@@ -255,15 +255,20 @@ fn decode_nikon_flashinfo(data: &[u8], _bo: ByteOrderMark) -> Vec<Tag> {
         // FlashCompensation (byte 10 high nibble)
         if data.len() > 10 {
             let comp = (data[10] >> 4) as i8;
-            if comp != 0 {
-                let ev = comp as f64 / 6.0;
-                tags.push(mk_nikon_str("FlashCompensation", &format!("{:.1} EV", ev)));
-            }
+            let ev = comp as f64 / 6.0;
+            tags.push(mk_nikon_str("FlashCompensation", &format!("{}", ev)));
+        }
+
+        // ExternalFlashFlags (byte 8)
+        if data.len() > 8 {
+            let flags = data[8];
+            let flag_str = if flags == 0 { "(none)".to_string() } else { format!("0x{:02X}", flags) };
+            tags.push(mk_nikon_str("ExternalFlashFlags", &flag_str));
         }
 
         // FlashGNDistance (byte 14)
-        if data.len() > 14 && data[14] > 0 {
-            tags.push(mk_nikon_str("FlashGNDistance", &format!("{} m", data[14])));
+        if data.len() > 14 {
+            tags.push(mk_nikon_str("FlashGNDistance", &format!("{}", data[14])));
         }
 
         // Flash group control modes (bytes 15-18 if available)
@@ -294,18 +299,14 @@ fn decode_nikon_flashinfo(data: &[u8], _bo: ByteOrderMark) -> Vec<Tag> {
             }
         }
 
-        // Compensation values
+        // Compensation values (emit even when 0)
         if data.len() > 17 {
             let comp_a = (data[17] >> 4) as i8;
-            if comp_a != 0 {
-                tags.push(mk_nikon_str("FlashGroupACompensation", &format!("{:.1} EV", comp_a as f64 / 6.0)));
-            }
+            tags.push(mk_nikon_str("FlashGroupACompensation", &format!("{}", comp_a as f64 / 6.0)));
         }
         if data.len() > 18 {
             let comp_b = (data[18] >> 4) as i8;
-            if comp_b != 0 {
-                tags.push(mk_nikon_str("FlashGroupBCompensation", &format!("{:.1} EV", comp_b as f64 / 6.0)));
-            }
+            tags.push(mk_nikon_str("FlashGroupBCompensation", &format!("{}", comp_b as f64 / 6.0)));
         }
     }
 

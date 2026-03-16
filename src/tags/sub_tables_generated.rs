@@ -180,35 +180,47 @@ pub fn dispatch_nikon_lens_data(ctx: &DispatchContext) -> Vec<Tag> {
             let ap = 2.0_f64.powf(d[5] as f64 / 24.0);
             tags.push(mk("Nikon", "AFAperture", &format!("{:.1}", ap)));
         }
-        if d[6] > 0 {
-            let fl = 5.0 * 2.0_f64.powf(d[6] as f64 / 24.0);
-            tags.push(mk("Nikon", "MinFocalLength", &format!("{:.1}", fl)));
+        // Offsets from Perl Nikon.pm LensData01 table (version 0101+):
+        // 0x04=ExitPupilPosition, 0x05=AFAperture,
+        // 0x08=FocusPosition, 0x09=FocusDistance,
+        // 0x0A=MCUVersion, 0x0B=LensIDNumber,
+        // 0x0C=LensFStops, 0x0D=MinFocalLength, 0x0E=MaxFocalLength,
+        // 0x0F=MaxApertureAtMinFocal, 0x10=MaxApertureAtMaxFocal,
+        // 0x11=EffectiveMaxAperture
+        if d[4] > 0 {
+            let ep = if d[4] > 0 { 2048.0 / d[4] as f64 } else { 0.0 };
+            tags.push(mk("Nikon", "ExitPupilPosition", &format!("{:.1}", ep)));
         }
-        if d[7] > 0 {
-            let fl = 5.0 * 2.0_f64.powf(d[7] as f64 / 24.0);
-            tags.push(mk("Nikon", "MaxFocalLength", &format!("{:.1}", fl)));
+        if d[5] > 0 {
+            let ap = 2.0_f64.powf(d[5] as f64 / 24.0);
+            tags.push(mk("Nikon", "AFAperture", &format!("{:.1}", ap)));
         }
-        if d[8] > 0 { tags.push(mk("Nikon", "FocusPosition", &format!("0x{:02X}", d[8]))); }
-        if d[9] > 0 {
-            let dist = 0.01 * 10.0_f64.powf(d[9] as f64 / 40.0);
+        if d.len() > 0x08 { tags.push(mk("Nikon", "FocusPosition", &format!("0x{:02X}", d[0x08]))); }
+        if d.len() > 0x09 && d[0x09] > 0 {
+            let dist = 0.01 * 10.0_f64.powf(d[0x09] as f64 / 40.0);
             tags.push(mk("Nikon", "FocusDistance", &format!("{:.2} m", dist)));
         }
-        if d[10] > 0 {
-            let ap = 2.0_f64.powf(d[10] as f64 / 24.0);
-            tags.push(mk("Nikon", "MaxApertureAtMaxFocal", &format!("{:.1}", ap)));
+        if d.len() > 0x0A { tags.push(mkn("Nikon", "MCUVersion", d[0x0A] as i32)); }
+        if d.len() > 0x0B { tags.push(mk("Nikon", "LensIDNumber", &format!("{}", d[0x0B]))); }
+        if d.len() > 0x0D && d[0x0D] > 0 {
+            let fl = 5.0 * 2.0_f64.powf(d[0x0D] as f64 / 24.0);
+            tags.push(mk("Nikon", "MinFocalLength", &format!("{:.1}", fl)));
         }
-        if d.len() > 11 && d[11] > 0 {
-            let ap = 2.0_f64.powf(d[11] as f64 / 24.0);
+        if d.len() > 0x0E && d[0x0E] > 0 {
+            let fl = 5.0 * 2.0_f64.powf(d[0x0E] as f64 / 24.0);
+            tags.push(mk("Nikon", "MaxFocalLength", &format!("{:.1}", fl)));
+        }
+        if d.len() > 0x0F && d[0x0F] > 0 {
+            let ap = 2.0_f64.powf(d[0x0F] as f64 / 24.0);
             tags.push(mk("Nikon", "MaxApertureAtMinFocal", &format!("{:.1}", ap)));
         }
-        if d.len() > 12 && d[12] > 0 {
-            let ap = 2.0_f64.powf(d[12] as f64 / 24.0);
-            tags.push(mk("Nikon", "EffectiveMaxAperture", &format!("{:.1}", ap)));
+        if d.len() > 0x10 && d[0x10] > 0 {
+            let ap = 2.0_f64.powf(d[0x10] as f64 / 24.0);
+            tags.push(mk("Nikon", "MaxApertureAtMaxFocal", &format!("{:.1}", ap)));
         }
-        if d.len() > 13 { tags.push(mkn("Nikon", "MCUVersion", d[13] as i32)); }
-        // LensIDNumber
-        if d.len() >= 8 {
-            tags.push(mk("Nikon", "LensIDNumber", &format!("{}", d[4])));
+        if d.len() > 0x11 && d[0x11] > 0 {
+            let ap = 2.0_f64.powf(d[0x11] as f64 / 24.0);
+            tags.push(mk("Nikon", "EffectiveMaxAperture", &format!("{:.1}", ap)));
         }
     }
 

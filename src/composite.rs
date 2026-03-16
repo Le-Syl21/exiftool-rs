@@ -83,9 +83,15 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         composite.extend(wb_tags);
     }
 
-    // DOF (Depth of Field)
-    if let Some(dof_tags) = compute_dof(tags) {
-        composite.extend(dof_tags);
+    // DOF (Depth of Field) — needs CircleOfConfusion from 35efl composites
+    {
+        let mut all_tags: Vec<&Tag> = tags.iter().collect();
+        let comp_refs: Vec<&Tag> = composite.iter().collect();
+        all_tags.extend(comp_refs);
+        let all_slice: Vec<Tag> = all_tags.into_iter().cloned().collect();
+        if let Some(dof_tags) = compute_dof(&all_slice) {
+            composite.extend(dof_tags);
+        }
     }
 
     // FocalPlaneXSize / FocalPlaneYSize
@@ -510,47 +516,59 @@ fn compute_wb_balance(tags: &[Tag]) -> Option<Vec<Tag>> {
 }
 
 /// Compute Depth of Field.
+/// Compute DOF using exact Perl ExifTool formula from Exif.pm line 4775.
+/// Require: FocalLength, Aperture (=FNumber), CircleOfConfusion
+/// Desire: FocusDistance, SubjectDistance, FocusDistanceLower/Upper
 fn compute_dof(tags: &[Tag]) -> Option<Vec<Tag>> {
-    let fl = find_tag_f64(tags, "FocalLength")?;
-    let fnum = find_tag_f64(tags, "FNumber")?;
-    let dist_upper = find_tag_f64(tags, "FocusDistanceUpper");
-    let dist_lower = find_tag_f64(tags, "FocusDistanceLower");
+    let f = find_tag_f64(tags, "FocalLength")?;     // mm
+    let aperture = find_tag_f64(tags, "FNumber")?;
+    let coc = find_tag_f64(tags, "CircleOfConfusion")
+        .or_else(|| {
+            find_tag_value(tags, "CircleOfConfusion")
+                .and_then(|s| s.split_whitespace().next()?.parse::<f64>().ok())
+        })?;
 
-    // Use average of upper/lower focus distance
-    let distance = match (dist_upper, dist_lower) {
-        (Some(u), Some(l)) if u > 0.0 && l > 0.0 => (u + l) / 2.0,
-        (Some(u), _) if u > 0.0 => u,
-        (_, Some(l)) if l > 0.0 => l,
-        _ => return None,
-    };
+    if f <= 0.0 || coc <= 0.0 { return None; }
 
-    if fl <= 0.0 || fnum <= 0.0 || distance <= 0.0 { return None; }
+    // Find focus distance (meters). Try multiple sources like Perl does.
+    let d = find_tag_f64(tags, "FocusDistance")
+        .or_else(|| find_tag_value(tags, "FocusDistance")
+            .and_then(|s| s.split_whitespace().next()?.parse().ok()))
+        .or_else(|| find_tag_f64(tags, "SubjectDistance"))
+        .or_else(|| {
+            let upper = find_tag_f64(tags, "FocusDistanceUpper")
+                .or_else(|| find_tag_value(tags, "FocusDistanceUpper")
+                    .and_then(|s| s.split_whitespace().next()?.parse().ok()));
+            let lower = find_tag_f64(tags, "FocusDistanceLower")
+                .or_else(|| find_tag_value(tags, "FocusDistanceLower")
+                    .and_then(|s| s.split_whitespace().next()?.parse().ok()));
+            match (upper, lower) {
+                (Some(u), Some(l)) => Some((u + l) / 2.0),
+                _ => None,
+            }
+        });
 
-    // Circle of confusion (assume 35mm equivalent)
-    let fl35 = find_tag_f64(tags, "FocalLengthIn35mmFormat").unwrap_or(fl * 1.6);
-    let crop = fl35 / fl;
-    let coc = 43.27 / crop / 1500.0; // mm
+    let d = d.unwrap_or(0.0);
+    let d = if d == 0.0 { 1e10 } else { d }; // 0 = infinity
 
-    // Hyperfocal distance
-    let h = (fl * fl) / (fnum * coc) + fl; // mm
-    let _h_m = h / 1000.0; // meters
+    // Perl formula: t = aperture * coc * (d*1000 - f) / (f * f)
+    let t = aperture * coc * (d * 1000.0 - f) / (f * f);
+    let near = d / (1.0 + t);
+    let mut far = d / (1.0 - t);
+    if far < 0.0 { far = 0.0; } // 0 means infinity
 
-    // DOF near and far limits (in meters)
-    let dist_mm = distance * 1000.0;
-    let near = dist_mm * (h - fl) / (h + dist_mm - 2.0 * fl);
-    let far = if dist_mm < h {
-        dist_mm * (h - fl) / (h - dist_mm)
+    let dof_str = if far == 0.0 {
+        format!("inf ({:.2} m - inf)", near)
     } else {
-        f64::INFINITY
+        let dof = far - near;
+        if dof > 0.0 && dof < 0.02 {
+            format!("{:.3} m ({:.3} - {:.3} m)", dof, near, far)
+        } else {
+            format!("{:.2} m ({:.2} - {:.2} m)", dof, near, far)
+        }
     };
 
-    let dof = if far.is_infinite() {
-        "inf".to_string()
-    } else {
-        format!("{:.2} m", (far - near) / 1000.0)
-    };
-
-    Some(vec![mk_composite("DOF", "Depth of Field", Value::String(dof))])
+    Some(vec![mk_composite("DOF", "Depth of Field", Value::String(dof_str))])
 }
 
 /// Compute focal plane physical size.
