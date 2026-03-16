@@ -254,6 +254,28 @@ impl ExifReader {
                     }
                     continue;
                 }
+                // PrintIM tag: extract version from "PrintIM" + 4-byte version
+                0xC4A5 => {
+                    let total_size = match entry.data_type {
+                        1 | 2 | 6 | 7 => entry.count as usize,
+                        _ => 0,
+                    };
+                    if total_size > 11 {
+                        let off = entry.value_offset as usize;
+                        if off + 11 <= data.len() && &data[off..off+7] == b"PrintIM" {
+                            let ver = String::from_utf8_lossy(&data[off+7..off+11]).to_string();
+                            tags.push(Tag {
+                                id: TagId::Text("PrintIMVersion".into()),
+                                name: "PrintIMVersion".into(),
+                                description: "PrintIM Version".into(),
+                                group: TagGroup { family0: "PrintIM".into(), family1: "PrintIM".into(), family2: "Printing".into() },
+                                raw_value: Value::String(ver.clone()),
+                                print_value: ver,
+                                priority: 0,
+                            });
+                        }
+                    }
+                }
                 _ => {}
             }
 
