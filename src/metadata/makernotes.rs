@@ -123,7 +123,7 @@ pub fn parse_makernotes(
 
     // Nikon second pass: decrypt encrypted sub-tables using serial + shutter count
     if info.manufacturer == Manufacturer::Nikon {
-        decrypt_nikon_subtables(parse_data, parse_offset, byte_order, &mut tags);
+        decrypt_nikon_subtables(parse_data, parse_offset, byte_order, &mut tags, model);
     }
 
     tags
@@ -312,6 +312,54 @@ fn decode_nikon_flashinfo(data: &[u8], _bo: ByteOrderMark) -> Vec<Tag> {
     tags
 }
 
+/// Decode Nikon ColorBalance (tag 0x0097).
+/// Version 0103 (D70): WB_RGBGLevels at offset 20, 4 × int16u
+fn decode_nikon_color_balance(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    if data.len() < 4 { return tags; }
+
+    let version = std::str::from_utf8(&data[..4]).unwrap_or("");
+
+    match version {
+        "0103" => {
+            // D70: WB at offset 20, 4 × int16u (R, G1, B, G2)
+            if data.len() >= 28 {
+                let r = read_u16(data, 20, bo);
+                let g = read_u16(data, 22, bo);
+                let b = read_u16(data, 24, bo);
+                let g2 = read_u16(data, 26, bo);
+                tags.push(mk_nikon_str("WB_RGBGLevels",
+                    &format!("{} {} {} {}", r, g, b, g2)));
+            }
+        }
+        "0100" => {
+            // D100: WB at offset 72, same format
+            if data.len() >= 80 {
+                let r = read_u16(data, 72, bo);
+                let g = read_u16(data, 74, bo);
+                let b = read_u16(data, 76, bo);
+                let g2 = read_u16(data, 78, bo);
+                tags.push(mk_nikon_str("WB_RGBGLevels",
+                    &format!("{} {} {} {}", r, g, b, g2)));
+            }
+        }
+        "0102" => {
+            // D2H: WB at offset 6, same format
+            if data.len() >= 14 {
+                let r = read_u16(data, 6, bo);
+                let g = read_u16(data, 8, bo);
+                let b = read_u16(data, 10, bo);
+                let g2 = read_u16(data, 12, bo);
+                tags.push(mk_nikon_str("WB_RGBGLevels",
+                    &format!("{} {} {} {}", r, g, b, g2)));
+            }
+        }
+        _ => {} // Encrypted versions handled by decrypt_nikon_subtables
+    }
+
+    tags
+}
+
 fn mk_nikon_str(name: &str, value: &str) -> Tag {
     Tag {
         id: TagId::Text(name.to_string()),
@@ -328,8 +376,10 @@ fn decrypt_nikon_subtables(
     ifd_offset: usize,
     byte_order: ByteOrderMark,
     tags: &mut Vec<Tag>,
+    model: &str,
 ) {
     // Extract decryption keys from already-parsed tags
+    // Mirrors Perl's SerialKey() function from Nikon.pm
     let serial_str = tags.iter()
         .find(|t| t.name == "SerialNumber" || t.name == "SerialNumber2")
         .map(|t| t.print_value.clone())
@@ -339,15 +389,18 @@ fn decrypt_nikon_subtables(
         .and_then(|t| t.raw_value.as_u64())
         .unwrap_or(0) as u32;
 
-    // Parse serial number: extract numeric part
-    let serial: u32 = serial_str.chars()
-        .filter(|c| c.is_ascii_digit())
-        .collect::<String>()
-        .parse()
-        .unwrap_or(0);
+    // SerialKey(): use serial if purely numeric, else fixed values per model
+    // (mirrors Perl Nikon.pm SerialKey function)
+    let serial: u32 = if serial_str.trim().chars().all(|c| c.is_ascii_digit()) && !serial_str.is_empty() {
+        serial_str.trim().parse().unwrap_or(0)
+    } else if model.contains("D50") {
+        0x22
+    } else {
+        0x60 // D200, D40X, D70, D80, etc.
+    };
 
-    if serial == 0 || shutter_count == 0 {
-        return; // Can't decrypt without both keys
+    if shutter_count == 0 {
+        return; // Can't decrypt without shutter count
     }
 
     // Scan IFD for encrypted tags and decrypt them
@@ -747,6 +800,7 @@ fn read_makernote_ifd(
                 }
                 // Nikon sub-tables
                 (Manufacturer::Nikon, 0x0088) => decode_nikon_afinfo(value_data, byte_order),
+                (Manufacturer::Nikon, 0x0097) => decode_nikon_color_balance(value_data, byte_order),
                 (Manufacturer::Nikon, 0x00A8) => decode_nikon_flashinfo(value_data, byte_order),
                 (Manufacturer::Nikon, 0x0091) => subs::dispatch_nikon_shot_info(&dispatch_ctx),
                 (Manufacturer::Nikon, 0x0098) => subs::dispatch_nikon_lens_data(&dispatch_ctx),

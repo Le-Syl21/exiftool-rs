@@ -484,18 +484,24 @@ fn compute_wb_balance(tags: &[Tag]) -> Option<Vec<Tag>> {
     // Try to find WhiteBalance RGGB values from Canon tags
     // These would come from Canon ColorData (tag 0x4001) which we decode separately
     // For now, check if we have the data from MakerNotes
-    if let Some(wb) = find_tag(tags, "WB_RGGBLevels") {
-        if let Value::List(items) = &wb.raw_value {
-            if items.len() >= 4 {
-                let r = items[0].as_f64().unwrap_or(0.0);
-                let g1 = items[1].as_f64().unwrap_or(0.0);
-                let b = items[3].as_f64().unwrap_or(0.0);
-                if g1 > 0.0 {
-                    result.push(mk_composite("RedBalance", "Red Balance",
-                        Value::String(format!("{:.6}", r / g1))));
-                    result.push(mk_composite("BlueBalance", "Blue Balance",
-                        Value::String(format!("{:.6}", b / g1))));
-                }
+    if let Some(wb) = find_tag(tags, "WB_RGGBLevels")
+        .or_else(|| find_tag(tags, "WB_RGBGLevels"))
+    {
+        // Parse WB levels from either List or space-separated String
+        let parts: Vec<f64> = match &wb.raw_value {
+            Value::List(items) => items.iter().filter_map(|v| v.as_f64()).collect(),
+            Value::String(s) => s.split_whitespace().filter_map(|p| p.parse().ok()).collect(),
+            _ => Vec::new(),
+        };
+        if parts.len() >= 4 {
+            let (r, g, b) = (parts[0], parts[1], parts[2]);
+            // For RGGB: R/G1, B/G1; For RGBG: R/G, B/G2
+            let g_div = if wb.name.contains("RGBG") { parts[3] } else { g };
+            if g > 0.0 && g_div > 0.0 {
+                result.push(mk_composite("RedBalance", "Red Balance",
+                    Value::String(format!("{:.6}", r / g))));
+                result.push(mk_composite("BlueBalance", "Blue Balance",
+                    Value::String(format!("{:.6}", b / g_div))));
             }
         }
     }
