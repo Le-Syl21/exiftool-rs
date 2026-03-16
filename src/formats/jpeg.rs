@@ -187,7 +187,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         Err(_) => {} // silently skip malformed EXIF
                     }
                 }
-                // XMP data
+                // XMP data (standard)
                 else if seg_data.len() > XMP_HEADER.len()
                     && seg_data.starts_with(XMP_HEADER)
                 {
@@ -195,6 +195,18 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     match XmpReader::read(xmp_data) {
                         Ok(xmp_tags) => tags.extend(xmp_tags),
                         Err(_) => {}
+                    }
+                }
+                // Extended XMP
+                else if seg_data.len() > 75
+                    && seg_data.starts_with(b"http://ns.adobe.com/xmp/extension/\0")
+                {
+                    let rest = &seg_data[35..]; // after header string + null
+                    if rest.len() >= 40 {
+                        let xmp_chunk = &rest[40..]; // after GUID(32) + total(4) + offset(4)
+                        if let Ok(ext_tags) = XmpReader::read(xmp_chunk) {
+                            tags.extend(ext_tags);
+                        }
                     }
                 }
             }

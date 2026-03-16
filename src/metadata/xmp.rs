@@ -78,12 +78,49 @@ impl XmpReader {
         for event in parser {
             match event {
                 Ok(XmlEvent::StartElement {
-                    name, ..
+                    name, attributes, ..
                 }) => {
                     // Track the path
                     let ns_uri = name.namespace.as_deref().unwrap_or("");
                     path.push((ns_uri.to_string(), name.local_name.clone()));
                     current_text.clear();
+
+                    // Extract attributes on rdf:Description as tags
+                    // e.g., <rdf:Description GCamera:HDRPlusMakernote="...">
+                    if name.local_name == "Description" {
+                        for attr in &attributes {
+                            // Skip rdf:about and xmlns declarations
+                            if attr.name.local_name == "about" { continue; }
+                            if attr.name.prefix.as_deref() == Some("xmlns") { continue; }
+                            if attr.name.local_name.starts_with("xmlns") { continue; }
+
+                            let attr_ns = attr.name.namespace.as_deref().unwrap_or("");
+                            let attr_prefix = namespace_prefix(attr_ns);
+                            let group_prefix = if attr_prefix.is_empty() {
+                                attr.name.prefix.as_deref().unwrap_or("XMP")
+                            } else {
+                                attr_prefix
+                            };
+                            let category = namespace_category(group_prefix);
+
+                            if !attr.value.is_empty() {
+                                let full_name = format!("{}{}", capitalize(group_prefix), attr.name.local_name);
+                                tags.push(Tag {
+                                    id: TagId::Text(format!("{}:{}", group_prefix, attr.name.local_name)),
+                                    name: full_name,
+                                    description: attr.name.local_name.clone(),
+                                    group: TagGroup {
+                                        family0: "XMP".to_string(),
+                                        family1: format!("XMP-{}", group_prefix),
+                                        family2: category.to_string(),
+                                    },
+                                    raw_value: Value::String(attr.value.clone()),
+                                    print_value: attr.value.clone(),
+                                    priority: 0,
+                                });
+                            }
+                        }
+                    }
 
                     if name.local_name == "li"
                         && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
