@@ -180,8 +180,14 @@ pub fn dispatch_nikon_lens_data(ctx: &DispatchContext) -> Vec<Tag> {
             let ap = 2.0_f64.powf(d[5] as f64 / 24.0);
             tags.push(mk("Nikon", "AFAperture", &format!("{:.1}", ap)));
         }
-        if d[6] > 0 { tags.push(mkn("Nikon", "MinFocalLength", d[6] as i32)); }
-        if d[7] > 0 { tags.push(mkn("Nikon", "MaxFocalLength", d[7] as i32)); }
+        if d[6] > 0 {
+            let fl = 5.0 * 2.0_f64.powf(d[6] as f64 / 24.0);
+            tags.push(mk("Nikon", "MinFocalLength", &format!("{:.1}", fl)));
+        }
+        if d[7] > 0 {
+            let fl = 5.0 * 2.0_f64.powf(d[7] as f64 / 24.0);
+            tags.push(mk("Nikon", "MaxFocalLength", &format!("{:.1}", fl)));
+        }
         if d[8] > 0 { tags.push(mk("Nikon", "FocusPosition", &format!("0x{:02X}", d[8]))); }
         if d[9] > 0 {
             let dist = 0.01 * 10.0_f64.powf(d[9] as f64 / 40.0);

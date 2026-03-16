@@ -93,6 +93,41 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         composite.extend(fp_tags);
     }
 
+    // Nikon SerialNumber (from SerialNumber2 or InternalSerialNumber)
+    if find_tag(tags, "SerialNumber").is_none() {
+        if let Some(sn) = find_tag_value(tags, "SerialNumber2")
+            .or_else(|| find_tag_value(tags, "InternalSerialNumber"))
+        {
+            composite.push(mk_composite("SerialNumber", "Serial Number", Value::String(sn)));
+        }
+    }
+
+    // LensSpec composite
+    if find_tag(tags, "LensSpec").is_none() {
+        let min_fl = find_tag_f64(tags, "MinFocalLength");
+        let max_fl = find_tag_f64(tags, "MaxFocalLength");
+        let min_ap = find_tag_value(tags, "MaxApertureAtMinFocal");
+        let max_ap = find_tag_value(tags, "MaxApertureAtMaxFocal");
+        if let (Some(min), Some(max)) = (min_fl, max_fl) {
+            if min > 0.0 && max > 0.0 {
+                let spec = if let (Some(ap_min), Some(ap_max)) = (min_ap, max_ap) {
+                    format!("{:.0}-{:.0}mm f/{}-{}", min, max, ap_min, ap_max)
+                } else {
+                    format!("{:.0}-{:.0}mm", min, max)
+                };
+                composite.push(mk_composite("LensSpec", "Lens Spec", Value::String(spec)));
+            }
+        }
+    }
+
+    // AutoFocus (from AFInfo)
+    if let Some(afm) = find_tag_value(tags, "AFAreaMode") {
+        if find_tag(tags, "AutoFocus").is_none() {
+            let af = if afm.contains("Manual") { "Off" } else { "On" };
+            composite.push(mk_composite("AutoFocus", "Auto Focus", Value::String(af.into())));
+        }
+    }
+
     // Canon-specific composites
     if let Some(canon_tags) = compute_canon_composites(tags) {
         composite.extend(canon_tags);

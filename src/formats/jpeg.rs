@@ -160,6 +160,22 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
         pos += seg_len;
 
         match marker {
+            // APP0 - JFIF
+            0xE0 => {
+                if seg_data.len() >= 5 && seg_data.starts_with(b"JFIF\0") {
+                    let major = seg_data[5] as u16;
+                    let minor = if seg_data.len() > 6 { seg_data[6] as u16 } else { 0 };
+                    tags.push(crate::tag::Tag {
+                        id: crate::tag::TagId::Text("JFIFVersion".into()),
+                        name: "JFIFVersion".into(),
+                        description: "JFIF Version".into(),
+                        group: crate::tag::TagGroup { family0: "JFIF".into(), family1: "JFIF".into(), family2: "Image".into() },
+                        raw_value: crate::value::Value::String(format!("{}.{:02}", major, minor)),
+                        print_value: format!("{}.{:02}", major, minor),
+                        priority: 0,
+                    });
+                }
+            }
             MARKER_APP1 => {
                 // EXIF data
                 if seg_data.len() > EXIF_HEADER.len()
