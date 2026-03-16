@@ -129,6 +129,43 @@ pub fn parse_makernotes(
     tags
 }
 
+/// Decode a PreviewIFD sub-directory — extract PreviewImageStart/Length.
+fn decode_preview_ifd(data: &[u8], offset: usize, bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    if offset + 2 > data.len() { return tags; }
+
+    let count = read_u16(data, offset, bo) as usize;
+    for i in 0..count.min(20) {
+        let eoff = offset + 2 + i * 12;
+        if eoff + 12 > data.len() { break; }
+        let tag_id = read_u16(data, eoff, bo);
+        let val = read_u32(data, eoff + 8, bo);
+
+        match tag_id {
+            0x0201 => {
+                tags.push(mk_nikon_str("PreviewImageStart", &val.to_string()));
+            }
+            0x0202 => {
+                tags.push(mk_nikon_str("PreviewImageLength", &val.to_string()));
+                // Also emit PreviewImage as binary marker
+                if val > 0 {
+                    tags.push(Tag {
+                        id: TagId::Text("PreviewImage".into()),
+                        name: "PreviewImage".into(),
+                        description: "Preview Image".into(),
+                        group: TagGroup { family0: "MakerNotes".into(), family1: "PreviewIFD".into(), family2: "Image".into() },
+                        raw_value: Value::Binary(Vec::new()), // placeholder
+                        print_value: format!("(Binary data {} bytes)", val),
+                        priority: 0,
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+    tags
+}
+
 /// Decode Nikon AFInfo (tag 0x0088).
 fn decode_nikon_afinfo(data: &[u8], _bo: ByteOrderMark) -> Vec<Tag> {
     let mut tags = Vec::new();
@@ -800,6 +837,14 @@ fn read_makernote_ifd(
                     decode_canon_color_data(value_data, count as usize, byte_order)
                 }
                 // Nikon sub-tables
+                (Manufacturer::Nikon, 0x0011) => {
+                    // PreviewIFD: the value is an offset to a sub-IFD in the data
+                    let preview_off = read_u32(value_data, 0, byte_order) as usize;
+                    // The offset is relative to the beginning of parse_data
+                    if preview_off > 0 && preview_off < data.len() {
+                        decode_preview_ifd(data, preview_off, byte_order)
+                    } else { Vec::new() }
+                }
                 (Manufacturer::Nikon, 0x0088) => decode_nikon_afinfo(value_data, byte_order),
                 (Manufacturer::Nikon, 0x0097) => decode_nikon_color_balance(value_data, byte_order),
                 (Manufacturer::Nikon, 0x00A8) => decode_nikon_flashinfo(value_data, byte_order),

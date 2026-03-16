@@ -76,6 +76,13 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     // ScaleFactor35efl + FocalLength35efl + Lens35efl
     if let Some(sf_tags) = compute_35efl(tags) {
         composite.extend(sf_tags);
+    } else if let Some(fl) = find_tag_f64(tags, "FocalLength") {
+        // Fallback: FocalLength35efl = FocalLength when no scale factor available
+        // (Perl does: ValueConv => ($val[0] || 0) * ($val[1] || 1))
+        if fl > 0.0 {
+            composite.push(mk_composite("FocalLength35efl", "Focal Length (35mm equiv)",
+                Value::String(format!("{:.1} mm", fl))));
+        }
     }
 
     // RedBalance + BlueBalance

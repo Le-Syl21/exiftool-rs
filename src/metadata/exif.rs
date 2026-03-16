@@ -305,10 +305,36 @@ impl ExifReader {
         }
 
         // Read next IFD offset
-        let next_ifd_offset = read_u32(data, entries_end, header.byte_order);
+        let next_ifd_offset = if entries_end + 4 <= data.len() {
+            read_u32(data, entries_end, header.byte_order)
+        } else { 0 };
         if next_ifd_offset != 0 && ifd_name == "IFD0" {
             // IFD1 = thumbnail
             let _ = Self::read_ifd(data, header, next_ifd_offset, "IFD1", tags);
+
+            // Create ThumbnailImage tag if offset+length are present
+            let thumb_offset = tags.iter()
+                .find(|t| t.name == "ThumbnailOffset" && t.group.family1 == "IFD1")
+                .and_then(|t| t.raw_value.as_u64());
+            let thumb_length = tags.iter()
+                .find(|t| t.name == "ThumbnailLength" && t.group.family1 == "IFD1")
+                .and_then(|t| t.raw_value.as_u64());
+
+            if let (Some(off), Some(len)) = (thumb_offset, thumb_length) {
+                let off = off as usize;
+                let len = len as usize;
+                if off + len <= data.len() && len > 0 {
+                    tags.push(Tag {
+                        id: TagId::Text("ThumbnailImage".into()),
+                        name: "ThumbnailImage".into(),
+                        description: "Thumbnail Image".into(),
+                        group: TagGroup { family0: "EXIF".into(), family1: "IFD1".into(), family2: "Image".into() },
+                        raw_value: Value::Binary(data[off..off+len].to_vec()),
+                        print_value: format!("(Binary data {} bytes)", len),
+                        priority: 0,
+                    });
+                }
+            }
         }
 
         Ok(if next_ifd_offset != 0 {
