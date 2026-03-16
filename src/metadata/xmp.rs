@@ -104,7 +104,7 @@ impl XmpReader {
                             let category = namespace_category(group_prefix);
 
                             if !attr.value.is_empty() {
-                                let full_name = format!("{}{}", capitalize(group_prefix), attr.name.local_name);
+                                let full_name = attr.name.local_name.clone();
                                 tags.push(Tag {
                                     id: TagId::Text(format!("{}:{}", group_prefix, attr.name.local_name)),
                                     name: full_name,
@@ -173,8 +173,7 @@ impl XmpReader {
                                     )
                                 };
 
-                                let full_name =
-                                    format!("{}{}", capitalize(group_prefix), tag_name);
+                                let full_name = tag_name.to_string();
                                 let print_value = value.to_display_string();
 
                                 tags.push(Tag {
@@ -212,7 +211,7 @@ impl XmpReader {
                             let category = namespace_category(group_prefix);
 
                             let value = Value::String(current_text.trim().to_string());
-                            let full_name = format!("{}{}", capitalize(group_prefix), tag_name);
+                            let full_name = tag_name.to_string();
                             let print_value = value.to_display_string();
 
                             tags.push(Tag {
