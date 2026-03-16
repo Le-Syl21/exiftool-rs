@@ -129,6 +129,75 @@ pub fn parse_makernotes(
     tags
 }
 
+/// Decode Apple RunTime binary plist (tag 0x0003).
+fn decode_apple_runtime(data: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+
+    if let Some(dict) = crate::formats::plist::parse_binary_plist(data) {
+        use crate::formats::plist::PlistValue;
+
+        if let Some(PlistValue::Int(v)) = dict.get("flags") {
+            let flag_str = match *v {
+                1 => "Valid",
+                3 => "Valid, Has been rounded",
+                _ => "",
+            };
+            let print = if flag_str.is_empty() { v.to_string() } else { flag_str.to_string() };
+            tags.push(Tag {
+                id: TagId::Text("RunTimeFlags".into()), name: "RunTimeFlags".into(),
+                description: "Run Time Flags".into(),
+                group: TagGroup { family0: "MakerNotes".into(), family1: "Apple".into(), family2: "Image".into() },
+                raw_value: Value::I32(*v as i32), print_value: print, priority: 0,
+            });
+        }
+        if let Some(PlistValue::Int(v)) = dict.get("value") {
+            tags.push(Tag {
+                id: TagId::Text("RunTimeValue".into()), name: "RunTimeValue".into(),
+                description: "Run Time Value".into(),
+                group: TagGroup { family0: "MakerNotes".into(), family1: "Apple".into(), family2: "Image".into() },
+                raw_value: Value::String(v.to_string()), print_value: v.to_string(), priority: 0,
+            });
+        }
+        if let Some(PlistValue::Int(v)) = dict.get("epoch") {
+            tags.push(Tag {
+                id: TagId::Text("RunTimeEpoch".into()), name: "RunTimeEpoch".into(),
+                description: "Run Time Epoch".into(),
+                group: TagGroup { family0: "MakerNotes".into(), family1: "Apple".into(), family2: "Image".into() },
+                raw_value: Value::I32(*v as i32), print_value: v.to_string(), priority: 0,
+            });
+        }
+        if let Some(PlistValue::Int(v)) = dict.get("timescale") {
+            tags.push(Tag {
+                id: TagId::Text("RunTimeScale".into()), name: "RunTimeScale".into(),
+                description: "Run Time Scale".into(),
+                group: TagGroup { family0: "MakerNotes".into(), family1: "Apple".into(), family2: "Image".into() },
+                raw_value: Value::String(v.to_string()), print_value: v.to_string(), priority: 0,
+            });
+
+            // RunTimeSincePowerUp composite
+            if let Some(PlistValue::Int(value)) = dict.get("value") {
+                if *v > 0 {
+                    let secs = *value as f64 / *v as f64;
+                    let h = (secs / 3600.0) as u32;
+                    let m = ((secs % 3600.0) / 60.0) as u32;
+                    let s = secs % 60.0;
+                    tags.push(Tag {
+                        id: TagId::Text("RunTimeSincePowerUp".into()),
+                        name: "RunTimeSincePowerUp".into(),
+                        description: "Run Time Since Power Up".into(),
+                        group: TagGroup { family0: "Composite".into(), family1: "Composite".into(), family2: "Image".into() },
+                        raw_value: Value::String(format!("{:.0}", secs)),
+                        print_value: format!("{}:{:02}:{:02}", h, m, s as u32),
+                        priority: 0,
+                    });
+                }
+            }
+        }
+    }
+
+    tags
+}
+
 /// Decode a PreviewIFD sub-directory — extract PreviewImageStart/Length.
 fn decode_preview_ifd(data: &[u8], offset: usize, bo: ByteOrderMark) -> Vec<Tag> {
     let mut tags = Vec::new();
@@ -851,6 +920,8 @@ fn read_makernote_ifd(
                 (Manufacturer::Nikon, 0x0091) => subs::dispatch_nikon_shot_info(&dispatch_ctx),
                 (Manufacturer::Nikon, 0x0098) => subs::dispatch_nikon_lens_data(&dispatch_ctx),
                 (Manufacturer::Nikon, 0x00B7) => subs::dispatch_nikon_af_info2(&dispatch_ctx),
+                // Apple RunTime plist
+                (Manufacturer::Apple, 0x0003) => decode_apple_runtime(value_data),
                 // Sony sub-tables
                 (Manufacturer::Sony, 0x0114) => subs::dispatch_sony_camera_settings(&dispatch_ctx),
                 (Manufacturer::Sony, 0x2010) => subs::dispatch_sony_tag2010(&dispatch_ctx),

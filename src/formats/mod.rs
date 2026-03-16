@@ -17,6 +17,7 @@ pub mod misc;
 pub mod mrw;
 pub mod ogg;
 pub mod pdf;
+pub mod plist;
 pub mod png;
 pub mod postscript;
 pub mod psd;

@@ -114,6 +114,15 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         }
     }
 
+    // LensID fallback: use LensModel if no LensID computed by 35efl
+    if !composite.iter().any(|t| t.name == "LensID") {
+        if let Some(lm) = find_tag_value(tags, "LensModel") {
+            if !lm.is_empty() {
+                composite.push(mk_composite("LensID", "Lens ID", Value::String(lm)));
+            }
+        }
+    }
+
     // Nikon SerialNumber (from SerialNumber2 or InternalSerialNumber)
     if find_tag(tags, "SerialNumber").is_none() {
         if let Some(sn) = find_tag_value(tags, "SerialNumber2")
