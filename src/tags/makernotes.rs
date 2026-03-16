@@ -21,10 +21,7 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         Manufacturer::Apple => &APPLE_TAGS[..],
         Manufacturer::Ricoh | Manufacturer::Minolta
         | Manufacturer::Google | Manufacturer::DJI => &[][..],
-        Manufacturer::Unknown => return (
-            &"Unknown",
-            &"Unknown",
-        ),
+        Manufacturer::Unknown => &[][..], // Will fallback to generated tables
     };
 
     for &(id, name, desc) in table {
@@ -48,6 +45,31 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
 
     if let Some(gen) = gen_table {
         for &(id, name) in gen {
+            if id == tag_id {
+                return (name, name);
+            }
+        }
+    }
+
+    // JVC tags (not in generated tables)
+    let jvc: &[(u16, &str)] = &[(0x0002, "CPUVersions"), (0x0003, "Quality")];
+    for &(id, name) in jvc {
+        if id == tag_id { return (name, name); }
+    }
+
+    // Last resort: search ALL generated tables
+    let all_tables: &[&[(u16, &str)]] = &[
+        &super::generated::GENERATED_CANON_TAGS,
+        &super::generated::GENERATED_NIKON_TAGS,
+        &super::generated::GENERATED_SONY_TAGS,
+        &super::generated::GENERATED_OLYMPUS_TAGS,
+        &super::generated::GENERATED_PENTAX_TAGS,
+        &super::generated::GENERATED_PANASONIC_TAGS,
+        &super::generated::GENERATED_FUJIFILM_TAGS,
+        &super::generated::GENERATED_SAMSUNG_TAGS,
+    ];
+    for table in all_tables {
+        for &(id, name) in *table {
             if id == tag_id {
                 return (name, name);
             }

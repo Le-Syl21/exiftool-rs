@@ -59,6 +59,12 @@ pub fn parse_makernotes(
     }
 
     let mn_data = &data[mn_offset..mn_offset + mn_size];
+
+    // JVC Text format: "VER:xxxxQTY:yyyy..." — parse directly
+    if mn_data.starts_with(b"VER:") {
+        return decode_jvc_text(mn_data);
+    }
+
     let info = detect_manufacturer(mn_data, make);
 
     let byte_order = info.byte_order.unwrap_or(parent_byte_order);
@@ -124,6 +130,57 @@ pub fn parse_makernotes(
     // Nikon second pass: decrypt encrypted sub-tables using serial + shutter count
     if info.manufacturer == Manufacturer::Nikon {
         decrypt_nikon_subtables(parse_data, parse_offset, byte_order, &mut tags, model);
+    }
+
+    tags
+}
+
+/// Decode JVC text-format MakerNotes ("VER:0100QTY:FINE...").
+fn decode_jvc_text(data: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let text = String::from_utf8_lossy(data);
+
+    // Parse KEY:VALUE pairs (3-letter key, 3-4 char value)
+    let mut pos = 0;
+    let bytes = text.as_bytes();
+    while pos + 7 <= bytes.len() {
+        // Key is uppercase letters until ':'
+        let key_start = pos;
+        while pos < bytes.len() && bytes[pos] != b':' { pos += 1; }
+        if pos >= bytes.len() { break; }
+        let key = &text[key_start..pos];
+        pos += 1; // skip ':'
+
+        // Value is next 4 bytes (or until next uppercase letter)
+        let val_start = pos;
+        while pos < bytes.len() && pos - val_start < 4 && !bytes[pos].is_ascii_uppercase() {
+            pos += 1;
+        }
+        // Extend if still lowercase/digits
+        while pos < bytes.len() && !bytes[pos].is_ascii_uppercase() && bytes[pos] != 0 {
+            pos += 1;
+        }
+        let val = text[val_start..pos].trim_end_matches('\0').trim();
+
+        let (name, print_val) = match key {
+            "VER" => ("MakerNoteVersion", val.to_string()),
+            "QTY" => ("Quality", match val {
+                "STND" | "STD" => "Normal".to_string(),
+                "FINE" => "Fine".to_string(),
+                _ => val.to_string(),
+            }),
+            _ => continue,
+        };
+
+        tags.push(Tag {
+            id: TagId::Text(name.to_string()),
+            name: name.to_string(),
+            description: name.to_string(),
+            group: TagGroup { family0: "MakerNotes".into(), family1: "JVC".into(), family2: "Camera".into() },
+            raw_value: Value::String(val.to_string()),
+            print_value: print_val,
+            priority: 0,
+        });
     }
 
     tags
@@ -665,6 +722,30 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
         return MakerNoteInfo {
             manufacturer: Manufacturer::Panasonic,
             ifd_offset: 12,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
+    // JVC: "JVC " (4 bytes) + IFD
+    // (from Perl MakerNotes.pm: Start => '$valuePtr + 4')
+    if mn_data.starts_with(b"JVC ") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Unknown,
+            ifd_offset: 4,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
+    // JVC Text: "VER:xxxxQTY:yyy..." — text-format MakerNotes
+    // (from Perl MakerNotes.pm: MakerNoteJVCText)
+    if mn_data.starts_with(b"VER:") && make.to_uppercase().contains("JVC") || make.to_uppercase().contains("VICTOR") {
+        // Not an IFD — parse as text key:value pairs
+        // Return special marker; we'll decode in the dispatch
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Unknown,
+            ifd_offset: 0,
             _base_adjust: 0,
             byte_order: None,
         };
