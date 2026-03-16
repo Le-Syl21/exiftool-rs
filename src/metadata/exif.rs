@@ -211,14 +211,18 @@ impl ExifReader {
         let entries_start = offset + 2;
         let entries_end = entries_start + entry_count * 12;
 
-        if entries_end + 4 > data.len() {
+        // Validate: at minimum, first entry must fit
+        if entries_start + 12 > data.len() && entry_count > 0 {
             return Err(Error::InvalidExif(format!(
                 "{} entries extend beyond data (need {}, have {})",
                 ifd_name,
-                entries_end + 4,
+                entries_start + 12,
                 data.len()
             )));
         }
+        // Clamp entry count if IFD extends beyond data
+        let entry_count = entry_count.min((data.len().saturating_sub(entries_start)) / 12);
+        let entries_end = entries_start + entry_count * 12;
 
         for i in 0..entry_count {
             let entry_offset = entries_start + i * 12;

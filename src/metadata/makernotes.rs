@@ -99,6 +99,12 @@ pub fn parse_makernotes(
             parse_data = sub;
             parse_offset = ifd_off;
         }
+        Manufacturer::Apple => {
+            // Apple iOS: IFD at mn_offset+14, offsets relative to mn_offset
+            // (Start = valuePtr + 14, Base = start - 14)
+            parse_data = &data[mn_offset..(mn_offset + mn_size).min(data.len())];
+            parse_offset = 14; // IFD starts at offset 14 within MakerNote
+        }
         Manufacturer::Fujifilm => {
             // FUJIFILM: offsets relative to start of maker note
             parse_data = &data[mn_offset..mn_offset + mn_size];
@@ -501,6 +507,24 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             ifd_offset: 12,
             _base_adjust: 0,
             byte_order: None,
+        };
+    }
+
+    // Apple iOS: "Apple iOS\0\0\x01" + MM/II + IFD (no standard TIFF header!)
+    if mn_data.len() >= 16 && mn_data.starts_with(b"Apple iOS\0") {
+        // "Apple iOS\0" (10 bytes) + "\0\x01" (2 bytes) + "MM" or "II" (2 bytes) + IFD directly
+        let bo = if mn_data[12] == b'M' && mn_data[13] == b'M' {
+            Some(ByteOrderMark::BigEndian)
+        } else if mn_data[12] == b'I' && mn_data[13] == b'I' {
+            Some(ByteOrderMark::LittleEndian)
+        } else {
+            None
+        };
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Apple,
+            ifd_offset: 14, // After "Apple iOS\0\0\x01MM" — IFD starts immediately
+            _base_adjust: 0,
+            byte_order: bo,
         };
     }
 
