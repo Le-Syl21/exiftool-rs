@@ -1,0 +1,207 @@
+//! GIF file format reader.
+//!
+//! Parses GIF87a/GIF89a files to extract comments, XMP, animation info.
+//! Mirrors ExifTool's GIF.pm.
+
+use crate::error::{Error, Result};
+use crate::tag::{Tag, TagGroup, TagId};
+use crate::value::Value;
+
+pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
+    if data.len() < 13 || !data.starts_with(b"GIF8") {
+        return Err(Error::InvalidData("not a GIF file".into()));
+    }
+
+    let mut tags = Vec::new();
+    let version = String::from_utf8_lossy(&data[3..6]).to_string();
+    tags.push(mk("GIFVersion", "GIF Version", Value::String(version)));
+
+    // Logical Screen Descriptor (bytes 6-12)
+    let width = u16::from_le_bytes([data[6], data[7]]);
+    let height = u16::from_le_bytes([data[8], data[9]]);
+    let packed = data[10];
+    let has_gct = (packed & 0x80) != 0;
+    let color_resolution = ((packed >> 4) & 0x07) + 1;
+    let gct_size = if has_gct { 3 * (1 << ((packed & 0x07) + 1)) } else { 0 };
+    let bg_color = data[11];
+    let _aspect_ratio = data[12];
+
+    tags.push(mk("ImageWidth", "Image Width", Value::U16(width)));
+    tags.push(mk("ImageHeight", "Image Height", Value::U16(height)));
+    tags.push(mk("ColorResolutionDepth", "Color Resolution Depth", Value::U8(color_resolution)));
+    tags.push(mk("BitsPerPixel", "Bits Per Pixel", Value::U8((packed & 0x07) + 1)));
+    if has_gct {
+        tags.push(mk("BackgroundColor", "Background Color", Value::U8(bg_color)));
+    }
+
+    let mut pos = 13 + gct_size as usize;
+    let mut frame_count: u32 = 0;
+    let mut total_duration: f64 = 0.0;
+
+    while pos < data.len() {
+        match data[pos] {
+            // Image Descriptor
+            0x2C => {
+                frame_count += 1;
+                if pos + 10 > data.len() {
+                    break;
+                }
+                let local_packed = data[pos + 9];
+                let has_lct = (local_packed & 0x80) != 0;
+                let lct_size = if has_lct { 3 * (1 << ((local_packed & 0x07) + 1)) } else { 0 };
+                pos += 10 + lct_size;
+                // Skip LZW minimum code size
+                if pos >= data.len() {
+                    break;
+                }
+                pos += 1;
+                // Skip sub-blocks
+                pos = skip_sub_blocks(data, pos);
+            }
+            // Extension
+            0x21 => {
+                if pos + 2 > data.len() {
+                    break;
+                }
+                let label = data[pos + 1];
+                pos += 2;
+
+                match label {
+                    // Comment Extension
+                    0xFE => {
+                        let (comment, new_pos) = read_sub_blocks(data, pos);
+                        pos = new_pos;
+                        if !comment.is_empty() {
+                            let text = String::from_utf8_lossy(&comment).to_string();
+                            tags.push(mk("Comment", "Comment", Value::String(text)));
+                        }
+                    }
+                    // Graphic Control Extension
+                    0xF9 => {
+                        if pos + 5 <= data.len() && data[pos] == 4 {
+                            let delay = u16::from_le_bytes([data[pos + 2], data[pos + 3]]);
+                            total_duration += delay as f64 / 100.0;
+                            let transparent_flag = (data[pos + 1] & 0x01) != 0;
+                            if transparent_flag {
+                                let transparent_idx = data[pos + 4];
+                                tags.push(mk(
+                                    "TransparentColor",
+                                    "Transparent Color Index",
+                                    Value::U8(transparent_idx),
+                                ));
+                            }
+                        }
+                        pos = skip_sub_blocks(data, pos);
+                    }
+                    // Application Extension
+                    0xFF => {
+                        if pos + 12 <= data.len() && data[pos] == 11 {
+                            let app_id = &data[pos + 1..pos + 12];
+                            pos += 12;
+
+                            if app_id == b"NETSCAPE2.0" || app_id == b"ANIMEXTS1.0" {
+                                // Animation loop count
+                                if pos + 4 <= data.len() && data[pos] == 3 && data[pos + 1] == 1 {
+                                    let loop_count =
+                                        u16::from_le_bytes([data[pos + 2], data[pos + 3]]);
+                                    tags.push(mk(
+                                        "AnimationIterations",
+                                        "Animation Iterations",
+                                        Value::U16(if loop_count == 0 {
+                                            u16::MAX
+                                        } else {
+                                            loop_count
+                                        }),
+                                    ));
+                                }
+                                pos = skip_sub_blocks(data, pos);
+                            } else if &app_id[..8] == b"XMP Data" {
+                                // XMP metadata
+                                let (xmp_data, new_pos) = read_sub_blocks(data, pos);
+                                pos = new_pos;
+                                if !xmp_data.is_empty() {
+                                    if let Ok(xmp_tags) =
+                                        crate::metadata::XmpReader::read(&xmp_data)
+                                    {
+                                        tags.extend(xmp_tags);
+                                    }
+                                }
+                            } else {
+                                pos = skip_sub_blocks(data, pos);
+                            }
+                        } else {
+                            pos = skip_sub_blocks(data, pos);
+                        }
+                    }
+                    // Plain Text Extension or unknown
+                    _ => {
+                        pos = skip_sub_blocks(data, pos);
+                    }
+                }
+            }
+            // Trailer
+            0x3B => break,
+            _ => {
+                pos += 1;
+            }
+        }
+    }
+
+    if frame_count > 0 {
+        tags.push(mk("FrameCount", "Frame Count", Value::U32(frame_count)));
+    }
+    if frame_count > 1 && total_duration > 0.0 {
+        tags.push(mk(
+            "Duration",
+            "Duration",
+            Value::String(format!("{:.2} s", total_duration)),
+        ));
+    }
+
+    Ok(tags)
+}
+
+fn skip_sub_blocks(data: &[u8], mut pos: usize) -> usize {
+    while pos < data.len() {
+        let block_size = data[pos] as usize;
+        pos += 1;
+        if block_size == 0 {
+            break;
+        }
+        pos += block_size;
+    }
+    pos
+}
+
+fn read_sub_blocks(data: &[u8], mut pos: usize) -> (Vec<u8>, usize) {
+    let mut result = Vec::new();
+    while pos < data.len() {
+        let block_size = data[pos] as usize;
+        pos += 1;
+        if block_size == 0 {
+            break;
+        }
+        if pos + block_size <= data.len() {
+            result.extend_from_slice(&data[pos..pos + block_size]);
+        }
+        pos += block_size;
+    }
+    (result, pos)
+}
+
+fn mk(name: &str, description: &str, value: Value) -> Tag {
+    let print_value = value.to_display_string();
+    Tag {
+        id: TagId::Text(name.to_string()),
+        name: name.to_string(),
+        description: description.to_string(),
+        group: TagGroup {
+            family0: "GIF".into(),
+            family1: "GIF".into(),
+            family2: "Image".into(),
+        },
+        raw_value: value,
+        print_value,
+        priority: 0,
+    }
+}

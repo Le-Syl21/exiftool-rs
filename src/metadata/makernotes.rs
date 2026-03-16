@@ -1,0 +1,1207 @@
+//! MakerNotes detection and parsing.
+//!
+//! Detects manufacturer-specific maker note headers and dispatches to
+//! the appropriate tag table. Mirrors ExifTool's MakerNotes.pm.
+
+use crate::metadata::exif::ByteOrderMark;
+use crate::tag::{Tag, TagGroup, TagId};
+use crate::tags::makernotes as mn_tags;
+use crate::value::Value;
+
+/// Manufacturer identification from maker note header.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Manufacturer {
+    Canon,
+    Nikon,
+    NikonOld,
+    Sony,
+    Pentax,
+    Olympus,
+    OlympusNew,
+    Panasonic,
+    Fujifilm,
+    Samsung,
+    Sigma,
+    Casio,
+    Ricoh,
+    Minolta,
+    Apple,
+    Google,
+    DJI,
+    Unknown,
+}
+
+/// Result of detecting a maker note format.
+struct MakerNoteInfo {
+    manufacturer: Manufacturer,
+    ifd_offset: usize,   // Offset to IFD start within maker note data
+    _base_adjust: i64,    // Base offset adjustment for value pointers
+    byte_order: Option<ByteOrderMark>, // Override byte order, or None for auto-detect
+}
+
+/// Parse maker notes from raw EXIF data.
+///
+/// `data` is the full TIFF data (from TIFF header start).
+/// `mn_offset` is the offset to the MakerNote value within TIFF data.
+/// `mn_size` is the size of the MakerNote value.
+/// `make` is the camera Make string (for fallback detection).
+/// `parent_byte_order` is the byte order of the parent EXIF structure.
+pub fn parse_makernotes(
+    data: &[u8],
+    mn_offset: usize,
+    mn_size: usize,
+    make: &str,
+    model: &str,
+    parent_byte_order: ByteOrderMark,
+) -> Vec<Tag> {
+    if mn_size < 12 || mn_offset + mn_size > data.len() {
+        return Vec::new();
+    }
+
+    let mn_data = &data[mn_offset..mn_offset + mn_size];
+    let info = detect_manufacturer(mn_data, make);
+
+    let byte_order = info.byte_order.unwrap_or(parent_byte_order);
+
+    // Calculate absolute IFD start in the full TIFF data
+    let ifd_abs = mn_offset + info.ifd_offset;
+    if ifd_abs + 2 > data.len() {
+        return Vec::new();
+    }
+
+    // For manufacturers with self-contained TIFF headers (Nikon, Olympus new, Fuji),
+    // we need to parse relative to their own TIFF header.
+    // For others (Canon, Sony, Pentax, Panasonic), offsets are relative to the main TIFF header.
+    let parse_data;
+    let parse_offset;
+
+    match info.manufacturer {
+        Manufacturer::Nikon => {
+            // Nikon type 2: has own TIFF header at mn_offset+10
+            let tiff_start = mn_offset + 10;
+            if tiff_start + 8 > data.len() {
+                return Vec::new();
+            }
+            let sub = &data[tiff_start..mn_offset + mn_size];
+            // Read IFD offset from the internal TIFF header
+            let ifd_off = read_u32(sub, 4, byte_order) as usize;
+            parse_data = sub;
+            parse_offset = ifd_off;
+        }
+        Manufacturer::OlympusNew => {
+            // OLYMPUS\0II/MM: own TIFF header at mn_offset+8
+            let tiff_start = mn_offset + 8;
+            if tiff_start + 8 > data.len() {
+                return Vec::new();
+            }
+            let sub = &data[tiff_start..mn_offset + mn_size];
+            let ifd_off = read_u32(sub, 4, byte_order) as usize;
+            parse_data = sub;
+            parse_offset = ifd_off;
+        }
+        Manufacturer::Fujifilm => {
+            // FUJIFILM: offsets relative to start of maker note
+            parse_data = &data[mn_offset..mn_offset + mn_size];
+            parse_offset = 0;
+        }
+        _ => {
+            // Canon, Sony, Pentax, Panasonic: offsets relative to main TIFF header
+            parse_data = data;
+            parse_offset = ifd_abs;
+        }
+    }
+
+    // Read IFD entries
+    let mut tags = Vec::new();
+    read_makernote_ifd(parse_data, parse_offset, byte_order, info.manufacturer, &mut tags, model);
+
+    // Nikon second pass: decrypt encrypted sub-tables using serial + shutter count
+    if info.manufacturer == Manufacturer::Nikon {
+        decrypt_nikon_subtables(parse_data, parse_offset, byte_order, &mut tags);
+    }
+
+    tags
+}
+
+/// Decode Nikon AFInfo (tag 0x0088).
+fn decode_nikon_afinfo(data: &[u8], _bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    if data.len() < 4 { return tags; }
+
+    // AFAreaMode (byte 0)
+    let af_area = match data[0] {
+        0 => "Single Area",
+        1 => "Dynamic Area",
+        2 => "Dynamic Area (closest subject)",
+        3 => "Group Dynamic",
+        4 => "Single Area (wide)",
+        5 => "Dynamic Area (wide)",
+        _ => "",
+    };
+    if !af_area.is_empty() {
+        tags.push(mk_nikon_str("AFAreaMode", af_area));
+    }
+
+    // AFPoint (byte 1)
+    let af_point = match data[1] {
+        0 => "Center",
+        1 => "Top",
+        2 => "Bottom",
+        3 => "Mid-left",
+        4 => "Mid-right",
+        5 => "Upper-left",
+        6 => "Upper-right",
+        7 => "Lower-left",
+        8 => "Lower-right",
+        9 => "Far Left",
+        10 => "Far Right",
+        _ => "",
+    };
+    if !af_point.is_empty() {
+        tags.push(mk_nikon_str("AFPoint", af_point));
+    }
+
+    // AFPointsInFocus (bytes 2-3, bitmask for 7/11 points)
+    if data.len() >= 4 {
+        let mask = u16::from_le_bytes([data[2], data[3]]);
+        let points: Vec<&str> = (0..11).filter(|&i| mask & (1 << i) != 0).map(|i| match i {
+            0 => "Center",
+            1 => "Top",
+            2 => "Bottom",
+            3 => "Mid-left",
+            4 => "Mid-right",
+            5 => "Upper-left",
+            6 => "Upper-right",
+            7 => "Lower-left",
+            8 => "Lower-right",
+            9 => "Far Left",
+            10 => "Far Right",
+            _ => "",
+        }).collect();
+        if !points.is_empty() {
+            tags.push(mk_nikon_str("AFPointsInFocus", &points.join(", ")));
+        }
+    }
+
+    tags
+}
+
+/// Decode Nikon FlashInfo (tag 0x00A8).
+fn decode_nikon_flashinfo(data: &[u8], _bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    if data.len() < 5 { return tags; }
+
+    // Version (first 4 bytes ASCII)
+    let version = std::str::from_utf8(&data[..4]).unwrap_or("");
+    tags.push(mk_nikon_str("FlashInfoVersion", version));
+
+    if data.len() >= 15 {
+        // FlashSource (byte 4)
+        let source = match data[4] {
+            0 => "None",
+            1 => "External",
+            2 => "Internal",
+            _ => "",
+        };
+        if !source.is_empty() {
+            tags.push(mk_nikon_str("FlashSource", source));
+        }
+
+        // ExternalFlashFirmware (bytes 6-7)
+        if data[6] > 0 {
+            tags.push(mk_nikon_str("ExternalFlashFirmware",
+                &format!("{}.{:02}", data[6], data[7])));
+        }
+
+        // ExternalFlashFlags (byte 8)
+        if data[8] != 0 {
+            tags.push(mk_nikon_str("ExternalFlashFlags",
+                &format!("0x{:02X}", data[8])));
+        }
+
+        // FlashCommanderMode (byte 9, in some versions)
+        if data.len() > 9 {
+            let cmd = match data[9] & 0x80 {
+                0 => "Off",
+                _ => "On",
+            };
+            tags.push(mk_nikon_str("FlashCommanderMode", cmd));
+        }
+
+        // FlashControlMode (byte 10)
+        if data.len() > 10 {
+            let mode = match data[10] & 0x0F {
+                0 => "Off",
+                1 => "iTTL-BL",
+                2 => "iTTL",
+                3 => "Auto Aperture",
+                4 => "Automatic",
+                5 => "GN (distance priority)",
+                6 => "Manual",
+                7 => "Repeating Flash",
+                _ => "",
+            };
+            if !mode.is_empty() {
+                tags.push(mk_nikon_str("FlashControlMode", mode));
+            }
+        }
+
+        // FlashCompensation (byte 10 high nibble)
+        if data.len() > 10 {
+            let comp = (data[10] >> 4) as i8;
+            if comp != 0 {
+                let ev = comp as f64 / 6.0;
+                tags.push(mk_nikon_str("FlashCompensation", &format!("{:.1} EV", ev)));
+            }
+        }
+
+        // FlashGNDistance (byte 14)
+        if data.len() > 14 && data[14] > 0 {
+            tags.push(mk_nikon_str("FlashGNDistance", &format!("{} m", data[14])));
+        }
+
+        // Flash group control modes (bytes 15-18 if available)
+        if data.len() > 15 {
+            let grp_a = match data[15] & 0x0F {
+                0 => "Off",
+                1 => "iTTL-BL",
+                2 => "iTTL",
+                3 => "Auto Aperture",
+                6 => "Manual",
+                _ => "",
+            };
+            if !grp_a.is_empty() {
+                tags.push(mk_nikon_str("FlashGroupAControlMode", grp_a));
+            }
+        }
+        if data.len() > 16 {
+            let grp_b = match data[16] & 0x0F {
+                0 => "Off",
+                1 => "iTTL-BL",
+                2 => "iTTL",
+                3 => "Auto Aperture",
+                6 => "Manual",
+                _ => "",
+            };
+            if !grp_b.is_empty() {
+                tags.push(mk_nikon_str("FlashGroupBControlMode", grp_b));
+            }
+        }
+
+        // Compensation values
+        if data.len() > 17 {
+            let comp_a = (data[17] >> 4) as i8;
+            if comp_a != 0 {
+                tags.push(mk_nikon_str("FlashGroupACompensation", &format!("{:.1} EV", comp_a as f64 / 6.0)));
+            }
+        }
+        if data.len() > 18 {
+            let comp_b = (data[18] >> 4) as i8;
+            if comp_b != 0 {
+                tags.push(mk_nikon_str("FlashGroupBCompensation", &format!("{:.1} EV", comp_b as f64 / 6.0)));
+            }
+        }
+    }
+
+    tags
+}
+
+fn mk_nikon_str(name: &str, value: &str) -> Tag {
+    Tag {
+        id: TagId::Text(name.to_string()),
+        name: name.to_string(), description: name.to_string(),
+        group: TagGroup { family0: "MakerNotes".into(), family1: "Nikon".into(), family2: "Camera".into() },
+        raw_value: Value::String(value.to_string()), print_value: value.to_string(), priority: 0,
+    }
+}
+
+/// Decrypt Nikon encrypted sub-tables (ShotInfo, LensData, FlashInfo).
+/// Uses SerialNumber + ShutterCount extracted from previously parsed tags.
+fn decrypt_nikon_subtables(
+    data: &[u8],
+    ifd_offset: usize,
+    byte_order: ByteOrderMark,
+    tags: &mut Vec<Tag>,
+) {
+    // Extract decryption keys from already-parsed tags
+    let serial_str = tags.iter()
+        .find(|t| t.name == "SerialNumber" || t.name == "SerialNumber2")
+        .map(|t| t.print_value.clone())
+        .unwrap_or_default();
+    let shutter_count = tags.iter()
+        .find(|t| t.name == "ShutterCount")
+        .and_then(|t| t.raw_value.as_u64())
+        .unwrap_or(0) as u32;
+
+    // Parse serial number: extract numeric part
+    let serial: u32 = serial_str.chars()
+        .filter(|c| c.is_ascii_digit())
+        .collect::<String>()
+        .parse()
+        .unwrap_or(0);
+
+    if serial == 0 || shutter_count == 0 {
+        return; // Can't decrypt without both keys
+    }
+
+    // Scan IFD for encrypted tags and decrypt them
+    if ifd_offset + 2 > data.len() { return; }
+    let entry_count = read_u16(data, ifd_offset, byte_order) as usize;
+
+    for i in 0..entry_count {
+        let eoff = ifd_offset + 2 + i * 12;
+        if eoff + 12 > data.len() { break; }
+
+        let tag_id = read_u16(data, eoff, byte_order);
+        let data_type = read_u16(data, eoff + 2, byte_order);
+        let count = read_u32(data, eoff + 4, byte_order) as usize;
+
+        let type_size = match data_type {
+            1 | 2 | 6 | 7 => 1, 3 | 8 => 2, 4 | 9 | 11 | 13 => 4, 5 | 10 | 12 => 8, _ => 1,
+        };
+        let total_size = type_size * count;
+        if total_size <= 4 { continue; }
+
+        let value_offset = read_u32(data, eoff + 8, byte_order) as usize;
+        if value_offset + total_size > data.len() { continue; }
+
+        match tag_id {
+            0x0091 => {
+                // ShotInfo: decrypt and extract ShutterCount etc.
+                let mut decrypted = data[value_offset..value_offset + total_size].to_vec();
+                crate::metadata::nikon_decrypt::nikon_decrypt(&mut decrypted, serial, shutter_count, 4);
+
+                // Extract version prefix (unencrypted first 4 bytes)
+                let version = std::str::from_utf8(&data[value_offset..value_offset + 4]).unwrap_or("");
+                tags.push(mk_canon_str("ShotInfoVersion", version));
+
+                // Decrypt reveals ShotInfo fields depending on version
+                // For now, extract what we can
+            }
+            0x00A8 => {
+                // FlashInfo: decrypt and decode
+                let mut decrypted = data[value_offset..value_offset + total_size].to_vec();
+                crate::metadata::nikon_decrypt::nikon_decrypt(&mut decrypted, serial, shutter_count, 4);
+
+                // Extract FlashInfo version (first 4 bytes unencrypted)
+                if total_size >= 4 {
+                    let fi_ver = std::str::from_utf8(&data[value_offset..value_offset + 4]).unwrap_or("");
+                    tags.push(mk_canon_str("FlashInfoVersion", fi_ver));
+                }
+
+                // Decode FlashInfo fields
+                if decrypted.len() >= 10 {
+                    let flash_source = match decrypted[4] {
+                        0 => "None",
+                        1 => "External",
+                        2 => "Internal",
+                        _ => "",
+                    };
+                    if !flash_source.is_empty() {
+                        tags.push(mk_canon_str("FlashSource", flash_source));
+                    }
+
+                    // FlashFirmware at offset 6
+                    if decrypted.len() >= 8 {
+                        let fw_major = decrypted[6];
+                        let fw_minor = decrypted[7];
+                        if fw_major > 0 {
+                            tags.push(mk_canon_str("ExternalFlashFirmware",
+                                &format!("{}.{}", fw_major, fw_minor)));
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Detect manufacturer from maker note header bytes.
+fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
+    let make_upper = make.to_uppercase();
+
+    // Nikon type 2: "Nikon\0\x02\x10\0\0" followed by TIFF header at offset 10
+    if mn_data.len() >= 18 && mn_data.starts_with(b"Nikon\0\x02") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Nikon,
+            ifd_offset: 18, // Skip Nikon header(10) + TIFF header(8)
+            _base_adjust: 0,
+            byte_order: detect_tiff_byte_order(&mn_data[10..]),
+        };
+    }
+
+    // Nikon type 1: "Nikon\0\x01\0"
+    if mn_data.starts_with(b"Nikon\0\x01") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::NikonOld,
+            ifd_offset: 8,
+            _base_adjust: 0,
+            byte_order: Some(ByteOrderMark::BigEndian),
+        };
+    }
+
+    // OLYMPUS\0II or OLYMPUS\0MM (new format)
+    if mn_data.len() >= 12 && mn_data.starts_with(b"OLYMPUS\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::OlympusNew,
+            ifd_offset: 12,
+            _base_adjust: 0,
+            byte_order: detect_tiff_byte_order(&mn_data[8..]),
+        };
+    }
+
+    // OM SYSTEM\0
+    if mn_data.len() >= 16 && mn_data.starts_with(b"OM SYSTEM\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::OlympusNew,
+            ifd_offset: 16,
+            _base_adjust: 0,
+            byte_order: detect_tiff_byte_order(&mn_data[12..]),
+        };
+    }
+
+    // OLYMP\0 or EPSON\0 (old format)
+    if mn_data.starts_with(b"OLYMP\0") || mn_data.starts_with(b"EPSON\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Olympus,
+            ifd_offset: 8,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
+    // FUJIFILM (8 bytes, then 4-byte LE offset to IFD)
+    if mn_data.len() >= 12 && (mn_data.starts_with(b"FUJIFILM") || mn_data.starts_with(b"GENERALE")) {
+        let ifd_off = u32::from_le_bytes([mn_data[8], mn_data[9], mn_data[10], mn_data[11]]) as usize;
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Fujifilm,
+            ifd_offset: ifd_off,
+            _base_adjust: 0,
+            byte_order: Some(ByteOrderMark::LittleEndian),
+        };
+    }
+
+    // Sony DSC/CAM/MOBILE
+    if mn_data.starts_with(b"SONY DSC") || mn_data.starts_with(b"SONY CAM")
+        || mn_data.starts_with(b"SONY MOBILE")
+    {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Sony,
+            ifd_offset: 12,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
+    // Panasonic\0
+    if mn_data.starts_with(b"Panasonic\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Panasonic,
+            ifd_offset: 12,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
+    // Pentax: "AOC\0"
+    if mn_data.starts_with(b"AOC\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Pentax,
+            ifd_offset: 6,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
+    // PENTAX \0
+    if mn_data.starts_with(b"PENTAX \0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Pentax,
+            ifd_offset: 10,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
+    // Samsung: "SAMSUNG\0"
+    if mn_data.starts_with(b"SAMSUNG\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Samsung,
+            ifd_offset: 8,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
+    // SIGMA\0
+    if mn_data.starts_with(b"SIGMA\0") || mn_data.starts_with(b"FOVEON\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Sigma,
+            ifd_offset: 10,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
+    // Fallback by Make string
+    let mfr = if make_upper.starts_with("CANON") {
+        Manufacturer::Canon
+    } else if make_upper.starts_with("NIKON") {
+        Manufacturer::Nikon
+    } else if make_upper.starts_with("SONY") {
+        Manufacturer::Sony
+    } else if make_upper.starts_with("OLYMPUS") || make_upper.starts_with("OM DIGITAL") {
+        Manufacturer::Olympus
+    } else if make_upper.starts_with("PENTAX") || make_upper.starts_with("RICOH") {
+        Manufacturer::Pentax
+    } else if make_upper.starts_with("PANASONIC") || make_upper.starts_with("LEICA") {
+        Manufacturer::Panasonic
+    } else if make_upper.starts_with("FUJI") {
+        Manufacturer::Fujifilm
+    } else if make_upper.starts_with("SAMSUNG") {
+        Manufacturer::Samsung
+    } else if make_upper.starts_with("CASIO") {
+        Manufacturer::Casio
+    } else if make_upper.starts_with("RICOH") {
+        Manufacturer::Ricoh
+    } else if make_upper.starts_with("MINOLTA") || make_upper.starts_with("KONICA") {
+        Manufacturer::Minolta
+    } else if make_upper.starts_with("APPLE") {
+        Manufacturer::Apple
+    } else if make_upper.starts_with("GOOGLE") {
+        Manufacturer::Google
+    } else if make_upper.starts_with("DJI") {
+        Manufacturer::DJI
+    } else {
+        Manufacturer::Unknown
+    };
+
+    MakerNoteInfo {
+        manufacturer: mfr,
+        ifd_offset: 0, // No header, IFD starts immediately
+        _base_adjust: 0,
+        byte_order: None,
+    }
+}
+
+/// Detect byte order from a TIFF header at the given position.
+fn detect_tiff_byte_order(data: &[u8]) -> Option<ByteOrderMark> {
+    if data.len() < 4 {
+        return None;
+    }
+    if data[0] == b'I' && data[1] == b'I' && data[2] == 0x2A && data[3] == 0x00 {
+        Some(ByteOrderMark::LittleEndian)
+    } else if data[0] == b'M' && data[1] == b'M' && data[2] == 0x00 && data[3] == 0x2A {
+        Some(ByteOrderMark::BigEndian)
+    } else {
+        None
+    }
+}
+
+/// Read IFD entries from maker note data and convert to tags.
+fn read_makernote_ifd(
+    data: &[u8],
+    ifd_offset: usize,
+    byte_order: ByteOrderMark,
+    manufacturer: Manufacturer,
+    tags: &mut Vec<Tag>,
+    model_name: &str,
+) {
+    if ifd_offset + 2 > data.len() {
+        return;
+    }
+
+    let entry_count = read_u16(data, ifd_offset, byte_order) as usize;
+    if entry_count == 0 || entry_count > 500 {
+        return;
+    }
+
+    let entries_start = ifd_offset + 2;
+
+    for i in 0..entry_count {
+        let entry_offset = entries_start + i * 12;
+        if entry_offset + 12 > data.len() {
+            break;
+        }
+
+        let tag_id = read_u16(data, entry_offset, byte_order);
+        let data_type = read_u16(data, entry_offset + 2, byte_order);
+        let count = read_u32(data, entry_offset + 4, byte_order);
+        let value_offset = read_u32(data, entry_offset + 8, byte_order);
+
+        // Validate entry
+        if data_type == 0 || data_type > 13 || count > 100000 {
+            continue;
+        }
+
+        let type_size = match data_type {
+            1 | 2 | 6 | 7 => 1,
+            3 | 8 => 2,
+            4 | 9 | 11 | 13 => 4,
+            5 | 10 | 12 => 8,
+            _ => continue,
+        };
+
+        let total_size = type_size * count as usize;
+
+        let value_data = if total_size <= 4 {
+            &data[entry_offset + 8..(entry_offset + 8 + total_size).min(data.len())]
+        } else {
+            let off = value_offset as usize;
+            if off + total_size > data.len() {
+                continue;
+            }
+            &data[off..off + total_size]
+        };
+
+        // Decode value
+        let value = decode_mn_value(value_data, data_type, count as usize, byte_order);
+
+        // Sub-table dispatch: decode binary structures into individual tags
+        {
+            use crate::tags::sub_tables_generated::{self as subs, DispatchContext};
+
+            let dispatch_ctx = DispatchContext {
+                model: &model_name,
+                data: value_data,
+                count: count as usize,
+                byte_order_le: byte_order == ByteOrderMark::LittleEndian,
+            };
+
+            let sub_tags = match (manufacturer, tag_id) {
+                // Canon sub-tables
+                (Manufacturer::Canon, 0x0001) => {
+                    let values: Vec<i16> = (0..count as usize)
+                        .map(|i| read_u16(value_data, i * 2, byte_order) as i16)
+                        .collect();
+                    crate::tags::canon_sub::decode_camera_settings(&values)
+                }
+                (Manufacturer::Canon, 0x0004) => {
+                    let values: Vec<i16> = (0..count as usize)
+                        .map(|i| read_u16(value_data, i * 2, byte_order) as i16)
+                        .collect();
+                    crate::tags::canon_sub::decode_shot_info(&values)
+                }
+                (Manufacturer::Canon, 0x0002) => {
+                    let values: Vec<u16> = (0..count as usize)
+                        .map(|i| read_u16(value_data, i * 2, byte_order))
+                        .collect();
+                    crate::tags::canon_sub::decode_focal_length(&values)
+                }
+                (Manufacturer::Canon, 0x000D) => {
+                    let mut t = subs::dispatch_canon_camera_info(&dispatch_ctx);
+                    // Also extract common fields (BracketMode etc.)
+                    t.extend(decode_canon_camera_info_common(value_data, count as usize, byte_order));
+                    t
+                }
+                (Manufacturer::Canon, 0x0012) => {
+                    // Canon AFInfo (old): int16u array
+                    decode_canon_afinfo(value_data, count as usize, byte_order)
+                }
+                (Manufacturer::Canon, 0x00A9) => {
+                    // Canon ColorBalance: int16u array with WB_RGGB levels
+                    decode_canon_color_balance(value_data, count as usize, byte_order)
+                }
+                (Manufacturer::Canon, 0x00AA) => {
+                    // Canon MeasuredColor → MeasuredRGGB
+                    if count as usize >= 5 {
+                        let r = read_u16(value_data, 2, byte_order);
+                        let g1 = read_u16(value_data, 4, byte_order);
+                        let g2 = read_u16(value_data, 6, byte_order);
+                        let b = read_u16(value_data, 8, byte_order);
+                        vec![mk_canon_str("MeasuredRGGB", &format!("{} {} {} {}", r, g1, g2, b))]
+                    } else { Vec::new() }
+                }
+                (Manufacturer::Canon, 0x0026) => {
+                    // Canon AFInfo2: int16s array
+                    decode_canon_afinfo2(value_data, count as usize, byte_order)
+                }
+                (Manufacturer::Canon, 0x4001) => {
+                    // Canon ColorData: int16s array (WB levels)
+                    decode_canon_color_data(value_data, count as usize, byte_order)
+                }
+                // Nikon sub-tables
+                (Manufacturer::Nikon, 0x0088) => decode_nikon_afinfo(value_data, byte_order),
+                (Manufacturer::Nikon, 0x00A8) => decode_nikon_flashinfo(value_data, byte_order),
+                (Manufacturer::Nikon, 0x0091) => subs::dispatch_nikon_shot_info(&dispatch_ctx),
+                (Manufacturer::Nikon, 0x0098) => subs::dispatch_nikon_lens_data(&dispatch_ctx),
+                (Manufacturer::Nikon, 0x00B7) => subs::dispatch_nikon_af_info2(&dispatch_ctx),
+                // Sony sub-tables
+                (Manufacturer::Sony, 0x0114) => subs::dispatch_sony_camera_settings(&dispatch_ctx),
+                (Manufacturer::Sony, 0x2010) => subs::dispatch_sony_tag2010(&dispatch_ctx),
+                (Manufacturer::Sony, 0x9400) => subs::dispatch_sony_tag9400(&dispatch_ctx),
+                _ => Vec::new(),
+            };
+
+            if !sub_tags.is_empty() {
+                tags.extend(sub_tags);
+                continue;
+            }
+        }
+
+        // Look up tag name
+        let group_name = manufacturer_group_name(manufacturer);
+        let (name, description) = mn_tags::lookup(manufacturer, tag_id);
+
+        // Apply manufacturer-specific print conversions
+        let print_value = apply_mn_print_conv(manufacturer, tag_id, &value)
+            .or_else(|| {
+                // Fallback to generated print conversions
+                let module = manufacturer_group_name(manufacturer);
+                value.as_u64()
+                    .and_then(|v| crate::tags::print_conv_generated::print_conv(module, tag_id, v as i64))
+                    .map(|s| s.to_string())
+                    .or_else(|| {
+                        // Try by tag name
+                        value.as_u64()
+                            .and_then(|v| crate::tags::print_conv_generated::print_conv_by_name(name, v as i64))
+                            .map(|s| s.to_string())
+                    })
+            })
+            .unwrap_or_else(|| value.to_display_string());
+
+        tags.push(Tag {
+            id: TagId::Numeric(tag_id),
+            name: name.to_string(),
+            description: description.to_string(),
+            group: TagGroup {
+                family0: "MakerNotes".to_string(),
+                family1: group_name.to_string(),
+                family2: "Camera".to_string(),
+            },
+            raw_value: value,
+            print_value,
+            priority: 0,
+        });
+    }
+}
+
+fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderMark) -> Value {
+    match data_type {
+        1 | 7 => {
+            // BYTE / UNDEFINED
+            if count == 1 { Value::U8(data[0]) }
+            else { Value::Undefined(data.to_vec()) }
+        }
+        2 => {
+            // ASCII
+            Value::String(
+                String::from_utf8_lossy(data)
+                    .trim_end_matches('\0')
+                    .to_string(),
+            )
+        }
+        3 => {
+            // SHORT
+            if count == 1 {
+                Value::U16(read_u16(data, 0, bo))
+            } else {
+                Value::List((0..count).map(|i| Value::U16(read_u16(data, i * 2, bo))).collect())
+            }
+        }
+        4 | 13 => {
+            // LONG / IFD
+            if count == 1 {
+                Value::U32(read_u32(data, 0, bo))
+            } else {
+                Value::List((0..count).map(|i| Value::U32(read_u32(data, i * 4, bo))).collect())
+            }
+        }
+        5 => {
+            // RATIONAL
+            if count == 1 && data.len() >= 8 {
+                Value::URational(read_u32(data, 0, bo), read_u32(data, 4, bo))
+            } else {
+                Value::Undefined(data.to_vec())
+            }
+        }
+        8 => {
+            // SSHORT
+            if count == 1 {
+                Value::I16(read_u16(data, 0, bo) as i16)
+            } else {
+                Value::List((0..count).map(|i| Value::I16(read_u16(data, i * 2, bo) as i16)).collect())
+            }
+        }
+        9 => {
+            // SLONG
+            if count == 1 {
+                Value::I32(read_u32(data, 0, bo) as i32)
+            } else {
+                Value::List((0..count).map(|i| Value::I32(read_u32(data, i * 4, bo) as i32)).collect())
+            }
+        }
+        10 => {
+            // SRATIONAL
+            if count == 1 && data.len() >= 8 {
+                Value::IRational(read_u32(data, 0, bo) as i32, read_u32(data, 4, bo) as i32)
+            } else {
+                Value::Undefined(data.to_vec())
+            }
+        }
+        _ => Value::Undefined(data.to_vec()),
+    }
+}
+
+fn manufacturer_group_name(mfr: Manufacturer) -> &'static str {
+    match mfr {
+        Manufacturer::Canon => "Canon",
+        Manufacturer::Nikon | Manufacturer::NikonOld => "Nikon",
+        Manufacturer::Sony => "Sony",
+        Manufacturer::Pentax => "Pentax",
+        Manufacturer::Olympus | Manufacturer::OlympusNew => "Olympus",
+        Manufacturer::Panasonic => "Panasonic",
+        Manufacturer::Fujifilm => "Fujifilm",
+        Manufacturer::Samsung => "Samsung",
+        Manufacturer::Sigma => "Sigma",
+        Manufacturer::Casio => "Casio",
+        Manufacturer::Ricoh => "Ricoh",
+        Manufacturer::Minolta => "Minolta",
+        Manufacturer::Apple => "Apple",
+        Manufacturer::Google => "Google",
+        Manufacturer::DJI => "DJI",
+        Manufacturer::Unknown => "MakerNotes",
+    }
+}
+
+/// Apply manufacturer-specific print conversions.
+/// Decode Canon CameraInfo common fields (indices 3-5: BracketMode/Value/ShotNumber).
+/// These are present in all CameraInfo variants at the same indices.
+fn decode_canon_camera_info_common(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    if count < 6 { return tags; }
+
+    // The format varies (int8u for most, int16s for some), but indices 3-5 are common
+    // For int8u format: each element is 1 byte
+    // For int16s format: each element is 2 bytes
+    // Detect based on data size vs count
+    let elem_size = if data.len() >= count * 2 { 2 } else { 1 };
+
+    let read_val = |idx: usize| -> i32 {
+        if elem_size == 2 {
+            read_u16(data, idx * 2, bo) as i16 as i32
+        } else {
+            if idx < data.len() { data[idx] as i8 as i32 } else { 0 }
+        }
+    };
+
+    let bracket_mode = read_val(3);
+    let bracket_value = read_val(4);
+    let bracket_shot = read_val(5);
+
+    let bm_str = match bracket_mode {
+        0 => "Off",
+        1 => "AEB",
+        2 => "FEB",
+        3 => "ISO",
+        4 => "WB",
+        _ => "",
+    };
+    let bm_print = if bm_str.is_empty() { bracket_mode.to_string() } else { bm_str.to_string() };
+    tags.push(Tag {
+        id: TagId::Text("BracketMode".into()), name: "BracketMode".into(),
+        description: "Bracket Mode".into(),
+        group: TagGroup { family0: "MakerNotes".into(), family1: "Canon".into(), family2: "Camera".into() },
+        raw_value: Value::I32(bracket_mode), print_value: bm_print, priority: 0,
+    });
+    tags.push(mk_canon("BracketValue", Value::I32(bracket_value)));
+    tags.push(mk_canon("BracketShotNumber", Value::I32(bracket_shot)));
+
+    tags
+}
+
+/// Decode Canon ColorBalance (tag 0x00A9).
+/// Structure: [count][R G1 B G2] × N white balance sets + [R G1 B G2] black levels
+fn decode_canon_color_balance(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let rd = |i: usize| -> u16 { read_u16(data, i * 2, bo) };
+
+    if count < 5 { return tags; }
+
+    // First value is the number of entries or a version marker
+    // Common layout: [header] [Auto: R G1 B G2] [Daylight: R G1 B G2] ...
+    let wb_names = [
+        "Auto", "Daylight", "Shade", "Cloudy", "Tungsten",
+        "Fluorescent", "Flash", "Custom", "Kelvin",
+    ];
+
+    let base = 1; // Skip first value (count/version)
+    let mut offset = base;
+
+    for name in &wb_names {
+        if offset + 4 > count { break; }
+        let r = rd(offset);
+        let g1 = rd(offset + 1);
+        let b = rd(offset + 2);
+        let g2 = rd(offset + 3);
+
+        if r > 0 || g1 > 0 { // Skip empty entries
+            tags.push(mk_canon_str(
+                &format!("WB_RGGBLevels{}", name),
+                &format!("{} {} {} {}", r, g1, b, g2),
+            ));
+
+            // First entry (Auto) is also WB_RGGBLevels
+            if *name == "Auto" {
+                tags.push(mk_canon_str("WB_RGGBLevels", &format!("{} {} {} {}", r, g1, b, g2)));
+            }
+        }
+
+        offset += 4;
+    }
+
+    // Black levels at end of data
+    if count >= offset + 4 {
+        // Last 4 values are typically black levels
+        let bl_base = count - 4;
+        let r = rd(bl_base);
+        let g1 = rd(bl_base + 1);
+        let b = rd(bl_base + 2);
+        let g2 = rd(bl_base + 3);
+        tags.push(mk_canon_str("WB_RGGBBlackLevels", &format!("{} {} {} {}", r, g1, b, g2)));
+    }
+
+    // MeasuredRGGB from MeasuredColor tag (0x00AA) - handled separately
+    // But we can compute RedBalance and BlueBalance here
+    if let Some(auto_tag) = tags.iter().find(|t| t.name == "WB_RGGBLevels") {
+        if let Value::String(ref s) = auto_tag.raw_value {
+            let parts: Vec<f64> = s.split_whitespace().filter_map(|p| p.parse().ok()).collect();
+            if parts.len() >= 4 && parts[1] > 0.0 {
+                let red_bal = parts[0] / parts[1];
+                let blue_bal = parts[2] / parts[1];
+                tags.push(mk_canon_str("RedBalance", &format!("{:.6}", red_bal)));
+                tags.push(mk_canon_str("BlueBalance", &format!("{:.6}", blue_bal)));
+            }
+        }
+    }
+
+    tags
+}
+
+/// Decode Canon AFInfo (tag 0x0012, old format).
+fn decode_canon_afinfo(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let rd = |i: usize| -> u16 { read_u16(data, i * 2, bo) };
+
+    if count < 5 { return tags; }
+
+    let num_af = rd(0) as usize;
+    let valid_af = rd(1);
+    let img_w = rd(2);
+    let img_h = rd(3);
+    let af_w = rd(4);
+
+    tags.push(mk_canon("NumAFPoints", Value::U16(num_af as u16)));
+    tags.push(mk_canon("ValidAFPoints", Value::U16(valid_af)));
+    tags.push(mk_canon("CanonImageWidth", Value::U16(img_w)));
+    tags.push(mk_canon("CanonImageHeight", Value::U16(img_h)));
+    tags.push(mk_canon("AFImageWidth", Value::U16(af_w)));
+
+    // AFImageHeight at index 5 if available
+    if count > 5 {
+        tags.push(mk_canon("AFImageHeight", Value::U16(rd(5))));
+    }
+
+    // AF area layout: [6]=AFAreaWidth [7]=AFAreaHeight [8..8+N]=XPos [8+N..8+2N]=YPos
+    if num_af > 0 && 8 + num_af * 2 <= count {
+        tags.push(mk_canon("AFAreaWidth", Value::U16(rd(6))));
+        tags.push(mk_canon("AFAreaHeight", Value::U16(rd(7))));
+
+        let x_pos: Vec<String> = (0..num_af).map(|i| (rd(8 + i) as i16).to_string()).collect();
+        tags.push(mk_canon_str("AFAreaXPositions", &x_pos.join(" ")));
+
+        let y_pos: Vec<String> = (0..num_af).map(|i| (rd(8 + num_af + i) as i16).to_string()).collect();
+        tags.push(mk_canon_str("AFAreaYPositions", &y_pos.join(" ")));
+    }
+
+    tags
+}
+
+/// Decode Canon AFInfo2 (tag 0x0026).
+fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let rd = |i: usize| -> i16 { read_u16(data, i * 2, bo) as i16 };
+
+    if count < 8 { return tags; }
+
+    let num_af = rd(2) as usize;
+    let valid_af = rd(3) as usize;
+    let img_w = rd(4) as u16;
+    let img_h = rd(5) as u16;
+    let af_w = rd(6) as u16;
+    let af_h = rd(7) as u16;
+
+    tags.push(mk_canon("NumAFPoints", Value::U16(num_af as u16)));
+    tags.push(mk_canon("ValidAFPoints", Value::U16(valid_af as u16)));
+    tags.push(mk_canon("CanonImageWidth", Value::U16(img_w)));
+    tags.push(mk_canon("CanonImageHeight", Value::U16(img_h)));
+    tags.push(mk_canon("AFImageWidth", Value::U16(af_w)));
+    tags.push(mk_canon("AFImageHeight", Value::U16(af_h)));
+
+    // AF Area dimensions and positions (variable count based on NumAFPoints)
+    let base = 8;
+    if num_af > 0 && base + num_af * 4 <= count {
+        // AFAreaWidths at base, AFAreaHeights at base+num_af, etc.
+        let widths: Vec<String> = (0..num_af).map(|i| rd(base + i).to_string()).collect();
+        let heights: Vec<String> = (0..num_af).map(|i| rd(base + num_af + i).to_string()).collect();
+        let x_pos: Vec<String> = (0..num_af).map(|i| rd(base + num_af * 2 + i).to_string()).collect();
+        let y_pos: Vec<String> = (0..num_af).map(|i| rd(base + num_af * 3 + i).to_string()).collect();
+
+        if !widths.is_empty() {
+            tags.push(mk_canon_str("AFAreaWidth", &widths.join(" ")));
+            tags.push(mk_canon_str("AFAreaHeight", &heights.join(" ")));
+            tags.push(mk_canon_str("AFAreaXPositions", &x_pos.join(" ")));
+            tags.push(mk_canon_str("AFAreaYPositions", &y_pos.join(" ")));
+        }
+    }
+
+    tags
+}
+
+/// Decode Canon ColorData (tag 0x4001).
+fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let rd = |i: usize| -> i16 { read_u16(data, i * 2, bo) as i16 };
+
+    if count < 50 { return tags; }
+
+    // The structure varies by camera model, but common layout for most EOS cameras:
+    // The first version byte determines offsets
+    let _version = rd(0);
+
+    // Determine WB offset based on version/count
+    let wb_base = if count > 580 { 63 }   // 5D Mark III etc.
+        else if count > 350 { 50 }         // Recent EOS
+        else if count > 200 { 25 }         // 20D/30D era
+        else { 19 };                       // Older cameras
+
+    // WB_RGGBLevelsAuto (4 values: R, G1, B, G2)
+    if wb_base + 4 <= count {
+        let r = rd(wb_base) as u16;
+        let g1 = rd(wb_base + 1) as u16;
+        let b = rd(wb_base + 2) as u16;
+        let g2 = rd(wb_base + 3) as u16;
+        tags.push(mk_canon_str("WB_RGGBLevelsAuto", &format!("{} {} {} {}", r, g1, b, g2)));
+        tags.push(mk_canon_str("WB_RGGBLevels", &format!("{} {} {} {}", r, g1, b, g2)));
+    }
+
+    // Subsequent WB blocks (each 4 values + 1 color temp)
+    let wb_names = ["Daylight", "Cloudy", "Tungsten", "Fluorescent", "Flash", "Custom", "Kelvin", "Shade"];
+    let mut offset = wb_base + 5; // After Auto + ColorTemp
+
+    for name in &wb_names {
+        if offset + 4 > count { break; }
+        let r = rd(offset) as u16;
+        let g1 = rd(offset + 1) as u16;
+        let b = rd(offset + 2) as u16;
+        let g2 = rd(offset + 3) as u16;
+        tags.push(mk_canon_str(
+            &format!("WB_RGGBLevels{}", name),
+            &format!("{} {} {} {}", r, g1, b, g2),
+        ));
+        offset += 5; // 4 RGGB + 1 ColorTemp
+    }
+
+    // WB_RGGBBlackLevels (usually near the end of the data)
+    // Common offset for many cameras
+    if count > 100 {
+        let bl_base = count - 8; // Approximate
+        if bl_base + 4 <= count {
+            let r = rd(bl_base) as u16;
+            let g1 = rd(bl_base + 1) as u16;
+            let b = rd(bl_base + 2) as u16;
+            let g2 = rd(bl_base + 3) as u16;
+            if r > 0 || g1 > 0 {
+                tags.push(mk_canon_str("WB_RGGBBlackLevels", &format!("{} {} {} {}", r, g1, b, g2)));
+            }
+        }
+    }
+
+    // MeasuredRGGB
+    let meas_base = wb_base - 4;
+    if meas_base + 4 <= count && meas_base > 0 {
+        let r = rd(meas_base) as u16;
+        let g1 = rd(meas_base + 1) as u16;
+        let b = rd(meas_base + 2) as u16;
+        let g2 = rd(meas_base + 3) as u16;
+        if r > 0 && g1 > 0 {
+            tags.push(mk_canon_str("MeasuredRGGB", &format!("{} {} {} {}", r, g1, b, g2)));
+        }
+    }
+
+    tags
+}
+
+fn mk_canon(name: &str, value: Value) -> Tag {
+    let pv = value.to_display_string();
+    Tag {
+        id: TagId::Text(name.to_string()),
+        name: name.to_string(),
+        description: name.to_string(),
+        group: TagGroup { family0: "MakerNotes".into(), family1: "Canon".into(), family2: "Camera".into() },
+        raw_value: value, print_value: pv, priority: 0,
+    }
+}
+
+fn mk_canon_str(name: &str, value: &str) -> Tag {
+    Tag {
+        id: TagId::Text(name.to_string()),
+        name: name.to_string(),
+        description: name.to_string(),
+        group: TagGroup { family0: "MakerNotes".into(), family1: "Canon".into(), family2: "Camera".into() },
+        raw_value: Value::String(value.to_string()),
+        print_value: value.to_string(),
+        priority: 0,
+    }
+}
+
+fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -> Option<String> {
+    use crate::tags::{nikon_conv, sony_conv};
+
+    match manufacturer {
+        Manufacturer::Nikon | Manufacturer::NikonOld => {
+            let v = value.as_u64();
+            match tag_id {
+                0x0087 => v.and_then(|v| nikon_conv::flash_mode(v)).map(|s| s.to_string()),
+                0x0089 => v.map(|v| nikon_conv::shooting_mode(v as u16)),
+                0x001E => v.and_then(|v| nikon_conv::color_space(v)).map(|s| s.to_string()),
+                0x0022 => v.and_then(|v| nikon_conv::active_d_lighting(v)).map(|s| s.to_string()),
+                0x002A => v.and_then(|v| nikon_conv::vignette_control(v)).map(|s| s.to_string()),
+                0x00B1 => v.and_then(|v| nikon_conv::high_iso_nr(v)).map(|s| s.to_string()),
+                0x0093 => v.and_then(|v| nikon_conv::nef_compression(v)).map(|s| s.to_string()),
+                _ => None,
+            }
+        }
+        Manufacturer::Sony => {
+            let v = value.as_u64();
+            match tag_id {
+                0xB020 => value.as_str().map(|s| sony_conv::creative_style(s).to_string()),
+                0xB023 => v.and_then(|v| sony_conv::scene_mode(v)).map(|s| s.to_string()),
+                0xB025 => v.and_then(|v| sony_conv::dro(v)).map(|s| s.to_string()),
+                0xB029 => v.and_then(|v| sony_conv::color_mode(v)).map(|s| s.to_string()),
+                0xB041 => v.and_then(|v| sony_conv::exposure_mode(v)).map(|s| s.to_string()),
+                0x201B => v.and_then(|v| sony_conv::focus_mode(v)).map(|s| s.to_string()),
+                0x201C => v.and_then(|v| sony_conv::af_area_mode(v)).map(|s| s.to_string()),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+fn read_u16(data: &[u8], offset: usize, bo: ByteOrderMark) -> u16 {
+    if offset + 2 > data.len() { return 0; }
+    match bo {
+        ByteOrderMark::LittleEndian => u16::from_le_bytes([data[offset], data[offset + 1]]),
+        ByteOrderMark::BigEndian => u16::from_be_bytes([data[offset], data[offset + 1]]),
+    }
+}
+
+fn read_u32(data: &[u8], offset: usize, bo: ByteOrderMark) -> u32 {
+    if offset + 4 > data.len() { return 0; }
+    match bo {
+        ByteOrderMark::LittleEndian => u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]),
+        ByteOrderMark::BigEndian => u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]),
+    }
+}

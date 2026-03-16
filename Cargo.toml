@@ -1,0 +1,15 @@
+[package]
+name = "exiftool"
+version = "0.1.0"
+edition = "2021"
+description = "A Rust implementation of ExifTool - Read, write, and edit metadata in image, audio, video, and document files"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+thiserror = "2"
+byteorder = "1"
+xml-rs = "0.8"
+encoding_rs = "0.8"
+
+[dev-dependencies]
+tempfile = "3"
