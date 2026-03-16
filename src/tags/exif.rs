@@ -540,7 +540,19 @@ static GPS_TAGS: &[TagInfo] = &[
     TagInfo { tag_id: 0x0010, name: "GPSImgDirectionRef", description: "GPS Img Direction Ref", family2: "Location" },
     TagInfo { tag_id: 0x0011, name: "GPSImgDirection", description: "GPS Img Direction", family2: "Location" },
     TagInfo { tag_id: 0x0012, name: "GPSMapDatum", description: "GPS Map Datum", family2: "Location" },
+    TagInfo { tag_id: 0x0013, name: "GPSDestLatitudeRef", description: "GPS Dest Latitude Ref", family2: "Location" },
+    TagInfo { tag_id: 0x0014, name: "GPSDestLatitude", description: "GPS Dest Latitude", family2: "Location" },
+    TagInfo { tag_id: 0x0015, name: "GPSDestLongitudeRef", description: "GPS Dest Longitude Ref", family2: "Location" },
+    TagInfo { tag_id: 0x0016, name: "GPSDestLongitude", description: "GPS Dest Longitude", family2: "Location" },
+    TagInfo { tag_id: 0x0017, name: "GPSDestBearingRef", description: "GPS Dest Bearing Ref", family2: "Location" },
+    TagInfo { tag_id: 0x0018, name: "GPSDestBearing", description: "GPS Dest Bearing", family2: "Location" },
+    TagInfo { tag_id: 0x0019, name: "GPSDestDistanceRef", description: "GPS Dest Distance Ref", family2: "Location" },
+    TagInfo { tag_id: 0x001A, name: "GPSDestDistance", description: "GPS Dest Distance", family2: "Location" },
+    TagInfo { tag_id: 0x001B, name: "GPSProcessingMethod", description: "GPS Processing Method", family2: "Location" },
+    TagInfo { tag_id: 0x001C, name: "GPSAreaInformation", description: "GPS Area Information", family2: "Location" },
     TagInfo { tag_id: 0x001D, name: "GPSDateStamp", description: "GPS Date Stamp", family2: "Time" },
+    TagInfo { tag_id: 0x001E, name: "GPSDifferential", description: "GPS Differential", family2: "Location" },
+    TagInfo { tag_id: 0x001F, name: "GPSHPositioningError", description: "GPS Horizontal Positioning Error", family2: "Location" },
 ];
 
 static INTEROP_TAGS: &[TagInfo] = &[

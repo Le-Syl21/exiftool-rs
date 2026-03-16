@@ -93,6 +93,14 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         composite.extend(fp_tags);
     }
 
+    // GPSDateTime composite
+    if let (Some(date), Some(time)) = (find_tag_value(tags, "GPSDateStamp"), find_tag_value(tags, "GPSTimeStamp")) {
+        if !date.is_empty() && !time.is_empty() {
+            composite.push(mk_composite("GPSDateTime", "GPS Date/Time",
+                Value::String(format!("{} {}Z", date, time))));
+        }
+    }
+
     // Nikon SerialNumber (from SerialNumber2 or InternalSerialNumber)
     if find_tag(tags, "SerialNumber").is_none() {
         if let Some(sn) = find_tag_value(tags, "SerialNumber2")
