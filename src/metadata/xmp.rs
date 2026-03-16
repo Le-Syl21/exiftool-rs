@@ -28,6 +28,16 @@ fn namespace_prefix(uri: &str) -> &str {
         "http://iptc.org/std/Iptc4xmpExt/2008-02-29/" => "Iptc4xmpExt",
         "http://ns.google.com/photos/1.0/camera/" => "GCamera",
         "http://ns.google.com/photos/1.0/image/" => "GImage",
+        "http://ns.google.com/photos/1.0/container/" => "GContainer",
+        "http://ns.google.com/photos/1.0/container/item/" => "GContainerItem",
+        "http://ns.google.com/photos/dd/1.0/device/" => "GDevice",
+        "http://ns.adobe.com/xmp/note/" => "xmpNote",
+        "adobe:ns:meta/" => "x",
+        "http://ns.adobe.com/pdf/1.3/" => "pdf",
+        "http://ns.adobe.com/xap/1.0/t/pg/" => "xmpTPg",
+        "http://ns.adobe.com/xap/1.0/sType/Dimensions#" => "stDim",
+        "http://ns.adobe.com/xap/1.0/sType/ResourceRef#" => "stRef",
+        "http://ns.microsoft.com/photo/1.0/" => "MicrosoftPhoto",
         _ => "",
     }
 }
