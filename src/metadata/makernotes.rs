@@ -66,6 +66,12 @@ pub fn parse_makernotes(
         return decode_jvc_text(mn_data);
     }
 
+    // Kodak binary: "KDK INFO" or "KDK" — not IFD, decode directly
+    if mn_data.starts_with(b"KDK") {
+        let start = if mn_data.starts_with(b"KDK INFO") { 8 } else { 8 };
+        return decode_kodak_binary(&mn_data[start..]);
+    }
+
     let info = detect_manufacturer(mn_data, make);
 
     let byte_order = info.byte_order.unwrap_or(parent_byte_order);
@@ -149,6 +155,71 @@ pub fn parse_makernotes(
     // Nikon second pass: decrypt encrypted sub-tables (only for type 2 with TIFF header)
     if info.manufacturer == Manufacturer::Nikon && info.ifd_offset >= 10 {
         decrypt_nikon_subtables(parse_data, parse_offset, byte_order, &mut tags, model);
+    }
+
+    tags
+}
+
+/// Decode Kodak binary MakerNotes (from Perl Kodak.pm, FORMAT=int8u mixed).
+fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let mk = |name: &str, val: String| Tag {
+        id: TagId::Text(name.into()), name: name.into(), description: name.into(),
+        group: TagGroup { family0: "MakerNotes".into(), family1: "Kodak".into(), family2: "Camera".into() },
+        raw_value: Value::String(val.clone()), print_value: val, priority: 0,
+    };
+
+    if d.len() < 60 { return tags; }
+
+    // From Perl Kodak::Main (byte offsets, big-endian)
+    let model = String::from_utf8_lossy(&d[0..8]).trim_end_matches('\0').to_string();
+    if !model.is_empty() { tags.push(mk("KodakModel", model)); }
+
+    tags.push(mk("Quality", d[9].to_string()));
+    tags.push(mk("BurstMode", d[10].to_string()));
+
+    let w = u16::from_be_bytes([d[12], d[13]]);
+    let h = u16::from_be_bytes([d[14], d[15]]);
+    tags.push(mk("KodakImageWidth", w.to_string()));
+    tags.push(mk("KodakImageHeight", h.to_string()));
+
+    let year = u16::from_be_bytes([d[16], d[17]]);
+    tags.push(mk("YearCreated", year.to_string()));
+    tags.push(mk("MonthDayCreated", format!("{:02}:{:02}", d[18], d[19])));
+
+    tags.push(mk("ShutterMode", d[27].to_string()));
+    tags.push(mk("MeteringMode", d[28].to_string()));
+
+    let fnum = u16::from_be_bytes([d[30], d[31]]);
+    tags.push(mk("FNumber", format!("{:.1}", fnum as f64 / 100.0)));
+
+    let exp = u32::from_be_bytes([d[32], d[33], d[34], d[35]]);
+    if exp > 0 { tags.push(mk("ExposureTime", exp.to_string())); }
+
+    let comp = i16::from_be_bytes([d[36], d[37]]);
+    tags.push(mk("ExposureCompensation", comp.to_string()));
+
+    tags.push(mk("FocusMode", d[56].to_string()));
+
+    if d.len() > 58 {
+        tags.push(mk("WhiteBalance", d[57].to_string()));
+    }
+    if d.len() > 72 {
+        tags.push(mk("Sharpness", d[72].to_string()));
+    }
+    if d.len() > 77 {
+        tags.push(mk("ISO", u16::from_be_bytes([d[76], d[77]]).to_string()));
+    }
+    if d.len() > 98 {
+        tags.push(mk("TotalZoom", u16::from_be_bytes([d[96], d[97]]).to_string()));
+        tags.push(mk("DateTimeStamp", d[98].to_string()));
+    }
+    if d.len() > 102 {
+        tags.push(mk("ColorMode", u32::from_be_bytes([d[100], d[101], d[102], d[103]]).to_string()));
+        tags.push(mk("DigitalZoom", u32::from_be_bytes([d[104], d[105], d[106], d[107]]).to_string()));
+    }
+    if d.len() > 109 {
+        tags.push(mk("Sharpness2", d[108].to_string()));
     }
 
     tags
