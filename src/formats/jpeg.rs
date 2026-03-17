@@ -366,37 +366,50 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
         let trailer_check = &data[data.len().saturating_sub(12)..];
         if trailer_check.starts_with(b"AXS!") || trailer_check.starts_with(b"AXS*") {
             let le = trailer_check[3] == b'*';
-            let start_pos = if le {
-                u32::from_le_bytes([trailer_check[4], trailer_check[5], trailer_check[6], trailer_check[7]])
-            } else {
-                u32::from_be_bytes([trailer_check[4], trailer_check[5], trailer_check[6], trailer_check[7]])
-            } as usize;
+            let rd32_afcp = |d: &[u8], off: usize| -> u32 {
+                if le { u32::from_le_bytes([d[off], d[off+1], d[off+2], d[off+3]]) }
+                else { u32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]) }
+            };
+            let rd16_afcp = |d: &[u8], off: usize| -> u16 {
+                if le { u16::from_le_bytes([d[off], d[off+1]]) }
+                else { u16::from_be_bytes([d[off], d[off+1]]) }
+            };
 
-            if start_pos < data.len() {
-                let afcp_data = &data[start_pos..];
-                // Parse AFCP directory: records of type(4) + size(4) + data
-                let mut apos = 12; // skip AXS header
-                while apos + 8 <= afcp_data.len() {
-                    let rec_type = &afcp_data[apos..apos + 4];
-                    let rec_size = if le {
-                        u32::from_le_bytes([afcp_data[apos+4], afcp_data[apos+5], afcp_data[apos+6], afcp_data[apos+7]])
-                    } else {
-                        u32::from_be_bytes([afcp_data[apos+4], afcp_data[apos+5], afcp_data[apos+6], afcp_data[apos+7]])
-                    } as usize;
-                    apos += 8;
-                    if apos + rec_size > afcp_data.len() { break; }
+            let start_pos = rd32_afcp(trailer_check, 4) as usize;
+            if start_pos + 18 < data.len() {
+                let afcp = &data[start_pos..];
+                // AXS header (12 bytes: "AXS!" + start + reserved)
+                // Then: version(4) + numEntries(2)
+                let num_entries = rd16_afcp(afcp, 18) as usize; // at offset 12+4+2=18? No.
+                // Actually: AXS!(4) + version_info(4) + num_entries(2) = offset 10
+                // Perl: vers=substr(buff,4,2), numEntries=Get16u(buff,6)
+                // buff is the first 8 bytes after seeking to start: AXS! header is 4+4+4=12
+                // Wait — Perl reads: $raf->Read($buff, 8) after the AXS header (12 bytes)
+                // So buff = 8 bytes at start_pos+12: version(2) + padding(2) + numEntries(2) + ...
+                // Actually Perl does: seek(startPos), read(buff,12) = AXS header
+                // then read(buff,8) = version info: vers=bytes[4..6], numEntries=Get16u(bytes,6)
+                // So after AXS header (12 bytes), there's 8 bytes of version/numEntries
+                // numEntries at offset 12+6=18 from start
+                // AXS header: tag(4) + version(2) + numEntries(2) + reserved(4) = 12 bytes
+                // Perl: numEntries = Get16u(buff, 6)
+                let num_entries = rd16_afcp(&data, start_pos + 6) as usize;
 
-                    if rec_type == b"IPTC" {
-                        let iptc_raw = &afcp_data[apos..apos + rec_size];
-                        // Find first IPTC marker (0x1C) — skip any header
+                // Directory: 12 bytes each, starts right after the 12-byte header
+                let dir_start = start_pos + 12;
+                for i in 0..num_entries.min(20) {
+                    let eoff = dir_start + i * 12;
+                    if eoff + 12 > data.len() { break; }
+                    let tag = &data[eoff..eoff + 4];
+                    let size = rd32_afcp(&data, eoff + 4) as usize;
+                    let offset = rd32_afcp(&data, eoff + 8) as usize;
+
+                    if tag == b"IPTC" && offset + size <= data.len() {
+                        let iptc_raw = &data[offset..offset + size];
                         let iptc_start = iptc_raw.iter().position(|&b| b == 0x1C).unwrap_or(0);
                         if let Ok(iptc_tags) = IptcReader::read(&iptc_raw[iptc_start..]) {
                             tags.extend(iptc_tags);
                         }
                     }
-                    apos += rec_size;
-                    // Pad to even
-                    if rec_size % 2 != 0 { apos += 1; }
                 }
             }
         }
