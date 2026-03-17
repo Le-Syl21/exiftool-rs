@@ -678,19 +678,55 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     tags.push(mk("FocusStepCount", rd32(444).to_string()));
                     tags.push(mk("FocusDistance", format!("{:.1} m", rf(448))));
                     tags.push(mk("FrameRate", format!("{}", u16::from_le_bytes([rec[452], rec[453]]))));
+
+                    // Additional CameraInfo fields (from Perl FLIR::CameraInfo)
+                    if rec.len() >= 830 {
+                        // RawValue stats (int16u)
+                        let ru16 = |off: usize| -> u16 {
+                            if ci_le { u16::from_le_bytes([rec[off], rec[off+1]]) }
+                            else { u16::from_be_bytes([rec[off], rec[off+1]]) }
+                        };
+                        tags.push(mk("RawValueRangeMin", ru16(784).to_string()));
+                        tags.push(mk("RawValueRangeMax", ru16(786).to_string()));
+                        tags.push(mk("RawValueMedian", ru16(824).to_string()));
+                        tags.push(mk("RawValueRange", ru16(828).to_string()));
+                    }
+                    // ImageTemperatureMax/Min (float)
+                    if rec.len() >= 780 {
+                        let max_t = rf(776) - 273.15;
+                        let min_t = rf(780) - 273.15;
+                        if max_t > -100.0 { tags.push(mk("ImageTemperatureMax", format!("{:.1} C", max_t))); }
+                        if min_t > -100.0 { tags.push(mk("ImageTemperatureMin", format!("{:.1} C", min_t))); }
+                    }
                 }
             }
             0x22 => {
-                // PaletteInfo
-                if rec.len() >= 50 {
-                    let palette_colors = rd32(0) as usize;
-                    tags.push(mk("PaletteColors", palette_colors.to_string()));
-                    // Palette name, method, etc.
+                // PaletteInfo (from Perl FLIR::PaletteInfo)
+                if rec.len() >= 28 {
+                    tags.push(mk("PaletteColors", rec[0].to_string()));
+                    // Colors at fixed offsets (3 bytes each: R,G,B)
+                    let color = |off: usize| -> String {
+                        if off + 3 <= rec.len() { format!("{} {} {}", rec[off], rec[off+1], rec[off+2]) }
+                        else { String::new() }
+                    };
+                    tags.push(mk("AboveColor", color(6)));
+                    tags.push(mk("BelowColor", color(9)));
+                    tags.push(mk("OverflowColor", color(12)));
+                    tags.push(mk("UnderflowColor", color(15)));
+                    tags.push(mk("Isotherm1Color", color(18)));
+                    tags.push(mk("Isotherm2Color", color(21)));
+                    tags.push(mk("PaletteMethod", rec[26].to_string()));
+                    tags.push(mk("PaletteStretch", rec[27].to_string()));
                     if rec.len() >= 128 {
-                        let name = String::from_utf8_lossy(&rec[48..80]).trim_end_matches('\0').to_string();
-                        if !name.is_empty() { tags.push(mk("PaletteName", name)); }
-                        let fname = String::from_utf8_lossy(&rec[80..128]).trim_end_matches('\0').to_string();
+                        let fname = String::from_utf8_lossy(&rec[48..80]).trim_end_matches('\0').to_string();
                         if !fname.is_empty() { tags.push(mk("PaletteFileName", fname)); }
+                        let pname = String::from_utf8_lossy(&rec[80..112]).trim_end_matches('\0').to_string();
+                        if !pname.is_empty() { tags.push(mk("PaletteName", pname)); }
+                    }
+                    // Palette data
+                    let pc = rec[0] as usize;
+                    if pc > 0 && 112 + pc * 3 <= rec.len() {
+                        tags.push(mk("Palette", format!("(Binary data {} bytes)", pc * 3)));
                     }
                 }
             }
