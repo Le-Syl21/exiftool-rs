@@ -31,6 +31,9 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
 
     let mut tags = Vec::new();
     let mut pos = 2;
+    // Extended XMP chunk accumulator: (total_size, chunks sorted by offset)
+    let mut ext_xmp_chunks: Vec<(u32, Vec<u8>)> = Vec::new();
+    let mut ext_xmp_total: u32 = 0;
 
     while pos + 4 <= data.len() {
         // Find next marker
@@ -197,16 +200,17 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         Err(_) => {}
                     }
                 }
-                // Extended XMP
+                // Extended XMP: accumulate chunks for later assembly
                 else if seg_data.len() > 75
                     && seg_data.starts_with(b"http://ns.adobe.com/xmp/extension/\0")
                 {
-                    let rest = &seg_data[35..]; // after header string + null
+                    let rest = &seg_data[35..];
                     if rest.len() >= 40 {
-                        let xmp_chunk = &rest[40..]; // after GUID(32) + total(4) + offset(4)
-                        if let Ok(ext_tags) = XmpReader::read(xmp_chunk) {
-                            tags.extend(ext_tags);
-                        }
+                        let total = u32::from_be_bytes([rest[32], rest[33], rest[34], rest[35]]);
+                        let offset = u32::from_be_bytes([rest[36], rest[37], rest[38], rest[39]]);
+                        let chunk = &rest[40..];
+                        ext_xmp_total = total;
+                        ext_xmp_chunks.push((offset, chunk.to_vec()));
                     }
                 }
             }
@@ -249,6 +253,18 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
             _ => {
                 // Skip unknown segments
             }
+        }
+    }
+
+    // Assemble and parse Extended XMP chunks (Perl: after SOS, reassemble by offset)
+    if !ext_xmp_chunks.is_empty() {
+        ext_xmp_chunks.sort_by_key(|(off, _)| *off);
+        let mut assembled = Vec::with_capacity(ext_xmp_total as usize);
+        for (_, chunk) in &ext_xmp_chunks {
+            assembled.extend_from_slice(chunk);
+        }
+        if let Ok(ext_tags) = XmpReader::read(&assembled) {
+            tags.extend(ext_tags);
         }
     }
 
