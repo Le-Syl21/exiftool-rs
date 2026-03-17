@@ -101,6 +101,21 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         if id == tag_id { return (name, name); }
     }
 
+    // Minolta-specific tags
+    if manufacturer == Manufacturer::Minolta {
+        let minolta: &[(u16, &str)] = &[
+            (0x0000, "MakerNoteVersion"), (0x0040, "CompressedImageSize"),
+            (0x0081, "PreviewImage"), (0x0088, "PreviewImageStart"),
+            (0x0089, "PreviewImageLength"), (0x0100, "SceneMode"),
+            (0x0101, "ColorMode"), (0x0102, "MinoltaQuality"),
+            (0x0104, "FlashExposureComp"), (0x0105, "Teleconverter"),
+            (0x0107, "ImageStabilization"), (0x010B, "ColorTemperature"),
+            (0x010C, "LensType"), (0x0113, "ImageStabilization"),
+            (0x0115, "WhiteBalance"), (0x0E00, "PrintIM"),
+        ];
+        for &(id, name) in minolta { if id == tag_id { return (name, name); } }
+    }
+
     // Last resort: search ALL generated tables
     let all_tables: &[&[(u16, &str)]] = &[
         &super::generated::GENERATED_CANON_TAGS,

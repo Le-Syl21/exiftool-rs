@@ -251,14 +251,16 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 }
             }
             MARKER_APP13 => {
-                // Photoshop / IPTC data
+                // Photoshop / IPTC data + all IRBs
                 if seg_data.len() > PHOTOSHOP_HEADER.len()
                     && seg_data.starts_with(PHOTOSHOP_HEADER)
                 {
-                    if let Some(iptc_data) = extract_iptc_from_photoshop(
+                    let (iptc_data, irb_tags) = extract_photoshop_irbs(
                         &seg_data[PHOTOSHOP_HEADER.len()..],
-                    ) {
-                        match IptcReader::read(iptc_data) {
+                    );
+                    tags.extend(irb_tags);
+                    if let Some(iptc_data) = iptc_data {
+                        match IptcReader::read(&iptc_data) {
                             Ok(iptc_tags) => tags.extend(iptc_tags),
                             Err(_) => {}
                         }
@@ -307,14 +309,139 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
     Ok(tags)
 }
 
-/// Extract IPTC data from a Photoshop IRB (Image Resource Block) segment.
-///
-/// Photoshop IRB format:
-///   - 4 bytes: resource type ("8BIM")
-///   - 2 bytes: resource ID
-///   - Pascal string: resource name (padded to even length)
-///   - 4 bytes: resource data length
-///   - N bytes: resource data (padded to even length)
+/// Extract all Photoshop IRBs, returning IPTC data and IRB tags.
+fn extract_photoshop_irbs(data: &[u8]) -> (Option<Vec<u8>>, Vec<crate::tag::Tag>) {
+    let mut iptc = None;
+    let mut tags = Vec::new();
+    let mut pos = 0;
+
+    while pos + 12 <= data.len() {
+        if &data[pos..pos + 4] != b"8BIM" { break; }
+        pos += 4;
+        let resource_id = u16::from_be_bytes([data[pos], data[pos + 1]]);
+        pos += 2;
+        let name_len = data[pos] as usize;
+        pos += 1 + name_len;
+        if (name_len + 1) % 2 != 0 { pos += 1; }
+        if pos + 4 > data.len() { break; }
+        let data_len = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
+        pos += 4;
+        if pos + data_len > data.len() { break; }
+        let irb_data = &data[pos..pos + data_len];
+
+        if resource_id == 0x0404 {
+            iptc = Some(irb_data.to_vec());
+        } else {
+            // Extract known Photoshop IRB tags
+            let name = photoshop_irb_name(resource_id);
+            if !name.is_empty() && data_len <= 256 {
+                let value = decode_photoshop_irb(resource_id, irb_data);
+                if !value.is_empty() {
+                    tags.push(crate::tag::Tag {
+                        id: crate::tag::TagId::Numeric(resource_id),
+                        name: name.to_string(),
+                        description: name.to_string(),
+                        group: crate::tag::TagGroup {
+                            family0: "Photoshop".into(),
+                            family1: "Photoshop".into(),
+                            family2: "Image".into(),
+                        },
+                        raw_value: crate::value::Value::String(value.clone()),
+                        print_value: value,
+                        priority: 0,
+                    });
+                }
+            }
+        }
+
+        pos += data_len;
+        if data_len % 2 != 0 { pos += 1; }
+    }
+
+    (iptc, tags)
+}
+
+fn photoshop_irb_name(id: u16) -> &'static str {
+    match id {
+        0x03ED => "ResolutionInfo",
+        0x03F3 => "PrintFlags",
+        0x0406 => "JPEG_Quality",
+        0x0408 => "GridGuidesInfo",
+        0x040A => "CopyrightFlag",
+        0x040B => "URL",
+        0x040C => "ThumbnailImage",
+        0x0414 => "DocumentSpecificIDs",
+        0x0419 => "GlobalAltitude",
+        0x041A => "ICC_Profile",
+        0x041E => "URLList",
+        0x0421 => "VersionInfo",
+        0x0425 => "CaptionDigest",
+        0x0426 => "PrintScale",
+        0x043C => "MeasurementScale",
+        0x043D => "TimelineInfo",
+        0x043E => "SheetDisclosure",
+        0x043F => "DisplayInfo",
+        0x0440 => "OnionSkins",
+        0x0BBD => "IPTCDigest",
+        0x2710 => "PrintInfo2",
+        _ => match id {
+            0x03F3 => "PrintFlags",
+            0x041B => "SpotHalftone",
+            0x041D => "AlphaIdentifiers",
+            0x041F => "PrintFlagsInfo",
+            _ => "",
+        },
+    }
+}
+
+fn decode_photoshop_irb(id: u16, data: &[u8]) -> String {
+    match id {
+        0x040A => {
+            // CopyrightFlag: 1 byte
+            if !data.is_empty() {
+                if data[0] == 0 { "False".into() } else { "True".into() }
+            } else { String::new() }
+        }
+        0x0419 => {
+            // GlobalAltitude: int32u BE
+            if data.len() >= 4 {
+                u32::from_be_bytes([data[0], data[1], data[2], data[3]]).to_string()
+            } else { String::new() }
+        }
+        0x0406 => {
+            // JPEG_Quality: structured
+            if data.len() >= 4 {
+                let quality = u16::from_be_bytes([data[0], data[1]]);
+                let format = u16::from_be_bytes([data[2], data[3]]);
+                let q_str = match quality { 1..=3 => "Low", 4..=6 => "Medium", 7..=9 => "High", 10..=12 => "Maximum", _ => "" };
+                let f_str = match format { 0 => "Standard", 1 => "Optimized", 2 => "Progressive", _ => "" };
+                format!("{} ({})", q_str, f_str)
+            } else { String::new() }
+        }
+        0x0BBD => {
+            // IPTCDigest: 16-byte MD5
+            if data.len() >= 16 {
+                data[..16].iter().map(|b| format!("{:02x}", b)).collect()
+            } else { String::new() }
+        }
+        _ => {
+            // Generic: try as string
+            if data.iter().all(|&b| b >= 0x20 && b < 0x7F || b == 0) {
+                String::from_utf8_lossy(data).trim_end_matches('\0').to_string()
+            } else if data.len() <= 4 {
+                format!("{}", u32::from_be_bytes({
+                    let mut buf = [0u8; 4];
+                    buf[4-data.len()..].copy_from_slice(data);
+                    buf
+                }))
+            } else {
+                String::new()
+            }
+        }
+    }
+}
+
+/// Extract IPTC data from a Photoshop IRB (for backward compat).
 fn extract_iptc_from_photoshop(data: &[u8]) -> Option<&[u8]> {
     let mut pos = 0;
 
