@@ -133,8 +133,19 @@ impl XmpReader {
                     // e.g., <rdf:Description GCamera:HDRPlusMakernote="...">
                     if name.local_name == "Description" {
                         for attr in &attributes {
-                            // Skip rdf:about and xmlns declarations
-                            if attr.name.local_name == "about" { continue; }
+                            // Emit rdf:about as "About" tag, skip xmlns
+                            if attr.name.local_name == "about" {
+                                if !attr.value.is_empty() {
+                                    tags.push(Tag {
+                                        id: TagId::Text("rdf:about".into()),
+                                        name: "About".into(), description: "About".into(),
+                                        group: TagGroup { family0: "XMP".into(), family1: "XMP-rdf".into(), family2: "Other".into() },
+                                        raw_value: Value::String(attr.value.clone()),
+                                        print_value: attr.value.clone(), priority: 0,
+                                    });
+                                }
+                                continue;
+                            }
                             if attr.name.prefix.as_deref() == Some("xmlns") { continue; }
                             if attr.name.local_name.starts_with("xmlns") { continue; }
 

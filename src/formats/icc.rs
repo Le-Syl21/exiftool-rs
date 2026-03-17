@@ -96,10 +96,67 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
     };
     tags.push(mk("RenderingIntent", "Rendering Intent", Value::String(intent_name.to_string())));
 
+    // ProfileCMMType (bytes 4-7)
+    let cmm = String::from_utf8_lossy(&data[4..8]).trim_end_matches('\0').trim().to_string();
+    if !cmm.is_empty() && cmm.bytes().any(|b| b > 0x20) {
+        tags.push(mk("ProfileCMMType", "Profile CMM Type", Value::String(cmm)));
+    }
+
+    // ProfileClass (bytes 12-15)
+    let class_sig = String::from_utf8_lossy(&data[12..16]).to_string();
+    let class_name = match class_sig.trim() {
+        "scnr" => "Input Device Profile",
+        "mntr" => "Display Device Profile",
+        "prtr" => "Output Device Profile",
+        "link" => "DeviceLink Profile",
+        "spac" => "ColorSpace Conversion Profile",
+        "abst" => "Abstract Profile",
+        "nmcl" => "Named Color Profile",
+        _ => "",
+    };
+    if !class_name.is_empty() {
+        tags.push(mk("ProfileClass", "Profile Class", Value::String(class_name.into())));
+    }
+
+    // CMMFlags (bytes 44-47)
+    let flags = u32::from_be_bytes([data[44], data[45], data[46], data[47]]);
+    tags.push(mk("CMMFlags", "CMM Flags", Value::String(format!("0x{:08X}", flags))));
+
+    // DeviceAttributes (bytes 56-63)
+    let attr = u64::from_be_bytes([data[56], data[57], data[58], data[59], data[60], data[61], data[62], data[63]]);
+    tags.push(mk("DeviceAttributes", "Device Attributes", Value::String(format!("{}", attr))));
+
     // Device manufacturer (bytes 48-51) and model (52-55)
     let manufacturer = String::from_utf8_lossy(&data[48..52]).trim().to_string();
     if !manufacturer.is_empty() && manufacturer.bytes().any(|b| b > 0x20) {
         tags.push(mk("DeviceManufacturer", "Device Manufacturer", Value::String(manufacturer)));
+    }
+    let dev_model = String::from_utf8_lossy(&data[52..56]).trim().to_string();
+    if !dev_model.is_empty() && dev_model.bytes().any(|b| b > 0x20) {
+        tags.push(mk("DeviceModel", "Device Model", Value::String(dev_model)));
+    }
+
+    // ProfileFileSignature (bytes 36-39, should be "acsp")
+    tags.push(mk("ProfileFileSignature", "Profile File Signature", Value::String("acsp".into())));
+
+    // ConnectionSpaceIlluminant (bytes 68-79, XYZ)
+    if data.len() >= 80 {
+        let x = i32::from_be_bytes([data[68], data[69], data[70], data[71]]) as f64 / 65536.0;
+        let y = i32::from_be_bytes([data[72], data[73], data[74], data[75]]) as f64 / 65536.0;
+        let z = i32::from_be_bytes([data[76], data[77], data[78], data[79]]) as f64 / 65536.0;
+        tags.push(mk("ConnectionSpaceIlluminant", "Connection Space Illuminant", Value::String(format!("{:.6} {:.6} {:.6}", x, y, z))));
+    }
+
+    // ProfileCreator (bytes 80-83)
+    let creator = String::from_utf8_lossy(&data[80..84]).trim_end_matches('\0').trim().to_string();
+    if !creator.is_empty() && creator.bytes().any(|b| b > 0x20) {
+        tags.push(mk("ProfileCreator", "Profile Creator", Value::String(creator)));
+    }
+
+    // ProfileID (bytes 84-99, MD5)
+    if data.len() >= 100 {
+        let id: String = data[84..100].iter().map(|b| format!("{:02x}", b)).collect();
+        tags.push(mk("ProfileID", "Profile ID", Value::String(id)));
     }
 
     // Profile description tag - search in tag table
@@ -139,6 +196,116 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                         .to_string();
                     if !text.is_empty() {
                         tags.push(mk("ProfileCopyright", "Profile Copyright", Value::String(text)));
+                    }
+                }
+            }
+
+            // Map ICC tag signatures to names (from Perl ICC_Profile.pm)
+            if offset + size <= data.len() && size >= 8 {
+                let d = &data[offset..offset + size];
+                let tag_name = match sig {
+                    b"rXYZ" => "RedMatrixColumn",
+                    b"gXYZ" => "GreenMatrixColumn",
+                    b"bXYZ" => "BlueMatrixColumn",
+                    b"wtpt" => "MediaWhitePoint",
+                    b"bkpt" => "MediaBlackPoint",
+                    b"lumi" => "Luminance",
+                    b"rTRC" => "RedTRC",
+                    b"gTRC" => "GreenTRC",
+                    b"bTRC" => "BlueTRC",
+                    b"tech" => "Technology",
+                    b"dmnd" => "DeviceMfgDesc",
+                    b"dmdd" => "DeviceModelDesc",
+                    b"vued" => "ViewingCondDesc",
+                    b"view" => "ViewingConditions",
+                    b"meas" => "MeasurementInfo",
+                    b"chad" => "ChromaticAdaptation",
+                    _ => "",
+                };
+                if !tag_name.is_empty() {
+                    let type_sig = &d[0..4];
+                    let value = match type_sig {
+                        b"XYZ " if d.len() >= 20 => {
+                            // XYZ type: 3 x s15Fixed16
+                            let x = i32::from_be_bytes([d[8], d[9], d[10], d[11]]) as f64 / 65536.0;
+                            let y = i32::from_be_bytes([d[12], d[13], d[14], d[15]]) as f64 / 65536.0;
+                            let z = i32::from_be_bytes([d[16], d[17], d[18], d[19]]) as f64 / 65536.0;
+                            format!("{:.6} {:.6} {:.6}", x, y, z)
+                        }
+                        b"curv" if d.len() >= 12 => {
+                            let count = u32::from_be_bytes([d[8], d[9], d[10], d[11]]);
+                            if count == 0 { "Linear".into() }
+                            else if count == 1 && d.len() >= 14 {
+                                let gamma = u16::from_be_bytes([d[12], d[13]]) as f64 / 256.0;
+                                format!("{:.1}", gamma)
+                            } else { format!("(Binary data {} entries)", count) }
+                        }
+                        b"desc" if d.len() >= 12 => {
+                            let len = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as usize;
+                            if 12 + len <= d.len() {
+                                String::from_utf8_lossy(&d[12..12+len]).trim_end_matches('\0').to_string()
+                            } else { String::new() }
+                        }
+                        b"mluc" if d.len() >= 20 => {
+                            // multiLocalizedUnicode
+                            let rec_count = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as usize;
+                            if rec_count > 0 && d.len() >= 20 {
+                                let str_off = u32::from_be_bytes([d[20], d[21], d[22], d[23]]) as usize;
+                                let str_len = u32::from_be_bytes([d[16], d[17], d[18], d[19]]) as usize;
+                                if str_off + str_len <= d.len() {
+                                    let units: Vec<u16> = d[str_off..str_off+str_len].chunks_exact(2)
+                                        .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
+                                    String::from_utf16_lossy(&units).trim_end_matches('\0').to_string()
+                                } else { String::new() }
+                            } else { String::new() }
+                        }
+                        b"sig " if d.len() >= 12 => {
+                            String::from_utf8_lossy(&d[8..12]).trim().to_string()
+                        }
+                        b"meas" if d.len() >= 36 => {
+                            // measurement type
+                            let observer = match u32::from_be_bytes([d[8], d[9], d[10], d[11]]) {
+                                1 => "CIE 1931", 2 => "CIE 1964", _ => "Unknown",
+                            };
+                            tags.push(mk("MeasurementObserver", "Measurement Observer", Value::String(observer.into())));
+                            let geometry = match u32::from_be_bytes([d[24], d[25], d[26], d[27]]) {
+                                1 => "0/45 or 45/0", 2 => "0/d or d/0", _ => "Unknown",
+                            };
+                            tags.push(mk("MeasurementGeometry", "Measurement Geometry", Value::String(geometry.into())));
+                            let illum = match u32::from_be_bytes([d[32], d[33], d[34], d[35]]) {
+                                1 => "D50", 2 => "D65", 3 => "D93", 4 => "F2", 5 => "D55", 6 => "A", 7 => "E", 8 => "F8", _ => "Unknown",
+                            };
+                            tags.push(mk("MeasurementIlluminant", "Measurement Illuminant", Value::String(illum.into())));
+                            // Backing and flare
+                            let backing_x = i32::from_be_bytes([d[12], d[13], d[14], d[15]]) as f64 / 65536.0;
+                            let backing_y = i32::from_be_bytes([d[16], d[17], d[18], d[19]]) as f64 / 65536.0;
+                            let backing_z = i32::from_be_bytes([d[20], d[21], d[22], d[23]]) as f64 / 65536.0;
+                            tags.push(mk("MeasurementBacking", "Measurement Backing", Value::String(format!("{:.6} {:.6} {:.6}", backing_x, backing_y, backing_z))));
+                            let flare = u32::from_be_bytes([d[28], d[29], d[30], d[31]]) as f64 / 65536.0;
+                            tags.push(mk("MeasurementFlare", "Measurement Flare", Value::String(format!("{:.4}%", flare * 100.0))));
+                            String::new() // sub-tags already pushed
+                        }
+                        b"view" if d.len() >= 28 => {
+                            let x = i32::from_be_bytes([d[8], d[9], d[10], d[11]]) as f64 / 65536.0;
+                            let y = i32::from_be_bytes([d[12], d[13], d[14], d[15]]) as f64 / 65536.0;
+                            let z = i32::from_be_bytes([d[16], d[17], d[18], d[19]]) as f64 / 65536.0;
+                            tags.push(mk("ViewingCondIlluminant", "Viewing Cond Illuminant", Value::String(format!("{:.5} {:.5} {:.5}", x, y, z))));
+                            let sx = i32::from_be_bytes([d[20], d[21], d[22], d[23]]) as f64 / 65536.0;
+                            let sy = i32::from_be_bytes([d[24], d[25], d[26], d[27]]) as f64 / 65536.0;
+                            let sz = i32::from_be_bytes([d[28], d[29], d[30], d[31]]) as f64 / 65536.0;
+                            tags.push(mk("ViewingCondSurround", "Viewing Cond Surround", Value::String(format!("{:.5} {:.5} {:.5}", sx, sy, sz))));
+                            if d.len() >= 36 {
+                                let illum_type = match u32::from_be_bytes([d[32], d[33], d[34], d[35]]) {
+                                    1 => "D50", 2 => "D65", 3 => "D93", 4 => "F2", 5 => "D55", 6 => "A", 7 => "E", 8 => "F8", _ => "Unknown",
+                                };
+                                tags.push(mk("ViewingCondIlluminantType", "Viewing Cond Illuminant Type", Value::String(illum_type.into())));
+                            }
+                            String::new()
+                        }
+                        _ => String::new(),
+                    };
+                    if !value.is_empty() {
+                        tags.push(mk(tag_name, tag_name, Value::String(value)));
                     }
                 }
             }
