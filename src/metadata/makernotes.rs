@@ -2268,9 +2268,26 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
         tags.push(mk_canon_str("WB_RGGBLevels", &format!("{} {} {} {}", r, g1, b, g2)));
     }
 
-    // Subsequent WB blocks (each 4 values + 1 color temp)
+    // ColorTempAuto (after Auto RGGB block)
+    if wb_base + 9 < count {
+        let temp = rd(wb_base + 9) as u16;
+        if temp > 0 { tags.push(mk_canon_str("ColorTempAuto", &temp.to_string())); }
+    }
+
+    // WB_RGGBLevelsMeasured (3rd block from base: wb_base+10)
+    if wb_base + 14 < count {
+        let r = rd(wb_base + 10) as u16;
+        let g1 = rd(wb_base + 11) as u16;
+        let b = rd(wb_base + 12) as u16;
+        let g2 = rd(wb_base + 13) as u16;
+        tags.push(mk_canon_str("WB_RGGBLevelsMeasured", &format!("{} {} {} {}", r, g1, b, g2)));
+        let temp = rd(wb_base + 14) as u16;
+        if temp > 0 { tags.push(mk_canon_str("ColorTempMeasured", &temp.to_string())); }
+    }
+
+    // Subsequent WB blocks (each 5 values: 4 RGGB + 1 ColorTemp)
     let wb_names = ["Daylight", "Cloudy", "Tungsten", "Fluorescent", "Flash", "Custom", "Kelvin", "Shade"];
-    let mut offset = wb_base + 5; // After Auto + ColorTemp
+    let mut offset = wb_base + 15; // After AsShot(5) + Auto(5) + Measured(5)
 
     for name in &wb_names {
         if offset + 4 > count { break; }
