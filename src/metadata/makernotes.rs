@@ -82,17 +82,21 @@ pub fn parse_makernotes(
     let parse_offset;
 
     match info.manufacturer {
-        Manufacturer::Nikon => {
+        Manufacturer::Nikon if info.ifd_offset >= 10 => {
             // Nikon type 2: has own TIFF header at mn_offset+10
             let tiff_start = mn_offset + 10;
             if tiff_start + 8 > data.len() {
                 return Vec::new();
             }
-            let sub = &data[tiff_start..mn_offset + mn_size];
-            // Read IFD offset from the internal TIFF header
+            let sub = &data[tiff_start..(mn_offset + mn_size).min(data.len())];
             let ifd_off = read_u32(sub, 4, byte_order) as usize;
             parse_data = sub;
             parse_offset = ifd_off;
+        }
+        Manufacturer::Nikon => {
+            // Headerless Nikon (Coolpix etc.): IFD directly, offsets relative to TIFF
+            parse_data = data;
+            parse_offset = mn_offset + info.ifd_offset;
         }
         Manufacturer::OlympusNew => {
             // OLYMPUS\0II/MM: own TIFF header at mn_offset+8
@@ -128,8 +132,8 @@ pub fn parse_makernotes(
     let mut tags = Vec::new();
     read_makernote_ifd(parse_data, parse_offset, byte_order, info.manufacturer, &mut tags, model);
 
-    // Nikon second pass: decrypt encrypted sub-tables using serial + shutter count
-    if info.manufacturer == Manufacturer::Nikon {
+    // Nikon second pass: decrypt encrypted sub-tables (only for type 2 with TIFF header)
+    if info.manufacturer == Manufacturer::Nikon && info.ifd_offset >= 10 {
         decrypt_nikon_subtables(parse_data, parse_offset, byte_order, &mut tags, model);
     }
 
