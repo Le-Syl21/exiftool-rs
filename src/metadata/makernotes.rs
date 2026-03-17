@@ -1459,6 +1459,33 @@ fn read_makernote_ifd(
                         let fw = String::from_utf8_lossy(&d[310..316]).trim_end_matches('\0').to_string();
                         if !fw.is_empty() { t.push(mk_canon_str("FirmwareVersion", &fw)); }
                     }
+                    // PictureStyleInfo sub-structure at offset 682 (int32s values)
+                    static PS_FIELDS: &[(usize, &str)] = &[
+                        (0,"ContrastStandard"),(4,"SharpnessStandard"),(8,"SaturationStandard"),(12,"ColorToneStandard"),
+                        (24,"ContrastPortrait"),(28,"SharpnessPortrait"),(32,"SaturationPortrait"),(36,"ColorTonePortrait"),
+                        (48,"ContrastLandscape"),(52,"SharpnessLandscape"),(56,"SaturationLandscape"),(60,"ColorToneLandscape"),
+                        (72,"ContrastNeutral"),(76,"SharpnessNeutral"),(80,"SaturationNeutral"),(84,"ColorToneNeutral"),
+                        (96,"ContrastFaithful"),(100,"SharpnessFaithful"),(104,"SaturationFaithful"),(108,"ColorToneFaithful"),
+                        (120,"ContrastMonochrome"),(124,"SharpnessMonochrome"),
+                        (136,"FilterEffectMonochrome"),(140,"ToningEffectMonochrome"),
+                        (144,"ContrastUserDef1"),(148,"SharpnessUserDef1"),(152,"SaturationUserDef1"),(156,"ColorToneUserDef1"),
+                        (160,"FilterEffectUserDef1"),(164,"ToningEffectUserDef1"),
+                        (168,"ContrastUserDef2"),(172,"SharpnessUserDef2"),(176,"SaturationUserDef2"),(180,"ColorToneUserDef2"),
+                        (184,"FilterEffectUserDef2"),(188,"ToningEffectUserDef2"),
+                        (192,"ContrastUserDef3"),(196,"SharpnessUserDef3"),(200,"SaturationUserDef3"),(204,"ColorToneUserDef3"),
+                        (208,"FilterEffectUserDef3"),(212,"ToningEffectUserDef3"),
+                        (216,"UserDef1PictureStyle"),(218,"UserDef2PictureStyle"),(220,"UserDef3PictureStyle"),
+                    ];
+                    let ps_base = 682;
+                    if d.len() > ps_base + 222 {
+                        for &(off, name) in PS_FIELDS {
+                            let abs = ps_base + off;
+                            if abs + 4 <= d.len() {
+                                let v = i32::from_le_bytes([d[abs], d[abs+1], d[abs+2], d[abs+3]]);
+                                t.push(mk_canon_str(name, &v.to_string()));
+                            }
+                        }
+                    }
                     t
                 }
                 (Manufacturer::Canon, 0x0012) => {
