@@ -209,6 +209,55 @@ fn decode_jvc_text(data: &[u8]) -> Vec<Tag> {
     tags
 }
 
+/// Generic binary sub-table decoder: extract int8u values at fixed offsets.
+fn decode_binary_subtable(data: &[u8], module: &str, table: &[(usize, &str)]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    for &(offset, name) in table {
+        if offset < data.len() {
+            let val = data[offset];
+            tags.push(Tag {
+                id: TagId::Text(name.to_string()),
+                name: name.to_string(), description: name.to_string(),
+                group: TagGroup { family0: "MakerNotes".into(), family1: module.into(), family2: "Camera".into() },
+                raw_value: Value::U8(val), print_value: val.to_string(), priority: 0,
+            });
+        }
+    }
+    tags
+}
+
+// Pentax binary sub-tables (from Perl Pentax.pm)
+static PENTAX_AE_INFO: &[(usize, &str)] = &[
+    (0, "AEExposureTime"), (1, "AEAperture"), (2, "AE_ISO"), (3, "AEXv"),
+    (4, "AEBXv"), (5, "AEMinExposureTime"), (6, "AEProgramMode"),
+    (8, "AEApertureSteps"), (9, "AEMaxAperture"), (10, "AEMaxAperture2"),
+    (11, "AEMinAperture"), (12, "AEMeteringMode"),
+];
+static PENTAX_AF_INFO: &[(usize, &str)] = &[
+    (4, "AFPredictor"), (7, "AFIntegrationTime"), (11, "AFPointsInFocus"),
+];
+static PENTAX_LENS_INFO: &[(usize, &str)] = &[
+    (0, "LensType"), (3, "LensData"),
+];
+static PENTAX_FLASH_INFO: &[(usize, &str)] = &[
+    (0, "FlashStatus"), (1, "InternalFlashMode"), (2, "ExternalFlashMode"),
+    (3, "InternalFlashStrength"), (25, "ExternalFlashExposureComp"),
+    (26, "ExternalFlashBounce"),
+];
+static PENTAX_CAMERA_SETTINGS: &[(usize, &str)] = &[
+    (0, "PictureMode2"), (2, "FlashOptions"), (3, "AFPointMode"),
+    (4, "AFPointSelected2"), (6, "ISOFloor"), (7, "DriveMode2"),
+    (8, "ExposureBracketStepSize"), (9, "BracketShotNumber"),
+    (10, "WhiteBalanceSet"), (16, "FlashOptions2"),
+];
+static PENTAX_CAMERA_INFO: &[(usize, &str)] = &[
+    // int32u format — offsets are word indices, not byte indices
+];
+static PENTAX_BATTERY_INFO: &[(usize, &str)] = &[
+    (2, "BodyBatteryADNoLoad"), (3, "BodyBatteryADLoad"),
+    (4, "GripBatteryADNoLoad"), (5, "GripBatteryADLoad"),
+];
+
 /// Decode Apple RunTime binary plist (tag 0x0003).
 fn decode_apple_runtime(data: &[u8]) -> Vec<Tag> {
     let mut tags = Vec::new();
@@ -1279,6 +1328,14 @@ fn read_makernote_ifd(
                         }]
                     } else { Vec::new() }
                 }
+                // Pentax binary sub-tables (from Perl Pentax.pm)
+                (Manufacturer::Pentax, 0x0205) => decode_binary_subtable(value_data, "Pentax", PENTAX_CAMERA_SETTINGS),
+                (Manufacturer::Pentax, 0x0206) => decode_binary_subtable(value_data, "Pentax", PENTAX_AE_INFO),
+                (Manufacturer::Pentax, 0x0207) => decode_binary_subtable(value_data, "Pentax", PENTAX_LENS_INFO),
+                (Manufacturer::Pentax, 0x0208) => decode_binary_subtable(value_data, "Pentax", PENTAX_FLASH_INFO),
+                (Manufacturer::Pentax, 0x0215) => decode_binary_subtable(value_data, "Pentax", PENTAX_CAMERA_INFO),
+                (Manufacturer::Pentax, 0x0216) => decode_binary_subtable(value_data, "Pentax", PENTAX_BATTERY_INFO),
+                (Manufacturer::Pentax, 0x021F) => decode_binary_subtable(value_data, "Pentax", PENTAX_AF_INFO),
                 // Apple RunTime plist
                 (Manufacturer::Apple, 0x0003) => decode_apple_runtime(value_data),
                 // Sony sub-tables
@@ -1291,6 +1348,26 @@ fn read_makernote_ifd(
             if !sub_tags.is_empty() {
                 tags.extend(sub_tags);
                 continue;
+            }
+        }
+
+        // Follow sub-IFDs for Olympus (0x2010-0x2050) and other manufacturers
+        // These are standard IFD format at the offset pointed by the tag value
+        if (manufacturer == Manufacturer::Olympus || manufacturer == Manufacturer::OlympusNew)
+            && data_type == 4 && count == 1 && tag_id >= 0x2010 && tag_id <= 0x2050
+        {
+            let sub_off = read_u32(value_data, 0, byte_order) as usize;
+            if sub_off > 0 && sub_off + 2 < data.len() {
+                let sub_count = read_u16(data, sub_off, byte_order) as usize;
+                if sub_count > 0 && sub_count < 200 && sub_off + 2 + sub_count * 12 <= data.len() {
+                    // It's a valid sub-IFD — parse it recursively
+                    let mut sub_tags = Vec::new();
+                    read_makernote_ifd(data, sub_off, byte_order, manufacturer, &mut sub_tags, model_name);
+                    if !sub_tags.is_empty() {
+                        tags.extend(sub_tags);
+                        continue;
+                    }
+                }
             }
         }
 
