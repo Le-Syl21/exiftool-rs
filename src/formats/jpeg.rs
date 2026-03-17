@@ -239,6 +239,14 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     // XResolution, YResolution, ResolutionUnit from TIFF-like structure
                     // (these may be in the EXIF already)
                 }
+                // FLIR thermal data: "FLIR\0" + segment_num(1) + total_segments(1) + FFF data
+                else if seg_data.starts_with(b"FLIR\0") && seg_data.len() > 0x48 {
+                    let fff_start = 8; // "FLIR\0" + seg_num + total + padding
+                    let flir_data = &seg_data[fff_start..];
+                    if flir_data.starts_with(b"FFF\0") || flir_data.starts_with(b"AFF\0") {
+                        tags.extend(decode_flir_fff(flir_data));
+                    }
+                }
                 // Extended XMP: accumulate chunks for later assembly
                 else if seg_data.len() > 75
                     && seg_data.starts_with(b"http://ns.adobe.com/xmp/extension/\0")
@@ -414,6 +422,159 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     Ok(tags)
+}
+
+/// Decode FLIR FFF data (from Perl FLIR.pm ProcessFLIR).
+fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
+    let mut tags = Vec::new();
+    if data.len() < 0x40 { return tags; }
+
+    let mk = |name: &str, val: String| crate::tag::Tag {
+        id: crate::tag::TagId::Text(name.into()),
+        name: name.into(), description: name.into(),
+        group: crate::tag::TagGroup { family0: "APP1".into(), family1: "FLIR".into(), family2: "Camera".into() },
+        raw_value: crate::value::Value::String(val.clone()), print_value: val, priority: 0,
+    };
+
+    // Detect byte order from version at offset 0x14
+    let ver_be = u32::from_be_bytes([data[0x14], data[0x15], data[0x16], data[0x17]]);
+    let ver_le = u32::from_le_bytes([data[0x14], data[0x15], data[0x16], data[0x17]]);
+    let le = ver_le >= 100 && ver_le < 200;
+
+    let rd32 = |off: usize| -> u32 {
+        if off + 4 > data.len() { return 0; }
+        if le { u32::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3]]) }
+        else { u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]) }
+    };
+    let rd_f32 = |off: usize| -> f32 {
+        if off + 4 > data.len() { return 0.0; }
+        let bits = rd32(off);
+        f32::from_bits(bits)
+    };
+
+    // Read directory
+    let dir_offset = rd32(0x18) as usize;
+    let num_entries = rd32(0x1C) as usize;
+
+    tags.push(mk("CreatorSoftware", String::from_utf8_lossy(&data[4..20]).trim_end_matches('\0').to_string()));
+
+    for i in 0..num_entries.min(50) {
+        let entry_off = dir_offset + i * 0x20;
+        if entry_off + 0x20 > data.len() { break; }
+
+        let rec_type = if le { u16::from_le_bytes([data[entry_off], data[entry_off + 1]]) } else { u16::from_be_bytes([data[entry_off], data[entry_off + 1]]) };
+        let rec_offset = rd32(entry_off + 0x0C) as usize;
+        let rec_size = rd32(entry_off + 0x10) as usize;
+
+        if rec_offset + rec_size > data.len() { continue; }
+        let rec = &data[rec_offset..rec_offset + rec_size];
+
+        match rec_type {
+            0x20 => {
+                // CameraInfo (from Perl FLIR::CameraInfo)
+                if rec.len() >= 200 {
+                    let ci_le = rec.len() > 2 && rec[0] == 2; // byte order from first int16u
+                    let rf = |off: usize| -> f32 {
+                        if off + 4 > rec.len() { return 0.0; }
+                        let bits = if ci_le {
+                            u32::from_le_bytes([rec[off], rec[off+1], rec[off+2], rec[off+3]])
+                        } else {
+                            u32::from_be_bytes([rec[off], rec[off+1], rec[off+2], rec[off+3]])
+                        };
+                        f32::from_bits(bits)
+                    };
+                    tags.push(mk("Emissivity", format!("{:.2}", rf(32))));
+                    tags.push(mk("ObjectDistance", format!("{:.2} m", rf(36))));
+                    tags.push(mk("ReflectedApparentTemperature", format!("{:.1} C", rf(40) - 273.15)));
+                    tags.push(mk("AtmosphericTemperature", format!("{:.1} C", rf(44) - 273.15)));
+                    tags.push(mk("IRWindowTemperature", format!("{:.1} C", rf(48) - 273.15)));
+                    tags.push(mk("IRWindowTransmission", format!("{:.2}", rf(52))));
+                    tags.push(mk("RelativeHumidity", format!("{:.2}", rf(60))));
+                    tags.push(mk("PlanckR1", format!("{}", rf(88))));
+                    tags.push(mk("PlanckB", format!("{}", rf(92))));
+                    tags.push(mk("PlanckF", format!("{}", rf(96))));
+                    tags.push(mk("AtmosphericTransAlpha1", format!("{}", rf(112))));
+                    tags.push(mk("AtmosphericTransAlpha2", format!("{}", rf(116))));
+                    tags.push(mk("AtmosphericTransBeta1", format!("{}", rf(120))));
+                    tags.push(mk("AtmosphericTransBeta2", format!("{}", rf(124))));
+                    tags.push(mk("AtmosphericTransX", format!("{}", rf(128))));
+                    let max_temp = rf(144) - 273.15;
+                    let min_temp = rf(148) - 273.15;
+                    tags.push(mk("CameraTemperatureRangeMax", format!("{:.1} C", max_temp)));
+                    tags.push(mk("CameraTemperatureRangeMin", format!("{:.1} C", min_temp)));
+                    tags.push(mk("CameraTemperatureMaxClip", format!("{:.1} C", rf(152) - 273.15)));
+                    tags.push(mk("CameraTemperatureMinClip", format!("{:.1} C", rf(156) - 273.15)));
+                    tags.push(mk("CameraTemperatureMaxSaturated", format!("{:.1} C", rf(160) - 273.15)));
+                    tags.push(mk("CameraTemperatureMinSaturated", format!("{:.1} C", rf(164) - 273.15)));
+                    tags.push(mk("CameraTemperatureMaxWarn", format!("{:.1} C", rf(168) - 273.15)));
+                    tags.push(mk("CameraTemperatureMinWarn", format!("{:.1} C", rf(172) - 273.15)));
+                    // Strings at fixed offsets
+                    if rec.len() >= 260 {
+                        let cam_model = String::from_utf8_lossy(&rec[212..244]).trim_end_matches('\0').to_string();
+                        if !cam_model.is_empty() { tags.push(mk("CameraModel", cam_model)); }
+                        let cam_pn = String::from_utf8_lossy(&rec[244..276]).trim_end_matches('\0').to_string();
+                        if !cam_pn.is_empty() { tags.push(mk("CameraPartNumber", cam_pn)); }
+                        let cam_sn = String::from_utf8_lossy(&rec[276..308]).trim_end_matches('\0').to_string();
+                        if !cam_sn.is_empty() { tags.push(mk("CameraSerialNumber", cam_sn)); }
+                    }
+                    if rec.len() >= 420 {
+                        let cam_sw = String::from_utf8_lossy(&rec[308..340]).trim_end_matches('\0').to_string();
+                        if !cam_sw.is_empty() { tags.push(mk("CameraSoftware", cam_sw)); }
+                        let lens_model = String::from_utf8_lossy(&rec[340..372]).trim_end_matches('\0').to_string();
+                        if !lens_model.is_empty() { tags.push(mk("LensModel", lens_model)); }
+                        let lens_pn = String::from_utf8_lossy(&rec[372..404]).trim_end_matches('\0').to_string();
+                        if !lens_pn.is_empty() { tags.push(mk("LensPartNumber", lens_pn)); }
+                        let lens_sn = String::from_utf8_lossy(&rec[404..436]).trim_end_matches('\0').to_string();
+                        if !lens_sn.is_empty() { tags.push(mk("LensSerialNumber", lens_sn)); }
+                        let fov = rf(436);
+                        if fov > 0.0 { tags.push(mk("FieldOfView", format!("{:.1} deg", fov))); }
+                        let filter_model = String::from_utf8_lossy(&rec[492..524]).trim_end_matches('\0').to_string();
+                        if !filter_model.is_empty() { tags.push(mk("FilterModel", filter_model)); }
+                        let filter_pn = String::from_utf8_lossy(&rec[524..556]).trim_end_matches('\0').to_string();
+                        if !filter_pn.is_empty() { tags.push(mk("FilterPartNumber", filter_pn)); }
+                        let filter_sn = String::from_utf8_lossy(&rec[556..588]).trim_end_matches('\0').to_string();
+                        if !filter_sn.is_empty() { tags.push(mk("FilterSerialNumber", filter_sn)); }
+                    }
+                    tags.push(mk("PeakSpectralSensitivity", format!("{:.1} um", rf(440))));
+                    tags.push(mk("FocusStepCount", rd32(444).to_string()));
+                    tags.push(mk("FocusDistance", format!("{:.1} m", rf(448))));
+                    tags.push(mk("FrameRate", format!("{}", u16::from_le_bytes([rec[452], rec[453]]))));
+                }
+            }
+            0x22 => {
+                // PaletteInfo
+                if rec.len() >= 50 {
+                    let palette_colors = rd32(0) as usize;
+                    tags.push(mk("PaletteColors", palette_colors.to_string()));
+                    // Palette name, method, etc.
+                    if rec.len() >= 128 {
+                        let name = String::from_utf8_lossy(&rec[48..80]).trim_end_matches('\0').to_string();
+                        if !name.is_empty() { tags.push(mk("PaletteName", name)); }
+                        let fname = String::from_utf8_lossy(&rec[80..128]).trim_end_matches('\0').to_string();
+                        if !fname.is_empty() { tags.push(mk("PaletteFileName", fname)); }
+                    }
+                }
+            }
+            0x01 => {
+                // RawData — extract dimensions
+                if rec.len() >= 32 {
+                    let w = u16::from_le_bytes([rec[2], rec[3]]);
+                    let h = u16::from_le_bytes([rec[4], rec[5]]);
+                    tags.push(mk("RawThermalImageWidth", w.to_string()));
+                    tags.push(mk("RawThermalImageHeight", h.to_string()));
+                    let img_type = u16::from_le_bytes([rec[24], rec[25]]);
+                    let type_str = match img_type {
+                        0 => "TIFF", 1 => "PNG", 2 => "JPEG", 100 => "JP2", _ => "",
+                    };
+                    if !type_str.is_empty() { tags.push(mk("RawThermalImageType", type_str.into())); }
+                    tags.push(mk("RawThermalImage", format!("(Binary data {} bytes)", rec.len())));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    tags
 }
 
 /// Extract all Photoshop IRBs, returning IPTC data and IRB tags.
