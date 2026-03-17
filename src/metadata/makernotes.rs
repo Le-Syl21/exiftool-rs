@@ -1794,21 +1794,23 @@ fn read_makernote_ifd(
                 }
                 // Ricoh ImageInfo binary sub-table (tag 0x1001)
                 (Manufacturer::Ricoh, 0x1001) => {
+                    // Ricoh ImageInfo: Big-Endian binary (from Perl Ricoh::ImageInfo)
                     let mut t = Vec::new();
                     let d = value_data;
-                    if d.len() >= 42 {
-                        let w = u16::from_le_bytes([d[0], d[1]]);
-                        let h = u16::from_le_bytes([d[2], d[3]]);
+                    if d.len() >= 4 {
+                        let w = u16::from_be_bytes([d[0], d[1]]);
+                        let h = u16::from_be_bytes([d[2], d[3]]);
                         t.push(mk_nikon_str("RicohImageWidth", &w.to_string()));
                         t.push(mk_nikon_str("RicohImageHeight", &h.to_string()));
-                        // RicohDate at offset 6 (7 bytes encoded)
-                        if d.len() >= 13 {
-                            let date = format!("{:02x}{:02x}:{:02x}:{:02x} {:02x}:{:02x}:{:02x}",
-                                d[6], d[7], d[8], d[9], d[10], d[11], d[12]);
-                            t.push(mk_nikon_str("RicohDate", &date));
-                        }
-                        // ManufactureDate1 at offset ~42+ (varies by model)
                     }
+                    if d.len() >= 13 {
+                        // RicohDate at offset 6 (7 bytes hex-encoded date)
+                        let date = format!("{:02x}{:02x}:{:02x}:{:02x} {:02x}:{:02x}:{:02x}",
+                            d[6], d[7], d[8], d[9], d[10], d[11], d[12]);
+                        t.push(mk_nikon_str("RicohDate", &date));
+                    }
+                    // ManufactureDate at offset 28-35 (from Perl Ricoh.pm)
+                    // These come from the main Ricoh IFD, not ImageInfo
                     t
                 }
                 // Olympus TextInfo (tag 0x0208): space-separated key value pairs
