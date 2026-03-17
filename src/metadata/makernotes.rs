@@ -122,9 +122,26 @@ pub fn parse_makernotes(
             parse_offset = info.ifd_offset; // = value read from bytes 8-11
         }
         _ => {
-            // Canon, Sony, Pentax, Panasonic: offsets relative to main TIFF header
-            parse_data = data;
-            parse_offset = ifd_abs;
+            // Default: offsets relative to main TIFF header
+            // BUT: for Motorola, PENTAX\0, Leica5, ISL, SonyEricsson, Kyocera,
+            // Olympus2/3 — offsets are relative to MakerNote start (Base = $start - N)
+            // Detect by checking if ifd_offset matches a self-contained pattern
+            let mn_bytes = &data[mn_offset..(mn_offset + mn_size).min(data.len())];
+            let is_self_contained = mn_bytes.starts_with(b"MOT\0")
+                || mn_bytes.starts_with(b"PENTAX \0")
+                || mn_bytes.starts_with(b"KYOCERA")
+                || mn_bytes.starts_with(b"ISLMAKERNOTE")
+                || mn_bytes.starts_with(b"SEMC MS\0")
+                || (mn_bytes.starts_with(b"LEICA\0") && mn_bytes.len() > 7
+                    && (mn_bytes[7] == 1 || mn_bytes[7] == 4 || mn_bytes[7] == 5));
+
+            if is_self_contained {
+                parse_data = mn_bytes;
+                parse_offset = info.ifd_offset;
+            } else {
+                parse_data = data;
+                parse_offset = ifd_abs;
+            }
         }
     }
 
@@ -862,6 +879,116 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             ifd_offset: 8,
             _base_adjust: 0,
             byte_order: None,
+        };
+    }
+
+    // Sony PIC: "SONY PIC\0" — offset 12
+    if mn_data.starts_with(b"SONY PIC\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Sony,
+            ifd_offset: 12,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+    // Sony PI: "SONY PI\0" — offset 12
+    if mn_data.starts_with(b"SONY PI\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Sony,
+            ifd_offset: 12,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+    // Sigma: "SIGMA\0\0\0" or "FOVEON\0\0" — offset 10
+    if mn_data.starts_with(b"SIGMA\0") || mn_data.starts_with(b"FOVEON\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Sigma,
+            ifd_offset: 10,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+    // PENTAX \0 (new) — offset 10, self-contained
+    if mn_data.starts_with(b"PENTAX \0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Pentax,
+            ifd_offset: 10,
+            _base_adjust: 0,
+            byte_order: detect_tiff_byte_order(&mn_data[6..]),
+        };
+    }
+    // LEICA\0 with various subtypes
+    if mn_data.starts_with(b"LEICA\0") && mn_data.len() >= 8 {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Panasonic, // Leica uses Panasonic tables
+            ifd_offset: 8,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+    // LEICA CAMERA AG\0
+    if mn_data.starts_with(b"LEICA CAMERA AG\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Panasonic,
+            ifd_offset: 18,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+    // Kyocera: "KYOCERA\0" — offset 22, base = start+2
+    if mn_data.starts_with(b"KYOCERA") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Unknown,
+            ifd_offset: 22,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+    // ISL: "ISLMAKERNOTE000\0"
+    if mn_data.starts_with(b"ISLMAKERNOTE") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Unknown,
+            ifd_offset: 24,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+    // Sony Ericsson: "SEMC MS\0"
+    if mn_data.starts_with(b"SEMC MS\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Sony,
+            ifd_offset: 20,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+    // HP: "Hewlett-Packard" or "Vivitar"
+    if mn_data.starts_with(b"Hewlett-Packard") || mn_data.starts_with(b"Vivitar") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Unknown,
+            ifd_offset: 0,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+    // Samsung: "SAMSUNG" or headerless with Make
+    if mn_data.starts_with(b"SAMSUNG") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Samsung,
+            ifd_offset: 0,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+    // Ricoh-Pentax: "RICOH\0II" or "RICOH\0MM"
+    if mn_data.len() >= 8 && mn_data.starts_with(b"RICOH\0") &&
+        (mn_data[6] == b'I' || mn_data[6] == b'M') {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Pentax,
+            ifd_offset: 8,
+            _base_adjust: 0,
+            byte_order: detect_tiff_byte_order(&mn_data[6..]),
         };
     }
 
