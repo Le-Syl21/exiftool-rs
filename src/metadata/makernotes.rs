@@ -636,6 +636,76 @@ fn decrypt_nikon_subtables(
                     }
                 }
             }
+            0x0098 => {
+                // LensData: decrypt if version 02xx+, then decode using LensData01 offsets
+                let ver = std::str::from_utf8(&data[value_offset..value_offset + 4.min(data.len() - value_offset)]).unwrap_or("");
+                if ver.starts_with("02") || ver.starts_with("04") || ver.starts_with("08") {
+                    let mut decrypted = data[value_offset..value_offset + total_size].to_vec();
+                    crate::metadata::nikon_decrypt::nikon_decrypt(&mut decrypted, serial, shutter_count, 4);
+                    // After decryption, decode directly using LensData01 offsets
+                    // (same structure as unencrypted 0101, just with encryption removed)
+                    tags.push(mk_nikon_str("LensDataVersion", ver));
+                    let d = &decrypted;
+                    if d.len() >= 0x12 {
+                        // Offsets from Perl LensData01 table
+                        if d[4] > 0 {
+                            let ep = 2048.0 / d[4] as f64;
+                            tags.push(mk_nikon_str("ExitPupilPosition", &format!("{:.1}", ep)));
+                        }
+                        if d[5] > 0 {
+                            let ap = 2.0_f64.powf(d[5] as f64 / 24.0);
+                            tags.push(mk_nikon_str("AFAperture", &format!("{:.1}", ap)));
+                        }
+                        if d[8] > 0 { tags.push(mk_nikon_str("FocusPosition", &format!("0x{:02X}", d[8]))); }
+                        if d[9] > 0 {
+                            let dist = 0.01 * 10.0_f64.powf(d[9] as f64 / 40.0);
+                            tags.push(mk_nikon_str("FocusDistance", &format!("{:.2} m", dist)));
+                        }
+                        if d.len() > 0x0A { tags.push(mk_nikon_str("MCUVersion", &d[0x0A].to_string())); }
+                        if d.len() > 0x0B { tags.push(mk_nikon_str("LensIDNumber", &d[0x0B].to_string())); }
+                        if d.len() > 0x0D && d[0x0D] > 0 {
+                            let fl = 5.0 * 2.0_f64.powf(d[0x0D] as f64 / 24.0);
+                            tags.push(mk_nikon_str("MinFocalLength", &format!("{:.1}", fl)));
+                        }
+                        if d.len() > 0x0E && d[0x0E] > 0 {
+                            let fl = 5.0 * 2.0_f64.powf(d[0x0E] as f64 / 24.0);
+                            tags.push(mk_nikon_str("MaxFocalLength", &format!("{:.1}", fl)));
+                        }
+                        if d.len() > 0x0F && d[0x0F] > 0 {
+                            let ap = 2.0_f64.powf(d[0x0F] as f64 / 24.0);
+                            tags.push(mk_nikon_str("MaxApertureAtMinFocal", &format!("{:.1}", ap)));
+                        }
+                        if d.len() > 0x10 && d[0x10] > 0 {
+                            let ap = 2.0_f64.powf(d[0x10] as f64 / 24.0);
+                            tags.push(mk_nikon_str("MaxApertureAtMaxFocal", &format!("{:.1}", ap)));
+                        }
+                        if d.len() > 0x11 && d[0x11] > 0 {
+                            let ap = 2.0_f64.powf(d[0x11] as f64 / 24.0);
+                            tags.push(mk_nikon_str("EffectiveMaxAperture", &format!("{:.1}", ap)));
+                        }
+                    }
+                }
+            }
+            0x0097 => {
+                // ColorBalance: decrypt if version 02xx+
+                // Perl: ColorBalance02 uses DecryptStart=>4, DirOffset=>6
+                // WB_RGGBLevels at offset 4+6=10 (4 × int16u)
+                let ver = std::str::from_utf8(&data[value_offset..value_offset + 4.min(data.len() - value_offset)]).unwrap_or("");
+                if ver.starts_with("02") {
+                    let mut decrypted = data[value_offset..value_offset + total_size].to_vec();
+                    crate::metadata::nikon_decrypt::nikon_decrypt(&mut decrypted, serial, shutter_count, 4);
+                    // WB_RGGBLevels at offset 10 (DecryptStart=4 + DirOffset=6)
+                    if decrypted.len() >= 18 {
+                        let off = 10;
+                        let r = u16::from_le_bytes([decrypted[off], decrypted[off+1]]);
+                        let g1 = u16::from_le_bytes([decrypted[off+2], decrypted[off+3]]);
+                        let g2 = u16::from_le_bytes([decrypted[off+4], decrypted[off+5]]);
+                        let b = u16::from_le_bytes([decrypted[off+6], decrypted[off+7]]);
+                        tags.push(mk_nikon_str("WB_RGGBLevels",
+                            &format!("{} {} {} {}", r, g1, g2, b)));
+                    }
+                }
+            }
             _ => {}
         }
     }

@@ -333,13 +333,14 @@ fn compute_shutter_speed(tags: &[Tag]) -> Option<Tag> {
     ))
 }
 
+/// Perl: Aperture = FNumber || ApertureValue
 fn compute_aperture(tags: &[Tag]) -> Option<Tag> {
-    let fnum = find_tag(tags, "FNumber")?;
-    Some(mk_composite(
-        "Aperture",
-        "Aperture",
-        Value::String(fnum.print_value.clone()),
-    ))
+    let val = find_tag_f64(tags, "FNumber")
+        .or_else(|| find_tag_f64(tags, "ApertureValue")
+            .map(|av| 2.0_f64.powf(av / 2.0)))?;
+    if val <= 0.0 { return None; }
+    Some(mk_composite("Aperture", "Aperture",
+        Value::String(format!("{:.1}", val))))
 }
 
 fn compute_image_size(tags: &[Tag]) -> Option<Tag> {
