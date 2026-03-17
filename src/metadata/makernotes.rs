@@ -72,6 +72,12 @@ pub fn parse_makernotes(
         return decode_kodak_binary(&mn_data[start..]);
     }
 
+    // Google HDRP: "HDRP\x02" or "HDRP\x03" — text-based MakerNote
+    // (from Perl Google.pm: ProcessHDRPMakerNote — key:value lines)
+    if mn_data.starts_with(b"HDRP") {
+        return decode_google_hdrp(mn_data);
+    }
+
     let info = detect_manufacturer(mn_data, make);
 
     let byte_order = info.byte_order.unwrap_or(parent_byte_order);
@@ -157,6 +163,79 @@ pub fn parse_makernotes(
         decrypt_nikon_subtables(parse_data, parse_offset, byte_order, &mut tags, model);
     }
 
+    tags
+}
+
+/// Decode Google HDRP MakerNote (text-based key:value from Perl Google.pm).
+fn decode_google_hdrp(data: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    // Skip HDRP header (first 4-5 bytes), then decompress/decode
+    // The actual MakerNote text is base64-encoded, then gzipped, then protobuf.
+    // But after decoding by Perl, the tags are text lines like "AndroidRelease: value"
+    // In our MN data, the raw HDRP binary is complex. However, some Google cameras
+    // store tags as plain text after the HDRP header.
+
+    // Try to find text content after HDRP header
+    let text = String::from_utf8_lossy(data);
+    for line in text.lines() {
+        if let Some(colon) = line.find(':') {
+            let key = line[..colon].trim();
+            let val = line[colon+1..].trim();
+            if !key.is_empty() && !val.is_empty() && key.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                tags.push(Tag {
+                    id: TagId::Text(key.to_string()),
+                    name: key.to_string(), description: key.to_string(),
+                    group: TagGroup { family0: "MakerNotes".into(), family1: "Google".into(), family2: "Camera".into() },
+                    raw_value: Value::String(val.to_string()), print_value: val.to_string(), priority: 0,
+                });
+            }
+        }
+    }
+    tags
+}
+
+/// Decode Minolta CameraSettings (int32u format, from Perl Minolta.pm).
+fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let rd = |idx: usize| -> u32 {
+        let off = idx * 4;
+        if off + 4 > data.len() { return 0; }
+        read_u32(data, off, bo)
+    };
+    let mk = |name: &str, val: String| Tag {
+        id: TagId::Text(name.into()), name: name.into(), description: name.into(),
+        group: TagGroup { family0: "MakerNotes".into(), family1: "Minolta".into(), family2: "Camera".into() },
+        raw_value: Value::String(val.clone()), print_value: val, priority: 0,
+    };
+
+    static FIELDS: &[(usize, &str)] = &[
+        (1, "ExposureMode"), (2, "FlashMode"), (3, "WhiteBalance"),
+        (4, "MinoltaImageSize"), (5, "MinoltaQuality"), (6, "DriveMode"),
+        (7, "MeteringMode"), (8, "ISO"), (9, "ExposureTime"), (10, "FNumber"),
+        (11, "MacroMode"), (12, "DigitalZoom"), (13, "ExposureCompensation"),
+        (14, "BracketStep"), (16, "IntervalLength"), (17, "IntervalNumber"),
+        (18, "FocalLength"), (19, "FocusDistance"),
+        (20, "FlashFired"), (21, "MinoltaDate"), (22, "MinoltaTime"),
+        (23, "MaxAperture"), (26, "FileNumberMemory"), (27, "LastFileNumber"),
+        (28, "ColorBalanceRed"), (29, "ColorBalanceGreen"), (30, "ColorBalanceBlue"),
+        (31, "Saturation"), (32, "Contrast"), (33, "Sharpness"),
+        (34, "SubjectProgram"), (35, "FlashExposureComp"), (36, "ISOSetting"),
+        (37, "MinoltaModelID"), (38, "IntervalMode"), (39, "FolderName"),
+        (40, "ColorMode"), (41, "ColorFilter"), (42, "BWFilter"),
+        (43, "InternalFlash"), (44, "Brightness"),
+        (45, "SpotFocusPointX"), (46, "SpotFocusPointY"),
+        (47, "WideFocusZone"), (48, "FocusMode"),
+        (49, "FocusArea"), (50, "DECPosition"),
+        (52, "DataImprint"),
+    ];
+
+    let max_idx = data.len() / 4;
+    for &(idx, name) in FIELDS {
+        if idx < max_idx {
+            let val = rd(idx);
+            tags.push(mk(name, val.to_string()));
+        }
+    }
     tags
 }
 
@@ -1394,6 +1473,10 @@ fn read_makernote_ifd(
                             raw_value: Value::String(ver.clone()), print_value: ver, priority: 0,
                         }]
                     } else { Vec::new() }
+                }
+                // Minolta CameraSettings binary sub-table (int32u format)
+                (Manufacturer::Minolta, 0x0001) | (Manufacturer::Minolta, 0x0003) => {
+                    decode_minolta_camera_settings(value_data, byte_order)
                 }
                 // Ricoh ImageInfo binary sub-table (tag 0x1001)
                 (Manufacturer::Ricoh, 0x1001) => {
