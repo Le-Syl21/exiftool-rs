@@ -168,15 +168,18 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 if seg_data.len() >= 5 && seg_data.starts_with(b"JFIF\0") {
                     let major = seg_data[5] as u16;
                     let minor = if seg_data.len() > 6 { seg_data[6] as u16 } else { 0 };
-                    tags.push(crate::tag::Tag {
-                        id: crate::tag::TagId::Text("JFIFVersion".into()),
-                        name: "JFIFVersion".into(),
-                        description: "JFIF Version".into(),
+                    let jfif_mk = |name: &str, val: String| crate::tag::Tag {
+                        id: crate::tag::TagId::Text(name.into()),
+                        name: name.into(), description: name.into(),
                         group: crate::tag::TagGroup { family0: "JFIF".into(), family1: "JFIF".into(), family2: "Image".into() },
-                        raw_value: crate::value::Value::String(format!("{}.{:02}", major, minor)),
-                        print_value: format!("{}.{:02}", major, minor),
-                        priority: 0,
-                    });
+                        raw_value: crate::value::Value::String(val.clone()), print_value: val, priority: 0,
+                    };
+                    tags.push(jfif_mk("JFIFVersion", format!("{}.{:02}", major, minor)));
+                    // ResolutionUnit at byte 7
+                    if seg_data.len() > 7 {
+                        let unit = match seg_data[7] { 0 => "None", 1 => "inches", 2 => "cm", _ => "" };
+                        if !unit.is_empty() { tags.push(jfif_mk("ResolutionUnit", unit.into())); }
+                    }
                 }
             }
             MARKER_APP1 => {
@@ -412,14 +415,13 @@ fn photoshop_irb_name(id: u16) -> &'static str {
         0x041A => "ICC_Profile",
         0x041E => "URLList",
         0x0421 => "VersionInfo",
-        0x0425 => "CaptionDigest",
+        0x0425 => "IPTCDigest",
         0x0426 => "PrintScale",
         0x043C => "MeasurementScale",
         0x043D => "TimelineInfo",
         0x043E => "SheetDisclosure",
         0x043F => "DisplayInfo",
         0x0440 => "OnionSkins",
-        0x0BBD => "IPTCDigest",
         0x2710 => "PrintInfo2",
         _ => match id {
             0x03F3 => "PrintFlags",
@@ -452,19 +454,76 @@ fn decode_photoshop_irb_subtags(id: u16, data: &[u8], tags: &mut Vec<crate::tag:
             let units_y = match u16::from_be_bytes([data[12], data[13]]) { 1 => "inches", 2 => "cm", _ => "" };
             if !units_y.is_empty() { tags.push(mk("DisplayedUnitsY", units_y.into())); }
         }
-        0x041F if data.len() >= 4 => {
-            // PrintFlagsInfo
-            let version = u16::from_be_bytes([data[0], data[1]]);
-            if data.len() >= 7 {
-                // CropMarks at byte 2, Bleed width at 4-7
+        0x0406 if data.len() >= 4 => {
+            // JPEG_Quality (from Perl Photoshop::JPEG_Quality)
+            let quality = i16::from_be_bytes([data[0], data[1]]);
+            tags.push(mk("PhotoshopQuality", (quality + 4).to_string()));
+            let format = i16::from_be_bytes([data[2], data[3]]);
+            let fmt_str = match format { 0 => "Standard", 1 => "Optimized", 0x101 => "Progressive", _ => "" };
+            if !fmt_str.is_empty() { tags.push(mk("PhotoshopFormat", fmt_str.into())); }
+        }
+        0x040D if data.len() >= 4 => {
+            // GlobalAngle
+            let angle = i32::from_be_bytes([data[0], data[1], data[2], data[3]]);
+            tags.push(mk("GlobalAngle", angle.to_string()));
+        }
+        0x0419 if data.len() >= 4 => {
+            // GlobalAltitude
+            let alt = i32::from_be_bytes([data[0], data[1], data[2], data[3]]);
+            tags.push(mk("GlobalAltitude", alt.to_string()));
+        }
+        0x041A if data.len() >= 28 => {
+            // SliceInfo (from Perl Photoshop::SliceInfo)
+            // Offset 20: SlicesGroupName (var_ustr32 = len(4) + UTF-16 string)
+            if data.len() > 24 {
+                let name_len = u32::from_be_bytes([data[20], data[21], data[22], data[23]]) as usize;
+                if 24 + name_len * 2 <= data.len() {
+                    let units: Vec<u16> = data[24..24 + name_len * 2].chunks_exact(2)
+                        .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
+                    let name = String::from_utf16_lossy(&units).trim_end_matches('\0').to_string();
+                    if !name.is_empty() { tags.push(mk("SlicesGroupName", name)); }
+                }
+                let num_off = 24 + name_len * 2;
+                if num_off + 4 <= data.len() {
+                    let num = u32::from_be_bytes([data[num_off], data[num_off+1], data[num_off+2], data[num_off+3]]);
+                    tags.push(mk("NumSlices", num.to_string()));
+                }
             }
         }
-        0x0426 if data.len() >= 8 => {
-            // PrintScale
+        0x0421 if data.len() >= 5 => {
+            // VersionInfo (from Perl Photoshop::VersionInfo)
+            let has_merged = if data[4] != 0 { "Yes" } else { "No" };
+            tags.push(mk("HasRealMergedData", has_merged.into()));
+            // WriterName at offset 5 (var_ustr32)
+            if data.len() > 9 {
+                let wname_len = u32::from_be_bytes([data[5], data[6], data[7], data[8]]) as usize;
+                if 9 + wname_len * 2 <= data.len() {
+                    let units: Vec<u16> = data[9..9 + wname_len * 2].chunks_exact(2)
+                        .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
+                    let wname = String::from_utf16_lossy(&units).trim_end_matches('\0').to_string();
+                    if !wname.is_empty() { tags.push(mk("WriterName", wname)); }
+                    let rname_off = 9 + wname_len * 2;
+                    if rname_off + 4 <= data.len() {
+                        let rname_len = u32::from_be_bytes([data[rname_off], data[rname_off+1], data[rname_off+2], data[rname_off+3]]) as usize;
+                        if rname_off + 4 + rname_len * 2 <= data.len() {
+                            let units: Vec<u16> = data[rname_off+4..rname_off+4+rname_len*2].chunks_exact(2)
+                                .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
+                            let rname = String::from_utf16_lossy(&units).trim_end_matches('\0').to_string();
+                            if !rname.is_empty() { tags.push(mk("ReaderName", rname)); }
+                        }
+                    }
+                }
+            }
+        }
+        0x0426 if data.len() >= 14 => {
+            // PrintScaleInfo
             let style = match u16::from_be_bytes([data[0], data[1]]) {
                 0 => "Centered", 1 => "Size to Fit", 2 => "User Defined", _ => "",
             };
-            if !style.is_empty() { tags.push(mk("PrintStyle", style.into())); }
+            if !style.is_empty() { tags.push(mk("PrintScale", style.into())); }
+            let x = f32::from_be_bytes([data[2], data[3], data[4], data[5]]);
+            let y = f32::from_be_bytes([data[6], data[7], data[8], data[9]]);
+            tags.push(mk("PrintPosition", format!("{} {}", x, y)));
         }
         _ => {}
     }
@@ -494,7 +553,7 @@ fn decode_photoshop_irb(id: u16, data: &[u8]) -> String {
                 format!("{} ({})", q_str, f_str)
             } else { String::new() }
         }
-        0x0BBD => {
+        0x0425 => {
             // IPTCDigest: 16-byte MD5
             if data.len() >= 16 {
                 data[..16].iter().map(|b| format!("{:02x}", b)).collect()
