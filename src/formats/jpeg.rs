@@ -180,6 +180,13 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         let unit = match seg_data[7] { 0 => "None", 1 => "inches", 2 => "cm", _ => "" };
                         if !unit.is_empty() { tags.push(jfif_mk("ResolutionUnit", unit.into())); }
                     }
+                    // XResolution at bytes 8-9, YResolution at 10-11 (int16u BE)
+                    if seg_data.len() > 11 {
+                        let xres = u16::from_be_bytes([seg_data[8], seg_data[9]]);
+                        let yres = u16::from_be_bytes([seg_data[10], seg_data[11]]);
+                        tags.push(jfif_mk("XResolution", xres.to_string()));
+                        tags.push(jfif_mk("YResolution", yres.to_string()));
+                    }
                 }
             }
             MARKER_APP1 => {
