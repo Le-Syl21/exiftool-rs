@@ -250,6 +250,40 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     }
                 }
             }
+            // APP2 — ICC_Profile
+            0xE2 => {
+                if seg_data.starts_with(b"ICC_PROFILE\0") && seg_data.len() > 14 {
+                    // ICC_PROFILE header: "ICC_PROFILE\0" + chunk_num(1) + total_chunks(1) + data
+                    let icc_data = &seg_data[14..];
+                    let icc_tags = crate::formats::icc::parse_icc_tags(icc_data);
+                    tags.extend(icc_tags);
+                }
+            }
+            // APP14 — Adobe
+            0xEE => {
+                if seg_data.starts_with(b"Adobe") && seg_data.len() >= 12 {
+                    let d = &seg_data[5..]; // skip "Adobe"
+                    let mk = |name: &str, val: String| crate::tag::Tag {
+                        id: crate::tag::TagId::Text(name.into()),
+                        name: name.into(), description: name.into(),
+                        group: crate::tag::TagGroup { family0: "APP14".into(), family1: "Adobe".into(), family2: "Image".into() },
+                        raw_value: crate::value::Value::String(val.clone()), print_value: val, priority: 0,
+                    };
+                    if d.len() >= 2 {
+                        tags.push(mk("DCTEncodeVersion", u16::from_be_bytes([d[0], d[1]]).to_string()));
+                    }
+                    if d.len() >= 4 {
+                        tags.push(mk("APP14Flags0", u16::from_be_bytes([d[2], d[3]]).to_string()));
+                    }
+                    if d.len() >= 6 {
+                        tags.push(mk("APP14Flags1", u16::from_be_bytes([d[4], d[5]]).to_string()));
+                    }
+                    if d.len() >= 7 {
+                        let ct = match d[6] { 0 => "Unknown", 1 => "YCbCr", 2 => "YCCK", _ => "" };
+                        if !ct.is_empty() { tags.push(mk("ColorTransform", ct.into())); }
+                    }
+                }
+            }
             MARKER_APP13 => {
                 // Photoshop / IPTC data + all IRBs
                 if seg_data.len() > PHOTOSHOP_HEADER.len()

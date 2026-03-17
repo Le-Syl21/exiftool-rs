@@ -164,3 +164,8 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         priority: 0,
     }
 }
+
+/// Parse ICC profile tags from raw profile data embedded in JPEG APP2.
+pub fn parse_icc_tags(data: &[u8]) -> Vec<Tag> {
+    read_icc(data).unwrap_or_default()
+}
