@@ -1395,6 +1395,25 @@ fn read_makernote_ifd(
                         }]
                     } else { Vec::new() }
                 }
+                // Ricoh ImageInfo binary sub-table (tag 0x1001)
+                (Manufacturer::Ricoh, 0x1001) => {
+                    let mut t = Vec::new();
+                    let d = value_data;
+                    if d.len() >= 42 {
+                        let w = u16::from_le_bytes([d[0], d[1]]);
+                        let h = u16::from_le_bytes([d[2], d[3]]);
+                        t.push(mk_nikon_str("RicohImageWidth", &w.to_string()));
+                        t.push(mk_nikon_str("RicohImageHeight", &h.to_string()));
+                        // RicohDate at offset 6 (7 bytes encoded)
+                        if d.len() >= 13 {
+                            let date = format!("{:02x}{:02x}:{:02x}:{:02x} {:02x}:{:02x}:{:02x}",
+                                d[6], d[7], d[8], d[9], d[10], d[11], d[12]);
+                            t.push(mk_nikon_str("RicohDate", &date));
+                        }
+                        // ManufactureDate1 at offset ~42+ (varies by model)
+                    }
+                    t
+                }
                 // Pentax binary sub-tables (from Perl Pentax.pm)
                 (Manufacturer::Pentax, 0x0205) => decode_binary_subtable(value_data, "Pentax", PENTAX_CAMERA_SETTINGS),
                 (Manufacturer::Pentax, 0x0206) => decode_binary_subtable(value_data, "Pentax", PENTAX_AE_INFO),

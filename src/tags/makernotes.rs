@@ -94,13 +94,17 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         for &(id, name) in casio2 { if id == tag_id { return (name, name); } }
     }
 
-    // Ricoh-specific tags (avoid collision with Canon 0x0001/0x0004)
+    // Ricoh-specific tags from Perl Ricoh.pm
     if manufacturer == Manufacturer::Ricoh {
         let ricoh: &[(u16, &str)] = &[
             (0x0001, "MakerNoteType"), (0x0002, "FirmwareVersion"),
-            (0x0005, "Sharpness"), (0x000C, "RicohImageWidth"),
-            (0x000D, "RicohImageHeight"), (0x0014, "ManufactureDate1"),
-            (0x0015, "ManufactureDate2"), (0x0E00, "PrintIM"),
+            (0x0005, "InternalSerialNumber"), (0x0E00, "PrintIM"),
+            (0x1000, "RecordingFormat"), (0x1001, "ImageInfo"),
+            (0x1003, "Sharpness"), (0x1004, "WhiteBalanceFineTune"),
+            (0x1006, "FocusMode"), (0x100B, "FlashExposureComp"),
+            (0x100E, "DynamicRangeExpansion"), (0x100F, "NoiseReduction"),
+            (0x1012, "Contrast"), (0x1013, "Saturation"),
+            (0x1014, "Sharpness"), (0x1500, "FocalLength"),
         ];
         for &(id, name) in ricoh {
             if id == tag_id { return (name, name); }
