@@ -353,6 +353,66 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
+    // AFCP Trailer: scan end of file for "AXS!" or "AXS*" (from Perl AFCP.pm)
+    if data.len() > 24 {
+        let trailer_check = &data[data.len().saturating_sub(12)..];
+        if trailer_check.starts_with(b"AXS!") || trailer_check.starts_with(b"AXS*") {
+            let le = trailer_check[3] == b'*';
+            let start_pos = if le {
+                u32::from_le_bytes([trailer_check[4], trailer_check[5], trailer_check[6], trailer_check[7]])
+            } else {
+                u32::from_be_bytes([trailer_check[4], trailer_check[5], trailer_check[6], trailer_check[7]])
+            } as usize;
+
+            if start_pos < data.len() {
+                let afcp_data = &data[start_pos..];
+                // Parse AFCP directory: records of type(4) + size(4) + data
+                let mut apos = 12; // skip AXS header
+                while apos + 8 <= afcp_data.len() {
+                    let rec_type = &afcp_data[apos..apos + 4];
+                    let rec_size = if le {
+                        u32::from_le_bytes([afcp_data[apos+4], afcp_data[apos+5], afcp_data[apos+6], afcp_data[apos+7]])
+                    } else {
+                        u32::from_be_bytes([afcp_data[apos+4], afcp_data[apos+5], afcp_data[apos+6], afcp_data[apos+7]])
+                    } as usize;
+                    apos += 8;
+                    if apos + rec_size > afcp_data.len() { break; }
+
+                    if rec_type == b"IPTC" {
+                        if let Ok(iptc_tags) = IptcReader::read(&afcp_data[apos..apos + rec_size]) {
+                            tags.extend(iptc_tags);
+                        }
+                    }
+                    apos += rec_size;
+                    // Pad to even
+                    if rec_size % 2 != 0 { apos += 1; }
+                }
+            }
+        }
+    }
+
+    // FotoStation/PhotoMechanic trailers: scan for Photoshop segments after SOS
+    // These are APP13 segments embedded after the image data
+    {
+        let sos_pos = data.windows(2).position(|w| w == [0xFF, 0xDA]);
+        if let Some(sp) = sos_pos {
+            // Scan rest of file for additional Photoshop segments
+            let rest = &data[sp..];
+            // Look for "Photoshop 3.0\0" or "cbipcbbl" markers
+            if let Some(ps_pos) = rest.windows(14).position(|w| w == PHOTOSHOP_HEADER) {
+                let ps_data = &rest[ps_pos + PHOTOSHOP_HEADER.len()..];
+                let (iptc2, irb2) = extract_photoshop_irbs(ps_data);
+                tags.extend(irb2);
+                if let Some(iptc2_data) = iptc2 {
+                    let digest = crate::md5::md5_hex(&iptc2_data);
+                    if let Ok(iptc_tags) = IptcReader::read(&iptc2_data) {
+                        tags.extend(iptc_tags);
+                    }
+                }
+            }
+        }
+    }
+
     Ok(tags)
 }
 
