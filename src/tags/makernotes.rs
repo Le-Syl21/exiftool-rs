@@ -51,7 +51,7 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         }
     }
 
-    // Tags for manufacturers not in generated tables (JVC, GE, Motorola)
+    // Tags for manufacturers not in generated tables
     let extra: &[(u16, &str)] = &[
         (0x0002, "CPUVersions"), (0x0003, "Quality"),       // JVC
         (0x0202, "Macro"), (0x0207, "GEModel"), (0x0300, "GEMake"), // GE
@@ -59,6 +59,19 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         (0x6420, "CustomRendered"), (0x64D0, "DriveMode"),
         (0x665E, "Sensor"), (0x6705, "ManufactureDate"),
     ];
+
+    // Ricoh-specific tags (avoid collision with Canon 0x0001/0x0004)
+    if manufacturer == Manufacturer::Ricoh {
+        let ricoh: &[(u16, &str)] = &[
+            (0x0001, "MakerNoteType"), (0x0002, "FirmwareVersion"),
+            (0x0005, "Sharpness"), (0x000C, "RicohImageWidth"),
+            (0x000D, "RicohImageHeight"), (0x0014, "ManufactureDate1"),
+            (0x0015, "ManufactureDate2"), (0x0E00, "PrintIM"),
+        ];
+        for &(id, name) in ricoh {
+            if id == tag_id { return (name, name); }
+        }
+    }
     for &(id, name) in extra {
         if id == tag_id { return (name, name); }
     }

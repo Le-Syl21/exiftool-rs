@@ -85,6 +85,23 @@ impl XmpReader {
                     path.push((ns_uri.to_string(), name.local_name.clone()));
                     current_text.clear();
 
+                    // x:xmpmeta — extract XMPToolkit from x:xmptk attribute
+                    if name.local_name == "xmpmeta" {
+                        for attr in &attributes {
+                            if attr.name.local_name == "xmptk" || attr.name.local_name == "xaptk" {
+                                tags.push(Tag {
+                                    id: TagId::Text("x:xmptk".into()),
+                                    name: "XMPToolkit".into(),
+                                    description: "XMP Toolkit".into(),
+                                    group: TagGroup { family0: "XMP".into(), family1: "XMP-x".into(), family2: "Other".into() },
+                                    raw_value: Value::String(attr.value.clone()),
+                                    print_value: attr.value.clone(),
+                                    priority: 0,
+                                });
+                            }
+                        }
+                    }
+
                     // Extract attributes on rdf:Description as tags
                     // e.g., <rdf:Description GCamera:HDRPlusMakernote="...">
                     if name.local_name == "Description" {
@@ -104,7 +121,7 @@ impl XmpReader {
                             let category = namespace_category(group_prefix);
 
                             if !attr.value.is_empty() {
-                                let full_name = attr.name.local_name.clone();
+                                let full_name = ucfirst(&attr.name.local_name);
                                 tags.push(Tag {
                                     id: TagId::Text(format!("{}:{}", group_prefix, attr.name.local_name)),
                                     name: full_name,
@@ -173,7 +190,7 @@ impl XmpReader {
                                     )
                                 };
 
-                                let full_name = tag_name.to_string();
+                                let full_name = ucfirst(tag_name);
                                 let print_value = value.to_display_string();
 
                                 tags.push(Tag {
@@ -211,7 +228,7 @@ impl XmpReader {
                             let category = namespace_category(group_prefix);
 
                             let value = Value::String(current_text.trim().to_string());
-                            let full_name = tag_name.to_string();
+                            let full_name = ucfirst(tag_name);
                             let print_value = value.to_display_string();
 
                             tags.push(Tag {
@@ -242,7 +259,7 @@ impl XmpReader {
     }
 }
 
-fn capitalize(s: &str) -> String {
+fn ucfirst(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
         None => String::new(),

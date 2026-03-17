@@ -727,6 +727,17 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
         };
     }
 
+    // Ricoh: "RICOH\0\0\0" (8 bytes) + IFD
+    // (from Perl MakerNotes.pm: Start => '$valuePtr + 8')
+    if mn_data.starts_with(b"Ricoh") || mn_data.starts_with(b"RICOH") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Ricoh,
+            ifd_offset: 8,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
     // GE: "GE\0\0" or "GENIC\0", Start => valuePtr + 18
     if mn_data.starts_with(b"GE\0\0") || mn_data.starts_with(b"GENIC\0") {
         return MakerNoteInfo {
@@ -1021,6 +1032,18 @@ fn read_makernote_ifd(
                 (Manufacturer::Nikon, 0x0091) => subs::dispatch_nikon_shot_info(&dispatch_ctx),
                 (Manufacturer::Nikon, 0x0098) => subs::dispatch_nikon_lens_data(&dispatch_ctx),
                 (Manufacturer::Nikon, 0x00B7) => subs::dispatch_nikon_af_info2(&dispatch_ctx),
+                // PrintIM in MakerNotes (tag 0x0E00) — extract version
+                (_, 0x0E00) => {
+                    if value_data.len() > 11 && value_data.starts_with(b"PrintIM") {
+                        let ver = String::from_utf8_lossy(&value_data[7..11]).to_string();
+                        vec![Tag {
+                            id: TagId::Text("PrintIMVersion".into()),
+                            name: "PrintIMVersion".into(), description: "PrintIM Version".into(),
+                            group: TagGroup { family0: "PrintIM".into(), family1: "PrintIM".into(), family2: "Printing".into() },
+                            raw_value: Value::String(ver.clone()), print_value: ver, priority: 0,
+                        }]
+                    } else { Vec::new() }
+                }
                 // Apple RunTime plist
                 (Manufacturer::Apple, 0x0003) => decode_apple_runtime(value_data),
                 // Sony sub-tables

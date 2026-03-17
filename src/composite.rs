@@ -131,6 +131,17 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         }
     }
 
+    // DigitalCreationDateTime (IPTC composite)
+    if let (Some(date), Some(time)) = (
+        find_tag_value(tags, "DigitalCreationDate"),
+        find_tag_value(tags, "DigitalCreationTime")
+    ) {
+        if !date.is_empty() && !time.is_empty() {
+            composite.push(mk_composite("DigitalCreationDateTime", "Digital Creation Date/Time",
+                Value::String(format!("{} {}", date, time))));
+        }
+    }
+
     // LensID fallback: use LensModel if no LensID computed by 35efl
     if !composite.iter().any(|t| t.name == "LensID") {
         if let Some(lm) = find_tag_value(tags, "LensModel") {
