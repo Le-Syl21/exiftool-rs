@@ -422,6 +422,59 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
+    // PhotoMechanic trailer: "cbipcbbl" at end of file (from Perl PhotoMechanic.pm)
+    if data.len() > 24 && &data[data.len()-8..] == b"cbipcbbl" {
+        let size = u32::from_be_bytes([
+            data[data.len()-12], data[data.len()-11], data[data.len()-10], data[data.len()-9]
+        ]) as usize;
+        if size < data.len() - 12 {
+            let pm_data = &data[data.len() - 12 - size..data.len() - 12];
+            // PhotoMechanic data is in IPTC format (record 2, datasets 209+)
+            // But also contains standard IPTC records
+            if let Some(start) = pm_data.iter().position(|&b| b == 0x1C) {
+                if let Ok(iptc_tags) = IptcReader::read(&pm_data[start..]) {
+                    // Map PM-specific datasets to tag names
+                    for tag in &iptc_tags {
+                        tags.push(tag.clone());
+                    }
+                }
+                // Also extract PM-specific tags with custom names
+                let mut pos = start;
+                while pos + 5 <= pm_data.len() {
+                    if pm_data[pos] != 0x1C { break; }
+                    let rec = pm_data[pos + 1];
+                    let ds = pm_data[pos + 2];
+                    let len = u16::from_be_bytes([pm_data[pos+3], pm_data[pos+4]]) as usize;
+                    pos += 5;
+                    if pos + len > pm_data.len() { break; }
+                    let val_bytes = &pm_data[pos..pos+len];
+                    let name = match (rec, ds) {
+                        (2, 209) => "CropLeft",
+                        (2, 210) => "CropTop",
+                        (2, 211) => "CropRight",
+                        (2, 212) => "CropBottom",
+                        (2, 216) => "Rotation",
+                        (2, 221) => "Tagged",
+                        (2, 222) => "ColorClass",
+                        _ => { pos += len; continue; },
+                    };
+                    let val = if len == 4 {
+                        i32::from_be_bytes([val_bytes[0], val_bytes[1], val_bytes[2], val_bytes[3]]).to_string()
+                    } else {
+                        String::from_utf8_lossy(val_bytes).to_string()
+                    };
+                    tags.push(crate::tag::Tag {
+                        id: crate::tag::TagId::Text(name.into()),
+                        name: name.into(), description: name.into(),
+                        group: crate::tag::TagGroup { family0: "PhotoMechanic".into(), family1: "PhotoMechanic".into(), family2: "Image".into() },
+                        raw_value: crate::value::Value::String(val.clone()), print_value: val, priority: 0,
+                    });
+                    pos += len;
+                }
+            }
+        }
+    }
+
     // FotoStation/PhotoMechanic trailers: scan for Photoshop segments after SOS
     // These are APP13 segments embedded after the image data
     {
