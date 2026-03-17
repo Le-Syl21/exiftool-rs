@@ -60,14 +60,41 @@ impl XmpReader {
     pub fn read(data: &[u8]) -> Result<Vec<Tag>> {
         let mut tags = Vec::new();
 
-        // XMP data may have trailing nulls or padding
-        let xml_data = std::str::from_utf8(data)
-            .or_else(|_| {
-                // Try to find the end of the XML
-                let trimmed = &data[..data.iter().rposition(|&b| b == b'>').unwrap_or(0) + 1];
-                std::str::from_utf8(trimmed)
-            })
-            .map_err(|e| Error::InvalidXmp(format!("invalid UTF-8: {}", e)))?;
+        // Handle UTF-16/32 BOM and convert to UTF-8 (from Perl XMP.pm line 4286)
+        let converted: String;
+        let xml_data = if data.starts_with(&[0xFE, 0xFF]) {
+            // UTF-16 BE BOM
+            let units: Vec<u16> = data[2..].chunks_exact(2)
+                .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
+            converted = String::from_utf16_lossy(&units);
+            converted.as_str()
+        } else if data.starts_with(&[0xFF, 0xFE]) && !data.starts_with(&[0xFF, 0xFE, 0x00, 0x00]) {
+            // UTF-16 LE BOM
+            let units: Vec<u16> = data[2..].chunks_exact(2)
+                .map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+            converted = String::from_utf16_lossy(&units);
+            converted.as_str()
+        } else if data.starts_with(&[0xEF, 0xBB, 0xBF]) {
+            // UTF-8 BOM — skip it
+            converted = String::new(); // unused
+            std::str::from_utf8(&data[3..])
+                .map_err(|e| Error::InvalidXmp(format!("invalid UTF-8: {}", e)))?
+        } else if data.len() > 4 && data[0] == 0 && data[1] != 0 {
+            // UTF-16 BE without BOM (starts with \0<)
+            let units: Vec<u16> = data.chunks_exact(2)
+                .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
+            converted = String::from_utf16_lossy(&units);
+            converted.as_str()
+        } else {
+            // UTF-8 (default)
+            converted = String::new();
+            std::str::from_utf8(data)
+                .or_else(|_| {
+                    let trimmed = &data[..data.iter().rposition(|&b| b == b'>').unwrap_or(0) + 1];
+                    std::str::from_utf8(trimmed)
+                })
+                .map_err(|e| Error::InvalidXmp(format!("invalid UTF-8: {}", e)))?
+        };
 
         let parser = EventReader::from_str(xml_data);
         let mut path: Vec<(String, String)> = Vec::new(); // (namespace, local_name)
