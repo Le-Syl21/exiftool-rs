@@ -82,4 +82,13 @@ static IPTC_TAGS: &[IptcTagInfo] = &[
     IptcTagInfo { record: 2, dataset: 130, name: "ImageType", description: "Image Type", is_string: true },
     IptcTagInfo { record: 2, dataset: 131, name: "ImageOrientation", description: "Image Orientation", is_string: true },
     IptcTagInfo { record: 2, dataset: 135, name: "LanguageIdentifier", description: "Language Identifier", is_string: true },
+    IptcTagInfo { record: 2, dataset: 150, name: "AudioType", description: "Audio Type", is_string: true },
+    IptcTagInfo { record: 2, dataset: 200, name: "ObjectPreviewFileFormat", description: "Object Preview File Format", is_string: false },
+    IptcTagInfo { record: 2, dataset: 201, name: "ObjectPreviewFileVersion", description: "Object Preview File Version", is_string: false },
+    IptcTagInfo { record: 2, dataset: 202, name: "ObjectPreviewData", description: "Object Preview Data", is_string: false },
+    IptcTagInfo { record: 2, dataset: 7, name: "EditStatus", description: "Edit Status", is_string: true },
+    IptcTagInfo { record: 2, dataset: 8, name: "EditorialUpdate", description: "Editorial Update", is_string: true },
+    IptcTagInfo { record: 2, dataset: 75, name: "ObjectCycle", description: "Object Cycle", is_string: true },
+    IptcTagInfo { record: 2, dataset: 230, name: "DocumentNotes", description: "Document Notes", is_string: true },
+    IptcTagInfo { record: 2, dataset: 135, name: "LanguageIdentifier", description: "Language Identifier", is_string: true },
 ];
