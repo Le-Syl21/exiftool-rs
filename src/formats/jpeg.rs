@@ -387,7 +387,10 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     if apos + rec_size > afcp_data.len() { break; }
 
                     if rec_type == b"IPTC" {
-                        if let Ok(iptc_tags) = IptcReader::read(&afcp_data[apos..apos + rec_size]) {
+                        let iptc_raw = &afcp_data[apos..apos + rec_size];
+                        // Find first IPTC marker (0x1C) — skip any header
+                        let iptc_start = iptc_raw.iter().position(|&b| b == 0x1C).unwrap_or(0);
+                        if let Ok(iptc_tags) = IptcReader::read(&iptc_raw[iptc_start..]) {
                             tags.extend(iptc_tags);
                         }
                     }
@@ -747,7 +750,7 @@ fn decode_photoshop_irb_subtags(id: u16, data: &[u8], tags: &mut Vec<crate::tag:
             }
         }
         0x0426 if data.len() >= 14 => {
-            // PrintScaleInfo
+            // PrintScaleInfo (from Perl Photoshop::PrintScaleInfo)
             let style = match u16::from_be_bytes([data[0], data[1]]) {
                 0 => "Centered", 1 => "Size to Fit", 2 => "User Defined", _ => "",
             };
@@ -755,6 +758,11 @@ fn decode_photoshop_irb_subtags(id: u16, data: &[u8], tags: &mut Vec<crate::tag:
             let x = f32::from_be_bytes([data[2], data[3], data[4], data[5]]);
             let y = f32::from_be_bytes([data[6], data[7], data[8], data[9]]);
             tags.push(mk("PrintPosition", format!("{} {}", x, y)));
+            // PrintScale at FORMAT index 10 = float at byte 10*2=20
+            if data.len() >= 24 {
+                let scale = f32::from_be_bytes([data[20], data[21], data[22], data[23]]);
+                tags.push(mk("PrintScale", format!("{}", scale)));
+            }
         }
         _ => {}
     }

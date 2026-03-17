@@ -89,7 +89,7 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
             (0x0008, "QualityMode"), (0x0009, "CasioImageSize"),
             (0x000D, "FocusMode"), (0x0014, "ISO"), (0x0019, "WhiteBalance"),
             (0x001D, "FocalLength"), (0x001F, "Saturation"), (0x0020, "Contrast"),
-            (0x0021, "Sharpness"), (0x0E00, "PrintIM"), (0x2001, "FirmwareDate"),
+            (0x0021, "Sharpness"), (0x0E00, "PrintIM"), (0x2000, "PreviewImage"), (0x2001, "FirmwareDate"), (0x2011, "WhiteBalanceBias"),
             (0x2012, "WhiteBalance"), (0x2021, "AFPointPosition"),
             (0x2022, "ObjectDistance"), (0x2034, "FlashDistance"),
             (0x3000, "RecordMode"), (0x3001, "ReleaseMode"), (0x3002, "Quality"),
