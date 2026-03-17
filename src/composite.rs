@@ -418,9 +418,15 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
 
     let mut result = Vec::new();
 
-    // Compute scale factor
+    // Compute scale factor (Perl: CalcScaleFactor35efl)
+    // Sources: FocalLengthIn35mmFormat, FocalPlaneDiagonal, FocalPlaneResolution
     let scale = if let Some(fl35) = find_tag_f64(tags, "FocalLengthIn35mmFormat") {
         if fl35 > 0.0 { fl35 / fl } else { return None; }
+    } else if let Some(diag) = find_tag_f64(tags, "FocalPlaneDiagonal")
+        .or_else(|| find_tag_value(tags, "FocalPlaneDiagonal")
+            .and_then(|s| s.split_whitespace().next()?.parse().ok()))
+    {
+        if diag > 0.0 { 43.2666 / diag } else { return None; }
     } else {
         // Compute from sensor size via FocalPlaneResolution
         let fpxr = find_tag_f64(tags, "FocalPlaneXResolution")?;
