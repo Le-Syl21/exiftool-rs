@@ -1445,6 +1445,21 @@ fn read_makernote_ifd(
                     // Canon AFInfo (old): int16u array
                     decode_canon_afinfo(value_data, count as usize, byte_order)
                 }
+                (Manufacturer::Canon, 0x00E0) => {
+                    // Canon SensorInfo: int16s, indices 1-12 (from Perl Canon::SensorInfo)
+                    let mut t = Vec::new();
+                    if count as usize >= 13 {
+                        let rd = |i: usize| -> i16 { read_u16(value_data, i * 2, byte_order) as i16 };
+                        for (i, name) in [(1,"SensorWidth"),(2,"SensorHeight"),
+                            (5,"SensorLeftBorder"),(6,"SensorTopBorder"),
+                            (7,"SensorRightBorder"),(8,"SensorBottomBorder"),
+                            (9,"BlackMaskLeftBorder"),(10,"BlackMaskTopBorder"),
+                            (11,"BlackMaskRightBorder"),(12,"BlackMaskBottomBorder")] {
+                            t.push(mk_canon_str(name, &(rd(i).to_string())));
+                        }
+                    }
+                    t
+                }
                 (Manufacturer::Canon, 0x00A9) => {
                     // Canon ColorBalance: int16u array with WB_RGGB levels
                     decode_canon_color_balance(value_data, count as usize, byte_order)
