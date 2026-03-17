@@ -52,6 +52,13 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         }
     }
 
+    // Pentax sub-table tags
+    if manufacturer == Manufacturer::Pentax {
+        for &(id, name) in PENTAX_SUB_TAGS {
+            if id == tag_id { return (name, name); }
+        }
+    }
+
     // Olympus sub-IFD tags (Equipment, CameraSettings, FocusInfo, etc.)
     if manufacturer == Manufacturer::Olympus || manufacturer == Manufacturer::OlympusNew {
         for &(id, name) in OLYMPUS_SUB_TAGS {
@@ -1038,4 +1045,81 @@ static OLYMPUS_SUB_TAGS: &[(u16, &str)] = &[
     (0x1209, "ManualFlash"),
     (0x120A, "MacroLED"),
     (0x1500, "SensorTemperature")
+];
+static PENTAX_SUB_TAGS: &[(u16, &str)] = &[
+    (0x0000, "AEExposureTime"),
+    (0x0001, "AEAperture"),
+    (0x0002, "AE_ISO"),
+    (0x0003, "AEXv"),
+    (0x0004, "AEBXv"),
+    (0x0005, "AEMinExposureTime"),
+    (0x0006, "AEProgramMode"),
+    (0x0007, "AEFlags"),
+    (0x0008, "AEApertureSteps"),
+    (0x0009, "AEMaxAperture"),
+    (0x000A, "AEMaxAperture2"),
+    (0x000B, "AEMinAperture"),
+    (0x000C, "AEMeteringMode"),
+    (0x000D, "AEWhiteBalance"),
+    (0x000E, "FlashExposureCompSet"),
+    (0x0015, "LevelIndicator"),
+    (0x0000, "AFPointsUnknown1"),
+    (0x0002, "AFPointsUnknown2"),
+    (0x0004, "AFPredictor"),
+    (0x0007, "AFIntegrationTime"),
+    (0x000B, "AFPointsInFocus"),
+    (0x0014, "AFPointValues"),
+    (0x012A, "AFPointsSelected"),
+    (0x018F, "AFPointsUnknown"),
+    (0x01FA, "LiveView"),
+    (0x01FD, "AFHold"),
+    (0x021F, "FirstFrameActionInAFC"),
+    (0x0220, "ActionInAFCCont"),
+    (0x0221, "AFCHold"),
+    (0x0960, "SubjectRecognition"),
+    (0x0000, "LensType"),
+    (0x0003, "LensData"),
+    (0x0000, "FlashStatus"),
+    (0x0001, "InternalFlashMode"),
+    (0x0002, "ExternalFlashMode"),
+    (0x0003, "InternalFlashStrength"),
+    (0x0019, "ExternalFlashExposureComp"),
+    (0x001A, "ExternalFlashBounce"),
+    (0x0000, "PictureMode2"),
+    (0x0002, "FlashOptions"),
+    (0x0003, "AFPointMode"),
+    (0x0004, "AFPointSelected2"),
+    (0x0006, "ISOFloor"),
+    (0x0007, "DriveMode2"),
+    (0x0008, "ExposureBracketStepSize"),
+    (0x0009, "BracketShotNumber"),
+    (0x000A, "WhiteBalanceSet"),
+    (0x000D, "RawAndJpgRecording"),
+    (0x0010, "FlashOptions2"),
+    (0x0012, "TvExposureTimeSetting"),
+    (0x0013, "AvApertureSetting"),
+    (0x0014, "SvISOSetting"),
+    (0x0015, "BaseExposureCompensation"),
+    (0x0001, "CameraOrientation"),
+    (0x0002, "BodyBatteryADNoLoad"),
+    (0x0003, "BodyBatteryADLoad"),
+    (0x0004, "GripBatteryADNoLoad"),
+    (0x0005, "GripBatteryADLoad"),
+    (0x0006, "BodyBatteryVoltage3"),
+    (0x0008, "BodyBatteryVoltage4"),
+    (0x0010, "GripBatteryState"),
+    (0x0011, "GripBatteryPercent"),
+    (0x0012, "GripBatteryVoltage"),
+    (0x0000, "PentaxModelID"),
+    (0x0001, "ManufactureDate"),
+    (0x0002, "ProductionCode"),
+    (0x0000, "SRResult"),
+    (0x0001, "ShakeReduction"),
+    (0x0002, "SRHalfPressTime"),
+    (0x0003, "SRFocalLength"),
+    (0x0003, "ExtenderStatus"),
+    (0x0000, "WhiteBalanceAutoAdjustment"),
+    (0x0001, "TungstenAWB"),
+    (0x0002, "HometownCity"),
+    (0x0003, "DestinationCity")
 ];

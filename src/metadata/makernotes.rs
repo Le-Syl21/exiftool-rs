@@ -381,6 +381,7 @@ fn decode_binary_subtable(data: &[u8], module: &str, table: &[(usize, &str)]) ->
 }
 
 // Pentax binary sub-tables (from Perl Pentax.pm)
+static PENTAX_SR_INFO: &[(usize, &str)] = &[(0, "SRResult"), (1, "ShakeReduction"), (2, "SRHalfPressTime"), (3, "SRFocalLength")];
 static PENTAX_AE_INFO: &[(usize, &str)] = &[
     (0, "AEExposureTime"), (1, "AEAperture"), (2, "AE_ISO"), (3, "AEXv"),
     (4, "AEBXv"), (5, "AEMinExposureTime"), (6, "AEProgramMode"),
@@ -1549,6 +1550,7 @@ fn read_makernote_ifd(
                 (Manufacturer::Pentax, 0x0215) => decode_binary_subtable(value_data, "Pentax", PENTAX_CAMERA_INFO),
                 (Manufacturer::Pentax, 0x0216) => decode_binary_subtable(value_data, "Pentax", PENTAX_BATTERY_INFO),
                 (Manufacturer::Pentax, 0x021F) => decode_binary_subtable(value_data, "Pentax", PENTAX_AF_INFO),
+                (Manufacturer::Pentax, 0x005C) => decode_binary_subtable(value_data, "Pentax", PENTAX_SR_INFO),
                 // Apple RunTime plist
                 (Manufacturer::Apple, 0x0003) => decode_apple_runtime(value_data),
                 // Sony sub-tables
