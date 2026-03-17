@@ -11,7 +11,7 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         Manufacturer::Canon => &CANON_TAGS[..],
         Manufacturer::Nikon | Manufacturer::NikonOld => &NIKON_TAGS[..],
         Manufacturer::Sony => &SONY_TAGS[..],
-        Manufacturer::Pentax => &PENTAX_TAGS[..],
+        Manufacturer::Pentax => &[][..], // Skip hand-written (has Canon/Casio collisions), use generated
         Manufacturer::Olympus | Manufacturer::OlympusNew => &OLYMPUS_TAGS[..],
         Manufacturer::Panasonic => &PANASONIC_TAGS[..],
         Manufacturer::Fujifilm => &FUJIFILM_TAGS[..],
@@ -436,7 +436,7 @@ static PENTAX_TAGS: &[(u16, &str, &str)] = &[
     (0x0029, "FrameNumber", "Frame Number"),
     (0x003E, "LensType", "Lens Type"),
     (0x003F, "LensModel", "Lens Model"),
-    (0x0047, "Temperature", "Temperature"),
+    (0x0047, "CameraTemperature", "Camera Temperature"),
     (0x0048, "AELock", "AE Lock"),
     (0x0049, "NoiseReduction", "Noise Reduction"),
     (0x004D, "FlashExposureComp", "Flash Exposure Comp"),
