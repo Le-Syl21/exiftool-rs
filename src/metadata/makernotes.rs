@@ -1649,6 +1649,29 @@ fn read_makernote_ifd(
                     // Canon AFInfo (old): int16u array
                     decode_canon_afinfo(value_data, count as usize, byte_order)
                 }
+                (Manufacturer::Canon, 0x0026) => {
+                    // Canon AFInfo2 (same structure as AFInfo but different tag)
+                    decode_canon_afinfo2(value_data, count as usize, byte_order)
+                }
+                (Manufacturer::Canon, 0x009A) => {
+                    // Canon AspectInfo: int32u format
+                    let mut t = Vec::new();
+                    if count as usize >= 1 {
+                        let v = read_u32(value_data, 0, byte_order);
+                        let s = match v { 0 => "3:2", 1 => "1:1", 2 => "4:3", 7 => "16:9", 8 => "4:5", _ => "" };
+                        if !s.is_empty() { t.push(mk_canon_str("AspectRatio", s)); }
+                        // CroppedImage dimensions at indices 1-6
+                        if count as usize >= 7 {
+                            let names = ["CroppedImageWidth","CroppedImageHeight","CroppedImageLeft","CroppedImageTop",
+                                         "CropLeftMargin","CropTopMargin"];
+                            for (i, name) in names.iter().enumerate() {
+                                let v = read_u32(value_data, (i+1)*4, byte_order);
+                                t.push(mk_canon_str(name, &v.to_string()));
+                            }
+                        }
+                    }
+                    t
+                }
                 (Manufacturer::Canon, 0x0099) => {
                     // Canon CustomFunctions2 (from Perl CanonCustom::ProcessCanonCustom2)
                     // Format: size(2) + pad(2) + count(4) + groups of records
