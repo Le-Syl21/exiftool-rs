@@ -1347,22 +1347,31 @@ fn read_makernote_ifd(
             }
         }
 
-        // Follow sub-IFDs for Olympus (0x2010-0x2050) and other manufacturers
-        // These are standard IFD format at the offset pointed by the tag value
+        // Olympus sub-IFDs (0x2010-0x2050): Equipment, CameraSettings, FocusInfo etc.
+        // Two formats (from Perl Olympus.pm):
+        //   1. format=ifd/int32u → offset to sub-IFD
+        //   2. format=undefined → data IS the sub-IFD inline
         if (manufacturer == Manufacturer::Olympus || manufacturer == Manufacturer::OlympusNew)
-            && data_type == 4 && count == 1 && tag_id >= 0x2010 && tag_id <= 0x2050
+            && tag_id >= 0x2010 && tag_id <= 0x2050
         {
-            let sub_off = read_u32(value_data, 0, byte_order) as usize;
-            if sub_off > 0 && sub_off + 2 < data.len() {
-                let sub_count = read_u16(data, sub_off, byte_order) as usize;
-                if sub_count > 0 && sub_count < 200 && sub_off + 2 + sub_count * 12 <= data.len() {
-                    // It's a valid sub-IFD — parse it recursively
+            if data_type == 4 && count == 1 {
+                // Case 2: offset to sub-IFD (OlympusNew)
+                let sub_off = read_u32(value_data, 0, byte_order) as usize;
+                if sub_off > 0 && sub_off + 2 < data.len() {
                     let mut sub_tags = Vec::new();
                     read_makernote_ifd(data, sub_off, byte_order, manufacturer, &mut sub_tags, model_name);
                     if !sub_tags.is_empty() {
                         tags.extend(sub_tags);
                         continue;
                     }
+                }
+            } else if data_type == 7 && total_size > 12 {
+                // Case 1: data IS the sub-IFD inline (old Olympus)
+                let mut sub_tags = Vec::new();
+                read_makernote_ifd(value_data, 0, byte_order, manufacturer, &mut sub_tags, model_name);
+                if !sub_tags.is_empty() {
+                    tags.extend(sub_tags);
+                    continue;
                 }
             }
         }
