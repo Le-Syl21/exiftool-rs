@@ -506,15 +506,29 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         group: crate::tag::TagGroup { family0: "FotoStation".into(), family1: "FotoStation".into(), family2: "Image".into() },
                         raw_value: crate::value::Value::String(val.clone()), print_value: val, priority: 0,
                     };
-                    // Crop/rotation fields (from Perl FotoStation::SoftEdit)
+                    // SoftEdit fields (from Perl FotoStation::SoftEdit, FORMAT=int32u)
+                    // Index × 4 = byte offset
                     if rec_data.len() >= 48 {
-                        let rd32 = |off: usize| u32::from_be_bytes([rec_data[off], rec_data[off+1], rec_data[off+2], rec_data[off+3]]);
-                        tags.push(mk("Rotation", (rd32(2) as i32).to_string()));
+                        let rd32 = |idx: usize| -> u32 {
+                            let off = idx * 4;
+                            if off + 4 > rec_data.len() { return 0; }
+                            u32::from_be_bytes([rec_data[off], rec_data[off+1], rec_data[off+2], rec_data[off+3]])
+                        };
+                        tags.push(mk("OriginalImageWidth", rd32(0).to_string()));
+                        if rec_data.len() >= 12 {
+                            tags.push(mk("OriginalImageHeight", rd32(1).to_string()));
+                            tags.push(mk("ColorPlanes", rd32(2).to_string()));
+                        }
+                        tags.push(mk("XYResolution", format!("{:.3}", rd32(3) as f64 / 1000.0)));
+                        tags.push(mk("Rotation", rd32(4).to_string()));
                         tags.push(mk("CropLeft", rd32(6).to_string()));
-                        tags.push(mk("CropTop", rd32(10).to_string()));
-                        tags.push(mk("CropRight", rd32(14).to_string()));
-                        tags.push(mk("CropBottom", rd32(18).to_string()));
-                        tags.push(mk("CropRotation", format!("{:.6}", f64::from(f32::from_be_bytes([rec_data[22], rec_data[23], rec_data[24], rec_data[25]])))));
+                        tags.push(mk("CropTop", rd32(7).to_string()));
+                        tags.push(mk("CropRight", rd32(8).to_string()));
+                        tags.push(mk("CropBottom", rd32(9).to_string()));
+                        if rec_data.len() >= 48 {
+                            let bits = rd32(11);
+                            tags.push(mk("CropRotation", format!("{:.6}", f32::from_bits(bits))));
+                        }
                     }
                 }
                 _ => {}
