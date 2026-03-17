@@ -1437,8 +1437,28 @@ fn read_makernote_ifd(
                 }
                 (Manufacturer::Canon, 0x000D) => {
                     let mut t = subs::dispatch_canon_camera_info(&dispatch_ctx);
-                    // Also extract common fields (BracketMode etc.)
                     t.extend(decode_canon_camera_info_common(value_data, count as usize, byte_order));
+                    // Decode model-specific CameraInfo fields (int8u offsets)
+                    let d = value_data;
+                    static CAMERA_INFO_FIELDS: &[(usize, &str)] = &[
+                        (3, "FNumber"), (4, "ExposureTime"), (6, "ISO"),
+                        (24, "CameraTemperature"), (29, "FocalLength"),
+                        (48, "CameraOrientation"), (67, "FocusDistanceUpper"),
+                        (69, "FocusDistanceLower"), (94, "WhiteBalance"),
+                        (98, "ColorTemperature"), (134, "PictureStyle"),
+                        (275, "MinFocalLength"), (277, "MaxFocalLength"),
+                        (370, "FileIndex"), (374, "ShutterCount"), (382, "DirectoryIndex"),
+                    ];
+                    for &(off, name) in CAMERA_INFO_FIELDS {
+                        if off < d.len() {
+                            t.push(mk_canon_str(name, &d[off].to_string()));
+                        }
+                    }
+                    // FirmwareVersion (string at offset 310, ~6 bytes)
+                    if d.len() > 316 {
+                        let fw = String::from_utf8_lossy(&d[310..316]).trim_end_matches('\0').to_string();
+                        if !fw.is_empty() { t.push(mk_canon_str("FirmwareVersion", &fw)); }
+                    }
                     t
                 }
                 (Manufacturer::Canon, 0x0012) => {
