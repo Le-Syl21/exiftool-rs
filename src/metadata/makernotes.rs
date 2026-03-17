@@ -194,6 +194,113 @@ fn decode_google_hdrp(data: &[u8]) -> Vec<Tag> {
     tags
 }
 
+/// Decode Canon CustomFunctions2 (from Perl CanonCustom.pm ProcessCanonCustom2).
+fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    if data.len() < 8 { return tags; }
+
+    let size = read_u16(data, 0, bo) as usize;
+    if size != data.len() || size < 8 { return tags; }
+
+    let group_count = read_u32(data, 4, bo) as usize;
+    let mut pos = 8;
+
+    for _ in 0..group_count.min(20) {
+        if pos + 12 > data.len() { break; }
+        let _rec_num = read_u32(data, pos, bo);
+        let rec_len = read_u32(data, pos + 4, bo) as usize;
+        let rec_count = read_u32(data, pos + 8, bo) as usize;
+        pos += 12;
+        if rec_len < 8 { break; }
+        let rec_end = pos + rec_len - 8;
+        if rec_end > data.len() { break; }
+
+        for _ in 0..rec_count.min(50) {
+            if pos + 8 > rec_end { break; }
+            let tag_id = read_u32(data, pos, bo);
+            let num_vals = read_u32(data, pos + 4, bo) as usize;
+            pos += 8;
+            if pos + num_vals * 4 > rec_end { break; }
+
+            let val = if num_vals > 0 && pos + 4 <= data.len() {
+                read_u32(data, pos, bo)
+            } else { 0 };
+
+            // Look up tag name from CustomFunctions2 table
+            let name = canon_custom2_name(tag_id);
+            if !name.is_empty() {
+                tags.push(mk_canon_str(name, &val.to_string()));
+            }
+
+            pos += num_vals * 4;
+        }
+    }
+    tags
+}
+
+fn canon_custom2_name(id: u32) -> &'static str {
+    match id {
+        0x0101 => "ExposureLevelIncrements",
+        0x0102 => "ISOSpeedIncrements",
+        0x0103 => "ISOSpeedRange",
+        0x0104 => "AEBAutoCancel",
+        0x0105 => "AEBSequence",
+        0x0106 => "AEBShotCount",
+        0x0107 => "SpotMeterLinkToAFPoint",
+        0x0108 => "SafetyShift",
+        0x0109 => "UsableShootingModes",
+        0x010A => "UsableMeteringModes",
+        0x010B => "ExposureModeInManual",
+        0x010C => "ShutterSpeedRange",
+        0x010D => "ApertureRange",
+        0x010E => "ApplyShootingMeteringMode",
+        0x010F => "FlashSyncSpeedAv",
+        0x0201 => "LongExposureNoiseReduction",
+        0x0202 => "HighISONoiseReduction",
+        0x0203 => "HighlightTonePriority",
+        0x0301 => "ETTLII",
+        0x0302 => "ShutterCurtainSync",
+        0x0303 => "FlashFiring",
+        0x0501 => "AFAssistBeam",
+        0x0502 => "AFPointSelectionMethod",
+        0x0503 => "AFPointAutoSelection",
+        0x0504 => "AFPointDisplayDuringFocus",
+        0x0505 => "AFPointBrightness",
+        0x0506 => "AFPointsSelected",
+        0x0507 => "AFAreaSelectionMethod",
+        0x050E => "AIServoTrackingSensitivity",
+        0x050F => "AIServoImagePriority",
+        0x0510 => "AIServoTrackingMethod",
+        0x0511 => "LensDriveNoAF",
+        0x0512 => "LensAFStopButton",
+        0x0513 => "AFMicroAdjMode",
+        0x0514 => "AFMicroadjustment",
+        0x0515 => "AFMicroAdjValue",
+        0x0601 => "ContinuousShootingSpeed",
+        0x0602 => "ContinuousShotLimit",
+        0x0701 => "ShutterButtonAFOnButton",
+        0x0702 => "AFOnAELockButtonSwitch",
+        0x0703 => "QuickControlDialInMeter",
+        0x0704 => "SetButtonWhenShooting",
+        0x0706 => "DialDirectionTvAv",
+        0x0707 => "AvSettingWithoutLens",
+        0x0708 => "WBMediaImageSizeSetting",
+        0x0709 => "ButtonFunctionControlOff",
+        0x0801 => "FocusingScreen",
+        0x0802 => "TimerLength",
+        0x0803 => "ShortReleaseTimeLag",
+        0x0804 => "AddAspectRatioInfo",
+        0x0805 => "AddOriginalDecisionData",
+        0x0806 => "LiveViewShooting",
+        0x0807 => "LiveViewExposureSimulation",
+        0x0808 => "MirrorLockup",
+        0x080B => "AFPointAreaExpansion",
+        0x080C => "InfoButtonWhenShooting",
+        0x0901 => "LCDIlluminationDuringBulb",
+        _ => "",
+    }
+}
+
 /// Decode Minolta CameraSettings (int32u format, from Perl Minolta.pm).
 fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
     let mut tags = Vec::new();
@@ -1491,6 +1598,13 @@ fn read_makernote_ifd(
                 (Manufacturer::Canon, 0x0012) => {
                     // Canon AFInfo (old): int16u array
                     decode_canon_afinfo(value_data, count as usize, byte_order)
+                }
+                (Manufacturer::Canon, 0x0099) => {
+                    // Canon CustomFunctions2 (from Perl CanonCustom::ProcessCanonCustom2)
+                    // Format: size(2) + pad(2) + count(4) + groups of records
+                    // Each group: recNum(4) + recLen(4) + recCount(4) + entries
+                    // Each entry: tag(4) + numValues(4) + values(4*N)
+                    decode_canon_custom_functions2(value_data, byte_order)
                 }
                 (Manufacturer::Canon, 0x00E0) => {
                     // Canon SensorInfo: int16s, indices 1-12 (from Perl Canon::SensorInfo)
