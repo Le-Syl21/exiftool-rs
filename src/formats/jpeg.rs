@@ -366,6 +366,9 @@ fn extract_photoshop_irbs(data: &[u8]) -> (Option<Vec<u8>>, Vec<crate::tag::Tag>
         if resource_id == 0x0404 {
             iptc = Some(irb_data.to_vec());
         } else {
+            // Decode IRBs with sub-tags (ResolutionInfo, etc.)
+            decode_photoshop_irb_subtags(resource_id, irb_data, &mut tags);
+
             // Extract known Photoshop IRB tags
             let name = photoshop_irb_name(resource_id);
             if !name.is_empty() && data_len <= 256 {
@@ -397,7 +400,7 @@ fn extract_photoshop_irbs(data: &[u8]) -> (Option<Vec<u8>>, Vec<crate::tag::Tag>
 
 fn photoshop_irb_name(id: u16) -> &'static str {
     match id {
-        0x03ED => "ResolutionInfo",
+        0x03ED => "ResolutionInfo", // decoded specially below
         0x03F3 => "PrintFlags",
         0x0406 => "JPEG_Quality",
         0x0408 => "GridGuidesInfo",
@@ -425,6 +428,45 @@ fn photoshop_irb_name(id: u16) -> &'static str {
             0x041F => "PrintFlagsInfo",
             _ => "",
         },
+    }
+}
+
+fn decode_photoshop_irb_subtags(id: u16, data: &[u8], tags: &mut Vec<crate::tag::Tag>) {
+    let mk = |name: &str, val: String| crate::tag::Tag {
+        id: crate::tag::TagId::Text(name.into()),
+        name: name.into(), description: name.into(),
+        group: crate::tag::TagGroup { family0: "Photoshop".into(), family1: "Photoshop".into(), family2: "Image".into() },
+        raw_value: crate::value::Value::String(val.clone()), print_value: val, priority: 0,
+    };
+
+    match id {
+        0x03ED if data.len() >= 14 => {
+            // ResolutionInfo (from Perl Photoshop::Resolution)
+            let xres = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as f64 / 65536.0;
+            tags.push(mk("XResolution", format!("{}", (xres * 100.0).round() / 100.0)));
+            let units_x = match u16::from_be_bytes([data[4], data[5]]) { 1 => "inches", 2 => "cm", _ => "" };
+            if !units_x.is_empty() { tags.push(mk("DisplayedUnitsX", units_x.into())); }
+            // Bytes 6-7: WidthUnit (not commonly used)
+            let yres = u32::from_be_bytes([data[8], data[9], data[10], data[11]]) as f64 / 65536.0;
+            tags.push(mk("YResolution", format!("{}", (yres * 100.0).round() / 100.0)));
+            let units_y = match u16::from_be_bytes([data[12], data[13]]) { 1 => "inches", 2 => "cm", _ => "" };
+            if !units_y.is_empty() { tags.push(mk("DisplayedUnitsY", units_y.into())); }
+        }
+        0x041F if data.len() >= 4 => {
+            // PrintFlagsInfo
+            let version = u16::from_be_bytes([data[0], data[1]]);
+            if data.len() >= 7 {
+                // CropMarks at byte 2, Bleed width at 4-7
+            }
+        }
+        0x0426 if data.len() >= 8 => {
+            // PrintScale
+            let style = match u16::from_be_bytes([data[0], data[1]]) {
+                0 => "Centered", 1 => "Size to Fit", 2 => "User Defined", _ => "",
+            };
+            if !style.is_empty() { tags.push(mk("PrintStyle", style.into())); }
+        }
+        _ => {}
     }
 }
 
