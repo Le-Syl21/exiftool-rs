@@ -449,10 +449,10 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     if pos + len > pm_data.len() { break; }
                     let val_bytes = &pm_data[pos..pos+len];
                     let name = match (rec, ds) {
-                        (2, 209) => "CropLeft",
-                        (2, 210) => "CropTop",
-                        (2, 211) => "CropRight",
-                        (2, 212) => "CropBottom",
+                        (2, 217) => "CropLeft",
+                        (2, 218) => "CropTop",
+                        (2, 219) => "CropRight",
+                        (2, 220) => "CropBottom",
                         (2, 216) => "Rotation",
                         (2, 221) => "Tagged",
                         (2, 222) => "ColorClass",
