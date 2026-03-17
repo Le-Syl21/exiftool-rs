@@ -300,6 +300,14 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
     if d.len() > 109 {
         tags.push(mk("Sharpness2", d[108].to_string()));
     }
+    if d.len() > 94 {
+        tags.push(mk("FlashMode", d[92].to_string()));
+        tags.push(mk("FlashFired", d[93].to_string()));
+        tags.push(mk("ISOSetting", d[94].to_string()));
+    }
+    if d.len() > 112 {
+        tags.push(mk("SequenceNumber", u32::from_be_bytes([d[108], d[109], d[110], d[111]]).to_string()));
+    }
 
     tags
 }
