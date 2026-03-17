@@ -1891,21 +1891,63 @@ fn read_makernote_ifd(
         if (manufacturer == Manufacturer::Olympus || manufacturer == Manufacturer::OlympusNew)
             && tag_id >= 0x2010 && tag_id <= 0x2050
         {
+            // Determine context-specific tag table
+            let oly_table: &[(u16, &str)] = match tag_id {
+                0x2010 => &crate::tags::makernotes::OLYMPUS_EQUIPMENT,
+                0x2020 => &crate::tags::makernotes::OLYMPUS_CAMERA_SETTINGS,
+                0x2030 | 0x2031 => &crate::tags::makernotes::OLYMPUS_RAW_DEV,
+                0x2040 => &crate::tags::makernotes::OLYMPUS_IMAGE_PROCESSING,
+                0x2050 => &crate::tags::makernotes::OLYMPUS_FOCUS_INFO,
+                _ => &[],
+            };
+
+            let parse_oly_ifd = |ifd_data: &[u8], ifd_off: usize| -> Vec<Tag> {
+                let mut sub_tags = Vec::new();
+                if ifd_off + 2 > ifd_data.len() { return sub_tags; }
+                let ec = read_u16(ifd_data, ifd_off, byte_order) as usize;
+                for j in 0..ec.min(100) {
+                    let eoff = ifd_off + 2 + j * 12;
+                    if eoff + 12 > ifd_data.len() { break; }
+                    let stid = read_u16(ifd_data, eoff, byte_order);
+                    // Look up in context-specific table first
+                    let name = oly_table.iter().find(|&&(id, _)| id == stid)
+                        .map(|&(_, n)| n)
+                        .unwrap_or("Unknown");
+                    if name == "Unknown" { continue; }
+                    let sdt = read_u16(ifd_data, eoff + 2, byte_order);
+                    let scnt = read_u32(ifd_data, eoff + 4, byte_order) as usize;
+                    let sts = match sdt { 1|2|6|7 => 1, 3|8 => 2, 4|9|11|13 => 4, 5|10|12 => 8, _ => 1 };
+                    let stotal = sts * scnt;
+                    let sval = if stotal <= 4 {
+                        &ifd_data[eoff+8..(eoff+8+stotal).min(ifd_data.len())]
+                    } else {
+                        let off = read_u32(ifd_data, eoff + 8, byte_order) as usize;
+                        if off + stotal <= ifd_data.len() { &ifd_data[off..off+stotal] }
+                        else { continue; }
+                    };
+                    let val = crate::metadata::makernotes::decode_mn_value(sval, sdt, scnt, byte_order);
+                    let pv = val.to_display_string();
+                    sub_tags.push(Tag {
+                        id: TagId::Text(name.to_string()), name: name.to_string(),
+                        description: name.to_string(),
+                        group: TagGroup { family0: "MakerNotes".into(), family1: "Olympus".into(), family2: "Camera".into() },
+                        raw_value: val, print_value: pv, priority: 0,
+                    });
+                }
+                sub_tags
+            };
+
             if data_type == 4 && count == 1 {
-                // Case 2: offset to sub-IFD (OlympusNew)
                 let sub_off = read_u32(value_data, 0, byte_order) as usize;
                 if sub_off > 0 && sub_off + 2 < data.len() {
-                    let mut sub_tags = Vec::new();
-                    read_makernote_ifd(data, sub_off, byte_order, manufacturer, &mut sub_tags, model_name);
+                    let sub_tags = parse_oly_ifd(data, sub_off);
                     if !sub_tags.is_empty() {
                         tags.extend(sub_tags);
                         continue;
                     }
                 }
             } else if data_type == 7 && total_size > 12 {
-                // Case 1: data IS the sub-IFD inline (old Olympus)
-                let mut sub_tags = Vec::new();
-                read_makernote_ifd(value_data, 0, byte_order, manufacturer, &mut sub_tags, model_name);
+                let sub_tags = parse_oly_ifd(value_data, 0);
                 if !sub_tags.is_empty() {
                     tags.extend(sub_tags);
                     continue;
@@ -1950,7 +1992,7 @@ fn read_makernote_ifd(
     }
 }
 
-fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderMark) -> Value {
+pub fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderMark) -> Value {
     match data_type {
         1 | 7 => {
             // BYTE / UNDEFINED
