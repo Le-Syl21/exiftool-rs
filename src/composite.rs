@@ -63,8 +63,13 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     }
 
     // LightValue
-    if let Some(lv) = compute_light_value(tags) {
-        composite.push(lv);
+    // LightValue (needs ShutterSpeed composite)
+    {
+        let mut all: Vec<Tag> = tags.to_vec();
+        all.extend(composite.iter().cloned());
+        if let Some(lv) = compute_light_value(&all) {
+            composite.push(lv);
+        }
     }
 
     // DateTimeCreated: combine DateTimeOriginal + SubSecTimeOriginal + OffsetTimeOriginal
@@ -383,17 +388,39 @@ fn compute_megapixels(tags: &[Tag]) -> Option<Tag> {
     ))
 }
 
+/// Perl: LV = 2*log2(Aperture) - log2(ShutterSpeed) - log2(ISO/100)
+/// Uses composites Aperture, ShutterSpeed, ISO (not raw FNumber/ExposureTime)
 fn compute_light_value(tags: &[Tag]) -> Option<Tag> {
-    let aperture = find_tag_f64(tags, "FNumber")?;
-    let exposure = find_tag_f64(tags, "ExposureTime")?;
+    // Aperture from composite or FNumber or ApertureValue
+    let aperture = find_tag_f64(tags, "FNumber")
+        .or_else(|| find_tag_f64(tags, "ApertureValue")
+            .map(|av| 2.0_f64.powf(av / 2.0)))?;
+
+    // ShutterSpeed from ExposureTime or ShutterSpeedValue
+    let shutter = find_tag_f64(tags, "ExposureTime")
+        .or_else(|| find_tag_f64(tags, "ShutterSpeedValue")
+            .map(|sv| 2.0_f64.powf(-sv)))
+        .or_else(|| {
+            // Parse from ShutterSpeed composite print value like "1/60 s"
+            find_tag_value(tags, "ShutterSpeed").and_then(|s| {
+                let s = s.trim_end_matches(" s").trim();
+                if s.contains('/') {
+                    let parts: Vec<&str> = s.split('/').collect();
+                    let n: f64 = parts[0].parse().ok()?;
+                    let d: f64 = parts[1].parse().ok()?;
+                    Some(n / d)
+                } else { s.parse().ok() }
+            })
+        })?;
+
     let iso = find_tag_f64(tags, "ISO")?;
 
-    if exposure <= 0.0 || iso <= 0.0 || aperture <= 0.0 {
+    if shutter <= 0.0 || iso <= 0.0 || aperture <= 0.0 {
         return None;
     }
 
-    // LV = log2(aperture^2 / exposure) - log2(iso / 100)
-    let lv = (aperture * aperture / exposure).log2() - (iso / 100.0).log2();
+    // LV = 2*log2(Aperture) - log2(ShutterSpeed) - log2(ISO/100)
+    let lv = 2.0 * aperture.log2() - shutter.log2() - (iso / 100.0).log2();
 
     Some(mk_composite(
         "LightValue",

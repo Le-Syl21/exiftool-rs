@@ -112,9 +112,10 @@ pub fn parse_makernotes(
             parse_offset = 14; // IFD starts at offset 14 within MakerNote
         }
         Manufacturer::Fujifilm => {
-            // FUJIFILM: offsets relative to start of maker note
-            parse_data = &data[mn_offset..mn_offset + mn_size];
-            parse_offset = 0;
+            // FUJIFILM: IFD at OffsetPt (byte 8-11 LE), offsets relative to MN start
+            // (from Perl: OffsetPt => '$valuePtr+8', Base => '$start')
+            parse_data = &data[mn_offset..(mn_offset + mn_size).min(data.len())];
+            parse_offset = info.ifd_offset; // = value read from bytes 8-11
         }
         _ => {
             // Canon, Sony, Pentax, Panasonic: offsets relative to main TIFF header
