@@ -1692,6 +1692,31 @@ fn read_makernote_ifd(
                     }
                     t
                 }
+                (Manufacturer::Canon, 0x0098) => {
+                    // Canon CropInfo: int16u format (from Perl Canon::CropInfo)
+                    let mut t = Vec::new();
+                    if count as usize >= 4 {
+                        let rd = |i: usize| -> u16 { read_u16(value_data, i * 2, byte_order) };
+                        t.push(mk_canon_str("CropLeftMargin", &rd(0).to_string()));
+                        t.push(mk_canon_str("CropRightMargin", &rd(1).to_string()));
+                        t.push(mk_canon_str("CropTopMargin", &rd(2).to_string()));
+                        t.push(mk_canon_str("CropBottomMargin", &rd(3).to_string()));
+                    }
+                    t
+                }
+                (Manufacturer::Canon, 0x00A0) => {
+                    // Canon ProcessingInfo: int16s format (from Perl Canon::Processing)
+                    let mut t = Vec::new();
+                    let rd = |i: usize| -> i16 { read_u16(value_data, i * 2, byte_order) as i16 };
+                    if count as usize >= 14 {
+                        t.push(mk_canon_str("ToneCurve", &rd(1).to_string()));
+                        t.push(mk_canon_str("SharpnessFrequency", &rd(3).to_string()));
+                        t.push(mk_canon_str("DigitalGain", &rd(11).to_string()));
+                        t.push(mk_canon_str("WBShiftAB", &rd(12).to_string()));
+                        t.push(mk_canon_str("WBShiftGM", &rd(13).to_string()));
+                    }
+                    t
+                }
                 (Manufacturer::Canon, 0x0099) => {
                     // Canon CustomFunctions2 (from Perl CanonCustom::ProcessCanonCustom2)
                     // Format: size(2) + pad(2) + count(4) + groups of records
