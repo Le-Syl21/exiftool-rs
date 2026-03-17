@@ -352,9 +352,8 @@ fn decode_nikon_afinfo(data: &[u8], _bo: ByteOrderMark) -> Vec<Tag> {
             10 => "Far Right",
             _ => "",
         }).collect();
-        if !points.is_empty() {
-            tags.push(mk_nikon_str("AFPointsInFocus", &points.join(", ")));
-        }
+        let pv = if points.is_empty() { "(none)".to_string() } else { points.join(", ") };
+        tags.push(mk_nikon_str("AFPointsInFocus", &pv));
     }
 
     tags
