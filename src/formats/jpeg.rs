@@ -520,7 +520,7 @@ fn decode_photoshop_irb_subtags(id: u16, data: &[u8], tags: &mut Vec<crate::tag:
             let style = match u16::from_be_bytes([data[0], data[1]]) {
                 0 => "Centered", 1 => "Size to Fit", 2 => "User Defined", _ => "",
             };
-            if !style.is_empty() { tags.push(mk("PrintScale", style.into())); }
+            if !style.is_empty() { tags.push(mk("PrintStyle", style.into())); }
             let x = f32::from_be_bytes([data[2], data[3], data[4], data[5]]);
             let y = f32::from_be_bytes([data[6], data[7], data[8], data[9]]);
             tags.push(mk("PrintPosition", format!("{} {}", x, y)));
