@@ -200,6 +200,42 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         Err(_) => {}
                     }
                 }
+                // Casio QVCI APP1 segment
+                else if seg_data.starts_with(b"QVCI\0") && seg_data.len() > 0x80 {
+                    let d = seg_data;
+                    let mk = |name: &str, val: String| -> crate::tag::Tag {
+                        crate::tag::Tag {
+                            id: crate::tag::TagId::Text(name.into()),
+                            name: name.into(), description: name.into(),
+                            group: crate::tag::TagGroup { family0: "MakerNotes".into(), family1: "Casio".into(), family2: "Camera".into() },
+                            raw_value: crate::value::Value::String(val.clone()), print_value: val, priority: 0,
+                        }
+                    };
+                    // CasioQuality at 0x2C
+                    let quality = match d[0x2C] {
+                        1 => "Economy", 2 => "Normal", 3 => "Fine", 4 => "Super Fine", _ => "",
+                    };
+                    if !quality.is_empty() { tags.push(mk("CasioQuality", quality.into())); }
+                    // DateTimeOriginal at 0x4D (20 bytes string)
+                    if d.len() > 0x61 {
+                        let dt = String::from_utf8_lossy(&d[0x4D..0x61]).trim_end_matches('\0').replace('.', ":").to_string();
+                        if !dt.is_empty() { tags.push(mk("DateTimeOriginal", dt)); }
+                    }
+                    // ModelType at 0x62 (4 bytes)
+                    if d.len() > 0x66 {
+                        let mt = u32::from_le_bytes([d[0x62], d[0x63], d[0x64], d[0x65]]);
+                        tags.push(mk("ModelType", mt.to_string()));
+                    }
+                    // ManufactureIndex at 0x76, ManufactureCode at 0x7A
+                    if d.len() > 0x7E {
+                        let mi = u32::from_le_bytes([d[0x76], d[0x77], d[0x78], d[0x79]]);
+                        let mc = u32::from_le_bytes([d[0x7A], d[0x7B], d[0x7C], d[0x7D]]);
+                        tags.push(mk("ManufactureIndex", mi.to_string()));
+                        tags.push(mk("ManufactureCode", mc.to_string()));
+                    }
+                    // XResolution, YResolution, ResolutionUnit from TIFF-like structure
+                    // (these may be in the EXIF already)
+                }
                 // Extended XMP: accumulate chunks for later assembly
                 else if seg_data.len() > 75
                     && seg_data.starts_with(b"http://ns.adobe.com/xmp/extension/\0")
