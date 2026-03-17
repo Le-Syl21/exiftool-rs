@@ -801,6 +801,39 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
         };
     }
 
+    // Sanyo: "SANYO\0" (6 bytes) + 2 padding + IFD
+    // (from Perl: Start => '$valuePtr + 8')
+    if mn_data.starts_with(b"SANYO\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Unknown,
+            ifd_offset: 8,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
+    // Casio Type 2: "QVC\0" or "DCI\0"
+    // (from Perl: Start => '$valuePtr + 6')
+    if mn_data.starts_with(b"QVC\0") || mn_data.starts_with(b"DCI\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Casio,
+            ifd_offset: 6,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
+    // Kodak: "KDK INFO" — NOT an IFD, binary format
+    if mn_data.starts_with(b"KDK INFO") {
+        // Kodak uses binary data, not IFD — handled separately
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Unknown,
+            ifd_offset: 0, // special marker for non-IFD
+            _base_adjust: 0,
+            byte_order: Some(ByteOrderMark::BigEndian),
+        };
+    }
+
     // Ricoh: "RICOH\0\0\0" (8 bytes) + IFD
     // (from Perl MakerNotes.pm: Start => '$valuePtr + 8')
     if mn_data.starts_with(b"Ricoh") || mn_data.starts_with(b"RICOH") {

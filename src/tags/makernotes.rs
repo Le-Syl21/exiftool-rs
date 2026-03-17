@@ -51,14 +51,39 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         }
     }
 
-    // Tags for manufacturers not in generated tables
+    // Tags for manufacturers not in generated tables (JVC, GE, Motorola, Sanyo)
     let extra: &[(u16, &str)] = &[
         (0x0002, "CPUVersions"), (0x0003, "Quality"),       // JVC
-        (0x0202, "Macro"), (0x0207, "GEModel"), (0x0300, "GEMake"), // GE
+        (0x0200, "SpecialMode"), (0x0201, "SanyoQuality"),  // Sanyo
+        (0x0202, "Macro"), (0x0204, "DigitalZoom"),
+        (0x0207, "GEModel"),
+        (0x0210, "ColorAdjustmentMode"), (0x0214, "SelfTimer"),
+        (0x0219, "OpticalZoomOn"), (0x021B, "DigitalZoomOn"),
+        (0x0225, "FlashMode"),
+        (0x0300, "GEMake"),
         (0x5500, "BuildNumber"), (0x5501, "SerialNumber"),  // Motorola
         (0x6420, "CustomRendered"), (0x64D0, "DriveMode"),
         (0x665E, "Sensor"), (0x6705, "ManufactureDate"),
     ];
+
+
+    // Casio Type 2 tags
+    if manufacturer == Manufacturer::Casio && tag_id >= 0x0002 {
+        let casio2: &[(u16, &str)] = &[
+            (0x0008, "QualityMode"), (0x0009, "CasioImageSize"),
+            (0x000D, "FocusMode"), (0x0014, "ISO"), (0x0019, "WhiteBalance"),
+            (0x001D, "FocalLength"), (0x001F, "Saturation"), (0x0020, "Contrast"),
+            (0x0021, "Sharpness"), (0x0E00, "PrintIM"), (0x2001, "FirmwareDate"),
+            (0x2012, "WhiteBalance"), (0x2021, "AFPointPosition"),
+            (0x2022, "ObjectDistance"), (0x2034, "FlashDistance"),
+            (0x3000, "RecordMode"), (0x3001, "ReleaseMode"), (0x3002, "Quality"),
+            (0x3003, "FocusMode"), (0x3006, "HometownCity"), (0x3007, "BestShotMode"),
+            (0x3008, "AutoISO"), (0x3014, "ISO"), (0x3015, "ColorMode"),
+            (0x3016, "Enhancement"), (0x3017, "ColorFilter"), (0x301B, "ArtMode"),
+            (0x3020, "ImageStabilization"), (0x302A, "LightingMode"),
+        ];
+        for &(id, name) in casio2 { if id == tag_id { return (name, name); } }
+    }
 
     // Ricoh-specific tags (avoid collision with Canon 0x0001/0x0004)
     if manufacturer == Manufacturer::Ricoh {
