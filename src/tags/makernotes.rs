@@ -471,7 +471,7 @@ static PANASONIC_TAGS: &[(u16, &str, &str)] = &[
     (0x0007, "FocusMode", "Focus Mode"),
     (0x000F, "AFAreaMode", "AF Area Mode"),
     (0x001A, "ImageStabilization", "Image Stabilization"),
-    (0x001C, "Macro", "Macro Mode"),
+    (0x001C, "MacroMode", "Macro Mode"),
     (0x001F, "ShootingMode", "Shooting Mode"),
     (0x0020, "Audio", "Audio"),
     (0x0023, "WhiteBalanceBias", "White Balance Bias"),

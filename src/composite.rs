@@ -35,14 +35,31 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         composite.push(ap);
     }
 
+    // ShutterSpeed from ShutterSpeedValue (APEX) if no ExposureTime
+    if find_tag(tags, "ShutterSpeed").is_none() && find_tag(tags, "ExposureTime").is_none() {
+        if let Some(ssv) = find_tag_f64(tags, "ShutterSpeedValue") {
+            let speed = 2.0_f64.powf(-ssv);
+            let print = if speed >= 1.0 {
+                format!("{:.0} s", speed)
+            } else if speed > 0.0 {
+                format!("1/{:.0} s", 1.0 / speed)
+            } else { "0".to_string() };
+            composite.push(mk_composite("ShutterSpeed", "Shutter Speed", Value::String(print)));
+        }
+    }
+
     // ImageSize: Width x Height
     if let Some(sz) = compute_image_size(tags) {
         composite.push(sz);
     }
 
-    // Megapixels
-    if let Some(mp) = compute_megapixels(tags) {
-        composite.push(mp);
+    // Megapixels (needs ImageSize composite)
+    {
+        let mut all: Vec<Tag> = tags.to_vec();
+        all.extend(composite.iter().cloned());
+        if let Some(mp) = compute_megapixels(&all) {
+            composite.push(mp);
+        }
     }
 
     // LightValue
@@ -326,24 +343,32 @@ fn compute_image_size(tags: &[Tag]) -> Option<Tag> {
     ))
 }
 
+/// Perl: Require => 'ImageSize', ValueConv => 'my @d = ($val =~ /\d+/g); $d[0] * $d[1] / 1000000'
 fn compute_megapixels(tags: &[Tag]) -> Option<Tag> {
-    let w = find_tag(tags, "ExifImageWidth")
-        .or_else(|| find_tag(tags, "ImageWidth"))?;
-    let h = find_tag(tags, "ExifImageHeight")
-        .or_else(|| find_tag(tags, "ExifImageHeight"))?;
+    // Use ImageSize composite (already computed) like Perl does
+    let sz = find_tag_value(tags, "ImageSize")
+        .or_else(|| {
+            let w = find_tag(tags, "ExifImageWidth").or_else(|| find_tag(tags, "ImageWidth"))?;
+            let h = find_tag(tags, "ExifImageHeight").or_else(|| find_tag(tags, "ImageHeight"))?;
+            let wv = w.raw_value.as_u64().or_else(|| w.print_value.parse().ok())?;
+            let hv = h.raw_value.as_u64().or_else(|| h.print_value.parse().ok())?;
+            Some(format!("{}x{}", wv, hv))
+        })?;
 
-    let width = w.raw_value.as_u64().or_else(|| w.print_value.parse().ok())?;
-    let height = h.raw_value.as_u64().or_else(|| h.print_value.parse().ok())?;
+    let nums: Vec<f64> = sz.split(|c: char| !c.is_ascii_digit())
+        .filter_map(|s| s.parse().ok()).collect();
+    if nums.len() < 2 { return None; }
 
-    let mp = (width * height) as f64 / 1_000_000.0;
-    if mp < 0.001 {
-        return None;
-    }
+    let mp = nums[0] * nums[1] / 1_000_000.0;
+    // Perl: sprintf("%.*f", ($val >= 1 ? 1 : ($val >= 0.001 ? 3 : 6)), $val)
+    let fmt = if mp >= 1.0 { format!("{:.1}", mp) }
+        else if mp >= 0.001 { format!("{:.3}", mp) }
+        else { format!("{:.6}", mp) };
 
     Some(mk_composite(
         "Megapixels",
         "Megapixels",
-        Value::String(format!("{:.1}", mp)),
+        Value::String(fmt),
     ))
 }
 
