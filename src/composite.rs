@@ -127,6 +127,26 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         composite.extend(fp_tags);
     }
 
+    // IPTC DateTimeCreated (from IPTC:DateCreated + IPTC:TimeCreated)
+    if find_tag(tags, "DateTimeCreated").is_none() {
+        if let (Some(date), Some(time)) = (find_tag_value(tags, "DateCreated"), find_tag_value(tags, "TimeCreated")) {
+            if !date.is_empty() && !time.is_empty() {
+                composite.push(mk_composite("DateTimeCreated", "Date/Time Created",
+                    Value::String(format!("{} {}", date, time))));
+            }
+        }
+    }
+
+    // IPTC DateTimeOriginal fallback (when no EXIF DateTimeOriginal)
+    if find_tag(tags, "DateTimeOriginal").is_none() {
+        if let (Some(date), Some(time)) = (find_tag_value(tags, "DateCreated"), find_tag_value(tags, "TimeCreated")) {
+            if !date.is_empty() && !time.is_empty() {
+                composite.push(mk_composite("DateTimeOriginal", "Date/Time Original",
+                    Value::String(format!("{} {}", date, time))));
+            }
+        }
+    }
+
     // GPSDateTime composite
     if let (Some(date), Some(time)) = (find_tag_value(tags, "GPSDateStamp"), find_tag_value(tags, "GPSTimeStamp")) {
         if !date.is_empty() && !time.is_empty() {
