@@ -23,6 +23,7 @@ pub enum Manufacturer {
     Samsung,
     Sigma,
     Casio,
+    CasioType2,
     Ricoh,
     Minolta,
     Apple,
@@ -833,7 +834,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
     // (from Perl: Start => '$valuePtr + 6')
     if mn_data.starts_with(b"QVC\0") || mn_data.starts_with(b"DCI\0") {
         return MakerNoteInfo {
-            manufacturer: Manufacturer::Casio,
+            manufacturer: Manufacturer::CasioType2,
             ifd_offset: 6,
             _base_adjust: 0,
             byte_order: None,
@@ -1408,7 +1409,7 @@ fn manufacturer_group_name(mfr: Manufacturer) -> &'static str {
         Manufacturer::Fujifilm => "Fujifilm",
         Manufacturer::Samsung => "Samsung",
         Manufacturer::Sigma => "Sigma",
-        Manufacturer::Casio => "Casio",
+        Manufacturer::Casio | Manufacturer::CasioType2 => "Casio",
         Manufacturer::Ricoh => "Ricoh",
         Manufacturer::Minolta => "Minolta",
         Manufacturer::Apple => "Apple",

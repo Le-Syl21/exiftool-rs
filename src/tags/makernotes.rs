@@ -18,6 +18,7 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         Manufacturer::Samsung => &SAMSUNG_TAGS[..],
         Manufacturer::Sigma => &SIGMA_TAGS[..],
         Manufacturer::Casio => &CASIO_TAGS[..],
+        Manufacturer::CasioType2 => &[][..], // Uses inline table below
         Manufacturer::Apple => &APPLE_TAGS[..],
         Manufacturer::Ricoh | Manufacturer::Minolta
         | Manufacturer::Google | Manufacturer::DJI => &[][..],
@@ -73,11 +74,11 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
     ];
 
 
-    // Casio Type 2 tags — has IDs that overlap with Type 1
-    // Type 2 detected by "QVC\0" header (ifd_offset=6)
-    // Only use these when tag_id >= 0x0008 to avoid collision
-    if manufacturer == Manufacturer::Casio && tag_id >= 0x0008 {
+    // Casio Type 2 tags (separate from Type 1 to avoid ID collisions)
+    if manufacturer == Manufacturer::CasioType2 {
         let casio2: &[(u16, &str)] = &[
+            (0x0002, "PreviewImageSize"), (0x0003, "PreviewImageLength"),
+            (0x0004, "PreviewImageStart"),
             (0x0008, "QualityMode"), (0x0009, "CasioImageSize"),
             (0x000D, "FocusMode"), (0x0014, "ISO"), (0x0019, "WhiteBalance"),
             (0x001D, "FocalLength"), (0x001F, "Saturation"), (0x0020, "Contrast"),
