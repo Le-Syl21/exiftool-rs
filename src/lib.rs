@@ -36,6 +36,7 @@ pub mod tag;
 pub mod tags;
 pub mod value;
 pub mod writer;
+pub mod md5;
 
 // Re-export main types at crate root
 pub use crate::error::{Error, Result};

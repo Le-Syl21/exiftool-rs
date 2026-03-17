@@ -297,6 +297,16 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     );
                     tags.extend(irb_tags);
                     if let Some(iptc_data) = iptc_data {
+                        // CurrentIPTCDigest = MD5 of raw IPTC block (from Perl IPTC.pm)
+                        let digest = crate::md5::md5_hex(&iptc_data);
+                        tags.push(crate::tag::Tag {
+                            id: crate::tag::TagId::Text("CurrentIPTCDigest".into()),
+                            name: "CurrentIPTCDigest".into(),
+                            description: "Current IPTC Digest".into(),
+                            group: crate::tag::TagGroup { family0: "Photoshop".into(), family1: "Photoshop".into(), family2: "Other".into() },
+                            raw_value: crate::value::Value::String(digest.clone()),
+                            print_value: digest, priority: 0,
+                        });
                         match IptcReader::read(&iptc_data) {
                             Ok(iptc_tags) => tags.extend(iptc_tags),
                             Err(_) => {}
