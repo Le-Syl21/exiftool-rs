@@ -1474,6 +1474,31 @@ fn read_makernote_ifd(
                         }]
                     } else { Vec::new() }
                 }
+                // Minolta PreviewImage — extract from PreviewImageLength tag
+                (Manufacturer::Minolta, 0x0089) => {
+                    let len_val = if total_size <= 4 {
+                        read_u32(value_data, 0, byte_order) as usize
+                    } else { 0 };
+                    let mut t = Vec::new();
+                    // Keep PreviewImageLength tag
+                    t.push(Tag {
+                        id: TagId::Text("PreviewImageLength".into()),
+                        name: "PreviewImageLength".into(), description: "Preview Image Length".into(),
+                        group: TagGroup { family0: "MakerNotes".into(), family1: "Minolta".into(), family2: "Image".into() },
+                        raw_value: Value::U32(len_val as u32), print_value: len_val.to_string(), priority: 0,
+                    });
+                    if len_val > 0 {
+                        t.push(Tag {
+                            id: TagId::Text("PreviewImage".into()),
+                            name: "PreviewImage".into(), description: "Preview Image".into(),
+                            group: TagGroup { family0: "MakerNotes".into(), family1: "Minolta".into(), family2: "Image".into() },
+                            raw_value: Value::Binary(Vec::new()),
+                            print_value: format!("(Binary data {} bytes)", len_val),
+                            priority: 0,
+                        });
+                    }
+                    t
+                }
                 // Minolta CameraSettings binary sub-table (int32u format)
                 (Manufacturer::Minolta, 0x0001) | (Manufacturer::Minolta, 0x0003) => {
                     decode_minolta_camera_settings(value_data, byte_order)
