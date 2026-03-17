@@ -51,9 +51,15 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         }
     }
 
-    // JVC tags (not in generated tables)
-    let jvc: &[(u16, &str)] = &[(0x0002, "CPUVersions"), (0x0003, "Quality")];
-    for &(id, name) in jvc {
+    // Tags for manufacturers not in generated tables (JVC, GE, Motorola)
+    let extra: &[(u16, &str)] = &[
+        (0x0002, "CPUVersions"), (0x0003, "Quality"),       // JVC
+        (0x0202, "Macro"), (0x0207, "GEModel"), (0x0300, "GEMake"), // GE
+        (0x5500, "BuildNumber"), (0x5501, "SerialNumber"),  // Motorola
+        (0x6420, "CustomRendered"), (0x64D0, "DriveMode"),
+        (0x665E, "Sensor"), (0x6705, "ManufactureDate"),
+    ];
+    for &(id, name) in extra {
         if id == tag_id { return (name, name); }
     }
 

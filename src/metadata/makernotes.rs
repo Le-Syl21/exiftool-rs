@@ -727,6 +727,26 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
         };
     }
 
+    // GE: "GE\0\0" or "GENIC\0", Start => valuePtr + 18
+    if mn_data.starts_with(b"GE\0\0") || mn_data.starts_with(b"GENIC\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Unknown,
+            ifd_offset: 18,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
+    // Motorola: "MOT\0", Start => valuePtr + 8, Base => start - 8
+    if mn_data.starts_with(b"MOT\0") {
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::Unknown,
+            ifd_offset: 8,
+            _base_adjust: 0,
+            byte_order: None,
+        };
+    }
+
     // JVC: "JVC " (4 bytes) + IFD
     // (from Perl MakerNotes.pm: Start => '$valuePtr + 4')
     if mn_data.starts_with(b"JVC ") {
