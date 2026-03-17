@@ -1937,7 +1937,7 @@ fn read_makernote_ifd(
                 sub_tags
             };
 
-            if data_type == 4 && count == 1 {
+            if (data_type == 4 || data_type == 13) && count == 1 {
                 let sub_off = read_u32(value_data, 0, byte_order) as usize;
                 if sub_off > 0 && sub_off + 2 < data.len() {
                     let sub_tags = parse_oly_ifd(data, sub_off);

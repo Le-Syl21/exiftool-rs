@@ -597,6 +597,7 @@ fn compute_wb_balance(tags: &[Tag]) -> Option<Vec<Tag>> {
     // For now, check if we have the data from MakerNotes
     if let Some(wb) = find_tag(tags, "WB_RGGBLevels")
         .or_else(|| find_tag(tags, "WB_RGBGLevels"))
+        .or_else(|| find_tag(tags, "WB_RBLevels"))
     {
         // Parse WB levels from either List or space-separated String
         let parts: Vec<f64> = match &wb.raw_value {
@@ -614,6 +615,13 @@ fn compute_wb_balance(tags: &[Tag]) -> Option<Vec<Tag>> {
                 result.push(mk_composite("BlueBalance", "Blue Balance",
                     Value::String(format!("{:.6}", b / g_div))));
             }
+        } else if parts.len() == 2 {
+            // WB_RBLevels (Olympus): R/256, B/256
+            let (r, b) = (parts[0], parts[1]);
+            result.push(mk_composite("RedBalance", "Red Balance",
+                Value::String(format!("{:.6}", r / 256.0))));
+            result.push(mk_composite("BlueBalance", "Blue Balance",
+                Value::String(format!("{:.6}", b / 256.0))));
         }
     }
 
