@@ -1811,6 +1811,28 @@ fn read_makernote_ifd(
                     }
                     t
                 }
+                // Olympus TextInfo (tag 0x0208): space-separated key value pairs
+                (Manufacturer::Olympus, 0x0208) | (Manufacturer::OlympusNew, 0x0208) => {
+                    let text = String::from_utf8_lossy(value_data);
+                    let mut t = Vec::new();
+                    // Format: "[section] Key=Value Key=Value" with space separation
+                    for token in text.split_whitespace() {
+                        if token.starts_with('[') { continue; } // skip section headers
+                        if let Some(eq) = token.find('=') {
+                            let key = &token[..eq];
+                            let val = &token[eq+1..];
+                            if !key.is_empty() && !val.is_empty() {
+                                t.push(Tag {
+                                    id: TagId::Text(key.to_string()),
+                                    name: key.to_string(), description: key.to_string(),
+                                    group: TagGroup { family0: "MakerNotes".into(), family1: "Olympus".into(), family2: "Camera".into() },
+                                    raw_value: Value::String(val.to_string()), print_value: val.to_string(), priority: 0,
+                                });
+                            }
+                        }
+                    }
+                    t
+                }
                 // Pentax binary sub-tables (from Perl Pentax.pm)
                 (Manufacturer::Pentax, 0x0205) => decode_binary_subtable(value_data, "Pentax", PENTAX_CAMERA_SETTINGS),
                 (Manufacturer::Pentax, 0x0206) => decode_binary_subtable(value_data, "Pentax", PENTAX_AE_INFO),
