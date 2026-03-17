@@ -475,6 +475,55 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
+    // FotoStation trailer: 0xa1b2c3d4 signature (from Perl FotoStation.pm)
+    if data.len() > 20 {
+        let mut fs_pos = data.len();
+        loop {
+            if fs_pos < 10 { break; }
+            let footer = &data[fs_pos - 10..fs_pos];
+            let tag = u16::from_be_bytes([footer[0], footer[1]]);
+            let size = u32::from_be_bytes([footer[2], footer[3], footer[4], footer[5]]) as usize;
+            let sig = u32::from_be_bytes([footer[6], footer[7], footer[8], footer[9]]);
+            if sig != 0xa1b2c3d4 || size < 10 { break; }
+            let data_size = size - 10;
+            if fs_pos < size { break; }
+            let rec_data = &data[fs_pos - size..fs_pos - 10];
+
+            match tag {
+                0x01 => {
+                    // IPTC data
+                    if let Some(start) = rec_data.iter().position(|&b| b == 0x1C) {
+                        if let Ok(iptc_tags) = IptcReader::read(&rec_data[start..]) {
+                            tags.extend(iptc_tags);
+                        }
+                    }
+                }
+                0x02 => {
+                    // SoftEdit: binary data with crop/rotation info
+                    let mk = |name: &str, val: String| crate::tag::Tag {
+                        id: crate::tag::TagId::Text(name.into()),
+                        name: name.into(), description: name.into(),
+                        group: crate::tag::TagGroup { family0: "FotoStation".into(), family1: "FotoStation".into(), family2: "Image".into() },
+                        raw_value: crate::value::Value::String(val.clone()), print_value: val, priority: 0,
+                    };
+                    // Crop/rotation fields (from Perl FotoStation::SoftEdit)
+                    if rec_data.len() >= 48 {
+                        let rd32 = |off: usize| u32::from_be_bytes([rec_data[off], rec_data[off+1], rec_data[off+2], rec_data[off+3]]);
+                        tags.push(mk("Rotation", (rd32(2) as i32).to_string()));
+                        tags.push(mk("CropLeft", rd32(6).to_string()));
+                        tags.push(mk("CropTop", rd32(10).to_string()));
+                        tags.push(mk("CropRight", rd32(14).to_string()));
+                        tags.push(mk("CropBottom", rd32(18).to_string()));
+                        tags.push(mk("CropRotation", format!("{:.6}", f64::from(f32::from_be_bytes([rec_data[22], rec_data[23], rec_data[24], rec_data[25]])))));
+                    }
+                }
+                _ => {}
+            }
+
+            fs_pos -= size;
+        }
+    }
+
     // FotoStation/PhotoMechanic trailers: scan for Photoshop segments after SOS
     // These are APP13 segments embedded after the image data
     {
