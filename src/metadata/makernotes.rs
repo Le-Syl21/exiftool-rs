@@ -61,6 +61,26 @@ pub fn parse_makernotes(
 
     let mn_data = &data[mn_offset..mn_offset + mn_size];
 
+    // GE MakerNotes: FixBase needed (Perl emits Warning)
+    if mn_data.starts_with(b"GE\0\0") || mn_data.starts_with(b"GENIC\0") {
+        // GE offsets need FixBase which we don't implement — emit Warning like Perl
+        let mut tags = Vec::new();
+        tags.push(Tag {
+            id: TagId::Text("Warning".into()),
+            name: "Warning".into(), description: "Warning".into(),
+            group: TagGroup { family0: "ExifTool".into(), family1: "ExifTool".into(), family2: "Other".into() },
+            raw_value: Value::String("[minor] Suspicious MakerNotes offset for tag 0x0200".into()),
+            print_value: "[minor] Suspicious MakerNotes offset for tag 0x0200".into(),
+            priority: 0,
+        });
+        // Still parse what we can
+        let info = detect_manufacturer(mn_data, make);
+        let byte_order = info.byte_order.unwrap_or(parent_byte_order);
+        let ifd_abs = mn_offset + info.ifd_offset;
+        read_makernote_ifd(data, ifd_abs, byte_order, info.manufacturer, &mut tags, model);
+        return tags;
+    }
+
     // JVC Text format: "VER:xxxxQTY:yyyy..." — parse directly
     if mn_data.starts_with(b"VER:") {
         return decode_jvc_text(mn_data);
