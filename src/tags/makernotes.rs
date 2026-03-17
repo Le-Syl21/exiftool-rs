@@ -54,12 +54,18 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
     // Tags for manufacturers not in generated tables (JVC, GE, Motorola, Sanyo)
     let extra: &[(u16, &str)] = &[
         (0x0002, "CPUVersions"), (0x0003, "Quality"),       // JVC
-        (0x0200, "SpecialMode"), (0x0201, "SanyoQuality"),  // Sanyo
+        (0x00FF, "MakerNoteOffset"),                         // Sanyo
+        (0x0200, "SpecialMode"), (0x0201, "SanyoQuality"),
         (0x0202, "Macro"), (0x0204, "DigitalZoom"),
         (0x0207, "GEModel"),
-        (0x0210, "ColorAdjustmentMode"), (0x0214, "SelfTimer"),
+        (0x020E, "SequentialShot"), (0x020F, "WideRange"),
+        (0x0210, "ColorAdjustmentMode"), (0x0213, "QuickShot"),
+        (0x0214, "SelfTimer"), (0x0216, "VoiceMemo"),
+        (0x0217, "RecordShutterRelease"), (0x0218, "FlickerReduce"),
         (0x0219, "OpticalZoomOn"), (0x021B, "DigitalZoomOn"),
-        (0x0225, "FlashMode"),
+        (0x021D, "LightSourceSpecial"), (0x021E, "Resaved"),
+        (0x021F, "SceneSelect"), (0x0223, "ManualFocusDistance"),
+        (0x0224, "SequenceShotInterval"), (0x0225, "FlashMode"),
         (0x0300, "GEMake"),
         (0x5500, "BuildNumber"), (0x5501, "SerialNumber"),  // Motorola
         (0x6420, "CustomRendered"), (0x64D0, "DriveMode"),
