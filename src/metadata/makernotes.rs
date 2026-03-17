@@ -2097,16 +2097,25 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
 
     if count < 50 { return tags; }
 
-    // The structure varies by camera model, but common layout for most EOS cameras:
-    // The first version byte determines offsets
-    let _version = rd(0);
+    let version = rd(0);
+    tags.push(mk_canon_str("ColorDataVersion", &version.to_string()));
 
-    // Determine WB offset based on version/count
-    let wb_base = if count > 580 { 63 }   // 5D Mark III etc.
-        else if count > 350 { 50 }         // Recent EOS
-        else if count > 200 { 25 }         // 20D/30D era
+    // Determine WB offset based on count (from Perl Canon.pm ColorData tables)
+    let wb_base = if count > 580 { 63 }   // ColorData3 (1DmkIII etc.)
+        else if count > 350 { 50 }         // ColorData2
+        else if count > 200 { 25 }         // ColorData1
         else { 19 };                       // Older cameras
 
+    // WB_RGGBLevelsAsShot (before Auto in ColorData3)
+    if wb_base >= 5 && wb_base + 4 <= count {
+        let r = rd(wb_base) as u16;
+        let g1 = rd(wb_base + 1) as u16;
+        let b = rd(wb_base + 2) as u16;
+        let g2 = rd(wb_base + 3) as u16;
+        tags.push(mk_canon_str("WB_RGGBLevelsAsShot", &format!("{} {} {} {}", r, g1, b, g2)));
+        let temp = rd(wb_base + 4) as u16;
+        if temp > 0 { tags.push(mk_canon_str("ColorTempAsShot", &temp.to_string())); }
+    }
     // WB_RGGBLevelsAuto (4 values: R, G1, B, G2)
     if wb_base + 4 <= count {
         let r = rd(wb_base) as u16;
@@ -2131,6 +2140,13 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
             &format!("WB_RGGBLevels{}", name),
             &format!("{} {} {} {}", r, g1, b, g2),
         ));
+        // ColorTemp for this WB mode
+        if offset + 4 < count {
+            let temp = rd(offset + 4) as u16;
+            if temp > 0 {
+                tags.push(mk_canon_str(&format!("ColorTemp{}", name), &temp.to_string()));
+            }
+        }
         offset += 5; // 4 RGGB + 1 ColorTemp
     }
 
