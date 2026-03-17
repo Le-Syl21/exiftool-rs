@@ -1376,6 +1376,17 @@ fn read_makernote_ifd(
         } else {
             let off = value_offset as usize;
             if off + total_size > data.len() {
+                // Emit Warning for suspicious offset (like Perl Exif.pm:6582)
+                if !tags.iter().any(|t| t.name == "Warning") {
+                    tags.push(Tag {
+                        id: TagId::Text("Warning".into()),
+                        name: "Warning".into(), description: "Warning".into(),
+                        group: TagGroup { family0: "ExifTool".into(), family1: "ExifTool".into(), family2: "Other".into() },
+                        raw_value: Value::String(format!("[minor] Suspicious MakerNotes offset for tag 0x{:04X}", tag_id)),
+                        print_value: format!("[minor] Suspicious MakerNotes offset for tag 0x{:04X}", tag_id),
+                        priority: 0,
+                    });
+                }
                 continue;
             }
             &data[off..off + total_size]

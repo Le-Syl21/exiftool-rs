@@ -34,6 +34,8 @@ fn namespace_prefix(uri: &str) -> &str {
         "http://ns.adobe.com/xmp/note/" => "xmpNote",
         "adobe:ns:meta/" => "x",
         "http://ns.adobe.com/pdf/1.3/" => "pdf",
+        "http://ns.adobe.com/xap/1.0/bj/" => "xmpBJ",
+        "http://ns.adobe.com/xap/1.0/sType/Job#" => "stJob",
         "http://ns.adobe.com/xap/1.0/t/pg/" => "xmpTPg",
         "http://ns.adobe.com/xap/1.0/sType/Dimensions#" => "stDim",
         "http://ns.adobe.com/xap/1.0/sType/ResourceRef#" => "stRef",
@@ -246,6 +248,39 @@ impl XmpReader {
                                 });
                             }
                             list_values.clear();
+                        }
+                        path.pop();
+                        current_text.clear();
+                        continue;
+                    }
+
+                    // Struct properties inside rdf:li (e.g., stJob:name inside xmpBJ:JobRef/Bag/li)
+                    // Perl flattens as "{ParentBag}{FieldName}" → "JobRefName"
+                    if !current_text.trim().is_empty() && in_rdf_li
+                        && name.namespace.as_deref() != Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        && name.local_name != "Description"
+                    {
+                        // Find the Bag/Seq parent property name
+                        // Find the Bag/Seq parent: skip li, Bag, Seq, Alt, Description, and the current tag name
+                        let cur_name = &name.local_name;
+                        let parent_name = path.iter().rev()
+                            .find(|(ns, ln)| ln != "li" && ln != "Bag" && ln != "Seq" && ln != "Alt"
+                                && ln != "Description" && ln != cur_name
+                                && ns != "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                            .map(|(_, ln)| ln.as_str())
+                            .unwrap_or("");
+                        if !parent_name.is_empty() {
+                            let flat_name = format!("{}{}", ucfirst(parent_name), ucfirst(&name.local_name));
+                            let prefix = namespace_prefix(ns_uri);
+                            let group_prefix = if prefix.is_empty() { "XMP" } else { prefix };
+                            let category = namespace_category(group_prefix);
+                            tags.push(Tag {
+                                id: TagId::Text(format!("{}:{}", group_prefix, flat_name)),
+                                name: flat_name.clone(), description: flat_name,
+                                group: TagGroup { family0: "XMP".into(), family1: format!("XMP-{}", group_prefix), family2: category.into() },
+                                raw_value: Value::String(current_text.trim().to_string()),
+                                print_value: current_text.trim().to_string(), priority: 0,
+                            });
                         }
                         path.pop();
                         current_text.clear();
