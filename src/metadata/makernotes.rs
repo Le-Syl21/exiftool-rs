@@ -100,15 +100,11 @@ pub fn parse_makernotes(
             parse_offset = mn_offset + info.ifd_offset;
         }
         Manufacturer::OlympusNew => {
-            // OLYMPUS\0II/MM: own TIFF header at mn_offset+8
-            let tiff_start = mn_offset + 8;
-            if tiff_start + 8 > data.len() {
-                return Vec::new();
-            }
-            let sub = &data[tiff_start..mn_offset + mn_size];
-            let ifd_off = read_u32(sub, 4, byte_order) as usize;
-            parse_data = sub;
-            parse_offset = ifd_off;
+            // OLYMPUS\0 + II/MM(2) + version(2) + IFD at byte 12
+            // (from Perl: Start => '$valuePtr + 12', Base => '$start - 12')
+            // Offsets in IFD are relative to start of MakerNote data
+            parse_data = &data[mn_offset..(mn_offset + mn_size).min(data.len())];
+            parse_offset = 12; // IFD directly at byte 12
         }
         Manufacturer::Apple => {
             // Apple iOS: IFD at mn_offset+14, offsets relative to mn_offset
