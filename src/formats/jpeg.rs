@@ -651,32 +651,38 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     if rec.len() >= 260 {
                         let cam_model = String::from_utf8_lossy(&rec[212..244]).trim_end_matches('\0').to_string();
                         if !cam_model.is_empty() { tags.push(mk("CameraModel", cam_model)); }
-                        let cam_pn = String::from_utf8_lossy(&rec[244..276]).trim_end_matches('\0').to_string();
+                        let cam_pn = String::from_utf8_lossy(&rec[244..260]).trim_end_matches('\0').to_string();
                         if !cam_pn.is_empty() { tags.push(mk("CameraPartNumber", cam_pn)); }
-                        let cam_sn = String::from_utf8_lossy(&rec[276..308]).trim_end_matches('\0').to_string();
+                        let cam_sn = String::from_utf8_lossy(&rec[260..276]).trim_end_matches('\0').to_string();
                         if !cam_sn.is_empty() { tags.push(mk("CameraSerialNumber", cam_sn)); }
                     }
-                    if rec.len() >= 420 {
-                        let cam_sw = String::from_utf8_lossy(&rec[308..340]).trim_end_matches('\0').to_string();
+                    if rec.len() >= 572 {
+                        let cam_sw = String::from_utf8_lossy(&rec[276..292]).trim_end_matches('\0').to_string();
                         if !cam_sw.is_empty() { tags.push(mk("CameraSoftware", cam_sw)); }
-                        let lens_model = String::from_utf8_lossy(&rec[340..372]).trim_end_matches('\0').to_string();
+                        let lens_model = String::from_utf8_lossy(&rec[368..400]).trim_end_matches('\0').to_string();
                         if !lens_model.is_empty() { tags.push(mk("LensModel", lens_model)); }
-                        let lens_pn = String::from_utf8_lossy(&rec[372..404]).trim_end_matches('\0').to_string();
+                        let lens_pn = String::from_utf8_lossy(&rec[400..416]).trim_end_matches('\0').to_string();
                         if !lens_pn.is_empty() { tags.push(mk("LensPartNumber", lens_pn)); }
-                        let lens_sn = String::from_utf8_lossy(&rec[404..436]).trim_end_matches('\0').to_string();
+                        let lens_sn = String::from_utf8_lossy(&rec[416..432]).trim_end_matches('\0').to_string();
                         if !lens_sn.is_empty() { tags.push(mk("LensSerialNumber", lens_sn)); }
                         let fov = rf(436);
                         if fov > 0.0 { tags.push(mk("FieldOfView", format!("{:.1} deg", fov))); }
                         let filter_model = String::from_utf8_lossy(&rec[492..524]).trim_end_matches('\0').to_string();
                         if !filter_model.is_empty() { tags.push(mk("FilterModel", filter_model)); }
-                        let filter_pn = String::from_utf8_lossy(&rec[524..556]).trim_end_matches('\0').to_string();
+                        let filter_pn = String::from_utf8_lossy(&rec[508..540]).trim_end_matches('\0').to_string();
                         if !filter_pn.is_empty() { tags.push(mk("FilterPartNumber", filter_pn)); }
-                        let filter_sn = String::from_utf8_lossy(&rec[556..588]).trim_end_matches('\0').to_string();
+                        let filter_sn = String::from_utf8_lossy(&rec[540..572]).trim_end_matches('\0').to_string();
                         if !filter_sn.is_empty() { tags.push(mk("FilterSerialNumber", filter_sn)); }
                     }
                     tags.push(mk("PeakSpectralSensitivity", format!("{:.1} um", rf(440))));
                     tags.push(mk("FocusStepCount", rd32(444).to_string()));
                     tags.push(mk("FocusDistance", format!("{:.1} m", rf(448))));
+                    // PlanckO (int32s) and PlanckR2 (float)
+                    if rec.len() >= 784 {
+                        let planck_o = if ci_le { i32::from_le_bytes([rec[776], rec[777], rec[778], rec[779]]) } else { i32::from_be_bytes([rec[776], rec[777], rec[778], rec[779]]) };
+                        tags.push(mk("PlanckO", planck_o.to_string()));
+                        tags.push(mk("PlanckR2", format!("{}", rf(780))));
+                    }
                     tags.push(mk("FrameRate", format!("{}", u16::from_le_bytes([rec[452], rec[453]]))));
 
                     // Additional CameraInfo fields (from Perl FLIR::CameraInfo)
