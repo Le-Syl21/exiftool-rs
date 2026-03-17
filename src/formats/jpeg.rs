@@ -268,8 +268,12 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     }
                 }
             }
-            // APP2 — ICC_Profile
+            // APP2 — ICC_Profile or InfiRay IJPEG
             0xE2 => {
+                // InfiRay: "....IJPEG\0" at offset 4
+                if seg_data.len() > 10 && &seg_data[4..10] == b"IJPEG\0" {
+                    tags.extend(decode_infray_version(seg_data));
+                }
                 if seg_data.starts_with(b"ICC_PROFILE\0") && seg_data.len() > 14 {
                     // ICC_PROFILE header: "ICC_PROFILE\0" + chunk_num(1) + total_chunks(1) + data
                     let icc_data = &seg_data[14..];
@@ -561,6 +565,60 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     Ok(tags)
+}
+
+/// Decode InfiRay IJPEG APP2 data (from Perl InfiRay.pm).
+fn decode_infray_version(data: &[u8]) -> Vec<crate::tag::Tag> {
+    let mut tags = Vec::new();
+    if data.len() < 0x50 { return tags; }
+
+    let mk = |name: &str, val: String| crate::tag::Tag {
+        id: crate::tag::TagId::Text(name.into()),
+        name: name.into(), description: name.into(),
+        group: crate::tag::TagGroup { family0: "APP2".into(), family1: "InfiRay".into(), family2: "Camera".into() },
+        raw_value: crate::value::Value::String(val.clone()), print_value: val, priority: 0,
+    };
+
+    let ru16 = |off: usize| u16::from_le_bytes([data[off], data[off+1]]);
+    let ru32 = |off: usize| u32::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3]]);
+    let rf32 = |off: usize| f32::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3]]);
+
+    tags.push(mk("IJPEGVersion", format!("{}.{}.{}.{}", data[0], data[1], data[2], data[3])));
+    if data.len() > 0x11 {
+        tags.push(mk("IJPEGOrgType", data[0x0C].to_string()));
+        tags.push(mk("IJPEGDispType", data[0x0D].to_string()));
+        tags.push(mk("IJPEGRotate", data[0x0E].to_string()));
+        tags.push(mk("IJPEGMirrorFlip", data[0x0F].to_string()));
+        tags.push(mk("ImageColorSwitchable", data[0x10].to_string()));
+        tags.push(mk("ThermalColorPalette", ru16(0x11).to_string()));
+    }
+    if data.len() > 0x30 {
+        tags.push(mk("IRDataSize", format!("{}", u64::from_le_bytes([data[0x20],data[0x21],data[0x22],data[0x23],data[0x24],data[0x25],data[0x26],data[0x27]]))));
+        tags.push(mk("IRDataFormat", ru16(0x28).to_string()));
+        tags.push(mk("IRImageWidth", ru16(0x2A).to_string()));
+        tags.push(mk("IRImageHeight", ru16(0x2C).to_string()));
+        tags.push(mk("IRImageBpp", data[0x2E].to_string()));
+    }
+    if data.len() > 0x48 {
+        tags.push(mk("TempDataSize", format!("{}", u64::from_le_bytes([data[0x30],data[0x31],data[0x32],data[0x33],data[0x34],data[0x35],data[0x36],data[0x37]]))));
+        tags.push(mk("TempDataFormat", ru16(0x38).to_string()));
+        tags.push(mk("TempImageWidth", ru16(0x3A).to_string()));
+        tags.push(mk("TempImageHeight", ru16(0x3C).to_string()));
+        tags.push(mk("TempImageBpp", data[0x3E].to_string()));
+    }
+    if data.len() > 0x58 {
+        tags.push(mk("VisibleDataSize", format!("{}", u64::from_le_bytes([data[0x40],data[0x41],data[0x42],data[0x43],data[0x44],data[0x45],data[0x46],data[0x47]]))));
+        tags.push(mk("VisibleDataFormat", ru16(0x48).to_string()));
+        tags.push(mk("VisibleImageWidth", ru16(0x4A).to_string()));
+        tags.push(mk("VisibleImageHeight", ru16(0x4C).to_string()));
+        tags.push(mk("VisibleImageBpp", data[0x4E].to_string()));
+    }
+    // IJPEGTempVersion at 0x50
+    if data.len() > 0x54 {
+        tags.push(mk("IJPEGTempVersion", format!("{}.{}.{}.{}", data[0x50], data[0x51], data[0x52], data[0x53])));
+    }
+
+    tags
 }
 
 /// Decode FLIR FFF data (from Perl FLIR.pm ProcessFLIR).
