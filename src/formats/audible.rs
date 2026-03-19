@@ -18,9 +18,6 @@ pub fn read_audible(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 
     // Number of TOC entries at offset 8 (big-endian uint32)
-    if data.len() < 12 {
-        return Ok(tags);
-    }
     let toc_count = u32::from_be_bytes([data[8], data[9], data[10], data[11]]) as usize;
 
     // Sanity check
@@ -28,13 +25,13 @@ pub fn read_audible(data: &[u8]) -> Result<Vec<Tag>> {
         return Err(Error::InvalidData("invalid TOC count".into()));
     }
 
-    // TOC starts at offset 12, each entry is 12 bytes: type(4), offset(4), length(4)
+    // TOC starts at offset 16 (after 16-byte header), each entry is 12 bytes: type(4), offset(4), length(4)
     let toc_bytes = toc_count * 12;
-    if 12 + toc_bytes > data.len() {
+    if 16 + toc_bytes > data.len() {
         return Err(Error::InvalidData("truncated TOC".into()));
     }
 
-    let toc = &data[12..12 + toc_bytes];
+    let toc = &data[16..16 + toc_bytes];
 
     for i in 0..toc_count {
         let base = i * 12;

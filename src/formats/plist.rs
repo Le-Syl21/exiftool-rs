@@ -97,6 +97,29 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
                 Some(PlistValue::Real(f64::from_bits(bits)))
             } else { None }
         }
+        0x3 => {
+            // Date: 8-byte float64, seconds since Jan 1 2001 00:00:00 UTC
+            if off + 9 > data.len() { return None; }
+            let bits = u64::from_be_bytes([data[off+1], data[off+2], data[off+3], data[off+4],
+                data[off+5], data[off+6], data[off+7], data[off+8]]);
+            let secs_since_2001 = f64::from_bits(bits);
+            // Convert to unix timestamp (2001-01-01 = 978307200 seconds since 1970-01-01)
+            let unix_ts = secs_since_2001 as i64 + 978307200i64;
+            let date_str = unix_ts_to_exif_date(unix_ts);
+            Some(PlistValue::Date(date_str))
+        }
+        0x4 => {
+            // Data: binary data
+            let (len, extra) = if obj_info == 0x0F {
+                let (l, ex) = read_length(data, off + 1)?;
+                (l, 1 + ex)
+            } else {
+                (obj_info, 0)
+            };
+            let start = off + 1 + extra;
+            if start + len > data.len() { return None; }
+            Some(PlistValue::Data(data[start..start+len].to_vec()))
+        }
         0x5 => {
             // ASCII string
             let len = if obj_info == 0x0F {

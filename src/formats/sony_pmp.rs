@@ -78,9 +78,8 @@ fn parse_rest(data: &[u8], jpg_start: usize, jpg_len: usize, tags: &mut Vec<Tag>
     // Comment at offset 52 (string[19])
     if data.len() > 71 {
         let comment = read_null_str(&data[52..71]);
-        if !comment.is_empty() {
-            tags.push(mk("Comment", "Comment", Value::String(comment)));
-        }
+        // Always push comment (even empty, to match ExifTool)
+        tags.push(mk("Comment", "Comment", Value::String(comment)));
     }
 
     // DateTimeOriginal at offset 76 (6 bytes: yy mm dd hh mm ss)
@@ -139,11 +138,16 @@ fn parse_rest(data: &[u8], jpg_start: usize, jpg_len: usize, tags: &mut Vec<Tag>
         let jpg_end = (jpg_start + jpg_len).min(data.len());
         let jpg_data = &data[jpg_start..jpg_end];
         if jpg_data.len() >= 3 && jpg_data[0] == 0xFF && jpg_data[1] == 0xD8 {
+            // Add JpgFromRaw binary tag
+            tags.push(mk("JpgFromRaw", "Jpg From Raw", Value::Binary(jpg_data.to_vec())));
+
             if let Ok(jpeg_tags) = crate::formats::jpeg::read_jpeg(jpg_data) {
-                // Only take EXIF/IPTC tags, not file-level tags
+                // Include all tags from the embedded JPEG (including JPEG structure tags)
+                // but skip redundant file-level metadata (MIMEType, FileType, etc.)
                 for tag in jpeg_tags {
-                    if tag.group.family0 != "File" {
-                        tags.push(tag);
+                    match tag.name.as_str() {
+                        "MIMEType" | "FileType" | "FileTypeExtension" | "ExifByteOrder" => {}
+                        _ => tags.push(tag),
                     }
                 }
             }

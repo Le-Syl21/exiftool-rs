@@ -208,7 +208,7 @@ fn process_props(data: &[u8], tags: &mut Vec<Tag>) {
         };
 
         for _j in 0..count {
-            let result = read_prop_value(data, &mut pos, eff_prop_type);
+            let result = read_prop_value_ex(data, &mut pos, eff_prop_type, is_multi);
             let val = match result {
                 Some(v) => v,
                 None => break,
@@ -270,6 +270,10 @@ fn format_bool(val: &str) -> String {
 }
 
 fn read_prop_value(data: &[u8], pos: &mut usize, prop_type: u16) -> Option<String> {
+    read_prop_value_ex(data, pos, prop_type, false)
+}
+
+fn read_prop_value_ex(data: &[u8], pos: &mut usize, prop_type: u16, is_multi: bool) -> Option<String> {
     match prop_type {
         0x01 => { // null
             Some(String::new())
@@ -327,6 +331,8 @@ fn read_prop_value(data: &[u8], pos: &mut usize, prop_type: u16) -> Option<Strin
             Some(v.to_string())
         }
         0x1E => { // string (null-terminated)
+            // For non-multi: skip 4-byte count prefix before the size
+            if !is_multi { *pos += 4; }
             if *pos + 4 > data.len() { return None; }
             let len = read_u32_le(data, *pos) as usize;
             *pos += 4;
@@ -336,6 +342,8 @@ fn read_prop_value(data: &[u8], pos: &mut usize, prop_type: u16) -> Option<Strin
             Some(s)
         }
         0x1F => { // Unicode string (null-terminated UTF-16LE)
+            // For non-multi: skip 4-byte count prefix before the size
+            if !is_multi { *pos += 4; }
             if *pos + 4 > data.len() { return None; }
             let len = read_u32_le(data, *pos) as usize;
             *pos += 4;
@@ -360,6 +368,8 @@ fn read_prop_value(data: &[u8], pos: &mut usize, prop_type: u16) -> Option<Strin
             Some(guid)
         }
         0x102 => { // binary blob
+            // For non-multi: skip 4-byte count prefix before the size
+            if !is_multi { *pos += 4; }
             if *pos + 4 > data.len() { return None; }
             let len = read_u32_le(data, *pos) as usize;
             *pos += 4;
@@ -369,7 +379,8 @@ fn read_prop_value(data: &[u8], pos: &mut usize, prop_type: u16) -> Option<Strin
             Some(s)
         }
         _ => {
-            // Unknown type - try to skip variable-length types
+            // Unknown variable-length type: skip count + size + data
+            if !is_multi { *pos += 4; } // skip count prefix
             if *pos + 4 > data.len() { return None; }
             let len = read_u32_le(data, *pos) as usize;
             if len > 1024*1024 { return None; } // sanity

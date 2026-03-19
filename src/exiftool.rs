@@ -1226,10 +1226,11 @@ impl ExifTool {
             "r3d" => formats::red::read_r3d(data).or_else(|_| Ok(Vec::new())),
             "tnef" => formats::tnef::read_tnef(data).or_else(|_| Ok(Vec::new())),
             "ppt" | "fpx" | "fpf" => formats::flashpix::read_fpx(data).or_else(|_| Ok(Vec::new())),
+            "itc" => formats::misc::read_itc(data).or_else(|_| Ok(Vec::new())),
             "dv" | "lfp" | "miff" | "mrc"
             | "dss" | "mobi" | "psp" | "pgf" | "raw"
             | "pmp" | "torrent" | "wtv"
-            | "xisf" | "czi" | "iso" | "itc" | "mxf"
+            | "xisf" | "czi" | "iso" | "mxf"
             | "afm" | "pfb" | "dfont" => Ok(Vec::new()),
             _ => Err(Error::UnsupportedFileType(ext)),
         }
