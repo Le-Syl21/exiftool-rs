@@ -158,9 +158,10 @@ impl XmpReader {
 
                     // Track rdf:parseType='Resource' (bare struct context)
                     let has_parse_resource = attributes.iter().any(|a| {
-                        (a.name.local_name == "parseType"
-                            && a.name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))
-                        && a.value == "Resource"
+                        a.name.local_name == "parseType"
+                            && (a.name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                                || a.name.prefix.as_deref() == Some("rdf"))
+                            && a.value == "Resource"
                     });
                     if has_parse_resource {
                         parse_resource_depths.push(path.len());

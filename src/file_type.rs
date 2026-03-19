@@ -99,6 +99,7 @@ pub enum FileType {
     RealAudio,
     Wma,
     M4a,
+    Dss,
     // ===== Documents =====
     Pdf,
     PostScript,
@@ -233,6 +234,7 @@ impl FileType {
             FileType::RealAudio => "RealAudio",
             FileType::Wma => "Windows Media Audio",
             FileType::M4a => "MPEG-4 Audio",
+            FileType::Dss => "Digital Speech Standard",
             // Documents
             FileType::Pdf => "PDF document",
             FileType::PostScript => "PostScript",
