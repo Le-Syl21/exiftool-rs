@@ -26,7 +26,18 @@ fn mk(name: &str, value: Value) -> Tag {
 /// Convert Windows FILETIME (100-ns intervals since 1601-01-01) hex string to ExifTool datetime
 fn filetime_hex_to_datetime(hex: &str) -> Option<String> {
     // Parse 16-char hex string as little-endian 64-bit
-    let bytes = hex::decode(hex).ok()?;
+    let mut bytes = Vec::new();
+    for i in (0..hex.len()).step_by(2) {
+        if i + 1 >= hex.len() {
+            return None;
+        }
+        let byte_str = &hex[i..i+2];
+        if let Ok(byte) = u8::from_str_radix(byte_str, 16) {
+            bytes.push(byte);
+        } else {
+            return None;
+        }
+    }
     if bytes.len() < 8 {
         return None;
     }

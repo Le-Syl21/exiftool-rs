@@ -241,7 +241,7 @@ pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
 
                 // VolumeSize composite: block_count * block_size
                 let total_bytes = block_count as u64 * block_size as u64;
-                tags.push(mk_with_print("VolumeSize", Value::U64(total_bytes), format_file_size(total_bytes)));
+                tags.push(mk_with_print("VolumeSize", Value::String(total_bytes.to_string()), format_file_size(total_bytes)));
             }
             255 => {
                 // Terminator

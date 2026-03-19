@@ -1,6 +1,9 @@
-//! Apple Binary PLIST parser.
-//! Reads binary property list format used in Apple MakerNotes (RunTime, etc.)
+//! Apple PLIST parser (binary and XML formats).
+//! Reads binary and XML property list formats used in Apple files.
 
+use crate::error::Result;
+use crate::tag::{Tag, TagGroup, TagId};
+use crate::value::Value;
 use std::collections::HashMap;
 
 /// Parse a binary plist and return key-value pairs.
@@ -50,6 +53,7 @@ pub enum PlistValue {
     Real(f64),
     Bool(bool),
     String(String),
+    Date(String),
     Data(Vec<u8>),
     Dict(HashMap<String, PlistValue>),
     Array(Vec<PlistValue>),
@@ -161,4 +165,390 @@ fn read_length(data: &[u8], off: usize) -> Option<(usize, usize)> {
     let size = 1 << (marker & 0x0F);
     let val = read_int(data, off + 1, size)?;
     Some((val, 1 + size))
+}
+
+// ============================================================================
+// Public PLIST tag readers
+// ============================================================================
+
+/// Read a binary plist file and return ExifTool-compatible tags.
+pub fn read_binary_plist_tags(data: &[u8]) -> Result<Vec<Tag>> {
+    let map = match parse_binary_plist(data) {
+        Some(m) => m,
+        None => return Ok(Vec::new()),
+    };
+
+    let mut tags = Vec::new();
+    let group = TagGroup {
+        family0: "PLIST".into(),
+        family1: "PLIST".into(),
+        family2: "Document".into(),
+    };
+
+    flatten_plist_dict(&map, &[], &group, &mut tags);
+    Ok(tags)
+}
+
+/// Flatten a plist dict (potentially nested) into tags.
+/// `key_path` is the slice of ancestor keys leading to this dict.
+fn flatten_plist_dict(
+    map: &HashMap<String, PlistValue>,
+    key_path: &[String],
+    group: &TagGroup,
+    tags: &mut Vec<Tag>,
+) {
+    for (key, val) in map {
+        let mut path = key_path.to_vec();
+        path.push(key.clone());
+        flatten_plist_value(&path, val, group, tags);
+    }
+}
+
+fn mk_plist_tag(name: String, raw_value: Value, group: &TagGroup) -> Tag {
+    let print_value = raw_value.to_display_string();
+    Tag {
+        id: TagId::Text(name.clone()),
+        name,
+        description: String::new(),
+        group: group.clone(),
+        raw_value,
+        print_value,
+        priority: 0,
+    }
+}
+
+fn flatten_plist_value(
+    key_path: &[String],
+    val: &PlistValue,
+    group: &TagGroup,
+    tags: &mut Vec<Tag>,
+) {
+    match val {
+        PlistValue::Dict(inner) => {
+            flatten_plist_dict(inner, key_path, group, tags);
+        }
+        PlistValue::Array(arr) => {
+            // Join array of strings/values comma-separated
+            let parts: Vec<String> = arr.iter().map(|v| plist_value_to_string(v)).collect();
+            let tag_name = plist_key_path_to_tag_name(key_path);
+            let tag_val = parts.join(", ");
+            tags.push(mk_plist_tag(tag_name, Value::String(tag_val), group));
+        }
+        PlistValue::Bool(b) => {
+            let tag_name = plist_key_path_to_tag_name(key_path);
+            // Match ExifTool behavior: 0x08=False, 0x09=True in binary plist
+            // But note: ExifTool Perl source has these inverted in the comment
+            // The actual test output shows TestBoolean:False for bplist containing true bool
+            // We use the standard spec: true=True, false=False
+            let s = if *b { "True" } else { "False" };
+            tags.push(mk_plist_tag(tag_name, Value::String(s.to_string()), group));
+        }
+        PlistValue::Int(i) => {
+            let tag_name = plist_key_path_to_tag_name(key_path);
+            tags.push(mk_plist_tag(tag_name, Value::String(i.to_string()), group));
+        }
+        PlistValue::Real(r) => {
+            let tag_name = plist_key_path_to_tag_name(key_path);
+            tags.push(mk_plist_tag(tag_name, Value::String(format_real(*r)), group));
+        }
+        PlistValue::String(s) => {
+            let tag_name = plist_key_path_to_tag_name(key_path);
+            tags.push(mk_plist_tag(tag_name, Value::String(s.clone()), group));
+        }
+        PlistValue::Date(s) => {
+            let tag_name = plist_key_path_to_tag_name(key_path);
+            tags.push(mk_plist_tag(tag_name, Value::String(s.clone()), group));
+        }
+        PlistValue::Data(bytes) => {
+            let tag_name = plist_key_path_to_tag_name(key_path);
+            tags.push(mk_plist_tag(tag_name, Value::Binary(bytes.clone()), group));
+        }
+        PlistValue::Null => {
+            // Don't emit null values
+        }
+    }
+}
+
+fn plist_value_to_string(val: &PlistValue) -> String {
+    match val {
+        PlistValue::String(s) => s.clone(),
+        PlistValue::Int(i) => i.to_string(),
+        PlistValue::Real(r) => format_real(*r),
+        PlistValue::Bool(b) => (if *b { "True" } else { "False" }).to_string(),
+        PlistValue::Date(s) => s.clone(),
+        _ => String::new(),
+    }
+}
+
+fn format_real(r: f64) -> String {
+    // Format like ExifTool: minimal decimal representation
+    let s = format!("{}", r);
+    s
+}
+
+/// Convert a key path like ["TestDict", "Author"] to tag name "TestDictAuthor".
+/// Matches ExifTool's: $name =~ s/([^A-Za-z])([a-z])/$1\u$2/g; $name =~ tr/-_a-zA-Z0-9//dc; ucfirst($name)
+fn plist_key_path_to_tag_name(path: &[String]) -> String {
+    let tag_id = path.join("/");
+    plist_tag_id_to_name(&tag_id)
+}
+
+pub fn plist_tag_id_to_name(tag_id: &str) -> String {
+    // Capitalize words after non-alpha chars, remove illegal chars, ucfirst
+    let mut name = String::new();
+    let mut capitalize_next = false;
+    for c in tag_id.chars() {
+        if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+            if capitalize_next {
+                for uc in c.to_uppercase() {
+                    name.push(uc);
+                }
+                capitalize_next = false;
+            } else {
+                name.push(c);
+            }
+        } else {
+            // Non-alphanumeric: remove but capitalize next letter
+            capitalize_next = true;
+        }
+    }
+    // ucfirst
+    let mut result = String::new();
+    let mut chars = name.chars();
+    if let Some(first) = chars.next() {
+        for uc in first.to_uppercase() {
+            result.push(uc);
+        }
+        result.extend(chars);
+    }
+    result
+}
+
+// ============================================================================
+// XML PLIST reader
+// ============================================================================
+
+/// Read an XML plist file and return ExifTool-compatible tags.
+pub fn read_xml_plist(data: &[u8]) -> Result<Vec<Tag>> {
+    let text = match std::str::from_utf8(data) {
+        Ok(s) => s,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    let mut tags = Vec::new();
+    let group = TagGroup {
+        family0: "PLIST".into(),
+        family1: "XML".into(),
+        family2: "Document".into(),
+    };
+
+    // Parse the plist dict recursively
+    let mut pos = 0;
+    // Skip to <dict> or <plist>
+    if let Some(root) = parse_xml_plist_root(text, &mut pos) {
+        flatten_plist_dict(&root, &[], &group, &mut tags);
+    }
+
+    Ok(tags)
+}
+
+/// Simple XML plist parser. Returns a dict (HashMap) representing the root dict.
+fn parse_xml_plist_root(text: &str, pos: &mut usize) -> Option<HashMap<String, PlistValue>> {
+    // Find the root <dict> element
+    let dict_start = text.find("<dict>")?;
+    *pos = dict_start + 6;
+    Some(parse_xml_dict(text, pos))
+}
+
+fn parse_xml_dict(text: &str, pos: &mut usize) -> HashMap<String, PlistValue> {
+    let mut map = HashMap::new();
+
+    loop {
+        skip_xml_whitespace(text, pos);
+        if *pos >= text.len() { break; }
+
+        // Check for </dict>
+        if text[*pos..].starts_with("</dict>") {
+            *pos += 7;
+            break;
+        }
+
+        // Expect <key>...</key>
+        if !text[*pos..].starts_with("<key>") {
+            // Skip unknown element
+            if let Some(end) = text[*pos..].find('>') {
+                *pos += end + 1;
+            } else {
+                break;
+            }
+            continue;
+        }
+        *pos += 5; // skip "<key>"
+        let key_end = match text[*pos..].find("</key>") {
+            Some(e) => e,
+            None => break,
+        };
+        let key = xml_unescape(&text[*pos..*pos + key_end]);
+        *pos += key_end + 6; // skip key text + "</key>"
+
+        skip_xml_whitespace(text, pos);
+        if *pos >= text.len() { break; }
+
+        // Parse value element
+        if let Some(val) = parse_xml_value(text, pos) {
+            map.insert(key, val);
+        }
+    }
+
+    map
+}
+
+fn parse_xml_array(text: &str, pos: &mut usize) -> Vec<PlistValue> {
+    let mut arr = Vec::new();
+
+    loop {
+        skip_xml_whitespace(text, pos);
+        if *pos >= text.len() { break; }
+
+        if text[*pos..].starts_with("</array>") {
+            *pos += 8;
+            break;
+        }
+
+        if let Some(val) = parse_xml_value(text, pos) {
+            arr.push(val);
+        } else {
+            break;
+        }
+    }
+
+    arr
+}
+
+fn parse_xml_value(text: &str, pos: &mut usize) -> Option<PlistValue> {
+    skip_xml_whitespace(text, pos);
+    if *pos >= text.len() { return None; }
+
+    let rest = &text[*pos..];
+
+    if rest.starts_with("<dict>") {
+        *pos += 6;
+        return Some(PlistValue::Dict(parse_xml_dict(text, pos)));
+    }
+    if rest.starts_with("<array>") {
+        *pos += 7;
+        return Some(PlistValue::Array(parse_xml_array(text, pos)));
+    }
+    if rest.starts_with("<string>") {
+        *pos += 8;
+        let end = text[*pos..].find("</string>")?;
+        let s = xml_unescape(&text[*pos..*pos + end]);
+        *pos += end + 9;
+        return Some(PlistValue::String(s));
+    }
+    if rest.starts_with("<integer>") {
+        *pos += 9;
+        let end = text[*pos..].find("</integer>")?;
+        let s = text[*pos..*pos + end].trim();
+        let val = s.parse::<i64>().ok()?;
+        *pos += end + 10;
+        return Some(PlistValue::Int(val));
+    }
+    if rest.starts_with("<real>") {
+        *pos += 6;
+        let end = text[*pos..].find("</real>")?;
+        let s = text[*pos..*pos + end].trim();
+        let val = s.parse::<f64>().ok()?;
+        *pos += end + 7;
+        return Some(PlistValue::Real(val));
+    }
+    if rest.starts_with("<true/>") {
+        *pos += 7;
+        return Some(PlistValue::Bool(true));
+    }
+    if rest.starts_with("<false/>") {
+        *pos += 8;
+        return Some(PlistValue::Bool(false));
+    }
+    if rest.starts_with("<date>") {
+        *pos += 6;
+        let end = text[*pos..].find("</date>")?;
+        let s = text[*pos..*pos + end].trim();
+        // Convert ISO 8601 date to ExifTool format
+        let date_str = convert_plist_date(s);
+        *pos += end + 7;
+        return Some(PlistValue::Date(date_str));
+    }
+    if rest.starts_with("<data>") {
+        *pos += 6;
+        let end = text[*pos..].find("</data>")?;
+        let b64 = text[*pos..*pos + end].split_whitespace().collect::<String>();
+        *pos += end + 7;
+        let bytes = base64_decode_simple(&b64);
+        return Some(PlistValue::Data(bytes));
+    }
+
+    // Skip unknown element
+    if let Some(tag_end) = rest.find('>') {
+        *pos += tag_end + 1;
+    } else {
+        *pos = text.len();
+    }
+    None
+}
+
+fn skip_xml_whitespace(text: &str, pos: &mut usize) {
+    let bytes = text.as_bytes();
+    while *pos < bytes.len() && (bytes[*pos] == b' ' || bytes[*pos] == b'\t'
+        || bytes[*pos] == b'\n' || bytes[*pos] == b'\r') {
+        *pos += 1;
+    }
+}
+
+fn xml_unescape(s: &str) -> String {
+    s.replace("&amp;", "&")
+     .replace("&lt;", "<")
+     .replace("&gt;", ">")
+     .replace("&quot;", "\"")
+     .replace("&apos;", "'")
+}
+
+/// Convert ISO 8601 date "2013-02-22T12:49:10Z" to ExifTool format "2013:02:22 12:49:10Z"
+fn convert_plist_date(s: &str) -> String {
+    // Format: YYYY-MM-DDTHH:MM:SSZ or YYYY-MM-DDTHH:MM:SS+HH:MM
+    if s.len() >= 19 {
+        let date_part = &s[0..10].replace('-', ":");
+        let time_part = &s[11..19];
+        let tz_part = &s[19..];
+        format!("{} {}{}", date_part, time_part, tz_part)
+    } else {
+        s.to_string()
+    }
+}
+
+/// Simple base64 decode (no padding required)
+fn base64_decode_simple(s: &str) -> Vec<u8> {
+    let alphabet = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut table = [0u8; 256];
+    for (i, &c) in alphabet.iter().enumerate() {
+        table[c as usize] = i as u8;
+    }
+
+    let mut result = Vec::new();
+    let bytes: Vec<u8> = s.bytes().filter(|&b| b != b'=' && b != b'\n' && b != b'\r' && b != b' ').collect();
+    for chunk in bytes.chunks(4) {
+        if chunk.len() < 2 { break; }
+        let b0 = table[chunk[0] as usize];
+        let b1 = table[chunk[1] as usize];
+        result.push((b0 << 2) | (b1 >> 4));
+        if chunk.len() >= 3 {
+            let b2 = table[chunk[2] as usize];
+            result.push((b1 << 4) | (b2 >> 2));
+            if chunk.len() >= 4 {
+                let b3 = table[chunk[3] as usize];
+                result.push((b2 << 6) | b3);
+            }
+        }
+    }
+    result
 }
