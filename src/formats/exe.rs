@@ -164,52 +164,261 @@ fn read_elf(data: &[u8]) -> Result<Vec<Tag>> {
 
 fn read_macho(data: &[u8], is_64: bool) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
+
+    // Determine byte order and bit depth from magic number
+    // \xFE\xED\xFA\xCE = 32-bit big endian
+    // \xCE\xFA\xED\xFE = 32-bit little endian
+    // \xFE\xED\xFA\xCF = 64-bit big endian
+    // \xCF\xFA\xED\xFE = 64-bit little endian
     let is_le = data[0] == 0xCE || data[0] == 0xCF;
+    let arch_str = if is_64 { "64 bit" } else { "32 bit" };
+    let order_str = if is_le { "Little endian" } else { "Big endian" };
 
-    tags.push(mk("ExeType", "Executable Type", Value::String(
-        format!("Mach-O {}", if is_64 { "64-bit" } else { "32-bit" })
-    )));
+    tags.push(mk("CPUArchitecture", "CPU Architecture", Value::String(arch_str.into())));
+    tags.push(mk("CPUByteOrder", "CPU Byte Order", Value::String(order_str.into())));
 
-    if data.len() < 16 {
+    if data.len() < 28 {
         return Ok(tags);
     }
 
-    let cpu_type = if is_le {
-        u32::from_le_bytes([data[4], data[5], data[6], data[7]])
-    } else {
-        u32::from_be_bytes([data[4], data[5], data[6], data[7]])
+    // Mach header layout:
+    //  0: magic (4 bytes)
+    //  4: cputype (int32s)
+    //  8: cpusubtype (int32s)
+    // 12: filetype (int32u)
+    // 16: ncmds (int32u)
+    // 20: sizeofcmds (int32u)
+    // 24: flags (int32u)
+
+    let read_u32 = |offset: usize| -> u32 {
+        if is_le {
+            u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]])
+        } else {
+            u32::from_be_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]])
+        }
+    };
+    let read_i32 = |offset: usize| -> i32 {
+        read_u32(offset) as i32
     };
 
-    let cpu_str = match cpu_type & 0xFF {
+    let cpu_type = read_i32(4);
+    let cpu_subtype = read_i32(8);
+    let file_type = read_u32(12);
+    let flags = read_u32(24);
+
+    // CPUType: strip 64-bit flag (0x1000000) for lookup, add "64-bit" suffix
+    let cpu_base = cpu_type & 0x00FFFFFF;
+    let has_64_flag = (cpu_type as u32) & 0x01000000 != 0;
+    let cpu_name = match cpu_base {
+        0xFFFFFF => "Any",  // -1 & 0xFFFFFF
+        1 => "VAX",
+        2 => "ROMP",
+        4 => "NS32032",
+        5 => "NS32332",
+        6 => "MC680x0",
         7 => "x86",
+        8 => "MIPS",
+        9 => "NS32532",
+        10 => "MC98000",
+        11 => "HPPA",
         12 => "ARM",
+        13 => "MC88000",
+        14 => "SPARC",
+        15 => "i860 big endian",
+        16 => "i860 little endian",
+        17 => "RS6000",
         18 => "PowerPC",
+        255 => "VEO",
         _ => "Unknown",
     };
-    let is_64_cpu = cpu_type & 0x01000000 != 0;
-    tags.push(mk("CPUType", "CPU Type", Value::String(
-        format!("{}{}", cpu_str, if is_64_cpu { " (64-bit)" } else { "" })
-    )));
-
-    let file_type = if is_le {
-        u32::from_le_bytes([data[12], data[13], data[14], data[15]])
+    let cpu_type_str = if has_64_flag {
+        format!("{} 64-bit", cpu_name)
     } else {
-        u32::from_be_bytes([data[12], data[13], data[14], data[15]])
+        cpu_name.to_string()
     };
-    let type_str = match file_type {
-        1 => "Object",
-        2 => "Executable",
-        3 => "Fixed VM Library",
-        4 => "Core Dump",
-        5 => "Preloaded Executable",
-        6 => "Dynamic Library",
-        7 => "Dynamic Linker",
-        8 => "Bundle",
+    tags.push(mk("CPUType", "CPU Type", Value::String(cpu_type_str)));
+
+    // CPUSubtype: lookup by "cputype subtype" key, adding "64-bit" suffix if high bit set
+    let sub_base = cpu_subtype & 0x7FFFFFFF;
+    let sub_has_64 = (cpu_subtype as u32) & 0x80000000 != 0;
+    let lookup_key = format!("{} {}", cpu_base, sub_base);
+    let subtype_name = macho_cpu_subtype(&lookup_key);
+    let cpu_subtype_str = if sub_has_64 || (has_64_flag && !subtype_name.is_empty()) {
+        format!("{} 64-bit", if subtype_name.is_empty() {
+            format!("Unknown ({} {})", cpu_type, cpu_subtype)
+        } else {
+            subtype_name.to_string()
+        })
+    } else if subtype_name.is_empty() {
+        format!("Unknown ({} {})", cpu_type, cpu_subtype)
+    } else {
+        subtype_name.to_string()
+    };
+    tags.push(mk("CPUSubtype", "CPU Subtype", Value::String(cpu_subtype_str)));
+
+    // ObjectFileType
+    let obj_type_str = match file_type {
+        1 => "Relocatable object",
+        2 => "Demand paged executable",
+        3 => "Fixed VM shared library",
+        4 => "Core",
+        5 => "Preloaded executable",
+        6 => "Dynamically bound shared library",
+        7 => "Dynamic link editor",
+        8 => "Dynamically bound bundle",
+        9 => "Shared library stub for static linking",
+        10 => "Debug information",
+        11 => "x86_64 kexts",
         _ => "Unknown",
     };
-    tags.push(mk("ObjectFileType", "Object File Type", Value::String(type_str.into())));
+    tags.push(mk("ObjectFileType", "Object File Type", Value::String(obj_type_str.into())));
+
+    // ObjectFlags: bitmask decoding
+    let flag_names = [
+        (0, "No undefs"),
+        (1, "Incrementa link"),
+        (2, "Dyld link"),
+        (3, "Bind at load"),
+        (4, "Prebound"),
+        (5, "Split segs"),
+        (6, "Lazy init"),
+        (7, "Two level"),
+        (8, "Force flat"),
+        (9, "No multi defs"),
+        (10, "No fix prebinding"),
+        (11, "Prebindable"),
+        (12, "All mods bound"),
+        (13, "Subsections via symbols"),
+        (14, "Canonical"),
+        (15, "Weak defines"),
+        (16, "Binds to weak"),
+        (17, "Allow stack execution"),
+        (18, "Dead strippable dylib"),
+        (19, "Root safe"),
+        (20, "No reexported dylibs"),
+        (21, "Random address"),
+    ];
+    let mut flag_parts: Vec<&str> = Vec::new();
+    for (bit, name) in &flag_names {
+        if flags & (1 << bit) != 0 {
+            flag_parts.push(name);
+        }
+    }
+    let flags_str = if flag_parts.is_empty() {
+        format!("0x{:x}", flags)
+    } else {
+        flag_parts.join(", ")
+    };
+    tags.push(mk("ObjectFlags", "Object Flags", Value::String(flags_str)));
 
     Ok(tags)
+}
+
+/// Lookup Mach-O CPU subtype name by "cputype subtype" key.
+fn macho_cpu_subtype(key: &str) -> &'static str {
+    match key {
+        "1 0" => "VAX (all)",
+        "1 1" => "VAX780",
+        "1 2" => "VAX785",
+        "1 3" => "VAX750",
+        "1 4" => "VAX730",
+        "1 5" => "UVAXI",
+        "1 6" => "UVAXII",
+        "1 7" => "VAX8200",
+        "1 8" => "VAX8500",
+        "1 9" => "VAX8600",
+        "1 10" => "VAX8650",
+        "1 11" => "VAX8800",
+        "1 12" => "UVAXIII",
+        "2 0" => "RT (all)",
+        "2 1" => "RT PC",
+        "2 2" => "RT APC",
+        "2 3" => "RT 135",
+        "4 0" => "NS32032 (all)",
+        "4 1" => "NS32032 DPC (032 CPU)",
+        "4 2" => "NS32032 SQT",
+        "4 3" => "NS32032 APC FPU (32081)",
+        "4 4" => "NS32032 APC FPA (Weitek)",
+        "4 5" => "NS32032 XPC (532)",
+        "5 0" => "NS32332 (all)",
+        "5 1" => "NS32332 DPC (032 CPU)",
+        "5 2" => "NS32332 SQT",
+        "5 3" => "NS32332 APC FPU (32081)",
+        "5 4" => "NS32332 APC FPA (Weitek)",
+        "5 5" => "NS32332 XPC (532)",
+        "6 1" => "MC680x0 (all)",
+        "6 2" => "MC68040",
+        "6 3" => "MC68030",
+        "7 3" => "i386 (all)",
+        "7 4" => "i486",
+        "7 132" => "i486SX",
+        "7 5" => "i586",
+        "7 22" => "Pentium Pro",
+        "7 54" => "Pentium II M3",
+        "7 86" => "Pentium II M5",
+        "7 103" => "Celeron",
+        "7 119" => "Celeron Mobile",
+        "7 8" => "Pentium III",
+        "7 24" => "Pentium III M",
+        "7 40" => "Pentium III Xeon",
+        "7 9" => "Pentium M",
+        "7 10" => "Pentium 4",
+        "7 26" => "Pentium 4 M",
+        "7 11" => "Itanium",
+        "7 27" => "Itanium 2",
+        "7 12" => "Xeon",
+        "7 28" => "Xeon MP",
+        "8 0" => "MIPS (all)",
+        "8 1" => "MIPS R2300",
+        "8 2" => "MIPS R2600",
+        "8 3" => "MIPS R2800",
+        "8 4" => "MIPS R2000a",
+        "8 5" => "MIPS R2000",
+        "8 6" => "MIPS R3000a",
+        "8 7" => "MIPS R3000",
+        "10 0" => "MC98000 (all)",
+        "10 1" => "MC98601",
+        "11 0" => "HPPA (all)",
+        "11 1" => "HPPA 7100LC",
+        "12 0" => "ARM (all)",
+        "12 1" => "ARM A500 ARCH",
+        "12 2" => "ARM A500",
+        "12 3" => "ARM A440",
+        "12 4" => "ARM M4",
+        "12 5" => "ARM A680/V4T",
+        "12 6" => "ARM V6",
+        "12 7" => "ARM V5TEJ",
+        "12 8" => "ARM XSCALE",
+        "12 9" => "ARM V7",
+        "13 0" => "MC88000 (all)",
+        "13 1" => "MC88100",
+        "13 2" => "MC88110",
+        "14 0" => "SPARC (all)",
+        "14 1" => "SUN 4/260",
+        "14 2" => "SUN 4/110",
+        "15 0" => "i860 (all)",
+        "15 1" => "i860 860",
+        "16 0" => "i860 little (all)",
+        "16 1" => "i860 little",
+        "17 0" => "RS6000 (all)",
+        "17 1" => "RS6000",
+        "18 0" => "PowerPC (all)",
+        "18 1" => "PowerPC 601",
+        "18 2" => "PowerPC 602",
+        "18 3" => "PowerPC 603",
+        "18 4" => "PowerPC 603e",
+        "18 5" => "PowerPC 603ev",
+        "18 6" => "PowerPC 604",
+        "18 7" => "PowerPC 604e",
+        "18 8" => "PowerPC 620",
+        "18 9" => "PowerPC 750",
+        "18 10" => "PowerPC 7400",
+        "18 11" => "PowerPC 7450",
+        "18 100" => "PowerPC 970",
+        "255 1" => "VEO 1",
+        "255 2" => "VEO 2",
+        _ => "",
+    }
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {

@@ -1062,6 +1062,30 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
         return Some(FileType::Html);
     }
 
+    // ELF executable: \x7FELF
+    if header.starts_with(&[0x7F, b'E', b'L', b'F']) {
+        return Some(FileType::Exe);
+    }
+
+    // Mach-O 32-bit: FEEDFACE (big) or CEFAEDFE (little)
+    if header.starts_with(&[0xFE, 0xED, 0xFA, 0xCE])
+        || header.starts_with(&[0xCE, 0xFA, 0xED, 0xFE])
+    {
+        return Some(FileType::Exe);
+    }
+
+    // Mach-O 64-bit: FEEDFACF (big) or CFFAEDFE (little)
+    if header.starts_with(&[0xFE, 0xED, 0xFA, 0xCF])
+        || header.starts_with(&[0xCF, 0xFA, 0xED, 0xFE])
+    {
+        return Some(FileType::Exe);
+    }
+
+    // Mach-O Universal/Fat binary: CAFEBABE
+    if header.starts_with(&[0xCA, 0xFE, 0xBA, 0xBE]) {
+        return Some(FileType::Exe);
+    }
+
     // PE executable: "MZ"
     if header.starts_with(b"MZ") {
         return Some(FileType::Exe);
