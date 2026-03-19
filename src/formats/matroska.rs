@@ -48,6 +48,11 @@ pub fn read_matroska(data: &[u8]) -> Result<Vec<Tag>> {
                 let v = read_uint(data, pos, size);
                 tags.push(mk("DocTypeVersion", "Document Type Version", Value::U32(v as u32)));
             }
+            0x4285 => {
+                // DocTypeReadVersion
+                let v = read_uint(data, pos, size);
+                tags.push(mk("DocTypeReadVersion", "Doc Type Read Version", Value::U32(v as u32)));
+            }
             _ => {}
         }
         pos += size;
@@ -171,7 +176,20 @@ fn parse_tracks(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
 
 fn parse_track_entry(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
     let mut pos = start;
-    let mut track_type: u64;
+    let mut track_type: u64 = 0;
+    let mut codec_id = String::new();
+
+    // First pass: find TrackType so we can prefix CodecID correctly
+    {
+        let mut scan = start;
+        while scan < end {
+            let (id, size, hdr_len) = match read_element_header(data, scan) { Ok(v) => v, Err(_) => break };
+            scan += hdr_len;
+            if scan + size > end { break; }
+            if id == 0x83 { track_type = read_uint(data, scan, size); }
+            scan += size;
+        }
+    }
 
     while pos < end {
         let (id, size, hdr_len) = match read_element_header(data, pos) {
@@ -182,47 +200,80 @@ fn parse_track_entry(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>)
         if pos + size > end { break; }
 
         match id {
+            0x57 => { // TrackNumber (from Perl Matroska.pm)
+                let v = read_uint(data, pos, size);
+                tags.push(mk("TrackNumber", "Track Number", Value::U32(v as u32)));
+            }
+            0x33C5 => { // TrackUID
+                let v = read_uint(data, pos, size);
+                tags.push(mk("TrackUID", "Track UID", Value::String(format!("{:08x}", v))));
+            }
             0x83 => {
                 // TrackType
-                track_type = read_uint(data, pos, size);
                 let type_str = match track_type {
-                    1 => "Video",
-                    2 => "Audio",
-                    3 => "Complex",
-                    0x10 => "Logo",
-                    0x11 => "Subtitle",
-                    0x12 => "Buttons",
-                    0x20 => "Control",
+                    1 => "Video", 2 => "Audio", 3 => "Complex",
+                    0x10 => "Logo", 0x11 => "Subtitle", 0x12 => "Buttons", 0x20 => "Control",
                     _ => "Unknown",
                 };
                 tags.push(mk("TrackType", "Track Type", Value::String(type_str.into())));
             }
+            0x39 => { // TrackUsed (FlagEnabled)
+                let v = read_uint(data, pos, size);
+                tags.push(mk("TrackUsed", "Track Used", Value::String(if v != 0 { "Yes" } else { "No" }.into())));
+            }
+            0x08 => { // TrackDefault (FlagDefault)
+                let v = read_uint(data, pos, size);
+                tags.push(mk("TrackDefault", "Track Default", Value::String(if v != 0 { "Yes" } else { "No" }.into())));
+            }
+            0x15AA => { // TrackForced (FlagForced)
+                let v = read_uint(data, pos, size);
+                tags.push(mk("TrackForced", "Track Forced", Value::String(if v != 0 { "Yes" } else { "No" }.into())));
+            }
+            0x3314F => { // TrackTimecodeScale
+                let v = read_float(data, pos, size);
+                tags.push(mk("TrackTimecodeScale", "Track Timecode Scale", Value::String(format!("{}", v))));
+            }
+            0x2A => { // CodecDecodeAll
+                let v = read_uint(data, pos, size);
+                tags.push(mk("CodecDecodeAll", "Codec Decode All", Value::String(if v != 0 { "Yes" } else { "No" }.into())));
+            }
+            0x23E383 => { // DefaultDuration (ns)
+                let v = read_uint(data, pos, size);
+                let ms = v / 1_000_000;
+                tags.push(mk("DefaultDuration", "Default Duration", Value::String(format!("{} ms", ms))));
+                // VideoFrameRate = 1e9 / DefaultDuration
+                if v > 0 && track_type == 1 {
+                    let fps = 1_000_000_000.0 / v as f64;
+                    tags.push(mk("VideoFrameRate", "Video Frame Rate", Value::String(format!("{:.0}", fps))));
+                }
+            }
             0x86 => {
-                // CodecID
+                // CodecID — prefixed with Video/Audio based on TrackType
                 let s = read_string(data, pos, size);
-                tags.push(mk("CodecID", "Codec ID", Value::String(s)));
+                let name = match track_type {
+                    1 => "VideoCodecID",
+                    2 => "AudioCodecID",
+                    _ => "CodecID",
+                };
+                codec_id = s.clone();
+                tags.push(mk(name, name, Value::String(s)));
             }
             0x258688 => {
-                // CodecName
                 let s = read_string(data, pos, size);
                 tags.push(mk("CodecName", "Codec Name", Value::String(s)));
             }
             0x536E => {
-                // TrackName
                 let s = read_string(data, pos, size);
                 tags.push(mk("TrackName", "Track Name", Value::String(s)));
             }
             0x22B59C => {
-                // Language
                 let s = read_string(data, pos, size);
                 tags.push(mk("TrackLanguage", "Track Language", Value::String(s)));
             }
             0xE0 => {
-                // Video settings
                 parse_video_settings(data, pos, pos + size, tags);
             }
             0xE1 => {
-                // Audio settings
                 parse_audio_settings(data, pos, pos + size, tags);
             }
             _ => {}
@@ -258,6 +309,17 @@ fn parse_video_settings(data: &[u8], start: usize, end: usize, tags: &mut Vec<Ta
             0x54BA => {
                 let v = read_uint(data, pos, size);
                 tags.push(mk("DisplayHeight", "Display Height", Value::U32(v as u32)));
+            }
+            0x53AC => {
+                // VideoScanType (StereoMode in newer spec, FlagInterlaced)
+                let v = read_uint(data, pos, size);
+                let s = match v {
+                    0 => "Undetermined",
+                    1 => "Interlaced",
+                    2 => "Progressive",
+                    _ => "Unknown",
+                };
+                tags.push(mk("VideoScanType", "Video Scan Type", Value::String(s.into())));
             }
             _ => {}
         }
