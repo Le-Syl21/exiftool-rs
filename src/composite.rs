@@ -645,6 +645,32 @@ fn compute_wb_balance(tags: &[Tag]) -> Option<Vec<Tag>> {
             result.push(mk_composite("BlueBalance", "Blue Balance",
                 Value::String(format!("{:.6}", b / 256.0))));
         }
+    } else if let Some(wb) = find_tag(tags, "WB_GRGBLevels") {
+        // Fujifilm GRGB format: G, R, G, B
+        // RedBalance = R / avg(G1, G2); BlueBalance = B / avg(G1, G2)
+        let parts: Vec<f64> = match &wb.raw_value {
+            Value::List(items) => items.iter().filter_map(|v| v.as_f64()).collect(),
+            Value::String(s) => s.split_whitespace().filter_map(|p| p.parse().ok()).collect(),
+            _ => Vec::new(),
+        };
+        if parts.len() >= 4 {
+            let g1 = parts[0]; // G
+            let r  = parts[1]; // R
+            let g2 = parts[2]; // G
+            let b  = parts[3]; // B
+            let g_avg = (g1 + g2) / 2.0;
+            if g_avg > 0.0 {
+                // PrintConv: int($val * 1e6 + 0.5) * 1e-6
+                let red_bal = r / g_avg;
+                let blue_bal = b / g_avg;
+                let red_print = format!("{}", (red_bal * 1e6 + 0.5) as i64 as f64 * 1e-6);
+                let blue_print = format!("{}", (blue_bal * 1e6 + 0.5) as i64 as f64 * 1e-6);
+                result.push(mk_composite("RedBalance", "Red Balance",
+                    Value::String(red_print)));
+                result.push(mk_composite("BlueBalance", "Blue Balance",
+                    Value::String(blue_print)));
+            }
+        }
     }
 
     if result.is_empty() { None } else { Some(result) }

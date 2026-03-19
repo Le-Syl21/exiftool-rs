@@ -43,17 +43,13 @@ pub fn read_jxl(data: &[u8]) -> Result<Vec<Tag>> {
 
     // JXL bare codestream: FF 0A
     if data.len() >= 2 && data[0] == 0xFF && data[1] == 0x0A {
-        tags.push(mk("JXLFormat", "JXL Format", Value::String("Codestream".into())));
-        // Parse JXL codestream header for basic image info
-        if data.len() >= 10 {
-            parse_jxl_codestream(&data[2..], &mut tags);
-        }
+        // Parse JXL codestream header for image dimensions
+        parse_jxl_codestream(data, &mut tags);
         return Ok(tags);
     }
 
     // JXL container (ISOBMFF boxes)
     if data.len() >= 12 && data.starts_with(&[0x00, 0x00, 0x00, 0x0C, 0x4A, 0x58, 0x4C, 0x20]) {
-        tags.push(mk("JXLFormat", "JXL Format", Value::String("Container".into())));
         parse_boxes(data, 12, data.len(), &mut tags, 0)?;
         return Ok(tags);
     }
@@ -208,32 +204,94 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
     Ok(())
 }
 
+/// Parse JXL codestream header to extract ImageWidth and ImageHeight.
+/// Mirrors Perl's ProcessJXLCodestream.
+/// data: codestream starting at FF 0A
 fn parse_jxl_codestream(data: &[u8], tags: &mut Vec<Tag>) {
-    // JXL codestream SizeHeader is bit-packed; simplified extraction
-    if data.len() < 4 {
+    // unpack 'x2C12' — skip 2 bytes (FF 0A), then read 12 bytes
+    if data.len() < 14 {
         return;
     }
-    // First bit: small (1) or not (0)
-    let bits = u32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-    let small = bits & 1;
+    // Build mutable array @a of 12 bytes starting at offset 2
+    let mut a: [u8; 12] = [0u8; 12];
+    let start = if data.len() >= 2 && data[0] == 0xFF && data[1] == 0x0A { 2 } else { 0 };
+    let src = &data[start..];
+    let len = src.len().min(12);
+    a[..len].copy_from_slice(&src[..len]);
+
+    // GetBits: reads n bits LSB-first from the shared array
+    let mut bits_state = a;
+
+    let get_bits = |state: &mut [u8; 12], n: u32| -> u32 {
+        let mut v: u32 = 0;
+        let mut bit: u32 = 1;
+        for _ in 0..n {
+            for i in 0..12 {
+                let set = state[i] & 1;
+                state[i] >>= 1;
+                if i > 0 {
+                    if set != 0 {
+                        state[i - 1] |= 0x80;
+                    }
+                } else {
+                    if set != 0 {
+                        v |= bit;
+                    }
+                    bit <<= 1;
+                }
+            }
+        }
+        v
+    };
+
+    let small = get_bits(&mut bits_state, 1);
+    let (x, y);
 
     if small == 1 {
-        let height_div8 = ((bits >> 1) & 0x1F) + 1;
-        let ratio = (bits >> 6) & 0x07;
-        let height = height_div8 * 8;
-        let width = match ratio {
-            0 => height, // 1:1
-            1 => (height * 12 + 9) / 10,
-            2 => (height * 4 + 2) / 3,
-            3 => (height * 3 + 1) / 2,
-            4 => (height * 16 + 8) / 9,
-            5 => (height * 5 + 2) / 4,
-            6 => height * 2,
-            _ => height,
-        };
-        tags.push(mk("ImageWidth", "Image Width", Value::U32(width)));
-        tags.push(mk("ImageHeight", "Image Height", Value::U32(height)));
-    }
+        y = (get_bits(&mut bits_state, 5) + 1) * 8;
+        let ratio = get_bits(&mut bits_state, 3);
+        if ratio == 0 {
+            x = (get_bits(&mut bits_state, 5) + 1) * 8;
+        } else {
+            let (num, den) = match ratio {
+                1 => (12u32, 10u32),
+                2 => (4, 3),
+                3 => (3, 2),
+                4 => (16, 9),
+                5 => (5, 4),
+                6 => (2, 1),
+                _ => (1, 1),
+            };
+            x = y * num / den;
+        }
+    } else {
+        // Non-small: read 2-bit size selector to determine number of bits for dimension
+        let size_bits = [9u32, 13, 18, 30];
+        let sel = get_bits(&mut bits_state, 2) as usize;
+        let nbits_y = size_bits[sel.min(3)];
+        y = get_bits(&mut bits_state, nbits_y) + 1;
+
+        let ratio = get_bits(&mut bits_state, 3);
+        if ratio == 0 {
+            let sel2 = get_bits(&mut bits_state, 2) as usize;
+            let nbits_x = size_bits[sel2.min(3)];
+            x = get_bits(&mut bits_state, nbits_x) + 1;
+        } else {
+            let (num, den) = match ratio {
+                1 => (12u32, 10u32),
+                2 => (4, 3),
+                3 => (3, 2),
+                4 => (16, 9),
+                5 => (5, 4),
+                6 => (2, 1),
+                _ => (1, 1),
+            };
+            x = y * num / den;
+        }
+    };
+
+    tags.push(mk("ImageWidth", "Image Width", Value::U32(x)));
+    tags.push(mk("ImageHeight", "Image Height", Value::U32(y)));
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {

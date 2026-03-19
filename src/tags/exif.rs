@@ -368,9 +368,55 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
         ("ExifIFD", 0x8827) => {
             // Keep as-is (number)
         }
+        // ModelTransform (0x85D8) and PixelScale (0x830E): space-separated doubles
+        // with Perl-style %.15g precision
+        (_, 0x85D8) | (_, 0x830E) => {
+            return Some(format_geotiff_doubles(value));
+        }
         _ => {}
     }
     None
+}
+
+/// Format a double value with Perl-style %.15g precision.
+/// Uses fixed notation when exponent is in [-4, 15), scientific otherwise.
+/// Trailing zeros are stripped.
+fn format_g15(v: f64) -> String {
+    if v == 0.0 {
+        return "0".to_string();
+    }
+    let abs_v = v.abs();
+    let exp = abs_v.log10().floor() as i32;
+    if exp >= -4 && exp < 15 {
+        let decimal_places = (14 - exp).max(0) as usize;
+        let s = format!("{:.prec$}", v, prec = decimal_places);
+        if s.contains('.') {
+            s.trim_end_matches('0').trim_end_matches('.').to_string()
+        } else {
+            s
+        }
+    } else {
+        format!("{:.14e}", v)
+    }
+}
+
+/// Format a double or list of doubles with Perl-style %.15g precision and space separator.
+/// This matches ExifTool's output format for GeoTiff coordinate arrays.
+pub fn format_geotiff_doubles(value: &Value) -> String {
+    match value {
+        Value::F64(v) => format_g15(*v),
+        Value::F32(v) => format_g15(*v as f64),
+        Value::List(items) => {
+            items.iter().map(|item| {
+                match item {
+                    Value::F64(v) => format_g15(*v),
+                    Value::F32(v) => format_g15(*v as f64),
+                    _ => item.to_display_string(),
+                }
+            }).collect::<Vec<_>>().join(" ")
+        }
+        _ => value.to_display_string(),
+    }
 }
 
 // ============================================================================
@@ -432,7 +478,8 @@ static IFD0_TAGS: &[TagInfo] = &[
     TagInfo { tag_id: 0x8769, name: "ExifOffset", description: "Exif IFD Pointer", family2: "Image" },
     TagInfo { tag_id: 0x8773, name: "ICC_Profile", description: "ICC Profile", family2: "Image" },
     TagInfo { tag_id: 0x8825, name: "GPSInfo", description: "GPS Info IFD Pointer", family2: "Location" },
-    TagInfo { tag_id: 0x85D8, name: "PixelScale", description: "Pixel Scale", family2: "Image" },
+    TagInfo { tag_id: 0x830E, name: "PixelScale", description: "Pixel Scale", family2: "Location" },
+    TagInfo { tag_id: 0x85D8, name: "ModelTransform", description: "Model Transform", family2: "Location" },
     TagInfo { tag_id: 0x8680, name: "IntergraphMatrix", description: "Intergraph Matrix", family2: "Image" },
     TagInfo { tag_id: 0x87AF, name: "GeoTiffDirectory", description: "GeoTiff Directory", family2: "Location" },
     TagInfo { tag_id: 0x87B0, name: "GeoTiffDoubleParams", description: "GeoTiff Double Params", family2: "Location" },
