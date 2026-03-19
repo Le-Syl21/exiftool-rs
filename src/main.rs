@@ -746,7 +746,8 @@ fn print_text_full(
                     println!("======== {}", file);
                 }
                 for tag in &tags {
-                    let val = tag.display_value(numeric);
+                    let val_raw = tag.display_value(numeric);
+                    let val = sanitize_display_value(&val_raw);
                     let id_prefix = if show_tag_ids {
                         format!("[{}] ", tag.id)
                     } else {
@@ -1038,6 +1039,24 @@ fn collect_files(dir: &Path, ext_filter: &Option<String>, files: &mut Vec<String
 // ============================================================================
 // Helpers
 // ============================================================================
+
+/// Translate control characters (0x01-0x1f, 0x7f) to '.' and remove null bytes,
+/// matching ExifTool's output behavior for -s format.
+fn sanitize_display_value(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    for b in s.bytes() {
+        if b == 0x00 {
+            // remove null bytes
+        } else if (b >= 0x01 && b <= 0x1f) || b == 0x7f {
+            result.push('.');
+        } else {
+            result.push(b as char);
+        }
+    }
+    // Remove trailing whitespace
+    let trimmed = result.trim_end();
+    trimmed.to_string()
+}
 
 fn escape_json(s: &str) -> String {
     s.replace('\\', "\\\\")

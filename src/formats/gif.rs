@@ -28,10 +28,17 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
 
     tags.push(mk("ImageWidth", "Image Width", Value::U16(width)));
     tags.push(mk("ImageHeight", "Image Height", Value::U16(height)));
+    tags.push(mk("HasColorMap", "Has Color Map", Value::String(if has_gct { "Yes" } else { "No" }.into())));
     tags.push(mk("ColorResolutionDepth", "Color Resolution Depth", Value::U8(color_resolution)));
     tags.push(mk("BitsPerPixel", "Bits Per Pixel", Value::U8((packed & 0x07) + 1)));
-    if has_gct {
-        tags.push(mk("BackgroundColor", "Background Color", Value::U8(bg_color)));
+    tags.push(mk("BackgroundColor", "Background Color", Value::U8(bg_color)));
+    // PixelAspectRatio: 0 = square pixels (undef), otherwise (val+15)/64
+    let aspect_ratio = data[12];
+    if aspect_ratio != 0 {
+        let par = (aspect_ratio as f64 + 15.0) / 64.0;
+        tags.push(mk("PixelAspectRatio", "Pixel Aspect Ratio", Value::String(format!("{:.4}", par))));
+    } else {
+        tags.push(mk("PixelAspectRatio", "Pixel Aspect Ratio", Value::U8(1)));
     }
 
     let mut pos = 13 + gct_size as usize;
@@ -73,6 +80,8 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
                         pos = new_pos;
                         if !comment.is_empty() {
                             let text = String::from_utf8_lossy(&comment).to_string();
+                            // Normalize newlines to ".." to match ExifTool output format
+                            let text = text.replace("\r\n", "..").replace('\n', "..").replace('\r', "..");
                             tags.push(mk("Comment", "Comment", Value::String(text)));
                         }
                     }
@@ -116,14 +125,36 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
                                 }
                                 pos = skip_sub_blocks(data, pos);
                             } else if &app_id[..8] == b"XMP Data" {
-                                // XMP metadata
-                                let (xmp_data, new_pos) = read_sub_blocks(data, pos);
+                                // XMP metadata — uses IncludeLengthBytes=2:
+                                // sub-block length bytes are part of the data stream
+                                // The raw XMP starts with a length byte followed by XMP content
+                                // We need to read sub-blocks but include the length bytes in the stream
+                                let (xmp_data, new_pos) = read_sub_blocks_include_len(data, pos);
                                 pos = new_pos;
                                 if !xmp_data.is_empty() {
+                                    // Strip the 258-byte landing zone from the end
+                                    // The landing zone ends with "\x01\x00" (last sub-block of 1 byte = 0x00)
+                                    // Find the real end: last occurrence of "?xpacket end"
+                                    let xmp_slice = if let Some(end_pos) = find_xpacket_end(&xmp_data) {
+                                        &xmp_data[..end_pos]
+                                    } else {
+                                        &xmp_data
+                                    };
                                     if let Ok(xmp_tags) =
-                                        crate::metadata::XmpReader::read(&xmp_data)
+                                        crate::metadata::XmpReader::read(xmp_slice)
                                     {
                                         tags.extend(xmp_tags);
+                                    }
+                                }
+                            } else if &app_id[..8] == b"ICCRGBG1" {
+                                // ICC Profile
+                                let (icc_data, new_pos) = read_sub_blocks(data, pos);
+                                pos = new_pos;
+                                if !icc_data.is_empty() {
+                                    if let Ok(icc_tags) =
+                                        crate::formats::icc::read_icc(&icc_data)
+                                    {
+                                        tags.extend(icc_tags);
                                     }
                                 }
                             } else {
@@ -147,7 +178,7 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    if frame_count > 0 {
+    if frame_count > 1 {
         tags.push(mk("FrameCount", "Frame Count", Value::U32(frame_count)));
     }
     if frame_count > 1 && total_duration > 0.0 {
@@ -187,6 +218,40 @@ fn read_sub_blocks(data: &[u8], mut pos: usize) -> (Vec<u8>, usize) {
         pos += block_size;
     }
     (result, pos)
+}
+
+/// Read sub-blocks and include the length bytes in the output (for XMP in GIF)
+fn read_sub_blocks_include_len(data: &[u8], mut pos: usize) -> (Vec<u8>, usize) {
+    let mut result = Vec::new();
+    while pos < data.len() {
+        let block_size = data[pos] as usize;
+        result.push(data[pos]); // include length byte
+        pos += 1;
+        if block_size == 0 {
+            break;
+        }
+        if pos + block_size <= data.len() {
+            result.extend_from_slice(&data[pos..pos + block_size]);
+        }
+        pos += block_size;
+    }
+    (result, pos)
+}
+
+/// Find the end of the XMP xpacket (returns position after the closing "?>")
+fn find_xpacket_end(data: &[u8]) -> Option<usize> {
+    // Search for "?xpacket end=" from near the end
+    let pattern = b"?xpacket end=";
+    let start = if data.len() > 512 { data.len() - 512 } else { 0 };
+    let search_range = &data[start..];
+    if let Some(rel_pos) = search_range.windows(pattern.len()).rposition(|w| w == pattern) {
+        let abs_pos = start + rel_pos;
+        // Find the closing "?>" after this position
+        if let Some(end_rel) = data[abs_pos..].windows(2).position(|w| w == b"?>") {
+            return Some(abs_pos + end_rel + 2);
+        }
+    }
+    None
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {

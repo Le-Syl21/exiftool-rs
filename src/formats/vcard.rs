@@ -61,7 +61,6 @@ fn unescape_vcard(s: &str) -> String {
 fn convert_datetime(val: &str) -> String {
     let mut s = val.to_string();
     // YYYYMMDDTHHMMSSZ -> YYYY:MM:DD HH:MM:SSZ
-    // Use regex-like replacement
     let s_bytes = s.as_bytes();
     if s_bytes.len() >= 15 && s_bytes[8] == b'T' {
         let year = &s[0..4];
@@ -86,25 +85,11 @@ fn convert_datetime(val: &str) -> String {
     s
 }
 
-/// Normalize a vCard tag name:
-/// - lowercase with uppercase first letter
-/// - lookup table for known name mappings
-fn normalize_vcard_tag(raw_tag: &str, types: &[String]) -> (String, String) {
-    // The tag ID used internally (lowercase with uppercase first)
-    let tag_id = {
-        let mut chars = raw_tag.chars();
-        match chars.next() {
-            None => String::new(),
-            Some(first) => {
-                let mut s = first.to_uppercase().to_string();
-                s.extend(chars.map(|c| c.to_ascii_lowercase()));
-                s
-            }
-        }
-    };
+/// Normalize a vCard tag name
+fn normalize_vcard_tag(raw_tag: &str) -> String {
+    let tag_id = ucfirst_lower(raw_tag);
 
-    // Known name mappings from VCard.pm
-    let base_name = match tag_id.as_str() {
+    match tag_id.as_str() {
         "Version" => "VCardVersion".into(),
         "Fn" => "FormattedName".into(),
         "N" => "Name".into(),
@@ -131,60 +116,42 @@ fn normalize_vcard_tag(raw_tag: &str, types: &[String]) -> (String, String) {
         "X-socialprofile" => "SocialProfile".into(),
         _ => {
             // Remove X- prefix for custom tags
-            if tag_id.starts_with("X-") || tag_id.starts_with("x-") {
-                let stripped = &tag_id[2..];
-                if !stripped.is_empty() {
-                    let mut chars = stripped.chars();
-                    match chars.next() {
-                        None => tag_id.clone(),
-                        Some(first) => {
-                            let mut s = first.to_uppercase().to_string();
-                            s.extend(chars.map(|c| c.to_ascii_lowercase()));
-                            s
-                        }
-                    }
-                } else {
-                    tag_id.clone()
-                }
+            if tag_id.starts_with("X-") {
+                ucfirst_lower(&tag_id[2..])
             } else {
-                tag_id.clone()
+                tag_id
             }
         }
-    };
-
-    // Append type parameters to the name
-    let mut name = base_name;
-    for t in types {
-        let t_upper: String = {
-            let mut chars = t.chars();
-            match chars.next() {
-                None => String::new(),
-                Some(first) => {
-                    let mut s = first.to_uppercase().to_string();
-                    s.extend(chars.map(|c| c.to_ascii_lowercase()));
-                    s
-                }
-            }
-        };
-        name.push_str(&t_upper);
     }
+}
 
-    (tag_id, name)
+fn ucfirst_lower(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        None => String::new(),
+        Some(first) => {
+            let mut result = first.to_uppercase().to_string();
+            result.extend(chars.map(|c| c.to_ascii_lowercase()));
+            result
+        }
+    }
+}
+
+fn ucfirst(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        None => String::new(),
+        Some(first) => {
+            let mut result = first.to_uppercase().to_string();
+            result.extend(chars);
+            result
+        }
+    }
 }
 
 /// Normalize an iCalendar tag name
 fn normalize_ical_tag(raw_tag: &str) -> String {
-    let tag_id = {
-        let mut chars = raw_tag.chars();
-        match chars.next() {
-            None => String::new(),
-            Some(first) => {
-                let mut s = first.to_uppercase().to_string();
-                s.extend(chars.map(|c| c.to_ascii_lowercase()));
-                s
-            }
-        }
-    };
+    let tag_id = ucfirst_lower(raw_tag);
 
     match tag_id.as_str() {
         "Version" => "VCalendarVersion".into(),
@@ -193,7 +160,6 @@ fn normalize_ical_tag(raw_tag: &str) -> String {
         "Attach" => "Attachment".into(),
         "Class" => "Classification".into(),
         "Geo" => "Geolocation".into(),
-        "Location" => "Location".into(),
         "Completed" => "DateTimeCompleted".into(),
         "Dtend" => "DateTimeEnd".into(),
         "Due" => "DateTimeDue".into(),
@@ -210,7 +176,6 @@ fn normalize_ical_tag(raw_tag: &str) -> String {
         "Created" => "DateCreated".into(),
         "Dtstamp" => "DateTimeStamp".into(),
         "Sequence" => "SequenceNumber".into(),
-        "Acknowledged" => "Acknowledged".into(),
         "X-apple-calendar-color" => "CalendarColor".into(),
         "X-apple-default-alarm" => "DefaultAlarm".into(),
         "X-apple-local-default-alarm" => "LocalDefaultAlarm".into(),
@@ -218,33 +183,17 @@ fn normalize_ical_tag(raw_tag: &str) -> String {
         "X-wr-calname" => "CalendarName".into(),
         "X-wr-relcalid" => "CalendarID".into(),
         "X-wr-alarmuid" => "AlarmUID".into(),
+        "X-wr-timezone" => "Wr-timezone".into(),
+        "Last-modified" => "ModifyDate".into(),
+        "Recurrence-id" => "RecurrenceID".into(),
+        "Exdate" => "ExceptionDateTimes".into(),
+        "Rdate" => "RecurrenceDateTimes".into(),
+        "Rrule" => "RecurrenceRule".into(),
         _ => {
             if tag_id.starts_with("X-microsoft-") {
-                let stripped = &raw_tag[12..];
-                let mut chars = stripped.chars();
-                match chars.next() {
-                    None => tag_id,
-                    Some(first) => {
-                        let mut s = first.to_uppercase().to_string();
-                        s.extend(chars.map(|c| c.to_ascii_lowercase()));
-                        s
-                    }
-                }
-            } else if tag_id.starts_with("X-") || tag_id.starts_with("x-") {
-                let stripped = &tag_id[2..];
-                if !stripped.is_empty() {
-                    let mut chars = stripped.chars();
-                    match chars.next() {
-                        None => tag_id,
-                        Some(first) => {
-                            let mut s = first.to_uppercase().to_string();
-                            s.extend(chars.map(|c| c.to_ascii_lowercase()));
-                            s
-                        }
-                    }
-                } else {
-                    tag_id
-                }
+                ucfirst(&raw_tag[12..])
+            } else if tag_id.starts_with("X-") {
+                ucfirst_lower(&tag_id[2..])
             } else {
                 tag_id
             }
@@ -261,262 +210,457 @@ fn is_time_tag_vcard(name: &str) -> bool {
 fn is_time_tag_ical(name: &str) -> bool {
     matches!(name,
         "DateTimeCompleted" | "DateTimeEnd" | "DateTimeDue" | "DateTimeStart" |
-        "DateCreated" | "DateTimeStamp" | "ModifyDate" | "DateCreated" |
-        "ExceptionDateTimes" | "RecurrenceDateTimes" | "Acknowledged"
+        "DateCreated" | "DateTimeStamp" | "ModifyDate" |
+        "ExceptionDateTimes" | "RecurrenceDateTimes" | "Acknowledged" |
+        "RecurrenceID"
     )
 }
 
-/// Parse vCard/iCalendar line into (tag, params, value)
-/// Handles folded lines (continuation lines start with space/tab)
-fn parse_lines(text: &str) -> Vec<(String, Vec<String>, String)> {
-    let mut result = Vec::new();
-    let mut current_line = String::new();
+/// Parsed vCard/iCal line
+struct ParsedLine {
+    tag: String,
+    types: Vec<String>,
+    encoding: Option<String>,
+    language: Option<String>,
+    geo: Option<String>,
+    label: Option<String>,
+    tzid: Option<String>,
+    extra_types: Vec<String>, // for inline base64 data types (e.g., "ImageJpeg")
+    value: String,
+}
 
-    // Handle both CRLF and LF line endings, and folded lines
+/// Parse a single unfolded vCard line
+fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
+    if line.is_empty() { return None; }
+
+    // Parse tag name (up to first ';' or ':')
+    let mut pos = 0;
+    let bytes = line.as_bytes();
+
+    // Skip group prefix (e.g., "item1.")
+    let tag_start = if let Some(dot) = line.find('.') {
+        // Only skip if before the colon and semicolon
+        let first_sep = line.find(|c: char| c == ':' || c == ';').unwrap_or(line.len());
+        if dot < first_sep { dot + 1 } else { 0 }
+    } else { 0 };
+
+    pos = tag_start;
+    let tag_name_start = pos;
+
+    // Read tag name
+    while pos < bytes.len() && bytes[pos] != b';' && bytes[pos] != b':' {
+        pos += 1;
+    }
+
+    if pos >= bytes.len() { return None; }
+    let raw_tag = &line[tag_name_start..pos];
+    if raw_tag.is_empty() { return None; }
+
+    // Parse parameters
+    let mut types = Vec::new();
+    let mut encoding = None;
+    let mut language = None;
+    let mut geo: Option<String> = None;
+    let mut label: Option<String> = None;
+    let mut tzid: Option<String> = None;
+
+    while pos < bytes.len() && bytes[pos] == b';' {
+        pos += 1; // skip ';'
+
+        // Read parameter name
+        let param_start = pos;
+        while pos < bytes.len() && bytes[pos] != b'=' && bytes[pos] != b':' && bytes[pos] != b';' {
+            pos += 1;
+        }
+        let param_name = &line[param_start..pos];
+        let param_name_lower = param_name.to_ascii_lowercase();
+
+        if pos < bytes.len() && bytes[pos] == b'=' {
+            pos += 1; // skip '='
+
+            // Read parameter value (may be quoted)
+            let mut param_val = String::new();
+            while pos < bytes.len() && bytes[pos] != b':' && bytes[pos] != b';' {
+                if bytes[pos] == b'"' {
+                    // Quoted string
+                    pos += 1;
+                    while pos < bytes.len() && bytes[pos] != b'"' {
+                        param_val.push(bytes[pos] as char);
+                        pos += 1;
+                    }
+                    if pos < bytes.len() { pos += 1; } // skip closing quote
+                    // Skip optional comma after quoted value
+                    if pos < bytes.len() && bytes[pos] == b',' {
+                        pos += 1;
+                    }
+                } else {
+                    // Unquoted - read until , ; :
+                    let val_start = pos;
+                    while pos < bytes.len() && bytes[pos] != b',' && bytes[pos] != b':' && bytes[pos] != b';' {
+                        pos += 1;
+                    }
+                    param_val.push_str(&line[val_start..pos]);
+                    if pos < bytes.len() && bytes[pos] == b',' {
+                        pos += 1; // skip comma between multi-values
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            match param_name_lower.as_str() {
+                "type" => {
+                    // May be comma-separated list
+                    for tv in param_val.split(',') {
+                        let tv = tv.trim().trim_matches('"');
+                        if !tv.is_empty() {
+                            types.push(ucfirst_lower(tv));
+                        }
+                    }
+                }
+                "encoding" => {
+                    encoding = Some(param_val.to_ascii_lowercase());
+                }
+                "language" => {
+                    language = Some(param_val);
+                }
+                "geo" => {
+                    // Remove "geo:" prefix if present
+                    let v = if param_val.starts_with("geo:") { param_val[4..].to_string() } else { param_val };
+                    // Convert comma to ", " for display
+                    let v = v.replace(',', ", ");
+                    geo = Some(v);
+                }
+                "label" => {
+                    let v = unescape_vcard(&param_val);
+                    label = Some(v);
+                }
+                "tzid" => {
+                    tzid = Some(param_val);
+                }
+                _ => {} // ignore other params
+            }
+        } else {
+            // Bare parameter (old vCard 2.x style) - treat as TYPE
+            if !param_name.is_empty() && bytes[pos] != b':' {
+                types.push(ucfirst_lower(param_name));
+            } else if !param_name.is_empty() {
+                // Check if it's a known encoding
+                let pn_lower = param_name.to_ascii_lowercase();
+                match pn_lower.as_str() {
+                    "quoted-printable" => { encoding = Some("quoted-printable".into()); }
+                    "base64" | "b" => { encoding = Some("base64".into()); }
+                    _ => { types.push(ucfirst_lower(param_name)); }
+                }
+            }
+        }
+    }
+
+    // Now we should be at ':'
+    if pos >= bytes.len() || bytes[pos] != b':' { return None; }
+    pos += 1; // skip ':'
+
+    let value_str = &line[pos..];
+
+    // Check for inline base64 data: "data:type/subtype;base64,"
+    let mut extra_types = Vec::new();
+    let mut final_value;
+
+    if let Some(rest) = value_str.strip_prefix("data:") {
+        if let Some(semi) = rest.find(';') {
+            let mime_type = &rest[..semi];
+            if rest[semi..].starts_with(";base64,") {
+                // Extract type/subtype and set encoding
+                if let Some(slash) = mime_type.find('/') {
+                    let t1 = ucfirst(&mime_type[..slash]);
+                    let t2 = ucfirst(&mime_type[slash+1..]);
+                    extra_types.push(format!("{}{}", t1, t2));
+                }
+                encoding = Some("base64".into());
+                // The actual base64 data comes after "data:type/sub;base64,"
+                final_value = value_str[rest[..semi+8+1].len()+5..].to_string();
+                // Note: we'll replace this with binary indicator below
+                final_value = String::new(); // placeholder
+            } else {
+                final_value = value_str.to_string();
+            }
+        } else {
+            final_value = value_str.to_string();
+        }
+    } else {
+        final_value = value_str.to_string();
+    }
+
+    // Apply encoding
+    final_value = match encoding.as_deref() {
+        Some("base64") | Some("b") => {
+            // For PHOTO/LOGO/SOUND - just indicate binary
+            format!("(Binary data, use -b option to extract)")
+        }
+        Some("quoted-printable") => {
+            decode_qp(value_str)
+        }
+        _ => {
+            unescape_vcard(value_str)
+        }
+    };
+
+    Some(ParsedLine {
+        tag: raw_tag.to_string(),
+        types,
+        encoding,
+        language,
+        geo,
+        label,
+        tzid,
+        extra_types,
+        value: final_value,
+    })
+}
+
+/// Decode quoted-printable encoding
+fn decode_qp(s: &str) -> String {
+    let mut result = Vec::new();
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'=' && i + 2 < bytes.len() {
+            let h1 = bytes[i+1];
+            let h2 = bytes[i+2];
+            if h1 == b'\r' || h1 == b'\n' {
+                // Soft line break - skip
+                i += 2;
+                if i < bytes.len() && bytes[i] == b'\n' { i += 1; }
+                continue;
+            }
+            if let (Some(n1), Some(n2)) = (hex_val(h1), hex_val(h2)) {
+                result.push((n1 << 4) | n2);
+                i += 3;
+                continue;
+            }
+        }
+        result.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&result).to_string()
+}
+
+fn hex_val(b: u8) -> Option<u8> {
+    match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(b - b'a' + 10),
+        b'A'..=b'F' => Some(b - b'A' + 10),
+        _ => None,
+    }
+}
+
+/// Parse all unfolded lines from vCard/iCal text
+fn parse_lines_raw(text: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut current = String::new();
+
     for raw_line in text.split('\n') {
         let line = raw_line.trim_end_matches('\r');
         if line.starts_with(' ') || line.starts_with('\t') {
-            // Continuation line
-            current_line.push_str(&line[1..]);
+            // Continuation line (folded)
+            current.push_str(&line[1..]);
         } else {
-            if !current_line.is_empty() {
-                // Process previous line
-                process_vcard_line(&current_line, &mut result);
+            if !current.is_empty() {
+                result.push(current.clone());
             }
-            current_line = line.to_string();
+            current = line.to_string();
         }
     }
-    if !current_line.is_empty() {
-        process_vcard_line(&current_line, &mut result);
+    if !current.is_empty() {
+        result.push(current);
     }
-
     result
 }
 
-fn process_vcard_line(line: &str, result: &mut Vec<(String, Vec<String>, String)>) {
-    // Skip empty lines or structural lines
-    if line.is_empty() { return; }
-
-    // Find the colon separating tag from value
-    // But first parse the tag name and parameters
-    let colon_pos = line.find(':');
-    if colon_pos.is_none() { return; }
-    let colon_pos = colon_pos.unwrap();
-
-    let tag_part = &line[..colon_pos];
-    let value = &line[colon_pos+1..];
-
-    // Parse tag and parameters
-    // tag_part = "TAGNAME;PARAM1=VAL;PARAM2=VAL;..."
-    let semicolons: Vec<&str> = tag_part.splitn(100, ';').collect();
-    if semicolons.is_empty() { return; }
-
-    let raw_tag = semicolons[0];
-
-    // Remove group prefix (e.g. "item1.EMAIL" -> "EMAIL")
-    let raw_tag = if let Some(dot_pos) = raw_tag.find('.') {
-        &raw_tag[dot_pos+1..]
-    } else {
-        raw_tag
-    };
-
-    // Parse TYPE parameters
-    let mut types = Vec::new();
-    let mut encoding = None;
-    for param in &semicolons[1..] {
-        let param_lower = param.to_ascii_lowercase();
-        if param_lower.starts_with("type=") {
-            let type_vals = &param[5..];
-            for tv in type_vals.split(',') {
-                let tv = tv.trim().trim_matches('"');
-                if !tv.is_empty() {
-                    types.push(tv.to_string());
-                }
-            }
-        } else if param_lower.starts_with("encoding=") {
-            encoding = Some(param[9..].to_ascii_lowercase());
-        } else if !param.contains('=') {
-            // Old vCard 2.x format: bare type parameter
-            types.push(param.to_string());
-        }
-    }
-
-    // Handle base64 data in value
-    let mut value_str = value.to_string();
-    if let Some(enc) = &encoding {
-        if enc == "base64" || enc == "b" {
-            // Just store as-is (binary data indicator)
-            value_str = format!("(Binary data, use -b option to extract)");
-        } else if enc == "quoted-printable" {
-            // Decode quoted-printable
-            let mut decoded = String::new();
-            let mut chars = value_str.chars().peekable();
-            while let Some(c) = chars.next() {
-                if c == '=' {
-                    let h1 = chars.next();
-                    let h2 = chars.next();
-                    if let (Some(h1), Some(h2)) = (h1, h2) {
-                        let hex_str = format!("{}{}", h1, h2);
-                        if let Ok(byte) = u8::from_str_radix(&hex_str, 16) {
-                            decoded.push(byte as char);
-                        }
-                    }
-                } else {
-                    decoded.push(c);
-                }
-            }
-            value_str = decoded;
-        }
-    } else {
-        value_str = unescape_vcard(&value_str);
-    }
-
-    result.push((raw_tag.to_string(), types, value_str));
+/// iCalendar isComponent set (top-level components that set the family1 group name)
+/// These component names are WITHOUT the V prefix (VEVENT→Event, VTIMEZONE→Timezone).
+fn is_ical_component(name: &str) -> bool {
+    matches!(name, "Event" | "Todo" | "Journal" | "Freebusy" | "Timezone" | "Alarm")
 }
 
 pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
     let text = String::from_utf8_lossy(data);
 
-    // Detect type
     let is_vcalendar = text.starts_with("BEGIN:VCALENDAR") ||
         text.contains("\nBEGIN:VCALENDAR") ||
-        text.starts_with("BEGIN:vcalendar");
+        text.to_ascii_uppercase().contains("BEGIN:VCALENDAR");
 
-    let lines = parse_lines(&text);
+    let raw_lines = parse_lines_raw(&text);
     let mut tags = Vec::new();
 
-    // Track component nesting for iCalendar
-    let mut component_stack: Vec<(String, u32)> = Vec::new(); // (name, count)
-    let mut component_prefix = String::new();
+    // iCalendar component tracking (mirrors Perl @count + $component logic):
+    //
+    // top_component: currently active top-level isComponent (Event, Timezone, etc.), None outside
+    // sub_stack: stack of (obj_name, index) for nested sub-components WITHIN a top-level component
+    //   e.g. VALARM(1) inside VEVENT → sub_stack = [("Alarm", 1)]
+    //   e.g. DAYLIGHT(1) inside VTIMEZONE → sub_stack = [("Daylight", 1)]
+    // sub_count_stack: per-nesting-level counters for sub-component types
+    //   sub_count_stack[0] = counts at current depth (reset when entering new top-level component)
+    //   sub_count_stack[1] = counts within the first sub-component level, etc.
+    //
+    // Tag prefix for tags inside sub-components: "Alarm1", "Daylight1", etc.
+    // Tags directly inside a top-level component (VEVENT, VTIMEZONE) are FLAT (no prefix).
+    let mut top_component: Option<String> = None;
+    let mut sub_stack: Vec<(String, u32)> = Vec::new();
+    let mut sub_count_stack: Vec<std::collections::HashMap<String, u32>> =
+        vec![std::collections::HashMap::new()];
 
-    // Count for indexed component prefix (e.g. Alarm1, Alarm2)
-    let mut alarm_count = 0u32;
+    for line in &raw_lines {
+        let upper = line.to_ascii_uppercase();
 
-    for (raw_tag, types, value) in &lines {
-        let raw_upper = raw_tag.to_ascii_uppercase();
+        // Handle BEGIN/END
+        if upper.starts_with("BEGIN:") || upper.starts_with("END:") {
+            let is_begin = upper.starts_with("BEGIN:");
+            let what_raw = if is_begin { &line[6..] } else { &line[4..] };
+            let what_lower = what_raw.to_ascii_lowercase();
+            // Capitalize first letter (preserving rest as-is doesn't matter, we lowercase first)
+            let what_cap = ucfirst(&what_lower);
 
-        // Handle BEGIN/END structural lines
-        if raw_upper == "BEGIN" || raw_upper == "END" {
-            let what = value.to_ascii_lowercase();
-            let what = {
-                let mut chars = what.chars();
-                match chars.next() {
-                    None => String::new(),
-                    Some(first) => {
-                        let mut s = first.to_uppercase().to_string();
-                        s.extend(chars);
-                        s
-                    }
-                }
+            // Is this VCARD/VCALENDAR/VNOTE (outermost container)?
+            let is_outer = matches!(what_cap.as_str(), "Vcard" | "Vcalendar" | "Vnote");
+
+            // Strip optional "V" prefix for isComponent check (VEVENT→Event, VALARM→Alarm, etc.)
+            // but DAYLIGHT, STANDARD don't have "V" prefix so they stay as-is
+            let what_no_v = if what_cap.starts_with('V') && what_cap.len() > 1 {
+                ucfirst(&what_cap[1..])
+            } else {
+                what_cap.clone()
             };
 
-            if raw_upper == "BEGIN" {
-                if what == "Vcard" || what == "Vcalendar" || what == "Vnote" {
-                    // top level, reset
-                    component_stack.clear();
-                    component_prefix.clear();
-                    alarm_count = 0;
+            if is_begin {
+                if is_outer {
+                    // New VCALENDAR/VCARD/VNOTE: reset all tracking
+                    top_component = None;
+                    sub_stack.clear();
+                    sub_count_stack = vec![std::collections::HashMap::new()];
+                } else if is_ical_component(&what_no_v) && top_component.is_none() {
+                    // New top-level isComponent (VEVENT, VTIMEZONE, etc.) while not in one
+                    top_component = Some(what_no_v);
+                    // Reset sub-component tracking for each new top-level component
+                    sub_stack.clear();
+                    sub_count_stack = vec![std::collections::HashMap::new()];
                 } else {
-                    if what == "Alarm" {
-                        alarm_count += 1;
-                        component_stack.push((what.clone(), alarm_count));
-                    } else {
-                        component_stack.push((what.clone(), 0));
-                    }
-                    // Rebuild prefix
-                    component_prefix = component_stack.iter()
-                        .map(|(name, idx)| {
-                            if *idx > 0 {
-                                format!("{}{}", name, idx)
-                            } else {
-                                name.clone()
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                        .join("");
+                    // Sub-component (VALARM, DAYLIGHT, STANDARD, or nested isComponent when already in one)
+                    // Increment count in current level
+                    let cnt = sub_count_stack.last_mut().unwrap()
+                        .entry(what_cap.clone()).or_insert(0);
+                    *cnt += 1;
+                    let idx = *cnt;
+                    sub_stack.push((what_cap.clone(), idx));
+                    sub_count_stack.push(std::collections::HashMap::new());
                 }
             } else { // END
-                if !component_stack.is_empty() {
-                    component_stack.pop();
-                    component_prefix = component_stack.iter()
-                        .map(|(name, idx)| {
-                            if *idx > 0 {
-                                format!("{}{}", name, idx)
-                            } else {
-                                name.clone()
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                        .join("");
+                if is_outer {
+                    // nothing special
+                } else if is_ical_component(&what_no_v) && top_component.as_deref() == Some(what_no_v.as_str()) {
+                    // Ending the top-level component
+                    top_component = None;
+                    sub_stack.clear();
+                    sub_count_stack = vec![std::collections::HashMap::new()];
+                } else if !sub_stack.is_empty() {
+                    sub_stack.pop();
+                    sub_count_stack.pop();
                 }
             }
             continue;
         }
 
-        let val_str = value.clone();
+        let parsed = match parse_vcard_line(line) {
+            Some(p) => p,
+            None => continue,
+        };
+
+        let raw_upper = parsed.tag.to_ascii_uppercase();
+        if raw_upper == "BEGIN" || raw_upper == "END" { continue; }
 
         if is_vcalendar {
-            let base_name = normalize_ical_tag(raw_tag);
-
-            // Apply component prefix if inside a component
-            let full_name = if component_prefix.is_empty() {
-                base_name.clone()
-            } else {
-                format!("{}{}", component_prefix, base_name)
-            };
-
-            // Handle date/time conversions
-            let display_val = if is_time_tag_ical(&base_name) || is_time_tag_ical(&full_name) {
-                convert_datetime(&val_str)
-            } else {
-                val_str.clone()
-            };
-
-            // Also handle Last-modified specially
-            let full_name = if raw_tag.to_ascii_lowercase() == "last-modified" {
-                if component_prefix.is_empty() { "ModifyDate".into() } else { format!("{}ModifyDate", component_prefix) }
-            } else {
-                full_name
-            };
-
-            // Handle TZID parameter (timezone ID for datetime)
-            // Add TZID as a separate tag
-            let mut tag = mk_ical(&full_name, display_val);
-            tag.group.family0 = "VCalendar".into();
-            tag.group.family1 = "VCalendar".into();
-            tags.push(tag);
-
+            // Build tag prefix from sub_stack only (top-level component tags are flat)
+            let prefix: String = sub_stack.iter()
+                .map(|(name, idx)| format!("{}{}", name, idx))
+                .collect();
+            emit_ical_tag(&parsed, &prefix, &mut tags);
         } else {
-            // vCard
-            let (_, base_name) = normalize_vcard_tag(raw_tag, types);
-
-            let display_val = if is_time_tag_vcard(&base_name) {
-                convert_datetime(&val_str)
-            } else {
-                val_str.clone()
-            };
-
-            // Handle PHOTO with base64
-            let display_val = if raw_tag.to_ascii_uppercase() == "PHOTO" && val_str.contains("base64,") {
-                // Extract just type info
-                let img_type = if val_str.contains("image/jpeg") || types.iter().any(|t| t.to_ascii_uppercase() == "JPEG") {
-                    "Jpeg"
-                } else if val_str.contains("image/png") {
-                    "Png"
-                } else {
-                    "Unknown"
-                };
-                format!("(Binary data, use -b option to extract)")
-            } else {
-                display_val
-            };
-
-            let tag = mk(&base_name, display_val);
-            tags.push(tag);
+            emit_vcard_tag(&parsed, &mut tags);
         }
     }
 
     Ok(tags)
+}
+
+fn emit_vcard_tag(parsed: &ParsedLine, tags: &mut Vec<Tag>) {
+    let base_name = normalize_vcard_tag(&parsed.tag);
+
+    // Build type suffix
+    let type_suffix: String = parsed.types.iter().cloned().collect();
+
+    // Build extra suffix from inline data types
+    let extra_suffix: String = parsed.extra_types.join("");
+
+    // Full name: base + type_suffix + extra_suffix
+    let mut full_name = format!("{}{}{}", base_name, type_suffix, extra_suffix);
+
+    // Apply language suffix: Note-fr
+    if let Some(ref lang) = parsed.language {
+        full_name = format!("{}-{}", full_name, lang);
+    }
+
+    let val = parsed.value.clone();
+
+    // Convert datetime if needed
+    let display_val = if is_time_tag_vcard(&base_name) {
+        convert_datetime(&val)
+    } else {
+        val.clone()
+    };
+
+    tags.push(mk(&full_name, display_val));
+
+    // Emit extra parameter tags (GEO, LABEL, TZID)
+    if let Some(ref geo_val) = parsed.geo {
+        let geo_tag = format!("{}{}Geolocation", base_name, type_suffix);
+        tags.push(mk(&geo_tag, geo_val.clone()));
+    }
+    if let Some(ref lbl_val) = parsed.label {
+        let lbl_tag = format!("{}{}Label", base_name, type_suffix);
+        tags.push(mk(&lbl_tag, lbl_val.clone()));
+    }
+}
+
+fn emit_ical_tag(parsed: &ParsedLine, component_prefix: &str, tags: &mut Vec<Tag>) {
+    let base_name = normalize_ical_tag(&parsed.tag);
+
+    let full_name = if component_prefix.is_empty() {
+        base_name.clone()
+    } else {
+        format!("{}{}", component_prefix, base_name)
+    };
+
+    let val = parsed.value.clone();
+
+    let display_val = if is_time_tag_ical(&base_name) || is_time_tag_ical(&full_name) {
+        convert_datetime(&val)
+    } else {
+        val.clone()
+    };
+
+    let mut tag = mk_ical(&full_name, display_val);
+    tag.group.family0 = "VCalendar".into();
+    tag.group.family1 = "VCalendar".into();
+    tags.push(tag);
+
+    // TZID parameter
+    if let Some(ref tzid_val) = parsed.tzid {
+        let tzid_tag = format!("{}TimezoneID", full_name);
+        let mut t = mk_ical(&tzid_tag, tzid_val.clone());
+        t.group.family0 = "VCalendar".into();
+        t.group.family1 = "VCalendar".into();
+        tags.push(t);
+    }
 }
 
 /// Read a VCF (vCard) file

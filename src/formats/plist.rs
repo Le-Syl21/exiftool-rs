@@ -143,6 +143,22 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
                 .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
             Some(PlistValue::String(String::from_utf16_lossy(&units)))
         }
+        0xA => {
+            // Array
+            let count = if obj_info == 0x0F {
+                let (l, _) = read_length(data, off + 1)?;
+                l
+            } else { obj_info };
+            let refs_start = if obj_info == 0x0F { off + 3 } else { off + 1 };
+            let mut arr = Vec::new();
+            for i in 0..count {
+                let elem_ref = read_int(data, refs_start + i * ref_size, ref_size)?;
+                if let Some(val) = parse_object(data, offsets, ref_size, elem_ref) {
+                    arr.push(val);
+                }
+            }
+            Some(PlistValue::Array(arr))
+        }
         0xD => {
             // Dict
             let count = if obj_info == 0x0F {
@@ -166,6 +182,59 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
         }
         _ => None,
     }
+}
+
+fn unix_ts_to_exif_date(ts: i64) -> String {
+    // Get local UTC offset from TZ env var (same approach as psp.rs)
+    let utc_offset = get_plist_utc_offset();
+    let adjusted = ts + utc_offset;
+    let secs_per_day = 86400i64;
+    let days = adjusted / secs_per_day;
+    let time_of_day = adjusted.rem_euclid(secs_per_day);
+    let hour = time_of_day / 3600;
+    let minute = (time_of_day % 3600) / 60;
+    let second = time_of_day % 60;
+
+    let mut year = 1970i32;
+    let mut rem = days;
+    loop {
+        let dy = if plist_is_leap(year) { 366i64 } else { 365i64 };
+        if rem < dy { break; }
+        rem -= dy;
+        year += 1;
+    }
+    let leap = plist_is_leap(year);
+    let month_days = [31i64, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let mut month = 1i32;
+    for &dm in &month_days {
+        if rem < dm { break; }
+        rem -= dm;
+        month += 1;
+    }
+    let day = rem + 1;
+    let offset_hours = utc_offset / 3600;
+    let offset_mins = (utc_offset.abs() % 3600) / 60;
+    let sign = if utc_offset >= 0 { '+' } else { '-' };
+    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
+        year, month, day, hour, minute, second,
+        sign, offset_hours.abs(), offset_mins)
+}
+
+fn get_plist_utc_offset() -> i64 {
+    if let Ok(tz) = std::env::var("TZ") {
+        let tz = tz.trim();
+        if let Some(sign_pos) = tz.rfind(['+', '-']) {
+            let sign: i64 = if &tz[sign_pos..sign_pos+1] == "+" { 1 } else { -1 };
+            if let Ok(h) = tz[sign_pos+1..].parse::<i64>() {
+                return -sign * h * 3600;
+            }
+        }
+    }
+    0
+}
+
+fn plist_is_leap(y: i32) -> bool {
+    (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
 }
 
 fn read_int(data: &[u8], off: usize, size: usize) -> Option<usize> {

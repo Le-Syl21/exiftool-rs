@@ -262,6 +262,84 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
                     }
                 }
             }
+            // ISOBMFF File Type box
+            b"ftyp" => {
+                let cd = &data[content_start..content_end];
+                if cd.len() >= 4 {
+                    let major_brand = &cd[0..4];
+                    let brand_str = String::from_utf8_lossy(major_brand);
+                    let brand_desc = match major_brand {
+                        b"jp2 " => "JPEG 2000 Image (.JP2)",
+                        b"jpm " => "JPEG 2000 Compound Image (.JPM)",
+                        b"jpx " => "JPEG 2000 with extensions (.JPX)",
+                        b"jxl " => "JPEG XL Image (.JXL)",
+                        b"jph " => "High-throughput JPEG 2000 (.JPH)",
+                        _ => "",
+                    };
+                    let brand_display = if brand_desc.is_empty() {
+                        brand_str.trim().to_string()
+                    } else {
+                        brand_desc.to_string()
+                    };
+                    tags.push(mk("MajorBrand", "Major Brand", Value::String(brand_display)));
+                }
+                if cd.len() >= 8 {
+                    let mv = &cd[4..8];
+                    let minor = format!("{:x}.{:x}.{:x}",
+                        u16::from_be_bytes([mv[0], mv[1]]),
+                        mv[2],
+                        mv[3]);
+                    tags.push(mk("MinorVersion", "Minor Version", Value::String(minor)));
+                }
+                if cd.len() >= 12 {
+                    // CompatibleBrands: 4-char groups starting at byte 8
+                    let compat_data = &cd[8..];
+                    let mut brands: Vec<String> = Vec::new();
+                    for chunk in compat_data.chunks(4) {
+                        if chunk.len() == 4 && !chunk.contains(&0u8) {
+                            let b = String::from_utf8_lossy(chunk).to_string();
+                            brands.push(b);
+                        }
+                    }
+                    if !brands.is_empty() {
+                        tags.push(mk("CompatibleBrands", "Compatible Brands", Value::String(brands.join(", "))));
+                    }
+                }
+            }
+            // Brotli-encoded metadata box (JXL)
+            b"brob" => {
+                let cd = &data[content_start..content_end];
+                if cd.len() >= 4 {
+                    let inner_type = &cd[0..4];
+                    let brotli_data = &cd[4..];
+                    // Decompress Brotli
+                    use std::io::Cursor;
+                    let mut input = Cursor::new(brotli_data);
+                    let mut output: Vec<u8> = Vec::new();
+                    let decomp_ok = brotli::BrotliDecompress(&mut input, &mut output).is_ok();
+                    if decomp_ok && !output.is_empty() {
+                        match inner_type {
+                            b"Exif" | b"exif" => {
+                                // Skip 4-byte offset if present (like the Exif box)
+                                let exif_payload = if output.len() > 4 {
+                                    &output[4..]
+                                } else {
+                                    &output[..]
+                                };
+                                if let Ok(exif_tags) = ExifReader::read(exif_payload) {
+                                    tags.extend(exif_tags);
+                                }
+                            }
+                            b"xml " | b"XML " => {
+                                if let Ok(xmp_tags) = XmpReader::read(&output) {
+                                    tags.extend(xmp_tags);
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
             _ => {}
         }
 

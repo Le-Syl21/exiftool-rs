@@ -93,28 +93,6 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
     };
     tags.push(mk("RenderingIntent", "Rendering Intent", Value::String(intent_name.to_string())));
 
-    // ProfileCMMType (bytes 4-7)
-    let cmm = String::from_utf8_lossy(&data[4..8]).trim_end_matches('\0').trim().to_string();
-    if !cmm.is_empty() && cmm.bytes().any(|b| b > 0x20) {
-        tags.push(mk("ProfileCMMType", "Profile CMM Type", Value::String(cmm)));
-    }
-
-    // ProfileClass (bytes 12-15)
-    let class_sig = String::from_utf8_lossy(&data[12..16]).to_string();
-    let class_name = match class_sig.trim() {
-        "scnr" => "Input Device Profile",
-        "mntr" => "Display Device Profile",
-        "prtr" => "Output Device Profile",
-        "link" => "DeviceLink Profile",
-        "spac" => "ColorSpace Conversion Profile",
-        "abst" => "Abstract Profile",
-        "nmcl" => "Named Color Profile",
-        _ => "",
-    };
-    if !class_name.is_empty() {
-        tags.push(mk("ProfileClass", "Profile Class", Value::String(class_name.into())));
-    }
-
     // CMMFlags (bytes 44-47)
     let flags = u32::from_be_bytes([data[44], data[45], data[46], data[47]]);
     tags.push(mk("CMMFlags", "CMM Flags", Value::String(format!("0x{:08X}", flags))));
