@@ -4,10 +4,10 @@
 //! it must be split across multiple APP1 segments using Extended XMP.
 //!
 //! Standard XMP segment:
-//!   FF E1 [len] "http://ns.adobe.com/xap/1.0/\0" [standard XMP]
+//!   `FF E1 {len} "http://ns.adobe.com/xap/1.0/\0" {standard XMP}`
 //!
 //! Extended XMP segments:
-//!   FF E1 [len] "http://ns.adobe.com/xmp/extension/\0" [GUID:32] [total_len:4] [offset:4] [data]
+//!   `FF E1 {len} "http://ns.adobe.com/xmp/extension/\0" {GUID:32} {total_len:4} {offset:4} {data}`
 
 const XMP_STD_HEADER: &[u8] = b"http://ns.adobe.com/xap/1.0/\0";
 const XMP_EXT_HEADER: &[u8] = b"http://ns.adobe.com/xmp/extension/\0";

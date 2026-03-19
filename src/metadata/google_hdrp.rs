@@ -5,7 +5,7 @@
 //!
 //! References:
 //! - ExifTool Google.pm ProcessHDRP (Perl source)
-//! - https://github.com/jakiki6/ruminant/blob/master/ruminant/modules/images.py
+//! - <https://github.com/jakiki6/ruminant/blob/master/ruminant/modules/images.py>
 
 #![allow(dead_code)]
 

@@ -1,6 +1,6 @@
 //! HTML metadata reader.
 //!
-//! Extracts <meta> tags, <title>, and embedded XMP from HTML files.
+//! Extracts `<meta>` tags, `<title>`, and embedded XMP from HTML files.
 
 use crate::error::{Error, Result};
 use crate::metadata::XmpReader;
