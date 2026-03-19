@@ -753,6 +753,30 @@ fn extract_hyperlinks(data: &[u8]) -> Option<String> {
     if links.is_empty() { None } else { Some(links.join(", ")) }
 }
 
+/// Read a mini-stream (for streams smaller than mini_stream_cutoff)
+fn read_mini_stream_chain(
+    mini_fat: &[u32],
+    mini_container: &[u8],
+    start: u32,
+    size: u32,
+    mini_sector_size: usize,
+) -> Vec<u8> {
+    let mut result = Vec::new();
+    let mut sector = start;
+    let mut count = 0;
+    while sector != END_OF_CHAIN && sector != FREESECT && count < 10000 {
+        let offset = sector as usize * mini_sector_size;
+        if offset + mini_sector_size > mini_container.len() { break; }
+        result.extend_from_slice(&mini_container[offset..offset + mini_sector_size]);
+        if sector as usize >= mini_fat.len() { break; }
+        sector = mini_fat[sector as usize];
+        count += 1;
+    }
+    // Truncate to actual size
+    result.truncate(size as usize);
+    result
+}
+
 pub fn read_fpx(data: &[u8]) -> Result<Vec<Tag>> {
     // OLE2 Compound File magic: D0 CF 11 E0 A1 B1 1A E1
     if data.len() < HDR_SIZE ||
@@ -768,9 +792,11 @@ pub fn read_fpx(data: &[u8]) -> Result<Vec<Tag>> {
 
     let fat_sector_count = r32(data, 44);
     let dir_start_sector = r32(data, 48);
-    let mini_sector_size_exp = r16(data, 34) as u32;
-    let _mini_sector_size = 1u32 << mini_sector_size_exp;
-    let _mini_stream_cutoff = r32(data, 56);
+    let mini_sector_size_exp = r16(data, 32) as u32;
+    let mini_sector_size = if mini_sector_size_exp == 0 { 64 } else { (1u32 << mini_sector_size_exp) as usize };
+    let mini_stream_cutoff = r32(data, 56);
+    let first_mini_fat_sector = r32(data, 60);
+    let num_mini_fat_sectors = r32(data, 64);
 
     // DIFAT array from header (at offset 76, up to 109 entries)
     let mut difat = Vec::new();
@@ -782,32 +808,62 @@ pub fn read_fpx(data: &[u8]) -> Result<Vec<Tag>> {
         difat.push(sect);
     }
 
-    let fat = parse_fat(data, sector_size as usize, &difat, fat_sector_count);
+    let fat = parse_fat(data, sector_size, &difat, fat_sector_count);
+
+    // Parse Mini FAT (stored in regular sectors)
+    let mini_fat = if first_mini_fat_sector != END_OF_CHAIN && first_mini_fat_sector != FREESECT {
+        let mini_fat_sectors = &[first_mini_fat_sector]; // simplified: just first sector
+        parse_fat(data, sector_size, mini_fat_sectors, num_mini_fat_sectors)
+    } else {
+        Vec::new()
+    };
 
     // Read directory
-    let dir_data = read_sector_chain(data, &fat, dir_start_sector, sector_size as usize);
+    let dir_data = read_sector_chain(data, &fat, dir_start_sector, sector_size);
     let entries = parse_directory(&dir_data);
+
+    // Get mini-stream container from root directory entry (entry 0, type=5=ROOT)
+    let mini_container = if !entries.is_empty() && entries[0].entry_type == 5 {
+        let root_start = entries[0].start_sector;
+        let root_size = entries[0].size;
+        if root_start != FREESECT && root_start != END_OF_CHAIN {
+            let data = read_sector_chain(data, &fat, root_start, sector_size);
+            let sz = root_size.min(data.len() as u32) as usize;
+            data[..sz].to_vec()
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
 
     let mut tags = Vec::new();
 
     // Find and process interesting streams
     for entry in &entries {
-        if entry.entry_type != 2 { continue; } // only STREAM
+        if entry.entry_type != 2 { continue; } // only STREAM type
         if entry.start_sector == FREESECT { continue; }
 
-        let stream = read_sector_chain(data, &fat, entry.start_sector, sector_size as usize);
-        let stream_len = entry.size.min(stream.len() as u32) as usize;
-        let stream = &stream[..stream_len.min(stream.len())];
+        // Determine if stream is in mini-stream or regular stream
+        let stream: Vec<u8> = if entry.size < mini_stream_cutoff && !mini_container.is_empty() && !mini_fat.is_empty() {
+            // Read from mini-stream
+            read_mini_stream_chain(&mini_fat, &mini_container, entry.start_sector, entry.size, mini_sector_size)
+        } else {
+            // Read from regular sectors
+            let s = read_sector_chain(data, &fat, entry.start_sector, sector_size);
+            let sz = entry.size.min(s.len() as u32) as usize;
+            s[..sz].to_vec()
+        };
 
         match entry.name.as_str() {
             "\u{0005}SummaryInformation" => {
-                process_properties(stream, true, &mut tags);
+                process_properties(&stream, true, &mut tags);
             }
             "\u{0005}DocumentSummaryInformation" => {
-                process_docinfo_stream(stream, &mut tags);
+                process_docinfo_stream(&stream, &mut tags);
             }
             "Current User" => {
-                if let Some(name) = extract_current_user(stream) {
+                if let Some(name) = extract_current_user(&stream) {
                     if !name.is_empty() {
                         tags.push(mk("CurrentUser", Value::String(name)));
                     }

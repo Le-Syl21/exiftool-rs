@@ -395,3 +395,48 @@ pub fn read_afm(data: &[u8]) -> Result<Vec<Tag>> {
 
     Ok(tags)
 }
+
+/// Read PostScript Type 1 Binary font (.pfb) file.
+/// PFB wraps PFA-style text in binary segments:
+///   \x80\x01 + 4-byte LE length = ASCII segment
+///   \x80\x02 + 4-byte LE length = binary/encrypted segment
+///   \x80\x03                     = EOF
+/// Extracts all ASCII segments, concatenates them, then parses as PFA.
+pub fn read_pfb(data: &[u8]) -> Result<Vec<Tag>> {
+    if data.len() < 6 || data[0] != 0x80 {
+        return Err(Error::InvalidData("not a PFB file".into()));
+    }
+
+    let mut text = Vec::new();
+    let mut pos = 0;
+    while pos + 2 <= data.len() {
+        if data[pos] != 0x80 {
+            break;
+        }
+        let seg_type = data[pos + 1];
+        if seg_type == 3 {
+            break; // EOF segment
+        }
+        if pos + 6 > data.len() {
+            break;
+        }
+        let length = u32::from_le_bytes([data[pos + 2], data[pos + 3], data[pos + 4], data[pos + 5]]) as usize;
+        pos += 6;
+        if pos + length > data.len() {
+            break;
+        }
+        if seg_type == 1 {
+            // ASCII segment — collect for parsing
+            text.extend_from_slice(&data[pos..pos + length]);
+        }
+        // type 2 = binary/encrypted — skip
+        pos += length;
+    }
+
+    if text.is_empty() {
+        return Err(Error::InvalidData("no ASCII segments in PFB file".into()));
+    }
+
+    // Parse the assembled text just like a PFA file
+    read_pfa(&text)
+}

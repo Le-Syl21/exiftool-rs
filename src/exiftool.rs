@@ -1205,6 +1205,7 @@ impl ExifTool {
             FileType::Psp => formats::psp::read_psp(data),
             FileType::SonyPmp => formats::sony_pmp::read_sony_pmp(data),
             FileType::Audible => formats::audible::read_audible(data),
+            FileType::Exr => formats::openexr::read_openexr(data),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }
@@ -1272,13 +1273,15 @@ impl ExifTool {
             "tnef" => formats::tnef::read_tnef(data).or_else(|_| Ok(Vec::new())),
             "ppt" | "fpx" | "fpf" => formats::flashpix::read_fpx(data).or_else(|_| Ok(Vec::new())),
             "itc" => formats::misc::read_itc(data).or_else(|_| Ok(Vec::new())),
-            "dv" | "lfp" | "miff" | "mrc"
+            "dv" => formats::dv::read_dv(data, data.len() as u64).or_else(|_| Ok(Vec::new())),
+            "lfp" | "miff" | "mrc"
             | "dss" | "mobi" | "psp" | "pgf" | "raw"
             | "pmp" | "torrent" | "wtv"
             | "xisf" | "czi" | "iso" | "mxf"
-            | "pfb" | "dfont" => Ok(Vec::new()),
+            | "dfont" => Ok(Vec::new()),
             "afm" => formats::font::read_afm(data).or_else(|_| Ok(Vec::new())),
             "pfa" => formats::font::read_pfa(data).or_else(|_| Ok(Vec::new())),
+            "pfb" => formats::font::read_pfb(data).or_else(|_| Ok(Vec::new())),
             _ => Err(Error::UnsupportedFileType(ext)),
         }
     }

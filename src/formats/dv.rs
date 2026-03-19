@@ -85,7 +85,8 @@ fn format_duration(secs: f64) -> String {
 }
 
 pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
-    if data.len() < 12000 {
+    if data.len() < 480 {
+        // Need at least 6 DIF blocks (6 * 80 bytes) after start offset
         return Ok(Vec::new());
     }
 
@@ -162,11 +163,12 @@ pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
                 }
                 time = None;
             } else if t == 0x63 && date.is_some() {
-                // time
-                let t1 = data[p + 1] & 0x7f;
-                let t2 = data[p + 2] & 0x7f;
-                let t3 = data[p + 3] & 0x3f;
-                time = Some(format!("{:02x}:{:02x}:{:02x}", t3, t2, t1));
+                // time: bytes at p+1..p+4 are [frames, seconds, minutes, hours] (BCD)
+                // Perl: $t[3]=p+4=hours & 0x3f, $t[2]=p+3=minutes & 0x7f, $t[1]=p+2=seconds & 0x7f
+                let hours = data[p + 4] & 0x3f;
+                let minutes = data[p + 3] & 0x7f;
+                let seconds = data[p + 2] & 0x7f;
+                time = Some(format!("{:02x}:{:02x}:{:02x}", hours, minutes, seconds));
                 break;
             } else {
                 time = None;
