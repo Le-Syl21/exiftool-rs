@@ -62,6 +62,34 @@ pub struct NewValue {
     pub value: Option<String>,
 }
 
+/// The main ExifTool engine — read, write, and edit metadata.
+///
+/// # Reading metadata
+/// ```no_run
+/// use exiftool_rs::ExifTool;
+///
+/// let et = ExifTool::new();
+///
+/// // Full tag structs
+/// let tags = et.extract_info("photo.jpg").unwrap();
+/// for tag in &tags {
+///     println!("[{}] {}: {}", tag.group.family0, tag.name, tag.print_value);
+/// }
+///
+/// // Simple name→value map
+/// let info = et.image_info("photo.jpg").unwrap();
+/// println!("Camera: {}", info.get("Model").unwrap_or(&String::new()));
+/// ```
+///
+/// # Writing metadata
+/// ```no_run
+/// use exiftool_rs::ExifTool;
+///
+/// let mut et = ExifTool::new();
+/// et.set_new_value("Artist", Some("John Doe"));
+/// et.set_new_value("Copyright", Some("2024"));
+/// et.write_info("input.jpg", "output.jpg").unwrap();
+/// ```
 pub struct ExifTool {
     options: Options,
     new_values: Vec<NewValue>,
