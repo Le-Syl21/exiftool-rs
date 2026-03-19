@@ -81,7 +81,100 @@ pub fn read_quicktime(data: &[u8]) -> Result<Vec<Tag>> {
     let mut state = QtState::default();
     parse_atoms(data, 0, data.len(), &mut tags, &mut state, 0);
 
+    // Compute composite AvgBitrate from MediaDataSize and Duration
+    // Mirrors Perl QuickTime composite AvgBitrate:
+    //   sum all MediaDataSize values, divide by Duration in seconds, multiply by 8
+    {
+        // Find Duration in seconds (from movie-level "Duration" tag which is already in s)
+        let duration_secs: Option<f64> = tags.iter().find_map(|t| {
+            if t.name == "Duration" {
+                if let Value::String(ref s) = t.raw_value {
+                    // Format is e.g. "29.05 s" or "0:01:23"
+                    if let Some(stripped) = s.strip_suffix(" s") {
+                        return stripped.parse::<f64>().ok();
+                    }
+                    // hh:mm:ss format
+                    let parts: Vec<&str> = s.split(':').collect();
+                    if parts.len() == 3 {
+                        if let (Ok(h), Ok(m), Ok(s)) = (
+                            parts[0].parse::<f64>(),
+                            parts[1].parse::<f64>(),
+                            parts[2].parse::<f64>(),
+                        ) {
+                            return Some(h * 3600.0 + m * 60.0 + s);
+                        }
+                    }
+                }
+            }
+            None
+        });
+
+        if let Some(dur) = duration_secs {
+            if dur > 0.0 {
+                // Sum all MediaDataSize values
+                let total_size: u64 = tags.iter().filter_map(|t| {
+                    if t.name == "MediaDataSize" {
+                        if let Value::U32(v) = t.raw_value { Some(v as u64) } else { None }
+                    } else {
+                        None
+                    }
+                }).sum();
+
+                let bitrate = (total_size as f64 * 8.0 / dur + 0.5) as u64;
+                tags.push(mk(
+                    "AvgBitrate",
+                    "Avg Bitrate",
+                    Value::String(convert_bitrate(bitrate)),
+                ));
+            } else {
+                // Duration is 0 or effectively zero
+                tags.push(mk(
+                    "AvgBitrate",
+                    "Avg Bitrate",
+                    Value::String("0 bps".to_string()),
+                ));
+            }
+        }
+    }
+
     Ok(tags)
+}
+
+/// Convert a bitrate in bps to a human-readable string.
+/// Mirrors ExifTool's ConvertBitrate(): uses %.3g for <100, %.0f for >=100.
+fn convert_bitrate(bps: u64) -> String {
+    let mut val = bps as f64;
+    let units = ["bps", "kbps", "Mbps", "Gbps"];
+    let mut idx = 0;
+    while val >= 1000.0 && idx + 1 < units.len() {
+        val /= 1000.0;
+        idx += 1;
+    }
+    let num_str = if val < 100.0 {
+        // %.3g: 3 significant figures
+        format_3g(val)
+    } else {
+        format!("{:.0}", val)
+    };
+    format!("{} {}", num_str, units[idx])
+}
+
+/// Format a float with up to 3 significant figures (like Perl's %.3g).
+fn format_3g(val: f64) -> String {
+    if val == 0.0 {
+        return "0".to_string();
+    }
+    // Use 3 significant digits
+    let mag = val.abs().log10().floor() as i32;
+    let decimals = (2 - mag).max(0) as usize;
+    let s = format!("{:.prec$}", val, prec = decimals);
+    // Strip trailing zeros after decimal point
+    if s.contains('.') {
+        let s = s.trim_end_matches('0').trim_end_matches('.');
+        s.to_string()
+    } else {
+        s
+    }
 }
 
 /// Recursively parse QuickTime atoms.

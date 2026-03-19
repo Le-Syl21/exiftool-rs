@@ -77,6 +77,37 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
                         .to_string(),
                     ),
                 ));
+                // Compression (byte 10), Filter (byte 11), Interlace (byte 12) — from Perl PNG.pm
+                let compression = match chunk_data[10] {
+                    0 => "Deflate/Inflate",
+                    _ => "Unknown",
+                };
+                tags.push(make_png_tag("Compression", "Compression", Value::String(compression.into())));
+                let filter = match chunk_data[11] {
+                    0 => "Adaptive",
+                    _ => "Unknown",
+                };
+                tags.push(make_png_tag("Filter", "Filter", Value::String(filter.into())));
+                let interlace = match chunk_data[12] {
+                    0 => "Noninterlaced",
+                    1 => "Adam7 Interlace",
+                    _ => "Unknown",
+                };
+                tags.push(make_png_tag("Interlace", "Interlace", Value::String(interlace.into())));
+            }
+
+            // bKGD - Background color
+            b"bKGD" if !chunk_data.is_empty() => {
+                let bg = if chunk_data.len() >= 6 {
+                    format!("{} {} {}", u16::from_be_bytes([chunk_data[0], chunk_data[1]]),
+                        u16::from_be_bytes([chunk_data[2], chunk_data[3]]),
+                        u16::from_be_bytes([chunk_data[4], chunk_data[5]]))
+                } else if chunk_data.len() >= 2 {
+                    u16::from_be_bytes([chunk_data[0], chunk_data[1]]).to_string()
+                } else {
+                    chunk_data[0].to_string()
+                };
+                tags.push(make_png_tag("BackgroundColor", "Background Color", Value::String(bg)));
             }
 
             // tEXt - Uncompressed text
@@ -191,10 +222,24 @@ fn make_png_tag(name: &str, description: &str, value: Value) -> Tag {
 }
 
 fn make_png_text_tag(key: &str, value: &str) -> Tag {
+    // Map standard PNG tEXt keys to Perl ExifTool tag names (from Perl PNG.pm TextualData)
+    let mapped_name = match key.to_lowercase().as_str() {
+        "comment" => "Comment",
+        "author" => "Author",
+        "copyright" => "Copyright",
+        "creation time" => "CreationTime",
+        "description" => "Description",
+        "disclaimer" => "Disclaimer",
+        "software" => "Creator",
+        "source" => "Source",
+        "title" => "Title",
+        "warning" => "Warning",
+        _ => key,
+    };
     Tag {
-        id: TagId::Text(key.to_string()),
-        name: key.to_string(),
-        description: key.to_string(),
+        id: TagId::Text(mapped_name.to_string()),
+        name: mapped_name.to_string(),
+        description: mapped_name.to_string(),
         group: TagGroup {
             family0: "PNG".to_string(),
             family1: "PNG-tEXt".to_string(),
