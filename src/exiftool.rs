@@ -1107,8 +1107,10 @@ impl ExifTool {
             FileType::Ape | FileType::Mpc | FileType::Audible
             | FileType::WavPack | FileType::Dsf => formats::id3::read_mp3(data),
             FileType::Aac => formats::misc::read_aac(data),
-            FileType::RealAudio | FileType::RealMedia => {
-                // Try ID3 first
+            FileType::RealAudio => {
+                formats::misc::read_real_audio(data).or_else(|_| Ok(Vec::new()))
+            }
+            FileType::RealMedia => {
                 formats::id3::read_mp3(data).or_else(|_| Ok(Vec::new()))
             }
             // Misc formats
@@ -1126,6 +1128,9 @@ impl ExifTool {
             FileType::Gzip => formats::misc::read_gzip(data),
             FileType::Rar => formats::misc::read_rar(data),
             FileType::Dss => formats::misc::read_dss(data),
+            FileType::Moi => formats::misc::read_moi(data),
+            FileType::MacOs => formats::misc::read_macos(data),
+            FileType::Json => formats::misc::read_json(data),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }
@@ -1177,10 +1182,13 @@ impl ExifTool {
             "mie" => Ok(Vec::new()),       // MIE
             "exr" => Ok(Vec::new()),       // OpenEXR
             "wpg" => formats::misc::read_wpg(data).or_else(|_| Ok(Vec::new())),
-            "dpx" | "dv" | "fpf" | "lfp" | "miff" | "moi" | "mrc"
+            "moi" => formats::misc::read_moi(data).or_else(|_| Ok(Vec::new())),
+            "macos" => formats::misc::read_macos(data).or_else(|_| Ok(Vec::new())),
+            "json" => formats::misc::read_json(data).or_else(|_| Ok(Vec::new())),
+            "dpx" | "dv" | "fpf" | "lfp" | "miff" | "mrc"
             | "dss" | "mobi" | "pcapng" | "psp" | "pgf" | "raw"
             | "r3d" | "pmp" | "tnef" | "torrent" | "wtv"
-            | "xisf" | "czi" | "iso" | "itc" | "macos" | "mxf"
+            | "xisf" | "czi" | "iso" | "itc" | "mxf"
             | "afm" | "pfb" | "ppt" | "dfont" => Ok(Vec::new()),
             _ => Err(Error::UnsupportedFileType(ext)),
         }

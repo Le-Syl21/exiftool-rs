@@ -39,12 +39,123 @@ pub fn read_exe(data: &[u8]) -> Result<Vec<Tag>> {
     }
     // AR archive (.a files)
     if data.starts_with(b"!<arch>\n") {
-        let mut tags = Vec::new();
-        tags.push(mk("ExeType", "Executable Type", Value::String("AR Archive (static library)".into())));
-        return Ok(tags);
+        return read_ar(data);
     }
 
     Err(Error::InvalidData("unknown executable format".into()))
+}
+
+/// Parse AR (static library) archive. Extract CreateDate from first entry header
+/// and Mach-O CPU tags from the first Mach-O member found.
+/// Mirrors ExifTool's EXE.pm ProcessEXE handling of !<arch> files.
+fn read_ar(data: &[u8]) -> Result<Vec<Tag>> {
+    let mut tags = Vec::new();
+    let mut pos = 8; // skip "!<arch>\n"
+    let mut first_entry = true;
+    let max_entries = 10;
+    let mut entries_checked = 0;
+
+    while entries_checked < max_entries && pos + 60 <= data.len() {
+        // AR entry header: 60 bytes total
+        // ar_name[16], ar_date[12], ar_uid[6], ar_gid[6], ar_mode[8], ar_size[10], terminator[2]
+        let entry = &data[pos..pos + 60];
+        if &entry[58..60] != b"`\n" {
+            break;
+        }
+
+        let ar_size_str = std::str::from_utf8(&entry[48..58]).unwrap_or("").trim();
+        let ar_size: usize = ar_size_str.parse().unwrap_or(0);
+        let data_start = pos + 60;
+
+        if first_entry {
+            // Extract CreateDate from ar_date field (Unix timestamp string)
+            let date_str = std::str::from_utf8(&entry[16..28]).unwrap_or("").trim().to_string();
+            if let Ok(unix_ts) = date_str.parse::<i64>() {
+                // Convert Unix timestamp to ExifTool date format
+                let date = unix_to_exif_date(unix_ts);
+                tags.push(mk("CreateDate", "Create Date", Value::String(date)));
+            }
+            first_entry = false;
+        }
+
+        // Determine actual data offset (BSD extended names: #1/N)
+        let ar_name = std::str::from_utf8(&entry[0..16]).unwrap_or("").trim();
+        let name_ext_len: usize = if let Some(rest) = ar_name.strip_prefix("#1/") {
+            rest.trim().parse().unwrap_or(0)
+        } else {
+            0
+        };
+        let member_data_start = data_start + name_ext_len;
+
+        // Try to extract Mach-O tags from this member
+        if member_data_start + 4 <= data.len() {
+            let member = &data[member_data_start..];
+            let is_macho = member.starts_with(&[0xFE, 0xED, 0xFA, 0xCE])
+                || member.starts_with(&[0xCE, 0xFA, 0xED, 0xFE])
+                || member.starts_with(&[0xFE, 0xED, 0xFA, 0xCF])
+                || member.starts_with(&[0xCF, 0xFA, 0xED, 0xFE]);
+            if is_macho {
+                let is_64 = member[3] == 0xCF || member[0] == 0xCF;
+                if let Ok(mut macho_tags) = read_macho(member, is_64) {
+                    // Remove ExeType if present (static lib doesn't need it)
+                    macho_tags.retain(|t| t.name != "ExeType" && t.name != "ObjectFileType" && t.name != "ObjectFlags");
+                    tags.extend(macho_tags);
+                }
+                break; // got what we need
+            }
+        }
+
+        pos += 60 + ar_size;
+        if pos & 1 != 0 {
+            pos += 1; // align to even boundary
+        }
+        entries_checked += 1;
+    }
+
+    Ok(tags)
+}
+
+/// Convert Unix timestamp to ExifTool date format (YYYY:MM:DD HH:MM:SS+TZ)
+fn unix_to_exif_date(ts: i64) -> String {
+    // Simple Unix timestamp to date conversion (no external crate)
+    // Using basic epoch calculation
+    let secs_per_minute = 60i64;
+    let secs_per_hour = 3600i64;
+    let secs_per_day = 86400i64;
+
+    // Days since epoch
+    let mut days = ts / secs_per_day;
+    let time_of_day = ts % secs_per_day;
+    let hour = time_of_day / secs_per_hour;
+    let minute = (time_of_day % secs_per_hour) / secs_per_minute;
+    let second = time_of_day % secs_per_minute;
+
+    // Calculate year/month/day from days since 1970-01-01
+    let mut year = 1970i32;
+    loop {
+        let days_in_year = if is_leap_year(year) { 366 } else { 365 };
+        if days < days_in_year {
+            break;
+        }
+        days -= days_in_year;
+        year += 1;
+    }
+    let leap = is_leap_year(year);
+    let month_days = [31i64, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let mut month = 1i32;
+    for &md in &month_days {
+        if days < md {
+            break;
+        }
+        days -= md;
+        month += 1;
+    }
+    let day = days + 1;
+    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}+00:00", year, month, day, hour, minute, second)
+}
+
+fn is_leap_year(y: i32) -> bool {
+    (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
 }
 
 fn read_pe(data: &[u8]) -> Result<Vec<Tag>> {

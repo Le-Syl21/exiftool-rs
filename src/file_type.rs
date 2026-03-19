@@ -129,6 +129,10 @@ pub enum FileType {
     Swf,
     Dicom,
     Fits,
+    // ===== Newly added =====
+    Moi,
+    MacOs,
+    Json,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -265,6 +269,9 @@ impl FileType {
             FileType::Swf => "Shockwave Flash",
             FileType::Dicom => "DICOM medical image",
             FileType::Fits => "FITS astronomical image",
+            FileType::Moi => "MOI",
+            FileType::MacOs => "MacOS",
+            FileType::Json => "JSON",
         }
     }
 
@@ -383,6 +390,9 @@ impl FileType {
             FileType::Swf => "application/x-shockwave-flash",
             FileType::Dicom => "application/dicom",
             FileType::Fits => "application/fits",
+            FileType::Moi => "application/octet-stream",
+            FileType::MacOs => "application/unknown",
+            FileType::Json => "application/json",
         }
     }
 
@@ -509,6 +519,9 @@ impl FileType {
             FileType::Swf => &["swf"],
             FileType::Dicom => &["dcm"],
             FileType::Fits => &["fits", "fit", "fts"],
+            FileType::Moi => &["moi"],
+            FileType::MacOs => &["macos"],
+            FileType::Json => &["json"],
         }
     }
 
@@ -610,6 +623,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Xmp, FileType::Mie, FileType::Exv, FileType::Vrd, FileType::Icc,
     FileType::Html, FileType::Exe, FileType::Font, FileType::Swf,
     FileType::Dicom, FileType::Fits,
+    FileType::Moi, FileType::MacOs, FileType::Json,
 ];
 
 /// Detect file type from magic bytes (first 64+ bytes of a file).
@@ -1120,6 +1134,11 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // WOFF2: "wOF2"
     if header.starts_with(b"wOF2") {
         return Some(FileType::Font);
+    }
+
+    // MOI: starts with "V6" (camcorder info file)
+    if header.len() >= 2 && header[0] == b'V' && header[1] == b'6' {
+        return Some(FileType::Moi);
     }
 
     None

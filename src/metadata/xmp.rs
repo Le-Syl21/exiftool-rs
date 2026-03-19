@@ -411,6 +411,35 @@ impl XmpReader {
                                 let group_prefix = if prefix.is_empty() { "XMP" } else { prefix };
                                 let category = namespace_category(group_prefix);
 
+                                // Check if this lang-alt field is inside a struct rdf:li
+                                // Path (from end): Alt, CvTermName, li, Bag/Seq, AboutCvTerm, ...
+                                // Check path.rev().nth(2) == "li" and path.rev().nth(3) == Bag/Seq
+                                let rdf_ns = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+                                let in_struct_li_alt = path.iter().rev().nth(2)
+                                    .map(|(ns, ln)| ln == "li" && ns == rdf_ns)
+                                    .unwrap_or(false);
+                                let (full_tag_name, emit_group_prefix, emit_category) = if in_struct_li_alt {
+                                    // Find struct bag property name: skip li, Bag/Seq, then get the property
+                                    let struct_parent = path.iter().rev()
+                                        .skip(2) // skip tag_name and li
+                                        .skip_while(|(ns, ln)| ln == "li" || ln == "Bag" || ln == "Seq" || ln == "Alt" || ns == rdf_ns)
+                                        .find(|(ns, ln)| ln != "Description" && ns != rdf_ns);
+                                    if let Some((sp_ns, sp_ln)) = struct_parent {
+                                        let sp_prefix = namespace_prefix(sp_ns);
+                                        let sp_gp = if sp_prefix.is_empty() { "XMP" } else { sp_prefix };
+                                        let field_uc = ucfirst(&tag_name);
+                                        let parent_uc = ucfirst(sp_ln);
+                                        let stripped = strip_struct_prefix(&parent_uc, &field_uc);
+                                        let flat = format!("{}{}", parent_uc, stripped);
+                                        let cat = namespace_category(sp_gp);
+                                        (flat, sp_gp.to_string(), cat.to_string())
+                                    } else {
+                                        (ucfirst(&tag_name), group_prefix.to_string(), category.to_string())
+                                    }
+                                } else {
+                                    (ucfirst(&tag_name), group_prefix.to_string(), category.to_string())
+                                };
+
                                 // Emit x-default as main tag
                                 if !list_values.is_empty() {
                                     let main_val = if list_values.len() == 1 {
@@ -420,13 +449,13 @@ impl XmpReader {
                                     };
                                     let pv = main_val.to_display_string();
                                     tags.push(Tag {
-                                        id: TagId::Text(format!("{}:{}", group_prefix, tag_name)),
-                                        name: ucfirst(&tag_name),
-                                        description: ucfirst(&tag_name),
+                                        id: TagId::Text(format!("{}:{}", emit_group_prefix, tag_name)),
+                                        name: full_tag_name.clone(),
+                                        description: full_tag_name.clone(),
                                         group: TagGroup {
                                             family0: "XMP".into(),
-                                            family1: format!("XMP-{}", group_prefix),
-                                            family2: category.into(),
+                                            family1: format!("XMP-{}", emit_group_prefix),
+                                            family2: emit_category.clone(),
                                         },
                                         raw_value: main_val,
                                         print_value: pv,
@@ -443,7 +472,7 @@ impl XmpReader {
                                         .filter_map(|v| v.clone())
                                         .collect();
                                     if !non_none.is_empty() {
-                                        let lang_tag = format!("{}-{}", ucfirst(&tag_name), lang);
+                                        let lang_tag = format!("{}-{}", full_tag_name, lang);
                                         let val = if non_none.len() == 1 {
                                             Value::String(non_none[0].clone())
                                         } else {
@@ -451,13 +480,13 @@ impl XmpReader {
                                         };
                                         let pv = val.to_display_string();
                                         tags.push(Tag {
-                                            id: TagId::Text(format!("{}-{}:{}", group_prefix, lang, tag_name)),
+                                            id: TagId::Text(format!("{}-{}:{}", emit_group_prefix, lang, tag_name)),
                                             name: lang_tag.clone(),
                                             description: lang_tag.clone(),
                                             group: TagGroup {
                                                 family0: "XMP".into(),
-                                                family1: format!("XMP-{}", group_prefix),
-                                                family2: category.into(),
+                                                family1: format!("XMP-{}", emit_group_prefix),
+                                                family2: emit_category.clone(),
                                             },
                                             raw_value: val,
                                             print_value: pv,

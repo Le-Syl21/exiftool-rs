@@ -439,23 +439,59 @@ pub fn read_pcx(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     let mut tags = Vec::new();
-    let _version = data[1];
-    let _encoding = data[2];
-    let bpp = data[3];
-    let xmin = u16::from_le_bytes([data[4], data[5]]);
-    let ymin = u16::from_le_bytes([data[6], data[7]]);
-    let xmax = u16::from_le_bytes([data[8], data[9]]);
-    let ymax = u16::from_le_bytes([data[10], data[11]]);
-    let hdpi = u16::from_le_bytes([data[12], data[13]]);
-    let vdpi = u16::from_le_bytes([data[14], data[15]]);
-    let num_planes = data[65];
+    let manufacturer = data[0x00];
+    let software_ver = data[0x01];
+    let encoding = data[0x02];
+    let bpp = data[0x03];
+    let xmin = u16::from_le_bytes([data[0x04], data[0x05]]);
+    let ymin = u16::from_le_bytes([data[0x06], data[0x07]]);
+    let xmax = u16::from_le_bytes([data[0x08], data[0x09]]);
+    let ymax = u16::from_le_bytes([data[0x0a], data[0x0b]]);
+    let hdpi = u16::from_le_bytes([data[0x0c], data[0x0d]]);
+    let vdpi = u16::from_le_bytes([data[0x0e], data[0x0f]]);
+    let num_planes = data[0x41];
+    let bytes_per_line = u16::from_le_bytes([data[0x42], data[0x43]]);
+    let color_mode = u16::from_le_bytes([data[0x44], data[0x45]]);
 
+    let mfr_str = match manufacturer {
+        10 => "ZSoft",
+        _ => "Unknown",
+    };
+    tags.push(mktag("PCX", "Manufacturer", "Manufacturer", Value::String(mfr_str.into())));
+
+    let sw_str = match software_ver {
+        0 => "PC Paintbrush 2.5",
+        2 => "PC Paintbrush 2.8 (with palette)",
+        3 => "PC Paintbrush 2.8 (without palette)",
+        4 => "PC Paintbrush for Windows",
+        5 => "PC Paintbrush 3.0+",
+        _ => "Unknown",
+    };
+    tags.push(mktag("PCX", "Software", "Software", Value::String(sw_str.into())));
+
+    let enc_str = match encoding {
+        1 => "RLE",
+        _ => "Unknown",
+    };
+    tags.push(mktag("PCX", "Encoding", "Encoding", Value::String(enc_str.into())));
+
+    tags.push(mktag("PCX", "BitsPerPixel", "Bits Per Pixel", Value::U8(bpp)));
+    tags.push(mktag("PCX", "LeftMargin", "Left Margin", Value::U16(xmin)));
+    tags.push(mktag("PCX", "TopMargin", "Top Margin", Value::U16(ymin)));
     tags.push(mktag("PCX", "ImageWidth", "Image Width", Value::U16(xmax - xmin + 1)));
     tags.push(mktag("PCX", "ImageHeight", "Image Height", Value::U16(ymax - ymin + 1)));
-    tags.push(mktag("PCX", "BitsPerPixel", "Bits Per Pixel", Value::U8(bpp)));
-    tags.push(mktag("PCX", "NumPlanes", "Color Planes", Value::U8(num_planes)));
     tags.push(mktag("PCX", "XResolution", "X Resolution", Value::U16(hdpi)));
     tags.push(mktag("PCX", "YResolution", "Y Resolution", Value::U16(vdpi)));
+    tags.push(mktag("PCX", "ColorPlanes", "Color Planes", Value::U8(num_planes)));
+    tags.push(mktag("PCX", "BytesPerLine", "Bytes Per Line", Value::U16(bytes_per_line)));
+
+    let cm_str = match color_mode {
+        0 => "n/a",
+        1 => "Color Palette",
+        2 => "Grayscale",
+        _ => "Unknown",
+    };
+    tags.push(mktag("PCX", "ColorMode", "Color Mode", Value::String(cm_str.into())));
 
     Ok(tags)
 }
@@ -886,6 +922,471 @@ fn get_local_tz_offset_secs() -> i64 {
 }
 
 // ============================================================================
+// MacOS XAttr (._) sidecar file
+// ============================================================================
+
+/// Parse MacOS AppleDouble sidecar (._) files containing XAttr data.
+/// Mirrors ExifTool's MacOS.pm ProcessMacOS and ProcessATTR.
+pub fn read_macos(data: &[u8]) -> Result<Vec<Tag>> {
+    // Check header: \0\x05\x16\x07\0\x02\0\0Mac OS X
+    if data.len() < 26 || data[0] != 0x00 || data[1] != 0x05 || data[2] != 0x16 || data[3] != 0x07 {
+        return Err(Error::InvalidData("not a MacOS sidecar file".into()));
+    }
+    let ver = data[5];
+    if ver != 2 {
+        return Ok(Vec::new());
+    }
+
+    let entries = u16::from_be_bytes([data[24], data[25]]) as usize;
+    if 26 + entries * 12 > data.len() {
+        return Ok(Vec::new());
+    }
+
+    let mut tags = Vec::new();
+
+    for i in 0..entries {
+        let pos = 26 + i * 12;
+        let tag_id = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]);
+        let off = u32::from_be_bytes([data[pos+4], data[pos+5], data[pos+6], data[pos+7]]) as usize;
+        let len = u32::from_be_bytes([data[pos+8], data[pos+9], data[pos+10], data[pos+11]]) as usize;
+
+        if tag_id == 9 && off + len <= data.len() {
+            // ATTR block
+            let entry_data = &data[off..off + len];
+            parse_attr_block(data, entry_data, &mut tags);
+        }
+    }
+
+    Ok(tags)
+}
+
+/// Parse an ATTR (extended attributes) block from a MacOS sidecar file.
+/// entry_data is the ATTR block, full_data is the entire file (for absolute offsets).
+fn parse_attr_block(full_data: &[u8], entry_data: &[u8], tags: &mut Vec<Tag>) {
+    if entry_data.len() < 70 {
+        return;
+    }
+    // Check for ATTR signature at offset 34
+    if &entry_data[34..38] != b"ATTR" {
+        return;
+    }
+
+    let xattr_entries = u32::from_be_bytes([entry_data[66], entry_data[67], entry_data[68], entry_data[69]]) as usize;
+    let mut pos = 70;
+
+    for _i in 0..xattr_entries {
+        if pos + 11 > entry_data.len() {
+            break;
+        }
+        let off = u32::from_be_bytes([entry_data[pos], entry_data[pos+1], entry_data[pos+2], entry_data[pos+3]]) as usize;
+        let len = u32::from_be_bytes([entry_data[pos+4], entry_data[pos+5], entry_data[pos+6], entry_data[pos+7]]) as usize;
+        let n = entry_data[pos+10] as usize;
+
+        if pos + 11 + n > entry_data.len() {
+            break;
+        }
+        let name_bytes = &entry_data[pos+11..pos+11+n];
+        let name = String::from_utf8_lossy(name_bytes).trim_end_matches('\0').to_string();
+
+        // Offsets are absolute file offsets
+        let val_data = if off + len <= full_data.len() {
+            &full_data[off..off + len]
+        } else {
+            pos += ((11 + n + 3) & !3).max(1);
+            continue;
+        };
+
+        // Convert xattr name to ExifTool tag name
+        let tag_name = xattr_name_to_tag(&name);
+
+        // Process value
+        if val_data.starts_with(b"bplist0") {
+            // Parse simple binary plist (arrays, strings, dates)
+            if let Some(value) = parse_simple_bplist(val_data) {
+                tags.push(mktag("MacOS", &tag_name, &tag_name, Value::String(value)));
+            } else {
+                // Just mark as binary
+                tags.push(mktag("MacOS", &tag_name, &tag_name, Value::Binary(val_data.to_vec())));
+            }
+        } else if len > 100 || val_data.contains(&0u8) && !val_data.starts_with(b"0082") {
+            // Binary data
+            tags.push(mktag("MacOS", &tag_name, &tag_name, Value::Binary(val_data.to_vec())));
+        } else {
+            let s = String::from_utf8_lossy(val_data).trim_end_matches('\0').to_string();
+            // Handle quarantine string: format "0082;TIME;APP;"
+            let display = if name == "com.apple.quarantine" {
+                format_quarantine(&s)
+            } else {
+                s
+            };
+            if !display.is_empty() {
+                tags.push(mktag("MacOS", &tag_name, &tag_name, Value::String(display)));
+            }
+        }
+
+        // Advance to next entry (aligned to 4 bytes)
+        pos += ((11 + n + 3) & !3).max(4);
+    }
+}
+
+/// Convert xattr attribute name to ExifTool tag name.
+/// Mirrors Perl: com.apple.metadata:kMDItemXxx → XAttrMDItemXxx etc.
+fn xattr_name_to_tag(name: &str) -> String {
+    // Check known names first (from ExifTool's XAttr table)
+    let known = match name {
+        "com.apple.quarantine" => Some("XAttrQuarantine"),
+        "com.apple.lastuseddate#PS" => Some("XAttrLastUsedDate"),
+        "com.apple.metadata:kMDItemDownloadedDate" => Some("XAttrMDItemDownloadedDate"),
+        "com.apple.metadata:kMDItemWhereFroms" => Some("XAttrMDItemWhereFroms"),
+        "com.apple.metadata:kMDLabel" => Some("XAttrMDLabel"),
+        "com.apple.metadata:kMDItemFinderComment" => Some("XAttrMDItemFinderComment"),
+        "com.apple.metadata:_kMDItemUserTags" => Some("XAttrMDItemUserTags"),
+        _ => None,
+    };
+    // For non-apple names: strip separators and capitalize words
+    if name.starts_with("org.") || name.starts_with("net.") || (!name.starts_with("com.apple.") && name.contains(':')) {
+        // Apply MakeTagName-style conversion
+        let mut tag = String::from("XAttr");
+        let mut cap_next = true;
+        for c in name.chars() {
+            if c == '.' || c == ':' || c == '_' || c == '-' {
+                cap_next = true;
+            } else if cap_next {
+                for uc in c.to_uppercase() {
+                    tag.push(uc);
+                }
+                cap_next = false;
+            } else {
+                tag.push(c);
+            }
+        }
+        return tag;
+    }
+    if let Some(n) = known {
+        return n.to_string();
+    }
+
+    // Remove random ID after kMDLabel_
+    let name = if let Some(p) = name.find("kMDLabel_") {
+        &name[..p + 8] // keep up to kMDLabel
+    } else {
+        name
+    };
+
+    // Apply Perl transformation
+    let basename = if let Some(rest) = name.strip_prefix("com.apple.") {
+        // s/^metadata:_?k//
+        let rest = if let Some(r) = rest.strip_prefix("metadata:k") {
+            r
+        } else if let Some(r) = rest.strip_prefix("metadata:_k") {
+            r
+        } else if let Some(r) = rest.strip_prefix("metadata:") {
+            r
+        } else {
+            rest
+        };
+        rest.to_string()
+    } else {
+        name.to_string()
+    };
+
+    // ucfirst then s/[.:_]([a-z])/\U$1/g
+    let base_ucfirst = ucfirst_str_misc(&basename);
+    let mut result = String::from("XAttr");
+
+    let chars: Vec<char> = base_ucfirst.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        if (c == '.' || c == ':' || c == '_' || c == '#') && i + 1 < chars.len() && chars[i+1].is_ascii_lowercase() {
+            result.push(chars[i+1].to_ascii_uppercase());
+            i += 2;
+        } else if c == '.' || c == ':' || c == '_' || c == '#' {
+            i += 1; // skip separator with no following lowercase
+        } else {
+            result.push(c);
+            i += 1;
+        }
+    }
+    result
+}
+
+fn ucfirst_str_misc(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
+}
+
+/// Format quarantine string to ExifTool format.
+fn format_quarantine(s: &str) -> String {
+    // Format: "FLAGS;HEX_TIME;APP;" or similar
+    // ExifTool shows: "Flags=0082 set at 2020:11:12 12:27:26 by Safari"
+    let parts: Vec<&str> = s.split(';').collect();
+    if parts.len() >= 3 {
+        let flags = parts[0];
+        let time_hex = parts[1];
+        let app = parts[2];
+
+        // Try to parse time_hex as hex timestamp
+        let time_str = if let Ok(ts) = i64::from_str_radix(time_hex, 16) {
+            // Mac HFS+ time: seconds since 2001-01-01 or 1904-01-01
+            // QuickTime epoch (2001) is used for Apple timestamps
+            // Actually quarantine uses Unix epoch
+            // Let's just show the raw value
+            format!("(ts={})", ts)
+        } else {
+            time_hex.to_string()
+        };
+
+        if !app.is_empty() {
+            return format!("Flags={} set at {} by {}", flags, time_str, app);
+        }
+        return format!("Flags={} set at {}", flags, time_str);
+    }
+    s.to_string()
+}
+
+/// Parse a simple binary plist to extract string, array of strings, or date values.
+fn parse_simple_bplist(data: &[u8]) -> Option<String> {
+    if data.len() < 32 || !data.starts_with(b"bplist00") {
+        return None;
+    }
+
+    // Read trailer: last 32 bytes
+    let trailer_start = data.len() - 32;
+    let trailer = &data[trailer_start..];
+    let offset_int_size = trailer[6] as usize;
+    let obj_ref_size = trailer[7] as usize;
+    let num_objects = u64::from_be_bytes([trailer[8], trailer[9], trailer[10], trailer[11],
+                                          trailer[12], trailer[13], trailer[14], trailer[15]]) as usize;
+    let top_object = u64::from_be_bytes([trailer[16], trailer[17], trailer[18], trailer[19],
+                                         trailer[20], trailer[21], trailer[22], trailer[23]]) as usize;
+    let offset_table_offset = u64::from_be_bytes([trailer[24], trailer[25], trailer[26], trailer[27],
+                                                   trailer[28], trailer[29], trailer[30], trailer[31]]) as usize;
+
+    if offset_int_size == 0 || offset_int_size > 8 || num_objects == 0 {
+        return None;
+    }
+
+    let mut objects_offset = Vec::with_capacity(num_objects);
+    for i in 0..num_objects {
+        let ot_pos = offset_table_offset + i * offset_int_size;
+        if ot_pos + offset_int_size > data.len() {
+            return None;
+        }
+        let mut off: usize = 0;
+        for j in 0..offset_int_size {
+            off = (off << 8) | data[ot_pos + j] as usize;
+        }
+        objects_offset.push(off);
+    }
+
+    let read_object = |obj_idx: usize| -> Option<String> {
+        let off = *objects_offset.get(obj_idx)?;
+        if off >= data.len() {
+            return None;
+        }
+        let marker = data[off];
+        let type_nibble = (marker & 0xF0) >> 4;
+        let info_nibble = marker & 0x0F;
+
+        match type_nibble {
+            0x5 => {
+                // ASCII string
+                let len = info_nibble as usize;
+                if off + 1 + len > data.len() { return None; }
+                Some(String::from_utf8_lossy(&data[off+1..off+1+len]).to_string())
+            }
+            0x6 => {
+                // Unicode string (UTF-16BE)
+                let len = info_nibble as usize;
+                let byte_len = len * 2;
+                if off + 1 + byte_len > data.len() { return None; }
+                let chars: Vec<u16> = data[off+1..off+1+byte_len]
+                    .chunks_exact(2)
+                    .map(|c| u16::from_be_bytes([c[0], c[1]]))
+                    .collect();
+                String::from_utf16(&chars).ok()
+            }
+            0x3 => {
+                // Date (64-bit float, seconds since 2001-01-01)
+                if off + 9 > data.len() { return None; }
+                let bits = u64::from_be_bytes([data[off+1], data[off+2], data[off+3], data[off+4],
+                                               data[off+5], data[off+6], data[off+7], data[off+8]]);
+                let secs = f64::from_bits(bits);
+                // Convert from Apple epoch (2001-01-01) to Unix epoch (1970-01-01)
+                let unix_secs = secs as i64 + 978307200;
+                // Format as date string
+                let days = unix_secs / 86400;
+                let time = unix_secs % 86400;
+                let hour = time / 3600;
+                let min = (time % 3600) / 60;
+                let sec = time % 60;
+                let mut year = 1970i32;
+                let mut rem_days = days;
+                loop {
+                    let dy = if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 { 366 } else { 365 };
+                    if rem_days < dy { break; }
+                    rem_days -= dy;
+                    year += 1;
+                }
+                let leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+                let month_days = [31i64, if leap {29} else {28}, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+                let mut month = 1i32;
+                for &md in &month_days {
+                    if rem_days < md { break; }
+                    rem_days -= md;
+                    month += 1;
+                }
+                let day = rem_days + 1;
+                Some(format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", year, month, day, hour, min, sec))
+            }
+            0xA => {
+                // Array: collect items
+                let count = if info_nibble == 0xF {
+                    // extended length
+                    if off + 2 > data.len() { return None; }
+                    let ext_marker = data[off+1];
+                    (1 << (ext_marker & 0xF)) as usize
+                } else {
+                    info_nibble as usize
+                };
+                Some(format!("({} items)", count))
+            }
+            _ => None,
+        }
+    };
+
+    // Get top object
+    let result = read_object(top_object)?;
+
+    // If it's an array, try to read its elements
+    if let Some(off) = objects_offset.get(top_object) {
+        let off = *off;
+        if off < data.len() {
+            let marker = data[off];
+            let type_nibble = (marker & 0xF0) >> 4;
+            if type_nibble == 0xA {
+                // Array: read elements
+                let count = (marker & 0x0F) as usize;
+                let mut items = Vec::new();
+                for j in 0..count {
+                    let ref_pos = off + 1 + j * obj_ref_size;
+                    if ref_pos + obj_ref_size > data.len() { break; }
+                    let mut obj_ref: usize = 0;
+                    for k in 0..obj_ref_size {
+                        obj_ref = (obj_ref << 8) | data[ref_pos + k] as usize;
+                    }
+                    if let Some(item_val) = read_object(obj_ref) {
+                        items.push(item_val);
+                    }
+                }
+                if !items.is_empty() {
+                    return Some(items.join(", "));
+                }
+            }
+        }
+    }
+
+    Some(result)
+}
+
+// ============================================================================
+// MOI (camcorder info file)
+// ============================================================================
+
+/// Parse MOI (camcorder info) files. Mirrors ExifTool's MOI.pm.
+pub fn read_moi(data: &[u8]) -> Result<Vec<Tag>> {
+    if data.len() < 256 || !data.starts_with(b"V6") {
+        return Err(Error::InvalidData("not a MOI file".into()));
+    }
+
+    let mut tags = Vec::new();
+
+    // 0x00: MOIVersion (string[2])
+    let version = String::from_utf8_lossy(&data[0..2]).to_string();
+    tags.push(mktag("MOI", "MOIVersion", "MOI Version", Value::String(version)));
+
+    // 0x06: DateTimeOriginal (undef[8]) = unpack 'nCCCCn'
+    // year(u16), month(u8), day(u8), hour(u8), min(u8), ms*1000(u16)
+    if data.len() >= 14 {
+        let year = u16::from_be_bytes([data[6], data[7]]);
+        let month = data[8];
+        let day = data[9];
+        let hour = data[10];
+        let min = data[11];
+        let ms = u16::from_be_bytes([data[12], data[13]]);
+        let sec_f = ms as f64 / 1000.0;
+        let dt = format!("{:04}:{:02}:{:02} {:02}:{:02}:{:06.3}", year, month, day, hour, min, sec_f);
+        tags.push(mktag("MOI", "DateTimeOriginal", "Date/Time Original", Value::String(dt)));
+    }
+
+    // 0x0e: Duration (int32u, ms)
+    if data.len() >= 0x12 {
+        let dur_ms = u32::from_be_bytes([data[0x0e], data[0x0f], data[0x10], data[0x11]]);
+        let dur_s = dur_ms as f64 / 1000.0;
+        let dur_str = format!("{:.2} s", dur_s);
+        tags.push(mktag("MOI", "Duration", "Duration", Value::String(dur_str)));
+    }
+
+    // 0x80: AspectRatio (int8u)
+    if data.len() > 0x80 {
+        let aspect = data[0x80];
+        let lo = aspect & 0x0F;
+        let hi = aspect >> 4;
+        let aspect_str = match lo {
+            0 | 1 => "4:3",
+            4 | 5 => "16:9",
+            _ => "Unknown",
+        };
+        let sys_str = match hi {
+            4 => " NTSC",
+            5 => " PAL",
+            _ => "",
+        };
+        let full = format!("{}{}", aspect_str, sys_str);
+        tags.push(mktag("MOI", "AspectRatio", "Aspect Ratio", Value::String(full)));
+    }
+
+    // 0x84: AudioCodec (int16u)
+    if data.len() > 0x86 {
+        let ac = u16::from_be_bytes([data[0x84], data[0x85]]);
+        let codec = match ac {
+            0x00c1 => "AC3",
+            0x4001 => "MPEG",
+            _ => "Unknown",
+        };
+        tags.push(mktag("MOI", "AudioCodec", "Audio Codec", Value::String(codec.into())));
+    }
+
+    // 0x86: AudioBitrate (int8u, val * 16000 + 48000)
+    if data.len() > 0x86 {
+        let ab = data[0x86];
+        let bitrate = ab as u32 * 16000 + 48000;
+        let bitrate_str = format!("{} kbps", bitrate / 1000);
+        tags.push(mktag("MOI", "AudioBitrate", "Audio Bitrate", Value::String(bitrate_str)));
+    }
+
+    // 0xda: VideoBitrate (int16u with lookup)
+    if data.len() > 0xdc {
+        let vb = u16::from_be_bytes([data[0xda], data[0xdb]]);
+        let vbps: Option<u32> = match vb {
+            0x5896 => Some(8500000),
+            0x813d => Some(5500000),
+            _ => None,
+        };
+        if let Some(bps) = vbps {
+            let vb_str = format!("{:.1} Mbps", bps as f64 / 1_000_000.0);
+            tags.push(mktag("MOI", "VideoBitrate", "Video Bitrate", Value::String(vb_str)));
+        }
+    }
+
+    Ok(tags)
+}
+
+// ============================================================================
 // RAR
 // ============================================================================
 
@@ -999,7 +1500,7 @@ fn read_rar5_entries(data: &[u8], tags: &mut Vec<Tag>) {
 
         // File header
         if head_type == 2 {
-            tags.push(mktag("ZIP", "CompressedSize", "Compressed Size", Value::U64(data_size)));
+            tags.push(mktag("ZIP", "CompressedSize", "Compressed Size", Value::U32(data_size as u32)));
         }
 
         let file_flag = match read_uleb128(header, &mut hpos) {
@@ -1011,7 +1512,7 @@ fn read_rar5_entries(data: &[u8], tags: &mut Vec<Tag>) {
             None => { pos += data_size as usize; continue; }
         };
         if file_flag & 0x0008 == 0 {
-            tags.push(mktag("ZIP", "UncompressedSize", "Uncompressed Size", Value::U64(uncompressed_size)));
+            tags.push(mktag("ZIP", "UncompressedSize", "Uncompressed Size", Value::U32(uncompressed_size as u32)));
         }
 
         // skip file attributes
@@ -1093,8 +1594,8 @@ fn read_rar4_entries(data: &[u8], tags: &mut Vec<Tag>) {
                 // name starts after 25-byte base header
                 if n >= 25 + name_len {
                     let name = String::from_utf8_lossy(&file_data[25..25 + name_len]).to_string();
-                    tags.push(mktag("ZIP", "CompressedSize", "Compressed Size", Value::U64(compressed)));
-                    tags.push(mktag("ZIP", "UncompressedSize", "Uncompressed Size", Value::U64(uncompressed)));
+                    tags.push(mktag("ZIP", "CompressedSize", "Compressed Size", Value::U32(compressed as u32)));
+                    tags.push(mktag("ZIP", "UncompressedSize", "Uncompressed Size", Value::U32(uncompressed as u32)));
                     let os_name = match os_byte {
                         0 => "MS-DOS",
                         1 => "OS/2",
@@ -1173,9 +1674,439 @@ pub fn read_json(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     let mut tags = Vec::new();
-    tags.push(mktag("JSON", "JSONType", "JSON Type", Value::String(
-        if trimmed.starts_with('{') { "Object" } else { "Array" }.into()
-    )));
+
+    // Parse top-level JSON object fields
+    if trimmed.starts_with('{') {
+        let mut collected: Vec<(String, String)> = Vec::new();
+        parse_json_object(trimmed, "", &mut collected);
+        for (key, value) in collected {
+            let tag_name = json_key_to_tag_name(&key);
+            if tag_name.is_empty() { continue; }
+            tags.push(mktag("JSON", &tag_name, &tag_name, Value::String(value)));
+        }
+    }
+
+    Ok(tags)
+}
+
+/// Recursively parse a JSON object, collecting (flat_tag_name, value) pairs.
+/// For nested objects, the key is prepended to nested keys.
+fn parse_json_object(json: &str, prefix: &str, out: &mut Vec<(String, String)>) {
+    let mut pos = 0;
+    let chars: Vec<char> = json.chars().collect();
+
+    // skip opening {
+    if pos < chars.len() && chars[pos] == '{' {
+        pos += 1;
+    }
+
+    loop {
+        // skip whitespace and commas
+        while pos < chars.len() && (chars[pos].is_whitespace() || chars[pos] == ',') {
+            pos += 1;
+        }
+        if pos >= chars.len() || chars[pos] == '}' {
+            break;
+        }
+
+        // read key
+        if chars[pos] != '"' {
+            break;
+        }
+        let key = read_json_string(&chars, &mut pos);
+
+        // skip whitespace and colon
+        while pos < chars.len() && (chars[pos].is_whitespace() || chars[pos] == ':') {
+            pos += 1;
+        }
+
+        // read value
+        if pos >= chars.len() {
+            break;
+        }
+
+        let full_key = if prefix.is_empty() { key.clone() } else { format!("{}{}", prefix, ucfirst_str(&key)) };
+
+        match chars[pos] {
+            '"' => {
+                let val = read_json_string(&chars, &mut pos);
+                out.push((full_key, val));
+            }
+            '{' => {
+                let obj_start = pos;
+                let obj_end = find_matching_bracket(&chars, pos, '{', '}');
+                let obj_str: String = chars[obj_start..obj_end + 1].iter().collect();
+                // For objects, flatten with parent key as prefix
+                parse_json_object(&obj_str, &full_key, out);
+                pos = obj_end + 1;
+            }
+            '[' => {
+                let arr_start = pos;
+                let arr_end = find_matching_bracket(&chars, pos, '[', ']');
+                let arr_str: String = chars[arr_start..arr_end + 1].iter().collect();
+                // Check if array contains objects (array-of-objects flattening)
+                if array_contains_objects(&arr_str) {
+                    // Flatten: parse each object with parent key as prefix, accumulate per sub-key
+                    let mut sub_map: Vec<(String, Vec<String>)> = Vec::new();
+                    parse_json_array_of_objects(&arr_str, &full_key, &mut sub_map);
+                    for (sub_key, vals) in sub_map {
+                        if !vals.is_empty() {
+                            out.push((sub_key, vals.join(", ")));
+                        }
+                    }
+                } else {
+                    let values = parse_json_array(&arr_str);
+                    if !values.is_empty() {
+                        out.push((full_key, values.join(", ")));
+                    }
+                }
+                pos = arr_end + 1;
+            }
+            'n' => {
+                // null
+                pos += 4;
+                out.push((full_key, "null".into()));
+            }
+            't' => {
+                // true
+                pos += 4;
+                out.push((full_key, "1".into()));
+            }
+            'f' => {
+                // false
+                pos += 5;
+                out.push((full_key, "0".into()));
+            }
+            _ => {
+                // number
+                let num_start = pos;
+                while pos < chars.len() && !chars[pos].is_whitespace() && chars[pos] != ',' && chars[pos] != '}' {
+                    pos += 1;
+                }
+                let num: String = chars[num_start..pos].iter().collect();
+                out.push((full_key, num));
+            }
+        }
+    }
+}
+
+fn parse_json_array(json: &str) -> Vec<String> {
+    let mut results = Vec::new();
+    let chars: Vec<char> = json.chars().collect();
+    let mut pos = 0;
+
+    if pos < chars.len() && chars[pos] == '[' {
+        pos += 1;
+    }
+
+    loop {
+        while pos < chars.len() && (chars[pos].is_whitespace() || chars[pos] == ',') {
+            pos += 1;
+        }
+        if pos >= chars.len() || chars[pos] == ']' {
+            break;
+        }
+
+        match chars[pos] {
+            '"' => {
+                let val = read_json_string(&chars, &mut pos);
+                results.push(val);
+            }
+            '[' => {
+                let end = find_matching_bracket(&chars, pos, '[', ']');
+                let sub: String = chars[pos..end + 1].iter().collect();
+                let sub_vals = parse_json_array(&sub);
+                results.extend(sub_vals);
+                pos = end + 1;
+            }
+            '{' => {
+                let end = find_matching_bracket(&chars, pos, '{', '}');
+                pos = end + 1;
+            }
+            'n' => { pos += 4; results.push("null".into()); }
+            't' => { pos += 4; results.push("1".into()); }
+            'f' => { pos += 5; results.push("0".into()); }
+            _ => {
+                let start = pos;
+                while pos < chars.len() && !chars[pos].is_whitespace() && chars[pos] != ',' && chars[pos] != ']' {
+                    pos += 1;
+                }
+                results.push(chars[start..pos].iter().collect());
+            }
+        }
+    }
+    results
+}
+
+/// Returns true if the JSON array contains at least one object element.
+fn array_contains_objects(json: &str) -> bool {
+    let chars: Vec<char> = json.chars().collect();
+    let mut pos = 0;
+    if pos < chars.len() && chars[pos] == '[' { pos += 1; }
+    while pos < chars.len() {
+        if chars[pos].is_whitespace() || chars[pos] == ',' { pos += 1; continue; }
+        if chars[pos] == ']' { break; }
+        if chars[pos] == '{' { return true; }
+        break;
+    }
+    false
+}
+
+/// Parse an array of objects, accumulating sub-fields per key.
+/// sub_map: Vec<(sub_key, Vec<value>)> — ordered by first occurrence.
+fn parse_json_array_of_objects(json: &str, prefix: &str, sub_map: &mut Vec<(String, Vec<String>)>) {
+    let chars: Vec<char> = json.chars().collect();
+    let mut pos = 0;
+    if pos < chars.len() && chars[pos] == '[' { pos += 1; }
+
+    loop {
+        while pos < chars.len() && (chars[pos].is_whitespace() || chars[pos] == ',') { pos += 1; }
+        if pos >= chars.len() || chars[pos] == ']' { break; }
+        if chars[pos] == '{' {
+            let end = find_matching_bracket(&chars, pos, '{', '}');
+            let obj_str: String = chars[pos..end + 1].iter().collect();
+            let mut obj_fields: Vec<(String, String)> = Vec::new();
+            parse_json_object(&obj_str, prefix, &mut obj_fields);
+            for (k, v) in obj_fields {
+                if let Some(entry) = sub_map.iter_mut().find(|(sk, _)| sk == &k) {
+                    // Append multiple values from nested arrays too
+                    for part in v.split(", ") {
+                        entry.1.push(part.to_string());
+                    }
+                } else {
+                    let vals: Vec<String> = v.split(", ").map(|s| s.to_string()).collect();
+                    sub_map.push((k, vals));
+                }
+            }
+            pos = end + 1;
+        } else {
+            // Non-object element, skip
+            while pos < chars.len() && chars[pos] != ',' && chars[pos] != ']' { pos += 1; }
+        }
+    }
+}
+
+fn read_json_string(chars: &[char], pos: &mut usize) -> String {
+    if *pos >= chars.len() || chars[*pos] != '"' {
+        return String::new();
+    }
+    *pos += 1; // skip opening "
+    let mut result = String::new();
+    while *pos < chars.len() && chars[*pos] != '"' {
+        if chars[*pos] == '\\' && *pos + 1 < chars.len() {
+            *pos += 1;
+            match chars[*pos] {
+                '"' => result.push('"'),
+                '\\' => result.push('\\'),
+                '/' => result.push('/'),
+                'n' => result.push('\n'),
+                'r' => result.push('\r'),
+                't' => result.push('\t'),
+                _ => result.push(chars[*pos]),
+            }
+        } else {
+            result.push(chars[*pos]);
+        }
+        *pos += 1;
+    }
+    if *pos < chars.len() { *pos += 1; } // skip closing "
+    result
+}
+
+fn find_matching_bracket(chars: &[char], start: usize, open: char, close: char) -> usize {
+    let mut level = 0;
+    let mut pos = start;
+    let mut in_string = false;
+    while pos < chars.len() {
+        if chars[pos] == '"' && (pos == 0 || chars[pos - 1] != '\\') {
+            in_string = !in_string;
+        }
+        if !in_string {
+            if chars[pos] == open { level += 1; }
+            else if chars[pos] == close {
+                level -= 1;
+                if level == 0 { return pos; }
+            }
+        }
+        pos += 1;
+    }
+    pos.saturating_sub(1)
+}
+
+fn ucfirst_str(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
+}
+
+/// Convert a JSON key (possibly nested like "testThis") to ExifTool tag name.
+/// Mirrors Perl: ucfirst, then capitalize letters after non-alphabetic chars.
+fn json_key_to_tag_name(key: &str) -> String {
+    // ucfirst
+    let key = ucfirst_str(key);
+    // Capitalize after non-alpha: s/([^a-zA-Z])([a-z])/$1\U$2/g
+    let mut result = String::new();
+    let chars: Vec<char> = key.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        result.push(c);
+        if !c.is_ascii_alphabetic() && i + 1 < chars.len() {
+            if chars[i + 1].is_ascii_lowercase() {
+                let uc = chars[i + 1].to_ascii_uppercase();
+                result.push(uc);
+                i += 2;
+                continue;
+            }
+        }
+        i += 1;
+    }
+    result
+}
+
+// ============================================================================
+// RealAudio (RA)
+// ============================================================================
+
+/// Parse RealAudio (.ra) files. Mirrors ExifTool's Real.pm ProcessReal for RA.
+pub fn read_real_audio(data: &[u8]) -> Result<Vec<Tag>> {
+    if data.len() < 8 || !data.starts_with(b".ra\xfd") {
+        return Err(Error::InvalidData("not a RealAudio file".into()));
+    }
+
+    let mut tags = Vec::new();
+    let version = u16::from_be_bytes([data[4], data[5]]);
+
+    // Only support version 4 currently (most common)
+    if version != 4 {
+        return Ok(tags);
+    }
+
+    // AudioV4: starts at offset 8
+    let d = &data[8..];
+    if d.len() < 40 {
+        return Ok(tags);
+    }
+
+    let mut pos = 0;
+    // Field 0: FourCC1 (4 bytes, undef)
+    pos += 4;
+    // Field 1: AudioFileSize (int32u)
+    pos += 4;
+    // Field 2: Version2 (int16u)
+    pos += 2;
+    // Field 3: HeaderSize (int32u)
+    pos += 4;
+    // Field 4: CodecFlavorID (int16u)
+    pos += 2;
+    // Field 5: CodedFrameSize (int32u)
+    pos += 4;
+
+    if pos + 4 > d.len() { return Ok(tags); }
+    // Field 6: AudioBytes (int32u)
+    let audio_bytes = u32::from_be_bytes([d[pos], d[pos+1], d[pos+2], d[pos+3]]);
+    pos += 4;
+    tags.push(mktag("Real", "AudioBytes", "Audio Bytes", Value::U32(audio_bytes)));
+
+    if pos + 4 > d.len() { return Ok(tags); }
+    // Field 7: BytesPerMinute (int32u)
+    let bpm = u32::from_be_bytes([d[pos], d[pos+1], d[pos+2], d[pos+3]]);
+    pos += 4;
+    tags.push(mktag("Real", "BytesPerMinute", "Bytes Per Minute", Value::U32(bpm)));
+
+    // Field 8: Unknown (int32u)
+    pos += 4;
+    // Field 9: SubPacketH (int16u)
+    pos += 2;
+
+    if pos + 2 > d.len() { return Ok(tags); }
+    // Field 10: AudioFrameSize (int16u)
+    let afs = u16::from_be_bytes([d[pos], d[pos+1]]);
+    pos += 2;
+    tags.push(mktag("Real", "AudioFrameSize", "Audio Frame Size", Value::U16(afs)));
+
+    // Field 11: SubPacketSize (int16u)
+    pos += 2;
+    // Field 12: Unknown (int16u)
+    pos += 2;
+
+    if pos + 2 > d.len() { return Ok(tags); }
+    // Field 13: SampleRate (int16u)
+    let sr = u16::from_be_bytes([d[pos], d[pos+1]]);
+    pos += 2;
+    tags.push(mktag("Real", "SampleRate", "Sample Rate", Value::U16(sr)));
+
+    // Field 14: Unknown (int16u)
+    pos += 2;
+
+    if pos + 2 > d.len() { return Ok(tags); }
+    // Field 15: BitsPerSample (int16u)
+    let bps = u16::from_be_bytes([d[pos], d[pos+1]]);
+    pos += 2;
+    tags.push(mktag("Real", "BitsPerSample", "Bits Per Sample", Value::U16(bps)));
+
+    if pos + 2 > d.len() { return Ok(tags); }
+    // Field 16: Channels (int16u)
+    let ch = u16::from_be_bytes([d[pos], d[pos+1]]);
+    pos += 2;
+    tags.push(mktag("Real", "Channels", "Channels", Value::U16(ch)));
+
+    if pos >= d.len() { return Ok(tags); }
+    // Field 17: FourCC2Len (int8u)
+    let fc2l = d[pos] as usize;
+    pos += 1;
+    pos += fc2l; // skip FourCC2
+
+    if pos >= d.len() { return Ok(tags); }
+    // Field 19: FourCC3Len (int8u)
+    let fc3l = d[pos] as usize;
+    pos += 1;
+    pos += fc3l; // skip FourCC3
+
+    if pos >= d.len() { return Ok(tags); }
+    // Field 21: Unknown (int8u)
+    pos += 1;
+
+    if pos + 2 > d.len() { return Ok(tags); }
+    // Field 22: Unknown (int16u)
+    pos += 2;
+
+    // Field 23: TitleLen (int8u)
+    if pos >= d.len() { return Ok(tags); }
+    let title_len = d[pos] as usize;
+    pos += 1;
+
+    // Field 24: Title (string[TitleLen])
+    if pos + title_len <= d.len() && title_len > 0 {
+        let title = String::from_utf8_lossy(&d[pos..pos + title_len]).to_string();
+        tags.push(mktag("Real", "Title", "Title", Value::String(title)));
+    }
+    pos += title_len;
+
+    // Field 25: ArtistLen (int8u)
+    if pos >= d.len() { return Ok(tags); }
+    let artist_len = d[pos] as usize;
+    pos += 1;
+
+    // Field 26: Artist
+    if pos + artist_len <= d.len() && artist_len > 0 {
+        let artist = String::from_utf8_lossy(&d[pos..pos + artist_len]).to_string();
+        tags.push(mktag("Real", "Artist", "Artist", Value::String(artist)));
+    }
+    pos += artist_len;
+
+    // Field 27: CopyrightLen (int8u)
+    if pos >= d.len() { return Ok(tags); }
+    let copy_len = d[pos] as usize;
+    pos += 1;
+
+    // Field 28: Copyright
+    if pos + copy_len <= d.len() && copy_len > 0 {
+        let copyright = String::from_utf8_lossy(&d[pos..pos + copy_len]).to_string();
+        tags.push(mktag("Real", "Copyright", "Copyright", Value::String(copyright)));
+    }
 
     Ok(tags)
 }
