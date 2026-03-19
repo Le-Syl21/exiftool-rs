@@ -137,10 +137,19 @@ fn parse_property_elements(xml: &str, tags: &mut Vec<Tag>) {
     let mut search = xml;
     while let Some(p) = search.find("<Property ") {
         let section = &search[p..];
-        let end = section.find("/>").map(|e| e + 2)
-            .or_else(|| section.find("</Property>").map(|e| e + 11))
-            .unwrap_or(section.len());
-        let inner = &section[10..end]; // skip "<Property "
+        // Find the end of this specific <Property> element
+        // Self-closing: .../> — but only if /> comes before the next >
+        // With text content: ...>text</Property>
+        let tag_end = section.find('>').unwrap_or(section.len());
+        let end = if tag_end < section.len() && section.as_bytes().get(tag_end.saturating_sub(1)) == Some(&b'/') {
+            // Self-closing: />
+            tag_end + 1
+        } else if let Some(close) = section.find("</Property>") {
+            close + 11
+        } else {
+            tag_end + 1
+        };
+        let inner = &section[10..end.min(section.len())]; // skip "<Property "
 
         if let Some(id) = extract_attr(inner, "id") {
             // Remove XISF: namespace prefix
@@ -229,11 +238,10 @@ fn extract_attr(attrs: &str, name: &str) -> Option<String> {
 fn extract_element_text(xml: &str) -> Option<String> {
     if let Some(start) = xml.find('>') {
         let after = &xml[start + 1..];
-        if let Some(end) = after.find('<') {
-            let text = after[..end].trim();
-            if !text.is_empty() {
-                return Some(text.to_string());
-            }
+        let end_text = after.find('<').unwrap_or(after.len());
+        let text = after[..end_text].trim();
+        if !text.is_empty() {
+            return Some(text.to_string());
         }
     }
     None

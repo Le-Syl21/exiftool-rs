@@ -139,6 +139,16 @@ fn codepage_name(cp: u32) -> String {
     }.to_string()
 }
 
+/// Extract GUID bytes as a short string (first 4 bytes big-endian hex, after stripping common suffix)
+/// Returns format like "00062008" from GUID 00062008-0000-0000-C000-000000000046
+fn guid_prefix(data: &[u8]) -> String {
+    if data.len() < 16 { return String::new(); }
+    // GUID is in mixed-endian format: {DWORD}-{WORD}-{WORD}-{BYTE[2]}-{BYTE[6]}
+    // Little-endian DWORD at bytes 0..4
+    format!("{:02x}{:02x}{:02x}{:02x}",
+        data[3], data[2], data[1], data[0])
+}
+
 /// Process TNEF message properties block (MAPI properties)
 fn process_props(data: &[u8], tags: &mut Vec<Tag>) {
     if data.len() < 4 { return; }
@@ -152,43 +162,37 @@ fn process_props(data: &[u8], tags: &mut Vec<Tag>) {
         pos += 4;
 
         // Handle named properties (bit 0x8000 set in tag)
-        let actual_tag = if prop_tag & 0x8000 != 0 {
-            // Named property: read GUID (16 bytes) + id_type (4 bytes) + num/name_len (4 bytes)
+        // Named property: GUID(16) + id_type(4) + num_or_len(4) [+ string_data if id_type==1]
+        let named_key: Option<String> = if prop_tag & 0x8000 != 0 {
             if pos + 24 > data.len() { break; }
-            let _guid = &data[pos..pos+16];
+            let guid = guid_prefix(&data[pos..pos+16]);
             let id_type = read_u32_le(data, pos + 16);
             let num = read_u32_le(data, pos + 20);
             pos += 24;
 
-            if id_type == 1 {
-                // String name
-                if pos + num as usize > data.len() { break; }
-                let name_bytes = &data[pos..pos + num as usize];
-                let name = if num >= 2 {
-                    read_utf16le(&name_bytes[..num as usize - 2])
+            if id_type == 0 {
+                // Numeric named property: key = GUID_NUMHEX
+                Some(format!("{}_{:08x}", guid, num))
+            } else if id_type == 1 {
+                // String named property: key = GUID_name
+                let slen = num as usize;
+                if pos + slen > data.len() { break; }
+                let name = if slen >= 2 {
+                    read_utf16le(&data[pos..pos + slen - 2])
                 } else {
                     String::new()
                 };
-                pos += ((num as usize) + 3) & !3; // pad to 4 bytes
-                // Look up known named property names
-                match name.as_str() {
-                    "AppVersion" => 0x8554u16,
-                    _ => 0xFFFF, // unknown
-                }
+                pos += (slen + 3) & !3; // pad to 4 bytes
+                Some(format!("{}_{}", guid, name))
             } else {
-                // Numeric named property
-                // Map known numeric named props
-                match num {
-                    0x0000801A => 0x8000, // HomeAddress (placeholder)
-                    _ => 0xFFFF,
-                }
+                break; // unknown id_type
             }
         } else {
-            prop_tag
+            None
         };
 
         // Handle multi-value
-        let (is_multi, prop_type) = if prop_type & 0x1000 != 0 {
+        let (is_multi, eff_prop_type) = if prop_type & 0x1000 != 0 {
             (true, prop_type & 0x0FFF)
         } else {
             (false, prop_type)
@@ -204,45 +208,49 @@ fn process_props(data: &[u8], tags: &mut Vec<Tag>) {
         };
 
         for _j in 0..count {
-            // Get value based on type
-            let result = read_prop_value(data, &mut pos, prop_type);
+            let result = read_prop_value(data, &mut pos, eff_prop_type);
             let val = match result {
                 Some(v) => v,
                 None => break,
             };
 
-            // Map known tags
-            let tag_name = match actual_tag {
-                // Main TNEF attributes
-                0x0002 => Some(("AlternateRecipientAllowed", format_bool(&val))),
-                0x0039 => Some(("ClientSubmitTime", format_systime(&val))),
-                0x0040 => Some(("ReceivedByName", val.clone())),
-                0x0044 => Some(("ReceivedRepresentingName", val.clone())),
-                0x007F => Some(("CorrelationKey", val.clone())),
-                0x0070 => Some(("Subject", val.clone())),
-                0x0075 => Some(("ReceivedByAddressType", val.clone())),
-                0x0076 => Some(("ReceivedByEmailAddress", val.clone())),
-                0x0077 => Some(("ReceivedRepresentingAddressType", val.clone())),
-                0x0078 => Some(("ReceivedRepresentingEmailAddress", val.clone())),
-                0x0C1A => Some(("SenderName", val.clone())),
-                0x0E1D => Some(("NormalizedSubject", val.clone())),
-                0x1000 => None, // MessageBodyText - binary, skip
-                0x1007 => Some(("SyncBodyCount", val.clone())),
-                0x1008 => Some(("SyncBodyData", val.clone())),
-                0x1009 => Some(("MessageBodyRTF", format!("(Binary data, use -b option to extract)"))),
-                0x1035 => Some(("InternetMessageID", val.clone())),
-                0x10F4 => Some(("Hidden", format_bool(&val))),
-                0x10F6 => Some(("ReadOnly", format_bool(&val))),
-                0x3007 => Some(("CreateDate", format_systime_str(&val))),
-                0x3008 => Some(("ModifyDate", format_systime_str(&val))),
-                0x3FDE => Some(("InternetCodePage", val.clone())),
-                0x3FF1 => Some(("LocalUserID", val.clone())),
-                0x3FF8 => Some(("CreatorName", val.clone())),
-                0x3FFA => Some(("LastModifierName", val.clone())),
-                0x3FFD => Some(("MessageCodePage", val.clone())),
-                0x4076 => Some(("SpamConfidenceLevel", val.clone())),
-                0x8554 => Some(("AppVersion", val.clone())),
-                _ => None,
+            // Determine tag name from either named key or numeric tag
+            let tag_name: Option<(&'static str, String)> = if let Some(ref key) = named_key {
+                match key.as_str() {
+                    "00062008_00008554" => Some(("AppVersion", val.clone())),
+                    _ => None,
+                }
+            } else {
+                match prop_tag {
+                    0x0002 => Some(("AlternateRecipientAllowed", format_bool(&val))),
+                    0x0039 => Some(("ClientSubmitTime", val.clone())),
+                    0x0040 => Some(("ReceivedByName", val.clone())),
+                    0x0044 => Some(("ReceivedRepresentingName", val.clone())),
+                    0x007F => Some(("CorrelationKey", val.clone())),
+                    0x0070 => Some(("Subject", val.clone())),
+                    0x0075 => Some(("ReceivedByAddressType", val.clone())),
+                    0x0076 => Some(("ReceivedByEmailAddress", val.clone())),
+                    0x0077 => Some(("ReceivedRepresentingAddressType", val.clone())),
+                    0x0078 => Some(("ReceivedRepresentingEmailAddress", val.clone())),
+                    0x0C1A => Some(("SenderName", val.clone())),
+                    0x0E1D => Some(("NormalizedSubject", val.clone())),
+                    0x1000 => None, // MessageBodyText - binary, skip
+                    0x1007 => Some(("SyncBodyCount", val.clone())),
+                    0x1008 => Some(("SyncBodyData", val.clone())),
+                    0x1009 => Some(("MessageBodyRTF", val.clone())),
+                    0x1035 => Some(("InternetMessageID", val.clone())),
+                    0x10F4 => Some(("Hidden", format_bool(&val))),
+                    0x10F6 => Some(("ReadOnly", format_bool(&val))),
+                    0x3007 => Some(("CreateDate", val.clone())),
+                    0x3008 => Some(("ModifyDate", val.clone())),
+                    0x3FDE => Some(("InternetCodePage", val.clone())),
+                    0x3FF1 => Some(("LocalUserID", val.clone())),
+                    0x3FF8 => Some(("CreatorName", val.clone())),
+                    0x3FFA => Some(("LastModifierName", val.clone())),
+                    0x3FFD => Some(("MessageCodePage", val.clone())),
+                    0x4076 => Some(("SpamConfidenceLevel", val.clone())),
+                    _ => None,
+                }
             };
 
             if let Some((name, pval)) = tag_name {
@@ -259,15 +267,6 @@ fn format_bool(val: &str) -> String {
         "1" | "-1" => "True".into(),
         _ => val.to_string(),
     }
-}
-
-fn format_systime(val: &str) -> String {
-    // val might already be formatted or be a raw FILETIME value
-    val.to_string()
-}
-
-fn format_systime_str(val: &str) -> String {
-    val.to_string()
 }
 
 fn read_prop_value(data: &[u8], pos: &mut usize, prop_type: u16) -> Option<String> {

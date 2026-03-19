@@ -907,6 +907,23 @@ impl ExifTool {
                         pos = cend + (csz & 1);
                     }
                     riff_bo
+                } else if data.starts_with(&[0x00, b'M', b'R', b'M']) {
+                    // MRW: find TTW segment which contains TIFF/EXIF data
+                    let mrw_data_offset = if data.len() >= 8 {
+                        u32::from_be_bytes([data[4], data[5], data[6], data[7]]) as usize + 8
+                    } else { 0 };
+                    let mut mrw_bo: Option<&[u8]> = None;
+                    let mut mpos = 8usize;
+                    while mpos + 8 <= mrw_data_offset.min(data.len()) {
+                        let seg_tag = &data[mpos..mpos+4];
+                        let seg_len = u32::from_be_bytes([data[mpos+4], data[mpos+5], data[mpos+6], data[mpos+7]]) as usize;
+                        if seg_tag == b"\x00TTW" && mpos + 8 + seg_len <= data.len() {
+                            mrw_bo = Some(&data[mpos+8..mpos+8+seg_len]);
+                            break;
+                        }
+                        mpos += 8 + seg_len;
+                    }
+                    mrw_bo
                 } else {
                     Some(&data[..])
                 };
@@ -1187,7 +1204,14 @@ impl ExifTool {
                     Ok(Vec::new())
                 }
             }
-            "vcf" | "ics" | "vcard" => Ok(Vec::new()), // vCard/iCal
+            "vcf" | "ics" | "vcard" => {
+                let s = String::from_utf8_lossy(&data[..data.len().min(100)]);
+                if s.contains("BEGIN:VCALENDAR") {
+                    formats::vcard::read_ics(data).or_else(|_| Ok(Vec::new()))
+                } else {
+                    formats::vcard::read_vcf(data).or_else(|_| Ok(Vec::new()))
+                }
+            }
             "xcf" => Ok(Vec::new()),      // GIMP
             "vrd" | "dr4" => Ok(Vec::new()), // Canon VRD
             "indd" | "indt" => Ok(Vec::new()), // InDesign
@@ -1198,11 +1222,15 @@ impl ExifTool {
             "moi" => formats::misc::read_moi(data).or_else(|_| Ok(Vec::new())),
             "macos" => formats::misc::read_macos(data).or_else(|_| Ok(Vec::new())),
             "json" => formats::misc::read_json(data).or_else(|_| Ok(Vec::new())),
-            "dpx" | "dv" | "fpf" | "lfp" | "miff" | "mrc"
+            "dpx" => formats::dpx::read_dpx(data).or_else(|_| Ok(Vec::new())),
+            "r3d" => formats::red::read_r3d(data).or_else(|_| Ok(Vec::new())),
+            "tnef" => formats::tnef::read_tnef(data).or_else(|_| Ok(Vec::new())),
+            "ppt" | "fpx" | "fpf" => formats::flashpix::read_fpx(data).or_else(|_| Ok(Vec::new())),
+            "dv" | "lfp" | "miff" | "mrc"
             | "dss" | "mobi" | "psp" | "pgf" | "raw"
-            | "r3d" | "pmp" | "tnef" | "torrent" | "wtv"
+            | "pmp" | "torrent" | "wtv"
             | "xisf" | "czi" | "iso" | "itc" | "mxf"
-            | "afm" | "pfb" | "ppt" | "dfont" => Ok(Vec::new()),
+            | "afm" | "pfb" | "dfont" => Ok(Vec::new()),
             _ => Err(Error::UnsupportedFileType(ext)),
         }
     }

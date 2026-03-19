@@ -79,11 +79,25 @@ pub fn read_iwork(data: &[u8]) -> Result<Vec<Tag>> {
         }
 
         // index.xml or index.apxl -> extract metadata
-        if (filename == "index.xml" || filename == "index.apxl") && compression == 0 {
+        if filename == "index.xml" || filename == "index.apxl" {
             let file_data_end = (data_start + compressed_size).min(data.len());
             if data_start < file_data_end {
-                let text = std::str::from_utf8(&data[data_start..file_data_end]).unwrap_or("");
-                parse_iwork_metadata(text, &mut tags);
+                let raw = &data[data_start..file_data_end];
+                let xml_string: Option<String> = if compression == 0 {
+                    std::str::from_utf8(raw).ok().map(|s| s.to_string())
+                } else if compression == 8 {
+                    // Deflate compressed - decompress
+                    use std::io::Read;
+                    let mut decoder = flate2::read::DeflateDecoder::new(raw);
+                    let mut decompressed = Vec::new();
+                    decoder.read_to_end(&mut decompressed).ok();
+                    std::str::from_utf8(&decompressed).ok().map(|s| s.to_string())
+                } else {
+                    None
+                };
+                if let Some(text) = xml_string {
+                    parse_iwork_metadata(&text, &mut tags);
+                }
             }
         }
 
@@ -178,12 +192,14 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
         return Err(Error::InvalidData("not a ZIP file".into()));
     }
 
-    // Check for iWork format (index.xml with Apple namespace)
-    // by scanning filenames in the ZIP
+    // Check for iWork format by scanning filenames in the ZIP.
+    // iWork files have index.xml/index.apxl but NOT [Content_Types].xml (OOXML).
     {
         let mut pos = 0usize;
         let mut has_index_xml = false;
-        while pos + 30 <= data.len() && data[pos..pos + 4] == [0x50, 0x4B, 0x03, 0x04] {
+        let mut has_content_types = false;
+        let mut scan_count = 0usize;
+        while pos + 30 <= data.len() && data[pos..pos + 4] == [0x50, 0x4B, 0x03, 0x04] && scan_count < 20 {
             let name_len = u16::from_le_bytes([data[pos + 26], data[pos + 27]]) as usize;
             let extra_len = u16::from_le_bytes([data[pos + 28], data[pos + 29]]) as usize;
             let compressed_size = u32::from_le_bytes([data[pos + 18], data[pos + 19], data[pos + 20], data[pos + 21]]) as usize;
@@ -192,28 +208,17 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
             let filename = std::str::from_utf8(&data[name_start..name_start + name_len]).unwrap_or("");
             if filename == "index.xml" || filename == "index.apxl" {
                 has_index_xml = true;
-                // Check if it's iWork by looking at the content
-                let data_start = name_start + name_len + extra_len;
-                let compression = u16::from_le_bytes([data[pos + 8], data[pos + 9]]);
-                if compression == 0 {
-                    let data_end = (data_start + compressed_size).min(data.len());
-                    if data_start < data_end {
-                        let text = std::str::from_utf8(&data[data_start..data_end.min(data_start + 200)]).unwrap_or("");
-                        // iWork files have ls:document, sl:document, or key:presentation
-                        if text.contains("developer.apple.com/namespaces")
-                            || text.contains("ls:document")
-                            || text.contains("sl:document")
-                            || text.contains("key:presentation")
-                        {
-                            return read_iwork(data);
-                        }
-                    }
-                }
-                break;
+            }
+            if filename == "[Content_Types].xml" {
+                has_content_types = true;
+                break; // definitely OOXML, not iWork
             }
             pos = name_start + name_len + extra_len + compressed_size;
+            scan_count += 1;
         }
-        let _ = has_index_xml; // suppress warning
+        if has_index_xml && !has_content_types {
+            return read_iwork(data);
+        }
     }
 
     let mut tags = Vec::new();
