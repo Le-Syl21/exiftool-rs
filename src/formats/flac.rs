@@ -63,14 +63,21 @@ pub fn read_flac(data: &[u8]) -> Result<Vec<Tag>> {
 }
 
 fn parse_stream_info(data: &[u8], tags: &mut Vec<Tag>) {
-    // Bits 0-15: min block size
-    // Bits 16-31: max block size
-    // Bits 32-55: min frame size (24 bits)
-    // Bits 56-79: max frame size (24 bits)
-    // Bits 80-99: sample rate (20 bits)
-    // Bits 100-102: channels - 1 (3 bits)
-    // Bits 103-107: bits per sample - 1 (5 bits)
-    // Bits 108-143: total samples (36 bits)
+    // FLAC STREAMINFO block (from Perl FLAC.pm):
+    // Bytes 0-1: BlockSizeMin (uint16 BE)
+    // Bytes 2-3: BlockSizeMax (uint16 BE)
+    // Bytes 4-6: FrameSizeMin (24 bits BE)
+    // Bytes 7-9: FrameSizeMax (24 bits BE)
+    // Bits 80-99: SampleRate (20 bits)
+    // Bits 100-102: Channels - 1 (3 bits)
+    // Bits 103-107: BitsPerSample - 1 (5 bits)
+    // Bits 108-143: TotalSamples (36 bits)
+    // Bytes 18-33: MD5Signature (16 bytes)
+
+    let block_size_min = u16::from_be_bytes([data[0], data[1]]);
+    let block_size_max = u16::from_be_bytes([data[2], data[3]]);
+    let frame_size_min = ((data[4] as u32) << 16) | ((data[5] as u32) << 8) | data[6] as u32;
+    let frame_size_max = ((data[7] as u32) << 16) | ((data[8] as u32) << 8) | data[9] as u32;
 
     let sample_rate = ((data[10] as u32) << 12)
         | ((data[11] as u32) << 4)
@@ -85,9 +92,23 @@ fn parse_stream_info(data: &[u8], tags: &mut Vec<Tag>) {
         | ((data[16] as u64) << 8)
         | data[17] as u64;
 
+    let md5 = if data.len() >= 34 {
+        data[18..34].iter().map(|b| format!("{:02x}", b)).collect::<String>()
+    } else {
+        String::new()
+    };
+
+    tags.push(mk("BlockSizeMin", "Block Size Min", Value::U16(block_size_min)));
+    tags.push(mk("BlockSizeMax", "Block Size Max", Value::U16(block_size_max)));
+    tags.push(mk("FrameSizeMin", "Frame Size Min", Value::U32(frame_size_min)));
+    tags.push(mk("FrameSizeMax", "Frame Size Max", Value::U32(frame_size_max)));
     tags.push(mk("SampleRate", "Sample Rate", Value::U32(sample_rate)));
-    tags.push(mk("NumChannels", "Number of Channels", Value::U8(channels)));
+    tags.push(mk("Channels", "Channels", Value::U8(channels)));
     tags.push(mk("BitsPerSample", "Bits Per Sample", Value::U16(bits_per_sample)));
+    tags.push(mk("TotalSamples", "Total Samples", Value::String(total_samples.to_string())));
+    if !md5.is_empty() {
+        tags.push(mk("MD5Signature", "MD5 Signature", Value::String(md5)));
+    }
 
     if total_samples > 0 && sample_rate > 0 {
         let duration = total_samples as f64 / sample_rate as f64;
