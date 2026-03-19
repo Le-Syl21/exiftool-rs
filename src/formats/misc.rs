@@ -177,30 +177,117 @@ pub fn read_hdr(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     let mut tags = Vec::new();
-    let text = String::from_utf8_lossy(&data[..data.len().min(4096)]);
+    let text = String::from_utf8_lossy(&data[..data.len().min(8192)]);
+
+    // Track key-value pairs and commands (last wins for non-list tags)
+    let mut kv_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let mut last_command: Option<String> = None;
+    let mut found_dims = false;
 
     for line in text.lines() {
-        if line.starts_with("FORMAT=") {
-            tags.push(mktag("HDR", "Format", "Format", Value::String(line[7..].to_string())));
-        } else if line.starts_with("SOFTWARE=") {
-            tags.push(mktag("HDR", "Software", "Software", Value::String(line[9..].to_string())));
-        } else if line.starts_with("EXPOSURE=") {
-            tags.push(mktag("HDR", "Exposure", "Exposure", Value::String(line[9..].to_string())));
-        } else if line.starts_with("-Y ") || line.starts_with("+Y ") {
-            // Resolution line: "-Y 600 +X 800" or "+Y 600 -X 800"
+        let line = line.trim_end_matches('\r');
+        // Skip the magic header line
+        if line.starts_with("#?") { continue; }
+        // Comment lines
+        if line.starts_with('#') { continue; }
+        // Empty line marks end of header metadata
+        if line.is_empty() { continue; }
+        // Dimension line (resolution) - last header line before data
+        if line.starts_with("-Y ") || line.starts_with("+Y ") || line.starts_with("-X ") || line.starts_with("+X ") {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() >= 4 {
-                if let Ok(h) = parts[1].parse::<u32>() {
-                    tags.push(mktag("HDR", "ImageHeight", "Image Height", Value::U32(h)));
+                // Format: -Y <h> +X <w> or similar
+                let axis1 = parts[0]; // e.g. "-Y"
+                let axis3 = parts[2]; // e.g. "+X"
+                let orient = format!("{} {}", axis1, axis3);
+                // Map orientation
+                let orient_name = match orient.as_str() {
+                    "-Y +X" => "Horizontal (normal)",
+                    "-Y -X" => "Mirror horizontal",
+                    "+Y -X" => "Rotate 180",
+                    "+Y +X" => "Mirror vertical",
+                    "+X -Y" => "Mirror horizontal and rotate 270 CW",
+                    "+X +Y" => "Rotate 90 CW",
+                    "-X +Y" => "Mirror horizontal and rotate 90 CW",
+                    "-X -Y" => "Rotate 270 CW",
+                    _ => &orient,
+                };
+                kv_map.insert("_orient".to_string(), orient_name.to_string());
+                if let Ok(dim1) = parts[1].parse::<u32>() {
+                    // first axis is Y (height)
+                    if axis1 == "-Y" || axis1 == "+Y" {
+                        kv_map.insert("ImageHeight".to_string(), dim1.to_string());
+                    } else {
+                        kv_map.insert("ImageWidth".to_string(), dim1.to_string());
+                    }
                 }
-                if let Ok(w) = parts[3].parse::<u32>() {
-                    tags.push(mktag("HDR", "ImageWidth", "Image Width", Value::U32(w)));
+                if let Ok(dim2) = parts[3].parse::<u32>() {
+                    if axis3 == "-X" || axis3 == "+X" {
+                        kv_map.insert("ImageWidth".to_string(), dim2.to_string());
+                    } else {
+                        kv_map.insert("ImageHeight".to_string(), dim2.to_string());
+                    }
                 }
             }
+            found_dims = true;
             break;
+        }
+        // Check for key=value pairs
+        if let Some(eq_pos) = line.find('=') {
+            let key = line[..eq_pos].trim().to_lowercase();
+            let val = line[eq_pos+1..].trim().to_string();
+            // Map known keys
+            let mapped_key = match key.as_str() {
+                "software" => "Software",
+                "view" => "View",
+                "format" => "Format",
+                "exposure" => "Exposure",
+                "gamma" => "Gamma",
+                "colorcorr" => "ColorCorrection",
+                "pixaspect" => "PixelAspectRatio",
+                "primaries" => "ColorPrimaries",
+                _ => "",
+            };
+            if !mapped_key.is_empty() {
+                kv_map.insert(mapped_key.to_string(), val);
+            }
+        } else {
+            // Not a key=value, not a comment, not empty, not dimension: it's a command
+            last_command = Some(line.to_string());
         }
     }
 
+    // Emit tags in a consistent order (matching Perl output order)
+    if let Some(cmd) = last_command {
+        tags.push(mktag("HDR", "Command", "Command", Value::String(cmd)));
+    }
+    if let Some(v) = kv_map.get("Exposure") {
+        tags.push(mktag("HDR", "Exposure", "Exposure", Value::String(v.clone())));
+    }
+    if let Some(v) = kv_map.get("Format") {
+        tags.push(mktag("HDR", "Format", "Format", Value::String(v.clone())));
+    }
+    if let Some(h) = kv_map.get("ImageHeight") {
+        if let Ok(hv) = h.parse::<u32>() {
+            tags.push(mktag("HDR", "ImageHeight", "Image Height", Value::U32(hv)));
+        }
+    }
+    if let Some(w) = kv_map.get("ImageWidth") {
+        if let Ok(wv) = w.parse::<u32>() {
+            tags.push(mktag("HDR", "ImageWidth", "Image Width", Value::U32(wv)));
+        }
+    }
+    if let Some(v) = kv_map.get("_orient") {
+        tags.push(mktag("HDR", "Orientation", "Orientation", Value::String(v.clone())));
+    }
+    if let Some(v) = kv_map.get("Software") {
+        tags.push(mktag("HDR", "Software", "Software", Value::String(v.clone())));
+    }
+    if let Some(v) = kv_map.get("View") {
+        tags.push(mktag("HDR", "View", "View", Value::String(v.clone())));
+    }
+
+    let _ = found_dims;
     Ok(tags)
 }
 
@@ -213,42 +300,130 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
         return Err(Error::InvalidData("not a PBM/PGM/PPM file".into()));
     }
 
+    let type_byte = data[1];
+    let is_pfm = type_byte == b'F' || type_byte == b'f';
+
     let mut tags = Vec::new();
-    let format = match data[1] {
-        b'1' => "PBM (ASCII)",
-        b'2' => "PGM (ASCII)",
-        b'3' => "PPM (ASCII)",
-        b'4' => "PBM (Binary)",
-        b'5' => "PGM (Binary)",
-        b'6' => "PPM (Binary)",
-        b'F' => "PFM (RGB Float)",
-        b'f' => "PFM (Grayscale Float)",
-        b'7' => "PAM",
-        _ => return Err(Error::InvalidData("not a PBM/PGM/PPM file".into())),
-    };
-    tags.push(mktag("PPM", "Format", "Format", Value::String(format.into())));
 
-    // Parse header: skip comments (#), read width height [maxval]
-    let text = String::from_utf8_lossy(&data[2..data.len().min(1024)]);
-    let mut values = Vec::new();
-    for line in text.lines() {
-        let line = line.trim();
-        if line.starts_with('#') { continue; }
-        for word in line.split_whitespace() {
-            if let Ok(v) = word.parse::<u32>() {
-                values.push(v);
+    if is_pfm {
+        // PFM format: PF\n<width> <height>\n<scale>\n<data>
+        // ColorSpace: PF=RGB, Pf=Monochrome
+        // ByteOrder: positive scale=Big-endian, negative=Little-endian
+        let text = String::from_utf8_lossy(&data[..data.len().min(256)]);
+        // Match: P[Ff]\n<width> <height>\n<scale>\n
+        let re_str = text.as_ref();
+        // Simple line-based parser
+        let mut lines = re_str.lines();
+        let header_line = lines.next().unwrap_or("");
+        let cs_char = if header_line.ends_with('F') || header_line == "PF" { b'F' } else { b'f' };
+        let color_space = if cs_char == b'F' { "RGB" } else { "Monochrome" };
+        tags.push(mktag("PFM", "ColorSpace", "Color Space", Value::String(color_space.into())));
+
+        // Width Height line
+        if let Some(wh_line) = lines.next() {
+            let parts: Vec<&str> = wh_line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                if let (Ok(w), Ok(h)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                    tags.push(mktag("PFM", "ImageWidth", "Image Width", Value::U32(w)));
+                    tags.push(mktag("PFM", "ImageHeight", "Image Height", Value::U32(h)));
+                }
             }
-            if values.len() >= 3 { break; }
         }
-        if values.len() >= 2 { break; }
-    }
+        // Scale factor line
+        if let Some(scale_line) = lines.next() {
+            let scale_str = scale_line.trim();
+            if let Ok(scale) = scale_str.parse::<f64>() {
+                let byte_order = if scale > 0.0 { "Big-endian" } else { "Little-endian" };
+                tags.push(mktag("PFM", "ByteOrder", "Byte Order", Value::String(byte_order.into())));
+            }
+        }
+    } else {
+        // PPM/PGM/PBM format
+        // Parse header: collect comments, then width height [maxval]
+        let text = String::from_utf8_lossy(&data[2..data.len().min(1024)]);
+        let mut comment_lines: Vec<String> = Vec::new();
+        let mut width: Option<u32> = None;
+        let mut height: Option<u32> = None;
+        let mut maxval: Option<u32> = None;
+        let mut found_dims = false;
 
-    if values.len() >= 2 {
-        tags.push(mktag("PPM", "ImageWidth", "Image Width", Value::U32(values[0])));
-        tags.push(mktag("PPM", "ImageHeight", "Image Height", Value::U32(values[1])));
-    }
-    if values.len() >= 3 {
-        tags.push(mktag("PPM", "MaxValue", "Max Value", Value::U32(values[2])));
+        // State machine: after magic byte, collect comments and parse dimensions
+        let mut remaining = text.as_ref();
+        // Skip initial whitespace
+        remaining = remaining.trim_start();
+
+        while !remaining.is_empty() {
+            if remaining.starts_with('#') {
+                // Comment line
+                let end = remaining.find('\n').unwrap_or(remaining.len());
+                let comment = &remaining[1..end];
+                // Remove leading space after '#'
+                let comment = comment.strip_prefix(' ').unwrap_or(comment);
+                comment_lines.push(comment.to_string());
+                remaining = &remaining[end..];
+                remaining = remaining.trim_start_matches('\n').trim_start_matches('\r');
+            } else if !found_dims {
+                // Parse width height
+                let parts: Vec<&str> = remaining.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    if let (Ok(w), Ok(h)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                        width = Some(w);
+                        height = Some(h);
+                        found_dims = true;
+                        // Advance past width and height
+                        let skip1 = remaining.find(parts[0]).unwrap_or(0) + parts[0].len();
+                        remaining = &remaining[skip1..];
+                        remaining = remaining.trim_start();
+                        let skip2 = remaining.find(parts[1]).unwrap_or(0) + parts[1].len();
+                        remaining = &remaining[skip2..];
+                        remaining = remaining.trim_start();
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            } else {
+                // Check for comment before maxval
+                if remaining.starts_with('#') {
+                    let end = remaining.find('\n').unwrap_or(remaining.len());
+                    let comment = &remaining[1..end];
+                    let comment = comment.strip_prefix(' ').unwrap_or(comment);
+                    comment_lines.push(comment.to_string());
+                    remaining = &remaining[end..];
+                    remaining = remaining.trim_start_matches('\n').trim_start_matches('\r');
+                    continue;
+                }
+                // Parse maxval (for non-PBM types)
+                let is_pbm = type_byte == b'1' || type_byte == b'4';
+                if !is_pbm {
+                    let parts: Vec<&str> = remaining.splitn(2, char::is_whitespace).collect();
+                    if let Some(v) = parts.first() {
+                        if let Ok(mv) = v.parse::<u32>() {
+                            maxval = Some(mv);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        // Comment: join lines and trim trailing newline
+        if !comment_lines.is_empty() {
+            let comment = comment_lines.join("\n");
+            let comment = comment.trim_end_matches('\n').trim_end_matches('\r').to_string();
+            tags.push(mktag("PPM", "Comment", "Comment", Value::String(comment)));
+        }
+
+        if let Some(w) = width {
+            tags.push(mktag("PPM", "ImageWidth", "Image Width", Value::U32(w)));
+        }
+        if let Some(h) = height {
+            tags.push(mktag("PPM", "ImageHeight", "Image Height", Value::U32(h)));
+        }
+        if let Some(mv) = maxval {
+            tags.push(mktag("PPM", "MaxVal", "Max Val", Value::U32(mv)));
+        }
     }
 
     Ok(tags)
@@ -459,8 +634,47 @@ pub fn read_pict(data: &[u8]) -> Result<Vec<Tag>> {
     let bottom = i16::from_be_bytes([d[6], d[7]]);
     let right = i16::from_be_bytes([d[8], d[9]]);
 
-    tags.push(mktag("PICT", "ImageWidth", "Image Width", Value::I16(right - left)));
-    tags.push(mktag("PICT", "ImageHeight", "Image Height", Value::I16(bottom - top)));
+    // Check PICT version at byte 10
+    // Version 2 opcode: 0x0011 at bytes 10-11
+    let mut h_res: Option<f64> = None;
+    let mut v_res: Option<f64> = None;
+    let mut w = (right - left) as i32;
+    let mut h = (bottom - top) as i32;
+
+    if d.len() >= 40 && d[10] == 0x00 && d[11] == 0x11 {
+        // Version 2: next 2 bytes are 0x02ff, then check for extended
+        // d[12..14] = 0x02ff, d[14..16] = 0x0c00
+        // d[16..18]: 0xffff = normal, 0xfffe = extended
+        if d.len() >= 18 && d[12] == 0x02 && d[13] == 0xff {
+            if d[16] == 0xff && d[17] == 0xfe && d.len() >= 36 {
+                // Extended version 2: resolution at offsets 24..28 and 28..32 (x8 skip from byte 16)
+                // From Perl: unpack('x8N2', $buff) where buff starts at byte after 0x0011 opcode
+                // $buff was read starting at position 12 (after 12-byte first read)
+                // x8 skips bytes 12..20, N2 reads bytes 20..24 and 24..28 in original data
+                // Actually the 28 bytes buff starts after the 12-byte header
+                // In d: after opcode 0x0011 at d[10..12], read 28 bytes: d[12..40]
+                // x8 skip => skip d[12..20], N2 => d[20..24] and d[24..28]
+                let h_fixed = i32::from_be_bytes([d[20], d[21], d[22], d[23]]);
+                let v_fixed = i32::from_be_bytes([d[24], d[25], d[26], d[27]]);
+                if h_fixed != 0 && v_fixed != 0 {
+                    h_res = Some(h_fixed as f64 / 65536.0);
+                    v_res = Some(v_fixed as f64 / 65536.0);
+                    // Scale dimensions from 72-dpi equivalent
+                    w = (w as f64 * h_res.unwrap() / 72.0 + 0.5) as i32;
+                    h = (h as f64 * v_res.unwrap() / 72.0 + 0.5) as i32;
+                }
+            }
+        }
+    }
+
+    tags.push(mktag("PICT", "ImageWidth", "Image Width", Value::I32(w)));
+    tags.push(mktag("PICT", "ImageHeight", "Image Height", Value::I32(h)));
+    if let Some(hr) = h_res {
+        tags.push(mktag("PICT", "XResolution", "X Resolution", Value::String(format!("{}", hr as i64))));
+    }
+    if let Some(vr) = v_res {
+        tags.push(mktag("PICT", "YResolution", "Y Resolution", Value::String(format!("{}", vr as i64))));
+    }
 
     Ok(tags)
 }

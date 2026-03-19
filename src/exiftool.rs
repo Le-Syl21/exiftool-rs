@@ -865,13 +865,35 @@ impl ExifTool {
         }
 
         // ExifByteOrder (from TIFF header)
-        if file_type == FileType::Jpeg || file_type == FileType::Tiff {
+        {
             let bo_str = if data.len() > 8 {
-                // Check EXIF in JPEG or TIFF header
-                let check = if data.starts_with(&[0xFF, 0xD8]) {
+                // Check EXIF in JPEG or TIFF header or WebP/RIFF EXIF chunk
+                let check: Option<&[u8]> = if data.starts_with(&[0xFF, 0xD8]) {
                     // JPEG: find APP1 EXIF header
                     data.windows(6).position(|w| w == b"Exif\0\0")
                         .map(|p| &data[p+6..])
+                } else if data.starts_with(b"RIFF") && data.len() >= 12 {
+                    // RIFF/WebP: find EXIF chunk
+                    let mut riff_bo: Option<&[u8]> = None;
+                    let mut pos = 12usize;
+                    while pos + 8 <= data.len() {
+                        let cid = &data[pos..pos+4];
+                        let csz = u32::from_le_bytes([data[pos+4],data[pos+5],data[pos+6],data[pos+7]]) as usize;
+                        let cstart = pos + 8;
+                        let cend = (cstart + csz).min(data.len());
+                        if cid == b"EXIF" && cend > cstart {
+                            let exif_data = &data[cstart..cend];
+                            let tiff = if exif_data.starts_with(b"Exif\0\0") { &exif_data[6..] } else { exif_data };
+                            riff_bo = Some(tiff);
+                            break;
+                        }
+                        // Also check LIST chunks
+                        if cid == b"LIST" && cend >= cstart + 4 {
+                            // recurse not needed for this simple scan - just advance
+                        }
+                        pos = cend + (csz & 1);
+                    }
+                    riff_bo
                 } else {
                     Some(&data[..])
                 };

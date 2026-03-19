@@ -80,23 +80,9 @@ pub fn read_bmp(data: &[u8]) -> Result<Vec<Tag>> {
             tags.push(mk("ImageLength", "Image Data Size", Value::U32(image_size)));
         }
 
-        // Convert pixels per meter to DPI
-        if x_ppm > 0 {
-            let x_dpi = (x_ppm as f64 * 0.0254).round();
-            tags.push(mk(
-                "XResolution",
-                "X Resolution",
-                Value::String(format!("{} dpi", x_dpi as u32)),
-            ));
-        }
-        if y_ppm > 0 {
-            let y_dpi = (y_ppm as f64 * 0.0254).round();
-            tags.push(mk(
-                "YResolution",
-                "Y Resolution",
-                Value::String(format!("{} dpi", y_dpi as u32)),
-            ));
-        }
+        // PixelsPerMeterX/Y (raw value in pixels per meter)
+        tags.push(mk("PixelsPerMeterX", "Pixels Per Meter X", Value::I32(x_ppm)));
+        tags.push(mk("PixelsPerMeterY", "Pixels Per Meter Y", Value::I32(y_ppm)));
         if colors_used > 0 {
             tags.push(mk("NumColors", "Number of Colors", Value::U32(colors_used)));
         }

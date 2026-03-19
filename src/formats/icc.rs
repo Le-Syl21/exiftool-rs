@@ -148,9 +148,14 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
         tags.push(mk("ConnectionSpaceIlluminant", "Connection Space Illuminant", Value::String(format!("{:.6} {:.6} {:.6}", x, y, z))));
     }
 
-    // ProfileCreator (bytes 80-83)
-    let creator = String::from_utf8_lossy(&data[80..84]).trim_end_matches('\0').trim().to_string();
-    if !creator.is_empty() && creator.bytes().any(|b| b > 0x20) {
+    // ProfileCreator (bytes 80-83) - always emit (may be empty)
+    if data.len() >= 84 {
+        let raw = &data[80..84];
+        let creator = if raw.iter().all(|&b| b == 0) {
+            String::new()
+        } else {
+            String::from_utf8_lossy(raw).trim_end_matches('\0').trim().to_string()
+        };
         tags.push(mk("ProfileCreator", "Profile Creator", Value::String(creator)));
     }
 

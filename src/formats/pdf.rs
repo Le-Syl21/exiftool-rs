@@ -58,9 +58,14 @@ pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
         tags.push(mk("PageCount", "Page Count", Value::U32(actual_pages as u32)));
     }
 
-    // Linearized?
-    if find_bytes(&data[..data.len().min(4096)], b"/Linearized").is_some() {
-        tags.push(mk("Linearized", "Linearized", Value::String("Yes".into())));
+    // Linearized? Perl always emits "Yes" or "No"
+    // A linearized PDF has /Linearized key in its first object dict
+    let is_linearized = find_bytes(&data[..data.len().min(4096)], b"/Linearized").is_some();
+    tags.push(mk("Linearized", "Linearized", Value::String(if is_linearized { "Yes" } else { "No" }.into())));
+
+    // Extract MediaBox from first /MediaBox entry found
+    if let Some(mb) = extract_media_box(data) {
+        tags.push(mk("MediaBox", "Media Box", Value::String(mb)));
     }
 
     // Encrypted?
@@ -307,6 +312,44 @@ fn scan_for_info_and_xmp(data: &[u8], tags: &mut Vec<Tag>) {
             break;
         }
     }
+}
+
+/// Find first /MediaBox array in the PDF and return as "x0, y0, x1, y1"
+fn extract_media_box(data: &[u8]) -> Option<String> {
+    let text = String::from_utf8_lossy(data);
+    // Find /MediaBox followed by [ ... ]
+    let mut search_start = 0;
+    while let Some(pos) = text[search_start..].find("/MediaBox") {
+        let abs_pos = search_start + pos;
+        let rest = &text[abs_pos + 9..];
+        let rest_trimmed = rest.trim_start();
+        if rest_trimmed.starts_with('[') {
+            if let Some(end) = rest_trimmed.find(']') {
+                let inner = &rest_trimmed[1..end];
+                // Parse space-separated numbers
+                let nums: Vec<&str> = inner.split_whitespace().collect();
+                if nums.len() >= 4 {
+                    // Format like Perl: "0, 0, 612, 792"
+                    let formatted: Vec<String> = nums[..4].iter().map(|s| {
+                        // Try integer first, then float
+                        if let Ok(i) = s.parse::<i64>() {
+                            i.to_string()
+                        } else if let Ok(f) = s.parse::<f64>() {
+                            format!("{}", f)
+                        } else {
+                            s.to_string()
+                        }
+                    }).collect();
+                    return Some(formatted.join(", "));
+                }
+            }
+        }
+        search_start = abs_pos + 9;
+        if search_start >= data.len() {
+            break;
+        }
+    }
+    None
 }
 
 fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {

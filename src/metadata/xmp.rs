@@ -342,7 +342,7 @@ impl XmpReader {
                                 let tag_name = &parent.1;
                                 let group_prefix =
                                     if prefix.is_empty() { "XMP" } else { prefix };
-                                let category = namespace_category(group_prefix);
+                                let _category = namespace_category(group_prefix);
 
                                 let value = if list_values.len() == 1 {
                                     Value::String(list_values[0].clone())
@@ -355,17 +355,50 @@ impl XmpReader {
                                     )
                                 };
 
-                                let full_name = ucfirst(tag_name);
+                                // Check if this property is inside a struct rdf:li
+                                // Path (from end): ..., [struct_bag_prop], Bag, li, [tag_name], [Bag/Seq/Alt]
+                                // Find li between tag_name and struct_bag_prop
+                                // path currently has: ..., struct_bag_prop, Bag, li, tag_name, Alt
+                                // rev(): Alt, tag_name, li, Bag, struct_bag_prop, ...
+                                let in_struct_li = path.iter().rev()
+                                    .skip(1) // skip Alt (current)
+                                    .skip(1) // skip tag_name (parent)
+                                    .any(|(ns, ln)| ln == "li" && ns == "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+
+                                let (full_name, emit_group_prefix) = if in_struct_li {
+                                    // Find the bag/seq property name (ancestor before the li)
+                                    // Skip: tag_name, li, Bag/Seq, then find the struct bag property
+                                    let struct_parent = path.iter().rev()
+                                        .skip(1) // skip Alt (current closing element is not in path yet)
+                                        .skip(1) // skip tag_name (this is the field)
+                                        .skip_while(|(ns, ln)| ln == "li" || ln == "Bag" || ln == "Seq" || ln == "Alt" || ns == "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                                        .find(|(ns, ln)| ln != "Description" && ns != "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+                                    if let Some((sp_ns, sp_ln)) = struct_parent {
+                                        let sp_prefix = namespace_prefix(sp_ns);
+                                        let sp_gp = if sp_prefix.is_empty() { "XMP" } else { sp_prefix };
+                                        let field_uc = ucfirst(tag_name);
+                                        let parent_uc = ucfirst(sp_ln);
+                                        let field_stripped = strip_struct_prefix(&parent_uc, &field_uc);
+                                        let flat = format!("{}{}", parent_uc, field_stripped);
+                                        (flat, sp_gp.to_string())
+                                    } else {
+                                        (ucfirst(tag_name), group_prefix.to_string())
+                                    }
+                                } else {
+                                    (ucfirst(tag_name), group_prefix.to_string())
+                                };
+
+                                let emit_cat = namespace_category(&emit_group_prefix);
                                 let print_value = value.to_display_string();
 
                                 tags.push(Tag {
-                                    id: TagId::Text(format!("{}:{}", group_prefix, tag_name)),
-                                    name: full_name,
-                                    description: tag_name.clone(),
+                                    id: TagId::Text(format!("{}:{}", emit_group_prefix, tag_name)),
+                                    name: full_name.clone(),
+                                    description: full_name,
                                     group: TagGroup {
                                         family0: "XMP".to_string(),
-                                        family1: format!("XMP-{}", group_prefix),
-                                        family2: category.to_string(),
+                                        family1: format!("XMP-{}", emit_group_prefix),
+                                        family2: emit_cat.to_string(),
                                     },
                                     raw_value: value,
                                     print_value,
@@ -395,7 +428,14 @@ impl XmpReader {
                             .map(|(_, ln)| ln.as_str())
                             .unwrap_or("");
                         if !parent_name.is_empty() {
-                            let flat_name = format!("{}{}", ucfirst(parent_name), ucfirst(&name.local_name));
+                            // Perl strips struct-type prefix from field names when the parent
+                            // name ends with the same prefix as the field name starts with.
+                            // E.g., parent "AboutCvTerm" ends with "CvTerm", field "CvTermName"
+                            // starts with "CvTerm" → strip "CvTerm" → flat = "AboutCvTerm" + "Name"
+                            let field_local = ucfirst(&name.local_name);
+                            let parent_ucfirst = ucfirst(parent_name);
+                            let field_stripped = strip_struct_prefix(&parent_ucfirst, &field_local);
+                            let flat_name = format!("{}{}", parent_ucfirst, field_stripped);
                             let prefix = namespace_prefix(ns_uri);
                             let group_prefix = if prefix.is_empty() { "XMP" } else { prefix };
                             let category = namespace_category(group_prefix);
@@ -506,6 +546,28 @@ impl XmpReader {
 
         Ok(tags)
     }
+}
+
+/// Strip struct-type prefix from field name when the parent name ends with that prefix.
+/// E.g., parent "AboutCvTerm" ends with "CvTerm", field "CvTermName" starts with "CvTerm"
+/// → return "Name" (stripped), so flat = "AboutCvTerm" + "Name" = "AboutCvTermName"
+fn strip_struct_prefix(parent: &str, field: &str) -> String {
+    // Try progressively shorter suffixes of parent (min 2 chars, must start at word boundary)
+    let parent_chars: Vec<char> = parent.chars().collect();
+    for start in 1..parent_chars.len().saturating_sub(1) {
+        // Only try positions that start with uppercase (word boundary)
+        if !parent_chars[start].is_uppercase() {
+            continue;
+        }
+        let suffix: String = parent_chars[start..].iter().collect();
+        if field.starts_with(suffix.as_str()) && suffix.len() > 1 {
+            let stripped = &field[suffix.len()..];
+            if !stripped.is_empty() {
+                return stripped.to_string();
+            }
+        }
+    }
+    field.to_string()
 }
 
 fn ucfirst(s: &str) -> String {

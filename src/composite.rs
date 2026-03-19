@@ -117,8 +117,10 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     }
 
     // IPTC DateTimeCreated (from IPTC:DateCreated + IPTC:TimeCreated)
+    // Only combine when the source DateCreated tag is from IPTC (not RIFF, XMP, etc.)
     if find_tag(tags, "DateTimeCreated").is_none() {
-        if let (Some(date), Some(time)) = (find_tag_value(tags, "DateCreated"), find_tag_value(tags, "TimeCreated")) {
+        if let (Some(date_tag), Some(time)) = (find_tag_in_group(tags, "DateCreated", "IPTC"), find_tag_value(tags, "TimeCreated")) {
+            let date = date_tag.print_value.clone();
             if !date.is_empty() && !time.is_empty() {
                 composite.push(mk_composite("DateTimeCreated", "Date/Time Created",
                     Value::String(format!("{} {}", date, time))));
@@ -126,7 +128,8 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         }
     }
 
-    // IPTC DateTimeOriginal fallback (when no EXIF DateTimeOriginal)
+    // DateTimeOriginal fallback (when no EXIF DateTimeOriginal)
+    // Works from any DateCreated+TimeCreated pair (IPTC, RIFF, etc.)
     if find_tag(tags, "DateTimeOriginal").is_none() {
         if let (Some(date), Some(time)) = (find_tag_value(tags, "DateCreated"), find_tag_value(tags, "TimeCreated")) {
             if !date.is_empty() && !time.is_empty() {
@@ -220,6 +223,16 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
 fn find_tag<'a>(tags: &'a [Tag], name: &str) -> Option<&'a Tag> {
     let name_lower = name.to_lowercase();
     tags.iter().find(|t| t.name.to_lowercase() == name_lower)
+}
+
+fn find_tag_in_group<'a>(tags: &'a [Tag], name: &str, group: &str) -> Option<&'a Tag> {
+    let name_lower = name.to_lowercase();
+    let group_lower = group.to_lowercase();
+    tags.iter().find(|t| {
+        t.name.to_lowercase() == name_lower
+            && (t.group.family0.to_lowercase() == group_lower
+                || t.group.family1.to_lowercase() == group_lower)
+    })
 }
 
 fn find_tag_value(tags: &[Tag], name: &str) -> Option<String> {

@@ -12,33 +12,31 @@ pub fn read_ico(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     let mut tags = Vec::new();
-    let ico_type = if data[2] == 1 { "Icon" } else { "Cursor" };
+    let is_ico = data[2] == 1;
     let num_images = u16::from_le_bytes([data[4], data[5]]);
 
-    tags.push(mk("IconType", "Icon Type", Value::String(ico_type.into())));
     tags.push(mk("ImageCount", "Image Count", Value::U16(num_images)));
 
     // Parse directory entries (16 bytes each, starting at offset 6)
-    let mut pos = 6;
-    for i in 0..num_images.min(16) {
-        if pos + 16 > data.len() {
-            break;
-        }
+    // Only extract tags from first image entry (like Perl does)
+    let pos = 6;
+    if num_images > 0 && pos + 16 <= data.len() {
         let w = if data[pos] == 0 { 256u16 } else { data[pos] as u16 };
         let h = if data[pos + 1] == 0 { 256u16 } else { data[pos + 1] as u16 };
-        let _colors = data[pos + 2] as u16;
-        let bit_count = u16::from_le_bytes([data[pos + 6], data[pos + 7]]);
-        let _img_size = u32::from_le_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]]);
+        let num_colors = data[pos + 2] as u16;
+        // byte 3 is reserved
+        let color_planes = u16::from_le_bytes([data[pos + 4], data[pos + 5]]);
+        let bits_per_pixel = u16::from_le_bytes([data[pos + 6], data[pos + 7]]);
+        let img_size = u32::from_le_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]]);
 
-        if i == 0 {
-            tags.push(mk("ImageWidth", "Image Width", Value::U16(w)));
-            tags.push(mk("ImageHeight", "Image Height", Value::U16(h)));
-            if bit_count > 0 {
-                tags.push(mk("BitDepth", "Bit Depth", Value::U16(bit_count)));
-            }
+        tags.push(mk("ImageWidth", "Image Width", Value::U16(w)));
+        tags.push(mk("ImageHeight", "Image Height", Value::U16(h)));
+        tags.push(mk("NumColors", "Num Colors", Value::U16(num_colors)));
+        if is_ico {
+            tags.push(mk("ColorPlanes", "Color Planes", Value::U16(color_planes)));
+            tags.push(mk("BitsPerPixel", "Bits Per Pixel", Value::U16(bits_per_pixel)));
         }
-
-        pos += 16;
+        tags.push(mk("ImageLength", "Image Length", Value::U32(img_size)));
     }
 
     Ok(tags)
