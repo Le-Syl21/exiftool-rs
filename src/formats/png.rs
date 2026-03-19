@@ -208,6 +208,23 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
                 ));
             }
 
+            // sRGB chunk - sRGB rendering intent (1 byte)
+            b"sRGB" if chunk_len >= 1 => {
+                let intent = chunk_data[0];
+                let intent_name = match intent {
+                    0 => "Perceptual",
+                    1 => "Relative Colorimetric",
+                    2 => "Saturation",
+                    3 => "Absolute Colorimetric",
+                    _ => "Unknown",
+                };
+                tags.push(make_png_tag(
+                    "SRGBRendering",
+                    "sRGB Rendering",
+                    Value::String(intent_name.to_string()),
+                ));
+            }
+
             // IEND - End of image
             b"IEND" => break,
 

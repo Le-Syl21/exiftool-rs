@@ -378,6 +378,13 @@ fn parse_atoms(
             _ if atom_type[0] == 0xA9 => {
                 parse_qt_text_atom(atom_type, data, content_start, content_end, tags);
             }
+            // Pentax/Samsung/Sanyo manufacturer tags in udta TAGS atom
+            b"TAGS" => {
+                let cd = &data[content_start..content_end];
+                if cd.starts_with(b"PENTAX DIGITAL CAMERA\0") {
+                    parse_pentax_mov(cd, tags);
+                }
+            }
             _ => {}
         }
 
@@ -2233,5 +2240,112 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         raw_value: value,
         print_value,
         priority: 0,
+    }
+}
+
+fn mk_makernote(name: &str, description: &str, value: Value) -> Tag {
+    let print_value = value.to_display_string();
+    Tag {
+        id: TagId::Text(name.to_string()),
+        name: name.to_string(),
+        description: description.to_string(),
+        group: TagGroup {
+            family0: "MakerNotes".into(),
+            family1: "MakerNotes".into(),
+            family2: "Camera".into(),
+        },
+        raw_value: value,
+        print_value,
+        priority: 0,
+    }
+}
+
+/// Parse Pentax::MOV binary data (GROUPS { 0 => MakerNotes, 2 => Camera }, ByteOrder => LE).
+/// data starts with "PENTAX DIGITAL CAMERA\0..."
+fn parse_pentax_mov(data: &[u8], tags: &mut Vec<Tag>) {
+    // Make (0x00, string[24])
+    if data.len() >= 24 {
+        let make_bytes = &data[0..24];
+        let end = make_bytes.iter().position(|&b| b == 0).unwrap_or(24);
+        let make = String::from_utf8_lossy(&make_bytes[..end]).to_string();
+        if !make.is_empty() {
+            tags.push(mk_makernote("Make", "Make", Value::String(make)));
+        }
+    }
+
+    // ExposureTime (0x26, int32u LE), ValueConv = '10/$val'
+    if data.len() >= 0x2a {
+        let val = u32::from_le_bytes([data[0x26], data[0x27], data[0x28], data[0x29]]);
+        if val > 0 {
+            let et = 10.0 / val as f64;
+            // Format like ExifTool: "1/N" for exposures < 1
+            let et_str = if et < 1.0 {
+                let denom = (1.0 / et).round() as u32;
+                format!("1/{}", denom)
+            } else {
+                format!("{}", et)
+            };
+            tags.push(mk_makernote("ExposureTime", "Exposure Time", Value::String(et_str)));
+        }
+    }
+
+    // FNumber (0x2a, rational64u LE)
+    if data.len() >= 0x32 {
+        let n = u32::from_le_bytes([data[0x2a], data[0x2b], data[0x2c], data[0x2d]]);
+        let d = u32::from_le_bytes([data[0x2e], data[0x2f], data[0x30], data[0x31]]);
+        if d > 0 {
+            let fn_val = n as f64 / d as f64;
+            let fn_str = format!("{:.1}", fn_val);
+            tags.push(mk_makernote("FNumber", "F Number", Value::String(fn_str)));
+        }
+    }
+
+    // ExposureCompensation (0x32, rational64s LE)
+    if data.len() >= 0x3a {
+        let n = i32::from_le_bytes([data[0x32], data[0x33], data[0x34], data[0x35]]);
+        let d = i32::from_le_bytes([data[0x36], data[0x37], data[0x38], data[0x39]]);
+        if d != 0 {
+            let ec_val = n as f64 / d as f64;
+            let ec_str = if ec_val == 0.0 {
+                "0".to_string()
+            } else {
+                format!("{:+.1}", ec_val)
+            };
+            tags.push(mk_makernote("ExposureCompensation", "Exposure Compensation", Value::String(ec_str)));
+        }
+    }
+
+    // WhiteBalance (0x44, int16u LE)
+    if data.len() >= 0x46 {
+        let wb = u16::from_le_bytes([data[0x44], data[0x45]]);
+        let wb_str = match wb {
+            0 => "Auto",
+            1 => "Daylight",
+            2 => "Shade",
+            3 => "Fluorescent",
+            4 => "Tungsten",
+            5 => "Manual",
+            _ => "Unknown",
+        };
+        tags.push(mk_makernote("WhiteBalance", "White Balance", Value::String(wb_str.into())));
+    }
+
+    // FocalLength (0x48, rational64u LE)
+    if data.len() >= 0x50 {
+        let n = u32::from_le_bytes([data[0x48], data[0x49], data[0x4a], data[0x4b]]);
+        let d = u32::from_le_bytes([data[0x4c], data[0x4d], data[0x4e], data[0x4f]]);
+        if d > 0 {
+            let fl_val = n as f64 / d as f64;
+            let fl_str = format!("{:.1} mm", fl_val);
+            tags.push(mk_makernote("FocalLength", "Focal Length", Value::String(fl_str)));
+        }
+    }
+
+    // ISO (0xaf, int16u LE)
+    if data.len() >= 0xb1 {
+        let iso = u16::from_le_bytes([data[0xaf], data[0xb0]]);
+        if iso > 0 {
+            tags.push(mk_makernote("ISO", "ISO", Value::U16(iso)));
+        }
     }
 }

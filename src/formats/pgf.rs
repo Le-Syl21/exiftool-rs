@@ -92,8 +92,13 @@ pub fn read_pgf(data: &[u8]) -> Result<Vec<Tag>> {
         if let Some(png_pos) = find_bytes(meta, &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]) {
             let png_data = &meta[png_pos..];
             if let Ok(png_tags) = crate::formats::png::read_png(png_data) {
-                // Add PNG tags with priority override (they should win)
+                // Add PNG tags, but skip dimension tags (PGF header has the correct ones)
                 for mut tag in png_tags {
+                    match tag.name.as_str() {
+                        "ImageWidth" | "ImageHeight" | "ImageSize" | "Megapixels"
+                        | "FileType" | "FileTypeExtension" | "MIMEType" => continue,
+                        _ => {}
+                    }
                     tag.priority = 2; // higher priority than default
                     tags.push(tag);
                 }

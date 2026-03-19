@@ -1141,7 +1141,14 @@ impl ExifTool {
             FileType::Icc => formats::icc::read_icc(data),
             // Documents
             FileType::Pdf => formats::pdf::read_pdf(data),
-            FileType::PostScript => formats::postscript::read_postscript(data),
+            FileType::PostScript => {
+                // PFA fonts start with %!PS-AdobeFont or %!FontType1
+                if data.starts_with(b"%!PS-AdobeFont") || data.starts_with(b"%!FontType1") {
+                    formats::font::read_pfa(data).or_else(|_| formats::postscript::read_postscript(data))
+                } else {
+                    formats::postscript::read_postscript(data)
+                }
+            }
             FileType::Zip | FileType::Docx | FileType::Xlsx | FileType::Pptx
             | FileType::Doc | FileType::Xls | FileType::Ppt => formats::zip::read_zip(data),
             FileType::Rtf => formats::rtf::read_rtf(data),
@@ -1229,9 +1236,8 @@ impl ExifTool {
             "csv" => {
                 Ok(compute_text_tags(data, true))
             }
-            "url" | "lnk" => {
-                Ok(Vec::new())
-            }
+            "url" => formats::lnk::read_url(data).or_else(|_| Ok(Vec::new())),
+            "lnk" => formats::lnk::read_lnk(data).or_else(|_| Ok(Vec::new())),
             "gpx" | "kml" | "xml" | "inx" => formats::xmp_file::read_xmp(data),
             "plist" | "aae" => {
                 // Try XML plist or binary plist
@@ -1270,7 +1276,9 @@ impl ExifTool {
             | "dss" | "mobi" | "psp" | "pgf" | "raw"
             | "pmp" | "torrent" | "wtv"
             | "xisf" | "czi" | "iso" | "mxf"
-            | "afm" | "pfb" | "dfont" => Ok(Vec::new()),
+            | "pfb" | "dfont" => Ok(Vec::new()),
+            "afm" => formats::font::read_afm(data).or_else(|_| Ok(Vec::new())),
+            "pfa" => formats::font::read_pfa(data).or_else(|_| Ok(Vec::new())),
             _ => Err(Error::UnsupportedFileType(ext)),
         }
     }

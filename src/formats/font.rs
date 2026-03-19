@@ -171,3 +171,227 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         raw_value: value, print_value: pv, priority: 0,
     }
 }
+
+/// Read PostScript Type 1 ASCII font (.pfa) file.
+/// Mirrors ExifTool's PostScript.pm + Font.pm PSInfo handling.
+pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
+    // Must start with %!PS-AdobeFont or similar (check bytes directly)
+    if !data.starts_with(b"%!PS-AdobeFont") && !data.starts_with(b"%!FontType1") {
+        return Err(Error::InvalidData("not a PFA file".into()));
+    }
+
+    // Take only the text portion (until we hit binary data)
+    // Find the first non-text byte or use the full file if all text
+    let text_end = data.iter().position(|&b| b == 0x80).unwrap_or(data.len());
+    let text_data = &data[..text_end];
+    let text = String::from_utf8_lossy(text_data);
+
+    let mut tags = Vec::new();
+    let mut comment_parts: Vec<String> = Vec::new();
+    let mut in_font_info = false;
+    let mut dsc_done = false;
+    let mut comment_done = false;
+
+    for line in text.lines() {
+        // DSC comments: %% prefix
+        if line.starts_with("%%") {
+            dsc_done = false;
+            if let Some(rest) = line.strip_prefix("%%Title: ") {
+                tags.push(mk("Title", "Title", Value::String(rest.trim().to_string())));
+            } else if let Some(rest) = line.strip_prefix("%%CreationDate: ") {
+                tags.push(mk("CreateDate", "Create Date", Value::String(rest.trim().to_string())));
+            } else if let Some(rest) = line.strip_prefix("%%Creator: ") {
+                tags.push(mk("Creator", "Creator", Value::String(rest.trim().to_string())));
+            } else if line.starts_with("%%EndComments") {
+                dsc_done = true;
+            }
+            continue;
+        }
+
+        // Single % comment (only before EndComments / first non-comment)
+        if line.starts_with('%') && !comment_done {
+            let rest = &line[1..].trim_start();
+            if !rest.is_empty() {
+                comment_parts.push(rest.to_string());
+            }
+            continue;
+        }
+
+        // Non-comment line: stop accumulating comments if we haven't already
+        if !line.starts_with('%') && !comment_done && !comment_parts.is_empty() {
+            comment_done = true;
+        }
+
+        // Detect FontInfo begin/end
+        if line.contains("FontInfo") && (line.contains("begin") || line.contains("dict begin")) {
+            in_font_info = true;
+        }
+        if line.contains("currentdict end") || line.contains("end\n") || line.trim() == "end" {
+            if in_font_info {
+                in_font_info = false;
+            }
+        }
+
+        // Parse /key value lines (both inside and outside FontInfo for top-level attrs)
+        if line.contains('/') {
+            let line_trimmed = line.trim();
+            if let Some(rest) = line_trimmed.strip_prefix('/') {
+                // Parse /Key value
+                if let Some((key, val_part)) = rest.split_once(|c: char| c == ' ' || c == '\t') {
+                    let val = val_part.trim();
+                    let val_str = if val.starts_with('(') && val.contains(')') {
+                        // PostScript string literal (value)
+                        let inner = val.trim_start_matches('(');
+                        if let Some(end) = inner.rfind(')') {
+                            unescape_postscript(&inner[..end]).to_string()
+                        } else {
+                            inner.to_string()
+                        }
+                    } else if val.starts_with('/') {
+                        // /Key /Value
+                        val[1..].split_whitespace().next().unwrap_or("").to_string()
+                    } else {
+                        // /Key value (number, boolean)
+                        val.split_whitespace().next().unwrap_or("").to_string()
+                    };
+
+                    // Map key to tag (PSInfo table)
+                    match key {
+                        "FontName" => tags.push(mk("FontName", "Font Name", Value::String(val_str))),
+                        "FontType" => tags.push(mk("FontType", "Font Type", Value::String(val_str))),
+                        "FullName" => tags.push(mk("FullName", "Full Name", Value::String(val_str))),
+                        "FamilyName" => tags.push(mk("FontFamily", "Font Family", Value::String(val_str))),
+                        "Weight" => tags.push(mk("Weight", "Weight", Value::String(val_str))),
+                        "Notice" => tags.push(mk("Notice", "Notice", Value::String(val_str))),
+                        "version" => tags.push(mk("Version", "Version", Value::String(val_str))),
+                        "FSType" => tags.push(mk("FSType", "FS Type", Value::String(val_str))),
+                        "ItalicAngle" => tags.push(mk("ItalicAngle", "Italic Angle", Value::String(val_str))),
+                        "isFixedPitch" => tags.push(mk("IsFixedPitch", "Is Fixed Pitch", Value::String(val_str))),
+                        "UnderlinePosition" => tags.push(mk("UnderlinePosition", "Underline Position", Value::String(val_str))),
+                        "UnderlineThickness" => tags.push(mk("UnderlineThickness", "Underline Thickness", Value::String(val_str))),
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+
+    // Add accumulated comment
+    if !comment_parts.is_empty() {
+        let combined = comment_parts.join(".."); // ExifTool joins with ".." separator
+        tags.push(mk("Comment", "Comment", Value::String(combined)));
+    }
+
+    Ok(tags)
+}
+
+fn unescape_postscript(s: &str) -> String {
+    let mut result = String::new();
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                Some('n') => result.push('\n'),
+                Some('r') => result.push('\r'),
+                Some('t') => result.push('\t'),
+                Some('b') => result.push('\x08'),
+                Some('f') => result.push('\x0c'),
+                Some('\\') => result.push('\\'),
+                Some('(') => result.push('('),
+                Some(')') => result.push(')'),
+                Some(c) => { result.push('\\'); result.push(c); }
+                None => result.push('\\'),
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
+/// Read Adobe Font Metrics (.afm) text file.
+/// Mirrors ExifTool's Font.pm AFM handling.
+pub fn read_afm(data: &[u8]) -> Result<Vec<Tag>> {
+    let text = std::str::from_utf8(data).map_err(|_| Error::InvalidData("AFM not UTF-8".into()))?;
+
+    // Must start with StartFontMetrics
+    if !text.starts_with("StartFontMetrics") {
+        return Err(Error::InvalidData("not an AFM file".into()));
+    }
+
+    let mut tags = Vec::new();
+    let mut create_date: Option<String> = None;
+
+    for line in text.lines() {
+        // Comment lines: "Comment key: value" or "Comment text"
+        if line.starts_with("Comment ") {
+            let rest = &line[8..];
+            // Check for "Comment Creation Date: ..."
+            if let Some(stripped) = rest.strip_prefix("Creation Date: ") {
+                create_date = Some(stripped.trim().to_string());
+            } else if create_date.is_none() && !rest.is_empty() {
+                // First non-date comment becomes Comment tag
+                tags.push(mk("Comment", "Comment", Value::String(rest.trim().to_string())));
+            }
+            continue;
+        }
+
+        // Key value pairs separated by first whitespace
+        if let Some((key, value)) = line.split_once(|c: char| c == ' ' || c == '\t') {
+            let key = key.trim();
+            let value = value.trim();
+
+            // Map AFM keys to ExifTool tag names
+            // ExifTool uses the Perl key directly (mostly same as AFM key)
+            let tag_name = match key {
+                "FontName" => Some(("FontName", "Font Name")),
+                "FullName" => Some(("FullName", "Full Name")),
+                "FamilyName" => Some(("FontFamily", "Font Family")),
+                "Weight" => Some(("Weight", "Weight")),
+                "Notice" => {
+                    // Strip parentheses
+                    let v = value.trim_start_matches('(').trim_end_matches(')');
+                    tags.push(mk("Notice", "Notice", Value::String(v.to_string())));
+                    None
+                }
+                "Version" => Some(("Version", "Version")),
+                "EncodingScheme" => Some(("EncodingScheme", "Encoding Scheme")),
+                "CapHeight" => {
+                    if let Ok(n) = value.parse::<f64>() {
+                        tags.push(mk("CapHeight", "Cap Height", Value::String(format!("{}", n))));
+                    }
+                    None
+                }
+                "XHeight" => {
+                    if let Ok(n) = value.parse::<f64>() {
+                        tags.push(mk("XHeight", "X Height", Value::String(format!("{}", n))));
+                    }
+                    None
+                }
+                "Ascender" => {
+                    if let Ok(n) = value.parse::<f64>() {
+                        tags.push(mk("Ascender", "Ascender", Value::String(format!("{}", n))));
+                    }
+                    None
+                }
+                "Descender" => {
+                    if let Ok(n) = value.parse::<f64>() {
+                        tags.push(mk("Descender", "Descender", Value::String(format!("{}", n))));
+                    }
+                    None
+                }
+                _ => None,
+            };
+            if let Some((name, desc)) = tag_name {
+                tags.push(mk(name, desc, Value::String(value.to_string())));
+            }
+        }
+    }
+
+    // Add CreateDate from comments
+    if let Some(date) = create_date {
+        tags.push(mk("CreateDate", "Create Date", Value::String(date)));
+    }
+
+    Ok(tags)
+}

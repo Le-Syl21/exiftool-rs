@@ -183,7 +183,7 @@ fn normalize_ical_tag(raw_tag: &str) -> String {
         "X-wr-calname" => "CalendarName".into(),
         "X-wr-relcalid" => "CalendarID".into(),
         "X-wr-alarmuid" => "AlarmUID".into(),
-        "X-wr-timezone" => "Wr-timezone".into(),
+        "X-wr-timezone" => "TimeZone2".into(),
         "Last-modified" => "ModifyDate".into(),
         "Recurrence-id" => "RecurrenceID".into(),
         "Exdate" => "ExceptionDateTimes".into(),
@@ -545,13 +545,24 @@ pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                     sub_stack.clear();
                     sub_count_stack = vec![std::collections::HashMap::new()];
                 } else {
-                    // Sub-component (VALARM, DAYLIGHT, STANDARD, or nested isComponent when already in one)
-                    // Increment count in current level
-                    let cnt = sub_count_stack.last_mut().unwrap()
-                        .entry(what_cap.clone()).or_insert(0);
-                    *cnt += 1;
-                    let idx = *cnt;
-                    sub_stack.push((what_cap.clone(), idx));
+                    // Sub-component (VALARM, DAYLIGHT, STANDARD, etc.)
+                    // In Perl: `$count[-1]{$what}++ if $v` where $v is non-empty only for V-prefixed names
+                    // (VALARM→$v="V", Alarm; DAYLIGHT→$v="", Daylight)
+                    // The $what used is WITHOUT the V prefix (Alarm, Daylight, Standard)
+                    let has_v_prefix = what_cap.starts_with('V') && what_cap.len() > 1;
+                    let obj_name = what_no_v.clone(); // component name without V prefix
+
+                    let idx = if has_v_prefix {
+                        // Only V-prefixed components get a count (e.g. VALARM → Alarm1)
+                        let cnt = sub_count_stack.last_mut().unwrap()
+                            .entry(obj_name.clone()).or_insert(0);
+                        *cnt += 1;
+                        *cnt
+                    } else {
+                        // Non-V components (DAYLIGHT, STANDARD) don't get a count → use 0 (displayed as empty)
+                        0
+                    };
+                    sub_stack.push((obj_name, idx));
                     sub_count_stack.push(std::collections::HashMap::new());
                 }
             } else { // END
@@ -580,8 +591,15 @@ pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
 
         if is_vcalendar {
             // Build tag prefix from sub_stack only (top-level component tags are flat)
+            // Index 0 means no number suffix (for non-V-prefixed components like DAYLIGHT)
             let prefix: String = sub_stack.iter()
-                .map(|(name, idx)| format!("{}{}", name, idx))
+                .map(|(name, idx)| {
+                    if *idx == 0 {
+                        name.clone()
+                    } else {
+                        format!("{}{}", name, idx)
+                    }
+                })
                 .collect();
             emit_ical_tag(&parsed, &prefix, &mut tags);
         } else {
