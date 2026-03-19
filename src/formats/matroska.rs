@@ -200,16 +200,16 @@ fn parse_track_entry(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>)
         if pos + size > end { break; }
 
         match id {
-            0x57 => { // TrackNumber (from Perl Matroska.pm)
+            0xD7 => { // TrackNumber (Perl 0x57 → raw 0xD7)
                 let v = read_uint(data, pos, size);
                 tags.push(mk("TrackNumber", "Track Number", Value::U32(v as u32)));
             }
-            0x33C5 => { // TrackUID
+            0x73C5 => { // TrackUID (Perl 0x33C5 → raw 0x73C5)
                 let v = read_uint(data, pos, size);
                 tags.push(mk("TrackUID", "Track UID", Value::String(format!("{:08x}", v))));
             }
             0x83 => {
-                // TrackType
+                // TrackType (Perl 0x03 → raw 0x83)
                 let type_str = match track_type {
                     1 => "Video", 2 => "Audio", 3 => "Complex",
                     0x10 => "Logo", 0x11 => "Subtitle", 0x12 => "Buttons", 0x20 => "Control",
@@ -217,23 +217,23 @@ fn parse_track_entry(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>)
                 };
                 tags.push(mk("TrackType", "Track Type", Value::String(type_str.into())));
             }
-            0x39 => { // TrackUsed (FlagEnabled)
+            0xB9 => { // TrackUsed/FlagEnabled (Perl 0x39 → raw 0xB9)
                 let v = read_uint(data, pos, size);
                 tags.push(mk("TrackUsed", "Track Used", Value::String(if v != 0 { "Yes" } else { "No" }.into())));
             }
-            0x08 => { // TrackDefault (FlagDefault)
+            0x88 => { // TrackDefault/FlagDefault (Perl 0x08 → raw 0x88)
                 let v = read_uint(data, pos, size);
                 tags.push(mk("TrackDefault", "Track Default", Value::String(if v != 0 { "Yes" } else { "No" }.into())));
             }
-            0x15AA => { // TrackForced (FlagForced)
+            0x55AA => { // TrackForced/FlagForced (Perl 0x15AA → raw 0x55AA)
                 let v = read_uint(data, pos, size);
                 tags.push(mk("TrackForced", "Track Forced", Value::String(if v != 0 { "Yes" } else { "No" }.into())));
             }
-            0x3314F => { // TrackTimecodeScale
+            0x23314F => { // TrackTimecodeScale (Perl 0x3314F → raw 0x23314F)
                 let v = read_float(data, pos, size);
                 tags.push(mk("TrackTimecodeScale", "Track Timecode Scale", Value::String(format!("{}", v))));
             }
-            0x2A => { // CodecDecodeAll
+            0xAA => { // CodecDecodeAll (Perl 0x2A → raw 0xAA)
                 let v = read_uint(data, pos, size);
                 tags.push(mk("CodecDecodeAll", "Codec Decode All", Value::String(if v != 0 { "Yes" } else { "No" }.into())));
             }

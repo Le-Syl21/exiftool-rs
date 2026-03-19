@@ -213,6 +213,7 @@ fn decode_id3v2_frame_22(frame_id: &[u8], data: &[u8]) -> Vec<Tag> {
         "TT1" => ("Grouping", "Grouping"),
         "TP2" => ("Band", "Band"),
         "TPA" => ("PartOfSet", "Part of Set"),
+        "TCP" => ("Compilation", "Compilation"),
         _ => return Vec::new(),
     };
 
@@ -225,6 +226,16 @@ fn decode_id3v2_frame_22(frame_id: &[u8], data: &[u8]) -> Vec<Tag> {
     if name == "Genre" {
         let resolved = resolve_genre(&text);
         return vec![mk(name, description, Value::String(resolved))];
+    }
+
+    // Compilation: map "0" → "No", "1" → "Yes"
+    if name == "Compilation" {
+        let val = match text.trim() {
+            "0" => "No".to_string(),
+            "1" => "Yes".to_string(),
+            other => other.to_string(),
+        };
+        return vec![mk(name, description, Value::String(val))];
     }
 
     vec![mk(name, description, Value::String(text))]
@@ -255,6 +266,7 @@ fn decode_id3v2_frame(frame_id: &[u8], data: &[u8]) -> Option<Tag> {
         "TCOP" => ("Copyright", "Copyright"),
         "TSSE" => ("EncoderSettings", "Encoder Settings"),
         "TSRC" => ("ISRC", "ISRC"),
+        "TCMP" => ("Compilation", "Compilation"),
         "COMM" => return decode_comment_frame("Comment", "Comment", data),
         "USLT" => return decode_comment_frame("Lyrics", "Lyrics", data),
         "APIC" => {
@@ -284,6 +296,15 @@ fn decode_id3v2_frame(frame_id: &[u8], data: &[u8]) -> Option<Tag> {
     if name == "Genre" {
         let resolved = resolve_genre(&text);
         return Some(mk(name, description, Value::String(resolved)));
+    }
+    // Compilation: map "0" → "No", "1" → "Yes"
+    if name == "Compilation" {
+        let val = match text.trim() {
+            "0" => "No".to_string(),
+            "1" => "Yes".to_string(),
+            other => other.to_string(),
+        };
+        return Some(mk(name, description, Value::String(val)));
     }
     Some(mk(name, description, Value::String(text)))
 }

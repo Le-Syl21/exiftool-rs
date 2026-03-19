@@ -236,13 +236,13 @@ fn decode_raf_tag(tag_id: u16, data_len: usize, val_data: &[u8], fuji_layout: bo
         0x2ff0 if data_len >= 8 => {
             Some(decode_wb_grgb(val_data, "WB_GRGBLevels", "WB GRGB Levels"))
         }
-        // RelativeExposure: rational32s (big-endian signed int32 numerator/denominator)
+        // RelativeExposure: rational32s = int16s numerator + int16s denominator (4 bytes total)
         // ValueConv: log($val) / log(2); PrintConv: sprintf("%+.1f",$val) or 0
-        0x9200 if data_len >= 8 => {
-            let n = i32::from_be_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]);
-            let d = i32::from_be_bytes([val_data[4], val_data[5], val_data[6], val_data[7]]);
-            if d != 0 {
-                let ratio = n as f64 / d as f64;
+        0x9200 if data_len >= 4 => {
+            let n = i16::from_be_bytes([val_data[0], val_data[1]]) as f64;
+            let d = i16::from_be_bytes([val_data[2], val_data[3]]) as f64;
+            if d != 0.0 {
+                let ratio = n / d;
                 let value = if ratio > 0.0 {
                     ratio.ln() / 2.0_f64.ln()
                 } else if ratio == 0.0 {
@@ -261,13 +261,13 @@ fn decode_raf_tag(tag_id: u16, data_len: usize, val_data: &[u8], fuji_layout: bo
                 None
             }
         }
-        // RawExposureBias: rational32s
+        // RawExposureBias: rational32s = int16s/int16s (4 bytes)
         // PrintConv: sprintf("%+.1f",$val) or 0
-        0x9650 if data_len >= 8 => {
-            let n = i32::from_be_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]);
-            let d = i32::from_be_bytes([val_data[4], val_data[5], val_data[6], val_data[7]]);
-            if d != 0 {
-                let value = n as f64 / d as f64;
+        0x9650 if data_len >= 4 => {
+            let n = i16::from_be_bytes([val_data[0], val_data[1]]) as f64;
+            let d = i16::from_be_bytes([val_data[2], val_data[3]]) as f64;
+            if d != 0.0 {
+                let value = n / d;
                 let print = if value == 0.0 {
                     "0".to_string()
                 } else {

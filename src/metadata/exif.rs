@@ -133,6 +133,78 @@ impl ExifReader {
             tags.extend(mn_tags);
         }
 
+        // Parse IPTC data embedded in TIFF (tag 0x83BB "IPTC-NAA")
+        // The raw tag stores IPTC data as undefined bytes or a list of u32 values
+        {
+            let iptc_data: Option<Vec<u8>> = tags.iter()
+                .find(|t| t.name == "IPTC-NAA")
+                .and_then(|t| {
+                    match &t.raw_value {
+                        Value::Undefined(bytes) => Some(bytes.clone()),
+                        Value::Binary(bytes) => Some(bytes.clone()),
+                        Value::List(items) => {
+                            // IPTC-NAA stored as uint32 list - convert back to bytes (big-endian)
+                            let mut bytes = Vec::with_capacity(items.len() * 4);
+                            for item in items {
+                                match item {
+                                    Value::U32(v) => bytes.extend_from_slice(&v.to_be_bytes()),
+                                    _ => {}
+                                }
+                            }
+                            if bytes.is_empty() { None } else { Some(bytes) }
+                        }
+                        _ => None,
+                    }
+                });
+
+            if let Some(iptc_bytes) = iptc_data {
+                // Compute MD5 of the raw IPTC data for CurrentIPTCDigest
+                let md5_hex = crate::md5::md5_hex(&iptc_bytes);
+
+                if let Ok(iptc_tags) = crate::metadata::IptcReader::read(&iptc_bytes) {
+                    // Replace raw IPTC-NAA tag with parsed IPTC tags
+                    tags.retain(|t| t.name != "IPTC-NAA");
+                    tags.extend(iptc_tags);
+                }
+
+                // Add CurrentIPTCDigest tag
+                tags.push(crate::tag::Tag {
+                    id: crate::tag::TagId::Text("CurrentIPTCDigest".into()),
+                    name: "CurrentIPTCDigest".into(),
+                    description: "Current IPTC Digest".into(),
+                    group: crate::tag::TagGroup {
+                        family0: "IPTC".into(),
+                        family1: "IPTC".into(),
+                        family2: "Other".into(),
+                    },
+                    raw_value: Value::String(md5_hex.clone()),
+                    print_value: md5_hex,
+                    priority: 0,
+                });
+            }
+        }
+
+        // Parse ICC_Profile data embedded in TIFF (tag 0x8773)
+        {
+            let icc_data: Option<Vec<u8>> = tags.iter()
+                .find(|t| t.name == "ICC_Profile")
+                .and_then(|t| {
+                    match &t.raw_value {
+                        Value::Undefined(bytes) => Some(bytes.clone()),
+                        Value::Binary(bytes) => Some(bytes.clone()),
+                        _ => None,
+                    }
+                });
+
+            if let Some(icc_bytes) = icc_data {
+                if let Ok(icc_tags) = crate::formats::icc::read_icc(&icc_bytes) {
+                    // Replace raw ICC_Profile tag with parsed ICC tags
+                    tags.retain(|t| t.name != "ICC_Profile");
+                    tags.extend(icc_tags);
+                }
+            }
+        }
+
         Ok(tags)
     }
 

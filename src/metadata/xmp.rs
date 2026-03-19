@@ -146,6 +146,19 @@ impl XmpReader {
         // Whether we're inside a GContainer:Directory/Seq/li (struct li).
         let mut in_gcontainer_li = false;
 
+        // Language-alt tracking:
+        // - current_li_lang: the xml:lang value on the current inner rdf:li
+        // - in_lang_alt: we're inside a rdf:Alt element
+        // - lang_alt_in_bag: the rdf:Alt is itself inside an outer rdf:li (Bag-of-lang-alt)
+        // - bag_lang_values: per-lang accumulated list for bag-of-lang-alt
+        // - bag_item_count: number of Bag items processed (for empty-slot tracking)
+        let mut current_li_lang: Option<String> = None;
+        let mut in_lang_alt = false;
+        let mut lang_alt_in_bag = false;
+        let mut bag_lang_values: std::collections::HashMap<String, Vec<Option<String>>> =
+            std::collections::HashMap::new();
+        let mut bag_item_count: usize = 0;
+
         for event in parser {
             match event {
                 Ok(XmlEvent::StartElement {
@@ -264,7 +277,38 @@ impl XmpReader {
                     } else if name.local_name == "li"
                         && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
+                        if in_lang_alt {
+                            // Inner rdf:li inside rdf:Alt — track the xml:lang attribute
+                            current_li_lang = attributes.iter()
+                                .find(|a| a.name.local_name == "lang"
+                                    && (a.name.prefix.as_deref() == Some("xml")
+                                        || a.name.namespace.as_deref() == Some("http://www.w3.org/XML/1998/namespace")))
+                                .map(|a| a.value.clone());
+                        } else if lang_alt_in_bag {
+                            // Outer rdf:li inside Bag (contains an Alt) — new bag item
+                            // Reset inner alt tracking for this item
+                            bag_item_count += 1;
+                        }
                         in_rdf_li = true;
+                    }
+
+                    // Detect rdf:Alt
+                    if name.local_name == "Alt"
+                        && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                    {
+                        in_lang_alt = true;
+                        // Check if we're inside an outer rdf:li (Bag item)
+                        // Path ends with: ..., Bag, li, Alt (just pushed)
+                        let depth = path.len();
+                        if depth >= 3 {
+                            let li_elem = &path[depth - 2]; // li (just before Alt)
+                            let bag_elem = &path[depth - 3]; // Bag
+                            if li_elem.1 == "li" && li_elem.0 == "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                                && bag_elem.1 == "Bag" && bag_elem.0 == "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                            {
+                                lang_alt_in_bag = true;
+                            }
+                        }
                     }
 
                     // Inside a GContainer struct li: capture Container:Item attributes
@@ -304,12 +348,36 @@ impl XmpReader {
                     if name.local_name == "li"
                         && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
-                        if in_gcontainer_li {
+                        if in_lang_alt {
+                            // Inner rdf:li inside rdf:Alt — store by lang
+                            let lang = current_li_lang.take().unwrap_or_else(|| "x-default".to_string());
+                            let text = current_text.trim().to_string();
+                            let opt_text = if text.is_empty() { None } else { Some(text.clone()) };
+                            if lang_alt_in_bag {
+                                // Bag-of-lang-alt: accumulate per-lang for current bag item
+                                let entry = bag_lang_values.entry(lang.clone()).or_default();
+                                // Pad to current bag item count if needed
+                                while entry.len() < bag_item_count {
+                                    entry.push(None);
+                                }
+                                entry.push(opt_text);
+                            } else {
+                                // Simple lang-alt: use list_values for x-default, track others separately
+                                if lang == "x-default" {
+                                    list_values.push(text);
+                                } else {
+                                    // Store non-default lang values with "-lang" suffix
+                                    bag_lang_values.entry(lang).or_default().push(opt_text);
+                                }
+                            }
+                        } else if in_gcontainer_li {
                             // GContainer struct li: fields were captured as attributes, not text
                             in_gcontainer_li = false;
                         } else if !current_text.trim().is_empty() {
                             list_values.push(current_text.trim().to_string());
                         }
+                        // If this was an outer li in bag-of-alt mode, we don't reset in_lang_alt
+                        // because we exit in_rdf_li but may still be in the bag
                         in_rdf_li = false;
                         path.pop();
                         current_text.clear();
@@ -322,6 +390,156 @@ impl XmpReader {
                         || name.local_name == "Alt")
                         && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
+                        // Handle closing rdf:Alt (simple lang-alt or end of inner Alt in bag-of-alt)
+                        if name.local_name == "Alt" {
+                            in_lang_alt = false;
+                            // If this Alt was inside a Bag li, don't emit yet — wait for Bag close
+                            if lang_alt_in_bag {
+                                // Reset for next Alt item — the outer li close will be next
+                                path.pop();
+                                current_text.clear();
+                                continue;
+                            }
+                            // Simple lang-alt (not in bag): emit tag with x-default as main value
+                            // and per-lang variants
+                            if let Some(parent) = path.iter().rev().nth(1) {
+                                let prefix = namespace_prefix(&parent.0);
+                                let tag_name = parent.1.clone();
+                                let group_prefix = if prefix.is_empty() { "XMP" } else { prefix };
+                                let category = namespace_category(group_prefix);
+
+                                // Emit x-default as main tag
+                                if !list_values.is_empty() {
+                                    let main_val = if list_values.len() == 1 {
+                                        Value::String(list_values[0].clone())
+                                    } else {
+                                        Value::List(list_values.iter().map(|s| Value::String(s.clone())).collect())
+                                    };
+                                    let pv = main_val.to_display_string();
+                                    tags.push(Tag {
+                                        id: TagId::Text(format!("{}:{}", group_prefix, tag_name)),
+                                        name: ucfirst(&tag_name),
+                                        description: ucfirst(&tag_name),
+                                        group: TagGroup {
+                                            family0: "XMP".into(),
+                                            family1: format!("XMP-{}", group_prefix),
+                                            family2: category.into(),
+                                        },
+                                        raw_value: main_val,
+                                        print_value: pv,
+                                        priority: 0,
+                                    });
+                                    list_values.clear();
+                                }
+                                // Emit per-lang variants as TagName-lang
+                                let mut lang_keys: Vec<String> = bag_lang_values.keys().cloned().collect();
+                                lang_keys.sort();
+                                for lang in &lang_keys {
+                                    let vals = &bag_lang_values[lang];
+                                    let non_none: Vec<String> = vals.iter()
+                                        .filter_map(|v| v.clone())
+                                        .collect();
+                                    if !non_none.is_empty() {
+                                        let lang_tag = format!("{}-{}", ucfirst(&tag_name), lang);
+                                        let val = if non_none.len() == 1 {
+                                            Value::String(non_none[0].clone())
+                                        } else {
+                                            Value::List(non_none.iter().map(|s| Value::String(s.clone())).collect())
+                                        };
+                                        let pv = val.to_display_string();
+                                        tags.push(Tag {
+                                            id: TagId::Text(format!("{}-{}:{}", group_prefix, lang, tag_name)),
+                                            name: lang_tag.clone(),
+                                            description: lang_tag.clone(),
+                                            group: TagGroup {
+                                                family0: "XMP".into(),
+                                                family1: format!("XMP-{}", group_prefix),
+                                                family2: category.into(),
+                                            },
+                                            raw_value: val,
+                                            print_value: pv,
+                                            priority: 0,
+                                        });
+                                    }
+                                }
+                                bag_lang_values.clear();
+                            }
+                            path.pop();
+                            current_text.clear();
+                            continue;
+                        }
+
+                        // Handle closing rdf:Bag when it's a Bag-of-lang-alt
+                        if name.local_name == "Bag" && lang_alt_in_bag {
+                            lang_alt_in_bag = false;
+                            bag_item_count = 0;
+                            // Find the parent property name
+                            if let Some(parent) = path.iter().rev().nth(1) {
+                                let prefix = namespace_prefix(&parent.0);
+                                let tag_name = parent.1.clone();
+                                let group_prefix = if prefix.is_empty() { "XMP" } else { prefix };
+                                let category = namespace_category(group_prefix);
+
+                                // Collect all language codes (maintaining insertion order: x-default first)
+                                let mut lang_keys: Vec<String> = bag_lang_values.keys().cloned().collect();
+                                // Put x-default first
+                                lang_keys.sort_by(|a, b| {
+                                    if a == "x-default" { std::cmp::Ordering::Less }
+                                    else if b == "x-default" { std::cmp::Ordering::Greater }
+                                    else { a.cmp(b) }
+                                });
+
+                                for lang in &lang_keys {
+                                    let vals = &bag_lang_values[lang];
+                                    let is_default = lang == "x-default";
+
+                                    // For x-default: join non-None values; for others: preserve empty slots
+                                    let joined: String = if is_default {
+                                        vals.iter()
+                                            .filter_map(|v| v.clone())
+                                            .collect::<Vec<_>>()
+                                            .join(", ")
+                                    } else {
+                                        vals.iter()
+                                            .map(|v| v.as_deref().unwrap_or(""))
+                                            .collect::<Vec<_>>()
+                                            .join(", ")
+                                    };
+
+                                    // Only emit if there's something meaningful
+                                    let has_content = vals.iter().any(|v| v.is_some());
+                                    if !has_content {
+                                        continue;
+                                    }
+
+                                    let (tag_key, tag_display) = if is_default {
+                                        (ucfirst(&tag_name), ucfirst(&tag_name))
+                                    } else {
+                                        let lt = format!("{}-{}", ucfirst(&tag_name), lang);
+                                        (lt.clone(), lt)
+                                    };
+
+                                    tags.push(Tag {
+                                        id: TagId::Text(format!("{}:{}", group_prefix, tag_key)),
+                                        name: tag_key.clone(),
+                                        description: tag_display,
+                                        group: TagGroup {
+                                            family0: "XMP".into(),
+                                            family1: format!("XMP-{}", group_prefix),
+                                            family2: category.into(),
+                                        },
+                                        raw_value: Value::String(joined.clone()),
+                                        print_value: joined,
+                                        priority: 0,
+                                    });
+                                }
+                                bag_lang_values.clear();
+                            }
+                            path.pop();
+                            current_text.clear();
+                            continue;
+                        }
+
                         // If this is the GContainer Seq, emit DirectoryItem* tags
                         if in_gcontainer_seq && name.local_name == "Seq" {
                             in_gcontainer_seq = false;

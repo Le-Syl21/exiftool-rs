@@ -19,6 +19,8 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
 
     let mut tags = Vec::new();
     let mut pos = 8; // skip signature
+    let mut found_idat = false;
+    let mut text_after_idat_count = 0usize;
 
     while pos + 12 <= data.len() {
         let chunk_len =
@@ -34,6 +36,10 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
         let chunk_data = &data[chunk_data_start..chunk_data_end];
 
         match chunk_type {
+            // IDAT - image data, track when we've seen it
+            b"IDAT" => {
+                found_idat = true;
+            }
             // IHDR - Image header (always first chunk)
             b"IHDR" if chunk_len >= 13 => {
                 let width = u32::from_be_bytes([
@@ -112,19 +118,30 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
 
             // tEXt - Uncompressed text
             b"tEXt" => {
+                if found_idat {
+                    text_after_idat_count += 1;
+                }
                 if let Some(null_pos) = chunk_data.iter().position(|&b| b == 0) {
                     let key = String::from_utf8_lossy(&chunk_data[..null_pos]).to_string();
                     let val =
                         String::from_utf8_lossy(&chunk_data[null_pos + 1..]).to_string();
-                    tags.push(make_png_text_tag(&key, &val));
+                    // Check for XMP in tEXt chunk
+                    if key == "XML:com.adobe.xmp" {
+                        if let Ok(xmp_tags) = crate::metadata::XmpReader::read(val.as_bytes()) {
+                            tags.extend(xmp_tags);
+                        }
+                    } else {
+                        tags.push(make_png_text_tag(&key, &val));
+                    }
                 }
             }
 
             // iTXt - International text (UTF-8)
             b"iTXt" => {
-                if let Some(tag) = parse_itxt(chunk_data) {
-                    tags.push(tag);
+                if found_idat {
+                    text_after_idat_count += 1;
                 }
+                parse_itxt_into(chunk_data, &mut tags);
             }
 
             // eXIf - EXIF data (PNG 1.5+)
@@ -201,6 +218,28 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
         pos = chunk_data_end + 4;
     }
 
+    // Generate warning if text/EXIF chunks appeared after IDAT
+    if text_after_idat_count > 0 {
+        let warn_msg = if text_after_idat_count > 1 {
+            format!("[minor] Text/EXIF chunk(s) found after PNG IDAT (may be ignored by some readers) [x{}]", text_after_idat_count)
+        } else {
+            "[minor] Text/EXIF chunk(s) found after PNG IDAT (may be ignored by some readers)".to_string()
+        };
+        tags.push(Tag {
+            id: TagId::Text("Warning".into()),
+            name: "Warning".into(),
+            description: "Warning".into(),
+            group: TagGroup {
+                family0: "ExifTool".into(),
+                family1: "ExifTool".into(),
+                family2: "Other".into(),
+            },
+            raw_value: Value::String(warn_msg.clone()),
+            print_value: warn_msg,
+            priority: 0,
+        });
+    }
+
     Ok(tags)
 }
 
@@ -251,14 +290,17 @@ fn make_png_text_tag(key: &str, value: &str) -> Tag {
     }
 }
 
-fn parse_itxt(data: &[u8]) -> Option<Tag> {
+fn parse_itxt_into(data: &[u8], tags: &mut Vec<Tag>) {
     // iTXt: keyword\0 compression_flag\0 compression_method\0 language\0 translated_keyword\0 text
-    let null_pos = data.iter().position(|&b| b == 0)?;
+    let null_pos = match data.iter().position(|&b| b == 0) {
+        Some(p) => p,
+        None => return,
+    };
     let key = String::from_utf8_lossy(&data[..null_pos]).to_string();
 
     let rest = &data[null_pos + 1..];
     if rest.len() < 2 {
-        return None;
+        return;
     }
 
     let _compression_flag = rest[0];
@@ -266,33 +308,28 @@ fn parse_itxt(data: &[u8]) -> Option<Tag> {
     let rest = &rest[2..];
 
     // Skip language tag
-    let null_pos = rest.iter().position(|&b| b == 0)?;
+    let null_pos = match rest.iter().position(|&b| b == 0) {
+        Some(p) => p,
+        None => return,
+    };
     let rest = &rest[null_pos + 1..];
 
     // Skip translated keyword
-    let null_pos = rest.iter().position(|&b| b == 0)?;
-    let text = String::from_utf8_lossy(&rest[null_pos + 1..]).to_string();
+    let null_pos = match rest.iter().position(|&b| b == 0) {
+        Some(p) => p,
+        None => return,
+    };
+    let text_slice = &rest[null_pos + 1..];
+
+    let text = String::from_utf8_lossy(text_slice).to_string();
 
     // Check for XMP in iTXt
     if key == "XML:com.adobe.xmp" {
-        if crate::metadata::XmpReader::read(text.as_bytes()).is_ok() {
-            // Return XMP tags individually would require changing return type,
-            // so for now store the raw XMP
-            return Some(Tag {
-                id: TagId::Text("XMP".into()),
-                name: "XMP".into(),
-                description: "XMP Metadata".into(),
-                group: TagGroup {
-                    family0: "XMP".into(),
-                    family1: "XMP".into(),
-                    family2: "Image".into(),
-                },
-                raw_value: Value::String(text),
-                print_value: "(XMP data)".into(),
-                priority: 0,
-            });
+        if let Ok(xmp_tags) = crate::metadata::XmpReader::read(text.as_bytes()) {
+            tags.extend(xmp_tags);
+            return;
         }
     }
 
-    Some(make_png_text_tag(&key, &text))
+    tags.push(make_png_text_tag(&key, &text));
 }

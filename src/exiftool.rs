@@ -833,8 +833,12 @@ impl ExifTool {
         if let Some(dir) = path.parent().and_then(|p| p.to_str()) {
             tags.push(file_tag("Directory", Value::String(dir.to_string())));
         }
-        if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-            tags.push(file_tag("FileTypeExtension", Value::String(ext.to_lowercase())));
+        // Use canonical extension from FileType (first in list), matching Perl behavior
+        let canonical_ext = file_type.extensions().first().copied().unwrap_or_else(|| {
+            path.extension().and_then(|e| e.to_str()).unwrap_or("")
+        });
+        if !canonical_ext.is_empty() {
+            tags.push(file_tag("FileTypeExtension", Value::String(canonical_ext.to_string())));
         }
 
         #[cfg(unix)]
@@ -872,6 +876,17 @@ impl ExifTool {
                     // JPEG: find APP1 EXIF header
                     data.windows(6).position(|w| w == b"Exif\0\0")
                         .map(|p| &data[p+6..])
+                } else if data.starts_with(b"FUJIFILMCCD-RAW") && data.len() >= 0x60 {
+                    // RAF: look in the embedded JPEG for EXIF byte order
+                    let jpeg_offset = u32::from_be_bytes([data[0x54], data[0x55], data[0x56], data[0x57]]) as usize;
+                    let jpeg_length = u32::from_be_bytes([data[0x58], data[0x59], data[0x5A], data[0x5B]]) as usize;
+                    if jpeg_offset > 0 && jpeg_offset + jpeg_length <= data.len() {
+                        let jpeg = &data[jpeg_offset..jpeg_offset + jpeg_length];
+                        jpeg.windows(6).position(|w| w == b"Exif\0\0")
+                            .map(|p| &jpeg[p+6..])
+                    } else {
+                        None
+                    }
                 } else if data.starts_with(b"RIFF") && data.len() >= 12 {
                     // RIFF/WebP: find EXIF chunk
                     let mut riff_bo: Option<&[u8]> = None;

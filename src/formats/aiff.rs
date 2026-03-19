@@ -17,11 +17,6 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
 
     let mut tags = Vec::new();
     let is_compressed = &data[8..12] == b"AIFC";
-    tags.push(mk(
-        "FileSubType",
-        "File Sub Type",
-        Value::String(if is_compressed { "AIFF-C (Compressed)".into() } else { "AIFF".into() }),
-    ));
 
     let mut pos = 12;
 
@@ -47,18 +42,22 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
 
                     tags.push(mk("NumChannels", "Number of Channels", Value::I16(channels)));
                     tags.push(mk("NumSampleFrames", "Number of Sample Frames", Value::U32(num_frames)));
-                    tags.push(mk("BitsPerSample", "Bits Per Sample", Value::I16(bits_per_sample)));
+                    tags.push(mk("SampleSize", "Sample Size", Value::I16(bits_per_sample)));
                     tags.push(mk("SampleRate", "Sample Rate", Value::U32(sample_rate as u32)));
 
                     if sample_rate > 0.0 && num_frames > 0 {
                         let duration = num_frames as f64 / sample_rate;
-                        let mins = (duration / 60.0) as u32;
-                        let secs = duration % 60.0;
-                        tags.push(mk(
-                            "Duration",
-                            "Duration",
-                            Value::String(format!("{}:{:05.2}", mins, secs)),
-                        ));
+                        // Perl ConvertDuration: < 30s → "{:.2} s", else "h:mm:ss"
+                        let dur_str = if duration < 30.0 {
+                            format!("{:.2} s", duration)
+                        } else {
+                            let dur_u = (duration + 0.5) as u64;
+                            let h = dur_u / 3600;
+                            let m = (dur_u % 3600) / 60;
+                            let s = dur_u % 60;
+                            format!("{}:{:02}:{:02}", h, m, s)
+                        };
+                        tags.push(mk("Duration", "Duration", Value::String(dur_str)));
                     }
 
                     // AIFC compression type
@@ -81,7 +80,7 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
             b"NAME" => {
                 let name = String::from_utf8_lossy(cd).trim_end_matches('\0').to_string();
                 if !name.is_empty() {
-                    tags.push(mk("Title", "Title", Value::String(name)));
+                    tags.push(mk("Name", "Name", Value::String(name)));
                 }
             }
             b"AUTH" => {
@@ -100,6 +99,37 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
                 let annotation = String::from_utf8_lossy(cd).trim_end_matches('\0').to_string();
                 if !annotation.is_empty() {
                     tags.push(mk("Annotation", "Annotation", Value::String(annotation)));
+                }
+            }
+            // COMT: Comment chunk with timestamp
+            b"COMT" => {
+                if cd.len() >= 2 {
+                    let num_comments = u16::from_be_bytes([cd[0], cd[1]]) as usize;
+                    let mut p = 2;
+                    for _ in 0..num_comments {
+                        if p + 8 > cd.len() { break; }
+                        let ts = u32::from_be_bytes([cd[p], cd[p+1], cd[p+2], cd[p+3]]);
+                        // marker ID at p+4..p+6 (skipped)
+                        let size = u16::from_be_bytes([cd[p+6], cd[p+7]]) as usize;
+                        p += 8;
+                        // CommentTime: Mac epoch (seconds since 1904-01-01)
+                        // ValueConv: ConvertUnixTime($val - ((66 * 365 + 17) * 24 * 3600))
+                        let mac_offset: u64 = (66 * 365 + 17) * 24 * 3600;
+                        if ts as u64 >= mac_offset {
+                            let unix_ts = ts as u64 - mac_offset;
+                            let dt = aiff_unix_to_datetime(unix_ts as i64);
+                            tags.push(mk("CommentTime", "Comment Time", Value::String(dt)));
+                        }
+                        if p + size <= cd.len() && size > 0 {
+                            let comment = String::from_utf8_lossy(&cd[p..p+size])
+                                .trim_end_matches('\0').to_string();
+                            if !comment.is_empty() {
+                                tags.push(mk("Comment", "Comment", Value::String(comment)));
+                            }
+                        }
+                        let size_padded = size + (size & 1);
+                        p += size_padded;
+                    }
                 }
             }
             // ID3 tags embedded in AIFF
@@ -146,6 +176,33 @@ fn decode_ieee_extended(data: &[u8]) -> f64 {
 
     let f = mantissa as f64 / (1u64 << 63) as f64;
     sign * f * 2.0_f64.powi(exponent as i32 - 16383)
+}
+
+/// Convert Unix timestamp to "YYYY:MM:DD HH:MM:SS" (UTC, without timezone suffix).
+/// Mirrors Perl's ConvertUnixTime($val) for AIFF CommentTime.
+fn aiff_unix_to_datetime(secs: i64) -> String {
+    let days = secs / 86400;
+    let time = secs % 86400;
+    let h = time / 3600;
+    let m = (time % 3600) / 60;
+    let s = time % 60;
+    let mut y = 1970i32;
+    let mut rem = days;
+    loop {
+        let dy: i64 = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 { 366 } else { 365 };
+        if rem < dy { break; }
+        rem -= dy;
+        y += 1;
+    }
+    let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+    let months: [i64; 12] = [31, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let mut mo = 1i32;
+    for &dm in &months {
+        if rem < dm { break; }
+        rem -= dm;
+        mo += 1;
+    }
+    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", y, mo, rem + 1, h, m, s)
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {
