@@ -164,6 +164,15 @@ pub fn parse_vorbis_comments(data: &[u8], tags: &mut Vec<Tag>) {
             let field = &comment[..eq_pos];
             let value = &comment[eq_pos + 1..];
 
+            // Special handling for METADATA_BLOCK_PICTURE: decode base64 then parse as FLAC picture
+            if field.eq_ignore_ascii_case("METADATA_BLOCK_PICTURE") {
+                // Decode base64
+                if let Some(pic_bytes) = base64_decode(value.trim()) {
+                    parse_flac_picture(&pic_bytes, tags);
+                }
+                continue;
+            }
+
             let (name, description) = vorbis_field_name(field);
             // If vorbis_field_name returned the raw field (unknown), try CamelCase conversion
             let (final_name, final_desc) = if name == field && field.contains(':') {
@@ -187,7 +196,7 @@ pub fn parse_vorbis_comments(data: &[u8], tags: &mut Vec<Tag>) {
     }
 }
 
-fn parse_flac_picture(data: &[u8], tags: &mut Vec<Tag>) {
+pub fn parse_flac_picture(data: &[u8], tags: &mut Vec<Tag>) {
     if data.len() < 32 {
         return;
     }
@@ -206,32 +215,106 @@ fn parse_flac_picture(data: &[u8], tags: &mut Vec<Tag>) {
         return;
     }
     let desc_len = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
-    pos += 4 + desc_len;
+    pos += 4;
+    let desc = if desc_len > 0 && pos + desc_len <= data.len() {
+        String::from_utf8_lossy(&data[pos..pos + desc_len]).to_string()
+    } else {
+        String::new()
+    };
+    pos += desc_len;
 
     if pos + 16 > data.len() {
         return;
     }
     let width = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]);
     let height = u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]);
-    pos += 16; // width + height + depth + num_colors
+    let depth = u32::from_be_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]]);
+    let num_colors = u32::from_be_bytes([data[pos + 12], data[pos + 13], data[pos + 14], data[pos + 15]]);
+    pos += 16;
 
     if pos + 4 > data.len() {
         return;
     }
-    let pic_data_len = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]);
+    let pic_data_len = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+    pos += 4;
 
     let type_str = match pic_type {
         0 => "Other",
+        1 => "File Icon",
+        2 => "Other File Icon",
         3 => "Front Cover",
         4 => "Back Cover",
+        5 => "Leaflet Page",
+        6 => "Media",
+        7 => "Lead Artist",
+        8 => "Artist",
+        9 => "Conductor",
+        10 => "Band",
+        11 => "Composer",
+        12 => "Lyricist",
+        13 => "Recording Location",
+        14 => "During Recording",
+        15 => "During Performance",
+        16 => "Movie Screen Capture",
+        17 => "A Bright Coloured Fish",
+        18 => "Illustration",
+        19 => "Band Logo",
+        20 => "Publisher Logo",
         _ => "Picture",
     };
 
-    tags.push(mk(
-        "Picture",
-        "Picture",
-        Value::String(format!("{} ({}x{}, {}, {} bytes)", type_str, width, height, mime, pic_data_len)),
-    ));
+    // Emit individual tags matching ExifTool's Perl output
+    tags.push(mk("PictureType", "Picture Type", Value::String(type_str.to_string())));
+    tags.push(mk("PictureMIMEType", "Picture MIME Type", Value::String(mime.clone())));
+    if !desc.is_empty() {
+        tags.push(mk("PictureDescription", "Picture Description", Value::String(desc)));
+    } else {
+        tags.push(mk("PictureDescription", "Picture Description", Value::String(String::new())));
+    }
+    tags.push(mk("PictureWidth", "Picture Width", Value::U32(width)));
+    tags.push(mk("PictureHeight", "Picture Height", Value::U32(height)));
+    tags.push(mk("PictureBitsPerPixel", "Picture Bits Per Pixel", Value::U32(depth)));
+    tags.push(mk("PictureIndexedColors", "Picture Indexed Colors", Value::U32(num_colors)));
+    tags.push(mk("PictureLength", "Picture Length", Value::U32(pic_data_len as u32)));
+
+    // Include the actual picture data
+    let pic_end = (pos + pic_data_len).min(data.len());
+    if pos < pic_end {
+        let pic_data = data[pos..pic_end].to_vec();
+        tags.push(mk("Picture", "Picture", Value::Binary(pic_data)));
+    }
+}
+
+/// Simple base64 decoder (no external deps).
+pub fn base64_decode(input: &str) -> Option<Vec<u8>> {
+    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut table = [255u8; 256];
+    for (i, &c) in CHARS.iter().enumerate() {
+        table[c as usize] = i as u8;
+    }
+
+    let input: Vec<u8> = input.bytes().filter(|&c| c != b'\n' && c != b'\r' && c != b' ').collect();
+    let mut out = Vec::with_capacity(input.len() * 3 / 4);
+
+    let mut i = 0;
+    while i + 3 < input.len() {
+        let a = table[input[i] as usize];
+        let b = table[input[i+1] as usize];
+        let c = table[input[i+2] as usize];
+        let d = table[input[i+3] as usize];
+
+        if a == 255 || b == 255 { break; }
+
+        out.push((a << 2) | (b >> 4));
+        if input[i+2] != b'=' && c != 255 {
+            out.push((b << 4) | (c >> 2));
+        }
+        if input[i+3] != b'=' && d != 255 {
+            out.push((c << 6) | d);
+        }
+        i += 4;
+    }
+    Some(out)
 }
 
 /// Convert "SOME WORDS" to "SomeWords" (CamelCase, spaces/underscores removed).

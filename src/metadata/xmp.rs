@@ -128,11 +128,29 @@ impl XmpReader {
                 .map_err(|e| Error::InvalidXmp(format!("invalid UTF-8: {}", e)))?
         };
 
-        let parser = EventReader::from_str(xml_data);
+        // Pre-pass: collect rdf:nodeID-mapped bag/seq values for later reference resolution.
+        // Also strip invalid XML chars from xpacket processing instructions.
+        let xml_clean: String = sanitize_xmp_xml(xml_data);
+        let xml_for_parse: &str = &xml_clean;
+
+        // Check if this is RDF/XMP format or generic XML
+        let is_rdf = xml_for_parse.contains("rdf:RDF") || xml_for_parse.contains("rdf:Description");
+        if !is_rdf {
+            // Generic XML: extract tags by building tag names from element paths
+            return read_generic_xml(xml_for_parse);
+        }
+
+        // Pre-pass: collect rdf:nodeID → list values (for Bag/Seq with nodeIDs)
+        let node_bags: std::collections::HashMap<String, Vec<String>> =
+            collect_node_bag_values(xml_for_parse);
+
+        let parser = EventReader::from_str(xml_for_parse);
         let mut path: Vec<(String, String)> = Vec::new(); // (namespace, local_name)
         let mut current_text = String::new();
         let mut in_rdf_li = false;
         let mut list_values: Vec<String> = Vec::new();
+        // Track depths where we should emit even with empty text (ExifTool et:id format)
+        let mut emit_empty_depths: std::collections::HashSet<usize> = std::collections::HashSet::new();
         // Track elements with rdf:parseType='Resource' (bare structs).
         // Each entry is the path depth at which we entered such an element.
         let mut parse_resource_depths: Vec<usize> = Vec::new();
@@ -169,6 +187,16 @@ impl XmpReader {
                     path.push((ns_uri.to_string(), name.local_name.clone()));
                     current_text.clear();
 
+                    // Track elements with et:id (ExifTool internal format): emit even if empty
+                    let has_et_id = attributes.iter().any(|a| {
+                        a.name.local_name == "id"
+                            && (a.name.prefix.as_deref() == Some("et")
+                                || a.name.namespace.as_deref() == Some("http://ns.exiftool.org/1.0/"))
+                    });
+                    if has_et_id {
+                        emit_empty_depths.insert(path.len());
+                    }
+
                     // Track rdf:parseType='Resource' (bare struct context)
                     let has_parse_resource = attributes.iter().any(|a| {
                         a.name.local_name == "parseType"
@@ -197,6 +225,51 @@ impl XmpReader {
                         }
                     }
 
+                    // Check if this element has a rdf:nodeID reference to a known bag/seq.
+                    // E.g., <dc:subject rdf:nodeID="anon2"/> — emit the bag values as a tag.
+                    // This is for non-Description elements that reference a nodeID bag.
+                    if name.local_name != "Description"
+                        && name.local_name != "RDF"
+                        && name.namespace.as_deref() != Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                    {
+                        if let Some(node_ref) = attributes.iter().find(|a| {
+                            a.name.local_name == "nodeID"
+                                && (a.name.prefix.as_deref() == Some("rdf")
+                                    || a.name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))
+                        }) {
+                            if let Some(bag_values) = node_bags.get(&node_ref.value) {
+                                let ns_uri = name.namespace.as_deref().unwrap_or("");
+                                let prefix = namespace_prefix(ns_uri);
+                                let group_prefix = if prefix.is_empty() {
+                                    name.prefix.as_deref().unwrap_or("XMP")
+                                } else {
+                                    prefix
+                                };
+                                let category = namespace_category(group_prefix);
+                                let full_name = ucfirst(&name.local_name);
+                                let value = if bag_values.len() == 1 {
+                                    Value::String(bag_values[0].clone())
+                                } else {
+                                    Value::List(bag_values.iter().map(|s| Value::String(s.clone())).collect())
+                                };
+                                let pv = value.to_display_string();
+                                tags.push(Tag {
+                                    id: TagId::Text(format!("{}:{}", group_prefix, name.local_name)),
+                                    name: full_name.clone(),
+                                    description: full_name,
+                                    group: TagGroup {
+                                        family0: "XMP".into(),
+                                        family1: format!("XMP-{}", group_prefix),
+                                        family2: category.into(),
+                                    },
+                                    raw_value: value,
+                                    print_value: pv,
+                                    priority: 0,
+                                });
+                            }
+                        }
+                    }
+
                     // Extract attributes on rdf:Description as tags
                     // e.g., <rdf:Description GCamera:HdrPlusMakernote="...">
                     if name.local_name == "Description" {
@@ -214,8 +287,20 @@ impl XmpReader {
                                 }
                                 continue;
                             }
+                            // Skip rdf:nodeID on Description (it's just an identifier, not a value)
+                            if attr.name.local_name == "nodeID"
+                                && (attr.name.prefix.as_deref() == Some("rdf")
+                                    || attr.name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))
+                            {
+                                continue;
+                            }
                             if attr.name.prefix.as_deref() == Some("xmlns") { continue; }
                             if attr.name.local_name.starts_with("xmlns") { continue; }
+                            // Skip ExifTool-internal attributes (et:toolkit, et:id, et:desc, etc.)
+                            if attr.name.prefix.as_deref() == Some("et")
+                                || attr.name.namespace.as_deref() == Some("http://ns.exiftool.org/1.0/")
+                                || attr.name.namespace.as_deref() == Some("http://ns.exiftool.ca/1.0/")
+                            { continue; }
 
                             let attr_ns = attr.name.namespace.as_deref().unwrap_or("");
                             let attr_prefix = namespace_prefix(attr_ns);
@@ -602,6 +687,16 @@ impl XmpReader {
                             if let Some(parent) = path.iter().rev().nth(1) {
                                 let prefix = namespace_prefix(&parent.0);
                                 let tag_name = &parent.1;
+                                // Skip RDF structural elements (RDF, Description, etc.)
+                                if tag_name == "RDF" || tag_name == "xmpmeta"
+                                    || parent.0 == "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                                    || parent.0 == "adobe:ns:meta/"
+                                {
+                                    list_values.clear();
+                                    path.pop();
+                                    current_text.clear();
+                                    continue;
+                                }
                                 let group_prefix =
                                     if prefix.is_empty() { "XMP" } else { prefix };
                                 let _category = namespace_category(group_prefix);
@@ -714,8 +809,9 @@ impl XmpReader {
                         continue;
                     }
 
-                    // Simple property with text content
-                    if !current_text.trim().is_empty() && !in_rdf_li {
+                    // Simple property with text content (or explicitly empty with et:id)
+                    let has_et_depth = emit_empty_depths.contains(&path.len());
+                    if (!current_text.trim().is_empty() || has_et_depth) && !in_rdf_li {
                         let prefix = namespace_prefix(ns_uri);
                         let tag_name = &name.local_name;
 
@@ -733,19 +829,20 @@ impl XmpReader {
                             // Check if we're inside a bare struct (rdf:parseType='Resource')
                             // In that case, flatten: {StructParent}{FieldName}
                             // The struct parent element is at depth (parse_resource_depths.last() - 1)
+                            let remapped = remap_xmp_tag_name(group_prefix, tag_name);
                             let full_name = if let Some(&struct_depth) = parse_resource_depths.last() {
                                 // The struct element is at index struct_depth - 1 in path
                                 if struct_depth >= 1 && struct_depth <= path.len() {
                                     let struct_elem = &path[struct_depth - 1];
                                     let struct_parent_name = ucfirst(&struct_elem.1);
-                                    let field_uc = ucfirst(tag_name);
+                                    let field_uc = remapped.clone();
                                     let field_stripped = strip_struct_prefix(&struct_parent_name, &field_uc);
                                     format!("{}{}", struct_parent_name, field_stripped)
                                 } else {
-                                    ucfirst(tag_name)
+                                    remapped
                                 }
                             } else {
-                                ucfirst(tag_name)
+                                remapped
                             };
 
                             tags.push(Tag {
@@ -768,6 +865,7 @@ impl XmpReader {
                     if parse_resource_depths.last() == Some(&path.len()) {
                         parse_resource_depths.pop();
                     }
+                    emit_empty_depths.remove(&path.len());
                     path.pop();
                     current_text.clear();
                 }
@@ -853,10 +951,250 @@ fn strip_struct_prefix(parent: &str, field: &str) -> String {
     field.to_string()
 }
 
+/// Remap XMP tag names where ExifTool uses a different Name than the XMP local name.
+fn remap_xmp_tag_name(group_prefix: &str, local_name: &str) -> String {
+    match (group_prefix, local_name) {
+        // tiff: namespace remappings
+        ("tiff", "ImageLength") => "ImageHeight".into(),
+        ("tiff", "BitsPerSample") => "BitsPerSample".into(),
+        // exif: namespace remappings
+        ("exif", "PixelXDimension") => "ExifImageWidth".into(),
+        ("exif", "PixelYDimension") => "ExifImageHeight".into(),
+        _ => {
+            // For unknown/ExifTool-internal namespaces (group_prefix = "XMP" or anything unknown),
+            // if the local name has only uppercase letters (e.g. "ISO"), ExifTool normalizes it:
+            // "ISO" → lowercase → ucfirst → "Iso"
+            // Mixed-case names are kept as-is with ucfirst.
+            let has_lowercase = local_name.chars().any(|c| c.is_lowercase());
+            let has_uppercase = local_name.chars().any(|c| c.is_uppercase());
+            if has_uppercase && !has_lowercase && local_name.len() > 1 {
+                ucfirst(&local_name.to_lowercase())
+            } else {
+                ucfirst(local_name)
+            }
+        }
+    }
+}
+
 fn ucfirst(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
         None => String::new(),
         Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
     }
+}
+
+/// Read generic (non-RDF) XML files by building tag names from element paths.
+/// This mirrors ExifTool's XMP.pm generic XML handling.
+fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
+    use xml::reader::{EventReader, XmlEvent};
+    let mut tags = Vec::new();
+    let mut seen_names: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    let parser = EventReader::from_str(xml);
+    let mut path: Vec<String> = Vec::new(); // element local names
+    let mut current_text = String::new();
+
+    // Accumulate full path as tag name prefix: root element name + child names concatenated
+    // Attributes on elements are emitted as TagName = value (path + attrName)
+
+    // Track which namespace URIs were declared on the root element (xmlns=...)
+    let mut root_xmlns: Option<String> = None;
+
+    for event in parser {
+        match event {
+            Ok(XmlEvent::StartElement { name, attributes, namespace, .. }) => {
+                let local = name.local_name.clone();
+                let path_str = format!("{}{}", path.join(""), local);
+                path.push(local.clone());
+                current_text.clear();
+
+                // Emit default xmlns (xmlns="uri") as {ElemName}Xmlns tag
+                // xml-rs exposes xmlns in the namespace mappings
+                // The default namespace (no prefix) is exposed via namespace.get("")
+                // We look for newly-declared default NS at this element
+                use xml::namespace::Namespace;
+                // Check if there's a new default namespace declared at this element
+                // xml-rs merges namespaces so we check the full namespace map
+                // The simplest approach: check if attributes contain xmlns-like entries
+                // xml-rs exposes xmlns as regular attribute with prefix="xmlns", local=""
+                // OR as a namespace mapping
+                // Actually, in xml-rs the namespace object contains ALL in-scope namespaces.
+                // We need to detect which ones are NEW at this element.
+                // The simplest heuristic: only emit xmlns for root element (path depth 1)
+                if path.len() == 1 {
+                    // Root element: emit its default xmlns
+                    if let Some(default_ns) = namespace.get("") {
+                        // Emit as {RootName}Xmlns = default_ns_uri
+                        let tag_name = format!("{}Xmlns", local);
+                        if !seen_names.contains(&tag_name) {
+                            seen_names.insert(tag_name.clone());
+                            root_xmlns = Some(default_ns.to_string());
+                            let val = Value::String(default_ns.to_string());
+                            let pv = val.to_display_string();
+                            tags.push(Tag {
+                                id: TagId::Text(format!("XMP:{}", tag_name)),
+                                name: tag_name.clone(), description: tag_name,
+                                group: TagGroup { family0: "XMP".into(), family1: "XMP".into(), family2: "Other".into() },
+                                raw_value: val, print_value: pv, priority: 0,
+                            });
+                        }
+                    }
+                }
+
+                // Emit attributes as tags (only first occurrence)
+                for attr in &attributes {
+                    let aname = &attr.name;
+                    if aname.prefix.as_deref() == Some("xmlns")
+                        || aname.local_name == "xmlns"
+                        || aname.local_name.starts_with("xmlns:")
+                    {
+                        // Skip xmlns declarations (handled via namespace above)
+                        continue;
+                    }
+                    // For xsi:schemaLocation → emit as {path}SchemaLocation
+                    let attr_local = ucfirst(&aname.local_name);
+                    let tag_name = format!("{}{}", path_str, attr_local);
+                    if !seen_names.contains(&tag_name) {
+                        seen_names.insert(tag_name.clone());
+                        // Determine group prefix from namespace
+                        let attr_ns = aname.namespace.as_deref().unwrap_or("");
+                        let pfx = namespace_prefix(attr_ns);
+                        let group_pfx = if pfx.is_empty() {
+                            aname.prefix.as_deref().unwrap_or("XMP")
+                        } else { pfx };
+                        let val = Value::String(attr.value.clone());
+                        let pv = val.to_display_string();
+                        tags.push(Tag {
+                            id: TagId::Text(format!("XMP:{}", tag_name)),
+                            name: tag_name.clone(), description: tag_name,
+                            group: TagGroup { family0: "XMP".into(), family1: format!("XMP-{}", group_pfx), family2: "Other".into() },
+                            raw_value: val, print_value: pv, priority: 0,
+                        });
+                    }
+                }
+            }
+            Ok(XmlEvent::Characters(text)) | Ok(XmlEvent::CData(text)) => {
+                current_text.push_str(&text);
+            }
+            Ok(XmlEvent::EndElement { .. }) => {
+                let text = current_text.trim().to_string();
+                if !text.is_empty() && !path.is_empty() {
+                    let tag_name = path.join("");
+                    if !seen_names.contains(&tag_name) {
+                        seen_names.insert(tag_name.clone());
+                        let val = Value::String(text.clone());
+                        let pv = val.to_display_string();
+                        tags.push(Tag {
+                            id: TagId::Text(format!("XMP:{}", tag_name)),
+                            name: tag_name.clone(), description: tag_name,
+                            group: TagGroup { family0: "XMP".into(), family1: "XMP".into(), family2: "Other".into() },
+                            raw_value: val, print_value: pv, priority: 0,
+                        });
+                    }
+                }
+                current_text.clear();
+                path.pop();
+            }
+            Err(_) => break,
+            _ => {}
+        }
+    }
+    Ok(tags)
+}
+
+/// Sanitize XMP XML: replace invalid XML characters (e.g., in xpacket PI values) with spaces.
+/// This handles xpacket begin="" which may contain non-XML-legal bytes like 0x1A.
+fn sanitize_xmp_xml(xml: &str) -> String {
+    let mut result = String::with_capacity(xml.len());
+    let mut in_pi = false; // inside a processing instruction <?...?>
+    let chars: Vec<char> = xml.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        if !in_pi && i + 1 < chars.len() && c == '<' && chars[i+1] == '?' {
+            in_pi = true;
+            result.push(c);
+        } else if in_pi && c == '?' && i + 1 < chars.len() && chars[i+1] == '>' {
+            in_pi = false;
+            result.push(c);
+            result.push(chars[i+1]);
+            i += 2;
+            continue;
+        } else if in_pi {
+            // Replace invalid XML chars in PI with space
+            if c == '\t' || c == '\n' || c == '\r' || (c as u32 >= 0x20 && c as u32 <= 0xD7FF)
+                || (c as u32 >= 0xE000 && c as u32 <= 0xFFFD)
+                || (c as u32 >= 0x10000 && c as u32 <= 0x10FFFF) {
+                result.push(c);
+            } else {
+                result.push(' ');
+            }
+        } else {
+            result.push(c);
+        }
+        i += 1;
+    }
+    result
+}
+
+/// Pre-pass: collect rdf:nodeID-mapped Bag/Seq values from XMP XML.
+/// Returns a map from nodeID string → list of rdf:li text values.
+fn collect_node_bag_values(xml: &str) -> std::collections::HashMap<String, Vec<String>> {
+    use xml::reader::{EventReader, XmlEvent};
+    let mut map: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+
+    let parser = EventReader::from_str(xml);
+    let mut current_node_id: Option<String> = None;
+    let mut current_items: Vec<String> = Vec::new();
+    let mut in_li = false;
+    let mut current_text = String::new();
+    let rdf_ns = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+
+    for event in parser {
+        match event {
+            Ok(XmlEvent::StartElement { name, attributes, .. }) => {
+                current_text.clear();
+                let local = &name.local_name;
+                let ns = name.namespace.as_deref().unwrap_or("");
+
+                if (local == "Bag" || local == "Seq" || local == "Alt") && ns == rdf_ns {
+                    // Check for rdf:nodeID attribute
+                    if let Some(nid) = attributes.iter().find(|a| {
+                        a.name.local_name == "nodeID"
+                            && (a.name.prefix.as_deref() == Some("rdf") || ns == rdf_ns)
+                    }) {
+                        current_node_id = Some(nid.value.clone());
+                        current_items.clear();
+                    }
+                } else if local == "li" && ns == rdf_ns && current_node_id.is_some() {
+                    in_li = true;
+                }
+            }
+            Ok(XmlEvent::Characters(text)) | Ok(XmlEvent::CData(text)) => {
+                if in_li {
+                    current_text.push_str(&text);
+                }
+            }
+            Ok(XmlEvent::EndElement { name }) => {
+                let local = &name.local_name;
+                let ns = name.namespace.as_deref().unwrap_or("");
+                if local == "li" && ns == rdf_ns && in_li {
+                    let val = current_text.trim().to_string();
+                    if !val.is_empty() {
+                        current_items.push(val);
+                    }
+                    in_li = false;
+                    current_text.clear();
+                } else if (local == "Bag" || local == "Seq" || local == "Alt") && ns == rdf_ns {
+                    if let Some(nid) = current_node_id.take() {
+                        map.insert(nid, std::mem::take(&mut current_items));
+                    }
+                }
+            }
+            Err(_) => break,
+            _ => {}
+        }
+    }
+    map
 }

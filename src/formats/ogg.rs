@@ -53,8 +53,33 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
         pos = data_pos;
     }
 
+    // Detect if this is a FLAC-in-OGG stream
+    let is_flac_in_ogg = packets.first().map(|p|
+        p.len() >= 5 && p[0] == 0x7F && &p[1..5] == b"FLAC"
+    ).unwrap_or(false);
+
     // Process packets
     for (_i, packet) in packets.iter().enumerate() {
+        if packet.len() < 4 {
+            continue;
+        }
+
+        if is_flac_in_ogg {
+            // FLAC-in-OGG: first packet has \x7FFLAC header, subsequent packets are FLAC metadata blocks
+            if packet[0] == 0x7F && packet.len() >= 5 && &packet[1..5] == b"FLAC" {
+                parse_flac_in_ogg_packet(packet, &mut tags);
+            } else {
+                // Subsequent FLAC-in-OGG packets are raw FLAC metadata blocks
+                // Type 4 = VORBIS_COMMENT (parse as Vorbis comments)
+                let block_type = packet[0] & 0x7F;
+                if block_type == 4 && packet.len() >= 4 {
+                    // Skip 4-byte FLAC metadata block header (type + 24-bit size)
+                    crate::formats::flac::parse_vorbis_comments(&packet[4..], &mut tags);
+                }
+            }
+            continue;
+        }
+
         if packet.len() < 7 {
             continue;
         }
@@ -82,10 +107,14 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     // Compute Duration from last OGG page's granule position / sample rate
-    let sample_rate = tags.iter()
-        .find(|t| t.name == "SampleRate")
-        .and_then(|t| t.raw_value.as_u64())
-        .unwrap_or(0);
+    // Don't compute Duration for Opus (Perl doesn't output it for short files)
+    let is_opus = tags.iter().any(|t| t.name == "OpusVersion");
+    let sample_rate = if is_opus { 0 } else {
+        tags.iter()
+            .find(|t| t.name == "SampleRate")
+            .and_then(|t| t.raw_value.as_u64())
+            .unwrap_or(0)
+    };
     if sample_rate > 0 {
         // Find the last "OggS" page signature and read its granule position
         let mut last_granule: Option<u64> = None;
@@ -111,6 +140,30 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     Ok(tags)
+}
+
+/// Parse a FLAC-in-OGG identification packet.
+/// Format: \x7F FLAC version(2) num_headers(2) "fLaC" flac_metadata_blocks...
+fn parse_flac_in_ogg_packet(packet: &[u8], tags: &mut Vec<Tag>) {
+    // After \x7FFLAC (5 bytes) + version(2) + num_headers(2) = 9 bytes header
+    // Then the native FLAC stream starting with "fLaC" magic
+    if packet.len() < 9 { return; }
+    let flac_data = &packet[9..];
+    // Pass to FLAC reader (it expects "fLaC" magic at start)
+    if flac_data.starts_with(b"fLaC") {
+        if let Ok(flac_tags) = crate::formats::flac::read_flac(flac_data) {
+            tags.extend(flac_tags);
+        }
+    } else {
+        // Try parsing as raw FLAC metadata block (without "fLaC" header)
+        // Some encoders skip the "fLaC" sync marker in OGG embedding
+        // Build a fake FLAC stream
+        let mut fake_flac = b"fLaC".to_vec();
+        fake_flac.extend_from_slice(flac_data);
+        if let Ok(flac_tags) = crate::formats::flac::read_flac(&fake_flac) {
+            tags.extend(flac_tags);
+        }
+    }
 }
 
 fn parse_vorbis_identification(packet: &[u8], tags: &mut Vec<Tag>) {

@@ -19,14 +19,21 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
     let mut has_content_types = false;
     let mut has_mimetype = false;
     let mut filenames = Vec::new();
+    let mut first_file = true;
 
     // Parse local file headers
     let mut pos = 0;
     while pos + 30 <= data.len() && data[pos..pos + 4] == [0x50, 0x4B, 0x03, 0x04] {
+        let bit_flag = u16::from_le_bytes([data[pos + 6], data[pos + 7]]);
+        let compression = u16::from_le_bytes([data[pos + 8], data[pos + 9]]);
+        let mod_time = u16::from_le_bytes([data[pos + 10], data[pos + 11]]);
+        let mod_date = u16::from_le_bytes([data[pos + 12], data[pos + 13]]);
+        let crc = u32::from_le_bytes([data[pos + 14], data[pos + 15], data[pos + 16], data[pos + 17]]);
         let compressed_size = u32::from_le_bytes([data[pos + 18], data[pos + 19], data[pos + 20], data[pos + 21]]) as usize;
         let uncompressed_size = u32::from_le_bytes([data[pos + 22], data[pos + 23], data[pos + 24], data[pos + 25]]) as u64;
         let name_len = u16::from_le_bytes([data[pos + 26], data[pos + 27]]) as usize;
         let extra_len = u16::from_le_bytes([data[pos + 28], data[pos + 29]]) as usize;
+        let required_version = u16::from_le_bytes([data[pos + 4], data[pos + 5]]);
 
         let name_start = pos + 30;
         if name_start + name_len > data.len() {
@@ -34,15 +41,43 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
         }
         let filename = String::from_utf8_lossy(&data[name_start..name_start + name_len]).to_string();
 
+        // Emit per-file tags for the first file (matching Perl behavior)
+        if first_file {
+            first_file = false;
+            tags.push(mk("ZipRequiredVersion", "Required Version", Value::U16(required_version)));
+            let bit_flag_str = if bit_flag != 0 {
+                format!("0x{:04x}", bit_flag)
+            } else {
+                bit_flag.to_string()
+            };
+            tags.push(mk("ZipBitFlag", "Bit Flag", Value::String(bit_flag_str)));
+            let compression_str = zip_compression_name(compression);
+            tags.push(mk("ZipCompression", "Compression", Value::String(compression_str)));
+            // DOS date/time to EXIF-style string
+            let year = ((mod_date >> 9) & 0x7F) as u32 + 1980;
+            let month = ((mod_date >> 5) & 0x0F) as u32;
+            let day = (mod_date & 0x1F) as u32;
+            let hour = ((mod_time >> 11) & 0x1F) as u32;
+            let minute = ((mod_time >> 5) & 0x3F) as u32;
+            let second = ((mod_time & 0x1F) as u32) * 2;
+            let date_str = format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+                year, month, day, hour, minute, second);
+            tags.push(mk("ZipModifyDate", "Modify Date", Value::String(date_str)));
+            let crc_str = format!("0x{:08x}", crc);
+            tags.push(mk("ZipCRC", "CRC", Value::String(crc_str)));
+            tags.push(mk("ZipCompressedSize", "Compressed Size", Value::U32(compressed_size as u32)));
+            tags.push(mk("ZipUncompressedSize", "Uncompressed Size", Value::U32(uncompressed_size as u32)));
+            tags.push(mk("ZipFileName", "File Name", Value::String(filename.clone())));
+        }
+
         if filename == "[Content_Types].xml" {
             has_content_types = true;
         }
         if filename == "mimetype" {
             has_mimetype = true;
-            // Read mimetype content (usually stored uncompressed as first file)
             let content_start = name_start + name_len + extra_len;
             let content_end = (content_start + compressed_size).min(data.len());
-            if content_start < content_end {
+            if content_start < content_end && compression == 0 {
                 let mime = String::from_utf8_lossy(&data[content_start..content_end])
                     .trim()
                     .to_string();
@@ -54,9 +89,7 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
         if filename == "docProps/core.xml" {
             let content_start = name_start + name_len + extra_len;
             let content_end = (content_start + compressed_size).min(data.len());
-            // Only parse if stored (not compressed) - compression method at offset 8
-            let method = u16::from_le_bytes([data[pos + 8], data[pos + 9]]);
-            if method == 0 && content_start < content_end {
+            if compression == 0 && content_start < content_end {
                 parse_ooxml_core(&data[content_start..content_end], &mut tags);
             }
         }
@@ -64,8 +97,7 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
         if filename == "docProps/app.xml" {
             let content_start = name_start + name_len + extra_len;
             let content_end = (content_start + compressed_size).min(data.len());
-            let method = u16::from_le_bytes([data[pos + 8], data[pos + 9]]);
-            if method == 0 && content_start < content_end {
+            if compression == 0 && content_start < content_end {
                 parse_ooxml_app(&data[content_start..content_end], &mut tags);
             }
         }
@@ -81,17 +113,30 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Determine document type
     if has_content_types {
-        // OOXML document
         let doc_type = detect_ooxml_type(&filenames);
         tags.push(mk("ZipSubType", "Document Type", Value::String(doc_type)));
     } else if has_mimetype {
         tags.push(mk("ZipSubType", "Document Type", Value::String("OpenDocument".into())));
     }
 
-    tags.push(mk("ZipFileCount", "File Count", Value::U32(file_count)));
-    tags.push(mk("ZipTotalSize", "Total Uncompressed Size", Value::String(format_size(total_size))));
-
     Ok(tags)
+}
+
+fn zip_compression_name(method: u16) -> String {
+    match method {
+        0 => "None".into(),
+        1 => "Shrunk".into(),
+        2 => "Reduced with compression factor 1".into(),
+        3 => "Reduced with compression factor 2".into(),
+        4 => "Reduced with compression factor 3".into(),
+        5 => "Reduced with compression factor 4".into(),
+        6 => "Imploded".into(),
+        8 => "Deflated".into(),
+        9 => "Enhanced Deflate using Deflate64(tm)".into(),
+        12 => "BZIP2".into(),
+        14 => "LZMA (EFS)".into(),
+        _ => format!("{}", method),
+    }
 }
 
 fn detect_ooxml_type(filenames: &[String]) -> String {

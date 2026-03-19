@@ -133,6 +133,8 @@ pub enum FileType {
     Moi,
     MacOs,
     Json,
+    Pcap,
+    Pcapng,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -272,6 +274,8 @@ impl FileType {
             FileType::Moi => "MOI",
             FileType::MacOs => "MacOS",
             FileType::Json => "JSON",
+            FileType::Pcap => "PCAP",
+            FileType::Pcapng => "PCAPNG",
         }
     }
 
@@ -393,6 +397,8 @@ impl FileType {
             FileType::Moi => "application/octet-stream",
             FileType::MacOs => "application/unknown",
             FileType::Json => "application/json",
+            FileType::Pcap => "application/vnd.tcpdump.pcap",
+            FileType::Pcapng => "application/vnd.tcpdump.pcap",
         }
     }
 
@@ -522,6 +528,8 @@ impl FileType {
             FileType::Moi => &["moi"],
             FileType::MacOs => &["macos"],
             FileType::Json => &["json"],
+            FileType::Pcap => &["pcap", "cap"],
+            FileType::Pcapng => &["pcapng", "ntar"],
         }
     }
 
@@ -624,6 +632,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Html, FileType::Exe, FileType::Font, FileType::Swf,
     FileType::Dicom, FileType::Fits,
     FileType::Moi, FileType::MacOs, FileType::Json,
+    FileType::Pcap, FileType::Pcapng,
 ];
 
 /// Detect file type from magic bytes (first 64+ bytes of a file).
@@ -1021,6 +1030,19 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // GZIP: 1F 8B
     if header.len() >= 2 && header[0] == 0x1F && header[1] == 0x8B {
         return Some(FileType::Gzip);
+    }
+
+    // PCAPNG: 0x0A 0x0D 0x0D 0x0A (Section Header Block)
+    if header.len() >= 4 && header[0] == 0x0A && header[1] == 0x0D && header[2] == 0x0D && header[3] == 0x0A {
+        return Some(FileType::Pcapng);
+    }
+
+    // PCAP: D4 C3 B2 A1 (little-endian) or A1 B2 C3 D4 (big-endian)
+    if header.len() >= 4 && (
+        (header[0] == 0xD4 && header[1] == 0xC3 && header[2] == 0xB2 && header[3] == 0xA1) ||
+        (header[0] == 0xA1 && header[1] == 0xB2 && header[2] == 0xC3 && header[3] == 0xD4)
+    ) {
+        return Some(FileType::Pcap);
     }
 
     // ===== Other =====

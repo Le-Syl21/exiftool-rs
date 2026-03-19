@@ -916,7 +916,8 @@ impl ExifTool {
                     else { "" }
                 } else { "" }
             } else { "" };
-            if !bo_str.is_empty() {
+            // Suppress ExifByteOrder for BigTIFF (Perl doesn't output it for BTF)
+            if !bo_str.is_empty() && file_type != FileType::Btf {
                 tags.push(file_tag("ExifByteOrder", Value::String(bo_str.to_string())));
             }
         }
@@ -1090,6 +1091,9 @@ impl ExifTool {
             FileType::Zip | FileType::Docx | FileType::Xlsx | FileType::Pptx
             | FileType::Doc | FileType::Xls | FileType::Ppt => formats::zip::read_zip(data),
             FileType::Rtf => formats::rtf::read_rtf(data),
+            FileType::InDesign => formats::misc::read_indesign(data),
+            FileType::Pcap => formats::misc::read_pcap(data),
+            FileType::Pcapng => formats::misc::read_pcapng(data),
             // Metadata / Other
             FileType::Xmp => formats::xmp_file::read_xmp(data),
             FileType::Html => {
@@ -1186,7 +1190,7 @@ impl ExifTool {
             "macos" => formats::misc::read_macos(data).or_else(|_| Ok(Vec::new())),
             "json" => formats::misc::read_json(data).or_else(|_| Ok(Vec::new())),
             "dpx" | "dv" | "fpf" | "lfp" | "miff" | "mrc"
-            | "dss" | "mobi" | "pcapng" | "psp" | "pgf" | "raw"
+            | "dss" | "mobi" | "psp" | "pgf" | "raw"
             | "r3d" | "pmp" | "tnef" | "torrent" | "wtv"
             | "xisf" | "czi" | "iso" | "itc" | "mxf"
             | "afm" | "pfb" | "ppt" | "dfont" => Ok(Vec::new()),

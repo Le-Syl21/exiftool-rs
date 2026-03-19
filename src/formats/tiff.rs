@@ -33,20 +33,11 @@ pub fn read_tiff(data: &[u8]) -> Result<Vec<Tag>> {
         42 => ExifReader::read(data)?,
         // BigTIFF (magic 43) - IFD offset is 8 bytes at offset 8
         43 => {
-            // BigTIFF has a different structure but IFD0 tags are similar
-            // For now, read as standard TIFF (works for basic tags)
-            // The ExifReader uses 32-bit offsets so may miss some data,
-            // but the IFD structure is compatible for basic extraction
-            let mut patched = data.to_vec();
-            // Patch magic to 42 so ExifReader accepts it
-            if is_le {
-                patched[2] = 0x2A;
-                patched[3] = 0x00;
-            } else {
-                patched[2] = 0x00;
-                patched[3] = 0x2A;
-            }
-            // BigTIFF: offset size(2)=8, always 0(2), IFD offset(8)
+            // BigTIFF has a different IFD structure:
+            // - IFD entry count is 8 bytes (we only use lower 4)
+            // - Each IFD entry is 20 bytes: tag(2) type(2) count(8) offset(8)
+            // - Value fits inline if count * type_size <= 8
+            // Parse IFD offset from BigTIFF header at bytes 8-15
             if data.len() >= 16 {
                 let ifd_offset = if is_le {
                     u64::from_le_bytes([
@@ -58,18 +49,11 @@ pub fn read_tiff(data: &[u8]) -> Result<Vec<Tag>> {
                         data[8], data[9], data[10], data[11],
                         data[12], data[13], data[14], data[15],
                     ])
-                };
-                // Patch IFD0 offset to standard 4-byte location
-                let offset32 = ifd_offset as u32;
-                if is_le {
-                    let bytes = offset32.to_le_bytes();
-                    patched[4..8].copy_from_slice(&bytes);
-                } else {
-                    let bytes = offset32.to_be_bytes();
-                    patched[4..8].copy_from_slice(&bytes);
-                }
+                } as usize;
+                read_bigtiff_ifd(data, ifd_offset, is_le)?
+            } else {
+                vec![]
             }
-            ExifReader::read(&patched)?
         }
         // Panasonic RW2 (magic 0x55)
         0x55 => {
@@ -566,4 +550,140 @@ fn geotiff_epsg_proj(value: i64) -> Option<String> {
         _ => return None,
     };
     Some(s.to_string())
+}
+
+/// Read a BigTIFF IFD and return tags.
+/// BigTIFF IFD entry format (20 bytes):
+///   tag(2) type(2) count(8) value_or_offset(8)
+/// Value fits inline if count * type_size <= 8.
+fn read_bigtiff_ifd(data: &[u8], ifd_offset: usize, is_le: bool) -> Result<Vec<Tag>> {
+    use crate::tags::exif as exif_tags;
+
+    if ifd_offset + 8 > data.len() {
+        return Ok(vec![]);
+    }
+
+    // BigTIFF: entry count is 8 bytes
+    let entry_count = btf_read_u64(data, ifd_offset, is_le) as usize;
+
+    let entries_start = ifd_offset + 8;
+    let entry_size = 20usize; // tag(2) + type(2) + count(8) + offset(8)
+    let max_entries = (data.len().saturating_sub(entries_start)) / entry_size;
+    let entry_count = entry_count.min(max_entries).min(1000);
+
+    let mut tags = Vec::new();
+
+    for i in 0..entry_count {
+        let eoff = entries_start + i * entry_size;
+        if eoff + entry_size > data.len() { break; }
+
+        let tag = btf_read_u16(data, eoff, is_le);
+        let dtype = btf_read_u16(data, eoff+2, is_le);
+        let count = btf_read_u64(data, eoff+4, is_le);
+        let raw_offset_bytes = &data[eoff+12..eoff+20];
+
+        let elem_size: usize = match dtype {
+            1 | 2 | 6 | 7 => 1,
+            3 | 8 => 2,
+            4 | 9 | 11 | 13 => 4,
+            5 | 10 | 12 => 8,
+            _ => continue,
+        };
+        let total_size = elem_size.saturating_mul(count as usize);
+        if total_size == 0 { continue; }
+
+        // Get value data (inline if fits in 8 bytes, otherwise at offset)
+        let value_slice: Vec<u8> = if total_size <= 8 {
+            raw_offset_bytes[..total_size.min(8)].to_vec()
+        } else {
+            let offset = btf_read_u64(raw_offset_bytes, 0, is_le) as usize;
+            if offset + total_size > data.len() { continue; }
+            data[offset..offset + total_size].to_vec()
+        };
+
+        let value = match bigtiff_parse_value(&value_slice, dtype, count as usize, is_le) {
+            Some(v) => v,
+            None => continue,
+        };
+
+        let (name, description) = {
+            match exif_tags::lookup("IFD0", tag) {
+                Some(i) => (i.name.to_string(), i.description.to_string()),
+                None => match exif_tags::lookup_generated(tag) {
+                    Some((n, d)) => (n.to_string(), d.to_string()),
+                    None => (format!("Tag0x{:04X}", tag), format!("Unknown 0x{:04X}", tag)),
+                }
+            }
+        };
+
+        let print_value = exif_tags::print_conv("IFD0", tag, &value)
+            .or_else(|| value.as_u64().and_then(|v|
+                crate::tags::print_conv_generated::print_conv_by_name(&name, v as i64))
+                .map(|s| s.to_string()))
+            .unwrap_or_else(|| value.to_display_string());
+
+        tags.push(Tag {
+            id: TagId::Numeric(tag),
+            name,
+            description,
+            group: TagGroup {
+                family0: "EXIF".into(),
+                family1: "IFD0".into(),
+                family2: "Image".into(),
+            },
+            raw_value: value,
+            print_value,
+            priority: 0,
+        });
+    }
+
+    Ok(tags)
+}
+
+fn bigtiff_parse_value(data: &[u8], dtype: u16, count: usize, is_le: bool) -> Option<Value> {
+    match dtype {
+        1 => {
+            if data.is_empty() { return None; }
+            if count == 1 { Some(Value::U8(data[0])) }
+            else { Some(Value::List(data.iter().map(|&b| Value::U8(b)).collect())) }
+        }
+        2 => Some(Value::String(String::from_utf8_lossy(data).trim_end_matches('\0').to_string())),
+        3 => {
+            if count == 1 { Some(Value::U16(btf_read_u16(data, 0, is_le))) }
+            else { Some(Value::List((0..count).map(|i| Value::U16(btf_read_u16(data, i*2, is_le))).collect())) }
+        }
+        4 | 13 => {
+            if count == 1 { Some(Value::U32(btf_read_u32(data, 0, is_le))) }
+            else { Some(Value::List((0..count).map(|i| Value::U32(btf_read_u32(data, i*4, is_le))).collect())) }
+        }
+        5 => {
+            if count == 1 {
+                Some(Value::URational(btf_read_u32(data, 0, is_le), btf_read_u32(data, 4, is_le)))
+            } else {
+                Some(Value::List((0..count).map(|i| {
+                    Value::URational(btf_read_u32(data, i*8, is_le), btf_read_u32(data, i*8+4, is_le))
+                }).collect()))
+            }
+        }
+        7 => Some(Value::Undefined(data.to_vec())),
+        _ => None,
+    }
+}
+
+fn btf_read_u16(d: &[u8], off: usize, is_le: bool) -> u16 {
+    if off + 2 > d.len() { return 0; }
+    if is_le { u16::from_le_bytes([d[off], d[off+1]]) }
+    else { u16::from_be_bytes([d[off], d[off+1]]) }
+}
+
+fn btf_read_u32(d: &[u8], off: usize, is_le: bool) -> u32 {
+    if off + 4 > d.len() { return 0; }
+    if is_le { u32::from_le_bytes([d[off], d[off+1], d[off+2], d[off+3]]) }
+    else { u32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]) }
+}
+
+fn btf_read_u64(d: &[u8], off: usize, is_le: bool) -> u64 {
+    if off + 8 > d.len() { return 0; }
+    if is_le { u64::from_le_bytes([d[off], d[off+1], d[off+2], d[off+3], d[off+4], d[off+5], d[off+6], d[off+7]]) }
+    else { u64::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3], d[off+4], d[off+5], d[off+6], d[off+7]]) }
 }

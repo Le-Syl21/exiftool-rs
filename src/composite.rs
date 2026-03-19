@@ -161,12 +161,15 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         }
     }
 
-    // LensID fallback: use LensModel if no LensID computed by 35efl
+    // LensID fallback: use LensModel or Lens if no LensID computed by 35efl
     if !composite.iter().any(|t| t.name == "LensID") {
-        if let Some(lm) = find_tag_value(tags, "LensModel") {
-            if !lm.is_empty() {
-                composite.push(mk_composite("LensID", "Lens ID", Value::String(lm)));
-            }
+        let lens_val = find_tag_value(tags, "LensModel")
+            .filter(|v| !v.is_empty())
+            .or_else(|| find_tag_value(tags, "Lens").filter(|v| !v.is_empty() && (v.contains("mm") || v.contains("/F"))));
+        if let Some(lm) = lens_val {
+            // Apply PrintConv: s/ - /-/ (remove spaces around dash), etc.
+            let lens_id = lm.replace(" - ", "-").replace("mmF", "mm F").replace("/F", "mm F");
+            composite.push(mk_composite("LensID", "Lens ID", Value::String(lens_id)));
         }
     }
 
@@ -191,11 +194,13 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     {
         let make = find_tag_value(tags, "Make").unwrap_or_default();
         if make.to_uppercase().contains("NIKON") {
-            // AutoFocus from FocusMode
-            if let Some(fm) = find_tag_value(tags, "FocusMode") {
-                if find_tag(&composite, "AutoFocus").is_none() {
-                    let af = if fm.contains("Manual") { "Off" } else { "On" };
-                    composite.push(mk_composite("AutoFocus", "Auto Focus", Value::String(af.into())));
+            // AutoFocus from FocusMode (only from MakerNotes, not XMP)
+            if let Some(fm_tag) = tags.iter().find(|t| t.name == "FocusMode") {
+                if fm_tag.group.family0 != "XMP" {
+                    if find_tag(&composite, "AutoFocus").is_none() {
+                        let af = if fm_tag.print_value.contains("Manual") { "Off" } else { "On" };
+                        composite.push(mk_composite("AutoFocus", "Auto Focus", Value::String(af.into())));
+                    }
                 }
             }
             // LensSpec from Lens+LensType
