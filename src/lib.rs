@@ -6,7 +6,7 @@
 //! ## Quick Start
 //!
 //! ```no_run
-//! use exiftool::ExifTool;
+//! use exiftool_rs::ExifTool;
 //!
 //! let et = ExifTool::new();
 //! let tags = et.extract_info("photo.jpg").unwrap();
@@ -18,14 +18,14 @@
 //! ## One-liner
 //!
 //! ```no_run
-//! let info = exiftool::image_info("photo.jpg").unwrap();
+//! let info = exiftool_rs::image_info("photo.jpg").unwrap();
 //! println!("Camera: {}", info.get("Model").unwrap_or(&String::new()));
 //! ```
 //!
 //! ## Writing Tags
 //!
 //! ```no_run
-//! use exiftool::ExifTool;
+//! use exiftool_rs::ExifTool;
 //!
 //! let mut et = ExifTool::new();
 //! et.set_new_value("Artist", Some("John Doe"));

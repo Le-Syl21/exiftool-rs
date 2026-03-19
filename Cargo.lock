@@ -52,7 +52,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "exiftool"
+name = "exiftool-rs"
 version = "0.1.0"
 dependencies = [
  "byteorder",

@@ -14,7 +14,7 @@ A Rust reimplementation of [ExifTool](https://exiftool.org/) — read, write, an
 ## Library Usage
 
 ```rust
-use exiftool::ExifTool;
+use exiftool_rs::ExifTool;
 
 let et = ExifTool::new();
 let tags = et.extract_info("photo.jpg").unwrap();
@@ -27,25 +27,25 @@ for tag in &tags {
 
 ```bash
 # Install
-cargo install exiftool
+cargo install exiftool-rs
 
 # Read metadata
-exiftool photo.jpg
+exiftool-rs photo.jpg
 
 # Short tag names
-exiftool -s photo.jpg
+exiftool-rs -s photo.jpg
 
 # JSON output
-exiftool -j photo.jpg
+exiftool-rs -j photo.jpg
 
 # Write tags
-exiftool -Artist="John Doe" -Copyright="2024" photo.jpg
+exiftool-rs -Artist="John Doe" -Copyright="2024" photo.jpg
 
 # Show groups
-exiftool -G photo.jpg
+exiftool-rs -G photo.jpg
 
 # Numeric values
-exiftool -n photo.jpg
+exiftool-rs -n photo.jpg
 ```
 
 ## CLI Options

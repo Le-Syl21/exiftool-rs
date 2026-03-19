@@ -3,7 +3,7 @@ use std::io::{self, BufRead, Write};
 use std::path::Path;
 use std::process;
 
-use exiftool::{ExifTool, Options};
+use exiftool_rs::{ExifTool, Options};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -50,7 +50,7 @@ fn main() {
         let arg = &args[i];
         match arg.as_str() {
             "-v" | "--version" | "-ver" => {
-                println!("exiftool-rs {}", exiftool::VERSION);
+                println!("exiftool-rs {}", exiftool_rs::VERSION);
                 process::exit(0);
             }
             "-h" | "--help" | "-help" => {
@@ -484,7 +484,7 @@ fn main() {
 
     // List tags mode
     if list_tags {
-        println!("Supported file types: {}", exiftool::FileType::all().len());
+        println!("Supported file types: {}", exiftool_rs::FileType::all().len());
         println!("Known EXIF tags: ~4300 (auto-generated from ExifTool source)");
         println!("Print conversions: ~17600");
         println!("MakerNotes manufacturers: Canon, Nikon, Sony, Olympus, Pentax, Panasonic, Fujifilm, Samsung, Sigma");
@@ -660,7 +660,7 @@ fn run_write_mode(
             if let Ok(file_tags) = et.extract_info(file) {
                 for &(tag_name, shift_str) in &shifts {
                     if let Some(current) = file_tags.iter().find(|t| t.name.to_lowercase() == tag_name.to_lowercase()) {
-                        if let Some(shifted) = exiftool::exiftool::shift_datetime(&current.print_value, shift_str) {
+                        if let Some(shifted) = exiftool_rs::exiftool::shift_datetime(&current.print_value, shift_str) {
                             et.set_new_value(tag_name, Some(&shifted));
                         }
                     }
@@ -783,7 +783,7 @@ fn filter_files_by_condition(et: &ExifTool, files: &[String], condition: &str) -
     }).cloned().collect()
 }
 
-fn evaluate_condition(tags: &[exiftool::Tag], condition: &str) -> bool {
+fn evaluate_condition(tags: &[exiftool_rs::Tag], condition: &str) -> bool {
     // Parse: $TagName op "value"
     let cond = condition.trim();
 
@@ -854,10 +854,10 @@ fn print_binary(et: &ExifTool, files: &[String]) {
             Ok(tags) => {
                 for tag in &tags {
                     match &tag.raw_value {
-                        exiftool::Value::Binary(data) => {
+                        exiftool_rs::Value::Binary(data) => {
                             let _ = stdout.write_all(data);
                         }
-                        exiftool::Value::Undefined(data) => {
+                        exiftool_rs::Value::Undefined(data) => {
                             let _ = stdout.write_all(data);
                         }
                         _ => {
@@ -921,7 +921,7 @@ fn print_json_all(et: &ExifTool, files: &[String]) {
     println!("]");
 }
 
-fn print_json_tags(tags: &[exiftool::Tag], filename: &str, prepend_comma: bool) {
+fn print_json_tags(tags: &[exiftool_rs::Tag], filename: &str, prepend_comma: bool) {
     if prepend_comma {
         print!(",");
     }
@@ -1063,7 +1063,7 @@ fn escape_xml(s: &str) -> String {
 }
 
 fn print_usage() {
-    eprintln!("exiftool-rs {}", exiftool::VERSION);
+    eprintln!("exiftool-rs {}", exiftool_rs::VERSION);
     eprintln!("A Rust implementation of ExifTool - read/write metadata in files");
     eprintln!();
     eprintln!("Usage: exiftool [OPTIONS] [-TAG[=VALUE]...] FILE [FILE...]");

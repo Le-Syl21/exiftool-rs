@@ -9,7 +9,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    let et = exiftool::ExifTool::new();
+    let et = exiftool_rs::ExifTool::new();
     match et.extract_info(&args[1]) {
         Ok(tags) => {
             for tag in &tags {

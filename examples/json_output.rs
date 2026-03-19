@@ -9,7 +9,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    let info = exiftool::image_info(&args[1]).unwrap();
+    let info = exiftool_rs::image_info(&args[1]).unwrap();
     for (key, value) in &info {
         println!("{}: {}", key, value);
     }

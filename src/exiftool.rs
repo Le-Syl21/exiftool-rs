@@ -43,7 +43,7 @@ impl Default for Options {
 ///
 /// # Example
 /// ```no_run
-/// use exiftool::ExifTool;
+/// use exiftool_rs::ExifTool;
 ///
 /// let mut et = ExifTool::new();
 /// let info = et.image_info("photo.jpg").unwrap();
@@ -111,7 +111,7 @@ impl ExifTool {
     ///
     /// # Example
     /// ```no_run
-    /// use exiftool::ExifTool;
+    /// use exiftool_rs::ExifTool;
     /// let mut et = ExifTool::new();
     /// et.set_new_value("Artist", Some("John Doe"));
     /// et.set_new_value("Copyright", Some("2024 John Doe"));

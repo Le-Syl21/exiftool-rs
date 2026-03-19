@@ -9,7 +9,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    let mut et = exiftool::ExifTool::new();
+    let mut et = exiftool_rs::ExifTool::new();
     et.set_new_value(&args[3], Some(&args[4]));
     match et.write_info(&args[1], &args[2]) {
         Ok(count) => println!("{} tag(s) written to {}", count, args[2]),

@@ -1,13 +1,13 @@
 [package]
-name = "exiftool"
+name = "exiftool-rs"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.71"
-description = "Read, write, and edit metadata in image, audio, video, and document files — a Rust reimplementation of ExifTool"
+description = "Read, write, and edit metadata in image, audio, video, and document files — a pure Rust reimplementation of ExifTool"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/Le-Syl21/exiftool-rs"
 homepage = "https://github.com/Le-Syl21/exiftool-rs"
-documentation = "https://docs.rs/exiftool"
+documentation = "https://docs.rs/exiftool-rs"
 readme = "README.md"
 keywords = ["exif", "metadata", "jpeg", "tiff", "xmp"]
 categories = ["multimedia::images", "parser-implementations"]
@@ -17,11 +17,11 @@ exclude = [
 ]
 
 [[bin]]
-name = "exiftool"
+name = "exiftool-rs"
 path = "src/main.rs"
 
 [lib]
-name = "exiftool"
+name = "exiftool_rs"
 path = "src/lib.rs"
 
 [dependencies]
