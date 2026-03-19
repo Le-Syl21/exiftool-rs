@@ -1777,25 +1777,36 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
 
     let mut tags = Vec::new();
 
-    // Parse SVG using XML parser for proper attribute/element extraction
+    // Parse SVG using XML parser for proper attribute/element extraction.
+    // We handle three distinct sections:
+    //   1. <svg> root element: version, xmlns, width, height attributes → SVG group tags
+    //   2. <desc> and other non-metadata children: path-based tags → SVG group
+    //   3. <metadata> block:
+    //      a. <rdf:RDF> → extract to string, pass to XmpReader for XMP tags
+    //      b. <c2pa:manifest> → base64-decode → JUMBF parsing
     use xml::reader::{EventReader, XmlEvent};
     let parser = EventReader::from_str(&text);
     let mut path: Vec<String> = Vec::new(); // element local names (ucfirst)
     let mut current_text = String::new();
-    let mut in_metadata = false;
-    let mut in_rdf = false;
-    let mut metadata_xml = String::new();
-    let mut metadata_depth = 0_usize;
+    // Which section are we in?
+    let mut in_metadata = false; // inside <metadata> element
+    let mut in_rdf = 0_usize;    // nesting depth inside <rdf:RDF>
+    let mut in_c2pa = 0_usize;   // nesting depth inside <c2pa:manifest>
+    let mut in_svg_body = false; // inside SVG non-metadata body (desc, title, etc.)
+    // Track whether each path element had child elements (to skip mixed-content text).
+    // True = had at least one child element. Parallel to `path`.
+    let mut had_child: Vec<bool> = Vec::new();
 
-    for event in parser {
+    for event in EventReader::from_str(text.as_ref()) {
         match event {
             Ok(XmlEvent::StartElement { name, attributes, namespace, .. }) => {
                 let local = &name.local_name;
                 let ns = name.namespace.as_deref().unwrap_or("");
 
-                if local == "svg" && (ns == "http://www.w3.org/2000/svg" || ns.is_empty()) && path.is_empty() {
-                    // Root SVG element: extract key attributes
+                // Root SVG element
+                if local == "svg" && path.is_empty() {
                     path.push("Svg".into());
+                    had_child.push(false);
                     for attr in &attributes {
                         match attr.name.local_name.as_str() {
                             "width" => tags.push(mktag("SVG", "ImageWidth", "Image Width", Value::String(attr.value.clone()))),
@@ -1812,105 +1823,141 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                             tags.push(mktag("SVG", "Xmlns", "XMLNS", Value::String(default_ns.to_string())));
                         }
                     }
-                    continue;
-                }
-
-                // Track metadata element
-                if local == "metadata" && !in_rdf {
-                    in_metadata = true;
-                    metadata_depth = path.len();
-                    metadata_xml.clear();
-                    path.push("Metadata".into());
                     current_text.clear();
                     continue;
                 }
 
-                // Inside metadata: collect raw XML for later XMP processing
-                if in_metadata && !in_rdf {
-                    if (local == "RDF" && ns == "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-                        || local == "rdf:RDF"
-                    {
-                        in_rdf = true;
-                        // We'll rely on XmpReader for the whole SVG
-                        in_metadata = false;
-                        path.push("Rdf".into());
-                        current_text.clear();
-                        continue;
-                    }
-                    // Non-RDF in metadata (e.g., c2pa:manifest) - handle specially
-                    if name.prefix.as_deref() == Some("c2pa") || local == "manifest" {
-                        // Collect base64 content for JUMBF extraction
-                        path.push("C2paManifest".into());
-                        current_text.clear();
-                        continue;
-                    }
+                // <metadata> block — switch to metadata parsing mode
+                if local == "metadata" && !in_metadata && in_rdf == 0 && in_c2pa == 0 {
+                    in_metadata = true;
+                    // Mark parent as having a child
+                    if let Some(last) = had_child.last_mut() { *last = true; }
+                    path.push("Metadata".into());
+                    had_child.push(false);
+                    current_text.clear();
+                    continue;
                 }
 
-                // Non-metadata, non-RDF elements (like desc with custom NS children)
-                if !in_metadata && !in_rdf && !path.is_empty() {
+                // Inside metadata: handle RDF and c2pa
+                if in_metadata {
+                    if in_rdf > 0 {
+                        in_rdf += 1;
+                        current_text.clear();
+                        continue;
+                    }
+                    if in_c2pa > 0 {
+                        in_c2pa += 1;
+                        current_text.clear();
+                        continue;
+                    }
+                    // Starting rdf:RDF
+                    if local == "RDF" && ns == "http://www.w3.org/1999/02/22-rdf-syntax-ns#" {
+                        in_rdf = 1;
+                        current_text.clear();
+                        continue;
+                    }
+                    // Starting c2pa:manifest
+                    if name.prefix.as_deref() == Some("c2pa") || local == "manifest" {
+                        in_c2pa = 1;
+                        current_text.clear();
+                        continue;
+                    }
+                    // Other metadata children: ignore
+                    current_text.clear();
+                    continue;
+                }
+
+                // SVG body elements (desc, title, etc.) - NOT metadata, NOT root svg
+                if !in_metadata && path.len() >= 1 {
+                    in_svg_body = true;
+                    // Mark parent as having a child
+                    if let Some(last) = had_child.last_mut() { *last = true; }
                     let ucfirst_local = svg_ucfirst(local);
-                    path.push(ucfirst_local.clone());
+                    path.push(ucfirst_local);
+                    had_child.push(false);
                     current_text.clear();
                     continue;
                 }
 
                 path.push(svg_ucfirst(local));
+                had_child.push(false);
                 current_text.clear();
             }
-            Ok(XmlEvent::Characters(text)) | Ok(XmlEvent::CData(text)) => {
-                current_text.push_str(&text);
+            Ok(XmlEvent::Characters(t)) | Ok(XmlEvent::CData(t)) => {
+                current_text.push_str(&t);
             }
             Ok(XmlEvent::EndElement { name }) => {
                 let local = &name.local_name;
 
-                // Handle c2pa:manifest base64 → JUMBF
-                if path.last().map(|s| s.as_str()) == Some("C2paManifest") {
-                    let b64 = current_text.trim().replace('\n', "").replace('\r', "").replace(' ', "");
-                    if !b64.is_empty() {
-                        if let Ok(jumbf_data) = base64_decode(&b64) {
-                            // Emit JUMBF binary tag
-                            let jumbf_group = crate::tag::TagGroup {
-                                family0: "JUMBF".into(),
-                                family1: "JUMBF".into(),
-                                family2: "Image".into(),
-                            };
-                            let print = format!("(Binary data {} bytes, use -b option to extract)", jumbf_data.len());
-                            tags.push(crate::tag::Tag {
-                                id: crate::tag::TagId::Text("JUMBF".into()),
-                                name: "JUMBF".into(),
-                                description: "JUMBF".into(),
-                                group: jumbf_group,
-                                raw_value: Value::Binary(jumbf_data.clone()),
-                                print_value: print,
-                                priority: 0,
-                            });
-                            // Parse JUMBF boxes to extract JUMDType, JUMDLabel, and JSON content
-                            parse_jumbf_for_svg(&jumbf_data, &mut tags);
+                // Exiting rdf:RDF depth
+                if in_rdf > 0 {
+                    in_rdf -= 1;
+                    current_text.clear();
+                    continue;
+                }
+
+                // Exiting c2pa:manifest depth
+                if in_c2pa > 0 {
+                    in_c2pa -= 1;
+                    if in_c2pa == 0 {
+                        // We've collected the base64 c2pa manifest text
+                        let b64 = current_text.chars().filter(|c| !c.is_whitespace()).collect::<String>();
+                        if !b64.is_empty() {
+                            if let Ok(jumbf_data) = base64_decode(&b64) {
+                                let jumbf_group = crate::tag::TagGroup {
+                                    family0: "JUMBF".into(),
+                                    family1: "JUMBF".into(),
+                                    family2: "Image".into(),
+                                };
+                                let print = format!("(Binary data {} bytes, use -b option to extract)", jumbf_data.len());
+                                tags.push(crate::tag::Tag {
+                                    id: crate::tag::TagId::Text("JUMBF".into()),
+                                    name: "JUMBF".into(),
+                                    description: "JUMBF".into(),
+                                    group: jumbf_group,
+                                    raw_value: Value::Binary(jumbf_data.clone()),
+                                    print_value: print,
+                                    priority: 0,
+                                });
+                                parse_jumbf_for_svg(&jumbf_data, &mut tags);
+                            }
                         }
                     }
-                    path.pop();
                     current_text.clear();
                     continue;
                 }
 
-                // Track end of metadata element
-                if local == "metadata" {
+                // Exiting metadata
+                if local == "metadata" && in_metadata {
                     in_metadata = false;
-                    path.pop();
+                    path.pop(); // pop "Metadata"
                     current_text.clear();
                     continue;
                 }
 
-                // SVG path-based element tags (e.g., desc children like myfoo:title → DescTitle)
-                if !in_metadata && !in_rdf && path.len() >= 2 {
-                    let text = current_text.trim().to_string();
-                    if !text.is_empty() {
+                // Skip other metadata children
+                if in_metadata {
+                    current_text.clear();
+                    continue;
+                }
+
+                // SVG body element text
+                if in_svg_body && path.len() >= 2 {
+                    let t = current_text.trim().to_string();
+                    if !t.is_empty() {
                         // Build tag name from path (skip root "Svg")
                         let tag_name = path.iter().skip(1).cloned().collect::<String>();
-                        if !tag_name.is_empty() && tag_name != "Metadata" {
-                            tags.push(mktag("SVG", &tag_name, &tag_name, Value::String(text)));
+                        if !tag_name.is_empty() {
+                            tags.push(mktag("SVG", &tag_name, &tag_name, Value::String(t)));
                         }
                     }
+                    path.pop();
+                    // If we've returned to Svg level (path.len() == 1), exit svg_body
+                    if path.len() <= 1 {
+                        in_svg_body = false;
+                    }
+                    current_text.clear();
+                    continue;
                 }
 
                 path.pop();
@@ -1921,9 +1968,46 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    // Extract XMP/RDF metadata from <metadata> block via XmpReader
-    if let Ok(xmp_tags) = XmpReader::read(data) {
-        tags.extend(xmp_tags);
+    // Now extract XMP from the <rdf:RDF> block.
+    // We look for the rdf:RDF section in the original text and pass it to XmpReader.
+    // XmpReader handles rdf:RDF as a valid XMP envelope.
+    if let Some(rdf_start) = text.find("<rdf:RDF") {
+        if let Some(rdf_end) = text.find("</rdf:RDF>") {
+            let rdf_section = &text[rdf_start..rdf_end + "</rdf:RDF>".len()];
+            if let Ok(xmp_tags) = XmpReader::read(rdf_section.as_bytes()) {
+                tags.extend(xmp_tags);
+            }
+        }
+    }
+
+    // Handle c2pa:manifest with potentially undeclared namespace prefix.
+    // Use text-based extraction since the XML parser may fail on undeclared namespaces.
+    if let Some(mstart) = text.find("<c2pa:manifest>") {
+        let content_start = mstart + "<c2pa:manifest>".len();
+        if let Some(mend) = text[content_start..].find("</c2pa:manifest>") {
+            let b64_content = &text[content_start..content_start + mend];
+            let b64: String = b64_content.chars().filter(|c| !c.is_whitespace()).collect();
+            if !b64.is_empty() {
+                if let Ok(jumbf_data) = base64_decode(&b64) {
+                    let jumbf_group = crate::tag::TagGroup {
+                        family0: "JUMBF".into(),
+                        family1: "JUMBF".into(),
+                        family2: "Image".into(),
+                    };
+                    let print = format!("(Binary data {} bytes, use -b option to extract)", jumbf_data.len());
+                    tags.push(crate::tag::Tag {
+                        id: crate::tag::TagId::Text("JUMBF".into()),
+                        name: "JUMBF".into(),
+                        description: "JUMBF".into(),
+                        group: jumbf_group,
+                        raw_value: Value::Binary(jumbf_data.clone()),
+                        print_value: print,
+                        priority: 0,
+                    });
+                    parse_jumbf_for_svg(&jumbf_data, &mut tags);
+                }
+            }
+        }
     }
 
     Ok(tags)
