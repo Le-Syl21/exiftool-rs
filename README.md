@@ -1,6 +1,6 @@
-# exiftool
+# exiftool-rs
 
-A Rust reimplementation of [ExifTool](https://exiftool.org/) — read, write, and edit metadata in image, audio, video, and document files.
+A pure Rust reimplementation of [ExifTool](https://exiftool.org/) — read, write, and edit metadata in image, audio, video, and document files.
 
 ## Features
 
@@ -61,6 +61,16 @@ exiftool-rs -n photo.jpg
 | `-ver` | Show version |
 | `-TAG=VALUE` | Write tag |
 | `-overwrite_original` | Overwrite without backup |
+
+## Testing
+
+```bash
+# Unit tests
+cargo test
+
+# ISO-functional test (compares against Perl ExifTool)
+./scripts/test_iso.sh
+```
 
 ## Building
 
