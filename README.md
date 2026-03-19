@@ -1,130 +1,80 @@
-# exiftool-rs
+# exiftool
 
-A Rust reimplementation of [ExifTool](https://exiftool.org/) — read, write, and
-edit metadata in image, audio, video, and document files.
+A Rust reimplementation of [ExifTool](https://exiftool.org/) — read, write, and edit metadata in image, audio, video, and document files.
 
-**38-61x faster** than the original Perl ExifTool. Memory-safe. Single binary.
+## Features
 
-## Quick Start
+- **41/41 JPEG test files** produce identical tag names as Perl ExifTool v13.52
+- **30+ format readers**: JPEG, TIFF, PNG, CR2, PSD, WebP, HEIF/AVIF, MP4/MOV, AVI, MKV, PDF, WAV, FLAC, MP3, OGG, BMP, GIF, DNG, NEF, ARW, ORF, RAF, RW2, PEF, and more
+- **15 format writers**: JPEG, TIFF, PNG, WebP, PSD, PDF, MP4, MKV, AVI, WAV, FLAC, MP3, OGG, CR2, HEIF/AVIF
+- **15 MakerNote manufacturers**: Canon, Nikon, Sony, Pentax, Olympus, Panasonic, Fujifilm, Samsung, Sigma, Casio, Ricoh, Minolta, Apple, Google, FLIR
+- **Specialized parsers**: GoPro GPMF, InfiRay thermal, FlashPix/OLE, Canon VRD, CIFF, MPF, MIE, and more
+- **No unsafe code**, minimal dependencies
 
-### CLI
-
-```bash
-# Read metadata
-exiftool photo.jpg
-
-# Read specific tags
-exiftool -Make -Model -FocalLength photo.jpg
-
-# JSON output
-exiftool -j photo.jpg
-
-# Write metadata
-exiftool -Artist="John Doe" -Copyright="2024" photo.jpg
-
-# Write EXIF + XMP + IPTC
-exiftool -Artist="John" -XMP:Title="My Photo" -IPTC:City="Paris" photo.jpg
-
-# Recursive scan
-exiftool -r -ext jpg /photos/
-
-# Copy tags between files
-exiftool -tagsFromFile source.jpg destination.jpg
-
-# Shift dates
-exiftool -DateTimeOriginal+=5:30:0 photo.jpg
-
-# Conditional processing
-exiftool -if '$Make eq "Canon"' -Model *.jpg
-
-# Custom format
-exiftool -p '$Make $Model - $FocalLength' *.jpg
-
-# Batch mode (stay-open)
-exiftool -stay_open True -@ -
-```
-
-### Rust Crate
+## Library Usage
 
 ```rust
 use exiftool::ExifTool;
 
-// Read metadata
 let et = ExifTool::new();
-let info = et.image_info("photo.jpg")?;
-for (tag, value) in &info {
-    println!("{}: {}", tag, value);
+let tags = et.read_metadata("photo.jpg").unwrap();
+for tag in &tags {
+    println!("{}: {}", tag.name, tag.print_value);
 }
-
-// Write metadata
-let mut et = ExifTool::new();
-et.set_new_value("Artist", Some("John Doe"));
-et.set_new_value("XMP:Title", Some("My Photo"));
-et.write_info("input.jpg", "output.jpg")?;
-
-// Copy tags from another file
-et.set_new_values_from_file("source.jpg", None)?;
-et.write_info("input.jpg", "output.jpg")?;
 ```
 
-## Supported Formats
+## CLI Usage
 
-### Read (29 format readers, 115 file types detected)
+```bash
+# Install
+cargo install exiftool
 
-| Category | Formats |
-|----------|---------|
-| **Images** | JPEG, PNG, TIFF, GIF, BMP, WebP, PSD, ICO, JPEG 2000, JPEG XL, HEIF, AVIF, FLIF, BPG, PCX, PICT, DjVu, Radiance HDR, PPM/PGM/PBM |
-| **RAW** | CR2, CR3, CRW, NEF, ARW, DNG, ORF, PEF, RW2, RAF, MRW, ERF, SRW, X3F, + 10 more |
-| **Video** | MP4, MOV, AVI, MKV, WebM, WMV, FLV, SWF, M2TS, MXF |
-| **Audio** | MP3, FLAC, OGG/Opus, AIFF, WAV, AAC, APE |
-| **Documents** | PDF, PostScript/EPS, RTF, DOCX, XLSX, PPTX, ODS, HTML |
-| **Other** | ZIP, RAR, 7z, GZIP, EXE (PE/ELF/Mach-O), Font (TTF/OTF/WOFF), ICC, DICOM, FITS, JSON |
+# Read metadata
+exiftool photo.jpg
 
-### Write (11 formats)
+# Short tag names
+exiftool -s photo.jpg
 
-JPEG, PNG, TIFF, WebP, MP4/MOV, HEIF/AVIF, MKV/WebM, PSD, PDF, + DNG/CR2/NEF/ARW via TIFF
+# JSON output
+exiftool -j photo.jpg
 
-## Features
+# Write tags
+exiftool -Artist="John Doe" -Copyright="2024" photo.jpg
 
-- **17,592 print conversions** for human-readable tag values
-- **4,286 known tags** across EXIF, IPTC, XMP, and 9 MakerNotes manufacturers
-- **Canon MakerNotes sub-tables** decoded (CameraSettings, ShotInfo, FocalLength)
-- **Nikon/Sony print conversions** (FlashMode, ShootingMode, DRO, etc.)
-- **16 composite tags** (GPSPosition, ImageSize, Megapixels, LightValue, FOV, etc.)
-- **Geolocation** reverse geocoding (114,877 cities from ExifTool's database)
-- **Stay-open mode** for batch processing
-- **5 output formats**: text, JSON, CSV, XML/RDF, tab-separated
-- **Conditional filtering** with `-if`
-- **Date shifting** with `-DateTimeOriginal+=H:M:S`
+# Show groups
+exiftool -G photo.jpg
 
-## Performance
+# Numeric values
+exiftool -n photo.jpg
+```
 
-| Benchmark | Perl ExifTool | exiftool-rs | Speedup |
-|-----------|--------------|-------------|---------|
-| 193 files (1 invocation) | 2.0s | 54ms | **38x** |
-| 193 files (separate) | 25.2s | 0.4s | **61x** |
+## CLI Options
+
+| Option | Description |
+|--------|-------------|
+| `-s` | Short tag names |
+| `-s2` | Very short (tag names only) |
+| `-G` | Show group names |
+| `-n` | Numeric output |
+| `-j` | JSON output |
+| `-b` | Binary output |
+| `-ver` | Show version |
+| `-TAG=VALUE` | Write tag |
+| `-overwrite_original` | Overwrite without backup |
 
 ## Building
 
 ```bash
+git clone https://github.com/YOUR_USERNAME/exiftool-rs
+cd exiftool-rs
 cargo build --release
 ```
 
-Binary: `target/release/exiftool` (~2.7 MB)
-
-### Regenerate tag tables from Perl source
-
-```bash
-# Requires Perl ExifTool source in ../exiftool/
-perl scripts/gen_tags.pl ../exiftool/lib > src/tags/generated.rs
-perl scripts/gen_print_conv.pl ../exiftool/lib > src/tags/print_conv_generated.rs
-```
-
-## Migration from Perl ExifTool
-
-See [MIGRATION.md](MIGRATION.md) for detailed compatibility notes,
-output format differences, and a migration checklist.
-
 ## License
 
-GPL-3.0-or-later (same as ExifTool)
+GPL-3.0-or-later (same as the original Perl ExifTool)
+
+## Acknowledgements
+
+Based on [ExifTool](https://exiftool.org/) by Phil Harvey.
+Tag tables and print conversions are generated from the ExifTool Perl source.

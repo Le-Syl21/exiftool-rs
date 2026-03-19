@@ -1,7 +1,7 @@
 //! # exiftool
 //!
-//! A Rust implementation of [ExifTool](https://exiftool.org/) for reading metadata
-//! from image, audio, video, and document files.
+//! A Rust reimplementation of [ExifTool](https://exiftool.org/) for reading, writing,
+//! and editing metadata in image, audio, video, and document files.
 //!
 //! ## Quick Start
 //!
@@ -9,20 +9,36 @@
 //! use exiftool::ExifTool;
 //!
 //! let et = ExifTool::new();
-//! let info = et.image_info("photo.jpg").unwrap();
-//! for (tag, value) in &info {
-//!     println!("{}: {}", tag, value);
+//! let tags = et.extract_info("photo.jpg").unwrap();
+//! for tag in &tags {
+//!     println!("{}: {}", tag.name, tag.print_value);
 //! }
 //! ```
 //!
-//! ## Supported Formats
+//! ## One-liner
 //!
-//! Currently supports reading metadata from:
-//! - **JPEG** — EXIF, IPTC, XMP
-//! - **PNG** — tEXt, iTXt, eXIf chunks
-//! - **TIFF** — Full IFD structure (also CR2, NEF, DNG, ARW)
+//! ```no_run
+//! let info = exiftool::image_info("photo.jpg").unwrap();
+//! println!("Camera: {}", info.get("Model").unwrap_or(&String::new()));
+//! ```
 //!
-//! More formats will be added incrementally.
+//! ## Writing Tags
+//!
+//! ```no_run
+//! use exiftool::ExifTool;
+//!
+//! let mut et = ExifTool::new();
+//! et.set_new_value("Artist", Some("John Doe"));
+//! et.write_info("photo.jpg", "photo_out.jpg").unwrap();
+//! ```
+//!
+//! ## Supported Formats (30+ readers, 15 writers)
+//!
+//! **Images**: JPEG, TIFF, PNG, WebP, PSD, BMP, GIF, HEIF/AVIF, ICO
+//! **Raw**: CR2, NEF, DNG, ARW, ORF, RAF, RW2, PEF, SR2, X3F, 3FR, ERF
+//! **Video**: MP4/MOV, AVI, MKV
+//! **Audio**: MP3, FLAC, WAV, OGG
+//! **Documents**: PDF
 
 pub mod composite;
 pub mod config;
