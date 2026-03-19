@@ -1096,8 +1096,9 @@ impl ExifTool {
             FileType::Pcapng => formats::misc::read_pcapng(data),
             // Metadata / Other
             FileType::Xmp => formats::xmp_file::read_xmp(data),
+            FileType::Svg => formats::misc::read_svg(data),
             FileType::Html => {
-                // SVG files detected as HTML
+                // SVG files that weren't detected by magic (e.g., via extension fallback)
                 let is_svg = data.windows(4).take(512).any(|w| w == b"<svg");
                 if is_svg {
                     formats::misc::read_svg(data)

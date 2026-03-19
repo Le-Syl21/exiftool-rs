@@ -40,6 +40,7 @@ fn namespace_prefix(uri: &str) -> &str {
         "http://ns.adobe.com/xap/1.0/sType/Dimensions#" => "stDim",
         "http://ns.adobe.com/xap/1.0/sType/ResourceRef#" => "stRef",
         "http://ns.microsoft.com/photo/1.0/" => "MicrosoftPhoto",
+        "http://ns.useplus.org/ldf/xmp/1.0/" => "plus",
         _ => "",
     }
 }
@@ -433,7 +434,7 @@ impl XmpReader {
                         if in_lang_alt {
                             // Inner rdf:li inside rdf:Alt — store by lang
                             let lang = current_li_lang.take().unwrap_or_else(|| "x-default".to_string());
-                            let text = current_text.trim().to_string();
+                            let text = normalize_xml_text(&current_text);
                             // Present-but-empty → Some(""), absent → padding with None below
                             let opt_text: Option<String> = Some(text.clone());
                             if lang_alt_in_bag {
@@ -463,8 +464,8 @@ impl XmpReader {
                         } else if in_gcontainer_li {
                             // GContainer struct li: fields were captured as attributes, not text
                             in_gcontainer_li = false;
-                        } else if !current_text.trim().is_empty() {
-                            list_values.push(current_text.trim().to_string());
+                        } else if !normalize_xml_text(&current_text).is_empty() {
+                            list_values.push(normalize_xml_text(&current_text));
                         }
                         in_rdf_li = false;
                         path.pop();
@@ -771,7 +772,7 @@ impl XmpReader {
 
                     // Struct properties inside rdf:li (e.g., stJob:name inside xmpBJ:JobRef/Bag/li)
                     // Perl flattens as "{ParentBag}{FieldName}" → "JobRefName"
-                    if !current_text.trim().is_empty() && in_rdf_li
+                    if !normalize_xml_text(&current_text).is_empty() && in_rdf_li
                         && name.namespace.as_deref() != Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                         && name.local_name != "Description"
                     {
@@ -800,8 +801,8 @@ impl XmpReader {
                                 id: TagId::Text(format!("{}:{}", group_prefix, flat_name)),
                                 name: flat_name.clone(), description: flat_name,
                                 group: TagGroup { family0: "XMP".into(), family1: format!("XMP-{}", group_prefix), family2: category.into() },
-                                raw_value: Value::String(current_text.trim().to_string()),
-                                print_value: current_text.trim().to_string(), priority: 0,
+                                raw_value: Value::String(normalize_xml_text(&current_text)),
+                                print_value: normalize_xml_text(&current_text), priority: 0,
                             });
                         }
                         path.pop();
@@ -811,7 +812,7 @@ impl XmpReader {
 
                     // Simple property with text content (or explicitly empty with et:id)
                     let has_et_depth = emit_empty_depths.contains(&path.len());
-                    if (!current_text.trim().is_empty() || has_et_depth) && !in_rdf_li {
+                    if (!normalize_xml_text(&current_text).is_empty() || has_et_depth) && !in_rdf_li {
                         let prefix = namespace_prefix(ns_uri);
                         let tag_name = &name.local_name;
 
@@ -823,7 +824,7 @@ impl XmpReader {
                             let group_prefix = if prefix.is_empty() { "XMP" } else { prefix };
                             let category = namespace_category(group_prefix);
 
-                            let value = Value::String(current_text.trim().to_string());
+                            let value = Value::String(normalize_xml_text(&current_text));
                             let print_value = value.to_display_string();
 
                             // Check if we're inside a bare struct (rdf:parseType='Resource')
@@ -932,8 +933,20 @@ impl XmpReader {
 /// Strip struct-type prefix from field name when the parent name ends with that prefix.
 /// E.g., parent "AboutCvTerm" ends with "CvTerm", field "CvTermName" starts with "CvTerm"
 /// → return "Name" (stripped), so flat = "AboutCvTerm" + "Name" = "AboutCvTermName"
+///
+/// Also handles PLUS-style: parent "CopyrightOwner", field "CopyrightOwnerName"
+/// → field starts with parent → strip entire parent → "Name"
+/// so flat = "CopyrightOwner" + "Name" = "CopyrightOwnerName"
 fn strip_struct_prefix(parent: &str, field: &str) -> String {
-    // Try progressively shorter suffixes of parent (min 2 chars, must start at word boundary)
+    // First: try stripping the full parent name as prefix (e.g., CopyrightOwner from CopyrightOwnerName)
+    if field.starts_with(parent) && field.len() > parent.len() {
+        let stripped = &field[parent.len()..];
+        if !stripped.is_empty() {
+            return stripped.to_string();
+        }
+    }
+
+    // Next: try progressively shorter suffixes of parent (min 2 chars, must start at word boundary)
     let parent_chars: Vec<char> = parent.chars().collect();
     for start in 1..parent_chars.len().saturating_sub(1) {
         // Only try positions that start with uppercase (word boundary)
@@ -960,6 +973,10 @@ fn remap_xmp_tag_name(group_prefix: &str, local_name: &str) -> String {
         // exif: namespace remappings
         ("exif", "PixelXDimension") => "ExifImageWidth".into(),
         ("exif", "PixelYDimension") => "ExifImageHeight".into(),
+        // photoshop: namespace remappings
+        ("photoshop", "ICCProfile") => "ICCProfileName".into(),
+        // plus: namespace remappings
+        ("plus", "Version") => "PLUSVersion".into(),
         _ => {
             // For unknown/ExifTool-internal namespaces (group_prefix = "XMP" or anything unknown),
             // if the local name has only uppercase letters (e.g. "ISO"), ExifTool normalizes it:
@@ -984,6 +1001,32 @@ fn ucfirst(s: &str) -> String {
     }
 }
 
+/// Normalize XML text content: trim outer whitespace and collapse internal whitespace sequences
+/// (including newlines from multi-line XMP text nodes) into single spaces.
+/// This matches ExifTool's XML text normalization behavior.
+fn normalize_xml_text(s: &str) -> String {
+    let trimmed = s.trim();
+    if !trimmed.contains('\n') && !trimmed.contains('\r') {
+        // Fast path: no line breaks
+        return trimmed.to_string();
+    }
+    // Collapse any sequence of whitespace (including newlines) into a single space
+    let mut result = String::with_capacity(trimmed.len());
+    let mut last_was_space = false;
+    for c in trimmed.chars() {
+        if c.is_whitespace() {
+            if !last_was_space {
+                result.push(' ');
+                last_was_space = true;
+            }
+        } else {
+            result.push(c);
+            last_was_space = false;
+        }
+    }
+    result
+}
+
 /// Read generic (non-RDF) XML files by building tag names from element paths.
 /// This mirrors ExifTool's XMP.pm generic XML handling.
 fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
@@ -992,10 +1035,11 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
     let mut seen_names: std::collections::HashSet<String> = std::collections::HashSet::new();
 
     let parser = EventReader::from_str(xml);
-    let mut path: Vec<String> = Vec::new(); // element local names
+    let mut path: Vec<String> = Vec::new(); // element local names (ucfirst'd)
     let mut current_text = String::new();
 
     // Accumulate full path as tag name prefix: root element name + child names concatenated
+    // Each path component is ucfirst'd to produce CamelCase tag names (e.g., GpxTrkName).
     // Attributes on elements are emitted as TagName = value (path + attrName)
 
     // Track which namespace URIs were declared on the root element (xmlns=...)
@@ -1004,7 +1048,7 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
     for event in parser {
         match event {
             Ok(XmlEvent::StartElement { name, attributes, namespace, .. }) => {
-                let local = name.local_name.clone();
+                let local = ucfirst(&name.local_name);
                 let path_str = format!("{}{}", path.join(""), local);
                 path.push(local.clone());
                 current_text.clear();
@@ -1078,7 +1122,7 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                 current_text.push_str(&text);
             }
             Ok(XmlEvent::EndElement { .. }) => {
-                let text = current_text.trim().to_string();
+                let text = normalize_xml_text(&current_text);
                 if !text.is_empty() && !path.is_empty() {
                     let tag_name = path.join("");
                     if !seen_names.contains(&tag_name) {
@@ -1180,7 +1224,7 @@ fn collect_node_bag_values(xml: &str) -> std::collections::HashMap<String, Vec<S
                 let local = &name.local_name;
                 let ns = name.namespace.as_deref().unwrap_or("");
                 if local == "li" && ns == rdf_ns && in_li {
-                    let val = current_text.trim().to_string();
+                    let val = normalize_xml_text(&current_text);
                     if !val.is_empty() {
                         current_items.push(val);
                     }

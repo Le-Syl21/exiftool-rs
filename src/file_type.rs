@@ -135,6 +135,7 @@ pub enum FileType {
     Json,
     Pcap,
     Pcapng,
+    Svg,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -276,6 +277,7 @@ impl FileType {
             FileType::Json => "JSON",
             FileType::Pcap => "PCAP",
             FileType::Pcapng => "PCAPNG",
+            FileType::Svg => "SVG",
         }
     }
 
@@ -399,6 +401,7 @@ impl FileType {
             FileType::Json => "application/json",
             FileType::Pcap => "application/vnd.tcpdump.pcap",
             FileType::Pcapng => "application/vnd.tcpdump.pcap",
+            FileType::Svg => "image/svg+xml",
         }
     }
 
@@ -530,6 +533,7 @@ impl FileType {
             FileType::Json => &["json"],
             FileType::Pcap => &["pcap", "cap"],
             FileType::Pcapng => &["pcapng", "ntar"],
+            FileType::Svg => &["svg"],
         }
     }
 
@@ -633,6 +637,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Dicom, FileType::Fits,
     FileType::Moi, FileType::MacOs, FileType::Json,
     FileType::Pcap, FileType::Pcapng,
+    FileType::Svg,
 ];
 
 /// Detect file type from magic bytes (first 64+ bytes of a file).
@@ -1080,7 +1085,7 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     if header.starts_with(b"<?xml") || header.starts_with(b"<svg") {
         let preview = &header[..header.len().min(512)];
         if preview.windows(4).any(|w| w == b"<svg") {
-            return Some(FileType::Html); // SVG handled via HTML path
+            return Some(FileType::Svg);
         }
         if preview.windows(5).any(|w| w == b"<html" || w == b"<HTML") {
             return Some(FileType::Html); // XHTML
