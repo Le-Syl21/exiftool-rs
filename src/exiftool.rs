@@ -1128,8 +1128,11 @@ impl ExifTool {
             "json" => formats::misc::read_json(data),
             "svg" => formats::misc::read_svg(data),
             "ram" => formats::misc::read_ram(data).or_else(|_| Ok(Vec::new())),
-            "txt" | "csv" | "log" | "igc" => {
-                Ok(compute_text_tags(data))
+            "txt" | "log" | "igc" => {
+                Ok(compute_text_tags(data, false))
+            }
+            "csv" => {
+                Ok(compute_text_tags(data, true))
             }
             "url" | "lnk" => {
                 Ok(Vec::new())
@@ -1688,8 +1691,8 @@ fn encode_exif_tag(
     Some((tag_id, format, encoded))
 }
 
-/// Compute text file tags: LineCount, WordCount, MIMEEncoding, Newlines (from Perl Text.pm).
-fn compute_text_tags(data: &[u8]) -> Vec<Tag> {
+/// Compute text file tags (from Perl Text.pm).
+fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
     let mut tags = Vec::new();
     let mk = |name: &str, val: String| Tag {
         id: crate::tag::TagId::Text(name.into()),
@@ -1698,15 +1701,54 @@ fn compute_text_tags(data: &[u8]) -> Vec<Tag> {
         raw_value: Value::String(val.clone()), print_value: val, priority: 0,
     };
 
-    // Detect encoding
+    // Detect encoding and BOM
     let is_ascii = data.iter().all(|&b| b < 128);
-    let is_utf8 = std::str::from_utf8(data).is_ok();
-    let encoding = if is_ascii { "us-ascii" }
-        else if data.starts_with(&[0xFF, 0xFE]) { "utf-16le" }
-        else if data.starts_with(&[0xFE, 0xFF]) { "utf-16be" }
-        else if data.starts_with(&[0xEF, 0xBB, 0xBF]) || is_utf8 { "utf-8" }
-        else { "unknown-8bit" };
+    let has_utf8_bom = data.starts_with(&[0xEF, 0xBB, 0xBF]);
+    let has_utf16le_bom = data.starts_with(&[0xFF, 0xFE]) && !data.starts_with(&[0xFF, 0xFE, 0x00, 0x00]);
+    let has_utf16be_bom = data.starts_with(&[0xFE, 0xFF]);
+    let has_utf32le_bom = data.starts_with(&[0xFF, 0xFE, 0x00, 0x00]);
+    let has_utf32be_bom = data.starts_with(&[0x00, 0x00, 0xFE, 0xFF]);
+
+    // Detect if file has weird non-text control characters (like multi-byte unicode without BOM)
+    let has_weird_ctrl = data.iter().any(|&b| (b <= 0x06) || (b >= 0x0e && b <= 0x1a) || (b >= 0x1c && b <= 0x1f) || b == 0x7f);
+
+    let (encoding, is_bom, is_utf16) = if has_utf32le_bom {
+        ("utf-32le", true, false)
+    } else if has_utf32be_bom {
+        ("utf-32be", true, false)
+    } else if has_utf16le_bom {
+        ("utf-16le", true, true)
+    } else if has_utf16be_bom {
+        ("utf-16be", true, true)
+    } else if has_weird_ctrl {
+        // Not a text file (has binary-like control chars but no recognized multi-byte marker)
+        return tags;
+    } else if is_ascii {
+        ("us-ascii", false, false)
+    } else {
+        // Check UTF-8
+        let is_valid_utf8 = std::str::from_utf8(data).is_ok();
+        if is_valid_utf8 {
+            if has_utf8_bom {
+                ("utf-8", true, false)
+            } else {
+                // Check if it has high bytes suggesting iso-8859-1 vs utf-8
+                // Perl's IsUTF8: returns >0 if valid UTF-8 with multi-byte, 0 if ASCII, <0 if invalid
+                // For simplicity: valid UTF-8 without BOM = utf-8
+                ("utf-8", false, false)
+            }
+        } else if !data.iter().any(|&b| b >= 0x80 && b <= 0x9f) {
+            ("iso-8859-1", false, false)
+        } else {
+            ("unknown-8bit", false, false)
+        }
+    };
+
     tags.push(mk("MIMEEncoding", encoding.into()));
+
+    if is_bom {
+        tags.push(mk("ByteOrderMark", "Yes".into()));
+    }
 
     // Count newlines and detect type
     let has_cr = data.contains(&b'\r');
@@ -1717,16 +1759,69 @@ fn compute_text_tags(data: &[u8]) -> Vec<Tag> {
         else { "(none)" };
     tags.push(mk("Newlines", newline_type.into()));
 
-    // Line count (Perl: number of \n in text)
-    let line_count = data.iter().filter(|&&b| b == b'\n').count();
-    // If no trailing newline, still count last line (Perl counts \n occurrences)
-    let line_count = if line_count == 0 && !data.is_empty() { 1 } else { line_count };
-    tags.push(mk("LineCount", line_count.to_string()));
+    if is_csv {
+        // CSV analysis: detect delimiter, quoting, column count, row count
+        let text = String::from_utf8_lossy(data);
+        let mut delim = "";
+        let mut quot = "";
+        let mut ncols = 1usize;
+        let mut nrows = 0usize;
 
-    // Word count
-    let text = String::from_utf8_lossy(data);
-    let word_count = text.split_whitespace().count();
-    tags.push(mk("WordCount", word_count.to_string()));
+        for line in text.lines() {
+            if nrows == 0 {
+                // Detect delimiter from first line
+                let comma_count = line.matches(',').count();
+                let semi_count = line.matches(';').count();
+                let tab_count = line.matches('\t').count();
+                if comma_count > semi_count && comma_count > tab_count {
+                    delim = ",";
+                    ncols = comma_count + 1;
+                } else if semi_count > tab_count {
+                    delim = ";";
+                    ncols = semi_count + 1;
+                } else if tab_count > 0 {
+                    delim = "\t";
+                    ncols = tab_count + 1;
+                } else {
+                    delim = "";
+                    ncols = 1;
+                }
+                // Detect quoting
+                if line.contains('"') { quot = "\""; }
+                else if line.contains('\'') { quot = "'"; }
+            }
+            nrows += 1;
+            if nrows >= 1000 { break; }
+        }
+
+        let delim_display = match delim {
+            "," => "Comma",
+            ";" => "Semicolon",
+            "\t" => "Tab",
+            _ => "(none)",
+        };
+        let quot_display = match quot {
+            "\"" => "Double quotes",
+            "'" => "Single quotes",
+            _ => "(none)",
+        };
+
+        tags.push(mk("Delimiter", delim_display.into()));
+        tags.push(mk("Quoting", quot_display.into()));
+        tags.push(mk("ColumnCount", ncols.to_string()));
+        if nrows > 0 {
+            tags.push(mk("RowCount", nrows.to_string()));
+        }
+    } else if !is_utf16 {
+        // Line count and word count for plain text files (not UTF-16/32)
+        let line_count = data.iter().filter(|&&b| b == b'\n').count();
+        let line_count = if line_count == 0 && !data.is_empty() { 1 } else { line_count };
+        tags.push(mk("LineCount", line_count.to_string()));
+
+        let text = String::from_utf8_lossy(data);
+        let word_count = text.split_whitespace().count();
+        tags.push(mk("WordCount", word_count.to_string()));
+    }
 
     tags
 }
