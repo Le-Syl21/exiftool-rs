@@ -98,8 +98,10 @@ fn parse_vorbis_identification(packet: &[u8], tags: &mut Vec<Tag>) {
     let nominal_bitrate = i32::from_le_bytes([d[13], d[14], d[15], d[16]]);
     let _min_bitrate = i32::from_le_bytes([d[17], d[18], d[19], d[20]]);
 
-    tags.push(mk("AudioFormat", "Audio Format", Value::String("Vorbis".into())));
-    tags.push(mk("NumChannels", "Number of Channels", Value::U8(channels)));
+    // Perl: VorbisVersion, AudioChannels, SampleRate (no AudioFormat tag)
+    let version = u32::from_le_bytes([d[0], d[1], d[2], d[3]]);
+    tags.push(mk("VorbisVersion", "Vorbis Version", Value::U32(version)));
+    tags.push(mk("AudioChannels", "Audio Channels", Value::U8(channels)));
     tags.push(mk("SampleRate", "Sample Rate", Value::U32(sample_rate)));
 
     if nominal_bitrate > 0 {
@@ -115,16 +117,21 @@ fn parse_opus_identification(packet: &[u8], tags: &mut Vec<Tag>) {
     if packet.len() < 19 {
         return;
     }
-    // "OpusHead" (8) then:
+    // "OpusHead" (8) then: version(1) channels(1) pre_skip(2) sample_rate(4) output_gain(2) map_family(1)
     let d = &packet[8..];
-    let _version = d[0];
+    let version = d[0];
     let channels = d[1];
     let _pre_skip = u16::from_le_bytes([d[2], d[3]]);
     let sample_rate = u32::from_le_bytes([d[4], d[5], d[6], d[7]]);
+    let output_gain = i16::from_le_bytes([d[8], d[9]]);
 
-    tags.push(mk("AudioFormat", "Audio Format", Value::String("Opus".into())));
-    tags.push(mk("NumChannels", "Number of Channels", Value::U8(channels)));
+    // Perl tag names: OpusVersion, AudioChannels, SampleRate, OutputGain
+    tags.push(mk("OpusVersion", "Opus Version", Value::String(format!("{}/{}", version >> 4, version & 0x0f))));
+    tags.push(mk("AudioChannels", "Audio Channels", Value::U8(channels)));
     tags.push(mk("SampleRate", "Sample Rate", Value::U32(sample_rate)));
+    // OutputGain in dB: value / 256.0
+    let gain_db = output_gain as f64 / 256.0;
+    tags.push(mk("OutputGain", "Output Gain", Value::String(format!("{:.2} dB", gain_db))));
 }
 
 fn parse_theora_identification(packet: &[u8], tags: &mut Vec<Tag>) {

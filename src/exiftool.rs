@@ -1103,6 +1103,7 @@ impl ExifTool {
             FileType::M2ts => formats::misc::read_m2ts(data),
             FileType::Gzip => formats::misc::read_gzip(data),
             FileType::Rar => formats::misc::read_rar(data),
+            FileType::Dss => formats::misc::read_dss(data),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }

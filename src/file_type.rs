@@ -234,7 +234,7 @@ impl FileType {
             FileType::RealAudio => "RealAudio",
             FileType::Wma => "Windows Media Audio",
             FileType::M4a => "MPEG-4 Audio",
-            FileType::Dss => "Digital Speech Standard",
+            FileType::Dss => "DSS",
             // Documents
             FileType::Pdf => "PDF document",
             FileType::PostScript => "PostScript",
@@ -351,6 +351,7 @@ impl FileType {
             FileType::RealAudio => "audio/x-pn-realaudio",
             FileType::Wma => "audio/x-ms-wma",
             FileType::M4a => "audio/mp4",
+            FileType::Dss => "audio/x-dss",
             // Documents
             FileType::Pdf => "application/pdf",
             FileType::PostScript => "application/postscript",
@@ -475,6 +476,7 @@ impl FileType {
             FileType::RealAudio => &["ra"],
             FileType::Wma => &["wma"],
             FileType::M4a => &["m4a", "m4b", "m4p"],
+            FileType::Dss => &["dss"],
             // Documents
             FileType::Pdf => &["pdf"],
             FileType::PostScript => &["ps", "eps", "epsf"],
@@ -593,7 +595,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Mp3, FileType::Flac, FileType::Ogg, FileType::Wav, FileType::Aiff,
     FileType::Aac, FileType::Opus, FileType::Mpc, FileType::Ape, FileType::WavPack,
     FileType::Ofr, FileType::Dsf, FileType::Audible, FileType::RealAudio,
-    FileType::Wma, FileType::M4a,
+    FileType::Wma, FileType::M4a, FileType::Dss,
     // Documents
     FileType::Pdf, FileType::PostScript, FileType::Doc, FileType::Docx,
     FileType::Xls, FileType::Xlsx, FileType::Ppt, FileType::Pptx,
@@ -941,6 +943,16 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // RealAudio: ".ra\xFD"
     if header.len() >= 4 && header[0] == b'.' && header[1] == b'r' && header[2] == b'a' && header[3] == 0xFD {
         return Some(FileType::RealAudio);
+    }
+
+    // DSS (Olympus Digital Speech Standard): "\x02dss" or "\x03ds2"
+    if header.len() >= 4
+        && (header[0] == 0x02 || header[0] == 0x03)
+        && (header[1] == b'd')
+        && (header[2] == b's')
+        && (header[3] == b's' || header[3] == b'2')
+    {
+        return Some(FileType::Dss);
     }
 
     // ===== Documents =====
