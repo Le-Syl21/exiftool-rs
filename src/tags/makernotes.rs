@@ -11,7 +11,7 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         Manufacturer::Canon => &CANON_TAGS[..],
         Manufacturer::Nikon | Manufacturer::NikonOld => &NIKON_TAGS[..],
         Manufacturer::Sony => &SONY_TAGS[..],
-        Manufacturer::Pentax => &[][..], // Skip hand-written (has Canon/Casio collisions), use generated
+        Manufacturer::Pentax => &PENTAX_MAIN_IFD_TAGS[..], // Main IFD overrides to avoid generated table collisions
         Manufacturer::Olympus | Manufacturer::OlympusNew => &OLYMPUS_TAGS[..],
         Manufacturer::Panasonic => &PANASONIC_TAGS[..],
         Manufacturer::Fujifilm => &FUJIFILM_TAGS[..],
@@ -21,7 +21,7 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         Manufacturer::CasioType2 => &[][..], // Uses inline table below
         Manufacturer::Apple => &APPLE_TAGS[..],
         Manufacturer::Ricoh | Manufacturer::Minolta
-        | Manufacturer::Google | Manufacturer::DJI => &[][..],
+        | Manufacturer::Google | Manufacturer::DJI | Manufacturer::GE => &[][..],
         Manufacturer::Unknown => &[][..], // Will fallback to generated tables
     };
 
@@ -124,8 +124,11 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
             if id == tag_id { return (name, name); }
         }
     }
-    for &(id, name) in extra {
-        if id == tag_id { return (name, name); }
+    // Restrict extra table to Unknown/Google/DJI manufacturers only
+    if manufacturer == Manufacturer::Unknown || manufacturer == Manufacturer::Google || manufacturer == Manufacturer::DJI {
+        for &(id, name) in extra {
+            if id == tag_id { return (name, name); }
+        }
     }
 
     // Minolta-specific tags
@@ -143,23 +146,19 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         for &(id, name) in minolta { if id == tag_id { return (name, name); } }
     }
 
-    // Last resort: search ALL generated tables
-    let all_tables: &[&[(u16, &str)]] = &[
-        &super::generated::GENERATED_CANON_TAGS,
-        &super::generated::GENERATED_NIKON_TAGS,
-        &super::generated::GENERATED_SONY_TAGS,
-        &super::generated::GENERATED_OLYMPUS_TAGS,
-        &super::generated::GENERATED_PENTAX_TAGS,
-        &super::generated::GENERATED_PANASONIC_TAGS,
-        &super::generated::GENERATED_FUJIFILM_TAGS,
-        &super::generated::GENERATED_SAMSUNG_TAGS,
-    ];
-    for table in all_tables {
-        for &(id, name) in *table {
-            if id == tag_id {
-                return (name, name);
-            }
+    // GE-specific tag lookup
+    if manufacturer == Manufacturer::GE {
+        let ge_tags: &[(u16, &str)] = &[
+            (0x0202, "Macro"), (0x0207, "GEModel"), (0x0300, "GEMake"),
+        ];
+        for &(id, name) in ge_tags {
+            if id == tag_id { return (name, name); }
         }
+    }
+
+    // DataDump (0x0F00) for Sanyo
+    if manufacturer == Manufacturer::Unknown && tag_id == 0x0F00 {
+        return ("DataDump", "DataDump");
     }
 
     ("Unknown", "Unknown MakerNote Tag")
@@ -170,7 +169,7 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
 static CANON_TAGS: &[(u16, &str, &str)] = &[
     (0x0001, "CanonCameraSettings", "Camera Settings"),
     (0x0002, "CanonFocalLength", "Focal Length"),
-    (0x0003, "CanonFlashInfo", "Flash Info"),
+    // (0x0003, "CanonFlashInfo", "Flash Info"), // Unknown/SubDirectory in Perl
     (0x0004, "CanonShotInfo", "Shot Info"),
     (0x0005, "CanonPanorama", "Panorama"),
     (0x0006, "CanonImageType", "Image Type"),
@@ -200,7 +199,7 @@ static CANON_TAGS: &[(u16, &str, &str)] = &[
     (0x0035, "TimeInfo", "Time Info"),
     (0x0038, "BatteryType", "Battery Type"),
     (0x003C, "AFInfo3", "AF Info 3"),
-    (0x0093, "CanonSerialInfo", "Serial Number Info"),
+    // (0x0093, "CanonSerialInfo", "Serial Number Info"), // Unknown/SubDirectory in Perl
     (0x0095, "LensModel", "Lens Model"),
     (0x0096, "InternalSerialNumber", "Internal Serial Number"),
     (0x0097, "DustRemovalData", "Dust Removal Data"),
@@ -208,6 +207,7 @@ static CANON_TAGS: &[(u16, &str, &str)] = &[
     (0x0099, "CustomFunctions2", "Custom Functions 2"),
     (0x009A, "AspectInfo", "Aspect Info"),
     (0x00A0, "ProcessingInfo", "Processing Info"),
+    (0x00A8, "Unknown", "Unknown"), // Prevent generated table collision
     (0x00AA, "MeasuredColor", "Measured Color"),
     (0x00B4, "ColorSpace", "Color Space"),
     (0x00D0, "VRDOffset", "VRD Offset"),
@@ -241,6 +241,7 @@ static NIKON_TAGS: &[(u16, &str, &str)] = &[
     (0x0007, "FocusMode", "Focus Mode"),
     (0x0008, "FlashSetting", "Flash Setting"),
     (0x0009, "FlashType", "Flash Type"),
+    (0x000A, "Unknown", "Unknown"), // Prevent generated table collision
     (0x000B, "WhiteBalanceFineTune", "White Balance Fine Tune"),
     (0x000C, "WBRBLevels", "WB RB Levels"),
     (0x000D, "ProgramShift", "Program Shift"),
@@ -303,14 +304,14 @@ static NIKON_TAGS: &[(u16, &str, &str)] = &[
     (0x009A, "SensorPixelSize", "Sensor Pixel Size"),
     (0x009C, "SceneAssist", "Scene Assist"),
     (0x009E, "RetouchHistory", "Retouch History"),
-    (0x00A0, "SerialNumber2", "Serial Number 2"),
+    (0x00A0, "SerialNumber", "Serial Number"),
     (0x00A2, "ImageDataSize", "Image Data Size"),
     (0x00A5, "ImageCount", "Image Count"),
     (0x00A6, "DeletedImageCount", "Deleted Image Count"),
     (0x00A7, "ShutterCount", "Shutter Count"),
     (0x00A8, "FlashInfo", "Flash Info"),
     (0x00A9, "ImageOptimization", "Image Optimization"),
-    (0x00AA, "Saturation2", "Saturation 2"),
+    (0x00AA, "Unknown", "Unknown"), // Saturation - Unknown=>1 in Perl
     (0x00AB, "VariProgram", "Vari Program"),
     (0x00AC, "ImageStabilization", "Image Stabilization"),
     (0x00AD, "AFResponse", "AF Response"),
@@ -392,72 +393,6 @@ static SONY_TAGS: &[(u16, &str, &str)] = &[
     (0xB050, "HighISONoiseReduction2", "High ISO NR 2"),
     (0xB052, "IntelligentAuto", "Intelligent Auto"),
     (0xB054, "WhiteBalance2", "White Balance 2"),
-];
-
-static PENTAX_TAGS: &[(u16, &str, &str)] = &[
-    (0x0000, "PentaxVersion", "Pentax Version"),
-    (0x0001, "PentaxModelType", "Model Type"),
-    (0x0002, "PreviewImageSize", "Preview Image Size"),
-    (0x0003, "PreviewImageLength", "Preview Image Length"),
-    (0x0004, "PreviewImageStart", "Preview Image Start"),
-    (0x0005, "PentaxModelID", "Model ID"),
-    (0x0006, "Date", "Date"),
-    (0x0007, "Time", "Time"),
-    (0x0008, "Quality", "Quality"),
-    (0x0009, "PentaxImageSize", "Image Size"),
-    (0x000B, "PictureMode", "Picture Mode"),
-    (0x000C, "FlashMode", "Flash Mode"),
-    (0x000D, "FocusMode", "Focus Mode"),
-    (0x000E, "AFPointSelected", "AF Point Selected"),
-    (0x000F, "AFPointsInFocus", "AF Points In Focus"),
-    (0x0010, "FocusPosition", "Focus Position"),
-    (0x0012, "ExposureTime", "Exposure Time"),
-    (0x0013, "FNumber", "F Number"),
-    (0x0014, "ISO", "ISO"),
-    (0x0016, "ExposureCompensation", "Exposure Compensation"),
-    (0x0017, "MeteringMode", "Metering Mode"),
-    (0x0018, "AutoBracketing", "Auto Bracketing"),
-    (0x0019, "WhiteBalance", "White Balance"),
-    (0x001A, "WhiteBalanceMode", "White Balance Mode"),
-    (0x001B, "BlueBalance", "Blue Balance"),
-    (0x001C, "RedBalance", "Red Balance"),
-    (0x001D, "FocalLength", "Focal Length"),
-    (0x001E, "DigitalZoom", "Digital Zoom"),
-    (0x001F, "Saturation", "Saturation"),
-    (0x0020, "Contrast", "Contrast"),
-    (0x0021, "Sharpness", "Sharpness"),
-    (0x0022, "WorldTimeLocation", "World Time Location"),
-    (0x0023, "HometownCity", "Hometown City"),
-    (0x0024, "DestinationCity", "Destination City"),
-    (0x0025, "HometownDST", "Hometown DST"),
-    (0x0026, "DestinationDST", "Destination DST"),
-    (0x0027, "DSPFirmwareVersion", "DSP Firmware Version"),
-    (0x0028, "CPUFirmwareVersion", "CPU Firmware Version"),
-    (0x0029, "FrameNumber", "Frame Number"),
-    (0x003E, "LensType", "Lens Type"),
-    (0x003F, "LensModel", "Lens Model"),
-    (0x0047, "CameraTemperature", "Camera Temperature"),
-    (0x0048, "AELock", "AE Lock"),
-    (0x0049, "NoiseReduction", "Noise Reduction"),
-    (0x004D, "FlashExposureComp", "Flash Exposure Comp"),
-    (0x004F, "ImageTone", "Image Tone"),
-    (0x0050, "ColorTemperature", "Color Temperature"),
-    (0x005C, "ShakeReduction", "Shake Reduction"),
-    (0x005D, "ShutterCount", "Shutter Count"),
-    (0x0069, "DynamicRangeExpansion", "Dynamic Range Expansion"),
-    (0x006B, "CrossProcess", "Cross Process"),
-    (0x0072, "LensSerialNumber", "Lens Serial Number"),
-    (0x0073, "SensorWidth", "Sensor Width"),
-    (0x0074, "SensorHeight", "Sensor Height"),
-    (0x0076, "LensID", "Lens ID"),
-    (0x0200, "BlackPoint", "Black Point"),
-    (0x0201, "WhitePoint", "White Point"),
-    (0x0205, "ShotInfo", "Shot Info"),
-    (0x0206, "AEInfo", "AE Info"),
-    (0x0207, "LensInfo", "Lens Info"),
-    (0x0208, "FlashInfo", "Flash Info"),
-    (0x0209, "AEMeteringSegments", "AE Metering Segments"),
-    (0x020D, "WB_RGGBLevels", "WB RGGB Levels"),
 ];
 
 static OLYMPUS_TAGS: &[(u16, &str, &str)] = &[
@@ -806,7 +741,7 @@ static CASIO_TAGS: &[(u16, &str, &str)] = &[
 
 static APPLE_TAGS: &[(u16, &str, &str)] = &[
     (0x0001, "MakerNoteVersion", "MakerNoteVersion"),
-    (0x0002, "AEMatrix", "AEMatrix"),
+    // (0x0002, "AEMatrix", "AEMatrix"), // Unknown=>1 in Perl, suppressed
     (0x0003, "RunTime", "RunTime"),
     (0x0004, "AEStable", "AEStable"),
     (0x0005, "AETarget", "AETarget"),
@@ -1025,10 +960,10 @@ static OLYMPUS_SUB_TAGS: &[(u16, &str)] = &[
     (0x1906, "KeystoneValue"),
     (0x2110, "GNDFilterType"),
     (0x0000, "FocusInfoVersion"),
-    (0x0209, "AutoFocus"),
+    // (0x0209, "AutoFocus"), // Unknown=>1 in Perl
     (0x0210, "SceneDetect"),
-    (0x0211, "SceneArea"),
-    (0x0212, "SceneDetectData"),
+    // (0x0211, "SceneArea"), // Unknown=>1 in Perl
+    // (0x0212, "SceneDetectData"), // Unknown=>1 in Perl
     (0x0300, "ZoomStepCount"),
     (0x0301, "FocusStepCount"),
     (0x0303, "FocusStepInfinity"),
@@ -1038,7 +973,7 @@ static OLYMPUS_SUB_TAGS: &[(u16, &str)] = &[
     (0x031B, "AFPointDetails"),
     (0x0328, "AFInfo"),
     (0x1201, "ExternalFlash"),
-    (0x1203, "ExternalFlashGuideNumber"),
+    // (0x1203, "ExternalFlashGuideNumber"), // Unknown=>1 in Perl
     (0x1204, "ExternalFlashBounce"),
     (0x1205, "ExternalFlashZoom"),
     (0x1208, "InternalFlash"),
@@ -1046,6 +981,87 @@ static OLYMPUS_SUB_TAGS: &[(u16, &str)] = &[
     (0x120A, "MacroLED"),
     (0x1500, "SensorTemperature")
 ];
+/// Pentax main IFD tag overrides — these take priority over generated table to avoid
+/// sub-table offset collisions (e.g. generated has 0x0e="SensorTemperature2" from a sub-table,
+/// but main IFD tag 0x000e is "AFPointSelected").
+static PENTAX_MAIN_IFD_TAGS: &[(u16, &str, &str)] = &[
+    (0x0000, "PentaxVersion", "Pentax Version"),
+    (0x0001, "PentaxModelType", "Pentax Model Type"),
+    (0x0002, "PreviewImageSize", "Preview Image Size"),
+    (0x0003, "PreviewImageLength", "Preview Image Length"),
+    (0x0004, "PreviewImageStart", "Preview Image Start"),
+    (0x0005, "PentaxModelID", "Pentax Model ID"),
+    (0x0006, "Date", "Date"),
+    (0x0007, "Time", "Time"),
+    (0x0008, "Quality", "Quality"),
+    (0x000b, "PictureMode", "Picture Mode"),
+    (0x000c, "FlashMode", "Flash Mode"),
+    (0x000d, "FocusMode", "Focus Mode"),
+    (0x000e, "AFPointSelected", "AF Point Selected"),
+    (0x000f, "AFPointsInFocus", "AF Points In Focus"),
+    (0x0010, "DataScaling", "Data Scaling"),  // actually FocusPosition for some models
+    (0x0011, "AFPointSelected2", "AF Point Selected 2"),
+    (0x0012, "ExposureTime", "Exposure Time"),
+    (0x0013, "FNumber", "F Number"),
+    (0x0014, "ISO", "ISO"),
+    (0x0016, "ExposureCompensation", "Exposure Compensation"),
+    (0x0017, "MeteringMode", "Metering Mode"),
+    (0x0018, "AutoBracketing", "Auto Bracketing"),
+    (0x0019, "WhiteBalance", "White Balance"),
+    (0x001a, "WhiteBalanceMode", "White Balance Mode"),
+    (0x001d, "FocalLength", "Focal Length"),
+    (0x001f, "Saturation", "Saturation"),
+    (0x0020, "Contrast", "Contrast"),
+    (0x0021, "Sharpness", "Sharpness"),
+    (0x0022, "WorldTimeLocation", "World Time Location"),
+    (0x0023, "HometownCity", "Hometown City"),
+    (0x0024, "DestinationCity", "Destination City"),
+    (0x0025, "HometownDST", "Hometown DST"),
+    (0x0026, "DestinationDST", "Destination DST"),
+    (0x0027, "DSPFirmwareVersion", "DSP Firmware Version"),
+    (0x0028, "CPUFirmwareVersion", "CPU Firmware Version"),
+    (0x002d, "EffectiveLV", "Effective LV"),
+    (0x0032, "ImageEditing", "Image Editing"),
+    (0x0033, "PictureMode", "Picture Mode"),
+    (0x0034, "DriveMode", "Drive Mode"),
+    (0x0037, "ColorSpace", "Color Space"),
+    (0x003d, "DataScaling", "Data Scaling"),
+    (0x003e, "PreviewImageBorders", "Preview Image Borders"),
+    (0x003f, "LensRec", "Lens Rec"),
+    (0x0040, "SensitivityAdjust", "Sensitivity Adjust"),
+    (0x0041, "ImageEditCount", "Image Edit Count"),
+    (0x0047, "CameraTemperature", "Camera Temperature"),
+    (0x0048, "AELock", "AE Lock"),
+    (0x0049, "NoiseReduction", "Noise Reduction"),
+    (0x004d, "FlashExposureComp", "Flash Exposure Comp"),
+    (0x004f, "ImageTone", "Image Tone"),
+    (0x0050, "ColorTemperature", "Color Temperature"),
+    (0x005c, "ShakeReductionInfo", "Shake Reduction Info"),
+    (0x005d, "ShutterCount", "Shutter Count"),
+    (0x0062, "RawDevelopmentProcess", "Raw Development Process"),
+    (0x0200, "BlackPoint", "Black Point"),
+    (0x0201, "WhitePoint", "White Point"),
+    (0x0205, "CameraSettings", "Camera Settings"),
+    (0x0206, "AEInfo", "AE Info"),
+    (0x0207, "LensInfo", "Lens Info"),
+    (0x0208, "FlashInfo", "Flash Info"),
+    (0x0209, "AEMeteringSegments", "AE Metering Segments"),
+    (0x020a, "FlashMeteringSegments", "Flash Metering Segments"),
+    (0x020b, "SlaveFlashMeteringSegments", "Slave Flash Metering Segments"),
+    (0x020d, "WB_RGGBLevelsDaylight", "WB_RGGBLevelsDaylight"),
+    (0x020e, "WB_RGGBLevelsShade", "WB_RGGBLevelsShade"),
+    (0x020f, "WB_RGGBLevelsCloudy", "WB_RGGBLevelsCloudy"),
+    (0x0210, "WB_RGGBLevelsTungsten", "WB_RGGBLevelsTungsten"),
+    (0x0211, "WB_RGGBLevelsFluorescentD", "WB_RGGBLevelsFluorescentD"),
+    (0x0212, "WB_RGGBLevelsFluorescentN", "WB_RGGBLevelsFluorescentN"),
+    (0x0213, "WB_RGGBLevelsFluorescentW", "WB_RGGBLevelsFluorescentW"),
+    (0x0214, "WB_RGGBLevelsFlash", "WB_RGGBLevelsFlash"),
+    (0x0215, "CameraInfo", "Camera Info"),
+    (0x0216, "BatteryInfo", "Battery Info"),
+    (0x021f, "AFInfo", "AF Info"),
+    (0x0222, "ColorInfo", "Color Info"),
+];
+
 static PENTAX_SUB_TAGS: &[(u16, &str)] = &[
     (0x0000, "AEExposureTime"),
     (0x0001, "AEAperture"),
@@ -1125,6 +1141,170 @@ static PENTAX_SUB_TAGS: &[(u16, &str)] = &[
 ];
 pub static OLYMPUS_CAMERA_SETTINGS: &[(u16, &str)] = &[(0x0000, "CameraSettingsVersion"), (0x0100, "PreviewImageValid"), (0x0101, "PreviewImageStart"), (0x0102, "PreviewImageLength"), (0x0200, "ExposureMode"), (0x0201, "AELock"), (0x0202, "MeteringMode"), (0x0203, "ExposureShift"), (0x0204, "NDFilter"), (0x0300, "MacroMode"), (0x0301, "FocusMode"), (0x0302, "FocusProcess"), (0x0303, "AFSearch"), (0x0304, "AFAreas"), (0x0305, "AFPointSelected"), (0x0306, "AFFineTune"), (0x0307, "AFFineTuneAdj"), (0x0308, "FocusBracketStepSize"), (0x0309, "AISubjectTrackingMode"), (0x030A, "AFTargetInfo"), (0x030B, "SubjectDetectInfo"), (0x0400, "FlashMode"), (0x0401, "FlashExposureComp"), (0x0403, "FlashRemoteControl"), (0x0404, "FlashControlMode"), (0x0405, "FlashIntensity"), (0x0406, "ManualFlashStrength"), (0x0500, "WhiteBalance2"), (0x0501, "WhiteBalanceTemperature"), (0x0502, "WhiteBalanceBracket"), (0x0503, "CustomSaturation"), (0x0504, "ModifiedSaturation"), (0x0505, "ContrastSetting"), (0x0506, "SharpnessSetting"), (0x0507, "ColorSpace"), (0x0509, "SceneMode"), (0x050A, "NoiseReduction"), (0x050B, "DistortionCorrection"), (0x050C, "ShadingCompensation"), (0x050D, "CompressionFactor"), (0x050F, "Gradation"), (0x0520, "PictureMode"), (0x0521, "PictureModeSaturation"), (0x0522, "PictureModeHue"), (0x0523, "PictureModeContrast"), (0x0524, "PictureModeSharpness"), (0x0525, "PictureModeBWFilter"), (0x0526, "PictureModeTone"), (0x0527, "NoiseFilter"), (0x0529, "ArtFilter"), (0x052C, "MagicFilter"), (0x052D, "PictureModeEffect"), (0x052E, "ToneLevel"), (0x052F, "ArtFilterEffect"), (0x0532, "ColorCreatorEffect"), (0x0537, "MonochromeProfileSettings"), (0x0538, "FilmGrainEffect"), (0x0539, "ColorProfileSettings"), (0x053A, "MonochromeVignetting"), (0x053B, "MonochromeColor"), (0x0600, "DriveMode"), (0x0601, "PanoramaMode"), (0x0603, "ImageQuality2"), (0x0604, "ImageStabilization"), (0x0804, "StackedImage"), (0x0821, "ISOAutoSettings"), (0x0900, "ManometerPressure"), (0x0901, "ManometerReading"), (0x0902, "ExtendedWBDetect"), (0x0903, "RollAngle"), (0x0904, "PitchAngle"), (0x0908, "DateTimeUTC")];
 pub static OLYMPUS_EQUIPMENT: &[(u16, &str)] = &[(0x0000, "EquipmentVersion"), (0x0100, "CameraType2"), (0x0101, "SerialNumber"), (0x0102, "InternalSerialNumber"), (0x0103, "FocalPlaneDiagonal"), (0x0104, "BodyFirmwareVersion"), (0x0201, "LensType"), (0x0202, "LensSerialNumber"), (0x0203, "LensModel"), (0x0204, "LensFirmwareVersion"), (0x0205, "MaxApertureAtMinFocal"), (0x0206, "MaxApertureAtMaxFocal"), (0x0207, "MinFocalLength"), (0x0208, "MaxFocalLength"), (0x020A, "MaxAperture"), (0x020B, "LensProperties"), (0x0301, "Extender"), (0x0302, "ExtenderSerialNumber"), (0x0303, "ExtenderModel"), (0x0304, "ExtenderFirmwareVersion"), (0x0403, "ConversionLens"), (0x1000, "FlashType"), (0x1001, "FlashModel"), (0x1002, "FlashFirmwareVersion"), (0x1003, "FlashSerialNumber")];
-pub static OLYMPUS_FOCUS_INFO: &[(u16, &str)] = &[(0x0000, "FocusInfoVersion"), (0x0209, "AutoFocus"), (0x0210, "SceneDetect"), (0x0211, "SceneArea"), (0x0212, "SceneDetectData"), (0x0300, "ZoomStepCount"), (0x0301, "FocusStepCount"), (0x0303, "FocusStepInfinity"), (0x0304, "FocusStepNear"), (0x0305, "FocusDistance"), (0x0308, "AFPoint"), (0x031B, "AFPointDetails"), (0x0328, "AFInfo"), (0x1201, "ExternalFlash"), (0x1203, "ExternalFlashGuideNumber"), (0x1204, "ExternalFlashBounce"), (0x1205, "ExternalFlashZoom"), (0x1208, "InternalFlash"), (0x1209, "ManualFlash"), (0x120A, "MacroLED"), (0x1500, "SensorTemperature"), (0x1600, "ImageStabilization")];
+pub static OLYMPUS_FOCUS_INFO: &[(u16, &str)] = &[(0x0000, "FocusInfoVersion"), (0x0210, "SceneDetect"), (0x0300, "ZoomStepCount"), (0x0301, "FocusStepCount"), (0x0303, "FocusStepInfinity"), (0x0304, "FocusStepNear"), (0x0305, "FocusDistance"), (0x0308, "AFPoint"), (0x031B, "AFPointDetails"), (0x0328, "AFInfo"), (0x1201, "ExternalFlash"), (0x1204, "ExternalFlashBounce"), (0x1205, "ExternalFlashZoom"), (0x1208, "InternalFlash"), (0x1209, "ManualFlash"), (0x120A, "MacroLED"), (0x1500, "SensorTemperature"), (0x1600, "ImageStabilization")];
 pub static OLYMPUS_IMAGE_PROCESSING: &[(u16, &str)] = &[(0x0000, "ImageProcessingVersion"), (0x0100, "WB_RBLevels"), (0x0102, "WB_RBLevels3000K"), (0x0103, "WB_RBLevels3300K"), (0x0104, "WB_RBLevels3600K"), (0x0105, "WB_RBLevels3900K"), (0x0106, "WB_RBLevels4000K"), (0x0107, "WB_RBLevels4300K"), (0x0108, "WB_RBLevels4500K"), (0x0109, "WB_RBLevels4800K"), (0x010A, "WB_RBLevels5300K"), (0x010B, "WB_RBLevels6000K"), (0x010C, "WB_RBLevels6600K"), (0x010D, "WB_RBLevels7500K"), (0x010E, "WB_RBLevelsCWB1"), (0x010F, "WB_RBLevelsCWB2"), (0x0110, "WB_RBLevelsCWB3"), (0x0111, "WB_RBLevelsCWB4"), (0x0113, "WB_GLevel3000K"), (0x0114, "WB_GLevel3300K"), (0x0115, "WB_GLevel3600K"), (0x0116, "WB_GLevel3900K"), (0x0117, "WB_GLevel4000K"), (0x0118, "WB_GLevel4300K"), (0x0119, "WB_GLevel4500K"), (0x011A, "WB_GLevel4800K"), (0x011B, "WB_GLevel5300K"), (0x011C, "WB_GLevel6000K"), (0x011D, "WB_GLevel6600K"), (0x011E, "WB_GLevel7500K"), (0x011F, "WB_GLevel"), (0x0200, "ColorMatrix"), (0x0300, "Enhancer"), (0x0301, "EnhancerValues"), (0x0310, "CoringFilter"), (0x0311, "CoringValues"), (0x0600, "BlackLevel2"), (0x0610, "GainBase"), (0x0611, "ValidBits"), (0x0612, "CropLeft"), (0x0613, "CropTop"), (0x0614, "CropWidth"), (0x0615, "CropHeight"), (0x0635, "UnknownBlock1"), (0x0636, "UnknownBlock2"), (0x0805, "SensorCalibration"), (0x1010, "NoiseReduction2"), (0x1011, "DistortionCorrection2"), (0x1012, "ShadingCompensation2"), (0x101C, "MultipleExposureMode"), (0x1103, "UnknownBlock3"), (0x1104, "UnknownBlock4"), (0x1112, "AspectRatio"), (0x1113, "AspectFrame"), (0x1200, "FacesDetected"), (0x1201, "FaceDetectArea"), (0x1202, "MaxFaces"), (0x1203, "FaceDetectFrameSize"), (0x1207, "FaceDetectFrameCrop"), (0x1306, "CameraTemperature"), (0x1900, "KeystoneCompensation"), (0x1901, "KeystoneDirection"), (0x1906, "KeystoneValue"), (0x2110, "GNDFilterType")];
 pub static OLYMPUS_RAW_DEV: &[(u16, &str)] = &[(0x0000, "RawDevVersion"), (0x0100, "RawDevExposureBiasValue"), (0x0101, "RawDevWhiteBalanceValue"), (0x0102, "RawDevWBFineAdjustment"), (0x0103, "RawDevGrayPoint"), (0x0104, "RawDevSaturationEmphasis"), (0x0105, "RawDevMemoryColorEmphasis"), (0x0106, "RawDevContrastValue"), (0x0107, "RawDevSharpnessValue"), (0x0108, "RawDevColorSpace"), (0x0109, "RawDevEngine"), (0x010A, "RawDevNoiseReduction"), (0x010B, "RawDevEditStatus"), (0x010C, "RawDevSettings")];
+
+// Olympus LensType print conversion
+// Key format: sprintf("%x %.2x %.2x", byte0, byte2, byte3)
+static OLYMPUS_LENS_TYPES: &[(&str, &str)] = &[
+    ("0 00 00", "None"),
+    ("0 01 00", "Olympus Zuiko Digital ED 50mm F2.0 Macro"),
+    ("0 01 01", "Olympus Zuiko Digital 40-150mm F3.5-4.5"),
+    ("0 01 10", "Olympus M.Zuiko Digital ED 14-42mm F3.5-5.6"),
+    ("0 02 00", "Olympus Zuiko Digital ED 150mm F2.0"),
+    ("0 02 10", "Olympus M.Zuiko Digital 17mm F2.8 Pancake"),
+    ("0 03 00", "Olympus Zuiko Digital ED 300mm F2.8"),
+    ("0 03 10", "Olympus M.Zuiko Digital ED 14-150mm F4.0-5.6 [II]"),
+    ("0 04 10", "Olympus M.Zuiko Digital ED 9-18mm F4.0-5.6"),
+    ("0 05 00", "Olympus Zuiko Digital 14-54mm F2.8-3.5"),
+    ("0 05 01", "Olympus Zuiko Digital Pro ED 90-250mm F2.8"),
+    ("0 05 10", "Olympus M.Zuiko Digital ED 14-42mm F3.5-5.6 L"),
+    ("0 06 00", "Olympus Zuiko Digital ED 50-200mm F2.8-3.5"),
+    ("0 06 01", "Olympus Zuiko Digital ED 8mm F3.5 Fisheye"),
+    ("0 06 10", "Olympus M.Zuiko Digital ED 40-150mm F4.0-5.6"),
+    ("0 07 00", "Olympus Zuiko Digital 11-22mm F2.8-3.5"),
+    ("0 07 01", "Olympus Zuiko Digital 18-180mm F3.5-6.3"),
+    ("0 07 10", "Olympus M.Zuiko Digital ED 12mm F2.0"),
+    ("0 08 01", "Olympus Zuiko Digital 70-300mm F4.0-5.6"),
+    ("0 08 10", "Olympus M.Zuiko Digital ED 75-300mm F4.8-6.7"),
+    ("0 09 10", "Olympus M.Zuiko Digital 14-42mm F3.5-5.6 II"),
+    ("0 10 01", "Kenko Tokina Reflex 300mm F6.3 MF Macro"),
+    ("0 10 10", "Olympus M.Zuiko Digital ED 12-50mm F3.5-6.3 EZ"),
+    ("0 11 10", "Olympus M.Zuiko Digital 45mm F1.8"),
+    ("0 12 10", "Olympus M.Zuiko Digital ED 60mm F2.8 Macro"),
+    ("0 13 10", "Olympus M.Zuiko Digital 14-42mm F3.5-5.6 II R"),
+    ("0 14 10", "Olympus M.Zuiko Digital ED 40-150mm F4.0-5.6 R"),
+    ("0 15 00", "Olympus Zuiko Digital ED 7-14mm F4.0"),
+    ("0 15 10", "Olympus M.Zuiko Digital ED 75mm F1.8"),
+    ("0 16 10", "Olympus M.Zuiko Digital 17mm F1.8"),
+    ("0 17 00", "Olympus Zuiko Digital Pro ED 35-100mm F2.0"),
+    ("0 18 00", "Olympus Zuiko Digital 14-45mm F3.5-5.6"),
+    ("0 18 10", "Olympus M.Zuiko Digital ED 75-300mm F4.8-6.7 II"),
+    ("0 19 10", "Olympus M.Zuiko Digital ED 12-40mm F2.8 Pro"),
+    ("0 20 00", "Olympus Zuiko Digital 35mm F3.5 Macro"),
+    ("0 20 10", "Olympus M.Zuiko Digital ED 40-150mm F2.8 Pro"),
+    ("0 21 10", "Olympus M.Zuiko Digital ED 14-42mm F3.5-5.6 EZ"),
+    ("0 22 00", "Olympus Zuiko Digital 17.5-45mm F3.5-5.6"),
+    ("0 22 10", "Olympus M.Zuiko Digital 25mm F1.8"),
+    ("0 23 00", "Olympus Zuiko Digital ED 14-42mm F3.5-5.6"),
+    ("0 23 10", "Olympus M.Zuiko Digital ED 7-14mm F2.8 Pro"),
+    ("0 24 00", "Olympus Zuiko Digital ED 40-150mm F4.0-5.6"),
+    ("0 24 10", "Olympus M.Zuiko Digital ED 300mm F4.0 IS Pro"),
+    ("0 25 10", "Olympus M.Zuiko Digital ED 8mm F1.8 Fisheye Pro"),
+    ("0 26 10", "Olympus M.Zuiko Digital ED 12-100mm F4.0 IS Pro"),
+    ("0 27 10", "Olympus M.Zuiko Digital ED 30mm F3.5 Macro"),
+    ("0 28 10", "Olympus M.Zuiko Digital ED 25mm F1.2 Pro"),
+    ("0 29 10", "Olympus M.Zuiko Digital ED 17mm F1.2 Pro"),
+    ("0 30 00", "Olympus Zuiko Digital ED 50-200mm F2.8-3.5 SWD"),
+    ("0 30 10", "Olympus M.Zuiko Digital ED 45mm F1.2 Pro"),
+    ("0 31 00", "Olympus Zuiko Digital ED 12-60mm F2.8-4.0 SWD"),
+    ("0 32 00", "Olympus Zuiko Digital ED 14-35mm F2.0 SWD"),
+    ("0 32 10", "Olympus M.Zuiko Digital ED 12-200mm F3.5-6.3"),
+    ("0 33 00", "Olympus Zuiko Digital 25mm F2.8"),
+    ("0 33 10", "Olympus M.Zuiko Digital 150-400mm F4.5 TC1.25x IS Pro"),
+    ("0 34 00", "Olympus Zuiko Digital ED 9-18mm F4.0-5.6"),
+    ("0 34 10", "Olympus M.Zuiko Digital ED 12-45mm F4.0 Pro"),
+    ("0 35 00", "Olympus Zuiko Digital 14-54mm F2.8-3.5 II"),
+    ("0 35 10", "Olympus M.Zuiko 100-400mm F5.0-6.3"),
+    ("0 36 10", "Olympus M.Zuiko Digital ED 8-25mm F4 Pro"),
+    ("0 37 10", "Olympus M.Zuiko Digital ED 40-150mm F4.0 Pro"),
+    ("0 38 10", "Olympus M.Zuiko Digital ED 20mm F1.4 Pro"),
+    ("0 39 10", "Olympus M.Zuiko Digital ED 90mm F3.5 Macro IS Pro"),
+    ("0 40 10", "Olympus M.Zuiko Digital ED 150-600mm F5.0-6.3"),
+    ("0 41 10", "OM System M.Zuiko Digital ED 50-200mm F2.8 IS Pro"),
+    ("1 01 00", "Sigma 18-50mm F3.5-5.6 DC"),
+    ("1 01 10", "Sigma 30mm F2.8 EX DN"),
+    ("1 02 00", "Sigma 55-200mm F4.0-5.6 DC"),
+    ("1 02 10", "Sigma 19mm F2.8 EX DN"),
+    ("1 03 00", "Sigma 18-125mm F3.5-5.6 DC"),
+    ("1 03 10", "Sigma 30mm F2.8 DN | A"),
+    ("1 04 00", "Sigma 18-125mm F3.5-5.6 DC"),
+    ("1 04 10", "Sigma 19mm F2.8 DN | A"),
+    ("1 05 00", "Sigma 30mm F1.4 EX DC HSM"),
+    ("1 05 10", "Sigma 60mm F2.8 DN | A"),
+    ("1 06 00", "Sigma APO 50-500mm F4.0-6.3 EX DG HSM"),
+    ("1 06 10", "Sigma 30mm F1.4 DC DN | C"),
+    ("1 07 00", "Sigma Macro 105mm F2.8 EX DG"),
+    ("1 07 10", "Sigma 16mm F1.4 DC DN | C (017)"),
+    ("1 08 00", "Sigma APO Macro 150mm F2.8 EX DG HSM"),
+    ("1 09 00", "Sigma 18-50mm F2.8 EX DC Macro"),
+    ("1 10 00", "Sigma 24mm F1.8 EX DG Aspherical Macro"),
+    ("1 11 00", "Sigma APO 135-400mm F4.5-5.6 DG"),
+    ("1 12 00", "Sigma APO 300-800mm F5.6 EX DG HSM"),
+    ("1 13 00", "Sigma 30mm F1.4 EX DC HSM"),
+    ("1 14 00", "Sigma APO 50-500mm F4.0-6.3 EX DG HSM"),
+    ("1 15 00", "Sigma 10-20mm F4.0-5.6 EX DC HSM"),
+    ("1 16 00", "Sigma APO 70-200mm F2.8 II EX DG Macro HSM"),
+    ("1 17 00", "Sigma 50mm F1.4 EX DG HSM"),
+    ("2 01 00", "Leica D Vario Elmarit 14-50mm F2.8-3.5 Asph."),
+    ("2 01 10", "Lumix G Vario 14-45mm F3.5-5.6 Asph. Mega OIS"),
+    ("2 02 00", "Leica D Summilux 25mm F1.4 Asph."),
+    ("2 02 10", "Lumix G Vario 45-200mm F4.0-5.6 Mega OIS"),
+    ("2 03 00", "Leica D Vario Elmar 14-50mm F3.8-5.6 Asph. Mega OIS"),
+    ("2 03 01", "Leica D Vario Elmar 14-50mm F3.8-5.6 Asph."),
+    ("2 03 10", "Lumix G Vario HD 14-140mm F4.0-5.8 Asph. Mega OIS"),
+    ("2 04 00", "Leica D Vario Elmar 14-150mm F3.5-5.6"),
+    ("2 04 10", "Lumix G Vario 7-14mm F4.0 Asph."),
+    ("2 05 10", "Lumix G 20mm F1.7 Asph."),
+    ("2 06 10", "Leica DG Macro-Elmarit 45mm F2.8 Asph. Mega OIS"),
+    ("2 07 10", "Lumix G Vario 14-42mm F3.5-5.6 Asph. Mega OIS"),
+    ("2 08 10", "Lumix G Fisheye 8mm F3.5"),
+    ("2 09 10", "Lumix G Vario 100-300mm F4.0-5.6 Mega OIS"),
+    ("2 10 10", "Lumix G 14mm F2.5 Asph."),
+    ("2 11 10", "Lumix G 12.5mm F12 3D"),
+    ("2 12 10", "Leica DG Summilux 25mm F1.4 Asph."),
+    ("2 13 10", "Lumix G X Vario PZ 45-175mm F4.0-5.6 Asph. Power OIS"),
+    ("2 14 10", "Lumix G X Vario PZ 14-42mm F3.5-5.6 Asph. Power OIS"),
+    ("2 15 10", "Lumix G X Vario 12-35mm F2.8 Asph. Power OIS"),
+    ("2 16 10", "Lumix G Vario 45-150mm F4.0-5.6 Asph. Mega OIS"),
+    ("2 17 10", "Lumix G X Vario 35-100mm F2.8 Power OIS"),
+    ("2 18 10", "Lumix G Vario 14-42mm F3.5-5.6 II Asph. Mega OIS"),
+    ("2 19 10", "Lumix G Vario 14-140mm F3.5-5.6 Asph. Power OIS"),
+    ("2 20 10", "Lumix G Vario 12-32mm F3.5-5.6 Asph. Mega OIS"),
+    ("2 21 10", "Leica DG Nocticron 42.5mm F1.2 Asph. Power OIS"),
+    ("2 22 10", "Leica DG Summilux 15mm F1.7 Asph."),
+    ("2 23 10", "Lumix G Vario 35-100mm F4.0-5.6 Asph. Mega OIS"),
+    ("2 24 10", "Lumix G Macro 30mm F2.8 Asph. Mega OIS"),
+    ("2 25 10", "Lumix G 42.5mm F1.7 Asph. Power OIS"),
+    ("2 26 10", "Lumix G 25mm F1.7 Asph."),
+    ("2 27 10", "Leica DG Vario-Elmar 100-400mm F4.0-6.3 Asph. Power OIS"),
+    ("2 28 10", "Lumix G Vario 12-60mm F3.5-5.6 Asph. Power OIS"),
+    ("2 29 10", "Leica DG Summilux 12mm F1.4 Asph."),
+    ("2 30 10", "Leica DG Vario-Elmarit 12-60mm F2.8-4 Asph. Power OIS"),
+    ("2 31 10", "Lumix G Vario 45-200mm F4.0-5.6 II"),
+    ("2 32 10", "Lumix G Vario 100-300mm F4.0-5.6 II"),
+    ("2 33 10", "Lumix G X Vario 12-35mm F2.8 II Asph. Power OIS"),
+    ("2 34 10", "Lumix G Vario 35-100mm F2.8 II"),
+    ("2 35 10", "Leica DG Vario-Elmarit 8-18mm F2.8-4 Asph."),
+    ("2 36 10", "Leica DG Elmarit 200mm F2.8 Power OIS"),
+    ("2 37 10", "Leica DG Vario-Elmarit 50-200mm F2.8-4 Asph. Power OIS"),
+    ("2 38 10", "Leica DG Vario-Summilux 10-25mm F1.7 Asph."),
+    ("2 39 10", "Leica DG Summilux 25mm F1.4 II Asph."),
+    ("2 40 10", "Leica DG Vario-Summilux 25-50mm F1.7 Asph."),
+    ("2 41 10", "Leica DG Summilux 9mm F1.7 Asph."),
+    ("3 01 00", "Leica D Vario Elmarit 14-50mm F2.8-3.5 Asph."),
+    ("3 02 00", "Leica D Summilux 25mm F1.4 Asph."),
+    ("5 01 10", "Tamron 14-150mm F3.5-5.8 Di III"),
+    ("18 01 10", "Venus Optics Laowa 50mm F2.8 2x Macro"),
+    ("f7 03 10", "LAOWA C&D-Dreamer MFT 7.5mm F2.0"),
+    ("f7 10 10", "LAOWA C&D-Dreamer MFT 6.0mm F2.0"),
+    ("ff32 02 10", "Xiaoyi 42.5mm F1.8"),
+];
+
+pub fn olympus_lens_type_name(key: &str) -> Option<&'static str> {
+    OLYMPUS_LENS_TYPES.iter().find(|&&(k, _)| k == key).map(|&(_, v)| v)
+}
+
+// Olympus Extender print conversion
+// Key format: sprintf("%x %.2x", byte0, byte2)
+static OLYMPUS_EXTENDER_TYPES: &[(&str, &str)] = &[
+    ("0 00", "None"),
+    ("0 04", "Olympus Zuiko Digital EC-14 1.4x Teleconverter"),
+    ("0 08", "Olympus EX-25 Extension Tube"),
+    ("0 10", "Olympus Zuiko Digital EC-20 2.0x Teleconverter"),
+];
+
+pub fn olympus_extender_name(key: &str) -> Option<&'static str> {
+    OLYMPUS_EXTENDER_TYPES.iter().find(|&&(k, _)| k == key).map(|&(_, v)| v)
+}

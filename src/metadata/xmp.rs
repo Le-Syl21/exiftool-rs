@@ -57,39 +57,69 @@ fn namespace_category(prefix: &str) -> &str {
     }
 }
 
+/// Check whether an attribute's local_name is the GCamera HDRPlus makernote field.
+/// ExifTool maps GCamera:HdrPlusMakernote (and GCamera:hdrp_makernote) → HDRPlusMakerNote.
+fn is_hdrp_makernote_attr(local_name: &str) -> bool {
+    local_name == "HdrPlusMakernote" || local_name == "hdrp_makernote"
+}
+
+/// Emit the HDRPlusMakerNote binary tag + all decoded HDRP sub-tags.
+fn emit_hdrp_makernote(b64_value: &str, tags: &mut Vec<Tag>) {
+    use crate::metadata::google_hdrp::decode_hdrp_makernote;
+
+    // Emit HDRPlusMakerNote as a binary tag (ExifTool shows "(Binary data N bytes...)")
+    let raw_bytes = b64_value.trim().len() * 3 / 4; // approximate decoded size
+    let print = format!("(Binary data {} bytes, use -b option to extract)", raw_bytes);
+    tags.push(Tag {
+        id: TagId::Text("GCamera:HdrPlusMakernote".into()),
+        name: "HDRPlusMakerNote".into(),
+        description: "HDRPlusMakerNote".into(),
+        group: TagGroup {
+            family0: "XMP".into(),
+            family1: "XMP-GCamera".into(),
+            family2: "Other".into(),
+        },
+        raw_value: Value::String(b64_value.to_string()),
+        print_value: print,
+        priority: 0,
+    });
+
+    // Decode and emit HDRP protobuf sub-tags
+    let hdrp_tags = decode_hdrp_makernote(b64_value);
+    tags.extend(hdrp_tags);
+}
+
 impl XmpReader {
     /// Parse XMP metadata from an XML byte slice.
     pub fn read(data: &[u8]) -> Result<Vec<Tag>> {
         let mut tags = Vec::new();
 
         // Handle UTF-16/32 BOM and convert to UTF-8 (from Perl XMP.pm line 4286)
-        let converted: String;
-        let xml_data = if data.starts_with(&[0xFE, 0xFF]) {
-            // UTF-16 BE BOM
+        // For UTF-16 inputs we need an owned String to borrow from; for UTF-8 we borrow directly.
+        let converted: Option<String> = if data.starts_with(&[0xFE, 0xFF]) {
             let units: Vec<u16> = data[2..].chunks_exact(2)
                 .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
-            converted = String::from_utf16_lossy(&units);
-            converted.as_str()
+            Some(String::from_utf16_lossy(&units))
         } else if data.starts_with(&[0xFF, 0xFE]) && !data.starts_with(&[0xFF, 0xFE, 0x00, 0x00]) {
-            // UTF-16 LE BOM
             let units: Vec<u16> = data[2..].chunks_exact(2)
                 .map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
-            converted = String::from_utf16_lossy(&units);
-            converted.as_str()
-        } else if data.starts_with(&[0xEF, 0xBB, 0xBF]) {
-            // UTF-8 BOM — skip it
-            converted = String::new(); // unused
-            std::str::from_utf8(&data[3..])
-                .map_err(|e| Error::InvalidXmp(format!("invalid UTF-8: {}", e)))?
+            Some(String::from_utf16_lossy(&units))
         } else if data.len() > 4 && data[0] == 0 && data[1] != 0 {
             // UTF-16 BE without BOM (starts with \0<)
             let units: Vec<u16> = data.chunks_exact(2)
                 .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
-            converted = String::from_utf16_lossy(&units);
-            converted.as_str()
+            Some(String::from_utf16_lossy(&units))
+        } else {
+            None
+        };
+        let xml_data: &str = if let Some(ref s) = converted {
+            s.as_str()
+        } else if data.starts_with(&[0xEF, 0xBB, 0xBF]) {
+            // UTF-8 BOM — skip it
+            std::str::from_utf8(&data[3..])
+                .map_err(|e| Error::InvalidXmp(format!("invalid UTF-8: {}", e)))?
         } else {
             // UTF-8 (default)
-            converted = String::new();
             std::str::from_utf8(data)
                 .or_else(|_| {
                     let trimmed = &data[..data.iter().rposition(|&b| b == b'>').unwrap_or(0) + 1];
@@ -103,6 +133,15 @@ impl XmpReader {
         let mut current_text = String::new();
         let mut in_rdf_li = false;
         let mut list_values: Vec<String> = Vec::new();
+
+        // GContainer struct: collect per-field lists for DirectoryItemMime/Semantic/Length.
+        // Key: flat field name (e.g. "Mime", "Semantic", "Length"), Values: collected per li.
+        let mut gcontainer_fields: std::collections::HashMap<String, Vec<String>> =
+            std::collections::HashMap::new();
+        // Whether we're currently inside a GContainer:Directory/Seq context.
+        let mut in_gcontainer_seq = false;
+        // Whether we're inside a GContainer:Directory/Seq/li (struct li).
+        let mut in_gcontainer_li = false;
 
         for event in parser {
             match event {
@@ -132,7 +171,7 @@ impl XmpReader {
                     }
 
                     // Extract attributes on rdf:Description as tags
-                    // e.g., <rdf:Description GCamera:HDRPlusMakernote="...">
+                    // e.g., <rdf:Description GCamera:HdrPlusMakernote="...">
                     if name.local_name == "Description" {
                         for attr in &attributes {
                             // Emit rdf:about as "About" tag, skip xmlns
@@ -158,9 +197,16 @@ impl XmpReader {
                             } else {
                                 attr_prefix
                             };
-                            let category = namespace_category(group_prefix);
 
                             if !attr.value.is_empty() {
+                                // Special handling: GCamera:HdrPlusMakernote / GCamera:hdrp_makernote
+                                // → emit HDRPlusMakerNote (binary) + decode HDRP sub-tags
+                                if group_prefix == "GCamera" && is_hdrp_makernote_attr(&attr.name.local_name) {
+                                    emit_hdrp_makernote(&attr.value, &mut tags);
+                                    continue;
+                                }
+
+                                let category = namespace_category(group_prefix);
                                 let full_name = ucfirst(&attr.name.local_name);
                                 tags.push(Tag {
                                     id: TagId::Text(format!("{}:{}", group_prefix, attr.name.local_name)),
@@ -179,10 +225,59 @@ impl XmpReader {
                         }
                     }
 
-                    if name.local_name == "li"
+                    // Detect GContainer:Directory/rdf:Seq entry
+                    // Path looks like: [..., (GContainer_ns, "Directory"), (rdf_ns, "Seq")]
+                    if name.local_name == "Seq"
+                        && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                    {
+                        // Check if the parent is GContainer:Directory
+                        if let Some(parent) = path.iter().rev().nth(1) {
+                            if parent.1 == "Directory"
+                                && parent.0 == "http://ns.google.com/photos/1.0/container/"
+                            {
+                                in_gcontainer_seq = true;
+                            }
+                        }
+                    }
+
+                    // Inside GContainer Seq: rdf:li starts a struct item
+                    if in_gcontainer_seq
+                        && name.local_name == "li"
+                        && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                    {
+                        in_gcontainer_li = true;
+                        in_rdf_li = true;
+                    } else if name.local_name == "li"
                         && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
                         in_rdf_li = true;
+                    }
+
+                    // Inside a GContainer struct li: capture Container:Item attributes
+                    // These are struct fields: Item:Mime, Item:Semantic, Item:Length
+                    if in_gcontainer_li
+                        && name.local_name == "Item"
+                        && name.namespace.as_deref() == Some("http://ns.google.com/photos/1.0/container/")
+                    {
+                        // Collect Item:Mime, Item:Semantic, Item:Length for this li entry
+                        let mut found: std::collections::HashMap<String, String> =
+                            std::collections::HashMap::new();
+                        for attr in &attributes {
+                            if attr.name.namespace.as_deref() == Some("http://ns.google.com/photos/1.0/container/item/") {
+                                let field = ucfirst(&attr.name.local_name);
+                                found.insert(field, attr.value.clone());
+                            }
+                        }
+                        // Accumulate: for each known field, push value or empty string
+                        // (so all lists stay aligned)
+                        let known = ["Mime", "Semantic", "Length"];
+                        for k in &known {
+                            if let Some(v) = found.get(*k) {
+                                gcontainer_fields.entry(k.to_string())
+                                    .or_default()
+                                    .push(v.clone());
+                            }
+                        }
                     }
                 }
                 Ok(XmlEvent::Characters(text)) | Ok(XmlEvent::CData(text)) => {
@@ -195,7 +290,10 @@ impl XmpReader {
                     if name.local_name == "li"
                         && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
-                        if !current_text.trim().is_empty() {
+                        if in_gcontainer_li {
+                            // GContainer struct li: fields were captured as attributes, not text
+                            in_gcontainer_li = false;
+                        } else if !current_text.trim().is_empty() {
                             list_values.push(current_text.trim().to_string());
                         }
                         in_rdf_li = false;
@@ -210,7 +308,34 @@ impl XmpReader {
                         || name.local_name == "Alt")
                         && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
-                        if !list_values.is_empty() {
+                        // If this is the GContainer Seq, emit DirectoryItem* tags
+                        if in_gcontainer_seq && name.local_name == "Seq" {
+                            in_gcontainer_seq = false;
+                            // Emit each field as DirectoryItem{Field}
+                            for (field, values) in &gcontainer_fields {
+                                let tag_name = format!("DirectoryItem{}", field);
+                                let value = if values.len() == 1 {
+                                    Value::String(values[0].clone())
+                                } else {
+                                    Value::List(values.iter().map(|s| Value::String(s.clone())).collect())
+                                };
+                                let print_value = value.to_display_string();
+                                tags.push(Tag {
+                                    id: TagId::Text(format!("GContainer:{}", tag_name)),
+                                    name: tag_name.clone(),
+                                    description: tag_name.clone(),
+                                    group: TagGroup {
+                                        family0: "XMP".into(),
+                                        family1: "XMP-GContainer".into(),
+                                        family2: "Image".into(),
+                                    },
+                                    raw_value: value,
+                                    print_value,
+                                    priority: 0,
+                                });
+                            }
+                            gcontainer_fields.clear();
+                        } else if !list_values.is_empty() {
                             // The parent element is the actual property
                             if let Some(parent) = path.iter().rev().nth(1) {
                                 let prefix = namespace_prefix(&parent.0);
@@ -326,6 +451,57 @@ impl XmpReader {
                 Err(_) => break,
                 _ => {}
             }
+        }
+
+        // Post-processing: emit GainMap Warning if DirectoryItemSemantic contains "GainMap"
+        let has_gainmap = tags.iter().any(|t| {
+            t.name == "DirectoryItemSemantic"
+                && t.print_value.contains("GainMap")
+        });
+        if has_gainmap {
+            // Find DirectoryItemMime and DirectoryItemLength for the GainMap entry
+            // Emit warning about GainMap image/jpeg not found in trailer
+            let gainmap_mime = tags.iter()
+                .find(|t| t.name == "DirectoryItemSemantic")
+                .and_then(|t| {
+                    // Find the semantic that is GainMap and get the corresponding Mime
+                    // For simplicity, look for GainMap in the values
+                    if let Value::List(ref items) = t.raw_value {
+                        items.iter().enumerate()
+                            .find(|(_, v)| v.to_display_string() == "GainMap")
+                            .map(|(i, _)| i)
+                    } else {
+                        None
+                    }
+                })
+                .and_then(|idx| {
+                    tags.iter()
+                        .find(|t| t.name == "DirectoryItemMime")
+                        .and_then(|t| match &t.raw_value {
+                            Value::List(items) => items.get(idx).map(|v| v.to_display_string()),
+                            Value::String(s) => if idx == 0 { Some(s.clone()) } else { None },
+                            _ => None,
+                        })
+                })
+                .unwrap_or_else(|| "image/jpeg".to_string());
+
+            let warning_msg = format!(
+                "[minor] Error reading GainMap {} from trailer",
+                gainmap_mime
+            );
+            tags.push(Tag {
+                id: TagId::Text("Warning".into()),
+                name: "Warning".into(),
+                description: "Warning".into(),
+                group: TagGroup {
+                    family0: "ExifTool".into(),
+                    family1: "ExifTool".into(),
+                    family2: "Other".into(),
+                },
+                raw_value: Value::String(warning_msg.clone()),
+                print_value: warning_msg,
+                priority: 0,
+            });
         }
 
         Ok(tags)

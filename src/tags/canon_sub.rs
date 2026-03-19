@@ -124,7 +124,17 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("Sharpness", Value::I16(v), v.to_string()));
     }
     if let Some(v) = get(16) {
-        tags.push(mkt("CameraISO", Value::I16(v), v.to_string()));
+        // RawConv => '$val == 0x7fff ? undef : $val' (suppress 32767)
+        if v != 0x7fff_u16 as i16 {
+            // ValueConv: CameraISO lookup
+            let pv = match v {
+                0 => "n/a".to_string(), 14 => "Auto High".to_string(), 15 => "Auto".to_string(),
+                16 => "50".to_string(), 17 => "100".to_string(), 18 => "200".to_string(),
+                19 => "400".to_string(), 20 => "800".to_string(),
+                _ => v.to_string(),
+            };
+            tags.push(mkt("CameraISO", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(17) {
         let pv = match v {
@@ -158,19 +168,21 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("FocusRange", Value::I16(v), pv));
     }
     if let Some(v) = get(19) {
-        let pv = match v {
-            8197 => "",
-            12288 => "",
-            12289 => "",
-            12290 => "",
-            12291 => "",
-            12292 => "",
-            16385 => "",
-            16390 => "",
-            _ => "",
-        };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
-        tags.push(mkt("AFPoint", Value::I16(v), pv));
+        if v != 0 {
+            let pv = match v {
+                8197 => "",
+                12288 => "",
+                12289 => "",
+                12290 => "",
+                12291 => "",
+                12292 => "",
+                16385 => "",
+                16390 => "",
+                _ => "",
+            };
+            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            tags.push(mkt("AFPoint", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(20) {
         let pv = match v {
@@ -226,46 +238,52 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("FlashBits", Value::I16(v), pv));
     }
     if let Some(v) = get(32) {
-        let pv = match v {
-            0 => "Single",
-            1 => "Continuous",
-            8 => "Manual",
-            _ => "",
-        };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
-        tags.push(mkt("FocusContinuous", Value::I16(v), pv));
+        if v != -1 {
+            let pv = match v {
+                0 => "Single",
+                1 => "Continuous",
+                8 => "Manual",
+                _ => "",
+            };
+            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            tags.push(mkt("FocusContinuous", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(33) {
-        let pv = match v {
-            0 => "Normal AE",
-            1 => "Exposure Compensation",
-            2 => "AE Lock",
-            3 => "AE Lock + Exposure Comp.",
-            4 => "No AE",
-            _ => "",
-        };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
-        tags.push(mkt("AESetting", Value::I16(v), pv));
+        if v != -1 {
+            let pv = match v {
+                0 => "Normal AE",
+                1 => "Exposure Compensation",
+                2 => "AE Lock",
+                3 => "AE Lock + Exposure Comp.",
+                4 => "No AE",
+                _ => "",
+            };
+            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            tags.push(mkt("AESetting", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(34) {
-        let pv = match v {
-            0 => "Off",
-            1 => "On",
-            2 => "Shoot Only",
-            3 => "Panning",
-            4 => "Dynamic",
-            256 => "Off (2)",
-            257 => "On (2)",
-            258 => "Shoot Only (2)",
-            259 => "Panning (2)",
-            260 => "Dynamic (2)",
-            _ => "",
-        };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
-        tags.push(mkt("ImageStabilization", Value::I16(v), pv));
+        if v != -1 {
+            let pv = match v {
+                0 => "Off",
+                1 => "On",
+                2 => "Shoot Only",
+                3 => "Panning",
+                4 => "Dynamic",
+                256 => "Off (2)",
+                257 => "On (2)",
+                258 => "Shoot Only (2)",
+                259 => "Panning (2)",
+                260 => "Dynamic (2)",
+                _ => "",
+            };
+            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            tags.push(mkt("ImageStabilization", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(35) {
-        tags.push(mkt("DisplayAperture", Value::I16(v), v.to_string()));
+        if v != 0 { tags.push(mkt("DisplayAperture", Value::I16(v), v.to_string())); }
     }
     if let Some(v) = get(36) {
         tags.push(mkt("ZoomSourceWidth", Value::I16(v), v.to_string()));
@@ -274,28 +292,32 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("ZoomTargetWidth", Value::I16(v), v.to_string()));
     }
     if let Some(v) = get(39) {
-        let pv = match v {
-            0 => "Center",
-            1 => "AF Point",
-            _ => "",
-        };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
-        tags.push(mkt("SpotMeteringMode", Value::I16(v), pv));
+        if v != -1 {
+            let pv = match v {
+                0 => "Center",
+                1 => "AF Point",
+                _ => "",
+            };
+            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            tags.push(mkt("SpotMeteringMode", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(40) {
-        let pv = match v {
-            0 => "Off",
-            1 => "Vivid",
-            2 => "Neutral",
-            3 => "Smooth",
-            4 => "Sepia",
-            5 => "B&W",
-            6 => "Custom",
-            100 => "My Color Data",
-            _ => "",
-        };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
-        tags.push(mkt("PhotoEffect", Value::I16(v), pv));
+        if v != -1 {
+            let pv = match v {
+                0 => "Off",
+                1 => "Vivid",
+                2 => "Neutral",
+                3 => "Smooth",
+                4 => "Sepia",
+                5 => "B&W",
+                6 => "Custom",
+                100 => "My Color Data",
+                _ => "",
+            };
+            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            tags.push(mkt("PhotoEffect", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(41) {
         let pv = match v {
@@ -345,16 +367,16 @@ pub fn decode_shot_info(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("AutoISO", Value::I16(v), v.to_string()));
     }
     if let Some(v) = get(2) {
-        tags.push(mkt("BaseISO", Value::I16(v), v.to_string()));
+        if v != 0 { tags.push(mkt("BaseISO", Value::I16(v), v.to_string())); }
     }
     if let Some(v) = get(3) {
         tags.push(mkt("MeasuredEV", Value::I16(v), v.to_string()));
     }
     if let Some(v) = get(4) {
-        tags.push(mkt("TargetAperture", Value::I16(v), v.to_string()));
+        if v > 0 { tags.push(mkt("TargetAperture", Value::I16(v), v.to_string())); }
     }
     if let Some(v) = get(5) {
-        tags.push(mkt("TargetExposureTime", Value::I16(v), v.to_string()));
+        if v > 0 { tags.push(mkt("TargetExposureTime", Value::I16(v), v.to_string())); }
     }
     if let Some(v) = get(6) {
         tags.push(mkt("ExposureCompensation", Value::I16(v), v.to_string()));
@@ -381,10 +403,14 @@ pub fn decode_shot_info(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("OpticalZoomCode", Value::I16(v), v.to_string()));
     }
     if let Some(v) = get(12) {
-        tags.push(mkt("CameraTemperature", Value::I16(v), v.to_string()));
+        if v != 0 { tags.push(mkt("CameraTemperature", Value::I16(v), v.to_string())); }
     }
     if let Some(v) = get(13) {
-        tags.push(mkt("FlashGuideNumber", Value::I16(v), v.to_string()));
+        // RawConv => '$val==-1 ? undef : $val', ValueConv => '$val / 32'
+        if v != -1 {
+            let val_f = v as f64 / 32.0;
+            tags.push(mkt("FlashGuideNumber", Value::I16(v), format!("{:.2}", val_f)));
+        }
     }
     if let Some(v) = get(14) {
         let pv = match v {
@@ -457,16 +483,18 @@ pub fn decode_shot_info(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("CameraType", Value::I16(v), pv));
     }
     if let Some(v) = get(27) {
-        let pv = match v {
-            -1 => "n/a",
-            0 => "None",
-            1 => "Rotate 90 CW",
-            2 => "Rotate 180",
-            3 => "Rotate 270 CW",
-            _ => "",
-        };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
-        tags.push(mkt("AutoRotate", Value::I16(v), pv));
+        // RawConv => '$val >= 0 ? $val : undef' — suppress negative values
+        if v >= 0 {
+            let pv = match v {
+                0 => "None",
+                1 => "Rotate 90 CW",
+                2 => "Rotate 180",
+                3 => "Rotate 270 CW",
+                _ => "",
+            };
+            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            tags.push(mkt("AutoRotate", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(28) {
         let pv = match v {
@@ -479,7 +507,11 @@ pub fn decode_shot_info(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("NDFilter", Value::I16(v), pv));
     }
     if let Some(v) = get(29) {
-        tags.push(mkt("SelfTimer2", Value::I16(v), v.to_string()));
+        // RawConv => '$val >= 0 ? $val : undef' — suppress negative values
+        if v >= 0 {
+            let val_f = v as f64 / 10.0;
+            tags.push(mkt("SelfTimer2", Value::I16(v), format!("{:.1}", val_f)));
+        }
     }
     if let Some(v) = get(33) {
         tags.push(mkt("FlashOutput", Value::I16(v), v.to_string()));
@@ -487,15 +519,36 @@ pub fn decode_shot_info(values: &[i16]) -> Vec<Tag> {
     tags
 }
 
-pub fn decode_focal_length(values: &[u16]) -> Vec<Tag> {
+pub fn decode_focal_length(values: &[u16], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if let Some(&v) = values.get(0) {
-        let pv = match v { 1 => "Fixed", 2 => "Zoom", _ => "" };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
-        tags.push(mkt("FocalType", Value::U16(v), pv));
+        if v != 0 {
+            let pv = match v { 1 => "Fixed", 2 => "Zoom", _ => "" };
+            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            tags.push(mkt("FocalType", Value::U16(v), pv));
+        }
     }
     if let Some(&v) = values.get(1) {
         tags.push(mkt("FocalLength", Value::U16(v), format!("{} mm", v)));
+    }
+    // FocalPlaneXSize/YSize for older Canon models (Perl: Canon::FocalLength table)
+    // Only present for some lower-end models, not 1D/5D/7D series
+    let model_upper = model.to_uppercase();
+    let is_1d_series = model_upper.contains("EOS-1D") || model_upper.contains("EOS 1D")
+        || model_upper.contains("EOS 1DS") || model_upper.contains("EOS-1DS");
+    let has_focal_plane = !is_1d_series && (model_upper.contains("REBEL") || model_upper.contains("300D")
+        || model_upper.contains("350D") || model_upper.contains("400D")
+        || model_upper.contains("POWERSHOT")
+        || (model_upper.contains("EOS") && !model_upper.contains("EOS 5D") && !model_upper.contains("EOS 7D")));
+    if has_focal_plane && values.len() >= 4 {
+        let fpx = values.get(2).copied().unwrap_or(0);
+        let fpy = values.get(3).copied().unwrap_or(0);
+        if fpx > 0 {
+            tags.push(mkt("FocalPlaneXSize", Value::U16(fpx), format!("{:.2} mm", fpx as f64 / 1000.0 * 25.4)));
+        }
+        if fpy > 0 {
+            tags.push(mkt("FocalPlaneYSize", Value::U16(fpy), format!("{:.2} mm", fpy as f64 / 1000.0 * 25.4)));
+        }
     }
     tags
 }

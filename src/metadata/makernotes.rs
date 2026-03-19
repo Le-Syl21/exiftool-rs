@@ -29,6 +29,7 @@ pub enum Manufacturer {
     Apple,
     Google,
     DJI,
+    GE,
     Unknown,
 }
 
@@ -60,6 +61,18 @@ pub fn parse_makernotes(
     }
 
     let mn_data = &data[mn_offset..mn_offset + mn_size];
+
+    // GoPro MakerNotes: binary format, not IFD (Perl: "Unrecognized MakerNotes")
+    if make.to_uppercase().starts_with("GOPRO") {
+        return vec![Tag {
+            id: TagId::Text("Warning".into()),
+            name: "Warning".into(), description: "Warning".into(),
+            group: TagGroup { family0: "ExifTool".into(), family1: "ExifTool".into(), family2: "Other".into() },
+            raw_value: Value::String("[minor] Unrecognized MakerNotes".into()),
+            print_value: "[minor] Unrecognized MakerNotes".into(),
+            priority: 0,
+        }];
+    }
 
     // GE MakerNotes: FixBase needed (Perl emits Warning)
     if mn_data.starts_with(b"GE\0\0") || mn_data.starts_with(b"GENIC\0") {
@@ -181,6 +194,36 @@ pub fn parse_makernotes(
     // Nikon second pass: decrypt encrypted sub-tables (only for type 2 with TIFF header)
     if info.manufacturer == Manufacturer::Nikon && info.ifd_offset >= 10 {
         decrypt_nikon_subtables(parse_data, parse_offset, byte_order, &mut tags, model);
+    }
+
+    // Canon post-processing: OriginalDecisionData
+    // The OriginalDecisionDataOffset tag gives a JPEG-file-relative offset to 512 bytes of binary data.
+    // In TIFF-relative terms, subtract 12 (SOI + APP1-marker + size + "Exif\0\0" = 2+2+2+6=12 bytes).
+    // Perl: Composite OriginalDecisionData requires OriginalDecisionDataOffset.
+    if info.manufacturer == Manufacturer::Canon {
+        if let Some(odd_tag) = tags.iter().find(|t| t.name == "OriginalDecisionDataOffset") {
+            if let Some(jpeg_off) = odd_tag.raw_value.as_u64() {
+                let jpeg_off = jpeg_off as usize;
+                // TIFF data (data) starts at JPEG byte offset 12 (typical JPEG-APP1-EXIF layout)
+                // Adjust: tiff_off = jpeg_off - 12
+                let tiff_off = jpeg_off.saturating_sub(12);
+                let odd_size = 512usize;
+                if tiff_off > 0 && tiff_off + odd_size <= data.len() {
+                    let bin_data = &data[tiff_off..tiff_off + odd_size];
+                    // Perl outputs: "(Binary data N bytes, use -b option to extract)"
+                    let pv = format!("(Binary data {} bytes, use -b option to extract)", odd_size);
+                    tags.push(Tag {
+                        id: TagId::Text("OriginalDecisionData".into()),
+                        name: "OriginalDecisionData".into(),
+                        description: "Original Decision Data".into(),
+                        group: TagGroup { family0: "Composite".into(), family1: "Composite".into(), family2: "Other".into() },
+                        raw_value: Value::Binary(bin_data.to_vec()),
+                        print_value: pv,
+                        priority: 0,
+                    });
+                }
+            }
+        }
     }
 
     tags
@@ -334,7 +377,7 @@ fn canon_custom2_name(id: u32) -> &'static str {
         0x0610 => "ContinuousShootingSpeed",
         0x0611 => "ContinuousShotLimit",
         0x0612 => "RestrictDriveModes",
-        0x0701 => "Shutter_AELock",
+        0x0701 => "ShutterButtonAFOnButton",
         0x0702 => "AFOnAELockButtonSwitch",
         0x0703 => "QuickControlDialInMeter",
         0x0704 => "SetButtonWhenShooting",
@@ -403,7 +446,7 @@ fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
         (45, "SpotFocusPointX"), (46, "SpotFocusPointY"),
         (47, "WideFocusZone"), (48, "FocusMode"),
         (49, "FocusArea"), (50, "DECPosition"),
-        (52, "DataImprint"),
+        // (52, "DataImprint"), // Condition: DiMAGE 7Hi only
     ];
 
     let max_idx = data.len() / 4;
@@ -457,14 +500,25 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
 
     tags.push(mk("FocusMode", d[56].to_string()));
 
-    if d.len() > 58 {
-        tags.push(mk("WhiteBalance", d[57].to_string()));
+    // TimeCreated at offset 0x14
+    if d.len() > 0x16 {
+        let h = d[0x14];
+        let m = d[0x15];
+        let s = d[0x16];
+        tags.push(mk("TimeCreated", format!("{:02}:{:02}:{:02}", h, m, s)));
     }
-    if d.len() > 72 {
-        tags.push(mk("Sharpness", d[72].to_string()));
+
+    // WhiteBalance at offset 0x40
+    if d.len() > 0x40 {
+        tags.push(mk("WhiteBalance", d[0x40].to_string()));
     }
-    if d.len() > 77 {
-        tags.push(mk("ISO", u16::from_be_bytes([d[76], d[77]]).to_string()));
+    // ISO at offset 0x60
+    if d.len() > 0x61 {
+        tags.push(mk("ISO", u16::from_be_bytes([d[0x60], d[0x61]]).to_string()));
+    }
+    // Sharpness at offset 0x6b
+    if d.len() > 0x6b {
+        tags.push(mk("Sharpness", d[0x6b].to_string()));
     }
     if d.len() > 98 {
         tags.push(mk("TotalZoom", u16::from_be_bytes([d[96], d[97]]).to_string()));
@@ -474,8 +528,9 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
         tags.push(mk("ColorMode", u32::from_be_bytes([d[100], d[101], d[102], d[103]]).to_string()));
         tags.push(mk("DigitalZoom", u32::from_be_bytes([d[104], d[105], d[106], d[107]]).to_string()));
     }
-    if d.len() > 109 {
-        tags.push(mk("Sharpness2", d[108].to_string()));
+    // 0x6b: Sharpness (int8s) — Perl Kodak::Main
+    if d.len() > 0x6b {
+        tags.push(mk("Sharpness", (d[0x6b] as i8).to_string()));
     }
     if d.len() > 94 {
         tags.push(mk("FlashMode", d[92].to_string()));
@@ -559,36 +614,803 @@ fn decode_binary_subtable(data: &[u8], module: &str, table: &[(usize, &str)]) ->
 
 // Pentax binary sub-tables (from Perl Pentax.pm)
 static PENTAX_SR_INFO: &[(usize, &str)] = &[(0, "SRResult"), (1, "ShakeReduction"), (2, "SRHalfPressTime"), (3, "SRFocalLength")];
-static PENTAX_AE_INFO: &[(usize, &str)] = &[
-    (0, "AEExposureTime"), (1, "AEAperture"), (2, "AE_ISO"), (3, "AEXv"),
-    (4, "AEBXv"), (5, "AEMinExposureTime"), (6, "AEProgramMode"),
-    (8, "AEApertureSteps"), (9, "AEMaxAperture"), (10, "AEMaxAperture2"),
-    (11, "AEMinAperture"), (12, "AEMeteringMode"),
-];
-static PENTAX_AF_INFO: &[(usize, &str)] = &[
-    (4, "AFPredictor"), (7, "AFIntegrationTime"), (11, "AFPointsInFocus"),
-];
-static PENTAX_LENS_INFO: &[(usize, &str)] = &[
-    (0, "LensType"), (3, "LensData"),
-];
-static PENTAX_FLASH_INFO: &[(usize, &str)] = &[
-    (0, "FlashStatus"), (1, "InternalFlashMode"), (2, "ExternalFlashMode"),
-    (3, "InternalFlashStrength"), (25, "ExternalFlashExposureComp"),
-    (26, "ExternalFlashBounce"),
-];
-static PENTAX_CAMERA_SETTINGS: &[(usize, &str)] = &[
-    (0, "PictureMode2"), (2, "FlashOptions"), (3, "AFPointMode"),
-    (4, "AFPointSelected2"), (6, "ISOFloor"), (7, "DriveMode2"),
-    (8, "ExposureBracketStepSize"), (9, "BracketShotNumber"),
-    (10, "WhiteBalanceSet"), (16, "FlashOptions2"),
-];
-static PENTAX_CAMERA_INFO: &[(usize, &str)] = &[
-    // int32u format — offsets are word indices, not byte indices
-];
-static PENTAX_BATTERY_INFO: &[(usize, &str)] = &[
-    (2, "BodyBatteryADNoLoad"), (3, "BodyBatteryADLoad"),
-    (4, "GripBatteryADNoLoad"), (5, "GripBatteryADLoad"),
-];
+
+/// PentaxEv: matches Perl's PentaxEv() from Pentax.pm (line 6815).
+/// Adjusts values where val%8==3 or val%8==5 for exact 1/3-stop fractions, then divides by 8.
+fn pentax_ev(val: i32) -> f64 {
+    let mut v = val as f64;
+    if val & 0x01 != 0 {
+        let sign = if val < 0 { -1.0_f64 } else { 1.0_f64 };
+        let frac = (val.abs() & 0x07) as i32;
+        if frac == 0x03 {
+            v += sign * (8.0 / 3.0 - frac as f64);
+        } else if frac == 0x05 {
+            v += sign * (16.0 / 3.0 - frac as f64);
+        }
+    }
+    v / 8.0
+}
+
+/// Helper: create a Pentax MakerNotes tag with a string value.
+fn mk_pentax(name: &str, print: &str) -> Tag {
+    Tag {
+        id: TagId::Text(name.to_string()), name: name.to_string(), description: name.to_string(),
+        group: TagGroup { family0: "MakerNotes".into(), family1: "Pentax".into(), family2: "Camera".into() },
+        raw_value: Value::String(print.to_string()), print_value: print.to_string(), priority: 0,
+    }
+}
+
+/// Format a shutter speed value (like ExifTool PrintExposureTime).
+fn print_exposure_time(val: f64) -> String {
+    if val <= 0.0 { return "0".to_string(); }
+    if val >= 1.0 { return format!("{}", val as u64); }
+    let inv = (1.0 / val).round() as u64;
+    format!("1/{}", inv)
+}
+
+/// Decode Pentax CameraSettings (tag 0x0205, 23 bytes).
+/// From Perl Pentax::CameraSettings table.
+fn decode_pentax_camera_settings(data: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    if data.is_empty() { return tags; }
+    let pb = |name: &str, v: &str| mk_pentax(name, v);
+
+    // Byte 0: PictureMode2
+    if data.len() > 0 {
+        let b = data[0];
+        let s = match b {
+            0 => "Scene Mode", 1 => "Auto PICT", 2 => "Program AE", 3 => "Green Mode",
+            4 => "Shutter Speed Priority", 5 => "Aperture Priority", 6 => "Program Tv Shift",
+            7 => "Program Av Shift", 8 => "Manual", 9 => "Bulb",
+            10 => "Aperture Priority, Off-Auto-Aperture", 11 => "Manual, Off-Auto-Aperture",
+            12 => "Bulb, Off-Auto-Aperture", 13 => "Shutter & Aperture Priority AE",
+            15 => "Sensitivity Priority AE", 16 => "Flash X-Sync Speed AE",
+            _ => "",
+        };
+        let pm2_tmp = if s.is_empty() { b.to_string() } else { s.to_string() };
+        tags.push(pb("PictureMode2", &pm2_tmp));
+    }
+
+    // Byte 1: bitmask fields — ProgramLine(0x03), EVSteps(0x20), E-DialInProgram(0x40), ApertureRingUse(0x80)
+    if data.len() > 1 {
+        let b = data[1];
+
+        let pl = b & 0x03;
+        let pl_s = match pl { 0 => "Normal", 1 => "Hi Speed", 2 => "Depth", 3 => "MTF", _ => "" };
+        tags.push(pb("ProgramLine", pl_s));
+
+        let ev = (b & 0x20) >> 5;
+        tags.push(pb("EVSteps", if ev == 0 { "1/2 EV Steps" } else { "1/3 EV Steps" }));
+
+        let ed = (b & 0x40) >> 6;
+        tags.push(pb("E-DialInProgram", if ed == 0 { "Tv or Av" } else { "P Shift" }));
+
+        let ar = (b & 0x80) >> 7;
+        tags.push(pb("ApertureRingUse", if ar == 0 { "Prohibited" } else { "Permitted" }));
+    }
+
+    // Byte 2: FlashOptions(0xf0), MeteringMode2(0x0f)
+    if data.len() > 2 {
+        let b = data[2];
+        let fo = (b & 0xf0) >> 4;
+        let fo_s = match fo {
+            0 => "Normal", 1 => "Red-eye reduction", 2 => "Auto",
+            3 => "Auto, Red-eye reduction", 5 => "Wireless (Master)",
+            6 => "Wireless (Control)", 8 => "Slow-sync",
+            9 => "Slow-sync, Red-eye reduction", 10 => "Trailing-curtain Sync", _ => "",
+        };
+        let fo_tmp = if fo_s.is_empty() { fo.to_string() } else { fo_s.to_string() };
+        tags.push(pb("FlashOptions", &fo_tmp));
+
+        let mm = b & 0x0f;
+        let mm_s = match mm {
+            0 => "Multi-segment",
+            v if v & 0x01 != 0 && v & 0x02 != 0 => "Center-weighted average, Spot",
+            v if v & 0x01 != 0 => "Center-weighted average",
+            v if v & 0x02 != 0 => "Spot",
+            _ => "",
+        };
+        let mm2_tmp = if mm_s.is_empty() { mm.to_string() } else { mm_s.to_string() };
+        tags.push(pb("MeteringMode2", &mm2_tmp));
+    }
+
+    // Byte 3: AFPointMode(0xf0), FocusMode2(0x0f)
+    if data.len() > 3 {
+        let b = data[3];
+        // AFPointMode (mask 0xf0)
+        let apm = (b & 0xf0) >> 4;
+        let apm_tmp = if apm == 0 { "Auto".to_string() } else {
+            let mut parts = Vec::new();
+            if apm & 0x01 != 0 { parts.push("Select"); }
+            if apm & 0x02 != 0 { parts.push("Fixed Center"); }
+            if parts.is_empty() { apm.to_string() } else { parts.join(", ") }
+        };
+        tags.push(pb("AFPointMode", &apm_tmp));
+
+        let fm = b & 0x0f;
+        let fm_s = match fm { 0 => "Manual", 1 => "AF-S", 2 => "AF-C", 3 => "AF-A", _ => "" };
+        let fm2_tmp = if fm_s.is_empty() { fm.to_string() } else { fm_s.to_string() };
+        tags.push(pb("FocusMode2", &fm2_tmp));
+    }
+
+    // Bytes 4-5: AFPointSelected2 (int16u, little-endian)
+    if data.len() > 5 {
+        let v = u16::from_le_bytes([data[4], data[5]]);
+        let aps2_tmp = if v == 0 {
+            "Auto".to_string()
+        } else {
+            let mut bits = Vec::new();
+            if v & (1 << 0) != 0 { bits.push("Upper-left"); }
+            if v & (1 << 1) != 0 { bits.push("Top"); }
+            if v & (1 << 2) != 0 { bits.push("Upper-right"); }
+            if v & (1 << 3) != 0 { bits.push("Left"); }
+            if v & (1 << 4) != 0 { bits.push("Mid-left"); }
+            if v & (1 << 5) != 0 { bits.push("Center"); }
+            if v & (1 << 6) != 0 { bits.push("Mid-right"); }
+            if v & (1 << 7) != 0 { bits.push("Right"); }
+            if v & (1 << 8) != 0 { bits.push("Lower-left"); }
+            if v & (1 << 9) != 0 { bits.push("Bottom"); }
+            if v & (1 << 10) != 0 { bits.push("Lower-right"); }
+            if bits.is_empty() { v.to_string() } else { bits.join(", ") }
+        };
+        tags.push(pb("AFPointSelected2", &aps2_tmp));
+    }
+
+    // Byte 6: ISOFloor — ValueConv: int(100*exp(PentaxEv(val-32)*log(2))+0.5)
+    if data.len() > 6 {
+        let raw = data[6] as i32;
+        let ev = pentax_ev(raw - 32);
+        let iso = (100.0 * (ev * std::f64::consts::LN_2).exp() + 0.5) as i64;
+        tags.push(pb("ISOFloor", &iso.to_string()));
+    }
+
+    // Byte 7: DriveMode2
+    if data.len() > 7 {
+        let b = data[7];
+        let dm2_tmp = if b == 0 {
+            "Single-frame".to_string()
+        } else {
+            let mut bits = Vec::new();
+            if b & (1 << 0) != 0 { bits.push("Continuous"); }
+            if b & (1 << 1) != 0 { bits.push("Continuous (Lo)"); }
+            if b & (1 << 2) != 0 { bits.push("Self-timer (12 s)"); }
+            if b & (1 << 3) != 0 { bits.push("Self-timer (2 s)"); }
+            if b & (1 << 4) != 0 { bits.push("Remote Control (3 s delay)"); }
+            if b & (1 << 5) != 0 { bits.push("Remote Control"); }
+            if b & (1 << 6) != 0 { bits.push("Exposure Bracket"); }
+            if b & (1 << 7) != 0 { bits.push("Multiple Exposure"); }
+            if bits.is_empty() { b.to_string() } else { bits.join(", ") }
+        };
+        tags.push(pb("DriveMode2", &dm2_tmp));
+    }
+
+    // Byte 8: ExposureBracketStepSize
+    if data.len() > 8 {
+        let b = data[8];
+        let ebs_s = match b {
+            3 => "0.3", 4 => "0.5", 5 => "0.7", 8 => "1.0",
+            11 => "1.3", 12 => "1.5", 13 => "1.7", 16 => "2.0", _ => "",
+        };
+        if !ebs_s.is_empty() {
+            tags.push(pb("ExposureBracketStepSize", ebs_s));
+        }
+    }
+
+    // Byte 9: BracketShotNumber
+    if data.len() > 9 {
+        let b = data[9];
+        let bsn_s = match b {
+            0x00 => "n/a", 0x02 => "1 of 2", 0x12 => "2 of 2",
+            0x03 => "1 of 3", 0x13 => "2 of 3", 0x23 => "3 of 3",
+            0x05 => "1 of 5", 0x15 => "2 of 5", 0x25 => "3 of 5",
+            0x35 => "4 of 5", 0x45 => "5 of 5", _ => "",
+        };
+        if !bsn_s.is_empty() {
+            tags.push(pb("BracketShotNumber", bsn_s));
+        }
+    }
+
+    // Byte 10: WhiteBalanceSet(0xf0), MultipleExposureSet(0x0f)
+    if data.len() > 10 {
+        let b = data[10];
+        let wb = (b & 0xf0) >> 4;
+        let wb_s = match wb {
+            0 => "Auto", 1 => "Daylight", 2 => "Shade", 3 => "Cloudy",
+            4 => "Daylight Fluorescent", 5 => "Day White Fluorescent",
+            6 => "White Fluorescent", 7 => "Tungsten", 8 => "Flash", 9 => "Manual",
+            12 => "Set Color Temperature 1", 13 => "Set Color Temperature 2",
+            14 => "Set Color Temperature 3", _ => "",
+        };
+        let wb_tmp = if wb_s.is_empty() { wb.to_string() } else { wb_s.to_string() };
+        tags.push(pb("WhiteBalanceSet", &wb_tmp));
+
+        let me = b & 0x0f;
+        tags.push(pb("MultipleExposureSet", if me == 0 { "Off" } else { "On" }));
+    }
+
+    // Byte 13: RawAndJpgRecording
+    if data.len() > 13 {
+        let b = data[13];
+        let s = match b {
+            0x01 => "JPEG (Best)", 0x04 => "RAW (PEF, Best)", 0x05 => "RAW+JPEG (PEF, Best)",
+            0x08 => "RAW (DNG, Best)", 0x09 => "RAW+JPEG (DNG, Best)",
+            0x21 => "JPEG (Better)", 0x24 => "RAW (PEF, Better)", 0x25 => "RAW+JPEG (PEF, Better)",
+            0x28 => "RAW (DNG, Better)", 0x29 => "RAW+JPEG (DNG, Better)",
+            0x41 => "JPEG (Good)", 0x44 => "RAW (PEF, Good)", 0x45 => "RAW+JPEG (PEF, Good)",
+            0x48 => "RAW (DNG, Good)", 0x49 => "RAW+JPEG (DNG, Good)", _ => "",
+        };
+        if !s.is_empty() {
+            tags.push(pb("RawAndJpgRecording", s));
+        }
+    }
+
+    // Byte 14: JpgRecordedPixels(0x03) — K10D only
+    if data.len() > 14 {
+        let b = data[14];
+        let jp = b & 0x03;
+        let jp_s = match jp { 0 => "10 MP", 1 => "6 MP", 2 => "2 MP", _ => "" };
+        if !jp_s.is_empty() {
+            tags.push(pb("JpgRecordedPixels", jp_s));
+        }
+
+        // SensitivitySteps(0x02) for K-5
+        let ss = (b & 0x02) >> 1;
+        tags.push(pb("SensitivitySteps", if ss == 0 { "1 EV Steps" } else { "As EV Steps" }));
+    }
+
+    // Byte 16: FlashOptions2(0xf0), MeteringMode3(0x0f) — K10D only
+    if data.len() > 16 {
+        let b = data[16];
+        let fo2 = (b & 0xf0) >> 4;
+        let fo2_s = match fo2 {
+            0 => "Normal", 1 => "Red-eye reduction", 2 => "Auto",
+            3 => "Auto, Red-eye reduction", 5 => "Wireless (Master)",
+            6 => "Wireless (Control)", 8 => "Slow-sync",
+            9 => "Slow-sync, Red-eye reduction", 10 => "Trailing-curtain Sync", _ => "",
+        };
+        let fo2_tmp = if fo2_s.is_empty() { fo2.to_string() } else { fo2_s.to_string() };
+        tags.push(pb("FlashOptions2", &fo2_tmp));
+
+        let mm3 = b & 0x0f;
+        let mm3_s = match mm3 {
+            0 => "Multi-segment",
+            v if v & 0x01 != 0 && v & 0x02 != 0 => "Center-weighted average, Spot",
+            v if v & 0x01 != 0 => "Center-weighted average",
+            v if v & 0x02 != 0 => "Spot",
+            _ => "",
+        };
+        let mm3_tmp = if mm3_s.is_empty() { mm3.to_string() } else { mm3_s.to_string() };
+        tags.push(pb("MeteringMode3", &mm3_tmp));
+    }
+
+    // Byte 17: SRActive(0x80), Rotation(0x60), ISOSetting(0x04), SensitivitySteps(0x02) — K10D
+    if data.len() > 17 {
+        let b = data[17];
+        let sr = (b & 0x80) >> 7;
+        tags.push(pb("SRActive", if sr == 0 { "No" } else { "Yes" }));
+
+        let rot = (b & 0x60) >> 5;
+        let rot_s = match rot {
+            0 => "Horizontal (normal)", 1 => "Rotate 180",
+            2 => "Rotate 90 CW", 3 => "Rotate 270 CW", _ => "",
+        };
+        tags.push(pb("Rotation", rot_s));
+
+        let iso = (b & 0x04) >> 2;
+        tags.push(pb("ISOSetting", if iso == 0 { "Manual" } else { "Auto" }));
+
+        // Remove SensitivitySteps from byte 17 since byte 14 already has it for K10D
+        // (Perl uses Condition to differentiate models; K10D uses byte 17.4)
+        let sens = (b & 0x02) >> 1;
+        // Only emit if not already emitted from byte 14 (K10D vs K-5 models differ)
+        // We emit it from byte 17 for K10D as that's what the test file shows
+        let _ = sens; // Already handled from byte 14
+    }
+
+    // Byte 18: TvExposureTimeSetting — ValueConv: exp(-PentaxEv(val-68)*log(2))
+    if data.len() > 18 {
+        let raw = data[18] as i32;
+        let ev = pentax_ev(raw - 68);
+        let tv = (-ev * std::f64::consts::LN_2).exp();
+        tags.push(pb("TvExposureTimeSetting", &print_exposure_time(tv)));
+    }
+
+    // Byte 19: AvApertureSetting — ValueConv: exp(PentaxEv(val-68)*log(2)/2)
+    if data.len() > 19 {
+        let raw = data[19] as i32;
+        let ev = pentax_ev(raw - 68);
+        let av = (ev * std::f64::consts::LN_2 / 2.0).exp();
+        tags.push(pb("AvApertureSetting", &format!("{:.1}", av)));
+    }
+
+    // Byte 20: SvISOSetting — ValueConv: int(100*exp(PentaxEv(val-32)*log(2))+0.5)
+    if data.len() > 20 {
+        let raw = data[20] as i32;
+        let ev = pentax_ev(raw - 32);
+        let iso = (100.0 * (ev * std::f64::consts::LN_2).exp() + 0.5) as u32;
+        tags.push(pb("SvISOSetting", &iso.to_string()));
+    }
+
+    // Byte 21: BaseExposureCompensation — ValueConv: PentaxEv(64-val)
+    if data.len() > 21 {
+        let raw = data[21] as i32;
+        let ev = pentax_ev(64 - raw);
+        let s = if ev == 0.0 { "0".to_string() } else { format!("{:+.1}", ev) };
+        tags.push(pb("BaseExposureCompensation", &s));
+    }
+
+    tags
+}
+
+/// Decode Pentax AEInfo (tag 0x0206).
+/// From Perl Pentax::AEInfo table.
+fn decode_pentax_ae_info(data: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let pb = |name: &str, v: &str| mk_pentax(name, v);
+
+    // Byte 0: AEExposureTime — 24*exp(-(val-32)*ln(2)/8)
+    if data.len() > 0 {
+        let raw = data[0] as f64;
+        let tv = 24.0 * (-(raw - 32.0) * std::f64::consts::LN_2 / 8.0).exp();
+        tags.push(pb("AEExposureTime", &print_exposure_time(tv)));
+    }
+    // Byte 1: AEAperture — exp((val-68)*ln(2)/16)
+    if data.len() > 1 {
+        let raw = data[1] as f64;
+        let av = ((raw - 68.0) * std::f64::consts::LN_2 / 16.0).exp();
+        tags.push(pb("AEAperture", &format!("{:.1}", av)));
+    }
+    // Byte 2: AE_ISO — 100*exp((val-32)*ln(2)/8)
+    if data.len() > 2 {
+        let raw = data[2] as f64;
+        let iso = (100.0 * ((raw - 32.0) * std::f64::consts::LN_2 / 8.0).exp() + 0.5) as u32;
+        tags.push(pb("AE_ISO", &iso.to_string()));
+    }
+    // Byte 3: AEXv — (val-64)/8
+    if data.len() > 3 {
+        let raw = data[3] as f64;
+        tags.push(pb("AEXv", &format!("{:.4}", (raw - 64.0) / 8.0)));
+    }
+    // Byte 4: AEBXv (int8s) — val/8
+    if data.len() > 4 {
+        let raw = data[4] as i8 as f64;
+        tags.push(pb("AEBXv", &format!("{:.4}", raw / 8.0)));
+    }
+    // Byte 5: AEMinExposureTime
+    if data.len() > 5 {
+        let raw = data[5] as f64;
+        let tv = 24.0 * (-(raw - 32.0) * std::f64::consts::LN_2 / 8.0).exp();
+        tags.push(pb("AEMinExposureTime", &print_exposure_time(tv)));
+    }
+    // Byte 6: AEProgramMode
+    if data.len() > 6 {
+        let b = data[6];
+        let s = match b {
+            0 => "M, P or TAv", 1 => "Av, B or X", 2 => "Tv", 3 => "Sv or Green Mode",
+            8 => "Hi-speed Program", 11 => "Hi-speed Program (P-Shift)",
+            16 => "DOF Program", 19 => "DOF Program (P-Shift)",
+            24 => "MTF Program", 27 => "MTF Program (P-Shift)",
+            35 => "Standard", 43 => "Portrait", 51 => "Landscape",
+            59 => "Macro", 67 => "Sport", 75 => "Night Scene Portrait",
+            83 => "No Flash", 91 => "Night Scene", 99 => "Surf & Snow",
+            107 => "Text", 115 => "Sunset", 123 => "Kids",
+            131 => "Pet", 139 => "Candlelight", 147 => "Museum",
+            184 => "Shallow DOF Program", _ => "",
+        };
+        let aepm_tmp = if s.is_empty() { b.to_string() } else { s.to_string() };
+        tags.push(pb("AEProgramMode", &aepm_tmp));
+    }
+    // Byte 8 (or 7 for small records): AEApertureSteps
+    let offset_adj = if data.len() > 20 { 1usize } else { 0usize }; // Hook: size > 20 shifts by 1
+    let base = 7 + offset_adj; // AEFlags at 7, then AEApertureSteps at 8
+    if data.len() > base + 1 {
+        let b = data[base + 1];
+        let aeas_tmp = if b == 255 { "n/a".to_string() } else { b.to_string() };
+        tags.push(pb("AEApertureSteps", &aeas_tmp));
+    }
+    // AEMaxAperture
+    if data.len() > base + 2 {
+        let raw = data[base + 2] as f64;
+        let av = ((raw - 68.0) * std::f64::consts::LN_2 / 16.0).exp();
+        tags.push(pb("AEMaxAperture", &format!("{:.1}", av)));
+    }
+    // AEMaxAperture2
+    if data.len() > base + 3 {
+        let raw = data[base + 3] as f64;
+        let av = ((raw - 68.0) * std::f64::consts::LN_2 / 16.0).exp();
+        tags.push(pb("AEMaxAperture2", &format!("{:.1}", av)));
+    }
+    // AEMinAperture
+    if data.len() > base + 4 {
+        let raw = data[base + 4] as f64;
+        let av = ((raw - 68.0) * std::f64::consts::LN_2 / 16.0).exp();
+        tags.push(pb("AEMinAperture", &format!("{:.0}", av)));
+    }
+    // AEMeteringMode
+    if data.len() > base + 5 {
+        let b = data[base + 5];
+        let s = if b == 0 { "Multi-segment" }
+            else if b & 0x10 != 0 && b & 0x20 != 0 { "Center-weighted average, Spot" }
+            else if b & 0x10 != 0 { "Center-weighted average" }
+            else if b & 0x20 != 0 { "Spot" }
+            else { "" };
+        let aemm_tmp = if s.is_empty() { b.to_string() } else { s.to_string() };
+        tags.push(pb("AEMeteringMode", &aemm_tmp));
+    }
+    // FlashExposureCompSet (byte 14 from start, int8s) — ValueConv: PentaxEv(val)
+    if data.len() > 14 {
+        let raw = data[14] as i8 as i32;
+        let ev = pentax_ev(raw);
+        let s = if ev == 0.0 { "0".to_string() } else { format!("{:+.1}", ev) };
+        tags.push(pb("FlashExposureCompSet", &s));
+    }
+
+    tags
+}
+
+/// Decode Pentax LensInfo (tag 0x0207) — dispatches based on data length.
+/// From Perl: LensInfo (20 bytes), LensInfo2 (21 bytes), LensInfo4 (91 bytes), etc.
+fn decode_pentax_lens_info(data: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let pb = |name: &str, v: &str| mk_pentax(name, v);
+    let n = data.len();
+
+    // Determine LensType and LensData start offset
+    // LensInfo (old, ≤20 bytes): LensType at [0..2], LensData at [3..20]
+    // LensInfo2 (21-89 bytes): LensType at [0..4] with transform, LensData at [4..21]
+    // LensInfo4 (91 bytes): LensType at [1..5], LensData at [12..30]
+    let (lens_data_start, lens_type_str) = if n <= 20 {
+        // Old format: LensType as 2 bytes
+        let lt = if n >= 2 { format!("{} {}", data[0], data[1]) } else { "0 0".to_string() };
+        tags.push(pb("LensType", &lt));
+        (3usize, lt)
+    } else if n == 91 {
+        // LensInfo4 format (K-r, K-5): LensType at bytes 1-4
+        if n >= 5 {
+            let b = data[1..5].to_vec();
+            let t0 = b[0] & 0x0f;
+            let t1 = (b[2] as u16) * 256 + b[3] as u16;
+            let lt = format!("{} {}", t0, t1);
+            tags.push(pb("LensType", &lt));
+        }
+        (12usize, "".to_string())
+    } else {
+        // LensInfo2 format (most models): LensType at bytes 0-3
+        if n >= 4 {
+            let t0 = data[0] & 0x0f;
+            let t1 = (data[2] as u16) * 256 + data[3] as u16;
+            let lt = format!("{} {}", t0, t1);
+            tags.push(pb("LensType", &lt));
+        }
+        (4usize, "".to_string())
+    };
+    let _ = lens_type_str;
+
+    // Decode LensData starting at lens_data_start
+    if n > lens_data_start {
+        let ld = &data[lens_data_start..];
+        decode_pentax_lens_data(ld, &mut tags);
+    }
+
+    tags
+}
+
+/// Decode Pentax LensData sub-table (17-18 bytes binary).
+/// From Perl Pentax::LensData table.
+fn decode_pentax_lens_data(d: &[u8], tags: &mut Vec<Tag>) {
+    let pb = |name: &str, v: &str| mk_pentax(name, v);
+
+    // Byte 0: AutoAperture(bit0), MinAperture(bits 1-2), LensFStops(bits 4-6)
+    if d.len() > 0 {
+        let b = d[0];
+        let aa = b & 0x01;
+        tags.push(pb("AutoAperture", if aa == 0 { "On" } else { "Off" }));
+
+        let ma_raw = (b & 0x06) >> 1;
+        let ma_s = match ma_raw { 0 => "22", 1 => "32", 2 => "45", 3 => "16", _ => "" };
+        tags.push(pb("MinAperture", ma_s));
+
+        let lf = (b & 0x70) >> 4;
+        let lf_stops = 5.0 + (lf ^ 0x07) as f64 / 2.0;
+        tags.push(pb("LensFStops", &format!("{:.1}", lf_stops)));
+    }
+
+    // Byte 3: MinFocusDistance(bits 7-3), FocusRangeIndex(bits 2-0)
+    if d.len() > 3 {
+        let b = d[3];
+        let mfd_raw = (b & 0xf8) >> 3;
+        let mfd_s = match mfd_raw {
+            0 => "0.13-0.19 m", 1 => "0.20-0.24 m", 2 => "0.25-0.28 m",
+            3 => "0.28-0.30 m", 4 => "0.35-0.38 m", 5 => "0.40-0.45 m",
+            6 => "0.49-0.50 m", 7 => "0.6 m", 8 => "0.7 m",
+            9 => "0.8-0.9 m", 10 => "1.0 m", 11 => "1.1-1.2 m",
+            12 => "1.4-1.5 m", 13 => "1.5 m", 14 => "2.0 m",
+            15 => "2.0-2.1 m", 16 => "2.1 m", 17 => "2.2-2.9 m",
+            18 => "3.0 m", 19 => "4-5 m", 20 => "5.6 m", _ => "",
+        };
+        if !mfd_s.is_empty() {
+            tags.push(pb("MinFocusDistance", mfd_s));
+        }
+
+        let fri = b & 0x07;
+        let fri_s = match fri {
+            7 => "0 (very close)", 6 => "1 (close)", 4 => "2",
+            5 => "3", 1 => "4", 0 => "5", 2 => "6 (far)", 3 => "7 (very far)", _ => "",
+        };
+        if !fri_s.is_empty() {
+            tags.push(pb("FocusRangeIndex", fri_s));
+        }
+    }
+
+    // Byte 9: LensFocalLength — 10*(val>>2) * 4**((val&3)-2)
+    if d.len() > 9 {
+        let b = d[9];
+        let fl = 10.0 * (b >> 2) as f64 * 4.0_f64.powi((b & 0x03) as i32 - 2);
+        tags.push(pb("LensFocalLength", &format!("{:.1} mm", fl)));
+    }
+
+    // Byte 10: NominalMaxAperture(bits 7-4), NominalMinAperture(bits 3-0)
+    if d.len() > 10 {
+        let b = d[10];
+        let nmax = (b & 0xf0) >> 4;
+        let nmin = b & 0x0f;
+        let nmax_av = 2.0_f64.powf(nmax as f64 / 4.0);
+        let nmin_av = 2.0_f64.powf((nmin as f64 + 10.0) / 4.0);
+        tags.push(pb("NominalMaxAperture", &format!("{:.1}", nmax_av)));
+        tags.push(pb("NominalMinAperture", &format!("{:.0}", nmin_av)));
+    }
+
+    // Byte 14: MaxAperture (bits 6-0, mask 0x7f) — val = 2**((raw-1)/32)
+    if d.len() > 14 {
+        let b = d[14] & 0x7f;
+        if b > 1 {
+            let av = 2.0_f64.powf((b as f64 - 1.0) / 32.0);
+            tags.push(pb("MaxAperture", &format!("{:.1}", av)));
+        }
+    }
+}
+
+/// Decode Pentax FlashInfo (tag 0x0208, 27 bytes).
+/// From Perl Pentax::FlashInfo table.
+fn decode_pentax_flash_info(data: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    if data.len() < 27 { return tags; }
+    let pb = |name: &str, v: &str| mk_pentax(name, v);
+
+    // Byte 0: FlashStatus
+    let fs = data[0];
+    let fs_s = match fs {
+        0x00 => "Off", 0x01 => "Off (1)", 0x02 => "External, Did not fire",
+        0x06 => "External, Fired", 0x08 => "Internal, Did not fire (0x08)",
+        0x09 => "Internal, Did not fire", 0x0d => "Internal, Fired", _ => "",
+    };
+    let fs_tmp = if fs_s.is_empty() { format!("0x{:02x}", fs) } else { fs_s.to_string() };
+    tags.push(pb("FlashStatus", &fs_tmp));
+
+    // Byte 1: InternalFlashMode
+    let ifm = data[1];
+    let ifm_s = match ifm {
+        0x00 => "n/a - Off-Auto-Aperture", 0x86 => "Fired, Wireless (Control)",
+        0x95 => "Fired, Wireless (Master)", 0xc0 => "Fired",
+        0xc1 => "Fired, Red-eye reduction", 0xc2 => "Fired, Auto",
+        0xc3 => "Fired, Auto, Red-eye reduction",
+        0xc6 => "Fired, Wireless (Control), Fired normally not as control",
+        0xc8 => "Fired, Slow-sync", 0xc9 => "Fired, Slow-sync, Red-eye reduction",
+        0xca => "Fired, Trailing-curtain Sync", 0xf0 => "Did not fire, Normal",
+        0xf1 => "Did not fire, Red-eye reduction", 0xf2 => "Did not fire, Auto",
+        0xf3 => "Did not fire, Auto, Red-eye reduction",
+        0xf4 => "Did not fire, (Unknown 0xf4)", 0xf5 => "Did not fire, Wireless (Master)",
+        0xf6 => "Did not fire, Wireless (Control)", 0xf8 => "Did not fire, Slow-sync",
+        0xf9 => "Did not fire, Slow-sync, Red-eye reduction",
+        0xfa => "Did not fire, Trailing-curtain Sync", _ => "",
+    };
+    let ifm_tmp = if ifm_s.is_empty() { format!("0x{:02x}", ifm) } else { ifm_s.to_string() };
+    tags.push(pb("InternalFlashMode", &ifm_tmp));
+
+    // Byte 2: ExternalFlashMode
+    let efm = data[2];
+    let efm_s = match efm {
+        0x00 => "n/a - Off-Auto-Aperture", 0x3f => "Off", 0x40 => "On, Auto",
+        0xbf => "On, Flash Problem", 0xc0 => "On, Manual", 0xc4 => "On, P-TTL Auto",
+        0xc5 => "On, Contrast-control Sync", 0xc6 => "On, High-speed Sync",
+        0xcc => "On, Wireless", 0xcd => "On, Wireless, High-speed Sync",
+        0xf0 => "Not Connected", _ => "",
+    };
+    let efm_tmp = if efm_s.is_empty() { format!("0x{:02x}", efm) } else { efm_s.to_string() };
+    tags.push(pb("ExternalFlashMode", &efm_tmp));
+
+    // Byte 3: InternalFlashStrength
+    tags.push(pb("InternalFlashStrength", &data[3].to_string()));
+
+    // Bytes 4-7: TTL_DA_AUp, TTL_DA_ADown, TTL_DA_BUp, TTL_DA_BDown
+    tags.push(pb("TTL_DA_AUp", &data[4].to_string()));
+    tags.push(pb("TTL_DA_ADown", &data[5].to_string()));
+    tags.push(pb("TTL_DA_BUp", &data[6].to_string()));
+    tags.push(pb("TTL_DA_BDown", &data[7].to_string()));
+
+    // Byte 24: ExternalFlashGuideNumber (bits 4-0, mask 0x1f)
+    if data.len() > 24 {
+        let raw = (data[24] & 0x1f) as i32;
+        let gn_s = if raw == 0 {
+            "n/a".to_string()
+        } else {
+            let raw_adj = if raw == 29 { -3i32 } else { raw };
+            let gn = 2.0_f64.powf(raw_adj as f64 / 16.0 + 4.0);
+            format!("{}", gn.round() as i64)
+        };
+        tags.push(pb("ExternalFlashGuideNumber", &gn_s));
+    }
+
+    // Byte 25: ExternalFlashExposureComp
+    if data.len() > 25 {
+        let b = data[25];
+        let ec_s = match b {
+            0 => "n/a", 144 => "n/a (Manual Mode)",
+            164 => "-3.0", 167 => "-2.5", 168 => "-2.0", 171 => "-1.5",
+            172 => "-1.0", 175 => "-0.5", 176 => "0.0", 179 => "0.5", 180 => "1.0",
+            _ => "",
+        };
+        let ec_tmp = if ec_s.is_empty() { b.to_string() } else { ec_s.to_string() };
+        tags.push(pb("ExternalFlashExposureComp", &ec_tmp));
+    }
+
+    // Byte 26: ExternalFlashBounce
+    if data.len() > 26 {
+        let b = data[26];
+        let fb_s = match b { 0 => "n/a", 16 => "Direct", 48 => "Bounce", _ => "" };
+        let fb_tmp = if fb_s.is_empty() { b.to_string() } else { fb_s.to_string() };
+        tags.push(pb("ExternalFlashBounce", &fb_tmp));
+    }
+
+    tags
+}
+
+/// Decode Pentax CameraInfo (tag 0x0215, int32u format).
+/// From Perl Pentax::CameraInfo table.
+fn decode_pentax_camera_info(data: &[u8], byte_order: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let pb = |name: &str, v: &str| mk_pentax(name, v);
+    if data.len() < 4 { return tags; }
+
+    // Word 0: PentaxModelID (priority 0 — skip)
+    // Word 1: ManufactureDate — format YYYYMMDD as YYYY:MM:DD
+    if data.len() >= 8 {
+        let raw = read_u32(data, 4, byte_order);
+        let s = raw.to_string();
+        let date = if s.len() == 8 {
+            format!("{}:{}:{}", &s[0..4], &s[4..6], &s[6..8])
+        } else if s.len() == 7 {
+            format!("200{}:{}:{}", &s[0..1], &s[1..3], &s[3..5])
+        } else {
+            format!("Unknown ({})", raw)
+        };
+        tags.push(pb("ManufactureDate", &date));
+    }
+
+    // Word 2+3: ProductionCode (int32u[2]) — join with "."
+    if data.len() >= 16 {
+        let a = read_u32(data, 8, byte_order);
+        let b = read_u32(data, 12, byte_order);
+        tags.push(pb("ProductionCode", &format!("{}.{}", a, b)));
+    }
+
+    // Word 4: InternalSerialNumber
+    if data.len() >= 20 {
+        let sn = read_u32(data, 16, byte_order);
+        tags.push(pb("InternalSerialNumber", &sn.to_string()));
+    }
+
+    tags
+}
+
+/// Decode Pentax BatteryInfo (tag 0x0216).
+/// From Perl Pentax::BatteryInfo table.
+fn decode_pentax_battery_info(data: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let pb = |name: &str, v: &str| mk_pentax(name, v);
+    if data.is_empty() { return tags; }
+
+    // Byte 0.1: PowerSource (mask 0x0f)
+    let b0 = data[0];
+    let ps = b0 & 0x0f;
+    let ps_s = match ps {
+        1 => "Camera Battery", 2 => "Body Battery",
+        3 => "Grip Battery", 4 => "External Power Supply", _ => "",
+    };
+    let ps_tmp = if ps_s.is_empty() { ps.to_string() } else { ps_s.to_string() };
+    tags.push(pb("PowerSource", &ps_tmp));
+
+    if data.len() > 1 {
+        let b1 = data[1];
+        // Byte 1.1: BodyBatteryState (mask 0xf0) >> 4
+        let bbs = (b1 & 0xf0) >> 4;
+        let bbs_s = match bbs {
+            1 => "Empty or Missing", 2 => "Almost Empty",
+            3 => "Running Low", 4 => "Full", 5 => "Full", _ => "",
+        };
+        let bbs_tmp = if bbs_s.is_empty() { bbs.to_string() } else { bbs_s.to_string() };
+        tags.push(pb("BodyBatteryState", &bbs_tmp));
+
+        // Byte 1.2: GripBatteryState (mask 0x0f)
+        let gbs = b1 & 0x0f;
+        let gbs_s = match gbs {
+            1 => "Empty or Missing", 2 => "Almost Empty",
+            3 => "Running Low", 4 => "Full", _ => "",
+        };
+        let gbs_tmp = if gbs_s.is_empty() { gbs.to_string() } else { gbs_s.to_string() };
+        tags.push(pb("GripBatteryState", &gbs_tmp));
+    }
+
+    // Bytes 2-5: BodyBatteryADNoLoad, BodyBatteryADLoad, GripBatteryADNoLoad, GripBatteryADLoad
+    if data.len() > 2 { tags.push(pb("BodyBatteryADNoLoad", &data[2].to_string())); }
+    if data.len() > 3 { tags.push(pb("BodyBatteryADLoad", &data[3].to_string())); }
+    if data.len() > 4 { tags.push(pb("GripBatteryADNoLoad", &data[4].to_string())); }
+    if data.len() > 5 { tags.push(pb("GripBatteryADLoad", &data[5].to_string())); }
+
+    tags
+}
+
+/// Decode Pentax AFInfo (tag 0x021F).
+/// From Perl Pentax::AFInfo table.
+fn decode_pentax_af_info(data: &[u8], byte_order: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let pb = |name: &str, v: &str| mk_pentax(name, v);
+
+    // Bytes 4-5: AFPredictor (int16s)
+    if data.len() > 5 {
+        let v = read_u16(data, 4, byte_order) as i16;
+        tags.push(pb("AFPredictor", &v.to_string()));
+    }
+
+    // Byte 6: AFDefocus
+    if data.len() > 6 {
+        tags.push(pb("AFDefocus", &data[6].to_string()));
+    }
+
+    // Byte 7: AFIntegrationTime — val*2 ms
+    if data.len() > 7 {
+        let ms = (data[7] as u32) * 2;
+        tags.push(pb("AFIntegrationTime", &format!("{} ms", ms)));
+    }
+
+    // Byte 11: AFPointsInFocus
+    if data.len() > 11 {
+        let b = data[11];
+        let s = match b {
+            0 => "None", 1 => "Lower-left, Bottom", 2 => "Bottom",
+            3 => "Lower-right, Bottom", 4 => "Mid-left, Center",
+            5 => "Center (horizontal)", 6 => "Mid-right, Center",
+            7 => "Upper-left, Top", 8 => "Top", 9 => "Upper-right, Top",
+            10 => "Right", 11 => "Lower-left, Mid-left", 12 => "Upper-left, Mid-left",
+            13 => "Bottom, Center", 14 => "Top, Center",
+            15 => "Lower-right, Mid-right", 16 => "Upper-right, Mid-right",
+            17 => "Left", 18 => "Mid-left", 19 => "Center (vertical)", 20 => "Mid-right",
+            _ => "",
+        };
+        let af_tmp = if s.is_empty() { b.to_string() } else { s.to_string() };
+        tags.push(pb("AFPointsInFocus", &af_tmp));
+    }
+
+    tags
+}
+
+/// Decode Pentax ColorInfo (tag 0x0222).
+/// Contains WBShiftAB (byte 0x10, int8s) and WBShiftGM (byte 0x11, int8s).
+fn decode_pentax_color_info(data: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let pb = |name: &str, v: &str| mk_pentax(name, v);
+
+    if data.len() > 0x10 {
+        let ab = data[0x10] as i8;
+        tags.push(pb("WBShiftAB", &ab.to_string()));
+    }
+    if data.len() > 0x11 {
+        let gm = data[0x11] as i8;
+        tags.push(pb("WBShiftGM", &gm.to_string()));
+    }
+
+    tags
+}
 
 /// Decode Apple RunTime binary plist (tag 0x0003).
 fn decode_apple_runtime(data: &[u8]) -> Vec<Tag> {
@@ -921,7 +1743,9 @@ fn decode_nikon_color_balance(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
                     &format!("{} {} {} {}", r, g, b, g2)));
             }
         }
-        _ => {} // Encrypted versions handled by decrypt_nikon_subtables
+        _ => {
+            // Unrecognized version - encrypted versions handled by decrypt_nikon_subtables
+        }
     }
 
     tags
@@ -999,7 +1823,7 @@ fn decrypt_nikon_subtables(
 
                 // Extract version prefix (unencrypted first 4 bytes)
                 let version = std::str::from_utf8(&data[value_offset..value_offset + 4]).unwrap_or("");
-                tags.push(mk_canon_str("ShotInfoVersion", version));
+                tags.push(mk_nikon_str("ShotInfoVersion", version));
 
                 // Decrypt reveals ShotInfo fields depending on version
                 // For now, extract what we can
@@ -1012,7 +1836,7 @@ fn decrypt_nikon_subtables(
                 // Extract FlashInfo version (first 4 bytes unencrypted)
                 if total_size >= 4 {
                     let fi_ver = std::str::from_utf8(&data[value_offset..value_offset + 4]).unwrap_or("");
-                    tags.push(mk_canon_str("FlashInfoVersion", fi_ver));
+                    tags.push(mk_nikon_str("FlashInfoVersion", fi_ver));
                 }
 
                 // Decode FlashInfo fields
@@ -1024,7 +1848,7 @@ fn decrypt_nikon_subtables(
                         _ => "",
                     };
                     if !flash_source.is_empty() {
-                        tags.push(mk_canon_str("FlashSource", flash_source));
+                        tags.push(mk_nikon_str("FlashSource", flash_source));
                     }
 
                     // FlashFirmware at offset 6
@@ -1032,7 +1856,7 @@ fn decrypt_nikon_subtables(
                         let fw_major = decrypted[6];
                         let fw_minor = decrypted[7];
                         if fw_major > 0 {
-                            tags.push(mk_canon_str("ExternalFlashFirmware",
+                            tags.push(mk_nikon_str("ExternalFlashFirmware",
                                 &format!("{}.{}", fw_major, fw_minor)));
                         }
                     }
@@ -1168,10 +1992,21 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
     }
 
     // FUJIFILM (8 bytes, then 4-byte LE offset to IFD)
-    if mn_data.len() >= 12 && (mn_data.starts_with(b"FUJIFILM") || mn_data.starts_with(b"GENERALE")) {
+    if mn_data.len() >= 12 && mn_data.starts_with(b"FUJIFILM") {
         let ifd_off = u32::from_le_bytes([mn_data[8], mn_data[9], mn_data[10], mn_data[11]]) as usize;
         return MakerNoteInfo {
             manufacturer: Manufacturer::Fujifilm,
+            ifd_offset: ifd_off,
+            _base_adjust: 0,
+            byte_order: Some(ByteOrderMark::LittleEndian),
+        };
+    }
+
+    // GENERALE (GE cameras use Fujifilm-like format)
+    if mn_data.len() >= 12 && mn_data.starts_with(b"GENERALE") {
+        let ifd_off = u32::from_le_bytes([mn_data[8], mn_data[9], mn_data[10], mn_data[11]]) as usize;
+        return MakerNoteInfo {
+            manufacturer: Manufacturer::GE,
             ifd_offset: ifd_off,
             _base_adjust: 0,
             byte_order: Some(ByteOrderMark::LittleEndian),
@@ -1247,7 +2082,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
     // GE: "GE\0\0" or "GENIC\0", Start => valuePtr + 18
     if mn_data.starts_with(b"GE\0\0") || mn_data.starts_with(b"GENIC\0") {
         return MakerNoteInfo {
-            manufacturer: Manufacturer::Unknown,
+            manufacturer: Manufacturer::GE,
             ifd_offset: 18,
             _base_adjust: 0,
             byte_order: None,
@@ -1485,6 +2320,8 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
         Manufacturer::Google
     } else if make_upper.starts_with("DJI") {
         Manufacturer::DJI
+    } else if make_upper.starts_with("GENERAL") || make_upper.starts_with("GEDSC") {
+        Manufacturer::GE
     } else {
         Manufacturer::Unknown
     };
@@ -1530,6 +2367,10 @@ fn read_makernote_ifd(
     }
 
     let entries_start = ifd_offset + 2;
+
+    // Pentax PreviewImage state: track PreviewImageStart and PreviewImageLength
+    let mut pentax_preview_start: Option<usize> = None;
+    let mut pentax_preview_length: Option<usize> = None;
 
     for i in 0..entry_count {
         let entry_offset = entries_start + i * 12;
@@ -1610,58 +2451,111 @@ fn read_makernote_ifd(
                     let values: Vec<u16> = (0..count as usize)
                         .map(|i| read_u16(value_data, i * 2, byte_order))
                         .collect();
-                    crate::tags::canon_sub::decode_focal_length(&values)
+                    crate::tags::canon_sub::decode_focal_length(&values, model_name)
                 }
                 (Manufacturer::Canon, 0x000D) => {
-                    let mut t = subs::dispatch_canon_camera_info(&dispatch_ctx);
+                    let variant_tags = subs::dispatch_canon_camera_info(&dispatch_ctx);
+                    let known_format = !variant_tags.is_empty(); // Only decode for known models
+                    // Note: variant_tags contains CameraInfoVariant (internal metadata), don't add to output
+                    let mut t = Vec::new();
                     t.extend(decode_canon_camera_info_common(value_data, count as usize, byte_order));
-                    // Decode model-specific CameraInfo fields (int8u offsets)
+                    // Decode CameraInfo1DmkIII fields (FORMAT='int8u', byte offsets)
+                    // Perl table: Canon::CameraInfo1DmkIII
                     let d = value_data;
-                    static CAMERA_INFO_FIELDS: &[(usize, &str)] = &[
-                        (3, "FNumber"), (4, "ExposureTime"), (6, "ISO"),
-                        (24, "CameraTemperature"), (29, "FocalLength"),
-                        (48, "CameraOrientation"), (67, "FocusDistanceUpper"),
-                        (69, "FocusDistanceLower"), (94, "WhiteBalance"),
-                        (98, "ColorTemperature"), (134, "PictureStyle"),
-                        (275, "MinFocalLength"), (277, "MaxFocalLength"),
-                        (370, "FileIndex"), (374, "ShutterCount"), (382, "DirectoryIndex"),
-                    ];
-                    for &(off, name) in CAMERA_INFO_FIELDS {
-                        if off < d.len() {
-                            t.push(mk_canon_str(name, &d[off].to_string()));
+                    // Only decode 1DmkIII-specific layout (data size ~1536 bytes)
+                    let is_1dmk3 = model_name.contains("1D Mark III") || model_name.contains("1DS Mark III");
+                    if known_format && is_1dmk3 {
+                        // Read helpers
+                        let rb = |off: usize| -> u8 { if off < d.len() { d[off] } else { 0 } };
+                        let r16le = |off: usize| -> u16 {
+                            if off + 2 <= d.len() { u16::from_le_bytes([d[off], d[off+1]]) } else { 0 }
+                        };
+                        let r16be = |off: usize| -> u16 {
+                            if off + 2 <= d.len() { u16::from_be_bytes([d[off], d[off+1]]) } else { 0 }
+                        };
+                        let r32le = |off: usize| -> u32 {
+                            if off + 4 <= d.len() { u32::from_le_bytes([d[off],d[off+1],d[off+2],d[off+3]]) } else { 0 }
+                        };
+                        // Single-byte fields (int8u)
+                        if d.len() > 48 { t.push(mk_canon_str("CameraOrientation", &{
+                            let v = rb(0x30);
+                            let s = match v { 0=>"Horizontal (normal)", 1=>"Rotate 90 CW", 2=>"Rotate 270 CW", _=> "" };
+                            if s.is_empty() { v.to_string() } else { s.to_string() }
+                        })); }
+                        if d.len() > 134 { t.push(mk_canon_str("PictureStyle", &rb(0x86).to_string())); }
+                        // int16u fields (little-endian)
+                        if d.len() > 96 { let v = r16le(0x5e); let pv_s; let pv = canon_wb_name(v as i16); let pv_owned = if pv.is_empty() { pv_s = v.to_string(); pv_s.as_str() } else { pv }; t.push(mk_canon_str("WhiteBalance", pv_owned)); }
+                        if d.len() > 100 { let v = r16le(0x62); if v > 0 { t.push(mk_canon_str("ColorTemperature", &v.to_string())); } }
+                        // LensType at 0x111 = 273 (big-endian int16u)
+                        if d.len() > 275 { t.push(mk_canon_str("MinFocalLength", &r16le(0x113).to_string())); }
+                        if d.len() > 277 { t.push(mk_canon_str("MaxFocalLength", &r16le(0x115).to_string())); }
+                        // FirmwareVersion string at 0x136 = 310, length 6
+                        if d.len() >= 316 {
+                            let fw = String::from_utf8_lossy(&d[0x136..0x136+6]).trim_end_matches('\0').to_string();
+                            if !fw.is_empty() { t.push(mk_canon_str("FirmwareVersion", &fw)); }
                         }
-                    }
-                    // FirmwareVersion (string at offset 310, ~6 bytes)
-                    if d.len() > 316 {
-                        let fw = String::from_utf8_lossy(&d[310..316]).trim_end_matches('\0').to_string();
-                        if !fw.is_empty() { t.push(mk_canon_str("FirmwareVersion", &fw)); }
-                    }
-                    // PictureStyleInfo sub-structure at offset 682 (int32s values)
-                    static PS_FIELDS: &[(usize, &str)] = &[
-                        (0,"ContrastStandard"),(4,"SharpnessStandard"),(8,"SaturationStandard"),(12,"ColorToneStandard"),
-                        (24,"ContrastPortrait"),(28,"SharpnessPortrait"),(32,"SaturationPortrait"),(36,"ColorTonePortrait"),
-                        (48,"ContrastLandscape"),(52,"SharpnessLandscape"),(56,"SaturationLandscape"),(60,"ColorToneLandscape"),
-                        (72,"ContrastNeutral"),(76,"SharpnessNeutral"),(80,"SaturationNeutral"),(84,"ColorToneNeutral"),
-                        (96,"ContrastFaithful"),(100,"SharpnessFaithful"),(104,"SaturationFaithful"),(108,"ColorToneFaithful"),
-                        (120,"ContrastMonochrome"),(124,"SharpnessMonochrome"),
-                        (136,"FilterEffectMonochrome"),(140,"ToningEffectMonochrome"),
-                        (144,"ContrastUserDef1"),(148,"SharpnessUserDef1"),(152,"SaturationUserDef1"),(156,"ColorToneUserDef1"),
-                        (160,"FilterEffectUserDef1"),(164,"ToningEffectUserDef1"),
-                        (168,"ContrastUserDef2"),(172,"SharpnessUserDef2"),(176,"SaturationUserDef2"),(180,"ColorToneUserDef2"),
-                        (184,"FilterEffectUserDef2"),(188,"ToningEffectUserDef2"),
-                        (192,"ContrastUserDef3"),(196,"SharpnessUserDef3"),(200,"SaturationUserDef3"),(204,"ColorToneUserDef3"),
-                        (208,"FilterEffectUserDef3"),(212,"ToningEffectUserDef3"),
-                        (216,"UserDef1PictureStyle"),(218,"UserDef2PictureStyle"),(220,"UserDef3PictureStyle"),
-                    ];
-                    let ps_base = 682;
-                    if d.len() > ps_base + 222 {
-                        for &(off, name) in PS_FIELDS {
-                            let abs = ps_base + off;
-                            if abs + 4 <= d.len() {
-                                let v = i32::from_le_bytes([d[abs], d[abs+1], d[abs+2], d[abs+3]]);
-                                t.push(mk_canon_str(name, &v.to_string()));
+                        // int32u fields (little-endian)
+                        // FileIndex at 0x172 = 370, ValueConv += 1
+                        if d.len() > 374 { let v = r32le(0x172); t.push(mk_canon_str("FileIndex", &(v + 1).to_string())); }
+                        // ShutterCount at 0x176 = 374, ValueConv += 1
+                        if d.len() > 378 { let v = r32le(0x176); t.push(mk_canon_str("ShutterCount", &(v + 1).to_string())); }
+                        // DirectoryIndex at 0x17e = 382, ValueConv -= 1
+                        if d.len() > 386 { let v = r32le(0x17e) as i32; t.push(mk_canon_str("DirectoryIndex", &(v - 1).to_string())); }
+                        // TimeStamp1 at 0x45a = 1114 (only for 1DMarkIII, not 1DSmkIII)
+                        // RawConv => '$val ? $val : undef' (suppress if 0)
+                        if model_name.contains("1D Mark III") && d.len() > 1118 {
+                            let v = r32le(0x45a);
+                            if v > 0 {
+                                let dt = unix_time_to_datetime(v);
+                                t.push(mk_canon_str("TimeStamp1", &dt));
                             }
                         }
+                        // TimeStamp at 0x45e = 1118 (both 1DmkIII and 1DSmkIII)
+                        if d.len() > 1122 {
+                            let v = r32le(0x45e);
+                            if v > 0 {
+                                let dt = unix_time_to_datetime(v);
+                                t.push(mk_canon_str("TimeStamp", &dt));
+                            }
+                        }
+                        // PictureStyleInfo at 0x2aa = 682 (SubDirectory — PSInfo table)
+                        let ps_base = 0x2aausize;
+                        static PS_FIELDS: &[(usize, &str)] = &[
+                            (0,"ContrastStandard"),(4,"SharpnessStandard"),(8,"SaturationStandard"),(12,"ColorToneStandard"),
+                            (24,"ContrastPortrait"),(28,"SharpnessPortrait"),(32,"SaturationPortrait"),(36,"ColorTonePortrait"),
+                            (48,"ContrastLandscape"),(52,"SharpnessLandscape"),(56,"SaturationLandscape"),(60,"ColorToneLandscape"),
+                            (72,"ContrastNeutral"),(76,"SharpnessNeutral"),(80,"SaturationNeutral"),(84,"ColorToneNeutral"),
+                            (96,"ContrastFaithful"),(100,"SharpnessFaithful"),(104,"SaturationFaithful"),(108,"ColorToneFaithful"),
+                            (120,"ContrastMonochrome"),(124,"SharpnessMonochrome"),
+                            (136,"FilterEffectMonochrome"),(140,"ToningEffectMonochrome"),
+                            (144,"ContrastUserDef1"),(148,"SharpnessUserDef1"),(152,"SaturationUserDef1"),(156,"ColorToneUserDef1"),
+                            (160,"FilterEffectUserDef1"),(164,"ToningEffectUserDef1"),
+                            (168,"ContrastUserDef2"),(172,"SharpnessUserDef2"),(176,"SaturationUserDef2"),(180,"ColorToneUserDef2"),
+                            (184,"FilterEffectUserDef2"),(188,"ToningEffectUserDef2"),
+                            (192,"ContrastUserDef3"),(196,"SharpnessUserDef3"),(200,"SaturationUserDef3"),(204,"ColorToneUserDef3"),
+                            (208,"FilterEffectUserDef3"),(212,"ToningEffectUserDef3"),
+                            (216,"UserDef1PictureStyle"),(218,"UserDef2PictureStyle"),(220,"UserDef3PictureStyle"),
+                        ];
+                        if d.len() > ps_base + 222 {
+                            for &(off, name) in PS_FIELDS {
+                                let abs = ps_base + off;
+                                if abs + 4 <= d.len() {
+                                    let v = i32::from_le_bytes([d[abs], d[abs+1], d[abs+2], d[abs+3]]);
+                                    // UserDefNPictureStyle: print as picture style name
+                                    let pv = if name.starts_with("UserDef") && name.ends_with("Style") {
+                                        let s = match v as u32 { 0x41 => "Standard", 0x42 => "Portrait", 0x43 => "Landscape",
+                                            0x44 => "Neutral", 0x45 => "Faithful", 0x51 => "Monochrome",
+                                            0x81 => "Standard", 0x82 => "Portrait", _ => "" };
+                                        if s.is_empty() { v.to_string() } else { s.to_string() }
+                                    } else { v.to_string() };
+                                    t.push(mk_canon_str(name, &pv));
+                                }
+                            }
+                        }
+                        let _ = r16be; // suppress unused warning
+                    } else if known_format {
+                        // Generic CameraInfo fields for other models (byte offsets, int8u single bytes)
+                        // This is a fallback for non-1DmkIII models that were using the old code
                     }
                     t
                 }
@@ -1674,16 +2568,19 @@ fn read_makernote_ifd(
                     decode_canon_afinfo2(value_data, count as usize, byte_order)
                 }
                 (Manufacturer::Canon, 0x009A) => {
-                    // Canon AspectInfo: int32u format
+                    // Canon AspectInfo: int32u format (from Perl Canon::AspectInfo)
+                    // index 0: AspectRatio, 1: CroppedImageWidth, 2: CroppedImageHeight,
+                    // 3: CroppedImageLeft, 4: CroppedImageTop
                     let mut t = Vec::new();
-                    if count as usize >= 1 {
+                    let n = count as usize;
+                    if n >= 1 {
                         let v = read_u32(value_data, 0, byte_order);
-                        let s = match v { 0 => "3:2", 1 => "1:1", 2 => "4:3", 7 => "16:9", 8 => "4:5", _ => "" };
+                        let s = match v { 0 => "3:2", 1 => "1:1", 2 => "4:3", 7 => "16:9", 8 => "4:5",
+                            12 => "3:2 (APS-H crop)", 13 => "3:2 (APS-C crop)", 258 => "4:3 crop", _ => "" };
                         if !s.is_empty() { t.push(mk_canon_str("AspectRatio", s)); }
-                        // CroppedImage dimensions at indices 1-6
-                        if count as usize >= 7 {
-                            let names = ["CroppedImageWidth","CroppedImageHeight","CroppedImageLeft","CroppedImageTop",
-                                         "CropLeftMargin","CropTopMargin"];
+                        // CroppedImage dimensions at indices 1-4 (when count >= 5)
+                        if n >= 5 {
+                            let names = ["CroppedImageWidth","CroppedImageHeight","CroppedImageLeft","CroppedImageTop"];
                             for (i, name) in names.iter().enumerate() {
                                 let v = read_u32(value_data, (i+1)*4, byte_order);
                                 t.push(mk_canon_str(name, &v.to_string()));
@@ -1706,14 +2603,59 @@ fn read_makernote_ifd(
                 }
                 (Manufacturer::Canon, 0x00A0) => {
                     // Canon ProcessingInfo: int16s format (from Perl Canon::Processing)
+                    // FIRST_ENTRY=1, so index i corresponds to int16s[i] (0-based)
                     let mut t = Vec::new();
                     let rd = |i: usize| -> i16 { read_u16(value_data, i * 2, byte_order) as i16 };
-                    if count as usize >= 14 {
+                    if count as usize >= 8 {
                         t.push(mk_canon_str("ToneCurve", &rd(1).to_string()));
+                        // index 2 = Sharpness (condition-based, skip)
                         t.push(mk_canon_str("SharpnessFrequency", &rd(3).to_string()));
+                        t.push(mk_canon_str("SensorRedLevel", &rd(4).to_string()));
+                        t.push(mk_canon_str("SensorBlueLevel", &rd(5).to_string()));
+                        t.push(mk_canon_str("WhiteBalanceRed", &rd(6).to_string()));
+                        t.push(mk_canon_str("WhiteBalanceBlue", &rd(7).to_string()));
+                    }
+                    if count as usize >= 14 {
                         t.push(mk_canon_str("DigitalGain", &rd(11).to_string()));
                         t.push(mk_canon_str("WBShiftAB", &rd(12).to_string()));
                         t.push(mk_canon_str("WBShiftGM", &rd(13).to_string()));
+                    }
+                    t
+                }
+                (Manufacturer::Canon, 0x0093) => {
+                    // Canon FileInfo: int16s format, FIRST_ENTRY=1 (from Perl Canon::FileInfo)
+                    // Tag 0x0093 is a subdirectory decoded here
+                    let mut t = Vec::new();
+                    let rd = |i: usize| -> i16 {
+                        if i * 2 + 2 > value_data.len() { return 0; }
+                        read_u16(value_data, i * 2, byte_order) as i16
+                    };
+                    let n = count as usize;
+                    // index 7: RawJpgSize (skip if < 0)
+                    if n > 7 { let v = rd(7); if v >= 0 {
+                        let pv = match v { 0=>"Large", 1=>"Medium 1", 2=>"Medium 2", 3=>"Small 1", 4=>"Small 2", 5=>"Small 3", 14=>"Medium", 15=>"Small", _=>""};
+                        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+                        t.push(mk_canon_str("RawJpgSize", &pv));
+                    }}
+                    // index 8: LongExposureNoiseReduction2 (skip if < 0)
+                    if n > 8 { let v = rd(8); if v >= 0 {
+                        let pv = match v { 0=>"Off", 1=>"On (1D)", 3=>"On", 4=>"Auto", _=>""};
+                        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+                        t.push(mk_canon_str("LongExposureNoiseReduction2", &pv));
+                    }}
+                    // index 9: WBBracketMode
+                    if n > 9 { let v = rd(9);
+                        let pv = match v { 0=>"Off", 1=>"On (shift AB)", 2=>"On (shift GM)", _=>""};
+                        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+                        t.push(mk_canon_str("WBBracketMode", &pv));
+                    }
+                    // index 12: WBBracketValueAB
+                    if n > 12 { t.push(mk_canon_str("WBBracketValueAB", &rd(12).to_string())); }
+                    // index 13: WBBracketValueGM
+                    if n > 13 { t.push(mk_canon_str("WBBracketValueGM", &rd(13).to_string())); }
+                    // index 19: LiveViewShooting (off/on)
+                    if n > 19 { let v = rd(19);
+                        t.push(mk_canon_str("LiveViewShooting", if v == 0 { "Off" } else { "On" }));
                     }
                     t
                 }
@@ -1753,9 +2695,25 @@ fn read_makernote_ifd(
                         vec![mk_canon_str("MeasuredRGGB", &format!("{} {} {} {}", r, g1, g2, b))]
                     } else { Vec::new() }
                 }
-                (Manufacturer::Canon, 0x0026) => {
-                    // Canon AFInfo2: int16s array
-                    decode_canon_afinfo2(value_data, count as usize, byte_order)
+                (Manufacturer::Canon, 0x4013) => {
+                    // Canon AFMicroAdj: int32s, FIRST_ENTRY=1
+                    // index 1 (bytes 4..8): AFMicroAdjMode (int32s)
+                    // index 2 (bytes 8..16): AFMicroAdjValue (rational64s = num/denom)
+                    let mut t = Vec::new();
+                    let d = value_data;
+                    if d.len() >= 8 {
+                        let mode = i32::from_le_bytes([d[4], d[5], d[6], d[7]]);
+                        let pv = match mode { 0=>"Disable", 1=>"Adjust all by the same amount", 2=>"Adjust by lens", _=>""};
+                        let pv = if pv.is_empty() { mode.to_string() } else { pv.to_string() };
+                        t.push(mk_canon_str("AFMicroAdjMode", &pv));
+                    }
+                    if d.len() >= 16 {
+                        let num = i32::from_le_bytes([d[8], d[9], d[10], d[11]]) as f64;
+                        let den = i32::from_le_bytes([d[12], d[13], d[14], d[15]]) as f64;
+                        let val = if den != 0.0 { num / den } else { 0.0 };
+                        t.push(mk_canon_str("AFMicroAdjValue", &format!("{:.0}", val)));
+                    }
+                    t
                 }
                 (Manufacturer::Canon, 0x4001) => {
                     // Canon ColorData: int16s array (WB levels)
@@ -1848,6 +2806,8 @@ fn read_makernote_ifd(
                         if let Some(eq) = token.find('=') {
                             let key = &token[..eq];
                             let val = &token[eq+1..];
+                            // Rename "Type" to "CameraType" to avoid conflict
+                            let key = if key == "Type" { "CameraType" } else { key };
                             if !key.is_empty() && !val.is_empty() {
                                 t.push(Tag {
                                     id: TagId::Text(key.to_string()),
@@ -1861,16 +2821,25 @@ fn read_makernote_ifd(
                     t
                 }
                 // Pentax binary sub-tables (from Perl Pentax.pm)
-                (Manufacturer::Pentax, 0x0205) => decode_binary_subtable(value_data, "Pentax", PENTAX_CAMERA_SETTINGS),
-                (Manufacturer::Pentax, 0x0206) => decode_binary_subtable(value_data, "Pentax", PENTAX_AE_INFO),
-                (Manufacturer::Pentax, 0x0207) => decode_binary_subtable(value_data, "Pentax", PENTAX_LENS_INFO),
-                (Manufacturer::Pentax, 0x0208) => decode_binary_subtable(value_data, "Pentax", PENTAX_FLASH_INFO),
-                (Manufacturer::Pentax, 0x0215) => decode_binary_subtable(value_data, "Pentax", PENTAX_CAMERA_INFO),
-                (Manufacturer::Pentax, 0x0216) => decode_binary_subtable(value_data, "Pentax", PENTAX_BATTERY_INFO),
-                (Manufacturer::Pentax, 0x021F) => decode_binary_subtable(value_data, "Pentax", PENTAX_AF_INFO),
+                (Manufacturer::Pentax, 0x0205) => decode_pentax_camera_settings(value_data),
+                (Manufacturer::Pentax, 0x0206) => decode_pentax_ae_info(value_data),
+                (Manufacturer::Pentax, 0x0207) => decode_pentax_lens_info(value_data),
+                (Manufacturer::Pentax, 0x0208) => {
+                    if value_data.len() == 27 {
+                        decode_pentax_flash_info(value_data)
+                    } else {
+                        Vec::new() // FlashInfoUnknown — no known tags
+                    }
+                },
+                (Manufacturer::Pentax, 0x0215) => decode_pentax_camera_info(value_data, byte_order),
+                (Manufacturer::Pentax, 0x0216) => decode_pentax_battery_info(value_data),
+                (Manufacturer::Pentax, 0x021F) => decode_pentax_af_info(value_data, byte_order),
+                (Manufacturer::Pentax, 0x0222) => decode_pentax_color_info(value_data),
                 (Manufacturer::Pentax, 0x005C) => decode_binary_subtable(value_data, "Pentax", PENTAX_SR_INFO),
                 // Apple RunTime plist
                 (Manufacturer::Apple, 0x0003) => decode_apple_runtime(value_data),
+                // Ricoh RicohSubdir (tag 0x2001): contains ManufactureDate1/ManufactureDate2
+                (Manufacturer::Ricoh, 0x2001) => decode_ricoh_subdir(value_data, data, byte_order),
                 // Sony sub-tables
                 (Manufacturer::Sony, 0x0114) => subs::dispatch_sony_camera_settings(&dispatch_ctx),
                 (Manufacturer::Sony, 0x2010) => subs::dispatch_sony_tag2010(&dispatch_ctx),
@@ -1926,7 +2895,31 @@ fn read_makernote_ifd(
                         else { continue; }
                     };
                     let val = crate::metadata::makernotes::decode_mn_value(sval, sdt, scnt, byte_order);
-                    let pv = val.to_display_string();
+
+                    // Special print conversions for Olympus Equipment sub-IFD
+                    // LensType (Equipment 0x0201): 6 int8u bytes → key "%x %.2x %.2x" (bytes 0,2,3) → lens name
+                    // Extender (Equipment 0x0301): 6 int8u bytes → key "%x %.2x" (bytes 0,2) → extender name
+                    let pv: String = if tag_id == 0x2010 && stid == 0x0201 && sdt == 1 && scnt >= 4 {
+                        // LensType: ValueConv = sprintf("%x %.2x %.2x", bytes[0], bytes[2], bytes[3])
+                        let b0 = sval.first().copied().unwrap_or(0) as u32;
+                        let b2 = sval.get(2).copied().unwrap_or(0) as u32;
+                        let b3 = sval.get(3).copied().unwrap_or(0) as u32;
+                        let key = format!("{:x} {:02x} {:02x}", b0, b2, b3);
+                        crate::tags::makernotes::olympus_lens_type_name(&key)
+                            .map(|s| s.to_string())
+                            .unwrap_or(key)
+                    } else if tag_id == 0x2010 && stid == 0x0301 && sdt == 1 && scnt >= 3 {
+                        // Extender: ValueConv = sprintf("%x %.2x", bytes[0], bytes[2])
+                        let b0 = sval.first().copied().unwrap_or(0) as u32;
+                        let b2 = sval.get(2).copied().unwrap_or(0) as u32;
+                        let key = format!("{:x} {:02x}", b0, b2);
+                        crate::tags::makernotes::olympus_extender_name(&key)
+                            .map(|s| s.to_string())
+                            .unwrap_or(key)
+                    } else {
+                        val.to_display_string()
+                    };
+
                     sub_tags.push(Tag {
                         id: TagId::Text(name.to_string()), name: name.to_string(),
                         description: name.to_string(),
@@ -1947,7 +2940,11 @@ fn read_makernote_ifd(
                     }
                 }
             } else if data_type == 7 && total_size > 12 {
-                let sub_tags = parse_oly_ifd(value_data, 0);
+                // Old Olympus inline sub-IFD: value_data IS the IFD blob,
+                // but value offsets inside it are TIFF-relative (not blob-relative).
+                // Pass the full `data` buffer with the absolute value_offset.
+                let sub_off = value_offset as usize;
+                let sub_tags = parse_oly_ifd(data, sub_off);
                 if !sub_tags.is_empty() {
                     tags.extend(sub_tags);
                     continue;
@@ -1958,6 +2955,95 @@ fn read_makernote_ifd(
         // Look up tag name
         let group_name = manufacturer_group_name(manufacturer);
         let (name, description) = mn_tags::lookup(manufacturer, tag_id);
+
+        // Suppress Unknown tags
+        if name == "Unknown" || name.contains("Unknown") {
+            continue;
+        }
+
+        // Suppress Canon tag 0x0000
+        if tag_id == 0x0000 && manufacturer == Manufacturer::Canon {
+            continue;
+        }
+
+        // SubDirectory suppression list: these are container tags, not leaf tags
+        let is_subdirectory = matches!((manufacturer, tag_id),
+            (Manufacturer::Canon, 0x0001) | // CanonCameraSettings
+            (Manufacturer::Canon, 0x0002) | // CanonFocalLength
+            (Manufacturer::Canon, 0x0003) | // CanonFlashInfo (Unknown => 1)
+            (Manufacturer::Canon, 0x0004) | // CanonShotInfo
+            (Manufacturer::Canon, 0x000D) | // CanonCameraInfo
+            (Manufacturer::Canon, 0x0093) | // CanonFileInfo (SubDirectory)
+            (Manufacturer::Canon, 0x0012) | // CanonAFInfo
+            (Manufacturer::Canon, 0x0026) | // CanonAFInfo2
+            (Manufacturer::Canon, 0x0098) | // CropInfo
+            (Manufacturer::Canon, 0x0099) | // CustomFunctions2
+            (Manufacturer::Canon, 0x009A) | // AspectInfo
+            (Manufacturer::Canon, 0x00A0) | // ProcessingInfo
+            (Manufacturer::Canon, 0x00A9) | // ColorBalance
+            (Manufacturer::Canon, 0x00AA) | // MeasuredColor
+            (Manufacturer::Canon, 0x00E0) | // SensorInfo
+            (Manufacturer::Canon, 0x4001) | // ColorData
+            (Manufacturer::Canon, 0x4013) | // AFMicroAdj
+            (Manufacturer::Nikon, 0x0011) | // PreviewIFD
+            (Manufacturer::Nikon, 0x0088) | // AFInfo
+            (Manufacturer::Nikon, 0x0091) | // ShotInfo
+            (Manufacturer::Nikon, 0x0097) | // ColorBalance
+            (Manufacturer::Nikon, 0x0098) | // LensData
+            (Manufacturer::Nikon, 0x00A8) | // FlashInfo
+            (Manufacturer::Nikon, 0x00B7) | // AFInfo2
+            (Manufacturer::Minolta, 0x0001) | // CameraSettings
+            (Manufacturer::Minolta, 0x0003) | // CameraSettings
+            (Manufacturer::Apple, 0x0003) |  // RunTime
+            (Manufacturer::Sony, 0x2000) |   // SonyIDC
+            // Pentax: these are SubDirectory container tags decoded above
+            (Manufacturer::Pentax, 0x0205) | // CameraSettings
+            (Manufacturer::Pentax, 0x0206) | // AEInfo
+            (Manufacturer::Pentax, 0x0207) | // LensInfo
+            (Manufacturer::Pentax, 0x0208) | // FlashInfo
+            (Manufacturer::Pentax, 0x0215) | // CameraInfo
+            (Manufacturer::Pentax, 0x0216) | // BatteryInfo
+            (Manufacturer::Pentax, 0x021F) | // AFInfo
+            (Manufacturer::Pentax, 0x0222) | // ColorInfo
+            (Manufacturer::Pentax, 0x003f) | // LensRec (SubDirectory)
+            (Manufacturer::Pentax, 0x005C)   // SRInfo
+        );
+        if is_subdirectory { continue; }
+
+        // Canon ImageUniqueID (0x0028): suppress if all-zero bytes (Perl RawConv)
+        if manufacturer == Manufacturer::Canon && tag_id == 0x0028 {
+            if value_data.iter().all(|&b| b == 0) { continue; }
+        }
+
+        // GE MakerNote: filter to known tags only
+        if manufacturer == Manufacturer::GE {
+            let known_ge = matches!(name, "Macro" | "GEModel" | "GEMake" | "Warning");
+            if !known_ge { continue; }
+        }
+
+        // Ricoh WhiteBalanceFineTune: only valid when format is int16u (data_type == 3)
+        if manufacturer == Manufacturer::Ricoh && tag_id == 0x1004 && data_type != 3 {
+            continue;
+        }
+
+        // Pentax ColorTemperature (0x0050): suppress when val==0, apply ValueConv 53190-val
+        if manufacturer == Manufacturer::Pentax && tag_id == 0x0050 {
+            if let Some(v) = value.as_u64() {
+                if v == 0 { continue; }
+                // ValueConv: 53190 - val
+                let converted = 53190i64 - v as i64;
+                let pv = converted.to_string();
+                tags.push(Tag {
+                    id: TagId::Numeric(tag_id),
+                    name: name.to_string(), description: description.to_string(),
+                    group: TagGroup { family0: "MakerNotes".to_string(), family1: "Pentax".to_string(), family2: "Camera".to_string() },
+                    raw_value: value, print_value: pv, priority: 0,
+                });
+                continue;
+            } else {
+                continue;
+            }
+        }
 
         // Apply manufacturer-specific print conversions
         let print_value = apply_mn_print_conv(manufacturer, tag_id, &value)
@@ -1976,6 +3062,15 @@ fn read_makernote_ifd(
             })
             .unwrap_or_else(|| value.to_display_string());
 
+        // Track Pentax PreviewImage offset/length for post-loop synthesis
+        if manufacturer == Manufacturer::Pentax {
+            if tag_id == 0x0004 {
+                if let Some(v) = value.as_u64() { pentax_preview_start = Some(v as usize); }
+            } else if tag_id == 0x0003 {
+                if let Some(v) = value.as_u64() { pentax_preview_length = Some(v as usize); }
+            }
+        }
+
         tags.push(Tag {
             id: TagId::Numeric(tag_id),
             name: name.to_string(),
@@ -1989,6 +3084,94 @@ fn read_makernote_ifd(
             print_value,
             priority: 0,
         });
+    }
+
+    // Synthesize Pentax PreviewImage from PreviewImageStart + PreviewImageLength
+    if manufacturer == Manufacturer::Pentax {
+        if let (Some(_start), Some(len)) = (pentax_preview_start, pentax_preview_length) {
+            if len > 0 {
+                tags.push(Tag {
+                    id: TagId::Text("PreviewImage".to_string()),
+                    name: "PreviewImage".to_string(),
+                    description: "Preview Image".to_string(),
+                    group: TagGroup {
+                        family0: "MakerNotes".to_string(),
+                        family1: "Pentax".to_string(),
+                        family2: "Image".to_string(),
+                    },
+                    raw_value: Value::Binary(Vec::new()),
+                    print_value: format!("(Binary data {} bytes, use -b option to extract)", len),
+                    priority: 0,
+                });
+            }
+        }
+    }
+
+    // Synthesize Olympus PreviewImage from PreviewImageStart + PreviewImageLength
+    // (from CameraSettings sub-IFD tags 0x0101 and 0x0102)
+    if manufacturer == Manufacturer::Olympus || manufacturer == Manufacturer::OlympusNew {
+        if !tags.iter().any(|t| t.name == "PreviewImage") {
+            let preview_start = tags.iter()
+                .find(|t| t.name == "PreviewImageStart")
+                .and_then(|t| t.raw_value.as_u64())
+                .map(|v| v as usize);
+            let preview_len = tags.iter()
+                .find(|t| t.name == "PreviewImageLength")
+                .and_then(|t| t.raw_value.as_u64())
+                .map(|v| v as usize);
+            if let (Some(start), Some(len)) = (preview_start, preview_len) {
+                if len > 0 && start > 0 && start + len <= data.len() {
+                    tags.push(Tag {
+                        id: TagId::Text("PreviewImage".to_string()),
+                        name: "PreviewImage".to_string(),
+                        description: "Preview Image".to_string(),
+                        group: TagGroup {
+                            family0: "MakerNotes".to_string(),
+                            family1: "Olympus".to_string(),
+                            family2: "Image".to_string(),
+                        },
+                        raw_value: Value::Binary(data[start..start + len].to_vec()),
+                        print_value: format!("(Binary data {} bytes, use -b option to extract)", len),
+                        priority: 0,
+                    });
+                }
+            }
+        }
+
+        // Synthesize ExtenderStatus composite (Perl Olympus.pm ExtenderStatus sub)
+        // Requires: Extender (ValueConv key), LensType (PrintConv string), MaxApertureValue
+        // Since MaxApertureValue comes from EXIF (not available here), we compute what we can:
+        // If Extender key's second token hex value is 0, status = 0 (Not attached)
+        // If key is '0 04' (EC-14), we'd need MaxApertureValue to decide 1 or 2
+        // For all other extenders (non-EC14), status = 1 (Attached)
+        if !tags.iter().any(|t| t.name == "ExtenderStatus") {
+            // Get the Extender raw bytes to compute ValueConv key
+            let extender_pv = tags.iter().find(|t| t.name == "Extender").map(|t| t.print_value.clone());
+            if let Some(ext_pv) = extender_pv {
+                // Map print value back to status
+                let (status_val, status_str) = if ext_pv == "None" {
+                    (0u32, "Not attached")
+                } else {
+                    // Extender is attached (covers EC-14, EX-25, EC-20, etc.)
+                    // For EC-14 ('0 04'), Perl checks MaxApertureValue vs lens max aperture.
+                    // Without MaxApertureValue from EXIF here, conservatively say Attached.
+                    (1u32, "Attached")
+                };
+                tags.push(Tag {
+                    id: TagId::Text("ExtenderStatus".to_string()),
+                    name: "ExtenderStatus".to_string(),
+                    description: "Extender Status".to_string(),
+                    group: TagGroup {
+                        family0: "MakerNotes".to_string(),
+                        family1: "Olympus".to_string(),
+                        family2: "Camera".to_string(),
+                    },
+                    raw_value: Value::U32(status_val),
+                    print_value: status_str.to_string(),
+                    priority: 0,
+                });
+            }
+        }
     }
 }
 
@@ -2076,6 +3259,7 @@ fn manufacturer_group_name(mfr: Manufacturer) -> &'static str {
         Manufacturer::Apple => "Apple",
         Manufacturer::Google => "Google",
         Manufacturer::DJI => "DJI",
+        Manufacturer::GE => "GE",
         Manufacturer::Unknown => "MakerNotes",
     }
 }
@@ -2234,18 +3418,37 @@ fn decode_canon_afinfo(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag>
 }
 
 /// Decode Canon AFInfo2 (tag 0x0026).
+/// Perl: Canon::AFInfo2, FORMAT='int16u', ProcessSerialData
+/// Sequential fields: [0]=AFInfoSize, [1]=AFAreaMode, [2]=NumAFPoints, [3]=ValidAFPoints,
+/// [4]=CanonImageWidth, [5]=CanonImageHeight, [6]=AFImageWidth, [7]=AFImageHeight,
+/// then variable-length arrays of size NumAFPoints: Widths, Heights, XPos, YPos,
+/// then AFPointsInFocus (ceil(N/16) words), AFPointsSelected (EOS, ceil(N/16) words)
 fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag> {
     let mut tags = Vec::new();
-    let rd = |i: usize| -> i16 { read_u16(data, i * 2, bo) as i16 };
+    let rd = |i: usize| -> u16 { read_u16(data, i * 2, bo) };
+    let rdi = |i: usize| -> i16 { read_u16(data, i * 2, bo) as i16 };
 
     if count < 8 { return tags; }
 
+    // seq 1: AFAreaMode
+    let area_mode = rd(1);
+    let area_mode_str = match area_mode {
+        0 => "Off (Manual Focus)", 1 => "AF Point Expansion (surround)",
+        2 => "Single-point AF", 4 => "Auto", 5 => "Face Detect AF",
+        6 => "Face + Tracking", 7 => "Zone AF", 8 => "AF Point Expansion (4 point)",
+        9 => "Spot AF", 10 => "AF Point Expansion (8 point)",
+        11 => "Flexizone Multi (49 point)", 12 => "Flexizone Multi (9 point)",
+        13 => "Flexizone Single", 14 => "Large Zone AF", _ => "",
+    };
+    let area_mode_pv = if area_mode_str.is_empty() { area_mode.to_string() } else { area_mode_str.to_string() };
+    tags.push(mk_canon_str("AFAreaMode", &area_mode_pv));
+
     let num_af = rd(2) as usize;
     let valid_af = rd(3) as usize;
-    let img_w = rd(4) as u16;
-    let img_h = rd(5) as u16;
-    let af_w = rd(6) as u16;
-    let af_h = rd(7) as u16;
+    let img_w = rd(4);
+    let img_h = rd(5);
+    let af_w = rd(6);
+    let af_h = rd(7);
 
     tags.push(mk_canon("NumAFPoints", Value::U16(num_af as u16)));
     tags.push(mk_canon("ValidAFPoints", Value::U16(valid_af as u16)));
@@ -2254,20 +3457,52 @@ fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag
     tags.push(mk_canon("AFImageWidth", Value::U16(af_w)));
     tags.push(mk_canon("AFImageHeight", Value::U16(af_h)));
 
-    // AF Area dimensions and positions (variable count based on NumAFPoints)
+    // Variable-length arrays starting at seq 8
     let base = 8;
     if num_af > 0 && base + num_af * 4 <= count {
-        // AFAreaWidths at base, AFAreaHeights at base+num_af, etc.
-        let widths: Vec<String> = (0..num_af).map(|i| rd(base + i).to_string()).collect();
-        let heights: Vec<String> = (0..num_af).map(|i| rd(base + num_af + i).to_string()).collect();
-        let x_pos: Vec<String> = (0..num_af).map(|i| rd(base + num_af * 2 + i).to_string()).collect();
-        let y_pos: Vec<String> = (0..num_af).map(|i| rd(base + num_af * 3 + i).to_string()).collect();
+        // AFAreaWidths at base, AFAreaHeights at base+num_af, XPos at base+2*num_af, YPos at base+3*num_af
+        let widths: Vec<String> = (0..num_af).map(|i| rdi(base + i).to_string()).collect();
+        let heights: Vec<String> = (0..num_af).map(|i| rdi(base + num_af + i).to_string()).collect();
+        let x_pos: Vec<String> = (0..num_af).map(|i| rdi(base + num_af * 2 + i).to_string()).collect();
+        let y_pos: Vec<String> = (0..num_af).map(|i| rdi(base + num_af * 3 + i).to_string()).collect();
 
         if !widths.is_empty() {
-            tags.push(mk_canon_str("AFAreaWidth", &widths.join(" ")));
-            tags.push(mk_canon_str("AFAreaHeight", &heights.join(" ")));
+            tags.push(mk_canon_str("AFAreaWidths", &widths.join(" ")));
+            tags.push(mk_canon_str("AFAreaHeights", &heights.join(" ")));
             tags.push(mk_canon_str("AFAreaXPositions", &x_pos.join(" ")));
             tags.push(mk_canon_str("AFAreaYPositions", &y_pos.join(" ")));
+        }
+
+        // AFPointsInFocus: ceil(num_af/16) int16s words, decoded as bitmask
+        let focus_words = (num_af + 15) / 16;
+        let focus_base = base + num_af * 4;
+        if focus_base + focus_words <= count {
+            let mut focus_bits: u64 = 0;
+            for w in 0..focus_words {
+                let word = rd(focus_base + w) as u64;
+                focus_bits |= word << (w * 16);
+            }
+            // Print as decimal bit index of set bits
+            let mut set_bits: Vec<u32> = Vec::new();
+            for b in 0..num_af { if focus_bits & (1u64 << b) != 0 { set_bits.push(b as u32); } }
+            let pv = if set_bits.len() == 1 { set_bits[0].to_string() }
+                     else { set_bits.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ") };
+            if !pv.is_empty() { tags.push(mk_canon_str("AFPointsInFocus", &pv)); }
+
+            // AFPointsSelected: another ceil(num_af/16) words (EOS models)
+            let sel_base = focus_base + focus_words;
+            if sel_base + focus_words <= count {
+                let mut sel_bits: u64 = 0;
+                for w in 0..focus_words {
+                    let word = rd(sel_base + w) as u64;
+                    sel_bits |= word << (w * 16);
+                }
+                let mut sel_set: Vec<u32> = Vec::new();
+                for b in 0..num_af { if sel_bits & (1u64 << b) != 0 { sel_set.push(b as u32); } }
+                let spv = if sel_set.len() == 1 { sel_set[0].to_string() }
+                          else { sel_set.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ") };
+                if !spv.is_empty() { tags.push(mk_canon_str("AFPointsSelected", &spv)); }
+            }
         }
     }
 
@@ -2275,110 +3510,227 @@ fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag
 }
 
 /// Decode Canon ColorData (tag 0x4001).
+/// Dispatches to the correct sub-table based on version/count.
+/// ColorData4 (count=674/692/702/1227/1250/1251/1337/1338/1346): version 2-9, used by 1DmkIII, 40D, etc.
+/// ColorData3 (count=796): version 1, used by 1DmkIIN, 5D, 30D, 400D.
 fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag> {
     let mut tags = Vec::new();
-    let rd = |i: usize| -> i16 { read_u16(data, i * 2, bo) as i16 };
+    let rd = |i: usize| -> i16 {
+        if i * 2 + 2 > data.len() { return 0; }
+        read_u16(data, i * 2, bo) as i16
+    };
+    let rdu = |i: usize| -> u16 {
+        if i * 2 + 2 > data.len() { return 0; }
+        read_u16(data, i * 2, bo)
+    };
 
     if count < 50 { return tags; }
 
     let version = rd(0);
-    tags.push(mk_canon_str("ColorDataVersion", &version.to_string()));
+    let version_str = match version {
+        1 => "1 (1DmkIIN/5D/30D/400D)",
+        2 => "2 (1DmkIII)",
+        3 => "3 (40D)",
+        4 => "4 (1DSmkIII)",
+        5 => "5 (450D/1000D)",
+        6 => "6 (50D/5DmkII)",
+        7 => "7 (500D/550D/7D/1DmkIV)",
+        9 => "9 (60D/1100D)",
+        _ => "",
+    };
+    let ver_pv = if version_str.is_empty() { version.to_string() } else { version_str.to_string() };
+    tags.push(mk_canon_str("ColorDataVersion", &ver_pv));
 
-    // Determine WB offset based on count (from Perl Canon.pm ColorData tables)
-    let wb_base = if count > 580 { 63 }   // ColorData3 (1DmkIII etc.)
-        else if count > 350 { 50 }         // ColorData2
-        else if count > 200 { 25 }         // ColorData1
-        else { 19 };                       // Older cameras
+    // ColorData4: version 2-9 (count 674..1346) — uses ColorCoefs subdir at index 0x3f (63)
+    // ColorData3: version 1 (count=796) — uses its own WB layout at index 0x3f (63)
+    // Both have WB data starting at index 63 (0x3f), but with different WB block layouts.
+    // ColorCoefs (for ColorData4): AsShot[0..3], CT[4], Auto[5..8], CT[9], Measured[10..13], CT[14],
+    //   (skip Unknown[15..18], CT[19]), Daylight[20..23], CT[24], Shade[25..28], CT[29],
+    //   Cloudy[30..33], CT[34], Tungsten[35..38], CT[39], Fluorescent[40..43], CT[44],
+    //   Kelvin[45..48], CT[49], Flash[50..53], CT[54]
+    //   (more unknown blocks follow...)
+    //   Fluorescent[40..43] = index 63+40=103, Flash[50..53] = 63+50=113
+    //   But 0x37 in ColorCoefs = Unknown2 (skip), 0x3c = Unknown3 (skip), etc.
+    //   The known non-Unknown blocks end at Flash (0x36 = 54 within ColorCoefs).
+    //   After many Unknown blocks: PC1 at 0x64 (100), PC2 at 0x69 (105), PC3 at 0x6e (110).
+    //   ColorCoefs ends at 0x72 (114) = ColorTempUnknown13 → total 105 valid entries (undef[210])
+    //
+    // ColorData3 (count=796): WB at 0x3f (63) with its own layout (WB_AsShot, CT, ..., many unknowns)
+    //   RawMeasuredRGGB at 0x26a (618) — int32u[4] with word swap
 
-    // WB_RGGBLevelsAsShot (before Auto in ColorData3)
-    if wb_base >= 5 && wb_base + 4 <= count {
-        let r = rd(wb_base) as u16;
-        let g1 = rd(wb_base + 1) as u16;
-        let b = rd(wb_base + 2) as u16;
-        let g2 = rd(wb_base + 3) as u16;
-        tags.push(mk_canon_str("WB_RGGBLevelsAsShot", &format!("{} {} {} {}", r, g1, b, g2)));
-        let temp = rd(wb_base + 4) as u16;
-        if temp > 0 { tags.push(mk_canon_str("ColorTempAsShot", &temp.to_string())); }
-    }
-    // WB_RGGBLevelsAuto (4 values: R, G1, B, G2)
-    if wb_base + 4 <= count {
-        let r = rd(wb_base) as u16;
-        let g1 = rd(wb_base + 1) as u16;
-        let b = rd(wb_base + 2) as u16;
-        let g2 = rd(wb_base + 3) as u16;
-        tags.push(mk_canon_str("WB_RGGBLevelsAuto", &format!("{} {} {} {}", r, g1, b, g2)));
-        tags.push(mk_canon_str("WB_RGGBLevels", &format!("{} {} {} {}", r, g1, b, g2)));
-    }
+    if count >= 674 {
+        // ColorData4 layout (1DmkIII, 40D, 50D, 5DmkII, etc.)
+        // ColorCoefs subdir starts at index 63 (0x3f in int16s words)
+        let cc = 63usize; // ColorCoefs base index
 
-    // ColorTempAuto (after Auto RGGB block)
-    if wb_base + 9 < count {
-        let temp = rd(wb_base + 9) as u16;
-        if temp > 0 { tags.push(mk_canon_str("ColorTempAuto", &temp.to_string())); }
-    }
+        // Helper to read 4-value RGGB block and format as string
+        let wb4 = |base: usize| -> String {
+            let r = rd(base) as u16;
+            let g1 = rd(base+1) as u16;
+            let g2 = rd(base+2) as u16;
+            let b = rd(base+3) as u16;
+            format!("{} {} {} {}", r, g1, g2, b)
+        };
+        let ct = |i: usize| -> u16 { rdu(i) };
 
-    // WB_RGGBLevelsMeasured (3rd block from base: wb_base+10)
-    if wb_base + 14 < count {
-        let r = rd(wb_base + 10) as u16;
-        let g1 = rd(wb_base + 11) as u16;
-        let b = rd(wb_base + 12) as u16;
-        let g2 = rd(wb_base + 13) as u16;
-        tags.push(mk_canon_str("WB_RGGBLevelsMeasured", &format!("{} {} {} {}", r, g1, b, g2)));
-        let temp = rd(wb_base + 14) as u16;
-        if temp > 0 { tags.push(mk_canon_str("ColorTempMeasured", &temp.to_string())); }
-    }
+        // AsShot: cc+0
+        if cc + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsAsShot", &wb4(cc))); }
+        if cc + 4 < count { let t = ct(cc+4); if t > 0 { tags.push(mk_canon_str("ColorTempAsShot", &t.to_string())); } }
+        // Auto: cc+5
+        if cc + 9 < count { tags.push(mk_canon_str("WB_RGGBLevelsAuto", &wb4(cc+5))); }
+        if cc + 9 < count { let t = ct(cc+9); if t > 0 { tags.push(mk_canon_str("ColorTempAuto", &t.to_string())); } }
+        // Measured: cc+10
+        if cc + 14 < count { tags.push(mk_canon_str("WB_RGGBLevelsMeasured", &wb4(cc+10))); }
+        if cc + 14 < count { let t = ct(cc+14); if t > 0 { tags.push(mk_canon_str("ColorTempMeasured", &t.to_string())); } }
+        // (skip Unknown at cc+15..19)
+        // Daylight: cc+20 (0x14 in ColorCoefs)
+        if cc + 24 < count { tags.push(mk_canon_str("WB_RGGBLevelsDaylight", &wb4(cc+20))); }
+        if cc + 24 < count { let t = ct(cc+24); if t > 0 { tags.push(mk_canon_str("ColorTempDaylight", &t.to_string())); } }
+        // Shade: cc+25 (0x19)
+        if cc + 29 < count { tags.push(mk_canon_str("WB_RGGBLevelsShade", &wb4(cc+25))); }
+        if cc + 29 < count { let t = ct(cc+29); if t > 0 { tags.push(mk_canon_str("ColorTempShade", &t.to_string())); } }
+        // Cloudy: cc+30 (0x1e)
+        if cc + 34 < count { tags.push(mk_canon_str("WB_RGGBLevelsCloudy", &wb4(cc+30))); }
+        if cc + 34 < count { let t = ct(cc+34); if t > 0 { tags.push(mk_canon_str("ColorTempCloudy", &t.to_string())); } }
+        // Tungsten: cc+35 (0x23)
+        if cc + 39 < count { tags.push(mk_canon_str("WB_RGGBLevelsTungsten", &wb4(cc+35))); }
+        if cc + 39 < count { let t = ct(cc+39); if t > 0 { tags.push(mk_canon_str("ColorTempTungsten", &t.to_string())); } }
+        // Fluorescent: cc+40 (0x28)
+        if cc + 44 < count { tags.push(mk_canon_str("WB_RGGBLevelsFluorescent", &wb4(cc+40))); }
+        if cc + 44 < count { let t = ct(cc+44); if t > 0 { tags.push(mk_canon_str("ColorTempFluorescent", &t.to_string())); } }
+        // Kelvin: cc+45 (0x2d)
+        if cc + 49 < count { tags.push(mk_canon_str("WB_RGGBLevelsKelvin", &wb4(cc+45))); }
+        if cc + 49 < count { let t = ct(cc+49); if t > 0 { tags.push(mk_canon_str("ColorTempKelvin", &t.to_string())); } }
+        // Flash: cc+50 (0x32)
+        if cc + 54 < count { tags.push(mk_canon_str("WB_RGGBLevelsFlash", &wb4(cc+50))); }
+        if cc + 54 < count { let t = ct(cc+54); if t > 0 { tags.push(mk_canon_str("ColorTempFlash", &t.to_string())); } }
 
-    // Subsequent WB blocks (each 5 values: 4 RGGB + 1 ColorTemp)
-    let wb_names = ["Daylight", "Cloudy", "Tungsten", "Fluorescent", "Flash", "Custom", "Kelvin", "Shade"];
-    let mut offset = wb_base + 15; // After AsShot(5) + Auto(5) + Measured(5)
+        // WB_RGGBLevels alias (same as AsShot)
+        if cc + 4 < count { tags.push(mk_canon_str("WB_RGGBLevels", &wb4(cc))); }
 
-    for name in &wb_names {
-        if offset + 4 > count { break; }
-        let r = rd(offset) as u16;
-        let g1 = rd(offset + 1) as u16;
-        let b = rd(offset + 2) as u16;
-        let g2 = rd(offset + 3) as u16;
-        tags.push(mk_canon_str(
-            &format!("WB_RGGBLevels{}", name),
-            &format!("{} {} {} {}", r, g1, b, g2),
-        ));
-        // ColorTemp for this WB mode
-        if offset + 4 < count {
-            let temp = rd(offset + 4) as u16;
-            if temp > 0 {
-                tags.push(mk_canon_str(&format!("ColorTemp{}", name), &temp.to_string()));
-            }
+        // AverageBlackLevel at index 0xe7 (231) — int16u[4]
+        let abl = 0xe7usize;
+        if abl + 4 <= count {
+            let v: Vec<String> = (0..4).map(|i| rdu(abl+i).to_string()).collect();
+            tags.push(mk_canon_str("AverageBlackLevel", &v.join(" ")));
         }
-        offset += 5; // 4 RGGB + 1 ColorTemp
-    }
 
-    // WB_RGGBBlackLevels (usually near the end of the data)
-    // Common offset for many cameras
-    if count > 100 {
-        let bl_base = count - 8; // Approximate
-        if bl_base + 4 <= count {
-            let r = rd(bl_base) as u16;
-            let g1 = rd(bl_base + 1) as u16;
-            let b = rd(bl_base + 2) as u16;
-            let g2 = rd(bl_base + 3) as u16;
-            if r > 0 || g1 > 0 {
-                tags.push(mk_canon_str("WB_RGGBBlackLevels", &format!("{} {} {} {}", r, g1, b, g2)));
-            }
+        // FlashBatteryLevel at index 0x26c (620) — single int16s
+        // PrintConv: '$val ? sprintf("%.2fV", $val * 5 / 186) : "n/a"'
+        let fbl = 0x26cusize;
+        if fbl < count {
+            let v = rdu(fbl) as u16;
+            let pv = if v > 0 { format!("{:.2}V", v as f64 * 5.0 / 186.0) } else { "n/a".to_string() };
+            tags.push(mk_canon_str("FlashBatteryLevel", &pv));
         }
-    }
 
-    // MeasuredRGGB
-    let meas_base = wb_base - 4;
-    if meas_base + 4 <= count && meas_base > 0 {
-        let r = rd(meas_base) as u16;
-        let g1 = rd(meas_base + 1) as u16;
-        let b = rd(meas_base + 2) as u16;
-        let g2 = rd(meas_base + 3) as u16;
-        if r > 0 && g1 > 0 {
-            tags.push(mk_canon_str("MeasuredRGGB", &format!("{} {} {} {}", r, g1, b, g2)));
+        // RawMeasuredRGGB at index 0x280 (640) — int32u[4] with word swap
+        // Each value is stored as two adjacent int16u with big-endian word order
+        // ValueConv: SwapWords (swap high/low 16-bit words of each 32-bit value)
+        let rmb = 0x280usize;
+        if rmb + 8 <= count {
+            let mut vals = Vec::new();
+            for i in 0..4 {
+                let lo = rdu(rmb + i*2) as u32;
+                let hi = rdu(rmb + i*2 + 1) as u32;
+                vals.push((hi << 16) | lo);
+            }
+            tags.push(mk_canon_str("RawMeasuredRGGB", &vals.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ")));
+        }
+
+    } else if count >= 580 {
+        // ColorData3 layout (1DmkIIN, 5D, 30D, 400D — count=796, version=1)
+        // WB data starts at 0x3f (63), layout similar to ColorData4's ColorCoefs
+        // but with its own unknowns. RawMeasuredRGGB at 0x26a (618).
+        let _cc = 63usize;
+        let wb4 = |base: usize| -> String {
+            let r = rd(base) as u16;
+            let g1 = rd(base+1) as u16;
+            let g2 = rd(base+2) as u16;
+            let b = rd(base+3) as u16;
+            format!("{} {} {} {}", r, g1, g2, b)
+        };
+        let ct = |i: usize| -> u16 { rdu(i) };
+
+        // AsShot at 0x26 (38) relative to whole array (not ColorCoefs)
+        // ColorData3 table (Perl Canon::ColorData3):
+        // 0x26 = WB_RGGBLevelsAsShot, 0x2a = CT AsShot, 0x2b = CT (same?), ...
+        // Use Perl table offsets directly:
+        let base = 0x26usize; // WB_RGGBLevelsAsShot at index 0x26 in ColorData3
+        if base + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsAsShot", &wb4(base))); }
+        if base + 4 < count { let t = ct(base+4); if t > 0 { tags.push(mk_canon_str("ColorTempAsShot", &t.to_string())); } }
+        // 0x2b = WB_RGGBLevelsDaylight
+        let dl = 0x2busize;
+        if dl + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsDaylight", &wb4(dl))); }
+        if dl + 4 < count { let t = ct(dl+4); if t > 0 { tags.push(mk_canon_str("ColorTempDaylight", &t.to_string())); } }
+
+        // WB_RGGBLevels alias
+        if base + 4 < count { tags.push(mk_canon_str("WB_RGGBLevels", &wb4(base))); }
+
+        // RawMeasuredRGGB at 0x26a (618) with word swap
+        let rmb = 0x26ausize;
+        if rmb + 8 <= count {
+            let mut vals = Vec::new();
+            for i in 0..4 {
+                let lo = rdu(rmb + i*2) as u32;
+                let hi = rdu(rmb + i*2 + 1) as u32;
+                vals.push((hi << 16) | lo);
+            }
+            tags.push(mk_canon_str("RawMeasuredRGGB", &vals.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ")));
+        }
+    } else {
+        // Older ColorData (count < 580) — simple WB layout
+        let wb_base = if count > 350 { 50 } else if count > 200 { 25 } else { 19 };
+        let wb4 = |base: usize| -> String {
+            let r = rd(base) as u16;
+            let g1 = rd(base+1) as u16;
+            let b = rd(base+2) as u16;
+            let g2 = rd(base+3) as u16;
+            format!("{} {} {} {}", r, g1, b, g2)
+        };
+        if wb_base + 4 <= count {
+            tags.push(mk_canon_str("WB_RGGBLevelsAsShot", &wb4(wb_base)));
+            tags.push(mk_canon_str("WB_RGGBLevels", &wb4(wb_base)));
+            let temp = rdu(wb_base + 4);
+            if temp > 0 { tags.push(mk_canon_str("ColorTempAsShot", &temp.to_string())); }
         }
     }
 
     tags
+}
+
+/// Convert Unix timestamp (seconds since 1970-01-01) to Exif datetime string "YYYY:MM:DD HH:MM:SS"
+fn unix_time_to_datetime(secs: u32) -> String {
+    let s = secs as i64;
+    let sec = (s % 60) as u32;
+    let min_total = s / 60;
+    let min = (min_total % 60) as u32;
+    let hour_total = min_total / 60;
+    let hour = (hour_total % 24) as u32;
+    let days = hour_total / 24;
+    // Algorithm from https://howardhinnant.github.io/date_algorithms.html
+    let z = days + 719468;
+    let era = if z >= 0 { z } else { z - 146096 } / 146097;
+    let doe = z - era * 146097;
+    let yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365*yoe + yoe/4 - yoe/100);
+    let mp = (5*doy + 2) / 153;
+    let d = doy - (153*mp + 2)/5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", y, m, d, hour, min, sec)
+}
+
+/// Return Canon white balance name for int16s value (from Perl %canonWhiteBalance)
+fn canon_wb_name(v: i16) -> &'static str {
+    match v {
+        0 => "Auto", 1 => "Daylight", 2 => "Cloudy", 3 => "Tungsten",
+        4 => "Fluorescent", 5 => "Flash", 6 => "Custom", 8 => "Shade",
+        9 => "Kelvin", 10 => "PC Set 1", 11 => "PC Set 2", 12 => "PC Set 3",
+        14 => "Daylight Fluorescent", 15 => "Custom 1", 16 => "Custom 2",
+        17 => "Underwater", _ => "",
+    }
 }
 
 fn mk_canon(name: &str, value: Value) -> Tag {
@@ -2436,6 +3788,77 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
         }
         _ => None,
     }
+}
+
+/// Decode Ricoh RicohSubdir (tag 0x2001): IFD or text header "[Ricoh Camera Info]"
+/// followed by a sub-IFD containing ManufactureDate1 (0x0004) and ManufactureDate2 (0x0005).
+fn decode_ricoh_subdir(data: &[u8], full_data: &[u8], _parent_bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    // Data may start with "[Ricoh Camera Info]\0" (20 bytes), then a Big-Endian IFD
+    let ifd_start = if data.len() > 20 && data.starts_with(b"[Ricoh Camera Info]") {
+        20
+    } else {
+        0
+    };
+    let ifd_data = &data[ifd_start..];
+    let bo = ByteOrderMark::BigEndian; // Ricoh subdirs use Big-Endian
+    if ifd_data.len() < 2 { return tags; }
+    let entry_count = read_u16(ifd_data, 0, bo) as usize;
+    if entry_count > 100 { return tags; }
+    for i in 0..entry_count {
+        let eoff = 2 + i * 12;
+        if eoff + 12 > ifd_data.len() { break; }
+        let tag_id = read_u16(ifd_data, eoff, bo);
+        let data_type = read_u16(ifd_data, eoff + 2, bo);
+        let count = read_u32(ifd_data, eoff + 4, bo) as usize;
+        let type_size: usize = match data_type { 1|2|6|7 => 1, 3|8 => 2, 4|9|11|13 => 4, 5|10|12 => 8, _ => 1 };
+        let total_size = count * type_size;
+        let value_data = if total_size <= 4 {
+            &ifd_data[eoff + 8..eoff + 8 + total_size.min(4)]
+        } else {
+            let raw_offset = read_u32(ifd_data, eoff + 8, bo) as usize;
+            // Try offset relative to ifd_data first, then to data, then to full_data (absolute TIFF)
+            if raw_offset + total_size <= ifd_data.len() {
+                &ifd_data[raw_offset..raw_offset + total_size]
+            } else if raw_offset + total_size <= data.len() {
+                &data[raw_offset..raw_offset + total_size]
+            } else if raw_offset + total_size <= full_data.len() {
+                &full_data[raw_offset..raw_offset + total_size]
+            } else {
+                continue;
+            }
+        };
+
+        let name = match tag_id {
+            0x0004 => "ManufactureDate1",
+            0x0005 => "ManufactureDate2",
+            _ => continue,
+        };
+
+        let val = if data_type == 2 {
+            // ASCII string
+            String::from_utf8_lossy(value_data).trim_end_matches('\0').to_string()
+        } else {
+            continue;
+        };
+
+        {
+            tags.push(Tag {
+                id: TagId::Numeric(tag_id),
+                name: name.to_string(),
+                description: name.to_string(),
+                group: TagGroup {
+                    family0: "MakerNotes".into(),
+                    family1: "Ricoh".into(),
+                    family2: "Time".into(),
+                },
+                raw_value: Value::String(val.clone()),
+                print_value: val,
+                priority: 0,
+            });
+        }
+    }
+    tags
 }
 
 fn read_u16(data: &[u8], offset: usize, bo: ByteOrderMark) -> u16 {

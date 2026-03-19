@@ -13,12 +13,9 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
 
     let mut tags = Vec::new();
 
-    let profile_size = u32::from_be_bytes([data[0], data[1], data[2], data[3]]);
-    tags.push(mk("ProfileSize", "Profile Size", Value::U32(profile_size)));
-
     let preferred_cmm = String::from_utf8_lossy(&data[4..8]).trim().to_string();
     if !preferred_cmm.is_empty() && preferred_cmm != "\0\0\0\0" {
-        tags.push(mk("PreferredCMM", "Preferred CMM", Value::String(preferred_cmm)));
+        tags.push(mk("ProfileCMMType", "Profile CMM Type", Value::String(preferred_cmm)));
     }
 
     let major = data[8];
@@ -28,16 +25,16 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
 
     let device_class = String::from_utf8_lossy(&data[12..16]).to_string();
     let class_name = match device_class.trim() {
-        "scnr" => "Input Device",
-        "mntr" => "Display Device",
-        "prtr" => "Output Device",
-        "link" => "Device Link",
-        "spac" => "Color Space Conversion",
-        "abst" => "Abstract",
-        "nmcl" => "Named Color",
+        "scnr" => "Input Device Profile",
+        "mntr" => "Display Device Profile",
+        "prtr" => "Output Device Profile",
+        "link" => "DeviceLink Profile",
+        "spac" => "ColorSpace Conversion Profile",
+        "abst" => "Abstract Profile",
+        "nmcl" => "Named Color Profile",
         _ => &device_class,
     };
-    tags.push(mk("DeviceClass", "Device Class", Value::String(class_name.to_string())));
+    tags.push(mk("ProfileClass", "Profile Class", Value::String(class_name.to_string())));
 
     let color_space = String::from_utf8_lossy(&data[16..20]).trim().to_string();
     let cs_name = match color_space.as_str() {
@@ -131,10 +128,14 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
     if !manufacturer.is_empty() && manufacturer.bytes().any(|b| b > 0x20) {
         tags.push(mk("DeviceManufacturer", "Device Manufacturer", Value::String(manufacturer)));
     }
-    let dev_model = String::from_utf8_lossy(&data[52..56]).trim().to_string();
-    if !dev_model.is_empty() && dev_model.bytes().any(|b| b > 0x20) {
-        tags.push(mk("DeviceModel", "Device Model", Value::String(dev_model)));
-    }
+    // DeviceModel: always emit (may be empty string), from ICC profile header bytes 52-55
+    let dev_model_raw = &data[52..56];
+    let dev_model = if dev_model_raw.iter().all(|&b| b == 0) {
+        String::new()
+    } else {
+        String::from_utf8_lossy(dev_model_raw).trim_end_matches('\0').trim().to_string()
+    };
+    tags.push(mk("DeviceModel", "Device Model", Value::String(dev_model)));
 
     // ProfileFileSignature (bytes 36-39, should be "acsp")
     tags.push(mk("ProfileFileSignature", "Profile File Signature", Value::String("acsp".into())));

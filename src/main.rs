@@ -150,7 +150,10 @@ fn main() {
                 // Pause before terminating (Windows)
             }
             "-lang" => {
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                    let _lang = args[i].replace("-", "_"); // TODO: i18n
+                }
             }
             "-api" => {
                 if i + 1 < args.len() { i += 1; } // consume API option

@@ -864,6 +864,31 @@ impl ExifTool {
         let composite = crate::composite::compute_composite_tags(&tags);
         tags.extend(composite);
 
+        // FLIR post-processing: remove LensID composite for FLIR cameras.
+        // Perl's LensID composite requires LensType EXIF tag (not present in FLIR images),
+        // and LensID-2 requires LensModel to match /(mm|\d\/F)/ (FLIR names like "FOL7"
+        // don't match).  Our composite.rs uses a simpler fallback that picks up any non-empty
+        // LensModel, so we remove LensID when the image is from a FLIR camera with FFF data.
+        {
+            let is_flir_fff = tags.iter().any(|t| t.group.family0 == "APP1"
+                && t.group.family1 == "FLIR");
+            if is_flir_fff {
+                tags.retain(|t| !(t.name == "LensID" && t.group.family0 == "Composite"));
+            }
+        }
+
+        // Olympus post-processing: remove the generic "Lens" composite for Olympus cameras.
+        // In Perl, the "Lens" composite tag requires Canon:MinFocalLength (Canon namespace).
+        // Our composite.rs generates Lens for any manufacturer that has MinFocalLength +
+        // MaxFocalLength (e.g., Olympus Equipment sub-IFD).  Remove it for non-Canon cameras.
+        {
+            let make = tags.iter().find(|t| t.name == "Make")
+                .map(|t| t.print_value.clone()).unwrap_or_default();
+            if !make.to_uppercase().contains("CANON") {
+                tags.retain(|t| t.name != "Lens" || t.group.family0 != "Composite");
+            }
+        }
+
         // Filter by requested tags if specified
         if !self.options.requested_tags.is_empty() {
             let requested: Vec<String> = self

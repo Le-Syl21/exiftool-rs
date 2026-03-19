@@ -209,7 +209,7 @@ impl ExifReader {
 
         let entry_count = read_u16(data, offset, header.byte_order) as usize;
         let entries_start = offset + 2;
-        let entries_end = entries_start + entry_count * 12;
+        let _entries_end = entries_start + entry_count * 12;
 
         // Validate: at minimum, first entry must fit
         if entries_start + 12 > data.len() && entry_count > 0 {
@@ -275,11 +275,31 @@ impl ExifReader {
                             });
                         }
                     }
+                    continue; // Suppress raw PrintIM tag
+                }
+                // Suppress GPS tag 0x0006 (GPSAltitude) when value is 0/0
+                0x0006 if ifd_name == "GPS" => {
+                    if let Some(val) = read_ifd_value(data, &entry, header.byte_order) {
+                        if let Value::URational(0, 0) = val {
+                            continue;
+                        }
+                    }
                 }
                 _ => {}
             }
 
-            if let Some(value) = read_ifd_value(data, &entry, header.byte_order) {
+            if let Some(mut value) = read_ifd_value(data, &entry, header.byte_order) {
+                // GPS TimeStamp (0x0007): convert 0/0 rationals to 0/1 so it displays as "0, 0, 0"
+                // (Perl treats 0/0 as 0 for GPS time, enabling GPSDateTime composite)
+                if ifd_name == "GPS" && entry.tag == 0x0007 {
+                    if let Value::List(ref mut items) = value {
+                        for item in items.iter_mut() {
+                            if matches!(item, Value::URational(0, 0)) {
+                                *item = Value::URational(0, 1);
+                            }
+                        }
+                    }
+                }
                 let tag_info = exif_tags::lookup(ifd_name, entry.tag);
                 let (name, description, family2) = match tag_info {
                     Some(info) => (

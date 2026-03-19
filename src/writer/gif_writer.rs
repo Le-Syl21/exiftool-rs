@@ -7,11 +7,10 @@ pub fn write_gif(source: &[u8], new_comment: Option<&str>) -> Result<Vec<u8>> {
         return Err(Error::InvalidData("not a GIF file".into()));
     }
     let mut output = Vec::with_capacity(source.len());
-    let mut pos = 0;
 
     // Copy header (6 bytes) + screen descriptor (7 bytes)
     output.extend_from_slice(&source[..13]);
-    pos = 13;
+    let mut pos = 13;
 
     // Skip global color table if present
     let packed = source[10];

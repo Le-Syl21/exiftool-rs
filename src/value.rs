@@ -43,7 +43,7 @@ impl Value {
             Value::I32(v) => v.to_string(),
             Value::URational(n, d) => {
                 if *d == 0 {
-                    "inf".to_string()
+                    if *n == 0 { "undef".to_string() } else { "inf".to_string() }
                 } else if *n % *d == 0 {
                     (*n / *d).to_string()
                 } else {

@@ -78,10 +78,10 @@ impl IptcReader {
             let tag_info = iptc_tags::lookup(record, dataset);
             let (name, description) = match tag_info {
                 Some(info) => (info.name.to_string(), info.description.to_string()),
-                None => (
-                    format!("IPTC:{}:{}", record, dataset),
-                    format!("Unknown IPTC record {} dataset {}", record, dataset),
-                ),
+                None => {
+                    // Suppress unknown IPTC records (don't emit IPTC:N:N format)
+                    continue;
+                },
             };
 
             let print_value = value.to_display_string();
