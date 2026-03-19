@@ -8,9 +8,212 @@ use crate::error::{Error, Result};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
+/// Read Apple iWork ZIP-based document (Numbers, Pages, Keynote).
+/// Extracts metadata from index.xml and PreviewImage from QuickLook/Thumbnail.jpg.
+pub fn read_iwork(data: &[u8]) -> Result<Vec<Tag>> {
+    if data.len() < 30 || !data.starts_with(&[0x50, 0x4B, 0x03, 0x04]) {
+        return Err(Error::InvalidData("not a ZIP file".into()));
+    }
+
+    let mut tags = Vec::new();
+    let mut first_file = true;
+
+    // First pass: collect ZIP directory entries (filename → data range)
+    let mut pos = 0usize;
+    while pos + 30 <= data.len() && data[pos..pos + 4] == [0x50, 0x4B, 0x03, 0x04] {
+        let compression = u16::from_le_bytes([data[pos + 8], data[pos + 9]]);
+        let mod_time = u16::from_le_bytes([data[pos + 10], data[pos + 11]]);
+        let mod_date = u16::from_le_bytes([data[pos + 12], data[pos + 13]]);
+        let crc = u32::from_le_bytes([data[pos + 14], data[pos + 15], data[pos + 16], data[pos + 17]]);
+        let compressed_size = u32::from_le_bytes([data[pos + 18], data[pos + 19], data[pos + 20], data[pos + 21]]) as usize;
+        let uncompressed_size = u32::from_le_bytes([data[pos + 22], data[pos + 23], data[pos + 24], data[pos + 25]]) as u32;
+        let name_len = u16::from_le_bytes([data[pos + 26], data[pos + 27]]) as usize;
+        let extra_len = u16::from_le_bytes([data[pos + 28], data[pos + 29]]) as usize;
+        let required_version = u16::from_le_bytes([data[pos + 4], data[pos + 5]]);
+        let bit_flag = u16::from_le_bytes([data[pos + 6], data[pos + 7]]);
+
+        let name_start = pos + 30;
+        if name_start + name_len > data.len() { break; }
+        let filename = String::from_utf8_lossy(&data[name_start..name_start + name_len]).to_string();
+
+        if first_file {
+            first_file = false;
+            tags.push(mk("ZipRequiredVersion", "Required Version", Value::U16(required_version)));
+            let bit_flag_str = if bit_flag != 0 { format!("0x{:04x}", bit_flag) } else { bit_flag.to_string() };
+            tags.push(mk("ZipBitFlag", "Bit Flag", Value::String(bit_flag_str)));
+            let compression_str = zip_compression_name(compression);
+            tags.push(mk("ZipCompression", "Compression", Value::String(compression_str)));
+            let year = ((mod_date >> 9) & 0x7F) as u32 + 1980;
+            let month = ((mod_date >> 5) & 0x0F) as u32;
+            let day = (mod_date & 0x1F) as u32;
+            let hour = ((mod_time >> 11) & 0x1F) as u32;
+            let minute = ((mod_time >> 5) & 0x3F) as u32;
+            let second = ((mod_time & 0x1F) as u32) * 2;
+            let date_str = format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", year, month, day, hour, minute, second);
+            tags.push(mk("ZipModifyDate", "Modify Date", Value::String(date_str)));
+            let crc_str = format!("0x{:08x}", crc);
+            tags.push(mk("ZipCRC", "CRC", Value::String(crc_str)));
+            tags.push(mk("ZipCompressedSize", "Compressed Size", Value::U32(compressed_size as u32)));
+            tags.push(mk("ZipUncompressedSize", "Uncompressed Size", Value::U32(uncompressed_size)));
+            tags.push(mk("ZipFileName", "File Name", Value::String(filename.clone())));
+        }
+
+        let data_start = name_start + name_len + extra_len;
+
+        // QuickLook/Thumbnail.jpg -> PreviewImage
+        if filename.eq_ignore_ascii_case("QuickLook/Thumbnail.jpg") && compression == 0 {
+            let file_data_end = (data_start + compressed_size).min(data.len());
+            if data_start < file_data_end {
+                let n = file_data_end - data_start;
+                let preview_str = format!("(Binary data {} bytes, use -b option to extract)", n);
+                tags.push(Tag {
+                    id: TagId::Text("PreviewImage".into()),
+                    name: "PreviewImage".into(),
+                    description: "Preview Image".into(),
+                    group: TagGroup { family0: "ZIP".into(), family1: "ZIP".into(), family2: "Preview".into() },
+                    raw_value: Value::Binary(data[data_start..file_data_end].to_vec()),
+                    print_value: preview_str,
+                    priority: 0,
+                });
+            }
+        }
+
+        // index.xml or index.apxl -> extract metadata
+        if (filename == "index.xml" || filename == "index.apxl") && compression == 0 {
+            let file_data_end = (data_start + compressed_size).min(data.len());
+            if data_start < file_data_end {
+                let text = std::str::from_utf8(&data[data_start..file_data_end]).unwrap_or("");
+                parse_iwork_metadata(text, &mut tags);
+            }
+        }
+
+        pos = data_start + compressed_size;
+    }
+
+    Ok(tags)
+}
+
+/// Parse iWork index.xml metadata section.
+fn parse_iwork_metadata(xml: &str, tags: &mut Vec<Tag>) {
+    // Find the <ns:metadata>...</ns:metadata> section
+    let meta_start = if let Some(p) = xml.find(":metadata>") {
+        p + ":metadata>".len()
+    } else {
+        return;
+    };
+    let meta_section = &xml[meta_start..];
+    let meta_end = if let Some(_p) = meta_section.find(":metadata>") {
+        // Find the '</' before ':metadata>'
+        let search = "</";
+        if let Some(close_pos) = meta_section[.._p].rfind(search) {
+            close_pos
+        } else {
+            return;
+        }
+    } else {
+        return;
+    };
+    let metadata_xml = &meta_section[..meta_end];
+
+    let fields = [
+        ("sf:authors", "Author"),
+        ("sf:copyright", "Copyright"),
+        ("sf:title", "Title"),
+        ("sf:keywords", "Keywords"),
+        ("sf:comment", "Comment"),
+        ("sf:projects", "Projects"),
+    ];
+
+    for (sf_tag, name) in &fields {
+        let open = format!("<{}>", sf_tag);
+        let close = format!("</{}>", sf_tag);
+        if let Some(start) = metadata_xml.find(&open) {
+            let inner = &metadata_xml[start + open.len()..];
+            if let Some(end) = inner.find(&close) {
+                let block = &inner[..end];
+                let values = extract_sfa_strings(block);
+                if !values.is_empty() {
+                    let combined = values.join(", ");
+                    let val = Value::String(combined.clone());
+                    tags.push(Tag {
+                        id: TagId::Text(name.to_string()),
+                        name: name.to_string(),
+                        description: name.to_string(),
+                        group: TagGroup { family0: "XML".into(), family1: "XML".into(), family2: "Document".into() },
+                        raw_value: val,
+                        print_value: combined,
+                        priority: 0,
+                    });
+                }
+            }
+        }
+    }
+}
+
+/// Extract all sfa:string="..." values from an XML fragment.
+fn extract_sfa_strings(xml: &str) -> Vec<String> {
+    let mut values = Vec::new();
+    let mut rest = xml;
+    while let Some(pos) = rest.find("sfa:string=\"") {
+        let after = &rest[pos + "sfa:string=\"".len()..];
+        if let Some(end) = after.find('"') {
+            let value = &after[..end];
+            let unescaped = value
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&apos;", "'");
+            values.push(unescaped);
+            rest = &after[end + 1..];
+        } else {
+            break;
+        }
+    }
+    values
+}
+
 pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
     if data.len() < 30 || !data.starts_with(&[0x50, 0x4B, 0x03, 0x04]) {
         return Err(Error::InvalidData("not a ZIP file".into()));
+    }
+
+    // Check for iWork format (index.xml with Apple namespace)
+    // by scanning filenames in the ZIP
+    {
+        let mut pos = 0usize;
+        let mut has_index_xml = false;
+        while pos + 30 <= data.len() && data[pos..pos + 4] == [0x50, 0x4B, 0x03, 0x04] {
+            let name_len = u16::from_le_bytes([data[pos + 26], data[pos + 27]]) as usize;
+            let extra_len = u16::from_le_bytes([data[pos + 28], data[pos + 29]]) as usize;
+            let compressed_size = u32::from_le_bytes([data[pos + 18], data[pos + 19], data[pos + 20], data[pos + 21]]) as usize;
+            let name_start = pos + 30;
+            if name_start + name_len > data.len() { break; }
+            let filename = std::str::from_utf8(&data[name_start..name_start + name_len]).unwrap_or("");
+            if filename == "index.xml" || filename == "index.apxl" {
+                has_index_xml = true;
+                // Check if it's iWork by looking at the content
+                let data_start = name_start + name_len + extra_len;
+                let compression = u16::from_le_bytes([data[pos + 8], data[pos + 9]]);
+                if compression == 0 {
+                    let data_end = (data_start + compressed_size).min(data.len());
+                    if data_start < data_end {
+                        let text = std::str::from_utf8(&data[data_start..data_end.min(data_start + 200)]).unwrap_or("");
+                        // iWork files have ls:document, sl:document, or key:presentation
+                        if text.contains("developer.apple.com/namespaces")
+                            || text.contains("ls:document")
+                            || text.contains("sl:document")
+                            || text.contains("key:presentation")
+                        {
+                            return read_iwork(data);
+                        }
+                    }
+                }
+                break;
+            }
+            pos = name_start + name_len + extra_len + compressed_size;
+        }
+        let _ = has_index_xml; // suppress warning
     }
 
     let mut tags = Vec::new();

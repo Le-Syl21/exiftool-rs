@@ -1109,7 +1109,7 @@ impl ExifTool {
             FileType::Exe => formats::exe::read_exe(data),
             FileType::Font => formats::font::read_font(data),
             // Audio with ID3
-            FileType::Ape | FileType::Mpc | FileType::Audible
+            FileType::Ape | FileType::Mpc
             | FileType::WavPack | FileType::Dsf => formats::id3::read_mp3(data),
             FileType::Aac => formats::misc::read_aac(data),
             FileType::RealAudio => {
@@ -1124,7 +1124,7 @@ impl ExifTool {
             FileType::Flv => formats::misc::read_flv(data),
             FileType::Swf => formats::misc::read_swf(data),
             FileType::Hdr => formats::misc::read_hdr(data),
-            FileType::DjVu => formats::misc::read_djvu(data),
+            FileType::DjVu => formats::djvu::read_djvu(data),
             FileType::Flif => formats::misc::read_flif(data),
             FileType::Bpg => formats::misc::read_bpg(data),
             FileType::Pcx => formats::misc::read_pcx(data),
@@ -1136,6 +1136,14 @@ impl ExifTool {
             FileType::Moi => formats::misc::read_moi(data),
             FileType::MacOs => formats::misc::read_macos(data),
             FileType::Json => formats::misc::read_json(data),
+            // New formats
+            FileType::Pgf => formats::pgf::read_pgf(data),
+            FileType::Xisf => formats::xisf::read_xisf(data),
+            FileType::Torrent => formats::torrent::read_torrent(data),
+            FileType::Mobi => formats::palm::read_palm(data),
+            FileType::Psp => formats::psp::read_psp(data),
+            FileType::SonyPmp => formats::sony_pmp::read_sony_pmp(data),
+            FileType::Audible => formats::audible::read_audible(data),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }

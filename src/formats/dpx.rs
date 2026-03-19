@@ -337,7 +337,7 @@ pub fn read_dpx(data: &[u8]) -> Result<Vec<Tag>> {
             } else {
                 format!("{}", ofr)
             };
-            tags.push(mk_print("OriginalFrameRate", Value::Float(ofr as f64), ofr_val));
+            tags.push(mk_print("OriginalFrameRate", Value::F64(ofr as f64), ofr_val));
         }
     }
 

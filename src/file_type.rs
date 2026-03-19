@@ -110,6 +110,9 @@ pub enum FileType {
     Xlsx,
     Ppt,
     Pptx,
+    Numbers,
+    Pages,
+    Key,
     InDesign,
     Rtf,
     // ===== Archives =====
@@ -136,6 +139,12 @@ pub enum FileType {
     Pcap,
     Pcapng,
     Svg,
+    // ===== New formats =====
+    Pgf,
+    Xisf,
+    Torrent,
+    Mobi,
+    SonyPmp,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -175,6 +184,11 @@ impl FileType {
             FileType::Pcx => "PCX image",
             FileType::Pict => "Apple PICT",
             FileType::Psp => "Paint Shop Pro image",
+            FileType::Pgf => "Progressive Graphics File",
+            FileType::Xisf => "PixInsight XISF image",
+            FileType::Torrent => "BitTorrent descriptor",
+            FileType::Mobi => "Mobipocket Book",
+            FileType::SonyPmp => "Sony PMP video",
             FileType::Hdr => "Radiance HDR",
             FileType::Rwz => "Rawzor compressed image",
             FileType::Btf => "BigTIFF image",
@@ -253,6 +267,9 @@ impl FileType {
             FileType::Xlsx => "Microsoft Excel",
             FileType::Ppt => "Microsoft PowerPoint (legacy)",
             FileType::Pptx => "Microsoft PowerPoint",
+            FileType::Numbers => "Apple Numbers",
+            FileType::Pages => "Apple Pages",
+            FileType::Key => "Apple Keynote",
             FileType::InDesign => "Adobe InDesign",
             FileType::Rtf => "Rich Text Format",
             // Archives
@@ -278,6 +295,11 @@ impl FileType {
             FileType::Pcap => "PCAP",
             FileType::Pcapng => "PCAPNG",
             FileType::Svg => "SVG",
+            FileType::Pgf => "PGF",
+            FileType::Xisf => "XISF",
+            FileType::Torrent => "Torrent",
+            FileType::Mobi => "MOBI",
+            FileType::SonyPmp => "PMP",
         }
     }
 
@@ -377,6 +399,9 @@ impl FileType {
             FileType::Xlsx => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             FileType::Ppt => "application/vnd.ms-powerpoint",
             FileType::Pptx => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            FileType::Numbers => "application/x-iwork-numbers-sffnumbers",
+            FileType::Pages => "application/x-iwork-pages-sffpages",
+            FileType::Key => "application/x-iwork-keynote-sffkey",
             FileType::InDesign => "application/x-indesign",
             FileType::Rtf => "application/rtf",
             // Archives
@@ -402,6 +427,11 @@ impl FileType {
             FileType::Pcap => "application/vnd.tcpdump.pcap",
             FileType::Pcapng => "application/vnd.tcpdump.pcap",
             FileType::Svg => "image/svg+xml",
+            FileType::Pgf => "image/pgf",
+            FileType::Xisf => "application/xisf",
+            FileType::Torrent => "application/x-bittorrent",
+            FileType::Mobi => "application/x-mobipocket-ebook",
+            FileType::SonyPmp => "image/x-sony-pmp",
         }
     }
 
@@ -509,6 +539,9 @@ impl FileType {
             FileType::Xlsx => &["xlsx", "xlsm", "xlsb"],
             FileType::Ppt => &["ppt", "pps", "pot"],
             FileType::Pptx => &["pptx", "pptm"],
+            FileType::Numbers => &["numbers", "nmbtemplate"],
+            FileType::Pages => &["pages"],
+            FileType::Key => &["key", "kth"],
             FileType::InDesign => &["ind", "indd", "indt"],
             FileType::Rtf => &["rtf"],
             // Archives
@@ -534,6 +567,11 @@ impl FileType {
             FileType::Pcap => &["pcap", "cap"],
             FileType::Pcapng => &["pcapng", "ntar"],
             FileType::Svg => &["svg"],
+            FileType::Pgf => &["pgf"],
+            FileType::Xisf => &["xisf"],
+            FileType::Torrent => &["torrent"],
+            FileType::Mobi => &["mobi", "azw", "azw3"],
+            FileType::SonyPmp => &["pmp"],
         }
     }
 
@@ -628,6 +666,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     // Documents
     FileType::Pdf, FileType::PostScript, FileType::Doc, FileType::Docx,
     FileType::Xls, FileType::Xlsx, FileType::Ppt, FileType::Pptx,
+    FileType::Numbers, FileType::Pages, FileType::Key,
     FileType::InDesign, FileType::Rtf,
     // Archives
     FileType::Zip, FileType::Rar, FileType::SevenZ, FileType::Gzip,
@@ -638,6 +677,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Moi, FileType::MacOs, FileType::Json,
     FileType::Pcap, FileType::Pcapng,
     FileType::Svg,
+    FileType::Pgf, FileType::Xisf, FileType::Torrent, FileType::Mobi, FileType::SonyPmp,
 ];
 
 /// Detect file type from magic bytes (first 64+ bytes of a file).
@@ -1166,6 +1206,30 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // MOI: starts with "V6" (camcorder info file)
     if header.len() >= 2 && header[0] == b'V' && header[1] == b'6' {
         return Some(FileType::Moi);
+    }
+
+    // PGF: "PGF"
+    if header.starts_with(b"PGF") {
+        return Some(FileType::Pgf);
+    }
+
+    // XISF: "XISF0100"
+    if header.starts_with(b"XISF0100") {
+        return Some(FileType::Xisf);
+    }
+
+    // Paint Shop Pro: "Paint Shop Pro Image File\n\x1a\0\0\0\0\0"
+    if header.len() >= 27 && header.starts_with(b"Paint Shop Pro Image File\n\x1a") {
+        return Some(FileType::Psp);
+    }
+
+    // Sony PMP: magic at offset 8-11 is 00 00 00 7C (header length = 124)
+    // and byte 4 is 0x00 (part of file size field)
+    if header.len() >= 12
+        && header[8] == 0x00 && header[9] == 0x00
+        && header[10] == 0x00 && header[11] == 0x7C
+    {
+        return Some(FileType::SonyPmp);
     }
 
     None
