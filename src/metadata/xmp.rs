@@ -133,6 +133,9 @@ impl XmpReader {
         let mut current_text = String::new();
         let mut in_rdf_li = false;
         let mut list_values: Vec<String> = Vec::new();
+        // Track elements with rdf:parseType='Resource' (bare structs).
+        // Each entry is the path depth at which we entered such an element.
+        let mut parse_resource_depths: Vec<usize> = Vec::new();
 
         // GContainer struct: collect per-field lists for DirectoryItemMime/Semantic/Length.
         // Key: flat field name (e.g. "Mime", "Semantic", "Length"), Values: collected per li.
@@ -152,6 +155,16 @@ impl XmpReader {
                     let ns_uri = name.namespace.as_deref().unwrap_or("");
                     path.push((ns_uri.to_string(), name.local_name.clone()));
                     current_text.clear();
+
+                    // Track rdf:parseType='Resource' (bare struct context)
+                    let has_parse_resource = attributes.iter().any(|a| {
+                        (a.name.local_name == "parseType"
+                            && a.name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))
+                        && a.value == "Resource"
+                    });
+                    if has_parse_resource {
+                        parse_resource_depths.push(path.len());
+                    }
 
                     // x:xmpmeta — extract XMPToolkit from x:xmptk attribute
                     if name.local_name == "xmpmeta" {
@@ -466,13 +479,30 @@ impl XmpReader {
                             let category = namespace_category(group_prefix);
 
                             let value = Value::String(current_text.trim().to_string());
-                            let full_name = ucfirst(tag_name);
                             let print_value = value.to_display_string();
+
+                            // Check if we're inside a bare struct (rdf:parseType='Resource')
+                            // In that case, flatten: {StructParent}{FieldName}
+                            // The struct parent element is at depth (parse_resource_depths.last() - 1)
+                            let full_name = if let Some(&struct_depth) = parse_resource_depths.last() {
+                                // The struct element is at index struct_depth - 1 in path
+                                if struct_depth >= 1 && struct_depth <= path.len() {
+                                    let struct_elem = &path[struct_depth - 1];
+                                    let struct_parent_name = ucfirst(&struct_elem.1);
+                                    let field_uc = ucfirst(tag_name);
+                                    let field_stripped = strip_struct_prefix(&struct_parent_name, &field_uc);
+                                    format!("{}{}", struct_parent_name, field_stripped)
+                                } else {
+                                    ucfirst(tag_name)
+                                }
+                            } else {
+                                ucfirst(tag_name)
+                            };
 
                             tags.push(Tag {
                                 id: TagId::Text(format!("{}:{}", group_prefix, tag_name)),
-                                name: full_name,
-                                description: tag_name.clone(),
+                                name: full_name.clone(),
+                                description: full_name,
                                 group: TagGroup {
                                     family0: "XMP".to_string(),
                                     family1: format!("XMP-{}", group_prefix),
@@ -485,6 +515,10 @@ impl XmpReader {
                         }
                     }
 
+                    // Pop parse_resource_depths if we're leaving that element
+                    if parse_resource_depths.last() == Some(&path.len()) {
+                        parse_resource_depths.pop();
+                    }
                     path.pop();
                     current_text.clear();
                 }

@@ -165,7 +165,27 @@ pub fn parse_vorbis_comments(data: &[u8], tags: &mut Vec<Tag>) {
             let value = &comment[eq_pos + 1..];
 
             let (name, description) = vorbis_field_name(field);
-            tags.push(mk(name, description, Value::String(value.to_string())));
+            // If vorbis_field_name returned the raw field (unknown), try CamelCase conversion
+            let (final_name, final_desc) = if name == field && field.contains(':') {
+                // Handle NAMESPACE:KEY → NamespaceKey (from Perl Vorbis.pm)
+                let parts: Vec<&str> = field.splitn(2, ':').collect();
+                let ns = parts[0];
+                let key = parts.get(1).unwrap_or(&"");
+                let cc = format!("{}{}",
+                    ns.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default().to_string()
+                    + &ns[1..].to_lowercase(),
+                    key.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default().to_string()
+                    + &key[1..].to_lowercase());
+                (cc.clone(), cc)
+            } else if name == field {
+                // Unknown field without namespace — just use CamelCase
+                let cc = field.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default()
+                    + &field[1..].to_lowercase();
+                (cc.clone(), cc)
+            } else {
+                (name.to_string(), description.to_string())
+            };
+            tags.push(mk(&final_name, &final_desc, Value::String(value.to_string())));
         }
     }
 }
@@ -224,7 +244,7 @@ fn vorbis_field_name(field: &str) -> (&str, &str) {
         "ARTIST" => ("Artist", "Artist"),
         "ALBUM" => ("Album", "Album"),
         "ALBUMARTIST" | "ALBUM ARTIST" => ("AlbumArtist", "Album Artist"),
-        "TRACKNUMBER" | "TRACK" => ("Track", "Track Number"),
+        "TRACKNUMBER" | "TRACK" => ("TrackNumber", "Track Number"),
         "TRACKTOTAL" | "TOTALTRACKS" => ("TrackTotal", "Total Tracks"),
         "DISCNUMBER" | "DISC" => ("DiscNumber", "Disc Number"),
         "DISCTOTAL" | "TOTALDISCS" => ("DiscTotal", "Total Discs"),
@@ -246,10 +266,23 @@ fn vorbis_field_name(field: &str) -> (&str, &str) {
         "REPLAYGAIN_ALBUM_PEAK" => ("ReplayGainAlbumPeak", "ReplayGain Album Peak"),
         "LANGUAGE" => ("Language", "Language"),
         "BPM" | "TEMPO" => ("BPM", "Beats Per Minute"),
+        "COVERART" => ("CoverArt", "Cover Art"),
+        "COVERARTMIME" => ("CoverArtMIMEType", "Cover Art MIME Type"),
+        "METADATA_BLOCK_PICTURE" => ("Picture", "Picture"),
         _ => {
-            // Return as-is for unknown fields
-            // We leak here but it's acceptable for static-like behavior
-            // In practice we return the field name directly
+            // Handle namespace:key patterns (e.g. MEDIAJUKEBOX:DATE → MediajukeboxDate)
+            if let Some(colon) = field.find(':') {
+                let ns = &field[..colon];
+                let key = &field[colon+1..];
+                // Convert to CamelCase: MEDIAJUKEBOX → Mediajukebox, DATE → Date
+                let ns_cc = ns.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default()
+                    + &ns[1..].to_lowercase();
+                let key_cc = key.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default()
+                    + &key[1..].to_lowercase();
+                // We can't return borrowed str for dynamic strings, so use field as-is
+                // The caller handles this case separately
+                return (field, field);
+            }
             return (field, field);
         }
     }
