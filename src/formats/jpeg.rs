@@ -376,6 +376,10 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         priority: 0,
                     });
                 }
+                // JPS (JPEG Stereo): starts with "_JPSJPS_"
+                else if seg_data.starts_with(b"_JPSJPS_") && seg_data.len() >= 14 {
+                    tags.extend(parse_jps(seg_data));
+                }
                 // Kodak Meta IFD: starts with "Meta\0\0", "META\0\0", or "Exif\0\0"
                 else if seg_data.len() > 8
                     && (seg_data.starts_with(b"Meta\0\0")
@@ -4443,4 +4447,118 @@ fn ciff_find_freebytes(
         });
         return; // only need the first FreeBytes
     }
+}
+
+/// Parse JPS (JPEG Stereo) APP3 segment.
+/// Data starts with "_JPSJPS_" (8 bytes), followed by the block.
+/// Mirrors ExifTool's JPEG::JPS table (JPEG.pm).
+fn parse_jps(data: &[u8]) -> Vec<Tag> {
+    use crate::tag::{TagId, TagGroup};
+    use crate::value::Value;
+
+    let mut tags = Vec::new();
+
+    let mk = |name: &str, description: &str, val: Value| -> Tag {
+        let print_value = val.to_display_string();
+        Tag {
+            id: TagId::Text(name.to_string()),
+            name: name.to_string(),
+            description: description.to_string(),
+            group: TagGroup {
+                family0: "APP3".into(),
+                family1: "JPS".into(),
+                family2: "Image".into(),
+            },
+            raw_value: val,
+            print_value,
+            priority: 0,
+        }
+    };
+
+    // HdrLength at offset 0x08 (int16u)
+    let hdr_length = if data.len() >= 10 {
+        u16::from_be_bytes([data[8], data[9]]) as usize
+    } else {
+        return tags;
+    };
+
+    if data.len() < 14 {
+        return tags;
+    }
+
+    // JPSSeparation and MediaType from int32u at offset 0x0a
+    let sep_raw = u32::from_be_bytes([data[10], data[11], data[12], data[13]]);
+    let media_type = sep_raw & 0xff;
+    let separation = (sep_raw >> 24) & 0xff;
+
+    if media_type == 1 {
+        // Stereo only: emit JPSSeparation
+        tags.push(mk("JPSSeparation", "JPS Separation", Value::U32(separation)));
+    }
+
+    // JPSFlags at offset 0x0b
+    if data.len() > 11 {
+        let flags = data[11];
+        let mut flag_strs = Vec::new();
+        if flags & (1 << 0) != 0 { flag_strs.push("Half height"); }
+        if flags & (1 << 1) != 0 { flag_strs.push("Half width"); }
+        if flags & (1 << 2) != 0 { flag_strs.push("Left field first"); }
+        let flag_str = if flag_strs.is_empty() {
+            String::new()
+        } else {
+            flag_strs.join(", ")
+        };
+        tags.push(mk("JPSFlags", "JPS Flags", Value::String(flag_str)));
+    }
+
+    // JPSLayout at offset 0x0c
+    if data.len() > 12 {
+        let layout = data[12];
+        let layout_str = if media_type == 0 {
+            // Mono
+            match layout {
+                0 => "Both Eyes",
+                1 => "Left Eye",
+                2 => "Right Eye",
+                _ => "Unknown",
+            }
+        } else {
+            // Stereo
+            match layout {
+                1 => "Interleaved",
+                2 => "Side By Side",
+                3 => "Over Under",
+                4 => "Anaglyph",
+                _ => "Unknown",
+            }
+        };
+        tags.push(mk("JPSLayout", "JPS Layout", Value::String(layout_str.to_string())));
+    }
+
+    // JPSType at offset 0x0d
+    if data.len() > 13 {
+        let jtype = data[13];
+        let type_str = match jtype {
+            0 => "Mono",
+            1 => "Stereo",
+            _ => "Unknown",
+        };
+        tags.push(mk("JPSType", "JPS Type", Value::String(type_str.to_string())));
+    }
+
+    // JPSComment: starts at offset 0x10, adjusted by HdrLength - 4
+    // "Hook => $varSize += $$self{HdrLength} - 4" means comment is at 0x10 + (HdrLength - 4)
+    let comment_offset = 0x10 + (hdr_length.saturating_sub(4));
+    if data.len() > comment_offset {
+        let comment_bytes = &data[comment_offset..];
+        // Strip null bytes
+        let comment = String::from_utf8_lossy(comment_bytes)
+            .trim_end_matches('\0')
+            .to_string();
+        if !comment.is_empty() {
+            tags.push(mk("JPSComment", "JPS Comment", Value::String(comment)));
+        }
+    }
+
+    tags
 }

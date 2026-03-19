@@ -284,11 +284,8 @@ impl XmpReader {
                                     && (a.name.prefix.as_deref() == Some("xml")
                                         || a.name.namespace.as_deref() == Some("http://www.w3.org/XML/1998/namespace")))
                                 .map(|a| a.value.clone());
-                        } else if lang_alt_in_bag {
-                            // Outer rdf:li inside Bag (contains an Alt) — new bag item
-                            // Reset inner alt tracking for this item
-                            bag_item_count += 1;
                         }
+                        // Note: outer rdf:li increment happens when it closes (to correctly track which item we're on)
                         in_rdf_li = true;
                     }
 
@@ -352,11 +349,13 @@ impl XmpReader {
                             // Inner rdf:li inside rdf:Alt — store by lang
                             let lang = current_li_lang.take().unwrap_or_else(|| "x-default".to_string());
                             let text = current_text.trim().to_string();
-                            let opt_text = if text.is_empty() { None } else { Some(text.clone()) };
+                            // Present-but-empty → Some(""), absent → padding with None below
+                            let opt_text: Option<String> = Some(text.clone());
                             if lang_alt_in_bag {
                                 // Bag-of-lang-alt: accumulate per-lang for current bag item
                                 let entry = bag_lang_values.entry(lang.clone()).or_default();
-                                // Pad to current bag item count if needed
+                                // Pad to bag_item_count (how many outer lis have closed so far)
+                                // bag_item_count is the count of completed outer lis
                                 while entry.len() < bag_item_count {
                                     entry.push(None);
                                 }
@@ -370,14 +369,18 @@ impl XmpReader {
                                     bag_lang_values.entry(lang).or_default().push(opt_text);
                                 }
                             }
+                        } else if lang_alt_in_bag && !in_lang_alt {
+                            // Closing an outer rdf:li in bag-of-alt mode
+                            // (the Alt inside it has already closed and set in_lang_alt=false)
+                            // Increment bag_item_count to mark this item as complete
+                            bag_item_count += 1;
+                            // list_values not used in bag-of-alt mode
                         } else if in_gcontainer_li {
                             // GContainer struct li: fields were captured as attributes, not text
                             in_gcontainer_li = false;
                         } else if !current_text.trim().is_empty() {
                             list_values.push(current_text.trim().to_string());
                         }
-                        // If this was an outer li in bag-of-alt mode, we don't reset in_lang_alt
-                        // because we exit in_rdf_li but may still be in the bag
                         in_rdf_li = false;
                         path.pop();
                         current_text.clear();
@@ -491,20 +494,18 @@ impl XmpReader {
 
                                 for lang in &lang_keys {
                                     let vals = &bag_lang_values[lang];
-                                    let is_default = lang == "x-default";
+                                    let is_default = lang == "x-default"; // kept for tag naming below
 
-                                    // For x-default: join non-None values; for others: preserve empty slots
-                                    let joined: String = if is_default {
-                                        vals.iter()
-                                            .filter_map(|v| v.clone())
-                                            .collect::<Vec<_>>()
-                                            .join(", ")
-                                    } else {
-                                        vals.iter()
-                                            .map(|v| v.as_deref().unwrap_or(""))
-                                            .collect::<Vec<_>>()
-                                            .join(", ")
-                                    };
+                                    // None = lang absent for this bag item → skip
+                                    // Some("") = lang present but empty → keep as empty slot
+                                    // Some(s) = lang present with value s → use s
+                                    //
+                                    // For x-default: skip None (absent items shouldn't affect default)
+                                    // For other langs: skip None (absent), keep Some("") (present but empty)
+                                    let joined: String = vals.iter()
+                                        .filter_map(|v| v.as_deref()) // None filtered out
+                                        .collect::<Vec<_>>()
+                                        .join(", ");
 
                                     // Only emit if there's something meaningful
                                     let has_content = vals.iter().any(|v| v.is_some());

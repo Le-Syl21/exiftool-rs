@@ -168,19 +168,16 @@ pub fn parse_vorbis_comments(data: &[u8], tags: &mut Vec<Tag>) {
             // If vorbis_field_name returned the raw field (unknown), try CamelCase conversion
             let (final_name, final_desc) = if name == field && field.contains(':') {
                 // Handle NAMESPACE:KEY → NamespaceKey (from Perl Vorbis.pm)
+                // Each word is capitalized, spaces removed: "TOOL NAME" → "ToolName"
                 let parts: Vec<&str> = field.splitn(2, ':').collect();
                 let ns = parts[0];
                 let key = parts.get(1).unwrap_or(&"");
-                let cc = format!("{}{}",
-                    ns.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default().to_string()
-                    + &ns[1..].to_lowercase(),
-                    key.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default().to_string()
-                    + &key[1..].to_lowercase());
+                let ns_cc = to_camel_case(ns);
+                let key_cc = to_camel_case(key);
+                let cc = format!("{}{}", ns_cc, key_cc);
                 (cc.clone(), cc)
             } else if name == field {
-                // Unknown field without namespace — just use CamelCase
-                let cc = field.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default()
-                    + &field[1..].to_lowercase();
+                let cc = to_camel_case(field);
                 (cc.clone(), cc)
             } else {
                 (name.to_string(), description.to_string())
@@ -235,6 +232,20 @@ fn parse_flac_picture(data: &[u8], tags: &mut Vec<Tag>) {
         "Picture",
         Value::String(format!("{} ({}x{}, {}, {} bytes)", type_str, width, height, mime, pic_data_len)),
     ));
+}
+
+/// Convert "SOME WORDS" to "SomeWords" (CamelCase, spaces/underscores removed).
+fn to_camel_case(s: &str) -> String {
+    s.split(|c: char| c == ' ' || c == '_')
+        .filter(|w| !w.is_empty())
+        .map(|w| {
+            let mut chars = w.chars();
+            match chars.next() {
+                Some(c) => c.to_uppercase().to_string() + &chars.as_str().to_lowercase(),
+                None => String::new(),
+            }
+        })
+        .collect()
 }
 
 /// Map Vorbis comment field names to canonical tag names.

@@ -833,10 +833,8 @@ impl ExifTool {
         if let Some(dir) = path.parent().and_then(|p| p.to_str()) {
             tags.push(file_tag("Directory", Value::String(dir.to_string())));
         }
-        // Use canonical extension from FileType (first in list), matching Perl behavior
-        let canonical_ext = file_type.extensions().first().copied().unwrap_or_else(|| {
-            path.extension().and_then(|e| e.to_str()).unwrap_or("")
-        });
+        // Use the canonical (first) extension from the FileType, matching Perl ExifTool behavior.
+        let canonical_ext = file_type.extensions().first().copied().unwrap_or("");
         if !canonical_ext.is_empty() {
             tags.push(file_tag("FileTypeExtension", Value::String(canonical_ext.to_string())));
         }
@@ -1001,6 +999,14 @@ impl ExifTool {
         // Try magic bytes first
         let header_len = data.len().min(256);
         if let Some(ft) = file_type::detect_from_magic(&data[..header_len]) {
+            // Override JPEG to JPS if the file extension is .jps
+            if ft == FileType::Jpeg {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if ext.eq_ignore_ascii_case("jps") {
+                        return Ok(FileType::Jps);
+                    }
+                }
+            }
             return Ok(ft);
         }
 
@@ -1021,7 +1027,7 @@ impl ExifTool {
     /// Dispatch to the appropriate format reader.
     fn process_file(&self, data: &[u8], file_type: FileType) -> Result<Vec<Tag>> {
         match file_type {
-            FileType::Jpeg => formats::jpeg::read_jpeg(data),
+            FileType::Jpeg | FileType::Jps => formats::jpeg::read_jpeg(data),
             FileType::Png | FileType::Mng => formats::png::read_png(data),
             // All TIFF-based formats (TIFF + most RAW formats)
             FileType::Tiff

@@ -25,6 +25,7 @@ pub enum FileType {
     Bpg,
     Exr,
     Ico,
+    Jps,
     // ===== Images - Specialized =====
     DjVu,
     Xcf,
@@ -160,6 +161,7 @@ impl FileType {
             FileType::Bpg => "Better Portable Graphics",
             FileType::Exr => "OpenEXR image",
             FileType::Ico => "Windows Icon",
+            FileType::Jps => "JPEG Stereo image",
             // Specialized images
             FileType::DjVu => "DjVu document",
             FileType::Xcf => "GIMP image",
@@ -286,6 +288,7 @@ impl FileType {
             FileType::Bpg => "image/bpg",
             FileType::Exr => "image/x-exr",
             FileType::Ico => "image/x-icon",
+            FileType::Jps => "image/x-jps",
             FileType::DjVu => "image/vnd.djvu",
             FileType::Xcf => "image/x-xcf",
             FileType::Pcx => "image/x-pcx",
@@ -403,6 +406,7 @@ impl FileType {
             FileType::Bpg => &["bpg"],
             FileType::Exr => &["exr"],
             FileType::Ico => &["ico", "cur"],
+            FileType::Jps => &["jps"],
             FileType::DjVu => &["djvu", "djv"],
             FileType::Xcf => &["xcf"],
             FileType::Pcx => &["pcx"],
@@ -575,7 +579,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Jpeg, FileType::Tiff, FileType::Png, FileType::Gif, FileType::Bmp,
     FileType::WebP, FileType::Heif, FileType::Avif, FileType::Psd, FileType::Jp2,
     FileType::J2c, FileType::Jxl, FileType::Jxr, FileType::Flif, FileType::Bpg,
-    FileType::Exr, FileType::Ico,
+    FileType::Exr, FileType::Ico, FileType::Jps,
     // Images - Specialized
     FileType::DjVu, FileType::Xcf, FileType::Pcx, FileType::Pict, FileType::Psp,
     FileType::Hdr, FileType::Rwz, FileType::Btf, FileType::Mng,
