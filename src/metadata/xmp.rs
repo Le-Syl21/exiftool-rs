@@ -1037,6 +1037,9 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
     let parser = EventReader::from_str(xml);
     let mut path: Vec<String> = Vec::new(); // element local names (ucfirst'd)
     let mut current_text = String::new();
+    // Track whether the current element has had any child elements (to detect leaf nodes)
+    // Each entry corresponds to the matching path depth: true = has children
+    let mut has_children: Vec<bool> = Vec::new();
 
     // Accumulate full path as tag name prefix: root element name + child names concatenated
     // Each path component is ucfirst'd to produce CamelCase tag names (e.g., GpxTrkName).
@@ -1050,7 +1053,12 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
             Ok(XmlEvent::StartElement { name, attributes, namespace, .. }) => {
                 let local = ucfirst(&name.local_name);
                 let path_str = format!("{}{}", path.join(""), local);
+                // Mark parent as having a child element
+                if let Some(last) = has_children.last_mut() {
+                    *last = true;
+                }
                 path.push(local.clone());
+                has_children.push(false);
                 current_text.clear();
 
                 // Emit default xmlns (xmlns="uri") as {ElemName}Xmlns tag
@@ -1125,7 +1133,9 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
             }
             Ok(XmlEvent::EndElement { .. }) => {
                 let text = normalize_xml_text(&current_text);
-                if !text.is_empty() && !path.is_empty() {
+                let is_leaf = has_children.last().copied().unwrap_or(false) == false;
+                // Emit tag if: has text content OR is a leaf node (no child elements, i.e. empty element)
+                if (is_leaf || !text.is_empty()) && !path.is_empty() {
                     let tag_name = path.join("");
                     if !seen_names.contains(&tag_name) {
                         seen_names.insert(tag_name.clone());
@@ -1140,6 +1150,7 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                     }
                 }
                 current_text.clear();
+                has_children.pop();
                 path.pop();
             }
             Err(_) => break,

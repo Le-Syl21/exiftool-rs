@@ -447,6 +447,7 @@ fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
         (47, "WideFocusZone"), (48, "FocusMode"),
         (49, "FocusArea"), (50, "DECPosition"),
         // (52, "DataImprint"), // Condition: DiMAGE 7Hi only
+        (63, "FlashMetering"),
     ];
 
     let max_idx = data.len() / 4;
@@ -2774,6 +2775,20 @@ fn read_makernote_ifd(
                 // Minolta CameraSettings binary sub-table (int32u format)
                 (Manufacturer::Minolta, 0x0001) | (Manufacturer::Minolta, 0x0003) => {
                     decode_minolta_camera_settings(value_data, byte_order)
+                }
+                // Minolta ImageStabilization (tag 0x0018): exists only when IS is enabled for DiMAGE A1/A2/X1
+                (Manufacturer::Minolta, 0x0018) => {
+                    // Condition: model =~ /^DiMAGE (A1|A2|X1)$/
+                    if model_name.starts_with("DiMAGE A1") || model_name.starts_with("DiMAGE A2") || model_name.starts_with("DiMAGE X1") {
+                        vec![Tag {
+                            id: TagId::Text("ImageStabilization".into()),
+                            name: "ImageStabilization".into(), description: "Image Stabilization".into(),
+                            group: TagGroup { family0: "MakerNotes".into(), family1: "Minolta".into(), family2: "Camera".into() },
+                            raw_value: Value::String("On".into()), print_value: "On".into(), priority: 0,
+                        }]
+                    } else {
+                        Vec::new()
+                    }
                 }
                 // Ricoh ImageInfo binary sub-table (tag 0x1001)
                 (Manufacturer::Ricoh, 0x1001) => {
