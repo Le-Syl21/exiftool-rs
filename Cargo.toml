@@ -1,6 +1,6 @@
 [package]
 name = "exiftool-rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.71"
 description = "Read, write, and edit metadata in image, audio, video, and document files — a pure Rust reimplementation of ExifTool"
