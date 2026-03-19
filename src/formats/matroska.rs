@@ -310,8 +310,8 @@ fn parse_video_settings(data: &[u8], start: usize, end: usize, tags: &mut Vec<Ta
                 let v = read_uint(data, pos, size);
                 tags.push(mk("DisplayHeight", "Display Height", Value::U32(v as u32)));
             }
-            0x53AC => {
-                // VideoScanType (StereoMode in newer spec, FlagInterlaced)
+            0x9A => {
+                // VideoScanType / FlagInterlaced (Perl 0x1A → raw 0x9A)
                 let v = read_uint(data, pos, size);
                 let s = match v {
                     0 => "Undetermined",
