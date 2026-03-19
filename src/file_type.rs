@@ -880,6 +880,15 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     if header.starts_with(b"ID3") {
         return Some(FileType::Mp3);
     }
+    // AAC ADTS: sync=0xFFF (12 bits), then layer bits 13-14 must be 00
+    // 0xFF F0 or 0xFF F1 (MPEG-2 AAC) or 0xFF F8/F9 (MPEG-4 AAC with CRC/no-CRC)
+    // Distinguishing from MP3: layer bits are 00 for AAC, non-zero for MP3
+    if header.len() >= 2 && header[0] == 0xFF
+        && (header[1] == 0xF0 || header[1] == 0xF1
+            || header[1] == 0xF8 || header[1] == 0xF9)
+    {
+        return Some(FileType::Aac);
+    }
     // MPEG audio sync: 0xFF + 0xE0 mask (after other FF-starting formats)
     if header.len() >= 2 && header[0] == 0xFF && (header[1] & 0xE0) == 0xE0 {
         return Some(FileType::Mp3);

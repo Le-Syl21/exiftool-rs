@@ -862,20 +862,29 @@ pub fn read_aac(data: &[u8]) -> Result<Vec<Tag>> {
     let t1 = u16::from_be_bytes([data[4], data[5]]);
     let t2 = data[6];
 
-    // Validate: profile type bits 16-17 (must not be 3=reserved)
-    let profile_type = (t0 >> 16) & 0x03;
+    // Validate: profile type
+    // In Perl: $t[0]>>16 & 0x03 = bits 17-16 counting from right (0=LSB) of big-endian u32
+    // These correspond to stream bits 14-15 in Perl's Bit016-017 numbering
+    // Perl uses ProcessBitStream which reads MSB-first; bits 16-17 from stream start = byte2 bits 0-1 from MSB
+    let profile_type = (t0 >> 16) & 0x03; // matches Perl $t[0]>>16 & 0x03
     if profile_type == 3 {
         return Err(Error::InvalidData("reserved AAC profile type".into()));
     }
 
-    // Sampling rate index bits 18-21
-    let sr_index = (t0 >> 12) & 0x0F;
+    // Sampling rate index: stream bits 18-21
+    // In Perl's ProcessBitStream: Bit018-021 = byte 2 bits 2-5 from MSB
+    // In big-endian u32 t0: byte 2 is bits 15-8. Byte2 bits 2-5 from MSB = t0 bits 13-10 from right.
+    // (t0 >> 10) & 0x0F
+    let sr_index = (t0 >> 10) & 0x0F;
     if sr_index > 12 {
         return Err(Error::InvalidData("invalid AAC sampling rate index".into()));
     }
 
-    // Channel configuration bits 23-25
-    let channel_config = ((t0 & 0x01) << 2) | (((t1 >> 14) & 0x03) as u32);
+    // Channel configuration: stream bits 23-25
+    // byte2 bit 7 from MSB (stream bit 23) = t0 bit 8 from right
+    // byte3 bits 0-1 from MSB (stream bits 24-25) = t0 bits 7-6 from right
+    // (t0 >> 6) & 0x07
+    let channel_config = (t0 >> 6) & 0x07;
 
     let mut tags = Vec::new();
 
@@ -913,45 +922,30 @@ pub fn read_aac(data: &[u8]) -> Result<Vec<Tag>> {
     let len = (((t0 as u64) << 11) & 0x1800) | (((t1 as u64) >> 5) & 0x07FF);
     let len = len as usize;
 
+    // Try to extract Encoder from the filler payload in the frame.
+    // Scan the remaining data for a printable ASCII string (like encoder name).
     if len >= 8 && data.len() >= len {
-        let frame_data = &data[7..len]; // frame_data is the remainder after 7-byte header
-        let no_crc = t0 & 0x00010000 != 0;
-        let blocks = (t2 & 0x03) as usize;
-        let mut pos: usize = 0;
-        if !no_crc {
-            pos += 2 + 2 * blocks;
-        }
-
-        if pos + 2 <= frame_data.len() {
-            let tmp = u16::from_be_bytes([frame_data[pos], frame_data[pos + 1]]);
-            let id = tmp >> 13;
-
-            // Filler payload (id=6)
-            if id == 6 {
-                let mut cnt = ((tmp >> 9) & 0x0F) as usize;
-                pos += 1; // advance 1 byte for the id/cnt byte
-                if cnt == 15 {
-                    if pos < frame_data.len() {
-                        let extra_byte = frame_data[pos] as usize;
-                        cnt += extra_byte.wrapping_sub(1);
-                        pos += 1;
-                    }
-                }
-                if pos + cnt <= frame_data.len() {
-                    let filler = &frame_data[pos..pos + cnt];
-                    // Strip leading and trailing nulls
-                    let start = filler.iter().position(|&b| b != 0).unwrap_or(cnt);
-                    let end = filler.iter().rposition(|&b| b != 0).map(|p| p + 1).unwrap_or(0);
-                    if start < end {
-                        let enc_bytes = &filler[start..end];
-                        if enc_bytes.iter().all(|&b| b >= 0x20 && b <= 0x7e) {
-                            if let Ok(enc) = std::str::from_utf8(enc_bytes) {
-                                tags.push(mktag("AAC", "Encoder", "Encoder", Value::String(enc.into())));
-                            }
-                        }
+        let frame_data = &data[7..len];
+        // Scan for a null-delimited printable string in the frame payload
+        // The encoder string is typically in a filler element, null-terminated
+        let mut i = 0;
+        while i < frame_data.len() {
+            // Skip null bytes
+            while i < frame_data.len() && frame_data[i] == 0 { i += 1; }
+            let start = i;
+            // Read printable bytes
+            while i < frame_data.len() && frame_data[i] >= 0x20 && frame_data[i] <= 0x7e { i += 1; }
+            let end = i;
+            if end - start >= 4 {
+                if let Ok(enc) = std::str::from_utf8(&frame_data[start..end]) {
+                    let enc = enc.trim();
+                    if enc.len() >= 4 {
+                        tags.push(mktag("AAC", "Encoder", "Encoder", Value::String(enc.into())));
+                        break;
                     }
                 }
             }
+            i += 1;
         }
     }
 

@@ -1128,8 +1128,11 @@ impl ExifTool {
             "json" => formats::misc::read_json(data),
             "svg" => formats::misc::read_svg(data),
             "ram" => formats::misc::read_ram(data).or_else(|_| Ok(Vec::new())),
-            "txt" | "csv" | "log" | "igc" | "url" | "lnk" => {
-                Ok(Vec::new()) // Text-like: report file-level info only
+            "txt" | "csv" | "log" | "igc" => {
+                Ok(compute_text_tags(data))
+            }
+            "url" | "lnk" => {
+                Ok(Vec::new())
             }
             "gpx" | "kml" | "xml" | "inx" => formats::xmp_file::read_xmp(data),
             "plist" | "aae" => {
@@ -1683,4 +1686,47 @@ fn encode_exif_tag(
     };
 
     Some((tag_id, format, encoded))
+}
+
+/// Compute text file tags: LineCount, WordCount, MIMEEncoding, Newlines (from Perl Text.pm).
+fn compute_text_tags(data: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let mk = |name: &str, val: String| Tag {
+        id: crate::tag::TagId::Text(name.into()),
+        name: name.into(), description: name.into(),
+        group: crate::tag::TagGroup { family0: "File".into(), family1: "File".into(), family2: "Other".into() },
+        raw_value: Value::String(val.clone()), print_value: val, priority: 0,
+    };
+
+    // Detect encoding
+    let is_ascii = data.iter().all(|&b| b < 128);
+    let is_utf8 = std::str::from_utf8(data).is_ok();
+    let encoding = if is_ascii { "us-ascii" }
+        else if data.starts_with(&[0xFF, 0xFE]) { "utf-16le" }
+        else if data.starts_with(&[0xFE, 0xFF]) { "utf-16be" }
+        else if data.starts_with(&[0xEF, 0xBB, 0xBF]) || is_utf8 { "utf-8" }
+        else { "unknown-8bit" };
+    tags.push(mk("MIMEEncoding", encoding.into()));
+
+    // Count newlines and detect type
+    let has_cr = data.contains(&b'\r');
+    let has_lf = data.contains(&b'\n');
+    let newline_type = if has_cr && has_lf { "Windows CRLF" }
+        else if has_lf { "Unix LF" }
+        else if has_cr { "Macintosh CR" }
+        else { "(none)" };
+    tags.push(mk("Newlines", newline_type.into()));
+
+    // Line count (Perl: number of \n in text)
+    let line_count = data.iter().filter(|&&b| b == b'\n').count();
+    // If no trailing newline, still count last line (Perl counts \n occurrences)
+    let line_count = if line_count == 0 && !data.is_empty() { 1 } else { line_count };
+    tags.push(mk("LineCount", line_count.to_string()));
+
+    // Word count
+    let text = String::from_utf8_lossy(data);
+    let word_count = text.split_whitespace().count();
+    tags.push(mk("WordCount", word_count.to_string()));
+
+    tags
 }
