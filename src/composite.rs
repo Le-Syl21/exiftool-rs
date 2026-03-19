@@ -660,11 +660,11 @@ fn compute_wb_balance(tags: &[Tag]) -> Option<Vec<Tag>> {
             let b  = parts[3]; // B
             let g_avg = (g1 + g2) / 2.0;
             if g_avg > 0.0 {
-                // PrintConv: int($val * 1e6 + 0.5) * 1e-6
-                let red_bal = r / g_avg;
-                let blue_bal = b / g_avg;
-                let red_print = format!("{}", (red_bal * 1e6 + 0.5) as i64 as f64 * 1e-6);
-                let blue_print = format!("{}", (blue_bal * 1e6 + 0.5) as i64 as f64 * 1e-6);
+                // PrintConv: int($val * 1e6 + 0.5) * 1e-6, then Perl %s = %.15g format
+                let red_bal = (r / g_avg * 1e6 + 0.5) as i64 as f64 * 1e-6;
+                let blue_bal = (b / g_avg * 1e6 + 0.5) as i64 as f64 * 1e-6;
+                let red_print = crate::value::format_g15(red_bal);
+                let blue_print = crate::value::format_g15(blue_bal);
                 result.push(mk_composite("RedBalance", "Red Balance",
                     Value::String(red_print)));
                 result.push(mk_composite("BlueBalance", "Blue Balance",

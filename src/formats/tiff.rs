@@ -259,26 +259,7 @@ fn make_geotiff_tag(key_id: u16, name: &str, description: &str, raw_val: Value, 
 
 /// Format a double value like Perl's %.15g (15 significant digits).
 fn format_g15(v: f64) -> String {
-    if v == 0.0 {
-        return "0".to_string();
-    }
-    let abs_v = v.abs();
-    let exp = abs_v.log10().floor() as i32;
-    if exp >= -4 && exp < 15 {
-        // Fixed notation: 15 significant digits = (14 - exp) decimal places
-        let decimal_places = (14 - exp).max(0) as usize;
-        let s = format!("{:.prec$}", v, prec = decimal_places);
-        // Trim trailing zeros after decimal point
-        if s.contains('.') {
-            let trimmed = s.trim_end_matches('0').trim_end_matches('.');
-            trimmed.to_string()
-        } else {
-            s
-        }
-    } else {
-        // Scientific notation
-        format!("{:.14e}", v)
-    }
+    crate::value::format_g15(v)
 }
 
 /// Extract a list of u16 values from a Value (handles U16, List of U16).

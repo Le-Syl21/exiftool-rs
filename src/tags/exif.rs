@@ -378,39 +378,17 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
     None
 }
 
-/// Format a double value with Perl-style %.15g precision.
-/// Uses fixed notation when exponent is in [-4, 15), scientific otherwise.
-/// Trailing zeros are stripped.
-fn format_g15(v: f64) -> String {
-    if v == 0.0 {
-        return "0".to_string();
-    }
-    let abs_v = v.abs();
-    let exp = abs_v.log10().floor() as i32;
-    if exp >= -4 && exp < 15 {
-        let decimal_places = (14 - exp).max(0) as usize;
-        let s = format!("{:.prec$}", v, prec = decimal_places);
-        if s.contains('.') {
-            s.trim_end_matches('0').trim_end_matches('.').to_string()
-        } else {
-            s
-        }
-    } else {
-        format!("{:.14e}", v)
-    }
-}
-
 /// Format a double or list of doubles with Perl-style %.15g precision and space separator.
 /// This matches ExifTool's output format for GeoTiff coordinate arrays.
 pub fn format_geotiff_doubles(value: &Value) -> String {
     match value {
-        Value::F64(v) => format_g15(*v),
-        Value::F32(v) => format_g15(*v as f64),
+        Value::F64(v) => crate::value::format_g15(*v),
+        Value::F32(v) => crate::value::format_g15(*v as f64),
         Value::List(items) => {
             items.iter().map(|item| {
                 match item {
-                    Value::F64(v) => format_g15(*v),
-                    Value::F32(v) => format_g15(*v as f64),
+                    Value::F64(v) => crate::value::format_g15(*v),
+                    Value::F32(v) => crate::value::format_g15(*v as f64),
                     _ => item.to_display_string(),
                 }
             }).collect::<Vec<_>>().join(" ")

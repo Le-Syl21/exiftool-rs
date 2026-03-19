@@ -113,3 +113,24 @@ impl fmt::Display for Value {
         write!(f, "{}", self.to_display_string())
     }
 }
+
+/// Format a float with Perl-style %.15g precision (15 significant digits, trailing zeros stripped).
+/// This matches ExifTool's default `%s` formatting for floating-point values.
+pub fn format_g15(v: f64) -> String {
+    if v == 0.0 {
+        return "0".to_string();
+    }
+    let abs_v = v.abs();
+    let exp = abs_v.log10().floor() as i32;
+    if exp >= -4 && exp < 15 {
+        let decimal_places = (14 - exp).max(0) as usize;
+        let s = format!("{:.prec$}", v, prec = decimal_places);
+        if s.contains('.') {
+            s.trim_end_matches('0').trim_end_matches('.').to_string()
+        } else {
+            s
+        }
+    } else {
+        format!("{:.14e}", v)
+    }
+}
