@@ -1107,7 +1107,9 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                         let group_pfx = if pfx.is_empty() {
                             aname.prefix.as_deref().unwrap_or("XMP")
                         } else { pfx };
-                        let val = Value::String(attr.value.clone());
+                        // Normalize attribute value to collapse internal whitespace/newlines
+                        let attr_val = normalize_xml_text(&attr.value);
+                        let val = Value::String(attr_val.clone());
                         let pv = val.to_display_string();
                         tags.push(Tag {
                             id: TagId::Text(format!("XMP:{}", tag_name)),

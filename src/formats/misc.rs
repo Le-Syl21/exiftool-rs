@@ -1930,7 +1930,8 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                 // Exiting metadata
                 if local == "metadata" && in_metadata {
                     in_metadata = false;
-                    path.pop(); // pop "Metadata"
+                    path.pop();
+                    had_child.pop();
                     current_text.clear();
                     continue;
                 }
@@ -1943,8 +1944,10 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
 
                 // SVG body element text
                 if in_svg_body && path.len() >= 2 {
+                    let this_had_child = had_child.pop().unwrap_or(false);
                     let t = current_text.trim().to_string();
-                    if !t.is_empty() {
+                    // Only emit if this element has no child elements (pure text node)
+                    if !t.is_empty() && !this_had_child {
                         // Build tag name from path (skip root "Svg")
                         let tag_name = path.iter().skip(1).cloned().collect::<String>();
                         if !tag_name.is_empty() {
@@ -1961,6 +1964,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                 }
 
                 path.pop();
+                had_child.pop();
                 current_text.clear();
             }
             Err(_) => break,
@@ -2168,11 +2172,10 @@ fn parse_jumbf_json_svg(json: &str, tags: &mut Vec<Tag>, group: &crate::tag::Tag
                 let val = &json[val_start..i];
                 i += 1;
 
-                // Map known C2PA JSON keys to tag names
+                // Map known C2PA JSON keys to tag names (matching ExifTool's Jpeg2000 JUMBF table)
                 let tag_name = match key {
                     "location" => Some("Location"),
                     "copyright" => Some("Copyright"),
-                    "title" => Some("AssetInfoTitle"),
                     _ => None,
                 };
                 if let Some(name) = tag_name {
