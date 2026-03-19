@@ -20,6 +20,73 @@ const UUID_XMP: [u8; 16] = [
     0x9C, 0x71, 0x99, 0x94, 0x91, 0xE3, 0xAF, 0xAC,
 ];
 
+/// Parse J2C codestream (raw JPEG 2000 codestream, no box wrapper).
+/// Mirrors how ExifTool uses ProcessJPEG with j2cMarker table for .j2c files.
+pub fn read_j2c(data: &[u8]) -> Result<Vec<Tag>> {
+    // Must start with FF 4F (SOC) FF 51 (SIZ)
+    if data.len() < 4 || data[0] != 0xFF || data[1] != 0x4F {
+        return Err(Error::InvalidData("not a J2C codestream".into()));
+    }
+
+    let mut tags = Vec::new();
+    let mut pos = 2; // skip SOC marker (FF 4F has no length)
+    let mut got_size = false;
+
+    while pos + 4 <= data.len() {
+        if data[pos] != 0xFF {
+            break;
+        }
+        let marker = data[pos + 1];
+        // Markers with no length: SOC (4F), SOD (93), EPH (92)
+        if marker == 0x4F || marker == 0x93 || marker == 0x92 {
+            pos += 2;
+            continue;
+        }
+        if pos + 4 > data.len() {
+            break;
+        }
+        let seg_len = u16::from_be_bytes([data[pos + 2], data[pos + 3]]) as usize;
+        if seg_len < 2 || pos + 2 + seg_len > data.len() {
+            break;
+        }
+        let seg_data = &data[pos + 4..pos + 2 + seg_len];
+
+        match marker {
+            0x51 => {
+                // SIZ: Rsiz(2) Xsiz(4) Ysiz(4) ...
+                // Perl: unpack('x2N2') => (Xsiz, Ysiz) => (width, height)
+                if seg_data.len() >= 10 && !got_size {
+                    let w = u32::from_be_bytes([seg_data[2], seg_data[3], seg_data[4], seg_data[5]]);
+                    let h = u32::from_be_bytes([seg_data[6], seg_data[7], seg_data[8], seg_data[9]]);
+                    got_size = true;
+                    tags.push(mk("ImageWidth", "Image Width", Value::U32(w)));
+                    tags.push(mk("ImageHeight", "Image Height", Value::U32(h)));
+                }
+            }
+            0x64 => {
+                // CME: comment and extension
+                if seg_data.len() >= 2 {
+                    let reg = u16::from_be_bytes([seg_data[0], seg_data[1]]);
+                    let val = &seg_data[2..];
+                    if !val.is_empty() {
+                        let comment = if reg == 1 {
+                            String::from_utf8_lossy(val).into_owned()
+                        } else {
+                            String::from_utf8_lossy(val).into_owned()
+                        };
+                        tags.push(mk("Comment", "Comment", Value::String(comment)));
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        pos += 2 + seg_len;
+    }
+
+    Ok(tags)
+}
+
 pub fn read_jp2(data: &[u8]) -> Result<Vec<Tag>> {
     // JP2 signature box: 0000000C 6A502020 0D0A870A
     if data.len() < 12 {

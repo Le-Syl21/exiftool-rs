@@ -1079,7 +1079,8 @@ impl ExifTool {
             FileType::Raf => formats::raf::read_raf(data),
             FileType::Mrw => formats::mrw::read_mrw(data),
             // Image formats
-            FileType::Jp2 | FileType::J2c => formats::jp2::read_jp2(data),
+            FileType::Jp2 => formats::jp2::read_jp2(data),
+            FileType::J2c => formats::jp2::read_j2c(data),
             FileType::Jxl => formats::jp2::read_jxl(data),
             FileType::Ico => formats::ico::read_ico(data),
             FileType::Icc => formats::icc::read_icc(data),
