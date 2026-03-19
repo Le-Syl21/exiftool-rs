@@ -81,6 +81,35 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
+    // Compute Duration from last OGG page's granule position / sample rate
+    let sample_rate = tags.iter()
+        .find(|t| t.name == "SampleRate")
+        .and_then(|t| t.raw_value.as_u64())
+        .unwrap_or(0);
+    if sample_rate > 0 {
+        // Find the last "OggS" page signature and read its granule position
+        let mut last_granule: Option<u64> = None;
+        let mut search = data.len().saturating_sub(65536); // scan last 64KB
+        while search + 27 <= data.len() {
+            if let Some(p) = data[search..].windows(4).position(|w| w == b"OggS") {
+                let page_pos = search + p;
+                if page_pos + 14 <= data.len() {
+                    let gp = u64::from_le_bytes([
+                        data[page_pos+6], data[page_pos+7], data[page_pos+8], data[page_pos+9],
+                        data[page_pos+10], data[page_pos+11], data[page_pos+12], data[page_pos+13],
+                    ]);
+                    if gp != u64::MAX && gp > 0 { last_granule = Some(gp); }
+                }
+                search = page_pos + 4;
+            } else { break; }
+        }
+        if let Some(granule) = last_granule {
+            let duration = granule as f64 / sample_rate as f64;
+            tags.push(mk("Duration", "Duration",
+                Value::String(format!("{:.2} s (approx)", duration))));
+        }
+    }
+
     Ok(tags)
 }
 
