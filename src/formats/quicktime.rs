@@ -24,6 +24,10 @@ struct QtState {
     track_header_version: u8,
     /// MediaHeaderVersion (0 or 1)
     media_header_version: u8,
+    /// Whether we already emitted HEVC config (to avoid duplicates from multiple hvcC boxes)
+    hevc_config_done: bool,
+    /// Whether we already emitted image spatial extent (to avoid duplicates)
+    ispe_done: bool,
 }
 
 pub fn read_quicktime(data: &[u8]) -> Result<Vec<Tag>> {
@@ -36,8 +40,11 @@ pub fn read_quicktime(data: &[u8]) -> Result<Vec<Tag>> {
     // Check for ftyp
     if data.len() >= 12 && &data[4..8] == b"ftyp" {
         let size = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
-        let brand = String::from_utf8_lossy(&data[8..12]).to_string();
-        tags.push(mk("MajorBrand", "Major Brand", Value::String(brand)));
+        let brand_raw = String::from_utf8_lossy(&data[8..12]).to_string();
+        let brand_display = ftyp_brand_name(&brand_raw)
+            .unwrap_or(brand_raw.as_str())
+            .to_string();
+        tags.push(mk("MajorBrand", "Major Brand", Value::String(brand_display)));
         if size >= 16 && data.len() >= 16 {
             let minor_raw = u32::from_be_bytes([data[12], data[13], data[14], data[15]]);
             // Format minor version as X.X.X (each byte)
@@ -210,6 +217,32 @@ fn parse_atoms(
             }
             b"enof" => {
                 parse_aperture_dim(data, content_start, content_end, tags, "EncodedPixelsDimensions", "Encoded Pixels Dimensions");
+            }
+            // HEIF/HEIC item properties container
+            b"iprp" => {
+                parse_atoms(data, content_start, content_end, tags, state, depth + 1);
+            }
+            // Item property container (inside iprp)
+            b"ipco" => {
+                parse_atoms(data, content_start, content_end, tags, state, depth + 1);
+            }
+            // HEVC configuration box (only process first one - for primary item)
+            b"hvcC" => {
+                if !state.hevc_config_done {
+                    state.hevc_config_done = true;
+                    parse_hvcc(data, content_start, content_end, tags);
+                }
+            }
+            // Image spatial extent (width/height for HEIF) - only process first one
+            b"ispe" => {
+                if !state.ispe_done {
+                    state.ispe_done = true;
+                    parse_ispe(data, content_start, content_end, tags);
+                }
+            }
+            // Primary item reference (HEIF)
+            b"pitm" => {
+                parse_pitm(data, content_start, content_end, tags);
             }
             // mdat: record offset and size
             b"mdat" => {
@@ -1048,6 +1081,285 @@ fn parse_smhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
     }
 }
 
+/// Parse HEVC configuration box (hvcC).
+fn parse_hvcc(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
+    let d = &data[start..end];
+    if d.len() < 22 {
+        return;
+    }
+
+    // Byte 0: HEVCConfigurationVersion
+    tags.push(mk(
+        "HEVCConfigurationVersion",
+        "HEVC Configuration Version",
+        Value::U32(d[0] as u32),
+    ));
+
+    // Byte 1: GeneralProfileSpace (bits 7-6), GeneralTierFlag (bit 5), GeneralProfileIDC (bits 4-0)
+    let profile_space = (d[1] >> 6) & 0x3;
+    let tier_flag = (d[1] >> 5) & 0x1;
+    let profile_idc = d[1] & 0x1f;
+
+    let profile_space_str = match profile_space {
+        0 => "Conforming",
+        1 => "Reserved 1",
+        2 => "Reserved 2",
+        3 => "Reserved 3",
+        _ => "Unknown",
+    };
+    tags.push(mk(
+        "GeneralProfileSpace",
+        "General Profile Space",
+        Value::String(profile_space_str.to_string()),
+    ));
+
+    let tier_str = if tier_flag == 0 { "Main Tier" } else { "High Tier" };
+    tags.push(mk(
+        "GeneralTierFlag",
+        "General Tier Flag",
+        Value::String(tier_str.to_string()),
+    ));
+
+    let profile_name = match profile_idc {
+        0 => "No Profile",
+        1 => "Main",
+        2 => "Main 10",
+        3 => "Main Still Picture",
+        4 => "Format Range Extensions",
+        5 => "High Throughput",
+        6 => "Multiview Main",
+        7 => "Scalable Main",
+        8 => "3D Main",
+        9 => "Screen Content Coding Extensions",
+        10 => "Scalable Format Range Extensions",
+        11 => "High Throughput Screen Content Coding Extensions",
+        _ => "Unknown",
+    };
+    tags.push(mk(
+        "GeneralProfileIDC",
+        "General Profile IDC",
+        Value::String(profile_name.to_string()),
+    ));
+
+    // Bytes 2-5: GenProfileCompatibilityFlags (int32u, BITMASK)
+    if d.len() >= 6 {
+        let flags = u32::from_be_bytes([d[2], d[3], d[4], d[5]]);
+        let compat_str = hevc_compat_flags_to_string(flags);
+        tags.push(mk(
+            "GenProfileCompatibilityFlags",
+            "Gen Profile Compatibility Flags",
+            Value::String(compat_str),
+        ));
+    }
+
+    // Bytes 6-11: ConstraintIndicatorFlags (6 bytes as space-separated decimals)
+    if d.len() >= 12 {
+        let constraint = format!(
+            "{} {} {} {} {} {}",
+            d[6], d[7], d[8], d[9], d[10], d[11]
+        );
+        tags.push(mk(
+            "ConstraintIndicatorFlags",
+            "Constraint Indicator Flags",
+            Value::String(constraint),
+        ));
+    }
+
+    // Byte 12: GeneralLevelIDC
+    if d.len() >= 13 {
+        let level = d[12];
+        let level_str = format!("{} (level {:.1})", level, level as f64 / 30.0);
+        tags.push(mk(
+            "GeneralLevelIDC",
+            "General Level IDC",
+            Value::String(level_str),
+        ));
+    }
+
+    // Bytes 13-14: MinSpatialSegmentationIDC (int16u, mask 0x0FFF)
+    if d.len() >= 15 {
+        let min_seg = u16::from_be_bytes([d[13], d[14]]) & 0x0FFF;
+        tags.push(mk(
+            "MinSpatialSegmentationIDC",
+            "Min Spatial Segmentation IDC",
+            Value::U32(min_seg as u32),
+        ));
+    }
+
+    // Byte 15: ParallelismType (bits 1-0)
+    if d.len() >= 16 {
+        let parallelism = d[15] & 0x3;
+        tags.push(mk(
+            "ParallelismType",
+            "Parallelism Type",
+            Value::U32(parallelism as u32),
+        ));
+    }
+
+    // Byte 16: ChromaFormat (bits 1-0)
+    if d.len() >= 17 {
+        let chroma = d[16] & 0x3;
+        let chroma_str = match chroma {
+            0 => "Monochrome",
+            1 => "4:2:0",
+            2 => "4:2:2",
+            3 => "4:4:4",
+            _ => "Unknown",
+        };
+        tags.push(mk(
+            "ChromaFormat",
+            "Chroma Format",
+            Value::String(chroma_str.to_string()),
+        ));
+    }
+
+    // Byte 17: BitDepthLuma (bits 2-0, add 8)
+    if d.len() >= 18 {
+        let luma = (d[17] & 0x7) + 8;
+        tags.push(mk("BitDepthLuma", "Bit Depth Luma", Value::U32(luma as u32)));
+    }
+
+    // Byte 18: BitDepthChroma (bits 2-0, add 8)
+    if d.len() >= 19 {
+        let chroma = (d[18] & 0x7) + 8;
+        tags.push(mk(
+            "BitDepthChroma",
+            "Bit Depth Chroma",
+            Value::U32(chroma as u32),
+        ));
+    }
+
+    // Bytes 19-20: AverageFrameRate (int16u, /256)
+    if d.len() >= 21 {
+        let avg_fr = u16::from_be_bytes([d[19], d[20]]);
+        let avg_fr_val = avg_fr as f64 / 256.0;
+        let avg_str = if avg_fr_val == avg_fr_val.floor() {
+            format!("{}", avg_fr_val as u32)
+        } else {
+            format!("{:.4}", avg_fr_val)
+                .trim_end_matches('0')
+                .to_string()
+        };
+        tags.push(mk(
+            "AverageFrameRate",
+            "Average Frame Rate",
+            Value::String(avg_str),
+        ));
+    }
+
+    // Byte 21: ConstantFrameRate (bits 7-6), NumTemporalLayers (bits 5-3), TemporalIDNested (bit 2)
+    if d.len() >= 22 {
+        let b21 = d[21];
+        let const_fr = (b21 >> 6) & 0x3;
+        let const_str = match const_fr {
+            0 => "Unknown",
+            1 => "Constant Frame Rate",
+            2 => "Each Temporal Layer is Constant Frame Rate",
+            _ => "Unknown",
+        };
+        tags.push(mk(
+            "ConstantFrameRate",
+            "Constant Frame Rate",
+            Value::String(const_str.to_string()),
+        ));
+
+        let num_layers = (b21 >> 3) & 0x7;
+        tags.push(mk(
+            "NumTemporalLayers",
+            "Num Temporal Layers",
+            Value::U32(num_layers as u32),
+        ));
+
+        let nested = (b21 >> 2) & 0x1;
+        let nested_str = if nested == 0 { "No" } else { "Yes" };
+        tags.push(mk(
+            "TemporalIDNested",
+            "Temporal ID Nested",
+            Value::String(nested_str.to_string()),
+        ));
+    }
+}
+
+/// Convert HEVC GenProfileCompatibilityFlags bitmask to descriptive string.
+fn hevc_compat_flags_to_string(flags: u32) -> String {
+    // ExifTool BITMASK iterates in ascending key order (bit 20 first, bit 31 last).
+    // Bit N = 1u32 << N.
+    let bit_names: [(u32, &str); 12] = [
+        (20, "High Throughput Screen Content Coding Extensions"),
+        (21, "Scalable Format Range Extensions"),
+        (22, "Screen Content Coding Extensions"),
+        (23, "3D Main"),
+        (24, "Scalable Main"),
+        (25, "Multiview Main"),
+        (26, "High Throughput"),
+        (27, "Format Range Extensions"),
+        (28, "Main Still Picture"),
+        (29, "Main 10"),
+        (30, "Main"),
+        (31, "No Profile"),
+    ];
+    let mut parts = Vec::new();
+    for (bit, name) in &bit_names {
+        if flags & (1u32 << bit) != 0 {
+            parts.push(*name);
+        }
+    }
+    if parts.is_empty() {
+        "(none)".to_string()
+    } else {
+        parts.join(", ")
+    }
+}
+
+/// Parse image spatial extent (ispe) for HEIF/HEIC.
+/// version+flags(4) + width(4) + height(4)
+fn parse_ispe(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
+    let d = &data[start..end];
+    if d.len() < 12 {
+        return;
+    }
+    // Check version/flags == 0
+    let ver_flags = u32::from_be_bytes([d[0], d[1], d[2], d[3]]);
+    if ver_flags != 0 {
+        return;
+    }
+    let width = u32::from_be_bytes([d[4], d[5], d[6], d[7]]);
+    let height = u32::from_be_bytes([d[8], d[9], d[10], d[11]]);
+    if width > 0 && height > 0 {
+        let extent_str = format!("{}x{}", width, height);
+        tags.push(mk(
+            "ImageSpatialExtent",
+            "Image Spatial Extent",
+            Value::String(extent_str),
+        ));
+        // Also emit ImageWidth/Height (only for the primary item, no DOC_NUM)
+        tags.push(mk("ImageWidth", "Image Width", Value::U32(width)));
+        tags.push(mk("ImageHeight", "Image Height", Value::U32(height)));
+    }
+}
+
+/// Parse primary item reference (pitm) for HEIF/HEIC.
+fn parse_pitm(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
+    let d = &data[start..end];
+    if d.len() < 6 {
+        return;
+    }
+    // version(1) + flags(3) + item_id(2 or 4 depending on version)
+    let version = d[0];
+    let item_id = if version == 0 && d.len() >= 6 {
+        u16::from_be_bytes([d[4], d[5]]) as u32
+    } else if version == 1 && d.len() >= 8 {
+        u32::from_be_bytes([d[4], d[5], d[6], d[7]])
+    } else {
+        return;
+    };
+    tags.push(mk(
+        "PrimaryItemReference",
+        "Primary Item Reference",
+        Value::U32(item_id),
+    ));
+}
+
 /// Parse sample description (stsd) for codec info.
 /// The stsd contains: version+flags(4), entry_count(4), then entries.
 /// Each entry: size(4), format(4), reserved(6), data_ref_index(2), then format-specific data.
@@ -1756,6 +2068,61 @@ fn convert_duration(secs: f64) -> String {
         format!("{}{} days {}:{:02}:{:02}", sign, d, h, m, s)
     } else {
         format!("{}{}:{:02}:{:02}", sign, h, m, s)
+    }
+}
+
+/// Look up an ftyp brand code to a human-readable description.
+fn ftyp_brand_name(brand: &str) -> Option<&'static str> {
+    match brand {
+        "3g2a" => Some("3GPP2 Media (.3G2) compliant with 3GPP2 C.S0050-0 V1.0"),
+        "3g2b" => Some("3GPP2 Media (.3G2) compliant with 3GPP2 C.S0050-A V1.0.0"),
+        "3g2c" => Some("3GPP2 Media (.3G2) compliant with 3GPP2 C.S0050-B v1.0"),
+        "3gp4" => Some("3GPP Media (.3GP) Release 4"),
+        "3gp5" => Some("3GPP Media (.3GP) Release 5"),
+        "3gp6" => Some("3GPP Media (.3GP) Release 6 Basic Profile"),
+        "aax " => Some("Audible Enhanced Audiobook (.AAX)"),
+        "avc1" => Some("MP4 Base w/ AVC ext [ISO 14496-12:2005]"),
+        "avif" => Some("AV1 Image File Format (.AVIF)"),
+        "CAEP" => Some("Canon Digital Camera"),
+        "crx " => Some("Canon Raw (.CRX)"),
+        "F4A " => Some("Audio for Adobe Flash Player 9+ (.F4A)"),
+        "F4B " => Some("Audio Book for Adobe Flash Player 9+ (.F4B)"),
+        "F4P " => Some("Protected Video for Adobe Flash Player 9+ (.F4P)"),
+        "F4V " => Some("Video for Adobe Flash Player 9+ (.F4V)"),
+        "heic" => Some("High Efficiency Image Format HEVC still image (.HEIC)"),
+        "hevc" => Some("High Efficiency Image Format HEVC sequence (.HEICS)"),
+        "heix" => Some("High Efficiency Image Format still image (.HEIF)"),
+        "isom" => Some("MP4 Base Media v1 [IS0 14496-12:2003]"),
+        "iso2" => Some("MP4 Base Media v2 [ISO 14496-12:2005]"),
+        "iso3" => Some("MP4 Base Media v3"),
+        "iso4" => Some("MP4 Base Media v4"),
+        "iso5" => Some("MP4 Base Media v5"),
+        "iso6" => Some("MP4 Base Media v6"),
+        "iso7" => Some("MP4 Base Media v7"),
+        "iso8" => Some("MP4 Base Media v8"),
+        "iso9" => Some("MP4 Base Media v9"),
+        "JP2 " => Some("JPEG 2000 Image (.JP2) [ISO 15444-1 ?]"),
+        "jpm " => Some("JPEG 2000 Compound Image (.JPM) [ISO 15444-6]"),
+        "jpx " => Some("JPEG 2000 with extensions (.JPX) [ISO 15444-2]"),
+        "M4A " => Some("Apple iTunes AAC-LC (.M4A) Audio"),
+        "M4B " => Some("Apple iTunes AAC-LC (.M4B) Audio Book"),
+        "M4P " => Some("Apple iTunes AAC-LC (.M4P) AES Protected Audio"),
+        "M4V " => Some("Apple iTunes Video (.M4V) Video"),
+        "M4VH" => Some("Apple TV (.M4V)"),
+        "M4VP" => Some("Apple iPhone (.M4V)"),
+        "mif1" => Some("High Efficiency Image Format still image (.HEIF)"),
+        "mjp2" => Some("Motion JPEG 2000 [ISO 15444-3] General Profile"),
+        "mmp4" => Some("MPEG-4/3GPP Mobile Profile (.MP4/3GP) (for NTT)"),
+        "mp41" => Some("MP4 v1 [ISO 14496-1:ch13]"),
+        "mp42" => Some("MP4 v2 [ISO 14496-14]"),
+        "MSNV" => Some("MPEG-4 (.MP4) for SonyPSP"),
+        "msf1" => Some("High Efficiency Image Format sequence (.HEIFS)"),
+        "NDAS" => Some("MP4 v2 [ISO 14496-14] Nero Digital AAC Audio"),
+        "pana" => Some("Panasonic Digital Camera"),
+        "qt  " => Some("Apple QuickTime (.MOV/QT)"),
+        "sdv " => Some("SD Memory Card Video"),
+        "XAVC" => Some("Sony XAVC"),
+        _ => None,
     }
 }
 

@@ -1082,8 +1082,9 @@ impl ExifTool {
             FileType::Exe => formats::exe::read_exe(data),
             FileType::Font => formats::font::read_font(data),
             // Audio with ID3
-            FileType::Aac | FileType::Ape | FileType::Mpc | FileType::Audible
+            FileType::Ape | FileType::Mpc | FileType::Audible
             | FileType::WavPack | FileType::Dsf => formats::id3::read_mp3(data),
+            FileType::Aac => formats::misc::read_aac(data),
             FileType::RealAudio | FileType::RealMedia => {
                 // Try ID3 first
                 formats::id3::read_mp3(data).or_else(|_| Ok(Vec::new()))
@@ -1126,7 +1127,8 @@ impl ExifTool {
             }
             "json" => formats::misc::read_json(data),
             "svg" => formats::misc::read_svg(data),
-            "txt" | "csv" | "log" | "igc" | "url" | "lnk" | "ram" => {
+            "ram" => formats::misc::read_ram(data).or_else(|_| Ok(Vec::new())),
+            "txt" | "csv" | "log" | "igc" | "url" | "lnk" => {
                 Ok(Vec::new()) // Text-like: report file-level info only
             }
             "gpx" | "kml" | "xml" | "inx" => formats::xmp_file::read_xmp(data),
@@ -1145,9 +1147,10 @@ impl ExifTool {
             "x3f" => Ok(Vec::new()),       // Sigma X3F
             "mie" => Ok(Vec::new()),       // MIE
             "exr" => Ok(Vec::new()),       // OpenEXR
+            "wpg" => formats::misc::read_wpg(data).or_else(|_| Ok(Vec::new())),
             "dpx" | "dv" | "fpf" | "lfp" | "miff" | "moi" | "mrc"
             | "dss" | "mobi" | "pcapng" | "psp" | "pgf" | "raw"
-            | "r3d" | "pmp" | "tnef" | "torrent" | "wpg" | "wtv"
+            | "r3d" | "pmp" | "tnef" | "torrent" | "wtv"
             | "xisf" | "czi" | "iso" | "itc" | "macos" | "mxf"
             | "afm" | "pfb" | "ppt" | "dfont" => Ok(Vec::new()),
             _ => Err(Error::UnsupportedFileType(ext)),

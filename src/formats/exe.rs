@@ -125,9 +125,8 @@ fn read_elf(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Other",
     };
 
-    tags.push(mk("ExeType", "Executable Type", Value::String(format!("ELF {}", class))));
-    tags.push(mk("ByteOrder", "Byte Order", Value::String(endian.into())));
-    tags.push(mk("OSABI", "OS/ABI", Value::String(os_abi.into())));
+    tags.push(mk("CPUType", "CPU Type", Value::String(format!("ELF {}", class))));
+    tags.push(mk("CPUByteOrder", "CPU Byte Order", Value::String(endian.into())));
 
     let is_le = data[5] == 1;
     let elf_type = if is_le {
