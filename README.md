@@ -17,7 +17,7 @@ A Rust reimplementation of [ExifTool](https://exiftool.org/) — read, write, an
 use exiftool::ExifTool;
 
 let et = ExifTool::new();
-let tags = et.read_metadata("photo.jpg").unwrap();
+let tags = et.extract_info("photo.jpg").unwrap();
 for tag in &tags {
     println!("{}: {}", tag.name, tag.print_value);
 }
@@ -65,7 +65,7 @@ exiftool -n photo.jpg
 ## Building
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/exiftool-rs
+git clone https://github.com/Le-Syl21/exiftool-rs
 cd exiftool-rs
 cargo build --release
 ```
@@ -73,6 +73,11 @@ cargo build --release
 ## License
 
 GPL-3.0-or-later (same as the original Perl ExifTool)
+
+## Authors
+
+- **Sylvain** ([@Le-Syl21](https://github.com/Le-Syl21)) — Project creator
+- **Claude** (Anthropic) — Implementation
 
 ## Acknowledgements
 
