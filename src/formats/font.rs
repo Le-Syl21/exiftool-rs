@@ -126,7 +126,8 @@ pub fn read_dfont(data: &[u8], tags: &mut Vec<Tag>) -> Result<()> {
             for j in 0..res_num {
                 let roff = ref_off + 12 * j;
                 if roff + 12 > map_len { break; }
-                let res_data_off = (u32::from_be_bytes([0, map[roff + 4], map[roff + 5], map[roff + 6]]) as usize) + dat_off;
+                // bytes 5-7 of reference entry are the 3-byte data offset (byte 4 is attributes)
+                let res_data_off = (u32::from_be_bytes([0, map[roff + 5], map[roff + 6], map[roff + 7]]) as usize) + dat_off;
                 if res_data_off + 4 > data.len() { continue; }
                 let res_data_len = u32::from_be_bytes([data[res_data_off], data[res_data_off+1], data[res_data_off+2], data[res_data_off+3]]) as usize;
                 let font_start = res_data_off + 4;
@@ -138,7 +139,8 @@ pub fn read_dfont(data: &[u8], tags: &mut Vec<Tag>) -> Result<()> {
             for j in 0..res_num {
                 let roff = ref_off + 12 * j;
                 if roff + 12 > map_len { break; }
-                let res_data_off = (u32::from_be_bytes([0, map[roff + 4], map[roff + 5], map[roff + 6]]) as usize) + dat_off;
+                // bytes 5-7 of reference entry are the 3-byte data offset (byte 4 is attributes)
+                let res_data_off = (u32::from_be_bytes([0, map[roff + 5], map[roff + 6], map[roff + 7]]) as usize) + dat_off;
                 if res_data_off + 4 > data.len() { continue; }
                 let res_data_len = u32::from_be_bytes([data[res_data_off], data[res_data_off+1], data[res_data_off+2], data[res_data_off+3]]) as usize;
                 let payload_start = res_data_off + 4;
@@ -365,33 +367,48 @@ fn get_font_language_code(platform: u16, language_id: u16, lang_tag_map: &std::c
             }
         }
         3 => {
-            // Windows language codes
+            // Windows language codes (matching Perl's Font.pm %ttLang table)
             match language_id {
-                0x0409 => "en".into(),
-                0x040c => "fr-FR".into(),
-                0x0407 => "de-DE".into(),
-                0x0410 => "it-IT".into(),
-                0x0413 => "nl-NL".into(),
-                0x041d => "sv-SE".into(),
-                0x040a => "es-ES".into(),
-                0x0406 => "da".into(),
-                0x0416 => "pt-BR".into(),
-                0x0415 => "pl".into(),
-                0x040d => "he".into(),
-                0x0411 => "ja".into(),
-                0x0412 => "ko".into(),
-                0x040b => "fi".into(),
-                0x0414 => "no-NO".into(),
-                0x0404 => "zh-TW".into(),
-                0x0804 => "zh-CN".into(),
-                0x0401 => "ar-SA".into(),
-                0x0408 => "el".into(),
-                0x0409 | 0x0809 => "en".into(),
-                0x040e => "hu".into(),
-                _ => {
-                    // Abbreviated form for unlisted codes
-                    String::new()
-                }
+                0x0401 => "ar-SA".into(), 0x0402 => "bg".into(),   0x0403 => "ca".into(),
+                0x0404 => "zh-TW".into(), 0x0405 => "cs".into(),   0x0406 => "da".into(),
+                0x0407 => "de-DE".into(), 0x0408 => "el".into(),   0x0409 => "en-US".into(),
+                0x040a => "es-ES".into(), 0x040b => "fi".into(),   0x040c => "fr-FR".into(),
+                0x040d => "he".into(),    0x040e => "hu".into(),   0x040f => "is".into(),
+                0x0410 => "it-IT".into(), 0x0411 => "ja".into(),   0x0412 => "ko".into(),
+                0x0413 => "nl-NL".into(), 0x0414 => "no-NO".into(),0x0415 => "pl".into(),
+                0x0416 => "pt-BR".into(), 0x0417 => "rm".into(),   0x0418 => "ro".into(),
+                0x0419 => "ru".into(),    0x041a => "hr".into(),   0x041b => "sk".into(),
+                0x041c => "sq".into(),    0x041d => "sv-SE".into(),0x041e => "th".into(),
+                0x041f => "tr".into(),    0x0420 => "ur".into(),   0x0421 => "id".into(),
+                0x0422 => "uk".into(),    0x0423 => "be".into(),   0x0424 => "sl".into(),
+                0x0425 => "et".into(),    0x0426 => "lv".into(),   0x0427 => "lt".into(),
+                0x0429 => "fa".into(),    0x042a => "vi".into(),   0x042d => "eu".into(),
+                0x042f => "mk".into(),    0x0436 => "af".into(),   0x0438 => "fo".into(),
+                0x0439 => "hi".into(),    0x043e => "ms-MY".into(),0x0441 => "sw".into(),
+                0x0445 => "bn-IN".into(), 0x0447 => "gu".into(),   0x0449 => "ta".into(),
+                0x044a => "te".into(),    0x044b => "kn".into(),   0x044c => "ml".into(),
+                0x044e => "mr".into(),    0x044f => "sa".into(),   0x0450 => "mn-MN".into(),
+                0x0456 => "gl".into(),    0x045a => "syr".into(),  0x0804 => "zh-CN".into(),
+                0x0807 => "de-CH".into(), 0x0809 => "en-GB".into(),0x080a => "es-MX".into(),
+                0x080c => "fr-BE".into(), 0x0810 => "it-CH".into(),0x0813 => "nl-BE".into(),
+                0x0814 => "nn".into(),    0x0816 => "pt-PT".into(),0x0c01 => "ar-EG".into(),
+                0x0c04 => "zh-HK".into(), 0x0c07 => "de-AT".into(),0x0c09 => "en-AU".into(),
+                0x0c0a => "es-ES".into(), 0x0c0c => "fr-CA".into(),0x1001 => "ar-LY".into(),
+                0x1009 => "en-CA".into(), 0x100a => "es-GT".into(),0x100c => "fr-CH".into(),
+                0x1401 => "ar-DZ".into(), 0x1409 => "en-NZ".into(),0x140a => "es-CR".into(),
+                0x140c => "fr-LU".into(), 0x1801 => "ar-MA".into(),0x1809 => "en-IE".into(),
+                0x180a => "es-PA".into(), 0x180c => "fr-MC".into(),0x1c01 => "ar-TN".into(),
+                0x1c09 => "en-ZA".into(), 0x1c0a => "es-DO".into(),0x2001 => "ar-OM".into(),
+                0x2009 => "en-JM".into(), 0x200a => "es-VE".into(),0x2401 => "ar-YE".into(),
+                0x2409 => "en-CB".into(), 0x240a => "es-CO".into(),0x2801 => "ar-SY".into(),
+                0x2809 => "en-BZ".into(), 0x280a => "es-PE".into(),0x2c01 => "ar-JO".into(),
+                0x2c09 => "en-TT".into(), 0x2c0a => "es-AR".into(),0x3001 => "ar-LB".into(),
+                0x3009 => "en-ZW".into(), 0x300a => "es-EC".into(),0x3401 => "ar-KW".into(),
+                0x3409 => "en-PH".into(), 0x340a => "es-CL".into(),0x3801 => "ar-AE".into(),
+                0x380a => "es-UY".into(), 0x3c01 => "ar-BH".into(),0x3c0a => "es-PY".into(),
+                0x4001 => "ar-QA".into(), 0x400a => "es-BO".into(),0x440a => "es-SV".into(),
+                0x480a => "es-HN".into(), 0x4c0a => "es-NI".into(),0x500a => "es-PR".into(),
+                _ => String::new(),
             }
         }
         0 => "en".into(), // Unicode platform - typically English

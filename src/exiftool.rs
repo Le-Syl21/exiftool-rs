@@ -1054,6 +1054,14 @@ impl ExifTool {
         // Try magic bytes first
         let header_len = data.len().min(256);
         if let Some(ft) = file_type::detect_from_magic(&data[..header_len]) {
+            // Override ICO to Font if extension is .dfont (Mac resource fork)
+            if ft == FileType::Ico {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if ext.eq_ignore_ascii_case("dfont") {
+                        return Ok(FileType::Font);
+                    }
+                }
+            }
             // Override JPEG to JPS if the file extension is .jps
             if ft == FileType::Jpeg {
                 if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
@@ -1187,7 +1195,20 @@ impl ExifTool {
                 }
             }
             FileType::Exe => formats::exe::read_exe(data),
-            FileType::Font => formats::font::read_font(data),
+            FileType::Font => {
+                // PFM files start with \x00\x01 or \x00\x02 and have file size at offset 2
+                if data.len() > 6 && data[0] == 0x00 && (data[1] == 0x01 || data[1] == 0x02) {
+                    let stored_size = u32::from_le_bytes([data[2], data[3], data[4], data[5]]) as usize;
+                    if stored_size == data.len() {
+                        if let Ok(tags) = formats::font::read_pfm(data) {
+                            if !tags.is_empty() {
+                                return Ok(tags);
+                            }
+                        }
+                    }
+                }
+                formats::font::read_font(data)
+            }
             // Audio with ID3
             FileType::WavPack | FileType::Dsf => formats::id3::read_mp3(data),
             FileType::Ape => formats::ape::read_ape(data),

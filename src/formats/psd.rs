@@ -17,12 +17,7 @@ pub fn read_psd(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
     let version = u16::from_be_bytes([data[4], data[5]]);
     let is_psb = version == 2;
-
-    tags.push(mk(
-        "FileVersion",
-        "File Version",
-        Value::String(if is_psb { "PSB".into() } else { "PSD".into() }),
-    ));
+    let _ = is_psb; // version used if needed
 
     // Header: channels, height, width, depth, color mode
     let num_channels = u16::from_be_bytes([data[12], data[13]]);
@@ -120,7 +115,49 @@ pub fn read_psd(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
+    // Look for PhotoMechanic IPTC trailer at end of file
+    // The trailer is raw IPTC data appended to the PSD file
+    scan_photomechanic_trailer(data, &mut tags);
+
     Ok(tags)
+}
+
+/// Scan for PhotoMechanic IPTC trailer at the end of the PSD file.
+/// PhotoMechanic appends IPTC record 2 data (datasets 209-239) to supported files.
+fn scan_photomechanic_trailer(data: &[u8], tags: &mut Vec<Tag>) {
+    // Look backwards from end of file for IPTC data (0x1C markers)
+    // The trailer starts with 0x1C 0x02 (record 2 dataset marker)
+    // Scan up to 4096 bytes from end
+    let search_from = if data.len() > 4096 { data.len() - 4096 } else { 0 };
+    let search_data = &data[search_from..];
+
+    // Find sequences of 0x1C 0x02 XX 0x00 0x04 (record 2, length=4 big-endian)
+    let mut pos = 0;
+    let mut pm_start = None;
+
+    while pos + 9 <= search_data.len() {
+        if search_data[pos] == 0x1C && search_data[pos+1] == 0x02 {
+            let dataset = search_data[pos+2];
+            // Check if this is a PhotoMechanic dataset
+            if dataset >= 209 && dataset <= 239 {
+                let len = u16::from_be_bytes([search_data[pos+3], search_data[pos+4]]) as usize;
+                if len == 4 && pos + 9 <= search_data.len() {
+                    // This looks like a valid PhotoMechanic IPTC record
+                    if pm_start.is_none() {
+                        pm_start = Some(pos);
+                    }
+                }
+            }
+        }
+        pos += 1;
+    }
+
+    if let Some(start) = pm_start {
+        // Parse the IPTC data from this point
+        if let Ok(pm_tags) = IptcReader::read(&search_data[start..]) {
+            tags.extend(pm_tags);
+        }
+    }
 }
 
 /// Parse Photoshop Image Resource Blocks (IRBs) - public for use by PDF reader.
@@ -316,6 +353,13 @@ pub fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<
             0x0424 => {
                 if let Ok(xmp_tags) = XmpReader::read(resource_data) {
                     tags.extend(xmp_tags);
+                }
+            }
+            // IPTCDigest (0x0425)
+            0x0425 => {
+                let hex = resource_data.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+                if !hex.is_empty() {
+                    tags.push(mk("IPTCDigest", "IPTC Digest", Value::String(hex)));
                 }
             }
             // PrintScaleInfo (0x0426)

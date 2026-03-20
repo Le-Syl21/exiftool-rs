@@ -75,6 +75,27 @@ impl IptcReader {
                 Value::Binary(value_data.to_vec())
             };
 
+            // Check for PhotoMechanic SoftEdit fields (record 2, dataset 209-222)
+            // Only skip for PM-specific datasets, not standard IPTC (e.g. DocumentNotes=230)
+            if record == 2 && dataset >= 209 && dataset <= 222 {
+                if let Some((pm_name, pm_print)) = lookup_photomechanic(dataset, &value) {
+                    tags.push(Tag {
+                        id: TagId::Numeric(((record as u16) << 8) | dataset as u16),
+                        name: pm_name.clone(),
+                        description: pm_name,
+                        group: TagGroup {
+                            family0: "PhotoMechanic".to_string(),
+                            family1: "PhotoMechanic".to_string(),
+                            family2: "Image".to_string(),
+                        },
+                        raw_value: value,
+                        print_value: pm_print,
+                        priority: 0,
+                    });
+                    continue;
+                }
+            }
+
             let tag_info = iptc_tags::lookup(record, dataset);
             let (name, description) = match tag_info {
                 Some(info) => (info.name.to_string(), info.description.to_string()),
@@ -102,5 +123,64 @@ impl IptcReader {
         }
 
         Ok(tags)
+    }
+}
+
+/// Look up a PhotoMechanic SoftEdit field (IPTC record 2, dataset 209-239).
+/// Returns (tag_name, print_value) or None if unknown.
+fn lookup_photomechanic(dataset: u8, value: &Value) -> Option<(String, String)> {
+    // PhotoMechanic fields are FORMAT='int32s' - 4 bytes big-endian signed int
+    let int_val = if let Value::Binary(ref b) = value {
+        if b.len() == 4 {
+            i32::from_be_bytes([b[0], b[1], b[2], b[3]])
+        } else {
+            return None;
+        }
+    } else {
+        return None;
+    };
+
+    let color_classes = [
+        "0 (None)", "1 (Winner)", "2 (Winner alt)", "3 (Superior)",
+        "4 (Superior alt)", "5 (Typical)", "6 (Typical alt)", "7 (Extras)", "8 (Trash)",
+    ];
+
+    match dataset {
+        209 => Some(("RawCropLeft".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
+        210 => Some(("RawCropTop".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
+        211 => Some(("RawCropRight".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
+        212 => Some(("RawCropBottom".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
+        213 => Some(("ConstrainedCropWidth".to_string(), int_val.to_string())),
+        214 => Some(("ConstrainedCropHeight".to_string(), int_val.to_string())),
+        215 => Some(("FrameNum".to_string(), int_val.to_string())),
+        216 => {
+            let rot = match int_val {
+                0 => "0", 1 => "90", 2 => "180", 3 => "270", _ => "0",
+            };
+            Some(("Rotation".to_string(), rot.to_string()))
+        }
+        217 => Some(("CropLeft".to_string(), int_val.to_string())),
+        218 => Some(("CropTop".to_string(), int_val.to_string())),
+        219 => Some(("CropRight".to_string(), int_val.to_string())),
+        220 => Some(("CropBottom".to_string(), int_val.to_string())),
+        221 => {
+            let v = if int_val == 0 { "No" } else { "Yes" };
+            Some(("Tagged".to_string(), v.to_string()))
+        }
+        222 => {
+            let idx = int_val as usize;
+            let class = if idx < color_classes.len() {
+                color_classes[idx].to_string()
+            } else {
+                format!("{}", int_val)
+            };
+            Some(("ColorClass".to_string(), class))
+        }
+        223 => Some(("Rating".to_string(), int_val.to_string())),
+        236 => Some(("PreviewCropLeft".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
+        237 => Some(("PreviewCropTop".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
+        238 => Some(("PreviewCropRight".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
+        239 => Some(("PreviewCropBottom".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
+        _ => None,
     }
 }

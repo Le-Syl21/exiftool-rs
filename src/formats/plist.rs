@@ -645,11 +645,162 @@ fn base64_decode_simple(s: &str) -> Vec<u8> {
     result
 }
 
+/// Map known AAE binary plist key paths to ExifTool tag names.
+fn aae_known_tag_name(key: &str) -> Option<&'static str> {
+    match key {
+        "slowMotion/regions/timeRange/start/flags" => Some("SlowMotionRegionsStartTimeFlags"),
+        "slowMotion/regions/timeRange/start/value" => Some("SlowMotionRegionsStartTimeValue"),
+        "slowMotion/regions/timeRange/start/timescale" => Some("SlowMotionRegionsStartTimeScale"),
+        "slowMotion/regions/timeRange/start/epoch" => Some("SlowMotionRegionsStartTimeEpoch"),
+        "slowMotion/regions/timeRange/duration/flags" => Some("SlowMotionRegionsDurationFlags"),
+        "slowMotion/regions/timeRange/duration/value" => Some("SlowMotionRegionsDurationValue"),
+        "slowMotion/regions/timeRange/duration/timescale" => Some("SlowMotionRegionsDurationTimeScale"),
+        "slowMotion/regions/timeRange/duration/epoch" => Some("SlowMotionRegionsDurationEpoch"),
+        "slowMotion/regions" => Some("SlowMotionRegions"),
+        "slowMotion/rate" => Some("SlowMotionRate"),
+        _ => None,
+    }
+}
+
+/// Convert bitmask flags for SlowMotionRegions*Flags tags.
+fn aae_flags_print_conv(val: i64) -> String {
+    let bits = [
+        (0, "Valid"),
+        (1, "Has been rounded"),
+        (2, "Positive infinity"),
+        (3, "Negative infinity"),
+        (4, "Indefinite"),
+    ];
+    let mut parts = Vec::new();
+    for &(bit, name) in &bits {
+        if val & (1 << bit) != 0 {
+            parts.push(name);
+        }
+    }
+    if parts.is_empty() {
+        format!("{}", val)
+    } else {
+        parts.join(", ")
+    }
+}
+
+/// Flatten a binary plist value recursively, collecting (path, value) pairs.
+fn flatten_bplist_to_paths(val: &PlistValue, path: &str, out: &mut Vec<(String, PlistValue)>) {
+    match val {
+        PlistValue::Dict(map) => {
+            for (k, v) in map {
+                let child_path = if path.is_empty() {
+                    k.clone()
+                } else {
+                    format!("{}/{}", path, k)
+                };
+                flatten_bplist_to_paths(v, &child_path, out);
+            }
+        }
+        PlistValue::Array(arr) => {
+            // For arrays, flatten each element at the same path (like Perl's List => 1)
+            // But also record the array at this path level
+            out.push((path.to_string(), val.clone()));
+            for item in arr {
+                flatten_bplist_to_paths(item, path, out);
+            }
+        }
+        _ => {
+            out.push((path.to_string(), val.clone()));
+        }
+    }
+}
+
 /// Read AAE plist file (Apple Adjustments).
 pub fn read_aae_plist(data: &[u8]) -> Result<Vec<Tag>> {
     if data.starts_with(b"bplist") {
-        read_binary_plist_tags(data)
-    } else {
-        read_xml_plist(data)
+        return read_binary_plist_tags(data);
     }
+
+    let text = match std::str::from_utf8(data) {
+        Ok(s) => s,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    let mut tags = Vec::new();
+    let group = TagGroup {
+        family0: "PLIST".into(),
+        family1: "XML".into(),
+        family2: "Document".into(),
+    };
+
+    // Parse outer XML plist dict
+    let mut pos = 0;
+    let root = match parse_xml_plist_root(text, &mut pos) {
+        Some(m) => m,
+        None => return Ok(tags),
+    };
+
+    // Process keys — for most keys flatten normally, but for adjustmentData decode binary plist
+    let mut sorted_keys: Vec<&String> = root.keys().collect();
+    sorted_keys.sort();
+
+    for key in &sorted_keys {
+        let val = &root[*key];
+        if key.as_str() == "adjustmentData" {
+            // Parse adjustmentData as binary plist, extract nested tags
+            if let PlistValue::Data(ref bytes) = val {
+                let bplist_data = if bytes.starts_with(b"bplist") {
+                    bytes.as_slice()
+                } else {
+                    continue;
+                };
+                if let Some(nested_map) = parse_binary_plist(bplist_data) {
+                    // Flatten binary plist to path → value pairs
+                    let mut paths: Vec<(String, PlistValue)> = Vec::new();
+                    for (k, v) in &nested_map {
+                        flatten_bplist_to_paths(v, k, &mut paths);
+                    }
+                    // Emit paths that match aae_known_tag_name
+                    // Use a deterministic order matching ExifTool output
+                    let order = [
+                        "slowMotion/regions/timeRange/start/flags",
+                        "slowMotion/regions/timeRange/start/value",
+                        "slowMotion/regions/timeRange/start/timescale",
+                        "slowMotion/regions/timeRange/start/epoch",
+                        "slowMotion/regions/timeRange/duration/flags",
+                        "slowMotion/regions/timeRange/duration/value",
+                        "slowMotion/regions/timeRange/duration/timescale",
+                        "slowMotion/regions/timeRange/duration/epoch",
+                        "slowMotion/regions",
+                        "slowMotion/rate",
+                    ];
+                    // Build a lookup map from the paths we got
+                    let path_map: HashMap<String, PlistValue> = paths.into_iter().collect();
+                    for &ordered_key in &order {
+                        if let Some(nv) = path_map.get(ordered_key) {
+                            if let Some(tag_name) = aae_known_tag_name(ordered_key) {
+                                let raw_val = match nv {
+                                    PlistValue::Int(i) => {
+                                        if tag_name.ends_with("Flags") {
+                                            Value::String(aae_flags_print_conv(*i))
+                                        } else {
+                                            Value::String(i.to_string())
+                                        }
+                                    }
+                                    PlistValue::Real(r) => Value::String(format!("{}", r)),
+                                    PlistValue::String(s) => Value::String(s.clone()),
+                                    PlistValue::Bool(b) => Value::String(if *b { "True" } else { "False" }.to_string()),
+                                    PlistValue::Array(_) => Value::String(String::new()),
+                                    _ => Value::String(String::new()),
+                                };
+                                tags.push(mk_plist_tag(tag_name.to_string(), raw_val, &group));
+                            }
+                        }
+                    }
+                }
+            }
+            // Do NOT output AdjustmentData as a raw binary tag
+        } else {
+            let path = vec![(*key).clone()];
+            flatten_plist_value(&path, val, &group, &mut tags);
+        }
+    }
+
+    Ok(tags)
 }
