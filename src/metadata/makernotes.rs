@@ -196,6 +196,15 @@ pub fn parse_makernotes(
         decrypt_nikon_subtables(parse_data, parse_offset, byte_order, &mut tags, model);
     }
 
+    // Pentax post-processing: deduplicate tags by name, keeping first occurrence.
+    // Mirrors ExifTool's PRIORITY => 0 behavior where subsequent values with the same
+    // tag name don't override an already-stored value (e.g., LensType from both
+    // LensRec and LensInfo sub-directories).
+    if info.manufacturer == Manufacturer::Pentax {
+        let mut seen_names = std::collections::HashSet::new();
+        tags.retain(|t| seen_names.insert(t.name.clone()));
+    }
+
     // Canon post-processing: OriginalDecisionData
     // The OriginalDecisionDataOffset tag gives a JPEG-file-relative offset to 512 bytes of binary data.
     // In TIFF-relative terms, subtract 12 (SOI + APP1-marker + size + "Exif\0\0" = 2+2+2+6=12 bytes).

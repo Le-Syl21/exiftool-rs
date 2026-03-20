@@ -1027,14 +1027,62 @@ fn convert_riff_date(val: &str) -> String {
 }
 
 fn parse_casio_date(val: &str) -> Option<String> {
-    // Match: YYYY/ M/DD H:MMPM style
-    let re_simple = regex_casio(val);
-    re_simple
-}
+    // Perl pattern: m{(\d{4})/\s*(\d+)/\s*(\d+)/?\s+(\d+):\s*(\d+)\s*(P?)}
+    // Casio/Pentax AVI format: "YYYY/MM/DD HH:MM:SS" — only HH:MM is captured (seconds dropped)
+    // e.g. "2009/10/27 12:14:34" → "2009:10:27 12:14:00"
+    // e.g. "2001/ 1/27  1:42PM"  → "2001:01:27 13:42:00"
+    // e.g. "2005/11/28/ 09:19"   → "2005:11:28 09:19:00"
+    let bytes = val.as_bytes();
+    let len = bytes.len();
 
-fn regex_casio(_val: &str) -> Option<String> {
-    // We skip complex regex; the simple formats above cover most cases
-    None
+    // Parse YYYY
+    if len < 4 || !bytes[0..4].iter().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let year: u32 = val[0..4].parse().ok()?;
+    let mut pos = 4;
+    if pos >= len || bytes[pos] != b'/' { return None; }
+    pos += 1;
+    // Skip optional spaces
+    while pos < len && bytes[pos] == b' ' { pos += 1; }
+    // Parse MM
+    let month_start = pos;
+    while pos < len && bytes[pos].is_ascii_digit() { pos += 1; }
+    if pos == month_start { return None; }
+    let month: u32 = val[month_start..pos].parse().ok()?;
+    if pos >= len || bytes[pos] != b'/' { return None; }
+    pos += 1;
+    // Skip optional spaces
+    while pos < len && bytes[pos] == b' ' { pos += 1; }
+    // Parse DD
+    let day_start = pos;
+    while pos < len && bytes[pos].is_ascii_digit() { pos += 1; }
+    if pos == day_start { return None; }
+    let day: u32 = val[day_start..pos].parse().ok()?;
+    // Skip optional trailing '/'
+    if pos < len && bytes[pos] == b'/' { pos += 1; }
+    // Skip whitespace
+    while pos < len && bytes[pos] == b' ' { pos += 1; }
+    if pos >= len { return None; }
+    // Parse HH
+    let hh_start = pos;
+    while pos < len && bytes[pos].is_ascii_digit() { pos += 1; }
+    if pos == hh_start { return None; }
+    let hh: u32 = val[hh_start..pos].parse().ok()?;
+    if pos >= len || bytes[pos] != b':' { return None; }
+    pos += 1;
+    // Skip optional spaces
+    while pos < len && bytes[pos] == b' ' { pos += 1; }
+    // Parse MM (minutes)
+    let mm_start = pos;
+    while pos < len && bytes[pos].is_ascii_digit() { pos += 1; }
+    if pos == mm_start { return None; }
+    let mm: u32 = val[mm_start..pos].parse().ok()?;
+    // Skip optional spaces and check for PM
+    while pos < len && bytes[pos] == b' ' { pos += 1; }
+    let pm = pos < len && (bytes[pos] == b'P' || bytes[pos] == b'p');
+    let hh_final = if pm { hh + 12 } else { hh };
+    Some(format!("{:04}:{:02}:{:02} {:02}:{:02}:00", year, month, day, hh_final, mm))
 }
 
 /// Format duration in seconds like ExifTool's ConvertDuration
