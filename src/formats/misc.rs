@@ -1124,7 +1124,182 @@ pub fn read_hdr(data: &[u8]) -> Result<Vec<Tag>> {
 // ============================================================================
 
 pub fn read_pfm(data: &[u8]) -> Result<Vec<Tag>> {
+    // Detect Printer Font Metrics (PFM) vs Portable Float Map
+    // PFM starts with 0x00 followed by 0x01 or 0x02
+    if data.len() >= 2 && data[0] == 0x00 && (data[1] == 0x01 || data[1] == 0x02) {
+        return read_printer_font_metrics(data);
+    }
     read_ppm(data)
+}
+
+/// Read Printer Font Metrics (.pfm) binary format.
+/// Little-endian fields at fixed offsets, as defined in Adobe's PFM spec.
+fn read_printer_font_metrics(data: &[u8]) -> Result<Vec<Tag>> {
+    if data.len() < 117 {
+        return Err(Error::InvalidData("PFM file too short".into()));
+    }
+    let stored_size = u32::from_le_bytes([data[2], data[3], data[4], data[5]]) as usize;
+    if stored_size != data.len() {
+        return Err(Error::InvalidData("PFM file size mismatch".into()));
+    }
+
+    let mut tags: Vec<Tag> = Vec::new();
+
+    // PFMVersion at offset 0: int16u LE, PrintConv: sprintf("%x.%.2x",$val>>8,$val&0xff)
+    let pfm_ver = u16::from_le_bytes([data[0], data[1]]);
+    let ver_str = format!("{:x}.{:02x}", pfm_ver >> 8, pfm_ver & 0xff);
+    tags.push(mktag_font("PFMVersion", "PFM Version", Value::String(ver_str)));
+
+    // Copyright at offset 6: string[60]
+    let copyright = pfm_str(data, 6, 60);
+    if !copyright.is_empty() {
+        tags.push(mktag_font("Copyright", "Copyright", Value::String(copyright)));
+    }
+
+    // FontType at offset 66: int16u LE
+    let font_type = u16::from_le_bytes([data[66], data[67]]);
+    tags.push(mktag_font("FontType", "Font Type", Value::String(format!("{}", font_type))));
+
+    // PointSize at offset 68: int16u LE
+    let point_size = u16::from_le_bytes([data[68], data[69]]);
+    tags.push(mktag_font("PointSize", "Point Size", Value::String(format!("{}", point_size))));
+
+    // YResolution at offset 70: int16u LE
+    let y_res = u16::from_le_bytes([data[70], data[71]]);
+    tags.push(mktag_font("YResolution", "Y Resolution", Value::String(format!("{}", y_res))));
+
+    // XResolution at offset 72: int16u LE
+    let x_res = u16::from_le_bytes([data[72], data[73]]);
+    tags.push(mktag_font("XResolution", "X Resolution", Value::String(format!("{}", x_res))));
+
+    // Ascent at offset 74: int16u LE
+    let ascent = u16::from_le_bytes([data[74], data[75]]);
+    tags.push(mktag_font("Ascent", "Ascent", Value::String(format!("{}", ascent))));
+
+    // InternalLeading at offset 76: int16u LE
+    let int_lead = u16::from_le_bytes([data[76], data[77]]);
+    tags.push(mktag_font("InternalLeading", "Internal Leading", Value::String(format!("{}", int_lead))));
+
+    // ExternalLeading at offset 78: int16u LE
+    let ext_lead = u16::from_le_bytes([data[78], data[79]]);
+    tags.push(mktag_font("ExternalLeading", "External Leading", Value::String(format!("{}", ext_lead))));
+
+    // Italic at offset 80: int8u
+    tags.push(mktag_font("Italic", "Italic", Value::String(format!("{}", data[80]))));
+
+    // Underline at offset 81: int8u
+    tags.push(mktag_font("Underline", "Underline", Value::String(format!("{}", data[81]))));
+
+    // Strikeout at offset 82: int8u
+    tags.push(mktag_font("Strikeout", "Strikeout", Value::String(format!("{}", data[82]))));
+
+    // Weight at offset 83: int16u LE
+    let weight = u16::from_le_bytes([data[83], data[84]]);
+    tags.push(mktag_font("Weight", "Weight", Value::String(format!("{}", weight))));
+
+    // CharacterSet at offset 85: int8u
+    tags.push(mktag_font("CharacterSet", "Character Set", Value::String(format!("{}", data[85]))));
+
+    // PixWidth at offset 86: int16u LE
+    let pix_w = u16::from_le_bytes([data[86], data[87]]);
+    tags.push(mktag_font("PixWidth", "Pix Width", Value::String(format!("{}", pix_w))));
+
+    // PixHeight at offset 88: int16u LE
+    let pix_h = u16::from_le_bytes([data[88], data[89]]);
+    tags.push(mktag_font("PixHeight", "Pix Height", Value::String(format!("{}", pix_h))));
+
+    // PitchAndFamily at offset 90: int8u
+    tags.push(mktag_font("PitchAndFamily", "Pitch And Family", Value::String(format!("{}", data[90]))));
+
+    // AvgWidth at offset 91: int16u LE
+    let avg_w = u16::from_le_bytes([data[91], data[92]]);
+    tags.push(mktag_font("AvgWidth", "Avg Width", Value::String(format!("{}", avg_w))));
+
+    // MaxWidth at offset 93: int16u LE
+    let max_w = u16::from_le_bytes([data[93], data[94]]);
+    tags.push(mktag_font("MaxWidth", "Max Width", Value::String(format!("{}", max_w))));
+
+    // FirstChar at offset 95: int8u
+    tags.push(mktag_font("FirstChar", "First Char", Value::String(format!("{}", data[95]))));
+
+    // LastChar at offset 96: int8u
+    tags.push(mktag_font("LastChar", "Last Char", Value::String(format!("{}", data[96]))));
+
+    // DefaultChar at offset 97: int8u
+    tags.push(mktag_font("DefaultChar", "Default Char", Value::String(format!("{}", data[97]))));
+
+    // BreakChar at offset 98: int8u
+    tags.push(mktag_font("BreakChar", "Break Char", Value::String(format!("{}", data[98]))));
+
+    // WidthBytes at offset 99: int16u LE
+    let width_bytes = u16::from_le_bytes([data[99], data[100]]);
+    tags.push(mktag_font("WidthBytes", "Width Bytes", Value::String(format!("{}", width_bytes))));
+
+    // FontName and PostScriptFontName: offset to name string is at bytes 105..108 (int32u LE)
+    // The name block contains: FontName\0PostScriptFontName\0
+    if data.len() >= 109 {
+        let name_off = u32::from_le_bytes([data[105], data[106], data[107], data[108]]) as usize;
+        if name_off > 0 && name_off < data.len() {
+            let rest = &data[name_off..];
+            if let Some(null_pos) = rest.iter().position(|&b| b == 0) {
+                let font_name: String = rest[..null_pos].iter()
+                    .filter(|&&b| b >= 0x20)
+                    .map(|&b| b as char)
+                    .collect();
+                if !font_name.is_empty() {
+                    tags.push(mktag_font("FontName", "Font Name", Value::String(font_name)));
+                }
+                let rest2 = &rest[null_pos + 1..];
+                if let Some(null_pos2) = rest2.iter().position(|&b| b == 0) {
+                    let ps_name: String = rest2[..null_pos2].iter()
+                        .filter(|&&b| b >= 0x20)
+                        .map(|&b| b as char)
+                        .collect();
+                    if !ps_name.is_empty() {
+                        tags.push(mktag_font("PostScriptFontName", "PostScript Font Name", Value::String(ps_name)));
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(tags)
+}
+
+/// Read a null-terminated or fixed-length string from PFM data.
+fn pfm_str(data: &[u8], offset: usize, max_len: usize) -> String {
+    let end = (offset + max_len).min(data.len());
+    if offset >= data.len() {
+        return String::new();
+    }
+    let slice = &data[offset..end];
+    let slice = if let Some(null_pos) = slice.iter().position(|&b| b == 0) {
+        &slice[..null_pos]
+    } else {
+        slice
+    };
+    slice.iter()
+        .filter(|&&b| b >= 0x20)
+        .map(|&b| b as char)
+        .collect()
+}
+
+/// Create a tag for Printer Font Metrics data.
+fn mktag_font(name: &str, description: &str, value: Value) -> Tag {
+    let pv = value.to_display_string();
+    Tag {
+        id: TagId::Text(name.to_string()),
+        name: name.to_string(),
+        description: description.to_string(),
+        group: TagGroup {
+            family0: "File".to_string(),
+            family1: "Font".to_string(),
+            family2: "Document".to_string(),
+        },
+        raw_value: value,
+        print_value: pv,
+        priority: 0,
+    }
 }
 
 pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
@@ -1554,40 +1729,139 @@ pub fn read_bpg(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     let mut tags = Vec::new();
-    let byte4 = data[4];
-    let pixel_format = (byte4 >> 5) & 0x07;
-    let has_alpha = (byte4 >> 4) & 1;
-    let bit_depth_m8 = byte4 & 0x0F;
+
+    // Bytes 4-5 are a big-endian 16-bit word containing multiple bit fields
+    // Layout matches Perl BPG::Main ProcessBinaryData at offset 4, Format int16u:
+    //   bits 15-13 (mask 0xe000): PixelFormat
+    //   bits 12,2  (mask 0x1004): Alpha
+    //   bits 11-8  (mask 0x0f00): BitDepth (value + 8)
+    //   bits 7-4   (mask 0x00f0): ColorSpace
+    //   bits 3,1,0 (mask 0x000b): Flags
+    let word = u16::from_be_bytes([data[4], data[5]]);
+
+    let pixel_format = (word & 0xe000) >> 13;
+    let alpha_raw = word & 0x1004;
+    let bit_depth = ((word & 0x0f00) >> 8) + 8;
+    let flags = word & 0x000b;
 
     let pf_name = match pixel_format {
-        0 => "YCbCr 4:2:0",
-        1 => "YCbCr 4:2:2",
-        2 => "YCbCr 4:4:4",
-        3 => "Grayscale",
-        4 => "YCbCr 4:2:0 + Alpha",
-        5 => "YCbCr 4:2:2 + Alpha",
+        0 => "Grayscale",
+        1 => "4:2:0 (chroma at 0.5, 0.5)",
+        2 => "4:2:2 (chroma at 0.5, 0)",
+        3 => "4:4:4",
+        4 => "4:2:0 (chroma at 0, 0.5)",
+        5 => "4:2:2 (chroma at 0, 0)",
         _ => "Unknown",
     };
     tags.push(mktag("BPG", "PixelFormat", "Pixel Format", Value::String(pf_name.into())));
-    tags.push(mktag("BPG", "HasAlpha", "Has Alpha", Value::String(if has_alpha != 0 { "Yes" } else { "No" }.into())));
-    tags.push(mktag("BPG", "BitDepth", "Bit Depth", Value::U8(bit_depth_m8 + 8)));
 
-    // Width and height are exp-golomb coded starting at offset 5/6
-    // Simplified: read as varints
-    let mut pos = 5;
+    let alpha_name = match alpha_raw {
+        0x1000 => "Alpha Exists (color not premultiplied)",
+        0x1004 => "Alpha Exists (color premultiplied)",
+        0x0004 => "Alpha Exists (W color component)",
+        _ => "No Alpha Plane",
+    };
+    tags.push(mktag("BPG", "Alpha", "Alpha", Value::String(alpha_name.into())));
+
+    tags.push(mktag("BPG", "BitDepth", "Bit Depth", Value::U32(bit_depth as u32)));
+
+    // Flags: bitmask (bit 0=Animation, bit 1=Limited Range, bit 3=Extension Present)
+    let mut flag_parts: Vec<&str> = Vec::new();
+    if flags & 0x0001 != 0 { flag_parts.push("Animation"); }
+    if flags & 0x0002 != 0 { flag_parts.push("Limited Range"); }
+    if flags & 0x0008 != 0 { flag_parts.push("Extension Present"); }
+    let flags_str = flag_parts.join(", ");
+    tags.push(mktag("BPG", "Flags", "Flags", Value::String(flags_str.into())));
+
+    // Width, height, and image length are ue7-encoded starting at offset 6
+    let mut pos = 6;
     if let Some((w, consumed)) = read_bpg_ue(data, pos) {
         tags.push(mktag("BPG", "ImageWidth", "Image Width", Value::U32(w as u32)));
         pos += consumed;
-        if let Some((h, _)) = read_bpg_ue(data, pos) {
+        if let Some((h, consumed)) = read_bpg_ue(data, pos) {
             tags.push(mktag("BPG", "ImageHeight", "Image Height", Value::U32(h as u32)));
+            pos += consumed;
+            if let Some((img_len, consumed)) = read_bpg_ue(data, pos) {
+                tags.push(mktag("BPG", "ImageLength", "Image Length", Value::U32(img_len as u32)));
+                pos += consumed;
+
+                // Parse extension blocks if the Extension Present flag is set
+                if flags & 0x0008 != 0 {
+                    if let Some((ext_size, n)) = read_bpg_ue(data, pos) {
+                        pos += n;
+                        let ext_end = pos + ext_size as usize;
+                        if ext_end <= data.len() {
+                            bpg_parse_extensions(data, pos, ext_end, &mut tags);
+                        }
+                    }
+                }
+            }
         }
     }
 
     Ok(tags)
 }
 
+fn bpg_parse_extensions(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
+    let mut pos = start;
+    while pos < end {
+        if pos >= data.len() { break; }
+        let ext_type = data[pos];
+        pos += 1;
+        let (ext_len, n) = match read_bpg_ue(data, pos) {
+            Some(v) => v,
+            None => break,
+        };
+        pos += n;
+        let ext_len = ext_len as usize;
+        if pos + ext_len > end { break; }
+        let ext_data = &data[pos..pos + ext_len];
+        pos += ext_len;
+
+        match ext_type {
+            1 => {
+                // EXIF: raw TIFF data (no "Exif\0\0" prefix).
+                // libbpg sometimes adds an extra padding byte before the TIFF header.
+                let exif_data = if ext_len > 3 {
+                    let b0 = ext_data[0];
+                    let b1 = ext_data[1];
+                    let b2 = ext_data[2];
+                    // Check for extra byte before II or MM TIFF header
+                    if b0 != b'I' && b0 != b'M' && (b1 == b'I' || b1 == b'M') && b1 == b2 {
+                        tags.push(mktag("ExifTool", "Warning", "Warning",
+                            Value::String("[minor] Ignored extra byte at start of EXIF extension".into())));
+                        &ext_data[1..]
+                    } else {
+                        ext_data
+                    }
+                } else {
+                    ext_data
+                };
+                if let Ok(exif_tags) = crate::metadata::ExifReader::read(exif_data) {
+                    tags.extend(exif_tags);
+                }
+            }
+            2 => {
+                // ICC Profile
+                if let Ok(icc_tags) = crate::formats::icc::read_icc(ext_data) {
+                    tags.extend(icc_tags);
+                }
+            }
+            3 => {
+                // XMP
+                if let Ok(xmp_tags) = crate::metadata::XmpReader::read(ext_data) {
+                    tags.extend(xmp_tags);
+                }
+            }
+            _ => {
+                // Extension types 4 (ThumbnailBPG) and 5 (AnimationControl) are binary/unknown
+            }
+        }
+    }
+}
+
 fn read_bpg_ue(data: &[u8], mut pos: usize) -> Option<(u64, usize)> {
-    // Exponential-Golomb / BPG uses a simple varint: MSB continuation
+    // BPG uses a simple ue7 varint: MSB is continuation bit
     let start = pos;
     let mut result = 0u64;
     loop {

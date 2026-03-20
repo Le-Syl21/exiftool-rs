@@ -1186,6 +1186,7 @@ impl ExifTool {
             | FileType::Lrv => formats::quicktime::read_quicktime(data),
             FileType::Mkv | FileType::WebM => formats::matroska::read_matroska(data),
             FileType::Asf | FileType::Wmv | FileType::Wma => formats::asf::read_asf(data),
+            FileType::Wtv => formats::wtv::read_wtv(data),
             // RAW formats with custom containers
             FileType::Crw => formats::canon_raw::read_crw(data),
             FileType::Raf => formats::raf::read_raf(data),
@@ -1212,6 +1213,9 @@ impl ExifTool {
             FileType::InDesign => formats::misc::read_indesign(data),
             FileType::Pcap => formats::misc::read_pcap(data),
             FileType::Pcapng => formats::misc::read_pcapng(data),
+            // Canon VRD / DR4
+            FileType::Vrd => formats::canon_vrd::read_vrd(data).or_else(|_| Ok(Vec::new())),
+            FileType::Dr4 => formats::canon_vrd::read_dr4(data).or_else(|_| Ok(Vec::new())),
             // Metadata / Other
             FileType::Xmp => formats::xmp_file::read_xmp(data),
             FileType::Svg => formats::misc::read_svg(data),
@@ -1254,13 +1258,15 @@ impl ExifTool {
             // Misc formats
             FileType::Czi => formats::misc::read_czi(data).or_else(|_| Ok(Vec::new())),
             FileType::PhotoCd => formats::misc::read_photo_cd(data).or_else(|_| Ok(Vec::new())),
-            FileType::Dicom => formats::misc::read_dicom(data),
+            FileType::Dicom => formats::dicom::read_dicom(data),
             FileType::Fits => formats::misc::read_fits(data),
             FileType::Flv => formats::misc::read_flv(data),
             FileType::Mxf => formats::misc::read_mxf(data).or_else(|_| Ok(Vec::new())),
             FileType::Swf => formats::misc::read_swf(data),
             FileType::Hdr => formats::misc::read_hdr(data),
             FileType::DjVu => formats::djvu::read_djvu(data),
+            FileType::Xcf => formats::gimp::read_xcf(data),
+            FileType::Mie => formats::mie::read_mie(data),
             FileType::Flif => formats::misc::read_flif(data),
             FileType::Bpg => formats::misc::read_bpg(data),
             FileType::Pcx => formats::misc::read_pcx(data),
@@ -1357,7 +1363,8 @@ impl ExifTool {
                 }
             }
             "xcf" => Ok(Vec::new()),      // GIMP
-            "vrd" | "dr4" => Ok(Vec::new()), // Canon VRD
+            "vrd" => formats::canon_vrd::read_vrd(data).or_else(|_| Ok(Vec::new())),
+            "dr4" => formats::canon_vrd::read_dr4(data).or_else(|_| Ok(Vec::new())),
             "indd" | "indt" => Ok(Vec::new()), // InDesign
             "x3f" => Ok(Vec::new()),       // Sigma X3F
             "mie" => Ok(Vec::new()),       // MIE
@@ -1375,7 +1382,7 @@ impl ExifTool {
             "czi" => formats::misc::read_czi(data).or_else(|_| Ok(Vec::new())),
             "lfp" | "miff" | "mrc"
             | "dss" | "mobi" | "psp" | "pgf" | "raw"
-            | "pmp" | "torrent" | "wtv"
+            | "pmp" | "torrent"
             | "xisf" | "mxf"
             | "dfont" => Ok(Vec::new()),
             "iso" => formats::iso::read_iso(data).or_else(|_| Ok(Vec::new())),

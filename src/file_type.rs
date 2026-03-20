@@ -127,6 +127,7 @@ pub enum FileType {
     Mie,
     Exv,
     Vrd,
+    Dr4,
     Icc,
     Html,
     Exe,
@@ -304,7 +305,8 @@ impl FileType {
             FileType::Xmp => "XMP sidecar",
             FileType::Mie => "MIE metadata",
             FileType::Exv => "Exiv2 metadata",
-            FileType::Vrd => "Canon VRD recipe",
+            FileType::Vrd => "VRD",
+            FileType::Dr4 => "DR4",
             FileType::Icc => "ICC color profile",
             FileType::Html => "HTML document",
             FileType::Exe => "Windows executable",
@@ -450,7 +452,8 @@ impl FileType {
             FileType::Xmp => "application/rdf+xml",
             FileType::Mie => "application/x-mie",
             FileType::Exv => "application/x-exv",
-            FileType::Vrd => "application/x-canon-vrd",
+            FileType::Vrd => "application/octet-stream",
+            FileType::Dr4 => "application/octet-stream",
             FileType::Icc => "application/vnd.icc.profile",
             FileType::Html => "text/html",
             FileType::Exe => "application/x-dosexec",
@@ -604,7 +607,8 @@ impl FileType {
             FileType::Xmp => &["xmp", "inx", "xml"],
             FileType::Mie => &["mie"],
             FileType::Exv => &["exv"],
-            FileType::Vrd => &["vrd", "dr4"],
+            FileType::Vrd => &["vrd"],
+            FileType::Dr4 => &["dr4"],
             FileType::Icc => &["icc", "icm"],
             FileType::Html => &["html", "htm", "xhtml", "svg"],
             FileType::Exe => &["exe", "dll", "elf", "so", "dylib", "a", "macho", "o"],
@@ -688,6 +692,7 @@ impl FileType {
             | FileType::PostScript
             | FileType::InDesign
             | FileType::Vrd
+            | FileType::Dr4
             | FileType::Audible => Support::ReadWrite,
             // R only
             _ => Support::Read,
@@ -734,7 +739,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     // Archives
     FileType::Zip, FileType::Rar, FileType::SevenZ, FileType::Gzip,
     // Metadata / Other
-    FileType::Xmp, FileType::Mie, FileType::Exv, FileType::Vrd, FileType::Icc,
+    FileType::Xmp, FileType::Mie, FileType::Exv, FileType::Vrd, FileType::Dr4, FileType::Icc,
     FileType::Html, FileType::Exe, FileType::Font, FileType::Swf,
     FileType::Dicom, FileType::Fits,
     FileType::Moi, FileType::MacOs, FileType::Json,
@@ -769,6 +774,19 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // GIF: "GIF87a" or "GIF89a"
     if header.starts_with(b"GIF8") && header.len() >= 6 && (header[4] == b'7' || header[4] == b'9') {
         return Some(FileType::Gif);
+    }
+
+    // Canon DR4: "IIII" + 04 00 04 00 (or 05 00 04 00)
+    if header.len() >= 8 && header.starts_with(b"IIII")
+        && (header[4] == 0x04 || header[4] == 0x05) && header[5] == 0x00
+        && header[6] == 0x04 && header[7] == 0x00
+    {
+        return Some(FileType::Dr4);
+    }
+
+    // Canon VRD: "CANON OPTIONAL DATA\0"
+    if header.starts_with(b"CANON OPTIONAL DATA\0") {
+        return Some(FileType::Vrd);
     }
 
     // TIFF / TIFF-based RAW: "II" or "MM" + magic 42
