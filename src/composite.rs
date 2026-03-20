@@ -43,9 +43,36 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         }
     }
 
+    // PanasonicRaw: ImageWidth/ImageHeight composites from sensor borders
+    // Perl PanasonicRaw::Composite: ImageWidth = SensorRightBorder - SensorLeftBorder
+    //                               ImageHeight = SensorBottomBorder - SensorTopBorder
+    // Only emit when these sensor border tags are present (RW2 files)
+    if find_tag(tags, "SensorRightBorder").is_some() && find_tag(tags, "SensorLeftBorder").is_some() {
+        if let (Some(right), Some(left)) = (
+            find_tag(tags, "SensorRightBorder").and_then(|t| t.raw_value.as_u64()),
+            find_tag(tags, "SensorLeftBorder").and_then(|t| t.raw_value.as_u64()),
+        ) {
+            composite.push(mk_composite("ImageWidth", "Image Width",
+                Value::String(format!("{}", right.saturating_sub(left)))));
+        }
+    }
+    if find_tag(tags, "SensorBottomBorder").is_some() && find_tag(tags, "SensorTopBorder").is_some() {
+        if let (Some(bottom), Some(top)) = (
+            find_tag(tags, "SensorBottomBorder").and_then(|t| t.raw_value.as_u64()),
+            find_tag(tags, "SensorTopBorder").and_then(|t| t.raw_value.as_u64()),
+        ) {
+            composite.push(mk_composite("ImageHeight", "Image Height",
+                Value::String(format!("{}", bottom.saturating_sub(top)))));
+        }
+    }
+
     // ImageSize: Width x Height
-    if let Some(sz) = compute_image_size(tags) {
-        composite.push(sz);
+    {
+        let mut all: Vec<Tag> = tags.to_vec();
+        all.extend(composite.iter().cloned());
+        if let Some(sz) = compute_image_size(&all) {
+            composite.push(sz);
+        }
     }
 
     // Megapixels (needs ImageSize composite)
@@ -234,6 +261,16 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         }
     }
 
+    // Panasonic AdvancedSceneMode composite (PanasonicRaw::Composite — only for RW2 files)
+    // Only fire when PanasonicRaw-specific tags exist (e.g. SensorTopBorder)
+    if find_tag(tags, "AdvancedSceneMode").is_none()
+        && find_tag(tags, "SensorTopBorder").is_some()
+    {
+        if let Some(adv) = compute_panasonic_advanced_scene_mode(tags) {
+            composite.push(adv);
+        }
+    }
+
     composite
 }
 
@@ -358,14 +395,18 @@ fn compute_aperture(tags: &[Tag]) -> Option<Tag> {
 
 fn compute_image_size(tags: &[Tag]) -> Option<Tag> {
     // Perl composite ImageSize requires ImageWidth and ImageHeight (format-native dimensions).
+    // For PanasonicRaw, ImageWidth/ImageHeight composites are computed before this runs.
     // ExifImageWidth/Height are "Desire" tags only used for Canon/Phase One TIFF-based RAW.
     // Do not fall back to ExifImageWidth/Height to avoid computing ImageSize for formats
     // (e.g. PDF) that have embedded EXIF but no native image dimensions.
-    let w = find_tag(tags, "ImageWidth")?;
-    let h = find_tag(tags, "ImageHeight")?;
+    let width = find_tag(tags, "ImageWidth")
+        .and_then(|t| t.raw_value.as_u64()
+            .or_else(|| t.print_value.trim().parse().ok()));
+    let height = find_tag(tags, "ImageHeight")
+        .and_then(|t| t.raw_value.as_u64()
+            .or_else(|| t.print_value.trim().parse().ok()));
 
-    let width = w.raw_value.as_u64().or_else(|| w.print_value.parse().ok())?;
-    let height = h.raw_value.as_u64().or_else(|| h.print_value.parse().ok())?;
+    let (width, height) = (width?, height?);
 
     Some(mk_composite(
         "ImageSize",
@@ -373,6 +414,7 @@ fn compute_image_size(tags: &[Tag]) -> Option<Tag> {
         Value::String(format!("{}x{}", width, height)),
     ))
 }
+
 
 /// Perl: Require => 'ImageSize', ValueConv => 'my @d = ($val =~ /\d+/g); $d[0] * $d[1] / 1000000'
 fn compute_megapixels(tags: &[Tag]) -> Option<Tag> {
@@ -724,6 +766,208 @@ fn compute_wb_balance(tags: &[Tag]) -> Option<Vec<Tag>> {
     }
 
     if result.is_empty() { None } else { Some(result) }
+}
+
+/// Panasonic AdvancedSceneMode composite.
+/// Perl: Require => Model + SceneMode + AdvancedSceneType
+/// Key = "SceneMode AdvancedSceneType" (raw integer values), optionally prefixed by model.
+fn compute_panasonic_advanced_scene_mode(tags: &[Tag]) -> Option<Tag> {
+    // Require all three
+    let model = find_tag_value(tags, "Model")?;
+    // Need SceneMode raw value (integer) and AdvancedSceneType raw value (integer)
+    let scene_mode_raw = find_tag(tags, "SceneMode")
+        .and_then(|t| t.raw_value.as_u64())
+        .unwrap_or(0);
+    let adv_type_raw = find_tag(tags, "AdvancedSceneType")
+        .and_then(|t| t.raw_value.as_u64())
+        .unwrap_or(1);
+
+    // Check it's a Panasonic camera (Make = Panasonic or Leica)
+    let make = find_tag_value(tags, "Make").unwrap_or_default();
+    if !make.contains("Panasonic") && !make.contains("Leica") {
+        return None;
+    }
+
+    // Perl PrintConv: first try model-specific key, then generic key
+    let model_key = format!("{} {} {}", model, scene_mode_raw, adv_type_raw);
+    let generic_key = format!("{} {}", scene_mode_raw, adv_type_raw);
+
+    // Model-specific table (only DMC-TZ40 entries in Perl)
+    let model_val = if model == "DMC-TZ40" {
+        match generic_key.as_str() {
+            "90 1" => Some("Expressive"),
+            "90 2" => Some("Retro"),
+            "90 3" => Some("High Key"),
+            "90 4" => Some("Sepia"),
+            "90 5" => Some("High Dynamic"),
+            "90 6" => Some("Miniature"),
+            "90 9" => Some("Low Key"),
+            "90 10" => Some("Toy Effect"),
+            "90 11" => Some("Dynamic Monochrome"),
+            "90 12" => Some("Soft"),
+            _ => None,
+        }
+    } else { None };
+
+    let print_val = if let Some(v) = model_val {
+        v.to_string()
+    } else {
+        // Generic table lookup
+        match generic_key.as_str() {
+            "0 1" => "Off".to_string(),
+            "2 2" => "Outdoor Portrait".to_string(),
+            "2 3" => "Indoor Portrait".to_string(),
+            "2 4" => "Creative Portrait".to_string(),
+            "3 2" => "Nature".to_string(),
+            "3 3" => "Architecture".to_string(),
+            "3 4" => "Creative Scenery".to_string(),
+            "4 2" => "Outdoor Sports".to_string(),
+            "4 3" => "Indoor Sports".to_string(),
+            "4 4" => "Creative Sports".to_string(),
+            "9 2" => "Flower".to_string(),
+            "9 3" => "Objects".to_string(),
+            "9 4" => "Creative Macro".to_string(),
+            "18 1" => "High Sensitivity".to_string(),
+            "20 1" => "Fireworks".to_string(),
+            "21 2" => "Illuminations".to_string(),
+            "21 4" => "Creative Night Scenery".to_string(),
+            "26 1" => "High-speed Burst (shot 1)".to_string(),
+            "27 1" => "High-speed Burst (shot 2)".to_string(),
+            "29 1" => "Snow".to_string(),
+            "30 1" => "Starry Sky".to_string(),
+            "31 1" => "Beach".to_string(),
+            "36 1" => "High-speed Burst (shot 3)".to_string(),
+            "39 1" => "Aerial Photo / Underwater / Multi-aspect".to_string(),
+            "45 2" => "Cinema".to_string(),
+            "45 7" => "Expressive".to_string(),
+            "45 8" => "Retro".to_string(),
+            "45 9" => "Pure".to_string(),
+            "45 10" => "Elegant".to_string(),
+            "45 12" => "Monochrome".to_string(),
+            "45 13" => "Dynamic Art".to_string(),
+            "45 14" => "Silhouette".to_string(),
+            "51 2" => "HDR Art".to_string(),
+            "51 3" => "HDR B&W".to_string(),
+            "59 1" => "Expressive".to_string(),
+            "59 2" => "Retro".to_string(),
+            "59 3" => "High Key".to_string(),
+            "59 4" => "Sepia".to_string(),
+            "59 5" => "High Dynamic".to_string(),
+            "59 6" => "Miniature".to_string(),
+            "59 9" => "Low Key".to_string(),
+            "59 10" => "Toy Effect".to_string(),
+            "59 11" => "Dynamic Monochrome".to_string(),
+            "59 12" => "Soft".to_string(),
+            "66 1" => "Impressive Art".to_string(),
+            "66 2" => "Cross Process".to_string(),
+            "66 3" => "Color Select".to_string(),
+            "66 4" => "Star".to_string(),
+            "90 3" => "Old Days".to_string(),
+            "90 4" => "Sunshine".to_string(),
+            "90 5" => "Bleach Bypass".to_string(),
+            "90 6" => "Toy Pop".to_string(),
+            "90 7" => "Fantasy".to_string(),
+            "90 8" => "Monochrome".to_string(),
+            "90 9" => "Rough Monochrome".to_string(),
+            "90 10" => "Silky Monochrome".to_string(),
+            "92 1" => "Handheld Night Shot".to_string(),
+            _ => {
+                // OTHER handler: lookup shooting mode name, add AdvancedSceneType modifier
+                // shootingMode table (Panasonic.pm %shootingMode)
+                let shooting_mode_name = panasonic_shooting_mode(scene_mode_raw);
+                if let Some(name) = shooting_mode_name {
+                    match adv_type_raw {
+                        1 => name.to_string(),
+                        5 => format!("{} (intelligent auto)", name),
+                        7 => format!("{} (intelligent auto plus)", name),
+                        n => format!("{} ({})", name, n),
+                    }
+                } else {
+                    format!("Unknown ({} {})", scene_mode_raw, adv_type_raw)
+                }
+            }
+        }
+    };
+
+    // Raw value: "Model SceneMode AdvancedSceneType" (Perl ValueConv)
+    let raw_str = format!("{} {} {}", model, scene_mode_raw, adv_type_raw);
+    Some(mk_composite_raw("AdvancedSceneMode", "Advanced Scene Mode",
+        Value::String(raw_str), print_val))
+}
+
+/// Panasonic ShootingMode/SceneMode name lookup (from %shootingMode in Panasonic.pm)
+fn panasonic_shooting_mode(val: u64) -> Option<&'static str> {
+    match val {
+        1 => Some("Normal"),
+        2 => Some("Portrait"),
+        3 => Some("Scenery"),
+        4 => Some("Sports"),
+        5 => Some("Night Portrait"),
+        6 => Some("Program"),
+        7 => Some("Aperture Priority"),
+        8 => Some("Shutter Priority"),
+        9 => Some("Macro"),
+        10 => Some("Spot"),
+        11 => Some("Manual"),
+        12 => Some("Movie Preview"),
+        13 => Some("Panning"),
+        14 => Some("Simple"),
+        15 => Some("Color Effects"),
+        16 => Some("Self Portrait"),
+        17 => Some("Economy"),
+        18 => Some("Fireworks"),
+        19 => Some("Party"),
+        20 => Some("Snow"),
+        21 => Some("Night Scenery"),
+        22 => Some("Food"),
+        23 => Some("Baby"),
+        24 => Some("Soft Skin"),
+        25 => Some("Candlelight"),
+        26 => Some("Starry Night"),
+        27 => Some("High Sensitivity"),
+        28 => Some("Panorama Assist"),
+        29 => Some("Underwater"),
+        30 => Some("Beach"),
+        31 => Some("Aerial Photo"),
+        32 => Some("Sunset"),
+        33 => Some("Pet"),
+        34 => Some("Intelligent ISO"),
+        35 => Some("Clipboard"),
+        36 => Some("High Speed Continuous Shooting"),
+        37 => Some("Intelligent Auto"),
+        39 => Some("Multi-aspect"),
+        41 => Some("Transform"),
+        42 => Some("Flash Burst"),
+        43 => Some("Pin Hole"),
+        44 => Some("Film Grain"),
+        45 => Some("My Color"),
+        46 => Some("Photo Frame"),
+        48 => Some("Movie"),
+        51 => Some("HDR"),
+        52 => Some("Peripheral Defocus"),
+        55 => Some("Handheld Night Shot"),
+        57 => Some("3D"),
+        59 => Some("Creative Control"),
+        60 => Some("Intelligent Auto Plus"),
+        62 => Some("Panorama"),
+        63 => Some("Glass Through"),
+        64 => Some("HDR"),
+        66 => Some("Digital Filter"),
+        67 => Some("Clear Portrait"),
+        68 => Some("Silky Skin"),
+        69 => Some("Backlit Softness"),
+        70 => Some("Clear in Backlight"),
+        71 => Some("Relaxing Tone"),
+        72 => Some("Sweet Child's Face"),
+        73 => Some("Distinct Scenery"),
+        74 => Some("Bright Blue Sky"),
+        75 => Some("Romantic Sunset Glow"),
+        76 => Some("Vivid Sunset Glow"),
+        77 => Some("Glistening Water"),
+        78 => Some("Clear Nightscape"),
+        79 => Some("Cool Night Sky"),
+        _ => None,
+    }
 }
 
 /// Compute Depth of Field.

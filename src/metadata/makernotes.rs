@@ -613,8 +613,64 @@ fn decode_binary_subtable(data: &[u8], module: &str, table: &[(usize, &str)]) ->
     tags
 }
 
-// Pentax binary sub-tables (from Perl Pentax.pm)
-static PENTAX_SR_INFO: &[(usize, &str)] = &[(0, "SRResult"), (1, "ShakeReduction"), (2, "SRHalfPressTime"), (3, "SRFocalLength")];
+// Pentax SRInfo decode (from Perl Pentax::SRInfo table)
+fn decode_pentax_sr_info(d: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let pb = |name: &str, v: &str| mk_pentax(name, v);
+
+    // Byte 0: SRResult — bitmask: 0=Stabilized, 6=Not ready; val 0 = "Not stabilized"
+    if !d.is_empty() {
+        let b = d[0];
+        let s = if b == 0 {
+            "Not stabilized".to_string()
+        } else {
+            let mut parts = Vec::new();
+            if b & (1 << 0) != 0 { parts.push("Stabilized"); }
+            // bits 1-5: show as [N] if set
+            for bit in 1..6usize {
+                if b & (1 << bit) != 0 { parts.push(match bit { 1 => "[1]", 2 => "[2]", 3 => "[3]", 4 => "[4]", 5 => "[5]", _ => "" }); }
+            }
+            if b & (1 << 6) != 0 { parts.push("Not ready"); }
+            if parts.is_empty() { b.to_string() } else { parts.join(", ") }
+        };
+        tags.push(pb("SRResult", &s));
+    }
+
+    // Byte 1: ShakeReduction
+    if d.len() > 1 {
+        let b = d[1];
+        let s = match b {
+            0 => "Off".to_string(), 1 => "On".to_string(),
+            4 => "Off (4)".to_string(), 5 => "On but Disabled".to_string(),
+            6 => "On (Video)".to_string(), 7 => "On (7)".to_string(),
+            15 => "On (15)".to_string(), 39 => "On (mode 2)".to_string(),
+            135 => "On (135)".to_string(), 167 => "On (mode 1)".to_string(),
+            v => format!("On ({})", v),
+        };
+        tags.push(pb("ShakeReduction", &s));
+    }
+
+    // Byte 2: SRHalfPressTime — val / 60, format "%.2f s"
+    if d.len() > 2 {
+        let raw = d[2] as f64;
+        let t = raw / 60.0;
+        let s = if raw >= 254.5 {
+            format!("{:.2} s or longer", t)
+        } else {
+            format!("{:.2} s", t)
+        };
+        tags.push(pb("SRHalfPressTime", &s));
+    }
+
+    // Byte 3: SRFocalLength — val & 0x01 ? val * 4 : val / 2, then "N mm"
+    if d.len() > 3 {
+        let b = d[3];
+        let fl = if b & 0x01 != 0 { (b as f64) * 4.0 } else { (b as f64) / 2.0 };
+        tags.push(pb("SRFocalLength", &format!("{} mm", fl as u32)));
+    }
+
+    tags
+}
 
 /// PentaxEv: matches Perl's PentaxEv() from Pentax.pm (line 6815).
 /// Adjusts values where val%8==3 or val%8==5 for exact 1/3-stop fractions, then divides by 8.
@@ -733,6 +789,114 @@ fn pentax_special_tag_conv(tag_id: u16, data_type: u16, count: u32, value_data: 
             let s = format!("{}; {}; {}; {}", s0, s1, s2, s3);
             Some(vec![mk("DriveMode", &s)])
         }
+        // PentaxModelType (0x0001): int16u — raw value, no print conv; suppress generated table
+        0x0001 if data_type == 3 && count == 1 && value_data.len() >= 2 => {
+            let v = u16::from_be_bytes([value_data[0], value_data[1]]);
+            Some(vec![mk("PentaxModelType", &v.to_string())])
+        }
+        // PentaxModelID (0x0005): int32u — lookup model name
+        0x0005 if (data_type == 4 || data_type == 9) && count == 1 && value_data.len() >= 4 => {
+            let raw = u32::from_be_bytes([value_data[0], value_data[1], value_data[2], value_data[3]]);
+            let name = pentax_model_id_name(raw).map(|s| s.to_string())
+                .unwrap_or_else(|| raw.to_string());
+            Some(vec![mk("PentaxModelID", &name)])
+        }
+        // Quality (0x0008): int16u — PrintConv lookup
+        0x0008 if (data_type == 3 || data_type == 8) && count == 1 && value_data.len() >= 2 => {
+            let v = if data_type == 3 {
+                u16::from_be_bytes([value_data[0], value_data[1]])
+            } else {
+                u16::from_be_bytes([value_data[0], value_data[1]])
+            };
+            let s = match v {
+                0 => "Good", 1 => "Better", 2 => "Best", 3 => "TIFF",
+                4 => "RAW", 5 => "Premium", 7 => "RAW (pixel shift enabled)",
+                8 => "Dynamic Pixel Shift", 9 => "Monochrome", 65535 => "n/a", _ => "",
+            };
+            let pv = if s.is_empty() { v.to_string() } else { s.to_string() };
+            Some(vec![mk("Quality", &pv)])
+        }
+        // FNumber (0x0013): int16u — ValueConv: val/10, PrintConv: sprintf("%.1f", val)
+        0x0013 if data_type == 3 && count == 1 && value_data.len() >= 2 => {
+            let raw = u16::from_be_bytes([value_data[0], value_data[1]]);
+            let fnum = raw as f64 / 10.0;
+            Some(vec![mk("FNumber", &format!("{:.1}", fnum))])
+        }
+        // ExposureCompensation (0x0016): int16s — ValueConv: (val-50)/10, PrintConv: val?sprintf("%+.1f",val):0
+        0x0016 if data_type == 3 && count == 1 && value_data.len() >= 2 => {
+            let raw = i16::from_be_bytes([value_data[0], value_data[1]]) as f64;
+            let v = (raw - 50.0) / 10.0;
+            let s = if v == 0.0 { "0".to_string() } else { format!("{:+.1}", v) };
+            Some(vec![mk("ExposureCompensation", &s)])
+        }
+        // WhiteBalance (0x0019): int16u — PrintConv lookup
+        0x0019 if data_type == 3 && count == 1 && value_data.len() >= 2 => {
+            let v = u16::from_be_bytes([value_data[0], value_data[1]]);
+            let s = match v {
+                0 => "Auto", 1 => "Daylight", 2 => "Shade", 3 => "Fluorescent",
+                4 => "Tungsten", 5 => "Manual", 6 => "Daylight Fluorescent",
+                7 => "Day White Fluorescent", 8 => "White Fluorescent", 9 => "Flash",
+                10 => "Cloudy", 11 => "Warm White Fluorescent", 14 => "Multi Auto",
+                15 => "Color Temperature Enhancement", 17 => "Kelvin",
+                0xfffe => "Unknown", 0xffff => "User-Selected", _ => "",
+            };
+            let pv = if s.is_empty() { v.to_string() } else { s.to_string() };
+            Some(vec![mk("WhiteBalance", &pv)])
+        }
+        // Saturation (0x001f): int16u — PrintConv lookup
+        0x001f if data_type == 3 && count == 1 && value_data.len() >= 2 => {
+            let v = u16::from_be_bytes([value_data[0], value_data[1]]);
+            let s = match v {
+                0 => "-2 (low)", 1 => "0 (normal)", 2 => "+2 (high)",
+                3 => "-1 (medium low)", 4 => "+1 (medium high)", 5 => "-3 (very low)",
+                6 => "+3 (very high)", 7 => "-4 (minimum)", 8 => "+4 (maximum)",
+                65535 => "None", _ => "",
+            };
+            let pv = if s.is_empty() { v.to_string() } else { s.to_string() };
+            Some(vec![mk("Saturation", &pv)])
+        }
+        // Contrast (0x0020): int16u — PrintConv lookup
+        0x0020 if data_type == 3 && count == 1 && value_data.len() >= 2 => {
+            let v = u16::from_be_bytes([value_data[0], value_data[1]]);
+            let s = match v {
+                0 => "-2 (low)", 1 => "0 (normal)", 2 => "+2 (high)",
+                3 => "-1 (medium low)", 4 => "+1 (medium high)", 5 => "-3 (very low)",
+                6 => "+3 (very high)", 7 => "-4 (minimum)", 8 => "+4 (maximum)",
+                65535 => "n/a", _ => "",
+            };
+            let pv = if s.is_empty() { v.to_string() } else { s.to_string() };
+            Some(vec![mk("Contrast", &pv)])
+        }
+        // Sharpness (0x0021): int16u — PrintConv lookup
+        0x0021 if data_type == 3 && count == 1 && value_data.len() >= 2 => {
+            let v = u16::from_be_bytes([value_data[0], value_data[1]]);
+            let s = match v {
+                0 => "-2 (soft)", 1 => "0 (normal)", 2 => "+2 (hard)",
+                3 => "-1 (medium soft)", 4 => "+1 (medium hard)", 5 => "-3 (very soft)",
+                6 => "+3 (very hard)", 7 => "-4 (minimum)", 8 => "+4 (maximum)", _ => "",
+            };
+            let pv = if s.is_empty() { v.to_string() } else { s.to_string() };
+            Some(vec![mk("Sharpness", &pv)])
+        }
+        // HighLowKeyAdj (0x006c): int16s[2] — PrintConv: "V1 V2" key → integer value
+        0x006c if (data_type == 8) && count == 2 && value_data.len() >= 4 => {
+            let v1 = i16::from_be_bytes([value_data[0], value_data[1]]) as i32;
+            let v2 = i16::from_be_bytes([value_data[2], value_data[3]]) as i32;
+            let key = format!("{} {}", v1, v2);
+            // PrintConv maps "-4 0"→-4, ..., "4 0"→4
+            let pv = if v2 == 0 { v1.to_string() } else { key };
+            Some(vec![mk("HighLowKeyAdj", &pv)])
+        }
+        // MonochromeToning (0x0074): int16u — PrintConv lookup
+        0x0074 if data_type == 3 && count == 1 && value_data.len() >= 2 => {
+            let v = u16::from_be_bytes([value_data[0], value_data[1]]);
+            let s = match v {
+                65535 => "None", 0 => "-4", 1 => "-3", 2 => "-2", 3 => "-1",
+                4 => "0", 5 => "1", 6 => "2", 7 => "3", 8 => "4", _ => "",
+            };
+            let pv = if s.is_empty() { v.to_string() } else { s.to_string() };
+            Some(vec![mk("MonochromeToning", &pv)])
+        }
         _ => None,
     }
 }
@@ -800,6 +964,44 @@ fn pentax_lens_type_name(key: &str) -> Option<&'static str> {
     }
 }
 
+/// Lookup Pentax model ID name from the raw int32u value.
+/// From Perl: %pentaxModelID in Pentax.pm
+fn pentax_model_id_name(id: u32) -> Option<&'static str> {
+    match id {
+        0x12B9C => Some("Optio 330RS"),
+        0x12C2D => Some("Optio 450"),
+        0x12CD2 => Some("Optio 550"),
+        0x12D10 => Some("Optio 33L"),
+        0x12D1E => Some("K10D"),
+        0x12D20 => Some("GX10"),
+        0x12D22 => Some("K20D"),
+        0x12D24 => Some("K200D"),
+        0x12D26 => Some("K2000"),
+        0x12D28 => Some("K-m"),
+        0x12D34 => Some("645D"),
+        0x12D36 => Some("K-7"),
+        0x12D38 => Some("K-x"),
+        0x12D3A => Some("K-r"),
+        0x12D3C => Some("K-5"),
+        0x12D3E => Some("K-5 II"),
+        0x12D40 => Some("K-30"),
+        0x12D41 => Some("K-01"),
+        0x12D43 => Some("K-50"),
+        0x12D44 => Some("K-500"),
+        0x12D45 => Some("K-3"),
+        0x12D46 => Some("K-5 II s"),
+        0x12D47 => Some("K-3 II"),
+        0x12D48 => Some("K-S1"),
+        0x12D49 => Some("K-S2"),
+        0x12D4B => Some("K-70"),
+        0x12D4C => Some("KP"),
+        0x12D4D => Some("K-1"),
+        0x12D4E => Some("K-1 Mark II"),
+        0x12DFE => Some("K-x"),
+        _ => None,
+    }
+}
+
 /// Helper: create a Pentax MakerNotes tag with a string value.
 fn mk_pentax(name: &str, print: &str) -> Tag {
     Tag {
@@ -819,7 +1021,7 @@ fn print_exposure_time(val: f64) -> String {
 
 /// Decode Pentax CameraSettings (tag 0x0205, 23 bytes).
 /// From Perl Pentax::CameraSettings table.
-fn decode_pentax_camera_settings(data: &[u8]) -> Vec<Tag> {
+fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark) -> Vec<Tag> {
     let mut tags = Vec::new();
     if data.is_empty() { return tags; }
     let pb = |name: &str, v: &str| mk_pentax(name, v);
@@ -902,9 +1104,9 @@ fn decode_pentax_camera_settings(data: &[u8]) -> Vec<Tag> {
         tags.push(pb("FocusMode2", &fm2_tmp));
     }
 
-    // Bytes 4-5: AFPointSelected2 (int16u, little-endian)
+    // Bytes 4-5: AFPointSelected2 (int16u, byte order from parent IFD)
     if data.len() > 5 {
-        let v = u16::from_le_bytes([data[4], data[5]]);
+        let v = read_u16(data, 4, byte_order);
         let aps2_tmp = if v == 0 {
             "Auto".to_string()
         } else {
@@ -1013,78 +1215,8 @@ fn decode_pentax_camera_settings(data: &[u8]) -> Vec<Tag> {
         }
     }
 
-    // Byte 14: JpgRecordedPixels(0x03) — K10D only
-    if data.len() > 14 {
-        let b = data[14];
-        let jp = b & 0x03;
-        let jp_s = match jp { 0 => "10 MP", 1 => "6 MP", 2 => "2 MP", _ => "" };
-        if !jp_s.is_empty() {
-            tags.push(pb("JpgRecordedPixels", jp_s));
-        }
-
-        // SensitivitySteps(0x02) for K-5
-        let ss = (b & 0x02) >> 1;
-        tags.push(pb("SensitivitySteps", if ss == 0 { "1 EV Steps" } else { "As EV Steps" }));
-    }
-
-    // Byte 16: FlashOptions2(0xf0), MeteringMode3(0x0f) — K10D only
-    if data.len() > 16 {
-        let b = data[16];
-        let fo2 = (b & 0xf0) >> 4;
-        let fo2_s = match fo2 {
-            0 => "Normal", 1 => "Red-eye reduction", 2 => "Auto",
-            3 => "Auto, Red-eye reduction", 5 => "Wireless (Master)",
-            6 => "Wireless (Control)", 8 => "Slow-sync",
-            9 => "Slow-sync, Red-eye reduction", 10 => "Trailing-curtain Sync", _ => "",
-        };
-        let fo2_tmp = if fo2_s.is_empty() { fo2.to_string() } else { fo2_s.to_string() };
-        tags.push(pb("FlashOptions2", &fo2_tmp));
-
-        let mm3 = b & 0x0f;
-        let mm3_s = match mm3 {
-            0 => "Multi-segment",
-            v if v & 0x01 != 0 && v & 0x02 != 0 => "Center-weighted average, Spot",
-            v if v & 0x01 != 0 => "Center-weighted average",
-            v if v & 0x02 != 0 => "Spot",
-            _ => "",
-        };
-        let mm3_tmp = if mm3_s.is_empty() { mm3.to_string() } else { mm3_s.to_string() };
-        tags.push(pb("MeteringMode3", &mm3_tmp));
-    }
-
-    // Byte 17: SRActive(0x80), Rotation(0x60), ISOSetting(0x04), SensitivitySteps(0x02) — K10D
-    if data.len() > 17 {
-        let b = data[17];
-        let sr = (b & 0x80) >> 7;
-        tags.push(pb("SRActive", if sr == 0 { "No" } else { "Yes" }));
-
-        let rot = (b & 0x60) >> 5;
-        let rot_s = match rot {
-            0 => "Horizontal (normal)", 1 => "Rotate 180",
-            2 => "Rotate 90 CW", 3 => "Rotate 270 CW", _ => "",
-        };
-        tags.push(pb("Rotation", rot_s));
-
-        let iso = (b & 0x04) >> 2;
-        tags.push(pb("ISOSetting", if iso == 0 { "Manual" } else { "Auto" }));
-
-        // Remove SensitivitySteps from byte 17 since byte 14 already has it for K10D
-        // (Perl uses Condition to differentiate models; K10D uses byte 17.4)
-        let sens = (b & 0x02) >> 1;
-        // Only emit if not already emitted from byte 14 (K10D vs K-5 models differ)
-        // We emit it from byte 17 for K10D as that's what the test file shows
-        let _ = sens; // Already handled from byte 14
-    }
-
-    // Byte 18: TvExposureTimeSetting — ValueConv: exp(-PentaxEv(val-68)*log(2))
-    if data.len() > 18 {
-        let raw = data[18] as i32;
-        let ev = pentax_ev(raw - 68);
-        let tv = (-ev * std::f64::consts::LN_2).exp();
-        tags.push(pb("TvExposureTimeSetting", &print_exposure_time(tv)));
-    }
-
     // Byte 19: AvApertureSetting — ValueConv: exp(PentaxEv(val-68)*log(2)/2)
+    // (Bytes 14-18 contain K10D-only or K-5-only tags; skip for model-independence)
     if data.len() > 19 {
         let raw = data[19] as i32;
         let ev = pentax_ev(raw - 68);
@@ -1138,12 +1270,16 @@ fn decode_pentax_ae_info(data: &[u8]) -> Vec<Tag> {
     // Byte 3: AEXv — (val-64)/8
     if data.len() > 3 {
         let raw = data[3] as f64;
-        tags.push(pb("AEXv", &format!("{:.4}", (raw - 64.0) / 8.0)));
+        let v = (raw - 64.0) / 8.0;
+        let s = if v == 0.0 { "0".to_string() } else { format!("{:.4}", v) };
+        tags.push(pb("AEXv", &s));
     }
     // Byte 4: AEBXv (int8s) — val/8
     if data.len() > 4 {
         let raw = data[4] as i8 as f64;
-        tags.push(pb("AEBXv", &format!("{:.4}", raw / 8.0)));
+        let v = raw / 8.0;
+        let s = if v == 0.0 { "0".to_string() } else { format!("{:.4}", v) };
+        tags.push(pb("AEBXv", &s));
     }
     // Byte 5: AEMinExposureTime
     if data.len() > 5 {
@@ -1195,7 +1331,7 @@ fn decode_pentax_ae_info(data: &[u8]) -> Vec<Tag> {
         let av = ((raw - 68.0) * std::f64::consts::LN_2 / 16.0).exp();
         tags.push(pb("AEMinAperture", &format!("{:.0}", av)));
     }
-    // AEMeteringMode
+    // AEMeteringMode (index 12, byte 12+offset_adj)
     if data.len() > base + 5 {
         let b = data[base + 5];
         let s = if b == 0 { "Multi-segment" }
@@ -1206,12 +1342,42 @@ fn decode_pentax_ae_info(data: &[u8]) -> Vec<Tag> {
         let aemm_tmp = if s.is_empty() { b.to_string() } else { s.to_string() };
         tags.push(pb("AEMeteringMode", &aemm_tmp));
     }
-    // FlashExposureCompSet (byte 14 from start, int8s) — ValueConv: PentaxEv(val)
-    if data.len() > 14 {
-        let raw = data[14] as i8 as i32;
+    // AEWhiteBalance + AEMeteringMode2 (index 13, byte 13+offset_adj) — only when size==24
+    // Mask 0xf0 for AEWhiteBalance, 0x0f for AEMeteringMode2
+    if data.len() == 24 && data.len() > base + 6 {
+        let b = data[base + 6];
+        let wb_nibble = (b & 0xf0) >> 4;
+        let wb_s = match wb_nibble {
+            0 => "Standard", 1 => "Daylight", 2 => "Shade", 3 => "Cloudy",
+            4 => "Daylight Fluorescent", 5 => "Day White Fluorescent",
+            6 => "White Fluorescent", 7 => "Tungsten", 8 => "Unknown", _ => "",
+        };
+        let wb_tmp = if wb_s.is_empty() { wb_nibble.to_string() } else { wb_s.to_string() };
+        tags.push(pb("AEWhiteBalance", &wb_tmp));
+
+        let mm2_nibble = b & 0x0f;
+        let mm2_s = if mm2_nibble == 0 { "Multi-segment" }
+            else if mm2_nibble & 0x01 != 0 && mm2_nibble & 0x02 != 0 { "Center-weighted average, Spot" }
+            else if mm2_nibble & 0x01 != 0 { "Center-weighted average" }
+            else if mm2_nibble & 0x02 != 0 { "Spot" }
+            else { "" };
+        let mm2_tmp = if mm2_s.is_empty() { mm2_nibble.to_string() } else { mm2_s.to_string() };
+        tags.push(pb("AEMeteringMode2", &mm2_tmp));
+    }
+    // FlashExposureCompSet (index 14, byte 14+offset_adj, int8s) — ValueConv: PentaxEv(val)
+    let fec_byte = 14 + offset_adj;
+    if data.len() > fec_byte {
+        let raw = data[fec_byte] as i8 as i32;
         let ev = pentax_ev(raw);
         let s = if ev == 0.0 { "0".to_string() } else { format!("{:+.1}", ev) };
         tags.push(pb("FlashExposureCompSet", &s));
+    }
+    // LevelIndicator (index 21, byte 21+offset_adj) — PrintConv: val==90 ? "n/a" : val
+    let li_byte = 21 + offset_adj;
+    if data.len() > li_byte {
+        let b = data[li_byte];
+        let s = if b == 90 { "n/a".to_string() } else { b.to_string() };
+        tags.push(pb("LevelIndicator", &s));
     }
 
     tags
@@ -1228,32 +1394,36 @@ fn decode_pentax_lens_info(data: &[u8]) -> Vec<Tag> {
     // LensInfo (old, ≤20 bytes): LensType at [0..2], LensData at [3..20]
     // LensInfo2 (21-89 bytes): LensType at [0..4] with transform, LensData at [4..21]
     // LensInfo4 (91 bytes): LensType at [1..5], LensData at [12..30]
-    let (lens_data_start, lens_type_str) = if n <= 20 {
-        // Old format: LensType as 2 bytes
-        let lt = if n >= 2 { format!("{} {}", data[0], data[1]) } else { "0 0".to_string() };
-        tags.push(pb("LensType", &lt));
-        (3usize, lt)
-    } else if n == 91 {
-        // LensInfo4 format (K-r, K-5): LensType at bytes 1-4
+    let push_lens_type = |tags: &mut Vec<Tag>, key: &str| {
+        let name = pentax_lens_type_name(key)
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| key.to_string());
+        tags.push(mk_pentax("LensType", &name));
+    };
+    let (lens_data_start, _lens_type_key) = if n == 90 || n == 91 || n == 80 || n == 128 || n == 168 {
+        // LensInfo4 format (K-r, K-5, etc.): LensType at bytes 1-4
         if n >= 5 {
-            let b = data[1..5].to_vec();
-            let t0 = b[0] & 0x0f;
-            let t1 = (b[2] as u16) * 256 + b[3] as u16;
+            let t0 = data[1] & 0x0f;
+            let t1 = (data[3] as u16) * 256 + data[4] as u16;
             let lt = format!("{} {}", t0, t1);
-            tags.push(pb("LensType", &lt));
+            push_lens_type(&mut tags, &lt);
         }
         (12usize, "".to_string())
+    } else if n <= 20 {
+        // Old format: LensType as 2 bytes
+        let lt = if n >= 2 { format!("{} {}", data[0], data[1]) } else { "0 0".to_string() };
+        push_lens_type(&mut tags, &lt);
+        (3usize, lt)
     } else {
-        // LensInfo2 format (most models): LensType at bytes 0-3
+        // LensInfo2 format (most models, 21-89 bytes): LensType at bytes 0-3
         if n >= 4 {
             let t0 = data[0] & 0x0f;
             let t1 = (data[2] as u16) * 256 + data[3] as u16;
             let lt = format!("{} {}", t0, t1);
-            tags.push(pb("LensType", &lt));
+            push_lens_type(&mut tags, &lt);
         }
         (4usize, "".to_string())
     };
-    let _ = lens_type_str;
 
     // Decode LensData starting at lens_data_start
     if n > lens_data_start {
@@ -1281,7 +1451,9 @@ fn decode_pentax_lens_data(d: &[u8], tags: &mut Vec<Tag>) {
 
         let lf = (b & 0x70) >> 4;
         let lf_stops = 5.0 + (lf ^ 0x07) as f64 / 2.0;
-        tags.push(pb("LensFStops", &format!("{:.1}", lf_stops)));
+        // Format as integer when no fractional part (Perl default numeric printing)
+        let lf_str = if lf_stops.fract() == 0.0 { format!("{}", lf_stops as u32) } else { format!("{}", lf_stops) };
+        tags.push(pb("LensFStops", &lf_str));
     }
 
     // Byte 3: MinFocusDistance(bits 7-3), FocusRangeIndex(bits 2-0)
@@ -1565,6 +1737,26 @@ fn decode_pentax_af_info(data: &[u8], byte_order: ByteOrderMark) -> Vec<Tag> {
 
 /// Decode Pentax ColorInfo (tag 0x0222).
 /// Contains WBShiftAB (byte 0x10, int8s) and WBShiftGM (byte 0x11, int8s).
+/// Decode Pentax LensRec (tag 0x003f): bytes 0-1 = LensType int8u[2], byte 3 = ExtenderStatus.
+fn decode_pentax_lens_rec(data: &[u8]) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    // LensType: bytes 0-1 as "A B" key
+    if data.len() >= 2 {
+        let key = format!("{} {}", data[0], data[1]);
+        let name = pentax_lens_type_name(&key)
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| key);
+        tags.push(mk_pentax("LensType", &name));
+    }
+    // ExtenderStatus: byte 3
+    if data.len() > 3 {
+        let s = match data[3] { 0 => "Not attached", 1 => "Attached", _ => "" };
+        let pv = if s.is_empty() { data[3].to_string() } else { s.to_string() };
+        tags.push(mk_pentax("ExtenderStatus", &pv));
+    }
+    tags
+}
+
 fn decode_pentax_color_info(data: &[u8]) -> Vec<Tag> {
     let mut tags = Vec::new();
     let pb = |name: &str, v: &str| mk_pentax(name, v);
@@ -3012,7 +3204,7 @@ fn read_makernote_ifd(
                     t
                 }
                 // Pentax binary sub-tables (from Perl Pentax.pm)
-                (Manufacturer::Pentax, 0x0205) => decode_pentax_camera_settings(value_data),
+                (Manufacturer::Pentax, 0x0205) => decode_pentax_camera_settings(value_data, byte_order),
                 (Manufacturer::Pentax, 0x0206) => decode_pentax_ae_info(value_data),
                 (Manufacturer::Pentax, 0x0207) => decode_pentax_lens_info(value_data),
                 (Manufacturer::Pentax, 0x0208) => {
@@ -3026,7 +3218,8 @@ fn read_makernote_ifd(
                 (Manufacturer::Pentax, 0x0216) => decode_pentax_battery_info(value_data),
                 (Manufacturer::Pentax, 0x021F) => decode_pentax_af_info(value_data, byte_order),
                 (Manufacturer::Pentax, 0x0222) => decode_pentax_color_info(value_data),
-                (Manufacturer::Pentax, 0x005C) => decode_binary_subtable(value_data, "Pentax", PENTAX_SR_INFO),
+                (Manufacturer::Pentax, 0x003F) => decode_pentax_lens_rec(value_data),
+                (Manufacturer::Pentax, 0x005C) => decode_pentax_sr_info(value_data),
                 // Apple RunTime plist
                 (Manufacturer::Apple, 0x0003) => decode_apple_runtime(value_data),
                 // Ricoh RicohSubdir (tag 0x2001): contains ManufactureDate1/ManufactureDate2
@@ -3244,7 +3437,6 @@ fn read_makernote_ifd(
             (Manufacturer::Pentax, 0x0216) | // BatteryInfo
             (Manufacturer::Pentax, 0x021F) | // AFInfo
             (Manufacturer::Pentax, 0x0222) | // ColorInfo
-            (Manufacturer::Pentax, 0x003f) | // LensRec (SubDirectory)
             (Manufacturer::Pentax, 0x005C)   // SRInfo
         );
         if is_subdirectory { continue; }
@@ -3269,11 +3461,8 @@ fn read_makernote_ifd(
             "FlashFired" | "LensFirmwareVersion" | "LensSerialNumber" | "LensType"
         ) { continue; }
 
-        // Pentax: suppress tags from sub-table generated lookups (model-specific)
-        if manufacturer == Manufacturer::Pentax && matches!(name,
-            "FlashOptions2" | "ISOSetting" | "JpgRecordedPixels" | "MeteringMode3" |
-            "Rotation" | "SensitivitySteps" | "SRActive" | "TvExposureTimeSetting"
-        ) { continue; }
+        // Note: Pentax sub-table tags (FlashOptions2, ISOSetting, etc.) are valid in JPEG
+        // but may be extras in AVI-embedded MakerNotes — no blanket suppression
 
         // GE MakerNote: filter to known tags only
         if manufacturer == Manufacturer::GE {
