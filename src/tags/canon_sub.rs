@@ -525,8 +525,23 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
             tags.push(mkt("FocusDistanceLower", Value::U16(v), pv));
         }
     }
-    // ShotInfo index 21: FNumber has Priority=0 in Perl (EXIF FNumber takes precedence)
-    // Suppress to avoid duplicates.
+    // ShotInfo index 21: FNumber — ValueConv: exp(CanonEv(val)*log(2)/2)
+    // Priority=0 in Perl (EXIF takes precedence). Emit anyway — EXIF dedup handles priority.
+    if let Some(v) = get(21) {
+        if v != 0 {
+            let ev = canon_ev(v as i32);
+            let fnum = (ev * std::f64::consts::LN_2 / 2.0).exp();
+            tags.push(Tag {
+                id: TagId::Text("FNumber".into()),
+                name: "FNumber".into(),
+                description: "F Number".into(),
+                group: TagGroup { family0: "MakerNotes".into(), family1: "Canon".into(), family2: "Camera".into() },
+                raw_value: Value::F64(fnum),
+                print_value: format!("{:.1}", fnum),
+                priority: 0,
+            });
+        }
+    }
     if let Some(v) = get(23) {
         tags.push(mkt("MeasuredEV2", Value::I16(v), v.to_string()));
     }

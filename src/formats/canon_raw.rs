@@ -520,7 +520,25 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                     tags.push(mk("FocalType", ft_str));
                 }
             }
-            // Skip FocalLength (index 1) — EXIF has it with higher priority
+            // FocalLength (index 1): ValueConv = val / FocalUnits
+            // Priority=0 in Perl (EXIF takes precedence) but CRW has no EXIF
+            if data.len() >= 4 {
+                let fl_raw = ru16l(data, 2);
+                let focal_units = ru16l(data, 0);
+                let fu = if focal_units > 0 { focal_units } else { 1 };
+                if fl_raw > 0 {
+                    let fl_mm = fl_raw as f64 / fu as f64;
+                    tags.push(Tag {
+                        id: TagId::Text("FocalLength".into()),
+                        name: "FocalLength".into(),
+                        description: "Focal Length".into(),
+                        group: TagGroup { family0: "CanonRaw".into(), family1: "CanonRaw".into(), family2: "Camera".into() },
+                        raw_value: Value::F64(fl_mm),
+                        print_value: format!("{} mm", fl_mm as u32),
+                        priority: 0,
+                    });
+                }
+            }
             if data.len() >= 6 {
                 // FocalPlaneXSize at index 2, FocalPlaneYSize at index 3
                 // ValueConv: val * 25.4 / 1000 (convert 1/1000 inch to mm)
