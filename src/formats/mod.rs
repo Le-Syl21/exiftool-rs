@@ -1,4 +1,5 @@
 pub mod aiff;
+pub mod capture_one;
 pub mod ape;
 pub mod asf;
 pub mod audible;

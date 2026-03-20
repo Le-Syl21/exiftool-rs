@@ -529,6 +529,12 @@ fn read_ifd_value(data: &[u8], entry: &IfdEntry, byte_order: ByteOrderMark) -> O
         &data[offset..offset + total_size]
     };
 
+    // IPTC-NAA (0x83BB): always read as raw binary regardless of declared type
+    // Perl reads "int32u[17] as undef[68]" — the raw bytes contain IPTC records
+    if entry.tag == 0x83BB {
+        return Some(Value::Binary(value_data.to_vec()));
+    }
+
     match entry.data_type {
         // BYTE
         1 => {

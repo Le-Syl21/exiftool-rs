@@ -6,6 +6,7 @@
 
 use crate::error::{Error, Result};
 use crate::metadata::{ExifReader, XmpReader};
+use crate::metadata::exif::ByteOrderMark;
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
@@ -335,6 +336,10 @@ fn read_riff_chunks(
                         b"adtl" => {
                             // Associated data list
                             read_riff_chunks(data, chunk_data_start + 4, chunk_data_end, tags, family, state)?;
+                        }
+                        b"hydt" | b"pntx" => {
+                            // Pentax metadata LIST (LIST hydt / LIST pntx)
+                            read_pentax_avi_chunks(data, chunk_data_start + 4, chunk_data_end, tags)?;
                         }
                         _ => {}
                     }
@@ -733,6 +738,52 @@ fn parse_bext(data: &[u8], start: usize, end: usize, chunk_size: usize, tags: &m
             tags.push(mk_riff(family, "DateTimeOriginal", "Date/Time Original", Value::String(converted.trim().to_string())));
         }
     }
+}
+
+/// Read Pentax AVI sub-chunks from LIST hydt or LIST pntx.
+/// Contains hymn or mknt chunks with Pentax MakerNotes (Pentax::Main IFD).
+/// Mirrors Perl: LIST_hydt => PentaxData => TagTable Pentax::AVI => hymn => MakerNotes.
+fn read_pentax_avi_chunks(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) -> Result<()> {
+    let mut pos = start;
+
+    while pos + 8 <= end {
+        let chunk_id = &data[pos..pos + 4];
+        let chunk_size = u32::from_le_bytes([
+            data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7],
+        ]) as usize;
+        let data_start = pos + 8;
+        let data_end = (data_start + chunk_size).min(end);
+
+        if data_start > end {
+            break;
+        }
+
+        match chunk_id {
+            b"hymn" | b"mknt" => {
+                // Pentax MakerNotes: data starts with "PENTAX \0" header (8 bytes),
+                // then byte-order mark (MM or II, 2 bytes), IFD at offset 10.
+                // Base = start of chunk data (all pointers relative to chunk start).
+                let mn_data = &data[data_start..data_end];
+                if mn_data.len() >= 12 && mn_data.starts_with(b"PENTAX \0") {
+                    // Detect byte order from bytes 8-9 (MM = big-endian, II = little-endian)
+                    let bo = if mn_data[8] == b'M' && mn_data[9] == b'M' {
+                        ByteOrderMark::BigEndian
+                    } else {
+                        ByteOrderMark::LittleEndian
+                    };
+                    let mn_tags = crate::metadata::makernotes::parse_makernotes(
+                        mn_data, 0, mn_data.len(), "PENTAX", "", bo,
+                    );
+                    tags.extend(mn_tags);
+                }
+            }
+            _ => {}
+        }
+
+        pos = data_end + (chunk_size & 1);
+    }
+
+    Ok(())
 }
 
 /// Read LIST exif sub-chunks (EXIF 2.3 WAV metadata)

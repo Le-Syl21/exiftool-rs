@@ -168,6 +168,8 @@ pub enum FileType {
     Odb,
     Odi,
     Odc,
+    // ===== CaptureOne Enhanced Image Package =====
+    Eip,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -345,6 +347,7 @@ impl FileType {
             FileType::Odb => "ODB",
             FileType::Odi => "ODI",
             FileType::Odc => "ODC",
+            FileType::Eip => "EIP",
         }
     }
 
@@ -495,6 +498,7 @@ impl FileType {
             FileType::Odb => "application/vnd.oasis.opendocument.database",
             FileType::Odi => "application/vnd.oasis.opendocument.image",
             FileType::Odc => "application/vnd.oasis.opendocument.chart",
+            FileType::Eip => "application/x-captureone",
         }
     }
 
@@ -653,6 +657,7 @@ impl FileType {
             FileType::Odi => &["odi"],
             FileType::Odc => &["odc"],
             FileType::Lfp => &["lfp", "lfr"],
+            FileType::Eip => &["eip"],
         }
     }
 
@@ -767,6 +772,8 @@ static ALL_FILE_TYPES: &[FileType] = &[
     // OpenDocument
     FileType::Ods, FileType::Odt, FileType::Odp, FileType::Odg,
     FileType::Odf, FileType::Odb, FileType::Odi, FileType::Odc,
+    // CaptureOne
+    FileType::Eip,
 ];
 
 /// Detect file type from magic bytes (first 64+ bytes of a file).

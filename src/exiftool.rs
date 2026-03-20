@@ -1113,8 +1113,14 @@ impl ExifTool {
                     }
                 }
             }
-            // For ZIP files, check if it's an OpenDocument format by reading the mimetype entry
+            // For ZIP files, check if it's an EIP (by extension) or OpenDocument format
             if ft == FileType::Zip {
+                // Check extension first for EIP
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if ext.eq_ignore_ascii_case("eip") {
+                        return Ok(FileType::Eip);
+                    }
+                }
                 if let Some(od_type) = detect_opendocument_type(data) {
                     return Ok(od_type);
                 }
@@ -1210,6 +1216,7 @@ impl ExifTool {
                     formats::postscript::read_postscript(data)
                 }
             }
+            FileType::Eip => formats::capture_one::read_eip(data),
             FileType::Zip | FileType::Docx | FileType::Xlsx | FileType::Pptx
             | FileType::Doc | FileType::Xls | FileType::Ppt => formats::zip::read_zip(data),
             FileType::Rtf => formats::rtf::read_rtf(data),

@@ -57,16 +57,7 @@ pub fn read_tiff(data: &[u8]) -> Result<Vec<Tag>> {
         }
         // Panasonic RW2 (magic 0x55)
         0x55 => {
-            // RW2 uses standard TIFF IFD structure but with magic 0x55
-            let mut patched = data.to_vec();
-            if is_le {
-                patched[2] = 0x2A;
-                patched[3] = 0x00;
-            } else {
-                patched[2] = 0x00;
-                patched[3] = 0x2A;
-            }
-            ExifReader::read(&patched)?
+            read_rw2(data, is_le)?
         }
         _ => return Err(Error::InvalidData(format!("unknown TIFF magic: 0x{:04X}", magic))),
     };
