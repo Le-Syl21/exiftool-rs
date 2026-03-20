@@ -199,12 +199,13 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         }
     }
 
-    // LensID fallback: use LensModel or Lens if no LensID computed by 35efl
+    // LensID fallback: use LensModel, Lens, or LensType if no LensID computed by 35efl
     // Only create when the value looks like a real camera lens (contains "mm" or "f/")
     if !composite.iter().any(|t| t.name == "LensID") {
         let lens_val = find_tag_value(tags, "LensModel")
             .filter(|v| !v.is_empty() && (v.contains("mm") || v.to_lowercase().contains("f/")))
-            .or_else(|| find_tag_value(tags, "Lens").filter(|v| !v.is_empty() && (v.contains("mm") || v.contains("/F"))));
+            .or_else(|| find_tag_value(tags, "Lens").filter(|v| !v.is_empty() && (v.contains("mm") || v.contains("/F"))))
+            .or_else(|| find_tag_value(tags, "LensType").filter(|v| !v.is_empty() && v.contains("mm")));
         if let Some(lm) = lens_val {
             // Apply PrintConv: s/ - /-/ (remove spaces around dash), etc.
             let lens_id = lm.replace(" - ", "-").replace("mmF", "mm F").replace("/F", "mm F");

@@ -822,8 +822,8 @@ fn pentax_special_tag_conv(tag_id: u16, data_type: u16, count: u32, value_data: 
             let fnum = raw as f64 / 10.0;
             Some(vec![mk("FNumber", &format!("{:.1}", fnum))])
         }
-        // ExposureCompensation (0x0016): int16s — ValueConv: (val-50)/10, PrintConv: val?sprintf("%+.1f",val):0
-        0x0016 if data_type == 3 && count == 1 && value_data.len() >= 2 => {
+        // ExposureCompensation (0x0016): int16u or int16s — ValueConv: (val-50)/10
+        0x0016 if (data_type == 3 || data_type == 8) && count <= 2 && value_data.len() >= 2 => {
             let raw = i16::from_be_bytes([value_data[0], value_data[1]]) as f64;
             let v = (raw - 50.0) / 10.0;
             let s = if v == 0.0 { "0".to_string() } else { format!("{:+.1}", v) };
