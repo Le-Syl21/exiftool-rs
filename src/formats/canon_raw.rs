@@ -224,6 +224,18 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
     };
 
     match tag_id {
+        0x080a => {
+            // CanonRawMakeModel: null-separated "Make\0Model\0" string
+            let s = String::from_utf8_lossy(data);
+            let parts: Vec<&str> = s.split('\0').filter(|p| !p.is_empty()).collect();
+            if let Some(make) = parts.first() {
+                tags.push(mk("Make", make.to_string()));
+            }
+            if let Some(model) = parts.get(1) {
+                tags.push(mk("Model", model.to_string()));
+            }
+            true
+        }
         0x102a => {
             // CanonShotInfo — int16s array, same format as JPEG MakerNote tag 0x0004
             let values: Vec<i16> = (0..data.len() / 2)
@@ -258,6 +270,27 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                     ..t
                 });
             }
+            true
+        }
+        0x1031 => {
+            // SensorInfo — int16s array (Canon::SensorInfo table)
+            let ri16 = |idx: usize| -> i16 {
+                let off = idx * 2;
+                if off + 2 > data.len() { return 0; }
+                if is_le { i16::from_le_bytes([data[off], data[off+1]]) }
+                else { i16::from_be_bytes([data[off], data[off+1]]) }
+            };
+            let n = data.len() / 2;
+            if n > 1 { tags.push(mk("SensorWidth", ri16(1).to_string())); }
+            if n > 2 { tags.push(mk("SensorHeight", ri16(2).to_string())); }
+            if n > 5 { tags.push(mk("SensorLeftBorder", ri16(5).to_string())); }
+            if n > 6 { tags.push(mk("SensorTopBorder", ri16(6).to_string())); }
+            if n > 7 { tags.push(mk("SensorRightBorder", ri16(7).to_string())); }
+            if n > 8 { tags.push(mk("SensorBottomBorder", ri16(8).to_string())); }
+            if n > 9 { tags.push(mk("BlackMaskLeftBorder", ri16(9).to_string())); }
+            if n > 10 { tags.push(mk("BlackMaskTopBorder", ri16(10).to_string())); }
+            if n > 11 { tags.push(mk("BlackMaskRightBorder", ri16(11).to_string())); }
+            if n > 12 { tags.push(mk("BlackMaskBottomBorder", ri16(12).to_string())); }
             true
         }
         0x1038 => {
@@ -422,7 +455,46 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
         0x1818 => {
             // ExposureInfo (SubDirectory → CanonRaw::ExposureInfo, FORMAT=float)
             // 0=ExposureCompensation, 1=ShutterSpeedValue, 2=ApertureValue
-            // These are complex conversions; for now just skip
+            if data.len() >= 4 {
+                let ec = rf32(data, 0);
+                tags.push(mk("ExposureCompensation", format!("{}", ec)));
+            }
+            if data.len() >= 8 {
+                let sv = rf32(data, 4);
+                // ShutterSpeedValue → ExposureTime: 2^(-sv)
+                let et = 2.0_f64.powf(-(sv as f64));
+                tags.push(mk("ShutterSpeedValue", format!("{}", sv)));
+                // Also emit ExposureTime for composites
+                let et_print = if et < 1.0 && et > 0.0 {
+                    format!("1/{}", (1.0 / et + 0.5) as u32)
+                } else {
+                    format!("{:.0}", et)
+                };
+                tags.push(Tag {
+                    id: TagId::Text("ExposureTime".into()),
+                    name: "ExposureTime".into(),
+                    description: "Exposure Time".into(),
+                    group: TagGroup { family0: "CanonRaw".into(), family1: "CanonRaw".into(), family2: "Camera".into() },
+                    raw_value: Value::F64(et),
+                    print_value: et_print,
+                    priority: 0,
+                });
+            }
+            if data.len() >= 12 {
+                let av = rf32(data, 8);
+                tags.push(mk("ApertureValue", format!("{}", av)));
+                // Also emit FNumber for composites: 2^(av/2)
+                let fn_val = 2.0_f64.powf(av as f64 / 2.0);
+                tags.push(Tag {
+                    id: TagId::Text("FNumber".into()),
+                    name: "FNumber".into(),
+                    description: "F Number".into(),
+                    group: TagGroup { family0: "CanonRaw".into(), family1: "CanonRaw".into(), family2: "Camera".into() },
+                    raw_value: Value::F64(fn_val),
+                    print_value: format!("{:.1}", fn_val),
+                    priority: 0,
+                });
+            }
             true
         }
         0x1029 => {
@@ -498,7 +570,7 @@ fn crw_tag_name(tag_id: u16) -> (&'static str, &'static str) {
         0x0000 => ("NullRecord", "Null Record"),
         0x0032 => ("CanonColorInfo1", "Color Info 1"),
         0x0805 => ("CanonFileDescription", "File Description"),
-        0x080a => ("", ""),  // CanonRawMakeModel: combined make/model string, not emitted directly
+        0x080a => ("CanonRawMakeModel", "Canon Raw Make Model"),  // Split into Make+Model in binary subdir
         0x080b => ("CanonFirmwareVersion", "Firmware Version"),
         0x080c => ("ComponentVersion", "Component Version"),
         0x080d => ("ROMOperationMode", "ROM Operation Mode"),
