@@ -31,7 +31,7 @@ pub fn read_djvu(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     // Parse chunks
-    let mut pos = 16;
+    let pos = 16;
     parse_chunks(data, pos, data.len(), &mut tags);
 
     Ok(tags)

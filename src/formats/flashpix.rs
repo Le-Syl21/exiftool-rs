@@ -219,7 +219,7 @@ fn process_properties(data: &[u8], is_summary: bool, tags: &mut Vec<Tag>) {
         let set_offset = r32(data, hdr_off + 16) as usize;
         if set_offset + 8 > data.len() { break; }
 
-        let set_size = r32(data, set_offset) as usize;
+        let _set_size = r32(data, set_offset) as usize;
         let prop_count = r32(data, set_offset + 4) as usize;
         if prop_count > 1000 { continue; }
 

@@ -338,11 +338,14 @@ fn compute_aperture(tags: &[Tag]) -> Option<Tag> {
 }
 
 fn compute_image_size(tags: &[Tag]) -> Option<Tag> {
-    // Prefer ExifImage dimensions (JPEG SOF), then EXIF tags, then TIFF IFD
-    let w = find_tag(tags, "ExifImageWidth")
-        .or_else(|| find_tag(tags, "ImageWidth"))?;
-    let h = find_tag(tags, "ExifImageHeight")
-        .or_else(|| find_tag(tags, "ImageHeight"))?;
+    // Perl composite ImageSize requires ImageWidth and ImageHeight (format-native dimensions).
+    // ExifImageWidth/Height are optional "Desire" and only used for specific RAW formats.
+    // Use ImageWidth/ImageHeight first; only fall back to ExifImageWidth/Height for JPEG
+    // (where the JPEG SOF emits ImageWidth from the actual frame, not EXIF).
+    let w = find_tag(tags, "ImageWidth")
+        .or_else(|| find_tag(tags, "ExifImageWidth"))?;
+    let h = find_tag(tags, "ImageHeight")
+        .or_else(|| find_tag(tags, "ExifImageHeight"))?;
 
     let width = w.raw_value.as_u64().or_else(|| w.print_value.parse().ok())?;
     let height = h.raw_value.as_u64().or_else(|| h.print_value.parse().ok())?;
@@ -359,8 +362,8 @@ fn compute_megapixels(tags: &[Tag]) -> Option<Tag> {
     // Use ImageSize composite (already computed) like Perl does
     let sz = find_tag_value(tags, "ImageSize")
         .or_else(|| {
-            let w = find_tag(tags, "ExifImageWidth").or_else(|| find_tag(tags, "ImageWidth"))?;
-            let h = find_tag(tags, "ExifImageHeight").or_else(|| find_tag(tags, "ImageHeight"))?;
+            let w = find_tag(tags, "ImageWidth").or_else(|| find_tag(tags, "ExifImageWidth"))?;
+            let h = find_tag(tags, "ImageHeight").or_else(|| find_tag(tags, "ExifImageHeight"))?;
             let wv = w.raw_value.as_u64().or_else(|| w.print_value.parse().ok())?;
             let hv = h.raw_value.as_u64().or_else(|| h.print_value.parse().ok())?;
             Some(format!("{}x{}", wv, hv))

@@ -3,7 +3,7 @@
 //! Each format has a minimal reader extracting basic metadata.
 
 use crate::error::{Error, Result};
-use crate::metadata::{ExifReader, XmpReader};
+use crate::metadata::XmpReader;
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
@@ -270,14 +270,392 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     let mut tags = Vec::new();
+
+    // FLV header: FLV(3) version(1) flags(1) offset(4 BE)
     let flags = data[4];
     let has_audio = flags & 0x04 != 0;
     let has_video = flags & 0x01 != 0;
+    let header_offset = u32::from_be_bytes([data[5], data[6], data[7], data[8]]) as usize;
 
-    tags.push(mktag("FLV", "HasAudio", "Has Audio", Value::String(if has_audio { "Yes" } else { "No" }.into())));
-    tags.push(mktag("FLV", "HasVideo", "Has Video", Value::String(if has_video { "Yes" } else { "No" }.into())));
+    // Parse FLV tags starting at header_offset
+    // Each tag: prev_tag_size(4) type(1) data_size(3 BE) timestamp(3 BE) ts_ext(1) stream_id(3) data(N)
+    // First prev_tag_size is 0 at position header_offset
+    let mut pos = header_offset;
+
+    // Skip initial prev_tag_size (4 bytes)
+    if pos + 4 <= data.len() {
+        pos += 4;
+    }
+
+    let mut found_meta = false;
+    let mut audio_info_found = false;
+    let mut video_info_found = false;
+
+    while pos + 11 <= data.len() && (!found_meta || (!audio_info_found && has_audio) || (!video_info_found && has_video)) {
+        let tag_type = data[pos];
+        let data_size = ((data[pos+1] as usize) << 16) | ((data[pos+2] as usize) << 8) | (data[pos+3] as usize);
+        // skip timestamp (3) + ts_ext (1) + stream_id (3) = 7 bytes
+        let tag_start = pos + 11;
+        let tag_end = tag_start + data_size;
+
+        if tag_end > data.len() { break; }
+
+        match tag_type {
+            0x12 => {
+                // Script (AMF metadata) tag
+                if !found_meta {
+                    let tag_data = &data[tag_start..tag_end];
+                    flv_parse_amf_metadata(tag_data, &mut tags);
+                    found_meta = true;
+                }
+            }
+            0x08 if !audio_info_found => {
+                // Audio tag: first byte = codec info
+                if data_size >= 1 {
+                    let info_byte = data[tag_start];
+                    let codec_id = (info_byte >> 4) & 0x0f;
+                    let sample_rate_idx = (info_byte >> 2) & 0x03;
+                    let sample_size = (info_byte >> 1) & 0x01;
+                    let stereo = info_byte & 0x01;
+
+                    let codec_name = match codec_id {
+                        0 => "Uncompressed",
+                        1 => "ADPCM",
+                        2 => "MP3",
+                        3 => "Uncompressed LE",
+                        4 => "Nellymoser 16kHz",
+                        5 => "Nellymoser 8kHz",
+                        6 => "Nellymoser",
+                        7 => "G711 A-law",
+                        8 => "G711 mu-law",
+                        10 => "AAC",
+                        11 => "Speex",
+                        14 => "MP3 8kHz",
+                        15 => "Device-specific",
+                        _ => "Unknown",
+                    };
+                    let sample_rate = match sample_rate_idx {
+                        0 => "5512", 1 => "11025", 2 => "22050", 3 => "44100", _ => "Unknown",
+                    };
+                    let channels = if stereo == 1 { "2 (stereo)" } else { "1 (mono)" };
+                    let bits = if sample_size == 1 { "16" } else { "8" };
+
+                    tags.push(mktag("FLV", "AudioCodecID", "Audio Codec ID", Value::String(format!("{}", codec_id))));
+                    tags.push(mktag("FLV", "AudioSampleRate", "Audio Sample Rate", Value::String(sample_rate.to_string())));
+                    tags.push(mktag("FLV", "AudioBitsPerSample", "Audio Bits Per Sample", Value::String(bits.to_string())));
+                    tags.push(mktag("FLV", "AudioChannels", "Audio Channels", Value::String(channels.to_string())));
+                    tags.push(mktag("FLV", "AudioEncoding", "Audio Encoding", Value::String(codec_name.to_string())));
+                    audio_info_found = true;
+                }
+            }
+            0x09 if !video_info_found => {
+                // Video tag: first byte = codec info
+                if data_size >= 1 {
+                    let info_byte = data[tag_start];
+                    let codec_id = info_byte & 0x0f;
+                    let codec_name = match codec_id {
+                        2 => "Sorenson H.263",
+                        3 => "Screen video",
+                        4 => "On2 VP6",
+                        5 => "On2 VP6 with alpha",
+                        6 => "Screen video v2",
+                        7 => "H.264",
+                        _ => "Unknown",
+                    };
+                    tags.push(mktag("FLV", "VideoCodecID", "Video Codec ID", Value::String(format!("{}", codec_id))));
+                    tags.push(mktag("FLV", "VideoEncoding", "Video Encoding", Value::String(codec_name.to_string())));
+                    video_info_found = true;
+                }
+            }
+            _ => {}
+        }
+
+        // Move to next tag: skip data + prev_tag_size(4)
+        pos = tag_end + 4;
+    }
+
+    // Add HasAudio/HasVideo from header flags
+    if has_audio && !tags.iter().any(|t| t.name == "HasAudio") {
+        tags.push(mktag("FLV", "HasAudio", "Has Audio", Value::String("Yes".into())));
+    }
+    if has_video && !tags.iter().any(|t| t.name == "HasVideo") {
+        tags.push(mktag("FLV", "HasVideo", "Has Video", Value::String("Yes".into())));
+    }
 
     Ok(tags)
+}
+
+/// Parse AMF metadata from FLV script tag.
+/// AMF format: type_byte + value...
+/// type 0x02 = string (2-byte BE len + bytes)
+/// type 0x08 = ECMAArray (4-byte count + key-value pairs until 0x00 0x00 0x09)
+fn flv_parse_amf_metadata(data: &[u8], tags: &mut Vec<Tag>) {
+    let mut pos = 0;
+
+    // First value should be string "onMetaData"
+    if pos + 3 > data.len() || data[pos] != 0x02 { return; }
+    pos += 1;
+    let str_len = u16::from_be_bytes([data[pos], data[pos+1]]) as usize;
+    pos += 2;
+    if pos + str_len > data.len() { return; }
+    let name = String::from_utf8_lossy(&data[pos..pos+str_len]).to_string();
+    pos += str_len;
+
+    if name != "onMetaData" { return; }
+
+    // Second value should be ECMAArray (0x08) or Object (0x03)
+    if pos >= data.len() { return; }
+    let container_type = data[pos];
+    pos += 1;
+
+    if container_type == 0x08 {
+        // ECMAArray: 4-byte count, then key-value pairs
+        if pos + 4 > data.len() { return; }
+        pos += 4; // skip array count
+    } else if container_type == 0x03 {
+        // Object: just key-value pairs
+    } else {
+        return;
+    }
+
+    // Parse key-value pairs until we hit 0x00 0x00 0x09 (end marker)
+    flv_parse_amf_object(data, &mut pos, tags, "");
+}
+
+fn flv_parse_amf_object(data: &[u8], pos: &mut usize, tags: &mut Vec<Tag>, prefix: &str) {
+    while *pos + 3 <= data.len() {
+        // Check for end-of-object marker: 0x00 0x00 0x09
+        if data[*pos] == 0x00 && data[*pos+1] == 0x00 && *pos + 2 < data.len() && data[*pos+2] == 0x09 {
+            *pos += 3;
+            break;
+        }
+
+        // Read key
+        let key_len = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
+        *pos += 2;
+        if *pos + key_len > data.len() { break; }
+        let key = String::from_utf8_lossy(&data[*pos..*pos+key_len]).to_string();
+        *pos += key_len;
+
+        if *pos >= data.len() { break; }
+
+        // Read value type
+        let val_type = data[*pos];
+        *pos += 1;
+
+        let full_key = if prefix.is_empty() {
+            // Convert camelCase key to ExifTool CamelCase tag name
+            flv_key_to_tag_name(&key)
+        } else {
+            // Nested: prefix + CamelCase key
+            let part = flv_key_to_tag_name(&key);
+            format!("{}{}", prefix, part)
+        };
+
+        match val_type {
+            0x00 => {
+                // Double
+                if *pos + 8 > data.len() { break; }
+                let bytes: [u8; 8] = [data[*pos], data[*pos+1], data[*pos+2], data[*pos+3],
+                                       data[*pos+4], data[*pos+5], data[*pos+6], data[*pos+7]];
+                let val = f64::from_be_bytes(bytes);
+                *pos += 8;
+                let val_str = flv_format_number(val);
+                tags.push(mktag("FLV", &full_key, &full_key, Value::String(val_str)));
+            }
+            0x01 => {
+                // Boolean
+                if *pos >= data.len() { break; }
+                let b = data[*pos] != 0;
+                *pos += 1;
+                tags.push(mktag("FLV", &full_key, &full_key, Value::String(if b { "Yes" } else { "No" }.to_string())));
+            }
+            0x02 => {
+                // String
+                if *pos + 2 > data.len() { break; }
+                let slen = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
+                *pos += 2;
+                if *pos + slen > data.len() { break; }
+                let s = String::from_utf8_lossy(&data[*pos..*pos+slen]).to_string();
+                *pos += slen;
+                tags.push(mktag("FLV", &full_key, &full_key, Value::String(s)));
+            }
+            0x03 => {
+                // Object: recurse with prefix
+                let new_prefix = format!("{}", full_key);
+                flv_parse_amf_object(data, pos, tags, &new_prefix);
+            }
+            0x08 => {
+                // ECMAArray
+                if *pos + 4 > data.len() { break; }
+                *pos += 4; // skip count
+                let new_prefix = format!("{}", full_key);
+                flv_parse_amf_object(data, pos, tags, &new_prefix);
+            }
+            0x09 => {
+                // End of object (shouldn't happen here)
+                break;
+            }
+            0x0a => {
+                // Strict array
+                if *pos + 4 > data.len() { break; }
+                let count = u32::from_be_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3]]) as usize;
+                *pos += 4;
+                let mut items = Vec::new();
+                for _ in 0..count {
+                    if *pos >= data.len() { break; }
+                    let item_type = data[*pos];
+                    *pos += 1;
+                    match item_type {
+                        0x00 => {
+                            if *pos + 8 > data.len() { break; }
+                            let bytes: [u8; 8] = [data[*pos], data[*pos+1], data[*pos+2], data[*pos+3],
+                                                   data[*pos+4], data[*pos+5], data[*pos+6], data[*pos+7]];
+                            let v = f64::from_be_bytes(bytes);
+                            *pos += 8;
+                            items.push(flv_format_number(v));
+                        }
+                        0x02 => {
+                            if *pos + 2 > data.len() { break; }
+                            let slen = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
+                            *pos += 2;
+                            if *pos + slen > data.len() { break; }
+                            let s = String::from_utf8_lossy(&data[*pos..*pos+slen]).to_string();
+                            *pos += slen;
+                            items.push(s);
+                        }
+                        _ => break,
+                    }
+                }
+                if !items.is_empty() {
+                    tags.push(mktag("FLV", &full_key, &full_key, Value::String(items.join(", "))));
+                }
+            }
+            0x0b => {
+                // Date
+                if *pos + 10 > data.len() { break; }
+                let ms = f64::from_be_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3],
+                                              data[*pos+4], data[*pos+5], data[*pos+6], data[*pos+7]]);
+                let tz_offset = i16::from_be_bytes([data[*pos+8], data[*pos+9]]) as i32; // minutes
+                *pos += 10;
+                // Convert milliseconds to datetime
+                let s = flv_format_date(ms, tz_offset);
+                tags.push(mktag("FLV", &full_key, &full_key, Value::String(s)));
+            }
+            _ => {
+                // Unknown type - stop parsing
+                break;
+            }
+        }
+    }
+}
+
+/// Convert an FLV AMF key to ExifTool tag name.
+fn flv_key_to_tag_name(key: &str) -> String {
+    // Special mappings
+    match key {
+        "audiobitrate" | "audioBitrate" => return "AudioBitrate".to_string(),
+        "audiocodecid" | "audioCodecId" => return "AudioCodecID".to_string(),
+        "audiodatarate" | "audioDataRate" => return "AudioBitrate".to_string(),
+        "audiosamplerate" | "audioSampleRate" => return "AudioSampleRate".to_string(),
+        "audiosamplesize" | "audioSampleSize" => return "AudioBitsPerSample".to_string(),
+        "audiochannels" | "audioChannels" => return "AudioChannels".to_string(),
+        "audiodelay" | "audioDelay" => return "AudioDelay".to_string(),
+        "audiosize" | "audioSize" => return "AudioSize".to_string(),
+        "canSeekToEnd" | "canseeektoend" => return "CanSeekToEnd".to_string(),
+        "creationdate" | "creationDate" => return "MetadataDate".to_string(),
+        "creator" | "metadatacreator" | "metadataCreator" => return "MetadataCreator".to_string(),
+        "cuePoints" | "cuepoints" => return "CuePoints".to_string(),
+        "datasize" | "dataSize" => return "DataSize".to_string(),
+        "duration" => return "Duration".to_string(),
+        "framerate" | "frameRate" => return "FrameRate".to_string(),
+        "haskeyframes" | "hasKeyframes" => return "HasKeyFrames".to_string(),
+        "hasmetadata" | "hasMetadata" => return "HasMetadata".to_string(),
+        "hascuepoints" | "hasCuePoints" => return "HasCuePoints".to_string(),
+        "lastkeyframetimestamp" | "lastKeyframeTimestamp" => return "LastKeyFrameTime".to_string(),
+        "lasttimestamp" | "lastTimestamp" => return "LastTimeStamp".to_string(),
+        "stereo" => return "Stereo".to_string(),
+        "videobitrate" | "videoBitrate" => return "VideoBitrate".to_string(),
+        "videocodecid" | "videoCodecId" => return "VideoCodecID".to_string(),
+        "videodatarate" | "videoDataRate" => return "VideoBitrate".to_string(),
+        "videosize" | "videoSize" => return "VideoSize".to_string(),
+        "width" => return "ImageWidth".to_string(),
+        "height" => return "ImageHeight".to_string(),
+        _ => {}
+    }
+
+    // CuePoints special handling: keys like "0", "1" become CuePoint0, CuePoint1
+    // General: ucfirst + rest as-is, but handle nested keys
+    let mut result = String::new();
+    let mut next_upper = true;
+    for ch in key.chars() {
+        if ch == '_' || ch == '-' {
+            next_upper = true;
+        } else if next_upper {
+            for c in ch.to_uppercase() { result.push(c); }
+            next_upper = false;
+        } else {
+            result.push(ch);
+        }
+    }
+    result
+}
+
+fn flv_format_number(val: f64) -> String {
+    // Check if it looks like a kbps rate
+    if val.fract() == 0.0 && val >= 0.0 && val < 1e9 {
+        format!("{}", val as i64)
+    } else {
+        // Check if we can represent as simple decimal
+        let s = format!("{}", val);
+        s
+    }
+}
+
+fn flv_format_date(ms: f64, tz_offset_minutes: i32) -> String {
+    // Convert milliseconds since epoch to datetime string
+    let secs = (ms / 1000.0) as i64;
+    let millis = ms as i64 % 1000;
+
+    // Simple epoch to datetime conversion
+    let epoch_to_date = |ts: i64| -> String {
+        // Basic implementation
+        let days = ts / 86400;
+        let rem_secs = ts % 86400;
+        let hours = rem_secs / 3600;
+        let mins = (rem_secs % 3600) / 60;
+        let secs = rem_secs % 60;
+
+        // Days since 1970-01-01
+        let mut year = 1970i32;
+        let mut remaining_days = days;
+        loop {
+            let days_in_year = if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 { 366 } else { 365 };
+            if remaining_days < days_in_year {
+                break;
+            }
+            remaining_days -= days_in_year;
+            year += 1;
+        }
+        let month_days = [31i64, if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        let mut month = 1;
+        let mut day = remaining_days + 1;
+        for &md in &month_days {
+            if day > md { day -= md; month += 1; } else { break; }
+        }
+        format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", year, month, day, hours, mins, secs)
+    };
+
+    let base = epoch_to_date(secs);
+    let tz_hours = tz_offset_minutes.abs() / 60;
+    let tz_mins = tz_offset_minutes.abs() % 60;
+    let tz_sign = if tz_offset_minutes >= 0 { "+" } else { "-" };
+
+    if millis != 0 {
+        format!("{}.{:03}{}{:02}:{:02}", base, millis, tz_sign, tz_hours, tz_mins)
+    } else {
+        format!("{}{}{:02}:{:02}", base, tz_sign, tz_hours, tz_mins)
+    }
 }
 
 // ============================================================================
@@ -1268,29 +1646,515 @@ fn format_exposure_time(val: f64) -> String {
 // M2TS (MPEG-2 Transport Stream)
 // ============================================================================
 
+// --- M2TS bit reader for SPS parsing ---
+struct M2tsBitReader<'a> {
+    data: &'a [u8],
+    byte_pos: usize,
+    bit_pos: u8,
+    current: u8,
+}
+
+impl<'a> M2tsBitReader<'a> {
+    fn new(data: &'a [u8]) -> Self {
+        let (byte_pos, bit_pos, current) = if data.is_empty() {
+            (0, 0, 0)
+        } else {
+            (1, 8, data[0])
+        };
+        M2tsBitReader { data, byte_pos, bit_pos, current }
+    }
+
+    fn read_bit(&mut self) -> Option<u32> {
+        if self.bit_pos == 0 {
+            if self.byte_pos >= self.data.len() { return None; }
+            self.current = self.data[self.byte_pos];
+            self.byte_pos += 1;
+            self.bit_pos = 8;
+        }
+        self.bit_pos -= 1;
+        Some(((self.current >> self.bit_pos) & 1) as u32)
+    }
+
+    fn read_bits(&mut self, n: u32) -> Option<u32> {
+        let mut val = 0u32;
+        for _ in 0..n { val = (val << 1) | self.read_bit()?; }
+        Some(val)
+    }
+
+    fn skip_bits(&mut self, n: u32) {
+        for _ in 0..n { let _ = self.read_bit(); }
+    }
+
+    fn read_ue(&mut self) -> Option<u32> {
+        let mut leading = 0u32;
+        while self.read_bit()? == 0 {
+            leading += 1;
+            if leading > 31 { return None; }
+        }
+        let mut val = (1u32 << leading) - 1;
+        for _ in 0..leading { val = (val << 1) | self.read_bit()?; }
+        Some(val)
+    }
+
+    fn read_se(&mut self) -> Option<i32> {
+        let ue = self.read_ue()?;
+        Some(if ue & 1 != 0 { ((ue + 1) >> 1) as i32 } else { -((ue >> 1) as i32) })
+    }
+}
+
+fn m2ts_find_packet_size(data: &[u8]) -> Option<(usize, usize)> {
+    for &(pkt, tco) in &[(192usize, 4usize), (188, 0)] {
+        if data.len() >= pkt * 3 && (0..3).all(|i| data[i * pkt + tco] == 0x47) {
+            return Some((pkt, tco));
+        }
+    }
+    None
+}
+
+fn m2ts_get_payload(pkt: &[u8], tco: usize) -> Option<(bool, u16, &[u8])> {
+    if pkt.len() < tco + 4 { return None; }
+    let hdr = &pkt[tco..];
+    if hdr[0] != 0x47 { return None; }
+    let pusi = (hdr[1] & 0x40) != 0;
+    let pid = (((hdr[1] & 0x1F) as u16) << 8) | hdr[2] as u16;
+    let afc = (hdr[3] >> 4) & 0x3;
+    if afc == 0 || afc == 2 { return None; }
+    let mut ps = 4;
+    if afc == 3 {
+        if hdr.len() <= ps { return None; }
+        ps += 1 + hdr[ps] as usize;
+    }
+    if ps >= hdr.len() { return None; }
+    Some((pusi, pid, &hdr[ps..]))
+}
+
+fn m2ts_parse_pat(section: &[u8]) -> Vec<u16> {
+    let mut pmt_pids = Vec::new();
+    if section.len() < 8 { return pmt_pids; }
+    let section_length = (((section[1] & 0x0F) as usize) << 8) | section[2] as usize;
+    let entries_end = (3 + section_length).saturating_sub(4).min(section.len());
+    let mut i = 8;
+    while i + 4 <= entries_end {
+        let prog_num = ((section[i] as u16) << 8) | section[i+1] as u16;
+        let pmt_pid = (((section[i+2] & 0x1F) as u16) << 8) | section[i+3] as u16;
+        if prog_num != 0 { pmt_pids.push(pmt_pid); }
+        i += 4;
+    }
+    pmt_pids
+}
+
+struct M2tsStreamInfo {
+    video_type: Option<String>,
+    audio_type: Option<String>,
+    audio_bitrate_idx: Option<u8>,
+    audio_surround_mode: Option<u8>,
+    audio_channels: Option<u8>,
+    h264_pid: Option<u16>,
+    audio_pid: Option<u16>,
+}
+
+fn m2ts_parse_pmt(section: &[u8]) -> Option<M2tsStreamInfo> {
+    if section.len() < 12 || section[0] != 0x02 { return None; }
+    let section_length = (((section[1] & 0x0F) as usize) << 8) | section[2] as usize;
+    let section_end = (3 + section_length).saturating_sub(4).min(section.len());
+    let prog_info_len = (((section[10] & 0x0F) as usize) << 8) | section[11] as usize;
+    let mut es_pos = 12 + prog_info_len;
+    if es_pos >= section_end { return None; }
+
+    let mut info = M2tsStreamInfo {
+        video_type: None, audio_type: None,
+        audio_bitrate_idx: None, audio_surround_mode: None, audio_channels: None,
+        h264_pid: None, audio_pid: None,
+    };
+
+    while es_pos + 5 <= section_end {
+        let stream_type = section[es_pos];
+        let es_pid = (((section[es_pos+1] & 0x1F) as u16) << 8) | section[es_pos+2] as u16;
+        let es_info_len = (((section[es_pos+3] & 0x0F) as usize) << 8) | section[es_pos+4] as usize;
+        let es_info_end = (es_pos + 5 + es_info_len).min(section_end);
+
+        match stream_type {
+            0x01 | 0x02 if info.video_type.is_none() => {
+                info.video_type = Some(m2ts_stream_type_name(stream_type).to_string());
+            }
+            0x10 if info.video_type.is_none() => {
+                info.video_type = Some(m2ts_stream_type_name(stream_type).to_string());
+            }
+            0x1b if info.video_type.is_none() => {
+                info.video_type = Some("H.264 (AVC) Video".to_string());
+                info.h264_pid = Some(es_pid);
+            }
+            0x24 if info.video_type.is_none() => {
+                info.video_type = Some(m2ts_stream_type_name(stream_type).to_string());
+            }
+            0x03 | 0x04 if info.audio_type.is_none() => {
+                info.audio_type = Some(m2ts_stream_type_name(stream_type).to_string());
+                info.audio_pid = Some(es_pid);
+            }
+            0x0f if info.audio_type.is_none() => {
+                info.audio_type = Some(m2ts_stream_type_name(stream_type).to_string());
+                info.audio_pid = Some(es_pid);
+            }
+            0x81 if info.audio_type.is_none() => {
+                info.audio_type = Some("A52/AC-3 Audio".to_string());
+                info.audio_pid = Some(es_pid);
+                // Parse AC3 audio descriptor from ES info
+                let mut di = es_pos + 5;
+                while di + 2 <= es_info_end {
+                    let dtag = section[di];
+                    let dlen = section[di+1] as usize;
+                    if di + 2 + dlen > es_info_end { break; }
+                    if dtag == 0x81 && dlen >= 3 {
+                        // AC3 audio descriptor per ATSC A/52
+                        let d0 = section[di+2];
+                        let d1 = section[di+3];
+                        let d2 = section[di+4];
+                        info.audio_bitrate_idx = Some(d1 >> 2);
+                        info.audio_surround_mode = Some(d1 & 0x03);
+                        info.audio_channels = Some((d2 >> 1) & 0x0f);
+                        let _ = d0; // sample_rate_idx from d0 >> 5 not used here
+                    }
+                    di += 2 + dlen;
+                }
+            }
+            _ => {}
+        }
+
+        es_pos = es_info_end;
+    }
+
+    if info.video_type.is_some() || info.audio_type.is_some() {
+        Some(info)
+    } else {
+        None
+    }
+}
+
+fn m2ts_parse_sps(sps_nal: &[u8]) -> Option<(u32, u32)> {
+    // Remove emulation prevention bytes
+    let mut rbsp = Vec::with_capacity(sps_nal.len());
+    let mut i = 0;
+    while i < sps_nal.len() {
+        if i + 2 < sps_nal.len() && sps_nal[i] == 0 && sps_nal[i+1] == 0 && sps_nal[i+2] == 3 {
+            rbsp.push(0); rbsp.push(0); i += 3;
+        } else {
+            rbsp.push(sps_nal[i]); i += 1;
+        }
+    }
+
+    let mut br = M2tsBitReader::new(&rbsp);
+    br.skip_bits(8); // nal_unit_type byte
+    let profile_idc = br.read_bits(8)?;
+    br.skip_bits(16); // constraint_flags + level_idc
+    br.read_ue()?; // seq_parameter_set_id
+
+    if matches!(profile_idc, 100|110|122|244|44|83|86|118|128) {
+        let chroma = br.read_ue()?;
+        if chroma == 3 { br.skip_bits(1); }
+        br.read_ue()?; br.read_ue()?; br.skip_bits(1);
+        let scaling = br.read_bit()?;
+        if scaling != 0 {
+            let count = if chroma != 3 { 8 } else { 12 };
+            for ci in 0..count {
+                if br.read_bit()? != 0 {
+                    let sz = if ci < 6 { 16 } else { 64 };
+                    let (mut last, mut next) = (8i32, 8i32);
+                    for _ in 0..sz {
+                        if next != 0 { let d = br.read_se()?; next = (last + d + 256) % 256; }
+                        last = if next == 0 { last } else { next };
+                    }
+                }
+            }
+        }
+    }
+
+    br.read_ue()?; // log2_max_frame_num_minus4
+    let poc_type = br.read_ue()?;
+    if poc_type == 0 { br.read_ue()?; }
+    else if poc_type == 1 {
+        br.skip_bits(1); br.read_se()?; br.read_se()?;
+        let n = br.read_ue()?;
+        for _ in 0..n { br.read_se()?; }
+    }
+    br.read_ue()?; br.skip_bits(1);
+
+    let pic_w = br.read_ue()?;
+    let pic_h = br.read_ue()?;
+    let frame_mbs_only = br.read_bit()?;
+    if frame_mbs_only == 0 { br.skip_bits(1); }
+    br.skip_bits(1);
+
+    let crop = br.read_bit()?;
+    let (cl, cr, ct, cb) = if crop != 0 {
+        (br.read_ue()?, br.read_ue()?, br.read_ue()?, br.read_ue()?)
+    } else { (0, 0, 0, 0) };
+
+    let w = (pic_w + 1) * 16 - cl * 2 - cr * 2;
+    let h = ((pic_h + 1) * (2 - frame_mbs_only)) * 16 - ct * 2 - cb * 2;
+    Some((w, h))
+}
+
+fn m2ts_parse_h264_pes(payload: &[u8]) -> Option<(u32, u32)> {
+    // Scan PES payload for NAL start codes, look for SPS (type 7)
+    let mut i = 0;
+    while i + 4 <= payload.len() {
+        let nal_start = if payload[i] == 0 && payload[i+1] == 0 && payload[i+2] == 1 {
+            i + 3
+        } else if i + 5 <= payload.len() && payload[i] == 0 && payload[i+1] == 0 && payload[i+2] == 0 && payload[i+3] == 1 {
+            i + 4
+        } else {
+            i += 1; continue;
+        };
+        if nal_start >= payload.len() { break; }
+        let nal_type = payload[nal_start] & 0x1F;
+        if nal_type == 7 {
+            if let Some(dims) = m2ts_parse_sps(&payload[nal_start..]) {
+                return Some(dims);
+            }
+        }
+        i = nal_start;
+    }
+    None
+}
+
+fn m2ts_parse_ac3_sample_rate(payload: &[u8]) -> Option<u32> {
+    // Scan for 0x0B77 sync word and read fscod
+    let pos = payload.windows(2).position(|w| w == [0x0B, 0x77])?;
+    if pos + 5 > payload.len() { return None; }
+    let fscod = payload[pos + 4] >> 6;
+    let rates = [48000u32, 44100, 32000, 0];
+    Some(rates.get(fscod as usize).copied().unwrap_or(0))
+}
+
+fn m2ts_stream_type_name(st: u8) -> &'static str {
+    match st {
+        0x01 => "MPEG1Video",
+        0x02 => "MPEG2Video",
+        0x03 => "MPEG1Audio",
+        0x04 => "MPEG2Audio",
+        0x0f => "ADTS AAC",
+        0x10 => "MPEG4Video",
+        0x1b => "H.264 (AVC) Video",
+        0x24 => "HEVC Video",
+        0x81 => "A52/AC-3 Audio",
+        0x82 => "DTS Audio",
+        _ => "Unknown",
+    }
+}
+
+fn m2ts_format_bitrate(kbps: u32) -> String {
+    format!("{} kbps", kbps)
+}
+
+fn m2ts_format_duration(first: u64, last: u64) -> String {
+    if last <= first { return "0 s".to_string(); }
+    let ticks = last - first;
+    let total_secs = ticks / 27_000_000;
+    if total_secs == 0 {
+        return "0 s".to_string();
+    }
+    let h = total_secs / 3600;
+    let m = (total_secs % 3600) / 60;
+    let s = total_secs % 60;
+    if h > 0 {
+        format!("{}:{:02}:{:02}", h, m, s)
+    } else {
+        format!("{}:{:02}", m, s)
+    }
+}
+
 pub fn read_m2ts(data: &[u8]) -> Result<Vec<Tag>> {
     if data.is_empty() {
         return Err(Error::InvalidData("empty file".into()));
     }
 
+    let (packet_size, tco) = m2ts_find_packet_size(data)
+        .ok_or_else(|| Error::InvalidData("not an MPEG-2 TS file".into()))?;
+
     let mut tags = Vec::new();
-
-    // Find sync byte pattern (0x47 every 188 or 192 bytes)
-    let packet_size = if data.len() >= 376 && data[0] == 0x47 && data[188] == 0x47 {
-        188
-    } else if data.len() >= 384 && data[0] == 0x47 && data[192] == 0x47 {
-        192 // M2TS with 4-byte timestamp prefix
-    } else if data.len() >= 8 && data[4] == 0x47 && data.len() >= 196 && data[196] == 0x47 {
-        192
-    } else {
-        return Err(Error::InvalidData("not an MPEG-2 TS file".into()));
-    };
-
-    tags.push(mktag("M2TS", "TSPacketSize", "TS Packet Size", Value::U32(packet_size as u32)));
     let num_packets = data.len() / packet_size;
-    tags.push(mktag("M2TS", "TSPacketCount", "TS Packet Count", Value::U32(num_packets as u32)));
+    let scan_count = num_packets.min(2000);
+
+    let mut pmt_pids: Vec<u16> = Vec::new();
+    let mut pmt_buf: std::collections::HashMap<u16, Vec<u8>> = std::collections::HashMap::new();
+    let mut pat_done = false;
+    let mut stream_info: Option<M2tsStreamInfo> = None;
+    let mut h264_dims: Option<(u32, u32)> = None;
+    let mut ac3_sample_rate: Option<u32> = None;
+    let mut pcr_first: Option<u64> = None;
+    let mut pcr_last: Option<u64> = None;
+
+    for pkt_idx in 0..scan_count {
+        let pkt = &data[pkt_idx * packet_size..(pkt_idx+1) * packet_size];
+
+        // Extract PCR
+        let hdr = &pkt[tco..];
+        if hdr.len() >= 12 && hdr[0] == 0x47 {
+            let afc = (hdr[3] >> 4) & 0x3;
+            if afc == 3 && hdr.len() > 5 {
+                let af_len = hdr[4] as usize;
+                if af_len >= 7 && hdr.len() >= 12 {
+                    let af_flags = hdr[5];
+                    if af_flags & 0x10 != 0 {
+                        let pb = ((hdr[6] as u64) << 25) | ((hdr[7] as u64) << 17)
+                            | ((hdr[8] as u64) << 9) | ((hdr[9] as u64) << 1)
+                            | ((hdr[10] as u64) >> 7);
+                        let pe = (((hdr[10] as u64) & 1) << 8) | hdr[11] as u64;
+                        let pcr = pb * 300 + pe;
+                        if pcr_first.is_none() { pcr_first = Some(pcr); }
+                        pcr_last = Some(pcr);
+                    }
+                }
+            }
+        }
+
+        if let Some((pusi, pid, payload)) = m2ts_get_payload(pkt, tco) {
+            if pid == 0x0000 && !pat_done {
+                let section = if pusi && !payload.is_empty() {
+                    let ptr = payload[0] as usize;
+                    &payload[(ptr + 1).min(payload.len())..]
+                } else { payload };
+                let new_pmts = m2ts_parse_pat(section);
+                if !new_pmts.is_empty() {
+                    pmt_pids = new_pmts;
+                    pat_done = true;
+                }
+            } else if stream_info.is_none() && pmt_pids.contains(&pid) {
+                let buf = pmt_buf.entry(pid).or_default();
+                if pusi {
+                    buf.clear();
+                    let ptr = if !payload.is_empty() { payload[0] as usize } else { 0 };
+                    buf.extend_from_slice(&payload[(ptr + 1).min(payload.len())..]);
+                } else {
+                    buf.extend_from_slice(payload);
+                }
+                let buf_clone = buf.clone();
+                if let Some(si) = m2ts_parse_pmt(&buf_clone) {
+                    stream_info = Some(si);
+                }
+            } else if let Some(ref si) = stream_info {
+                if h264_dims.is_none() && Some(pid) == si.h264_pid {
+                    // Skip PES header to get to ES data
+                    let es = m2ts_skip_pes_header(payload);
+                    if let Some(dims) = m2ts_parse_h264_pes(es) {
+                        h264_dims = Some(dims);
+                    }
+                }
+                if ac3_sample_rate.is_none() && Some(pid) == si.audio_pid {
+                    let es = m2ts_skip_pes_header(payload);
+                    if let Some(sr) = m2ts_parse_ac3_sample_rate(es) {
+                        if sr > 0 { ac3_sample_rate = Some(sr); }
+                    }
+                }
+            }
+        }
+    }
+
+    // Also scan last packets for PCR (duration)
+    if num_packets > scan_count {
+        for pkt_idx in (num_packets - 500).max(scan_count)..num_packets {
+            let pkt = &data[pkt_idx * packet_size..(pkt_idx+1) * packet_size];
+            let hdr = &pkt[tco..];
+            if hdr.len() >= 12 && hdr[0] == 0x47 {
+                let afc = (hdr[3] >> 4) & 0x3;
+                if afc == 3 && hdr.len() > 5 {
+                    let af_len = hdr[4] as usize;
+                    if af_len >= 7 {
+                        let af_flags = hdr[5];
+                        if af_flags & 0x10 != 0 && hdr.len() >= 12 {
+                            let pb = ((hdr[6] as u64) << 25) | ((hdr[7] as u64) << 17)
+                                | ((hdr[8] as u64) << 9) | ((hdr[9] as u64) << 1)
+                                | ((hdr[10] as u64) >> 7);
+                            let pe = (((hdr[10] as u64) & 1) << 8) | hdr[11] as u64;
+                            pcr_last = Some(pb * 300 + pe);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Emit tags
+    if let Some(ref si) = stream_info {
+        if let Some(ref vt) = si.video_type {
+            tags.push(mktag("M2TS", "VideoStreamType", "Video Stream Type", Value::String(vt.clone())));
+        }
+        if let Some(ref at) = si.audio_type {
+            tags.push(mktag("M2TS", "AudioStreamType", "Audio Stream Type", Value::String(at.clone())));
+        }
+
+        // AC3 audio descriptor info
+        if si.audio_bitrate_idx.is_some() || si.audio_surround_mode.is_some() || si.audio_channels.is_some() {
+            let bitrates = [
+                32u32,40,48,56,64,80,96,112,128,160,192,224,256,320,384,448,512,576,640
+            ];
+            if let Some(bi) = si.audio_bitrate_idx {
+                let idx = bi as usize;
+                if idx < bitrates.len() {
+                    tags.push(mktag("M2TS", "AudioBitrate", "Audio Bitrate",
+                        Value::String(m2ts_format_bitrate(bitrates[idx]))));
+                }
+            }
+            if let Some(sm) = si.audio_surround_mode {
+                let s = match sm {
+                    0 => "Not indicated",
+                    1 => "Not Dolby surround",
+                    2 => "Dolby surround",
+                    _ => "Reserved",
+                };
+                tags.push(mktag("M2TS", "SurroundMode", "Surround Mode", Value::String(s.into())));
+            }
+            if let Some(ch) = si.audio_channels {
+                let cs = match ch {
+                    0 => "1 + 1",
+                    1 => "1",
+                    2 => "2",
+                    3 => "3",
+                    4 => "2/1",
+                    5 => "3/1",
+                    6 => "2/2",
+                    7 => "3/2",
+                    _ => "Unknown",
+                };
+                tags.push(mktag("M2TS", "AudioChannels", "Audio Channels", Value::String(cs.into())));
+            }
+        }
+    }
+
+    if let Some((w, h)) = h264_dims {
+        tags.push(mktag("M2TS", "ImageWidth", "Image Width", Value::U32(w)));
+        tags.push(mktag("M2TS", "ImageHeight", "Image Height", Value::U32(h)));
+    }
+
+    if let Some(sr) = ac3_sample_rate {
+        tags.push(mktag("M2TS", "AudioSampleRate", "Audio Sample Rate", Value::U32(sr)));
+    }
+
+    // Duration
+    if let (Some(first), Some(last)) = (pcr_first, pcr_last) {
+        let dur = m2ts_format_duration(first, last);
+        tags.push(mktag("M2TS", "Duration", "Duration", Value::String(dur)));
+    }
 
     Ok(tags)
+}
+
+fn m2ts_skip_pes_header(payload: &[u8]) -> &[u8] {
+    // PES header: 00 00 01 stream_id [2 bytes length] [variable header]
+    if payload.len() < 9 || payload[0] != 0x00 || payload[1] != 0x00 || payload[2] != 0x01 {
+        return payload;
+    }
+    let stream_id = payload[3];
+    // Private stream IDs don't have standard PES header extension
+    if stream_id == 0xBC || stream_id == 0xBE || stream_id == 0xBF
+        || stream_id == 0xF0 || stream_id == 0xF1 || stream_id == 0xFF
+        || stream_id == 0xF2 || stream_id == 0xF8 {
+        return &payload[6..];
+    }
+    if payload.len() < 9 { return payload; }
+    let header_data_length = payload[8] as usize;
+    let es_start = 9 + header_data_length;
+    if es_start <= payload.len() { &payload[es_start..] } else { payload }
 }
 
 // ============================================================================
@@ -2186,7 +3050,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
     //      a. <rdf:RDF> → extract to string, pass to XmpReader for XMP tags
     //      b. <c2pa:manifest> → base64-decode → JUMBF parsing
     use xml::reader::{EventReader, XmlEvent};
-    let parser = EventReader::from_str(&text);
+    let _parser = EventReader::from_str(&text);
     let mut path: Vec<String> = Vec::new(); // element local names (ucfirst)
     let mut current_text = String::new();
     // Which section are we in?
@@ -3067,7 +3931,7 @@ pub fn read_aac(data: &[u8]) -> Result<Vec<Tag>> {
     // unpack as Perl: N=u32 big-endian from bytes 0-3, n=u16 from bytes 4-5, C=u8 from byte 6
     let t0 = u32::from_be_bytes([data[0], data[1], data[2], data[3]]);
     let t1 = u16::from_be_bytes([data[4], data[5]]);
-    let t2 = data[6];
+    let _t2 = data[6];
 
     // Validate: profile type
     // In Perl: $t[0]>>16 & 0x03 = bits 17-16 counting from right (0=LSB) of big-endian u32
@@ -3302,7 +4166,7 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
                     pos += 0; // skip
                     // Emit last_type
                     if let Some(lt) = last_type.take() {
-                        let val = if count > 1 { format!("{}x{}", lt, count) } else { format!("{}", lt) };
+                        let _val = if count > 1 { format!("{}x{}", lt, count) } else { format!("{}", lt) };
                         records.push(format_wpg_record(lt, count, if ver == 1 { &v1_map } else { &v2_map }));
                     }
                     last_type = Some(record_type);
@@ -3394,7 +4258,7 @@ pub fn read_ram(data: &[u8]) -> Result<Vec<Tag>> {
 
     let text = String::from_utf8_lossy(data);
     // Check for valid start: must begin with a URL-like protocol
-    let first_line = text.lines().next().unwrap_or("").trim();
+    let _first_line = text.lines().next().unwrap_or("").trim();
     // Validate: http:// lines must end with real media extensions
     let valid_protocols = ["rtsp://", "pnm://", "http://", "rtspt://", "rtspu://", "mmst://", "file://"];
     let has_valid = text.lines().any(|line| {
@@ -3582,7 +4446,7 @@ pub fn read_indesign(data: &[u8]) -> Result<Vec<Tag>> {
     };
 
     // Stream byte order is at offset 24 of current master page: 1 = LE, 2 = BE
-    let stream_is_le = cur_page[24] == 1;
+    let _stream_is_le = cur_page[24] == 1;
 
     // Number of pages (determines start of stream objects) - master page is LE
     let pages = u32::from_le_bytes(cur_page[280..284].try_into().unwrap_or([0;4]));
@@ -3813,7 +4677,7 @@ fn parse_pcapng_blocks(data: &[u8], start: usize, is_le: bool, tags: &mut Vec<Ta
         if is_le { u32::from_le_bytes([d[o], d[o+1], d[o+2], d[o+3]]) }
         else { u32::from_be_bytes([d[o], d[o+1], d[o+2], d[o+3]]) }
     };
-    let r64 = |d: &[u8], o: usize| -> u64 {
+    let _r64 = |d: &[u8], o: usize| -> u64 {
         if o+8 > d.len() { return 0; }
         if is_le { u64::from_le_bytes([d[o], d[o+1], d[o+2], d[o+3], d[o+4], d[o+5], d[o+6], d[o+7]]) }
         else { u64::from_be_bytes([d[o], d[o+1], d[o+2], d[o+3], d[o+4], d[o+5], d[o+6], d[o+7]]) }
@@ -3850,7 +4714,7 @@ fn format_unix_timestamp(secs: i64, usecs: u64) -> Option<String> {
     // For now, use UTC + known local offset from Perl output
     // Perl shows: 2020:10:13 16:12:07.025764+02:00
     // We'll use UTC for simplicity but format it correctly
-    use std::time::{SystemTime, UNIX_EPOCH};
+    
 
     // Get local timezone offset using system time
     let tz_offset_secs = get_local_tz_offset();
@@ -3870,7 +4734,7 @@ fn format_unix_timestamp(secs: i64, usecs: u64) -> Option<String> {
 fn get_local_tz_offset() -> i32 {
     // Try to get timezone offset from system
     // This uses a simple method: compare local time to UTC
-    use std::time::{SystemTime, UNIX_EPOCH};
+    
     // For now return 0 (UTC) - the test data shows +02:00 but we can't easily detect this
     // without platform-specific code
     0
@@ -3959,7 +4823,7 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
             let body_end = pos + block_size;
             let body = &data[body_start..body_end];
             if body.len() >= 20 {
-                let data_type = &body[0x10 - 8 + 8..]; // offset 0x10 from block start = 0x08 from body
+                let _data_type = &body[0x10 - 8 + 8..]; // offset 0x10 from block start = 0x08 from body
                 // Actually offset 0x10 from the block start means byte 16 from pos
                 // body starts at pos+8, so offset 16 from pos = body[8..12]
                 let dt_bytes = &data[pos+16..pos+20];

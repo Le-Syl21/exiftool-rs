@@ -1089,6 +1089,20 @@ impl ExifTool {
                     }
                 }
             }
+            // Override MP3 to MPC/APE/WavPack if extension says otherwise
+            if ft == FileType::Mp3 {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if ext.eq_ignore_ascii_case("mpc") {
+                        return Ok(FileType::Mpc);
+                    }
+                    if ext.eq_ignore_ascii_case("ape") {
+                        return Ok(FileType::Ape);
+                    }
+                    if ext.eq_ignore_ascii_case("wv") {
+                        return Ok(FileType::WavPack);
+                    }
+                }
+            }
             return Ok(ft);
         }
 

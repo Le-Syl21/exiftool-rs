@@ -497,6 +497,7 @@ static EXIF_IFD_TAGS: &[TagInfo] = &[
     TagInfo { tag_id: 0x9208, name: "LightSource", description: "Light Source", family2: "Camera" },
     TagInfo { tag_id: 0x9209, name: "Flash", description: "Flash", family2: "Camera" },
     TagInfo { tag_id: 0x920A, name: "FocalLength", description: "Focal Length", family2: "Camera" },
+    TagInfo { tag_id: 0x920D, name: "Noise", description: "Noise", family2: "Camera" },
     TagInfo { tag_id: 0x927C, name: "MakerNote", description: "Maker Note", family2: "Camera" },
     TagInfo { tag_id: 0x9286, name: "UserComment", description: "User Comment", family2: "Image" },
     TagInfo { tag_id: 0x9290, name: "SubSecTime", description: "Sub Sec Time", family2: "Time" },

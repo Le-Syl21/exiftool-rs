@@ -1005,23 +1005,33 @@ fn ucfirst(s: &str) -> String {
 /// Mirrors Perl: `my $name = ucfirst lc $tag; $name =~ s/_(.)/\U$1/g;`
 /// e.g. IMAGE_CREATION → ImageCreation, GENERAL_CREATION_INFO → GeneralCreationInfo
 fn xml_elem_to_camel(s: &str) -> String {
-    // lowercase first, then ucfirst, then remove underscores and capitalize next char
-    let lower = s.to_lowercase();
-    let mut result = String::with_capacity(lower.len());
-    let mut capitalize_next = true;
-    for ch in lower.chars() {
-        if ch == '_' {
-            capitalize_next = true;
-        } else if capitalize_next {
-            for c in ch.to_uppercase() {
-                result.push(c);
+    // If the string contains underscores or is ALL_CAPS, do full conversion:
+    // lowercase, ucfirst, remove underscores capitalizing next char
+    if s.contains('_') || s.chars().all(|c| c.is_uppercase() || !c.is_alphabetic()) {
+        let lower = s.to_lowercase();
+        let mut result = String::with_capacity(lower.len());
+        let mut capitalize_next = true;
+        for ch in lower.chars() {
+            if ch == '_' {
+                capitalize_next = true;
+            } else if capitalize_next {
+                for c in ch.to_uppercase() {
+                    result.push(c);
+                }
+                capitalize_next = false;
+            } else {
+                result.push(ch);
             }
-            capitalize_next = false;
-        } else {
-            result.push(ch);
+        }
+        result
+    } else {
+        // camelCase or lowercase: just ucfirst
+        let mut chars = s.chars();
+        match chars.next() {
+            None => String::new(),
+            Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
         }
     }
-    result
 }
 
 /// Normalize XML text content: trim outer whitespace and collapse internal whitespace sequences
@@ -1088,7 +1098,7 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                 // xml-rs exposes xmlns in the namespace mappings
                 // The default namespace (no prefix) is exposed via namespace.get("")
                 // We look for newly-declared default NS at this element
-                use xml::namespace::Namespace;
+                
                 // Check if there's a new default namespace declared at this element
                 // xml-rs merges namespaces so we check the full namespace map
                 // The simplest approach: check if attributes contain xmlns-like entries

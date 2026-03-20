@@ -297,7 +297,7 @@ fn parse_name_table(data: &[u8], tags: &mut Vec<Tag>) {
 }
 
 /// Decode a font name string based on platform and encoding.
-fn decode_font_name_string(data: &[u8], offset: usize, length: usize, platform: u16, encoding: u16) -> String {
+fn decode_font_name_string(data: &[u8], offset: usize, length: usize, platform: u16, _encoding: u16) -> String {
     if offset + length > data.len() { return String::new(); }
     let raw = &data[offset..offset + length];
     match platform {
@@ -695,3 +695,172 @@ pub fn read_pfb(data: &[u8]) -> Result<Vec<Tag>> {
     // Parse the assembled text just like a PFA file
     read_pfa(&text)
 }
+
+/// Read Printer Font Metrics (.pfm) file.
+/// Little-endian binary format with fixed-offset fields.
+pub fn read_pfm(data: &[u8]) -> Result<Vec<Tag>> {
+    // PFM: starts with \x00\x01 or \x00\x02, total size at offset 2 (int32u LE)
+    if data.len() < 117 || data[0] != 0x00 || (data[1] != 0x01 && data[1] != 0x02) {
+        return Err(Error::InvalidData("not a PFM file".into()));
+    }
+    let stored_size = u32::from_le_bytes([data[2], data[3], data[4], data[5]]) as usize;
+    if stored_size != data.len() {
+        return Err(Error::InvalidData("PFM file size mismatch".into()));
+    }
+
+    let mut tags = Vec::new();
+    let group = "Font";
+
+    // PFMVersion at offset 0: int16u LE, PrintConv: sprintf("%x.%.2x",$val>>8,$val&0xff)
+    let pfm_ver = u16::from_le_bytes([data[0], data[1]]);
+    let ver_str = format!("{:x}.{:02x}", pfm_ver >> 8, pfm_ver & 0xff);
+    tags.push(mk_font(group, "PFMVersion", "PFM Version", Value::String(ver_str)));
+
+    // Copyright at offset 6: string[60]
+    let copyright = pfm_read_string(data, 6, 60);
+    if !copyright.is_empty() {
+        tags.push(mk_font(group, "Copyright", "Copyright", Value::String(copyright)));
+    }
+
+    // FontType at offset 66: int16u LE
+    let font_type = u16::from_le_bytes([data[66], data[67]]);
+    tags.push(mk_font(group, "FontType", "Font Type", Value::String(format!("{}", font_type))));
+
+    // PointSize at offset 68: int16u LE
+    let point_size = u16::from_le_bytes([data[68], data[69]]);
+    tags.push(mk_font(group, "PointSize", "Point Size", Value::String(format!("{}", point_size))));
+
+    // YResolution at offset 70: int16u LE
+    let y_res = u16::from_le_bytes([data[70], data[71]]);
+    tags.push(mk_font(group, "YResolution", "Y Resolution", Value::String(format!("{}", y_res))));
+
+    // XResolution at offset 72: int16u LE
+    let x_res = u16::from_le_bytes([data[72], data[73]]);
+    tags.push(mk_font(group, "XResolution", "X Resolution", Value::String(format!("{}", x_res))));
+
+    // Ascent at offset 74: int16u LE
+    let ascent = u16::from_le_bytes([data[74], data[75]]);
+    tags.push(mk_font(group, "Ascent", "Ascent", Value::String(format!("{}", ascent))));
+
+    // InternalLeading at offset 76: int16u LE
+    let int_lead = u16::from_le_bytes([data[76], data[77]]);
+    tags.push(mk_font(group, "InternalLeading", "Internal Leading", Value::String(format!("{}", int_lead))));
+
+    // ExternalLeading at offset 78: int16u LE
+    let ext_lead = u16::from_le_bytes([data[78], data[79]]);
+    tags.push(mk_font(group, "ExternalLeading", "External Leading", Value::String(format!("{}", ext_lead))));
+
+    // Italic at offset 80: int8u
+    tags.push(mk_font(group, "Italic", "Italic", Value::String(format!("{}", data[80]))));
+
+    // Underline at offset 81: int8u
+    tags.push(mk_font(group, "Underline", "Underline", Value::String(format!("{}", data[81]))));
+
+    // Strikeout at offset 82: int8u
+    tags.push(mk_font(group, "Strikeout", "Strikeout", Value::String(format!("{}", data[82]))));
+
+    // Weight at offset 83: int16u LE
+    let weight = u16::from_le_bytes([data[83], data[84]]);
+    tags.push(mk_font(group, "Weight", "Weight", Value::String(format!("{}", weight))));
+
+    // CharacterSet at offset 85: int8u
+    tags.push(mk_font(group, "CharacterSet", "Character Set", Value::String(format!("{}", data[85]))));
+
+    // PixWidth at offset 86: int16u LE
+    let pix_w = u16::from_le_bytes([data[86], data[87]]);
+    tags.push(mk_font(group, "PixWidth", "Pix Width", Value::String(format!("{}", pix_w))));
+
+    // PixHeight at offset 88: int16u LE
+    let pix_h = u16::from_le_bytes([data[88], data[89]]);
+    tags.push(mk_font(group, "PixHeight", "Pix Height", Value::String(format!("{}", pix_h))));
+
+    // PitchAndFamily at offset 90: int8u
+    tags.push(mk_font(group, "PitchAndFamily", "Pitch And Family", Value::String(format!("{}", data[90]))));
+
+    // AvgWidth at offset 91: int16u LE
+    let avg_w = u16::from_le_bytes([data[91], data[92]]);
+    tags.push(mk_font(group, "AvgWidth", "Avg Width", Value::String(format!("{}", avg_w))));
+
+    // MaxWidth at offset 93: int16u LE
+    let max_w = u16::from_le_bytes([data[93], data[94]]);
+    tags.push(mk_font(group, "MaxWidth", "Max Width", Value::String(format!("{}", max_w))));
+
+    // FirstChar at offset 95: int8u
+    tags.push(mk_font(group, "FirstChar", "First Char", Value::String(format!("{}", data[95]))));
+
+    // LastChar at offset 96: int8u
+    tags.push(mk_font(group, "LastChar", "Last Char", Value::String(format!("{}", data[96]))));
+
+    // DefaultChar at offset 97: int8u
+    tags.push(mk_font(group, "DefaultChar", "Default Char", Value::String(format!("{}", data[97]))));
+
+    // BreakChar at offset 98: int8u
+    tags.push(mk_font(group, "BreakChar", "Break Char", Value::String(format!("{}", data[98]))));
+
+    // WidthBytes at offset 99: int16u LE
+    let width_bytes = u16::from_le_bytes([data[99], data[100]]);
+    tags.push(mk_font(group, "WidthBytes", "Width Bytes", Value::String(format!("{}", width_bytes))));
+
+    // FontName and PostScriptFontName: at offset stored at position 105 (int32u LE)
+    if data.len() >= 109 {
+        let name_off = u32::from_le_bytes([data[105], data[106], data[107], data[108]]) as usize;
+        if name_off < data.len() {
+            let rest = &data[name_off..];
+            if let Some(null_pos) = rest.iter().position(|&b| b == 0) {
+                let font_name: String = rest[..null_pos].iter()
+                    .filter(|&&b| b >= 0x20)
+                    .map(|&b| b as char)
+                    .collect();
+                if !font_name.is_empty() {
+                    tags.push(mk_font(group, "FontName", "Font Name", Value::String(font_name)));
+                }
+                let rest2 = &rest[null_pos + 1..];
+                if let Some(null_pos2) = rest2.iter().position(|&b| b == 0) {
+                    let ps_name: String = rest2[..null_pos2].iter()
+                        .filter(|&&b| b >= 0x20)
+                        .map(|&b| b as char)
+                        .collect();
+                    if !ps_name.is_empty() {
+                        tags.push(mk_font(group, "PostScriptFontName", "PostScript Font Name", Value::String(ps_name)));
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(tags)
+}
+
+fn mk_font(group: &str, name: &str, desc: &str, val: Value) -> Tag {
+    let pv = val.to_display_string();
+    Tag {
+        id: TagId::Text(name.to_string()),
+        name: name.to_string(),
+        description: desc.to_string(),
+        raw_value: val,
+        print_value: pv,
+        priority: 0,
+        group: TagGroup {
+            family0: "File".to_string(),
+            family1: group.to_string(),
+            family2: "Document".to_string(),
+        },
+    }
+}
+
+fn pfm_read_string(data: &[u8], offset: usize, max_len: usize) -> String {
+    let end = (offset + max_len).min(data.len());
+    let slice = &data[offset..end];
+    let slice = if let Some(null_pos) = slice.iter().position(|&b| b == 0) {
+        &slice[..null_pos]
+    } else {
+        slice
+    };
+    slice.iter()
+        .filter(|&&b| b >= 0x20 || b == b'\t')
+        .map(|&b| b as char)
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+

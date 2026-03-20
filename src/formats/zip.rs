@@ -489,7 +489,7 @@ fn parse_ooxml_app(data: &[u8], tags: &mut Vec<Tag>) {
 }
 
 /// Convert OOXML-specific values (booleans, security flags, etc.)
-fn convert_ooxml_value(xml_tag: &str, tag_name: &str, value: &str) -> String {
+fn convert_ooxml_value(_xml_tag: &str, tag_name: &str, value: &str) -> String {
     match tag_name {
         "ScaleCrop" | "LinksUpToDate" | "HyperlinksChanged" | "SharedDoc" => {
             match value.to_lowercase().as_str() {
@@ -662,7 +662,7 @@ fn extract_xml_value(xml: &str, tag: &str) -> Option<String> {
     // Match exact tag: <tag> or <tag /> or <ns:tag> - require '>' or '/' or ' ' after tag name
     let open_exact = format!("<{}>", tag);
     let open_attr = format!("<{} ", tag);
-    let open_ns_end = format!("<{}/>", tag);
+    let _open_ns_end = format!("<{}/>", tag);
     let close = format!("</{}>", tag);
 
     let start = if let Some(p) = xml.find(&open_exact) {

@@ -289,7 +289,7 @@ fn unix_to_exif_date(ts: i64) -> String {
 
     let adjusted = ts + utc_offset;
     let secs_per_day = 86400i64;
-    let mut days = adjusted / secs_per_day;
+    let days = adjusted / secs_per_day;
     let time_of_day = adjusted % secs_per_day;
     let (time_of_day, days) = if time_of_day < 0 {
         (time_of_day + secs_per_day, days - 1)

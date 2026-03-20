@@ -120,7 +120,7 @@ pub fn read_openexr(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
             Some(v) => v,
             None => break,
         };
-        let attr_type = attr_type.to_string();
+        let _attr_type = attr_type.to_string();
         pos = next;
 
         // Read size

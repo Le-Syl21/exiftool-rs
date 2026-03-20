@@ -361,7 +361,7 @@ fn va_to_offset(va: u32, sections: &[(u32, u32, u32)]) -> Option<usize> {
 }
 
 /// Find the raw file offset of the Version resource data
-fn find_version_resource(rsrc: &[u8], rsrc_va: u32, sections: &[(u32, u32, u32)], data: &[u8]) -> Option<usize> {
+fn find_version_resource(rsrc: &[u8], _rsrc_va: u32, sections: &[(u32, u32, u32)], data: &[u8]) -> Option<usize> {
     // Resource directory: 16-byte header + entries
     // entry: u32 name, u32 offset_or_data
     if rsrc.len() < 16 {
@@ -577,7 +577,7 @@ fn parse_vs_version_info(data: &[u8], start: usize, tags: &mut Vec<Tag>) {
 
 /// Parse StringFileInfo block (contains StringTable)
 fn parse_string_file_info(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
-    let mut pos = start;
+    let pos = start;
 
     // First entry is the StringTable
     if pos + 6 > end {
@@ -728,7 +728,7 @@ fn read_elf(data: &[u8]) -> Result<Vec<Tag>> {
         2 => "Big-endian",
         _ => "Unknown",
     };
-    let os_abi = match data[7] {
+    let _os_abi = match data[7] {
         0 => "UNIX System V",
         3 => "Linux",
         6 => "Solaris",

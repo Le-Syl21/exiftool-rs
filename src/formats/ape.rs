@@ -438,7 +438,7 @@ fn ape_key_to_tag_name(key: &str) -> String {
 }
 
 /// Apply value conversion for known APE tags.
-fn ape_value_conv(tag_name: &str, val: &str) -> (Value, String) {
+fn ape_value_conv(_tag_name: &str, val: &str) -> (Value, String) {
     (Value::String(val.to_string()), val.to_string())
 }
 

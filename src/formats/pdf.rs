@@ -5,7 +5,7 @@
 
 use crate::error::{Error, Result};
 use crate::formats::psd;
-use crate::metadata::{ExifReader, IptcReader, XmpReader};
+use crate::metadata::XmpReader;
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
@@ -66,11 +66,6 @@ pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
     // A linearized PDF has /Linearized key in its first object dict
     let is_linearized = find_bytes(&data[..data.len().min(4096)], b"/Linearized").is_some();
     tags.push(mk("Linearized", "Linearized", Value::String(if is_linearized { "Yes" } else { "No" }.into())));
-
-    // Extract MediaBox from first /MediaBox entry found
-    if let Some(mb) = extract_media_box(data) {
-        tags.push(mk("MediaBox", "Media Box", Value::String(mb)));
-    }
 
     // Encrypted?
     if find_bytes(&data[..data.len().min(8192)], b"/Encrypt").is_some() {

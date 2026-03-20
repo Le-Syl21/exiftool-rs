@@ -59,6 +59,29 @@ impl IptcReader {
                 _ => continue,
             };
 
+            // Check for PhotoMechanic SoftEdit fields BEFORE string decoding
+            // (These are int32s, not strings, so must be decoded as binary)
+            if record == 2 && dataset >= 209 && dataset <= 222 {
+                // Decode as binary (int32s)
+                let bin_value = Value::Binary(value_data.to_vec());
+                if let Some((pm_name, pm_print)) = lookup_photomechanic(dataset, &bin_value) {
+                    tags.push(Tag {
+                        id: TagId::Numeric(((record as u16) << 8) | dataset as u16),
+                        name: pm_name.clone(),
+                        description: pm_name,
+                        group: TagGroup {
+                            family0: "PhotoMechanic".to_string(),
+                            family1: "PhotoMechanic".to_string(),
+                            family2: "Image".to_string(),
+                        },
+                        raw_value: bin_value,
+                        print_value: pm_print,
+                        priority: 0,
+                    });
+                    continue;
+                }
+            }
+
             let value = if iptc_tags::is_string_tag(record, dataset) {
                 Value::String(
                     String::from_utf8_lossy(value_data)
@@ -74,27 +97,6 @@ impl IptcReader {
             } else {
                 Value::Binary(value_data.to_vec())
             };
-
-            // Check for PhotoMechanic SoftEdit fields (record 2, dataset 209-222)
-            // Only skip for PM-specific datasets, not standard IPTC (e.g. DocumentNotes=230)
-            if record == 2 && dataset >= 209 && dataset <= 222 {
-                if let Some((pm_name, pm_print)) = lookup_photomechanic(dataset, &value) {
-                    tags.push(Tag {
-                        id: TagId::Numeric(((record as u16) << 8) | dataset as u16),
-                        name: pm_name.clone(),
-                        description: pm_name,
-                        group: TagGroup {
-                            family0: "PhotoMechanic".to_string(),
-                            family1: "PhotoMechanic".to_string(),
-                            family2: "Image".to_string(),
-                        },
-                        raw_value: value,
-                        print_value: pm_print,
-                        priority: 0,
-                    });
-                    continue;
-                }
-            }
 
             let tag_info = iptc_tags::lookup(record, dataset);
             let (name, description) = match tag_info {

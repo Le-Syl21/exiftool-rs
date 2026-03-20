@@ -298,12 +298,16 @@ pub fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<
             }
             // Global Angle (0x040D)
             0x040D => {
+                // ExifTool takes the last occurrence of duplicate IRB resource IDs.
+                // Remove any previous GlobalAngle before pushing the new value.
+                tags.retain(|t| t.name != "GlobalAngle");
                 if resource_data.len() >= 4 {
                     let angle = u32::from_be_bytes([
                         resource_data[0], resource_data[1], resource_data[2], resource_data[3],
                     ]);
                     tags.push(mk("GlobalAngle", "Global Angle", Value::U32(angle)));
                 }
+                // If len < 4 (e.g. 1 byte), don't push - effectively suppresses GlobalAngle
             }
             // ICC Profile (0x040F)
             0x040F => {

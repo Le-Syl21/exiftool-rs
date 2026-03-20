@@ -84,7 +84,7 @@ pub fn read_pgf(data: &[u8]) -> Result<Vec<Tag>> {
 
     // The post_len includes the metadata PNG
     let effective_len = post_len.saturating_sub(16 + skip); // 16 = size of fixed header fields
-    let meta_end = meta_start + effective_len.min(data.len().saturating_sub(meta_start));
+    let _meta_end = meta_start + effective_len.min(data.len().saturating_sub(meta_start));
 
     if meta_start < data.len() && meta_start + 8 < data.len() {
         let meta = &data[meta_start..data.len()];

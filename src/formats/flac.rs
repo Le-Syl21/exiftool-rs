@@ -370,9 +370,9 @@ fn vorbis_field_name(field: &str) -> (&str, &str) {
                 let ns = &field[..colon];
                 let key = &field[colon+1..];
                 // Convert to CamelCase: MEDIAJUKEBOX → Mediajukebox, DATE → Date
-                let ns_cc = ns.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default()
+                let _ns_cc = ns.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default()
                     + &ns[1..].to_lowercase();
-                let key_cc = key.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default()
+                let _key_cc = key.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default()
                     + &key[1..].to_lowercase();
                 // We can't return borrowed str for dynamic strings, so use field as-is
                 // The caller handles this case separately

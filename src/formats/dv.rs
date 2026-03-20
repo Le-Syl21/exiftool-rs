@@ -124,7 +124,7 @@ pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
     let mut interlace: Option<bool> = None;
 
     let mut pos = start;
-    for i in 1..6usize {
+    for _i in 1..6usize {
         pos += 80;
         if pos >= data.len() { break; }
         let block_type = data[pos];
@@ -143,7 +143,7 @@ pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
                 interlace = Some((data[p + 3] & 0x10) != 0);
             } else if t == 0x62 {
                 // date
-                let d0 = data[p + 1];
+                let _d0 = data[p + 1];
                 let d1 = data[p + 2];
                 let d2 = data[p + 3];
                 let d3 = data[p + 4];
@@ -223,7 +223,7 @@ pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
     // Audio info from AAUX DIF
     let audio_pos = start + 80 * 6 + 80 * 16 * 3 + 3;
     if audio_pos + 4 < data.len() && data[audio_pos] == 0x50 {
-        let smpls = data[audio_pos + 1];
+        let _smpls = data[audio_pos + 1];
         let freq = (data[audio_pos + 4] >> 3) & 0x07;
         let atype = data[audio_pos + 3] & 0x1f;
         let quant = data[audio_pos + 4] & 0x07;
@@ -268,7 +268,7 @@ fn find_dif_start(data: &[u8]) -> crate::error::Result<Option<usize>> {
 
     // Try pattern 2: look for sync sequence
     let pat1 = [0xff, 0x3f, 0x07, 0x00];
-    let pat2 = [0xff, 0x3f, 0x07, 0x01];
+    let _pat2 = [0xff, 0x3f, 0x07, 0x01];
     for i in 0..data.len().saturating_sub(167) {
         let matches = (data[i] == 0x00 || data[i] == 0xff) &&
             data[i+1..i+5] == pat1[1..5] &&

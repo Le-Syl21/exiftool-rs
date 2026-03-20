@@ -486,7 +486,7 @@ fn parse_stream_properties(data: &[u8], tags: &mut Vec<Tag>) {
         }
         let channels = u16::from_le_bytes([ts[2], ts[3]]);
         let sample_rate = u32::from_le_bytes([ts[4], ts[5], ts[6], ts[7]]);
-        let bits_per_sample = if ts.len() >= 16 { u16::from_le_bytes([ts[14], ts[15]]) } else { 0 };
+        let _bits_per_sample = if ts.len() >= 16 { u16::from_le_bytes([ts[14], ts[15]]) } else { 0 };
 
         tags.push(mk("AudioChannels", "Audio Channels", Value::U16(channels)));
         tags.push(mk("AudioSampleRate", "Audio Sample Rate", Value::U32(sample_rate)));

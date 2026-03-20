@@ -165,24 +165,71 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
                     let height = u32::from_be_bytes([cd[0], cd[1], cd[2], cd[3]]);
                     let width = u32::from_be_bytes([cd[4], cd[5], cd[6], cd[7]]);
                     let num_components = u16::from_be_bytes([cd[8], cd[9]]);
-                    let bit_depth = (cd[10] & 0x7F) + 1;
-                    let _compression = cd[11];
+                    let bpc_raw = cd[10];
+                    let compression_raw = cd[11];
 
                     tags.push(mk("ImageHeight", "Image Height", Value::U32(height)));
                     tags.push(mk("ImageWidth", "Image Width", Value::U32(width)));
                     tags.push(mk("NumberOfComponents", "Number of Components", Value::U16(num_components)));
-                    tags.push(mk("BitsPerComponent", "Bits Per Component", Value::U8(bit_depth)));
+
+                    // BitsPerComponent: bit7 = signed, bits 0-6 = depth-1
+                    let bpc_str = if bpc_raw == 0xff {
+                        "Variable".to_string()
+                    } else {
+                        let sign = if (bpc_raw & 0x80) != 0 { "Signed" } else { "Unsigned" };
+                        let depth = (bpc_raw & 0x7f) + 1;
+                        format!("{} Bits, {}", depth, sign)
+                    };
+                    tags.push(mk("BitsPerComponent", "Bits Per Component", Value::String(bpc_str)));
+
+                    // Compression
+                    let comp_str = match compression_raw {
+                        0 => "Uncompressed".to_string(),
+                        1 => "Modified Huffman".to_string(),
+                        2 => "Modified READ".to_string(),
+                        3 => "Modified Modified READ".to_string(),
+                        4 => "JBIG".to_string(),
+                        5 => "JPEG".to_string(),
+                        6 => "JPEG-LS".to_string(),
+                        7 => "JPEG 2000".to_string(),
+                        8 => "JBIG2".to_string(),
+                        _ => format!("{}", compression_raw),
+                    };
+                    tags.push(mk("Compression", "Compression", Value::String(comp_str)));
                 }
             }
             // Color Specification box
             b"colr" => {
                 if content_end - content_start >= 3 {
-                    let method = data[content_start];
+                    let cd = &data[content_start..content_end];
+                    let method = cd[0];
+                    let precedence = cd[1] as i8;
+                    let approximation = cd[2];
+
+                    // ColorSpecMethod
+                    let method_str = match method {
+                        1 => "Enumerated".to_string(),
+                        2 => "Restricted ICC".to_string(),
+                        3 => "Any ICC".to_string(),
+                        4 => "Vendor Color".to_string(),
+                        _ => format!("{}", method),
+                    };
+                    tags.push(mk("ColorSpecMethod", "Color Spec Method", Value::String(method_str)));
+                    tags.push(mk("ColorSpecPrecedence", "Color Spec Precedence", Value::String(format!("{}", precedence))));
+
+                    // ColorSpecApproximation
+                    let approx_str = match approximation {
+                        0 => "Not Specified".to_string(),
+                        1 => "Accurate".to_string(),
+                        2 => "Exceptional Quality".to_string(),
+                        3 => "Reasonable Quality".to_string(),
+                        4 => "Poor Quality".to_string(),
+                        _ => format!("{}", approximation),
+                    };
+                    tags.push(mk("ColorSpecApproximation", "Color Spec Approximation", Value::String(approx_str)));
+
                     if method == 1 && content_end - content_start >= 7 {
-                        let enum_cs = u32::from_be_bytes([
-                            data[content_start + 3], data[content_start + 4],
-                            data[content_start + 5], data[content_start + 6],
-                        ]);
+                        let enum_cs = u32::from_be_bytes([cd[3], cd[4], cd[5], cd[6]]);
                         let cs_name = match enum_cs {
                             16 => "sRGB",
                             17 => "Grayscale",
@@ -190,6 +237,14 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
                             _ => "Unknown",
                         };
                         tags.push(mk("ColorSpace", "Color Space", Value::String(cs_name.into())));
+                    } else if method == 2 || method == 3 {
+                        // ICC profile follows at offset 3
+                        if content_end - content_start > 3 {
+                            let icc_data = &data[content_start + 3..content_end];
+                            if let Ok(icc_tags) = crate::formats::icc::read_icc(icc_data) {
+                                tags.extend(icc_tags);
+                            }
+                        }
                     }
                 }
             }
@@ -217,19 +272,38 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
                     }
                 }
             }
-            // UUID box (EXIF, XMP, IPTC)
+            // UUID box (EXIF, XMP, IPTC, GeoJP2)
             b"uuid" => {
                 if content_end - content_start > 16 {
                     let uuid = &data[content_start..content_start + 16];
                     let payload = &data[content_start + 16..content_end];
 
                     if uuid == &UUID_XMP {
+                        // XMP by UUID
                         if let Ok(xmp_tags) = XmpReader::read(payload) {
                             tags.extend(xmp_tags);
                         }
-                    } else if uuid == &UUID_EXIF {
+                    } else if uuid == b"JpgTiffExif->JP2" {
+                        // EXIF: UUID is literally "JpgTiffExif->JP2", payload is TIFF
                         if let Ok(exif_tags) = ExifReader::read(payload) {
                             tags.extend(exif_tags);
+                        }
+                    } else if uuid == &UUID_EXIF {
+                        // Alternative EXIF UUID (from our constant)
+                        if let Ok(exif_tags) = ExifReader::read(payload) {
+                            tags.extend(exif_tags);
+                        }
+                    } else {
+                        // GeoJP2: UUID b14bf8bd-083d-4b43-a5ae-8cd7d5a6ce03
+                        const UUID_GEOJP2: [u8; 16] = [
+                            0xb1, 0x4b, 0xf8, 0xbd, 0x08, 0x3d, 0x4b, 0x43,
+                            0xa5, 0xae, 0x8c, 0xd7, 0xd5, 0xa6, 0xce, 0x03,
+                        ];
+                        if uuid == &UUID_GEOJP2 {
+                            // GeoTIFF data: TIFF file
+                            if let Ok(geo_tags) = ExifReader::read(payload) {
+                                tags.extend(geo_tags);
+                            }
                         }
                     }
                 }

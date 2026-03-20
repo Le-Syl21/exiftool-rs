@@ -407,7 +407,7 @@ pub fn read_tnef(data: &[u8]) -> Result<Vec<Tag>> {
 
     // CodePage from first few bytes
     // TNEFVersion is at offset 9 (4 bytes) after signature
-    let version_bytes = if data.len() >= 10 {
+    let _version_bytes = if data.len() >= 10 {
         read_u32_le(data, 6)
     } else { 0 };
 

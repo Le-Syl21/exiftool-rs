@@ -96,6 +96,25 @@ impl ExifReader {
         let header = parse_tiff_header(data)?;
         let mut tags = Vec::new();
 
+        // Emit ExifByteOrder tag
+        let bo_str = match header.byte_order {
+            ByteOrderMark::LittleEndian => "Little-endian (Intel, II)",
+            ByteOrderMark::BigEndian => "Big-endian (Motorola, MM)",
+        };
+        tags.push(Tag {
+            id: TagId::Text("ExifByteOrder".to_string()),
+            name: "ExifByteOrder".to_string(),
+            description: "Exif Byte Order".to_string(),
+            group: TagGroup {
+                family0: "EXIF".to_string(),
+                family1: "IFD0".to_string(),
+                family2: "ExifTool".to_string(),
+            },
+            raw_value: Value::String(bo_str.to_string()),
+            print_value: bo_str.to_string(),
+            priority: 0,
+        });
+
         // Read IFD0 (main image)
         Self::read_ifd(data, &header, header.ifd0_offset, "IFD0", &mut tags)?;
 
@@ -204,6 +223,9 @@ impl ExifReader {
                 }
             }
         }
+
+        // Process GeoTIFF key directory if present
+        process_geotiff_keys(&mut tags);
 
         Ok(tags)
     }
@@ -663,5 +685,278 @@ fn read_i32(data: &[u8], offset: usize, bo: ByteOrderMark) -> i32 {
     match bo {
         ByteOrderMark::LittleEndian => LittleEndian::read_i32(&data[offset..]),
         ByteOrderMark::BigEndian => BigEndian::read_i32(&data[offset..]),
+    }
+}
+
+/// Process GeoTIFF key directory (tag GeoTiffDirectory / GeoKeyDirectory)
+/// and replace raw directory/ascii/double params with named GeoTIFF tags.
+fn process_geotiff_keys(tags: &mut Vec<Tag>) {
+    // Extract GeoTiffDirectory values
+    let dir_vals: Option<Vec<u16>> = tags.iter()
+        .find(|t| t.name == "GeoTiffDirectory")
+        .and_then(|t| {
+            match &t.raw_value {
+                Value::List(items) => {
+                    let vals: Vec<u16> = items.iter().filter_map(|v| {
+                        match v {
+                            Value::U16(x) => Some(*x),
+                            Value::U32(x) => Some(*x as u16),
+                            _ => None,
+                        }
+                    }).collect();
+                    if vals.is_empty() { None } else { Some(vals) }
+                }
+                _ => None,
+            }
+        });
+
+    let dir_vals = match dir_vals {
+        Some(v) => v,
+        None => return,
+    };
+
+    if dir_vals.len() < 4 {
+        return;
+    }
+
+    let version = dir_vals[0];
+    let revision = dir_vals[1];
+    let minor_rev = dir_vals[2];
+    let num_entries = dir_vals[3] as usize;
+
+    if dir_vals.len() < 4 + num_entries * 4 {
+        return;
+    }
+
+    // Extract ASCII params
+    let ascii_params: Option<String> = tags.iter()
+        .find(|t| t.name == "GeoTiffAsciiParams")
+        .map(|t| t.print_value.clone());
+
+    // Extract double params
+    let double_params: Option<Vec<f64>> = tags.iter()
+        .find(|t| t.name == "GeoTiffDoubleParams")
+        .and_then(|t| {
+            match &t.raw_value {
+                Value::List(items) => {
+                    let vals: Vec<f64> = items.iter().filter_map(|v| {
+                        match v {
+                            Value::F64(x) => Some(*x),
+                            Value::F32(x) => Some(*x as f64),
+                            _ => None,
+                        }
+                    }).collect();
+                    if vals.is_empty() { None } else { Some(vals) }
+                }
+                _ => None,
+            }
+        });
+
+    let mut new_tags = Vec::new();
+
+    // Version tag
+    new_tags.push(Tag {
+        id: TagId::Text("GeoTiffVersion".to_string()),
+        name: "GeoTiffVersion".to_string(),
+        description: "GeoTiff Version".to_string(),
+        group: TagGroup { family0: "EXIF".into(), family1: "IFD0".into(), family2: "Location".into() },
+        raw_value: Value::String(format!("{}.{}.{}", version, revision, minor_rev)),
+        print_value: format!("{}.{}.{}", version, revision, minor_rev),
+        priority: 0,
+    });
+
+    // Process each GeoKey
+    for i in 0..num_entries {
+        let base = 4 + i * 4;
+        let key_id = dir_vals[base];
+        let location = dir_vals[base + 1];
+        let count = dir_vals[base + 2] as usize;
+        let value_or_offset = dir_vals[base + 3];
+
+        let raw_val: Option<String> = match location {
+            0 => {
+                // Value stored inline in value_or_offset
+                Some(format!("{}", value_or_offset))
+            }
+            34737 => {
+                // ASCII params
+                if let Some(ref ascii) = ascii_params {
+                    let off = value_or_offset as usize;
+                    let end = (off + count).min(ascii.len());
+                    if off <= end {
+                        let s = &ascii[off..end];
+                        // Remove trailing '|' separators
+                        let s = s.trim_end_matches('|').trim().to_string();
+                        Some(s)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            34736 => {
+                // Double params
+                if let Some(ref doubles) = double_params {
+                    let off = value_or_offset as usize;
+                    if count == 1 && off < doubles.len() {
+                        Some(format!("{}", doubles[off]))
+                    } else if count > 1 {
+                        let vals: Vec<String> = doubles.iter().skip(off).take(count)
+                            .map(|v| format!("{}", v)).collect();
+                        Some(vals.join(" "))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
+        let val_str = match raw_val {
+            Some(v) => v,
+            None => continue,
+        };
+
+        // Map GeoKey ID to tag name and print value
+        let (tag_name, print_val) = geotiff_key_to_tag(key_id, &val_str);
+        if tag_name.is_empty() { continue; }
+
+        new_tags.push(Tag {
+            id: TagId::Text(tag_name.clone()),
+            name: tag_name.clone(),
+            description: tag_name.clone(),
+            group: TagGroup { family0: "EXIF".into(), family1: "IFD0".into(), family2: "Location".into() },
+            raw_value: Value::String(val_str),
+            print_value: print_val,
+            priority: 0,
+        });
+    }
+
+    if !new_tags.is_empty() {
+        // Remove raw GeoTIFF tags
+        tags.retain(|t| t.name != "GeoTiffDirectory" && t.name != "GeoTiffAsciiParams" && t.name != "GeoTiffDoubleParams");
+        tags.extend(new_tags);
+    }
+}
+
+/// Map a GeoKey ID to (tag_name, print_value).
+fn geotiff_key_to_tag(key_id: u16, value: &str) -> (String, String) {
+    let val_u16: Option<u16> = value.parse().ok();
+
+    match key_id {
+        // Section 6.2.1: GeoTIFF Configuration Keys
+        0x0001 => return ("GeoTiffVersion".to_string(), value.to_string()), // not used here
+        0x0400 => { // GTModelType
+            let print = match val_u16 {
+                Some(1) => "Projected".to_string(),
+                Some(2) => "Geographic".to_string(),
+                Some(3) => "Geocentric".to_string(),
+                Some(32767) => "User Defined".to_string(),
+                _ => value.to_string(),
+            };
+            return ("GTModelType".to_string(), print);
+        }
+        0x0401 => { // GTRasterType
+            let print = match val_u16 {
+                Some(1) => "Pixel Is Area".to_string(),
+                Some(2) => "Pixel Is Point".to_string(),
+                Some(32767) => "User Defined".to_string(),
+                _ => value.to_string(),
+            };
+            return ("GTRasterType".to_string(), print);
+        }
+        0x0402 => return ("GTCitation".to_string(), value.to_string()),
+
+        // Section 6.2.2: Geographic CS Parameter Keys
+        0x0800 => return ("GeographicType".to_string(), geotiff_pcs_name(val_u16.unwrap_or(0), value)),
+        0x0801 => return ("GeogCitation".to_string(), value.to_string()),
+        0x0802 => return ("GeogGeodeticDatum".to_string(), value.to_string()),
+        0x0803 => return ("GeogPrimeMeridian".to_string(), value.to_string()),
+        0x0804 => return ("GeogLinearUnits".to_string(), geotiff_linear_unit_name(val_u16.unwrap_or(0), value)),
+        0x0805 => return ("GeogLinearUnitSize".to_string(), value.to_string()),
+        0x0806 => return ("GeogAngularUnits".to_string(), value.to_string()),
+        0x0807 => return ("GeogAngularUnitSize".to_string(), value.to_string()),
+        0x0808 => return ("GeogEllipsoid".to_string(), value.to_string()),
+        0x0809 => return ("GeogSemiMajorAxis".to_string(), value.to_string()),
+        0x080a => return ("GeogSemiMinorAxis".to_string(), value.to_string()),
+        0x080b => return ("GeogInvFlattening".to_string(), value.to_string()),
+        0x080c => return ("GeogAzimuthUnits".to_string(), value.to_string()),
+        0x080d => return ("GeogPrimeMeridianLong".to_string(), value.to_string()),
+
+        // Section 6.2.3: Projected CS Parameter Keys
+        0x0C00 => { // ProjectedCSType
+            return ("ProjectedCSType".to_string(), geotiff_pcs_name(val_u16.unwrap_or(0), value));
+        }
+        0x0C01 => return ("PCSCitation".to_string(), value.to_string()),
+        0x0C02 => return ("Projection".to_string(), value.to_string()),
+        0x0C03 => return ("ProjCoordTrans".to_string(), value.to_string()),
+        0x0C04 => return ("ProjLinearUnits".to_string(), geotiff_linear_unit_name(val_u16.unwrap_or(0), value)),
+        0x0C05 => return ("ProjLinearUnitSize".to_string(), value.to_string()),
+        0x0C06 => return ("ProjStdParallel1".to_string(), value.to_string()),
+        0x0C07 => return ("ProjStdParallel2".to_string(), value.to_string()),
+        0x0C08 => return ("ProjNatOriginLong".to_string(), value.to_string()),
+        0x0C09 => return ("ProjNatOriginLat".to_string(), value.to_string()),
+        0x0C0a => return ("ProjFalseEasting".to_string(), value.to_string()),
+        0x0C0b => return ("ProjFalseNorthing".to_string(), value.to_string()),
+        0x0C0c => return ("ProjFalseOriginLong".to_string(), value.to_string()),
+        0x0C0d => return ("ProjFalseOriginLat".to_string(), value.to_string()),
+        0x0C0e => return ("ProjFalseOriginEasting".to_string(), value.to_string()),
+        0x0C0f => return ("ProjFalseOriginNorthing".to_string(), value.to_string()),
+        0x0C10 => return ("ProjCenterLong".to_string(), value.to_string()),
+        0x0C11 => return ("ProjCenterLat".to_string(), value.to_string()),
+        0x0C12 => return ("ProjCenterEasting".to_string(), value.to_string()),
+        0x0C13 => return ("ProjCenterNorthing".to_string(), value.to_string()),
+        0x0C14 => return ("ProjScaleAtNatOrigin".to_string(), value.to_string()),
+        0x0C15 => return ("ProjScaleAtCenter".to_string(), value.to_string()),
+        0x0C16 => return ("ProjAzimuthAngle".to_string(), value.to_string()),
+        0x0C17 => return ("ProjStraightVertPoleLong".to_string(), value.to_string()),
+
+        // Section 6.2.4: Vertical CS Keys
+        0x1000 => return ("VerticalCSType".to_string(), value.to_string()),
+        0x1001 => return ("VerticalCitation".to_string(), value.to_string()),
+        0x1002 => return ("VerticalDatum".to_string(), value.to_string()),
+        0x1003 => return ("VerticalUnits".to_string(), geotiff_linear_unit_name(val_u16.unwrap_or(0), value)),
+
+        _ => {}
+    }
+    (String::new(), String::new())
+}
+
+fn geotiff_linear_unit_name(val: u16, fallback: &str) -> String {
+    match val {
+        9001 => "Linear Meter".to_string(),
+        9002 => "Linear Foot".to_string(),
+        9003 => "Linear Foot US Survey".to_string(),
+        9004 => "Linear Foot Modified American".to_string(),
+        9005 => "Linear Foot Clarke".to_string(),
+        9006 => "Linear Foot Indian".to_string(),
+        9007 => "Linear Link".to_string(),
+        9008 => "Linear Link Benoit".to_string(),
+        9009 => "Linear Link Sears".to_string(),
+        9010 => "Linear Chain Benoit".to_string(),
+        9011 => "Linear Chain Sears".to_string(),
+        9012 => "Linear Yard Sears".to_string(),
+        9013 => "Linear Yard Indian".to_string(),
+        9014 => "Linear Fathom".to_string(),
+        9015 => "Linear Mile International Nautical".to_string(),
+        _ => fallback.to_string(),
+    }
+}
+
+fn geotiff_pcs_name(val: u16, fallback: &str) -> String {
+    // Common PCS codes - just return the code with description for common ones
+    match val {
+        26918 => "NAD83 UTM zone 18N".to_string(),
+        26919 => "NAD83 UTM zone 19N".to_string(),
+        32618 => "WGS84 UTM zone 18N".to_string(),
+        32619 => "WGS84 UTM zone 19N".to_string(),
+        4326 => "WGS 84".to_string(),
+        4269 => "NAD83".to_string(),
+        4267 => "NAD27".to_string(),
+        32767 => "User Defined".to_string(),
+        _ => fallback.to_string(),
     }
 }
