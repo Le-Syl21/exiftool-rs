@@ -695,10 +695,28 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
                 .map(|t| t.name.clone())
                 .collect();
             for t in jpg_tags {
-                if t.group.family0 == "File" { continue; }
+                // Pass through JPEG SOF tags (EncodingProcess, ColorComponents, YCbCrSubSampling)
+                // from the embedded JPEG as Perl does for RW2 files.
+                if t.group.family0 == "File" {
+                    match t.name.as_str() {
+                        "EncodingProcess" | "ColorComponents" | "YCbCrSubSampling" => {
+                            // Keep these: Perl includes them from the embedded JpgFromRaw
+                        }
+                        _ => continue,
+                    }
+                }
                 if t.group.family0 == "Composite" { continue; }
                 // Skip ExifByteOrder from embedded (already have it)
                 if t.name == "ExifByteOrder" { continue; }
+                // PanasonicTitle/PanasonicTitle2: skip if content is all zeros (Perl RawConv)
+                if t.name == "PanasonicTitle" || t.name == "PanasonicTitle2" {
+                    let is_empty = match &t.raw_value {
+                        Value::Undefined(b) | Value::Binary(b) => b.iter().all(|&x| x == 0),
+                        Value::String(s) => s.trim_end_matches('\0').is_empty(),
+                        _ => false,
+                    };
+                    if is_empty { continue; }
+                }
                 // Skip IFD0 tags already extracted (Make, Model, etc.)
                 if t.group.family1 == "IFD0" && existing_names.contains(&t.name) {
                     continue;

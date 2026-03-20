@@ -701,6 +701,28 @@ fn compute_wb_balance(tags: &[Tag]) -> Option<Vec<Tag>> {
         }
     }
 
+    // Panasonic: WBRedLevel, WBGreenLevel, WBBlueLevel as separate EXIF tags
+    // Perl: RedBalance = $r/$g, BlueBalance = $b/$g (from Exif.pm Composite::RedBalance)
+    if result.is_empty() {
+        let r_tag = find_tag(tags, "WBRedLevel")
+            .and_then(|t| t.raw_value.as_f64());
+        let g_tag = find_tag(tags, "WBGreenLevel")
+            .and_then(|t| t.raw_value.as_f64());
+        let b_tag = find_tag(tags, "WBBlueLevel")
+            .and_then(|t| t.raw_value.as_f64());
+        if let (Some(r), Some(g), Some(b)) = (r_tag, g_tag, b_tag) {
+            if g > 0.0 {
+                // Perl formula: int($val * 1e6 + 0.5) * 1e-6 (from Exif.pm)
+                let red_bal = (r / g * 1e6 + 0.5) as i64 as f64 * 1e-6;
+                let blue_bal = (b / g * 1e6 + 0.5) as i64 as f64 * 1e-6;
+                result.push(mk_composite("RedBalance", "Red Balance",
+                    Value::String(crate::value::format_g15(red_bal))));
+                result.push(mk_composite("BlueBalance", "Blue Balance",
+                    Value::String(crate::value::format_g15(blue_bal))));
+            }
+        }
+    }
+
     if result.is_empty() { None } else { Some(result) }
 }
 

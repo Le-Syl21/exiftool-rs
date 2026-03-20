@@ -513,22 +513,8 @@ static PANASONIC_TAGS: &[(u16, &str, &str)] = &[
     (0x0034, "OpticalZoomMode", "Optical Zoom Mode"),
     (0x0035, "ConversionLens", "Conversion Lens"),
     (0x0036, "TravelDay", "Travel Day"),
-    (0x003A, "WorldTimestamp", "World Timestamp"),
-    (0x003C, "Contrast", "Contrast"),
-    (0x003D, "BracketSettings", "Bracket Settings"),
-    (0x003E, "WBShiftAB", "WB Shift AB"),
-    (0x003F, "WBShiftGM", "WB Shift GM"),
-    (0x0040, "FlashCurtain", "Flash Curtain"),
-    (0x0041, "LongExposureNoiseReduction", "Long Exposure NR"),
-    (0x0042, "PanasonicImageWidth", "Image Width"),
-    (0x0043, "PanasonicImageHeight", "Image Height"),
-    (0x0044, "AFPointPosition", "AF Point Position"),
-    (0x0045, "FaceDetInfo", "Face Detection Info"),
-    (0x0046, "LensType", "Lens Type"),
-    (0x0047, "LensSerialNumber", "Lens Serial Number"),
-    (0x0048, "AccessoryType", "Accessory Type"),
-    (0x0049, "AccessorySerialNumber", "Accessory Serial Number"),
-    (0x004D, "LensFirmwareVersion", "Lens Firmware Version"),
+    // 0x003A-0x004D: use generated table (has correct WorldTimeLocation, ProgramISO, etc.)
+    // 0x0046-0x004D: LensType etc. are in generated table
     (0x0051, "LensType", "Lens Type"),
     (0x0052, "LensSerialNumber2", "Lens Serial Number 2"),
     (0x0059, "Transform", "Transform"),
@@ -571,10 +557,10 @@ static PANASONIC_TAGS: &[(u16, &str, &str)] = &[
     (0x8004, "WBRedLevel", "WB Red Level"),
     (0x8005, "WBGreenLevel", "WB Green Level"),
     (0x8006, "WBBlueLevel", "WB Blue Level"),
-    (0x8007, "FlashFired", "Flash Fired"),
+    // 0x8007 FlashFired: disabled in Perl (conflicts with EXIF)
     (0x8008, "TextStamp", "Text Stamp"),
-    (0x8009, "TextStamp2", "Text Stamp 2"),
-    (0x8010, "BabyAge2", "Baby Age 2"),
+    (0x8009, "TextStamp", "Text Stamp"),  // same name as 0x8008 in Perl
+    (0x8010, "BabyAge", "Baby Age"),      // Perl: BabyAge (not BabyAge2)
     (0x8012, "Transform2", "Transform 2"),
 ];
 

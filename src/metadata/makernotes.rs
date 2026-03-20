@@ -632,6 +632,174 @@ fn pentax_ev(val: i32) -> f64 {
     v / 8.0
 }
 
+/// Handle special Pentax main IFD tags that need custom ValueConv/PrintConv.
+/// Returns Some(Vec<Tag>) if the tag was handled, None to fall through to normal processing.
+fn pentax_special_tag_conv(tag_id: u16, data_type: u16, count: u32, value_data: &[u8]) -> Option<Vec<Tag>> {
+    let mk = |name: &str, val: &str| mk_pentax(name, val);
+
+    match tag_id {
+        // PentaxVersion (0x0000): int8u[4], PrintConv: tr/ /./; $val
+        0x0000 if data_type == 1 && count == 4 && value_data.len() >= 4 => {
+            let s = format!("{}.{}.{}.{}", value_data[0], value_data[1], value_data[2], value_data[3]);
+            Some(vec![mk("PentaxVersion", &s)])
+        }
+        // Date (0x0006): undef[4], ValueConv: sprintf "%.4d:%.2d:%.2d", unpack("nC2", $val)
+        // Year is big-endian int16u, then month byte, day byte
+        0x0006 if data_type == 7 && count == 4 && value_data.len() >= 4 => {
+            let year = u16::from_be_bytes([value_data[0], value_data[1]]) as u32;
+            let month = value_data[2] as u32;
+            let day = value_data[3] as u32;
+            let s = format!("{:04}:{:02}:{:02}", year, month, day);
+            Some(vec![mk("Date", &s)])
+        }
+        // Time (0x0007): undef[3], ValueConv: sprintf "%.2d:%.2d:%.2d", unpack("C3", $val)
+        0x0007 if data_type == 7 && count >= 3 && value_data.len() >= 3 => {
+            let s = format!("{:02}:{:02}:{:02}", value_data[0], value_data[1], value_data[2]);
+            Some(vec![mk("Time", &s)])
+        }
+        // DSPFirmwareVersion (0x0027): undef[4], each byte XOR 0xFF, format "%d.%02d.%02d.%02d"
+        0x0027 if data_type == 7 && count == 4 && value_data.len() >= 4 => {
+            let b: Vec<u8> = value_data[..4].iter().map(|&x| x ^ 0xFF).collect();
+            let s = format!("{}.{:02}.{:02}.{:02}", b[0], b[1], b[2], b[3]);
+            Some(vec![mk("DSPFirmwareVersion", &s)])
+        }
+        // CPUFirmwareVersion (0x0028): same as DSPFirmwareVersion
+        0x0028 if data_type == 7 && count == 4 && value_data.len() >= 4 => {
+            let b: Vec<u8> = value_data[..4].iter().map(|&x| x ^ 0xFF).collect();
+            let s = format!("{}.{:02}.{:02}.{:02}", b[0], b[1], b[2], b[3]);
+            Some(vec![mk("CPUFirmwareVersion", &s)])
+        }
+        // PictureMode (0x0033): int8u[3], multi-value PrintConv
+        // Byte 0: mode number, Byte 1: EV steps (0=1/2, 1=1/3)
+        0x0033 if data_type == 1 && count >= 2 && value_data.len() >= 2 => {
+            let mode = value_data[0];
+            let ev = value_data[1];
+            let mode_str = match mode {
+                0 => "Program", 1 => "Shutter Speed Priority", 2 => "Program AE",
+                3 => "Manual", 5 => "Portrait", 6 => "Landscape", 8 => "Sport",
+                9 => "Night Scene", 11 => "Soft", 12 => "Surf & Snow",
+                13 => "Candlelight", 14 => "Autumn", 15 => "Macro",
+                17 => "Fireworks", 18 => "Text", 19 => "Panorama",
+                22 => "Sepia", 30 => "Self Portrait", 37 => "Museum",
+                38 => "Food", 40 => "Green Mode", 53 => "Underwater",
+                68 => "Automatic", 128 => "Auto", 0xff => "Video",
+                _ => "",
+            };
+            let mode_part = if mode_str.is_empty() {
+                format!("{}", mode)
+            } else if mode_str == "Video" {
+                // Perl: "Video (4)" for mode=0xFF with ev=1 (1/3 EV steps index)
+                format!("Video ({})", ev)
+            } else {
+                mode_str.to_string()
+            };
+            let ev_part = match ev {
+                0 => "1/2 EV steps".to_string(),
+                1 => "1/3 EV steps".to_string(),
+                v => v.to_string(),
+            };
+            let s = format!("{}; {}", mode_part, ev_part);
+            Some(vec![mk("PictureMode", &s)])
+        }
+        // DriveMode (0x0034): int8u[4], multi-value PrintConv
+        0x0034 if data_type == 1 && count >= 4 && value_data.len() >= 4 => {
+            let decode_drive = |b: u8| -> &'static str {
+                match b {
+                    0 => "Single-frame", 1 => "Continuous", 2 => "Continuous (Hi)",
+                    3 => "Burst", 4 => "Self-timer (12 s)", 5 => "Self-timer (2 s)",
+                    6 => "Remote Control (3 s delay)", 7 => "Remote Control",
+                    8 => "Exposure Bracket", 9 => "Multiple Exposure", 0xff => "Video",
+                    _ => "",
+                }
+            };
+            let decode_shots = |b: u8| -> String {
+                match b {
+                    0 | 0xff => "n/a".to_string(),
+                    v => v.to_string(),
+                }
+            };
+            let decode_trigger = |b: u8| -> &'static str {
+                match b {
+                    0 => "Shutter Button", 1 => "Remote Control", 2 => "Mirror Lock-up", _ => "",
+                }
+            };
+            let s0 = decode_drive(value_data[0]);
+            let s0 = if s0.is_empty() { value_data[0].to_string() } else { s0.to_string() };
+            let s1 = decode_shots(value_data[1]);
+            let s2 = decode_trigger(value_data[2]);
+            let s2 = if s2.is_empty() { value_data[2].to_string() } else { s2.to_string() };
+            let s3 = decode_drive(value_data[3]);
+            let s3 = if s3.is_empty() { value_data[3].to_string() } else { s3.to_string() };
+            let s = format!("{}; {}; {}; {}", s0, s1, s2, s3);
+            Some(vec![mk("DriveMode", &s)])
+        }
+        _ => None,
+    }
+}
+
+/// Lookup Pentax lens type name from the key string (e.g. "7 222").
+/// From Perl: %pentaxLensTypes in Pentax.pm
+fn pentax_lens_type_name(key: &str) -> Option<&'static str> {
+    // Common Pentax/Samsung lens types (selected subset)
+    match key {
+        "0 0" => Some("M-42 or No Lens"),
+        "1 0" => Some("Pentax-A 50mm F2"),
+        "2 0" => Some("Pentax-A 28mm F2.8"),
+        "3 0" => Some("Pentax-A 135mm F2.8"),
+        "5 0" => Some("Pentax-A 150mm F3.5"),
+        "6 0" => Some("Pentax-A 85mm F1.4"),
+        "7 0" => Some("Pentax-A 28mm F2"),
+        "8 0" => Some("Pentax-A 200mm F4"),
+        "9 0" => Some("Pentax-A 24mm F2.8"),
+        "10 0" => Some("Pentax-A 50mm F1.7"),
+        "11 0" => Some("Pentax-A 50mm F1.4"),
+        "13 0" => Some("Pentax-A 300mm F4.5"),
+        "14 0" => Some("Pentax-A 24mm F2.8 or Sigma Lens"),
+        "15 0" => Some("Pentax-A 50mm F2.8 Macro"),
+        "16 0" => Some("Pentax-A 300mm F5.6"),
+        "18 0" => Some("Pentax-A 28mm F2.8 Shift"),
+        "19 0" => Some("Pentax-A 35mm F2.8 Macro"),
+        "20 0" => Some("Pentax-A 50mm F4 Macro"),
+        "21 0" => Some("Pentax-A* 85mm F1.4"),
+        "22 0" => Some("Pentax-A* 200mm F2.8"),
+        "23 0" => Some("Pentax-A 300mm F4.5 ED IF"),
+        "24 0" => Some("Pentax-A* 85mm F1.4"),
+        "25 0" => Some("Pentax-A 28-85mm F3.5-4.5 or Tokina Lens"),
+        "26 0" => Some("Pentax-A 28-85mm F3.5-4.5"),
+        "27 0" => Some("Pentax-A 35-105mm F3.5"),
+        "28 0" => Some("Pentax-A* 80-200mm F2.8 ED IF"),
+        "29 0" => Some("Pentax-A 28-135mm F4 IF"),
+        "30 0" => Some("Pentax-A 50-135mm F3.5 IF"),
+        "31 0" => Some("Pentax-A* 28-85mm F3.5-4.5"),
+        "32 0" => Some("Pentax-A 70-210mm F4"),
+        "33 0" => Some("Pentax-A 35-135mm F3.5-4.5"),
+        "34 0" => Some("Pentax-A 35-80mm F4-5.6"),
+        "35 0" => Some("Pentax-A 28-80mm F3.5-5.6 or Sigma AF 18-125mm F3.5-5.6 DC"),
+        "36 0" => Some("Pentax-A* 35-135mm F3.5-4.5"),
+        "37 0" => Some("Pentax-A 100-300mm F4.5-5.6 or Sigma Lens"),
+        "38 0" => Some("Pentax-A* 80-200mm F4.7-5.6"),
+        "39 0" => Some("Pentax-A 35-80mm F4-5.6"),
+        "4 0" => Some("Pentax-A 50mm F1.4"),
+        "12 0" => Some("Pentax-A 100mm F2.8 Macro"),
+        "17 0" => Some("Pentax-A 70-210mm F4"),
+        "7 222" => Some("smc PENTAX-DA L 18-55mm F3.5-5.6"),
+        "7 223" => Some("smc PENTAX-DA L 50-200mm F4-5.6 ED WR"),
+        "7 224" => Some("smc PENTAX-DA 18-55mm F3.5-5.6 AL WR"),
+        "7 225" => Some("smc PENTAX-DA 18-55mm F3.5-5.6 AL"),
+        "7 226" => Some("smc PENTAX-DA 50-200mm F4-5.6 AL WR"),
+        "7 228" => Some("smc PENTAX-DA 18-55mm F3.5-5.6 WR"),
+        "7 229" => Some("smc PENTAX-DA L 18-55mm F3.5-5.6 WR"),
+        "7 230" => Some("smc PENTAX-DA 50-200mm F4-5.6 WR"),
+        "7 232" => Some("smc PENTAX-DA 50-200mm F4-5.6 WR"),
+        "7 233" => Some("smc PENTAX-DA L 50-200mm F4-5.6 ED"),
+        "7 234" => Some("HD PENTAX-DA 18-50mm F4-5.6 DC WR RE"),
+        "7 235" => Some("HD PENTAX-DA 50-200mm F4-5.6 ED WR"),
+        "4 234" => Some("smc PENTAX-DA 18-55mm F3.5-5.6 AL"),
+        "4 235" => Some("smc PENTAX-DA 55-300mm F4-5.8 ED"),
+        _ => None,
+    }
+}
+
 /// Helper: create a Pentax MakerNotes tag with a string value.
 fn mk_pentax(name: &str, print: &str) -> Tag {
     Tag {
@@ -2423,6 +2591,14 @@ fn read_makernote_ifd(
         // Decode value
         let value = decode_mn_value(value_data, data_type, count as usize, byte_order);
 
+        // Pentax special tag handling: complex conversions for multi-byte/undefined tags
+        if manufacturer == Manufacturer::Pentax {
+            if let Some(special_tags) = pentax_special_tag_conv(tag_id, data_type, count, value_data) {
+                tags.extend(special_tags);
+                continue;
+            }
+        }
+
         // Sub-table dispatch: decode binary structures into individual tags
         {
             use crate::tags::sub_tables_generated::{self as subs, DispatchContext};
@@ -2859,6 +3035,46 @@ fn read_makernote_ifd(
                 (Manufacturer::Sony, 0x0114) => subs::dispatch_sony_camera_settings(&dispatch_ctx),
                 (Manufacturer::Sony, 0x2010) => subs::dispatch_sony_tag2010(&dispatch_ctx),
                 (Manufacturer::Sony, 0x9400) => subs::dispatch_sony_tag9400(&dispatch_ctx),
+                // Panasonic FaceDetInfo (tag 0x004e): binary subdirectory
+                // FORMAT=int16u, FIRST_ENTRY=0
+                // 0=NumFacePositions, 1=Face1Position[4], 5=Face2Position[4], ...
+                (Manufacturer::Panasonic, 0x004e) => {
+                    let mut t = Vec::new();
+                    if value_data.len() >= 2 {
+                        let num = read_u16(value_data, 0, byte_order);
+                        t.push(Tag {
+                            id: TagId::Text("NumFacePositions".into()),
+                            name: "NumFacePositions".into(),
+                            description: "Num Face Positions".into(),
+                            group: TagGroup { family0: "MakerNotes".into(), family1: "Panasonic".into(), family2: "Image".into() },
+                            raw_value: Value::U16(num),
+                            print_value: num.to_string(),
+                            priority: 0,
+                        });
+                        // Only emit FaceNPosition if NumFacePositions >= n
+                        for i in 0..5usize {
+                            if (i as u16) < num {
+                                let base = (1 + i * 4) * 2;
+                                if base + 8 <= value_data.len() {
+                                    let x = read_u16(value_data, base, byte_order);
+                                    let y = read_u16(value_data, base+2, byte_order);
+                                    let w = read_u16(value_data, base+4, byte_order);
+                                    let h = read_u16(value_data, base+6, byte_order);
+                                    t.push(Tag {
+                                        id: TagId::Text(format!("Face{}Position", i+1)),
+                                        name: format!("Face{}Position", i+1),
+                                        description: format!("Face {} Position", i+1),
+                                        group: TagGroup { family0: "MakerNotes".into(), family1: "Panasonic".into(), family2: "Image".into() },
+                                        raw_value: Value::List(vec![Value::U16(x), Value::U16(y), Value::U16(w), Value::U16(h)]),
+                                        print_value: format!("{} {} {} {}", x, y, w, h),
+                                        priority: 0,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    t
+                }
                 _ => Vec::new(),
             };
 
@@ -3044,6 +3260,19 @@ fn read_makernote_ifd(
         // Canon: suppress tags from sub-table generated lookups that don't exist in main MakerNote
         if manufacturer == Manufacturer::Canon && matches!(name,
             "ColorDataVersion" | "FlashOutput" | "FocusDistanceLower" | "FocusDistanceUpper"
+        ) { continue; }
+
+        // Panasonic: suppress tags wrongly matched from generated sub-table lookups
+        if manufacturer == Manufacturer::Panasonic && matches!(name,
+            "WorldTimestamp" | "BabyAge2" | "TextStamp2" | "BracketSettings" |
+            "LongExposureNoiseReduction" | "AccessoryType" | "FaceDetInfo" |
+            "FlashFired" | "LensFirmwareVersion" | "LensSerialNumber" | "LensType"
+        ) { continue; }
+
+        // Pentax: suppress tags from sub-table generated lookups (model-specific)
+        if manufacturer == Manufacturer::Pentax && matches!(name,
+            "FlashOptions2" | "ISOSetting" | "JpgRecordedPixels" | "MeteringMode3" |
+            "Rotation" | "SensitivitySteps" | "SRActive" | "TvExposureTimeSetting"
         ) { continue; }
 
         // GE MakerNote: filter to known tags only

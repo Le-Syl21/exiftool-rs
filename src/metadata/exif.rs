@@ -426,7 +426,8 @@ impl ExifReader {
                 if matches!(name.as_str(),
                     "ApplicationNotes" | // XMP data — should be parsed, not emitted raw
                     "MinSampleValue" | "MaxSampleValue" | // Not emitted by Perl for raw formats
-                    "ProcessingSoftware" // Protected tag, not always emitted
+                    "ProcessingSoftware" | // Protected tag, not always emitted
+                    "PanasonicTitle" | "PanasonicTitle2" // DNG tags, wrong match for RW2
                 ) {
                     continue;
                 }
