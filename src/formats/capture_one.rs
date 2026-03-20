@@ -429,8 +429,8 @@ pub fn read_eip(data: &[u8]) -> Result<Vec<Tag>> {
             }
         }
 
-        // Parse as IIQ (Phase One TIFF)
-        let iiq_tags = crate::formats::misc::read_iiq(iiq_bytes).unwrap_or_default();
+        // Parse as TIFF (the IIQ in EIP is a simple TIFF, not the full IIQ format)
+        let iiq_tags = crate::formats::tiff::read_tiff(iiq_bytes).unwrap_or_default();
         // Filter out tags that shouldn't appear from EIP context:
         // - ExifByteOrder (we've already emitted it above)
         // - File group tags (FileName, FileSize, etc.) from the embedded file

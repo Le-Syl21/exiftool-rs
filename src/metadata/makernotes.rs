@@ -725,36 +725,104 @@ fn pentax_special_tag_conv(tag_id: u16, data_type: u16, count: u32, value_data: 
             let s = format!("{}.{:02}.{:02}.{:02}", b[0], b[1], b[2], b[3]);
             Some(vec![mk("CPUFirmwareVersion", &s)])
         }
-        // PictureMode (0x0033): int8u[3], multi-value PrintConv
-        // Byte 0: mode number, Byte 1: EV steps (0=1/2, 1=1/3)
-        0x0033 if data_type == 1 && count >= 2 && value_data.len() >= 2 => {
-            let mode = value_data[0];
-            let ev = value_data[1];
-            let mode_str = match mode {
-                0 => "Program", 1 => "Shutter Speed Priority", 2 => "Program AE",
-                3 => "Manual", 5 => "Portrait", 6 => "Landscape", 8 => "Sport",
-                9 => "Night Scene", 11 => "Soft", 12 => "Surf & Snow",
-                13 => "Candlelight", 14 => "Autumn", 15 => "Macro",
-                17 => "Fireworks", 18 => "Text", 19 => "Panorama",
-                22 => "Sepia", 30 => "Self Portrait", 37 => "Museum",
-                38 => "Food", 40 => "Green Mode", 53 => "Underwater",
-                68 => "Automatic", 128 => "Auto", 0xff => "Video",
+        // PictureMode (0x0033): int8u[3], Perl Relist => [[0,1], 2]
+        // Bytes 0+1 joined as key for PrintConv[0], byte 2 is EV steps index for PrintConv[1]
+        0x0033 if data_type == 1 && count >= 3 && value_data.len() >= 3 => {
+            let b0 = value_data[0];
+            let b1 = value_data[1];
+            let b2 = value_data[2];
+            let key = format!("{} {}", b0, b1);
+            let mode_part = match key.as_str() {
+                "0 0"   => "Program",
+                "0 1"   => "Hi-speed Program",
+                "0 2"   => "DOF Program",
+                "0 3"   => "MTF Program",
+                "0 4"   => "Standard",
+                "0 5"   => "Portrait",
+                "0 6"   => "Landscape",
+                "0 7"   => "Macro",
+                "0 8"   => "Sport",
+                "0 9"   => "Night Scene Portrait",
+                "0 10"  => "No Flash",
+                "0 11"  => "Night Scene",
+                "0 12"  => "Surf & Snow",
+                "0 13"  => "Text",
+                "0 14"  => "Sunset",
+                "0 15"  => "Kids",
+                "0 16"  => "Pet",
+                "0 17"  => "Candlelight",
+                "0 18"  => "Museum",
+                "0 19"  => "Food",
+                "0 20"  => "Stage Lighting",
+                "0 21"  => "Night Snap",
+                "0 23"  => "Blue Sky",
+                "0 24"  => "Sunset",
+                "0 26"  => "Night Scene HDR",
+                "0 27"  => "HDR",
+                "0 28"  => "Quick Macro",
+                "0 29"  => "Forest",
+                "0 30"  => "Backlight Silhouette",
+                "0 31"  => "Max. Aperture Priority",
+                "0 32"  => "DOF",
+                "1 4"   => "Auto PICT (Standard)",
+                "1 5"   => "Auto PICT (Portrait)",
+                "1 6"   => "Auto PICT (Landscape)",
+                "1 7"   => "Auto PICT (Macro)",
+                "1 8"   => "Auto PICT (Sport)",
+                "2 0"   => "Program (HyP)",
+                "2 1"   => "Hi-speed Program (HyP)",
+                "2 2"   => "DOF Program (HyP)",
+                "2 3"   => "MTF Program (HyP)",
+                "2 22"  => "Shallow DOF (HyP)",
+                "3 0"   => "Green Mode",
+                "4 0"   => "Shutter Speed Priority",
+                "4 2"   => "Shutter Speed Priority 2",
+                "4 31"  => "Shutter Speed Priority 31",
+                "5 0"   => "Aperture Priority",
+                "5 2"   => "Aperture Priority 2",
+                "5 31"  => "Aperture Priority 31",
+                "6 0"   => "Program Tv Shift",
+                "7 0"   => "Program Av Shift",
+                "8 0"   => "Manual",
+                "9 0"   => "Bulb",
+                "10 0"  => "Aperture Priority, Off-Auto-Aperture",
+                "11 0"  => "Manual, Off-Auto-Aperture",
+                "12 0"  => "Bulb, Off-Auto-Aperture",
+                "13 0"  => "Shutter & Aperture Priority AE",
+                "14 0"  => "Shutter Priority AE",
+                "15 0"  => "Sensitivity Priority AE",
+                "16 0"  => "Flash X-Sync Speed AE",
+                "17 0"  => "Flash X-Sync Speed",
+                "18 0"  => "Auto Program (Normal)",
+                "18 1"  => "Auto Program (Hi-speed)",
+                "18 2"  => "Auto Program (DOF)",
+                "18 3"  => "Auto Program (MTF)",
+                "18 22" => "Auto Program (Shallow DOF)",
+                "19 0"  => "Astrotracer",
+                "20 22" => "Blur Control",
+                "24 0"  => "Aperture Priority (Adv.Hyp)",
+                "25 0"  => "Manual Exposure (Adv.Hyp)",
+                "26 0"  => "Shutter and Aperture Priority (TAv)",
+                "249 0" => "Movie (TAv)",
+                "250 0" => "Movie (TAv, Auto Aperture)",
+                "251 0" => "Movie (Manual)",
+                "252 0" => "Movie (Manual, Auto Aperture)",
+                "253 0" => "Movie (Av)",
+                "254 0" => "Movie (Av, Auto Aperture)",
+                "255 0" => "Movie (P, Auto Aperture)",
+                "255 4" => "Video (4)",
+                _       => &key,
+            };
+            let ev_part = match b2 {
+                0 => "1/2 EV steps",
+                1 => "1/3 EV steps",
                 _ => "",
             };
-            let mode_part = if mode_str.is_empty() {
-                format!("{}", mode)
-            } else if mode_str == "Video" {
-                // Perl: "Video (4)" for mode=0xFF with ev=1 (1/3 EV steps index)
-                format!("Video ({})", ev)
+            let s = if ev_part.is_empty() {
+                format!("{}; {}", mode_part, b2)
             } else {
-                mode_str.to_string()
+                format!("{}; {}", mode_part, ev_part)
             };
-            let ev_part = match ev {
-                0 => "1/2 EV steps".to_string(),
-                1 => "1/3 EV steps".to_string(),
-                v => v.to_string(),
-            };
-            let s = format!("{}; {}", mode_part, ev_part);
             Some(vec![mk("PictureMode", &s)])
         }
         // DriveMode (0x0034): int8u[4], multi-value PrintConv
