@@ -209,8 +209,8 @@ impl XmpReader {
                         parse_resource_depths.push(path.len());
                     }
 
-                    // x:xmpmeta — extract XMPToolkit from x:xmptk attribute
-                    if name.local_name == "xmpmeta" {
+                    // x:xmpmeta or x:xapmeta — extract XMPToolkit from x:xmptk/x:xaptk attribute
+                    if name.local_name == "xmpmeta" || name.local_name == "xapmeta" {
                         for attr in &attributes {
                             if attr.name.local_name == "xmptk" || attr.name.local_name == "xaptk" {
                                 tags.push(Tag {
@@ -689,7 +689,7 @@ impl XmpReader {
                                 let prefix = namespace_prefix(&parent.0);
                                 let tag_name = &parent.1;
                                 // Skip RDF structural elements (RDF, Description, etc.)
-                                if tag_name == "RDF" || tag_name == "xmpmeta"
+                                if tag_name == "RDF" || tag_name == "xmpmeta" || tag_name == "xapmeta"
                                     || parent.0 == "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
                                     || parent.0 == "adobe:ns:meta/"
                                 {

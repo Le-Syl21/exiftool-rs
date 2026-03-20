@@ -422,89 +422,75 @@ fn flv_parse_amf_metadata(data: &[u8], tags: &mut Vec<Tag>) {
     flv_parse_amf_object(data, &mut pos, tags, "");
 }
 
-fn flv_parse_amf_object(data: &[u8], pos: &mut usize, tags: &mut Vec<Tag>, prefix: &str) {
-    while *pos + 3 <= data.len() {
-        // Check for end-of-object marker: 0x00 0x00 0x09
-        if data[*pos] == 0x00 && data[*pos+1] == 0x00 && *pos + 2 < data.len() && data[*pos+2] == 0x09 {
-            *pos += 3;
-            break;
+/// Parse an AMF value at *pos, advancing pos.
+/// For struct types (0x03, 0x08), emits sub-tags directly.
+/// compound_key: the raw key built for this value (for tag name lookup).
+/// struct_name: prefix for nested object keys (e.g. "CuePoint0", "keyframes").
+fn flv_parse_amf_value(
+    data: &[u8],
+    pos: &mut usize,
+    tags: &mut Vec<Tag>,
+    compound_key: &str,
+    struct_name: &str,
+) {
+    if *pos >= data.len() { return; }
+    let val_type = data[*pos];
+    *pos += 1;
+
+    match val_type {
+        0x00 => {
+            if *pos + 8 > data.len() { return; }
+            let bytes: [u8; 8] = [data[*pos], data[*pos+1], data[*pos+2], data[*pos+3],
+                                   data[*pos+4], data[*pos+5], data[*pos+6], data[*pos+7]];
+            let val = f64::from_be_bytes(bytes);
+            *pos += 8;
+            let tag_name = flv_lookup_tag(compound_key);
+            let val_str = flv_apply_conv(&tag_name, val);
+            tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(val_str)));
         }
-
-        // Read key
-        let key_len = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
-        *pos += 2;
-        if *pos + key_len > data.len() { break; }
-        let key = String::from_utf8_lossy(&data[*pos..*pos+key_len]).to_string();
-        *pos += key_len;
-
-        if *pos >= data.len() { break; }
-
-        // Read value type
-        let val_type = data[*pos];
-        *pos += 1;
-
-        let full_key = if prefix.is_empty() {
-            // Convert camelCase key to ExifTool CamelCase tag name
-            flv_key_to_tag_name(&key)
-        } else {
-            // Nested: prefix + CamelCase key
-            let part = flv_key_to_tag_name(&key);
-            format!("{}{}", prefix, part)
-        };
-
-        match val_type {
-            0x00 => {
-                // Double
-                if *pos + 8 > data.len() { break; }
-                let bytes: [u8; 8] = [data[*pos], data[*pos+1], data[*pos+2], data[*pos+3],
-                                       data[*pos+4], data[*pos+5], data[*pos+6], data[*pos+7]];
-                let val = f64::from_be_bytes(bytes);
-                *pos += 8;
-                let val_str = flv_format_number(val);
-                tags.push(mktag("FLV", &full_key, &full_key, Value::String(val_str)));
-            }
-            0x01 => {
-                // Boolean
-                if *pos >= data.len() { break; }
-                let b = data[*pos] != 0;
-                *pos += 1;
-                tags.push(mktag("FLV", &full_key, &full_key, Value::String(if b { "Yes" } else { "No" }.to_string())));
-            }
-            0x02 => {
-                // String
-                if *pos + 2 > data.len() { break; }
-                let slen = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
-                *pos += 2;
-                if *pos + slen > data.len() { break; }
-                let s = String::from_utf8_lossy(&data[*pos..*pos+slen]).to_string();
-                *pos += slen;
-                tags.push(mktag("FLV", &full_key, &full_key, Value::String(s)));
-            }
-            0x03 => {
-                // Object: recurse with prefix
-                let new_prefix = format!("{}", full_key);
-                flv_parse_amf_object(data, pos, tags, &new_prefix);
-            }
-            0x08 => {
-                // ECMAArray
-                if *pos + 4 > data.len() { break; }
-                *pos += 4; // skip count
-                let new_prefix = format!("{}", full_key);
-                flv_parse_amf_object(data, pos, tags, &new_prefix);
-            }
-            0x09 => {
-                // End of object (shouldn't happen here)
-                break;
-            }
-            0x0a => {
-                // Strict array
-                if *pos + 4 > data.len() { break; }
-                let count = u32::from_be_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3]]) as usize;
+        0x01 => {
+            if *pos >= data.len() { return; }
+            let b = data[*pos] != 0;
+            *pos += 1;
+            let tag_name = flv_lookup_tag(compound_key);
+            tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(if b { "Yes" } else { "No" }.to_string())));
+        }
+        0x02 => {
+            if *pos + 2 > data.len() { return; }
+            let slen = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
+            *pos += 2;
+            if *pos + slen > data.len() { return; }
+            let s = String::from_utf8_lossy(&data[*pos..*pos+slen]).to_string();
+            *pos += slen;
+            let tag_name = flv_lookup_tag(compound_key);
+            let s = s.trim_end().to_string();
+            tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(s)));
+        }
+        0x03 | 0x08 => {
+            if val_type == 0x08 {
+                if *pos + 4 > data.len() { return; }
                 *pos += 4;
-                let mut items = Vec::new();
-                for _ in 0..count {
-                    if *pos >= data.len() { break; }
-                    let item_type = data[*pos];
+            }
+            flv_parse_amf_object(data, pos, tags, struct_name);
+        }
+        0x09 => { /* end marker, ignore */ }
+        0x0a => {
+            if *pos + 4 > data.len() { return; }
+            let count = u32::from_be_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3]]) as usize;
+            *pos += 4;
+            let mut items: Vec<String> = Vec::new();
+            for i in 0..count {
+                if *pos >= data.len() { break; }
+                let item_type = data[*pos];
+                if item_type == 0x03 || item_type == 0x08 {
+                    let indexed_name = format!("{}{}", struct_name, i);
+                    *pos += 1;
+                    if item_type == 0x08 {
+                        if *pos + 4 > data.len() { break; }
+                        *pos += 4;
+                    }
+                    flv_parse_amf_object(data, pos, tags, &indexed_name);
+                } else {
                     *pos += 1;
                     match item_type {
                         0x00 => {
@@ -515,6 +501,12 @@ fn flv_parse_amf_object(data: &[u8], pos: &mut usize, tags: &mut Vec<Tag>, prefi
                             *pos += 8;
                             items.push(flv_format_number(v));
                         }
+                        0x01 => {
+                            if *pos >= data.len() { break; }
+                            let b = data[*pos] != 0;
+                            *pos += 1;
+                            items.push(if b { "Yes" } else { "No" }.to_string());
+                        }
                         0x02 => {
                             if *pos + 2 > data.len() { break; }
                             let slen = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
@@ -524,137 +516,257 @@ fn flv_parse_amf_object(data: &[u8], pos: &mut usize, tags: &mut Vec<Tag>, prefi
                             *pos += slen;
                             items.push(s);
                         }
-                        _ => break,
+                        _ => { *pos = data.len(); break; }
                     }
                 }
-                if !items.is_empty() {
-                    tags.push(mktag("FLV", &full_key, &full_key, Value::String(items.join(", "))));
-                }
             }
-            0x0b => {
-                // Date
-                if *pos + 10 > data.len() { break; }
-                let ms = f64::from_be_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3],
-                                              data[*pos+4], data[*pos+5], data[*pos+6], data[*pos+7]]);
-                let tz_offset = i16::from_be_bytes([data[*pos+8], data[*pos+9]]) as i32; // minutes
-                *pos += 10;
-                // Convert milliseconds to datetime
-                let s = flv_format_date(ms, tz_offset);
-                tags.push(mktag("FLV", &full_key, &full_key, Value::String(s)));
-            }
-            _ => {
-                // Unknown type - stop parsing
-                break;
+            if !items.is_empty() {
+                let tag_name = flv_lookup_tag(compound_key);
+                tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(items.join(", "))));
             }
         }
+        0x0b => {
+            if *pos + 10 > data.len() { return; }
+            let ms = f64::from_be_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3],
+                                          data[*pos+4], data[*pos+5], data[*pos+6], data[*pos+7]]);
+            let tz_offset = i16::from_be_bytes([data[*pos+8], data[*pos+9]]) as i32;
+            *pos += 10;
+            let s = flv_format_date(ms, tz_offset);
+            let tag_name = flv_lookup_tag(compound_key);
+            tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(s)));
+        }
+        0x0c | 0x0f => {
+            if *pos + 4 > data.len() { return; }
+            let slen = u32::from_be_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3]]) as usize;
+            *pos += 4;
+            if *pos + slen > data.len() { return; }
+            let s = String::from_utf8_lossy(&data[*pos..*pos+slen]).to_string();
+            *pos += slen;
+            let tag_name = flv_lookup_tag(compound_key);
+            tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(s)));
+        }
+        0x05 | 0x06 => { /* null/undefined, no value bytes */ }
+        _ => { *pos = data.len(); }
     }
 }
 
-/// Convert an FLV AMF key to ExifTool tag name.
-fn flv_key_to_tag_name(key: &str) -> String {
-    // Special mappings
-    match key {
-        "audiobitrate" | "audioBitrate" => return "AudioBitrate".to_string(),
-        "audiocodecid" | "audioCodecId" => return "AudioCodecID".to_string(),
-        "audiodatarate" | "audioDataRate" => return "AudioBitrate".to_string(),
-        "audiosamplerate" | "audioSampleRate" => return "AudioSampleRate".to_string(),
-        "audiosamplesize" | "audioSampleSize" => return "AudioBitsPerSample".to_string(),
-        "audiochannels" | "audioChannels" => return "AudioChannels".to_string(),
-        "audiodelay" | "audioDelay" => return "AudioDelay".to_string(),
-        "audiosize" | "audioSize" => return "AudioSize".to_string(),
-        "canSeekToEnd" | "canseeektoend" => return "CanSeekToEnd".to_string(),
-        "creationdate" | "creationDate" => return "MetadataDate".to_string(),
-        "creator" | "metadatacreator" | "metadataCreator" => return "MetadataCreator".to_string(),
-        "cuePoints" | "cuepoints" => return "CuePoints".to_string(),
-        "datasize" | "dataSize" => return "DataSize".to_string(),
-        "duration" => return "Duration".to_string(),
-        "framerate" | "frameRate" => return "FrameRate".to_string(),
-        "haskeyframes" | "hasKeyframes" => return "HasKeyFrames".to_string(),
-        "hasmetadata" | "hasMetadata" => return "HasMetadata".to_string(),
-        "hascuepoints" | "hasCuePoints" => return "HasCuePoints".to_string(),
-        "lastkeyframetimestamp" | "lastKeyframeTimestamp" => return "LastKeyFrameTime".to_string(),
-        "lasttimestamp" | "lastTimestamp" => return "LastTimeStamp".to_string(),
-        "stereo" => return "Stereo".to_string(),
-        "videobitrate" | "videoBitrate" => return "VideoBitrate".to_string(),
-        "videocodecid" | "videoCodecId" => return "VideoCodecID".to_string(),
-        "videodatarate" | "videoDataRate" => return "VideoBitrate".to_string(),
-        "videosize" | "videoSize" => return "VideoSize".to_string(),
-        "width" => return "ImageWidth".to_string(),
-        "height" => return "ImageHeight".to_string(),
-        _ => {}
-    }
+fn flv_parse_amf_object(data: &[u8], pos: &mut usize, tags: &mut Vec<Tag>, struct_name: &str) {
+    while *pos + 3 <= data.len() {
+        if data[*pos] == 0x00 && data[*pos+1] == 0x00 && *pos + 2 < data.len() && data[*pos+2] == 0x09 {
+            *pos += 3;
+            break;
+        }
+        if *pos + 2 > data.len() { break; }
+        let key_len = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
+        *pos += 2;
+        if *pos + key_len > data.len() { break; }
+        let key = String::from_utf8_lossy(&data[*pos..*pos+key_len]).to_string();
+        *pos += key_len;
+        if *pos >= data.len() { break; }
 
-    // CuePoints special handling: keys like "0", "1" become CuePoint0, CuePoint1
-    // General: ucfirst + rest as-is, but handle nested keys
-    let mut result = String::new();
-    let mut next_upper = true;
-    for ch in key.chars() {
-        if ch == '_' || ch == '-' {
-            next_upper = true;
-        } else if next_upper {
-            for c in ch.to_uppercase() { result.push(c); }
-            next_upper = false;
-        } else {
-            result.push(ch);
+        // Build compound key: structName + ucfirst(mapped_key), mirrors Perl's:
+        //   $tag = $$tagInfo{Name} if SubDirectory
+        //   $tag = $structName . ucfirst($tag) if defined $structName
+        //   StructName = $tag
+        let (compound_key, nested_struct) = flv_build_compound_key(struct_name, &key);
+
+        flv_parse_amf_value(data, pos, tags, &compound_key, &nested_struct);
+    }
+}
+
+/// Build (compound_key, nested_struct_name) for a given struct_name + raw key.
+/// Mirrors Perl AMF ProcessMeta logic:
+///   - At top level (struct_name empty): compound_key = raw_key
+///   - Nested: compound_key = struct_name + ucfirst(mapped_sub_key)
+///   - nested_struct = compound_key for most cases (used as StructName in Perl)
+///   - Exception: SubDirectory entries (cuePoints) → nested_struct = Name = "CuePoint"
+fn flv_build_compound_key(struct_name: &str, raw_key: &str) -> (String, String) {
+    if struct_name.is_empty() {
+        // Top-level key
+        let compound_key = raw_key.to_string();
+        // SubDirectory entries use their Name as the nested struct_name
+        let nested_struct = match raw_key {
+            "cuePoints" => "CuePoint".to_string(),
+            _ => raw_key.to_string(),
+        };
+        (compound_key, nested_struct)
+    } else {
+        // Nested key: map through sub-key table first
+        let mapped_key = flv_map_sub_key(struct_name, raw_key);
+        let uckey = flv_ucfirst(&mapped_key);
+        let compound_key = format!("{}{}", struct_name, uckey);
+        // nested_struct is the compound_key (raw, used as StructName)
+        let nested_struct = compound_key.clone();
+        (compound_key, nested_struct)
+    }
+}
+
+/// Map a raw sub-key through the appropriate subtable based on the parent struct_name.
+/// e.g. inside a CuePoint struct: "parameters" → "Parameter"
+fn flv_map_sub_key(struct_name: &str, key: &str) -> String {
+    // CuePointN struct (but not CuePointNParameter*)
+    if let Some(rest) = struct_name.strip_prefix("CuePoint") {
+        let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if !digits.is_empty() && !rest[digits.len()..].starts_with("Parameter") {
+            // Inside CuePoint subtable
+            return match key {
+                "name"       => "Name".to_string(),
+                "type"       => "Type".to_string(),
+                "time"       => "Time".to_string(),
+                "parameters" => "Parameter".to_string(),
+                _ => key.to_string(),
+            };
         }
     }
-    result
+    key.to_string()
+}
+
+
+fn flv_lookup_tag(key: &str) -> String {
+    match key {
+        "audiocodecid"           => return "AudioCodecID".to_string(),
+        "audiodatarate"          => return "AudioBitrate".to_string(),
+        "audiodelay"             => return "AudioDelay".to_string(),
+        "audiosamplerate"        => return "AudioSampleRate".to_string(),
+        "audiosamplesize"        => return "AudioSampleSize".to_string(),
+        "audiosize"              => return "AudioSize".to_string(),
+        "bytelength"             => return "ByteLength".to_string(),
+        "canseekontime"          => return "CanSeekOnTime".to_string(),
+        "canSeekToEnd"           => return "CanSeekToEnd".to_string(),
+        "creationdate"           => return "CreateDate".to_string(),
+        "createdby"              => return "CreatedBy".to_string(),
+        "cuePoints"              => return "CuePoint".to_string(),
+        "datasize"               => return "DataSize".to_string(),
+        "duration"               => return "Duration".to_string(),
+        "filesize"               => return "FileSizeBytes".to_string(),
+        "framerate"              => return "FrameRate".to_string(),
+        "hasAudio"               => return "HasAudio".to_string(),
+        "hasCuePoints"           => return "HasCuePoints".to_string(),
+        "hasKeyframes"           => return "HasKeyFrames".to_string(),
+        "hasMetadata"            => return "HasMetadata".to_string(),
+        "hasVideo"               => return "HasVideo".to_string(),
+        "height"                 => return "ImageHeight".to_string(),
+        "httphostheader"         => return "HTTPHostHeader".to_string(),
+        "keyframesTimes"         => return "KeyFramesTimes".to_string(),
+        "keyframesFilepositions" => return "KeyFramePositions".to_string(),
+        "lasttimestamp"          => return "LastTimeStamp".to_string(),
+        "lastkeyframetimestamp"  => return "LastKeyFrameTime".to_string(),
+        "metadatacreator"        => return "MetadataCreator".to_string(),
+        "metadatadate"           => return "MetadataDate".to_string(),
+        "purl"                   => return "URL".to_string(),
+        "pmsg"                   => return "Message".to_string(),
+        "sourcedata"             => return "SourceData".to_string(),
+        "starttime"              => return "StartTime".to_string(),
+        "stereo"                 => return "Stereo".to_string(),
+        "totaldatarate"          => return "TotalDataRate".to_string(),
+        "totalduration"          => return "TotalDuration".to_string(),
+        "videocodecid"           => return "VideoCodecID".to_string(),
+        "videodatarate"          => return "VideoBitrate".to_string(),
+        "videosize"              => return "VideoSize".to_string(),
+        "width"                  => return "ImageWidth".to_string(),
+        _ => {}
+    }
+    flv_ucfirst(key)
+}
+
+fn flv_apply_conv(tag_name: &str, val: f64) -> String {
+    match tag_name {
+        "AudioBitrate" => flv_convert_bitrate(val * 1000.0),
+        "VideoBitrate" => flv_convert_bitrate(val * 1000.0),
+        "Duration" | "StartTime" | "TotalDuration" => flv_convert_duration(val),
+        "FrameRate" => {
+            let rounded = (val * 1000.0 + 0.5).floor() / 1000.0;
+            flv_format_number(rounded)
+        }
+        _ => flv_format_number(val),
+    }
+}
+
+fn flv_convert_bitrate(bps: f64) -> String {
+    let kbps = bps / 1000.0;
+    if kbps >= 10.0 {
+        format!("{} kbps", (kbps * 10.0 + 0.5).floor() / 10.0)
+    } else {
+        format!("{:.1} kbps", kbps)
+    }
+}
+
+fn flv_convert_duration(secs: f64) -> String {
+    let rounded = (secs * 100.0 + 0.5).floor() / 100.0;
+    if rounded == rounded.floor() {
+        format!("{:.0} s", rounded)
+    } else {
+        let s = format!("{:.2}", rounded);
+        let s = s.trim_end_matches('0');
+        let s = s.trim_end_matches('.');
+        format!("{} s", s)
+    }
 }
 
 fn flv_format_number(val: f64) -> String {
-    // Check if it looks like a kbps rate
-    if val.fract() == 0.0 && val >= 0.0 && val < 1e9 {
+    if val.fract() == 0.0 && val.abs() < 1e15 {
         format!("{}", val as i64)
     } else {
-        // Check if we can represent as simple decimal
-        let s = format!("{}", val);
-        s
+        let s = format!("{:.10}", val);
+        let s = s.trim_end_matches('0');
+        let s = s.trim_end_matches('.');
+        s.to_string()
+    }
+}
+
+fn flv_ucfirst(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        None => String::new(),
+        Some(c) => {
+            let upper: String = c.to_uppercase().collect();
+            upper + chars.as_str()
+        }
     }
 }
 
 fn flv_format_date(ms: f64, tz_offset_minutes: i32) -> String {
-    // Convert milliseconds since epoch to datetime string
-    let secs = (ms / 1000.0) as i64;
-    let millis = ms as i64 % 1000;
+    // Perl: ConvertUnixTime($val/1000, 0, 6) - convert to datetime with 6 decimal places
+    let unix_secs = ms / 1000.0;
+    let whole_secs = unix_secs.floor() as i64;
+    // Microseconds from fractional part (6 decimal places)
+    let usec = ((unix_secs - unix_secs.floor()) * 1_000_000.0).round() as u64;
 
-    // Simple epoch to datetime conversion
-    let epoch_to_date = |ts: i64| -> String {
-        // Basic implementation
+    let epoch_to_ymdhms = |ts: i64| -> (i32, u32, u32, u32, u32, u32) {
         let days = ts / 86400;
         let rem_secs = ts % 86400;
         let hours = rem_secs / 3600;
         let mins = (rem_secs % 3600) / 60;
         let secs = rem_secs % 60;
-
-        // Days since 1970-01-01
         let mut year = 1970i32;
         let mut remaining_days = days;
         loop {
             let days_in_year = if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 { 366 } else { 365 };
-            if remaining_days < days_in_year {
-                break;
-            }
+            if remaining_days < days_in_year { break; }
             remaining_days -= days_in_year;
             year += 1;
         }
-        let month_days = [31i64, if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-        let mut month = 1;
+        let leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+        let month_days: [i64; 12] = [31, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        let mut month = 1u32;
         let mut day = remaining_days + 1;
         for &md in &month_days {
             if day > md { day -= md; month += 1; } else { break; }
         }
-        format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", year, month, day, hours, mins, secs)
+        (year, month, day as u32, hours as u32, mins as u32, secs as u32)
     };
 
-    let base = epoch_to_date(secs);
+    let (year, month, day, hours, mins, secs) = epoch_to_ymdhms(whole_secs);
     let tz_hours = tz_offset_minutes.abs() / 60;
     let tz_mins = tz_offset_minutes.abs() % 60;
     let tz_sign = if tz_offset_minutes >= 0 { "+" } else { "-" };
 
-    if millis != 0 {
-        format!("{}.{:03}{}{:02}:{:02}", base, millis, tz_sign, tz_hours, tz_mins)
+    if usec != 0 {
+        format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:06}{}{:02}:{:02}",
+                year, month, day, hours, mins, secs, usec, tz_sign, tz_hours, tz_mins)
     } else {
-        format!("{}{}{:02}:{:02}", base, tz_sign, tz_hours, tz_mins)
+        format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
+                year, month, day, hours, mins, secs, tz_sign, tz_hours, tz_mins)
     }
 }
 
@@ -1691,14 +1803,17 @@ impl<'a> M2tsBitReader<'a> {
             leading += 1;
             if leading > 31 { return None; }
         }
-        let mut val = (1u32 << leading) - 1;
-        for _ in 0..leading { val = (val << 1) | self.read_bit()?; }
-        Some(val)
+        // After while loop, the '1' terminator bit was consumed.
+        // Now read 'leading' INFO bits.
+        let mut info = 0u32;
+        for _ in 0..leading { info = (info << 1) | self.read_bit()?; }
+        Some((1 << leading) + info - 1)
     }
 
     fn read_se(&mut self) -> Option<i32> {
         let ue = self.read_ue()?;
-        Some(if ue & 1 != 0 { ((ue + 1) >> 1) as i32 } else { -((ue >> 1) as i32) })
+        let abs_val = ((ue + 1) >> 1) as i32;
+        Some(if ue & 1 != 0 { abs_val } else { -abs_val })
     }
 }
 
@@ -1889,9 +2004,16 @@ fn m2ts_parse_sps(sps_nal: &[u8]) -> Option<(u32, u32)> {
         (br.read_ue()?, br.read_ue()?, br.read_ue()?, br.read_ue()?)
     } else { (0, 0, 0, 0) };
 
-    let w = (pic_w + 1) * 16 - cl * 2 - cr * 2;
-    let h = ((pic_h + 1) * (2 - frame_mbs_only)) * 16 - ct * 2 - cb * 2;
-    Some((w, h))
+    // Crop multiplier: 4 for width, (4 - frame_mbs_only*2) for height (Perl H264.pm)
+    let m = 4 - frame_mbs_only * 2;
+    let w = (pic_w + 1) * 16 - 4 * cl - 4 * cr;
+    let h = ((pic_h + 1) * (2 - frame_mbs_only)) * 16 - m * ct - m * cb;
+    // Validity check matching ExifTool H264.pm
+    if w >= 160 && w <= 4096 && h >= 120 && h <= 3072 {
+        Some((w, h))
+    } else {
+        None
+    }
 }
 
 fn m2ts_parse_h264_pes(payload: &[u8]) -> Option<(u32, u32)> {
@@ -1987,11 +2109,11 @@ pub fn read_m2ts(data: &[u8]) -> Result<Vec<Tag>> {
     for pkt_idx in 0..scan_count {
         let pkt = &data[pkt_idx * packet_size..(pkt_idx+1) * packet_size];
 
-        // Extract PCR
+        // Extract PCR from adaptation field (AFC=2 or AFC=3)
         let hdr = &pkt[tco..];
         if hdr.len() >= 12 && hdr[0] == 0x47 {
             let afc = (hdr[3] >> 4) & 0x3;
-            if afc == 3 && hdr.len() > 5 {
+            if (afc == 2 || afc == 3) && hdr.len() > 5 {
                 let af_len = hdr[4] as usize;
                 if af_len >= 7 && hdr.len() >= 12 {
                     let af_flags = hdr[5];
@@ -2057,7 +2179,7 @@ pub fn read_m2ts(data: &[u8]) -> Result<Vec<Tag>> {
             let hdr = &pkt[tco..];
             if hdr.len() >= 12 && hdr[0] == 0x47 {
                 let afc = (hdr[3] >> 4) & 0x3;
-                if afc == 3 && hdr.len() > 5 {
+                if (afc == 2 || afc == 3) && hdr.len() > 5 {
                     let af_len = hdr[4] as usize;
                     if af_len >= 7 {
                         let af_flags = hdr[5];
