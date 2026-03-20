@@ -117,13 +117,20 @@ impl fmt::Display for Value {
 /// Format a float with Perl-style %.15g precision (15 significant digits, trailing zeros stripped).
 /// This matches ExifTool's default `%s` formatting for floating-point values.
 pub fn format_g15(v: f64) -> String {
+    format_g_prec(v, 15)
+}
+
+/// Format a float with Perl-style %.Ng precision (N significant digits, trailing zeros stripped).
+/// Mirrors C sprintf's %g: uses exponential if exponent < -4 or >= precision.
+pub fn format_g_prec(v: f64, prec: usize) -> String {
     if v == 0.0 {
         return "0".to_string();
     }
     let abs_v = v.abs();
     let exp = abs_v.log10().floor() as i32;
-    if exp >= -4 && exp < 15 {
-        let decimal_places = (14 - exp).max(0) as usize;
+    if exp >= -4 && exp < prec as i32 {
+        // Fixed-point: need (prec-1 - exp) decimal places
+        let decimal_places = ((prec as i32 - 1 - exp).max(0)) as usize;
         let s = format!("{:.prec$}", v, prec = decimal_places);
         if s.contains('.') {
             s.trim_end_matches('0').trim_end_matches('.').to_string()
@@ -131,6 +138,29 @@ pub fn format_g15(v: f64) -> String {
             s
         }
     } else {
-        format!("{:.14e}", v)
+        // Exponential format: prec-1 decimal places
+        let decimal_places = prec - 1;
+        let s = format!("{:.prec$e}", v, prec = decimal_places);
+        // Rust produces e.g. "3.51360899930879e20", need "3.51360899930879e+20"
+        // and "-1.5e-6" → "-1.5e-06" (at least 2 digits in exponent)
+        // First strip trailing zeros from mantissa
+        let (mantissa_part, exp_part) = if let Some(e_pos) = s.find('e') {
+            (&s[..e_pos], &s[e_pos+1..])
+        } else {
+            return s;
+        };
+        let mantissa_trimmed = if mantissa_part.contains('.') {
+            mantissa_part.trim_end_matches('0').trim_end_matches('.')
+        } else {
+            mantissa_part
+        };
+        // Parse exponent and reformat with sign and minimum 2 digits
+        let exp_val: i32 = exp_part.parse().unwrap_or(0);
+        let exp_str = if exp_val >= 0 {
+            format!("e+{:02}", exp_val)
+        } else {
+            format!("e-{:02}", -exp_val)
+        };
+        format!("{}{}", mantissa_trimmed, exp_str)
     }
 }

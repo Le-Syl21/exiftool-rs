@@ -402,6 +402,15 @@ impl ExifReader {
                         info.family2.to_string(),
                     ),
                     None => {
+                        // Skip known SubDirectory/internal tags that Perl doesn't emit
+                        if matches!(entry.tag,
+                            0x014A | // SubIFD pointers
+                            0x02BC | // ApplicationNotes (XMP SubDirectory)
+                            0x9216 | // NikonEncryption
+                            0xC634   // DNG PrivateData
+                        ) {
+                            continue;
+                        }
                         // Fallback to generated tags
                         match exif_tags::lookup_generated(entry.tag) {
                             Some((n, d)) => (n.to_string(), d.to_string(), "Other".to_string()),
@@ -413,6 +422,12 @@ impl ExifReader {
                         }
                     }
                 };
+
+                // Suppress known SubDirectory/internal tags that Perl decodes but doesn't emit as raw
+                if name == "ApplicationNotes" {
+                    // XMP data — should be parsed, not emitted raw
+                    continue;
+                }
 
                 let print_value =
                     exif_tags::print_conv(ifd_name, entry.tag, &value)

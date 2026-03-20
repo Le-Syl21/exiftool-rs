@@ -136,6 +136,7 @@ pub enum FileType {
     Dicom,
     Fits,
     // ===== Newly added =====
+    Mrc,
     Moi,
     MacOs,
     Json,
@@ -152,8 +153,12 @@ pub enum FileType {
     Plist,
     Aae,
     KyoceraRaw,
+    // ===== Lytro Light Field Picture =====
+    Lfp,
     // ===== Portable Float Map =====
     PortableFloatMap,
+    // ===== FLIR thermal =====
+    Fpf,
     // ===== OpenDocument =====
     Ods,
     Odt,
@@ -210,6 +215,7 @@ impl FileType {
             FileType::Plist => "PLIST",
             FileType::Aae => "AAE",
             FileType::KyoceraRaw => "Kyocera Contax N RAW",
+            FileType::Lfp => "LFP",
             FileType::PortableFloatMap => "Portable Float Map",
             FileType::Hdr => "Radiance HDR",
             FileType::Rwz => "Rawzor compressed image",
@@ -314,6 +320,7 @@ impl FileType {
             FileType::Swf => "Shockwave Flash",
             FileType::Dicom => "DICOM medical image",
             FileType::Fits => "FITS astronomical image",
+            FileType::Mrc => "MRC image",
             FileType::Moi => "MOI",
             FileType::MacOs => "MacOS",
             FileType::Json => "JSON",
@@ -329,6 +336,7 @@ impl FileType {
             FileType::Aae => "AAE",
             FileType::KyoceraRaw => "KyoceraRaw",
             FileType::PortableFloatMap => "PFM",
+            FileType::Fpf => "FPF",
             FileType::Ods => "ODS",
             FileType::Odt => "ODT",
             FileType::Odp => "ODP",
@@ -461,6 +469,7 @@ impl FileType {
             FileType::Swf => "application/x-shockwave-flash",
             FileType::Dicom => "application/dicom",
             FileType::Fits => "application/fits",
+            FileType::Mrc => "image/x-mrc",
             FileType::Moi => "application/octet-stream",
             FileType::MacOs => "application/unknown",
             FileType::Json => "application/json",
@@ -475,7 +484,9 @@ impl FileType {
             FileType::Plist => "application/x-plist",
             FileType::Aae => "application/vnd.apple.photos",
             FileType::KyoceraRaw => "image/x-raw",
+            FileType::Lfp => "image/x-lytro-lfp",
             FileType::PortableFloatMap => "image/x-pfm",
+            FileType::Fpf => "image/x-flir-fpf",
             FileType::Ods => "application/vnd.oasis.opendocument.spreadsheet",
             FileType::Odt => "application/vnd.oasis.opendocument.text",
             FileType::Odp => "application/vnd.oasis.opendocument.presentation",
@@ -616,6 +627,7 @@ impl FileType {
             FileType::Swf => &["swf"],
             FileType::Dicom => &["dcm"],
             FileType::Fits => &["fits", "fit", "fts"],
+            FileType::Mrc => &["mrc"],
             FileType::Moi => &["moi"],
             FileType::MacOs => &["macos"],
             FileType::Json => &["json"],
@@ -631,6 +643,7 @@ impl FileType {
             FileType::Aae => &["aae"],
             FileType::KyoceraRaw => &["raw"],
             FileType::PortableFloatMap => &["pfm"],
+            FileType::Fpf => &["fpf"],
             FileType::Ods => &["ods"],
             FileType::Odt => &["odt"],
             FileType::Odp => &["odp"],
@@ -639,6 +652,7 @@ impl FileType {
             FileType::Odb => &["odb"],
             FileType::Odi => &["odi"],
             FileType::Odc => &["odc"],
+            FileType::Lfp => &["lfp", "lfr"],
         }
     }
 
@@ -742,12 +756,14 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Xmp, FileType::Mie, FileType::Exv, FileType::Vrd, FileType::Dr4, FileType::Icc,
     FileType::Html, FileType::Exe, FileType::Font, FileType::Swf,
     FileType::Dicom, FileType::Fits,
-    FileType::Moi, FileType::MacOs, FileType::Json,
+    FileType::Mrc, FileType::Moi, FileType::MacOs, FileType::Json,
     FileType::Pcap, FileType::Pcapng,
     FileType::Svg,
     FileType::Pgf, FileType::Xisf, FileType::Torrent, FileType::Mobi, FileType::SonyPmp,
     FileType::Plist, FileType::Aae, FileType::KyoceraRaw,
     FileType::PortableFloatMap,
+    FileType::Fpf,
+    FileType::Lfp,
     // OpenDocument
     FileType::Ods, FileType::Odt, FileType::Odp, FileType::Odg,
     FileType::Odf, FileType::Odb, FileType::Odi, FileType::Odc,
@@ -769,6 +785,11 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // PNG: 89 50 4E 47 0D 0A 1A 0A
     if header.starts_with(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]) {
         return Some(FileType::Png);
+    }
+
+    // Lytro LFP: 89 4C 46 50 0D 0A 1A 0A  ("\x89LFP\r\n\x1a\n")
+    if header.starts_with(&[0x89, 0x4C, 0x46, 0x50, 0x0D, 0x0A, 0x1A, 0x0A]) {
+        return Some(FileType::Lfp);
     }
 
     // GIF: "GIF87a" or "GIF89a"
@@ -910,6 +931,11 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // Portable Float Map: "PF\n" (color) or "Pf\n" (grayscale)
     if header.len() >= 3 && header[0] == b'P' && (header[1] == b'F' || header[1] == b'f') && header[2] == b'\n' {
         return Some(FileType::PortableFloatMap);
+    }
+
+    // FLIR FPF: "FPF Public Image Format\0"
+    if header.starts_with(b"FPF Public Image Format\0") {
+        return Some(FileType::Fpf);
     }
 
     // ===== RAW formats with unique magic =====
@@ -1212,6 +1238,26 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // DICOM: "DICM" at offset 128
     if header.len() >= 132 && &header[128..132] == b"DICM" {
         return Some(FileType::Dicom);
+    }
+
+
+    // MRC: axis values at offset 64-75 (each 1/2/3) and "MAP" at offset 208
+    if header.len() >= 214 {
+        let ax1 = u32::from_le_bytes([header[64], header[65], header[66], header[67]]);
+        let ax2 = u32::from_le_bytes([header[68], header[69], header[70], header[71]]);
+        let ax3 = u32::from_le_bytes([header[72], header[73], header[74], header[75]]);
+        if (1..=3).contains(&ax1) && (1..=3).contains(&ax2) && (1..=3).contains(&ax3)
+            && &header[208..211] == b"MAP"
+        {
+            let ms0 = header[212];
+            let ms1 = header[213];
+            if (ms0 == 0x44 && ms1 == 0x44)
+                || (ms0 == 0x44 && ms1 == 0x41)
+                || (ms0 == 0x11 && ms1 == 0x11)
+            {
+                return Some(FileType::Mrc);
+            }
+        }
     }
 
     // FITS: "SIMPLE  ="

@@ -1192,6 +1192,7 @@ impl ExifTool {
             FileType::Crw => formats::canon_raw::read_crw(data),
             FileType::Raf => formats::raf::read_raf(data),
             FileType::Mrw => formats::mrw::read_mrw(data),
+            FileType::Mrc => formats::mrc::read_mrc(data),
             // Image formats
             FileType::Jp2 => formats::jp2::read_jp2(data),
             FileType::J2c => formats::jp2::read_j2c(data),
@@ -1268,6 +1269,9 @@ impl ExifTool {
             FileType::DjVu => formats::djvu::read_djvu(data),
             FileType::Xcf => formats::gimp::read_xcf(data),
             FileType::Mie => formats::mie::read_mie(data),
+            FileType::Lfp => formats::lytro::read_lfp(data),
+            // FileType::Miff dispatched via string extension below
+            FileType::Fpf => formats::flir_fpf::read_fpf(data),
             FileType::Flif => formats::misc::read_flif(data),
             FileType::Bpg => formats::misc::read_bpg(data),
             FileType::Pcx => formats::misc::read_pcx(data),
@@ -1305,6 +1309,7 @@ impl ExifTool {
             }
             FileType::KyoceraRaw => formats::misc::read_kyocera_raw(data),
             FileType::PortableFloatMap => formats::misc::read_pfm(data),
+            FileType::Fpf => formats::flir_fpf::read_fpf(data),
             FileType::Ods | FileType::Odt | FileType::Odp | FileType::Odg |
             FileType::Odf | FileType::Odb | FileType::Odi | FileType::Odc => formats::zip::read_zip(data),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
@@ -1367,7 +1372,7 @@ impl ExifTool {
             "vrd" => formats::canon_vrd::read_vrd(data).or_else(|_| Ok(Vec::new())),
             "dr4" => formats::canon_vrd::read_dr4(data).or_else(|_| Ok(Vec::new())),
             "indd" | "indt" => Ok(Vec::new()), // InDesign
-            "x3f" => Ok(Vec::new()),       // Sigma X3F
+            "x3f" => formats::sigma_raw::read_x3f(data).or_else(|_| Ok(Vec::new())),
             "mie" => Ok(Vec::new()),       // MIE
             "exr" => Ok(Vec::new()),       // OpenEXR
             "wpg" => formats::misc::read_wpg(data).or_else(|_| Ok(Vec::new())),
@@ -1377,11 +1382,13 @@ impl ExifTool {
             "dpx" => formats::dpx::read_dpx(data).or_else(|_| Ok(Vec::new())),
             "r3d" => formats::red::read_r3d(data).or_else(|_| Ok(Vec::new())),
             "tnef" => formats::tnef::read_tnef(data).or_else(|_| Ok(Vec::new())),
-            "ppt" | "fpx" | "fpf" => formats::flashpix::read_fpx(data).or_else(|_| Ok(Vec::new())),
+            "ppt" | "fpx" => formats::flashpix::read_fpx(data).or_else(|_| Ok(Vec::new())),
+            "fpf" => formats::flir_fpf::read_fpf(data).or_else(|_| Ok(Vec::new())),
             "itc" => formats::misc::read_itc(data).or_else(|_| Ok(Vec::new())),
             "dv" => formats::dv::read_dv(data, data.len() as u64).or_else(|_| Ok(Vec::new())),
             "czi" => formats::misc::read_czi(data).or_else(|_| Ok(Vec::new())),
-            "lfp" | "miff" | "mrc"
+            "miff" => formats::miff::read_miff(data).or_else(|_| Ok(Vec::new())),
+            "lfp" | "mrc"
             | "dss" | "mobi" | "psp" | "pgf" | "raw"
             | "pmp" | "torrent"
             | "xisf" | "mxf"

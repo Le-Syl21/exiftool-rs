@@ -3007,6 +3007,9 @@ fn read_makernote_ifd(
             (Manufacturer::Nikon, 0x0098) | // LensData
             (Manufacturer::Nikon, 0x00A8) | // FlashInfo
             (Manufacturer::Nikon, 0x00B7) | // AFInfo2
+            (Manufacturer::Nikon, 0x0E09) | // NikonCaptureData (SubDirectory)
+            (Manufacturer::Nikon, 0x0E10) | // NikonCaptureOffsets (SubDirectory)
+            (Manufacturer::Nikon, 0x0E22) | // NikonScanIFD (SubDirectory)
             (Manufacturer::Minolta, 0x0001) | // CameraSettings
             (Manufacturer::Minolta, 0x0003) | // CameraSettings
             (Manufacturer::Apple, 0x0003) |  // RunTime

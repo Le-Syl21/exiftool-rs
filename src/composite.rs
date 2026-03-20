@@ -173,9 +173,10 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     }
 
     // LensID fallback: use LensModel or Lens if no LensID computed by 35efl
+    // Only create when the value looks like a real camera lens (contains "mm" or "f/")
     if !composite.iter().any(|t| t.name == "LensID") {
         let lens_val = find_tag_value(tags, "LensModel")
-            .filter(|v| !v.is_empty())
+            .filter(|v| !v.is_empty() && (v.contains("mm") || v.to_lowercase().contains("f/")))
             .or_else(|| find_tag_value(tags, "Lens").filter(|v| !v.is_empty() && (v.contains("mm") || v.contains("/F"))));
         if let Some(lm) = lens_val {
             // Apply PrintConv: s/ - /-/ (remove spaces around dash), etc.
@@ -471,9 +472,11 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
         let fpyr = find_tag_f64(tags, "FocalPlaneYResolution")?;
         // Use largest available image dimensions (full sensor)
         let img_w = find_tag_f64(tags, "RelatedImageWidth")
-            .or_else(|| find_tag_f64(tags, "ExifImageWidth"))?;
+            .or_else(|| find_tag_f64(tags, "ExifImageWidth"))
+            .or_else(|| find_tag_f64(tags, "ImageWidth"))?;
         let img_h = find_tag_f64(tags, "RelatedImageHeight")
-            .or_else(|| find_tag_f64(tags, "ExifImageHeight"))?;
+            .or_else(|| find_tag_f64(tags, "ExifImageHeight"))
+            .or_else(|| find_tag_f64(tags, "ImageHeight"))?;
         if fpxr <= 0.0 || fpyr <= 0.0 || img_w <= 0.0 || img_h <= 0.0 { return None; }
 
         let unit = find_tag_f64(tags, "FocalPlaneResolutionUnit").unwrap_or(2.0);
