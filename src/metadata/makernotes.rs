@@ -2988,6 +2988,7 @@ fn read_makernote_ifd(
             (Manufacturer::Canon, 0x0003) | // CanonFlashInfo (Unknown => 1)
             (Manufacturer::Canon, 0x0004) | // CanonShotInfo
             (Manufacturer::Canon, 0x000D) | // CanonCameraInfo
+            (Manufacturer::Canon, 0x000F) | // CustomFunctions (SubDirectory)
             (Manufacturer::Canon, 0x0093) | // CanonFileInfo (SubDirectory)
             (Manufacturer::Canon, 0x0012) | // CanonAFInfo
             (Manufacturer::Canon, 0x0026) | // CanonAFInfo2
@@ -2999,6 +3000,9 @@ fn read_makernote_ifd(
             (Manufacturer::Canon, 0x00AA) | // MeasuredColor
             (Manufacturer::Canon, 0x00E0) | // SensorInfo
             (Manufacturer::Canon, 0x4001) | // ColorData
+            (Manufacturer::Canon, 0x4002) | // CRWParam (Unknown, Binary, Drop)
+            (Manufacturer::Canon, 0x4003) | // ColorInfo (SubDirectory)
+            (Manufacturer::Canon, 0x4005) | // Flavor (Unknown, Binary, Drop)
             (Manufacturer::Canon, 0x4013) | // AFMicroAdj
             (Manufacturer::Nikon, 0x0011) | // PreviewIFD
             (Manufacturer::Nikon, 0x0088) | // AFInfo
@@ -3009,7 +3013,8 @@ fn read_makernote_ifd(
             (Manufacturer::Nikon, 0x00B7) | // AFInfo2
             (Manufacturer::Nikon, 0x0E01) | // NikonCaptureData (SubDirectory)
             (Manufacturer::Nikon, 0x0E0E) | // NikonCaptureOffsets (SubDirectory)
-            (Manufacturer::Nikon, 0x0E22) | // NikonScanIFD (SubDirectory)
+            (Manufacturer::Nikon, 0x0E10) | // NikonScanIFD (SubDirectory)
+            (Manufacturer::Nikon, 0x0E22) | // NikonICCProfile (SubDirectory)
             (Manufacturer::Minolta, 0x0001) | // CameraSettings
             (Manufacturer::Minolta, 0x0003) | // CameraSettings
             (Manufacturer::Apple, 0x0003) |  // RunTime
@@ -3035,6 +3040,11 @@ fn read_makernote_ifd(
 
         // Nikon: suppress tags that are SubDirectory in sub-tables but wrongly matched from generated
         if manufacturer == Manufacturer::Nikon && name == "IntervalOffset" { continue; }
+
+        // Canon: suppress tags from sub-table generated lookups that don't exist in main MakerNote
+        if manufacturer == Manufacturer::Canon && matches!(name,
+            "ColorDataVersion" | "FlashOutput" | "FocusDistanceLower" | "FocusDistanceUpper"
+        ) { continue; }
 
         // GE MakerNote: filter to known tags only
         if manufacturer == Manufacturer::GE {
@@ -3560,7 +3570,8 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
         _ => "",
     };
     let ver_pv = if version_str.is_empty() { version.to_string() } else { version_str.to_string() };
-    tags.push(mk_canon_str("ColorDataVersion", &ver_pv));
+    // ColorDataVersion is internal — Perl doesn't emit it by default
+    // tags.push(mk_canon_str("ColorDataVersion", &ver_pv));
 
     // ColorData4: version 2-9 (count 674..1346) — uses ColorCoefs subdir at index 0x3f (63)
     // ColorData3: version 1 (count=796) — uses its own WB layout at index 0x3f (63)
