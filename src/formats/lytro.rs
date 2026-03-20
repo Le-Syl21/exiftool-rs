@@ -466,24 +466,9 @@ fn convert_xmp_date(val: &str) -> String {
 /// Format FNumber (e.g., 1.9099... → "1.9")
 fn format_fnumber(val: &str) -> String {
     if let Ok(f) = val.parse::<f64>() {
-        // Perl uses PrintFNumber which formats to reasonable precision
-        // Round to 1 decimal if close, otherwise use minimal precision
-        let rounded = (f * 10.0).round() / 10.0;
-        if (rounded - f).abs() < 0.001 {
-            format!("{:.1}", rounded)
-        } else {
-            format!("{}", f)
-        }
-    } else {
-        val.to_string()
-    }
-}
-
-/// Convert focal length from metres to mm and format.
-fn format_focal_length(val: &str) -> String {
-    if let Ok(f) = val.parse::<f64>() {
-        let mm = f * 1000.0;
-        format!("{:.1} mm", mm)
+        // Perl PrintFNumber: format to minimal significant digits (usually 1 decimal)
+        // Round to 1 decimal place
+        format!("{:.1}", f)
     } else {
         val.to_string()
     }
@@ -510,19 +495,6 @@ fn format_exposure_time(val: &str) -> String {
         // Express as 1/N
         let n = (1.0 / f).round() as u64;
         format!("1/{}", n)
-    } else {
-        val.to_string()
-    }
-}
-
-/// Convert pixel pitch (metres) to pixels/inch: 25.4 / val / 1000
-fn format_pixel_pitch(val: &str) -> String {
-    if let Ok(f) = val.parse::<f64>() {
-        if f <= 0.0 {
-            return val.to_string();
-        }
-        let ppi = 25.4 / f / 1000.0;
-        format!("{}", ppi)
     } else {
         val.to_string()
     }
