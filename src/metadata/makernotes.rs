@@ -3745,6 +3745,18 @@ fn read_makernote_ifd(
             continue;
         }
 
+        // Nikon NikonScanIFD (0x0E10): read sub-IFD for scanner tags
+        if manufacturer == Manufacturer::Nikon && tag_id == 0x0E10 {
+            // The value is a pointer to a sub-IFD within the TIFF data
+            if value_data.len() >= 4 {
+                let scan_offset = read_u32(value_data, 0, byte_order) as usize;
+                // Read the sub-IFD from the full TIFF data
+                let scan_tags = decode_nikon_scan_ifd(data, scan_offset, byte_order);
+                tags.extend(scan_tags);
+            }
+            continue;
+        }
+
         // Nikon NikonCaptureData (0x0E01): decode into sub-tags
         if manufacturer == Manufacturer::Nikon && tag_id == 0x0E01 {
             let sub_tags = crate::metadata::nikon_capture::decode_nikon_capture(value_data);
@@ -3783,7 +3795,7 @@ fn read_makernote_ifd(
             (Manufacturer::Nikon, 0x00A8) | // FlashInfo
             (Manufacturer::Nikon, 0x00B7) | // AFInfo2
             (Manufacturer::Nikon, 0x0E0E) | // NikonCaptureOffsets (SubDirectory)
-            (Manufacturer::Nikon, 0x0E10) | // NikonScanIFD (SubDirectory)
+            // NikonScanIFD (0x0E10) now decoded above
             (Manufacturer::Nikon, 0x0E22) | // NikonICCProfile (SubDirectory)
             (Manufacturer::Minolta, 0x0001) | // CameraSettings
             (Manufacturer::Minolta, 0x0003) | // CameraSettings
@@ -4830,4 +4842,102 @@ fn read_u32(data: &[u8], offset: usize, bo: ByteOrderMark) -> u32 {
         ByteOrderMark::LittleEndian => u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]),
         ByteOrderMark::BigEndian => u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]),
     }
+}
+
+/// Decode Nikon Scan IFD — a standard TIFF IFD with scanner-specific tags
+fn decode_nikon_scan_ifd(data: &[u8], offset: usize, bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    if offset + 2 > data.len() { return tags; }
+
+    let count = read_u16(data, offset, bo) as usize;
+    let entries_start = offset + 2;
+
+    let mk = |name: &str, val: String| -> Tag {
+        Tag {
+            id: TagId::Text(name.into()),
+            name: name.into(),
+            description: name.into(),
+            group: TagGroup { family0: "MakerNotes".into(), family1: "NikonScan".into(), family2: "Image".into() },
+            raw_value: Value::String(val.clone()),
+            print_value: val,
+            priority: 0,
+        }
+    };
+
+    for i in 0..count.min(50) {
+        let eoff = entries_start + i * 12;
+        if eoff + 12 > data.len() { break; }
+
+        let tag = read_u16(data, eoff, bo);
+        let dtype = read_u16(data, eoff + 2, bo);
+        let cnt = read_u32(data, eoff + 4, bo) as usize;
+        let val_off_raw = read_u32(data, eoff + 8, bo);
+
+        // Determine value location
+        let elem_size = match dtype { 1|2|6|7 => 1, 3|8 => 2, 4|9|11 => 4, 5|10|12 => 8, _ => 1 };
+        let total = elem_size * cnt;
+        let val_data = if total <= 4 {
+            &data[eoff+8..eoff+12]
+        } else {
+            let off = val_off_raw as usize;
+            if off + total > data.len() { continue; }
+            &data[off..off+total]
+        };
+
+        match tag {
+            0x02 => {
+                // FilmType — string
+                let s = String::from_utf8_lossy(val_data).trim_end_matches('\0').to_string();
+                tags.push(mk("FilmType", s));
+            }
+            0x41 => {
+                // BitDepth — int16u
+                if val_data.len() >= 2 {
+                    tags.push(mk("BitDepth", read_u16(val_data, 0, bo).to_string()));
+                }
+            }
+            0x50 => {
+                // MasterGain — rational64s
+                if val_data.len() >= 8 {
+                    let num = read_u32(val_data, 0, bo) as i32;
+                    let den = read_u32(val_data, 4, bo) as i32;
+                    let v = if den != 0 { num as f64 / den as f64 } else { 0.0 };
+                    tags.push(mk("MasterGain", format!("{:.2}", v)));
+                }
+            }
+            0x51 => {
+                // ColorGain — rational64s[3]
+                if val_data.len() >= 24 {
+                    let mut vals = Vec::new();
+                    for j in 0..3 {
+                        let num = read_u32(val_data, j*8, bo) as i32;
+                        let den = read_u32(val_data, j*8+4, bo) as i32;
+                        let v = if den != 0 { num as f64 / den as f64 } else { 0.0 };
+                        vals.push(format!("{:.2}", v));
+                    }
+                    tags.push(mk("ColorGain", vals.join(" ")));
+                }
+            }
+            0x60 => {
+                // ScanImageEnhancer — int32u
+                if val_data.len() >= 4 {
+                    let v = read_u32(val_data, 0, bo);
+                    tags.push(mk("ScanImageEnhancer", if v != 0 { "On" } else { "Off" }.into()));
+                }
+            }
+            0x100 => {
+                // DigitalICE — string
+                let s = String::from_utf8_lossy(val_data).trim_end_matches('\0').to_string();
+                tags.push(mk("DigitalICE", s));
+            }
+            0x110 => {
+                // ROCInfo subdirectory — skip
+            }
+            0x120 => {
+                // GEMInfo subdirectory — skip
+            }
+            _ => {}
+        }
+    }
+    tags
 }
