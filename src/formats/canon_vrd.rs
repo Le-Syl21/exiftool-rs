@@ -674,6 +674,23 @@ fn process_dr4_tag(
     tags.push(mktag("CanonDR4", name, val, print));
 }
 
+/// Extract an integer from a Value (handles both U32 and I32)
+fn val_as_i32(val: &Value) -> Option<i32> {
+    match val {
+        Value::U32(v) => Some(*v as i32),
+        Value::I32(v) => Some(*v),
+        _ => None,
+    }
+}
+
+fn val_as_u32(val: &Value) -> Option<u32> {
+    match val {
+        Value::U32(v) => Some(*v),
+        Value::I32(v) => Some(*v as u32),
+        _ => None,
+    }
+}
+
 /// Return tag name and print value for a DR4 tag
 fn dr4_tag_name_and_print<'a>(
     data: &[u8],
@@ -687,7 +704,7 @@ fn dr4_tag_name_and_print<'a>(
         // Header tags (processed separately)
         // 0x10002 => Rotation
         0x10002 => {
-            let v = match val { Value::U32(x) => *x, _ => return ("", String::new()) };
+            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
             let print = match v { 0 => "0", 1 => "90", 2 => "180", 3 => "270", _ => "" };
             ("Rotation", if print.is_empty() { v.to_string() } else { print.to_string() })
         }
@@ -701,7 +718,7 @@ fn dr4_tag_name_and_print<'a>(
             ("CustomPictureStyle", print)
         }
         0x10100 => {
-            let v = match val { Value::U32(x) => *x, _ => return ("", String::new()) };
+            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
             let print = match v {
                 0 => "Unrated".to_string(),
                 1 => "1".to_string(),
@@ -715,7 +732,7 @@ fn dr4_tag_name_and_print<'a>(
             ("Rating", print)
         }
         0x10101 => {
-            let v = match val { Value::U32(x) => *x, _ => return ("", String::new()) };
+            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
             let print = match v {
                 0 => "Clear".to_string(),
                 1..=5 => v.to_string(),
@@ -724,7 +741,7 @@ fn dr4_tag_name_and_print<'a>(
             ("CheckMark", print)
         }
         0x10200 => {
-            let v = match val { Value::U32(x) => *x, _ => return ("", String::new()) };
+            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
             let print = match v {
                 1 => "sRGB",
                 2 => "Adobe RGB",
@@ -740,7 +757,7 @@ fn dr4_tag_name_and_print<'a>(
             ("RawBrightnessAdj", print)
         }
         0x20101 => {
-            let v = match val { Value::I32(x) => *x, Value::U32(x) => *x as i32, _ => return ("", String::new()) };
+            let v = match val_as_i32(val) { Some(x) => x, None => return ("", String::new()) };
             let print = match v {
                 -1 => "Manual (Click)",
                 0 => "Auto",
@@ -772,11 +789,11 @@ fn dr4_tag_name_and_print<'a>(
             ("WBAdjRGGBLevels", print)
         }
         0x20200 => {
-            let v = match val { Value::U32(x) => *x, _ => return ("", String::new()) };
+            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
             ("GammaLinear", no_yes(v))
         }
         0x20301 => {
-            let v = match val { Value::U32(x) => *x, _ => return ("", String::new()) };
+            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
             let print = match v {
                 0x81 => "Standard",
                 0x82 => "Portrait",
@@ -816,7 +833,7 @@ fn dr4_tag_name_and_print<'a>(
             ("ColorSaturationAdj", print)
         }
         0x20306 => {
-            let v = match val { Value::U32(x) => *x, _ => return ("", String::new()) };
+            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
             let print = match v {
                 0 => "None",
                 1 => "Sepia",
@@ -828,7 +845,7 @@ fn dr4_tag_name_and_print<'a>(
             ("MonochromeToningEffect", if print.is_empty() { v.to_string() } else { print.to_string() })
         }
         0x20307 => {
-            let v = match val { Value::U32(x) => *x, _ => return ("", String::new()) };
+            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
             let print = match v {
                 0 => "None",
                 1 => "Yellow",
@@ -863,7 +880,7 @@ fn dr4_tag_name_and_print<'a>(
             ("HighlightAdj", print)
         }
         0x20310 => {
-            let v = match val { Value::U32(x) => *x, _ => return ("", String::new()) };
+            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
             let print = match v {
                 0 => "Sharpness",
                 1 => "Unsharp Mask",
@@ -876,14 +893,7 @@ fn dr4_tag_name_and_print<'a>(
         0x20410 => ("ToneCurveBrightness", val.to_display_string()),
         0x20411 => ("ToneCurveContrast", val.to_display_string()),
         0x20500 => {
-            let v = match val { Value::U32(x) => *x, _ => return ("", String::new()) };
-            let print = match v {
-                0 => "Low",
-                1 => "Standard",
-                2 => "Strong",
-                _ => "",
-            };
-            ("AutoLightingOptimizer", if print.is_empty() { v.to_string() } else { print.to_string() })
+            ("AutoLightingOptimizer", val.to_display_string())
         }
         0x20600 => {
             let print = match val {
@@ -937,7 +947,7 @@ fn dr4_tag_name_and_print<'a>(
             ("ChromaticAberration", print)
         }
         0x20704 => {
-            let v = match val { Value::U32(x) => *x, _ => return ("", String::new()) };
+            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
             ("ColorBlurOn", no_yes(v))
         }
         0x20705 => {
@@ -989,7 +999,7 @@ fn dr4_tag_name_and_print<'a>(
             ("MagentaHSL", format_hsl(data, off, len))
         }
         0x30101 => {
-            let v = match val { Value::U32(x) => *x, _ => return ("", String::new()) };
+            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
             let print = match v {
                 0 => "Free",
                 1 => "Custom",

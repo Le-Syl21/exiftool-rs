@@ -214,11 +214,16 @@ fn bool_print(val: i32) -> String {
 /// Convert 100ns-since-0001-01-01 to "YYYY:MM:DD HH:MM:SSZ".
 ///
 /// Mirrors: $val / 1e7 - 719162*24*3600 -> unix time -> ConvertUnixTime
+/// ConvertUnixTime rounds the fractional seconds (if frac >= 0.5, adds 1 to integer time).
 fn convert_time_100ns(val: u64) -> String {
     // 719162 days from 0001-01-01 to 1970-01-01
     const EPOCH_OFFSET_SECS: i64 = 719162 * 24 * 3600;
-    let secs_since_epoch = (val as f64 / 1e7) as i64 - EPOCH_OFFSET_SECS;
-    unix_secs_to_datetime(secs_since_epoch)
+    let float_secs = val as f64 / 1e7 - EPOCH_OFFSET_SECS as f64;
+    let int_secs = float_secs.floor() as i64;
+    let frac = float_secs - float_secs.floor();
+    // Mirrors Perl ConvertUnixTime: sprintf('%.0f', frac) => '1' means round up
+    let rounded_secs = if frac >= 0.5 { int_secs + 1 } else { int_secs };
+    unix_secs_to_datetime(rounded_secs)
 }
 
 fn unix_secs_to_datetime(secs: i64) -> String {
@@ -267,18 +272,24 @@ fn convert_duration_100ns(val: u64) -> String {
     convert_duration(total_secs)
 }
 
-/// Convert duration in seconds to "H:MM:SS" or "MM:SS" string.
-/// Mirrors ExifTool's ConvertDuration().
+/// Convert duration in seconds to a human-readable string.
+/// Mirrors ExifTool's ConvertDuration():
+///   - < 30s: "X.XX s"
+///   - >= 30s: "H:MM:SS" (always includes hours component)
 fn convert_duration(secs: f64) -> String {
-    let total = secs as u64;
-    let s = total % 60;
-    let m = (total / 60) % 60;
-    let h = total / 3600;
-    if h > 0 {
-        format!("{}:{:02}:{:02}", h, m, s)
-    } else {
-        format!("{}:{:02}", m, s)
+    if secs == 0.0 {
+        return "0 s".to_string();
     }
+    let (sign, secs) = if secs < 0.0 { ("-", -secs) } else { ("", secs) };
+    if secs < 30.0 {
+        return format!("{}{:.2} s", sign, secs);
+    }
+    // Round to nearest second
+    let secs = (secs + 0.5) as u64;
+    let s = secs % 60;
+    let m = (secs / 60) % 60;
+    let h = secs / 3600;
+    format!("{}{}:{:02}:{:02}", sign, h, m, s)
 }
 
 /// Process WTV metadata chunk data.
@@ -353,7 +364,17 @@ fn process_metadata(data: &[u8], tags: &mut Vec<Tag>) {
             }
             // fmt 1 = string (UTF-16-LE)
             1 => {
-                let s = decode_utf16le(value_bytes);
+                let raw_s = decode_utf16le(value_bytes);
+                // Apply ValueConv transformations for specific tags
+                // 'WM/MediaOriginalBroadcastDateTime' and 'WM/OriginalReleaseTime':
+                //   Perl: $val =~ tr/-T/: /; $val
+                //   Converts ISO date "0001-01-01T00:00:00Z" -> "0001:01:01 00:00:00Z"
+                let s = match tag_name.as_str() {
+                    "MediaOriginalBroadcastDateTime" | "OriginalReleaseTime" => {
+                        raw_s.replace('-', ":").replace('T', " ")
+                    }
+                    _ => raw_s,
+                };
                 mk_wtv(&tag_name, Value::String(s.clone()), s)
             }
             // fmt 4 = int64u (time values use this)
