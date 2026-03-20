@@ -1062,6 +1062,25 @@ impl ExifTool {
                     }
                 }
             }
+            // Override PLIST to AAE if extension is .aae
+            if ft == FileType::Plist {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if ext.eq_ignore_ascii_case("aae") {
+                        return Ok(FileType::Aae);
+                    }
+                }
+            }
+            // Override XMP to PLIST/AAE if extension is .plist or .aae
+            if ft == FileType::Xmp {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if ext.eq_ignore_ascii_case("plist") {
+                        return Ok(FileType::Plist);
+                    }
+                    if ext.eq_ignore_ascii_case("aae") {
+                        return Ok(FileType::Aae);
+                    }
+                }
+            }
             return Ok(ft);
         }
 
@@ -1170,8 +1189,9 @@ impl ExifTool {
             FileType::Exe => formats::exe::read_exe(data),
             FileType::Font => formats::font::read_font(data),
             // Audio with ID3
-            FileType::Ape | FileType::Mpc
-            | FileType::WavPack | FileType::Dsf => formats::id3::read_mp3(data),
+            FileType::WavPack | FileType::Dsf => formats::id3::read_mp3(data),
+            FileType::Ape => formats::ape::read_ape(data),
+            FileType::Mpc => formats::ape::read_mpc(data),
             FileType::Aac => formats::misc::read_aac(data),
             FileType::RealAudio => {
                 formats::misc::read_real_audio(data).or_else(|_| Ok(Vec::new()))
@@ -1206,6 +1226,22 @@ impl ExifTool {
             FileType::SonyPmp => formats::sony_pmp::read_sony_pmp(data),
             FileType::Audible => formats::audible::read_audible(data),
             FileType::Exr => formats::openexr::read_openexr(data),
+            // New formats
+            FileType::Plist => {
+                if data.starts_with(b"bplist") {
+                    formats::plist::read_binary_plist_tags(data)
+                } else {
+                    formats::plist::read_xml_plist(data)
+                }
+            }
+            FileType::Aae => {
+                if data.starts_with(b"bplist") {
+                    formats::plist::read_binary_plist_tags(data)
+                } else {
+                    formats::plist::read_aae_plist(data)
+                }
+            }
+            FileType::KyoceraRaw => formats::misc::read_kyocera_raw(data),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }
@@ -1240,14 +1276,18 @@ impl ExifTool {
             "url" => formats::lnk::read_url(data).or_else(|_| Ok(Vec::new())),
             "lnk" => formats::lnk::read_lnk(data).or_else(|_| Ok(Vec::new())),
             "gpx" | "kml" | "xml" | "inx" => formats::xmp_file::read_xmp(data),
-            "plist" | "aae" => {
-                // Try XML plist or binary plist
+            "plist" => {
                 if data.starts_with(b"bplist") {
                     formats::plist::read_binary_plist_tags(data).or_else(|_| Ok(Vec::new()))
-                } else if data.starts_with(b"<?xml") {
-                    formats::plist::read_xml_plist(data).or_else(|_| Ok(Vec::new()))
                 } else {
-                    Ok(Vec::new())
+                    formats::plist::read_xml_plist(data).or_else(|_| Ok(Vec::new()))
+                }
+            }
+            "aae" => {
+                if data.starts_with(b"bplist") {
+                    formats::plist::read_binary_plist_tags(data).or_else(|_| Ok(Vec::new()))
+                } else {
+                    formats::plist::read_aae_plist(data).or_else(|_| Ok(Vec::new()))
                 }
             }
             "vcf" | "ics" | "vcard" => {

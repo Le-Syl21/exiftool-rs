@@ -3,7 +3,7 @@
 //! Each format has a minimal reader extracting basic metadata.
 
 use crate::error::{Error, Result};
-use crate::metadata::XmpReader;
+use crate::metadata::{ExifReader, XmpReader};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
@@ -85,35 +85,179 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
     // FITS header: 80-byte fixed-width keyword records
     let mut pos = 0;
+    // For CONTINUE: track current tag to append value
+    let mut continue_tag: Option<String> = None;
+    let mut continue_val: String = String::new();
+
     while pos + 80 <= data.len() {
         let record = &data[pos..pos + 80];
-        let keyword = String::from_utf8_lossy(&record[..8]).trim().to_string();
+        let keyword = String::from_utf8_lossy(&record[..8]).trim_end().to_string();
         pos += 80;
 
         if keyword == "END" { break; }
-        if keyword.is_empty() { continue; }
 
-        if record.len() > 10 && record[8] == b'=' {
-            let value = String::from_utf8_lossy(&record[10..]).trim().to_string();
-            let value = value.split('/').next().unwrap_or("").trim().trim_matches('\'').trim().to_string();
-
-            match keyword.as_str() {
-                "BITPIX" => tags.push(mktag("FITS", "BitDepth", "Bit Depth", Value::String(value))),
-                "NAXIS" => tags.push(mktag("FITS", "NumAxes", "Number of Axes", Value::String(value))),
-                "NAXIS1" => tags.push(mktag("FITS", "ImageWidth", "Image Width", Value::String(value))),
-                "NAXIS2" => tags.push(mktag("FITS", "ImageHeight", "Image Height", Value::String(value))),
-                "OBJECT" => tags.push(mktag("FITS", "Object", "Object", Value::String(value))),
-                "TELESCOP" => tags.push(mktag("FITS", "Telescope", "Telescope", Value::String(value))),
-                "INSTRUME" => tags.push(mktag("FITS", "Instrument", "Instrument", Value::String(value))),
-                "DATE-OBS" => tags.push(mktag("FITS", "DateObs", "Date Observed", Value::String(value))),
-                "OBSERVER" => tags.push(mktag("FITS", "Observer", "Observer", Value::String(value))),
-                "EXPTIME" => tags.push(mktag("FITS", "ExposureTime", "Exposure Time", Value::String(value))),
-                _ => {}
+        // Handle CONTINUE keyword
+        if keyword == "CONTINUE" {
+            if continue_tag.is_some() {
+                // Continue value from previous quoted string
+                let val_raw = String::from_utf8_lossy(&record[8..]).to_string();
+                let (more, cont) = fits_parse_continued_value(&val_raw);
+                continue_val.push_str(&more);
+                if !cont {
+                    let tag_name = continue_tag.take().unwrap();
+                    let tag_desc = fits_tag_description(&tag_name);
+                    tags.push(mktag("FITS", &tag_name, &tag_desc, Value::String(continue_val.clone())));
+                    continue_val.clear();
+                }
             }
+            continue;
+        }
+
+        // Flush any pending continue
+        if let Some(tag_name) = continue_tag.take() {
+            let tag_desc = fits_tag_description(&tag_name);
+            tags.push(mktag("FITS", &tag_name, &tag_desc, Value::String(continue_val.clone())));
+            continue_val.clear();
+        }
+
+        // COMMENT and HISTORY: special handling (no '= ' at position 8)
+        if keyword == "COMMENT" || keyword == "HISTORY" {
+            let val = String::from_utf8_lossy(&record[8..]).trim_end().to_string();
+            let name = if keyword == "COMMENT" { "Comment" } else { "History" };
+            tags.push(mktag("FITS", name, name, Value::String(val)));
+            continue;
+        }
+
+        // Standard keyword = value
+        if keyword.is_empty() { continue; }
+        if record.len() <= 10 || record[8] != b'=' { continue; }
+
+        let val_raw = String::from_utf8_lossy(&record[10..]).to_string();
+        // Parse value: may be quoted string, boolean T/F, or number
+        let (value, is_continued) = fits_parse_value(&val_raw);
+        if value.is_empty() { continue; }
+
+        // Map known keywords, generate names for others
+        let tag_name = fits_keyword_to_name(&keyword);
+        let tag_desc = fits_tag_description(&tag_name);
+
+        if is_continued {
+            continue_tag = Some(tag_name);
+            continue_val = value;
+        } else {
+            tags.push(mktag("FITS", &tag_name, &tag_desc, Value::String(value)));
         }
     }
 
+    // Flush pending continue
+    if let Some(tag_name) = continue_tag.take() {
+        let tag_desc = fits_tag_description(&tag_name);
+        tags.push(mktag("FITS", &tag_name, &tag_desc, Value::String(continue_val.clone())));
+    }
+
     Ok(tags)
+}
+
+/// Parse a FITS value field (columns 11-80 of an 80-char record).
+/// Returns (value_string, is_continued) where is_continued means value ends with '&'.
+fn fits_parse_value(s: &str) -> (String, bool) {
+    let s = s.trim_start();
+    if s.starts_with('\'') {
+        // Quoted string: parse until closing quote (doubled quotes are escaped)
+        let inner = &s[1..];
+        let mut result = String::new();
+        let mut chars = inner.chars().peekable();
+        loop {
+            match chars.next() {
+                None => break,
+                Some('\'') => {
+                    if chars.peek() == Some(&'\'') {
+                        // Escaped quote
+                        chars.next();
+                        result.push('\'');
+                    } else {
+                        break; // End of string
+                    }
+                }
+                Some(c) => result.push(c),
+            }
+        }
+        // Trim trailing spaces from quoted string
+        let trimmed = result.trim_end().to_string();
+        let is_cont = trimmed.ends_with('&');
+        let val = if is_cont { trimmed[..trimmed.len()-1].to_string() } else { trimmed };
+        (val, is_cont)
+    } else {
+        // Non-quoted: take everything up to comment marker /
+        // Remove trailing spaces and comment
+        let val = s.splitn(2, '/').next().unwrap_or("").trim().to_string();
+        // Re-format float exponents: D/E -> e
+        let val = val.replace('D', "e").replace('E', "e");
+        if val.is_empty() { return (String::new(), false); }
+        (val, false)
+    }
+}
+
+/// Parse a FITS CONTINUE value (same format as normal value but starting at column 9).
+fn fits_parse_continued_value(s: &str) -> (String, bool) {
+    fits_parse_value(s)
+}
+
+/// Convert a FITS keyword to a tag name (ExifTool naming convention).
+/// Known keywords get special names; others get generated from keyword.
+fn fits_keyword_to_name(keyword: &str) -> String {
+    match keyword {
+        "SIMPLE"   => "Simple".into(),
+        "BITPIX"   => "Bitpix".into(),
+        "NAXIS"    => "Naxis".into(),
+        "NAXIS1"   => "Naxis1".into(),
+        "NAXIS2"   => "Naxis2".into(),
+        "EXTEND"   => "Extend".into(),
+        "ORIGIN"   => "Origin".into(),
+        "TELESCOP" => "Telescope".into(),
+        "BACKGRND" => "Background".into(),
+        "INSTRUME" => "Instrument".into(),
+        "OBJECT"   => "Object".into(),
+        "OBSERVER" => "Observer".into(),
+        "DATE"     => "CreateDate".into(),
+        "AUTHOR"   => "Creator".into(),
+        "REFERENC" => "Reference".into(),
+        "DATE-OBS" => "ObservationDate".into(),
+        "TIME-OBS" => "ObservationTime".into(),
+        "DATE-END" => "ObservationDateEnd".into(),
+        "TIME-END" => "ObservationTimeEnd".into(),
+        "COMMENT"  => "Comment".into(),
+        "HISTORY"  => "History".into(),
+        _ => {
+            // Generate name: ucfirst lc tag, remove underscores and capitalize next
+            let lower = keyword.to_lowercase();
+            let mut result = String::new();
+            let mut capitalize_next = true;
+            for ch in lower.chars() {
+                if ch == '_' || ch == '-' {
+                    capitalize_next = true;
+                } else if capitalize_next {
+                    for c in ch.to_uppercase() { result.push(c); }
+                    capitalize_next = false;
+                } else {
+                    result.push(ch);
+                }
+            }
+            result
+        }
+    }
+}
+
+fn fits_tag_description(name: &str) -> String {
+    // Generate description by inserting spaces before capitals
+    let mut desc = String::new();
+    for ch in name.chars() {
+        if ch.is_uppercase() && !desc.is_empty() {
+            desc.push(' ');
+        }
+        desc.push(ch);
+    }
+    desc
 }
 
 // ============================================================================
@@ -702,24 +846,148 @@ pub fn read_flif(data: &[u8]) -> Result<Vec<Tag>> {
 
     let mut tags = Vec::new();
     let byte4 = data[4];
-    let interlaced = (byte4 >> 4) & 1;
-    let num_channels = (byte4 & 0x0F) + 1;
-    let _bpc = data[5];
+    // ExifTool FLIF tag 0: type char (determines interlaced, color mode)
+    let type_char = byte4 as char;
+    // ExifTool tag 1: bit depth char
+    let bpc_char = data[5] as char;
 
-    tags.push(mktag("FLIF", "Interlaced", "Interlaced", Value::String(if interlaced != 0 { "Yes" } else { "No" }.into())));
-    tags.push(mktag("FLIF", "NumChannels", "Channels", Value::U8(num_channels)));
+    // ImageType: ExifTool maps the type byte directly
+    let image_type = match type_char {
+        '1' => "Grayscale (non-interlaced)",
+        '3' => "RGB (non-interlaced)",
+        '4' => "RGBA (non-interlaced)",
+        'A' => "Grayscale (interlaced)",
+        'C' => "RGB (interlaced)",
+        'D' => "RGBA (interlaced)",
+        'Q' => "Grayscale Animation (non-interlaced)",
+        'S' => "RGB Animation (non-interlaced)",
+        'T' => "RGBA Animation (non-interlaced)",
+        'a' => "Grayscale Animation (interlaced)",
+        'c' => "RGB Animation (interlaced)",
+        'd' => "RGBA Animation (interlaced)",
+        _ => "Unknown",
+    };
+    tags.push(mktag("FLIF", "ImageType", "Image Type", Value::String(image_type.into())));
+
+    // BitDepth
+    let bit_depth = match bpc_char {
+        '0' => "Custom",
+        '1' => "8",
+        '2' => "16",
+        _ => "Unknown",
+    };
+    tags.push(mktag("FLIF", "BitDepth", "Bit Depth", Value::String(bit_depth.into())));
 
     // Width and height are varint encoded starting at offset 6
     let mut pos = 6;
     if let Some((w, consumed)) = read_flif_varint(data, pos) {
-        tags.push(mktag("FLIF", "ImageWidth", "Image Width", Value::U32((w + 1) as u32)));
+        let width = (w + 1) as u32;
+        tags.push(mktag("FLIF", "ImageWidth", "Image Width", Value::U32(width)));
         pos += consumed;
-        if let Some((h, _)) = read_flif_varint(data, pos) {
-            tags.push(mktag("FLIF", "ImageHeight", "Image Height", Value::U32((h + 1) as u32)));
+        if let Some((h, consumed2)) = read_flif_varint(data, pos) {
+            let height = (h + 1) as u32;
+            tags.push(mktag("FLIF", "ImageHeight", "Image Height", Value::U32(height)));
+            pos += consumed2;
+
+            // If animation type (byte4 > 'H' = 0x48), read frame count varint
+            if byte4 > 0x48 {
+                if let Some((frames, consumed3)) = read_flif_varint(data, pos) {
+                    let frame_count = (frames + 2) as u32;
+                    tags.push(mktag("FLIF", "AnimationFrames", "Animation Frames", Value::U32(frame_count)));
+                    pos += consumed3;
+                }
+            }
+        }
+    }
+
+    // Parse metadata chunks: each chunk has a 4-byte tag, then varint size, then compressed data
+    loop {
+        if pos + 4 >= data.len() { break; }
+        let chunk_tag = &data[pos..pos + 4];
+        let first_byte = chunk_tag[0];
+        // If first byte < 32, it's the start of image data
+        if first_byte < 32 {
+            // Encoding tag
+            let encoding = match first_byte {
+                0 => "FLIF16",
+                _ => "Unknown",
+            };
+            tags.push(mktag("FLIF", "Encoding", "Encoding", Value::String(encoding.into())));
+            break;
+        }
+        pos += 4;
+        let chunk_tag = std::str::from_utf8(chunk_tag).unwrap_or("").to_string();
+
+        let size = match read_flif_varint(data, pos) {
+            Some((s, consumed)) => {
+                pos += consumed;
+                s as usize
+            }
+            None => break,
+        };
+
+        if pos + size > data.len() { break; }
+        let chunk_data = &data[pos..pos + size];
+        pos += size;
+
+        // Try to inflate (raw deflate)
+        let inflated = flif_inflate(chunk_data);
+        let payload = if let Some(ref d) = inflated { d.as_slice() } else { chunk_data };
+
+        match chunk_tag.as_str() {
+            "iCCP" => {
+                // ICC profile
+                if let Ok(icc_tags) = crate::formats::icc::read_icc(payload) {
+                    tags.extend(icc_tags);
+                }
+            }
+            "eXif" => {
+                // EXIF: skip "Exif\0\0" header if present
+                let exif_data = if payload.starts_with(b"Exif\x00\x00") {
+                    &payload[6..]
+                } else {
+                    payload
+                };
+                if let Ok(exif_tags) = crate::metadata::ExifReader::read(exif_data) {
+                    tags.extend(exif_tags);
+                }
+            }
+            "eXmp" => {
+                // XMP
+                if let Ok(xmp_tags) = crate::metadata::XmpReader::read(payload) {
+                    tags.extend(xmp_tags);
+                }
+            }
+            _ => {}
         }
     }
 
     Ok(tags)
+}
+
+/// Try to inflate raw deflate-compressed data (FLIF metadata chunks).
+/// FLIF uses raw deflate (no zlib/gzip header).
+fn flif_inflate(data: &[u8]) -> Option<Vec<u8>> {
+    use std::io::Read;
+    // Try raw deflate first
+    {
+        use flate2::read::DeflateDecoder;
+        let mut decoder = DeflateDecoder::new(data);
+        let mut output = Vec::new();
+        if decoder.read_to_end(&mut output).is_ok() && !output.is_empty() {
+            return Some(output);
+        }
+    }
+    // Fallback: try zlib
+    {
+        use flate2::read::ZlibDecoder;
+        let mut decoder = ZlibDecoder::new(data);
+        let mut output = Vec::new();
+        if decoder.read_to_end(&mut output).is_ok() && !output.is_empty() {
+            return Some(output);
+        }
+    }
+    None
 }
 
 fn read_flif_varint(data: &[u8], mut pos: usize) -> Option<(u64, usize)> {
@@ -861,6 +1129,139 @@ pub fn read_pict(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     Ok(tags)
+}
+
+// ============================================================================
+// Kyocera Contax N Digital RAW
+// ============================================================================
+
+pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
+    if data.len() < 156 {
+        return Err(Error::InvalidData("too short for Kyocera RAW".into()));
+    }
+    // Validate: "ARECOYK" at offset 0x19
+    if &data[0x19..0x20] != b"ARECOYK" {
+        return Err(Error::InvalidData("not a Kyocera RAW file".into()));
+    }
+
+    let mut tags = Vec::new();
+    let group = "KyoceraRaw";
+
+    // FirmwareVersion at 0x01, 10 bytes, reversed string
+    let fw_bytes: Vec<u8> = data[0x01..0x0b].iter().rev().copied().collect();
+    let fw = String::from_utf8_lossy(&fw_bytes).trim_matches('\0').to_string();
+    if !fw.is_empty() {
+        tags.push(mktag(group, "FirmwareVersion", "Firmware Version", Value::String(fw)));
+    }
+
+    // Model at 0x0c, 12 bytes, reversed string
+    let model_bytes: Vec<u8> = data[0x0c..0x18].iter().rev().copied().collect();
+    let model = String::from_utf8_lossy(&model_bytes).trim_matches('\0').to_string();
+    if !model.is_empty() {
+        tags.push(mktag(group, "Model", "Camera Model Name", Value::String(model)));
+    }
+
+    // Make at 0x19, 7 bytes, reversed string
+    let make_bytes: Vec<u8> = data[0x19..0x20].iter().rev().copied().collect();
+    let make = String::from_utf8_lossy(&make_bytes).trim_matches('\0').to_string();
+    if !make.is_empty() {
+        tags.push(mktag(group, "Make", "Camera Make", Value::String(make)));
+    }
+
+    // DateTimeOriginal at 0x21, 20 bytes, reversed string
+    let dt_bytes: Vec<u8> = data[0x21..0x35].iter().rev().copied().collect();
+    let dt_str = String::from_utf8_lossy(&dt_bytes).trim_matches('\0').to_string();
+    if !dt_str.is_empty() {
+        tags.push(mktag(group, "DateTimeOriginal", "Date/Time Original", Value::String(dt_str)));
+    }
+
+    // ISO at 0x34, int32u (big-endian, index into table)
+    if data.len() >= 0x38 {
+        let iso_idx = u32::from_be_bytes([data[0x34], data[0x35], data[0x36], data[0x37]]);
+        let iso_val = kyocera_iso(iso_idx);
+        if iso_val > 0 {
+            let mut t = mktag(group, "ISO", "ISO", Value::String(iso_idx.to_string()));
+            t.print_value = iso_val.to_string();
+            tags.push(t);
+        }
+    }
+
+    // ExposureTime at 0x38, int32u: 2^(val/8)/16000
+    if data.len() >= 0x3c {
+        let et_idx = u32::from_be_bytes([data[0x38], data[0x39], data[0x3a], data[0x3b]]);
+        let et_val = f64::powf(2.0, et_idx as f64 / 8.0) / 16000.0;
+        let print_val = format_exposure_time(et_val);
+        let mut t = mktag(group, "ExposureTime", "Exposure Time", Value::String(format!("{:.10}", et_val)));
+        t.print_value = print_val;
+        tags.push(t);
+    }
+
+    // WB_RGGBLevels at 0x3c, int32u[4]
+    if data.len() >= 0x4c {
+        let r = u32::from_be_bytes([data[0x3c], data[0x3d], data[0x3e], data[0x3f]]);
+        let g1 = u32::from_be_bytes([data[0x40], data[0x41], data[0x42], data[0x43]]);
+        let g2 = u32::from_be_bytes([data[0x44], data[0x45], data[0x46], data[0x47]]);
+        let b = u32::from_be_bytes([data[0x48], data[0x49], data[0x4a], data[0x4b]]);
+        let wb_str = format!("{} {} {} {}", r, g1, g2, b);
+        tags.push(mktag(group, "WB_RGGBLevels", "WB RGGB Levels", Value::String(wb_str)));
+    }
+
+    // FNumber at 0x58, int32u: 2^(val/16)
+    if data.len() >= 0x5c {
+        let fn_idx = u32::from_be_bytes([data[0x58], data[0x59], data[0x5a], data[0x5b]]);
+        let fn_val = f64::powf(2.0, fn_idx as f64 / 16.0);
+        let print_val = format!("{}", (fn_val * 10000.0).round() / 10000.0);
+        let mut t = mktag(group, "FNumber", "F Number", Value::String(format!("{}", fn_val)));
+        t.print_value = print_val;
+        tags.push(t);
+    }
+
+    // MaxAperture at 0x68, int32u: 2^(val/16)
+    if data.len() >= 0x6c {
+        let ma_idx = u32::from_be_bytes([data[0x68], data[0x69], data[0x6a], data[0x6b]]);
+        let ma_val = f64::powf(2.0, ma_idx as f64 / 16.0);
+        let print_val = format!("{}", (ma_val * 100.0).round() / 100.0);
+        let mut t = mktag(group, "MaxAperture", "Max Aperture Value", Value::String(format!("{}", ma_val)));
+        t.print_value = print_val;
+        tags.push(t);
+    }
+
+    // FocalLength at 0x70, int32u
+    if data.len() >= 0x74 {
+        let fl = u32::from_be_bytes([data[0x70], data[0x71], data[0x72], data[0x73]]);
+        let mut t = mktag(group, "FocalLength", "Focal Length", Value::String(fl.to_string()));
+        t.print_value = format!("{} mm", fl);
+        tags.push(t);
+    }
+
+    // Lens at 0x7c, string[32]
+    if data.len() >= 0x9c {
+        let lens_bytes = &data[0x7c..0x9c];
+        let lens = String::from_utf8_lossy(lens_bytes).trim_matches('\0').to_string();
+        if !lens.is_empty() {
+            tags.push(mktag(group, "Lens", "Lens", Value::String(lens)));
+        }
+    }
+
+    Ok(tags)
+}
+
+fn kyocera_iso(idx: u32) -> u32 {
+    match idx {
+        7 => 25, 8 => 32, 9 => 40, 10 => 50, 11 => 64, 12 => 80,
+        13 => 100, 14 => 125, 15 => 160, 16 => 200, 17 => 250,
+        18 => 320, 19 => 400, _ => 0,
+    }
+}
+
+fn format_exposure_time(val: f64) -> String {
+    if val == 0.0 { return "0".to_string(); }
+    if val >= 1.0 {
+        format!("{}", val)
+    } else {
+        let recip = (1.0 / val).round() as u32;
+        format!("1/{}", recip)
+    }
 }
 
 // ============================================================================
@@ -3658,3 +4059,4 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
 
     Ok(tags)
 }
+

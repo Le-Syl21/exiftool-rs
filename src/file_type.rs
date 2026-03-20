@@ -145,6 +145,10 @@ pub enum FileType {
     Torrent,
     Mobi,
     SonyPmp,
+    // ===== Additional formats =====
+    Plist,
+    Aae,
+    KyoceraRaw,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -189,6 +193,9 @@ impl FileType {
             FileType::Torrent => "BitTorrent descriptor",
             FileType::Mobi => "Mobipocket Book",
             FileType::SonyPmp => "Sony PMP video",
+            FileType::Plist => "PLIST",
+            FileType::Aae => "AAE",
+            FileType::KyoceraRaw => "Kyocera Contax N RAW",
             FileType::Hdr => "Radiance HDR",
             FileType::Rwz => "Rawzor compressed image",
             FileType::Btf => "BigTIFF image",
@@ -300,6 +307,9 @@ impl FileType {
             FileType::Torrent => "Torrent",
             FileType::Mobi => "MOBI",
             FileType::SonyPmp => "PMP",
+            FileType::Plist => "PLIST",
+            FileType::Aae => "AAE",
+            FileType::KyoceraRaw => "KyoceraRaw",
         }
     }
 
@@ -432,6 +442,9 @@ impl FileType {
             FileType::Torrent => "application/x-bittorrent",
             FileType::Mobi => "application/x-mobipocket-ebook",
             FileType::SonyPmp => "image/x-sony-pmp",
+            FileType::Plist => "application/x-plist",
+            FileType::Aae => "application/vnd.apple.photos",
+            FileType::KyoceraRaw => "image/x-raw",
         }
     }
 
@@ -572,6 +585,9 @@ impl FileType {
             FileType::Torrent => &["torrent"],
             FileType::Mobi => &["mobi", "azw", "azw3"],
             FileType::SonyPmp => &["pmp"],
+            FileType::Plist => &["plist"],
+            FileType::Aae => &["aae"],
+            FileType::KyoceraRaw => &["raw"],
         }
     }
 
@@ -678,6 +694,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Pcap, FileType::Pcapng,
     FileType::Svg,
     FileType::Pgf, FileType::Xisf, FileType::Torrent, FileType::Mobi, FileType::SonyPmp,
+    FileType::Plist, FileType::Aae, FileType::KyoceraRaw,
 ];
 
 /// Detect file type from magic bytes (first 64+ bytes of a file).
@@ -992,6 +1009,11 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
         return Some(FileType::Ape);
     }
 
+    // Kyocera Contax N RAW: 'ARECOYK' at offset 0x19
+    if header.len() >= 0x20 && &header[0x19..0x20] == b"ARECOYK" {
+        return Some(FileType::KyoceraRaw);
+    }
+
     // Musepack: "MP+" or "MPCK"
     if header.starts_with(b"MP+") || header.starts_with(b"MPCK") {
         return Some(FileType::Mpc);
@@ -1135,6 +1157,10 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
         }
         if preview.windows(4).any(|w| w == b"<rdf" || w == b"<RDF") {
             return Some(FileType::Xmp);
+        }
+        // Apple PLIST
+        if preview.windows(7).any(|w| w == b"<plist") || preview.windows(20).any(|w| w == b"DTD PLIST") {
+            return Some(FileType::Plist);
         }
         // Default XML → XMP (most XML files ExifTool handles contain XMP)
         return Some(FileType::Xmp);

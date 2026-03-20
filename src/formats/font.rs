@@ -14,56 +14,150 @@ pub fn read_font(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 
     // Detect font type
-    if data.starts_with(b"wOFF") {
+    if data.starts_with(b"wOFF") || data.starts_with(b"wOF2") {
         return read_woff(data);
     }
-    if data.starts_with(b"wOF2") {
-        tags.push(mk("FontFormat", "Font Format", Value::String("WOFF2".into())));
+    if data.starts_with(b"ttcf") {
+        // TTC: process each font in the collection
+        if data.len() < 12 {
+            return Err(Error::InvalidData("TTC too small".into()));
+        }
+        let num_fonts = u32::from_be_bytes([data[8], data[9], data[10], data[11]]) as usize;
+        tags.push(mk("NumFonts", "Num Fonts", Value::U32(num_fonts as u32)));
+        // Offsets of each font start at byte 12
+        for i in 0..num_fonts.min(64) {
+            let off_pos = 12 + i * 4;
+            if off_pos + 4 > data.len() { break; }
+            let font_off = u32::from_be_bytes([data[off_pos], data[off_pos+1], data[off_pos+2], data[off_pos+3]]) as usize;
+            if font_off + 12 <= data.len() {
+                parse_otf_font(&data[font_off..], 0, &mut tags);
+            }
+        }
         return Ok(tags);
     }
-    if data.starts_with(b"OTTO") {
-        tags.push(mk("FontFormat", "Font Format", Value::String("OpenType/CFF".into())));
-    } else if data.starts_with(&[0x00, 0x01, 0x00, 0x00]) || data.starts_with(b"true") || data.starts_with(b"typ1") {
-        tags.push(mk("FontFormat", "Font Format", Value::String("TrueType".into())));
-    } else if data.starts_with(b"ttcf") {
-        tags.push(mk("FontFormat", "Font Format", Value::String("TrueType Collection".into())));
-        let num_fonts = u32::from_be_bytes([data[8], data[9], data[10], data[11]]);
-        tags.push(mk("FontCount", "Font Count", Value::U32(num_fonts)));
-        return Ok(tags);
-    } else {
-        return Err(Error::InvalidData("unknown font format".into()));
-    }
 
-    // Parse sfnt table directory
-    let num_tables = u16::from_be_bytes([data[4], data[5]]) as usize;
-    let mut pos = 12;
-
-    for _ in 0..num_tables {
-        if pos + 16 > data.len() {
-            break;
-        }
-        let tag = &data[pos..pos + 4];
-        let offset = u32::from_be_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]]) as usize;
-        let length = u32::from_be_bytes([data[pos + 12], data[pos + 13], data[pos + 14], data[pos + 15]]) as usize;
-        pos += 16;
-
-        if tag == b"name" && offset + length <= data.len() {
-            parse_name_table(&data[offset..offset + length], &mut tags);
-        }
-        if tag == b"head" && offset + 54 <= data.len() {
-            let d = &data[offset..];
-            let units_per_em = u16::from_be_bytes([d[18], d[19]]);
-            tags.push(mk("UnitsPerEm", "Units Per Em", Value::U16(units_per_em)));
-            // Created date (Mac epoch at offset 20, 8 bytes)
-            let created = i64::from_be_bytes([d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27]]);
-            if created > 0 {
-                // Mac epoch = seconds since 1904-01-01
-                tags.push(mk("FontCreated", "Font Created", Value::String(format!("(Mac epoch {})", created))));
+    // Check for DFONT (Mac resource fork with sfnt resources)
+    if data.len() >= 16 {
+        let dat_off = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
+        let map_off = u32::from_be_bytes([data[4], data[5], data[6], data[7]]) as usize;
+        let dat_len = u32::from_be_bytes([data[8], data[9], data[10], data[11]]) as usize;
+        let map_len = u32::from_be_bytes([data[12], data[13], data[14], data[15]]) as usize;
+        // Validate it looks like a RSRC (dfont) file
+        if dat_off >= 0x10 && map_off >= 0x10
+            && dat_off + dat_len <= data.len()
+            && map_off + map_len <= data.len()
+            && map_len >= 30
+            && (dat_off == 0x100 || (dat_off as u64 + dat_len as u64 == map_off as u64)
+                || (map_off as u64 + map_len as u64 <= data.len() as u64))
+        {
+            if read_dfont(data, &mut tags).is_ok() && !tags.is_empty() {
+                return Ok(tags);
             }
         }
     }
 
+    // OTF/TTF
+    parse_otf_font(data, 0, &mut tags);
     Ok(tags)
+}
+
+/// Parse a single OTF/TTF font (not a TTC, dfont, or WOFF).
+fn parse_otf_font(data: &[u8], _base: usize, tags: &mut Vec<Tag>) {
+    if data.len() < 12 {
+        return;
+    }
+    // Verify it starts with a known sfnt signature
+    if !data.starts_with(b"OTTO")
+        && !data.starts_with(&[0x00, 0x01, 0x00, 0x00])
+        && !data.starts_with(b"true")
+        && !data.starts_with(b"typ1")
+        && !data.starts_with(&[0xa5, b'k', b'b', b'd'])
+        && !data.starts_with(&[0xa5, b'l', b's', b't'])
+    {
+        return;
+    }
+    let num_tables = u16::from_be_bytes([data[4], data[5]]) as usize;
+    if num_tables > 256 { return; }
+    let mut pos = 12;
+    for _ in 0..num_tables {
+        if pos + 16 > data.len() { break; }
+        let tbl_tag = &data[pos..pos + 4];
+        let offset = u32::from_be_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]]) as usize;
+        let length = u32::from_be_bytes([data[pos + 12], data[pos + 13], data[pos + 14], data[pos + 15]]) as usize;
+        pos += 16;
+        if tbl_tag == b"name" && offset + length <= data.len() {
+            parse_name_table(&data[offset..offset + length], tags);
+        }
+    }
+}
+
+/// Read a DFONT (Mac resource fork) file and extract font name tags.
+/// The dfont file is a Mac OS resource fork file containing sfnt resources.
+pub fn read_dfont(data: &[u8], tags: &mut Vec<Tag>) -> Result<()> {
+    if data.len() < 30 {
+        return Err(Error::InvalidData("dfont too small".into()));
+    }
+    let dat_off = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
+    let map_off = u32::from_be_bytes([data[4], data[5], data[6], data[7]]) as usize;
+    let _dat_len = u32::from_be_bytes([data[8], data[9], data[10], data[11]]) as usize;
+    let map_len = u32::from_be_bytes([data[12], data[13], data[14], data[15]]) as usize;
+
+    if map_off + map_len > data.len() || map_len < 30 {
+        return Err(Error::InvalidData("invalid dfont map".into()));
+    }
+    let map = &data[map_off..map_off + map_len];
+    // type_off: offset from start of map to type list
+    let type_off = u16::from_be_bytes([map[24], map[25]]) as usize;
+    let name_off = u16::from_be_bytes([map[26], map[27]]) as usize;
+    let num_types = ((u16::from_be_bytes([map[28], map[29]]) as usize) + 1) & 0xffff;
+
+    if type_off < 28 || name_off < 30 { return Err(Error::InvalidData("bad offsets".into())); }
+
+    // Parse type list
+    for i in 0..num_types {
+        let off = type_off + 2 + 8 * i;
+        if off + 8 > map_len { break; }
+        let res_type = &map[off..off + 4];
+        let res_num = (u16::from_be_bytes([map[off + 4], map[off + 5]]) as usize) + 1;
+        let ref_off = (u16::from_be_bytes([map[off + 6], map[off + 7]]) as usize) + type_off;
+
+        // Only process 'sfnt' and 'vers' resources
+        if res_type == b"sfnt" {
+            for j in 0..res_num {
+                let roff = ref_off + 12 * j;
+                if roff + 12 > map_len { break; }
+                let res_data_off = (u32::from_be_bytes([0, map[roff + 4], map[roff + 5], map[roff + 6]]) as usize) + dat_off;
+                if res_data_off + 4 > data.len() { continue; }
+                let res_data_len = u32::from_be_bytes([data[res_data_off], data[res_data_off+1], data[res_data_off+2], data[res_data_off+3]]) as usize;
+                let font_start = res_data_off + 4;
+                if font_start + res_data_len <= data.len() {
+                    parse_otf_font(&data[font_start..font_start + res_data_len], 0, tags);
+                }
+            }
+        } else if res_type == b"vers" {
+            for j in 0..res_num {
+                let roff = ref_off + 12 * j;
+                if roff + 12 > map_len { break; }
+                let res_data_off = (u32::from_be_bytes([0, map[roff + 4], map[roff + 5], map[roff + 6]]) as usize) + dat_off;
+                if res_data_off + 4 > data.len() { continue; }
+                let res_data_len = u32::from_be_bytes([data[res_data_off], data[res_data_off+1], data[res_data_off+2], data[res_data_off+3]]) as usize;
+                let payload_start = res_data_off + 4;
+                if payload_start + res_data_len > data.len() || res_data_len < 8 { continue; }
+                let vers_data = &data[payload_start..payload_start + res_data_len];
+                // 'vers' resource: short version (4 bytes), country code (2 bytes), short string (1 byte + N), long string (1 byte + N)
+                let short_len = vers_data[6] as usize;
+                let p = 7 + short_len;
+                if p + 1 > vers_data.len() { continue; }
+                let long_len = vers_data[p] as usize;
+                let p2 = p + 1;
+                if p2 + long_len <= vers_data.len() && long_len > 0 {
+                    let ver_str = String::from_utf8_lossy(&vers_data[p2..p2 + long_len]).to_string();
+                    tags.push(mk("ApplicationVersion", "Application Version", Value::String(ver_str)));
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn read_woff(data: &[u8]) -> Result<Vec<Tag>> {
@@ -96,9 +190,35 @@ fn parse_name_table(data: &[u8], tags: &mut Vec<Tag>) {
         return;
     }
 
+    let format = u16::from_be_bytes([data[0], data[1]]);
     let count = u16::from_be_bytes([data[2], data[3]]) as usize;
     let string_offset = u16::from_be_bytes([data[4], data[5]]) as usize;
     let mut pos = 6;
+
+    // For format 1: parse language-tag records after the name records
+    let mut lang_tag_map: std::collections::HashMap<u16, String> = std::collections::HashMap::new();
+    if format == 1 && 6 + count * 12 + 2 <= data.len() {
+        let lang_tag_count_pos = 6 + count * 12;
+        let lang_tag_count = u16::from_be_bytes([data[lang_tag_count_pos], data[lang_tag_count_pos + 1]]) as usize;
+        let mut lt_pos = lang_tag_count_pos + 2;
+        for i in 0..lang_tag_count {
+            if lt_pos + 4 > data.len() { break; }
+            let lang_len = u16::from_be_bytes([data[lt_pos], data[lt_pos+1]]) as usize;
+            let lang_str_off = u16::from_be_bytes([data[lt_pos+2], data[lt_pos+3]]) as usize;
+            lt_pos += 4;
+            let abs = string_offset + lang_str_off;
+            if abs + lang_len <= data.len() && lang_len % 2 == 0 {
+                let units: Vec<u16> = data[abs..abs+lang_len].chunks_exact(2)
+                    .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
+                let lang_str = String::from_utf16_lossy(&units);
+                // lang_tag IDs start at 0x8000
+                lang_tag_map.insert(0x8000 + i as u16, lang_str.to_string());
+            }
+        }
+    }
+
+    // Track which base tag names already have their default ('en') entry
+    let mut seen_tags: std::collections::HashMap<String, bool> = std::collections::HashMap::new();
 
     for _ in 0..count {
         if pos + 12 > data.len() {
@@ -106,8 +226,8 @@ fn parse_name_table(data: &[u8], tags: &mut Vec<Tag>) {
         }
 
         let platform_id = u16::from_be_bytes([data[pos], data[pos + 1]]);
-        let _encoding_id = u16::from_be_bytes([data[pos + 2], data[pos + 3]]);
-        let _language_id = u16::from_be_bytes([data[pos + 4], data[pos + 5]]);
+        let encoding_id = u16::from_be_bytes([data[pos + 2], data[pos + 3]]);
+        let language_id = u16::from_be_bytes([data[pos + 4], data[pos + 5]]);
         let name_id = u16::from_be_bytes([data[pos + 6], data[pos + 7]]);
         let length = u16::from_be_bytes([data[pos + 8], data[pos + 9]]) as usize;
         let offset = u16::from_be_bytes([data[pos + 10], data[pos + 11]]) as usize;
@@ -118,46 +238,164 @@ fn parse_name_table(data: &[u8], tags: &mut Vec<Tag>) {
             continue;
         }
 
-        // Only process platform 3 (Windows) or platform 1 (Mac)
-        let text = if platform_id == 3 {
-            let units: Vec<u16> = data[abs_offset..abs_offset + length]
-                .chunks_exact(2)
-                .map(|c| u16::from_be_bytes([c[0], c[1]]))
-                .collect();
-            String::from_utf16_lossy(&units)
-        } else if platform_id == 1 {
-            String::from_utf8_lossy(&data[abs_offset..abs_offset + length]).to_string()
-        } else {
-            continue;
-        };
-
+        // Decode text based on platform/encoding
+        let text = decode_font_name_string(data, abs_offset, length, platform_id, encoding_id);
         if text.is_empty() {
             continue;
         }
 
-        let (name, desc) = match name_id {
-            0 => ("Copyright", "Copyright"),
-            1 => ("FontFamily", "Font Family"),
-            2 => ("FontSubFamily", "Font Sub-Family"),
-            3 => ("FontUniqueID", "Unique ID"),
-            4 => ("FontName", "Font Name"),
-            5 => ("FontVersion", "Version"),
-            6 => ("PostScriptName", "PostScript Name"),
-            7 => ("Trademark", "Trademark"),
-            8 => ("Manufacturer", "Manufacturer"),
-            9 => ("Designer", "Designer"),
-            11 => ("URLVendor", "Vendor URL"),
-            12 => ("URLDesigner", "Designer URL"),
-            13 => ("LicenseDescription", "License"),
-            14 => ("LicenseURL", "License URL"),
-            16 => ("TypographicFamily", "Typographic Family"),
+        // Get tag name and description
+        let (base_name, desc) = match name_id {
+            0  => ("Copyright", "Copyright"),
+            1  => ("FontFamily", "Font Family"),
+            2  => ("FontSubfamily", "Font Subfamily"),
+            3  => ("FontSubfamilyID", "Unique ID"),
+            4  => ("FontName", "Font Name"),
+            5  => ("NameTableVersion", "Name Table Version"),
+            6  => ("PostScriptFontName", "PostScript Font Name"),
+            7  => ("Trademark", "Trademark"),
+            8  => ("Manufacturer", "Manufacturer"),
+            9  => ("Designer", "Designer"),
+            10 => ("Description", "Description"),
+            11 => ("VendorURL", "Vendor URL"),
+            12 => ("DesignerURL", "Designer URL"),
+            13 => ("License", "License"),
+            14 => ("LicenseInfoURL", "License Info URL"),
+            16 => ("PreferredFamily", "Preferred Family"),
+            17 => ("PreferredSubfamily", "Preferred Subfamily"),
+            18 => ("CompatibleFontName", "Compatible Font Name"),
+            19 => ("SampleText", "Sample Text"),
+            20 => ("PostScriptFontName", "PostScript Font Name"),
+            21 => ("WWSFamilyName", "WWS Family Name"),
+            22 => ("WWSSubfamilyName", "WWS Subfamily Name"),
             _ => continue,
         };
 
-        // Only add if not already present (prefer Windows names)
-        if !tags.iter().any(|t| t.name == name) {
-            tags.push(mk(name, desc, Value::String(text)));
+        // Get language code
+        let lang_code = get_font_language_code(platform_id, language_id, &lang_tag_map);
+
+        // Construct tag name with language suffix if not default
+        let tag_name = if lang_code.is_empty() || lang_code == "en" {
+            base_name.to_string()
+        } else {
+            format!("{}-{}", base_name, lang_code)
+        };
+
+        // Avoid duplicates
+        if !seen_tags.contains_key(&tag_name) {
+            seen_tags.insert(tag_name.clone(), true);
+            let desc_full = if lang_code.is_empty() || lang_code == "en" {
+                desc.to_string()
+            } else {
+                format!("{} ({})", desc, lang_code)
+            };
+            tags.push(mk(&tag_name, &desc_full, Value::String(text)));
         }
+    }
+}
+
+/// Decode a font name string based on platform and encoding.
+fn decode_font_name_string(data: &[u8], offset: usize, length: usize, platform: u16, encoding: u16) -> String {
+    if offset + length > data.len() { return String::new(); }
+    let raw = &data[offset..offset + length];
+    match platform {
+        3 => {
+            // Windows: UTF-16 BE
+            let units: Vec<u16> = raw.chunks_exact(2)
+                .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
+            String::from_utf16_lossy(&units).trim().to_string()
+        }
+        0 => {
+            // Unicode: UTF-16 BE
+            let units: Vec<u16> = raw.chunks_exact(2)
+                .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
+            String::from_utf16_lossy(&units).trim().to_string()
+        }
+        1 => {
+            // Macintosh: encoding depends on encoding_id
+            // For encoding 0 (MacRoman), treat as Latin-1
+            String::from_utf8_lossy(raw).trim().to_string()
+        }
+        _ => String::from_utf8_lossy(raw).trim().to_string(),
+    }
+}
+
+/// Get language code for a font name table entry.
+fn get_font_language_code(platform: u16, language_id: u16, lang_tag_map: &std::collections::HashMap<u16, String>) -> String {
+    // Check custom language tag map first
+    if let Some(lang) = lang_tag_map.get(&language_id) {
+        return lang.clone();
+    }
+
+    match platform {
+        1 => {
+            // Macintosh language codes
+            match language_id {
+                0 => "en".into(),
+                1 => "fr".into(),
+                2 => "de".into(),
+                3 => "it".into(),
+                4 => "nl-NL".into(),
+                5 => "sv".into(),
+                6 => "es".into(),
+                7 => "da".into(),
+                8 => "pt".into(),
+                9 => "no".into(),
+                10 => "he".into(),
+                11 => "ja".into(),
+                12 => "ar".into(),
+                13 => "fi".into(),
+                14 => "el".into(),
+                15 => "is".into(),
+                16 => "mt".into(),
+                17 => "tr".into(),
+                18 => "hr".into(),
+                19 => "zh-TW".into(),
+                20 => "ur".into(),
+                21 => "hi".into(),
+                22 => "th".into(),
+                23 => "ko".into(),
+                24 => "lt".into(),
+                25 => "pl".into(),
+                26 => "hu".into(),
+                27 => "et".into(),
+                28 => "lv".into(),
+                33 => "zh-CN".into(),
+                _ => format!("{}", language_id),
+            }
+        }
+        3 => {
+            // Windows language codes
+            match language_id {
+                0x0409 => "en".into(),
+                0x040c => "fr-FR".into(),
+                0x0407 => "de-DE".into(),
+                0x0410 => "it-IT".into(),
+                0x0413 => "nl-NL".into(),
+                0x041d => "sv-SE".into(),
+                0x040a => "es-ES".into(),
+                0x0406 => "da".into(),
+                0x0416 => "pt-BR".into(),
+                0x0415 => "pl".into(),
+                0x040d => "he".into(),
+                0x0411 => "ja".into(),
+                0x0412 => "ko".into(),
+                0x040b => "fi".into(),
+                0x0414 => "no-NO".into(),
+                0x0404 => "zh-TW".into(),
+                0x0804 => "zh-CN".into(),
+                0x0401 => "ar-SA".into(),
+                0x0408 => "el".into(),
+                0x0409 | 0x0809 => "en".into(),
+                0x040e => "hu".into(),
+                _ => {
+                    // Abbreviated form for unlisted codes
+                    String::new()
+                }
+            }
+        }
+        0 => "en".into(), // Unicode platform - typically English
+        _ => String::new(),
     }
 }
 

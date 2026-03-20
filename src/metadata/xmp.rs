@@ -1001,6 +1001,29 @@ fn ucfirst(s: &str) -> String {
     }
 }
 
+/// Convert XML element names to ExifTool-style CamelCase tag names.
+/// Mirrors Perl: `my $name = ucfirst lc $tag; $name =~ s/_(.)/\U$1/g;`
+/// e.g. IMAGE_CREATION → ImageCreation, GENERAL_CREATION_INFO → GeneralCreationInfo
+fn xml_elem_to_camel(s: &str) -> String {
+    // lowercase first, then ucfirst, then remove underscores and capitalize next char
+    let lower = s.to_lowercase();
+    let mut result = String::with_capacity(lower.len());
+    let mut capitalize_next = true;
+    for ch in lower.chars() {
+        if ch == '_' {
+            capitalize_next = true;
+        } else if capitalize_next {
+            for c in ch.to_uppercase() {
+                result.push(c);
+            }
+            capitalize_next = false;
+        } else {
+            result.push(ch);
+        }
+    }
+    result
+}
+
 /// Normalize XML text content: trim outer whitespace and collapse internal whitespace sequences
 /// (including newlines from multi-line XMP text nodes) into single spaces.
 /// This matches ExifTool's XML text normalization behavior.
@@ -1051,7 +1074,7 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
     for event in parser {
         match event {
             Ok(XmlEvent::StartElement { name, attributes, namespace, .. }) => {
-                let local = ucfirst(&name.local_name);
+                let local = xml_elem_to_camel(&name.local_name);
                 let path_str = format!("{}{}", path.join(""), local);
                 // Mark parent as having a child element
                 if let Some(last) = has_children.last_mut() {
@@ -1077,7 +1100,7 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                 if path.len() == 1 {
                     // Root element: emit its default xmlns
                     if let Some(default_ns) = namespace.get("") {
-                        // Emit as {RootName}Xmlns = default_ns_uri
+                        // Emit as {RootName}Xmlns = default_ns_uri (CamelCase root name)
                         let tag_name = format!("{}Xmlns", local);
                         if !seen_names.contains(&tag_name) {
                             seen_names.insert(tag_name.clone());
@@ -1105,7 +1128,7 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                         continue;
                     }
                     // For xsi:schemaLocation → emit as {path}SchemaLocation
-                    let attr_local = ucfirst(&aname.local_name);
+                    let attr_local = xml_elem_to_camel(&aname.local_name);
                     let tag_name = format!("{}{}", path_str, attr_local);
                     if !seen_names.contains(&tag_name) {
                         seen_names.insert(tag_name.clone());

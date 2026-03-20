@@ -644,3 +644,12 @@ fn base64_decode_simple(s: &str) -> Vec<u8> {
     }
     result
 }
+
+/// Read AAE plist file (Apple Adjustments).
+pub fn read_aae_plist(data: &[u8]) -> Result<Vec<Tag>> {
+    if data.starts_with(b"bplist") {
+        read_binary_plist_tags(data)
+    } else {
+        read_xml_plist(data)
+    }
+}

@@ -4,7 +4,8 @@
 //! Mirrors ExifTool's PDF.pm.
 
 use crate::error::{Error, Result};
-use crate::metadata::XmpReader;
+use crate::formats::psd;
+use crate::metadata::{ExifReader, IptcReader, XmpReader};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
@@ -48,6 +49,9 @@ pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Scan for Info dictionary objects and XMP streams
     scan_for_info_and_xmp(data, &mut tags);
+
+    // Scan for embedded Photoshop IRBs (IPTC, EXIF, ICC etc.)
+    scan_for_photoshop_irbs(data, &mut tags);
 
     // Count pages (look for /Type /Page entries)
     let page_count = count_pattern(data, b"/Type /Page") + count_pattern(data, b"/Type/Page");
@@ -350,6 +354,34 @@ fn extract_media_box(data: &[u8]) -> Option<String> {
         }
     }
     None
+}
+
+/// Scan PDF data for embedded Photoshop 8BIM resource blocks.
+fn scan_for_photoshop_irbs(data: &[u8], tags: &mut Vec<Tag>) {
+    // Look for the start of 8BIM sequences - find first 8BIM that is at the start of a block
+    // Typically in a PDF stream object
+    let mut search_pos = 0;
+    while search_pos + 4 < data.len() {
+        if let Some(pos) = find_bytes(&data[search_pos..], b"8BIM") {
+            let abs_pos = search_pos + pos;
+            // Check if this looks like a real Photoshop IRB block (preceded by binary stream data)
+            // Walk backward a bit to find if there's a "stream\n" before this area
+            let block_start = abs_pos;
+
+            // Only parse if we can find a sequence of 8BIM blocks
+            // Parse from this block start
+            let end = data.len();
+            let mut irb_tags = Vec::new();
+            psd::read_irb_resources(data, block_start, end, &mut irb_tags);
+            if !irb_tags.is_empty() {
+                tags.extend(irb_tags);
+                return; // Only parse once
+            }
+            search_pos = abs_pos + 4;
+        } else {
+            break;
+        }
+    }
 }
 
 fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {

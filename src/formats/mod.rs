@@ -1,4 +1,5 @@
 pub mod aiff;
+pub mod ape;
 pub mod asf;
 pub mod audible;
 pub mod bmp;

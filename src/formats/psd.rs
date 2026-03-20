@@ -4,6 +4,7 @@
 //! XMP, ICC profiles, and layer info. Mirrors ExifTool's Photoshop.pm.
 
 use crate::error::{Error, Result};
+use crate::formats::icc;
 use crate::metadata::{ExifReader, IptcReader, XmpReader};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
@@ -122,8 +123,8 @@ pub fn read_psd(data: &[u8]) -> Result<Vec<Tag>> {
     Ok(tags)
 }
 
-/// Parse Photoshop Image Resource Blocks (IRBs).
-fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
+/// Parse Photoshop Image Resource Blocks (IRBs) - public for use by PDF reader.
+pub fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
     let mut pos = start;
 
     while pos + 12 <= end {
@@ -163,7 +164,7 @@ fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>
         let resource_data = &data[pos..pos + data_len];
 
         match resource_id {
-            // Resolution info
+            // Resolution info (0x03ED)
             0x03ED => {
                 if resource_data.len() >= 16 {
                     let h_res_fixed = u32::from_be_bytes([
@@ -173,54 +174,43 @@ fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>
                     let v_res_fixed = u32::from_be_bytes([
                         resource_data[8], resource_data[9], resource_data[10], resource_data[11],
                     ]);
+                    let v_res_unit = u16::from_be_bytes([resource_data[12], resource_data[13]]);
 
                     let h_res = h_res_fixed as f64 / 65536.0;
                     let v_res = v_res_fixed as f64 / 65536.0;
-                    let unit = if h_res_unit == 1 { "dpi" } else { "dpcm" };
 
                     tags.push(mk(
                         "XResolution",
                         "X Resolution",
-                        Value::String(format!("{:.0} {}", h_res, unit)),
+                        Value::String(format!("{:.0}", h_res)),
                     ));
                     tags.push(mk(
                         "YResolution",
                         "Y Resolution",
-                        Value::String(format!("{:.0} {}", v_res, unit)),
+                        Value::String(format!("{:.0}", v_res)),
                     ));
+
+                    let h_unit_str = match h_res_unit {
+                        1 => "inches",
+                        2 => "cm",
+                        _ => "unknown",
+                    };
+                    let v_unit_str = match v_res_unit {
+                        1 => "inches",
+                        2 => "cm",
+                        _ => "unknown",
+                    };
+                    tags.push(mk("DisplayedUnitsX", "Displayed Units X", Value::String(h_unit_str.into())));
+                    tags.push(mk("DisplayedUnitsY", "Displayed Units Y", Value::String(v_unit_str.into())));
                 }
             }
-            // IPTC-IIM
+            // IPTC-IIM (0x0404)
             0x0404 => {
                 if let Ok(iptc_tags) = IptcReader::read(resource_data) {
                     tags.extend(iptc_tags);
                 }
             }
-            // ICC Profile
-            0x040F => {
-                tags.push(mk(
-                    "ICC_Profile",
-                    "ICC Profile",
-                    Value::Binary(resource_data.to_vec()),
-                ));
-            }
-            // EXIF
-            0x0422 => {
-                if let Ok(exif_tags) = ExifReader::read(resource_data) {
-                    tags.extend(exif_tags);
-                }
-            }
-            // XMP
-            0x0424 => {
-                if let Ok(xmp_tags) = XmpReader::read(resource_data) {
-                    tags.extend(xmp_tags);
-                }
-            }
-            // Print flags
-            0x03F3 => {
-                // Just note that print info exists
-            }
-            // JPEG Quality
+            // JPEG Quality (0x0406)
             0x0406 => {
                 if resource_data.len() >= 4 {
                     let quality = u16::from_be_bytes([resource_data[0], resource_data[1]]);
@@ -233,7 +223,6 @@ fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>
                         259 => "Progressive (5 scans)",
                         _ => "Unknown",
                     };
-                    // Quality is 1-12 in Photoshop
                     let q = match quality {
                         q if q <= 3 => "Low",
                         q if q <= 5 => "Medium",
@@ -253,6 +242,86 @@ fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>
                     ));
                 }
             }
+            // Copyright flag (0x040A)
+            0x040A => {
+                if !resource_data.is_empty() {
+                    let flag = resource_data[0];
+                    let val = if flag == 0 { "False" } else { "True" };
+                    tags.push(mk("CopyrightFlag", "Copyright Flag", Value::String(val.into())));
+                }
+            }
+            // URL (0x040B)
+            0x040B => {
+                if let Ok(url) = std::str::from_utf8(resource_data) {
+                    let url = url.trim().to_string();
+                    if !url.is_empty() {
+                        tags.push(mk("URL", "URL", Value::String(url)));
+                    }
+                }
+            }
+            // Global Angle (0x040D)
+            0x040D => {
+                if resource_data.len() >= 4 {
+                    let angle = u32::from_be_bytes([
+                        resource_data[0], resource_data[1], resource_data[2], resource_data[3],
+                    ]);
+                    tags.push(mk("GlobalAngle", "Global Angle", Value::U32(angle)));
+                }
+            }
+            // ICC Profile (0x040F)
+            0x040F => {
+                // Parse ICC profile tags inline
+                if let Ok(icc_tags) = icc::read_icc(resource_data) {
+                    tags.extend(icc_tags);
+                }
+            }
+            // Global Altitude (0x0419)
+            0x0419 => {
+                if resource_data.len() >= 4 {
+                    let alt = u32::from_be_bytes([
+                        resource_data[0], resource_data[1], resource_data[2], resource_data[3],
+                    ]);
+                    tags.push(mk("GlobalAltitude", "Global Altitude", Value::U32(alt)));
+                }
+            }
+            // Slice Info (0x041A)
+            0x041A => {
+                parse_psd_slices(resource_data, tags);
+            }
+            // URL_List (0x041E)
+            0x041E => {
+                if resource_data.len() >= 4 {
+                    // List of URLs
+                    let count = u32::from_be_bytes([
+                        resource_data[0], resource_data[1], resource_data[2], resource_data[3],
+                    ]);
+                    let url_val = if count == 0 { String::new() } else {
+                        // Try to extract URL strings (simplified)
+                        String::new()
+                    };
+                    tags.push(mk("URL_List", "URL List", Value::String(url_val)));
+                }
+            }
+            // Version Info (0x0421) - HasRealMergedData, WriterName, ReaderName
+            0x0421 => {
+                parse_psd_version_info(resource_data, tags);
+            }
+            // EXIF (0x0422)
+            0x0422 => {
+                if let Ok(exif_tags) = ExifReader::read(resource_data) {
+                    tags.extend(exif_tags);
+                }
+            }
+            // XMP (0x0424)
+            0x0424 => {
+                if let Ok(xmp_tags) = XmpReader::read(resource_data) {
+                    tags.extend(xmp_tags);
+                }
+            }
+            // PrintScaleInfo (0x0426)
+            0x0426 => {
+                parse_psd_print_scale(resource_data, tags);
+            }
             _ => {}
         }
 
@@ -261,6 +330,111 @@ fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>
             pos += 1;
         }
     }
+}
+
+/// Parse SliceInfo resource (0x041A) for group name and count.
+fn parse_psd_slices(data: &[u8], tags: &mut Vec<Tag>) {
+    // Slice resource has a header then slice records
+    // At offset 20: var_ustr32 (4 bytes len + UTF-16 data) = SlicesGroupName
+    // At offset 20 + len: NumSlices (int32u)
+    if data.len() < 24 { return; }
+
+    // Skip first 20 bytes (bounding box: top, left, bottom, right each int32)
+    let pos = 20usize;
+    if pos + 4 > data.len() { return; }
+
+    // SlicesGroupName: 4 bytes = char count (UTF-16), then 2*count bytes
+    let char_count = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
+    let str_end = pos + 4 + char_count * 2;
+
+    if str_end > data.len() { return; }
+
+    // Decode UTF-16BE string
+    let utf16: Vec<u16> = data[pos+4..str_end]
+        .chunks_exact(2)
+        .map(|c| u16::from_be_bytes([c[0], c[1]]))
+        .collect();
+    let group_name = String::from_utf16_lossy(&utf16);
+    if !group_name.is_empty() {
+        tags.push(mk("SlicesGroupName", "Slices Group Name", Value::String(group_name)));
+    }
+
+    // NumSlices follows
+    if str_end + 4 <= data.len() {
+        let num_slices = u32::from_be_bytes([data[str_end], data[str_end+1], data[str_end+2], data[str_end+3]]);
+        tags.push(mk("NumSlices", "Number of Slices", Value::U32(num_slices)));
+    }
+}
+
+/// Parse VersionInfo resource (0x0421): HasRealMergedData, WriterName, ReaderName.
+fn parse_psd_version_info(data: &[u8], tags: &mut Vec<Tag>) {
+    // offset 0: version (int32u) - skip
+    // offset 4: HasRealMergedData (int8u)
+    // offset 5: WriterName (var_ustr32: 4 byte count + UTF-16)
+    // after: ReaderName (var_ustr32)
+    if data.len() < 5 { return; }
+
+    let has_merged = data[4];
+    tags.push(mk(
+        "HasRealMergedData",
+        "Has Real Merged Data",
+        Value::String(if has_merged != 0 { "Yes" } else { "No" }.into()),
+    ));
+
+    // WriterName
+    let pos = 5usize;
+    if pos + 4 > data.len() { return; }
+    let char_count = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
+    let str_end = pos + 4 + char_count * 2;
+    if str_end > data.len() { return; }
+
+    let utf16: Vec<u16> = data[pos+4..str_end]
+        .chunks_exact(2)
+        .map(|c| u16::from_be_bytes([c[0], c[1]]))
+        .collect();
+    let writer_name = String::from_utf16_lossy(&utf16);
+    if !writer_name.is_empty() {
+        tags.push(mk("WriterName", "Writer Name", Value::String(writer_name)));
+    }
+
+    // ReaderName
+    let pos2 = str_end;
+    if pos2 + 4 > data.len() { return; }
+    let char_count2 = u32::from_be_bytes([data[pos2], data[pos2+1], data[pos2+2], data[pos2+3]]) as usize;
+    let str_end2 = pos2 + 4 + char_count2 * 2;
+    if str_end2 > data.len() { return; }
+
+    let utf16_2: Vec<u16> = data[pos2+4..str_end2]
+        .chunks_exact(2)
+        .map(|c| u16::from_be_bytes([c[0], c[1]]))
+        .collect();
+    let reader_name = String::from_utf16_lossy(&utf16_2);
+    if !reader_name.is_empty() {
+        tags.push(mk("ReaderName", "Reader Name", Value::String(reader_name)));
+    }
+}
+
+/// Parse PrintScaleInfo resource (0x0426): PrintStyle, PrintPosition, PrintScale.
+fn parse_psd_print_scale(data: &[u8], tags: &mut Vec<Tag>) {
+    if data.len() < 14 { return; }
+
+    let style = u16::from_be_bytes([data[0], data[1]]);
+    let style_str = match style {
+        0 => "Centered",
+        1 => "Size to Fit",
+        2 => "User Defined",
+        _ => "Unknown",
+    };
+    tags.push(mk("PrintStyle", "Print Style", Value::String(style_str.into())));
+
+    // PrintPosition: two floats (x, y)
+    let x = f32::from_be_bytes([data[2], data[3], data[4], data[5]]);
+    let y = f32::from_be_bytes([data[6], data[7], data[8], data[9]]);
+    tags.push(mk("PrintPosition", "Print Position", Value::String(format!("{} {}", x, y))));
+
+    // PrintScale: one float
+    let scale = f32::from_be_bytes([data[10], data[11], data[12], data[13]]);
+    tags.push(mk("PrintScale", "Print Scale", Value::String(format!("{}", scale))));
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {
