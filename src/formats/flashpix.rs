@@ -344,9 +344,19 @@ fn process_properties(data: &[u8], is_summary: bool, tags: &mut Vec<Tag>) {
                 64 => { // VT_FILETIME
                     if val_data.len() < 8 { continue; }
                     let ft = r64(val_data, 0);
-                    match filetime_to_str(ft) {
-                        Some(s) => s,
-                        None => continue,
+                    // Convert 100ns units to seconds
+                    let secs = ft as f64 * 1e-7;
+                    let one_year_secs = 365.0 * 24.0 * 3600.0;
+                    if secs > one_year_secs {
+                        // Treat as timestamp
+                        match filetime_to_str(ft) {
+                            Some(s) => s,
+                            None => continue,
+                        }
+                    } else {
+                        // Treat as time span (seconds) - pass as seconds string
+                        // Use a special marker so process_*_prop can format it correctly
+                        format!("TIMESPAN:{}", secs)
                     }
                 }
                 65 | 71 => { // VT_BLOB, VT_CF
@@ -509,12 +519,15 @@ fn process_summary_prop(prop_id: u32, val: String, tags: &mut Vec<Tag>) {
         0x08 => tags.push(mk("LastModifiedBy", Value::String(val))),
         0x09 => tags.push(mk("RevisionNumber", Value::String(val))),
         0x0a => {
-            // TotalEditTime in 100ns units -> convert to minutes
-            let ns: u64 = val.parse().unwrap_or(0);
-            let secs = ns / 10_000_000;
-            let mins = secs as f64 / 60.0;
-            let print = format!("{:.1} minutes", mins);
-            tags.push(mk_print("TotalEditTime", Value::String(val), print));
+            // TotalEditTime as time span (seconds)
+            let secs = if val.starts_with("TIMESPAN:") {
+                val[9..].parse::<f64>().unwrap_or(0.0)
+            } else {
+                val.parse::<f64>().unwrap_or(0.0)
+            };
+            let print = convert_time_span(secs);
+            let raw = format!("{}", secs as u64);
+            tags.push(mk_print("TotalEditTime", Value::String(raw), print));
         }
         0x0c => tags.push(mk("CreateDate", Value::String(val))),
         0x0d => tags.push(mk("ModifyDate", Value::String(val))),
@@ -602,7 +615,8 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
             if pos + name_len > data.len() { break; }
             let name = read_str_bytes(&data[pos..pos+name_len]);
             dict.insert(id, name);
-            pos += (name_len + 3) & !3;
+            // OLE dictionary names are NOT padded to 4 bytes
+            pos += name_len;
         }
         break;
     }
@@ -624,6 +638,40 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
         if val_off + 4 > data.len() { continue; }
         let vtype = r32(data, val_off) & 0xFFF;
         let val_data = if val_off + 4 < data.len() { &data[val_off+4..] } else { continue };
+
+        // Handle special system properties
+        if name == "_PID_LINKBASE" {
+            // VT_BLOB containing UTF-16LE string
+            if vtype == 65 && val_data.len() >= 4 { // VT_BLOB
+                let blob_size = r32(val_data, 0) as usize;
+                if val_data.len() >= 4 + blob_size && blob_size >= 2 {
+                    let blob = &val_data[4..4+blob_size];
+                    // Strip trailing null and decode UTF-16LE
+                    let wcount = blob_size / 2;
+                    let s = read_utf16le(blob, wcount);
+                    if !s.is_empty() {
+                        tags.push(mk("HyperlinkBase", Value::String(s)));
+                    }
+                }
+            }
+            continue;
+        }
+
+        if name == "_PID_HLINKS" {
+            // VT_BLOB containing array of VT_VARIANT hyperlinks
+            if vtype == 65 && val_data.len() >= 4 { // VT_BLOB
+                let blob_size = r32(val_data, 0) as usize;
+                if val_data.len() >= 4 + blob_size {
+                    let blob = &val_data[4..4+blob_size];
+                    if let Some(links) = process_hyperlinks_blob(blob) {
+                        if !links.is_empty() {
+                            tags.push(mk("Hyperlinks", Value::String(links)));
+                        }
+                    }
+                }
+            }
+            continue;
+        }
 
         let val = match vtype {
             2 | 18 => {
@@ -674,19 +722,104 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
 
         if val.is_empty() { continue; }
 
-        // Name the tag "Custom" + name
-        let tag_name = format!("Custom{}", {
-            let mut chars = name.chars();
+        // Build tag name from dictionary name
+        // Remove leading "Custom " prefix if present
+        let clean_name = if name.starts_with("Custom ") {
+            &name[7..]
+        } else {
+            &name[..]
+        };
+
+        // Capitalize and form tag name
+        let tag_name = {
+            let mut chars = clean_name.chars();
             match chars.next() {
-                None => name.clone(),
+                None => format!("Custom{}", name),
                 Some(f) => {
                     let mut s = f.to_uppercase().to_string();
                     s.extend(chars);
-                    s
+                    // Remove spaces for camelCase
+                    let s = s.replace(' ', "");
+                    format!("Custom{}", s)
                 }
             }
-        });
+        };
         tags.push(mk(&tag_name, Value::String(val)));
+    }
+}
+
+/// Parse the _PID_HLINKS VT_BLOB as an array of VT_VARIANTs
+/// Each hyperlink consists of 6 VT_VARIANTs: [type, flags, name, frame, address, subaddress]
+fn process_hyperlinks_blob(blob: &[u8]) -> Option<String> {
+    if blob.len() < 4 { return None; }
+    let num_variants = r32(blob, 0) as usize;
+    if num_variants == 0 { return None; }
+    let mut pos = 4;
+    let mut vals: Vec<String> = Vec::new();
+
+    for _ in 0..num_variants.min(200) {
+        if pos + 4 > blob.len() { break; }
+        let vtype = r32(blob, pos) & 0xFFF;
+        pos += 4;
+        let val = match vtype {
+            3 => { // VT_I4
+                if pos + 4 > blob.len() { break; }
+                let v = r32(blob, pos) as i32;
+                pos += 4;
+                v.to_string()
+            }
+            31 => { // VT_LPWSTR - word count then UTF-16LE data
+                if pos + 4 > blob.len() { break; }
+                let wcount = r32(blob, pos) as usize;
+                pos += 4;
+                if pos + wcount * 2 > blob.len() { break; }
+                let s = read_utf16le(&blob[pos..], wcount);
+                // Pad to 4-byte boundary
+                let byte_len = wcount * 2;
+                pos += (byte_len + 3) & !3;
+                s
+            }
+            _ => {
+                // Skip 4 bytes for unknown simple types
+                pos += 4;
+                String::new()
+            }
+        };
+        vals.push(val);
+    }
+
+    // Groups of 6: [type, flags, name, frame, address, subaddress]
+    let mut links: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i + 5 < vals.len() {
+        let mut link = vals[i + 4].clone(); // address is at index 4
+        let subaddr = &vals[i + 5];         // subaddress is at index 5
+        if !subaddr.is_empty() {
+            link.push('#');
+            link.push_str(subaddr);
+        }
+        if !link.is_empty() {
+            links.push(link);
+        }
+        i += 6;
+    }
+
+    if links.is_empty() { None } else { Some(links.join(", ")) }
+}
+
+/// Mirror ExifTool's ConvertTimeSpan - format seconds as human-readable span
+fn convert_time_span(secs: f64) -> String {
+    if secs <= 0.0 {
+        return secs.to_string();
+    }
+    if secs < 60.0 {
+        format!("{} seconds", secs)
+    } else if secs < 3600.0 {
+        format!("{:.1} minutes", secs / 60.0)
+    } else if secs < 86400.0 {
+        format!("{:.1} hours", secs / 3600.0)
+    } else {
+        format!("{:.1} days", secs / 86400.0)
     }
 }
 
@@ -704,18 +837,18 @@ fn codepage_name(cp: u32) -> String {
 }
 
 /// Extract the "Current User" stream for PowerPoint
+/// Based on ExifTool's ValueConv: skip 4 bytes, read size(4), pos(4), extract ASCII name
 fn extract_current_user(data: &[u8]) -> Option<String> {
     if data.len() < 12 { return None; }
-    let _size = r32(data, 0);
-    let token = r32(data, 4);
-    if token != 0xe391c05f { return None; }
-    let offset_to_current_edit = r32(data, 8) as usize;
-    if offset_to_current_edit + 4 > data.len() { return None; }
-    // At the offset: len_user_name(4) + ansi_username + unicode_username
-    let len = r32(data, offset_to_current_edit) as usize;
-    if offset_to_current_edit + 4 + len > data.len() { return None; }
-    let name = read_str_bytes(&data[offset_to_current_edit+4..offset_to_current_edit+4+len]);
-    Some(name)
+    // Skip first 4 bytes, then read size and pos
+    let size = r32(data, 4) as usize;
+    let pos = r32(data, 8) as usize;
+    let len = size.checked_sub(pos)?.checked_sub(4)?;
+    if data.len() < size + 8 { return None; }
+    let name_start = 8 + pos;
+    if name_start + len > data.len() { return None; }
+    let name = read_str_bytes(&data[name_start..name_start+len]);
+    if name.is_empty() { None } else { Some(name) }
 }
 
 /// Process a stream with hyperlinks (VT_LPWSTR array)

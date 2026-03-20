@@ -1277,8 +1277,9 @@ impl ExifTool {
             "lfp" | "miff" | "mrc"
             | "dss" | "mobi" | "psp" | "pgf" | "raw"
             | "pmp" | "torrent" | "wtv"
-            | "xisf" | "czi" | "iso" | "mxf"
+            | "xisf" | "czi" | "mxf"
             | "dfont" => Ok(Vec::new()),
+            "iso" => formats::iso::read_iso(data).or_else(|_| Ok(Vec::new())),
             "afm" => formats::font::read_afm(data).or_else(|_| Ok(Vec::new())),
             "pfa" => formats::font::read_pfa(data).or_else(|_| Ok(Vec::new())),
             "pfb" => formats::font::read_pfb(data).or_else(|_| Ok(Vec::new())),
