@@ -1349,10 +1349,11 @@ impl ExifTool {
             "ppt" | "fpx" | "fpf" => formats::flashpix::read_fpx(data).or_else(|_| Ok(Vec::new())),
             "itc" => formats::misc::read_itc(data).or_else(|_| Ok(Vec::new())),
             "dv" => formats::dv::read_dv(data, data.len() as u64).or_else(|_| Ok(Vec::new())),
+            "czi" => formats::misc::read_czi(data).or_else(|_| Ok(Vec::new())),
             "lfp" | "miff" | "mrc"
             | "dss" | "mobi" | "psp" | "pgf" | "raw"
             | "pmp" | "torrent" | "wtv"
-            | "xisf" | "czi" | "mxf"
+            | "xisf" | "mxf"
             | "dfont" => Ok(Vec::new()),
             "iso" => formats::iso::read_iso(data).or_else(|_| Ok(Vec::new())),
             "afm" => formats::font::read_afm(data).or_else(|_| Ok(Vec::new())),

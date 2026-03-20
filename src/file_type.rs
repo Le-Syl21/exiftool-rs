@@ -72,6 +72,7 @@ pub enum FileType {
     Asf,
     Flv,
     Mxf,
+    Czi,
     M2ts,
     Mpeg,
     ThreeGP,
@@ -236,6 +237,7 @@ impl FileType {
             FileType::Asf => "Advanced Systems Format",
             FileType::Flv => "Flash Video",
             FileType::Mxf => "Material Exchange Format",
+            FileType::Czi => "CZI",
             FileType::M2ts => "MPEG-2 Transport Stream",
             FileType::Mpeg => "MPEG video",
             FileType::ThreeGP => "3GPP multimedia",
@@ -374,6 +376,7 @@ impl FileType {
             FileType::Asf => "video/x-ms-asf",
             FileType::Flv => "video/x-flv",
             FileType::Mxf => "application/mxf",
+            FileType::Czi => "image/czi",
             FileType::M2ts => "video/mp2t",
             FileType::Mpeg => "video/mpeg",
             FileType::ThreeGP => "video/3gpp",
@@ -514,6 +517,7 @@ impl FileType {
             FileType::Asf => &["asf"],
             FileType::Flv => &["flv"],
             FileType::Mxf => &["mxf"],
+            FileType::Czi => &["czi"],
             FileType::M2ts => &["m2ts", "mts", "m2t", "ts"],
             FileType::Mpeg => &["mpg", "mpeg", "m2v", "mpv"],
             FileType::ThreeGP => &["3gp", "3gpp", "3g2", "3gp2"],
@@ -933,6 +937,11 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // MXF: 06 0E 2B 34 02 05 01 01
     if header.len() >= 8 && header.starts_with(&[0x06, 0x0E, 0x2B, 0x34]) {
         return Some(FileType::Mxf);
+    }
+
+    // ZISRAW/CZI: "ZISRAWFILE" magic
+    if header.len() >= 10 && header.starts_with(b"ZISRAWFILE") {
+        return Some(FileType::Czi);
     }
 
     // ICC Profile: "acsp" at offset 36 (must be before MPEG check which has loose matching)
