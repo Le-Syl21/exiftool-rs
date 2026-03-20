@@ -612,7 +612,8 @@ impl ExifReader {
                     .collect();
                 let thumbnail_tags = ["ThumbnailOffset", "ThumbnailLength", "ThumbnailImage",
                     "Compression", "PhotometricInterpretation", "JPEGInterchangeFormat",
-                    "JPEGInterchangeFormatLength"];
+                    "JPEGInterchangeFormatLength",
+                    "SubfileType", "StripOffsets", "StripByteCounts"];
                 tags.retain(|t| {
                     if t.group.family1 != "IFD1" { return true; }
                     // Keep thumbnail-specific tags
