@@ -6954,14 +6954,14 @@ fn mxf_decode_tag(ul: &str, val: &[u8]) -> Option<(String, String)> {
             } else { None }
         },
         // RoundedTimecodeTimebase (int16u)
-        "060e2b34010101020402010100000000" => {
+        "060e2b34010101020404010102060000" => {
             if val.len() >= 2 {
                 let n = u16::from_be_bytes([val[0],val[1]]);
                 Some(("RoundedTimecodeTimebase".into(), n.to_string()))
             } else { None }
         },
         // DropFrame (Boolean)
-        "060e2b34010101040402010104000000" => {
+        "060e2b34010101010404010105000000" => {
             if !val.is_empty() {
                 Some(("DropFrame".into(), if val[0] != 0 {"True"} else {"False"}.into()))
             } else { None }
@@ -7013,8 +7013,14 @@ fn mxf_decode_tag(ul: &str, val: &[u8]) -> Option<(String, String)> {
                 Some(("SampleRate".into(), rate))
             } else { None }
         },
-        // AudioSampleRate (rational64s)
+        // ChannelCount (int32u)
         "060e2b34010101050402010104000000" => {
+            if val.len() >= 4 { let n = u32::from_be_bytes([val[0],val[1],val[2],val[3]]); Some(("ChannelCount".into(), n.to_string())) }
+            else if !val.is_empty() { Some(("ChannelCount".into(), val[0].to_string())) }
+            else { None }
+        },
+        // AudioSampleRate (rational64s)
+        "060e2b34010101050402030101010000" => {
             if val.len() >= 8 {
                 let num = i32::from_be_bytes([val[0],val[1],val[2],val[3]]);
                 let den = i32::from_be_bytes([val[4],val[5],val[6],val[7]]);
@@ -7025,29 +7031,23 @@ fn mxf_decode_tag(ul: &str, val: &[u8]) -> Option<(String, String)> {
                 Some(("AudioSampleRate".into(), rate))
             } else { None }
         },
+        // BlockAlign (int16u)
+        "060e2b34010101050402030201000000" => {
+            if val.len() >= 2 { let n = u16::from_be_bytes([val[0],val[1]]); Some(("BlockAlign".into(), n.to_string())) } else { None }
+        },
+        // AverageBytesPerSecond (int32u)
+        "060e2b34010101050402030305000000" => {
+            if val.len() >= 4 { let n = u32::from_be_bytes([val[0],val[1],val[2],val[3]]); Some(("AverageBytesPerSecond".into(), n.to_string())) } else { None }
+        },
         // LockedIndicator (Boolean)
-        "060e2b34010101040402030201000000" => {
+        "060e2b34010101040402030104000000" => {
             if !val.is_empty() {
                 Some(("LockedIndicator".into(), if val[0] != 0 {"True"} else {"False"}.into()))
             } else { None }
         },
-        // ChannelCount (int32u)
-        "060e2b34010101040402030104000000" => {
-            if val.len() >= 4 { let n = u32::from_be_bytes([val[0],val[1],val[2],val[3]]); Some(("ChannelCount".into(), n.to_string())) }
-            else if !val.is_empty() { Some(("ChannelCount".into(), val[0].to_string())) }
-            else { None }
-        },
         // BitsPerAudioSample (int32u)
         "060e2b34010101040402030304000000" => {
             if val.len() >= 4 { let n = u32::from_be_bytes([val[0],val[1],val[2],val[3]]); Some(("BitsPerAudioSample".into(), n.to_string())) } else { None }
-        },
-        // BlockAlign (int16u)
-        "060e2b34010101050402030101010000" => {
-            if val.len() >= 2 { let n = u16::from_be_bytes([val[0],val[1]]); Some(("BlockAlign".into(), n.to_string())) } else { None }
-        },
-        // AverageBytesPerSecond (int32u)
-        "060e2b34010101050402030304000000" => {
-            if val.len() >= 4 { let n = u32::from_be_bytes([val[0],val[1],val[2],val[3]]); Some(("AverageBytesPerSecond".into(), n.to_string())) } else { None }
         },
         // LinkedTrackID (int32u)
         "060e2b34010101050601010305000000" => {
