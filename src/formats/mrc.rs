@@ -124,9 +124,15 @@ fn unix_to_exif_datetime(secs: i64) -> String {
 
 /// Convert OLE Automation date (days since Dec 30, 1899) to ExifTool datetime string.
 /// Perl: ValueConv => 'ConvertUnixTime(($val-25569)*24*3600)'
+/// Perl's ConvertUnixTime rounds fractional seconds (adds 1 if frac >= 0.5).
 fn ole_date_to_datetime(ole_days: f64) -> String {
-    let unix_secs = (ole_days - 25569.0) * 86400.0;
-    unix_to_exif_datetime(unix_secs as i64)
+    let unix_secs_f = (ole_days - 25569.0) * 86400.0;
+    // Round fractional seconds (Perl ConvertUnixTime behavior)
+    let itime = unix_secs_f.floor() as i64;
+    let frac = unix_secs_f - itime as f64;
+    // If frac rounds to 1 (i.e., >= 0.5), increment itime
+    let rounded = if frac >= 0.5 { itime + 1 } else { itime };
+    unix_to_exif_datetime(rounded)
 }
 
 /// Convert microseconds-since-Unix-epoch to ExifTool datetime string.

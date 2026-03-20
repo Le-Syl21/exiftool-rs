@@ -698,6 +698,24 @@ static SIGMA_TAGS: &[(u16, &str, &str)] = &[
     (0x0017, "Firmware", "Firmware"),
     (0x0018, "Software", "Software"),
     (0x0019, "AutoBracket", "Auto Bracket"),
+    // Tags 0x001a-0x003d (DP2 and similar models, MakerNoteSigmaVer < 3)
+    (0x001a, "PreviewImageStart", "Preview Image Start"),
+    (0x001b, "PreviewImageLength", "Preview Image Length"),
+    (0x001c, "PreviewImageSize", "Preview Image Size"),
+    (0x001d, "MakerNoteVersion", "Maker Note Version"),
+    (0x001f, "AFPoint", "AF Point"),
+    (0x0022, "FileFormat", "File Format"),
+    (0x0024, "Calibration", "Calibration"),
+    (0x002c, "ColorMode", "Color Mode"),
+    (0x0030, "LensApertureRange", "Lens Aperture Range"),
+    (0x0033, "ExposureTime2", "Exposure Time 2"),
+    (0x0034, "BurstShot", "Burst Shot"),
+    (0x0035, "ExposureCompensation", "Exposure Compensation"),
+    (0x0039, "SensorTemperature", "Sensor Temperature"),
+    (0x003a, "FlashExposureComp", "Flash Exposure Comp"),
+    (0x003b, "Firmware", "Firmware"),
+    (0x003c, "WhiteBalance", "White Balance"),
+    (0x003d, "PictureMode", "Picture Mode"),
 ];
 
 static CASIO_TAGS: &[(u16, &str, &str)] = &[

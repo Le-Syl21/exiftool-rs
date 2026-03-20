@@ -85,19 +85,8 @@ pub fn read_lfp(data: &[u8]) -> Result<Vec<Tag>> {
         extract_tags_from_json(block.as_str(), &mut tags);
     }
 
-    // Synthesize FocalPlaneYResolution = FocalPlaneXResolution (Perl note: "Y same as X")
-    // This is needed for composite ScaleFactor35efl calculation.
-    if tags.iter().any(|t| t.name == "FocalPlaneXResolution")
-        && !tags.iter().any(|t| t.name == "FocalPlaneYResolution")
-    {
-        if let Some(t) = tags.iter().find(|t| t.name == "FocalPlaneXResolution").cloned() {
-            let mut t2 = t.clone();
-            t2.id = TagId::Text("FocalPlaneYResolution".into());
-            t2.name = "FocalPlaneYResolution".into();
-            t2.description = "FocalPlaneYResolution".into();
-            tags.push(t2);
-        }
-    }
+    // Perl doesn't emit FocalPlaneYResolution for Lytro (note says "Y same as X")
+    tags.retain(|t| t.name != "FocalPlaneYResolution");
 
     Ok(tags)
 }
@@ -329,20 +318,20 @@ fn clean_non_alnum(s: &str) -> String {
 }
 
 /// Emit a tag, applying name transformations and print conversions.
-fn emit_tag(tag_path: &str, raw_value: String, tags: &mut Vec<Tag>) {
+fn emit_tag(tag_path: &str, json_value: String, tags: &mut Vec<Tag>) {
     let (name, is_devices) = tag_path_to_name(tag_path);
     if name.is_empty() {
         return;
     }
 
     // Apply special name mappings and print conversions
-    let (final_name, print_value) = apply_tag_mapping(&name, &raw_value);
+    let (final_name, raw_str, print_value) = apply_tag_mapping(&name, &json_value);
 
     let family2 = if is_devices { "Camera" } else { "Image" };
 
     // Check if tag with this name already exists; if so update it (last-write-wins for arrays)
     if let Some(existing) = tags.iter_mut().find(|t| t.name == final_name) {
-        existing.raw_value = Value::String(raw_value.clone());
+        existing.raw_value = Value::String(raw_str.clone());
         existing.print_value = print_value.clone();
         return;
     }
@@ -356,79 +345,96 @@ fn emit_tag(tag_path: &str, raw_value: String, tags: &mut Vec<Tag>) {
             family1: "Lytro".into(),
             family2: family2.into(),
         },
-        raw_value: Value::String(raw_value),
+        raw_value: Value::String(raw_str),
         print_value,
         priority: 0,
     });
 }
 
 /// Apply special tag name mappings (from Perl's %Main table) and print conversions.
-/// Returns (final_name, print_value).
-fn apply_tag_mapping(name: &str, raw: &str) -> (String, String) {
+/// Returns (final_name, raw_value, print_value).
+/// The raw_value is the numeric/converted value used for composite calculations.
+/// The print_value is the human-readable string.
+fn apply_tag_mapping(name: &str, raw: &str) -> (String, String, String) {
     match name {
         // Explicit name remappings from Perl's tag table
-        "Type" => ("CameraType".into(), raw.to_string()),
-        "CameraMake" => ("Make".into(), raw.to_string()),
-        "CameraModel" => ("Model".into(), raw.to_string()),
-        "CameraSerialNumber" => ("SerialNumber".into(), raw.to_string()),
-        "CameraFirmware" => ("FirmwareVersion".into(), raw.to_string()),
-        "AccelerometerSampleArrayTime" => ("AccelerometerTime".into(), raw.to_string()),
-        "AccelerometerSampleArrayX" => ("AccelerometerX".into(), raw.to_string()),
-        "AccelerometerSampleArrayY" => ("AccelerometerY".into(), raw.to_string()),
-        "AccelerometerSampleArrayZ" => ("AccelerometerZ".into(), raw.to_string()),
+        "Type" => ("CameraType".into(), raw.to_string(), raw.to_string()),
+        "CameraMake" => ("Make".into(), raw.to_string(), raw.to_string()),
+        "CameraModel" => ("Model".into(), raw.to_string(), raw.to_string()),
+        "CameraSerialNumber" => ("SerialNumber".into(), raw.to_string(), raw.to_string()),
+        "CameraFirmware" => ("FirmwareVersion".into(), raw.to_string(), raw.to_string()),
+        "AccelerometerSampleArrayTime" => ("AccelerometerTime".into(), raw.to_string(), raw.to_string()),
+        "AccelerometerSampleArrayX" => ("AccelerometerX".into(), raw.to_string(), raw.to_string()),
+        "AccelerometerSampleArrayY" => ("AccelerometerY".into(), raw.to_string(), raw.to_string()),
+        "AccelerometerSampleArrayZ" => ("AccelerometerZ".into(), raw.to_string(), raw.to_string()),
         "ClockZuluTime" => {
             // ValueConv: convert XMP date format to ExifTool format
             let converted = convert_xmp_date(raw);
-            ("DateTimeOriginal".into(), converted)
+            ("DateTimeOriginal".into(), converted.clone(), converted)
         }
         "LensFNumber" => {
+            // Raw value stays numeric for composites (e.g., Aperture)
             let pv = format_fnumber(raw);
-            ("FNumber".into(), pv)
+            ("FNumber".into(), raw.to_string(), pv)
         }
         "LensFocalLength" => {
-            // ValueConv: $val * 1000 (metres to mm), PrintConv: sprintf("%.1f mm", $val)
-            let pv = format_focal_length(raw);
-            ("FocalLength".into(), pv)
+            // ValueConv: $val * 1000 (metres to mm)
+            // Raw stores mm value as string; PrintConv: "X.X mm"
+            if let Ok(v) = raw.parse::<f64>() {
+                let mm = v * 1000.0;
+                let mm_str = format!("{}", mm);
+                let pv = format!("{:.1} mm", mm);
+                ("FocalLength".into(), mm_str, pv)
+            } else {
+                ("FocalLength".into(), raw.to_string(), raw.to_string())
+            }
         }
         "LensTemperature" => {
             let pv = format_temperature(raw);
-            ("LensTemperature".into(), pv)
+            ("LensTemperature".into(), raw.to_string(), pv)
         }
         "SocTemperature" => {
             let pv = format_temperature(raw);
-            ("SocTemperature".into(), pv)
+            ("SocTemperature".into(), raw.to_string(), pv)
         }
         "ShutterFrameExposureDuration" => {
             let pv = format_exposure_time(raw);
-            ("FrameExposureTime".into(), pv)
+            ("FrameExposureTime".into(), raw.to_string(), pv)
         }
         "ShutterPixelExposureDuration" => {
+            // Raw stays as numeric seconds for composites (ShutterSpeed)
             let pv = format_exposure_time(raw);
-            ("ExposureTime".into(), pv)
+            ("ExposureTime".into(), raw.to_string(), pv)
         }
         "SensorPixelPitch" => {
             // ValueConv: 25.4 / $val / 1000 (metres to pixels/inch)
-            let pv = format_pixel_pitch(raw);
-            ("FocalPlaneXResolution".into(), pv)
+            // Store converted numeric value in raw for composite calculations
+            if let Ok(v) = raw.parse::<f64>() {
+                let ppi = 25.4 / v / 1000.0;
+                let s = format!("{}", ppi);
+                ("FocalPlaneXResolution".into(), s.clone(), s)
+            } else {
+                ("FocalPlaneXResolution".into(), raw.to_string(), raw.to_string())
+            }
         }
-        "SensorSensorSerial" => ("SensorSerialNumber".into(), raw.to_string()),
-        "SensorIso" => ("ISO".into(), raw.to_string()),
+        "SensorSensorSerial" => ("SensorSerialNumber".into(), raw.to_string(), raw.to_string()),
+        "SensorIso" => ("ISO".into(), raw.to_string(), raw.to_string()),
         "ImageLimitExposureBias" => {
             let pv = format_exposure_bias(raw);
-            ("ImageLimitExposureBias".into(), pv)
+            ("ImageLimitExposureBias".into(), raw.to_string(), pv)
         }
         "ImageModulationExposureBias" => {
             let pv = format_exposure_bias(raw);
-            ("ImageModulationExposureBias".into(), pv)
+            ("ImageModulationExposureBias".into(), raw.to_string(), pv)
         }
         "ImageOrientation" => {
             let pv = match raw {
                 "1" => "Horizontal (normal)".to_string(),
                 _ => raw.to_string(),
             };
-            ("Orientation".into(), pv)
+            ("Orientation".into(), raw.to_string(), pv)
         }
-        _ => (name.to_string(), raw.to_string()),
+        _ => (name.to_string(), raw.to_string(), raw.to_string()),
     }
 }
 

@@ -306,17 +306,33 @@ fn parse_properties(sec_data: &[u8], tags: &mut Vec<Tag>) {
         let prop_name = extract_utf16_str(&chars, name_pos);
         let prop_val = extract_utf16_str(&chars, val_pos);
 
-        // Map PROP key to ExifTool tag name + print conversion
-        if let Some((tag_name, tag_desc, print_val)) = map_prop(&prop_name, &prop_val) {
-            tags.push(mk_tag_str(tag_name, tag_desc, print_val, "X3F", "Properties", "Camera"));
+        // Map PROP key to ExifTool tag name + raw value + print conversion
+        if let Some((tag_name, tag_desc, raw_val, print_val)) = map_prop(&prop_name, &prop_val) {
+            let pv = print_val.clone();
+            tags.push(Tag {
+                id: TagId::Text(tag_name.to_string()),
+                name: tag_name.to_string(),
+                description: tag_desc.to_string(),
+                group: TagGroup {
+                    family0: "X3F".to_string(),
+                    family1: "Properties".to_string(),
+                    family2: "Camera".to_string(),
+                },
+                raw_value: raw_val,
+                print_value: pv,
+                priority: 0,
+            });
         }
     }
 }
 
-/// Map a PROP key/value to (tag_name, tag_description, print_value).
+/// Map a PROP key/value to (tag_name, tag_description, raw_value, print_value).
 /// Returns None if the key is not recognized.
-fn map_prop(key: &str, val: &str) -> Option<(&'static str, &'static str, String)> {
-    match key {
+fn map_prop(key: &str, val: &str) -> Option<(&'static str, &'static str, Value, String)> {
+    // Helper closure: wrap a string as (raw, print) pair
+    let s = |v: &str| -> (Value, String) { (Value::String(v.to_string()), v.to_string()) };
+
+    let (name, desc, raw, pv): (&'static str, &'static str, Value, String) = match key {
         "AEMODE" => {
             let pv = match val {
                 "8" => "8-segment",
@@ -324,26 +340,29 @@ fn map_prop(key: &str, val: &str) -> Option<(&'static str, &'static str, String)
                 "A" => "Average",
                 _ => val,
             };
-            Some(("MeteringMode", "Metering Mode", pv.to_string()))
+            let (r, p) = s(pv);
+            ("MeteringMode", "Metering Mode", r, p)
         }
-        "AFMODE" => Some(("FocusMode", "Focus Mode", val.to_string())),
-        "AP_DESC" => Some(("ApertureDisplayed", "Aperture Displayed", val.to_string())),
+        "AFMODE" => { let (r, p) = s(val); ("FocusMode", "Focus Mode", r, p) }
+        "AP_DESC" => { let (r, p) = s(val); ("ApertureDisplayed", "Aperture Displayed", r, p) }
         "APERTURE" => {
-            // FNumber
+            // FNumber — store as F64 so composite can compute Aperture
             if let Ok(f) = val.parse::<f64>() {
-                Some(("FNumber", "F Number", format!("{:.1}", f)))
+                let pv = format!("{:.1}", f);
+                ("FNumber", "F Number", Value::F64(f), pv)
             } else {
-                Some(("FNumber", "F Number", val.to_string()))
+                let (r, p) = s(val);
+                ("FNumber", "F Number", r, p)
             }
         }
-        "BRACKET" => Some(("BracketShot", "Bracket Shot", val.to_string())),
-        "BURST" => Some(("BurstShot", "Burst Shot", val.to_string())),
-        "CAMMANUF" => Some(("Make", "Make", val.to_string())),
-        "CAMMODEL" => Some(("Model", "Model", val.to_string())),
-        "CAMNAME" => Some(("CameraName", "Camera Name", val.to_string())),
-        "CAMSERIAL" => Some(("SerialNumber", "Serial Number", val.to_string())),
-        "CM_DESC" => Some(("SceneCaptureType", "Scene Capture Type", val.to_string())),
-        "COLORSPACE" => Some(("ColorSpace", "Color Space", val.to_string())),
+        "BRACKET" => { let (r, p) = s(val); ("BracketShot", "Bracket Shot", r, p) }
+        "BURST"   => { let (r, p) = s(val); ("BurstShot", "Burst Shot", r, p) }
+        "CAMMANUF" => { let (r, p) = s(val); ("Make", "Make", r, p) }
+        "CAMMODEL" => { let (r, p) = s(val); ("Model", "Model", r, p) }
+        "CAMNAME"  => { let (r, p) = s(val); ("CameraName", "Camera Name", r, p) }
+        "CAMSERIAL" => { let (r, p) = s(val); ("SerialNumber", "Serial Number", r, p) }
+        "CM_DESC"  => { let (r, p) = s(val); ("SceneCaptureType", "Scene Capture Type", r, p) }
+        "COLORSPACE" => { let (r, p) = s(val); ("ColorSpace", "Color Space", r, p) }
         "DRIVE" => {
             let pv = match val {
                 "SINGLE" => "Single Shot",
@@ -355,42 +374,50 @@ fn map_prop(key: &str, val: &str) -> Option<(&'static str, &'static str, String)
                 "OFF"    => "Off",
                 _        => val,
             };
-            Some(("DriveMode", "Drive Mode", pv.to_string()))
+            let (r, p) = s(pv);
+            ("DriveMode", "Drive Mode", r, p)
         }
-        "EXPCOMP" => Some(("ExposureCompensation", "Exposure Compensation", val.to_string())),
-        "EXPNET" => Some(("NetExposureCompensation", "Net Exposure Compensation", val.to_string())),
+        "EXPCOMP" => { let (r, p) = s(val); ("ExposureCompensation", "Exposure Compensation", r, p) }
+        "EXPNET"  => { let (r, p) = s(val); ("NetExposureCompensation", "Net Exposure Compensation", r, p) }
         "EXPTIME" => {
-            // IntegrationTime: value is in microseconds
+            // IntegrationTime: value is in microseconds, store as F64 seconds
             if let Ok(usec) = val.parse::<f64>() {
                 let secs = usec * 1e-6;
                 let print = print_exposure_time(secs);
-                Some(("IntegrationTime", "Integration Time", print))
+                ("IntegrationTime", "Integration Time", Value::F64(secs), print)
             } else {
-                Some(("IntegrationTime", "Integration Time", val.to_string()))
+                let (r, p) = s(val);
+                ("IntegrationTime", "Integration Time", r, p)
             }
         }
-        "FIRMVERS" => Some(("FirmwareVersion", "Firmware Version", val.to_string())),
+        "FIRMVERS" => { let (r, p) = s(val); ("FirmwareVersion", "Firmware Version", r, p) }
         "FLASH" => {
-            // ucfirst(lc($val))
             let pv = ucfirst_lc(val);
-            Some(("FlashMode", "Flash Mode", pv))
+            let (r, _) = s(val);
+            ("FlashMode", "Flash Mode", r, pv)
         }
-        "FLASHEXPCOMP" => Some(("FlashExposureComp", "Flash Exposure Comp", val.to_string())),
-        "FLASHPOWER" => Some(("FlashPower", "Flash Power", val.to_string())),
-        "FLASHTTLMODE" => Some(("FlashTTLMode", "Flash TTL Mode", val.to_string())),
-        "FLASHTYPE" => Some(("FlashType", "Flash Type", val.to_string())),
+        "FLASHEXPCOMP" => { let (r, p) = s(val); ("FlashExposureComp", "Flash Exposure Comp", r, p) }
+        "FLASHPOWER"   => { let (r, p) = s(val); ("FlashPower", "Flash Power", r, p) }
+        "FLASHTTLMODE" => { let (r, p) = s(val); ("FlashTTLMode", "Flash TTL Mode", r, p) }
+        "FLASHTYPE"    => { let (r, p) = s(val); ("FlashType", "Flash Type", r, p) }
         "FLENGTH" => {
+            // FocalLength — store as F64 so composite 35efl can use it
             if let Ok(f) = val.parse::<f64>() {
-                Some(("FocalLength", "Focal Length", format!("{:.1} mm", f)))
+                let pv = format!("{:.1} mm", f);
+                ("FocalLength", "Focal Length", Value::F64(f), pv)
             } else {
-                Some(("FocalLength", "Focal Length", val.to_string()))
+                let (r, p) = s(val);
+                ("FocalLength", "Focal Length", r, p)
             }
         }
         "FLEQ35MM" => {
+            // FocalLengthIn35mmFormat — store as F64
             if let Ok(f) = val.parse::<f64>() {
-                Some(("FocalLengthIn35mmFormat", "Focal Length In 35mm Format", format!("{:.1} mm", f)))
+                let pv = format!("{:.1} mm", f);
+                ("FocalLengthIn35mmFormat", "Focal Length In 35mm Format", Value::F64(f), pv)
             } else {
-                Some(("FocalLengthIn35mmFormat", "Focal Length In 35mm Format", val.to_string()))
+                let (r, p) = s(val);
+                ("FocalLengthIn35mmFormat", "Focal Length In 35mm Format", r, p)
             }
         }
         "FOCUS" => {
@@ -400,21 +427,33 @@ fn map_prop(key: &str, val: &str) -> Option<(&'static str, &'static str, String)
                 "M"       => "Manual",
                 _         => val,
             };
-            Some(("Focus", "Focus", pv.to_string()))
+            let (r, p) = s(pv);
+            ("Focus", "Focus", r, p)
         }
-        "IMAGERBOARDID" => Some(("ImagerBoardID", "Imager Board ID", val.to_string())),
+        "IMAGERBOARDID" => { let (r, p) = s(val); ("ImagerBoardID", "Imager Board ID", r, p) }
         "IMAGERTEMP" => {
-            Some(("SensorTemperature", "Sensor Temperature", format!("{} C", val)))
+            let pv = format!("{} C", val);
+            let (r, _) = s(val);
+            ("SensorTemperature", "Sensor Temperature", r, pv)
         }
-        "IMAGEBOARDID" => Some(("ImageBoardID", "Image Board ID", val.to_string())),
-        "ISO" => Some(("ISO", "ISO", val.to_string())),
-        "LENSARANGE" => Some(("LensApertureRange", "Lens Aperture Range", val.to_string())),
-        "LENSFRANGE" => Some(("LensFocalRange", "Lens Focal Range", val.to_string())),
+        "IMAGEBOARDID" => { let (r, p) = s(val); ("ImageBoardID", "Image Board ID", r, p) }
+        "ISO" => {
+            // Store as F64 so LightValue composite can use it
+            if let Ok(f) = val.parse::<f64>() {
+                let pv = format!("{}", f as u64);
+                ("ISO", "ISO", Value::F64(f), pv)
+            } else {
+                let (r, p) = s(val);
+                ("ISO", "ISO", r, p)
+            }
+        }
+        "LENSARANGE" => { let (r, p) = s(val); ("LensApertureRange", "Lens Aperture Range", r, p) }
+        "LENSFRANGE"  => { let (r, p) = s(val); ("LensFocalRange", "Lens Focal Range", r, p) }
         "LENSMODEL" => {
-            // LensType — if it looks like a hex number, convert to hex display
-            let pv = if val.chars().all(|c| c.is_ascii_hexdigit()) && !val.is_empty() {
-                // Map hex value to lens name if known
-                if let Ok(hex_val) = u32::from_str_radix(val.trim(), 16) {
+            // LensType — if it looks like a hex number, convert to name
+            let val_trimmed = val.trim();
+            let pv = if !val_trimmed.is_empty() && val_trimmed.chars().all(|c| c.is_ascii_hexdigit()) {
+                if let Ok(hex_val) = u32::from_str_radix(val_trimmed, 16) {
                     lens_type_name(hex_val)
                 } else {
                     val.to_string()
@@ -422,7 +461,8 @@ fn map_prop(key: &str, val: &str) -> Option<(&'static str, &'static str, String)
             } else {
                 val.to_string()
             };
-            Some(("LensType", "Lens Type", pv))
+            let (r, _) = s(val);
+            ("LensType", "Lens Type", r, pv)
         }
         "PMODE" => {
             let pv = match val {
@@ -432,7 +472,8 @@ fn map_prop(key: &str, val: &str) -> Option<(&'static str, &'static str, String)
                 "M" => "Manual",
                 _   => val,
             };
-            Some(("ExposureProgram", "Exposure Program", pv.to_string()))
+            let (r, p) = s(pv);
+            ("ExposureProgram", "Exposure Program", r, p)
         }
         "RESOLUTION" => {
             let pv = match val {
@@ -441,31 +482,36 @@ fn map_prop(key: &str, val: &str) -> Option<(&'static str, &'static str, String)
                 "HI"  => "High",
                 _     => val,
             };
-            Some(("Quality", "Quality", pv.to_string()))
+            let (r, p) = s(pv);
+            ("Quality", "Quality", r, p)
         }
-        "SENSORID" => Some(("SensorID", "Sensor ID", val.to_string())),
-        "SH_DESC" => Some(("ShutterSpeedDisplayed", "Shutter Speed Displayed", val.to_string())),
+        "SENSORID" => { let (r, p) = s(val); ("SensorID", "Sensor ID", r, p) }
+        "SH_DESC"  => { let (r, p) = s(val); ("ShutterSpeedDisplayed", "Shutter Speed Displayed", r, p) }
         "SHUTTER" => {
+            // ExposureTime — store as F64
             if let Ok(f) = val.parse::<f64>() {
                 let print = print_exposure_time(f);
-                Some(("ExposureTime", "Exposure Time", print))
+                ("ExposureTime", "Exposure Time", Value::F64(f), print)
             } else {
-                Some(("ExposureTime", "Exposure Time", val.to_string()))
+                let (r, p) = s(val);
+                ("ExposureTime", "Exposure Time", r, p)
             }
         }
         "TIME" => {
             // Unix timestamp → "YYYY:MM:DD HH:MM:SS"
             if let Ok(ts) = val.parse::<i64>() {
                 let dt = unix_to_datetime(ts);
-                Some(("DateTimeOriginal", "Date/Time Original", dt))
+                ("DateTimeOriginal", "Date/Time Original", Value::String(dt.clone()), dt)
             } else {
-                Some(("DateTimeOriginal", "Date/Time Original", val.to_string()))
+                let (r, p) = s(val);
+                ("DateTimeOriginal", "Date/Time Original", r, p)
             }
         }
-        "WB_DESC" => Some(("WhiteBalance", "White Balance", val.to_string())),
-        "VERSION_BF" => Some(("VersionBF", "Version BF", val.to_string())),
-        _ => None,
-    }
+        "WB_DESC"    => { let (r, p) = s(val); ("WhiteBalance", "White Balance", r, p) }
+        "VERSION_BF" => { let (r, p) = s(val); ("VersionBF", "Version BF", r, p) }
+        _ => return None,
+    };
+    Some((name, desc, raw, pv))
 }
 
 // ---------------------------------------------------------------------------

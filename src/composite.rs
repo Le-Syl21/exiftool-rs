@@ -267,9 +267,16 @@ fn find_tag_f64(tags: &[Tag], name: &str) -> Option<f64> {
                     if f > 0.0 { Some(f) } else { None }
                 })
             } else {
-                // Try parsing from print value
+                // Try parsing from print value (strip units like "mm", "m", etc.)
                 t.print_value.split(',').last()
-                    .and_then(|s| s.trim().parse::<f64>().ok())
+                    .and_then(|s| {
+                        let s = s.trim();
+                        // Try direct parse first, then strip common suffixes
+                        s.parse::<f64>().ok()
+                            .or_else(|| s.trim_end_matches(" mm").trim().parse::<f64>().ok())
+                            .or_else(|| s.trim_end_matches(" m").trim().parse::<f64>().ok())
+                            .or_else(|| s.split_whitespace().next()?.parse::<f64>().ok())
+                    })
                     .filter(|&v| v > 0.0)
             }
         })
@@ -469,7 +476,8 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
     } else {
         // Compute from sensor size via FocalPlaneResolution
         let fpxr = find_tag_f64(tags, "FocalPlaneXResolution")?;
-        let fpyr = find_tag_f64(tags, "FocalPlaneYResolution")?;
+        // FocalPlaneYResolution defaults to X if not present (e.g., Lytro: "Y same as X")
+        let fpyr = find_tag_f64(tags, "FocalPlaneYResolution").unwrap_or(fpxr);
         // Use largest available image dimensions (full sensor)
         let img_w = find_tag_f64(tags, "RelatedImageWidth")
             .or_else(|| find_tag_f64(tags, "ExifImageWidth"))
