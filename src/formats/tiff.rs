@@ -68,6 +68,717 @@ pub fn read_tiff(data: &[u8]) -> Result<Vec<Tag>> {
     Ok(tags)
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Panasonic RW2 reader
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Read helpers for byte-order-aware values.
+fn rw2_u16(data: &[u8], off: usize, le: bool) -> u16 {
+    if off + 2 > data.len() { return 0; }
+    if le { u16::from_le_bytes([data[off], data[off+1]]) }
+    else   { u16::from_be_bytes([data[off], data[off+1]]) }
+}
+fn rw2_i16(data: &[u8], off: usize, le: bool) -> i16 {
+    rw2_u16(data, off, le) as i16
+}
+fn rw2_u32(data: &[u8], off: usize, le: bool) -> u32 {
+    if off + 4 > data.len() { return 0; }
+    if le { u32::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3]]) }
+    else   { u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]) }
+}
+
+/// PanasonicRaw IFD0 tag table (from PanasonicRaw.pm ::Main).
+/// Returns (name, family2).
+fn panasonic_raw_tag(tag: u16) -> Option<(&'static str, &'static str)> {
+    Some(match tag {
+        0x0001 => ("PanasonicRawVersion", "Image"),
+        0x0002 => ("SensorWidth",         "Image"),
+        0x0003 => ("SensorHeight",        "Image"),
+        0x0004 => ("SensorTopBorder",     "Image"),
+        0x0005 => ("SensorLeftBorder",    "Image"),
+        0x0006 => ("SensorBottomBorder",  "Image"),
+        0x0007 => ("SensorRightBorder",   "Image"),
+        0x0008 => ("SamplesPerPixel",     "Image"),
+        0x0009 => ("CFAPattern",          "Image"),
+        0x000a => ("BitsPerSample",       "Image"),
+        0x000b => ("Compression",         "Image"),
+        0x000e => ("LinearityLimitRed",   "Image"),
+        0x000f => ("LinearityLimitGreen", "Image"),
+        0x0010 => ("LinearityLimitBlue",  "Image"),
+        0x0011 => ("RedBalance",          "Camera"),
+        0x0012 => ("BlueBalance",         "Camera"),
+        // 0x0013: WBInfo (old, skip)
+        0x0017 => ("ISO",                 "Image"),
+        0x0018 => ("HighISOMultiplierRed",   "Image"),
+        0x0019 => ("HighISOMultiplierGreen", "Image"),
+        0x001a => ("HighISOMultiplierBlue",  "Image"),
+        0x001b => ("NoiseReductionParams",   "Image"),
+        0x001c => ("BlackLevelRed",   "Image"),
+        0x001d => ("BlackLevelGreen", "Image"),
+        0x001e => ("BlackLevelBlue",  "Image"),
+        0x0024 => ("WBRedLevel",   "Image"),
+        0x0025 => ("WBGreenLevel", "Image"),
+        0x0026 => ("WBBlueLevel",  "Image"),
+        // 0x0027: WBInfo2 (handled separately)
+        0x002d => ("RawFormat",    "Image"),
+        // 0x002e: JpgFromRaw (handled separately)
+        0x002f => ("CropTop",    "Image"),
+        0x0030 => ("CropLeft",   "Image"),
+        0x0031 => ("CropBottom", "Image"),
+        0x0032 => ("CropRight",  "Image"),
+        // Standard TIFF / EXIF tags also valid in RW2 IFD0:
+        0x010f => ("Make",           "Camera"),
+        0x0110 => ("Model",          "Camera"),
+        0x0111 => ("StripOffsets",   "Image"),
+        0x0112 => ("Orientation",    "Image"),
+        0x0115 => ("SamplesPerPixel","Image"),
+        0x0116 => ("RowsPerStrip",   "Image"),
+        0x0117 => ("StripByteCounts","Image"),
+        0x0118 => ("RawDataOffset",  "Image"),
+        // 0x0119: DistortionInfo (handled separately)
+        0x011a => ("XResolution",    "Image"),
+        0x011b => ("YResolution",    "Image"),
+        0x011c => ("Gamma",          "Image"),
+        0x0128 => ("ResolutionUnit", "Image"),
+        0x0131 => ("Software",       "Image"),
+        0x0132 => ("ModifyDate",     "Time"),
+        0x013b => ("Artist",         "Author"),
+        0x0213 => ("YCbCrPositioning","Image"),
+        0x8298 => ("Copyright",      "Author"),
+        _ => return None,
+    })
+}
+
+/// Apply print conversions specific to PanasonicRaw IFD0 tags.
+fn panasonic_raw_print_conv(tag: u16, value: &Value) -> Option<String> {
+    match tag {
+        0x0009 => { // CFAPattern
+            if let Some(v) = value.as_u64() {
+                return Some(match v {
+                    0 => "n/a",
+                    1 => "[Red,Green][Green,Blue]",
+                    2 => "[Green,Red][Blue,Green]",
+                    3 => "[Green,Blue][Red,Green]",
+                    4 => "[Blue,Green][Green,Red]",
+                    _ => return None,
+                }.to_string());
+            }
+        }
+        0x000b => { // Compression
+            if let Some(v) = value.as_u64() {
+                return Some(match v {
+                    34316 => "Panasonic RAW 1",
+                    34826 => "Panasonic RAW 2",
+                    34828 => "Panasonic RAW 3",
+                    34830 => "Panasonic RAW 4",
+                    _ => return None,
+                }.to_string());
+            }
+        }
+        0x0112 => { // Orientation (same as standard EXIF)
+            if let Some(v) = value.as_u64() {
+                return Some(match v {
+                    1 => "Horizontal (normal)",
+                    2 => "Mirror horizontal",
+                    3 => "Rotate 180",
+                    4 => "Mirror vertical",
+                    5 => "Mirror horizontal and rotate 270 CW",
+                    6 => "Rotate 90 CW",
+                    7 => "Mirror horizontal and rotate 90 CW",
+                    8 => "Rotate 270 CW",
+                    _ => return None,
+                }.to_string());
+            }
+        }
+        0x0128 => { // ResolutionUnit
+            if let Some(v) = value.as_u64() {
+                return Some(match v {
+                    1 => "No Absolute Unit",
+                    2 => "inches",
+                    3 => "centimeters",
+                    _ => return None,
+                }.to_string());
+            }
+        }
+        0x0213 => { // YCbCrPositioning
+            if let Some(v) = value.as_u64() {
+                return Some(match v {
+                    1 => "Centered",
+                    2 => "Co-sited",
+                    _ => return None,
+                }.to_string());
+            }
+        }
+        _ => {}
+    }
+    None
+}
+
+/// Parse RW2 IFD value (same as standard TIFF IFD value decoding).
+fn rw2_read_value(data: &[u8], dtype: u16, count: u32, inline_data: &[u8; 4], value_offset: u32, le: bool) -> Option<Value> {
+    let elem_size: usize = match dtype {
+        1 | 2 | 6 | 7 => 1,
+        3 | 8 => 2,
+        4 | 9 | 11 | 13 => 4,
+        5 | 10 | 12 => 8,
+        _ => return None,
+    };
+    let total = elem_size * count as usize;
+    let value_data: &[u8] = if total <= 4 {
+        &inline_data[..total.min(4)]
+    } else {
+        let off = value_offset as usize;
+        if off + total > data.len() { return None; }
+        &data[off..off + total]
+    };
+
+    Some(match dtype {
+        1 => if count == 1 { Value::U8(value_data[0]) }
+             else { Value::List(value_data.iter().map(|&b| Value::U8(b)).collect()) },
+        2 => Value::String(String::from_utf8_lossy(value_data).trim_end_matches('\0').to_string()),
+        3 => if count == 1 { Value::U16(rw2_u16(value_data, 0, le)) }
+             else { Value::List((0..count as usize).map(|i| Value::U16(rw2_u16(value_data, i*2, le))).collect()) },
+        4 | 13 => if count == 1 { Value::U32(rw2_u32(value_data, 0, le)) }
+                  else { Value::List((0..count as usize).map(|i| Value::U32(rw2_u32(value_data, i*4, le))).collect()) },
+        5 => if count == 1 {
+                let n = rw2_u32(value_data, 0, le);
+                let d = rw2_u32(value_data, 4, le);
+                Value::URational(n, d)
+             } else {
+                Value::List((0..count as usize).map(|i| {
+                    Value::URational(rw2_u32(value_data, i*8, le), rw2_u32(value_data, i*8+4, le))
+                }).collect())
+             },
+        6 => if count == 1 { Value::I16(value_data[0] as i8 as i16) }
+             else { Value::List(value_data.iter().map(|&b| Value::I16(b as i8 as i16)).collect()) },
+        7 => Value::Undefined(value_data.to_vec()),
+        8 => if count == 1 { Value::I16(rw2_i16(value_data, 0, le)) }
+             else { Value::List((0..count as usize).map(|i| Value::I16(rw2_i16(value_data, i*2, le))).collect()) },
+        9 => if count == 1 {
+                let v = rw2_u32(value_data, 0, le) as i32;
+                Value::I32(v)
+             } else {
+                Value::List((0..count as usize).map(|i| Value::I32(rw2_u32(value_data, i*4, le) as i32)).collect())
+             },
+        10 => {
+            let n = rw2_u32(value_data, 0, le) as i32;
+            let d = rw2_u32(value_data, 4, le) as i32;
+            if count == 1 { Value::IRational(n, d) }
+            else { Value::List((0..count as usize).map(|i| {
+                Value::IRational(rw2_u32(value_data, i*8, le) as i32, rw2_u32(value_data, i*8+4, le) as i32)
+            }).collect()) }
+        },
+        11 => {
+            let bits = rw2_u32(value_data, 0, le);
+            if count == 1 { Value::F32(f32::from_bits(bits)) }
+            else { Value::List((0..count as usize).map(|i| {
+                Value::F32(f32::from_bits(rw2_u32(value_data, i*4, le)))
+            }).collect()) }
+        },
+        12 => {
+            let bits = if value_data.len() >= 8 {
+                if le { u64::from_le_bytes(value_data[..8].try_into().unwrap_or([0;8])) }
+                else  { u64::from_be_bytes(value_data[..8].try_into().unwrap_or([0;8])) }
+            } else { 0 };
+            if count == 1 { Value::F64(f64::from_bits(bits)) }
+            else { Value::List((0..count as usize).map(|i| {
+                let off = i * 8;
+                let b = if off + 8 <= value_data.len() {
+                    if le { u64::from_le_bytes(value_data[off..off+8].try_into().unwrap_or([0;8])) }
+                    else  { u64::from_be_bytes(value_data[off..off+8].try_into().unwrap_or([0;8])) }
+                } else { 0 };
+                Value::F64(f64::from_bits(b))
+            }).collect()) }
+        },
+        _ => return None,
+    })
+}
+
+/// Parse WBInfo2 binary subdirectory from PanasonicRaw.pm::WBInfo2.
+/// Format: int16u (every 2 bytes), FIRST_ENTRY=0
+/// Indices: 0=NumWBEntries, 1=WBType1, 2..4=WB_RGBLevels1, 5=WBType2, ...
+fn parse_wb_info2(data: &[u8], le: bool) -> Vec<Tag> {
+    if data.len() < 2 { return vec![]; }
+    let mut tags = Vec::new();
+    // First value: NumWBEntries
+    let num = rw2_u16(data, 0, le) as usize;
+    tags.push(Tag {
+        id: TagId::Text("NumWBEntries".into()),
+        name: "NumWBEntries".into(),
+        description: "Num WB Entries".into(),
+        group: TagGroup { family0: "PanasonicRaw".into(), family1: "PanasonicRaw".into(), family2: "Image".into() },
+        raw_value: Value::U16(num as u16),
+        print_value: num.to_string(),
+        priority: 0,
+    });
+    // Each WB entry: WBType (1 int16u) + WB_RGBLevels (3 int16u) = 4 int16u = 8 bytes
+    // But they're spread at fixed byte offsets in the WBInfo2 binary data:
+    // Entry i: WBType at byte_offset = (i*5+1)*2, WB_RGBLevels at byte_offset = (i*5+2)*2
+    // From WBInfo2: 0=NumWBEntries, 1=WBType1, 2-4=WB_RGBLevels1, 5=WBType2, 6-8=WB_RGBLevels2...
+    static WB_TYPE_NAMES: &[(&str, &str)] = &[
+        ("0", "Unknown"), ("1", "Daylight"), ("2", "Cloudy"), ("3", "Tungsten"),
+        ("4", "Flash (FZ7)"), ("5", "Flash"), ("6", "n/a"), ("7", "n/a"),
+        ("8", "Custom"), ("9", "Fine Weather"), ("10", "Cloudy"), ("11", "Shade"),
+        ("12", "Kelvin"), ("16", "AWBc"), ("20", "D55"), ("24", "ISO Studio Tungsten"),
+    ];
+    let wb_type_print_conv = |v: u16| -> String {
+        // Use ExifTool's LightSource table (Panasonic WBInfo2 uses it)
+        match v {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            255 => "Other".to_string(),
+            _ => v.to_string(),
+        }
+    };
+    let _ = WB_TYPE_NAMES; // avoid unused warning
+
+    for i in 0..num.min(7) {
+        // WBInfo2: indices: 0=NumWBEntries, then for each entry: WBType at idx=1+i*4, WB_RGBLevels[3] at idx=2+i*4..4+i*4
+        // Wait, looking at Perl:
+        // 0 => NumWBEntries, 1 => WBType1, 2 => WB_RGBLevels1 (int16u[3]),
+        // 5 => WBType2, 6 => WB_RGBLevels2 (int16u[3]), ...
+        // So entry i uses: WBType at byte=2*(1 + i*4), WB_RGBLevels at bytes starting at 2*(2+i*4)
+        let type_off = 2 * (1 + i * 4);
+        let rgb_off = 2 * (2 + i * 4);
+        if type_off + 2 > data.len() || rgb_off + 6 > data.len() { break; }
+        let wbt = rw2_u16(data, type_off, le);
+        let r = rw2_u16(data, rgb_off,   le);
+        let g = rw2_u16(data, rgb_off+2, le);
+        let b = rw2_u16(data, rgb_off+4, le);
+        let n = i + 1;
+        let wbt_s = wb_type_print_conv(wbt);
+        tags.push(Tag {
+            id: TagId::Text(format!("WBType{}", n)),
+            name: format!("WBType{}", n),
+            description: format!("WB Type {}", n),
+            group: TagGroup { family0: "PanasonicRaw".into(), family1: "PanasonicRaw".into(), family2: "Image".into() },
+            raw_value: Value::U16(wbt),
+            print_value: wbt_s,
+            priority: 0,
+        });
+        tags.push(Tag {
+            id: TagId::Text(format!("WB_RGBLevels{}", n)),
+            name: format!("WB_RGBLevels{}", n),
+            description: format!("WB RGB Levels {}", n),
+            group: TagGroup { family0: "PanasonicRaw".into(), family1: "PanasonicRaw".into(), family2: "Image".into() },
+            raw_value: Value::List(vec![Value::U16(r), Value::U16(g), Value::U16(b)]),
+            print_value: format!("{} {} {}", r, g, b),
+            priority: 0,
+        });
+    }
+    tags
+}
+
+/// Parse DistortionInfo binary subdirectory from PanasonicRaw.pm::DistortionInfo.
+/// FORMAT = 'int16s', FIRST_ENTRY=0.
+/// DistortionParam02 at index 2, DistortionParam04 at 4, DistortionScale at 5,
+/// DistortionCorrection at 7 (masked), DistortionParam08 at 8, etc.
+fn parse_distortion_info(data: &[u8], le: bool) -> Vec<Tag> {
+    let read_i16 = |idx: usize| -> i16 {
+        let off = idx * 2;
+        if off + 2 > data.len() { return 0; }
+        rw2_i16(data, off, le)
+    };
+    let mk = |name: &'static str, desc: &'static str, raw: Value, print: String| -> Tag {
+        Tag {
+            id: TagId::Text(name.into()),
+            name: name.into(),
+            description: desc.into(),
+            group: TagGroup { family0: "PanasonicRaw".into(), family1: "PanasonicRaw".into(), family2: "Image".into() },
+            raw_value: raw,
+            print_value: print,
+            priority: 0,
+        }
+    };
+    let mut tags = Vec::new();
+    if data.len() < 6 { return tags; }
+
+    // Index 2: DistortionParam02 = val / 32768
+    let v2 = read_i16(2);
+    let f2 = v2 as f64 / 32768.0;
+    tags.push(mk("DistortionParam02", "Distortion Param 02",
+        Value::F64(f2), crate::value::format_g15(f2)));
+
+    // Index 4: DistortionParam04 = val / 32768
+    if data.len() >= 10 {
+        let v4 = read_i16(4);
+        let f4 = v4 as f64 / 32768.0;
+        tags.push(mk("DistortionParam04", "Distortion Param 04",
+            Value::F64(f4), crate::value::format_g15(f4)));
+
+        // Index 5: DistortionScale = 1 / (1 + val/32768)
+        let v5 = read_i16(5);
+        let f5 = 1.0 / (1.0 + v5 as f64 / 32768.0);
+        tags.push(mk("DistortionScale", "Distortion Scale",
+            Value::F64(f5), crate::value::format_g15(f5)));
+    }
+
+    // Index 7: DistortionCorrection — masked (low nibble), byte index = 7*2 = 14
+    if data.len() >= 16 {
+        let v7 = read_i16(7);
+        let masked = (v7 as i16 & 0x0f) as i64;
+        let pv = match masked { 0 => "Off", 1 => "On", _ => "Unknown" };
+        tags.push(mk("DistortionCorrection", "Distortion Correction",
+            Value::I32(masked as i32), pv.to_string()));
+
+        // Index 8: DistortionParam08 = val / 32768
+        if data.len() >= 18 {
+            let v8 = read_i16(8);
+            let f8 = v8 as f64 / 32768.0;
+            tags.push(mk("DistortionParam08", "Distortion Param 08",
+                Value::F64(f8), crate::value::format_g15(f8)));
+        }
+
+        // Index 9: DistortionParam09 = val / 32768
+        if data.len() >= 20 {
+            let v9 = read_i16(9);
+            let f9 = v9 as f64 / 32768.0;
+            tags.push(mk("DistortionParam09", "Distortion Param 09",
+                Value::F64(f9), crate::value::format_g15(f9)));
+        }
+
+        // Index 11: DistortionParam11 = val / 32768
+        if data.len() >= 24 {
+            let v11 = read_i16(11);
+            let f11 = v11 as f64 / 32768.0;
+            tags.push(mk("DistortionParam11", "Distortion Param 11",
+                Value::F64(f11), crate::value::format_g15(f11)));
+        }
+    }
+
+    tags
+}
+
+/// Read an IFD entry (12 bytes starting at off) and return tag_id, dtype, count, offset, inline.
+struct RW2IfdEntry {
+    tag: u16,
+    dtype: u16,
+    count: u32,
+    value_offset: u32,
+    inline_data: [u8; 4],
+}
+
+fn rw2_parse_entry(data: &[u8], off: usize, le: bool) -> Option<RW2IfdEntry> {
+    if off + 12 > data.len() { return None; }
+    let tag = rw2_u16(data, off, le);
+    let dtype = rw2_u16(data, off+2, le);
+    let count = rw2_u32(data, off+4, le);
+    let value_offset = rw2_u32(data, off+8, le);
+    let mut inline_data = [0u8; 4];
+    inline_data.copy_from_slice(&data[off+8..off+12]);
+    Some(RW2IfdEntry { tag, dtype, count, value_offset, inline_data })
+}
+
+/// Read the Panasonic RW2 file.
+///
+/// RW2 uses magic 0x55 instead of 0x2A but is otherwise a TIFF file.
+/// IFD0 uses PanasonicRaw-specific tags (not standard EXIF).
+/// The JpgFromRaw (tag 0x002e) is an embedded JPEG containing the full
+/// ExifIFD and MakerNotes metadata.
+fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
+    if data.len() < 8 { return Ok(vec![]); }
+
+    // Get IFD0 offset from bytes 4-7
+    let ifd0_off = rw2_u32(data, 4, le) as usize;
+    if ifd0_off + 2 > data.len() { return Ok(vec![]); }
+
+    let mut tags: Vec<Tag> = Vec::new();
+
+    // Emit ExifByteOrder tag
+    let bo_str = if le { "Little-endian (Intel, II)" } else { "Big-endian (Motorola, MM)" };
+    tags.push(Tag {
+        id: TagId::Text("ExifByteOrder".into()),
+        name: "ExifByteOrder".into(),
+        description: "Exif Byte Order".into(),
+        group: TagGroup { family0: "EXIF".into(), family1: "IFD0".into(), family2: "ExifTool".into() },
+        raw_value: Value::String(bo_str.to_string()),
+        print_value: bo_str.to_string(),
+        priority: 0,
+    });
+
+    let entry_count = rw2_u16(data, ifd0_off, le) as usize;
+    let entries_start = ifd0_off + 2;
+    let entry_count = entry_count.min((data.len().saturating_sub(entries_start)) / 12).min(200);
+
+    // Collect JpgFromRaw data, WBInfo2 data, DistortionInfo data
+    let mut jpg_from_raw: Option<Vec<u8>> = None;
+    let mut wb_info2_data: Option<Vec<u8>> = None;
+    let mut distortion_data: Option<Vec<u8>> = None;
+    // Track ThumbnailOffset+Length for IFD1
+    let mut thumb_offset: Option<u64> = None;
+    let mut thumb_length: Option<u64> = None;
+
+    for i in 0..entry_count {
+        let eoff = entries_start + i * 12;
+        let e = match rw2_parse_entry(data, eoff, le) {
+            Some(e) => e,
+            None => break,
+        };
+
+        // Handle special subdirectories first
+        match e.tag {
+            0x002e => {
+                // JpgFromRaw: extract JPEG data
+                let dtype = e.dtype;
+                let count = e.count as usize;
+                let elem = match dtype { 1|2|6|7 => 1, 3|8 => 2, 4|9|11|13 => 4, 5|10|12 => 8, _ => 1 };
+                let total = elem * count;
+                if total > 4 {
+                    let off = e.value_offset as usize;
+                    if off + total <= data.len() {
+                        jpg_from_raw = Some(data[off..off+total].to_vec());
+                    }
+                }
+                // Add JpgFromRaw tag for display
+                tags.push(Tag {
+                    id: TagId::Numeric(0x002e),
+                    name: "JpgFromRaw".into(),
+                    description: "Jpg From Raw".into(),
+                    group: TagGroup { family0: "EXIF".into(), family1: "IFD0".into(), family2: "Preview".into() },
+                    raw_value: Value::Binary(Vec::new()), // don't store raw bytes
+                    print_value: format!("(Binary data {} bytes, use -b option to extract)", total),
+                    priority: 0,
+                });
+                continue;
+            }
+            0x0027 => {
+                // WBInfo2: binary subdirectory
+                let dtype = e.dtype;
+                let count = e.count as usize;
+                let elem = match dtype { 1|2|6|7 => 1, 3|8 => 2, 4|9|11|13 => 4, 5|10|12 => 8, _ => 1 };
+                let total = elem * count;
+                let bytes = if total <= 4 {
+                    e.inline_data[..total.min(4)].to_vec()
+                } else {
+                    let off = e.value_offset as usize;
+                    if off + total <= data.len() {
+                        data[off..off+total].to_vec()
+                    } else { continue; }
+                };
+                wb_info2_data = Some(bytes);
+                continue;
+            }
+            0x0119 => {
+                // DistortionInfo: binary subdirectory
+                let dtype = e.dtype;
+                let count = e.count as usize;
+                let elem = match dtype { 1|2|6|7 => 1, 3|8 => 2, 4|9|11|13 => 4, 5|10|12 => 8, _ => 1 };
+                let total = elem * count;
+                let bytes = if total <= 4 {
+                    e.inline_data[..total.min(4)].to_vec()
+                } else {
+                    let off = e.value_offset as usize;
+                    if off + total <= data.len() {
+                        data[off..off+total].to_vec()
+                    } else { continue; }
+                };
+                distortion_data = Some(bytes);
+                continue;
+            }
+            // Skip tags that are subdirectories or handled elsewhere
+            0x0013 | // WBInfo (old format)
+            0x0120 | // CameraIFD
+            0x02bc | // ApplicationNotes (XMP)
+            0x83bb | // IPTC-NAA
+            0x8769 | // ExifOffset (in embedded JPEG)
+            0x8825   // GPS
+            => continue,
+            _ => {}
+        }
+
+        // Look up tag in PanasonicRaw table
+        let tag_info = panasonic_raw_tag(e.tag);
+        if tag_info.is_none() {
+            // Skip unknown tags
+            continue;
+        }
+        let (name, family2) = tag_info.unwrap();
+
+        // Read value
+        let value = match rw2_read_value(data, e.dtype, e.count, &e.inline_data, e.value_offset, le) {
+            Some(v) => v,
+            None => continue,
+        };
+
+        // Special value conversions
+        let (final_value, print_value) = match e.tag {
+            0x0001 => {
+                // PanasonicRawVersion: undef bytes → display as string
+                let s = match &value {
+                    Value::Undefined(b) => String::from_utf8_lossy(b).to_string(),
+                    Value::String(s) => s.clone(),
+                    _ => value.to_display_string(),
+                };
+                (value, s)
+            }
+            0x001b => {
+                // NoiseReductionParams: undef[n] read as int16u[n/2]
+                let bytes = match &value {
+                    Value::Undefined(b) => b.clone(),
+                    _ => vec![],
+                };
+                let n = bytes.len() / 2;
+                let vals: Vec<i64> = (0..n)
+                    .map(|i| rw2_u16(&bytes, i*2, le) as i64)
+                    .collect();
+                let s = vals.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ");
+                let raw = Value::List(vals.iter().map(|&v| Value::U16(v as u16)).collect());
+                (raw, s)
+            }
+            _ => {
+                let pv = panasonic_raw_print_conv(e.tag, &value)
+                    .or_else(|| crate::tags::exif::print_conv("IFD0", e.tag, &value))
+                    .unwrap_or_else(|| value.to_display_string());
+                (value, pv)
+            }
+        };
+
+        // Track thumbnail info from IFD0 (if present)
+        if e.tag == 0x0111 || e.tag == 0x0201 { // StripOffsets / JPEGInterchangeFormat
+            thumb_offset = final_value.as_u64();
+        }
+        if e.tag == 0x0117 || e.tag == 0x0202 { // StripByteCounts / JPEGInterchangeFormatLength
+            thumb_length = final_value.as_u64();
+        }
+
+        tags.push(Tag {
+            id: TagId::Numeric(e.tag),
+            name: name.to_string(),
+            description: name.to_string(),
+            group: TagGroup {
+                family0: "EXIF".into(),
+                family1: "IFD0".into(),
+                family2: family2.to_string(),
+            },
+            raw_value: final_value,
+            print_value,
+            priority: 0,
+        });
+    }
+
+    // Parse WBInfo2 binary subdirectory
+    if let Some(wb_data) = wb_info2_data {
+        tags.extend(parse_wb_info2(&wb_data, le));
+    }
+
+    // Parse DistortionInfo binary subdirectory
+    if let Some(dist_data) = distortion_data {
+        tags.extend(parse_distortion_info(&dist_data, le));
+    }
+
+    // Process embedded JpgFromRaw: extract all metadata from the embedded JPEG.
+    // This is where ExifIFD, MakerNotes, PrintIM, etc. come from in RW2 files.
+    if let Some(jpg_data) = jpg_from_raw {
+        if let Ok(jpg_tags) = crate::formats::jpeg::read_jpeg(&jpg_data) {
+            // Merge JPEG metadata into our tags.
+            // Skip tags already present from IFD0 to avoid duplicates.
+            // Also skip File-group tags from the embedded JPEG.
+            let existing_names: std::collections::HashSet<String> = tags.iter()
+                .map(|t| t.name.clone())
+                .collect();
+            for t in jpg_tags {
+                if t.group.family0 == "File" { continue; }
+                if t.group.family0 == "Composite" { continue; }
+                // Skip ExifByteOrder from embedded (already have it)
+                if t.name == "ExifByteOrder" { continue; }
+                // Skip IFD0 tags already extracted (Make, Model, etc.)
+                if t.group.family1 == "IFD0" && existing_names.contains(&t.name) {
+                    continue;
+                }
+                tags.push(t);
+            }
+        }
+    }
+
+    // Read IFD1 (thumbnail) if next_ifd_offset is non-zero
+    // (The thumbnail IFD follows IFD0's entries list)
+    let entries_end = entries_start + entry_count * 12;
+    if entries_end + 4 <= data.len() {
+        let next_ifd = rw2_u32(data, entries_end, le) as usize;
+        if next_ifd > 0 && next_ifd + 2 <= data.len() {
+            let ifd1_count = rw2_u16(data, next_ifd, le) as usize;
+            let ifd1_start = next_ifd + 2;
+            let ifd1_count = ifd1_count.min((data.len().saturating_sub(ifd1_start)) / 12).min(50);
+            for i in 0..ifd1_count {
+                let eoff = ifd1_start + i * 12;
+                let e = match rw2_parse_entry(data, eoff, le) {
+                    Some(e) => e,
+                    None => break,
+                };
+                // For IFD1 we only care about thumbnail pointer tags
+                match e.tag {
+                    0x0201 => { // JPEGInterchangeFormat
+                        if let Some(v) = rw2_read_value(data, e.dtype, e.count, &e.inline_data, e.value_offset, le) {
+                            thumb_offset = v.as_u64();
+                            tags.push(Tag {
+                                id: TagId::Numeric(e.tag),
+                                name: "ThumbnailOffset".into(),
+                                description: "Thumbnail Offset".into(),
+                                group: TagGroup { family0: "EXIF".into(), family1: "IFD1".into(), family2: "Image".into() },
+                                raw_value: v,
+                                print_value: thumb_offset.unwrap_or(0).to_string(),
+                                priority: 0,
+                            });
+                        }
+                    }
+                    0x0202 => { // JPEGInterchangeFormatLength
+                        if let Some(v) = rw2_read_value(data, e.dtype, e.count, &e.inline_data, e.value_offset, le) {
+                            thumb_length = v.as_u64();
+                            tags.push(Tag {
+                                id: TagId::Numeric(e.tag),
+                                name: "ThumbnailLength".into(),
+                                description: "Thumbnail Length".into(),
+                                group: TagGroup { family0: "EXIF".into(), family1: "IFD1".into(), family2: "Image".into() },
+                                raw_value: v,
+                                print_value: thumb_length.unwrap_or(0).to_string(),
+                                priority: 0,
+                            });
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    // Add ThumbnailImage if we have offset+length
+    if let (Some(off), Some(len)) = (thumb_offset, thumb_length) {
+        let off = off as usize;
+        let len = len as usize;
+        if off > 0 && len > 0 && off + len <= data.len() {
+            tags.push(Tag {
+                id: TagId::Text("ThumbnailImage".into()),
+                name: "ThumbnailImage".into(),
+                description: "Thumbnail Image".into(),
+                group: TagGroup { family0: "EXIF".into(), family1: "IFD1".into(), family2: "Image".into() },
+                raw_value: Value::Binary(data[off..off+len].to_vec()),
+                print_value: format!("(Binary data {} bytes, use -b option to extract)", len),
+                priority: 0,
+            });
+        }
+    }
+
+    Ok(tags)
+}
+
 /// Process GeoTiff directory (tag 0x87AF) and extract semantic GeoKey tags.
 ///
 /// GeoTiff stores geographic metadata in three special TIFF tags:
