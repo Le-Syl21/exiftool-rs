@@ -245,7 +245,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                     i16::from_be_bytes([data[i*2], data[i*2+1]])
                 })
                 .collect();
-            let sub_tags = crate::tags::canon_sub::decode_shot_info(&values);
+            let sub_tags = crate::tags::canon_sub::decode_shot_info(&values, "");
             for t in sub_tags {
                 tags.push(Tag {
                     group: TagGroup { family0: "CanonRaw".into(), family1: "CanonRaw".into(), family2: "Camera".into() },

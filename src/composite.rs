@@ -577,11 +577,30 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
         }
     }
 
-    // LensID
+    // LensID (Canon PrintLensID logic)
     if let Some(lt) = find_tag(tags, "LensType") {
-        let lens_str = lt.print_value.clone();
-        if !lens_str.is_empty() && lens_str != "0" {
+        let raw_val = lt.raw_value.as_u64().map(|v| v as i64).unwrap_or_else(|| {
+            lt.raw_value.to_display_string().parse::<i64>().unwrap_or(0)
+        });
+        let pv = lt.print_value.clone();
+        // For LensType = -1 or 65535 ("n/a" / "Unknown"): "Unknown ShortFocal-LongFocalmm"
+        if raw_val == -1 || raw_val == 65535 {
+            let min_fl = find_tag_f64(tags, "MinFocalLength");
+            let max_fl = find_tag_f64(tags, "MaxFocalLength");
+            let lens_str = if let (Some(min), Some(max)) = (min_fl, max_fl) {
+                if min > 0.0 && max > 0.0 && (max - min).abs() > 0.1 {
+                    format!("Unknown {:.0}-{:.0}mm", min, max)
+                } else if min > 0.0 {
+                    format!("Unknown {:.0}mm", min)
+                } else {
+                    "Unknown".to_string()
+                }
+            } else {
+                "Unknown".to_string()
+            };
             result.push(mk_composite("LensID", "Lens ID", Value::String(lens_str)));
+        } else if !pv.is_empty() && pv != "0" && pv != "n/a" {
+            result.push(mk_composite("LensID", "Lens ID", Value::String(pv)));
         }
     }
 
@@ -634,15 +653,8 @@ fn compute_canon_composites(tags: &[Tag]) -> Option<Vec<Tag>> {
         result.push(mk_composite("ShootingMode", "Shooting Mode", Value::String(em)));
     }
 
-    // Canon Lens composite from MinFocalLength+MaxFocalLength
-    let min_fl = find_tag_f64(tags, "MinFocalLength");
-    let max_fl = find_tag_f64(tags, "MaxFocalLength");
-    if let (Some(min), Some(max)) = (min_fl, max_fl) {
-        if min > 0.0 && max > 0.0 {
-            let spec = format!("{:.0}-{:.0}mm", min, max);
-            result.push(mk_composite("Lens", "Lens", Value::String(spec)));
-        }
-    }
+    // NOTE: Canon Lens composite is handled by compute_lens_composite (main lens function)
+    // which correctly formats it as "18.0 - 55.0 mm". Do not duplicate it here.
 
     // FileNumber (Canon composite): DirectoryIndex + FileIndex → "DDD-FFFF"
     // Perl: sprintf("%.3d%.4d", @val), then PrintConv s/(\d+)(\d{4})/$1-$2/

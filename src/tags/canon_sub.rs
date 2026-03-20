@@ -201,7 +201,15 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("CanonExposureMode", Value::I16(v), pv));
     }
     if let Some(v) = get(22) {
-        tags.push(mkt("LensType", Value::I16(v), v.to_string()));
+        // RawConv: suppress if 0. PrintConv: -1 => "n/a" (rest from canonLensTypes table)
+        if v != 0 {
+            let pv = if v == -1 {
+                "n/a".to_string()
+            } else {
+                canon_lens_type_name(v as u16).map(|s| s.to_string()).unwrap_or_else(|| v.to_string())
+            };
+            tags.push(mkt("LensType", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(23) {
         tags.push(mkt("MaxFocalLength", Value::I16(v), v.to_string()));
@@ -359,7 +367,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
     tags
 }
 
-pub fn decode_shot_info(values: &[i16]) -> Vec<Tag> {
+pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     let get = |idx: usize| -> Option<i16> { values.get(idx).copied() };
 
@@ -455,15 +463,23 @@ pub fn decode_shot_info(values: &[i16]) -> Vec<Tag> {
         let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
         tags.push(mkt("ControlMode", Value::I16(v), pv));
     }
-    if let Some(v) = get(19) {
-        tags.push(mkt("FocusDistanceUpper", Value::I16(v), v.to_string()));
+    // FocusDistanceUpper/Lower: Format=int16u.
+    // RawConv: '($$self{FocusDistanceUpper} = $val) || undef' — suppress when 0.
+    // ValueConv: $val / 100; PrintConv: "> 655.345 ? 'inf' : '$val m'"
+    let focus_upper = get(19).map(|v| v as u16).unwrap_or(0);
+    if focus_upper != 0 {
+        let m = focus_upper as f64 / 100.0;
+        let pv = if m > 655.345 { "inf".to_string() } else { format!("{} m", m) };
+        tags.push(mkt("FocusDistanceUpper", Value::U16(focus_upper), pv));
+        // FocusDistanceLower: only emit when FocusDistanceUpper is non-zero (Condition)
+        if let Some(v) = get(20).map(|v| v as u16) {
+            let m = v as f64 / 100.0;
+            let pv = if m > 655.345 { "inf".to_string() } else { format!("{} m", m) };
+            tags.push(mkt("FocusDistanceLower", Value::U16(v), pv));
+        }
     }
-    if let Some(v) = get(20) {
-        tags.push(mkt("FocusDistanceLower", Value::I16(v), v.to_string()));
-    }
-    if let Some(v) = get(21) {
-        tags.push(mkt("FNumber", Value::I16(v), v.to_string()));
-    }
+    // ShotInfo index 21: FNumber has Priority=0 in Perl (EXIF FNumber takes precedence)
+    // Suppress to avoid duplicates.
     if let Some(v) = get(23) {
         tags.push(mkt("MeasuredEV2", Value::I16(v), v.to_string()));
     }
@@ -513,8 +529,19 @@ pub fn decode_shot_info(values: &[i16]) -> Vec<Tag> {
             tags.push(mkt("SelfTimer2", Value::I16(v), format!("{:.1}", val_f)));
         }
     }
+    // FlashOutput: RawConv: '($$self{Model}=~/(PowerShot|IXUS|IXY)/ or $val) ? $val : undef'
+    // Suppress when 0 for non-PowerShot models
     if let Some(v) = get(33) {
-        tags.push(mkt("FlashOutput", Value::I16(v), v.to_string()));
+        let is_powershot = model.contains("PowerShot") || model.contains("IXUS")
+            || model.contains("IXY");
+        if v != 0 || is_powershot {
+            // PrintConv for FlashOutput from ColorData3:
+            // ValueConv: exp(($val-200)/16*log(2)), PrintConv: sprintf("%.0f%%", $val*100)
+            // But here it's the ShotInfo FlashOutput which has a different scale.
+            // For ShotInfo index 33: Perl just stores the raw int16s with no ValueConv.
+            // So just emit the raw value.
+            tags.push(mkt("FlashOutput", Value::I16(v), v.to_string()));
+        }
     }
     tags
 }
@@ -528,9 +555,8 @@ pub fn decode_focal_length(values: &[u16], model: &str) -> Vec<Tag> {
             tags.push(mkt("FocalType", Value::U16(v), pv));
         }
     }
-    if let Some(&v) = values.get(1) {
-        tags.push(mkt("FocalLength", Value::U16(v), format!("{} mm", v)));
-    }
+    // FocalLength has Priority=0 in Perl (EXIF FocalLength takes precedence)
+    // Suppress to avoid duplicates.
     // FocalPlaneXSize/YSize for older Canon models (Perl: Canon::FocalLength table)
     // Only present for some lower-end models, not 1D/5D/7D series
     let model_upper = model.to_uppercase();
@@ -566,5 +592,250 @@ fn mkt(name: &str, raw: Value, print_val: String) -> Tag {
         raw_value: raw,
         print_value: print_val,
         priority: 0,
+    }
+}
+
+/// Look up Canon lens name from canonLensTypes table.
+pub fn canon_lens_type_name(val: u16) -> Option<&'static str> {
+    match val {
+        1 => Some("Canon EF 50mm f/1.8"),
+        2 => Some("Canon EF 28mm f/2.8 or Sigma Lens"),
+        3 => Some("Canon EF 135mm f/2.8 Soft"),
+        4 => Some("Canon EF 35-105mm f/3.5-4.5 or Sigma Lens"),
+        5 => Some("Canon EF 35-70mm f/3.5-4.5"),
+        6 => Some("Canon EF 28-70mm f/3.5-4.5 or Sigma or Tokina Lens"),
+        7 => Some("Canon EF 100-300mm f/5.6L"),
+        8 => Some("Canon EF 100-300mm f/5.6 or Sigma or Tokina Lens"),
+        9 => Some("Canon EF 70-210mm f/4"),
+        10 => Some("Canon EF 50mm f/2.5 Macro or Sigma Lens"),
+        11 => Some("Canon EF 35mm f/2"),
+        13 => Some("Canon EF 15mm f/2.8 Fisheye"),
+        14 => Some("Canon EF 50-200mm f/3.5-4.5L"),
+        15 => Some("Canon EF 50-200mm f/3.5-4.5"),
+        16 => Some("Canon EF 35-135mm f/3.5-4.5"),
+        17 => Some("Canon EF 35-70mm f/3.5-4.5A"),
+        18 => Some("Canon EF 28-70mm f/3.5-4.5"),
+        20 => Some("Canon EF 100-200mm f/4.5A"),
+        21 => Some("Canon EF 80-200mm f/2.8L"),
+        22 => Some("Canon EF 20-35mm f/2.8L or Tokina Lens"),
+        23 => Some("Canon EF 35-105mm f/3.5-4.5"),
+        24 => Some("Canon EF 35-80mm f/4-5.6 Power Zoom"),
+        25 => Some("Canon EF 35-80mm f/4-5.6 Power Zoom"),
+        26 => Some("Canon EF 100mm f/2.8 Macro or Other Lens"),
+        27 => Some("Canon EF 35-80mm f/4-5.6"),
+        28 => Some("Canon EF 80-200mm f/4.5-5.6 or Tamron Lens"),
+        29 => Some("Canon EF 50mm f/1.8 II"),
+        30 => Some("Canon EF 35-105mm f/4.5-5.6"),
+        31 => Some("Canon EF 75-300mm f/4-5.6 or Tamron Lens"),
+        32 => Some("Canon EF 24mm f/2.8 or Sigma Lens"),
+        33 => Some("Voigtlander or Carl Zeiss Lens"),
+        35 => Some("Canon EF 35-80mm f/4-5.6"),
+        36 => Some("Canon EF 38-76mm f/4.5-5.6"),
+        37 => Some("Canon EF 35-80mm f/4-5.6 or Tamron Lens"),
+        38 => Some("Canon EF 80-200mm f/4.5-5.6 II"),
+        39 => Some("Canon EF 75-300mm f/4-5.6"),
+        40 => Some("Canon EF 28-80mm f/3.5-5.6"),
+        41 => Some("Canon EF 28-90mm f/4-5.6"),
+        42 => Some("Canon EF 28-200mm f/3.5-5.6 or Tamron Lens"),
+        43 => Some("Canon EF 28-105mm f/4-5.6"),
+        44 => Some("Canon EF 90-300mm f/4.5-5.6"),
+        45 => Some("Canon EF-S 18-55mm f/3.5-5.6 [II]"),
+        46 => Some("Canon EF 28-90mm f/4-5.6"),
+        47 => Some("Zeiss Milvus 35mm f/2 or 50mm f/2"),
+        48 => Some("Canon EF-S 18-55mm f/3.5-5.6 IS"),
+        49 => Some("Canon EF-S 55-250mm f/4-5.6 IS"),
+        50 => Some("Canon EF-S 18-200mm f/3.5-5.6 IS"),
+        51 => Some("Canon EF-S 18-135mm f/3.5-5.6 IS"),
+        52 => Some("Canon EF-S 18-55mm f/3.5-5.6 IS II"),
+        53 => Some("Canon EF-S 18-55mm f/3.5-5.6 III"),
+        54 => Some("Canon EF-S 55-250mm f/4-5.6 IS II"),
+        60 => Some("Irix 11mm f/4 or 15mm f/2.4"),
+        63 => Some("Irix 30mm F1.4 Dragonfly"),
+        80 => Some("Canon TS-E 50mm f/2.8L Macro"),
+        81 => Some("Canon TS-E 90mm f/2.8L Macro"),
+        82 => Some("Canon TS-E 135mm f/4L Macro"),
+        94 => Some("Canon TS-E 17mm f/4L"),
+        95 => Some("Canon TS-E 24mm f/3.5L II"),
+        103 => Some("Samyang AF 14mm f/2.8 EF or Rokinon Lens"),
+        106 => Some("Rokinon SP / Samyang XP 35mm f/1.2"),
+        112 => Some("Sigma 28mm f/1.5 FF High-speed Prime or other Sigma Lens"),
+        117 => Some("Tamron 35-150mm f/2.8-4.0 Di VC OSD (A043) or other Tamron Lens"),
+        124 => Some("Canon MP-E 65mm f/2.8 1-5x Macro Photo"),
+        125 => Some("Canon TS-E 24mm f/3.5L"),
+        126 => Some("Canon TS-E 45mm f/2.8"),
+        127 => Some("Canon TS-E 90mm f/2.8 or Tamron Lens"),
+        129 => Some("Canon EF 300mm f/2.8L USM"),
+        130 => Some("Canon EF 50mm f/1.0L USM"),
+        131 => Some("Canon EF 28-80mm f/2.8-4L USM or Sigma Lens"),
+        132 => Some("Canon EF 1200mm f/5.6L USM"),
+        134 => Some("Canon EF 600mm f/4L IS USM"),
+        135 => Some("Canon EF 200mm f/1.8L USM"),
+        136 => Some("Canon EF 300mm f/2.8L USM"),
+        137 => Some("Canon EF 85mm f/1.2L USM or Sigma or Tamron Lens"),
+        138 => Some("Canon EF 28-80mm f/2.8-4L"),
+        139 => Some("Canon EF 400mm f/2.8L USM"),
+        140 => Some("Canon EF 500mm f/4.5L USM"),
+        141 => Some("Canon EF 500mm f/4.5L USM"),
+        142 => Some("Canon EF 300mm f/2.8L IS USM"),
+        143 => Some("Canon EF 500mm f/4L IS USM or Sigma Lens"),
+        144 => Some("Canon EF 35-135mm f/4-5.6 USM"),
+        145 => Some("Canon EF 100-300mm f/4.5-5.6 USM"),
+        146 => Some("Canon EF 70-210mm f/3.5-4.5 USM"),
+        147 => Some("Canon EF 35-135mm f/4-5.6 USM"),
+        148 => Some("Canon EF 28-80mm f/3.5-5.6 USM"),
+        149 => Some("Canon EF 100mm f/2 USM"),
+        150 => Some("Canon EF 14mm f/2.8L USM or Sigma Lens"),
+        151 => Some("Canon EF 200mm f/2.8L USM"),
+        152 => Some("Canon EF 300mm f/4L IS USM or Sigma Lens"),
+        153 => Some("Canon EF 35-350mm f/3.5-5.6L USM or Sigma or Tamron Lens"),
+        154 => Some("Canon EF 20mm f/2.8 USM or Zeiss Lens"),
+        155 => Some("Canon EF 85mm f/1.8 USM or Sigma Lens"),
+        156 => Some("Canon EF 28-105mm f/3.5-4.5 USM or Tamron Lens"),
+        160 => Some("Canon EF 20-35mm f/3.5-4.5 USM or Tamron or Tokina Lens"),
+        161 => Some("Canon EF 28-70mm f/2.8L USM or Other Lens"),
+        162 => Some("Canon EF 200mm f/2.8L USM"),
+        163 => Some("Canon EF 300mm f/4L"),
+        164 => Some("Canon EF 400mm f/5.6L"),
+        165 => Some("Canon EF 70-200mm f/2.8L USM"),
+        166 => Some("Canon EF 70-200mm f/2.8L USM + 1.4x"),
+        167 => Some("Canon EF 70-200mm f/2.8L USM + 2x"),
+        168 => Some("Canon EF 28mm f/1.8 USM or Sigma Lens"),
+        169 => Some("Canon EF 17-35mm f/2.8L USM or Sigma Lens"),
+        170 => Some("Canon EF 200mm f/2.8L II USM or Sigma Lens"),
+        171 => Some("Canon EF 300mm f/4L USM"),
+        172 => Some("Canon EF 400mm f/5.6L USM or Sigma Lens"),
+        173 => Some("Canon EF 180mm Macro f/3.5L USM or Sigma Lens"),
+        174 => Some("Canon EF 135mm f/2L USM or Other Lens"),
+        175 => Some("Canon EF 400mm f/2.8L USM"),
+        176 => Some("Canon EF 24-85mm f/3.5-4.5 USM"),
+        177 => Some("Canon EF 300mm f/4L IS USM"),
+        178 => Some("Canon EF 28-135mm f/3.5-5.6 IS"),
+        179 => Some("Canon EF 24mm f/1.4L USM"),
+        180 => Some("Canon EF 35mm f/1.4L USM or Other Lens"),
+        181 => Some("Canon EF 100-400mm f/4.5-5.6L IS USM + 1.4x or Sigma Lens"),
+        182 => Some("Canon EF 100-400mm f/4.5-5.6L IS USM + 2x or Sigma Lens"),
+        183 => Some("Canon EF 100-400mm f/4.5-5.6L IS USM or Sigma Lens"),
+        184 => Some("Canon EF 400mm f/2.8L USM + 2x"),
+        185 => Some("Canon EF 600mm f/4L IS USM"),
+        186 => Some("Canon EF 70-200mm f/4L USM"),
+        187 => Some("Canon EF 70-200mm f/4L USM + 1.4x"),
+        188 => Some("Canon EF 70-200mm f/4L USM + 2x"),
+        189 => Some("Canon EF 70-200mm f/4L USM + 2.8x"),
+        190 => Some("Canon EF 100mm f/2.8 Macro USM"),
+        191 => Some("Canon EF 400mm f/4 DO IS or Sigma Lens"),
+        193 => Some("Canon EF 35-80mm f/4-5.6 USM"),
+        194 => Some("Canon EF 80-200mm f/4.5-5.6 USM"),
+        195 => Some("Canon EF 35-105mm f/4.5-5.6 USM"),
+        196 => Some("Canon EF 75-300mm f/4-5.6 USM"),
+        197 => Some("Canon EF 75-300mm f/4-5.6 IS USM or Sigma Lens"),
+        198 => Some("Canon EF 50mm f/1.4 USM or Other Lens"),
+        199 => Some("Canon EF 28-80mm f/3.5-5.6 USM"),
+        200 => Some("Canon EF 75-300mm f/4-5.6 USM"),
+        201 => Some("Canon EF 28-80mm f/3.5-5.6 USM"),
+        202 => Some("Canon EF 28-80mm f/3.5-5.6 USM IV"),
+        208 => Some("Canon EF 22-55mm f/4-5.6 USM"),
+        209 => Some("Canon EF 55-200mm f/4.5-5.6"),
+        210 => Some("Canon EF 28-90mm f/4-5.6 USM"),
+        211 => Some("Canon EF 28-200mm f/3.5-5.6 USM"),
+        212 => Some("Canon EF 28-105mm f/4-5.6 USM"),
+        213 => Some("Canon EF 90-300mm f/4.5-5.6 USM or Tamron Lens"),
+        214 => Some("Canon EF-S 18-55mm f/3.5-5.6 USM"),
+        215 => Some("Canon EF 55-200mm f/4.5-5.6 II USM"),
+        217 => Some("Tamron AF 18-270mm f/3.5-6.3 Di II VC PZD"),
+        220 => Some("Yongnuo YN 50mm f/1.8"),
+        224 => Some("Canon EF 70-200mm f/2.8L IS USM"),
+        225 => Some("Canon EF 70-200mm f/2.8L IS USM + 1.4x"),
+        226 => Some("Canon EF 70-200mm f/2.8L IS USM + 2x"),
+        227 => Some("Canon EF 70-200mm f/2.8L IS USM + 2.8x"),
+        228 => Some("Canon EF 28-105mm f/3.5-4.5 USM"),
+        229 => Some("Canon EF 16-35mm f/2.8L USM"),
+        230 => Some("Canon EF 24-70mm f/2.8L USM"),
+        231 => Some("Canon EF 17-40mm f/4L USM or Sigma Lens"),
+        232 => Some("Canon EF 70-300mm f/4.5-5.6 DO IS USM"),
+        233 => Some("Canon EF 28-300mm f/3.5-5.6L IS USM"),
+        234 => Some("Canon EF-S 17-85mm f/4-5.6 IS USM or Tokina Lens"),
+        235 => Some("Canon EF-S 10-22mm f/3.5-4.5 USM"),
+        236 => Some("Canon EF-S 60mm f/2.8 Macro USM"),
+        237 => Some("Canon EF 24-105mm f/4L IS USM"),
+        238 => Some("Canon EF 70-300mm f/4-5.6 IS USM"),
+        239 => Some("Canon EF 85mm f/1.2L II USM or Rokinon Lens"),
+        240 => Some("Canon EF-S 17-55mm f/2.8 IS USM or Sigma Lens"),
+        241 => Some("Canon EF 50mm f/1.2L USM"),
+        242 => Some("Canon EF 70-200mm f/4L IS USM"),
+        243 => Some("Canon EF 70-200mm f/4L IS USM + 1.4x"),
+        244 => Some("Canon EF 70-200mm f/4L IS USM + 2x"),
+        245 => Some("Canon EF 70-200mm f/4L IS USM + 2.8x"),
+        246 => Some("Canon EF 16-35mm f/2.8L II USM"),
+        247 => Some("Canon EF 14mm f/2.8L II USM"),
+        248 => Some("Canon EF 200mm f/2L IS USM or Sigma Lens"),
+        249 => Some("Canon EF 800mm f/5.6L IS USM"),
+        250 => Some("Canon EF 24mm f/1.4L II USM or Sigma Lens"),
+        251 => Some("Canon EF 70-200mm f/2.8L IS II USM"),
+        252 => Some("Canon EF 70-200mm f/2.8L IS II USM + 1.4x"),
+        253 => Some("Canon EF 70-200mm f/2.8L IS II USM + 2x"),
+        254 => Some("Canon EF 100mm f/2.8L Macro IS USM or Tamron Lens"),
+        255 => Some("Sigma 24-105mm f/4 DG OS HSM | A or Other Lens"),
+        368 => Some("Sigma 14-24mm f/2.8 DG HSM | A or other Sigma Lens"),
+        488 => Some("Canon EF-S 15-85mm f/3.5-5.6 IS USM"),
+        489 => Some("Canon EF 70-300mm f/4-5.6L IS USM"),
+        490 => Some("Canon EF 8-15mm f/4L Fisheye USM"),
+        491 => Some("Canon EF 300mm f/2.8L IS II USM or Tamron Lens"),
+        492 => Some("Canon EF 400mm f/2.8L IS II USM"),
+        493 => Some("Canon EF 500mm f/4L IS II USM or EF 24-105mm f4L IS USM"),
+        494 => Some("Canon EF 600mm f/4L IS II USM"),
+        495 => Some("Canon EF 24-70mm f/2.8L II USM or Sigma Lens"),
+        496 => Some("Canon EF 200-400mm f/4L IS USM"),
+        499 => Some("Canon EF 200-400mm f/4L IS USM + 1.4x"),
+        502 => Some("Canon EF 28mm f/2.8 IS USM or Tamron Lens"),
+        503 => Some("Canon EF 24mm f/2.8 IS USM"),
+        504 => Some("Canon EF 24-70mm f/4L IS USM"),
+        505 => Some("Canon EF 35mm f/2 IS USM"),
+        506 => Some("Canon EF 400mm f/4 DO IS II USM"),
+        507 => Some("Canon EF 16-35mm f/4L IS USM"),
+        508 => Some("Canon EF 11-24mm f/4L USM or Tamron Lens"),
+        624 => Some("Sigma 70-200mm f/2.8 DG OS HSM | S or other Sigma Lens"),
+        747 => Some("Canon EF 100-400mm f/4.5-5.6L IS II USM or Tamron Lens"),
+        748 => Some("Canon EF 100-400mm f/4.5-5.6L IS II USM + 1.4x or Tamron Lens"),
+        749 => Some("Canon EF 100-400mm f/4.5-5.6L IS II USM + 2x or Tamron Lens"),
+        750 => Some("Canon EF 35mm f/1.4L II USM or Tamron Lens"),
+        751 => Some("Canon EF 16-35mm f/2.8L III USM"),
+        752 => Some("Canon EF 24-105mm f/4L IS II USM"),
+        753 => Some("Canon EF 85mm f/1.4L IS USM"),
+        754 => Some("Canon EF 70-200mm f/4L IS II USM"),
+        757 => Some("Canon EF 400mm f/2.8L IS III USM"),
+        758 => Some("Canon EF 600mm f/4L IS III USM"),
+        923 => Some("Meike/SKY 85mm f/1.8 DCM"),
+        1136 => Some("Sigma 24-70mm f/2.8 DG OS HSM | A"),
+        4142 => Some("Canon EF-S 18-135mm f/3.5-5.6 IS STM"),
+        4143 => Some("Canon EF-M 18-55mm f/3.5-5.6 IS STM or Tamron Lens"),
+        4144 => Some("Canon EF 40mm f/2.8 STM"),
+        4145 => Some("Canon EF-M 22mm f/2 STM"),
+        4146 => Some("Canon EF-S 18-55mm f/3.5-5.6 IS STM"),
+        4147 => Some("Canon EF-M 11-22mm f/4-5.6 IS STM"),
+        4148 => Some("Canon EF-S 55-250mm f/4-5.6 IS STM"),
+        4149 => Some("Canon EF-M 55-200mm f/4.5-6.3 IS STM"),
+        4150 => Some("Canon EF-S 10-18mm f/4.5-5.6 IS STM"),
+        4152 => Some("Canon EF 24-105mm f/3.5-5.6 IS STM"),
+        4153 => Some("Canon EF-M 15-45mm f/3.5-6.3 IS STM"),
+        4154 => Some("Canon EF-S 24mm f/2.8 STM"),
+        4155 => Some("Canon EF-M 28mm f/3.5 Macro IS STM"),
+        4156 => Some("Canon EF 50mm f/1.8 STM"),
+        4157 => Some("Canon EF-M 18-150mm f/3.5-6.3 IS STM"),
+        4158 => Some("Canon EF-S 18-55mm f/4-5.6 IS STM"),
+        4159 => Some("Canon EF-M 32mm f/1.4 STM"),
+        4160 => Some("Canon EF-S 35mm f/2.8 Macro IS STM"),
+        4208 => Some("Sigma 56mm f/1.4 DC DN | C or other Sigma Lens"),
+        4976 => Some("Sigma 16-300mm F3.5-6.7 DC OS | C (025)"),
+        6512 => Some("Sigma 12mm F1.4 DC | C"),
+        36910 => Some("Canon EF 70-300mm f/4-5.6 IS II USM"),
+        36912 => Some("Canon EF-S 18-135mm f/3.5-5.6 IS USM"),
+        61182 => Some("Canon RF 50mm F1.2L USM or other Canon RF Lens"),
+        61491 => Some("Canon CN-E 14mm T3.1 L F"),
+        61492 => Some("Canon CN-E 24mm T1.5 L F"),
+        61494 => Some("Canon CN-E 85mm T1.3 L F"),
+        61495 => Some("Canon CN-E 135mm T2.2 L F"),
+        61496 => Some("Canon CN-E 35mm T1.5 L F"),
+        65535 => Some("n/a"),
+        _ => None,
     }
 }

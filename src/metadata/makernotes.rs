@@ -266,6 +266,105 @@ fn decode_google_hdrp(data: &[u8]) -> Vec<Tag> {
     tags
 }
 
+/// Decode Canon CustomFunctions (tag 0x000F) using ProcessCanonCustom format.
+/// Format: size(2 bytes LE) + entries of 2 bytes each [tag_hi | val_lo].
+/// Dispatches to camera-model-specific tag tables.
+fn decode_canon_custom_functions(data: &[u8], bo: ByteOrderMark, model: &str) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    if data.len() < 4 { return tags; }
+    let block_size = read_u16(data, 0, bo) as usize;
+    // Block size must match data length (Perl validates this)
+    if block_size != data.len() && block_size != data.len().saturating_sub(2) {
+        return tags;
+    }
+    // Entries start at offset 2, each is 2 bytes: (tag << 8) | value
+    let mut pos = 2;
+    while pos + 2 <= data.len() {
+        let entry = read_u16(data, pos, bo);
+        let tag_num = (entry >> 8) as u8;
+        let val = (entry & 0xff) as u8;
+        pos += 2;
+
+        // Dispatch to model-specific table
+        // Currently support: 350D/REBEL XT/Kiss Digital N
+        let tag_info = if model.contains("350D") || model.contains("REBEL XT")
+            || model.contains("Kiss Digital N") {
+            canon_custom_350d(tag_num, val)
+        } else {
+            // Unknown model — skip
+            continue;
+        };
+        if let Some((name, pv)) = tag_info {
+            tags.push(mk_canon_str(name, &pv));
+        }
+    }
+    tags
+}
+
+/// Canon CustomFunctions350D tag lookup (from Perl CanonCustom::Functions350D).
+fn canon_custom_350d(tag: u8, val: u8) -> Option<(&'static str, String)> {
+    let pv = match tag {
+        0 => { // SetButtonCrossKeysFunc
+            let s = match val {
+                0 => "Normal", 1 => "Set: Quality", 2 => "Set: Parameter",
+                3 => "Set: Playback", 4 => "Cross keys: AF point select", _ => "",
+            };
+            if s.is_empty() { val.to_string() } else { s.to_string() }
+        }
+        1 => { // LongExposureNoiseReduction
+            let s = match val { 0 => "Off", 1 => "On", _ => "" };
+            if s.is_empty() { val.to_string() } else { s.to_string() }
+        }
+        2 => { // FlashSyncSpeedAv
+            let s = match val { 0 => "Auto", 1 => "1/200 Fixed", _ => "" };
+            if s.is_empty() { val.to_string() } else { s.to_string() }
+        }
+        3 => { // Shutter-AELock
+            let s = match val {
+                0 => "AF/AE lock", 1 => "AE lock/AF",
+                2 => "AF/AF lock, No AE lock", 3 => "AE/AF, No AE lock", _ => "",
+            };
+            if s.is_empty() { val.to_string() } else { s.to_string() }
+        }
+        4 => { // AFAssistBeam
+            let s = match val {
+                0 => "Emits", 1 => "Does not emit", 2 => "Only ext. flash emits", _ => "",
+            };
+            if s.is_empty() { val.to_string() } else { s.to_string() }
+        }
+        5 => { // ExposureLevelIncrements
+            let s = match val { 0 => "1/3 Stop", 1 => "1/2 Stop", _ => "" };
+            if s.is_empty() { val.to_string() } else { s.to_string() }
+        }
+        6 => { // MirrorLockup
+            let s = match val { 0 => "Disable", 1 => "Enable", _ => "" };
+            if s.is_empty() { val.to_string() } else { s.to_string() }
+        }
+        7 => { // ETTLII
+            let s = match val { 0 => "Evaluative", 1 => "Average", _ => "" };
+            if s.is_empty() { val.to_string() } else { s.to_string() }
+        }
+        8 => { // ShutterCurtainSync
+            let s = match val { 0 => "1st-curtain sync", 1 => "2nd-curtain sync", _ => "" };
+            if s.is_empty() { val.to_string() } else { s.to_string() }
+        }
+        _ => return None,
+    };
+    let name = match tag {
+        0 => "SetButtonCrossKeysFunc",
+        1 => "LongExposureNoiseReduction",
+        2 => "FlashSyncSpeedAv",
+        3 => "Shutter-AELock",
+        4 => "AFAssistBeam",
+        5 => "ExposureLevelIncrements",
+        6 => "MirrorLockup",
+        7 => "ETTLII",
+        8 => "ShutterCurtainSync",
+        _ => return None,
+    };
+    Some((name, pv))
+}
+
 /// Decode Canon CustomFunctions2 (from Perl CanonCustom.pm ProcessCanonCustom2).
 fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
     let mut tags = Vec::new();
@@ -2967,7 +3066,7 @@ fn read_makernote_ifd(
                     let values: Vec<i16> = (0..count as usize)
                         .map(|i| read_u16(value_data, i * 2, byte_order) as i16)
                         .collect();
-                    crate::tags::canon_sub::decode_shot_info(&values)
+                    crate::tags::canon_sub::decode_shot_info(&values, model_name)
                 }
                 (Manufacturer::Canon, 0x0002) => {
                     let values: Vec<u16> = (0..count as usize)
@@ -3004,13 +3103,39 @@ fn read_makernote_ifd(
                             let s = match v { 0=>"Horizontal (normal)", 1=>"Rotate 90 CW", 2=>"Rotate 270 CW", _=> "" };
                             if s.is_empty() { v.to_string() } else { s.to_string() }
                         })); }
+                        // FocusDistanceUpper at 0x43, FocusDistanceLower at 0x45 (int16uRev = big-endian)
+                        // RawConv: suppress when 0. ValueConv: val/100. PrintConv: ">655.345 ? 'inf' : '$val m'"
+                        if d.len() > 0x44 {
+                            let fu = r16be(0x43);
+                            if fu != 0 {
+                                let m = fu as f64 / 100.0;
+                                let pv = if m > 655.345 { "inf".to_string() } else { format!("{} m", m) };
+                                t.push(mk_canon_str("FocusDistanceUpper", &pv));
+                                if d.len() > 0x46 {
+                                    let fl = r16be(0x45);
+                                    let m2 = fl as f64 / 100.0;
+                                    let pv2 = if m2 > 655.345 { "inf".to_string() } else { format!("{} m", m2) };
+                                    t.push(mk_canon_str("FocusDistanceLower", &pv2));
+                                }
+                            }
+                        }
                         if d.len() > 134 { t.push(mk_canon_str("PictureStyle", &rb(0x86).to_string())); }
                         // int16u fields (little-endian)
                         if d.len() > 96 { let v = r16le(0x5e); let pv_s; let pv = canon_wb_name(v as i16); let pv_owned = if pv.is_empty() { pv_s = v.to_string(); pv_s.as_str() } else { pv }; t.push(mk_canon_str("WhiteBalance", pv_owned)); }
                         if d.len() > 100 { let v = r16le(0x62); if v > 0 { t.push(mk_canon_str("ColorTemperature", &v.to_string())); } }
-                        // LensType at 0x111 = 273 (big-endian int16u)
-                        if d.len() > 275 { t.push(mk_canon_str("MinFocalLength", &r16le(0x113).to_string())); }
-                        if d.len() > 277 { t.push(mk_canon_str("MaxFocalLength", &r16le(0x115).to_string())); }
+                        // LensType at 0x111 = 273 (big-endian int16uRev). RawConv: suppress if 0.
+                        if d.len() > 273 {
+                            let lt = r16be(0x111);
+                            if lt != 0 {
+                                let pv = crate::tags::canon_sub::canon_lens_type_name(lt)
+                                    .map(|s| s.to_string())
+                                    .unwrap_or_else(|| lt.to_string());
+                                t.push(mk_canon_str("LensType", &pv));
+                            }
+                        }
+                        // MinFocalLength at 0x113, MaxFocalLength at 0x115 (big-endian int16uRev)
+                        if d.len() > 275 { t.push(mk_canon_str("MinFocalLength", &r16be(0x113).to_string())); }
+                        if d.len() > 277 { t.push(mk_canon_str("MaxFocalLength", &r16be(0x115).to_string())); }
                         // FirmwareVersion string at 0x136 = 310, length 6
                         if d.len() >= 316 {
                             let fw = String::from_utf8_lossy(&d[0x136..0x136+6]).trim_end_matches('\0').to_string();
@@ -3074,7 +3199,6 @@ fn read_makernote_ifd(
                                 }
                             }
                         }
-                        let _ = r16be; // suppress unused warning
                     } else if known_format {
                         // Generic CameraInfo fields for other models (byte offsets, int8u single bytes)
                         // This is a fallback for non-1DmkIII models that were using the old code
@@ -3125,20 +3249,63 @@ fn read_makernote_ifd(
                 }
                 (Manufacturer::Canon, 0x00A0) => {
                     // Canon ProcessingInfo: int16s format (from Perl Canon::Processing)
-                    // FIRST_ENTRY=1, so index i corresponds to int16s[i] (0-based)
+                    // FIRST_ENTRY=1, so index i corresponds to int16s[i] (0-based in data)
                     let mut t = Vec::new();
                     let rd = |i: usize| -> i16 { read_u16(value_data, i * 2, byte_order) as i16 };
-                    if count as usize >= 8 {
-                        t.push(mk_canon_str("ToneCurve", &rd(1).to_string()));
-                        // index 2 = Sharpness (condition-based, skip)
-                        t.push(mk_canon_str("SharpnessFrequency", &rd(3).to_string()));
+                    let rdu = |i: usize| -> u16 { read_u16(value_data, i * 2, byte_order) };
+                    let n = count as usize;
+                    if n >= 8 {
+                        // index 1: ToneCurve
+                        let tc = rd(1);
+                        let pv = match tc { 0=>"Standard", 1=>"Manual", 2=>"Custom", _=>"" };
+                        let pv = if pv.is_empty() { tc.to_string() } else { pv.to_string() };
+                        t.push(mk_canon_str("ToneCurve", &pv));
+                        // index 2 = Sharpness (condition-based 20D/350D excluded, skip)
+                        // index 3: SharpnessFrequency
+                        let sf = rd(3);
+                        let pv = match sf { 0=>"n/a", 1=>"Lowest", 2=>"Low", 3=>"Standard", 4=>"High", 5=>"Highest", _=>"" };
+                        let pv = if pv.is_empty() { sf.to_string() } else { pv.to_string() };
+                        t.push(mk_canon_str("SharpnessFrequency", &pv));
                         t.push(mk_canon_str("SensorRedLevel", &rd(4).to_string()));
                         t.push(mk_canon_str("SensorBlueLevel", &rd(5).to_string()));
                         t.push(mk_canon_str("WhiteBalanceRed", &rd(6).to_string()));
                         t.push(mk_canon_str("WhiteBalanceBlue", &rd(7).to_string()));
                     }
-                    if count as usize >= 14 {
-                        t.push(mk_canon_str("DigitalGain", &rd(11).to_string()));
+                    if n >= 9 {
+                        // index 8: WhiteBalance — RawConv: suppress if < 0
+                        let wb = rd(8);
+                        if wb >= 0 {
+                            let pv = canon_wb_name(wb);
+                            let pv = if pv.is_empty() { wb.to_string() } else { pv.to_string() };
+                            t.push(mk_canon_str("WhiteBalance", &pv));
+                        }
+                    }
+                    if n >= 10 {
+                        // index 9: ColorTemperature
+                        let ct = rdu(9);
+                        t.push(mk_canon_str("ColorTemperature", &ct.to_string()));
+                    }
+                    if n >= 11 {
+                        // index 10: PictureStyle (PrintHex + pictureStyles lookup)
+                        let ps = rd(10);
+                        let pv = match ps as u8 {
+                            0x00 => "None", 0x01 => "Standard", 0x02 => "Portrait",
+                            0x03 => "High Saturation", 0x04 => "Adobe RGB",
+                            0x05 => "Low Saturation", 0x06 => "CM Set 1", 0x07 => "CM Set 2",
+                            0x21 => "User Def. 1", 0x22 => "User Def. 2", 0x23 => "User Def. 3",
+                            0x41 => "PC 1", 0x42 => "PC 2", 0x43 => "PC 3",
+                            0x81 => "Standard", 0x82 => "Portrait", 0x83 => "Landscape",
+                            0x84 => "Neutral", 0x85 => "Faithful", 0x86 => "Monochrome",
+                            0x87 => "Auto", 0x88 => "Fine Detail", 0xff => "n/a",
+                            _ => "",
+                        };
+                        let pv = if pv.is_empty() { format!("0x{:x}", ps as u8) } else { pv.to_string() };
+                        t.push(mk_canon_str("PictureStyle", &pv));
+                    }
+                    if n >= 14 {
+                        // index 11: DigitalGain (ValueConv: val/10)
+                        let dg = rd(11);
+                        t.push(mk_canon_str("DigitalGain", &(dg as f64 / 10.0).to_string()));
                         t.push(mk_canon_str("WBShiftAB", &rd(12).to_string()));
                         t.push(mk_canon_str("WBShiftGM", &rd(13).to_string()));
                     }
@@ -3152,7 +3319,22 @@ fn read_makernote_ifd(
                         if i * 2 + 2 > value_data.len() { return 0; }
                         read_u16(value_data, i * 2, byte_order) as i16
                     };
+                    let rdu4 = |i: usize| -> u32 {
+                        if i * 2 + 4 > value_data.len() { return 0; }
+                        read_u32(value_data, i * 2, byte_order)
+                    };
                     let n = count as usize;
+                    // index 1: FileNumber for 20D/350D (int32u, not int16s)
+                    // ValueConv: (($val&0xffc0)>>6)*10000+(($val>>16)&0xff)+(($val&0x3f)<<8)
+                    // PrintConv: s/(\d+)(\d{4})/$1-$2/
+                    let is_20d_350d = model_name.contains("20D") || model_name.contains("350D");
+                    if n > 2 && is_20d_350d {
+                        let raw = rdu4(1); // index 1 = byte offset 2, 4 bytes (int32u)
+                        let dir = (raw & 0xffc0) >> 6;
+                        let file = ((raw >> 16) & 0xff) | ((raw & 0x3f) << 8);
+                        let num = dir * 10000 + file;
+                        t.push(mk_canon_str("FileNumber", &format!("{}-{:04}", num / 10000, num % 10000)));
+                    }
                     // index 7: RawJpgSize (skip if < 0)
                     if n > 7 { let v = rd(7); if v >= 0 {
                         let pv = match v { 0=>"Large", 1=>"Medium 1", 2=>"Medium 2", 3=>"Small 1", 4=>"Small 2", 5=>"Small 3", 14=>"Medium", 15=>"Small", _=>""};
@@ -3175,11 +3357,31 @@ fn read_makernote_ifd(
                     if n > 12 { t.push(mk_canon_str("WBBracketValueAB", &rd(12).to_string())); }
                     // index 13: WBBracketValueGM
                     if n > 13 { t.push(mk_canon_str("WBBracketValueGM", &rd(13).to_string())); }
+                    // index 14: FilterEffect (skip if -1)
+                    // RawConv => '$val==-1 ? undef : $val'
+                    if n > 14 { let v = rd(14); if v != -1 {
+                        let pv = match v { 0=>"None", 1=>"Yellow", 2=>"Orange", 3=>"Red", 4=>"Green", _=>""};
+                        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+                        t.push(mk_canon_str("FilterEffect", &pv));
+                    }}
+                    // index 15: ToningEffect (skip if -1)
+                    if n > 15 { let v = rd(15); if v != -1 {
+                        let pv = match v { 0=>"None", 1=>"Sepia", 2=>"Blue", 3=>"Purple", 4=>"Green", _=>""};
+                        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+                        t.push(mk_canon_str("ToningEffect", &pv));
+                    }}
                     // index 19: LiveViewShooting (off/on)
                     if n > 19 { let v = rd(19);
                         t.push(mk_canon_str("LiveViewShooting", if v == 0 { "Off" } else { "On" }));
                     }
                     t
+                }
+                (Manufacturer::Canon, 0x000F) => {
+                    // Canon CustomFunctions (ProcessCanonCustom format)
+                    // First 2 bytes = block size. Then entries of 2 bytes each:
+                    //   high byte = tag number, low byte = value
+                    // Dispatch to camera-model-specific table.
+                    decode_canon_custom_functions(value_data, byte_order, model_name)
                 }
                 (Manufacturer::Canon, 0x0099) => {
                     // Canon CustomFunctions2 (from Perl CanonCustom::ProcessCanonCustom2)
@@ -3557,7 +3759,7 @@ fn read_makernote_ifd(
             (Manufacturer::Canon, 0x0003) | // CanonFlashInfo (Unknown => 1)
             (Manufacturer::Canon, 0x0004) | // CanonShotInfo
             (Manufacturer::Canon, 0x000D) | // CanonCameraInfo
-            (Manufacturer::Canon, 0x000F) | // CustomFunctions (SubDirectory)
+            (Manufacturer::Canon, 0x000F) | // CustomFunctions (SubDirectory, decoded in sub_tags)
             (Manufacturer::Canon, 0x0093) | // CanonFileInfo (SubDirectory)
             (Manufacturer::Canon, 0x0012) | // CanonAFInfo
             (Manufacturer::Canon, 0x0026) | // CanonAFInfo2
@@ -3612,6 +3814,26 @@ fn read_makernote_ifd(
         if manufacturer == Manufacturer::Canon && matches!(name,
             "ColorDataVersion" | "FlashOutput" | "FocusDistanceLower" | "FocusDistanceUpper"
         ) { continue; }
+
+        // Canon tag 0x0019: unknown in main MakerNotes (Perl shows as "Canon_0x0019"),
+        // but wrongly mapped to "WB_RGGBLevelsAsShot" from the ColorData sub-table generated lookup.
+        if manufacturer == Manufacturer::Canon && tag_id == 0x0019 { continue; }
+
+        // Canon tag 0x0083 (OriginalDecisionDataOffset): int32u offset, no print conversion.
+        // The generated table has CameraOrientation PrintConv for this tag ID which is wrong.
+        if manufacturer == Manufacturer::Canon && tag_id == 0x0083 {
+            tags.push(Tag {
+                id: TagId::Numeric(tag_id),
+                name: name.to_string(), description: description.to_string(),
+                group: TagGroup {
+                    family0: "MakerNotes".to_string(),
+                    family1: manufacturer_group_name(manufacturer).to_string(),
+                    family2: "Camera".to_string(),
+                },
+                raw_value: value.clone(), print_value: value.to_display_string(), priority: 0,
+            });
+            continue;
+        }
 
         // Panasonic: suppress tags wrongly matched from generated sub-table lookups
         if manufacturer == Manufacturer::Panasonic && matches!(name,
@@ -3969,19 +4191,8 @@ fn decode_canon_color_balance(data: &[u8], count: usize, bo: ByteOrderMark) -> V
         tags.push(mk_canon_str("WB_RGGBBlackLevels", &format!("{} {} {} {}", r, g1, b, g2)));
     }
 
-    // MeasuredRGGB from MeasuredColor tag (0x00AA) - handled separately
-    // But we can compute RedBalance and BlueBalance here
-    if let Some(auto_tag) = tags.iter().find(|t| t.name == "WB_RGGBLevels") {
-        if let Value::String(ref s) = auto_tag.raw_value {
-            let parts: Vec<f64> = s.split_whitespace().filter_map(|p| p.parse().ok()).collect();
-            if parts.len() >= 4 && parts[1] > 0.0 {
-                let red_bal = parts[0] / parts[1];
-                let blue_bal = parts[2] / parts[1];
-                tags.push(mk_canon_str("RedBalance", &format!("{:.6}", red_bal)));
-                tags.push(mk_canon_str("BlueBalance", &format!("{:.6}", blue_bal)));
-            }
-        }
-    }
+    // RedBalance and BlueBalance are computed as Composite tags from WB_RGGBLevels.
+    // Do not emit them here to avoid duplicates.
 
     tags
 }
@@ -4227,6 +4438,21 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
             tags.push(mk_canon_str("AverageBlackLevel", &v.join(" ")));
         }
 
+        // FlashOutput at index 0x26b (619) in ColorData4
+        // ValueConv: '$val >= 255 ? 255 : exp(($val-200)/16*log(2))'
+        // PrintConv: '$val == 255 ? "Strobe or Misfire" : sprintf("%.0f%%", $val * 100)'
+        let fo = 0x26busize;
+        if fo < count {
+            let v = rd(fo);
+            let vc = if v >= 255 { 255.0_f64 } else { ((v as f64 - 200.0) / 16.0 * 2_f64.ln()).exp() };
+            let pv = if v >= 255 {
+                "Strobe or Misfire".to_string()
+            } else {
+                format!("{:.0}%", vc * 100.0)
+            };
+            tags.push(mk_canon_str("FlashOutput", &pv));
+        }
+
         // FlashBatteryLevel at index 0x26c (620) — single int16s
         // PrintConv: '$val ? sprintf("%.2fV", $val * 5 / 186) : "n/a"'
         let fbl = 0x26cusize;
@@ -4250,11 +4476,20 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
             tags.push(mk_canon_str("RawMeasuredRGGB", &vals.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ")));
         }
 
-    } else if count >= 580 {
-        // ColorData3 layout (1DmkIIN, 5D, 30D, 400D — count=796, version=1)
-        // WB data starts at 0x3f (63), layout similar to ColorData4's ColorCoefs
-        // but with its own unknowns. RawMeasuredRGGB at 0x26a (618).
-        let _cc = 63usize;
+    } else if count == 582 {
+        // ColorData1 layout (20D and 350D — count=582)
+        // WB entries at specific indices in the int16s array.
+        // From Perl Canon::ColorData1 (FIRST_ENTRY=0, FORMAT=int16s):
+        //   0x19 (25) = WB_RGGBLevelsAsShot [4], 0x1d (29) = ColorTempAsShot
+        //   0x1e (30) = WB_RGGBLevelsAuto [4],   0x22 (34) = ColorTempAuto
+        //   0x23 (35) = WB_RGGBLevelsDaylight [4], 0x27 (39) = ColorTempDaylight
+        //   0x28 (40) = WB_RGGBLevelsShade [4],  0x2c (44) = ColorTempShade
+        //   0x2d (45) = WB_RGGBLevelsCloudy [4], 0x31 (49) = ColorTempCloudy
+        //   0x32 (50) = WB_RGGBLevelsTungsten [4], 0x36 (54) = ColorTempTungsten
+        //   0x37 (55) = WB_RGGBLevelsFluorescent [4], 0x3b (59) = ColorTempFluorescent
+        //   0x3c (60) = WB_RGGBLevelsFlash [4], 0x40 (64) = ColorTempFlash
+        //   0x41 (65) = WB_RGGBLevelsCustom1 [4], 0x45 (69) = ColorTempCustom1
+        //   0x46 (70) = WB_RGGBLevelsCustom2 [4], 0x4a (74) = ColorTempCustom2
         let wb4 = |base: usize| -> String {
             let r = rd(base) as u16;
             let g1 = rd(base+1) as u16;
@@ -4264,23 +4499,92 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
         };
         let ct = |i: usize| -> u16 { rdu(i) };
 
-        // AsShot at 0x26 (38) relative to whole array (not ColorCoefs)
-        // ColorData3 table (Perl Canon::ColorData3):
-        // 0x26 = WB_RGGBLevelsAsShot, 0x2a = CT AsShot, 0x2b = CT (same?), ...
-        // Use Perl table offsets directly:
-        let base = 0x26usize; // WB_RGGBLevelsAsShot at index 0x26 in ColorData3
-        if base + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsAsShot", &wb4(base))); }
-        if base + 4 < count { let t = ct(base+4); if t > 0 { tags.push(mk_canon_str("ColorTempAsShot", &t.to_string())); } }
-        // 0x2b = WB_RGGBLevelsDaylight
-        let dl = 0x2busize;
-        if dl + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsDaylight", &wb4(dl))); }
-        if dl + 4 < count { let t = ct(dl+4); if t > 0 { tags.push(mk_canon_str("ColorTempDaylight", &t.to_string())); } }
+        // AsShot
+        if 0x19 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsAsShot", &wb4(0x19))); }
+        if 0x1d < count { let t = ct(0x1d); if t > 0 { tags.push(mk_canon_str("ColorTempAsShot", &t.to_string())); } }
+        // Auto
+        if 0x1e + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsAuto", &wb4(0x1e))); }
+        if 0x22 < count { let t = ct(0x22); if t > 0 { tags.push(mk_canon_str("ColorTempAuto", &t.to_string())); } }
+        // Daylight
+        if 0x23 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsDaylight", &wb4(0x23))); }
+        if 0x27 < count { let t = ct(0x27); if t > 0 { tags.push(mk_canon_str("ColorTempDaylight", &t.to_string())); } }
+        // Shade
+        if 0x28 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsShade", &wb4(0x28))); }
+        if 0x2c < count { let t = ct(0x2c); if t > 0 { tags.push(mk_canon_str("ColorTempShade", &t.to_string())); } }
+        // Cloudy
+        if 0x2d + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsCloudy", &wb4(0x2d))); }
+        if 0x31 < count { let t = ct(0x31); if t > 0 { tags.push(mk_canon_str("ColorTempCloudy", &t.to_string())); } }
+        // Tungsten
+        if 0x32 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsTungsten", &wb4(0x32))); }
+        if 0x36 < count { let t = ct(0x36); if t > 0 { tags.push(mk_canon_str("ColorTempTungsten", &t.to_string())); } }
+        // Fluorescent
+        if 0x37 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsFluorescent", &wb4(0x37))); }
+        if 0x3b < count { let t = ct(0x3b); if t > 0 { tags.push(mk_canon_str("ColorTempFluorescent", &t.to_string())); } }
+        // Flash
+        if 0x3c + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsFlash", &wb4(0x3c))); }
+        if 0x40 < count { let t = ct(0x40); if t > 0 { tags.push(mk_canon_str("ColorTempFlash", &t.to_string())); } }
+        // Custom1
+        if 0x41 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsCustom1", &wb4(0x41))); }
+        if 0x45 < count { let t = ct(0x45); if t > 0 { tags.push(mk_canon_str("ColorTempCustom1", &t.to_string())); } }
+        // Custom2
+        if 0x46 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsCustom2", &wb4(0x46))); }
+        if 0x4a < count { let t = ct(0x4a); if t > 0 { tags.push(mk_canon_str("ColorTempCustom2", &t.to_string())); } }
 
-        // WB_RGGBLevels alias
-        if base + 4 < count { tags.push(mk_canon_str("WB_RGGBLevels", &wb4(base))); }
+        // WB_RGGBLevels alias (same as AsShot)
+        if 0x19 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevels", &wb4(0x19))); }
 
-        // RawMeasuredRGGB at 0x26a (618) with word swap
-        let rmb = 0x26ausize;
+    } else if count == 796 {
+        // ColorData3 layout (1DmkIIN, 5D, 30D, 400D — count=796, version=1)
+        // WB entries at specific indices (from Perl Canon::ColorData3):
+        //   0x3f (63) = WB_RGGBLevelsAsShot [4], 0x43 (67) = ColorTempAsShot
+        //   0x44 (68) = WB_RGGBLevelsAuto [4], 0x48 (72) = ColorTempAuto
+        //   0x49 (73) = WB_RGGBLevelsMeasured [4], 0x4d (77) = ColorTempMeasured
+        //   0x4e (78) = WB_RGGBLevelsDaylight [4], 0x52 (82) = ColorTempDaylight
+        //   0x53 (83) = WB_RGGBLevelsShade [4], 0x57 (87) = ColorTempShade
+        //   0x58 (88) = WB_RGGBLevelsCloudy [4], 0x5c (92) = ColorTempCloudy
+        //   0x5d (93) = WB_RGGBLevelsTungsten [4], 0x61 (97) = ColorTempTungsten
+        //   0x62 (98) = WB_RGGBLevelsFluorescent [4], 0x66 (102) = ColorTempFluorescent
+        //   0x67 (103) = WB_RGGBLevelsKelvin [4], 0x6b (107) = ColorTempKelvin
+        //   0x6c (108) = WB_RGGBLevelsFlash [4], 0x70 (112) = ColorTempFlash
+        //   0x80 (128) = WB_RGGBLevelsCustom [4], 0x84 (132) = ColorTempCustom
+        //   RawMeasuredRGGB at 0x287 (647) with word-swap (int32u[4])
+        let wb4 = |base: usize| -> String {
+            let r = rd(base) as u16;
+            let g1 = rd(base+1) as u16;
+            let g2 = rd(base+2) as u16;
+            let b = rd(base+3) as u16;
+            format!("{} {} {} {}", r, g1, g2, b)
+        };
+        let ct = |i: usize| -> u16 { rdu(i) };
+
+        if 0x3f + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsAsShot", &wb4(0x3f))); }
+        if 0x43 < count { let t = ct(0x43); if t > 0 { tags.push(mk_canon_str("ColorTempAsShot", &t.to_string())); } }
+        if 0x44 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsAuto", &wb4(0x44))); }
+        if 0x48 < count { let t = ct(0x48); if t > 0 { tags.push(mk_canon_str("ColorTempAuto", &t.to_string())); } }
+        if 0x49 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsMeasured", &wb4(0x49))); }
+        if 0x4d < count { let t = ct(0x4d); if t > 0 { tags.push(mk_canon_str("ColorTempMeasured", &t.to_string())); } }
+        if 0x4e + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsDaylight", &wb4(0x4e))); }
+        if 0x52 < count { let t = ct(0x52); if t > 0 { tags.push(mk_canon_str("ColorTempDaylight", &t.to_string())); } }
+        if 0x53 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsShade", &wb4(0x53))); }
+        if 0x57 < count { let t = ct(0x57); if t > 0 { tags.push(mk_canon_str("ColorTempShade", &t.to_string())); } }
+        if 0x58 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsCloudy", &wb4(0x58))); }
+        if 0x5c < count { let t = ct(0x5c); if t > 0 { tags.push(mk_canon_str("ColorTempCloudy", &t.to_string())); } }
+        if 0x5d + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsTungsten", &wb4(0x5d))); }
+        if 0x61 < count { let t = ct(0x61); if t > 0 { tags.push(mk_canon_str("ColorTempTungsten", &t.to_string())); } }
+        if 0x62 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsFluorescent", &wb4(0x62))); }
+        if 0x66 < count { let t = ct(0x66); if t > 0 { tags.push(mk_canon_str("ColorTempFluorescent", &t.to_string())); } }
+        if 0x67 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsKelvin", &wb4(0x67))); }
+        if 0x6b < count { let t = ct(0x6b); if t > 0 { tags.push(mk_canon_str("ColorTempKelvin", &t.to_string())); } }
+        if 0x6c + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsFlash", &wb4(0x6c))); }
+        if 0x70 < count { let t = ct(0x70); if t > 0 { tags.push(mk_canon_str("ColorTempFlash", &t.to_string())); } }
+        if 0x80 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsCustom", &wb4(0x80))); }
+        if 0x84 < count { let t = ct(0x84); if t > 0 { tags.push(mk_canon_str("ColorTempCustom", &t.to_string())); } }
+
+        // WB_RGGBLevels alias (same as AsShot)
+        if 0x3f + 4 < count { tags.push(mk_canon_str("WB_RGGBLevels", &wb4(0x3f))); }
+
+        // RawMeasuredRGGB at 0x287 (647) — int32u[4] with word swap
+        let rmb = 0x287usize;
         if rmb + 8 <= count {
             let mut vals = Vec::new();
             for i in 0..4 {
@@ -4290,6 +4594,45 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
             }
             tags.push(mk_canon_str("RawMeasuredRGGB", &vals.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ")));
         }
+
+    } else if count == 653 {
+        // ColorData2 layout (1DmkII and 1DSmkII — count=653)
+        // From Perl Canon::ColorData2 (FIRST_ENTRY=0, FORMAT=int16s):
+        //   0x18 = WB_RGGBLevelsAuto [4], 0x1c = ColorTempAuto
+        //   0x22 = WB_RGGBLevelsAsShot [4], 0x26 = ColorTempAsShot
+        //   0x27 = WB_RGGBLevelsDaylight [4], 0x2b = ColorTempDaylight
+        //   (similar pattern continues with Shade, Cloudy, Tungsten, Fluorescent, Kelvin, Flash)
+        let wb4 = |base: usize| -> String {
+            let r = rd(base) as u16;
+            let g1 = rd(base+1) as u16;
+            let g2 = rd(base+2) as u16;
+            let b = rd(base+3) as u16;
+            format!("{} {} {} {}", r, g1, g2, b)
+        };
+        let ct = |i: usize| -> u16 { rdu(i) };
+
+        if 0x18 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsAuto", &wb4(0x18))); }
+        if 0x1c < count { let t = ct(0x1c); if t > 0 { tags.push(mk_canon_str("ColorTempAuto", &t.to_string())); } }
+        if 0x22 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsAsShot", &wb4(0x22))); }
+        if 0x26 < count { let t = ct(0x26); if t > 0 { tags.push(mk_canon_str("ColorTempAsShot", &t.to_string())); } }
+        if 0x27 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsDaylight", &wb4(0x27))); }
+        if 0x2b < count { let t = ct(0x2b); if t > 0 { tags.push(mk_canon_str("ColorTempDaylight", &t.to_string())); } }
+        if 0x2c + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsShade", &wb4(0x2c))); }
+        if 0x30 < count { let t = ct(0x30); if t > 0 { tags.push(mk_canon_str("ColorTempShade", &t.to_string())); } }
+        if 0x31 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsCloudy", &wb4(0x31))); }
+        if 0x35 < count { let t = ct(0x35); if t > 0 { tags.push(mk_canon_str("ColorTempCloudy", &t.to_string())); } }
+        if 0x36 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsTungsten", &wb4(0x36))); }
+        if 0x3a < count { let t = ct(0x3a); if t > 0 { tags.push(mk_canon_str("ColorTempTungsten", &t.to_string())); } }
+        if 0x3b + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsFluorescent", &wb4(0x3b))); }
+        if 0x3f < count { let t = ct(0x3f); if t > 0 { tags.push(mk_canon_str("ColorTempFluorescent", &t.to_string())); } }
+        if 0x40 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsKelvin", &wb4(0x40))); }
+        if 0x44 < count { let t = ct(0x44); if t > 0 { tags.push(mk_canon_str("ColorTempKelvin", &t.to_string())); } }
+        if 0x45 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevelsFlash", &wb4(0x45))); }
+        if 0x49 < count { let t = ct(0x49); if t > 0 { tags.push(mk_canon_str("ColorTempFlash", &t.to_string())); } }
+
+        // WB_RGGBLevels alias (same as AsShot)
+        if 0x22 + 4 < count { tags.push(mk_canon_str("WB_RGGBLevels", &wb4(0x22))); }
+
     } else {
         // Older ColorData (count < 580) — simple WB layout
         let wb_base = if count > 350 { 50 } else if count > 200 { 25 } else { 19 };

@@ -199,7 +199,50 @@ impl ExifReader {
             );
             // Remove the raw MakerNote tag and replace with parsed tags
             tags.retain(|t| t.name != "MakerNote");
-            tags.extend(mn_tags);
+            // In Perl ExifTool, MakerNotes tags with equal/higher priority overwrite EXIF tags.
+            // Tags in the EXIF-primary list: EXIF wins (skip MakerNotes duplicate).
+            // Other tags: MakerNotes wins (remove EXIF version, add MakerNotes version).
+            {
+                // Tags where EXIF takes priority over MakerNotes (structural/authoritative EXIF)
+                let exif_primary: &[&str] = &[
+                    "ThumbnailOffset", "ThumbnailLength", "ThumbnailImage",
+                    "StripOffsets", "StripByteCounts",
+                    "PreviewImageStart", "PreviewImageLength", "PreviewImage",
+                    "ImageWidth", "ImageHeight", "BitsPerSample", "Compression",
+                    "PhotometricInterpretation", "SamplesPerPixel", "RowsPerStrip",
+                    "PlanarConfiguration", "XResolution", "YResolution", "ResolutionUnit",
+                    "Orientation", "Make", "Model", "Software",
+                    "ExifByteOrder", "CR2CFAPattern", "RawImageSegmentation",
+                    "ColorSpace", "ExifVersion", "FlashpixVersion",
+                    "ExifImageWidth", "ExifImageHeight", "InteropIndex", "InteropVersion",
+                    "DateTimeOriginal", "CreateDate", "ModifyDate", "DateTime",
+                    "FocalPlaneXResolution", "FocalPlaneYResolution", "FocalPlaneResolutionUnit",
+                    "CustomRendered", "ExposureMode", "SceneCaptureType",
+                    "Flash", "FocalLength", "ISO", "ExposureTime", "ExposureProgram",
+                    "FNumber", "ShutterSpeedValue", "ApertureValue", "ComponentsConfiguration",
+                    "UserComment",
+                ];
+                let mn_name_set: std::collections::HashSet<String> = mn_tags.iter()
+                    .map(|t| t.name.clone())
+                    .collect();
+                let exif_has: std::collections::HashSet<String> = tags.iter()
+                    .map(|t| t.name.clone())
+                    .collect();
+                // Remove EXIF non-primary tags when MakerNotes provides them (MakerNotes wins)
+                tags.retain(|t| {
+                    !mn_name_set.contains(&t.name)
+                    || exif_primary.contains(&t.name.as_str())
+                });
+                // Add MakerNotes tags, but skip EXIF-primary tags that EXIF already provides
+                for mn_tag in mn_tags {
+                    if exif_primary.contains(&mn_tag.name.as_str())
+                        && exif_has.contains(&mn_tag.name) {
+                        // EXIF wins - don't add MakerNotes version
+                        continue;
+                    }
+                    tags.push(mn_tag);
+                }
+            }
         }
 
         // Parse IPTC data embedded in TIFF (tag 0x83BB "IPTC-NAA")
@@ -276,6 +319,38 @@ impl ExifReader {
 
         // Process GeoTIFF key directory if present
         process_geotiff_keys(&mut tags);
+
+        // Final deduplication: within MakerNotes, if the same tag name appears multiple times
+        // (e.g., from different sub-tables), keep the last occurrence.
+        // Only deduplicate MakerNotes tags (family0 == "MakerNotes") to avoid affecting
+        // structural EXIF/IFD tags.
+        {
+            // Find MakerNotes tags that have duplicates
+            let mn_tags_start = tags.iter().position(|t| t.group.family0 == "MakerNotes")
+                .unwrap_or(tags.len());
+            if mn_tags_start < tags.len() {
+                // For each MakerNotes tag name, find the last occurrence index
+                let mut last_idx: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+                for (i, t) in tags[mn_tags_start..].iter().enumerate() {
+                    last_idx.insert(t.name.as_str(), i + mn_tags_start);
+                }
+                // Retain only the last occurrence of each MakerNotes duplicate
+                let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
+                // Process in reverse, keeping only the last (= rightmost = first in reverse)
+                let mut keep = vec![false; tags.len()];
+                for (i, t) in tags.iter().enumerate().rev() {
+                    if t.group.family0 != "MakerNotes" {
+                        keep[i] = true;
+                        continue;
+                    }
+                    if seen.insert(t.name.as_str()) {
+                        keep[i] = true; // first seen in reverse = last occurrence
+                    }
+                }
+                let mut iter = keep.iter();
+                tags.retain(|_| *iter.next().unwrap_or(&true));
+            }
+        }
 
         Ok(tags)
     }
@@ -429,6 +504,18 @@ impl ExifReader {
                         }
                     }
                 }
+                // In CR2 IFD2 (preview JPEG), suppress StripOffsets/StripByteCounts
+                // because IFD3 has the correct values for the raw data.
+                // Also suppress tags that duplicate IFD0 content (ImageWidth, ImageHeight,
+                // BitsPerSample, Compression) since the first (IFD0) value is preferred.
+                0x0100 | 0x0101 | 0x0102 | 0x0103 | 0x0111 | 0x0117
+                    if ifd_name == "IFD2" => {
+                    continue;
+                }
+                // In CR2 IFD3 (raw data), suppress Compression (IFD0 value is preferred).
+                0x0103 if ifd_name == "IFD3" => {
+                    continue;
+                }
                 _ => {}
             }
 
@@ -514,8 +601,26 @@ impl ExifReader {
         } else { 0 };
         if next_ifd_offset != 0 && ifd_name == "IFD0" {
             // IFD1 = thumbnail
+            let ifd1_start_idx = tags.len();
             let ifd1_next = Self::read_ifd(data, header, next_ifd_offset, "IFD1", tags)
                 .ok().flatten();
+            // Suppress IFD1 tags that duplicate IFD0 tags (only keep thumbnail-specific ones)
+            // In Perl, IFD1 (thumbnail) tags are secondary and don't appear in output if IFD0 has them.
+            {
+                let ifd0_names: std::collections::HashSet<String> = tags[..ifd1_start_idx].iter()
+                    .map(|t| t.name.clone())
+                    .collect();
+                let thumbnail_tags = ["ThumbnailOffset", "ThumbnailLength", "ThumbnailImage",
+                    "Compression", "PhotometricInterpretation", "JPEGInterchangeFormat",
+                    "JPEGInterchangeFormatLength"];
+                tags.retain(|t| {
+                    if t.group.family1 != "IFD1" { return true; }
+                    // Keep thumbnail-specific tags
+                    if thumbnail_tags.contains(&t.name.as_str()) { return true; }
+                    // Suppress IFD1 tags that IFD0 already has
+                    !ifd0_names.contains(&t.name)
+                });
+            }
 
             // Create ThumbnailImage tag if offset+length are present
             let thumb_offset = tags.iter()

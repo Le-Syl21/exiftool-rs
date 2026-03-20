@@ -971,7 +971,10 @@ impl ExifTool {
                 } else { "" }
             } else { "" };
             // Suppress ExifByteOrder for BigTIFF, Canon VRD/DR4 (Perl doesn't output it for these)
-            if !bo_str.is_empty() && file_type != FileType::Btf
+            // Also skip if already emitted by ExifReader (TIFF-based formats)
+            let already_has_exifbyteorder = tags.iter().any(|t| t.name == "ExifByteOrder");
+            if !bo_str.is_empty() && !already_has_exifbyteorder
+                && file_type != FileType::Btf
                 && file_type != FileType::Dr4 && file_type != FileType::Vrd
                 && file_type != FileType::Crw {
                 tags.push(file_tag("ExifByteOrder", Value::String(bo_str.to_string())));
