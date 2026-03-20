@@ -3570,8 +3570,11 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
         _ => "",
     };
     let ver_pv = if version_str.is_empty() { version.to_string() } else { version_str.to_string() };
-    // ColorDataVersion is internal — Perl doesn't emit it by default
-    // tags.push(mk_canon_str("ColorDataVersion", &ver_pv));
+    // Only emit ColorDataVersion for known versions (Perl handles unknown versions
+    // through different sub-tables that we don't implement)
+    if !version_str.is_empty() {
+        tags.push(mk_canon_str("ColorDataVersion", &ver_pv));
+    }
 
     // ColorData4: version 2-9 (count 674..1346) — uses ColorCoefs subdir at index 0x3f (63)
     // ColorData3: version 1 (count=796) — uses its own WB layout at index 0x3f (63)
