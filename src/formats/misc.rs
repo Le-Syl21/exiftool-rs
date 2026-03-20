@@ -6834,15 +6834,17 @@ pub fn read_mxf(data: &[u8]) -> Result<Vec<Tag>> {
         if val_start + val_len > data.len() { break; }
         let val = &data[val_start..val_start+val_len];
         
-        // Header/Footer partition (02 05): parse MXFVersion
-        if key[4] == 0x02 && key[5] == 0x05 {
-            if val.len() >= 2 && !tags.iter().any(|t| t.name == "MXFVersion") {
+        // Header/Footer partition (0d0102010102xxxx): parse MXFVersion at offset 0
+        if key[4] == 0x02 && key[5] == 0x05 && key[12] == 0x01 && key[13] == 0x02 {
+            if val.len() >= 4 && !tags.iter().any(|t| t.name == "MXFVersion") {
+                let major = u16::from_be_bytes([val[0], val[1]]);
+                let minor = u16::from_be_bytes([val[2], val[3]]);
                 tags.push(mktag("MXF", "MXFVersion", "MXF Version",
-                    Value::String(format!("{}.{}", val[0], val[1]))));
+                    Value::String(format!("{}.{}", major, minor))));
             }
         }
-        // Primer Pack (key[13] == 0x05 for Primer): 0d010201010501xx
-        else if key[12] == 0x01 && key[13] == 0x05 {
+        // Primer Pack: key[12]=0x01 && key[13]=0x05 (0d010201010501xx)
+        else if key[4] == 0x02 && key[5] == 0x05 && key[12] == 0x01 && key[13] == 0x05 {
             if val.len() >= 8 {
                 let count = u32::from_be_bytes([val[0],val[1],val[2],val[3]]) as usize;
                 let item_size = u32::from_be_bytes([val[4],val[5],val[6],val[7]]) as usize;
@@ -6867,9 +6869,18 @@ pub fn read_mxf(data: &[u8]) -> Result<Vec<Tag>> {
         pos = val_start + val_len;
     }
     
-    // Deduplicate (keep first occurrence)
-    let mut seen = std::collections::HashSet::new();
-    tags.retain(|t| seen.insert(t.name.clone()));
+    // Deduplicate (keep last occurrence, like Perl's MXF dedup behavior)
+    let mut last_index: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for (i, t) in tags.iter().enumerate() {
+        last_index.insert(t.name.clone(), i);
+    }
+    let mut result = Vec::new();
+    for (i, t) in tags.into_iter().enumerate() {
+        if last_index.get(&t.name) == Some(&i) {
+            result.push(t);
+        }
+    }
+    tags = result;
     
     Ok(tags)
 }
@@ -7074,11 +7085,13 @@ fn mxf_decode_product_version(val: &[u8]) -> String {
     let build = u16::from_be_bytes([val[6],val[7]]);
     let rel_type = u16::from_be_bytes([val[8],val[9]]);
     let rel_str = match rel_type {
-        0 => "released".to_string(),
-        1 => "development build".to_string(),
-        2 => "maintenance release".to_string(),
-        3 => "patch release".to_string(),
-        _ => rel_type.to_string(),
+        0 => "unknown".to_string(),
+        1 => "released".to_string(),
+        2 => "debug".to_string(),
+        3 => "patched".to_string(),
+        4 => "beta".to_string(),
+        5 => "private build".to_string(),
+        _ => format!("unknown {}", rel_type),
     };
     format!("{}.{}.{}.{} {}", major, minor, patch, build, rel_str)
 }

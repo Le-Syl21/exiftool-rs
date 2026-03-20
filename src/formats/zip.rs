@@ -187,146 +187,202 @@ fn extract_sfa_strings(xml: &str) -> Vec<String> {
     values
 }
 
+/// A parsed entry from the ZIP central directory.
+struct ZipEntry {
+    filename: String,
+    compression: u16,
+    compressed_size: u32,
+    uncompressed_size: u32,
+    local_header_offset: u32,
+    mod_time: u16,
+    mod_date: u16,
+    crc: u32,
+    required_version: u16,
+    bit_flag: u16,
+}
+
+/// Parse the ZIP central directory and return all entries.
+/// Returns None if no valid EOCD is found.
+fn parse_zip_central_directory(data: &[u8]) -> Option<Vec<ZipEntry>> {
+    let len = data.len();
+    if len < 22 {
+        return None;
+    }
+    // Search for EOCD signature from end of file (allow up to 65535 bytes comment)
+    let search_start = if len > 65557 { len - 65557 } else { 0 };
+    let eocd_pos = {
+        let mut found = None;
+        let mut i = len.saturating_sub(22);
+        loop {
+            if i < search_start { break; }
+            if data[i..i + 4] == [0x50, 0x4B, 0x05, 0x06] {
+                found = Some(i);
+                break;
+            }
+            if i == 0 { break; }
+            i -= 1;
+        }
+        found?
+    };
+
+    let cd_entries = u16::from_le_bytes([data[eocd_pos + 10], data[eocd_pos + 11]]) as usize;
+    let cd_size = u32::from_le_bytes([data[eocd_pos + 12], data[eocd_pos + 13],
+                                      data[eocd_pos + 14], data[eocd_pos + 15]]) as usize;
+    let cd_offset = u32::from_le_bytes([data[eocd_pos + 16], data[eocd_pos + 17],
+                                        data[eocd_pos + 18], data[eocd_pos + 19]]) as usize;
+
+    if cd_offset + cd_size > len {
+        return None;
+    }
+
+    let mut entries = Vec::with_capacity(cd_entries);
+    let mut pos = cd_offset;
+
+    while pos + 46 <= cd_offset + cd_size && pos + 46 <= len {
+        if data[pos..pos + 4] != [0x50, 0x4B, 0x01, 0x02] {
+            break;
+        }
+        let required_version = u16::from_le_bytes([data[pos + 6], data[pos + 7]]);
+        let bit_flag = u16::from_le_bytes([data[pos + 8], data[pos + 9]]);
+        let compression = u16::from_le_bytes([data[pos + 10], data[pos + 11]]);
+        let mod_time = u16::from_le_bytes([data[pos + 12], data[pos + 13]]);
+        let mod_date = u16::from_le_bytes([data[pos + 14], data[pos + 15]]);
+        let crc = u32::from_le_bytes([data[pos + 16], data[pos + 17], data[pos + 18], data[pos + 19]]);
+        let compressed_size = u32::from_le_bytes([data[pos + 20], data[pos + 21], data[pos + 22], data[pos + 23]]);
+        let uncompressed_size = u32::from_le_bytes([data[pos + 24], data[pos + 25], data[pos + 26], data[pos + 27]]);
+        let name_len = u16::from_le_bytes([data[pos + 28], data[pos + 29]]) as usize;
+        let extra_len = u16::from_le_bytes([data[pos + 30], data[pos + 31]]) as usize;
+        let comment_len = u16::from_le_bytes([data[pos + 32], data[pos + 33]]) as usize;
+        let local_header_offset = u32::from_le_bytes([data[pos + 42], data[pos + 43], data[pos + 44], data[pos + 45]]);
+
+        let name_start = pos + 46;
+        if name_start + name_len > len { break; }
+        let filename = String::from_utf8_lossy(&data[name_start..name_start + name_len]).to_string();
+
+        entries.push(ZipEntry {
+            filename,
+            compression,
+            compressed_size,
+            uncompressed_size,
+            local_header_offset,
+            mod_time,
+            mod_date,
+            crc,
+            required_version,
+            bit_flag,
+        });
+
+        pos = name_start + name_len + extra_len + comment_len;
+    }
+
+    Some(entries)
+}
+
+/// Get the file data for a ZIP entry using its local header offset.
+/// Reads the local file header to find the actual data start.
+fn zip_entry_data<'a>(data: &'a [u8], entry: &ZipEntry) -> Option<&'a [u8]> {
+    let lh_offset = entry.local_header_offset as usize;
+    if lh_offset + 30 > data.len() { return None; }
+    if data[lh_offset..lh_offset + 4] != [0x50, 0x4B, 0x03, 0x04] { return None; }
+    let name_len = u16::from_le_bytes([data[lh_offset + 26], data[lh_offset + 27]]) as usize;
+    let extra_len = u16::from_le_bytes([data[lh_offset + 28], data[lh_offset + 29]]) as usize;
+    let data_start = lh_offset + 30 + name_len + extra_len;
+    let data_end = data_start + entry.compressed_size as usize;
+    if data_end > data.len() { return None; }
+    Some(&data[data_start..data_end])
+}
+
 pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
     if data.len() < 30 || !data.starts_with(&[0x50, 0x4B, 0x03, 0x04]) {
         return Err(Error::InvalidData("not a ZIP file".into()));
     }
 
-    // Check for iWork format by scanning filenames in the ZIP.
-    // iWork files have index.xml/index.apxl but NOT [Content_Types].xml (OOXML).
+    // Parse the central directory to get reliable file entries
+    let entries = parse_zip_central_directory(data).unwrap_or_default();
+
+    // Check for iWork format
     {
-        let mut pos = 0usize;
         let mut has_index_xml = false;
         let mut has_content_types = false;
-        let mut scan_count = 0usize;
-        while pos + 30 <= data.len() && data[pos..pos + 4] == [0x50, 0x4B, 0x03, 0x04] && scan_count < 20 {
-            let name_len = u16::from_le_bytes([data[pos + 26], data[pos + 27]]) as usize;
-            let extra_len = u16::from_le_bytes([data[pos + 28], data[pos + 29]]) as usize;
-            let compressed_size = u32::from_le_bytes([data[pos + 18], data[pos + 19], data[pos + 20], data[pos + 21]]) as usize;
-            let name_start = pos + 30;
-            if name_start + name_len > data.len() { break; }
-            let filename = std::str::from_utf8(&data[name_start..name_start + name_len]).unwrap_or("");
-            if filename == "index.xml" || filename == "index.apxl" {
+        for entry in &entries {
+            if entry.filename == "index.xml" || entry.filename == "index.apxl" {
                 has_index_xml = true;
             }
-            if filename == "[Content_Types].xml" {
+            if entry.filename == "[Content_Types].xml" {
                 has_content_types = true;
-                break; // definitely OOXML, not iWork
+                break;
             }
-            pos = name_start + name_len + extra_len + compressed_size;
-            scan_count += 1;
         }
         if has_index_xml && !has_content_types {
             return read_iwork(data);
         }
     }
 
-    // Pre-scan: check if this is an OpenDocument file (has "mimetype" as first file with oasis MIME)
-    let is_opendoc = {
-        let mut found = false;
-        if data.len() > 30 && data[0..4] == [0x50, 0x4B, 0x03, 0x04] {
-            let compression = u16::from_le_bytes([data[8], data[9]]);
-            let compressed_size = u32::from_le_bytes([data[18], data[19], data[20], data[21]]) as usize;
-            let name_len = u16::from_le_bytes([data[26], data[27]]) as usize;
-            let extra_len = u16::from_le_bytes([data[28], data[29]]) as usize;
-            let name_start = 30;
-            if name_start + name_len <= data.len() {
-                let filename = std::str::from_utf8(&data[name_start..name_start + name_len]).unwrap_or("");
-                if filename == "mimetype" && compression == 0 {
-                    let content_start = name_start + name_len + extra_len;
-                    let content_end = (content_start + compressed_size).min(data.len());
-                    if content_start < content_end {
-                        let mime = std::str::from_utf8(&data[content_start..content_end]).unwrap_or("").trim();
-                        if mime.starts_with("application/vnd.oasis.opendocument") {
-                            found = true;
-                        }
-                    }
-                }
-            }
-        }
-        found
+    // Check if this is an OpenDocument file
+    let is_opendoc = entries.first()
+        .map(|e| e.filename == "mimetype" && e.compression == 0)
+        .unwrap_or(false) && {
+        // Read mimetype content
+        entries.first().and_then(|e| zip_entry_data(data, e))
+            .and_then(|d| std::str::from_utf8(d).ok())
+            .map(|s| s.trim().starts_with("application/vnd.oasis.opendocument"))
+            .unwrap_or(false)
     };
 
     let mut tags = Vec::new();
-    let mut file_count = 0u32;
-    let mut total_size = 0u64;
     let mut has_content_types = false;
     let mut has_mimetype = false;
-    let mut filenames = Vec::new();
-    let mut first_file = true;
+    let mut first_entry = true;
 
-    // Parse local file headers
-    let mut pos = 0;
-    while pos + 30 <= data.len() && data[pos..pos + 4] == [0x50, 0x4B, 0x03, 0x04] {
-        let bit_flag = u16::from_le_bytes([data[pos + 6], data[pos + 7]]);
-        let compression = u16::from_le_bytes([data[pos + 8], data[pos + 9]]);
-        let mod_time = u16::from_le_bytes([data[pos + 10], data[pos + 11]]);
-        let mod_date = u16::from_le_bytes([data[pos + 12], data[pos + 13]]);
-        let crc = u32::from_le_bytes([data[pos + 14], data[pos + 15], data[pos + 16], data[pos + 17]]);
-        let compressed_size = u32::from_le_bytes([data[pos + 18], data[pos + 19], data[pos + 20], data[pos + 21]]) as usize;
-        let uncompressed_size = u32::from_le_bytes([data[pos + 22], data[pos + 23], data[pos + 24], data[pos + 25]]) as u64;
-        let name_len = u16::from_le_bytes([data[pos + 26], data[pos + 27]]) as usize;
-        let extra_len = u16::from_le_bytes([data[pos + 28], data[pos + 29]]) as usize;
-        let required_version = u16::from_le_bytes([data[pos + 4], data[pos + 5]]);
-
-        let name_start = pos + 30;
-        if name_start + name_len > data.len() {
-            break;
-        }
-        let filename = String::from_utf8_lossy(&data[name_start..name_start + name_len]).to_string();
+    for entry in &entries {
+        let filename = &entry.filename;
 
         // Emit per-file tags for the first file (matching Perl behavior)
-        // Skip for OpenDocument files (they don't emit Zip* tags)
-        let emit_zip_tags = first_file && !is_opendoc;
-        if first_file { first_file = false; }
-        if emit_zip_tags {
-            tags.push(mk("ZipRequiredVersion", "Required Version", Value::U16(required_version)));
-            let bit_flag_str = if bit_flag != 0 {
-                format!("0x{:04x}", bit_flag)
+        // Skip for OpenDocument files
+        if first_entry && !is_opendoc {
+            let bit_flag_str = if entry.bit_flag != 0 {
+                format!("0x{:04x}", entry.bit_flag)
             } else {
-                bit_flag.to_string()
+                entry.bit_flag.to_string()
             };
+            tags.push(mk("ZipRequiredVersion", "Required Version", Value::U16(entry.required_version)));
             tags.push(mk("ZipBitFlag", "Bit Flag", Value::String(bit_flag_str)));
-            let compression_str = zip_compression_name(compression);
-            tags.push(mk("ZipCompression", "Compression", Value::String(compression_str)));
-            // DOS date/time to EXIF-style string
-            let year = ((mod_date >> 9) & 0x7F) as u32 + 1980;
-            let month = ((mod_date >> 5) & 0x0F) as u32;
-            let day = (mod_date & 0x1F) as u32;
-            let hour = ((mod_time >> 11) & 0x1F) as u32;
-            let minute = ((mod_time >> 5) & 0x3F) as u32;
-            let second = ((mod_time & 0x1F) as u32) * 2;
-            let date_str = format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
-                year, month, day, hour, minute, second);
+            tags.push(mk("ZipCompression", "Compression", Value::String(zip_compression_name(entry.compression))));
+            let year = ((entry.mod_date >> 9) & 0x7F) as u32 + 1980;
+            let month = ((entry.mod_date >> 5) & 0x0F) as u32;
+            let day = (entry.mod_date & 0x1F) as u32;
+            let hour = ((entry.mod_time >> 11) & 0x1F) as u32;
+            let minute = ((entry.mod_time >> 5) & 0x3F) as u32;
+            let second = ((entry.mod_time & 0x1F) as u32) * 2;
+            let date_str = format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", year, month, day, hour, minute, second);
             tags.push(mk("ZipModifyDate", "Modify Date", Value::String(date_str)));
-            let crc_str = format!("0x{:08x}", crc);
-            tags.push(mk("ZipCRC", "CRC", Value::String(crc_str)));
-            tags.push(mk("ZipCompressedSize", "Compressed Size", Value::U32(compressed_size as u32)));
-            tags.push(mk("ZipUncompressedSize", "Uncompressed Size", Value::U32(uncompressed_size as u32)));
+            tags.push(mk("ZipCRC", "CRC", Value::String(format!("0x{:08x}", entry.crc))));
+            tags.push(mk("ZipCompressedSize", "Compressed Size", Value::U32(entry.compressed_size)));
+            tags.push(mk("ZipUncompressedSize", "Uncompressed Size", Value::U32(entry.uncompressed_size)));
             tags.push(mk("ZipFileName", "File Name", Value::String(filename.clone())));
         }
+        if first_entry { first_entry = false; }
 
         if filename == "[Content_Types].xml" {
             has_content_types = true;
         }
+
         if filename == "mimetype" {
             has_mimetype = true;
-            let content_start = name_start + name_len + extra_len;
-            let content_end = (content_start + compressed_size).min(data.len());
-            if content_start < content_end && compression == 0 {
-                let mime = String::from_utf8_lossy(&data[content_start..content_end])
-                    .trim()
-                    .to_string();
-                tags.push(mk("MIMEType", "MIME Type", Value::String(mime)));
+            if !is_opendoc {
+                if let Some(raw) = zip_entry_data(data, entry) {
+                    if entry.compression == 0 {
+                        let mime = String::from_utf8_lossy(raw).trim().to_string();
+                        tags.push(mk("MIMEType", "MIME Type", Value::String(mime)));
+                    }
+                }
             }
         }
 
         // OpenDocument: parse meta.xml for metadata
         if filename == "meta.xml" {
-            let content_start = name_start + name_len + extra_len;
-            let content_end = (content_start + compressed_size).min(data.len());
-            if content_start < content_end {
-                if let Some(xml_bytes) = decompress_zip_entry(&data[content_start..content_end], compression, uncompressed_size as usize) {
+            if let Some(raw) = zip_entry_data(data, entry) {
+                if let Some(xml_bytes) = decompress_zip_entry(raw, entry.compression, entry.uncompressed_size as usize) {
                     parse_opendoc_meta(&xml_bytes, &mut tags);
                 }
             }
@@ -334,10 +390,8 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
 
         // OpenDocument: thumbnail PNG
         if filename == "Thumbnails/thumbnail.png" {
-            let content_start = name_start + name_len + extra_len;
-            let content_end = (content_start + compressed_size).min(data.len());
-            if content_start < content_end {
-                if let Some(img_bytes) = decompress_zip_entry(&data[content_start..content_end], compression, uncompressed_size as usize) {
+            if let Some(raw) = zip_entry_data(data, entry) {
+                if let Some(img_bytes) = decompress_zip_entry(raw, entry.compression, entry.uncompressed_size as usize) {
                     let n = img_bytes.len();
                     let preview_str = format!("(Binary data {} bytes, use -b option to extract)", n);
                     tags.push(Tag {
@@ -355,30 +409,24 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
 
         // For OOXML: parse docProps/core.xml
         if filename == "docProps/core.xml" {
-            let content_start = name_start + name_len + extra_len;
-            let content_end = (content_start + compressed_size).min(data.len());
-            if content_start < content_end {
-                if let Some(xml_bytes) = decompress_zip_entry(&data[content_start..content_end], compression, uncompressed_size as usize) {
+            if let Some(raw) = zip_entry_data(data, entry) {
+                if let Some(xml_bytes) = decompress_zip_entry(raw, entry.compression, entry.uncompressed_size as usize) {
                     parse_ooxml_core(&xml_bytes, &mut tags);
                 }
             }
         }
 
         if filename == "docProps/app.xml" {
-            let content_start = name_start + name_len + extra_len;
-            let content_end = (content_start + compressed_size).min(data.len());
-            if content_start < content_end {
-                if let Some(xml_bytes) = decompress_zip_entry(&data[content_start..content_end], compression, uncompressed_size as usize) {
+            if let Some(raw) = zip_entry_data(data, entry) {
+                if let Some(xml_bytes) = decompress_zip_entry(raw, entry.compression, entry.uncompressed_size as usize) {
                     parse_ooxml_app(&xml_bytes, &mut tags);
                 }
             }
         }
 
         if filename == "docProps/custom.xml" {
-            let content_start = name_start + name_len + extra_len;
-            let content_end = (content_start + compressed_size).min(data.len());
-            if content_start < content_end {
-                if let Some(xml_bytes) = decompress_zip_entry(&data[content_start..content_end], compression, uncompressed_size as usize) {
+            if let Some(raw) = zip_entry_data(data, entry) {
+                if let Some(xml_bytes) = decompress_zip_entry(raw, entry.compression, entry.uncompressed_size as usize) {
                     parse_ooxml_custom(&xml_bytes, &mut tags);
                 }
             }
@@ -387,10 +435,8 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
         // Extract PreviewImage from thumbnail
         if filename == "docProps/thumbnail.jpeg" || filename == "docProps/thumbnail.jpg"
             || filename == "docProps/thumbnail.png" {
-            let content_start = name_start + name_len + extra_len;
-            let content_end = (content_start + compressed_size).min(data.len());
-            if content_start < content_end {
-                if let Some(img_bytes) = decompress_zip_entry(&data[content_start..content_end], compression, uncompressed_size as usize) {
+            if let Some(raw) = zip_entry_data(data, entry) {
+                if let Some(img_bytes) = decompress_zip_entry(raw, entry.compression, entry.uncompressed_size as usize) {
                     let n = img_bytes.len();
                     let preview_str = format!("(Binary data {} bytes, use -b option to extract)", n);
                     tags.push(Tag {
@@ -405,14 +451,6 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
                 }
             }
         }
-
-        if file_count < 50 {
-            filenames.push(filename);
-        }
-        file_count += 1;
-        total_size += uncompressed_size;
-
-        pos = name_start + name_len + extra_len + compressed_size;
     }
 
     // Note: ZipSubType is not emitted as it doesn't match Perl ExifTool output

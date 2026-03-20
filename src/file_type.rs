@@ -153,6 +153,15 @@ pub enum FileType {
     KyoceraRaw,
     // ===== Portable Float Map =====
     PortableFloatMap,
+    // ===== OpenDocument =====
+    Ods,
+    Odt,
+    Odp,
+    Odg,
+    Odf,
+    Odb,
+    Odi,
+    Odc,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -318,6 +327,14 @@ impl FileType {
             FileType::Aae => "AAE",
             FileType::KyoceraRaw => "KyoceraRaw",
             FileType::PortableFloatMap => "PFM",
+            FileType::Ods => "ODS",
+            FileType::Odt => "ODT",
+            FileType::Odp => "ODP",
+            FileType::Odg => "ODG",
+            FileType::Odf => "ODF",
+            FileType::Odb => "ODB",
+            FileType::Odi => "ODI",
+            FileType::Odc => "ODC",
         }
     }
 
@@ -456,6 +473,14 @@ impl FileType {
             FileType::Aae => "application/vnd.apple.photos",
             FileType::KyoceraRaw => "image/x-raw",
             FileType::PortableFloatMap => "image/x-pfm",
+            FileType::Ods => "application/vnd.oasis.opendocument.spreadsheet",
+            FileType::Odt => "application/vnd.oasis.opendocument.text",
+            FileType::Odp => "application/vnd.oasis.opendocument.presentation",
+            FileType::Odg => "application/vnd.oasis.opendocument.graphics",
+            FileType::Odf => "application/vnd.oasis.opendocument.formula",
+            FileType::Odb => "application/vnd.oasis.opendocument.database",
+            FileType::Odi => "application/vnd.oasis.opendocument.image",
+            FileType::Odc => "application/vnd.oasis.opendocument.chart",
         }
     }
 
@@ -602,6 +627,14 @@ impl FileType {
             FileType::Aae => &["aae"],
             FileType::KyoceraRaw => &["raw"],
             FileType::PortableFloatMap => &["pfm"],
+            FileType::Ods => &["ods"],
+            FileType::Odt => &["odt"],
+            FileType::Odp => &["odp"],
+            FileType::Odg => &["odg"],
+            FileType::Odf => &["odf"],
+            FileType::Odb => &["odb"],
+            FileType::Odi => &["odi"],
+            FileType::Odc => &["odc"],
         }
     }
 
@@ -710,6 +743,9 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Pgf, FileType::Xisf, FileType::Torrent, FileType::Mobi, FileType::SonyPmp,
     FileType::Plist, FileType::Aae, FileType::KyoceraRaw,
     FileType::PortableFloatMap,
+    // OpenDocument
+    FileType::Ods, FileType::Odt, FileType::Odp, FileType::Odg,
+    FileType::Odf, FileType::Odb, FileType::Odi, FileType::Odc,
 ];
 
 /// Detect file type from magic bytes (first 64+ bytes of a file).

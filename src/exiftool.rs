@@ -1111,6 +1111,12 @@ impl ExifTool {
                     }
                 }
             }
+            // For ZIP files, check if it's an OpenDocument format by reading the mimetype entry
+            if ft == FileType::Zip {
+                if let Some(od_type) = detect_opendocument_type(data) {
+                    return Ok(od_type);
+                }
+            }
             return Ok(ft);
         }
 
@@ -1129,6 +1135,7 @@ impl ExifTool {
     }
 
     /// Dispatch to the appropriate format reader.
+
     fn process_file(&self, data: &[u8], file_type: FileType) -> Result<Vec<Tag>> {
         match file_type {
             FileType::Jpeg | FileType::Jps => formats::jpeg::read_jpeg(data),
@@ -1249,6 +1256,7 @@ impl ExifTool {
             FileType::Dicom => formats::misc::read_dicom(data),
             FileType::Fits => formats::misc::read_fits(data),
             FileType::Flv => formats::misc::read_flv(data),
+            FileType::Mxf => formats::misc::read_mxf(data).or_else(|_| Ok(Vec::new())),
             FileType::Swf => formats::misc::read_swf(data),
             FileType::Hdr => formats::misc::read_hdr(data),
             FileType::DjVu => formats::djvu::read_djvu(data),
@@ -1289,6 +1297,8 @@ impl ExifTool {
             }
             FileType::KyoceraRaw => formats::misc::read_kyocera_raw(data),
             FileType::PortableFloatMap => formats::misc::read_pfm(data),
+            FileType::Ods | FileType::Odt | FileType::Odp | FileType::Odg |
+            FileType::Odf | FileType::Odb | FileType::Odi | FileType::Odc => formats::zip::read_zip(data),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }
@@ -1379,6 +1389,44 @@ impl ExifTool {
 impl Default for ExifTool {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Detect OpenDocument file type by reading the `mimetype` entry from a ZIP.
+/// Returns None if not an OpenDocument file.
+fn detect_opendocument_type(data: &[u8]) -> Option<FileType> {
+    // OpenDocument ZIPs have "mimetype" as the FIRST local file entry (uncompressed)
+    if data.len() < 30 || data[0..4] != [0x50, 0x4B, 0x03, 0x04] {
+        return None;
+    }
+    let compression = u16::from_le_bytes([data[8], data[9]]);
+    let compressed_size = u32::from_le_bytes([data[18], data[19], data[20], data[21]]) as usize;
+    let name_len = u16::from_le_bytes([data[26], data[27]]) as usize;
+    let extra_len = u16::from_le_bytes([data[28], data[29]]) as usize;
+    let name_start = 30;
+    if name_start + name_len > data.len() {
+        return None;
+    }
+    let filename = std::str::from_utf8(&data[name_start..name_start + name_len]).unwrap_or("");
+    if filename != "mimetype" || compression != 0 {
+        return None;
+    }
+    let content_start = name_start + name_len + extra_len;
+    let content_end = (content_start + compressed_size).min(data.len());
+    if content_start >= content_end {
+        return None;
+    }
+    let mime = std::str::from_utf8(&data[content_start..content_end]).unwrap_or("").trim();
+    match mime {
+        "application/vnd.oasis.opendocument.spreadsheet" => Some(FileType::Ods),
+        "application/vnd.oasis.opendocument.text" => Some(FileType::Odt),
+        "application/vnd.oasis.opendocument.presentation" => Some(FileType::Odp),
+        "application/vnd.oasis.opendocument.graphics" => Some(FileType::Odg),
+        "application/vnd.oasis.opendocument.formula" => Some(FileType::Odf),
+        "application/vnd.oasis.opendocument.database" => Some(FileType::Odb),
+        "application/vnd.oasis.opendocument.image" => Some(FileType::Odi),
+        "application/vnd.oasis.opendocument.chart" => Some(FileType::Odc),
+        _ => None,
     }
 }
 
