@@ -207,7 +207,7 @@ fn fits_parse_continued_value(s: &str) -> (String, bool) {
 /// Known keywords get special names; others get generated from keyword.
 fn fits_keyword_to_name(keyword: &str) -> String {
     match keyword {
-        "SIMPLE"   => "Simple".into(),
+        "SIMPLE"   => return String::new(), // Perl internal only
         "BITPIX"   => "Bitpix".into(),
         "NAXIS"    => "Naxis".into(),
         "NAXIS1"   => "Naxis1".into(),
@@ -382,7 +382,17 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
         tags.push(mktag("FLV", "HasVideo", "Has Video", Value::String("Yes".into())));
     }
 
-    Ok(tags)
+    // Deduplicate: keep the last occurrence of each tag name (mirrors Perl's hash-based storage)
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut deduped: Vec<Tag> = Vec::with_capacity(tags.len());
+    for tag in tags.into_iter().rev() {
+        if seen.insert(tag.name.clone()) {
+            deduped.push(tag);
+        }
+    }
+    deduped.reverse();
+
+    Ok(deduped)
 }
 
 /// Parse AMF metadata from FLV script tag.
@@ -683,11 +693,36 @@ fn flv_apply_conv(tag_name: &str, val: f64) -> String {
 }
 
 fn flv_convert_bitrate(bps: f64) -> String {
-    let kbps = bps / 1000.0;
-    if kbps >= 10.0 {
-        format!("{} kbps", (kbps * 10.0 + 0.5).floor() / 10.0)
+    // Mirrors Perl's ConvertBitrate: divide by 1000 until < 1000,
+    // then %.0f if >= 100, else %.3g (3 significant digits)
+    let mut val = bps;
+    let mut units = "bps";
+    for u in &["bps", "kbps", "Mbps", "Gbps"] {
+        units = u;
+        if val < 1000.0 { break; }
+        val /= 1000.0;
+    }
+    if val >= 100.0 {
+        format!("{:.0} {}", val, units)
     } else {
-        format!("{:.1} kbps", kbps)
+        // 3 significant digits
+        let s = format_3g(val);
+        format!("{} {}", s, units)
+    }
+}
+
+fn format_3g(val: f64) -> String {
+    if val == 0.0 { return "0".to_string(); }
+    // 3 significant digits
+    let magnitude = val.abs().log10().floor() as i32;
+    let factor = 10f64.powi(2 - magnitude);
+    let rounded = (val * factor).round() / factor;
+    if rounded.fract() == 0.0 {
+        format!("{:.0}", rounded)
+    } else {
+        let s = format!("{:.6}", rounded);
+        let s = s.trim_end_matches('0').trim_end_matches('.');
+        s.to_string()
     }
 }
 
@@ -1817,6 +1852,233 @@ impl<'a> M2tsBitReader<'a> {
     }
 }
 
+/// MDPM (Modified DV Pack Metadata) data extracted from H.264 SEI unregistered user data
+struct M2tsMdpmData {
+    datetime_original: Option<String>,
+    aperture_setting: Option<String>,
+    gain: Option<String>,
+    image_stabilization: Option<String>,
+    exposure_time: Option<String>,
+    shutter_speed: Option<String>,
+    make: Option<String>,
+    recording_mode: Option<String>,
+}
+
+/// Parse SEI NAL unit (type 6) from H.264 and extract MDPM camera metadata.
+/// UUID: 17ee8c60-f84d-11d9-8cd6-0800200c9a66 + "MDPM"
+fn m2ts_parse_sei(nal_data: &[u8]) -> Option<M2tsMdpmData> {
+    // Remove emulation prevention bytes (0x000003 -> 0x0000)
+    let mut rbsp = Vec::with_capacity(nal_data.len());
+    let mut i = 0;
+    while i < nal_data.len() {
+        if i + 2 < nal_data.len() && nal_data[i] == 0 && nal_data[i+1] == 0 && nal_data[i+2] == 3 {
+            rbsp.push(0); rbsp.push(0); i += 3;
+        } else {
+            rbsp.push(nal_data[i]); i += 1;
+        }
+    }
+
+    let data = &rbsp;
+    let end = data.len();
+    let mut pos = 1; // skip nal_unit_type byte (0x06)
+
+    // Scan SEI payloads
+    while pos < end {
+        // Read payload type (extended via 0xFF bytes)
+        let mut sei_type: u32 = 0;
+        loop {
+            if pos >= end { return None; }
+            let t = data[pos]; pos += 1;
+            sei_type += t as u32;
+            if t != 0xFF { break; }
+        }
+        if sei_type == 0x80 { return None; } // terminator
+
+        // Read payload size
+        let mut sei_size: usize = 0;
+        loop {
+            if pos >= end { return None; }
+            let t = data[pos]; pos += 1;
+            sei_size += t as usize;
+            if t != 0xFF { break; }
+        }
+        if pos + sei_size > end { return None; }
+
+        if sei_type == 5 {
+            // Unregistered user data: check for MDPM UUID
+            // UUID bytes: 17 ee 8c 60 f8 4d 11 d9 8c d6 08 00 20 0c 9a 66
+            // followed by "MDPM" (4 bytes)
+            let payload = &data[pos..pos + sei_size];
+            if sei_size > 20 {
+                let uuid_mdpm = b"\x17\xee\x8c\x60\xf8\x4d\x11\xd9\x8c\xd6\x08\x00\x20\x0c\x9a\x66MDPM";
+                if payload.len() >= 20 && &payload[..20] == uuid_mdpm {
+                    return m2ts_parse_mdpm(&payload[20..]);
+                }
+            }
+        }
+
+        pos += sei_size;
+    }
+    None
+}
+
+/// Parse MDPM entries and decode camera metadata tags.
+fn m2ts_parse_mdpm(data: &[u8]) -> Option<M2tsMdpmData> {
+    if data.is_empty() { return None; }
+
+    let mut result = M2tsMdpmData {
+        datetime_original: None,
+        aperture_setting: None,
+        gain: None,
+        image_stabilization: None,
+        exposure_time: None,
+        shutter_speed: None,
+        make: None,
+        recording_mode: None,
+    };
+
+    let num = data[0] as usize;
+    let mut pos = 1;
+    let end = data.len();
+    let mut last_tag: u8 = 0;
+    let mut index = 0;
+
+    while index < num && pos + 5 <= end {
+        let tag = data[pos];
+        if tag <= last_tag && index > 0 { break; } // out of sequence
+        last_tag = tag;
+
+        let val4 = [data[pos+1], data[pos+2], data[pos+3], data[pos+4]];
+        pos += 5;
+        index += 1;
+
+        match tag {
+            0x18 => {
+                // DateTimeOriginal: combine with next tag (0x19)
+                // Read 4 bytes from current tag, then peek at next tag
+                let mut combined = val4.to_vec();
+                if pos + 5 <= end && data[pos] == 0x19 {
+                    combined.extend_from_slice(&data[pos+1..pos+5]);
+                    pos += 5; index += 1; last_tag = 0x19;
+                }
+                // combined = [tz, yy_high, yy_low, mm, dd, HH, MM, SS] (BCD / raw)
+                // ExifTool ValueConv: my ($tz, @a) = unpack('C*',$val);
+                // sprintf('%.2x%.2x:%.2x:%.2x %.2x:%.2x:%.2x%s%.2d:%s%s', @a, ...)
+                if combined.len() >= 8 {
+                    let tz = combined[0];
+                    let yh = combined[1]; // year high byte
+                    let yl = combined[2]; // year low byte
+                    let mo = combined[3];
+                    let dy = combined[4];
+                    let hh = combined[5];
+                    let mm = combined[6];
+                    let ss = combined[7];
+                    let sign = if tz & 0x20 != 0 { '-' } else { '+' };
+                    let tz_h = (tz >> 1) & 0x0f;
+                    let tz_m = if tz & 0x01 != 0 { "30" } else { "00" };
+                    let dst = if tz & 0x40 != 0 { " DST" } else { "" };
+                    let s = format!("{:02x}{:02x}:{:02x}:{:02x} {:02x}:{:02x}:{:02x}{}{:02}:{}{}", yh, yl, mo, dy, hh, mm, ss, sign, tz_h, tz_m, dst);
+                    result.datetime_original = Some(s);
+                }
+            }
+            0x70 => {
+                // Camera1: byte 0 = ApertureSetting, byte 1 = Gain (low nibble) + ExposureProgram (high nibble)
+                let aperture_raw = val4[0];
+                let aperture = match aperture_raw {
+                    0xFF => "Auto".to_string(),
+                    0xFE => "Closed".to_string(),
+                    v => format!("{:.1}", 2f64.powf((v & 0x3f) as f64 / 8.0)),
+                };
+                result.aperture_setting = Some(aperture);
+
+                let gain_raw = val4[1] & 0x0f;
+                let gain_val = (gain_raw as i32 - 1) * 3;
+                result.gain = if gain_val == 42 {
+                    Some("Out of range".to_string())
+                } else {
+                    Some(format!("{} dB", gain_val))
+                };
+            }
+            0x71 => {
+                // Camera2: byte 1 = ImageStabilization
+                let is_raw = val4[1];
+                let is_str = match is_raw {
+                    0x00 => "Off".to_string(),
+                    0x3F => "On (0x3f)".to_string(),
+                    0xBF => "Off (0xbf)".to_string(),
+                    0xFF => "n/a".to_string(),
+                    v => {
+                        let state = if v & 0x10 != 0 { "On" } else { "Off" };
+                        format!("{} (0x{:02x})", state, v)
+                    }
+                };
+                result.image_stabilization = Some(is_str);
+            }
+            0x7F => {
+                // Shutter: int16u little-endian, tag 1.1 mask 0x7fff = ExposureTime
+                let val_le = u16::from_le_bytes([val4[0], val4[1]]);
+                let val_le2 = u16::from_le_bytes([val4[2], val4[3]]);
+                let shutter_raw = val_le2 & 0x7fff;
+                let _ = val_le; // word 0 unused
+                if shutter_raw != 0x7fff {
+                    let exp_f = shutter_raw as f64 / 28125.0;
+                    // Format as fraction using ExifTool::Exif::PrintExposureTime logic
+                    let et_str = m2ts_format_exposure_time(exp_f);
+                    result.exposure_time = Some(et_str.clone());
+                    result.shutter_speed = Some(et_str);
+                }
+            }
+            0xE0 => {
+                // MakeModel: int16u[0] = Make code
+                let make_code = u16::from_be_bytes([val4[0], val4[1]]);
+                let make_str = match make_code {
+                    0x0103 => "Panasonic",
+                    0x0108 => "Sony",
+                    0x1011 => "Canon",
+                    0x1104 => "JVC",
+                    _ => "Unknown",
+                };
+                result.make = Some(make_str.to_string());
+            }
+            0xE1 => {
+                // RecInfo (Canon): int8u[0] = RecordingMode
+                let rec_mode = val4[0];
+                let mode_str = match rec_mode {
+                    0x02 => "XP+",
+                    0x04 => "SP",
+                    0x05 => "LP",
+                    0x06 => "FXP",
+                    0x07 => "MXP",
+                    _ => "Unknown",
+                };
+                result.recording_mode = Some(mode_str.to_string());
+            }
+            _ => {}
+        }
+    }
+
+    if result.datetime_original.is_some() || result.aperture_setting.is_some()
+        || result.gain.is_some() || result.make.is_some() {
+        Some(result)
+    } else {
+        None
+    }
+}
+
+/// Format exposure time like ExifTool's PrintExposureTime
+fn m2ts_format_exposure_time(val: f64) -> String {
+    if val <= 0.0 { return "0".to_string(); }
+    if val >= 1.0 {
+        if (val - val.round()).abs() < 0.005 {
+            return format!("{}", val.round() as i64);
+        }
+        return format!("{:.1}", val);
+    }
+    // Express as fraction 1/N
+    let n = (1.0 / val).round() as i64;
+    if n > 0 { format!("1/{}", n) } else { format!("{}", val) }
+}
+
 fn m2ts_find_packet_size(data: &[u8]) -> Option<(usize, usize)> {
     for &(pkt, tco) in &[(192usize, 4usize), (188, 0)] {
         if data.len() >= pkt * 3 && (0..3).all(|i| data[i * pkt + tco] == 0x47) {
@@ -2016,27 +2278,33 @@ fn m2ts_parse_sps(sps_nal: &[u8]) -> Option<(u32, u32)> {
     }
 }
 
-fn m2ts_parse_h264_pes(payload: &[u8]) -> Option<(u32, u32)> {
-    // Scan PES payload for NAL start codes, look for SPS (type 7)
+/// Returns (Option<(width,height)>, Option<MdpmData>) by scanning NAL units in payload.
+fn m2ts_parse_h264_pes(payload: &[u8]) -> (Option<(u32, u32)>, Option<M2tsMdpmData>) {
+    let mut dims = None;
+    let mut mdpm = None;
     let mut i = 0;
-    while i + 4 <= payload.len() {
-        let nal_start = if payload[i] == 0 && payload[i+1] == 0 && payload[i+2] == 1 {
+    while i + 3 <= payload.len() {
+        let nal_start = if payload[i] == 0 && payload[i+1] == 0 && i + 3 < payload.len() && payload[i+2] == 1 {
             i + 3
-        } else if i + 5 <= payload.len() && payload[i] == 0 && payload[i+1] == 0 && payload[i+2] == 0 && payload[i+3] == 1 {
+        } else if i + 4 < payload.len() && payload[i] == 0 && payload[i+1] == 0 && payload[i+2] == 0 && payload[i+3] == 1 {
             i + 4
         } else {
             i += 1; continue;
         };
         if nal_start >= payload.len() { break; }
         let nal_type = payload[nal_start] & 0x1F;
-        if nal_type == 7 {
-            if let Some(dims) = m2ts_parse_sps(&payload[nal_start..]) {
-                return Some(dims);
+        match nal_type {
+            7 if dims.is_none() => {
+                dims = m2ts_parse_sps(&payload[nal_start..]);
             }
+            6 if mdpm.is_none() => {
+                mdpm = m2ts_parse_sei(&payload[nal_start..]);
+            }
+            _ => {}
         }
-        i = nal_start;
+        i = nal_start + 1;
     }
-    None
+    (dims, mdpm)
 }
 
 fn m2ts_parse_ac3_sample_rate(payload: &[u8]) -> Option<u32> {
@@ -2102,6 +2370,7 @@ pub fn read_m2ts(data: &[u8]) -> Result<Vec<Tag>> {
     let mut pat_done = false;
     let mut stream_info: Option<M2tsStreamInfo> = None;
     let mut h264_dims: Option<(u32, u32)> = None;
+    let mut mdpm_data: Option<M2tsMdpmData> = None;
     let mut ac3_sample_rate: Option<u32> = None;
     let mut pcr_first: Option<u64> = None;
     let mut pcr_last: Option<u64> = None;
@@ -2155,12 +2424,12 @@ pub fn read_m2ts(data: &[u8]) -> Result<Vec<Tag>> {
                     stream_info = Some(si);
                 }
             } else if let Some(ref si) = stream_info {
-                if h264_dims.is_none() && Some(pid) == si.h264_pid {
+                if (h264_dims.is_none() || mdpm_data.is_none()) && Some(pid) == si.h264_pid {
                     // Skip PES header to get to ES data
                     let es = m2ts_skip_pes_header(payload);
-                    if let Some(dims) = m2ts_parse_h264_pes(es) {
-                        h264_dims = Some(dims);
-                    }
+                    let (dims, mdpm) = m2ts_parse_h264_pes(es);
+                    if dims.is_some() && h264_dims.is_none() { h264_dims = dims; }
+                    if mdpm.is_some() && mdpm_data.is_none() { mdpm_data = mdpm; }
                 }
                 if ac3_sample_rate.is_none() && Some(pid) == si.audio_pid {
                     let es = m2ts_skip_pes_header(payload);
@@ -2256,6 +2525,37 @@ pub fn read_m2ts(data: &[u8]) -> Result<Vec<Tag>> {
     if let (Some(first), Some(last)) = (pcr_first, pcr_last) {
         let dur = m2ts_format_duration(first, last);
         tags.push(mktag("M2TS", "Duration", "Duration", Value::String(dur)));
+    }
+
+    // MDPM camera metadata from H.264 SEI
+    if let Some(ref mdpm) = mdpm_data {
+        if let Some(ref v) = mdpm.make {
+            tags.push(mktag("H264", "Make", "Make", Value::String(v.clone())));
+        }
+        if let Some(ref v) = mdpm.datetime_original {
+            tags.push(mktag("H264", "DateTimeOriginal", "Date/Time Original", Value::String(v.clone())));
+        }
+        if let Some(ref v) = mdpm.aperture_setting {
+            tags.push(mktag("H264", "ApertureSetting", "Aperture Setting", Value::String(v.clone())));
+        }
+        if let Some(ref v) = mdpm.gain {
+            tags.push(mktag("H264", "Gain", "Gain", Value::String(v.clone())));
+        }
+        if let Some(ref v) = mdpm.image_stabilization {
+            tags.push(mktag("H264", "ImageStabilization", "Image Stabilization", Value::String(v.clone())));
+        }
+        if let Some(ref v) = mdpm.exposure_time {
+            tags.push(mktag("H264", "ExposureTime", "Exposure Time", Value::String(v.clone())));
+        }
+        if let Some(ref v) = mdpm.shutter_speed {
+            tags.push(mktag("H264", "ShutterSpeed", "Shutter Speed", Value::String(v.clone())));
+        }
+        if let Some(ref v) = mdpm.recording_mode {
+            tags.push(mktag("H264", "RecordingMode", "Recording Mode", Value::String(v.clone())));
+        }
+        // ExifTool always emits a Warning for embedded video data
+        tags.push(mktag("M2TS", "Warning", "Warning",
+            Value::String("[minor] The ExtractEmbedded option may find more tags in the video data".to_string())));
     }
 
     Ok(tags)
