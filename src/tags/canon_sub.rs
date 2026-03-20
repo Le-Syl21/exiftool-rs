@@ -456,10 +456,14 @@ pub fn decode_shot_info(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("ControlMode", Value::I16(v), pv));
     }
     if let Some(v) = get(19) {
-        tags.push(mkt("FocusDistanceUpper", Value::I16(v), v.to_string()));
+        if v != 0 { // Perl RawConv: suppress when 0
+            tags.push(mkt("FocusDistanceUpper", Value::I16(v), v.to_string()));
+        }
     }
     if let Some(v) = get(20) {
-        tags.push(mkt("FocusDistanceLower", Value::I16(v), v.to_string()));
+        if get(19).unwrap_or(0) != 0 { // Perl Condition: only when FocusDistanceUpper non-zero
+            tags.push(mkt("FocusDistanceLower", Value::I16(v), v.to_string()));
+        }
     }
     if let Some(v) = get(21) {
         tags.push(mkt("FNumber", Value::I16(v), v.to_string()));
@@ -514,7 +518,10 @@ pub fn decode_shot_info(values: &[i16]) -> Vec<Tag> {
         }
     }
     if let Some(v) = get(33) {
-        tags.push(mkt("FlashOutput", Value::I16(v), v.to_string()));
+        // Perl RawConv: suppress when 0 for non-PowerShot models
+        if v != 0 {
+            tags.push(mkt("FlashOutput", Value::I16(v), v.to_string()));
+        }
     }
     tags
 }
