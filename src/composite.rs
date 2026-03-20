@@ -139,11 +139,13 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         }
     }
     // DateTimeOriginal from ID3:Year (when no other DateTimeOriginal)
+    // Perl: ID3::Composite, only fires for ID3 group tags
     if find_tag(tags, "DateTimeOriginal").is_none() && composite.iter().all(|t| t.name != "DateTimeOriginal") {
-        if let Some(year) = find_tag_value(tags, "Year") {
+        if let Some(year_tag) = tags.iter().find(|t| t.name == "Year" && t.group.family0 == "ID3") {
+            let year = year_tag.print_value.clone();
             if !year.is_empty() {
                 composite.push(mk_composite("DateTimeOriginal", "Date/Time Original",
-                    Value::String(year.to_string())));
+                    Value::String(year)));
             }
         }
     }

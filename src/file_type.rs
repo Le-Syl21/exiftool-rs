@@ -780,6 +780,13 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
             if header.len() >= 10 && is_le && header[8] == b'C' && header[9] == b'R' {
                 return Some(FileType::Cr2);
             }
+            // IIQ: "IIII" (LE) or "MMMM" (BE) at offset 8
+            if header.len() >= 12 && is_le && &header[8..12] == b"IIII" {
+                return Some(FileType::Iiq);
+            }
+            if header.len() >= 12 && is_be && &header[8..12] == b"MMMM" {
+                return Some(FileType::Iiq);
+            }
             // ORF: "IIRO" or "IIRS" (Olympus)
             if header.len() >= 4 && is_le && header[0] == b'I' && header[1] == b'I' {
                 if header.len() >= 8 {

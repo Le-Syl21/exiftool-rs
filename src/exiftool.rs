@@ -1152,7 +1152,6 @@ impl ExifTool {
             | FileType::Pef
             | FileType::Erf
             | FileType::Fff
-            | FileType::Iiq
             | FileType::Rwl
             | FileType::Mef
             | FileType::Srw
@@ -1162,6 +1161,8 @@ impl ExifTool {
             | FileType::Dcr
             | FileType::Rw2
             | FileType::Srf => formats::tiff::read_tiff(data),
+            // Phase One IIQ: TIFF + PhaseOne maker note block
+            FileType::Iiq => formats::misc::read_iiq(data),
             // Image formats
             FileType::Gif => formats::gif::read_gif(data),
             FileType::Bmp => formats::bmp::read_bmp(data),

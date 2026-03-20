@@ -53,8 +53,8 @@ pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
     // Scan for embedded Photoshop IRBs (IPTC, EXIF, ICC etc.)
     scan_for_photoshop_irbs(data, &mut tags);
 
-    // Extract MediaBox from first page or page tree
-    if let Some(media_box) = extract_media_box(data) {
+    // Extract MediaBox from page dictionary (only if found within a /Type /Page dict)
+    if let Some(media_box) = extract_media_box_from_page(data) {
         tags.push(mk("MediaBox", "Media Box", Value::String(media_box)));
     }
 
@@ -318,40 +318,50 @@ fn scan_for_info_and_xmp(data: &[u8], tags: &mut Vec<Tag>) {
     }
 }
 
-/// Find first /MediaBox array in the PDF and return as "x0, y0, x1, y1"
-fn extract_media_box(data: &[u8]) -> Option<String> {
+/// Find /MediaBox in a /Type /Pages dictionary (page tree root, not individual pages).
+/// Perl only reads MediaBox from the Pages node, not from individual Page objects.
+fn extract_media_box_from_page(data: &[u8]) -> Option<String> {
     let text = String::from_utf8_lossy(data);
-    // Find /MediaBox followed by [ ... ]
+    // Find /Type /Pages or /Type/Pages dictionaries and look for /MediaBox within them
     let mut search_start = 0;
-    while let Some(pos) = text[search_start..].find("/MediaBox") {
-        let abs_pos = search_start + pos;
-        let rest = &text[abs_pos + 9..];
-        let rest_trimmed = rest.trim_start();
-        if rest_trimmed.starts_with('[') {
-            if let Some(end) = rest_trimmed.find(']') {
-                let inner = &rest_trimmed[1..end];
-                // Parse space-separated numbers
-                let nums: Vec<&str> = inner.split_whitespace().collect();
-                if nums.len() >= 4 {
-                    // Format like Perl: "0, 0, 612, 792"
-                    let formatted: Vec<String> = nums[..4].iter().map(|s| {
-                        // Try integer first, then float
-                        if let Ok(i) = s.parse::<i64>() {
-                            i.to_string()
-                        } else if let Ok(f) = s.parse::<f64>() {
-                            format!("{}", f)
-                        } else {
-                            s.to_string()
-                        }
-                    }).collect();
-                    return Some(formatted.join(", "));
+    while search_start < text.len() {
+        // Find the next /Type /Pages (with optional spaces)
+        let pages_pos = text[search_start..].find("/Type /Pages")
+            .or_else(|| text[search_start..].find("/Type/Pages"));
+        let pages_pos = match pages_pos {
+            Some(p) => search_start + p,
+            None => break,
+        };
+        // Find the dictionary bounds (<< ... >>) containing this /Type /Pages
+        // Search backward for <<
+        let dict_start = text[..pages_pos].rfind("<<").unwrap_or(0);
+        // Search forward for >>
+        let dict_end = text[pages_pos..].find(">>").map(|p| pages_pos + p + 2).unwrap_or(text.len());
+        let dict = &text[dict_start..dict_end];
+        // Look for /MediaBox within this dict
+        if let Some(mb_pos) = dict.find("/MediaBox") {
+            let rest = &dict[mb_pos + 9..];
+            let rest_trimmed = rest.trim_start();
+            if rest_trimmed.starts_with('[') {
+                if let Some(end) = rest_trimmed.find(']') {
+                    let inner = &rest_trimmed[1..end];
+                    let nums: Vec<&str> = inner.split_whitespace().collect();
+                    if nums.len() >= 4 {
+                        let formatted: Vec<String> = nums[..4].iter().map(|s| {
+                            if let Ok(i) = s.parse::<i64>() {
+                                i.to_string()
+                            } else if let Ok(f) = s.parse::<f64>() {
+                                format!("{}", f)
+                            } else {
+                                s.to_string()
+                            }
+                        }).collect();
+                        return Some(formatted.join(", "));
+                    }
                 }
             }
         }
-        search_start = abs_pos + 9;
-        if search_start >= data.len() {
-            break;
-        }
+        search_start = pages_pos + 12;
     }
     None
 }
@@ -374,7 +384,8 @@ fn scan_for_photoshop_irbs(data: &[u8], tags: &mut Vec<Tag>) {
             let mut irb_tags = Vec::new();
             psd::read_irb_resources(data, block_start, end, &mut irb_tags);
             if !irb_tags.is_empty() {
-                tags.extend(irb_tags);
+                // Perl doesn't emit CurrentIPTCDigest for PDF files
+                tags.extend(irb_tags.into_iter().filter(|t| t.name != "CurrentIPTCDigest"));
                 return; // Only parse once
             }
             search_pos = abs_pos + 4;
