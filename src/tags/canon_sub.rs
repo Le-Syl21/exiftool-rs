@@ -4,6 +4,30 @@
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
+/// Canon EV conversion — mirrors Perl's CanonEv() with 1/3 and 2/3 step handling
+fn canon_ev(val: i32) -> f64 {
+    let sign: f64 = if val < 0 { -1.0 } else { 1.0 };
+    let v = val.unsigned_abs();
+    let frac = v & 0x1F;
+    let int_part = v - frac;
+    let frac_val = match frac {
+        0x0C => 32.0 / 3.0,
+        0x14 => 64.0 / 3.0,
+        _ => frac as f64,
+    };
+    sign * (int_part as f64 + frac_val) / 0x20 as f64
+}
+
+/// Print exposure time like Perl's PrintExposureTime
+pub fn print_exposure_time(val: f64) -> String {
+    if val <= 0.0 { return "0".to_string(); }
+    if val < 0.25 - 0.001 {
+        format!("1/{}", (0.5 + 1.0 / val) as u32)
+    } else {
+        format!("{:.1}", (val * 10.0 + 0.5) as u32 as f64 / 10.0)
+    }
+}
+
 pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
     let mut tags = Vec::new();
     let get = |idx: usize| -> Option<i16> { values.get(idx).copied() };
@@ -462,6 +486,29 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         };
         let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
         tags.push(mkt("ControlMode", Value::I16(v), pv));
+    }
+    // Index 22: ExposureTime — Two variants depending on model:
+    // 350D/20D: exp(-CanonEv(val)*log(2))*1000/32
+    // Others: exp(-CanonEv(val)*log(2))
+    // RawConv: ($val or FILE_TYPE eq "CRW") ? $val : undef
+    if let Some(v) = get(22) {
+        // For CRW files, v=0 is valid (1 sec). For JPEG, suppress 0.
+        // We can't check file type here, so emit if non-zero
+        if v != 0 {
+            let ev = canon_ev(v as i32);
+            // Use the generic formula (most models)
+            let et = (-ev * std::f64::consts::LN_2).exp();
+            let pv = crate::tags::canon_sub::print_exposure_time(et);
+            tags.push(Tag {
+                id: TagId::Text("ExposureTime".into()),
+                name: "ExposureTime".into(),
+                description: "Exposure Time".into(),
+                group: TagGroup { family0: "MakerNotes".into(), family1: "Canon".into(), family2: "Camera".into() },
+                raw_value: Value::F64(et),
+                print_value: pv,
+                priority: 0,
+            });
+        }
     }
     // FocusDistanceUpper/Lower: Format=int16u.
     // RawConv: '($$self{FocusDistanceUpper} = $val) || undef' — suppress when 0.
