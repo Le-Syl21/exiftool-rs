@@ -36,6 +36,7 @@ pub enum FileType {
     Rwz,
     Btf,
     Mng,
+    PhotoCd,
     // ===== Images - RAW =====
     Cr2,
     Cr3,
@@ -150,6 +151,8 @@ pub enum FileType {
     Plist,
     Aae,
     KyoceraRaw,
+    // ===== Portable Float Map =====
+    PortableFloatMap,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -197,10 +200,12 @@ impl FileType {
             FileType::Plist => "PLIST",
             FileType::Aae => "AAE",
             FileType::KyoceraRaw => "Kyocera Contax N RAW",
+            FileType::PortableFloatMap => "Portable Float Map",
             FileType::Hdr => "Radiance HDR",
             FileType::Rwz => "Rawzor compressed image",
             FileType::Btf => "BigTIFF image",
             FileType::Mng => "MNG animation",
+            FileType::PhotoCd => "Kodak Photo CD",
             // RAW
             FileType::Cr2 => "Canon CR2 RAW",
             FileType::Cr3 => "Canon CR3 RAW",
@@ -312,6 +317,7 @@ impl FileType {
             FileType::Plist => "PLIST",
             FileType::Aae => "AAE",
             FileType::KyoceraRaw => "KyoceraRaw",
+            FileType::PortableFloatMap => "PFM",
         }
     }
 
@@ -448,6 +454,7 @@ impl FileType {
             FileType::Plist => "application/x-plist",
             FileType::Aae => "application/vnd.apple.photos",
             FileType::KyoceraRaw => "image/x-raw",
+            FileType::PortableFloatMap => "image/x-pfm",
         }
     }
 
@@ -574,7 +581,7 @@ impl FileType {
             FileType::Icc => &["icc", "icm"],
             FileType::Html => &["html", "htm", "xhtml", "svg"],
             FileType::Exe => &["exe", "dll", "elf", "so", "dylib", "a", "macho", "o"],
-            FileType::Font => &["ttf", "otf", "woff", "woff2", "ttc", "dfont", "afm", "pfa", "pfb", "pfm"],
+            FileType::Font => &["ttf", "otf", "woff", "woff2", "ttc", "dfont", "afm", "pfa", "pfb"],
             FileType::Swf => &["swf"],
             FileType::Dicom => &["dcm"],
             FileType::Fits => &["fits", "fit", "fts"],
@@ -592,6 +599,7 @@ impl FileType {
             FileType::Plist => &["plist"],
             FileType::Aae => &["aae"],
             FileType::KyoceraRaw => &["raw"],
+            FileType::PortableFloatMap => &["pfm"],
         }
     }
 
@@ -699,6 +707,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Svg,
     FileType::Pgf, FileType::Xisf, FileType::Torrent, FileType::Mobi, FileType::SonyPmp,
     FileType::Plist, FileType::Aae, FileType::KyoceraRaw,
+    FileType::PortableFloatMap,
 ];
 
 /// Detect file type from magic bytes (first 64+ bytes of a file).
@@ -833,6 +842,11 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // Radiance HDR: "#?RADIANCE"
     if header.len() >= 10 && header.starts_with(b"#?RADIANCE") {
         return Some(FileType::Hdr);
+    }
+
+    // Portable Float Map: "PF\n" (color) or "Pf\n" (grayscale)
+    if header.len() >= 3 && header[0] == b'P' && (header[1] == b'F' || header[1] == b'f') && header[2] == b'\n' {
+        return Some(FileType::PortableFloatMap);
     }
 
     // ===== RAW formats with unique magic =====

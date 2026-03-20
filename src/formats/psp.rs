@@ -249,7 +249,8 @@ fn parse_ext_block(data: &[u8], tags: &mut Vec<Tag>) {
             // EXIF block: starts with "Exif\0\0" then byte order + TIFF header
             let exif_data = &val_data[6..];
             if let Ok(exif_tags) = crate::metadata::exif::ExifReader::read(exif_data) {
-                tags.extend(exif_tags);
+                // PSP doesn't expose ExifByteOrder
+                tags.extend(exif_tags.into_iter().filter(|t| t.name != "ExifByteOrder"));
             }
         }
     }

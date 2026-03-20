@@ -1210,16 +1210,17 @@ impl ExifTool {
             }
             FileType::Exe => formats::exe::read_exe(data),
             FileType::Font => {
-                // PFM files start with \x00\x01 or \x00\x02 and have file size at offset 2
-                if data.len() > 6 && data[0] == 0x00 && (data[1] == 0x01 || data[1] == 0x02) {
-                    let stored_size = u32::from_le_bytes([data[2], data[3], data[4], data[5]]) as usize;
-                    if stored_size == data.len() {
-                        if let Ok(tags) = formats::font::read_pfm(data) {
-                            if !tags.is_empty() {
-                                return Ok(tags);
-                            }
-                        }
-                    }
+                // AFM: Adobe Font Metrics text file
+                if data.starts_with(b"StartFontMetrics") {
+                    return formats::font::read_afm(data);
+                }
+                // PFA: PostScript Type 1 ASCII font
+                if data.starts_with(b"%!PS-AdobeFont") || data.starts_with(b"%!FontType1") {
+                    return formats::font::read_pfa(data).or_else(|_| Ok(Vec::new()));
+                }
+                // PFB: PostScript Type 1 Binary font
+                if data.len() >= 2 && data[0] == 0x80 && (data[1] == 0x01 || data[1] == 0x02) {
+                    return formats::font::read_pfb(data).or_else(|_| Ok(Vec::new()));
                 }
                 formats::font::read_font(data)
             }
@@ -1232,9 +1233,10 @@ impl ExifTool {
                 formats::misc::read_real_audio(data).or_else(|_| Ok(Vec::new()))
             }
             FileType::RealMedia => {
-                formats::id3::read_mp3(data).or_else(|_| Ok(Vec::new()))
+                formats::misc::read_real_media(data).or_else(|_| Ok(Vec::new()))
             }
             // Misc formats
+            FileType::Czi => formats::misc::read_czi(data).or_else(|_| Ok(Vec::new())),
             FileType::Dicom => formats::misc::read_dicom(data),
             FileType::Fits => formats::misc::read_fits(data),
             FileType::Flv => formats::misc::read_flv(data),
@@ -1277,6 +1279,7 @@ impl ExifTool {
                 }
             }
             FileType::KyoceraRaw => formats::misc::read_kyocera_raw(data),
+            FileType::PortableFloatMap => formats::misc::read_pfm(data),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }

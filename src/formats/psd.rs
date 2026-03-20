@@ -5,6 +5,7 @@
 
 use crate::error::{Error, Result};
 use crate::formats::icc;
+use crate::md5;
 use crate::metadata::{ExifReader, IptcReader, XmpReader};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
@@ -96,7 +97,9 @@ pub fn read_psd(data: &[u8]) -> Result<Vec<Tag>> {
                 l
             };
 
-            if layer_info_len > 2 && pos + 2 <= data.len() {
+            // layer_info_len == 0 means no layers, but layer count (0) is still present
+            // Perl: $len += 2 to include the layer count, then calls ProcessLayers with DirLen=2
+            if pos + 2 <= data.len() {
                 let layer_count = i16::from_be_bytes([data[pos], data[pos + 1]]);
                 let actual_count = layer_count.unsigned_abs();
                 tags.push(mk(
@@ -243,6 +246,9 @@ pub fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<
             }
             // IPTC-IIM (0x0404)
             0x0404 => {
+                // Compute MD5 of IPTC data for CurrentIPTCDigest
+                let digest_hex = md5::md5_hex(resource_data);
+                tags.push(mk("CurrentIPTCDigest", "Current IPTC Digest", Value::String(digest_hex)));
                 if let Ok(iptc_tags) = IptcReader::read(resource_data) {
                     tags.extend(iptc_tags);
                 }

@@ -138,6 +138,15 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
             }
         }
     }
+    // DateTimeOriginal from ID3:Year (when no other DateTimeOriginal)
+    if find_tag(tags, "DateTimeOriginal").is_none() && composite.iter().all(|t| t.name != "DateTimeOriginal") {
+        if let Some(year) = find_tag_value(tags, "Year") {
+            if !year.is_empty() {
+                composite.push(mk_composite("DateTimeOriginal", "Date/Time Original",
+                    Value::String(year.to_string())));
+            }
+        }
+    }
 
     // GPSDateTime composite (Perl: Require GPSDateStamp + GPSTimeStamp)
     // Both tags must EXIST. Date can be empty (result: " 00:00:00Z")

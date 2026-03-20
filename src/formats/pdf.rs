@@ -53,6 +53,11 @@ pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
     // Scan for embedded Photoshop IRBs (IPTC, EXIF, ICC etc.)
     scan_for_photoshop_irbs(data, &mut tags);
 
+    // Extract MediaBox from first page or page tree
+    if let Some(media_box) = extract_media_box(data) {
+        tags.push(mk("MediaBox", "Media Box", Value::String(media_box)));
+    }
+
     // Count pages (look for /Type /Page entries)
     let page_count = count_pattern(data, b"/Type /Page") + count_pattern(data, b"/Type/Page");
     // Subtract catalog /Type /Pages entries
