@@ -115,8 +115,58 @@ impl ExifReader {
             priority: 0,
         });
 
+        // Detect CR2: "CR" at offset 8 in TIFF data
+        let is_cr2 = data.len() > 10 && &data[8..10] == b"CR";
+
         // Read IFD0 (main image)
         Self::read_ifd(data, &header, header.ifd0_offset, "IFD0", &mut tags)?;
+
+        // For CR2 files, rename IFD0 StripOffsets→PreviewImageStart and
+        // StripByteCounts→PreviewImageLength, then construct PreviewImage.
+        if is_cr2 {
+            // Rename tags in-place
+            for tag in tags.iter_mut() {
+                if tag.group.family1 == "IFD0" {
+                    if tag.name == "StripOffsets" {
+                        tag.name = "PreviewImageStart".to_string();
+                        tag.description = "Preview Image Start".to_string();
+                        tag.id = TagId::Text("PreviewImageStart".to_string());
+                    } else if tag.name == "StripByteCounts" {
+                        tag.name = "PreviewImageLength".to_string();
+                        tag.description = "Preview Image Length".to_string();
+                        tag.id = TagId::Text("PreviewImageLength".to_string());
+                    }
+                }
+            }
+            // Construct PreviewImage from PreviewImageStart + PreviewImageLength
+            let preview_start = tags.iter()
+                .find(|t| t.name == "PreviewImageStart" && t.group.family1 == "IFD0")
+                .and_then(|t| t.raw_value.as_u64())
+                .map(|v| v as usize);
+            let preview_len = tags.iter()
+                .find(|t| t.name == "PreviewImageLength" && t.group.family1 == "IFD0")
+                .and_then(|t| t.raw_value.as_u64())
+                .map(|v| v as usize);
+            if let (Some(start), Some(len)) = (preview_start, preview_len) {
+                if len > 0 && start + len <= data.len() {
+                    let img_data = data[start..start+len].to_vec();
+                    let pv = format!("(Binary data {} bytes, use -b option to extract)", len);
+                    tags.push(Tag {
+                        id: TagId::Text("PreviewImage".to_string()),
+                        name: "PreviewImage".to_string(),
+                        description: "Preview Image".to_string(),
+                        group: TagGroup {
+                            family0: "EXIF".to_string(),
+                            family1: "IFD0".to_string(),
+                            family2: "Preview".to_string(),
+                        },
+                        raw_value: Value::Binary(img_data),
+                        print_value: pv,
+                        priority: 0,
+                    });
+                }
+            }
+        }
 
         // Extract Make + Model for MakerNotes detection and sub-table dispatch
         let make = tags
@@ -464,7 +514,8 @@ impl ExifReader {
         } else { 0 };
         if next_ifd_offset != 0 && ifd_name == "IFD0" {
             // IFD1 = thumbnail
-            let _ = Self::read_ifd(data, header, next_ifd_offset, "IFD1", tags);
+            let ifd1_next = Self::read_ifd(data, header, next_ifd_offset, "IFD1", tags)
+                .ok().flatten();
 
             // Create ThumbnailImage tag if offset+length are present
             let thumb_offset = tags.iter()
@@ -487,6 +538,21 @@ impl ExifReader {
                         print_value: format!("(Binary data {} bytes)", len),
                         priority: 0,
                     });
+                }
+            }
+
+            // CR2 files have additional IFDs (IFD2, IFD3) following IFD1 in the chain.
+            // CR2 is identified by "CR" bytes at offset 8 in the TIFF data.
+            let is_cr2 = data.len() > 10 && &data[8..10] == b"CR";
+            if is_cr2 {
+                if let Some(ifd2_offset) = ifd1_next {
+                    // IFD2 = preview JPEG image data (emit selected tags)
+                    let ifd2_next = Self::read_ifd(data, header, ifd2_offset, "IFD2", tags)
+                        .ok().flatten();
+                    // IFD3 = raw image data (emit CR2CFAPattern, RawImageSegmentation, StripOffsets, StripByteCounts)
+                    if let Some(ifd3_offset) = ifd2_next {
+                        let _ = Self::read_ifd(data, header, ifd3_offset, "IFD3", tags);
+                    }
                 }
             }
         }

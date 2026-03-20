@@ -3543,6 +3543,13 @@ fn read_makernote_ifd(
             continue;
         }
 
+        // Nikon NikonCaptureData (0x0E01): decode into sub-tags
+        if manufacturer == Manufacturer::Nikon && tag_id == 0x0E01 {
+            let sub_tags = crate::metadata::nikon_capture::decode_nikon_capture(value_data);
+            tags.extend(sub_tags);
+            continue;
+        }
+
         // SubDirectory suppression list: these are container tags, not leaf tags
         let is_subdirectory = matches!((manufacturer, tag_id),
             (Manufacturer::Canon, 0x0001) | // CanonCameraSettings
@@ -3573,7 +3580,6 @@ fn read_makernote_ifd(
             (Manufacturer::Nikon, 0x0098) | // LensData
             (Manufacturer::Nikon, 0x00A8) | // FlashInfo
             (Manufacturer::Nikon, 0x00B7) | // AFInfo2
-            (Manufacturer::Nikon, 0x0E01) | // NikonCaptureData (SubDirectory)
             (Manufacturer::Nikon, 0x0E0E) | // NikonCaptureOffsets (SubDirectory)
             (Manufacturer::Nikon, 0x0E10) | // NikonScanIFD (SubDirectory)
             (Manufacturer::Nikon, 0x0E22) | // NikonICCProfile (SubDirectory)
