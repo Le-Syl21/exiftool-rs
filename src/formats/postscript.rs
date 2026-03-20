@@ -68,8 +68,8 @@ pub fn read_postscript(data: &[u8]) -> Result<Vec<Tag>> {
             tags.push(mk("Author", "Author", Value::String(rest.trim().trim_matches('(').trim_matches(')').to_string())));
         } else if let Some(rest) = line.strip_prefix("%%BoundingBox:") {
             tags.push(mk("BoundingBox", "Bounding Box", Value::String(rest.trim().to_string())));
-        } else if let Some(rest) = line.strip_prefix("%%HiResBoundingBox:") {
-            tags.push(mk("HiResBoundingBox", "HiRes Bounding Box", Value::String(rest.trim().to_string())));
+        } else if let Some(_rest) = line.strip_prefix("%%HiResBoundingBox:") {
+            // Perl doesn't emit HiResBoundingBox
         } else if let Some(rest) = line.strip_prefix("%%Pages:") {
             tags.push(mk("Pages", "Pages", Value::String(rest.trim().to_string())));
         } else if let Some(rest) = line.strip_prefix("%%LanguageLevel:") {
@@ -77,12 +77,7 @@ pub fn read_postscript(data: &[u8]) -> Result<Vec<Tag>> {
         } else if let Some(rest) = line.strip_prefix("%%DocumentData:") {
             tags.push(mk("DocumentData", "Document Data", Value::String(rest.trim().to_string())));
         } else if line.starts_with("%!PS-Adobe-") {
-            let version = line.strip_prefix("%!PS-Adobe-").unwrap_or("").trim();
-            tags.push(mk("PSVersion", "PostScript Version", Value::String(version.to_string())));
-            // Check for EPS
-            if version.contains("EPSF") {
-                tags.push(mk("EPSVersion", "EPS Version", Value::String(version.to_string())));
-            }
+            // Perl stores version internally but doesn't emit PSVersion/EPSVersion directly
         }
     }
 
