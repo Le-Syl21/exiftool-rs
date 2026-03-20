@@ -104,15 +104,15 @@ fn parse_ciff_dir(
             (&data[abs_offset..abs_offset + size_field], size_field)
         };
 
+        // Some CIFF tags have SubDirectory → binary data tables (from Perl CanonRaw.pm).
+        // Check this BEFORE the name check, since sub-dir tags have empty names.
+        if parse_ciff_binary_subdir(tag_id, value_data, is_le, tags) {
+            continue; // sub-tags emitted, skip emitting the container tag
+        }
+
         let (name, description) = crw_tag_name(tag_id);
         if name.is_empty() {
             continue;
-        }
-
-        // Some CIFF tags have SubDirectory → binary data tables (from Perl CanonRaw.pm).
-        // For those, parse the binary data and emit sub-tags instead of the raw container.
-        if parse_ciff_binary_subdir(tag_id, value_data, is_le, tags) {
-            continue; // sub-tags emitted, skip emitting the container tag
         }
 
         let value = match data_type {
@@ -224,6 +224,124 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
     };
 
     match tag_id {
+        0x102a => {
+            // CanonShotInfo — int16s array, same format as JPEG MakerNote tag 0x0004
+            let values: Vec<i16> = (0..data.len() / 2)
+                .map(|i| if is_le {
+                    i16::from_le_bytes([data[i*2], data[i*2+1]])
+                } else {
+                    i16::from_be_bytes([data[i*2], data[i*2+1]])
+                })
+                .collect();
+            let sub_tags = crate::tags::canon_sub::decode_shot_info(&values);
+            for t in sub_tags {
+                tags.push(Tag {
+                    group: TagGroup { family0: "CanonRaw".into(), family1: "CanonRaw".into(), family2: "Camera".into() },
+                    ..t
+                });
+            }
+            true
+        }
+        0x102d => {
+            // CanonCameraSettings — int16s array, same format as JPEG MakerNote tag 0x0001
+            let values: Vec<i16> = (0..data.len() / 2)
+                .map(|i| if is_le {
+                    i16::from_le_bytes([data[i*2], data[i*2+1]])
+                } else {
+                    i16::from_be_bytes([data[i*2], data[i*2+1]])
+                })
+                .collect();
+            let sub_tags = crate::tags::canon_sub::decode_camera_settings(&values);
+            for t in sub_tags {
+                tags.push(Tag {
+                    group: TagGroup { family0: "CanonRaw".into(), family1: "CanonRaw".into(), family2: "Camera".into() },
+                    ..t
+                });
+            }
+            true
+        }
+        0x1038 => {
+            // CanonAFInfo — int16u array: decode basic AF fields
+            let ru16l = |off: usize| -> u16 {
+                if off + 2 > data.len() { return 0; }
+                if is_le { u16::from_le_bytes([data[off], data[off+1]]) }
+                else { u16::from_be_bytes([data[off], data[off+1]]) }
+            };
+            // Perl Canon::AFInfo: NumAFPoints(0), ValidAFPoints(1), ImageWidth(2), ImageHeight(3)
+            // then AFAreaWidth(4), AFAreaHeight(5) for each point, then AFAreaXPositions, AFAreaYPositions
+            if data.len() >= 8 {
+                let num_points = ru16l(0);
+                let valid_points = ru16l(2);
+                tags.push(mk("NumAFPoints", num_points.to_string()));
+                tags.push(mk("ValidAFPoints", valid_points.to_string()));
+                tags.push(mk("AFImageWidth", ru16l(4).to_string()));
+                tags.push(mk("AFImageHeight", ru16l(6).to_string()));
+                let n = num_points as usize;
+                // AFAreaWidth/Height — Perl emits single value (first element)
+                if data.len() >= 8 + 2 {
+                    tags.push(mk("AFAreaWidth", ru16l(8).to_string()));
+                }
+                if data.len() >= 8 + n * 2 + 2 {
+                    tags.push(mk("AFAreaHeight", ru16l(8 + n * 2).to_string()));
+                }
+                if data.len() >= 8 + n * 6 {
+                    let xpos: Vec<String> = (0..n).map(|i| {
+                        let v = ru16l(8 + n*4 + i*2) as i16;
+                        v.to_string()
+                    }).collect();
+                    tags.push(mk("AFAreaXPositions", xpos.join(" ")));
+                }
+                if data.len() >= 8 + n * 8 {
+                    let ypos: Vec<String> = (0..n).map(|i| {
+                        let v = ru16l(8 + n*6 + i*2) as i16;
+                        v.to_string()
+                    }).collect();
+                    tags.push(mk("AFAreaYPositions", ypos.join(" ")));
+                }
+            }
+            true
+        }
+        0x10a9 => {
+            // ColorBalance — int16s array (Canon::ColorBalance table)
+            let ri16 = |idx: usize| -> i16 {
+                let off = idx * 2;
+                if off + 2 > data.len() { return 0; }
+                if is_le { i16::from_le_bytes([data[off], data[off+1]]) }
+                else { i16::from_be_bytes([data[off], data[off+1]]) }
+            };
+            let wb4 = |idx: usize| -> String {
+                format!("{} {} {} {}", ri16(idx), ri16(idx+1), ri16(idx+2), ri16(idx+3))
+            };
+            let n = data.len() / 2;
+            if n > 4 { tags.push(mk("WB_RGGBLevelsAuto", wb4(1))); }
+            if n > 8 { tags.push(mk("WB_RGGBLevelsDaylight", wb4(5))); }
+            if n > 12 { tags.push(mk("WB_RGGBLevelsShade", wb4(9))); }
+            if n > 16 { tags.push(mk("WB_RGGBLevelsCloudy", wb4(13))); }
+            if n > 20 { tags.push(mk("WB_RGGBLevelsTungsten", wb4(17))); }
+            if n > 24 { tags.push(mk("WB_RGGBLevelsFluorescent", wb4(21))); }
+            if n > 28 { tags.push(mk("WB_RGGBLevelsFlash", wb4(25))); }
+            if n > 32 { tags.push(mk("WB_RGGBLevelsCustom", wb4(29))); }
+            if n > 36 { tags.push(mk("WB_RGGBLevelsKelvin", wb4(33))); }
+            if n > 40 { tags.push(mk("WB_RGGBBlackLevels", wb4(37))); }
+            true
+        }
+        0x1093 => {
+            // CanonFileInfo — int16s array: decode basic fields
+            let ri16l = |off: usize| -> i16 {
+                if off + 2 > data.len() { return 0; }
+                if is_le { i16::from_le_bytes([data[off], data[off+1]]) }
+                else { i16::from_be_bytes([data[off], data[off+1]]) }
+            };
+            // Perl Canon::FileInfo: FileNumber(0), BracketMode(3), BracketValue(4), BracketShotNumber(5)
+            if data.len() >= 2 {
+                let file_num = ri16l(0) as u16;
+                let dir = (file_num as u32 >> 8) * 100 + (file_num & 0xFF) as u32;
+                // Perl: sprintf("%d-%04d", $hi*100 + ($lo>>8), ($lo&0xff)*10 + ($hi>>4))
+                // Simplified for now
+                tags.push(mk("FileNumber", file_num.to_string()));
+            }
+            true
+        }
         0x1803 => {
             // ImageFormat (SubDirectory → CanonRaw::ImageFormat, FORMAT=int32u)
             // 0=FileFormat, 1=TargetCompressionRatio(float)
