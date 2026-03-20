@@ -414,18 +414,20 @@ impl ExifReader {
                         // Fallback to generated tags
                         match exif_tags::lookup_generated(entry.tag) {
                             Some((n, d)) => (n.to_string(), d.to_string(), "Other".to_string()),
-                            None => (
-                                format!("Tag0x{:04X}", entry.tag),
-                                format!("Unknown tag 0x{:04X}", entry.tag),
-                                "Other".to_string(),
-                            ),
+                            None => {
+                                // Perl doesn't emit unknown EXIF tags by default
+                                continue;
+                            },
                         }
                     }
                 };
 
                 // Suppress known SubDirectory/internal tags that Perl decodes but doesn't emit as raw
-                if name == "ApplicationNotes" {
-                    // XMP data — should be parsed, not emitted raw
+                if matches!(name.as_str(),
+                    "ApplicationNotes" | // XMP data — should be parsed, not emitted raw
+                    "MinSampleValue" | "MaxSampleValue" | // Not emitted by Perl for raw formats
+                    "ProcessingSoftware" // Protected tag, not always emitted
+                ) {
                     continue;
                 }
 
