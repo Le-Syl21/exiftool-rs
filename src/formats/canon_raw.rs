@@ -395,14 +395,15 @@ fn crw_tag_name(tag_id: u16) -> (&'static str, &'static str) {
         0x101c => ("BaseISO", "Base ISO"),
         0x1026 => ("", ""),  // unknown, skip
         0x1029 => ("CanonFocalLength", "Focal Length"),
-        0x102a => ("CanonShotInfo", "Shot Info"),
-        0x102d => ("CanonCameraSettings", "Camera Settings"),
-        0x1031 => ("SensorInfo", "Sensor Info"),
-        0x1038 => ("CanonAFInfo", "AF Info"),
-        0x1093 => ("CanonFileInfo", "File Info"),
-        0x10a9 => ("ColorBalance", "Color Balance"),
+        // SubDirectory containers — decoded into sub-tags by Perl, suppressed here
+        0x102a => ("", ""),  // CanonShotInfo (SubDirectory)
+        0x102d => ("", ""),  // CanonCameraSettings (SubDirectory)
+        0x1031 => ("", ""),  // SensorInfo (SubDirectory)
+        0x1038 => ("", ""),  // CanonAFInfo (SubDirectory)
+        0x1093 => ("", ""),  // CanonFileInfo (SubDirectory)
+        0x10a9 => ("", ""),  // ColorBalance (SubDirectory)
         0x10b4 => ("ColorSpace", "Color Space"),
-        0x10b5 => ("RawJpgInfo", "Raw Jpg Info"),
+        0x10b5 => ("", ""),  // RawJpgInfo (SubDirectory)
         0x1803 => ("ImageFormat", "Image Format"),
         0x1804 => ("RecordID", "Record ID"),
         0x1806 => ("SelfTimerTime", "Self Timer Time"),
@@ -414,7 +415,7 @@ fn crw_tag_name(tag_id: u16) -> (&'static str, &'static str) {
         0x1817 => ("FileNumber", "File Number"),
         0x1818 => ("ExposureInfo", "Exposure Info"),
         0x1834 => ("CanonModelID", "Model ID"),
-        0x1835 => ("DecoderTable", "Decoder Table"),
+        0x1835 => ("", ""),  // DecoderTable (SubDirectory)
         0x183b => ("SerialNumber", "Serial Number"),
         0x3002 => ("ShootingRecord", "Shooting Record"),
         0x3003 => ("MeasuredInfo", "Measured Info"),
