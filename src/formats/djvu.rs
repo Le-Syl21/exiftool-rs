@@ -76,8 +76,10 @@ fn parse_chunks(data: &[u8], mut pos: usize, end: usize, tags: &mut Vec<Tag>) {
             }
             b"ANTa" => parse_ant(chunk_data, tags),
             b"ANTz" => {
-                // BZZ compressed annotation - we don't have a BZZ decompressor
-                // so we skip this for now
+                // BZZ compressed annotation - decompress and parse
+                if let Some(decompressed) = super::bzz::decode(chunk_data) {
+                    parse_ant(&decompressed, tags);
+                }
             }
             b"INCL" => {
                 // Included file ID
@@ -150,11 +152,9 @@ fn parse_ant(data: &[u8], tags: &mut Vec<Tag>) {
     }
 
     // Look for (xmp ...) block
-    if let Some(xmp_start) = find_sexpr(text, "xmp") {
-        if let Some(xmp_content) = extract_sexpr_string(&text[xmp_start..]) {
-            if let Ok(xmp_tags) = XmpReader::read(xmp_content.as_bytes()) {
-                tags.extend(xmp_tags);
-            }
+    if let Some(xmp_content) = extract_sexpr_value(text, "xmp") {
+        if let Ok(xmp_tags) = XmpReader::read(xmp_content.as_bytes()) {
+            tags.extend(xmp_tags);
         }
     }
 

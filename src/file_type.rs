@@ -350,6 +350,7 @@ impl FileType {
             FileType::Hdr => "image/vnd.radiance",
             FileType::Rwz => "image/x-rawzor",
             FileType::Mng => "video/x-mng",
+            FileType::PhotoCd => "image/x-photo-cd",
             // RAW → use specific MIME where available
             FileType::Cr2 => "image/x-canon-cr2",
             FileType::Cr3 | FileType::Crm => "image/x-canon-cr3",
@@ -488,6 +489,7 @@ impl FileType {
             FileType::Rwz => &["rwz"],
             FileType::Btf => &["btf"],
             FileType::Mng => &["mng", "jng"],
+            FileType::PhotoCd => &["pcd"],
             // RAW
             FileType::Cr2 => &["cr2"],
             FileType::Cr3 => &["cr3"],
@@ -673,7 +675,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Exr, FileType::Ico, FileType::Jps,
     // Images - Specialized
     FileType::DjVu, FileType::Xcf, FileType::Pcx, FileType::Pict, FileType::Psp,
-    FileType::Hdr, FileType::Rwz, FileType::Btf, FileType::Mng,
+    FileType::Hdr, FileType::Rwz, FileType::Btf, FileType::Mng, FileType::PhotoCd,
     // RAW
     FileType::Cr2, FileType::Cr3, FileType::Crw, FileType::Nef, FileType::Arw,
     FileType::Sr2, FileType::Srf, FileType::Orf, FileType::Rw2, FileType::Dng,

@@ -3,6 +3,7 @@ pub mod ape;
 pub mod asf;
 pub mod audible;
 pub mod bmp;
+pub mod bzz;
 pub mod canon_raw;
 pub mod djvu;
 pub mod dpx;

@@ -1089,6 +1089,14 @@ impl ExifTool {
                     }
                 }
             }
+            // Override to PhotoCD if extension is .pcd (file starts with 0xFF padding)
+            if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                if ext.eq_ignore_ascii_case("pcd") && data.len() >= 2056
+                    && &data[2048..2055] == b"PCD_IPI"
+                {
+                    return Ok(FileType::PhotoCd);
+                }
+            }
             // Override MP3 to MPC/APE/WavPack if extension says otherwise
             if ft == FileType::Mp3 {
                 if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
@@ -1237,6 +1245,7 @@ impl ExifTool {
             }
             // Misc formats
             FileType::Czi => formats::misc::read_czi(data).or_else(|_| Ok(Vec::new())),
+            FileType::PhotoCd => formats::misc::read_photo_cd(data).or_else(|_| Ok(Vec::new())),
             FileType::Dicom => formats::misc::read_dicom(data),
             FileType::Fits => formats::misc::read_fits(data),
             FileType::Flv => formats::misc::read_flv(data),

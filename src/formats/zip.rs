@@ -221,6 +221,32 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
+    // Pre-scan: check if this is an OpenDocument file (has "mimetype" as first file with oasis MIME)
+    let is_opendoc = {
+        let mut found = false;
+        if data.len() > 30 && data[0..4] == [0x50, 0x4B, 0x03, 0x04] {
+            let compression = u16::from_le_bytes([data[8], data[9]]);
+            let compressed_size = u32::from_le_bytes([data[18], data[19], data[20], data[21]]) as usize;
+            let name_len = u16::from_le_bytes([data[26], data[27]]) as usize;
+            let extra_len = u16::from_le_bytes([data[28], data[29]]) as usize;
+            let name_start = 30;
+            if name_start + name_len <= data.len() {
+                let filename = std::str::from_utf8(&data[name_start..name_start + name_len]).unwrap_or("");
+                if filename == "mimetype" && compression == 0 {
+                    let content_start = name_start + name_len + extra_len;
+                    let content_end = (content_start + compressed_size).min(data.len());
+                    if content_start < content_end {
+                        let mime = std::str::from_utf8(&data[content_start..content_end]).unwrap_or("").trim();
+                        if mime.starts_with("application/vnd.oasis.opendocument") {
+                            found = true;
+                        }
+                    }
+                }
+            }
+        }
+        found
+    };
+
     let mut tags = Vec::new();
     let mut file_count = 0u32;
     let mut total_size = 0u64;
@@ -250,8 +276,10 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
         let filename = String::from_utf8_lossy(&data[name_start..name_start + name_len]).to_string();
 
         // Emit per-file tags for the first file (matching Perl behavior)
-        if first_file {
-            first_file = false;
+        // Skip for OpenDocument files (they don't emit Zip* tags)
+        let emit_zip_tags = first_file && !is_opendoc;
+        if first_file { first_file = false; }
+        if emit_zip_tags {
             tags.push(mk("ZipRequiredVersion", "Required Version", Value::U16(required_version)));
             let bit_flag_str = if bit_flag != 0 {
                 format!("0x{:04x}", bit_flag)
@@ -290,6 +318,38 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
                     .trim()
                     .to_string();
                 tags.push(mk("MIMEType", "MIME Type", Value::String(mime)));
+            }
+        }
+
+        // OpenDocument: parse meta.xml for metadata
+        if filename == "meta.xml" {
+            let content_start = name_start + name_len + extra_len;
+            let content_end = (content_start + compressed_size).min(data.len());
+            if content_start < content_end {
+                if let Some(xml_bytes) = decompress_zip_entry(&data[content_start..content_end], compression, uncompressed_size as usize) {
+                    parse_opendoc_meta(&xml_bytes, &mut tags);
+                }
+            }
+        }
+
+        // OpenDocument: thumbnail PNG
+        if filename == "Thumbnails/thumbnail.png" {
+            let content_start = name_start + name_len + extra_len;
+            let content_end = (content_start + compressed_size).min(data.len());
+            if content_start < content_end {
+                if let Some(img_bytes) = decompress_zip_entry(&data[content_start..content_end], compression, uncompressed_size as usize) {
+                    let n = img_bytes.len();
+                    let preview_str = format!("(Binary data {} bytes, use -b option to extract)", n);
+                    tags.push(Tag {
+                        id: TagId::Text("PreviewPNG".into()),
+                        name: "PreviewPNG".into(),
+                        description: "Preview PNG".into(),
+                        group: TagGroup { family0: "ZIP".into(), family1: "ZIP".into(), family2: "Preview".into() },
+                        raw_value: Value::Binary(img_bytes),
+                        print_value: preview_str,
+                        priority: 0,
+                    });
+                }
             }
         }
 
@@ -686,6 +746,159 @@ fn format_size(bytes: u64) -> String {
     if bytes < 1024 { format!("{} bytes", bytes) }
     else if bytes < 1024 * 1024 { format!("{:.1} kB", bytes as f64 / 1024.0) }
     else { format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0)) }
+}
+
+/// Parse OpenDocument meta.xml and extract metadata tags.
+/// The meta.xml format uses namespaced XML elements.
+fn parse_opendoc_meta(data: &[u8], tags: &mut Vec<Tag>) {
+    let text = String::from_utf8_lossy(data);
+    let xml = text.as_ref();
+
+    // Extract grddl:transformation attribute from root element
+    if let Some(trans) = xml_attr(xml, "grddl:transformation") {
+        tags.push(mk("Transformation", "Transformation", Value::String(trans)));
+    }
+
+    // Parse office:meta section
+    // Simple tag mappings: element local-name → ExifTool tag name
+    let simple_tags = [
+        ("meta:initial-creator", "Initial-creator"),
+        ("meta:creation-date", "Creation-date"),
+        ("meta:keyword", "Keyword"),
+        ("meta:editing-duration", "Editing-duration"),
+        ("meta:editing-cycles", "Editing-cycles"),
+        ("meta:generator", "Generator"),
+        ("dc:title", "Title"),
+        ("dc:subject", "Subject"),
+        ("dc:description", "Description"),
+        ("dc:date", "Date"),
+        ("dc:creator", "Creator"),
+    ];
+
+    for (elem, tag_name) in &simple_tags {
+        if let Some(val) = xml_element_text(xml, elem) {
+            // Convert ISO dates to ExifTool format
+            let val = if tag_name.ends_with("-date") || *tag_name == "Date" {
+                convert_iso_date(&val)
+            } else {
+                val
+            };
+            tags.push(mk(tag_name, tag_name, Value::String(val)));
+        }
+    }
+
+    // meta:document-statistic attributes
+    if let Some(stat_pos) = xml.find("<meta:document-statistic") {
+        let stat_part = &xml[stat_pos..];
+        let elem_end = stat_part.find('>').unwrap_or(stat_part.len());
+        let elem_str = &stat_part[..elem_end];
+
+        let stat_attrs = [
+            ("meta:table-count", "Document-statisticTable-count"),
+            ("meta:cell-count", "Document-statisticCell-count"),
+            ("meta:object-count", "Document-statisticObject-count"),
+            ("meta:page-count", "Document-statisticPage-count"),
+            ("meta:word-count", "Document-statisticWord-count"),
+            ("meta:character-count", "Document-statisticCharacter-count"),
+        ];
+        for (attr, tag_name) in &stat_attrs {
+            if let Some(val) = xml_attr(elem_str, attr) {
+                tags.push(mk(tag_name, tag_name, Value::String(val)));
+            }
+        }
+    }
+
+    // meta:user-defined elements
+    let mut search = xml;
+    while let Some(pos) = search.find("<meta:user-defined") {
+        let part = &search[pos..];
+        // Get meta:name attribute
+        let elem_end = part.find('>').unwrap_or(part.len());
+        let elem_str = &part[..elem_end];
+        let name = xml_attr(elem_str, "meta:name").unwrap_or_default();
+        // Get text content
+        let content_start = part.find('>').map(|p| p + 1).unwrap_or(part.len());
+        let content_end = part.find("</meta:user-defined>").unwrap_or(part.len());
+        let value = if content_start < content_end {
+            xml_decode_entities(part[content_start..content_end].trim())
+        } else {
+            String::new()
+        };
+        if !name.is_empty() {
+            tags.push(mk("User-definedName", "User-defined Name", Value::String(name)));
+        }
+        if !value.is_empty() {
+            tags.push(mk("User-defined", "User-defined", Value::String(value)));
+        }
+        let advance = pos + 19;
+        if advance >= search.len() { break; }
+        search = &search[advance..];
+    }
+}
+
+/// Get attribute value from an XML element string.
+fn xml_attr(xml: &str, attr: &str) -> Option<String> {
+    let search = format!("{}=\"", attr);
+    let pos = xml.find(&search)?;
+    let after = &xml[pos + search.len()..];
+    let end = after.find('"')?;
+    Some(xml_decode_entities(&after[..end]))
+}
+
+/// Get text content of first matching XML element.
+fn xml_element_text(xml: &str, elem: &str) -> Option<String> {
+    let open = format!("<{}", elem);
+    let close = format!("</{}>", elem);
+    let pos = xml.find(&open)?;
+    let after_open = &xml[pos..];
+    // Find end of opening tag
+    let tag_end = after_open.find('>')?;
+    // Check for self-closing tag
+    if after_open[..tag_end].ends_with('/') {
+        return None;
+    }
+    let content_start = tag_end + 1;
+    let close_pos = after_open[content_start..].find(&close)?;
+    let content = &after_open[content_start..content_start + close_pos];
+    let trimmed = content.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(xml_decode_entities(trimmed))
+    }
+}
+
+/// Decode basic XML entities.
+fn xml_decode_entities(s: &str) -> String {
+    s.replace("&amp;", "&")
+     .replace("&lt;", "<")
+     .replace("&gt;", ">")
+     .replace("&quot;", "\"")
+     .replace("&apos;", "'")
+}
+
+/// Convert ISO 8601 date "2010-04-19T11:16:49.13" to ExifTool format "2010:04:19 11:16:49.13"
+fn convert_iso_date(s: &str) -> String {
+    // Replace first two dashes with colons, and T with space
+    let mut result = String::with_capacity(s.len());
+    let mut dash_count = 0;
+    let mut in_time = false;
+    for c in s.chars() {
+        if !in_time && c == '-' {
+            dash_count += 1;
+            if dash_count <= 2 {
+                result.push(':');
+            } else {
+                result.push(c);
+            }
+        } else if c == 'T' {
+            in_time = true;
+            result.push(' ');
+        } else {
+            result.push(c);
+        }
+    }
+    result
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {
