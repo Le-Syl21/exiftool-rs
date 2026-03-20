@@ -265,6 +265,10 @@ struct AviState {
     video_frame_count: u32,
     /// Video frame rate (from strh, rational: scale/rate -> rate/scale fps)
     video_frame_rate: Option<f64>,
+    /// Recursion depth — Duration is only emitted at depth 0
+    depth: usize,
+    /// Number of streams seen so far (StreamType/Quality/SampleSize only from first stream)
+    stream_count_seen: u32,
 }
 
 impl AviState {
@@ -278,6 +282,8 @@ impl AviState {
             total_frames: 0,
             video_frame_count: 0,
             video_frame_rate: None,
+            depth: 0,
+            stream_count_seen: 0,
         }
     }
 }
@@ -320,14 +326,20 @@ fn read_riff_chunks(
                         }
                         b"hdrl" => {
                             // AVI header list - contains avih and strl
+                            state.depth += 1;
                             read_riff_chunks(data, chunk_data_start + 4, chunk_data_end, tags, family, state)?;
+                            state.depth -= 1;
                         }
                         b"strl" => {
+                            state.depth += 1;
                             read_riff_chunks(data, chunk_data_start + 4, chunk_data_end, tags, family, state)?;
+                            state.depth -= 1;
                         }
                         b"odml" => {
                             // OpenDML extended AVI header
+                            state.depth += 1;
                             read_riff_chunks(data, chunk_data_start + 4, chunk_data_end, tags, family, state)?;
+                            state.depth -= 1;
                         }
                         b"exif" => {
                             // EXIF data in AVI/WAV LIST exif chunk
@@ -335,7 +347,9 @@ fn read_riff_chunks(
                         }
                         b"adtl" => {
                             // Associated data list
+                            state.depth += 1;
                             read_riff_chunks(data, chunk_data_start + 4, chunk_data_end, tags, family, state)?;
+                            state.depth -= 1;
                         }
                         b"hydt" | b"pntx" => {
                             // Pentax metadata LIST (LIST hydt / LIST pntx)
@@ -386,17 +400,21 @@ fn read_riff_chunks(
                     let cd = &data[chunk_data_start..chunk_data_end];
                     let fcc_type = String::from_utf8_lossy(&cd[0..4]).to_string();
                     state.current_stream_type = Some(fcc_type.clone());
+                    state.stream_count_seen += 1;
+                    let is_first_stream = state.stream_count_seen == 1;
 
-                    // StreamType
-                    let stream_type_str = match fcc_type.as_str() {
-                        "auds" => "Audio",
-                        "mids" => "MIDI",
-                        "txts" => "Text",
-                        "vids" => "Video",
-                        "iavs" => "Interleaved Audio+Video",
-                        _ => &fcc_type,
-                    };
-                    tags.push(mk_riff(family, "StreamType", "Stream Type", Value::String(stream_type_str.to_string())));
+                    // StreamType — Perl uses PRIORITY=>0 so only first stream wins
+                    if is_first_stream {
+                        let stream_type_str = match fcc_type.as_str() {
+                            "auds" => "Audio",
+                            "mids" => "MIDI",
+                            "txts" => "Text",
+                            "vids" => "Video",
+                            "iavs" => "Interleaved Audio+Video",
+                            _ => &fcc_type,
+                        };
+                        tags.push(mk_riff(family, "StreamType", "Stream Type", Value::String(stream_type_str.to_string())));
+                    }
 
                     if chunk_size >= 8 {
                         let fcc_handler = String::from_utf8_lossy(&cd[4..8]).trim_end_matches('\0').to_string();
@@ -438,7 +456,8 @@ fn read_riff_chunks(
                     }
 
                     // Quality (offset 40) and SampleSize (offset 44)
-                    if chunk_size >= 48 {
+                    // Perl uses PRIORITY=>0 so only first stream's values are kept
+                    if chunk_size >= 48 && is_first_stream {
                         let quality = u32::from_le_bytes([cd[40], cd[41], cd[42], cd[43]]);
                         let sample_size = u32::from_le_bytes([cd[44], cd[45], cd[46], cd[47]]);
 
@@ -544,6 +563,12 @@ fn read_riff_chunks(
         }
 
         pos = chunk_data_end + (chunk_size & 1);
+    }
+
+    // After processing all chunks, compute Duration — only at the top level (depth == 0)
+    // to avoid emitting Duration once per recursive sub-list call.
+    if state.depth > 0 {
+        return Ok(());
     }
 
     // After processing all chunks, compute Duration for WAV

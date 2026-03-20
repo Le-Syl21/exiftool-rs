@@ -1089,7 +1089,7 @@ fn print_exposure_time(val: f64) -> String {
 
 /// Decode Pentax CameraSettings (tag 0x0205, 23 bytes).
 /// From Perl Pentax::CameraSettings table.
-fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark) -> Vec<Tag> {
+fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if data.is_empty() { return tags; }
     let pb = |name: &str, v: &str| mk_pentax(name, v);
@@ -1283,8 +1283,84 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark) -> Vec<
         }
     }
 
+    // Bytes 14-18: K10D/K-5/GX10 specific tags
+    let is_k10d = model.contains("K10D") || model.contains("GX10") || model.contains("K-5");
+    // Byte 14: bit-field tags (K10D/K-5 specific)
+    if data.len() > 14 && is_k10d {
+        let b = data[14];
+        // 14.1: JpgRecordedPixels (bits 0-1)
+        let jpgrp = b & 0x03;
+        let jpgrp_s = match jpgrp { 0 => "10 MP", 1 => "6 MP", 2 => "2 MP", _ => "" };
+        if !jpgrp_s.is_empty() {
+            tags.push(pb("JpgRecordedPixels", jpgrp_s));
+        }
+        // 14.3: SensitivitySteps (bits 4-5)
+        let ss = (b >> 4) & 0x01;
+        let ss_s = match ss { 0 => "1 EV Steps", 1 => "As EV Steps", _ => "" };
+        if !ss_s.is_empty() {
+            tags.push(pb("SensitivitySteps", ss_s));
+        }
+    }
+
+    // Byte 16: FlashOptions2 + MeteringMode3
+    if data.len() > 16 && is_k10d {
+        let b = data[16];
+        // 16: FlashOptions2 (bits 4-7)
+        let fo2 = (b & 0xf0) >> 4;
+        let fo2_s = match fo2 {
+            0 => "Normal", 1 => "Red-eye Reduction", 2 => "Auto",
+            3 => "Auto, Red-eye Reduction", 5 => "Wireless (Master)",
+            6 => "Wireless (Control)", 8 => "Slow Sync", 9 => "Slow Sync, Red-eye Reduction",
+            10 => "Trailing Curtain Sync", _ => "",
+        };
+        if !fo2_s.is_empty() {
+            tags.push(pb("FlashOptions2", fo2_s));
+        }
+        // 16.1: MeteringMode3 (bits 0-3)
+        let mm3 = b & 0x0f;
+        let mm3_s = match mm3 {
+            0 => "Multi-segment", 1 => "Center-weighted Average", 2 => "Spot", _ => "",
+        };
+        if !mm3_s.is_empty() {
+            tags.push(pb("MeteringMode3", mm3_s));
+        }
+    }
+
+    // Byte 17: bit-field tags
+    if data.len() > 17 && is_k10d {
+        let b = data[17];
+        // 17.1: SRActive (bit 0)
+        let sr = b & 0x01;
+        tags.push(pb("SRActive", if sr != 0 { "Yes" } else { "No" }));
+        // 17.2: Rotation (bits 1-2)
+        let rot = (b >> 1) & 0x03;
+        let rot_s = match rot {
+            0 => "Horizontal (normal)", 1 => "Rotate 180",
+            2 => "Rotate 90 CW", 3 => "Rotate 270 CW", _ => "",
+        };
+        if !rot_s.is_empty() {
+            tags.push(pb("Rotation", rot_s));
+        }
+        // 17.3: ISOSetting (bits 3-4)
+        let iso_s = (b >> 3) & 0x03;
+        let iso_str = match iso_s { 0 => "Manual", 1 => "Auto", 2 => "Auto (Outdoor)", _ => "" };
+        if !iso_str.is_empty() {
+            tags.push(pb("ISOSetting", iso_str));
+        }
+    }
+
+    // Byte 18: TvExposureTimeSetting — ValueConv: exp(PentaxEv(val-68)*log(2))
+    if data.len() > 18 && is_k10d {
+        let raw = data[18] as i32;
+        let ev = pentax_ev(raw - 68);
+        let t = (ev * std::f64::consts::LN_2).exp();
+        let s = if t > 0.0 {
+            if t < 1.0 { format!("1/{}", (1.0 / t + 0.5) as u32) } else { format!("{:.0}", t) }
+        } else { "0".to_string() };
+        tags.push(pb("TvExposureTimeSetting", &s));
+    }
+
     // Byte 19: AvApertureSetting — ValueConv: exp(PentaxEv(val-68)*log(2)/2)
-    // (Bytes 14-18 contain K10D-only or K-5-only tags; skip for model-independence)
     if data.len() > 19 {
         let raw = data[19] as i32;
         let ev = pentax_ev(raw - 68);
@@ -3272,7 +3348,7 @@ fn read_makernote_ifd(
                     t
                 }
                 // Pentax binary sub-tables (from Perl Pentax.pm)
-                (Manufacturer::Pentax, 0x0205) => decode_pentax_camera_settings(value_data, byte_order),
+                (Manufacturer::Pentax, 0x0205) => decode_pentax_camera_settings(value_data, byte_order, model_name),
                 (Manufacturer::Pentax, 0x0206) => decode_pentax_ae_info(value_data),
                 (Manufacturer::Pentax, 0x0207) => decode_pentax_lens_info(value_data),
                 (Manufacturer::Pentax, 0x0208) => {

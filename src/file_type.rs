@@ -253,7 +253,7 @@ impl FileType {
             // Video
             FileType::Mp4 => "MP4 video",
             FileType::QuickTime => "QuickTime video",
-            FileType::Avi => "AVI video",
+            FileType::Avi => "AVI",
             FileType::Mkv => "Matroska video",
             FileType::WebM => "WebM video",
             FileType::Wmv => "Windows Media Video",
