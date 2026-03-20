@@ -117,6 +117,16 @@ fn decode_nikon_capture_tag(tag_id: u32, data: &[u8], tags: &mut Vec<Tag>) {
         0xb0384e1e => decode_photo_effects(data, tags),
         0xbf3c6c20 => decode_wb_adj(data, tags),
 
+        0x3cfc73c6 => {
+            // RedEyeData subdirectory
+            if !data.is_empty() {
+                let v = match data[0] {
+                    0 => "Off", 1 => "Automatic", 2 => "Click on Eyes", _ => "",
+                };
+                if !v.is_empty() { tags.push(mk("RedEyeCorrection", v)); }
+            }
+        }
+
         // Edit version name
         0x3d136244 => {
             let s = String::from_utf8_lossy(data).trim_end_matches('\0').to_string();

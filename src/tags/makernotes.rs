@@ -311,7 +311,7 @@ static NIKON_TAGS: &[(u16, &str, &str)] = &[
     (0x00A7, "ShutterCount", "Shutter Count"),
     (0x00A8, "FlashInfo", "Flash Info"),
     (0x00A9, "ImageOptimization", "Image Optimization"),
-    (0x00AA, "Unknown", "Unknown"), // Saturation - Unknown=>1 in Perl
+    (0x00AA, "Saturation", "Saturation"),
     (0x00AB, "VariProgram", "Vari Program"),
     (0x00AC, "ImageStabilization", "Image Stabilization"),
     (0x00AD, "AFResponse", "AF Response"),
