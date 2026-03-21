@@ -26,6 +26,8 @@ pub struct Options {
     pub fast_scan: u8,
     /// Only extract these tag names (empty = all).
     pub requested_tags: Vec<String>,
+    /// Extract embedded documents/data (video frames, etc.). Level: 0=off, 1=-ee, 2=-ee2, 3=-ee3.
+    pub extract_embedded: u8,
 }
 
 impl Default for Options {
@@ -35,6 +37,7 @@ impl Default for Options {
             print_conv: true,
             fast_scan: 0,
             requested_tags: Vec::new(),
+            extract_embedded: 0,
         }
     }
 }
@@ -1301,7 +1304,7 @@ impl ExifTool {
             FileType::Bpg => formats::misc::read_bpg(data),
             FileType::Pcx => formats::misc::read_pcx(data),
             FileType::Pict => formats::misc::read_pict(data),
-            FileType::M2ts => formats::misc::read_m2ts(data),
+            FileType::M2ts => formats::misc::read_m2ts(data, self.options.extract_embedded),
             FileType::Gzip => formats::misc::read_gzip(data),
             FileType::Rar => formats::misc::read_rar(data),
             FileType::Dss => formats::misc::read_dss(data),

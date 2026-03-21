@@ -110,9 +110,9 @@ fn main() {
                     i += 1;
                 }
             }
-            "-ee" | "-ee2" | "-ee3" => {
-                // Extract embedded files - not yet implemented
-            }
+            "-ee" => { options.extract_embedded = 1; }
+            "-ee2" => { options.extract_embedded = 2; }
+            "-ee3" => { options.extract_embedded = 3; }
             "-efile" | "-efile!" => {
                 if i + 1 < args.len() { i += 1; }
             }
