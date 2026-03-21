@@ -23,13 +23,13 @@ jobs:
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             use_cross: true
-          # macOS x86_64 — native
-          - os: macos-13
-            target: x86_64-apple-darwin
-            use_cross: false
-          # macOS ARM64 — native (M1 runner)
+          # macOS ARM64 — native (M1/M2 runner, also builds x86_64 via universal)
           - os: macos-latest
             target: aarch64-apple-darwin
+            use_cross: false
+          # macOS x86_64 — cross-compile from ARM runner
+          - os: macos-latest
+            target: x86_64-apple-darwin
             use_cross: false
           # Windows x86_64 — native
           - os: windows-latest
@@ -64,7 +64,7 @@ jobs:
         run: cross build --release --target ${{ matrix.target }}
 
       - name: Run tests (native)
-        if: "!matrix.use_cross && !contains(matrix.target, 'aarch64-pc-windows')"
+        if: "!matrix.use_cross && !contains(matrix.target, 'aarch64-pc-windows') && !contains(matrix.target, 'x86_64-apple-darwin')"
         run: cargo test --target ${{ matrix.target }}
 
       - name: Run tests (cross/QEMU)
