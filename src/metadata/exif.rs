@@ -245,6 +245,13 @@ impl ExifReader {
             }
         }
 
+        // DNG PrivateData (0xC634): parse Adobe MakN for MakerNotes if no MakerNote found
+        if mn_info.is_none() {
+            // Scan for DNGPrivateData in tags — look for "Adobe\0" header
+            // Find the offset from the tag value (stored as binary/undefined)
+            Self::parse_dng_private_data(data, &header, &make, &make_and_model, &mut tags);
+        }
+
         // Parse IPTC data embedded in TIFF (tag 0x83BB "IPTC-NAA")
         // The raw tag stores IPTC data as undefined bytes or a list of u32 values
         {
@@ -356,6 +363,67 @@ impl ExifReader {
     }
 
     /// Find MakerNote (tag 0x927C) offset and size in ExifIFD.
+    /// Parse DNG PrivateData (0xC634) to extract embedded MakerNotes
+    fn parse_dng_private_data(data: &[u8], header: &TiffHeader, make: &str, model: &str, tags: &mut Vec<Tag>) {
+        // Scan IFD0 for tag 0xC634
+        let ifd0_offset = header.ifd0_offset as usize;
+        if ifd0_offset + 2 > data.len() { return; }
+        let entry_count = read_u16(data, ifd0_offset, header.byte_order) as usize;
+        let entries_start = ifd0_offset + 2;
+        for i in 0..entry_count {
+            let eoff = entries_start + i * 12;
+            if eoff + 12 > data.len() { break; }
+            let tag = read_u16(data, eoff, header.byte_order);
+            if tag == 0xC634 {
+                let dtype = read_u16(data, eoff + 2, header.byte_order);
+                let count = read_u32(data, eoff + 4, header.byte_order) as usize;
+                let elem_size = match dtype { 1 | 7 => 1, _ => 0 };
+                let total = elem_size * count;
+                if total < 14 { continue; }
+                let off = read_u32(data, eoff + 8, header.byte_order) as usize;
+                if off + total > data.len() { continue; }
+                let pdata = &data[off..off+total];
+                // Parse Adobe DNGPrivateData: "Adobe\0" + blocks
+                if !pdata.starts_with(b"Adobe\0") { continue; }
+                let mut bpos = 6;
+                while bpos + 8 <= pdata.len() {
+                    let btag = &pdata[bpos..bpos+4];
+                    let bsize = u32::from_be_bytes([pdata[bpos+4], pdata[bpos+5], pdata[bpos+6], pdata[bpos+7]]) as usize;
+                    bpos += 8;
+                    if bpos + bsize > pdata.len() { break; }
+                    if btag == b"MakN" && bsize > 6 {
+                        let mn_block = &pdata[bpos..bpos+bsize];
+                        let mn_bo = if &mn_block[0..2] == b"II" {
+                            ByteOrderMark::LittleEndian
+                        } else {
+                            ByteOrderMark::BigEndian
+                        };
+                        let mut mn_start = 6; // skip byte order + original offset
+                        // Hack for extra 12 bytes in MakN header (Adobe Camera Raw bug)
+                        if bsize >= 18 && &mn_block[6..10] == b"\0\0\0\x01" {
+                            mn_start += 12;
+                        }
+                        if mn_start < bsize {
+                            let mn_data = &mn_block[mn_start..];
+                            let mn_tags = crate::metadata::makernotes::parse_makernotes(
+                                mn_data, 0, mn_data.len(), make, model, mn_bo,
+                            );
+                            for mn_tag in mn_tags {
+                                // Skip EXIF-primary tags
+                                if tags.iter().any(|t| t.name == mn_tag.name) {
+                                    continue;
+                                }
+                                tags.push(mn_tag);
+                            }
+                        }
+                    }
+                    bpos += bsize;
+                }
+                break;
+            }
+        }
+    }
+
     fn find_makernote(data: &[u8], header: &TiffHeader, result: &mut Option<(usize, usize)>) {
         // First find ExifIFD offset from IFD0
         let ifd0_offset = header.ifd0_offset as usize;
@@ -567,7 +635,7 @@ impl ExifReader {
                         if matches!(entry.tag,
                             // 0x014A handled above (SubIFD traversal)
                             0x02BC | // ApplicationNotes (XMP SubDirectory)
-                            0xC634   // DNG PrivateData
+                            0xC634   // DNG PrivateData — processed after IFD scan
                         ) {
                             continue;
                         }
