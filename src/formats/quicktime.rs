@@ -195,19 +195,15 @@ fn parse_canon_ctmd(data: &[u8], start: usize, size: usize, tags: &mut Vec<Tag>)
                     let edata = &rec_data[epos+8..epos+elen];
                     match etag {
                         0x927C => {
-                            // MakerNoteCanon: raw Canon MakerNote data
-                            let make = tags.iter().find(|t| t.name == "Make")
-                                .map(|t| t.print_value.clone()).unwrap_or_default();
+                            // MakerNoteCanon: TIFF containing Canon MakerNote IFD
+                            // CTMD has the full MakerNote — replace any CMT3 versions
                             let model = tags.iter().find(|t| t.name == "Model")
                                 .map(|t| t.print_value.clone()).unwrap_or_default();
-                            let mn_tags = crate::metadata::makernotes::parse_makernotes(
-                                edata, 0, edata.len(), &make, &model,
-                                crate::metadata::exif::ByteOrderMark::LittleEndian,
-                            );
+                            let mn_tags = parse_canon_cr3_makernotes(edata, &model);
                             for t in mn_tags {
-                                if !tags.iter().any(|e| e.name == t.name) {
-                                    tags.push(t);
-                                }
+                                // Replace existing tag with CTMD version (CTMD has priority)
+                                tags.retain(|e| e.name != t.name);
+                                tags.push(t);
                             }
                         }
                         0x8769 => {
@@ -2579,9 +2575,13 @@ fn parse_canon_uuid(
             }
             b"CMT3" => {
                 // MakerNoteCanon: TIFF whose IFD0 IS the Canon MakerNotes IFD
+                // Note: CMT3 has incomplete sub-tables (truncated ColorData).
+                // CTMD type 8 has the full MakerNote with correct ColorData.
+                // Only add CMT3 tags that CTMD doesn't provide (CTMD parsed later).
                 if content_end > content_start {
                     let tiff_data = &data[content_start..content_end];
                     let mn_tags = parse_canon_cr3_makernotes(tiff_data, &model);
+                    // Store CMT3 tags — they may be overwritten by CTMD later
                     tags.extend(mn_tags);
                 }
             }
