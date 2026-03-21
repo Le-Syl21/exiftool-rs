@@ -68,6 +68,29 @@ pub fn parse_canon_cr3_makernotes(data: &[u8], model: &str) -> Vec<Tag> {
     tags
 }
 
+pub fn parse_makernotes_with_base(
+    data: &[u8],
+    mn_offset: usize,
+    mn_size: usize,
+    make: &str,
+    model: &str,
+    parent_byte_order: ByteOrderMark,
+    base_fix: isize,
+) -> Vec<Tag> {
+    if mn_size < 12 || mn_offset + mn_size > data.len() {
+        return Vec::new();
+    }
+    let mn_data = &data[mn_offset..mn_offset + mn_size];
+    let info = detect_manufacturer(mn_data, make);
+    let byte_order = info.byte_order.unwrap_or(parent_byte_order);
+    let ifd_offset = mn_offset + info.ifd_offset;
+    let mut tags = Vec::new();
+    read_makernote_ifd_with_base(
+        data, ifd_offset, byte_order, info.manufacturer, &mut tags, model, base_fix
+    );
+    tags
+}
+
 pub fn parse_makernotes(
     data: &[u8],
     mn_offset: usize,
@@ -2995,6 +3018,18 @@ fn read_makernote_ifd(
     tags: &mut Vec<Tag>,
     model_name: &str,
 ) {
+    read_makernote_ifd_with_base(data, ifd_offset, byte_order, manufacturer, tags, model_name, 0);
+}
+
+fn read_makernote_ifd_with_base(
+    data: &[u8],
+    ifd_offset: usize,
+    byte_order: ByteOrderMark,
+    manufacturer: Manufacturer,
+    tags: &mut Vec<Tag>,
+    model_name: &str,
+    base_fix: isize,
+) {
     if ifd_offset + 2 > data.len() {
         return;
     }
@@ -3044,7 +3079,7 @@ fn read_makernote_ifd(
         let value_data = if total_size <= 4 {
             &data[entry_offset + 8..(entry_offset + 8 + total_size).min(data.len())]
         } else {
-            let off = value_offset as usize;
+            let off = (value_offset as isize + base_fix) as usize;
             if off + total_size > data.len() {
                 // Emit Warning for suspicious offset (like Perl Exif.pm:6582)
                 if !tags.iter().any(|t| t.name == "Warning") {

@@ -427,10 +427,10 @@ impl ExifReader {
                             } else { 0 };
 
                             let mn_tags = if fix_base != 0 {
-                                // Pass full DNG data with corrected offset
-                                crate::metadata::makernotes::parse_makernotes(
+                                // Pass full DNG data with corrected offset and base fix
+                                crate::metadata::makernotes::parse_makernotes_with_base(
                                     data, mn_abs_offset, mn_data_in_block.len(),
-                                    make, model, mn_bo,
+                                    make, model, mn_bo, fix_base,
                                 )
                             } else {
                                 crate::metadata::makernotes::parse_makernotes(
