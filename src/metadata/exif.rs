@@ -404,10 +404,40 @@ impl ExifReader {
                             mn_start += 12;
                         }
                         if mn_start < bsize {
-                            let mn_data = &mn_block[mn_start..];
-                            let mn_tags = crate::metadata::makernotes::parse_makernotes(
-                                mn_data, 0, mn_data.len(), make, model, mn_bo,
-                            );
+                            // Canon MakerNotes have a TIFF footer with the original offset.
+                            // Sub-table value_offsets are relative to the original file.
+                            // We need to pass the full DNG data so offsets resolve correctly.
+                            let mn_data_in_block = &mn_block[mn_start..];
+                            let mn_abs_offset = off + (bpos - 8 + 8) + mn_start; // absolute offset in DNG file
+                            // Check for Canon TIFF footer (last 8 bytes)
+                            let fix_base = if mn_data_in_block.len() > 8 {
+                                let footer = &mn_data_in_block[mn_data_in_block.len()-8..];
+                                if (footer[0..2] == *b"II" || footer[0..2] == *b"MM")
+                                    && (footer[2..4] == *b"\x2a\x00" || footer[2..4] == *b"\x00\x2a")
+                                {
+                                    let old_off = if footer[0] == b'I' {
+                                        u32::from_le_bytes([footer[4], footer[5], footer[6], footer[7]])
+                                    } else {
+                                        u32::from_be_bytes([footer[4], footer[5], footer[6], footer[7]])
+                                    } as usize;
+                                    if old_off > 0 && mn_abs_offset > old_off {
+                                        mn_abs_offset as isize - old_off as isize
+                                    } else { 0 }
+                                } else { 0 }
+                            } else { 0 };
+
+                            let mn_tags = if fix_base != 0 {
+                                // Pass full DNG data with corrected offset
+                                crate::metadata::makernotes::parse_makernotes(
+                                    data, mn_abs_offset, mn_data_in_block.len(),
+                                    make, model, mn_bo,
+                                )
+                            } else {
+                                crate::metadata::makernotes::parse_makernotes(
+                                    mn_data_in_block, 0, mn_data_in_block.len(),
+                                    make, model, mn_bo,
+                                )
+                            };
                             // DNG MakerNote tags that Perl doesn't emit (conditions/Unknown/offset issues)
                             let dng_suppress = ["AESetting", "CameraISO", "ImageStabilization",
                                 "SpotMeteringMode", "RawJpgSize", "Warning"];
