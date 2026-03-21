@@ -15,27 +15,27 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux x86_64 — native
-          - os: ubuntu-latest
+          # Linux x86_64
+          - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             use_cross: false
-          # Linux ARM64 — via cross (QEMU)
-          - os: ubuntu-latest
+          # Linux ARM64 (no native runner — use cross/QEMU)
+          - os: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
             use_cross: true
-          # macOS ARM64 — native (M1/M2 runner, also builds x86_64 via universal)
+          # macOS ARM64 (Apple Silicon — native)
           - os: macos-latest
             target: aarch64-apple-darwin
             use_cross: false
-          # macOS x86_64 — cross-compile from ARM runner
-          - os: macos-latest
+          # macOS x86_64 (Intel runner)
+          - os: macos-15-large
             target: x86_64-apple-darwin
             use_cross: false
-          # Windows x86_64 — native
+          # Windows x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             use_cross: false
-          # Windows ARM64 — cross-compile (no native runner)
+          # Windows ARM64 (cross-compile, no native runner)
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             use_cross: false
@@ -59,17 +59,15 @@ jobs:
         if: "!matrix.use_cross"
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Build (cross)
+      - name: Build + Test (cross/QEMU)
         if: matrix.use_cross
-        run: cross build --release --target ${{ matrix.target }}
+        run: |
+          cross build --release --target ${{ matrix.target }}
+          cross test --target ${{ matrix.target }}
 
-      - name: Run tests (native)
-        if: "!matrix.use_cross && !contains(matrix.target, 'aarch64-pc-windows') && !contains(matrix.target, 'x86_64-apple-darwin')"
+      - name: Run tests
+        if: "!matrix.use_cross && !contains(matrix.target, 'aarch64-pc-windows')"
         run: cargo test --target ${{ matrix.target }}
-
-      - name: Run tests (cross/QEMU)
-        if: matrix.use_cross
-        run: cross test --target ${{ matrix.target }}
 
       - name: Check 0 warnings
         if: matrix.target == 'x86_64-unknown-linux-gnu'
