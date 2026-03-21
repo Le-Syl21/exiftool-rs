@@ -254,19 +254,10 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("FlashModel", Value::I16(v), v.to_string()));
     }
     if let Some(v) = get(29) {
-        let pv = match v {
-            0 => "Manual",
-            1 => "TTL",
-            2 => "A-TTL",
-            3 => "E-TTL",
-            4 => "FP sync enabled",
-            7 => "2nd-curtain sync used",
-            11 => "FP sync used",
-            13 => "Built-in",
-            14 => "External",
-            _ => "",
-        };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        // FlashBits: BITMASK PrintConv
+        // 0='(none)', bits: 0=Manual, 1=TTL, 2=A-TTL, 3=E-TTL, 4=FP sync enabled,
+        //                   7=2nd-curtain sync used, 11=FP sync used, 13=Built-in, 14=External
+        let pv = flash_bits_str(v as u16);
         tags.push(mkt("FlashBits", Value::I16(v), pv));
     }
     if let Some(v) = get(32) {
@@ -396,25 +387,51 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
     let get = |idx: usize| -> Option<i16> { values.get(idx).copied() };
 
     if let Some(v) = get(1) {
-        tags.push(mkt("AutoISO", Value::I16(v), v.to_string()));
+        // AutoISO: ValueConv => 'exp($val/32*log(2))*100', PrintConv => 'sprintf("%.0f",$val)'
+        let auto_iso = (v as f64 / 32.0 * std::f64::consts::LN_2).exp() * 100.0;
+        tags.push(mkt("AutoISO", Value::F64(auto_iso), format!("{:.0}", auto_iso)));
     }
     if let Some(v) = get(2) {
-        if v != 0 { tags.push(mkt("BaseISO", Value::I16(v), v.to_string())); }
+        if v != 0 {
+            // BaseISO: ValueConv => 'exp($val/32*log(2))*100/32', PrintConv => 'sprintf("%.0f",$val)'
+            let base_iso = (v as f64 / 32.0 * std::f64::consts::LN_2).exp() * 100.0 / 32.0;
+            tags.push(mkt("BaseISO", Value::F64(base_iso), format!("{:.0}", base_iso)));
+        }
     }
     if let Some(v) = get(3) {
-        tags.push(mkt("MeasuredEV", Value::I16(v), v.to_string()));
+        // MeasuredEV: ValueConv => '$val / 32 + 5', PrintConv => 'sprintf("%.2f",$val)'
+        let mev = v as f64 / 32.0 + 5.0;
+        tags.push(mkt("MeasuredEV", Value::F64(mev), format!("{:.2}", mev)));
     }
     if let Some(v) = get(4) {
-        if v > 0 { tags.push(mkt("TargetAperture", Value::I16(v), v.to_string())); }
+        if v > 0 {
+            // TargetAperture: ValueConv => 'exp(CanonEv($val)*log(2)/2)', PrintConv => 'sprintf("%.2g",$val)'
+            let av = (canon_ev(v as i32) * std::f64::consts::LN_2 / 2.0).exp();
+            tags.push(mkt("TargetAperture", Value::F64(av), format!("{:.2}", av)));
+        }
     }
     if let Some(v) = get(5) {
-        if v > 0 { tags.push(mkt("TargetExposureTime", Value::I16(v), v.to_string())); }
+        // TargetExposureTime: ValueConv => 'exp(-CanonEv($val)*log(2))'
+        // RawConv: suppress if > -1000 && (val != 0 || model contains EOS/PowerShot)
+        // For simplicity: suppress if val <= -1000 or (val == 0 for non-EOS)
+        let raw = v as i32;
+        let valid = raw > -1000 && (raw != 0 || model.contains("EOS") || model.contains("PowerShot") || model.contains("CRW"));
+        if valid {
+            let et = (-canon_ev(raw) * std::f64::consts::LN_2).exp();
+            let pv = print_exposure_time(et);
+            tags.push(mkt("TargetExposureTime", Value::F64(et), pv));
+        }
     }
     if let Some(v) = get(6) {
-        tags.push(mkt("ExposureCompensation", Value::I16(v), v.to_string()));
+        // ExposureCompensation: ValueConv => 'CanonEv($val)', PrintConv => PrintFraction
+        let ev = canon_ev(v as i32);
+        let pv = print_fraction(ev);
+        tags.push(mkt("ExposureCompensation", Value::F64(ev), pv));
     }
     if let Some(v) = get(7) {
-        tags.push(mkt("WhiteBalance", Value::I16(v), v.to_string()));
+        // WhiteBalance: PrintConv => canonWhiteBalance table
+        let pv = canon_white_balance_str(v);
+        tags.push(mkt("WhiteBalance", Value::I16(v), pv));
     }
     if let Some(v) = get(8) {
         let pv = match v {
@@ -432,7 +449,9 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         tags.push(mkt("SequenceNumber", Value::I16(v), v.to_string()));
     }
     if let Some(v) = get(10) {
-        tags.push(mkt("OpticalZoomCode", Value::I16(v), v.to_string()));
+        // OpticalZoomCode: PrintConv => '$val == 8 ? "n/a" : $val'
+        let pv = if v == 8 { "n/a".to_string() } else { v.to_string() };
+        tags.push(mkt("OpticalZoomCode", Value::I16(v), pv));
     }
     if let Some(v) = get(12) {
         if v != 0 { tags.push(mkt("CameraTemperature", Value::I16(v), v.to_string())); }
@@ -460,7 +479,10 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         tags.push(mkt("AFPointsInFocus", Value::I16(v), pv));
     }
     if let Some(v) = get(15) {
-        tags.push(mkt("FlashExposureComp", Value::I16(v), v.to_string()));
+        // FlashExposureComp: ValueConv => 'CanonEv($val)', PrintConv => PrintFraction
+        let ev = canon_ev(v as i32);
+        let pv = print_fraction(ev);
+        tags.push(mkt("FlashExposureComp", Value::F64(ev), pv));
     }
     if let Some(v) = get(16) {
         let pv = match v {
@@ -475,7 +497,10 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         tags.push(mkt("AutoExposureBracketing", Value::I16(v), pv));
     }
     if let Some(v) = get(17) {
-        tags.push(mkt("AEBBracketValue", Value::I16(v), v.to_string()));
+        // AEBBracketValue: ValueConv => 'CanonEv($val)', PrintConv => PrintFraction
+        let ev = canon_ev(v as i32);
+        let pv = print_fraction(ev);
+        tags.push(mkt("AEBBracketValue", Value::F64(ev), pv));
     }
     if let Some(v) = get(18) {
         let pv = match v {
@@ -543,10 +568,16 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         }
     }
     if let Some(v) = get(23) {
-        tags.push(mkt("MeasuredEV2", Value::I16(v), v.to_string()));
+        // MeasuredEV2: RawConv: suppress if 0; ValueConv => '$val / 8 - 6'
+        if v != 0 {
+            let mev2 = v as f64 / 8.0 - 6.0;
+            tags.push(mkt("MeasuredEV2", Value::F64(mev2), format!("{}", mev2)));
+        }
     }
     if let Some(v) = get(24) {
-        tags.push(mkt("BulbDuration", Value::I16(v), v.to_string()));
+        // BulbDuration: ValueConv => '$val / 10'
+        let bd = v as f64 / 10.0;
+        tags.push(mkt("BulbDuration", Value::F64(bd), format!("{}", bd)));
     }
     if let Some(v) = get(26) {
         let pv = match v {
@@ -654,6 +685,83 @@ fn mkt(name: &str, raw: Value, print_val: String) -> Tag {
         raw_value: raw,
         print_value: print_val,
         priority: 0,
+    }
+}
+
+/// Perl PrintFraction: convert a float EV value to fraction string like "+2/3", "-1/3", "0"
+pub fn print_fraction(val: f64) -> String {
+    // Perl's PrintFraction uses predefined fractions for common EV steps
+    if val == 0.0 { return "0".to_string(); }
+    let abs_val = val.abs();
+    let sign = if val < 0.0 { "-" } else { "+" };
+    // Common fractions in 1/3 stop increments
+    let thirds = (abs_val * 3.0 + 0.5) as i64;
+    let whole = thirds / 3;
+    let rem = thirds % 3;
+    match rem {
+        0 => format!("{}{}", sign, whole),
+        1 => {
+            if whole == 0 { format!("{}1/3", sign) }
+            else { format!("{}{} 1/3", sign, whole) }
+        }
+        2 => {
+            if whole == 0 { format!("{}2/3", sign) }
+            else { format!("{}{} 2/3", sign, whole) }
+        }
+        _ => format!("{}{:.0}", sign, abs_val),
+    }
+}
+
+/// Perl canonWhiteBalance lookup table
+pub fn canon_white_balance_str(v: i16) -> String {
+    match v {
+        0 => "Auto".to_string(),
+        1 => "Daylight".to_string(),
+        2 => "Cloudy".to_string(),
+        3 => "Tungsten".to_string(),
+        4 => "Fluorescent".to_string(),
+        5 => "Flash".to_string(),
+        6 => "Custom".to_string(),
+        7 => "Black & White".to_string(),
+        8 => "Shade".to_string(),
+        9 => "Manual Temperature (Kelvin)".to_string(),
+        10 => "PC Set1".to_string(),
+        11 => "PC Set2".to_string(),
+        12 => "PC Set3".to_string(),
+        14 => "Daylight Fluorescent".to_string(),
+        15 => "Custom 1".to_string(),
+        16 => "Custom 2".to_string(),
+        17 => "Underwater".to_string(),
+        18 => "Custom 3".to_string(),
+        19 => "Custom 4".to_string(),
+        20 => "PC Set4".to_string(),
+        21 => "PC Set5".to_string(),
+        _ => v.to_string(),
+    }
+}
+
+/// FlashBits bitmask to string (Perl: BITMASK PrintConv)
+pub fn flash_bits_str(v: u16) -> String {
+    if v == 0 { return "(none)".to_string(); }
+    let bits = [
+        (0, "Manual"),
+        (1, "TTL"),
+        (2, "A-TTL"),
+        (3, "E-TTL"),
+        (4, "FP sync enabled"),
+        (7, "2nd-curtain sync used"),
+        (11, "FP sync used"),
+        (13, "Built-in"),
+        (14, "External"),
+    ];
+    let mut parts: Vec<&str> = bits.iter()
+        .filter(|&&(bit, _)| (v >> bit) & 1 == 1)
+        .map(|&(_, name)| name)
+        .collect();
+    if parts.is_empty() {
+        v.to_string()
+    } else {
+        parts.join(", ")
     }
 }
 

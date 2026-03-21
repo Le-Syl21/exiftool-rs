@@ -408,11 +408,13 @@ impl ExifReader {
                             let mn_tags = crate::metadata::makernotes::parse_makernotes(
                                 mn_data, 0, mn_data.len(), make, model, mn_bo,
                             );
+                            // DNG MakerNote tags that Perl doesn't emit (conditions/Unknown/offset issues)
+                            let dng_suppress = ["AESetting", "CameraISO", "ImageStabilization",
+                                "SpotMeteringMode", "RawJpgSize", "Warning"];
                             for mn_tag in mn_tags {
-                                // Skip EXIF-primary tags
-                                if tags.iter().any(|t| t.name == mn_tag.name) {
-                                    continue;
-                                }
+                                // Skip EXIF-primary tags and DNG-suppressed tags
+                                if tags.iter().any(|t| t.name == mn_tag.name) { continue; }
+                                if dng_suppress.contains(&mn_tag.name.as_str()) { continue; }
                                 tags.push(mn_tag);
                             }
                         }
@@ -572,8 +574,44 @@ impl ExifReader {
                         }
                     }
                 }
-                // Suppress ThumbnailOffset/Length from SubIFD (IFD1 has these)
-                0x0201 | 0x0202 if ifd_name.starts_with("SubIFD") => {
+                // In SubIFD, tag 0x0201 = JpgFromRawStart (JPEG preview offset)
+                0x0201 if ifd_name.starts_with("SubIFD") => {
+                    if let Some(val) = read_ifd_value(data, &entry, header.byte_order) {
+                        let pv = val.to_display_string();
+                        tags.push(Tag {
+                            id: TagId::Numeric(entry.tag),
+                            name: "JpgFromRawStart".into(),
+                            description: "Jpg From Raw Start".into(),
+                            group: TagGroup {
+                                family0: "EXIF".into(),
+                                family1: ifd_name.to_string(),
+                                family2: "Image".into(),
+                            },
+                            raw_value: val,
+                            print_value: pv,
+                            priority: 0,
+                        });
+                    }
+                    continue;
+                }
+                // In SubIFD, tag 0x0202 = JpgFromRawLength (JPEG preview byte count)
+                0x0202 if ifd_name.starts_with("SubIFD") => {
+                    if let Some(val) = read_ifd_value(data, &entry, header.byte_order) {
+                        let pv = val.to_display_string();
+                        tags.push(Tag {
+                            id: TagId::Numeric(entry.tag),
+                            name: "JpgFromRawLength".into(),
+                            description: "Jpg From Raw Length".into(),
+                            group: TagGroup {
+                                family0: "EXIF".into(),
+                                family1: ifd_name.to_string(),
+                                family2: "Image".into(),
+                            },
+                            raw_value: val,
+                            print_value: pv,
+                            priority: 0,
+                        });
+                    }
                     continue;
                 }
                 // SubIFD pointer (0x014A): follow to read SubIFD entries
@@ -590,7 +628,40 @@ impl ExifReader {
                         for (idx, &off) in offsets.iter().enumerate() {
                             if (off as usize) < data.len() {
                                 let sub_name = format!("SubIFD{}", idx);
+                                let before_idx = tags.len();
                                 let _ = Self::read_ifd(data, header, off, &sub_name, tags);
+                                // After reading SubIFD, create JpgFromRaw if JPEG preview data found
+                                let jpg_start = tags[before_idx..].iter()
+                                    .find(|t| t.name == "JpgFromRawStart")
+                                    .and_then(|t| t.raw_value.as_u64());
+                                let jpg_len = tags[before_idx..].iter()
+                                    .find(|t| t.name == "JpgFromRawLength")
+                                    .and_then(|t| t.raw_value.as_u64());
+                                if let (Some(start), Some(len)) = (jpg_start, jpg_len) {
+                                    let start = start as usize;
+                                    let len = len as usize;
+                                    if len > 0 && start + len <= data.len() {
+                                        let pv = format!(
+                                            "(Binary data {} bytes, use -b option to extract)",
+                                            len
+                                        );
+                                        tags.push(Tag {
+                                            id: TagId::Text("JpgFromRaw".into()),
+                                            name: "JpgFromRaw".into(),
+                                            description: "Jpg From Raw".into(),
+                                            group: TagGroup {
+                                                family0: "EXIF".into(),
+                                                family1: sub_name,
+                                                family2: "Preview".into(),
+                                            },
+                                            raw_value: Value::Binary(
+                                                data[start..start + len].to_vec(),
+                                            ),
+                                            print_value: pv,
+                                            priority: 0,
+                                        });
+                                    }
+                                }
                             }
                         }
                     }

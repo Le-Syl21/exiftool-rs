@@ -258,6 +258,13 @@ fn parse_ciff_dir(
         let raw_print = value.to_display_string();
         // Apply tag-specific print conversions from Perl CanonRaw.pm
         let print_value = match tag_id {
+            0x180b => {
+                // SerialNumber: for EOS models: sprintf("%.10d",$val) = zero-padded 10 digits
+                // For EOS D30: sprintf("%x-%.5d", $val>>16, $val & 0xffff)
+                // For CRW files, assume EOS (non-D30), so use 10-digit format
+                let n: u64 = raw_print.parse().unwrap_or(0);
+                format!("{:010}", n)
+            }
             0x1817 => {
                 // FileNumber: PrintConv => '$_=$val;s/(\d+)(\d{4})/$1-$2/;$_'
                 // Splits number so last 4 digits become a suffix after dash
