@@ -1,7 +1,10 @@
-//! # exiftool
+//! # exiftool-rs
 //!
-//! A Rust reimplementation of [ExifTool](https://exiftool.org/) for reading, writing,
+//! A pure Rust reimplementation of [ExifTool](https://exiftool.org/) for reading, writing,
 //! and editing metadata in image, audio, video, and document files.
+//!
+//! **194/194 test files (100%)** produce identical tag names as Perl ExifTool v13.52.
+//! Over 11,600 tags verified across 55+ file formats.
 //!
 //! ## Quick Start
 //!
@@ -32,13 +35,24 @@
 //! et.write_info("photo.jpg", "photo_out.jpg").unwrap();
 //! ```
 //!
-//! ## Supported Formats (30+ readers, 15 writers)
+//! ## Supported Formats (55+ readers, 15 writers)
 //!
-//! **Images**: JPEG, TIFF, PNG, WebP, PSD, BMP, GIF, HEIF/AVIF, ICO
-//! **Raw**: CR2, NEF, DNG, ARW, ORF, RAF, RW2, PEF, SR2, X3F, 3FR, ERF
-//! **Video**: MP4/MOV, AVI, MKV
-//! **Audio**: MP3, FLAC, WAV, OGG
-//! **Documents**: PDF
+//! **Images**: JPEG, TIFF, PNG, WebP, PSD, BMP, GIF, HEIF/AVIF, ICO, XCF, BPG, MIFF, PGF
+//!
+//! **Raw**: CR2, CR3, CRW, NEF, DNG, ARW, ORF, RAF, RW2, PEF, SR2, X3F, IIQ, 3FR, ERF, MRW
+//!
+//! **Video**: MP4/MOV, AVI, MKV, MTS, WTV, DV, FLV, SWF, MXF
+//!
+//! **Audio**: MP3, FLAC, WAV, OGG, AAC, AIFF, APE, MPC, WavPack, DSF, Audible
+//!
+//! **Documents**: PDF, RTF, HTML, PostScript, DjVu, OpenDocument, TNEF
+//!
+//! **Scientific**: DICOM, MRC, FITS, XISF
+//!
+//! **Other**: EXE/ELF/Mach-O, ZIP/RAR/GZ, ISO, LNK, Torrent, VCard, MIE, Lytro LFP, FLIR FPF, CaptureOne EIP
+//!
+//! **MakerNotes**: Canon, Nikon, Sony, Pentax, Olympus, Panasonic, Fujifilm, Samsung,
+//! Sigma, Casio, Ricoh, Minolta, Apple, Google, FLIR, GE, GoPro
 
 pub mod composite;
 pub mod config;

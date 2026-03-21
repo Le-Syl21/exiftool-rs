@@ -1,6 +1,10 @@
 # exiftool-rs
 
-A pure Rust reimplementation of [ExifTool](https://exiftool.org/) — read, write, and edit metadata in image, audio, video, and document files.
+[![Crates.io](https://img.shields.io/crates/v/exiftool-rs.svg)](https://crates.io/crates/exiftool-rs)
+[![Documentation](https://docs.rs/exiftool-rs/badge.svg)](https://docs.rs/exiftool-rs)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+
+A pure Rust reimplementation of [ExifTool](https://exiftool.org/) — read, write, and edit metadata in image, audio, video, and document files. No unsafe code, no Perl dependency, no system libraries.
 
 ## Features
 
