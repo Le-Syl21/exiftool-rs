@@ -404,6 +404,21 @@ impl ExifReader {
                             mn_start += 12;
                         }
                         if mn_start < bsize {
+                            // Emit MakerNoteByteOrder
+                            let mn_bo_str = if mn_bo == ByteOrderMark::LittleEndian {
+                                "Little-endian (Intel, II)"
+                            } else {
+                                "Big-endian (Motorola, MM)"
+                            };
+                            tags.push(Tag {
+                                id: TagId::Text("MakerNoteByteOrder".into()),
+                                name: "MakerNoteByteOrder".into(),
+                                description: "Maker Note Byte Order".into(),
+                                group: TagGroup { family0: "File".into(), family1: "File".into(), family2: "Image".into() },
+                                raw_value: Value::String(mn_bo_str.into()),
+                                print_value: mn_bo_str.into(),
+                                priority: 0,
+                            });
                             // Canon MakerNotes have a TIFF footer with the original offset.
                             // Sub-table value_offsets are relative to the original file.
                             // We need to pass the full DNG data so offsets resolve correctly.
