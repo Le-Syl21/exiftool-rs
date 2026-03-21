@@ -2142,6 +2142,7 @@ impl<'a> M2tsBitReader<'a> {
 }
 
 /// MDPM (Modified DV Pack Metadata) data extracted from H.264 SEI unregistered user data
+#[derive(Clone)]
 struct M2tsMdpmData {
     datetime_original: Option<String>,
     aperture_setting: Option<String>,
@@ -2642,7 +2643,7 @@ fn m2ts_format_duration(first: u64, last: u64) -> String {
     }
 }
 
-pub fn read_m2ts(data: &[u8]) -> Result<Vec<Tag>> {
+pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     if data.is_empty() {
         return Err(Error::InvalidData("empty file".into()));
     }
@@ -2652,7 +2653,8 @@ pub fn read_m2ts(data: &[u8]) -> Result<Vec<Tag>> {
 
     let mut tags = Vec::new();
     let num_packets = data.len() / packet_size;
-    let scan_count = num_packets.min(2000);
+    // With -ee, scan all packets; without, scan first 2000 only
+    let scan_count = if extract_embedded > 0 { num_packets } else { num_packets.min(2000) };
 
     let mut pmt_pids: Vec<u16> = Vec::new();
     let mut pmt_buf: std::collections::HashMap<u16, Vec<u8>> = std::collections::HashMap::new();
@@ -2660,6 +2662,7 @@ pub fn read_m2ts(data: &[u8]) -> Result<Vec<Tag>> {
     let mut stream_info: Option<M2tsStreamInfo> = None;
     let mut h264_dims: Option<(u32, u32)> = None;
     let mut mdpm_data: Option<M2tsMdpmData> = None;
+    let mut all_mdpm: Vec<M2tsMdpmData> = Vec::new();
     let mut ac3_sample_rate: Option<u32> = None;
     let mut pcr_first: Option<u64> = None;
     let mut pcr_last: Option<u64> = None;
@@ -2713,12 +2716,16 @@ pub fn read_m2ts(data: &[u8]) -> Result<Vec<Tag>> {
                     stream_info = Some(si);
                 }
             } else if let Some(ref si) = stream_info {
-                if (h264_dims.is_none() || mdpm_data.is_none()) && Some(pid) == si.h264_pid {
+                let need_first = h264_dims.is_none() || mdpm_data.is_none();
+                if (need_first || extract_embedded > 0) && Some(pid) == si.h264_pid {
                     // Skip PES header to get to ES data
                     let es = m2ts_skip_pes_header(payload);
                     let (dims, mdpm) = m2ts_parse_h264_pes(es);
                     if dims.is_some() && h264_dims.is_none() { h264_dims = dims; }
-                    if mdpm.is_some() && mdpm_data.is_none() { mdpm_data = mdpm; }
+                    if let Some(ref m) = mdpm {
+                        if mdpm_data.is_none() { mdpm_data = mdpm.clone(); }
+                        if extract_embedded > 0 { all_mdpm.push(m.clone()); }
+                    }
                 }
                 if ac3_sample_rate.is_none() && Some(pid) == si.audio_pid {
                     let es = m2ts_skip_pes_header(payload);
@@ -2842,9 +2849,24 @@ pub fn read_m2ts(data: &[u8]) -> Result<Vec<Tag>> {
         if let Some(ref v) = mdpm.recording_mode {
             tags.push(mktag("H264", "RecordingMode", "Recording Mode", Value::String(v.clone())));
         }
-        // ExifTool always emits a Warning for embedded video data
-        tags.push(mktag("M2TS", "Warning", "Warning",
-            Value::String("[minor] The ExtractEmbedded option may find more tags in the video data".to_string())));
+        // ExifTool emits Warning only when -ee is NOT used
+        if extract_embedded == 0 {
+            tags.push(mktag("M2TS", "Warning", "Warning",
+                Value::String("[minor] The ExtractEmbedded option may find more tags in the video data".to_string())));
+        }
+    }
+
+    // With -ee: emit tags from ALL MDPM frames (per-frame metadata)
+    // Skip first frame (already emitted above from mdpm_data)
+    if extract_embedded > 0 && all_mdpm.len() > 1 {
+        for mdpm in &all_mdpm[1..] {
+            if let Some(ref v) = mdpm.datetime_original {
+                tags.push(mktag("H264", "DateTimeOriginal", "Date/Time Original", Value::String(v.clone())));
+            }
+            if let Some(ref v) = mdpm.make {
+                tags.push(mktag("H264", "Make", "Make", Value::String(v.clone())));
+            }
+        }
     }
 
     Ok(tags)
