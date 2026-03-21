@@ -662,10 +662,12 @@ pub fn decode_focal_length(values: &[u16], model: &str) -> Vec<Tag> {
     if has_focal_plane && values.len() >= 4 {
         let fpx = values.get(2).copied().unwrap_or(0);
         let fpy = values.get(3).copied().unwrap_or(0);
-        if fpx > 0 {
+        // Sanity check: raw value should be < 2000 (gives < ~50mm)
+        // Larger values indicate the field is not valid for this model
+        if fpx > 0 && fpx < 2000 {
             tags.push(mkt("FocalPlaneXSize", Value::U16(fpx), format!("{:.2} mm", fpx as f64 / 1000.0 * 25.4)));
         }
-        if fpy > 0 {
+        if fpy > 0 && fpy < 2000 {
             tags.push(mkt("FocalPlaneYSize", Value::U16(fpy), format!("{:.2} mm", fpy as f64 / 1000.0 * 25.4)));
         }
     }
