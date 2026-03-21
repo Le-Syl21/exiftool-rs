@@ -705,7 +705,7 @@ impl ExifReader {
                         // Skip known SubDirectory/internal tags that Perl doesn't emit
                         if matches!(entry.tag,
                             // 0x014A handled above (SubIFD traversal)
-                            0x02BC | // ApplicationNotes (XMP SubDirectory)
+                            // 0x02BC (ApplicationNotes) now parsed as XMP above
                             0xC634   // DNG PrivateData — processed after IFD scan
                         ) {
                             continue;
@@ -721,9 +721,17 @@ impl ExifReader {
                     }
                 };
 
-                // Suppress known SubDirectory/internal tags that Perl decodes but doesn't emit as raw
+                // Parse ApplicationNotes (0x02BC) as XMP
+                if name == "ApplicationNotes" {
+                    if let Value::Binary(ref xmp_bytes) = value {
+                        if let Ok(xmp_tags) = crate::metadata::XmpReader::read(xmp_bytes) {
+                            tags.extend(xmp_tags);
+                        }
+                    }
+                    continue;
+                }
+                // Suppress known SubDirectory/internal tags
                 if matches!(name.as_str(),
-                    "ApplicationNotes" | // XMP data — should be parsed, not emitted raw
                     "MinSampleValue" | "MaxSampleValue" | // Not emitted by Perl for raw formats
                     "ProcessingSoftware" | // Protected tag, not always emitted
                     "PanasonicTitle" | "PanasonicTitle2" // DNG tags, wrong match for RW2
@@ -865,8 +873,12 @@ fn read_ifd_value(data: &[u8], entry: &IfdEntry, byte_order: ByteOrderMark) -> O
     };
 
     // IPTC-NAA (0x83BB): always read as raw binary regardless of declared type
-    // Perl reads "int32u[17] as undef[68]" — the raw bytes contain IPTC records
     if entry.tag == 0x83BB {
+        return Some(Value::Binary(value_data.to_vec()));
+    }
+
+    // ApplicationNotes (0x02BC): always read as raw binary (XMP data)
+    if entry.tag == 0x02BC {
         return Some(Value::Binary(value_data.to_vec()));
     }
 
