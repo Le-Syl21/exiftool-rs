@@ -839,6 +839,19 @@ impl ExifReader {
             None
         })
     }
+
+    /// Parse a TIFF where IFD0 is treated as a named IFD (e.g. "GPS", "ExifIFD").
+    /// Used for CR3 CMT4 (GPS-only TIFF) and CMT2 (ExifIFD-only TIFF).
+    /// Does NOT emit ExifByteOrder or do MakerNote/IFD1 processing.
+    pub fn read_as_named_ifd(data: &[u8], ifd_name: &str) -> Vec<Tag> {
+        let header = match parse_tiff_header(data) {
+            Ok(h) => h,
+            Err(_) => return Vec::new(),
+        };
+        let mut tags = Vec::new();
+        let _ = Self::read_ifd(data, &header, header.ifd0_offset, ifd_name, &mut tags);
+        tags
+    }
 }
 
 fn parse_ifd_entry(data: &[u8], offset: usize, byte_order: ByteOrderMark) -> IfdEntry {

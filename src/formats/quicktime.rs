@@ -5,7 +5,8 @@
 //! Mirrors ExifTool's QuickTime.pm.
 
 use crate::error::{Error, Result};
-use crate::metadata::XmpReader;
+use crate::metadata::makernotes::parse_canon_cr3_makernotes;
+use crate::metadata::{ExifReader, XmpReader};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
@@ -28,6 +29,14 @@ struct QtState {
     hevc_config_done: bool,
     /// Whether we already emitted image spatial extent (to avoid duplicates)
     ispe_done: bool,
+    /// CTMD sample offset in file (from co64/stco in meta handler track)
+    ctmd_offset: Option<u64>,
+    /// CTMD sample size in bytes
+    ctmd_size: Option<u32>,
+    /// Whether the current track's stsd format is CTMD
+    current_track_is_ctmd: bool,
+    /// Model string from CMT1 (for MakerNotes parsing)
+    model: String,
 }
 
 pub fn read_quicktime(data: &[u8]) -> Result<Vec<Tag>> {
@@ -233,7 +242,12 @@ fn parse_atoms(
 
         match atom_type {
             // Container atoms - recurse into (these just contain sub-atoms)
-            b"moov" | b"trak" | b"edts" => {
+            b"moov" | b"edts" => {
+                parse_atoms(data, content_start, content_end, tags, state, depth + 1);
+            }
+            b"trak" => {
+                // Reset per-track CTMD flag when entering a new track
+                state.current_track_is_ctmd = false;
                 parse_atoms(data, content_start, content_end, tags, state, depth + 1);
             }
             // mdia: recurse but reset media-level state
@@ -301,6 +315,52 @@ fn parse_atoms(
             b"stts" => {
                 parse_stts(data, content_start, content_end, tags, state);
             }
+            // Chunk offset table (32-bit) - used to locate CTMD sample data
+            b"stco" => {
+                if state.current_track_is_ctmd && state.ctmd_offset.is_none() {
+                    let d = &data[content_start..content_end];
+                    if d.len() >= 12 {
+                        let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
+                        if entry_count > 0 && d.len() >= 8 + entry_count * 4 {
+                            let offset = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as u64;
+                            state.ctmd_offset = Some(offset);
+                        }
+                    }
+                }
+            }
+            // Chunk offset table (64-bit) - used to locate CTMD sample data
+            b"co64" => {
+                if state.current_track_is_ctmd && state.ctmd_offset.is_none() {
+                    let d = &data[content_start..content_end];
+                    if d.len() >= 16 {
+                        let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
+                        if entry_count > 0 && d.len() >= 8 + entry_count * 8 {
+                            let offset = u64::from_be_bytes([d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]]);
+                            state.ctmd_offset = Some(offset);
+                        }
+                    }
+                }
+            }
+            // Sample sizes - used to get CTMD sample size
+            b"stsz" => {
+                if state.current_track_is_ctmd && state.ctmd_size.is_none() {
+                    let d = &data[content_start..content_end];
+                    if d.len() >= 12 {
+                        // If sample_size field is non-zero, all samples have that size
+                        let sample_size = u32::from_be_bytes([d[4], d[5], d[6], d[7]]);
+                        if sample_size > 0 {
+                            state.ctmd_size = Some(sample_size);
+                        } else if d.len() >= 16 {
+                            // Variable sizes: read first entry
+                            let _count = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as usize;
+                            if d.len() >= 16 {
+                                let first_size = u32::from_be_bytes([d[12], d[13], d[14], d[15]]);
+                                state.ctmd_size = Some(first_size);
+                            }
+                        }
+                    }
+                }
+            }
             // Track aperture atoms
             b"clef" => {
                 parse_aperture_dim(data, content_start, content_end, tags, "CleanApertureDimensions", "Clean Aperture Dimensions");
@@ -352,10 +412,14 @@ fn parse_atoms(
             }
             // XMP metadata (uuid box)
             b"uuid" => {
-                // XMP UUID: BE7ACFCB97A942E89C71999491E3AFAC
                 if content_end - content_start > 16 {
                     let uuid = &data[content_start..content_start + 16];
-                    if uuid[0] == 0xBE
+                    // Canon UUID: 85C0B687820F11E08111F4CE462B6A48
+                    if uuid == b"\x85\xc0\xb6\x87\x82\x0f\x11\xe0\x81\x11\xf4\xce\x46\x2b\x6a\x48" {
+                        parse_canon_uuid(data, content_start + 16, content_end, tags);
+                    }
+                    // XMP UUID: BE7ACFCB97A942E89C71999491E3AFAC
+                    else if uuid[0] == 0xBE
                         && uuid[1] == 0x7A
                         && uuid[2] == 0xCF
                         && uuid[3] == 0xCB
@@ -2347,5 +2411,98 @@ fn parse_pentax_mov(data: &[u8], tags: &mut Vec<Tag>) {
         if iso > 0 {
             tags.push(mk_makernote("ISO", "ISO", Value::U16(iso)));
         }
+    }
+}
+
+/// Parse Canon UUID box content (CR3 files).
+///
+/// The Canon UUID (85C0B687...) contains a series of sub-boxes:
+/// - CNCV: compressor version string
+/// - CMT1: TIFF with IFD0 (Make, Model, ImageWidth/Height, etc.)
+/// - CMT2: TIFF with ExifIFD (ExposureTime, FNumber, ISO, etc.)
+/// - CMT3: TIFF with Canon MakerNotes IFD (standalone)
+/// - CMT4: TIFF with GPS IFD as IFD0
+/// - THMB: thumbnail image
+///
+/// Mirrors Canon.pm %Image::ExifTool::Canon::uuid processing.
+fn parse_canon_uuid(
+    data: &[u8],
+    start: usize,
+    end: usize,
+    tags: &mut Vec<Tag>,
+) {
+    let mut pos = start;
+    let mut model = String::new();
+
+    // First pass: find Make/Model from CMT1 if available (for MakerNotes dispatch)
+    // We'll extract model after processing CMT1.
+
+    while pos + 8 <= end {
+        let size = u32::from_be_bytes([
+            data[pos], data[pos + 1], data[pos + 2], data[pos + 3],
+        ]) as usize;
+        if size < 8 || pos + size > end {
+            break;
+        }
+        let box_type = &data[pos + 4..pos + 8];
+        let content_start = pos + 8;
+        let content_end = pos + size;
+
+        match box_type {
+            b"CNCV" => {
+                // Canon Compressor Version - string tag
+                if content_end > content_start {
+                    let s = String::from_utf8_lossy(&data[content_start..content_end])
+                        .trim_end_matches('\0')
+                        .to_string();
+                    if !s.is_empty() {
+                        tags.push(mk("CompressorVersion", "Compressor Version", Value::String(s)));
+                    }
+                }
+            }
+            b"CMT1" => {
+                // IFD0: TIFF containing Make, Model, ImageWidth/Height, etc.
+                if content_end > content_start {
+                    let tiff_data = &data[content_start..content_end];
+                    if let Ok(mut exif_tags) = ExifReader::read(tiff_data) {
+                        // Extract model for CMT3 MakerNotes dispatch
+                        if let Some(m) = exif_tags.iter().find(|t| t.name == "Model") {
+                            model = m.print_value.clone();
+                        }
+                        tags.extend(exif_tags);
+                    }
+                }
+            }
+            b"CMT2" => {
+                // ExifIFD: TIFF whose IFD0 IS the ExifIFD (ExposureTime, FNumber, etc.)
+                if content_end > content_start {
+                    let tiff_data = &data[content_start..content_end];
+                    // Parse IFD0 as ExifIFD (the CMT2 TIFF stores ExifIFD tags directly in IFD0)
+                    let exif_tags = ExifReader::read_as_named_ifd(tiff_data, "ExifIFD");
+                    tags.extend(exif_tags);
+                }
+            }
+            b"CMT3" => {
+                // MakerNoteCanon: TIFF whose IFD0 IS the Canon MakerNotes IFD
+                if content_end > content_start {
+                    let tiff_data = &data[content_start..content_end];
+                    let mn_tags = parse_canon_cr3_makernotes(tiff_data, &model);
+                    tags.extend(mn_tags);
+                }
+            }
+            b"CMT4" => {
+                // GPS: TIFF whose IFD0 IS the GPS IFD
+                if content_end > content_start {
+                    let tiff_data = &data[content_start..content_end];
+                    let gps_tags = ExifReader::read_as_named_ifd(tiff_data, "GPS");
+                    tags.extend(gps_tags);
+                }
+            }
+            _ => {
+                // THMB, CCTP, CTBO, CNCV, free, etc. - ignore
+            }
+        }
+
+        pos += size;
     }
 }

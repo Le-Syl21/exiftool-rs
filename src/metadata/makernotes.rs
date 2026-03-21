@@ -48,6 +48,26 @@ struct MakerNoteInfo {
 /// `mn_size` is the size of the MakerNote value.
 /// `make` is the camera Make string (for fallback detection).
 /// `parent_byte_order` is the byte order of the parent EXIF structure.
+/// Parse Canon MakerNotes from a standalone TIFF (CR3 CMT3 box).
+///
+/// CMT3 contains a TIFF file where IFD0 IS the Canon MakerNotes IFD directly.
+/// This is the ProcessCMT3 case in Perl Canon.pm.
+pub fn parse_canon_cr3_makernotes(data: &[u8], model: &str) -> Vec<Tag> {
+    use crate::metadata::exif::parse_tiff_header;
+    let header = match parse_tiff_header(data) {
+        Ok(h) => h,
+        Err(_) => return Vec::new(),
+    };
+    let bo = header.byte_order;
+    let ifd_offset = header.ifd0_offset as usize;
+    if ifd_offset + 2 > data.len() {
+        return Vec::new();
+    }
+    let mut tags = Vec::new();
+    read_makernote_ifd(data, ifd_offset, bo, Manufacturer::Canon, &mut tags, model);
+    tags
+}
+
 pub fn parse_makernotes(
     data: &[u8],
     mn_offset: usize,
@@ -366,7 +386,7 @@ fn canon_custom_350d(tag: u8, val: u8) -> Option<(&'static str, String)> {
 }
 
 /// Decode Canon CustomFunctions2 (from Perl CanonCustom.pm ProcessCanonCustom2).
-fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
+fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark, model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if data.len() < 8 { return tags; }
 
@@ -399,7 +419,12 @@ fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
             } else { 0 };
 
             // Look up tag name from CustomFunctions2 table
-            let name = canon_custom2_name(tag_id);
+            // Tag 0x0103: ISOSpeedRange for 1D models, ISOExpansion for others
+            let name = if tag_id == 0x0103 && !model.contains("1D") {
+                "ISOExpansion"
+            } else {
+                canon_custom2_name(tag_id)
+            };
             if !name.is_empty() {
                 tags.push(mk_canon_str(name, &val.to_string()));
             } else if tag_id > 0 {
@@ -2975,6 +3000,9 @@ fn read_makernote_ifd(
     }
 
     let entry_count = read_u16(data, ifd_offset, byte_order) as usize;
+    if manufacturer == Manufacturer::Canon {
+        eprintln!("DEBUG read_makernote_ifd: ifd_offset={} entry_count={} data.len={} bo={:?}", ifd_offset, entry_count, data.len(), byte_order);
+    }
     if entry_count == 0 || entry_count > 500 {
         return;
     }
@@ -2995,6 +3023,10 @@ fn read_makernote_ifd(
         let data_type = read_u16(data, entry_offset + 2, byte_order);
         let count = read_u32(data, entry_offset + 4, byte_order);
         let value_offset = read_u32(data, entry_offset + 8, byte_order);
+
+        if manufacturer == Manufacturer::Canon {
+            eprintln!("DEBUG IFD entry #{}: tag=0x{:04x} type={} count={} voff={}", i, tag_id, data_type, count, value_offset);
+        }
 
         // Validate entry
         if data_type == 0 || data_type > 13 || count > 100000 {
@@ -3054,6 +3086,9 @@ fn read_makernote_ifd(
                 byte_order_le: byte_order == ByteOrderMark::LittleEndian,
             };
 
+            if manufacturer == Manufacturer::Canon {
+                eprintln!("DEBUG Canon sub-table dispatch: tag_id=0x{:04x}, count={}", tag_id, count);
+            }
             let sub_tags = match (manufacturer, tag_id) {
                 // Canon sub-tables
                 (Manufacturer::Canon, 0x0001) => {
@@ -3203,6 +3238,28 @@ fn read_makernote_ifd(
                         // Generic CameraInfo fields for other models (byte offsets, int8u single bytes)
                         // This is a fallback for non-1DmkIII models that were using the old code
                     }
+                    // CameraInfoUnknown: FirmwareVersion at byte offset 0x5c1 (1473), string[6]
+                    // Condition: must start with "X.Y.Z\0" pattern (from Perl Canon::CameraInfoUnknown)
+                    // Note: M50 stores firmware version here
+                    let fw_off = 0x5c1usize;
+                    if value_data.len() >= fw_off + 6 {
+                        let fw_bytes = &value_data[fw_off..fw_off + 6];
+                        // Condition: $$valPt =~ /^\d\.\d\.\d\0/
+                        if fw_bytes.len() >= 5
+                            && fw_bytes[0].is_ascii_digit()
+                            && fw_bytes[1] == b'.'
+                            && fw_bytes[2].is_ascii_digit()
+                            && fw_bytes[3] == b'.'
+                            && fw_bytes[4].is_ascii_digit()
+                        {
+                            let fw = String::from_utf8_lossy(fw_bytes)
+                                .trim_end_matches('\0')
+                                .to_string();
+                            if !fw.is_empty() && !t.iter().any(|tag| tag.name == "FirmwareVersion") {
+                                t.push(mk_canon_str("FirmwareVersion", &fw));
+                            }
+                        }
+                    }
                     t
                 }
                 (Manufacturer::Canon, 0x0012) => {
@@ -3309,6 +3366,14 @@ fn read_makernote_ifd(
                         t.push(mk_canon_str("WBShiftAB", &rd(12).to_string()));
                         t.push(mk_canon_str("WBShiftGM", &rd(13).to_string()));
                     }
+                    if n >= 15 {
+                        // index 14: UnsharpMaskFineness
+                        t.push(mk_canon_str("UnsharpMaskFineness", &rd(14).to_string()));
+                    }
+                    if n >= 16 {
+                        // index 15: UnsharpMaskThreshold
+                        t.push(mk_canon_str("UnsharpMaskThreshold", &rd(15).to_string()));
+                    }
                     t
                 }
                 (Manufacturer::Canon, 0x0093) => {
@@ -3335,6 +3400,16 @@ fn read_makernote_ifd(
                         let num = dir * 10000 + file;
                         t.push(mk_canon_str("FileNumber", &format!("{}-{:04}", num / 10000, num % 10000)));
                     }
+                    // index 3: BracketMode
+                    if n > 3 { let v = rd(3);
+                        let pv = match v { 0=>"Off", 1=>"AEB", 2=>"FEB", 3=>"ISO", 4=>"WB", _=>""};
+                        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+                        t.push(mk_canon_str("BracketMode", &pv));
+                    }
+                    // index 4: BracketValue
+                    if n > 4 { t.push(mk_canon_str("BracketValue", &rd(4).to_string())); }
+                    // index 5: BracketShotNumber
+                    if n > 5 { t.push(mk_canon_str("BracketShotNumber", &rd(5).to_string())); }
                     // index 7: RawJpgSize (skip if < 0)
                     if n > 7 { let v = rd(7); if v >= 0 {
                         let pv = match v { 0=>"Large", 1=>"Medium 1", 2=>"Medium 2", 3=>"Small 1", 4=>"Small 2", 5=>"Small 3", 14=>"Medium", 15=>"Small", _=>""};
@@ -3374,6 +3449,33 @@ fn read_makernote_ifd(
                     if n > 19 { let v = rd(19);
                         t.push(mk_canon_str("LiveViewShooting", if v == 0 { "Off" } else { "On" }));
                     }
+                    // index 20: FocusDistanceUpper (int16u, RawConv suppress if 0)
+                    // FIRST_ENTRY=1 so index 20 = word offset 20 = byte offset 40
+                    if n > 20 { let v = rd(20) as u16; if v != 0 {
+                        let m_val = v as f64 / 100.0;
+                        let pv = if m_val > 655.345 { "inf".to_string() } else { format!("{} m", m_val) };
+                        t.push(mk_canon_str("FocusDistanceUpper", &pv));
+                        // index 21: FocusDistanceLower (conditional on FocusDistanceUpper != 0)
+                        if n > 21 { let v2 = rd(21) as u16;
+                            let m_val2 = v2 as f64 / 100.0;
+                            let pv2 = if m_val2 > 655.345 { "inf".to_string() } else { format!("{} m", m_val2) };
+                            t.push(mk_canon_str("FocusDistanceLower", &pv2));
+                        }
+                    }}
+                    // index 23: ShutterMode
+                    if n > 23 { let v = rd(23);
+                        let pv = match v { 0=>"Mechanical", 1=>"Electronic First Curtain", 2=>"Electronic", _=>""};
+                        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+                        t.push(mk_canon_str("ShutterMode", &pv));
+                    }
+                    // index 25: FlashExposureLock
+                    if n > 25 { let v = rd(25);
+                        t.push(mk_canon_str("FlashExposureLock", if v == 0 { "Off" } else { "On" }));
+                    }
+                    // index 32: AntiFlicker
+                    if n > 32 { let v = rd(32);
+                        t.push(mk_canon_str("AntiFlicker", if v == 0 { "Off" } else { "On" }));
+                    }
                     t
                 }
                 (Manufacturer::Canon, 0x000F) => {
@@ -3388,7 +3490,7 @@ fn read_makernote_ifd(
                     // Format: size(2) + pad(2) + count(4) + groups of records
                     // Each group: recNum(4) + recLen(4) + recCount(4) + entries
                     // Each entry: tag(4) + numValues(4) + values(4*N)
-                    decode_canon_custom_functions2(value_data, byte_order)
+                    decode_canon_custom_functions2(value_data, byte_order, model_name)
                 }
                 (Manufacturer::Canon, 0x00E0) => {
                     // Canon SensorInfo: int16s, indices 1-12 (from Perl Canon::SensorInfo)
@@ -3441,7 +3543,52 @@ fn read_makernote_ifd(
                 }
                 (Manufacturer::Canon, 0x4001) => {
                     // Canon ColorData: int16s array (WB levels)
+                    eprintln!("DEBUG 0x4001 Canon ColorData dispatch: count={}, mfr={:?}", count, manufacturer);
                     decode_canon_color_data(value_data, count as usize, byte_order)
+                }
+                (Manufacturer::Canon, 0x0035) => {
+                    // Canon TimeInfo: int32s FIRST_ENTRY=1
+                    // index 1 = TimeZone (minutes offset from UTC)
+                    // index 2 = TimeZoneCity (0-n)
+                    // index 3 = DaylightSavings (0=Off, 60=On)
+                    decode_canon_time_info(value_data, byte_order)
+                }
+                (Manufacturer::Canon, 0x4015) => {
+                    // Canon VignettingCorr/VignettingCorrUnknown:
+                    // First byte (int8u) is VignettingCorrVersion, regardless of sub-table variant
+                    let mut t = Vec::new();
+                    if !value_data.is_empty() {
+                        let v = value_data[0] as u32;
+                        t.push(mk_canon_str("VignettingCorrVersion", &v.to_string()));
+                    }
+                    t
+                }
+                (Manufacturer::Canon, 0x4016) => {
+                    // Canon VignettingCorr2: int32s FIRST_ENTRY=1
+                    // index 5=PeripheralLightingSetting, 6=ChromaticAberrationSetting,
+                    // 7=DistortionCorrectionSetting, 9=DigitalLensOptimizerSetting
+                    decode_canon_vignetting_corr2(value_data, byte_order)
+                }
+                (Manufacturer::Canon, 0x4018) => {
+                    // Canon LightingOpt: int32s FIRST_ENTRY=1
+                    // index 1=PeripheralIlluminationCorr, 2=AutoLightingOptimizer, 3=HighlightTonePriority,
+                    // 4=LongExposureNoiseReduction, 5=HighISONoiseReduction, 10=DigitalLensOptimizer, 11=DualPixelRaw
+                    decode_canon_lighting_opt(value_data, byte_order)
+                }
+                (Manufacturer::Canon, 0x4020) => {
+                    // Canon AmbienceInfo → Ambience sub-table: int32s FIRST_ENTRY=1
+                    // Condition: not all zeros
+                    // index 1 = AmbienceSelection
+                    decode_canon_ambience(value_data, byte_order)
+                }
+                (Manufacturer::Canon, 0x4024) => {
+                    // Canon FilterInfo: custom format (ProcessFilters)
+                    decode_canon_filter_info(value_data, byte_order)
+                }
+                (Manufacturer::Canon, 0x4025) => {
+                    // Canon HDRInfo: int32s FIRST_ENTRY=1
+                    // index 1 = HDR, index 2 = HDREffect
+                    decode_canon_hdr_info(value_data, byte_order)
                 }
                 // Nikon sub-tables
                 (Manufacturer::Nikon, 0x0011) => {
@@ -3811,11 +3958,18 @@ fn read_makernote_ifd(
             (Manufacturer::Canon, 0x00A9) | // ColorBalance
             (Manufacturer::Canon, 0x00AA) | // MeasuredColor
             (Manufacturer::Canon, 0x00E0) | // SensorInfo
+            (Manufacturer::Canon, 0x0035) | // TimeInfo
             (Manufacturer::Canon, 0x4001) | // ColorData
             (Manufacturer::Canon, 0x4002) | // CRWParam (Unknown, Binary, Drop)
             (Manufacturer::Canon, 0x4003) | // ColorInfo (SubDirectory)
             (Manufacturer::Canon, 0x4005) | // Flavor (Unknown, Binary, Drop)
             (Manufacturer::Canon, 0x4013) | // AFMicroAdj
+            (Manufacturer::Canon, 0x4015) | // VignettingCorr
+            (Manufacturer::Canon, 0x4016) | // VignettingCorr2
+            (Manufacturer::Canon, 0x4018) | // LightingOpt
+            (Manufacturer::Canon, 0x4020) | // AmbienceInfo
+            (Manufacturer::Canon, 0x4024) | // FilterInfo
+            (Manufacturer::Canon, 0x4025) | // HDRInfo
             (Manufacturer::Nikon, 0x0011) | // PreviewIFD
             (Manufacturer::Nikon, 0x0088) | // AFInfo
             (Manufacturer::Nikon, 0x0091) | // ShotInfo
@@ -3852,7 +4006,7 @@ fn read_makernote_ifd(
 
         // Canon: suppress tags from sub-table generated lookups that don't exist in main MakerNote
         if manufacturer == Manufacturer::Canon && matches!(name,
-            "ColorDataVersion" | "FlashOutput" | "FocusDistanceLower" | "FocusDistanceUpper"
+            "ColorDataVersion" | "FlashOutput"
         ) { continue; }
 
         // Canon tag 0x0019: unknown in main MakerNotes (Perl shows as "Canon_0x0019"),
@@ -4384,6 +4538,67 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
     };
 
     if count < 50 { return tags; }
+
+    eprintln!("DEBUG decode_canon_color_data: count={}, data.len()={}", count, data.len());
+
+    // ColorData9 (count=1816/1820/1824): M50, EOS R, EOS RP, 90D, 850D etc.
+    // FIRST_ENTRY=0, FORMAT=int16s; index 0x00 = ColorDataVersion at int16s[0]
+    if count == 1816 || count == 1820 || count == 1824 {
+        let version = rd(0);
+        let ver_str = match version {
+            16 => "16 (M50)",
+            17 => "17 (R)",
+            18 => "18 (RP/250D)",
+            19 => "19 (90D/850D/M6mkII/M200)",
+            _ => "",
+        };
+        let ver_pv = if ver_str.is_empty() { version.to_string() } else { ver_str.to_string() };
+        tags.push(mk_canon_str("ColorDataVersion", &ver_pv));
+
+        // Helper: read 4 int16s starting at absolute index i as RGGB string
+        let wb4 = |i: usize| -> String {
+            if i + 4 > count { return String::new(); }
+            format!("{} {} {} {}", rd(i), rd(i+1), rd(i+2), rd(i+3))
+        };
+        let ct = |i: usize| -> u16 { if i < count { rdu(i) } else { 0 } };
+
+        // WB blocks (all absolute indices in int16s array):
+        let emit_wb = |tags: &mut Vec<Tag>, name_wb: &str, name_ct: &str, idx_wb: usize, idx_ct: usize| {
+            let s = wb4(idx_wb);
+            if !s.is_empty() { tags.push(mk_canon_str(name_wb, &s)); }
+            let t = ct(idx_ct);
+            if t > 0 { tags.push(mk_canon_str(name_ct, &t.to_string())); }
+        };
+
+        emit_wb(&mut tags, "WB_RGGBLevelsAsShot",    "ColorTempAsShot",    0x47, 0x4b);
+        emit_wb(&mut tags, "WB_RGGBLevelsAuto",       "ColorTempAuto",       0x4c, 0x50);
+        emit_wb(&mut tags, "WB_RGGBLevelsMeasured",   "ColorTempMeasured",   0x51, 0x55);
+        emit_wb(&mut tags, "WB_RGGBLevelsDaylight",   "ColorTempDaylight",   0x88, 0x8c);
+        emit_wb(&mut tags, "WB_RGGBLevelsShade",      "ColorTempShade",      0x8d, 0x91);
+        emit_wb(&mut tags, "WB_RGGBLevelsCloudy",     "ColorTempCloudy",     0x92, 0x96);
+        emit_wb(&mut tags, "WB_RGGBLevelsTungsten",   "ColorTempTungsten",   0x97, 0x9b);
+        emit_wb(&mut tags, "WB_RGGBLevelsFluorescent","ColorTempFluorescent",0x9c, 0xa0);
+        emit_wb(&mut tags, "WB_RGGBLevelsKelvin",     "ColorTempKelvin",     0xa1, 0xa5);
+        emit_wb(&mut tags, "WB_RGGBLevelsFlash",      "ColorTempFlash",      0xa6, 0xaa);
+
+        // PerChannelBlackLevel at 0x149 = int16u[4]
+        let pcbl = 0x149usize;
+        if pcbl + 4 <= count {
+            let s: Vec<String> = (0..4).map(|i| rdu(pcbl+i).to_string()).collect();
+            tags.push(mk_canon_str("PerChannelBlackLevel", &s.join(" ")));
+        }
+        // NormalWhiteLevel at 0x31c = int16u (suppress if 0)
+        let nwl = 0x31cusize;
+        if nwl < count { let v = rdu(nwl); if v > 0 { tags.push(mk_canon_str("NormalWhiteLevel", &v.to_string())); } }
+        // SpecularWhiteLevel at 0x31d = int16u
+        let swl = 0x31dusize;
+        if swl < count { let v = rdu(swl); tags.push(mk_canon_str("SpecularWhiteLevel", &v.to_string())); }
+        // LinearityUpperMargin at 0x31e = int16u
+        let lum = 0x31eusize;
+        if lum < count { let v = rdu(lum); tags.push(mk_canon_str("LinearityUpperMargin", &v.to_string())); }
+
+        return tags;
+    }
 
     let version = rd(0);
     let version_str = match version {
@@ -4966,6 +5181,275 @@ fn decode_nikon_scan_ifd(data: &[u8], offset: usize, bo: ByteOrderMark) -> Vec<T
             }
             _ => {}
         }
+    }
+    tags
+}
+
+// Canon TimeInfo (tag 0x0035): int32s, FIRST_ENTRY=1
+// Index 1=TimeZone(minutes), 2=TimeZoneCity, 3=DaylightSavings(0=Off,60=On)
+fn decode_canon_time_info(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    // Data is packed int32s starting at byte 0, FIRST_ENTRY=1 means index 1 is at byte 4
+    let read_i32 = |d: &[u8], idx: usize| -> i32 {
+        let off = idx * 4;
+        if off + 4 > d.len() { return 0; }
+        match bo {
+            ByteOrderMark::LittleEndian => i32::from_le_bytes([d[off], d[off+1], d[off+2], d[off+3]]),
+            ByteOrderMark::BigEndian    => i32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]),
+        }
+    };
+    if data.len() >= 8 {
+        let tz_minutes = read_i32(data, 1); // FIRST_ENTRY=1 → index 1 at byte 4
+        // Format as e.g. "+09:00" or "-05:30"
+        let sign = if tz_minutes >= 0 { "+" } else { "-" };
+        let abs = tz_minutes.unsigned_abs();
+        let tz_str = format!("{}{:02}:{:02}", sign, abs / 60, abs % 60);
+        tags.push(mk_canon_str("TimeZone", &tz_str));
+    }
+    if data.len() >= 12 {
+        let city_val = read_i32(data, 2);
+        let city_name = match city_val {
+            0  => "n/a",
+            1  => "Chatham Islands",
+            2  => "Wellington",
+            3  => "Solomon Islands",
+            4  => "Sydney",
+            5  => "Adelaide",
+            6  => "Tokyo",
+            7  => "Hong Kong",
+            8  => "Bangkok",
+            9  => "Yangon",
+            10 => "Dhaka",
+            11 => "Kathmandu",
+            12 => "Delhi",
+            13 => "Karachi",
+            14 => "Kabul",
+            15 => "Dubai",
+            16 => "Tehran",
+            17 => "Moscow",
+            18 => "Cairo",
+            19 => "Paris",
+            20 => "London",
+            21 => "Azores",
+            22 => "Fernando de Noronha",
+            23 => "Sao Paulo",
+            24 => "Newfoundland",
+            25 => "Santiago",
+            26 => "Caracas",
+            27 => "New York",
+            28 => "Chicago",
+            29 => "Denver",
+            30 => "Los Angeles",
+            31 => "Anchorage",
+            32 => "Honolulu",
+            33 => "Samoa",
+            32766 => "(not set)",
+            _ => "",
+        };
+        let city_out = if city_name.is_empty() { city_val.to_string() } else { city_name.to_string() };
+        tags.push(mk_canon_str("TimeZoneCity", &city_out));
+    }
+    if data.len() >= 16 {
+        let dst = read_i32(data, 3);
+        let dst_str = match dst { 0 => "Off", 60 => "On", _ => "" };
+        let dst_out = if dst_str.is_empty() { dst.to_string() } else { dst_str.to_string() };
+        tags.push(mk_canon_str("DaylightSavings", &dst_out));
+    }
+    tags
+}
+
+// Canon VignettingCorr2 (tag 0x4016): int32s, FIRST_ENTRY=1
+// Index 5=PeripheralLightingSetting, 6=ChromaticAberrationSetting,
+// 7=DistortionCorrectionSetting, 9=DigitalLensOptimizerSetting
+fn decode_canon_vignetting_corr2(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let read_i32 = |d: &[u8], idx: usize| -> i32 {
+        let off = idx * 4;
+        if off + 4 > d.len() { return -1; }
+        match bo {
+            ByteOrderMark::LittleEndian => i32::from_le_bytes([d[off], d[off+1], d[off+2], d[off+3]]),
+            ByteOrderMark::BigEndian    => i32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]),
+        }
+    };
+    let off_on = |v: i32| -> String { match v { 0 => "Off".to_string(), 1 => "On".to_string(), _ => v.to_string() } };
+    // FIRST_ENTRY=1, so index 5 is at byte offset 5*4=20
+    if data.len() > 5 * 4 {
+        let v = read_i32(data, 5);
+        if v >= 0 { tags.push(mk_canon_str("PeripheralLightingSetting", &off_on(v))); }
+    }
+    if data.len() > 6 * 4 {
+        let v = read_i32(data, 6);
+        if v >= 0 { tags.push(mk_canon_str("ChromaticAberrationSetting", &off_on(v))); }
+    }
+    if data.len() > 7 * 4 {
+        let v = read_i32(data, 7);
+        if v >= 0 { tags.push(mk_canon_str("DistortionCorrectionSetting", &off_on(v))); }
+    }
+    if data.len() > 9 * 4 {
+        let v = read_i32(data, 9);
+        if v >= 0 { tags.push(mk_canon_str("DigitalLensOptimizerSetting", &off_on(v))); }
+    }
+    tags
+}
+
+// Canon LightingOpt (tag 0x4018): int32s, FIRST_ENTRY=1
+fn decode_canon_lighting_opt(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let read_i32 = |d: &[u8], idx: usize| -> Option<i32> {
+        let off = idx * 4;
+        if off + 4 > d.len() { return None; }
+        Some(match bo {
+            ByteOrderMark::LittleEndian => i32::from_le_bytes([d[off], d[off+1], d[off+2], d[off+3]]),
+            ByteOrderMark::BigEndian    => i32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]),
+        })
+    };
+    let off_on = |v: i32| -> String { match v { 0 => "Off".to_string(), 1 => "On".to_string(), _ => v.to_string() } };
+    if let Some(v) = read_i32(data, 1) {
+        tags.push(mk_canon_str("PeripheralIlluminationCorr", &off_on(v)));
+    }
+    if let Some(v) = read_i32(data, 2) {
+        let s = match v { 0=>"Standard", 1=>"Low", 2=>"Strong", 3=>"Off", _=>"" };
+        tags.push(mk_canon_str("AutoLightingOptimizer", &if s.is_empty() { v.to_string() } else { s.to_string() }));
+    }
+    if let Some(v) = read_i32(data, 3) {
+        let s = match v { 0=>"Off", 1=>"On", 2=>"Enhanced", _=>"" };
+        tags.push(mk_canon_str("HighlightTonePriority", &if s.is_empty() { v.to_string() } else { s.to_string() }));
+    }
+    if let Some(v) = read_i32(data, 4) {
+        let s = match v { 0=>"Off", 1=>"Auto", 2=>"On", _=>"" };
+        tags.push(mk_canon_str("LongExposureNoiseReduction", &if s.is_empty() { v.to_string() } else { s.to_string() }));
+    }
+    if let Some(v) = read_i32(data, 5) {
+        let s = match v { 0=>"Standard", 1=>"Low", 2=>"Strong", 3=>"Off", _=>"" };
+        tags.push(mk_canon_str("HighISONoiseReduction", &if s.is_empty() { v.to_string() } else { s.to_string() }));
+    }
+    if let Some(v) = read_i32(data, 10) {
+        let s = match v { 0=>"Off", 1=>"Standard", 2=>"High", _=>"" };
+        tags.push(mk_canon_str("DigitalLensOptimizer", &if s.is_empty() { v.to_string() } else { s.to_string() }));
+    }
+    if let Some(v) = read_i32(data, 11) {
+        tags.push(mk_canon_str("DualPixelRaw", &off_on(v)));
+    }
+    tags
+}
+
+// Canon AmbienceInfo (tag 0x4020): int32s, FIRST_ENTRY=1
+// Index 1 = AmbienceSelection
+fn decode_canon_ambience(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    if data.len() < 8 { return tags; }
+    // Check not all zeros
+    if data.iter().all(|&b| b == 0) { return tags; }
+    let off = 1 * 4;
+    if off + 4 > data.len() { return tags; }
+    let v = match bo {
+        ByteOrderMark::LittleEndian => i32::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3]]),
+        ByteOrderMark::BigEndian    => i32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]),
+    };
+    let s = match v {
+        0 => "Standard",
+        1 => "Vivid",
+        2 => "Warm",
+        3 => "Soft",
+        4 => "Cool",
+        5 => "Intense",
+        6 => "Brighter",
+        7 => "Darker",
+        8 => "Monochrome",
+        _ => "",
+    };
+    tags.push(mk_canon_str("AmbienceSelection", &if s.is_empty() { v.to_string() } else { s.to_string() }));
+    tags
+}
+
+// Canon FilterInfo (tag 0x4024): custom ProcessFilters format
+// Structure: 4 bytes unknown, 4 bytes numFilters, then for each filter:
+//   4 bytes filterNum, 4 bytes size (not counting filterNum), 4 bytes numParams,
+//   then for each param: 4 bytes tagId, 4 bytes count, count*4 bytes values
+fn decode_canon_filter_info(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    if data.len() < 8 { return tags; }
+    let read_u32_local = |d: &[u8], off: usize| -> u32 {
+        if off + 4 > d.len() { return 0; }
+        match bo {
+            ByteOrderMark::LittleEndian => u32::from_le_bytes([d[off], d[off+1], d[off+2], d[off+3]]),
+            ByteOrderMark::BigEndian    => u32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]),
+        }
+    };
+    let read_i32_local = |d: &[u8], off: usize| -> i32 {
+        if off + 4 > d.len() { return 0; }
+        match bo {
+            ByteOrderMark::LittleEndian => i32::from_le_bytes([d[off], d[off+1], d[off+2], d[off+3]]),
+            ByteOrderMark::BigEndian    => i32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]),
+        }
+    };
+    let num_filters = read_u32_local(data, 4) as usize;
+    let mut pos = 8usize;
+    for _i in 0..num_filters {
+        if pos + 12 > data.len() { break; }
+        let _fnum = read_u32_local(data, pos);
+        let size = read_u32_local(data, pos + 4) as usize;
+        let nparm = read_u32_local(data, pos + 8) as usize;
+        let nxt = pos + 4 + size;
+        pos += 12;
+        for _j in 0..nparm {
+            if pos + 8 > data.len() { break; }
+            let tag_id = read_u32_local(data, pos);
+            let count = read_u32_local(data, pos + 4) as usize;
+            pos += 8;
+            if pos + 4 * count > data.len() { break; }
+            // Read first value
+            let val = read_i32_local(data, pos);
+            let tag_name = match tag_id {
+                0x101 => Some("GrainyBWFilter"),
+                0x201 => Some("SoftFocusFilter"),
+                0x301 => Some("ToyCameraFilter"),
+                0x401 => Some("MiniatureFilter"),
+                0x402 => Some("MiniatureFilterOrientation"),
+                0x403 => Some("MiniatureFilterPosition"),
+                0x404 => Some("MiniatureFilterParameter"),
+                0x501 => Some("FisheyeFilter"),
+                0x601 => Some("PaintingFilter"),
+                0x701 => Some("WatercolorFilter"),
+                _ => None,
+            };
+            if let Some(name) = tag_name {
+                // Special print conversions for filter on/off
+                let print_val = match tag_id {
+                    0x101 | 0x201 | 0x301 | 0x401 | 0x501 | 0x601 | 0x701 => {
+                        if val == -1 { "Off".to_string() } else { format!("On ({})", val) }
+                    }
+                    0x402 => match val { 0 => "Horizontal".to_string(), 1 => "Vertical".to_string(), _ => val.to_string() },
+                    _ => val.to_string(),
+                };
+                tags.push(mk_canon_str(name, &print_val));
+            }
+            pos += 4 * count;
+        }
+        pos = nxt;
+    }
+    tags
+}
+
+// Canon HDRInfo (tag 0x4025): int32s, FIRST_ENTRY=1
+// Index 1 = HDR, index 2 = HDREffect
+fn decode_canon_hdr_info(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
+    let mut tags = Vec::new();
+    let read_i32 = |d: &[u8], idx: usize| -> Option<i32> {
+        let off = idx * 4;
+        if off + 4 > d.len() { return None; }
+        Some(match bo {
+            ByteOrderMark::LittleEndian => i32::from_le_bytes([d[off], d[off+1], d[off+2], d[off+3]]),
+            ByteOrderMark::BigEndian    => i32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]),
+        })
+    };
+    if let Some(v) = read_i32(data, 1) {
+        let s = match v { 0=>"Off", 1=>"Auto", 2=>"On", _=>"" };
+        tags.push(mk_canon_str("HDR", &if s.is_empty() { v.to_string() } else { s.to_string() }));
+    }
+    if let Some(v) = read_i32(data, 2) {
+        let s = match v { 0=>"Natural", 1=>"Art (standard)", 2=>"Art (vivid)", 3=>"Art (bold)", 4=>"Art (embossed)", _=>"" };
+        tags.push(mk_canon_str("HDREffect", &if s.is_empty() { v.to_string() } else { s.to_string() }));
     }
     tags
 }
