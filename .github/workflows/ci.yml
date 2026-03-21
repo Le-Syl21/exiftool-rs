@@ -12,20 +12,33 @@ env:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
+          # Linux x86_64 — native
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            use_cross: false
+          # Linux ARM64 — via cross (QEMU)
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-          - os: macos-latest
+            use_cross: true
+          # macOS x86_64 — native
+          - os: macos-13
             target: x86_64-apple-darwin
+            use_cross: false
+          # macOS ARM64 — native (M1 runner)
           - os: macos-latest
             target: aarch64-apple-darwin
+            use_cross: false
+          # Windows x86_64 — native
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            use_cross: false
+          # Windows ARM64 — cross-compile (no native runner)
           - os: windows-latest
             target: aarch64-pc-windows-msvc
+            use_cross: false
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.target }}
@@ -38,18 +51,27 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install cross-compilation tools (Linux ARM)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Install cross
+        if: matrix.use_cross
+        run: cargo install cross --locked
 
-      - name: Build
+      - name: Build (native)
+        if: "!matrix.use_cross"
         run: cargo build --release --target ${{ matrix.target }}
-        env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
 
-      - name: Check warnings
+      - name: Build (cross)
+        if: matrix.use_cross
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: Run tests (native)
+        if: "!matrix.use_cross && !contains(matrix.target, 'aarch64-pc-windows')"
+        run: cargo test --target ${{ matrix.target }}
+
+      - name: Run tests (cross/QEMU)
+        if: matrix.use_cross
+        run: cross test --target ${{ matrix.target }}
+
+      - name: Check 0 warnings
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           output=$(cargo build --release 2>&1)
@@ -58,16 +80,3 @@ jobs:
             echo "$output" | grep "^warning:"
             exit 1
           fi
-
-      - name: Run tests
-        if: "!contains(matrix.target, 'aarch64')"
-        run: cargo test
-
-  clippy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - run: cargo clippy -- -D warnings 2>&1 || true
