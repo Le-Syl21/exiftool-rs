@@ -3001,7 +3001,6 @@ fn read_makernote_ifd(
 
     let entry_count = read_u16(data, ifd_offset, byte_order) as usize;
     if manufacturer == Manufacturer::Canon {
-        eprintln!("DEBUG read_makernote_ifd: ifd_offset={} entry_count={} data.len={} bo={:?}", ifd_offset, entry_count, data.len(), byte_order);
     }
     if entry_count == 0 || entry_count > 500 {
         return;
@@ -3025,7 +3024,6 @@ fn read_makernote_ifd(
         let value_offset = read_u32(data, entry_offset + 8, byte_order);
 
         if manufacturer == Manufacturer::Canon {
-            eprintln!("DEBUG IFD entry #{}: tag=0x{:04x} type={} count={} voff={}", i, tag_id, data_type, count, value_offset);
         }
 
         // Validate entry
@@ -3087,7 +3085,6 @@ fn read_makernote_ifd(
             };
 
             if manufacturer == Manufacturer::Canon {
-                eprintln!("DEBUG Canon sub-table dispatch: tag_id=0x{:04x}, count={}", tag_id, count);
             }
             let sub_tags = match (manufacturer, tag_id) {
                 // Canon sub-tables
@@ -3543,7 +3540,6 @@ fn read_makernote_ifd(
                 }
                 (Manufacturer::Canon, 0x4001) => {
                     // Canon ColorData: int16s array (WB levels)
-                    eprintln!("DEBUG 0x4001 Canon ColorData dispatch: count={}, mfr={:?}", count, manufacturer);
                     decode_canon_color_data(value_data, count as usize, byte_order)
                 }
                 (Manufacturer::Canon, 0x0035) => {
@@ -4497,7 +4493,7 @@ fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag
             }
             // Print as decimal bit index of set bits
             let mut set_bits: Vec<u32> = Vec::new();
-            for b in 0..num_af { if focus_bits & (1u64 << b) != 0 { set_bits.push(b as u32); } }
+            for b in 0..num_af.min(64) { if focus_bits & (1u64 << b) != 0 { set_bits.push(b as u32); } }
             let pv = if set_bits.len() == 1 { set_bits[0].to_string() }
                      else { set_bits.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ") };
             if !pv.is_empty() { tags.push(mk_canon_str("AFPointsInFocus", &pv)); }
@@ -4511,7 +4507,7 @@ fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag
                     sel_bits |= word << (w * 16);
                 }
                 let mut sel_set: Vec<u32> = Vec::new();
-                for b in 0..num_af { if sel_bits & (1u64 << b) != 0 { sel_set.push(b as u32); } }
+                for b in 0..num_af.min(64) { if sel_bits & (1u64 << b) != 0 { sel_set.push(b as u32); } }
                 let spv = if sel_set.len() == 1 { sel_set[0].to_string() }
                           else { sel_set.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ") };
                 if !spv.is_empty() { tags.push(mk_canon_str("AFPointsSelected", &spv)); }
@@ -4539,7 +4535,6 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
 
     if count < 50 { return tags; }
 
-    eprintln!("DEBUG decode_canon_color_data: count={}, data.len()={}", count, data.len());
 
     // ColorData9 (count=1816/1820/1824): M50, EOS R, EOS RP, 90D, 850D etc.
     // FIRST_ENTRY=0, FORMAT=int16s; index 0x00 = ColorDataVersion at int16s[0]
