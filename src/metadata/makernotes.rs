@@ -752,22 +752,6 @@ fn decode_jvc_text(data: &[u8]) -> Vec<Tag> {
     tags
 }
 
-/// Generic binary sub-table decoder: extract int8u values at fixed offsets.
-fn decode_binary_subtable(data: &[u8], module: &str, table: &[(usize, &str)]) -> Vec<Tag> {
-    let mut tags = Vec::new();
-    for &(offset, name) in table {
-        if offset < data.len() {
-            let val = data[offset];
-            tags.push(Tag {
-                id: TagId::Text(name.to_string()),
-                name: name.to_string(), description: name.to_string(),
-                group: TagGroup { family0: "MakerNotes".into(), family1: module.into(), family2: "Camera".into() },
-                raw_value: Value::U8(val), print_value: val.to_string(), priority: 0,
-            });
-        }
-    }
-    tags
-}
 
 // Pentax SRInfo decode (from Perl Pentax::SRInfo table)
 fn decode_pentax_sr_info(d: &[u8]) -> Vec<Tag> {
@@ -1687,7 +1671,7 @@ fn decode_pentax_ae_info(data: &[u8]) -> Vec<Tag> {
 /// From Perl: LensInfo (20 bytes), LensInfo2 (21 bytes), LensInfo4 (91 bytes), etc.
 fn decode_pentax_lens_info(data: &[u8]) -> Vec<Tag> {
     let mut tags = Vec::new();
-    let pb = |name: &str, v: &str| mk_pentax(name, v);
+    let _pb = |name: &str, v: &str| mk_pentax(name, v);
     let n = data.len();
 
     // Determine LensType and LensData start offset

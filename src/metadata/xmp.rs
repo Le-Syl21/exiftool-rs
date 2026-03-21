@@ -1416,13 +1416,6 @@ fn flash_numeric_to_string(val: u32) -> String {
     }
 }
 
-/// Build a struct tag name prefix from the current element path.
-/// Concatenates ucfirst'd names of non-RDF, non-Description ancestor elements.
-/// E.g., path [RDF, Description, Manifest, Seq, li, reference] → "ManifestReference"
-/// This mirrors how Perl's GetXMPTagID accumulates names from the property path.
-fn build_struct_tag_prefix(path: &[(String, String)]) -> String {
-    build_struct_tag_prefix_excluding(path, None)
-}
 
 /// Like build_struct_tag_prefix but excludes the element with the given local name
 /// (used when path already includes the current element but we want the prefix without it).
@@ -1744,7 +1737,6 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
     // Attributes on elements are emitted as TagName = value (path + attrName)
 
     // Track which namespace URIs were declared on the root element (xmlns=...)
-    let mut root_xmlns: Option<String> = None;
 
     for event in parser {
         match event {
@@ -1779,7 +1771,6 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                         let tag_name = format!("{}Xmlns", local);
                         if !seen_names.contains(&tag_name) {
                             seen_names.insert(tag_name.clone());
-                            root_xmlns = Some(default_ns.to_string());
                             let val = Value::String(default_ns.to_string());
                             let pv = val.to_display_string();
                             tags.push(Tag {

@@ -125,7 +125,6 @@ pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
 
     let mut tags = Vec::new();
     let mut offset = 32768usize;
-    let mut boot_system_found = false;
 
     while offset + 2048 <= data.len() {
         let sector = &data[offset..offset + 2048];
@@ -142,7 +141,6 @@ pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                 );
                 // Always extract BootSystem even if empty (indicates bootable)
                 tags.push(mk("BootSystem", Value::String(boot_system.to_string())));
-                boot_system_found = true;
             }
             1 => {
                 // Primary Volume Descriptor

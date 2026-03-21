@@ -40,8 +40,6 @@ struct QtState {
     /// JPEG track sample offset and size (for JpgFromRaw extraction)
     jpeg_offset: Option<u64>,
     jpeg_size: Option<u32>,
-    /// Model string from CMT1 (for MakerNotes parsing)
-    model: String,
 }
 
 pub fn read_quicktime(data: &[u8]) -> Result<Vec<Tag>> {

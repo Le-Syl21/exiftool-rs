@@ -348,7 +348,7 @@ fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<Vec<u8>> {
     if comp_val != 1 { return None; }
 
     // Get required tags
-    let strip_off = find_tag(tags, "StripOffsets")?.raw_value.as_u64()? as u32;
+    let _strip_off = find_tag(tags, "StripOffsets")?.raw_value.as_u64()? as u32;
     let strip_len = find_tag(tags, "StripByteCounts")?.raw_value.as_u64()? as u32;
     let bps_str = find_tag_value(tags, "BitsPerSample").unwrap_or_default();
     let bps_vals: Vec<u16> = bps_str.split(|c: char| c == ',' || c == ' ')
@@ -358,7 +358,7 @@ fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<Vec<u8>> {
     let rps = find_tag(tags, "RowsPerStrip")?.raw_value.as_u64()? as u32;
     let photo = find_tag(tags, "PhotometricInterpretation")?.raw_value.as_u64()
         .or_else(|| if find_tag_value(tags, "PhotometricInterpretation")?.contains("RGB") { Some(2) } else { Some(1) })? as u16;
-    let planar = find_tag(tags, "PlanarConfiguration").and_then(|t| t.raw_value.as_u64()).unwrap_or(1) as u16;
+    let _planar = find_tag(tags, "PlanarConfiguration").and_then(|t| t.raw_value.as_u64()).unwrap_or(1) as u16;
     let orient = find_tag(tags, "Orientation").and_then(|t| t.raw_value.as_u64()).unwrap_or(1) as u16;
 
     // Calculate image dimensions from strip data
@@ -1088,7 +1088,7 @@ fn compute_panasonic_advanced_scene_mode(tags: &[Tag]) -> Option<Tag> {
     }
 
     // Perl PrintConv: first try model-specific key, then generic key
-    let model_key = format!("{} {} {}", model, scene_mode_raw, adv_type_raw);
+    let _model_key = format!("{} {} {}", model, scene_mode_raw, adv_type_raw);
     let generic_key = format!("{} {}", scene_mode_raw, adv_type_raw);
 
     // Model-specific table (only DMC-TZ40 entries in Perl)

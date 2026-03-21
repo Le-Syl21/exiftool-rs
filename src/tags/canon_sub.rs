@@ -756,7 +756,7 @@ pub fn flash_bits_str(v: u16) -> String {
         (13, "Built-in"),
         (14, "External"),
     ];
-    let mut parts: Vec<&str> = bits.iter()
+    let parts: Vec<&str> = bits.iter()
         .filter(|&&(bit, _)| (v >> bit) & 1 == 1)
         .map(|&(_, name)| name)
         .collect();

@@ -157,9 +157,6 @@ fn parse_fat(data: &[u8], sector_size: usize, difat: &[u32], fat_sector_count: u
 struct DirEntry {
     name: String,
     entry_type: u8,
-    child: u32,
-    sibling_left: u32,
-    sibling_right: u32,
     start_sector: u32,
     size: u32,
 }
@@ -167,8 +164,8 @@ struct DirEntry {
 fn parse_dir_entry(data: &[u8]) -> DirEntry {
     if data.len() < 128 {
         return DirEntry {
-            name: String::new(), entry_type: 0, child: FREESECT,
-            sibling_left: FREESECT, sibling_right: FREESECT,
+            name: String::new(), entry_type: 0,
+            
             start_sector: FREESECT, size: 0,
         };
     }
@@ -182,9 +179,6 @@ fn parse_dir_entry(data: &[u8]) -> DirEntry {
     DirEntry {
         name,
         entry_type: data[66],
-        child: r32(data, 76),
-        sibling_left: r32(data, 72),
-        sibling_right: r32(data, 68),
         start_sector: r32(data, 116),
         size: r32(data, 120),
     }
@@ -224,7 +218,6 @@ fn process_properties(data: &[u8], is_summary: bool, tags: &mut Vec<Tag>) {
         if prop_count > 1000 { continue; }
 
         // Read code page from property 0x01
-        let mut code_page = 1252u16;
 
         // First pass: find code page
         for i in 0..prop_count.min(500) {
@@ -237,7 +230,6 @@ fn process_properties(data: &[u8], is_summary: bool, tags: &mut Vec<Tag>) {
             if prop_id == 1 {
                 let vtype = r32(data, val_off) & 0xFFF;
                 if vtype == 2 && val_off + 6 <= data.len() {
-                    code_page = r16(data, val_off + 4);
                 }
                 break;
             }
@@ -851,40 +843,6 @@ fn extract_current_user(data: &[u8]) -> Option<String> {
     if name.is_empty() { None } else { Some(name) }
 }
 
-/// Process a stream with hyperlinks (VT_LPWSTR array)
-fn extract_hyperlinks(data: &[u8]) -> Option<String> {
-    if data.len() < 4 { return None; }
-    // This is a VT_VECTOR of VT_VARIANT
-    // For simplicity, scan for UTF-16 strings that look like URLs
-    let mut links = Vec::new();
-    let mut pos = 0;
-    while pos + 2 < data.len() {
-        // Look for http or mailto patterns in UTF-16
-        let word = r16(data, pos);
-        if word == b'h' as u16 || word == b'm' as u16 {
-            // Try to read a UTF-16 string
-            let start = pos;
-            let mut end = start;
-            while end + 2 <= data.len() {
-                let w = r16(data, end);
-                if w == 0 { break; }
-                end += 2;
-            }
-            if end > start {
-                let s = read_utf16le(&data[start..end], (end-start)/2);
-                if s.starts_with("http") || s.starts_with("mailto") || s.starts_with("ftp") {
-                    if !links.contains(&s) {
-                        links.push(s);
-                    }
-                    pos = end + 2;
-                    continue;
-                }
-            }
-        }
-        pos += 2;
-    }
-    if links.is_empty() { None } else { Some(links.join(", ")) }
-}
 
 /// Read a mini-stream (for streams smaller than mini_stream_cutoff)
 fn read_mini_stream_chain(

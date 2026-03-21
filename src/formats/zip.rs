@@ -493,15 +493,6 @@ fn zip_compression_name(method: u16) -> String {
     }
 }
 
-fn detect_ooxml_type(filenames: &[String]) -> String {
-    for name in filenames {
-        if name.starts_with("word/") { return "DOCX (Microsoft Word)".into(); }
-        if name.starts_with("xl/") { return "XLSX (Microsoft Excel)".into(); }
-        if name.starts_with("ppt/") { return "PPTX (Microsoft PowerPoint)".into(); }
-        if name.starts_with("visio/") { return "VSDX (Microsoft Visio)".into(); }
-    }
-    "Office Open XML".into()
-}
 
 fn parse_ooxml_core(data: &[u8], tags: &mut Vec<Tag>) {
     let text = String::from_utf8_lossy(data);
@@ -780,11 +771,6 @@ fn extract_xml_value(xml: &str, tag: &str) -> Option<String> {
     if value.is_empty() { None } else { Some(value) }
 }
 
-fn format_size(bytes: u64) -> String {
-    if bytes < 1024 { format!("{} bytes", bytes) }
-    else if bytes < 1024 * 1024 { format!("{:.1} kB", bytes as f64 / 1024.0) }
-    else { format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0)) }
-}
 
 /// Parse OpenDocument meta.xml and extract metadata tags.
 /// The meta.xml format uses namespaced XML elements.

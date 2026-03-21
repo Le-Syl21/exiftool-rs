@@ -177,7 +177,6 @@ fn parse_tracks(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
 fn parse_track_entry(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
     let mut pos = start;
     let mut track_type: u64 = 0;
-    let mut codec_id = String::new();
 
     // First pass: find TrackType so we can prefix CodecID correctly
     {
@@ -255,7 +254,6 @@ fn parse_track_entry(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>)
                     2 => "AudioCodecID",
                     _ => "CodecID",
                 };
-                codec_id = s.clone();
                 tags.push(mk(name, name, Value::String(s)));
             }
             0x258688 => {

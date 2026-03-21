@@ -14,7 +14,33 @@ A pure Rust reimplementation of [ExifTool](https://exiftool.org/) — read, writ
 - **15+ MakerNote manufacturers**: Canon, Nikon, Sony, Pentax, Olympus, Panasonic, Fujifilm, Samsung, Sigma, Casio, Ricoh, Minolta, Apple, Google, FLIR, GE, GoPro
 - **Deep sub-table decoders**: Canon ColorData/CustomFunctions/ShotInfo, Nikon NikonCapture/ScanIFD, Panasonic RW2, Pentax CameraSettings, and more
 - **Specialized parsers**: GoPro GPMF, InfiRay thermal, FlashPix/OLE, Canon VRD/CIFF, MPF, MIE, Lytro LFP, FLIR FPF, Sigma X3F, CaptureOne EIP, and more
-- **No unsafe code**, minimal dependencies
+- **0 compiler warnings**, no unsafe code, minimal dependencies
+
+## Supported Formats
+
+| Category | Read | Write |
+|----------|------|-------|
+| **Images** | JPEG, TIFF, PNG, WebP, PSD, BMP, GIF, HEIF/AVIF, ICO, PPM, PGF, BPG, XCF, MIFF, PICT | JPEG, TIFF, PNG, WebP, PSD |
+| **Raw** | CR2, CR3, CRW, NEF, DNG, ARW, ORF, RAF, RW2, PEF, X3F, IIQ, MRW, 3FR, ERF, SRW | CR2 |
+| **Video** | MP4/MOV, AVI, MKV, MTS, WTV, DV, FLV, SWF, MXF, ASF/WMV | MP4, MKV, AVI |
+| **Audio** | MP3, FLAC, WAV, OGG, AAC, AIFF, APE, MPC, WavPack, DSF, Audible | MP3, FLAC, WAV, OGG |
+| **Documents** | PDF, RTF, HTML, PostScript, DjVu, OpenDocument, TNEF | PDF |
+| **Scientific** | DICOM, MRC, FITS, XISF, DPX | — |
+| **Archives** | ZIP, RAR, GZIP, ISO, Torrent | — |
+| **Other** | EXE/ELF/Mach-O, LNK, VCard, ICS, MIE, Lytro LFP, FLIR FPF, CaptureOne EIP, Palm PDB, PLIST | — |
+
+### MakerNote Support
+
+| Manufacturer | Sub-table Decoders |
+|-------------|-------------------|
+| **Canon** | CameraSettings, ShotInfo, AFInfo, ColorData (WB), CustomFunctions, VRD, CIFF, CTMD |
+| **Nikon** | NikonCapture (D-Lighting, Crop, ColorBoost, UnsharpMask), ScanIFD, CaptureOffsets |
+| **Sony** | SonyIDC |
+| **Pentax** | CameraSettings (K10D/K-5), AEInfo, LensInfo, FlashInfo, CameraInfo |
+| **Olympus** | Equipment, CameraSettings, FocusInfo, RawDevelopment |
+| **Panasonic** | RW2 sub-IFDs, AdvancedSceneMode composite |
+| **Fujifilm** | RAF WB, PreviewImage |
+| **Others** | Samsung, Sigma, Casio, Ricoh, Minolta, Apple, Google, FLIR, GE, GoPro |
 
 ## Library Usage
 

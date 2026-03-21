@@ -618,7 +618,6 @@ fn parse_string_file_info(data: &[u8], start: usize, end: usize, tags: &mut Vec<
             "040B" => "Finnish",
             "040F" => "Icelandic",
             "0414" => "Norwegian (Bokmal)",
-            "0416" => "Portuguese (Brazilian)",
             "041D" => "Swedish",
             "1009" => "English (Canadian)",
             _ => lang_code,

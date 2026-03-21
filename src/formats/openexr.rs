@@ -44,16 +44,7 @@ fn read_le_u32(data: &[u8], off: usize) -> Option<u32> {
     Some(u32::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3]]))
 }
 
-fn read_le_i32(data: &[u8], off: usize) -> Option<i32> {
-    if off + 4 > data.len() { return None; }
-    Some(i32::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3]]))
-}
 
-fn read_le_f32(data: &[u8], off: usize) -> Option<f32> {
-    if off + 4 > data.len() { return None; }
-    let bits = u32::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3]]);
-    Some(f32::from_bits(bits))
-}
 
 fn read_le_u8(data: &[u8], off: usize) -> Option<u8> {
     data.get(off).copied()

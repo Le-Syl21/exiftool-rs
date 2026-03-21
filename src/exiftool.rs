@@ -1334,7 +1334,6 @@ impl ExifTool {
             }
             FileType::KyoceraRaw => formats::misc::read_kyocera_raw(data),
             FileType::PortableFloatMap => formats::misc::read_pfm(data),
-            FileType::Fpf => formats::flir_fpf::read_fpf(data),
             FileType::Ods | FileType::Odt | FileType::Odp | FileType::Odg |
             FileType::Odf | FileType::Odb | FileType::Odi | FileType::Odc => formats::zip::read_zip(data),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
@@ -1403,7 +1402,6 @@ impl ExifTool {
             "wpg" => formats::misc::read_wpg(data).or_else(|_| Ok(Vec::new())),
             "moi" => formats::misc::read_moi(data).or_else(|_| Ok(Vec::new())),
             "macos" => formats::misc::read_macos(data).or_else(|_| Ok(Vec::new())),
-            "json" => formats::misc::read_json(data).or_else(|_| Ok(Vec::new())),
             "dpx" => formats::dpx::read_dpx(data).or_else(|_| Ok(Vec::new())),
             "r3d" => formats::red::read_r3d(data).or_else(|_| Ok(Vec::new())),
             "tnef" => formats::tnef::read_tnef(data).or_else(|_| Ok(Vec::new())),

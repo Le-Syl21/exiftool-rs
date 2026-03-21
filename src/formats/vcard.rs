@@ -220,7 +220,6 @@ fn is_time_tag_ical(name: &str) -> bool {
 struct ParsedLine {
     tag: String,
     types: Vec<String>,
-    encoding: Option<String>,
     language: Option<String>,
     geo: Option<String>,
     label: Option<String>,
@@ -234,7 +233,7 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
     if line.is_empty() { return None; }
 
     // Parse tag name (up to first ';' or ':')
-    let mut pos = 0;
+    let mut pos;
     let bytes = line.as_bytes();
 
     // Skip group prefix (e.g., "item1.")
@@ -364,7 +363,7 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
 
     // Check for inline base64 data: "data:type/subtype;base64,"
     let mut extra_types = Vec::new();
-    let mut final_value;
+    let final_value;
 
     if let Some(rest) = value_str.strip_prefix("data:") {
         if let Some(semi) = rest.find(';') {
@@ -378,17 +377,17 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
                 }
                 encoding = Some("base64".into());
                 // The actual base64 data comes after "data:type/sub;base64,"
-                final_value = value_str[rest[..semi+8+1].len()+5..].to_string();
+                // (value computed below)
                 // Note: we'll replace this with binary indicator below
-                final_value = String::new(); // placeholder
+                
             } else {
-                final_value = value_str.to_string();
+                
             }
         } else {
-            final_value = value_str.to_string();
+            
         }
     } else {
-        final_value = value_str.to_string();
+        
     }
 
     // Apply encoding
@@ -408,7 +407,6 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
     Some(ParsedLine {
         tag: raw_tag.to_string(),
         types,
-        encoding,
         language,
         geo,
         label,

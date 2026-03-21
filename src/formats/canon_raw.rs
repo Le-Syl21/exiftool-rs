@@ -956,7 +956,7 @@ fn canon_model_id_str(id: u32) -> String {
         0x80000286 => "EOS-1D Mark III".to_string(),
         0x80000288 => "EOS 5D Mark II".to_string(),
         0x80000289 => "EOS Digital Rebel / 300D / Kiss Digital".to_string(), // 300D variant
-        0x80000000 | 0x80000170 => "EOS Digital Rebel / 300D / Kiss Digital".to_string(),
+        0x80000000 => "EOS Digital Rebel / 300D / Kiss Digital".to_string(),
         // Catch-all: format as hex
         _ => format!("0x{:08X}", id),
     }

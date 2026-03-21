@@ -38,13 +38,7 @@ fn read_i8(data: &[u8], off: usize) -> i8 {
     data[off] as i8
 }
 
-fn read_u16_le(data: &[u8], off: usize) -> u16 {
-    u16::from_le_bytes([data[off], data[off + 1]])
-}
 
-fn read_i16_le(data: &[u8], off: usize) -> i16 {
-    i16::from_le_bytes([data[off], data[off + 1]])
-}
 
 fn read_u16_be(data: &[u8], off: usize) -> u16 {
     u16::from_be_bytes([data[off], data[off + 1]])
@@ -74,9 +68,6 @@ fn read_u32_be(data: &[u8], off: usize) -> u32 {
     u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]])
 }
 
-fn read_f32_le(data: &[u8], off: usize) -> f32 {
-    f32::from_le_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]])
-}
 
 fn read_f64_le(data: &[u8], off: usize) -> f64 {
     f64::from_le_bytes([
@@ -185,23 +176,6 @@ fn read_dr4_value(data: &[u8], off: usize, len: usize, fmt: u32) -> Value {
     }
 }
 
-/// Format a Value as a print string
-fn value_to_print(val: &Value) -> String {
-    match val {
-        Value::String(s) => s.clone(),
-        Value::U32(v) => v.to_string(),
-        Value::I32(v) => v.to_string(),
-        Value::F64(v) => format!("{}", v),
-        Value::List(vals) => {
-            vals.iter()
-                .map(|v| value_to_print(v))
-                .collect::<Vec<_>>()
-                .join(" ")
-        }
-        Value::Binary(b) => format!("(binary {} bytes)", b.len()),
-        _ => val.to_display_string(),
-    }
-}
 
 /// Canon model ID lookup
 fn canon_model_id(id: u32) -> &'static str {
@@ -509,7 +483,7 @@ fn parse_dr4_crop_info(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>)
     let angle_off = off + 8 * 4;
     if angle_off + 8 <= off + len {
         let v = read_f64_le(data, angle_off);
-        let print = format!("{:.7}", v).trim_end_matches('0').trim_end_matches('.').to_string();
+        let _print = format!("{:.7}", v).trim_end_matches('0').trim_end_matches('.').to_string();
         // Perl does sprintf("%.7g",$val)
         let print = format_g(v, 7);
         tags.push(mktag("CanonDR4", "CropAngle", Value::F64(v), print));
@@ -541,10 +515,10 @@ fn parse_dr4_stamp_info(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>
 /// Format a f64 with %g semantics (up to `sig` significant digits)
 fn format_g(v: f64, sig: usize) -> String {
     if v == 0.0 { return "0".to_string(); }
-    let formatted = format!("{:.prec$e}", v, prec = sig.saturating_sub(1));
+    let _formatted = format!("{:.prec$e}", v, prec = sig.saturating_sub(1));
     // Parse to determine if exponential or fixed notation is better
     // Use Rust's default Display which already does something like %g
-    let s = format!("{:.*}", sig, v);
+    let _s = format!("{:.*}", sig, v);
     // Actually, use a simpler approach: format with enough precision, then strip trailing zeros
     let s = format!("{}", v);
     s
@@ -594,7 +568,7 @@ fn process_dr4_tag(
     data: &[u8],
     tag: u32,
     fmt: u32,
-    flg0: u32,
+    _flg0: u32,
     flg1: u32,
     off: usize,
     len: usize,
@@ -707,7 +681,7 @@ fn val_as_u32(val: &Value) -> Option<u32> {
 fn dr4_tag_name_and_print<'a>(
     data: &[u8],
     tag: u32,
-    fmt: u32,
+    _fmt: u32,
     val: &Value,
     off: usize,
     len: usize,

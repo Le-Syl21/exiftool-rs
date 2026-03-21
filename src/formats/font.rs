@@ -444,13 +444,11 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
     let mut comment_parts: Vec<String> = Vec::new();
     let mut in_font_info = false;
-    let mut dsc_done = false;
     let mut comment_done = false;
 
     for line in text.lines() {
         // DSC comments: %% prefix
         if line.starts_with("%%") {
-            dsc_done = false;
             if let Some(rest) = line.strip_prefix("%%Title: ") {
                 tags.push(mk("Title", "Title", Value::String(rest.trim().to_string())));
             } else if let Some(rest) = line.strip_prefix("%%CreationDate: ") {
@@ -458,7 +456,6 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
             } else if let Some(rest) = line.strip_prefix("%%Creator: ") {
                 tags.push(mk("Creator", "Creator", Value::String(rest.trim().to_string())));
             } else if line.starts_with("%%EndComments") {
-                dsc_done = true;
             }
             continue;
         }

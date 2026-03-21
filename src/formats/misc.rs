@@ -3023,10 +3023,6 @@ fn gzip_unix_to_datetime(secs: i64) -> String {
         y, mo, rem + 1, h, m, s, tz_sign, tz_h.abs(), tz_m)
 }
 
-/// Get local timezone offset in seconds using /proc or /etc/localtime.
-fn get_local_tz_offset_secs() -> i64 {
-    get_local_tz_offset_for_timestamp(0)
-}
 
 /// Get local timezone offset in seconds for a specific Unix timestamp (DST-aware).
 /// Uses libc's localtime_r via raw syscall to account for DST.
@@ -3037,9 +3033,9 @@ fn get_local_tz_offset_for_timestamp(ts: i64) -> i64 {
         // since the binary is on Linux we can use the C library through FFI
         use std::mem;
         extern "C" {
-            fn localtime_r(timep: *const libc_time_t, result: *mut TmStruct) -> *mut TmStruct;
+            fn localtime_r(timep: *const LibcTimeT, result: *mut TmStruct) -> *mut TmStruct;
         }
-        type libc_time_t = i64;
+        type LibcTimeT = i64;
         #[repr(C)]
         struct TmStruct {
             tm_sec: i32, tm_min: i32, tm_hour: i32, tm_mday: i32,
@@ -4198,13 +4194,6 @@ fn parse_jumbf_json_svg(json: &str, tags: &mut Vec<Tag>, group: &crate::tag::Tag
     }
 }
 
-fn extract_xml_attr(tag: &str, name: &str) -> Option<String> {
-    let pat = format!("{}=\"", name);
-    let pos = tag.find(&pat)?;
-    let rest = &tag[pos + pat.len()..];
-    let end = rest.find('"')?;
-    Some(rest[..end].to_string())
-}
 
 // ============================================================================
 // JSON
@@ -5481,9 +5470,6 @@ fn unix_to_datetime(secs: i64) -> (i32, u32, u32, u32, u32, u32) {
     // Basic implementation of Unix timestamp to calendar date
     const SECS_PER_DAY: i64 = 86400;
     const DAYS_PER_400Y: i64 = 146097;
-    const DAYS_PER_100Y: i64 = 36524;
-    const DAYS_PER_4Y: i64 = 1461;
-    const DAYS_PER_Y: i64 = 365;
 
     let (days, rem) = if secs >= 0 {
         (secs / SECS_PER_DAY, secs % SECS_PER_DAY)
@@ -5999,7 +5985,7 @@ fn regex_replace_first(s: &str, pat: &str, replacement: &str) -> String {
 }
 
 /// Handle regex replace for patterns with capturing groups.
-fn czi_regex_replace_group(s: &str, pat: &str, replacement: &str) -> String {
+fn czi_regex_replace_group(s: &str, pat: &str, _replacement: &str) -> String {
     // Handle specific known patterns:
     // "(Devices?)+Device" → "Device"
     // "(BeamPathNode)+" → "BeamPathNode"
@@ -7532,7 +7518,7 @@ pub fn read_iiq(data: &[u8]) -> Result<Vec<Tag>> {
     // Actually: keep PhaseOne version for FocalLength (more accurate), remove EXIF
     {
         // Build set of existing tag names
-        let existing: std::collections::HashSet<String> = tags.iter().map(|t| t.name.clone()).collect();
+        let _existing: std::collections::HashSet<String> = tags.iter().map(|t| t.name.clone()).collect();
         // Remove EXIF versions of tags that PhaseOne provides (FocalLength, ISO, ShutterSpeedValue, ApertureValue)
         let phaseone_names: std::collections::HashSet<String> = phaseone_tags.iter().map(|t| t.name.clone()).collect();
         // Remove from existing tags those that PhaseOne also provides (PhaseOne wins)
@@ -7576,7 +7562,7 @@ pub fn read_iiq(data: &[u8]) -> Result<Vec<Tag>> {
 /// Format f64 to match Perl's %.15g format (15 significant digits, no trailing zeros)
 fn iiq_fmt_f64(v: f64) -> String {
     // Use %.15g equivalent: 15 significant digits
-    let s = format!("{:.15e}", v);
+    let _s = format!("{:.15e}", v);
     // Parse the scientific notation and convert to %.15g style
     // Simpler: just format with enough precision and let Rust handle it
     // Actually use a direct approach: format with 14 decimal places in the mantissa
@@ -7854,7 +7840,7 @@ fn iiq_parse_sensor_calibration(
             let eoff = sub_entry_start + j * 12;
             let etag = iiq_read_u32(sub, eoff, sub_is_le);
             let esize = iiq_read_u32(sub, eoff + 4, sub_is_le) as usize;
-            let eval_ptr = iiq_read_u32(sub, eoff + 8, sub_is_le) as usize;
+            let _eval_ptr = iiq_read_u32(sub, eoff + 8, sub_is_le) as usize;
 
             if etag == 0x0400 {
                 // SensorDefects (binary undef)

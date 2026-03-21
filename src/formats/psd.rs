@@ -84,7 +84,7 @@ pub fn read_psd(data: &[u8]) -> Result<Vec<Tag>> {
         };
 
         if layer_len > 0 && pos + 4 <= data.len() {
-            let layer_info_len = if is_psb && pos + 8 <= data.len() {
+            let _layer_info_len = if is_psb && pos + 8 <= data.len() {
                 let l = u64::from_be_bytes([
                     data[pos], data[pos + 1], data[pos + 2], data[pos + 3],
                     data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7],

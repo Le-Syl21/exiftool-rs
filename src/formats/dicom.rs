@@ -5,22 +5,6 @@ use crate::error::{Error, Result};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
-fn mktag(name: &str, desc: &str, value: Value) -> Tag {
-    let pv = value.to_display_string();
-    Tag {
-        id: TagId::Text(name.to_string()),
-        name: name.to_string(),
-        description: desc.to_string(),
-        group: TagGroup {
-            family0: "DICOM".into(),
-            family1: "DICOM".into(),
-            family2: "Image".into(),
-        },
-        raw_value: value,
-        print_value: pv,
-        priority: 0,
-    }
-}
 
 // VR types that use 32-bit length fields in explicit VR syntax
 fn is_vr32(vr: &[u8]) -> bool {

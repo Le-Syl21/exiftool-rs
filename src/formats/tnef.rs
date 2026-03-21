@@ -269,9 +269,6 @@ fn format_bool(val: &str) -> String {
     }
 }
 
-fn read_prop_value(data: &[u8], pos: &mut usize, prop_type: u16) -> Option<String> {
-    read_prop_value_ex(data, pos, prop_type, false)
-}
 
 fn read_prop_value_ex(data: &[u8], pos: &mut usize, prop_type: u16, is_multi: bool) -> Option<String> {
     match prop_type {
