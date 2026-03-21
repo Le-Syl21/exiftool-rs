@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -15,30 +16,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux x86_64
           - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             use_cross: false
-          # Linux ARM64 (no native runner — use cross/QEMU)
+            artifact: exiftool-rs-linux-x86_64
           - os: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
             use_cross: true
-          # macOS ARM64 (Apple Silicon — native)
+            artifact: exiftool-rs-linux-arm64
           - os: macos-latest
             target: aarch64-apple-darwin
             use_cross: false
-          # macOS x86_64 (Intel runner)
-          - os: macos-15-large
+            artifact: exiftool-rs-macos-arm64
+          - os: macos-latest
             target: x86_64-apple-darwin
             use_cross: false
-          # Windows x86_64
+            artifact: exiftool-rs-macos-x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             use_cross: false
-          # Windows ARM64 (cross-compile, no native runner)
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-            use_cross: false
+            artifact: exiftool-rs-windows-x86_64
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.target }}
@@ -66,7 +63,7 @@ jobs:
           cross test --target ${{ matrix.target }}
 
       - name: Run tests
-        if: "!matrix.use_cross && !contains(matrix.target, 'aarch64-pc-windows')"
+        if: "!matrix.use_cross && matrix.target != 'x86_64-apple-darwin'"
         run: cargo test --target ${{ matrix.target }}
 
       - name: Check 0 warnings
@@ -78,3 +75,42 @@ jobs:
             echo "$output" | grep "^warning:"
             exit 1
           fi
+
+      - name: Package binary (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf ../../../${{ matrix.artifact }}.tar.gz exiftool-rs
+          cd ../../..
+
+      - name: Package binary (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cd target/${{ matrix.target }}/release
+          Compress-Archive -Path exiftool-rs.exe -DestinationPath ../../../${{ matrix.artifact }}.zip
+          cd ../../..
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.*
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/**/*
