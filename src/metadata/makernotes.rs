@@ -3757,6 +3757,35 @@ fn read_makernote_ifd(
             continue;
         }
 
+        // Nikon NikonCaptureOffsets (0x0E0E): decode IFD offset tags
+        if manufacturer == Manufacturer::Nikon && tag_id == 0x0E0E && value_data.len() > 6 {
+            // Validate "0100" header
+            if &value_data[0..4] == b"0100" || (value_data[0] == 0x01 && value_data[1] == 0x00) {
+                let start = 4; // skip "0100" header
+                if start + 2 <= value_data.len() {
+                    let count = u16::from_le_bytes([value_data[start], value_data[start+1]]) as usize;
+                    for i in 0..count.min(10) {
+                        let pos = start + 2 + i * 12;
+                        if pos + 8 > value_data.len() { break; }
+                        let tid = u32::from_le_bytes([value_data[pos], value_data[pos+1], value_data[pos+2], value_data[pos+3]]);
+                        let val = u32::from_le_bytes([value_data[pos+4], value_data[pos+5], value_data[pos+6], value_data[pos+7]]);
+                        let name = match tid {
+                            1 => "IFD0_Offset",
+                            2 => "PreviewIFD_Offset",
+                            3 => "SubIFD_Offset",
+                            _ => continue,
+                        };
+                        tags.push(Tag {
+                            id: TagId::Text(name.into()), name: name.into(), description: name.into(),
+                            group: TagGroup { family0: "MakerNotes".into(), family1: "Nikon".into(), family2: "Camera".into() },
+                            raw_value: Value::U32(val), print_value: val.to_string(), priority: 0,
+                        });
+                    }
+                }
+            }
+            continue;
+        }
+
         // Nikon NikonCaptureData (0x0E01): decode into sub-tags
         if manufacturer == Manufacturer::Nikon && tag_id == 0x0E01 {
             let sub_tags = crate::metadata::nikon_capture::decode_nikon_capture(value_data);
@@ -3794,8 +3823,7 @@ fn read_makernote_ifd(
             (Manufacturer::Nikon, 0x0098) | // LensData
             (Manufacturer::Nikon, 0x00A8) | // FlashInfo
             (Manufacturer::Nikon, 0x00B7) | // AFInfo2
-            (Manufacturer::Nikon, 0x0E0E) | // NikonCaptureOffsets (SubDirectory)
-            // NikonScanIFD (0x0E10) now decoded above
+            // NikonCaptureOffsets (0x0E0E) and NikonScanIFD (0x0E10) now decoded above
             (Manufacturer::Nikon, 0x0E22) | // NikonICCProfile (SubDirectory)
             (Manufacturer::Minolta, 0x0001) | // CameraSettings
             (Manufacturer::Minolta, 0x0003) | // CameraSettings

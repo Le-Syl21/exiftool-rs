@@ -93,6 +93,13 @@ fn decode_nikon_capture_tag(tag_id: u32, data: &[u8], tags: &mut Vec<Tag>) {
         0x76a43204 => { if !data.is_empty() { tags.push(mk("WhiteBalanceAdj", off_on(data[0]))); } }
         0x76a43205 => { if !data.is_empty() { tags.push(mk("VignetteControl", off_on(data[0]))); } }
         0x76a43206 => { if !data.is_empty() { tags.push(mk("FlipHorizontal", no_yes(data[0]))); } }
+        0x76a43207 => {
+            // Rotation — int16u
+            if data.len() >= 2 {
+                let v = u16::from_le_bytes([data[0], data[1]]);
+                tags.push(mk("Rotation", &v.to_string()));
+            }
+        }
         0xab5eca5e => { if !data.is_empty() { tags.push(mk("PhotoEffects", off_on(data[0]))); } }
         0xac6bd5c0 => {
             if data.len() >= 2 {
