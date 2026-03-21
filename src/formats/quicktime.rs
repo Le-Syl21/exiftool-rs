@@ -35,6 +35,11 @@ struct QtState {
     ctmd_size: Option<u32>,
     /// Whether the current track's stsd format is CTMD
     current_track_is_ctmd: bool,
+    /// Whether the current track's stsd format is JPEG (for JpgFromRaw)
+    current_track_is_jpeg: bool,
+    /// JPEG track sample offset and size (for JpgFromRaw extraction)
+    jpeg_offset: Option<u64>,
+    jpeg_size: Option<u32>,
     /// Model string from CMT1 (for MakerNotes parsing)
     model: String,
 }
@@ -152,6 +157,24 @@ pub fn read_quicktime(data: &[u8]) -> Result<Vec<Tag>> {
         let ctmd_sz = ctmd_sz as usize;
         if ctmd_off + ctmd_sz <= data.len() {
             parse_canon_ctmd(data, ctmd_off, ctmd_sz, &mut tags);
+        }
+    }
+
+    // Extract JpgFromRaw from JPEG track sample data
+    if let (Some(jpg_off), Some(jpg_sz)) = (state.jpeg_offset, state.jpeg_size) {
+        let jpg_off = jpg_off as usize;
+        let jpg_sz = jpg_sz as usize;
+        if jpg_sz > 0 && jpg_off + jpg_sz <= data.len() {
+            let jpg_data = &data[jpg_off..jpg_off + jpg_sz];
+            tags.push(Tag {
+                id: TagId::Text("JpgFromRaw".into()),
+                name: "JpgFromRaw".into(),
+                description: "Jpg From Raw".into(),
+                group: TagGroup { family0: "QuickTime".into(), family1: "QuickTime".into(), family2: "Preview".into() },
+                raw_value: Value::Binary(jpg_data.to_vec()),
+                print_value: format!("(Binary data {} bytes, use -b option to extract)", jpg_sz),
+                priority: 0,
+            });
         }
     }
 
@@ -327,6 +350,7 @@ fn parse_atoms(
             b"trak" => {
                 // Reset per-track CTMD flag when entering a new track
                 state.current_track_is_ctmd = false;
+                state.current_track_is_jpeg = false;
                 parse_atoms(data, content_start, content_end, tags, state, depth + 1);
             }
             // mdia: recurse but reset media-level state
@@ -394,49 +418,53 @@ fn parse_atoms(
             b"stts" => {
                 parse_stts(data, content_start, content_end, tags, state);
             }
-            // Chunk offset table (32-bit) - used to locate CTMD sample data
+            // Chunk offset table (32-bit) - used to locate CTMD/JPEG sample data
             b"stco" => {
-                if state.current_track_is_ctmd && state.ctmd_offset.is_none() {
-                    let d = &data[content_start..content_end];
-                    if d.len() >= 12 {
-                        let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
-                        if entry_count > 0 && d.len() >= 8 + entry_count * 4 {
-                            let offset = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as u64;
+                let d = &data[content_start..content_end];
+                if d.len() >= 12 {
+                    let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
+                    if entry_count > 0 && d.len() >= 8 + entry_count * 4 {
+                        let offset = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as u64;
+                        if state.current_track_is_ctmd && state.ctmd_offset.is_none() {
                             state.ctmd_offset = Some(offset);
+                        }
+                        if state.current_track_is_jpeg && state.jpeg_offset.is_none() {
+                            state.jpeg_offset = Some(offset);
                         }
                     }
                 }
             }
             // Chunk offset table (64-bit) - used to locate CTMD sample data
             b"co64" => {
-                if state.current_track_is_ctmd && state.ctmd_offset.is_none() {
-                    let d = &data[content_start..content_end];
-                    if d.len() >= 16 {
-                        let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
-                        if entry_count > 0 && d.len() >= 8 + entry_count * 8 {
-                            let offset = u64::from_be_bytes([d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]]);
+                let d = &data[content_start..content_end];
+                if d.len() >= 16 {
+                    let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
+                    if entry_count > 0 && d.len() >= 8 + entry_count * 8 {
+                        let offset = u64::from_be_bytes([d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]]);
+                        if state.current_track_is_ctmd && state.ctmd_offset.is_none() {
                             state.ctmd_offset = Some(offset);
+                        }
+                        if state.current_track_is_jpeg && state.jpeg_offset.is_none() {
+                            state.jpeg_offset = Some(offset);
                         }
                     }
                 }
             }
-            // Sample sizes - used to get CTMD sample size
+            // Sample sizes - used to get CTMD/JPEG sample size
             b"stsz" => {
-                if state.current_track_is_ctmd && state.ctmd_size.is_none() {
-                    let d = &data[content_start..content_end];
-                    if d.len() >= 12 {
-                        // If sample_size field is non-zero, all samples have that size
-                        let sample_size = u32::from_be_bytes([d[4], d[5], d[6], d[7]]);
-                        if sample_size > 0 {
-                            state.ctmd_size = Some(sample_size);
-                        } else if d.len() >= 16 {
-                            // Variable sizes: read first entry
-                            let _count = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as usize;
-                            if d.len() >= 16 {
-                                let first_size = u32::from_be_bytes([d[12], d[13], d[14], d[15]]);
-                                state.ctmd_size = Some(first_size);
-                            }
-                        }
+                let d = &data[content_start..content_end];
+                if d.len() >= 12 {
+                    let sample_size = u32::from_be_bytes([d[4], d[5], d[6], d[7]]);
+                    let first_size = if sample_size > 0 {
+                        sample_size
+                    } else if d.len() >= 16 {
+                        u32::from_be_bytes([d[12], d[13], d[14], d[15]])
+                    } else { 0 };
+                    if state.current_track_is_ctmd && state.ctmd_size.is_none() && first_size > 0 {
+                        state.ctmd_size = Some(first_size);
+                    }
+                    if state.current_track_is_jpeg && state.jpeg_size.is_none() && first_size > 0 {
+                        state.jpeg_size = Some(first_size);
                     }
                 }
             }
@@ -496,6 +524,28 @@ fn parse_atoms(
                     // Canon UUID: 85C0B687820F11E08111F4CE462B6A48
                     if uuid == b"\x85\xc0\xb6\x87\x82\x0f\x11\xe0\x81\x11\xf4\xce\x46\x2b\x6a\x48" {
                         parse_canon_uuid(data, content_start + 16, content_end, tags);
+                    }
+                    // Canon DPP4 UUID: EAF42B5E1C984B88B9FBB7DC406E4D16 (contains PRVW)
+                    else if uuid == b"\xea\xf4\x2b\x5e\x1c\x98\x4b\x88\xb9\xfb\xb7\xdc\x40\x6e\x4d\x16" {
+                        // Find PRVW signature in the uuid content
+                        let inner = &data[content_start + 16..content_end];
+                        if let Some(prvw_pos) = inner.windows(4).position(|w| w == b"PRVW") {
+                            // PRVW: skip 16 bytes (4 tag + 12 header) after "PRVW"
+                            let data_start = prvw_pos + 16;
+                            if data_start < inner.len() {
+                                let prvw_data = &inner[data_start..];
+                                let size = prvw_data.len();
+                                tags.push(Tag {
+                                    id: TagId::Text("PreviewImage".into()),
+                                    name: "PreviewImage".into(),
+                                    description: "Preview Image".into(),
+                                    group: TagGroup { family0: "QuickTime".into(), family1: "QuickTime".into(), family2: "Preview".into() },
+                                    raw_value: Value::Binary(prvw_data.to_vec()),
+                                    print_value: format!("(Binary data {} bytes, use -b option to extract)", size),
+                                    priority: 0,
+                                });
+                            }
+                        }
                     }
                     // XMP UUID: BE7ACFCB97A942E89C71999491E3AFAC
                     else if uuid[0] == 0xBE
@@ -1635,6 +1685,11 @@ fn parse_stsd(
     if format == b"CTMD" {
         state.current_track_is_ctmd = true;
         tags.push(mk("MetaFormat", "Meta Format", Value::String("CTMD".into())));
+    }
+    // Check for JPEG or CRAW format (Canon CR3 JpgFromRaw track)
+    // First CRAW track in CR3 contains JpgFromRaw data
+    if format == b"JPEG" || (format == b"CRAW" && state.jpeg_offset.is_none()) {
+        state.current_track_is_jpeg = true;
     }
 
     // Determine if audio or video based on handler type
