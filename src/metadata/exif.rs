@@ -504,6 +504,30 @@ impl ExifReader {
                         }
                     }
                 }
+                // Suppress ThumbnailOffset/Length from SubIFD (IFD1 has these)
+                0x0201 | 0x0202 if ifd_name.starts_with("SubIFD") => {
+                    continue;
+                }
+                // SubIFD pointer (0x014A): follow to read SubIFD entries
+                0x014A if ifd_name == "IFD0" => {
+                    // Read SubIFD offset(s) — may be a single uint32 or array
+                    if let Some(val) = read_ifd_value(data, &entry, header.byte_order) {
+                        let offsets: Vec<u32> = match &val {
+                            Value::U32(v) => vec![*v],
+                            Value::List(items) => items.iter().filter_map(|v| {
+                                if let Value::U32(o) = v { Some(*o) } else { None }
+                            }).collect(),
+                            _ => vec![],
+                        };
+                        for (idx, &off) in offsets.iter().enumerate() {
+                            if (off as usize) < data.len() {
+                                let sub_name = format!("SubIFD{}", idx);
+                                let _ = Self::read_ifd(data, header, off, &sub_name, tags);
+                            }
+                        }
+                    }
+                    continue;
+                }
                 // In CR2 IFD2 (preview JPEG), suppress StripOffsets/StripByteCounts
                 // because IFD3 has the correct values for the raw data.
                 // Also suppress tags that duplicate IFD0 content (ImageWidth, ImageHeight,
@@ -541,9 +565,8 @@ impl ExifReader {
                     None => {
                         // Skip known SubDirectory/internal tags that Perl doesn't emit
                         if matches!(entry.tag,
-                            0x014A | // SubIFD pointers
+                            // 0x014A handled above (SubIFD traversal)
                             0x02BC | // ApplicationNotes (XMP SubDirectory)
-                            0x9216 | // NikonEncryption
                             0xC634   // DNG PrivateData
                         ) {
                             continue;
