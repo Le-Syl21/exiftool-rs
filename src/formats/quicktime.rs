@@ -1798,15 +1798,31 @@ fn parse_stts(
     tags: &mut Vec<Tag>,
     state: &QtState,
 ) {
-    if &state.handler_type != b"vide" {
-        return;
-    }
     let d = &data[start..end];
     if d.len() < 8 {
         return;
     }
     let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
     if entry_count == 0 || d.len() < 8 + entry_count * 8 {
+        return;
+    }
+
+    // For metadata tracks (handler "meta"), emit SampleTime and SampleDuration
+    if &state.handler_type == b"meta" && state.current_track_is_ctmd {
+        if entry_count > 0 {
+            let off = 8;
+            let _count = u32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]);
+            let delta = u32::from_be_bytes([d[off+4], d[off+5], d[off+6], d[off+7]]);
+            // SampleTime=0, SampleDuration=count/delta (simplified)
+            let sample_time_s = 0u32;
+            let sample_dur_s = delta as f64; // In Perl, uses movie timescale; simplified here
+            tags.push(mk("SampleTime", "Sample Time", Value::String(format!("{} s", sample_time_s as u32))));
+            tags.push(mk("SampleDuration", "Sample Duration", Value::String(format!("{:.2} s", sample_dur_s))));
+        }
+        return;
+    }
+
+    if &state.handler_type != b"vide" {
         return;
     }
 
@@ -2593,8 +2609,24 @@ fn parse_canon_uuid(
                     tags.extend(gps_tags);
                 }
             }
+            b"THMB" => {
+                // ThumbnailImage: skip 16-byte header
+                if content_end > content_start + 16 {
+                    let thumb_data = &data[content_start + 16..content_end];
+                    let size = thumb_data.len();
+                    tags.push(Tag {
+                        id: TagId::Text("ThumbnailImage".into()),
+                        name: "ThumbnailImage".into(),
+                        description: "Thumbnail Image".into(),
+                        group: TagGroup { family0: "MakerNotes".into(), family1: "Canon".into(), family2: "Preview".into() },
+                        raw_value: Value::Binary(thumb_data.to_vec()),
+                        print_value: format!("(Binary data {} bytes, use -b option to extract)", size),
+                        priority: 0,
+                    });
+                }
+            }
             _ => {
-                // THMB, CCTP, CTBO, CNCV, free, etc. - ignore
+                // CCTP, CTBO, CNCV, free, etc. - ignore
             }
         }
 
