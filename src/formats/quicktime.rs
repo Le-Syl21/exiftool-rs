@@ -2462,14 +2462,20 @@ fn parse_canon_uuid(
             }
             b"CMT1" => {
                 // IFD0: TIFF containing Make, Model, ImageWidth/Height, etc.
+                // Don't parse MakerNotes from CMT1 — they're in CMT3 (full version)
                 if content_end > content_start {
                     let tiff_data = &data[content_start..content_end];
-                    if let Ok(mut exif_tags) = ExifReader::read(tiff_data) {
+                    if let Ok(exif_tags) = ExifReader::read(tiff_data) {
                         // Extract model for CMT3 MakerNotes dispatch
                         if let Some(m) = exif_tags.iter().find(|t| t.name == "Model") {
                             model = m.print_value.clone();
                         }
-                        tags.extend(exif_tags);
+                        // Filter out MakerNote tags from CMT1 (CMT3 has the full version)
+                        for t in exif_tags {
+                            if t.group.family0 == "MakerNotes" { continue; }
+                            if t.name == "MakerNoteByteOrder" { continue; }
+                            tags.push(t);
+                        }
                     }
                 }
             }
