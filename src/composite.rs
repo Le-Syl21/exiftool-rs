@@ -287,6 +287,30 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         }
     }
 
+    // CFAPattern composite: convert CFAPattern2 + CFARepeatPatternDim to readable format
+    // e.g., "0 1 1 2" with dim "2 2" → "[Red,Green][Green,Blue]"
+    if find_tag(tags, "CFAPattern").is_none() {
+        if let (Some(pat), Some(dim)) = (find_tag_value(tags, "CFAPattern2"), find_tag_value(tags, "CFARepeatPatternDim")) {
+            let dims: Vec<usize> = dim.split(|c: char| c == ',' || c == ' ')
+                .filter_map(|s| s.trim().parse().ok()).collect();
+            let vals: Vec<u8> = pat.split(|c: char| c == ',' || c == ' ')
+                .filter_map(|s| s.trim().parse().ok()).collect();
+            if dims.len() == 2 && dims[0] > 0 && dims[1] > 0 && vals.len() >= dims[0] * dims[1] {
+                let color = |v: u8| match v { 0 => "Red", 1 => "Green", 2 => "Blue", 3 => "Cyan", 4 => "Magenta", 5 => "Yellow", 6 => "White", _ => "?" };
+                let mut s = String::new();
+                for row in 0..dims[1] {
+                    s.push('[');
+                    for col in 0..dims[0] {
+                        if col > 0 { s.push(','); }
+                        s.push_str(color(vals[row * dims[0] + col]));
+                    }
+                    s.push(']');
+                }
+                composite.push(mk_composite("CFAPattern", "CFA Pattern", Value::String(s)));
+            }
+        }
+    }
+
     // ThumbnailTIFF composite: rebuild TIFF from IFD tags
     // Requires SubfileType=1 (reduced-resolution) + Compression=1 (uncompressed)
     if find_tag(tags, "ThumbnailTIFF").is_none() {

@@ -675,7 +675,56 @@ impl ExifReader {
                                 let sub_name = format!("SubIFD{}", idx);
                                 let before_idx = tags.len();
                                 let _ = Self::read_ifd(data, header, off, &sub_name, tags);
-                                // After reading SubIFD, create JpgFromRaw if JPEG preview data found
+
+                                // Check if this SubIFD has JPEG compression
+                                let is_jpeg = tags[before_idx..].iter()
+                                    .any(|t| t.name == "Compression" && (t.print_value.contains("JPEG") || t.raw_value.as_u64() == Some(6)));
+
+                                if is_jpeg {
+                                    // Rename StripOffsets/StripByteCounts based on SubIFD index
+                                    // Perl: SubIFD2 → JpgFromRaw*, others → PreviewImage*
+                                    let (start_name, len_name, img_name) = if idx == 2 {
+                                        ("JpgFromRawStart", "JpgFromRawLength", "JpgFromRaw")
+                                    } else {
+                                        ("PreviewImageStart", "PreviewImageLength", "PreviewImage")
+                                    };
+                                    // Find StripOffsets and StripByteCounts in this SubIFD
+                                    let strip_off = tags[before_idx..].iter()
+                                        .find(|t| t.name == "StripOffsets")
+                                        .and_then(|t| t.raw_value.as_u64());
+                                    let strip_len = tags[before_idx..].iter()
+                                        .find(|t| t.name == "StripByteCounts")
+                                        .and_then(|t| t.raw_value.as_u64());
+                                    if let (Some(s), Some(l)) = (strip_off, strip_len) {
+                                        tags.push(Tag {
+                                            id: TagId::Text(start_name.into()), name: start_name.into(),
+                                            description: start_name.into(),
+                                            group: TagGroup { family0: "EXIF".into(), family1: sub_name.clone(), family2: "Preview".into() },
+                                            raw_value: Value::U32(s as u32), print_value: s.to_string(), priority: 0,
+                                        });
+                                        tags.push(Tag {
+                                            id: TagId::Text(len_name.into()), name: len_name.into(),
+                                            description: len_name.into(),
+                                            group: TagGroup { family0: "EXIF".into(), family1: sub_name.clone(), family2: "Preview".into() },
+                                            raw_value: Value::U32(l as u32), print_value: l.to_string(), priority: 0,
+                                        });
+                                        // Extract binary image data
+                                        let s = s as usize;
+                                        let l = l as usize;
+                                        if l > 0 && s + l <= data.len() {
+                                            let pv = format!("(Binary data {} bytes, use -b option to extract)", l);
+                                            tags.push(Tag {
+                                                id: TagId::Text(img_name.into()), name: img_name.into(),
+                                                description: img_name.into(),
+                                                group: TagGroup { family0: "EXIF".into(), family1: sub_name.clone(), family2: "Preview".into() },
+                                                raw_value: Value::Binary(data[s..s+l].to_vec()),
+                                                print_value: pv, priority: 0,
+                                            });
+                                        }
+                                    }
+                                }
+
+                                // Legacy: Also check for already-named JpgFromRawStart tags
                                 let jpg_start = tags[before_idx..].iter()
                                     .find(|t| t.name == "JpgFromRawStart")
                                     .and_then(|t| t.raw_value.as_u64());
