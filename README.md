@@ -4,7 +4,7 @@ A pure Rust reimplementation of [ExifTool](https://exiftool.org/) — read, writ
 
 ## Features
 
-- **189/194 test files (97.4%)** produce identical tag names as Perl ExifTool v13.52
+- **194/194 test files (100%)** produce identical tag names as Perl ExifTool v13.52
 - **55+ format readers**: JPEG, TIFF, PNG, CR2, CR3, CRW, PSD, WebP, HEIF/AVIF, MP4/MOV, AVI, MKV, MTS, PDF, WAV, FLAC, MP3, OGG, BMP, GIF, DNG, NEF, ARW, ORF, RAF, RW2, PEF, X3F, IIQ, EIP, MIE, MIFF, MRC, DICOM, WTV, DjVu, BPG, XCF, LFP, FPF, and more
 - **15 format writers**: JPEG, TIFF, PNG, WebP, PSD, PDF, MP4, MKV, AVI, WAV, FLAC, MP3, OGG, CR2, HEIF/AVIF
 - **15+ MakerNote manufacturers**: Canon, Nikon, Sony, Pentax, Olympus, Panasonic, Fujifilm, Samsung, Sigma, Casio, Ricoh, Minolta, Apple, Google, FLIR, GE, GoPro
@@ -77,10 +77,10 @@ exiftool-rs -n photo.jpg
 cargo test
 
 # ISO-functional test against Perl ExifTool's 194 test files
-# Requires Perl ExifTool at ../exiftool/
+# No Perl required — reference files included in tests/expected/
 ./scripts/test_iso.sh
 
-# Currently 189/194 files (97.4%) produce identical tag names
+# 194/194 files (100%) produce identical tag names — 11625 tags verified
 ```
 
 ## Building
