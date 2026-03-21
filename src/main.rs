@@ -584,9 +584,15 @@ fn main() {
             eprintln!("[htmlDump not yet fully implemented — use Perl ExifTool for hex dumps]");
         }
         if scan_for_xmp {
-            // Scan entire file for XMP data (not just standard locations)
-            // This is handled internally by the XMP parser when the flag is set
-            eprintln!("[scanForXMP: scanning entire file for XMP data]");
+            for f in &files {
+                if let Ok(data) = std::fs::read(f) {
+                    if let Some(xmp_tags) = scan_file_for_xmp(&data) {
+                        for t in xmp_tags {
+                            println!("{:<33}: {}", t.name, t.print_value);
+                        }
+                    }
+                }
+            }
         }
         if verbose > 0 {
             eprintln!("[verbose level {} — detailed structure output not yet available]", verbose);
@@ -1050,6 +1056,29 @@ fn print_diff(et: &ExifTool, file1: &str, file2: &str) {
             println!("    > {}", v2);
         }
     }
+}
+
+/// Scan entire file for XMP data (<?xpacket begin= ... <?xpacket end)
+fn scan_file_for_xmp(data: &[u8]) -> Option<Vec<exiftool_rs::Tag>> {
+    let marker = b"<?xpacket begin=";
+    let end_marker = b"<?xpacket end";
+    let text = data;
+
+    if let Some(start) = text.windows(marker.len()).position(|w| w == marker) {
+        if let Some(end_rel) = text[start..].windows(end_marker.len()).position(|w| w == end_marker) {
+            // Find the end of the <?xpacket end...?> tag
+            let end = start + end_rel;
+            if let Some(close) = text[end..].windows(2).position(|w| w == b"?>") {
+                let xmp_data = &text[start..end + close + 2];
+                if let Ok(tags) = exiftool_rs::metadata::XmpReader::read(xmp_data) {
+                    if !tags.is_empty() {
+                        return Some(tags);
+                    }
+                }
+            }
+        }
+    }
+    None
 }
 
 fn print_csv(et: &ExifTool, files: &[String]) {
