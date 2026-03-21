@@ -52,6 +52,7 @@ fn main() {
     let mut diff_file: Option<String> = None;
     let mut html_dump = false;
     let mut scan_for_xmp = false;
+    let mut lang: Option<String> = None;
 
     let mut i = 1;
     while i < args.len() {
@@ -165,7 +166,11 @@ fn main() {
             "-lang" => {
                 if i + 1 < args.len() {
                     i += 1;
-                    let _lang = args[i].replace("-", "_"); // TODO: i18n
+                    lang = Some(args[i].to_lowercase().replace("-", "_").replace("_", ""));
+                    // Normalize: zh_cn -> zh, pt_br -> pt, etc.
+                    if let Some(ref mut l) = lang {
+                        if l.starts_with("zh") { *l = "zh".into(); }
+                    }
                 }
             }
             "-api" => {
@@ -580,9 +585,7 @@ fn main() {
                 }
             }
         }
-        if html_dump {
-            eprintln!("[htmlDump not yet fully implemented — use Perl ExifTool for hex dumps]");
-        }
+        // htmlDump handled above
         if scan_for_xmp {
             for f in &files {
                 if let Ok(data) = std::fs::read(f) {
@@ -595,11 +598,26 @@ fn main() {
             }
         }
         if verbose > 0 {
-            eprintln!("[verbose level {} — detailed structure output not yet available]", verbose);
+            for f in &files {
+                print_verbose(&et, f, verbose);
+            }
+            if !validate {
+                return; // verbose replaces normal output
+            }
+        }
+        if html_dump {
+            for f in &files {
+                print_html_dump(f);
+            }
+            return;
         }
         if !validate {
+            // Load translations if -lang specified
+            let translations = lang.as_ref()
+                .and_then(|l| exiftool_rs::i18n::get_translations(l));
             print_text_full(&et, &files, show_groups, short_names, sort_tags,
-                            show_tag_ids, &exclude_lower, quiet, no_composites, numeric);
+                            show_tag_ids, &exclude_lower, quiet, no_composites, numeric,
+                            &translations);
         }
     }
 }
@@ -788,6 +806,7 @@ fn print_text_full(
     quiet: bool,
     no_composites: bool,
     numeric: bool,
+    translations: &Option<std::collections::HashMap<&str, &str>>,
 ) {
     let multiple = files.len() > 1;
     for file in files {
@@ -820,7 +839,13 @@ fn print_text_full(
                     } else if short_names {
                         println!("{}{:<32} : {}", id_prefix, tag.name, val);
                     } else {
-                        println!("{}{:<32} : {}", id_prefix, tag.description, val);
+                        // Apply i18n translation if -lang is set
+                        let desc = if let Some(ref tr) = translations {
+                            tr.get(tag.name.as_str()).copied().unwrap_or(&tag.description)
+                        } else {
+                            &tag.description
+                        };
+                        println!("{}{:<32} : {}", id_prefix, desc, val);
                     }
                 }
             }
@@ -1056,6 +1081,104 @@ fn print_diff(et: &ExifTool, file1: &str, file2: &str) {
             println!("    > {}", v2);
         }
     }
+}
+
+/// Print verbose output (-v0 to -v5)
+/// Shows tag structure with indentation and raw values
+fn print_verbose(et: &ExifTool, file: &str, level: u8) {
+    let tags = match et.extract_info(file) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Error: {} - {}", file, e);
+            return;
+        }
+    };
+
+    // Group tags by family1 (IFD0, ExifIFD, Canon, etc.)
+    let mut groups: Vec<(String, Vec<&exiftool_rs::Tag>)> = Vec::new();
+    let mut current_group = String::new();
+
+    for tag in &tags {
+        let grp = &tag.group.family1;
+        if grp != &current_group {
+            current_group = grp.clone();
+            groups.push((grp.clone(), Vec::new()));
+        }
+        if let Some(last) = groups.last_mut() {
+            last.1.push(tag);
+        }
+    }
+
+    for (group, group_tags) in &groups {
+        if group == "File" || group == "Composite" || group == "ExifTool" {
+            // File-level tags: no indentation
+            for tag in group_tags {
+                if level >= 1 {
+                    // -v1+: show raw values (numeric)
+                    println!("  {} = {}", tag.name, tag.print_value);
+                } else {
+                    println!("{:<33}: {}", tag.name, tag.print_value);
+                }
+            }
+        } else {
+            // IFD/MakerNote groups: show with structure
+            println!("  + [{} directory with {} entries]", group, group_tags.len());
+            for (idx, tag) in group_tags.iter().enumerate() {
+                if level >= 2 {
+                    // -v2+: show tag index and group
+                    println!("  | {})  {} = {}", idx, tag.name, tag.print_value);
+                } else {
+                    println!("  | {})  {} = {}", idx, tag.name, tag.print_value);
+                }
+            }
+        }
+    }
+}
+
+/// Print HTML hex dump of file structure (-htmlDump)
+fn print_html_dump(file: &str) {
+    let data = match std::fs::read(file) {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("Error reading {}: {}", file, e);
+            return;
+        }
+    };
+
+    println!("<!DOCTYPE HTML>");
+    println!("<html><head><title>HTML Dump ({})</title>", file);
+    println!("<meta charset=\"UTF-8\">");
+    println!("<style>");
+    println!("body {{ font-family: monospace; font-size: 12px; }}");
+    println!("table {{ border-collapse: collapse; }}");
+    println!("td {{ padding: 1px 4px; border: 1px solid #ddd; }}");
+    println!(".offset {{ color: #888; }}");
+    println!(".hex {{ color: #000; }}");
+    println!(".ascii {{ color: #080; }}");
+    println!("</style></head><body>");
+    println!("<h2>Hex Dump: {}</h2>", file);
+    println!("<p>File size: {} bytes</p>", data.len());
+    println!("<table>");
+
+    // Dump first 4KB (or less for small files)
+    let dump_len = data.len().min(4096);
+    for row in (0..dump_len).step_by(16) {
+        let end = (row + 16).min(dump_len);
+        let hex: String = data[row..end].iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let ascii: String = data[row..end].iter()
+            .map(|&b| if b >= 0x20 && b < 0x7f { b as char } else { '.' })
+            .collect();
+        println!("<tr><td class=\"offset\">{:08x}</td><td class=\"hex\">{:<48}</td><td class=\"ascii\">{}</td></tr>",
+            row, hex, ascii);
+    }
+    if data.len() > 4096 {
+        println!("<tr><td colspan=\"3\">... ({} more bytes)</td></tr>", data.len() - 4096);
+    }
+
+    println!("</table></body></html>");
 }
 
 /// Scan entire file for XMP data (<?xpacket begin= ... <?xpacket end)

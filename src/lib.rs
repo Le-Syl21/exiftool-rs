@@ -60,6 +60,7 @@ pub mod error;
 
 
 pub mod geolocation;
+pub mod i18n;
 pub mod exiftool;
 pub mod file_type;
 pub mod formats;
