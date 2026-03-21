@@ -146,7 +146,90 @@ pub fn read_quicktime(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
+    // Parse Canon CTMD (Canon Timed MetaData) if found
+    if let (Some(ctmd_off), Some(ctmd_sz)) = (state.ctmd_offset, state.ctmd_size) {
+        let ctmd_off = ctmd_off as usize;
+        let ctmd_sz = ctmd_sz as usize;
+        if ctmd_off + ctmd_sz <= data.len() {
+            parse_canon_ctmd(data, ctmd_off, ctmd_sz, &mut tags);
+        }
+    }
+
     Ok(tags)
+}
+
+/// Parse Canon CTMD (Canon Timed MetaData) records.
+/// Format: records of size(4LE) + type(2LE) + header(6) + data.
+/// Types 7/8/9 contain ExifInfo with embedded MakerNotes.
+fn parse_canon_ctmd(data: &[u8], start: usize, size: usize, tags: &mut Vec<Tag>) {
+    let end = start + size;
+    let mut pos = start;
+
+    while pos + 12 < end {
+        let rec_size = u32::from_le_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
+        let rec_type = u16::from_le_bytes([data[pos+4], data[pos+5]]);
+
+        if rec_size < 12 || pos + rec_size > end { break; }
+
+        let rec_data = &data[pos + 12..pos + rec_size];
+
+        match rec_type {
+            1 => {
+                // TimeStamp: 2 bytes skip + year(2LE) + month + day + hour + min + sec + centisec
+                if rec_data.len() >= 9 {
+                    let year = u16::from_le_bytes([rec_data[2], rec_data[3]]);
+                    let ts = format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:02}",
+                        year, rec_data[4], rec_data[5], rec_data[6], rec_data[7], rec_data[8],
+                        if rec_data.len() > 9 { rec_data[9] } else { 0 });
+                    tags.push(mk("TimeStamp", "Time Stamp", Value::String(ts)));
+                }
+            }
+            7 | 8 | 9 => {
+                // ExifInfo: records of size(4LE)+tag(4LE)+TIFF_data
+                // Tags: 0x8769=ExifIFD, 0x927C=MakerNote
+                let mut epos = 0;
+                while epos + 8 < rec_data.len() {
+                    let elen = u32::from_le_bytes([rec_data[epos], rec_data[epos+1], rec_data[epos+2], rec_data[epos+3]]) as usize;
+                    let etag = u32::from_le_bytes([rec_data[epos+4], rec_data[epos+5], rec_data[epos+6], rec_data[epos+7]]);
+                    if elen < 8 || epos + elen > rec_data.len() { break; }
+                    let edata = &rec_data[epos+8..epos+elen];
+                    match etag {
+                        0x927C => {
+                            // MakerNoteCanon: raw Canon MakerNote data
+                            let make = tags.iter().find(|t| t.name == "Make")
+                                .map(|t| t.print_value.clone()).unwrap_or_default();
+                            let model = tags.iter().find(|t| t.name == "Model")
+                                .map(|t| t.print_value.clone()).unwrap_or_default();
+                            let mn_tags = crate::metadata::makernotes::parse_makernotes(
+                                edata, 0, edata.len(), &make, &model,
+                                crate::metadata::exif::ByteOrderMark::LittleEndian,
+                            );
+                            for t in mn_tags {
+                                if !tags.iter().any(|e| e.name == t.name) {
+                                    tags.push(t);
+                                }
+                            }
+                        }
+                        0x8769 => {
+                            // ExifIFD: parse as TIFF
+                            if let Ok(exif_tags) = crate::metadata::ExifReader::read(edata) {
+                                for t in exif_tags {
+                                    if !tags.iter().any(|e| e.name == t.name) {
+                                        tags.push(t);
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                    epos += elen;
+                }
+            }
+            _ => {}
+        }
+
+        pos += rec_size;
+    }
 }
 
 /// Convert a bitrate in bps to a human-readable string.
@@ -1551,6 +1634,12 @@ fn parse_stsd(
     let entry_size = u32::from_be_bytes([entry[0], entry[1], entry[2], entry[3]]) as usize;
     let format = &entry[4..8];
     let format_str = String::from_utf8_lossy(format).trim().to_string();
+
+    // Check for CTMD (Canon Timed MetaData) format
+    if format == b"CTMD" {
+        state.current_track_is_ctmd = true;
+        tags.push(mk("MetaFormat", "Meta Format", Value::String("CTMD".into())));
+    }
 
     // Determine if audio or video based on handler type
     let handler = &state.handler_type;
