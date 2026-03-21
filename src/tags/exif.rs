@@ -471,8 +471,10 @@ static IFD0_TAGS: &[TagInfo] = &[
     TagInfo { tag_id: 0xC621, name: "ColorMatrix1", description: "Color Matrix 1", family2: "Image" },
     TagInfo { tag_id: 0xC622, name: "ColorMatrix2", description: "Color Matrix 2", family2: "Image" },
     TagInfo { tag_id: 0xC628, name: "AsShotNeutral", description: "As Shot Neutral", family2: "Camera" },
-    TagInfo { tag_id: 0xC62F, name: "CameraCalibration1", description: "Camera Calibration 1", family2: "Camera" },
-    TagInfo { tag_id: 0xC630, name: "CameraCalibration2", description: "Camera Calibration 2", family2: "Camera" },
+    TagInfo { tag_id: 0xC623, name: "CameraCalibration1", description: "Camera Calibration 1", family2: "Camera" },
+    TagInfo { tag_id: 0xC624, name: "CameraCalibration2", description: "Camera Calibration 2", family2: "Camera" },
+    TagInfo { tag_id: 0xC62F, name: "CameraSerialNumber", description: "Camera Serial Number", family2: "Camera" },
+    TagInfo { tag_id: 0xC630, name: "DNGLensInfo", description: "DNG Lens Info", family2: "Camera" },
     TagInfo { tag_id: 0xC65A, name: "CalibrationIlluminant1", description: "Calibration Illuminant 1", family2: "Camera" },
     TagInfo { tag_id: 0xC65B, name: "CalibrationIlluminant2", description: "Calibration Illuminant 2", family2: "Camera" },
 ];
