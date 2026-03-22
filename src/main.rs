@@ -1394,10 +1394,10 @@ fn print_usage() {
     eprintln!();
     eprintln!("Language:");
     eprintln!("  -lang LANG            Set language for tag descriptions");
-    let langs: Vec<String> = exiftool_rs::i18n::AVAILABLE_LANGUAGES.iter()
-        .map(|(code, name)| format!("{} ({})", code, name))
-        .collect();
-    eprintln!("                        Supported: {}", langs.join(", "));
+    eprintln!("                        Supported languages:");
+    for (code, name) in exiftool_rs::i18n::AVAILABLE_LANGUAGES {
+        eprintln!("                          {:<8} {}", code, name);
+    }
     eprintln!();
     eprintln!("Other:");
     eprintln!("  -stay_open True       Keep running, read commands from stdin");
