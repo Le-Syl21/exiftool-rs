@@ -342,6 +342,132 @@ impl ExifTool {
         }
     }
 
+    /// Returns the set of tag names (lowercase) that are writable for a given file type.
+    /// Returns `None` if any tag is writable (open-ended formats like PNG, FLAC, MKV).
+    /// Returns `Some(empty set)` if the format has no writer.
+    pub fn writable_tags(file_type: FileType) -> Option<std::collections::HashSet<&'static str>> {
+        use std::collections::HashSet;
+
+        // EXIF tags supported by exif_writer
+        const EXIF_TAGS: &[&str] = &[
+            "imagedescription", "make", "model", "orientation",
+            "xresolution", "yresolution", "resolutionunit", "software",
+            "modifydate", "datetime", "artist", "copyright",
+            "datetimeoriginal", "createdate", "datetimedigitized",
+            "usercomment", "imageuniqueid", "ownername", "cameraownername",
+            "serialnumber", "bodyserialnumber", "lensmake", "lensmodel", "lensserialnumber",
+        ];
+
+        // IPTC tags supported by iptc_writer
+        const IPTC_TAGS: &[&str] = &[
+            "objectname", "title", "urgency", "category", "supplementalcategories",
+            "keywords", "specialinstructions", "datecreated", "timecreated",
+            "by-line", "author", "byline", "by-linetitle", "authorsposition", "bylinetitle",
+            "city", "sub-location", "sublocation", "province-state", "state", "provincestate",
+            "country-primarylocationcode", "countrycode",
+            "country-primarylocationname", "country",
+            "headline", "credit", "source", "copyrightnotice",
+            "contact", "caption-abstract", "caption", "description",
+            "writer-editor", "captionwriter",
+        ];
+
+        // XMP auto-detected tags (no group prefix needed)
+        const XMP_AUTO_TAGS: &[&str] = &[
+            "title", "description", "subject", "creator", "rights",
+            "keywords", "rating", "label", "hierarchicalsubject",
+        ];
+
+        // ID3 tags
+        const ID3_TAGS: &[&str] = &[
+            "title", "artist", "album", "year", "date", "track",
+            "genre", "comment", "composer", "albumartist",
+            "encoder", "encodedby", "publisher", "copyright", "bpm", "lyrics",
+        ];
+
+        // MP4/MOV ilst tags
+        const MP4_TAGS: &[&str] = &[
+            "title", "artist", "album", "year", "date", "comment",
+            "genre", "composer", "writer", "encoder", "encodedby",
+            "grouping", "lyrics", "description", "albumartist", "copyright",
+        ];
+
+        // PDF Info dict tags
+        const PDF_TAGS: &[&str] = &[
+            "title", "author", "subject", "keywords", "creator", "producer",
+        ];
+
+        // PostScript DSC tags
+        const PS_TAGS: &[&str] = &[
+            "title", "creator", "author", "for", "creationdate", "createdate",
+        ];
+
+        match file_type {
+            // Open-ended: any tag name accepted
+            FileType::Png | FileType::Flac | FileType::Mkv | FileType::WebM
+            | FileType::Ogg | FileType::Opus | FileType::Xmp => None,
+
+            // JPEG: EXIF + IPTC + XMP auto + comment
+            FileType::Jpeg => {
+                let mut set: HashSet<&str> = HashSet::new();
+                set.extend(EXIF_TAGS);
+                set.extend(IPTC_TAGS);
+                set.extend(XMP_AUTO_TAGS);
+                set.insert("comment");
+                Some(set)
+            }
+
+            // TIFF-based: EXIF only
+            FileType::Tiff | FileType::Dng | FileType::Cr2 | FileType::Nef
+            | FileType::Arw | FileType::Orf | FileType::Pef => {
+                let mut set: HashSet<&str> = HashSet::new();
+                set.extend(EXIF_TAGS);
+                Some(set)
+            }
+
+            // WebP: EXIF + XMP auto
+            FileType::WebP => {
+                let mut set: HashSet<&str> = HashSet::new();
+                set.extend(EXIF_TAGS);
+                set.extend(XMP_AUTO_TAGS);
+                Some(set)
+            }
+
+            // MP4/MOV/HEIF: ilst + XMP auto
+            FileType::Mp4 | FileType::QuickTime | FileType::M4a
+            | FileType::ThreeGP | FileType::F4v | FileType::Heif | FileType::Avif => {
+                let mut set: HashSet<&str> = HashSet::new();
+                set.extend(MP4_TAGS);
+                set.extend(XMP_AUTO_TAGS);
+                Some(set)
+            }
+
+            // PSD: IPTC + XMP auto
+            FileType::Psd => {
+                let mut set: HashSet<&str> = HashSet::new();
+                set.extend(IPTC_TAGS);
+                set.extend(XMP_AUTO_TAGS);
+                Some(set)
+            }
+
+            FileType::Pdf => Some(PDF_TAGS.iter().copied().collect()),
+            FileType::PostScript => Some(PS_TAGS.iter().copied().collect()),
+
+            FileType::Mp3 | FileType::Aiff => Some(ID3_TAGS.iter().copied().collect()),
+
+            FileType::Gif => {
+                let mut set: HashSet<&str> = HashSet::new();
+                set.insert("comment");
+                Some(set)
+            }
+
+            // JP2/JXL: XMP only (with group prefix)
+            FileType::Jp2 | FileType::Jxl => Some(XMP_AUTO_TAGS.iter().copied().collect()),
+
+            // No writer
+            _ => Some(HashSet::new()),
+        }
+    }
+
     /// Write metadata changes to JPEG data.
     fn write_jpeg(&self, data: &[u8]) -> Result<Vec<u8>> {
         // Classify new values by target group

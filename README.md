@@ -6,6 +6,8 @@
 
 A pure Rust reimplementation of [ExifTool](https://exiftool.org/) — read, write, and edit metadata in image, audio, video, and document files. No unsafe code, no Perl dependency, no system libraries.
 
+![Screenshot](assets/screenshot.png)
+
 ## Features
 
 - **194/194 test files (100%)** produce identical tag names as Perl ExifTool v13.52
@@ -79,6 +81,55 @@ exiftool-rs -G photo.jpg
 exiftool-rs -n photo.jpg
 ```
 
+## GUI
+
+exiftool-rs includes an optional graphical interface built with [egui](https://github.com/emilk/egui).
+
+```bash
+# Install with GUI support
+cargo install exiftool-rs --features gui
+
+# Launch the GUI
+exiftool-rs-gui
+
+# Or with a specific language
+exiftool-rs-gui -lang fr
+```
+
+**Features:**
+- Open files or folders, navigate with arrow keys
+- View all metadata grouped by category
+- Double-click any writable tag to edit it
+- Copy all metadata to clipboard
+- Save edits back to the file
+- 23 languages supported
+
+### Supported Languages
+
+| Code | Language | Code | Language |
+|------|----------|------|----------|
+| `en` | English | `ko` | Korean |
+| `ar` | Arabic | `nl` | Dutch |
+| `bn` | Bengali | `pl` | Polish |
+| `cs` | Czech | `pt` | Portuguese |
+| `de` | German | `ru` | Russian |
+| `en_ca` | English (Canada) | `sk` | Slovak |
+| `en_gb` | English (UK) | `sv` | Swedish |
+| `es` | Spanish | `tr` | Turkish |
+| `fi` | Finnish | `zh` | Chinese (Simplified) |
+| `fr` | French | `zh_tw` | Chinese (Traditional) |
+| `hi` | Hindi | | |
+| `it` | Italian | | |
+| `ja` | Japanese | | |
+
+### Platform Notes
+
+| OS | Icon in binary | Notes |
+|----|---------------|-------|
+| **Windows** | Yes | Icon embedded in `.exe` via `winres` |
+| **macOS** | No | Requires a `.app` bundle with `.icns` |
+| **Linux** | No | ELF binaries don't support embedded icons |
+
 ## CLI Options
 
 | Option | Description |
@@ -118,8 +169,15 @@ cargo test
 ```bash
 git clone https://github.com/Le-Syl21/exiftool-rs
 cd exiftool-rs
+
+# CLI only
 cargo build --release
+
+# CLI + GUI
+cargo build --release --features gui
 ```
+
+The `gui` feature is optional and not included by default. Without it, the GUI dependencies (egui, eframe, image, rfd) are not downloaded or compiled.
 
 ## License
 

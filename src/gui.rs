@@ -42,8 +42,8 @@ fn main() {
         .ok();
 
     let mut viewport = egui::ViewportBuilder::default()
-        .with_inner_size([1000.0, 700.0])
-        .with_min_inner_size([600.0, 400.0])
+        .with_inner_size([600.0, 700.0])
+        .with_min_inner_size([400.0, 400.0])
         .with_drag_and_drop(true);
 
     if let Some(icon) = icon {
@@ -105,6 +105,14 @@ struct App {
     status: String,
     /// Thumbnail texture
     thumbnail: Option<egui::TextureHandle>,
+    /// Whether fonts have been configured
+    fonts_configured: bool,
+    /// Writable tags for current file type (None = any tag writable)
+    writable_tags: Option<Option<std::collections::HashSet<&'static str>>>,
+    /// Whether window needs auto-resize after loading tags
+    needs_resize: bool,
+    /// Flash feedback timer (for copy/save button visual confirmation)
+    flash_until: Option<std::time::Instant>,
 }
 
 #[cfg(feature = "gui")]
@@ -133,6 +141,10 @@ impl App {
             translations: None,
             status: String::new(),
             thumbnail: None,
+            fonts_configured: false,
+            writable_tags: None,
+            needs_resize: false,
+            flash_until: None,
         };
 
         app.status = exiftool_rs::i18n::ui_text(&app.lang, "drop_start").to_string();
@@ -202,10 +214,21 @@ impl App {
         self.editing = None;
         self.thumbnail = None;
 
+        // Detect file type for writable tags
+        let ext = path.extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("");
+        self.writable_tags = if let Some(ft) = exiftool_rs::file_type::detect_from_extension(ext) {
+            Some(ExifTool::writable_tags(ft))
+        } else {
+            Some(Some(std::collections::HashSet::new()))
+        };
+
         match self.et.extract_info(path.to_str().unwrap_or("")) {
             Ok(tags) => {
                 self.tags = tags;
                 self.build_groups();
+                self.needs_resize = true;
                 let name = path.file_name().unwrap_or_default().to_string_lossy();
                 let count = self.tags.len();
                 self.status = format!("{} tags | {}", count, name);
@@ -262,24 +285,64 @@ impl App {
         description
     }
 
-    fn is_writable(tag_name: &str) -> bool {
-        // Composites and File-level tags are read-only
-        !matches!(tag_name,
-            "FileSize" | "FileName" | "Directory" | "FileType" | "MIMEType" |
-            "FileModifyDate" | "FileAccessDate" | "FileInodeChangeDate" |
-            "FilePermissions" | "FileTypeExtension" | "ExifToolVersion" |
-            "ImageSize" | "Megapixels" | "ShutterSpeed" | "Aperture" |
-            "LightValue" | "FocalLength35efl" | "CircleOfConfusion" |
-            "DOF" | "FOV" | "HyperfocalDistance" | "ScaleFactor35efl" |
-            "LensID" | "Lens" | "Lens35efl" | "DriveMode" | "ShootingMode" |
-            "BlueBalance" | "RedBalance" | "WB_RGGBLevels" | "GPSPosition"
-        )
+    fn is_tag_writable(&self, tag_name: &str) -> bool {
+        match &self.writable_tags {
+            None => false, // no file loaded
+            Some(None) => true, // open-ended format (PNG, FLAC, MKV...)
+            Some(Some(set)) => set.contains(tag_name.to_lowercase().as_str()),
+        }
     }
 }
 
 #[cfg(feature = "gui")]
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Configure fonts for CJK, Arabic, Devanagari, Bengali support
+        if !self.fonts_configured {
+            self.fonts_configured = true;
+            let mut fonts = egui::FontDefinitions::default();
+
+            // CJK (Chinese, Japanese, Korean)
+            fonts.font_data.insert("noto_cjk".to_owned(),
+                std::sync::Arc::new(egui::FontData::from_static(
+                    include_bytes!("../assets/fonts/NotoSansCJKsc-Regular.otf")
+                )));
+            // Arabic
+            fonts.font_data.insert("noto_arabic".to_owned(),
+                std::sync::Arc::new(egui::FontData::from_static(
+                    include_bytes!("../assets/fonts/NotoSansArabic-Regular.ttf")
+                )));
+            // Devanagari (Hindi)
+            fonts.font_data.insert("noto_devanagari".to_owned(),
+                std::sync::Arc::new(egui::FontData::from_static(
+                    include_bytes!("../assets/fonts/NotoSansDevanagari-Regular.ttf")
+                )));
+            // Bengali
+            fonts.font_data.insert("noto_bengali".to_owned(),
+                std::sync::Arc::new(egui::FontData::from_static(
+                    include_bytes!("../assets/fonts/NotoSansBengali-Regular.ttf")
+                )));
+            // Korean
+            fonts.font_data.insert("noto_korean".to_owned(),
+                std::sync::Arc::new(egui::FontData::from_static(
+                    include_bytes!("../assets/fonts/NotoSansKR-Regular.ttf")
+                )));
+
+            // Add as fallback fonts after the default proportional font
+            for name in ["noto_cjk", "noto_korean", "noto_arabic", "noto_devanagari", "noto_bengali"] {
+                fonts.families
+                    .entry(egui::FontFamily::Proportional)
+                    .or_default()
+                    .push(name.to_owned());
+                fonts.families
+                    .entry(egui::FontFamily::Monospace)
+                    .or_default()
+                    .push(name.to_owned());
+            }
+
+            ctx.set_fonts(fonts);
+        }
+
         // Handle dropped files
         ctx.input(|i| {
             if !i.raw.dropped_files.is_empty() {
@@ -322,7 +385,9 @@ impl eframe::App for App {
         // Top toolbar
         egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "open")).clicked() {
+                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "open"))
+                    .on_hover_text(exiftool_rs::i18n::ui_text(&self.lang, "tooltip_open"))
+                    .clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         if let Some(parent) = path.parent() {
                             self.open_folder(parent);
@@ -333,19 +398,33 @@ impl eframe::App for App {
                         }
                     }
                 }
-                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "folder")).clicked() {
+                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "folder"))
+                    .on_hover_text(exiftool_rs::i18n::ui_text(&self.lang, "tooltip_folder"))
+                    .clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_folder() {
                         self.open_folder(&path);
                     }
                 }
-                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "copy")).clicked() {
+                // Show flash feedback on copy/save buttons
+                let is_flashing = self.flash_until.map_or(false, |t| t > std::time::Instant::now());
+                if is_flashing {
+                    ctx.request_repaint();
+                }
+
+                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "copy"))
+                    .on_hover_text(exiftool_rs::i18n::ui_text(&self.lang, "tooltip_copy"))
+                    .clicked() {
                     let text: String = self.tags.iter()
                         .map(|t| format!("{}: {}", t.name, t.print_value))
                         .collect::<Vec<_>>()
                         .join("\n");
                     ctx.copy_text(text);
+                    self.status = exiftool_rs::i18n::ui_text(&self.lang, "copied").to_string();
+                    self.flash_until = Some(std::time::Instant::now() + std::time::Duration::from_millis(800));
                 }
-                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "save")).clicked() {
+                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "save"))
+                    .on_hover_text(exiftool_rs::i18n::ui_text(&self.lang, "tooltip_save"))
+                    .clicked() {
                     if !self.pending_edits.is_empty() {
                         if let Some(path) = self.files.get(self.current) {
                             let path_str = path.to_string_lossy().to_string();
@@ -358,6 +437,7 @@ impl eframe::App for App {
                                     self.status = format!("{} {}", self.pending_edits.len(), exiftool_rs::i18n::ui_text(&self.lang, "saved"));
                                     self.pending_edits.clear();
                                     self.load_current();
+                                    self.flash_until = Some(std::time::Instant::now() + std::time::Duration::from_millis(800));
                                 }
                                 Err(e) => {
                                     self.status = format!("{}: {}", exiftool_rs::i18n::ui_text(&self.lang, "save_error"), e);
@@ -389,6 +469,12 @@ impl eframe::App for App {
                 if let Some(l) = new_lang {
                     self.set_language(&l);
                 }
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.small_button(exiftool_rs::i18n::ui_text(&self.lang, "about")).clicked() {
+                        self.show_about = true;
+                    }
+                });
             });
         });
 
@@ -418,12 +504,26 @@ impl eframe::App for App {
                     }
                 });
             });
+
+            // Editable hint bar
+            egui::TopBottomPanel::top("editable_hint").show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new(
+                        exiftool_rs::i18n::ui_text(&self.lang, "editable_hint")
+                    ).color(egui::Color32::from_rgb(100, 200, 100)));
+                });
+            });
         }
 
         // Status bar
+        let is_flashing = self.flash_until.map_or(false, |t| t > std::time::Instant::now());
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.label(&self.status);
+                if is_flashing {
+                    ui.label(egui::RichText::new(&self.status).color(egui::Color32::GREEN).strong());
+                } else {
+                    ui.label(&self.status);
+                }
                 if !self.pending_edits.is_empty() {
                     ui.separator();
                     ui.label(egui::RichText::new(
@@ -447,49 +547,28 @@ impl eframe::App for App {
             }
         }
 
-        // Left panel: preview / icon (always visible)
-        egui::SidePanel::left("preview_panel")
-            .default_width(250.0)
-            .min_width(150.0)
-            .show(ctx, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.add_space(ui.available_height() / 4.0);
 
-                    // Show icon (placeholder for preview)
-                    if let Some(ref tex) = self.icon_texture {
-                        ui.image((tex.id(), egui::vec2(128.0, 128.0)));
-                    }
-
-                    ui.add_space(12.0);
-
-                    if self.files.is_empty() {
-                        ui.label(egui::RichText::new("exiftool-rs")
-                            .size(22.0)
-                            .strong());
-                        ui.add_space(8.0);
-                        ui.label(egui::RichText::new(exiftool_rs::i18n::ui_text(&self.lang, "welcome"))
-                            .size(13.0)
-                            .color(egui::Color32::GRAY));
-                    } else {
-                        ui.label(egui::RichText::new(
-                            exiftool_rs::i18n::ui_text(&self.lang, "no_preview")
-                        ).color(egui::Color32::GRAY).italics());
-                    }
-
-                    // About link at bottom
-                    ui.add_space(ui.available_height() - 40.0);
-                    if ui.small_button(exiftool_rs::i18n::ui_text(&self.lang, "about")).clicked() {
-                        self.show_about = true;
-                    }
-                });
-            });
-
-        // Right panel: tags
+        // Main panel: tags
         egui::CentralPanel::default().show(ctx, |ui| {
+            // Draw watermark logo in background
+            if let Some(ref tex) = self.icon_texture {
+                let panel_rect = ui.available_rect_before_wrap();
+                let logo_size = panel_rect.height().min(panel_rect.width()) * 0.5;
+                let center = panel_rect.center();
+                let logo_rect = egui::Rect::from_center_size(center, egui::vec2(logo_size, logo_size));
+                ui.painter().image(
+                    tex.id(),
+                    logo_rect,
+                    egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                    egui::Color32::from_white_alpha(128),
+                );
+            }
+
             if self.tags.is_empty() && self.files.is_empty() {
                 return;
             }
 
+            ui.with_layout(egui::Layout::top_down(egui::Align::LEFT), |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 let groups = self.groups.clone();
                 for (group_name, group_tags) in &groups {
@@ -526,18 +605,21 @@ impl eframe::App for App {
                                     let is_edited = self.pending_edits.iter().any(|(n, _)| n == &tag.name);
 
                                     // Tag name : value (with separator)
-                                    ui.label(egui::RichText::new(format!("{} :", desc)).color(egui::Color32::LIGHT_BLUE));
+                                    ui.label(egui::RichText::new(format!("{} :", desc)).color(egui::Color32::LIGHT_BLUE).strong());
 
                                     // Value — double-click to edit
+                                    let writable = self.is_tag_writable(&tag.name);
                                     let value_text = if is_edited {
-                                        egui::RichText::new(display_value).color(egui::Color32::YELLOW)
+                                        egui::RichText::new(display_value).color(egui::Color32::YELLOW).strong()
+                                    } else if writable {
+                                        egui::RichText::new(display_value).color(egui::Color32::from_rgb(100, 200, 100)).strong()
                                     } else {
-                                        egui::RichText::new(display_value)
+                                        egui::RichText::new(display_value).color(egui::Color32::from_rgb(200, 100, 100)).strong()
                                     };
 
                                     let response = ui.label(value_text);
 
-                                    if response.double_clicked() && Self::is_writable(&tag.name) {
+                                    if response.double_clicked() && self.is_tag_writable(&tag.name) {
                                         self.editing = Some(EditState {
                                             tag_name: tag.name.clone(),
                                             original_value: tag.print_value.clone(),
@@ -546,7 +628,7 @@ impl eframe::App for App {
                                     }
 
                                     // Show "read-only" cursor for non-writable tags
-                                    if response.hovered() && !Self::is_writable(&tag.name) {
+                                    if response.hovered() && !self.is_tag_writable(&tag.name) {
                                         response.on_hover_text(exiftool_rs::i18n::ui_text(&self.lang, "read_only"));
                                     }
 
@@ -556,6 +638,8 @@ impl eframe::App for App {
                         ui.add_space(8.0);
                     }
                 }
+            });
+
             });
         });
 

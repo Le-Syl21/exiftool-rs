@@ -11,6 +11,8 @@ The Perl source is at `../exiftool/` for reference.
 src/
 ├── lib.rs              # Crate root, re-exports
 ├── main.rs             # CLI binary (~30 options)
+├── gui.rs              # GUI binary (optional, feature "gui")
+├── i18n.rs             # Internationalization (YAML locale loading)
 ├── exiftool.rs         # ExifTool struct: read API + write API + dispatch
 ├── error.rs            # Error types
 ├── value.rs            # Value enum (String, URational, Binary, etc.)
@@ -44,9 +46,12 @@ src/
 ## Key Commands
 
 ```bash
-cargo build --release          # Build
-cargo test                     # Run tests (22 unit + 3 doc)
-cargo run -- -s photo.jpg      # Run CLI
+cargo build --release                    # Build CLI only
+cargo build --release --features gui     # Build CLI + GUI
+cargo test                               # Run tests (22 unit + 3 doc)
+cargo run -- -s photo.jpg                # Run CLI
+cargo run --features gui --bin exiftool-rs-gui  # Run GUI
+cargo run --features gui --bin exiftool-rs-gui -- -lang fr  # GUI in French
 
 # Regenerate from Perl source:
 perl scripts/gen_tags.pl ../exiftool/lib > src/tags/generated.rs
@@ -61,6 +66,16 @@ perl scripts/gen_print_conv.pl ../exiftool/lib > src/tags/print_conv_generated.r
 4. **Print conversion chain** — hand-written → manufacturer-specific → generated
 5. **JPEG merge mode** — reads existing EXIF, applies changes, rebuilds
 6. **Geolocation.dat** — uses ExifTool's binary database directly (no conversion)
+7. **GUI is optional** — behind `gui` feature flag, no GUI deps in default build
+8. **i18n via YAML** — locale files in `locales/`, 23 languages, UI strings prefixed `_ui.`
+
+## GUI Architecture
+
+- `src/gui.rs` — standalone binary using `eframe`/`egui`
+- `src/i18n.rs` — loads YAML locale files, provides `ui_text()` and `tag_description()`
+- `locales/*.yml` — 23 language files (3230 tag descriptions + 19 UI strings each)
+- `assets/icon.png` — application icon (also embedded in Windows `.exe` via `build.rs`)
+- `build.rs` — Windows-only: embeds `assets/icon.ico` into the executable via `winres`
 
 ## Important Files
 
