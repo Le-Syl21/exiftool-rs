@@ -16,6 +16,12 @@ exclude = [
     ".github/",
     "tests/images/",
     "tests/expected/",
+    "assets/fonts/",
+    "assets/screenshot.png",
+    "assets/icon.ico",
+    "assets/icon.png",
+    "build.rs",
+    "src/gui.rs",
 ]
 
 [[bin]]
