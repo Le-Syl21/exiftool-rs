@@ -10,11 +10,31 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let initial_path = args.get(1).cloned();
 
+    // Load window icon from embedded PNG
+    let icon_data = include_bytes!("../assets/icon.png");
+    let icon = image::load_from_memory(icon_data)
+        .map(|img| {
+            let rgba = img.to_rgba8();
+            let (w, h) = rgba.dimensions();
+            egui::IconData {
+                rgba: rgba.into_raw(),
+                width: w,
+                height: h,
+            }
+        })
+        .ok();
+
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_inner_size([1000.0, 700.0])
+        .with_min_inner_size([600.0, 400.0])
+        .with_drag_and_drop(true);
+
+    if let Some(icon) = icon {
+        viewport = viewport.with_icon(std::sync::Arc::new(icon));
+    }
+
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1000.0, 700.0])
-            .with_min_inner_size([600.0, 400.0])
-            .with_drag_and_drop(true),
+        viewport,
         ..Default::default()
     };
 
@@ -50,6 +70,8 @@ struct App {
     groups: Vec<(String, Vec<Tag>)>,
     /// Collapsed groups
     collapsed: std::collections::HashSet<String>,
+    /// App icon texture for welcome screen
+    icon_texture: Option<egui::TextureHandle>,
     /// Pending edits: (tag_name, new_value)
     pending_edits: Vec<(String, String)>,
     /// Edit popup state
@@ -83,6 +105,7 @@ impl App {
             tags: Vec::new(),
             groups: Vec::new(),
             collapsed: std::collections::HashSet::new(),
+            icon_texture: None,
             pending_edits: Vec::new(),
             editing: None,
             lang: exiftool_rs::i18n::detect_system_language(),
@@ -391,9 +414,33 @@ impl eframe::App for App {
         // Main content
         egui::CentralPanel::default().show(ctx, |ui| {
             if self.tags.is_empty() && self.files.is_empty() {
-                ui.centered_and_justified(|ui| {
+                ui.vertical_centered(|ui| {
+                    ui.add_space(ui.available_height() / 4.0);
+
+                    // Show app icon
+                    if self.icon_texture.is_none() {
+                        let icon_data = include_bytes!("../assets/icon.png");
+                        if let Ok(img) = image::load_from_memory(icon_data) {
+                            let rgba = img.to_rgba8();
+                            let (w, h) = rgba.dimensions();
+                            let color_image = egui::ColorImage::from_rgba_unmultiplied(
+                                [w as usize, h as usize],
+                                &rgba.into_raw(),
+                            );
+                            self.icon_texture = Some(ctx.load_texture("icon", color_image, egui::TextureOptions::LINEAR));
+                        }
+                    }
+                    if let Some(ref tex) = self.icon_texture {
+                        ui.image((tex.id(), egui::vec2(128.0, 128.0)));
+                    }
+
+                    ui.add_space(16.0);
+                    ui.label(egui::RichText::new("exiftool-rs")
+                        .size(28.0)
+                        .strong());
+                    ui.add_space(8.0);
                     ui.label(egui::RichText::new("Drop a file or folder here\nor use Open / Folder buttons")
-                        .size(20.0)
+                        .size(16.0)
                         .color(egui::Color32::GRAY));
                 });
                 return;
