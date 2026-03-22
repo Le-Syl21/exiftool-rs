@@ -298,7 +298,7 @@ impl eframe::App for App {
                         .map(|t| format!("{}: {}", t.name, t.print_value))
                         .collect::<Vec<_>>()
                         .join("\n");
-                    ui.output_mut(|o| o.copied_text = text);
+                    ctx.copy_text(text);
                 }
                 if ui.button("💾 Save").clicked() {
                     if !self.pending_edits.is_empty() {
