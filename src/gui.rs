@@ -8,7 +8,24 @@ fn main() {
     use eframe::egui;
 
     let args: Vec<String> = std::env::args().collect();
-    let initial_path = args.get(1).cloned();
+    let mut initial_path: Option<String> = None;
+    let mut forced_lang: Option<String> = None;
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "-lang" => {
+                if i + 1 < args.len() {
+                    i += 1;
+                    forced_lang = Some(args[i].clone());
+                }
+            }
+            arg if !arg.starts_with('-') => {
+                initial_path = Some(arg.to_string());
+            }
+            _ => {}
+        }
+        i += 1;
+    }
 
     // Load window icon from embedded PNG
     let icon_data = include_bytes!("../assets/icon.png");
@@ -41,7 +58,7 @@ fn main() {
     let _ = eframe::run_native(
         "exiftool-rs",
         options,
-        Box::new(move |_cc| Ok(Box::new(App::new(initial_path)))),
+        Box::new(move |_cc| Ok(Box::new(App::new(initial_path, forced_lang)))),
     );
 }
 
@@ -97,7 +114,7 @@ struct EditState {
 
 #[cfg(feature = "gui")]
 impl App {
-    fn new(initial_path: Option<String>) -> Self {
+    fn new(initial_path: Option<String>, forced_lang: Option<String>) -> Self {
         let mut app = Self {
             et: ExifTool::new(),
             files: Vec::new(),
@@ -108,12 +125,14 @@ impl App {
             icon_texture: None,
             pending_edits: Vec::new(),
             editing: None,
-            lang: exiftool_rs::i18n::detect_system_language(),
+            lang: forced_lang.unwrap_or_else(|| exiftool_rs::i18n::detect_system_language()),
             languages: exiftool_rs::i18n::AVAILABLE_LANGUAGES.to_vec(),
             translations: None,
-            status: "Drop a file or folder to start".into(),
+            status: String::new(),
             thumbnail: None,
         };
+
+        app.status = exiftool_rs::i18n::ui_text(&app.lang, "drop_start").to_string();
 
         // Load translations for detected system language
         if app.lang != "en" {
@@ -169,7 +188,7 @@ impl App {
         if !self.files.is_empty() {
             self.load_current();
         } else {
-            self.status = "No supported files found in folder".into();
+            self.status = exiftool_rs::i18n::ui_text(&self.lang, "no_files").to_string();
         }
     }
 
@@ -191,7 +210,7 @@ impl App {
             Err(e) => {
                 self.tags.clear();
                 self.groups.clear();
-                self.status = format!("Error: {}", e);
+                self.status = format!("{}: {}", exiftool_rs::i18n::ui_text(&self.lang, "error"), e);
             }
         }
     }
@@ -300,7 +319,7 @@ impl eframe::App for App {
         // Top toolbar
         egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                if ui.button("📂 Open").clicked() {
+                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "open")).clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         if let Some(parent) = path.parent() {
                             self.open_folder(parent);
@@ -311,19 +330,19 @@ impl eframe::App for App {
                         }
                     }
                 }
-                if ui.button("📁 Folder").clicked() {
+                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "folder")).clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_folder() {
                         self.open_folder(&path);
                     }
                 }
-                if ui.button("📋 Copy").clicked() {
+                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "copy")).clicked() {
                     let text: String = self.tags.iter()
                         .map(|t| format!("{}: {}", t.name, t.print_value))
                         .collect::<Vec<_>>()
                         .join("\n");
                     ctx.copy_text(text);
                 }
-                if ui.button("💾 Save").clicked() {
+                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "save")).clicked() {
                     if !self.pending_edits.is_empty() {
                         if let Some(path) = self.files.get(self.current) {
                             let path_str = path.to_string_lossy().to_string();
@@ -333,12 +352,12 @@ impl eframe::App for App {
                             }
                             match et.write_info(&path_str, &path_str) {
                                 Ok(_) => {
-                                    self.status = format!("Saved {} edits", self.pending_edits.len());
+                                    self.status = format!("{} {}", self.pending_edits.len(), exiftool_rs::i18n::ui_text(&self.lang, "saved"));
                                     self.pending_edits.clear();
                                     self.load_current();
                                 }
                                 Err(e) => {
-                                    self.status = format!("Save error: {}", e);
+                                    self.status = format!("{}: {}", exiftool_rs::i18n::ui_text(&self.lang, "save_error"), e);
                                 }
                             }
                         }
@@ -405,7 +424,7 @@ impl eframe::App for App {
                 if !self.pending_edits.is_empty() {
                     ui.separator();
                     ui.label(egui::RichText::new(
-                        format!("{} modification(s) en attente", self.pending_edits.len())
+                        format!("{} {}", self.pending_edits.len(), exiftool_rs::i18n::ui_text(&self.lang, "pending"))
                     ).color(egui::Color32::YELLOW));
                 }
             });
@@ -439,7 +458,7 @@ impl eframe::App for App {
                         .size(28.0)
                         .strong());
                     ui.add_space(8.0);
-                    ui.label(egui::RichText::new("Drop a file or folder here\nor use Open / Folder buttons")
+                    ui.label(egui::RichText::new(exiftool_rs::i18n::ui_text(&self.lang, "welcome"))
                         .size(16.0)
                         .color(egui::Color32::GRAY));
                 });
@@ -503,7 +522,7 @@ impl eframe::App for App {
 
                                     // Show "read-only" cursor for non-writable tags
                                     if response.hovered() && !Self::is_writable(&tag.name) {
-                                        response.on_hover_text("Read-only (composite/computed tag)");
+                                        response.on_hover_text(exiftool_rs::i18n::ui_text(&self.lang, "read_only"));
                                     }
 
                                     ui.end_row();
@@ -519,18 +538,18 @@ impl eframe::App for App {
         let mut close_edit = false;
         if let Some(ref mut edit) = self.editing {
             let mut open = true;
-            egui::Window::new(format!("Edit: {}", edit.tag_name))
+            egui::Window::new(format!("{}: {}", exiftool_rs::i18n::ui_text(&self.lang, "edit"), edit.tag_name))
                 .open(&mut open)
                 .collapsible(false)
                 .resizable(false)
                 .show(ctx, |ui| {
-                    ui.label(format!("Original: {}", edit.original_value));
+                    ui.label(format!("{}: {}", exiftool_rs::i18n::ui_text(&self.lang, "original"), edit.original_value));
                     ui.add_space(4.0);
                     let response = ui.text_edit_singleline(&mut edit.new_value);
 
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
-                        if ui.button("OK").clicked() || (response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter))) {
+                        if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "ok")).clicked() || (response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter))) {
                             if edit.new_value != edit.original_value {
                                 // Remove any existing edit for this tag
                                 self.pending_edits.retain(|(n, _)| n != &edit.tag_name);
@@ -538,7 +557,7 @@ impl eframe::App for App {
                             }
                             close_edit = true;
                         }
-                        if ui.button("Cancel").clicked() {
+                        if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "cancel")).clicked() {
                             close_edit = true;
                         }
                     });
