@@ -1,0 +1,7 @@
+# ExifTool - British English tag descriptions
+# Only differences from en
+ColorSpace: "Colour Space"
+ColorTemperature: "Colour Temperature"
+ColorSpaceData: "Colour Space Data"
+Stabilization: "Stabilisation"
+ImageStabilization: "Image Stabilisation"

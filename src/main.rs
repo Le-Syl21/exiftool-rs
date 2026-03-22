@@ -2,6 +2,17 @@ use std::env;
 use std::io::{self, BufRead, Write};
 use std::path::Path;
 use std::process;
+use unicode_width::UnicodeWidthStr;
+
+/// Pad a string to a fixed display width (handles CJK/wide chars correctly)
+fn pad_display(s: &str, width: usize) -> String {
+    let display_w = UnicodeWidthStr::width(s);
+    if display_w >= width {
+        s.to_string()
+    } else {
+        format!("{}{}", s, " ".repeat(width - display_w))
+    }
+}
 
 use exiftool_rs::{ExifTool, Options};
 
@@ -591,7 +602,7 @@ fn main() {
                 if let Ok(data) = std::fs::read(f) {
                     if let Some(xmp_tags) = scan_file_for_xmp(&data) {
                         for t in xmp_tags {
-                            println!("{:<33}: {}", t.name, t.print_value);
+                            println!("{} : {}", pad_display(&t.name, 33), t.print_value);
                         }
                     }
                 }
@@ -660,11 +671,11 @@ fn run_stay_open(options: Options, show_groups: bool, short_names: bool, json: b
                             } else {
                                 for tag in &tags {
                                     if show_groups {
-                                        println!("[{}] {:<32} : {}", tag.group.family1, tag.name, tag.print_value);
+                                        println!("[{}] {} : {}", tag.group.family1, pad_display(&tag.name, 32), tag.print_value);
                                     } else if short_names {
-                                        println!("{:<32} : {}", tag.name, tag.print_value);
+                                        println!("{} : {}", pad_display(&tag.name, 32), tag.print_value);
                                     } else {
-                                        println!("{:<32} : {}", tag.description, tag.print_value);
+                                        println!("{} : {}", pad_display(&tag.description, 32), tag.print_value);
                                     }
                                 }
                             }
@@ -835,9 +846,9 @@ fn print_text_full(
                         String::new()
                     };
                     if show_groups {
-                        println!("{}[{}] {:<32} : {}", id_prefix, tag.group.family1, tag.name, val);
+                        println!("{}[{}] {} : {}", id_prefix, tag.group.family1, pad_display(&tag.name, 32), val);
                     } else if short_names {
-                        println!("{}{:<32} : {}", id_prefix, tag.name, val);
+                        println!("{}{} : {}", id_prefix, pad_display(&tag.name, 32), val);
                     } else {
                         // Apply i18n translation if -lang is set
                         let desc = if let Some(ref tr) = translations {
@@ -845,7 +856,7 @@ fn print_text_full(
                         } else {
                             &tag.description
                         };
-                        println!("{}{:<32} : {}", id_prefix, desc, val);
+                        println!("{}{} : {}", id_prefix, pad_display(desc, 32), val);
                     }
                 }
             }
@@ -1117,7 +1128,7 @@ fn print_verbose(et: &ExifTool, file: &str, level: u8) {
                     // -v1+: show raw values (numeric)
                     println!("  {} = {}", tag.name, tag.print_value);
                 } else {
-                    println!("{:<33}: {}", tag.name, tag.print_value);
+                    println!("{} : {}", pad_display(&tag.name, 33), tag.print_value);
                 }
             }
         } else {
@@ -1344,29 +1355,55 @@ fn escape_xml(s: &str) -> String {
 
 fn print_usage() {
     eprintln!("exiftool-rs {}", exiftool_rs::VERSION);
-    eprintln!("A Rust implementation of ExifTool - read/write metadata in files");
+    eprintln!("A Rust implementation of ExifTool — read/write metadata in 55+ file formats");
     eprintln!();
-    eprintln!("Usage: exiftool [OPTIONS] [-TAG[=VALUE]...] FILE [FILE...]");
+    eprintln!("Usage: exiftool-rs [OPTIONS] [-TAG[=VALUE]...] FILE [FILE...]");
     eprintln!();
     eprintln!("Read options:");
     eprintln!("  -j, -json             Output in JSON format");
     eprintln!("  -csv                  Output in CSV format");
     eprintln!("  -X, -xml              Output in XML/RDF format");
-    eprintln!("  -g, -group            Show group names");
+    eprintln!("  -args                 Output as -TAG=VALUE (for piping back)");
+    eprintln!("  -php                  Output as PHP array");
+    eprintln!("  -g, -G                Show group names");
     eprintln!("  -n, -num              Show numerical values (no print conversion)");
     eprintln!("  -s, -short            Show short tag names only");
     eprintln!("  -b, -binary           Output binary data (thumbnails, etc.)");
     eprintln!("  -r, -recurse          Recursively scan directories");
     eprintln!("  -ext EXT              Process only files with extension EXT");
+    eprintln!("  -ee                   Extract embedded data (video frame metadata)");
+    eprintln!("  -v[NUM]               Verbose output (0-5, shows file structure)");
+    eprintln!("  -D                    Show tag IDs in decimal");
+    eprintln!("  -H                    Show tag IDs in hexadecimal");
+    eprintln!("  -t, -tab              Tab-delimited output");
     eprintln!("  -TAG                  Extract specific tag(s)");
+    eprintln!("  --TAG                 Exclude specific tag(s)");
     eprintln!();
     eprintln!("Write options:");
     eprintln!("  -TAG=VALUE            Set tag to value");
     eprintln!("  -TAG=                 Delete tag");
     eprintln!("  -overwrite_original   Modify file in place");
+    eprintln!("  -tagsFromFile FILE    Copy tags from another file");
+    eprintln!();
+    eprintln!("Processing:");
+    eprintln!("  -diff FILE            Compare metadata with another file");
+    eprintln!("  -validate             Validate metadata structure");
+    eprintln!("  -scanForXMP           Scan entire file for XMP data");
+    eprintln!("  -htmlDump             Generate HTML hex dump of file structure");
+    eprintln!("  -progress             Show processing progress on stderr");
+    eprintln!();
+    eprintln!("Language:");
+    eprintln!("  -lang LANG            Set language for tag descriptions");
+    let langs: Vec<String> = exiftool_rs::i18n::AVAILABLE_LANGUAGES.iter()
+        .map(|(code, name)| format!("{} ({})", code, name))
+        .collect();
+    eprintln!("                        Supported: {}", langs.join(", "));
     eprintln!();
     eprintln!("Other:");
     eprintln!("  -stay_open True       Keep running, read commands from stdin");
-    eprintln!("  -v, -ver              Show version");
+    eprintln!("  -ver                  Show version");
     eprintln!("  -h, -help             Show this help");
+    eprintln!();
+    eprintln!("GUI (requires --features gui):");
+    eprintln!("  exiftool-rs-gui [FILE|DIR]   Open metadata viewer/editor");
 }
