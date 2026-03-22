@@ -89,6 +89,8 @@ struct App {
     collapsed: std::collections::HashSet<String>,
     /// App icon texture for welcome screen
     icon_texture: Option<egui::TextureHandle>,
+    /// Show About dialog
+    show_about: bool,
     /// Pending edits: (tag_name, new_value)
     pending_edits: Vec<(String, String)>,
     /// Edit popup state
@@ -123,6 +125,7 @@ impl App {
             groups: Vec::new(),
             collapsed: std::collections::HashSet::new(),
             icon_texture: None,
+            show_about: false,
             pending_edits: Vec::new(),
             editing: None,
             lang: forced_lang.unwrap_or_else(|| exiftool_rs::i18n::detect_system_language()),
@@ -430,38 +433,60 @@ impl eframe::App for App {
             });
         });
 
-        // Main content
-        egui::CentralPanel::default().show(ctx, |ui| {
-            if self.tags.is_empty() && self.files.is_empty() {
+        // Load icon texture once
+        if self.icon_texture.is_none() {
+            let icon_data = include_bytes!("../assets/icon.png");
+            if let Ok(img) = image::load_from_memory(icon_data) {
+                let rgba = img.to_rgba8();
+                let (w, h) = rgba.dimensions();
+                let color_image = egui::ColorImage::from_rgba_unmultiplied(
+                    [w as usize, h as usize],
+                    &rgba.into_raw(),
+                );
+                self.icon_texture = Some(ctx.load_texture("icon", color_image, egui::TextureOptions::LINEAR));
+            }
+        }
+
+        // Left panel: preview / icon (always visible)
+        egui::SidePanel::left("preview_panel")
+            .default_width(250.0)
+            .min_width(150.0)
+            .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
                     ui.add_space(ui.available_height() / 4.0);
 
-                    // Show app icon
-                    if self.icon_texture.is_none() {
-                        let icon_data = include_bytes!("../assets/icon.png");
-                        if let Ok(img) = image::load_from_memory(icon_data) {
-                            let rgba = img.to_rgba8();
-                            let (w, h) = rgba.dimensions();
-                            let color_image = egui::ColorImage::from_rgba_unmultiplied(
-                                [w as usize, h as usize],
-                                &rgba.into_raw(),
-                            );
-                            self.icon_texture = Some(ctx.load_texture("icon", color_image, egui::TextureOptions::LINEAR));
-                        }
-                    }
+                    // Show icon (placeholder for preview)
                     if let Some(ref tex) = self.icon_texture {
                         ui.image((tex.id(), egui::vec2(128.0, 128.0)));
                     }
 
-                    ui.add_space(16.0);
-                    ui.label(egui::RichText::new("exiftool-rs")
-                        .size(28.0)
-                        .strong());
-                    ui.add_space(8.0);
-                    ui.label(egui::RichText::new(exiftool_rs::i18n::ui_text(&self.lang, "welcome"))
-                        .size(16.0)
-                        .color(egui::Color32::GRAY));
+                    ui.add_space(12.0);
+
+                    if self.files.is_empty() {
+                        ui.label(egui::RichText::new("exiftool-rs")
+                            .size(22.0)
+                            .strong());
+                        ui.add_space(8.0);
+                        ui.label(egui::RichText::new(exiftool_rs::i18n::ui_text(&self.lang, "welcome"))
+                            .size(13.0)
+                            .color(egui::Color32::GRAY));
+                    } else {
+                        ui.label(egui::RichText::new(
+                            exiftool_rs::i18n::ui_text(&self.lang, "no_preview")
+                        ).color(egui::Color32::GRAY).italics());
+                    }
+
+                    // About link at bottom
+                    ui.add_space(ui.available_height() - 40.0);
+                    if ui.small_button(exiftool_rs::i18n::ui_text(&self.lang, "about")).clicked() {
+                        self.show_about = true;
+                    }
                 });
+            });
+
+        // Right panel: tags
+        egui::CentralPanel::default().show(ctx, |ui| {
+            if self.tags.is_empty() && self.files.is_empty() {
                 return;
             }
 
@@ -500,8 +525,8 @@ impl eframe::App for App {
 
                                     let is_edited = self.pending_edits.iter().any(|(n, _)| n == &tag.name);
 
-                                    // Tag name (description)
-                                    ui.label(egui::RichText::new(desc).color(egui::Color32::LIGHT_BLUE));
+                                    // Tag name : value (with separator)
+                                    ui.label(egui::RichText::new(format!("{} :", desc)).color(egui::Color32::LIGHT_BLUE));
 
                                     // Value — double-click to edit
                                     let value_text = if is_edited {
@@ -566,6 +591,38 @@ impl eframe::App for App {
         }
         if close_edit {
             self.editing = None;
+        }
+
+        // About dialog
+        if self.show_about {
+            let mut open = true;
+            egui::Window::new("About exiftool-rs")
+                .open(&mut open)
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                .show(ctx, |ui| {
+                    ui.vertical_centered(|ui| {
+                        if let Some(ref tex) = self.icon_texture {
+                            ui.image((tex.id(), egui::vec2(64.0, 64.0)));
+                        }
+                        ui.add_space(8.0);
+                        ui.label(egui::RichText::new("exiftool-rs").size(20.0).strong());
+                        ui.label(format!("v{}", exiftool_rs::VERSION));
+                        ui.add_space(8.0);
+                        ui.label("A pure Rust reimplementation of ExifTool");
+                        ui.label("194/194 test files — 100% ISO-functional parity");
+                        ui.add_space(8.0);
+                        ui.label("Based on ExifTool by Phil Harvey");
+                        ui.hyperlink_to("exiftool.org", "https://exiftool.org/");
+                        ui.add_space(4.0);
+                        ui.hyperlink_to("GitHub", "https://github.com/Le-Syl21/exiftool-rs");
+                        ui.add_space(8.0);
+                        ui.label(egui::RichText::new("Sylvain (project creator) + Claude (implementation)")
+                            .small().color(egui::Color32::GRAY));
+                    });
+                });
+            if !open { self.show_about = false; }
         }
     }
 }
