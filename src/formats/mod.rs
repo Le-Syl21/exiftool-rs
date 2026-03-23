@@ -44,6 +44,7 @@ pub mod postscript;
 pub mod psd;
 pub mod psp;
 pub mod quicktime;
+pub mod quicktime_stream;
 pub mod raf;
 pub mod red;
 pub mod riff;

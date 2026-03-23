@@ -1337,7 +1337,7 @@ impl ExifTool {
             | FileType::Cr3
             | FileType::F4v
             | FileType::Mqv
-            | FileType::Lrv => formats::quicktime::read_quicktime(data),
+            | FileType::Lrv => formats::quicktime::read_quicktime_with_ee(data, self.options.extract_embedded),
             FileType::Mkv | FileType::WebM => formats::matroska::read_matroska(data),
             FileType::Asf | FileType::Wmv | FileType::Wma => formats::asf::read_asf(data),
             FileType::Wtv => formats::wtv::read_wtv(data),

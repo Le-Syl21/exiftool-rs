@@ -40,9 +40,22 @@ struct QtState {
     /// JPEG track sample offset and size (for JpgFromRaw extraction)
     jpeg_offset: Option<u64>,
     jpeg_size: Option<u32>,
+    /// ExtractEmbedded level (0=off, 1=-ee, 2=-ee2, 3=-ee3)
+    extract_embedded: u8,
+    /// Completed tracks for timed metadata extraction
+    stream_tracks: Vec<super::quicktime_stream::TrackInfo>,
+    /// Current track being built (for stream extraction)
+    stream_current: super::quicktime_stream::TrackInfo,
+    /// stsd format for the current track (meta_format)
+    current_stsd_format: Option<String>,
 }
 
 pub fn read_quicktime(data: &[u8]) -> Result<Vec<Tag>> {
+    read_quicktime_with_ee(data, 0)
+}
+
+/// Read QuickTime metadata, optionally extracting embedded timed metadata.
+pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     if data.len() < 8 {
         return Err(Error::InvalidData("file too small for QuickTime".into()));
     }
@@ -91,6 +104,7 @@ pub fn read_quicktime(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Parse atom tree
     let mut state = QtState::default();
+    state.extract_embedded = extract_embedded;
     parse_atoms(data, 0, data.len(), &mut tags, &mut state, 0);
 
     // Compute composite AvgBitrate from MediaDataSize and Duration
@@ -173,6 +187,35 @@ pub fn read_quicktime(data: &[u8]) -> Result<Vec<Tag>> {
                 print_value: format!("(Binary data {} bytes, use -b option to extract)", jpg_sz),
                 priority: 0,
             });
+        }
+    }
+
+    // Extract timed metadata from stream tracks when -ee is used
+    if extract_embedded > 0 {
+        // Finalize the last track being built (if any)
+        if state.stream_current.handler_type != [0; 4]
+            || state.stream_current.meta_format.is_some()
+        {
+            state.stream_tracks.push(state.stream_current.clone());
+        }
+        if !state.stream_tracks.is_empty() {
+            let stream_tags = super::quicktime_stream::extract_stream_tags(
+                data,
+                &state.stream_tracks,
+                extract_embedded,
+            );
+            if !stream_tags.is_empty() {
+                tags.extend(stream_tags);
+            } else {
+                tags.push(mk(
+                    "Warning",
+                    "Warning",
+                    Value::String(
+                        "[minor] The ExtractEmbedded option may find more tags in the video data"
+                            .to_string(),
+                    ),
+                ));
+            }
         }
     }
 
@@ -346,6 +389,15 @@ fn parse_atoms(
                 parse_atoms(data, content_start, content_end, tags, state, depth + 1);
             }
             b"trak" => {
+                // Finalize previous stream track (if any) before starting a new one
+                if state.extract_embedded > 0
+                    && (state.stream_current.handler_type != [0; 4]
+                        || state.stream_current.meta_format.is_some())
+                {
+                    state.stream_tracks.push(state.stream_current.clone());
+                }
+                state.stream_current = super::quicktime_stream::TrackInfo::default();
+                state.current_stsd_format = None;
                 // Reset per-track CTMD flag when entering a new track
                 state.current_track_is_ctmd = false;
                 state.current_track_is_jpeg = false;
@@ -429,6 +481,16 @@ fn parse_atoms(
                         if state.current_track_is_jpeg && state.jpeg_offset.is_none() {
                             state.jpeg_offset = Some(offset);
                         }
+                        // Collect all chunk offsets for stream extraction
+                        if state.extract_embedded > 0 {
+                            let max_entries = entry_count.min((d.len() - 8) / 4);
+                            for i in 0..max_entries {
+                                let off = u32::from_be_bytes([
+                                    d[8 + i * 4], d[9 + i * 4], d[10 + i * 4], d[11 + i * 4],
+                                ]) as u64;
+                                state.stream_current.stco.push(off);
+                            }
+                        }
                     }
                 }
             }
@@ -445,6 +507,17 @@ fn parse_atoms(
                         if state.current_track_is_jpeg && state.jpeg_offset.is_none() {
                             state.jpeg_offset = Some(offset);
                         }
+                        // Collect all chunk offsets for stream extraction
+                        if state.extract_embedded > 0 {
+                            let max_entries = entry_count.min((d.len() - 8) / 8);
+                            for i in 0..max_entries {
+                                let off = u64::from_be_bytes([
+                                    d[8 + i * 8], d[9 + i * 8], d[10 + i * 8], d[11 + i * 8],
+                                    d[12 + i * 8], d[13 + i * 8], d[14 + i * 8], d[15 + i * 8],
+                                ]);
+                                state.stream_current.stco.push(off);
+                            }
+                        }
                     }
                 }
             }
@@ -453,6 +526,7 @@ fn parse_atoms(
                 let d = &data[content_start..content_end];
                 if d.len() >= 12 {
                     let sample_size = u32::from_be_bytes([d[4], d[5], d[6], d[7]]);
+                    let sample_count = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as usize;
                     let first_size = if sample_size > 0 {
                         sample_size
                     } else if d.len() >= 16 {
@@ -463,6 +537,40 @@ fn parse_atoms(
                     }
                     if state.current_track_is_jpeg && state.jpeg_size.is_none() && first_size > 0 {
                         state.jpeg_size = Some(first_size);
+                    }
+                    // Collect all sample sizes for stream extraction
+                    if state.extract_embedded > 0 {
+                        if sample_size > 0 {
+                            // All samples have the same size
+                            for _ in 0..sample_count {
+                                state.stream_current.stsz.push(sample_size);
+                            }
+                        } else {
+                            // Individual sizes at offset 12
+                            let max_samples = sample_count.min((d.len() - 12) / 4);
+                            for i in 0..max_samples {
+                                let sz = u32::from_be_bytes([
+                                    d[12 + i * 4], d[13 + i * 4], d[14 + i * 4], d[15 + i * 4],
+                                ]);
+                                state.stream_current.stsz.push(sz);
+                            }
+                        }
+                    }
+                }
+            }
+            // Sample-to-chunk table - used for stream extraction
+            b"stsc" => {
+                let d = &data[content_start..content_end];
+                if d.len() >= 8 {
+                    let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
+                    if state.extract_embedded > 0 && d.len() >= 8 + entry_count * 12 {
+                        for i in 0..entry_count {
+                            let off = 8 + i * 12;
+                            let first_chunk = u32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]]);
+                            let spc = u32::from_be_bytes([d[off + 4], d[off + 5], d[off + 6], d[off + 7]]);
+                            let desc_idx = u32::from_be_bytes([d[off + 8], d[off + 9], d[off + 10], d[off + 11]]);
+                            state.stream_current.stsc.push((first_chunk, spc, desc_idx));
+                        }
                     }
                 }
             }
@@ -1082,6 +1190,9 @@ fn parse_mdhd(
     }
 
     state.media_timescale = timescale;
+    if state.extract_embedded > 0 {
+        state.stream_current.media_timescale = timescale;
+    }
 
     if let Some(dt) = mac_epoch_to_string(create) {
         tags.push(mk(
@@ -1184,6 +1295,10 @@ fn parse_hdlr(
         // Skip 'alis' and 'url ' types (they don't set the main handler type)
         if htype_bytes != b"alis" && htype_bytes != b"url " {
             state.handler_type = [htype_bytes[0], htype_bytes[1], htype_bytes[2], htype_bytes[3]];
+            // Copy to stream current track
+            if state.extract_embedded > 0 {
+                state.stream_current.handler_type = state.handler_type;
+            }
         }
         let handler_name = match htype_bytes {
             b"alis" => "Alias Data",
@@ -1690,6 +1805,11 @@ fn parse_stsd(
         state.current_track_is_jpeg = true;
     }
 
+    // Record meta format for stream extraction
+    if state.extract_embedded > 0 && !format_str.is_empty() {
+        state.stream_current.meta_format = Some(format_str.clone());
+    }
+
     // Determine if audio or video based on handler type
     let handler = &state.handler_type;
 
@@ -1849,7 +1969,7 @@ fn parse_stts(
     start: usize,
     end: usize,
     tags: &mut Vec<Tag>,
-    state: &QtState,
+    state: &mut QtState,
 ) {
     let d = &data[start..end];
     if d.len() < 8 {
@@ -1858,6 +1978,19 @@ fn parse_stts(
     let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
     if entry_count == 0 || d.len() < 8 + entry_count * 8 {
         return;
+    }
+
+    // Collect stts entries for stream extraction
+    if state.extract_embedded > 0 {
+        for i in 0..entry_count {
+            let off = 8 + i * 8;
+            if off + 8 > d.len() {
+                break;
+            }
+            let count = u32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]]);
+            let delta = u32::from_be_bytes([d[off + 4], d[off + 5], d[off + 6], d[off + 7]]);
+            state.stream_current.stts.push((count, delta));
+        }
     }
 
     // For metadata tracks (handler "meta"), emit SampleTime and SampleDuration
