@@ -3,6 +3,8 @@
 //! Build: cargo build --release --features gui --bin exiftool-rs-gui
 //! Run:   ./target/release/exiftool-rs-gui [FILE_OR_DIR]
 
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 #[cfg(feature = "gui")]
 fn main() {
     use eframe::egui;
@@ -302,42 +304,18 @@ impl eframe::App for App {
             self.fonts_configured = true;
             let mut fonts = egui::FontDefinitions::default();
 
-            // CJK (Chinese, Japanese, Korean)
-            fonts.font_data.insert("noto_cjk".to_owned(),
-                std::sync::Arc::new(egui::FontData::from_static(
-                    include_bytes!("../assets/fonts/NotoSansCJKsc-Regular.otf")
-                )));
-            // Arabic
-            fonts.font_data.insert("noto_arabic".to_owned(),
-                std::sync::Arc::new(egui::FontData::from_static(
-                    include_bytes!("../assets/fonts/NotoSansArabic-Regular.ttf")
-                )));
-            // Devanagari (Hindi)
-            fonts.font_data.insert("noto_devanagari".to_owned(),
-                std::sync::Arc::new(egui::FontData::from_static(
-                    include_bytes!("../assets/fonts/NotoSansDevanagari-Regular.ttf")
-                )));
-            // Bengali
-            fonts.font_data.insert("noto_bengali".to_owned(),
-                std::sync::Arc::new(egui::FontData::from_static(
-                    include_bytes!("../assets/fonts/NotoSansBengali-Regular.ttf")
-                )));
-            // Korean
-            fonts.font_data.insert("noto_korean".to_owned(),
-                std::sync::Arc::new(egui::FontData::from_static(
-                    include_bytes!("../assets/fonts/NotoSansKR-Regular.ttf")
-                )));
-
-            // Add as fallback fonts after the default proportional font
-            for name in ["noto_cjk", "noto_korean", "noto_arabic", "noto_devanagari", "noto_bengali"] {
+            // Load Noto fonts from noto-fonts-dl (downloaded at build time, XZ-compressed)
+            for (name, data) in noto_fonts_dl::load_fonts() {
+                fonts.font_data.insert(name.clone(),
+                    std::sync::Arc::new(egui::FontData::from_owned(data.clone())));
                 fonts.families
                     .entry(egui::FontFamily::Proportional)
                     .or_default()
-                    .push(name.to_owned());
+                    .push(name.clone());
                 fonts.families
                     .entry(egui::FontFamily::Monospace)
                     .or_default()
-                    .push(name.to_owned());
+                    .push(name.clone());
             }
 
             ctx.set_fonts(fonts);
