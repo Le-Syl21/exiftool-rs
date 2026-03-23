@@ -46,7 +46,7 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
 
     if let Some(gen) = gen_table {
         for &(id, name) in gen {
-            if id == tag_id {
+            if id == tag_id as u32 {
                 return (name, name);
             }
         }

@@ -426,7 +426,7 @@ pub static GENERATED_EXIF_TAGS: &[GenTagInfo] = &[
 ];
 
 /// Canon MakerNotes tags: 1245
-pub static GENERATED_CANON_TAGS: &[(u16, &str)] = &[
+pub static GENERATED_CANON_TAGS: &[(u32, &str)] = &[
     (0x00, "FirmwareVersionLookAhead"),
     (0x00, "FirmwareVersionLookAhead"),
     (0x00, "FirmwareVersionLookAhead"),
@@ -1675,7 +1675,7 @@ pub static GENERATED_CANON_TAGS: &[(u16, &str)] = &[
 ];
 
 /// Nikon MakerNotes tags: 561
-pub static GENERATED_NIKON_TAGS: &[(u16, &str)] = &[
+pub static GENERATED_NIKON_TAGS: &[(u32, &str)] = &[
     (0x00, "LensDataVersion"),
     (0x00, "LensDataVersion"),
     (0x00, "LensDataVersion"),
@@ -2198,10 +2198,49 @@ pub static GENERATED_NIKON_TAGS: &[(u16, &str)] = &[
     (0x350b, "OrientationInfo"),
     (0x3693, "Rotation"),
     (0x801a, "Nikon_AVITags_0x801a"),
+    (0x110829a, "ExposureTime"),
+    (0x110829d, "FNumber"),
+    (0x1108822, "ExposureProgram"),
+    (0x1109204, "ExposureCompensation"),
+    (0x1109207, "MeteringMode"),
+    (0x110920a, "FocalLength"),
+    (0x110a432, "LensInfo"),
+    (0x1200000, "GPSVersionID"),
+    (0x1200001, "GPSLatitudeRef"),
+    (0x1200002, "GPSLatitude"),
+    (0x1200003, "GPSLongitudeRef"),
+    (0x1200004, "GPSLongitude"),
+    (0x1200005, "GPSAltitudeRef"),
+    (0x1200006, "GPSAltitude"),
+    (0x1200007, "GPSTimeStamp"),
+    (0x1200008, "GPSSatellites"),
+    (0x1200010, "GPSImgDirectionRef"),
+    (0x1200011, "GPSImgDirection"),
+    (0x1200012, "GPSMapDatum"),
+    (0x120001d, "GPSDateStamp"),
+    (0x2000001, "MakerNoteVersion"),
+    (0x2000007, "FocusMode"),
+    (0x200001b, "CropHiSpeed"),
+    (0x200001e, "ColorSpace"),
+    (0x200001f, "VRInfo"),
+    (0x2000024, "WorldTime"),
+    (0x2000025, "ISOInfo"),
+    (0x200002a, "VignetteControl"),
+    (0x200002c, "UnknownInfo"),
+    (0x2000032, "UnknownInfo2"),
+    (0x2000039, "LocationInfo"),
+    (0x200004e, "NikonSettings"),
+    (0x2000083, "LensType"),
+    (0x2000084, "Lens"),
+    (0x2000087, "FlashMode"),
+    (0x20000a7, "ShutterCount"),
+    (0x20000ab, "VariProgram"),
+    (0x20000b1, "HighISONoiseReduction"),
+    (0x20000c3, "BarometerInfo"),
 ];
 
 /// Sony MakerNotes tags: 973
-pub static GENERATED_SONY_TAGS: &[(u16, &str)] = &[
+pub static GENERATED_SONY_TAGS: &[(u32, &str)] = &[
     (0x00, "LensSpec"),
     (0x00, "LensSpec"),
     (0x00, "LensSpec"),
@@ -3178,7 +3217,7 @@ pub static GENERATED_SONY_TAGS: &[(u16, &str)] = &[
 ];
 
 /// Olympus MakerNotes tags: 420
-pub static GENERATED_OLYMPUS_TAGS: &[(u16, &str)] = &[
+pub static GENERATED_OLYMPUS_TAGS: &[(u32, &str)] = &[
     (0x0000, "MakerNoteVersion"),
     (0x000, "EquipmentVersion"),
     (0x000, "CameraSettingsVersion"),
@@ -3602,7 +3641,7 @@ pub static GENERATED_OLYMPUS_TAGS: &[(u16, &str)] = &[
 ];
 
 /// Pentax MakerNotes tags: 239
-pub static GENERATED_PENTAX_TAGS: &[(u16, &str)] = &[
+pub static GENERATED_PENTAX_TAGS: &[(u32, &str)] = &[
     (0x0000, "PentaxVersion"),
     (0x00, "AFPointsUnknown1"),
     (0x00, "PixelShiftResolution"),
@@ -3845,7 +3884,7 @@ pub static GENERATED_PENTAX_TAGS: &[(u16, &str)] = &[
 ];
 
 /// Panasonic MakerNotes tags: 230
-pub static GENERATED_PANASONIC_TAGS: &[(u16, &str)] = &[
+pub static GENERATED_PANASONIC_TAGS: &[(u32, &str)] = &[
     (0x00, "Make"),
     (0x01, "ImageQuality"),
     (0x02, "FirmwareVersion"),
@@ -4075,10 +4114,11 @@ pub static GENERATED_PANASONIC_TAGS: &[(u16, &str)] = &[
     (0x8009, "TextStamp"),
     (0x8010, "BabyAge"),
     (0x8012, "Transform"),
+    (0x200080, "ExifData"),
 ];
 
 /// FujiFilm MakerNotes tags: 138
-pub static GENERATED_FUJIFILM_TAGS: &[(u16, &str)] = &[
+pub static GENERATED_FUJIFILM_TAGS: &[(u32, &str)] = &[
     (0x0, "Version"),
     (0x00, "Make"),
     (0x0010, "InternalSerialNumber"),
@@ -4220,7 +4260,7 @@ pub static GENERATED_FUJIFILM_TAGS: &[(u16, &str)] = &[
 ];
 
 /// Samsung MakerNotes tags: 69
-pub static GENERATED_SAMSUNG_TAGS: &[(u16, &str)] = &[
+pub static GENERATED_SAMSUNG_TAGS: &[(u32, &str)] = &[
     (0x00, "Make"),
     (0x00, "Make"),
     (0x0001, "MakerNoteVersion"),
