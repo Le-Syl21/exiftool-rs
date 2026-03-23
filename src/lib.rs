@@ -3,7 +3,7 @@
 //! A pure Rust reimplementation of [ExifTool](https://exiftool.org/) for reading, writing,
 //! and editing metadata in image, audio, video, and document files.
 //!
-//! **194/194 test files (100%)** produce identical tag names as Perl ExifTool v13.52.
+//! **194/194 test files (100%)** produce identical tag names as Perl ExifTool v13.53.
 //! Over 11,600 tags verified across 55+ file formats.
 //!
 //! ## Quick Start

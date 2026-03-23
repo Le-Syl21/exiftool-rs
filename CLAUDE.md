@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-exiftool-rs is a Rust reimplementation of Perl ExifTool v13.52.
+exiftool-rs is a Rust reimplementation of Perl ExifTool v13.53.
 The Perl source is at `../exiftool/` for reference.
 
 ## Architecture

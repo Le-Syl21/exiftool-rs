@@ -2,7 +2,7 @@
 # exiftool-rs ISO-Functional Test Suite
 #
 # Compares exiftool-rs tag NAMES against stored reference lists
-# generated from Perl ExifTool v13.52.
+# generated from Perl ExifTool v13.53.
 #
 # No Perl ExifTool needed — reference files are in tests/expected/
 # Tags are compared by NAME only (not values). Missing = failure, extras = OK.

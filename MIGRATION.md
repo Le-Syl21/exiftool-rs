@@ -5,7 +5,7 @@ and exiftool-rs for developers migrating their applications.
 
 ## Overview
 
-exiftool-rs is a Rust reimplementation of [ExifTool](https://exiftool.org/) v13.52.
+exiftool-rs is a Rust reimplementation of [ExifTool](https://exiftool.org/) v13.53.
 It aims for iso-functionality while being **38-61x faster** and memory-safe.
 
 ---
