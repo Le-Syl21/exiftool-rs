@@ -1335,6 +1335,7 @@ impl ExifTool {
             | FileType::Heif
             | FileType::Avif
             | FileType::Cr3
+            | FileType::Crm
             | FileType::F4v
             | FileType::Mqv
             | FileType::Lrv => formats::quicktime::read_quicktime_with_ee(data, self.options.extract_embedded),
@@ -1430,9 +1431,11 @@ impl ExifTool {
             FileType::Bpg => formats::misc::read_bpg(data),
             FileType::Pcx => formats::misc::read_pcx(data),
             FileType::Pict => formats::misc::read_pict(data),
+            FileType::Mpeg => formats::mpeg::read_mpeg(data),
             FileType::M2ts => formats::misc::read_m2ts(data, self.options.extract_embedded),
             FileType::Gzip => formats::misc::read_gzip(data),
             FileType::Rar => formats::misc::read_rar(data),
+            FileType::SevenZ => formats::misc::read_7z(data),
             FileType::Dss => formats::misc::read_dss(data),
             FileType::Moi => formats::misc::read_moi(data),
             FileType::MacOs => formats::misc::read_macos(data),
@@ -1465,6 +1468,9 @@ impl ExifTool {
             FileType::PortableFloatMap => formats::misc::read_pfm(data),
             FileType::Ods | FileType::Odt | FileType::Odp | FileType::Odg |
             FileType::Odf | FileType::Odb | FileType::Odi | FileType::Odc => formats::zip::read_zip(data),
+            FileType::Lif => formats::misc::read_lif(data),
+            FileType::Rwz => formats::misc::read_rawzor(data),
+            FileType::Jxr => formats::misc::read_jxr(data),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }
@@ -1537,6 +1543,7 @@ impl ExifTool {
             "ppt" | "fpx" => formats::flashpix::read_fpx(data).or_else(|_| Ok(Vec::new())),
             "fpf" => formats::flir_fpf::read_fpf(data).or_else(|_| Ok(Vec::new())),
             "itc" => formats::misc::read_itc(data).or_else(|_| Ok(Vec::new())),
+            "mpg" | "mpeg" | "m1v" | "m2v" | "mpv" => formats::mpeg::read_mpeg(data).or_else(|_| Ok(Vec::new())),
             "dv" => formats::dv::read_dv(data, data.len() as u64).or_else(|_| Ok(Vec::new())),
             "czi" => formats::misc::read_czi(data).or_else(|_| Ok(Vec::new())),
             "miff" => formats::miff::read_miff(data).or_else(|_| Ok(Vec::new())),

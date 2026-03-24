@@ -3785,6 +3785,627 @@ fn read_rar4_entries(data: &[u8], tags: &mut Vec<Tag>) {
 }
 
 // ============================================================================
+// 7-Zip (7Z) archive
+// ============================================================================
+
+pub fn read_7z(data: &[u8]) -> Result<Vec<Tag>> {
+    // 7z signature: 37 7A BC AF 27 1C
+    if data.len() < 32 || !data.starts_with(b"7z\xBC\xAF\x27\x1C") {
+        return Err(Error::InvalidData("not a 7z file".into()));
+    }
+
+    let mut tags = Vec::new();
+
+    // Version: bytes 6-7 (major, minor)
+    let major = data[6];
+    let minor = data[7];
+    tags.push(mktag(
+        "ZIP",
+        "FileVersion",
+        "File Version",
+        Value::String(format!("7z v{}.{:02}", major, minor)),
+    ));
+
+    // Start Header: skip CRC (4 bytes at offset 8)
+    // NextHeaderOffset (8 bytes at offset 12), NextHeaderSize (8 bytes at offset 20)
+    // NextHeaderCRC (4 bytes at offset 28)
+    let next_header_offset = u64::from_le_bytes([
+        data[12], data[13], data[14], data[15],
+        data[16], data[17], data[18], data[19],
+    ]) as usize;
+    let next_header_size = u64::from_le_bytes([
+        data[20], data[21], data[22], data[23],
+        data[24], data[25], data[26], data[27],
+    ]) as usize;
+
+    // Next header starts after the 32-byte start header
+    let header_start = 32 + next_header_offset;
+    if header_start >= data.len() || header_start + next_header_size > data.len() {
+        return Ok(tags);
+    }
+
+    let header = &data[header_start..header_start + next_header_size];
+    if header.is_empty() {
+        return Ok(tags);
+    }
+
+    let pid = header[0];
+    if pid == 0x01 {
+        // Normal (uncompressed) header — parse file info
+        sevenz_extract_header(&header[1..], &mut tags);
+    }
+    // pid == 0x17 (23) = encoded header — requires LZMA decompression, skip
+
+    Ok(tags)
+}
+
+/// Read a 7z variable-length encoded uint64.
+/// Returns (value, bytes_consumed) or None if data is insufficient.
+fn sevenz_read_uint64(data: &[u8]) -> Option<(u64, usize)> {
+    if data.is_empty() {
+        return None;
+    }
+    let b = data[0];
+    if b == 0xFF {
+        // Full 8-byte value follows
+        if data.len() < 9 {
+            return None;
+        }
+        let v = u64::from_le_bytes([
+            data[1], data[2], data[3], data[4],
+            data[5], data[6], data[7], data[8],
+        ]);
+        return Some((v, 9));
+    }
+
+    let thresholds: &[u8] = &[0x7F, 0xBF, 0xDF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE];
+    let mut mask: u8 = 0x80;
+    let mut extra_bytes = 0usize;
+
+    for (i, &threshold) in thresholds.iter().enumerate() {
+        if b <= threshold {
+            extra_bytes = i;
+            break;
+        }
+        mask >>= 1;
+        if i == thresholds.len() - 1 {
+            extra_bytes = 8;
+        }
+    }
+
+    if extra_bytes == 0 {
+        return Some(((b & (mask - 1)) as u64, 1));
+    }
+
+    if data.len() < 1 + extra_bytes {
+        return None;
+    }
+
+    let mut buf = [0u8; 8];
+    buf[..extra_bytes].copy_from_slice(&data[1..1 + extra_bytes]);
+    let value = u64::from_le_bytes(buf);
+    let high = (b & mask.wrapping_sub(1)) as u64;
+    Some((value + (high << (extra_bytes * 8)), 1 + extra_bytes))
+}
+
+/// Read booleans from 7z bitfield.
+fn sevenz_read_booleans(data: &[u8], pos: &mut usize, count: usize, check_all: bool) -> Vec<bool> {
+    let mut result = Vec::with_capacity(count);
+    if check_all {
+        if *pos >= data.len() {
+            return vec![false; count];
+        }
+        let all_defined = data[*pos];
+        *pos += 1;
+        if all_defined != 0 {
+            return vec![true; count];
+        }
+    }
+
+    let mut b = 0u8;
+    let mut mask = 0u8;
+    for _ in 0..count {
+        if mask == 0 {
+            if *pos >= data.len() {
+                result.push(false);
+                continue;
+            }
+            b = data[*pos];
+            *pos += 1;
+            mask = 0x80;
+        }
+        result.push((b & mask) != 0);
+        mask >>= 1;
+    }
+    result
+}
+
+/// Skip through the streams info section (PackInfo + UnpackInfo + SubstreamsInfo).
+fn sevenz_skip_streams_info(data: &[u8], pos: &mut usize) -> bool {
+    // We need to skip the entire StreamsInfo block to get to FilesInfo.
+    // StreamsInfo = PackInfo? UnpackInfo? SubstreamsInfo? End
+    if *pos >= data.len() {
+        return false;
+    }
+    let mut pid = data[*pos];
+    *pos += 1;
+
+    // PackInfo (id=6)
+    if pid == 0x06 {
+        if !sevenz_skip_pack_info(data, pos) {
+            return false;
+        }
+        if *pos >= data.len() {
+            return false;
+        }
+        pid = data[*pos];
+        *pos += 1;
+    }
+
+    // UnpackInfo (id=7)
+    if pid == 0x07 {
+        if !sevenz_skip_unpack_info(data, pos) {
+            return false;
+        }
+        if *pos >= data.len() {
+            return false;
+        }
+        pid = data[*pos];
+        *pos += 1;
+    }
+
+    // SubstreamsInfo (id=8)
+    if pid == 0x08 {
+        if !sevenz_skip_to_end(data, pos) {
+            return false;
+        }
+        if *pos >= data.len() {
+            return false;
+        }
+        pid = data[*pos];
+        *pos += 1;
+    }
+
+    pid == 0x00 // End marker
+}
+
+/// Skip PackInfo section.
+fn sevenz_skip_pack_info(data: &[u8], pos: &mut usize) -> bool {
+    // packPos (uint64)
+    if let Some((_, n)) = sevenz_read_uint64(&data[*pos..]) {
+        *pos += n;
+    } else {
+        return false;
+    }
+    // numPackStreams (uint64)
+    let num_streams = if let Some((v, n)) = sevenz_read_uint64(&data[*pos..]) {
+        *pos += n;
+        v as usize
+    } else {
+        return false;
+    };
+
+    // Properties until End
+    loop {
+        if *pos >= data.len() {
+            return false;
+        }
+        let pid = data[*pos];
+        *pos += 1;
+        if pid == 0x00 {
+            return true;
+        }
+        if pid == 0x09 {
+            // Size: read numStreams uint64 values
+            for _ in 0..num_streams {
+                if let Some((_, n)) = sevenz_read_uint64(&data[*pos..]) {
+                    *pos += n;
+                } else {
+                    return false;
+                }
+            }
+        } else if pid == 0x0A {
+            // CRC
+            let defined = sevenz_read_booleans(data, pos, num_streams, true);
+            for d in &defined {
+                if *d {
+                    *pos += 4; // uint32 CRC
+                }
+            }
+        } else {
+            return false;
+        }
+    }
+}
+
+/// Skip UnpackInfo section.
+fn sevenz_skip_unpack_info(data: &[u8], pos: &mut usize) -> bool {
+    if *pos >= data.len() {
+        return false;
+    }
+    let pid = data[*pos];
+    *pos += 1;
+    if pid != 0x0B {
+        // Folder id expected
+        return false;
+    }
+
+    let num_folders = if let Some((v, n)) = sevenz_read_uint64(&data[*pos..]) {
+        *pos += n;
+        v as usize
+    } else {
+        return false;
+    };
+
+    if *pos >= data.len() {
+        return false;
+    }
+    let external = data[*pos];
+    *pos += 1;
+
+    if external != 0 {
+        return false; // External data not supported
+    }
+
+    // Read folders to count total output streams
+    let mut total_out = 0usize;
+    for _ in 0..num_folders {
+        let out = sevenz_skip_folder(data, pos);
+        if out == 0 {
+            return false;
+        }
+        total_out += out;
+    }
+
+    // CodersUnpackSize (id=0x0C)
+    if *pos >= data.len() {
+        return false;
+    }
+    let pid2 = data[*pos];
+    *pos += 1;
+    if pid2 != 0x0C {
+        return false;
+    }
+    // Read total_out uint64 values
+    for _ in 0..total_out {
+        if let Some((_, n)) = sevenz_read_uint64(&data[*pos..]) {
+            *pos += n;
+        } else {
+            return false;
+        }
+    }
+
+    // Optional CRC + End
+    loop {
+        if *pos >= data.len() {
+            return false;
+        }
+        let pid3 = data[*pos];
+        *pos += 1;
+        if pid3 == 0x00 {
+            return true;
+        }
+        if pid3 == 0x0A {
+            // CRC
+            let defined = sevenz_read_booleans(data, pos, num_folders, true);
+            for d in &defined {
+                if *d {
+                    *pos += 4;
+                }
+            }
+        } else {
+            return false;
+        }
+    }
+}
+
+/// Skip a folder definition, return total output stream count (0 on error).
+fn sevenz_skip_folder(data: &[u8], pos: &mut usize) -> usize {
+    let num_coders = if let Some((v, n)) = sevenz_read_uint64(&data[*pos..]) {
+        *pos += n;
+        v as usize
+    } else {
+        return 0;
+    };
+
+    let mut total_in = 0usize;
+    let mut total_out = 0usize;
+
+    for _ in 0..num_coders {
+        if *pos >= data.len() {
+            return 0;
+        }
+        let b = data[*pos];
+        *pos += 1;
+        let method_size = (b & 0x0F) as usize;
+        let is_complex = (b & 0x10) != 0;
+        let has_attributes = (b & 0x20) != 0;
+
+        *pos += method_size; // skip method ID
+
+        let (num_in, num_out) = if is_complex {
+            let ni = if let Some((v, n)) = sevenz_read_uint64(&data[*pos..]) {
+                *pos += n;
+                v as usize
+            } else {
+                return 0;
+            };
+            let no = if let Some((v, n)) = sevenz_read_uint64(&data[*pos..]) {
+                *pos += n;
+                v as usize
+            } else {
+                return 0;
+            };
+            (ni, no)
+        } else {
+            (1, 1)
+        };
+        total_in += num_in;
+        total_out += num_out;
+
+        if has_attributes {
+            let prop_len = if let Some((v, n)) = sevenz_read_uint64(&data[*pos..]) {
+                *pos += n;
+                v as usize
+            } else {
+                return 0;
+            };
+            *pos += prop_len;
+        }
+    }
+
+    // BindPairs
+    let num_bind_pairs = total_out.saturating_sub(1);
+    for _ in 0..num_bind_pairs {
+        // Two uint64 per bind pair
+        for _ in 0..2 {
+            if let Some((_, n)) = sevenz_read_uint64(&data[*pos..]) {
+                *pos += n;
+            } else {
+                return 0;
+            }
+        }
+    }
+
+    // PackedIndices
+    let num_packed = total_in.saturating_sub(num_bind_pairs);
+    if num_packed != 1 {
+        for _ in 0..num_packed {
+            if let Some((_, n)) = sevenz_read_uint64(&data[*pos..]) {
+                *pos += n;
+            } else {
+                return 0;
+            }
+        }
+    }
+
+    total_out
+}
+
+/// Skip properties until End marker (0x00).
+fn sevenz_skip_to_end(data: &[u8], pos: &mut usize) -> bool {
+    loop {
+        if *pos >= data.len() {
+            return false;
+        }
+        let pid = data[*pos];
+        *pos += 1;
+        if pid == 0x00 {
+            return true;
+        }
+        // For SubstreamsInfo properties (13=NumUnpackStream, 9=Size, 10=CRC),
+        // we don't know the exact count, so skip by reading the remaining as
+        // generic property-id + data. Since these use variable-length encoding,
+        // we skip by scanning for the End marker (0x00) after the last known property.
+        // Simplified: skip entire remaining sub-block by scanning for 0x00 end.
+        // This works because the format guarantees an End marker.
+
+        // For known property IDs, try to skip properly
+        if pid == 0x0D || pid == 0x09 || pid == 0x0A {
+            // These have variable-length content we can't easily skip without
+            // knowing the folder count. Use a simple heuristic: scan for End marker.
+            // Back up one byte and scan forward.
+            *pos -= 1;
+            // Scan forward for End marker (0x00) at a plausible position
+            while *pos < data.len() {
+                if data[*pos] == 0x00 {
+                    *pos += 1;
+                    return true;
+                }
+                *pos += 1;
+            }
+            return false;
+        }
+
+        return false;
+    }
+}
+
+/// Extract header info from a normal (uncompressed) 7z header.
+fn sevenz_extract_header(data: &[u8], tags: &mut Vec<Tag>) {
+    let mut pos = 0;
+    if pos >= data.len() {
+        return;
+    }
+
+    let mut pid = data[pos];
+    pos += 1;
+
+    // MainStreamsInfo (id=4)
+    if pid == 0x04 {
+        if !sevenz_skip_streams_info(data, &mut pos) {
+            return;
+        }
+        if pos >= data.len() {
+            return;
+        }
+        pid = data[pos];
+        pos += 1;
+    }
+
+    // FilesInfo (id=5)
+    if pid == 0x05 {
+        sevenz_read_files_info(data, &mut pos, tags);
+    }
+}
+
+/// Read the FilesInfo section and extract file names and modify dates.
+fn sevenz_read_files_info(data: &[u8], pos: &mut usize, tags: &mut Vec<Tag>) {
+    let num_files = if let Some((v, n)) = sevenz_read_uint64(&data[*pos..]) {
+        *pos += n;
+        v as usize
+    } else {
+        return;
+    };
+
+    if num_files == 0 || num_files > 100_000 {
+        return;
+    }
+
+    let mut filenames: Vec<Option<String>> = vec![None; num_files];
+    let mut modify_dates: Vec<Option<i64>> = vec![None; num_files];
+
+    loop {
+        if *pos >= data.len() {
+            break;
+        }
+        let prop = data[*pos];
+        *pos += 1;
+
+        if prop == 0x00 {
+            // End
+            break;
+        }
+
+        let size = if let Some((v, n)) = sevenz_read_uint64(&data[*pos..]) {
+            *pos += n;
+            v as usize
+        } else {
+            break;
+        };
+
+        if *pos + size > data.len() {
+            break;
+        }
+
+        let prop_data = &data[*pos..*pos + size];
+
+        match prop {
+            0x11 => {
+                // Names (property 17)
+                sevenz_read_names(prop_data, num_files, &mut filenames);
+            }
+            0x14 => {
+                // LastWriteTime (property 20)
+                sevenz_read_times(prop_data, num_files, &mut modify_dates);
+            }
+            0x19 => {
+                // Dummy (property 25) — skip
+            }
+            _ => {
+                // Skip other properties (EmptyStream=14, EmptyFile=15, Attributes=21, etc.)
+            }
+        }
+
+        *pos += size;
+    }
+
+    // Emit tags per file (using doc_num like Perl ExifTool)
+    let mut doc_num = 0u32;
+    for i in 0..num_files {
+        let has_name = filenames[i].is_some();
+        let has_date = modify_dates[i].is_some();
+        if !has_name && !has_date {
+            continue;
+        }
+        doc_num += 1;
+
+        if let Some(ref name) = filenames[i] {
+            let mut tag = mktag("ZIP", "ArchivedFileName", "Archived File Name", Value::String(name.clone()));
+            tag.group.family2 = "Other".into();
+            if doc_num > 1 {
+                tag.name = format!("ArchivedFileName ({})", doc_num);
+            }
+            tags.push(tag);
+        }
+        if let Some(unix_secs) = modify_dates[i] {
+            let (y, mo, d, h, m, s) = unix_to_datetime(unix_secs);
+            let dt_str = format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}Z", y, mo, d, h, m, s);
+            let mut tag = mktag("ZIP", "ModifyDate", "Modify Date", Value::String(dt_str));
+            tag.group.family2 = "Time".into();
+            if doc_num > 1 {
+                tag.name = format!("ModifyDate ({})", doc_num);
+            }
+            tags.push(tag);
+        }
+    }
+}
+
+/// Read UTF-16LE file names from the Names property.
+fn sevenz_read_names(data: &[u8], num_files: usize, filenames: &mut [Option<String>]) {
+    if data.is_empty() {
+        return;
+    }
+    // First byte: external flag
+    let external = data[0];
+    if external != 0 {
+        return;
+    }
+
+    let mut pos = 1;
+    for i in 0..num_files {
+        let mut utf16_units = Vec::new();
+        loop {
+            if pos + 2 > data.len() {
+                return;
+            }
+            let ch = u16::from_le_bytes([data[pos], data[pos + 1]]);
+            pos += 2;
+            if ch == 0 {
+                break;
+            }
+            utf16_units.push(ch);
+        }
+        if !utf16_units.is_empty() {
+            filenames[i] = Some(String::from_utf16_lossy(&utf16_units));
+        }
+    }
+}
+
+/// Read Windows FILETIME timestamps from a Times property.
+fn sevenz_read_times(data: &[u8], num_files: usize, times: &mut [Option<i64>]) {
+    let mut pos = 0;
+    let defined = sevenz_read_booleans(data, &mut pos, num_files, true);
+
+    if pos >= data.len() {
+        return;
+    }
+    let external = data[pos];
+    pos += 1;
+    if external != 0 {
+        return;
+    }
+
+    for i in 0..num_files {
+        if i < defined.len() && defined[i] {
+            if pos + 8 > data.len() {
+                return;
+            }
+            let filetime = u64::from_le_bytes([
+                data[pos], data[pos + 1], data[pos + 2], data[pos + 3],
+                data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7],
+            ]);
+            pos += 8;
+            // Convert Windows FILETIME to Unix timestamp
+            // FILETIME is 100-nanosecond intervals since 1601-01-01
+            // Integer division for exact seconds
+            let unix_secs = (filetime / 10_000_000).wrapping_sub(11_644_473_600) as i64;
+            times[i] = Some(unix_secs);
+        }
+    }
+}
+
+// ============================================================================
 // SVG (via XMP)
 // ============================================================================
 
@@ -7403,6 +8024,218 @@ fn mxf_decode_component_def(val: &[u8]) -> String {
         "060e2b34040101010103020400000000" => "Descriptive Metadata Track".to_string(),
         _ => ul,
     }
+}
+
+// ============================================================================
+// LIF (Leica Image Format)
+// XML-based metadata from Leica microscope images.
+// Header: 0x70 0x00 0x00 0x00 + LE32 chunk_size + 0x2A + LE32 xml_char_count + UTF-16LE XML
+// ============================================================================
+
+pub fn read_lif(data: &[u8]) -> Result<Vec<Tag>> {
+    // Validate LIF magic: 0x70 0x00 0x00 0x00 ... 0x2A ... '<' 0x00
+    if data.len() < 15
+        || data[0] != 0x70 || data[1] != 0x00 || data[2] != 0x00 || data[3] != 0x00
+        || data[8] != 0x2A
+        || data[13] != b'<' || data[14] != 0x00
+    {
+        return Err(Error::InvalidData("not a LIF file".into()));
+    }
+
+    let chunk_size = u32::from_le_bytes([data[4], data[5], data[6], data[7]]) as usize;
+    let xml_char_count = u32::from_le_bytes([data[9], data[10], data[11], data[12]]) as usize;
+    let xml_byte_len = xml_char_count * 2; // UTF-16LE
+
+    if chunk_size > 100_000_000 {
+        return Err(Error::InvalidData("LIF XML block too large".into()));
+    }
+    if xml_byte_len > chunk_size {
+        return Err(Error::InvalidData("corrupted LIF XML block".into()));
+    }
+
+    // XML data starts at offset 13 (after the 0x2A byte and 4-byte length, but Perl seeks back 2 bytes
+    // from position 15 to read from offset 13)
+    let xml_start = 13;
+    let xml_end = xml_start + xml_byte_len;
+    if xml_end > data.len() {
+        return Err(Error::InvalidData("truncated LIF XML block".into()));
+    }
+
+    // Decode UTF-16LE to UTF-8
+    let utf16_data = &data[xml_start..xml_end];
+    let (decoded, _, _) = encoding_rs::UTF_16LE.decode(utf16_data);
+    let xml_str = decoded.into_owned();
+
+    // Extract XMP-style tags from the XML
+    let mut tags = Vec::new();
+
+    // Try to parse with XmpReader first (handles RDF/XMP fragments)
+    if let Ok(xmp_tags) = XmpReader::read(xml_str.as_bytes()) {
+        if !xmp_tags.is_empty() {
+            tags.extend(xmp_tags);
+        }
+    }
+
+    // Also extract key attributes from the LIF XML structure directly
+    // LIF XML has elements like <Element Name="..." UniqueID="..."> with
+    // <ChannelDescription>, <DimensionDescription>, etc.
+    lif_extract_xml_tags(&xml_str, &mut tags);
+
+    Ok(tags)
+}
+
+/// Extract key tags from LIF XML structure.
+fn lif_extract_xml_tags(xml: &str, tags: &mut Vec<Tag>) {
+    use xml::reader::{EventReader, XmlEvent};
+
+    let reader = EventReader::from_str(xml);
+    let mut element_names: Vec<String> = Vec::new();
+
+    for event in reader {
+        match event {
+            Ok(XmlEvent::StartElement { name, attributes, .. }) => {
+                let local = name.local_name.clone();
+
+                // Collect attributes of interest
+                for attr in &attributes {
+                    let attr_name = &attr.name.local_name;
+                    let attr_val = &attr.value;
+                    if attr_val.is_empty() { continue; }
+
+                    match (local.as_str(), attr_name.as_str()) {
+                        ("Element", "Name") => {
+                            element_names.push(attr_val.clone());
+                            tags.push(mktag("LIF", "ElementName", "Element Name", Value::String(attr_val.clone())));
+                        }
+                        ("DimensionDescription", "DimID") => {
+                            tags.push(mktag("LIF", "DimensionID", "Dimension ID", Value::String(attr_val.clone())));
+                        }
+                        ("DimensionDescription", "NumberOfElements") => {
+                            tags.push(mktag("LIF", "NumberOfElements", "Number Of Elements", Value::String(attr_val.clone())));
+                        }
+                        ("DimensionDescription", "Length") => {
+                            tags.push(mktag("LIF", "DimensionLength", "Dimension Length", Value::String(attr_val.clone())));
+                        }
+                        ("DimensionDescription", "Unit") => {
+                            tags.push(mktag("LIF", "DimensionUnit", "Dimension Unit", Value::String(attr_val.clone())));
+                        }
+                        ("DimensionDescription", "Origin") => {
+                            tags.push(mktag("LIF", "DimensionOrigin", "Dimension Origin", Value::String(attr_val.clone())));
+                        }
+                        ("ChannelDescription", "LUTName") => {
+                            tags.push(mktag("LIF", "ChannelLUTName", "Channel LUT Name", Value::String(attr_val.clone())));
+                        }
+                        ("ChannelDescription", "Resolution") => {
+                            tags.push(mktag("LIF", "ChannelResolution", "Channel Resolution", Value::String(attr_val.clone())));
+                        }
+                        ("ChannelDescription", "BytesInc") => {
+                            tags.push(mktag("LIF", "ChannelBytesInc", "Channel Bytes Inc", Value::String(attr_val.clone())));
+                        }
+                        ("TimeStampList", "NumberOfTimeStamps") => {
+                            tags.push(mktag("LIF", "NumberOfTimeStamps", "Number Of Time Stamps", Value::String(attr_val.clone())));
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            Ok(XmlEvent::EndElement { .. }) => {}
+            Err(_) => break,
+            _ => {}
+        }
+    }
+}
+
+// ============================================================================
+// Rawzor (.rwz) - Compressed RAW wrapper
+// Extracts header-level metadata. The embedded image metadata requires bzip2
+// decompression which is not currently supported.
+// ============================================================================
+
+pub fn read_rawzor(data: &[u8]) -> Result<Vec<Tag>> {
+    // Header:
+    //  0: "rawzor" (6 bytes)
+    //  6: int16u Required SDK version
+    //  8: int16u Creator SDK version
+    // 10: int64u RWZ file size
+    // 18: int64u Original file size
+    // 26: reserved (12 bytes)
+    // 38: int64u metadata offset
+    if data.len() < 46 || !data.starts_with(b"rawzor") {
+        return Err(Error::InvalidData("not a Rawzor file".into()));
+    }
+
+    let mut tags = Vec::new();
+
+    let req_vers = u16::from_le_bytes([data[6], data[7]]);
+    let creator_vers = u16::from_le_bytes([data[8], data[9]]);
+    let rwz_size = u64::from_le_bytes([data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17]]);
+    let orig_size = u64::from_le_bytes([data[18], data[19], data[20], data[21], data[22], data[23], data[24], data[25]]);
+
+    tags.push(mktag(
+        "Rawzor", "RawzorRequiredVersion", "Rawzor Required Version",
+        Value::String(format!("{:.2}", req_vers as f64 / 100.0)),
+    ));
+    tags.push(mktag(
+        "Rawzor", "RawzorCreatorVersion", "Rawzor Creator Version",
+        Value::String(format!("{:.2}", creator_vers as f64 / 100.0)),
+    ));
+    tags.push(mktag(
+        "Rawzor", "OriginalFileSize", "Original File Size",
+        Value::String(orig_size.to_string()),
+    ));
+    if rwz_size > 0 {
+        let factor = orig_size as f64 / rwz_size as f64;
+        tags.push(mktag(
+            "Rawzor", "CompressionFactor", "Compression Factor",
+            Value::String(format!("{:.2}", factor)),
+        ));
+    }
+
+    // Check version - max supported is 1.99 (199)
+    if req_vers > 199 {
+        // Version too new, just return what we have
+        return Ok(tags);
+    }
+
+    // Metadata decompression requires bzip2 which is not available.
+    // The Perl ExifTool issues a warning in this case too.
+    // We still return the header-level tags.
+
+    Ok(tags)
+}
+
+// ============================================================================
+// JPEG XR / HD Photo (.jxr, .hdp, .wdp)
+// TIFF-based format with identifier byte 0xBC instead of standard 0x2A.
+// Route to standard TIFF reader since the IFD structure is compatible.
+// ============================================================================
+
+pub fn read_jxr(data: &[u8]) -> Result<Vec<Tag>> {
+    // JXR is TIFF-based: "II" + 0xBC byte at offset 2
+    // The TIFF reader handles IFD parsing; JXR uses standard EXIF IFD tags
+    // plus HD Photo-specific tags (0xBC01-0xBC82) which are in the EXIF tag tables.
+    if data.len() < 8
+        || data[0] != b'I' || data[1] != b'I'
+        || (data[2] & 0xFF) != 0xBC
+    {
+        return Err(Error::InvalidData("not a JPEG XR file".into()));
+    }
+
+    // Check version byte (offset 3)
+    if data[3] > 1 {
+        return Err(Error::InvalidData(format!(
+            "JPEG XR version {} not supported", data[3]
+        )));
+    }
+
+    // JXR uses TIFF IFD structure but with magic 0xBC instead of 0x2A (42).
+    // The TIFF reader only accepts magic 42/43/0x55. Patch the magic bytes
+    // to standard TIFF so the reader can parse the IFDs.
+    let mut patched = data.to_vec();
+    patched[2] = 0x2A; // Standard TIFF magic (42)
+    patched[3] = 0x00;
+
+    crate::formats::tiff::read_tiff(&patched)
 }
 
 // ============================================================================

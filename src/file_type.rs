@@ -170,6 +170,8 @@ pub enum FileType {
     Odc,
     // ===== CaptureOne Enhanced Image Package =====
     Eip,
+    // ===== Leica Image Format =====
+    Lif,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -339,6 +341,7 @@ impl FileType {
             FileType::Odi => "ODI",
             FileType::Odc => "ODC",
             FileType::Eip => "EIP",
+            FileType::Lif => "Leica Image Format",
         }
     }
 
@@ -490,6 +493,7 @@ impl FileType {
             FileType::Odi => "application/vnd.oasis.opendocument.image",
             FileType::Odc => "application/vnd.oasis.opendocument.chart",
             FileType::Eip => "application/x-captureone",
+            FileType::Lif => "image/x-leica-lif",
         }
     }
 
@@ -649,6 +653,7 @@ impl FileType {
             FileType::Odc => &["odc"],
             FileType::Lfp => &["lfp", "lfr"],
             FileType::Eip => &["eip"],
+            FileType::Lif => &["lif"],
         }
     }
 
@@ -723,7 +728,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Exr, FileType::Ico, FileType::Jps,
     // Images - Specialized
     FileType::DjVu, FileType::Xcf, FileType::Pcx, FileType::Pict, FileType::Psp,
-    FileType::Hdr, FileType::Rwz, FileType::Btf, FileType::Mng, FileType::PhotoCd,
+    FileType::Hdr, FileType::Rwz, FileType::Btf, FileType::Mng, FileType::PhotoCd, FileType::Lif,
     // RAW
     FileType::Cr2, FileType::Cr3, FileType::Crw, FileType::Nef, FileType::Arw,
     FileType::Sr2, FileType::Srf, FileType::Orf, FileType::Rw2, FileType::Dng,
@@ -934,6 +939,28 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // FLIR FPF: "FPF Public Image Format\0"
     if header.starts_with(b"FPF Public Image Format\0") {
         return Some(FileType::Fpf);
+    }
+
+    // LIF (Leica Image Format): 0x70 0x00 0x00 0x00 + 4 bytes size + 0x2A + 4 bytes + '<' 0x00
+    if header.len() >= 15
+        && header[0] == 0x70 && header[1] == 0x00 && header[2] == 0x00 && header[3] == 0x00
+        && header[8] == 0x2A
+        && header[13] == b'<' && header[14] == 0x00
+    {
+        return Some(FileType::Lif);
+    }
+
+    // Rawzor: "rawzor"
+    if header.starts_with(b"rawzor") {
+        return Some(FileType::Rwz);
+    }
+
+    // JPEG XR / HD Photo: "II" + 0xBC byte at offset 2 (TIFF-like but identifier 0xBC)
+    if header.len() >= 4
+        && header[0] == b'I' && header[1] == b'I'
+        && (header[2] & 0xFF) == 0xBC
+    {
+        return Some(FileType::Jxr);
     }
 
     // ===== RAW formats with unique magic =====

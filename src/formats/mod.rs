@@ -31,6 +31,7 @@ pub mod matroska;
 pub mod mie;
 pub mod miff;
 pub mod misc;
+pub mod mpeg;
 pub mod mrc;
 pub mod mrw;
 pub mod ogg;
