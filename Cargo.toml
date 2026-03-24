@@ -1,9 +1,9 @@
 [package]
 name = "exiftool-rs"
-version = "0.4.1"
+version = "0.4.2"
 edition = "2021"
 rust-version = "1.71"
-description = "Read, write, and edit metadata in 55+ file formats — a pure Rust reimplementation of ExifTool 13.53 with 100% tag name parity (194/194 test files)"
+description = "Read, write, and edit metadata in 93 file formats — a pure Rust reimplementation of ExifTool 13.53 with 100% tag name parity (194/194 test files)"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/Le-Syl21/exiftool-rs"
 homepage = "https://github.com/Le-Syl21/exiftool-rs"

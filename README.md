@@ -4,47 +4,67 @@
 [![Documentation](https://docs.rs/exiftool-rs/badge.svg)](https://docs.rs/exiftool-rs)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
-A pure Rust reimplementation of [ExifTool](https://exiftool.org/) — read, write, and edit metadata in image, audio, video, and document files. No unsafe code, no Perl dependency, no system libraries.
+A pure Rust reimplementation of [ExifTool](https://exiftool.org/) v13.53 — read, write, and edit metadata in image, audio, video, and document files. No unsafe code, no Perl dependency, no system libraries.
 
 ![Screenshot](assets/screenshot.png)
 
 ## Features
 
 - **194/194 test files (100%)** produce identical tag names as Perl ExifTool v13.53
-- **55+ format readers**: JPEG, TIFF, PNG, CR2, CR3, CRW, PSD, WebP, HEIF/AVIF, MP4/MOV, AVI, MKV, MTS, PDF, WAV, FLAC, MP3, OGG, BMP, GIF, DNG, NEF, ARW, ORF, RAF, RW2, PEF, X3F, IIQ, EIP, MIE, MIFF, MRC, DICOM, WTV, DjVu, BPG, XCF, LFP, FPF, and more
+- **93 format readers** covering all Perl ExifTool modules
 - **15 format writers**: JPEG, TIFF, PNG, WebP, PSD, PDF, MP4, MKV, AVI, WAV, FLAC, MP3, OGG, CR2, HEIF/AVIF
-- **15+ MakerNote manufacturers**: Canon, Nikon, Sony, Pentax, Olympus, Panasonic, Fujifilm, Samsung, Sigma, Casio, Ricoh, Minolta, Apple, Google, FLIR, GE, GoPro
-- **Deep sub-table decoders**: Canon ColorData/CustomFunctions/ShotInfo, Nikon NikonCapture/ScanIFD, Panasonic RW2, Pentax CameraSettings, and more
-- **Specialized parsers**: GoPro GPMF, InfiRay thermal, FlashPix/OLE, Canon VRD/CIFF, MPF, MIE, Lytro LFP, FLIR FPF, Sigma X3F, CaptureOne EIP, and more
-- **Timed metadata extraction** (`-ee`): GPS and sensor data from dashcams (freeGPS, Kenwood, Novatek, Viofo), action cams (GoPro GPMF, Insta360), drones (DJI, Yuneec), Google CAMM, NMEA
-- **Optional GUI** with 23 languages, drag & drop, tag editing, Noto font support for CJK/Arabic/Hindi/Bengali
+- **17 MakerNote manufacturers** with deep sub-table decoders
+- **Timed metadata extraction** (`-ee`) for dashcams, action cams, drones
+- **Optional GUI** with 23 languages (3230 tags translated per language)
 - **0 compiler warnings**, no unsafe code, minimal dependencies
 
 ## Supported Formats
 
-| Category | Read | Write |
-|----------|------|-------|
-| **Images** | JPEG, TIFF, PNG, WebP, PSD, BMP, GIF, HEIF/AVIF, ICO, PPM, PGF, BPG, XCF, MIFF, PICT | JPEG, TIFF, PNG, WebP, PSD |
-| **Raw** | CR2, CR3, CRW, NEF, DNG, ARW, ORF, RAF, RW2, PEF, X3F, IIQ, MRW, 3FR, ERF, SRW | CR2 |
-| **Video** | MP4/MOV, AVI, MKV, MTS, WTV, DV, FLV, SWF, MXF, ASF/WMV | MP4, MKV, AVI |
-| **Audio** | MP3, FLAC, WAV, OGG, AAC, AIFF, APE, MPC, WavPack, DSF, Audible | MP3, FLAC, WAV, OGG |
-| **Documents** | PDF, RTF, HTML, PostScript, DjVu, OpenDocument, TNEF | PDF |
-| **Scientific** | DICOM, MRC, FITS, XISF, DPX | — |
-| **Archives** | ZIP, RAR, GZIP, ISO, Torrent | — |
-| **Other** | EXE/ELF/Mach-O, LNK, VCard, ICS, MIE, Lytro LFP, FLIR FPF, CaptureOne EIP, Palm PDB, PLIST | — |
+### Read (93 format modules)
 
-### MakerNote Support
+| Category | Formats |
+|----------|---------|
+| **Images** | JPEG, TIFF, PNG, WebP, PSD, BMP, GIF, HEIF/AVIF, ICO, PPM, PGF, BPG, XCF, MIFF, PICT, PCX, MNG, JXR, FLIF, Radiance HDR, OpenEXR, PSP, InDesign |
+| **Raw** | CR2, CR3, CRW, CRM, NEF, DNG, ARW, ORF, RAF, RW2, PEF, SR2, SRW, X3F, IIQ, 3FR, ERF, MRW, Rawzor, KyoceraRaw |
+| **Video** | MP4/MOV, AVI, MKV/WebM, MPEG, MTS/M2TS, WTV, DV, FLV, SWF, MXF, ASF/WMV, Real (RM/RAM) |
+| **Audio** | MP3, FLAC, WAV, OGG, Opus, AAC, AIFF, APE, MPC, WavPack, DSF, Audible |
+| **Documents** | PDF, RTF, HTML, PostScript, DjVu, OpenDocument (ODT/ODS/ODP/ODG), TNEF |
+| **Fonts** | TrueType (TTF), OpenType (OTF), WOFF/WOFF2, AFM, PFA, PFB |
+| **Scientific** | DICOM, MRC, FITS, XISF, DPX, LIF (Leica) |
+| **Archives** | ZIP, 7Z, RAR, GZIP, ISO, Torrent |
+| **Other** | EXE/ELF/Mach-O, LNK, VCard, ICS, JSON, PLIST, PCAP, MIE, MOI, Lytro LFP, FLIR FPF, CaptureOne EIP, Palm PDB, FlashPix (OLE), iWork, Red R3D |
+
+### Write (15 formats)
+
+| Category | Formats |
+|----------|---------|
+| **Images** | JPEG, TIFF, PNG, WebP, PSD |
+| **Raw** | CR2, HEIF/AVIF |
+| **Video** | MP4, MKV, AVI |
+| **Audio** | MP3, FLAC, WAV, OGG |
+| **Documents** | PDF |
+
+### MakerNote Support (17 manufacturers)
 
 | Manufacturer | Sub-table Decoders |
 |-------------|-------------------|
 | **Canon** | CameraSettings, ShotInfo, AFInfo, ColorData (WB), CustomFunctions, VRD, CIFF, CTMD |
 | **Nikon** | NikonCapture (D-Lighting, Crop, ColorBoost, UnsharpMask), ScanIFD, CaptureOffsets |
-| **Sony** | SonyIDC |
+| **Sony** | SonyIDC, lens tables (400+ entries) |
 | **Pentax** | CameraSettings (K10D/K-5), AEInfo, LensInfo, FlashInfo, CameraInfo |
 | **Olympus** | Equipment, CameraSettings, FocusInfo, RawDevelopment |
 | **Panasonic** | RW2 sub-IFDs, AdvancedSceneMode composite |
 | **Fujifilm** | RAF WB, PreviewImage |
-| **Others** | Samsung, Sigma, Casio, Ricoh, Minolta, Apple, Google, FLIR, GE, GoPro |
+| **Samsung** | MakerNote IFD |
+| **Sigma** | MakerNote IFD, X3F raw |
+| **Casio** | Type 1, Type 2 |
+| **Ricoh** | MakerNote IFD |
+| **Minolta** | MakerNote IFD |
+| **Apple** | MakerNote IFD |
+| **Google** | MakerNote IFD |
+| **FLIR** | Thermal metadata, FPF |
+| **GE** | MakerNote IFD |
+| **GoPro** | GPMF timed metadata |
 
 ### Timed Metadata (`-ee`)
 
@@ -122,23 +142,20 @@ exiftool-rs-gui -lang fr
 - Save edits back to the file
 - 23 languages supported (CJK, Arabic, Hindi, Bengali fonts included via [noto-fonts-dl](https://crates.io/crates/noto-fonts-dl))
 
-### Supported Languages
+### Supported Languages (23)
 
-| Code | Language | Code | Language |
-|------|----------|------|----------|
-| `en` | English | `ko` | Korean |
-| `ar` | Arabic | `nl` | Dutch |
-| `bn` | Bengali | `pl` | Polish |
-| `cs` | Czech | `pt` | Portuguese |
-| `de` | German | `ru` | Russian |
-| `en_ca` | English (Canada) | `sk` | Slovak |
-| `en_gb` | English (UK) | `sv` | Swedish |
-| `es` | Spanish | `tr` | Turkish |
-| `fi` | Finnish | `zh` | Chinese (Simplified) |
-| `fr` | French | `zh_tw` | Chinese (Traditional) |
-| `hi` | Hindi | | |
-| `it` | Italian | | |
-| `ja` | Japanese | | |
+| Code | Language | Code | Language | Code | Language |
+|------|----------|------|----------|------|----------|
+| `en` | English | `fr` | French | `pl` | Polish |
+| `ar` | Arabic | `hi` | Hindi | `pt` | Portuguese |
+| `bn` | Bengali | `it` | Italian | `ru` | Russian |
+| `cs` | Czech | `ja` | Japanese | `sk` | Slovak |
+| `de` | German | `ko` | Korean | `sv` | Swedish |
+| `en_ca` | English (CA) | `nl` | Dutch | `tr` | Turkish |
+| `en_gb` | English (UK) | `fi` | Finnish | `zh` | Chinese (Simplified) |
+| `es` | Spanish | | | `zh_tw` | Chinese (Traditional) |
+
+Each language includes 3230 translated tag descriptions plus all UI strings.
 
 ### Platform Notes
 
@@ -169,6 +186,15 @@ exiftool-rs-gui -lang fr
 | `-TAG=` | Delete tag |
 | `-overwrite_original` | Overwrite without backup |
 | `-stay_open True` | Keep running, read commands from stdin |
+| `-lang LANG` | Set language (GUI and tag descriptions) |
+| `-v` | Verbose output |
+| `-htmlDump` | HTML hex dump of file structure |
+| `-validate` | Validate metadata |
+| `-diff` | Show differences between files |
+| `-args` | Print in ExifTool arg format |
+| `-php` | PHP array output |
+| `-progress` | Show progress during processing |
+| `-scanForXMP` | Scan file for XMP data |
 
 ## Testing
 

@@ -35,21 +35,25 @@
 //! et.write_info("photo.jpg", "photo_out.jpg").unwrap();
 //! ```
 //!
-//! ## Supported Formats (55+ readers, 15 writers)
+//! ## Supported Formats (93 readers, 15 writers)
 //!
-//! **Images**: JPEG, TIFF, PNG, WebP, PSD, BMP, GIF, HEIF/AVIF, ICO, XCF, BPG, MIFF, PGF
+//! **Images**: JPEG, TIFF, PNG, WebP, PSD, BMP, GIF, HEIF/AVIF, ICO, XCF, BPG, MIFF, PGF, PPM, PCX, PICT, JXR, FLIF, MNG, Radiance HDR, OpenEXR, PSP, InDesign
 //!
-//! **Raw**: CR2, CR3, CRW, NEF, DNG, ARW, ORF, RAF, RW2, PEF, SR2, X3F, IIQ, 3FR, ERF, MRW
+//! **Raw**: CR2, CR3, CRW, CRM, NEF, DNG, ARW, ORF, RAF, RW2, PEF, SR2, X3F, IIQ, 3FR, ERF, MRW, SRW, Rawzor, KyoceraRaw
 //!
-//! **Video**: MP4/MOV, AVI, MKV, MTS, WTV, DV, FLV, SWF, MXF
+//! **Video**: MP4/MOV, AVI, MKV, MTS, MPEG, WTV, DV, FLV, SWF, MXF, ASF/WMV, Real
 //!
-//! **Audio**: MP3, FLAC, WAV, OGG, AAC, AIFF, APE, MPC, WavPack, DSF, Audible
+//! **Audio**: MP3, FLAC, WAV, OGG, AAC, AIFF, APE, MPC, WavPack, DSF, Audible, Opus
 //!
-//! **Documents**: PDF, RTF, HTML, PostScript, DjVu, OpenDocument, TNEF
+//! **Documents**: PDF, RTF, HTML, PostScript, DjVu, OpenDocument, TNEF, Font (TTF/OTF/WOFF)
 //!
-//! **Scientific**: DICOM, MRC, FITS, XISF
+//! **Scientific**: DICOM, MRC, FITS, XISF, DPX, LIF (Leica)
 //!
-//! **Other**: EXE/ELF/Mach-O, ZIP/RAR/GZ, ISO, LNK, Torrent, VCard, MIE, Lytro LFP, FLIR FPF, CaptureOne EIP
+//! **Archives**: ZIP, 7Z, RAR, GZIP, ISO, Torrent
+//!
+//! **Other**: EXE/ELF/Mach-O, LNK, VCard, ICS, JSON, PLIST, MIE, Lytro LFP, FLIR FPF, CaptureOne EIP, Palm PDB, PCAP
+//!
+//! **Timed metadata** (`-ee`): freeGPS (dashcams), GoPro GPMF, Google CAMM, NMEA, Kenwood, DJI, Insta360
 //!
 //! **MakerNotes**: Canon, Nikon, Sony, Pentax, Olympus, Panasonic, Fujifilm, Samsung,
 //! Sigma, Casio, Ricoh, Minolta, Apple, Google, FLIR, GE, GoPro
