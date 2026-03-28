@@ -1155,6 +1155,19 @@ impl ExifTool {
             }
         }
 
+        // Priority-based deduplication: when the same tag name appears multiple times,
+        // keep only the one with the highest priority (e.g., EXIF over JFIF, FFF over MakerNote).
+        if !self.options.duplicates {
+            let mut best_priority: HashMap<String, i32> = HashMap::new();
+            for tag in &tags {
+                let entry = best_priority.entry(tag.name.clone()).or_insert(tag.priority);
+                if tag.priority > *entry {
+                    *entry = tag.priority;
+                }
+            }
+            tags.retain(|t| t.priority >= *best_priority.get(&t.name).unwrap_or(&0));
+        }
+
         // Filter by requested tags if specified
         if !self.options.requested_tags.is_empty() {
             let requested: Vec<String> = self
@@ -1174,7 +1187,7 @@ impl ExifTool {
     /// Handles duplicate tag names by appending group info.
     fn get_info(&self, tags: &[Tag]) -> ImageInfo {
         let mut info = ImageInfo::new();
-        let mut seen: HashMap<String, usize> = HashMap::new();
+        let mut seen: HashMap<String, (usize, i32)> = HashMap::new(); // (count, best priority)
 
         for tag in tags {
             let value = if self.options.print_conv {
@@ -1183,10 +1196,15 @@ impl ExifTool {
                 &tag.raw_value.to_display_string()
             };
 
-            let count = seen.entry(tag.name.clone()).or_insert(0);
-            *count += 1;
+            let entry = seen.entry(tag.name.clone()).or_insert((0, i32::MIN));
+            entry.0 += 1;
 
-            if *count == 1 {
+            if entry.0 == 1 {
+                entry.1 = tag.priority;
+                info.insert(tag.name.clone(), value.clone());
+            } else if tag.priority > entry.1 {
+                // Higher priority tag replaces the previous one
+                entry.1 = tag.priority;
                 info.insert(tag.name.clone(), value.clone());
             } else if self.options.duplicates {
                 let key = format!("{} [{}:{}]", tag.name, tag.group.family0, tag.group.family1);

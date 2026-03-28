@@ -41,6 +41,10 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
     // Extended XMP chunk accumulator: (total_size, chunks sorted by offset)
     let mut ext_xmp_chunks: Vec<(u32, Vec<u8>)> = Vec::new();
     let mut ext_xmp_total: u32 = 0;
+    // FLIR FFF chunk accumulator: indexed by chunk number
+    let mut flir_chunks: Vec<Option<Vec<u8>>> = Vec::new();
+    let mut flir_count: usize = 0;
+    let mut flir_total: Option<usize> = None;
     // InfiRay flag: set when APP2 IJPEG header is detected
     let mut is_infray = false;
     // FlashPix FPXR accumulator: contents list + stream data per index
@@ -184,7 +188,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         id: crate::tag::TagId::Text(name.into()),
                         name: name.into(), description: name.into(),
                         group: crate::tag::TagGroup { family0: "JFIF".into(), family1: "JFIF".into(), family2: "Image".into() },
-                        raw_value: crate::value::Value::String(val.clone()), print_value: val, priority: 0,
+                        raw_value: crate::value::Value::String(val.clone()), print_value: val, priority: -1,
                     };
                     tags.push(jfif_mk("JFIFVersion", format!("{}.{:02}", major, minor)));
                     // ResolutionUnit at byte 7
@@ -319,12 +323,49 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     // XResolution, YResolution, ResolutionUnit from TIFF-like structure
                     // (these may be in the EXIF already)
                 }
-                // FLIR thermal data: "FLIR\0" + segment_num(1) + total_segments(1) + FFF data
-                else if seg_data.starts_with(b"FLIR\0") && seg_data.len() > 0x48 {
-                    let fff_start = 8; // "FLIR\0" + seg_num + total + padding
-                    let flir_data = &seg_data[fff_start..];
-                    if flir_data.starts_with(b"FFF\0") || flir_data.starts_with(b"AFF\0") {
-                        tags.extend(decode_flir_fff(flir_data));
+                // FLIR thermal data: "FLIR\0" + type(1) + chunk_num(1) + chunks_total_minus1(1) + FFF data
+                // Chunks must be accumulated and reassembled before decoding (like Perl ExifTool).
+                else if seg_data.starts_with(b"FLIR\0") && seg_data.len() >= 8 {
+                    let chunk_num = seg_data[6] as usize;
+                    let chunks_tot = seg_data[7] as usize + 1; // stored as total-1
+                    let chunk_data = &seg_data[8..];
+                    if let Some(prev_total) = flir_total {
+                        if chunks_tot != prev_total {
+                            // Inconsistent total — abort FLIR chunk collection
+                            flir_total = None;
+                            flir_chunks.clear();
+                            flir_count = 0;
+                        }
+                    }
+                    if flir_total.is_none() && flir_count == 0 {
+                        flir_total = Some(chunks_tot);
+                        flir_chunks.resize(chunks_tot, None);
+                    }
+                    if flir_total.is_some() {
+                        if chunk_num < flir_chunks.len() {
+                            if flir_chunks[chunk_num].is_some() {
+                                // Duplicate chunk: append to existing
+                                flir_chunks[chunk_num].as_mut().unwrap().extend_from_slice(chunk_data);
+                            } else {
+                                flir_chunks[chunk_num] = Some(chunk_data.to_vec());
+                                flir_count += 1;
+                            }
+                        }
+                        // Process once all chunks are collected
+                        if flir_count >= flir_total.unwrap() {
+                            let mut flir_data = Vec::new();
+                            for chunk in &flir_chunks {
+                                if let Some(c) = chunk {
+                                    flir_data.extend_from_slice(c);
+                                }
+                            }
+                            flir_chunks.clear();
+                            flir_count = 0;
+                            flir_total = None;
+                            if flir_data.starts_with(b"FFF\0") || flir_data.starts_with(b"AFF\0") {
+                                tags.extend(decode_flir_fff(&flir_data));
+                            }
+                        }
                     }
                 }
                 // Extended XMP: accumulate chunks for later assembly
@@ -980,6 +1021,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     t.id = crate::tag::TagId::Text("ImageTemperatureMin".into());
                     t.name = "ImageTemperatureMin".into();
                     t.description = "ImageTemperatureMin".into();
+                    t.priority = -1;
                 }
             }
             // Remove "Quality" from MakerNotes (FLIR tag 0x0003 = Emissivity, already in FFF)
@@ -1004,7 +1046,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         },
                         raw_value: crate::value::Value::String(v.to_string()),
                         print_value: v.to_string(),
-                        priority: 0,
+                        priority: -1,
                     });
                 }
             }
@@ -1716,6 +1758,31 @@ fn decode_infray_version(data: &[u8]) -> Vec<crate::tag::Tag> {
     tags
 }
 
+/// Emulate C/Perl sprintf("%.8g", val) — 8 significant digits, no trailing zeros.
+fn float8g(v: f32) -> String {
+    // Use f64 to avoid f32 rounding artifacts, then format with 8 significant digits
+    let v = v as f64;
+    let formatted = format!("{:.8e}", v);
+    // Parse the exponent to decide fixed vs scientific
+    if let Some(e_pos) = formatted.find('e') {
+        let exp: i32 = formatted[e_pos+1..].parse().unwrap_or(0);
+        if exp >= -4 && exp < 8 {
+            // Fixed notation: compute decimal places = 7 - exp (8 sig digits, 1 before decimal)
+            let decimals = (7 - exp).max(0) as usize;
+            let s = format!("{:.*}", decimals, v);
+            // Trim trailing zeros after decimal point
+            if s.contains('.') {
+                let s = s.trim_end_matches('0');
+                let s = s.trim_end_matches('.');
+                return s.to_string();
+            }
+            return s;
+        }
+    }
+    // Fallback: scientific notation
+    format!("{:.7e}", v)
+}
+
 /// Decode FLIR FFF data (from Perl FLIR.pm ProcessFLIR).
 fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
     let mut tags = Vec::new();
@@ -1775,31 +1842,35 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                         };
                         f32::from_bits(bits)
                     };
+                    // Format Kelvin float as Celsius, avoiding -0.0
+                    let fmt_celsius = |off: usize| -> String {
+                        let c = rf(off) - 273.15;
+                        let c = if c == 0.0 { 0.0 } else { c }; // normalize -0.0
+                        format!("{:.1} C", c)
+                    };
                     tags.push(mk("Emissivity", format!("{:.2}", rf(32))));
                     tags.push(mk("ObjectDistance", format!("{:.2} m", rf(36))));
-                    tags.push(mk("ReflectedApparentTemperature", format!("{:.1} C", rf(40) - 273.15)));
-                    tags.push(mk("AtmosphericTemperature", format!("{:.1} C", rf(44) - 273.15)));
-                    tags.push(mk("IRWindowTemperature", format!("{:.1} C", rf(48) - 273.15)));
+                    tags.push(mk("ReflectedApparentTemperature", fmt_celsius(40)));
+                    tags.push(mk("AtmosphericTemperature", fmt_celsius(44)));
+                    tags.push(mk("IRWindowTemperature", fmt_celsius(48)));
                     tags.push(mk("IRWindowTransmission", format!("{:.2}", rf(52))));
-                    tags.push(mk("RelativeHumidity", format!("{:.2}", rf(60))));
-                    tags.push(mk("PlanckR1", format!("{}", rf(88))));
-                    tags.push(mk("PlanckB", format!("{}", rf(92))));
-                    tags.push(mk("PlanckF", format!("{}", rf(96))));
-                    tags.push(mk("AtmosphericTransAlpha1", format!("{}", rf(112))));
-                    tags.push(mk("AtmosphericTransAlpha2", format!("{}", rf(116))));
-                    tags.push(mk("AtmosphericTransBeta1", format!("{}", rf(120))));
-                    tags.push(mk("AtmosphericTransBeta2", format!("{}", rf(124))));
-                    tags.push(mk("AtmosphericTransX", format!("{}", rf(128))));
-                    let max_temp = rf(144) - 273.15;
-                    let min_temp = rf(148) - 273.15;
-                    tags.push(mk("CameraTemperatureRangeMax", format!("{:.1} C", max_temp)));
-                    tags.push(mk("CameraTemperatureRangeMin", format!("{:.1} C", min_temp)));
-                    tags.push(mk("CameraTemperatureMaxClip", format!("{:.1} C", rf(152) - 273.15)));
-                    tags.push(mk("CameraTemperatureMinClip", format!("{:.1} C", rf(156) - 273.15)));
-                    tags.push(mk("CameraTemperatureMaxSaturated", format!("{:.1} C", rf(160) - 273.15)));
-                    tags.push(mk("CameraTemperatureMinSaturated", format!("{:.1} C", rf(164) - 273.15)));
-                    tags.push(mk("CameraTemperatureMaxWarn", format!("{:.1} C", rf(168) - 273.15)));
-                    tags.push(mk("CameraTemperatureMinWarn", format!("{:.1} C", rf(172) - 273.15)));
+                    tags.push(mk("RelativeHumidity", format!("{:.1} %", rf(60) * 100.0)));
+                    tags.push(mk("PlanckR1", float8g(rf(88))));
+                    tags.push(mk("PlanckB", float8g(rf(92))));
+                    tags.push(mk("PlanckF", float8g(rf(96))));
+                    tags.push(mk("AtmosphericTransAlpha1", format!("{:.6}", rf(112))));
+                    tags.push(mk("AtmosphericTransAlpha2", format!("{:.6}", rf(116))));
+                    tags.push(mk("AtmosphericTransBeta1", format!("{:.6}", rf(120))));
+                    tags.push(mk("AtmosphericTransBeta2", format!("{:.6}", rf(124))));
+                    tags.push(mk("AtmosphericTransX", format!("{:.6}", rf(128))));
+                    tags.push(mk("CameraTemperatureRangeMax", fmt_celsius(144)));
+                    tags.push(mk("CameraTemperatureRangeMin", fmt_celsius(148)));
+                    tags.push(mk("CameraTemperatureMaxClip", fmt_celsius(152)));
+                    tags.push(mk("CameraTemperatureMinClip", fmt_celsius(156)));
+                    tags.push(mk("CameraTemperatureMaxSaturated", fmt_celsius(160)));
+                    tags.push(mk("CameraTemperatureMinSaturated", fmt_celsius(164)));
+                    tags.push(mk("CameraTemperatureMaxWarn", fmt_celsius(168)));
+                    tags.push(mk("CameraTemperatureMinWarn", fmt_celsius(172)));
                     // Strings at fixed offsets
                     if rec.len() >= 260 {
                         let cam_model = String::from_utf8_lossy(&rec[212..244]).trim_end_matches('\0').to_string();
@@ -1837,7 +1908,7 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     if rec.len() >= 784 {
                         let planck_o = if ci_le { i32::from_le_bytes([rec[776], rec[777], rec[778], rec[779]]) } else { i32::from_be_bytes([rec[776], rec[777], rec[778], rec[779]]) };
                         tags.push(mk("PlanckO", planck_o.to_string()));
-                        tags.push(mk("PlanckR2", format!("{}", rf(780))));
+                        tags.push(mk("PlanckR2", float8g(rf(780))));
                     }
                     tags.push(mk("FrameRate", format!("{}", u16::from_le_bytes([rec[452], rec[453]]))));
 

@@ -79,6 +79,7 @@ fn read_str(data: &[u8], offset: usize, len: usize) -> String {
 /// Convert float Kelvin to Celsius: subtract 273.15, format "%.1f C"
 fn kelvin_to_celsius(k: f32) -> String {
     let c = k as f64 - 273.15;
+    let c = if c == 0.0 { 0.0 } else { c }; // normalize -0.0
     format!("{:.1} C", c)
 }
 
