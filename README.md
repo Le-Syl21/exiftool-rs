@@ -161,7 +161,7 @@ Each language includes 3230 translated tag descriptions plus all UI strings.
 
 | OS | Icon in binary | Notes |
 |----|---------------|-------|
-| **Windows** | Yes | Icon embedded in `.exe` via `winres` |
+| **Windows** | Opt-in | Icon embedded in `.exe` via `winres` when `win-icon` feature is enabled |
 | **macOS** | No | Requires a `.app` bundle with `.icns` |
 | **Linux** | No | ELF binaries don't support embedded icons |
 
@@ -220,9 +220,14 @@ cargo build --release
 
 # CLI + GUI
 cargo build --release --features gui
+
+# With Windows icon embedded in the .exe
+cargo build --release --features win-icon
 ```
 
 The `gui` feature is optional and not included by default. Without it, the GUI dependencies (egui, eframe, image, rfd, noto-fonts-dl) are not downloaded or compiled.
+
+The `win-icon` feature embeds an icon into the Windows `.exe` via `winres`. It is disabled by default to avoid conflicts with frameworks like Tauri that manage their own Windows resources.
 
 ## License
 
