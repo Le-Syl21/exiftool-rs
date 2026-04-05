@@ -88,6 +88,15 @@ for tag in &tags {
 }
 ```
 
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| `gui` | Enable the graphical interface (`exiftool-rs-gui` binary) |
+| `win-icon` | Embed Windows application icon in the binary (CLI builds only) |
+
+> **Note for library consumers:** The `win-icon` feature should only be enabled when building standalone binaries. If you use `exiftool-rs` as a library dependency, do **not** enable `win-icon` — it would inject a Windows VERSION resource into your own binary and cause linker conflicts.
+
 ## CLI Usage
 
 ```bash

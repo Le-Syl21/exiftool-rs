@@ -35,8 +35,8 @@ path = "src/lib.rs"
 
 [features]
 default = []
-gui = ["eframe", "egui", "image", "rfd", "noto-fonts-dl"]
 win-icon = ["winres"]
+gui = ["eframe", "egui", "image", "rfd", "noto-fonts-dl"]
 
 [dependencies]
 thiserror = "2"
