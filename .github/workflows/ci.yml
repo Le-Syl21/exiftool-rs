@@ -2,10 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
     tags: ['v*']
-  pull_request:
-    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
@@ -66,6 +63,67 @@ jobs:
             echo "$output" | grep "^warning:"
             exit 1
           fi
+
+      # --- Apple signing & notarization ---
+      - name: Import Apple Developer ID certificate
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 \
+            -k "$KEYCHAIN_PATH" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+      - name: Sign binaries (macOS)
+        if: runner.os == 'macOS'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          SIGN_ID="Developer ID Application: Sylvain Gargasson ($APPLE_TEAM_ID)"
+          codesign --force --options runtime \
+            --sign "$SIGN_ID" \
+            --timestamp \
+            target/release/exiftool-rs
+          codesign --force --options runtime \
+            --sign "$SIGN_ID" \
+            --timestamp \
+            target/release/exiftool-rs-gui
+
+      - name: Notarize binaries (macOS, tags only)
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          ditto -c -k --keepParent \
+            target/release/exiftool-rs \
+            $RUNNER_TEMP/exiftool-rs-cli.zip
+          xcrun notarytool submit $RUNNER_TEMP/exiftool-rs-cli.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          ditto -c -k --keepParent \
+            target/release/exiftool-rs-gui \
+            $RUNNER_TEMP/exiftool-rs-gui.zip
+          xcrun notarytool submit $RUNNER_TEMP/exiftool-rs-gui.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
 
       # --- Package CLI ---
       - name: Package CLI (Unix)
