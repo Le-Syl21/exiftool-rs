@@ -71,6 +71,10 @@ fn main() {
         match arg.as_str() {
             "-v" | "--version" | "-ver" => {
                 println!("exiftool-rs {}", exiftool_rs::VERSION);
+                println!("Copyright (C) 2024 Sylvain Gargasson");
+                println!("License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl-3.0.html>");
+                println!("This is free software: you are free to change and redistribute it.");
+                println!("There is NO WARRANTY, to the extent permitted by law.");
                 process::exit(0);
             }
             "-h" | "--help" | "-help" => {
