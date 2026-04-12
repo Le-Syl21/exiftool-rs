@@ -116,7 +116,7 @@ fn read_dr4_value(data: &[u8], off: usize, len: usize, fmt: u32) -> Value {
     match fmt {
         2 => {
             // string
-            let s = String::from_utf8_lossy(&data[off..off + len])
+            let s = crate::encoding::decode_utf8_or_latin1(&data[off..off + len])
                 .trim_end_matches('\0')
                 .to_string();
             Value::String(s)

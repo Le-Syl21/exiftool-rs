@@ -22,7 +22,7 @@ pub fn read_xisf(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     let xml_data = &data[16..16 + hdr_len];
-    let xml_str = String::from_utf8_lossy(xml_data);
+    let xml_str = crate::encoding::decode_utf8_or_latin1(xml_data);
 
     // Store the raw XML as binary (matches ExifTool behavior)
     tags.push(mk("XML", "XML", Value::Binary(xml_data.to_vec())));

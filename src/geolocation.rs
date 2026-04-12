@@ -139,7 +139,7 @@ impl GeolocationDb {
                 .map(|p| name_start + p)
                 .unwrap_or(data.len());
 
-            let name = String::from_utf8_lossy(&data[name_start..name_end]).to_string();
+            let name = crate::encoding::decode_utf8_or_latin1(&data[name_start..name_end]).to_string();
 
             cities.push(CityRecord {
                 lat_raw,
@@ -267,7 +267,7 @@ fn read_string_list(data: &[u8], pos: &mut usize) -> Vec<String> {
         while *pos < data.len() && data[*pos] != b'\n' {
             *pos += 1;
         }
-        let s = String::from_utf8_lossy(&data[start..*pos]).to_string();
+        let s = crate::encoding::decode_utf8_or_latin1(&data[start..*pos]).to_string();
         list.push(s);
         if *pos < data.len() {
             *pos += 1; // Skip newline
@@ -290,7 +290,7 @@ fn read_country_list(data: &[u8], pos: &mut usize) -> Vec<(String, String)> {
         while *pos < data.len() && data[*pos] != b'\n' {
             *pos += 1;
         }
-        let line = String::from_utf8_lossy(&data[start..*pos]).to_string();
+        let line = crate::encoding::decode_utf8_or_latin1(&data[start..*pos]).to_string();
         if *pos < data.len() { *pos += 1; }
 
         if line.len() >= 2 {

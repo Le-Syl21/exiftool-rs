@@ -89,7 +89,7 @@ pub fn read_miff(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Parse the header text
     let header_bytes = &data[..header_data_end];
-    let header_str = String::from_utf8_lossy(header_bytes);
+    let header_str = crate::encoding::decode_utf8_or_latin1(header_bytes);
 
     // Collect profiles: list of (profile_type, byte_length)
     let mut profiles: Vec<(String, usize)> = Vec::new();

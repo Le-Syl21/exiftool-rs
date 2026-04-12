@@ -305,7 +305,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     if !quality.is_empty() { tags.push(mk("CasioQuality", quality.into())); }
                     // DateTimeOriginal at 0x4D (20 bytes string)
                     if d.len() > 0x61 {
-                        let dt = String::from_utf8_lossy(&d[0x4D..0x61]).trim_end_matches('\0').replace('.', ":").to_string();
+                        let dt = crate::encoding::decode_utf8_or_latin1(&d[0x4D..0x61]).trim_end_matches('\0').replace('.', ":").to_string();
                         if !dt.is_empty() { tags.push(mk("DateTimeOriginal", dt)); }
                     }
                     // ModelType at 0x62 (4 bytes)
@@ -587,7 +587,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
             }
             MARKER_COM => {
                 // JPEG Comment
-                let comment = String::from_utf8_lossy(seg_data)
+                let comment = crate::encoding::decode_utf8_or_latin1(seg_data)
                     .trim_end_matches('\0')
                     .to_string();
                 if !comment.is_empty() {
@@ -956,7 +956,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 }
             }
             if let Some(end) = json_end {
-                let json_str = String::from_utf8_lossy(&json_data[..end]).to_string();
+                let json_str = crate::encoding::decode_utf8_or_latin1(&json_data[..end]).to_string();
                 tags.push(crate::tag::Tag {
                     id: crate::tag::TagId::Text("JSONInfo".into()),
                     name: "JSONInfo".into(),
@@ -1166,7 +1166,7 @@ fn parse_jumbf_boxes_jumd(data: &[u8], tags: &mut Vec<crate::tag::Tag>) {
                 // label: null-terminated string after toggles
                 let label_data = &content[17..];
                 let null_pos = label_data.iter().position(|&b| b == 0).unwrap_or(label_data.len());
-                let label = String::from_utf8_lossy(&label_data[..null_pos]).to_string();
+                let label = crate::encoding::decode_utf8_or_latin1(&label_data[..null_pos]).to_string();
 
                 // JUMDType: raw=hex string, print=formatted with dashes
                 let type_hex = type_bytes.iter().map(|b| format!("{:02x}", b)).collect::<String>();
@@ -1179,7 +1179,7 @@ fn parse_jumbf_boxes_jumd(data: &[u8], tags: &mut Vec<crate::tag::Tag>) {
                     let ascii4 = &type_bytes[..4];
                     let is_printable_alpha = ascii4.iter().all(|&b| b.is_ascii_alphanumeric());
                     if is_printable_alpha {
-                        let ascii_str = String::from_utf8_lossy(ascii4);
+                        let ascii_str = crate::encoding::decode_utf8_or_latin1(ascii4);
                         format!("({})-{}-{}-{}", ascii_str, a1, a2, a3)
                     } else {
                         format!("{}-{}-{}-{}", a0, a1, a2, a3)
@@ -1262,7 +1262,7 @@ fn process_eppim(tiff_data: &[u8]) -> Vec<crate::tag::Tag> {
             if size >= 11 && voff + size <= tiff_data.len() {
                 let pm = &tiff_data[voff..voff + size];
                 if pm.starts_with(b"PrintIM") {
-                    let ver = String::from_utf8_lossy(&pm[7..11]).trim_end_matches('\0').to_string();
+                    let ver = crate::encoding::decode_utf8_or_latin1(&pm[7..11]).trim_end_matches('\0').to_string();
                     tags.push(crate::tag::Tag {
                         id: crate::tag::TagId::Text("PrintIMVersion".into()),
                         name: "PrintIMVersion".into(),
@@ -1332,7 +1332,7 @@ fn process_spiff(data: &[u8]) -> Vec<crate::tag::Tag> {
 /// Data starts at the first '<' of the XML (e.g. `<MJMD>`).
 fn process_media_jukebox_xml(data: &[u8]) -> Vec<crate::tag::Tag> {
     let mut tags = Vec::new();
-    let xml = String::from_utf8_lossy(data);
+    let xml = crate::encoding::decode_utf8_or_latin1(data);
 
     let mk_xml = |name: &str, val: String| crate::tag::Tag {
         id: crate::tag::TagId::Text(name.into()),
@@ -1415,7 +1415,7 @@ fn process_jpeg_hdr(data: &[u8]) -> Vec<crate::tag::Tag> {
     // where $pos = Perl pos() after /~\0/g = tilde_pos + 2
     // so meta length = tilde_pos + 2 - 9 = tilde_pos - 7
     let meta_len = tilde_pos.saturating_sub(7);
-    let meta = String::from_utf8_lossy(&data[7..7 + meta_len]);
+    let meta = crate::encoding::decode_utf8_or_latin1(&data[7..7 + meta_len]);
     let meta_bytes = meta.as_bytes();
 
     // Parse /(\w+)=([^,\s]*)/g
@@ -1458,7 +1458,7 @@ fn process_jpeg_hdr(data: &[u8]) -> Vec<crate::tag::Tag> {
 fn process_graphicconverter(data: &[u8]) -> Vec<crate::tag::Tag> {
     let mut tags = Vec::new();
     if data.is_empty() || data[0] != b'Q' { return tags; }
-    let rest = String::from_utf8_lossy(&data[1..]);
+    let rest = crate::encoding::decode_utf8_or_latin1(&data[1..]);
     let trimmed = rest.trim_start();
     let num_end = trimmed.find(|c: char| !c.is_ascii_digit()).unwrap_or(trimmed.len());
     let quality_str = trimmed[..num_end].to_string();
@@ -1566,7 +1566,7 @@ fn parse_samsung_seft(data: &[u8], block_end: usize) -> Vec<crate::tag::Tag> {
         let name_len = get_u32le(buf2, 4) as usize;
         if 8 + name_len > size { continue; }
         let name_bytes = &buf2[8..8 + name_len];
-        let name_str = String::from_utf8_lossy(name_bytes).trim_end_matches('\0').to_string();
+        let name_str = crate::encoding::decode_utf8_or_latin1(name_bytes).trim_end_matches('\0').to_string();
         let value_bytes = &buf2[8 + name_len..];
 
         match entry_type {
@@ -1642,7 +1642,7 @@ fn parse_mie_elements(data: &[u8], pos: &mut usize, tags: &mut Vec<crate::tag::T
         }
 
         if *pos + name_len > data.len() { break; }
-        let name = String::from_utf8_lossy(&data[*pos..*pos + name_len]).to_string();
+        let name = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos + name_len]).to_string();
         *pos += name_len;
 
         // Step 2: Decode extended value length (AFTER reading name — per MIE spec)
@@ -1688,7 +1688,7 @@ fn parse_mie_elements(data: &[u8], pos: &mut usize, tags: &mut Vec<crate::tag::T
                 _ => name,
             };
 
-            let val_str = String::from_utf8_lossy(val_bytes).trim_end_matches('\0').to_string();
+            let val_str = crate::encoding::decode_utf8_or_latin1(val_bytes).trim_end_matches('\0').to_string();
             tags.push(crate::tag::Tag {
                 id: crate::tag::TagId::Text(name.clone()),
                 name: name.clone(),
@@ -1815,7 +1815,7 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
     let dir_offset = rd32(0x18) as usize;
     let num_entries = rd32(0x1C) as usize;
 
-    tags.push(mk("CreatorSoftware", String::from_utf8_lossy(&data[4..20]).trim_end_matches('\0').to_string()));
+    tags.push(mk("CreatorSoftware", crate::encoding::decode_utf8_or_latin1(&data[4..20]).trim_end_matches('\0').to_string()));
 
     for i in 0..num_entries.min(50) {
         let entry_off = dir_offset + i * 0x20;
@@ -1873,32 +1873,32 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     tags.push(mk("CameraTemperatureMinWarn", fmt_celsius(172)));
                     // Strings at fixed offsets
                     if rec.len() >= 260 {
-                        let cam_model = String::from_utf8_lossy(&rec[212..244]).trim_end_matches('\0').to_string();
+                        let cam_model = crate::encoding::decode_utf8_or_latin1(&rec[212..244]).trim_end_matches('\0').to_string();
                         if !cam_model.is_empty() { tags.push(mk("CameraModel", cam_model)); }
-                        let cam_pn = String::from_utf8_lossy(&rec[244..260]).trim_end_matches('\0').to_string();
+                        let cam_pn = crate::encoding::decode_utf8_or_latin1(&rec[244..260]).trim_end_matches('\0').to_string();
                         if !cam_pn.is_empty() { tags.push(mk("CameraPartNumber", cam_pn)); }
-                        let cam_sn = String::from_utf8_lossy(&rec[260..276]).trim_end_matches('\0').to_string();
+                        let cam_sn = crate::encoding::decode_utf8_or_latin1(&rec[260..276]).trim_end_matches('\0').to_string();
                         if !cam_sn.is_empty() { tags.push(mk("CameraSerialNumber", cam_sn)); }
                     }
                     if rec.len() >= 572 {
-                        let cam_sw = String::from_utf8_lossy(&rec[276..292]).trim_end_matches('\0').to_string();
+                        let cam_sw = crate::encoding::decode_utf8_or_latin1(&rec[276..292]).trim_end_matches('\0').to_string();
                         if !cam_sw.is_empty() { tags.push(mk("CameraSoftware", cam_sw)); }
-                        let lens_model = String::from_utf8_lossy(&rec[368..400]).trim_end_matches('\0').to_string();
+                        let lens_model = crate::encoding::decode_utf8_or_latin1(&rec[368..400]).trim_end_matches('\0').to_string();
                         if !lens_model.is_empty() { tags.push(mk("LensModel", lens_model)); }
-                        let lens_pn = String::from_utf8_lossy(&rec[400..416]).trim_end_matches('\0').to_string();
+                        let lens_pn = crate::encoding::decode_utf8_or_latin1(&rec[400..416]).trim_end_matches('\0').to_string();
                         tags.push(mk("LensPartNumber", lens_pn));
-                        let lens_sn = String::from_utf8_lossy(&rec[416..432]).trim_end_matches('\0').to_string();
+                        let lens_sn = crate::encoding::decode_utf8_or_latin1(&rec[416..432]).trim_end_matches('\0').to_string();
                         tags.push(mk("LensSerialNumber", lens_sn));
                         let fov = rf(436);
                         if fov > 0.0 { tags.push(mk("FieldOfView", format!("{:.1} deg", fov))); }
                         // FilterModel: string[16] at 0x1ec=492 (Perl: Format => 'string[16]')
-                        let filter_model = String::from_utf8_lossy(&rec[492..508]).trim_end_matches('\0').to_string();
+                        let filter_model = crate::encoding::decode_utf8_or_latin1(&rec[492..508]).trim_end_matches('\0').to_string();
                         tags.push(mk("FilterModel", filter_model));
                         // FilterPartNumber: string[32] at 0x1fc=508
-                        let filter_pn = String::from_utf8_lossy(&rec[508..540]).trim_end_matches('\0').to_string();
+                        let filter_pn = crate::encoding::decode_utf8_or_latin1(&rec[508..540]).trim_end_matches('\0').to_string();
                         tags.push(mk("FilterPartNumber", filter_pn));
                         // FilterSerialNumber: string[32] at 0x21c=540
-                        let filter_sn = String::from_utf8_lossy(&rec[540..572]).trim_end_matches('\0').to_string();
+                        let filter_sn = crate::encoding::decode_utf8_or_latin1(&rec[540..572]).trim_end_matches('\0').to_string();
                         tags.push(mk("FilterSerialNumber", filter_sn));
                     }
                     tags.push(mk("PeakSpectralSensitivity", format!("{:.1} um", rf(440))));
@@ -1946,9 +1946,9 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     tags.push(mk("PaletteMethod", rec[26].to_string()));
                     tags.push(mk("PaletteStretch", rec[27].to_string()));
                     if rec.len() >= 128 {
-                        let fname = String::from_utf8_lossy(&rec[48..80]).trim_end_matches('\0').to_string();
+                        let fname = crate::encoding::decode_utf8_or_latin1(&rec[48..80]).trim_end_matches('\0').to_string();
                         if !fname.is_empty() { tags.push(mk("PaletteFileName", fname)); }
-                        let pname = String::from_utf8_lossy(&rec[80..112]).trim_end_matches('\0').to_string();
+                        let pname = crate::encoding::decode_utf8_or_latin1(&rec[80..112]).trim_end_matches('\0').to_string();
                         if !pname.is_empty() { tags.push(mk("PaletteName", pname)); }
                     }
                     // Palette data
@@ -2335,7 +2335,7 @@ fn decode_photoshop_irb(id: u16, data: &[u8]) -> String {
         _ => {
             // Generic: try as string
             if data.iter().all(|&b| b >= 0x20 && b < 0x7F || b == 0) {
-                String::from_utf8_lossy(data).trim_end_matches('\0').to_string()
+                crate::encoding::decode_utf8_or_latin1(data).trim_end_matches('\0').to_string()
             } else if data.len() <= 4 {
                 format!("{}", u32::from_be_bytes({
                     let mut buf = [0u8; 4];
@@ -2465,7 +2465,7 @@ fn app12_group2(tag_name: &str, section: &str) -> &'static str {
 /// Format: ASCII text with optional section headers like "[picture info]" and
 /// key=value pairs separated by CR/LF or NUL bytes.
 fn process_app12_picture_info(data: &[u8]) -> Vec<crate::tag::Tag> {
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
     let mut tags = Vec::new();
     let mut section = String::new();
 
@@ -2749,7 +2749,7 @@ fn parse_mpf_inner(
             0xb000 => {
                 // MPFVersion — 4 UNDEFINED bytes stored inline
                 let bytes = mpf.get(eoff + 8..eoff + 12).unwrap_or(&[]);
-                let ver = String::from_utf8_lossy(bytes).into_owned();
+                let ver = crate::encoding::decode_utf8_or_latin1(bytes);
                 tags.push(mk_ifd_tag(
                     "MPFVersion",
                     crate::value::Value::String(ver.clone()),
@@ -3088,7 +3088,7 @@ fn meta_ifd_value_string(
             else { val_data[..n.min(val_data.len())].iter().map(|b| b.to_string()).collect::<Vec<_>>().join(" ") }
         }
         2 => { // ASCII
-            String::from_utf8_lossy(val_data).trim_end_matches('\0').to_string()
+            crate::encoding::decode_utf8_or_latin1(val_data).trim_end_matches('\0').to_string()
         }
         3 => { // SHORT (uint16)
             let n = count as usize;
@@ -3109,7 +3109,7 @@ fn meta_ifd_value_string(
             }).collect::<Vec<_>>().join(" ")
         }
         7 => { // UNDEFINED — render as ASCII if printable
-            let s = String::from_utf8_lossy(val_data);
+            let s = crate::encoding::decode_utf8_or_latin1(val_data);
             let trimmed = s.trim_end_matches('\0');
             if trimmed.chars().all(|c| c.is_ascii_graphic() || c == ' ') {
                 trimmed.to_string()
@@ -3548,10 +3548,10 @@ fn parse_gpmf_records(data: &[u8], tags: &mut Vec<crate::tag::Tag>, depth: usize
         // Decode value based on format
         let val_str = if fmt == 0x63 {
             // string
-            String::from_utf8_lossy(val_data).trim_end_matches('\0').to_string()
+            crate::encoding::decode_utf8_or_latin1(val_data).trim_end_matches('\0').to_string()
         } else if fmt == 0x55 && val_data.len() >= 16 {
             // date: "yymmddhhmmss.sss" format
-            String::from_utf8_lossy(&val_data[..16]).trim_end_matches('\0').to_string()
+            crate::encoding::decode_utf8_or_latin1(&val_data[..16]).trim_end_matches('\0').to_string()
         } else if (fmt == 0x42 || fmt == 0x62) && size == 1 {
             val_data[0].to_string()
         } else if (fmt == 0x53 || fmt == 0x73) && size >= 2 {
@@ -3593,7 +3593,7 @@ fn parse_gpmf_records(data: &[u8], tags: &mut Vec<crate::tag::Tag>, depth: usize
         } else if size > 256 {
             format!("(Binary data {} bytes)", size)
         } else {
-            String::from_utf8_lossy(val_data).trim_end_matches('\0').to_string()
+            crate::encoding::decode_utf8_or_latin1(val_data).trim_end_matches('\0').to_string()
         };
 
         // Emit even empty values (Perl does: ExposureType with empty value)
@@ -3668,14 +3668,14 @@ fn parse_ricoh_rmeta(data: &[u8]) -> Vec<crate::tag::Tag> {
 
         if sec_type == 1 {
             // Section 1: tag names (null-delimited)
-            section_tags = String::from_utf8_lossy(sec_data)
+            section_tags = crate::encoding::decode_utf8_or_latin1(sec_data)
                 .split('\0')
                 .take(num_entries + 1)
                 .map(|s| s.to_string())
                 .collect();
         } else if sec_type == 2 || sec_type == 18 {
             // Section 2/18: string values (null-delimited)
-            section_vals = String::from_utf8_lossy(sec_data)
+            section_vals = crate::encoding::decode_utf8_or_latin1(sec_data)
                 .split('\0')
                 .take(num_entries + 1)
                 .map(|s| s.to_string())
@@ -3913,7 +3913,7 @@ fn decode_infray_sensor(data: &[u8]) -> Vec<crate::tag::Tag> {
 
     let read_str = |off: usize, len: usize| -> String {
         if off + len > data.len() { return String::new(); }
-        String::from_utf8_lossy(&data[off..off+len]).trim_end_matches('\0').to_string()
+        crate::encoding::decode_utf8_or_latin1(&data[off..off+len]).trim_end_matches('\0').to_string()
     };
 
     let rf32 = |off: usize| -> f32 {
@@ -4148,7 +4148,7 @@ fn parse_ole_props<'a>(data: &[u8], family: &str, tag_map: &dyn Fn(u32) -> Optio
                     if val_off + 8 > data.len() { continue; }
                     let slen = ru32(val_off + 4) as usize;
                     if val_off + 8 + slen > data.len() { continue; }
-                    String::from_utf8_lossy(&data[val_off+8..val_off+8+slen]).trim_end_matches('\0').to_string()
+                    crate::encoding::decode_utf8_or_latin1(&data[val_off+8..val_off+8+slen]).trim_end_matches('\0').to_string()
                 }
                 31 => { // VT_LPWSTR
                     if val_off + 8 > data.len() { continue; }
@@ -4227,7 +4227,7 @@ fn parse_qualcomm(data: &[u8]) -> Vec<crate::tag::Tag> {
             break;
         }
         let tag_bytes = &data[pos + 3..pos + 3 + tag_len];
-        let tag_str = String::from_utf8_lossy(tag_bytes).to_string();
+        let tag_str = crate::encoding::decode_utf8_or_latin1(tag_bytes).to_string();
         pos += 3 + tag_len; // now at format byte
         let fmt = data[pos];
         // skip fmt(1) + cnt1(2) + cnt2(2) = 5 bytes
@@ -4623,7 +4623,7 @@ fn parse_jps(data: &[u8]) -> Vec<Tag> {
     if data.len() > comment_offset {
         let comment_bytes = &data[comment_offset..];
         // Strip null bytes
-        let comment = String::from_utf8_lossy(comment_bytes)
+        let comment = crate::encoding::decode_utf8_or_latin1(comment_bytes)
             .trim_end_matches('\0')
             .to_string();
         if !comment.is_empty() {

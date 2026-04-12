@@ -9,7 +9,7 @@ use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
 pub fn read_html(data: &[u8]) -> Result<Vec<Tag>> {
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
     let lower = text.to_lowercase();
 
     if !lower.contains("<html") && !lower.contains("<!doctype html") && !lower.contains("<?xml") {

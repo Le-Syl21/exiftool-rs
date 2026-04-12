@@ -136,7 +136,7 @@ fn decode_nikon_capture_tag(tag_id: u32, data: &[u8], tags: &mut Vec<Tag>) {
 
         // Edit version name
         0x3d136244 => {
-            let s = String::from_utf8_lossy(data).trim_end_matches('\0').to_string();
+            let s = crate::encoding::decode_utf8_or_latin1(data).trim_end_matches('\0').to_string();
             if !s.is_empty() { tags.push(mk("EditVersionName", &s)); }
         }
 

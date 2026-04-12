@@ -258,7 +258,7 @@ fn parse_ext_block(data: &[u8], tags: &mut Vec<Tag>) {
 
 fn read_null_terminated_or_all(data: &[u8]) -> String {
     let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
-    String::from_utf8_lossy(&data[..end]).to_string()
+    crate::encoding::decode_utf8_or_latin1(&data[..end]).to_string()
 }
 
 fn unix_to_exif_date(ts: i64) -> String {

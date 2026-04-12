@@ -38,7 +38,7 @@ fn parse_mie_group(data: &[u8], pos: &mut usize, group_name: &str, tags: &mut Ve
             }
         }
         let tag_name = if tag_len > 0 {
-            let name = String::from_utf8_lossy(&data[*pos..*pos + tag_len]).to_string();
+            let name = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos + tag_len]).to_string();
             *pos += tag_len;
             name
         } else {
@@ -155,11 +155,11 @@ fn parse_mie_value(format_type: u8, data: &[u8]) -> Value {
     match format_type {
         0x20 | 0x28 => {
             // ASCII string or UTF-8
-            Value::String(String::from_utf8_lossy(data).trim_end_matches('\0').to_string())
+            Value::String(crate::encoding::decode_utf8_or_latin1(data).trim_end_matches('\0').to_string())
         }
         0x30 | 0x38 => {
             // String list (null-separated)
-            let s = String::from_utf8_lossy(data).trim_end_matches('\0').to_string();
+            let s = crate::encoding::decode_utf8_or_latin1(data).trim_end_matches('\0').to_string();
             Value::String(s.replace('\0', ", "))
         }
         0x40 => {

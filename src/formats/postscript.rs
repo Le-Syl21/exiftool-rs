@@ -37,7 +37,7 @@ pub fn read_postscript(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     // Parse DSC comments line by line (handle \r, \n, and \r\n)
-    let text = String::from_utf8_lossy(&data[offset..data.len().min(offset + 65536)]);
+    let text = crate::encoding::decode_utf8_or_latin1(&data[offset..data.len().min(offset + 65536)]);
     let text = text.replace('\r', "\n");
 
     for line in text.lines() {
@@ -93,7 +93,7 @@ pub fn read_postscript(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     // Look for %BeginPhotoshop blocks (Photoshop IRB data encoded as hex)
-    let full_text = String::from_utf8_lossy(&data[offset..]);
+    let full_text = crate::encoding::decode_utf8_or_latin1(&data[offset..]);
     let full_text = full_text.replace('\r', "\n");
     parse_photoshop_blocks(&full_text, &mut tags);
 

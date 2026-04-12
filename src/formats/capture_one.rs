@@ -131,7 +131,7 @@ fn parse_zip_central_directory(data: &[u8]) -> Option<Vec<ZipEntry>> {
 
         let name_start = pos + 46;
         if name_start + name_len > len { break; }
-        let filename = String::from_utf8_lossy(&data[name_start..name_start + name_len]).to_string();
+        let filename = crate::encoding::decode_utf8_or_latin1(&data[name_start..name_start + name_len]).to_string();
 
         entries.push(ZipEntry {
             filename,

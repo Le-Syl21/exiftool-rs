@@ -106,7 +106,7 @@ fn parse_tnef_date(data: &[u8]) -> Option<String> {
 /// Read string from bytes (null-terminated or full length)
 fn read_str(data: &[u8]) -> String {
     let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
-    String::from_utf8_lossy(&data[..end]).trim().to_string()
+    crate::encoding::decode_utf8_or_latin1(&data[..end]).trim().to_string()
 }
 
 /// Decode UTF-16LE string

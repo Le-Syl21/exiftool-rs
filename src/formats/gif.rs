@@ -13,7 +13,7 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     let mut tags = Vec::new();
-    let version = String::from_utf8_lossy(&data[3..6]).to_string();
+    let version = crate::encoding::decode_utf8_or_latin1(&data[3..6]).to_string();
     tags.push(mk("GIFVersion", "GIF Version", Value::String(version)));
 
     // Logical Screen Descriptor (bytes 6-12)
@@ -79,7 +79,7 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
                         let (comment, new_pos) = read_sub_blocks(data, pos);
                         pos = new_pos;
                         if !comment.is_empty() {
-                            let text = String::from_utf8_lossy(&comment).to_string();
+                            let text = crate::encoding::decode_utf8_or_latin1(&comment).to_string();
                             // Normalize newlines to ".." to match ExifTool output format
                             let text = text.replace("\r\n", "..").replace('\n', "..").replace('\r', "..");
                             tags.push(mk("Comment", "Comment", Value::String(text)));

@@ -128,7 +128,7 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
             } else { obj_info };
             let start = if obj_info == 0x0F { off + 3 } else { off + 1 };
             if start + len > data.len() { return None; }
-            Some(PlistValue::String(String::from_utf8_lossy(&data[start..start+len]).to_string()))
+            Some(PlistValue::String(crate::encoding::decode_utf8_or_latin1(&data[start..start+len]).to_string()))
         }
         0x6 => {
             // UTF-16 string

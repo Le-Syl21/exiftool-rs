@@ -558,7 +558,7 @@ fn read_float(data: &[u8], pos: usize, size: usize) -> f64 {
 
 fn read_string(data: &[u8], pos: usize, size: usize) -> String {
     let end = (pos + size).min(data.len());
-    String::from_utf8_lossy(&data[pos..end])
+    crate::encoding::decode_utf8_or_latin1(&data[pos..end])
         .trim_end_matches('\0')
         .to_string()
 }

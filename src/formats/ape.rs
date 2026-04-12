@@ -375,7 +375,7 @@ pub fn parse_ape_tags(data: &[u8], tags: &mut Vec<Tag>, group: &str) {
         if key.starts_with("Cover Art") && is_binary {
             // Split at first null: description + binary data
             if let Some(null_pos) = val_bytes.iter().position(|&b| b == 0) {
-                let desc = String::from_utf8_lossy(&val_bytes[..null_pos]).to_string();
+                let desc = crate::encoding::decode_utf8_or_latin1(&val_bytes[..null_pos]);
                 let img_data = val_bytes[null_pos+1..].to_vec();
 
                 // Emit description tag
@@ -391,7 +391,7 @@ pub fn parse_ape_tags(data: &[u8], tags: &mut Vec<Tag>, group: &str) {
         } else if is_binary {
             tags.push(mk(group, &tag_name, Value::Binary(val_bytes.to_vec())));
         } else {
-            let s = String::from_utf8_lossy(val_bytes).to_string();
+            let s = crate::encoding::decode_utf8_or_latin1(val_bytes);
             // Apply known tag transformations
             let (raw_val, print_val) = ape_value_conv(&tag_name, &s);
             let mut tag = mk(group, &tag_name, raw_val);

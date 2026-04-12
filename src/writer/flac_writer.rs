@@ -64,7 +64,7 @@ fn build_vorbis_comments(existing: &[u8], changes: &[(&str, &str)]) -> Vec<u8> {
                 let clen = u32::from_le_bytes([existing[p], existing[p+1], existing[p+2], existing[p+3]]) as usize;
                 p += 4;
                 if p + clen > existing.len() { break; }
-                let comment = String::from_utf8_lossy(&existing[p..p+clen]).to_string();
+                let comment = crate::encoding::decode_utf8_or_latin1(&existing[p..p+clen]).to_string();
                 if let Some(eq) = comment.find('=') {
                     comments.push((comment[..eq].to_string(), comment[eq+1..].to_string()));
                 }

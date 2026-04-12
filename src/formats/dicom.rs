@@ -394,7 +394,7 @@ pub fn read_dicom(data: &[u8]) -> Result<Vec<Tag>> {
 
         // Special handling for TransferSyntaxUID - track for later
         if group == 0x0002 && element == 0x0010 {
-            let ts = String::from_utf8_lossy(val_data)
+            let ts = crate::encoding::decode_utf8_or_latin1(val_data)
                 .trim()
                 .trim_end_matches('\0')
                 .to_string();
@@ -527,24 +527,24 @@ fn build_value_string(val_data: &[u8], vr: &[u8], group: u16, element: u16, big_
         }
         b"DA" => {
             // Date: YYYYMMDD
-            let s = String::from_utf8_lossy(val_data);
+            let s = crate::encoding::decode_utf8_or_latin1(val_data);
             let s = s.trim().trim_end_matches('\0');
             format_date(s)
         }
         b"TM" => {
             // Time: HHMMSS.FFFFFF
-            let s = String::from_utf8_lossy(val_data);
+            let s = crate::encoding::decode_utf8_or_latin1(val_data);
             let s = s.trim().trim_end_matches('\0');
             format_time(s)
         }
         b"UI" => {
             // UID: trim null bytes
-            let s = String::from_utf8_lossy(val_data);
+            let s = crate::encoding::decode_utf8_or_latin1(val_data);
             s.trim().trim_end_matches('\0').to_string()
         }
         _ => {
             // String types: trim trailing spaces and nulls
-            let s = String::from_utf8_lossy(val_data);
+            let s = crate::encoding::decode_utf8_or_latin1(val_data);
             let s = s.trim_end_matches(' ').trim_end_matches('\0').trim_start_matches(' ');
             // For AE, CS, DS, IS, LO, PN, SH: trim both ends
             s.trim().to_string()

@@ -70,9 +70,9 @@ pub fn read_j2c(data: &[u8]) -> Result<Vec<Tag>> {
                     let val = &seg_data[2..];
                     if !val.is_empty() {
                         let comment = if reg == 1 {
-                            String::from_utf8_lossy(val).into_owned()
+                            crate::encoding::decode_utf8_or_latin1(val)
                         } else {
-                            String::from_utf8_lossy(val).into_owned()
+                            crate::encoding::decode_utf8_or_latin1(val)
                         };
                         tags.push(mk("Comment", "Comment", Value::String(comment)));
                     }
@@ -341,7 +341,7 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
                 let cd = &data[content_start..content_end];
                 if cd.len() >= 4 {
                     let major_brand = &cd[0..4];
-                    let brand_str = String::from_utf8_lossy(major_brand);
+                    let brand_str = crate::encoding::decode_utf8_or_latin1(major_brand);
                     let brand_desc = match major_brand {
                         b"jp2 " => "JPEG 2000 Image (.JP2)",
                         b"jpm " => "JPEG 2000 Compound Image (.JPM)",
@@ -371,7 +371,7 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
                     let mut brands: Vec<String> = Vec::new();
                     for chunk in compat_data.chunks(4) {
                         if chunk.len() == 4 && !chunk.contains(&0u8) {
-                            let b = String::from_utf8_lossy(chunk).to_string();
+                            let b = crate::encoding::decode_utf8_or_latin1(chunk).to_string();
                             brands.push(b);
                         }
                     }

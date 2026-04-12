@@ -597,7 +597,7 @@ impl ExifReader {
                     if total_size > 11 {
                         let off = entry.value_offset as usize;
                         if off + 11 <= data.len() && &data[off..off+7] == b"PrintIM" {
-                            let ver = String::from_utf8_lossy(&data[off+7..off+11]).to_string();
+                            let ver = crate::encoding::decode_utf8_or_latin1(&data[off+7..off+11]).to_string();
                             tags.push(Tag {
                                 id: TagId::Text("PrintIMVersion".into()),
                                 name: "PrintIMVersion".into(),
@@ -1000,7 +1000,7 @@ fn read_ifd_value(data: &[u8], entry: &IfdEntry, byte_order: ByteOrderMark) -> O
         }
         // ASCII
         2 => {
-            let s = String::from_utf8_lossy(value_data);
+            let s = crate::encoding::decode_utf8_or_latin1(value_data);
             Some(Value::String(s.trim_end_matches('\0').to_string()))
         }
         // SHORT

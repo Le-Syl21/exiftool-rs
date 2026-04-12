@@ -157,7 +157,7 @@ fn parse_rest(data: &[u8], jpg_start: usize, jpg_len: usize, tags: &mut Vec<Tag>
 
 fn read_null_str(data: &[u8]) -> String {
     let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
-    String::from_utf8_lossy(&data[..end]).to_string()
+    crate::encoding::decode_utf8_or_latin1(&data[..end]).to_string()
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {

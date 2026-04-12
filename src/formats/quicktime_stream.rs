@@ -486,7 +486,7 @@ fn process_freegps_type2_nmea(data: &[u8], tags: &mut Vec<Tag>) -> bool {
     }
 
     // Search for NMEA RMC sentence in the data
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
     if parse_nmea_rmc(&text, tags) {
         return true;
     }
@@ -1058,7 +1058,7 @@ fn process_mebx(data: &[u8], tags: &mut Vec<Tag>) -> bool {
 
         // Try to decode as UTF-8 string
         if let Ok(s) = std::str::from_utf8(val_data) {
-            let key_str = String::from_utf8_lossy(key).to_string();
+            let key_str = crate::encoding::decode_utf8_or_latin1(key).to_string();
             let name = key_str.trim().to_string();
             if !name.is_empty() {
                 tags.push(mk_stream(&name, &name, Value::String(s.trim().to_string())));
@@ -1076,7 +1076,7 @@ fn process_tx3g(data: &[u8], tags: &mut Vec<Tag>) -> bool {
     if data.len() < 2 {
         return false;
     }
-    let text = String::from_utf8_lossy(&data[2..]); // skip 2-byte length word
+    let text = crate::encoding::decode_utf8_or_latin1(&data[2..]); // skip 2-byte length word
     let text = text.trim();
     if text.is_empty() {
         return false;
@@ -1226,7 +1226,7 @@ fn process_tx3g_autel(text: &str, tags: &mut Vec<Tag>) -> bool {
 // ─── NMEA processor ───
 
 fn process_nmea(data: &[u8], tags: &mut Vec<Tag>) -> bool {
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
     parse_nmea_rmc(&text, tags) || parse_nmea_gga(&text, tags)
 }
 
@@ -1372,7 +1372,7 @@ fn parse_nmea_coord(s: &str) -> Option<f64> {
 // ─── text track processor ───
 
 fn process_text(data: &[u8], tags: &mut Vec<Tag>) -> bool {
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
     let text = text.trim();
     if text.is_empty() {
         return false;
@@ -1719,7 +1719,7 @@ fn try_ascii_digits(data: &[u8], max_len: usize) -> Option<String> {
     let end = data.len().min(max_len);
     let slice = &data[..end];
     if slice.iter().all(|b| b.is_ascii_digit()) {
-        Some(String::from_utf8_lossy(slice).to_string())
+        Some(crate::encoding::decode_utf8_or_latin1(slice).to_string())
     } else {
         None
     }

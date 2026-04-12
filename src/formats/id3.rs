@@ -276,7 +276,7 @@ fn decode_id3v2_frame(frame_id: &[u8], data: &[u8]) -> Option<Tag> {
         }
         "TXXX" => return decode_txxx_frame(data),
         "WOAR" => {
-            let url = String::from_utf8_lossy(data).trim_end_matches('\0').to_string();
+            let url = crate::encoding::decode_utf8_or_latin1(data).trim_end_matches('\0').to_string();
             return Some(mk("ArtistURL", "Artist URL", Value::String(url)));
         }
         "WXXX" => return decode_wxxx_frame(data),
@@ -332,9 +332,9 @@ fn decode_id3_text(data: &[u8]) -> Option<String> {
         }
         3 => {
             // UTF-8
-            String::from_utf8_lossy(text_data).to_string()
+            crate::encoding::decode_utf8_or_latin1(text_data).to_string()
         }
-        _ => String::from_utf8_lossy(text_data).to_string(),
+        _ => crate::encoding::decode_utf8_or_latin1(text_data).to_string(),
     };
 
     let trimmed = text.trim_end_matches('\0').to_string();
@@ -404,7 +404,7 @@ fn decode_pic_frame(data: &[u8]) -> Vec<Tag> {
     }
     let encoding = data[0];
     // 3-char image format (e.g., "JPG", "PNG")
-    let image_format = String::from_utf8_lossy(&data[1..4]).to_string();
+    let image_format = crate::encoding::decode_utf8_or_latin1(&data[1..4]).to_string();
     let pic_type = data[4];
     let rest = &data[5..];
 
@@ -537,7 +537,7 @@ fn decode_wxxx_frame(data: &[u8]) -> Option<Tag> {
     let rest = &data[1..];
     let (desc_bytes, url_bytes) = split_encoded_string(rest, encoding);
     let desc = decode_raw_text(desc_bytes, encoding);
-    let url = String::from_utf8_lossy(url_bytes).trim_end_matches('\0').to_string();
+    let url = crate::encoding::decode_utf8_or_latin1(url_bytes).trim_end_matches('\0').to_string();
     let desc = desc.trim_end_matches('\0');
     let name = if desc.is_empty() { "UserURL" } else { desc };
 
@@ -547,7 +547,7 @@ fn decode_wxxx_frame(data: &[u8]) -> Option<Tag> {
 /// Decode POPM (Popularimeter) frame.
 fn decode_popularity_frame(data: &[u8]) -> Option<Tag> {
     let null_pos = data.iter().position(|&b| b == 0)?;
-    let email = String::from_utf8_lossy(&data[..null_pos]).to_string();
+    let email = crate::encoding::decode_utf8_or_latin1(&data[..null_pos]).to_string();
     let rest = &data[null_pos + 1..];
     if rest.is_empty() {
         return None;
@@ -591,8 +591,8 @@ fn decode_raw_text(data: &[u8], encoding: u8) -> String {
         0 => data.iter().map(|&b| b as char).collect(),
         1 => decode_utf16(data),
         2 => decode_utf16_be(data),
-        3 => String::from_utf8_lossy(data).to_string(),
-        _ => String::from_utf8_lossy(data).to_string(),
+        3 => crate::encoding::decode_utf8_or_latin1(data).to_string(),
+        _ => crate::encoding::decode_utf8_or_latin1(data).to_string(),
     }
 }
 

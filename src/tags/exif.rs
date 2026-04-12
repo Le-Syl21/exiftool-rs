@@ -340,7 +340,7 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
         // ExifVersion / FlashpixVersion
         ("ExifIFD", 0x9000) | ("ExifIFD", 0xA000) => {
             if let Value::Undefined(ref data) = value {
-                let s = String::from_utf8_lossy(data);
+                let s = crate::encoding::decode_utf8_or_latin1(data);
                 if s.len() == 4 {
                     return Some(format!("{}.{}", &s[0..2], &s[2..4]));
                 }

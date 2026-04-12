@@ -47,7 +47,7 @@ pub fn read_mrw(data: &[u8]) -> Result<Vec<Tag>> {
                 // Offset 18: StorageMethod (int8u)
                 // Offset 23: BayerPattern  (int8u)
                 if length >= 8 {
-                    let fw = String::from_utf8_lossy(&seg_data[0..8.min(length)]).trim_end_matches('\0').to_string();
+                    let fw = crate::encoding::decode_utf8_or_latin1(&seg_data[0..8.min(length)]).trim_end_matches('\0').to_string();
                     if !fw.is_empty() {
                         tags.push(mk_str("FirmwareID", "Firmware ID", fw.clone()));
                     }

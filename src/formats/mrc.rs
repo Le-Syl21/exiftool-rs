@@ -92,7 +92,7 @@ fn read_str(data: &[u8], offset: usize, len: usize) -> String {
     if offset + len > data.len() { return String::new(); }
     let s = &data[offset..offset+len];
     let end = s.iter().position(|&b| b == 0).unwrap_or(len);
-    String::from_utf8_lossy(&s[..end]).trim_end().to_string()
+    crate::encoding::decode_utf8_or_latin1(&s[..end]).trim_end().to_string()
 }
 
 /// Convert Unix timestamp (seconds since 1970-01-01) to ExifTool datetime string.

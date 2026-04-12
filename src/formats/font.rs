@@ -153,7 +153,7 @@ pub fn read_dfont(data: &[u8], tags: &mut Vec<Tag>) -> Result<()> {
                 let long_len = vers_data[p] as usize;
                 let p2 = p + 1;
                 if p2 + long_len <= vers_data.len() && long_len > 0 {
-                    let ver_str = String::from_utf8_lossy(&vers_data[p2..p2 + long_len]).to_string();
+                    let ver_str = crate::encoding::decode_utf8_or_latin1(&vers_data[p2..p2 + long_len]).to_string();
                     tags.push(mk("ApplicationVersion", "Application Version", Value::String(ver_str)));
                 }
             }
@@ -316,9 +316,9 @@ fn decode_font_name_string(data: &[u8], offset: usize, length: usize, platform: 
         1 => {
             // Macintosh: encoding depends on encoding_id
             // For encoding 0 (MacRoman), treat as Latin-1
-            String::from_utf8_lossy(raw).trim().to_string()
+            crate::encoding::decode_utf8_or_latin1(raw).trim().to_string()
         }
-        _ => String::from_utf8_lossy(raw).trim().to_string(),
+        _ => crate::encoding::decode_utf8_or_latin1(raw).trim().to_string(),
     }
 }
 
@@ -439,7 +439,7 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
     // Find the first non-text byte or use the full file if all text
     let text_end = data.iter().position(|&b| b == 0x80).unwrap_or(data.len());
     let text_data = &data[..text_end];
-    let text = String::from_utf8_lossy(text_data);
+    let text = crate::encoding::decode_utf8_or_latin1(text_data);
 
     let mut tags = Vec::new();
     let mut comment_parts: Vec<String> = Vec::new();

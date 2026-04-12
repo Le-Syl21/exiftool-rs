@@ -132,7 +132,7 @@ pub fn parse_vorbis_comments(data: &[u8], tags: &mut Vec<Tag>) {
     if pos + vendor_len > data.len() {
         return;
     }
-    let vendor = String::from_utf8_lossy(&data[pos..pos + vendor_len]).to_string();
+    let vendor = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + vendor_len]).to_string();
     pos += vendor_len;
 
     if !vendor.is_empty() {
@@ -157,7 +157,7 @@ pub fn parse_vorbis_comments(data: &[u8], tags: &mut Vec<Tag>) {
             break;
         }
 
-        let comment = String::from_utf8_lossy(&data[pos..pos + comment_len]);
+        let comment = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + comment_len]);
         pos += comment_len;
 
         if let Some(eq_pos) = comment.find('=') {
@@ -208,7 +208,7 @@ pub fn parse_flac_picture(data: &[u8], tags: &mut Vec<Tag>) {
     if pos + mime_len > data.len() {
         return;
     }
-    let mime = String::from_utf8_lossy(&data[pos..pos + mime_len]).to_string();
+    let mime = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + mime_len]).to_string();
     pos += mime_len;
 
     if pos + 4 > data.len() {
@@ -217,7 +217,7 @@ pub fn parse_flac_picture(data: &[u8], tags: &mut Vec<Tag>) {
     let desc_len = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
     pos += 4;
     let desc = if desc_len > 0 && pos + desc_len <= data.len() {
-        String::from_utf8_lossy(&data[pos..pos + desc_len]).to_string()
+        crate::encoding::decode_utf8_or_latin1(&data[pos..pos + desc_len]).to_string()
     } else {
         String::new()
     };

@@ -61,7 +61,7 @@ fn read_str(data: &[u8], off: usize, len: usize) -> String {
     if off + len > data.len() { return String::new(); }
     let s = &data[off..off+len];
     let end = s.iter().position(|&b| b == 0).unwrap_or(len);
-    String::from_utf8_lossy(&s[..end]).trim().to_string()
+    crate::encoding::decode_utf8_or_latin1(&s[..end]).trim().to_string()
 }
 
 fn convert_date(val: &str) -> String {
@@ -111,7 +111,7 @@ fn parse_red_dir(buff: &[u8], dir_start: usize, dir_end: usize, tags: &mut Vec<T
             1 => { // string
                 let s = {
                     let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
-                    String::from_utf8_lossy(&data[..end]).trim().to_string()
+                    crate::encoding::decode_utf8_or_latin1(&data[..end]).trim().to_string()
                 };
                 if !s.is_empty() {
                     match tag {

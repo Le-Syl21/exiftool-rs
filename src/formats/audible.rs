@@ -112,8 +112,8 @@ fn parse_metadata(data: &[u8], tags: &mut Vec<Tag>) {
             break;
         }
 
-        let tag = String::from_utf8_lossy(&data[pos..tag_end]).to_string();
-        let val = String::from_utf8_lossy(&data[tag_end..val_end]).to_string();
+        let tag = crate::encoding::decode_utf8_or_latin1(&data[pos..tag_end]);
+        let val = crate::encoding::decode_utf8_or_latin1(&data[tag_end..val_end]);
 
         pos = val_end;
 

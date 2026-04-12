@@ -34,7 +34,7 @@ pub fn read_iwork(data: &[u8]) -> Result<Vec<Tag>> {
 
         let name_start = pos + 30;
         if name_start + name_len > data.len() { break; }
-        let filename = String::from_utf8_lossy(&data[name_start..name_start + name_len]).to_string();
+        let filename = crate::encoding::decode_utf8_or_latin1(&data[name_start..name_start + name_len]).to_string();
 
         if first_file {
             first_file = false;
@@ -257,7 +257,7 @@ fn parse_zip_central_directory(data: &[u8]) -> Option<Vec<ZipEntry>> {
 
         let name_start = pos + 46;
         if name_start + name_len > len { break; }
-        let filename = String::from_utf8_lossy(&data[name_start..name_start + name_len]).to_string();
+        let filename = crate::encoding::decode_utf8_or_latin1(&data[name_start..name_start + name_len]).to_string();
 
         entries.push(ZipEntry {
             filename,
@@ -372,7 +372,7 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
             if !is_opendoc {
                 if let Some(raw) = zip_entry_data(data, entry) {
                     if entry.compression == 0 {
-                        let mime = String::from_utf8_lossy(raw).trim().to_string();
+                        let mime = crate::encoding::decode_utf8_or_latin1(raw).trim().to_string();
                         tags.push(mk("MIMEType", "MIME Type", Value::String(mime)));
                     }
                 }
@@ -495,7 +495,7 @@ fn zip_compression_name(method: u16) -> String {
 
 
 fn parse_ooxml_core(data: &[u8], tags: &mut Vec<Tag>) {
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
     let fields: &[(&str, &str)] = &[
         ("dc:title", "Title"),
         ("dc:creator", "Creator"),
@@ -525,7 +525,7 @@ fn parse_ooxml_core(data: &[u8], tags: &mut Vec<Tag>) {
 }
 
 fn parse_ooxml_app(data: &[u8], tags: &mut Vec<Tag>) {
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
     let fields: &[(&str, &str)] = &[
         ("Template", "Template"),
         ("TotalTime", "TotalEditTime"),
@@ -666,8 +666,8 @@ fn parse_vt_vector_strings(xml: &str) -> String {
 
 /// Parse docProps/custom.xml for custom properties.
 fn parse_ooxml_custom(data: &[u8], tags: &mut Vec<Tag>) {
-    let text = String::from_utf8_lossy(data);
-    let mut rest = text.as_ref();
+    let text = crate::encoding::decode_utf8_or_latin1(data);
+    let mut rest = text.as_str();
 
     // Each property: <property ... name="PropName"><vt:TYPE>value</vt:TYPE></property>
     while let Some(p) = rest.find("<property ") {
@@ -775,8 +775,8 @@ fn extract_xml_value(xml: &str, tag: &str) -> Option<String> {
 /// Parse OpenDocument meta.xml and extract metadata tags.
 /// The meta.xml format uses namespaced XML elements.
 fn parse_opendoc_meta(data: &[u8], tags: &mut Vec<Tag>) {
-    let text = String::from_utf8_lossy(data);
-    let xml = text.as_ref();
+    let text = crate::encoding::decode_utf8_or_latin1(data);
+    let xml = text.as_str();
 
     // Extract grddl:transformation attribute from root element
     if let Some(trans) = xml_attr(xml, "grddl:transformation") {

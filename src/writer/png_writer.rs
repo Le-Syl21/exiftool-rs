@@ -59,15 +59,15 @@ pub fn write_png(
             b"tEXt" | b"iTXt" | b"zTXt" => {
                 // Check if this text chunk should be removed
                 let null_pos = chunk_data.iter().position(|&b| b == 0).unwrap_or(chunk_data.len());
-                let keyword = String::from_utf8_lossy(&chunk_data[..null_pos]);
+                let keyword = crate::encoding::decode_latin1(&chunk_data[..null_pos]);
 
-                if remove_text.iter().any(|&k| k == keyword.as_ref()) {
+                if remove_text.iter().any(|&k| k == keyword.as_str()) {
                     pos = chunk_end;
                     continue; // Skip this chunk
                 }
 
                 // Check if we're replacing this keyword
-                if new_text.iter().any(|(k, _)| *k == keyword.as_ref()) {
+                if new_text.iter().any(|(k, _)| *k == keyword.as_str()) {
                     pos = chunk_end;
                     continue; // Skip (will be replaced by new chunk above)
                 }

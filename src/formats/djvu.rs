@@ -83,7 +83,7 @@ fn parse_chunks(data: &[u8], mut pos: usize, end: usize, tags: &mut Vec<Tag>) {
             }
             b"INCL" => {
                 // Included file ID
-                let id = String::from_utf8_lossy(chunk_data).trim_end_matches('\0').to_string();
+                let id = crate::encoding::decode_utf8_or_latin1(chunk_data).trim_end_matches('\0').to_string();
                 if !id.is_empty() {
                     tags.push(mk("IncludedFileID", "Included File ID", Value::String(id)));
                 }
@@ -143,8 +143,8 @@ fn parse_info(data: &[u8], tags: &mut Vec<Tag>) {
 
 /// Parse DjVu ANTa annotation chunk (s-expression format)
 fn parse_ant(data: &[u8], tags: &mut Vec<Tag>) {
-    let text = String::from_utf8_lossy(data);
-    let text = text.as_ref();
+    let text = crate::encoding::decode_utf8_or_latin1(data);
+    let text = text.as_str();
 
     // Look for (metadata ...) block
     if let Some(meta_start) = find_sexpr(text, "metadata") {

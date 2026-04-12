@@ -219,7 +219,7 @@ fn parse_ciff_dir(
         let value = match data_type {
             0x00 => {
                 // Raw bytes / string
-                let s = String::from_utf8_lossy(value_data)
+                let s = crate::encoding::decode_utf8_or_latin1(value_data)
                     .trim_end_matches('\0')
                     .to_string();
                 if s.chars().all(|c| c.is_ascii_graphic() || c.is_ascii_whitespace()) && !s.is_empty() {
@@ -231,7 +231,7 @@ fn parse_ciff_dir(
             0x08 => {
                 // ASCII string
                 Value::String(
-                    String::from_utf8_lossy(value_data)
+                    crate::encoding::decode_utf8_or_latin1(value_data)
                         .trim_end_matches('\0')
                         .to_string(),
                 )
@@ -381,7 +381,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
     match tag_id {
         0x080a => {
             // CanonRawMakeModel: null-separated "Make\0Model\0" string
-            let s = String::from_utf8_lossy(data);
+            let s = crate::encoding::decode_utf8_or_latin1(data);
             let parts: Vec<&str> = s.split('\0').filter(|p| !p.is_empty()).collect();
             if let Some(make) = parts.first() {
                 tags.push(mk("Make", make.to_string()));

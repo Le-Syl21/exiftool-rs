@@ -22,12 +22,12 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 
     // Version at offset 0x3C (4 bytes ASCII, e.g., "0106")
-    let version = String::from_utf8_lossy(&data[0x3C..0x40]).to_string();
+    let version = crate::encoding::decode_utf8_or_latin1(&data[0x3C..0x40]).to_string();
     tags.push(mk("RAFVersion", "RAF Version", Value::String(version)));
 
     // Camera model (bytes 0x1C-0x3C, null-terminated)
     let model_end = data[0x1C..0x3C].iter().position(|&b| b == 0).unwrap_or(0x20);
-    let model = String::from_utf8_lossy(&data[0x1C..0x1C + model_end]).to_string();
+    let model = crate::encoding::decode_utf8_or_latin1(&data[0x1C..0x1C + model_end]).to_string();
     if !model.is_empty() {
         tags.push(mk("Model", "Camera Model", Value::String(model)));
     }

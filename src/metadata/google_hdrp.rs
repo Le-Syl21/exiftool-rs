@@ -639,7 +639,7 @@ fn parse_protobuf(data: &[u8], prefix: &str, tags: &mut Vec<Tag>) {
                 if let Some(def) = HDRP_FIELDS.iter().find(|d| d.path == path) {
                     match def.fmt {
                         FieldFmt::String => {
-                            let s = String::from_utf8_lossy(bytes).to_string();
+                            let s = crate::encoding::decode_utf8_or_latin1(bytes).to_string();
                             tags.push(make_tag(def.name, def.group2,
                                 Value::String(s.clone()), s));
                         }

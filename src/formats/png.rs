@@ -122,9 +122,9 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
                     text_after_idat_count += 1;
                 }
                 if let Some(null_pos) = chunk_data.iter().position(|&b| b == 0) {
-                    let key = String::from_utf8_lossy(&chunk_data[..null_pos]).to_string();
+                    let key = crate::encoding::decode_latin1(&chunk_data[..null_pos]);
                     let val =
-                        String::from_utf8_lossy(&chunk_data[null_pos + 1..]).to_string();
+                        crate::encoding::decode_latin1(&chunk_data[null_pos + 1..]);
                     // Check for XMP in tEXt chunk
                     if key == "XML:com.adobe.xmp" {
                         if let Ok(xmp_tags) = crate::metadata::XmpReader::read(val.as_bytes()) {
@@ -313,7 +313,7 @@ fn parse_itxt_into(data: &[u8], tags: &mut Vec<Tag>) {
         Some(p) => p,
         None => return,
     };
-    let key = String::from_utf8_lossy(&data[..null_pos]).to_string();
+    let key = crate::encoding::decode_utf8_or_latin1(&data[..null_pos]).to_string();
 
     let rest = &data[null_pos + 1..];
     if rest.len() < 2 {
@@ -338,7 +338,7 @@ fn parse_itxt_into(data: &[u8], tags: &mut Vec<Tag>) {
     };
     let text_slice = &rest[null_pos + 1..];
 
-    let text = String::from_utf8_lossy(text_slice).to_string();
+    let text = crate::encoding::decode_utf8_or_latin1(text_slice).to_string();
 
     // Check for XMP in iTXt
     if key == "XML:com.adobe.xmp" {

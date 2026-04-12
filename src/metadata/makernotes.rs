@@ -291,7 +291,7 @@ fn decode_google_hdrp(data: &[u8]) -> Vec<Tag> {
     // store tags as plain text after the HDRP header.
 
     // Try to find text content after HDRP header
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
     for line in text.lines() {
         if let Some(colon) = line.find(':') {
             let key = line[..colon].trim();
@@ -628,7 +628,7 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
     if d.len() < 60 { return tags; }
 
     // From Perl Kodak::Main (byte offsets, big-endian)
-    let model = String::from_utf8_lossy(&d[0..8]).trim_end_matches('\0').to_string();
+    let model = crate::encoding::decode_utf8_or_latin1(&d[0..8]).trim_end_matches('\0').to_string();
     if !model.is_empty() { tags.push(mk("KodakModel", model)); }
 
     tags.push(mk("Quality", d[9].to_string()));
@@ -704,7 +704,7 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
 /// Decode JVC text-format MakerNotes ("VER:0100QTY:FINE...").
 fn decode_jvc_text(data: &[u8]) -> Vec<Tag> {
     let mut tags = Vec::new();
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
 
     // Parse KEY:VALUE pairs (3-letter key, 3-4 char value)
     let mut pos = 0;
@@ -3189,7 +3189,7 @@ fn read_makernote_ifd_with_base(
                         if d.len() > 277 { t.push(mk_canon_str("MaxFocalLength", &r16be(0x115).to_string())); }
                         // FirmwareVersion string at 0x136 = 310, length 6
                         if d.len() >= 316 {
-                            let fw = String::from_utf8_lossy(&d[0x136..0x136+6]).trim_end_matches('\0').to_string();
+                            let fw = crate::encoding::decode_utf8_or_latin1(&d[0x136..0x136+6]).trim_end_matches('\0').to_string();
                             if !fw.is_empty() { t.push(mk_canon_str("FirmwareVersion", &fw)); }
                         }
                         // int32u fields (little-endian)
@@ -3268,7 +3268,7 @@ fn read_makernote_ifd_with_base(
                             && fw_bytes[3] == b'.'
                             && fw_bytes[4].is_ascii_digit()
                         {
-                            let fw = String::from_utf8_lossy(fw_bytes)
+                            let fw = crate::encoding::decode_utf8_or_latin1(fw_bytes)
                                 .trim_end_matches('\0')
                                 .to_string();
                             if !fw.is_empty() && !t.iter().any(|tag| tag.name == "FirmwareVersion") {
@@ -3623,7 +3623,7 @@ fn read_makernote_ifd_with_base(
                 // PrintIM in MakerNotes (tag 0x0E00) — extract version
                 (_, 0x0E00) => {
                     if value_data.len() > 11 && value_data.starts_with(b"PrintIM") {
-                        let ver = String::from_utf8_lossy(&value_data[7..11]).to_string();
+                        let ver = crate::encoding::decode_utf8_or_latin1(&value_data[7..11]).to_string();
                         vec![Tag {
                             id: TagId::Text("PrintIMVersion".into()),
                             name: "PrintIMVersion".into(), description: "PrintIM Version".into(),
@@ -3698,7 +3698,7 @@ fn read_makernote_ifd_with_base(
                 }
                 // Olympus TextInfo (tag 0x0208): space-separated key value pairs
                 (Manufacturer::Olympus, 0x0208) | (Manufacturer::OlympusNew, 0x0208) => {
-                    let text = String::from_utf8_lossy(value_data);
+                    let text = crate::encoding::decode_utf8_or_latin1(value_data);
                     let mut t = Vec::new();
                     // Format: "[section] Key=Value Key=Value" with space separation
                     for token in text.split_whitespace() {
@@ -4224,7 +4224,7 @@ pub fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderM
         2 => {
             // ASCII
             Value::String(
-                String::from_utf8_lossy(data)
+                crate::encoding::decode_utf8_or_latin1(data)
                     .trim_end_matches('\0')
                     .to_string(),
             )
@@ -5061,7 +5061,7 @@ fn decode_ricoh_subdir(data: &[u8], full_data: &[u8], _parent_bo: ByteOrderMark)
 
         let val = if data_type == 2 {
             // ASCII string
-            String::from_utf8_lossy(value_data).trim_end_matches('\0').to_string()
+            crate::encoding::decode_utf8_or_latin1(value_data).trim_end_matches('\0').to_string()
         } else {
             continue;
         };
@@ -5144,7 +5144,7 @@ fn decode_nikon_scan_ifd(data: &[u8], offset: usize, bo: ByteOrderMark) -> Vec<T
         match tag {
             0x02 => {
                 // FilmType — string
-                let s = String::from_utf8_lossy(val_data).trim_end_matches('\0').to_string();
+                let s = crate::encoding::decode_utf8_or_latin1(val_data).trim_end_matches('\0').to_string();
                 tags.push(mk("FilmType", s));
             }
             0x41 => {
@@ -5184,7 +5184,7 @@ fn decode_nikon_scan_ifd(data: &[u8], offset: usize, bo: ByteOrderMark) -> Vec<T
             }
             0x100 => {
                 // DigitalICE — string
-                let s = String::from_utf8_lossy(val_data).trim_end_matches('\0').to_string();
+                let s = crate::encoding::decode_utf8_or_latin1(val_data).trim_end_matches('\0').to_string();
                 tags.push(mk("DigitalICE", s));
             }
             0x110 => {

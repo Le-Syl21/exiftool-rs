@@ -28,7 +28,7 @@ pub fn split_xmp(xmp_data: &[u8]) -> (Vec<u8>, Vec<Vec<u8>>) {
 
     // Need to split: put xpacket wrapper in standard, actual RDF in extended
     // Find a good split point (after x:xmpmeta close or at xpacket boundary)
-    let _xmp_str = String::from_utf8_lossy(xmp_data);
+    let _xmp_str = crate::encoding::decode_utf8_or_latin1(xmp_data);
 
     // Standard part: minimal XMP with HasExtendedXMP property
     let guid = compute_md5_hex(xmp_data);

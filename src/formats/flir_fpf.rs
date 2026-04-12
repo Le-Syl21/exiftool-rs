@@ -73,7 +73,7 @@ fn read_str(data: &[u8], offset: usize, len: usize) -> String {
     }
     let s = &data[offset..offset + len];
     let end = s.iter().position(|&b| b == 0).unwrap_or(len);
-    String::from_utf8_lossy(&s[..end]).trim().to_string()
+    crate::encoding::decode_utf8_or_latin1(&s[..end]).trim().to_string()
 }
 
 /// Convert float Kelvin to Celsius: subtract 273.15, format "%.1f C"

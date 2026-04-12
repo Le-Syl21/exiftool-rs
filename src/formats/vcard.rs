@@ -440,7 +440,7 @@ fn decode_qp(s: &str) -> String {
         result.push(bytes[i]);
         i += 1;
     }
-    String::from_utf8_lossy(&result).to_string()
+    crate::encoding::decode_utf8_or_latin1(&result).to_string()
 }
 
 fn hex_val(b: u8) -> Option<u8> {
@@ -482,7 +482,7 @@ fn is_ical_component(name: &str) -> bool {
 }
 
 pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
 
     let is_vcalendar = text.starts_with("BEGIN:VCALENDAR") ||
         text.contains("\nBEGIN:VCALENDAR") ||

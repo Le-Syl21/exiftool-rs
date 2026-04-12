@@ -136,7 +136,7 @@ fn read_u64_le(data: &[u8], off: usize) -> Option<u64> {
 fn read_cstring(data: &[u8], off: usize) -> Option<String> {
     if off >= data.len() { return None; }
     let end = data[off..].iter().position(|&b| b == 0).unwrap_or(data.len() - off);
-    Some(String::from_utf8_lossy(&data[off..off+end]).to_string())
+    Some(crate::encoding::decode_utf8_or_latin1(&data[off..off+end]).to_string())
 }
 
 fn read_utf16le_string(data: &[u8], off: usize) -> Option<String> {
@@ -943,7 +943,7 @@ fn process_uri_item(data: &[u8], tags: &mut Vec<Tag>) {
                 let s = if is_unicode {
                     read_utf16le_fixed(data, off, field_len).unwrap_or_default()
                 } else {
-                    String::from_utf8_lossy(&data[off..off + field_len])
+                    crate::encoding::decode_utf8_or_latin1(&data[off..off + field_len])
                         .trim_end_matches('\0').to_string()
                 };
                 if !s.is_empty() {
@@ -1480,7 +1480,7 @@ pub fn read_lnk(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                 .collect();
             String::from_utf16_lossy(&chars).to_string()
         } else {
-            String::from_utf8_lossy(&data[pos..pos + byte_len]).to_string()
+            crate::encoding::decode_utf8_or_latin1(&data[pos..pos + byte_len]).to_string()
         };
         let full_byte_len = if is_unicode { char_count * 2 } else { char_count };
         pos += full_byte_len.min(data.len() - pos);
@@ -1521,7 +1521,7 @@ pub fn read_url(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
         }
     }
 
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
     let mut tags = Vec::new();
 
     for line in text.lines() {

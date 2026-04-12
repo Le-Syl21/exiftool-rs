@@ -18,7 +18,7 @@ pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
 
     // PDF version from header
     let header_end = data.iter().position(|&b| b == b'\n' || b == b'\r').unwrap_or(20).min(20);
-    let version = String::from_utf8_lossy(&data[5..header_end]).trim().to_string();
+    let version = crate::encoding::decode_utf8_or_latin1(&data[5..header_end]).trim().to_string();
     tags.push(mk("PDFVersion", "PDF Version", Value::String(version)));
 
     // Find startxref (near end of file)
@@ -28,7 +28,7 @@ pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
     // Find "startxref" marker
     let _xref_offset = find_bytes(tail, b"startxref").and_then(|rel| {
         let line_start = rel + 9; // skip "startxref"
-        let offset_str = String::from_utf8_lossy(&tail[line_start..])
+        let offset_str = crate::encoding::decode_utf8_or_latin1(&tail[line_start..])
             .trim()
             .lines()
             .next()
@@ -86,7 +86,7 @@ fn parse_trailer_info(data: &[u8], trailer: &[u8], tags: &mut Vec<Tag>) {
     if let Some(info_pos) = find_bytes(trailer, b"/Info") {
         let rest = &trailer[info_pos + 5..];
         // Try to parse object reference: "N 0 R"
-        let ref_str = String::from_utf8_lossy(rest);
+        let ref_str = crate::encoding::decode_utf8_or_latin1(rest);
         let parts: Vec<&str> = ref_str.trim().splitn(4, char::is_whitespace).collect();
         if parts.len() >= 3 && parts[2].starts_with('R') {
             if let Ok(obj_num) = parts[0].parse::<u32>() {
@@ -114,28 +114,26 @@ fn find_and_parse_info_object(data: &[u8], obj_num: u32, tags: &mut Vec<Tag>) {
 }
 
 /// Parse a PDF Info dictionary for standard metadata keys.
+/// Works on raw bytes to preserve UTF-16BE and PDFDocEncoding data.
 fn parse_info_dict(dict: &[u8], tags: &mut Vec<Tag>) {
-    let dict_str = String::from_utf8_lossy(dict);
-
-    let fields = [
-        ("/Title", "Title", "Title"),
-        ("/Author", "Author", "Author"),
-        ("/Subject", "Subject", "Subject"),
-        ("/Keywords", "Keywords", "Keywords"),
-        ("/Creator", "Creator", "Creator Application"),
-        ("/Producer", "Producer", "PDF Producer"),
-        ("/CreationDate", "CreateDate", "Create Date"),
-        ("/ModDate", "ModifyDate", "Modify Date"),
+    let fields: &[(&[u8], &str, &str)] = &[
+        (b"/Title", "Title", "Title"),
+        (b"/Author", "Author", "Author"),
+        (b"/Subject", "Subject", "Subject"),
+        (b"/Keywords", "Keywords", "Keywords"),
+        (b"/Creator", "Creator", "Creator Application"),
+        (b"/Producer", "Producer", "PDF Producer"),
+        (b"/CreationDate", "CreateDate", "Create Date"),
+        (b"/ModDate", "ModifyDate", "Modify Date"),
     ];
 
-    for (key, name, description) in &fields {
-        if let Some(value) = extract_pdf_string_value(&dict_str, key) {
+    for (key, name, description) in fields {
+        if let Some(value) = extract_pdf_string_value_bytes(dict, key) {
             let value = if name.contains("Date") {
                 convert_pdf_date(&value)
             } else {
                 value
             };
-            // Don't add empty values
             if !value.is_empty() {
                 tags.push(mk(name, description, Value::String(value)));
             }
@@ -143,19 +141,21 @@ fn parse_info_dict(dict: &[u8], tags: &mut Vec<Tag>) {
     }
 }
 
-/// Extract a string value after a PDF key like /Title from a dictionary.
-fn extract_pdf_string_value(dict: &str, key: &str) -> Option<String> {
-    let key_pos = dict.find(key)?;
+/// Extract a string value after a PDF key from raw bytes.
+fn extract_pdf_string_value_bytes(dict: &[u8], key: &[u8]) -> Option<String> {
+    let key_pos = find_bytes(dict, key)?;
     let rest = &dict[key_pos + key.len()..];
-    let rest = rest.trim_start();
+    // Skip whitespace
+    let start = rest.iter().position(|&b| b != b' ' && b != b'\t' && b != b'\r' && b != b'\n')?;
+    let rest = &rest[start..];
 
-    if rest.starts_with('(') {
-        // Literal string
-        let mut depth = 0;
+    if rest.first() == Some(&b'(') {
+        // Literal string — find matching close paren on raw bytes
+        let mut depth = 0i32;
         let mut end = 0;
-        let bytes = rest.as_bytes();
-        for (i, &b) in bytes.iter().enumerate() {
-            match b {
+        let mut i = 0;
+        while i < rest.len() {
+            match rest[i] {
                 b'(' => depth += 1,
                 b')' => {
                     depth -= 1;
@@ -164,66 +164,154 @@ fn extract_pdf_string_value(dict: &str, key: &str) -> Option<String> {
                         break;
                     }
                 }
-                b'\\' => { /* skip next */ }
+                b'\\' => { i += 1; } // skip escaped byte
                 _ => {}
             }
+            i += 1;
         }
         if end > 1 {
             let raw = &rest[1..end];
-            return Some(decode_pdf_string(raw));
+            return Some(decode_pdf_literal_bytes(raw));
         }
-    } else if rest.starts_with('<') {
+    } else if rest.first() == Some(&b'<') {
         // Hex string
-        if let Some(close) = rest.find('>') {
+        if let Some(close) = rest.iter().position(|&b| b == b'>') {
             let hex = &rest[1..close];
-            return Some(decode_pdf_hex_string(hex));
+            // Hex content is always ASCII, safe to convert
+            let hex_str = crate::encoding::decode_utf8_or_latin1(hex);
+            return Some(decode_pdf_hex_string(&hex_str));
         }
     }
 
     None
 }
 
-/// Decode PDF string escape sequences.
-fn decode_pdf_string(s: &str) -> String {
-    let mut result = String::new();
-    let bytes = s.as_bytes();
+/// Decode PDF literal string from raw bytes: process escape sequences,
+/// then detect UTF-16BE BOM or fall back to PDFDocEncoding.
+fn decode_pdf_literal_bytes(raw: &[u8]) -> String {
+    // First pass: decode escape sequences into raw bytes
+    let mut bytes = Vec::with_capacity(raw.len());
     let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'\\' && i + 1 < bytes.len() {
+    while i < raw.len() {
+        if raw[i] == b'\\' && i + 1 < raw.len() {
             i += 1;
-            match bytes[i] {
-                b'n' => result.push('\n'),
-                b'r' => result.push('\r'),
-                b't' => result.push('\t'),
-                b'b' => result.push('\u{08}'),
-                b'f' => result.push('\u{0C}'),
-                b'(' => result.push('('),
-                b')' => result.push(')'),
-                b'\\' => result.push('\\'),
+            match raw[i] {
+                b'n' => bytes.push(b'\n'),
+                b'r' => bytes.push(b'\r'),
+                b't' => bytes.push(b'\t'),
+                b'b' => bytes.push(0x08),
+                b'f' => bytes.push(0x0C),
+                b'(' => bytes.push(b'('),
+                b')' => bytes.push(b')'),
+                b'\\' => bytes.push(b'\\'),
                 b'0'..=b'7' => {
-                    // Octal
-                    let mut val = (bytes[i] - b'0') as u32;
-                    if i + 1 < bytes.len() && bytes[i + 1] >= b'0' && bytes[i + 1] <= b'7' {
+                    let mut val = (raw[i] - b'0') as u8;
+                    if i + 1 < raw.len() && raw[i + 1] >= b'0' && raw[i + 1] <= b'7' {
                         i += 1;
-                        val = val * 8 + (bytes[i] - b'0') as u32;
-                        if i + 1 < bytes.len() && bytes[i + 1] >= b'0' && bytes[i + 1] <= b'7' {
+                        val = val * 8 + (raw[i] - b'0');
+                        if i + 1 < raw.len() && raw[i + 1] >= b'0' && raw[i + 1] <= b'7' {
                             i += 1;
-                            val = val * 8 + (bytes[i] - b'0') as u32;
+                            val = val * 8 + (raw[i] - b'0');
                         }
                     }
-                    if let Some(c) = char::from_u32(val) {
-                        result.push(c);
-                    }
+                    bytes.push(val);
                 }
                 c => {
-                    result.push('\\');
-                    result.push(c as char);
+                    bytes.push(b'\\');
+                    bytes.push(c);
                 }
             }
         } else {
-            result.push(bytes[i] as char);
+            bytes.push(raw[i]);
         }
         i += 1;
+    }
+
+    decode_pdf_text_bytes(&bytes)
+}
+
+/// Decode raw PDF text bytes: UTF-16BE (if BOM present), UTF-8 (if BOM present), or PDFDocEncoding.
+fn decode_pdf_text_bytes(bytes: &[u8]) -> String {
+    // UTF-16BE BOM: 0xFE 0xFF
+    if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
+        let units: Vec<u16> = bytes[2..]
+            .chunks_exact(2)
+            .map(|c| u16::from_be_bytes([c[0], c[1]]))
+            .collect();
+        return String::from_utf16_lossy(&units);
+    }
+    // UTF-8 BOM: 0xEF 0xBB 0xBF
+    if bytes.len() >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF {
+        return crate::encoding::decode_utf8_or_latin1(&bytes[3..]).to_string();
+    }
+    // PDFDocEncoding (superset of Latin-1 with special chars at 0x80-0x9F)
+    decode_pdf_doc_encoding(bytes)
+}
+
+/// PDFDocEncoding lookup for bytes 0x80–0xAD that differ from Unicode.
+/// Bytes 0x00–0x7F map to Unicode directly (ASCII).
+/// Bytes 0xAE–0xFF map to the same Unicode code point (Latin-1).
+fn pdf_doc_encoding_char(b: u8) -> char {
+    match b {
+        0x80 => '\u{2022}', // BULLET
+        0x81 => '\u{2020}', // DAGGER
+        0x82 => '\u{2021}', // DOUBLE DAGGER
+        0x83 => '\u{2026}', // HORIZONTAL ELLIPSIS
+        0x84 => '\u{2014}', // EM DASH
+        0x85 => '\u{2013}', // EN DASH
+        0x86 => '\u{0192}', // LATIN SMALL LETTER F WITH HOOK
+        0x87 => '\u{2044}', // FRACTION SLASH
+        0x88 => '\u{2039}', // SINGLE LEFT-POINTING ANGLE QUOTATION MARK
+        0x89 => '\u{203A}', // SINGLE RIGHT-POINTING ANGLE QUOTATION MARK
+        0x8A => '\u{2212}', // MINUS SIGN
+        0x8B => '\u{2030}', // PER MILLE SIGN
+        0x8C => '\u{201E}', // DOUBLE LOW-9 QUOTATION MARK
+        0x8D => '\u{201C}', // LEFT DOUBLE QUOTATION MARK
+        0x8E => '\u{201D}', // RIGHT DOUBLE QUOTATION MARK
+        0x8F => '\u{2018}', // LEFT SINGLE QUOTATION MARK
+        0x90 => '\u{2019}', // RIGHT SINGLE QUOTATION MARK
+        0x91 => '\u{201A}', // SINGLE LOW-9 QUOTATION MARK
+        0x92 => '\u{2122}', // TRADE MARK SIGN
+        0x93 => '\u{FB01}', // LATIN SMALL LIGATURE FI
+        0x94 => '\u{FB02}', // LATIN SMALL LIGATURE FL
+        0x95 => '\u{0141}', // LATIN CAPITAL LETTER L WITH STROKE
+        0x96 => '\u{0152}', // LATIN CAPITAL LIGATURE OE
+        0x97 => '\u{0160}', // LATIN CAPITAL LETTER S WITH CARON
+        0x98 => '\u{0178}', // LATIN CAPITAL LETTER Y WITH DIAERESIS
+        0x99 => '\u{017D}', // LATIN CAPITAL LETTER Z WITH CARON
+        0x9A => '\u{0131}', // LATIN SMALL LETTER DOTLESS I
+        0x9B => '\u{0142}', // LATIN SMALL LETTER L WITH STROKE
+        0x9C => '\u{0153}', // LATIN SMALL LIGATURE OE
+        0x9D => '\u{0161}', // LATIN SMALL LETTER S WITH CARON
+        0x9E => '\u{017E}', // LATIN SMALL LETTER Z WITH CARON
+        0xA0 => '\u{20AC}', // EURO SIGN
+        0xA1 => '\u{00A1}', // INVERTED EXCLAMATION MARK
+        0xA2 => '\u{00A2}', // CENT SIGN
+        0xA3 => '\u{00A3}', // POUND SIGN
+        0xA4 => '\u{00A4}', // CURRENCY SIGN
+        0xA5 => '\u{00A5}', // YEN SIGN
+        0xA6 => '\u{00A6}', // BROKEN BAR
+        0xA7 => '\u{00A7}', // SECTION SIGN
+        0xA8 => '\u{00A8}', // DIAERESIS
+        0xA9 => '\u{00A9}', // COPYRIGHT SIGN
+        0xAA => '\u{00AA}', // FEMININE ORDINAL INDICATOR
+        0xAB => '\u{00AB}', // LEFT-POINTING DOUBLE ANGLE QUOTATION MARK
+        0xAC => '\u{00AC}', // NOT SIGN
+        0xAD => '\u{00AD}', // SOFT HYPHEN
+        // 0xAE–0xFF: same as Unicode code point (Latin-1 supplement)
+        _ => b as char,
+    }
+}
+
+/// Decode a byte slice as PDFDocEncoding to a String.
+fn decode_pdf_doc_encoding(bytes: &[u8]) -> String {
+    let mut result = String::with_capacity(bytes.len());
+    for &b in bytes {
+        if b < 0x80 {
+            result.push(b as char);
+        } else {
+            result.push(pdf_doc_encoding_char(b));
+        }
     }
     result
 }
@@ -231,21 +319,6 @@ fn decode_pdf_string(s: &str) -> String {
 /// Decode PDF hex string.
 fn decode_pdf_hex_string(hex: &str) -> String {
     let hex = hex.replace(char::is_whitespace, "");
-    // Check for UTF-16 BOM (FEFF)
-    if hex.starts_with("FEFF") || hex.starts_with("feff") {
-        let bytes: Vec<u8> = (0..hex.len())
-            .step_by(2)
-            .filter_map(|i| u8::from_str_radix(&hex[i..i + 2], 16).ok())
-            .collect();
-        let units: Vec<u16> = bytes
-            .chunks_exact(2)
-            .skip(1) // skip BOM
-            .map(|c| u16::from_be_bytes([c[0], c[1]]))
-            .collect();
-        return String::from_utf16_lossy(&units);
-    }
-
-    // ASCII hex
     let bytes: Vec<u8> = (0..hex.len())
         .step_by(2)
         .filter_map(|i| {
@@ -256,7 +329,7 @@ fn decode_pdf_hex_string(hex: &str) -> String {
             }
         })
         .collect();
-    String::from_utf8_lossy(&bytes).to_string()
+    decode_pdf_text_bytes(&bytes)
 }
 
 /// Convert PDF date format "D:YYYYMMDDHHmmSS" to standard format.
@@ -321,7 +394,7 @@ fn scan_for_info_and_xmp(data: &[u8], tags: &mut Vec<Tag>) {
 /// Find /MediaBox in a /Type /Pages dictionary (page tree root, not individual pages).
 /// Perl only reads MediaBox from the Pages node, not from individual Page objects.
 fn extract_media_box_from_page(data: &[u8]) -> Option<String> {
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
     // Find /Type /Pages or /Type/Pages dictionaries and look for /MediaBox within them
     let mut search_start = 0;
     while search_start < text.len() {

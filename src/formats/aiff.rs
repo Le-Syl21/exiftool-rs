@@ -62,7 +62,7 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
 
                     // AIFC compression type
                     if is_compressed && cd.len() >= 22 {
-                        let comp_type = String::from_utf8_lossy(&cd[18..22]).trim().to_string();
+                        let comp_type = crate::encoding::decode_utf8_or_latin1(&cd[18..22]).trim().to_string();
                         let comp_name = match comp_type.as_str() {
                             "NONE" | "none" => "None",
                             "sowt" => "Little-endian PCM",
@@ -78,25 +78,25 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
                 }
             }
             b"NAME" => {
-                let name = String::from_utf8_lossy(cd).trim_end_matches('\0').to_string();
+                let name = crate::encoding::decode_utf8_or_latin1(cd).trim_end_matches('\0').to_string();
                 if !name.is_empty() {
                     tags.push(mk("Name", "Name", Value::String(name)));
                 }
             }
             b"AUTH" => {
-                let author = String::from_utf8_lossy(cd).trim_end_matches('\0').to_string();
+                let author = crate::encoding::decode_utf8_or_latin1(cd).trim_end_matches('\0').to_string();
                 if !author.is_empty() {
                     tags.push(mk("Author", "Author", Value::String(author)));
                 }
             }
             b"(c) " => {
-                let copyright = String::from_utf8_lossy(cd).trim_end_matches('\0').to_string();
+                let copyright = crate::encoding::decode_utf8_or_latin1(cd).trim_end_matches('\0').to_string();
                 if !copyright.is_empty() {
                     tags.push(mk("Copyright", "Copyright", Value::String(copyright)));
                 }
             }
             b"ANNO" => {
-                let annotation = String::from_utf8_lossy(cd).trim_end_matches('\0').to_string();
+                let annotation = crate::encoding::decode_utf8_or_latin1(cd).trim_end_matches('\0').to_string();
                 if !annotation.is_empty() {
                     tags.push(mk("Annotation", "Annotation", Value::String(annotation)));
                 }
@@ -121,7 +121,7 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
                             tags.push(mk("CommentTime", "Comment Time", Value::String(dt)));
                         }
                         if p + size <= cd.len() && size > 0 {
-                            let comment = String::from_utf8_lossy(&cd[p..p+size])
+                            let comment = crate::encoding::decode_utf8_or_latin1(&cd[p..p+size])
                                 .trim_end_matches('\0').to_string();
                             if !comment.is_empty() {
                                 tags.push(mk("Comment", "Comment", Value::String(comment)));

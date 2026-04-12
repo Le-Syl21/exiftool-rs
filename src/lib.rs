@@ -60,6 +60,7 @@
 
 pub mod composite;
 pub mod config;
+pub mod encoding;
 pub mod error;
 
 

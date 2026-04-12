@@ -15,7 +15,7 @@ pub fn read_xcf(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 
     // Header: "gimp xcf " + version(5 bytes) + \0 + width(4) + height(4) + colormode(4)
-    let version_str = String::from_utf8_lossy(&data[9..14]).trim_end_matches('\0').to_string();
+    let version_str = crate::encoding::decode_utf8_or_latin1(&data[9..14]).trim_end_matches('\0').to_string();
     let version_num = match version_str.as_str() {
         "file\0" | "file" => "0".to_string(),
         _ => {
@@ -136,7 +136,7 @@ fn parse_parasites(data: &[u8], tags: &mut Vec<Tag>) {
 
         // Name string
         let name_bytes = &data[pos..pos + name_len];
-        let name = String::from_utf8_lossy(name_bytes).trim_end_matches('\0').to_string();
+        let name = crate::encoding::decode_utf8_or_latin1(name_bytes).trim_end_matches('\0').to_string();
         pos += name_len;
 
         // Flags (4 bytes) — skip
@@ -185,7 +185,7 @@ fn parse_parasites(data: &[u8], tags: &mut Vec<Tag>) {
                 }
             }
             "gimp-comment" => {
-                let comment = String::from_utf8_lossy(parasite_data).trim_end_matches('\0').to_string();
+                let comment = crate::encoding::decode_utf8_or_latin1(parasite_data).trim_end_matches('\0').to_string();
                 if !comment.is_empty() {
                     tags.push(mk("Comment", "Comment", Value::String(comment)));
                 }

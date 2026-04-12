@@ -65,7 +65,7 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
     // Check for ftyp
     if data.len() >= 12 && &data[4..8] == b"ftyp" {
         let size = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
-        let brand_raw = String::from_utf8_lossy(&data[8..12]).to_string();
+        let brand_raw = crate::encoding::decode_utf8_or_latin1(&data[8..12]).to_string();
         let brand_display = ftyp_brand_name(&brand_raw)
             .unwrap_or(brand_raw.as_str())
             .to_string();
@@ -86,7 +86,7 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
             let mut brands = Vec::new();
             let mut pos = 16;
             while pos + 4 <= size.min(data.len()) {
-                let b = String::from_utf8_lossy(&data[pos..pos + 4]).trim().to_string();
+                let b = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + 4]).trim().to_string();
                 if !b.is_empty() {
                     brands.push(b);
                 }
@@ -1274,7 +1274,7 @@ fn parse_hdlr(
     if d.len() >= 8 {
         let hclass = &d[4..8];
         if hclass != b"\0\0\0\0" {
-            let class_str = String::from_utf8_lossy(hclass).to_string();
+            let class_str = crate::encoding::decode_utf8_or_latin1(hclass).to_string();
             let class_name = match hclass {
                 b"mhlr" => "Media Handler",
                 b"dhlr" => "Data Handler",
@@ -1291,7 +1291,7 @@ fn parse_hdlr(
     // HandlerType at byte 8
     if d.len() >= 12 {
         let htype_bytes = &d[8..12];
-        let htype_raw = String::from_utf8_lossy(htype_bytes).trim().to_string();
+        let htype_raw = crate::encoding::decode_utf8_or_latin1(htype_bytes).trim().to_string();
         // Skip 'alis' and 'url ' types (they don't set the main handler type)
         if htype_bytes != b"alis" && htype_bytes != b"url " {
             state.handler_type = [htype_bytes[0], htype_bytes[1], htype_bytes[2], htype_bytes[3]];
@@ -1339,7 +1339,7 @@ fn parse_hdlr(
     if d.len() >= 16 {
         let vendor = &d[12..16];
         if vendor != b"\0\0\0\0" {
-            let vendor_str = String::from_utf8_lossy(vendor).to_string();
+            let vendor_str = crate::encoding::decode_utf8_or_latin1(vendor).to_string();
             let vendor_name = vendor_id_name(vendor);
             tags.push(mk(
                 "HandlerVendorID",
@@ -1372,11 +1372,11 @@ fn decode_pascal_or_c_string(bytes: &[u8]) -> String {
     // If first byte is a control char (0x00-0x1F) and < len, it's Pascal
     if first < 0x20 && (first as usize) < bytes.len() {
         let s = &bytes[1..1 + first as usize];
-        return String::from_utf8_lossy(s).trim_end_matches('\0').to_string();
+        return crate::encoding::decode_utf8_or_latin1(s).trim_end_matches('\0').to_string();
     }
     // Otherwise C string
     let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
-    String::from_utf8_lossy(&bytes[..end]).to_string()
+    crate::encoding::decode_utf8_or_latin1(&bytes[..end]).to_string()
 }
 
 /// Look up a vendor ID.
@@ -1792,7 +1792,7 @@ fn parse_stsd(
     }
     let entry_size = u32::from_be_bytes([entry[0], entry[1], entry[2], entry[3]]) as usize;
     let format = &entry[4..8];
-    let format_str = String::from_utf8_lossy(format).trim().to_string();
+    let format_str = crate::encoding::decode_utf8_or_latin1(format).trim().to_string();
 
     // Check for CTMD (Canon Timed MetaData) format
     if format == b"CTMD" {
@@ -1820,7 +1820,7 @@ fn parse_stsd(
         // Field 24: AudioChannels (int16u) at byte 24
         // Field 26: AudioBitsPerSample (int16u) at byte 26
         // Field 32: AudioSampleRate (fixed32u) at byte 32
-        let fmt = String::from_utf8_lossy(format).to_string();
+        let fmt = crate::encoding::decode_utf8_or_latin1(format).to_string();
         if fmt.chars().all(|c| c.is_ascii_graphic() || c == ' ') && !fmt.trim().is_empty() {
             tags.push(mk(
                 "AudioFormat",
@@ -1885,7 +1885,7 @@ fn parse_stsd(
         if entry.len() >= 24 {
             let vendor = &entry[20..24];
             if vendor != b"\0\0\0\0" {
-                let vendor_str = String::from_utf8_lossy(vendor).to_string();
+                let vendor_str = crate::encoding::decode_utf8_or_latin1(vendor).to_string();
                 let vname = vendor_id_name(vendor)
                     .map(|s| s.to_string())
                     .unwrap_or(vendor_str);
@@ -2098,7 +2098,7 @@ fn parse_ilst_triplet(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>
             b"mean" => {
                 // version+flags(4) + string
                 if content.len() > 4 {
-                    mean_val = String::from_utf8_lossy(&content[4..])
+                    mean_val = crate::encoding::decode_utf8_or_latin1(&content[4..])
                         .trim_end_matches('\0')
                         .to_string();
                 }
@@ -2106,7 +2106,7 @@ fn parse_ilst_triplet(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>
             b"name" => {
                 // version+flags(4) + string
                 if content.len() > 4 {
-                    name_val = String::from_utf8_lossy(&content[4..])
+                    name_val = crate::encoding::decode_utf8_or_latin1(&content[4..])
                         .trim_end_matches('\0')
                         .to_string();
                 }
@@ -2114,7 +2114,7 @@ fn parse_ilst_triplet(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>
             b"data" => {
                 // data_type(4) + locale(4) + value
                 if content.len() > 8 {
-                    data_val = String::from_utf8_lossy(&content[8..])
+                    data_val = crate::encoding::decode_utf8_or_latin1(&content[8..])
                         .trim_end_matches('\0')
                         .to_string();
                 }
@@ -2244,7 +2244,7 @@ fn find_data_atom(data: &[u8], start: usize, end: usize) -> Option<String> {
             return Some(match data_type & 0xFF {
                 1 => {
                     // UTF-8
-                    String::from_utf8_lossy(value_data).to_string()
+                    crate::encoding::decode_utf8_or_latin1(value_data).to_string()
                 }
                 2 => {
                     // UTF-16
@@ -2318,7 +2318,7 @@ fn find_data_atom(data: &[u8], start: usize, end: usize) -> Option<String> {
                         format!("(Binary {} bytes)", value_data.len())
                     }
                 }
-                _ => String::from_utf8_lossy(value_data).to_string(),
+                _ => crate::encoding::decode_utf8_or_latin1(value_data).to_string(),
             });
         }
 
@@ -2345,11 +2345,11 @@ fn parse_qt_text_atom(
     let text_start = start + 4;
 
     if text_start + text_len <= end {
-        let text = String::from_utf8_lossy(&data[text_start..text_start + text_len])
+        let text = crate::encoding::decode_utf8_or_latin1(&data[text_start..text_start + text_len])
             .trim_end_matches('\0')
             .to_string();
         if !text.is_empty() {
-            let key = String::from_utf8_lossy(&atom_type[1..4]).to_string();
+            let key = crate::encoding::decode_utf8_or_latin1(&atom_type[1..4]).to_string();
             let (static_name, static_desc) = qt_text_name(&key);
             if !static_name.is_empty() {
                 tags.push(mk(static_name, static_desc, Value::String(text)));
@@ -2618,7 +2618,7 @@ fn parse_pentax_mov(data: &[u8], tags: &mut Vec<Tag>) {
     if data.len() >= 24 {
         let make_bytes = &data[0..24];
         let end = make_bytes.iter().position(|&b| b == 0).unwrap_or(24);
-        let make = String::from_utf8_lossy(&make_bytes[..end]).to_string();
+        let make = crate::encoding::decode_utf8_or_latin1(&make_bytes[..end]).to_string();
         if !make.is_empty() {
             tags.push(mk_makernote("Make", "Make", Value::String(make)));
         }
@@ -2739,7 +2739,7 @@ fn parse_canon_uuid(
             b"CNCV" => {
                 // Canon Compressor Version - string tag
                 if content_end > content_start {
-                    let s = String::from_utf8_lossy(&data[content_start..content_end])
+                    let s = crate::encoding::decode_utf8_or_latin1(&data[content_start..content_end])
                         .trim_end_matches('\0')
                         .to_string();
                     if !s.is_empty() {

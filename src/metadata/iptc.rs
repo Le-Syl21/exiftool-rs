@@ -20,8 +20,38 @@ impl IptcReader {
     ///   - 1 byte:  dataset number
     ///   - 2 bytes: data length (big-endian), or extended if >= 0x8000
     ///   - N bytes: data
+    /// Pre-scan IPTC data for CodedCharacterSet (record 1, dataset 90).
+    /// Returns true if UTF-8 is indicated (ESC %G = bytes 0x1B 0x25 0x47).
+    fn detect_iptc_charset(data: &[u8]) -> bool {
+        let mut pos = 0;
+        while pos + 5 <= data.len() {
+            if data[pos] != 0x1C {
+                pos += 1;
+                continue;
+            }
+            let record = data[pos + 1];
+            let dataset = data[pos + 2];
+            let length = u16::from_be_bytes([data[pos + 3], data[pos + 4]]) as usize;
+            pos += 5;
+            if length >= 0x8000 {
+                break;
+            }
+            if pos + length > data.len() {
+                break;
+            }
+            if record == 1 && dataset == 90 {
+                let val = &data[pos..pos + length];
+                // ESC %G = UTF-8
+                return val.windows(3).any(|w| w == [0x1B, 0x25, 0x47]);
+            }
+            pos += length;
+        }
+        false
+    }
+
     pub fn read(data: &[u8]) -> Result<Vec<Tag>> {
         let mut tags = Vec::new();
+        let is_utf8 = Self::detect_iptc_charset(data);
         let mut pos = 0;
 
         while pos + 5 <= data.len() {
@@ -83,11 +113,12 @@ impl IptcReader {
             }
 
             let value = if iptc_tags::is_string_tag(record, dataset) {
-                Value::String(
-                    String::from_utf8_lossy(value_data)
-                        .trim_end_matches('\0')
-                        .to_string(),
-                )
+                let s = if is_utf8 {
+                    crate::encoding::decode_utf8_or_latin1(value_data).to_string()
+                } else {
+                    crate::encoding::decode_latin1(value_data)
+                };
+                Value::String(s.trim_end_matches('\0').to_string())
             } else if length <= 2 {
                 match length {
                     1 => Value::U8(value_data[0]),

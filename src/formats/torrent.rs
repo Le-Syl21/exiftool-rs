@@ -40,7 +40,7 @@ fn parse_bencode(data: &[u8], pos: &mut usize) -> Option<Bencode> {
             while *pos < data.len() && data[*pos] != b'e' {
                 let key = parse_bencode(data, pos)?;
                 let key_str = match key {
-                    Bencode::Bytes(b) => String::from_utf8_lossy(&b).into_owned(),
+                    Bencode::Bytes(b) => crate::encoding::decode_utf8_or_latin1(&b),
                     _ => return None,
                 };
                 let val = parse_bencode(data, pos)?;

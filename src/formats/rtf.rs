@@ -11,7 +11,7 @@ pub fn read_rtf(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     let mut tags = Vec::new();
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
 
     // Extract the {\info ...} group contents
     if let Some(info_content) = find_rtf_group(&text, "info") {
@@ -261,7 +261,7 @@ fn extract_rtf_groups(text: &str) -> Vec<(bool, String, String)> {
             skip_to_closing_brace(bytes, &mut pos);
             continue;
         }
-        let cmd = String::from_utf8_lossy(&bytes[cmd_start..pos]).to_string();
+        let cmd = crate::encoding::decode_utf8_or_latin1(&bytes[cmd_start..pos]).to_string();
 
         // skip optional terminator (space, newline, or digit sequence)
         if pos < bytes.len() && bytes[pos] == b' ' {

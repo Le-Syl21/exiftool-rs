@@ -1538,7 +1538,7 @@ impl ExifTool {
                 }
             }
             "vcf" | "ics" | "vcard" => {
-                let s = String::from_utf8_lossy(&data[..data.len().min(100)]);
+                let s = crate::encoding::decode_utf8_or_latin1(&data[..data.len().min(100)]);
                 if s.contains("BEGIN:VCALENDAR") {
                     formats::vcard::read_ics(data).or_else(|_| Ok(Vec::new()))
                 } else {
@@ -2214,7 +2214,7 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
 
     if is_csv {
         // CSV analysis: detect delimiter, quoting, column count, row count
-        let text = String::from_utf8_lossy(data);
+        let text = crate::encoding::decode_utf8_or_latin1(data);
         let mut delim = "";
         let mut quot = "";
         let mut ncols = 1usize;
@@ -2271,7 +2271,7 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
         let line_count = if line_count == 0 && !data.is_empty() { 1 } else { line_count };
         tags.push(mk("LineCount", line_count.to_string()));
 
-        let text = String::from_utf8_lossy(data);
+        let text = crate::encoding::decode_utf8_or_latin1(data);
         let word_count = text.split_whitespace().count();
         tags.push(mk("WordCount", word_count.to_string()));
     }

@@ -178,7 +178,7 @@ fn parse_mobi(data: &[u8], offset: usize, tags: &mut Vec<Tag>) {
         // name_offset is relative to the record start (offset in data)
         let abs_name_off = offset + name_offset;
         if abs_name_off + name_len <= data.len() && name_len > 0 {
-            let book_name = String::from_utf8_lossy(&data[abs_name_off..abs_name_off + name_len]).to_string();
+            let book_name = crate::encoding::decode_utf8_or_latin1(&data[abs_name_off..abs_name_off + name_len]).to_string();
             if !book_name.is_empty() {
                 tags.push(mk("BookName", "Book Name", Value::String(book_name)));
             }
@@ -280,7 +280,7 @@ fn parse_exth(data: &[u8], tags: &mut Vec<Tag>) {
 }
 
 fn extract_str_tag(data: &[u8], name: &str, tags: &mut Vec<Tag>) {
-    let s = String::from_utf8_lossy(data).trim_end_matches('\0').to_string();
+    let s = crate::encoding::decode_utf8_or_latin1(data).trim_end_matches('\0').to_string();
     if !s.is_empty() {
         tags.push(mk(name, name, Value::String(s)));
     }
@@ -288,7 +288,7 @@ fn extract_str_tag(data: &[u8], name: &str, tags: &mut Vec<Tag>) {
 
 fn read_cstr(data: &[u8]) -> String {
     let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
-    String::from_utf8_lossy(&data[..end]).to_string()
+    crate::encoding::decode_utf8_or_latin1(&data[..end]).to_string()
 }
 
 /// Convert Palm timestamp to ExifTool date string.

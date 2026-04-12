@@ -235,7 +235,7 @@ fn rw2_read_value(data: &[u8], dtype: u16, count: u32, inline_data: &[u8; 4], va
     Some(match dtype {
         1 => if count == 1 { Value::U8(value_data[0]) }
              else { Value::List(value_data.iter().map(|&b| Value::U8(b)).collect()) },
-        2 => Value::String(String::from_utf8_lossy(value_data).trim_end_matches('\0').to_string()),
+        2 => Value::String(crate::encoding::decode_utf8_or_latin1(value_data).trim_end_matches('\0').to_string()),
         3 => if count == 1 { Value::U16(rw2_u16(value_data, 0, le)) }
              else { Value::List((0..count as usize).map(|i| Value::U16(rw2_u16(value_data, i*2, le))).collect()) },
         4 | 13 => if count == 1 { Value::U32(rw2_u32(value_data, 0, le)) }
@@ -623,7 +623,7 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
             0x0001 => {
                 // PanasonicRawVersion: undef bytes → display as string
                 let s = match &value {
-                    Value::Undefined(b) => String::from_utf8_lossy(b).to_string(),
+                    Value::Undefined(b) => crate::encoding::decode_utf8_or_latin1(b).to_string(),
                     Value::String(s) => s.clone(),
                     _ => value.to_display_string(),
                 };
@@ -1367,7 +1367,7 @@ fn bigtiff_parse_value(data: &[u8], dtype: u16, count: usize, is_le: bool) -> Op
             if count == 1 { Some(Value::U8(data[0])) }
             else { Some(Value::List(data.iter().map(|&b| Value::U8(b)).collect())) }
         }
-        2 => Some(Value::String(String::from_utf8_lossy(data).trim_end_matches('\0').to_string())),
+        2 => Some(Value::String(crate::encoding::decode_utf8_or_latin1(data).trim_end_matches('\0').to_string())),
         3 => {
             if count == 1 { Some(Value::U16(btf_read_u16(data, 0, is_le))) }
             else { Some(Value::List((0..count).map(|i| Value::U16(btf_read_u16(data, i*2, is_le))).collect())) }

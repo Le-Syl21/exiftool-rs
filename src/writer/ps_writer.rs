@@ -15,7 +15,7 @@ pub fn write_postscript(source: &[u8], changes: &[(&str, &str)]) -> Result<Vec<u
         return Err(Error::InvalidData("not a PostScript file".into()));
     }
 
-    let text = String::from_utf8_lossy(source);
+    let text = crate::encoding::decode_utf8_or_latin1(source);
     let mut result = text.to_string();
 
     for &(key, value) in changes {

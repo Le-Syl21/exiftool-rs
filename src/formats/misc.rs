@@ -42,7 +42,7 @@ pub fn read_dicom(data: &[u8]) -> Result<Vec<Tag>> {
         }
 
         let val_data = &data[pos..pos + val_len];
-        let text = String::from_utf8_lossy(val_data).trim().trim_end_matches('\0').to_string();
+        let text = crate::encoding::decode_utf8_or_latin1(val_data).trim().trim_end_matches('\0').to_string();
 
         match (group, element) {
             (0x0008, 0x0060) => tags.push(mktag("DICOM", "Modality", "Modality", Value::String(text))),
@@ -91,7 +91,7 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
 
     while pos + 80 <= data.len() {
         let record = &data[pos..pos + 80];
-        let keyword = String::from_utf8_lossy(&record[..8]).trim_end().to_string();
+        let keyword = crate::encoding::decode_utf8_or_latin1(&record[..8]).trim_end().to_string();
         pos += 80;
 
         if keyword == "END" { break; }
@@ -100,7 +100,7 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
         if keyword == "CONTINUE" {
             if continue_tag.is_some() {
                 // Continue value from previous quoted string
-                let val_raw = String::from_utf8_lossy(&record[8..]).to_string();
+                let val_raw = crate::encoding::decode_utf8_or_latin1(&record[8..]).to_string();
                 let (more, cont) = fits_parse_continued_value(&val_raw);
                 continue_val.push_str(&more);
                 if !cont {
@@ -122,7 +122,7 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
 
         // COMMENT and HISTORY: special handling (no '= ' at position 8)
         if keyword == "COMMENT" || keyword == "HISTORY" {
-            let val = String::from_utf8_lossy(&record[8..]).trim_end().to_string();
+            let val = crate::encoding::decode_utf8_or_latin1(&record[8..]).trim_end().to_string();
             let name = if keyword == "COMMENT" { "Comment" } else { "History" };
             tags.push(mktag("FITS", name, name, Value::String(val)));
             continue;
@@ -132,7 +132,7 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
         if keyword.is_empty() { continue; }
         if record.len() <= 10 || record[8] != b'=' { continue; }
 
-        let val_raw = String::from_utf8_lossy(&record[10..]).to_string();
+        let val_raw = crate::encoding::decode_utf8_or_latin1(&record[10..]).to_string();
         // Parse value: may be quoted string, boolean T/F, or number
         let (value, is_continued) = fits_parse_value(&val_raw);
         if value.is_empty() { continue; }
@@ -408,7 +408,7 @@ fn flv_parse_amf_metadata(data: &[u8], tags: &mut Vec<Tag>) {
     let str_len = u16::from_be_bytes([data[pos], data[pos+1]]) as usize;
     pos += 2;
     if pos + str_len > data.len() { return; }
-    let name = String::from_utf8_lossy(&data[pos..pos+str_len]).to_string();
+    let name = crate::encoding::decode_utf8_or_latin1(&data[pos..pos+str_len]).to_string();
     pos += str_len;
 
     if name != "onMetaData" { return; }
@@ -470,7 +470,7 @@ fn flv_parse_amf_value(
             let slen = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
             *pos += 2;
             if *pos + slen > data.len() { return; }
-            let s = String::from_utf8_lossy(&data[*pos..*pos+slen]).to_string();
+            let s = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos+slen]).to_string();
             *pos += slen;
             let tag_name = flv_lookup_tag(compound_key);
             let s = s.trim_end().to_string();
@@ -522,7 +522,7 @@ fn flv_parse_amf_value(
                             let slen = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
                             *pos += 2;
                             if *pos + slen > data.len() { break; }
-                            let s = String::from_utf8_lossy(&data[*pos..*pos+slen]).to_string();
+                            let s = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos+slen]).to_string();
                             *pos += slen;
                             items.push(s);
                         }
@@ -550,7 +550,7 @@ fn flv_parse_amf_value(
             let slen = u32::from_be_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3]]) as usize;
             *pos += 4;
             if *pos + slen > data.len() { return; }
-            let s = String::from_utf8_lossy(&data[*pos..*pos+slen]).to_string();
+            let s = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos+slen]).to_string();
             *pos += slen;
             let tag_name = flv_lookup_tag(compound_key);
             tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(s)));
@@ -570,7 +570,7 @@ fn flv_parse_amf_object(data: &[u8], pos: &mut usize, tags: &mut Vec<Tag>, struc
         let key_len = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
         *pos += 2;
         if *pos + key_len > data.len() { break; }
-        let key = String::from_utf8_lossy(&data[*pos..*pos+key_len]).to_string();
+        let key = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos+key_len]).to_string();
         *pos += key_len;
         if *pos >= data.len() { break; }
 
@@ -978,7 +978,7 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
 }
 
 fn extract_xmp_toolkit(xmp: &[u8]) -> String {
-    let text = String::from_utf8_lossy(xmp);
+    let text = crate::encoding::decode_utf8_or_latin1(xmp);
     // Look for xmp:CreatorTool or xmptk attribute
     if let Some(start) = text.find("xmptk=\"") {
         let after = &text[start + 7..];
@@ -1005,7 +1005,7 @@ pub fn read_hdr(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     let mut tags = Vec::new();
-    let text = String::from_utf8_lossy(&data[..data.len().min(8192)]);
+    let text = crate::encoding::decode_utf8_or_latin1(&data[..data.len().min(8192)]);
 
     // Track key-value pairs and commands (last wins for non-list tags)
     let mut kv_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
@@ -1316,9 +1316,9 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
         // PFM format: PF\n<width> <height>\n<scale>\n<data>
         // ColorSpace: PF=RGB, Pf=Monochrome
         // ByteOrder: positive scale=Big-endian, negative=Little-endian
-        let text = String::from_utf8_lossy(&data[..data.len().min(256)]);
+        let text = crate::encoding::decode_utf8_or_latin1(&data[..data.len().min(256)]);
         // Match: P[Ff]\n<width> <height>\n<scale>\n
-        let re_str = text.as_ref();
+        let re_str = text.as_str();
         // Simple line-based parser
         let mut lines = re_str.lines();
         let header_line = lines.next().unwrap_or("");
@@ -1347,7 +1347,7 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
     } else {
         // PPM/PGM/PBM format
         // Parse header: collect comments, then width height [maxval]
-        let text = String::from_utf8_lossy(&data[2..data.len().min(1024)]);
+        let text = crate::encoding::decode_utf8_or_latin1(&data[2..data.len().min(1024)]);
         let mut comment_lines: Vec<String> = Vec::new();
         let mut width: Option<u32> = None;
         let mut height: Option<u32> = None;
@@ -1355,7 +1355,7 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
         let mut found_dims = false;
 
         // State machine: after magic byte, collect comments and parse dimensions
-        let mut remaining = text.as_ref();
+        let mut remaining = text.as_str();
         // Skip initial whitespace
         remaining = remaining.trim_start();
 
@@ -1963,28 +1963,28 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
 
     // FirmwareVersion at 0x01, 10 bytes, reversed string
     let fw_bytes: Vec<u8> = data[0x01..0x0b].iter().rev().copied().collect();
-    let fw = String::from_utf8_lossy(&fw_bytes).trim_matches('\0').to_string();
+    let fw = crate::encoding::decode_utf8_or_latin1(&fw_bytes).trim_matches('\0').to_string();
     if !fw.is_empty() {
         tags.push(mktag(group, "FirmwareVersion", "Firmware Version", Value::String(fw)));
     }
 
     // Model at 0x0c, 12 bytes, reversed string
     let model_bytes: Vec<u8> = data[0x0c..0x18].iter().rev().copied().collect();
-    let model = String::from_utf8_lossy(&model_bytes).trim_matches('\0').to_string();
+    let model = crate::encoding::decode_utf8_or_latin1(&model_bytes).trim_matches('\0').to_string();
     if !model.is_empty() {
         tags.push(mktag(group, "Model", "Camera Model Name", Value::String(model)));
     }
 
     // Make at 0x19, 7 bytes, reversed string
     let make_bytes: Vec<u8> = data[0x19..0x20].iter().rev().copied().collect();
-    let make = String::from_utf8_lossy(&make_bytes).trim_matches('\0').to_string();
+    let make = crate::encoding::decode_utf8_or_latin1(&make_bytes).trim_matches('\0').to_string();
     if !make.is_empty() {
         tags.push(mktag(group, "Make", "Camera Make", Value::String(make)));
     }
 
     // DateTimeOriginal at 0x21, 20 bytes, reversed string
     let dt_bytes: Vec<u8> = data[0x21..0x35].iter().rev().copied().collect();
-    let dt_str = String::from_utf8_lossy(&dt_bytes).trim_matches('\0').to_string();
+    let dt_str = crate::encoding::decode_utf8_or_latin1(&dt_bytes).trim_matches('\0').to_string();
     if !dt_str.is_empty() {
         tags.push(mktag(group, "DateTimeOriginal", "Date/Time Original", Value::String(dt_str)));
     }
@@ -2051,7 +2051,7 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
     // Lens at 0x7c, string[32]
     if data.len() >= 0x9c {
         let lens_bytes = &data[0x7c..0x9c];
-        let lens = String::from_utf8_lossy(lens_bytes).trim_matches('\0').to_string();
+        let lens = crate::encoding::decode_utf8_or_latin1(lens_bytes).trim_matches('\0').to_string();
         if !lens.is_empty() {
             tags.push(mktag(group, "Lens", "Lens", Value::String(lens)));
         }
@@ -2975,7 +2975,7 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
         if flags & 0x08 != 0 && pos < data.len() {
             let name_end = data[pos..].iter().position(|&b| b == 0)
                 .unwrap_or(data.len() - pos);
-            let filename = String::from_utf8_lossy(&data[pos..pos + name_end]).to_string();
+            let filename = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + name_end]).to_string();
             if !filename.is_empty() {
                 tags.push(mktag("GZIP", "ArchivedFileName", "Archived File Name", Value::String(filename)));
             }
@@ -2986,7 +2986,7 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
         if flags & 0x10 != 0 && pos < data.len() {
             let comment_end = data[pos..].iter().position(|&b| b == 0)
                 .unwrap_or(data.len() - pos);
-            let comment = String::from_utf8_lossy(&data[pos..pos + comment_end]).to_string();
+            let comment = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + comment_end]).to_string();
             if !comment.is_empty() {
                 tags.push(mktag("GZIP", "Comment", "Comment", Value::String(comment)));
             }
@@ -3000,7 +3000,7 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
         if flags & 0x08 != 0 && pos < data.len() {
             let name_end = data[pos..].iter().position(|&b| b == 0)
                 .unwrap_or(data.len() - pos);
-            let filename = String::from_utf8_lossy(&data[pos..pos + name_end]).to_string();
+            let filename = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + name_end]).to_string();
             if !filename.is_empty() {
                 tags.push(mktag("GZIP", "ArchivedFileName", "Archived File Name", Value::String(filename)));
             }
@@ -3154,7 +3154,7 @@ fn parse_attr_block(full_data: &[u8], entry_data: &[u8], tags: &mut Vec<Tag>) {
             break;
         }
         let name_bytes = &entry_data[pos+11..pos+11+n];
-        let name = String::from_utf8_lossy(name_bytes).trim_end_matches('\0').to_string();
+        let name = crate::encoding::decode_utf8_or_latin1(name_bytes).trim_end_matches('\0').to_string();
 
         // Offsets are absolute file offsets
         let val_data = if off + len <= full_data.len() {
@@ -3180,7 +3180,7 @@ fn parse_attr_block(full_data: &[u8], entry_data: &[u8], tags: &mut Vec<Tag>) {
             // Binary data
             tags.push(mktag("MacOS", &tag_name, &tag_name, Value::Binary(val_data.to_vec())));
         } else {
-            let s = String::from_utf8_lossy(val_data).trim_end_matches('\0').to_string();
+            let s = crate::encoding::decode_utf8_or_latin1(val_data).trim_end_matches('\0').to_string();
             // Handle quarantine string: format "0082;TIME;APP;"
             let display = if name == "com.apple.quarantine" {
                 format_quarantine(&s)
@@ -3365,7 +3365,7 @@ fn parse_simple_bplist(data: &[u8]) -> Option<String> {
                 // ASCII string
                 let len = info_nibble as usize;
                 if off + 1 + len > data.len() { return None; }
-                Some(String::from_utf8_lossy(&data[off+1..off+1+len]).to_string())
+                Some(crate::encoding::decode_utf8_or_latin1(&data[off+1..off+1+len]).to_string())
             }
             0x6 => {
                 // Unicode string (UTF-16BE)
@@ -3474,7 +3474,7 @@ pub fn read_moi(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 
     // 0x00: MOIVersion (string[2])
-    let version = String::from_utf8_lossy(&data[0..2]).to_string();
+    let version = crate::encoding::decode_utf8_or_latin1(&data[0..2]).to_string();
     tags.push(mktag("MOI", "MOIVersion", "MOI Version", Value::String(version)));
 
     // 0x06: DateTimeOriginal (undef[8]) = unpack 'nCCCCn'
@@ -3713,7 +3713,7 @@ fn read_rar5_entries(data: &[u8], tags: &mut Vec<Tag>) {
             let name_len = header[hpos] as usize;
             hpos += 1;
             if hpos + name_len <= header.len() {
-                let name = String::from_utf8_lossy(&header[hpos..hpos + name_len])
+                let name = crate::encoding::decode_utf8_or_latin1(&header[hpos..hpos + name_len])
                     .trim_end_matches('\0')
                     .to_string();
                 if !name.is_empty() {
@@ -3761,7 +3761,7 @@ fn read_rar4_entries(data: &[u8], tags: &mut Vec<Tag>) {
                 let name_len = u16::from_le_bytes([file_data[10], file_data[11]]) as usize;
                 // name starts after 25-byte base header
                 if n >= 25 + name_len {
-                    let name = String::from_utf8_lossy(&file_data[25..25 + name_len]).to_string();
+                    let name = crate::encoding::decode_utf8_or_latin1(&file_data[25..25 + name_len]).to_string();
                     tags.push(mktag("ZIP", "CompressedSize", "Compressed Size", Value::U32(compressed as u32)));
                     tags.push(mktag("ZIP", "UncompressedSize", "Uncompressed Size", Value::U32(uncompressed as u32)));
                     let os_name = match os_byte {
@@ -4410,7 +4410,7 @@ fn sevenz_read_times(data: &[u8], num_files: usize, times: &mut [Option<i64>]) {
 // ============================================================================
 
 pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
 
     if !text.contains("<svg") {
         return Err(Error::InvalidData("not an SVG file".into()));
@@ -4438,7 +4438,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
     // True = had at least one child element. Parallel to `path`.
     let mut had_child: Vec<bool> = Vec::new();
 
-    for event in EventReader::from_str(text.as_ref()) {
+    for event in EventReader::from_str(text.as_str()) {
         match event {
             Ok(XmlEvent::StartElement { name, attributes, namespace, .. }) => {
                 let local = &name.local_name;
@@ -4737,7 +4737,7 @@ fn parse_jumbf_jumd_svg(data: &[u8], tags: &mut Vec<Tag>, emit_desc: bool) {
                 let type_bytes = &content[..16];
                 let label_data = &content[17..];
                 let null_pos = label_data.iter().position(|&b| b == 0).unwrap_or(label_data.len());
-                let label = String::from_utf8_lossy(&label_data[..null_pos]).to_string();
+                let label = crate::encoding::decode_utf8_or_latin1(&label_data[..null_pos]).to_string();
 
                 if emit_desc {
                     // Emit JUMDType
@@ -4748,7 +4748,7 @@ fn parse_jumbf_jumd_svg(data: &[u8], tags: &mut Vec<Tag>, emit_desc: bool) {
                     let ascii4 = &type_bytes[..4];
                     let is_printable = ascii4.iter().all(|&b| b.is_ascii_alphanumeric());
                     let print_type = if is_printable {
-                        let ascii_str = String::from_utf8_lossy(ascii4);
+                        let ascii_str = crate::encoding::decode_utf8_or_latin1(ascii4);
                         format!("({})-{}-{}-{}", ascii_str, a1, a2, a3)
                     } else {
                         format!("{}-{}-{}-{}", &type_hex[..8], a1, a2, a3)
@@ -4843,7 +4843,7 @@ fn parse_jumbf_json_svg(json: &str, tags: &mut Vec<Tag>, group: &crate::tag::Tag
 // ============================================================================
 
 pub fn read_json(data: &[u8]) -> Result<Vec<Tag>> {
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
     let trimmed = text.trim();
     if !trimmed.starts_with('{') && !trimmed.starts_with('[') {
         return Err(Error::InvalidData("not a JSON file".into()));
@@ -5256,7 +5256,7 @@ pub fn read_real_audio(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Field 24: Title (string[TitleLen])
     if pos + title_len <= d.len() && title_len > 0 {
-        let title = String::from_utf8_lossy(&d[pos..pos + title_len]).to_string();
+        let title = crate::encoding::decode_utf8_or_latin1(&d[pos..pos + title_len]).to_string();
         tags.push(mktag("Real", "Title", "Title", Value::String(title)));
     }
     pos += title_len;
@@ -5268,7 +5268,7 @@ pub fn read_real_audio(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Field 26: Artist
     if pos + artist_len <= d.len() && artist_len > 0 {
-        let artist = String::from_utf8_lossy(&d[pos..pos + artist_len]).to_string();
+        let artist = crate::encoding::decode_utf8_or_latin1(&d[pos..pos + artist_len]).to_string();
         tags.push(mktag("Real", "Artist", "Artist", Value::String(artist)));
     }
     pos += artist_len;
@@ -5280,7 +5280,7 @@ pub fn read_real_audio(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Field 28: Copyright
     if pos + copy_len <= d.len() && copy_len > 0 {
-        let copyright = String::from_utf8_lossy(&d[pos..pos + copy_len]).to_string();
+        let copyright = crate::encoding::decode_utf8_or_latin1(&d[pos..pos + copy_len]).to_string();
         tags.push(mktag("Real", "Copyright", "Copyright", Value::String(copyright)));
     }
 
@@ -5625,7 +5625,7 @@ pub fn read_ram(data: &[u8]) -> Result<Vec<Tag>> {
         return Err(Error::InvalidData("not a RAM file".into()));
     }
 
-    let text = String::from_utf8_lossy(data);
+    let text = crate::encoding::decode_utf8_or_latin1(data);
     // Check for valid start: must begin with a URL-like protocol
     let _first_line = text.lines().next().unwrap_or("").trim();
     // Validate: http:// lines must end with real media extensions
@@ -5677,7 +5677,7 @@ pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
     // Offset 12: Model, string[16]
     if data.len() >= 28 {
         let model_bytes = &data[12..28];
-        let model = String::from_utf8_lossy(model_bytes)
+        let model = crate::encoding::decode_utf8_or_latin1(model_bytes)
             .trim_end_matches('\0')
             .trim()
             .to_string();
@@ -5689,7 +5689,7 @@ pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
     // Offset 38: StartTime, string[12] — format YYMMDDHHMMSS
     if data.len() >= 50 {
         let st_bytes = &data[38..50];
-        let st_str = String::from_utf8_lossy(st_bytes);
+        let st_str = crate::encoding::decode_utf8_or_latin1(st_bytes);
         if let Some(dt) = parse_dss_time(&st_str) {
             tags.push(mktag("Olympus", "StartTime", "Start Time", Value::String(dt)));
         }
@@ -5698,7 +5698,7 @@ pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
     // Offset 50: EndTime, string[12]
     if data.len() >= 62 {
         let et_bytes = &data[50..62];
-        let et_str = String::from_utf8_lossy(et_bytes);
+        let et_str = crate::encoding::decode_utf8_or_latin1(et_bytes);
         if let Some(dt) = parse_dss_time(&et_str) {
             tags.push(mktag("Olympus", "EndTime", "End Time", Value::String(dt)));
         }
@@ -5707,7 +5707,7 @@ pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
     // Offset 62: Duration, string[6] — format HHMMSS
     if data.len() >= 68 {
         let dur_bytes = &data[62..68];
-        let dur_str = String::from_utf8_lossy(dur_bytes);
+        let dur_str = crate::encoding::decode_utf8_or_latin1(dur_bytes);
         if let Some(dur_secs) = parse_dss_duration(&dur_str) {
             let dur_display = dss_convert_duration(dur_secs);
             tags.push(mktag("Olympus", "Duration", "Duration", Value::String(dur_display)));
@@ -5996,19 +5996,19 @@ fn parse_pcapng_options(data: &[u8], start: usize, end: usize, is_le: bool,
 
         match (ctx, opt_code) {
             ("shb", 2) => { // shb_hardware
-                let s = String::from_utf8_lossy(opt_data).to_string();
+                let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
                 tags.push(mktag("PCAP", "Hardware", "Hardware", Value::String(s)));
             }
             ("shb", 3) => { // shb_os
-                let s = String::from_utf8_lossy(opt_data).to_string();
+                let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
                 tags.push(mktag("PCAP", "OperatingSystem", "Operating System", Value::String(s)));
             }
             ("shb", 4) => { // shb_userappl
-                let s = String::from_utf8_lossy(opt_data).to_string();
+                let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
                 tags.push(mktag("PCAP", "UserApplication", "User Application", Value::String(s)));
             }
             ("idb", 2) => { // if_name
-                let s = String::from_utf8_lossy(opt_data).to_string();
+                let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
                 tags.push(mktag("PCAP", "DeviceName", "Device Name", Value::String(s)));
             }
             ("idb", 9) => { // if_tsresol: timestamp resolution
@@ -6028,7 +6028,7 @@ fn parse_pcapng_options(data: &[u8], start: usize, end: usize, is_le: bool,
                 }
             }
             ("idb", 12) => { // if_os
-                let s = String::from_utf8_lossy(opt_data).to_string();
+                let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
                 if !tags.iter().any(|t| t.name == "OperatingSystem") {
                     tags.push(mktag("PCAP", "OperatingSystem", "Operating System", Value::String(s)));
                 }
@@ -6851,11 +6851,11 @@ fn real_parse_mdpr(data: &[u8], tags: &mut Vec<Tag>, is_first: bool) {
     if off >= data.len() { return; }
     let name_len = data[off] as usize; off += 1;
     if off + name_len > data.len() { return; }
-    let stream_name = String::from_utf8_lossy(&data[off..off+name_len]).to_string(); off += name_len;
+    let stream_name = crate::encoding::decode_utf8_or_latin1(&data[off..off+name_len]).to_string(); off += name_len;
     if off >= data.len() { return; }
     let mime_len = data[off] as usize; off += 1;
     if off + mime_len > data.len() { return; }
-    let mime_type = String::from_utf8_lossy(&data[off..off+mime_len]).to_string(); off += mime_len;
+    let mime_type = crate::encoding::decode_utf8_or_latin1(&data[off..off+mime_len]).to_string(); off += mime_len;
 
     // Only emit stream info for first non-logical stream (Perl PRIORITY => 0 = first takes priority)
     if is_first {
@@ -6921,7 +6921,7 @@ fn real_parse_properties(data: &[u8], tags: &mut Vec<Tag>) {
 
         let tag_len = data[pos] as usize; pos += 1;
         if pos + tag_len > data.len() { break; }
-        let tag_name = String::from_utf8_lossy(&data[pos..pos+tag_len]).to_string(); pos += tag_len;
+        let tag_name = crate::encoding::decode_utf8_or_latin1(&data[pos..pos+tag_len]).to_string(); pos += tag_len;
 
         if pos + 6 > data.len() { break; }
         let prop_type = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]); pos += 4;
@@ -6982,7 +6982,7 @@ fn real_file_info_tag(tag: &str, prop_type: u32, val_data: &[u8], val_len: usize
         "CreateDate" | "ModifyDate" => {
             // Convert "D/M/YYYY H:MM:SS" to "YYYY:MM:DD HH:MM:SS"
             if prop_type == 2 {
-                let s = String::from_utf8_lossy(val_data).trim_matches('\0').to_string();
+                let s = crate::encoding::decode_utf8_or_latin1(val_data).trim_matches('\0').to_string();
                 Some(real_parse_date(&s))
             } else { None }
         }
@@ -7002,7 +7002,7 @@ fn real_parse_prop_value(tag: &str, prop_type: u32, val_data: &[u8], val_len: us
             } else { None }
         }
         2 => { // string
-            let s = String::from_utf8_lossy(val_data).trim_matches('\0').to_string();
+            let s = crate::encoding::decode_utf8_or_latin1(val_data).trim_matches('\0').to_string();
             Some(s)
         }
         _ => None
@@ -7031,22 +7031,22 @@ fn real_parse_cont(data: &[u8], tags: &mut Vec<Tag>) {
 
     let title_len = u16::from_be_bytes([data[off], data[off+1]]) as usize; off += 2;
     if off + title_len > data.len() { return; }
-    let title = String::from_utf8_lossy(&data[off..off+title_len]).to_string(); off += title_len;
+    let title = crate::encoding::decode_utf8_or_latin1(&data[off..off+title_len]).to_string(); off += title_len;
 
     if off + 2 > data.len() { return; }
     let author_len = u16::from_be_bytes([data[off], data[off+1]]) as usize; off += 2;
     if off + author_len > data.len() { return; }
-    let author = String::from_utf8_lossy(&data[off..off+author_len]).to_string(); off += author_len;
+    let author = crate::encoding::decode_utf8_or_latin1(&data[off..off+author_len]).to_string(); off += author_len;
 
     if off + 2 > data.len() { return; }
     let copyright_len = u16::from_be_bytes([data[off], data[off+1]]) as usize; off += 2;
     if off + copyright_len > data.len() { return; }
-    let copyright = String::from_utf8_lossy(&data[off..off+copyright_len]).to_string(); off += copyright_len;
+    let copyright = crate::encoding::decode_utf8_or_latin1(&data[off..off+copyright_len]).to_string(); off += copyright_len;
 
     if off + 2 > data.len() { return; }
     let comment_len = u16::from_be_bytes([data[off], data[off+1]]) as usize; off += 2;
     if off + comment_len > data.len() { return; }
-    let comment = String::from_utf8_lossy(&data[off..off+comment_len]).to_string();
+    let comment = crate::encoding::decode_utf8_or_latin1(&data[off..off+comment_len]).to_string();
 
     if !title.is_empty() { tags.push(mktag("Real", "Title", "Title", Value::String(title))); }
     if !author.is_empty() { tags.push(mktag("Real", "Author", "Author", Value::String(author))); }
@@ -7080,7 +7080,7 @@ fn real_parse_rjmd_entries(data: &[u8], pos_start: usize, dir_end: usize, prefix
         if pos + 28 + name_len > dir_end { break; }
 
         let name_bytes = &data[pos+28..pos+28+name_len];
-        let name = String::from_utf8_lossy(name_bytes).split('\0').next().unwrap_or("").to_string();
+        let name = crate::encoding::decode_utf8_or_latin1(name_bytes).split('\0').next().unwrap_or("").to_string();
 
         let full_name = if prefix.is_empty() {
             name.clone()
@@ -7098,7 +7098,7 @@ fn real_parse_rjmd_entries(data: &[u8], pos_start: usize, dir_end: usize, prefix
                 let val_str = match entry_type {
                     1 | 2 | 6 | 7 | 8 => {
                         // string/text/url/date/filename
-                        let s = String::from_utf8_lossy(val_data).trim_matches('\0').to_string();
+                        let s = crate::encoding::decode_utf8_or_latin1(val_data).trim_matches('\0').to_string();
                         let s = s.trim_end().to_string();
                         if entry_type == 7 {
                             // date: YYYYMMDDHHMMSS format
@@ -7314,7 +7314,7 @@ fn id3v1_genre_name(n: usize) -> Option<&'static str> {
 
 fn read_null_terminated_str(bytes: &[u8]) -> String {
     let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
-    String::from_utf8_lossy(&bytes[..end]).trim().to_string()
+    crate::encoding::decode_utf8_or_latin1(&bytes[..end]).trim().to_string()
 }
 
 fn real_convert_bitrate(bps: f64) -> String {
@@ -7586,7 +7586,7 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
 fn pcd_rtrim_str(bytes: &[u8]) -> String {
     // Perl's string[] format reads to null terminator, then trims trailing spaces/NULs
     let null_end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
-    let s = String::from_utf8_lossy(&bytes[..null_end]);
+    let s = crate::encoding::decode_utf8_or_latin1(&bytes[..null_end]);
     s.trim_end_matches(|c: char| c == ' ' || c == '\0').to_string()
 }
 
@@ -8450,7 +8450,7 @@ fn iiq_read_f32(data: &[u8], off: usize, is_le: bool) -> f32 {
 fn iiq_read_str(raw: &[u8]) -> String {
     // Read null-terminated string
     let end = raw.iter().position(|&b| b == 0).unwrap_or(raw.len());
-    String::from_utf8_lossy(&raw[..end]).trim().to_string()
+    crate::encoding::decode_utf8_or_latin1(&raw[..end]).trim().to_string()
 }
 
 fn iiq_decode_tag(

@@ -13,7 +13,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
 
     let mut tags = Vec::new();
 
-    let preferred_cmm = String::from_utf8_lossy(&data[4..8]).trim().to_string();
+    let preferred_cmm = crate::encoding::decode_utf8_or_latin1(&data[4..8]).trim().to_string();
     if !preferred_cmm.is_empty() && preferred_cmm != "\0\0\0\0" {
         tags.push(mk("ProfileCMMType", "Profile CMM Type", Value::String(preferred_cmm)));
     }
@@ -23,7 +23,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
     let patch = data[9] & 0x0F;
     tags.push(mk("ProfileVersion", "Profile Version", Value::String(format!("{}.{}.{}", major, minor, patch))));
 
-    let device_class = String::from_utf8_lossy(&data[12..16]).to_string();
+    let device_class = crate::encoding::decode_utf8_or_latin1(&data[12..16]).to_string();
     let class_name = match device_class.trim() {
         "scnr" => "Input Device Profile",
         "mntr" => "Display Device Profile",
@@ -36,7 +36,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
     };
     tags.push(mk("ProfileClass", "Profile Class", Value::String(class_name.to_string())));
 
-    let color_space = String::from_utf8_lossy(&data[16..20]).trim().to_string();
+    let color_space = crate::encoding::decode_utf8_or_latin1(&data[16..20]).trim().to_string();
     let cs_name = match color_space.as_str() {
         "XYZ" => "XYZ",
         "Lab" => "Lab",
@@ -53,7 +53,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
     };
     tags.push(mk("ColorSpaceData", "Color Space", Value::String(cs_name.to_string())));
 
-    let pcs = String::from_utf8_lossy(&data[20..24]).trim().to_string();
+    let pcs = crate::encoding::decode_utf8_or_latin1(&data[20..24]).trim().to_string();
     tags.push(mk("ProfileConnectionSpace", "Connection Space", Value::String(pcs)));
 
     // Creation date (bytes 24-35): year(2), month(2), day(2), hour(2), minute(2), second(2)
@@ -70,7 +70,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
     ));
 
     // Primary platform (bytes 40-43)
-    let platform = String::from_utf8_lossy(&data[40..44]).trim().to_string();
+    let platform = crate::encoding::decode_utf8_or_latin1(&data[40..44]).trim().to_string();
     let platform_name = match platform.as_str() {
         "APPL" => "Apple",
         "MSFT" => "Microsoft",
@@ -102,7 +102,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
     tags.push(mk("DeviceAttributes", "Device Attributes", Value::String(format!("{}", attr))));
 
     // Device manufacturer (bytes 48-51) and model (52-55)
-    let manufacturer = String::from_utf8_lossy(&data[48..52]).trim().to_string();
+    let manufacturer = crate::encoding::decode_utf8_or_latin1(&data[48..52]).trim().to_string();
     if !manufacturer.is_empty() && manufacturer.bytes().any(|b| b > 0x20) {
         tags.push(mk("DeviceManufacturer", "Device Manufacturer", Value::String(manufacturer)));
     }
@@ -111,7 +111,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
     let dev_model = if dev_model_raw.iter().all(|&b| b == 0) {
         String::new()
     } else {
-        String::from_utf8_lossy(dev_model_raw).trim_end_matches('\0').trim().to_string()
+        crate::encoding::decode_utf8_or_latin1(dev_model_raw).trim_end_matches('\0').trim().to_string()
     };
     tags.push(mk("DeviceModel", "Device Model", Value::String(dev_model)));
 
@@ -132,7 +132,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
         let creator = if raw.iter().all(|&b| b == 0) {
             String::new()
         } else {
-            String::from_utf8_lossy(raw).trim_end_matches('\0').trim().to_string()
+            crate::encoding::decode_utf8_or_latin1(raw).trim_end_matches('\0').trim().to_string()
         };
         tags.push(mk("ProfileCreator", "Profile Creator", Value::String(creator)));
     }
@@ -162,7 +162,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                 if d.len() >= 12 && &d[0..4] == b"desc" {
                     let str_len = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as usize;
                     if 12 + str_len <= d.len() {
-                        let desc = String::from_utf8_lossy(&d[12..12 + str_len])
+                        let desc = crate::encoding::decode_utf8_or_latin1(&d[12..12 + str_len])
                             .trim_end_matches('\0')
                             .to_string();
                         if !desc.is_empty() {
@@ -175,7 +175,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
             if sig == b"cprt" && offset + size <= data.len() && size > 8 {
                 let d = &data[offset..offset + size];
                 if d.len() >= 8 && &d[0..4] == b"text" {
-                    let text = String::from_utf8_lossy(&d[8..])
+                    let text = crate::encoding::decode_utf8_or_latin1(&d[8..])
                         .trim_end_matches('\0')
                         .to_string();
                     if !text.is_empty() {
@@ -227,7 +227,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                         b"desc" if d.len() >= 12 => {
                             let len = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as usize;
                             if 12 + len <= d.len() {
-                                String::from_utf8_lossy(&d[12..12+len]).trim_end_matches('\0').to_string()
+                                crate::encoding::decode_utf8_or_latin1(&d[12..12+len]).trim_end_matches('\0').to_string()
                             } else { String::new() }
                         }
                         b"mluc" if d.len() >= 20 => {
@@ -244,7 +244,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                             } else { String::new() }
                         }
                         b"sig " if d.len() >= 12 => {
-                            String::from_utf8_lossy(&d[8..12]).trim().to_string()
+                            crate::encoding::decode_utf8_or_latin1(&d[8..12]).trim().to_string()
                         }
                         b"meas" if d.len() >= 36 => {
                             // measurement type

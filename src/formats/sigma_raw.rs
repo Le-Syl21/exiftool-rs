@@ -536,7 +536,7 @@ fn hex_bytes(data: &[u8]) -> String {
 
 fn read_cstr(data: &[u8]) -> String {
     let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
-    String::from_utf8_lossy(&data[..end]).into_owned()
+    crate::encoding::decode_utf8_or_latin1(&data[..end])
 }
 
 fn extract_utf16_str(chars: &[u16], pos: usize) -> String {

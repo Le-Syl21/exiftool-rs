@@ -27,7 +27,7 @@ pub fn read_riff(data: &[u8]) -> Result<Vec<Tag>> {
         _ => {
             return Err(Error::InvalidData(format!(
                 "unknown RIFF type: {}",
-                String::from_utf8_lossy(form_type)
+                crate::encoding::decode_utf8_or_latin1(form_type)
             )));
         }
     }
@@ -398,7 +398,7 @@ fn read_riff_chunks(
             b"strh" => {
                 if chunk_size >= 4 {
                     let cd = &data[chunk_data_start..chunk_data_end];
-                    let fcc_type = String::from_utf8_lossy(&cd[0..4]).to_string();
+                    let fcc_type = crate::encoding::decode_utf8_or_latin1(&cd[0..4]).to_string();
                     state.current_stream_type = Some(fcc_type.clone());
                     state.stream_count_seen += 1;
                     let is_first_stream = state.stream_count_seen == 1;
@@ -417,7 +417,7 @@ fn read_riff_chunks(
                     }
 
                     if chunk_size >= 8 {
-                        let fcc_handler = String::from_utf8_lossy(&cd[4..8]).trim_end_matches('\0').to_string();
+                        let fcc_handler = crate::encoding::decode_utf8_or_latin1(&cd[4..8]).trim_end_matches('\0').to_string();
                         if fcc_type == "vids" {
                             tags.push(mk_riff(family, "VideoCodec", "Video Codec", Value::String(fcc_handler)));
                         } else if fcc_type == "auds" {
@@ -529,7 +529,7 @@ fn read_riff_chunks(
             }
             // IDIT - DateTimeOriginal (top-level or in hdrl)
             b"IDIT" => {
-                let s = String::from_utf8_lossy(&data[chunk_data_start..chunk_data_end])
+                let s = crate::encoding::decode_utf8_or_latin1(&data[chunk_data_start..chunk_data_end])
                     .trim_end_matches('\0')
                     .to_string();
                 if !s.is_empty() {
@@ -667,7 +667,7 @@ fn parse_bitmapinfoheader(data: &[u8], start: usize, end: usize, tags: &mut Vec<
     let compression_str = if compression_raw > 256 {
         // FourCC: stored as little-endian, display as string
         let bytes = [cd[16], cd[17], cd[18], cd[19]];
-        String::from_utf8_lossy(&bytes).to_uppercase()
+        crate::encoding::decode_utf8_or_latin1(&bytes).to_uppercase()
     } else {
         match compression_raw {
             0 => "None".into(),
@@ -720,7 +720,7 @@ fn parse_bext(data: &[u8], start: usize, end: usize, chunk_size: usize, tags: &m
     let cd = &data[start..end];
 
     // Description: 256 bytes at offset 0
-    let description = String::from_utf8_lossy(&cd[..256.min(cd.len())])
+    let description = crate::encoding::decode_utf8_or_latin1(&cd[..256.min(cd.len())])
         .trim_end_matches('\0')
         .to_string();
     if !description.is_empty() {
@@ -729,7 +729,7 @@ fn parse_bext(data: &[u8], start: usize, end: usize, chunk_size: usize, tags: &m
 
     if cd.len() >= 288 {
         // Originator: 32 bytes at offset 256
-        let originator = String::from_utf8_lossy(&cd[256..288])
+        let originator = crate::encoding::decode_utf8_or_latin1(&cd[256..288])
             .trim_end_matches('\0')
             .to_string();
         if !originator.is_empty() {
@@ -739,7 +739,7 @@ fn parse_bext(data: &[u8], start: usize, end: usize, chunk_size: usize, tags: &m
 
     if cd.len() >= 320 {
         // OriginatorReference: 32 bytes at offset 288
-        let orig_ref = String::from_utf8_lossy(&cd[288..320])
+        let orig_ref = crate::encoding::decode_utf8_or_latin1(&cd[288..320])
             .trim_end_matches('\0')
             .to_string();
         if !orig_ref.is_empty() {
@@ -749,7 +749,7 @@ fn parse_bext(data: &[u8], start: usize, end: usize, chunk_size: usize, tags: &m
 
     if cd.len() >= 338 {
         // DateTimeOriginal: 18 bytes at offset 320 (format: "YYYY-MM-DD HH:MM:SS")
-        let dt_str = String::from_utf8_lossy(&cd[320..338])
+        let dt_str = crate::encoding::decode_utf8_or_latin1(&cd[320..338])
             .trim_end_matches('\0')
             .to_string();
         if !dt_str.is_empty() {
@@ -827,7 +827,7 @@ fn read_exif_list_chunks(data: &[u8], start: usize, end: usize, tags: &mut Vec<T
         }
 
         let raw_bytes = &data[pos..pos + chunk_size];
-        let value = String::from_utf8_lossy(raw_bytes)
+        let value = crate::encoding::decode_utf8_or_latin1(raw_bytes)
             .trim_end_matches('\0')
             .to_string();
 
@@ -871,7 +871,7 @@ fn read_info_chunks(
             break;
         }
 
-        let value = String::from_utf8_lossy(&data[pos..pos + chunk_size])
+        let value = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + chunk_size])
             .trim_end_matches('\0')
             .to_string();
 
