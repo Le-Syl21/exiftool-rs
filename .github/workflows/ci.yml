@@ -33,7 +33,7 @@ jobs:
     name: ${{ matrix.label }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -135,7 +135,7 @@ jobs:
         run: Compress-Archive -Path target/release/exiftool-rs.exe -DestinationPath exiftool-rs-cli-${{ matrix.label }}.zip
 
       - name: Upload CLI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: exiftool-rs-cli-${{ matrix.label }}
           path: exiftool-rs-cli-${{ matrix.label }}.*
@@ -150,7 +150,7 @@ jobs:
         run: Compress-Archive -Path target/release/exiftool-rs-gui.exe -DestinationPath exiftool-rs-gui-${{ matrix.label }}.zip
 
       - name: Upload GUI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: exiftool-rs-gui-${{ matrix.label }}
           path: exiftool-rs-gui-${{ matrix.label }}.*
@@ -164,7 +164,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: artifacts
 
@@ -174,7 +174,7 @@ jobs:
           generate_release_notes: true
           files: artifacts/**/*
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
