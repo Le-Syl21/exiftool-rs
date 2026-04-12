@@ -1320,13 +1320,13 @@ fn collect_files(dir: &Path, ext_filter: &Option<String>, files: &mut Vec<String
 /// matching ExifTool's output behavior for -s format.
 fn sanitize_display_value(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
-    for b in s.bytes() {
-        if b == 0x00 {
+    for ch in s.chars() {
+        if ch == '\0' {
             // remove null bytes
-        } else if (b >= 0x01 && b <= 0x1f) || b == 0x7f {
+        } else if ch >= '\x01' && ch <= '\x1f' || ch == '\x7f' {
             result.push('.');
         } else {
-            result.push(b as char);
+            result.push(ch);
         }
     }
     // Remove trailing whitespace
