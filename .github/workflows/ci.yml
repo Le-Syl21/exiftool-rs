@@ -111,19 +111,27 @@ jobs:
           ditto -c -k --keepParent \
             target/release/exiftool-rs \
             $RUNNER_TEMP/exiftool-rs-cli.zip
+          ditto -c -k --keepParent \
+            target/release/exiftool-rs-gui \
+            $RUNNER_TEMP/exiftool-rs-gui.zip
+
           xcrun notarytool submit $RUNNER_TEMP/exiftool-rs-cli.zip \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
-          ditto -c -k --keepParent \
-            target/release/exiftool-rs-gui \
-            $RUNNER_TEMP/exiftool-rs-gui.zip
+            --wait &
           xcrun notarytool submit $RUNNER_TEMP/exiftool-rs-gui.zip \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
+            --wait &
+          wait
+
+      - name: Staple notarization tickets (macOS)
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
+        run: |
+          xcrun stapler staple target/release/exiftool-rs
+          xcrun stapler staple target/release/exiftool-rs-gui
 
       # --- Package CLI ---
       - name: Package CLI (Unix)
