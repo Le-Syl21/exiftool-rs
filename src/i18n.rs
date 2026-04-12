@@ -128,25 +128,85 @@ pub fn translate(lang: &str, tag_name: &str, default: &str) -> String {
 /// Detect system language for GUI autodetection.
 /// Returns the language code (e.g., "fr", "de", "ja") or "en" as fallback.
 pub fn detect_system_language() -> String {
-    // Check LANG, LC_ALL, LC_MESSAGES environment variables
+    // 1. Check POSIX environment variables (Linux, macOS terminal)
     for var in &["LC_ALL", "LC_MESSAGES", "LANG"] {
         if let Ok(val) = std::env::var(var) {
-            let val = val.to_lowercase();
-            // Parse "fr_FR.UTF-8" → "fr"
-            let code = val.split('.').next().unwrap_or(&val);
-            let code = code.split('_').next().unwrap_or(code);
-            // Check if we support this language
-            if AVAILABLE_LANGUAGES.iter().any(|(c, _)| *c == code) {
-                return code.to_string();
-            }
-            // Try with full code (zh_tw, en_ca, etc.)
-            let full = val.split('.').next().unwrap_or(&val).replace('-', "_");
-            if AVAILABLE_LANGUAGES.iter().any(|(c, _)| *c == full) {
-                return full;
+            if let Some(lang) = match_locale(&val) {
+                return lang;
             }
         }
     }
+
+    // 2. Platform-specific detection
+    if let Some(lang) = detect_platform_language() {
+        return lang;
+    }
+
     "en".to_string()
+}
+
+/// Try to match a locale string (e.g. "fr_FR.UTF-8", "fr-FR", "fr") to a supported language.
+fn match_locale(val: &str) -> Option<String> {
+    let val = val.to_lowercase();
+    // Parse "fr_FR.UTF-8" → "fr"
+    let code = val.split('.').next().unwrap_or(&val);
+    let short = code.split('_').next().unwrap_or(code);
+    // Check short code first (e.g. "fr")
+    if AVAILABLE_LANGUAGES.iter().any(|(c, _)| *c == short) {
+        return Some(short.to_string());
+    }
+    // Try full code (e.g. "zh_tw", "en_ca")
+    let full = code.replace('-', "_");
+    if AVAILABLE_LANGUAGES.iter().any(|(c, _)| *c == full) {
+        return Some(full);
+    }
+    None
+}
+
+/// Platform-specific language detection.
+#[cfg(target_os = "windows")]
+fn detect_platform_language() -> Option<String> {
+    // Use Windows GetUserDefaultLocaleName API
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetUserDefaultLocaleName(locale: *mut u16, len: i32) -> i32;
+    }
+    let mut buf = [0u16; 85];
+    let len = unsafe { GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as i32) };
+    if len > 0 {
+        let locale = String::from_utf16_lossy(&buf[..len as usize - 1]);
+        return match_locale(&locale);
+    }
+    None
+}
+
+#[cfg(target_os = "macos")]
+fn detect_platform_language() -> Option<String> {
+    // Use defaults read .GlobalPreferences AppleLanguages
+    if let Ok(output) = std::process::Command::new("defaults")
+        .args(["read", "-globalDomain", "AppleLanguages"])
+        .output()
+    {
+        if output.status.success() {
+            let text = String::from_utf8_lossy(&output.stdout);
+            // Output is a plist array like: ( "fr-FR", "en-US", ... )
+            // Extract the first language
+            for line in text.lines() {
+                let trimmed = line.trim().trim_matches(|c| c == '"' || c == ',' || c == '(' || c == ')');
+                if !trimmed.is_empty() {
+                    if let Some(lang) = match_locale(trimmed) {
+                        return Some(lang);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+fn detect_platform_language() -> Option<String> {
+    None // Linux relies on environment variables above
 }
 
 /// List available language codes
