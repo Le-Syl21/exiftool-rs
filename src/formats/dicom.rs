@@ -5,7 +5,6 @@ use crate::error::{Error, Result};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
-
 // VR types that use 32-bit length fields in explicit VR syntax
 fn is_vr32(vr: &[u8]) -> bool {
     matches!(vr, b"OB" | b"OW" | b"OF" | b"SQ" | b"UT" | b"UN")
@@ -13,8 +12,10 @@ fn is_vr32(vr: &[u8]) -> bool {
 
 // Tags that are always implicit VR regardless of syntax
 fn is_implicit_tag(group: u16, element: u16) -> bool {
-    matches!((group, element),
-        (0xFFFE, 0xE000) | (0xFFFE, 0xE00D) | (0xFFFE, 0xE0DD))
+    matches!(
+        (group, element),
+        (0xFFFE, 0xE000) | (0xFFFE, 0xE00D) | (0xFFFE, 0xE0DD)
+    )
 }
 
 /// Look up tag name for a (group, element) pair.
@@ -25,12 +26,21 @@ fn lookup_tag(group: u16, element: u16) -> Option<(&'static str, &'static str)> 
         (0x0002, 0x0000) => Some(("FileMetaInfoGroupLength", "File Meta Info Group Length")),
         (0x0002, 0x0001) => Some(("FileMetaInfoVersion", "File Meta Info Version")),
         (0x0002, 0x0002) => Some(("MediaStorageSOPClassUID", "Media Storage SOP Class UID")),
-        (0x0002, 0x0003) => Some(("MediaStorageSOPInstanceUID", "Media Storage SOP Instance UID")),
+        (0x0002, 0x0003) => Some((
+            "MediaStorageSOPInstanceUID",
+            "Media Storage SOP Instance UID",
+        )),
         (0x0002, 0x0010) => Some(("TransferSyntaxUID", "Transfer Syntax UID")),
         (0x0002, 0x0012) => Some(("ImplementationClassUID", "Implementation Class UID")),
         (0x0002, 0x0013) => Some(("ImplementationVersionName", "Implementation Version Name")),
-        (0x0002, 0x0016) => Some(("SourceApplicationEntityTitle", "Source Application Entity Title")),
-        (0x0002, 0x0100) => Some(("PrivateInformationCreatorUID", "Private Information Creator UID")),
+        (0x0002, 0x0016) => Some((
+            "SourceApplicationEntityTitle",
+            "Source Application Entity Title",
+        )),
+        (0x0002, 0x0100) => Some((
+            "PrivateInformationCreatorUID",
+            "Private Information Creator UID",
+        )),
         (0x0002, 0x0102) => Some(("PrivateInformation", "Private Information")),
         // Identifying group (0008)
         (0x0008, 0x0000) => Some(("IdentifyingGroupLength", "Identifying Group Length")),
@@ -66,7 +76,10 @@ fn lookup_tag(group: u16, element: u16) -> Option<(&'static str, &'static str)> 
         (0x0008, 0x0081) => Some(("InstitutionAddress", "Institution Address")),
         (0x0008, 0x0090) => Some(("ReferringPhysicianName", "Referring Physician Name")),
         (0x0008, 0x0092) => Some(("ReferringPhysicianAddress", "Referring Physician Address")),
-        (0x0008, 0x0094) => Some(("ReferringPhysicianTelephoneNumber", "Referring Physician Telephone Number")),
+        (0x0008, 0x0094) => Some((
+            "ReferringPhysicianTelephoneNumber",
+            "Referring Physician Telephone Number",
+        )),
         (0x0008, 0x0100) => Some(("CodeValue", "Code Value")),
         (0x0008, 0x0102) => Some(("CodingSchemeDesignator", "Coding Scheme Designator")),
         (0x0008, 0x0103) => Some(("CodingSchemeVersion", "Coding Scheme Version")),
@@ -76,12 +89,21 @@ fn lookup_tag(group: u16, element: u16) -> Option<(&'static str, &'static str)> 
         (0x0008, 0x1010) => Some(("StationName", "Station Name")),
         (0x0008, 0x1030) => Some(("StudyDescription", "Study Description")),
         (0x0008, 0x103E) => Some(("SeriesDescription", "Series Description")),
-        (0x0008, 0x1040) => Some(("InstitutionalDepartmentName", "Institutional Department Name")),
+        (0x0008, 0x1040) => Some((
+            "InstitutionalDepartmentName",
+            "Institutional Department Name",
+        )),
         (0x0008, 0x1048) => Some(("PhysiciansOfRecord", "Physicians Of Record")),
         (0x0008, 0x1050) => Some(("PerformingPhysicianName", "Performing Physician Name")),
-        (0x0008, 0x1060) => Some(("NameOfPhysicianReadingStudy", "Name Of Physician Reading Study")),
+        (0x0008, 0x1060) => Some((
+            "NameOfPhysicianReadingStudy",
+            "Name Of Physician Reading Study",
+        )),
         (0x0008, 0x1070) => Some(("OperatorsName", "Operators Name")),
-        (0x0008, 0x1080) => Some(("AdmittingDiagnosesDescription", "Admitting Diagnoses Description")),
+        (0x0008, 0x1080) => Some((
+            "AdmittingDiagnosesDescription",
+            "Admitting Diagnoses Description",
+        )),
         (0x0008, 0x1090) => Some(("ManufacturersModelName", "Manufacturers Model Name")),
         (0x0008, 0x1150) => Some(("ReferencedSOPClassUID", "Referenced SOP Class UID")),
         (0x0008, 0x1155) => Some(("ReferencedSOPInstanceUID", "Referenced SOP Instance UID")),
@@ -137,7 +159,10 @@ fn lookup_tag(group: u16, element: u16) -> Option<(&'static str, &'static str)> 
         (0x0018, 0x0086) => Some(("EchoNumber", "Echo Number")),
         (0x0018, 0x0087) => Some(("MagneticFieldStrength", "Magnetic Field Strength")),
         (0x0018, 0x0088) => Some(("SpacingBetweenSlices", "Spacing Between Slices")),
-        (0x0018, 0x0089) => Some(("NumberOfPhaseEncodingSteps", "Number Of Phase Encoding Steps")),
+        (0x0018, 0x0089) => Some((
+            "NumberOfPhaseEncodingSteps",
+            "Number Of Phase Encoding Steps",
+        )),
         (0x0018, 0x0090) => Some(("DataCollectionDiameter", "Data Collection Diameter")),
         (0x0018, 0x0091) => Some(("EchoTrainLength", "Echo Train Length")),
         (0x0018, 0x0093) => Some(("PercentSampling", "Percent Sampling")),
@@ -146,9 +171,18 @@ fn lookup_tag(group: u16, element: u16) -> Option<(&'static str, &'static str)> 
         (0x0018, 0x1000) => Some(("DeviceSerialNumber", "Device Serial Number")),
         (0x0018, 0x1004) => Some(("PlateID", "Plate ID")),
         (0x0018, 0x1010) => Some(("SecondaryCaptureDeviceID", "Secondary Capture Device ID")),
-        (0x0018, 0x1016) => Some(("SecondaryCaptureDeviceManufacturer", "Secondary Capture Device Manufacturer")),
-        (0x0018, 0x1018) => Some(("SecondaryCaptureDeviceManufacturersModelName", "Secondary Capture Device Manufacturers Model Name")),
-        (0x0018, 0x1019) => Some(("SecondaryCaptureDeviceSoftwareVersion", "Secondary Capture Device Software Version")),
+        (0x0018, 0x1016) => Some((
+            "SecondaryCaptureDeviceManufacturer",
+            "Secondary Capture Device Manufacturer",
+        )),
+        (0x0018, 0x1018) => Some((
+            "SecondaryCaptureDeviceManufacturersModelName",
+            "Secondary Capture Device Manufacturers Model Name",
+        )),
+        (0x0018, 0x1019) => Some((
+            "SecondaryCaptureDeviceSoftwareVersion",
+            "Secondary Capture Device Software Version",
+        )),
         (0x0018, 0x1020) => Some(("SoftwareVersion", "Software Version")),
         (0x0018, 0x1030) => Some(("ProtocolName", "Protocol Name")),
         (0x0018, 0x1040) => Some(("ContrastBolusRoute", "Contrast Bolus Route")),
@@ -171,7 +205,10 @@ fn lookup_tag(group: u16, element: u16) -> Option<(&'static str, &'static str)> 
         (0x0018, 0x1250) => Some(("ReceiveCoilName", "Receive Coil Name")),
         (0x0018, 0x1251) => Some(("TransmitCoilName", "Transmit Coil Name")),
         (0x0018, 0x1310) => Some(("AcquisitionMatrix", "Acquisition Matrix")),
-        (0x0018, 0x1312) => Some(("InPlanePhaseEncodingDirection", "In Plane Phase Encoding Direction")),
+        (0x0018, 0x1312) => Some((
+            "InPlanePhaseEncodingDirection",
+            "In Plane Phase Encoding Direction",
+        )),
         (0x0018, 0x1314) => Some(("FlipAngle", "Flip Angle")),
         (0x0018, 0x1315) => Some(("VariableFlipAngleFlag", "Variable Flip Angle Flag")),
         (0x0018, 0x1316) => Some(("SAR", "SAR")),
@@ -202,7 +239,10 @@ fn lookup_tag(group: u16, element: u16) -> Option<(&'static str, &'static str)> 
         (0x0020, 0x1041) => Some(("SliceLocation", "Slice Location")),
         (0x0020, 0x3401) => Some(("ModifyingDeviceID", "Modifying Device ID")),
         (0x0020, 0x3402) => Some(("ModifiedImageID", "Modified Image ID")),
-        (0x0020, 0x3404) => Some(("ModifyingDeviceManufacturer", "Modifying Device Manufacturer")),
+        (0x0020, 0x3404) => Some((
+            "ModifyingDeviceManufacturer",
+            "Modifying Device Manufacturer",
+        )),
         (0x0020, 0x3406) => Some(("ModifiedImageDescription", "Modified Image Description")),
         (0x0020, 0x4000) => Some(("ImageComments", "Image Comments")),
         // Image group (0028)
@@ -230,10 +270,22 @@ fn lookup_tag(group: u16, element: u16) -> Option<(&'static str, &'static str)> 
         (0x0028, 0x1052) => Some(("RescaleIntercept", "Rescale Intercept")),
         (0x0028, 0x1053) => Some(("RescaleSlope", "Rescale Slope")),
         (0x0028, 0x1054) => Some(("RescaleType", "Rescale Type")),
-        (0x0028, 0x1055) => Some(("WindowCenterAndWidthExplanation", "Window Center And Width Explanation")),
-        (0x0028, 0x1101) => Some(("RedPaletteColorLookupTableDescriptor", "Red Palette Color Lookup Table Descriptor")),
-        (0x0028, 0x1102) => Some(("GreenPaletteColorLookupTableDescriptor", "Green Palette Color Lookup Table Descriptor")),
-        (0x0028, 0x1103) => Some(("BluePaletteColorLookupTableDescriptor", "Blue Palette Color Lookup Table Descriptor")),
+        (0x0028, 0x1055) => Some((
+            "WindowCenterAndWidthExplanation",
+            "Window Center And Width Explanation",
+        )),
+        (0x0028, 0x1101) => Some((
+            "RedPaletteColorLookupTableDescriptor",
+            "Red Palette Color Lookup Table Descriptor",
+        )),
+        (0x0028, 0x1102) => Some((
+            "GreenPaletteColorLookupTableDescriptor",
+            "Green Palette Color Lookup Table Descriptor",
+        )),
+        (0x0028, 0x1103) => Some((
+            "BluePaletteColorLookupTableDescriptor",
+            "Blue Palette Color Lookup Table Descriptor",
+        )),
         // Pixel data (7FE0)
         (0x7FE0, 0x0010) => Some(("PixelData", "Pixel Data")),
         _ => None,
@@ -251,7 +303,9 @@ fn lookup_uid(uid: &str) -> Option<&'static str> {
         "1.2.840.10008.1.2.4.50" => Some("JPEG Baseline (Process 1)"),
         "1.2.840.10008.1.2.4.51" => Some("JPEG Extended (Process 2 & 4)"),
         "1.2.840.10008.1.2.4.57" => Some("JPEG Lossless, Non-Hierarchical (Process 14)"),
-        "1.2.840.10008.1.2.4.70" => Some("JPEG Lossless, Non-Hierarchical, First-Order Prediction (Process 14-1)"),
+        "1.2.840.10008.1.2.4.70" => {
+            Some("JPEG Lossless, Non-Hierarchical, First-Order Prediction (Process 14-1)")
+        }
         "1.2.840.10008.1.2.4.80" => Some("JPEG-LS Lossless Image Compression"),
         "1.2.840.10008.1.2.4.81" => Some("JPEG-LS Lossy (Near-Lossless) Image Compression"),
         "1.2.840.10008.1.2.4.90" => Some("JPEG 2000 Image Compression (Lossless Only)"),
@@ -342,7 +396,9 @@ pub fn read_dicom(data: &[u8]) -> Result<Vec<Tag>> {
                 (b"  " as &[u8], len, 8usize)
             } else if is_vr32(vr) {
                 // 2 reserved bytes then 4-byte length
-                if pos + 12 > data.len() { break; }
+                if pos + 12 > data.len() {
+                    break;
+                }
                 let len = read_u32(data, pos + 8, big_endian) as usize;
                 (vr, len, 12usize)
             } else {
@@ -433,16 +489,25 @@ fn read_u16(data: &[u8], pos: usize, big_endian: bool) -> u16 {
 
 fn read_u32(data: &[u8], pos: usize, big_endian: bool) -> u32 {
     if big_endian {
-        u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]])
+        u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]])
     } else {
-        u32::from_le_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]])
+        u32::from_le_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]])
     }
 }
 
-fn build_value_string(val_data: &[u8], vr: &[u8], group: u16, element: u16, big_endian: bool) -> String {
+fn build_value_string(
+    val_data: &[u8],
+    vr: &[u8],
+    group: u16,
+    element: u16,
+    big_endian: bool,
+) -> String {
     // Binary pixel data - return description
     if (group == 0x7FE0 && element == 0x0010) || val_data.len() > 1024 {
-        return format!("(Binary data {} bytes, use -b option to extract)", val_data.len());
+        return format!(
+            "(Binary data {} bytes, use -b option to extract)",
+            val_data.len()
+        );
     }
 
     match vr {
@@ -452,9 +517,9 @@ fn build_value_string(val_data: &[u8], vr: &[u8], group: u16, element: u16, big_
             let mut i = 0;
             while i + 2 <= val_data.len() {
                 let v = if big_endian {
-                    u16::from_be_bytes([val_data[i], val_data[i+1]])
+                    u16::from_be_bytes([val_data[i], val_data[i + 1]])
                 } else {
-                    u16::from_le_bytes([val_data[i], val_data[i+1]])
+                    u16::from_le_bytes([val_data[i], val_data[i + 1]])
                 };
                 vals.push(v.to_string());
                 i += 2;
@@ -466,9 +531,9 @@ fn build_value_string(val_data: &[u8], vr: &[u8], group: u16, element: u16, big_
             let mut i = 0;
             while i + 2 <= val_data.len() {
                 let v = if big_endian {
-                    i16::from_be_bytes([val_data[i], val_data[i+1]])
+                    i16::from_be_bytes([val_data[i], val_data[i + 1]])
                 } else {
-                    i16::from_le_bytes([val_data[i], val_data[i+1]])
+                    i16::from_le_bytes([val_data[i], val_data[i + 1]])
                 };
                 vals.push(v.to_string());
                 i += 2;
@@ -490,9 +555,19 @@ fn build_value_string(val_data: &[u8], vr: &[u8], group: u16, element: u16, big_
             let mut i = 0;
             while i + 4 <= val_data.len() {
                 let v = if big_endian {
-                    i32::from_be_bytes([val_data[i], val_data[i+1], val_data[i+2], val_data[i+3]])
+                    i32::from_be_bytes([
+                        val_data[i],
+                        val_data[i + 1],
+                        val_data[i + 2],
+                        val_data[i + 3],
+                    ])
                 } else {
-                    i32::from_le_bytes([val_data[i], val_data[i+1], val_data[i+2], val_data[i+3]])
+                    i32::from_le_bytes([
+                        val_data[i],
+                        val_data[i + 1],
+                        val_data[i + 2],
+                        val_data[i + 3],
+                    ])
                 };
                 vals.push(v.to_string());
                 i += 4;
@@ -503,8 +578,17 @@ fn build_value_string(val_data: &[u8], vr: &[u8], group: u16, element: u16, big_
             let mut vals = Vec::new();
             let mut i = 0;
             while i + 4 <= val_data.len() {
-                let bytes = [val_data[i], val_data[i+1], val_data[i+2], val_data[i+3]];
-                let v = if big_endian { f32::from_be_bytes(bytes) } else { f32::from_le_bytes(bytes) };
+                let bytes = [
+                    val_data[i],
+                    val_data[i + 1],
+                    val_data[i + 2],
+                    val_data[i + 3],
+                ];
+                let v = if big_endian {
+                    f32::from_be_bytes(bytes)
+                } else {
+                    f32::from_le_bytes(bytes)
+                };
                 vals.push(format!("{}", v));
                 i += 4;
             }
@@ -514,8 +598,12 @@ fn build_value_string(val_data: &[u8], vr: &[u8], group: u16, element: u16, big_
             let mut vals = Vec::new();
             let mut i = 0;
             while i + 8 <= val_data.len() {
-                let bytes: [u8; 8] = val_data[i..i+8].try_into().unwrap_or([0u8; 8]);
-                let v = if big_endian { f64::from_be_bytes(bytes) } else { f64::from_le_bytes(bytes) };
+                let bytes: [u8; 8] = val_data[i..i + 8].try_into().unwrap_or([0u8; 8]);
+                let v = if big_endian {
+                    f64::from_be_bytes(bytes)
+                } else {
+                    f64::from_le_bytes(bytes)
+                };
                 vals.push(format!("{}", v));
                 i += 8;
             }
@@ -523,7 +611,10 @@ fn build_value_string(val_data: &[u8], vr: &[u8], group: u16, element: u16, big_
         }
         b"OB" | b"OW" => {
             // Binary data
-            format!("(Binary data {} bytes, use -b option to extract)", val_data.len())
+            format!(
+                "(Binary data {} bytes, use -b option to extract)",
+                val_data.len()
+            )
         }
         b"DA" => {
             // Date: YYYYMMDD
@@ -545,14 +636,23 @@ fn build_value_string(val_data: &[u8], vr: &[u8], group: u16, element: u16, big_
         _ => {
             // String types: trim trailing spaces and nulls
             let s = crate::encoding::decode_utf8_or_latin1(val_data);
-            let s = s.trim_end_matches(' ').trim_end_matches('\0').trim_start_matches(' ');
+            let s = s
+                .trim_end_matches(' ')
+                .trim_end_matches('\0')
+                .trim_start_matches(' ');
             // For AE, CS, DS, IS, LO, PN, SH: trim both ends
             s.trim().to_string()
         }
     }
 }
 
-fn apply_print_conv(group: u16, element: u16, value_str: &str, val_data: &[u8], big_endian: bool) -> String {
+fn apply_print_conv(
+    group: u16,
+    element: u16,
+    value_str: &str,
+    val_data: &[u8],
+    big_endian: bool,
+) -> String {
     match (group, element) {
         // PixelRepresentation: 0=Unsigned, 1=Signed
         (0x0028, 0x0103) => {
@@ -572,8 +672,14 @@ fn apply_print_conv(group: u16, element: u16, value_str: &str, val_data: &[u8], 
             }
         }
         // UI tags: look up UID
-        (0x0002, 0x0002) | (0x0002, 0x0003) | (0x0002, 0x0010) | (0x0002, 0x0012)
-        | (0x0008, 0x0016) | (0x0008, 0x0018) | (0x0020, 0x000D) | (0x0020, 0x000E)
+        (0x0002, 0x0002)
+        | (0x0002, 0x0003)
+        | (0x0002, 0x0010)
+        | (0x0002, 0x0012)
+        | (0x0008, 0x0016)
+        | (0x0008, 0x0018)
+        | (0x0020, 0x000D)
+        | (0x0020, 0x000E)
         | (0x0020, 0x0052) => {
             if let Some(name) = lookup_uid(value_str) {
                 name.to_string()

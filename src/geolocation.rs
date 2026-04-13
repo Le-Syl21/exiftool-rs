@@ -29,8 +29,8 @@ pub struct GeolocationDb {
 
 /// Raw binary city record (13 bytes + name).
 struct CityRecord {
-    lat_raw: u32,  // 20-bit
-    lon_raw: u32,  // 20-bit
+    lat_raw: u32, // 20-bit
+    lon_raw: u32, // 20-bit
     country_idx: u8,
     pop_code: u32,
     region_idx: u16,
@@ -118,7 +118,8 @@ impl GeolocationDb {
             let lt = u16::from_be_bytes([data[pos], data[pos + 1]]);
             let f = data[pos + 2];
             let ln = u16::from_be_bytes([data[pos + 3], data[pos + 4]]);
-            let code = u32::from_be_bytes([data[pos + 5], data[pos + 6], data[pos + 7], data[pos + 8]]);
+            let code =
+                u32::from_be_bytes([data[pos + 5], data[pos + 6], data[pos + 7], data[pos + 8]]);
             let sn = u16::from_be_bytes([data[pos + 9], data[pos + 10]]);
             let tn = data[pos + 11];
             let fn_byte = data[pos + 12];
@@ -135,11 +136,14 @@ impl GeolocationDb {
 
             // Find city name (UTF-8 until newline)
             let name_start = pos + 13;
-            let name_end = data[name_start..].iter().position(|&b| b == b'\n')
+            let name_end = data[name_start..]
+                .iter()
+                .position(|&b| b == b'\n')
                 .map(|p| name_start + p)
                 .unwrap_or(data.len());
 
-            let name = crate::encoding::decode_utf8_or_latin1(&data[name_start..name_end]).to_string();
+            let name =
+                crate::encoding::decode_utf8_or_latin1(&data[name_start..name_end]).to_string();
 
             cities.push(CityRecord {
                 lat_raw,
@@ -210,19 +214,27 @@ impl GeolocationDb {
         let lat = rec.lat_raw as f64 * 180.0 / 1048576.0 - 90.0;
         let lon = rec.lon_raw as f64 * 360.0 / 1048576.0 - 180.0;
 
-        let (country_code, country) = self.countries.get(rec.country_idx as usize)
+        let (country_code, country) = self
+            .countries
+            .get(rec.country_idx as usize)
             .cloned()
             .unwrap_or_else(|| ("??".into(), "Unknown".into()));
 
-        let region = self.regions.get(rec.region_idx as usize)
+        let region = self
+            .regions
+            .get(rec.region_idx as usize)
             .cloned()
             .unwrap_or_default();
 
-        let subregion = self.subregions.get(rec.subregion_idx as usize)
+        let subregion = self
+            .subregions
+            .get(rec.subregion_idx as usize)
             .cloned()
             .unwrap_or_default();
 
-        let timezone = self.timezones.get(rec.tz_idx as usize)
+        let timezone = self
+            .timezones
+            .get(rec.tz_idx as usize)
             .cloned()
             .unwrap_or_default();
 
@@ -259,7 +271,12 @@ fn read_string_list(data: &[u8], pos: &mut usize) -> Vec<String> {
             break;
         }
         // Check for separator
-        if data[*pos] == 0 && *pos + 3 < data.len() && data[*pos + 1] == 0 && data[*pos + 2] == 0 && data[*pos + 3] == 0 {
+        if data[*pos] == 0
+            && *pos + 3 < data.len()
+            && data[*pos + 1] == 0
+            && data[*pos + 2] == 0
+            && data[*pos + 3] == 0
+        {
             break;
         }
         // Read until newline
@@ -291,7 +308,9 @@ fn read_country_list(data: &[u8], pos: &mut usize) -> Vec<(String, String)> {
             *pos += 1;
         }
         let line = crate::encoding::decode_utf8_or_latin1(&data[start..*pos]).to_string();
-        if *pos < data.len() { *pos += 1; }
+        if *pos < data.len() {
+            *pos += 1;
+        }
 
         if line.len() >= 2 {
             let code = line[..2].to_string();

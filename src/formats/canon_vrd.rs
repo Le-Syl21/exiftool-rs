@@ -38,8 +38,6 @@ fn read_i8(data: &[u8], off: usize) -> i8 {
     data[off] as i8
 }
 
-
-
 fn read_u16_be(data: &[u8], off: usize) -> u16 {
     u16::from_be_bytes([data[off], data[off + 1]])
 }
@@ -68,7 +66,6 @@ fn read_u32_be(data: &[u8], off: usize) -> u32 {
     u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]])
 }
 
-
 fn read_f64_le(data: &[u8], off: usize) -> f64 {
     f64::from_le_bytes([
         data[off],
@@ -83,7 +80,11 @@ fn read_f64_le(data: &[u8], off: usize) -> f64 {
 }
 
 fn no_yes(v: u32) -> String {
-    if v == 0 { "No".to_string() } else { "Yes".to_string() }
+    if v == 0 {
+        "No".to_string()
+    } else {
+        "Yes".to_string()
+    }
 }
 
 // ============================================================================
@@ -176,7 +177,6 @@ fn read_dr4_value(data: &[u8], off: usize, len: usize, fmt: u32) -> Value {
     }
 }
 
-
 /// Canon model ID lookup
 fn canon_model_id(id: u32) -> &'static str {
     match id {
@@ -256,12 +256,26 @@ fn canon_model_id(id: u32) -> &'static str {
 
 /// Tone curve print conversion: interpret 21-element array
 fn tone_curve_print(vals: &[u32]) -> String {
-    if vals.len() != 21 { return vals.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" "); }
+    if vals.len() != 21 {
+        return vals
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+    }
     let n = vals[0] as usize;
-    if n < 2 || n > 10 { return vals.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" "); }
+    if n < 2 || n > 10 {
+        return vals
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+    }
     let mut result = String::new();
     for i in 0..n {
-        if i > 0 { result.push(' '); }
+        if i > 0 {
+            result.push(' ');
+        }
         result.push('(');
         result.push_str(&vals[1 + i * 2].to_string());
         result.push(',');
@@ -284,27 +298,52 @@ fn parse_dr4_tone_curve(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>
     // 0x2d: RedCurvePoints (21 int32u)
     // 0x53: GreenCurvePoints (21 int32u)
     // 0x79: BlueCurvePoints (21 int32u)
-    if off + len > data.len() { return; }
+    if off + len > data.len() {
+        return;
+    }
 
     let read_u32_at = |idx: usize| -> Option<u32> {
         let byte_off = off + idx * 4;
-        if byte_off + 4 <= off + len { Some(read_u32_le(data, byte_off)) } else { None }
+        if byte_off + 4 <= off + len {
+            Some(read_u32_le(data, byte_off))
+        } else {
+            None
+        }
     };
     let read_u32s_at = |idx: usize, count: usize| -> Option<Vec<u32>> {
         let byte_off = off + idx * 4;
         if byte_off + count * 4 <= off + len {
-            Some((0..count).map(|i| read_u32_le(data, byte_off + i * 4)).collect())
-        } else { None }
+            Some(
+                (0..count)
+                    .map(|i| read_u32_le(data, byte_off + i * 4))
+                    .collect(),
+            )
+        } else {
+            None
+        }
     };
 
     // ToneCurveColorSpace
     if let Some(v) = read_u32_at(0x00) {
-        let print = match v { 0 => "RGB".to_string(), 1 => "Luminance".to_string(), _ => v.to_string() };
-        tags.push(mktag("CanonDR4", "ToneCurveColorSpace", Value::U32(v), print));
+        let print = match v {
+            0 => "RGB".to_string(),
+            1 => "Luminance".to_string(),
+            _ => v.to_string(),
+        };
+        tags.push(mktag(
+            "CanonDR4",
+            "ToneCurveColorSpace",
+            Value::U32(v),
+            print,
+        ));
     }
     // ToneCurveShape
     if let Some(v) = read_u32_at(0x01) {
-        let print = match v { 0 => "Curve".to_string(), 1 => "Straight".to_string(), _ => v.to_string() };
+        let print = match v {
+            0 => "Curve".to_string(),
+            1 => "Straight".to_string(),
+            _ => v.to_string(),
+        };
         tags.push(mktag("CanonDR4", "ToneCurveShape", Value::U32(v), print));
     }
     // ToneCurveInputRange (0x03..0x04)
@@ -327,11 +366,21 @@ fn parse_dr4_tone_curve(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>
     }
     // ToneCurveX (0x0a)
     if let Some(v) = read_u32_at(0x0a) {
-        tags.push(mktag("CanonDR4", "ToneCurveX", Value::U32(v), v.to_string()));
+        tags.push(mktag(
+            "CanonDR4",
+            "ToneCurveX",
+            Value::U32(v),
+            v.to_string(),
+        ));
     }
     // ToneCurveY (0x0b)
     if let Some(v) = read_u32_at(0x0b) {
-        tags.push(mktag("CanonDR4", "ToneCurveY", Value::U32(v), v.to_string()));
+        tags.push(mktag(
+            "CanonDR4",
+            "ToneCurveY",
+            Value::U32(v),
+            v.to_string(),
+        ));
     }
     // RedCurvePoints (0x2d..0x41 = 21 elements)
     if let Some(vals) = read_u32s_at(0x2d, 21) {
@@ -355,50 +404,109 @@ fn parse_dr4_tone_curve(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>
 
 /// Parse GammaInfo subdirectory (tag 0x20a00) which is f64 values
 fn parse_dr4_gamma_info(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>) {
-    if off + len > data.len() { return; }
+    if off + len > data.len() {
+        return;
+    }
     let read_f64_at = |idx: usize| -> Option<f64> {
         let byte_off = off + idx * 8;
         if byte_off + 8 <= off + len {
             let v = read_f64_le(data, byte_off);
             Some(if v.abs() < 1e-100 { 0.0 } else { v })
-        } else { None }
+        } else {
+            None
+        }
     };
     let read_f64s_at = |idx: usize, count: usize| -> Option<Vec<f64>> {
         let byte_off = off + idx * 8;
         if byte_off + count * 8 <= off + len {
-            Some((0..count).map(|i| {
-                let v = read_f64_le(data, byte_off + i * 8);
-                if v.abs() < 1e-100 { 0.0 } else { v }
-            }).collect())
-        } else { None }
+            Some(
+                (0..count)
+                    .map(|i| {
+                        let v = read_f64_le(data, byte_off + i * 8);
+                        if v.abs() < 1e-100 {
+                            0.0
+                        } else {
+                            v
+                        }
+                    })
+                    .collect(),
+            )
+        } else {
+            None
+        }
     };
 
     if let Some(v) = read_f64_at(0x02) {
-        tags.push(mktag("CanonDR4", "GammaContrast", Value::F64(v), format!("{}", v)));
+        tags.push(mktag(
+            "CanonDR4",
+            "GammaContrast",
+            Value::F64(v),
+            format!("{}", v),
+        ));
     }
     if let Some(v) = read_f64_at(0x03) {
-        tags.push(mktag("CanonDR4", "GammaColorTone", Value::F64(v), format!("{}", v)));
+        tags.push(mktag(
+            "CanonDR4",
+            "GammaColorTone",
+            Value::F64(v),
+            format!("{}", v),
+        ));
     }
     if let Some(v) = read_f64_at(0x04) {
-        tags.push(mktag("CanonDR4", "GammaSaturation", Value::F64(v), format!("{}", v)));
+        tags.push(mktag(
+            "CanonDR4",
+            "GammaSaturation",
+            Value::F64(v),
+            format!("{}", v),
+        ));
     }
     if let Some(v) = read_f64_at(0x05) {
-        tags.push(mktag("CanonDR4", "GammaUnsharpMaskStrength", Value::F64(v), format!("{}", v)));
+        tags.push(mktag(
+            "CanonDR4",
+            "GammaUnsharpMaskStrength",
+            Value::F64(v),
+            format!("{}", v),
+        ));
     }
     if let Some(v) = read_f64_at(0x06) {
-        tags.push(mktag("CanonDR4", "GammaUnsharpMaskFineness", Value::F64(v), format!("{}", v)));
+        tags.push(mktag(
+            "CanonDR4",
+            "GammaUnsharpMaskFineness",
+            Value::F64(v),
+            format!("{}", v),
+        ));
     }
     if let Some(v) = read_f64_at(0x07) {
-        tags.push(mktag("CanonDR4", "GammaUnsharpMaskThreshold", Value::F64(v), format!("{}", v)));
+        tags.push(mktag(
+            "CanonDR4",
+            "GammaUnsharpMaskThreshold",
+            Value::F64(v),
+            format!("{}", v),
+        ));
     }
     if let Some(v) = read_f64_at(0x08) {
-        tags.push(mktag("CanonDR4", "GammaSharpnessStrength", Value::F64(v), format!("{}", v)));
+        tags.push(mktag(
+            "CanonDR4",
+            "GammaSharpnessStrength",
+            Value::F64(v),
+            format!("{}", v),
+        ));
     }
     if let Some(v) = read_f64_at(0x09) {
-        tags.push(mktag("CanonDR4", "GammaShadow", Value::F64(v), format!("{}", v)));
+        tags.push(mktag(
+            "CanonDR4",
+            "GammaShadow",
+            Value::F64(v),
+            format!("{}", v),
+        ));
     }
     if let Some(v) = read_f64_at(0x0a) {
-        tags.push(mktag("CanonDR4", "GammaHighlight", Value::F64(v), format!("{}", v)));
+        tags.push(mktag(
+            "CanonDR4",
+            "GammaHighlight",
+            Value::F64(v),
+            format!("{}", v),
+        ));
     }
     // GammaBlackPoint: complex conversion
     if let Some(v) = read_f64_at(0x0c) {
@@ -406,9 +514,18 @@ fn parse_dr4_gamma_info(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>
             0.0
         } else {
             let r = (v / 4.6875_f64).ln() / 2.0_f64.ln() + 1.0;
-            if r.abs() > 1e-10 { r } else { 0.0 }
+            if r.abs() > 1e-10 {
+                r
+            } else {
+                0.0
+            }
         };
-        tags.push(mktag("CanonDR4", "GammaBlackPoint", Value::F64(conv), format!("{:+.3}", conv)));
+        tags.push(mktag(
+            "CanonDR4",
+            "GammaBlackPoint",
+            Value::F64(conv),
+            format!("{:+.3}", conv),
+        ));
     }
     // GammaWhitePoint: complex conversion
     if let Some(v) = read_f64_at(0x0d) {
@@ -416,9 +533,18 @@ fn parse_dr4_gamma_info(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>
             0.0
         } else {
             let r = (v / 4.6875_f64).ln() / 2.0_f64.ln() - 11.77109325169954;
-            if r.abs() > 1e-10 { r } else { 0.0 }
+            if r.abs() > 1e-10 {
+                r
+            } else {
+                0.0
+            }
         };
-        tags.push(mktag("CanonDR4", "GammaWhitePoint", Value::F64(conv), format!("{:+.3}", conv)));
+        tags.push(mktag(
+            "CanonDR4",
+            "GammaWhitePoint",
+            Value::F64(conv),
+            format!("{:+.3}", conv),
+        ));
     }
     // GammaMidPoint: complex conversion
     if let Some(v) = read_f64_at(0x0e) {
@@ -426,9 +552,18 @@ fn parse_dr4_gamma_info(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>
             0.0
         } else {
             let r = (v / 4.6875_f64).ln() / 2.0_f64.ln() - 8.0;
-            if r.abs() > 1e-10 { r } else { 0.0 }
+            if r.abs() > 1e-10 {
+                r
+            } else {
+                0.0
+            }
         };
-        tags.push(mktag("CanonDR4", "GammaMidPoint", Value::F64(conv), format!("{:+.3}", conv)));
+        tags.push(mktag(
+            "CanonDR4",
+            "GammaMidPoint",
+            Value::F64(conv),
+            format!("{:+.3}", conv),
+        ));
     }
     // GammaCurveOutputRange: 2 doubles at 0x0f
     if let Some(vals) = read_f64s_at(0x0f, 2) {
@@ -440,10 +575,16 @@ fn parse_dr4_gamma_info(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>
 
 /// Parse CropInfo subdirectory (tag 0xf0100)
 fn parse_dr4_crop_info(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>) {
-    if off + len > data.len() { return; }
+    if off + len > data.len() {
+        return;
+    }
     let read_i32_at = |idx: usize| -> Option<i32> {
         let byte_off = off + idx * 4;
-        if byte_off + 4 <= off + len { Some(read_i32_le(data, byte_off)) } else { None }
+        if byte_off + 4 <= off + len {
+            Some(read_i32_le(data, byte_off))
+        } else {
+            None
+        }
     };
 
     // 0: CropActive
@@ -453,11 +594,21 @@ fn parse_dr4_crop_info(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>)
     }
     // 1: CropRotatedOriginalWidth
     if let Some(v) = read_i32_at(1) {
-        tags.push(mktag("CanonDR4", "CropRotatedOriginalWidth", Value::I32(v), v.to_string()));
+        tags.push(mktag(
+            "CanonDR4",
+            "CropRotatedOriginalWidth",
+            Value::I32(v),
+            v.to_string(),
+        ));
     }
     // 2: CropRotatedOriginalHeight
     if let Some(v) = read_i32_at(2) {
-        tags.push(mktag("CanonDR4", "CropRotatedOriginalHeight", Value::I32(v), v.to_string()));
+        tags.push(mktag(
+            "CanonDR4",
+            "CropRotatedOriginalHeight",
+            Value::I32(v),
+            v.to_string(),
+        ));
     }
     // 3: CropX
     if let Some(v) = read_i32_at(3) {
@@ -473,17 +624,30 @@ fn parse_dr4_crop_info(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>)
     }
     // 6: CropHeight
     if let Some(v) = read_i32_at(6) {
-        tags.push(mktag("CanonDR4", "CropHeight", Value::I32(v), v.to_string()));
+        tags.push(mktag(
+            "CanonDR4",
+            "CropHeight",
+            Value::I32(v),
+            v.to_string(),
+        ));
     }
     // 7: CropRotation
     if let Some(v) = read_i32_at(7) {
-        tags.push(mktag("CanonDR4", "CropRotation", Value::I32(v), v.to_string()));
+        tags.push(mktag(
+            "CanonDR4",
+            "CropRotation",
+            Value::I32(v),
+            v.to_string(),
+        ));
     }
     // 8-9: CropAngle (double at byte offset 32)
     let angle_off = off + 8 * 4;
     if angle_off + 8 <= off + len {
         let v = read_f64_le(data, angle_off);
-        let _print = format!("{:.7}", v).trim_end_matches('0').trim_end_matches('.').to_string();
+        let _print = format!("{:.7}", v)
+            .trim_end_matches('0')
+            .trim_end_matches('.')
+            .to_string();
         // Perl does sprintf("%.7g",$val)
         let print = format_g(v, 7);
         tags.push(mktag("CanonDR4", "CropAngle", Value::F64(v), print));
@@ -493,12 +657,22 @@ fn parse_dr4_crop_info(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>)
     let orig_w_off = off + 32 + 8; // byte 40
     if orig_w_off + 4 <= off + len {
         let v = read_i32_le(data, orig_w_off);
-        tags.push(mktag("CanonDR4", "CropOriginalWidth", Value::I32(v), v.to_string()));
+        tags.push(mktag(
+            "CanonDR4",
+            "CropOriginalWidth",
+            Value::I32(v),
+            v.to_string(),
+        ));
     }
     let orig_h_off = off + 32 + 8 + 4; // byte 44
     if orig_h_off + 4 <= off + len {
         let v = read_i32_le(data, orig_h_off);
-        tags.push(mktag("CanonDR4", "CropOriginalHeight", Value::I32(v), v.to_string()));
+        tags.push(mktag(
+            "CanonDR4",
+            "CropOriginalHeight",
+            Value::I32(v),
+            v.to_string(),
+        ));
     }
 }
 
@@ -508,13 +682,20 @@ fn parse_dr4_stamp_info(data: &[u8], off: usize, len: usize, tags: &mut Vec<Tag>
     let byte_off = off + 0x02 * 4;
     if byte_off + 4 <= off + len {
         let v = read_u32_le(data, byte_off);
-        tags.push(mktag("CanonDR4", "StampToolCount", Value::U32(v), v.to_string()));
+        tags.push(mktag(
+            "CanonDR4",
+            "StampToolCount",
+            Value::U32(v),
+            v.to_string(),
+        ));
     }
 }
 
 /// Format a f64 with %g semantics (up to `sig` significant digits)
 fn format_g(v: f64, sig: usize) -> String {
-    if v == 0.0 { return "0".to_string(); }
+    if v == 0.0 {
+        return "0".to_string();
+    }
     let _formatted = format!("{:.prec$e}", v, prec = sig.saturating_sub(1));
     // Parse to determine if exponential or fixed notation is better
     // Use Rust's default Display which already does something like %g
@@ -526,7 +707,9 @@ fn format_g(v: f64, sig: usize) -> String {
 
 /// HSL tag print conversion: 3 doubles formatted with up to 4 significant digits
 fn format_hsl(data: &[u8], off: usize, len: usize) -> String {
-    if off + len > data.len() || len < 24 { return String::new(); }
+    if off + len > data.len() || len < 24 {
+        return String::new();
+    }
     let v0 = read_f64_le(data, off);
     let v1 = read_f64_le(data, off + 8);
     let v2 = read_f64_le(data, off + 16);
@@ -535,7 +718,9 @@ fn format_hsl(data: &[u8], off: usize, len: usize) -> String {
 }
 
 fn fmt_g(v: f64) -> String {
-    if v == 0.0 { return "0".to_string(); }
+    if v == 0.0 {
+        return "0".to_string();
+    }
     // Use Rust's default formatting which approximates %g
     let s = format!("{}", v);
     s
@@ -547,7 +732,9 @@ fn process_dr4_entries(data: &[u8], pos: usize, num_entries: usize, tags: &mut V
 
     for index in 0..num_entries {
         let entry = dir_start + 36 + 28 * index;
-        if entry + 28 > data.len() { break; }
+        if entry + 28 > data.len() {
+            break;
+        }
 
         let tag = read_u32_le(data, entry);
         let fmt = read_u32_le(data, entry + 4);
@@ -557,7 +744,9 @@ fn process_dr4_entries(data: &[u8], pos: usize, num_entries: usize, tags: &mut V
         let off = read_u32_le(data, entry + 20) as usize + dir_start;
         let len = read_u32_le(data, entry + 24) as usize;
 
-        if off + len > data.len() { continue; }
+        if off + len > data.len() {
+            continue;
+        }
 
         // Process the main tag value
         process_dr4_tag(data, tag, fmt, flg0, flg1, off, len, entry, tags);
@@ -582,7 +771,12 @@ fn process_dr4_tag(
             parse_dr4_tone_curve(data, off, len, tags);
             // Also emit ToneCurveOriginal flag (.1)
             let print = no_yes(flg1);
-            tags.push(mktag("CanonDR4", "ToneCurveOriginal", Value::U32(flg1), print));
+            tags.push(mktag(
+                "CanonDR4",
+                "ToneCurveOriginal",
+                Value::U32(flg1),
+                print,
+            ));
             return;
         }
         0x20a00 => {
@@ -612,37 +806,67 @@ fn process_dr4_tag(
             // SharpnessAdjOn (flag 0)
             let flag_val = read_u32_le(data, entry + 8);
             let print = no_yes(flag_val);
-            tags.push(mktag("CanonDR4", "SharpnessAdjOn", Value::U32(flag_val), print));
+            tags.push(mktag(
+                "CanonDR4",
+                "SharpnessAdjOn",
+                Value::U32(flag_val),
+                print,
+            ));
         }
         0x20500 => {
             // AutoLightingOptimizerOn (flag 0)
             let flag_val = read_u32_le(data, entry + 8);
             let print = no_yes(flag_val);
-            tags.push(mktag("CanonDR4", "AutoLightingOptimizerOn", Value::U32(flag_val), print));
+            tags.push(mktag(
+                "CanonDR4",
+                "AutoLightingOptimizerOn",
+                Value::U32(flag_val),
+                print,
+            ));
         }
         0x20670 => {
             // ColorMoireReductionOn (flag 0)
             let flag_val = read_u32_le(data, entry + 8);
             let print = no_yes(flag_val);
-            tags.push(mktag("CanonDR4", "ColorMoireReductionOn", Value::U32(flag_val), print));
+            tags.push(mktag(
+                "CanonDR4",
+                "ColorMoireReductionOn",
+                Value::U32(flag_val),
+                print,
+            ));
         }
         0x20702 => {
             // PeripheralIlluminationOn (flag 0)
             let flag_val = read_u32_le(data, entry + 8);
             let print = no_yes(flag_val);
-            tags.push(mktag("CanonDR4", "PeripheralIlluminationOn", Value::U32(flag_val), print));
+            tags.push(mktag(
+                "CanonDR4",
+                "PeripheralIlluminationOn",
+                Value::U32(flag_val),
+                print,
+            ));
         }
         0x20703 => {
             // ChromaticAberrationOn (flag 0)
             let flag_val = read_u32_le(data, entry + 8);
             let print = no_yes(flag_val);
-            tags.push(mktag("CanonDR4", "ChromaticAberrationOn", Value::U32(flag_val), print));
+            tags.push(mktag(
+                "CanonDR4",
+                "ChromaticAberrationOn",
+                Value::U32(flag_val),
+                print,
+            ));
         }
         0x20705 => {
             // DistortionCorrectionOn (flag 0)
             let flag_val = read_u32_le(data, entry + 8);
             let print = no_yes(flag_val);
-            tags.push(mktag("CanonDR4", "DistortionCorrectionOn", Value::U32(flag_val), print));
+            tags.push(mktag(
+                "CanonDR4",
+                "DistortionCorrectionOn",
+                Value::U32(flag_val),
+                print,
+            ));
         }
         0x20706 => {
             // DLOOn (flag 0)
@@ -655,7 +879,9 @@ fn process_dr4_tag(
 
     // Now process the main tag
     let (name, print) = dr4_tag_name_and_print(data, tag, fmt, &val, off, len);
-    if name.is_empty() { return; }
+    if name.is_empty() {
+        return;
+    }
 
     tags.push(mktag("CanonDR4", name, val, print));
 }
@@ -690,13 +916,34 @@ fn dr4_tag_name_and_print<'a>(
         // Header tags (processed separately)
         // 0x10002 => Rotation
         0x10002 => {
-            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
-            let print = match v { 0 => "0", 1 => "90", 2 => "180", 3 => "270", _ => "" };
-            ("Rotation", if print.is_empty() { v.to_string() } else { print.to_string() })
+            let v = match val_as_u32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
+            let print = match v {
+                0 => "0",
+                1 => "90",
+                2 => "180",
+                3 => "270",
+                _ => "",
+            };
+            (
+                "Rotation",
+                if print.is_empty() {
+                    v.to_string()
+                } else {
+                    print.to_string()
+                },
+            )
         }
         // 0x10003 => AngleAdj
         0x10003 => {
-            let v = match val { Value::F64(x) => *x, Value::I32(x) => *x as f64, Value::U32(x) => *x as f64, _ => return ("", String::new()) };
+            let v = match val {
+                Value::F64(x) => *x,
+                Value::I32(x) => *x as f64,
+                Value::U32(x) => *x as f64,
+                _ => return ("", String::new()),
+            };
             ("AngleAdj", format!("{:.2}", v))
         }
         0x10021 => {
@@ -704,7 +951,10 @@ fn dr4_tag_name_and_print<'a>(
             ("CustomPictureStyle", print)
         }
         0x10100 => {
-            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
+            let v = match val_as_u32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
             let print = match v {
                 0 => "Unrated".to_string(),
                 1 => "1".to_string(),
@@ -718,7 +968,10 @@ fn dr4_tag_name_and_print<'a>(
             ("Rating", print)
         }
         0x10101 => {
-            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
+            let v = match val_as_u32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
             let print = match v {
                 0 => "Clear".to_string(),
                 1..=5 => v.to_string(),
@@ -727,7 +980,10 @@ fn dr4_tag_name_and_print<'a>(
             ("CheckMark", print)
         }
         0x10200 => {
-            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
+            let v = match val_as_u32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
             let print = match v {
                 1 => "sRGB",
                 2 => "Adobe RGB",
@@ -736,14 +992,24 @@ fn dr4_tag_name_and_print<'a>(
                 5 => "ColorMatch RGB",
                 _ => "",
             };
-            ("WorkColorSpace", if print.is_empty() { v.to_string() } else { print.to_string() })
+            (
+                "WorkColorSpace",
+                if print.is_empty() {
+                    v.to_string()
+                } else {
+                    print.to_string()
+                },
+            )
         }
         0x20001 => {
             let print = val.to_display_string();
             ("RawBrightnessAdj", print)
         }
         0x20101 => {
-            let v = match val_as_i32(val) { Some(x) => x, None => return ("", String::new()) };
+            let v = match val_as_i32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
             let print = match v {
                 -1 => "Manual (Click)",
                 0 => "Auto",
@@ -757,7 +1023,14 @@ fn dr4_tag_name_and_print<'a>(
                 255 => "Shot Settings",
                 _ => "",
             };
-            ("WhiteBalanceAdj", if print.is_empty() { v.to_string() } else { print.to_string() })
+            (
+                "WhiteBalanceAdj",
+                if print.is_empty() {
+                    v.to_string()
+                } else {
+                    print.to_string()
+                },
+            )
         }
         0x20102 => ("WBAdjColorTemp", val.to_display_string()),
         0x20105 => ("WBAdjMagentaGreen", val.to_display_string()),
@@ -768,18 +1041,28 @@ fn dr4_tag_name_and_print<'a>(
                 Value::List(vals) => {
                     let s: Vec<String> = vals.iter().map(|v| v.to_display_string()).collect();
                     // Remove first element per Perl: '$val =~ s/^\d+ //; $val'
-                    if s.len() > 1 { s[1..].join(" ") } else { s.join(" ") }
+                    if s.len() > 1 {
+                        s[1..].join(" ")
+                    } else {
+                        s.join(" ")
+                    }
                 }
                 _ => val.to_display_string(),
             };
             ("WBAdjRGGBLevels", print)
         }
         0x20200 => {
-            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
+            let v = match val_as_u32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
             ("GammaLinear", no_yes(v))
         }
         0x20301 => {
-            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
+            let v = match val_as_u32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
             let print = match v {
                 0x81 => "Standard",
                 0x82 => "Portrait",
@@ -793,7 +1076,14 @@ fn dr4_tag_name_and_print<'a>(
                 0xff => "Custom",
                 _ => "",
             };
-            ("PictureStyle", if print.is_empty() { format!("0x{:x}", v) } else { print.to_string() })
+            (
+                "PictureStyle",
+                if print.is_empty() {
+                    format!("0x{:x}", v)
+                } else {
+                    print.to_string()
+                },
+            )
         }
         0x20303 => ("ContrastAdj", val.to_display_string()),
         0x20304 => {
@@ -819,7 +1109,10 @@ fn dr4_tag_name_and_print<'a>(
             ("ColorSaturationAdj", print)
         }
         0x20306 => {
-            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
+            let v = match val_as_u32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
             let print = match v {
                 0 => "None",
                 1 => "Sepia",
@@ -828,10 +1121,20 @@ fn dr4_tag_name_and_print<'a>(
                 4 => "Green",
                 _ => "",
             };
-            ("MonochromeToningEffect", if print.is_empty() { v.to_string() } else { print.to_string() })
+            (
+                "MonochromeToningEffect",
+                if print.is_empty() {
+                    v.to_string()
+                } else {
+                    print.to_string()
+                },
+            )
         }
         0x20307 => {
-            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
+            let v = match val_as_u32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
             let print = match v {
                 0 => "None",
                 1 => "Yellow",
@@ -840,7 +1143,14 @@ fn dr4_tag_name_and_print<'a>(
                 4 => "Green",
                 _ => "",
             };
-            ("MonochromeFilterEffect", if print.is_empty() { v.to_string() } else { print.to_string() })
+            (
+                "MonochromeFilterEffect",
+                if print.is_empty() {
+                    v.to_string()
+                } else {
+                    print.to_string()
+                },
+            )
         }
         0x20308 => ("UnsharpMaskStrength", val.to_display_string()),
         0x20309 => ("UnsharpMaskFineness", val.to_display_string()),
@@ -866,27 +1176,47 @@ fn dr4_tag_name_and_print<'a>(
             ("HighlightAdj", print)
         }
         0x20310 => {
-            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
+            let v = match val_as_u32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
             let print = match v {
                 0 => "Sharpness",
                 1 => "Unsharp Mask",
                 _ => "",
             };
-            ("SharpnessAdj", if print.is_empty() { v.to_string() } else { print.to_string() })
+            (
+                "SharpnessAdj",
+                if print.is_empty() {
+                    v.to_string()
+                } else {
+                    print.to_string()
+                },
+            )
         }
         0x20311 => ("SharpnessStrength", val.to_display_string()),
         // 0x20400: ToneCurve - handled as subdirectory above
         0x20410 => ("ToneCurveBrightness", val.to_display_string()),
         0x20411 => ("ToneCurveContrast", val.to_display_string()),
         0x20500 => {
-            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
+            let v = match val_as_u32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
             let print = match v {
                 0 => "Low",
                 1 => "Standard",
                 2 => "Strong",
                 _ => "",
             };
-            ("AutoLightingOptimizer", if print.is_empty() { v.to_string() } else { print.to_string() })
+            (
+                "AutoLightingOptimizer",
+                if print.is_empty() {
+                    v.to_string()
+                } else {
+                    print.to_string()
+                },
+            )
         }
         0x20600 => {
             let print = match val {
@@ -940,7 +1270,10 @@ fn dr4_tag_name_and_print<'a>(
             ("ChromaticAberration", print)
         }
         0x20704 => {
-            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
+            let v = match val_as_u32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
             ("ColorBlurOn", no_yes(v))
         }
         0x20705 => {
@@ -967,32 +1300,19 @@ fn dr4_tag_name_and_print<'a>(
         }
         0x20900 => ("ColorHue", val.to_display_string()),
         0x20901 => ("SaturationAdj", val.to_display_string()),
-        0x20910 => {
-            ("RedHSL", format_hsl(data, off, len))
-        }
-        0x20911 => {
-            ("OrangeHSL", format_hsl(data, off, len))
-        }
-        0x20912 => {
-            ("YellowHSL", format_hsl(data, off, len))
-        }
-        0x20913 => {
-            ("GreenHSL", format_hsl(data, off, len))
-        }
-        0x20914 => {
-            ("AquaHSL", format_hsl(data, off, len))
-        }
-        0x20915 => {
-            ("BlueHSL", format_hsl(data, off, len))
-        }
-        0x20916 => {
-            ("PurpleHSL", format_hsl(data, off, len))
-        }
-        0x20917 => {
-            ("MagentaHSL", format_hsl(data, off, len))
-        }
+        0x20910 => ("RedHSL", format_hsl(data, off, len)),
+        0x20911 => ("OrangeHSL", format_hsl(data, off, len)),
+        0x20912 => ("YellowHSL", format_hsl(data, off, len)),
+        0x20913 => ("GreenHSL", format_hsl(data, off, len)),
+        0x20914 => ("AquaHSL", format_hsl(data, off, len)),
+        0x20915 => ("BlueHSL", format_hsl(data, off, len)),
+        0x20916 => ("PurpleHSL", format_hsl(data, off, len)),
+        0x20917 => ("MagentaHSL", format_hsl(data, off, len)),
         0x30101 => {
-            let v = match val_as_u32(val) { Some(x) => x, None => return ("", String::new()) };
+            let v = match val_as_u32(val) {
+                Some(x) => x,
+                None => return ("", String::new()),
+            };
             let print = match v {
                 0 => "Free",
                 1 => "Custom",
@@ -1007,12 +1327,23 @@ fn dr4_tag_name_and_print<'a>(
                 10 => "9:16",
                 _ => "",
             };
-            ("CropAspectRatio", if print.is_empty() { v.to_string() } else { print.to_string() })
+            (
+                "CropAspectRatio",
+                if print.is_empty() {
+                    v.to_string()
+                } else {
+                    print.to_string()
+                },
+            )
         }
         0x30102 => {
             // CropAspectRatioCustom: 2 int32u values
             let print = match val {
-                Value::List(vals) => vals.iter().map(|v| v.to_display_string()).collect::<Vec<_>>().join(" "),
+                Value::List(vals) => vals
+                    .iter()
+                    .map(|v| v.to_display_string())
+                    .collect::<Vec<_>>()
+                    .join(" "),
                 _ => val.to_display_string(),
             };
             ("CropAspectRatioCustom", print)
@@ -1029,7 +1360,10 @@ pub fn read_dr4(data: &[u8]) -> Result<Vec<Tag>> {
     }
     // Check magic: "IIII" + 04/05 00 04 00
     if &data[0..4] != b"IIII"
-        || !((data[4] == 0x04 || data[4] == 0x05) && data[5] == 0x00 && data[6] == 0x04 && data[7] == 0x00)
+        || !((data[4] == 0x04 || data[4] == 0x05)
+            && data[5] == 0x00
+            && data[6] == 0x04
+            && data[7] == 0x00)
     {
         return Err(Error::InvalidData("not a DR4 file".into()));
     }
@@ -1046,7 +1380,12 @@ pub fn read_dr4(data: &[u8]) -> Result<Vec<Tag>> {
     } else {
         model_name.to_string()
     };
-    tags.push(mktag("CanonDR4", "DR4CameraModel", Value::U32(camera_model_id), print));
+    tags.push(mktag(
+        "CanonDR4",
+        "DR4CameraModel",
+        Value::U32(camera_model_id),
+        print,
+    ));
 
     let num_entries = read_u32_le(data, 28) as usize; // index 7
 
@@ -1083,7 +1422,9 @@ pub fn read_vrd(data: &[u8]) -> Result<Vec<Tag>> {
     let mut pos = 0x1c; // start after header
 
     while pos + 8 <= footer_start {
-        if pos + 8 > footer_start { break; }
+        if pos + 8 > footer_start {
+            break;
+        }
         let block_type = read_u32_be(data, pos);
         let block_len = read_u32_be(data, pos + 4) as usize;
         pos += 8;
@@ -1106,9 +1447,13 @@ pub fn read_vrd(data: &[u8]) -> Result<Vec<Tag>> {
                     if inner_start + inner_len <= pos + block_len {
                         // The DR4 data inside VRD
                         if inner_len >= 32 {
-                            process_dr4_entries(&data[inner_start..inner_start + inner_len], 0,
-                                read_u32_le(&data[inner_start..inner_start + inner_len], 28) as usize,
-                                &mut tags);
+                            process_dr4_entries(
+                                &data[inner_start..inner_start + inner_len],
+                                0,
+                                read_u32_le(&data[inner_start..inner_start + inner_len], 28)
+                                    as usize,
+                                &mut tags,
+                            );
                         }
                     }
                 }
@@ -1130,9 +1475,13 @@ fn parse_vrd_edit_data(edit_data: &[u8], tags: &mut Vec<Tag>) {
     //   1: VRDStampTool (variable length: 4-byte count prefix)
     //   2: VRD2 (rest)
 
-    if edit_data.len() < 4 { return; }
+    if edit_data.len() < 4 {
+        return;
+    }
     let rec_len = read_u32_be(edit_data, 0) as usize;
-    if rec_len + 4 > edit_data.len() { return; }
+    if rec_len + 4 > edit_data.len() {
+        return;
+    }
     let rec = &edit_data[4..4 + rec_len];
 
     // Section 0: VRD1 (0x272 bytes)
@@ -1143,13 +1492,22 @@ fn parse_vrd_edit_data(edit_data: &[u8], tags: &mut Vec<Tag>) {
 
     // Section 1: VRDStampTool (4-byte length prefix)
     let mut sub_pos = vrd1_size;
-    if sub_pos + 4 > rec.len() { return; }
+    if sub_pos + 4 > rec.len() {
+        return;
+    }
     let stamp_len = read_u32_be(rec, sub_pos) as usize;
     sub_pos += 4;
-    if sub_pos + stamp_len > rec.len() { return; }
+    if sub_pos + stamp_len > rec.len() {
+        return;
+    }
     if stamp_len >= 4 {
         let count = read_u32_le(&rec[sub_pos..], 0);
-        tags.push(mktag("CanonVRD", "StampToolCount", Value::U32(count), count.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "StampToolCount",
+            Value::U32(count),
+            count.to_string(),
+        ));
     }
     sub_pos += stamp_len;
 
@@ -1161,7 +1519,9 @@ fn parse_vrd_edit_data(edit_data: &[u8], tags: &mut Vec<Tag>) {
 
 /// Parse VRD Version 1 binary data (0x272 bytes, little-endian)
 fn parse_vrd_ver1(data: &[u8], tags: &mut Vec<Tag>) {
-    if data.len() < 0x272 { return; }
+    if data.len() < 0x272 {
+        return;
+    }
 
     // VRD inner data is big-endian (SetByteOrder('MM') in Perl)
 
@@ -1178,7 +1538,12 @@ fn parse_vrd_ver1(data: &[u8], tags: &mut Vec<Tag>) {
         let c = read_u16_be(data, 0x00a);
         let d = read_u16_be(data, 0x00c);
         let print = format!("{} {} {} {}", a, b, c, d);
-        let raw = Value::List(vec![Value::U16(a), Value::U16(b), Value::U16(c), Value::U16(d)]);
+        let raw = Value::List(vec![
+            Value::U16(a),
+            Value::U16(b),
+            Value::U16(c),
+            Value::U16(d),
+        ]);
         tags.push(mktag("CanonVRD", "WBAdjRGGBLevels", raw, print));
     }
 
@@ -1198,52 +1563,103 @@ fn parse_vrd_ver1(data: &[u8], tags: &mut Vec<Tag>) {
             31 => "Shot Settings",
             _ => "",
         };
-        tags.push(mktag("CanonVRD", "WhiteBalanceAdj", Value::U16(v),
-            if print.is_empty() { v.to_string() } else { print.to_string() }));
+        tags.push(mktag(
+            "CanonVRD",
+            "WhiteBalanceAdj",
+            Value::U16(v),
+            if print.is_empty() {
+                v.to_string()
+            } else {
+                print.to_string()
+            },
+        ));
     }
 
     // 0x01a: WBAdjColorTemp (int16u)
     {
         let v = read_u16_be(data, 0x01a);
-        tags.push(mktag("CanonVRD", "WBAdjColorTemp", Value::U16(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "WBAdjColorTemp",
+            Value::U16(v),
+            v.to_string(),
+        ));
     }
 
     // 0x024: WBFineTuneActive (int16u)
     {
         let v = read_u16_be(data, 0x024);
-        tags.push(mktag("CanonVRD", "WBFineTuneActive", Value::U16(v), no_yes(v as u32)));
+        tags.push(mktag(
+            "CanonVRD",
+            "WBFineTuneActive",
+            Value::U16(v),
+            no_yes(v as u32),
+        ));
     }
 
     // 0x028: WBFineTuneSaturation (int16u)
     {
         let v = read_u16_be(data, 0x028);
-        tags.push(mktag("CanonVRD", "WBFineTuneSaturation", Value::U16(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "WBFineTuneSaturation",
+            Value::U16(v),
+            v.to_string(),
+        ));
     }
 
     // 0x02c: WBFineTuneTone (int16u)
     {
         let v = read_u16_be(data, 0x02c);
-        tags.push(mktag("CanonVRD", "WBFineTuneTone", Value::U16(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "WBFineTuneTone",
+            Value::U16(v),
+            v.to_string(),
+        ));
     }
 
     // 0x02e: RawColorAdj (int16u)
     {
         let v = read_u16_be(data, 0x02e);
-        let print = match v { 0 => "Shot Settings", 1 => "Faithful", 2 => "Custom", _ => "" };
-        tags.push(mktag("CanonVRD", "RawColorAdj", Value::U16(v),
-            if print.is_empty() { v.to_string() } else { print.to_string() }));
+        let print = match v {
+            0 => "Shot Settings",
+            1 => "Faithful",
+            2 => "Custom",
+            _ => "",
+        };
+        tags.push(mktag(
+            "CanonVRD",
+            "RawColorAdj",
+            Value::U16(v),
+            if print.is_empty() {
+                v.to_string()
+            } else {
+                print.to_string()
+            },
+        ));
     }
 
     // 0x030: RawCustomSaturation (int32s)
     {
         let v = read_i32_be(data, 0x030);
-        tags.push(mktag("CanonVRD", "RawCustomSaturation", Value::I32(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "RawCustomSaturation",
+            Value::I32(v),
+            v.to_string(),
+        ));
     }
 
     // 0x034: RawCustomTone (int32s)
     {
         let v = read_i32_be(data, 0x034);
-        tags.push(mktag("CanonVRD", "RawCustomTone", Value::I32(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "RawCustomTone",
+            Value::I32(v),
+            v.to_string(),
+        ));
     }
 
     // 0x038: RawBrightnessAdj (int32s / 6000)
@@ -1267,58 +1683,113 @@ fn parse_vrd_ver1(data: &[u8], tags: &mut Vec<Tag>) {
             6 => "Custom 5",
             _ => "",
         };
-        tags.push(mktag("CanonVRD", "ToneCurveProperty", Value::U16(v),
-            if print.is_empty() { v.to_string() } else { print.to_string() }));
+        tags.push(mktag(
+            "CanonVRD",
+            "ToneCurveProperty",
+            Value::U16(v),
+            if print.is_empty() {
+                v.to_string()
+            } else {
+                print.to_string()
+            },
+        ));
     }
 
     // 0x07a: DynamicRangeMin (int16u)
     {
         let v = read_u16_be(data, 0x07a);
-        tags.push(mktag("CanonVRD", "DynamicRangeMin", Value::U16(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "DynamicRangeMin",
+            Value::U16(v),
+            v.to_string(),
+        ));
     }
 
     // 0x07c: DynamicRangeMax (int16u)
     {
         let v = read_u16_be(data, 0x07c);
-        tags.push(mktag("CanonVRD", "DynamicRangeMax", Value::U16(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "DynamicRangeMax",
+            Value::U16(v),
+            v.to_string(),
+        ));
     }
 
     // 0x110: ToneCurveActive (int16u)
     {
         let v = read_u16_be(data, 0x110);
-        tags.push(mktag("CanonVRD", "ToneCurveActive", Value::U16(v), no_yes(v as u32)));
+        tags.push(mktag(
+            "CanonVRD",
+            "ToneCurveActive",
+            Value::U16(v),
+            no_yes(v as u32),
+        ));
     }
 
     // 0x113: ToneCurveMode (int8u at 0x113)
     {
         let v = read_u8(data, 0x113) as u16;
-        let print = match v { 0 => "RGB", 1 => "Luminance", _ => "" };
-        tags.push(mktag("CanonVRD", "ToneCurveMode", Value::U16(v),
-            if print.is_empty() { v.to_string() } else { print.to_string() }));
+        let print = match v {
+            0 => "RGB",
+            1 => "Luminance",
+            _ => "",
+        };
+        tags.push(mktag(
+            "CanonVRD",
+            "ToneCurveMode",
+            Value::U16(v),
+            if print.is_empty() {
+                v.to_string()
+            } else {
+                print.to_string()
+            },
+        ));
     }
 
     // 0x114: BrightnessAdj (int8s)
     {
         let v = read_i8(data, 0x114) as i16;
-        tags.push(mktag("CanonVRD", "BrightnessAdj", Value::I16(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "BrightnessAdj",
+            Value::I16(v),
+            v.to_string(),
+        ));
     }
 
     // 0x115: ContrastAdj (int8s)
     {
         let v = read_i8(data, 0x115) as i16;
-        tags.push(mktag("CanonVRD", "ContrastAdj", Value::I16(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "ContrastAdj",
+            Value::I16(v),
+            v.to_string(),
+        ));
     }
 
     // 0x116: SaturationAdj (int16s)
     {
         let v = read_i16_be(data, 0x116);
-        tags.push(mktag("CanonVRD", "SaturationAdj", Value::I16(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "SaturationAdj",
+            Value::I16(v),
+            v.to_string(),
+        ));
     }
 
     // 0x11e: ColorToneAdj (int32s)
     {
         let v = read_i32_be(data, 0x11e);
-        tags.push(mktag("CanonVRD", "ColorToneAdj", Value::I32(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "ColorToneAdj",
+            Value::I32(v),
+            v.to_string(),
+        ));
     }
 
     // Tone curve data (int16u[21] each)
@@ -1341,9 +1812,21 @@ fn parse_vrd_ver1(data: &[u8], tags: &mut Vec<Tag>) {
     // 0x159: ToneCurveInterpolation (int8u)
     {
         let v = read_u8(data, 0x159) as u16;
-        let print = match v { 0 => "Curve", 1 => "Straight", _ => "" };
-        tags.push(mktag("CanonVRD", "ToneCurveInterpolation", Value::U16(v),
-            if print.is_empty() { v.to_string() } else { print.to_string() }));
+        let print = match v {
+            0 => "Curve",
+            1 => "Straight",
+            _ => "",
+        };
+        tags.push(mktag(
+            "CanonVRD",
+            "ToneCurveInterpolation",
+            Value::U16(v),
+            if print.is_empty() {
+                v.to_string()
+            } else {
+                print.to_string()
+            },
+        ));
     }
 
     // 0x160: RedCurvePoints
@@ -1413,7 +1896,12 @@ fn parse_vrd_ver1(data: &[u8], tags: &mut Vec<Tag>) {
     // 0x244: CropActive (int16u)
     {
         let v = read_u16_be(data, 0x244);
-        tags.push(mktag("CanonVRD", "CropActive", Value::U16(v), no_yes(v as u32)));
+        tags.push(mktag(
+            "CanonVRD",
+            "CropActive",
+            Value::U16(v),
+            no_yes(v as u32),
+        ));
     }
 
     // 0x246: CropLeft (int16u)
@@ -1437,13 +1925,23 @@ fn parse_vrd_ver1(data: &[u8], tags: &mut Vec<Tag>) {
     // 0x24c: CropHeight (int16u)
     {
         let v = read_u16_be(data, 0x24c);
-        tags.push(mktag("CanonVRD", "CropHeight", Value::U16(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "CropHeight",
+            Value::U16(v),
+            v.to_string(),
+        ));
     }
 
     // 0x25a: SharpnessAdj (int16u)
     {
         let v = read_u16_be(data, 0x25a);
-        tags.push(mktag("CanonVRD", "SharpnessAdj", Value::U16(v), v.to_string()));
+        tags.push(mktag(
+            "CanonVRD",
+            "SharpnessAdj",
+            Value::U16(v),
+            v.to_string(),
+        ));
     }
 
     // 0x260: CropAspectRatio (int16u)
@@ -1466,37 +1964,79 @@ fn parse_vrd_ver1(data: &[u8], tags: &mut Vec<Tag>) {
             65535 => "Custom",
             _ => "",
         };
-        tags.push(mktag("CanonVRD", "CropAspectRatio", Value::U16(v),
-            if print.is_empty() { v.to_string() } else { print.to_string() }));
+        tags.push(mktag(
+            "CanonVRD",
+            "CropAspectRatio",
+            Value::U16(v),
+            if print.is_empty() {
+                v.to_string()
+            } else {
+                print.to_string()
+            },
+        ));
     }
 
     // 0x262: ConstrainedCropWidth (float)
     {
         let v = read_f32_be(data, 0x262);
-        let print = format!("{:.7}", v).trim_end_matches('0').trim_end_matches('.').to_string();
-        tags.push(mktag("CanonVRD", "ConstrainedCropWidth", Value::F32(v), print));
+        let print = format!("{:.7}", v)
+            .trim_end_matches('0')
+            .trim_end_matches('.')
+            .to_string();
+        tags.push(mktag(
+            "CanonVRD",
+            "ConstrainedCropWidth",
+            Value::F32(v),
+            print,
+        ));
     }
 
     // 0x266: ConstrainedCropHeight (float)
     {
         let v = read_f32_be(data, 0x266);
-        let print = format!("{:.7}", v).trim_end_matches('0').trim_end_matches('.').to_string();
-        tags.push(mktag("CanonVRD", "ConstrainedCropHeight", Value::F32(v), print));
+        let print = format!("{:.7}", v)
+            .trim_end_matches('0')
+            .trim_end_matches('.')
+            .to_string();
+        tags.push(mktag(
+            "CanonVRD",
+            "ConstrainedCropHeight",
+            Value::F32(v),
+            print,
+        ));
     }
 
     // 0x26a: CheckMark (int16u)
     {
         let v = read_u16_be(data, 0x26a);
-        let print = match v { 0 => "Clear".to_string(), 1..=3 => v.to_string(), _ => v.to_string() };
+        let print = match v {
+            0 => "Clear".to_string(),
+            1..=3 => v.to_string(),
+            _ => v.to_string(),
+        };
         tags.push(mktag("CanonVRD", "CheckMark", Value::U16(v), print));
     }
 
     // 0x26e: Rotation (int16u)
     {
         let v = read_u16_be(data, 0x26e);
-        let print = match v { 0 => "0", 1 => "90", 2 => "180", 3 => "270", _ => "" };
-        tags.push(mktag("CanonVRD", "Rotation", Value::U16(v),
-            if print.is_empty() { v.to_string() } else { print.to_string() }));
+        let print = match v {
+            0 => "0",
+            1 => "90",
+            2 => "180",
+            3 => "270",
+            _ => "",
+        };
+        tags.push(mktag(
+            "CanonVRD",
+            "Rotation",
+            Value::U16(v),
+            if print.is_empty() {
+                v.to_string()
+            } else {
+                print.to_string()
+            },
+        ));
     }
 
     // 0x270: WorkColorSpace (int16u)
@@ -1510,24 +2050,48 @@ fn parse_vrd_ver1(data: &[u8], tags: &mut Vec<Tag>) {
             4 => "ColorMatch RGB",
             _ => "",
         };
-        tags.push(mktag("CanonVRD", "WorkColorSpace", Value::U16(v),
-            if print.is_empty() { v.to_string() } else { print.to_string() }));
+        tags.push(mktag(
+            "CanonVRD",
+            "WorkColorSpace",
+            Value::U16(v),
+            if print.is_empty() {
+                v.to_string()
+            } else {
+                print.to_string()
+            },
+        ));
     }
 }
 
 fn read_u16_array(data: &[u8], off: usize, count: usize) -> Vec<u16> {
     let end = off + count * 2;
-    if end > data.len() { return vec![0u16; count]; }
+    if end > data.len() {
+        return vec![0u16; count];
+    }
     (0..count).map(|i| read_u16_be(data, off + i * 2)).collect()
 }
 
 fn tone_curve_print_u16(vals: &[u16]) -> String {
-    if vals.len() != 21 { return vals.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" "); }
+    if vals.len() != 21 {
+        return vals
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+    }
     let n = vals[0] as usize;
-    if n < 2 || n > 10 { return vals.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" "); }
+    if n < 2 || n > 10 {
+        return vals
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+    }
     let mut result = String::new();
     for i in 0..n {
-        if i > 0 { result.push(' '); }
+        if i > 0 {
+            result.push(' ');
+        }
         result.push('(');
         result.push_str(&vals[1 + i * 2].to_string());
         result.push(',');
@@ -1541,11 +2105,17 @@ fn tone_curve_print_u16(vals: &[u16]) -> String {
 fn parse_vrd_ver2(data: &[u8], tags: &mut Vec<Tag>) {
     // FORMAT => 'int16s' means each tag is at offset * 2 bytes, and read as i16
     // (unless explicitly overridden)
-    if data.len() < 4 { return; }
+    if data.len() < 4 {
+        return;
+    }
 
     let read_i16_at = |idx: usize| -> Option<i16> {
         let byte_off = idx * 2;
-        if byte_off + 2 <= data.len() { Some(read_i16_be(data, byte_off)) } else { None }
+        if byte_off + 2 <= data.len() {
+            Some(read_i16_be(data, byte_off))
+        } else {
+            None
+        }
     };
 
     // 0x02: PictureStyle
@@ -1561,111 +2131,567 @@ fn parse_vrd_ver2(data: &[u8], tags: &mut Vec<Tag>) {
             7 => "Custom",
             _ => "",
         };
-        tags.push(mktag("CanonVRD", "PictureStyle", Value::I16(v),
-            if print.is_empty() { v.to_string() } else { print.to_string() }));
+        tags.push(mktag(
+            "CanonVRD",
+            "PictureStyle",
+            Value::I16(v),
+            if print.is_empty() {
+                v.to_string()
+            } else {
+                print.to_string()
+            },
+        ));
     }
 
     // 0x03: IsCustomPictureStyle
     if let Some(v) = read_i16_at(0x03) {
-        tags.push(mktag("CanonVRD", "IsCustomPictureStyle", Value::I16(v), no_yes(v as u32)));
+        tags.push(mktag(
+            "CanonVRD",
+            "IsCustomPictureStyle",
+            Value::I16(v),
+            no_yes(v as u32),
+        ));
     }
 
     // Standard picture style params
-    if let Some(v) = read_i16_at(0x0d) { tags.push(mktag("CanonVRD", "StandardRawColorTone", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x0e) { tags.push(mktag("CanonVRD", "StandardRawSaturation", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x0f) { tags.push(mktag("CanonVRD", "StandardRawContrast", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x10) {
-        tags.push(mktag("CanonVRD", "StandardRawLinear", Value::I16(v), no_yes(v as u32)));
+    if let Some(v) = read_i16_at(0x0d) {
+        tags.push(mktag(
+            "CanonVRD",
+            "StandardRawColorTone",
+            Value::I16(v),
+            v.to_string(),
+        ));
     }
-    if let Some(v) = read_i16_at(0x11) { tags.push(mktag("CanonVRD", "StandardRawSharpness", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x12) { tags.push(mktag("CanonVRD", "StandardRawHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x13) { tags.push(mktag("CanonVRD", "StandardRawShadowPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x14) { tags.push(mktag("CanonVRD", "StandardOutputHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x15) { tags.push(mktag("CanonVRD", "StandardOutputShadowPoint", Value::I16(v), v.to_string())); }
+    if let Some(v) = read_i16_at(0x0e) {
+        tags.push(mktag(
+            "CanonVRD",
+            "StandardRawSaturation",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x0f) {
+        tags.push(mktag(
+            "CanonVRD",
+            "StandardRawContrast",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x10) {
+        tags.push(mktag(
+            "CanonVRD",
+            "StandardRawLinear",
+            Value::I16(v),
+            no_yes(v as u32),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x11) {
+        tags.push(mktag(
+            "CanonVRD",
+            "StandardRawSharpness",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x12) {
+        tags.push(mktag(
+            "CanonVRD",
+            "StandardRawHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x13) {
+        tags.push(mktag(
+            "CanonVRD",
+            "StandardRawShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x14) {
+        tags.push(mktag(
+            "CanonVRD",
+            "StandardOutputHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x15) {
+        tags.push(mktag(
+            "CanonVRD",
+            "StandardOutputShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
 
     // Portrait picture style params
-    if let Some(v) = read_i16_at(0x16) { tags.push(mktag("CanonVRD", "PortraitRawColorTone", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x17) { tags.push(mktag("CanonVRD", "PortraitRawSaturation", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x18) { tags.push(mktag("CanonVRD", "PortraitRawContrast", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x19) {
-        tags.push(mktag("CanonVRD", "PortraitRawLinear", Value::I16(v), no_yes(v as u32)));
+    if let Some(v) = read_i16_at(0x16) {
+        tags.push(mktag(
+            "CanonVRD",
+            "PortraitRawColorTone",
+            Value::I16(v),
+            v.to_string(),
+        ));
     }
-    if let Some(v) = read_i16_at(0x1a) { tags.push(mktag("CanonVRD", "PortraitRawSharpness", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x1b) { tags.push(mktag("CanonVRD", "PortraitRawHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x1c) { tags.push(mktag("CanonVRD", "PortraitRawShadowPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x1d) { tags.push(mktag("CanonVRD", "PortraitOutputHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x1e) { tags.push(mktag("CanonVRD", "PortraitOutputShadowPoint", Value::I16(v), v.to_string())); }
+    if let Some(v) = read_i16_at(0x17) {
+        tags.push(mktag(
+            "CanonVRD",
+            "PortraitRawSaturation",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x18) {
+        tags.push(mktag(
+            "CanonVRD",
+            "PortraitRawContrast",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x19) {
+        tags.push(mktag(
+            "CanonVRD",
+            "PortraitRawLinear",
+            Value::I16(v),
+            no_yes(v as u32),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x1a) {
+        tags.push(mktag(
+            "CanonVRD",
+            "PortraitRawSharpness",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x1b) {
+        tags.push(mktag(
+            "CanonVRD",
+            "PortraitRawHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x1c) {
+        tags.push(mktag(
+            "CanonVRD",
+            "PortraitRawShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x1d) {
+        tags.push(mktag(
+            "CanonVRD",
+            "PortraitOutputHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x1e) {
+        tags.push(mktag(
+            "CanonVRD",
+            "PortraitOutputShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
 
     // Landscape
-    if let Some(v) = read_i16_at(0x1f) { tags.push(mktag("CanonVRD", "LandscapeRawColorTone", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x20) { tags.push(mktag("CanonVRD", "LandscapeRawSaturation", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x21) { tags.push(mktag("CanonVRD", "LandscapeRawContrast", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x22) {
-        tags.push(mktag("CanonVRD", "LandscapeRawLinear", Value::I16(v), no_yes(v as u32)));
+    if let Some(v) = read_i16_at(0x1f) {
+        tags.push(mktag(
+            "CanonVRD",
+            "LandscapeRawColorTone",
+            Value::I16(v),
+            v.to_string(),
+        ));
     }
-    if let Some(v) = read_i16_at(0x23) { tags.push(mktag("CanonVRD", "LandscapeRawSharpness", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x24) { tags.push(mktag("CanonVRD", "LandscapeRawHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x25) { tags.push(mktag("CanonVRD", "LandscapeRawShadowPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x26) { tags.push(mktag("CanonVRD", "LandscapeOutputHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x27) { tags.push(mktag("CanonVRD", "LandscapeOutputShadowPoint", Value::I16(v), v.to_string())); }
+    if let Some(v) = read_i16_at(0x20) {
+        tags.push(mktag(
+            "CanonVRD",
+            "LandscapeRawSaturation",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x21) {
+        tags.push(mktag(
+            "CanonVRD",
+            "LandscapeRawContrast",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x22) {
+        tags.push(mktag(
+            "CanonVRD",
+            "LandscapeRawLinear",
+            Value::I16(v),
+            no_yes(v as u32),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x23) {
+        tags.push(mktag(
+            "CanonVRD",
+            "LandscapeRawSharpness",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x24) {
+        tags.push(mktag(
+            "CanonVRD",
+            "LandscapeRawHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x25) {
+        tags.push(mktag(
+            "CanonVRD",
+            "LandscapeRawShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x26) {
+        tags.push(mktag(
+            "CanonVRD",
+            "LandscapeOutputHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x27) {
+        tags.push(mktag(
+            "CanonVRD",
+            "LandscapeOutputShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
 
     // Neutral
-    if let Some(v) = read_i16_at(0x28) { tags.push(mktag("CanonVRD", "NeutralRawColorTone", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x29) { tags.push(mktag("CanonVRD", "NeutralRawSaturation", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x2a) { tags.push(mktag("CanonVRD", "NeutralRawContrast", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x2b) {
-        tags.push(mktag("CanonVRD", "NeutralRawLinear", Value::I16(v), no_yes(v as u32)));
+    if let Some(v) = read_i16_at(0x28) {
+        tags.push(mktag(
+            "CanonVRD",
+            "NeutralRawColorTone",
+            Value::I16(v),
+            v.to_string(),
+        ));
     }
-    if let Some(v) = read_i16_at(0x2c) { tags.push(mktag("CanonVRD", "NeutralRawSharpness", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x2d) { tags.push(mktag("CanonVRD", "NeutralRawHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x2e) { tags.push(mktag("CanonVRD", "NeutralRawShadowPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x2f) { tags.push(mktag("CanonVRD", "NeutralOutputHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x30) { tags.push(mktag("CanonVRD", "NeutralOutputShadowPoint", Value::I16(v), v.to_string())); }
+    if let Some(v) = read_i16_at(0x29) {
+        tags.push(mktag(
+            "CanonVRD",
+            "NeutralRawSaturation",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x2a) {
+        tags.push(mktag(
+            "CanonVRD",
+            "NeutralRawContrast",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x2b) {
+        tags.push(mktag(
+            "CanonVRD",
+            "NeutralRawLinear",
+            Value::I16(v),
+            no_yes(v as u32),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x2c) {
+        tags.push(mktag(
+            "CanonVRD",
+            "NeutralRawSharpness",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x2d) {
+        tags.push(mktag(
+            "CanonVRD",
+            "NeutralRawHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x2e) {
+        tags.push(mktag(
+            "CanonVRD",
+            "NeutralRawShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x2f) {
+        tags.push(mktag(
+            "CanonVRD",
+            "NeutralOutputHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x30) {
+        tags.push(mktag(
+            "CanonVRD",
+            "NeutralOutputShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
 
     // Faithful
-    if let Some(v) = read_i16_at(0x31) { tags.push(mktag("CanonVRD", "FaithfulRawColorTone", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x32) { tags.push(mktag("CanonVRD", "FaithfulRawSaturation", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x33) { tags.push(mktag("CanonVRD", "FaithfulRawContrast", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x34) {
-        tags.push(mktag("CanonVRD", "FaithfulRawLinear", Value::I16(v), no_yes(v as u32)));
+    if let Some(v) = read_i16_at(0x31) {
+        tags.push(mktag(
+            "CanonVRD",
+            "FaithfulRawColorTone",
+            Value::I16(v),
+            v.to_string(),
+        ));
     }
-    if let Some(v) = read_i16_at(0x35) { tags.push(mktag("CanonVRD", "FaithfulRawSharpness", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x36) { tags.push(mktag("CanonVRD", "FaithfulRawHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x37) { tags.push(mktag("CanonVRD", "FaithfulRawShadowPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x38) { tags.push(mktag("CanonVRD", "FaithfulOutputHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x39) { tags.push(mktag("CanonVRD", "FaithfulOutputShadowPoint", Value::I16(v), v.to_string())); }
+    if let Some(v) = read_i16_at(0x32) {
+        tags.push(mktag(
+            "CanonVRD",
+            "FaithfulRawSaturation",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x33) {
+        tags.push(mktag(
+            "CanonVRD",
+            "FaithfulRawContrast",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x34) {
+        tags.push(mktag(
+            "CanonVRD",
+            "FaithfulRawLinear",
+            Value::I16(v),
+            no_yes(v as u32),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x35) {
+        tags.push(mktag(
+            "CanonVRD",
+            "FaithfulRawSharpness",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x36) {
+        tags.push(mktag(
+            "CanonVRD",
+            "FaithfulRawHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x37) {
+        tags.push(mktag(
+            "CanonVRD",
+            "FaithfulRawShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x38) {
+        tags.push(mktag(
+            "CanonVRD",
+            "FaithfulOutputHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x39) {
+        tags.push(mktag(
+            "CanonVRD",
+            "FaithfulOutputShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
 
     // Monochrome
     if let Some(v) = read_i16_at(0x3a) {
-        let print = match v { -2 => "None", -1 => "Yellow", 0 => "Orange", 1 => "Red", 2 => "Green", _ => "" };
-        tags.push(mktag("CanonVRD", "MonochromeFilterEffect", Value::I16(v),
-            if print.is_empty() { v.to_string() } else { print.to_string() }));
+        let print = match v {
+            -2 => "None",
+            -1 => "Yellow",
+            0 => "Orange",
+            1 => "Red",
+            2 => "Green",
+            _ => "",
+        };
+        tags.push(mktag(
+            "CanonVRD",
+            "MonochromeFilterEffect",
+            Value::I16(v),
+            if print.is_empty() {
+                v.to_string()
+            } else {
+                print.to_string()
+            },
+        ));
     }
     if let Some(v) = read_i16_at(0x3b) {
-        let print = match v { -2 => "None", -1 => "Sepia", 0 => "Blue", 1 => "Purple", 2 => "Green", _ => "" };
-        tags.push(mktag("CanonVRD", "MonochromeToningEffect", Value::I16(v),
-            if print.is_empty() { v.to_string() } else { print.to_string() }));
+        let print = match v {
+            -2 => "None",
+            -1 => "Sepia",
+            0 => "Blue",
+            1 => "Purple",
+            2 => "Green",
+            _ => "",
+        };
+        tags.push(mktag(
+            "CanonVRD",
+            "MonochromeToningEffect",
+            Value::I16(v),
+            if print.is_empty() {
+                v.to_string()
+            } else {
+                print.to_string()
+            },
+        ));
     }
-    if let Some(v) = read_i16_at(0x3c) { tags.push(mktag("CanonVRD", "MonochromeContrast", Value::I16(v), v.to_string())); }
+    if let Some(v) = read_i16_at(0x3c) {
+        tags.push(mktag(
+            "CanonVRD",
+            "MonochromeContrast",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
     if let Some(v) = read_i16_at(0x3d) {
-        tags.push(mktag("CanonVRD", "MonochromeLinear", Value::I16(v), no_yes(v as u32)));
+        tags.push(mktag(
+            "CanonVRD",
+            "MonochromeLinear",
+            Value::I16(v),
+            no_yes(v as u32),
+        ));
     }
-    if let Some(v) = read_i16_at(0x3e) { tags.push(mktag("CanonVRD", "MonochromeSharpness", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x3f) { tags.push(mktag("CanonVRD", "MonochromeRawHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x40) { tags.push(mktag("CanonVRD", "MonochromeRawShadowPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x41) { tags.push(mktag("CanonVRD", "MonochromeOutputHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x42) { tags.push(mktag("CanonVRD", "MonochromeOutputShadowPoint", Value::I16(v), v.to_string())); }
+    if let Some(v) = read_i16_at(0x3e) {
+        tags.push(mktag(
+            "CanonVRD",
+            "MonochromeSharpness",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x3f) {
+        tags.push(mktag(
+            "CanonVRD",
+            "MonochromeRawHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x40) {
+        tags.push(mktag(
+            "CanonVRD",
+            "MonochromeRawShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x41) {
+        tags.push(mktag(
+            "CanonVRD",
+            "MonochromeOutputHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x42) {
+        tags.push(mktag(
+            "CanonVRD",
+            "MonochromeOutputShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
 
     // Custom picture style
-    if let Some(v) = read_i16_at(0x4c) { tags.push(mktag("CanonVRD", "CustomColorTone", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x4d) { tags.push(mktag("CanonVRD", "CustomSaturation", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x4e) { tags.push(mktag("CanonVRD", "CustomContrast", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x4f) {
-        tags.push(mktag("CanonVRD", "CustomLinear", Value::I16(v), no_yes(v as u32)));
+    if let Some(v) = read_i16_at(0x4c) {
+        tags.push(mktag(
+            "CanonVRD",
+            "CustomColorTone",
+            Value::I16(v),
+            v.to_string(),
+        ));
     }
-    if let Some(v) = read_i16_at(0x50) { tags.push(mktag("CanonVRD", "CustomSharpness", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x51) { tags.push(mktag("CanonVRD", "CustomRawHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x52) { tags.push(mktag("CanonVRD", "CustomRawShadowPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x53) { tags.push(mktag("CanonVRD", "CustomOutputHighlightPoint", Value::I16(v), v.to_string())); }
-    if let Some(v) = read_i16_at(0x54) { tags.push(mktag("CanonVRD", "CustomOutputShadowPoint", Value::I16(v), v.to_string())); }
+    if let Some(v) = read_i16_at(0x4d) {
+        tags.push(mktag(
+            "CanonVRD",
+            "CustomSaturation",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x4e) {
+        tags.push(mktag(
+            "CanonVRD",
+            "CustomContrast",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x4f) {
+        tags.push(mktag(
+            "CanonVRD",
+            "CustomLinear",
+            Value::I16(v),
+            no_yes(v as u32),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x50) {
+        tags.push(mktag(
+            "CanonVRD",
+            "CustomSharpness",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x51) {
+        tags.push(mktag(
+            "CanonVRD",
+            "CustomRawHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x52) {
+        tags.push(mktag(
+            "CanonVRD",
+            "CustomRawShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x53) {
+        tags.push(mktag(
+            "CanonVRD",
+            "CustomOutputHighlightPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
+    if let Some(v) = read_i16_at(0x54) {
+        tags.push(mktag(
+            "CanonVRD",
+            "CustomOutputShadowPoint",
+            Value::I16(v),
+            v.to_string(),
+        ));
+    }
 }

@@ -83,7 +83,9 @@ pub fn read_miff(data: &[u8]) -> Result<Vec<Tag>> {
     // For old-style files it may just use ":\n".
     let header_end = find_header_end(data);
     if header_end.is_none() {
-        return Err(Error::InvalidData("MIFF header end marker not found".into()));
+        return Err(Error::InvalidData(
+            "MIFF header end marker not found".into(),
+        ));
     }
     let (header_data_end, profile_data_start) = header_end.unwrap();
 
@@ -179,19 +181,13 @@ fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     if needle.is_empty() || haystack.len() < needle.len() {
         return None;
     }
-    haystack
-        .windows(needle.len())
-        .position(|w| w == needle)
+    haystack.windows(needle.len()).position(|w| w == needle)
 }
 
 /// Parse MIFF header tokens and populate tags and profiles lists.
 /// The Perl code: split ' ', $buff — splits on any whitespace.
 /// Then iterates through tokens, building key=value pairs.
-fn parse_header_tokens(
-    header: &str,
-    tags: &mut Vec<Tag>,
-    profiles: &mut Vec<(String, usize)>,
-) {
+fn parse_header_tokens(header: &str, tags: &mut Vec<Tag>, profiles: &mut Vec<(String, usize)>) {
     // Tokenize: split on any whitespace (space, tab, newline, CR, form-feed)
     let tokens: Vec<&str> = header.split_whitespace().collect();
 
@@ -266,12 +262,7 @@ fn parse_header_tokens(
     }
 }
 
-fn emit_tag(
-    key: &str,
-    val: String,
-    tags: &mut Vec<Tag>,
-    profiles: &mut Vec<(String, usize)>,
-) {
+fn emit_tag(key: &str, val: String, tags: &mut Vec<Tag>, profiles: &mut Vec<(String, usize)>) {
     // Check for profile-* keys
     if let Some(profile_type) = key.strip_prefix("profile-") {
         // val is the length as a string

@@ -3,7 +3,7 @@
 //! Rewrites TIFF files (and TIFF-based RAW: DNG, CR2, etc.) with updated metadata.
 
 use crate::error::Result;
-use crate::metadata::exif::{ByteOrderMark, parse_tiff_header};
+use crate::metadata::exif::{parse_tiff_header, ByteOrderMark};
 
 /// Rewrite a TIFF file, updating specific IFD entries.
 ///
@@ -120,7 +120,12 @@ fn try_update_tag(
 }
 
 /// Find a sub-IFD pointer (ExifIFD=0x8769, GPS=0x8825) in an IFD.
-fn find_sub_ifd(data: &[u8], ifd_offset: usize, bo: ByteOrderMark, pointer_tag: u16) -> Option<usize> {
+fn find_sub_ifd(
+    data: &[u8],
+    ifd_offset: usize,
+    bo: ByteOrderMark,
+    pointer_tag: u16,
+) -> Option<usize> {
     if ifd_offset + 2 > data.len() {
         return None;
     }
@@ -148,7 +153,17 @@ fn read_u16(data: &[u8], offset: usize, bo: ByteOrderMark) -> u16 {
 
 fn read_u32(data: &[u8], offset: usize, bo: ByteOrderMark) -> u32 {
     match bo {
-        ByteOrderMark::LittleEndian => u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]),
-        ByteOrderMark::BigEndian => u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]),
+        ByteOrderMark::LittleEndian => u32::from_le_bytes([
+            data[offset],
+            data[offset + 1],
+            data[offset + 2],
+            data[offset + 3],
+        ]),
+        ByteOrderMark::BigEndian => u32::from_be_bytes([
+            data[offset],
+            data[offset + 1],
+            data[offset + 2],
+            data[offset + 3],
+        ]),
     }
 }

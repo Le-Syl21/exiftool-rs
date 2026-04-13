@@ -22,7 +22,9 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
 
     while pos + 8 <= data.len() {
         let chunk_id = &data[pos..pos + 4];
-        let chunk_size = u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]) as usize;
+        let chunk_size =
+            u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                as usize;
         pos += 8;
 
         if pos + chunk_size > data.len() {
@@ -40,10 +42,22 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
                     let bits_per_sample = i16::from_be_bytes([cd[6], cd[7]]);
                     let sample_rate = decode_ieee_extended(&cd[8..18]);
 
-                    tags.push(mk("NumChannels", "Number of Channels", Value::I16(channels)));
-                    tags.push(mk("NumSampleFrames", "Number of Sample Frames", Value::U32(num_frames)));
+                    tags.push(mk(
+                        "NumChannels",
+                        "Number of Channels",
+                        Value::I16(channels),
+                    ));
+                    tags.push(mk(
+                        "NumSampleFrames",
+                        "Number of Sample Frames",
+                        Value::U32(num_frames),
+                    ));
                     tags.push(mk("SampleSize", "Sample Size", Value::I16(bits_per_sample)));
-                    tags.push(mk("SampleRate", "Sample Rate", Value::U32(sample_rate as u32)));
+                    tags.push(mk(
+                        "SampleRate",
+                        "Sample Rate",
+                        Value::U32(sample_rate as u32),
+                    ));
 
                     if sample_rate > 0.0 && num_frames > 0 {
                         let duration = num_frames as f64 / sample_rate;
@@ -62,7 +76,9 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
 
                     // AIFC compression type
                     if is_compressed && cd.len() >= 22 {
-                        let comp_type = crate::encoding::decode_utf8_or_latin1(&cd[18..22]).trim().to_string();
+                        let comp_type = crate::encoding::decode_utf8_or_latin1(&cd[18..22])
+                            .trim()
+                            .to_string();
                         let comp_name = match comp_type.as_str() {
                             "NONE" | "none" => "None",
                             "sowt" => "Little-endian PCM",
@@ -73,30 +89,42 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
                             "ima4" | "IMA4" => "IMA ADPCM",
                             _ => &comp_type,
                         };
-                        tags.push(mk("Compression", "Compression", Value::String(comp_name.to_string())));
+                        tags.push(mk(
+                            "Compression",
+                            "Compression",
+                            Value::String(comp_name.to_string()),
+                        ));
                     }
                 }
             }
             b"NAME" => {
-                let name = crate::encoding::decode_utf8_or_latin1(cd).trim_end_matches('\0').to_string();
+                let name = crate::encoding::decode_utf8_or_latin1(cd)
+                    .trim_end_matches('\0')
+                    .to_string();
                 if !name.is_empty() {
                     tags.push(mk("Name", "Name", Value::String(name)));
                 }
             }
             b"AUTH" => {
-                let author = crate::encoding::decode_utf8_or_latin1(cd).trim_end_matches('\0').to_string();
+                let author = crate::encoding::decode_utf8_or_latin1(cd)
+                    .trim_end_matches('\0')
+                    .to_string();
                 if !author.is_empty() {
                     tags.push(mk("Author", "Author", Value::String(author)));
                 }
             }
             b"(c) " => {
-                let copyright = crate::encoding::decode_utf8_or_latin1(cd).trim_end_matches('\0').to_string();
+                let copyright = crate::encoding::decode_utf8_or_latin1(cd)
+                    .trim_end_matches('\0')
+                    .to_string();
                 if !copyright.is_empty() {
                     tags.push(mk("Copyright", "Copyright", Value::String(copyright)));
                 }
             }
             b"ANNO" => {
-                let annotation = crate::encoding::decode_utf8_or_latin1(cd).trim_end_matches('\0').to_string();
+                let annotation = crate::encoding::decode_utf8_or_latin1(cd)
+                    .trim_end_matches('\0')
+                    .to_string();
                 if !annotation.is_empty() {
                     tags.push(mk("Annotation", "Annotation", Value::String(annotation)));
                 }
@@ -107,10 +135,12 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
                     let num_comments = u16::from_be_bytes([cd[0], cd[1]]) as usize;
                     let mut p = 2;
                     for _ in 0..num_comments {
-                        if p + 8 > cd.len() { break; }
-                        let ts = u32::from_be_bytes([cd[p], cd[p+1], cd[p+2], cd[p+3]]);
+                        if p + 8 > cd.len() {
+                            break;
+                        }
+                        let ts = u32::from_be_bytes([cd[p], cd[p + 1], cd[p + 2], cd[p + 3]]);
                         // marker ID at p+4..p+6 (skipped)
-                        let size = u16::from_be_bytes([cd[p+6], cd[p+7]]) as usize;
+                        let size = u16::from_be_bytes([cd[p + 6], cd[p + 7]]) as usize;
                         p += 8;
                         // CommentTime: Mac epoch (seconds since 1904-01-01)
                         // ValueConv: ConvertUnixTime($val - ((66 * 365 + 17) * 24 * 3600))
@@ -121,8 +151,9 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
                             tags.push(mk("CommentTime", "Comment Time", Value::String(dt)));
                         }
                         if p + size <= cd.len() && size > 0 {
-                            let comment = crate::encoding::decode_utf8_or_latin1(&cd[p..p+size])
-                                .trim_end_matches('\0').to_string();
+                            let comment = crate::encoding::decode_utf8_or_latin1(&cd[p..p + size])
+                                .trim_end_matches('\0')
+                                .to_string();
                             if !comment.is_empty() {
                                 tags.push(mk("Comment", "Comment", Value::String(comment)));
                             }
@@ -189,20 +220,49 @@ fn aiff_unix_to_datetime(secs: i64) -> String {
     let mut y = 1970i32;
     let mut rem = days;
     loop {
-        let dy: i64 = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 { 366 } else { 365 };
-        if rem < dy { break; }
+        let dy: i64 = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {
+            366
+        } else {
+            365
+        };
+        if rem < dy {
+            break;
+        }
         rem -= dy;
         y += 1;
     }
     let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
-    let months: [i64; 12] = [31, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let months: [i64; 12] = [
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
     let mut mo = 1i32;
     for &dm in &months {
-        if rem < dm { break; }
+        if rem < dm {
+            break;
+        }
         rem -= dm;
         mo += 1;
     }
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", y, mo, rem + 1, h, m, s)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+        y,
+        mo,
+        rem + 1,
+        h,
+        m,
+        s
+    )
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {

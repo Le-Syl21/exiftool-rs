@@ -87,7 +87,9 @@ fn main() {
             "-g" | "--group" | "-g0" => show_groups = true,
             "-n" | "--num" | "-num" => options.print_conv = false,
             "-s" | "--short" => short_names = true,
-            "-S" | "-veryShort" => { short_names = true; } // -S = -s without padding
+            "-S" | "-veryShort" => {
+                short_names = true;
+            } // -S = -s without padding
             "-f" => options.fast_scan = 1,
             "-F" => options.fast_scan = 2,
             "-b" | "-binary" => binary_output = true,
@@ -101,25 +103,37 @@ fn main() {
             "-U" | "-unknown2" => _show_unknown = true,
             "-m" | "-ignoreMinorErrors" => { /* ignored, we're lenient by default */ }
             "-P" | "-preserve" => _preserve_dates = true,
-            "-progress" => { progress = true; }
+            "-progress" => {
+                progress = true;
+            }
             "-L" | "-latin" => { /* charset handled in encoding_rs */ }
             "-t" | "-tab" => tab_output = true,
             "-T" => tab_output = true,
             "-sort" => sort_tags = true,
-            "-list" | "-listx" | "-listw" | "-listr" | "-listf" | "-listd"
-            | "-listg1" | "-listgeo" | "-listwf" => list_tags = true,
-            "-args" | "-argFormat" => { args_output = true; }
+            "-list" | "-listx" | "-listw" | "-listr" | "-listf" | "-listd" | "-listg1"
+            | "-listgeo" | "-listwf" => list_tags = true,
+            "-args" | "-argFormat" => {
+                args_output = true;
+            }
             "-c" | "-coordFormat" => {
-                if i + 1 < args.len() { i += 1; } // consume format arg
+                if i + 1 < args.len() {
+                    i += 1;
+                } // consume format arg
             }
             "-charset" => {
-                if i + 1 < args.len() { i += 1; } // consume charset arg
+                if i + 1 < args.len() {
+                    i += 1;
+                } // consume charset arg
             }
             "-config" => {
-                if i + 1 < args.len() { i += 1; } // consume config file
+                if i + 1 < args.len() {
+                    i += 1;
+                } // consume config file
             }
             "-csvDelim" | "-csvdelim" => {
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                }
             }
             "-delete_original" | "-deleteOriginal" => {
                 // Delete _original backup files
@@ -139,17 +153,29 @@ fn main() {
                     i += 1;
                 }
             }
-            "-ee" => { options.extract_embedded = 1; }
-            "-ee2" => { options.extract_embedded = 2; }
-            "-ee3" => { options.extract_embedded = 3; }
+            "-ee" => {
+                options.extract_embedded = 1;
+            }
+            "-ee2" => {
+                options.extract_embedded = 2;
+            }
+            "-ee3" => {
+                options.extract_embedded = 3;
+            }
             "-efile" | "-efile!" => {
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                }
             }
             "-execute" => { /* stay-open command separator */ }
             "-fast" | "-fast2" | "-fast3" | "-fast4" | "-fast5" => {
                 options.fast_scan = match arg.as_str() {
-                    "-fast" => 1, "-fast2" => 2, "-fast3" => 3,
-                    "-fast4" => 4, "-fast5" => 5, _ => 1,
+                    "-fast" => 1,
+                    "-fast2" => 2,
+                    "-fast3" => 3,
+                    "-fast4" => 4,
+                    "-fast5" => 5,
+                    _ => 1,
                 };
             }
             "-G" | "-G0" | "-G1" | "-G2" | "-G3" | "-G4" | "-G5" | "-G6" => show_groups = true,
@@ -158,22 +184,32 @@ fn main() {
                 // Reverse geocoding is automatic when GPS is present
             }
             "-geotag" => {
-                if i + 1 < args.len() { i += 1; } // consume GPX file
+                if i + 1 < args.len() {
+                    i += 1;
+                } // consume GPX file
             }
             "-geosync" => {
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                }
             }
             "-geotime" => {
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                }
             }
             "-globalTimeShift" | "-globaltimeshift" => {
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                }
             }
             "-htmlDump" | "-htmldump" => {
                 html_dump = true;
             }
             "-i" | "-ignore" => {
-                if i + 1 < args.len() { i += 1; } // consume dir to ignore
+                if i + 1 < args.len() {
+                    i += 1;
+                } // consume dir to ignore
             }
             "-k" | "-pause" => {
                 // Pause before terminating (Windows)
@@ -184,32 +220,50 @@ fn main() {
                     lang = Some(args[i].to_lowercase().replace("-", "_").replace("_", ""));
                     // Normalize: zh_cn -> zh, pt_br -> pt, etc.
                     if let Some(ref mut l) = lang {
-                        if l.starts_with("zh") { *l = "zh".into(); }
+                        if l.starts_with("zh") {
+                            *l = "zh".into();
+                        }
                     }
                 }
             }
             "-api" => {
-                if i + 1 < args.len() { i += 1; } // consume API option
+                if i + 1 < args.len() {
+                    i += 1;
+                } // consume API option
             }
             "-one" | "-1" => { /* process only first file */ }
             "-overwrite_original_in_place" => overwrite_original = true,
             "-password" => {
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                }
             }
-            "-php" | "-phpFormat" => { php_output = true; }
+            "-php" | "-phpFormat" => {
+                php_output = true;
+            }
             "-preview" => { /* extract preview image */ }
             "-require" => {
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                }
             }
-            "-scanForXMP" | "-scanforxmp" => { scan_for_xmp = true; }
+            "-scanForXMP" | "-scanforxmp" => {
+                scan_for_xmp = true;
+            }
             "-struct" | "-s2" | "-s1" => short_names = true,
             "-use" | "-useMWG" | "-usemwg" => { /* use MWG composite tags */ }
-            "-validate" => { validate = true; }
+            "-validate" => {
+                validate = true;
+            }
             "-w" | "-w!" | "-w+" | "-W" | "-W!" | "-W+" => {
-                if i + 1 < args.len() { i += 1; } // consume output extension
+                if i + 1 < args.len() {
+                    i += 1;
+                } // consume output extension
             }
             "-wm" => {
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                }
             }
             "-z" | "-zip" => { /* process compressed data */ }
             "-common_args" => {
@@ -245,9 +299,16 @@ fn main() {
                     i += 1;
                 }
             }
-            "-s3" => { short_names = true; } // Extra-short: tag names only, no padding
+            "-s3" => {
+                short_names = true;
+            } // Extra-short: tag names only, no padding
             "-v0" | "-v1" | "-v2" | "-v3" | "-v4" | "-v5" => {
-                verbose = args[i].chars().last().unwrap_or('0').to_digit(10).unwrap_or(0) as u8;
+                verbose = args[i]
+                    .chars()
+                    .last()
+                    .unwrap_or('0')
+                    .to_digit(10)
+                    .unwrap_or(0) as u8;
             }
             "-ifd1" => {
                 // Specifically request IFD1 (thumbnail) tags
@@ -262,19 +323,27 @@ fn main() {
             }
             "-srcfile" | "-srcFile" => {
                 // Specify source file for -tagsFromFile
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                }
             }
             "-userParam" | "-userparam" => {
                 // Set user parameter
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                }
             }
             "-wext" | "-wExt" => {
                 // Specify write extension filter
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                }
             }
             "-listItem" | "-listitem" => {
                 // Specify list item index
-                if i + 1 < args.len() { i += 1; }
+                if i + 1 < args.len() {
+                    i += 1;
+                }
             }
             "-unsafe" | "-Unsafe" => {
                 // Allow unsafe tag operations
@@ -292,19 +361,37 @@ fn main() {
                 options.requested_tags.push("ModifyDate".into());
             }
             "-common" => {
-                options.requested_tags.extend([
-                    "FileName", "FileSize", "FileType", "Make", "Model",
-                    "DateTimeOriginal", "ImageSize", "FocalLength", "ExposureTime",
-                    "FNumber", "ISO", "Flash", "LensModel",
-                ].iter().map(|s| s.to_string()));
+                options.requested_tags.extend(
+                    [
+                        "FileName",
+                        "FileSize",
+                        "FileType",
+                        "Make",
+                        "Model",
+                        "DateTimeOriginal",
+                        "ImageSize",
+                        "FocalLength",
+                        "ExposureTime",
+                        "FNumber",
+                        "ISO",
+                        "Flash",
+                        "LensModel",
+                    ]
+                    .iter()
+                    .map(|s| s.to_string()),
+                );
             }
             // Named tag shortcuts (recognized by ExifTool as special options)
             "-directory" => options.requested_tags.push("Directory".into()),
             "-filename" => options.requested_tags.push("FileName".into()),
             "-jpgfromraw" | "-JpgFromRaw" => options.requested_tags.push("JpgFromRaw".into()),
             "-previewimage" | "-PreviewImage" => options.requested_tags.push("PreviewImage".into()),
-            "-thumbnailimage" | "-ThumbnailImage" => options.requested_tags.push("ThumbnailImage".into()),
-            "-embeddedimage" | "-EmbeddedImage" => options.requested_tags.push("EmbeddedImage".into()),
+            "-thumbnailimage" | "-ThumbnailImage" => {
+                options.requested_tags.push("ThumbnailImage".into())
+            }
+            "-embeddedimage" | "-EmbeddedImage" => {
+                options.requested_tags.push("EmbeddedImage".into())
+            }
             "-icc_profile" | "-ICC_Profile" => options.requested_tags.push("ICC_Profile".into()),
             "-imagesize" | "-ImageSize" => options.requested_tags.push("ImageSize".into()),
             // All remaining ExifTool tag-name options (for 100% CLI compatibility)
@@ -316,16 +403,24 @@ fn main() {
             "-copyright" | "-Copyright" => options.requested_tags.push("Copyright".into()),
             "-createdate" | "-CreateDate" => options.requested_tags.push("CreateDate".into()),
             "-credit" | "-Credit" => options.requested_tags.push("Credit".into()),
-            "-datetimeoriginal" | "-DateTimeOriginal" => options.requested_tags.push("DateTimeOriginal".into()),
+            "-datetimeoriginal" | "-DateTimeOriginal" => {
+                options.requested_tags.push("DateTimeOriginal".into())
+            }
             "-dc" => options.requested_tags.push("dc".into()),
             "-exif" | "-EXIF" => options.requested_tags.push("EXIF:*".into()),
-            "-exposurecompensation" | "-ExposureCompensation" => options.requested_tags.push("ExposureCompensation".into()),
+            "-exposurecompensation" | "-ExposureCompensation" => {
+                options.requested_tags.push("ExposureCompensation".into())
+            }
             "-exposuretime" | "-ExposureTime" => options.requested_tags.push("ExposureTime".into()),
             "-file" => options.requested_tags.push("File:*".into()),
             "-file1" => options.requested_tags.push("File:*".into()),
-            "-filenum" | "-FileNum" | "-fileNum" => options.requested_tags.push("FileNumber".into()),
+            "-filenum" | "-FileNum" | "-fileNum" => {
+                options.requested_tags.push("FileNumber".into())
+            }
             "-four" => { /* numeric argument */ }
-            "-hierarchicalkeywords" | "-HierarchicalKeywords" => options.requested_tags.push("HierarchicalSubject".into()),
+            "-hierarchicalkeywords" | "-HierarchicalKeywords" => {
+                options.requested_tags.push("HierarchicalSubject".into())
+            }
             "-iptc" | "-IPTC" => options.requested_tags.push("IPTC:*".into()),
             "-iso" | "-ISO" => options.requested_tags.push("ISO".into()),
             "-keywords" | "-Keywords" => options.requested_tags.push("Keywords".into()),
@@ -511,13 +606,23 @@ fn main() {
 
     // Write mode
     if !write_tags.is_empty() || !delete_tags.is_empty() || tags_from_file.is_some() {
-        run_write_mode(&files, &write_tags, &delete_tags, overwrite_original, options, tags_from_file.as_deref());
+        run_write_mode(
+            &files,
+            &write_tags,
+            &delete_tags,
+            overwrite_original,
+            options,
+            tags_from_file.as_deref(),
+        );
         return;
     }
 
     // List tags mode
     if list_tags {
-        println!("Supported file types: {}", exiftool_rs::FileType::all().len());
+        println!(
+            "Supported file types: {}",
+            exiftool_rs::FileType::all().len()
+        );
         println!("Known EXIF tags: ~4300 (auto-generated from ExifTool source)");
         println!("Print conversions: ~17600");
         println!("MakerNotes manufacturers: Canon, Nikon, Sony, Olympus, Pentax, Panasonic, Fujifilm, Samsung, Sigma");
@@ -596,7 +701,10 @@ fn main() {
             // Simple validation: if we can read tags, it's valid
             for f in &files {
                 if let Ok(tags) = et.extract_info(f) {
-                    println!("Validate                         : {}", if tags.is_empty() { "Error" } else { "OK" });
+                    println!(
+                        "Validate                         : {}",
+                        if tags.is_empty() { "Error" } else { "OK" }
+                    );
                 }
             }
         }
@@ -628,11 +736,22 @@ fn main() {
         }
         if !validate {
             // Load translations if -lang specified
-            let translations = lang.as_ref()
+            let translations = lang
+                .as_ref()
                 .and_then(|l| exiftool_rs::i18n::get_translations(l));
-            print_text_full(&et, &files, show_groups, short_names, sort_tags,
-                            show_tag_ids, &exclude_lower, quiet, no_composites, numeric,
-                            &translations);
+            print_text_full(
+                &et,
+                &files,
+                show_groups,
+                short_names,
+                sort_tags,
+                show_tag_ids,
+                &exclude_lower,
+                quiet,
+                no_composites,
+                numeric,
+                &translations,
+            );
         }
     }
 }
@@ -675,11 +794,24 @@ fn run_stay_open(options: Options, show_groups: bool, short_names: bool, json: b
                             } else {
                                 for tag in &tags {
                                     if show_groups {
-                                        println!("[{}] {} : {}", tag.group.family1, pad_display(&tag.name, 32), tag.print_value);
+                                        println!(
+                                            "[{}] {} : {}",
+                                            tag.group.family1,
+                                            pad_display(&tag.name, 32),
+                                            tag.print_value
+                                        );
                                     } else if short_names {
-                                        println!("{} : {}", pad_display(&tag.name, 32), tag.print_value);
+                                        println!(
+                                            "{} : {}",
+                                            pad_display(&tag.name, 32),
+                                            tag.print_value
+                                        );
                                     } else {
-                                        println!("{} : {}", pad_display(&tag.description, 32), tag.print_value);
+                                        println!(
+                                            "{} : {}",
+                                            pad_display(&tag.description, 32),
+                                            tag.print_value
+                                        );
                                     }
                                 }
                             }
@@ -740,11 +872,16 @@ fn run_write_mode(
     }
 
     // Process date shifts per file
-    let shifts: Vec<(&str, &str)> = write_tags.iter()
+    let shifts: Vec<(&str, &str)> = write_tags
+        .iter()
         .filter(|(t, _)| t.starts_with("__SHIFT__:"))
         .filter_map(|(t, _)| {
             let parts: Vec<&str> = t.splitn(3, ':').collect();
-            if parts.len() == 3 { Some((parts[1], parts[2])) } else { None }
+            if parts.len() == 3 {
+                Some((parts[1], parts[2]))
+            } else {
+                None
+            }
         })
         .collect();
 
@@ -754,8 +891,13 @@ fn run_write_mode(
         if !shifts.is_empty() {
             if let Ok(file_tags) = et.extract_info(file) {
                 for &(tag_name, shift_str) in &shifts {
-                    if let Some(current) = file_tags.iter().find(|t| t.name.to_lowercase() == tag_name.to_lowercase()) {
-                        if let Some(shifted) = exiftool_rs::exiftool::shift_datetime(&current.print_value, shift_str) {
+                    if let Some(current) = file_tags
+                        .iter()
+                        .find(|t| t.name.to_lowercase() == tag_name.to_lowercase())
+                    {
+                        if let Some(shifted) =
+                            exiftool_rs::exiftool::shift_datetime(&current.print_value, shift_str)
+                        {
                             et.set_new_value(tag_name, Some(&shifted));
                         }
                     }
@@ -769,8 +911,14 @@ fn run_write_mode(
             let path = Path::new(file);
             let parent = path.parent().unwrap_or(Path::new(""));
             let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("out");
-            let ext = path.extension().map(|e| format!(".{}", e.to_str().unwrap_or(""))).unwrap_or_default();
-            parent.join(format!("{}_exiftool_out{}", stem, ext)).to_string_lossy().to_string()
+            let ext = path
+                .extension()
+                .map(|e| format!(".{}", e.to_str().unwrap_or("")))
+                .unwrap_or_default();
+            parent
+                .join(format!("{}_exiftool_out{}", stem, ext))
+                .to_string_lossy()
+                .to_string()
         };
         match et.write_info(file, &dst) {
             Ok(n) => {
@@ -798,9 +946,14 @@ fn sort_files_by_tag(et: &ExifTool, files: &mut Vec<String>, tag_name: &str) {
     let mut tagged: Vec<(String, String)> = files
         .iter()
         .map(|f| {
-            let val = et.extract_info(f).ok()
-                .and_then(|tags| tags.iter().find(|t| t.name.to_lowercase() == tag_name.to_lowercase())
-                    .map(|t| t.print_value.clone()))
+            let val = et
+                .extract_info(f)
+                .ok()
+                .and_then(|tags| {
+                    tags.iter()
+                        .find(|t| t.name.to_lowercase() == tag_name.to_lowercase())
+                        .map(|t| t.print_value.clone())
+                })
                 .unwrap_or_default();
             (f.clone(), val)
         })
@@ -850,13 +1003,21 @@ fn print_text_full(
                         String::new()
                     };
                     if show_groups {
-                        println!("{}[{}] {} : {}", id_prefix, tag.group.family1, pad_display(&tag.name, 32), val);
+                        println!(
+                            "{}[{}] {} : {}",
+                            id_prefix,
+                            tag.group.family1,
+                            pad_display(&tag.name, 32),
+                            val
+                        );
                     } else if short_names {
                         println!("{}{} : {}", id_prefix, pad_display(&tag.name, 32), val);
                     } else {
                         // Apply i18n translation if -lang is set
                         let desc = if let Some(ref tr) = translations {
-                            tr.get(tag.name.as_str()).copied().unwrap_or(&tag.description)
+                            tr.get(tag.name.as_str())
+                                .copied()
+                                .unwrap_or(&tag.description)
                         } else {
                             &tag.description
                         };
@@ -873,17 +1034,18 @@ fn print_text_full(
     }
 }
 
-
 /// Filter files by a simple condition on tag values.
 /// Supports: '$TagName eq "value"', '$TagName ne "value"', '$TagName =~ /pattern/'
 fn filter_files_by_condition(et: &ExifTool, files: &[String], condition: &str) -> Vec<String> {
     let cond = condition.trim().trim_matches('\'').trim_matches('"');
-    files.iter().filter(|file| {
-        match et.extract_info(file.as_str()) {
+    files
+        .iter()
+        .filter(|file| match et.extract_info(file.as_str()) {
             Ok(tags) => evaluate_condition(&tags, cond),
             Err(_) => false,
-        }
-    }).cloned().collect()
+        })
+        .cloned()
+        .collect()
 }
 
 fn evaluate_condition(tags: &[exiftool_rs::Tag], condition: &str) -> bool {
@@ -897,9 +1059,17 @@ fn evaluate_condition(tags: &[exiftool_rs::Tag], condition: &str) -> bool {
 
     let rest = &cond[1..];
     let (tag_name, operator, value) = if let Some(pos) = rest.find(" eq ") {
-        (&rest[..pos], "eq", rest[pos + 4..].trim().trim_matches('"').trim_matches('\''))
+        (
+            &rest[..pos],
+            "eq",
+            rest[pos + 4..].trim().trim_matches('"').trim_matches('\''),
+        )
     } else if let Some(pos) = rest.find(" ne ") {
-        (&rest[..pos], "ne", rest[pos + 4..].trim().trim_matches('"').trim_matches('\''))
+        (
+            &rest[..pos],
+            "ne",
+            rest[pos + 4..].trim().trim_matches('"').trim_matches('\''),
+        )
     } else if let Some(pos) = rest.find(" =~ ") {
         (&rest[..pos], "=~", rest[pos + 4..].trim().trim_matches('/'))
     } else if let Some(pos) = rest.find(" !~ ") {
@@ -914,7 +1084,8 @@ fn evaluate_condition(tags: &[exiftool_rs::Tag], condition: &str) -> bool {
         return true; // Can't parse
     };
 
-    let tag_value = tags.iter()
+    let tag_value = tags
+        .iter()
         .find(|t| t.name.to_lowercase() == tag_name.to_lowercase())
         .map(|t| t.print_value.as_str())
         .unwrap_or("");
@@ -989,8 +1160,20 @@ fn print_formatted(et: &ExifTool, files: &[String], format: &str) {
                     }
                 }
                 // Also support $filename, $directory
-                output = output.replace("$filename", Path::new(file).file_name().and_then(|f| f.to_str()).unwrap_or(""));
-                output = output.replace("$directory", Path::new(file).parent().and_then(|p| p.to_str()).unwrap_or(""));
+                output = output.replace(
+                    "$filename",
+                    Path::new(file)
+                        .file_name()
+                        .and_then(|f| f.to_str())
+                        .unwrap_or(""),
+                );
+                output = output.replace(
+                    "$directory",
+                    Path::new(file)
+                        .parent()
+                        .and_then(|p| p.to_str())
+                        .unwrap_or(""),
+                );
                 // Clean up unreplaced variables
                 println!("{}", output);
             }
@@ -1039,7 +1222,12 @@ fn print_json_tags(tags: &[exiftool_rs::Tag], filename: &str, prepend_comma: boo
         } else if let Ok(f) = value_str.parse::<f64>() {
             println!("  \"{}\": {}{}", tag.name, f, comma);
         } else {
-            println!("  \"{}\": \"{}\"{}", tag.name, escape_json(value_str), comma);
+            println!(
+                "  \"{}\": \"{}\"{}",
+                tag.name,
+                escape_json(value_str),
+                comma
+            );
         }
     }
     print!("}}");
@@ -1078,10 +1266,14 @@ fn print_diff(et: &ExifTool, file1: &str, file2: &str) {
     let tags1 = et.extract_info(file1).unwrap_or_default();
     let tags2 = et.extract_info(file2).unwrap_or_default();
 
-    let map1: std::collections::HashMap<&str, &str> = tags1.iter()
-        .map(|t| (t.name.as_str(), t.print_value.as_str())).collect();
-    let map2: std::collections::HashMap<&str, &str> = tags2.iter()
-        .map(|t| (t.name.as_str(), t.print_value.as_str())).collect();
+    let map1: std::collections::HashMap<&str, &str> = tags1
+        .iter()
+        .map(|t| (t.name.as_str(), t.print_value.as_str()))
+        .collect();
+    let map2: std::collections::HashMap<&str, &str> = tags2
+        .iter()
+        .map(|t| (t.name.as_str(), t.print_value.as_str()))
+        .collect();
 
     let mut all_keys: Vec<&str> = map1.keys().chain(map2.keys()).copied().collect();
     all_keys.sort();
@@ -1137,7 +1329,11 @@ fn print_verbose(et: &ExifTool, file: &str, level: u8) {
             }
         } else {
             // IFD/MakerNote groups: show with structure
-            println!("  + [{} directory with {} entries]", group, group_tags.len());
+            println!(
+                "  + [{} directory with {} entries]",
+                group,
+                group_tags.len()
+            );
             for (idx, tag) in group_tags.iter().enumerate() {
                 if level >= 2 {
                     // -v2+: show tag index and group
@@ -1179,18 +1375,29 @@ fn print_html_dump(file: &str) {
     let dump_len = data.len().min(4096);
     for row in (0..dump_len).step_by(16) {
         let end = (row + 16).min(dump_len);
-        let hex: String = data[row..end].iter()
+        let hex: String = data[row..end]
+            .iter()
             .map(|b| format!("{:02x}", b))
             .collect::<Vec<_>>()
             .join(" ");
-        let ascii: String = data[row..end].iter()
-            .map(|&b| if b >= 0x20 && b < 0x7f { b as char } else { '.' })
+        let ascii: String = data[row..end]
+            .iter()
+            .map(|&b| {
+                if b >= 0x20 && b < 0x7f {
+                    b as char
+                } else {
+                    '.'
+                }
+            })
             .collect();
         println!("<tr><td class=\"offset\">{:08x}</td><td class=\"hex\">{:<48}</td><td class=\"ascii\">{}</td></tr>",
             row, hex, ascii);
     }
     if data.len() > 4096 {
-        println!("<tr><td colspan=\"3\">... ({} more bytes)</td></tr>", data.len() - 4096);
+        println!(
+            "<tr><td colspan=\"3\">... ({} more bytes)</td></tr>",
+            data.len() - 4096
+        );
     }
 
     println!("</table></body></html>");
@@ -1203,7 +1410,10 @@ fn scan_file_for_xmp(data: &[u8]) -> Option<Vec<exiftool_rs::Tag>> {
     let text = data;
 
     if let Some(start) = text.windows(marker.len()).position(|w| w == marker) {
-        if let Some(end_rel) = text[start..].windows(end_marker.len()).position(|w| w == end_marker) {
+        if let Some(end_rel) = text[start..]
+            .windows(end_marker.len())
+            .position(|w| w == end_marker)
+        {
             // Find the end of the <?xpacket end...?> tag
             let end = start + end_rel;
             if let Some(close) = text[end..].windows(2).position(|w| w == b"?>") {
@@ -1251,7 +1461,11 @@ fn print_csv(et: &ExifTool, files: &[String]) {
     for (file, row) in &all_results {
         print!("{}", escape_csv(file));
         for name in &all_tags {
-            let value = row.iter().find(|(n, _)| n == name).map(|(_, v)| v.as_str()).unwrap_or("");
+            let value = row
+                .iter()
+                .find(|(n, _)| n == name)
+                .map(|(_, v)| v.as_str())
+                .unwrap_or("");
             print!(",{}", escape_csv(value));
         }
         println!();
@@ -1269,8 +1483,14 @@ fn print_xml(et: &ExifTool, files: &[String]) {
                 println!("  <rdf:Description rdf:about='{}'>", escape_xml(file));
                 for tag in &tags {
                     let ns = tag.group.family0.to_lowercase();
-                    println!("    <et:{}:{} rdf:datatype='string'>{}</et:{}:{}>",
-                        ns, tag.name, escape_xml(&tag.print_value), ns, tag.name);
+                    println!(
+                        "    <et:{}:{} rdf:datatype='string'>{}</et:{}:{}>",
+                        ns,
+                        tag.name,
+                        escape_xml(&tag.print_value),
+                        ns,
+                        tag.name
+                    );
                 }
                 println!("  </rdf:Description>");
             }
@@ -1301,7 +1521,12 @@ fn collect_files(dir: &Path, ext_filter: &Option<String>, files: &mut Vec<String
             collect_files(&path, ext_filter, files);
         } else if path.is_file() {
             if let Some(ref ext) = ext_filter {
-                if path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) != Some(ext.clone()) {
+                if path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e.to_lowercase())
+                    != Some(ext.clone())
+                {
                     continue;
                 }
             }

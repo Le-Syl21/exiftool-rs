@@ -438,11 +438,15 @@ impl FileType {
             FileType::Pdf => "application/pdf",
             FileType::PostScript => "application/postscript",
             FileType::Doc => "application/msword",
-            FileType::Docx => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            FileType::Docx => {
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            }
             FileType::Xls => "application/vnd.ms-excel",
             FileType::Xlsx => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             FileType::Ppt => "application/vnd.ms-powerpoint",
-            FileType::Pptx => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            FileType::Pptx => {
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            }
             FileType::Numbers => "application/x-iwork-numbers-sffnumbers",
             FileType::Pages => "application/x-iwork-pages-sffpages",
             FileType::Key => "application/x-iwork-keynote-sffkey",
@@ -622,7 +626,9 @@ impl FileType {
             FileType::Icc => &["icc", "icm"],
             FileType::Html => &["html", "htm", "xhtml", "svg"],
             FileType::Exe => &["exe", "dll", "elf", "so", "dylib", "a", "macho", "o"],
-            FileType::Font => &["ttf", "otf", "woff", "woff2", "ttc", "dfont", "afm", "pfa", "pfb"],
+            FileType::Font => &[
+                "ttf", "otf", "woff", "woff2", "ttc", "dfont", "afm", "pfa", "pfb",
+            ],
             FileType::Swf => &["swf"],
             FileType::Dicom => &["dcm"],
             FileType::Fits => &["fits", "fit", "fts"],
@@ -722,52 +728,160 @@ impl FileType {
 
 static ALL_FILE_TYPES: &[FileType] = &[
     // Images - Standard
-    FileType::Jpeg, FileType::Tiff, FileType::Png, FileType::Gif, FileType::Bmp,
-    FileType::WebP, FileType::Heif, FileType::Avif, FileType::Psd, FileType::Jp2,
-    FileType::J2c, FileType::Jxl, FileType::Jxr, FileType::Flif, FileType::Bpg,
-    FileType::Exr, FileType::Ico, FileType::Jps,
+    FileType::Jpeg,
+    FileType::Tiff,
+    FileType::Png,
+    FileType::Gif,
+    FileType::Bmp,
+    FileType::WebP,
+    FileType::Heif,
+    FileType::Avif,
+    FileType::Psd,
+    FileType::Jp2,
+    FileType::J2c,
+    FileType::Jxl,
+    FileType::Jxr,
+    FileType::Flif,
+    FileType::Bpg,
+    FileType::Exr,
+    FileType::Ico,
+    FileType::Jps,
     // Images - Specialized
-    FileType::DjVu, FileType::Xcf, FileType::Pcx, FileType::Pict, FileType::Psp,
-    FileType::Hdr, FileType::Rwz, FileType::Btf, FileType::Mng, FileType::PhotoCd, FileType::Lif,
+    FileType::DjVu,
+    FileType::Xcf,
+    FileType::Pcx,
+    FileType::Pict,
+    FileType::Psp,
+    FileType::Hdr,
+    FileType::Rwz,
+    FileType::Btf,
+    FileType::Mng,
+    FileType::PhotoCd,
+    FileType::Lif,
     // RAW
-    FileType::Cr2, FileType::Cr3, FileType::Crw, FileType::Nef, FileType::Arw,
-    FileType::Sr2, FileType::Srf, FileType::Orf, FileType::Rw2, FileType::Dng,
-    FileType::Raf, FileType::Pef, FileType::Dcr, FileType::Mrw, FileType::Erf,
-    FileType::Fff, FileType::Iiq, FileType::Rwl, FileType::Mef, FileType::Srw,
-    FileType::X3f, FileType::Gpr, FileType::Arq, FileType::ThreeFR, FileType::Crm,
+    FileType::Cr2,
+    FileType::Cr3,
+    FileType::Crw,
+    FileType::Nef,
+    FileType::Arw,
+    FileType::Sr2,
+    FileType::Srf,
+    FileType::Orf,
+    FileType::Rw2,
+    FileType::Dng,
+    FileType::Raf,
+    FileType::Pef,
+    FileType::Dcr,
+    FileType::Mrw,
+    FileType::Erf,
+    FileType::Fff,
+    FileType::Iiq,
+    FileType::Rwl,
+    FileType::Mef,
+    FileType::Srw,
+    FileType::X3f,
+    FileType::Gpr,
+    FileType::Arq,
+    FileType::ThreeFR,
+    FileType::Crm,
     // Video
-    FileType::Mp4, FileType::QuickTime, FileType::Avi, FileType::Mkv, FileType::WebM,
-    FileType::Wmv, FileType::Asf, FileType::Flv, FileType::Mxf, FileType::M2ts,
-    FileType::Mpeg, FileType::ThreeGP, FileType::RealMedia, FileType::R3d,
-    FileType::Dvb, FileType::Lrv, FileType::Mqv, FileType::F4v, FileType::Wtv,
+    FileType::Mp4,
+    FileType::QuickTime,
+    FileType::Avi,
+    FileType::Mkv,
+    FileType::WebM,
+    FileType::Wmv,
+    FileType::Asf,
+    FileType::Flv,
+    FileType::Mxf,
+    FileType::M2ts,
+    FileType::Mpeg,
+    FileType::ThreeGP,
+    FileType::RealMedia,
+    FileType::R3d,
+    FileType::Dvb,
+    FileType::Lrv,
+    FileType::Mqv,
+    FileType::F4v,
+    FileType::Wtv,
     FileType::DvrMs,
     // Audio
-    FileType::Mp3, FileType::Flac, FileType::Ogg, FileType::Wav, FileType::Aiff,
-    FileType::Aac, FileType::Opus, FileType::Mpc, FileType::Ape, FileType::WavPack,
-    FileType::Ofr, FileType::Dsf, FileType::Audible, FileType::RealAudio,
-    FileType::Wma, FileType::M4a, FileType::Dss,
+    FileType::Mp3,
+    FileType::Flac,
+    FileType::Ogg,
+    FileType::Wav,
+    FileType::Aiff,
+    FileType::Aac,
+    FileType::Opus,
+    FileType::Mpc,
+    FileType::Ape,
+    FileType::WavPack,
+    FileType::Ofr,
+    FileType::Dsf,
+    FileType::Audible,
+    FileType::RealAudio,
+    FileType::Wma,
+    FileType::M4a,
+    FileType::Dss,
     // Documents
-    FileType::Pdf, FileType::PostScript, FileType::Doc, FileType::Docx,
-    FileType::Xls, FileType::Xlsx, FileType::Ppt, FileType::Pptx,
-    FileType::Numbers, FileType::Pages, FileType::Key,
-    FileType::InDesign, FileType::Rtf,
+    FileType::Pdf,
+    FileType::PostScript,
+    FileType::Doc,
+    FileType::Docx,
+    FileType::Xls,
+    FileType::Xlsx,
+    FileType::Ppt,
+    FileType::Pptx,
+    FileType::Numbers,
+    FileType::Pages,
+    FileType::Key,
+    FileType::InDesign,
+    FileType::Rtf,
     // Archives
-    FileType::Zip, FileType::Rar, FileType::SevenZ, FileType::Gzip,
+    FileType::Zip,
+    FileType::Rar,
+    FileType::SevenZ,
+    FileType::Gzip,
     // Metadata / Other
-    FileType::Xmp, FileType::Mie, FileType::Exv, FileType::Vrd, FileType::Dr4, FileType::Icc,
-    FileType::Html, FileType::Exe, FileType::Font, FileType::Swf,
-    FileType::Dicom, FileType::Fits,
-    FileType::Mrc, FileType::Moi, FileType::MacOs, FileType::Json,
-    FileType::Pcap, FileType::Pcapng,
+    FileType::Xmp,
+    FileType::Mie,
+    FileType::Exv,
+    FileType::Vrd,
+    FileType::Dr4,
+    FileType::Icc,
+    FileType::Html,
+    FileType::Exe,
+    FileType::Font,
+    FileType::Swf,
+    FileType::Dicom,
+    FileType::Fits,
+    FileType::Mrc,
+    FileType::Moi,
+    FileType::MacOs,
+    FileType::Json,
+    FileType::Pcap,
+    FileType::Pcapng,
     FileType::Svg,
-    FileType::Pgf, FileType::Xisf, FileType::Torrent, FileType::Mobi, FileType::SonyPmp,
-    FileType::Plist, FileType::Aae, FileType::KyoceraRaw,
+    FileType::Pgf,
+    FileType::Xisf,
+    FileType::Torrent,
+    FileType::Mobi,
+    FileType::SonyPmp,
+    FileType::Plist,
+    FileType::Aae,
+    FileType::KyoceraRaw,
     FileType::PortableFloatMap,
     FileType::Fpf,
     FileType::Lfp,
     // OpenDocument
-    FileType::Ods, FileType::Odt, FileType::Odp, FileType::Odg,
-    FileType::Odf, FileType::Odb, FileType::Odi, FileType::Odc,
+    FileType::Ods,
+    FileType::Odt,
+    FileType::Odp,
+    FileType::Odg,
+    FileType::Odf,
+    FileType::Odb,
+    FileType::Odi,
+    FileType::Odc,
     // CaptureOne
     FileType::Eip,
 ];
@@ -796,14 +910,18 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // GIF: "GIF87a" or "GIF89a"
-    if header.starts_with(b"GIF8") && header.len() >= 6 && (header[4] == b'7' || header[4] == b'9') {
+    if header.starts_with(b"GIF8") && header.len() >= 6 && (header[4] == b'7' || header[4] == b'9')
+    {
         return Some(FileType::Gif);
     }
 
     // Canon DR4: "IIII" + 04 00 04 00 (or 05 00 04 00)
-    if header.len() >= 8 && header.starts_with(b"IIII")
-        && (header[4] == 0x04 || header[4] == 0x05) && header[5] == 0x00
-        && header[6] == 0x04 && header[7] == 0x00
+    if header.len() >= 8
+        && header.starts_with(b"IIII")
+        && (header[4] == 0x04 || header[4] == 0x05)
+        && header[5] == 0x00
+        && header[6] == 0x04
+        && header[7] == 0x00
     {
         return Some(FileType::Dr4);
     }
@@ -815,8 +933,10 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
 
     // TIFF / TIFF-based RAW: "II" or "MM" + magic 42
     if header.len() >= 4 {
-        let is_le = header[0] == b'I' && header[1] == b'I' && header[2] == 0x2A && header[3] == 0x00;
-        let is_be = header[0] == b'M' && header[1] == b'M' && header[2] == 0x00 && header[3] == 0x2A;
+        let is_le =
+            header[0] == b'I' && header[1] == b'I' && header[2] == 0x2A && header[3] == 0x00;
+        let is_be =
+            header[0] == b'M' && header[1] == b'M' && header[2] == 0x00 && header[3] == 0x2A;
         if is_le || is_be {
             // CR2: "II" + "CR" at offset 8
             if header.len() >= 10 && is_le && header[8] == b'C' && header[9] == b'R' {
@@ -841,8 +961,10 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
             return Some(FileType::Tiff);
         }
         // BigTIFF: "II" + 0x2B or "MM" + 0x002B
-        let is_btf_le = header[0] == b'I' && header[1] == b'I' && header[2] == 0x2B && header[3] == 0x00;
-        let is_btf_be = header[0] == b'M' && header[1] == b'M' && header[2] == 0x00 && header[3] == 0x2B;
+        let is_btf_le =
+            header[0] == b'I' && header[1] == b'I' && header[2] == 0x2B && header[3] == 0x00;
+        let is_btf_be =
+            header[0] == b'M' && header[1] == b'M' && header[2] == 0x00 && header[3] == 0x2B;
         if is_btf_le || is_btf_be {
             return Some(FileType::Btf);
         }
@@ -902,7 +1024,12 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // ICO: 00 00 01 00 (icon) or 00 00 02 00 (cursor)
-    if header.len() >= 4 && header[0] == 0 && header[1] == 0 && (header[2] == 1 || header[2] == 2) && header[3] == 0 {
+    if header.len() >= 4
+        && header[0] == 0
+        && header[1] == 0
+        && (header[2] == 1 || header[2] == 2)
+        && header[3] == 0
+    {
         return Some(FileType::Ico);
     }
 
@@ -932,7 +1059,11 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // Portable Float Map: "PF\n" (color) or "Pf\n" (grayscale)
-    if header.len() >= 3 && header[0] == b'P' && (header[1] == b'F' || header[1] == b'f') && header[2] == b'\n' {
+    if header.len() >= 3
+        && header[0] == b'P'
+        && (header[1] == b'F' || header[1] == b'f')
+        && header[2] == b'\n'
+    {
         return Some(FileType::PortableFloatMap);
     }
 
@@ -943,9 +1074,13 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
 
     // LIF (Leica Image Format): 0x70 0x00 0x00 0x00 + 4 bytes size + 0x2A + 4 bytes + '<' 0x00
     if header.len() >= 15
-        && header[0] == 0x70 && header[1] == 0x00 && header[2] == 0x00 && header[3] == 0x00
+        && header[0] == 0x70
+        && header[1] == 0x00
+        && header[2] == 0x00
+        && header[3] == 0x00
         && header[8] == 0x2A
-        && header[13] == b'<' && header[14] == 0x00
+        && header[13] == b'<'
+        && header[14] == 0x00
     {
         return Some(FileType::Lif);
     }
@@ -956,10 +1091,7 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // JPEG XR / HD Photo: "II" + 0xBC byte at offset 2 (TIFF-like but identifier 0xBC)
-    if header.len() >= 4
-        && header[0] == b'I' && header[1] == b'I'
-        && (header[2] & 0xFF) == 0xBC
-    {
+    if header.len() >= 4 && header[0] == b'I' && header[1] == b'I' && (header[2] & 0xFF) == 0xBC {
         return Some(FileType::Jxr);
     }
 
@@ -971,8 +1103,11 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // Canon CRW: "II" + 0x1A00 + "HEAPCCDR"
-    if header.len() >= 14 && header[0] == b'I' && header[1] == b'I'
-        && header[2] == 0x1A && header[3] == 0x00
+    if header.len() >= 14
+        && header[0] == b'I'
+        && header[1] == b'I'
+        && header[2] == 0x1A
+        && header[3] == 0x00
         && &header[6..14] == b"HEAPCCDR"
     {
         return Some(FileType::Crw);
@@ -989,7 +1124,12 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // Panasonic RW2: "IIU" (special TIFF variant)
-    if header.len() >= 4 && header[0] == b'I' && header[1] == b'I' && header[2] == 0x55 && header[3] == 0x00 {
+    if header.len() >= 4
+        && header[0] == b'I'
+        && header[1] == b'I'
+        && header[2] == 0x55
+        && header[3] == 0x00
+    {
         return Some(FileType::Rw2);
     }
 
@@ -999,7 +1139,10 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     if header.len() >= 12 && &header[4..8] == b"ftyp" {
         let brand = &header[8..12];
         // HEIF/HEIC
-        if brand == b"heic" || brand == b"mif1" || brand == b"heim" || brand == b"heis"
+        if brand == b"heic"
+            || brand == b"mif1"
+            || brand == b"heim"
+            || brand == b"heis"
             || brand == b"msf1"
         {
             return Some(FileType::Heif);
@@ -1038,8 +1181,12 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // QuickTime without ftyp: check for common atom types at offset 4
     if header.len() >= 8 {
         let atom_type = &header[4..8];
-        if atom_type == b"moov" || atom_type == b"mdat" || atom_type == b"wide"
-            || atom_type == b"free" || atom_type == b"pnot" || atom_type == b"skip"
+        if atom_type == b"moov"
+            || atom_type == b"mdat"
+            || atom_type == b"wide"
+            || atom_type == b"free"
+            || atom_type == b"pnot"
+            || atom_type == b"skip"
         {
             return Some(FileType::QuickTime);
         }
@@ -1078,7 +1225,10 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // MPEG: 00 00 01 Bx (system header) or 00 00 01 BA (pack start)
-    if header.len() >= 4 && header[0] == 0 && header[1] == 0 && header[2] == 1
+    if header.len() >= 4
+        && header[0] == 0
+        && header[1] == 0
+        && header[2] == 1
         && (header[3] == 0xBA || header[3] == 0xBB || (header[3] & 0xF0) == 0xE0)
     {
         return Some(FileType::Mpeg);
@@ -1113,9 +1263,9 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // AAC ADTS: sync=0xFFF (12 bits), then layer bits 13-14 must be 00
     // 0xFF F0 or 0xFF F1 (MPEG-2 AAC) or 0xFF F8/F9 (MPEG-4 AAC with CRC/no-CRC)
     // Distinguishing from MP3: layer bits are 00 for AAC, non-zero for MP3
-    if header.len() >= 2 && header[0] == 0xFF
-        && (header[1] == 0xF0 || header[1] == 0xF1
-            || header[1] == 0xF8 || header[1] == 0xF9)
+    if header.len() >= 2
+        && header[0] == 0xFF
+        && (header[1] == 0xF0 || header[1] == 0xF1 || header[1] == 0xF8 || header[1] == 0xF9)
     {
         return Some(FileType::Aac);
     }
@@ -1172,7 +1322,12 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // RealAudio: ".ra\xFD"
-    if header.len() >= 4 && header[0] == b'.' && header[1] == b'r' && header[2] == b'a' && header[3] == 0xFD {
+    if header.len() >= 4
+        && header[0] == b'.'
+        && header[1] == b'r'
+        && header[2] == b'a'
+        && header[3] == 0xFD
+    {
         return Some(FileType::RealAudio);
     }
 
@@ -1237,15 +1392,20 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // PCAPNG: 0x0A 0x0D 0x0D 0x0A (Section Header Block)
-    if header.len() >= 4 && header[0] == 0x0A && header[1] == 0x0D && header[2] == 0x0D && header[3] == 0x0A {
+    if header.len() >= 4
+        && header[0] == 0x0A
+        && header[1] == 0x0D
+        && header[2] == 0x0D
+        && header[3] == 0x0A
+    {
         return Some(FileType::Pcapng);
     }
 
     // PCAP: D4 C3 B2 A1 (little-endian) or A1 B2 C3 D4 (big-endian)
-    if header.len() >= 4 && (
-        (header[0] == 0xD4 && header[1] == 0xC3 && header[2] == 0xB2 && header[3] == 0xA1) ||
-        (header[0] == 0xA1 && header[1] == 0xB2 && header[2] == 0xC3 && header[3] == 0xD4)
-    ) {
+    if header.len() >= 4
+        && ((header[0] == 0xD4 && header[1] == 0xC3 && header[2] == 0xB2 && header[3] == 0xA1)
+            || (header[0] == 0xA1 && header[1] == 0xB2 && header[2] == 0xC3 && header[3] == 0xD4))
+    {
         return Some(FileType::Pcap);
     }
 
@@ -1265,13 +1425,14 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
         return Some(FileType::Dicom);
     }
 
-
     // MRC: axis values at offset 64-75 (each 1/2/3) and "MAP" at offset 208
     if header.len() >= 214 {
         let ax1 = u32::from_le_bytes([header[64], header[65], header[66], header[67]]);
         let ax2 = u32::from_le_bytes([header[68], header[69], header[70], header[71]]);
         let ax3 = u32::from_le_bytes([header[72], header[73], header[74], header[75]]);
-        if (1..=3).contains(&ax1) && (1..=3).contains(&ax2) && (1..=3).contains(&ax3)
+        if (1..=3).contains(&ax1)
+            && (1..=3).contains(&ax2)
+            && (1..=3).contains(&ax3)
             && &header[208..211] == b"MAP"
         {
             let ms0 = header[212];
@@ -1309,14 +1470,18 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
         if preview.windows(5).any(|w| w == b"<html" || w == b"<HTML") {
             return Some(FileType::Html); // XHTML
         }
-        if preview.windows(10).any(|w| w == b"<x:xmpmeta") || preview.windows(9).any(|w| w == b"<?xpacket") {
+        if preview.windows(10).any(|w| w == b"<x:xmpmeta")
+            || preview.windows(9).any(|w| w == b"<?xpacket")
+        {
             return Some(FileType::Xmp);
         }
         if preview.windows(4).any(|w| w == b"<rdf" || w == b"<RDF") {
             return Some(FileType::Xmp);
         }
         // Apple PLIST
-        if preview.windows(7).any(|w| w == b"<plist") || preview.windows(20).any(|w| w == b"DTD PLIST") {
+        if preview.windows(7).any(|w| w == b"<plist")
+            || preview.windows(20).any(|w| w == b"DTD PLIST")
+        {
             return Some(FileType::Plist);
         }
         // Default XML → XMP (most XML files ExifTool handles contain XMP)
@@ -1324,8 +1489,11 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // HTML
-    if header.starts_with(b"<!DOCTYPE html") || header.starts_with(b"<!doctype html")
-        || header.starts_with(b"<!DOCTYPE HTML") || header.starts_with(b"<html") || header.starts_with(b"<HTML")
+    if header.starts_with(b"<!DOCTYPE html")
+        || header.starts_with(b"<!doctype html")
+        || header.starts_with(b"<!DOCTYPE HTML")
+        || header.starts_with(b"<html")
+        || header.starts_with(b"<HTML")
     {
         return Some(FileType::Html);
     }
@@ -1360,7 +1528,9 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // TrueType font: 00 01 00 00 or "true" or "typ1"
-    if (header.starts_with(&[0x00, 0x01, 0x00, 0x00]) || header.starts_with(b"true") || header.starts_with(b"typ1"))
+    if (header.starts_with(&[0x00, 0x01, 0x00, 0x00])
+        || header.starts_with(b"true")
+        || header.starts_with(b"typ1"))
         && header.len() >= 12
     {
         return Some(FileType::Font);
@@ -1409,8 +1579,10 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     // Sony PMP: magic at offset 8-11 is 00 00 00 7C (header length = 124)
     // and byte 4 is 0x00 (part of file size field)
     if header.len() >= 12
-        && header[8] == 0x00 && header[9] == 0x00
-        && header[10] == 0x00 && header[11] == 0x7C
+        && header[8] == 0x00
+        && header[9] == 0x00
+        && header[10] == 0x00
+        && header[11] == 0x7C
     {
         return Some(FileType::SonyPmp);
     }
@@ -1537,22 +1709,34 @@ mod tests {
 
     #[test]
     fn test_detect_rar() {
-        assert_eq!(detect_from_magic(b"Rar!\x1A\x07\x01\x00"), Some(FileType::Rar));
+        assert_eq!(
+            detect_from_magic(b"Rar!\x1A\x07\x01\x00"),
+            Some(FileType::Rar)
+        );
     }
 
     #[test]
     fn test_detect_7z() {
-        assert_eq!(detect_from_magic(&[0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C]), Some(FileType::SevenZ));
+        assert_eq!(
+            detect_from_magic(&[0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C]),
+            Some(FileType::SevenZ)
+        );
     }
 
     #[test]
     fn test_detect_gzip() {
-        assert_eq!(detect_from_magic(&[0x1F, 0x8B, 0x08, 0x00]), Some(FileType::Gzip));
+        assert_eq!(
+            detect_from_magic(&[0x1F, 0x8B, 0x08, 0x00]),
+            Some(FileType::Gzip)
+        );
     }
 
     #[test]
     fn test_detect_raf() {
-        assert_eq!(detect_from_magic(b"FUJIFILMCCD-RAW 0201"), Some(FileType::Raf));
+        assert_eq!(
+            detect_from_magic(b"FUJIFILMCCD-RAW 0201"),
+            Some(FileType::Raf)
+        );
     }
 
     #[test]
@@ -1595,6 +1779,10 @@ mod tests {
 
     #[test]
     fn test_total_format_count() {
-        assert!(FileType::all().len() >= 100, "Expected 100+ formats, got {}", FileType::all().len());
+        assert!(
+            FileType::all().len() >= 100,
+            "Expected 100+ formats, got {}",
+            FileType::all().len()
+        );
     }
 }

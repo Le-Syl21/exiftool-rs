@@ -66,7 +66,9 @@ fn main() {
 
 #[cfg(not(feature = "gui"))]
 fn main() {
-    eprintln!("GUI not available. Build with: cargo build --release --features gui --bin exiftool-rs-gui");
+    eprintln!(
+        "GUI not available. Build with: cargo build --release --features gui --bin exiftool-rs-gui"
+    );
     std::process::exit(1);
 }
 
@@ -185,14 +187,50 @@ impl App {
                 // Filter by supported extensions
                 if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
                     let ext_lower = ext.to_lowercase();
-                    matches!(ext_lower.as_str(),
-                        "jpg" | "jpeg" | "tif" | "tiff" | "png" | "gif" | "bmp" | "webp" |
-                        "cr2" | "cr3" | "crw" | "nef" | "dng" | "arw" | "orf" | "raf" |
-                        "rw2" | "pef" | "x3f" | "iiq" | "mrw" | "sr2" | "srf" |
-                        "mp4" | "mov" | "avi" | "mkv" | "mts" | "m2ts" |
-                        "mp3" | "flac" | "wav" | "ogg" | "aac" |
-                        "pdf" | "psd" | "heif" | "heic" | "avif" |
-                        "xmp" | "mie" | "exv"
+                    matches!(
+                        ext_lower.as_str(),
+                        "jpg"
+                            | "jpeg"
+                            | "tif"
+                            | "tiff"
+                            | "png"
+                            | "gif"
+                            | "bmp"
+                            | "webp"
+                            | "cr2"
+                            | "cr3"
+                            | "crw"
+                            | "nef"
+                            | "dng"
+                            | "arw"
+                            | "orf"
+                            | "raf"
+                            | "rw2"
+                            | "pef"
+                            | "x3f"
+                            | "iiq"
+                            | "mrw"
+                            | "sr2"
+                            | "srf"
+                            | "mp4"
+                            | "mov"
+                            | "avi"
+                            | "mkv"
+                            | "mts"
+                            | "m2ts"
+                            | "mp3"
+                            | "flac"
+                            | "wav"
+                            | "ogg"
+                            | "aac"
+                            | "pdf"
+                            | "psd"
+                            | "heif"
+                            | "heic"
+                            | "avif"
+                            | "xmp"
+                            | "mie"
+                            | "exv"
                     )
                 } else {
                     false
@@ -210,16 +248,16 @@ impl App {
     }
 
     fn load_current(&mut self) {
-        if self.current >= self.files.len() { return; }
+        if self.current >= self.files.len() {
+            return;
+        }
         let path = self.files[self.current].clone();
         self.pending_edits.clear();
         self.editing = None;
         self.thumbnail = None;
 
         // Detect file type for writable tags
-        let ext = path.extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("");
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         self.writable_tags = if let Some(ft) = exiftool_rs::file_type::detect_from_extension(ext) {
             Some(ExifTool::writable_tags(ft))
         } else {
@@ -261,7 +299,9 @@ impl App {
     }
 
     fn navigate(&mut self, delta: isize) {
-        if self.files.is_empty() { return; }
+        if self.files.is_empty() {
+            return;
+        }
         let new = self.current as isize + delta;
         if new >= 0 && (new as usize) < self.files.len() {
             self.current = new as usize;
@@ -289,7 +329,7 @@ impl App {
 
     fn is_tag_writable(&self, tag_name: &str) -> bool {
         match &self.writable_tags {
-            None => false, // no file loaded
+            None => false,      // no file loaded
             Some(None) => true, // open-ended format (PNG, FLAC, MKV...)
             Some(Some(set)) => set.contains(tag_name.to_lowercase().as_str()),
         }
@@ -306,13 +346,17 @@ impl eframe::App for App {
 
             // Load Noto fonts from noto-fonts-dl (downloaded at build time, XZ-compressed)
             for (name, data) in noto_fonts_dl::load_fonts() {
-                fonts.font_data.insert(name.clone(),
-                    std::sync::Arc::new(egui::FontData::from_owned(data.clone())));
-                fonts.families
+                fonts.font_data.insert(
+                    name.clone(),
+                    std::sync::Arc::new(egui::FontData::from_owned(data.clone())),
+                );
+                fonts
+                    .families
                     .entry(egui::FontFamily::Proportional)
                     .or_default()
                     .push(name.clone());
-                fonts.families
+                fonts
+                    .families
                     .entry(egui::FontFamily::Monospace)
                     .or_default()
                     .push(name.clone());
@@ -346,8 +390,12 @@ impl eframe::App for App {
 
         // Keyboard navigation
         ctx.input(|i| {
-            if i.key_pressed(egui::Key::ArrowLeft) { self.navigate(-1); }
-            if i.key_pressed(egui::Key::ArrowRight) { self.navigate(1); }
+            if i.key_pressed(egui::Key::ArrowLeft) {
+                self.navigate(-1);
+            }
+            if i.key_pressed(egui::Key::ArrowRight) {
+                self.navigate(1);
+            }
             if i.key_pressed(egui::Key::Home) {
                 self.current = 0;
                 self.load_current();
@@ -363,9 +411,11 @@ impl eframe::App for App {
         // Top toolbar
         egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "open"))
+                if ui
+                    .button(exiftool_rs::i18n::ui_text(&self.lang, "open"))
                     .on_hover_text(exiftool_rs::i18n::ui_text(&self.lang, "tooltip_open"))
-                    .clicked() {
+                    .clicked()
+                {
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         if let Some(parent) = path.parent() {
                             self.open_folder(parent);
@@ -376,33 +426,44 @@ impl eframe::App for App {
                         }
                     }
                 }
-                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "folder"))
+                if ui
+                    .button(exiftool_rs::i18n::ui_text(&self.lang, "folder"))
                     .on_hover_text(exiftool_rs::i18n::ui_text(&self.lang, "tooltip_folder"))
-                    .clicked() {
+                    .clicked()
+                {
                     if let Some(path) = rfd::FileDialog::new().pick_folder() {
                         self.open_folder(&path);
                     }
                 }
                 // Show flash feedback on copy/save buttons
-                let is_flashing = self.flash_until.map_or(false, |t| t > std::time::Instant::now());
+                let is_flashing = self
+                    .flash_until
+                    .map_or(false, |t| t > std::time::Instant::now());
                 if is_flashing {
                     ctx.request_repaint();
                 }
 
-                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "copy"))
+                if ui
+                    .button(exiftool_rs::i18n::ui_text(&self.lang, "copy"))
                     .on_hover_text(exiftool_rs::i18n::ui_text(&self.lang, "tooltip_copy"))
-                    .clicked() {
-                    let text: String = self.tags.iter()
+                    .clicked()
+                {
+                    let text: String = self
+                        .tags
+                        .iter()
                         .map(|t| format!("{}: {}", t.name, t.print_value))
                         .collect::<Vec<_>>()
                         .join("\n");
                     ctx.copy_text(text);
                     self.status = exiftool_rs::i18n::ui_text(&self.lang, "copied").to_string();
-                    self.flash_until = Some(std::time::Instant::now() + std::time::Duration::from_millis(800));
+                    self.flash_until =
+                        Some(std::time::Instant::now() + std::time::Duration::from_millis(800));
                 }
-                if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "save"))
+                if ui
+                    .button(exiftool_rs::i18n::ui_text(&self.lang, "save"))
                     .on_hover_text(exiftool_rs::i18n::ui_text(&self.lang, "tooltip_save"))
-                    .clicked() {
+                    .clicked()
+                {
                     if !self.pending_edits.is_empty() {
                         if let Some(path) = self.files.get(self.current) {
                             let path_str = path.to_string_lossy().to_string();
@@ -412,13 +473,24 @@ impl eframe::App for App {
                             }
                             match et.write_info(&path_str, &path_str) {
                                 Ok(_) => {
-                                    self.status = format!("{} {}", self.pending_edits.len(), exiftool_rs::i18n::ui_text(&self.lang, "saved"));
+                                    self.status = format!(
+                                        "{} {}",
+                                        self.pending_edits.len(),
+                                        exiftool_rs::i18n::ui_text(&self.lang, "saved")
+                                    );
                                     self.pending_edits.clear();
                                     self.load_current();
-                                    self.flash_until = Some(std::time::Instant::now() + std::time::Duration::from_millis(800));
+                                    self.flash_until = Some(
+                                        std::time::Instant::now()
+                                            + std::time::Duration::from_millis(800),
+                                    );
                                 }
                                 Err(e) => {
-                                    self.status = format!("{}: {}", exiftool_rs::i18n::ui_text(&self.lang, "save_error"), e);
+                                    self.status = format!(
+                                        "{}: {}",
+                                        exiftool_rs::i18n::ui_text(&self.lang, "save_error"),
+                                        e
+                                    );
                                 }
                             }
                         }
@@ -430,7 +502,8 @@ impl eframe::App for App {
                 // Language selector
                 let langs: Vec<(&str, &str)> = self.languages.clone();
                 let current_lang = self.lang.clone();
-                let current_lang_name = langs.iter()
+                let current_lang_name = langs
+                    .iter()
                     .find(|(c, _)| *c == current_lang)
                     .map(|(_, n)| *n)
                     .unwrap_or("English");
@@ -449,7 +522,10 @@ impl eframe::App for App {
                 }
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.small_button(exiftool_rs::i18n::ui_text(&self.lang, "about")).clicked() {
+                    if ui
+                        .small_button(exiftool_rs::i18n::ui_text(&self.lang, "about"))
+                        .clicked()
+                    {
                         self.show_about = true;
                     }
                 });
@@ -469,13 +545,21 @@ impl eframe::App for App {
                         self.navigate(-1);
                     }
 
-                    let filename = self.files.get(self.current)
+                    let filename = self
+                        .files
+                        .get(self.current)
                         .and_then(|p| p.file_name())
                         .map(|n| n.to_string_lossy().to_string())
                         .unwrap_or_default();
-                    ui.label(egui::RichText::new(
-                        format!("  {}  ({}/{})  ", filename, self.current + 1, self.files.len())
-                    ).strong());
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "  {}  ({}/{})  ",
+                            filename,
+                            self.current + 1,
+                            self.files.len()
+                        ))
+                        .strong(),
+                    );
 
                     if ui.add_enabled(can_next, egui::Button::new("▶")).clicked() {
                         self.navigate(1);
@@ -486,27 +570,42 @@ impl eframe::App for App {
             // Editable hint bar
             egui::TopBottomPanel::top("editable_hint").show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new(
-                        exiftool_rs::i18n::ui_text(&self.lang, "editable_hint")
-                    ).color(egui::Color32::from_rgb(100, 200, 100)));
+                    ui.label(
+                        egui::RichText::new(exiftool_rs::i18n::ui_text(
+                            &self.lang,
+                            "editable_hint",
+                        ))
+                        .color(egui::Color32::from_rgb(100, 200, 100)),
+                    );
                 });
             });
         }
 
         // Status bar
-        let is_flashing = self.flash_until.map_or(false, |t| t > std::time::Instant::now());
+        let is_flashing = self
+            .flash_until
+            .map_or(false, |t| t > std::time::Instant::now());
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if is_flashing {
-                    ui.label(egui::RichText::new(&self.status).color(egui::Color32::GREEN).strong());
+                    ui.label(
+                        egui::RichText::new(&self.status)
+                            .color(egui::Color32::GREEN)
+                            .strong(),
+                    );
                 } else {
                     ui.label(&self.status);
                 }
                 if !self.pending_edits.is_empty() {
                     ui.separator();
-                    ui.label(egui::RichText::new(
-                        format!("{} {}", self.pending_edits.len(), exiftool_rs::i18n::ui_text(&self.lang, "pending"))
-                    ).color(egui::Color32::YELLOW));
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{} {}",
+                            self.pending_edits.len(),
+                            exiftool_rs::i18n::ui_text(&self.lang, "pending")
+                        ))
+                        .color(egui::Color32::YELLOW),
+                    );
                 }
             });
         });
@@ -521,10 +620,10 @@ impl eframe::App for App {
                     [w as usize, h as usize],
                     &rgba.into_raw(),
                 );
-                self.icon_texture = Some(ctx.load_texture("icon", color_image, egui::TextureOptions::LINEAR));
+                self.icon_texture =
+                    Some(ctx.load_texture("icon", color_image, egui::TextureOptions::LINEAR));
             }
         }
-
 
         // Main panel: tags
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -533,7 +632,8 @@ impl eframe::App for App {
                 let panel_rect = ui.available_rect_before_wrap();
                 let logo_size = panel_rect.height().min(panel_rect.width()) * 0.5;
                 let center = panel_rect.center();
-                let logo_rect = egui::Rect::from_center_size(center, egui::vec2(logo_size, logo_size));
+                let logo_rect =
+                    egui::Rect::from_center_size(center, egui::vec2(logo_size, logo_size));
                 ui.painter().image(
                     tex.id(),
                     logo_rect,
@@ -547,77 +647,100 @@ impl eframe::App for App {
             }
 
             ui.with_layout(egui::Layout::top_down(egui::Align::LEFT), |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                let groups = self.groups.clone();
-                for (group_name, group_tags) in &groups {
-                    let is_collapsed = self.collapsed.contains(group_name);
-                    let header = if is_collapsed {
-                        format!("▶ {} ({})", group_name, group_tags.len())
-                    } else {
-                        format!("▼ {} ({})", group_name, group_tags.len())
-                    };
-
-                    if ui.selectable_label(false, egui::RichText::new(&header).strong().size(14.0)).clicked() {
-                        if is_collapsed {
-                            self.collapsed.remove(group_name);
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    let groups = self.groups.clone();
+                    for (group_name, group_tags) in &groups {
+                        let is_collapsed = self.collapsed.contains(group_name);
+                        let header = if is_collapsed {
+                            format!("▶ {} ({})", group_name, group_tags.len())
                         } else {
-                            self.collapsed.insert(group_name.clone());
+                            format!("▼ {} ({})", group_name, group_tags.len())
+                        };
+
+                        if ui
+                            .selectable_label(
+                                false,
+                                egui::RichText::new(&header).strong().size(14.0),
+                            )
+                            .clicked()
+                        {
+                            if is_collapsed {
+                                self.collapsed.remove(group_name);
+                            } else {
+                                self.collapsed.insert(group_name.clone());
+                            }
+                        }
+
+                        if !is_collapsed {
+                            egui::Grid::new(format!("grid_{}", group_name))
+                                .num_columns(2)
+                                .spacing([20.0, 4.0])
+                                .striped(true)
+                                .show(ui, |ui| {
+                                    for tag in group_tags {
+                                        let desc = self.translate(&tag.name, &tag.description);
+
+                                        // Check if this tag has a pending edit
+                                        let display_value = self
+                                            .pending_edits
+                                            .iter()
+                                            .find(|(name, _)| name == &tag.name)
+                                            .map(|(_, v)| v.as_str())
+                                            .unwrap_or(&tag.print_value);
+
+                                        let is_edited =
+                                            self.pending_edits.iter().any(|(n, _)| n == &tag.name);
+
+                                        // Tag name : value (with separator)
+                                        ui.label(
+                                            egui::RichText::new(format!("{} :", desc))
+                                                .color(egui::Color32::LIGHT_BLUE)
+                                                .strong(),
+                                        );
+
+                                        // Value — double-click to edit
+                                        let writable = self.is_tag_writable(&tag.name);
+                                        let value_text = if is_edited {
+                                            egui::RichText::new(display_value)
+                                                .color(egui::Color32::YELLOW)
+                                                .strong()
+                                        } else if writable {
+                                            egui::RichText::new(display_value)
+                                                .color(egui::Color32::from_rgb(100, 200, 100))
+                                                .strong()
+                                        } else {
+                                            egui::RichText::new(display_value)
+                                                .color(egui::Color32::from_rgb(200, 100, 100))
+                                                .strong()
+                                        };
+
+                                        let response = ui.label(value_text);
+
+                                        if response.double_clicked()
+                                            && self.is_tag_writable(&tag.name)
+                                        {
+                                            self.editing = Some(EditState {
+                                                tag_name: tag.name.clone(),
+                                                original_value: tag.print_value.clone(),
+                                                new_value: tag.print_value.clone(),
+                                            });
+                                        }
+
+                                        // Show "read-only" cursor for non-writable tags
+                                        if response.hovered() && !self.is_tag_writable(&tag.name) {
+                                            response.on_hover_text(exiftool_rs::i18n::ui_text(
+                                                &self.lang,
+                                                "read_only",
+                                            ));
+                                        }
+
+                                        ui.end_row();
+                                    }
+                                });
+                            ui.add_space(8.0);
                         }
                     }
-
-                    if !is_collapsed {
-                        egui::Grid::new(format!("grid_{}", group_name))
-                            .num_columns(2)
-                            .spacing([20.0, 4.0])
-                            .striped(true)
-                            .show(ui, |ui| {
-                                for tag in group_tags {
-                                    let desc = self.translate(&tag.name, &tag.description);
-
-                                    // Check if this tag has a pending edit
-                                    let display_value = self.pending_edits.iter()
-                                        .find(|(name, _)| name == &tag.name)
-                                        .map(|(_, v)| v.as_str())
-                                        .unwrap_or(&tag.print_value);
-
-                                    let is_edited = self.pending_edits.iter().any(|(n, _)| n == &tag.name);
-
-                                    // Tag name : value (with separator)
-                                    ui.label(egui::RichText::new(format!("{} :", desc)).color(egui::Color32::LIGHT_BLUE).strong());
-
-                                    // Value — double-click to edit
-                                    let writable = self.is_tag_writable(&tag.name);
-                                    let value_text = if is_edited {
-                                        egui::RichText::new(display_value).color(egui::Color32::YELLOW).strong()
-                                    } else if writable {
-                                        egui::RichText::new(display_value).color(egui::Color32::from_rgb(100, 200, 100)).strong()
-                                    } else {
-                                        egui::RichText::new(display_value).color(egui::Color32::from_rgb(200, 100, 100)).strong()
-                                    };
-
-                                    let response = ui.label(value_text);
-
-                                    if response.double_clicked() && self.is_tag_writable(&tag.name) {
-                                        self.editing = Some(EditState {
-                                            tag_name: tag.name.clone(),
-                                            original_value: tag.print_value.clone(),
-                                            new_value: tag.print_value.clone(),
-                                        });
-                                    }
-
-                                    // Show "read-only" cursor for non-writable tags
-                                    if response.hovered() && !self.is_tag_writable(&tag.name) {
-                                        response.on_hover_text(exiftool_rs::i18n::ui_text(&self.lang, "read_only"));
-                                    }
-
-                                    ui.end_row();
-                                }
-                            });
-                        ui.add_space(8.0);
-                    }
-                }
-            });
-
+                });
             });
         });
 
@@ -625,31 +748,49 @@ impl eframe::App for App {
         let mut close_edit = false;
         if let Some(ref mut edit) = self.editing {
             let mut open = true;
-            egui::Window::new(format!("{}: {}", exiftool_rs::i18n::ui_text(&self.lang, "edit"), edit.tag_name))
-                .open(&mut open)
-                .collapsible(false)
-                .resizable(false)
-                .show(ctx, |ui| {
-                    ui.label(format!("{}: {}", exiftool_rs::i18n::ui_text(&self.lang, "original"), edit.original_value));
-                    ui.add_space(4.0);
-                    let response = ui.text_edit_singleline(&mut edit.new_value);
+            egui::Window::new(format!(
+                "{}: {}",
+                exiftool_rs::i18n::ui_text(&self.lang, "edit"),
+                edit.tag_name
+            ))
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .show(ctx, |ui| {
+                ui.label(format!(
+                    "{}: {}",
+                    exiftool_rs::i18n::ui_text(&self.lang, "original"),
+                    edit.original_value
+                ));
+                ui.add_space(4.0);
+                let response = ui.text_edit_singleline(&mut edit.new_value);
 
-                    ui.add_space(8.0);
-                    ui.horizontal(|ui| {
-                        if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "ok")).clicked() || (response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter))) {
-                            if edit.new_value != edit.original_value {
-                                // Remove any existing edit for this tag
-                                self.pending_edits.retain(|(n, _)| n != &edit.tag_name);
-                                self.pending_edits.push((edit.tag_name.clone(), edit.new_value.clone()));
-                            }
-                            close_edit = true;
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if ui
+                        .button(exiftool_rs::i18n::ui_text(&self.lang, "ok"))
+                        .clicked()
+                        || (response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)))
+                    {
+                        if edit.new_value != edit.original_value {
+                            // Remove any existing edit for this tag
+                            self.pending_edits.retain(|(n, _)| n != &edit.tag_name);
+                            self.pending_edits
+                                .push((edit.tag_name.clone(), edit.new_value.clone()));
                         }
-                        if ui.button(exiftool_rs::i18n::ui_text(&self.lang, "cancel")).clicked() {
-                            close_edit = true;
-                        }
-                    });
+                        close_edit = true;
+                    }
+                    if ui
+                        .button(exiftool_rs::i18n::ui_text(&self.lang, "cancel"))
+                        .clicked()
+                    {
+                        close_edit = true;
+                    }
                 });
-            if !open { close_edit = true; }
+            });
+            if !open {
+                close_edit = true;
+            }
         }
         if close_edit {
             self.editing = None;
@@ -682,7 +823,10 @@ impl eframe::App for App {
                         ui.add_space(4.0);
                         ui.label("This program is distributed WITHOUT ANY WARRANTY.");
                         ui.add_space(4.0);
-                        ui.hyperlink_to("Full license text (GPLv3)", "https://www.gnu.org/licenses/gpl-3.0.html");
+                        ui.hyperlink_to(
+                            "Full license text (GPLv3)",
+                            "https://www.gnu.org/licenses/gpl-3.0.html",
+                        );
                         ui.add_space(8.0);
                         ui.separator();
                         ui.label("Based on ExifTool by Phil Harvey");
@@ -690,11 +834,18 @@ impl eframe::App for App {
                         ui.add_space(4.0);
                         ui.hyperlink_to("GitHub", "https://github.com/Le-Syl21/exiftool-rs");
                         ui.add_space(8.0);
-                        ui.label(egui::RichText::new("Sylvain (project creator) + Claude (implementation)")
-                            .small().color(egui::Color32::GRAY));
+                        ui.label(
+                            egui::RichText::new(
+                                "Sylvain (project creator) + Claude (implementation)",
+                            )
+                            .small()
+                            .color(egui::Color32::GRAY),
+                        );
                     });
                 });
-            if !open { self.show_about = false; }
+            if !open {
+                self.show_about = false;
+            }
         }
     }
 }

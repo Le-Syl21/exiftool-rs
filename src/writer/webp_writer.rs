@@ -31,7 +31,10 @@ pub fn write_webp(
     while pos + 8 <= source.len() {
         let chunk_id = &source[pos..pos + 4];
         let chunk_size = u32::from_le_bytes([
-            source[pos + 4], source[pos + 5], source[pos + 6], source[pos + 7],
+            source[pos + 4],
+            source[pos + 5],
+            source[pos + 6],
+            source[pos + 7],
         ]) as usize;
         let chunk_end = pos + 8 + chunk_size;
         let padded_end = chunk_end + (chunk_size & 1); // Pad to even
@@ -88,7 +91,11 @@ pub fn write_webp(
             }
         }
 
-        pos = if padded_end <= source.len() { padded_end } else { chunk_end };
+        pos = if padded_end <= source.len() {
+            padded_end
+        } else {
+            chunk_end
+        };
     }
 
     // Append new chunks if not yet written

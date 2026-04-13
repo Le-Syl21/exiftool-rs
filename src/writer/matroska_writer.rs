@@ -158,10 +158,14 @@ fn read_ebml_element(data: &[u8], pos: usize) -> Option<(u32, usize, usize)> {
 
     // Read element ID (variable length)
     let first = data[pos];
-    if first == 0 { return None; }
+    if first == 0 {
+        return None;
+    }
 
     let id_len = first.leading_zeros() as usize + 1;
-    if pos + id_len > data.len() || id_len > 4 { return None; }
+    if pos + id_len > data.len() || id_len > 4 {
+        return None;
+    }
 
     let mut id = first as u32;
     for i in 1..id_len {
@@ -170,13 +174,19 @@ fn read_ebml_element(data: &[u8], pos: usize) -> Option<(u32, usize, usize)> {
 
     // Read size
     let size_pos = pos + id_len;
-    if size_pos >= data.len() { return None; }
+    if size_pos >= data.len() {
+        return None;
+    }
 
     let size_first = data[size_pos];
-    if size_first == 0 { return None; }
+    if size_first == 0 {
+        return None;
+    }
 
     let size_len = size_first.leading_zeros() as usize + 1;
-    if size_pos + size_len > data.len() || size_len > 8 { return None; }
+    if size_pos + size_len > data.len() || size_len > 8 {
+        return None;
+    }
 
     let mut size = (size_first as u64) & ((1 << (8 - size_len)) - 1);
     for i in 1..size_len {

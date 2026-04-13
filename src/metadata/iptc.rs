@@ -135,7 +135,7 @@ impl IptcReader {
                 None => {
                     // Suppress unknown IPTC records (don't emit IPTC:N:N format)
                     continue;
-                },
+                }
             };
 
             let print_value = value.to_display_string();
@@ -174,21 +174,44 @@ fn lookup_photomechanic(dataset: u8, value: &Value) -> Option<(String, String)> 
     };
 
     let color_classes = [
-        "0 (None)", "1 (Winner)", "2 (Winner alt)", "3 (Superior)",
-        "4 (Superior alt)", "5 (Typical)", "6 (Typical alt)", "7 (Extras)", "8 (Trash)",
+        "0 (None)",
+        "1 (Winner)",
+        "2 (Winner alt)",
+        "3 (Superior)",
+        "4 (Superior alt)",
+        "5 (Typical)",
+        "6 (Typical alt)",
+        "7 (Extras)",
+        "8 (Trash)",
     ];
 
     match dataset {
-        209 => Some(("RawCropLeft".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
-        210 => Some(("RawCropTop".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
-        211 => Some(("RawCropRight".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
-        212 => Some(("RawCropBottom".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
+        209 => Some((
+            "RawCropLeft".to_string(),
+            format!("{:.3}%", int_val as f64 / 655.36),
+        )),
+        210 => Some((
+            "RawCropTop".to_string(),
+            format!("{:.3}%", int_val as f64 / 655.36),
+        )),
+        211 => Some((
+            "RawCropRight".to_string(),
+            format!("{:.3}%", int_val as f64 / 655.36),
+        )),
+        212 => Some((
+            "RawCropBottom".to_string(),
+            format!("{:.3}%", int_val as f64 / 655.36),
+        )),
         213 => Some(("ConstrainedCropWidth".to_string(), int_val.to_string())),
         214 => Some(("ConstrainedCropHeight".to_string(), int_val.to_string())),
         215 => Some(("FrameNum".to_string(), int_val.to_string())),
         216 => {
             let rot = match int_val {
-                0 => "0", 1 => "90", 2 => "180", 3 => "270", _ => "0",
+                0 => "0",
+                1 => "90",
+                2 => "180",
+                3 => "270",
+                _ => "0",
             };
             Some(("Rotation".to_string(), rot.to_string()))
         }
@@ -210,10 +233,22 @@ fn lookup_photomechanic(dataset: u8, value: &Value) -> Option<(String, String)> 
             Some(("ColorClass".to_string(), class))
         }
         223 => Some(("Rating".to_string(), int_val.to_string())),
-        236 => Some(("PreviewCropLeft".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
-        237 => Some(("PreviewCropTop".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
-        238 => Some(("PreviewCropRight".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
-        239 => Some(("PreviewCropBottom".to_string(), format!("{:.3}%", int_val as f64 / 655.36))),
+        236 => Some((
+            "PreviewCropLeft".to_string(),
+            format!("{:.3}%", int_val as f64 / 655.36),
+        )),
+        237 => Some((
+            "PreviewCropTop".to_string(),
+            format!("{:.3}%", int_val as f64 / 655.36),
+        )),
+        238 => Some((
+            "PreviewCropRight".to_string(),
+            format!("{:.3}%", int_val as f64 / 655.36),
+        )),
+        239 => Some((
+            "PreviewCropBottom".to_string(),
+            format!("{:.3}%", int_val as f64 / 655.36),
+        )),
         _ => None,
     }
 }

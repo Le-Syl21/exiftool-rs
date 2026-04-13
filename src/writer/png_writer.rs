@@ -27,7 +27,12 @@ pub fn write_png(
     let mut wrote_new_chunks = false;
 
     while pos + 12 <= source.len() {
-        let chunk_len = u32::from_be_bytes([source[pos], source[pos + 1], source[pos + 2], source[pos + 3]]) as usize;
+        let chunk_len = u32::from_be_bytes([
+            source[pos],
+            source[pos + 1],
+            source[pos + 2],
+            source[pos + 3],
+        ]) as usize;
         let chunk_type = &source[pos + 4..pos + 8];
         let chunk_end = pos + 8 + chunk_len + 4; // +4 for CRC
 
@@ -58,7 +63,10 @@ pub fn write_png(
         match chunk_type {
             b"tEXt" | b"iTXt" | b"zTXt" => {
                 // Check if this text chunk should be removed
-                let null_pos = chunk_data.iter().position(|&b| b == 0).unwrap_or(chunk_data.len());
+                let null_pos = chunk_data
+                    .iter()
+                    .position(|&b| b == 0)
+                    .unwrap_or(chunk_data.len());
                 let keyword = crate::encoding::decode_latin1(&chunk_data[..null_pos]);
 
                 if remove_text.iter().any(|&k| k == keyword.as_str()) {

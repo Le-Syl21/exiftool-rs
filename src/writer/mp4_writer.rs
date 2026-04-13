@@ -23,15 +23,26 @@ pub fn write_mp4(
     let mut wrote_metadata = false;
 
     while pos + 8 <= source.len() {
-        let size = u32::from_be_bytes([source[pos], source[pos + 1], source[pos + 2], source[pos + 3]]) as usize;
+        let size = u32::from_be_bytes([
+            source[pos],
+            source[pos + 1],
+            source[pos + 2],
+            source[pos + 3],
+        ]) as usize;
         let atom_type = &source[pos + 4..pos + 8];
 
         let actual_size = if size == 0 {
             source.len() - pos
         } else if size == 1 && pos + 16 <= source.len() {
             u64::from_be_bytes([
-                source[pos + 8], source[pos + 9], source[pos + 10], source[pos + 11],
-                source[pos + 12], source[pos + 13], source[pos + 14], source[pos + 15],
+                source[pos + 8],
+                source[pos + 9],
+                source[pos + 10],
+                source[pos + 11],
+                source[pos + 12],
+                source[pos + 13],
+                source[pos + 14],
+                source[pos + 15],
             ]) as usize
         } else {
             size
@@ -81,7 +92,10 @@ fn rewrite_moov(
 
     while pos + 8 <= moov_data.len() {
         let size = u32::from_be_bytes([
-            moov_data[pos], moov_data[pos + 1], moov_data[pos + 2], moov_data[pos + 3],
+            moov_data[pos],
+            moov_data[pos + 1],
+            moov_data[pos + 2],
+            moov_data[pos + 3],
         ]) as usize;
         let atom_type = &moov_data[pos + 4..pos + 8];
 
@@ -115,8 +129,8 @@ fn rewrite_moov(
     // Add XMP uuid atom
     if let Some(xmp) = new_xmp {
         let uuid_xmp: [u8; 16] = [
-            0xBE, 0x7A, 0xCF, 0xCB, 0x97, 0xA9, 0x42, 0xE8,
-            0x9C, 0x71, 0x99, 0x94, 0x91, 0xE3, 0xAF, 0xAC,
+            0xBE, 0x7A, 0xCF, 0xCB, 0x97, 0xA9, 0x42, 0xE8, 0x9C, 0x71, 0x99, 0x94, 0x91, 0xE3,
+            0xAF, 0xAC,
         ];
         let uuid_size = (8 + 16 + xmp.len()) as u32;
         output.extend_from_slice(&uuid_size.to_be_bytes());
@@ -136,7 +150,10 @@ fn rewrite_udta(udta_data: &[u8], new_tags: &[(&[u8; 4], &str)]) -> Result<Vec<u
 
     while pos + 8 <= udta_data.len() {
         let size = u32::from_be_bytes([
-            udta_data[pos], udta_data[pos + 1], udta_data[pos + 2], udta_data[pos + 3],
+            udta_data[pos],
+            udta_data[pos + 1],
+            udta_data[pos + 2],
+            udta_data[pos + 3],
         ]) as usize;
         let atom_type = &udta_data[pos + 4..pos + 8];
 
@@ -223,9 +240,9 @@ fn build_hdlr() -> Vec<u8> {
     let mut content = Vec::new();
     content.extend_from_slice(&[0, 0, 0, 0]); // version/flags
     content.extend_from_slice(&[0, 0, 0, 0]); // pre-defined
-    content.extend_from_slice(b"mdir");         // handler type
-    content.extend_from_slice(&[0; 12]);        // reserved
-    content.push(0);                            // name (null-terminated)
+    content.extend_from_slice(b"mdir"); // handler type
+    content.extend_from_slice(&[0; 12]); // reserved
+    content.push(0); // name (null-terminated)
 
     let size = (content.len() + 8) as u32;
     let mut out = Vec::new();
@@ -262,8 +279,8 @@ fn create_moov(tags: &[(&[u8; 4], &str)], xmp: Option<&[u8]>) -> Vec<u8> {
 
     if let Some(xmp_data) = xmp {
         let uuid_xmp: [u8; 16] = [
-            0xBE, 0x7A, 0xCF, 0xCB, 0x97, 0xA9, 0x42, 0xE8,
-            0x9C, 0x71, 0x99, 0x94, 0x91, 0xE3, 0xAF, 0xAC,
+            0xBE, 0x7A, 0xCF, 0xCB, 0x97, 0xA9, 0x42, 0xE8, 0x9C, 0x71, 0x99, 0x94, 0x91, 0xE3,
+            0xAF, 0xAC,
         ];
         let uuid_size = (8 + 16 + xmp_data.len()) as u32;
         content.extend_from_slice(&uuid_size.to_be_bytes());

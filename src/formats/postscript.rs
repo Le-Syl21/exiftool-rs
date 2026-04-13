@@ -28,22 +28,31 @@ pub fn read_postscript(data: &[u8]) -> Result<Vec<Tag>> {
         if ps_offset + ps_length <= data.len() {
             offset = ps_offset;
         }
-        tags.push(mk("EPSFormat", "EPS Format", Value::String("DOS Binary".into())));
+        tags.push(mk(
+            "EPSFormat",
+            "EPS Format",
+            Value::String("DOS Binary".into()),
+        ));
     }
 
     // Check for PS magic
-    if offset + 4 > data.len() || (!data[offset..].starts_with(b"%!PS") && !data[offset..].starts_with(b"%!Ad")) {
+    if offset + 4 > data.len()
+        || (!data[offset..].starts_with(b"%!PS") && !data[offset..].starts_with(b"%!Ad"))
+    {
         return Err(Error::InvalidData("not a PostScript file".into()));
     }
 
     // Parse DSC comments line by line (handle \r, \n, and \r\n)
-    let text = crate::encoding::decode_utf8_or_latin1(&data[offset..data.len().min(offset + 65536)]);
+    let text =
+        crate::encoding::decode_utf8_or_latin1(&data[offset..data.len().min(offset + 65536)]);
     let text = text.replace('\r', "\n");
 
     for line in text.lines() {
         // Stop at the first embedded document or end of comments section
-        if line.starts_with("%%EndComments") || line.starts_with("%%BeginDocument")
-            || line.starts_with("%%BeginProlog") || line.starts_with("%%BeginSetup")
+        if line.starts_with("%%EndComments")
+            || line.starts_with("%%BeginDocument")
+            || line.starts_with("%%BeginProlog")
+            || line.starts_with("%%BeginSetup")
         {
             break;
         }
@@ -59,23 +68,51 @@ pub fn read_postscript(data: &[u8]) -> Result<Vec<Tag>> {
         let line = line.trim();
 
         if let Some(rest) = line.strip_prefix("%%Title:") {
-            tags.push(mk("Title", "Title", Value::String(rest.trim().trim_matches('(').trim_matches(')').to_string())));
+            tags.push(mk(
+                "Title",
+                "Title",
+                Value::String(rest.trim().trim_matches('(').trim_matches(')').to_string()),
+            ));
         } else if let Some(rest) = line.strip_prefix("%%Creator:") {
-            tags.push(mk("Creator", "Creator", Value::String(rest.trim().trim_matches('(').trim_matches(')').to_string())));
+            tags.push(mk(
+                "Creator",
+                "Creator",
+                Value::String(rest.trim().trim_matches('(').trim_matches(')').to_string()),
+            ));
         } else if let Some(rest) = line.strip_prefix("%%CreationDate:") {
-            tags.push(mk("CreateDate", "Create Date", Value::String(rest.trim().trim_matches('(').trim_matches(')').to_string())));
+            tags.push(mk(
+                "CreateDate",
+                "Create Date",
+                Value::String(rest.trim().trim_matches('(').trim_matches(')').to_string()),
+            ));
         } else if let Some(rest) = line.strip_prefix("%%For:") {
-            tags.push(mk("Author", "Author", Value::String(rest.trim().trim_matches('(').trim_matches(')').to_string())));
+            tags.push(mk(
+                "Author",
+                "Author",
+                Value::String(rest.trim().trim_matches('(').trim_matches(')').to_string()),
+            ));
         } else if let Some(rest) = line.strip_prefix("%%BoundingBox:") {
-            tags.push(mk("BoundingBox", "Bounding Box", Value::String(rest.trim().to_string())));
+            tags.push(mk(
+                "BoundingBox",
+                "Bounding Box",
+                Value::String(rest.trim().to_string()),
+            ));
         } else if let Some(_rest) = line.strip_prefix("%%HiResBoundingBox:") {
             // Perl doesn't emit HiResBoundingBox
         } else if let Some(rest) = line.strip_prefix("%%Pages:") {
             tags.push(mk("Pages", "Pages", Value::String(rest.trim().to_string())));
         } else if let Some(rest) = line.strip_prefix("%%LanguageLevel:") {
-            tags.push(mk("LanguageLevel", "Language Level", Value::String(rest.trim().to_string())));
+            tags.push(mk(
+                "LanguageLevel",
+                "Language Level",
+                Value::String(rest.trim().to_string()),
+            ));
         } else if let Some(rest) = line.strip_prefix("%%DocumentData:") {
-            tags.push(mk("DocumentData", "Document Data", Value::String(rest.trim().to_string())));
+            tags.push(mk(
+                "DocumentData",
+                "Document Data",
+                Value::String(rest.trim().to_string()),
+            ));
         } else if line.starts_with("%!PS-Adobe-") {
             // Perl stores version internally but doesn't emit PSVersion/EPSVersion directly
         }
@@ -115,7 +152,10 @@ fn parse_photoshop_blocks(text: &str, tags: &mut Vec<Tag>) {
         let mut hex_str = String::new();
         let mut first = true;
         for line in block.lines() {
-            if first { first = false; continue; } // skip header line
+            if first {
+                first = false;
+                continue;
+            } // skip header line
             let line = line.trim();
             if line.starts_with("% ") {
                 let hex_part = &line[2..];
@@ -129,7 +169,9 @@ fn parse_photoshop_blocks(text: &str, tags: &mut Vec<Tag>) {
         }
 
         let advance = start + end + 13; // skip past %EndPhotoshop
-        if advance >= search.len() { break; }
+        if advance >= search.len() {
+            break;
+        }
         search = &search[advance..];
     }
 }
@@ -146,14 +188,20 @@ fn parse_photoshop_irb(data: &[u8], tags: &mut Vec<Tag>) {
         // Pascal string at pos+6: 1 byte length + string data, padded to even
         let name_len = data[pos + 6] as usize;
         let name_total = 1 + name_len;
-        let name_total = if name_total % 2 != 0 { name_total + 1 } else { name_total };
+        let name_total = if name_total % 2 != 0 {
+            name_total + 1
+        } else {
+            name_total
+        };
         let data_start = pos + 6 + name_total;
         if data_start + 4 > data.len() {
             break;
         }
         let data_size = u32::from_be_bytes([
-            data[data_start], data[data_start + 1],
-            data[data_start + 2], data[data_start + 3],
+            data[data_start],
+            data[data_start + 1],
+            data[data_start + 2],
+            data[data_start + 3],
         ]) as usize;
         let data_end = data_start + 4 + data_size;
         if data_end > data.len() {
@@ -165,7 +213,11 @@ fn parse_photoshop_irb(data: &[u8], tags: &mut Vec<Tag>) {
             0x0404 => {
                 // IPTC-NAA: compute CurrentIPTCDigest as MD5 of the data
                 let digest = crate::md5::md5_hex(block_data);
-                tags.push(mk("CurrentIPTCDigest", "Current IPTC Digest", Value::String(digest)));
+                tags.push(mk(
+                    "CurrentIPTCDigest",
+                    "Current IPTC Digest",
+                    Value::String(digest),
+                ));
                 if let Ok(iptc_tags) = crate::metadata::IptcReader::read(block_data) {
                     tags.extend(iptc_tags);
                 }
@@ -173,7 +225,10 @@ fn parse_photoshop_irb(data: &[u8], tags: &mut Vec<Tag>) {
             0x0425 => {
                 // IPTCDigest (stored as raw 16-byte MD5)
                 if block_data.len() >= 16 {
-                    let digest = block_data[..16].iter().map(|b| format!("{:02x}", b)).collect::<String>();
+                    let digest = block_data[..16]
+                        .iter()
+                        .map(|b| format!("{:02x}", b))
+                        .collect::<String>();
                     tags.push(mk("IPTCDigest", "IPTC Digest", Value::String(digest)));
                 }
             }

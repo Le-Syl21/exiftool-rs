@@ -20,7 +20,9 @@ fn canon_ev(val: i32) -> f64 {
 
 /// Print exposure time like Perl's PrintExposureTime
 pub fn print_exposure_time(val: f64) -> String {
-    if val <= 0.0 { return "0".to_string(); }
+    if val <= 0.0 {
+        return "0".to_string();
+    }
     if val < 0.25 - 0.001 {
         format!("1/{}", (0.5 + 1.0 / val) as u32)
     } else {
@@ -38,7 +40,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             2 => "Normal",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("MacroMode", Value::I16(v), pv));
     }
     if let Some(v) = get(2) {
@@ -60,7 +66,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             16 => "External flash",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("CanonFlashMode", Value::I16(v), pv));
     }
     if let Some(v) = get(5) {
@@ -77,7 +87,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             10 => "Continuous, Silent",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("ContinuousDrive", Value::I16(v), pv));
     }
     if let Some(v) = get(7) {
@@ -97,7 +111,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             519 => "Movie Servo AF",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("FocusMode", Value::I16(v), pv));
     }
     if let Some(v) = get(9) {
@@ -118,7 +136,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             15 => "CR3+HIF",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("RecordMode", Value::I16(v), pv));
     }
     if let Some(v) = get(10) {
@@ -135,7 +157,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             3 => "Other",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("DigitalZoom", Value::I16(v), pv));
     }
     if let Some(v) = get(13) {
@@ -152,9 +178,14 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         if v != 0x7fff_u16 as i16 {
             // ValueConv: CameraISO lookup
             let pv = match v {
-                0 => "n/a".to_string(), 14 => "Auto High".to_string(), 15 => "Auto".to_string(),
-                16 => "50".to_string(), 17 => "100".to_string(), 18 => "200".to_string(),
-                19 => "400".to_string(), 20 => "800".to_string(),
+                0 => "n/a".to_string(),
+                14 => "Auto High".to_string(),
+                15 => "Auto".to_string(),
+                16 => "50".to_string(),
+                17 => "100".to_string(),
+                18 => "200".to_string(),
+                19 => "400".to_string(),
+                20 => "800".to_string(),
                 _ => v.to_string(),
             };
             tags.push(mkt("CameraISO", Value::I16(v), pv));
@@ -170,7 +201,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             5 => "Center-weighted average",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("MeteringMode", Value::I16(v), pv));
     }
     if let Some(v) = get(18) {
@@ -188,7 +223,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             10 => "Infinity",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("FocusRange", Value::I16(v), pv));
     }
     if let Some(v) = get(19) {
@@ -204,7 +243,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
                 16390 => "",
                 _ => "",
             };
-            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            let pv = if pv.is_empty() {
+                v.to_string()
+            } else {
+                pv.to_string()
+            };
             tags.push(mkt("AFPoint", Value::I16(v), pv));
         }
     }
@@ -221,7 +264,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             8 => "Flexible-priority AE",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("CanonExposureMode", Value::I16(v), pv));
     }
     if let Some(v) = get(22) {
@@ -230,7 +277,9 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             let pv = if v == -1 {
                 "n/a".to_string()
             } else {
-                canon_lens_type_name(v as u16).map(|s| s.to_string()).unwrap_or_else(|| v.to_string())
+                canon_lens_type_name(v as u16)
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| v.to_string())
             };
             tags.push(mkt("LensType", Value::I16(v), pv));
         }
@@ -268,7 +317,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
                 8 => "Manual",
                 _ => "",
             };
-            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            let pv = if pv.is_empty() {
+                v.to_string()
+            } else {
+                pv.to_string()
+            };
             tags.push(mkt("FocusContinuous", Value::I16(v), pv));
         }
     }
@@ -282,7 +335,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
                 4 => "No AE",
                 _ => "",
             };
-            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            let pv = if pv.is_empty() {
+                v.to_string()
+            } else {
+                pv.to_string()
+            };
             tags.push(mkt("AESetting", Value::I16(v), pv));
         }
     }
@@ -301,12 +358,18 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
                 260 => "Dynamic (2)",
                 _ => "",
             };
-            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            let pv = if pv.is_empty() {
+                v.to_string()
+            } else {
+                pv.to_string()
+            };
             tags.push(mkt("ImageStabilization", Value::I16(v), pv));
         }
     }
     if let Some(v) = get(35) {
-        if v != 0 { tags.push(mkt("DisplayAperture", Value::I16(v), v.to_string())); }
+        if v != 0 {
+            tags.push(mkt("DisplayAperture", Value::I16(v), v.to_string()));
+        }
     }
     if let Some(v) = get(36) {
         tags.push(mkt("ZoomSourceWidth", Value::I16(v), v.to_string()));
@@ -321,7 +384,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
                 1 => "AF Point",
                 _ => "",
             };
-            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            let pv = if pv.is_empty() {
+                v.to_string()
+            } else {
+                pv.to_string()
+            };
             tags.push(mkt("SpotMeteringMode", Value::I16(v), pv));
         }
     }
@@ -338,7 +405,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
                 100 => "My Color Data",
                 _ => "",
             };
-            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            let pv = if pv.is_empty() {
+                v.to_string()
+            } else {
+                pv.to_string()
+            };
             tags.push(mkt("PhotoEffect", Value::I16(v), pv));
         }
     }
@@ -351,7 +422,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             32767 => "",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("ManualFlashOutput", Value::I16(v), pv));
     }
     if let Some(v) = get(42) {
@@ -364,7 +439,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             2 => "sRAW2 (sRAW)",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("SRAWQuality", Value::I16(v), pv));
     }
     if let Some(v) = get(50) {
@@ -373,7 +452,11 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             1 => "Enable",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("FocusBracketing", Value::I16(v), pv));
     }
     if let Some(v) = get(51) {
@@ -389,13 +472,21 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
     if let Some(v) = get(1) {
         // AutoISO: ValueConv => 'exp($val/32*log(2))*100', PrintConv => 'sprintf("%.0f",$val)'
         let auto_iso = (v as f64 / 32.0 * std::f64::consts::LN_2).exp() * 100.0;
-        tags.push(mkt("AutoISO", Value::F64(auto_iso), format!("{:.0}", auto_iso)));
+        tags.push(mkt(
+            "AutoISO",
+            Value::F64(auto_iso),
+            format!("{:.0}", auto_iso),
+        ));
     }
     if let Some(v) = get(2) {
         if v != 0 {
             // BaseISO: ValueConv => 'exp($val/32*log(2))*100/32', PrintConv => 'sprintf("%.0f",$val)'
             let base_iso = (v as f64 / 32.0 * std::f64::consts::LN_2).exp() * 100.0 / 32.0;
-            tags.push(mkt("BaseISO", Value::F64(base_iso), format!("{:.0}", base_iso)));
+            tags.push(mkt(
+                "BaseISO",
+                Value::F64(base_iso),
+                format!("{:.0}", base_iso),
+            ));
         }
     }
     if let Some(v) = get(3) {
@@ -415,7 +506,11 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         // RawConv: suppress if > -1000 && (val != 0 || model contains EOS/PowerShot)
         // For simplicity: suppress if val <= -1000 or (val == 0 for non-EOS)
         let raw = v as i32;
-        let valid = raw > -1000 && (raw != 0 || model.contains("EOS") || model.contains("PowerShot") || model.contains("CRW"));
+        let valid = raw > -1000
+            && (raw != 0
+                || model.contains("EOS")
+                || model.contains("PowerShot")
+                || model.contains("CRW"));
         if valid {
             let et = (-canon_ev(raw) * std::f64::consts::LN_2).exp();
             let pv = print_exposure_time(et);
@@ -442,7 +537,11 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
             3 => "None",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("SlowShutter", Value::I16(v), pv));
     }
     if let Some(v) = get(9) {
@@ -450,17 +549,27 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
     }
     if let Some(v) = get(10) {
         // OpticalZoomCode: PrintConv => '$val == 8 ? "n/a" : $val'
-        let pv = if v == 8 { "n/a".to_string() } else { v.to_string() };
+        let pv = if v == 8 {
+            "n/a".to_string()
+        } else {
+            v.to_string()
+        };
         tags.push(mkt("OpticalZoomCode", Value::I16(v), pv));
     }
     if let Some(v) = get(12) {
-        if v != 0 { tags.push(mkt("CameraTemperature", Value::I16(v), v.to_string())); }
+        if v != 0 {
+            tags.push(mkt("CameraTemperature", Value::I16(v), v.to_string()));
+        }
     }
     if let Some(v) = get(13) {
         // RawConv => '$val==-1 ? undef : $val', ValueConv => '$val / 32'
         if v != -1 {
             let val_f = v as f64 / 32.0;
-            tags.push(mkt("FlashGuideNumber", Value::I16(v), format!("{:.2}", val_f)));
+            tags.push(mkt(
+                "FlashGuideNumber",
+                Value::I16(v),
+                format!("{:.2}", val_f),
+            ));
         }
     }
     if let Some(v) = get(14) {
@@ -475,7 +584,11 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
             12295 => "",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("AFPointsInFocus", Value::I16(v), pv));
     }
     if let Some(v) = get(15) {
@@ -493,7 +606,11 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
             3 => "On (shot 3)",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("AutoExposureBracketing", Value::I16(v), pv));
     }
     if let Some(v) = get(17) {
@@ -509,7 +626,11 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
             3 => "Computer Remote Control",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("ControlMode", Value::I16(v), pv));
     }
     // Index 22: ExposureTime — Two variants depending on model:
@@ -528,7 +649,11 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
                 id: TagId::Text("ExposureTime".into()),
                 name: "ExposureTime".into(),
                 description: "Exposure Time".into(),
-                group: TagGroup { family0: "MakerNotes".into(), family1: "Canon".into(), family2: "Camera".into() },
+                group: TagGroup {
+                    family0: "MakerNotes".into(),
+                    family1: "Canon".into(),
+                    family2: "Camera".into(),
+                },
                 raw_value: Value::F64(et),
                 print_value: pv,
                 priority: 0,
@@ -541,12 +666,20 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
     let focus_upper = get(19).map(|v| v as u16).unwrap_or(0);
     if focus_upper != 0 {
         let m = focus_upper as f64 / 100.0;
-        let pv = if m > 655.345 { "inf".to_string() } else { format!("{} m", m) };
+        let pv = if m > 655.345 {
+            "inf".to_string()
+        } else {
+            format!("{} m", m)
+        };
         tags.push(mkt("FocusDistanceUpper", Value::U16(focus_upper), pv));
         // FocusDistanceLower: only emit when FocusDistanceUpper is non-zero (Condition)
         if let Some(v) = get(20).map(|v| v as u16) {
             let m = v as f64 / 100.0;
-            let pv = if m > 655.345 { "inf".to_string() } else { format!("{} m", m) };
+            let pv = if m > 655.345 {
+                "inf".to_string()
+            } else {
+                format!("{} m", m)
+            };
             tags.push(mkt("FocusDistanceLower", Value::U16(v), pv));
         }
     }
@@ -560,7 +693,11 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
                 id: TagId::Text("FNumber".into()),
                 name: "FNumber".into(),
                 description: "F Number".into(),
-                group: TagGroup { family0: "MakerNotes".into(), family1: "Canon".into(), family2: "Camera".into() },
+                group: TagGroup {
+                    family0: "MakerNotes".into(),
+                    family1: "Canon".into(),
+                    family2: "Camera".into(),
+                },
                 raw_value: Value::F64(fnum),
                 print_value: format!("{:.1}", fnum),
                 priority: 0,
@@ -588,7 +725,11 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
             255 => "DV Camera",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("CameraType", Value::I16(v), pv));
     }
     if let Some(v) = get(27) {
@@ -601,7 +742,11 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
                 3 => "Rotate 270 CW",
                 _ => "",
             };
-            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            let pv = if pv.is_empty() {
+                v.to_string()
+            } else {
+                pv.to_string()
+            };
             tags.push(mkt("AutoRotate", Value::I16(v), pv));
         }
     }
@@ -612,7 +757,11 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
             1 => "On",
             _ => "",
         };
-        let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+        let pv = if pv.is_empty() {
+            v.to_string()
+        } else {
+            pv.to_string()
+        };
         tags.push(mkt("NDFilter", Value::I16(v), pv));
     }
     if let Some(v) = get(29) {
@@ -625,8 +774,8 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
     // FlashOutput: RawConv: '($$self{Model}=~/(PowerShot|IXUS|IXY)/ or $val) ? $val : undef'
     // Suppress when 0 for non-PowerShot models
     if let Some(v) = get(33) {
-        let is_powershot = model.contains("PowerShot") || model.contains("IXUS")
-            || model.contains("IXY");
+        let is_powershot =
+            model.contains("PowerShot") || model.contains("IXUS") || model.contains("IXY");
         if v != 0 || is_powershot {
             // PrintConv for FlashOutput from ColorData3:
             // ValueConv: exp(($val-200)/16*log(2)), PrintConv: sprintf("%.0f%%", $val*100)
@@ -643,8 +792,16 @@ pub fn decode_focal_length(values: &[u16], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if let Some(&v) = values.get(0) {
         if v != 0 {
-            let pv = match v { 1 => "Fixed", 2 => "Zoom", _ => "" };
-            let pv = if pv.is_empty() { v.to_string() } else { pv.to_string() };
+            let pv = match v {
+                1 => "Fixed",
+                2 => "Zoom",
+                _ => "",
+            };
+            let pv = if pv.is_empty() {
+                v.to_string()
+            } else {
+                pv.to_string()
+            };
             tags.push(mkt("FocalType", Value::U16(v), pv));
         }
     }
@@ -653,22 +810,37 @@ pub fn decode_focal_length(values: &[u16], model: &str) -> Vec<Tag> {
     // FocalPlaneXSize/YSize for older Canon models (Perl: Canon::FocalLength table)
     // Only present for some lower-end models, not 1D/5D/7D series
     let model_upper = model.to_uppercase();
-    let is_1d_series = model_upper.contains("EOS-1D") || model_upper.contains("EOS 1D")
-        || model_upper.contains("EOS 1DS") || model_upper.contains("EOS-1DS");
-    let has_focal_plane = !is_1d_series && (model_upper.contains("REBEL") || model_upper.contains("300D")
-        || model_upper.contains("350D") || model_upper.contains("400D")
-        || model_upper.contains("POWERSHOT")
-        || (model_upper.contains("EOS") && !model_upper.contains("EOS 5D") && !model_upper.contains("EOS 7D")));
+    let is_1d_series = model_upper.contains("EOS-1D")
+        || model_upper.contains("EOS 1D")
+        || model_upper.contains("EOS 1DS")
+        || model_upper.contains("EOS-1DS");
+    let has_focal_plane = !is_1d_series
+        && (model_upper.contains("REBEL")
+            || model_upper.contains("300D")
+            || model_upper.contains("350D")
+            || model_upper.contains("400D")
+            || model_upper.contains("POWERSHOT")
+            || (model_upper.contains("EOS")
+                && !model_upper.contains("EOS 5D")
+                && !model_upper.contains("EOS 7D")));
     if has_focal_plane && values.len() >= 4 {
         let fpx = values.get(2).copied().unwrap_or(0);
         let fpy = values.get(3).copied().unwrap_or(0);
         // Sanity check: raw value should be < 2000 (gives < ~50mm)
         // Larger values indicate the field is not valid for this model
         if fpx > 0 && fpx < 2000 {
-            tags.push(mkt("FocalPlaneXSize", Value::U16(fpx), format!("{:.2} mm", fpx as f64 / 1000.0 * 25.4)));
+            tags.push(mkt(
+                "FocalPlaneXSize",
+                Value::U16(fpx),
+                format!("{:.2} mm", fpx as f64 / 1000.0 * 25.4),
+            ));
         }
         if fpy > 0 && fpy < 2000 {
-            tags.push(mkt("FocalPlaneYSize", Value::U16(fpy), format!("{:.2} mm", fpy as f64 / 1000.0 * 25.4)));
+            tags.push(mkt(
+                "FocalPlaneYSize",
+                Value::U16(fpy),
+                format!("{:.2} mm", fpy as f64 / 1000.0 * 25.4),
+            ));
         }
     }
     tags
@@ -693,7 +865,9 @@ fn mkt(name: &str, raw: Value, print_val: String) -> Tag {
 /// Perl PrintFraction: convert a float EV value to fraction string like "+2/3", "-1/3", "0"
 pub fn print_fraction(val: f64) -> String {
     // Perl's PrintFraction uses predefined fractions for common EV steps
-    if val == 0.0 { return "0".to_string(); }
+    if val == 0.0 {
+        return "0".to_string();
+    }
     let abs_val = val.abs();
     let sign = if val < 0.0 { "-" } else { "+" };
     // Common fractions in 1/3 stop increments
@@ -703,12 +877,18 @@ pub fn print_fraction(val: f64) -> String {
     match rem {
         0 => format!("{}{}", sign, whole),
         1 => {
-            if whole == 0 { format!("{}1/3", sign) }
-            else { format!("{}{} 1/3", sign, whole) }
+            if whole == 0 {
+                format!("{}1/3", sign)
+            } else {
+                format!("{}{} 1/3", sign, whole)
+            }
         }
         2 => {
-            if whole == 0 { format!("{}2/3", sign) }
-            else { format!("{}{} 2/3", sign, whole) }
+            if whole == 0 {
+                format!("{}2/3", sign)
+            } else {
+                format!("{}{} 2/3", sign, whole)
+            }
         }
         _ => format!("{}{:.0}", sign, abs_val),
     }
@@ -744,7 +924,9 @@ pub fn canon_white_balance_str(v: i16) -> String {
 
 /// FlashBits bitmask to string (Perl: BITMASK PrintConv)
 pub fn flash_bits_str(v: u16) -> String {
-    if v == 0 { return "(none)".to_string(); }
+    if v == 0 {
+        return "(none)".to_string();
+    }
     let bits = [
         (0, "Manual"),
         (1, "TTL"),
@@ -756,7 +938,8 @@ pub fn flash_bits_str(v: u16) -> String {
         (13, "Built-in"),
         (14, "External"),
     ];
-    let parts: Vec<&str> = bits.iter()
+    let parts: Vec<&str> = bits
+        .iter()
         .filter(|&&(bit, _)| (v >> bit) & 1 == 1)
         .map(|&(_, name)| name)
         .collect();

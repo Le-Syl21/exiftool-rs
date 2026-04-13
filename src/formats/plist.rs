@@ -8,25 +8,57 @@ use std::collections::HashMap;
 
 /// Parse a binary plist and return key-value pairs.
 pub fn parse_binary_plist(data: &[u8]) -> Option<HashMap<String, PlistValue>> {
-    if data.len() < 40 { return None; }
+    if data.len() < 40 {
+        return None;
+    }
 
     // Check magic: "bplist00"
-    if !data.starts_with(b"bplist0") { return None; }
+    if !data.starts_with(b"bplist0") {
+        return None;
+    }
 
     // Trailer: last 32 bytes
     let trailer = &data[data.len() - 32..];
     let _unused = &trailer[0..6];
     let int_size = trailer[6] as usize;
     let ref_size = trailer[7] as usize;
-    let num_obj = u64::from_be_bytes([trailer[8], trailer[9], trailer[10], trailer[11],
-        trailer[12], trailer[13], trailer[14], trailer[15]]) as usize;
-    let top_obj = u64::from_be_bytes([trailer[16], trailer[17], trailer[18], trailer[19],
-        trailer[20], trailer[21], trailer[22], trailer[23]]) as usize;
-    let table_off = u64::from_be_bytes([trailer[24], trailer[25], trailer[26], trailer[27],
-        trailer[28], trailer[29], trailer[30], trailer[31]]) as usize;
+    let num_obj = u64::from_be_bytes([
+        trailer[8],
+        trailer[9],
+        trailer[10],
+        trailer[11],
+        trailer[12],
+        trailer[13],
+        trailer[14],
+        trailer[15],
+    ]) as usize;
+    let top_obj = u64::from_be_bytes([
+        trailer[16],
+        trailer[17],
+        trailer[18],
+        trailer[19],
+        trailer[20],
+        trailer[21],
+        trailer[22],
+        trailer[23],
+    ]) as usize;
+    let table_off = u64::from_be_bytes([
+        trailer[24],
+        trailer[25],
+        trailer[26],
+        trailer[27],
+        trailer[28],
+        trailer[29],
+        trailer[30],
+        trailer[31],
+    ]) as usize;
 
-    if top_obj >= num_obj || int_size == 0 || ref_size == 0 { return None; }
-    if table_off + int_size * num_obj > data.len() { return None; }
+    if top_obj >= num_obj || int_size == 0 || ref_size == 0 {
+        return None;
+    }
+    if table_off + int_size * num_obj > data.len() {
+        return None;
+    }
 
     // Read offset table
     let mut offsets = Vec::with_capacity(num_obj);
@@ -61,9 +93,13 @@ pub enum PlistValue {
 }
 
 fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> Option<PlistValue> {
-    if idx >= offsets.len() { return None; }
+    if idx >= offsets.len() {
+        return None;
+    }
     let off = offsets[idx];
-    if off >= data.len() { return None; }
+    if off >= data.len() {
+        return None;
+    }
 
     let marker = data[off];
     let obj_type = marker >> 4;
@@ -89,19 +125,44 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
             // Real: 2^obj_info bytes
             let size = 1 << obj_info;
             if size == 4 && off + 5 <= data.len() {
-                let bits = u32::from_be_bytes([data[off+1], data[off+2], data[off+3], data[off+4]]);
+                let bits = u32::from_be_bytes([
+                    data[off + 1],
+                    data[off + 2],
+                    data[off + 3],
+                    data[off + 4],
+                ]);
                 Some(PlistValue::Real(f32::from_bits(bits) as f64))
             } else if size == 8 && off + 9 <= data.len() {
-                let bits = u64::from_be_bytes([data[off+1], data[off+2], data[off+3], data[off+4],
-                    data[off+5], data[off+6], data[off+7], data[off+8]]);
+                let bits = u64::from_be_bytes([
+                    data[off + 1],
+                    data[off + 2],
+                    data[off + 3],
+                    data[off + 4],
+                    data[off + 5],
+                    data[off + 6],
+                    data[off + 7],
+                    data[off + 8],
+                ]);
                 Some(PlistValue::Real(f64::from_bits(bits)))
-            } else { None }
+            } else {
+                None
+            }
         }
         0x3 => {
             // Date: 8-byte float64, seconds since Jan 1 2001 00:00:00 UTC
-            if off + 9 > data.len() { return None; }
-            let bits = u64::from_be_bytes([data[off+1], data[off+2], data[off+3], data[off+4],
-                data[off+5], data[off+6], data[off+7], data[off+8]]);
+            if off + 9 > data.len() {
+                return None;
+            }
+            let bits = u64::from_be_bytes([
+                data[off + 1],
+                data[off + 2],
+                data[off + 3],
+                data[off + 4],
+                data[off + 5],
+                data[off + 6],
+                data[off + 7],
+                data[off + 8],
+            ]);
             let secs_since_2001 = f64::from_bits(bits);
             // Convert to unix timestamp (2001-01-01 = 978307200 seconds since 1970-01-01)
             let unix_ts = secs_since_2001 as i64 + 978307200i64;
@@ -117,30 +178,44 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
                 (obj_info, 0)
             };
             let start = off + 1 + extra;
-            if start + len > data.len() { return None; }
-            Some(PlistValue::Data(data[start..start+len].to_vec()))
+            if start + len > data.len() {
+                return None;
+            }
+            Some(PlistValue::Data(data[start..start + len].to_vec()))
         }
         0x5 => {
             // ASCII string
             let len = if obj_info == 0x0F {
                 let (l, _) = read_length(data, off + 1)?;
                 l
-            } else { obj_info };
+            } else {
+                obj_info
+            };
             let start = if obj_info == 0x0F { off + 3 } else { off + 1 };
-            if start + len > data.len() { return None; }
-            Some(PlistValue::String(crate::encoding::decode_utf8_or_latin1(&data[start..start+len]).to_string()))
+            if start + len > data.len() {
+                return None;
+            }
+            Some(PlistValue::String(
+                crate::encoding::decode_utf8_or_latin1(&data[start..start + len]).to_string(),
+            ))
         }
         0x6 => {
             // UTF-16 string
             let len = if obj_info == 0x0F {
                 let (l, _) = read_length(data, off + 1)?;
                 l
-            } else { obj_info };
+            } else {
+                obj_info
+            };
             let start = if obj_info == 0x0F { off + 3 } else { off + 1 };
             let byte_len = len * 2;
-            if start + byte_len > data.len() { return None; }
-            let units: Vec<u16> = data[start..start+byte_len].chunks_exact(2)
-                .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
+            if start + byte_len > data.len() {
+                return None;
+            }
+            let units: Vec<u16> = data[start..start + byte_len]
+                .chunks_exact(2)
+                .map(|c| u16::from_be_bytes([c[0], c[1]]))
+                .collect();
             Some(PlistValue::String(String::from_utf16_lossy(&units)))
         }
         0xA => {
@@ -148,7 +223,9 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
             let count = if obj_info == 0x0F {
                 let (l, _) = read_length(data, off + 1)?;
                 l
-            } else { obj_info };
+            } else {
+                obj_info
+            };
             let refs_start = if obj_info == 0x0F { off + 3 } else { off + 1 };
             let mut arr = Vec::new();
             for i in 0..count {
@@ -164,7 +241,9 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
             let count = if obj_info == 0x0F {
                 let (l, _) = read_length(data, off + 1)?;
                 l
-            } else { obj_info };
+            } else {
+                obj_info
+            };
             let keys_start = if obj_info == 0x0F { off + 3 } else { off + 1 };
             let vals_start = keys_start + count * ref_size;
 
@@ -172,7 +251,9 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
             for i in 0..count {
                 let key_ref = read_int(data, keys_start + i * ref_size, ref_size)?;
                 let val_ref = read_int(data, vals_start + i * ref_size, ref_size)?;
-                if let Some(PlistValue::String(key)) = parse_object(data, offsets, ref_size, key_ref) {
+                if let Some(PlistValue::String(key)) =
+                    parse_object(data, offsets, ref_size, key_ref)
+                {
                     if let Some(val) = parse_object(data, offsets, ref_size, val_ref) {
                         map.insert(key, val);
                     }
@@ -199,15 +280,32 @@ fn unix_ts_to_exif_date(ts: i64) -> String {
     let mut rem = days;
     loop {
         let dy = if plist_is_leap(year) { 366i64 } else { 365i64 };
-        if rem < dy { break; }
+        if rem < dy {
+            break;
+        }
         rem -= dy;
         year += 1;
     }
     let leap = plist_is_leap(year);
-    let month_days = [31i64, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let month_days = [
+        31i64,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
     let mut month = 1i32;
     for &dm in &month_days {
-        if rem < dm { break; }
+        if rem < dm {
+            break;
+        }
         rem -= dm;
         month += 1;
     }
@@ -215,17 +313,30 @@ fn unix_ts_to_exif_date(ts: i64) -> String {
     let offset_hours = utc_offset / 3600;
     let offset_mins = (utc_offset.abs() % 3600) / 60;
     let sign = if utc_offset >= 0 { '+' } else { '-' };
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
-        year, month, day, hour, minute, second,
-        sign, offset_hours.abs(), offset_mins)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        sign,
+        offset_hours.abs(),
+        offset_mins
+    )
 }
 
 fn get_plist_utc_offset() -> i64 {
     if let Ok(tz) = std::env::var("TZ") {
         let tz = tz.trim();
         if let Some(sign_pos) = tz.rfind(['+', '-']) {
-            let sign: i64 = if &tz[sign_pos..sign_pos+1] == "+" { 1 } else { -1 };
-            if let Ok(h) = tz[sign_pos+1..].parse::<i64>() {
+            let sign: i64 = if &tz[sign_pos..sign_pos + 1] == "+" {
+                1
+            } else {
+                -1
+            };
+            if let Ok(h) = tz[sign_pos + 1..].parse::<i64>() {
                 return -sign * h * 3600;
             }
         }
@@ -238,21 +349,31 @@ fn plist_is_leap(y: i32) -> bool {
 }
 
 fn read_int(data: &[u8], off: usize, size: usize) -> Option<usize> {
-    if off + size > data.len() { return None; }
+    if off + size > data.len() {
+        return None;
+    }
     let mut val = 0usize;
-    for i in 0..size { val = (val << 8) | data[off + i] as usize; }
+    for i in 0..size {
+        val = (val << 8) | data[off + i] as usize;
+    }
     Some(val)
 }
 
 fn read_int_signed(data: &[u8], off: usize, size: usize) -> Option<i64> {
-    if off + size > data.len() { return None; }
+    if off + size > data.len() {
+        return None;
+    }
     let mut val = 0i64;
-    for i in 0..size { val = (val << 8) | data[off + i] as i64; }
+    for i in 0..size {
+        val = (val << 8) | data[off + i] as i64;
+    }
     Some(val)
 }
 
 fn read_length(data: &[u8], off: usize) -> Option<(usize, usize)> {
-    if off >= data.len() { return None; }
+    if off >= data.len() {
+        return None;
+    }
     let marker = data[off];
     let size = 1 << (marker & 0x0F);
     let val = read_int(data, off + 1, size)?;
@@ -341,7 +462,11 @@ fn flatten_plist_value(
         }
         PlistValue::Real(r) => {
             let tag_name = plist_key_path_to_tag_name(key_path);
-            tags.push(mk_plist_tag(tag_name, Value::String(format_real(*r)), group));
+            tags.push(mk_plist_tag(
+                tag_name,
+                Value::String(format_real(*r)),
+                group,
+            ));
         }
         PlistValue::String(s) => {
             let tag_name = plist_key_path_to_tag_name(key_path);
@@ -457,7 +582,9 @@ fn parse_xml_dict(text: &str, pos: &mut usize) -> HashMap<String, PlistValue> {
 
     loop {
         skip_xml_whitespace(text, pos);
-        if *pos >= text.len() { break; }
+        if *pos >= text.len() {
+            break;
+        }
 
         // Check for </dict>
         if text[*pos..].starts_with("</dict>") {
@@ -484,7 +611,9 @@ fn parse_xml_dict(text: &str, pos: &mut usize) -> HashMap<String, PlistValue> {
         *pos += key_end + 6; // skip key text + "</key>"
 
         skip_xml_whitespace(text, pos);
-        if *pos >= text.len() { break; }
+        if *pos >= text.len() {
+            break;
+        }
 
         // Parse value element
         if let Some(val) = parse_xml_value(text, pos) {
@@ -500,7 +629,9 @@ fn parse_xml_array(text: &str, pos: &mut usize) -> Vec<PlistValue> {
 
     loop {
         skip_xml_whitespace(text, pos);
-        if *pos >= text.len() { break; }
+        if *pos >= text.len() {
+            break;
+        }
 
         if text[*pos..].starts_with("</array>") {
             *pos += 8;
@@ -519,7 +650,9 @@ fn parse_xml_array(text: &str, pos: &mut usize) -> Vec<PlistValue> {
 
 fn parse_xml_value(text: &str, pos: &mut usize) -> Option<PlistValue> {
     skip_xml_whitespace(text, pos);
-    if *pos >= text.len() { return None; }
+    if *pos >= text.len() {
+        return None;
+    }
 
     let rest = &text[*pos..];
 
@@ -574,7 +707,9 @@ fn parse_xml_value(text: &str, pos: &mut usize) -> Option<PlistValue> {
     if rest.starts_with("<data>") {
         *pos += 6;
         let end = text[*pos..].find("</data>")?;
-        let b64 = text[*pos..*pos + end].split_whitespace().collect::<String>();
+        let b64 = text[*pos..*pos + end]
+            .split_whitespace()
+            .collect::<String>();
         *pos += end + 7;
         let bytes = base64_decode_simple(&b64);
         return Some(PlistValue::Data(bytes));
@@ -591,18 +726,22 @@ fn parse_xml_value(text: &str, pos: &mut usize) -> Option<PlistValue> {
 
 fn skip_xml_whitespace(text: &str, pos: &mut usize) {
     let bytes = text.as_bytes();
-    while *pos < bytes.len() && (bytes[*pos] == b' ' || bytes[*pos] == b'\t'
-        || bytes[*pos] == b'\n' || bytes[*pos] == b'\r') {
+    while *pos < bytes.len()
+        && (bytes[*pos] == b' '
+            || bytes[*pos] == b'\t'
+            || bytes[*pos] == b'\n'
+            || bytes[*pos] == b'\r')
+    {
         *pos += 1;
     }
 }
 
 fn xml_unescape(s: &str) -> String {
     s.replace("&amp;", "&")
-     .replace("&lt;", "<")
-     .replace("&gt;", ">")
-     .replace("&quot;", "\"")
-     .replace("&apos;", "'")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'")
 }
 
 /// Convert ISO 8601 date "2013-02-22T12:49:10Z" to ExifTool format "2013:02:22 12:49:10Z"
@@ -627,9 +766,14 @@ fn base64_decode_simple(s: &str) -> Vec<u8> {
     }
 
     let mut result = Vec::new();
-    let bytes: Vec<u8> = s.bytes().filter(|&b| b != b'=' && b != b'\n' && b != b'\r' && b != b' ').collect();
+    let bytes: Vec<u8> = s
+        .bytes()
+        .filter(|&b| b != b'=' && b != b'\n' && b != b'\r' && b != b' ')
+        .collect();
     for chunk in bytes.chunks(4) {
-        if chunk.len() < 2 { break; }
+        if chunk.len() < 2 {
+            break;
+        }
         let b0 = table[chunk[0] as usize];
         let b1 = table[chunk[1] as usize];
         result.push((b0 << 2) | (b1 >> 4));
@@ -654,7 +798,9 @@ fn aae_known_tag_name(key: &str) -> Option<&'static str> {
         "slowMotion/regions/timeRange/start/epoch" => Some("SlowMotionRegionsStartTimeEpoch"),
         "slowMotion/regions/timeRange/duration/flags" => Some("SlowMotionRegionsDurationFlags"),
         "slowMotion/regions/timeRange/duration/value" => Some("SlowMotionRegionsDurationValue"),
-        "slowMotion/regions/timeRange/duration/timescale" => Some("SlowMotionRegionsDurationTimeScale"),
+        "slowMotion/regions/timeRange/duration/timescale" => {
+            Some("SlowMotionRegionsDurationTimeScale")
+        }
         "slowMotion/regions/timeRange/duration/epoch" => Some("SlowMotionRegionsDurationEpoch"),
         "slowMotion/regions" => Some("SlowMotionRegions"),
         "slowMotion/rate" => Some("SlowMotionRate"),
@@ -785,7 +931,9 @@ pub fn read_aae_plist(data: &[u8]) -> Result<Vec<Tag>> {
                                     }
                                     PlistValue::Real(r) => Value::String(format!("{}", r)),
                                     PlistValue::String(s) => Value::String(s.clone()),
-                                    PlistValue::Bool(b) => Value::String(if *b { "True" } else { "False" }.to_string()),
+                                    PlistValue::Bool(b) => {
+                                        Value::String(if *b { "True" } else { "False" }.to_string())
+                                    }
                                     PlistValue::Array(_) => Value::String(String::new()),
                                     _ => Value::String(String::new()),
                                 };

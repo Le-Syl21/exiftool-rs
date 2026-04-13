@@ -41,64 +41,89 @@ fn mk_print(name: &str, value: Value, print: String) -> Tag {
 }
 
 fn r16(data: &[u8], off: usize) -> u16 {
-    if off + 2 > data.len() { return 0; }
-    u16::from_le_bytes([data[off], data[off+1]])
+    if off + 2 > data.len() {
+        return 0;
+    }
+    u16::from_le_bytes([data[off], data[off + 1]])
 }
 
 fn r32(data: &[u8], off: usize) -> u32 {
-    if off + 4 > data.len() { return 0; }
-    u32::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3]])
+    if off + 4 > data.len() {
+        return 0;
+    }
+    u32::from_le_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]])
 }
 
 fn r64(data: &[u8], off: usize) -> u64 {
-    if off + 8 > data.len() { return 0; }
-    u64::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3],
-                        data[off+4], data[off+5], data[off+6], data[off+7]])
+    if off + 8 > data.len() {
+        return 0;
+    }
+    u64::from_le_bytes([
+        data[off],
+        data[off + 1],
+        data[off + 2],
+        data[off + 3],
+        data[off + 4],
+        data[off + 5],
+        data[off + 6],
+        data[off + 7],
+    ])
 }
 
 fn filetime_to_str(ft: u64) -> Option<String> {
-    if ft == 0 { return None; }
+    if ft == 0 {
+        return None;
+    }
     let secs = (ft / 10_000_000) as i64 - 11644473600;
-    if secs < 0 { return None; }
+    if secs < 0 {
+        return None;
+    }
     Some(unix_to_str(secs))
 }
 
 fn unix_to_str(unix: i64) -> String {
-    if unix < 0 { return String::new(); }
+    if unix < 0 {
+        return String::new();
+    }
     let secs = unix % 86400;
     let days = unix / 86400;
     let h = secs / 3600;
     let m = (secs % 3600) / 60;
     let s = secs % 60;
     let (year, month, day) = days_to_date(days);
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", year, month, day, h, m, s)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+        year, month, day, h, m, s
+    )
 }
 
 fn days_to_date(days: i64) -> (i32, u32, u32) {
     let z = days + 719468;
     let era = if z >= 0 { z } else { z - 146096 } / 146097;
     let doe = z - era * 146097;
-    let yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
     let y = yoe + era * 400;
-    let doy = doe - (365*yoe + yoe/4 - yoe/100);
-    let mp = (5*doy + 2) / 153;
-    let d = doy - (153*mp + 2)/5 + 1;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
     let month = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year = if month <= 2 { y+1 } else { y };
+    let year = if month <= 2 { y + 1 } else { y };
     (year as i32, month as u32, d as u32)
 }
 
 /// OLE VT_DATE: number of days since Dec 30, 1899
 fn ole_date_to_str(days: f64) -> String {
-    if days == 0.0 { return String::new(); }
+    if days == 0.0 {
+        return String::new();
+    }
     let unix = ((days - 25569.0) * 86400.0) as i64;
     unix_to_str(unix)
 }
 
 /// Read a UTF-16LE string from data
 fn read_utf16le(data: &[u8], count: usize) -> String {
-    let words: Vec<u16> = (0..count.min(data.len()/2))
-        .map(|i| u16::from_le_bytes([data[i*2], data[i*2+1]]))
+    let words: Vec<u16> = (0..count.min(data.len() / 2))
+        .map(|i| u16::from_le_bytes([data[i * 2], data[i * 2 + 1]]))
         .collect();
     let end = words.iter().position(|&w| w == 0).unwrap_or(words.len());
     String::from_utf16_lossy(&words[..end]).to_string()
@@ -107,7 +132,9 @@ fn read_utf16le(data: &[u8], count: usize) -> String {
 /// Read a string from data (null-terminated or fixed length)
 fn read_str_bytes(data: &[u8]) -> String {
     let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
-    crate::encoding::decode_utf8_or_latin1(&data[..end]).trim().to_string()
+    crate::encoding::decode_utf8_or_latin1(&data[..end])
+        .trim()
+        .to_string()
 }
 
 /// OLE sector size (usually 512 bytes)
@@ -123,9 +150,13 @@ fn read_sector_chain(data: &[u8], fat: &[u32], start_sector: u32, sector_size: u
 
     while sector != END_OF_CHAIN && sector != FREESECT && count < 10000 {
         let offset = HDR_SIZE + sector as usize * sector_size;
-        if offset + sector_size > data.len() { break; }
+        if offset + sector_size > data.len() {
+            break;
+        }
         result.extend_from_slice(&data[offset..offset + sector_size]);
-        if sector as usize >= fat.len() { break; }
+        if sector as usize >= fat.len() {
+            break;
+        }
         sector = fat[sector as usize];
         count += 1;
     }
@@ -140,10 +171,16 @@ fn parse_fat(data: &[u8], sector_size: usize, difat: &[u32], fat_sector_count: u
     let mut fat_sectors_read = 0;
 
     for &sect in difat {
-        if sect == FREESECT || sect == END_OF_CHAIN { break; }
-        if fat_sectors_read >= fat_sector_count as usize { break; }
+        if sect == FREESECT || sect == END_OF_CHAIN {
+            break;
+        }
+        if fat_sectors_read >= fat_sector_count as usize {
+            break;
+        }
         let off = HDR_SIZE + sect as usize * sector_size;
-        if off + sector_size > data.len() { break; }
+        if off + sector_size > data.len() {
+            break;
+        }
         for i in 0..entries_per_sector {
             fat.push(r32(data, off + i * 4));
         }
@@ -164,9 +201,11 @@ struct DirEntry {
 fn parse_dir_entry(data: &[u8]) -> DirEntry {
     if data.len() < 128 {
         return DirEntry {
-            name: String::new(), entry_type: 0,
-            
-            start_sector: FREESECT, size: 0,
+            name: String::new(),
+            entry_type: 0,
+
+            start_sector: FREESECT,
+            size: 0,
         };
     }
     let name_len = r16(data, 64) as usize;
@@ -189,7 +228,7 @@ fn parse_directory(dir_data: &[u8]) -> Vec<DirEntry> {
     let mut entries = Vec::new();
     let mut pos = 0;
     while pos + 128 <= dir_data.len() {
-        entries.push(parse_dir_entry(&dir_data[pos..pos+128]));
+        entries.push(parse_dir_entry(&dir_data[pos..pos + 128]));
         pos += 128;
     }
     entries
@@ -197,40 +236,55 @@ fn parse_directory(dir_data: &[u8]) -> Vec<DirEntry> {
 
 /// Process an OLE property set stream
 fn process_properties(data: &[u8], is_summary: bool, tags: &mut Vec<Tag>) {
-    if data.len() < 28 { return; }
+    if data.len() < 28 {
+        return;
+    }
 
     // Property set header: byte order(2) + version(2) + SystemID(4) + CLSID(16) + reserved + num_property_sets(4)
     let byte_order = r16(data, 0);
-    if byte_order != 0xFFFE { return; } // must be little-endian
+    if byte_order != 0xFFFE {
+        return;
+    } // must be little-endian
 
     let num_sets = r32(data, 24) as usize;
-    if num_sets == 0 { return; }
+    if num_sets == 0 {
+        return;
+    }
 
     // Process each property set
     for set_idx in 0..num_sets.min(2) {
         let hdr_off = 28 + set_idx * 20; // GUID(16) + offset(4)
-        if hdr_off + 20 > data.len() { break; }
+        if hdr_off + 20 > data.len() {
+            break;
+        }
         let set_offset = r32(data, hdr_off + 16) as usize;
-        if set_offset + 8 > data.len() { break; }
+        if set_offset + 8 > data.len() {
+            break;
+        }
 
         let _set_size = r32(data, set_offset) as usize;
         let prop_count = r32(data, set_offset + 4) as usize;
-        if prop_count > 1000 { continue; }
+        if prop_count > 1000 {
+            continue;
+        }
 
         // Read code page from property 0x01
 
         // First pass: find code page
         for i in 0..prop_count.min(500) {
             let off = set_offset + 8 + i * 8;
-            if off + 8 > data.len() { break; }
+            if off + 8 > data.len() {
+                break;
+            }
             let prop_id = r32(data, off);
             let prop_off = r32(data, off + 4) as usize;
             let val_off = set_offset + prop_off;
-            if val_off + 4 > data.len() { continue; }
+            if val_off + 4 > data.len() {
+                continue;
+            }
             if prop_id == 1 {
                 let vtype = r32(data, val_off) & 0xFFF;
-                if vtype == 2 && val_off + 6 <= data.len() {
-                }
+                if vtype == 2 && val_off + 6 <= data.len() {}
                 break;
             }
         }
@@ -238,103 +292,179 @@ fn process_properties(data: &[u8], is_summary: bool, tags: &mut Vec<Tag>) {
         // Second pass: extract all properties
         for i in 0..prop_count.min(500) {
             let off = set_offset + 8 + i * 8;
-            if off + 8 > data.len() { break; }
+            if off + 8 > data.len() {
+                break;
+            }
             let prop_id = r32(data, off);
             let prop_off = r32(data, off + 4) as usize;
             let val_off = set_offset + prop_off;
-            if val_off + 4 > data.len() { continue; }
+            if val_off + 4 > data.len() {
+                continue;
+            }
 
             let vtype_full = r32(data, val_off);
             let vtype = vtype_full & 0x0FFF;
             let is_vector = (vtype_full & 0x1000) != 0;
 
-            let val_data = if val_off + 4 < data.len() { &data[val_off+4..] } else { continue };
+            let val_data = if val_off + 4 < data.len() {
+                &data[val_off + 4..]
+            } else {
+                continue;
+            };
 
             if is_vector {
                 // VT_VECTOR: count (4 bytes) followed by elements
-                if val_data.len() < 4 { continue; }
+                if val_data.len() < 4 {
+                    continue;
+                }
                 let count = r32(val_data, 0) as usize;
-                process_vector_prop(prop_id, vtype, &val_data[4..], count, set_idx, is_summary, tags);
+                process_vector_prop(
+                    prop_id,
+                    vtype,
+                    &val_data[4..],
+                    count,
+                    set_idx,
+                    is_summary,
+                    tags,
+                );
                 continue;
             }
 
             let val = match vtype {
                 0 | 1 => continue, // VT_EMPTY, VT_NULL
-                2 => { // VT_I2
-                    if val_data.len() < 2 { continue; }
+                2 => {
+                    // VT_I2
+                    if val_data.len() < 2 {
+                        continue;
+                    }
                     let v = r16(val_data, 0) as i16;
                     v.to_string()
                 }
-                3 | 10 => { // VT_I4, VT_ERROR
-                    if val_data.len() < 4 { continue; }
+                3 | 10 => {
+                    // VT_I4, VT_ERROR
+                    if val_data.len() < 4 {
+                        continue;
+                    }
                     let v = r32(val_data, 0) as i32;
                     v.to_string()
                 }
-                4 => { // VT_R4
-                    if val_data.len() < 4 { continue; }
+                4 => {
+                    // VT_R4
+                    if val_data.len() < 4 {
+                        continue;
+                    }
                     let v = f32::from_bits(r32(val_data, 0));
                     format!("{}", v)
                 }
-                5 => { // VT_R8
-                    if val_data.len() < 8 { continue; }
+                5 => {
+                    // VT_R8
+                    if val_data.len() < 8 {
+                        continue;
+                    }
                     let v = f64::from_bits(r64(val_data, 0));
                     format!("{}", v)
                 }
-                7 => { // VT_DATE (double, days since Dec 30, 1899)
-                    if val_data.len() < 8 { continue; }
+                7 => {
+                    // VT_DATE (double, days since Dec 30, 1899)
+                    if val_data.len() < 8 {
+                        continue;
+                    }
                     let v = f64::from_bits(r64(val_data, 0));
                     ole_date_to_str(v)
                 }
-                8 => { // VT_BSTR
-                    if val_data.len() < 4 { continue; }
+                8 => {
+                    // VT_BSTR
+                    if val_data.len() < 4 {
+                        continue;
+                    }
                     let len = r32(val_data, 0) as usize;
-                    if val_data.len() < 4 + len { continue; }
-                    read_utf16le(&val_data[4..4+len], len/2)
+                    if val_data.len() < 4 + len {
+                        continue;
+                    }
+                    read_utf16le(&val_data[4..4 + len], len / 2)
                 }
-                11 => { // VT_BOOL
-                    if val_data.len() < 2 { continue; }
+                11 => {
+                    // VT_BOOL
+                    if val_data.len() < 2 {
+                        continue;
+                    }
                     let v = r16(val_data, 0);
-                    if v != 0 { "1".to_string() } else { "0".to_string() }
+                    if v != 0 {
+                        "1".to_string()
+                    } else {
+                        "0".to_string()
+                    }
                 }
-                16 => { // VT_I1
-                    if val_data.is_empty() { continue; }
+                16 => {
+                    // VT_I1
+                    if val_data.is_empty() {
+                        continue;
+                    }
                     (val_data[0] as i8).to_string()
                 }
-                17 => { // VT_UI1
-                    if val_data.is_empty() { continue; }
+                17 => {
+                    // VT_UI1
+                    if val_data.is_empty() {
+                        continue;
+                    }
                     val_data[0].to_string()
                 }
-                18 => { // VT_UI2
-                    if val_data.len() < 2 { continue; }
+                18 => {
+                    // VT_UI2
+                    if val_data.len() < 2 {
+                        continue;
+                    }
                     r16(val_data, 0).to_string()
                 }
-                19 => { // VT_UI4
-                    if val_data.len() < 4 { continue; }
+                19 => {
+                    // VT_UI4
+                    if val_data.len() < 4 {
+                        continue;
+                    }
                     r32(val_data, 0).to_string()
                 }
-                20 => { // VT_I8
-                    if val_data.len() < 8 { continue; }
+                20 => {
+                    // VT_I8
+                    if val_data.len() < 8 {
+                        continue;
+                    }
                     let v = r64(val_data, 0) as i64;
                     v.to_string()
                 }
-                21 => { // VT_UI8
-                    if val_data.len() < 8 { continue; }
+                21 => {
+                    // VT_UI8
+                    if val_data.len() < 8 {
+                        continue;
+                    }
                     r64(val_data, 0).to_string()
                 }
-                30 => { // VT_LPSTR
-                    if val_data.len() < 4 { continue; }
+                30 => {
+                    // VT_LPSTR
+                    if val_data.len() < 4 {
+                        continue;
+                    }
                     let len = r32(val_data, 0) as usize;
-                    if val_data.len() < 4 + len { continue; }
-                    read_str_bytes(&val_data[4..4+len])
+                    if val_data.len() < 4 + len {
+                        continue;
+                    }
+                    read_str_bytes(&val_data[4..4 + len])
                 }
-                31 => { // VT_LPWSTR
-                    if val_data.len() < 4 { continue; }
+                31 => {
+                    // VT_LPWSTR
+                    if val_data.len() < 4 {
+                        continue;
+                    }
                     let word_count = r32(val_data, 0) as usize;
-                    if val_data.len() < 4 + word_count * 2 { continue; }
+                    if val_data.len() < 4 + word_count * 2 {
+                        continue;
+                    }
                     read_utf16le(&val_data[4..], word_count)
                 }
-                64 => { // VT_FILETIME
-                    if val_data.len() < 8 { continue; }
+                64 => {
+                    // VT_FILETIME
+                    if val_data.len() < 8 {
+                        continue;
+                    }
                     let ft = r64(val_data, 0);
                     // Convert 100ns units to seconds
                     let secs = ft as f64 * 1e-7;
@@ -351,13 +481,19 @@ fn process_properties(data: &[u8], is_summary: bool, tags: &mut Vec<Tag>) {
                         format!("TIMESPAN:{}", secs)
                     }
                 }
-                65 | 71 => { // VT_BLOB, VT_CF
-                    if val_data.len() < 4 { continue; }
+                65 | 71 => {
+                    // VT_BLOB, VT_CF
+                    if val_data.len() < 4 {
+                        continue;
+                    }
                     let len = r32(val_data, 0) as usize;
                     format!("(Binary data {} bytes, use -b option to extract)", len)
                 }
-                72 => { // VT_CLSID
-                    if val_data.len() < 16 { continue; }
+                72 => {
+                    // VT_CLSID
+                    if val_data.len() < 16 {
+                        continue;
+                    }
                     let g = val_data;
                     format!("{:02X}{:02X}{:02X}{:02X}-{:02X}{:02X}-{:02X}{:02X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}",
                         g[3],g[2],g[1],g[0], g[5],g[4], g[7],g[6],
@@ -366,7 +502,9 @@ fn process_properties(data: &[u8], is_summary: bool, tags: &mut Vec<Tag>) {
                 _ => continue,
             };
 
-            if val.is_empty() { continue; }
+            if val.is_empty() {
+                continue;
+            }
 
             if is_summary {
                 process_summary_prop(prop_id, val, tags);
@@ -380,91 +518,144 @@ fn process_properties(data: &[u8], is_summary: bool, tags: &mut Vec<Tag>) {
     }
 }
 
-fn process_vector_prop(prop_id: u32, elem_type: u32, data: &[u8], count: usize, set_idx: usize, is_summary: bool, tags: &mut Vec<Tag>) {
+fn process_vector_prop(
+    prop_id: u32,
+    elem_type: u32,
+    data: &[u8],
+    count: usize,
+    set_idx: usize,
+    is_summary: bool,
+    tags: &mut Vec<Tag>,
+) {
     let mut vals = Vec::new();
     let mut pos = 0;
 
     for _ in 0..count.min(100) {
         let val = match elem_type {
             2 | 18 => {
-                if pos + 4 > data.len() { break; }
+                if pos + 4 > data.len() {
+                    break;
+                }
                 let v = r16(data, pos);
                 pos += 4; // padded
                 v.to_string()
             }
             3 | 10 => {
-                if pos + 4 > data.len() { break; }
+                if pos + 4 > data.len() {
+                    break;
+                }
                 let v = r32(data, pos) as i32;
                 pos += 4;
                 v.to_string()
             }
-            30 => { // VT_LPSTR
-                if pos + 4 > data.len() { break; }
+            30 => {
+                // VT_LPSTR
+                if pos + 4 > data.len() {
+                    break;
+                }
                 let len = r32(data, pos) as usize;
                 pos += 4;
-                if pos + len > data.len() { break; }
-                let s = read_str_bytes(&data[pos..pos+len]);
+                if pos + len > data.len() {
+                    break;
+                }
+                let s = read_str_bytes(&data[pos..pos + len]);
                 pos += (len + 3) & !3;
                 s
             }
-            31 => { // VT_LPWSTR
-                if pos + 4 > data.len() { break; }
+            31 => {
+                // VT_LPWSTR
+                if pos + 4 > data.len() {
+                    break;
+                }
                 let wcount = r32(data, pos) as usize;
                 pos += 4;
-                if pos + wcount * 2 > data.len() { break; }
+                if pos + wcount * 2 > data.len() {
+                    break;
+                }
                 let s = read_utf16le(&data[pos..], wcount);
                 pos += (wcount * 2 + 3) & !3;
                 s
             }
-            12 => { // VT_VARIANT (4 bytes type + value)
-                if pos + 4 > data.len() { break; }
+            12 => {
+                // VT_VARIANT (4 bytes type + value)
+                if pos + 4 > data.len() {
+                    break;
+                }
                 let sub_type = r32(data, pos) & 0xFFF;
                 pos += 4;
                 match sub_type {
                     3 => {
-                        if pos + 4 > data.len() { break; }
+                        if pos + 4 > data.len() {
+                            break;
+                        }
                         let v = r32(data, pos) as i32;
                         pos += 4;
                         v.to_string()
                     }
-                    5 => { // double
-                        if pos + 8 > data.len() { break; }
+                    5 => {
+                        // double
+                        if pos + 8 > data.len() {
+                            break;
+                        }
                         let v = f64::from_bits(r64(data, pos));
                         pos += 8;
                         format!("{}", v)
                     }
-                    7 => { // VT_DATE
-                        if pos + 8 > data.len() { break; }
+                    7 => {
+                        // VT_DATE
+                        if pos + 8 > data.len() {
+                            break;
+                        }
                         let v = f64::from_bits(r64(data, pos));
                         pos += 8;
                         ole_date_to_str(v)
                     }
-                    11 => { // VT_BOOL
-                        if pos + 4 > data.len() { break; }
+                    11 => {
+                        // VT_BOOL
+                        if pos + 4 > data.len() {
+                            break;
+                        }
                         let v = r16(data, pos);
                         pos += 4;
-                        if v != 0 { "1".into() } else { "0".into() }
+                        if v != 0 {
+                            "1".into()
+                        } else {
+                            "0".into()
+                        }
                     }
-                    30 => { // VT_LPSTR
-                        if pos + 4 > data.len() { break; }
+                    30 => {
+                        // VT_LPSTR
+                        if pos + 4 > data.len() {
+                            break;
+                        }
                         let len = r32(data, pos) as usize;
                         pos += 4;
-                        if pos + len > data.len() { break; }
-                        let s = read_str_bytes(&data[pos..pos+len]);
+                        if pos + len > data.len() {
+                            break;
+                        }
+                        let s = read_str_bytes(&data[pos..pos + len]);
                         pos += (len + 3) & !3;
                         s
                     }
-                    31 => { // VT_LPWSTR
-                        if pos + 4 > data.len() { break; }
+                    31 => {
+                        // VT_LPWSTR
+                        if pos + 4 > data.len() {
+                            break;
+                        }
                         let wcount = r32(data, pos) as usize;
                         pos += 4;
-                        if pos + wcount * 2 > data.len() { break; }
+                        if pos + wcount * 2 > data.len() {
+                            break;
+                        }
                         let s = read_utf16le(&data[pos..], wcount);
                         pos += (wcount * 2 + 3) & !3;
                         s
                     }
-                    64 => { // FILETIME
-                        if pos + 8 > data.len() { break; }
+                    64 => {
+                        // FILETIME
+                        if pos + 8 > data.len() {
+                            break;
+                        }
                         let ft = r64(data, pos);
                         pos += 8;
                         filetime_to_str(ft).unwrap_or_default()
@@ -482,7 +673,9 @@ fn process_vector_prop(prop_id: u32, elem_type: u32, data: &[u8], count: usize, 
         }
     }
 
-    if vals.is_empty() { return; }
+    if vals.is_empty() {
+        return;
+    }
     let combined = vals.join(", ");
 
     if is_summary {
@@ -582,30 +775,44 @@ fn process_userdefined_prop(prop_id: u32, val: String, tags: &mut Vec<Tag>) {
 
 /// Process UserDefined properties with a dictionary
 fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<Tag>) {
-    if set_offset + 8 > data.len() { return; }
+    if set_offset + 8 > data.len() {
+        return;
+    }
     let prop_count = r32(data, set_offset + 4) as usize;
-    if prop_count > 500 { return; }
+    if prop_count > 500 {
+        return;
+    }
 
     // First find the dictionary (prop_id = 0)
     let mut dict: std::collections::HashMap<u32, String> = std::collections::HashMap::new();
     for i in 0..prop_count.min(500) {
         let off = set_offset + 8 + i * 8;
-        if off + 8 > data.len() { break; }
+        if off + 8 > data.len() {
+            break;
+        }
         let prop_id = r32(data, off);
-        if prop_id != 0 { continue; }
+        if prop_id != 0 {
+            continue;
+        }
         let prop_off = r32(data, off + 4) as usize;
         let val_off = set_offset + prop_off;
-        if val_off + 4 > data.len() { break; }
+        if val_off + 4 > data.len() {
+            break;
+        }
         // Dictionary: count (4 bytes) + entries (id(4) + name_len(4) + name_bytes)
         let dict_count = r32(data, val_off) as usize;
         let mut pos = val_off + 4;
         for _ in 0..dict_count.min(100) {
-            if pos + 8 > data.len() { break; }
+            if pos + 8 > data.len() {
+                break;
+            }
             let id = r32(data, pos);
             let name_len = r32(data, pos + 4) as usize;
             pos += 8;
-            if pos + name_len > data.len() { break; }
-            let name = read_str_bytes(&data[pos..pos+name_len]);
+            if pos + name_len > data.len() {
+                break;
+            }
+            let name = read_str_bytes(&data[pos..pos + name_len]);
             dict.insert(id, name);
             // OLE dictionary names are NOT padded to 4 bytes
             pos += name_len;
@@ -616,9 +823,13 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
     // Now process actual properties
     for i in 0..prop_count.min(500) {
         let off = set_offset + 8 + i * 8;
-        if off + 8 > data.len() { break; }
+        if off + 8 > data.len() {
+            break;
+        }
         let prop_id = r32(data, off);
-        if prop_id == 0 || prop_id == 1 { continue; } // skip dictionary and codepage
+        if prop_id == 0 || prop_id == 1 {
+            continue;
+        } // skip dictionary and codepage
 
         let name = match dict.get(&prop_id) {
             Some(n) => n.clone(),
@@ -627,17 +838,24 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
 
         let prop_off = r32(data, off + 4) as usize;
         let val_off = set_offset + prop_off;
-        if val_off + 4 > data.len() { continue; }
+        if val_off + 4 > data.len() {
+            continue;
+        }
         let vtype = r32(data, val_off) & 0xFFF;
-        let val_data = if val_off + 4 < data.len() { &data[val_off+4..] } else { continue };
+        let val_data = if val_off + 4 < data.len() {
+            &data[val_off + 4..]
+        } else {
+            continue;
+        };
 
         // Handle special system properties
         if name == "_PID_LINKBASE" {
             // VT_BLOB containing UTF-16LE string
-            if vtype == 65 && val_data.len() >= 4 { // VT_BLOB
+            if vtype == 65 && val_data.len() >= 4 {
+                // VT_BLOB
                 let blob_size = r32(val_data, 0) as usize;
                 if val_data.len() >= 4 + blob_size && blob_size >= 2 {
-                    let blob = &val_data[4..4+blob_size];
+                    let blob = &val_data[4..4 + blob_size];
                     // Strip trailing null and decode UTF-16LE
                     let wcount = blob_size / 2;
                     let s = read_utf16le(blob, wcount);
@@ -651,10 +869,11 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
 
         if name == "_PID_HLINKS" {
             // VT_BLOB containing array of VT_VARIANT hyperlinks
-            if vtype == 65 && val_data.len() >= 4 { // VT_BLOB
+            if vtype == 65 && val_data.len() >= 4 {
+                // VT_BLOB
                 let blob_size = r32(val_data, 0) as usize;
                 if val_data.len() >= 4 + blob_size {
-                    let blob = &val_data[4..4+blob_size];
+                    let blob = &val_data[4..4 + blob_size];
                     if let Some(links) = process_hyperlinks_blob(blob) {
                         if !links.is_empty() {
                             tags.push(mk("Hyperlinks", Value::String(links)));
@@ -667,42 +886,71 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
 
         let val = match vtype {
             2 | 18 => {
-                if val_data.len() < 2 { continue; }
+                if val_data.len() < 2 {
+                    continue;
+                }
                 r16(val_data, 0).to_string()
             }
             3 => {
-                if val_data.len() < 4 { continue; }
+                if val_data.len() < 4 {
+                    continue;
+                }
                 (r32(val_data, 0) as i32).to_string()
             }
             5 => {
-                if val_data.len() < 8 { continue; }
+                if val_data.len() < 8 {
+                    continue;
+                }
                 let v = f64::from_bits(r64(val_data, 0));
                 format!("{}", v)
             }
-            7 => { // VT_DATE
-                if val_data.len() < 8 { continue; }
+            7 => {
+                // VT_DATE
+                if val_data.len() < 8 {
+                    continue;
+                }
                 let v = f64::from_bits(r64(val_data, 0));
                 ole_date_to_str(v)
             }
-            11 => { // VT_BOOL
-                if val_data.len() < 2 { continue; }
+            11 => {
+                // VT_BOOL
+                if val_data.len() < 2 {
+                    continue;
+                }
                 let v = r16(val_data, 0);
-                if v != 0 { "1".into() } else { "0".into() }
+                if v != 0 {
+                    "1".into()
+                } else {
+                    "0".into()
+                }
             }
-            30 => { // VT_LPSTR
-                if val_data.len() < 4 { continue; }
+            30 => {
+                // VT_LPSTR
+                if val_data.len() < 4 {
+                    continue;
+                }
                 let len = r32(val_data, 0) as usize;
-                if val_data.len() < 4 + len { continue; }
-                read_str_bytes(&val_data[4..4+len])
+                if val_data.len() < 4 + len {
+                    continue;
+                }
+                read_str_bytes(&val_data[4..4 + len])
             }
-            31 => { // VT_LPWSTR
-                if val_data.len() < 4 { continue; }
+            31 => {
+                // VT_LPWSTR
+                if val_data.len() < 4 {
+                    continue;
+                }
                 let wcount = r32(val_data, 0) as usize;
-                if val_data.len() < 4 + wcount * 2 { continue; }
+                if val_data.len() < 4 + wcount * 2 {
+                    continue;
+                }
                 read_utf16le(&val_data[4..], wcount)
             }
-            64 => { // VT_FILETIME
-                if val_data.len() < 8 { continue; }
+            64 => {
+                // VT_FILETIME
+                if val_data.len() < 8 {
+                    continue;
+                }
                 let ft = r64(val_data, 0);
                 match filetime_to_str(ft) {
                     Some(s) => s,
@@ -712,7 +960,9 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
             _ => continue,
         };
 
-        if val.is_empty() { continue; }
+        if val.is_empty() {
+            continue;
+        }
 
         // Build tag name from dictionary name
         // Remove leading "Custom " prefix if present
@@ -743,28 +993,42 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
 /// Parse the _PID_HLINKS VT_BLOB as an array of VT_VARIANTs
 /// Each hyperlink consists of 6 VT_VARIANTs: [type, flags, name, frame, address, subaddress]
 fn process_hyperlinks_blob(blob: &[u8]) -> Option<String> {
-    if blob.len() < 4 { return None; }
+    if blob.len() < 4 {
+        return None;
+    }
     let num_variants = r32(blob, 0) as usize;
-    if num_variants == 0 { return None; }
+    if num_variants == 0 {
+        return None;
+    }
     let mut pos = 4;
     let mut vals: Vec<String> = Vec::new();
 
     for _ in 0..num_variants.min(200) {
-        if pos + 4 > blob.len() { break; }
+        if pos + 4 > blob.len() {
+            break;
+        }
         let vtype = r32(blob, pos) & 0xFFF;
         pos += 4;
         let val = match vtype {
-            3 => { // VT_I4
-                if pos + 4 > blob.len() { break; }
+            3 => {
+                // VT_I4
+                if pos + 4 > blob.len() {
+                    break;
+                }
                 let v = r32(blob, pos) as i32;
                 pos += 4;
                 v.to_string()
             }
-            31 => { // VT_LPWSTR - word count then UTF-16LE data
-                if pos + 4 > blob.len() { break; }
+            31 => {
+                // VT_LPWSTR - word count then UTF-16LE data
+                if pos + 4 > blob.len() {
+                    break;
+                }
                 let wcount = r32(blob, pos) as usize;
                 pos += 4;
-                if pos + wcount * 2 > blob.len() { break; }
+                if pos + wcount * 2 > blob.len() {
+                    break;
+                }
                 let s = read_utf16le(&blob[pos..], wcount);
                 // Pad to 4-byte boundary
                 let byte_len = wcount * 2;
@@ -785,7 +1049,7 @@ fn process_hyperlinks_blob(blob: &[u8]) -> Option<String> {
     let mut i = 0;
     while i + 5 < vals.len() {
         let mut link = vals[i + 4].clone(); // address is at index 4
-        let subaddr = &vals[i + 5];         // subaddress is at index 5
+        let subaddr = &vals[i + 5]; // subaddress is at index 5
         if !subaddr.is_empty() {
             link.push('#');
             link.push_str(subaddr);
@@ -796,7 +1060,11 @@ fn process_hyperlinks_blob(blob: &[u8]) -> Option<String> {
         i += 6;
     }
 
-    if links.is_empty() { None } else { Some(links.join(", ")) }
+    if links.is_empty() {
+        None
+    } else {
+        Some(links.join(", "))
+    }
 }
 
 /// Mirror ExifTool's ConvertTimeSpan - format seconds as human-readable span
@@ -825,24 +1093,34 @@ fn codepage_name(cp: u32) -> String {
         10000 => "Mac Roman (Western European)",
         65001 => "Unicode (UTF-8)",
         _ => return cp.to_string(),
-    }.to_string()
+    }
+    .to_string()
 }
 
 /// Extract the "Current User" stream for PowerPoint
 /// Based on ExifTool's ValueConv: skip 4 bytes, read size(4), pos(4), extract ASCII name
 fn extract_current_user(data: &[u8]) -> Option<String> {
-    if data.len() < 12 { return None; }
+    if data.len() < 12 {
+        return None;
+    }
     // Skip first 4 bytes, then read size and pos
     let size = r32(data, 4) as usize;
     let pos = r32(data, 8) as usize;
     let len = size.checked_sub(pos)?.checked_sub(4)?;
-    if data.len() < size + 8 { return None; }
+    if data.len() < size + 8 {
+        return None;
+    }
     let name_start = 8 + pos;
-    if name_start + len > data.len() { return None; }
-    let name = read_str_bytes(&data[name_start..name_start+len]);
-    if name.is_empty() { None } else { Some(name) }
+    if name_start + len > data.len() {
+        return None;
+    }
+    let name = read_str_bytes(&data[name_start..name_start + len]);
+    if name.is_empty() {
+        None
+    } else {
+        Some(name)
+    }
 }
-
 
 /// Read a mini-stream (for streams smaller than mini_stream_cutoff)
 fn read_mini_stream_chain(
@@ -857,9 +1135,13 @@ fn read_mini_stream_chain(
     let mut count = 0;
     while sector != END_OF_CHAIN && sector != FREESECT && count < 10000 {
         let offset = sector as usize * mini_sector_size;
-        if offset + mini_sector_size > mini_container.len() { break; }
+        if offset + mini_sector_size > mini_container.len() {
+            break;
+        }
         result.extend_from_slice(&mini_container[offset..offset + mini_sector_size]);
-        if sector as usize >= mini_fat.len() { break; }
+        if sector as usize >= mini_fat.len() {
+            break;
+        }
         sector = mini_fat[sector as usize];
         count += 1;
     }
@@ -870,13 +1152,16 @@ fn read_mini_stream_chain(
 
 pub fn read_fpx(data: &[u8]) -> Result<Vec<Tag>> {
     // OLE2 Compound File magic: D0 CF 11 E0 A1 B1 1A E1
-    if data.len() < HDR_SIZE ||
-       &data[0..8] != &[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1] {
+    if data.len() < HDR_SIZE || &data[0..8] != &[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1] {
         return Err(Error::InvalidData("not an OLE2 compound file".into()));
     }
 
     let sector_size_exp = r16(data, 30) as u32;
-    let sector_size = if sector_size_exp == 0 { 512 } else { 1 << sector_size_exp };
+    let sector_size = if sector_size_exp == 0 {
+        512
+    } else {
+        1 << sector_size_exp
+    };
     if sector_size < 64 || sector_size > 65536 {
         return Err(Error::InvalidData("invalid OLE sector size".into()));
     }
@@ -884,7 +1169,11 @@ pub fn read_fpx(data: &[u8]) -> Result<Vec<Tag>> {
     let fat_sector_count = r32(data, 44);
     let dir_start_sector = r32(data, 48);
     let mini_sector_size_exp = r16(data, 32) as u32;
-    let mini_sector_size = if mini_sector_size_exp == 0 { 64 } else { (1u32 << mini_sector_size_exp) as usize };
+    let mini_sector_size = if mini_sector_size_exp == 0 {
+        64
+    } else {
+        (1u32 << mini_sector_size_exp) as usize
+    };
     let mini_stream_cutoff = r32(data, 56);
     let first_mini_fat_sector = r32(data, 60);
     let num_mini_fat_sectors = r32(data, 64);
@@ -893,9 +1182,13 @@ pub fn read_fpx(data: &[u8]) -> Result<Vec<Tag>> {
     let mut difat = Vec::new();
     for i in 0..109usize {
         let off = 76 + i * 4;
-        if off + 4 > data.len() { break; }
+        if off + 4 > data.len() {
+            break;
+        }
         let sect = r32(data, off);
-        if sect == FREESECT { break; }
+        if sect == FREESECT {
+            break;
+        }
         difat.push(sect);
     }
 
@@ -932,13 +1225,26 @@ pub fn read_fpx(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Find and process interesting streams
     for entry in &entries {
-        if entry.entry_type != 2 { continue; } // only STREAM type
-        if entry.start_sector == FREESECT { continue; }
+        if entry.entry_type != 2 {
+            continue;
+        } // only STREAM type
+        if entry.start_sector == FREESECT {
+            continue;
+        }
 
         // Determine if stream is in mini-stream or regular stream
-        let stream: Vec<u8> = if entry.size < mini_stream_cutoff && !mini_container.is_empty() && !mini_fat.is_empty() {
+        let stream: Vec<u8> = if entry.size < mini_stream_cutoff
+            && !mini_container.is_empty()
+            && !mini_fat.is_empty()
+        {
             // Read from mini-stream
-            read_mini_stream_chain(&mini_fat, &mini_container, entry.start_sector, entry.size, mini_sector_size)
+            read_mini_stream_chain(
+                &mini_fat,
+                &mini_container,
+                entry.start_sector,
+                entry.size,
+                mini_sector_size,
+            )
         } else {
             // Read from regular sectors
             let s = read_sector_chain(data, &fat, entry.start_sector, sector_size);
@@ -969,10 +1275,14 @@ pub fn read_fpx(data: &[u8]) -> Result<Vec<Tag>> {
 
 /// Process the DocumentSummaryInformation stream (which may have 2 sections)
 fn process_docinfo_stream(data: &[u8], tags: &mut Vec<Tag>) {
-    if data.len() < 28 { return; }
+    if data.len() < 28 {
+        return;
+    }
 
     let byte_order = r16(data, 0);
-    if byte_order != 0xFFFE { return; }
+    if byte_order != 0xFFFE {
+        return;
+    }
 
     let num_sets = r32(data, 24) as usize;
 
@@ -986,21 +1296,35 @@ fn process_docinfo_stream(data: &[u8], tags: &mut Vec<Tag>) {
                 if prop_count <= 1000 {
                     for i in 0..prop_count.min(500) {
                         let off = set_offset + 8 + i * 8;
-                        if off + 8 > data.len() { break; }
+                        if off + 8 > data.len() {
+                            break;
+                        }
                         let prop_id = r32(data, off);
                         let prop_off = r32(data, off + 4) as usize;
                         let val_off = set_offset + prop_off;
-                        if val_off + 4 > data.len() { continue; }
+                        if val_off + 4 > data.len() {
+                            continue;
+                        }
 
                         let vtype_full = r32(data, val_off);
                         let vtype = vtype_full & 0x0FFF;
                         let is_vector = (vtype_full & 0x1000) != 0;
-                        let val_data = &data[val_off+4..];
+                        let val_data = &data[val_off + 4..];
 
                         if is_vector {
-                            if val_data.len() < 4 { continue; }
+                            if val_data.len() < 4 {
+                                continue;
+                            }
                             let count = r32(val_data, 0) as usize;
-                            process_vector_prop(prop_id, vtype, &val_data[4..], count, 0, false, tags);
+                            process_vector_prop(
+                                prop_id,
+                                vtype,
+                                &val_data[4..],
+                                count,
+                                0,
+                                false,
+                                tags,
+                            );
                         } else {
                             let val = extract_prop_val(vtype, val_data);
                             if let Some(v) = val {
@@ -1030,54 +1354,92 @@ fn process_docinfo_stream(data: &[u8], tags: &mut Vec<Tag>) {
 fn extract_prop_val(vtype: u32, val_data: &[u8]) -> Option<String> {
     match vtype {
         2 | 18 => {
-            if val_data.len() < 2 { return None; }
+            if val_data.len() < 2 {
+                return None;
+            }
             Some(r16(val_data, 0).to_string())
         }
         3 | 10 | 19 => {
-            if val_data.len() < 4 { return None; }
+            if val_data.len() < 4 {
+                return None;
+            }
             Some((r32(val_data, 0) as i32).to_string())
         }
         4 => {
-            if val_data.len() < 4 { return None; }
+            if val_data.len() < 4 {
+                return None;
+            }
             Some(format!("{}", f32::from_bits(r32(val_data, 0))))
         }
         5 => {
-            if val_data.len() < 8 { return None; }
+            if val_data.len() < 8 {
+                return None;
+            }
             Some(format!("{}", f64::from_bits(r64(val_data, 0))))
         }
-        7 => { // VT_DATE
-            if val_data.len() < 8 { return None; }
+        7 => {
+            // VT_DATE
+            if val_data.len() < 8 {
+                return None;
+            }
             let v = f64::from_bits(r64(val_data, 0));
             Some(ole_date_to_str(v))
         }
-        8 => { // VT_BSTR
-            if val_data.len() < 4 { return None; }
+        8 => {
+            // VT_BSTR
+            if val_data.len() < 4 {
+                return None;
+            }
             let len = r32(val_data, 0) as usize;
-            if val_data.len() < 4 + len { return None; }
-            Some(read_utf16le(&val_data[4..4+len], len/2))
+            if val_data.len() < 4 + len {
+                return None;
+            }
+            Some(read_utf16le(&val_data[4..4 + len], len / 2))
         }
-        11 => { // VT_BOOL
-            if val_data.len() < 2 { return None; }
-            Some(if r16(val_data, 0) != 0 { "1".into() } else { "0".into() })
+        11 => {
+            // VT_BOOL
+            if val_data.len() < 2 {
+                return None;
+            }
+            Some(if r16(val_data, 0) != 0 {
+                "1".into()
+            } else {
+                "0".into()
+            })
         }
         17 => {
-            if val_data.is_empty() { return None; }
+            if val_data.is_empty() {
+                return None;
+            }
             Some(val_data[0].to_string())
         }
-        30 => { // VT_LPSTR
-            if val_data.len() < 4 { return None; }
+        30 => {
+            // VT_LPSTR
+            if val_data.len() < 4 {
+                return None;
+            }
             let len = r32(val_data, 0) as usize;
-            if val_data.len() < 4 + len { return None; }
-            Some(read_str_bytes(&val_data[4..4+len]))
+            if val_data.len() < 4 + len {
+                return None;
+            }
+            Some(read_str_bytes(&val_data[4..4 + len]))
         }
-        31 => { // VT_LPWSTR
-            if val_data.len() < 4 { return None; }
+        31 => {
+            // VT_LPWSTR
+            if val_data.len() < 4 {
+                return None;
+            }
             let wcount = r32(val_data, 0) as usize;
-            if val_data.len() < 4 + wcount * 2 { return None; }
+            if val_data.len() < 4 + wcount * 2 {
+                return None;
+            }
             Some(read_utf16le(&val_data[4..], wcount))
         }
-        64 => { // VT_FILETIME
-            if val_data.len() < 8 { return None; }
+        64 => {
+            // VT_FILETIME
+            if val_data.len() < 8 {
+                return None;
+            }
             let ft = r64(val_data, 0);
             filetime_to_str(ft)
         }

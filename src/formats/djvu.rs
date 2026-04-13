@@ -27,7 +27,11 @@ pub fn read_djvu(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "",
     };
     if !subfile_type.is_empty() {
-        tags.push(mk("SubfileType", "Subfile Type", Value::String(subfile_type.into())));
+        tags.push(mk(
+            "SubfileType",
+            "Subfile Type",
+            Value::String(subfile_type.into()),
+        ));
     }
 
     // Parse chunks
@@ -40,9 +44,9 @@ pub fn read_djvu(data: &[u8]) -> Result<Vec<Tag>> {
 fn parse_chunks(data: &[u8], mut pos: usize, end: usize, tags: &mut Vec<Tag>) {
     while pos + 8 <= end {
         let chunk_id = &data[pos..pos + 4];
-        let chunk_size = u32::from_be_bytes([
-            data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7],
-        ]) as usize;
+        let chunk_size =
+            u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                as usize;
         pos += 8;
 
         let chunk_end = pos + chunk_size;
@@ -69,7 +73,11 @@ fn parse_chunks(data: &[u8], mut pos: usize, end: usize, tags: &mut Vec<Tag>) {
                         _ => "",
                     };
                     if !subfile_str.is_empty() {
-                        tags.push(mk("SubfileType", "Subfile Type", Value::String(subfile_str.into())));
+                        tags.push(mk(
+                            "SubfileType",
+                            "Subfile Type",
+                            Value::String(subfile_str.into()),
+                        ));
                     }
                     parse_chunks(data, pos + 4, chunk_end, tags);
                 }
@@ -83,7 +91,9 @@ fn parse_chunks(data: &[u8], mut pos: usize, end: usize, tags: &mut Vec<Tag>) {
             }
             b"INCL" => {
                 // Included file ID
-                let id = crate::encoding::decode_utf8_or_latin1(chunk_data).trim_end_matches('\0').to_string();
+                let id = crate::encoding::decode_utf8_or_latin1(chunk_data)
+                    .trim_end_matches('\0')
+                    .to_string();
                 if !id.is_empty() {
                     tags.push(mk("IncludedFileID", "Included File ID", Value::String(id)));
                 }
@@ -124,8 +134,16 @@ fn parse_info(data: &[u8], tags: &mut Vec<Tag>) {
 
     tags.push(mk("ImageWidth", "Image Width", Value::U16(width)));
     tags.push(mk("ImageHeight", "Image Height", Value::U16(height)));
-    tags.push(mk("DjVuVersion", "DjVu Version", Value::String(version_str)));
-    tags.push(mk("SpatialResolution", "Spatial Resolution", Value::U16(dpi)));
+    tags.push(mk(
+        "DjVuVersion",
+        "DjVu Version",
+        Value::String(version_str),
+    ));
+    tags.push(mk(
+        "SpatialResolution",
+        "Spatial Resolution",
+        Value::U16(dpi),
+    ));
 
     if gamma > 0.0 {
         tags.push(mk("Gamma", "Gamma", Value::String(format!("{:.1}", gamma))));
@@ -138,7 +156,11 @@ fn parse_info(data: &[u8], tags: &mut Vec<Tag>) {
         6 => "Rotate 270 CW",
         _ => "Unknown (0)",
     };
-    tags.push(mk("Orientation", "Orientation", Value::String(orient_str.into())));
+    tags.push(mk(
+        "Orientation",
+        "Orientation",
+        Value::String(orient_str.into()),
+    ));
 }
 
 /// Parse DjVu ANTa annotation chunk (s-expression format)
@@ -182,7 +204,12 @@ fn find_sexpr(text: &str, name: &str) -> Option<usize> {
         let abs = pos + p;
         // Check that after the name comes a space, (, or "
         let after = abs + search.len();
-        if after >= text.len() || matches!(text.as_bytes()[after], b' ' | b'\t' | b'\n' | b'\r' | b'"' | b'(') {
+        if after >= text.len()
+            || matches!(
+                text.as_bytes()[after],
+                b' ' | b'\t' | b'\n' | b'\r' | b'"' | b'('
+            )
+        {
             return Some(abs);
         }
         pos = abs + 1;
@@ -210,24 +237,27 @@ fn extract_sexpr_string(text: &str) -> Option<String> {
             match chars.next() {
                 None => break,
                 Some('"') => return Some(result),
-                Some('\\') => {
-                    match chars.next() {
-                        Some('n') => result.push('\n'),
-                        Some('r') => result.push('\r'),
-                        Some('t') => result.push('\t'),
-                        Some('"') => result.push('"'),
-                        Some('\\') => result.push('\\'),
-                        Some(c) => { result.push('\\'); result.push(c); }
-                        None => break,
+                Some('\\') => match chars.next() {
+                    Some('n') => result.push('\n'),
+                    Some('r') => result.push('\r'),
+                    Some('t') => result.push('\t'),
+                    Some('"') => result.push('"'),
+                    Some('\\') => result.push('\\'),
+                    Some(c) => {
+                        result.push('\\');
+                        result.push(c);
                     }
-                }
+                    None => break,
+                },
                 Some(c) => result.push(c),
             }
         }
         Some(result)
     } else {
         // Unquoted token - read until whitespace or )
-        let end = text.find(|c: char| c.is_whitespace() || c == ')').unwrap_or(text.len());
+        let end = text
+            .find(|c: char| c.is_whitespace() || c == ')')
+            .unwrap_or(text.len());
         if end > 0 {
             Some(text[..end].to_string())
         } else {
@@ -310,7 +340,10 @@ fn parse_meta_pairs(text: &str, tags: &mut Vec<Tag>) {
                         b't' => s.push('\t'),
                         b'"' => s.push('"'),
                         b'\\' => s.push('\\'),
-                        c => { s.push('\\'); s.push(c as char); }
+                        c => {
+                            s.push('\\');
+                            s.push(c as char);
+                        }
                     }
                 } else {
                     s.push(bytes[pos] as char);

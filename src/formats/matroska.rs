@@ -46,12 +46,20 @@ pub fn read_matroska(data: &[u8]) -> Result<Vec<Tag>> {
             0x4287 => {
                 // DocTypeVersion
                 let v = read_uint(data, pos, size);
-                tags.push(mk("DocTypeVersion", "Document Type Version", Value::U32(v as u32)));
+                tags.push(mk(
+                    "DocTypeVersion",
+                    "Document Type Version",
+                    Value::U32(v as u32),
+                ));
             }
             0x4285 => {
                 // DocTypeReadVersion
                 let v = read_uint(data, pos, size);
-                tags.push(mk("DocTypeReadVersion", "Doc Type Read Version", Value::U32(v as u32)));
+                tags.push(mk(
+                    "DocTypeReadVersion",
+                    "Doc Type Read Version",
+                    Value::U32(v as u32),
+                ));
             }
             _ => {}
         }
@@ -89,9 +97,9 @@ pub fn read_matroska(data: &[u8]) -> Result<Vec<Tag>> {
         }
 
         match id {
-            0x1549A966 => parse_info(data, pos, pos + size, &mut tags),    // Info
-            0x1654AE6B => parse_tracks(data, pos, pos + size, &mut tags),  // Tracks
-            0x1254C367 => parse_tags(data, pos, pos + size, &mut tags),    // Tags
+            0x1549A966 => parse_info(data, pos, pos + size, &mut tags), // Info
+            0x1654AE6B => parse_tracks(data, pos, pos + size, &mut tags), // Tracks
+            0x1254C367 => parse_tags(data, pos, pos + size, &mut tags), // Tags
             0x1043A770 => parse_chapters(data, pos, pos + size, &mut tags), // Chapters
             0x1F43B675 => break, // Cluster - stop here (actual media data)
             _ => {}
@@ -113,25 +121,39 @@ fn parse_info(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
             Err(_) => break,
         };
         pos += hdr_len;
-        if pos + size > end { break; }
+        if pos + size > end {
+            break;
+        }
 
         match id {
             0x2AD7B1 => {
                 // TimecodeScale
                 timecode_scale = read_uint(data, pos, size);
-                tags.push(mk("TimecodeScale", "Timecode Scale", Value::String(format!("{} ns", timecode_scale))));
+                tags.push(mk(
+                    "TimecodeScale",
+                    "Timecode Scale",
+                    Value::String(format!("{} ns", timecode_scale)),
+                ));
             }
             0x4489 => {
                 // Duration (float)
                 let dur = read_float(data, pos, size);
                 let dur_secs = dur * timecode_scale as f64 / 1e9;
-                tags.push(mk("Duration", "Duration", Value::String(format_duration(dur_secs))));
+                tags.push(mk(
+                    "Duration",
+                    "Duration",
+                    Value::String(format_duration(dur_secs)),
+                ));
             }
             0x4461 => {
                 // DateUTC (signed int, nanoseconds since 2001-01-01)
                 let ns = read_int(data, pos, size);
                 let unix_secs = ns / 1_000_000_000 + 978307200; // 2001-01-01 epoch to Unix epoch
-                tags.push(mk("DateTimeOriginal", "Date/Time Original", Value::String(format!("{}", unix_secs))));
+                tags.push(mk(
+                    "DateTimeOriginal",
+                    "Date/Time Original",
+                    Value::String(format!("{}", unix_secs)),
+                ));
             }
             0x7BA9 => {
                 // Title
@@ -163,7 +185,9 @@ fn parse_tracks(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
             Err(_) => break,
         };
         pos += hdr_len;
-        if pos + size > end { break; }
+        if pos + size > end {
+            break;
+        }
 
         if id == 0xAE {
             // TrackEntry
@@ -182,10 +206,17 @@ fn parse_track_entry(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>)
     {
         let mut scan = start;
         while scan < end {
-            let (id, size, hdr_len) = match read_element_header(data, scan) { Ok(v) => v, Err(_) => break };
+            let (id, size, hdr_len) = match read_element_header(data, scan) {
+                Ok(v) => v,
+                Err(_) => break,
+            };
             scan += hdr_len;
-            if scan + size > end { break; }
-            if id == 0x83 { track_type = read_uint(data, scan, size); }
+            if scan + size > end {
+                break;
+            }
+            if id == 0x83 {
+                track_type = read_uint(data, scan, size);
+            }
             scan += size;
         }
     }
@@ -196,54 +227,105 @@ fn parse_track_entry(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>)
             Err(_) => break,
         };
         pos += hdr_len;
-        if pos + size > end { break; }
+        if pos + size > end {
+            break;
+        }
 
         match id {
-            0xD7 => { // TrackNumber (Perl 0x57 → raw 0xD7)
+            0xD7 => {
+                // TrackNumber (Perl 0x57 → raw 0xD7)
                 let v = read_uint(data, pos, size);
                 tags.push(mk("TrackNumber", "Track Number", Value::U32(v as u32)));
             }
-            0x73C5 => { // TrackUID (Perl 0x33C5 → raw 0x73C5)
+            0x73C5 => {
+                // TrackUID (Perl 0x33C5 → raw 0x73C5)
                 let v = read_uint(data, pos, size);
-                tags.push(mk("TrackUID", "Track UID", Value::String(format!("{:08x}", v))));
+                tags.push(mk(
+                    "TrackUID",
+                    "Track UID",
+                    Value::String(format!("{:08x}", v)),
+                ));
             }
             0x83 => {
                 // TrackType (Perl 0x03 → raw 0x83)
                 let type_str = match track_type {
-                    1 => "Video", 2 => "Audio", 3 => "Complex",
-                    0x10 => "Logo", 0x11 => "Subtitle", 0x12 => "Buttons", 0x20 => "Control",
+                    1 => "Video",
+                    2 => "Audio",
+                    3 => "Complex",
+                    0x10 => "Logo",
+                    0x11 => "Subtitle",
+                    0x12 => "Buttons",
+                    0x20 => "Control",
                     _ => "Unknown",
                 };
-                tags.push(mk("TrackType", "Track Type", Value::String(type_str.into())));
+                tags.push(mk(
+                    "TrackType",
+                    "Track Type",
+                    Value::String(type_str.into()),
+                ));
             }
-            0xB9 => { // TrackUsed/FlagEnabled (Perl 0x39 → raw 0xB9)
+            0xB9 => {
+                // TrackUsed/FlagEnabled (Perl 0x39 → raw 0xB9)
                 let v = read_uint(data, pos, size);
-                tags.push(mk("TrackUsed", "Track Used", Value::String(if v != 0 { "Yes" } else { "No" }.into())));
+                tags.push(mk(
+                    "TrackUsed",
+                    "Track Used",
+                    Value::String(if v != 0 { "Yes" } else { "No" }.into()),
+                ));
             }
-            0x88 => { // TrackDefault/FlagDefault (Perl 0x08 → raw 0x88)
+            0x88 => {
+                // TrackDefault/FlagDefault (Perl 0x08 → raw 0x88)
                 let v = read_uint(data, pos, size);
-                tags.push(mk("TrackDefault", "Track Default", Value::String(if v != 0 { "Yes" } else { "No" }.into())));
+                tags.push(mk(
+                    "TrackDefault",
+                    "Track Default",
+                    Value::String(if v != 0 { "Yes" } else { "No" }.into()),
+                ));
             }
-            0x55AA => { // TrackForced/FlagForced (Perl 0x15AA → raw 0x55AA)
+            0x55AA => {
+                // TrackForced/FlagForced (Perl 0x15AA → raw 0x55AA)
                 let v = read_uint(data, pos, size);
-                tags.push(mk("TrackForced", "Track Forced", Value::String(if v != 0 { "Yes" } else { "No" }.into())));
+                tags.push(mk(
+                    "TrackForced",
+                    "Track Forced",
+                    Value::String(if v != 0 { "Yes" } else { "No" }.into()),
+                ));
             }
-            0x23314F => { // TrackTimecodeScale (Perl 0x3314F → raw 0x23314F)
+            0x23314F => {
+                // TrackTimecodeScale (Perl 0x3314F → raw 0x23314F)
                 let v = read_float(data, pos, size);
-                tags.push(mk("TrackTimecodeScale", "Track Timecode Scale", Value::String(format!("{}", v))));
+                tags.push(mk(
+                    "TrackTimecodeScale",
+                    "Track Timecode Scale",
+                    Value::String(format!("{}", v)),
+                ));
             }
-            0xAA => { // CodecDecodeAll (Perl 0x2A → raw 0xAA)
+            0xAA => {
+                // CodecDecodeAll (Perl 0x2A → raw 0xAA)
                 let v = read_uint(data, pos, size);
-                tags.push(mk("CodecDecodeAll", "Codec Decode All", Value::String(if v != 0 { "Yes" } else { "No" }.into())));
+                tags.push(mk(
+                    "CodecDecodeAll",
+                    "Codec Decode All",
+                    Value::String(if v != 0 { "Yes" } else { "No" }.into()),
+                ));
             }
-            0x23E383 => { // DefaultDuration (ns)
+            0x23E383 => {
+                // DefaultDuration (ns)
                 let v = read_uint(data, pos, size);
                 let ms = v / 1_000_000;
-                tags.push(mk("DefaultDuration", "Default Duration", Value::String(format!("{} ms", ms))));
+                tags.push(mk(
+                    "DefaultDuration",
+                    "Default Duration",
+                    Value::String(format!("{} ms", ms)),
+                ));
                 // VideoFrameRate = 1e9 / DefaultDuration
                 if v > 0 && track_type == 1 {
                     let fps = 1_000_000_000.0 / v as f64;
-                    tags.push(mk("VideoFrameRate", "Video Frame Rate", Value::String(format!("{:.0}", fps))));
+                    tags.push(mk(
+                        "VideoFrameRate",
+                        "Video Frame Rate",
+                        Value::String(format!("{:.0}", fps)),
+                    ));
                 }
             }
             0x86 => {
@@ -289,7 +371,9 @@ fn parse_video_settings(data: &[u8], start: usize, end: usize, tags: &mut Vec<Ta
             Err(_) => break,
         };
         pos += hdr_len;
-        if pos + size > end { break; }
+        if pos + size > end {
+            break;
+        }
 
         match id {
             0xB0 => {
@@ -317,7 +401,11 @@ fn parse_video_settings(data: &[u8], start: usize, end: usize, tags: &mut Vec<Ta
                     2 => "Progressive",
                     _ => "Unknown",
                 };
-                tags.push(mk("VideoScanType", "Video Scan Type", Value::String(s.into())));
+                tags.push(mk(
+                    "VideoScanType",
+                    "Video Scan Type",
+                    Value::String(s.into()),
+                ));
             }
             _ => {}
         }
@@ -334,12 +422,18 @@ fn parse_audio_settings(data: &[u8], start: usize, end: usize, tags: &mut Vec<Ta
             Err(_) => break,
         };
         pos += hdr_len;
-        if pos + size > end { break; }
+        if pos + size > end {
+            break;
+        }
 
         match id {
             0xB5 => {
                 let v = read_float(data, pos, size);
-                tags.push(mk("AudioSampleRate", "Audio Sample Rate", Value::U32(v as u32)));
+                tags.push(mk(
+                    "AudioSampleRate",
+                    "Audio Sample Rate",
+                    Value::U32(v as u32),
+                ));
             }
             0x9F => {
                 let v = read_uint(data, pos, size);
@@ -347,7 +441,11 @@ fn parse_audio_settings(data: &[u8], start: usize, end: usize, tags: &mut Vec<Ta
             }
             0x6264 => {
                 let v = read_uint(data, pos, size);
-                tags.push(mk("AudioBitsPerSample", "Audio Bits Per Sample", Value::U32(v as u32)));
+                tags.push(mk(
+                    "AudioBitsPerSample",
+                    "Audio Bits Per Sample",
+                    Value::U32(v as u32),
+                ));
             }
             _ => {}
         }
@@ -364,7 +462,9 @@ fn parse_tags(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
             Err(_) => break,
         };
         pos += hdr_len;
-        if pos + size > end { break; }
+        if pos + size > end {
+            break;
+        }
 
         if id == 0x7373 {
             // Tag element → contains SimpleTag children
@@ -384,7 +484,9 @@ fn parse_tag_element(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>)
             Err(_) => break,
         };
         pos += hdr_len;
-        if pos + size > end { break; }
+        if pos + size > end {
+            break;
+        }
 
         if id == 0x67C8 {
             // SimpleTag
@@ -406,11 +508,13 @@ fn parse_simple_tag(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) 
             Err(_) => break,
         };
         pos += hdr_len;
-        if pos + size > end { break; }
+        if pos + size > end {
+            break;
+        }
 
         match id {
-            0x45A3 => tag_name = read_string(data, pos, size),    // TagName
-            0x4487 => tag_string = read_string(data, pos, size),  // TagString
+            0x45A3 => tag_name = read_string(data, pos, size), // TagName
+            0x4487 => tag_string = read_string(data, pos, size), // TagString
             _ => {}
         }
         pos += size;
@@ -432,7 +536,9 @@ fn parse_chapters(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
             Err(_) => break,
         };
         pos += hdr_len;
-        if pos + size > end { break; }
+        if pos + size > end {
+            break;
+        }
 
         if id == 0xB6 {
             // ChapterAtom
@@ -443,7 +549,11 @@ fn parse_chapters(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
     }
 
     if chapter_count > 0 {
-        tags.push(mk("ChapterCount", "Chapter Count", Value::U32(chapter_count)));
+        tags.push(mk(
+            "ChapterCount",
+            "Chapter Count",
+            Value::U32(chapter_count),
+        ));
     }
 }
 
@@ -547,8 +657,14 @@ fn read_float(data: &[u8], pos: usize, size: usize) -> f64 {
         f32::from_bits(bits) as f64
     } else if size == 8 && pos + 8 <= data.len() {
         let bits = u64::from_be_bytes([
-            data[pos], data[pos + 1], data[pos + 2], data[pos + 3],
-            data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7],
+            data[pos],
+            data[pos + 1],
+            data[pos + 2],
+            data[pos + 3],
+            data[pos + 4],
+            data[pos + 5],
+            data[pos + 6],
+            data[pos + 7],
         ]);
         f64::from_bits(bits)
     } else {

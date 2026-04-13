@@ -35,9 +35,14 @@ pub fn read_audible(data: &[u8]) -> Result<Vec<Tag>> {
 
     for i in 0..toc_count {
         let base = i * 12;
-        let entry_type = u32::from_be_bytes([toc[base], toc[base+1], toc[base+2], toc[base+3]]);
-        let offset = u32::from_be_bytes([toc[base+4], toc[base+5], toc[base+6], toc[base+7]]) as usize;
-        let length = u32::from_be_bytes([toc[base+8], toc[base+9], toc[base+10], toc[base+11]]) as usize;
+        let entry_type =
+            u32::from_be_bytes([toc[base], toc[base + 1], toc[base + 2], toc[base + 3]]);
+        let offset =
+            u32::from_be_bytes([toc[base + 4], toc[base + 5], toc[base + 6], toc[base + 7]])
+                as usize;
+        let length =
+            u32::from_be_bytes([toc[base + 8], toc[base + 9], toc[base + 10], toc[base + 11]])
+                as usize;
 
         if length == 0 {
             continue;
@@ -63,8 +68,10 @@ pub fn read_audible(data: &[u8]) -> Result<Vec<Tag>> {
             11 => {
                 // Cover art
                 if chunk.len() >= 8 {
-                    let art_len = u32::from_be_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as usize;
-                    let art_off_abs = u32::from_be_bytes([chunk[4], chunk[5], chunk[6], chunk[7]]) as usize;
+                    let art_len =
+                        u32::from_be_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as usize;
+                    let art_off_abs =
+                        u32::from_be_bytes([chunk[4], chunk[5], chunk[6], chunk[7]]) as usize;
                     // art_off is absolute offset within the file
                     if art_off_abs >= offset && art_off_abs + art_len <= offset + length {
                         let art_rel = art_off_abs - offset;
@@ -101,8 +108,12 @@ fn parse_metadata(data: &[u8], tags: &mut Vec<Tag>) {
         // 4 bytes: tag string length
         // 4 bytes: value string length
         let _unk = data[pos];
-        let tag_len = u32::from_be_bytes([data[pos+1], data[pos+2], data[pos+3], data[pos+4]]) as usize;
-        let val_len = u32::from_be_bytes([data[pos+5], data[pos+6], data[pos+7], data[pos+8]]) as usize;
+        let tag_len =
+            u32::from_be_bytes([data[pos + 1], data[pos + 2], data[pos + 3], data[pos + 4]])
+                as usize;
+        let val_len =
+            u32::from_be_bytes([data[pos + 5], data[pos + 6], data[pos + 7], data[pos + 8]])
+                as usize;
 
         pos += 9;
         let tag_end = pos + tag_len;

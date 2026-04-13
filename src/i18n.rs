@@ -66,7 +66,9 @@ fn parse_yaml_simple(content: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
     for line in content.lines() {
         let line = line.trim();
-        if line.is_empty() || line.starts_with('#') { continue; }
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
         if let Some((key, val)) = line.split_once(": ") {
             let key = key.trim().trim_matches('"');
             let val = val.trim().trim_matches('"');
@@ -100,7 +102,9 @@ pub fn get_translations(lang: &str) -> Option<HashMap<&'static str, &'static str
         other => other,
     };
 
-    if lang == "en" { return None; }
+    if lang == "en" {
+        return None;
+    }
 
     let locales = get_all_locales();
     let locale = locales.get(lang)?;
@@ -115,7 +119,9 @@ pub fn get_translations(lang: &str) -> Option<HashMap<&'static str, &'static str
 
 /// Translate a tag description. Returns the original if no translation exists.
 pub fn translate(lang: &str, tag_name: &str, default: &str) -> String {
-    if lang == "en" { return default.to_string(); }
+    if lang == "en" {
+        return default.to_string();
+    }
     let locales = get_all_locales();
     if let Some(locale) = locales.get(lang) {
         if let Some(translation) = locale.get(tag_name) {
@@ -192,7 +198,9 @@ fn detect_platform_language() -> Option<String> {
             // Output is a plist array like: ( "fr-FR", "en-US", ... )
             // Extract the first language
             for line in text.lines() {
-                let trimmed = line.trim().trim_matches(|c| c == '"' || c == ',' || c == '(' || c == ')');
+                let trimmed = line
+                    .trim()
+                    .trim_matches(|c| c == '"' || c == ',' || c == '(' || c == ')');
                 if !trimmed.is_empty() {
                     if let Some(lang) = match_locale(trimmed) {
                         return Some(lang);
@@ -231,9 +239,7 @@ pub fn ui_text<'a>(lang: &str, key: &'a str) -> &'a str {
 
     // Fallback to English locale
     static EN_LOCALE: OnceLock<HashMap<String, String>> = OnceLock::new();
-    let en = EN_LOCALE.get_or_init(|| {
-        parse_yaml_simple(include_str!("../locales/en.yml"))
-    });
+    let en = EN_LOCALE.get_or_init(|| parse_yaml_simple(include_str!("../locales/en.yml")));
     if let Some(val) = en.get(&ui_key) {
         return Box::leak(val.clone().into_boxed_str());
     }

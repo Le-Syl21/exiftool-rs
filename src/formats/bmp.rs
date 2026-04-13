@@ -29,7 +29,11 @@ pub fn read_bmp(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Unknown",
     };
 
-    tags.push(mk("BMPVersion", "BMP Version", Value::String(version.into())));
+    tags.push(mk(
+        "BMPVersion",
+        "BMP Version",
+        Value::String(version.into()),
+    ));
 
     if header_size == 12 && data.len() >= 26 {
         // OS/2 V1: 16-bit width/height
@@ -81,8 +85,16 @@ pub fn read_bmp(data: &[u8]) -> Result<Vec<Tag>> {
         }
 
         // PixelsPerMeterX/Y (raw value in pixels per meter)
-        tags.push(mk("PixelsPerMeterX", "Pixels Per Meter X", Value::I32(x_ppm)));
-        tags.push(mk("PixelsPerMeterY", "Pixels Per Meter Y", Value::I32(y_ppm)));
+        tags.push(mk(
+            "PixelsPerMeterX",
+            "Pixels Per Meter X",
+            Value::I32(x_ppm),
+        ));
+        tags.push(mk(
+            "PixelsPerMeterY",
+            "Pixels Per Meter Y",
+            Value::I32(y_ppm),
+        ));
         if colors_used > 0 {
             tags.push(mk("NumColors", "Number of Colors", Value::U32(colors_used)));
         }
@@ -99,10 +111,10 @@ pub fn read_bmp(data: &[u8]) -> Result<Vec<Tag>> {
             let cs_type = u32::from_le_bytes([data[70], data[71], data[72], data[73]]);
             let cs_name = match cs_type {
                 0 => "Calibrated RGB",
-                0x73524742 => "sRGB",           // 'sRGB'
+                0x73524742 => "sRGB",                // 'sRGB'
                 0x57696E20 => "Windows Color Space", // 'Win '
-                0x4C494E4B => "Linked Profile",  // 'LINK'
-                0x4D424544 => "Embedded Profile", // 'MBED'
+                0x4C494E4B => "Linked Profile",      // 'LINK'
+                0x4D424544 => "Embedded Profile",    // 'MBED'
                 _ => "Unknown",
             };
             tags.push(mk(

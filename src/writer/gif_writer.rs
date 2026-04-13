@@ -42,7 +42,9 @@ pub fn write_gif(source: &[u8], new_comment: Option<&str>) -> Result<Vec<u8>> {
                 while pos < source.len() {
                     let block_size = source[pos] as usize;
                     pos += 1;
-                    if block_size == 0 { break; }
+                    if block_size == 0 {
+                        break;
+                    }
                     pos += block_size;
                 }
             }

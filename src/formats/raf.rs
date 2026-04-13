@@ -26,7 +26,10 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
     tags.push(mk("RAFVersion", "RAF Version", Value::String(version)));
 
     // Camera model (bytes 0x1C-0x3C, null-terminated)
-    let model_end = data[0x1C..0x3C].iter().position(|&b| b == 0).unwrap_or(0x20);
+    let model_end = data[0x1C..0x3C]
+        .iter()
+        .position(|&b| b == 0)
+        .unwrap_or(0x20);
     let model = crate::encoding::decode_utf8_or_latin1(&data[0x1C..0x1C + model_end]).to_string();
     if !model.is_empty() {
         tags.push(mk("Model", "Camera Model", Value::String(model)));
@@ -41,8 +44,12 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
             3 => "Lossy",
             _ => "Unknown",
         };
-        tags.push(mk_loc("RAFCompression", "RAF Compression",
-            Value::U32(compression), comp_str.to_string()));
+        tags.push(mk_loc(
+            "RAFCompression",
+            "RAF Compression",
+            Value::U32(compression),
+            comp_str.to_string(),
+        ));
     }
 
     // JPEG offset at 0x54 (uint32 BE) and length at 0x58
@@ -84,8 +91,10 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
 
     // RAF directory offset at 0x5C and length at 0x60
     if data.len() >= 0x64 {
-        let dir_offset = u32::from_be_bytes([data[0x5C], data[0x5D], data[0x5E], data[0x5F]]) as usize;
-        let dir_length = u32::from_be_bytes([data[0x60], data[0x61], data[0x62], data[0x63]]) as usize;
+        let dir_offset =
+            u32::from_be_bytes([data[0x5C], data[0x5D], data[0x5E], data[0x5F]]) as usize;
+        let dir_length =
+            u32::from_be_bytes([data[0x60], data[0x61], data[0x62], data[0x63]]) as usize;
 
         if dir_offset > 0 && dir_offset + dir_length <= data.len() {
             parse_raf_directory(&data[dir_offset..dir_offset + dir_length], &mut tags);
@@ -115,11 +124,15 @@ fn parse_raf_directory(data: &[u8], tags: &mut Vec<Tag>) {
     {
         let mut scan_pos = 4;
         for _ in 0..num_entries {
-            if scan_pos + 4 > data.len() { break; }
+            if scan_pos + 4 > data.len() {
+                break;
+            }
             let tag_id = u16::from_be_bytes([data[scan_pos], data[scan_pos + 1]]);
             let data_len = u16::from_be_bytes([data[scan_pos + 2], data[scan_pos + 3]]) as usize;
             scan_pos += 4;
-            if scan_pos + data_len > data.len() { break; }
+            if scan_pos + data_len > data.len() {
+                break;
+            }
             if tag_id == 0x130 && data_len >= 1 {
                 fuji_layout = (data[scan_pos] & 0x80) != 0;
             }
@@ -155,83 +168,124 @@ fn decode_raf_tag(tag_id: u16, data_len: usize, val_data: &[u8], fuji_layout: bo
         // RawImageFullSize: int16u[2], stored height-width, display width-height
         0x100 if data_len >= 4 => {
             let height = u16::from_be_bytes([val_data[0], val_data[1]]) as u32;
-            let width  = u16::from_be_bytes([val_data[2], val_data[3]]) as u32;
+            let width = u16::from_be_bytes([val_data[2], val_data[3]]) as u32;
             let s = format!("{}x{}", width, height);
-            Some(mk_loc("RawImageFullSize", "Raw Image Full Size",
-                Value::String(s.clone()), s))
+            Some(mk_loc(
+                "RawImageFullSize",
+                "Raw Image Full Size",
+                Value::String(s.clone()),
+                s,
+            ))
         }
         // RawImageCropTopLeft: int16u[2] (top_margin, left_margin)
         0x110 if data_len >= 4 => {
-            let top  = u16::from_be_bytes([val_data[0], val_data[1]]);
+            let top = u16::from_be_bytes([val_data[0], val_data[1]]);
             let left = u16::from_be_bytes([val_data[2], val_data[3]]);
             let s = format!("{} {}", top, left);
-            Some(mk_loc("RawImageCropTopLeft", "Raw Image Crop Top Left",
-                Value::String(s.clone()), s))
+            Some(mk_loc(
+                "RawImageCropTopLeft",
+                "Raw Image Crop Top Left",
+                Value::String(s.clone()),
+                s,
+            ))
         }
         // RawImageCroppedSize: int16u[2], stored height-width, display width-height
         0x111 if data_len >= 4 => {
             let height = u16::from_be_bytes([val_data[0], val_data[1]]) as u32;
-            let width  = u16::from_be_bytes([val_data[2], val_data[3]]) as u32;
+            let width = u16::from_be_bytes([val_data[2], val_data[3]]) as u32;
             let s = format!("{}x{}", width, height);
-            Some(mk_loc("RawImageCroppedSize", "Raw Image Cropped Size",
-                Value::String(s.clone()), s))
+            Some(mk_loc(
+                "RawImageCroppedSize",
+                "Raw Image Cropped Size",
+                Value::String(s.clone()),
+                s,
+            ))
         }
         // RawImageSize: int16u[2], height then width, with FujiLayout adjustment
         0x121 if data_len >= 4 => {
             let mut height = u16::from_be_bytes([val_data[0], val_data[1]]) as u32;
-            let mut width  = u16::from_be_bytes([val_data[2], val_data[3]]) as u32;
+            let mut width = u16::from_be_bytes([val_data[2], val_data[3]]) as u32;
             if fuji_layout {
                 width /= 2;
                 height *= 2;
             }
             let s = format!("{}x{}", width, height);
-            Some(mk_loc("RawImageSize", "Raw Image Size",
-                Value::String(s.clone()), s))
+            Some(mk_loc(
+                "RawImageSize",
+                "Raw Image Size",
+                Value::String(s.clone()),
+                s,
+            ))
         }
         // FujiLayout: int8u[4]
         0x130 => {
             let bytes: Vec<u8> = val_data[..data_len.min(4)].to_vec();
-            let s = bytes.iter().map(|b| b.to_string()).collect::<Vec<_>>().join(" ");
-            Some(mk_loc("FujiLayout", "Fuji Layout",
-                Value::String(s.clone()), s))
+            let s = bytes
+                .iter()
+                .map(|b| b.to_string())
+                .collect::<Vec<_>>()
+                .join(" ");
+            Some(mk_loc(
+                "FujiLayout",
+                "Fuji Layout",
+                Value::String(s.clone()),
+                s,
+            ))
         }
         // WB_GRGBLevelsAuto: int16u[4] (take first 4 values only)
-        0x2000 if data_len >= 8 => {
-            Some(decode_wb_grgb(val_data, "WB_GRGBLevelsAuto", "WB GRGB Levels Auto"))
-        }
+        0x2000 if data_len >= 8 => Some(decode_wb_grgb(
+            val_data,
+            "WB_GRGBLevelsAuto",
+            "WB GRGB Levels Auto",
+        )),
         // WB_GRGBLevelsDaylight
-        0x2100 if data_len >= 8 => {
-            Some(decode_wb_grgb(val_data, "WB_GRGBLevelsDaylight", "WB GRGB Levels Daylight"))
-        }
+        0x2100 if data_len >= 8 => Some(decode_wb_grgb(
+            val_data,
+            "WB_GRGBLevelsDaylight",
+            "WB GRGB Levels Daylight",
+        )),
         // WB_GRGBLevelsCloudy
-        0x2200 if data_len >= 8 => {
-            Some(decode_wb_grgb(val_data, "WB_GRGBLevelsCloudy", "WB GRGB Levels Cloudy"))
-        }
+        0x2200 if data_len >= 8 => Some(decode_wb_grgb(
+            val_data,
+            "WB_GRGBLevelsCloudy",
+            "WB GRGB Levels Cloudy",
+        )),
         // WB_GRGBLevelsDaylightFluor
-        0x2300 if data_len >= 8 => {
-            Some(decode_wb_grgb(val_data, "WB_GRGBLevelsDaylightFluor", "WB GRGB Levels Daylight Fluor"))
-        }
+        0x2300 if data_len >= 8 => Some(decode_wb_grgb(
+            val_data,
+            "WB_GRGBLevelsDaylightFluor",
+            "WB GRGB Levels Daylight Fluor",
+        )),
         // WB_GRGBLevelsDayWhiteFluor
-        0x2301 if data_len >= 8 => {
-            Some(decode_wb_grgb(val_data, "WB_GRGBLevelsDayWhiteFluor", "WB GRGB Levels Day White Fluor"))
-        }
+        0x2301 if data_len >= 8 => Some(decode_wb_grgb(
+            val_data,
+            "WB_GRGBLevelsDayWhiteFluor",
+            "WB GRGB Levels Day White Fluor",
+        )),
         // WB_GRGBLevelsWhiteFluorescent
-        0x2302 if data_len >= 8 => {
-            Some(decode_wb_grgb(val_data, "WB_GRGBLevelsWhiteFluorescent", "WB GRGB Levels White Fluorescent"))
-        }
+        0x2302 if data_len >= 8 => Some(decode_wb_grgb(
+            val_data,
+            "WB_GRGBLevelsWhiteFluorescent",
+            "WB GRGB Levels White Fluorescent",
+        )),
         // WB_GRGBLevelsWarmWhiteFluor
-        0x2310 if data_len >= 8 => {
-            Some(decode_wb_grgb(val_data, "WB_GRGBLevelsWarmWhiteFluor", "WB GRGB Levels Warm White Fluor"))
-        }
+        0x2310 if data_len >= 8 => Some(decode_wb_grgb(
+            val_data,
+            "WB_GRGBLevelsWarmWhiteFluor",
+            "WB GRGB Levels Warm White Fluor",
+        )),
         // WB_GRGBLevelsLivingRoomWarmWhiteFluor
-        0x2311 if data_len >= 8 => {
-            Some(decode_wb_grgb(val_data, "WB_GRGBLevelsLivingRoomWarmWhiteFluor",
-                "WB GRGB Levels Living Room Warm White Fluor"))
-        }
+        0x2311 if data_len >= 8 => Some(decode_wb_grgb(
+            val_data,
+            "WB_GRGBLevelsLivingRoomWarmWhiteFluor",
+            "WB GRGB Levels Living Room Warm White Fluor",
+        )),
         // WB_GRGBLevelsTungsten
-        0x2400 if data_len >= 8 => {
-            Some(decode_wb_grgb(val_data, "WB_GRGBLevelsTungsten", "WB GRGB Levels Tungsten"))
-        }
+        0x2400 if data_len >= 8 => Some(decode_wb_grgb(
+            val_data,
+            "WB_GRGBLevelsTungsten",
+            "WB GRGB Levels Tungsten",
+        )),
         // WB_GRGBLevels
         0x2ff0 if data_len >= 8 => {
             Some(decode_wb_grgb(val_data, "WB_GRGBLevels", "WB GRGB Levels"))
@@ -255,8 +309,12 @@ fn decode_raf_tag(tag_id: u16, data_len: usize, val_data: &[u8], fuji_layout: bo
                 } else {
                     format!("{:+.1}", value)
                 };
-                Some(mk_loc("RelativeExposure", "Relative Exposure",
-                    Value::F64(value), print))
+                Some(mk_loc(
+                    "RelativeExposure",
+                    "Relative Exposure",
+                    Value::F64(value),
+                    print,
+                ))
             } else {
                 None
             }
@@ -273,8 +331,12 @@ fn decode_raf_tag(tag_id: u16, data_len: usize, val_data: &[u8], fuji_layout: bo
                 } else {
                     format!("{:+.1}", value)
                 };
-                Some(mk_loc("RawExposureBias", "Raw Exposure Bias",
-                    Value::F64(value), print))
+                Some(mk_loc(
+                    "RawExposureBias",
+                    "Raw Exposure Bias",
+                    Value::F64(value),
+                    print,
+                ))
             } else {
                 None
             }
@@ -287,9 +349,9 @@ fn decode_raf_tag(tag_id: u16, data_len: usize, val_data: &[u8], fuji_layout: bo
 /// Only takes the first 4 u16 values (G, R, G, B).
 fn decode_wb_grgb(val_data: &[u8], name: &str, description: &str) -> Tag {
     let g1 = u16::from_be_bytes([val_data[0], val_data[1]]);
-    let r  = u16::from_be_bytes([val_data[2], val_data[3]]);
+    let r = u16::from_be_bytes([val_data[2], val_data[3]]);
     let g2 = u16::from_be_bytes([val_data[4], val_data[5]]);
-    let b  = u16::from_be_bytes([val_data[6], val_data[7]]);
+    let b = u16::from_be_bytes([val_data[6], val_data[7]]);
     let s = format!("{} {} {} {}", g1, r, g2, b);
     mk_loc(name, description, Value::String(s.clone()), s)
 }

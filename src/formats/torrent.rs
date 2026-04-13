@@ -169,23 +169,21 @@ pub fn read_torrent(data: &[u8]) -> Result<Vec<Tag>> {
                     tags.push(mk("Encoding", "Encoding", Value::String(s)));
                 }
             }
-            "url-list" => {
-                match val {
-                    Bencode::List(items) => {
-                        for (i, item) in items.iter().enumerate() {
-                            if let Some(s) = bencode_to_string(item) {
-                                let name = format!("URLList{}", i + 1);
-                                tags.push(mk(&name, &name, Value::String(s)));
-                            }
-                        }
-                    }
-                    _ => {
-                        if let Some(s) = bencode_to_string(val) {
-                            tags.push(mk("URLList1", "URLList1", Value::String(s)));
+            "url-list" => match val {
+                Bencode::List(items) => {
+                    for (i, item) in items.iter().enumerate() {
+                        if let Some(s) = bencode_to_string(item) {
+                            let name = format!("URLList{}", i + 1);
+                            tags.push(mk(&name, &name, Value::String(s)));
                         }
                     }
                 }
-            }
+                _ => {
+                    if let Some(s) = bencode_to_string(val) {
+                        tags.push(mk("URLList1", "URLList1", Value::String(s)));
+                    }
+                }
+            },
             "info" => {
                 if let Bencode::Dict(info) = val {
                     process_info(info, &mut tags);
@@ -215,7 +213,11 @@ fn process_info(info: &[(String, Bencode)], tags: &mut Vec<Tag>) {
             }
             "piece length" => {
                 if let Bencode::Int(n) = val {
-                    tags.push(mk("PieceLength", "Piece Length", Value::String(n.to_string())));
+                    tags.push(mk(
+                        "PieceLength",
+                        "Piece Length",
+                        Value::String(n.to_string()),
+                    ));
                 }
             }
             "pieces" => {
@@ -226,7 +228,11 @@ fn process_info(info: &[(String, Bencode)], tags: &mut Vec<Tag>) {
             "length" => {
                 // Single-file torrent
                 if let Bencode::Int(n) = val {
-                    tags.push(mk("File1Length", "File 1 Length", Value::String(convert_file_size(*n))));
+                    tags.push(mk(
+                        "File1Length",
+                        "File 1 Length",
+                        Value::String(convert_file_size(*n)),
+                    ));
                 }
             }
             "files" => {
@@ -253,10 +259,8 @@ fn process_info(info: &[(String, Bencode)], tags: &mut Vec<Tag>) {
                         }
                         "path" => {
                             if let Bencode::List(parts) = fval {
-                                let path: Vec<String> = parts
-                                    .iter()
-                                    .filter_map(bencode_to_string)
-                                    .collect();
+                                let path: Vec<String> =
+                                    parts.iter().filter_map(bencode_to_string).collect();
                                 let path_str = path.join("/");
                                 let name = format!("File{}Path", idx);
                                 tags.push(mk(&name, &name, Value::String(path_str)));
@@ -304,15 +308,32 @@ fn unix_to_exif_date(ts: i64) -> String {
     let mut rem = days;
     loop {
         let dy = if is_leap(year) { 366i64 } else { 365i64 };
-        if rem < dy { break; }
+        if rem < dy {
+            break;
+        }
         rem -= dy;
         year += 1;
     }
     let leap = is_leap(year);
-    let month_days = [31i64, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let month_days = [
+        31i64,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
     let mut month = 1i32;
     for &dm in &month_days {
-        if rem < dm { break; }
+        if rem < dm {
+            break;
+        }
         rem -= dm;
         month += 1;
     }
@@ -321,9 +342,18 @@ fn unix_to_exif_date(ts: i64) -> String {
     let offset_hours = utc_offset / 3600;
     let offset_mins = (utc_offset.abs() % 3600) / 60;
     let sign = if utc_offset >= 0 { '+' } else { '-' };
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
-        year, month, day, hour, minute, second,
-        sign, offset_hours.abs(), offset_mins)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        sign,
+        offset_hours.abs(),
+        offset_mins
+    )
 }
 
 fn get_local_utc_offset() -> i64 {
@@ -333,8 +363,12 @@ fn get_local_utc_offset() -> i64 {
         // Parse simple TZ like "CET-1" or "UTC+5"
         let tz = tz.trim();
         if let Some(sign_pos) = tz.rfind(['+', '-']) {
-            let sign: i64 = if &tz[sign_pos..sign_pos+1] == "+" { 1 } else { -1 };
-            if let Ok(h) = tz[sign_pos+1..].parse::<i64>() {
+            let sign: i64 = if &tz[sign_pos..sign_pos + 1] == "+" {
+                1
+            } else {
+                -1
+            };
+            if let Ok(h) = tz[sign_pos + 1..].parse::<i64>() {
                 return -sign * h * 3600; // TZ sign is inverted (CET-1 means UTC+1)
             }
         }

@@ -29,11 +29,19 @@ pub fn read_sony_pmp(data: &[u8]) -> Result<Vec<Tag>> {
 
     // JpgFromRawStart at offset 8 (int32u BE)
     let jpg_start = u32::from_be_bytes([data[8], data[9], data[10], data[11]]) as usize;
-    tags.push(mk("JpgFromRawStart", "Jpg From Raw Start", Value::U32(jpg_start as u32)));
+    tags.push(mk(
+        "JpgFromRawStart",
+        "Jpg From Raw Start",
+        Value::U32(jpg_start as u32),
+    ));
 
     // JpgFromRawLength at offset 12
     let jpg_len = u32::from_be_bytes([data[12], data[13], data[14], data[15]]) as usize;
-    tags.push(mk("JpgFromRawLength", "Jpg From Raw Length", Value::U32(jpg_len as u32)));
+    tags.push(mk(
+        "JpgFromRawLength",
+        "Jpg From Raw Length",
+        Value::U32(jpg_len as u32),
+    ));
 
     // SonyImageWidth at offset 22 (int16u BE)
     let sony_w = u16::from_be_bytes([data[22], data[23]]);
@@ -41,7 +49,11 @@ pub fn read_sony_pmp(data: &[u8]) -> Result<Vec<Tag>> {
 
     // SonyImageHeight at offset 24
     let sony_h = u16::from_be_bytes([data[24], data[25]]);
-    tags.push(mk("SonyImageHeight", "Sony Image Height", Value::U16(sony_h)));
+    tags.push(mk(
+        "SonyImageHeight",
+        "Sony Image Height",
+        Value::U16(sony_h),
+    ));
 
     // Orientation at offset 27
     let orientation = data[27];
@@ -52,7 +64,11 @@ pub fn read_sony_pmp(data: &[u8]) -> Result<Vec<Tag>> {
         3 => "Rotate 90 CW",
         _ => "Unknown",
     };
-    tags.push(mk("Orientation", "Orientation", Value::String(orient_str.into())));
+    tags.push(mk(
+        "Orientation",
+        "Orientation",
+        Value::String(orient_str.into()),
+    ));
 
     // ImageQuality at offset 29
     let quality = data[29];
@@ -60,14 +76,20 @@ pub fn read_sony_pmp(data: &[u8]) -> Result<Vec<Tag>> {
         8 => "Snap Shot",
         23 => "Standard",
         51 => "Fine",
-        n => return {
-            // Just add unknown
-            tags.push(mk("ImageQuality", "Image Quality", Value::U8(n)));
-            parse_rest(&data, jpg_start, jpg_len, &mut tags);
-            Ok(tags)
-        },
+        n => {
+            return {
+                // Just add unknown
+                tags.push(mk("ImageQuality", "Image Quality", Value::U8(n)));
+                parse_rest(&data, jpg_start, jpg_len, &mut tags);
+                Ok(tags)
+            }
+        }
     };
-    tags.push(mk("ImageQuality", "Image Quality", Value::String(qual_str.into())));
+    tags.push(mk(
+        "ImageQuality",
+        "Image Quality",
+        Value::String(qual_str.into()),
+    ));
 
     parse_rest(data, jpg_start, jpg_len, &mut tags);
 
@@ -85,16 +107,24 @@ fn parse_rest(data: &[u8], jpg_start: usize, jpg_len: usize, tags: &mut Vec<Tag>
     // DateTimeOriginal at offset 76 (6 bytes: yy mm dd hh mm ss)
     if data.len() >= 82 {
         let y = data[76] as i32 + if data[76] < 70 { 2000 } else { 1900 };
-        let dt = format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
-            y, data[77], data[78], data[79], data[80], data[81]);
-        tags.push(mk("DateTimeOriginal", "Date/Time Original", Value::String(dt)));
+        let dt = format!(
+            "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+            y, data[77], data[78], data[79], data[80], data[81]
+        );
+        tags.push(mk(
+            "DateTimeOriginal",
+            "Date/Time Original",
+            Value::String(dt),
+        ));
     }
 
     // ModifyDate at offset 84
     if data.len() >= 90 {
         let y = data[84] as i32 + if data[84] < 70 { 2000 } else { 1900 };
-        let dt = format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
-            y, data[85], data[86], data[87], data[88], data[89]);
+        let dt = format!(
+            "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+            y, data[85], data[86], data[87], data[88], data[89]
+        );
         tags.push(mk("ModifyDate", "Modify Date", Value::String(dt)));
     }
 
@@ -118,7 +148,11 @@ fn parse_rest(data: &[u8], jpg_start: usize, jpg_len: usize, tags: &mut Vec<Tag>
         let fn_raw = i16::from_be_bytes([data[106], data[107]]);
         if fn_raw > 0 {
             let fnum = fn_raw as f64 / 100.0;
-            tags.push(mk("FNumber", "F Number", Value::String(format!("{:.1}", fnum))));
+            tags.push(mk(
+                "FNumber",
+                "F Number",
+                Value::String(format!("{:.1}", fnum)),
+            ));
         }
     }
 
@@ -139,7 +173,11 @@ fn parse_rest(data: &[u8], jpg_start: usize, jpg_len: usize, tags: &mut Vec<Tag>
         let jpg_data = &data[jpg_start..jpg_end];
         if jpg_data.len() >= 3 && jpg_data[0] == 0xFF && jpg_data[1] == 0xD8 {
             // Add JpgFromRaw binary tag
-            tags.push(mk("JpgFromRaw", "Jpg From Raw", Value::Binary(jpg_data.to_vec())));
+            tags.push(mk(
+                "JpgFromRaw",
+                "Jpg From Raw",
+                Value::Binary(jpg_data.to_vec()),
+            ));
 
             if let Ok(jpeg_tags) = crate::formats::jpeg::read_jpeg(jpg_data) {
                 // Include all tags from the embedded JPEG (including JPEG structure tags)

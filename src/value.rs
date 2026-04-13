@@ -43,7 +43,11 @@ impl Value {
             Value::I32(v) => v.to_string(),
             Value::URational(n, d) => {
                 if *d == 0 {
-                    if *n == 0 { "undef".to_string() } else { "inf".to_string() }
+                    if *n == 0 {
+                        "undef".to_string()
+                    } else {
+                        "inf".to_string()
+                    }
                 } else if *n % *d == 0 {
                     (*n / *d).to_string()
                 } else {
@@ -52,7 +56,11 @@ impl Value {
             }
             Value::IRational(n, d) => {
                 if *d == 0 {
-                    if *n >= 0 { "inf".to_string() } else { "-inf".to_string() }
+                    if *n >= 0 {
+                        "inf".to_string()
+                    } else {
+                        "-inf".to_string()
+                    }
                 } else if *n % *d == 0 {
                     (*n / *d).to_string()
                 } else {
@@ -62,13 +70,11 @@ impl Value {
             Value::F32(v) => format!("{}", v),
             Value::F64(v) => format!("{}", v),
             Value::Binary(data) => format!("(Binary data {} bytes)", data.len()),
-            Value::List(items) => {
-                items
-                    .iter()
-                    .map(|v| v.to_display_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            }
+            Value::List(items) => items
+                .iter()
+                .map(|v| v.to_display_string())
+                .collect::<Vec<_>>()
+                .join(", "),
             Value::Undefined(data) => format!("(Undefined {} bytes)", data.len()),
         }
     }
@@ -145,7 +151,7 @@ pub fn format_g_prec(v: f64, prec: usize) -> String {
         // and "-1.5e-6" → "-1.5e-06" (at least 2 digits in exponent)
         // First strip trailing zeros from mantissa
         let (mantissa_part, exp_part) = if let Some(e_pos) = s.find('e') {
-            (&s[..e_pos], &s[e_pos+1..])
+            (&s[..e_pos], &s[e_pos + 1..])
         } else {
             return s;
         };

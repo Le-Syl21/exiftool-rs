@@ -27,7 +27,12 @@ pub fn write_psd(
     if pos + 4 > source.len() {
         return Err(Error::InvalidData("truncated PSD".into()));
     }
-    let color_len = u32::from_be_bytes([source[pos], source[pos + 1], source[pos + 2], source[pos + 3]]) as usize;
+    let color_len = u32::from_be_bytes([
+        source[pos],
+        source[pos + 1],
+        source[pos + 2],
+        source[pos + 3],
+    ]) as usize;
     output.extend_from_slice(&source[pos..pos + 4 + color_len]);
     pos += 4 + color_len;
 
@@ -35,7 +40,12 @@ pub fn write_psd(
     if pos + 4 > source.len() {
         return Err(Error::InvalidData("truncated PSD".into()));
     }
-    let irb_len = u32::from_be_bytes([source[pos], source[pos + 1], source[pos + 2], source[pos + 3]]) as usize;
+    let irb_len = u32::from_be_bytes([
+        source[pos],
+        source[pos + 1],
+        source[pos + 2],
+        source[pos + 3],
+    ]) as usize;
     let irb_start = pos + 4;
     let irb_end = irb_start + irb_len;
     pos = irb_start;
@@ -57,7 +67,10 @@ pub fn write_psd(
             break;
         }
         let data_len = u32::from_be_bytes([
-            source[data_pos], source[data_pos + 1], source[data_pos + 2], source[data_pos + 3],
+            source[data_pos],
+            source[data_pos + 1],
+            source[data_pos + 2],
+            source[data_pos + 3],
         ]) as usize;
         let data_padded = data_len + (data_len % 2);
         let block_end = data_pos + 4 + data_padded;

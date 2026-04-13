@@ -12,20 +12,17 @@ use crate::value::Value;
 
 // WTV file magic (first 16 bytes)
 const WTV_MAGIC: [u8; 16] = [
-    0xb7, 0xd8, 0x00, 0x20, 0x37, 0x49, 0xda, 0x11,
-    0xa6, 0x4e, 0x00, 0x07, 0xe9, 0x5e, 0xad, 0x8d,
+    0xb7, 0xd8, 0x00, 0x20, 0x37, 0x49, 0xda, 0x11, 0xa6, 0x4e, 0x00, 0x07, 0xe9, 0x5e, 0xad, 0x8d,
 ];
 
 // GUID for WTV directory entries
 const DIR_ENTRY_GUID: [u8; 16] = [
-    0x92, 0xb7, 0x74, 0x91, 0x59, 0x70, 0x70, 0x44,
-    0x88, 0xdf, 0x06, 0x3b, 0x82, 0xcc, 0x21, 0x3d,
+    0x92, 0xb7, 0x74, 0x91, 0x59, 0x70, 0x70, 0x44, 0x88, 0xdf, 0x06, 0x3b, 0x82, 0xcc, 0x21, 0x3d,
 ];
 
 // GUID sentinel for metadata entries
 const METADATA_ENTRY_GUID: [u8; 16] = [
-    0x5a, 0xfe, 0xd7, 0x6d, 0xc8, 0x1d, 0x8f, 0x4a,
-    0x99, 0x22, 0xfa, 0xb1, 0x1c, 0x38, 0x14, 0x53,
+    0x5a, 0xfe, 0xd7, 0x6d, 0xc8, 0x1d, 0x8f, 0x4a, 0x99, 0x22, 0xfa, 0xb1, 0x1c, 0x38, 0x14, 0x53,
 ];
 
 fn mk_wtv(name: &str, value: Value, print: String) -> Tag {
@@ -45,8 +42,15 @@ fn mk_wtv(name: &str, value: Value, print: String) -> Tag {
 }
 
 fn read_u32_le(data: &[u8], off: usize) -> Option<u32> {
-    if off + 4 > data.len() { return None; }
-    Some(u32::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3]]))
+    if off + 4 > data.len() {
+        return None;
+    }
+    Some(u32::from_le_bytes([
+        data[off],
+        data[off + 1],
+        data[off + 2],
+        data[off + 3],
+    ]))
 }
 
 fn read_i32_le(data: &[u8], off: usize) -> Option<i32> {
@@ -54,19 +58,30 @@ fn read_i32_le(data: &[u8], off: usize) -> Option<i32> {
 }
 
 fn read_u64_le(data: &[u8], off: usize) -> Option<u64> {
-    if off + 8 > data.len() { return None; }
+    if off + 8 > data.len() {
+        return None;
+    }
     Some(u64::from_le_bytes([
-        data[off], data[off+1], data[off+2], data[off+3],
-        data[off+4], data[off+5], data[off+6], data[off+7],
+        data[off],
+        data[off + 1],
+        data[off + 2],
+        data[off + 3],
+        data[off + 4],
+        data[off + 5],
+        data[off + 6],
+        data[off + 7],
     ]))
 }
 
 /// Decode a UTF-16-LE byte slice to a String.
 fn decode_utf16le(bytes: &[u8]) -> String {
-    let words: Vec<u16> = bytes.chunks_exact(2)
+    let words: Vec<u16> = bytes
+        .chunks_exact(2)
         .map(|b| u16::from_le_bytes([b[0], b[1]]))
         .collect();
-    String::from_utf16_lossy(&words).trim_end_matches('\0').to_string()
+    String::from_utf16_lossy(&words)
+        .trim_end_matches('\0')
+        .to_string()
 }
 
 /// Read sectors referenced by a sector table.
@@ -81,7 +96,10 @@ fn read_sectors(file: &[u8], sec_table: &[u8], mut pos: usize, sec_size: usize) 
     let mut result: Vec<u8> = Vec::new();
     while pos + 4 <= sec_table.len() {
         let sec = u32::from_le_bytes([
-            sec_table[pos], sec_table[pos+1], sec_table[pos+2], sec_table[pos+3],
+            sec_table[pos],
+            sec_table[pos + 1],
+            sec_table[pos + 2],
+            sec_table[pos + 3],
         ]) as usize;
         if sec == 0xffff {
             return None;
@@ -97,17 +115,22 @@ fn read_sectors(file: &[u8], sec_table: &[u8], mut pos: usize, sec_size: usize) 
         result.extend_from_slice(&file[offset..offset + sec_size]);
         pos += 4;
     }
-    if result.is_empty() { None } else { Some(result) }
+    if result.is_empty() {
+        None
+    } else {
+        Some(result)
+    }
 }
 
 /// Returns true if the raw tag name is marked Unknown=1 in the Perl tag table.
 /// These tags are not output by default (Perl ExifTool hides them unless -u flag is used).
 fn is_unknown_tag(raw: &str) -> bool {
-    matches!(raw,
+    matches!(
+        raw,
         "WM/WMRVBitrate"
-        | "WM/WMRVExpirationDate"
-        | "WM/WMRVExpirationSpan"
-        | "WM/MediaThumbTimeStamp"
+            | "WM/WMRVExpirationDate"
+            | "WM/WMRVExpirationSpan"
+            | "WM/MediaThumbTimeStamp"
     )
 }
 
@@ -121,73 +144,73 @@ fn is_unknown_tag(raw: &str) -> bool {
 fn map_tag_name(raw: &str) -> String {
     // Explicit mappings from the Perl tag table
     match raw {
-        "WM/Genre"                          => return "Genre".into(),
-        "WM/Language"                       => return "Language".into(),
-        "WM/MediaClassPrimaryID"            => return "MediaClassPrimaryID".into(),
-        "WM/MediaClassSecondaryID"          => return "MediaClassSecondaryID".into(),
-        "WM/MediaCredits"                   => return "MediaCredits".into(),
-        "WM/MediaIsDelay"                   => return "MediaIsDelay".into(),
-        "WM/MediaIsFinale"                  => return "MediaIsFinale".into(),
-        "WM/MediaIsLive"                    => return "MediaIsLive".into(),
-        "WM/MediaIsMovie"                   => return "MediaIsMovie".into(),
-        "WM/MediaIsPremiere"                => return "MediaIsPremiere".into(),
-        "WM/MediaIsRepeat"                  => return "MediaIsRepeat".into(),
-        "WM/MediaIsSAP"                     => return "MediaIsSAP".into(),
-        "WM/MediaIsSport"                   => return "MediaIsSport".into(),
-        "WM/MediaIsStereo"                  => return "MediaIsStereo".into(),
-        "WM/MediaIsSubtitled"               => return "MediaIsSubtitled".into(),
-        "WM/MediaIsTape"                    => return "MediaIsTape".into(),
-        "WM/MediaNetworkAffiliation"        => return "MediaNetworkAffiliation".into(),
+        "WM/Genre" => return "Genre".into(),
+        "WM/Language" => return "Language".into(),
+        "WM/MediaClassPrimaryID" => return "MediaClassPrimaryID".into(),
+        "WM/MediaClassSecondaryID" => return "MediaClassSecondaryID".into(),
+        "WM/MediaCredits" => return "MediaCredits".into(),
+        "WM/MediaIsDelay" => return "MediaIsDelay".into(),
+        "WM/MediaIsFinale" => return "MediaIsFinale".into(),
+        "WM/MediaIsLive" => return "MediaIsLive".into(),
+        "WM/MediaIsMovie" => return "MediaIsMovie".into(),
+        "WM/MediaIsPremiere" => return "MediaIsPremiere".into(),
+        "WM/MediaIsRepeat" => return "MediaIsRepeat".into(),
+        "WM/MediaIsSAP" => return "MediaIsSAP".into(),
+        "WM/MediaIsSport" => return "MediaIsSport".into(),
+        "WM/MediaIsStereo" => return "MediaIsStereo".into(),
+        "WM/MediaIsSubtitled" => return "MediaIsSubtitled".into(),
+        "WM/MediaIsTape" => return "MediaIsTape".into(),
+        "WM/MediaNetworkAffiliation" => return "MediaNetworkAffiliation".into(),
         "WM/MediaOriginalBroadcastDateTime" => return "MediaOriginalBroadcastDateTime".into(),
-        "WM/MediaOriginalChannel"           => return "MediaOriginalChannel".into(),
-        "WM/MediaOriginalChannelSubNumber"  => return "MediaOriginalChannelSubNumber".into(),
-        "WM/MediaOriginalRunTime"           => return "MediaOriginalRunTime".into(),
-        "WM/MediaStationCallSign"           => return "MediaStationCallSign".into(),
-        "WM/MediaStationName"               => return "MediaStationName".into(),
-        "WM/MediaThumbAspectRatioX"         => return "MediaThumbAspectRatioX".into(),
-        "WM/MediaThumbAspectRatioY"         => return "MediaThumbAspectRatioY".into(),
-        "WM/MediaThumbHeight"               => return "MediaThumbHeight".into(),
-        "WM/MediaThumbRatingAttributes"     => return "MediaThumbRatingAttributes".into(),
-        "WM/MediaThumbRatingLevel"          => return "MediaThumbRatingLevel".into(),
-        "WM/MediaThumbRatingSystem"         => return "MediaThumbRatingSystem".into(),
-        "WM/MediaThumbRet"                  => return "MediaThumbRet".into(),
-        "WM/MediaThumbStride"               => return "MediaThumbStride".into(),
-        "WM/MediaThumbWidth"                => return "MediaThumbWidth".into(),
-        "WM/OriginalReleaseTime"            => return "OriginalReleaseTime".into(),
-        "WM/ParentalRating"                 => return "ParentalRating".into(),
-        "WM/ParentalRatingReason"           => return "ParentalRatingReason".into(),
-        "WM/Provider"                       => return "Provider".into(),
-        "WM/ProviderCopyright"              => return "ProviderCopyright".into(),
-        "WM/ProviderRating"                 => return "ProviderRating".into(),
-        "WM/SubTitle"                       => return "Subtitle".into(),
-        "WM/SubTitleDescription"            => return "SubtitleDescription".into(),
-        "WM/VideoClosedCaptioning"          => return "VideoClosedCaptioning".into(),
-        "WM/WMRVATSCContent"                => return "ATSCContent".into(),
-        "WM/WMRVActualSoftPostPadding"      => return "ActualSoftPostPadding".into(),
-        "WM/WMRVActualSoftPrePadding"       => return "ActualSoftPrePadding".into(),
-        "WM/WMRVBrandingImageID"            => return "BrandingImageID".into(),
-        "WM/WMRVBrandingName"               => return "BrandingName".into(),
-        "WM/WMRVContentProtected"           => return "ContentProtected".into(),
-        "WM/WMRVContentProtectedPercent"    => return "ContentProtectedPercent".into(),
-        "WM/WMRVDTVContent"                 => return "DTVContent".into(),
-        "WM/WMRVEncodeTime"                 => return "EncodeTime".into(),
-        "WM/WMRVEndTime"                    => return "EndTime".into(),
-        "WM/WMRVHDContent"                  => return "HDContent".into(),
-        "WM/WMRVHardPostPadding"            => return "HardPostPadding".into(),
-        "WM/WMRVHardPrePadding"             => return "HardPrePadding".into(),
-        "WM/WMRVInBandRatingAttributes"     => return "InBandRatingAttributes".into(),
-        "WM/WMRVInBandRatingLevel"          => return "InBandRatingLevel".into(),
-        "WM/WMRVInBandRatingSystem"         => return "InBandRatingSystem".into(),
-        "WM/WMRVKeepUntil"                  => return "KeepUntil".into(),
-        "WM/WMRVOriginalSoftPostPadding"    => return "OriginalSoftPostPadding".into(),
-        "WM/WMRVOriginalSoftPrePadding"     => return "OriginalSoftPrePadding".into(),
-        "WM/WMRVProgramID"                  => return "ProgramID".into(),
-        "WM/WMRVQuality"                    => return "Quality".into(),
-        "WM/WMRVRequestID"                  => return "RequestID".into(),
-        "WM/WMRVScheduleItemID"             => return "ScheduleItemID".into(),
-        "WM/WMRVSeriesUID"                  => return "SeriesUID".into(),
-        "WM/WMRVServiceID"                  => return "ServiceID".into(),
-        "WM/WMRVWatched"                    => return "Watched".into(),
+        "WM/MediaOriginalChannel" => return "MediaOriginalChannel".into(),
+        "WM/MediaOriginalChannelSubNumber" => return "MediaOriginalChannelSubNumber".into(),
+        "WM/MediaOriginalRunTime" => return "MediaOriginalRunTime".into(),
+        "WM/MediaStationCallSign" => return "MediaStationCallSign".into(),
+        "WM/MediaStationName" => return "MediaStationName".into(),
+        "WM/MediaThumbAspectRatioX" => return "MediaThumbAspectRatioX".into(),
+        "WM/MediaThumbAspectRatioY" => return "MediaThumbAspectRatioY".into(),
+        "WM/MediaThumbHeight" => return "MediaThumbHeight".into(),
+        "WM/MediaThumbRatingAttributes" => return "MediaThumbRatingAttributes".into(),
+        "WM/MediaThumbRatingLevel" => return "MediaThumbRatingLevel".into(),
+        "WM/MediaThumbRatingSystem" => return "MediaThumbRatingSystem".into(),
+        "WM/MediaThumbRet" => return "MediaThumbRet".into(),
+        "WM/MediaThumbStride" => return "MediaThumbStride".into(),
+        "WM/MediaThumbWidth" => return "MediaThumbWidth".into(),
+        "WM/OriginalReleaseTime" => return "OriginalReleaseTime".into(),
+        "WM/ParentalRating" => return "ParentalRating".into(),
+        "WM/ParentalRatingReason" => return "ParentalRatingReason".into(),
+        "WM/Provider" => return "Provider".into(),
+        "WM/ProviderCopyright" => return "ProviderCopyright".into(),
+        "WM/ProviderRating" => return "ProviderRating".into(),
+        "WM/SubTitle" => return "Subtitle".into(),
+        "WM/SubTitleDescription" => return "SubtitleDescription".into(),
+        "WM/VideoClosedCaptioning" => return "VideoClosedCaptioning".into(),
+        "WM/WMRVATSCContent" => return "ATSCContent".into(),
+        "WM/WMRVActualSoftPostPadding" => return "ActualSoftPostPadding".into(),
+        "WM/WMRVActualSoftPrePadding" => return "ActualSoftPrePadding".into(),
+        "WM/WMRVBrandingImageID" => return "BrandingImageID".into(),
+        "WM/WMRVBrandingName" => return "BrandingName".into(),
+        "WM/WMRVContentProtected" => return "ContentProtected".into(),
+        "WM/WMRVContentProtectedPercent" => return "ContentProtectedPercent".into(),
+        "WM/WMRVDTVContent" => return "DTVContent".into(),
+        "WM/WMRVEncodeTime" => return "EncodeTime".into(),
+        "WM/WMRVEndTime" => return "EndTime".into(),
+        "WM/WMRVHDContent" => return "HDContent".into(),
+        "WM/WMRVHardPostPadding" => return "HardPostPadding".into(),
+        "WM/WMRVHardPrePadding" => return "HardPrePadding".into(),
+        "WM/WMRVInBandRatingAttributes" => return "InBandRatingAttributes".into(),
+        "WM/WMRVInBandRatingLevel" => return "InBandRatingLevel".into(),
+        "WM/WMRVInBandRatingSystem" => return "InBandRatingSystem".into(),
+        "WM/WMRVKeepUntil" => return "KeepUntil".into(),
+        "WM/WMRVOriginalSoftPostPadding" => return "OriginalSoftPostPadding".into(),
+        "WM/WMRVOriginalSoftPrePadding" => return "OriginalSoftPrePadding".into(),
+        "WM/WMRVProgramID" => return "ProgramID".into(),
+        "WM/WMRVQuality" => return "Quality".into(),
+        "WM/WMRVRequestID" => return "RequestID".into(),
+        "WM/WMRVScheduleItemID" => return "ScheduleItemID".into(),
+        "WM/WMRVSeriesUID" => return "SeriesUID".into(),
+        "WM/WMRVServiceID" => return "ServiceID".into(),
+        "WM/WMRVWatched" => return "Watched".into(),
         _ => {}
     }
 
@@ -208,7 +231,11 @@ fn map_tag_name(raw: &str) -> String {
 
 /// Convert a boolean int32 value to "Yes"/"No".
 fn bool_print(val: i32) -> String {
-    if val == 0 { "No".to_string() } else { "Yes".to_string() }
+    if val == 0 {
+        "No".to_string()
+    } else {
+        "Yes".to_string()
+    }
 }
 
 /// Convert 100ns-since-0001-01-01 to "YYYY:MM:DD HH:MM:SSZ".
@@ -300,7 +327,7 @@ fn process_metadata(data: &[u8], tags: &mut Vec<Tag>) {
 
     while pos + 0x18 < end {
         // Check sentinel GUID
-        if &data[pos..pos+16] != &METADATA_ENTRY_GUID {
+        if &data[pos..pos + 16] != &METADATA_ENTRY_GUID {
             break;
         }
 
@@ -321,7 +348,7 @@ fn process_metadata(data: &[u8], tags: &mut Vec<Tag>) {
             if pos + 2 > end {
                 return; // truncated
             }
-            let ch = &data[pos..pos+2];
+            let ch = &data[pos..pos + 2];
             pos += 2;
             if ch == [0, 0] {
                 break;
@@ -353,7 +380,10 @@ fn process_metadata(data: &[u8], tags: &mut Vec<Tag>) {
                 }
                 let int_val = match read_i32_le(value_bytes, 0) {
                     Some(v) => v,
-                    None => { pos += len; continue; }
+                    None => {
+                        pos += len;
+                        continue;
+                    }
                 };
                 let print = if fmt == 3 {
                     bool_print(int_val)
@@ -385,7 +415,10 @@ fn process_metadata(data: &[u8], tags: &mut Vec<Tag>) {
                 }
                 let u64_val = match read_u64_le(value_bytes, 0) {
                     Some(v) => v,
-                    None => { pos += len; continue; }
+                    None => {
+                        pos += len;
+                        continue;
+                    }
                 };
                 // Apply value conversions for known time/duration tags
                 let print = match tag_name.as_str() {
@@ -393,12 +426,8 @@ fn process_metadata(data: &[u8], tags: &mut Vec<Tag>) {
                         let secs = u64_val as f64 / 1e7;
                         convert_duration(secs)
                     }
-                    "EncodeTime" | "EndTime" => {
-                        convert_time_100ns(u64_val)
-                    }
-                    "MediaOriginalRunTime" => {
-                        convert_duration_100ns(u64_val)
-                    }
+                    "EncodeTime" | "EndTime" => convert_time_100ns(u64_val),
+                    "MediaOriginalRunTime" => convert_duration_100ns(u64_val),
                     _ => u64_val.to_string(),
                 };
                 // For Duration, store float value; for int64 use Int
@@ -410,7 +439,10 @@ fn process_metadata(data: &[u8], tags: &mut Vec<Tag>) {
             }
             // fmt 6 = GUID
             6 => {
-                let hex = value_bytes.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+                let hex = value_bytes
+                    .iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect::<String>();
                 mk_wtv(&tag_name, Value::String(hex.clone()), hex)
             }
             // unknown formats - skip
@@ -435,7 +467,8 @@ pub fn read_wtv(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     // Sector size is at offset 0x28; constrain to 0x1000 or 0x100
-    let raw_sec_size = u32::from_le_bytes([data[0x28], data[0x29], data[0x2a], data[0x2b]]) as usize;
+    let raw_sec_size =
+        u32::from_le_bytes([data[0x28], data[0x29], data[0x2a], data[0x2b]]) as usize;
     let sec_size = if raw_sec_size == 0x1000 || raw_sec_size == 0x100 {
         raw_sec_size
     } else {
@@ -457,7 +490,7 @@ pub fn read_wtv(data: &[u8]) -> Result<Vec<Tag>> {
 
     while pos + 0x28 < directory.len() {
         // Check directory entry GUID
-        if &directory[pos..pos+16] != &DIR_ENTRY_GUID {
+        if &directory[pos..pos + 16] != &DIR_ENTRY_GUID {
             if pos > 0 {
                 break; // no more entries
             }

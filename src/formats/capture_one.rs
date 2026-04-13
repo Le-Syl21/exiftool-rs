@@ -88,22 +88,34 @@ fn parse_zip_central_directory(data: &[u8]) -> Option<Vec<ZipEntry>> {
         let mut found = None;
         let mut i = len.saturating_sub(22);
         loop {
-            if i < search_start { break; }
+            if i < search_start {
+                break;
+            }
             if data[i..i + 4] == [0x50, 0x4B, 0x05, 0x06] {
                 found = Some(i);
                 break;
             }
-            if i == 0 { break; }
+            if i == 0 {
+                break;
+            }
             i -= 1;
         }
         found?
     };
 
     let cd_entries = u16::from_le_bytes([data[eocd_pos + 10], data[eocd_pos + 11]]) as usize;
-    let cd_size = u32::from_le_bytes([data[eocd_pos + 12], data[eocd_pos + 13],
-                                      data[eocd_pos + 14], data[eocd_pos + 15]]) as usize;
-    let cd_offset = u32::from_le_bytes([data[eocd_pos + 16], data[eocd_pos + 17],
-                                        data[eocd_pos + 18], data[eocd_pos + 19]]) as usize;
+    let cd_size = u32::from_le_bytes([
+        data[eocd_pos + 12],
+        data[eocd_pos + 13],
+        data[eocd_pos + 14],
+        data[eocd_pos + 15],
+    ]) as usize;
+    let cd_offset = u32::from_le_bytes([
+        data[eocd_pos + 16],
+        data[eocd_pos + 17],
+        data[eocd_pos + 18],
+        data[eocd_pos + 19],
+    ]) as usize;
 
     if cd_offset + cd_size > len {
         return None;
@@ -121,17 +133,41 @@ fn parse_zip_central_directory(data: &[u8]) -> Option<Vec<ZipEntry>> {
         let compression = u16::from_le_bytes([data[pos + 10], data[pos + 11]]);
         let mod_time = u16::from_le_bytes([data[pos + 12], data[pos + 13]]);
         let mod_date = u16::from_le_bytes([data[pos + 14], data[pos + 15]]);
-        let crc = u32::from_le_bytes([data[pos + 16], data[pos + 17], data[pos + 18], data[pos + 19]]);
-        let compressed_size = u32::from_le_bytes([data[pos + 20], data[pos + 21], data[pos + 22], data[pos + 23]]);
-        let uncompressed_size = u32::from_le_bytes([data[pos + 24], data[pos + 25], data[pos + 26], data[pos + 27]]);
+        let crc = u32::from_le_bytes([
+            data[pos + 16],
+            data[pos + 17],
+            data[pos + 18],
+            data[pos + 19],
+        ]);
+        let compressed_size = u32::from_le_bytes([
+            data[pos + 20],
+            data[pos + 21],
+            data[pos + 22],
+            data[pos + 23],
+        ]);
+        let uncompressed_size = u32::from_le_bytes([
+            data[pos + 24],
+            data[pos + 25],
+            data[pos + 26],
+            data[pos + 27],
+        ]);
         let name_len = u16::from_le_bytes([data[pos + 28], data[pos + 29]]) as usize;
         let extra_len = u16::from_le_bytes([data[pos + 30], data[pos + 31]]) as usize;
         let comment_len = u16::from_le_bytes([data[pos + 32], data[pos + 33]]) as usize;
-        let local_header_offset = u32::from_le_bytes([data[pos + 42], data[pos + 43], data[pos + 44], data[pos + 45]]);
+        let local_header_offset = u32::from_le_bytes([
+            data[pos + 42],
+            data[pos + 43],
+            data[pos + 44],
+            data[pos + 45],
+        ]);
 
         let name_start = pos + 46;
-        if name_start + name_len > len { break; }
-        let filename = crate::encoding::decode_utf8_or_latin1(&data[name_start..name_start + name_len]).to_string();
+        if name_start + name_len > len {
+            break;
+        }
+        let filename =
+            crate::encoding::decode_utf8_or_latin1(&data[name_start..name_start + name_len])
+                .to_string();
 
         entries.push(ZipEntry {
             filename,
@@ -155,13 +191,19 @@ fn parse_zip_central_directory(data: &[u8]) -> Option<Vec<ZipEntry>> {
 /// Get the raw (compressed) file data for a ZIP entry.
 fn zip_entry_data<'a>(data: &'a [u8], entry: &ZipEntry) -> Option<&'a [u8]> {
     let lh_offset = entry.local_header_offset as usize;
-    if lh_offset + 30 > data.len() { return None; }
-    if data[lh_offset..lh_offset + 4] != [0x50, 0x4B, 0x03, 0x04] { return None; }
+    if lh_offset + 30 > data.len() {
+        return None;
+    }
+    if data[lh_offset..lh_offset + 4] != [0x50, 0x4B, 0x03, 0x04] {
+        return None;
+    }
     let name_len = u16::from_le_bytes([data[lh_offset + 26], data[lh_offset + 27]]) as usize;
     let extra_len = u16::from_le_bytes([data[lh_offset + 28], data[lh_offset + 29]]) as usize;
     let data_start = lh_offset + 30 + name_len + extra_len;
     let data_end = data_start + entry.compressed_size as usize;
-    if data_end > data.len() { return None; }
+    if data_end > data.len() {
+        return None;
+    }
     Some(&data[data_start..data_end])
 }
 
@@ -188,7 +230,10 @@ fn format_dos_datetime(mod_date: u16, mod_time: u16) -> String {
     let hour = ((mod_time >> 11) & 0x1F) as u32;
     let minute = ((mod_time >> 5) & 0x3F) as u32;
     let second = ((mod_time & 0x1F) as u32) * 2;
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", year, month, day, hour, minute, second)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+        year, month, day, hour, minute, second
+    )
 }
 
 /// ZIP compression method name.
@@ -222,7 +267,8 @@ fn parse_cos_xml(xml: &str) -> Vec<(String, String)> {
     while let Some(e_pos) = rest.find("<E ") {
         let elem_start = &rest[e_pos..];
         // Find end of this element (either "/>" or ">")
-        let elem_end = elem_start.find("/>")
+        let elem_end = elem_start
+            .find("/>")
             .map(|p| p + 2)
             .or_else(|| elem_start.find('>').map(|p| p + 1))
             .unwrap_or(elem_start.len());
@@ -239,13 +285,18 @@ fn parse_cos_xml(xml: &str) -> Vec<(String, String)> {
         }
 
         rest = &rest[e_pos + 3..]; // advance past "<E "
-        if rest.is_empty() { break; }
+        if rest.is_empty() {
+            break;
+        }
     }
 
-    order.into_iter().map(|k| {
-        let v = map.remove(&k).unwrap_or_default();
-        (k, v)
-    }).collect()
+    order
+        .into_iter()
+        .map(|k| {
+            let v = map.remove(&k).unwrap_or_default();
+            (k, v)
+        })
+        .collect()
 }
 
 /// Extract K attribute from an element string like `<E K="foo" V="bar"/>`.
@@ -272,10 +323,10 @@ fn xml_attr_v(elem: &str) -> Option<String> {
 /// Unescape basic XML entities.
 fn xml_unescape(s: &str) -> String {
     s.replace("&amp;", "&")
-     .replace("&lt;", "<")
-     .replace("&gt;", ">")
-     .replace("&quot;", "\"")
-     .replace("&apos;", "'")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'")
 }
 
 /// Extract the highest-version manifest file name from manifest XML.
@@ -289,8 +340,10 @@ fn parse_manifest(xml: &str) -> Option<(String, String)> {
     let raw_lower = raw_path.to_ascii_lowercase();
     let settings_lower = settings_path.to_ascii_lowercase();
 
-    if !raw_lower.ends_with(".iiq") && !raw_lower.ends_with(".tiff")
-        && !raw_lower.ends_with(".tif") && !raw_lower.ends_with(".jpg")
+    if !raw_lower.ends_with(".iiq")
+        && !raw_lower.ends_with(".tiff")
+        && !raw_lower.ends_with(".tif")
+        && !raw_lower.ends_with(".jpg")
         && !raw_lower.ends_with(".jpeg")
     {
         return None;
@@ -333,14 +386,35 @@ pub fn read_eip(data: &[u8]) -> Result<Vec<Tag>> {
         } else {
             first.bit_flag.to_string()
         };
-        tags.push(zip_tag("ZipRequiredVersion", Value::U16(first.required_version)));
+        tags.push(zip_tag(
+            "ZipRequiredVersion",
+            Value::U16(first.required_version),
+        ));
         tags.push(zip_tag("ZipBitFlag", Value::String(bit_flag_str)));
-        tags.push(zip_tag("ZipCompression", Value::String(compression_name(first.compression).to_string())));
-        tags.push(zip_tag("ZipModifyDate", Value::String(format_dos_datetime(first.mod_date, first.mod_time))));
-        tags.push(zip_tag("ZipCRC", Value::String(format!("0x{:08x}", first.crc))));
-        tags.push(zip_tag("ZipCompressedSize", Value::U32(first.compressed_size)));
-        tags.push(zip_tag("ZipUncompressedSize", Value::U32(first.uncompressed_size)));
-        tags.push(zip_tag("ZipFileName", Value::String(first.filename.clone())));
+        tags.push(zip_tag(
+            "ZipCompression",
+            Value::String(compression_name(first.compression).to_string()),
+        ));
+        tags.push(zip_tag(
+            "ZipModifyDate",
+            Value::String(format_dos_datetime(first.mod_date, first.mod_time)),
+        ));
+        tags.push(zip_tag(
+            "ZipCRC",
+            Value::String(format!("0x{:08x}", first.crc)),
+        ));
+        tags.push(zip_tag(
+            "ZipCompressedSize",
+            Value::U32(first.compressed_size),
+        ));
+        tags.push(zip_tag(
+            "ZipUncompressedSize",
+            Value::U32(first.uncompressed_size),
+        ));
+        tags.push(zip_tag(
+            "ZipFileName",
+            Value::String(first.filename.clone()),
+        ));
     }
 
     // Find manifest files (manifest.xml, manifest50.xml, etc.)
@@ -351,7 +425,7 @@ pub fn read_eip(data: &[u8]) -> Result<Vec<Tag>> {
         // Match manifest followed by optional digits and .xml
         let lower = fname.to_ascii_lowercase();
         if lower.starts_with("manifest") && lower.ends_with(".xml") {
-            let stem = &lower[8..lower.len()-4]; // digits between "manifest" and ".xml"
+            let stem = &lower[8..lower.len() - 4]; // digits between "manifest" and ".xml"
             if stem.chars().all(|c| c.is_ascii_digit()) {
                 let is_better = match &best_manifest {
                     None => true,
@@ -368,7 +442,11 @@ pub fn read_eip(data: &[u8]) -> Result<Vec<Tag>> {
     let mut parse_files: std::collections::HashSet<String> = std::collections::HashSet::new();
     if let Some((manifest_entry, _)) = best_manifest {
         if let Some(raw) = zip_entry_data(data, manifest_entry) {
-            if let Some(bytes) = decompress_entry(raw, manifest_entry.compression, manifest_entry.uncompressed_size as usize) {
+            if let Some(bytes) = decompress_entry(
+                raw,
+                manifest_entry.compression,
+                manifest_entry.uncompressed_size as usize,
+            ) {
                 if let Ok(xml) = std::str::from_utf8(&bytes) {
                     if let Some((image_path, settings_path)) = parse_manifest(xml) {
                         parse_files.insert(image_path);
@@ -391,17 +469,24 @@ pub fn read_eip(data: &[u8]) -> Result<Vec<Tag>> {
             parse_files.contains(fname.as_str())
         } else {
             // Fallback: look for image in root dir and .cos in CaptureOne/
-            let is_root_image = !fname.contains('/') &&
-                (lower.ends_with(".iiq") || lower.ends_with(".tif") || lower.ends_with(".tiff")
-                 || lower.ends_with(".jpg") || lower.ends_with(".jpeg"));
+            let is_root_image = !fname.contains('/')
+                && (lower.ends_with(".iiq")
+                    || lower.ends_with(".tif")
+                    || lower.ends_with(".tiff")
+                    || lower.ends_with(".jpg")
+                    || lower.ends_with(".jpeg"));
             let is_cos = lower.starts_with("captureone/") && lower.ends_with(".cos");
             is_root_image || is_cos
         };
 
-        if !should_parse { continue; }
+        if !should_parse {
+            continue;
+        }
 
         if let Some(raw) = zip_entry_data(data, entry) {
-            if let Some(bytes) = decompress_entry(raw, entry.compression, entry.uncompressed_size as usize) {
+            if let Some(bytes) =
+                decompress_entry(raw, entry.compression, entry.uncompressed_size as usize)
+            {
                 if lower.ends_with(".cos") {
                     // Keep the last .cos file found (highest version wins via manifest selection)
                     cos_data = Some(bytes);
@@ -435,8 +520,12 @@ pub fn read_eip(data: &[u8]) -> Result<Vec<Tag>> {
         // - ExifByteOrder (we've already emitted it above)
         // - File group tags (FileName, FileSize, etc.) from the embedded file
         for t in iiq_tags {
-            if t.name == "ExifByteOrder" { continue; }
-            if t.group.family0 == "File" { continue; }
+            if t.name == "ExifByteOrder" {
+                continue;
+            }
+            if t.group.family0 == "File" {
+                continue;
+            }
             tags.push(t);
         }
     }
@@ -449,7 +538,10 @@ pub fn read_eip(data: &[u8]) -> Result<Vec<Tag>> {
                 // ColorCorrections is shown as binary data per Perl CaptureOne.pm Hidden=>1
                 if key == "ColorCorrections" {
                     let byte_count = val.len();
-                    let display = format!("(Binary data {} bytes, use -b option to extract)", byte_count);
+                    let display = format!(
+                        "(Binary data {} bytes, use -b option to extract)",
+                        byte_count
+                    );
                     tags.push(Tag {
                         id: TagId::Text(key.clone()),
                         name: key.clone(),

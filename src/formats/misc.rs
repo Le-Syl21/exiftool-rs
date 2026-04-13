@@ -16,7 +16,12 @@ pub fn read_dicom(data: &[u8]) -> Result<Vec<Tag>> {
         return Err(Error::InvalidData("not a DICOM file".into()));
     }
     let mut tags = Vec::new();
-    tags.push(mktag("DICOM", "FileFormat", "File Format", Value::String("DICOM".into())));
+    tags.push(mktag(
+        "DICOM",
+        "FileFormat",
+        "File Format",
+        Value::String("DICOM".into()),
+    ));
 
     // Parse DICOM data elements (group, element, VR, length, value)
     let mut pos = 132;
@@ -30,7 +35,9 @@ pub fn read_dicom(data: &[u8]) -> Result<Vec<Tag>> {
             let len = u16::from_le_bytes([data[pos + 6], data[pos + 7]]) as usize;
             (len, 8)
         } else {
-            let len = u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]) as usize;
+            let len =
+                u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                    as usize;
             (len, 8)
         };
         pos += hdr_size;
@@ -42,14 +49,39 @@ pub fn read_dicom(data: &[u8]) -> Result<Vec<Tag>> {
         }
 
         let val_data = &data[pos..pos + val_len];
-        let text = crate::encoding::decode_utf8_or_latin1(val_data).trim().trim_end_matches('\0').to_string();
+        let text = crate::encoding::decode_utf8_or_latin1(val_data)
+            .trim()
+            .trim_end_matches('\0')
+            .to_string();
 
         match (group, element) {
-            (0x0008, 0x0060) => tags.push(mktag("DICOM", "Modality", "Modality", Value::String(text))),
-            (0x0008, 0x0070) => tags.push(mktag("DICOM", "Manufacturer", "Manufacturer", Value::String(text))),
-            (0x0008, 0x1030) => tags.push(mktag("DICOM", "StudyDescription", "Study Description", Value::String(text))),
-            (0x0010, 0x0010) => tags.push(mktag("DICOM", "PatientName", "Patient Name", Value::String(text))),
-            (0x0010, 0x0020) => tags.push(mktag("DICOM", "PatientID", "Patient ID", Value::String(text))),
+            (0x0008, 0x0060) => {
+                tags.push(mktag("DICOM", "Modality", "Modality", Value::String(text)))
+            }
+            (0x0008, 0x0070) => tags.push(mktag(
+                "DICOM",
+                "Manufacturer",
+                "Manufacturer",
+                Value::String(text),
+            )),
+            (0x0008, 0x1030) => tags.push(mktag(
+                "DICOM",
+                "StudyDescription",
+                "Study Description",
+                Value::String(text),
+            )),
+            (0x0010, 0x0010) => tags.push(mktag(
+                "DICOM",
+                "PatientName",
+                "Patient Name",
+                Value::String(text),
+            )),
+            (0x0010, 0x0020) => tags.push(mktag(
+                "DICOM",
+                "PatientID",
+                "Patient ID",
+                Value::String(text),
+            )),
             (0x0028, 0x0010) => {
                 if val_len == 2 {
                     let v = u16::from_le_bytes([val_data[0], val_data[1]]);
@@ -67,7 +99,9 @@ pub fn read_dicom(data: &[u8]) -> Result<Vec<Tag>> {
 
         pos += val_len;
         count += 1;
-        if group > 0x0028 { break; } // Stop after image dimensions
+        if group > 0x0028 {
+            break;
+        } // Stop after image dimensions
     }
 
     Ok(tags)
@@ -91,10 +125,14 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
 
     while pos + 80 <= data.len() {
         let record = &data[pos..pos + 80];
-        let keyword = crate::encoding::decode_utf8_or_latin1(&record[..8]).trim_end().to_string();
+        let keyword = crate::encoding::decode_utf8_or_latin1(&record[..8])
+            .trim_end()
+            .to_string();
         pos += 80;
 
-        if keyword == "END" { break; }
+        if keyword == "END" {
+            break;
+        }
 
         // Handle CONTINUE keyword
         if keyword == "CONTINUE" {
@@ -106,7 +144,12 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
                 if !cont {
                     let tag_name = continue_tag.take().unwrap();
                     let tag_desc = fits_tag_description(&tag_name);
-                    tags.push(mktag("FITS", &tag_name, &tag_desc, Value::String(continue_val.clone())));
+                    tags.push(mktag(
+                        "FITS",
+                        &tag_name,
+                        &tag_desc,
+                        Value::String(continue_val.clone()),
+                    ));
                     continue_val.clear();
                 }
             }
@@ -116,26 +159,43 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
         // Flush any pending continue
         if let Some(tag_name) = continue_tag.take() {
             let tag_desc = fits_tag_description(&tag_name);
-            tags.push(mktag("FITS", &tag_name, &tag_desc, Value::String(continue_val.clone())));
+            tags.push(mktag(
+                "FITS",
+                &tag_name,
+                &tag_desc,
+                Value::String(continue_val.clone()),
+            ));
             continue_val.clear();
         }
 
         // COMMENT and HISTORY: special handling (no '= ' at position 8)
         if keyword == "COMMENT" || keyword == "HISTORY" {
-            let val = crate::encoding::decode_utf8_or_latin1(&record[8..]).trim_end().to_string();
-            let name = if keyword == "COMMENT" { "Comment" } else { "History" };
+            let val = crate::encoding::decode_utf8_or_latin1(&record[8..])
+                .trim_end()
+                .to_string();
+            let name = if keyword == "COMMENT" {
+                "Comment"
+            } else {
+                "History"
+            };
             tags.push(mktag("FITS", name, name, Value::String(val)));
             continue;
         }
 
         // Standard keyword = value
-        if keyword.is_empty() { continue; }
-        if record.len() <= 10 || record[8] != b'=' { continue; }
+        if keyword.is_empty() {
+            continue;
+        }
+        if record.len() <= 10 || record[8] != b'=' {
+            continue;
+        }
 
         let val_raw = crate::encoding::decode_utf8_or_latin1(&record[10..]).to_string();
         // Parse value: may be quoted string, boolean T/F, or number
         let (value, is_continued) = fits_parse_value(&val_raw);
-        if value.is_empty() { continue; }
+        if value.is_empty() {
+            continue;
+        }
 
         // Map known keywords, generate names for others
         let tag_name = fits_keyword_to_name(&keyword);
@@ -152,7 +212,12 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
     // Flush pending continue
     if let Some(tag_name) = continue_tag.take() {
         let tag_desc = fits_tag_description(&tag_name);
-        tags.push(mktag("FITS", &tag_name, &tag_desc, Value::String(continue_val.clone())));
+        tags.push(mktag(
+            "FITS",
+            &tag_name,
+            &tag_desc,
+            Value::String(continue_val.clone()),
+        ));
     }
 
     Ok(tags)
@@ -185,7 +250,11 @@ fn fits_parse_value(s: &str) -> (String, bool) {
         // Trim trailing spaces from quoted string
         let trimmed = result.trim_end().to_string();
         let is_cont = trimmed.ends_with('&');
-        let val = if is_cont { trimmed[..trimmed.len()-1].to_string() } else { trimmed };
+        let val = if is_cont {
+            trimmed[..trimmed.len() - 1].to_string()
+        } else {
+            trimmed
+        };
         (val, is_cont)
     } else {
         // Non-quoted: take everything up to comment marker /
@@ -193,7 +262,9 @@ fn fits_parse_value(s: &str) -> (String, bool) {
         let val = s.splitn(2, '/').next().unwrap_or("").trim().to_string();
         // Re-format float exponents: D/E -> e
         let val = val.replace('D', "e").replace('E', "e");
-        if val.is_empty() { return (String::new(), false); }
+        if val.is_empty() {
+            return (String::new(), false);
+        }
         (val, false)
     }
 }
@@ -207,27 +278,27 @@ fn fits_parse_continued_value(s: &str) -> (String, bool) {
 /// Known keywords get special names; others get generated from keyword.
 fn fits_keyword_to_name(keyword: &str) -> String {
     match keyword {
-        "SIMPLE"   => return String::new(), // Perl internal only
-        "BITPIX"   => "Bitpix".into(),
-        "NAXIS"    => "Naxis".into(),
-        "NAXIS1"   => "Naxis1".into(),
-        "NAXIS2"   => "Naxis2".into(),
-        "EXTEND"   => "Extend".into(),
-        "ORIGIN"   => "Origin".into(),
+        "SIMPLE" => return String::new(), // Perl internal only
+        "BITPIX" => "Bitpix".into(),
+        "NAXIS" => "Naxis".into(),
+        "NAXIS1" => "Naxis1".into(),
+        "NAXIS2" => "Naxis2".into(),
+        "EXTEND" => "Extend".into(),
+        "ORIGIN" => "Origin".into(),
         "TELESCOP" => "Telescope".into(),
         "BACKGRND" => "Background".into(),
         "INSTRUME" => "Instrument".into(),
-        "OBJECT"   => "Object".into(),
+        "OBJECT" => "Object".into(),
         "OBSERVER" => "Observer".into(),
-        "DATE"     => "CreateDate".into(),
-        "AUTHOR"   => "Creator".into(),
+        "DATE" => "CreateDate".into(),
+        "AUTHOR" => "Creator".into(),
         "REFERENC" => "Reference".into(),
         "DATE-OBS" => "ObservationDate".into(),
         "TIME-OBS" => "ObservationTime".into(),
         "DATE-END" => "ObservationDateEnd".into(),
         "TIME-END" => "ObservationTimeEnd".into(),
-        "COMMENT"  => "Comment".into(),
-        "HISTORY"  => "History".into(),
+        "COMMENT" => "Comment".into(),
+        "HISTORY" => "History".into(),
         _ => {
             // Generate name: ucfirst lc tag, remove underscores and capitalize next
             let lower = keyword.to_lowercase();
@@ -237,7 +308,9 @@ fn fits_keyword_to_name(keyword: &str) -> String {
                 if ch == '_' || ch == '-' {
                     capitalize_next = true;
                 } else if capitalize_next {
-                    for c in ch.to_uppercase() { result.push(c); }
+                    for c in ch.to_uppercase() {
+                        result.push(c);
+                    }
                     capitalize_next = false;
                 } else {
                     result.push(ch);
@@ -291,14 +364,20 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
     let mut audio_info_found = false;
     let mut video_info_found = false;
 
-    while pos + 11 <= data.len() && (!found_meta || (!audio_info_found && has_audio) || (!video_info_found && has_video)) {
+    while pos + 11 <= data.len()
+        && (!found_meta || (!audio_info_found && has_audio) || (!video_info_found && has_video))
+    {
         let tag_type = data[pos];
-        let data_size = ((data[pos+1] as usize) << 16) | ((data[pos+2] as usize) << 8) | (data[pos+3] as usize);
+        let data_size = ((data[pos + 1] as usize) << 16)
+            | ((data[pos + 2] as usize) << 8)
+            | (data[pos + 3] as usize);
         // skip timestamp (3) + ts_ext (1) + stream_id (3) = 7 bytes
         let tag_start = pos + 11;
         let tag_end = tag_start + data_size;
 
-        if tag_end > data.len() { break; }
+        if tag_end > data.len() {
+            break;
+        }
 
         match tag_type {
             0x12 => {
@@ -335,16 +414,49 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
                         _ => "Unknown",
                     };
                     let sample_rate = match sample_rate_idx {
-                        0 => "5512", 1 => "11025", 2 => "22050", 3 => "44100", _ => "Unknown",
+                        0 => "5512",
+                        1 => "11025",
+                        2 => "22050",
+                        3 => "44100",
+                        _ => "Unknown",
                     };
-                    let channels = if stereo == 1 { "2 (stereo)" } else { "1 (mono)" };
+                    let channels = if stereo == 1 {
+                        "2 (stereo)"
+                    } else {
+                        "1 (mono)"
+                    };
                     let bits = if sample_size == 1 { "16" } else { "8" };
 
-                    tags.push(mktag("FLV", "AudioCodecID", "Audio Codec ID", Value::String(format!("{}", codec_id))));
-                    tags.push(mktag("FLV", "AudioSampleRate", "Audio Sample Rate", Value::String(sample_rate.to_string())));
-                    tags.push(mktag("FLV", "AudioBitsPerSample", "Audio Bits Per Sample", Value::String(bits.to_string())));
-                    tags.push(mktag("FLV", "AudioChannels", "Audio Channels", Value::String(channels.to_string())));
-                    tags.push(mktag("FLV", "AudioEncoding", "Audio Encoding", Value::String(codec_name.to_string())));
+                    tags.push(mktag(
+                        "FLV",
+                        "AudioCodecID",
+                        "Audio Codec ID",
+                        Value::String(format!("{}", codec_id)),
+                    ));
+                    tags.push(mktag(
+                        "FLV",
+                        "AudioSampleRate",
+                        "Audio Sample Rate",
+                        Value::String(sample_rate.to_string()),
+                    ));
+                    tags.push(mktag(
+                        "FLV",
+                        "AudioBitsPerSample",
+                        "Audio Bits Per Sample",
+                        Value::String(bits.to_string()),
+                    ));
+                    tags.push(mktag(
+                        "FLV",
+                        "AudioChannels",
+                        "Audio Channels",
+                        Value::String(channels.to_string()),
+                    ));
+                    tags.push(mktag(
+                        "FLV",
+                        "AudioEncoding",
+                        "Audio Encoding",
+                        Value::String(codec_name.to_string()),
+                    ));
                     audio_info_found = true;
                 }
             }
@@ -362,8 +474,18 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
                         7 => "H.264",
                         _ => "Unknown",
                     };
-                    tags.push(mktag("FLV", "VideoCodecID", "Video Codec ID", Value::String(format!("{}", codec_id))));
-                    tags.push(mktag("FLV", "VideoEncoding", "Video Encoding", Value::String(codec_name.to_string())));
+                    tags.push(mktag(
+                        "FLV",
+                        "VideoCodecID",
+                        "Video Codec ID",
+                        Value::String(format!("{}", codec_id)),
+                    ));
+                    tags.push(mktag(
+                        "FLV",
+                        "VideoEncoding",
+                        "Video Encoding",
+                        Value::String(codec_name.to_string()),
+                    ));
                     video_info_found = true;
                 }
             }
@@ -376,10 +498,20 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Add HasAudio/HasVideo from header flags
     if has_audio && !tags.iter().any(|t| t.name == "HasAudio") {
-        tags.push(mktag("FLV", "HasAudio", "Has Audio", Value::String("Yes".into())));
+        tags.push(mktag(
+            "FLV",
+            "HasAudio",
+            "Has Audio",
+            Value::String("Yes".into()),
+        ));
     }
     if has_video && !tags.iter().any(|t| t.name == "HasVideo") {
-        tags.push(mktag("FLV", "HasVideo", "Has Video", Value::String("Yes".into())));
+        tags.push(mktag(
+            "FLV",
+            "HasVideo",
+            "Has Video",
+            Value::String("Yes".into()),
+        ));
     }
 
     // Deduplicate: keep the last occurrence of each tag name (mirrors Perl's hash-based storage)
@@ -403,24 +535,34 @@ fn flv_parse_amf_metadata(data: &[u8], tags: &mut Vec<Tag>) {
     let mut pos = 0;
 
     // First value should be string "onMetaData"
-    if pos + 3 > data.len() || data[pos] != 0x02 { return; }
+    if pos + 3 > data.len() || data[pos] != 0x02 {
+        return;
+    }
     pos += 1;
-    let str_len = u16::from_be_bytes([data[pos], data[pos+1]]) as usize;
+    let str_len = u16::from_be_bytes([data[pos], data[pos + 1]]) as usize;
     pos += 2;
-    if pos + str_len > data.len() { return; }
-    let name = crate::encoding::decode_utf8_or_latin1(&data[pos..pos+str_len]).to_string();
+    if pos + str_len > data.len() {
+        return;
+    }
+    let name = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + str_len]).to_string();
     pos += str_len;
 
-    if name != "onMetaData" { return; }
+    if name != "onMetaData" {
+        return;
+    }
 
     // Second value should be ECMAArray (0x08) or Object (0x03)
-    if pos >= data.len() { return; }
+    if pos >= data.len() {
+        return;
+    }
     let container_type = data[pos];
     pos += 1;
 
     if container_type == 0x08 {
         // ECMAArray: 4-byte count, then key-value pairs
-        if pos + 4 > data.len() { return; }
+        if pos + 4 > data.len() {
+            return;
+        }
         pos += 4; // skip array count
     } else if container_type == 0x03 {
         // Object: just key-value pairs
@@ -443,15 +585,27 @@ fn flv_parse_amf_value(
     compound_key: &str,
     struct_name: &str,
 ) {
-    if *pos >= data.len() { return; }
+    if *pos >= data.len() {
+        return;
+    }
     let val_type = data[*pos];
     *pos += 1;
 
     match val_type {
         0x00 => {
-            if *pos + 8 > data.len() { return; }
-            let bytes: [u8; 8] = [data[*pos], data[*pos+1], data[*pos+2], data[*pos+3],
-                                   data[*pos+4], data[*pos+5], data[*pos+6], data[*pos+7]];
+            if *pos + 8 > data.len() {
+                return;
+            }
+            let bytes: [u8; 8] = [
+                data[*pos],
+                data[*pos + 1],
+                data[*pos + 2],
+                data[*pos + 3],
+                data[*pos + 4],
+                data[*pos + 5],
+                data[*pos + 6],
+                data[*pos + 7],
+            ];
             let val = f64::from_be_bytes(bytes);
             *pos += 8;
             let tag_name = flv_lookup_tag(compound_key);
@@ -459,18 +613,29 @@ fn flv_parse_amf_value(
             tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(val_str)));
         }
         0x01 => {
-            if *pos >= data.len() { return; }
+            if *pos >= data.len() {
+                return;
+            }
             let b = data[*pos] != 0;
             *pos += 1;
             let tag_name = flv_lookup_tag(compound_key);
-            tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(if b { "Yes" } else { "No" }.to_string())));
+            tags.push(mktag(
+                "FLV",
+                &tag_name,
+                &tag_name,
+                Value::String(if b { "Yes" } else { "No" }.to_string()),
+            ));
         }
         0x02 => {
-            if *pos + 2 > data.len() { return; }
-            let slen = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
+            if *pos + 2 > data.len() {
+                return;
+            }
+            let slen = u16::from_be_bytes([data[*pos], data[*pos + 1]]) as usize;
             *pos += 2;
-            if *pos + slen > data.len() { return; }
-            let s = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos+slen]).to_string();
+            if *pos + slen > data.len() {
+                return;
+            }
+            let s = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos + slen]).to_string();
             *pos += slen;
             let tag_name = flv_lookup_tag(compound_key);
             let s = s.trim_end().to_string();
@@ -478,25 +643,35 @@ fn flv_parse_amf_value(
         }
         0x03 | 0x08 => {
             if val_type == 0x08 {
-                if *pos + 4 > data.len() { return; }
+                if *pos + 4 > data.len() {
+                    return;
+                }
                 *pos += 4;
             }
             flv_parse_amf_object(data, pos, tags, struct_name);
         }
         0x09 => { /* end marker, ignore */ }
         0x0a => {
-            if *pos + 4 > data.len() { return; }
-            let count = u32::from_be_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3]]) as usize;
+            if *pos + 4 > data.len() {
+                return;
+            }
+            let count =
+                u32::from_be_bytes([data[*pos], data[*pos + 1], data[*pos + 2], data[*pos + 3]])
+                    as usize;
             *pos += 4;
             let mut items: Vec<String> = Vec::new();
             for i in 0..count {
-                if *pos >= data.len() { break; }
+                if *pos >= data.len() {
+                    break;
+                }
                 let item_type = data[*pos];
                 if item_type == 0x03 || item_type == 0x08 {
                     let indexed_name = format!("{}{}", struct_name, i);
                     *pos += 1;
                     if item_type == 0x08 {
-                        if *pos + 4 > data.len() { break; }
+                        if *pos + 4 > data.len() {
+                            break;
+                        }
                         *pos += 4;
                     }
                     flv_parse_amf_object(data, pos, tags, &indexed_name);
@@ -504,75 +679,129 @@ fn flv_parse_amf_value(
                     *pos += 1;
                     match item_type {
                         0x00 => {
-                            if *pos + 8 > data.len() { break; }
-                            let bytes: [u8; 8] = [data[*pos], data[*pos+1], data[*pos+2], data[*pos+3],
-                                                   data[*pos+4], data[*pos+5], data[*pos+6], data[*pos+7]];
+                            if *pos + 8 > data.len() {
+                                break;
+                            }
+                            let bytes: [u8; 8] = [
+                                data[*pos],
+                                data[*pos + 1],
+                                data[*pos + 2],
+                                data[*pos + 3],
+                                data[*pos + 4],
+                                data[*pos + 5],
+                                data[*pos + 6],
+                                data[*pos + 7],
+                            ];
                             let v = f64::from_be_bytes(bytes);
                             *pos += 8;
                             items.push(flv_format_number(v));
                         }
                         0x01 => {
-                            if *pos >= data.len() { break; }
+                            if *pos >= data.len() {
+                                break;
+                            }
                             let b = data[*pos] != 0;
                             *pos += 1;
                             items.push(if b { "Yes" } else { "No" }.to_string());
                         }
                         0x02 => {
-                            if *pos + 2 > data.len() { break; }
-                            let slen = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
+                            if *pos + 2 > data.len() {
+                                break;
+                            }
+                            let slen = u16::from_be_bytes([data[*pos], data[*pos + 1]]) as usize;
                             *pos += 2;
-                            if *pos + slen > data.len() { break; }
-                            let s = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos+slen]).to_string();
+                            if *pos + slen > data.len() {
+                                break;
+                            }
+                            let s =
+                                crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos + slen])
+                                    .to_string();
                             *pos += slen;
                             items.push(s);
                         }
-                        _ => { *pos = data.len(); break; }
+                        _ => {
+                            *pos = data.len();
+                            break;
+                        }
                     }
                 }
             }
             if !items.is_empty() {
                 let tag_name = flv_lookup_tag(compound_key);
-                tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(items.join(", "))));
+                tags.push(mktag(
+                    "FLV",
+                    &tag_name,
+                    &tag_name,
+                    Value::String(items.join(", ")),
+                ));
             }
         }
         0x0b => {
-            if *pos + 10 > data.len() { return; }
-            let ms = f64::from_be_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3],
-                                          data[*pos+4], data[*pos+5], data[*pos+6], data[*pos+7]]);
-            let tz_offset = i16::from_be_bytes([data[*pos+8], data[*pos+9]]) as i32;
+            if *pos + 10 > data.len() {
+                return;
+            }
+            let ms = f64::from_be_bytes([
+                data[*pos],
+                data[*pos + 1],
+                data[*pos + 2],
+                data[*pos + 3],
+                data[*pos + 4],
+                data[*pos + 5],
+                data[*pos + 6],
+                data[*pos + 7],
+            ]);
+            let tz_offset = i16::from_be_bytes([data[*pos + 8], data[*pos + 9]]) as i32;
             *pos += 10;
             let s = flv_format_date(ms, tz_offset);
             let tag_name = flv_lookup_tag(compound_key);
             tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(s)));
         }
         0x0c | 0x0f => {
-            if *pos + 4 > data.len() { return; }
-            let slen = u32::from_be_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3]]) as usize;
+            if *pos + 4 > data.len() {
+                return;
+            }
+            let slen =
+                u32::from_be_bytes([data[*pos], data[*pos + 1], data[*pos + 2], data[*pos + 3]])
+                    as usize;
             *pos += 4;
-            if *pos + slen > data.len() { return; }
-            let s = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos+slen]).to_string();
+            if *pos + slen > data.len() {
+                return;
+            }
+            let s = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos + slen]).to_string();
             *pos += slen;
             let tag_name = flv_lookup_tag(compound_key);
             tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(s)));
         }
         0x05 | 0x06 => { /* null/undefined, no value bytes */ }
-        _ => { *pos = data.len(); }
+        _ => {
+            *pos = data.len();
+        }
     }
 }
 
 fn flv_parse_amf_object(data: &[u8], pos: &mut usize, tags: &mut Vec<Tag>, struct_name: &str) {
     while *pos + 3 <= data.len() {
-        if data[*pos] == 0x00 && data[*pos+1] == 0x00 && *pos + 2 < data.len() && data[*pos+2] == 0x09 {
+        if data[*pos] == 0x00
+            && data[*pos + 1] == 0x00
+            && *pos + 2 < data.len()
+            && data[*pos + 2] == 0x09
+        {
             *pos += 3;
             break;
         }
-        if *pos + 2 > data.len() { break; }
-        let key_len = u16::from_be_bytes([data[*pos], data[*pos+1]]) as usize;
+        if *pos + 2 > data.len() {
+            break;
+        }
+        let key_len = u16::from_be_bytes([data[*pos], data[*pos + 1]]) as usize;
         *pos += 2;
-        if *pos + key_len > data.len() { break; }
-        let key = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos+key_len]).to_string();
+        if *pos + key_len > data.len() {
+            break;
+        }
+        let key = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos + key_len]).to_string();
         *pos += key_len;
-        if *pos >= data.len() { break; }
+        if *pos >= data.len() {
+            break;
+        }
 
         // Build compound key: structName + ucfirst(mapped_key), mirrors Perl's:
         //   $tag = $$tagInfo{Name} if SubDirectory
@@ -620,9 +849,9 @@ fn flv_map_sub_key(struct_name: &str, key: &str) -> String {
         if !digits.is_empty() && !rest[digits.len()..].starts_with("Parameter") {
             // Inside CuePoint subtable
             return match key {
-                "name"       => "Name".to_string(),
-                "type"       => "Type".to_string(),
-                "time"       => "Time".to_string(),
+                "name" => "Name".to_string(),
+                "type" => "Type".to_string(),
+                "time" => "Time".to_string(),
                 "parameters" => "Parameter".to_string(),
                 _ => key.to_string(),
             };
@@ -631,49 +860,48 @@ fn flv_map_sub_key(struct_name: &str, key: &str) -> String {
     key.to_string()
 }
 
-
 fn flv_lookup_tag(key: &str) -> String {
     match key {
-        "audiocodecid"           => return "AudioCodecID".to_string(),
-        "audiodatarate"          => return "AudioBitrate".to_string(),
-        "audiodelay"             => return "AudioDelay".to_string(),
-        "audiosamplerate"        => return "AudioSampleRate".to_string(),
-        "audiosamplesize"        => return "AudioSampleSize".to_string(),
-        "audiosize"              => return "AudioSize".to_string(),
-        "bytelength"             => return "ByteLength".to_string(),
-        "canseekontime"          => return "CanSeekOnTime".to_string(),
-        "canSeekToEnd"           => return "CanSeekToEnd".to_string(),
-        "creationdate"           => return "CreateDate".to_string(),
-        "createdby"              => return "CreatedBy".to_string(),
-        "cuePoints"              => return "CuePoint".to_string(),
-        "datasize"               => return "DataSize".to_string(),
-        "duration"               => return "Duration".to_string(),
-        "filesize"               => return "FileSizeBytes".to_string(),
-        "framerate"              => return "FrameRate".to_string(),
-        "hasAudio"               => return "HasAudio".to_string(),
-        "hasCuePoints"           => return "HasCuePoints".to_string(),
-        "hasKeyframes"           => return "HasKeyFrames".to_string(),
-        "hasMetadata"            => return "HasMetadata".to_string(),
-        "hasVideo"               => return "HasVideo".to_string(),
-        "height"                 => return "ImageHeight".to_string(),
-        "httphostheader"         => return "HTTPHostHeader".to_string(),
-        "keyframesTimes"         => return "KeyFramesTimes".to_string(),
+        "audiocodecid" => return "AudioCodecID".to_string(),
+        "audiodatarate" => return "AudioBitrate".to_string(),
+        "audiodelay" => return "AudioDelay".to_string(),
+        "audiosamplerate" => return "AudioSampleRate".to_string(),
+        "audiosamplesize" => return "AudioSampleSize".to_string(),
+        "audiosize" => return "AudioSize".to_string(),
+        "bytelength" => return "ByteLength".to_string(),
+        "canseekontime" => return "CanSeekOnTime".to_string(),
+        "canSeekToEnd" => return "CanSeekToEnd".to_string(),
+        "creationdate" => return "CreateDate".to_string(),
+        "createdby" => return "CreatedBy".to_string(),
+        "cuePoints" => return "CuePoint".to_string(),
+        "datasize" => return "DataSize".to_string(),
+        "duration" => return "Duration".to_string(),
+        "filesize" => return "FileSizeBytes".to_string(),
+        "framerate" => return "FrameRate".to_string(),
+        "hasAudio" => return "HasAudio".to_string(),
+        "hasCuePoints" => return "HasCuePoints".to_string(),
+        "hasKeyframes" => return "HasKeyFrames".to_string(),
+        "hasMetadata" => return "HasMetadata".to_string(),
+        "hasVideo" => return "HasVideo".to_string(),
+        "height" => return "ImageHeight".to_string(),
+        "httphostheader" => return "HTTPHostHeader".to_string(),
+        "keyframesTimes" => return "KeyFramesTimes".to_string(),
         "keyframesFilepositions" => return "KeyFramePositions".to_string(),
-        "lasttimestamp"          => return "LastTimeStamp".to_string(),
-        "lastkeyframetimestamp"  => return "LastKeyFrameTime".to_string(),
-        "metadatacreator"        => return "MetadataCreator".to_string(),
-        "metadatadate"           => return "MetadataDate".to_string(),
-        "purl"                   => return "URL".to_string(),
-        "pmsg"                   => return "Message".to_string(),
-        "sourcedata"             => return "SourceData".to_string(),
-        "starttime"              => return "StartTime".to_string(),
-        "stereo"                 => return "Stereo".to_string(),
-        "totaldatarate"          => return "TotalDataRate".to_string(),
-        "totalduration"          => return "TotalDuration".to_string(),
-        "videocodecid"           => return "VideoCodecID".to_string(),
-        "videodatarate"          => return "VideoBitrate".to_string(),
-        "videosize"              => return "VideoSize".to_string(),
-        "width"                  => return "ImageWidth".to_string(),
+        "lasttimestamp" => return "LastTimeStamp".to_string(),
+        "lastkeyframetimestamp" => return "LastKeyFrameTime".to_string(),
+        "metadatacreator" => return "MetadataCreator".to_string(),
+        "metadatadate" => return "MetadataDate".to_string(),
+        "purl" => return "URL".to_string(),
+        "pmsg" => return "Message".to_string(),
+        "sourcedata" => return "SourceData".to_string(),
+        "starttime" => return "StartTime".to_string(),
+        "stereo" => return "Stereo".to_string(),
+        "totaldatarate" => return "TotalDataRate".to_string(),
+        "totalduration" => return "TotalDuration".to_string(),
+        "videocodecid" => return "VideoCodecID".to_string(),
+        "videodatarate" => return "VideoBitrate".to_string(),
+        "videosize" => return "VideoSize".to_string(),
+        "width" => return "ImageWidth".to_string(),
         _ => {}
     }
     flv_ucfirst(key)
@@ -699,7 +927,9 @@ fn flv_convert_bitrate(bps: f64) -> String {
     let mut units = "bps";
     for u in &["bps", "kbps", "Mbps", "Gbps"] {
         units = u;
-        if val < 1000.0 { break; }
+        if val < 1000.0 {
+            break;
+        }
         val /= 1000.0;
     }
     if val >= 100.0 {
@@ -712,7 +942,9 @@ fn flv_convert_bitrate(bps: f64) -> String {
 }
 
 fn format_3g(val: f64) -> String {
-    if val == 0.0 { return "0".to_string(); }
+    if val == 0.0 {
+        return "0".to_string();
+    }
     // 3 significant digits
     let magnitude = val.abs().log10().floor() as i32;
     let factor = 10f64.powi(2 - magnitude);
@@ -787,19 +1019,50 @@ fn flv_format_date(ms: f64, tz_offset_minutes: i32) -> String {
         let mut year = 1970i32;
         let mut remaining_days = days;
         loop {
-            let days_in_year = if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 { 366 } else { 365 };
-            if remaining_days < days_in_year { break; }
+            let days_in_year = if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 {
+                366
+            } else {
+                365
+            };
+            if remaining_days < days_in_year {
+                break;
+            }
             remaining_days -= days_in_year;
             year += 1;
         }
         let leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
-        let month_days: [i64; 12] = [31, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        let month_days: [i64; 12] = [
+            31,
+            if leap { 29 } else { 28 },
+            31,
+            30,
+            31,
+            30,
+            31,
+            31,
+            30,
+            31,
+            30,
+            31,
+        ];
         let mut month = 1u32;
         let mut day = remaining_days + 1;
         for &md in &month_days {
-            if day > md { day -= md; month += 1; } else { break; }
+            if day > md {
+                day -= md;
+                month += 1;
+            } else {
+                break;
+            }
         }
-        (year, month, day as u32, hours as u32, mins as u32, secs as u32)
+        (
+            year,
+            month,
+            day as u32,
+            hours as u32,
+            mins as u32,
+            secs as u32,
+        )
     };
 
     let (year, month, day, hours, mins, secs) = epoch_to_ymdhms(whole_secs);
@@ -808,11 +1071,15 @@ fn flv_format_date(ms: f64, tz_offset_minutes: i32) -> String {
     let tz_sign = if tz_offset_minutes >= 0 { "+" } else { "-" };
 
     if usec != 0 {
-        format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:06}{}{:02}:{:02}",
-                year, month, day, hours, mins, secs, usec, tz_sign, tz_hours, tz_mins)
+        format!(
+            "{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:06}{}{:02}:{:02}",
+            year, month, day, hours, mins, secs, usec, tz_sign, tz_hours, tz_mins
+        )
     } else {
-        format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
-                year, month, day, hours, mins, secs, tz_sign, tz_hours, tz_mins)
+        format!(
+            "{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
+            year, month, day, hours, mins, secs, tz_sign, tz_hours, tz_mins
+        )
     }
 }
 
@@ -840,9 +1107,18 @@ pub fn read_swf(data: &[u8]) -> Result<Vec<Tag>> {
     let version = data[3];
     let _file_length = u32::from_le_bytes([data[4], data[5], data[6], data[7]]);
 
-    tags.push(mktag("SWF", "FlashVersion", "Flash Version", Value::U8(version)));
-    tags.push(mktag("SWF", "Compressed", "Compressed",
-        Value::String(if compressed { "False" } else { "False" }.into())));
+    tags.push(mktag(
+        "SWF",
+        "FlashVersion",
+        "Flash Version",
+        Value::U8(version),
+    ));
+    tags.push(mktag(
+        "SWF",
+        "Compressed",
+        "Compressed",
+        Value::String(if compressed { "False" } else { "False" }.into()),
+    ));
 
     // Parse SWF body (starting at byte 8)
     // For uncompressed SWF: body starts at data[8]
@@ -858,7 +1134,9 @@ pub fn read_swf(data: &[u8]) -> Result<Vec<Tag>> {
 /// The body starts with a RECT structure (image dimensions), followed by
 /// FrameRate (u16 LE, fixed 8.8) and FrameCount (u16 LE), then SWF tags.
 fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
-    if body.is_empty() { return; }
+    if body.is_empty() {
+        return;
+    }
 
     // RECT structure: first 5 bits = nBits (number of bits for each coordinate)
     // Then 4 values each nBits long: Xmin, Xmax, Ymin, Ymax (in twips, 1/20 pixel)
@@ -866,7 +1144,9 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
     let total_bits = 5 + n_bits * 4;
     let n_bytes = (total_bits + 7) / 8;
 
-    if body.len() < n_bytes + 4 { return; }
+    if body.len() < n_bytes + 4 {
+        return;
+    }
 
     // Extract the bit-packed values
     // Read bit string
@@ -881,7 +1161,11 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
     bit_str >>= shift;
 
     // Extract values (from LSB side after the shift)
-    let mask = if n_bits >= 64 { u64::MAX } else { (1u64 << n_bits) - 1 };
+    let mask = if n_bits >= 64 {
+        u64::MAX
+    } else {
+        (1u64 << n_bits) - 1
+    };
     let ymax_raw = (bit_str & mask) as i32;
     let ymin_raw = ((bit_str >> n_bits) & mask) as i32;
     let xmax_raw = ((bit_str >> (n_bits * 2)) & mask) as i32;
@@ -891,7 +1175,9 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
     let sign_extend = |v: i32, bits: usize| -> i32 {
         if bits > 0 && bits < 32 && (v & (1 << (bits - 1))) != 0 {
             v | (!0i32 << bits)
-        } else { v }
+        } else {
+            v
+        }
     };
     let xmin = sign_extend(xmin_raw, n_bits);
     let xmax = sign_extend(xmax_raw, n_bits);
@@ -904,23 +1190,44 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
 
     if width >= 0.0 && height >= 0.0 {
         tags.push(mktag("SWF", "ImageWidth", "Image Width", Value::F64(width)));
-        tags.push(mktag("SWF", "ImageHeight", "Image Height", Value::F64(height)));
+        tags.push(mktag(
+            "SWF",
+            "ImageHeight",
+            "Image Height",
+            Value::F64(height),
+        ));
     }
 
     // Frame rate (fixed point 8.8 little-endian) and frame count
     let fr_offset = n_bytes;
-    if fr_offset + 4 > body.len() { return; }
+    if fr_offset + 4 > body.len() {
+        return;
+    }
     let frame_rate_raw = u16::from_le_bytes([body[fr_offset], body[fr_offset + 1]]);
     let frame_count = u16::from_le_bytes([body[fr_offset + 2], body[fr_offset + 3]]);
     let frame_rate = frame_rate_raw as f64 / 256.0;
 
-    tags.push(mktag("SWF", "FrameRate", "Frame Rate", Value::F64(frame_rate)));
-    tags.push(mktag("SWF", "FrameCount", "Frame Count", Value::U16(frame_count)));
+    tags.push(mktag(
+        "SWF",
+        "FrameRate",
+        "Frame Rate",
+        Value::F64(frame_rate),
+    ));
+    tags.push(mktag(
+        "SWF",
+        "FrameCount",
+        "Frame Count",
+        Value::U16(frame_count),
+    ));
 
     if frame_rate > 0.0 && frame_count > 0 {
         let duration = frame_count as f64 / frame_rate;
-        tags.push(mktag("SWF", "Duration", "Duration",
-            Value::String(format!("{:.2} s", duration))));
+        tags.push(mktag(
+            "SWF",
+            "Duration",
+            "Duration",
+            Value::String(format!("{:.2} s", duration)),
+        ));
     }
 
     // Scan SWF tags for metadata (tag 77 = Metadata/XMP)
@@ -933,15 +1240,24 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
         tag_pos += 2;
 
         let tag_len = if short_len == 0x3F {
-            if tag_pos + 4 > body.len() { break; }
-            let l = u32::from_le_bytes([body[tag_pos], body[tag_pos+1], body[tag_pos+2], body[tag_pos+3]]) as usize;
+            if tag_pos + 4 > body.len() {
+                break;
+            }
+            let l = u32::from_le_bytes([
+                body[tag_pos],
+                body[tag_pos + 1],
+                body[tag_pos + 2],
+                body[tag_pos + 3],
+            ]) as usize;
             tag_pos += 4;
             l
         } else {
             short_len
         };
 
-        if tag_pos + tag_len > body.len() { break; }
+        if tag_pos + tag_len > body.len() {
+            break;
+        }
 
         match tag_type {
             69 => {
@@ -949,7 +1265,9 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
                 if tag_len >= 1 {
                     let flags = body[tag_pos];
                     found_attributes = true;
-                    if flags & 0x10 == 0 { break; } // No metadata
+                    if flags & 0x10 == 0 {
+                        break;
+                    } // No metadata
                 }
             }
             77 => {
@@ -965,8 +1283,12 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
                     }
                 }
                 // Also store raw XMP
-                tags.push(mktag("SWF", "XMPToolkit", "XMP Toolkit",
-                    Value::String(extract_xmp_toolkit(xmp_data))));
+                tags.push(mktag(
+                    "SWF",
+                    "XMPToolkit",
+                    "XMP Toolkit",
+                    Value::String(extract_xmp_toolkit(xmp_data)),
+                ));
                 break;
             }
             _ => {}
@@ -1015,13 +1337,23 @@ pub fn read_hdr(data: &[u8]) -> Result<Vec<Tag>> {
     for line in text.lines() {
         let line = line.trim_end_matches('\r');
         // Skip the magic header line
-        if line.starts_with("#?") { continue; }
+        if line.starts_with("#?") {
+            continue;
+        }
         // Comment lines
-        if line.starts_with('#') { continue; }
+        if line.starts_with('#') {
+            continue;
+        }
         // Empty line marks end of header metadata
-        if line.is_empty() { continue; }
+        if line.is_empty() {
+            continue;
+        }
         // Dimension line (resolution) - last header line before data
-        if line.starts_with("-Y ") || line.starts_with("+Y ") || line.starts_with("-X ") || line.starts_with("+X ") {
+        if line.starts_with("-Y ")
+            || line.starts_with("+Y ")
+            || line.starts_with("-X ")
+            || line.starts_with("+X ")
+        {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() >= 4 {
                 // Format: -Y <h> +X <w> or similar
@@ -1063,7 +1395,7 @@ pub fn read_hdr(data: &[u8]) -> Result<Vec<Tag>> {
         // Check for key=value pairs
         if let Some(eq_pos) = line.find('=') {
             let key = line[..eq_pos].trim().to_lowercase();
-            let val = line[eq_pos+1..].trim().to_string();
+            let val = line[eq_pos + 1..].trim().to_string();
             // Map known keys
             let mapped_key = match key.as_str() {
                 "software" => "Software",
@@ -1090,7 +1422,12 @@ pub fn read_hdr(data: &[u8]) -> Result<Vec<Tag>> {
         tags.push(mktag("HDR", "Command", "Command", Value::String(cmd)));
     }
     if let Some(v) = kv_map.get("Exposure") {
-        tags.push(mktag("HDR", "Exposure", "Exposure", Value::String(v.clone())));
+        tags.push(mktag(
+            "HDR",
+            "Exposure",
+            "Exposure",
+            Value::String(v.clone()),
+        ));
     }
     if let Some(v) = kv_map.get("Format") {
         tags.push(mktag("HDR", "Format", "Format", Value::String(v.clone())));
@@ -1106,10 +1443,20 @@ pub fn read_hdr(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
     if let Some(v) = kv_map.get("_orient") {
-        tags.push(mktag("HDR", "Orientation", "Orientation", Value::String(v.clone())));
+        tags.push(mktag(
+            "HDR",
+            "Orientation",
+            "Orientation",
+            Value::String(v.clone()),
+        ));
     }
     if let Some(v) = kv_map.get("Software") {
-        tags.push(mktag("HDR", "Software", "Software", Value::String(v.clone())));
+        tags.push(mktag(
+            "HDR",
+            "Software",
+            "Software",
+            Value::String(v.clone()),
+        ));
     }
     if let Some(v) = kv_map.get("View") {
         tags.push(mktag("HDR", "View", "View", Value::String(v.clone())));
@@ -1148,92 +1495,188 @@ fn read_printer_font_metrics(data: &[u8]) -> Result<Vec<Tag>> {
     // PFMVersion at offset 0: int16u LE, PrintConv: sprintf("%x.%.2x",$val>>8,$val&0xff)
     let pfm_ver = u16::from_le_bytes([data[0], data[1]]);
     let ver_str = format!("{:x}.{:02x}", pfm_ver >> 8, pfm_ver & 0xff);
-    tags.push(mktag_font("PFMVersion", "PFM Version", Value::String(ver_str)));
+    tags.push(mktag_font(
+        "PFMVersion",
+        "PFM Version",
+        Value::String(ver_str),
+    ));
 
     // Copyright at offset 6: string[60]
     let copyright = pfm_str(data, 6, 60);
     if !copyright.is_empty() {
-        tags.push(mktag_font("Copyright", "Copyright", Value::String(copyright)));
+        tags.push(mktag_font(
+            "Copyright",
+            "Copyright",
+            Value::String(copyright),
+        ));
     }
 
     // FontType at offset 66: int16u LE
     let font_type = u16::from_le_bytes([data[66], data[67]]);
-    tags.push(mktag_font("FontType", "Font Type", Value::String(format!("{}", font_type))));
+    tags.push(mktag_font(
+        "FontType",
+        "Font Type",
+        Value::String(format!("{}", font_type)),
+    ));
 
     // PointSize at offset 68: int16u LE
     let point_size = u16::from_le_bytes([data[68], data[69]]);
-    tags.push(mktag_font("PointSize", "Point Size", Value::String(format!("{}", point_size))));
+    tags.push(mktag_font(
+        "PointSize",
+        "Point Size",
+        Value::String(format!("{}", point_size)),
+    ));
 
     // YResolution at offset 70: int16u LE
     let y_res = u16::from_le_bytes([data[70], data[71]]);
-    tags.push(mktag_font("YResolution", "Y Resolution", Value::String(format!("{}", y_res))));
+    tags.push(mktag_font(
+        "YResolution",
+        "Y Resolution",
+        Value::String(format!("{}", y_res)),
+    ));
 
     // XResolution at offset 72: int16u LE
     let x_res = u16::from_le_bytes([data[72], data[73]]);
-    tags.push(mktag_font("XResolution", "X Resolution", Value::String(format!("{}", x_res))));
+    tags.push(mktag_font(
+        "XResolution",
+        "X Resolution",
+        Value::String(format!("{}", x_res)),
+    ));
 
     // Ascent at offset 74: int16u LE
     let ascent = u16::from_le_bytes([data[74], data[75]]);
-    tags.push(mktag_font("Ascent", "Ascent", Value::String(format!("{}", ascent))));
+    tags.push(mktag_font(
+        "Ascent",
+        "Ascent",
+        Value::String(format!("{}", ascent)),
+    ));
 
     // InternalLeading at offset 76: int16u LE
     let int_lead = u16::from_le_bytes([data[76], data[77]]);
-    tags.push(mktag_font("InternalLeading", "Internal Leading", Value::String(format!("{}", int_lead))));
+    tags.push(mktag_font(
+        "InternalLeading",
+        "Internal Leading",
+        Value::String(format!("{}", int_lead)),
+    ));
 
     // ExternalLeading at offset 78: int16u LE
     let ext_lead = u16::from_le_bytes([data[78], data[79]]);
-    tags.push(mktag_font("ExternalLeading", "External Leading", Value::String(format!("{}", ext_lead))));
+    tags.push(mktag_font(
+        "ExternalLeading",
+        "External Leading",
+        Value::String(format!("{}", ext_lead)),
+    ));
 
     // Italic at offset 80: int8u
-    tags.push(mktag_font("Italic", "Italic", Value::String(format!("{}", data[80]))));
+    tags.push(mktag_font(
+        "Italic",
+        "Italic",
+        Value::String(format!("{}", data[80])),
+    ));
 
     // Underline at offset 81: int8u
-    tags.push(mktag_font("Underline", "Underline", Value::String(format!("{}", data[81]))));
+    tags.push(mktag_font(
+        "Underline",
+        "Underline",
+        Value::String(format!("{}", data[81])),
+    ));
 
     // Strikeout at offset 82: int8u
-    tags.push(mktag_font("Strikeout", "Strikeout", Value::String(format!("{}", data[82]))));
+    tags.push(mktag_font(
+        "Strikeout",
+        "Strikeout",
+        Value::String(format!("{}", data[82])),
+    ));
 
     // Weight at offset 83: int16u LE
     let weight = u16::from_le_bytes([data[83], data[84]]);
-    tags.push(mktag_font("Weight", "Weight", Value::String(format!("{}", weight))));
+    tags.push(mktag_font(
+        "Weight",
+        "Weight",
+        Value::String(format!("{}", weight)),
+    ));
 
     // CharacterSet at offset 85: int8u
-    tags.push(mktag_font("CharacterSet", "Character Set", Value::String(format!("{}", data[85]))));
+    tags.push(mktag_font(
+        "CharacterSet",
+        "Character Set",
+        Value::String(format!("{}", data[85])),
+    ));
 
     // PixWidth at offset 86: int16u LE
     let pix_w = u16::from_le_bytes([data[86], data[87]]);
-    tags.push(mktag_font("PixWidth", "Pix Width", Value::String(format!("{}", pix_w))));
+    tags.push(mktag_font(
+        "PixWidth",
+        "Pix Width",
+        Value::String(format!("{}", pix_w)),
+    ));
 
     // PixHeight at offset 88: int16u LE
     let pix_h = u16::from_le_bytes([data[88], data[89]]);
-    tags.push(mktag_font("PixHeight", "Pix Height", Value::String(format!("{}", pix_h))));
+    tags.push(mktag_font(
+        "PixHeight",
+        "Pix Height",
+        Value::String(format!("{}", pix_h)),
+    ));
 
     // PitchAndFamily at offset 90: int8u
-    tags.push(mktag_font("PitchAndFamily", "Pitch And Family", Value::String(format!("{}", data[90]))));
+    tags.push(mktag_font(
+        "PitchAndFamily",
+        "Pitch And Family",
+        Value::String(format!("{}", data[90])),
+    ));
 
     // AvgWidth at offset 91: int16u LE
     let avg_w = u16::from_le_bytes([data[91], data[92]]);
-    tags.push(mktag_font("AvgWidth", "Avg Width", Value::String(format!("{}", avg_w))));
+    tags.push(mktag_font(
+        "AvgWidth",
+        "Avg Width",
+        Value::String(format!("{}", avg_w)),
+    ));
 
     // MaxWidth at offset 93: int16u LE
     let max_w = u16::from_le_bytes([data[93], data[94]]);
-    tags.push(mktag_font("MaxWidth", "Max Width", Value::String(format!("{}", max_w))));
+    tags.push(mktag_font(
+        "MaxWidth",
+        "Max Width",
+        Value::String(format!("{}", max_w)),
+    ));
 
     // FirstChar at offset 95: int8u
-    tags.push(mktag_font("FirstChar", "First Char", Value::String(format!("{}", data[95]))));
+    tags.push(mktag_font(
+        "FirstChar",
+        "First Char",
+        Value::String(format!("{}", data[95])),
+    ));
 
     // LastChar at offset 96: int8u
-    tags.push(mktag_font("LastChar", "Last Char", Value::String(format!("{}", data[96]))));
+    tags.push(mktag_font(
+        "LastChar",
+        "Last Char",
+        Value::String(format!("{}", data[96])),
+    ));
 
     // DefaultChar at offset 97: int8u
-    tags.push(mktag_font("DefaultChar", "Default Char", Value::String(format!("{}", data[97]))));
+    tags.push(mktag_font(
+        "DefaultChar",
+        "Default Char",
+        Value::String(format!("{}", data[97])),
+    ));
 
     // BreakChar at offset 98: int8u
-    tags.push(mktag_font("BreakChar", "Break Char", Value::String(format!("{}", data[98]))));
+    tags.push(mktag_font(
+        "BreakChar",
+        "Break Char",
+        Value::String(format!("{}", data[98])),
+    ));
 
     // WidthBytes at offset 99: int16u LE
     let width_bytes = u16::from_le_bytes([data[99], data[100]]);
-    tags.push(mktag_font("WidthBytes", "Width Bytes", Value::String(format!("{}", width_bytes))));
+    tags.push(mktag_font(
+        "WidthBytes",
+        "Width Bytes",
+        Value::String(format!("{}", width_bytes)),
+    ));
 
     // FontName and PostScriptFontName: offset to name string is at bytes 105..108 (int32u LE)
     // The name block contains: FontName\0PostScriptFontName\0
@@ -1242,21 +1685,31 @@ fn read_printer_font_metrics(data: &[u8]) -> Result<Vec<Tag>> {
         if name_off > 0 && name_off < data.len() {
             let rest = &data[name_off..];
             if let Some(null_pos) = rest.iter().position(|&b| b == 0) {
-                let font_name: String = rest[..null_pos].iter()
+                let font_name: String = rest[..null_pos]
+                    .iter()
                     .filter(|&&b| b >= 0x20)
                     .map(|&b| b as char)
                     .collect();
                 if !font_name.is_empty() {
-                    tags.push(mktag_font("FontName", "Font Name", Value::String(font_name)));
+                    tags.push(mktag_font(
+                        "FontName",
+                        "Font Name",
+                        Value::String(font_name),
+                    ));
                 }
                 let rest2 = &rest[null_pos + 1..];
                 if let Some(null_pos2) = rest2.iter().position(|&b| b == 0) {
-                    let ps_name: String = rest2[..null_pos2].iter()
+                    let ps_name: String = rest2[..null_pos2]
+                        .iter()
                         .filter(|&&b| b >= 0x20)
                         .map(|&b| b as char)
                         .collect();
                     if !ps_name.is_empty() {
-                        tags.push(mktag_font("PostScriptFontName", "PostScript Font Name", Value::String(ps_name)));
+                        tags.push(mktag_font(
+                            "PostScriptFontName",
+                            "PostScript Font Name",
+                            Value::String(ps_name),
+                        ));
                     }
                 }
             }
@@ -1278,7 +1731,8 @@ fn pfm_str(data: &[u8], offset: usize, max_len: usize) -> String {
     } else {
         slice
     };
-    slice.iter()
+    slice
+        .iter()
         .filter(|&&b| b >= 0x20)
         .map(|&b| b as char)
         .collect()
@@ -1322,9 +1776,18 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
         // Simple line-based parser
         let mut lines = re_str.lines();
         let header_line = lines.next().unwrap_or("");
-        let cs_char = if header_line.ends_with('F') || header_line == "PF" { b'F' } else { b'f' };
+        let cs_char = if header_line.ends_with('F') || header_line == "PF" {
+            b'F'
+        } else {
+            b'f'
+        };
         let color_space = if cs_char == b'F' { "RGB" } else { "Monochrome" };
-        tags.push(mktag("PFM", "ColorSpace", "Color Space", Value::String(color_space.into())));
+        tags.push(mktag(
+            "PFM",
+            "ColorSpace",
+            "Color Space",
+            Value::String(color_space.into()),
+        ));
 
         // Width Height line
         if let Some(wh_line) = lines.next() {
@@ -1340,8 +1803,17 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
         if let Some(scale_line) = lines.next() {
             let scale_str = scale_line.trim();
             if let Ok(scale) = scale_str.parse::<f64>() {
-                let byte_order = if scale > 0.0 { "Big-endian" } else { "Little-endian" };
-                tags.push(mktag("PFM", "ByteOrder", "Byte Order", Value::String(byte_order.into())));
+                let byte_order = if scale > 0.0 {
+                    "Big-endian"
+                } else {
+                    "Little-endian"
+                };
+                tags.push(mktag(
+                    "PFM",
+                    "ByteOrder",
+                    "Byte Order",
+                    Value::String(byte_order.into()),
+                ));
             }
         }
     } else {
@@ -1418,7 +1890,10 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
         // Comment: join lines and trim trailing newline
         if !comment_lines.is_empty() {
             let comment = comment_lines.join("\n");
-            let comment = comment.trim_end_matches('\n').trim_end_matches('\r').to_string();
+            let comment = comment
+                .trim_end_matches('\n')
+                .trim_end_matches('\r')
+                .to_string();
             tags.push(mktag("PPM", "Comment", "Comment", Value::String(comment)));
         }
 
@@ -1464,7 +1939,12 @@ pub fn read_pcx(data: &[u8]) -> Result<Vec<Tag>> {
         10 => "ZSoft",
         _ => "Unknown",
     };
-    tags.push(mktag("PCX", "Manufacturer", "Manufacturer", Value::String(mfr_str.into())));
+    tags.push(mktag(
+        "PCX",
+        "Manufacturer",
+        "Manufacturer",
+        Value::String(mfr_str.into()),
+    ));
 
     let sw_str = match software_ver {
         0 => "PC Paintbrush 2.5",
@@ -1474,23 +1954,68 @@ pub fn read_pcx(data: &[u8]) -> Result<Vec<Tag>> {
         5 => "PC Paintbrush 3.0+",
         _ => "Unknown",
     };
-    tags.push(mktag("PCX", "Software", "Software", Value::String(sw_str.into())));
+    tags.push(mktag(
+        "PCX",
+        "Software",
+        "Software",
+        Value::String(sw_str.into()),
+    ));
 
     let enc_str = match encoding {
         1 => "RLE",
         _ => "Unknown",
     };
-    tags.push(mktag("PCX", "Encoding", "Encoding", Value::String(enc_str.into())));
+    tags.push(mktag(
+        "PCX",
+        "Encoding",
+        "Encoding",
+        Value::String(enc_str.into()),
+    ));
 
-    tags.push(mktag("PCX", "BitsPerPixel", "Bits Per Pixel", Value::U8(bpp)));
+    tags.push(mktag(
+        "PCX",
+        "BitsPerPixel",
+        "Bits Per Pixel",
+        Value::U8(bpp),
+    ));
     tags.push(mktag("PCX", "LeftMargin", "Left Margin", Value::U16(xmin)));
     tags.push(mktag("PCX", "TopMargin", "Top Margin", Value::U16(ymin)));
-    tags.push(mktag("PCX", "ImageWidth", "Image Width", Value::U16(xmax - xmin + 1)));
-    tags.push(mktag("PCX", "ImageHeight", "Image Height", Value::U16(ymax - ymin + 1)));
-    tags.push(mktag("PCX", "XResolution", "X Resolution", Value::U16(hdpi)));
-    tags.push(mktag("PCX", "YResolution", "Y Resolution", Value::U16(vdpi)));
-    tags.push(mktag("PCX", "ColorPlanes", "Color Planes", Value::U8(num_planes)));
-    tags.push(mktag("PCX", "BytesPerLine", "Bytes Per Line", Value::U16(bytes_per_line)));
+    tags.push(mktag(
+        "PCX",
+        "ImageWidth",
+        "Image Width",
+        Value::U16(xmax - xmin + 1),
+    ));
+    tags.push(mktag(
+        "PCX",
+        "ImageHeight",
+        "Image Height",
+        Value::U16(ymax - ymin + 1),
+    ));
+    tags.push(mktag(
+        "PCX",
+        "XResolution",
+        "X Resolution",
+        Value::U16(hdpi),
+    ));
+    tags.push(mktag(
+        "PCX",
+        "YResolution",
+        "Y Resolution",
+        Value::U16(vdpi),
+    ));
+    tags.push(mktag(
+        "PCX",
+        "ColorPlanes",
+        "Color Planes",
+        Value::U8(num_planes),
+    ));
+    tags.push(mktag(
+        "PCX",
+        "BytesPerLine",
+        "Bytes Per Line",
+        Value::U16(bytes_per_line),
+    ));
 
     let cm_str = match color_mode {
         0 => "n/a",
@@ -1498,7 +2023,12 @@ pub fn read_pcx(data: &[u8]) -> Result<Vec<Tag>> {
         2 => "Grayscale",
         _ => "Unknown",
     };
-    tags.push(mktag("PCX", "ColorMode", "Color Mode", Value::String(cm_str.into())));
+    tags.push(mktag(
+        "PCX",
+        "ColorMode",
+        "Color Mode",
+        Value::String(cm_str.into()),
+    ));
 
     Ok(tags)
 }
@@ -1521,13 +2051,20 @@ pub fn read_djvu(data: &[u8]) -> Result<Vec<Tag>> {
         b"PM44" | b"BM44" => "DjVu Photo/Bitmap",
         _ => "DjVu",
     };
-    tags.push(mktag("DjVu", "DocumentType", "Document Type", Value::String(doc_type.into())));
+    tags.push(mktag(
+        "DjVu",
+        "DocumentType",
+        "Document Type",
+        Value::String(doc_type.into()),
+    ));
 
     // Parse INFO chunk for dimensions
     let mut pos = 16;
     while pos + 8 <= data.len() {
         let chunk_id = &data[pos..pos + 4];
-        let chunk_size = u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]) as usize;
+        let chunk_size =
+            u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                as usize;
         pos += 8;
 
         if chunk_id == b"INFO" && chunk_size >= 10 && pos + 10 <= data.len() {
@@ -1535,8 +2072,18 @@ pub fn read_djvu(data: &[u8]) -> Result<Vec<Tag>> {
             let height = u16::from_be_bytes([data[pos + 2], data[pos + 3]]);
             let dpi = u16::from_le_bytes([data[pos + 6], data[pos + 7]]);
 
-            tags.push(mktag("DjVu", "ImageWidth", "Image Width", Value::U16(width)));
-            tags.push(mktag("DjVu", "ImageHeight", "Image Height", Value::U16(height)));
+            tags.push(mktag(
+                "DjVu",
+                "ImageWidth",
+                "Image Width",
+                Value::U16(width),
+            ));
+            tags.push(mktag(
+                "DjVu",
+                "ImageHeight",
+                "Image Height",
+                Value::U16(height),
+            ));
             if dpi > 0 {
                 tags.push(mktag("DjVu", "Resolution", "Resolution", Value::U16(dpi)));
             }
@@ -1544,7 +2091,9 @@ pub fn read_djvu(data: &[u8]) -> Result<Vec<Tag>> {
         }
 
         pos += chunk_size;
-        if chunk_size % 2 != 0 { pos += 1; }
+        if chunk_size % 2 != 0 {
+            pos += 1;
+        }
     }
 
     Ok(tags)
@@ -1582,7 +2131,12 @@ pub fn read_flif(data: &[u8]) -> Result<Vec<Tag>> {
         'd' => "RGBA Animation (interlaced)",
         _ => "Unknown",
     };
-    tags.push(mktag("FLIF", "ImageType", "Image Type", Value::String(image_type.into())));
+    tags.push(mktag(
+        "FLIF",
+        "ImageType",
+        "Image Type",
+        Value::String(image_type.into()),
+    ));
 
     // BitDepth
     let bit_depth = match bpc_char {
@@ -1591,24 +2145,44 @@ pub fn read_flif(data: &[u8]) -> Result<Vec<Tag>> {
         '2' => "16",
         _ => "Unknown",
     };
-    tags.push(mktag("FLIF", "BitDepth", "Bit Depth", Value::String(bit_depth.into())));
+    tags.push(mktag(
+        "FLIF",
+        "BitDepth",
+        "Bit Depth",
+        Value::String(bit_depth.into()),
+    ));
 
     // Width and height are varint encoded starting at offset 6
     let mut pos = 6;
     if let Some((w, consumed)) = read_flif_varint(data, pos) {
         let width = (w + 1) as u32;
-        tags.push(mktag("FLIF", "ImageWidth", "Image Width", Value::U32(width)));
+        tags.push(mktag(
+            "FLIF",
+            "ImageWidth",
+            "Image Width",
+            Value::U32(width),
+        ));
         pos += consumed;
         if let Some((h, consumed2)) = read_flif_varint(data, pos) {
             let height = (h + 1) as u32;
-            tags.push(mktag("FLIF", "ImageHeight", "Image Height", Value::U32(height)));
+            tags.push(mktag(
+                "FLIF",
+                "ImageHeight",
+                "Image Height",
+                Value::U32(height),
+            ));
             pos += consumed2;
 
             // If animation type (byte4 > 'H' = 0x48), read frame count varint
             if byte4 > 0x48 {
                 if let Some((frames, consumed3)) = read_flif_varint(data, pos) {
                     let frame_count = (frames + 2) as u32;
-                    tags.push(mktag("FLIF", "AnimationFrames", "Animation Frames", Value::U32(frame_count)));
+                    tags.push(mktag(
+                        "FLIF",
+                        "AnimationFrames",
+                        "Animation Frames",
+                        Value::U32(frame_count),
+                    ));
                     pos += consumed3;
                 }
             }
@@ -1617,7 +2191,9 @@ pub fn read_flif(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Parse metadata chunks: each chunk has a 4-byte tag, then varint size, then compressed data
     loop {
-        if pos + 4 >= data.len() { break; }
+        if pos + 4 >= data.len() {
+            break;
+        }
         let chunk_tag = &data[pos..pos + 4];
         let first_byte = chunk_tag[0];
         // If first byte < 32, it's the start of image data
@@ -1627,7 +2203,12 @@ pub fn read_flif(data: &[u8]) -> Result<Vec<Tag>> {
                 0 => "FLIF16",
                 _ => "Unknown",
             };
-            tags.push(mktag("FLIF", "Encoding", "Encoding", Value::String(encoding.into())));
+            tags.push(mktag(
+                "FLIF",
+                "Encoding",
+                "Encoding",
+                Value::String(encoding.into()),
+            ));
             break;
         }
         pos += 4;
@@ -1641,13 +2222,19 @@ pub fn read_flif(data: &[u8]) -> Result<Vec<Tag>> {
             None => break,
         };
 
-        if pos + size > data.len() { break; }
+        if pos + size > data.len() {
+            break;
+        }
         let chunk_data = &data[pos..pos + size];
         pos += size;
 
         // Try to inflate (raw deflate)
         let inflated = flif_inflate(chunk_data);
-        let payload = if let Some(ref d) = inflated { d.as_slice() } else { chunk_data };
+        let payload = if let Some(ref d) = inflated {
+            d.as_slice()
+        } else {
+            chunk_data
+        };
 
         match chunk_tag.as_str() {
             "iCCP" => {
@@ -1709,12 +2296,18 @@ fn read_flif_varint(data: &[u8], mut pos: usize) -> Option<(u64, usize)> {
     let start = pos;
     let mut result = 0u64;
     loop {
-        if pos >= data.len() { return None; }
+        if pos >= data.len() {
+            return None;
+        }
         let byte = data[pos];
         result = (result << 7) | (byte & 0x7F) as u64;
         pos += 1;
-        if byte & 0x80 == 0 { break; }
-        if pos - start > 8 { return None; }
+        if byte & 0x80 == 0 {
+            break;
+        }
+        if pos - start > 8 {
+            return None;
+        }
     }
     Some((result, pos - start))
 }
@@ -1753,7 +2346,12 @@ pub fn read_bpg(data: &[u8]) -> Result<Vec<Tag>> {
         5 => "4:2:2 (chroma at 0, 0)",
         _ => "Unknown",
     };
-    tags.push(mktag("BPG", "PixelFormat", "Pixel Format", Value::String(pf_name.into())));
+    tags.push(mktag(
+        "BPG",
+        "PixelFormat",
+        "Pixel Format",
+        Value::String(pf_name.into()),
+    ));
 
     let alpha_name = match alpha_raw {
         0x1000 => "Alpha Exists (color not premultiplied)",
@@ -1761,28 +2359,64 @@ pub fn read_bpg(data: &[u8]) -> Result<Vec<Tag>> {
         0x0004 => "Alpha Exists (W color component)",
         _ => "No Alpha Plane",
     };
-    tags.push(mktag("BPG", "Alpha", "Alpha", Value::String(alpha_name.into())));
+    tags.push(mktag(
+        "BPG",
+        "Alpha",
+        "Alpha",
+        Value::String(alpha_name.into()),
+    ));
 
-    tags.push(mktag("BPG", "BitDepth", "Bit Depth", Value::U32(bit_depth as u32)));
+    tags.push(mktag(
+        "BPG",
+        "BitDepth",
+        "Bit Depth",
+        Value::U32(bit_depth as u32),
+    ));
 
     // Flags: bitmask (bit 0=Animation, bit 1=Limited Range, bit 3=Extension Present)
     let mut flag_parts: Vec<&str> = Vec::new();
-    if flags & 0x0001 != 0 { flag_parts.push("Animation"); }
-    if flags & 0x0002 != 0 { flag_parts.push("Limited Range"); }
-    if flags & 0x0008 != 0 { flag_parts.push("Extension Present"); }
+    if flags & 0x0001 != 0 {
+        flag_parts.push("Animation");
+    }
+    if flags & 0x0002 != 0 {
+        flag_parts.push("Limited Range");
+    }
+    if flags & 0x0008 != 0 {
+        flag_parts.push("Extension Present");
+    }
     let flags_str = flag_parts.join(", ");
-    tags.push(mktag("BPG", "Flags", "Flags", Value::String(flags_str.into())));
+    tags.push(mktag(
+        "BPG",
+        "Flags",
+        "Flags",
+        Value::String(flags_str.into()),
+    ));
 
     // Width, height, and image length are ue7-encoded starting at offset 6
     let mut pos = 6;
     if let Some((w, consumed)) = read_bpg_ue(data, pos) {
-        tags.push(mktag("BPG", "ImageWidth", "Image Width", Value::U32(w as u32)));
+        tags.push(mktag(
+            "BPG",
+            "ImageWidth",
+            "Image Width",
+            Value::U32(w as u32),
+        ));
         pos += consumed;
         if let Some((h, consumed)) = read_bpg_ue(data, pos) {
-            tags.push(mktag("BPG", "ImageHeight", "Image Height", Value::U32(h as u32)));
+            tags.push(mktag(
+                "BPG",
+                "ImageHeight",
+                "Image Height",
+                Value::U32(h as u32),
+            ));
             pos += consumed;
             if let Some((img_len, consumed)) = read_bpg_ue(data, pos) {
-                tags.push(mktag("BPG", "ImageLength", "Image Length", Value::U32(img_len as u32)));
+                tags.push(mktag(
+                    "BPG",
+                    "ImageLength",
+                    "Image Length",
+                    Value::U32(img_len as u32),
+                ));
                 pos += consumed;
 
                 // Parse extension blocks if the Extension Present flag is set
@@ -1805,7 +2439,9 @@ pub fn read_bpg(data: &[u8]) -> Result<Vec<Tag>> {
 fn bpg_parse_extensions(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
     let mut pos = start;
     while pos < end {
-        if pos >= data.len() { break; }
+        if pos >= data.len() {
+            break;
+        }
         let ext_type = data[pos];
         pos += 1;
         let (ext_len, n) = match read_bpg_ue(data, pos) {
@@ -1814,7 +2450,9 @@ fn bpg_parse_extensions(data: &[u8], start: usize, end: usize, tags: &mut Vec<Ta
         };
         pos += n;
         let ext_len = ext_len as usize;
-        if pos + ext_len > end { break; }
+        if pos + ext_len > end {
+            break;
+        }
         let ext_data = &data[pos..pos + ext_len];
         pos += ext_len;
 
@@ -1828,8 +2466,14 @@ fn bpg_parse_extensions(data: &[u8], start: usize, end: usize, tags: &mut Vec<Ta
                     let b2 = ext_data[2];
                     // Check for extra byte before II or MM TIFF header
                     if b0 != b'I' && b0 != b'M' && (b1 == b'I' || b1 == b'M') && b1 == b2 {
-                        tags.push(mktag("ExifTool", "Warning", "Warning",
-                            Value::String("[minor] Ignored extra byte at start of EXIF extension".into())));
+                        tags.push(mktag(
+                            "ExifTool",
+                            "Warning",
+                            "Warning",
+                            Value::String(
+                                "[minor] Ignored extra byte at start of EXIF extension".into(),
+                            ),
+                        ));
                         &ext_data[1..]
                     } else {
                         ext_data
@@ -1865,12 +2509,18 @@ fn read_bpg_ue(data: &[u8], mut pos: usize) -> Option<(u64, usize)> {
     let start = pos;
     let mut result = 0u64;
     loop {
-        if pos >= data.len() { return None; }
+        if pos >= data.len() {
+            return None;
+        }
         let byte = data[pos];
         result = (result << 7) | (byte & 0x7F) as u64;
         pos += 1;
-        if byte & 0x80 == 0 { break; }
-        if pos - start > 8 { return None; }
+        if byte & 0x80 == 0 {
+            break;
+        }
+        if pos - start > 8 {
+            return None;
+        }
     }
     Some((result, pos - start))
 }
@@ -1936,10 +2586,20 @@ pub fn read_pict(data: &[u8]) -> Result<Vec<Tag>> {
     tags.push(mktag("PICT", "ImageWidth", "Image Width", Value::I32(w)));
     tags.push(mktag("PICT", "ImageHeight", "Image Height", Value::I32(h)));
     if let Some(hr) = h_res {
-        tags.push(mktag("PICT", "XResolution", "X Resolution", Value::String(format!("{}", hr as i64))));
+        tags.push(mktag(
+            "PICT",
+            "XResolution",
+            "X Resolution",
+            Value::String(format!("{}", hr as i64)),
+        ));
     }
     if let Some(vr) = v_res {
-        tags.push(mktag("PICT", "YResolution", "Y Resolution", Value::String(format!("{}", vr as i64))));
+        tags.push(mktag(
+            "PICT",
+            "YResolution",
+            "Y Resolution",
+            Value::String(format!("{}", vr as i64)),
+        ));
     }
 
     Ok(tags)
@@ -1963,30 +2623,53 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
 
     // FirmwareVersion at 0x01, 10 bytes, reversed string
     let fw_bytes: Vec<u8> = data[0x01..0x0b].iter().rev().copied().collect();
-    let fw = crate::encoding::decode_utf8_or_latin1(&fw_bytes).trim_matches('\0').to_string();
+    let fw = crate::encoding::decode_utf8_or_latin1(&fw_bytes)
+        .trim_matches('\0')
+        .to_string();
     if !fw.is_empty() {
-        tags.push(mktag(group, "FirmwareVersion", "Firmware Version", Value::String(fw)));
+        tags.push(mktag(
+            group,
+            "FirmwareVersion",
+            "Firmware Version",
+            Value::String(fw),
+        ));
     }
 
     // Model at 0x0c, 12 bytes, reversed string
     let model_bytes: Vec<u8> = data[0x0c..0x18].iter().rev().copied().collect();
-    let model = crate::encoding::decode_utf8_or_latin1(&model_bytes).trim_matches('\0').to_string();
+    let model = crate::encoding::decode_utf8_or_latin1(&model_bytes)
+        .trim_matches('\0')
+        .to_string();
     if !model.is_empty() {
-        tags.push(mktag(group, "Model", "Camera Model Name", Value::String(model)));
+        tags.push(mktag(
+            group,
+            "Model",
+            "Camera Model Name",
+            Value::String(model),
+        ));
     }
 
     // Make at 0x19, 7 bytes, reversed string
     let make_bytes: Vec<u8> = data[0x19..0x20].iter().rev().copied().collect();
-    let make = crate::encoding::decode_utf8_or_latin1(&make_bytes).trim_matches('\0').to_string();
+    let make = crate::encoding::decode_utf8_or_latin1(&make_bytes)
+        .trim_matches('\0')
+        .to_string();
     if !make.is_empty() {
         tags.push(mktag(group, "Make", "Camera Make", Value::String(make)));
     }
 
     // DateTimeOriginal at 0x21, 20 bytes, reversed string
     let dt_bytes: Vec<u8> = data[0x21..0x35].iter().rev().copied().collect();
-    let dt_str = crate::encoding::decode_utf8_or_latin1(&dt_bytes).trim_matches('\0').to_string();
+    let dt_str = crate::encoding::decode_utf8_or_latin1(&dt_bytes)
+        .trim_matches('\0')
+        .to_string();
     if !dt_str.is_empty() {
-        tags.push(mktag(group, "DateTimeOriginal", "Date/Time Original", Value::String(dt_str)));
+        tags.push(mktag(
+            group,
+            "DateTimeOriginal",
+            "Date/Time Original",
+            Value::String(dt_str),
+        ));
     }
 
     // ISO at 0x34, int32u (big-endian, index into table)
@@ -2005,7 +2688,12 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
         let et_idx = u32::from_be_bytes([data[0x38], data[0x39], data[0x3a], data[0x3b]]);
         let et_val = f64::powf(2.0, et_idx as f64 / 8.0) / 16000.0;
         let print_val = format_exposure_time(et_val);
-        let mut t = mktag(group, "ExposureTime", "Exposure Time", Value::String(format!("{:.10}", et_val)));
+        let mut t = mktag(
+            group,
+            "ExposureTime",
+            "Exposure Time",
+            Value::String(format!("{:.10}", et_val)),
+        );
         t.print_value = print_val;
         tags.push(t);
     }
@@ -2017,7 +2705,12 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
         let g2 = u32::from_be_bytes([data[0x44], data[0x45], data[0x46], data[0x47]]);
         let b = u32::from_be_bytes([data[0x48], data[0x49], data[0x4a], data[0x4b]]);
         let wb_str = format!("{} {} {} {}", r, g1, g2, b);
-        tags.push(mktag(group, "WB_RGGBLevels", "WB RGGB Levels", Value::String(wb_str)));
+        tags.push(mktag(
+            group,
+            "WB_RGGBLevels",
+            "WB RGGB Levels",
+            Value::String(wb_str),
+        ));
     }
 
     // FNumber at 0x58, int32u: 2^(val/16)
@@ -2025,7 +2718,12 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
         let fn_idx = u32::from_be_bytes([data[0x58], data[0x59], data[0x5a], data[0x5b]]);
         let fn_val = f64::powf(2.0, fn_idx as f64 / 16.0);
         let print_val = format!("{}", (fn_val * 10000.0).round() / 10000.0);
-        let mut t = mktag(group, "FNumber", "F Number", Value::String(format!("{}", fn_val)));
+        let mut t = mktag(
+            group,
+            "FNumber",
+            "F Number",
+            Value::String(format!("{}", fn_val)),
+        );
         t.print_value = print_val;
         tags.push(t);
     }
@@ -2035,7 +2733,12 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
         let ma_idx = u32::from_be_bytes([data[0x68], data[0x69], data[0x6a], data[0x6b]]);
         let ma_val = f64::powf(2.0, ma_idx as f64 / 16.0);
         let print_val = format!("{}", (ma_val * 100.0).round() / 100.0);
-        let mut t = mktag(group, "MaxAperture", "Max Aperture Value", Value::String(format!("{}", ma_val)));
+        let mut t = mktag(
+            group,
+            "MaxAperture",
+            "Max Aperture Value",
+            Value::String(format!("{}", ma_val)),
+        );
         t.print_value = print_val;
         tags.push(t);
     }
@@ -2043,7 +2746,12 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
     // FocalLength at 0x70, int32u
     if data.len() >= 0x74 {
         let fl = u32::from_be_bytes([data[0x70], data[0x71], data[0x72], data[0x73]]);
-        let mut t = mktag(group, "FocalLength", "Focal Length", Value::String(fl.to_string()));
+        let mut t = mktag(
+            group,
+            "FocalLength",
+            "Focal Length",
+            Value::String(fl.to_string()),
+        );
         t.print_value = format!("{} mm", fl);
         tags.push(t);
     }
@@ -2051,7 +2759,9 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
     // Lens at 0x7c, string[32]
     if data.len() >= 0x9c {
         let lens_bytes = &data[0x7c..0x9c];
-        let lens = crate::encoding::decode_utf8_or_latin1(lens_bytes).trim_matches('\0').to_string();
+        let lens = crate::encoding::decode_utf8_or_latin1(lens_bytes)
+            .trim_matches('\0')
+            .to_string();
         if !lens.is_empty() {
             tags.push(mktag(group, "Lens", "Lens", Value::String(lens)));
         }
@@ -2062,14 +2772,27 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
 
 fn kyocera_iso(idx: u32) -> u32 {
     match idx {
-        7 => 25, 8 => 32, 9 => 40, 10 => 50, 11 => 64, 12 => 80,
-        13 => 100, 14 => 125, 15 => 160, 16 => 200, 17 => 250,
-        18 => 320, 19 => 400, _ => 0,
+        7 => 25,
+        8 => 32,
+        9 => 40,
+        10 => 50,
+        11 => 64,
+        12 => 80,
+        13 => 100,
+        14 => 125,
+        15 => 160,
+        16 => 200,
+        17 => 250,
+        18 => 320,
+        19 => 400,
+        _ => 0,
     }
 }
 
 fn format_exposure_time(val: f64) -> String {
-    if val == 0.0 { return "0".to_string(); }
+    if val == 0.0 {
+        return "0".to_string();
+    }
     if val >= 1.0 {
         format!("{}", val)
     } else {
@@ -2097,12 +2820,19 @@ impl<'a> M2tsBitReader<'a> {
         } else {
             (1, 8, data[0])
         };
-        M2tsBitReader { data, byte_pos, bit_pos, current }
+        M2tsBitReader {
+            data,
+            byte_pos,
+            bit_pos,
+            current,
+        }
     }
 
     fn read_bit(&mut self) -> Option<u32> {
         if self.bit_pos == 0 {
-            if self.byte_pos >= self.data.len() { return None; }
+            if self.byte_pos >= self.data.len() {
+                return None;
+            }
             self.current = self.data[self.byte_pos];
             self.byte_pos += 1;
             self.bit_pos = 8;
@@ -2113,24 +2843,32 @@ impl<'a> M2tsBitReader<'a> {
 
     fn read_bits(&mut self, n: u32) -> Option<u32> {
         let mut val = 0u32;
-        for _ in 0..n { val = (val << 1) | self.read_bit()?; }
+        for _ in 0..n {
+            val = (val << 1) | self.read_bit()?;
+        }
         Some(val)
     }
 
     fn skip_bits(&mut self, n: u32) {
-        for _ in 0..n { let _ = self.read_bit(); }
+        for _ in 0..n {
+            let _ = self.read_bit();
+        }
     }
 
     fn read_ue(&mut self) -> Option<u32> {
         let mut leading = 0u32;
         while self.read_bit()? == 0 {
             leading += 1;
-            if leading > 31 { return None; }
+            if leading > 31 {
+                return None;
+            }
         }
         // After while loop, the '1' terminator bit was consumed.
         // Now read 'leading' INFO bits.
         let mut info = 0u32;
-        for _ in 0..leading { info = (info << 1) | self.read_bit()?; }
+        for _ in 0..leading {
+            info = (info << 1) | self.read_bit()?;
+        }
         Some((1 << leading) + info - 1)
     }
 
@@ -2161,10 +2899,17 @@ fn m2ts_parse_sei(nal_data: &[u8]) -> Option<M2tsMdpmData> {
     let mut rbsp = Vec::with_capacity(nal_data.len());
     let mut i = 0;
     while i < nal_data.len() {
-        if i + 2 < nal_data.len() && nal_data[i] == 0 && nal_data[i+1] == 0 && nal_data[i+2] == 3 {
-            rbsp.push(0); rbsp.push(0); i += 3;
+        if i + 2 < nal_data.len()
+            && nal_data[i] == 0
+            && nal_data[i + 1] == 0
+            && nal_data[i + 2] == 3
+        {
+            rbsp.push(0);
+            rbsp.push(0);
+            i += 3;
         } else {
-            rbsp.push(nal_data[i]); i += 1;
+            rbsp.push(nal_data[i]);
+            i += 1;
         }
     }
 
@@ -2177,22 +2922,36 @@ fn m2ts_parse_sei(nal_data: &[u8]) -> Option<M2tsMdpmData> {
         // Read payload type (extended via 0xFF bytes)
         let mut sei_type: u32 = 0;
         loop {
-            if pos >= end { return None; }
-            let t = data[pos]; pos += 1;
+            if pos >= end {
+                return None;
+            }
+            let t = data[pos];
+            pos += 1;
             sei_type += t as u32;
-            if t != 0xFF { break; }
+            if t != 0xFF {
+                break;
+            }
         }
-        if sei_type == 0x80 { return None; } // terminator
+        if sei_type == 0x80 {
+            return None;
+        } // terminator
 
         // Read payload size
         let mut sei_size: usize = 0;
         loop {
-            if pos >= end { return None; }
-            let t = data[pos]; pos += 1;
+            if pos >= end {
+                return None;
+            }
+            let t = data[pos];
+            pos += 1;
             sei_size += t as usize;
-            if t != 0xFF { break; }
+            if t != 0xFF {
+                break;
+            }
         }
-        if pos + sei_size > end { return None; }
+        if pos + sei_size > end {
+            return None;
+        }
 
         if sei_type == 5 {
             // Unregistered user data: check for MDPM UUID
@@ -2200,7 +2959,8 @@ fn m2ts_parse_sei(nal_data: &[u8]) -> Option<M2tsMdpmData> {
             // followed by "MDPM" (4 bytes)
             let payload = &data[pos..pos + sei_size];
             if sei_size > 20 {
-                let uuid_mdpm = b"\x17\xee\x8c\x60\xf8\x4d\x11\xd9\x8c\xd6\x08\x00\x20\x0c\x9a\x66MDPM";
+                let uuid_mdpm =
+                    b"\x17\xee\x8c\x60\xf8\x4d\x11\xd9\x8c\xd6\x08\x00\x20\x0c\x9a\x66MDPM";
                 if payload.len() >= 20 && &payload[..20] == uuid_mdpm {
                     return m2ts_parse_mdpm(&payload[20..]);
                 }
@@ -2214,7 +2974,9 @@ fn m2ts_parse_sei(nal_data: &[u8]) -> Option<M2tsMdpmData> {
 
 /// Parse MDPM entries and decode camera metadata tags.
 fn m2ts_parse_mdpm(data: &[u8]) -> Option<M2tsMdpmData> {
-    if data.is_empty() { return None; }
+    if data.is_empty() {
+        return None;
+    }
 
     let mut result = M2tsMdpmData {
         datetime_original: None,
@@ -2235,10 +2997,12 @@ fn m2ts_parse_mdpm(data: &[u8]) -> Option<M2tsMdpmData> {
 
     while index < num && pos + 5 <= end {
         let tag = data[pos];
-        if tag <= last_tag && index > 0 { break; } // out of sequence
+        if tag <= last_tag && index > 0 {
+            break;
+        } // out of sequence
         last_tag = tag;
 
-        let val4 = [data[pos+1], data[pos+2], data[pos+3], data[pos+4]];
+        let val4 = [data[pos + 1], data[pos + 2], data[pos + 3], data[pos + 4]];
         pos += 5;
         index += 1;
 
@@ -2248,8 +3012,10 @@ fn m2ts_parse_mdpm(data: &[u8]) -> Option<M2tsMdpmData> {
                 // Read 4 bytes from current tag, then peek at next tag
                 let mut combined = val4.to_vec();
                 if pos + 5 <= end && data[pos] == 0x19 {
-                    combined.extend_from_slice(&data[pos+1..pos+5]);
-                    pos += 5; index += 1; last_tag = 0x19;
+                    combined.extend_from_slice(&data[pos + 1..pos + 5]);
+                    pos += 5;
+                    index += 1;
+                    last_tag = 0x19;
                 }
                 // combined = [tz, yy_high, yy_low, mm, dd, HH, MM, SS] (BCD / raw)
                 // ExifTool ValueConv: my ($tz, @a) = unpack('C*',$val);
@@ -2267,7 +3033,10 @@ fn m2ts_parse_mdpm(data: &[u8]) -> Option<M2tsMdpmData> {
                     let tz_h = (tz >> 1) & 0x0f;
                     let tz_m = if tz & 0x01 != 0 { "30" } else { "00" };
                     let dst = if tz & 0x40 != 0 { " DST" } else { "" };
-                    let s = format!("{:02x}{:02x}:{:02x}:{:02x} {:02x}:{:02x}:{:02x}{}{:02}:{}{}", yh, yl, mo, dy, hh, mm, ss, sign, tz_h, tz_m, dst);
+                    let s = format!(
+                        "{:02x}{:02x}:{:02x}:{:02x} {:02x}:{:02x}:{:02x}{}{:02}:{}{}",
+                        yh, yl, mo, dy, hh, mm, ss, sign, tz_h, tz_m, dst
+                    );
                     result.datetime_original = Some(s);
                 }
             }
@@ -2347,8 +3116,11 @@ fn m2ts_parse_mdpm(data: &[u8]) -> Option<M2tsMdpmData> {
         }
     }
 
-    if result.datetime_original.is_some() || result.aperture_setting.is_some()
-        || result.gain.is_some() || result.make.is_some() {
+    if result.datetime_original.is_some()
+        || result.aperture_setting.is_some()
+        || result.gain.is_some()
+        || result.make.is_some()
+    {
         Some(result)
     } else {
         None
@@ -2357,7 +3129,9 @@ fn m2ts_parse_mdpm(data: &[u8]) -> Option<M2tsMdpmData> {
 
 /// Format exposure time like ExifTool's PrintExposureTime
 fn m2ts_format_exposure_time(val: f64) -> String {
-    if val <= 0.0 { return "0".to_string(); }
+    if val <= 0.0 {
+        return "0".to_string();
+    }
     if val >= 1.0 {
         if (val - val.round()).abs() < 0.005 {
             return format!("{}", val.round() as i64);
@@ -2366,7 +3140,11 @@ fn m2ts_format_exposure_time(val: f64) -> String {
     }
     // Express as fraction 1/N
     let n = (1.0 / val).round() as i64;
-    if n > 0 { format!("1/{}", n) } else { format!("{}", val) }
+    if n > 0 {
+        format!("1/{}", n)
+    } else {
+        format!("{}", val)
+    }
 }
 
 fn m2ts_find_packet_size(data: &[u8]) -> Option<(usize, usize)> {
@@ -2379,32 +3157,46 @@ fn m2ts_find_packet_size(data: &[u8]) -> Option<(usize, usize)> {
 }
 
 fn m2ts_get_payload(pkt: &[u8], tco: usize) -> Option<(bool, u16, &[u8])> {
-    if pkt.len() < tco + 4 { return None; }
+    if pkt.len() < tco + 4 {
+        return None;
+    }
     let hdr = &pkt[tco..];
-    if hdr[0] != 0x47 { return None; }
+    if hdr[0] != 0x47 {
+        return None;
+    }
     let pusi = (hdr[1] & 0x40) != 0;
     let pid = (((hdr[1] & 0x1F) as u16) << 8) | hdr[2] as u16;
     let afc = (hdr[3] >> 4) & 0x3;
-    if afc == 0 || afc == 2 { return None; }
+    if afc == 0 || afc == 2 {
+        return None;
+    }
     let mut ps = 4;
     if afc == 3 {
-        if hdr.len() <= ps { return None; }
+        if hdr.len() <= ps {
+            return None;
+        }
         ps += 1 + hdr[ps] as usize;
     }
-    if ps >= hdr.len() { return None; }
+    if ps >= hdr.len() {
+        return None;
+    }
     Some((pusi, pid, &hdr[ps..]))
 }
 
 fn m2ts_parse_pat(section: &[u8]) -> Vec<u16> {
     let mut pmt_pids = Vec::new();
-    if section.len() < 8 { return pmt_pids; }
+    if section.len() < 8 {
+        return pmt_pids;
+    }
     let section_length = (((section[1] & 0x0F) as usize) << 8) | section[2] as usize;
     let entries_end = (3 + section_length).saturating_sub(4).min(section.len());
     let mut i = 8;
     while i + 4 <= entries_end {
-        let prog_num = ((section[i] as u16) << 8) | section[i+1] as u16;
-        let pmt_pid = (((section[i+2] & 0x1F) as u16) << 8) | section[i+3] as u16;
-        if prog_num != 0 { pmt_pids.push(pmt_pid); }
+        let prog_num = ((section[i] as u16) << 8) | section[i + 1] as u16;
+        let pmt_pid = (((section[i + 2] & 0x1F) as u16) << 8) | section[i + 3] as u16;
+        if prog_num != 0 {
+            pmt_pids.push(pmt_pid);
+        }
         i += 4;
     }
     pmt_pids
@@ -2421,23 +3213,32 @@ struct M2tsStreamInfo {
 }
 
 fn m2ts_parse_pmt(section: &[u8]) -> Option<M2tsStreamInfo> {
-    if section.len() < 12 || section[0] != 0x02 { return None; }
+    if section.len() < 12 || section[0] != 0x02 {
+        return None;
+    }
     let section_length = (((section[1] & 0x0F) as usize) << 8) | section[2] as usize;
     let section_end = (3 + section_length).saturating_sub(4).min(section.len());
     let prog_info_len = (((section[10] & 0x0F) as usize) << 8) | section[11] as usize;
     let mut es_pos = 12 + prog_info_len;
-    if es_pos >= section_end { return None; }
+    if es_pos >= section_end {
+        return None;
+    }
 
     let mut info = M2tsStreamInfo {
-        video_type: None, audio_type: None,
-        audio_bitrate_idx: None, audio_surround_mode: None, audio_channels: None,
-        h264_pid: None, audio_pid: None,
+        video_type: None,
+        audio_type: None,
+        audio_bitrate_idx: None,
+        audio_surround_mode: None,
+        audio_channels: None,
+        h264_pid: None,
+        audio_pid: None,
     };
 
     while es_pos + 5 <= section_end {
         let stream_type = section[es_pos];
-        let es_pid = (((section[es_pos+1] & 0x1F) as u16) << 8) | section[es_pos+2] as u16;
-        let es_info_len = (((section[es_pos+3] & 0x0F) as usize) << 8) | section[es_pos+4] as usize;
+        let es_pid = (((section[es_pos + 1] & 0x1F) as u16) << 8) | section[es_pos + 2] as u16;
+        let es_info_len =
+            (((section[es_pos + 3] & 0x0F) as usize) << 8) | section[es_pos + 4] as usize;
         let es_info_end = (es_pos + 5 + es_info_len).min(section_end);
 
         match stream_type {
@@ -2469,13 +3270,15 @@ fn m2ts_parse_pmt(section: &[u8]) -> Option<M2tsStreamInfo> {
                 let mut di = es_pos + 5;
                 while di + 2 <= es_info_end {
                     let dtag = section[di];
-                    let dlen = section[di+1] as usize;
-                    if di + 2 + dlen > es_info_end { break; }
+                    let dlen = section[di + 1] as usize;
+                    if di + 2 + dlen > es_info_end {
+                        break;
+                    }
                     if dtag == 0x81 && dlen >= 3 {
                         // AC3 audio descriptor per ATSC A/52
-                        let d0 = section[di+2];
-                        let d1 = section[di+3];
-                        let d2 = section[di+4];
+                        let d0 = section[di + 2];
+                        let d1 = section[di + 3];
+                        let d2 = section[di + 4];
                         info.audio_bitrate_idx = Some(d1 >> 2);
                         info.audio_surround_mode = Some(d1 & 0x03);
                         info.audio_channels = Some((d2 >> 1) & 0x0f);
@@ -2502,10 +3305,13 @@ fn m2ts_parse_sps(sps_nal: &[u8]) -> Option<(u32, u32)> {
     let mut rbsp = Vec::with_capacity(sps_nal.len());
     let mut i = 0;
     while i < sps_nal.len() {
-        if i + 2 < sps_nal.len() && sps_nal[i] == 0 && sps_nal[i+1] == 0 && sps_nal[i+2] == 3 {
-            rbsp.push(0); rbsp.push(0); i += 3;
+        if i + 2 < sps_nal.len() && sps_nal[i] == 0 && sps_nal[i + 1] == 0 && sps_nal[i + 2] == 3 {
+            rbsp.push(0);
+            rbsp.push(0);
+            i += 3;
         } else {
-            rbsp.push(sps_nal[i]); i += 1;
+            rbsp.push(sps_nal[i]);
+            i += 1;
         }
     }
 
@@ -2515,10 +3321,17 @@ fn m2ts_parse_sps(sps_nal: &[u8]) -> Option<(u32, u32)> {
     br.skip_bits(16); // constraint_flags + level_idc
     br.read_ue()?; // seq_parameter_set_id
 
-    if matches!(profile_idc, 100|110|122|244|44|83|86|118|128) {
+    if matches!(
+        profile_idc,
+        100 | 110 | 122 | 244 | 44 | 83 | 86 | 118 | 128
+    ) {
         let chroma = br.read_ue()?;
-        if chroma == 3 { br.skip_bits(1); }
-        br.read_ue()?; br.read_ue()?; br.skip_bits(1);
+        if chroma == 3 {
+            br.skip_bits(1);
+        }
+        br.read_ue()?;
+        br.read_ue()?;
+        br.skip_bits(1);
         let scaling = br.read_bit()?;
         if scaling != 0 {
             let count = if chroma != 3 { 8 } else { 12 };
@@ -2527,7 +3340,10 @@ fn m2ts_parse_sps(sps_nal: &[u8]) -> Option<(u32, u32)> {
                     let sz = if ci < 6 { 16 } else { 64 };
                     let (mut last, mut next) = (8i32, 8i32);
                     for _ in 0..sz {
-                        if next != 0 { let d = br.read_se()?; next = (last + d + 256) % 256; }
+                        if next != 0 {
+                            let d = br.read_se()?;
+                            next = (last + d + 256) % 256;
+                        }
                         last = if next == 0 { last } else { next };
                     }
                 }
@@ -2537,24 +3353,34 @@ fn m2ts_parse_sps(sps_nal: &[u8]) -> Option<(u32, u32)> {
 
     br.read_ue()?; // log2_max_frame_num_minus4
     let poc_type = br.read_ue()?;
-    if poc_type == 0 { br.read_ue()?; }
-    else if poc_type == 1 {
-        br.skip_bits(1); br.read_se()?; br.read_se()?;
+    if poc_type == 0 {
+        br.read_ue()?;
+    } else if poc_type == 1 {
+        br.skip_bits(1);
+        br.read_se()?;
+        br.read_se()?;
         let n = br.read_ue()?;
-        for _ in 0..n { br.read_se()?; }
+        for _ in 0..n {
+            br.read_se()?;
+        }
     }
-    br.read_ue()?; br.skip_bits(1);
+    br.read_ue()?;
+    br.skip_bits(1);
 
     let pic_w = br.read_ue()?;
     let pic_h = br.read_ue()?;
     let frame_mbs_only = br.read_bit()?;
-    if frame_mbs_only == 0 { br.skip_bits(1); }
+    if frame_mbs_only == 0 {
+        br.skip_bits(1);
+    }
     br.skip_bits(1);
 
     let crop = br.read_bit()?;
     let (cl, cr, ct, cb) = if crop != 0 {
         (br.read_ue()?, br.read_ue()?, br.read_ue()?, br.read_ue()?)
-    } else { (0, 0, 0, 0) };
+    } else {
+        (0, 0, 0, 0)
+    };
 
     // Crop multiplier: 4 for width, (4 - frame_mbs_only*2) for height (Perl H264.pm)
     let m = 4 - frame_mbs_only * 2;
@@ -2574,14 +3400,26 @@ fn m2ts_parse_h264_pes(payload: &[u8]) -> (Option<(u32, u32)>, Option<M2tsMdpmDa
     let mut mdpm = None;
     let mut i = 0;
     while i + 3 <= payload.len() {
-        let nal_start = if payload[i] == 0 && payload[i+1] == 0 && i + 3 < payload.len() && payload[i+2] == 1 {
+        let nal_start = if payload[i] == 0
+            && payload[i + 1] == 0
+            && i + 3 < payload.len()
+            && payload[i + 2] == 1
+        {
             i + 3
-        } else if i + 4 < payload.len() && payload[i] == 0 && payload[i+1] == 0 && payload[i+2] == 0 && payload[i+3] == 1 {
+        } else if i + 4 < payload.len()
+            && payload[i] == 0
+            && payload[i + 1] == 0
+            && payload[i + 2] == 0
+            && payload[i + 3] == 1
+        {
             i + 4
         } else {
-            i += 1; continue;
+            i += 1;
+            continue;
         };
-        if nal_start >= payload.len() { break; }
+        if nal_start >= payload.len() {
+            break;
+        }
         let nal_type = payload[nal_start] & 0x1F;
         match nal_type {
             7 if dims.is_none() => {
@@ -2600,7 +3438,9 @@ fn m2ts_parse_h264_pes(payload: &[u8]) -> (Option<(u32, u32)>, Option<M2tsMdpmDa
 fn m2ts_parse_ac3_sample_rate(payload: &[u8]) -> Option<u32> {
     // Scan for 0x0B77 sync word and read fscod
     let pos = payload.windows(2).position(|w| w == [0x0B, 0x77])?;
-    if pos + 5 > payload.len() { return None; }
+    if pos + 5 > payload.len() {
+        return None;
+    }
     let fscod = payload[pos + 4] >> 6;
     let rates = [48000u32, 44100, 32000, 0];
     Some(rates.get(fscod as usize).copied().unwrap_or(0))
@@ -2627,7 +3467,9 @@ fn m2ts_format_bitrate(kbps: u32) -> String {
 }
 
 fn m2ts_format_duration(first: u64, last: u64) -> String {
-    if last <= first { return "0 s".to_string(); }
+    if last <= first {
+        return "0 s".to_string();
+    }
     let ticks = last - first;
     let total_secs = ticks / 27_000_000;
     if total_secs == 0 {
@@ -2654,7 +3496,11 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
     let num_packets = data.len() / packet_size;
     // With -ee, scan all packets; without, scan first 2000 only
-    let scan_count = if extract_embedded > 0 { num_packets } else { num_packets.min(2000) };
+    let scan_count = if extract_embedded > 0 {
+        num_packets
+    } else {
+        num_packets.min(2000)
+    };
 
     let mut pmt_pids: Vec<u16> = Vec::new();
     let mut pmt_buf: std::collections::HashMap<u16, Vec<u8>> = std::collections::HashMap::new();
@@ -2668,7 +3514,7 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     let mut pcr_last: Option<u64> = None;
 
     for pkt_idx in 0..scan_count {
-        let pkt = &data[pkt_idx * packet_size..(pkt_idx+1) * packet_size];
+        let pkt = &data[pkt_idx * packet_size..(pkt_idx + 1) * packet_size];
 
         // Extract PCR from adaptation field (AFC=2 or AFC=3)
         let hdr = &pkt[tco..];
@@ -2679,12 +3525,16 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                 if af_len >= 7 && hdr.len() >= 12 {
                     let af_flags = hdr[5];
                     if af_flags & 0x10 != 0 {
-                        let pb = ((hdr[6] as u64) << 25) | ((hdr[7] as u64) << 17)
-                            | ((hdr[8] as u64) << 9) | ((hdr[9] as u64) << 1)
+                        let pb = ((hdr[6] as u64) << 25)
+                            | ((hdr[7] as u64) << 17)
+                            | ((hdr[8] as u64) << 9)
+                            | ((hdr[9] as u64) << 1)
                             | ((hdr[10] as u64) >> 7);
                         let pe = (((hdr[10] as u64) & 1) << 8) | hdr[11] as u64;
                         let pcr = pb * 300 + pe;
-                        if pcr_first.is_none() { pcr_first = Some(pcr); }
+                        if pcr_first.is_none() {
+                            pcr_first = Some(pcr);
+                        }
                         pcr_last = Some(pcr);
                     }
                 }
@@ -2696,7 +3546,9 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                 let section = if pusi && !payload.is_empty() {
                     let ptr = payload[0] as usize;
                     &payload[(ptr + 1).min(payload.len())..]
-                } else { payload };
+                } else {
+                    payload
+                };
                 let new_pmts = m2ts_parse_pat(section);
                 if !new_pmts.is_empty() {
                     pmt_pids = new_pmts;
@@ -2706,7 +3558,11 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                 let buf = pmt_buf.entry(pid).or_default();
                 if pusi {
                     buf.clear();
-                    let ptr = if !payload.is_empty() { payload[0] as usize } else { 0 };
+                    let ptr = if !payload.is_empty() {
+                        payload[0] as usize
+                    } else {
+                        0
+                    };
                     buf.extend_from_slice(&payload[(ptr + 1).min(payload.len())..]);
                 } else {
                     buf.extend_from_slice(payload);
@@ -2721,16 +3577,24 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                     // Skip PES header to get to ES data
                     let es = m2ts_skip_pes_header(payload);
                     let (dims, mdpm) = m2ts_parse_h264_pes(es);
-                    if dims.is_some() && h264_dims.is_none() { h264_dims = dims; }
+                    if dims.is_some() && h264_dims.is_none() {
+                        h264_dims = dims;
+                    }
                     if let Some(ref m) = mdpm {
-                        if mdpm_data.is_none() { mdpm_data = mdpm.clone(); }
-                        if extract_embedded > 0 { all_mdpm.push(m.clone()); }
+                        if mdpm_data.is_none() {
+                            mdpm_data = mdpm.clone();
+                        }
+                        if extract_embedded > 0 {
+                            all_mdpm.push(m.clone());
+                        }
                     }
                 }
                 if ac3_sample_rate.is_none() && Some(pid) == si.audio_pid {
                     let es = m2ts_skip_pes_header(payload);
                     if let Some(sr) = m2ts_parse_ac3_sample_rate(es) {
-                        if sr > 0 { ac3_sample_rate = Some(sr); }
+                        if sr > 0 {
+                            ac3_sample_rate = Some(sr);
+                        }
                     }
                 }
             }
@@ -2740,7 +3604,7 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     // Also scan last packets for PCR (duration)
     if num_packets > scan_count {
         for pkt_idx in (num_packets - 500).max(scan_count)..num_packets {
-            let pkt = &data[pkt_idx * packet_size..(pkt_idx+1) * packet_size];
+            let pkt = &data[pkt_idx * packet_size..(pkt_idx + 1) * packet_size];
             let hdr = &pkt[tco..];
             if hdr.len() >= 12 && hdr[0] == 0x47 {
                 let afc = (hdr[3] >> 4) & 0x3;
@@ -2749,8 +3613,10 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                     if af_len >= 7 {
                         let af_flags = hdr[5];
                         if af_flags & 0x10 != 0 && hdr.len() >= 12 {
-                            let pb = ((hdr[6] as u64) << 25) | ((hdr[7] as u64) << 17)
-                                | ((hdr[8] as u64) << 9) | ((hdr[9] as u64) << 1)
+                            let pb = ((hdr[6] as u64) << 25)
+                                | ((hdr[7] as u64) << 17)
+                                | ((hdr[8] as u64) << 9)
+                                | ((hdr[9] as u64) << 1)
                                 | ((hdr[10] as u64) >> 7);
                             let pe = (((hdr[10] as u64) & 1) << 8) | hdr[11] as u64;
                             pcr_last = Some(pb * 300 + pe);
@@ -2764,22 +3630,40 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     // Emit tags
     if let Some(ref si) = stream_info {
         if let Some(ref vt) = si.video_type {
-            tags.push(mktag("M2TS", "VideoStreamType", "Video Stream Type", Value::String(vt.clone())));
+            tags.push(mktag(
+                "M2TS",
+                "VideoStreamType",
+                "Video Stream Type",
+                Value::String(vt.clone()),
+            ));
         }
         if let Some(ref at) = si.audio_type {
-            tags.push(mktag("M2TS", "AudioStreamType", "Audio Stream Type", Value::String(at.clone())));
+            tags.push(mktag(
+                "M2TS",
+                "AudioStreamType",
+                "Audio Stream Type",
+                Value::String(at.clone()),
+            ));
         }
 
         // AC3 audio descriptor info
-        if si.audio_bitrate_idx.is_some() || si.audio_surround_mode.is_some() || si.audio_channels.is_some() {
+        if si.audio_bitrate_idx.is_some()
+            || si.audio_surround_mode.is_some()
+            || si.audio_channels.is_some()
+        {
             let bitrates = [
-                32u32,40,48,56,64,80,96,112,128,160,192,224,256,320,384,448,512,576,640
+                32u32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 448, 512,
+                576, 640,
             ];
             if let Some(bi) = si.audio_bitrate_idx {
                 let idx = bi as usize;
                 if idx < bitrates.len() {
-                    tags.push(mktag("M2TS", "AudioBitrate", "Audio Bitrate",
-                        Value::String(m2ts_format_bitrate(bitrates[idx]))));
+                    tags.push(mktag(
+                        "M2TS",
+                        "AudioBitrate",
+                        "Audio Bitrate",
+                        Value::String(m2ts_format_bitrate(bitrates[idx])),
+                    ));
                 }
             }
             if let Some(sm) = si.audio_surround_mode {
@@ -2789,7 +3673,12 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                     2 => "Dolby surround",
                     _ => "Reserved",
                 };
-                tags.push(mktag("M2TS", "SurroundMode", "Surround Mode", Value::String(s.into())));
+                tags.push(mktag(
+                    "M2TS",
+                    "SurroundMode",
+                    "Surround Mode",
+                    Value::String(s.into()),
+                ));
             }
             if let Some(ch) = si.audio_channels {
                 let cs = match ch {
@@ -2803,7 +3692,12 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                     7 => "3/2",
                     _ => "Unknown",
                 };
-                tags.push(mktag("M2TS", "AudioChannels", "Audio Channels", Value::String(cs.into())));
+                tags.push(mktag(
+                    "M2TS",
+                    "AudioChannels",
+                    "Audio Channels",
+                    Value::String(cs.into()),
+                ));
             }
         }
     }
@@ -2814,7 +3708,12 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     }
 
     if let Some(sr) = ac3_sample_rate {
-        tags.push(mktag("M2TS", "AudioSampleRate", "Audio Sample Rate", Value::U32(sr)));
+        tags.push(mktag(
+            "M2TS",
+            "AudioSampleRate",
+            "Audio Sample Rate",
+            Value::U32(sr),
+        ));
     }
 
     // Duration
@@ -2829,30 +3728,67 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
             tags.push(mktag("H264", "Make", "Make", Value::String(v.clone())));
         }
         if let Some(ref v) = mdpm.datetime_original {
-            tags.push(mktag("H264", "DateTimeOriginal", "Date/Time Original", Value::String(v.clone())));
+            tags.push(mktag(
+                "H264",
+                "DateTimeOriginal",
+                "Date/Time Original",
+                Value::String(v.clone()),
+            ));
         }
         if let Some(ref v) = mdpm.aperture_setting {
-            tags.push(mktag("H264", "ApertureSetting", "Aperture Setting", Value::String(v.clone())));
+            tags.push(mktag(
+                "H264",
+                "ApertureSetting",
+                "Aperture Setting",
+                Value::String(v.clone()),
+            ));
         }
         if let Some(ref v) = mdpm.gain {
             tags.push(mktag("H264", "Gain", "Gain", Value::String(v.clone())));
         }
         if let Some(ref v) = mdpm.image_stabilization {
-            tags.push(mktag("H264", "ImageStabilization", "Image Stabilization", Value::String(v.clone())));
+            tags.push(mktag(
+                "H264",
+                "ImageStabilization",
+                "Image Stabilization",
+                Value::String(v.clone()),
+            ));
         }
         if let Some(ref v) = mdpm.exposure_time {
-            tags.push(mktag("H264", "ExposureTime", "Exposure Time", Value::String(v.clone())));
+            tags.push(mktag(
+                "H264",
+                "ExposureTime",
+                "Exposure Time",
+                Value::String(v.clone()),
+            ));
         }
         if let Some(ref v) = mdpm.shutter_speed {
-            tags.push(mktag("H264", "ShutterSpeed", "Shutter Speed", Value::String(v.clone())));
+            tags.push(mktag(
+                "H264",
+                "ShutterSpeed",
+                "Shutter Speed",
+                Value::String(v.clone()),
+            ));
         }
         if let Some(ref v) = mdpm.recording_mode {
-            tags.push(mktag("H264", "RecordingMode", "Recording Mode", Value::String(v.clone())));
+            tags.push(mktag(
+                "H264",
+                "RecordingMode",
+                "Recording Mode",
+                Value::String(v.clone()),
+            ));
         }
         // ExifTool emits Warning only when -ee is NOT used
         if extract_embedded == 0 {
-            tags.push(mktag("M2TS", "Warning", "Warning",
-                Value::String("[minor] The ExtractEmbedded option may find more tags in the video data".to_string())));
+            tags.push(mktag(
+                "M2TS",
+                "Warning",
+                "Warning",
+                Value::String(
+                    "[minor] The ExtractEmbedded option may find more tags in the video data"
+                        .to_string(),
+                ),
+            ));
         }
     }
 
@@ -2861,7 +3797,12 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     if extract_embedded > 0 && all_mdpm.len() > 1 {
         for mdpm in &all_mdpm[1..] {
             if let Some(ref v) = mdpm.datetime_original {
-                tags.push(mktag("H264", "DateTimeOriginal", "Date/Time Original", Value::String(v.clone())));
+                tags.push(mktag(
+                    "H264",
+                    "DateTimeOriginal",
+                    "Date/Time Original",
+                    Value::String(v.clone()),
+                ));
             }
             if let Some(ref v) = mdpm.make {
                 tags.push(mktag("H264", "Make", "Make", Value::String(v.clone())));
@@ -2879,15 +3820,27 @@ fn m2ts_skip_pes_header(payload: &[u8]) -> &[u8] {
     }
     let stream_id = payload[3];
     // Private stream IDs don't have standard PES header extension
-    if stream_id == 0xBC || stream_id == 0xBE || stream_id == 0xBF
-        || stream_id == 0xF0 || stream_id == 0xF1 || stream_id == 0xFF
-        || stream_id == 0xF2 || stream_id == 0xF8 {
+    if stream_id == 0xBC
+        || stream_id == 0xBE
+        || stream_id == 0xBF
+        || stream_id == 0xF0
+        || stream_id == 0xF1
+        || stream_id == 0xFF
+        || stream_id == 0xF2
+        || stream_id == 0xF8
+    {
         return &payload[6..];
     }
-    if payload.len() < 9 { return payload; }
+    if payload.len() < 9 {
+        return payload;
+    }
     let header_data_length = payload[8] as usize;
     let es_start = 9 + header_data_length;
-    if es_start <= payload.len() { &payload[es_start..] } else { payload }
+    if es_start <= payload.len() {
+        &payload[es_start..]
+    } else {
+        payload
+    }
 }
 
 // ============================================================================
@@ -2908,10 +3861,21 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Compression (byte 2)
     let compress_str = if method == 8 { "Deflated" } else { "Unknown" };
-    tags.push(mktag("GZIP", "Compression", "Compression", Value::String(compress_str.into())));
+    tags.push(mktag(
+        "GZIP",
+        "Compression",
+        "Compression",
+        Value::String(compress_str.into()),
+    ));
 
     // Flags (byte 3) — bitmask
-    let flag_names = [(0, "Text"), (1, "CRC16"), (2, "ExtraFields"), (3, "FileName"), (4, "Comment")];
+    let flag_names = [
+        (0, "Text"),
+        (1, "CRC16"),
+        (2, "ExtraFields"),
+        (3, "FileName"),
+        (4, "Comment"),
+    ];
     let mut flag_parts: Vec<&str> = Vec::new();
     for (bit, name) in &flag_names {
         if flags & (1 << bit) != 0 {
@@ -2929,7 +3893,12 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
     let mtime = u32::from_le_bytes([data[4], data[5], data[6], data[7]]);
     if mtime > 0 {
         let dt = gzip_unix_to_datetime(mtime as i64);
-        tags.push(mktag("GZIP", "ModifyDate", "Modify Date", Value::String(dt)));
+        tags.push(mktag(
+            "GZIP",
+            "ModifyDate",
+            "Modify Date",
+            Value::String(dt),
+        ));
     }
 
     // ExtraFlags (byte 8)
@@ -2939,7 +3908,12 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
         4 => "Fastest Algorithm".to_string(),
         _ => format!("{}", xflags),
     };
-    tags.push(mktag("GZIP", "ExtraFlags", "Extra Flags", Value::String(extra_flags_str)));
+    tags.push(mktag(
+        "GZIP",
+        "ExtraFlags",
+        "Extra Flags",
+        Value::String(extra_flags_str),
+    ));
 
     // OperatingSystem (byte 9)
     let os_str = match os_byte {
@@ -2960,7 +3934,12 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
         255 => "unknown",
         _ => "Other",
     };
-    tags.push(mktag("GZIP", "OperatingSystem", "Operating System", Value::String(os_str.into())));
+    tags.push(mktag(
+        "GZIP",
+        "OperatingSystem",
+        "Operating System",
+        Value::String(os_str.into()),
+    ));
 
     // Extract file name and comment if flag bits set
     let mut pos = 10usize;
@@ -2973,20 +3952,31 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
 
         // ArchivedFileName (bit 3)
         if flags & 0x08 != 0 && pos < data.len() {
-            let name_end = data[pos..].iter().position(|&b| b == 0)
+            let name_end = data[pos..]
+                .iter()
+                .position(|&b| b == 0)
                 .unwrap_or(data.len() - pos);
-            let filename = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + name_end]).to_string();
+            let filename =
+                crate::encoding::decode_utf8_or_latin1(&data[pos..pos + name_end]).to_string();
             if !filename.is_empty() {
-                tags.push(mktag("GZIP", "ArchivedFileName", "Archived File Name", Value::String(filename)));
+                tags.push(mktag(
+                    "GZIP",
+                    "ArchivedFileName",
+                    "Archived File Name",
+                    Value::String(filename),
+                ));
             }
             pos += name_end + 1;
         }
 
         // Comment (bit 4)
         if flags & 0x10 != 0 && pos < data.len() {
-            let comment_end = data[pos..].iter().position(|&b| b == 0)
+            let comment_end = data[pos..]
+                .iter()
+                .position(|&b| b == 0)
                 .unwrap_or(data.len() - pos);
-            let comment = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + comment_end]).to_string();
+            let comment =
+                crate::encoding::decode_utf8_or_latin1(&data[pos..pos + comment_end]).to_string();
             if !comment.is_empty() {
                 tags.push(mktag("GZIP", "Comment", "Comment", Value::String(comment)));
             }
@@ -2998,11 +3988,19 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
             pos += 2 + xlen;
         }
         if flags & 0x08 != 0 && pos < data.len() {
-            let name_end = data[pos..].iter().position(|&b| b == 0)
+            let name_end = data[pos..]
+                .iter()
+                .position(|&b| b == 0)
                 .unwrap_or(data.len() - pos);
-            let filename = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + name_end]).to_string();
+            let filename =
+                crate::encoding::decode_utf8_or_latin1(&data[pos..pos + name_end]).to_string();
             if !filename.is_empty() {
-                tags.push(mktag("GZIP", "ArchivedFileName", "Archived File Name", Value::String(filename)));
+                tags.push(mktag(
+                    "GZIP",
+                    "ArchivedFileName",
+                    "Archived File Name",
+                    Value::String(filename),
+                ));
             }
         }
     }
@@ -3018,33 +4016,67 @@ fn gzip_unix_to_datetime(secs: i64) -> String {
     let local_secs = secs + tz_offset;
     let days = local_secs / 86400;
     let time = local_secs % 86400;
-    let (time, days) = if time < 0 { (time + 86400, days - 1) } else { (time, days) };
+    let (time, days) = if time < 0 {
+        (time + 86400, days - 1)
+    } else {
+        (time, days)
+    };
     let h = time / 3600;
     let m = (time % 3600) / 60;
     let s = time % 60;
     let mut y = 1970i32;
     let mut rem = days;
     loop {
-        let dy: i64 = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 { 366 } else { 365 };
-        if rem < dy { break; }
+        let dy: i64 = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {
+            366
+        } else {
+            365
+        };
+        if rem < dy {
+            break;
+        }
         rem -= dy;
         y += 1;
     }
     let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
-    let months: [i64; 12] = [31, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let months: [i64; 12] = [
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
     let mut mo = 1;
     for &dm in &months {
-        if rem < dm { break; }
+        if rem < dm {
+            break;
+        }
         rem -= dm;
         mo += 1;
     }
     let tz_h = tz_offset / 3600;
     let tz_m = (tz_offset.abs() % 3600) / 60;
     let tz_sign = if tz_offset >= 0 { "+" } else { "-" };
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
-        y, mo, rem + 1, h, m, s, tz_sign, tz_h.abs(), tz_m)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
+        y,
+        mo,
+        rem + 1,
+        h,
+        m,
+        s,
+        tz_sign,
+        tz_h.abs(),
+        tz_m
+    )
 }
-
 
 /// Get local timezone offset in seconds for a specific Unix timestamp (DST-aware).
 /// Uses libc's localtime_r via raw syscall to account for DST.
@@ -3060,9 +4092,17 @@ fn get_local_tz_offset_for_timestamp(ts: i64) -> i64 {
         type LibcTimeT = i64;
         #[repr(C)]
         struct TmStruct {
-            tm_sec: i32, tm_min: i32, tm_hour: i32, tm_mday: i32,
-            tm_mon: i32, tm_year: i32, tm_wday: i32, tm_yday: i32,
-            tm_isdst: i32, tm_gmtoff: i64, tm_zone: *const i8,
+            tm_sec: i32,
+            tm_min: i32,
+            tm_hour: i32,
+            tm_mday: i32,
+            tm_mon: i32,
+            tm_year: i32,
+            tm_wday: i32,
+            tm_yday: i32,
+            tm_isdst: i32,
+            tm_gmtoff: i64,
+            tm_zone: *const i8,
         }
         unsafe {
             let mut tm: TmStruct = mem::zeroed();
@@ -3075,16 +4115,30 @@ fn get_local_tz_offset_for_timestamp(ts: i64) -> i64 {
     // Fallback: try to detect from /etc/timezone
     if let Ok(tz) = std::fs::read_to_string("/etc/timezone") {
         let tz = tz.trim();
-        if tz == "UTC" || tz == "UTC0" { return 0; }
+        if tz == "UTC" || tz == "UTC0" {
+            return 0;
+        }
     }
     if let Ok(link) = std::fs::read_link("/etc/localtime") {
         let path = link.to_string_lossy();
-        if path.contains("UTC") || path.ends_with("/UTC") { return 0; }
-        if path.contains("Europe/") || path.contains("/CET") { return 3600; }
-        if path.contains("America/New_York") { return -5 * 3600; }
-        if path.contains("America/Los_Angeles") { return -8 * 3600; }
-        if path.contains("America/Chicago") { return -6 * 3600; }
-        if path.contains("Asia/Tokyo") { return 9 * 3600; }
+        if path.contains("UTC") || path.ends_with("/UTC") {
+            return 0;
+        }
+        if path.contains("Europe/") || path.contains("/CET") {
+            return 3600;
+        }
+        if path.contains("America/New_York") {
+            return -5 * 3600;
+        }
+        if path.contains("America/Los_Angeles") {
+            return -8 * 3600;
+        }
+        if path.contains("America/Chicago") {
+            return -6 * 3600;
+        }
+        if path.contains("Asia/Tokyo") {
+            return 9 * 3600;
+        }
     }
     0
 }
@@ -3114,9 +4168,11 @@ pub fn read_macos(data: &[u8]) -> Result<Vec<Tag>> {
 
     for i in 0..entries {
         let pos = 26 + i * 12;
-        let tag_id = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]);
-        let off = u32::from_be_bytes([data[pos+4], data[pos+5], data[pos+6], data[pos+7]]) as usize;
-        let len = u32::from_be_bytes([data[pos+8], data[pos+9], data[pos+10], data[pos+11]]) as usize;
+        let tag_id = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]);
+        let off = u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+            as usize;
+        let len = u32::from_be_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]])
+            as usize;
 
         if tag_id == 9 && off + len <= data.len() {
             // ATTR block
@@ -3139,22 +4195,39 @@ fn parse_attr_block(full_data: &[u8], entry_data: &[u8], tags: &mut Vec<Tag>) {
         return;
     }
 
-    let xattr_entries = u32::from_be_bytes([entry_data[66], entry_data[67], entry_data[68], entry_data[69]]) as usize;
+    let xattr_entries = u32::from_be_bytes([
+        entry_data[66],
+        entry_data[67],
+        entry_data[68],
+        entry_data[69],
+    ]) as usize;
     let mut pos = 70;
 
     for _i in 0..xattr_entries {
         if pos + 11 > entry_data.len() {
             break;
         }
-        let off = u32::from_be_bytes([entry_data[pos], entry_data[pos+1], entry_data[pos+2], entry_data[pos+3]]) as usize;
-        let len = u32::from_be_bytes([entry_data[pos+4], entry_data[pos+5], entry_data[pos+6], entry_data[pos+7]]) as usize;
-        let n = entry_data[pos+10] as usize;
+        let off = u32::from_be_bytes([
+            entry_data[pos],
+            entry_data[pos + 1],
+            entry_data[pos + 2],
+            entry_data[pos + 3],
+        ]) as usize;
+        let len = u32::from_be_bytes([
+            entry_data[pos + 4],
+            entry_data[pos + 5],
+            entry_data[pos + 6],
+            entry_data[pos + 7],
+        ]) as usize;
+        let n = entry_data[pos + 10] as usize;
 
         if pos + 11 + n > entry_data.len() {
             break;
         }
-        let name_bytes = &entry_data[pos+11..pos+11+n];
-        let name = crate::encoding::decode_utf8_or_latin1(name_bytes).trim_end_matches('\0').to_string();
+        let name_bytes = &entry_data[pos + 11..pos + 11 + n];
+        let name = crate::encoding::decode_utf8_or_latin1(name_bytes)
+            .trim_end_matches('\0')
+            .to_string();
 
         // Offsets are absolute file offsets
         let val_data = if off + len <= full_data.len() {
@@ -3174,13 +4247,25 @@ fn parse_attr_block(full_data: &[u8], entry_data: &[u8], tags: &mut Vec<Tag>) {
                 tags.push(mktag("MacOS", &tag_name, &tag_name, Value::String(value)));
             } else {
                 // Just mark as binary
-                tags.push(mktag("MacOS", &tag_name, &tag_name, Value::Binary(val_data.to_vec())));
+                tags.push(mktag(
+                    "MacOS",
+                    &tag_name,
+                    &tag_name,
+                    Value::Binary(val_data.to_vec()),
+                ));
             }
         } else if len > 100 || val_data.contains(&0u8) && !val_data.starts_with(b"0082") {
             // Binary data
-            tags.push(mktag("MacOS", &tag_name, &tag_name, Value::Binary(val_data.to_vec())));
+            tags.push(mktag(
+                "MacOS",
+                &tag_name,
+                &tag_name,
+                Value::Binary(val_data.to_vec()),
+            ));
         } else {
-            let s = crate::encoding::decode_utf8_or_latin1(val_data).trim_end_matches('\0').to_string();
+            let s = crate::encoding::decode_utf8_or_latin1(val_data)
+                .trim_end_matches('\0')
+                .to_string();
             // Handle quarantine string: format "0082;TIME;APP;"
             let display = if name == "com.apple.quarantine" {
                 format_quarantine(&s)
@@ -3212,7 +4297,10 @@ fn xattr_name_to_tag(name: &str) -> String {
         _ => None,
     };
     // For non-apple names: strip separators and capitalize words
-    if name.starts_with("org.") || name.starts_with("net.") || (!name.starts_with("com.apple.") && name.contains(':')) {
+    if name.starts_with("org.")
+        || name.starts_with("net.")
+        || (!name.starts_with("com.apple.") && name.contains(':'))
+    {
         // Apply MakeTagName-style conversion
         let mut tag = String::from("XAttr");
         let mut cap_next = true;
@@ -3266,8 +4354,11 @@ fn xattr_name_to_tag(name: &str) -> String {
     let mut i = 0;
     while i < chars.len() {
         let c = chars[i];
-        if (c == '.' || c == ':' || c == '_' || c == '#') && i + 1 < chars.len() && chars[i+1].is_ascii_lowercase() {
-            result.push(chars[i+1].to_ascii_uppercase());
+        if (c == '.' || c == ':' || c == '_' || c == '#')
+            && i + 1 < chars.len()
+            && chars[i + 1].is_ascii_lowercase()
+        {
+            result.push(chars[i + 1].to_ascii_uppercase());
             i += 2;
         } else if c == '.' || c == ':' || c == '_' || c == '#' {
             i += 1; // skip separator with no following lowercase
@@ -3327,12 +4418,36 @@ fn parse_simple_bplist(data: &[u8]) -> Option<String> {
     let trailer = &data[trailer_start..];
     let offset_int_size = trailer[6] as usize;
     let obj_ref_size = trailer[7] as usize;
-    let num_objects = u64::from_be_bytes([trailer[8], trailer[9], trailer[10], trailer[11],
-                                          trailer[12], trailer[13], trailer[14], trailer[15]]) as usize;
-    let top_object = u64::from_be_bytes([trailer[16], trailer[17], trailer[18], trailer[19],
-                                         trailer[20], trailer[21], trailer[22], trailer[23]]) as usize;
-    let offset_table_offset = u64::from_be_bytes([trailer[24], trailer[25], trailer[26], trailer[27],
-                                                   trailer[28], trailer[29], trailer[30], trailer[31]]) as usize;
+    let num_objects = u64::from_be_bytes([
+        trailer[8],
+        trailer[9],
+        trailer[10],
+        trailer[11],
+        trailer[12],
+        trailer[13],
+        trailer[14],
+        trailer[15],
+    ]) as usize;
+    let top_object = u64::from_be_bytes([
+        trailer[16],
+        trailer[17],
+        trailer[18],
+        trailer[19],
+        trailer[20],
+        trailer[21],
+        trailer[22],
+        trailer[23],
+    ]) as usize;
+    let offset_table_offset = u64::from_be_bytes([
+        trailer[24],
+        trailer[25],
+        trailer[26],
+        trailer[27],
+        trailer[28],
+        trailer[29],
+        trailer[30],
+        trailer[31],
+    ]) as usize;
 
     if offset_int_size == 0 || offset_int_size > 8 || num_objects == 0 {
         return None;
@@ -3364,15 +4479,22 @@ fn parse_simple_bplist(data: &[u8]) -> Option<String> {
             0x5 => {
                 // ASCII string
                 let len = info_nibble as usize;
-                if off + 1 + len > data.len() { return None; }
-                Some(crate::encoding::decode_utf8_or_latin1(&data[off+1..off+1+len]).to_string())
+                if off + 1 + len > data.len() {
+                    return None;
+                }
+                Some(
+                    crate::encoding::decode_utf8_or_latin1(&data[off + 1..off + 1 + len])
+                        .to_string(),
+                )
             }
             0x6 => {
                 // Unicode string (UTF-16BE)
                 let len = info_nibble as usize;
                 let byte_len = len * 2;
-                if off + 1 + byte_len > data.len() { return None; }
-                let chars: Vec<u16> = data[off+1..off+1+byte_len]
+                if off + 1 + byte_len > data.len() {
+                    return None;
+                }
+                let chars: Vec<u16> = data[off + 1..off + 1 + byte_len]
                     .chunks_exact(2)
                     .map(|c| u16::from_be_bytes([c[0], c[1]]))
                     .collect();
@@ -3380,9 +4502,19 @@ fn parse_simple_bplist(data: &[u8]) -> Option<String> {
             }
             0x3 => {
                 // Date (64-bit float, seconds since 2001-01-01)
-                if off + 9 > data.len() { return None; }
-                let bits = u64::from_be_bytes([data[off+1], data[off+2], data[off+3], data[off+4],
-                                               data[off+5], data[off+6], data[off+7], data[off+8]]);
+                if off + 9 > data.len() {
+                    return None;
+                }
+                let bits = u64::from_be_bytes([
+                    data[off + 1],
+                    data[off + 2],
+                    data[off + 3],
+                    data[off + 4],
+                    data[off + 5],
+                    data[off + 6],
+                    data[off + 7],
+                    data[off + 8],
+                ]);
                 let secs = f64::from_bits(bits);
                 // Convert from Apple epoch (2001-01-01) to Unix epoch (1970-01-01)
                 let unix_secs = secs as i64 + 978307200;
@@ -3395,28 +4527,54 @@ fn parse_simple_bplist(data: &[u8]) -> Option<String> {
                 let mut year = 1970i32;
                 let mut rem_days = days;
                 loop {
-                    let dy = if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 { 366 } else { 365 };
-                    if rem_days < dy { break; }
+                    let dy = if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 {
+                        366
+                    } else {
+                        365
+                    };
+                    if rem_days < dy {
+                        break;
+                    }
                     rem_days -= dy;
                     year += 1;
                 }
                 let leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
-                let month_days = [31i64, if leap {29} else {28}, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+                let month_days = [
+                    31i64,
+                    if leap { 29 } else { 28 },
+                    31,
+                    30,
+                    31,
+                    30,
+                    31,
+                    31,
+                    30,
+                    31,
+                    30,
+                    31,
+                ];
                 let mut month = 1i32;
                 for &md in &month_days {
-                    if rem_days < md { break; }
+                    if rem_days < md {
+                        break;
+                    }
                     rem_days -= md;
                     month += 1;
                 }
                 let day = rem_days + 1;
-                Some(format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", year, month, day, hour, min, sec))
+                Some(format!(
+                    "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+                    year, month, day, hour, min, sec
+                ))
             }
             0xA => {
                 // Array: collect items
                 let count = if info_nibble == 0xF {
                     // extended length
-                    if off + 2 > data.len() { return None; }
-                    let ext_marker = data[off+1];
+                    if off + 2 > data.len() {
+                        return None;
+                    }
+                    let ext_marker = data[off + 1];
                     (1 << (ext_marker & 0xF)) as usize
                 } else {
                     info_nibble as usize
@@ -3442,7 +4600,9 @@ fn parse_simple_bplist(data: &[u8]) -> Option<String> {
                 let mut items = Vec::new();
                 for j in 0..count {
                     let ref_pos = off + 1 + j * obj_ref_size;
-                    if ref_pos + obj_ref_size > data.len() { break; }
+                    if ref_pos + obj_ref_size > data.len() {
+                        break;
+                    }
                     let mut obj_ref: usize = 0;
                     for k in 0..obj_ref_size {
                         obj_ref = (obj_ref << 8) | data[ref_pos + k] as usize;
@@ -3475,7 +4635,12 @@ pub fn read_moi(data: &[u8]) -> Result<Vec<Tag>> {
 
     // 0x00: MOIVersion (string[2])
     let version = crate::encoding::decode_utf8_or_latin1(&data[0..2]).to_string();
-    tags.push(mktag("MOI", "MOIVersion", "MOI Version", Value::String(version)));
+    tags.push(mktag(
+        "MOI",
+        "MOIVersion",
+        "MOI Version",
+        Value::String(version),
+    ));
 
     // 0x06: DateTimeOriginal (undef[8]) = unpack 'nCCCCn'
     // year(u16), month(u8), day(u8), hour(u8), min(u8), ms*1000(u16)
@@ -3487,8 +4652,16 @@ pub fn read_moi(data: &[u8]) -> Result<Vec<Tag>> {
         let min = data[11];
         let ms = u16::from_be_bytes([data[12], data[13]]);
         let sec_f = ms as f64 / 1000.0;
-        let dt = format!("{:04}:{:02}:{:02} {:02}:{:02}:{:06.3}", year, month, day, hour, min, sec_f);
-        tags.push(mktag("MOI", "DateTimeOriginal", "Date/Time Original", Value::String(dt)));
+        let dt = format!(
+            "{:04}:{:02}:{:02} {:02}:{:02}:{:06.3}",
+            year, month, day, hour, min, sec_f
+        );
+        tags.push(mktag(
+            "MOI",
+            "DateTimeOriginal",
+            "Date/Time Original",
+            Value::String(dt),
+        ));
     }
 
     // 0x0e: Duration (int32u, ms)
@@ -3515,7 +4688,12 @@ pub fn read_moi(data: &[u8]) -> Result<Vec<Tag>> {
             _ => "",
         };
         let full = format!("{}{}", aspect_str, sys_str);
-        tags.push(mktag("MOI", "AspectRatio", "Aspect Ratio", Value::String(full)));
+        tags.push(mktag(
+            "MOI",
+            "AspectRatio",
+            "Aspect Ratio",
+            Value::String(full),
+        ));
     }
 
     // 0x84: AudioCodec (int16u)
@@ -3526,7 +4704,12 @@ pub fn read_moi(data: &[u8]) -> Result<Vec<Tag>> {
             0x4001 => "MPEG",
             _ => "Unknown",
         };
-        tags.push(mktag("MOI", "AudioCodec", "Audio Codec", Value::String(codec.into())));
+        tags.push(mktag(
+            "MOI",
+            "AudioCodec",
+            "Audio Codec",
+            Value::String(codec.into()),
+        ));
     }
 
     // 0x86: AudioBitrate (int8u, val * 16000 + 48000)
@@ -3534,7 +4717,12 @@ pub fn read_moi(data: &[u8]) -> Result<Vec<Tag>> {
         let ab = data[0x86];
         let bitrate = ab as u32 * 16000 + 48000;
         let bitrate_str = format!("{} kbps", bitrate / 1000);
-        tags.push(mktag("MOI", "AudioBitrate", "Audio Bitrate", Value::String(bitrate_str)));
+        tags.push(mktag(
+            "MOI",
+            "AudioBitrate",
+            "Audio Bitrate",
+            Value::String(bitrate_str),
+        ));
     }
 
     // 0xda: VideoBitrate (int16u with lookup)
@@ -3547,7 +4735,12 @@ pub fn read_moi(data: &[u8]) -> Result<Vec<Tag>> {
         };
         if let Some(bps) = vbps {
             let vb_str = format!("{:.1} Mbps", bps as f64 / 1_000_000.0);
-            tags.push(mktag("MOI", "VideoBitrate", "Video Bitrate", Value::String(vb_str)));
+            tags.push(mktag(
+                "MOI",
+                "VideoBitrate",
+                "Video Bitrate",
+                Value::String(vb_str),
+            ));
         }
     }
 
@@ -3589,11 +4782,21 @@ pub fn read_rar(data: &[u8]) -> Result<Vec<Tag>> {
 
     if data[6] == 0x00 {
         // RAR v4
-        tags.push(mktag("ZIP", "FileVersion", "File Version", Value::String("RAR v4".into())));
+        tags.push(mktag(
+            "ZIP",
+            "FileVersion",
+            "File Version",
+            Value::String("RAR v4".into()),
+        ));
         read_rar4_entries(data, &mut tags);
     } else if data[6] == 0x01 && data[7] == 0x00 {
         // RAR v5
-        tags.push(mktag("ZIP", "FileVersion", "File Version", Value::String("RAR v5".into())));
+        tags.push(mktag(
+            "ZIP",
+            "FileVersion",
+            "File Version",
+            Value::String("RAR v5".into()),
+        ));
         read_rar5_entries(data, &mut tags);
     }
 
@@ -3668,19 +4871,35 @@ fn read_rar5_entries(data: &[u8], tags: &mut Vec<Tag>) {
 
         // File header
         if head_type == 2 {
-            tags.push(mktag("ZIP", "CompressedSize", "Compressed Size", Value::U32(data_size as u32)));
+            tags.push(mktag(
+                "ZIP",
+                "CompressedSize",
+                "Compressed Size",
+                Value::U32(data_size as u32),
+            ));
         }
 
         let file_flag = match read_uleb128(header, &mut hpos) {
             Some(v) => v,
-            None => { pos += data_size as usize; continue; }
+            None => {
+                pos += data_size as usize;
+                continue;
+            }
         };
         let uncompressed_size = match read_uleb128(header, &mut hpos) {
             Some(v) => v,
-            None => { pos += data_size as usize; continue; }
+            None => {
+                pos += data_size as usize;
+                continue;
+            }
         };
         if file_flag & 0x0008 == 0 {
-            tags.push(mktag("ZIP", "UncompressedSize", "Uncompressed Size", Value::U32(uncompressed_size as u32)));
+            tags.push(mktag(
+                "ZIP",
+                "UncompressedSize",
+                "Uncompressed Size",
+                Value::U32(uncompressed_size as u32),
+            ));
         }
 
         // skip file attributes
@@ -3705,7 +4924,12 @@ fn read_rar5_entries(data: &[u8], tags: &mut Vec<Tag>) {
                 1 => "Unix",
                 _ => "Unknown",
             };
-            tags.push(mktag("ZIP", "OperatingSystem", "Operating System", Value::String(os_name.into())));
+            tags.push(mktag(
+                "ZIP",
+                "OperatingSystem",
+                "Operating System",
+                Value::String(os_name.into()),
+            ));
         }
 
         // filename: 1-byte length then name bytes
@@ -3717,7 +4941,12 @@ fn read_rar5_entries(data: &[u8], tags: &mut Vec<Tag>) {
                     .trim_end_matches('\0')
                     .to_string();
                 if !name.is_empty() {
-                    tags.push(mktag("ZIP", "ArchivedFileName", "Archived File Name", Value::String(name)));
+                    tags.push(mktag(
+                        "ZIP",
+                        "ArchivedFileName",
+                        "Archived File Name",
+                        Value::String(name),
+                    ));
                 }
             }
         }
@@ -3744,7 +4973,9 @@ fn read_rar4_entries(data: &[u8], tags: &mut Vec<Tag>) {
             if pos + 11 > data.len() {
                 break;
             }
-            let add_size = u32::from_le_bytes([data[pos + 7], data[pos + 8], data[pos + 9], data[pos + 10]]) as usize;
+            let add_size =
+                u32::from_le_bytes([data[pos + 7], data[pos + 8], data[pos + 9], data[pos + 10]])
+                    as usize;
             size = size.saturating_add(add_size).saturating_sub(4);
         }
 
@@ -3755,15 +4986,31 @@ fn read_rar4_entries(data: &[u8], tags: &mut Vec<Tag>) {
             let n = size.min(4096).min(data.len() - pos);
             if n >= 16 {
                 let file_data = &data[pos..pos + n];
-                let compressed = u32::from_le_bytes([file_data[0], file_data[1], file_data[2], file_data[3]]) as u64;
-                let uncompressed = u32::from_le_bytes([file_data[4], file_data[5], file_data[6], file_data[7]]) as u64;
+                let compressed =
+                    u32::from_le_bytes([file_data[0], file_data[1], file_data[2], file_data[3]])
+                        as u64;
+                let uncompressed =
+                    u32::from_le_bytes([file_data[4], file_data[5], file_data[6], file_data[7]])
+                        as u64;
                 let os_byte = file_data[14];
                 let name_len = u16::from_le_bytes([file_data[10], file_data[11]]) as usize;
                 // name starts after 25-byte base header
                 if n >= 25 + name_len {
-                    let name = crate::encoding::decode_utf8_or_latin1(&file_data[25..25 + name_len]).to_string();
-                    tags.push(mktag("ZIP", "CompressedSize", "Compressed Size", Value::U32(compressed as u32)));
-                    tags.push(mktag("ZIP", "UncompressedSize", "Uncompressed Size", Value::U32(uncompressed as u32)));
+                    let name =
+                        crate::encoding::decode_utf8_or_latin1(&file_data[25..25 + name_len])
+                            .to_string();
+                    tags.push(mktag(
+                        "ZIP",
+                        "CompressedSize",
+                        "Compressed Size",
+                        Value::U32(compressed as u32),
+                    ));
+                    tags.push(mktag(
+                        "ZIP",
+                        "UncompressedSize",
+                        "Uncompressed Size",
+                        Value::U32(uncompressed as u32),
+                    ));
                     let os_name = match os_byte {
                         0 => "MS-DOS",
                         1 => "OS/2",
@@ -3771,8 +5018,18 @@ fn read_rar4_entries(data: &[u8], tags: &mut Vec<Tag>) {
                         3 => "Unix",
                         _ => "Unknown",
                     };
-                    tags.push(mktag("ZIP", "OperatingSystem", "Operating System", Value::String(os_name.into())));
-                    tags.push(mktag("ZIP", "ArchivedFileName", "Archived File Name", Value::String(name)));
+                    tags.push(mktag(
+                        "ZIP",
+                        "OperatingSystem",
+                        "Operating System",
+                        Value::String(os_name.into()),
+                    ));
+                    tags.push(mktag(
+                        "ZIP",
+                        "ArchivedFileName",
+                        "Archived File Name",
+                        Value::String(name),
+                    ));
                 }
             }
         }
@@ -3810,12 +5067,10 @@ pub fn read_7z(data: &[u8]) -> Result<Vec<Tag>> {
     // NextHeaderOffset (8 bytes at offset 12), NextHeaderSize (8 bytes at offset 20)
     // NextHeaderCRC (4 bytes at offset 28)
     let next_header_offset = u64::from_le_bytes([
-        data[12], data[13], data[14], data[15],
-        data[16], data[17], data[18], data[19],
+        data[12], data[13], data[14], data[15], data[16], data[17], data[18], data[19],
     ]) as usize;
     let next_header_size = u64::from_le_bytes([
-        data[20], data[21], data[22], data[23],
-        data[24], data[25], data[26], data[27],
+        data[20], data[21], data[22], data[23], data[24], data[25], data[26], data[27],
     ]) as usize;
 
     // Next header starts after the 32-byte start header
@@ -3852,8 +5107,7 @@ fn sevenz_read_uint64(data: &[u8]) -> Option<(u64, usize)> {
             return None;
         }
         let v = u64::from_le_bytes([
-            data[1], data[2], data[3], data[4],
-            data[5], data[6], data[7], data[8],
+            data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8],
         ]);
         return Some((v, 9));
     }
@@ -4321,7 +5575,12 @@ fn sevenz_read_files_info(data: &[u8], pos: &mut usize, tags: &mut Vec<Tag>) {
         doc_num += 1;
 
         if let Some(ref name) = filenames[i] {
-            let mut tag = mktag("ZIP", "ArchivedFileName", "Archived File Name", Value::String(name.clone()));
+            let mut tag = mktag(
+                "ZIP",
+                "ArchivedFileName",
+                "Archived File Name",
+                Value::String(name.clone()),
+            );
             tag.group.family2 = "Other".into();
             if doc_num > 1 {
                 tag.name = format!("ArchivedFileName ({})", doc_num);
@@ -4392,8 +5651,14 @@ fn sevenz_read_times(data: &[u8], num_files: usize, times: &mut [Option<i64>]) {
                 return;
             }
             let filetime = u64::from_le_bytes([
-                data[pos], data[pos + 1], data[pos + 2], data[pos + 3],
-                data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7],
+                data[pos],
+                data[pos + 1],
+                data[pos + 2],
+                data[pos + 3],
+                data[pos + 4],
+                data[pos + 5],
+                data[pos + 6],
+                data[pos + 7],
             ]);
             pos += 8;
             // Convert Windows FILETIME to Unix timestamp
@@ -4431,16 +5696,21 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
     let mut current_text = String::new();
     // Which section are we in?
     let mut in_metadata = false; // inside <metadata> element
-    let mut in_rdf = 0_usize;    // nesting depth inside <rdf:RDF>
-    let mut in_c2pa = 0_usize;   // nesting depth inside <c2pa:manifest>
+    let mut in_rdf = 0_usize; // nesting depth inside <rdf:RDF>
+    let mut in_c2pa = 0_usize; // nesting depth inside <c2pa:manifest>
     let mut in_svg_body = false; // inside SVG non-metadata body (desc, title, etc.)
-    // Track whether each path element had child elements (to skip mixed-content text).
-    // True = had at least one child element. Parallel to `path`.
+                                 // Track whether each path element had child elements (to skip mixed-content text).
+                                 // True = had at least one child element. Parallel to `path`.
     let mut had_child: Vec<bool> = Vec::new();
 
     for event in EventReader::from_str(text.as_str()) {
         match event {
-            Ok(XmlEvent::StartElement { name, attributes, namespace, .. }) => {
+            Ok(XmlEvent::StartElement {
+                name,
+                attributes,
+                namespace,
+                ..
+            }) => {
                 let local = &name.local_name;
                 let ns = name.namespace.as_deref().unwrap_or("");
 
@@ -4450,18 +5720,48 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                     had_child.push(false);
                     for attr in &attributes {
                         match attr.name.local_name.as_str() {
-                            "width" => tags.push(mktag("SVG", "ImageWidth", "Image Width", Value::String(attr.value.clone()))),
-                            "height" => tags.push(mktag("SVG", "ImageHeight", "Image Height", Value::String(attr.value.clone()))),
-                            "version" => tags.push(mktag("SVG", "SVGVersion", "SVG Version", Value::String(attr.value.clone()))),
-                            "viewBox" | "viewbox" => tags.push(mktag("SVG", "ViewBox", "View Box", Value::String(attr.value.clone()))),
-                            "id" => tags.push(mktag("SVG", "ID", "ID", Value::String(attr.value.clone()))),
+                            "width" => tags.push(mktag(
+                                "SVG",
+                                "ImageWidth",
+                                "Image Width",
+                                Value::String(attr.value.clone()),
+                            )),
+                            "height" => tags.push(mktag(
+                                "SVG",
+                                "ImageHeight",
+                                "Image Height",
+                                Value::String(attr.value.clone()),
+                            )),
+                            "version" => tags.push(mktag(
+                                "SVG",
+                                "SVGVersion",
+                                "SVG Version",
+                                Value::String(attr.value.clone()),
+                            )),
+                            "viewBox" | "viewbox" => tags.push(mktag(
+                                "SVG",
+                                "ViewBox",
+                                "View Box",
+                                Value::String(attr.value.clone()),
+                            )),
+                            "id" => tags.push(mktag(
+                                "SVG",
+                                "ID",
+                                "ID",
+                                Value::String(attr.value.clone()),
+                            )),
                             _ => {}
                         }
                     }
                     // Extract default namespace (xmlns="...") from the namespace map
                     if let Some(default_ns) = namespace.get("") {
                         if !default_ns.is_empty() {
-                            tags.push(mktag("SVG", "Xmlns", "XMLNS", Value::String(default_ns.to_string())));
+                            tags.push(mktag(
+                                "SVG",
+                                "Xmlns",
+                                "XMLNS",
+                                Value::String(default_ns.to_string()),
+                            ));
                         }
                     }
                     current_text.clear();
@@ -4472,7 +5772,9 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                 if local == "metadata" && !in_metadata && in_rdf == 0 && in_c2pa == 0 {
                     in_metadata = true;
                     // Mark parent as having a child
-                    if let Some(last) = had_child.last_mut() { *last = true; }
+                    if let Some(last) = had_child.last_mut() {
+                        *last = true;
+                    }
                     path.push("Metadata".into());
                     had_child.push(false);
                     current_text.clear();
@@ -4512,7 +5814,9 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                 if !in_metadata && path.len() >= 1 {
                     in_svg_body = true;
                     // Mark parent as having a child
-                    if let Some(last) = had_child.last_mut() { *last = true; }
+                    if let Some(last) = had_child.last_mut() {
+                        *last = true;
+                    }
                     let ucfirst_local = svg_ucfirst(local);
                     path.push(ucfirst_local);
                     had_child.push(false);
@@ -4542,7 +5846,10 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                     in_c2pa -= 1;
                     if in_c2pa == 0 {
                         // We've collected the base64 c2pa manifest text
-                        let b64 = current_text.chars().filter(|c| !c.is_whitespace()).collect::<String>();
+                        let b64 = current_text
+                            .chars()
+                            .filter(|c| !c.is_whitespace())
+                            .collect::<String>();
                         if !b64.is_empty() {
                             if let Ok(jumbf_data) = base64_decode(&b64) {
                                 let jumbf_group = crate::tag::TagGroup {
@@ -4550,7 +5857,10 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                                     family1: "JUMBF".into(),
                                     family2: "Image".into(),
                                 };
-                                let print = format!("(Binary data {} bytes, use -b option to extract)", jumbf_data.len());
+                                let print = format!(
+                                    "(Binary data {} bytes, use -b option to extract)",
+                                    jumbf_data.len()
+                                );
                                 tags.push(crate::tag::Tag {
                                     id: crate::tag::TagId::Text("JUMBF".into()),
                                     name: "JUMBF".into(),
@@ -4639,7 +5949,10 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                         family1: "JUMBF".into(),
                         family2: "Image".into(),
                     };
-                    let print = format!("(Binary data {} bytes, use -b option to extract)", jumbf_data.len());
+                    let print = format!(
+                        "(Binary data {} bytes, use -b option to extract)",
+                        jumbf_data.len()
+                    );
                     tags.push(crate::tag::Tag {
                         id: crate::tag::TagId::Text("JUMBF".into()),
                         name: "JUMBF".into(),
@@ -4674,10 +5987,15 @@ fn base64_decode(s: &str) -> std::result::Result<Vec<u8>, ()> {
     for (i, &c) in alphabet.iter().enumerate() {
         table[c as usize] = i as u8;
     }
-    let bytes: Vec<u8> = s.bytes().filter(|&b| b != b'=' && b != b'\n' && b != b'\r' && b != b' ').collect();
+    let bytes: Vec<u8> = s
+        .bytes()
+        .filter(|&b| b != b'=' && b != b'\n' && b != b'\r' && b != b' ')
+        .collect();
     let mut out = Vec::with_capacity(bytes.len() * 3 / 4);
     for chunk in bytes.chunks(4) {
-        if chunk.len() < 2 { break; }
+        if chunk.len() < 2 {
+            break;
+        }
         let b0 = table[chunk[0] as usize];
         let b1 = table[chunk[1] as usize];
         out.push((b0 << 2) | (b1 >> 4));
@@ -4702,10 +6020,13 @@ fn parse_jumbf_for_svg(data: &[u8], tags: &mut Vec<Tag>) {
 fn parse_jumbf_boxes_svg(data: &[u8], tags: &mut Vec<Tag>, top_level: bool) {
     let mut pos = 0;
     while pos + 8 <= data.len() {
-        let lbox = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
-        let tbox = &data[pos+4..pos+8];
-        if lbox < 8 || pos + lbox > data.len() { break; }
-        let content = &data[pos+8..pos+lbox];
+        let lbox =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+        let tbox = &data[pos + 4..pos + 8];
+        if lbox < 8 || pos + lbox > data.len() {
+            break;
+        }
+        let content = &data[pos + 8..pos + lbox];
 
         if tbox == b"jumb" {
             parse_jumbf_jumd_svg(content, tags, top_level);
@@ -4726,22 +6047,30 @@ fn parse_jumbf_jumd_svg(data: &[u8], tags: &mut Vec<Tag>, emit_desc: bool) {
     let mut found_jumd = false;
 
     while pos + 8 <= data.len() {
-        let lbox = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
-        let tbox = &data[pos+4..pos+8];
-        if lbox < 8 || pos + lbox > data.len() { break; }
-        let content = &data[pos+8..pos+lbox];
+        let lbox =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+        let tbox = &data[pos + 4..pos + 8];
+        if lbox < 8 || pos + lbox > data.len() {
+            break;
+        }
+        let content = &data[pos + 8..pos + lbox];
 
         if tbox == b"jumd" && !found_jumd {
             found_jumd = true;
             if content.len() >= 17 {
                 let type_bytes = &content[..16];
                 let label_data = &content[17..];
-                let null_pos = label_data.iter().position(|&b| b == 0).unwrap_or(label_data.len());
-                let label = crate::encoding::decode_utf8_or_latin1(&label_data[..null_pos]).to_string();
+                let null_pos = label_data
+                    .iter()
+                    .position(|&b| b == 0)
+                    .unwrap_or(label_data.len());
+                let label =
+                    crate::encoding::decode_utf8_or_latin1(&label_data[..null_pos]).to_string();
 
                 if emit_desc {
                     // Emit JUMDType
-                    let type_hex: String = type_bytes.iter().map(|b| format!("{:02x}", b)).collect();
+                    let type_hex: String =
+                        type_bytes.iter().map(|b| format!("{:02x}", b)).collect();
                     let a1 = &type_hex[8..12];
                     let a2 = &type_hex[12..16];
                     let a3 = &type_hex[16..32];
@@ -4800,16 +6129,22 @@ fn parse_jumbf_json_svg(json: &str, tags: &mut Vec<Tag>, group: &crate::tag::Tag
             // Read key
             i += 1;
             let key_start = i;
-            while i < bytes.len() && bytes[i] != b'"' { i += 1; }
+            while i < bytes.len() && bytes[i] != b'"' {
+                i += 1;
+            }
             let key = &json[key_start..i];
             i += 1; // skip closing "
-            // Skip whitespace and colon
-            while i < bytes.len() && (bytes[i] == b':' || bytes[i] == b' ') { i += 1; }
+                    // Skip whitespace and colon
+            while i < bytes.len() && (bytes[i] == b':' || bytes[i] == b' ') {
+                i += 1;
+            }
             // Read value if it's a string
             if i < bytes.len() && bytes[i] == b'"' {
                 i += 1;
                 let val_start = i;
-                while i < bytes.len() && bytes[i] != b'"' { i += 1; }
+                while i < bytes.len() && bytes[i] != b'"' {
+                    i += 1;
+                }
                 let val = &json[val_start..i];
                 i += 1;
 
@@ -4837,7 +6172,6 @@ fn parse_jumbf_json_svg(json: &str, tags: &mut Vec<Tag>, group: &crate::tag::Tag
     }
 }
 
-
 // ============================================================================
 // JSON
 // ============================================================================
@@ -4857,7 +6191,9 @@ pub fn read_json(data: &[u8]) -> Result<Vec<Tag>> {
         parse_json_object(trimmed, "", &mut collected);
         for (key, value) in collected {
             let tag_name = json_key_to_tag_name(&key);
-            if tag_name.is_empty() { continue; }
+            if tag_name.is_empty() {
+                continue;
+            }
             tags.push(mktag("JSON", &tag_name, &tag_name, Value::String(value)));
         }
     }
@@ -4901,7 +6237,11 @@ fn parse_json_object(json: &str, prefix: &str, out: &mut Vec<(String, String)>) 
             break;
         }
 
-        let full_key = if prefix.is_empty() { key.clone() } else { format!("{}{}", prefix, ucfirst_str(&key)) };
+        let full_key = if prefix.is_empty() {
+            key.clone()
+        } else {
+            format!("{}{}", prefix, ucfirst_str(&key))
+        };
 
         match chars[pos] {
             '"' => {
@@ -4956,7 +6296,11 @@ fn parse_json_object(json: &str, prefix: &str, out: &mut Vec<(String, String)>) 
             _ => {
                 // number
                 let num_start = pos;
-                while pos < chars.len() && !chars[pos].is_whitespace() && chars[pos] != ',' && chars[pos] != '}' {
+                while pos < chars.len()
+                    && !chars[pos].is_whitespace()
+                    && chars[pos] != ','
+                    && chars[pos] != '}'
+                {
                     pos += 1;
                 }
                 let num: String = chars[num_start..pos].iter().collect();
@@ -4999,12 +6343,25 @@ fn parse_json_array(json: &str) -> Vec<String> {
                 let end = find_matching_bracket(&chars, pos, '{', '}');
                 pos = end + 1;
             }
-            'n' => { pos += 4; results.push("null".into()); }
-            't' => { pos += 4; results.push("1".into()); }
-            'f' => { pos += 5; results.push("0".into()); }
+            'n' => {
+                pos += 4;
+                results.push("null".into());
+            }
+            't' => {
+                pos += 4;
+                results.push("1".into());
+            }
+            'f' => {
+                pos += 5;
+                results.push("0".into());
+            }
             _ => {
                 let start = pos;
-                while pos < chars.len() && !chars[pos].is_whitespace() && chars[pos] != ',' && chars[pos] != ']' {
+                while pos < chars.len()
+                    && !chars[pos].is_whitespace()
+                    && chars[pos] != ','
+                    && chars[pos] != ']'
+                {
                     pos += 1;
                 }
                 results.push(chars[start..pos].iter().collect());
@@ -5018,11 +6375,20 @@ fn parse_json_array(json: &str) -> Vec<String> {
 fn array_contains_objects(json: &str) -> bool {
     let chars: Vec<char> = json.chars().collect();
     let mut pos = 0;
-    if pos < chars.len() && chars[pos] == '[' { pos += 1; }
+    if pos < chars.len() && chars[pos] == '[' {
+        pos += 1;
+    }
     while pos < chars.len() {
-        if chars[pos].is_whitespace() || chars[pos] == ',' { pos += 1; continue; }
-        if chars[pos] == ']' { break; }
-        if chars[pos] == '{' { return true; }
+        if chars[pos].is_whitespace() || chars[pos] == ',' {
+            pos += 1;
+            continue;
+        }
+        if chars[pos] == ']' {
+            break;
+        }
+        if chars[pos] == '{' {
+            return true;
+        }
         break;
     }
     false
@@ -5033,11 +6399,17 @@ fn array_contains_objects(json: &str) -> bool {
 fn parse_json_array_of_objects(json: &str, prefix: &str, sub_map: &mut Vec<(String, Vec<String>)>) {
     let chars: Vec<char> = json.chars().collect();
     let mut pos = 0;
-    if pos < chars.len() && chars[pos] == '[' { pos += 1; }
+    if pos < chars.len() && chars[pos] == '[' {
+        pos += 1;
+    }
 
     loop {
-        while pos < chars.len() && (chars[pos].is_whitespace() || chars[pos] == ',') { pos += 1; }
-        if pos >= chars.len() || chars[pos] == ']' { break; }
+        while pos < chars.len() && (chars[pos].is_whitespace() || chars[pos] == ',') {
+            pos += 1;
+        }
+        if pos >= chars.len() || chars[pos] == ']' {
+            break;
+        }
         if chars[pos] == '{' {
             let end = find_matching_bracket(&chars, pos, '{', '}');
             let obj_str: String = chars[pos..end + 1].iter().collect();
@@ -5057,7 +6429,9 @@ fn parse_json_array_of_objects(json: &str, prefix: &str, sub_map: &mut Vec<(Stri
             pos = end + 1;
         } else {
             // Non-object element, skip
-            while pos < chars.len() && chars[pos] != ',' && chars[pos] != ']' { pos += 1; }
+            while pos < chars.len() && chars[pos] != ',' && chars[pos] != ']' {
+                pos += 1;
+            }
         }
     }
 }
@@ -5085,7 +6459,9 @@ fn read_json_string(chars: &[char], pos: &mut usize) -> String {
         }
         *pos += 1;
     }
-    if *pos < chars.len() { *pos += 1; } // skip closing "
+    if *pos < chars.len() {
+        *pos += 1;
+    } // skip closing "
     result
 }
 
@@ -5098,10 +6474,13 @@ fn find_matching_bracket(chars: &[char], start: usize, open: char, close: char) 
             in_string = !in_string;
         }
         if !in_string {
-            if chars[pos] == open { level += 1; }
-            else if chars[pos] == close {
+            if chars[pos] == open {
+                level += 1;
+            } else if chars[pos] == close {
                 level -= 1;
-                if level == 0 { return pos; }
+                if level == 0 {
+                    return pos;
+                }
             }
         }
         pos += 1;
@@ -5180,77 +6559,119 @@ pub fn read_real_audio(data: &[u8]) -> Result<Vec<Tag>> {
     // Field 5: CodedFrameSize (int32u)
     pos += 4;
 
-    if pos + 4 > d.len() { return Ok(tags); }
+    if pos + 4 > d.len() {
+        return Ok(tags);
+    }
     // Field 6: AudioBytes (int32u)
-    let audio_bytes = u32::from_be_bytes([d[pos], d[pos+1], d[pos+2], d[pos+3]]);
+    let audio_bytes = u32::from_be_bytes([d[pos], d[pos + 1], d[pos + 2], d[pos + 3]]);
     pos += 4;
-    tags.push(mktag("Real", "AudioBytes", "Audio Bytes", Value::U32(audio_bytes)));
+    tags.push(mktag(
+        "Real",
+        "AudioBytes",
+        "Audio Bytes",
+        Value::U32(audio_bytes),
+    ));
 
-    if pos + 4 > d.len() { return Ok(tags); }
+    if pos + 4 > d.len() {
+        return Ok(tags);
+    }
     // Field 7: BytesPerMinute (int32u)
-    let bpm = u32::from_be_bytes([d[pos], d[pos+1], d[pos+2], d[pos+3]]);
+    let bpm = u32::from_be_bytes([d[pos], d[pos + 1], d[pos + 2], d[pos + 3]]);
     pos += 4;
-    tags.push(mktag("Real", "BytesPerMinute", "Bytes Per Minute", Value::U32(bpm)));
+    tags.push(mktag(
+        "Real",
+        "BytesPerMinute",
+        "Bytes Per Minute",
+        Value::U32(bpm),
+    ));
 
     // Field 8: Unknown (int32u)
     pos += 4;
     // Field 9: SubPacketH (int16u)
     pos += 2;
 
-    if pos + 2 > d.len() { return Ok(tags); }
+    if pos + 2 > d.len() {
+        return Ok(tags);
+    }
     // Field 10: AudioFrameSize (int16u)
-    let afs = u16::from_be_bytes([d[pos], d[pos+1]]);
+    let afs = u16::from_be_bytes([d[pos], d[pos + 1]]);
     pos += 2;
-    tags.push(mktag("Real", "AudioFrameSize", "Audio Frame Size", Value::U16(afs)));
+    tags.push(mktag(
+        "Real",
+        "AudioFrameSize",
+        "Audio Frame Size",
+        Value::U16(afs),
+    ));
 
     // Field 11: SubPacketSize (int16u)
     pos += 2;
     // Field 12: Unknown (int16u)
     pos += 2;
 
-    if pos + 2 > d.len() { return Ok(tags); }
+    if pos + 2 > d.len() {
+        return Ok(tags);
+    }
     // Field 13: SampleRate (int16u)
-    let sr = u16::from_be_bytes([d[pos], d[pos+1]]);
+    let sr = u16::from_be_bytes([d[pos], d[pos + 1]]);
     pos += 2;
     tags.push(mktag("Real", "SampleRate", "Sample Rate", Value::U16(sr)));
 
     // Field 14: Unknown (int16u)
     pos += 2;
 
-    if pos + 2 > d.len() { return Ok(tags); }
+    if pos + 2 > d.len() {
+        return Ok(tags);
+    }
     // Field 15: BitsPerSample (int16u)
-    let bps = u16::from_be_bytes([d[pos], d[pos+1]]);
+    let bps = u16::from_be_bytes([d[pos], d[pos + 1]]);
     pos += 2;
-    tags.push(mktag("Real", "BitsPerSample", "Bits Per Sample", Value::U16(bps)));
+    tags.push(mktag(
+        "Real",
+        "BitsPerSample",
+        "Bits Per Sample",
+        Value::U16(bps),
+    ));
 
-    if pos + 2 > d.len() { return Ok(tags); }
+    if pos + 2 > d.len() {
+        return Ok(tags);
+    }
     // Field 16: Channels (int16u)
-    let ch = u16::from_be_bytes([d[pos], d[pos+1]]);
+    let ch = u16::from_be_bytes([d[pos], d[pos + 1]]);
     pos += 2;
     tags.push(mktag("Real", "Channels", "Channels", Value::U16(ch)));
 
-    if pos >= d.len() { return Ok(tags); }
+    if pos >= d.len() {
+        return Ok(tags);
+    }
     // Field 17: FourCC2Len (int8u)
     let fc2l = d[pos] as usize;
     pos += 1;
     pos += fc2l; // skip FourCC2
 
-    if pos >= d.len() { return Ok(tags); }
+    if pos >= d.len() {
+        return Ok(tags);
+    }
     // Field 19: FourCC3Len (int8u)
     let fc3l = d[pos] as usize;
     pos += 1;
     pos += fc3l; // skip FourCC3
 
-    if pos >= d.len() { return Ok(tags); }
+    if pos >= d.len() {
+        return Ok(tags);
+    }
     // Field 21: Unknown (int8u)
     pos += 1;
 
-    if pos + 2 > d.len() { return Ok(tags); }
+    if pos + 2 > d.len() {
+        return Ok(tags);
+    }
     // Field 22: Unknown (int16u)
     pos += 2;
 
     // Field 23: TitleLen (int8u)
-    if pos >= d.len() { return Ok(tags); }
+    if pos >= d.len() {
+        return Ok(tags);
+    }
     let title_len = d[pos] as usize;
     pos += 1;
 
@@ -5262,7 +6683,9 @@ pub fn read_real_audio(data: &[u8]) -> Result<Vec<Tag>> {
     pos += title_len;
 
     // Field 25: ArtistLen (int8u)
-    if pos >= d.len() { return Ok(tags); }
+    if pos >= d.len() {
+        return Ok(tags);
+    }
     let artist_len = d[pos] as usize;
     pos += 1;
 
@@ -5274,14 +6697,21 @@ pub fn read_real_audio(data: &[u8]) -> Result<Vec<Tag>> {
     pos += artist_len;
 
     // Field 27: CopyrightLen (int8u)
-    if pos >= d.len() { return Ok(tags); }
+    if pos >= d.len() {
+        return Ok(tags);
+    }
     let copy_len = d[pos] as usize;
     pos += 1;
 
     // Field 28: Copyright
     if pos + copy_len <= d.len() && copy_len > 0 {
         let copyright = crate::encoding::decode_utf8_or_latin1(&d[pos..pos + copy_len]).to_string();
-        tags.push(mktag("Real", "Copyright", "Copyright", Value::String(copyright)));
+        tags.push(mktag(
+            "Real",
+            "Copyright",
+            "Copyright",
+            Value::String(copyright),
+        ));
     }
 
     Ok(tags)
@@ -5335,10 +6765,17 @@ pub fn read_aac(data: &[u8]) -> Result<Vec<Tag>> {
         2 => "Scalable Sampling Rate",
         _ => "Unknown",
     };
-    tags.push(mktag("AAC", "ProfileType", "Profile Type", Value::String(profile_name.into())));
+    tags.push(mktag(
+        "AAC",
+        "ProfileType",
+        "Profile Type",
+        Value::String(profile_name.into()),
+    ));
 
     // SampleRate
-    let sample_rates = [96000u32, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+    let sample_rates = [
+        96000u32, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350,
+    ];
     if let Some(&sr) = sample_rates.get(sr_index as usize) {
         tags.push(mktag("AAC", "SampleRate", "Sample Rate", Value::U32(sr)));
     }
@@ -5355,7 +6792,12 @@ pub fn read_aac(data: &[u8]) -> Result<Vec<Tag>> {
         7 => "7+1",
         _ => "?",
     };
-    tags.push(mktag("AAC", "Channels", "Channels", Value::String(channels_str.into())));
+    tags.push(mktag(
+        "AAC",
+        "Channels",
+        "Channels",
+        Value::String(channels_str.into()),
+    ));
 
     // Frame length: bits 30-42 (13 bits)
     // $len = (($t0 << 11) & 0x1800) | (($t1 >> 5) & 0x07ff)
@@ -5371,16 +6813,25 @@ pub fn read_aac(data: &[u8]) -> Result<Vec<Tag>> {
         let mut i = 0;
         while i < frame_data.len() {
             // Skip null bytes
-            while i < frame_data.len() && frame_data[i] == 0 { i += 1; }
+            while i < frame_data.len() && frame_data[i] == 0 {
+                i += 1;
+            }
             let start = i;
             // Read printable bytes
-            while i < frame_data.len() && frame_data[i] >= 0x20 && frame_data[i] <= 0x7e { i += 1; }
+            while i < frame_data.len() && frame_data[i] >= 0x20 && frame_data[i] <= 0x7e {
+                i += 1;
+            }
             let end = i;
             if end - start >= 4 {
                 if let Ok(enc) = std::str::from_utf8(&frame_data[start..end]) {
                     let enc = enc.trim();
                     if enc.len() >= 4 {
-                        tags.push(mktag("AAC", "Encoder", "Encoder", Value::String(enc.into())));
+                        tags.push(mktag(
+                            "AAC",
+                            "Encoder",
+                            "Encoder",
+                            Value::String(enc.into()),
+                        ));
                         break;
                     }
                 }
@@ -5409,7 +6860,12 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
     // Version at bytes 10-11
     let ver = data[10];
     let rev = data[11];
-    tags.push(mktag("WPG", "WPGVersion", "WPG Version", Value::String(format!("{}.{}", ver, rev))));
+    tags.push(mktag(
+        "WPG",
+        "WPGVersion",
+        "WPG Version",
+        Value::String(format!("{}.{}", ver, rev)),
+    ));
 
     if ver < 1 || ver > 2 {
         return Ok(tags);
@@ -5417,7 +6873,9 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Determine start position
     let mut pos = if offset > 16 { offset } else { 16 };
-    if pos > data.len() { pos = data.len(); }
+    if pos > data.len() {
+        pos = data.len();
+    }
 
     let mut records: Vec<String> = Vec::new();
     let mut last_type: Option<u32> = None;
@@ -5427,49 +6885,115 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
 
     // WPG v1 record map
     let v1_map: std::collections::HashMap<u32, &str> = [
-        (0x01, "Fill Attributes"), (0x02, "Line Attributes"), (0x03, "Marker Attributes"),
-        (0x04, "Polymarker"), (0x05, "Line"), (0x06, "Polyline"), (0x07, "Rectangle"),
-        (0x08, "Polygon"), (0x09, "Ellipse"), (0x0a, "Reserved"), (0x0b, "Bitmap (Type 1)"),
-        (0x0c, "Graphics Text (Type 1)"), (0x0d, "Graphics Text Attributes"),
-        (0x0e, "Color Map"), (0x0f, "Start WPG (Type 1)"), (0x10, "End WPG"),
-        (0x11, "PostScript Data (Type 1)"), (0x12, "Output Attributes"),
-        (0x13, "Curved Polyline"), (0x14, "Bitmap (Type 2)"), (0x15, "Start Figure"),
-        (0x16, "Start Chart"), (0x17, "PlanPerfect Data"), (0x18, "Graphics Text (Type 2)"),
-        (0x19, "Start WPG (Type 2)"), (0x1a, "Graphics Text (Type 3)"),
+        (0x01, "Fill Attributes"),
+        (0x02, "Line Attributes"),
+        (0x03, "Marker Attributes"),
+        (0x04, "Polymarker"),
+        (0x05, "Line"),
+        (0x06, "Polyline"),
+        (0x07, "Rectangle"),
+        (0x08, "Polygon"),
+        (0x09, "Ellipse"),
+        (0x0a, "Reserved"),
+        (0x0b, "Bitmap (Type 1)"),
+        (0x0c, "Graphics Text (Type 1)"),
+        (0x0d, "Graphics Text Attributes"),
+        (0x0e, "Color Map"),
+        (0x0f, "Start WPG (Type 1)"),
+        (0x10, "End WPG"),
+        (0x11, "PostScript Data (Type 1)"),
+        (0x12, "Output Attributes"),
+        (0x13, "Curved Polyline"),
+        (0x14, "Bitmap (Type 2)"),
+        (0x15, "Start Figure"),
+        (0x16, "Start Chart"),
+        (0x17, "PlanPerfect Data"),
+        (0x18, "Graphics Text (Type 2)"),
+        (0x19, "Start WPG (Type 2)"),
+        (0x1a, "Graphics Text (Type 3)"),
         (0x1b, "PostScript Data (Type 2)"),
-    ].iter().cloned().collect();
+    ]
+    .iter()
+    .cloned()
+    .collect();
 
     // WPG v2 record map
     let v2_map: std::collections::HashMap<u32, &str> = [
-        (0x00, "End Marker"), (0x01, "Start WPG"), (0x02, "End WPG"),
-        (0x03, "Form Settings"), (0x04, "Ruler Settings"), (0x05, "Grid Settings"),
-        (0x06, "Layer"), (0x08, "Pen Style Definition"), (0x09, "Pattern Definition"),
-        (0x0a, "Comment"), (0x0b, "Color Transfer"), (0x0c, "Color Palette"),
-        (0x0d, "DP Color Palette"), (0x0e, "Bitmap Data"), (0x0f, "Text Data"),
-        (0x10, "Chart Style"), (0x11, "Chart Data"), (0x12, "Object Image"),
-        (0x15, "Polyline"), (0x16, "Polyspline"), (0x17, "Polycurve"),
-        (0x18, "Rectangle"), (0x19, "Arc"), (0x1a, "Compound Polygon"),
-        (0x1b, "Bitmap"), (0x1c, "Text Line"), (0x1d, "Text Block"),
-        (0x1e, "Text Path"), (0x1f, "Chart"), (0x20, "Group"),
-        (0x21, "Object Capsule"), (0x22, "Font Settings"), (0x25, "Pen Fore Color"),
-        (0x26, "DP Pen Fore Color"), (0x27, "Pen Back Color"), (0x28, "DP Pen Back Color"),
-        (0x29, "Pen Style"), (0x2a, "Pen Pattern"), (0x2b, "Pen Size"),
-        (0x2c, "DP Pen Size"), (0x2d, "Line Cap"), (0x2e, "Line Join"),
-        (0x2f, "Brush Gradient"), (0x30, "DP Brush Gradient"), (0x31, "Brush Fore Color"),
-        (0x32, "DP Brush Fore Color"), (0x33, "Brush Back Color"), (0x34, "DP Brush Back Color"),
-        (0x35, "Brush Pattern"), (0x36, "Horizontal Line"), (0x37, "Vertical Line"),
-        (0x38, "Poster Settings"), (0x39, "Image State"), (0x3a, "Envelope Definition"),
-        (0x3b, "Envelope"), (0x3c, "Texture Definition"), (0x3d, "Brush Texture"),
-        (0x3e, "Texture Alignment"), (0x3f, "Pen Texture "),
-    ].iter().cloned().collect();
+        (0x00, "End Marker"),
+        (0x01, "Start WPG"),
+        (0x02, "End WPG"),
+        (0x03, "Form Settings"),
+        (0x04, "Ruler Settings"),
+        (0x05, "Grid Settings"),
+        (0x06, "Layer"),
+        (0x08, "Pen Style Definition"),
+        (0x09, "Pattern Definition"),
+        (0x0a, "Comment"),
+        (0x0b, "Color Transfer"),
+        (0x0c, "Color Palette"),
+        (0x0d, "DP Color Palette"),
+        (0x0e, "Bitmap Data"),
+        (0x0f, "Text Data"),
+        (0x10, "Chart Style"),
+        (0x11, "Chart Data"),
+        (0x12, "Object Image"),
+        (0x15, "Polyline"),
+        (0x16, "Polyspline"),
+        (0x17, "Polycurve"),
+        (0x18, "Rectangle"),
+        (0x19, "Arc"),
+        (0x1a, "Compound Polygon"),
+        (0x1b, "Bitmap"),
+        (0x1c, "Text Line"),
+        (0x1d, "Text Block"),
+        (0x1e, "Text Path"),
+        (0x1f, "Chart"),
+        (0x20, "Group"),
+        (0x21, "Object Capsule"),
+        (0x22, "Font Settings"),
+        (0x25, "Pen Fore Color"),
+        (0x26, "DP Pen Fore Color"),
+        (0x27, "Pen Back Color"),
+        (0x28, "DP Pen Back Color"),
+        (0x29, "Pen Style"),
+        (0x2a, "Pen Pattern"),
+        (0x2b, "Pen Size"),
+        (0x2c, "DP Pen Size"),
+        (0x2d, "Line Cap"),
+        (0x2e, "Line Join"),
+        (0x2f, "Brush Gradient"),
+        (0x30, "DP Brush Gradient"),
+        (0x31, "Brush Fore Color"),
+        (0x32, "DP Brush Fore Color"),
+        (0x33, "Brush Back Color"),
+        (0x34, "DP Brush Back Color"),
+        (0x35, "Brush Pattern"),
+        (0x36, "Horizontal Line"),
+        (0x37, "Vertical Line"),
+        (0x38, "Poster Settings"),
+        (0x39, "Image State"),
+        (0x3a, "Envelope Definition"),
+        (0x3b, "Envelope"),
+        (0x3c, "Texture Definition"),
+        (0x3d, "Brush Texture"),
+        (0x3e, "Texture Alignment"),
+        (0x3f, "Pen Texture "),
+    ]
+    .iter()
+    .cloned()
+    .collect();
 
     let mut safety = 0;
     loop {
-        if pos >= data.len() || safety > 10000 { break; }
+        if pos >= data.len() || safety > 10000 {
+            break;
+        }
         safety += 1;
 
         let (record_type, len, get_size) = if ver == 1 {
-            if pos >= data.len() { break; }
+            if pos >= data.len() {
+                break;
+            }
             let rtype = data[pos] as u32;
             pos += 1;
             // Read var-int length
@@ -5479,7 +7003,9 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
             (rtype, l, gs)
         } else {
             // Version 2: read 2 bytes for flags+type
-            if pos + 1 >= data.len() { break; }
+            if pos + 1 >= data.len() {
+                break;
+            }
             let rtype = data[pos + 1] as u32;
             pos += 2;
             // Skip extensions (var-int)
@@ -5502,7 +7028,9 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
         if get_size {
             // Read Start record to get image dimensions
             let rec_end = pos + len;
-            if rec_end > data.len() { break; }
+            if rec_end > data.len() {
+                break;
+            }
             let rec = &data[pos..rec_end];
             pos = rec_end;
 
@@ -5533,10 +7061,18 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
                     (x1, y1, x2, y2)
                 } else {
                     pos += 0; // skip
-                    // Emit last_type
+                              // Emit last_type
                     if let Some(lt) = last_type.take() {
-                        let _val = if count > 1 { format!("{}x{}", lt, count) } else { format!("{}", lt) };
-                        records.push(format_wpg_record(lt, count, if ver == 1 { &v1_map } else { &v2_map }));
+                        let _val = if count > 1 {
+                            format!("{}x{}", lt, count)
+                        } else {
+                            format!("{}", lt)
+                        };
+                        records.push(format_wpg_record(
+                            lt,
+                            count,
+                            if ver == 1 { &v1_map } else { &v2_map },
+                        ));
                     }
                     last_type = Some(record_type);
                     count = 1;
@@ -5558,23 +7094,43 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
             count += 1;
         } else {
             if let Some(lt) = last_type.take() {
-                records.push(format_wpg_record(lt, count, if ver == 1 { &v1_map } else { &v2_map }));
+                records.push(format_wpg_record(
+                    lt,
+                    count,
+                    if ver == 1 { &v1_map } else { &v2_map },
+                ));
             }
-            if record_type == 0 && ver == 2 { break; } // End Marker
+            if record_type == 0 && ver == 2 {
+                break;
+            } // End Marker
             last_type = Some(record_type);
             count = 1;
         }
     }
     // Emit last record
     if let Some(lt) = last_type.take() {
-        records.push(format_wpg_record(lt, count, if ver == 1 { &v1_map } else { &v2_map }));
+        records.push(format_wpg_record(
+            lt,
+            count,
+            if ver == 1 { &v1_map } else { &v2_map },
+        ));
     }
 
     if let Some(w) = image_width_inches {
-        tags.push(mktag("WPG", "ImageWidthInches", "Image Width Inches", Value::String(format!("{:.2}", w))));
+        tags.push(mktag(
+            "WPG",
+            "ImageWidthInches",
+            "Image Width Inches",
+            Value::String(format!("{:.2}", w)),
+        ));
     }
     if let Some(h) = image_height_inches {
-        tags.push(mktag("WPG", "ImageHeightInches", "Image Height Inches", Value::String(format!("{:.2}", h))));
+        tags.push(mktag(
+            "WPG",
+            "ImageHeightInches",
+            "Image Height Inches",
+            Value::String(format!("{:.2}", h)),
+        ));
     }
     if !records.is_empty() {
         let joined = records.join(", ");
@@ -5584,8 +7140,13 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
     Ok(tags)
 }
 
-fn format_wpg_record(rtype: u32, count: usize, map: &std::collections::HashMap<u32, &str>) -> String {
-    let name = map.get(&rtype)
+fn format_wpg_record(
+    rtype: u32,
+    count: usize,
+    map: &std::collections::HashMap<u32, &str>,
+) -> String {
+    let name = map
+        .get(&rtype)
         .map(|s| s.to_string())
         .unwrap_or_else(|| format!("Unknown (0x{:02x})", rtype));
     if count > 1 {
@@ -5596,17 +7157,23 @@ fn format_wpg_record(rtype: u32, count: usize, map: &std::collections::HashMap<u
 }
 
 fn read_wpg_varint(data: &[u8], pos: usize) -> (usize, usize) {
-    if pos >= data.len() { return (0, 0); }
+    if pos >= data.len() {
+        return (0, 0);
+    }
     let first = data[pos] as usize;
     if first != 0xFF {
         return (first, 1);
     }
     // 0xFF → read 2 more bytes as u16 LE
-    if pos + 2 >= data.len() { return (0, 1); }
+    if pos + 2 >= data.len() {
+        return (0, 1);
+    }
     let val = u16::from_le_bytes([data[pos + 1], data[pos + 2]]) as usize;
     if val & 0x8000 != 0 {
         // Read 2 more bytes
-        if pos + 4 >= data.len() { return (val & 0x7FFF, 3); }
+        if pos + 4 >= data.len() {
+            return (val & 0x7FFF, 3);
+        }
         let hi = u16::from_le_bytes([data[pos + 3], data[pos + 4]]) as usize;
         let full = ((val & 0x7FFF) << 16) | hi;
         return (full, 5);
@@ -5629,7 +7196,9 @@ pub fn read_ram(data: &[u8]) -> Result<Vec<Tag>> {
     // Check for valid start: must begin with a URL-like protocol
     let _first_line = text.lines().next().unwrap_or("").trim();
     // Validate: http:// lines must end with real media extensions
-    let valid_protocols = ["rtsp://", "pnm://", "http://", "rtspt://", "rtspu://", "mmst://", "file://"];
+    let valid_protocols = [
+        "rtsp://", "pnm://", "http://", "rtspt://", "rtspu://", "mmst://", "file://",
+    ];
     let has_valid = text.lines().any(|line| {
         let l = line.trim();
         valid_protocols.iter().any(|p| l.starts_with(p))
@@ -5641,11 +7210,17 @@ pub fn read_ram(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
     for line in text.lines() {
         let line = line.trim();
-        if line.is_empty() { continue; }
+        if line.is_empty() {
+            continue;
+        }
         // Validate http:// URLs
         if line.starts_with("http://") {
-            if !line.ends_with(".ra") && !line.ends_with(".rm") && !line.ends_with(".rv")
-                && !line.ends_with(".rmvb") && !line.ends_with(".smil") {
+            if !line.ends_with(".ra")
+                && !line.ends_with(".rm")
+                && !line.ends_with(".rv")
+                && !line.ends_with(".rmvb")
+                && !line.ends_with(".smil")
+            {
                 continue;
             }
         }
@@ -5682,7 +7257,12 @@ pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
             .trim()
             .to_string();
         if !model.is_empty() {
-            tags.push(mktag("Olympus", "Model", "Camera Model Name", Value::String(model)));
+            tags.push(mktag(
+                "Olympus",
+                "Model",
+                "Camera Model Name",
+                Value::String(model),
+            ));
         }
     }
 
@@ -5691,7 +7271,12 @@ pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
         let st_bytes = &data[38..50];
         let st_str = crate::encoding::decode_utf8_or_latin1(st_bytes);
         if let Some(dt) = parse_dss_time(&st_str) {
-            tags.push(mktag("Olympus", "StartTime", "Start Time", Value::String(dt)));
+            tags.push(mktag(
+                "Olympus",
+                "StartTime",
+                "Start Time",
+                Value::String(dt),
+            ));
         }
     }
 
@@ -5710,7 +7295,12 @@ pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
         let dur_str = crate::encoding::decode_utf8_or_latin1(dur_bytes);
         if let Some(dur_secs) = parse_dss_duration(&dur_str) {
             let dur_display = dss_convert_duration(dur_secs);
-            tags.push(mktag("Olympus", "Duration", "Duration", Value::String(dur_display)));
+            tags.push(mktag(
+                "Olympus",
+                "Duration",
+                "Duration",
+                Value::String(dur_display),
+            ));
         }
     }
 
@@ -5730,14 +7320,18 @@ fn parse_dss_time(s: &str) -> Option<String> {
     let mi = &s[8..10];
     let ss = &s[10..12];
     // Validate digits
-    if !yy.chars().all(|c| c.is_ascii_digit()) { return None; }
+    if !yy.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
     Some(format!("20{}:{}:{} {}:{}:{}", yy, mm, dd, hh, mi, ss))
 }
 
 /// Parse DSS duration string HHMMSS → seconds
 fn parse_dss_duration(s: &str) -> Option<f64> {
     let s = s.trim_matches('\0');
-    if s.len() < 6 { return None; }
+    if s.len() < 6 {
+        return None;
+    }
     let hh: u64 = s[0..2].parse().ok()?;
     let mm: u64 = s[2..4].parse().ok()?;
     let ss: u64 = s[4..6].parse().ok()?;
@@ -5787,13 +7381,19 @@ fn mktag(family: &str, name: &str, description: &str, value: Value) -> Tag {
 
 pub fn read_indesign(data: &[u8]) -> Result<Vec<Tag>> {
     // InDesign master page GUID: 06 06 ED F5 D8 1D 46 E5 BD 31 EF E7 FE 74 B7 1D
-    let master_guid = &[0x06u8, 0x06, 0xED, 0xF5, 0xD8, 0x1D, 0x46, 0xE5,
-                         0xBD, 0x31, 0xEF, 0xE7, 0xFE, 0x74, 0xB7, 0x1D];
-    let object_header_guid = &[0xDE, 0x39, 0x39, 0x79, 0x51, 0x88, 0x4B, 0x6C,
-                                 0x8E, 0x63, 0xEE, 0xF8, 0xAE, 0xE0, 0xDD, 0x38];
+    let master_guid = &[
+        0x06u8, 0x06, 0xED, 0xF5, 0xD8, 0x1D, 0x46, 0xE5, 0xBD, 0x31, 0xEF, 0xE7, 0xFE, 0x74, 0xB7,
+        0x1D,
+    ];
+    let object_header_guid = &[
+        0xDE, 0x39, 0x39, 0x79, 0x51, 0x88, 0x4B, 0x6C, 0x8E, 0x63, 0xEE, 0xF8, 0xAE, 0xE0, 0xDD,
+        0x38,
+    ];
 
     if data.len() < 4096 || !data.starts_with(master_guid) {
-        return Err(crate::error::Error::InvalidData("not an InDesign file".into()));
+        return Err(crate::error::Error::InvalidData(
+            "not an InDesign file".into(),
+        ));
     }
 
     // Read two master pages (each 4096 bytes) and pick the most current one
@@ -5807,18 +7407,24 @@ pub fn read_indesign(data: &[u8]) -> Result<Vec<Tag>> {
     // Master pages always use LE byte order ('II')
     // Determine current master page (highest sequence number wins)
     let cur_page = {
-        let seq1 = u64::from_le_bytes(page1[264..272].try_into().unwrap_or([0;8]));
+        let seq1 = u64::from_le_bytes(page1[264..272].try_into().unwrap_or([0; 8]));
         let seq2 = if page2.starts_with(master_guid) {
-            u64::from_le_bytes(page2[264..272].try_into().unwrap_or([0;8]))
-        } else { 0 };
-        if seq2 > seq1 { page2 } else { page1 }
+            u64::from_le_bytes(page2[264..272].try_into().unwrap_or([0; 8]))
+        } else {
+            0
+        };
+        if seq2 > seq1 {
+            page2
+        } else {
+            page1
+        }
     };
 
     // Stream byte order is at offset 24 of current master page: 1 = LE, 2 = BE
     let _stream_is_le = cur_page[24] == 1;
 
     // Number of pages (determines start of stream objects) - master page is LE
-    let pages = u32::from_le_bytes(cur_page[280..284].try_into().unwrap_or([0;4]));
+    let pages = u32::from_le_bytes(cur_page[280..284].try_into().unwrap_or([0; 4]));
     let start_pos = (pages as usize) * 4096;
     if start_pos >= data.len() {
         return Ok(vec![]);
@@ -5828,17 +7434,18 @@ pub fn read_indesign(data: &[u8]) -> Result<Vec<Tag>> {
     // Object header GUID (16 bytes) + additional header data (16 bytes) = 32 bytes total
     let mut pos = start_pos;
     while pos + 32 <= data.len() {
-        if &data[pos..pos+16] != object_header_guid {
+        if &data[pos..pos + 16] != object_header_guid {
             break;
         }
         // Object (stream) length at offset 24 in the 32-byte object header
         // The object header itself appears to always use LE byte order
-        let obj_len = u32::from_le_bytes(
-            data[pos+24..pos+28].try_into().unwrap_or([0;4])
-        ) as usize;
+        let obj_len =
+            u32::from_le_bytes(data[pos + 24..pos + 28].try_into().unwrap_or([0; 4])) as usize;
 
         pos += 32;
-        if obj_len == 0 || pos + obj_len > data.len() { break; }
+        if obj_len == 0 || pos + obj_len > data.len() {
+            break;
+        }
 
         let obj_data = &data[pos..pos + obj_len];
 
@@ -5880,14 +7487,24 @@ pub fn read_pcap(data: &[u8]) -> Result<Vec<Tag>> {
 
     let is_le = data[0] == 0xD4 && data[1] == 0xC3;
     let r16 = |d: &[u8], o: usize| -> u16 {
-        if o+2 > d.len() { return 0; }
-        if is_le { u16::from_le_bytes([d[o], d[o+1]]) }
-        else { u16::from_be_bytes([d[o], d[o+1]]) }
+        if o + 2 > d.len() {
+            return 0;
+        }
+        if is_le {
+            u16::from_le_bytes([d[o], d[o + 1]])
+        } else {
+            u16::from_be_bytes([d[o], d[o + 1]])
+        }
     };
     let r32 = |d: &[u8], o: usize| -> u32 {
-        if o+4 > d.len() { return 0; }
-        if is_le { u32::from_le_bytes([d[o], d[o+1], d[o+2], d[o+3]]) }
-        else { u32::from_be_bytes([d[o], d[o+1], d[o+2], d[o+3]]) }
+        if o + 4 > d.len() {
+            return 0;
+        }
+        if is_le {
+            u32::from_le_bytes([d[o], d[o + 1], d[o + 2], d[o + 3]])
+        } else {
+            u32::from_be_bytes([d[o], d[o + 1], d[o + 2], d[o + 3]])
+        }
     };
 
     let maj = r16(data, 4);
@@ -5895,12 +7512,29 @@ pub fn read_pcap(data: &[u8]) -> Result<Vec<Tag>> {
     let link_type = r32(data, 20);
 
     let mut tags = Vec::new();
-    let bo_str = if is_le { "Little-endian (Intel, II)" } else { "Big-endian (Motorola, MM)" };
-    tags.push(mktag("PCAP", "ByteOrder", "Byte Order", Value::String(bo_str.into())));
-    tags.push(mktag("PCAP", "PCAPVersion", "PCAP Version",
-        Value::String(format!("PCAP {}.{}", maj, min))));
-    tags.push(mktag("PCAP", "LinkType", "Link Type",
-        Value::String(pcap_link_type_name(link_type))));
+    let bo_str = if is_le {
+        "Little-endian (Intel, II)"
+    } else {
+        "Big-endian (Motorola, MM)"
+    };
+    tags.push(mktag(
+        "PCAP",
+        "ByteOrder",
+        "Byte Order",
+        Value::String(bo_str.into()),
+    ));
+    tags.push(mktag(
+        "PCAP",
+        "PCAPVersion",
+        "PCAP Version",
+        Value::String(format!("PCAP {}.{}", maj, min)),
+    ));
+    tags.push(mktag(
+        "PCAP",
+        "LinkType",
+        "Link Type",
+        Value::String(pcap_link_type_name(link_type)),
+    ));
 
     Ok(tags)
 }
@@ -5917,19 +7551,32 @@ pub fn read_pcapng(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Block length at offset 4 (4 bytes)
     // Byte order magic at offset 8: 0x1A2B3C4D (LE) or 0x4D3C2B1A (BE)
-    let bo_magic_le = data.len() >= 12 &&
-        data[8] == 0x4D && data[9] == 0x3C && data[10] == 0x2B && data[11] == 0x1A;
+    let bo_magic_le = data.len() >= 12
+        && data[8] == 0x4D
+        && data[9] == 0x3C
+        && data[10] == 0x2B
+        && data[11] == 0x1A;
     let is_le = bo_magic_le;
 
     let r16 = |d: &[u8], o: usize| -> u16 {
-        if o+2 > d.len() { return 0; }
-        if is_le { u16::from_le_bytes([d[o], d[o+1]]) }
-        else { u16::from_be_bytes([d[o], d[o+1]]) }
+        if o + 2 > d.len() {
+            return 0;
+        }
+        if is_le {
+            u16::from_le_bytes([d[o], d[o + 1]])
+        } else {
+            u16::from_be_bytes([d[o], d[o + 1]])
+        }
     };
     let r32 = |d: &[u8], o: usize| -> u32 {
-        if o+4 > d.len() { return 0; }
-        if is_le { u32::from_le_bytes([d[o], d[o+1], d[o+2], d[o+3]]) }
-        else { u32::from_be_bytes([d[o], d[o+1], d[o+2], d[o+3]]) }
+        if o + 4 > d.len() {
+            return 0;
+        }
+        if is_le {
+            u32::from_le_bytes([d[o], d[o + 1], d[o + 2], d[o + 3]])
+        } else {
+            u32::from_be_bytes([d[o], d[o + 1], d[o + 2], d[o + 3]])
+        }
     };
 
     let maj = r16(data, 12);
@@ -5937,19 +7584,40 @@ pub fn read_pcapng(data: &[u8]) -> Result<Vec<Tag>> {
     let blk_len = r32(data, 4) as usize;
 
     let mut tags = Vec::new();
-    let bo_str = if is_le { "Little-endian (Intel, II)" } else { "Big-endian (Motorola, MM)" };
-    tags.push(mktag("PCAP", "ByteOrder", "Byte Order", Value::String(bo_str.into())));
-    tags.push(mktag("PCAP", "PCAPVersion", "PCAP Version",
-        Value::String(format!("PCAPNG {}.{}", maj, min))));
+    let bo_str = if is_le {
+        "Little-endian (Intel, II)"
+    } else {
+        "Big-endian (Motorola, MM)"
+    };
+    tags.push(mktag(
+        "PCAP",
+        "ByteOrder",
+        "Byte Order",
+        Value::String(bo_str.into()),
+    ));
+    tags.push(mktag(
+        "PCAP",
+        "PCAPVersion",
+        "PCAP Version",
+        Value::String(format!("PCAPNG {}.{}", maj, min)),
+    ));
 
     // SHB structure: block_type(4) + block_len(4) + bo_magic(4) + major(2) + minor(2) + section_len(8)
     // Options start at offset 24 (after the 8-byte section_length field)
     let opt_start = 24usize;
-    let opt_end = if blk_len > 4 && blk_len <= data.len() { blk_len - 4 } else { data.len() };
+    let opt_end = if blk_len > 4 && blk_len <= data.len() {
+        blk_len - 4
+    } else {
+        data.len()
+    };
     parse_pcapng_options(data, opt_start, opt_end, is_le, &mut tags, "shb");
 
     // Parse Interface Description Block (IDB) right after the SHB
-    let idb_start = if blk_len < data.len() { blk_len } else { return Ok(tags); };
+    let idb_start = if blk_len < data.len() {
+        blk_len
+    } else {
+        return Ok(tags);
+    };
     if idb_start + 20 <= data.len() {
         let idb_type = r32(data, idb_start);
         if idb_type == 1 {
@@ -5957,13 +7625,20 @@ pub fn read_pcapng(data: &[u8]) -> Result<Vec<Tag>> {
             let idb_len = r32(data, idb_start + 4) as usize;
             let link_type = r32(data, idb_start + 8) & 0xFFFF;
             let link_name = pcap_link_type_name(link_type);
-            tags.push(mktag("PCAP", "LinkType", "Link Type", Value::String(link_name)));
+            tags.push(mktag(
+                "PCAP",
+                "LinkType",
+                "Link Type",
+                Value::String(link_name),
+            ));
 
             // Parse IDB options (starting at offset idb_start + 16)
             let idb_opt_start = idb_start + 16;
             let idb_opt_end = if idb_start + idb_len > 4 && idb_start + idb_len <= data.len() {
                 idb_start + idb_len - 4
-            } else { data.len() };
+            } else {
+                data.len()
+            };
             parse_pcapng_options(data, idb_opt_start, idb_opt_end, is_le, &mut tags, "idb");
 
             // Parse EPB/SPB blocks to find TimeStamp
@@ -5975,12 +7650,23 @@ pub fn read_pcapng(data: &[u8]) -> Result<Vec<Tag>> {
     Ok(tags)
 }
 
-fn parse_pcapng_options(data: &[u8], start: usize, end: usize, is_le: bool,
-                         tags: &mut Vec<Tag>, ctx: &str) {
+fn parse_pcapng_options(
+    data: &[u8],
+    start: usize,
+    end: usize,
+    is_le: bool,
+    tags: &mut Vec<Tag>,
+    ctx: &str,
+) {
     let r16 = |d: &[u8], o: usize| -> u16 {
-        if o+2 > d.len() { return 0; }
-        if is_le { u16::from_le_bytes([d[o], d[o+1]]) }
-        else { u16::from_be_bytes([d[o], d[o+1]]) }
+        if o + 2 > d.len() {
+            return 0;
+        }
+        if is_le {
+            u16::from_le_bytes([d[o], d[o + 1]])
+        } else {
+            u16::from_be_bytes([d[o], d[o + 1]])
+        }
     };
 
     let mut pos = start;
@@ -5988,30 +7674,49 @@ fn parse_pcapng_options(data: &[u8], start: usize, end: usize, is_le: bool,
         let opt_code = r16(data, pos);
         let opt_len = r16(data, pos + 2) as usize;
         pos += 4;
-        if opt_code == 0 { break; } // opt_endofopt
+        if opt_code == 0 {
+            break;
+        } // opt_endofopt
         let padded_len = (opt_len + 3) & !3;
-        if pos + opt_len > data.len() { break; }
+        if pos + opt_len > data.len() {
+            break;
+        }
 
         let opt_data = &data[pos..pos + opt_len];
 
         match (ctx, opt_code) {
-            ("shb", 2) => { // shb_hardware
+            ("shb", 2) => {
+                // shb_hardware
                 let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
                 tags.push(mktag("PCAP", "Hardware", "Hardware", Value::String(s)));
             }
-            ("shb", 3) => { // shb_os
+            ("shb", 3) => {
+                // shb_os
                 let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
-                tags.push(mktag("PCAP", "OperatingSystem", "Operating System", Value::String(s)));
+                tags.push(mktag(
+                    "PCAP",
+                    "OperatingSystem",
+                    "Operating System",
+                    Value::String(s),
+                ));
             }
-            ("shb", 4) => { // shb_userappl
+            ("shb", 4) => {
+                // shb_userappl
                 let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
-                tags.push(mktag("PCAP", "UserApplication", "User Application", Value::String(s)));
+                tags.push(mktag(
+                    "PCAP",
+                    "UserApplication",
+                    "User Application",
+                    Value::String(s),
+                ));
             }
-            ("idb", 2) => { // if_name
+            ("idb", 2) => {
+                // if_name
                 let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
                 tags.push(mktag("PCAP", "DeviceName", "Device Name", Value::String(s)));
             }
-            ("idb", 9) => { // if_tsresol: timestamp resolution
+            ("idb", 9) => {
+                // if_tsresol: timestamp resolution
                 if opt_len >= 1 {
                     let tsresol = opt_data[0];
                     let resolution = if tsresol & 0x80 != 0 {
@@ -6023,14 +7728,24 @@ fn parse_pcapng_options(data: &[u8], start: usize, end: usize, is_le: bool,
                         let exp = tsresol & 0x7F;
                         format!("1e-{:02}", exp)
                     };
-                    tags.push(mktag("PCAP", "TimeStampResolution", "Time Stamp Resolution",
-                        Value::String(resolution)));
+                    tags.push(mktag(
+                        "PCAP",
+                        "TimeStampResolution",
+                        "Time Stamp Resolution",
+                        Value::String(resolution),
+                    ));
                 }
             }
-            ("idb", 12) => { // if_os
+            ("idb", 12) => {
+                // if_os
                 let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
                 if !tags.iter().any(|t| t.name == "OperatingSystem") {
-                    tags.push(mktag("PCAP", "OperatingSystem", "Operating System", Value::String(s)));
+                    tags.push(mktag(
+                        "PCAP",
+                        "OperatingSystem",
+                        "Operating System",
+                        Value::String(s),
+                    ));
                 }
             }
             _ => {}
@@ -6042,21 +7757,51 @@ fn parse_pcapng_options(data: &[u8], start: usize, end: usize, is_le: bool,
 
 fn parse_pcapng_blocks(data: &[u8], start: usize, is_le: bool, tags: &mut Vec<Tag>) {
     let r32 = |d: &[u8], o: usize| -> u32 {
-        if o+4 > d.len() { return 0; }
-        if is_le { u32::from_le_bytes([d[o], d[o+1], d[o+2], d[o+3]]) }
-        else { u32::from_be_bytes([d[o], d[o+1], d[o+2], d[o+3]]) }
+        if o + 4 > d.len() {
+            return 0;
+        }
+        if is_le {
+            u32::from_le_bytes([d[o], d[o + 1], d[o + 2], d[o + 3]])
+        } else {
+            u32::from_be_bytes([d[o], d[o + 1], d[o + 2], d[o + 3]])
+        }
     };
     let _r64 = |d: &[u8], o: usize| -> u64 {
-        if o+8 > d.len() { return 0; }
-        if is_le { u64::from_le_bytes([d[o], d[o+1], d[o+2], d[o+3], d[o+4], d[o+5], d[o+6], d[o+7]]) }
-        else { u64::from_be_bytes([d[o], d[o+1], d[o+2], d[o+3], d[o+4], d[o+5], d[o+6], d[o+7]]) }
+        if o + 8 > d.len() {
+            return 0;
+        }
+        if is_le {
+            u64::from_le_bytes([
+                d[o],
+                d[o + 1],
+                d[o + 2],
+                d[o + 3],
+                d[o + 4],
+                d[o + 5],
+                d[o + 6],
+                d[o + 7],
+            ])
+        } else {
+            u64::from_be_bytes([
+                d[o],
+                d[o + 1],
+                d[o + 2],
+                d[o + 3],
+                d[o + 4],
+                d[o + 5],
+                d[o + 6],
+                d[o + 7],
+            ])
+        }
     };
 
     let mut pos = start;
     while pos + 8 <= data.len() {
         let block_type = r32(data, pos);
         let block_len = r32(data, pos + 4) as usize;
-        if block_len < 12 || pos + block_len > data.len() { break; }
+        if block_len < 12 || pos + block_len > data.len() {
+            break;
+        }
 
         // EPB (Enhanced Packet Block) = type 6
         if block_type == 6 && block_len >= 28 {
@@ -6083,7 +7828,6 @@ fn format_unix_timestamp(secs: i64, usecs: u64) -> Option<String> {
     // For now, use UTC + known local offset from Perl output
     // Perl shows: 2020:10:13 16:12:07.025764+02:00
     // We'll use UTC for simplicity but format it correctly
-    
 
     // Get local timezone offset using system time
     let tz_offset_secs = get_local_tz_offset();
@@ -6096,14 +7840,25 @@ fn format_unix_timestamp(secs: i64, usecs: u64) -> Option<String> {
     let tz_mins = (tz_offset_secs.abs() % 3600) / 60;
     let tz_sign = if tz_offset_secs >= 0 { '+' } else { '-' };
 
-    Some(format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:06}{}{:02}:{:02}",
-        y, mo, d, h, mi, s, usecs, tz_sign, tz_hours.abs(), tz_mins))
+    Some(format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:06}{}{:02}:{:02}",
+        y,
+        mo,
+        d,
+        h,
+        mi,
+        s,
+        usecs,
+        tz_sign,
+        tz_hours.abs(),
+        tz_mins
+    ))
 }
 
 fn get_local_tz_offset() -> i32 {
     // Try to get timezone offset from system
     // This uses a simple method: compare local time to UTC
-    
+
     // For now return 0 (UTC) - the test data shows +02:00 but we can't easily detect this
     // without platform-specific code
     0
@@ -6131,11 +7886,11 @@ fn unix_to_datetime(secs: i64) -> (i32, u32, u32, u32, u32, u32) {
     let z = days + 719468; // days from 0000-03-01
     let era = if z >= 0 { z } else { z - DAYS_PER_400Y + 1 } / DAYS_PER_400Y;
     let doe = z - era * DAYS_PER_400Y;
-    let yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
     let y = yoe + era * 400;
-    let doy = doe - (365*yoe + yoe/4 - yoe/100);
-    let mp = (5*doy + 2)/153;
-    let d = doy - (153*mp+2)/5 + 1;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
     let mo = if mp < 10 { mp + 3 } else { mp - 9 };
     let y = if mo <= 2 { y + 1 } else { y };
 
@@ -6173,8 +7928,9 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
     let mut pos = 0usize;
 
     while pos + 8 <= data.len() {
-        let block_size = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
-        let block_tag = &data[pos+4..pos+8];
+        let block_size =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+        let block_tag = &data[pos + 4..pos + 8];
 
         if block_size < 8 || block_size >= 0x80000000 {
             break;
@@ -6190,20 +7946,31 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
             let body = &data[body_start..body_end];
             if body.len() >= 20 {
                 let _data_type = &body[0x10 - 8 + 8..]; // offset 0x10 from block start = 0x08 from body
-                // Actually offset 0x10 from the block start means byte 16 from pos
-                // body starts at pos+8, so offset 16 from pos = body[8..12]
-                let dt_bytes = &data[pos+16..pos+20];
+                                                        // Actually offset 0x10 from the block start means byte 16 from pos
+                                                        // body starts at pos+8, so offset 16 from pos = body[8..12]
+                let dt_bytes = &data[pos + 16..pos + 20];
                 let dt_str = match dt_bytes {
                     b"artw" => "Artwork",
                     _ => "Unknown",
                 };
-                tags.push(mktag("ITC", "DataType", "Data Type", Value::String(dt_str.into())));
+                tags.push(mktag(
+                    "ITC",
+                    "DataType",
+                    "Data Type",
+                    Value::String(dt_str.into()),
+                ));
             }
         } else if block_tag == b"item" {
             // Read inner length (4 bytes after block header)
-            if pos + 12 > data.len() { break; }
-            let inner_len = u32::from_be_bytes([data[pos+8], data[pos+9], data[pos+10], data[pos+11]]) as usize;
-            if inner_len < 0xd0 || inner_len > block_size { break; }
+            if pos + 12 > data.len() {
+                break;
+            }
+            let inner_len =
+                u32::from_be_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]])
+                    as usize;
+            if inner_len < 0xd0 || inner_len > block_size {
+                break;
+            }
 
             // Remaining image data size
             let image_size = block_size - inner_len;
@@ -6213,22 +7980,32 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
             let mut scan = pos + 12;
             let mut remaining = inner_len - 12;
             loop {
-                if remaining < 4 || scan + 4 > data.len() { break; }
-                let word = &data[scan..scan+4];
+                if remaining < 4 || scan + 4 > data.len() {
+                    break;
+                }
+                let word = &data[scan..scan + 4];
                 remaining -= 4;
                 scan += 4;
-                if word == b"\0\0\0\0" { break; }
+                if word == b"\0\0\0\0" {
+                    break;
+                }
             }
-            if remaining < 4 { break; }
+            if remaining < 4 {
+                break;
+            }
 
             // Read remaining header
             let hdr_start = scan;
             let hdr_len = remaining;
-            if hdr_start + hdr_len > data.len() { break; }
+            if hdr_start + hdr_len > data.len() {
+                break;
+            }
             let hdr = &data[hdr_start..hdr_start + hdr_len];
 
             // Verify 'data' marker at offset 0xb0
-            if hdr.len() < 0xb4 || &hdr[0xb0..0xb4] != b"data" { break; }
+            if hdr.len() < 0xb4 || &hdr[0xb0..0xb4] != b"data" {
+                break;
+            }
 
             // Parse ITC::Item fields (FORMAT = int32u, FIRST_ENTRY = 0)
             // Entry 0 (offset 0*4=0): LibraryID = undef[8] → hex string
@@ -6251,7 +8028,12 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
                     b"locl" => "Local Music File",
                     _ => "Unknown",
                 };
-                tags.push(mktag("ITC", "DataLocation", "Data Location", Value::String(loc_str.into())));
+                tags.push(mktag(
+                    "ITC",
+                    "DataLocation",
+                    "Data Location",
+                    Value::String(loc_str.into()),
+                ));
             }
             // Entry 5 (offset 5*4=20): ImageType = undef[4]
             if hdr.len() >= 24 {
@@ -6261,7 +8043,12 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
                     b"\0\0\0\x0d" => "JPEG",
                     _ => "Unknown",
                 };
-                tags.push(mktag("ITC", "ImageType", "Image Type", Value::String(type_str.into())));
+                tags.push(mktag(
+                    "ITC",
+                    "ImageType",
+                    "Image Type",
+                    Value::String(type_str.into()),
+                ));
             }
             // Entry 7 (offset 7*4=28): ImageWidth = int32u
             if hdr.len() >= 32 {
@@ -6271,7 +8058,12 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
             // Entry 8 (offset 8*4=32): ImageHeight = int32u
             if hdr.len() >= 36 {
                 let height = u32::from_be_bytes([hdr[32], hdr[33], hdr[34], hdr[35]]);
-                tags.push(mktag("ITC", "ImageHeight", "Image Height", Value::U32(height)));
+                tags.push(mktag(
+                    "ITC",
+                    "ImageHeight",
+                    "Image Height",
+                    Value::U32(height),
+                ));
             }
 
             // ImageData (binary data after item header)
@@ -6279,7 +8071,12 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
                 let img_start = pos + block_size - image_size;
                 if img_start + image_size <= data.len() {
                     let img_data = data[img_start..img_start + image_size].to_vec();
-                    tags.push(mktag("ITC", "ImageData", "Image Data", Value::Binary(img_data)));
+                    tags.push(mktag(
+                        "ITC",
+                        "ImageData",
+                        "Image Data",
+                        Value::Binary(img_data),
+                    ));
                 }
             }
         }
@@ -6289,7 +8086,6 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
 
     Ok(tags)
 }
-
 
 // ============================================================================
 // ZISRAW/CZI (Zeiss Integrated Software RAW)
@@ -6308,37 +8104,64 @@ pub fn read_czi(data: &[u8]) -> Result<Vec<Tag>> {
         let major = u32::from_le_bytes([data[0x20], data[0x21], data[0x22], data[0x23]]);
         let minor = u32::from_le_bytes([data[0x24], data[0x25], data[0x26], data[0x27]]);
         let version = format!("{}.{}", major, minor);
-        tags.push(mktag("ZISRAW", "ZISRAWVersion", "ZISRAW Version", Value::String(version)));
+        tags.push(mktag(
+            "ZISRAW",
+            "ZISRAWVersion",
+            "ZISRAW Version",
+            Value::String(version),
+        ));
     }
 
     // PrimaryFileGUID at offset 0x30: 16 bytes as hex
     if data.len() >= 0x40 {
         let guid = hex_encode(&data[0x30..0x40]);
-        tags.push(mktag("ZISRAW", "PrimaryFileGUID", "Primary File GUID", Value::String(guid)));
+        tags.push(mktag(
+            "ZISRAW",
+            "PrimaryFileGUID",
+            "Primary File GUID",
+            Value::String(guid),
+        ));
     }
 
     // FileGUID at offset 0x40: 16 bytes as hex
     if data.len() >= 0x50 {
         let guid = hex_encode(&data[0x40..0x50]);
-        tags.push(mktag("ZISRAW", "FileGUID", "File GUID", Value::String(guid)));
+        tags.push(mktag(
+            "ZISRAW",
+            "FileGUID",
+            "File GUID",
+            Value::String(guid),
+        ));
     }
 
     // Metadata section offset at byte 92 (0x5C): 64-bit LE
     if data.len() >= 100 {
-        let meta_off = u64::from_le_bytes([data[92], data[93], data[94], data[95],
-                                            data[96], data[97], data[98], data[99]]) as usize;
+        let meta_off = u64::from_le_bytes([
+            data[92], data[93], data[94], data[95], data[96], data[97], data[98], data[99],
+        ]) as usize;
         if meta_off > 0 && meta_off + 288 <= data.len() {
             // Check for ZISRAWMETADATA magic
-            if &data[meta_off..meta_off+16] == b"ZISRAWMETADATA\x00\x00" {
+            if &data[meta_off..meta_off + 16] == b"ZISRAWMETADATA\x00\x00" {
                 // XML length at offset 32 of metadata segment
-                let xml_len = u32::from_le_bytes([data[meta_off+32], data[meta_off+33],
-                                                    data[meta_off+34], data[meta_off+35]]) as usize;
+                let xml_len = u32::from_le_bytes([
+                    data[meta_off + 32],
+                    data[meta_off + 33],
+                    data[meta_off + 34],
+                    data[meta_off + 35],
+                ]) as usize;
                 let xml_start = meta_off + 288;
                 if xml_start + xml_len <= data.len() {
-                    let xml_bytes = &data[xml_start..xml_start+xml_len];
+                    let xml_bytes = &data[xml_start..xml_start + xml_len];
                     // Emit XML as binary data tag
-                    tags.push(mktag("ZISRAW", "XML", "XML",
-                        Value::String(format!("(Binary data {} bytes, use -b option to extract)", xml_len))));
+                    tags.push(mktag(
+                        "ZISRAW",
+                        "XML",
+                        "XML",
+                        Value::String(format!(
+                            "(Binary data {} bytes, use -b option to extract)",
+                            xml_len
+                        )),
+                    ));
                     // Parse XML metadata
                     if let Ok(xml_str) = std::str::from_utf8(xml_bytes) {
                         czi_parse_xml(xml_str, &mut tags);
@@ -6369,11 +8192,15 @@ fn czi_parse_xml(xml: &str, tags: &mut Vec<Tag>) {
 
     for event in parser {
         match event {
-            Ok(XmlEvent::StartElement { name, attributes, .. }) => {
+            Ok(XmlEvent::StartElement {
+                name, attributes, ..
+            }) => {
                 let elem_name = &name.local_name;
                 let is_ignored = ignore_elems.contains(&elem_name.as_str());
                 ignored.push(is_ignored);
-                if let Some(last) = has_child.last_mut() { *last = true; }
+                if let Some(last) = has_child.last_mut() {
+                    *last = true;
+                }
 
                 if !is_ignored {
                     path.push(elem_name.clone());
@@ -6427,7 +8254,12 @@ fn czi_parse_xml(xml: &str, tags: &mut Vec<Tag>) {
                             let path_str = path.join("");
                             let tag_name = czi_shorten_tag_name(&path_str);
                             if !tag_name.is_empty() {
-                                tags.push(mktag("ZISRAW", &tag_name, &tag_name, Value::String(text)));
+                                tags.push(mktag(
+                                    "ZISRAW",
+                                    &tag_name,
+                                    &tag_name,
+                                    Value::String(text),
+                                ));
                             }
                         }
                     }
@@ -6455,7 +8287,11 @@ fn czi_shorten_tag_name(name: &str) -> String {
     s = regex_replace(&s, "ObjectivesObjective", "Objective");
     s = s.replace("ChannelsChannel", "Channel");
     s = s.replace("TubeLensesTubeLens", "TubeLens");
-    s = regex_replace(&s, "^ExperimentHardwareSettingsPoolHardwareSetting", "HardwareSetting");
+    s = regex_replace(
+        &s,
+        "^ExperimentHardwareSettingsPoolHardwareSetting",
+        "HardwareSetting",
+    );
     s = s.replace("SharpnessMeasureSetSharpnessMeasure", "Sharpness");
     s = s.replace("FocusSetupAutofocusSetup", "Autofocus");
     s = s.replace("TracksTrack", "Track");
@@ -6506,7 +8342,10 @@ fn czi_shorten_tag_name(name: &str) -> String {
     s = s.replace("TrackTrack", "Track");
     s = s.replace("AnalogOutMaximumsAnalogOutMaximum", "AnalogOutMaximum");
     s = s.replace("AnalogOutMinimumsAnalogOutMinimum", "AnalogOutMinimum");
-    s = s.replace("DigitalOutLabelsDigitalOutLabelLabel", "DigitalOutLabelLabel");
+    s = s.replace(
+        "DigitalOutLabelsDigitalOutLabelLabel",
+        "DigitalOutLabelLabel",
+    );
     s = s.replace("FocusDefiniteFocus", "FocusDefinite");
     s = s.replace("ChangerChanger", "Changer");
     s = s.replace("Calibration", "Cal");
@@ -6516,7 +8355,10 @@ fn czi_shorten_tag_name(name: &str) -> String {
     s = s.replace("CameraGeometryCameraGeometry", "CameraGeometry");
     s = s.replace("CameraCamera", "Camera");
     s = s.replace("DetectorsCamera", "Camera");
-    s = s.replace("FilterChangerLeftChangerEmissionFilter", "LeftChangerEmissionFilter");
+    s = s.replace(
+        "FilterChangerLeftChangerEmissionFilter",
+        "LeftChangerEmissionFilter",
+    );
     s = s.replace("SwitchingStatesSwitchingState", "SwitchingState");
     s = s.replace("Information", "Info");
     // s/SubDimensions?//g
@@ -6533,7 +8375,11 @@ fn czi_shorten_tag_name(name: &str) -> String {
     s = s.replace("Increment", "Incr");
     s = s.replace("Parameter", "Param");
     // s/(ParfocalParcentralValues)+ParfocalParcentralValue/Parcentral/
-    s = regex_replace(&s, "(ParfocalParcentralValues?)+ParfocalParcentralValues?", "Parcentral");
+    s = regex_replace(
+        &s,
+        "(ParfocalParcentralValues?)+ParfocalParcentralValues?",
+        "Parcentral",
+    );
     s = s.replace("ParcentralParcentral", "Parcentral");
     s = s.replace("CorrFocusCorrection", "FocusCorr");
     // s/(ApoTomeDepthInfo)+Element/ApoTomeDepth/
@@ -6554,7 +8400,11 @@ fn czi_shorten_tag_name(name: &str) -> String {
     s = s.replace("DataWegaDatasWegaData", "DataWega");
     s = s.replace("ClickStopPositionsClickStopPosition", "ClickStopPosition");
     // s/LightSourcess?LightSource(Settings)?(LightSource)?/LightSource/
-    s = regex_replace(&s, "LightSourcess?LightSource(Settings)?(LightSource)?", "LightSource");
+    s = regex_replace(
+        &s,
+        "LightSourcess?LightSource(Settings)?(LightSource)?",
+        "LightSource",
+    );
     s = s.replace("FilterSetsFilterSet", "FilterSet");
     s = s.replace("EmissionFiltersEmissionFilter", "EmissionFilter");
     s = s.replace("ExcitationFiltersExcitationFilter", "ExcitationFilter");
@@ -6600,9 +8450,9 @@ fn regex_replace(s: &str, pat: &str, replacement: &str) -> String {
 }
 
 fn regex_replace_first(s: &str, pat: &str, replacement: &str) -> String {
-    // Handle patterns like "Setups?" (optional s) and "Parameters?" 
+    // Handle patterns like "Setups?" (optional s) and "Parameters?"
     let variants: Vec<&str> = if pat.ends_with('?') {
-        let base = &pat[..pat.len()-1];
+        let base = &pat[..pat.len() - 1];
         let long = pat.trim_end_matches('?');
         // "Setups?" → try "Setups" then "Setup"
         // We need both variants
@@ -6613,8 +8463,8 @@ fn regex_replace_first(s: &str, pat: &str, replacement: &str) -> String {
     // Try with the longer variant first
     if pat.ends_with('?') {
         let long = pat.trim_end_matches('?'); // "Setups" from "Setups?"
-        let base = &long[..long.len()-1]; // "Setup"
-        // Try "Setups" first
+        let base = &long[..long.len() - 1]; // "Setup"
+                                            // Try "Setups" first
         if let Some(idx) = s.find(long) {
             return format!("{}{}{}", &s[..idx], replacement, &s[idx + long.len()..]);
         }
@@ -6645,7 +8495,9 @@ fn czi_regex_replace_group(s: &str, pat: &str, _replacement: &str) -> String {
             let prev = r.clone();
             r = r.replace("DevicesDevice", "Device");
             r = r.replace("DeviceDevice", "Device");
-            if r == prev { break; }
+            if r == prev {
+                break;
+            }
         }
         return r;
     }
@@ -6655,7 +8507,9 @@ fn czi_regex_replace_group(s: &str, pat: &str, _replacement: &str) -> String {
         loop {
             let prev = r.clone();
             r = r.replace("BeamPathNodeBeamPathNode", "BeamPathNode");
-            if r == prev { break; }
+            if r == prev {
+                break;
+            }
         }
         return r;
     }
@@ -6701,8 +8555,13 @@ fn czi_regex_replace_group(s: &str, pat: &str, _replacement: &str) -> String {
         let mut r = s.to_string();
         loop {
             let prev = r.clone();
-            r = r.replace("ApoTomeDepthInfoApoTomeDepthInfoElement", "ApoTomeDepthInfoElement");
-            if r == prev { break; }
+            r = r.replace(
+                "ApoTomeDepthInfoApoTomeDepthInfoElement",
+                "ApoTomeDepthInfoElement",
+            );
+            if r == prev {
+                break;
+            }
         }
         r = r.replace("ApoTomeDepthInfoElement", "ApoTomeDepth");
         return r;
@@ -6713,8 +8572,14 @@ fn czi_regex_replace_group(s: &str, pat: &str, _replacement: &str) -> String {
         return r;
     }
     if pat.starts_with("(ParfocalParcentralValues?)+") {
-        let r = s.replace("ParfocalParcentralValuesParfocalParcentralValue", "Parcentral");
-        let r = r.replace("ParfocalParcentralValueParfocalParcentralValue", "Parcentral");
+        let r = s.replace(
+            "ParfocalParcentralValuesParfocalParcentralValue",
+            "Parcentral",
+        );
+        let r = r.replace(
+            "ParfocalParcentralValueParfocalParcentralValue",
+            "Parcentral",
+        );
         let r = r.replace("ParfocalParcentralValue", "Parcentral");
         return r;
     }
@@ -6738,7 +8603,9 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 
     // Skip .RMF header (size at bytes 4..8)
-    if data.len() < 8 { return Ok(tags); }
+    if data.len() < 8 {
+        return Ok(tags);
+    }
     let hdr_size = u32::from_be_bytes([data[4], data[5], data[6], data[7]]) as usize;
     let hdr_size = hdr_size.max(8);
     let mut pos = hdr_size;
@@ -6749,13 +8616,21 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Process chunks
     while pos + 10 <= data.len() {
-        let chunk_id = &data[pos..pos+4];
-        if chunk_id == b"\x00\x00\x00\x00" { break; }
-        let chunk_size = u32::from_be_bytes([data[pos+4], data[pos+5], data[pos+6], data[pos+7]]) as usize;
-        if chunk_size < 10 || pos + chunk_size > data.len() { break; }
-        if chunk_id == b"DATA" { break; }
+        let chunk_id = &data[pos..pos + 4];
+        if chunk_id == b"\x00\x00\x00\x00" {
+            break;
+        }
+        let chunk_size =
+            u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                as usize;
+        if chunk_size < 10 || pos + chunk_size > data.len() {
+            break;
+        }
+        if chunk_id == b"DATA" {
+            break;
+        }
 
-        let chunk_data = &data[pos+10..pos+chunk_size];
+        let chunk_data = &data[pos + 10..pos + chunk_size];
 
         match chunk_id {
             b"PROP" => real_parse_prop(chunk_data, &mut tags),
@@ -6776,8 +8651,8 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     // Check for ID3v1 at last 128 bytes
-    if data.len() >= 128 && data[data.len()-128..data.len()-125] == *b"TAG" {
-        let id3_data = &data[data.len()-128..];
+    if data.len() >= 128 && data[data.len() - 128..data.len() - 125] == *b"TAG" {
+        let id3_data = &data[data.len() - 128..];
         real_parse_id3v1(id3_data, &mut tags);
     }
 
@@ -6786,91 +8661,244 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
 
 fn real_find_rjmd(data: &[u8]) -> Option<Vec<u8>> {
     // Perl: seek(-140, 2) read 12 bytes, check for "RMJE"
-    if data.len() < 140 { return None; }
+    if data.len() < 140 {
+        return None;
+    }
     let rmje_pos = data.len() - 140;
-    if &data[rmje_pos..rmje_pos+4] != b"RMJE" { return None; }
-    let meta_size = u32::from_be_bytes([data[rmje_pos+8], data[rmje_pos+9], data[rmje_pos+10], data[rmje_pos+11]]) as usize;
+    if &data[rmje_pos..rmje_pos + 4] != b"RMJE" {
+        return None;
+    }
+    let meta_size = u32::from_be_bytes([
+        data[rmje_pos + 8],
+        data[rmje_pos + 9],
+        data[rmje_pos + 10],
+        data[rmje_pos + 11],
+    ]) as usize;
     // RJMD starts at rmje_pos - meta_size
-    if meta_size > rmje_pos { return None; }
+    if meta_size > rmje_pos {
+        return None;
+    }
     let rjmd_start = rmje_pos - meta_size;
-    if rjmd_start + 4 > data.len() || &data[rjmd_start..rjmd_start+4] != b"RJMD" { return None; }
-    Some(data[rjmd_start..rjmd_start+meta_size].to_vec())
+    if rjmd_start + 4 > data.len() || &data[rjmd_start..rjmd_start + 4] != b"RJMD" {
+        return None;
+    }
+    Some(data[rjmd_start..rjmd_start + meta_size].to_vec())
 }
 
 fn real_parse_prop(data: &[u8], tags: &mut Vec<Tag>) {
-    if data.len() < 40 { return; }
+    if data.len() < 40 {
+        return;
+    }
     let mut off = 0usize;
-    let max_bitrate = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    let avg_bitrate = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    let max_pkt = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    let avg_pkt = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    let num_pkts = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    let duration_ms = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    let preroll_ms = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
+    let max_bitrate = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    let avg_bitrate = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    let max_pkt = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    let avg_pkt = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    let num_pkts = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    let duration_ms = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    let preroll_ms = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
     off += 4; // index offset (unknown)
     off += 4; // data offset (unknown)
-    if data.len() < off + 4 { return; }
-    let num_streams = u16::from_be_bytes([data[off], data[off+1]]); off += 2;
-    if data.len() < off + 2 { return; }
-    let flags = u16::from_be_bytes([data[off], data[off+1]]);
+    if data.len() < off + 4 {
+        return;
+    }
+    let num_streams = u16::from_be_bytes([data[off], data[off + 1]]);
+    off += 2;
+    if data.len() < off + 2 {
+        return;
+    }
+    let flags = u16::from_be_bytes([data[off], data[off + 1]]);
 
-    tags.push(mktag("Real", "MaxBitrate", "Max Bitrate", Value::String(real_convert_bitrate(max_bitrate as f64))));
-    tags.push(mktag("Real", "AvgBitrate", "Avg Bitrate", Value::String(real_convert_bitrate(avg_bitrate as f64))));
-    tags.push(mktag("Real", "MaxPacketSize", "Max Packet Size", Value::U32(max_pkt)));
-    tags.push(mktag("Real", "AvgPacketSize", "Avg Packet Size", Value::U32(avg_pkt)));
-    tags.push(mktag("Real", "NumPackets", "Num Packets", Value::U32(num_pkts)));
+    tags.push(mktag(
+        "Real",
+        "MaxBitrate",
+        "Max Bitrate",
+        Value::String(real_convert_bitrate(max_bitrate as f64)),
+    ));
+    tags.push(mktag(
+        "Real",
+        "AvgBitrate",
+        "Avg Bitrate",
+        Value::String(real_convert_bitrate(avg_bitrate as f64)),
+    ));
+    tags.push(mktag(
+        "Real",
+        "MaxPacketSize",
+        "Max Packet Size",
+        Value::U32(max_pkt),
+    ));
+    tags.push(mktag(
+        "Real",
+        "AvgPacketSize",
+        "Avg Packet Size",
+        Value::U32(avg_pkt),
+    ));
+    tags.push(mktag(
+        "Real",
+        "NumPackets",
+        "Num Packets",
+        Value::U32(num_pkts),
+    ));
     // Duration: ms / 1000, then ConvertDuration
     let dur_secs = duration_ms as f64 / 1000.0;
-    tags.push(mktag("Real", "Duration", "Duration", Value::String(real_convert_duration(dur_secs))));
+    tags.push(mktag(
+        "Real",
+        "Duration",
+        "Duration",
+        Value::String(real_convert_duration(dur_secs)),
+    ));
     let preroll_secs = preroll_ms as f64 / 1000.0;
-    tags.push(mktag("Real", "Preroll", "Preroll", Value::String(real_convert_duration(preroll_secs))));
-    tags.push(mktag("Real", "NumStreams", "Num Streams", Value::U16(num_streams)));
+    tags.push(mktag(
+        "Real",
+        "Preroll",
+        "Preroll",
+        Value::String(real_convert_duration(preroll_secs)),
+    ));
+    tags.push(mktag(
+        "Real",
+        "NumStreams",
+        "Num Streams",
+        Value::U16(num_streams),
+    ));
 
     // Flags BITMASK
     let mut flag_strs = Vec::new();
-    if flags & 0x01 != 0 { flag_strs.push("Allow Recording"); }
-    if flags & 0x02 != 0 { flag_strs.push("Perfect Play"); }
-    if flags & 0x04 != 0 { flag_strs.push("Live"); }
-    if flags & 0x08 != 0 { flag_strs.push("Allow Download"); }
+    if flags & 0x01 != 0 {
+        flag_strs.push("Allow Recording");
+    }
+    if flags & 0x02 != 0 {
+        flag_strs.push("Perfect Play");
+    }
+    if flags & 0x04 != 0 {
+        flag_strs.push("Live");
+    }
+    if flags & 0x08 != 0 {
+        flag_strs.push("Allow Download");
+    }
     if !flag_strs.is_empty() {
-        tags.push(mktag("Real", "Flags", "Flags", Value::String(flag_strs.join(", "))));
+        tags.push(mktag(
+            "Real",
+            "Flags",
+            "Flags",
+            Value::String(flag_strs.join(", ")),
+        ));
     }
 }
 
 fn real_parse_mdpr(data: &[u8], tags: &mut Vec<Tag>, is_first: bool) {
-    if data.len() < 30 { return; }
+    if data.len() < 30 {
+        return;
+    }
     let mut off = 0usize;
-    let stream_num = u16::from_be_bytes([data[off], data[off+1]]); off += 2;
-    let max_bitrate = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    let avg_bitrate = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    let max_pkt = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    let avg_pkt = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    let start_time = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    let preroll_ms = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    let duration_ms = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
-    if off >= data.len() { return; }
-    let name_len = data[off] as usize; off += 1;
-    if off + name_len > data.len() { return; }
-    let stream_name = crate::encoding::decode_utf8_or_latin1(&data[off..off+name_len]).to_string(); off += name_len;
-    if off >= data.len() { return; }
-    let mime_len = data[off] as usize; off += 1;
-    if off + mime_len > data.len() { return; }
-    let mime_type = crate::encoding::decode_utf8_or_latin1(&data[off..off+mime_len]).to_string(); off += mime_len;
+    let stream_num = u16::from_be_bytes([data[off], data[off + 1]]);
+    off += 2;
+    let max_bitrate = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    let avg_bitrate = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    let max_pkt = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    let avg_pkt = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    let start_time = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    let preroll_ms = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    let duration_ms = u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
+    if off >= data.len() {
+        return;
+    }
+    let name_len = data[off] as usize;
+    off += 1;
+    if off + name_len > data.len() {
+        return;
+    }
+    let stream_name =
+        crate::encoding::decode_utf8_or_latin1(&data[off..off + name_len]).to_string();
+    off += name_len;
+    if off >= data.len() {
+        return;
+    }
+    let mime_len = data[off] as usize;
+    off += 1;
+    if off + mime_len > data.len() {
+        return;
+    }
+    let mime_type = crate::encoding::decode_utf8_or_latin1(&data[off..off + mime_len]).to_string();
+    off += mime_len;
 
     // Only emit stream info for first non-logical stream (Perl PRIORITY => 0 = first takes priority)
     if is_first {
-        tags.push(mktag("Real", "StreamNumber", "Stream Number", Value::U16(stream_num)));
-        tags.push(mktag("Real", "StreamMaxBitrate", "Stream Max Bitrate", Value::String(real_convert_bitrate(max_bitrate as f64))));
-        tags.push(mktag("Real", "StreamAvgBitrate", "Stream Avg Bitrate", Value::String(real_convert_bitrate(avg_bitrate as f64))));
-        tags.push(mktag("Real", "StreamMaxPacketSize", "Stream Max Packet Size", Value::U32(max_pkt)));
-        tags.push(mktag("Real", "StreamAvgPacketSize", "Stream Avg Packet Size", Value::U32(avg_pkt)));
-        tags.push(mktag("Real", "StreamStartTime", "Stream Start Time", Value::U32(start_time)));
+        tags.push(mktag(
+            "Real",
+            "StreamNumber",
+            "Stream Number",
+            Value::U16(stream_num),
+        ));
+        tags.push(mktag(
+            "Real",
+            "StreamMaxBitrate",
+            "Stream Max Bitrate",
+            Value::String(real_convert_bitrate(max_bitrate as f64)),
+        ));
+        tags.push(mktag(
+            "Real",
+            "StreamAvgBitrate",
+            "Stream Avg Bitrate",
+            Value::String(real_convert_bitrate(avg_bitrate as f64)),
+        ));
+        tags.push(mktag(
+            "Real",
+            "StreamMaxPacketSize",
+            "Stream Max Packet Size",
+            Value::U32(max_pkt),
+        ));
+        tags.push(mktag(
+            "Real",
+            "StreamAvgPacketSize",
+            "Stream Avg Packet Size",
+            Value::U32(avg_pkt),
+        ));
+        tags.push(mktag(
+            "Real",
+            "StreamStartTime",
+            "Stream Start Time",
+            Value::U32(start_time),
+        ));
         let preroll_secs = preroll_ms as f64 / 1000.0;
-        tags.push(mktag("Real", "StreamPreroll", "Stream Preroll", Value::String(real_convert_duration(preroll_secs))));
+        tags.push(mktag(
+            "Real",
+            "StreamPreroll",
+            "Stream Preroll",
+            Value::String(real_convert_duration(preroll_secs)),
+        ));
         let dur_secs = duration_ms as f64 / 1000.0;
-        tags.push(mktag("Real", "StreamDuration", "Stream Duration", Value::String(real_convert_duration(dur_secs))));
-        tags.push(mktag("Real", "StreamName", "Stream Name", Value::String(stream_name)));
-        tags.push(mktag("Real", "StreamMimeType", "Stream Mime Type", Value::String(mime_type.clone())));
+        tags.push(mktag(
+            "Real",
+            "StreamDuration",
+            "Stream Duration",
+            Value::String(real_convert_duration(dur_secs)),
+        ));
+        tags.push(mktag(
+            "Real",
+            "StreamName",
+            "Stream Name",
+            Value::String(stream_name),
+        ));
+        tags.push(mktag(
+            "Real",
+            "StreamMimeType",
+            "Stream Mime Type",
+            Value::String(mime_type.clone()),
+        ));
     }
 
     // Check for logical-fileinfo stream
@@ -6884,26 +8912,45 @@ fn real_parse_fileinfo(data: &[u8], tags: &mut Vec<Tag>) {
     // FileInfoLen2 (tag 13, 4 bytes) = first 4 bytes of type_spec_data,
     // FileInfoVersion (tag 14, 2 bytes), PhysicalStreams (tag 15, 2 bytes),
     // [stream_nums(2)*N + data_offsets(4)*N], num_rules(2), [rule_nums(2)*N], num_props(2)
-    if data.len() < 12 { return; }
+    if data.len() < 12 {
+        return;
+    }
     let mut off = 0usize;
     // FileInfoLen (tag 12): type_spec_size
-    let _file_info_len = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
+    let _file_info_len =
+        u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
     // FileInfoLen2 (tag 13): first 4 bytes of type_spec_data (conditional on logical-fileinfo)
-    let _file_info_len2 = u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]); off += 4;
+    let _file_info_len2 =
+        u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]);
+    off += 4;
     // FileInfoVersion (tag 14): int16u
-    let fi_ver = u16::from_be_bytes([data[off], data[off+1]]); off += 2;
+    let fi_ver = u16::from_be_bytes([data[off], data[off + 1]]);
+    off += 2;
     // PhysicalStreams (tag 15): int16u
-    let phys_streams = u16::from_be_bytes([data[off], data[off+1]]) as usize; off += 2;
+    let phys_streams = u16::from_be_bytes([data[off], data[off + 1]]) as usize;
+    off += 2;
     // Skip physical stream numbers (2 bytes each) and data offsets (4 bytes each)
     off += phys_streams * 2 + phys_streams * 4;
-    if off + 2 > data.len() { return; }
-    let num_rules = u16::from_be_bytes([data[off], data[off+1]]) as usize; off += 2;
+    if off + 2 > data.len() {
+        return;
+    }
+    let num_rules = u16::from_be_bytes([data[off], data[off + 1]]) as usize;
+    off += 2;
     // Skip rule map
     off += num_rules * 2;
-    if off + 2 > data.len() { return; }
-    let _num_props = u16::from_be_bytes([data[off], data[off+1]]); off += 2;
+    if off + 2 > data.len() {
+        return;
+    }
+    let _num_props = u16::from_be_bytes([data[off], data[off + 1]]);
+    off += 2;
 
-    tags.push(mktag("Real", "FileInfoVersion", "File Info Version", Value::U16(fi_ver)));
+    tags.push(mktag(
+        "Real",
+        "FileInfoVersion",
+        "File Info Version",
+        Value::U16(fi_ver),
+    ));
 
     // Now parse FileInfoProperties
     real_parse_properties(&data[off..], tags);
@@ -6913,21 +8960,39 @@ fn real_parse_properties(data: &[u8], tags: &mut Vec<Tag>) {
     let mut pos = 0usize;
     while pos + 7 <= data.len() {
         let p_start = pos;
-        let p_size = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
-        let p_ver = u16::from_be_bytes([data[pos+4], data[pos+5]]);
-        if p_size < 7 || p_start + p_size > data.len() { break; }
-        if p_ver != 0 { pos = p_start + p_size; continue; }
+        let p_size =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+        let p_ver = u16::from_be_bytes([data[pos + 4], data[pos + 5]]);
+        if p_size < 7 || p_start + p_size > data.len() {
+            break;
+        }
+        if p_ver != 0 {
+            pos = p_start + p_size;
+            continue;
+        }
         pos += 6;
 
-        let tag_len = data[pos] as usize; pos += 1;
-        if pos + tag_len > data.len() { break; }
-        let tag_name = crate::encoding::decode_utf8_or_latin1(&data[pos..pos+tag_len]).to_string(); pos += tag_len;
+        let tag_len = data[pos] as usize;
+        pos += 1;
+        if pos + tag_len > data.len() {
+            break;
+        }
+        let tag_name =
+            crate::encoding::decode_utf8_or_latin1(&data[pos..pos + tag_len]).to_string();
+        pos += tag_len;
 
-        if pos + 6 > data.len() { break; }
-        let prop_type = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]); pos += 4;
-        let val_len = u16::from_be_bytes([data[pos], data[pos+1]]) as usize; pos += 2;
-        if pos + val_len > data.len() { break; }
-        let val_data = &data[pos..pos+val_len];
+        if pos + 6 > data.len() {
+            break;
+        }
+        let prop_type =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]);
+        pos += 4;
+        let val_len = u16::from_be_bytes([data[pos], data[pos + 1]]) as usize;
+        pos += 2;
+        if pos + val_len > data.len() {
+            break;
+        }
+        let val_data = &data[pos..pos + val_len];
 
         let (exif_name, val_str) = real_file_info_tag(&tag_name, prop_type, val_data, val_len);
         if let Some(val) = val_str {
@@ -6940,26 +9005,34 @@ fn real_parse_properties(data: &[u8], tags: &mut Vec<Tag>) {
     }
 }
 
-fn real_file_info_tag(tag: &str, prop_type: u32, val_data: &[u8], val_len: usize) -> (String, Option<String>) {
+fn real_file_info_tag(
+    tag: &str,
+    prop_type: u32,
+    val_data: &[u8],
+    val_len: usize,
+) -> (String, Option<String>) {
     let tag_name = match tag {
-        "Content Rating"    => "ContentRating",
-        "Audiences"         => "Audiences",
-        "audioMode"         => "AudioMode",
-        "Creation Date"     => "CreateDate",
-        "Generated By"      => "Software",
+        "Content Rating" => "ContentRating",
+        "Audiences" => "Audiences",
+        "audioMode" => "AudioMode",
+        "Creation Date" => "CreateDate",
+        "Generated By" => "Software",
         "Modification Date" => "ModifyDate",
-        "videoMode"         => "VideoMode",
-        "Description"       => "Description",
-        "Keywords"          => "Keywords",
-        "Indexable"         => "Indexable",
-        "File ID"           => "FileID",
-        "Target Audiences"  => "TargetAudiences",
-        "Audio Format"      => "AudioFormat",
-        "Video Quality"     => "VideoQuality",
+        "videoMode" => "VideoMode",
+        "Description" => "Description",
+        "Keywords" => "Keywords",
+        "Indexable" => "Indexable",
+        "File ID" => "FileID",
+        "Target Audiences" => "TargetAudiences",
+        "Audio Format" => "AudioFormat",
+        "Video Quality" => "VideoQuality",
         _ => {
             // Remove spaces, ucfirst
             let s: String = tag.split_whitespace().collect::<Vec<_>>().join("");
-            return (ucfirst_first_char(&s), real_parse_prop_value(tag, prop_type, val_data, val_len));
+            return (
+                ucfirst_first_char(&s),
+                real_parse_prop_value(tag, prop_type, val_data, val_len),
+            );
         }
     };
 
@@ -6977,35 +9050,57 @@ fn real_file_info_tag(tag: &str, prop_type: u32, val_data: &[u8], val_len: usize
                     6 => "Adults Only".to_string(),
                     _ => format!("{}", v),
                 })
-            } else { None }
+            } else {
+                None
+            }
         }
         "CreateDate" | "ModifyDate" => {
             // Convert "D/M/YYYY H:MM:SS" to "YYYY:MM:DD HH:MM:SS"
             if prop_type == 2 {
-                let s = crate::encoding::decode_utf8_or_latin1(val_data).trim_matches('\0').to_string();
+                let s = crate::encoding::decode_utf8_or_latin1(val_data)
+                    .trim_matches('\0')
+                    .to_string();
                 Some(real_parse_date(&s))
-            } else { None }
+            } else {
+                None
+            }
         }
-        _ => real_parse_prop_value(tag_name, prop_type, val_data, val_len)
+        _ => real_parse_prop_value(tag_name, prop_type, val_data, val_len),
     };
 
     (tag_name.to_string(), val)
 }
 
-fn real_parse_prop_value(tag: &str, prop_type: u32, val_data: &[u8], val_len: usize) -> Option<String> {
+fn real_parse_prop_value(
+    tag: &str,
+    prop_type: u32,
+    val_data: &[u8],
+    val_len: usize,
+) -> Option<String> {
     let _ = tag;
-    if val_len == 0 { return Some(String::new()); }
+    if val_len == 0 {
+        return Some(String::new());
+    }
     match prop_type {
-        0 => { // int32u
+        0 => {
+            // int32u
             if val_len >= 4 {
-                Some(format!("{}", u32::from_be_bytes([val_data[0], val_data[1], val_data[2], val_data[3]])))
-            } else { None }
+                Some(format!(
+                    "{}",
+                    u32::from_be_bytes([val_data[0], val_data[1], val_data[2], val_data[3]])
+                ))
+            } else {
+                None
+            }
         }
-        2 => { // string
-            let s = crate::encoding::decode_utf8_or_latin1(val_data).trim_matches('\0').to_string();
+        2 => {
+            // string
+            let s = crate::encoding::decode_utf8_or_latin1(val_data)
+                .trim_matches('\0')
+                .to_string();
             Some(s)
         }
-        _ => None
+        _ => None,
     }
 }
 
@@ -7019,68 +9114,151 @@ fn real_parse_date(s: &str) -> String {
         let hour: u32 = parts[3].parse().unwrap_or(0);
         let min: u32 = parts[4].parse().unwrap_or(0);
         let sec: u32 = parts[5].parse().unwrap_or(0);
-        format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", year, month, day, hour, min, sec)
+        format!(
+            "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+            year, month, day, hour, min, sec
+        )
     } else {
         s.to_string()
     }
 }
 
 fn real_parse_cont(data: &[u8], tags: &mut Vec<Tag>) {
-    if data.len() < 8 { return; }
+    if data.len() < 8 {
+        return;
+    }
     let mut off = 0usize;
 
-    let title_len = u16::from_be_bytes([data[off], data[off+1]]) as usize; off += 2;
-    if off + title_len > data.len() { return; }
-    let title = crate::encoding::decode_utf8_or_latin1(&data[off..off+title_len]).to_string(); off += title_len;
+    let title_len = u16::from_be_bytes([data[off], data[off + 1]]) as usize;
+    off += 2;
+    if off + title_len > data.len() {
+        return;
+    }
+    let title = crate::encoding::decode_utf8_or_latin1(&data[off..off + title_len]).to_string();
+    off += title_len;
 
-    if off + 2 > data.len() { return; }
-    let author_len = u16::from_be_bytes([data[off], data[off+1]]) as usize; off += 2;
-    if off + author_len > data.len() { return; }
-    let author = crate::encoding::decode_utf8_or_latin1(&data[off..off+author_len]).to_string(); off += author_len;
+    if off + 2 > data.len() {
+        return;
+    }
+    let author_len = u16::from_be_bytes([data[off], data[off + 1]]) as usize;
+    off += 2;
+    if off + author_len > data.len() {
+        return;
+    }
+    let author = crate::encoding::decode_utf8_or_latin1(&data[off..off + author_len]).to_string();
+    off += author_len;
 
-    if off + 2 > data.len() { return; }
-    let copyright_len = u16::from_be_bytes([data[off], data[off+1]]) as usize; off += 2;
-    if off + copyright_len > data.len() { return; }
-    let copyright = crate::encoding::decode_utf8_or_latin1(&data[off..off+copyright_len]).to_string(); off += copyright_len;
+    if off + 2 > data.len() {
+        return;
+    }
+    let copyright_len = u16::from_be_bytes([data[off], data[off + 1]]) as usize;
+    off += 2;
+    if off + copyright_len > data.len() {
+        return;
+    }
+    let copyright =
+        crate::encoding::decode_utf8_or_latin1(&data[off..off + copyright_len]).to_string();
+    off += copyright_len;
 
-    if off + 2 > data.len() { return; }
-    let comment_len = u16::from_be_bytes([data[off], data[off+1]]) as usize; off += 2;
-    if off + comment_len > data.len() { return; }
-    let comment = crate::encoding::decode_utf8_or_latin1(&data[off..off+comment_len]).to_string();
+    if off + 2 > data.len() {
+        return;
+    }
+    let comment_len = u16::from_be_bytes([data[off], data[off + 1]]) as usize;
+    off += 2;
+    if off + comment_len > data.len() {
+        return;
+    }
+    let comment = crate::encoding::decode_utf8_or_latin1(&data[off..off + comment_len]).to_string();
 
-    if !title.is_empty() { tags.push(mktag("Real", "Title", "Title", Value::String(title))); }
-    if !author.is_empty() { tags.push(mktag("Real", "Author", "Author", Value::String(author))); }
-    if !copyright.is_empty() { tags.push(mktag("Real", "Copyright", "Copyright", Value::String(copyright))); }
-    if !comment.is_empty() { tags.push(mktag("Real", "Comment", "Comment", Value::String(comment))); }
+    if !title.is_empty() {
+        tags.push(mktag("Real", "Title", "Title", Value::String(title)));
+    }
+    if !author.is_empty() {
+        tags.push(mktag("Real", "Author", "Author", Value::String(author)));
+    }
+    if !copyright.is_empty() {
+        tags.push(mktag(
+            "Real",
+            "Copyright",
+            "Copyright",
+            Value::String(copyright),
+        ));
+    }
+    if !comment.is_empty() {
+        tags.push(mktag("Real", "Comment", "Comment", Value::String(comment)));
+    }
 }
 
 fn real_parse_rjmd(data: &[u8], tags: &mut Vec<Tag>) {
     // data starts with RJMD header: RJMD(4) + version(4) + data_len(4) + metadata
     // ProcessRealMeta DirStart=8, DirLen=data.len()-8
-    if data.len() < 8 { return; }
+    if data.len() < 8 {
+        return;
+    }
     let dir_start = 8usize;
     let dir_end = data.len();
     real_parse_rjmd_entries(data, dir_start, dir_end, "", tags);
 }
 
-fn real_parse_rjmd_entries(data: &[u8], pos_start: usize, dir_end: usize, prefix: &str, tags: &mut Vec<Tag>) {
+fn real_parse_rjmd_entries(
+    data: &[u8],
+    pos_start: usize,
+    dir_end: usize,
+    prefix: &str,
+    tags: &mut Vec<Tag>,
+) {
     let mut pos = pos_start;
     while pos + 28 <= dir_end {
-        if pos + 28 > data.len() { break; }
-        let entry_size = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
-        let entry_type = u32::from_be_bytes([data[pos+4], data[pos+5], data[pos+6], data[pos+7]]);
-        let _flags = u32::from_be_bytes([data[pos+8], data[pos+9], data[pos+10], data[pos+11]]);
-        let value_pos_rel = u32::from_be_bytes([data[pos+12], data[pos+13], data[pos+14], data[pos+15]]) as usize;
-        let _sub_pos_rel = u32::from_be_bytes([data[pos+16], data[pos+17], data[pos+18], data[pos+19]]) as usize;
-        let num_sub = u32::from_be_bytes([data[pos+20], data[pos+21], data[pos+22], data[pos+23]]) as usize;
-        let name_len = u32::from_be_bytes([data[pos+24], data[pos+25], data[pos+26], data[pos+27]]) as usize;
+        if pos + 28 > data.len() {
+            break;
+        }
+        let entry_size =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+        let entry_type =
+            u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]);
+        let _flags =
+            u32::from_be_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]]);
+        let value_pos_rel = u32::from_be_bytes([
+            data[pos + 12],
+            data[pos + 13],
+            data[pos + 14],
+            data[pos + 15],
+        ]) as usize;
+        let _sub_pos_rel = u32::from_be_bytes([
+            data[pos + 16],
+            data[pos + 17],
+            data[pos + 18],
+            data[pos + 19],
+        ]) as usize;
+        let num_sub = u32::from_be_bytes([
+            data[pos + 20],
+            data[pos + 21],
+            data[pos + 22],
+            data[pos + 23],
+        ]) as usize;
+        let name_len = u32::from_be_bytes([
+            data[pos + 24],
+            data[pos + 25],
+            data[pos + 26],
+            data[pos + 27],
+        ]) as usize;
 
-        if entry_size < 28 { break; }
-        if pos + entry_size > dir_end { break; }
-        if pos + 28 + name_len > dir_end { break; }
+        if entry_size < 28 {
+            break;
+        }
+        if pos + entry_size > dir_end {
+            break;
+        }
+        if pos + 28 + name_len > dir_end {
+            break;
+        }
 
-        let name_bytes = &data[pos+28..pos+28+name_len];
-        let name = crate::encoding::decode_utf8_or_latin1(name_bytes).split('\0').next().unwrap_or("").to_string();
+        let name_bytes = &data[pos + 28..pos + 28 + name_len];
+        let name = crate::encoding::decode_utf8_or_latin1(name_bytes)
+            .split('\0')
+            .next()
+            .unwrap_or("")
+            .to_string();
 
         let full_name = if prefix.is_empty() {
             name.clone()
@@ -7090,15 +9268,22 @@ fn real_parse_rjmd_entries(data: &[u8], pos_start: usize, dir_end: usize, prefix
 
         let value_pos = value_pos_rel + pos;
         if value_pos + 4 <= dir_end {
-            let value_len = u32::from_be_bytes([data[value_pos], data[value_pos+1], data[value_pos+2], data[value_pos+3]]) as usize;
+            let value_len = u32::from_be_bytes([
+                data[value_pos],
+                data[value_pos + 1],
+                data[value_pos + 2],
+                data[value_pos + 3],
+            ]) as usize;
             let value_start = value_pos + 4;
             if value_start + value_len <= dir_end && entry_type != 9 && entry_type != 10 {
                 // Emit value
-                let val_data = &data[value_start..value_start+value_len];
+                let val_data = &data[value_start..value_start + value_len];
                 let val_str = match entry_type {
                     1 | 2 | 6 | 7 | 8 => {
                         // string/text/url/date/filename
-                        let s = crate::encoding::decode_utf8_or_latin1(val_data).trim_matches('\0').to_string();
+                        let s = crate::encoding::decode_utf8_or_latin1(val_data)
+                            .trim_matches('\0')
+                            .to_string();
                         let s = s.trim_end().to_string();
                         if entry_type == 7 {
                             // date: YYYYMMDDHHMMSS format
@@ -7107,19 +9292,41 @@ fn real_parse_rjmd_entries(data: &[u8], pos_start: usize, dir_end: usize, prefix
                             s
                         }
                     }
-                    4 => { // int32u
+                    4 => {
+                        // int32u
                         if value_len >= 4 {
-                            format!("{}", u32::from_be_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]))
-                        } else { String::new() }
+                            format!(
+                                "{}",
+                                u32::from_be_bytes([
+                                    val_data[0],
+                                    val_data[1],
+                                    val_data[2],
+                                    val_data[3]
+                                ])
+                            )
+                        } else {
+                            String::new()
+                        }
                     }
-                    3 => { // flag
+                    3 => {
+                        // flag
                         if value_len == 4 {
-                            format!("{}", u32::from_be_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]))
+                            format!(
+                                "{}",
+                                u32::from_be_bytes([
+                                    val_data[0],
+                                    val_data[1],
+                                    val_data[2],
+                                    val_data[3]
+                                ])
+                            )
                         } else if value_len >= 1 {
                             format!("{}", val_data[0])
-                        } else { String::new() }
+                        } else {
+                            String::new()
+                        }
                     }
-                    _ => String::new()
+                    _ => String::new(),
                 };
 
                 if !full_name.is_empty() {
@@ -7128,7 +9335,6 @@ fn real_parse_rjmd_entries(data: &[u8], pos_start: usize, dir_end: usize, prefix
                         tags.push(mktag("Real", &tag_name, &tag_name, Value::String(val_str)));
                     }
                 }
-
             }
 
             // Process sub-properties
@@ -7136,7 +9342,13 @@ fn real_parse_rjmd_entries(data: &[u8], pos_start: usize, dir_end: usize, prefix
                 let sub_dir_start = value_pos + 4 + value_len + num_sub * 8;
                 let sub_dir_len = pos + entry_size - sub_dir_start;
                 if sub_dir_start + sub_dir_len <= dir_end && sub_dir_len > 0 {
-                    real_parse_rjmd_entries(data, sub_dir_start, sub_dir_start + sub_dir_len, &full_name, tags);
+                    real_parse_rjmd_entries(
+                        data,
+                        sub_dir_start,
+                        sub_dir_start + sub_dir_len,
+                        &full_name,
+                        tags,
+                    );
                 }
             }
         }
@@ -7148,7 +9360,15 @@ fn real_parse_rjmd_entries(data: &[u8], pos_start: usize, dir_end: usize, prefix
 fn real_parse_rjmd_date(s: &str) -> String {
     // Format: YYYYMMDDHHMMSS
     if s.len() >= 14 {
-        format!("{}:{}:{} {}:{}:{}", &s[..4], &s[4..6], &s[6..8], &s[8..10], &s[10..12], &s[12..14])
+        format!(
+            "{}:{}:{} {}:{}:{}",
+            &s[..4],
+            &s[4..6],
+            &s[6..8],
+            &s[8..10],
+            &s[10..12],
+            &s[12..14]
+        )
     } else {
         s.to_string()
     }
@@ -7161,17 +9381,21 @@ fn real_rjmd_tag_name(full_name: &str) -> String {
     // 'Track/Category' => 'TrackCategory'
     // etc.
     match full_name {
-        "Album/Name"        => "AlbumName".to_string(),
-        "Track/Category"    => "TrackCategory".to_string(),
-        "Track/Comments"    => "TrackComments".to_string(),
-        "Track/Lyrics"      => "TrackLyrics".to_string(),
+        "Album/Name" => "AlbumName".to_string(),
+        "Track/Category" => "TrackCategory".to_string(),
+        "Track/Comments" => "TrackComments".to_string(),
+        "Track/Lyrics" => "TrackLyrics".to_string(),
         _ => {
             // Auto-generate: strip /, remove spaces, ucfirst each component
-            let clean: String = full_name.split('/')
+            let clean: String = full_name
+                .split('/')
                 .filter(|s| !s.is_empty())
                 .map(|s| {
                     // Remove spaces and capitalize
-                    let cleaned: String = s.chars().filter(|&c| c.is_alphanumeric() || c == '_').collect();
+                    let cleaned: String = s
+                        .chars()
+                        .filter(|&c| c.is_alphanumeric() || c == '_')
+                        .collect();
                     ucfirst_first_char(&cleaned)
                 })
                 .collect();
@@ -7194,7 +9418,9 @@ fn ucfirst_first_char(s: &str) -> String {
 fn real_parse_id3v1(data: &[u8], tags: &mut Vec<Tag>) {
     // Simple ID3v1 parser (128 bytes starting with "TAG")
     // PRIORITY => 0 means these tags don't override already-set tags
-    if data.len() < 128 || &data[..3] != b"TAG" { return; }
+    if data.len() < 128 || &data[..3] != b"TAG" {
+        return;
+    }
 
     // Title: bytes 3..33 (30 bytes)
     let title = read_null_terminated_str(&data[3..33]);
@@ -7233,7 +9459,12 @@ fn real_parse_id3v1(data: &[u8], tags: &mut Vec<Tag>) {
     }
     if let Some(genre_name) = id3v1_genre_name(genre_byte) {
         if !tags.iter().any(|t| t.name == "Genre") {
-            new_tags.push(mktag("ID3", "Genre", "Genre", Value::String(genre_name.to_string())));
+            new_tags.push(mktag(
+                "ID3",
+                "Genre",
+                "Genre",
+                Value::String(genre_name.to_string()),
+            ));
         }
     }
     tags.extend(new_tags);
@@ -7241,72 +9472,198 @@ fn real_parse_id3v1(data: &[u8], tags: &mut Vec<Tag>) {
 
 fn id3v1_genre_name(n: usize) -> Option<&'static str> {
     match n {
-        0 => Some("Blues"), 1 => Some("Classic Rock"), 2 => Some("Country"),
-        3 => Some("Dance"), 4 => Some("Disco"), 5 => Some("Funk"),
-        6 => Some("Grunge"), 7 => Some("Hip-Hop"), 8 => Some("Jazz"),
-        9 => Some("Metal"), 10 => Some("New Age"), 11 => Some("Oldies"),
-        12 => Some("Other"), 13 => Some("Pop"), 14 => Some("R&B"),
-        15 => Some("Rap"), 16 => Some("Reggae"), 17 => Some("Rock"),
-        18 => Some("Techno"), 19 => Some("Industrial"), 20 => Some("Alternative"),
-        21 => Some("Ska"), 22 => Some("Death Metal"), 23 => Some("Pranks"),
-        24 => Some("Soundtrack"), 25 => Some("Euro-Techno"), 26 => Some("Ambient"),
-        27 => Some("Trip-Hop"), 28 => Some("Vocal"), 29 => Some("Jazz+Funk"),
-        30 => Some("Fusion"), 31 => Some("Trance"), 32 => Some("Classical"),
-        33 => Some("Instrumental"), 34 => Some("Acid"), 35 => Some("House"),
-        36 => Some("Game"), 37 => Some("Sound Clip"), 38 => Some("Gospel"),
-        39 => Some("Noise"), 40 => Some("Alt. Rock"), 41 => Some("Bass"),
-        42 => Some("Soul"), 43 => Some("Punk"), 44 => Some("Space"),
-        45 => Some("Meditative"), 46 => Some("Instrumental Pop"),
-        47 => Some("Instrumental Rock"), 48 => Some("Ethnic"), 49 => Some("Gothic"),
-        50 => Some("Darkwave"), 51 => Some("Techno-Industrial"), 52 => Some("Electronic"),
-        53 => Some("Pop-Folk"), 54 => Some("Eurodance"), 55 => Some("Dream"),
-        56 => Some("Southern Rock"), 57 => Some("Comedy"), 58 => Some("Cult"),
-        59 => Some("Gangsta Rap"), 60 => Some("Top 40"), 61 => Some("Christian Rap"),
-        62 => Some("Pop/Funk"), 63 => Some("Jungle"), 64 => Some("Native American"),
-        65 => Some("Cabaret"), 66 => Some("New Wave"), 67 => Some("Psychedelic"),
-        68 => Some("Rave"), 69 => Some("Showtunes"), 70 => Some("Trailer"),
-        71 => Some("Lo-Fi"), 72 => Some("Tribal"), 73 => Some("Acid Punk"),
-        74 => Some("Acid Jazz"), 75 => Some("Polka"), 76 => Some("Retro"),
-        77 => Some("Musical"), 78 => Some("Rock & Roll"), 79 => Some("Hard Rock"),
-        80 => Some("Folk"), 81 => Some("Folk-Rock"), 82 => Some("National Folk"),
-        83 => Some("Swing"), 84 => Some("Fast-Fusion"), 85 => Some("Bebop"),
-        86 => Some("Latin"), 87 => Some("Revival"), 88 => Some("Celtic"),
-        89 => Some("Bluegrass"), 90 => Some("Avantgarde"), 91 => Some("Gothic Rock"),
-        92 => Some("Progressive Rock"), 93 => Some("Psychedelic Rock"),
-        94 => Some("Symphonic Rock"), 95 => Some("Slow Rock"), 96 => Some("Big Band"),
-        97 => Some("Chorus"), 98 => Some("Easy Listening"), 99 => Some("Acoustic"),
-        100 => Some("Humour"), 101 => Some("Speech"), 102 => Some("Chanson"),
-        103 => Some("Opera"), 104 => Some("Chamber Music"), 105 => Some("Sonata"),
-        106 => Some("Symphony"), 107 => Some("Booty Bass"), 108 => Some("Primus"),
-        109 => Some("Porn Groove"), 110 => Some("Satire"), 111 => Some("Slow Jam"),
-        112 => Some("Club"), 113 => Some("Tango"), 114 => Some("Samba"),
-        115 => Some("Folklore"), 116 => Some("Ballad"), 117 => Some("Power Ballad"),
-        118 => Some("Rhythmic Soul"), 119 => Some("Freestyle"), 120 => Some("Duet"),
-        121 => Some("Punk Rock"), 122 => Some("Drum Solo"), 123 => Some("A Cappella"),
-        124 => Some("Euro-House"), 125 => Some("Dance Hall"), 126 => Some("Goa"),
-        127 => Some("Drum & Bass"), 128 => Some("Club-House"), 129 => Some("Hardcore"),
-        130 => Some("Terror"), 131 => Some("Indie"), 132 => Some("BritPop"),
-        133 => Some("Afro-Punk"), 134 => Some("Polsk Punk"), 135 => Some("Beat"),
-        136 => Some("Christian Gangsta Rap"), 137 => Some("Heavy Metal"),
-        138 => Some("Black Metal"), 139 => Some("Crossover"),
-        140 => Some("Contemporary Christian"), 141 => Some("Christian Rock"),
-        142 => Some("Merengue"), 143 => Some("Salsa"), 144 => Some("Thrash Metal"),
-        145 => Some("Anime"), 146 => Some("JPop"), 147 => Some("Synthpop"),
-        148 => Some("Abstract"), 149 => Some("Art Rock"), 150 => Some("Baroque"),
-        151 => Some("Bhangra"), 152 => Some("Big Beat"), 153 => Some("Breakbeat"),
-        154 => Some("Chillout"), 155 => Some("Downtempo"), 156 => Some("Dub"),
-        157 => Some("EBM"), 158 => Some("Eclectic"), 159 => Some("Electro"),
-        160 => Some("Electroclash"), 161 => Some("Emo"), 162 => Some("Experimental"),
-        163 => Some("Garage"), 164 => Some("Global"), 165 => Some("IDM"),
-        166 => Some("Illbient"), 167 => Some("Industro-Goth"), 168 => Some("Jam Band"),
-        169 => Some("Krautrock"), 170 => Some("Leftfield"), 171 => Some("Lounge"),
-        172 => Some("Math Rock"), 173 => Some("New Romantic"), 174 => Some("Nu-Breakz"),
-        175 => Some("Post-Punk"), 176 => Some("Post-Rock"), 177 => Some("Psytrance"),
-        178 => Some("Shoegaze"), 179 => Some("Space Rock"), 180 => Some("Trop Rock"),
-        181 => Some("World Music"), 182 => Some("Neoclassical"), 183 => Some("Audiobook"),
-        184 => Some("Audio Theatre"), 185 => Some("Neue Deutsche Welle"),
-        186 => Some("Podcast"), 187 => Some("Indie Rock"), 188 => Some("G-Funk"),
-        189 => Some("Dubstep"), 190 => Some("Garage Rock"), 191 => Some("Psybient"),
+        0 => Some("Blues"),
+        1 => Some("Classic Rock"),
+        2 => Some("Country"),
+        3 => Some("Dance"),
+        4 => Some("Disco"),
+        5 => Some("Funk"),
+        6 => Some("Grunge"),
+        7 => Some("Hip-Hop"),
+        8 => Some("Jazz"),
+        9 => Some("Metal"),
+        10 => Some("New Age"),
+        11 => Some("Oldies"),
+        12 => Some("Other"),
+        13 => Some("Pop"),
+        14 => Some("R&B"),
+        15 => Some("Rap"),
+        16 => Some("Reggae"),
+        17 => Some("Rock"),
+        18 => Some("Techno"),
+        19 => Some("Industrial"),
+        20 => Some("Alternative"),
+        21 => Some("Ska"),
+        22 => Some("Death Metal"),
+        23 => Some("Pranks"),
+        24 => Some("Soundtrack"),
+        25 => Some("Euro-Techno"),
+        26 => Some("Ambient"),
+        27 => Some("Trip-Hop"),
+        28 => Some("Vocal"),
+        29 => Some("Jazz+Funk"),
+        30 => Some("Fusion"),
+        31 => Some("Trance"),
+        32 => Some("Classical"),
+        33 => Some("Instrumental"),
+        34 => Some("Acid"),
+        35 => Some("House"),
+        36 => Some("Game"),
+        37 => Some("Sound Clip"),
+        38 => Some("Gospel"),
+        39 => Some("Noise"),
+        40 => Some("Alt. Rock"),
+        41 => Some("Bass"),
+        42 => Some("Soul"),
+        43 => Some("Punk"),
+        44 => Some("Space"),
+        45 => Some("Meditative"),
+        46 => Some("Instrumental Pop"),
+        47 => Some("Instrumental Rock"),
+        48 => Some("Ethnic"),
+        49 => Some("Gothic"),
+        50 => Some("Darkwave"),
+        51 => Some("Techno-Industrial"),
+        52 => Some("Electronic"),
+        53 => Some("Pop-Folk"),
+        54 => Some("Eurodance"),
+        55 => Some("Dream"),
+        56 => Some("Southern Rock"),
+        57 => Some("Comedy"),
+        58 => Some("Cult"),
+        59 => Some("Gangsta Rap"),
+        60 => Some("Top 40"),
+        61 => Some("Christian Rap"),
+        62 => Some("Pop/Funk"),
+        63 => Some("Jungle"),
+        64 => Some("Native American"),
+        65 => Some("Cabaret"),
+        66 => Some("New Wave"),
+        67 => Some("Psychedelic"),
+        68 => Some("Rave"),
+        69 => Some("Showtunes"),
+        70 => Some("Trailer"),
+        71 => Some("Lo-Fi"),
+        72 => Some("Tribal"),
+        73 => Some("Acid Punk"),
+        74 => Some("Acid Jazz"),
+        75 => Some("Polka"),
+        76 => Some("Retro"),
+        77 => Some("Musical"),
+        78 => Some("Rock & Roll"),
+        79 => Some("Hard Rock"),
+        80 => Some("Folk"),
+        81 => Some("Folk-Rock"),
+        82 => Some("National Folk"),
+        83 => Some("Swing"),
+        84 => Some("Fast-Fusion"),
+        85 => Some("Bebop"),
+        86 => Some("Latin"),
+        87 => Some("Revival"),
+        88 => Some("Celtic"),
+        89 => Some("Bluegrass"),
+        90 => Some("Avantgarde"),
+        91 => Some("Gothic Rock"),
+        92 => Some("Progressive Rock"),
+        93 => Some("Psychedelic Rock"),
+        94 => Some("Symphonic Rock"),
+        95 => Some("Slow Rock"),
+        96 => Some("Big Band"),
+        97 => Some("Chorus"),
+        98 => Some("Easy Listening"),
+        99 => Some("Acoustic"),
+        100 => Some("Humour"),
+        101 => Some("Speech"),
+        102 => Some("Chanson"),
+        103 => Some("Opera"),
+        104 => Some("Chamber Music"),
+        105 => Some("Sonata"),
+        106 => Some("Symphony"),
+        107 => Some("Booty Bass"),
+        108 => Some("Primus"),
+        109 => Some("Porn Groove"),
+        110 => Some("Satire"),
+        111 => Some("Slow Jam"),
+        112 => Some("Club"),
+        113 => Some("Tango"),
+        114 => Some("Samba"),
+        115 => Some("Folklore"),
+        116 => Some("Ballad"),
+        117 => Some("Power Ballad"),
+        118 => Some("Rhythmic Soul"),
+        119 => Some("Freestyle"),
+        120 => Some("Duet"),
+        121 => Some("Punk Rock"),
+        122 => Some("Drum Solo"),
+        123 => Some("A Cappella"),
+        124 => Some("Euro-House"),
+        125 => Some("Dance Hall"),
+        126 => Some("Goa"),
+        127 => Some("Drum & Bass"),
+        128 => Some("Club-House"),
+        129 => Some("Hardcore"),
+        130 => Some("Terror"),
+        131 => Some("Indie"),
+        132 => Some("BritPop"),
+        133 => Some("Afro-Punk"),
+        134 => Some("Polsk Punk"),
+        135 => Some("Beat"),
+        136 => Some("Christian Gangsta Rap"),
+        137 => Some("Heavy Metal"),
+        138 => Some("Black Metal"),
+        139 => Some("Crossover"),
+        140 => Some("Contemporary Christian"),
+        141 => Some("Christian Rock"),
+        142 => Some("Merengue"),
+        143 => Some("Salsa"),
+        144 => Some("Thrash Metal"),
+        145 => Some("Anime"),
+        146 => Some("JPop"),
+        147 => Some("Synthpop"),
+        148 => Some("Abstract"),
+        149 => Some("Art Rock"),
+        150 => Some("Baroque"),
+        151 => Some("Bhangra"),
+        152 => Some("Big Beat"),
+        153 => Some("Breakbeat"),
+        154 => Some("Chillout"),
+        155 => Some("Downtempo"),
+        156 => Some("Dub"),
+        157 => Some("EBM"),
+        158 => Some("Eclectic"),
+        159 => Some("Electro"),
+        160 => Some("Electroclash"),
+        161 => Some("Emo"),
+        162 => Some("Experimental"),
+        163 => Some("Garage"),
+        164 => Some("Global"),
+        165 => Some("IDM"),
+        166 => Some("Illbient"),
+        167 => Some("Industro-Goth"),
+        168 => Some("Jam Band"),
+        169 => Some("Krautrock"),
+        170 => Some("Leftfield"),
+        171 => Some("Lounge"),
+        172 => Some("Math Rock"),
+        173 => Some("New Romantic"),
+        174 => Some("Nu-Breakz"),
+        175 => Some("Post-Punk"),
+        176 => Some("Post-Rock"),
+        177 => Some("Psytrance"),
+        178 => Some("Shoegaze"),
+        179 => Some("Space Rock"),
+        180 => Some("Trop Rock"),
+        181 => Some("World Music"),
+        182 => Some("Neoclassical"),
+        183 => Some("Audiobook"),
+        184 => Some("Audio Theatre"),
+        185 => Some("Neue Deutsche Welle"),
+        186 => Some("Podcast"),
+        187 => Some("Indie Rock"),
+        188 => Some("G-Funk"),
+        189 => Some("Dubstep"),
+        190 => Some("Garage Rock"),
+        191 => Some("Psybient"),
         255 => Some("None"),
         _ => None,
     }
@@ -7314,7 +9671,9 @@ fn id3v1_genre_name(n: usize) -> Option<&'static str> {
 
 fn read_null_terminated_str(bytes: &[u8]) -> String {
     let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
-    crate::encoding::decode_utf8_or_latin1(&bytes[..end]).trim().to_string()
+    crate::encoding::decode_utf8_or_latin1(&bytes[..end])
+        .trim()
+        .to_string()
 }
 
 fn real_convert_bitrate(bps: f64) -> String {
@@ -7345,30 +9704,47 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
     let sv = pcd[7];
     let sv2 = pcd[8];
     if sv != 255 || sv2 != 255 {
-        tags.push(mktag("PhotoCD", "SpecificationVersion", "Specification Version",
-            Value::String(format!("{}.{}", sv, sv2))));
+        tags.push(mktag(
+            "PhotoCD",
+            "SpecificationVersion",
+            "Specification Version",
+            Value::String(format!("{}.{}", sv, sv2)),
+        ));
     }
 
     // Byte 9: AuthoringSoftwareRelease (int8u[2])
     let ar = pcd[9];
     let ar2 = pcd[10];
     if ar != 255 || ar2 != 255 {
-        tags.push(mktag("PhotoCD", "AuthoringSoftwareRelease", "Authoring Software Release",
-            Value::String(format!("{}.{}", ar, ar2))));
+        tags.push(mktag(
+            "PhotoCD",
+            "AuthoringSoftwareRelease",
+            "Authoring Software Release",
+            Value::String(format!("{}.{}", ar, ar2)),
+        ));
     }
 
     // Byte 11: ImageMagnificationDescriptor (int8u[2])
     let im1 = pcd[11];
     let im2 = pcd[12];
-    tags.push(mktag("PhotoCD", "ImageMagnificationDescriptor", "Image Magnification Descriptor",
-        Value::String(format!("{}.{}", im1, im2))));
+    tags.push(mktag(
+        "PhotoCD",
+        "ImageMagnificationDescriptor",
+        "Image Magnification Descriptor",
+        Value::String(format!("{}.{}", im1, im2)),
+    ));
 
     // Byte 13: CreateDate (int32u BE, unix time)
     if pcd.len() >= 17 {
         let ts = u32::from_be_bytes([pcd[13], pcd[14], pcd[15], pcd[16]]);
         if ts != 0xffffffff {
             let dt = gzip_unix_to_datetime(ts as i64);
-            tags.push(mktag("PhotoCD", "CreateDate", "Create Date", Value::String(dt)));
+            tags.push(mktag(
+                "PhotoCD",
+                "CreateDate",
+                "Create Date",
+                Value::String(dt),
+            ));
         }
     }
 
@@ -7377,7 +9753,12 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
         let ts = u32::from_be_bytes([pcd[17], pcd[18], pcd[19], pcd[20]]);
         if ts != 0xffffffff {
             let dt = gzip_unix_to_datetime(ts as i64);
-            tags.push(mktag("PhotoCD", "ModifyDate", "Modify Date", Value::String(dt)));
+            tags.push(mktag(
+                "PhotoCD",
+                "ModifyDate",
+                "Modify Date",
+                Value::String(dt),
+            ));
         }
     }
 
@@ -7396,14 +9777,24 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "",
     };
     if !medium_str.is_empty() {
-        tags.push(mktag("PhotoCD", "ImageMedium", "Image Medium", Value::String(medium_str.into())));
+        tags.push(mktag(
+            "PhotoCD",
+            "ImageMedium",
+            "Image Medium",
+            Value::String(medium_str.into()),
+        ));
     }
 
     // Byte 22: ProductType (string[20])
     if pcd.len() >= 42 {
         let s = pcd_rtrim_str(&pcd[22..42]);
         if !s.is_empty() {
-            tags.push(mktag("PhotoCD", "ProductType", "Product Type", Value::String(s)));
+            tags.push(mktag(
+                "PhotoCD",
+                "ProductType",
+                "Product Type",
+                Value::String(s),
+            ));
         }
     }
 
@@ -7411,7 +9802,12 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
     if pcd.len() >= 62 {
         let s = pcd_rtrim_str(&pcd[42..62]);
         if !s.is_empty() {
-            tags.push(mktag("PhotoCD", "ScannerVendorID", "Scanner Vendor ID", Value::String(s)));
+            tags.push(mktag(
+                "PhotoCD",
+                "ScannerVendorID",
+                "Scanner Vendor ID",
+                Value::String(s),
+            ));
         }
     }
 
@@ -7419,7 +9815,12 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
     if pcd.len() >= 78 {
         let s = pcd_rtrim_str(&pcd[62..78]);
         if !s.is_empty() {
-            tags.push(mktag("PhotoCD", "ScannerProductID", "Scanner Product ID", Value::String(s)));
+            tags.push(mktag(
+                "PhotoCD",
+                "ScannerProductID",
+                "Scanner Product ID",
+                Value::String(s),
+            ));
         }
     }
 
@@ -7427,7 +9828,12 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
     if pcd.len() >= 82 {
         let s = pcd_rtrim_str(&pcd[78..82]);
         if !s.is_empty() {
-            tags.push(mktag("PhotoCD", "ScannerFirmwareVersion", "Scanner Firmware Version", Value::String(s)));
+            tags.push(mktag(
+                "PhotoCD",
+                "ScannerFirmwareVersion",
+                "Scanner Firmware Version",
+                Value::String(s),
+            ));
         }
     }
 
@@ -7435,14 +9841,24 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
     if pcd.len() >= 90 {
         let s = pcd_rtrim_str(&pcd[82..90]);
         // Always emit (even if empty string)
-        tags.push(mktag("PhotoCD", "ScannerFirmwareDate", "Scanner Firmware Date", Value::String(s)));
+        tags.push(mktag(
+            "PhotoCD",
+            "ScannerFirmwareDate",
+            "Scanner Firmware Date",
+            Value::String(s),
+        ));
     }
 
     // Byte 90: ScannerSerialNumber (string[20])
     if pcd.len() >= 110 {
         let s = pcd_rtrim_str(&pcd[90..110]);
         if !s.is_empty() {
-            tags.push(mktag("PhotoCD", "ScannerSerialNumber", "Scanner Serial Number", Value::String(s)));
+            tags.push(mktag(
+                "PhotoCD",
+                "ScannerSerialNumber",
+                "Scanner Serial Number",
+                Value::String(s),
+            ));
         }
     }
 
@@ -7450,21 +9866,32 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
     if pcd.len() >= 112 {
         let h1 = pcd[110];
         let h2 = pcd[111];
-        let pixel_size = format!("{:02x}.{:02x}", h1, h2).trim_start_matches('0').to_string();
+        let pixel_size = format!("{:02x}.{:02x}", h1, h2)
+            .trim_start_matches('0')
+            .to_string();
         let pixel_size = if pixel_size.starts_with('.') {
             format!("0{}", pixel_size)
         } else {
             pixel_size
         };
-        tags.push(mktag("PhotoCD", "ScannerPixelSize", "Scanner Pixel Size",
-            Value::String(format!("{} micrometers", pixel_size))));
+        tags.push(mktag(
+            "PhotoCD",
+            "ScannerPixelSize",
+            "Scanner Pixel Size",
+            Value::String(format!("{} micrometers", pixel_size)),
+        ));
     }
 
     // Byte 112: ImageWorkstationMake (string[20])
     if pcd.len() >= 132 {
         let s = pcd_rtrim_str(&pcd[112..132]);
         if !s.is_empty() {
-            tags.push(mktag("PhotoCD", "ImageWorkstationMake", "Image Workstation Make", Value::String(s)));
+            tags.push(mktag(
+                "PhotoCD",
+                "ImageWorkstationMake",
+                "Image Workstation Make",
+                Value::String(s),
+            ));
         }
     }
 
@@ -7481,7 +9908,12 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
             _ => "",
         };
         if !cs_str.is_empty() {
-            tags.push(mktag("PhotoCD", "CharacterSet", "Character Set", Value::String(cs_str.into())));
+            tags.push(mktag(
+                "PhotoCD",
+                "CharacterSet",
+                "Character Set",
+                Value::String(cs_str.into()),
+            ));
         }
     }
 
@@ -7489,7 +9921,12 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
     if pcd.len() >= 225 {
         let s = pcd_rtrim_str(&pcd[165..225]);
         if !s.is_empty() {
-            tags.push(mktag("PhotoCD", "PhotoFinisherName", "Photo Finisher Name", Value::String(s)));
+            tags.push(mktag(
+                "PhotoCD",
+                "PhotoFinisherName",
+                "Photo Finisher Name",
+                Value::String(s),
+            ));
         }
     }
 
@@ -7500,8 +9937,12 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
         // Byte 228: SceneBalanceAlgorithmRevision (int8u[2])
         let r1 = pcd[228];
         let r2 = pcd[229];
-        tags.push(mktag("PhotoCD", "SceneBalanceAlgorithmRevision", "Scene Balance Algorithm Revision",
-            Value::String(format!("{}.{}", r1, r2))));
+        tags.push(mktag(
+            "PhotoCD",
+            "SceneBalanceAlgorithmRevision",
+            "Scene Balance Algorithm Revision",
+            Value::String(format!("{}.{}", r1, r2)),
+        ));
 
         // Byte 230: SceneBalanceAlgorithmCommand
         let cmd = pcd[230];
@@ -7513,16 +9954,24 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
             _ => "",
         };
         if !cmd_str.is_empty() {
-            tags.push(mktag("PhotoCD", "SceneBalanceAlgorithmCommand", "Scene Balance Algorithm Command",
-                Value::String(cmd_str.into())));
+            tags.push(mktag(
+                "PhotoCD",
+                "SceneBalanceAlgorithmCommand",
+                "Scene Balance Algorithm Command",
+                Value::String(cmd_str.into()),
+            ));
         }
 
         // Byte 325: SceneBalanceAlgorithmFilmID (int16u BE)
         if pcd.len() >= 327 {
             let film_id = u16::from_be_bytes([pcd[325], pcd[326]]) as u32;
             let film_str = pcd_film_id_name(film_id);
-            tags.push(mktag("PhotoCD", "SceneBalanceAlgorithmFilmID", "Scene Balance Algorithm Film ID",
-                Value::String(film_str.to_string())));
+            tags.push(mktag(
+                "PhotoCD",
+                "SceneBalanceAlgorithmFilmID",
+                "Scene Balance Algorithm Film ID",
+                Value::String(film_str.to_string()),
+            ));
         }
 
         // Byte 331: CopyrightStatus
@@ -7534,7 +9983,12 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
                 _ => "",
             };
             if !cs_str.is_empty() {
-                tags.push(mktag("PhotoCD", "CopyrightStatus", "Copyright Status", Value::String(cs_str.into())));
+                tags.push(mktag(
+                    "PhotoCD",
+                    "CopyrightStatus",
+                    "Copyright Status",
+                    Value::String(cs_str.into()),
+                ));
             }
         }
     }
@@ -7553,20 +10007,39 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
             3 => "Rotate 90 CW",
             _ => "",
         };
-        tags.push(mktag("PhotoCD", "Orientation", "Orientation", Value::String(orient_str.into())));
+        tags.push(mktag(
+            "PhotoCD",
+            "Orientation",
+            "Orientation",
+            Value::String(orient_str.into()),
+        ));
 
         // ImageWidth and ImageHeight depend on orientation
         // Base size: 768x512 (landscape), 512x768 (portrait for rotate 90/270)
         // size_raw: 0=Base (768x512), 1=4Base, 2=16Base
         // scale factor: $val * 2 || 1 = if size_raw > 0 { size_raw * 2 } else { 1 }
-        let scale = if size_raw > 0 { (size_raw * 2) as u32 } else { 1 };
+        let scale = if size_raw > 0 {
+            (size_raw * 2) as u32
+        } else {
+            1
+        };
         let (w, h) = if orient_raw & 0x01 != 0 {
             (512 * scale, 768 * scale) // portrait
         } else {
             (768 * scale, 512 * scale) // landscape
         };
-        tags.push(mktag("PhotoCD", "ImageWidth", "Image Width", Value::String(w.to_string())));
-        tags.push(mktag("PhotoCD", "ImageHeight", "Image Height", Value::String(h.to_string())));
+        tags.push(mktag(
+            "PhotoCD",
+            "ImageWidth",
+            "Image Width",
+            Value::String(w.to_string()),
+        ));
+        tags.push(mktag(
+            "PhotoCD",
+            "ImageHeight",
+            "Image Height",
+            Value::String(h.to_string()),
+        ));
 
         let class_str = match class_raw {
             0 => "Class 1 - 35mm film; Pictoral hard copy",
@@ -7576,7 +10049,12 @@ pub fn read_photo_cd(data: &[u8]) -> Result<Vec<Tag>> {
             _ => "",
         };
         if !class_str.is_empty() {
-            tags.push(mktag("PhotoCD", "CompressionClass", "Compression Class", Value::String(class_str.into())));
+            tags.push(mktag(
+                "PhotoCD",
+                "CompressionClass",
+                "Compression Class",
+                Value::String(class_str.into()),
+            ));
         }
     }
 
@@ -7587,120 +10065,230 @@ fn pcd_rtrim_str(bytes: &[u8]) -> String {
     // Perl's string[] format reads to null terminator, then trims trailing spaces/NULs
     let null_end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
     let s = crate::encoding::decode_utf8_or_latin1(&bytes[..null_end]);
-    s.trim_end_matches(|c: char| c == ' ' || c == '\0').to_string()
+    s.trim_end_matches(|c: char| c == ' ' || c == '\0')
+        .to_string()
 }
 
 fn pcd_film_id_name(n: u32) -> &'static str {
     match n {
-        1 => "3M ScotchColor AT 100", 2 => "3M ScotchColor AT 200",
-        3 => "3M ScotchColor HR2 400", 7 => "3M Scotch HR 200 Gen 2",
-        9 => "3M Scotch HR 400 Gen 2", 16 => "Agfa Agfacolor XRS 400 Gen 1",
-        17 => "Agfa Agfacolor XRG/XRS 400", 18 => "Agfa Agfacolor XRG/XRS 200",
-        19 => "Agfa Agfacolor XRS 1000 Gen 2", 20 => "Agfa Agfacolor XRS 400 Gen 2",
-        21 => "Agfa Agfacolor XRS/XRC 100", 26 => "Fuji Reala 100 (JAPAN)",
-        27 => "Fuji Reala 100 Gen 1", 28 => "Fuji Reala 100 Gen 2",
-        29 => "Fuji SHR 400 Gen 2", 30 => "Fuji Super HG 100",
-        31 => "Fuji Super HG 1600 Gen 1", 32 => "Fuji Super HG 200",
-        33 => "Fuji Super HG 400", 34 => "Fuji Super HG 100 Gen 2",
-        35 => "Fuji Super HR 100 Gen 1", 36 => "Fuji Super HR 100 Gen 2",
-        37 => "Fuji Super HR 1600 Gen 2", 38 => "Fuji Super HR 200 Gen 1",
-        39 => "Fuji Super HR 200 Gen 2", 40 => "Fuji Super HR 400 Gen 1",
-        43 => "Fuji NSP 160S (Pro)", 45 => "Kodak Kodacolor VR 100 Gen 2",
-        47 => "Kodak Gold 400 Gen 3", 55 => "Kodak Ektar 100 Gen 1",
-        56 => "Kodak Ektar 1000 Gen 1", 57 => "Kodak Ektar 125 Gen 1",
-        58 => "Kodak Royal Gold 25 RZ", 60 => "Kodak Gold 1600 Gen 1",
-        61 => "Kodak Gold 200 Gen 2", 62 => "Kodak Gold 400 Gen 2",
-        65 => "Kodak Kodacolor VR 100 Gen 1", 66 => "Kodak Kodacolor VR 1000 Gen 2",
-        67 => "Kodak Kodacolor VR 1000 Gen 1", 68 => "Kodak Kodacolor VR 200 Gen 1",
-        69 => "Kodak Kodacolor VR 400 Gen 1", 70 => "Kodak Kodacolor VR 200 Gen 2",
-        71 => "Kodak Kodacolor VRG 100 Gen 1", 72 => "Kodak Gold 100 Gen 2",
-        73 => "Kodak Kodacolor VRG 200 Gen 1", 74 => "Kodak Gold 400 Gen 1",
-        87 => "Kodak Ektacolor Gold 160", 88 => "Kodak Ektapress 1600 Gen 1 PPC",
-        89 => "Kodak Ektapress Gold 100 Gen 1 PPA", 90 => "Kodak Ektapress Gold 400 PPB-3",
-        92 => "Kodak Ektar 25 Professional PHR", 97 => "Kodak T-Max 100 Professional",
-        98 => "Kodak T-Max 3200 Professional", 99 => "Kodak T-Max 400 Professional",
-        101 => "Kodak Vericolor 400 Prof VPH", 102 => "Kodak Vericolor III Pro",
-        121 => "Konika Konica Color SR-G 3200", 122 => "Konika Konica Color Super SR100",
-        123 => "Konika Konica Color Super SR 400", 138 => "Kodak Gold Unknown",
-        139 => "Kodak Unknown Neg A- Normal SBA", 143 => "Kodak Ektar 100 Gen 2",
-        147 => "Kodak Kodacolor CII", 148 => "Kodak Kodacolor II",
-        149 => "Kodak Gold Plus 200 Gen 3", 150 => "Kodak Internegative +10% Contrast",
-        151 => "Agfa Agfacolor Ultra 50", 152 => "Fuji NHG 400",
-        153 => "Agfa Agfacolor XRG 100", 154 => "Kodak Gold Plus 100 Gen 3",
-        155 => "Konika Konica Color Super SR200 Gen 1", 156 => "Konika Konica Color SR-G 160",
-        157 => "Agfa Agfacolor Optima 125", 158 => "Agfa Agfacolor Portrait 160",
-        162 => "Kodak Kodacolor VRG 400 Gen 1", 163 => "Kodak Gold 200 Gen 1",
-        164 => "Kodak Kodacolor VRG 100 Gen 2", 174 => "Kodak Internegative +20% Contrast",
-        175 => "Kodak Internegative +30% Contrast", 176 => "Kodak Internegative +40% Contrast",
-        184 => "Kodak TMax-100 D-76 CI = .40", 185 => "Kodak TMax-100 D-76 CI = .50",
-        186 => "Kodak TMax-100 D-76 CI = .55", 187 => "Kodak TMax-100 D-76 CI = .70",
-        188 => "Kodak TMax-100 D-76 CI = .80", 189 => "Kodak TMax-100 TMax CI = .40",
-        190 => "Kodak TMax-100 TMax CI = .50", 191 => "Kodak TMax-100 TMax CI = .55",
-        192 => "Kodak TMax-100 TMax CI = .70", 193 => "Kodak TMax-100 TMax CI = .80",
-        195 => "Kodak TMax-400 D-76 CI = .40", 196 => "Kodak TMax-400 D-76 CI = .50",
-        197 => "Kodak TMax-400 D-76 CI = .55", 198 => "Kodak TMax-400 D-76 CI = .70",
-        214 => "Kodak TMax-400 D-76 CI = .80", 215 => "Kodak TMax-400 TMax CI = .40",
-        216 => "Kodak TMax-400 TMax CI = .50", 217 => "Kodak TMax-400 TMax CI = .55",
-        218 => "Kodak TMax-400 TMax CI = .70", 219 => "Kodak TMax-400 TMax CI = .80",
-        224 => "3M ScotchColor ATG 400/EXL 400", 266 => "Agfa Agfacolor Optima 200",
-        267 => "Konika Impressa 50", 268 => "Polaroid Polaroid CP 200",
-        269 => "Konika Konica Color Super SR200 Gen 2", 270 => "ILFORD XP2 400",
-        271 => "Polaroid Polaroid Color HD2 100", 272 => "Polaroid Polaroid Color HD2 400",
-        273 => "Polaroid Polaroid Color HD2 200", 282 => "3M ScotchColor ATG-1 200",
-        284 => "Konika XG 400", 307 => "Kodak Universal Reversal B/W",
-        308 => "Kodak RPC Copy Film Gen 1", 312 => "Kodak Universal E6",
-        324 => "Kodak Gold Ultra 400 Gen 4", 328 => "Fuji Super G 100",
-        329 => "Fuji Super G 200", 330 => "Fuji Super G 400 Gen 2",
-        333 => "Kodak Universal K14", 334 => "Fuji Super G 400 Gen 1",
-        366 => "Kodak Vericolor HC 6329 VHC", 367 => "Kodak Vericolor HC 4329 VHC",
-        368 => "Kodak Vericolor L 6013 VPL", 369 => "Kodak Vericolor L 4013 VPL",
-        418 => "Kodak Ektacolor Gold II 400 Prof", 430 => "Kodak Royal Gold 1000",
-        431 => "Kodak Kodacolor VR 200 / 5093", 432 => "Kodak Gold Plus 100 Gen 4",
-        443 => "Kodak Royal Gold 100", 444 => "Kodak Royal Gold 400",
-        445 => "Kodak Universal E6 auto-balance", 446 => "Kodak Universal E6 illum. corr.",
-        447 => "Kodak Universal K14 auto-balance", 448 => "Kodak Universal K14 illum. corr.",
-        449 => "Kodak Ektar 100 Gen 3 SY", 456 => "Kodak Ektar 25",
-        457 => "Kodak Ektar 100 Gen 3 CX", 458 => "Kodak Ektapress Plus 100 Prof PJA-1",
-        459 => "Kodak Ektapress Gold II 100 Prof", 460 => "Kodak Pro 100 PRN",
-        461 => "Kodak Vericolor HC 100 Prof VHC-2", 462 => "Kodak Prof Color Neg 100",
-        463 => "Kodak Ektar 1000 Gen 2", 464 => "Kodak Ektapress Plus 1600 Pro PJC-1",
-        465 => "Kodak Ektapress Gold II 1600 Prof", 466 => "Kodak Super Gold 1600 GF Gen 2",
-        467 => "Kodak Kodacolor 100 Print Gen 4", 468 => "Kodak Super Gold 100 Gen 4",
-        469 => "Kodak Gold 100 Gen 4", 470 => "Kodak Gold III 100 Gen 4",
-        471 => "Kodak Funtime 100 FA", 472 => "Kodak Funtime 200 FB",
-        473 => "Kodak Kodacolor VR 200 Gen 4", 474 => "Kodak Gold Super 200 Gen 4",
-        475 => "Kodak Kodacolor 200 Print Gen 4", 476 => "Kodak Super Gold 200 Gen 4",
-        477 => "Kodak Gold 200 Gen 4", 478 => "Kodak Gold III 200 Gen 4",
-        479 => "Kodak Gold Ultra 400 Gen 5", 480 => "Kodak Super Gold 400 Gen 5",
-        481 => "Kodak Gold 400 Gen 5", 482 => "Kodak Gold III 400 Gen 5",
-        483 => "Kodak Kodacolor 400 Print Gen 5", 484 => "Kodak Ektapress Plus 400 Prof PJB-2",
-        485 => "Kodak Ektapress Gold II 400 Prof G5", 486 => "Kodak Pro 400 PPF-2",
-        487 => "Kodak Ektacolor Gold II 400 EGP-4", 488 => "Kodak Ektacolor Gold 400 Prof EGP-4",
-        489 => "Kodak Ektapress Gold II Multspd PJM", 490 => "Kodak Pro 400 MC PMC",
-        491 => "Kodak Vericolor 400 Prof VPH-2", 492 => "Kodak Vericolor 400 Plus Prof VPH-2",
-        493 => "Kodak Unknown Neg Product Code 83", 505 => "Kodak Ektacolor Pro Gold 160 GPX",
-        508 => "Kodak Royal Gold 200", 517 => "Kodak 4050000000",
-        519 => "Kodak Gold Plus 100 Gen 5", 520 => "Kodak Gold 800 Gen 1",
-        521 => "Kodak Gold Super 200 Gen 5", 522 => "Kodak Ektapress Plus 200 Prof",
-        523 => "Kodak 4050 E6 auto-balance", 524 => "Kodak 4050 E6 ilum. corr.",
-        525 => "Kodak 4050 K14", 526 => "Kodak 4050 K14 auto-balance",
-        527 => "Kodak 4050 K14 ilum. corr.", 528 => "Kodak 4050 Reversal B&W",
-        532 => "Kodak Advantix 200", 533 => "Kodak Advantix 400",
-        534 => "Kodak Advantix 100", 535 => "Kodak Ektapress Multspd Prof PJM-2",
-        536 => "Kodak Kodacolor VR 200 Gen 5", 537 => "Kodak Funtime 200 FB Gen 2",
-        538 => "Kodak Commercial 200", 539 => "Kodak Royal Gold 25 Copystand",
-        540 => "Kodak Kodacolor DA 100 Gen 5", 545 => "Kodak Kodacolor VR 400 Gen 2",
-        546 => "Kodak Gold 100 Gen 6", 547 => "Kodak Gold 200 Gen 6",
-        548 => "Kodak Gold 400 Gen 6", 549 => "Kodak Royal Gold 100 Gen 2",
-        550 => "Kodak Royal Gold 200 Gen 2", 551 => "Kodak Royal Gold 400 Gen 2",
-        552 => "Kodak Gold Max 800 Gen 2", 554 => "Kodak 4050 E6 high contrast",
-        555 => "Kodak 4050 E6 low saturation high contrast", 556 => "Kodak 4050 E6 low saturation",
-        557 => "Kodak Universal E-6 Low Saturation", 558 => "Kodak T-Max T400 CN",
-        563 => "Kodak Ektapress PJ100", 564 => "Kodak Ektapress PJ400",
-        565 => "Kodak Ektapress PJ800", 567 => "Kodak Portra 160NC",
-        568 => "Kodak Portra 160VC", 569 => "Kodak Portra 400NC",
-        570 => "Kodak Portra 400VC", 575 => "Kodak Advantix 100-2",
-        576 => "Kodak Advantix 200-2", 577 => "Kodak Advantix Black & White + 400",
+        1 => "3M ScotchColor AT 100",
+        2 => "3M ScotchColor AT 200",
+        3 => "3M ScotchColor HR2 400",
+        7 => "3M Scotch HR 200 Gen 2",
+        9 => "3M Scotch HR 400 Gen 2",
+        16 => "Agfa Agfacolor XRS 400 Gen 1",
+        17 => "Agfa Agfacolor XRG/XRS 400",
+        18 => "Agfa Agfacolor XRG/XRS 200",
+        19 => "Agfa Agfacolor XRS 1000 Gen 2",
+        20 => "Agfa Agfacolor XRS 400 Gen 2",
+        21 => "Agfa Agfacolor XRS/XRC 100",
+        26 => "Fuji Reala 100 (JAPAN)",
+        27 => "Fuji Reala 100 Gen 1",
+        28 => "Fuji Reala 100 Gen 2",
+        29 => "Fuji SHR 400 Gen 2",
+        30 => "Fuji Super HG 100",
+        31 => "Fuji Super HG 1600 Gen 1",
+        32 => "Fuji Super HG 200",
+        33 => "Fuji Super HG 400",
+        34 => "Fuji Super HG 100 Gen 2",
+        35 => "Fuji Super HR 100 Gen 1",
+        36 => "Fuji Super HR 100 Gen 2",
+        37 => "Fuji Super HR 1600 Gen 2",
+        38 => "Fuji Super HR 200 Gen 1",
+        39 => "Fuji Super HR 200 Gen 2",
+        40 => "Fuji Super HR 400 Gen 1",
+        43 => "Fuji NSP 160S (Pro)",
+        45 => "Kodak Kodacolor VR 100 Gen 2",
+        47 => "Kodak Gold 400 Gen 3",
+        55 => "Kodak Ektar 100 Gen 1",
+        56 => "Kodak Ektar 1000 Gen 1",
+        57 => "Kodak Ektar 125 Gen 1",
+        58 => "Kodak Royal Gold 25 RZ",
+        60 => "Kodak Gold 1600 Gen 1",
+        61 => "Kodak Gold 200 Gen 2",
+        62 => "Kodak Gold 400 Gen 2",
+        65 => "Kodak Kodacolor VR 100 Gen 1",
+        66 => "Kodak Kodacolor VR 1000 Gen 2",
+        67 => "Kodak Kodacolor VR 1000 Gen 1",
+        68 => "Kodak Kodacolor VR 200 Gen 1",
+        69 => "Kodak Kodacolor VR 400 Gen 1",
+        70 => "Kodak Kodacolor VR 200 Gen 2",
+        71 => "Kodak Kodacolor VRG 100 Gen 1",
+        72 => "Kodak Gold 100 Gen 2",
+        73 => "Kodak Kodacolor VRG 200 Gen 1",
+        74 => "Kodak Gold 400 Gen 1",
+        87 => "Kodak Ektacolor Gold 160",
+        88 => "Kodak Ektapress 1600 Gen 1 PPC",
+        89 => "Kodak Ektapress Gold 100 Gen 1 PPA",
+        90 => "Kodak Ektapress Gold 400 PPB-3",
+        92 => "Kodak Ektar 25 Professional PHR",
+        97 => "Kodak T-Max 100 Professional",
+        98 => "Kodak T-Max 3200 Professional",
+        99 => "Kodak T-Max 400 Professional",
+        101 => "Kodak Vericolor 400 Prof VPH",
+        102 => "Kodak Vericolor III Pro",
+        121 => "Konika Konica Color SR-G 3200",
+        122 => "Konika Konica Color Super SR100",
+        123 => "Konika Konica Color Super SR 400",
+        138 => "Kodak Gold Unknown",
+        139 => "Kodak Unknown Neg A- Normal SBA",
+        143 => "Kodak Ektar 100 Gen 2",
+        147 => "Kodak Kodacolor CII",
+        148 => "Kodak Kodacolor II",
+        149 => "Kodak Gold Plus 200 Gen 3",
+        150 => "Kodak Internegative +10% Contrast",
+        151 => "Agfa Agfacolor Ultra 50",
+        152 => "Fuji NHG 400",
+        153 => "Agfa Agfacolor XRG 100",
+        154 => "Kodak Gold Plus 100 Gen 3",
+        155 => "Konika Konica Color Super SR200 Gen 1",
+        156 => "Konika Konica Color SR-G 160",
+        157 => "Agfa Agfacolor Optima 125",
+        158 => "Agfa Agfacolor Portrait 160",
+        162 => "Kodak Kodacolor VRG 400 Gen 1",
+        163 => "Kodak Gold 200 Gen 1",
+        164 => "Kodak Kodacolor VRG 100 Gen 2",
+        174 => "Kodak Internegative +20% Contrast",
+        175 => "Kodak Internegative +30% Contrast",
+        176 => "Kodak Internegative +40% Contrast",
+        184 => "Kodak TMax-100 D-76 CI = .40",
+        185 => "Kodak TMax-100 D-76 CI = .50",
+        186 => "Kodak TMax-100 D-76 CI = .55",
+        187 => "Kodak TMax-100 D-76 CI = .70",
+        188 => "Kodak TMax-100 D-76 CI = .80",
+        189 => "Kodak TMax-100 TMax CI = .40",
+        190 => "Kodak TMax-100 TMax CI = .50",
+        191 => "Kodak TMax-100 TMax CI = .55",
+        192 => "Kodak TMax-100 TMax CI = .70",
+        193 => "Kodak TMax-100 TMax CI = .80",
+        195 => "Kodak TMax-400 D-76 CI = .40",
+        196 => "Kodak TMax-400 D-76 CI = .50",
+        197 => "Kodak TMax-400 D-76 CI = .55",
+        198 => "Kodak TMax-400 D-76 CI = .70",
+        214 => "Kodak TMax-400 D-76 CI = .80",
+        215 => "Kodak TMax-400 TMax CI = .40",
+        216 => "Kodak TMax-400 TMax CI = .50",
+        217 => "Kodak TMax-400 TMax CI = .55",
+        218 => "Kodak TMax-400 TMax CI = .70",
+        219 => "Kodak TMax-400 TMax CI = .80",
+        224 => "3M ScotchColor ATG 400/EXL 400",
+        266 => "Agfa Agfacolor Optima 200",
+        267 => "Konika Impressa 50",
+        268 => "Polaroid Polaroid CP 200",
+        269 => "Konika Konica Color Super SR200 Gen 2",
+        270 => "ILFORD XP2 400",
+        271 => "Polaroid Polaroid Color HD2 100",
+        272 => "Polaroid Polaroid Color HD2 400",
+        273 => "Polaroid Polaroid Color HD2 200",
+        282 => "3M ScotchColor ATG-1 200",
+        284 => "Konika XG 400",
+        307 => "Kodak Universal Reversal B/W",
+        308 => "Kodak RPC Copy Film Gen 1",
+        312 => "Kodak Universal E6",
+        324 => "Kodak Gold Ultra 400 Gen 4",
+        328 => "Fuji Super G 100",
+        329 => "Fuji Super G 200",
+        330 => "Fuji Super G 400 Gen 2",
+        333 => "Kodak Universal K14",
+        334 => "Fuji Super G 400 Gen 1",
+        366 => "Kodak Vericolor HC 6329 VHC",
+        367 => "Kodak Vericolor HC 4329 VHC",
+        368 => "Kodak Vericolor L 6013 VPL",
+        369 => "Kodak Vericolor L 4013 VPL",
+        418 => "Kodak Ektacolor Gold II 400 Prof",
+        430 => "Kodak Royal Gold 1000",
+        431 => "Kodak Kodacolor VR 200 / 5093",
+        432 => "Kodak Gold Plus 100 Gen 4",
+        443 => "Kodak Royal Gold 100",
+        444 => "Kodak Royal Gold 400",
+        445 => "Kodak Universal E6 auto-balance",
+        446 => "Kodak Universal E6 illum. corr.",
+        447 => "Kodak Universal K14 auto-balance",
+        448 => "Kodak Universal K14 illum. corr.",
+        449 => "Kodak Ektar 100 Gen 3 SY",
+        456 => "Kodak Ektar 25",
+        457 => "Kodak Ektar 100 Gen 3 CX",
+        458 => "Kodak Ektapress Plus 100 Prof PJA-1",
+        459 => "Kodak Ektapress Gold II 100 Prof",
+        460 => "Kodak Pro 100 PRN",
+        461 => "Kodak Vericolor HC 100 Prof VHC-2",
+        462 => "Kodak Prof Color Neg 100",
+        463 => "Kodak Ektar 1000 Gen 2",
+        464 => "Kodak Ektapress Plus 1600 Pro PJC-1",
+        465 => "Kodak Ektapress Gold II 1600 Prof",
+        466 => "Kodak Super Gold 1600 GF Gen 2",
+        467 => "Kodak Kodacolor 100 Print Gen 4",
+        468 => "Kodak Super Gold 100 Gen 4",
+        469 => "Kodak Gold 100 Gen 4",
+        470 => "Kodak Gold III 100 Gen 4",
+        471 => "Kodak Funtime 100 FA",
+        472 => "Kodak Funtime 200 FB",
+        473 => "Kodak Kodacolor VR 200 Gen 4",
+        474 => "Kodak Gold Super 200 Gen 4",
+        475 => "Kodak Kodacolor 200 Print Gen 4",
+        476 => "Kodak Super Gold 200 Gen 4",
+        477 => "Kodak Gold 200 Gen 4",
+        478 => "Kodak Gold III 200 Gen 4",
+        479 => "Kodak Gold Ultra 400 Gen 5",
+        480 => "Kodak Super Gold 400 Gen 5",
+        481 => "Kodak Gold 400 Gen 5",
+        482 => "Kodak Gold III 400 Gen 5",
+        483 => "Kodak Kodacolor 400 Print Gen 5",
+        484 => "Kodak Ektapress Plus 400 Prof PJB-2",
+        485 => "Kodak Ektapress Gold II 400 Prof G5",
+        486 => "Kodak Pro 400 PPF-2",
+        487 => "Kodak Ektacolor Gold II 400 EGP-4",
+        488 => "Kodak Ektacolor Gold 400 Prof EGP-4",
+        489 => "Kodak Ektapress Gold II Multspd PJM",
+        490 => "Kodak Pro 400 MC PMC",
+        491 => "Kodak Vericolor 400 Prof VPH-2",
+        492 => "Kodak Vericolor 400 Plus Prof VPH-2",
+        493 => "Kodak Unknown Neg Product Code 83",
+        505 => "Kodak Ektacolor Pro Gold 160 GPX",
+        508 => "Kodak Royal Gold 200",
+        517 => "Kodak 4050000000",
+        519 => "Kodak Gold Plus 100 Gen 5",
+        520 => "Kodak Gold 800 Gen 1",
+        521 => "Kodak Gold Super 200 Gen 5",
+        522 => "Kodak Ektapress Plus 200 Prof",
+        523 => "Kodak 4050 E6 auto-balance",
+        524 => "Kodak 4050 E6 ilum. corr.",
+        525 => "Kodak 4050 K14",
+        526 => "Kodak 4050 K14 auto-balance",
+        527 => "Kodak 4050 K14 ilum. corr.",
+        528 => "Kodak 4050 Reversal B&W",
+        532 => "Kodak Advantix 200",
+        533 => "Kodak Advantix 400",
+        534 => "Kodak Advantix 100",
+        535 => "Kodak Ektapress Multspd Prof PJM-2",
+        536 => "Kodak Kodacolor VR 200 Gen 5",
+        537 => "Kodak Funtime 200 FB Gen 2",
+        538 => "Kodak Commercial 200",
+        539 => "Kodak Royal Gold 25 Copystand",
+        540 => "Kodak Kodacolor DA 100 Gen 5",
+        545 => "Kodak Kodacolor VR 400 Gen 2",
+        546 => "Kodak Gold 100 Gen 6",
+        547 => "Kodak Gold 200 Gen 6",
+        548 => "Kodak Gold 400 Gen 6",
+        549 => "Kodak Royal Gold 100 Gen 2",
+        550 => "Kodak Royal Gold 200 Gen 2",
+        551 => "Kodak Royal Gold 400 Gen 2",
+        552 => "Kodak Gold Max 800 Gen 2",
+        554 => "Kodak 4050 E6 high contrast",
+        555 => "Kodak 4050 E6 low saturation high contrast",
+        556 => "Kodak 4050 E6 low saturation",
+        557 => "Kodak Universal E-6 Low Saturation",
+        558 => "Kodak T-Max T400 CN",
+        563 => "Kodak Ektapress PJ100",
+        564 => "Kodak Ektapress PJ400",
+        565 => "Kodak Ektapress PJ800",
+        567 => "Kodak Portra 160NC",
+        568 => "Kodak Portra 160VC",
+        569 => "Kodak Portra 400NC",
+        570 => "Kodak Portra 400VC",
+        575 => "Kodak Advantix 100-2",
+        576 => "Kodak Advantix 200-2",
+        577 => "Kodak Advantix Black & White + 400",
         578 => "Kodak Ektapress PJ800-2",
         _ => "",
     }
@@ -7713,58 +10301,73 @@ fn pcd_film_id_name(n: u32) -> &'static str {
 pub fn read_mxf(data: &[u8]) -> Result<Vec<Tag>> {
     // Look for MXF KLV start marker: 06 0e 2b 34
     let magic = b"\x06\x0e\x2b\x34";
-    let start = data.windows(4).position(|w| w == magic.as_ref())
+    let start = data
+        .windows(4)
+        .position(|w| w == magic.as_ref())
         .ok_or_else(|| Error::InvalidData("not an MXF file".into()))?;
-    
+
     let data = &data[start..];
     let mut tags: Vec<Tag> = Vec::new();
-    let mut registry: std::collections::HashMap<[u8;2], [u8;16]> = std::collections::HashMap::new();
-    
+    let mut registry: std::collections::HashMap<[u8; 2], [u8; 16]> =
+        std::collections::HashMap::new();
+
     let mut pos = 0;
     while pos + 17 <= data.len() {
-        if &data[pos..pos+4] != b"\x06\x0e\x2b\x34" {
+        if &data[pos..pos + 4] != b"\x06\x0e\x2b\x34" {
             pos += 1;
             continue;
         }
-        let key = &data[pos..pos+16];
-        
+        let key = &data[pos..pos + 16];
+
         // Parse BER length at pos+16
-        let len_byte = data[pos+16];
+        let len_byte = data[pos + 16];
         let (val_len, ber_size) = if len_byte < 0x80 {
             (len_byte as usize, 1usize)
         } else {
             let n = (len_byte & 0x7f) as usize;
-            if pos + 17 + n > data.len() { break; }
+            if pos + 17 + n > data.len() {
+                break;
+            }
             let mut l = 0usize;
-            for i in 0..n { l = (l << 8) | (data[pos+17+i] as usize); }
+            for i in 0..n {
+                l = (l << 8) | (data[pos + 17 + i] as usize);
+            }
             (l, 1 + n)
         };
         let val_start = pos + 16 + ber_size;
-        if val_start + val_len > data.len() { break; }
-        let val = &data[val_start..val_start+val_len];
-        
+        if val_start + val_len > data.len() {
+            break;
+        }
+        let val = &data[val_start..val_start + val_len];
+
         // Header/Footer partition (0d0102010102xxxx): parse MXFVersion at offset 0
         if key[4] == 0x02 && key[5] == 0x05 && key[12] == 0x01 && key[13] == 0x02 {
             if val.len() >= 4 && !tags.iter().any(|t| t.name == "MXFVersion") {
                 let major = u16::from_be_bytes([val[0], val[1]]);
                 let minor = u16::from_be_bytes([val[2], val[3]]);
-                tags.push(mktag("MXF", "MXFVersion", "MXF Version",
-                    Value::String(format!("{}.{}", major, minor))));
+                tags.push(mktag(
+                    "MXF",
+                    "MXFVersion",
+                    "MXF Version",
+                    Value::String(format!("{}.{}", major, minor)),
+                ));
             }
         }
         // Primer Pack: key[12]=0x01 && key[13]=0x05 (0d010201010501xx)
         else if key[4] == 0x02 && key[5] == 0x05 && key[12] == 0x01 && key[13] == 0x05 {
             if val.len() >= 8 {
-                let count = u32::from_be_bytes([val[0],val[1],val[2],val[3]]) as usize;
-                let item_size = u32::from_be_bytes([val[4],val[5],val[6],val[7]]) as usize;
+                let count = u32::from_be_bytes([val[0], val[1], val[2], val[3]]) as usize;
+                let item_size = u32::from_be_bytes([val[4], val[5], val[6], val[7]]) as usize;
                 if item_size >= 18 {
                     for i in 0..count {
                         let off = 8 + i * item_size;
-                        if off + 18 > val.len() { break; }
-                        let mut ltag = [0u8;2];
-                        ltag.copy_from_slice(&val[off..off+2]);
-                        let mut ul = [0u8;16];
-                        ul.copy_from_slice(&val[off+2..off+18]);
+                        if off + 18 > val.len() {
+                            break;
+                        }
+                        let mut ltag = [0u8; 2];
+                        ltag.copy_from_slice(&val[off..off + 2]);
+                        let mut ul = [0u8; 16];
+                        ul.copy_from_slice(&val[off + 2..off + 18]);
                         registry.insert(ltag, ul);
                     }
                 }
@@ -7774,10 +10377,10 @@ pub fn read_mxf(data: &[u8]) -> Result<Vec<Tag>> {
         else if key[4] == 0x02 && key[5] == 0x53 {
             mxf_parse_local_set(val, &registry, &mut tags);
         }
-        
+
         pos = val_start + val_len;
     }
-    
+
     // Deduplicate (keep last occurrence, like Perl's MXF dedup behavior)
     let mut last_index: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
     for (i, t) in tags.iter().enumerate() {
@@ -7790,30 +10393,32 @@ pub fn read_mxf(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
     tags = result;
-    
+
     Ok(tags)
 }
 
 fn mxf_parse_local_set(
     data: &[u8],
-    registry: &std::collections::HashMap<[u8;2], [u8;16]>,
+    registry: &std::collections::HashMap<[u8; 2], [u8; 16]>,
     tags: &mut Vec<Tag>,
 ) {
     let mut pos = 0;
     while pos + 4 <= data.len() {
-        let ltag = [data[pos], data[pos+1]];
-        let llen = u16::from_be_bytes([data[pos+2], data[pos+3]]) as usize;
+        let ltag = [data[pos], data[pos + 1]];
+        let llen = u16::from_be_bytes([data[pos + 2], data[pos + 3]]) as usize;
         pos += 4;
-        if pos + llen > data.len() { break; }
-        let val = &data[pos..pos+llen];
-        
+        if pos + llen > data.len() {
+            break;
+        }
+        let val = &data[pos..pos + llen];
+
         if let Some(ul) = registry.get(&ltag) {
             let ul_hex: String = ul.iter().map(|b| format!("{:02x}", b)).collect();
             if let Some((name, value)) = mxf_decode_tag(&ul_hex, val) {
                 tags.push(mktag("MXF", &name, &name, Value::String(value)));
             }
         }
-        
+
         pos += llen;
     }
 }
@@ -7821,178 +10426,301 @@ fn mxf_parse_local_set(
 fn mxf_decode_tag(ul: &str, val: &[u8]) -> Option<(String, String)> {
     match ul {
         // Timestamps (8 bytes)
-        "060e2b34010101020702011002040000" => Some(("ContainerLastModifyDate".into(), mxf_decode_timestamp(val))),
-        "060e2b34010101020702011002030000" => Some(("ModifyDate".into(), mxf_decode_timestamp(val))),
-        "060e2b34010101020702011001030000" => Some(("CreateDate".into(), mxf_decode_timestamp(val))),
-        "060e2b34010101020702011002050000" => Some(("PackageLastModifyDate".into(), mxf_decode_timestamp(val))),
+        "060e2b34010101020702011002040000" => {
+            Some(("ContainerLastModifyDate".into(), mxf_decode_timestamp(val)))
+        }
+        "060e2b34010101020702011002030000" => {
+            Some(("ModifyDate".into(), mxf_decode_timestamp(val)))
+        }
+        "060e2b34010101020702011001030000" => {
+            Some(("CreateDate".into(), mxf_decode_timestamp(val)))
+        }
+        "060e2b34010101020702011002050000" => {
+            Some(("PackageLastModifyDate".into(), mxf_decode_timestamp(val)))
+        }
         // VersionType: 2 bytes major.minor
-        "060e2b34010101020301020105000000" => Some(("SDKVersion".into(), mxf_decode_version_short(val))),
+        "060e2b34010101020301020105000000" => {
+            Some(("SDKVersion".into(), mxf_decode_version_short(val)))
+        }
         // ProductVersion: 5 × int16u
-        "060e2b3401010102052007010a000000" => Some(("ToolkitVersion".into(), mxf_decode_product_version(val))),
+        "060e2b3401010102052007010a000000" => {
+            Some(("ToolkitVersion".into(), mxf_decode_product_version(val)))
+        }
         // UTF-16 strings
-        "060e2b34010101020520070102010000" => Some(("ApplicationSupplierName".into(), mxf_decode_utf16(val))),
-        "060e2b34010101020520070103010000" => Some(("ApplicationName".into(), mxf_decode_utf16(val))),
-        "060e2b34010101020520070105010000" => Some(("ApplicationVersionString".into(), mxf_decode_utf16(val))),
-        "060e2b34010101020520070106010000" => Some(("ApplicationPlatform".into(), mxf_decode_utf16(val))),
+        "060e2b34010101020520070102010000" => {
+            Some(("ApplicationSupplierName".into(), mxf_decode_utf16(val)))
+        }
+        "060e2b34010101020520070103010000" => {
+            Some(("ApplicationName".into(), mxf_decode_utf16(val)))
+        }
+        "060e2b34010101020520070105010000" => {
+            Some(("ApplicationVersionString".into(), mxf_decode_utf16(val)))
+        }
+        "060e2b34010101020520070106010000" => {
+            Some(("ApplicationPlatform".into(), mxf_decode_utf16(val)))
+        }
         // TrackName (UTF-16)
         "060e2b34010101020107010201000000" => Some(("TrackName".into(), mxf_decode_utf16(val))),
         // TrackNumber (int32u)
         "060e2b34010101020104010300000000" => {
             if val.len() >= 4 {
-                let n = u32::from_be_bytes([val[0],val[1],val[2],val[3]]);
+                let n = u32::from_be_bytes([val[0], val[1], val[2], val[3]]);
                 Some(("TrackNumber".into(), n.to_string()))
-            } else { None }
-        },
+            } else {
+                None
+            }
+        }
         // TrackID (int32u) - 060e2b34.0101.0102.01070101.00000000
         "060e2b34010101020107010100000000" => {
             if val.len() >= 4 {
-                let n = u32::from_be_bytes([val[0],val[1],val[2],val[3]]);
+                let n = u32::from_be_bytes([val[0], val[1], val[2], val[3]]);
                 Some(("TrackID".into(), n.to_string()))
-            } else { None }
-        },
+            } else {
+                None
+            }
+        }
         // EditRate (rational64s)
         "060e2b34010101020530040500000000" => {
             if val.len() >= 8 {
-                let num = i32::from_be_bytes([val[0],val[1],val[2],val[3]]);
-                let den = i32::from_be_bytes([val[4],val[5],val[6],val[7]]);
+                let num = i32::from_be_bytes([val[0], val[1], val[2], val[3]]);
+                let den = i32::from_be_bytes([val[4], val[5], val[6], val[7]]);
                 let rate = if den != 0 && den != 1 {
                     let r = num as f64 / den as f64;
-                    if r == r.floor() { format!("{}", r as i64) } else { format!("{:.6}", r).trim_end_matches('0').to_string() }
-                } else { num.to_string() };
+                    if r == r.floor() {
+                        format!("{}", r as i64)
+                    } else {
+                        format!("{:.6}", r).trim_end_matches('0').to_string()
+                    }
+                } else {
+                    num.to_string()
+                };
                 Some(("EditRate".into(), rate))
-            } else { None }
-        },
+            } else {
+                None
+            }
+        }
         // RoundedTimecodeTimebase (int16u)
         "060e2b34010101020404010102060000" => {
             if val.len() >= 2 {
-                let n = u16::from_be_bytes([val[0],val[1]]);
+                let n = u16::from_be_bytes([val[0], val[1]]);
                 Some(("RoundedTimecodeTimebase".into(), n.to_string()))
-            } else { None }
-        },
+            } else {
+                None
+            }
+        }
         // DropFrame (Boolean)
         "060e2b34010101010404010105000000" => {
             if !val.is_empty() {
-                Some(("DropFrame".into(), if val[0] != 0 {"True"} else {"False"}.into()))
-            } else { None }
-        },
+                Some((
+                    "DropFrame".into(),
+                    if val[0] != 0 { "True" } else { "False" }.into(),
+                ))
+            } else {
+                None
+            }
+        }
         // StartTimecode (int64s, shown as "N s")
         "060e2b34010101020702010301050000" => {
             if val.len() >= 8 {
-                let n = i64::from_be_bytes([val[0],val[1],val[2],val[3],val[4],val[5],val[6],val[7]]);
+                let n = i64::from_be_bytes([
+                    val[0], val[1], val[2], val[3], val[4], val[5], val[6], val[7],
+                ]);
                 Some(("StartTimecode".into(), format!("{} s", n)))
-            } else { None }
-        },
+            } else {
+                None
+            }
+        }
         // ComponentDataDefinition (WeakReference to DataDefinition UL)
-        "060e2b34010101020601010401020000" => {
-            Some(("ComponentDataDefinition".into(), mxf_decode_component_def(val)))
-        },
+        "060e2b34010101020601010401020000" => Some((
+            "ComponentDataDefinition".into(),
+            mxf_decode_component_def(val),
+        )),
         // Origin (int64s duration in edit units)
         "060e2b34010101020702010301040000" => {
             if val.len() >= 8 {
-                let n = i64::from_be_bytes([val[0],val[1],val[2],val[3],val[4],val[5],val[6],val[7]]);
+                let n = i64::from_be_bytes([
+                    val[0], val[1], val[2], val[3], val[4], val[5], val[6], val[7],
+                ]);
                 Some(("Origin".into(), format!("{} s", n)))
-            } else { None }
-        },
+            } else {
+                None
+            }
+        }
         // Duration (int64s)
-        "060e2b34010101020702010301030000" |
-        "060e2b34010101020702010302000000" => {
+        "060e2b34010101020702010301030000" | "060e2b34010101020702010302000000" => {
             if val.len() >= 8 {
-                let n = i64::from_be_bytes([val[0],val[1],val[2],val[3],val[4],val[5],val[6],val[7]]);
-                if n > 1000000000 { return None; } // all 0xff sentinel
+                let n = i64::from_be_bytes([
+                    val[0], val[1], val[2], val[3], val[4], val[5], val[6], val[7],
+                ]);
+                if n > 1000000000 {
+                    return None;
+                } // all 0xff sentinel
                 Some(("Duration".into(), format!("{} s", n)))
-            } else { None }
-        },
+            } else {
+                None
+            }
+        }
         // EssenceLength (int64s)
         "060e2b34010101010406010200000000" => {
             if val.len() >= 8 {
-                let n = i64::from_be_bytes([val[0],val[1],val[2],val[3],val[4],val[5],val[6],val[7]]);
-                if n > 1000000000 { return None; }
+                let n = i64::from_be_bytes([
+                    val[0], val[1], val[2], val[3], val[4], val[5], val[6], val[7],
+                ]);
+                if n > 1000000000 {
+                    return None;
+                }
                 Some(("EssenceLength".into(), format!("{} s", n)))
-            } else { None }
-        },
+            } else {
+                None
+            }
+        }
         // SampleRate (rational64s)
         "060e2b34010101010406010100000000" => {
             if val.len() >= 8 {
-                let num = i32::from_be_bytes([val[0],val[1],val[2],val[3]]);
-                let den = i32::from_be_bytes([val[4],val[5],val[6],val[7]]);
+                let num = i32::from_be_bytes([val[0], val[1], val[2], val[3]]);
+                let den = i32::from_be_bytes([val[4], val[5], val[6], val[7]]);
                 let rate = if den != 0 && den != 1 {
                     let r = num as f64 / den as f64;
-                    if r == r.floor() { format!("{}", r as i64) } else { format!("{:.6}", r) }
-                } else { num.to_string() };
+                    if r == r.floor() {
+                        format!("{}", r as i64)
+                    } else {
+                        format!("{:.6}", r)
+                    }
+                } else {
+                    num.to_string()
+                };
                 Some(("SampleRate".into(), rate))
-            } else { None }
-        },
+            } else {
+                None
+            }
+        }
         // ChannelCount (int32u)
         "060e2b34010101050402010104000000" => {
-            if val.len() >= 4 { let n = u32::from_be_bytes([val[0],val[1],val[2],val[3]]); Some(("ChannelCount".into(), n.to_string())) }
-            else if !val.is_empty() { Some(("ChannelCount".into(), val[0].to_string())) }
-            else { None }
-        },
+            if val.len() >= 4 {
+                let n = u32::from_be_bytes([val[0], val[1], val[2], val[3]]);
+                Some(("ChannelCount".into(), n.to_string()))
+            } else if !val.is_empty() {
+                Some(("ChannelCount".into(), val[0].to_string()))
+            } else {
+                None
+            }
+        }
         // AudioSampleRate (rational64s)
         "060e2b34010101050402030101010000" => {
             if val.len() >= 8 {
-                let num = i32::from_be_bytes([val[0],val[1],val[2],val[3]]);
-                let den = i32::from_be_bytes([val[4],val[5],val[6],val[7]]);
+                let num = i32::from_be_bytes([val[0], val[1], val[2], val[3]]);
+                let den = i32::from_be_bytes([val[4], val[5], val[6], val[7]]);
                 let rate = if den != 0 && den != 1 {
                     let r = num as f64 / den as f64;
-                    if r == r.floor() { format!("{}", r as i64) } else { format!("{:.6}", r) }
-                } else { num.to_string() };
+                    if r == r.floor() {
+                        format!("{}", r as i64)
+                    } else {
+                        format!("{:.6}", r)
+                    }
+                } else {
+                    num.to_string()
+                };
                 Some(("AudioSampleRate".into(), rate))
-            } else { None }
-        },
+            } else {
+                None
+            }
+        }
         // BlockAlign (int16u)
         "060e2b34010101050402030201000000" => {
-            if val.len() >= 2 { let n = u16::from_be_bytes([val[0],val[1]]); Some(("BlockAlign".into(), n.to_string())) } else { None }
-        },
+            if val.len() >= 2 {
+                let n = u16::from_be_bytes([val[0], val[1]]);
+                Some(("BlockAlign".into(), n.to_string()))
+            } else {
+                None
+            }
+        }
         // AverageBytesPerSecond (int32u)
         "060e2b34010101050402030305000000" => {
-            if val.len() >= 4 { let n = u32::from_be_bytes([val[0],val[1],val[2],val[3]]); Some(("AverageBytesPerSecond".into(), n.to_string())) } else { None }
-        },
+            if val.len() >= 4 {
+                let n = u32::from_be_bytes([val[0], val[1], val[2], val[3]]);
+                Some(("AverageBytesPerSecond".into(), n.to_string()))
+            } else {
+                None
+            }
+        }
         // LockedIndicator (Boolean)
         "060e2b34010101040402030104000000" => {
             if !val.is_empty() {
-                Some(("LockedIndicator".into(), if val[0] != 0 {"True"} else {"False"}.into()))
-            } else { None }
-        },
+                Some((
+                    "LockedIndicator".into(),
+                    if val[0] != 0 { "True" } else { "False" }.into(),
+                ))
+            } else {
+                None
+            }
+        }
         // BitsPerAudioSample (int32u)
         "060e2b34010101040402030304000000" => {
-            if val.len() >= 4 { let n = u32::from_be_bytes([val[0],val[1],val[2],val[3]]); Some(("BitsPerAudioSample".into(), n.to_string())) } else { None }
-        },
+            if val.len() >= 4 {
+                let n = u32::from_be_bytes([val[0], val[1], val[2], val[3]]);
+                Some(("BitsPerAudioSample".into(), n.to_string()))
+            } else {
+                None
+            }
+        }
         // LinkedTrackID (int32u)
         "060e2b34010101050601010305000000" => {
-            if val.len() >= 4 { let n = u32::from_be_bytes([val[0],val[1],val[2],val[3]]); Some(("LinkedTrackID".into(), n.to_string())) } else { None }
-        },
+            if val.len() >= 4 {
+                let n = u32::from_be_bytes([val[0], val[1], val[2], val[3]]);
+                Some(("LinkedTrackID".into(), n.to_string()))
+            } else {
+                None
+            }
+        }
         // EssenceStreamID (int32u)
         "060e2b34010101040103040400000000" => {
-            if val.len() >= 4 { let n = u32::from_be_bytes([val[0],val[1],val[2],val[3]]); Some(("EssenceStreamID".into(), n.to_string())) }
-            else if val.len() >= 2 { let n = u16::from_be_bytes([val[0],val[1]]); Some(("EssenceStreamID".into(), n.to_string())) }
-            else { None }
-        },
+            if val.len() >= 4 {
+                let n = u32::from_be_bytes([val[0], val[1], val[2], val[3]]);
+                Some(("EssenceStreamID".into(), n.to_string()))
+            } else if val.len() >= 2 {
+                let n = u16::from_be_bytes([val[0], val[1]]);
+                Some(("EssenceStreamID".into(), n.to_string()))
+            } else {
+                None
+            }
+        }
         _ => None,
     }
 }
 
 fn mxf_decode_timestamp(val: &[u8]) -> String {
-    if val.len() < 8 { return String::new(); }
+    if val.len() < 8 {
+        return String::new();
+    }
     let year = u16::from_be_bytes([val[0], val[1]]);
-    let month = val[2]; let day = val[3];
-    let hour = val[4]; let min = val[5]; let sec = val[6];
+    let month = val[2];
+    let day = val[3];
+    let hour = val[4];
+    let min = val[5];
+    let sec = val[6];
     let msec = (val[7] as u32) * 4;
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:03}", year, month, day, hour, min, sec, msec)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:03}",
+        year, month, day, hour, min, sec, msec
+    )
 }
 
 fn mxf_decode_version_short(val: &[u8]) -> String {
-    if val.len() < 2 { return String::new(); }
+    if val.len() < 2 {
+        return String::new();
+    }
     format!("{}.{}", val[0], val[1])
 }
 
 fn mxf_decode_product_version(val: &[u8]) -> String {
-    if val.len() < 10 { return String::new(); }
-    let major = u16::from_be_bytes([val[0],val[1]]);
-    let minor = u16::from_be_bytes([val[2],val[3]]);
-    let patch = u16::from_be_bytes([val[4],val[5]]);
-    let build = u16::from_be_bytes([val[6],val[7]]);
-    let rel_type = u16::from_be_bytes([val[8],val[9]]);
+    if val.len() < 10 {
+        return String::new();
+    }
+    let major = u16::from_be_bytes([val[0], val[1]]);
+    let minor = u16::from_be_bytes([val[2], val[3]]);
+    let patch = u16::from_be_bytes([val[4], val[5]]);
+    let build = u16::from_be_bytes([val[6], val[7]]);
+    let rel_type = u16::from_be_bytes([val[8], val[9]]);
     let rel_str = match rel_type {
         0 => "unknown".to_string(),
         1 => "released".to_string(),
@@ -8006,15 +10734,20 @@ fn mxf_decode_product_version(val: &[u8]) -> String {
 }
 
 fn mxf_decode_utf16(val: &[u8]) -> String {
-    let chars: Vec<u16> = val.chunks(2)
+    let chars: Vec<u16> = val
+        .chunks(2)
         .filter(|c| c.len() == 2)
         .map(|c| u16::from_be_bytes([c[0], c[1]]))
         .collect();
-    String::from_utf16_lossy(&chars).trim_end_matches('\0').to_string()
+    String::from_utf16_lossy(&chars)
+        .trim_end_matches('\0')
+        .to_string()
 }
 
 fn mxf_decode_component_def(val: &[u8]) -> String {
-    if val.len() < 16 { return String::new(); }
+    if val.len() < 16 {
+        return String::new();
+    }
     let ul: String = val[..16].iter().map(|b| format!("{:02x}", b)).collect();
     match ul.as_str() {
         "060e2b34040101020d01030102060200" => "Sound Essence Track".to_string(),
@@ -8035,9 +10768,13 @@ fn mxf_decode_component_def(val: &[u8]) -> String {
 pub fn read_lif(data: &[u8]) -> Result<Vec<Tag>> {
     // Validate LIF magic: 0x70 0x00 0x00 0x00 ... 0x2A ... '<' 0x00
     if data.len() < 15
-        || data[0] != 0x70 || data[1] != 0x00 || data[2] != 0x00 || data[3] != 0x00
+        || data[0] != 0x70
+        || data[1] != 0x00
+        || data[2] != 0x00
+        || data[3] != 0x00
         || data[8] != 0x2A
-        || data[13] != b'<' || data[14] != 0x00
+        || data[13] != b'<'
+        || data[14] != 0x00
     {
         return Err(Error::InvalidData("not a LIF file".into()));
     }
@@ -8093,46 +10830,100 @@ fn lif_extract_xml_tags(xml: &str, tags: &mut Vec<Tag>) {
 
     for event in reader {
         match event {
-            Ok(XmlEvent::StartElement { name, attributes, .. }) => {
+            Ok(XmlEvent::StartElement {
+                name, attributes, ..
+            }) => {
                 let local = name.local_name.clone();
 
                 // Collect attributes of interest
                 for attr in &attributes {
                     let attr_name = &attr.name.local_name;
                     let attr_val = &attr.value;
-                    if attr_val.is_empty() { continue; }
+                    if attr_val.is_empty() {
+                        continue;
+                    }
 
                     match (local.as_str(), attr_name.as_str()) {
                         ("Element", "Name") => {
                             element_names.push(attr_val.clone());
-                            tags.push(mktag("LIF", "ElementName", "Element Name", Value::String(attr_val.clone())));
+                            tags.push(mktag(
+                                "LIF",
+                                "ElementName",
+                                "Element Name",
+                                Value::String(attr_val.clone()),
+                            ));
                         }
                         ("DimensionDescription", "DimID") => {
-                            tags.push(mktag("LIF", "DimensionID", "Dimension ID", Value::String(attr_val.clone())));
+                            tags.push(mktag(
+                                "LIF",
+                                "DimensionID",
+                                "Dimension ID",
+                                Value::String(attr_val.clone()),
+                            ));
                         }
                         ("DimensionDescription", "NumberOfElements") => {
-                            tags.push(mktag("LIF", "NumberOfElements", "Number Of Elements", Value::String(attr_val.clone())));
+                            tags.push(mktag(
+                                "LIF",
+                                "NumberOfElements",
+                                "Number Of Elements",
+                                Value::String(attr_val.clone()),
+                            ));
                         }
                         ("DimensionDescription", "Length") => {
-                            tags.push(mktag("LIF", "DimensionLength", "Dimension Length", Value::String(attr_val.clone())));
+                            tags.push(mktag(
+                                "LIF",
+                                "DimensionLength",
+                                "Dimension Length",
+                                Value::String(attr_val.clone()),
+                            ));
                         }
                         ("DimensionDescription", "Unit") => {
-                            tags.push(mktag("LIF", "DimensionUnit", "Dimension Unit", Value::String(attr_val.clone())));
+                            tags.push(mktag(
+                                "LIF",
+                                "DimensionUnit",
+                                "Dimension Unit",
+                                Value::String(attr_val.clone()),
+                            ));
                         }
                         ("DimensionDescription", "Origin") => {
-                            tags.push(mktag("LIF", "DimensionOrigin", "Dimension Origin", Value::String(attr_val.clone())));
+                            tags.push(mktag(
+                                "LIF",
+                                "DimensionOrigin",
+                                "Dimension Origin",
+                                Value::String(attr_val.clone()),
+                            ));
                         }
                         ("ChannelDescription", "LUTName") => {
-                            tags.push(mktag("LIF", "ChannelLUTName", "Channel LUT Name", Value::String(attr_val.clone())));
+                            tags.push(mktag(
+                                "LIF",
+                                "ChannelLUTName",
+                                "Channel LUT Name",
+                                Value::String(attr_val.clone()),
+                            ));
                         }
                         ("ChannelDescription", "Resolution") => {
-                            tags.push(mktag("LIF", "ChannelResolution", "Channel Resolution", Value::String(attr_val.clone())));
+                            tags.push(mktag(
+                                "LIF",
+                                "ChannelResolution",
+                                "Channel Resolution",
+                                Value::String(attr_val.clone()),
+                            ));
                         }
                         ("ChannelDescription", "BytesInc") => {
-                            tags.push(mktag("LIF", "ChannelBytesInc", "Channel Bytes Inc", Value::String(attr_val.clone())));
+                            tags.push(mktag(
+                                "LIF",
+                                "ChannelBytesInc",
+                                "Channel Bytes Inc",
+                                Value::String(attr_val.clone()),
+                            ));
                         }
                         ("TimeStampList", "NumberOfTimeStamps") => {
-                            tags.push(mktag("LIF", "NumberOfTimeStamps", "Number Of Time Stamps", Value::String(attr_val.clone())));
+                            tags.push(mktag(
+                                "LIF",
+                                "NumberOfTimeStamps",
+                                "Number Of Time Stamps",
+                                Value::String(attr_val.clone()),
+                            ));
                         }
                         _ => {}
                     }
@@ -8168,25 +10959,37 @@ pub fn read_rawzor(data: &[u8]) -> Result<Vec<Tag>> {
 
     let req_vers = u16::from_le_bytes([data[6], data[7]]);
     let creator_vers = u16::from_le_bytes([data[8], data[9]]);
-    let rwz_size = u64::from_le_bytes([data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17]]);
-    let orig_size = u64::from_le_bytes([data[18], data[19], data[20], data[21], data[22], data[23], data[24], data[25]]);
+    let rwz_size = u64::from_le_bytes([
+        data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17],
+    ]);
+    let orig_size = u64::from_le_bytes([
+        data[18], data[19], data[20], data[21], data[22], data[23], data[24], data[25],
+    ]);
 
     tags.push(mktag(
-        "Rawzor", "RawzorRequiredVersion", "Rawzor Required Version",
+        "Rawzor",
+        "RawzorRequiredVersion",
+        "Rawzor Required Version",
         Value::String(format!("{:.2}", req_vers as f64 / 100.0)),
     ));
     tags.push(mktag(
-        "Rawzor", "RawzorCreatorVersion", "Rawzor Creator Version",
+        "Rawzor",
+        "RawzorCreatorVersion",
+        "Rawzor Creator Version",
         Value::String(format!("{:.2}", creator_vers as f64 / 100.0)),
     ));
     tags.push(mktag(
-        "Rawzor", "OriginalFileSize", "Original File Size",
+        "Rawzor",
+        "OriginalFileSize",
+        "Original File Size",
         Value::String(orig_size.to_string()),
     ));
     if rwz_size > 0 {
         let factor = orig_size as f64 / rwz_size as f64;
         tags.push(mktag(
-            "Rawzor", "CompressionFactor", "Compression Factor",
+            "Rawzor",
+            "CompressionFactor",
+            "Compression Factor",
             Value::String(format!("{:.2}", factor)),
         ));
     }
@@ -8214,17 +11017,15 @@ pub fn read_jxr(data: &[u8]) -> Result<Vec<Tag>> {
     // JXR is TIFF-based: "II" + 0xBC byte at offset 2
     // The TIFF reader handles IFD parsing; JXR uses standard EXIF IFD tags
     // plus HD Photo-specific tags (0xBC01-0xBC82) which are in the EXIF tag tables.
-    if data.len() < 8
-        || data[0] != b'I' || data[1] != b'I'
-        || (data[2] & 0xFF) != 0xBC
-    {
+    if data.len() < 8 || data[0] != b'I' || data[1] != b'I' || (data[2] & 0xFF) != 0xBC {
         return Err(Error::InvalidData("not a JPEG XR file".into()));
     }
 
     // Check version byte (offset 3)
     if data[3] > 1 {
         return Err(Error::InvalidData(format!(
-            "JPEG XR version {} not supported", data[3]
+            "JPEG XR version {} not supported",
+            data[3]
         )));
     }
 
@@ -8264,9 +11065,11 @@ pub fn read_iiq(data: &[u8]) -> Result<Vec<Tag>> {
         let mut remove_indices: std::collections::HashSet<usize> = std::collections::HashSet::new();
 
         // Tags that may legitimately appear in both IFDs and we should keep BOTH
-        let keep_both: std::collections::HashSet<&str> = [
-            "SubfileType", "StripOffsets", "StripByteCounts",
-        ].iter().cloned().collect();
+        let keep_both: std::collections::HashSet<&str> =
+            ["SubfileType", "StripOffsets", "StripByteCounts"]
+                .iter()
+                .cloned()
+                .collect();
 
         for (i, t) in tags.iter().enumerate() {
             // Remove ExifByteOrder (already added by outer exiftool.rs)
@@ -8276,7 +11079,11 @@ pub fn read_iiq(data: &[u8]) -> Result<Vec<Tag>> {
             }
             // Remove the first SubfileType (IFD0's "full image" marker = value 0)
             if t.name == "SubfileType" && !subfile_type_removed {
-                let raw_v = if let Value::String(ref v) = t.raw_value { v.as_str() } else { "" };
+                let raw_v = if let Value::String(ref v) = t.raw_value {
+                    v.as_str()
+                } else {
+                    ""
+                };
                 if raw_v == "0" || t.print_value == "0" {
                     remove_indices.insert(i);
                     subfile_type_removed = true;
@@ -8286,11 +11093,17 @@ pub fn read_iiq(data: &[u8]) -> Result<Vec<Tag>> {
             // Remove first StripOffsets (IFD0's strip) and first StripByteCounts
             if t.name == "StripOffsets" {
                 strip_offsets_count += 1;
-                if strip_offsets_count == 1 { remove_indices.insert(i); continue; }
+                if strip_offsets_count == 1 {
+                    remove_indices.insert(i);
+                    continue;
+                }
             }
             if t.name == "StripByteCounts" {
                 strip_bytes_count += 1;
-                if strip_bytes_count == 1 { remove_indices.insert(i); continue; }
+                if strip_bytes_count == 1 {
+                    remove_indices.insert(i);
+                    continue;
+                }
             }
             // Remove 1x1 ImageWidth/Height placeholders
             if (t.name == "ImageWidth" || t.name == "ImageHeight") && t.print_value == "1" {
@@ -8358,33 +11171,57 @@ pub fn read_iiq(data: &[u8]) -> Result<Vec<Tag>> {
             &data[off + 12..end]
         } else {
             let abs_ptr = phaseone_start + val_or_ptr;
-            if abs_ptr + size > data.len() { continue; }
+            if abs_ptr + size > data.len() {
+                continue;
+            }
             &data[abs_ptr..abs_ptr + size]
         };
 
-        iiq_decode_tag(tag_id, raw, is_le, size, data, phaseone_start, &mut phaseone_tags);
+        iiq_decode_tag(
+            tag_id,
+            raw,
+            is_le,
+            size,
+            data,
+            phaseone_start,
+            &mut phaseone_tags,
+        );
     }
 
     // Parse SensorCalibration sub-block (tag 0x0110)
-    iiq_parse_sensor_calibration(data, phaseone_start, is_le, entry_start, num_entries, &mut phaseone_tags);
+    iiq_parse_sensor_calibration(
+        data,
+        phaseone_start,
+        is_le,
+        entry_start,
+        num_entries,
+        &mut phaseone_tags,
+    );
 
     // Extend with PhaseOne tags, but don't add tags that already exist (skip dups)
     // Exception: FocalLength from PhaseOne should override EXIF's (remove EXIF version)
     // Actually: keep PhaseOne version for FocalLength (more accurate), remove EXIF
     {
         // Build set of existing tag names
-        let _existing: std::collections::HashSet<String> = tags.iter().map(|t| t.name.clone()).collect();
+        let _existing: std::collections::HashSet<String> =
+            tags.iter().map(|t| t.name.clone()).collect();
         // Remove EXIF versions of tags that PhaseOne provides (FocalLength, ISO, ShutterSpeedValue, ApertureValue)
-        let phaseone_names: std::collections::HashSet<String> = phaseone_tags.iter().map(|t| t.name.clone()).collect();
+        let phaseone_names: std::collections::HashSet<String> =
+            phaseone_tags.iter().map(|t| t.name.clone()).collect();
         // Remove from existing tags those that PhaseOne also provides (PhaseOne wins)
         // PhaseOne ShutterSpeedValue/ApertureValue are better than EXIF APEX versions
-        let phaseone_overrides: std::collections::HashSet<&str> = [
-            "ShutterSpeedValue", "ApertureValue",
-        ].iter().cloned().collect();
-        tags.retain(|t| !phaseone_overrides.contains(t.name.as_str()) || !phaseone_names.contains(&t.name));
+        let phaseone_overrides: std::collections::HashSet<&str> =
+            ["ShutterSpeedValue", "ApertureValue"]
+                .iter()
+                .cloned()
+                .collect();
+        tags.retain(|t| {
+            !phaseone_overrides.contains(t.name.as_str()) || !phaseone_names.contains(&t.name)
+        });
 
         // Now add PhaseOne tags, skipping ones already in tags
-        let existing2: std::collections::HashSet<String> = tags.iter().map(|t| t.name.clone()).collect();
+        let existing2: std::collections::HashSet<String> =
+            tags.iter().map(|t| t.name.clone()).collect();
         for t in phaseone_tags {
             if !existing2.contains(&t.name) {
                 tags.push(t);
@@ -8394,18 +11231,28 @@ pub fn read_iiq(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Add composite tags: RedBalance, BlueBalance from WB_RGBLevels
     {
-        let wb_val = tags.iter().find(|t| t.name == "WB_RGBLevels")
+        let wb_val = tags
+            .iter()
+            .find(|t| t.name == "WB_RGBLevels")
             .map(|t| t.print_value.clone());
         if let Some(s) = wb_val {
             let parts: Vec<&str> = s.split_whitespace().collect();
             if parts.len() >= 3 {
                 if let Ok(r) = parts[0].parse::<f64>() {
-                    tags.push(mktag("Composite", "RedBalance", "Red Balance",
-                        Value::String(format!("{:.5}", r))));
+                    tags.push(mktag(
+                        "Composite",
+                        "RedBalance",
+                        "Red Balance",
+                        Value::String(format!("{:.5}", r)),
+                    ));
                 }
                 if let Ok(b) = parts[2].parse::<f64>() {
-                    tags.push(mktag("Composite", "BlueBalance", "Blue Balance",
-                        Value::String(format!("{:.5}", b))));
+                    tags.push(mktag(
+                        "Composite",
+                        "BlueBalance",
+                        "Blue Balance",
+                        Value::String(format!("{:.5}", b)),
+                    ));
                 }
             }
         }
@@ -8433,29 +11280,43 @@ fn iiq_fmt_f64(v: f64) -> String {
 }
 
 fn iiq_read_u32(data: &[u8], off: usize, is_le: bool) -> u32 {
-    if off + 4 > data.len() { return 0; }
+    if off + 4 > data.len() {
+        return 0;
+    }
     if is_le {
-        u32::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3]])
+        u32::from_le_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]])
     } else {
-        u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]])
+        u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]])
     }
 }
 
 fn iiq_read_f32(data: &[u8], off: usize, is_le: bool) -> f32 {
-    if off + 4 > data.len() { return 0.0; }
-    let bytes = [data[off], data[off+1], data[off+2], data[off+3]];
-    if is_le { f32::from_le_bytes(bytes) } else { f32::from_be_bytes(bytes) }
+    if off + 4 > data.len() {
+        return 0.0;
+    }
+    let bytes = [data[off], data[off + 1], data[off + 2], data[off + 3]];
+    if is_le {
+        f32::from_le_bytes(bytes)
+    } else {
+        f32::from_be_bytes(bytes)
+    }
 }
 
 fn iiq_read_str(raw: &[u8]) -> String {
     // Read null-terminated string
     let end = raw.iter().position(|&b| b == 0).unwrap_or(raw.len());
-    crate::encoding::decode_utf8_or_latin1(&raw[..end]).trim().to_string()
+    crate::encoding::decode_utf8_or_latin1(&raw[..end])
+        .trim()
+        .to_string()
 }
 
 fn iiq_decode_tag(
-    tag_id: u32, raw: &[u8], is_le: bool, size: usize,
-    full_data: &[u8], phaseone_start: usize,
+    tag_id: u32,
+    raw: &[u8],
+    is_le: bool,
+    size: usize,
+    full_data: &[u8],
+    phaseone_start: usize,
     tags: &mut Vec<Tag>,
 ) {
     let push = |tags: &mut Vec<Tag>, name: &str, desc: &str, val: String| {
@@ -8470,7 +11331,11 @@ fn iiq_decode_tag(
         }
         0x0100 => {
             // CameraOrientation
-            let v = if raw.len() >= 4 { iiq_read_u32(raw, 0, is_le) & 0x03 } else { 0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_u32(raw, 0, is_le) & 0x03
+            } else {
+                0
+            };
             let s = match v {
                 0 => "Horizontal (normal)".to_string(),
                 1 => "Rotate 90 CW".to_string(),
@@ -8486,13 +11351,17 @@ fn iiq_decode_tag(
         }
         0x0105 => {
             // ISO
-            let v = if raw.len() >= 4 { iiq_read_u32(raw, 0, is_le) } else { 0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_u32(raw, 0, is_le)
+            } else {
+                0
+            };
             push(tags, "ISO", "ISO", v.to_string());
         }
         0x0106 => {
             // ColorMatrix1 (9 floats)
             if raw.len() >= 36 {
-                let vals: Vec<f32> = (0..9).map(|i| iiq_read_f32(raw, i*4, is_le)).collect();
+                let vals: Vec<f32> = (0..9).map(|i| iiq_read_f32(raw, i * 4, is_le)).collect();
                 let s: Vec<String> = vals.iter().map(|v| format!("{:.3}", v)).collect();
                 push(tags, "ColorMatrix1", "Color Matrix 1", s.join(" "));
             }
@@ -8505,7 +11374,7 @@ fn iiq_decode_tag(
                 let b = iiq_read_f32(raw, 8, is_le) as f64;
                 // Normalize so G=1
                 let s = if g != 0.0 {
-                    format!("{} {} {}", iiq_fmt_f64(r/g), 1.0f64, iiq_fmt_f64(b/g))
+                    format!("{} {} {}", iiq_fmt_f64(r / g), 1.0f64, iiq_fmt_f64(b / g))
                 } else {
                     format!("{} {} {}", iiq_fmt_f64(r), iiq_fmt_f64(g), iiq_fmt_f64(b))
                 };
@@ -8513,32 +11382,65 @@ fn iiq_decode_tag(
             }
         }
         0x0108 => {
-            let v = if raw.len() >= 4 { iiq_read_u32(raw, 0, is_le) } else { 0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_u32(raw, 0, is_le)
+            } else {
+                0
+            };
             push(tags, "SensorWidth", "Sensor Width", v.to_string());
         }
         0x0109 => {
-            let v = if raw.len() >= 4 { iiq_read_u32(raw, 0, is_le) } else { 0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_u32(raw, 0, is_le)
+            } else {
+                0
+            };
             push(tags, "SensorHeight", "Sensor Height", v.to_string());
         }
         0x010a => {
-            let v = if raw.len() >= 4 { iiq_read_u32(raw, 0, is_le) } else { 0 };
-            push(tags, "SensorLeftMargin", "Sensor Left Margin", v.to_string());
+            let v = if raw.len() >= 4 {
+                iiq_read_u32(raw, 0, is_le)
+            } else {
+                0
+            };
+            push(
+                tags,
+                "SensorLeftMargin",
+                "Sensor Left Margin",
+                v.to_string(),
+            );
         }
         0x010b => {
-            let v = if raw.len() >= 4 { iiq_read_u32(raw, 0, is_le) } else { 0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_u32(raw, 0, is_le)
+            } else {
+                0
+            };
             push(tags, "SensorTopMargin", "Sensor Top Margin", v.to_string());
         }
         0x010c => {
-            let v = if raw.len() >= 4 { iiq_read_u32(raw, 0, is_le) } else { 0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_u32(raw, 0, is_le)
+            } else {
+                0
+            };
             push(tags, "ImageWidth", "Image Width", v.to_string());
         }
         0x010d => {
-            let v = if raw.len() >= 4 { iiq_read_u32(raw, 0, is_le) } else { 0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_u32(raw, 0, is_le)
+            } else {
+                0
+            };
             push(tags, "ImageHeight", "Image Height", v.to_string());
         }
         0x010e => {
             // RawFormat
-            let v = if raw.len() >= 4 { iiq_read_u32(raw, 0, is_le) } else { 0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_u32(raw, 0, is_le)
+            } else {
+                0
+            };
             let s = match v {
                 0 => "Uncompressed".to_string(),
                 1 => "RAW 1".to_string(),
@@ -8552,7 +11454,11 @@ fn iiq_decode_tag(
             push(tags, "RawFormat", "Raw Format", s);
         }
         0x0113 => {
-            let v = if raw.len() >= 4 { iiq_read_u32(raw, 0, is_le) } else { 0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_u32(raw, 0, is_le)
+            } else {
+                0
+            };
             push(tags, "ImageNumber", "Image Number", v.to_string());
         }
         0x0203 => {
@@ -8563,22 +11469,48 @@ fn iiq_decode_tag(
         }
         0x0210 => {
             // SensorTemperature (float)
-            let v = if raw.len() >= 4 { iiq_read_f32(raw, 0, is_le) } else { 0.0 };
-            push(tags, "SensorTemperature", "Sensor Temperature", format!("{:.2} C", v));
+            let v = if raw.len() >= 4 {
+                iiq_read_f32(raw, 0, is_le)
+            } else {
+                0.0
+            };
+            push(
+                tags,
+                "SensorTemperature",
+                "Sensor Temperature",
+                format!("{:.2} C", v),
+            );
         }
         0x0211 => {
             // SensorTemperature2 (float)
-            let v = if raw.len() >= 4 { iiq_read_f32(raw, 0, is_le) } else { 0.0 };
-            push(tags, "SensorTemperature2", "Sensor Temperature 2", format!("{:.2} C", v));
+            let v = if raw.len() >= 4 {
+                iiq_read_f32(raw, 0, is_le)
+            } else {
+                0.0
+            };
+            push(
+                tags,
+                "SensorTemperature2",
+                "Sensor Temperature 2",
+                format!("{:.2} C", v),
+            );
         }
         0x021d => {
             // BlackLevel
-            let v = if raw.len() >= 4 { iiq_read_u32(raw, 0, is_le) } else { 0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_u32(raw, 0, is_le)
+            } else {
+                0
+            };
             push(tags, "BlackLevel", "Black Level", v.to_string());
         }
         0x0222 => {
             // SplitColumn
-            let v = if raw.len() >= 4 { iiq_read_u32(raw, 0, is_le) } else { 0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_u32(raw, 0, is_le)
+            } else {
+                0
+            };
             push(tags, "SplitColumn", "Split Column", v.to_string());
         }
         0x0223 => {
@@ -8586,51 +11518,86 @@ fn iiq_decode_tag(
             // Format as space-separated int16u values (matching Perl Binary output)
             let count = raw.len() / 2;
             if count > 0 {
-                let vals: Vec<String> = (0..count).map(|i| {
-                    let v = if is_le {
-                        u16::from_le_bytes([raw[i*2], raw[i*2+1]])
-                    } else {
-                        u16::from_be_bytes([raw[i*2], raw[i*2+1]])
-                    };
-                    v.to_string()
-                }).collect();
+                let vals: Vec<String> = (0..count)
+                    .map(|i| {
+                        let v = if is_le {
+                            u16::from_le_bytes([raw[i * 2], raw[i * 2 + 1]])
+                        } else {
+                            u16::from_be_bytes([raw[i * 2], raw[i * 2 + 1]])
+                        };
+                        v.to_string()
+                    })
+                    .collect();
                 let s = vals.join(" ");
                 let display = format!("(Binary data {} bytes, use -b option to extract)", s.len());
                 push(tags, "BlackLevelData", "Black Level Data", display);
             } else {
-                push(tags, "BlackLevelData", "Black Level Data",
-                    format!("(Binary data {} bytes, use -b option to extract)", raw.len()));
+                push(
+                    tags,
+                    "BlackLevelData",
+                    "Black Level Data",
+                    format!(
+                        "(Binary data {} bytes, use -b option to extract)",
+                        raw.len()
+                    ),
+                );
             }
         }
         0x0226 => {
             // ColorMatrix2 (9 floats)
             if raw.len() >= 36 {
-                let vals: Vec<f32> = (0..9).map(|i| iiq_read_f32(raw, i*4, is_le)).collect();
+                let vals: Vec<f32> = (0..9).map(|i| iiq_read_f32(raw, i * 4, is_le)).collect();
                 let s: Vec<String> = vals.iter().map(|v| format!("{:.3}", v)).collect();
                 push(tags, "ColorMatrix2", "Color Matrix 2", s.join(" "));
             }
         }
         0x0301 => {
             // FirmwareVersions (string)
-            push(tags, "FirmwareVersions", "Firmware Versions", iiq_read_str(raw));
+            push(
+                tags,
+                "FirmwareVersions",
+                "Firmware Versions",
+                iiq_read_str(raw),
+            );
         }
         0x0400 => {
             // ShutterSpeedValue (float, convert: 2**(-val))
-            let v = if raw.len() >= 4 { iiq_read_f32(raw, 0, is_le) } else { 0.0 };
-            let exposure = if v.abs() < 100.0 { 2.0f32.powf(-v) } else { 0.0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_f32(raw, 0, is_le)
+            } else {
+                0.0
+            };
+            let exposure = if v.abs() < 100.0 {
+                2.0f32.powf(-v)
+            } else {
+                0.0
+            };
             // Format as fraction
             let s = iiq_format_exposure_time(exposure);
             push(tags, "ShutterSpeedValue", "Shutter Speed Value", s);
         }
         0x0401 => {
             // ApertureValue (float, convert: 2**(val/2))
-            let v = if raw.len() >= 4 { iiq_read_f32(raw, 0, is_le) } else { 0.0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_f32(raw, 0, is_le)
+            } else {
+                0.0
+            };
             let aperture = 2.0f32.powf(v / 2.0);
-            push(tags, "ApertureValue", "Aperture Value", format!("{:.1}", aperture));
+            push(
+                tags,
+                "ApertureValue",
+                "Aperture Value",
+                format!("{:.1}", aperture),
+            );
         }
         0x0403 => {
             // FocalLength (float)
-            let v = if raw.len() >= 4 { iiq_read_f32(raw, 0, is_le) } else { 0.0 };
+            let v = if raw.len() >= 4 {
+                iiq_read_f32(raw, 0, is_le)
+            } else {
+                0.0
+            };
             push(tags, "FocalLength", "Focal Length", format!("{:.1} mm", v));
         }
         0x0412 => {
@@ -8644,7 +11611,9 @@ fn iiq_decode_tag(
 }
 
 fn iiq_format_exposure_time(t: f32) -> String {
-    if t <= 0.0 { return "0".to_string(); }
+    if t <= 0.0 {
+        return "0".to_string();
+    }
     if t >= 1.0 {
         // Whole seconds or more
         let rounded = t.round() as u32;
@@ -8659,36 +11628,55 @@ fn iiq_format_exposure_time(t: f32) -> String {
 }
 
 fn iiq_parse_sensor_calibration(
-    data: &[u8], phaseone_start: usize, is_le: bool,
-    entry_start: usize, num_entries: usize,
+    data: &[u8],
+    phaseone_start: usize,
+    is_le: bool,
+    entry_start: usize,
+    num_entries: usize,
     tags: &mut Vec<Tag>,
 ) {
     // Find tag 0x0110 (SensorCalibration sub-block)
     for i in 0..num_entries {
         let off = entry_start + i * 16;
         let tag_id = iiq_read_u32(data, off, is_le);
-        if tag_id != 0x0110 { continue; }
+        if tag_id != 0x0110 {
+            continue;
+        }
         let size = iiq_read_u32(data, off + 8, is_le) as usize;
         let val_or_ptr = iiq_read_u32(data, off + 12, is_le) as usize;
-        if size <= 4 { return; }
+        if size <= 4 {
+            return;
+        }
 
         let abs_ptr = phaseone_start + val_or_ptr;
-        if abs_ptr + size > data.len() { return; }
+        if abs_ptr + size > data.len() {
+            return;
+        }
         let sub = &data[abs_ptr..abs_ptr + size];
 
         // SensorCalibration sub-block: starts with IIII\\x01\\x00\\x00\\x00 or MMMM\\x00\\x00\\x00\\x01
-        if sub.len() < 12 { return; }
+        if sub.len() < 12 {
+            return;
+        }
         let sub_is_le = &sub[0..4] == b"IIII";
         let sub_is_be = &sub[0..4] == b"MMMM";
-        if !sub_is_le && !sub_is_be { return; }
+        if !sub_is_le && !sub_is_be {
+            return;
+        }
 
         let sub_ifd_off = iiq_read_u32(sub, 8, sub_is_le) as usize;
-        if sub_ifd_off + 8 > sub.len() { return; }
+        if sub_ifd_off + 8 > sub.len() {
+            return;
+        }
 
         let num_sub = iiq_read_u32(sub, sub_ifd_off, sub_is_le) as usize;
-        if num_sub > 300 { return; }
+        if num_sub > 300 {
+            return;
+        }
         let sub_entry_start = sub_ifd_off + 8;
-        if sub_entry_start + num_sub * 12 > sub.len() { return; }
+        if sub_entry_start + num_sub * 12 > sub.len() {
+            return;
+        }
 
         // SensorCalibration uses 12-byte entries (no format field)
         for j in 0..num_sub {
@@ -8700,7 +11688,12 @@ fn iiq_parse_sensor_calibration(
             if etag == 0x0400 {
                 // SensorDefects (binary undef)
                 let display = format!("(Binary data {} bytes, use -b option to extract)", esize);
-                tags.push(mktag("MakerNotes", "SensorDefects", "Sensor Defects", Value::String(display)));
+                tags.push(mktag(
+                    "MakerNotes",
+                    "SensorDefects",
+                    "Sensor Defects",
+                    Value::String(display),
+                ));
                 break;
             }
         }

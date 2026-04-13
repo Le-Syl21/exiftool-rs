@@ -51,19 +51,35 @@ fn build_new_vorbis_comments(existing: &[u8], changes: &[(&str, &str)]) -> Vec<u
 
     // Parse existing
     if existing.len() >= 8 {
-        let vendor_len = u32::from_le_bytes([existing[0], existing[1], existing[2], existing[3]]) as usize;
+        let vendor_len =
+            u32::from_le_bytes([existing[0], existing[1], existing[2], existing[3]]) as usize;
         let mut p = 4 + vendor_len;
         if p + 4 <= existing.len() {
-            let num = u32::from_le_bytes([existing[p], existing[p+1], existing[p+2], existing[p+3]]);
+            let num = u32::from_le_bytes([
+                existing[p],
+                existing[p + 1],
+                existing[p + 2],
+                existing[p + 3],
+            ]);
             p += 4;
             for _ in 0..num {
-                if p + 4 > existing.len() { break; }
-                let clen = u32::from_le_bytes([existing[p], existing[p+1], existing[p+2], existing[p+3]]) as usize;
+                if p + 4 > existing.len() {
+                    break;
+                }
+                let clen = u32::from_le_bytes([
+                    existing[p],
+                    existing[p + 1],
+                    existing[p + 2],
+                    existing[p + 3],
+                ]) as usize;
                 p += 4;
-                if p + clen > existing.len() { break; }
-                let comment = crate::encoding::decode_utf8_or_latin1(&existing[p..p+clen]).to_string();
+                if p + clen > existing.len() {
+                    break;
+                }
+                let comment =
+                    crate::encoding::decode_utf8_or_latin1(&existing[p..p + clen]).to_string();
                 if let Some(eq) = comment.find('=') {
-                    comments.push((comment[..eq].to_string(), comment[eq+1..].to_string()));
+                    comments.push((comment[..eq].to_string(), comment[eq + 1..].to_string()));
                 }
                 p += clen;
             }

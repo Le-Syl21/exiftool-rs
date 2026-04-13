@@ -19,7 +19,9 @@ pub fn read_mrw(data: &[u8]) -> Result<Vec<Tag>> {
 
     while pos + 8 <= data_offset.min(data.len()) {
         let seg_tag = &data[pos..pos + 4];
-        let length = u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]) as usize;
+        let length =
+            u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                as usize;
         pos += 8;
 
         if pos + length > data.len() {
@@ -47,7 +49,9 @@ pub fn read_mrw(data: &[u8]) -> Result<Vec<Tag>> {
                 // Offset 18: StorageMethod (int8u)
                 // Offset 23: BayerPattern  (int8u)
                 if length >= 8 {
-                    let fw = crate::encoding::decode_utf8_or_latin1(&seg_data[0..8.min(length)]).trim_end_matches('\0').to_string();
+                    let fw = crate::encoding::decode_utf8_or_latin1(&seg_data[0..8.min(length)])
+                        .trim_end_matches('\0')
+                        .to_string();
                     if !fw.is_empty() {
                         tags.push(mk_str("FirmwareID", "Firmware ID", fw.clone()));
                     }
@@ -77,7 +81,7 @@ pub fn read_mrw(data: &[u8]) -> Result<Vec<Tag>> {
                     let storage_str = match storage {
                         82 => "Padded".to_string(),
                         89 => "Linear".to_string(),
-                        v  => v.to_string(),
+                        v => v.to_string(),
                     };
                     tags.push(mk_str("StorageMethod", "Storage Method", storage_str));
                 }
@@ -100,26 +104,38 @@ pub fn read_mrw(data: &[u8]) -> Result<Vec<Tag>> {
                     let w1 = seg_data[1];
                     let w2 = seg_data[2];
                     let w3 = seg_data[3];
-                    tags.push(mk_str("WBScale", "White Balance Scale",
-                        format!("{} {} {} {}", w0, w1, w2, w3)));
+                    tags.push(mk_str(
+                        "WBScale",
+                        "White Balance Scale",
+                        format!("{} {} {} {}", w0, w1, w2, w3),
+                    ));
                 }
                 if length >= 12 {
-                    let r  = u16::from_be_bytes([seg_data[4],  seg_data[5]]);
-                    let g1 = u16::from_be_bytes([seg_data[6],  seg_data[7]]);
-                    let g2 = u16::from_be_bytes([seg_data[8],  seg_data[9]]);
-                    let b  = u16::from_be_bytes([seg_data[10], seg_data[11]]);
-                    tags.push(mk_str("WB_RGGBLevels", "WB RGGB Levels",
-                        format!("{} {} {} {}", r, g1, g2, b)));
+                    let r = u16::from_be_bytes([seg_data[4], seg_data[5]]);
+                    let g1 = u16::from_be_bytes([seg_data[6], seg_data[7]]);
+                    let g2 = u16::from_be_bytes([seg_data[8], seg_data[9]]);
+                    let b = u16::from_be_bytes([seg_data[10], seg_data[11]]);
+                    tags.push(mk_str(
+                        "WB_RGGBLevels",
+                        "WB RGGB Levels",
+                        format!("{} {} {} {}", r, g1, g2, b),
+                    ));
                     // Also compute Red/Blue balance as float
                     if g1 > 0 {
                         let red_bal = r as f64 / g1 as f64;
-                        tags.push(mk_str("RedBalance", "Red Balance",
-                            format!("{:.6}", red_bal)));
+                        tags.push(mk_str(
+                            "RedBalance",
+                            "Red Balance",
+                            format!("{:.6}", red_bal),
+                        ));
                     }
                     if g2 > 0 {
                         let blue_bal = b as f64 / g2 as f64;
-                        tags.push(mk_str("BlueBalance", "Blue Balance",
-                            format!("{:.6}", blue_bal)));
+                        tags.push(mk_str(
+                            "BlueBalance",
+                            "Blue Balance",
+                            format!("{:.6}", blue_bal),
+                        ));
                     }
                 }
             }
@@ -175,11 +191,12 @@ pub fn read_mrw(data: &[u8]) -> Result<Vec<Tag>> {
                     let iso_raw = seg_data[6];
                     if iso_raw != 255 {
                         let iso_str = match iso_raw {
-                            0   => "Auto".to_string(),
+                            0 => "Auto".to_string(),
                             174 => "80 (Zone Matching Low)".to_string(),
                             184 => "200 (Zone Matching High)".to_string(),
-                            v   => {
-                                let iso_val = (2f64.powf((v as f64 - 48.0) / 8.0) * 100.0 + 0.5) as u32;
+                            v => {
+                                let iso_val =
+                                    (2f64.powf((v as f64 - 48.0) / 8.0) * 100.0 + 0.5) as u32;
                                 iso_val.to_string()
                             }
                         };
@@ -193,15 +210,15 @@ pub fn read_mrw(data: &[u8]) -> Result<Vec<Tag>> {
                 }
                 // WB_RBLevels (only for Minolta PRD models — always true for MRW files)
                 for (name, offset) in &[
-                    ("WB_RBLevelsTungsten",  8usize),
-                    ("WB_RBLevelsDaylight",  12),
-                    ("WB_RBLevelsCloudy",    16),
-                    ("WB_RBLevelsCoolWhiteF",20),
-                    ("WB_RBLevelsFlash",     24),
-                    ("WB_RBLevelsCustom",    28),
+                    ("WB_RBLevelsTungsten", 8usize),
+                    ("WB_RBLevelsDaylight", 12),
+                    ("WB_RBLevelsCloudy", 16),
+                    ("WB_RBLevelsCoolWhiteF", 20),
+                    ("WB_RBLevelsFlash", 24),
+                    ("WB_RBLevelsCustom", 28),
                 ] {
                     if length >= offset + 4 {
-                        let r = u16::from_be_bytes([seg_data[*offset],     seg_data[*offset + 1]]);
+                        let r = u16::from_be_bytes([seg_data[*offset], seg_data[*offset + 1]]);
                         let b = u16::from_be_bytes([seg_data[*offset + 2], seg_data[*offset + 3]]);
                         tags.push(mk_str(name, name, format!("{} {}", r, b)));
                     }
@@ -240,13 +257,23 @@ pub fn read_mrw(data: &[u8]) -> Result<Vec<Tag>> {
 /// Convert WBMode byte to string (matches Perl MinoltaRaw::ConvertWBMode).
 fn convert_wb_mode(val: u8) -> String {
     let wb_map: &[(u8, &str)] = &[
-        (0, "Auto"), (1, "Daylight"), (2, "Cloudy"), (3, "Tungsten"),
-        (4, "Flash/Fluorescent"), (5, "Fluorescent"), (6, "Shade"),
-        (7, "User 1"), (8, "User 2"), (9, "User 3"), (10, "Temperature"),
+        (0, "Auto"),
+        (1, "Daylight"),
+        (2, "Cloudy"),
+        (3, "Tungsten"),
+        (4, "Flash/Fluorescent"),
+        (5, "Fluorescent"),
+        (6, "Shade"),
+        (7, "User 1"),
+        (8, "User 2"),
+        (9, "User 3"),
+        (10, "Temperature"),
     ];
     let lo = val & 0x0f;
     let hi = val >> 4;
-    let base = wb_map.iter().find(|&&(k, _)| k == lo)
+    let base = wb_map
+        .iter()
+        .find(|&&(k, _)| k == lo)
         .map(|&(_, v)| v)
         .unwrap_or("Unknown");
     let mut s = base.to_string();
@@ -259,14 +286,14 @@ fn convert_wb_mode(val: u8) -> String {
 /// Convert Minolta ColorMode value to string (matches Perl %minoltaColorMode).
 fn convert_minolta_color_mode(val: u32) -> String {
     match val {
-        0  => "Natural color".to_string(),
-        1  => "Black & White".to_string(),
-        2  => "Vivid color".to_string(),
-        3  => "Solarization".to_string(),
-        4  => "Adobe RGB".to_string(),
+        0 => "Natural color".to_string(),
+        1 => "Black & White".to_string(),
+        2 => "Vivid color".to_string(),
+        3 => "Solarization".to_string(),
+        4 => "Adobe RGB".to_string(),
         13 => "Natural sRGB".to_string(),
         14 => "Natural+ sRGB".to_string(),
-        v  => v.to_string(),
+        v => v.to_string(),
     }
 }
 

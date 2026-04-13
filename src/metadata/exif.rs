@@ -139,17 +139,19 @@ impl ExifReader {
                 }
             }
             // Construct PreviewImage from PreviewImageStart + PreviewImageLength
-            let preview_start = tags.iter()
+            let preview_start = tags
+                .iter()
                 .find(|t| t.name == "PreviewImageStart" && t.group.family1 == "IFD0")
                 .and_then(|t| t.raw_value.as_u64())
                 .map(|v| v as usize);
-            let preview_len = tags.iter()
+            let preview_len = tags
+                .iter()
                 .find(|t| t.name == "PreviewImageLength" && t.group.family1 == "IFD0")
                 .and_then(|t| t.raw_value.as_u64())
                 .map(|v| v as usize);
             if let (Some(start), Some(len)) = (preview_start, preview_len) {
                 if len > 0 && start + len <= data.len() {
-                    let img_data = data[start..start+len].to_vec();
+                    let img_data = data[start..start + len].to_vec();
                     let pv = format!("(Binary data {} bytes, use -b option to extract)", len);
                     tags.push(Tag {
                         id: TagId::Text("PreviewImage".to_string()),
@@ -182,7 +184,11 @@ impl ExifReader {
             .unwrap_or_default();
 
         // Store model for sub-table dispatch
-        let make_and_model = if model.is_empty() { make.clone() } else { model };
+        let make_and_model = if model.is_empty() {
+            make.clone()
+        } else {
+            model
+        };
 
         // Find and parse MakerNotes
         // Look for the MakerNote tag (0x927C) that was stored as Undefined
@@ -195,7 +201,12 @@ impl ExifReader {
 
         if let Some((mn_offset, mn_size)) = mn_info {
             let mn_tags = crate::metadata::makernotes::parse_makernotes(
-                data, mn_offset, mn_size, &make, &make_and_model, header.byte_order,
+                data,
+                mn_offset,
+                mn_size,
+                &make,
+                &make_and_model,
+                header.byte_order,
             );
             // Remove the raw MakerNote tag and replace with parsed tags
             tags.retain(|t| t.name != "MakerNote");
@@ -205,38 +216,73 @@ impl ExifReader {
             {
                 // Tags where EXIF takes priority over MakerNotes (structural/authoritative EXIF)
                 let exif_primary: &[&str] = &[
-                    "ThumbnailOffset", "ThumbnailLength", "ThumbnailImage",
-                    "StripOffsets", "StripByteCounts",
-                    "PreviewImageStart", "PreviewImageLength", "PreviewImage",
-                    "ImageWidth", "ImageHeight", "BitsPerSample", "Compression",
-                    "PhotometricInterpretation", "SamplesPerPixel", "RowsPerStrip",
-                    "PlanarConfiguration", "XResolution", "YResolution", "ResolutionUnit",
-                    "Orientation", "Make", "Model", "Software",
-                    "ExifByteOrder", "CR2CFAPattern", "RawImageSegmentation",
-                    "ColorSpace", "ExifVersion", "FlashpixVersion",
-                    "ExifImageWidth", "ExifImageHeight", "InteropIndex", "InteropVersion",
-                    "DateTimeOriginal", "CreateDate", "ModifyDate", "DateTime",
-                    "FocalPlaneXResolution", "FocalPlaneYResolution", "FocalPlaneResolutionUnit",
-                    "CustomRendered", "ExposureMode", "SceneCaptureType",
-                    "Flash", "FocalLength", "ISO", "ExposureTime", "ExposureProgram",
-                    "FNumber", "ShutterSpeedValue", "ApertureValue", "ComponentsConfiguration",
+                    "ThumbnailOffset",
+                    "ThumbnailLength",
+                    "ThumbnailImage",
+                    "StripOffsets",
+                    "StripByteCounts",
+                    "PreviewImageStart",
+                    "PreviewImageLength",
+                    "PreviewImage",
+                    "ImageWidth",
+                    "ImageHeight",
+                    "BitsPerSample",
+                    "Compression",
+                    "PhotometricInterpretation",
+                    "SamplesPerPixel",
+                    "RowsPerStrip",
+                    "PlanarConfiguration",
+                    "XResolution",
+                    "YResolution",
+                    "ResolutionUnit",
+                    "Orientation",
+                    "Make",
+                    "Model",
+                    "Software",
+                    "ExifByteOrder",
+                    "CR2CFAPattern",
+                    "RawImageSegmentation",
+                    "ColorSpace",
+                    "ExifVersion",
+                    "FlashpixVersion",
+                    "ExifImageWidth",
+                    "ExifImageHeight",
+                    "InteropIndex",
+                    "InteropVersion",
+                    "DateTimeOriginal",
+                    "CreateDate",
+                    "ModifyDate",
+                    "DateTime",
+                    "FocalPlaneXResolution",
+                    "FocalPlaneYResolution",
+                    "FocalPlaneResolutionUnit",
+                    "CustomRendered",
+                    "ExposureMode",
+                    "SceneCaptureType",
+                    "Flash",
+                    "FocalLength",
+                    "ISO",
+                    "ExposureTime",
+                    "ExposureProgram",
+                    "FNumber",
+                    "ShutterSpeedValue",
+                    "ApertureValue",
+                    "ComponentsConfiguration",
                     "UserComment",
                 ];
-                let mn_name_set: std::collections::HashSet<String> = mn_tags.iter()
-                    .map(|t| t.name.clone())
-                    .collect();
-                let exif_has: std::collections::HashSet<String> = tags.iter()
-                    .map(|t| t.name.clone())
-                    .collect();
+                let mn_name_set: std::collections::HashSet<String> =
+                    mn_tags.iter().map(|t| t.name.clone()).collect();
+                let exif_has: std::collections::HashSet<String> =
+                    tags.iter().map(|t| t.name.clone()).collect();
                 // Remove EXIF non-primary tags when MakerNotes provides them (MakerNotes wins)
                 tags.retain(|t| {
-                    !mn_name_set.contains(&t.name)
-                    || exif_primary.contains(&t.name.as_str())
+                    !mn_name_set.contains(&t.name) || exif_primary.contains(&t.name.as_str())
                 });
                 // Add MakerNotes tags, but skip EXIF-primary tags that EXIF already provides
                 for mn_tag in mn_tags {
                     if exif_primary.contains(&mn_tag.name.as_str())
-                        && exif_has.contains(&mn_tag.name) {
+                        && exif_has.contains(&mn_tag.name)
+                    {
                         // EXIF wins - don't add MakerNotes version
                         continue;
                     }
@@ -255,9 +301,8 @@ impl ExifReader {
         // Parse IPTC data embedded in TIFF (tag 0x83BB "IPTC-NAA")
         // The raw tag stores IPTC data as undefined bytes or a list of u32 values
         {
-            let iptc_data: Option<Vec<u8>> = tags.iter()
-                .find(|t| t.name == "IPTC-NAA")
-                .and_then(|t| {
+            let iptc_data: Option<Vec<u8>> =
+                tags.iter().find(|t| t.name == "IPTC-NAA").and_then(|t| {
                     match &t.raw_value {
                         Value::Undefined(bytes) => Some(bytes.clone()),
                         Value::Binary(bytes) => Some(bytes.clone()),
@@ -270,7 +315,11 @@ impl ExifReader {
                                     _ => {}
                                 }
                             }
-                            if bytes.is_empty() { None } else { Some(bytes) }
+                            if bytes.is_empty() {
+                                None
+                            } else {
+                                Some(bytes)
+                            }
                         }
                         _ => None,
                     }
@@ -305,15 +354,14 @@ impl ExifReader {
 
         // Parse ICC_Profile data embedded in TIFF (tag 0x8773)
         {
-            let icc_data: Option<Vec<u8>> = tags.iter()
-                .find(|t| t.name == "ICC_Profile")
-                .and_then(|t| {
-                    match &t.raw_value {
+            let icc_data: Option<Vec<u8>> =
+                tags.iter()
+                    .find(|t| t.name == "ICC_Profile")
+                    .and_then(|t| match &t.raw_value {
                         Value::Undefined(bytes) => Some(bytes.clone()),
                         Value::Binary(bytes) => Some(bytes.clone()),
                         _ => None,
-                    }
-                });
+                    });
 
             if let Some(icc_bytes) = icc_data {
                 if let Ok(icc_tags) = crate::formats::icc::read_icc(&icc_bytes) {
@@ -333,11 +381,14 @@ impl ExifReader {
         // structural EXIF/IFD tags.
         {
             // Find MakerNotes tags that have duplicates
-            let mn_tags_start = tags.iter().position(|t| t.group.family0 == "MakerNotes")
+            let mn_tags_start = tags
+                .iter()
+                .position(|t| t.group.family0 == "MakerNotes")
                 .unwrap_or(tags.len());
             if mn_tags_start < tags.len() {
                 // For each MakerNotes tag name, find the last occurrence index
-                let mut last_idx: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+                let mut last_idx: std::collections::HashMap<&str, usize> =
+                    std::collections::HashMap::new();
                 for (i, t) in tags[mn_tags_start..].iter().enumerate() {
                     last_idx.insert(t.name.as_str(), i + mn_tags_start);
                 }
@@ -364,42 +415,68 @@ impl ExifReader {
 
     /// Find MakerNote (tag 0x927C) offset and size in ExifIFD.
     /// Parse DNG PrivateData (0xC634) to extract embedded MakerNotes
-    fn parse_dng_private_data(data: &[u8], header: &TiffHeader, make: &str, model: &str, tags: &mut Vec<Tag>) {
+    fn parse_dng_private_data(
+        data: &[u8],
+        header: &TiffHeader,
+        make: &str,
+        model: &str,
+        tags: &mut Vec<Tag>,
+    ) {
         // Scan IFD0 for tag 0xC634
         let ifd0_offset = header.ifd0_offset as usize;
-        if ifd0_offset + 2 > data.len() { return; }
+        if ifd0_offset + 2 > data.len() {
+            return;
+        }
         let entry_count = read_u16(data, ifd0_offset, header.byte_order) as usize;
         let entries_start = ifd0_offset + 2;
         for i in 0..entry_count {
             let eoff = entries_start + i * 12;
-            if eoff + 12 > data.len() { break; }
+            if eoff + 12 > data.len() {
+                break;
+            }
             let tag = read_u16(data, eoff, header.byte_order);
             if tag == 0xC634 {
                 let dtype = read_u16(data, eoff + 2, header.byte_order);
                 let count = read_u32(data, eoff + 4, header.byte_order) as usize;
-                let elem_size = match dtype { 1 | 7 => 1, _ => 0 };
+                let elem_size = match dtype {
+                    1 | 7 => 1,
+                    _ => 0,
+                };
                 let total = elem_size * count;
-                if total < 14 { continue; }
+                if total < 14 {
+                    continue;
+                }
                 let off = read_u32(data, eoff + 8, header.byte_order) as usize;
-                if off + total > data.len() { continue; }
-                let pdata = &data[off..off+total];
+                if off + total > data.len() {
+                    continue;
+                }
+                let pdata = &data[off..off + total];
                 // Parse Adobe DNGPrivateData: "Adobe\0" + blocks
-                if !pdata.starts_with(b"Adobe\0") { continue; }
+                if !pdata.starts_with(b"Adobe\0") {
+                    continue;
+                }
                 let mut bpos = 6;
                 while bpos + 8 <= pdata.len() {
-                    let btag = &pdata[bpos..bpos+4];
-                    let bsize = u32::from_be_bytes([pdata[bpos+4], pdata[bpos+5], pdata[bpos+6], pdata[bpos+7]]) as usize;
+                    let btag = &pdata[bpos..bpos + 4];
+                    let bsize = u32::from_be_bytes([
+                        pdata[bpos + 4],
+                        pdata[bpos + 5],
+                        pdata[bpos + 6],
+                        pdata[bpos + 7],
+                    ]) as usize;
                     bpos += 8;
-                    if bpos + bsize > pdata.len() { break; }
+                    if bpos + bsize > pdata.len() {
+                        break;
+                    }
                     if btag == b"MakN" && bsize > 6 {
-                        let mn_block = &pdata[bpos..bpos+bsize];
+                        let mn_block = &pdata[bpos..bpos + bsize];
                         let mn_bo = if &mn_block[0..2] == b"II" {
                             ByteOrderMark::LittleEndian
                         } else {
                             ByteOrderMark::BigEndian
                         };
                         let mut mn_start = 6; // skip byte order + original offset
-                        // Hack for extra 12 bytes in MakN header (Adobe Camera Raw bug)
+                                              // Hack for extra 12 bytes in MakN header (Adobe Camera Raw bug)
                         if bsize >= 18 && &mn_block[6..10] == b"\0\0\0\x01" {
                             mn_start += 12;
                         }
@@ -414,7 +491,11 @@ impl ExifReader {
                                 id: TagId::Text("MakerNoteByteOrder".into()),
                                 name: "MakerNoteByteOrder".into(),
                                 description: "Maker Note Byte Order".into(),
-                                group: TagGroup { family0: "File".into(), family1: "File".into(), family2: "Image".into() },
+                                group: TagGroup {
+                                    family0: "File".into(),
+                                    family1: "File".into(),
+                                    family2: "Image".into(),
+                                },
                                 raw_value: Value::String(mn_bo_str.into()),
                                 print_value: mn_bo_str.into(),
                                 priority: 0,
@@ -424,42 +505,72 @@ impl ExifReader {
                             // We need to pass the full DNG data so offsets resolve correctly.
                             let mn_data_in_block = &mn_block[mn_start..];
                             let mn_abs_offset = off + (bpos - 8 + 8) + mn_start; // absolute offset in DNG file
-                            // Check for Canon TIFF footer (last 8 bytes)
+                                                                                 // Check for Canon TIFF footer (last 8 bytes)
                             let fix_base = if mn_data_in_block.len() > 8 {
-                                let footer = &mn_data_in_block[mn_data_in_block.len()-8..];
+                                let footer = &mn_data_in_block[mn_data_in_block.len() - 8..];
                                 if (footer[0..2] == *b"II" || footer[0..2] == *b"MM")
-                                    && (footer[2..4] == *b"\x2a\x00" || footer[2..4] == *b"\x00\x2a")
+                                    && (footer[2..4] == *b"\x2a\x00"
+                                        || footer[2..4] == *b"\x00\x2a")
                                 {
                                     let old_off = if footer[0] == b'I' {
-                                        u32::from_le_bytes([footer[4], footer[5], footer[6], footer[7]])
+                                        u32::from_le_bytes([
+                                            footer[4], footer[5], footer[6], footer[7],
+                                        ])
                                     } else {
-                                        u32::from_be_bytes([footer[4], footer[5], footer[6], footer[7]])
+                                        u32::from_be_bytes([
+                                            footer[4], footer[5], footer[6], footer[7],
+                                        ])
                                     } as usize;
                                     if old_off > 0 && mn_abs_offset > old_off {
                                         mn_abs_offset as isize - old_off as isize
-                                    } else { 0 }
-                                } else { 0 }
-                            } else { 0 };
+                                    } else {
+                                        0
+                                    }
+                                } else {
+                                    0
+                                }
+                            } else {
+                                0
+                            };
 
                             let mn_tags = if fix_base != 0 {
                                 // Pass full DNG data with corrected offset and base fix
                                 crate::metadata::makernotes::parse_makernotes_with_base(
-                                    data, mn_abs_offset, mn_data_in_block.len(),
-                                    make, model, mn_bo, fix_base,
+                                    data,
+                                    mn_abs_offset,
+                                    mn_data_in_block.len(),
+                                    make,
+                                    model,
+                                    mn_bo,
+                                    fix_base,
                                 )
                             } else {
                                 crate::metadata::makernotes::parse_makernotes(
-                                    mn_data_in_block, 0, mn_data_in_block.len(),
-                                    make, model, mn_bo,
+                                    mn_data_in_block,
+                                    0,
+                                    mn_data_in_block.len(),
+                                    make,
+                                    model,
+                                    mn_bo,
                                 )
                             };
                             // DNG MakerNote tags that Perl doesn't emit (conditions/Unknown/offset issues)
-                            let dng_suppress = ["AESetting", "CameraISO", "ImageStabilization",
-                                "SpotMeteringMode", "RawJpgSize", "Warning"];
+                            let dng_suppress = [
+                                "AESetting",
+                                "CameraISO",
+                                "ImageStabilization",
+                                "SpotMeteringMode",
+                                "RawJpgSize",
+                                "Warning",
+                            ];
                             for mn_tag in mn_tags {
                                 // Skip EXIF-primary tags and DNG-suppressed tags
-                                if tags.iter().any(|t| t.name == mn_tag.name) { continue; }
-                                if dng_suppress.contains(&mn_tag.name.as_str()) { continue; }
+                                if tags.iter().any(|t| t.name == mn_tag.name) {
+                                    continue;
+                                }
+                                if dng_suppress.contains(&mn_tag.name.as_str()) {
+                                    continue;
+                                }
                                 tags.push(mn_tag);
                             }
                         }
@@ -482,7 +593,9 @@ impl ExifReader {
 
         for i in 0..entry_count {
             let eoff = entries_start + i * 12;
-            if eoff + 12 > data.len() { break; }
+            if eoff + 12 > data.len() {
+                break;
+            }
             let tag = read_u16(data, eoff, header.byte_order);
             if tag == 0x8769 {
                 // ExifIFD pointer
@@ -493,7 +606,12 @@ impl ExifReader {
         }
     }
 
-    fn find_makernote_in_ifd(data: &[u8], header: &TiffHeader, ifd_offset: usize, result: &mut Option<(usize, usize)>) {
+    fn find_makernote_in_ifd(
+        data: &[u8],
+        header: &TiffHeader,
+        ifd_offset: usize,
+        result: &mut Option<(usize, usize)>,
+    ) {
         if ifd_offset + 2 > data.len() {
             return;
         }
@@ -502,12 +620,20 @@ impl ExifReader {
 
         for i in 0..entry_count {
             let eoff = entries_start + i * 12;
-            if eoff + 12 > data.len() { break; }
+            if eoff + 12 > data.len() {
+                break;
+            }
             let tag = read_u16(data, eoff, header.byte_order);
             if tag == 0x927C {
                 let data_type = read_u16(data, eoff + 2, header.byte_order);
                 let count = read_u32(data, eoff + 4, header.byte_order) as usize;
-                let type_size = match data_type { 1 | 2 | 6 | 7 => 1, 3 | 8 => 2, 4 | 9 | 11 | 13 => 4, 5 | 10 | 12 => 8, _ => 1 };
+                let type_size = match data_type {
+                    1 | 2 | 6 | 7 => 1,
+                    3 | 8 => 2,
+                    4 | 9 | 11 | 13 => 4,
+                    5 | 10 | 12 => 8,
+                    _ => 1,
+                };
                 let total_size = type_size * count;
 
                 if total_size <= 4 {
@@ -596,13 +722,19 @@ impl ExifReader {
                     };
                     if total_size > 11 {
                         let off = entry.value_offset as usize;
-                        if off + 11 <= data.len() && &data[off..off+7] == b"PrintIM" {
-                            let ver = crate::encoding::decode_utf8_or_latin1(&data[off+7..off+11]).to_string();
+                        if off + 11 <= data.len() && &data[off..off + 7] == b"PrintIM" {
+                            let ver =
+                                crate::encoding::decode_utf8_or_latin1(&data[off + 7..off + 11])
+                                    .to_string();
                             tags.push(Tag {
                                 id: TagId::Text("PrintIMVersion".into()),
                                 name: "PrintIMVersion".into(),
                                 description: "PrintIM Version".into(),
-                                group: TagGroup { family0: "PrintIM".into(), family1: "PrintIM".into(), family2: "Printing".into() },
+                                group: TagGroup {
+                                    family0: "PrintIM".into(),
+                                    family1: "PrintIM".into(),
+                                    family2: "Printing".into(),
+                                },
                                 raw_value: Value::String(ver.clone()),
                                 print_value: ver,
                                 priority: 0,
@@ -665,9 +797,16 @@ impl ExifReader {
                     if let Some(val) = read_ifd_value(data, &entry, header.byte_order) {
                         let offsets: Vec<u32> = match &val {
                             Value::U32(v) => vec![*v],
-                            Value::List(items) => items.iter().filter_map(|v| {
-                                if let Value::U32(o) = v { Some(*o) } else { None }
-                            }).collect(),
+                            Value::List(items) => items
+                                .iter()
+                                .filter_map(|v| {
+                                    if let Value::U32(o) = v {
+                                        Some(*o)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect(),
                             _ => vec![],
                         };
                         for (idx, &off) in offsets.iter().enumerate() {
@@ -677,8 +816,11 @@ impl ExifReader {
                                 let _ = Self::read_ifd(data, header, off, &sub_name, tags);
 
                                 // Check if this SubIFD has JPEG compression
-                                let is_jpeg = tags[before_idx..].iter()
-                                    .any(|t| t.name == "Compression" && (t.print_value.contains("JPEG") || t.raw_value.as_u64() == Some(6)));
+                                let is_jpeg = tags[before_idx..].iter().any(|t| {
+                                    t.name == "Compression"
+                                        && (t.print_value.contains("JPEG")
+                                            || t.raw_value.as_u64() == Some(6))
+                                });
 
                                 if is_jpeg {
                                     // Rename StripOffsets/StripByteCounts based on SubIFD index
@@ -689,46 +831,73 @@ impl ExifReader {
                                         ("PreviewImageStart", "PreviewImageLength", "PreviewImage")
                                     };
                                     // Find StripOffsets and StripByteCounts in this SubIFD
-                                    let strip_off = tags[before_idx..].iter()
+                                    let strip_off = tags[before_idx..]
+                                        .iter()
                                         .find(|t| t.name == "StripOffsets")
                                         .and_then(|t| t.raw_value.as_u64());
-                                    let strip_len = tags[before_idx..].iter()
+                                    let strip_len = tags[before_idx..]
+                                        .iter()
                                         .find(|t| t.name == "StripByteCounts")
                                         .and_then(|t| t.raw_value.as_u64());
                                     if let (Some(s), Some(l)) = (strip_off, strip_len) {
                                         tags.push(Tag {
-                                            id: TagId::Text(start_name.into()), name: start_name.into(),
+                                            id: TagId::Text(start_name.into()),
+                                            name: start_name.into(),
                                             description: start_name.into(),
-                                            group: TagGroup { family0: "EXIF".into(), family1: sub_name.clone(), family2: "Preview".into() },
-                                            raw_value: Value::U32(s as u32), print_value: s.to_string(), priority: 0,
+                                            group: TagGroup {
+                                                family0: "EXIF".into(),
+                                                family1: sub_name.clone(),
+                                                family2: "Preview".into(),
+                                            },
+                                            raw_value: Value::U32(s as u32),
+                                            print_value: s.to_string(),
+                                            priority: 0,
                                         });
                                         tags.push(Tag {
-                                            id: TagId::Text(len_name.into()), name: len_name.into(),
+                                            id: TagId::Text(len_name.into()),
+                                            name: len_name.into(),
                                             description: len_name.into(),
-                                            group: TagGroup { family0: "EXIF".into(), family1: sub_name.clone(), family2: "Preview".into() },
-                                            raw_value: Value::U32(l as u32), print_value: l.to_string(), priority: 0,
+                                            group: TagGroup {
+                                                family0: "EXIF".into(),
+                                                family1: sub_name.clone(),
+                                                family2: "Preview".into(),
+                                            },
+                                            raw_value: Value::U32(l as u32),
+                                            print_value: l.to_string(),
+                                            priority: 0,
                                         });
                                         // Extract binary image data
                                         let s = s as usize;
                                         let l = l as usize;
                                         if l > 0 && s + l <= data.len() {
-                                            let pv = format!("(Binary data {} bytes, use -b option to extract)", l);
+                                            let pv = format!(
+                                                "(Binary data {} bytes, use -b option to extract)",
+                                                l
+                                            );
                                             tags.push(Tag {
-                                                id: TagId::Text(img_name.into()), name: img_name.into(),
+                                                id: TagId::Text(img_name.into()),
+                                                name: img_name.into(),
                                                 description: img_name.into(),
-                                                group: TagGroup { family0: "EXIF".into(), family1: sub_name.clone(), family2: "Preview".into() },
-                                                raw_value: Value::Binary(data[s..s+l].to_vec()),
-                                                print_value: pv, priority: 0,
+                                                group: TagGroup {
+                                                    family0: "EXIF".into(),
+                                                    family1: sub_name.clone(),
+                                                    family2: "Preview".into(),
+                                                },
+                                                raw_value: Value::Binary(data[s..s + l].to_vec()),
+                                                print_value: pv,
+                                                priority: 0,
                                             });
                                         }
                                     }
                                 }
 
                                 // Legacy: Also check for already-named JpgFromRawStart tags
-                                let jpg_start = tags[before_idx..].iter()
+                                let jpg_start = tags[before_idx..]
+                                    .iter()
                                     .find(|t| t.name == "JpgFromRawStart")
                                     .and_then(|t| t.raw_value.as_u64());
-                                let jpg_len = tags[before_idx..].iter()
+                                let jpg_len = tags[before_idx..]
+                                    .iter()
                                     .find(|t| t.name == "JpgFromRawLength")
                                     .and_then(|t| t.raw_value.as_u64());
                                 if let (Some(start), Some(len)) = (jpg_start, jpg_len) {
@@ -765,8 +934,7 @@ impl ExifReader {
                 // because IFD3 has the correct values for the raw data.
                 // Also suppress tags that duplicate IFD0 content (ImageWidth, ImageHeight,
                 // BitsPerSample, Compression) since the first (IFD0) value is preferred.
-                0x0100 | 0x0101 | 0x0102 | 0x0103 | 0x0111 | 0x0117
-                    if ifd_name == "IFD2" => {
+                0x0100 | 0x0101 | 0x0102 | 0x0103 | 0x0111 | 0x0117 if ifd_name == "IFD2" => {
                     continue;
                 }
                 // In CR2 IFD3 (raw data), suppress Compression (IFD0 value is preferred).
@@ -797,10 +965,11 @@ impl ExifReader {
                     ),
                     None => {
                         // Skip known SubDirectory/internal tags that Perl doesn't emit
-                        if matches!(entry.tag,
+                        if matches!(
+                            entry.tag,
                             // 0x014A handled above (SubIFD traversal)
                             // 0x02BC (ApplicationNotes) now parsed as XMP above
-                            0xC634   // DNG PrivateData — processed after IFD scan
+                            0xC634 // DNG PrivateData — processed after IFD scan
                         ) {
                             continue;
                         }
@@ -810,7 +979,7 @@ impl ExifReader {
                             None => {
                                 // Perl doesn't emit unknown EXIF tags by default
                                 continue;
-                            },
+                            }
                         }
                     }
                 };
@@ -825,7 +994,8 @@ impl ExifReader {
                     continue;
                 }
                 // Suppress known SubDirectory/internal tags
-                if matches!(name.as_str(),
+                if matches!(
+                    name.as_str(),
                     "MinSampleValue" | "MaxSampleValue" | // Not emitted by Perl for raw formats
                     "ProcessingSoftware" | // Protected tag, not always emitted
                     "PanasonicTitle" | "PanasonicTitle2" // DNG tags, wrong match for RW2
@@ -833,15 +1003,19 @@ impl ExifReader {
                     continue;
                 }
 
-                let print_value =
-                    exif_tags::print_conv(ifd_name, entry.tag, &value)
-                        .or_else(|| {
-                            // Fallback to generated print conversions
-                            value.as_u64()
-                                .and_then(|v| crate::tags::print_conv_generated::print_conv_by_name(&name, v as i64))
-                                .map(|s| s.to_string())
-                        })
-                        .unwrap_or_else(|| value.to_display_string());
+                let print_value = exif_tags::print_conv(ifd_name, entry.tag, &value)
+                    .or_else(|| {
+                        // Fallback to generated print conversions
+                        value
+                            .as_u64()
+                            .and_then(|v| {
+                                crate::tags::print_conv_generated::print_conv_by_name(
+                                    &name, v as i64,
+                                )
+                            })
+                            .map(|s| s.to_string())
+                    })
+                    .unwrap_or_else(|| value.to_display_string());
 
                 tags.push(Tag {
                     id: TagId::Numeric(entry.tag),
@@ -862,36 +1036,54 @@ impl ExifReader {
         // Read next IFD offset
         let next_ifd_offset = if entries_end + 4 <= data.len() {
             read_u32(data, entries_end, header.byte_order)
-        } else { 0 };
+        } else {
+            0
+        };
         if next_ifd_offset != 0 && ifd_name == "IFD0" {
             // IFD1 = thumbnail
             let ifd1_start_idx = tags.len();
             let ifd1_next = Self::read_ifd(data, header, next_ifd_offset, "IFD1", tags)
-                .ok().flatten();
+                .ok()
+                .flatten();
             // Suppress IFD1 tags that duplicate IFD0 tags (only keep thumbnail-specific ones)
             // In Perl, IFD1 (thumbnail) tags are secondary and don't appear in output if IFD0 has them.
             {
-                let ifd0_names: std::collections::HashSet<String> = tags[..ifd1_start_idx].iter()
+                let ifd0_names: std::collections::HashSet<String> = tags[..ifd1_start_idx]
+                    .iter()
                     .map(|t| t.name.clone())
                     .collect();
-                let thumbnail_tags = ["ThumbnailOffset", "ThumbnailLength", "ThumbnailImage",
-                    "Compression", "PhotometricInterpretation", "JPEGInterchangeFormat",
+                let thumbnail_tags = [
+                    "ThumbnailOffset",
+                    "ThumbnailLength",
+                    "ThumbnailImage",
+                    "Compression",
+                    "PhotometricInterpretation",
+                    "JPEGInterchangeFormat",
                     "JPEGInterchangeFormatLength",
-                    "SubfileType", "StripOffsets", "StripByteCounts"];
+                    "SubfileType",
+                    "StripOffsets",
+                    "StripByteCounts",
+                ];
                 tags.retain(|t| {
-                    if t.group.family1 != "IFD1" { return true; }
+                    if t.group.family1 != "IFD1" {
+                        return true;
+                    }
                     // Keep thumbnail-specific tags
-                    if thumbnail_tags.contains(&t.name.as_str()) { return true; }
+                    if thumbnail_tags.contains(&t.name.as_str()) {
+                        return true;
+                    }
                     // Suppress IFD1 tags that IFD0 already has
                     !ifd0_names.contains(&t.name)
                 });
             }
 
             // Create ThumbnailImage tag if offset+length are present
-            let thumb_offset = tags.iter()
+            let thumb_offset = tags
+                .iter()
                 .find(|t| t.name == "ThumbnailOffset" && t.group.family1 == "IFD1")
                 .and_then(|t| t.raw_value.as_u64());
-            let thumb_length = tags.iter()
+            let thumb_length = tags
+                .iter()
                 .find(|t| t.name == "ThumbnailLength" && t.group.family1 == "IFD1")
                 .and_then(|t| t.raw_value.as_u64());
 
@@ -903,8 +1095,12 @@ impl ExifReader {
                         id: TagId::Text("ThumbnailImage".into()),
                         name: "ThumbnailImage".into(),
                         description: "Thumbnail Image".into(),
-                        group: TagGroup { family0: "EXIF".into(), family1: "IFD1".into(), family2: "Image".into() },
-                        raw_value: Value::Binary(data[off..off+len].to_vec()),
+                        group: TagGroup {
+                            family0: "EXIF".into(),
+                            family1: "IFD1".into(),
+                            family2: "Image".into(),
+                        },
+                        raw_value: Value::Binary(data[off..off + len].to_vec()),
                         print_value: format!("(Binary data {} bytes)", len),
                         priority: 0,
                     });
@@ -918,7 +1114,8 @@ impl ExifReader {
                 if let Some(ifd2_offset) = ifd1_next {
                     // IFD2 = preview JPEG image data (emit selected tags)
                     let ifd2_next = Self::read_ifd(data, header, ifd2_offset, "IFD2", tags)
-                        .ok().flatten();
+                        .ok()
+                        .flatten();
                     // IFD3 = raw image data (emit CR2CFAPattern, RawImageSegmentation, StripOffsets, StripByteCounts)
                     if let Some(ifd3_offset) = ifd2_next {
                         let _ = Self::read_ifd(data, header, ifd3_offset, "IFD3", tags);
@@ -995,7 +1192,9 @@ fn read_ifd_value(data: &[u8], entry: &IfdEntry, byte_order: ByteOrderMark) -> O
             if entry.count == 1 {
                 Some(Value::U8(value_data[0]))
             } else {
-                Some(Value::List(value_data.iter().map(|&b| Value::U8(b)).collect()))
+                Some(Value::List(
+                    value_data.iter().map(|&b| Value::U8(b)).collect(),
+                ))
             }
         }
         // ASCII
@@ -1169,23 +1368,27 @@ fn read_i32(data: &[u8], offset: usize, bo: ByteOrderMark) -> i32 {
 /// and replace raw directory/ascii/double params with named GeoTIFF tags.
 fn process_geotiff_keys(tags: &mut Vec<Tag>) {
     // Extract GeoTiffDirectory values
-    let dir_vals: Option<Vec<u16>> = tags.iter()
-        .find(|t| t.name == "GeoTiffDirectory")
-        .and_then(|t| {
-            match &t.raw_value {
+    let dir_vals: Option<Vec<u16>> =
+        tags.iter()
+            .find(|t| t.name == "GeoTiffDirectory")
+            .and_then(|t| match &t.raw_value {
                 Value::List(items) => {
-                    let vals: Vec<u16> = items.iter().filter_map(|v| {
-                        match v {
+                    let vals: Vec<u16> = items
+                        .iter()
+                        .filter_map(|v| match v {
                             Value::U16(x) => Some(*x),
                             Value::U32(x) => Some(*x as u16),
                             _ => None,
-                        }
-                    }).collect();
-                    if vals.is_empty() { None } else { Some(vals) }
+                        })
+                        .collect();
+                    if vals.is_empty() {
+                        None
+                    } else {
+                        Some(vals)
+                    }
                 }
                 _ => None,
-            }
-        });
+            });
 
     let dir_vals = match dir_vals {
         Some(v) => v,
@@ -1206,27 +1409,32 @@ fn process_geotiff_keys(tags: &mut Vec<Tag>) {
     }
 
     // Extract ASCII params
-    let ascii_params: Option<String> = tags.iter()
+    let ascii_params: Option<String> = tags
+        .iter()
         .find(|t| t.name == "GeoTiffAsciiParams")
         .map(|t| t.print_value.clone());
 
     // Extract double params
-    let double_params: Option<Vec<f64>> = tags.iter()
+    let double_params: Option<Vec<f64>> = tags
+        .iter()
         .find(|t| t.name == "GeoTiffDoubleParams")
-        .and_then(|t| {
-            match &t.raw_value {
-                Value::List(items) => {
-                    let vals: Vec<f64> = items.iter().filter_map(|v| {
-                        match v {
-                            Value::F64(x) => Some(*x),
-                            Value::F32(x) => Some(*x as f64),
-                            _ => None,
-                        }
-                    }).collect();
-                    if vals.is_empty() { None } else { Some(vals) }
+        .and_then(|t| match &t.raw_value {
+            Value::List(items) => {
+                let vals: Vec<f64> = items
+                    .iter()
+                    .filter_map(|v| match v {
+                        Value::F64(x) => Some(*x),
+                        Value::F32(x) => Some(*x as f64),
+                        _ => None,
+                    })
+                    .collect();
+                if vals.is_empty() {
+                    None
+                } else {
+                    Some(vals)
                 }
-                _ => None,
             }
+            _ => None,
         });
 
     let mut new_tags = Vec::new();
@@ -1236,7 +1444,11 @@ fn process_geotiff_keys(tags: &mut Vec<Tag>) {
         id: TagId::Text("GeoTiffVersion".to_string()),
         name: "GeoTiffVersion".to_string(),
         description: "GeoTiff Version".to_string(),
-        group: TagGroup { family0: "EXIF".into(), family1: "IFD0".into(), family2: "Location".into() },
+        group: TagGroup {
+            family0: "EXIF".into(),
+            family1: "IFD0".into(),
+            family2: "Location".into(),
+        },
         raw_value: Value::String(format!("{}.{}.{}", version, revision, minor_rev)),
         print_value: format!("{}.{}.{}", version, revision, minor_rev),
         priority: 0,
@@ -1279,8 +1491,12 @@ fn process_geotiff_keys(tags: &mut Vec<Tag>) {
                     if count == 1 && off < doubles.len() {
                         Some(format!("{}", doubles[off]))
                     } else if count > 1 {
-                        let vals: Vec<String> = doubles.iter().skip(off).take(count)
-                            .map(|v| format!("{}", v)).collect();
+                        let vals: Vec<String> = doubles
+                            .iter()
+                            .skip(off)
+                            .take(count)
+                            .map(|v| format!("{}", v))
+                            .collect();
                         Some(vals.join(" "))
                     } else {
                         None
@@ -1299,13 +1515,19 @@ fn process_geotiff_keys(tags: &mut Vec<Tag>) {
 
         // Map GeoKey ID to tag name and print value
         let (tag_name, print_val) = geotiff_key_to_tag(key_id, &val_str);
-        if tag_name.is_empty() { continue; }
+        if tag_name.is_empty() {
+            continue;
+        }
 
         new_tags.push(Tag {
             id: TagId::Text(tag_name.clone()),
             name: tag_name.clone(),
             description: tag_name.clone(),
-            group: TagGroup { family0: "EXIF".into(), family1: "IFD0".into(), family2: "Location".into() },
+            group: TagGroup {
+                family0: "EXIF".into(),
+                family1: "IFD0".into(),
+                family2: "Location".into(),
+            },
             raw_value: Value::String(val_str),
             print_value: print_val,
             priority: 0,
@@ -1314,7 +1536,11 @@ fn process_geotiff_keys(tags: &mut Vec<Tag>) {
 
     if !new_tags.is_empty() {
         // Remove raw GeoTIFF tags
-        tags.retain(|t| t.name != "GeoTiffDirectory" && t.name != "GeoTiffAsciiParams" && t.name != "GeoTiffDoubleParams");
+        tags.retain(|t| {
+            t.name != "GeoTiffDirectory"
+                && t.name != "GeoTiffAsciiParams"
+                && t.name != "GeoTiffDoubleParams"
+        });
         tags.extend(new_tags);
     }
 }
@@ -1326,7 +1552,8 @@ fn geotiff_key_to_tag(key_id: u16, value: &str) -> (String, String) {
     match key_id {
         // Section 6.2.1: GeoTIFF Configuration Keys
         0x0001 => return ("GeoTiffVersion".to_string(), value.to_string()), // not used here
-        0x0400 => { // GTModelType
+        0x0400 => {
+            // GTModelType
             let print = match val_u16 {
                 Some(1) => "Projected".to_string(),
                 Some(2) => "Geographic".to_string(),
@@ -1336,7 +1563,8 @@ fn geotiff_key_to_tag(key_id: u16, value: &str) -> (String, String) {
             };
             return ("GTModelType".to_string(), print);
         }
-        0x0401 => { // GTRasterType
+        0x0401 => {
+            // GTRasterType
             let print = match val_u16 {
                 Some(1) => "Pixel Is Area".to_string(),
                 Some(2) => "Pixel Is Point".to_string(),
@@ -1348,11 +1576,21 @@ fn geotiff_key_to_tag(key_id: u16, value: &str) -> (String, String) {
         0x0402 => return ("GTCitation".to_string(), value.to_string()),
 
         // Section 6.2.2: Geographic CS Parameter Keys
-        0x0800 => return ("GeographicType".to_string(), geotiff_pcs_name(val_u16.unwrap_or(0), value)),
+        0x0800 => {
+            return (
+                "GeographicType".to_string(),
+                geotiff_pcs_name(val_u16.unwrap_or(0), value),
+            )
+        }
         0x0801 => return ("GeogCitation".to_string(), value.to_string()),
         0x0802 => return ("GeogGeodeticDatum".to_string(), value.to_string()),
         0x0803 => return ("GeogPrimeMeridian".to_string(), value.to_string()),
-        0x0804 => return ("GeogLinearUnits".to_string(), geotiff_linear_unit_name(val_u16.unwrap_or(0), value)),
+        0x0804 => {
+            return (
+                "GeogLinearUnits".to_string(),
+                geotiff_linear_unit_name(val_u16.unwrap_or(0), value),
+            )
+        }
         0x0805 => return ("GeogLinearUnitSize".to_string(), value.to_string()),
         0x0806 => return ("GeogAngularUnits".to_string(), value.to_string()),
         0x0807 => return ("GeogAngularUnitSize".to_string(), value.to_string()),
@@ -1364,13 +1602,22 @@ fn geotiff_key_to_tag(key_id: u16, value: &str) -> (String, String) {
         0x080d => return ("GeogPrimeMeridianLong".to_string(), value.to_string()),
 
         // Section 6.2.3: Projected CS Parameter Keys
-        0x0C00 => { // ProjectedCSType
-            return ("ProjectedCSType".to_string(), geotiff_pcs_name(val_u16.unwrap_or(0), value));
+        0x0C00 => {
+            // ProjectedCSType
+            return (
+                "ProjectedCSType".to_string(),
+                geotiff_pcs_name(val_u16.unwrap_or(0), value),
+            );
         }
         0x0C01 => return ("PCSCitation".to_string(), value.to_string()),
         0x0C02 => return ("Projection".to_string(), value.to_string()),
         0x0C03 => return ("ProjCoordTrans".to_string(), value.to_string()),
-        0x0C04 => return ("ProjLinearUnits".to_string(), geotiff_linear_unit_name(val_u16.unwrap_or(0), value)),
+        0x0C04 => {
+            return (
+                "ProjLinearUnits".to_string(),
+                geotiff_linear_unit_name(val_u16.unwrap_or(0), value),
+            )
+        }
         0x0C05 => return ("ProjLinearUnitSize".to_string(), value.to_string()),
         0x0C06 => return ("ProjStdParallel1".to_string(), value.to_string()),
         0x0C07 => return ("ProjStdParallel2".to_string(), value.to_string()),
@@ -1395,7 +1642,12 @@ fn geotiff_key_to_tag(key_id: u16, value: &str) -> (String, String) {
         0x1000 => return ("VerticalCSType".to_string(), value.to_string()),
         0x1001 => return ("VerticalCitation".to_string(), value.to_string()),
         0x1002 => return ("VerticalDatum".to_string(), value.to_string()),
-        0x1003 => return ("VerticalUnits".to_string(), geotiff_linear_unit_name(val_u16.unwrap_or(0), value)),
+        0x1003 => {
+            return (
+                "VerticalUnits".to_string(),
+                geotiff_linear_unit_name(val_u16.unwrap_or(0), value),
+            )
+        }
 
         _ => {}
     }

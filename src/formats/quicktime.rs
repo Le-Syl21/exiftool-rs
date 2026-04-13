@@ -69,7 +69,11 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
         let brand_display = ftyp_brand_name(&brand_raw)
             .unwrap_or(brand_raw.as_str())
             .to_string();
-        tags.push(mk("MajorBrand", "Major Brand", Value::String(brand_display)));
+        tags.push(mk(
+            "MajorBrand",
+            "Major Brand",
+            Value::String(brand_display),
+        ));
         if size >= 16 && data.len() >= 16 {
             let minor_raw = u32::from_be_bytes([data[12], data[13], data[14], data[15]]);
             // Format minor version as X.X.X (each byte)
@@ -86,7 +90,9 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
             let mut brands = Vec::new();
             let mut pos = 16;
             while pos + 4 <= size.min(data.len()) {
-                let b = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + 4]).trim().to_string();
+                let b = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + 4])
+                    .trim()
+                    .to_string();
                 if !b.is_empty() {
                     brands.push(b);
                 }
@@ -138,13 +144,20 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
         if let Some(dur) = duration_secs {
             if dur > 0.0 {
                 // Sum all MediaDataSize values
-                let total_size: u64 = tags.iter().filter_map(|t| {
-                    if t.name == "MediaDataSize" {
-                        if let Value::U32(v) = t.raw_value { Some(v as u64) } else { None }
-                    } else {
-                        None
-                    }
-                }).sum();
+                let total_size: u64 = tags
+                    .iter()
+                    .filter_map(|t| {
+                        if t.name == "MediaDataSize" {
+                            if let Value::U32(v) = t.raw_value {
+                                Some(v as u64)
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                    .sum();
 
                 let bitrate = (total_size as f64 * 8.0 / dur + 0.5) as u64;
                 tags.push(mk(
@@ -182,7 +195,11 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
                 id: TagId::Text("JpgFromRaw".into()),
                 name: "JpgFromRaw".into(),
                 description: "Jpg From Raw".into(),
-                group: TagGroup { family0: "QuickTime".into(), family1: "QuickTime".into(), family2: "Preview".into() },
+                group: TagGroup {
+                    family0: "QuickTime".into(),
+                    family1: "QuickTime".into(),
+                    family2: "Preview".into(),
+                },
                 raw_value: Value::Binary(jpg_data.to_vec()),
                 print_value: format!("(Binary data {} bytes, use -b option to extract)", jpg_sz),
                 priority: 0,
@@ -193,8 +210,7 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
     // Extract timed metadata from stream tracks when -ee is used
     if extract_embedded > 0 {
         // Finalize the last track being built (if any)
-        if state.stream_current.handler_type != [0; 4]
-            || state.stream_current.meta_format.is_some()
+        if state.stream_current.handler_type != [0; 4] || state.stream_current.meta_format.is_some()
         {
             state.stream_tracks.push(state.stream_current.clone());
         }
@@ -230,10 +246,13 @@ fn parse_canon_ctmd(data: &[u8], start: usize, size: usize, tags: &mut Vec<Tag>)
     let mut pos = start;
 
     while pos + 12 < end {
-        let rec_size = u32::from_le_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
-        let rec_type = u16::from_le_bytes([data[pos+4], data[pos+5]]);
+        let rec_size =
+            u32::from_le_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+        let rec_type = u16::from_le_bytes([data[pos + 4], data[pos + 5]]);
 
-        if rec_size < 12 || pos + rec_size > end { break; }
+        if rec_size < 12 || pos + rec_size > end {
+            break;
+        }
 
         let rec_data = &data[pos + 12..pos + rec_size];
 
@@ -242,9 +261,16 @@ fn parse_canon_ctmd(data: &[u8], start: usize, size: usize, tags: &mut Vec<Tag>)
                 // TimeStamp: 2 bytes skip + year(2LE) + month + day + hour + min + sec + centisec
                 if rec_data.len() >= 9 {
                     let year = u16::from_le_bytes([rec_data[2], rec_data[3]]);
-                    let ts = format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:02}",
-                        year, rec_data[4], rec_data[5], rec_data[6], rec_data[7], rec_data[8],
-                        if rec_data.len() > 9 { rec_data[9] } else { 0 });
+                    let ts = format!(
+                        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:02}",
+                        year,
+                        rec_data[4],
+                        rec_data[5],
+                        rec_data[6],
+                        rec_data[7],
+                        rec_data[8],
+                        if rec_data.len() > 9 { rec_data[9] } else { 0 }
+                    );
                     tags.push(mk("TimeStamp", "Time Stamp", Value::String(ts)));
                 }
             }
@@ -253,16 +279,31 @@ fn parse_canon_ctmd(data: &[u8], start: usize, size: usize, tags: &mut Vec<Tag>)
                 // Tags: 0x8769=ExifIFD, 0x927C=MakerNote
                 let mut epos = 0;
                 while epos + 8 < rec_data.len() {
-                    let elen = u32::from_le_bytes([rec_data[epos], rec_data[epos+1], rec_data[epos+2], rec_data[epos+3]]) as usize;
-                    let etag = u32::from_le_bytes([rec_data[epos+4], rec_data[epos+5], rec_data[epos+6], rec_data[epos+7]]);
-                    if elen < 8 || epos + elen > rec_data.len() { break; }
-                    let edata = &rec_data[epos+8..epos+elen];
+                    let elen = u32::from_le_bytes([
+                        rec_data[epos],
+                        rec_data[epos + 1],
+                        rec_data[epos + 2],
+                        rec_data[epos + 3],
+                    ]) as usize;
+                    let etag = u32::from_le_bytes([
+                        rec_data[epos + 4],
+                        rec_data[epos + 5],
+                        rec_data[epos + 6],
+                        rec_data[epos + 7],
+                    ]);
+                    if elen < 8 || epos + elen > rec_data.len() {
+                        break;
+                    }
+                    let edata = &rec_data[epos + 8..epos + elen];
                     match etag {
                         0x927C => {
                             // MakerNoteCanon: TIFF containing Canon MakerNote IFD
                             // CTMD has the full MakerNote — replace any CMT3 versions
-                            let model = tags.iter().find(|t| t.name == "Model")
-                                .map(|t| t.print_value.clone()).unwrap_or_default();
+                            let model = tags
+                                .iter()
+                                .find(|t| t.name == "Model")
+                                .map(|t| t.print_value.clone())
+                                .unwrap_or_default();
                             let mn_tags = parse_canon_cr3_makernotes(edata, &model);
                             for t in mn_tags {
                                 // Replace existing tag with CTMD version (CTMD has priority)
@@ -345,12 +386,8 @@ fn parse_atoms(
     let mut pos = start;
 
     while pos + 8 <= end {
-        let mut size = u32::from_be_bytes([
-            data[pos],
-            data[pos + 1],
-            data[pos + 2],
-            data[pos + 3],
-        ]) as u64;
+        let mut size =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as u64;
         let atom_type = &data[pos + 4..pos + 8];
         let header_size;
 
@@ -422,14 +459,7 @@ fn parse_atoms(
             // Metadata container: meta has a 4-byte version/flags before sub-atoms
             b"meta" => {
                 if content_start + 4 <= content_end {
-                    parse_atoms(
-                        data,
-                        content_start + 4,
-                        content_end,
-                        tags,
-                        state,
-                        depth + 1,
-                    );
+                    parse_atoms(data, content_start + 4, content_end, tags, state, depth + 1);
                 }
             }
             // iTunes item list
@@ -486,7 +516,10 @@ fn parse_atoms(
                             let max_entries = entry_count.min((d.len() - 8) / 4);
                             for i in 0..max_entries {
                                 let off = u32::from_be_bytes([
-                                    d[8 + i * 4], d[9 + i * 4], d[10 + i * 4], d[11 + i * 4],
+                                    d[8 + i * 4],
+                                    d[9 + i * 4],
+                                    d[10 + i * 4],
+                                    d[11 + i * 4],
                                 ]) as u64;
                                 state.stream_current.stco.push(off);
                             }
@@ -500,7 +533,9 @@ fn parse_atoms(
                 if d.len() >= 16 {
                     let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
                     if entry_count > 0 && d.len() >= 8 + entry_count * 8 {
-                        let offset = u64::from_be_bytes([d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]]);
+                        let offset = u64::from_be_bytes([
+                            d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
+                        ]);
                         if state.current_track_is_ctmd && state.ctmd_offset.is_none() {
                             state.ctmd_offset = Some(offset);
                         }
@@ -512,8 +547,14 @@ fn parse_atoms(
                             let max_entries = entry_count.min((d.len() - 8) / 8);
                             for i in 0..max_entries {
                                 let off = u64::from_be_bytes([
-                                    d[8 + i * 8], d[9 + i * 8], d[10 + i * 8], d[11 + i * 8],
-                                    d[12 + i * 8], d[13 + i * 8], d[14 + i * 8], d[15 + i * 8],
+                                    d[8 + i * 8],
+                                    d[9 + i * 8],
+                                    d[10 + i * 8],
+                                    d[11 + i * 8],
+                                    d[12 + i * 8],
+                                    d[13 + i * 8],
+                                    d[14 + i * 8],
+                                    d[15 + i * 8],
                                 ]);
                                 state.stream_current.stco.push(off);
                             }
@@ -531,7 +572,9 @@ fn parse_atoms(
                         sample_size
                     } else if d.len() >= 16 {
                         u32::from_be_bytes([d[12], d[13], d[14], d[15]])
-                    } else { 0 };
+                    } else {
+                        0
+                    };
                     if state.current_track_is_ctmd && state.ctmd_size.is_none() && first_size > 0 {
                         state.ctmd_size = Some(first_size);
                     }
@@ -550,7 +593,10 @@ fn parse_atoms(
                             let max_samples = sample_count.min((d.len() - 12) / 4);
                             for i in 0..max_samples {
                                 let sz = u32::from_be_bytes([
-                                    d[12 + i * 4], d[13 + i * 4], d[14 + i * 4], d[15 + i * 4],
+                                    d[12 + i * 4],
+                                    d[13 + i * 4],
+                                    d[14 + i * 4],
+                                    d[15 + i * 4],
                                 ]);
                                 state.stream_current.stsz.push(sz);
                             }
@@ -566,9 +612,20 @@ fn parse_atoms(
                     if state.extract_embedded > 0 && d.len() >= 8 + entry_count * 12 {
                         for i in 0..entry_count {
                             let off = 8 + i * 12;
-                            let first_chunk = u32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]]);
-                            let spc = u32::from_be_bytes([d[off + 4], d[off + 5], d[off + 6], d[off + 7]]);
-                            let desc_idx = u32::from_be_bytes([d[off + 8], d[off + 9], d[off + 10], d[off + 11]]);
+                            let first_chunk =
+                                u32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]]);
+                            let spc = u32::from_be_bytes([
+                                d[off + 4],
+                                d[off + 5],
+                                d[off + 6],
+                                d[off + 7],
+                            ]);
+                            let desc_idx = u32::from_be_bytes([
+                                d[off + 8],
+                                d[off + 9],
+                                d[off + 10],
+                                d[off + 11],
+                            ]);
                             state.stream_current.stsc.push((first_chunk, spc, desc_idx));
                         }
                     }
@@ -576,13 +633,34 @@ fn parse_atoms(
             }
             // Track aperture atoms
             b"clef" => {
-                parse_aperture_dim(data, content_start, content_end, tags, "CleanApertureDimensions", "Clean Aperture Dimensions");
+                parse_aperture_dim(
+                    data,
+                    content_start,
+                    content_end,
+                    tags,
+                    "CleanApertureDimensions",
+                    "Clean Aperture Dimensions",
+                );
             }
             b"prof" => {
-                parse_aperture_dim(data, content_start, content_end, tags, "ProductionApertureDimensions", "Production Aperture Dimensions");
+                parse_aperture_dim(
+                    data,
+                    content_start,
+                    content_end,
+                    tags,
+                    "ProductionApertureDimensions",
+                    "Production Aperture Dimensions",
+                );
             }
             b"enof" => {
-                parse_aperture_dim(data, content_start, content_end, tags, "EncodedPixelsDimensions", "Encoded Pixels Dimensions");
+                parse_aperture_dim(
+                    data,
+                    content_start,
+                    content_end,
+                    tags,
+                    "EncodedPixelsDimensions",
+                    "Encoded Pixels Dimensions",
+                );
             }
             // HEIF/HEIC item properties container
             b"iprp" => {
@@ -632,7 +710,9 @@ fn parse_atoms(
                         parse_canon_uuid(data, content_start + 16, content_end, tags);
                     }
                     // Canon DPP4 UUID: EAF42B5E1C984B88B9FBB7DC406E4D16 (contains PRVW)
-                    else if uuid == b"\xea\xf4\x2b\x5e\x1c\x98\x4b\x88\xb9\xfb\xb7\xdc\x40\x6e\x4d\x16" {
+                    else if uuid
+                        == b"\xea\xf4\x2b\x5e\x1c\x98\x4b\x88\xb9\xfb\xb7\xdc\x40\x6e\x4d\x16"
+                    {
                         // Find PRVW signature in the uuid content
                         let inner = &data[content_start + 16..content_end];
                         if let Some(prvw_pos) = inner.windows(4).position(|w| w == b"PRVW") {
@@ -645,9 +725,16 @@ fn parse_atoms(
                                     id: TagId::Text("PreviewImage".into()),
                                     name: "PreviewImage".into(),
                                     description: "Preview Image".into(),
-                                    group: TagGroup { family0: "QuickTime".into(), family1: "QuickTime".into(), family2: "Preview".into() },
+                                    group: TagGroup {
+                                        family0: "QuickTime".into(),
+                                        family1: "QuickTime".into(),
+                                        family2: "Preview".into(),
+                                    },
                                     raw_value: Value::Binary(prvw_data.to_vec()),
-                                    print_value: format!("(Binary data {} bytes, use -b option to extract)", size),
+                                    print_value: format!(
+                                        "(Binary data {} bytes, use -b option to extract)",
+                                        size
+                                    ),
                                     priority: 0,
                                 });
                             }
@@ -698,13 +785,7 @@ fn parse_atoms(
 ///         9=MatrixStructure(fixed32s[9]), 18=PreviewTime, 19=PreviewDuration,
 ///         20=PosterTime, 21=SelectionTime, 22=SelectionDuration, 23=CurrentTime,
 ///         24=NextTrackID
-fn parse_mvhd(
-    data: &[u8],
-    start: usize,
-    end: usize,
-    tags: &mut Vec<Tag>,
-    state: &mut QtState,
-) {
+fn parse_mvhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state: &mut QtState) {
     if start + 4 > end {
         return;
     }
@@ -737,14 +818,10 @@ fn parse_mvhd(
         if d.len() < 108 {
             return;
         }
-        creation =
-            u64::from_be_bytes([d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]]);
-        modification =
-            u64::from_be_bytes([d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]]);
+        creation = u64::from_be_bytes([d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]]);
+        modification = u64::from_be_bytes([d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]]);
         timescale = u32::from_be_bytes([d[16], d[17], d[18], d[19]]);
-        duration = u64::from_be_bytes([
-            d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27],
-        ]);
+        duration = u64::from_be_bytes([d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27]]);
         data_after = &d[28..]; // field 5 comes after 28 bytes
     } else {
         return;
@@ -771,19 +848,19 @@ fn parse_mvhd(
 
     // data_after[0..] = PreferredRate (field 5, fixed32s = int32u/0x10000)
     if data_after.len() >= 4 {
-        let rate_raw = u32::from_be_bytes([
-            data_after[0],
-            data_after[1],
-            data_after[2],
-            data_after[3],
-        ]);
+        let rate_raw =
+            u32::from_be_bytes([data_after[0], data_after[1], data_after[2], data_after[3]]);
         let rate = rate_raw as f64 / 0x10000 as f64;
         let rate_str = if rate == rate.floor() {
             format!("{}", rate as i32)
         } else {
             format!("{:.4}", rate).trim_end_matches('0').to_string()
         };
-        tags.push(mk("PreferredRate", "Preferred Rate", Value::String(rate_str)));
+        tags.push(mk(
+            "PreferredRate",
+            "Preferred Rate",
+            Value::String(rate_str),
+        ));
     }
 
     // PreferredVolume (field 6): int16u at byte 4 of data_after (6*4=24 - 5*4=20 = 4)
@@ -814,48 +891,42 @@ fn parse_mvhd(
     // Fields 18-24 are int32u at byte N*4 from version byte
     // Field 18 = byte 72 from version = d[68] = data_after[52]
     if data_after.len() >= 80 {
-        let preview_time =
-            u32::from_be_bytes([
-                data_after[52],
-                data_after[53],
-                data_after[54],
-                data_after[55],
-            ]) as u64;
-        let preview_dur =
-            u32::from_be_bytes([
-                data_after[56],
-                data_after[57],
-                data_after[58],
-                data_after[59],
-            ]) as u64;
-        let poster_time =
-            u32::from_be_bytes([
-                data_after[60],
-                data_after[61],
-                data_after[62],
-                data_after[63],
-            ]) as u64;
-        let sel_time =
-            u32::from_be_bytes([
-                data_after[64],
-                data_after[65],
-                data_after[66],
-                data_after[67],
-            ]) as u64;
-        let sel_dur =
-            u32::from_be_bytes([
-                data_after[68],
-                data_after[69],
-                data_after[70],
-                data_after[71],
-            ]) as u64;
-        let cur_time =
-            u32::from_be_bytes([
-                data_after[72],
-                data_after[73],
-                data_after[74],
-                data_after[75],
-            ]) as u64;
+        let preview_time = u32::from_be_bytes([
+            data_after[52],
+            data_after[53],
+            data_after[54],
+            data_after[55],
+        ]) as u64;
+        let preview_dur = u32::from_be_bytes([
+            data_after[56],
+            data_after[57],
+            data_after[58],
+            data_after[59],
+        ]) as u64;
+        let poster_time = u32::from_be_bytes([
+            data_after[60],
+            data_after[61],
+            data_after[62],
+            data_after[63],
+        ]) as u64;
+        let sel_time = u32::from_be_bytes([
+            data_after[64],
+            data_after[65],
+            data_after[66],
+            data_after[67],
+        ]) as u64;
+        let sel_dur = u32::from_be_bytes([
+            data_after[68],
+            data_after[69],
+            data_after[70],
+            data_after[71],
+        ]) as u64;
+        let cur_time = u32::from_be_bytes([
+            data_after[72],
+            data_after[73],
+            data_after[74],
+            data_after[75],
+        ]) as u64;
         let next_track = u32::from_be_bytes([
             data_after[76],
             data_after[77],
@@ -942,13 +1013,7 @@ fn parse_matrix_structure(bytes: &[u8]) -> String {
 /// Fields: 0=TrackHeaderVersion(int8u), 1=TrackCreateDate, 2=TrackModifyDate,
 ///         3=TrackID, 5=TrackDuration, 8=TrackLayer(int16u@32), 9=TrackVolume(int16u@36),
 ///         10=MatrixStructure(fixed32s[9]@40), 19=ImageWidth(fixed32u@76), 20=ImageHeight(fixed32u@80)
-fn parse_tkhd(
-    data: &[u8],
-    start: usize,
-    end: usize,
-    tags: &mut Vec<Tag>,
-    state: &mut QtState,
-) {
+fn parse_tkhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state: &mut QtState) {
     if start + 4 > end {
         return;
     }
@@ -978,15 +1043,11 @@ fn parse_tkhd(
         if d.len() < 88 {
             return;
         }
-        create =
-            u64::from_be_bytes([d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]]);
-        modify =
-            u64::from_be_bytes([d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]]);
+        create = u64::from_be_bytes([d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]]);
+        modify = u64::from_be_bytes([d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]]);
         track_id = u32::from_be_bytes([d[16], d[17], d[18], d[19]]);
         // d[20..24] = reserved
-        track_dur = u64::from_be_bytes([
-            d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31],
-        ]);
+        track_dur = u64::from_be_bytes([d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31]]);
         data_rest = &d[32..];
     } else {
         return;
@@ -1044,18 +1105,10 @@ fn parse_tkhd(
     // ImageWidth/Height at data_rest[48..56] (fixed32u = fixed 16.16)
     let mut has_video = false;
     if data_rest.len() >= 56 {
-        let w_raw = u32::from_be_bytes([
-            data_rest[48],
-            data_rest[49],
-            data_rest[50],
-            data_rest[51],
-        ]);
-        let h_raw = u32::from_be_bytes([
-            data_rest[52],
-            data_rest[53],
-            data_rest[54],
-            data_rest[55],
-        ]);
+        let w_raw =
+            u32::from_be_bytes([data_rest[48], data_rest[49], data_rest[50], data_rest[51]]);
+        let h_raw =
+            u32::from_be_bytes([data_rest[52], data_rest[53], data_rest[54], data_rest[55]]);
         // FixWrongFormat: if high bits set, the value is actually in wrong format
         let w = fix_wrong_format(w_raw);
         let h = fix_wrong_format(h_raw);
@@ -1141,13 +1194,7 @@ fn calc_rotation_from_matrix(bytes: &[u8]) -> i32 {
 }
 
 /// Parse media header (mdhd).
-fn parse_mdhd(
-    data: &[u8],
-    start: usize,
-    end: usize,
-    tags: &mut Vec<Tag>,
-    state: &mut QtState,
-) {
+fn parse_mdhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state: &mut QtState) {
     if start + 4 > end {
         return;
     }
@@ -1176,14 +1223,10 @@ fn parse_mdhd(
         if d.len() < 32 {
             return;
         }
-        create =
-            u64::from_be_bytes([d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]]);
-        modify =
-            u64::from_be_bytes([d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]]);
+        create = u64::from_be_bytes([d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]]);
+        modify = u64::from_be_bytes([d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]]);
         timescale = u32::from_be_bytes([d[16], d[17], d[18], d[19]]);
-        duration = u64::from_be_bytes([
-            d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27],
-        ]);
+        duration = u64::from_be_bytes([d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27]]);
         lang_offset = 28;
     } else {
         return;
@@ -1232,10 +1275,7 @@ fn parse_mdhd(
                 let c1 = ((lang_code >> 10) & 0x1F) as u8 + 0x60;
                 let c2 = ((lang_code >> 5) & 0x1F) as u8 + 0x60;
                 let c3 = (lang_code & 0x1F) as u8 + 0x60;
-                if c1.is_ascii_lowercase()
-                    && c2.is_ascii_lowercase()
-                    && c3.is_ascii_lowercase()
-                {
+                if c1.is_ascii_lowercase() && c2.is_ascii_lowercase() && c3.is_ascii_lowercase() {
                     let lang = format!("{}{}{}", c1 as char, c2 as char, c3 as char);
                     tags.push(mk(
                         "MediaLanguageCode",
@@ -1258,13 +1298,7 @@ fn parse_mdhd(
 /// Parse handler reference (hdlr).
 /// Byte layout: version+flags(4), HandlerClass(4), HandlerType(4), HandlerVendorID(4),
 ///              reserved(12), HandlerDescription(string)
-fn parse_hdlr(
-    data: &[u8],
-    start: usize,
-    end: usize,
-    tags: &mut Vec<Tag>,
-    state: &mut QtState,
-) {
+fn parse_hdlr(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state: &mut QtState) {
     if start + 12 > end {
         return;
     }
@@ -1291,10 +1325,17 @@ fn parse_hdlr(
     // HandlerType at byte 8
     if d.len() >= 12 {
         let htype_bytes = &d[8..12];
-        let htype_raw = crate::encoding::decode_utf8_or_latin1(htype_bytes).trim().to_string();
+        let htype_raw = crate::encoding::decode_utf8_or_latin1(htype_bytes)
+            .trim()
+            .to_string();
         // Skip 'alis' and 'url ' types (they don't set the main handler type)
         if htype_bytes != b"alis" && htype_bytes != b"url " {
-            state.handler_type = [htype_bytes[0], htype_bytes[1], htype_bytes[2], htype_bytes[3]];
+            state.handler_type = [
+                htype_bytes[0],
+                htype_bytes[1],
+                htype_bytes[2],
+                htype_bytes[3],
+            ];
             // Copy to stream current track
             if state.extract_embedded > 0 {
                 state.stream_current.handler_type = state.handler_type;
@@ -1372,7 +1413,9 @@ fn decode_pascal_or_c_string(bytes: &[u8]) -> String {
     // If first byte is a control char (0x00-0x1F) and < len, it's Pascal
     if first < 0x20 && (first as usize) < bytes.len() {
         let s = &bytes[1..1 + first as usize];
-        return crate::encoding::decode_utf8_or_latin1(s).trim_end_matches('\0').to_string();
+        return crate::encoding::decode_utf8_or_latin1(s)
+            .trim_end_matches('\0')
+            .to_string();
     }
     // Otherwise C string
     let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
@@ -1479,9 +1522,7 @@ fn parse_smhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
         let balance_str = if balance == balance.floor() {
             format!("{}", balance as i32)
         } else {
-            format!("{:.4}", balance)
-                .trim_end_matches('0')
-                .to_string()
+            format!("{:.4}", balance).trim_end_matches('0').to_string()
         };
         tags.push(mk("Balance", "Balance", Value::String(balance_str)));
     }
@@ -1519,7 +1560,11 @@ fn parse_hvcc(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
         Value::String(profile_space_str.to_string()),
     ));
 
-    let tier_str = if tier_flag == 0 { "Main Tier" } else { "High Tier" };
+    let tier_str = if tier_flag == 0 {
+        "Main Tier"
+    } else {
+        "High Tier"
+    };
     tags.push(mk(
         "GeneralTierFlag",
         "General Tier Flag",
@@ -1560,10 +1605,7 @@ fn parse_hvcc(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
 
     // Bytes 6-11: ConstraintIndicatorFlags (6 bytes as space-separated decimals)
     if d.len() >= 12 {
-        let constraint = format!(
-            "{} {} {} {} {} {}",
-            d[6], d[7], d[8], d[9], d[10], d[11]
-        );
+        let constraint = format!("{} {} {} {} {} {}", d[6], d[7], d[8], d[9], d[10], d[11]);
         tags.push(mk(
             "ConstraintIndicatorFlags",
             "Constraint Indicator Flags",
@@ -1622,7 +1664,11 @@ fn parse_hvcc(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
     // Byte 17: BitDepthLuma (bits 2-0, add 8)
     if d.len() >= 18 {
         let luma = (d[17] & 0x7) + 8;
-        tags.push(mk("BitDepthLuma", "Bit Depth Luma", Value::U32(luma as u32)));
+        tags.push(mk(
+            "BitDepthLuma",
+            "Bit Depth Luma",
+            Value::U32(luma as u32),
+        ));
     }
 
     // Byte 18: BitDepthChroma (bits 2-0, add 8)
@@ -1769,13 +1815,7 @@ fn parse_pitm(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
 /// Parse sample description (stsd) for codec info.
 /// The stsd contains: version+flags(4), entry_count(4), then entries.
 /// Each entry: size(4), format(4), reserved(6), data_ref_index(2), then format-specific data.
-fn parse_stsd(
-    data: &[u8],
-    start: usize,
-    end: usize,
-    tags: &mut Vec<Tag>,
-    state: &mut QtState,
-) {
+fn parse_stsd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state: &mut QtState) {
     let d = &data[start..end];
     if d.len() < 16 {
         return;
@@ -1792,12 +1832,18 @@ fn parse_stsd(
     }
     let entry_size = u32::from_be_bytes([entry[0], entry[1], entry[2], entry[3]]) as usize;
     let format = &entry[4..8];
-    let format_str = crate::encoding::decode_utf8_or_latin1(format).trim().to_string();
+    let format_str = crate::encoding::decode_utf8_or_latin1(format)
+        .trim()
+        .to_string();
 
     // Check for CTMD (Canon Timed MetaData) format
     if format == b"CTMD" {
         state.current_track_is_ctmd = true;
-        tags.push(mk("MetaFormat", "Meta Format", Value::String("CTMD".into())));
+        tags.push(mk(
+            "MetaFormat",
+            "Meta Format",
+            Value::String("CTMD".into()),
+        ));
     }
     // Check for JPEG or CRAW format (Canon CR3 JpgFromRaw track)
     // First CRAW track in CR3 contains JpgFromRaw data
@@ -1964,13 +2010,7 @@ fn parse_stsd(
 
 /// Parse time-to-sample table (stts) to compute VideoFrameRate.
 /// Only for video tracks (handler_type == 'vide').
-fn parse_stts(
-    data: &[u8],
-    start: usize,
-    end: usize,
-    tags: &mut Vec<Tag>,
-    state: &mut QtState,
-) {
+fn parse_stts(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state: &mut QtState) {
     let d = &data[start..end];
     if d.len() < 8 {
         return;
@@ -1997,13 +2037,21 @@ fn parse_stts(
     if &state.handler_type == b"meta" && state.current_track_is_ctmd {
         if entry_count > 0 {
             let off = 8;
-            let _count = u32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]);
-            let delta = u32::from_be_bytes([d[off+4], d[off+5], d[off+6], d[off+7]]);
+            let _count = u32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]]);
+            let delta = u32::from_be_bytes([d[off + 4], d[off + 5], d[off + 6], d[off + 7]]);
             // SampleTime=0, SampleDuration=count/delta (simplified)
             let sample_time_s = 0u32;
             let sample_dur_s = delta as f64; // In Perl, uses movie timescale; simplified here
-            tags.push(mk("SampleTime", "Sample Time", Value::String(format!("{} s", sample_time_s as u32))));
-            tags.push(mk("SampleDuration", "Sample Duration", Value::String(format!("{:.2} s", sample_dur_s))));
+            tags.push(mk(
+                "SampleTime",
+                "Sample Time",
+                Value::String(format!("{} s", sample_time_s as u32)),
+            ));
+            tags.push(mk(
+                "SampleDuration",
+                "Sample Duration",
+                Value::String(format!("{:.2} s", sample_dur_s)),
+            ));
         }
         return;
     }
@@ -2021,12 +2069,7 @@ fn parse_stts(
             break;
         }
         let count = u32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]]) as u64;
-        let delta = u32::from_be_bytes([
-            d[off + 4],
-            d[off + 5],
-            d[off + 6],
-            d[off + 7],
-        ]) as u64;
+        let delta = u32::from_be_bytes([d[off + 4], d[off + 5], d[off + 6], d[off + 7]]) as u64;
         total_samples += count;
         total_duration += count * delta;
     }
@@ -2074,7 +2117,11 @@ fn parse_aperture_dim(
     if w > 0.0 && h > 0.0 {
         let w_int = w as u32;
         let h_int = h as u32;
-        tags.push(mk(name, desc, Value::String(format!("{}x{}", w_int, h_int))));
+        tags.push(mk(
+            name,
+            desc,
+            Value::String(format!("{}x{}", w_int, h_int)),
+        ));
     }
 }
 
@@ -2087,7 +2134,8 @@ fn parse_ilst_triplet(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>
     let mut data_val = String::new();
 
     while pos + 8 <= end {
-        let size = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+        let size =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
         if size < 8 || pos + size > end {
             break;
         }
@@ -2194,8 +2242,7 @@ fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
 
     while pos + 8 <= end {
         let item_size =
-            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]])
-                as usize;
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
         let item_type = &data[pos + 4..pos + 8];
         let item_end = pos + item_size;
 
@@ -2228,8 +2275,7 @@ fn find_data_atom(data: &[u8], start: usize, end: usize) -> Option<String> {
 
     while pos + 16 <= end {
         let size =
-            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]])
-                as usize;
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
         let atom_type = &data[pos + 4..pos + 8];
 
         if size < 16 || pos + size > end {
@@ -2256,7 +2302,10 @@ fn find_data_atom(data: &[u8], start: usize, end: usize) -> Option<String> {
                 }
                 13 | 14 => {
                     // JPEG / PNG cover art
-                    format!("(Binary data {} bytes, use -b option to extract)", value_data.len())
+                    format!(
+                        "(Binary data {} bytes, use -b option to extract)",
+                        value_data.len()
+                    )
                 }
                 21 => {
                     // Signed integer
@@ -2636,7 +2685,11 @@ fn parse_pentax_mov(data: &[u8], tags: &mut Vec<Tag>) {
             } else {
                 format!("{}", et)
             };
-            tags.push(mk_makernote("ExposureTime", "Exposure Time", Value::String(et_str)));
+            tags.push(mk_makernote(
+                "ExposureTime",
+                "Exposure Time",
+                Value::String(et_str),
+            ));
         }
     }
 
@@ -2662,7 +2715,11 @@ fn parse_pentax_mov(data: &[u8], tags: &mut Vec<Tag>) {
             } else {
                 format!("{:+.1}", ec_val)
             };
-            tags.push(mk_makernote("ExposureCompensation", "Exposure Compensation", Value::String(ec_str)));
+            tags.push(mk_makernote(
+                "ExposureCompensation",
+                "Exposure Compensation",
+                Value::String(ec_str),
+            ));
         }
     }
 
@@ -2678,7 +2735,11 @@ fn parse_pentax_mov(data: &[u8], tags: &mut Vec<Tag>) {
             5 => "Manual",
             _ => "Unknown",
         };
-        tags.push(mk_makernote("WhiteBalance", "White Balance", Value::String(wb_str.into())));
+        tags.push(mk_makernote(
+            "WhiteBalance",
+            "White Balance",
+            Value::String(wb_str.into()),
+        ));
     }
 
     // FocalLength (0x48, rational64u LE)
@@ -2688,7 +2749,11 @@ fn parse_pentax_mov(data: &[u8], tags: &mut Vec<Tag>) {
         if d > 0 {
             let fl_val = n as f64 / d as f64;
             let fl_str = format!("{:.1} mm", fl_val);
-            tags.push(mk_makernote("FocalLength", "Focal Length", Value::String(fl_str)));
+            tags.push(mk_makernote(
+                "FocalLength",
+                "Focal Length",
+                Value::String(fl_str),
+            ));
         }
     }
 
@@ -2712,12 +2777,7 @@ fn parse_pentax_mov(data: &[u8], tags: &mut Vec<Tag>) {
 /// - THMB: thumbnail image
 ///
 /// Mirrors Canon.pm %Image::ExifTool::Canon::uuid processing.
-fn parse_canon_uuid(
-    data: &[u8],
-    start: usize,
-    end: usize,
-    tags: &mut Vec<Tag>,
-) {
+fn parse_canon_uuid(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
     let mut pos = start;
     let mut model = String::new();
 
@@ -2725,9 +2785,8 @@ fn parse_canon_uuid(
     // We'll extract model after processing CMT1.
 
     while pos + 8 <= end {
-        let size = u32::from_be_bytes([
-            data[pos], data[pos + 1], data[pos + 2], data[pos + 3],
-        ]) as usize;
+        let size =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
         if size < 8 || pos + size > end {
             break;
         }
@@ -2739,11 +2798,16 @@ fn parse_canon_uuid(
             b"CNCV" => {
                 // Canon Compressor Version - string tag
                 if content_end > content_start {
-                    let s = crate::encoding::decode_utf8_or_latin1(&data[content_start..content_end])
-                        .trim_end_matches('\0')
-                        .to_string();
+                    let s =
+                        crate::encoding::decode_utf8_or_latin1(&data[content_start..content_end])
+                            .trim_end_matches('\0')
+                            .to_string();
                     if !s.is_empty() {
-                        tags.push(mk("CompressorVersion", "Compressor Version", Value::String(s)));
+                        tags.push(mk(
+                            "CompressorVersion",
+                            "Compressor Version",
+                            Value::String(s),
+                        ));
                     }
                 }
             }
@@ -2759,8 +2823,12 @@ fn parse_canon_uuid(
                         }
                         // Filter out MakerNote tags from CMT1 (CMT3 has the full version)
                         for t in exif_tags {
-                            if t.group.family0 == "MakerNotes" { continue; }
-                            if t.name == "MakerNoteByteOrder" { continue; }
+                            if t.group.family0 == "MakerNotes" {
+                                continue;
+                            }
+                            if t.name == "MakerNoteByteOrder" {
+                                continue;
+                            }
                             tags.push(t);
                         }
                     }
@@ -2804,9 +2872,16 @@ fn parse_canon_uuid(
                         id: TagId::Text("ThumbnailImage".into()),
                         name: "ThumbnailImage".into(),
                         description: "Thumbnail Image".into(),
-                        group: TagGroup { family0: "MakerNotes".into(), family1: "Canon".into(), family2: "Preview".into() },
+                        group: TagGroup {
+                            family0: "MakerNotes".into(),
+                            family1: "Canon".into(),
+                            family2: "Preview".into(),
+                        },
                         raw_value: Value::Binary(thumb_data.to_vec()),
-                        print_value: format!("(Binary data {} bytes, use -b option to extract)", size),
+                        print_value: format!(
+                            "(Binary data {} bytes, use -b option to extract)",
+                            size
+                        ),
                         priority: 0,
                     });
                 }

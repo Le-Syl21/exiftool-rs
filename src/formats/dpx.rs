@@ -39,41 +39,77 @@ fn mk_print(name: &str, value: Value, print: String) -> Tag {
 }
 
 fn read_str(data: &[u8], offset: usize, len: usize) -> String {
-    if offset + len > data.len() { return String::new(); }
-    let s = &data[offset..offset+len];
+    if offset + len > data.len() {
+        return String::new();
+    }
+    let s = &data[offset..offset + len];
     // null-terminate
     let end = s.iter().position(|&b| b == 0).unwrap_or(len);
-    crate::encoding::decode_utf8_or_latin1(&s[..end]).trim().to_string()
+    crate::encoding::decode_utf8_or_latin1(&s[..end])
+        .trim()
+        .to_string()
 }
 
 fn read_u32_be(data: &[u8], offset: usize) -> u32 {
-    if offset + 4 > data.len() { return 0; }
-    u32::from_be_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]])
+    if offset + 4 > data.len() {
+        return 0;
+    }
+    u32::from_be_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+    ])
 }
 
 fn read_u32_le(data: &[u8], offset: usize) -> u32 {
-    if offset + 4 > data.len() { return 0; }
-    u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]])
+    if offset + 4 > data.len() {
+        return 0;
+    }
+    u32::from_le_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+    ])
 }
 
 fn read_u16_be(data: &[u8], offset: usize) -> u16 {
-    if offset + 2 > data.len() { return 0; }
-    u16::from_be_bytes([data[offset], data[offset+1]])
+    if offset + 2 > data.len() {
+        return 0;
+    }
+    u16::from_be_bytes([data[offset], data[offset + 1]])
 }
 
 fn read_u16_le(data: &[u8], offset: usize) -> u16 {
-    if offset + 2 > data.len() { return 0; }
-    u16::from_le_bytes([data[offset], data[offset+1]])
+    if offset + 2 > data.len() {
+        return 0;
+    }
+    u16::from_le_bytes([data[offset], data[offset + 1]])
 }
 
 fn read_f32_be(data: &[u8], offset: usize) -> f32 {
-    if offset + 4 > data.len() { return 0.0; }
-    f32::from_bits(u32::from_be_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]))
+    if offset + 4 > data.len() {
+        return 0.0;
+    }
+    f32::from_bits(u32::from_be_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+    ]))
 }
 
 fn read_f32_le(data: &[u8], offset: usize) -> f32 {
-    if offset + 4 > data.len() { return 0.0; }
-    f32::from_bits(u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]))
+    if offset + 4 > data.len() {
+        return 0.0;
+    }
+    f32::from_bits(u32::from_le_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+    ]))
 }
 
 pub fn read_dpx(data: &[u8]) -> Result<Vec<Tag>> {
@@ -90,20 +126,40 @@ pub fn read_dpx(data: &[u8]) -> Result<Vec<Tag>> {
     };
 
     let read_u32 = |off: usize| -> u32 {
-        if big_endian { read_u32_be(data, off) } else { read_u32_le(data, off) }
+        if big_endian {
+            read_u32_be(data, off)
+        } else {
+            read_u32_le(data, off)
+        }
     };
     let read_u16 = |off: usize| -> u16 {
-        if big_endian { read_u16_be(data, off) } else { read_u16_le(data, off) }
+        if big_endian {
+            read_u16_be(data, off)
+        } else {
+            read_u16_le(data, off)
+        }
     };
     let read_f32 = |off: usize| -> f32 {
-        if big_endian { read_f32_be(data, off) } else { read_f32_le(data, off) }
+        if big_endian {
+            read_f32_be(data, off)
+        } else {
+            read_f32_le(data, off)
+        }
     };
 
     let mut tags = Vec::new();
 
     // ByteOrder: offset 0
-    let byte_order_str = if big_endian { "Big-endian" } else { "Little-endian" };
-    tags.push(mk_print("ByteOrder", Value::String(byte_order_str.into()), byte_order_str.into()));
+    let byte_order_str = if big_endian {
+        "Big-endian"
+    } else {
+        "Little-endian"
+    };
+    tags.push(mk_print(
+        "ByteOrder",
+        Value::String(byte_order_str.into()),
+        byte_order_str.into(),
+    ));
 
     // HeaderVersion: offset 8, string[8]
     let hdr_ver = read_str(data, 8, 8);
@@ -117,8 +173,16 @@ pub fn read_dpx(data: &[u8]) -> Result<Vec<Tag>> {
 
     // DittoKey: offset 20, int32u
     let ditto_key = read_u32(20);
-    let ditto_str = match ditto_key { 0 => "Same", 1 => "New", _ => "Unknown" };
-    tags.push(mk_print("DittoKey", Value::U32(ditto_key), ditto_str.into()));
+    let ditto_str = match ditto_key {
+        0 => "Same",
+        1 => "New",
+        _ => "Unknown",
+    };
+    tags.push(mk_print(
+        "DittoKey",
+        Value::U32(ditto_key),
+        ditto_str.into(),
+    ));
 
     // ImageFileName: offset 36, string[100]
     let img_fn = read_str(data, 36, 100);
@@ -130,7 +194,11 @@ pub fn read_dpx(data: &[u8]) -> Result<Vec<Tag>> {
     if !create_date_raw.is_empty() {
         let create_date = create_date_raw.replacen(':', " ", 3);
         // Only keep up to position 19 (YYYY:MM:DD HH:MM:SS)
-        let create_date = if create_date.len() > 19 { create_date[..19].to_string() } else { create_date };
+        let create_date = if create_date.len() > 19 {
+            create_date[..19].to_string()
+        } else {
+            create_date
+        };
         tags.push(mk("CreateDate", Value::String(create_date)));
     }
 
@@ -171,7 +239,11 @@ pub fn read_dpx(data: &[u8]) -> Result<Vec<Tag>> {
             7 => "Mirror horizontal and rotate 90 CW",
             _ => "Unknown",
         };
-        tags.push(mk_print("Orientation", Value::U16(orientation), orient_str.into()));
+        tags.push(mk_print(
+            "Orientation",
+            Value::U16(orientation),
+            orient_str.into(),
+        ));
     }
 
     // ImageElements: offset 770, int16u
@@ -195,7 +267,11 @@ pub fn read_dpx(data: &[u8]) -> Result<Vec<Tag>> {
     // DataSign: offset 780, int32u
     if 780 + 4 <= data.len() {
         let data_sign = read_u32(780);
-        let sign_str = match data_sign { 0 => "Unsigned", 1 => "Signed", _ => "Unknown" };
+        let sign_str = match data_sign {
+            0 => "Unsigned",
+            1 => "Signed",
+            _ => "Unknown",
+        };
         tags.push(mk_print("DataSign", Value::U32(data_sign), sign_str.into()));
     }
 
@@ -228,7 +304,11 @@ pub fn read_dpx(data: &[u8]) -> Result<Vec<Tag>> {
             156 => "User-defined 8 component element",
             _ => "Unknown",
         };
-        tags.push(mk_print("ComponentsConfiguration", Value::U8(comp_config), comp_str.into()));
+        tags.push(mk_print(
+            "ComponentsConfiguration",
+            Value::U8(comp_config),
+            comp_str.into(),
+        ));
     }
 
     // TransferCharacteristic: offset 801, int8u
@@ -260,7 +340,11 @@ pub fn read_dpx(data: &[u8]) -> Result<Vec<Tag>> {
             22 => "IEC 61966-2-1 sRGB",
             _ => "Unknown",
         };
-        tags.push(mk_print("TransferCharacteristic", Value::U8(tc), tc_str.into()));
+        tags.push(mk_print(
+            "TransferCharacteristic",
+            Value::U8(tc),
+            tc_str.into(),
+        ));
     }
 
     // ColorimetricSpecification: offset 802, int8u
@@ -284,7 +368,11 @@ pub fn read_dpx(data: &[u8]) -> Result<Vec<Tag>> {
             18 => "ACES",
             _ => "Unknown",
         };
-        tags.push(mk_print("ColorimetricSpecification", Value::U8(cs), cs_str.into()));
+        tags.push(mk_print(
+            "ColorimetricSpecification",
+            Value::U8(cs),
+            cs_str.into(),
+        ));
     }
 
     // BitDepth: offset 803, int8u
@@ -337,7 +425,11 @@ pub fn read_dpx(data: &[u8]) -> Result<Vec<Tag>> {
             } else {
                 format!("{}", ofr)
             };
-            tags.push(mk_print("OriginalFrameRate", Value::F64(ofr as f64), ofr_val));
+            tags.push(mk_print(
+                "OriginalFrameRate",
+                Value::F64(ofr as f64),
+                ofr_val,
+            ));
         }
     }
 

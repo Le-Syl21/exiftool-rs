@@ -93,7 +93,9 @@ pub fn read_lfp(data: &[u8]) -> Result<Vec<Tag>> {
 
 fn looks_like_json(data: &[u8]) -> bool {
     // Trim leading whitespace and check for '{'
-    let s = data.iter().take_while(|&&b| b == b' ' || b == b'\t' || b == b'\r' || b == b'\n');
+    let s = data
+        .iter()
+        .take_while(|&&b| b == b' ' || b == b'\t' || b == b'\r' || b == b'\n');
     let start = s.count();
     start < data.len() && data[start] == b'{'
 }
@@ -363,7 +365,9 @@ fn apply_tag_mapping(name: &str, raw: &str) -> (String, String, String) {
         "CameraModel" => ("Model".into(), raw.to_string(), raw.to_string()),
         "CameraSerialNumber" => ("SerialNumber".into(), raw.to_string(), raw.to_string()),
         "CameraFirmware" => ("FirmwareVersion".into(), raw.to_string(), raw.to_string()),
-        "AccelerometerSampleArrayTime" => ("AccelerometerTime".into(), raw.to_string(), raw.to_string()),
+        "AccelerometerSampleArrayTime" => {
+            ("AccelerometerTime".into(), raw.to_string(), raw.to_string())
+        }
         "AccelerometerSampleArrayX" => ("AccelerometerX".into(), raw.to_string(), raw.to_string()),
         "AccelerometerSampleArrayY" => ("AccelerometerY".into(), raw.to_string(), raw.to_string()),
         "AccelerometerSampleArrayZ" => ("AccelerometerZ".into(), raw.to_string(), raw.to_string()),
@@ -414,10 +418,18 @@ fn apply_tag_mapping(name: &str, raw: &str) -> (String, String, String) {
                 let s = format!("{}", ppi);
                 ("FocalPlaneXResolution".into(), s.clone(), s)
             } else {
-                ("FocalPlaneXResolution".into(), raw.to_string(), raw.to_string())
+                (
+                    "FocalPlaneXResolution".into(),
+                    raw.to_string(),
+                    raw.to_string(),
+                )
             }
         }
-        "SensorSensorSerial" => ("SensorSerialNumber".into(), raw.to_string(), raw.to_string()),
+        "SensorSensorSerial" => (
+            "SensorSerialNumber".into(),
+            raw.to_string(),
+            raw.to_string(),
+        ),
         "SensorIso" => ("ISO".into(), raw.to_string(), raw.to_string()),
         "ImageLimitExposureBias" => {
             let pv = format_exposure_bias(raw);

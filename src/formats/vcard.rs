@@ -1,9 +1,9 @@
 //! VCard (.vcf) and iCalendar (.ics) format reader.
 //! Mirrors ExifTool's VCard.pm ProcessVCard.
 
+use crate::error::Result;
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
-use crate::error::Result;
 
 fn mk(name: &str, value: String) -> Tag {
     Tag {
@@ -47,7 +47,10 @@ fn unescape_vcard(s: &str) -> String {
                 Some('\\') => result.push('\\'),
                 Some(',') => result.push(','),
                 Some('n') | Some('N') => result.push('\n'),
-                Some(c2) => { result.push('\\'); result.push(c2); }
+                Some(c2) => {
+                    result.push('\\');
+                    result.push(c2);
+                }
                 None => result.push('\\'),
             }
         } else {
@@ -208,11 +211,19 @@ fn is_time_tag_vcard(name: &str) -> bool {
 
 /// Check if this is a time tag in iCalendar
 fn is_time_tag_ical(name: &str) -> bool {
-    matches!(name,
-        "DateTimeCompleted" | "DateTimeEnd" | "DateTimeDue" | "DateTimeStart" |
-        "DateCreated" | "DateTimeStamp" | "ModifyDate" |
-        "ExceptionDateTimes" | "RecurrenceDateTimes" | "Acknowledged" |
-        "RecurrenceID"
+    matches!(
+        name,
+        "DateTimeCompleted"
+            | "DateTimeEnd"
+            | "DateTimeDue"
+            | "DateTimeStart"
+            | "DateCreated"
+            | "DateTimeStamp"
+            | "ModifyDate"
+            | "ExceptionDateTimes"
+            | "RecurrenceDateTimes"
+            | "Acknowledged"
+            | "RecurrenceID"
     )
 }
 
@@ -230,7 +241,9 @@ struct ParsedLine {
 
 /// Parse a single unfolded vCard line
 fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
-    if line.is_empty() { return None; }
+    if line.is_empty() {
+        return None;
+    }
 
     // Parse tag name (up to first ';' or ':')
     let mut pos;
@@ -239,9 +252,17 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
     // Skip group prefix (e.g., "item1.")
     let tag_start = if let Some(dot) = line.find('.') {
         // Only skip if before the colon and semicolon
-        let first_sep = line.find(|c: char| c == ':' || c == ';').unwrap_or(line.len());
-        if dot < first_sep { dot + 1 } else { 0 }
-    } else { 0 };
+        let first_sep = line
+            .find(|c: char| c == ':' || c == ';')
+            .unwrap_or(line.len());
+        if dot < first_sep {
+            dot + 1
+        } else {
+            0
+        }
+    } else {
+        0
+    };
 
     pos = tag_start;
     let tag_name_start = pos;
@@ -251,9 +272,13 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
         pos += 1;
     }
 
-    if pos >= bytes.len() { return None; }
+    if pos >= bytes.len() {
+        return None;
+    }
     let raw_tag = &line[tag_name_start..pos];
-    if raw_tag.is_empty() { return None; }
+    if raw_tag.is_empty() {
+        return None;
+    }
 
     // Parse parameters
     let mut types = Vec::new();
@@ -287,15 +312,21 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
                         param_val.push(bytes[pos] as char);
                         pos += 1;
                     }
-                    if pos < bytes.len() { pos += 1; } // skip closing quote
-                    // Skip optional comma after quoted value
+                    if pos < bytes.len() {
+                        pos += 1;
+                    } // skip closing quote
+                      // Skip optional comma after quoted value
                     if pos < bytes.len() && bytes[pos] == b',' {
                         pos += 1;
                     }
                 } else {
                     // Unquoted - read until , ; :
                     let val_start = pos;
-                    while pos < bytes.len() && bytes[pos] != b',' && bytes[pos] != b':' && bytes[pos] != b';' {
+                    while pos < bytes.len()
+                        && bytes[pos] != b','
+                        && bytes[pos] != b':'
+                        && bytes[pos] != b';'
+                    {
                         pos += 1;
                     }
                     param_val.push_str(&line[val_start..pos]);
@@ -325,7 +356,11 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
                 }
                 "geo" => {
                     // Remove "geo:" prefix if present
-                    let v = if param_val.starts_with("geo:") { param_val[4..].to_string() } else { param_val };
+                    let v = if param_val.starts_with("geo:") {
+                        param_val[4..].to_string()
+                    } else {
+                        param_val
+                    };
                     // Convert comma to ", " for display
                     let v = v.replace(',', ", ");
                     geo = Some(v);
@@ -347,16 +382,24 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
                 // Check if it's a known encoding
                 let pn_lower = param_name.to_ascii_lowercase();
                 match pn_lower.as_str() {
-                    "quoted-printable" => { encoding = Some("quoted-printable".into()); }
-                    "base64" | "b" => { encoding = Some("base64".into()); }
-                    _ => { types.push(ucfirst_lower(param_name)); }
+                    "quoted-printable" => {
+                        encoding = Some("quoted-printable".into());
+                    }
+                    "base64" | "b" => {
+                        encoding = Some("base64".into());
+                    }
+                    _ => {
+                        types.push(ucfirst_lower(param_name));
+                    }
                 }
             }
         }
     }
 
     // Now we should be at ':'
-    if pos >= bytes.len() || bytes[pos] != b':' { return None; }
+    if pos >= bytes.len() || bytes[pos] != b':' {
+        return None;
+    }
     pos += 1; // skip ':'
 
     let value_str = &line[pos..];
@@ -372,22 +415,18 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
                 // Extract type/subtype and set encoding
                 if let Some(slash) = mime_type.find('/') {
                     let t1 = ucfirst(&mime_type[..slash]);
-                    let t2 = ucfirst(&mime_type[slash+1..]);
+                    let t2 = ucfirst(&mime_type[slash + 1..]);
                     extra_types.push(format!("{}{}", t1, t2));
                 }
                 encoding = Some("base64".into());
                 // The actual base64 data comes after "data:type/sub;base64,"
                 // (value computed below)
                 // Note: we'll replace this with binary indicator below
-                
             } else {
-                
             }
         } else {
-            
         }
     } else {
-        
     }
 
     // Apply encoding
@@ -396,12 +435,8 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
             // For PHOTO/LOGO/SOUND - just indicate binary
             format!("(Binary data, use -b option to extract)")
         }
-        Some("quoted-printable") => {
-            decode_qp(value_str)
-        }
-        _ => {
-            unescape_vcard(value_str)
-        }
+        Some("quoted-printable") => decode_qp(value_str),
+        _ => unescape_vcard(value_str),
     };
 
     Some(ParsedLine {
@@ -423,12 +458,14 @@ fn decode_qp(s: &str) -> String {
     let mut i = 0;
     while i < bytes.len() {
         if bytes[i] == b'=' && i + 2 < bytes.len() {
-            let h1 = bytes[i+1];
-            let h2 = bytes[i+2];
+            let h1 = bytes[i + 1];
+            let h2 = bytes[i + 2];
             if h1 == b'\r' || h1 == b'\n' {
                 // Soft line break - skip
                 i += 2;
-                if i < bytes.len() && bytes[i] == b'\n' { i += 1; }
+                if i < bytes.len() && bytes[i] == b'\n' {
+                    i += 1;
+                }
                 continue;
             }
             if let (Some(n1), Some(n2)) = (hex_val(h1), hex_val(h2)) {
@@ -478,15 +515,18 @@ fn parse_lines_raw(text: &str) -> Vec<String> {
 /// iCalendar isComponent set (top-level components that set the family1 group name)
 /// These component names are WITHOUT the V prefix (VEVENT→Event, VTIMEZONE→Timezone).
 fn is_ical_component(name: &str) -> bool {
-    matches!(name, "Event" | "Todo" | "Journal" | "Freebusy" | "Timezone" | "Alarm")
+    matches!(
+        name,
+        "Event" | "Todo" | "Journal" | "Freebusy" | "Timezone" | "Alarm"
+    )
 }
 
 pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
     let text = crate::encoding::decode_utf8_or_latin1(data);
 
-    let is_vcalendar = text.starts_with("BEGIN:VCALENDAR") ||
-        text.contains("\nBEGIN:VCALENDAR") ||
-        text.to_ascii_uppercase().contains("BEGIN:VCALENDAR");
+    let is_vcalendar = text.starts_with("BEGIN:VCALENDAR")
+        || text.contains("\nBEGIN:VCALENDAR")
+        || text.to_ascii_uppercase().contains("BEGIN:VCALENDAR");
 
     let raw_lines = parse_lines_raw(&text);
     let mut tags = Vec::new();
@@ -552,8 +592,11 @@ pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
 
                     let idx = if has_v_prefix {
                         // Only V-prefixed components get a count (e.g. VALARM → Alarm1)
-                        let cnt = sub_count_stack.last_mut().unwrap()
-                            .entry(obj_name.clone()).or_insert(0);
+                        let cnt = sub_count_stack
+                            .last_mut()
+                            .unwrap()
+                            .entry(obj_name.clone())
+                            .or_insert(0);
                         *cnt += 1;
                         *cnt
                     } else {
@@ -563,10 +606,13 @@ pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                     sub_stack.push((obj_name, idx));
                     sub_count_stack.push(std::collections::HashMap::new());
                 }
-            } else { // END
+            } else {
+                // END
                 if is_outer {
                     // nothing special
-                } else if is_ical_component(&what_no_v) && top_component.as_deref() == Some(what_no_v.as_str()) {
+                } else if is_ical_component(&what_no_v)
+                    && top_component.as_deref() == Some(what_no_v.as_str())
+                {
                     // Ending the top-level component
                     top_component = None;
                     sub_stack.clear();
@@ -585,12 +631,15 @@ pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
         };
 
         let raw_upper = parsed.tag.to_ascii_uppercase();
-        if raw_upper == "BEGIN" || raw_upper == "END" { continue; }
+        if raw_upper == "BEGIN" || raw_upper == "END" {
+            continue;
+        }
 
         if is_vcalendar {
             // Build tag prefix from sub_stack only (top-level component tags are flat)
             // Index 0 means no number suffix (for non-V-prefixed components like DAYLIGHT)
-            let prefix: String = sub_stack.iter()
+            let prefix: String = sub_stack
+                .iter()
                 .map(|(name, idx)| {
                     if *idx == 0 {
                         name.clone()

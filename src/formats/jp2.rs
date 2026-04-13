@@ -10,14 +10,12 @@ use crate::value::Value;
 
 /// UUID for EXIF in JP2 containers
 const UUID_EXIF: [u8; 16] = [
-    0x4A, 0x46, 0x49, 0x46, 0x00, 0x11, 0x00, 0x10,
-    0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71,
+    0x4A, 0x46, 0x49, 0x46, 0x00, 0x11, 0x00, 0x10, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71,
 ];
 
 /// UUID for XMP in JP2 containers
 const UUID_XMP: [u8; 16] = [
-    0xBE, 0x7A, 0xCF, 0xCB, 0x97, 0xA9, 0x42, 0xE8,
-    0x9C, 0x71, 0x99, 0x94, 0x91, 0xE3, 0xAF, 0xAC,
+    0xBE, 0x7A, 0xCF, 0xCB, 0x97, 0xA9, 0x42, 0xE8, 0x9C, 0x71, 0x99, 0x94, 0x91, 0xE3, 0xAF, 0xAC,
 ];
 
 /// Parse J2C codestream (raw JPEG 2000 codestream, no box wrapper).
@@ -56,8 +54,10 @@ pub fn read_j2c(data: &[u8]) -> Result<Vec<Tag>> {
                 // SIZ: Rsiz(2) Xsiz(4) Ysiz(4) ...
                 // Perl: unpack('x2N2') => (Xsiz, Ysiz) => (width, height)
                 if seg_data.len() >= 10 && !got_size {
-                    let w = u32::from_be_bytes([seg_data[2], seg_data[3], seg_data[4], seg_data[5]]);
-                    let h = u32::from_be_bytes([seg_data[6], seg_data[7], seg_data[8], seg_data[9]]);
+                    let w =
+                        u32::from_be_bytes([seg_data[2], seg_data[3], seg_data[4], seg_data[5]]);
+                    let h =
+                        u32::from_be_bytes([seg_data[6], seg_data[7], seg_data[8], seg_data[9]]);
                     got_size = true;
                     tags.push(mk("ImageWidth", "Image Width", Value::U32(w)));
                     tags.push(mk("ImageHeight", "Image Height", Value::U32(h)));
@@ -124,7 +124,13 @@ pub fn read_jxl(data: &[u8]) -> Result<Vec<Tag>> {
     Err(Error::InvalidData("not a JXL file".into()))
 }
 
-fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth: u32) -> Result<()> {
+fn parse_boxes(
+    data: &[u8],
+    start: usize,
+    end: usize,
+    tags: &mut Vec<Tag>,
+    depth: u32,
+) -> Result<()> {
     if depth > 10 {
         return Ok(());
     }
@@ -132,13 +138,20 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
     let mut pos = start;
 
     while pos + 8 <= end {
-        let box_size = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as u64;
+        let box_size =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as u64;
         let box_type = &data[pos + 4..pos + 8];
 
         let (header_size, actual_size) = if box_size == 1 && pos + 16 <= end {
             let ext_size = u64::from_be_bytes([
-                data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11],
-                data[pos + 12], data[pos + 13], data[pos + 14], data[pos + 15],
+                data[pos + 8],
+                data[pos + 9],
+                data[pos + 10],
+                data[pos + 11],
+                data[pos + 12],
+                data[pos + 13],
+                data[pos + 14],
+                data[pos + 15],
             ]);
             (16usize, ext_size)
         } else if box_size == 0 {
@@ -170,17 +183,29 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
 
                     tags.push(mk("ImageHeight", "Image Height", Value::U32(height)));
                     tags.push(mk("ImageWidth", "Image Width", Value::U32(width)));
-                    tags.push(mk("NumberOfComponents", "Number of Components", Value::U16(num_components)));
+                    tags.push(mk(
+                        "NumberOfComponents",
+                        "Number of Components",
+                        Value::U16(num_components),
+                    ));
 
                     // BitsPerComponent: bit7 = signed, bits 0-6 = depth-1
                     let bpc_str = if bpc_raw == 0xff {
                         "Variable".to_string()
                     } else {
-                        let sign = if (bpc_raw & 0x80) != 0 { "Signed" } else { "Unsigned" };
+                        let sign = if (bpc_raw & 0x80) != 0 {
+                            "Signed"
+                        } else {
+                            "Unsigned"
+                        };
                         let depth = (bpc_raw & 0x7f) + 1;
                         format!("{} Bits, {}", depth, sign)
                     };
-                    tags.push(mk("BitsPerComponent", "Bits Per Component", Value::String(bpc_str)));
+                    tags.push(mk(
+                        "BitsPerComponent",
+                        "Bits Per Component",
+                        Value::String(bpc_str),
+                    ));
 
                     // Compression
                     let comp_str = match compression_raw {
@@ -214,8 +239,16 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
                         4 => "Vendor Color".to_string(),
                         _ => format!("{}", method),
                     };
-                    tags.push(mk("ColorSpecMethod", "Color Spec Method", Value::String(method_str)));
-                    tags.push(mk("ColorSpecPrecedence", "Color Spec Precedence", Value::String(format!("{}", precedence))));
+                    tags.push(mk(
+                        "ColorSpecMethod",
+                        "Color Spec Method",
+                        Value::String(method_str),
+                    ));
+                    tags.push(mk(
+                        "ColorSpecPrecedence",
+                        "Color Spec Precedence",
+                        Value::String(format!("{}", precedence)),
+                    ));
 
                     // ColorSpecApproximation
                     let approx_str = match approximation {
@@ -226,7 +259,11 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
                         4 => "Poor Quality".to_string(),
                         _ => format!("{}", approximation),
                     };
-                    tags.push(mk("ColorSpecApproximation", "Color Spec Approximation", Value::String(approx_str)));
+                    tags.push(mk(
+                        "ColorSpecApproximation",
+                        "Color Spec Approximation",
+                        Value::String(approx_str),
+                    ));
 
                     if method == 1 && content_end - content_start >= 7 {
                         let enum_cs = u32::from_be_bytes([cd[3], cd[4], cd[5], cd[6]]);
@@ -236,7 +273,11 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
                             18 => "sYCC",
                             _ => "Unknown",
                         };
-                        tags.push(mk("ColorSpace", "Color Space", Value::String(cs_name.into())));
+                        tags.push(mk(
+                            "ColorSpace",
+                            "Color Space",
+                            Value::String(cs_name.into()),
+                        ));
                     } else if method == 2 || method == 3 {
                         // ICC profile follows at offset 3
                         if content_end - content_start > 3 {
@@ -264,11 +305,19 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
 
                     if vr_d > 0 {
                         let vres = (vr_n as f64 / vr_d as f64) * 10f64.powi(vr_e as i32);
-                        tags.push(mk("YResolution", "Y Resolution", Value::String(format!("{:.0}", vres))));
+                        tags.push(mk(
+                            "YResolution",
+                            "Y Resolution",
+                            Value::String(format!("{:.0}", vres)),
+                        ));
                     }
                     if hr_d > 0 {
                         let hres = (hr_n as f64 / hr_d as f64) * 10f64.powi(hr_e as i32);
-                        tags.push(mk("XResolution", "X Resolution", Value::String(format!("{:.0}", hres))));
+                        tags.push(mk(
+                            "XResolution",
+                            "X Resolution",
+                            Value::String(format!("{:.0}", hres)),
+                        ));
                     }
                 }
             }
@@ -296,8 +345,8 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
                     } else {
                         // GeoJP2: UUID b14bf8bd-083d-4b43-a5ae-8cd7d5a6ce03
                         const UUID_GEOJP2: [u8; 16] = [
-                            0xb1, 0x4b, 0xf8, 0xbd, 0x08, 0x3d, 0x4b, 0x43,
-                            0xa5, 0xae, 0x8c, 0xd7, 0xd5, 0xa6, 0xce, 0x03,
+                            0xb1, 0x4b, 0xf8, 0xbd, 0x08, 0x3d, 0x4b, 0x43, 0xa5, 0xae, 0x8c, 0xd7,
+                            0xd5, 0xa6, 0xce, 0x03,
                         ];
                         if uuid == &UUID_GEOJP2 {
                             // GeoTIFF data: TIFF file
@@ -355,14 +404,20 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
                     } else {
                         brand_desc.to_string()
                     };
-                    tags.push(mk("MajorBrand", "Major Brand", Value::String(brand_display)));
+                    tags.push(mk(
+                        "MajorBrand",
+                        "Major Brand",
+                        Value::String(brand_display),
+                    ));
                 }
                 if cd.len() >= 8 {
                     let mv = &cd[4..8];
-                    let minor = format!("{:x}.{:x}.{:x}",
+                    let minor = format!(
+                        "{:x}.{:x}.{:x}",
                         u16::from_be_bytes([mv[0], mv[1]]),
                         mv[2],
-                        mv[3]);
+                        mv[3]
+                    );
                     tags.push(mk("MinorVersion", "Minor Version", Value::String(minor)));
                 }
                 if cd.len() >= 12 {
@@ -376,7 +431,11 @@ fn parse_boxes(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, depth
                         }
                     }
                     if !brands.is_empty() {
-                        tags.push(mk("CompatibleBrands", "Compatible Brands", Value::String(brands.join(", "))));
+                        tags.push(mk(
+                            "CompatibleBrands",
+                            "Compatible Brands",
+                            Value::String(brands.join(", ")),
+                        ));
                     }
                 }
             }
@@ -433,7 +492,11 @@ fn parse_jxl_codestream(data: &[u8], tags: &mut Vec<Tag>) {
     }
     // Build mutable array @a of 12 bytes starting at offset 2
     let mut a: [u8; 12] = [0u8; 12];
-    let start = if data.len() >= 2 && data[0] == 0xFF && data[1] == 0x0A { 2 } else { 0 };
+    let start = if data.len() >= 2 && data[0] == 0xFF && data[1] == 0x0A {
+        2
+    } else {
+        0
+    };
     let src = &data[start..];
     let len = src.len().min(12);
     a[..len].copy_from_slice(&src[..len]);

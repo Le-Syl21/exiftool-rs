@@ -52,7 +52,12 @@ fn read_u32_le(data: &[u8], offset: usize) -> u32 {
     if offset + 4 > data.len() {
         return 0;
     }
-    u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]])
+    u32::from_le_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+    ])
 }
 
 fn read_f32_le(data: &[u8], offset: usize) -> f32 {
@@ -73,7 +78,9 @@ fn read_str(data: &[u8], offset: usize, len: usize) -> String {
     }
     let s = &data[offset..offset + len];
     let end = s.iter().position(|&b| b == 0).unwrap_or(len);
-    crate::encoding::decode_utf8_or_latin1(&s[..end]).trim().to_string()
+    crate::encoding::decode_utf8_or_latin1(&s[..end])
+        .trim()
+        .to_string()
 }
 
 /// Convert float Kelvin to Celsius: subtract 273.15, format "%.1f C"

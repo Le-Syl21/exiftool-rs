@@ -54,8 +54,11 @@ fn find_xmp(data: &[u8]) -> Option<usize> {
     let marker = b"<?xpacket begin";
     // Search from the start, but skip the first 26 bytes (header)
     let start = 26;
-    if data.len() <= start { return None; }
-    data[start..].windows(marker.len())
+    if data.len() <= start {
+        return None;
+    }
+    data[start..]
+        .windows(marker.len())
         .position(|w| w == marker)
         .map(|p| p + start)
 }
@@ -63,12 +66,20 @@ fn find_xmp(data: &[u8]) -> Option<usize> {
 /// Find the end of an XMP packet (after <?xpacket end ...?>).
 fn find_xmp_end(data: &[u8], xmp_start: usize) -> Option<usize> {
     let end_marker = b"<?xpacket end";
-    if xmp_start >= data.len() { return None; }
+    if xmp_start >= data.len() {
+        return None;
+    }
     let after_start = &data[xmp_start..];
-    if let Some(pos) = after_start.windows(end_marker.len()).position(|w| w == end_marker) {
+    if let Some(pos) = after_start
+        .windows(end_marker.len())
+        .position(|w| w == end_marker)
+    {
         // Find the '?>' closing the processing instruction
         let close_search_start = xmp_start + pos + end_marker.len();
-        if let Some(close_pos) = data[close_search_start..].windows(2).position(|w| w == b"?>") {
+        if let Some(close_pos) = data[close_search_start..]
+            .windows(2)
+            .position(|w| w == b"?>")
+        {
             return Some(close_search_start + close_pos + 2);
         }
         // Fallback: just return end of the end marker
@@ -118,7 +129,9 @@ fn parse_ciff_dir(
         // $tagID = $tag & 0x3fff
         // $tagType = ($tag >> 8) & 0x38
         // $valueInDir = ($tag & 0x4000) -- value stored inline in dir entry
-        if (raw_tag & 0x8000) != 0 { continue; } // bad entry
+        if (raw_tag & 0x8000) != 0 {
+            continue;
+        } // bad entry
 
         let tag_id = raw_tag & 0x3FFF;
         let data_type = (raw_tag >> 8) & 0x38;
@@ -130,7 +143,15 @@ fn parse_ciff_dir(
             if abs_offset + size_field <= block_end {
                 // Detect ImageDescription directory (0x2804) to handle 0x0805 correctly
                 let is_image_desc = tag_id == 0x2804;
-                parse_ciff_dir(data, abs_offset, abs_offset + size_field, is_le, tags, depth + 1, is_image_desc);
+                parse_ciff_dir(
+                    data,
+                    abs_offset,
+                    abs_offset + size_field,
+                    is_le,
+                    tags,
+                    depth + 1,
+                    is_image_desc,
+                );
             }
             continue;
         }
@@ -138,11 +159,15 @@ fn parse_ciff_dir(
         // Determine value data
         let (value_data, _size): (&[u8], usize) = if value_in_dir {
             // Value stored in directory entry: 8 bytes (size_field + value_offset fields)
-            if entry_pos + 2 + 8 > data.len() { continue; }
+            if entry_pos + 2 + 8 > data.len() {
+                continue;
+            }
             (&data[entry_pos + 2..entry_pos + 10], 8)
         } else {
             let abs_offset = value_offset + block_start;
-            if abs_offset + size_field > data.len() { continue; }
+            if abs_offset + size_field > data.len() {
+                continue;
+            }
             (&data[abs_offset..abs_offset + size_field], size_field)
         };
 
@@ -157,12 +182,19 @@ fn parse_ciff_dir(
         match tag_id {
             0x2005 => {
                 // RawData - always emit as binary
-                let pv = format!("(Binary data {} bytes, use -b option to extract)", value_data.len());
+                let pv = format!(
+                    "(Binary data {} bytes, use -b option to extract)",
+                    value_data.len()
+                );
                 tags.push(Tag {
                     id: TagId::Numeric(tag_id),
                     name: "RawData".into(),
                     description: "Raw Data".into(),
-                    group: TagGroup { family0: "MakerNotes".into(), family1: "MakerNotes".into(), family2: "Camera".into() },
+                    group: TagGroup {
+                        family0: "MakerNotes".into(),
+                        family1: "MakerNotes".into(),
+                        family2: "Camera".into(),
+                    },
                     raw_value: Value::Binary(value_data.to_vec()),
                     print_value: pv,
                     priority: 0,
@@ -171,12 +203,19 @@ fn parse_ciff_dir(
             }
             0x2007 => {
                 // JpgFromRaw - always emit as binary
-                let pv = format!("(Binary data {} bytes, use -b option to extract)", value_data.len());
+                let pv = format!(
+                    "(Binary data {} bytes, use -b option to extract)",
+                    value_data.len()
+                );
                 tags.push(Tag {
                     id: TagId::Numeric(tag_id),
                     name: "JpgFromRaw".into(),
                     description: "Jpg From Raw".into(),
-                    group: TagGroup { family0: "MakerNotes".into(), family1: "MakerNotes".into(), family2: "Camera".into() },
+                    group: TagGroup {
+                        family0: "MakerNotes".into(),
+                        family1: "MakerNotes".into(),
+                        family2: "Camera".into(),
+                    },
                     raw_value: Value::Binary(value_data.to_vec()),
                     print_value: pv,
                     priority: 0,
@@ -185,12 +224,19 @@ fn parse_ciff_dir(
             }
             0x2008 => {
                 // ThumbnailImage - always emit as binary
-                let pv = format!("(Binary data {} bytes, use -b option to extract)", value_data.len());
+                let pv = format!(
+                    "(Binary data {} bytes, use -b option to extract)",
+                    value_data.len()
+                );
                 tags.push(Tag {
                     id: TagId::Numeric(tag_id),
                     name: "ThumbnailImage".into(),
                     description: "Thumbnail Image".into(),
-                    group: TagGroup { family0: "MakerNotes".into(), family1: "MakerNotes".into(), family2: "Camera".into() },
+                    group: TagGroup {
+                        family0: "MakerNotes".into(),
+                        family1: "MakerNotes".into(),
+                        family2: "Camera".into(),
+                    },
                     raw_value: Value::Binary(value_data.to_vec()),
                     print_value: pv,
                     priority: 0,
@@ -222,7 +268,10 @@ fn parse_ciff_dir(
                 let s = crate::encoding::decode_utf8_or_latin1(value_data)
                     .trim_end_matches('\0')
                     .to_string();
-                if s.chars().all(|c| c.is_ascii_graphic() || c.is_ascii_whitespace()) && !s.is_empty() {
+                if s.chars()
+                    .all(|c| c.is_ascii_graphic() || c.is_ascii_whitespace())
+                    && !s.is_empty()
+                {
                     Value::String(s)
                 } else {
                     Value::Binary(value_data.to_vec())
@@ -361,20 +410,35 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
         }
     };
     let rf32 = |d: &[u8], off: usize| -> f32 {
-        if off + 4 > d.len() { return 0.0; }
-        if is_le { f32::from_le_bytes([d[off], d[off+1], d[off+2], d[off+3]]) }
-        else { f32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]) }
+        if off + 4 > d.len() {
+            return 0.0;
+        }
+        if is_le {
+            f32::from_le_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
+        } else {
+            f32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
+        }
     };
     let ru32 = |d: &[u8], off: usize| -> u32 {
-        if off + 4 > d.len() { return 0; }
-        if is_le { u32::from_le_bytes([d[off], d[off+1], d[off+2], d[off+3]]) }
-        else { u32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]) }
+        if off + 4 > d.len() {
+            return 0;
+        }
+        if is_le {
+            u32::from_le_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
+        } else {
+            u32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
+        }
     };
     let ri32 = |d: &[u8], off: usize| -> i32 { ru32(d, off) as i32 };
     let ru16 = |d: &[u8], off: usize| -> u16 {
-        if off + 2 > d.len() { return 0; }
-        if is_le { u16::from_le_bytes([d[off], d[off+1]]) }
-        else { u16::from_be_bytes([d[off], d[off+1]]) }
+        if off + 2 > d.len() {
+            return 0;
+        }
+        if is_le {
+            u16::from_le_bytes([d[off], d[off + 1]])
+        } else {
+            u16::from_be_bytes([d[off], d[off + 1]])
+        }
     };
     let ri16 = |d: &[u8], off: usize| -> i16 { ru16(d, off) as i16 };
 
@@ -393,13 +457,15 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
         }
         0x102a => {
             // CanonShotInfo — int16s array, same format as JPEG MakerNote tag 0x0004
-            let values: Vec<i16> = (0..data.len() / 2)
-                .map(|i| ri16(data, i*2))
-                .collect();
+            let values: Vec<i16> = (0..data.len() / 2).map(|i| ri16(data, i * 2)).collect();
             let sub_tags = crate::tags::canon_sub::decode_shot_info(&values, "CRW");
             for t in sub_tags {
                 tags.push(Tag {
-                    group: TagGroup { family0: "MakerNotes".into(), family1: "MakerNotes".into(), family2: "Camera".into() },
+                    group: TagGroup {
+                        family0: "MakerNotes".into(),
+                        family1: "MakerNotes".into(),
+                        family2: "Camera".into(),
+                    },
                     ..t
                 });
             }
@@ -407,13 +473,15 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
         }
         0x102d => {
             // CanonCameraSettings — int16s array, same format as JPEG MakerNote tag 0x0001
-            let values: Vec<i16> = (0..data.len() / 2)
-                .map(|i| ri16(data, i*2))
-                .collect();
+            let values: Vec<i16> = (0..data.len() / 2).map(|i| ri16(data, i * 2)).collect();
             let sub_tags = crate::tags::canon_sub::decode_camera_settings(&values);
             for t in sub_tags {
                 tags.push(Tag {
-                    group: TagGroup { family0: "MakerNotes".into(), family1: "MakerNotes".into(), family2: "Camera".into() },
+                    group: TagGroup {
+                        family0: "MakerNotes".into(),
+                        family1: "MakerNotes".into(),
+                        family2: "Camera".into(),
+                    },
                     ..t
                 });
             }
@@ -422,16 +490,36 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
         0x1031 => {
             // SensorInfo — int16s array (Canon::SensorInfo table)
             let n = data.len() / 2;
-            if n > 1 { tags.push(mk("SensorWidth", ri16(data, 2).to_string())); }
-            if n > 2 { tags.push(mk("SensorHeight", ri16(data, 4).to_string())); }
-            if n > 5 { tags.push(mk("SensorLeftBorder", ri16(data, 10).to_string())); }
-            if n > 6 { tags.push(mk("SensorTopBorder", ri16(data, 12).to_string())); }
-            if n > 7 { tags.push(mk("SensorRightBorder", ri16(data, 14).to_string())); }
-            if n > 8 { tags.push(mk("SensorBottomBorder", ri16(data, 16).to_string())); }
-            if n > 9 { tags.push(mk("BlackMaskLeftBorder", ri16(data, 18).to_string())); }
-            if n > 10 { tags.push(mk("BlackMaskTopBorder", ri16(data, 20).to_string())); }
-            if n > 11 { tags.push(mk("BlackMaskRightBorder", ri16(data, 22).to_string())); }
-            if n > 12 { tags.push(mk("BlackMaskBottomBorder", ri16(data, 24).to_string())); }
+            if n > 1 {
+                tags.push(mk("SensorWidth", ri16(data, 2).to_string()));
+            }
+            if n > 2 {
+                tags.push(mk("SensorHeight", ri16(data, 4).to_string()));
+            }
+            if n > 5 {
+                tags.push(mk("SensorLeftBorder", ri16(data, 10).to_string()));
+            }
+            if n > 6 {
+                tags.push(mk("SensorTopBorder", ri16(data, 12).to_string()));
+            }
+            if n > 7 {
+                tags.push(mk("SensorRightBorder", ri16(data, 14).to_string()));
+            }
+            if n > 8 {
+                tags.push(mk("SensorBottomBorder", ri16(data, 16).to_string()));
+            }
+            if n > 9 {
+                tags.push(mk("BlackMaskLeftBorder", ri16(data, 18).to_string()));
+            }
+            if n > 10 {
+                tags.push(mk("BlackMaskTopBorder", ri16(data, 20).to_string()));
+            }
+            if n > 11 {
+                tags.push(mk("BlackMaskRightBorder", ri16(data, 22).to_string()));
+            }
+            if n > 12 {
+                tags.push(mk("BlackMaskBottomBorder", ri16(data, 24).to_string()));
+            }
             true
         }
         0x1038 => {
@@ -472,18 +560,18 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                 let xpos_start = 16;
                 let xpos_end = xpos_start + num_points * 2;
                 if data.len() >= xpos_end && num_points > 0 {
-                    let xpos: Vec<String> = (0..num_points).map(|i| {
-                        ri16(data, xpos_start + i * 2).to_string()
-                    }).collect();
+                    let xpos: Vec<String> = (0..num_points)
+                        .map(|i| ri16(data, xpos_start + i * 2).to_string())
+                        .collect();
                     tags.push(mk("AFAreaXPositions", xpos.join(" ")));
                 }
                 // AFAreaYPositions: N int16s starting after X positions
                 let ypos_start = xpos_end;
                 let ypos_end = ypos_start + num_points * 2;
                 if data.len() >= ypos_end && num_points > 0 {
-                    let ypos: Vec<String> = (0..num_points).map(|i| {
-                        ri16(data, ypos_start + i * 2).to_string()
-                    }).collect();
+                    let ypos: Vec<String> = (0..num_points)
+                        .map(|i| ri16(data, ypos_start + i * 2).to_string())
+                        .collect();
                     tags.push(mk("AFAreaYPositions", ypos.join(" ")));
                 }
                 // AFPointsInFocus: ceil(N/16) int16s
@@ -519,26 +607,48 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                 // idx is 1-based per Perl FIRST_ENTRY=1
                 // actual byte offset: (idx-1)*2
                 let base = (idx - 1) * 2;
-                format!("{} {} {} {}",
+                format!(
+                    "{} {} {} {}",
                     ri16(data, base),
                     ri16(data, base + 2),
                     ri16(data, base + 4),
-                    ri16(data, base + 6))
+                    ri16(data, base + 6)
+                )
             };
             let n = data.len() / 2 + 1; // n items (1-based count)
-            // WB_RGGBLevelsAsShot: index 0 (byte 0) contains a selector; the actual
-            // AS-SHOT levels are selected by the WhiteBalance value.
-            // For the CRW file we just emit the standard named sets.
-            if n > 4 { tags.push(mk("WB_RGGBLevelsAuto", wb4_u(1))); }
-            if n > 8 { tags.push(mk("WB_RGGBLevelsDaylight", wb4_u(5))); }
-            if n > 12 { tags.push(mk("WB_RGGBLevelsShade", wb4_u(9))); }
-            if n > 16 { tags.push(mk("WB_RGGBLevelsCloudy", wb4_u(13))); }
-            if n > 20 { tags.push(mk("WB_RGGBLevelsTungsten", wb4_u(17))); }
-            if n > 24 { tags.push(mk("WB_RGGBLevelsFluorescent", wb4_u(21))); }
-            if n > 28 { tags.push(mk("WB_RGGBLevelsFlash", wb4_u(25))); }
-            if n > 32 { tags.push(mk("WB_RGGBLevelsCustom", wb4_u(29))); }
-            if n > 36 { tags.push(mk("WB_RGGBLevelsKelvin", wb4_u(33))); }
-            if n > 40 { tags.push(mk("WB_RGGBBlackLevels", wb4_u(37))); }
+                                        // WB_RGGBLevelsAsShot: index 0 (byte 0) contains a selector; the actual
+                                        // AS-SHOT levels are selected by the WhiteBalance value.
+                                        // For the CRW file we just emit the standard named sets.
+            if n > 4 {
+                tags.push(mk("WB_RGGBLevelsAuto", wb4_u(1)));
+            }
+            if n > 8 {
+                tags.push(mk("WB_RGGBLevelsDaylight", wb4_u(5)));
+            }
+            if n > 12 {
+                tags.push(mk("WB_RGGBLevelsShade", wb4_u(9)));
+            }
+            if n > 16 {
+                tags.push(mk("WB_RGGBLevelsCloudy", wb4_u(13)));
+            }
+            if n > 20 {
+                tags.push(mk("WB_RGGBLevelsTungsten", wb4_u(17)));
+            }
+            if n > 24 {
+                tags.push(mk("WB_RGGBLevelsFluorescent", wb4_u(21)));
+            }
+            if n > 28 {
+                tags.push(mk("WB_RGGBLevelsFlash", wb4_u(25)));
+            }
+            if n > 32 {
+                tags.push(mk("WB_RGGBLevelsCustom", wb4_u(29)));
+            }
+            if n > 36 {
+                tags.push(mk("WB_RGGBLevelsKelvin", wb4_u(33)));
+            }
+            if n > 40 {
+                tags.push(mk("WB_RGGBBlackLevels", wb4_u(37)));
+            }
             true
         }
         0x10b5 => {
@@ -603,12 +713,20 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             if n > 4 {
                 // Index 4 = BracketValue (byte 6)
                 let bracket_val = ri16(data, 6);
-                tags.push(mk_raw("BracketValue", Value::I16(bracket_val), bracket_val.to_string()));
+                tags.push(mk_raw(
+                    "BracketValue",
+                    Value::I16(bracket_val),
+                    bracket_val.to_string(),
+                ));
             }
             if n > 5 {
                 // Index 5 = BracketShotNumber (byte 8)
                 let bracket_shot = ri16(data, 8);
-                tags.push(mk_raw("BracketShotNumber", Value::I16(bracket_shot), bracket_shot.to_string()));
+                tags.push(mk_raw(
+                    "BracketShotNumber",
+                    Value::I16(bracket_shot),
+                    bracket_shot.to_string(),
+                ));
             }
             true
         }
@@ -642,8 +760,12 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             // ImageInfo (SubDirectory → CanonRaw::ImageInfo, FORMAT=int32u)
             // Indices: 0=ImageWidth, 1=ImageHeight, 2=PixelAspectRatio(float),
             //          3=Rotation(int32s), 4=ComponentBitDepth, 5=ColorBitDepth, 6=ColorBW
-            if data.len() >= 4 { tags.push(mk("ImageWidth", ru32(data, 0).to_string())); }
-            if data.len() >= 8 { tags.push(mk("ImageHeight", ru32(data, 4).to_string())); }
+            if data.len() >= 4 {
+                tags.push(mk("ImageWidth", ru32(data, 0).to_string()));
+            }
+            if data.len() >= 8 {
+                tags.push(mk("ImageHeight", ru32(data, 4).to_string()));
+            }
             if data.len() >= 12 {
                 let aspect = rf32(data, 8); // PixelAspectRatio is float
                 let s = if aspect == aspect.floor() && aspect < 1e6 {
@@ -657,16 +779,26 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                 let rot = ri32(data, 12);
                 tags.push(mk("Rotation", rot.to_string()));
             }
-            if data.len() >= 20 { tags.push(mk("ComponentBitDepth", ru32(data, 16).to_string())); }
-            if data.len() >= 24 { tags.push(mk("ColorBitDepth", ru32(data, 20).to_string())); }
-            if data.len() >= 28 { tags.push(mk("ColorBW", ru32(data, 24).to_string())); }
+            if data.len() >= 20 {
+                tags.push(mk("ComponentBitDepth", ru32(data, 16).to_string()));
+            }
+            if data.len() >= 24 {
+                tags.push(mk("ColorBitDepth", ru32(data, 20).to_string()));
+            }
+            if data.len() >= 28 {
+                tags.push(mk("ColorBW", ru32(data, 24).to_string()));
+            }
             true
         }
         0x1813 => {
             // FlashInfo (SubDirectory → CanonRaw::FlashInfo, FORMAT=float)
             // 0=FlashGuideNumber, 1=FlashThreshold
-            if data.len() >= 4 { tags.push(mk("FlashGuideNumber", format!("{}", rf32(data, 0)))); }
-            if data.len() >= 8 { tags.push(mk("FlashThreshold", format!("{}", rf32(data, 4)))); }
+            if data.len() >= 4 {
+                tags.push(mk("FlashGuideNumber", format!("{}", rf32(data, 0))));
+            }
+            if data.len() >= 8 {
+                tags.push(mk("FlashThreshold", format!("{}", rf32(data, 4))));
+            }
             true
         }
         0x1814 => {
@@ -715,7 +847,9 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                 // ShutterSpeedValue ValueConv: 'abs($val)<100 ? 1/(2**$val) : 0'
                 let et = if (sv as f64).abs() < 100.0 {
                     2.0_f64.powf(-(sv as f64))
-                } else { 0.0 };
+                } else {
+                    0.0
+                };
                 tags.push(mk("ShutterSpeedValue", format!("{}", sv)));
                 // Emit ExposureTime for composites
                 let et_print = crate::tags::canon_sub::print_exposure_time(et);
@@ -723,7 +857,11 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                     id: TagId::Text("ExposureTime".into()),
                     name: "ExposureTime".into(),
                     description: "Exposure Time".into(),
-                    group: TagGroup { family0: "MakerNotes".into(), family1: "MakerNotes".into(), family2: "Camera".into() },
+                    group: TagGroup {
+                        family0: "MakerNotes".into(),
+                        family1: "MakerNotes".into(),
+                        family2: "Camera".into(),
+                    },
                     raw_value: Value::F64(et),
                     print_value: et_print,
                     priority: 0,
@@ -739,7 +877,11 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                     id: TagId::Text("FNumber".into()),
                     name: "FNumber".into(),
                     description: "F Number".into(),
-                    group: TagGroup { family0: "MakerNotes".into(), family1: "MakerNotes".into(), family2: "Camera".into() },
+                    group: TagGroup {
+                        family0: "MakerNotes".into(),
+                        family1: "MakerNotes".into(),
+                        family2: "Camera".into(),
+                    },
                     raw_value: Value::F64(fn_val),
                     print_value: format!("{:.1}", fn_val),
                     priority: 0,
@@ -790,7 +932,11 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                         id: TagId::Text("FocalLength".into()),
                         name: "FocalLength".into(),
                         description: "Focal Length".into(),
-                        group: TagGroup { family0: "MakerNotes".into(), family1: "MakerNotes".into(), family2: "Camera".into() },
+                        group: TagGroup {
+                            family0: "MakerNotes".into(),
+                            family1: "MakerNotes".into(),
+                            family2: "Camera".into(),
+                        },
                         raw_value: Value::F64(fl_mm),
                         print_value: format!("{} mm", fl_mm as u32),
                         priority: 0,
@@ -806,7 +952,11 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                         id: TagId::Text("FocalPlaneXSize".into()),
                         name: "FocalPlaneXSize".into(),
                         description: "Focal Plane X Size".into(),
-                        group: TagGroup { family0: "MakerNotes".into(), family1: "MakerNotes".into(), family2: "Camera".into() },
+                        group: TagGroup {
+                            family0: "MakerNotes".into(),
+                            family1: "MakerNotes".into(),
+                            family2: "Camera".into(),
+                        },
                         raw_value: Value::F64(x_mm),
                         print_value: print_str,
                         priority: 0,
@@ -822,7 +972,11 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                         id: TagId::Text("FocalPlaneYSize".into()),
                         name: "FocalPlaneYSize".into(),
                         description: "Focal Plane Y Size".into(),
-                        group: TagGroup { family0: "MakerNotes".into(), family1: "MakerNotes".into(), family2: "Camera".into() },
+                        group: TagGroup {
+                            family0: "MakerNotes".into(),
+                            family1: "MakerNotes".into(),
+                            family2: "Camera".into(),
+                        },
                         raw_value: Value::F64(y_mm),
                         print_value: print_str,
                         priority: 0,
@@ -859,7 +1013,20 @@ fn unix_time_to_exif(unix_time: u32) -> String {
         remaining_days -= days_in_year;
         year += 1;
     }
-    let month_days = [31i64, if is_leap_year(year) { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let month_days = [
+        31i64,
+        if is_leap_year(year) { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
     let mut month = 1i64;
     for &md in &month_days {
         if remaining_days < md {
@@ -869,7 +1036,10 @@ fn unix_time_to_exif(unix_time: u32) -> String {
         month += 1;
     }
     let day = remaining_days + 1;
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", year, month, day, h, m, s)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+        year, month, day, h, m, s
+    )
 }
 
 fn is_leap_year(y: i64) -> bool {
@@ -882,7 +1052,7 @@ fn crw_tag_name(tag_id: u16) -> (&'static str, &'static str) {
         0x0000 => ("NullRecord", "Null Record"),
         0x0032 => ("CanonColorInfo1", "Color Info 1"),
         // 0x0805 handled specially based on directory context (CanonFileDescription or UserComment)
-        0x080a => ("CanonRawMakeModel", "Canon Raw Make Model"),  // Split into Make+Model in binary subdir
+        0x080a => ("CanonRawMakeModel", "Canon Raw Make Model"), // Split into Make+Model in binary subdir
         0x080b => ("CanonFirmwareVersion", "Firmware Version"),
         0x080c => ("ComponentVersion", "Component Version"),
         0x080d => ("ROMOperationMode", "ROM Operation Mode"),
@@ -895,35 +1065,35 @@ fn crw_tag_name(tag_id: u16) -> (&'static str, &'static str) {
         0x1011 => ("ShutterReleaseTiming", "Shutter Release Timing"),
         0x1016 => ("ReleaseSetting", "Release Setting"),
         0x101c => ("BaseISO", "Base ISO"),
-        0x1026 => ("", ""),  // unknown, skip
-        0x1029 => ("", ""),  // CanonFocalLength (SubDirectory) — handled in binary subdir
+        0x1026 => ("", ""), // unknown, skip
+        0x1029 => ("", ""), // CanonFocalLength (SubDirectory) — handled in binary subdir
         // SubDirectory containers — decoded into sub-tags by Perl, suppressed here
-        0x102a => ("", ""),  // CanonShotInfo (SubDirectory)
-        0x102d => ("", ""),  // CanonCameraSettings (SubDirectory)
-        0x1031 => ("", ""),  // SensorInfo (SubDirectory)
-        0x1038 => ("", ""),  // CanonAFInfo (SubDirectory)
-        0x1093 => ("", ""),  // CanonFileInfo (SubDirectory)
-        0x10a9 => ("", ""),  // ColorBalance (SubDirectory)
+        0x102a => ("", ""), // CanonShotInfo (SubDirectory)
+        0x102d => ("", ""), // CanonCameraSettings (SubDirectory)
+        0x1031 => ("", ""), // SensorInfo (SubDirectory)
+        0x1038 => ("", ""), // CanonAFInfo (SubDirectory)
+        0x1093 => ("", ""), // CanonFileInfo (SubDirectory)
+        0x10a9 => ("", ""), // ColorBalance (SubDirectory)
         0x10ae => ("ColorTemperature", "Color Temperature"),
         0x10b4 => ("ColorSpace", "Color Space"),
-        0x10b5 => ("", ""),  // RawJpgInfo (SubDirectory)
-        0x1803 => ("", ""),  // ImageFormat (SubDirectory) — handled in binary subdir
+        0x10b5 => ("", ""), // RawJpgInfo (SubDirectory)
+        0x1803 => ("", ""), // ImageFormat (SubDirectory) — handled in binary subdir
         0x1804 => ("RecordID", "Record ID"),
         0x1806 => ("SelfTimerTime", "Self Timer Time"),
         0x1807 => ("TargetDistanceSetting", "Target Distance Setting"),
         0x180b => ("SerialNumber", "Serial Number"),
-        0x180e => ("", ""),  // TimeStamp (SubDirectory) — handled in binary subdir
-        0x1810 => ("", ""),  // ImageInfo (SubDirectory) — handled in binary subdir
-        0x1813 => ("", ""),  // FlashInfo (SubDirectory) — handled in binary subdir
-        0x1814 => ("", ""),  // MeasuredEV — handled in binary subdir
+        0x180e => ("", ""), // TimeStamp (SubDirectory) — handled in binary subdir
+        0x1810 => ("", ""), // ImageInfo (SubDirectory) — handled in binary subdir
+        0x1813 => ("", ""), // FlashInfo (SubDirectory) — handled in binary subdir
+        0x1814 => ("", ""), // MeasuredEV — handled in binary subdir
         0x1817 => ("FileNumber", "File Number"),
-        0x1818 => ("", ""),  // ExposureInfo (SubDirectory) — handled in binary subdir
+        0x1818 => ("", ""), // ExposureInfo (SubDirectory) — handled in binary subdir
         0x1834 => ("CanonModelID", "Model ID"),
-        0x1835 => ("", ""),  // DecoderTable (SubDirectory) — handled in binary subdir
+        0x1835 => ("", ""), // DecoderTable (SubDirectory) — handled in binary subdir
         0x183b => ("SerialNumberFormat", "Serial Number Format"),
-        0x2005 => ("", ""),  // RawData — handled separately
-        0x2007 => ("", ""),  // JpgFromRaw — handled separately
-        0x2008 => ("", ""),  // ThumbnailImage — handled separately
+        0x2005 => ("", ""), // RawData — handled separately
+        0x2007 => ("", ""), // JpgFromRaw — handled separately
+        0x2008 => ("", ""), // ThumbnailImage — handled separately
         0x3002 => ("ShootingRecord", "Shooting Record"),
         0x3003 => ("MeasuredInfo", "Measured Info"),
         0x3004 => ("ColorInfo", "Color Info"),
@@ -972,8 +1142,18 @@ fn read_u16(data: &[u8], offset: usize, is_le: bool) -> u16 {
 
 fn read_u32(data: &[u8], offset: usize, is_le: bool) -> u32 {
     if is_le {
-        u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]])
+        u32::from_le_bytes([
+            data[offset],
+            data[offset + 1],
+            data[offset + 2],
+            data[offset + 3],
+        ])
     } else {
-        u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]])
+        u32::from_be_bytes([
+            data[offset],
+            data[offset + 1],
+            data[offset + 2],
+            data[offset + 3],
+        ])
     }
 }

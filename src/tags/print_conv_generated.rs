@@ -7,7 +7,8 @@
 /// Returns the human-readable string for the given module, tag ID, and numeric value.
 pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str> {
     match (module, tag_id) {
-        ("AIFF", 0x0009) => match value { // CompressionType
+        ("AIFF", 0x0009) => match value {
+            // CompressionType
             2 => Some("ACE 2-to-1"),
             3 => Some("MAC 3-to-1"),
             6 => Some("MAC 6-to-1"),
@@ -17,7 +18,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             728 => Some("G728"),
             _ => None,
         },
-        ("ASF", 0x0000) => match value { // PictureType
+        ("ASF", 0x0000) => match value {
+            // PictureType
             0 => Some("Other"),
             1 => Some("32x32 PNG Icon"),
             2 => Some("Other Icon"),
@@ -41,22 +43,26 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             20 => Some("Publisher Logo"),
             _ => None,
         },
-        ("Apple", 0x0004) => match value { // AEStable
+        ("Apple", 0x0004) => match value {
+            // AEStable
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Apple", 0x0007) => match value { // AFStable
+        ("Apple", 0x0007) => match value {
+            // AFStable
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Apple", 0x000A) => match value { // HDRImageType
+        ("Apple", 0x000A) => match value {
+            // HDRImageType
             3 => Some("HDR Image"),
             4 => Some("Original Image"),
             _ => None,
         },
-        ("Apple", 0x0014) => match value { // ImageCaptureType
+        ("Apple", 0x0014) => match value {
+            // ImageCaptureType
             1 => Some("ProRAW"),
             2 => Some("Portrait"),
             10 => Some("Photo"),
@@ -64,18 +70,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             12 => Some("Scene"),
             _ => None,
         },
-        ("Apple", 0x002E) => match value { // CameraType
+        ("Apple", 0x002E) => match value {
+            // CameraType
             0 => Some("Back Wide Angle"),
             1 => Some("Back Normal"),
             6 => Some("Front"),
             _ => None,
         },
-        ("BMP", 0x0000) => match value { // BMPVersion
+        ("BMP", 0x0000) => match value {
+            // BMPVersion
             12 => Some("OS/2 V1"),
             64 => Some("OS/2 V2"),
             _ => None,
         },
-        ("BMP", 0x0010) => match value { // Compression
+        ("BMP", 0x0010) => match value {
+            // Compression
             0 => Some("None"),
             1 => Some("8-Bit RLE"),
             2 => Some("4-Bit RLE"),
@@ -84,27 +93,31 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("PNG"),
             _ => None,
         },
-        ("BMP", 0x0038) => match value { // ColorSpace
+        ("BMP", 0x0038) => match value {
+            // ColorSpace
             0 => Some("Calibrated RGB"),
             1 => Some("Device RGB"),
             2 => Some("Device CMYK"),
             _ => None,
         },
-        ("BMP", 0x006C) => match value { // RenderingIntent
+        ("BMP", 0x006C) => match value {
+            // RenderingIntent
             1 => Some("Graphic (LCS_GM_BUSINESS)"),
             2 => Some("Proof (LCS_GM_GRAPHICS)"),
             4 => Some("Picture (LCS_GM_IMAGES)"),
             8 => Some("Absolute Colorimetric (LCS_GM_ABS_COLORIMETRIC)"),
             _ => None,
         },
-        ("BPG", 0x0001) => match value { // Alpha
+        ("BPG", 0x0001) => match value {
+            // Alpha
             0 => Some("No Alpha Plane"),
             4 => Some("Alpha Exists (W color component)"),
             4096 => Some("Alpha Exists (color not premultiplied)"),
             4100 => Some("Alpha Exists (color premultiplied)"),
             _ => None,
         },
-        ("BPG", 0x0003) => match value { // ColorSpace
+        ("BPG", 0x0003) => match value {
+            // ColorSpace
             0 => Some("YCbCr (BT 601)"),
             1 => Some("RGB"),
             2 => Some("YCgCo"),
@@ -113,75 +126,89 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("BT 2020 Constant Luminance"),
             _ => None,
         },
-        ("BPG", 0x0004) => match value { // Flags
+        ("BPG", 0x0004) => match value {
+            // Flags
             0 => Some("Animation"),
             1 => Some("Limited Range"),
             3 => Some("Extension Present"),
             _ => None,
         },
-        ("Canon", 0x0000) => match value { // ColorDataVersion
+        ("Canon", 0x0000) => match value {
+            // ColorDataVersion
             64 => Some("64 (R1/R5mkII)"),
             65 => Some("65 (R50V)"),
             _ => None,
         },
-        ("Canon", 0x0001) => match value { // FocusBracketing
+        ("Canon", 0x0001) => match value {
+            // FocusBracketing
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Canon", 0x0002) => match value { // AFTrackingSensitivity
+        ("Canon", 0x0002) => match value {
+            // AFTrackingSensitivity
             127 => Some("Auto"),
             2147483647 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x0003) => match value { // AFAccelDecelTracking
+        ("Canon", 0x0003) => match value {
+            // AFAccelDecelTracking
             127 => Some("Auto"),
             2147483647 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x0004) => match value { // FocusBracketingExposureSmoothing
+        ("Canon", 0x0004) => match value {
+            // FocusBracketingExposureSmoothing
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Canon", 0x0005) => match value { // FocusBracketingDepthComposite
+        ("Canon", 0x0005) => match value {
+            // FocusBracketingDepthComposite
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Canon", 0x0006) => match value { // FocusBracketingCropDepthComposite
+        ("Canon", 0x0006) => match value {
+            // FocusBracketingCropDepthComposite
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Canon", 0x0007) => match value { // DistortionCorrectionSetting
+        ("Canon", 0x0007) => match value {
+            // DistortionCorrectionSetting
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Canon", 0x0008) => match value { // AFAssistBeam
+        ("Canon", 0x0008) => match value {
+            // AFAssistBeam
             0 => Some("Enable"),
             1 => Some("Disable"),
             2 => Some("IR AF Assist Beam Only"),
             3 => Some("LED AF Assist Beam Only"),
             _ => None,
         },
-        ("Canon", 0x0009) => match value { // OneShotAFRelease
+        ("Canon", 0x0009) => match value {
+            // OneShotAFRelease
             0 => Some("Focus Priority"),
             1 => Some("Release Priority"),
             _ => None,
         },
-        ("Canon", 0x000A) => match value { // AutoAFPointSelEOSiTRAF
+        ("Canon", 0x000A) => match value {
+            // AutoAFPointSelEOSiTRAF
             0 => Some("Enable"),
             1 => Some("Disable"),
             _ => None,
         },
-        ("Canon", 0x000B) => match value { // LensDriveWhenAFImpossible
+        ("Canon", 0x000B) => match value {
+            // LensDriveWhenAFImpossible
             0 => Some("Continue Focus Search"),
             1 => Some("Stop Focus Search"),
             _ => None,
         },
-        ("Canon", 0x000C) => match value { // SelectAFAreaSelectionMode
+        ("Canon", 0x000C) => match value {
+            // SelectAFAreaSelectionMode
             0 => Some("Single-point AF"),
             1 => Some("Auto"),
             2 => Some("Zone AF"),
@@ -190,23 +217,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("AF Point Expansion (8 point)"),
             _ => None,
         },
-        ("Canon", 0x000D) => match value { // AFAreaSelectionMethod
+        ("Canon", 0x000D) => match value {
+            // AFAreaSelectionMethod
             0 => Some("M-Fn Button"),
             1 => Some("Main Dial"),
             _ => None,
         },
-        ("Canon", 0x000E) => match value { // OrientationLinkedAF
+        ("Canon", 0x000E) => match value {
+            // OrientationLinkedAF
             0 => Some("Same for Vert/Horiz Points"),
             1 => Some("Separate Vert/Horiz Points"),
             2 => Some("Separate Area+Points"),
             _ => None,
         },
-        ("Canon", 0x000F) => match value { // ManualAFPointSelPattern
+        ("Canon", 0x000F) => match value {
+            // ManualAFPointSelPattern
             0 => Some("Stops at AF Area Edges"),
             1 => Some("Continuous"),
             _ => None,
         },
-        ("Canon", 0x0010) => match value { // AFPointDisplayDuringFocus
+        ("Canon", 0x0010) => match value {
+            // AFPointDisplayDuringFocus
             0 => Some("Selected (constant)"),
             1 => Some("All (constant)"),
             2 => Some("Selected (pre-AF, focused)"),
@@ -214,24 +245,28 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Disabled"),
             _ => None,
         },
-        ("Canon", 0x0011) => match value { // VFDisplayIllumination
+        ("Canon", 0x0011) => match value {
+            // VFDisplayIllumination
             0 => Some("Auto"),
             1 => Some("Enable"),
             2 => Some("Disable"),
             _ => None,
         },
-        ("Canon", 0x0012) => match value { // AFStatusViewfinder
+        ("Canon", 0x0012) => match value {
+            // AFStatusViewfinder
             0 => Some("Show in Field of View"),
             1 => Some("Show Outside View"),
             _ => None,
         },
-        ("Canon", 0x0013) => match value { // InitialAFPointInServo
+        ("Canon", 0x0013) => match value {
+            // InitialAFPointInServo
             0 => Some("Initial AF Point Selected"),
             1 => Some("Manual AF Point"),
             2 => Some("Auto"),
             _ => None,
         },
-        ("Canon", 0x0014) => match value { // SubjectToDetect
+        ("Canon", 0x0014) => match value {
+            // SubjectToDetect
             0 => Some("None"),
             1 => Some("People"),
             2 => Some("Animals"),
@@ -239,65 +274,76 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Auto"),
             _ => None,
         },
-        ("Canon", 0x0015) => match value { // SubjectSwitching
+        ("Canon", 0x0015) => match value {
+            // SubjectSwitching
             0 => Some("Initial Priority"),
             1 => Some("On Subject"),
             2 => Some("Switch Subject"),
             2147483647 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x0017) => match value { // ShutterMode
+        ("Canon", 0x0017) => match value {
+            // ShutterMode
             0 => Some("Mechanical"),
             1 => Some("Electronic First Curtain"),
             2 => Some("Electronic"),
             _ => None,
         },
-        ("Canon", 0x0018) => match value { // EyeDetection
+        ("Canon", 0x0018) => match value {
+            // EyeDetection
             0 => Some("Off"),
             1 => Some("Auto"),
             2 => Some("Left Eye"),
             3 => Some("Right Eye"),
             _ => None,
         },
-        ("Canon", 0x0019) => match value { // FlashExposureLock
+        ("Canon", 0x0019) => match value {
+            // FlashExposureLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Canon", 0x001A) => match value { // WholeAreaTracking
+        ("Canon", 0x001A) => match value {
+            // WholeAreaTracking
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Canon", 0x001B) => match value { // ServoAFCharacteristics
+        ("Canon", 0x001B) => match value {
+            // ServoAFCharacteristics
             0 => Some("Case Auto"),
             1 => Some("Case Manual"),
             _ => None,
         },
-        ("Canon", 0x001C) => match value { // CaseAutoSetting
+        ("Canon", 0x001C) => match value {
+            // CaseAutoSetting
             -1 => Some("Locked On"),
             0 => Some("Standard"),
             1 => Some("Responsive"),
             2147483647 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x001D) => match value { // ActionPriority
+        ("Canon", 0x001D) => match value {
+            // ActionPriority
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Canon", 0x001E) => match value { // SportEvents
+        ("Canon", 0x001E) => match value {
+            // SportEvents
             0 => Some("Soccer"),
             1 => Some("Basketball"),
             2 => Some("Volleyball"),
             _ => None,
         },
-        ("Canon", 0x0020) => match value { // AntiFlicker
+        ("Canon", 0x0020) => match value {
+            // AntiFlicker
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Canon", 0x0021) => match value { // AESetting
+        ("Canon", 0x0021) => match value {
+            // AESetting
             0 => Some("Normal AE"),
             1 => Some("Exposure Compensation"),
             2 => Some("AE Lock"),
@@ -305,7 +351,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("No AE"),
             _ => None,
         },
-        ("Canon", 0x0022) => match value { // ImageStabilization
+        ("Canon", 0x0022) => match value {
+            // ImageStabilization
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("Shoot Only"),
@@ -318,7 +365,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             260 => Some("Dynamic (2)"),
             _ => None,
         },
-        ("Canon", 0x0023) => match value { // Categories
+        ("Canon", 0x0023) => match value {
+            // Categories
             0 => Some("People"),
             1 => Some("Scenery"),
             2 => Some("Events"),
@@ -328,13 +376,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("To Do"),
             _ => None,
         },
-        ("Canon", 0x0027) => match value { // CameraOrientation
+        ("Canon", 0x0027) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Canon", 0x0028) => match value { // PhotoEffect
+        ("Canon", 0x0028) => match value {
+            // PhotoEffect
             0 => Some("Off"),
             1 => Some("Vivid"),
             2 => Some("Neutral"),
@@ -345,7 +395,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             100 => Some("My Color Data"),
             _ => None,
         },
-        ("Canon", 0x0029) => match value { // ManualFlashOutput
+        ("Canon", 0x0029) => match value {
+            // ManualFlashOutput
             0 => Some("n/a"),
             1280 => Some("Full"),
             1282 => Some("Medium"),
@@ -353,59 +404,69 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x002D) => match value { // FocalType
+        ("Canon", 0x002D) => match value {
+            // FocalType
             0 => Some("Fixed"),
             2 => Some("Zoom"),
             _ => None,
         },
-        ("Canon", 0x002E) => match value { // SRAWQuality
+        ("Canon", 0x002E) => match value {
+            // SRAWQuality
             0 => Some("n/a"),
             1 => Some("sRAW1 (mRAW)"),
             2 => Some("sRAW2 (sRAW)"),
             _ => None,
         },
-        ("Canon", 0x0030) => match value { // CameraOrientation
+        ("Canon", 0x0030) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Canon", 0x0031) => match value { // CameraOrientation
+        ("Canon", 0x0031) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Canon", 0x0032) => match value { // FocusBracketing
+        ("Canon", 0x0032) => match value {
+            // FocusBracketing
             0 => Some("Disable"),
             1 => Some("Enable"),
             _ => None,
         },
-        ("Canon", 0x0035) => match value { // CameraOrientation
+        ("Canon", 0x0035) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Canon", 0x0036) => match value { // CameraOrientation
+        ("Canon", 0x0036) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Canon", 0x0038) => match value { // CameraOrientation
+        ("Canon", 0x0038) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Canon", 0x003A) => match value { // CameraOrientation
+        ("Canon", 0x003A) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Canon", 0x003D) => match value { // RFLensType
+        ("Canon", 0x003D) => match value {
+            // RFLensType
             0 => Some("n/a"),
             257 => Some("Canon RF 50mm F1.2L USM"),
             258 => Some("Canon RF 24-105mm F4L IS USM"),
@@ -483,7 +544,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             332 => Some("Canon RF 14mm F1.4 L VCM"),
             _ => None,
         },
-        ("Canon", 0x0041) => match value { // SharpnessFrequency
+        ("Canon", 0x0041) => match value {
+            // SharpnessFrequency
             0 => Some("n/a"),
             1 => Some("Lowest"),
             2 => Some("Low"),
@@ -492,7 +554,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Highest"),
             _ => None,
         },
-        ("Canon", 0x0044) => match value { // WhiteBalance
+        ("Canon", 0x0044) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -517,7 +580,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             23 => Some("Auto (ambience priority)"),
             _ => None,
         },
-        ("Canon", 0x0047) => match value { // SharpnessFrequency
+        ("Canon", 0x0047) => match value {
+            // SharpnessFrequency
             0 => Some("n/a"),
             1 => Some("Lowest"),
             2 => Some("Low"),
@@ -526,7 +590,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Highest"),
             _ => None,
         },
-        ("Canon", 0x004A) => match value { // WhiteBalance
+        ("Canon", 0x004A) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -551,7 +616,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             23 => Some("Auto (ambience priority)"),
             _ => None,
         },
-        ("Canon", 0x004B) => match value { // PictureStyle
+        ("Canon", 0x004B) => match value {
+            // PictureStyle
             0 => Some("None"),
             1 => Some("Standard"),
             2 => Some("Portrait"),
@@ -578,7 +644,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x0051) => match value { // PictureStyle
+        ("Canon", 0x0051) => match value {
+            // PictureStyle
             0 => Some("None"),
             1 => Some("Standard"),
             2 => Some("Portrait"),
@@ -605,7 +672,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x0054) => match value { // WhiteBalance
+        ("Canon", 0x0054) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -630,7 +698,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             23 => Some("Auto (ambience priority)"),
             _ => None,
         },
-        ("Canon", 0x005E) => match value { // WhiteBalance
+        ("Canon", 0x005E) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -655,7 +724,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             23 => Some("Auto (ambience priority)"),
             _ => None,
         },
-        ("Canon", 0x006C) => match value { // PictureStyle
+        ("Canon", 0x006C) => match value {
+            // PictureStyle
             0 => Some("None"),
             1 => Some("Standard"),
             2 => Some("Portrait"),
@@ -682,7 +752,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x006F) => match value { // WhiteBalance
+        ("Canon", 0x006F) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -707,7 +778,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             23 => Some("Auto (ambience priority)"),
             _ => None,
         },
-        ("Canon", 0x0073) => match value { // WhiteBalance
+        ("Canon", 0x0073) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -732,7 +804,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             23 => Some("Auto (ambience priority)"),
             _ => None,
         },
-        ("Canon", 0x0077) => match value { // WhiteBalance
+        ("Canon", 0x0077) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -757,7 +830,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             23 => Some("Auto (ambience priority)"),
             _ => None,
         },
-        ("Canon", 0x0078) => match value { // WhiteBalance
+        ("Canon", 0x0078) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -782,7 +856,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             23 => Some("Auto (ambience priority)"),
             _ => None,
         },
-        ("Canon", 0x007B) => match value { // WhiteBalance
+        ("Canon", 0x007B) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -807,25 +882,29 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             23 => Some("Auto (ambience priority)"),
             _ => None,
         },
-        ("Canon", 0x007D) => match value { // CameraOrientation
+        ("Canon", 0x007D) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Canon", 0x0083) => match value { // CameraOrientation
+        ("Canon", 0x0083) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Canon", 0x0084) => match value { // CameraOrientation
+        ("Canon", 0x0084) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Canon", 0x0086) => match value { // PictureStyle
+        ("Canon", 0x0086) => match value {
+            // PictureStyle
             0 => Some("None"),
             1 => Some("Standard"),
             2 => Some("Portrait"),
@@ -852,7 +931,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x0088) => match value { // FilterEffectMonochrome
+        ("Canon", 0x0088) => match value {
+            // FilterEffectMonochrome
             -559038737 => Some("n/a"),
             0 => Some("None"),
             1 => Some("Yellow"),
@@ -861,7 +941,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Green"),
             _ => None,
         },
-        ("Canon", 0x008C) => match value { // ToningEffectMonochrome
+        ("Canon", 0x008C) => match value {
+            // ToningEffectMonochrome
             -559038737 => Some("n/a"),
             0 => Some("None"),
             1 => Some("Sepia"),
@@ -870,13 +951,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Green"),
             _ => None,
         },
-        ("Canon", 0x0096) => match value { // CameraOrientation
+        ("Canon", 0x0096) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Canon", 0x00A0) => match value { // FilterEffectAuto
+        ("Canon", 0x00A0) => match value {
+            // FilterEffectAuto
             -559038737 => Some("n/a"),
             0 => Some("None"),
             1 => Some("Yellow"),
@@ -885,7 +968,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Green"),
             _ => None,
         },
-        ("Canon", 0x00A4) => match value { // ToningEffectAuto
+        ("Canon", 0x00A4) => match value {
+            // ToningEffectAuto
             -559038737 => Some("n/a"),
             0 => Some("None"),
             1 => Some("Sepia"),
@@ -894,7 +978,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Green"),
             _ => None,
         },
-        ("Canon", 0x00A7) => match value { // PictureStyle
+        ("Canon", 0x00A7) => match value {
+            // PictureStyle
             0 => Some("None"),
             1 => Some("Standard"),
             2 => Some("Portrait"),
@@ -921,7 +1006,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x00AB) => match value { // PictureStyle
+        ("Canon", 0x00AB) => match value {
+            // PictureStyle
             0 => Some("None"),
             1 => Some("Standard"),
             2 => Some("Portrait"),
@@ -948,7 +1034,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x00AF) => match value { // CameraPictureStyle
+        ("Canon", 0x00AF) => match value {
+            // CameraPictureStyle
             33 => Some("User Defined 1"),
             34 => Some("User Defined 2"),
             35 => Some("User Defined 3"),
@@ -960,7 +1047,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             134 => Some("Monochrome"),
             _ => None,
         },
-        ("Canon", 0x00B0) => match value { // PictureStyle
+        ("Canon", 0x00B0) => match value {
+            // PictureStyle
             0 => Some("None"),
             1 => Some("Standard"),
             2 => Some("Portrait"),
@@ -987,7 +1075,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x00B3) => match value { // PictureStyle
+        ("Canon", 0x00B3) => match value {
+            // PictureStyle
             0 => Some("None"),
             1 => Some("Standard"),
             2 => Some("Portrait"),
@@ -1014,13 +1103,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x00B4) => match value { // ColorSpace
+        ("Canon", 0x00B4) => match value {
+            // ColorSpace
             1 => Some("sRGB"),
             2 => Some("Adobe RGB"),
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x00B8) => match value { // FilterEffectUserDef1
+        ("Canon", 0x00B8) => match value {
+            // FilterEffectUserDef1
             -559038737 => Some("n/a"),
             0 => Some("None"),
             1 => Some("Yellow"),
@@ -1029,7 +1120,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Green"),
             _ => None,
         },
-        ("Canon", 0x00BC) => match value { // ToningEffectUserDef1
+        ("Canon", 0x00BC) => match value {
+            // ToningEffectUserDef1
             -559038737 => Some("n/a"),
             0 => Some("None"),
             1 => Some("Sepia"),
@@ -1038,28 +1130,32 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Green"),
             _ => None,
         },
-        ("Canon", 0x00BD) => match value { // HighISONoiseReduction
+        ("Canon", 0x00BD) => match value {
+            // HighISONoiseReduction
             0 => Some("Standard"),
             1 => Some("Low"),
             2 => Some("Strong"),
             3 => Some("Off"),
             _ => None,
         },
-        ("Canon", 0x00BE) => match value { // AutoLightingOptimizer
+        ("Canon", 0x00BE) => match value {
+            // AutoLightingOptimizer
             0 => Some("Standard"),
             1 => Some("Low"),
             2 => Some("Strong"),
             3 => Some("Off"),
             _ => None,
         },
-        ("Canon", 0x00BF) => match value { // AutoLightingOptimizer
+        ("Canon", 0x00BF) => match value {
+            // AutoLightingOptimizer
             0 => Some("Standard"),
             1 => Some("Low"),
             2 => Some("Strong"),
             3 => Some("Off"),
             _ => None,
         },
-        ("Canon", 0x00C2) => match value { // WhiteBalance
+        ("Canon", 0x00C2) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -1084,14 +1180,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             23 => Some("Auto (ambience priority)"),
             _ => None,
         },
-        ("Canon", 0x00C9) => match value { // HighISONoiseReduction
+        ("Canon", 0x00C9) => match value {
+            // HighISONoiseReduction
             0 => Some("Standard"),
             1 => Some("Low"),
             2 => Some("Strong"),
             3 => Some("Off"),
             _ => None,
         },
-        ("Canon", 0x00D0) => match value { // FilterEffectUserDef2
+        ("Canon", 0x00D0) => match value {
+            // FilterEffectUserDef2
             -559038737 => Some("n/a"),
             0 => Some("None"),
             1 => Some("Yellow"),
@@ -1100,7 +1198,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Green"),
             _ => None,
         },
-        ("Canon", 0x00D4) => match value { // ToningEffectUserDef2
+        ("Canon", 0x00D4) => match value {
+            // ToningEffectUserDef2
             -559038737 => Some("n/a"),
             0 => Some("None"),
             1 => Some("Sepia"),
@@ -1109,7 +1208,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Green"),
             _ => None,
         },
-        ("Canon", 0x00D8) => match value { // UserDef1PictureStyle
+        ("Canon", 0x00D8) => match value {
+            // UserDef1PictureStyle
             65 => Some("PC 1"),
             66 => Some("PC 2"),
             67 => Some("PC 3"),
@@ -1122,7 +1222,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             135 => Some("Auto"),
             _ => None,
         },
-        ("Canon", 0x00DA) => match value { // UserDef2PictureStyle
+        ("Canon", 0x00DA) => match value {
+            // UserDef2PictureStyle
             65 => Some("PC 1"),
             66 => Some("PC 2"),
             67 => Some("PC 3"),
@@ -1135,7 +1236,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             135 => Some("Auto"),
             _ => None,
         },
-        ("Canon", 0x00DC) => match value { // UserDef3PictureStyle
+        ("Canon", 0x00DC) => match value {
+            // UserDef3PictureStyle
             65 => Some("PC 1"),
             66 => Some("PC 2"),
             67 => Some("PC 3"),
@@ -1148,7 +1250,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             135 => Some("Auto"),
             _ => None,
         },
-        ("Canon", 0x00E8) => match value { // FilterEffectUserDef3
+        ("Canon", 0x00E8) => match value {
+            // FilterEffectUserDef3
             -559038737 => Some("n/a"),
             0 => Some("None"),
             1 => Some("Yellow"),
@@ -1157,7 +1260,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Green"),
             _ => None,
         },
-        ("Canon", 0x00EC) => match value { // ToningEffectUserDef3
+        ("Canon", 0x00EC) => match value {
+            // ToningEffectUserDef3
             -559038737 => Some("n/a"),
             0 => Some("None"),
             1 => Some("Sepia"),
@@ -1166,7 +1270,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Green"),
             _ => None,
         },
-        ("Canon", 0x00F0) => match value { // UserDef1PictureStyle
+        ("Canon", 0x00F0) => match value {
+            // UserDef1PictureStyle
             65 => Some("PC 1"),
             66 => Some("PC 2"),
             67 => Some("PC 3"),
@@ -1179,7 +1284,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             135 => Some("Auto"),
             _ => None,
         },
-        ("Canon", 0x00F2) => match value { // UserDef2PictureStyle
+        ("Canon", 0x00F2) => match value {
+            // UserDef2PictureStyle
             65 => Some("PC 1"),
             66 => Some("PC 2"),
             67 => Some("PC 3"),
@@ -1192,7 +1298,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             135 => Some("Auto"),
             _ => None,
         },
-        ("Canon", 0x00F4) => match value { // UserDef3PictureStyle
+        ("Canon", 0x00F4) => match value {
+            // UserDef3PictureStyle
             65 => Some("PC 1"),
             66 => Some("PC 2"),
             67 => Some("PC 3"),
@@ -1205,7 +1312,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             135 => Some("Auto"),
             _ => None,
         },
-        ("Canon", 0x00FA) => match value { // PictureStyle
+        ("Canon", 0x00FA) => match value {
+            // PictureStyle
             0 => Some("None"),
             1 => Some("Standard"),
             2 => Some("Portrait"),
@@ -1232,7 +1340,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x0108) => match value { // ToningEffectMonochrome
+        ("Canon", 0x0108) => match value {
+            // ToningEffectMonochrome
             -559038737 => Some("n/a"),
             0 => Some("None"),
             1 => Some("Sepia"),
@@ -1241,7 +1350,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Green"),
             _ => None,
         },
-        ("Canon", 0x010C) => match value { // UserDef1PictureStyle
+        ("Canon", 0x010C) => match value {
+            // UserDef1PictureStyle
             65 => Some("PC 1"),
             66 => Some("PC 2"),
             67 => Some("PC 3"),
@@ -1254,7 +1364,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             135 => Some("Auto"),
             _ => None,
         },
-        ("Canon", 0x010E) => match value { // UserDef2PictureStyle
+        ("Canon", 0x010E) => match value {
+            // UserDef2PictureStyle
             65 => Some("PC 1"),
             66 => Some("PC 2"),
             67 => Some("PC 3"),
@@ -1267,7 +1378,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             135 => Some("Auto"),
             _ => None,
         },
-        ("Canon", 0x0110) => match value { // UserDef3PictureStyle
+        ("Canon", 0x0110) => match value {
+            // UserDef3PictureStyle
             65 => Some("PC 1"),
             66 => Some("PC 2"),
             67 => Some("PC 3"),
@@ -1280,7 +1392,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             135 => Some("Auto"),
             _ => None,
         },
-        ("Canon", 0x0131) => match value { // WhiteBalance
+        ("Canon", 0x0131) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -1305,7 +1418,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             23 => Some("Auto (ambience priority)"),
             _ => None,
         },
-        ("Canon", 0x0169) => match value { // PictureStyle
+        ("Canon", 0x0169) => match value {
+            // PictureStyle
             0 => Some("None"),
             1 => Some("Standard"),
             2 => Some("Portrait"),
@@ -1332,12 +1446,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Canon", 0x0402) => match value { // MiniatureFilterOrientation
+        ("Canon", 0x0402) => match value {
+            // MiniatureFilterOrientation
             0 => Some("Horizontal"),
             1 => Some("Vertical"),
             _ => None,
         },
-        ("CanonCustom", 0x0000) => match value { // SetButtonCrossKeysFunc
+        ("CanonCustom", 0x0000) => match value {
+            // SetButtonCrossKeysFunc
             0 => Some("Set: Picture Style"),
             1 => Some("Set: Quality"),
             2 => Some("Set: Flash Exposure Comp"),
@@ -1345,100 +1461,118 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Cross keys: AF point select"),
             _ => None,
         },
-        ("CanonCustom", 0x0001) => match value { // LongExposureNoiseReduction
+        ("CanonCustom", 0x0001) => match value {
+            // LongExposureNoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("CanonCustom", 0x0002) => match value { // FlashSyncSpeedAv
+        ("CanonCustom", 0x0002) => match value {
+            // FlashSyncSpeedAv
             0 => Some("Auto"),
             1 => Some("1/200 Fixed"),
             _ => None,
         },
-        ("CanonCustom", 0x0003) => match value { // MirrorLockup
+        ("CanonCustom", 0x0003) => match value {
+            // MirrorLockup
             0 => Some("Disable"),
             1 => Some("Enable"),
             _ => None,
         },
-        ("CanonCustom", 0x0004) => match value { // ExposureLevelIncrements
+        ("CanonCustom", 0x0004) => match value {
+            // ExposureLevelIncrements
             0 => Some("1/2 Stop"),
             1 => Some("1/3 Stop"),
             _ => None,
         },
-        ("CanonCustom", 0x0005) => match value { // AFAssist
+        ("CanonCustom", 0x0005) => match value {
+            // AFAssist
             0 => Some("Emits/Fires"),
             1 => Some("Does not emit/Fires"),
             2 => Some("Only ext. flash emits/Fires"),
             3 => Some("Emits/Does not fire"),
             _ => None,
         },
-        ("CanonCustom", 0x0006) => match value { // FlashSyncSpeedAv
+        ("CanonCustom", 0x0006) => match value {
+            // FlashSyncSpeedAv
             0 => Some("Auto"),
             1 => Some("1/200 Fixed"),
             _ => None,
         },
-        ("CanonCustom", 0x0007) => match value { // AEBSequenceAutoCancel
+        ("CanonCustom", 0x0007) => match value {
+            // AEBSequenceAutoCancel
             0 => Some("0,-,+/Enabled"),
             1 => Some("0,-,+/Disabled"),
             2 => Some("-,0,+/Enabled"),
             3 => Some("-,0,+/Disabled"),
             _ => None,
         },
-        ("CanonCustom", 0x0008) => match value { // ShutterCurtainSync
+        ("CanonCustom", 0x0008) => match value {
+            // ShutterCurtainSync
             0 => Some("1st-curtain sync"),
             1 => Some("2nd-curtain sync"),
             _ => None,
         },
-        ("CanonCustom", 0x0009) => match value { // LensAFStopButton
+        ("CanonCustom", 0x0009) => match value {
+            // LensAFStopButton
             0 => Some("AF Stop"),
             1 => Some("Operate AF"),
             2 => Some("Lock AE and start timer"),
             _ => None,
         },
-        ("CanonCustom", 0x000A) => match value { // FillFlashAutoReduction
+        ("CanonCustom", 0x000A) => match value {
+            // FillFlashAutoReduction
             0 => Some("Enable"),
             1 => Some("Disable"),
             _ => None,
         },
-        ("CanonCustom", 0x000B) => match value { // MenuButtonReturn
+        ("CanonCustom", 0x000B) => match value {
+            // MenuButtonReturn
             0 => Some("Top"),
             1 => Some("Previous (volatile)"),
             2 => Some("Previous"),
             _ => None,
         },
-        ("CanonCustom", 0x000C) => match value { // SetButtonWhenShooting
+        ("CanonCustom", 0x000C) => match value {
+            // SetButtonWhenShooting
             0 => Some("Default (no function)"),
             1 => Some("Image quality"),
             2 => Some("Change ISO speed"),
             3 => Some("Change parameters"),
             _ => None,
         },
-        ("CanonCustom", 0x000D) => match value { // SensorCleaning
+        ("CanonCustom", 0x000D) => match value {
+            // SensorCleaning
             0 => Some("Disable"),
             1 => Some("Enable"),
             _ => None,
         },
-        ("CanonCustom", 0x000E) => match value { // SuperimposedDisplay
+        ("CanonCustom", 0x000E) => match value {
+            // SuperimposedDisplay
             0 => Some("On"),
             1 => Some("Off"),
             _ => None,
         },
-        ("CanonCustom", 0x000F) => match value { // ShutterReleaseNoCFCard
+        ("CanonCustom", 0x000F) => match value {
+            // ShutterReleaseNoCFCard
             0 => Some("Yes"),
             1 => Some("No"),
             _ => None,
         },
-        ("CanonCustom", 0x0010) => match value { // SafetyShiftInAvOrTv
+        ("CanonCustom", 0x0010) => match value {
+            // SafetyShiftInAvOrTv
             0 => Some("Disable"),
             1 => Some("Enable"),
             _ => None,
         },
-        ("CanonCustom", 0x0011) => match value { // MagnifiedView
+        ("CanonCustom", 0x0011) => match value {
+            // MagnifiedView
             0 => Some("Image playback only"),
             1 => Some("Image review and playback"),
             _ => None,
         },
-        ("CanonCustom", 0x0012) => match value { // LensAFStopButton
+        ("CanonCustom", 0x0012) => match value {
+            // LensAFStopButton
             0 => Some("AF stop"),
             1 => Some("AF start"),
             2 => Some("AE lock while metering"),
@@ -1447,49 +1581,58 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("IS start"),
             _ => None,
         },
-        ("CanonCustom", 0x0013) => match value { // AddOriginalDecisionData
+        ("CanonCustom", 0x0013) => match value {
+            // AddOriginalDecisionData
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("CanonCustom", 0x0014) => match value { // AddOriginalDecisionData
+        ("CanonCustom", 0x0014) => match value {
+            // AddOriginalDecisionData
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("CanonCustom", 0x0015) => match value { // AIServoContinuousShooting
+        ("CanonCustom", 0x0015) => match value {
+            // AIServoContinuousShooting
             0 => Some("Shooting not possible without focus"),
             1 => Some("Shooting possible without focus"),
             _ => None,
         },
-        ("CanonCustom", 0x0102) => match value { // ISOSpeedIncrements
+        ("CanonCustom", 0x0102) => match value {
+            // ISOSpeedIncrements
             0 => Some("1/3 Stop"),
             1 => Some("1 Stop"),
             _ => None,
         },
-        ("CanonCustom", 0x0104) => match value { // AEBAutoCancel
+        ("CanonCustom", 0x0104) => match value {
+            // AEBAutoCancel
             0 => Some("On"),
             1 => Some("Off"),
             _ => None,
         },
-        ("CanonCustom", 0x0105) => match value { // AEBSequence
+        ("CanonCustom", 0x0105) => match value {
+            // AEBSequence
             0 => Some("0,-,+"),
             1 => Some("-,0,+"),
             2 => Some("+,0,-"),
             _ => None,
         },
-        ("CanonCustom", 0x0107) => match value { // SpotMeterLinkToAFPoint
+        ("CanonCustom", 0x0107) => match value {
+            // SpotMeterLinkToAFPoint
             0 => Some("Disable (use center AF point)"),
             1 => Some("Enable (use active AF point)"),
             _ => None,
         },
-        ("CanonCustom", 0x0108) => match value { // SafetyShift
+        ("CanonCustom", 0x0108) => match value {
+            // SafetyShift
             0 => Some("Disable"),
             1 => Some("Enable (Tv/Av)"),
             2 => Some("Enable (ISO speed)"),
             _ => None,
         },
-        ("CanonCustom", 0x010B) => match value { // ExposureModeInManual
+        ("CanonCustom", 0x010B) => match value {
+            // ExposureModeInManual
             0 => Some("Specified metering mode"),
             1 => Some("Evaluative metering"),
             2 => Some("Partial metering"),
@@ -1497,55 +1640,65 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Center-weighted average"),
             _ => None,
         },
-        ("CanonCustom", 0x0113) => match value { // ExposureCompAutoCancel
+        ("CanonCustom", 0x0113) => match value {
+            // ExposureCompAutoCancel
             0 => Some("Enable"),
             1 => Some("Disable"),
             _ => None,
         },
-        ("CanonCustom", 0x0114) => match value { // AELockMeterModeAfterFocus
+        ("CanonCustom", 0x0114) => match value {
+            // AELockMeterModeAfterFocus
             0 => Some("Evaluative"),
             1 => Some("Partial"),
             2 => Some("Spot"),
             3 => Some("Center-weighted"),
             _ => None,
         },
-        ("CanonCustom", 0x0201) => match value { // LongExposureNoiseReduction
+        ("CanonCustom", 0x0201) => match value {
+            // LongExposureNoiseReduction
             0 => Some("Off"),
             1 => Some("Auto"),
             2 => Some("On"),
             _ => None,
         },
-        ("CanonCustom", 0x0203) => match value { // HighlightTonePriority
+        ("CanonCustom", 0x0203) => match value {
+            // HighlightTonePriority
             0 => Some("Disable"),
             1 => Some("Enable"),
             _ => None,
         },
-        ("CanonCustom", 0x0304) => match value { // ETTLII
+        ("CanonCustom", 0x0304) => match value {
+            // ETTLII
             0 => Some("Evaluative"),
             1 => Some("Average"),
             _ => None,
         },
-        ("CanonCustom", 0x0305) => match value { // ShutterCurtainSync
+        ("CanonCustom", 0x0305) => match value {
+            // ShutterCurtainSync
             0 => Some("1st-curtain sync"),
             1 => Some("2nd-curtain sync"),
             _ => None,
         },
-        ("CanonCustom", 0x0306) => match value { // FlashFiring
+        ("CanonCustom", 0x0306) => match value {
+            // FlashFiring
             0 => Some("Fires"),
             1 => Some("Does not fire"),
             _ => None,
         },
-        ("CanonCustom", 0x0407) => match value { // ViewInfoDuringExposure
+        ("CanonCustom", 0x0407) => match value {
+            // ViewInfoDuringExposure
             0 => Some("Disable"),
             1 => Some("Enable"),
             _ => None,
         },
-        ("CanonCustom", 0x0408) => match value { // LCDIlluminationDuringBulb
+        ("CanonCustom", 0x0408) => match value {
+            // LCDIlluminationDuringBulb
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("CanonCustom", 0x040A) => match value { // ViewfinderWarnings
+        ("CanonCustom", 0x040A) => match value {
+            // ViewfinderWarnings
             0 => Some("Monochrome"),
             1 => Some("WB corrected"),
             2 => Some("One-touch image quality"),
@@ -1555,23 +1708,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("HDR"),
             _ => None,
         },
-        ("CanonCustom", 0x040B) => match value { // LVShootingAreaDisplay
+        ("CanonCustom", 0x040B) => match value {
+            // LVShootingAreaDisplay
             0 => Some("Masked"),
             1 => Some("Outlined"),
             _ => None,
         },
-        ("CanonCustom", 0x040C) => match value { // LVShootingAreaDisplay
+        ("CanonCustom", 0x040C) => match value {
+            // LVShootingAreaDisplay
             0 => Some("Masked"),
             1 => Some("Outlined"),
             _ => None,
         },
-        ("CanonCustom", 0x0501) => match value { // USMLensElectronicMF
+        ("CanonCustom", 0x0501) => match value {
+            // USMLensElectronicMF
             0 => Some("Enable after one-shot AF"),
             1 => Some("Disable after one-shot AF"),
             2 => Some("Disable in AF mode"),
             _ => None,
         },
-        ("CanonCustom", 0x0502) => match value { // AIServoTrackingSensitivity
+        ("CanonCustom", 0x0502) => match value {
+            // AIServoTrackingSensitivity
             -2 => Some("Slow"),
             -1 => Some("Medium Slow"),
             0 => Some("Standard"),
@@ -1579,24 +1736,28 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             2 => Some("Fast"),
             _ => None,
         },
-        ("CanonCustom", 0x0503) => match value { // AIServoImagePriority
+        ("CanonCustom", 0x0503) => match value {
+            // AIServoImagePriority
             0 => Some("1: AF, 2: Tracking"),
             1 => Some("1: AF, 2: Drive speed"),
             2 => Some("1: Release, 2: Drive speed"),
             3 => Some("1: Release, 2: Tracking"),
             _ => None,
         },
-        ("CanonCustom", 0x0504) => match value { // AIServoTrackingMethod
+        ("CanonCustom", 0x0504) => match value {
+            // AIServoTrackingMethod
             0 => Some("Main focus point priority"),
             1 => Some("Continuous AF track priority"),
             _ => None,
         },
-        ("CanonCustom", 0x0505) => match value { // LensDriveNoAF
+        ("CanonCustom", 0x0505) => match value {
+            // LensDriveNoAF
             0 => Some("Focus search on"),
             1 => Some("Focus search off"),
             _ => None,
         },
-        ("CanonCustom", 0x0506) => match value { // LensAFStopButton
+        ("CanonCustom", 0x0506) => match value {
+            // LensAFStopButton
             0 => Some("AF stop"),
             1 => Some("AF start"),
             2 => Some("AE lock"),
@@ -1607,82 +1768,97 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Spot AF"),
             _ => None,
         },
-        ("CanonCustom", 0x050B) => match value { // AFPointAutoSelection
+        ("CanonCustom", 0x050B) => match value {
+            // AFPointAutoSelection
             0 => Some("Control-direct:disable/Main:enable"),
             1 => Some("Control-direct:disable/Main:disable"),
             2 => Some("Control-direct:enable/Main:enable"),
             _ => None,
         },
-        ("CanonCustom", 0x050D) => match value { // AFPointBrightness
+        ("CanonCustom", 0x050D) => match value {
+            // AFPointBrightness
             0 => Some("Normal"),
             1 => Some("Brighter"),
             _ => None,
         },
-        ("CanonCustom", 0x0513) => match value { // ManualAFPointSelectPattern
+        ("CanonCustom", 0x0513) => match value {
+            // ManualAFPointSelectPattern
             0 => Some("Stops at AF area edges"),
             1 => Some("Continuous"),
             _ => None,
         },
-        ("CanonCustom", 0x0514) => match value { // DisplayAllAFPoints
+        ("CanonCustom", 0x0514) => match value {
+            // DisplayAllAFPoints
             0 => Some("Enable"),
             1 => Some("Disable"),
             _ => None,
         },
-        ("CanonCustom", 0x0515) => match value { // FocusDisplayAIServoAndMF
+        ("CanonCustom", 0x0515) => match value {
+            // FocusDisplayAIServoAndMF
             0 => Some("Enable"),
             1 => Some("Disable"),
             _ => None,
         },
-        ("CanonCustom", 0x0516) => match value { // OrientationLinkedAFPoint
+        ("CanonCustom", 0x0516) => match value {
+            // OrientationLinkedAFPoint
             0 => Some("Same for vertical and horizontal"),
             1 => Some("Select different AF points"),
             _ => None,
         },
-        ("CanonCustom", 0x0517) => match value { // MultiControllerWhileMetering
+        ("CanonCustom", 0x0517) => match value {
+            // MultiControllerWhileMetering
             0 => Some("Off"),
             1 => Some("AF point selection"),
             _ => None,
         },
-        ("CanonCustom", 0x0519) => match value { // AIServoFirstImagePriority
+        ("CanonCustom", 0x0519) => match value {
+            // AIServoFirstImagePriority
             -1 => Some("Release priority"),
             0 => Some("Equal priority"),
             1 => Some("Focus priority"),
             _ => None,
         },
-        ("CanonCustom", 0x051A) => match value { // AIServoSecondImagePriority
+        ("CanonCustom", 0x051A) => match value {
+            // AIServoSecondImagePriority
             -1 => Some("Shooting speed priority"),
             0 => Some("Equal priority"),
             1 => Some("Focus priority"),
             _ => None,
         },
-        ("CanonCustom", 0x051B) => match value { // AFAreaSelectMethod
+        ("CanonCustom", 0x051B) => match value {
+            // AFAreaSelectMethod
             0 => Some("AF area selection button"),
             1 => Some("Main dial"),
             _ => None,
         },
-        ("CanonCustom", 0x051C) => match value { // AutoAFPointColorTracking
+        ("CanonCustom", 0x051C) => match value {
+            // AutoAFPointColorTracking
             0 => Some("On-Shot AF only"),
             1 => Some("Disable"),
             _ => None,
         },
-        ("CanonCustom", 0x051E) => match value { // InitialAFPointAIServoAF
+        ("CanonCustom", 0x051E) => match value {
+            // InitialAFPointAIServoAF
             0 => Some("Auto"),
             1 => Some("Initial AF point selected"),
             2 => Some("Manual AF point"),
             _ => None,
         },
-        ("CanonCustom", 0x060F) => match value { // MirrorLockup
+        ("CanonCustom", 0x060F) => match value {
+            // MirrorLockup
             0 => Some("Disable"),
             1 => Some("Enable"),
             2 => Some("Enable: Down with Set"),
             _ => None,
         },
-        ("CanonCustom", 0x0702) => match value { // AFOnAELockButtonSwitch
+        ("CanonCustom", 0x0702) => match value {
+            // AFOnAELockButtonSwitch
             0 => Some("Disable"),
             1 => Some("Enable"),
             _ => None,
         },
-        ("CanonCustom", 0x0703) => match value { // QuickControlDialInMeter
+        ("CanonCustom", 0x0703) => match value {
+            // QuickControlDialInMeter
             0 => Some("Exposure comp/Aperture"),
             1 => Some("AF point selection"),
             2 => Some("ISO speed"),
@@ -1690,33 +1866,39 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("ISO speed swapped with Exposure comp"),
             _ => None,
         },
-        ("CanonCustom", 0x0705) => match value { // ManualTv
+        ("CanonCustom", 0x0705) => match value {
+            // ManualTv
             0 => Some("Tv=Main/Av=Control"),
             1 => Some("Tv=Control/Av=Main"),
             _ => None,
         },
-        ("CanonCustom", 0x0706) => match value { // DialDirectionTvAv
+        ("CanonCustom", 0x0706) => match value {
+            // DialDirectionTvAv
             0 => Some("Normal"),
             1 => Some("Reversed"),
             _ => None,
         },
-        ("CanonCustom", 0x0707) => match value { // AvSettingWithoutLens
+        ("CanonCustom", 0x0707) => match value {
+            // AvSettingWithoutLens
             0 => Some("Disable"),
             1 => Some("Enable"),
             _ => None,
         },
-        ("CanonCustom", 0x0708) => match value { // WBMediaImageSizeSetting
+        ("CanonCustom", 0x0708) => match value {
+            // WBMediaImageSizeSetting
             0 => Some("Rear LCD panel"),
             1 => Some("LCD monitor"),
             2 => Some("Off (disable button)"),
             _ => None,
         },
-        ("CanonCustom", 0x070A) => match value { // ButtonFunctionControlOff
+        ("CanonCustom", 0x070A) => match value {
+            // ButtonFunctionControlOff
             0 => Some("Normal (enable)"),
             1 => Some("Disable main, Control, Multi-control"),
             _ => None,
         },
-        ("CanonCustom", 0x070B) => match value { // AssignFuncButton
+        ("CanonCustom", 0x070B) => match value {
+            // AssignFuncButton
             0 => Some("LCD brightness"),
             1 => Some("Image quality"),
             2 => Some("Exposure comp./AEB setting"),
@@ -1724,47 +1906,56 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Live view function settings"),
             _ => None,
         },
-        ("CanonCustom", 0x070D) => match value { // StartMovieShooting
+        ("CanonCustom", 0x070D) => match value {
+            // StartMovieShooting
             0 => Some("Default (from LV)"),
             1 => Some("Quick start (FEL button)"),
             _ => None,
         },
-        ("CanonCustom", 0x070E) => match value { // FlashButtonFunction
+        ("CanonCustom", 0x070E) => match value {
+            // FlashButtonFunction
             0 => Some("Raise built-in flash"),
             1 => Some("ISO speed"),
             _ => None,
         },
-        ("CanonCustom", 0x0710) => match value { // TrashButtonFunction
+        ("CanonCustom", 0x0710) => match value {
+            // TrashButtonFunction
             0 => Some("Normal (set center AF point)"),
             1 => Some("Depth-of-field preview"),
             _ => None,
         },
-        ("CanonCustom", 0x0711) => match value { // ShutterReleaseWithoutLens
+        ("CanonCustom", 0x0711) => match value {
+            // ShutterReleaseWithoutLens
             0 => Some("Disable"),
             1 => Some("Enable"),
             _ => None,
         },
-        ("CanonCustom", 0x0712) => match value { // ControlRingRotation
+        ("CanonCustom", 0x0712) => match value {
+            // ControlRingRotation
             0 => Some("Normal"),
             1 => Some("Reversed"),
             _ => None,
         },
-        ("CanonCustom", 0x0713) => match value { // FocusRingRotation
+        ("CanonCustom", 0x0713) => match value {
+            // FocusRingRotation
             0 => Some("Normal"),
             1 => Some("Reversed"),
             _ => None,
         },
-        ("CanonCustom", 0x0714) => match value { // RFLensMFFocusRingSensitivity
+        ("CanonCustom", 0x0714) => match value {
+            // RFLensMFFocusRingSensitivity
             0 => Some("Varies With Rotation Speed"),
             1 => Some("Linked To Rotation Angle"),
             _ => None,
         },
-        ("CanonCustom", 0x080D) => match value { // ShortReleaseTimeLag
+        ("CanonCustom", 0x080D) => match value {
+            // ShortReleaseTimeLag
             0 => Some("Disable"),
             1 => Some("Enable"),
             _ => None,
         },
-        ("CanonCustom", 0x080E) => match value { // AddAspectRatioInfo
+        ("CanonCustom", 0x080E) => match value {
+            // AddAspectRatioInfo
             0 => Some("Off"),
             1 => Some("6:6"),
             2 => Some("3:4"),
@@ -1774,105 +1965,124 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("5:7"),
             _ => None,
         },
-        ("CanonCustom", 0x080F) => match value { // AddOriginalDecisionData
+        ("CanonCustom", 0x080F) => match value {
+            // AddOriginalDecisionData
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("CanonCustom", 0x0810) => match value { // LiveViewExposureSimulation
+        ("CanonCustom", 0x0810) => match value {
+            // LiveViewExposureSimulation
             0 => Some("Disable (LCD auto adjust)"),
             1 => Some("Enable (simulates exposure)"),
             _ => None,
         },
-        ("CanonCustom", 0x0811) => match value { // LCDDisplayAtPowerOn
+        ("CanonCustom", 0x0811) => match value {
+            // LCDDisplayAtPowerOn
             0 => Some("Display"),
             1 => Some("Retain power off status"),
             _ => None,
         },
-        ("CanonCustom", 0x0812) => match value { // MemoAudioQuality
+        ("CanonCustom", 0x0812) => match value {
+            // MemoAudioQuality
             0 => Some("High (48 kHz)"),
             1 => Some("Low (8 kHz)"),
             _ => None,
         },
-        ("CanonCustom", 0x0813) => match value { // DefaultEraseOption
+        ("CanonCustom", 0x0813) => match value {
+            // DefaultEraseOption
             0 => Some("Cancel selected"),
             1 => Some("Erase selected"),
             2 => Some("Erase RAW selected"),
             3 => Some("Erase non-RAW selected"),
             _ => None,
         },
-        ("CanonCustom", 0x0814) => match value { // RetractLensOnPowerOff
+        ("CanonCustom", 0x0814) => match value {
+            // RetractLensOnPowerOff
             0 => Some("Enable"),
             1 => Some("Disable"),
             _ => None,
         },
-        ("CanonCustom", 0x0815) => match value { // AddIPTCInformation
+        ("CanonCustom", 0x0815) => match value {
+            // AddIPTCInformation
             0 => Some("Disable"),
             1 => Some("Enable"),
             _ => None,
         },
-        ("CanonCustom", 0x0816) => match value { // AudioCompression
+        ("CanonCustom", 0x0816) => match value {
+            // AudioCompression
             0 => Some("Enable"),
             1 => Some("Disable"),
             _ => None,
         },
-        ("CanonRaw", 0x0000) => match value { // FileFormat
+        ("CanonRaw", 0x0000) => match value {
+            // FileFormat
             65536 => Some("JPEG (lossy)"),
             65538 => Some("JPEG (non-quantization)"),
             65539 => Some("JPEG (lossy/non-quantization toggled)"),
             131073 => Some("CRW"),
             _ => None,
         },
-        ("CanonRaw", 0x0001) => match value { // RawJpgQuality
+        ("CanonRaw", 0x0001) => match value {
+            // RawJpgQuality
             1 => Some("Economy"),
             2 => Some("Normal"),
             3 => Some("Fine"),
             5 => Some("Superfine"),
             _ => None,
         },
-        ("CanonRaw", 0x0002) => match value { // RawJpgSize
+        ("CanonRaw", 0x0002) => match value {
+            // RawJpgSize
             0 => Some("Large"),
             1 => Some("Medium"),
             2 => Some("Small"),
             _ => None,
         },
-        ("CanonRaw", 0x100A) => match value { // TargetImageType
+        ("CanonRaw", 0x100A) => match value {
+            // TargetImageType
             0 => Some("Real-world Subject"),
             1 => Some("Written Document"),
             _ => None,
         },
-        ("CanonRaw", 0x1010) => match value { // ShutterReleaseMethod
+        ("CanonRaw", 0x1010) => match value {
+            // ShutterReleaseMethod
             0 => Some("Single Shot"),
             2 => Some("Continuous Shooting"),
             _ => None,
         },
-        ("CanonRaw", 0x1011) => match value { // ShutterReleaseTiming
+        ("CanonRaw", 0x1011) => match value {
+            // ShutterReleaseTiming
             0 => Some("Priority on shutter"),
             1 => Some("Priority on focus"),
             _ => None,
         },
-        ("CanonRaw", 0x10B4) => match value { // ColorSpace
+        ("CanonRaw", 0x10B4) => match value {
+            // ColorSpace
             1 => Some("sRGB"),
             2 => Some("Adobe RGB"),
             65535 => Some("Uncalibrated"),
             _ => None,
         },
-        ("CanonRaw", 0x183B) => match value { // SerialNumberFormat
+        ("CanonRaw", 0x183B) => match value {
+            // SerialNumberFormat
             2415919104 => Some("Format 1"),
             2684354560 => Some("Format 2"),
             _ => None,
         },
-        ("CanonVRD", 0x0000) => match value { // ToneCurveColorSpace
+        ("CanonVRD", 0x0000) => match value {
+            // ToneCurveColorSpace
             0 => Some("RGB"),
             1 => Some("Luminance"),
             _ => None,
         },
-        ("CanonVRD", 0x0001) => match value { // ToneCurveShape
+        ("CanonVRD", 0x0001) => match value {
+            // ToneCurveShape
             0 => Some("Curve"),
             1 => Some("Straight"),
             _ => None,
         },
-        ("CanonVRD", 0x0002) => match value { // PictureStyle
+        ("CanonVRD", 0x0002) => match value {
+            // PictureStyle
             0 => Some("Standard"),
             1 => Some("Portrait"),
             2 => Some("Landscape"),
@@ -1883,7 +2093,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Custom"),
             _ => None,
         },
-        ("CanonVRD", 0x0018) => match value { // WhiteBalanceAdj
+        ("CanonVRD", 0x0018) => match value {
+            // WhiteBalanceAdj
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -1896,13 +2107,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             31 => Some("Shot Settings"),
             _ => None,
         },
-        ("CanonVRD", 0x002E) => match value { // RawColorAdj
+        ("CanonVRD", 0x002E) => match value {
+            // RawColorAdj
             0 => Some("Shot Settings"),
             1 => Some("Faithful"),
             2 => Some("Custom"),
             _ => None,
         },
-        ("CanonVRD", 0x003A) => match value { // MonochromeFilterEffect
+        ("CanonVRD", 0x003A) => match value {
+            // MonochromeFilterEffect
             -2 => Some("None"),
             -1 => Some("Yellow"),
             0 => Some("Orange"),
@@ -1910,7 +2123,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             2 => Some("Green"),
             _ => None,
         },
-        ("CanonVRD", 0x003B) => match value { // MonochromeToningEffect
+        ("CanonVRD", 0x003B) => match value {
+            // MonochromeToningEffect
             -2 => Some("None"),
             -1 => Some("Sepia"),
             0 => Some("Blue"),
@@ -1918,7 +2132,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             2 => Some("Green"),
             _ => None,
         },
-        ("CanonVRD", 0x003C) => match value { // ToneCurveProperty
+        ("CanonVRD", 0x003C) => match value {
+            // ToneCurveProperty
             0 => Some("Shot Settings"),
             1 => Some("Linear"),
             2 => Some("Custom 1"),
@@ -1928,29 +2143,34 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Custom 5"),
             _ => None,
         },
-        ("CanonVRD", 0x006F) => match value { // AutoLightingOptimizer
+        ("CanonVRD", 0x006F) => match value {
+            // AutoLightingOptimizer
             100 => Some("Low"),
             200 => Some("Standard"),
             300 => Some("Strong"),
             32767 => Some("n/a"),
             _ => None,
         },
-        ("CanonVRD", 0x0090) => match value { // UnsharpMask
+        ("CanonVRD", 0x0090) => match value {
+            // UnsharpMask
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("CanonVRD", 0x0113) => match value { // ToneCurveMode
+        ("CanonVRD", 0x0113) => match value {
+            // ToneCurveMode
             0 => Some("RGB"),
             1 => Some("Luminance"),
             _ => None,
         },
-        ("CanonVRD", 0x0159) => match value { // ToneCurveInterpolation
+        ("CanonVRD", 0x0159) => match value {
+            // ToneCurveInterpolation
             0 => Some("Curve"),
             1 => Some("Straight"),
             _ => None,
         },
-        ("CanonVRD", 0x0260) => match value { // CropAspectRatio
+        ("CanonVRD", 0x0260) => match value {
+            // CropAspectRatio
             0 => Some("Free"),
             1 => Some("3:2"),
             2 => Some("2:3"),
@@ -1967,7 +2187,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("Custom"),
             _ => None,
         },
-        ("CanonVRD", 0x0270) => match value { // WorkColorSpace
+        ("CanonVRD", 0x0270) => match value {
+            // WorkColorSpace
             0 => Some("sRGB"),
             1 => Some("Adobe RGB"),
             2 => Some("Wide Gamut RGB"),
@@ -1975,7 +2196,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("ColorMatch RGB"),
             _ => None,
         },
-        ("Casio", 0x0001) => match value { // RecordingMode
+        ("Casio", 0x0001) => match value {
+            // RecordingMode
             1 => Some("Single Shutter"),
             2 => Some("Panorama"),
             3 => Some("Night Scene"),
@@ -1987,13 +2209,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             16 => Some("Landscape"),
             _ => None,
         },
-        ("Casio", 0x0002) => match value { // Quality
+        ("Casio", 0x0002) => match value {
+            // Quality
             1 => Some("Economy"),
             2 => Some("Normal"),
             3 => Some("Fine"),
             _ => None,
         },
-        ("Casio", 0x0003) => match value { // FocusMode
+        ("Casio", 0x0003) => match value {
+            // FocusMode
             2 => Some("Macro"),
             3 => Some("Auto"),
             4 => Some("Manual"),
@@ -2001,7 +2225,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Spot AF"),
             _ => None,
         },
-        ("Casio", 0x0005) => match value { // FlashIntensity
+        ("Casio", 0x0005) => match value {
+            // FlashIntensity
             11 => Some("Weak"),
             12 => Some("Low"),
             13 => Some("Normal"),
@@ -2009,7 +2234,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             15 => Some("Strong"),
             _ => None,
         },
-        ("Casio", 0x0007) => match value { // WhiteBalance
+        ("Casio", 0x0007) => match value {
+            // WhiteBalance
             1 => Some("Auto"),
             2 => Some("Tungsten"),
             3 => Some("Daylight"),
@@ -2018,14 +2244,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             129 => Some("Manual"),
             _ => None,
         },
-        ("Casio", 0x0008) => match value { // FaceOrientation
+        ("Casio", 0x0008) => match value {
+            // FaceOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             3 => Some("Rotate 180"),
             _ => None,
         },
-        ("Casio", 0x0009) => match value { // CasioImageSize
+        ("Casio", 0x0009) => match value {
+            // CasioImageSize
             0 => Some("640x480"),
             4 => Some("1600x1200"),
             5 => Some("2048x1536"),
@@ -2035,7 +2263,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             36 => Some("3008x2008"),
             _ => None,
         },
-        ("Casio", 0x000A) => match value { // DigitalZoom
+        ("Casio", 0x000A) => match value {
+            // DigitalZoom
             65536 => Some("Off"),
             65537 => Some("2x"),
             104857 => Some("1.6x"),
@@ -2044,7 +2273,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             262144 => Some("4x"),
             _ => None,
         },
-        ("Casio", 0x000B) => match value { // Sharpness
+        ("Casio", 0x000B) => match value {
+            // Sharpness
             0 => Some("Normal"),
             1 => Some("Soft"),
             2 => Some("Hard"),
@@ -2053,7 +2283,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             18 => Some("-1"),
             _ => None,
         },
-        ("Casio", 0x000C) => match value { // Contrast
+        ("Casio", 0x000C) => match value {
+            // Contrast
             0 => Some("Normal"),
             1 => Some("Low"),
             2 => Some("High"),
@@ -2062,12 +2293,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             18 => Some("-1"),
             _ => None,
         },
-        ("Casio", 0x000D) => match value { // FocusMode
+        ("Casio", 0x000D) => match value {
+            // FocusMode
             0 => Some("Normal"),
             1 => Some("Macro"),
             _ => None,
         },
-        ("Casio", 0x0016) => match value { // Enhancement
+        ("Casio", 0x0016) => match value {
+            // Enhancement
             1 => Some("Off"),
             2 => Some("Red"),
             3 => Some("Green"),
@@ -2075,7 +2308,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Flesh Tones"),
             _ => None,
         },
-        ("Casio", 0x0017) => match value { // ColorFilter
+        ("Casio", 0x0017) => match value {
+            // ColorFilter
             1 => Some("Off"),
             2 => Some("Black & White"),
             3 => Some("Sepia"),
@@ -2087,7 +2321,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("Purple"),
             _ => None,
         },
-        ("Casio", 0x0018) => match value { // AFPoint
+        ("Casio", 0x0018) => match value {
+            // AFPoint
             1 => Some("Center"),
             2 => Some("Upper Left"),
             3 => Some("Upper Right"),
@@ -2107,7 +2342,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             17 => Some("Bottom Right"),
             _ => None,
         },
-        ("Casio", 0x0019) => match value { // WhiteBalance
+        ("Casio", 0x0019) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Shade"),
@@ -2116,32 +2352,37 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Manual"),
             _ => None,
         },
-        ("Casio", 0x001F) => match value { // Saturation
+        ("Casio", 0x001F) => match value {
+            // Saturation
             0 => Some("Low"),
             1 => Some("Normal"),
             2 => Some("High"),
             _ => None,
         },
-        ("Casio", 0x0020) => match value { // Contrast
+        ("Casio", 0x0020) => match value {
+            // Contrast
             0 => Some("Low"),
             1 => Some("Normal"),
             2 => Some("High"),
             _ => None,
         },
-        ("Casio", 0x0021) => match value { // Sharpness
+        ("Casio", 0x0021) => match value {
+            // Sharpness
             0 => Some("Soft"),
             1 => Some("Normal"),
             2 => Some("Hard"),
             _ => None,
         },
-        ("Casio", 0x002C) => match value { // CasioQuality
+        ("Casio", 0x002C) => match value {
+            // CasioQuality
             1 => Some("Economy"),
             2 => Some("Normal"),
             3 => Some("Fine"),
             4 => Some("Super Fine"),
             _ => None,
         },
-        ("Casio", 0x2012) => match value { // WhiteBalance
+        ("Casio", 0x2012) => match value {
+            // WhiteBalance
             0 => Some("Manual"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -2153,7 +2394,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             12 => Some("Flash"),
             _ => None,
         },
-        ("Casio", 0x3000) => match value { // RecordMode
+        ("Casio", 0x3000) => match value {
+            // RecordMode
             2 => Some("Program AE"),
             3 => Some("Shutter Priority"),
             4 => Some("Aperture Priority"),
@@ -2164,7 +2406,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             20 => Some("YouTube Movie"),
             _ => None,
         },
-        ("Casio", 0x3001) => match value { // ReleaseMode
+        ("Casio", 0x3001) => match value {
+            // ReleaseMode
             1 => Some("Normal"),
             3 => Some("AE Bracketing"),
             11 => Some("WB Bracketing"),
@@ -2172,13 +2415,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             19 => Some("High Speed Burst"),
             _ => None,
         },
-        ("Casio", 0x3002) => match value { // Quality
+        ("Casio", 0x3002) => match value {
+            // Quality
             1 => Some("Economy"),
             2 => Some("Normal"),
             3 => Some("Fine"),
             _ => None,
         },
-        ("Casio", 0x3003) => match value { // FocusMode
+        ("Casio", 0x3003) => match value {
+            // FocusMode
             0 => Some("Manual"),
             1 => Some("Focus Lock"),
             2 => Some("Macro"),
@@ -2188,7 +2433,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Super Macro"),
             _ => None,
         },
-        ("Casio", 0x3008) => match value { // AutoISO
+        ("Casio", 0x3008) => match value {
+            // AutoISO
             1 => Some("On"),
             2 => Some("Off"),
             7 => Some("On (high sensitivity)"),
@@ -2196,7 +2442,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             10 => Some("High Speed"),
             _ => None,
         },
-        ("Casio", 0x3009) => match value { // AFMode
+        ("Casio", 0x3009) => match value {
+            // AFMode
             0 => Some("Off"),
             1 => Some("Spot"),
             2 => Some("Multi"),
@@ -2205,13 +2452,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Intelligent"),
             _ => None,
         },
-        ("Casio", 0x3015) => match value { // ColorMode
+        ("Casio", 0x3015) => match value {
+            // ColorMode
             0 => Some("Off"),
             2 => Some("Black & White"),
             3 => Some("Sepia"),
             _ => None,
         },
-        ("Casio", 0x3016) => match value { // Enhancement
+        ("Casio", 0x3016) => match value {
+            // Enhancement
             0 => Some("Off"),
             1 => Some("Scenery"),
             3 => Some("Green"),
@@ -2219,7 +2468,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("Flesh Tones"),
             _ => None,
         },
-        ("Casio", 0x3017) => match value { // ColorFilter
+        ("Casio", 0x3017) => match value {
+            // ColorFilter
             0 => Some("Off"),
             1 => Some("Blue"),
             3 => Some("Green"),
@@ -2229,7 +2479,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Pink"),
             _ => None,
         },
-        ("Casio", 0x301B) => match value { // ArtMode
+        ("Casio", 0x301B) => match value {
+            // ArtMode
             0 => Some("Normal"),
             8 => Some("Silent Movie"),
             39 => Some("HDR"),
@@ -2245,27 +2496,31 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             69 => Some("Light Tone"),
             _ => None,
         },
-        ("Casio", 0x3020) => match value { // ImageStabilization
+        ("Casio", 0x3020) => match value {
+            // ImageStabilization
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("Best Shot"),
             3 => Some("Movie Anti-Shake"),
             _ => None,
         },
-        ("Casio", 0x302A) => match value { // LightingMode
+        ("Casio", 0x302A) => match value {
+            // LightingMode
             0 => Some("Off"),
             1 => Some("High Dynamic Range"),
             5 => Some("Shadow Enhance Low"),
             6 => Some("Shadow Enhance High"),
             _ => None,
         },
-        ("Casio", 0x302B) => match value { // PortraitRefiner
+        ("Casio", 0x302B) => match value {
+            // PortraitRefiner
             0 => Some("Off"),
             1 => Some("+1"),
             2 => Some("+2"),
             _ => None,
         },
-        ("Casio", 0x3031) => match value { // SpecialEffectSetting
+        ("Casio", 0x3031) => match value {
+            // SpecialEffectSetting
             0 => Some("Off"),
             1 => Some("Makeup"),
             2 => Some("Mist Removal"),
@@ -2273,34 +2528,40 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             16 => Some("Art Shot"),
             _ => None,
         },
-        ("Casio", 0x4003) => match value { // VideoQuality
+        ("Casio", 0x4003) => match value {
+            // VideoQuality
             1 => Some("Standard"),
             3 => Some("HD (720p)"),
             4 => Some("Full HD (1080p)"),
             5 => Some("Low"),
             _ => None,
         },
-        ("DJI", 0x0001) => match value { // CoordinateUnits
+        ("DJI", 0x0001) => match value {
+            // CoordinateUnits
             0 => Some("Radians"),
             1 => Some("Degrees"),
             _ => None,
         },
-        ("DNG", 0x0002) => match value { // DynamicRange
+        ("DNG", 0x0002) => match value {
+            // DynamicRange
             0 => Some("Standard"),
             1 => Some("High"),
             _ => None,
         },
-        ("DNG", 0x000B) => match value { // SeqFinal
+        ("DNG", 0x000B) => match value {
+            // SeqFinal
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("DPX", 0x0014) => match value { // DittoKey
+        ("DPX", 0x0014) => match value {
+            // DittoKey
             0 => Some("Same"),
             1 => Some("New"),
             _ => None,
         },
-        ("DPX", 0x0300) => match value { // Orientation
+        ("DPX", 0x0300) => match value {
+            // Orientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Mirror vertical"),
             2 => Some("Mirror horizontal"),
@@ -2311,12 +2572,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Mirror horizontal and rotate 90 CW"),
             _ => None,
         },
-        ("DPX", 0x030C) => match value { // DataSign
+        ("DPX", 0x030C) => match value {
+            // DataSign
             0 => Some("Unsigned"),
             1 => Some("Signed"),
             _ => None,
         },
-        ("DPX", 0x0320) => match value { // ComponentsConfiguration
+        ("DPX", 0x0320) => match value {
+            // ComponentsConfiguration
             0 => Some("User-defined single component"),
             1 => Some("Red (R)"),
             2 => Some("Green (G)"),
@@ -2342,7 +2605,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             156 => Some("User-defined 8 component element"),
             _ => None,
         },
-        ("DPX", 0x0321) => match value { // TransferCharacteristic
+        ("DPX", 0x0321) => match value {
+            // TransferCharacteristic
             0 => Some("User-defined"),
             1 => Some("Printing density"),
             2 => Some("Linear"),
@@ -2368,7 +2632,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             22 => Some("IEC 61966-2-1 sRGB"),
             _ => None,
         },
-        ("DPX", 0x0322) => match value { // ColorimetricSpecification
+        ("DPX", 0x0322) => match value {
+            // ColorimetricSpecification
             0 => Some("User-defined"),
             1 => Some("Printing density"),
             4 => Some("Unspecified video"),
@@ -2386,7 +2651,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             18 => Some("ACES"),
             _ => None,
         },
-        ("DSF", 0x0005) => match value { // ChannelType
+        ("DSF", 0x0005) => match value {
+            // ChannelType
             1 => Some("Mono"),
             2 => Some("Stereo (Left, Right)"),
             3 => Some("3 Channels (Left, Right, Center)"),
@@ -2396,14 +2662,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("5.1 Channels (Left, Right, Center, Bass, Back L, Back R)"),
             _ => None,
         },
-        ("DjVu", 0x0009) => match value { // Orientation
+        ("DjVu", 0x0009) => match value {
+            // Orientation
             1 => Some("Horizontal (normal)"),
             2 => Some("Rotate 180"),
             5 => Some("Rotate 90 CW"),
             6 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("EXE", 0x0000) => match value { // MachineType
+        ("EXE", 0x0000) => match value {
+            // MachineType
             0 => Some("Unknown"),
             1 => Some("Target host"),
             332 => Some("Intel 386 or later, and compatibles"),
@@ -2447,17 +2715,20 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             60448 => Some("Dotnet 0xEC20"),
             _ => None,
         },
-        ("EXE", 0x0004) => match value { // CPUArchitecture
+        ("EXE", 0x0004) => match value {
+            // CPUArchitecture
             1 => Some("32 bit"),
             2 => Some("64 bit"),
             _ => None,
         },
-        ("EXE", 0x0005) => match value { // CPUByteOrder
+        ("EXE", 0x0005) => match value {
+            // CPUByteOrder
             1 => Some("Little endian"),
             2 => Some("Big endian"),
             _ => None,
         },
-        ("EXE", 0x0006) => match value { // ObjectFlags
+        ("EXE", 0x0006) => match value {
+            // ObjectFlags
             0 => Some("No undefs"),
             1 => Some("Incrementa link"),
             2 => Some("Dyld link"),
@@ -2482,7 +2753,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             21 => Some("Random address"),
             _ => None,
         },
-        ("EXE", 0x0007) => match value { // FileFlags
+        ("EXE", 0x0007) => match value {
+            // FileFlags
             0 => Some("Debug"),
             1 => Some("Pre-release"),
             2 => Some("Patched"),
@@ -2491,7 +2763,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Special build"),
             _ => None,
         },
-        ("EXE", 0x0008) => match value { // FileOS
+        ("EXE", 0x0008) => match value {
+            // FileOS
             1 => Some("Win16"),
             2 => Some("PM-16"),
             3 => Some("PM-32"),
@@ -2507,7 +2780,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             262148 => Some("Windows NT 32-bit"),
             _ => None,
         },
-        ("EXE", 0x0009) => match value { // ObjectFileType
+        ("EXE", 0x0009) => match value {
+            // ObjectFileType
             0 => Some("Unknown"),
             1 => Some("Executable application"),
             2 => Some("Dynamic link library"),
@@ -2517,13 +2791,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Static library"),
             _ => None,
         },
-        ("EXE", 0x000A) => match value { // PEType
+        ("EXE", 0x000A) => match value {
+            // PEType
             263 => Some("ROM Image"),
             267 => Some("PE32"),
             523 => Some("PE32+"),
             _ => None,
         },
-        ("EXE", 0x0010) => match value { // ObjectFileType
+        ("EXE", 0x0010) => match value {
+            // ObjectFileType
             0 => Some("None"),
             1 => Some("Relocatable file"),
             2 => Some("Executable file"),
@@ -2531,7 +2807,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Core file"),
             _ => None,
         },
-        ("EXE", 0x0012) => match value { // CPUType
+        ("EXE", 0x0012) => match value {
+            // CPUType
             0 => Some("None"),
             1 => Some("AT&T WE 32100"),
             2 => Some("SPARC"),
@@ -2610,7 +2887,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             41872 => Some("S/390 (old)"),
             _ => None,
         },
-        ("EXE", 0x002C) => match value { // Subsystem
+        ("EXE", 0x002C) => match value {
+            // Subsystem
             0 => Some("Unknown"),
             1 => Some("Native"),
             2 => Some("Windows GUI"),
@@ -2625,12 +2903,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             14 => Some("XBOX"),
             _ => None,
         },
-        ("Exif", 0x0001) => match value { // InteropIndex
+        ("Exif", 0x0001) => match value {
+            // InteropIndex
             3 => Some("R03 - DCF option file (Adobe RGB)"),
             98 => Some("R98 - DCF basic file (sRGB)"),
             _ => None,
         },
-        ("Exif", 0x0103) => match value { // Compression
+        ("Exif", 0x0103) => match value {
+            // Compression
             1 => Some("Uncompressed"),
             2 => Some("CCITT 1D"),
             3 => Some("T4/Group 3 Fax"),
@@ -2686,7 +2966,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("Pentax PEF Compressed"),
             _ => None,
         },
-        ("Exif", 0x0106) => match value { // PhotometricInterpretation
+        ("Exif", 0x0106) => match value {
+            // PhotometricInterpretation
             0 => Some("WhiteIsZero"),
             1 => Some("BlackIsZero"),
             2 => Some("RGB"),
@@ -2706,18 +2987,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             52527 => Some("Semantic Mask"),
             _ => None,
         },
-        ("Exif", 0x0107) => match value { // Thresholding
+        ("Exif", 0x0107) => match value {
+            // Thresholding
             1 => Some("No dithering or halftoning"),
             2 => Some("Ordered dither or halftone"),
             3 => Some("Randomized dither"),
             _ => None,
         },
-        ("Exif", 0x010A) => match value { // FillOrder
+        ("Exif", 0x010A) => match value {
+            // FillOrder
             1 => Some("Normal"),
             2 => Some("Reversed"),
             _ => None,
         },
-        ("Exif", 0x0112) => match value { // Orientation
+        ("Exif", 0x0112) => match value {
+            // Orientation
             1 => Some("Horizontal (normal)"),
             2 => Some("Mirror horizontal"),
             3 => Some("Rotate 180"),
@@ -2728,24 +3012,28 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Exif", 0x011C) => match value { // PlanarConfiguration
+        ("Exif", 0x011C) => match value {
+            // PlanarConfiguration
             1 => Some("Chunky"),
             2 => Some("Planar"),
             _ => None,
         },
-        ("Exif", 0x0124) => match value { // T4Options
+        ("Exif", 0x0124) => match value {
+            // T4Options
             0 => Some("2-Dimensional encoding"),
             1 => Some("Uncompressed"),
             2 => Some("Fill bits added"),
             _ => None,
         },
-        ("Exif", 0x0128) => match value { // ResolutionUnit
+        ("Exif", 0x0128) => match value {
+            // ResolutionUnit
             1 => Some("None"),
             2 => Some("inches"),
             3 => Some("cm"),
             _ => None,
         },
-        ("Exif", 0x013D) => match value { // Predictor
+        ("Exif", 0x013D) => match value {
+            // Predictor
             1 => Some("None"),
             2 => Some("Horizontal differencing"),
             3 => Some("Floating point"),
@@ -2755,39 +3043,46 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             34895 => Some("Floating point X4"),
             _ => None,
         },
-        ("Exif", 0x0147) => match value { // CleanFaxData
+        ("Exif", 0x0147) => match value {
+            // CleanFaxData
             0 => Some("Clean"),
             1 => Some("Regenerated"),
             2 => Some("Unclean"),
             _ => None,
         },
-        ("Exif", 0x014C) => match value { // InkSet
+        ("Exif", 0x014C) => match value {
+            // InkSet
             1 => Some("CMYK"),
             2 => Some("Not CMYK"),
             _ => None,
         },
-        ("Exif", 0x0152) => match value { // ExtraSamples
+        ("Exif", 0x0152) => match value {
+            // ExtraSamples
             0 => Some("Unspecified"),
             1 => Some("Associated Alpha"),
             2 => Some("Unassociated Alpha"),
             _ => None,
         },
-        ("Exif", 0x015A) => match value { // Indexed
+        ("Exif", 0x015A) => match value {
+            // Indexed
             0 => Some("Not indexed"),
             1 => Some("Indexed"),
             _ => None,
         },
-        ("Exif", 0x015F) => match value { // OPIProxy
+        ("Exif", 0x015F) => match value {
+            // OPIProxy
             0 => Some("Higher resolution image does not exist"),
             1 => Some("Higher resolution image exists"),
             _ => None,
         },
-        ("Exif", 0x0191) => match value { // ProfileType
+        ("Exif", 0x0191) => match value {
+            // ProfileType
             0 => Some("Unspecified"),
             1 => Some("Group 3 FAX"),
             _ => None,
         },
-        ("Exif", 0x0192) => match value { // FaxProfile
+        ("Exif", 0x0192) => match value {
+            // FaxProfile
             0 => Some("Unknown"),
             1 => Some("Minimal B&W lossless, S"),
             2 => Some("Extended B&W lossless, F"),
@@ -2799,7 +3094,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("Multi Profiles"),
             _ => None,
         },
-        ("Exif", 0x0193) => match value { // CodingMethods
+        ("Exif", 0x0193) => match value {
+            // CodingMethods
             0 => Some("Unspecified compression"),
             1 => Some("Modified Huffman"),
             2 => Some("Modified Read"),
@@ -2809,24 +3105,28 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("JBIG color"),
             _ => None,
         },
-        ("Exif", 0x0200) => match value { // JPEGProc
+        ("Exif", 0x0200) => match value {
+            // JPEGProc
             1 => Some("Baseline"),
             14 => Some("Lossless"),
             _ => None,
         },
-        ("Exif", 0x0213) => match value { // YCbCrPositioning
+        ("Exif", 0x0213) => match value {
+            // YCbCrPositioning
             1 => Some("Centered"),
             2 => Some("Co-sited"),
             _ => None,
         },
-        ("Exif", 0x0303) => match value { // RenderingIntent
+        ("Exif", 0x0303) => match value {
+            // RenderingIntent
             0 => Some("Perceptual"),
             1 => Some("Relative Colorimetric"),
             2 => Some("Saturation"),
             3 => Some("Absolute colorimetric"),
             _ => None,
         },
-        ("Exif", 0x7000) => match value { // SonyRawFileType
+        ("Exif", 0x7000) => match value {
+            // SonyRawFileType
             0 => Some("Sony Uncompressed 14-bit RAW"),
             1 => Some("Sony Uncompressed 12-bit RAW"),
             2 => Some("Sony Compressed RAW"),
@@ -2835,27 +3135,31 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Sony Compressed RAW 2"),
             _ => None,
         },
-        ("Exif", 0x7031) => match value { // VignettingCorrection
+        ("Exif", 0x7031) => match value {
+            // VignettingCorrection
             256 => Some("Off"),
             257 => Some("Auto"),
             272 => Some("Auto (ILCE-1)"),
             511 => Some("No correction params available"),
             _ => None,
         },
-        ("Exif", 0x7034) => match value { // ChromaticAberrationCorrection
+        ("Exif", 0x7034) => match value {
+            // ChromaticAberrationCorrection
             0 => Some("Off"),
             1 => Some("Auto"),
             255 => Some("No correction params available"),
             _ => None,
         },
-        ("Exif", 0x7036) => match value { // DistortionCorrection
+        ("Exif", 0x7036) => match value {
+            // DistortionCorrection
             0 => Some("Off"),
             1 => Some("Auto"),
             17 => Some("Auto fixed by lens"),
             255 => Some("No correction params available"),
             _ => None,
         },
-        ("Exif", 0x84E3) => match value { // RasterPadding
+        ("Exif", 0x84E3) => match value {
+            // RasterPadding
             0 => Some("Byte"),
             1 => Some("Word"),
             2 => Some("Long Word"),
@@ -2863,23 +3167,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             10 => Some("Long Sector"),
             _ => None,
         },
-        ("Exif", 0x84E7) => match value { // ImageColorIndicator
+        ("Exif", 0x84E7) => match value {
+            // ImageColorIndicator
             0 => Some("Unspecified Image Color"),
             1 => Some("Specified Image Color"),
             _ => None,
         },
-        ("Exif", 0x84E8) => match value { // BackgroundColorIndicator
+        ("Exif", 0x84E8) => match value {
+            // BackgroundColorIndicator
             0 => Some("Unspecified Background Color"),
             1 => Some("Specified Background Color"),
             _ => None,
         },
-        ("Exif", 0x84EE) => match value { // HCUsage
+        ("Exif", 0x84EE) => match value {
+            // HCUsage
             0 => Some("CT"),
             1 => Some("Line Art"),
             2 => Some("Trap"),
             _ => None,
         },
-        ("Exif", 0x877F) => match value { // TIFF_FXExtensions
+        ("Exif", 0x877F) => match value {
+            // TIFF_FXExtensions
             0 => Some("Resolution/Image Width"),
             1 => Some("N Layer Profile M"),
             2 => Some("Shared Data"),
@@ -2887,7 +3195,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("JBIG2 Profile M"),
             _ => None,
         },
-        ("Exif", 0x8780) => match value { // MultiProfiles
+        ("Exif", 0x8780) => match value {
+            // MultiProfiles
             0 => Some("Profile S"),
             1 => Some("Profile F"),
             2 => Some("Profile J"),
@@ -2901,7 +3210,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             10 => Some("JBIG2 Profile M"),
             _ => None,
         },
-        ("Exif", 0x8822) => match value { // ExposureProgram
+        ("Exif", 0x8822) => match value {
+            // ExposureProgram
             0 => Some("Not Defined"),
             1 => Some("Manual"),
             2 => Some("Program AE"),
@@ -2914,7 +3224,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("Bulb"),
             _ => None,
         },
-        ("Exif", 0x8830) => match value { // SensitivityType
+        ("Exif", 0x8830) => match value {
+            // SensitivityType
             0 => Some("Unknown"),
             1 => Some("Standard Output Sensitivity"),
             2 => Some("Recommended Exposure Index"),
@@ -2925,7 +3236,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Standard Output Sensitivity, Recommended Exposure Index and ISO Speed"),
             _ => None,
         },
-        ("Exif", 0x9207) => match value { // MeteringMode
+        ("Exif", 0x9207) => match value {
+            // MeteringMode
             0 => Some("Unknown"),
             1 => Some("Average"),
             2 => Some("Center-weighted average"),
@@ -2936,7 +3248,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("Other"),
             _ => None,
         },
-        ("Exif", 0x9208) => match value { // LightSource
+        ("Exif", 0x9208) => match value {
+            // LightSource
             0 => Some("Unknown"),
             1 => Some("Daylight"),
             2 => Some("Fluorescent"),
@@ -2961,7 +3274,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("Other"),
             _ => None,
         },
-        ("Exif", 0x9210) => match value { // FocalPlaneResolutionUnit
+        ("Exif", 0x9210) => match value {
+            // FocalPlaneResolutionUnit
             1 => Some("None"),
             2 => Some("inches"),
             3 => Some("cm"),
@@ -2969,7 +3283,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("um"),
             _ => None,
         },
-        ("Exif", 0x9217) => match value { // SensingMethod
+        ("Exif", 0x9217) => match value {
+            // SensingMethod
             1 => Some("Monochrome area"),
             2 => Some("One-chip color area"),
             3 => Some("Two-chip color area"),
@@ -2980,7 +3295,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Color sequential linear"),
             _ => None,
         },
-        ("Exif", 0xA001) => match value { // ColorSpace
+        ("Exif", 0xA001) => match value {
+            // ColorSpace
             1 => Some("sRGB"),
             2 => Some("Adobe RGB"),
             65533 => Some("Wide Gamut RGB"),
@@ -2988,7 +3304,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("Adobe RGB"),
             _ => None,
         },
-        ("Exif", 0xA210) => match value { // FocalPlaneResolutionUnit
+        ("Exif", 0xA210) => match value {
+            // FocalPlaneResolutionUnit
             1 => Some("None"),
             2 => Some("inches"),
             3 => Some("cm"),
@@ -2996,7 +3313,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("um"),
             _ => None,
         },
-        ("Exif", 0xA217) => match value { // SensingMethod
+        ("Exif", 0xA217) => match value {
+            // SensingMethod
             1 => Some("Not defined"),
             2 => Some("One-chip color area"),
             3 => Some("Two-chip color area"),
@@ -3006,13 +3324,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Color sequential linear"),
             _ => None,
         },
-        ("Exif", 0xA300) => match value { // FileSource
+        ("Exif", 0xA300) => match value {
+            // FileSource
             1 => Some("Film Scanner"),
             2 => Some("Reflection Print Scanner"),
             3 => Some("Digital Camera"),
             _ => None,
         },
-        ("Exif", 0xA401) => match value { // CustomRendered
+        ("Exif", 0xA401) => match value {
+            // CustomRendered
             0 => Some("Normal"),
             1 => Some("Custom"),
             2 => Some("HDR (no original saved)"),
@@ -3023,18 +3343,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Portrait"),
             _ => None,
         },
-        ("Exif", 0xA402) => match value { // ExposureMode
+        ("Exif", 0xA402) => match value {
+            // ExposureMode
             0 => Some("Auto"),
             1 => Some("Manual"),
             2 => Some("Auto bracket"),
             _ => None,
         },
-        ("Exif", 0xA403) => match value { // WhiteBalance
+        ("Exif", 0xA403) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Manual"),
             _ => None,
         },
-        ("Exif", 0xA406) => match value { // SceneCaptureType
+        ("Exif", 0xA406) => match value {
+            // SceneCaptureType
             0 => Some("Standard"),
             1 => Some("Landscape"),
             2 => Some("Portrait"),
@@ -3042,7 +3365,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Other"),
             _ => None,
         },
-        ("Exif", 0xA407) => match value { // GainControl
+        ("Exif", 0xA407) => match value {
+            // GainControl
             0 => Some("None"),
             1 => Some("Low gain up"),
             2 => Some("High gain up"),
@@ -3050,39 +3374,45 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("High gain down"),
             _ => None,
         },
-        ("Exif", 0xA408) => match value { // Contrast
+        ("Exif", 0xA408) => match value {
+            // Contrast
             0 => Some("Normal"),
             1 => Some("Low"),
             2 => Some("High"),
             _ => None,
         },
-        ("Exif", 0xA409) => match value { // Saturation
+        ("Exif", 0xA409) => match value {
+            // Saturation
             0 => Some("Normal"),
             1 => Some("Low"),
             2 => Some("High"),
             _ => None,
         },
-        ("Exif", 0xA40A) => match value { // Sharpness
+        ("Exif", 0xA40A) => match value {
+            // Sharpness
             0 => Some("Normal"),
             1 => Some("Soft"),
             2 => Some("Hard"),
             _ => None,
         },
-        ("Exif", 0xA40C) => match value { // SubjectDistanceRange
+        ("Exif", 0xA40C) => match value {
+            // SubjectDistanceRange
             0 => Some("Unknown"),
             1 => Some("Macro"),
             2 => Some("Close"),
             3 => Some("Distant"),
             _ => None,
         },
-        ("Exif", 0xA460) => match value { // CompositeImage
+        ("Exif", 0xA460) => match value {
+            // CompositeImage
             0 => Some("Unknown"),
             1 => Some("Not a Composite Image"),
             2 => Some("General Composite Image"),
             3 => Some("Composite Image Captured While Shooting"),
             _ => None,
         },
-        ("Exif", 0xBC01) => match value { // PixelFormat
+        ("Exif", 0xBC01) => match value {
+            // PixelFormat
             5 => Some("Black & White"),
             8 => Some("8-bit Gray"),
             9 => Some("16-bit BGR555"),
@@ -3140,7 +3470,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             63 => Some("32-bit Gray Fixed Point"),
             _ => None,
         },
-        ("Exif", 0xBC02) => match value { // Transformation
+        ("Exif", 0xBC02) => match value {
+            // Transformation
             0 => Some("Horizontal (normal)"),
             1 => Some("Mirror vertical"),
             2 => Some("Mirror horizontal"),
@@ -3151,37 +3482,43 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Exif", 0xBC03) => match value { // Uncompressed
+        ("Exif", 0xBC03) => match value {
+            // Uncompressed
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Exif", 0xBC04) => match value { // ImageType
+        ("Exif", 0xBC04) => match value {
+            // ImageType
             0 => Some("Preview"),
             1 => Some("Page"),
             _ => None,
         },
-        ("Exif", 0xBCC4) => match value { // ImageDataDiscard
+        ("Exif", 0xBCC4) => match value {
+            // ImageDataDiscard
             0 => Some("Full Resolution"),
             1 => Some("Flexbits Discarded"),
             2 => Some("HighPass Frequency Data Discarded"),
             3 => Some("Highpass and LowPass Frequency Data Discarded"),
             _ => None,
         },
-        ("Exif", 0xBCC5) => match value { // AlphaDataDiscard
+        ("Exif", 0xBCC5) => match value {
+            // AlphaDataDiscard
             0 => Some("Full Resolution"),
             1 => Some("Flexbits Discarded"),
             2 => Some("HighPass Frequency Data Discarded"),
             3 => Some("Highpass and LowPass Frequency Data Discarded"),
             _ => None,
         },
-        ("Exif", 0xC580) => match value { // USPTOOriginalContentType
+        ("Exif", 0xC580) => match value {
+            // USPTOOriginalContentType
             0 => Some("Text or Drawing"),
             1 => Some("Grayscale"),
             2 => Some("Color"),
             _ => None,
         },
-        ("Exif", 0xC617) => match value { // CFALayout
+        ("Exif", 0xC617) => match value {
+            // CFALayout
             1 => Some("Rectangular"),
             2 => Some("Even columns offset down 1/2 row"),
             3 => Some("Even columns offset up 1/2 row"),
@@ -3193,12 +3530,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("Even rows offset down by 1/2 row, even columns offset right by 1/2 column"),
             _ => None,
         },
-        ("Exif", 0xC635) => match value { // MakerNoteSafety
+        ("Exif", 0xC635) => match value {
+            // MakerNoteSafety
             0 => Some("Unsafe"),
             1 => Some("Safe"),
             _ => None,
         },
-        ("Exif", 0xC65A) => match value { // CalibrationIlluminant1
+        ("Exif", 0xC65A) => match value {
+            // CalibrationIlluminant1
             0 => Some("Unknown"),
             1 => Some("Daylight"),
             2 => Some("Fluorescent"),
@@ -3223,7 +3562,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("Other"),
             _ => None,
         },
-        ("Exif", 0xC65B) => match value { // CalibrationIlluminant2
+        ("Exif", 0xC65B) => match value {
+            // CalibrationIlluminant2
             0 => Some("Unknown"),
             1 => Some("Daylight"),
             2 => Some("Fluorescent"),
@@ -3248,20 +3588,23 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("Other"),
             _ => None,
         },
-        ("Exif", 0xC6BF) => match value { // ColorimetricReference
+        ("Exif", 0xC6BF) => match value {
+            // ColorimetricReference
             0 => Some("Scene-referred"),
             1 => Some("Output-referred (ICC Profile Dynamic Range)"),
             2 => Some("Output-referred (High Dyanmic Range)"),
             _ => None,
         },
-        ("Exif", 0xC6FD) => match value { // ProfileEmbedPolicy
+        ("Exif", 0xC6FD) => match value {
+            // ProfileEmbedPolicy
             0 => Some("Allow Copying"),
             1 => Some("Embed if Used"),
             2 => Some("Never Embed"),
             3 => Some("No Restrictions"),
             _ => None,
         },
-        ("Exif", 0xC71A) => match value { // PreviewColorSpace
+        ("Exif", 0xC71A) => match value {
+            // PreviewColorSpace
             0 => Some("Unknown"),
             1 => Some("Gray Gamma 2.2"),
             2 => Some("sRGB"),
@@ -3269,39 +3612,46 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("ProPhoto RGB"),
             _ => None,
         },
-        ("Exif", 0xC7A3) => match value { // ProfileHueSatMapEncoding
+        ("Exif", 0xC7A3) => match value {
+            // ProfileHueSatMapEncoding
             0 => Some("Linear"),
             1 => Some("sRGB"),
             _ => None,
         },
-        ("Exif", 0xC7A4) => match value { // ProfileLookTableEncoding
+        ("Exif", 0xC7A4) => match value {
+            // ProfileLookTableEncoding
             0 => Some("Linear"),
             1 => Some("sRGB"),
             _ => None,
         },
-        ("Exif", 0xC7A6) => match value { // DefaultBlackRender
+        ("Exif", 0xC7A6) => match value {
+            // DefaultBlackRender
             0 => Some("Auto"),
             1 => Some("None"),
             _ => None,
         },
-        ("Exif", 0xC7E9) => match value { // DepthFormat
+        ("Exif", 0xC7E9) => match value {
+            // DepthFormat
             0 => Some("Unknown"),
             1 => Some("Linear"),
             2 => Some("Inverse"),
             _ => None,
         },
-        ("Exif", 0xC7EC) => match value { // DepthUnits
+        ("Exif", 0xC7EC) => match value {
+            // DepthUnits
             0 => Some("Unknown"),
             1 => Some("Meters"),
             _ => None,
         },
-        ("Exif", 0xC7ED) => match value { // DepthMeasureType
+        ("Exif", 0xC7ED) => match value {
+            // DepthMeasureType
             0 => Some("Unknown"),
             1 => Some("Optical Axis"),
             2 => Some("Optical Ray"),
             _ => None,
         },
-        ("Exif", 0xCD31) => match value { // CalibrationIlluminant3
+        ("Exif", 0xCD31) => match value {
+            // CalibrationIlluminant3
             0 => Some("Unknown"),
             1 => Some("Daylight"),
             2 => Some("Fluorescent"),
@@ -3326,7 +3676,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("Other"),
             _ => None,
         },
-        ("FLAC", 0x0000) => match value { // PictureType
+        ("FLAC", 0x0000) => match value {
+            // PictureType
             0 => Some("Other"),
             1 => Some("32x32 PNG Icon"),
             2 => Some("Other Icon"),
@@ -3350,19 +3701,22 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             20 => Some("Publisher Logo"),
             _ => None,
         },
-        ("FLIR", 0x0000) => match value { // GPSValid
+        ("FLIR", 0x0000) => match value {
+            // GPSValid
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("FLIR", 0x001A) => match value { // Reading1Units
+        ("FLIR", 0x001A) => match value {
+            // Reading1Units
             13 => Some("C"),
             27 => Some("%"),
             29 => Some("Relative"),
             36 => Some("g/kg"),
             _ => None,
         },
-        ("FLIR", 0x001C) => match value { // Reading1Description
+        ("FLIR", 0x001C) => match value {
+            // Reading1Description
             0 => Some("Humidity"),
             3 => Some("Moisture"),
             7 => Some("Dew Point"),
@@ -3371,28 +3725,32 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("Difference Temperature"),
             _ => None,
         },
-        ("FLIR", 0x0028) => match value { // ImageType
+        ("FLIR", 0x0028) => match value {
+            // ImageType
             0 => Some("Temperature"),
             1 => Some("Temperature Difference"),
             2 => Some("Object Signal"),
             3 => Some("Object Signal Difference"),
             _ => None,
         },
-        ("FLIR", 0x002A) => match value { // ImagePixelFormat
+        ("FLIR", 0x002A) => match value {
+            // ImagePixelFormat
             0 => Some("2-byte short integer"),
             1 => Some("4-byte long integer"),
             2 => Some("4-byte float"),
             3 => Some("8-byte double"),
             _ => None,
         },
-        ("FLIR", 0x007E) => match value { // Reading2Units
+        ("FLIR", 0x007E) => match value {
+            // Reading2Units
             13 => Some("C"),
             27 => Some("%"),
             29 => Some("rel"),
             36 => Some("g/kg"),
             _ => None,
         },
-        ("FLIR", 0x0080) => match value { // Reading2Description
+        ("FLIR", 0x0080) => match value {
+            // Reading2Description
             0 => Some("Humidity"),
             3 => Some("Moisture"),
             7 => Some("Dew Point"),
@@ -3401,14 +3759,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("Difference Temperature"),
             _ => None,
         },
-        ("FLIR", 0x00E2) => match value { // Reading3Units
+        ("FLIR", 0x00E2) => match value {
+            // Reading3Units
             13 => Some("C"),
             27 => Some("%"),
             29 => Some("rel"),
             36 => Some("g/kg"),
             _ => None,
         },
-        ("FLIR", 0x00E4) => match value { // Reading3Description
+        ("FLIR", 0x00E4) => match value {
+            // Reading3Description
             0 => Some("Humidity"),
             3 => Some("Moisture"),
             7 => Some("Dew Point"),
@@ -3417,14 +3777,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("Difference Temperature"),
             _ => None,
         },
-        ("FLIR", 0x0146) => match value { // Reading4Units
+        ("FLIR", 0x0146) => match value {
+            // Reading4Units
             13 => Some("C"),
             27 => Some("%"),
             29 => Some("rel"),
             36 => Some("g/kg"),
             _ => None,
         },
-        ("FLIR", 0x0148) => match value { // Reading4Description
+        ("FLIR", 0x0148) => match value {
+            // Reading4Description
             0 => Some("Humidity"),
             3 => Some("Moisture"),
             7 => Some("Dew Point"),
@@ -3433,30 +3795,35 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("Difference Temperature"),
             _ => None,
         },
-        ("Flash", 0x0045) => match value { // FlashAttributes
+        ("Flash", 0x0045) => match value {
+            // FlashAttributes
             0 => Some("UseNetwork"),
             3 => Some("ActionScript3"),
             4 => Some("HasMetadata"),
             _ => None,
         },
-        ("FlashPix", 0x0000) => match value { // Identification
+        ("FlashPix", 0x0000) => match value {
+            // Identification
             25194 => Some("Word 98 Mac"),
             27234 => Some("MS Word 97"),
             42460 => Some("Word 6.0/7.0"),
             42476 => Some("Word 8.0"),
             _ => None,
         },
-        ("FlashPix", 0x0001) => match value { // System
+        ("FlashPix", 0x0001) => match value {
+            // System
             0 => Some("Windows"),
             1 => Some("Macintosh"),
             _ => None,
         },
-        ("FlashPix", 0x0002) => match value { // Word97
+        ("FlashPix", 0x0002) => match value {
+            // Word97
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("FlashPix", 0x0003) => match value { // LanguageCode
+        ("FlashPix", 0x0003) => match value {
+            // LanguageCode
             1024 => Some("None"),
             1025 => Some("Arabic"),
             1026 => Some("Bulgarian"),
@@ -3517,7 +3884,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4108 => Some("French (Swiss)"),
             _ => None,
         },
-        ("FlashPix", 0x0005) => match value { // DocFlags
+        ("FlashPix", 0x0005) => match value {
+            // DocFlags
             0 => Some("Template"),
             1 => Some("AutoText only"),
             2 => Some("Complex"),
@@ -3532,50 +3900,59 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             15 => Some("Obfuscated"),
             _ => None,
         },
-        ("FlashPix", 0x000B) => match value { // ScaleCrop
+        ("FlashPix", 0x000B) => match value {
+            // ScaleCrop
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("FlashPix", 0x0010) => match value { // LinksUpToDate
+        ("FlashPix", 0x0010) => match value {
+            // LinksUpToDate
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("FlashPix", 0x0013) => match value { // SharedDoc
+        ("FlashPix", 0x0013) => match value {
+            // SharedDoc
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("FlashPix", 0x0016) => match value { // HyperlinksChanged
+        ("FlashPix", 0x0016) => match value {
+            // HyperlinksChanged
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("FujiFilm", 0x0001) => match value { // DriveMode
+        ("FujiFilm", 0x0001) => match value {
+            // DriveMode
             0 => Some("Single"),
             1 => Some("Continuous Low"),
             2 => Some("Continuous High"),
             _ => None,
         },
-        ("FujiFilm", 0x0003) => match value { // AFAreaMode
+        ("FujiFilm", 0x0003) => match value {
+            // AFAreaMode
             0 => Some("Single Point"),
             1 => Some("Zone"),
             2 => Some("Wide/Tracking"),
             _ => None,
         },
-        ("FujiFilm", 0x006C) => match value { // RAFCompression
+        ("FujiFilm", 0x006C) => match value {
+            // RAFCompression
             0 => Some("Uncompressed"),
             2 => Some("Lossless"),
             3 => Some("Lossy"),
             _ => None,
         },
-        ("FujiFilm", 0x0117) => match value { // RawZoomActive
+        ("FujiFilm", 0x0117) => match value {
+            // RawZoomActive
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("FujiFilm", 0x1001) => match value { // Sharpness
+        ("FujiFilm", 0x1001) => match value {
+            // Sharpness
             0 => Some("-4 (softest)"),
             1 => Some("-3 (very soft)"),
             2 => Some("-2 (soft)"),
@@ -3589,7 +3966,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("FujiFilm", 0x1002) => match value { // WhiteBalance
+        ("FujiFilm", 0x1002) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Auto (white priority)"),
             2 => Some("Auto (ambiance priority)"),
@@ -3612,7 +3990,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4080 => Some("Kelvin"),
             _ => None,
         },
-        ("FujiFilm", 0x1003) => match value { // Saturation
+        ("FujiFilm", 0x1003) => match value {
+            // Saturation
             0 => Some("0 (normal)"),
             128 => Some("+1 (medium high)"),
             192 => Some("+3 (very high)"),
@@ -3635,7 +4014,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32768 => Some("Film Simulation"),
             _ => None,
         },
-        ("FujiFilm", 0x1004) => match value { // Contrast
+        ("FujiFilm", 0x1004) => match value {
+            // Contrast
             0 => Some("Normal"),
             128 => Some("Medium High"),
             256 => Some("High"),
@@ -3644,19 +4024,22 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32768 => Some("Film Simulation"),
             _ => None,
         },
-        ("FujiFilm", 0x1006) => match value { // Contrast
+        ("FujiFilm", 0x1006) => match value {
+            // Contrast
             0 => Some("Normal"),
             256 => Some("High"),
             768 => Some("Low"),
             _ => None,
         },
-        ("FujiFilm", 0x100B) => match value { // NoiseReduction
+        ("FujiFilm", 0x100B) => match value {
+            // NoiseReduction
             64 => Some("Low"),
             128 => Some("Normal"),
             256 => Some("n/a"),
             _ => None,
         },
-        ("FujiFilm", 0x100E) => match value { // NoiseReduction
+        ("FujiFilm", 0x100E) => match value {
+            // NoiseReduction
             0 => Some("0 (normal)"),
             256 => Some("+2 (strong)"),
             384 => Some("+1 (medium strong)"),
@@ -3668,7 +4051,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             736 => Some("-4 (weakest)"),
             _ => None,
         },
-        ("FujiFilm", 0x100F) => match value { // Clarity
+        ("FujiFilm", 0x100F) => match value {
+            // Clarity
             -5000 => Some("-5"),
             -4000 => Some("-4"),
             -3000 => Some("-3"),
@@ -3682,7 +4066,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5000 => Some("5"),
             _ => None,
         },
-        ("FujiFilm", 0x1010) => match value { // FujiFlashMode
+        ("FujiFilm", 0x1010) => match value {
+            // FujiFlashMode
             0 => Some("Auto"),
             1 => Some("On"),
             2 => Some("Off"),
@@ -3710,30 +4095,35 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             59680 => Some("High Speed Sync (HSS)"),
             _ => None,
         },
-        ("FujiFilm", 0x1020) => match value { // Macro
+        ("FujiFilm", 0x1020) => match value {
+            // Macro
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("FujiFilm", 0x1021) => match value { // FocusMode
+        ("FujiFilm", 0x1021) => match value {
+            // FocusMode
             0 => Some("Auto"),
             1 => Some("Manual"),
             65535 => Some("Movie"),
             _ => None,
         },
-        ("FujiFilm", 0x1022) => match value { // AFMode
+        ("FujiFilm", 0x1022) => match value {
+            // AFMode
             0 => Some("No"),
             1 => Some("Single Point"),
             256 => Some("Zone"),
             512 => Some("Wide/Tracking"),
             _ => None,
         },
-        ("FujiFilm", 0x1030) => match value { // SlowSync
+        ("FujiFilm", 0x1030) => match value {
+            // SlowSync
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("FujiFilm", 0x1031) => match value { // PictureMode
+        ("FujiFilm", 0x1031) => match value {
+            // PictureMode
             0 => Some("Auto"),
             1 => Some("Portrait"),
             2 => Some("Landscape"),
@@ -3769,48 +4159,56 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             768 => Some("Manual"),
             _ => None,
         },
-        ("FujiFilm", 0x1033) => match value { // EXRAuto
+        ("FujiFilm", 0x1033) => match value {
+            // EXRAuto
             0 => Some("Auto"),
             1 => Some("Manual"),
             _ => None,
         },
-        ("FujiFilm", 0x1034) => match value { // EXRMode
+        ("FujiFilm", 0x1034) => match value {
+            // EXRMode
             256 => Some("HR (High Resolution)"),
             512 => Some("SN (Signal to Noise priority)"),
             768 => Some("DR (Dynamic Range priority)"),
             _ => None,
         },
-        ("FujiFilm", 0x1037) => match value { // MultipleExposure
+        ("FujiFilm", 0x1037) => match value {
+            // MultipleExposure
             1 => Some("Additive"),
             2 => Some("Average"),
             3 => Some("Light"),
             4 => Some("Dark"),
             _ => None,
         },
-        ("FujiFilm", 0x1045) => match value { // LensModulationOptimizer
+        ("FujiFilm", 0x1045) => match value {
+            // LensModulationOptimizer
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("FujiFilm", 0x1047) => match value { // GrainEffectRoughness
+        ("FujiFilm", 0x1047) => match value {
+            // GrainEffectRoughness
             0 => Some("Off"),
             32 => Some("Weak"),
             64 => Some("Strong"),
             _ => None,
         },
-        ("FujiFilm", 0x1048) => match value { // ColorChromeEffect
+        ("FujiFilm", 0x1048) => match value {
+            // ColorChromeEffect
             0 => Some("Off"),
             32 => Some("Weak"),
             64 => Some("Strong"),
             _ => None,
         },
-        ("FujiFilm", 0x104C) => match value { // GrainEffectSize
+        ("FujiFilm", 0x104C) => match value {
+            // GrainEffectSize
             0 => Some("Off"),
             16 => Some("Small"),
             32 => Some("Large"),
             _ => None,
         },
-        ("FujiFilm", 0x104D) => match value { // CropMode
+        ("FujiFilm", 0x104D) => match value {
+            // CropMode
             0 => Some("n/a"),
             1 => Some("Full-frame on GFX"),
             2 => Some("Sports Finder Mode"),
@@ -3818,26 +4216,30 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Digital Tele-Conv"),
             _ => None,
         },
-        ("FujiFilm", 0x104E) => match value { // ColorChromeFXBlue
+        ("FujiFilm", 0x104E) => match value {
+            // ColorChromeFXBlue
             0 => Some("Off"),
             32 => Some("Weak"),
             64 => Some("Strong"),
             _ => None,
         },
-        ("FujiFilm", 0x1050) => match value { // ShutterType
+        ("FujiFilm", 0x1050) => match value {
+            // ShutterType
             0 => Some("Mechanical"),
             1 => Some("Electronic"),
             2 => Some("Electronic (long shutter speed)"),
             3 => Some("Electronic Front Curtain"),
             _ => None,
         },
-        ("FujiFilm", 0x1102) => match value { // WhiteBalanceBracketing
+        ("FujiFilm", 0x1102) => match value {
+            // WhiteBalanceBracketing
             511 => Some("+/- 1"),
             767 => Some("+/- 2"),
             1023 => Some("+/- 3"),
             _ => None,
         },
-        ("FujiFilm", 0x1150) => match value { // CompositeImageMode
+        ("FujiFilm", 0x1150) => match value {
+            // CompositeImageMode
             0 => Some("n/a"),
             1 => Some("Pro Low-light"),
             2 => Some("Pro Focus"),
@@ -3846,14 +4248,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             1024 => Some("Multi-exposure"),
             _ => None,
         },
-        ("FujiFilm", 0x1154) => match value { // PanoramaDirection
+        ("FujiFilm", 0x1154) => match value {
+            // PanoramaDirection
             1 => Some("Right"),
             2 => Some("Left"),
             3 => Some("Up"),
             4 => Some("Down"),
             _ => None,
         },
-        ("FujiFilm", 0x1201) => match value { // AdvancedFilter
+        ("FujiFilm", 0x1201) => match value {
+            // AdvancedFilter
             65536 => Some("Pop Color"),
             131072 => Some("Hi Key"),
             196608 => Some("Toy Camera"),
@@ -3873,33 +4277,39 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             1245186 => Some("Expired Film Neutral"),
             _ => None,
         },
-        ("FujiFilm", 0x1210) => match value { // ColorMode
+        ("FujiFilm", 0x1210) => match value {
+            // ColorMode
             0 => Some("Standard"),
             16 => Some("Chrome"),
             48 => Some("B & W"),
             _ => None,
         },
-        ("FujiFilm", 0x1300) => match value { // BlurWarning
+        ("FujiFilm", 0x1300) => match value {
+            // BlurWarning
             0 => Some("None"),
             1 => Some("Blur Warning"),
             _ => None,
         },
-        ("FujiFilm", 0x1301) => match value { // FocusWarning
+        ("FujiFilm", 0x1301) => match value {
+            // FocusWarning
             0 => Some("Good"),
             1 => Some("Out of focus"),
             _ => None,
         },
-        ("FujiFilm", 0x1302) => match value { // ExposureWarning
+        ("FujiFilm", 0x1302) => match value {
+            // ExposureWarning
             0 => Some("Good"),
             1 => Some("Bad exposure"),
             _ => None,
         },
-        ("FujiFilm", 0x1400) => match value { // DynamicRange
+        ("FujiFilm", 0x1400) => match value {
+            // DynamicRange
             1 => Some("Standard"),
             3 => Some("Wide"),
             _ => None,
         },
-        ("FujiFilm", 0x1401) => match value { // FilmMode
+        ("FujiFilm", 0x1401) => match value {
+            // FilmMode
             0 => Some("F0/Standard (Provia)"),
             256 => Some("F1/Studio Portrait"),
             272 => Some("F1a/Studio Portrait Enhanced Saturation"),
@@ -3918,7 +4328,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             2816 => Some("Reala ACE"),
             _ => None,
         },
-        ("FujiFilm", 0x1402) => match value { // DynamicRangeSetting
+        ("FujiFilm", 0x1402) => match value {
+            // DynamicRangeSetting
             0 => Some("Auto"),
             1 => Some("Manual"),
             256 => Some("Standard (100%)"),
@@ -3927,7 +4338,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32768 => Some("Film Simulation"),
             _ => None,
         },
-        ("FujiFilm", 0x1425) => match value { // SceneRecognition
+        ("FujiFilm", 0x1425) => match value {
+            // SceneRecognition
             0 => Some("Unrecognized"),
             256 => Some("Portrait Image"),
             259 => Some("Night Portrait"),
@@ -3937,96 +4349,113 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             1024 => Some("Macro"),
             _ => None,
         },
-        ("FujiFilm", 0x1436) => match value { // ImageGeneration
+        ("FujiFilm", 0x1436) => match value {
+            // ImageGeneration
             0 => Some("Original Image"),
             1 => Some("Re-developed from RAW"),
             _ => None,
         },
-        ("FujiFilm", 0x1443) => match value { // DRangePriority
+        ("FujiFilm", 0x1443) => match value {
+            // DRangePriority
             0 => Some("Auto"),
             1 => Some("Fixed"),
             _ => None,
         },
-        ("FujiFilm", 0x1444) => match value { // DRangePriorityAuto
+        ("FujiFilm", 0x1444) => match value {
+            // DRangePriorityAuto
             1 => Some("Weak"),
             2 => Some("Strong"),
             3 => Some("Plus"),
             _ => None,
         },
-        ("FujiFilm", 0x1445) => match value { // DRangePriorityFixed
+        ("FujiFilm", 0x1445) => match value {
+            // DRangePriorityFixed
             1 => Some("Weak"),
             2 => Some("Strong"),
             _ => None,
         },
-        ("FujiFilm", 0x3803) => match value { // VideoRecordingMode
+        ("FujiFilm", 0x3803) => match value {
+            // VideoRecordingMode
             0 => Some("Normal"),
             16 => Some("F-log"),
             32 => Some("HLG"),
             48 => Some("F-log2"),
             _ => None,
         },
-        ("FujiFilm", 0x3804) => match value { // PeripheralLighting
+        ("FujiFilm", 0x3804) => match value {
+            // PeripheralLighting
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("FujiFilm", 0x3806) => match value { // VideoCompression
+        ("FujiFilm", 0x3806) => match value {
+            // VideoCompression
             1 => Some("Log GOP"),
             2 => Some("All Intra"),
             _ => None,
         },
-        ("FujiFilm", 0x3824) => match value { // FullHDHighSpeedRec
+        ("FujiFilm", 0x3824) => match value {
+            // FullHDHighSpeedRec
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("GE", 0x0202) => match value { // Macro
+        ("GE", 0x0202) => match value {
+            // Macro
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("GIF", 0x0001) => match value { // HasColorMap
+        ("GIF", 0x0001) => match value {
+            // HasColorMap
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("GIMP", 0x0011) => match value { // Compression
+        ("GIMP", 0x0011) => match value {
+            // Compression
             0 => Some("None"),
             1 => Some("RLE Encoding"),
             2 => Some("Zlib"),
             3 => Some("Fractal"),
             _ => None,
         },
-        ("GIMP", 0x0016) => match value { // ColorMode
+        ("GIMP", 0x0016) => match value {
+            // ColorMode
             0 => Some("RGB Color"),
             1 => Some("Grayscale"),
             2 => Some("Indexed Color"),
             _ => None,
         },
-        ("GPS", 0x000A) => match value { // GPSMeasureMode
+        ("GPS", 0x000A) => match value {
+            // GPSMeasureMode
             2 => Some("2-Dimensional Measurement"),
             3 => Some("3-Dimensional Measurement"),
             _ => None,
         },
-        ("GPS", 0x001E) => match value { // GPSDifferential
+        ("GPS", 0x001E) => match value {
+            // GPSDifferential
             0 => Some("No Correction"),
             1 => Some("Differential Corrected"),
             _ => None,
         },
-        ("GeoTiff", 0x0400) => match value { // GTModelType
+        ("GeoTiff", 0x0400) => match value {
+            // GTModelType
             1 => Some("Projected"),
             2 => Some("Geographic"),
             3 => Some("Geocentric"),
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GeoTiff", 0x0401) => match value { // GTRasterType
+        ("GeoTiff", 0x0401) => match value {
+            // GTRasterType
             1 => Some("Pixel Is Area"),
             2 => Some("Pixel Is Point"),
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GeoTiff", 0x0803) => match value { // GeogPrimeMeridian
+        ("GeoTiff", 0x0803) => match value {
+            // GeogPrimeMeridian
             8901 => Some("Greenwich"),
             8902 => Some("Lisbon"),
             8903 => Some("Paris"),
@@ -4041,7 +4470,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GeoTiff", 0x0804) => match value { // GeogLinearUnits
+        ("GeoTiff", 0x0804) => match value {
+            // GeogLinearUnits
             9001 => Some("Linear Meter"),
             9002 => Some("Linear Foot"),
             9003 => Some("Linear Foot US Survey"),
@@ -4068,7 +4498,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GeoTiff", 0x0806) => match value { // GeogAngularUnits
+        ("GeoTiff", 0x0806) => match value {
+            // GeogAngularUnits
             9001 => Some("Linear Meter"),
             9002 => Some("Linear Foot"),
             9003 => Some("Linear Foot US Survey"),
@@ -4095,7 +4526,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GeoTiff", 0x0808) => match value { // GeogEllipsoid
+        ("GeoTiff", 0x0808) => match value {
+            // GeogEllipsoid
             7001 => Some("Airy 1830"),
             7002 => Some("Airy Modified 1849"),
             7003 => Some("Australian National Spheroid"),
@@ -4134,7 +4566,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GeoTiff", 0x080C) => match value { // GeogAzimuthUnits
+        ("GeoTiff", 0x080C) => match value {
+            // GeogAzimuthUnits
             9001 => Some("Linear Meter"),
             9002 => Some("Linear Foot"),
             9003 => Some("Linear Foot US Survey"),
@@ -4161,7 +4594,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GeoTiff", 0x0C03) => match value { // ProjCoordTrans
+        ("GeoTiff", 0x0C03) => match value {
+            // ProjCoordTrans
             1 => Some("Transverse Mercator"),
             2 => Some("Transverse Mercator Modified Alaska"),
             3 => Some("Oblique Mercator"),
@@ -4193,7 +4627,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GeoTiff", 0x0C04) => match value { // ProjLinearUnits
+        ("GeoTiff", 0x0C04) => match value {
+            // ProjLinearUnits
             9001 => Some("Linear Meter"),
             9002 => Some("Linear Foot"),
             9003 => Some("Linear Foot US Survey"),
@@ -4220,7 +4655,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GeoTiff", 0x1000) => match value { // VerticalCSType
+        ("GeoTiff", 0x1000) => match value {
+            // VerticalCSType
             0 => Some("Undefined"),
             5001 => Some("Airy 1830 ellipsoid"),
             5002 => Some("Airy Modified 1849 ellipsoid"),
@@ -4263,7 +4699,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GeoTiff", 0x1002) => match value { // VerticalDatum
+        ("GeoTiff", 0x1002) => match value {
+            // VerticalDatum
             0 => Some("Undefined"),
             5001 => Some("Airy 1830 ellipsoid"),
             5002 => Some("Airy Modified 1849 ellipsoid"),
@@ -4306,7 +4743,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GeoTiff", 0x1003) => match value { // VerticalUnits
+        ("GeoTiff", 0x1003) => match value {
+            // VerticalUnits
             9001 => Some("Linear Meter"),
             9002 => Some("Linear Foot"),
             9003 => Some("Linear Foot US Survey"),
@@ -4333,7 +4771,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GeoTiff", 0xB799) => match value { // ChartFormat
+        ("GeoTiff", 0xB799) => match value {
+            // ChartFormat
             47500 => Some("General"),
             47501 => Some("Coastal"),
             47502 => Some("Harbor"),
@@ -4347,7 +4786,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             47510 => Some("Inset"),
             _ => None,
         },
-        ("GeoTiff", 0xB7A0) => match value { // ChartSoundingDatum
+        ("GeoTiff", 0xB7A0) => match value {
+            // ChartSoundingDatum
             47600 => Some("Equatorial Spring Low Water"),
             47601 => Some("Indian Spring Low Water"),
             47602 => Some("Lowest Astronomical Tide"),
@@ -4364,7 +4804,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             47613 => Some("Tropic Lower Low Water"),
             _ => None,
         },
-        ("GeoTiff", 0xB7A1) => match value { // ChartDepthUnits
+        ("GeoTiff", 0xB7A1) => match value {
+            // ChartDepthUnits
             9001 => Some("Linear Meter"),
             9002 => Some("Linear Foot"),
             9003 => Some("Linear Foot US Survey"),
@@ -4391,12 +4832,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("User Defined"),
             _ => None,
         },
-        ("GoPro", 0x0008) => match value { // GPSMeasureMode
+        ("GoPro", 0x0008) => match value {
+            // GPSMeasureMode
             2 => Some("2-Dimensional Measurement"),
             3 => Some("3-Dimensional Measurement"),
             _ => None,
         },
-        ("H264", 0x0000) => match value { // RecordingMode
+        ("H264", 0x0000) => match value {
+            // RecordingMode
             2 => Some("XP+"),
             4 => Some("SP"),
             5 => Some("LP"),
@@ -4404,14 +4847,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("MXP"),
             _ => None,
         },
-        ("H264", 0x0001) => match value { // ImageStabilization
+        ("H264", 0x0001) => match value {
+            // ImageStabilization
             0 => Some("Off"),
             63 => Some("On (0x3f)"),
             191 => Some("Off (0xbf)"),
             255 => Some("n/a"),
             _ => None,
         },
-        ("H264", 0x00A2) => match value { // ExposureProgram
+        ("H264", 0x00A2) => match value {
+            // ExposureProgram
             0 => Some("Not Defined"),
             1 => Some("Manual"),
             2 => Some("Program AE"),
@@ -4423,39 +4868,46 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Landscape"),
             _ => None,
         },
-        ("H264", 0x00A7) => match value { // CustomRendered
+        ("H264", 0x00A7) => match value {
+            // CustomRendered
             0 => Some("Normal"),
             1 => Some("Custom"),
             _ => None,
         },
-        ("H264", 0x00A8) => match value { // WhiteBalance
+        ("H264", 0x00A8) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Manual"),
             _ => None,
         },
-        ("H264", 0x00AA) => match value { // SceneCaptureType
+        ("H264", 0x00AA) => match value {
+            // SceneCaptureType
             0 => Some("Standard"),
             1 => Some("Landscape"),
             2 => Some("Portrait"),
             3 => Some("Night"),
             _ => None,
         },
-        ("H264", 0x00B9) => match value { // GPSAltitudeRef
+        ("H264", 0x00B9) => match value {
+            // GPSAltitudeRef
             0 => Some("Above Sea Level"),
             1 => Some("Below Sea Level"),
             _ => None,
         },
-        ("H264", 0x00BF) => match value { // GPSMeasureMode
+        ("H264", 0x00BF) => match value {
+            // GPSMeasureMode
             2 => Some("2-Dimensional Measurement"),
             3 => Some("3-Dimensional Measurement"),
             _ => None,
         },
-        ("ICC_Profile", 0x0008) => match value { // MeasurementObserver
+        ("ICC_Profile", 0x0008) => match value {
+            // MeasurementObserver
             1 => Some("CIE 1931"),
             2 => Some("CIE 1964"),
             _ => None,
         },
-        ("ICC_Profile", 0x0009) => match value { // TransferCharacteristics
+        ("ICC_Profile", 0x0009) => match value {
+            // TransferCharacteristics
             0 => Some("For future use (0)"),
             1 => Some("BT.709"),
             2 => Some("Unspecified"),
@@ -4477,7 +4929,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             18 => Some("BT.2100 HLG, ARIB STD-B67"),
             _ => None,
         },
-        ("ICC_Profile", 0x000A) => match value { // ChromaticityColorant
+        ("ICC_Profile", 0x000A) => match value {
+            // ChromaticityColorant
             0 => Some("Unknown"),
             1 => Some("ITU-R BT.709"),
             2 => Some("SMPTE RP145-1994"),
@@ -4485,18 +4938,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("P22"),
             _ => None,
         },
-        ("ICC_Profile", 0x000B) => match value { // VideoFullRangeFlag
+        ("ICC_Profile", 0x000B) => match value {
+            // VideoFullRangeFlag
             0 => Some("Limited"),
             1 => Some("Full"),
             _ => None,
         },
-        ("ICC_Profile", 0x0018) => match value { // MeasurementGeometry
+        ("ICC_Profile", 0x0018) => match value {
+            // MeasurementGeometry
             0 => Some("Unknown"),
             1 => Some("0/45 or 45/0"),
             2 => Some("0/d or d/0"),
             _ => None,
         },
-        ("ICC_Profile", 0x0020) => match value { // MeasurementIlluminant
+        ("ICC_Profile", 0x0020) => match value {
+            // MeasurementIlluminant
             1 => Some("D50"),
             2 => Some("D65"),
             3 => Some("D93"),
@@ -4507,31 +4963,36 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("F8"),
             _ => None,
         },
-        ("ICC_Profile", 0x0040) => match value { // RenderingIntent
+        ("ICC_Profile", 0x0040) => match value {
+            // RenderingIntent
             0 => Some("Perceptual"),
             1 => Some("Media-Relative Colorimetric"),
             2 => Some("Saturation"),
             3 => Some("ICC-Absolute Colorimetric"),
             _ => None,
         },
-        ("ICO", 0x0002) => match value { // ImageType
+        ("ICO", 0x0002) => match value {
+            // ImageType
             1 => Some("Icon"),
             2 => Some("Cursor"),
             _ => None,
         },
-        ("ID3", 0x00B8) => match value { // Speed
+        ("ID3", 0x00B8) => match value {
+            // Speed
             1 => Some("Slow"),
             2 => Some("Medium"),
             3 => Some("Fast"),
             4 => Some("Hardcore"),
             _ => None,
         },
-        ("IPTC", 0x000A) => match value { // SizeMode
+        ("IPTC", 0x000A) => match value {
+            // SizeMode
             0 => Some("Size Not Known"),
             1 => Some("Size Known"),
             _ => None,
         },
-        ("IPTC", 0x0014) => match value { // FileFormat
+        ("IPTC", 0x0014) => match value {
+            // FileFormat
             0 => Some("No ObjectData"),
             1 => Some("IPTC-NAA Digital Newsphoto Parameter Record"),
             2 => Some("IPTC7901 Recommended Message Format"),
@@ -4564,14 +5025,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             29 => Some("Corel Draw [.CDR]"),
             _ => None,
         },
-        ("IPTC", 0x0037) => match value { // SupplementalType
+        ("IPTC", 0x0037) => match value {
+            // SupplementalType
             0 => Some("Main Image"),
             1 => Some("Reduced Resolution Image"),
             2 => Some("Logo"),
             3 => Some("Rasterized Caption"),
             _ => None,
         },
-        ("IPTC", 0x003C) => match value { // ColorRepresentation
+        ("IPTC", 0x003C) => match value {
+            // ColorRepresentation
             0 => Some("No Image, Single Frame"),
             256 => Some("Monochrome, Single Frame"),
             768 => Some("3 Components, Single Frame"),
@@ -4588,7 +5051,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             1029 => Some("4 Components, Special Interleaving"),
             _ => None,
         },
-        ("IPTC", 0x0040) => match value { // InterchangeColorSpace
+        ("IPTC", 0x0040) => match value {
+            // InterchangeColorSpace
             1 => Some("X,Y,Z CIE"),
             2 => Some("RGB SMPTE"),
             3 => Some("Y,U,V (K) (D65)"),
@@ -4599,13 +5063,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("sRGB"),
             _ => None,
         },
-        ("IPTC", 0x005A) => match value { // SampleStructure
+        ("IPTC", 0x005A) => match value {
+            // SampleStructure
             0 => Some("OrthogonalConstangSampling"),
             1 => Some("Orthogonal4-2-2Sampling"),
             2 => Some("CompressionDependent"),
             _ => None,
         },
-        ("IPTC", 0x0064) => match value { // ScanningDirection
+        ("IPTC", 0x0064) => match value {
+            // ScanningDirection
             0 => Some("L-R, Top-Bottom"),
             1 => Some("R-L, Top-Bottom"),
             2 => Some("L-R, Bottom-Top"),
@@ -4616,7 +5082,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Bottom-Top, R-L"),
             _ => None,
         },
-        ("IPTC", 0x0078) => match value { // QuantizationMethod
+        ("IPTC", 0x0078) => match value {
+            // QuantizationMethod
             0 => Some("Linear Reflectance/Transmittance"),
             1 => Some("Linear Density"),
             2 => Some("IPTC Ref B"),
@@ -4627,12 +5094,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Gamma Compensated"),
             _ => None,
         },
-        ("IPTC", 0x0082) => match value { // ExcursionTolerance
+        ("IPTC", 0x0082) => match value {
+            // ExcursionTolerance
             0 => Some("Not Allowed"),
             1 => Some("Allowed"),
             _ => None,
         },
-        ("IPTC", 0x00C8) => match value { // ObjectPreviewFileFormat
+        ("IPTC", 0x00C8) => match value {
+            // ObjectPreviewFileFormat
             0 => Some("No ObjectData"),
             1 => Some("IPTC-NAA Digital Newsphoto Parameter Record"),
             2 => Some("IPTC7901 Recommended Message Format"),
@@ -4665,7 +5134,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             29 => Some("Corel Draw [.CDR]"),
             _ => None,
         },
-        ("ISO", 0x0000) => match value { // VolumeType
+        ("ISO", 0x0000) => match value {
+            // VolumeType
             0 => Some("Boot Record"),
             1 => Some("Primary Volume"),
             2 => Some("Supplementary Volume"),
@@ -4673,45 +5143,53 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("Terminator"),
             _ => None,
         },
-        ("JPEG", 0x0000) => match value { // InterleavedField
+        ("JPEG", 0x0000) => match value {
+            // InterleavedField
             0 => Some("Not Interleaved"),
             1 => Some("Odd"),
             2 => Some("Even"),
             _ => None,
         },
-        ("JPEG", 0x0001) => match value { // APP14Flags0
+        ("JPEG", 0x0001) => match value {
+            // APP14Flags0
             0 => Some("(none)"),
             15 => Some("Encoded with Blend=1 downsampling"),
             _ => None,
         },
-        ("JPEG", 0x0003) => match value { // ColorTransform
+        ("JPEG", 0x0003) => match value {
+            // ColorTransform
             0 => Some("Unknown (RGB or CMYK)"),
             1 => Some("YCbCr"),
             2 => Some("YCCK"),
             _ => None,
         },
-        ("JPEG", 0x0009) => match value { // ImageClass
+        ("JPEG", 0x0009) => match value {
+            // ImageClass
             0 => Some("General Purpose"),
             4 => Some("Tactical Imagery"),
             _ => None,
         },
-        ("JPEG", 0x000A) => match value { // JPEGProcess
+        ("JPEG", 0x000A) => match value {
+            // JPEGProcess
             1 => Some("Baseline sequential DCT, Huffman coding, 8-bit samples"),
             4 => Some("Extended sequential DCT, Huffman coding, 12-bit samples"),
             _ => None,
         },
-        ("JPEG", 0x000B) => match value { // JPSFlags
+        ("JPEG", 0x000B) => match value {
+            // JPSFlags
             0 => Some("Half height"),
             1 => Some("Half width"),
             2 => Some("Left field first"),
             _ => None,
         },
-        ("JPEG", 0x000D) => match value { // JPSType
+        ("JPEG", 0x000D) => match value {
+            // JPSType
             0 => Some("Mono"),
             1 => Some("Stereo"),
             _ => None,
         },
-        ("JPEG", 0x000E) => match value { // ColorSpace
+        ("JPEG", 0x000E) => match value {
+            // ColorSpace
             0 => Some("Bi-level"),
             1 => Some("YCbCr, ITU-R BT 709, video"),
             2 => Some("No color space specified"),
@@ -4726,7 +5204,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             14 => Some("CIELab"),
             _ => None,
         },
-        ("JPEG", 0x0010) => match value { // Compression
+        ("JPEG", 0x0010) => match value {
+            // Compression
             0 => Some("Uncompressed, interleaved, 8 bits per sample"),
             1 => Some("Modified Huffman"),
             2 => Some("Modified READ"),
@@ -4735,26 +5214,30 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("JPEG"),
             _ => None,
         },
-        ("JPEG", 0x0011) => match value { // ResolutionUnit
+        ("JPEG", 0x0011) => match value {
+            // ResolutionUnit
             0 => Some("None"),
             1 => Some("inches"),
             2 => Some("cm"),
             _ => None,
         },
-        ("JVC", 0x0003) => match value { // Quality
+        ("JVC", 0x0003) => match value {
+            // Quality
             0 => Some("Low"),
             1 => Some("Normal"),
             2 => Some("Fine"),
             _ => None,
         },
-        ("Jpeg2000", 0x0000) => match value { // ColorSpecMethod
+        ("Jpeg2000", 0x0000) => match value {
+            // ColorSpecMethod
             1 => Some("Enumerated"),
             2 => Some("Restricted ICC"),
             3 => Some("Any ICC"),
             4 => Some("Vendor Color"),
             _ => None,
         },
-        ("Jpeg2000", 0x0002) => match value { // ColorSpecApproximation
+        ("Jpeg2000", 0x0002) => match value {
+            // ColorSpecApproximation
             0 => Some("Not Specified"),
             1 => Some("Accurate"),
             2 => Some("Exceptional Quality"),
@@ -4762,7 +5245,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Poor Quality"),
             _ => None,
         },
-        ("Jpeg2000", 0x0008) => match value { // DisplayYResolutionUnit
+        ("Jpeg2000", 0x0008) => match value {
+            // DisplayYResolutionUnit
             -3 => Some("km"),
             -2 => Some("100 m"),
             -1 => Some("10 m"),
@@ -4775,7 +5259,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("um"),
             _ => None,
         },
-        ("Jpeg2000", 0x0009) => match value { // DisplayXResolutionUnit
+        ("Jpeg2000", 0x0009) => match value {
+            // DisplayXResolutionUnit
             -3 => Some("km"),
             -2 => Some("100 m"),
             -1 => Some("10 m"),
@@ -4788,7 +5273,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("um"),
             _ => None,
         },
-        ("Jpeg2000", 0x000B) => match value { // Compression
+        ("Jpeg2000", 0x000B) => match value {
+            // Compression
             0 => Some("Uncompressed"),
             1 => Some("Modified Huffman"),
             2 => Some("Modified READ"),
@@ -4800,69 +5286,81 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("JBIG2"),
             _ => None,
         },
-        ("Kodak", 0x0009) => match value { // Quality
+        ("Kodak", 0x0009) => match value {
+            // Quality
             1 => Some("Fine"),
             2 => Some("Normal"),
             _ => None,
         },
-        ("Kodak", 0x000A) => match value { // BurstMode
+        ("Kodak", 0x000A) => match value {
+            // BurstMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Kodak", 0x001A) => match value { // WhiteBalance
+        ("Kodak", 0x001A) => match value {
+            // WhiteBalance
             1 => Some("Daylight"),
             2 => Some("Flash"),
             3 => Some("Tungsten"),
             _ => None,
         },
-        ("Kodak", 0x001B) => match value { // ShutterMode
+        ("Kodak", 0x001B) => match value {
+            // ShutterMode
             0 => Some("Auto"),
             8 => Some("Aperture Priority"),
             32 => Some("Manual?"),
             _ => None,
         },
-        ("Kodak", 0x001C) => match value { // MeteringMode
+        ("Kodak", 0x001C) => match value {
+            // MeteringMode
             0 => Some("Multi-segment"),
             1 => Some("Center-weighted average"),
             2 => Some("Spot"),
             _ => None,
         },
-        ("Kodak", 0x0022) => match value { // Flash
+        ("Kodak", 0x0022) => match value {
+            // Flash
             0 => Some("No Flash"),
             1 => Some("Fired"),
             _ => None,
         },
-        ("Kodak", 0x0027) => match value { // FlashMode
+        ("Kodak", 0x0027) => match value {
+            // FlashMode
             0 => Some("Auto"),
             1 => Some("On"),
             2 => Some("Off"),
             3 => Some("Red-Eye"),
             _ => None,
         },
-        ("Kodak", 0x002A) => match value { // ImageRotated
+        ("Kodak", 0x002A) => match value {
+            // ImageRotated
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Kodak", 0x002B) => match value { // Macro
+        ("Kodak", 0x002B) => match value {
+            // Macro
             0 => Some("On"),
             1 => Some("Off"),
             _ => None,
         },
-        ("Kodak", 0x0038) => match value { // FocusMode
+        ("Kodak", 0x0038) => match value {
+            // FocusMode
             0 => Some("Normal"),
             2 => Some("Macro"),
             _ => None,
         },
-        ("Kodak", 0x0040) => match value { // WhiteBalance
+        ("Kodak", 0x0040) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Flash?"),
             2 => Some("Tungsten"),
             3 => Some("Daylight"),
             _ => None,
         },
-        ("Kodak", 0x005C) => match value { // FlashMode
+        ("Kodak", 0x005C) => match value {
+            // FlashMode
             0 => Some("Auto"),
             1 => Some("Fill Flash"),
             2 => Some("Off"),
@@ -4872,12 +5370,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             64 => Some("Red-Eye?"),
             _ => None,
         },
-        ("Kodak", 0x005D) => match value { // FlashFired
+        ("Kodak", 0x005D) => match value {
+            // FlashFired
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Kodak", 0x0066) => match value { // ColorMode
+        ("Kodak", 0x0066) => match value {
+            // ColorMode
             1 => Some("B&W"),
             2 => Some("Sepia"),
             3 => Some("B&W Yellow Filter"),
@@ -4890,13 +5390,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             16384 => Some("Sepia"),
             _ => None,
         },
-        ("Kodak", 0x0203) => match value { // PictureEffect
+        ("Kodak", 0x0203) => match value {
+            // PictureEffect
             0 => Some("None"),
             3 => Some("Monochrome"),
             9 => Some("Kodachrome"),
             _ => None,
         },
-        ("Kodak", 0x0CE7) => match value { // HostSoftwareRendering
+        ("Kodak", 0x0CE7) => match value {
+            // HostSoftwareRendering
             0 => Some("Normal (sRGB)"),
             1 => Some("Linear (camera RGB)"),
             2 => Some("Pro Photo RGB"),
@@ -4904,34 +5406,39 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Other Profile"),
             _ => None,
         },
-        ("Kodak", 0x0DB8) => match value { // FinishFileType
+        ("Kodak", 0x0DB8) => match value {
+            // FinishFileType
             0 => Some("JPEG Best"),
             1 => Some("JPEG Better"),
             2 => Some("JPEG Good"),
             3 => Some("TIFF RGB"),
             _ => None,
         },
-        ("Kodak", 0x0DB9) => match value { // FinishResolution
+        ("Kodak", 0x0DB9) => match value {
+            // FinishResolution
             0 => Some("100%"),
             1 => Some("67%"),
             2 => Some("50%"),
             3 => Some("25%"),
             _ => None,
         },
-        ("Kodak", 0x0DBA) => match value { // FinishNoise
+        ("Kodak", 0x0DBA) => match value {
+            // FinishNoise
             0 => Some("Normal"),
             1 => Some("Strong"),
             2 => Some("Low"),
             _ => None,
         },
-        ("Kodak", 0x0DBB) => match value { // FinishSharpening
+        ("Kodak", 0x0DBB) => match value {
+            // FinishSharpening
             0 => Some("None"),
             1 => Some("High"),
             2 => Some("Medium"),
             3 => Some("Low"),
             _ => None,
         },
-        ("Kodak", 0x0DBC) => match value { // FinishLook
+        ("Kodak", 0x0DBC) => match value {
+            // FinishLook
             0 => Some("Product"),
             1 => Some("Portrait"),
             2 => Some("Product Reduced"),
@@ -4951,22 +5458,26 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             17 => Some("DCS Sepia 2"),
             _ => None,
         },
-        ("Kodak", 0x0DBD) => match value { // FinishExposure
+        ("Kodak", 0x0DBD) => match value {
+            // FinishExposure
             0 => Some("Yes"),
             1 => Some("No"),
             _ => None,
         },
-        ("Kodak", 0x0E60) => match value { // CFAInterpolationAlgorithm
+        ("Kodak", 0x0E60) => match value {
+            // CFAInterpolationAlgorithm
             0 => Some("AH2"),
             1 => Some("Karnak"),
             _ => None,
         },
-        ("Kodak", 0x0E61) => match value { // CFAInterpolationMetric
+        ("Kodak", 0x0E61) => match value {
+            // CFAInterpolationMetric
             0 => Some("Linear12"),
             1 => Some("KLUT12"),
             _ => None,
         },
-        ("Kodak", 0x6002) => match value { // SceneModeUsed
+        ("Kodak", 0x6002) => match value {
+            // SceneModeUsed
             0 => Some("Program"),
             2 => Some("Aperture Priority"),
             3 => Some("Shutter Priority"),
@@ -4990,7 +5501,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             28 => Some("Panorama"),
             _ => None,
         },
-        ("Kodak", 0xF002) => match value { // SceneModeUsed
+        ("Kodak", 0xF002) => match value {
+            // SceneModeUsed
             0 => Some("Program"),
             2 => Some("Aperture Priority"),
             3 => Some("Shutter Priority"),
@@ -5014,7 +5526,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             28 => Some("Panorama"),
             _ => None,
         },
-        ("Kodak", 0xFA02) => match value { // SceneMode
+        ("Kodak", 0xFA02) => match value {
+            // SceneMode
             1 => Some("Sport"),
             3 => Some("Portrait"),
             4 => Some("Landscape"),
@@ -5040,7 +5553,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             34 => Some("High ISO"),
             _ => None,
         },
-        ("Kodak", 0xFA0D) => match value { // WhiteBalance
+        ("Kodak", 0xFA0D) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Fluorescent"),
             2 => Some("Tungsten"),
@@ -5048,7 +5562,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Shade"),
             _ => None,
         },
-        ("LNK", 0x0003) => match value { // SortIndex
+        ("LNK", 0x0003) => match value {
+            // SortIndex
             0 => Some("Internet Explorer"),
             66 => Some("Libraries"),
             68 => Some("Users"),
@@ -5064,12 +5579,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             128 => Some("My Games"),
             _ => None,
         },
-        ("LNK", 0x0006) => match value { // Item00Type
+        ("LNK", 0x0006) => match value {
+            // Item00Type
             271654917 => Some("MTPType2"),
             603896814 => Some("PropertyStoreGUID"),
             _ => None,
         },
-        ("LNK", 0x0008) => match value { // ControlPanelCategory
+        ("LNK", 0x0008) => match value {
+            // ControlPanelCategory
             0 => Some("All Control Panel Items"),
             1 => Some("Appearance and Personalization"),
             2 => Some("Hardware and Sound"),
@@ -5084,7 +5601,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("Mobile PC"),
             _ => None,
         },
-        ("LNK", 0x000C) => match value { // TargetFileAttributes
+        ("LNK", 0x000C) => match value {
+            // TargetFileAttributes
             0 => Some("Read-only"),
             1 => Some("Hidden"),
             2 => Some("System"),
@@ -5102,14 +5620,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             14 => Some("Encrypted"),
             _ => None,
         },
-        ("LNK", 0x0010) => match value { // OperatingSystem
+        ("LNK", 0x0010) => match value {
+            // OperatingSystem
             20 => Some("Windows XP, 2003"),
             38 => Some("Windows Vista"),
             42 => Some("Windows 2008, 7, 8"),
             46 => Some("Windows 8.1, 10"),
             _ => None,
         },
-        ("LNK", 0x0014) => match value { // Flags
+        ("LNK", 0x0014) => match value {
+            // Flags
             0 => Some("IDList"),
             1 => Some("LinkInfo"),
             2 => Some("Description"),
@@ -5137,7 +5657,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             26 => Some("KeepLocalIDList"),
             _ => None,
         },
-        ("LNK", 0x0018) => match value { // FileAttributes
+        ("LNK", 0x0018) => match value {
+            // FileAttributes
             0 => Some("Read-only"),
             1 => Some("Hidden"),
             2 => Some("System"),
@@ -5155,7 +5676,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             14 => Some("Encrypted"),
             _ => None,
         },
-        ("LNK", 0x0024) => match value { // FontFamily
+        ("LNK", 0x0024) => match value {
+            // FontFamily
             0 => Some("Don"),
             1 => Some("Roman"),
             2 => Some("Swiss"),
@@ -5164,7 +5686,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Decorative"),
             _ => None,
         },
-        ("LNK", 0x003C) => match value { // RunWindow
+        ("LNK", 0x003C) => match value {
+            // RunWindow
             0 => Some("Hide"),
             1 => Some("Normal"),
             2 => Some("Show Minimized"),
@@ -5178,7 +5701,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             10 => Some("Show Default"),
             _ => None,
         },
-        ("MISB", 0x0001) => match value { // SecurityClassification
+        ("MISB", 0x0001) => match value {
+            // SecurityClassification
             1 => Some("Unclassified"),
             2 => Some("Restricted"),
             3 => Some("Confidential"),
@@ -5186,7 +5710,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Top Secret"),
             _ => None,
         },
-        ("MISB", 0x0002) => match value { // ClassifyingCountryCodeMethod
+        ("MISB", 0x0002) => match value {
+            // ClassifyingCountryCodeMethod
             1 => Some("ISO-3166 Two Letter"),
             2 => Some("ISO-3166 Three Letter"),
             3 => Some("FIPS 10-4 Two Letter"),
@@ -5203,7 +5728,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             16 => Some("GENC Mixed"),
             _ => None,
         },
-        ("MISB", 0x000C) => match value { // ObjectCountryCodingMethod
+        ("MISB", 0x000C) => match value {
+            // ObjectCountryCodingMethod
             1 => Some("ISO-3166 Two Letter"),
             2 => Some("ISO-3166 Three Letter"),
             3 => Some("ISO-3166 Numeric"),
@@ -5217,13 +5743,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             64 => Some("GENC AdminSub"),
             _ => None,
         },
-        ("MISB", 0x0022) => match value { // IcingDetected
+        ("MISB", 0x0022) => match value {
+            // IcingDetected
             0 => Some("n/a"),
             1 => Some("No"),
             2 => Some("Yes"),
             _ => None,
         },
-        ("MISB", 0x002F) => match value { // GenericFlagData01
+        ("MISB", 0x002F) => match value {
+            // GenericFlagData01
             0 => Some("Laser range"),
             1 => Some("Auto-track"),
             2 => Some("IR polarity black"),
@@ -5232,7 +5760,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Image invalid"),
             _ => None,
         },
-        ("MISB", 0x003F) => match value { // SensorFieldOfViewName
+        ("MISB", 0x003F) => match value {
+            // SensorFieldOfViewName
             0 => Some("Ultranarrow"),
             1 => Some("Narrow"),
             2 => Some("Medium"),
@@ -5243,7 +5772,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("4x Ultranarrow"),
             _ => None,
         },
-        ("MISB", 0x004D) => match value { // OperationalMode
+        ("MISB", 0x004D) => match value {
+            // OperationalMode
             0 => Some("Other"),
             1 => Some("Operational"),
             2 => Some("Training"),
@@ -5251,23 +5781,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Maintenance"),
             _ => None,
         },
-        ("MNG", 0x0000) => match value { // DeltaType
+        ("MNG", 0x0000) => match value {
+            // DeltaType
             0 => Some("Absolute"),
             1 => Some("Relative"),
             _ => None,
         },
-        ("MNG", 0x0001) => match value { // IterationEndAction
+        ("MNG", 0x0001) => match value {
+            // IterationEndAction
             0 => Some("Show Last Frame"),
             1 => Some("Display Nothing"),
             2 => Some("Show First Frame"),
             _ => None,
         },
-        ("MNG", 0x0002) => match value { // FillMethod
+        ("MNG", 0x0002) => match value {
+            // FillMethod
             0 => Some("Bit Replication"),
             1 => Some("Zero Fill"),
             _ => None,
         },
-        ("MNG", 0x0003) => match value { // DeltaType
+        ("MNG", 0x0003) => match value {
+            // DeltaType
             0 => Some("Full Replacement"),
             1 => Some("Pixel Addition"),
             2 => Some("Alpha Addition"),
@@ -5278,12 +5812,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("No Change"),
             _ => None,
         },
-        ("MNG", 0x0004) => match value { // DeltaType
+        ("MNG", 0x0004) => match value {
+            // DeltaType
             0 => Some("Absolute"),
             1 => Some("Relative"),
             _ => None,
         },
-        ("MNG", 0x0005) => match value { // TerminationCondition
+        ("MNG", 0x0005) => match value {
+            // TerminationCondition
             0 => Some("Deterministic, not cacheable"),
             1 => Some("Decoder discretion, not cacheable"),
             2 => Some("User discretion, not cacheable"),
@@ -5294,46 +5830,54 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("External signal, cacheable"),
             _ => None,
         },
-        ("MNG", 0x0006) => match value { // MandatoryBackground
+        ("MNG", 0x0006) => match value {
+            // MandatoryBackground
             0 => Some("Color and Image Advisory"),
             1 => Some("Color Mandatory, Image Advisory"),
             2 => Some("Color Advisory, Image Mandatory"),
             3 => Some("Color and Image Mandatory"),
             _ => None,
         },
-        ("MNG", 0x0007) => match value { // LocalDeltaType
+        ("MNG", 0x0007) => match value {
+            // LocalDeltaType
             0 => Some("Absolute"),
             1 => Some("Relative"),
             _ => None,
         },
-        ("MNG", 0x0008) => match value { // ColorType
+        ("MNG", 0x0008) => match value {
+            // ColorType
             8 => Some("Gray"),
             10 => Some("Color"),
             12 => Some("Gray Alpha"),
             14 => Some("Color Alpha"),
             _ => None,
         },
-        ("MNG", 0x0009) => match value { // BackgroundTiling
+        ("MNG", 0x0009) => match value {
+            // BackgroundTiling
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("MNG", 0x000B) => match value { // Interlace
+        ("MNG", 0x000B) => match value {
+            // Interlace
             0 => Some("Sequential"),
             8 => Some("Progressive"),
             _ => None,
         },
-        ("MNG", 0x000C) => match value { // Interlace
+        ("MNG", 0x000C) => match value {
+            // Interlace
             0 => Some("Noninterlaced"),
             1 => Some("Adam7 Interlace"),
             _ => None,
         },
-        ("MNG", 0x000D) => match value { // AlphaCompression
+        ("MNG", 0x000D) => match value {
+            // AlphaCompression
             0 => Some("MNG Grayscale IDAT"),
             8 => Some("JNG 8-bit Grayscale JDAA"),
             _ => None,
         },
-        ("MNG", 0x0011) => match value { // YMethod
+        ("MNG", 0x0011) => match value {
+            // YMethod
             0 => Some("No Magnification"),
             1 => Some("Pixel Replication"),
             2 => Some("Linear Interpolation"),
@@ -5342,17 +5886,20 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Color Closest Pixel and Alpha Linear Interpolation"),
             _ => None,
         },
-        ("MNG", 0x0018) => match value { // BoundaryOrigin
+        ("MNG", 0x0018) => match value {
+            // BoundaryOrigin
             0 => Some("Desination Origin"),
             1 => Some("Target Origin"),
             _ => None,
         },
-        ("MOI", 0x0084) => match value { // AudioCodec
+        ("MOI", 0x0084) => match value {
+            // AudioCodec
             193 => Some("AC3"),
             16385 => Some("MPEG"),
             _ => None,
         },
-        ("MPEG", 0x0009) => match value { // LameMethod
+        ("MPEG", 0x0009) => match value {
+            // LameMethod
             1 => Some("CBR"),
             2 => Some("ABR"),
             3 => Some("VBR (old/rh)"),
@@ -5363,7 +5910,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("ABR (2-pass)"),
             _ => None,
         },
-        ("MPEG", 0x0018) => match value { // LameStereoMode
+        ("MPEG", 0x0018) => match value {
+            // LameStereoMode
             0 => Some("Mono"),
             1 => Some("Stereo"),
             2 => Some("Dual Channels"),
@@ -5373,13 +5921,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Intensity Stereo"),
             _ => None,
         },
-        ("MPF", 0x0001) => match value { // MPImageFlags
+        ("MPF", 0x0001) => match value {
+            // MPImageFlags
             2 => Some("Representative image"),
             3 => Some("Dependent child image"),
             4 => Some("Dependent parent image"),
             _ => None,
         },
-        ("MPF", 0x0003) => match value { // MPImageType
+        ("MPF", 0x0003) => match value {
+            // MPImageType
             0 => Some("Undefined"),
             65537 => Some("Large Thumbnail (VGA equivalent)"),
             65538 => Some("Large Thumbnail (full HD equivalent)"),
@@ -5394,7 +5944,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             327680 => Some("Gain Map Image"),
             _ => None,
         },
-        ("MRC", 0x0003) => match value { // ImageMode
+        ("MRC", 0x0003) => match value {
+            // ImageMode
             0 => Some("8-bit signed integer"),
             1 => Some("16-bit signed integer"),
             2 => Some("32-bit signed real"),
@@ -5403,46 +5954,54 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("16-bit unsigned integer"),
             _ => None,
         },
-        ("MRC", 0x0010) => match value { // ImageWidthAxis
+        ("MRC", 0x0010) => match value {
+            // ImageWidthAxis
             1 => Some("X"),
             2 => Some("Y"),
             3 => Some("Z"),
             _ => None,
         },
-        ("MRC", 0x0011) => match value { // ImageHeightAxis
+        ("MRC", 0x0011) => match value {
+            // ImageHeightAxis
             1 => Some("X"),
             2 => Some("Y"),
             3 => Some("Z"),
             _ => None,
         },
-        ("MRC", 0x0012) => match value { // ImageDepthAxis
+        ("MRC", 0x0012) => match value {
+            // ImageDepthAxis
             1 => Some("X"),
             2 => Some("Y"),
             3 => Some("Z"),
             _ => None,
         },
-        ("MRC", 0x00F4) => match value { // InstrumentMode
+        ("MRC", 0x00F4) => match value {
+            // InstrumentMode
             1 => Some("TEM"),
             2 => Some("STEM"),
             _ => None,
         },
-        ("MRC", 0x00F8) => match value { // ProjectionMode
+        ("MRC", 0x00F8) => match value {
+            // ProjectionMode
             1 => Some("Diffraction"),
             2 => Some("Imaging"),
             _ => None,
         },
-        ("MRC", 0x011C) => match value { // ProbeMode
+        ("MRC", 0x011C) => match value {
+            // ProbeMode
             1 => Some("Nano"),
             2 => Some("Micro"),
             _ => None,
         },
-        ("MRC", 0x0318) => match value { // ScanModeEnumeration
+        ("MRC", 0x0318) => match value {
+            // ScanModeEnumeration
             0 => Some("Other"),
             1 => Some("Raster"),
             2 => Some("Serpentine"),
             _ => None,
         },
-        ("Matroska", 0x0003) => match value { // TrackType
+        ("Matroska", 0x0003) => match value {
+            // TrackType
             1 => Some("Video"),
             2 => Some("Audio"),
             3 => Some("Complex"),
@@ -5452,45 +6011,53 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32 => Some("Control"),
             _ => None,
         },
-        ("Matroska", 0x0008) => match value { // TrackDefault
+        ("Matroska", 0x0008) => match value {
+            // TrackDefault
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Matroska", 0x001A) => match value { // VideoScanType
+        ("Matroska", 0x001A) => match value {
+            // VideoScanType
             0 => Some("Undetermined"),
             1 => Some("Interlaced"),
             2 => Some("Progressive"),
             _ => None,
         },
-        ("Matroska", 0x001C) => match value { // TrackLacing
+        ("Matroska", 0x001C) => match value {
+            // TrackLacing
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Matroska", 0x002A) => match value { // CodecDecodeAll
+        ("Matroska", 0x002A) => match value {
+            // CodecDecodeAll
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Matroska", 0x0039) => match value { // TrackUsed
+        ("Matroska", 0x0039) => match value {
+            // TrackUsed
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Matroska", 0x0254) => match value { // ContentCompressionAlgorithm
+        ("Matroska", 0x0254) => match value {
+            // ContentCompressionAlgorithm
             0 => Some("zlib"),
             1 => Some("bzlib"),
             2 => Some("lzo1x"),
             3 => Some("Header Stripping"),
             _ => None,
         },
-        ("Matroska", 0x0484) => match value { // TagDefault
+        ("Matroska", 0x0484) => match value {
+            // TagDefault
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Matroska", 0x07E1) => match value { // ContentEncryptionAlgorithm
+        ("Matroska", 0x07E1) => match value {
+            // ContentEncryptionAlgorithm
             0 => Some("Not Encrypted"),
             1 => Some("DES"),
             2 => Some("3DES"),
@@ -5499,23 +6066,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("AES"),
             _ => None,
         },
-        ("Matroska", 0x07E5) => match value { // ContentSignatureAlgorithm
+        ("Matroska", 0x07E5) => match value {
+            // ContentSignatureAlgorithm
             0 => Some("Not Signed"),
             1 => Some("RSA"),
             _ => None,
         },
-        ("Matroska", 0x07E6) => match value { // ContentSignatureHashAlgorithm
+        ("Matroska", 0x07E6) => match value {
+            // ContentSignatureHashAlgorithm
             0 => Some("Not Signed"),
             1 => Some("SHA1-160"),
             2 => Some("MD5"),
             _ => None,
         },
-        ("Matroska", 0x1033) => match value { // ContentEncodingType
+        ("Matroska", 0x1033) => match value {
+            // ContentEncodingType
             0 => Some("Compression"),
             1 => Some("Encryption"),
             _ => None,
         },
-        ("Matroska", 0x14B2) => match value { // DisplayUnit
+        ("Matroska", 0x14B2) => match value {
+            // DisplayUnit
             0 => Some("Pixels"),
             1 => Some("cm"),
             2 => Some("inches"),
@@ -5523,18 +6094,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Unknown"),
             _ => None,
         },
-        ("Matroska", 0x14B3) => match value { // AspectRatioType
+        ("Matroska", 0x14B3) => match value {
+            // AspectRatioType
             0 => Some("Free Resizing"),
             1 => Some("Keep Aspect Ratio"),
             2 => Some("Fixed"),
             _ => None,
         },
-        ("Matroska", 0x15AA) => match value { // TrackForced
+        ("Matroska", 0x15AA) => match value {
+            // TrackForced
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Matroska", 0x23C3) => match value { // ChapterPhysicalEquivalent
+        ("Matroska", 0x23C3) => match value {
+            // ChapterPhysicalEquivalent
             10 => Some("Index"),
             20 => Some("Track"),
             30 => Some("Session"),
@@ -5544,12 +6118,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             70 => Some("Set / Package"),
             _ => None,
         },
-        ("Matroska", 0x26BF) => match value { // TrackTranslateCodec
+        ("Matroska", 0x26BF) => match value {
+            // TrackTranslateCodec
             0 => Some("Matroska Script"),
             1 => Some("DVD Menu"),
             _ => None,
         },
-        ("Matroska", 0x28CA) => match value { // TargetTypeValue
+        ("Matroska", 0x28CA) => match value {
+            // TargetTypeValue
             10 => Some("Shot"),
             20 => Some("Scene/Subtrack"),
             30 => Some("Chapter/Track"),
@@ -5559,37 +6135,43 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             70 => Some("Collection"),
             _ => None,
         },
-        ("Matroska", 0x2922) => match value { // ChapterProcessTime
+        ("Matroska", 0x2922) => match value {
+            // ChapterProcessTime
             0 => Some("For Duration of Chapter"),
             1 => Some("Before Chapter"),
             2 => Some("After Chapter"),
             _ => None,
         },
-        ("Matroska", 0x2955) => match value { // ChapterProcessCodecID
+        ("Matroska", 0x2955) => match value {
+            // ChapterProcessCodecID
             0 => Some("Matroska"),
             1 => Some("DVD"),
             _ => None,
         },
-        ("Matroska", 0x29BF) => match value { // ChapterTranslateCodec
+        ("Matroska", 0x29BF) => match value {
+            // ChapterTranslateCodec
             0 => Some("Matroska Script"),
             1 => Some("DVD Menu"),
             _ => None,
         },
-        ("Matroska", 0x7671) => match value { // ProjectionType
+        ("Matroska", 0x7671) => match value {
+            // ProjectionType
             0 => Some("Rectangular"),
             1 => Some("Equirectangular"),
             2 => Some("Cubemap"),
             3 => Some("Mesh"),
             _ => None,
         },
-        ("Microsoft", 0x0001) => match value { // PanoramicStitchCameraMotion
+        ("Microsoft", 0x0001) => match value {
+            // PanoramicStitchCameraMotion
             2 => Some("Rigid Scale"),
             3 => Some("Affine"),
             4 => Some("3D Rotation"),
             5 => Some("Homography"),
             _ => None,
         },
-        ("Microsoft", 0x0002) => match value { // PanoramicStitchMapType
+        ("Microsoft", 0x0002) => match value {
+            // PanoramicStitchMapType
             0 => Some("Perspective"),
             1 => Some("Horizontal Cylindrical"),
             2 => Some("Horizontal Spherical"),
@@ -5597,7 +6179,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             258 => Some("Vertical Spherical"),
             _ => None,
         },
-        ("Minolta", 0x0000) => match value { // ExposureMode
+        ("Minolta", 0x0000) => match value {
+            // ExposureMode
             0 => Some("Program"),
             1 => Some("Aperture Priority"),
             2 => Some("Shutter Priority"),
@@ -5613,7 +6196,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4227 => Some("Macro"),
             _ => None,
         },
-        ("Minolta", 0x0001) => match value { // AFSensorActive
+        ("Minolta", 0x0001) => match value {
+            // AFSensorActive
             0 => Some("Top-right"),
             1 => Some("Bottom-right"),
             2 => Some("Bottom"),
@@ -5624,13 +6208,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Bottom-left"),
             _ => None,
         },
-        ("Minolta", 0x0002) => match value { // MinoltaImageSize
+        ("Minolta", 0x0002) => match value {
+            // MinoltaImageSize
             0 => Some("Large"),
             1 => Some("Medium"),
             2 => Some("Small"),
             _ => None,
         },
-        ("Minolta", 0x0003) => match value { // MinoltaQuality
+        ("Minolta", 0x0003) => match value {
+            // MinoltaQuality
             0 => Some("RAW"),
             16 => Some("Fine"),
             32 => Some("Normal"),
@@ -5638,7 +6224,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             48 => Some("Economy"),
             _ => None,
         },
-        ("Minolta", 0x0004) => match value { // WhiteBalance
+        ("Minolta", 0x0004) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Shade"),
@@ -5649,12 +6236,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             512 => Some("Manual"),
             _ => None,
         },
-        ("Minolta", 0x0005) => match value { // HighSpeedSync
+        ("Minolta", 0x0005) => match value {
+            // HighSpeedSync
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x0006) => match value { // DriveMode
+        ("Minolta", 0x0006) => match value {
+            // DriveMode
             0 => Some("Single"),
             1 => Some("Continuous"),
             2 => Some("Self-timer"),
@@ -5664,13 +6253,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("HS continuous"),
             _ => None,
         },
-        ("Minolta", 0x0007) => match value { // MeteringMode
+        ("Minolta", 0x0007) => match value {
+            // MeteringMode
             0 => Some("Multi-segment"),
             1 => Some("Center-weighted average"),
             2 => Some("Spot"),
             _ => None,
         },
-        ("Minolta", 0x000A) => match value { // DriveMode2
+        ("Minolta", 0x000A) => match value {
+            // DriveMode2
             0 => Some("Self-timer 10 sec"),
             1 => Some("Continuous"),
             4 => Some("Self-timer 2 sec"),
@@ -5683,7 +6274,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             1795 => Some("Continuous Bracketing High"),
             _ => None,
         },
-        ("Minolta", 0x000B) => match value { // WhiteBalance
+        ("Minolta", 0x000B) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -5695,7 +6287,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             512 => Some("Manual"),
             _ => None,
         },
-        ("Minolta", 0x000C) => match value { // FocusMode
+        ("Minolta", 0x000C) => match value {
+            // FocusMode
             0 => Some("AF-S"),
             1 => Some("AF-C"),
             4 => Some("AF-A"),
@@ -5703,7 +6296,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("DMF"),
             _ => None,
         },
-        ("Minolta", 0x000D) => match value { // AFPointSelected
+        ("Minolta", 0x000D) => match value {
+            // AFPointSelected
             1 => Some("Center"),
             2 => Some("Top"),
             3 => Some("Top-right"),
@@ -5715,7 +6309,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("Top-left"),
             _ => None,
         },
-        ("Minolta", 0x000E) => match value { // DriveMode
+        ("Minolta", 0x000E) => match value {
+            // DriveMode
             0 => Some("Self-timer 10 sec"),
             1 => Some("Continuous"),
             2 => Some("Single-frame Exposure Bracketing"),
@@ -5726,43 +6321,50 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("White Balance Bracketing High"),
             _ => None,
         },
-        ("Minolta", 0x000F) => match value { // FlashMode
+        ("Minolta", 0x000F) => match value {
+            // FlashMode
             0 => Some("Auto"),
             2 => Some("Rear Sync"),
             3 => Some("Wireless"),
             4 => Some("Fill Flash"),
             _ => None,
         },
-        ("Minolta", 0x0010) => match value { // Rotation
+        ("Minolta", 0x0010) => match value {
+            // Rotation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 270 CW"),
             2 => Some("Rotate 90 CW"),
             _ => None,
         },
-        ("Minolta", 0x0012) => match value { // MeteringMode
+        ("Minolta", 0x0012) => match value {
+            // MeteringMode
             0 => Some("Multi-segment"),
             1 => Some("Center-weighted average"),
             2 => Some("Spot"),
             _ => None,
         },
-        ("Minolta", 0x0013) => match value { // ISOSetting
+        ("Minolta", 0x0013) => match value {
+            // ISOSetting
             0 => Some("Auto"),
             174 => Some("80 (Zone Matching Low)"),
             184 => Some("200 (Zone Matching High)"),
             _ => None,
         },
-        ("Minolta", 0x0014) => match value { // ImageStabilizationSetting
+        ("Minolta", 0x0014) => match value {
+            // ImageStabilizationSetting
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x0015) => match value { // DynamicRangeOptimizerMode
+        ("Minolta", 0x0015) => match value {
+            // DynamicRangeOptimizerMode
             0 => Some("Off"),
             1 => Some("Standard"),
             2 => Some("Advanced"),
             _ => None,
         },
-        ("Minolta", 0x0016) => match value { // ColorMode
+        ("Minolta", 0x0016) => match value {
+            // ColorMode
             0 => Some("Standard"),
             1 => Some("Vivid"),
             2 => Some("Portrait"),
@@ -5773,28 +6375,33 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Adobe RGB"),
             _ => None,
         },
-        ("Minolta", 0x0017) => match value { // ColorSpace
+        ("Minolta", 0x0017) => match value {
+            // ColorSpace
             0 => Some("sRGB"),
             2 => Some("B&W"),
             5 => Some("Adobe RGB"),
             _ => None,
         },
-        ("Minolta", 0x001A) => match value { // FileNumberMemory
+        ("Minolta", 0x001A) => match value {
+            // FileNumberMemory
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x001C) => match value { // FlashMetering
+        ("Minolta", 0x001C) => match value {
+            // FlashMetering
             0 => Some("ADI (Advanced Distance Integration)"),
             1 => Some("Pre-flash TTL"),
             _ => None,
         },
-        ("Minolta", 0x001D) => match value { // PrioritySetupShutterRelease
+        ("Minolta", 0x001D) => match value {
+            // PrioritySetupShutterRelease
             0 => Some("AF"),
             1 => Some("Release"),
             _ => None,
         },
-        ("Minolta", 0x001E) => match value { // DriveMode
+        ("Minolta", 0x001E) => match value {
+            // DriveMode
             0 => Some("Single Frame"),
             1 => Some("Continuous"),
             2 => Some("Self-timer"),
@@ -5803,27 +6410,32 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("White Balance Bracketing"),
             _ => None,
         },
-        ("Minolta", 0x001F) => match value { // SelfTimerTime
+        ("Minolta", 0x001F) => match value {
+            // SelfTimerTime
             0 => Some("10 s"),
             4 => Some("2 s"),
             _ => None,
         },
-        ("Minolta", 0x0020) => match value { // ContinuousBracketing
+        ("Minolta", 0x0020) => match value {
+            // ContinuousBracketing
             771 => Some("Low"),
             1795 => Some("High"),
             _ => None,
         },
-        ("Minolta", 0x0021) => match value { // SingleFrameBracketing
+        ("Minolta", 0x0021) => match value {
+            // SingleFrameBracketing
             770 => Some("Low"),
             1794 => Some("High"),
             _ => None,
         },
-        ("Minolta", 0x0022) => match value { // WhiteBalanceBracketing
+        ("Minolta", 0x0022) => match value {
+            // WhiteBalanceBracketing
             8 => Some("Low"),
             9 => Some("High"),
             _ => None,
         },
-        ("Minolta", 0x0023) => match value { // WhiteBalanceSetting
+        ("Minolta", 0x0023) => match value {
+            // WhiteBalanceSetting
             0 => Some("Auto"),
             1 => Some("Preset"),
             2 => Some("Custom"),
@@ -5833,7 +6445,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32771 => Some("Color Temperature/Color Filter"),
             _ => None,
         },
-        ("Minolta", 0x0024) => match value { // PresetWhiteBalance
+        ("Minolta", 0x0024) => match value {
+            // PresetWhiteBalance
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
             3 => Some("Shade"),
@@ -5842,23 +6455,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Flash"),
             _ => None,
         },
-        ("Minolta", 0x0025) => match value { // ColorTemperatureSetting
+        ("Minolta", 0x0025) => match value {
+            // ColorTemperatureSetting
             0 => Some("Temperature"),
             2 => Some("Color Filter"),
             _ => None,
         },
-        ("Minolta", 0x0026) => match value { // CustomWBSetting
+        ("Minolta", 0x0026) => match value {
+            // CustomWBSetting
             0 => Some("Setup"),
             1 => Some("Recall"),
             _ => None,
         },
-        ("Minolta", 0x0027) => match value { // DynamicRangeOptimizerSetting
+        ("Minolta", 0x0027) => match value {
+            // DynamicRangeOptimizerSetting
             0 => Some("Off"),
             1 => Some("Standard"),
             2 => Some("Advanced"),
             _ => None,
         },
-        ("Minolta", 0x0028) => match value { // ColorMode
+        ("Minolta", 0x0028) => match value {
+            // ColorMode
             0 => Some("Natural color"),
             1 => Some("Black & White"),
             2 => Some("Vivid color"),
@@ -5866,23 +6483,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Adobe RGB"),
             _ => None,
         },
-        ("Minolta", 0x002A) => match value { // ExposureCompensationMode
+        ("Minolta", 0x002A) => match value {
+            // ExposureCompensationMode
             0 => Some("Ambient and Flash"),
             1 => Some("Ambient Only"),
             _ => None,
         },
-        ("Minolta", 0x002B) => match value { // InternalFlash
+        ("Minolta", 0x002B) => match value {
+            // InternalFlash
             0 => Some("No"),
             1 => Some("Fired"),
             _ => None,
         },
-        ("Minolta", 0x002C) => match value { // WhiteBalanceBracketing
+        ("Minolta", 0x002C) => match value {
+            // WhiteBalanceBracketing
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("High"),
             _ => None,
         },
-        ("Minolta", 0x002F) => match value { // ColorSpace
+        ("Minolta", 0x002F) => match value {
+            // ColorSpace
             0 => Some("Natural sRGB"),
             1 => Some("Natural+ sRGB"),
             2 => Some("Monochrome"),
@@ -5890,12 +6511,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Adobe RGB"),
             _ => None,
         },
-        ("Minolta", 0x0030) => match value { // FocusMode
+        ("Minolta", 0x0030) => match value {
+            // FocusMode
             0 => Some("AF"),
             1 => Some("MF"),
             _ => None,
         },
-        ("Minolta", 0x0031) => match value { // FlashFunction
+        ("Minolta", 0x0031) => match value {
+            // FlashFunction
             0 => Some("No flash"),
             768 => Some("Built-in flash"),
             4613 => Some("Manual"),
@@ -5908,20 +6531,23 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6030 => Some("HSS"),
             _ => None,
         },
-        ("Minolta", 0x0032) => match value { // DECPosition
+        ("Minolta", 0x0032) => match value {
+            // DECPosition
             0 => Some("Exposure"),
             1 => Some("Contrast"),
             2 => Some("Saturation"),
             3 => Some("Filter"),
             _ => None,
         },
-        ("Minolta", 0x0033) => match value { // AFAreaMode
+        ("Minolta", 0x0033) => match value {
+            // AFAreaMode
             0 => Some("Wide"),
             1 => Some("Local"),
             2 => Some("Spot"),
             _ => None,
         },
-        ("Minolta", 0x0034) => match value { // ExposureMode
+        ("Minolta", 0x0034) => match value {
+            // ExposureMode
             0 => Some("Program"),
             1 => Some("Aperture Priority"),
             2 => Some("Shutter Priority"),
@@ -5937,7 +6563,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4227 => Some("Macro"),
             _ => None,
         },
-        ("Minolta", 0x0036) => match value { // ColorMode
+        ("Minolta", 0x0036) => match value {
+            // ColorMode
             0 => Some("Standard"),
             1 => Some("Vivid"),
             2 => Some("Portrait"),
@@ -5948,114 +6575,135 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Adobe RGB"),
             _ => None,
         },
-        ("Minolta", 0x0037) => match value { // CustomWBError
+        ("Minolta", 0x0037) => match value {
+            // CustomWBError
             0 => Some("OK"),
             1 => Some("Error"),
             _ => None,
         },
-        ("Minolta", 0x003B) => match value { // SonyImageSize
+        ("Minolta", 0x003B) => match value {
+            // SonyImageSize
             0 => Some("Standard"),
             1 => Some("Medium"),
             2 => Some("Small"),
             _ => None,
         },
-        ("Minolta", 0x003C) => match value { // SonyQuality
+        ("Minolta", 0x003C) => match value {
+            // SonyQuality
             0 => Some("RAW"),
             32 => Some("Fine"),
             34 => Some("RAW + JPEG"),
             48 => Some("Standard"),
             _ => None,
         },
-        ("Minolta", 0x003E) => match value { // InstantPlaybackSetup
+        ("Minolta", 0x003E) => match value {
+            // InstantPlaybackSetup
             0 => Some("Image and Information"),
             1 => Some("Image Only"),
             3 => Some("Image and Histogram"),
             _ => None,
         },
-        ("Minolta", 0x003F) => match value { // NoiseReduction
+        ("Minolta", 0x003F) => match value {
+            // NoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x0040) => match value { // EyeStartAF
+        ("Minolta", 0x0040) => match value {
+            // EyeStartAF
             0 => Some("On"),
             1 => Some("Off"),
             _ => None,
         },
-        ("Minolta", 0x0041) => match value { // RedEyeReduction
+        ("Minolta", 0x0041) => match value {
+            // RedEyeReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x0042) => match value { // FlashDefault
+        ("Minolta", 0x0042) => match value {
+            // FlashDefault
             0 => Some("Auto"),
             1 => Some("Fill Flash"),
             _ => None,
         },
-        ("Minolta", 0x0043) => match value { // AutoBracketOrder
+        ("Minolta", 0x0043) => match value {
+            // AutoBracketOrder
             0 => Some("0 - +"),
             1 => Some("- 0 +"),
             _ => None,
         },
-        ("Minolta", 0x0044) => match value { // FocusHoldButton
+        ("Minolta", 0x0044) => match value {
+            // FocusHoldButton
             0 => Some("Focus Hold"),
             1 => Some("DOF Preview"),
             _ => None,
         },
-        ("Minolta", 0x0045) => match value { // AELButton
+        ("Minolta", 0x0045) => match value {
+            // AELButton
             0 => Some("Hold"),
             1 => Some("Toggle"),
             2 => Some("Spot Hold"),
             3 => Some("Spot Toggle"),
             _ => None,
         },
-        ("Minolta", 0x0046) => match value { // ControlDialSet
+        ("Minolta", 0x0046) => match value {
+            // ControlDialSet
             0 => Some("Shutter Speed"),
             1 => Some("Aperture"),
             _ => None,
         },
-        ("Minolta", 0x0047) => match value { // ExposureCompensationMode
+        ("Minolta", 0x0047) => match value {
+            // ExposureCompensationMode
             0 => Some("Ambient and Flash"),
             1 => Some("Ambient Only"),
             _ => None,
         },
-        ("Minolta", 0x0048) => match value { // AFAssist
+        ("Minolta", 0x0048) => match value {
+            // AFAssist
             0 => Some("On"),
             1 => Some("Off"),
             _ => None,
         },
-        ("Minolta", 0x0049) => match value { // CardShutterLock
+        ("Minolta", 0x0049) => match value {
+            // CardShutterLock
             0 => Some("On"),
             1 => Some("Off"),
             _ => None,
         },
-        ("Minolta", 0x004A) => match value { // LensShutterLock
+        ("Minolta", 0x004A) => match value {
+            // LensShutterLock
             0 => Some("On"),
             1 => Some("Off"),
             _ => None,
         },
-        ("Minolta", 0x004B) => match value { // AFAreaIllumination
+        ("Minolta", 0x004B) => match value {
+            // AFAreaIllumination
             0 => Some("0.3 s"),
             1 => Some("0.6 s"),
             2 => Some("Off"),
             _ => None,
         },
-        ("Minolta", 0x004C) => match value { // MonitorDisplayOff
+        ("Minolta", 0x004C) => match value {
+            // MonitorDisplayOff
             0 => Some("Automatic"),
             1 => Some("Manual"),
             _ => None,
         },
-        ("Minolta", 0x004D) => match value { // RecordDisplay
+        ("Minolta", 0x004D) => match value {
+            // RecordDisplay
             0 => Some("Auto Rotate"),
             1 => Some("Horizontal"),
             _ => None,
         },
-        ("Minolta", 0x004E) => match value { // PlayDisplay
+        ("Minolta", 0x004E) => match value {
+            // PlayDisplay
             0 => Some("Auto Rotate"),
             1 => Some("Manual Rotate"),
             _ => None,
         },
-        ("Minolta", 0x0050) => match value { // ExposureIndicator
+        ("Minolta", 0x0050) => match value {
+            // ExposureIndicator
             0 => Some("Not Indicated"),
             1 => Some("Under Scale"),
             119 => Some("Bottom of Scale"),
@@ -6080,7 +6728,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             254 => Some("Over Scale"),
             _ => None,
         },
-        ("Minolta", 0x0051) => match value { // AELExposureIndicator
+        ("Minolta", 0x0051) => match value {
+            // AELExposureIndicator
             0 => Some("Not Indicated"),
             1 => Some("Under Scale"),
             119 => Some("Bottom of Scale"),
@@ -6105,7 +6754,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             254 => Some("Over Scale"),
             _ => None,
         },
-        ("Minolta", 0x0052) => match value { // ExposureBracketingIndicatorLast
+        ("Minolta", 0x0052) => match value {
+            // ExposureBracketingIndicatorLast
             0 => Some("Not Indicated"),
             1 => Some("Under Scale"),
             119 => Some("Bottom of Scale"),
@@ -6130,13 +6780,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             254 => Some("Over Scale"),
             _ => None,
         },
-        ("Minolta", 0x0053) => match value { // MeteringOffScaleIndicator
+        ("Minolta", 0x0053) => match value {
+            // MeteringOffScaleIndicator
             0 => Some("Within Range"),
             1 => Some("Under/Over Range"),
             255 => Some("Out of Range"),
             _ => None,
         },
-        ("Minolta", 0x0054) => match value { // FlashExposureIndicator
+        ("Minolta", 0x0054) => match value {
+            // FlashExposureIndicator
             0 => Some("Not Indicated"),
             1 => Some("Under Scale"),
             119 => Some("Bottom of Scale"),
@@ -6161,7 +6813,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             254 => Some("Over Scale"),
             _ => None,
         },
-        ("Minolta", 0x0055) => match value { // FlashExposureIndicatorNext
+        ("Minolta", 0x0055) => match value {
+            // FlashExposureIndicatorNext
             0 => Some("Not Indicated"),
             1 => Some("Under Scale"),
             119 => Some("Bottom of Scale"),
@@ -6186,7 +6839,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             254 => Some("Over Scale"),
             _ => None,
         },
-        ("Minolta", 0x0056) => match value { // FlashExposureIndicatorLast
+        ("Minolta", 0x0056) => match value {
+            // FlashExposureIndicatorLast
             0 => Some("Not Indicated"),
             1 => Some("Under Scale"),
             119 => Some("Bottom of Scale"),
@@ -6211,47 +6865,55 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             254 => Some("Over Scale"),
             _ => None,
         },
-        ("Minolta", 0x0057) => match value { // ImageStabilization
+        ("Minolta", 0x0057) => match value {
+            // ImageStabilization
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x0058) => match value { // FocusModeSwitch
+        ("Minolta", 0x0058) => match value {
+            // FocusModeSwitch
             0 => Some("AF"),
             1 => Some("MF"),
             _ => None,
         },
-        ("Minolta", 0x0059) => match value { // FlashType
+        ("Minolta", 0x0059) => match value {
+            // FlashType
             0 => Some("Off"),
             1 => Some("Built-in"),
             2 => Some("External"),
             _ => None,
         },
-        ("Minolta", 0x005A) => match value { // Rotation
+        ("Minolta", 0x005A) => match value {
+            // Rotation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 270 CW"),
             2 => Some("Rotate 90 CW"),
             _ => None,
         },
-        ("Minolta", 0x005B) => match value { // AELock
+        ("Minolta", 0x005B) => match value {
+            // AELock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x0060) => match value { // BatteryState
+        ("Minolta", 0x0060) => match value {
+            // BatteryState
             3 => Some("Very Low"),
             4 => Some("Low"),
             5 => Some("Half Full"),
             6 => Some("Sufficient Power Remaining"),
             _ => None,
         },
-        ("Minolta", 0x0065) => match value { // Rotation
+        ("Minolta", 0x0065) => match value {
+            // Rotation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Minolta", 0x0071) => match value { // PictureFinish
+        ("Minolta", 0x0071) => match value {
+            // PictureFinish
             0 => Some("Natural"),
             1 => Some("Natural+"),
             2 => Some("Portrait"),
@@ -6264,22 +6926,26 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("Adobe RGB (ICC)"),
             _ => None,
         },
-        ("Minolta", 0x0075) => match value { // ZoneMatchingOn
+        ("Minolta", 0x0075) => match value {
+            // ZoneMatchingOn
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x00B0) => match value { // NoiseReduction
+        ("Minolta", 0x00B0) => match value {
+            // NoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x00BD) => match value { // ImageStabilization
+        ("Minolta", 0x00BD) => match value {
+            // ImageStabilization
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x0100) => match value { // SceneMode
+        ("Minolta", 0x0100) => match value {
+            // SceneMode
             0 => Some("Standard"),
             1 => Some("Portrait"),
             2 => Some("Text"),
@@ -6307,7 +6973,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Minolta", 0x0102) => match value { // MinoltaQuality
+        ("Minolta", 0x0102) => match value {
+            // MinoltaQuality
             0 => Some("Raw"),
             1 => Some("Super Fine"),
             2 => Some("Fine"),
@@ -6316,7 +6983,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Extra fine"),
             _ => None,
         },
-        ("Minolta", 0x0105) => match value { // Teleconverter
+        ("Minolta", 0x0105) => match value {
+            // Teleconverter
             0 => Some("None"),
             4 => Some("Minolta/Sony AF 1.4x APO (D) (0x04)"),
             5 => Some("Minolta/Sony AF 2x APO (D) (0x05)"),
@@ -6328,28 +6996,33 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             160 => Some("Minolta AF 1.4x APO"),
             _ => None,
         },
-        ("Minolta", 0x0107) => match value { // ImageStabilization
+        ("Minolta", 0x0107) => match value {
+            // ImageStabilization
             1 => Some("Off"),
             5 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x0109) => match value { // RawAndJpgRecording
+        ("Minolta", 0x0109) => match value {
+            // RawAndJpgRecording
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x010A) => match value { // ZoneMatching
+        ("Minolta", 0x010A) => match value {
+            // ZoneMatching
             0 => Some("ISO Setting Used"),
             1 => Some("High Key"),
             2 => Some("Low Key"),
             _ => None,
         },
-        ("Minolta", 0x0113) => match value { // ImageStabilization
+        ("Minolta", 0x0113) => match value {
+            // ImageStabilization
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Minolta", 0x0115) => match value { // WhiteBalance
+        ("Minolta", 0x0115) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Color Temperature/Color Filter"),
             16 => Some("Daylight"),
@@ -6361,12 +7034,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             112 => Some("Custom"),
             _ => None,
         },
-        ("Minolta", 0x49C2) => match value { // ImageStabilization
+        ("Minolta", 0x49C2) => match value {
+            // ImageStabilization
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("MinoltaRaw", 0x0005) => match value { // ProgramMode
+        ("MinoltaRaw", 0x0005) => match value {
+            // ProgramMode
             0 => Some("None"),
             1 => Some("Portrait"),
             2 => Some("Text"),
@@ -6375,46 +7050,54 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Sports"),
             _ => None,
         },
-        ("MinoltaRaw", 0x0006) => match value { // ISOSetting
+        ("MinoltaRaw", 0x0006) => match value {
+            // ISOSetting
             0 => Some("Auto"),
             174 => Some("80 (Zone Matching Low)"),
             184 => Some("200 (Zone Matching High)"),
             _ => None,
         },
-        ("MinoltaRaw", 0x0012) => match value { // StorageMethod
+        ("MinoltaRaw", 0x0012) => match value {
+            // StorageMethod
             82 => Some("Padded"),
             89 => Some("Linear"),
             _ => None,
         },
-        ("MinoltaRaw", 0x0017) => match value { // BayerPattern
+        ("MinoltaRaw", 0x0017) => match value {
+            // BayerPattern
             1 => Some("RGGB"),
             4 => Some("GBRG"),
             _ => None,
         },
-        ("MinoltaRaw", 0x003A) => match value { // ZoneMatching
+        ("MinoltaRaw", 0x003A) => match value {
+            // ZoneMatching
             0 => Some("ISO Setting Used"),
             1 => Some("High Key"),
             2 => Some("Low Key"),
             _ => None,
         },
-        ("MinoltaRaw", 0x004A) => match value { // ZoneMatching
+        ("MinoltaRaw", 0x004A) => match value {
+            // ZoneMatching
             0 => Some("ISO Setting Used"),
             1 => Some("High Key"),
             2 => Some("Low Key"),
             _ => None,
         },
-        ("Nikon", 0x0000) => match value { // AutoCapturedFrame
+        ("Nikon", 0x0000) => match value {
+            // AutoCapturedFrame
             0 => Some("No"),
             5 => Some("Yes"),
             _ => None,
         },
-        ("Nikon", 0x0001) => match value { // MultiExposureMode
+        ("Nikon", 0x0001) => match value {
+            // MultiExposureMode
             0 => Some("Off"),
             1 => Some("Multiple Exposure"),
             3 => Some("HDR"),
             _ => None,
         },
-        ("Nikon", 0x0002) => match value { // FlashGroupCControlMode
+        ("Nikon", 0x0002) => match value {
+            // FlashGroupCControlMode
             0 => Some("Off"),
             1 => Some("iTTL-BL"),
             2 => Some("iTTL"),
@@ -6425,21 +7108,24 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Repeating Flash"),
             _ => None,
         },
-        ("Nikon", 0x0003) => match value { // MultiExposureOverlayMode
+        ("Nikon", 0x0003) => match value {
+            // MultiExposureOverlayMode
             0 => Some("Add"),
             1 => Some("Average"),
             2 => Some("Light"),
             3 => Some("Dark"),
             _ => None,
         },
-        ("Nikon", 0x0004) => match value { // DistortionCorrection
+        ("Nikon", 0x0004) => match value {
+            // DistortionCorrection
             0 => Some("No Lens Attached"),
             1 => Some("On (Optional)"),
             2 => Some("Off"),
             3 => Some("On (Required)"),
             _ => None,
         },
-        ("Nikon", 0x0005) => match value { // HDRLevel
+        ("Nikon", 0x0005) => match value {
+            // HDRLevel
             0 => Some("n/a"),
             1 => Some("Normal"),
             2 => Some("Low"),
@@ -6448,7 +7134,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Auto"),
             _ => None,
         },
-        ("Nikon", 0x0006) => match value { // HDRSmoothing
+        ("Nikon", 0x0006) => match value {
+            // HDRSmoothing
             0 => Some("Off"),
             1 => Some("Normal"),
             2 => Some("Low"),
@@ -6457,7 +7144,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("n/a"),
             _ => None,
         },
-        ("Nikon", 0x0007) => match value { // HDRLevel2
+        ("Nikon", 0x0007) => match value {
+            // HDRLevel2
             0 => Some("Auto"),
             1 => Some("1 EV"),
             2 => Some("2 EV"),
@@ -6465,14 +7153,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("n/a"),
             _ => None,
         },
-        ("Nikon", 0x0008) => match value { // ExternalFlashFlags
+        ("Nikon", 0x0008) => match value {
+            // ExternalFlashFlags
             0 => Some("Flash Ready"),
             2 => Some("Bounce Flash"),
             4 => Some("Wide Flash Adapter"),
             7 => Some("Zoom Override"),
             _ => None,
         },
-        ("Nikon", 0x000A) => match value { // NEFCompression
+        ("Nikon", 0x000A) => match value {
+            // NEFCompression
             1 => Some("Lossy (type 1)"),
             2 => Some("Uncompressed"),
             3 => Some("Lossless"),
@@ -6487,7 +7177,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             14 => Some("High Efficiency*"),
             _ => None,
         },
-        ("Nikon", 0x000C) => match value { // MeteringMode
+        ("Nikon", 0x000C) => match value {
+            // MeteringMode
             0 => Some("Unknown"),
             1 => Some("Average"),
             2 => Some("Center-weighted average"),
@@ -6498,7 +7189,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("Other"),
             _ => None,
         },
-        ("Nikon", 0x000E) => match value { // FlashGNDistance
+        ("Nikon", 0x000E) => match value {
+            // FlashGNDistance
             1 => Some("0.1 m"),
             2 => Some("0.2 m"),
             3 => Some("0.3 m"),
@@ -6538,7 +7230,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("n/a"),
             _ => None,
         },
-        ("Nikon", 0x000F) => match value { // FlashGNDistance
+        ("Nikon", 0x000F) => match value {
+            // FlashGNDistance
             1 => Some("0.1 m"),
             2 => Some("0.2 m"),
             3 => Some("0.3 m"),
@@ -6578,7 +7271,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("n/a"),
             _ => None,
         },
-        ("Nikon", 0x0010) => match value { // FlashColorFilter
+        ("Nikon", 0x0010) => match value {
+            // FlashColorFilter
             0 => Some("None"),
             1 => Some("FL-GL1 or SZ-2FL Fluorescent"),
             2 => Some("FL-GL2"),
@@ -6591,20 +7285,23 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             128 => Some("Incandescent"),
             _ => None,
         },
-        ("Nikon", 0x0012) => match value { // ResolutionUnit
+        ("Nikon", 0x0012) => match value {
+            // ResolutionUnit
             1 => Some("None"),
             2 => Some("inches"),
             3 => Some("cm"),
             _ => None,
         },
-        ("Nikon", 0x0017) => match value { // NikonMeteringMode
+        ("Nikon", 0x0017) => match value {
+            // NikonMeteringMode
             0 => Some("Matrix"),
             1 => Some("Center"),
             2 => Some("Spot"),
             3 => Some("Highlight"),
             _ => None,
         },
-        ("Nikon", 0x0018) => match value { // ADLBracketingType
+        ("Nikon", 0x0018) => match value {
+            // ADLBracketingType
             0 => Some("Off"),
             1 => Some("2 Shots"),
             2 => Some("3 Shots"),
@@ -6612,50 +7309,58 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("5 Shots"),
             _ => None,
         },
-        ("Nikon", 0x001A) => match value { // Rotation
+        ("Nikon", 0x001A) => match value {
+            // Rotation
             0 => Some("Horizontal"),
             1 => Some("Rotate 270 CW"),
             2 => Some("Rotate 90 CW"),
             3 => Some("Rotate 180"),
             _ => None,
         },
-        ("Nikon", 0x001E) => match value { // ColorSpace
+        ("Nikon", 0x001E) => match value {
+            // ColorSpace
             1 => Some("sRGB"),
             2 => Some("Adobe RGB"),
             4 => Some("BT.2100"),
             _ => None,
         },
-        ("Nikon", 0x0020) => match value { // ImageAuthentication
+        ("Nikon", 0x0020) => match value {
+            // ImageAuthentication
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0022) => match value { // ExtendedPhotoShootingBanks
+        ("Nikon", 0x0022) => match value {
+            // ExtendedPhotoShootingBanks
             0 => Some("On"),
             1 => Some("Off"),
             _ => None,
         },
-        ("Nikon", 0x0024) => match value { // PhotoShootingMenuBank
+        ("Nikon", 0x0024) => match value {
+            // PhotoShootingMenuBank
             0 => Some("A"),
             1 => Some("B"),
             2 => Some("C"),
             3 => Some("D"),
             _ => None,
         },
-        ("Nikon", 0x0025) => match value { // FlashIlluminationPattern
+        ("Nikon", 0x0025) => match value {
+            // FlashIlluminationPattern
             0 => Some("Standard"),
             1 => Some("Center-weighted"),
             2 => Some("Even"),
             _ => None,
         },
-        ("Nikon", 0x002A) => match value { // VignetteControl
+        ("Nikon", 0x002A) => match value {
+            // VignetteControl
             0 => Some("Off"),
             1 => Some("Low"),
             3 => Some("Normal"),
             5 => Some("High"),
             _ => None,
         },
-        ("Nikon", 0x002B) => match value { // ImageArea
+        ("Nikon", 0x002B) => match value {
+            // ImageArea
             0 => Some("FX (36x24)"),
             1 => Some("DX (24x16)"),
             2 => Some("5:4 (30x24)"),
@@ -6664,7 +7369,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("16:9"),
             _ => None,
         },
-        ("Nikon", 0x0030) => match value { // LensID
+        ("Nikon", 0x0030) => match value {
+            // LensID
             1 => Some("Nikkor Z 24-70mm f/4 S"),
             2 => Some("Nikkor Z 14-30mm f/4 S"),
             4 => Some("Nikkor Z 35mm f/1.8 S"),
@@ -6712,7 +7418,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32769 => Some("Nikkor Z 600mm f/4 TC VR S TC-1.4x"),
             _ => None,
         },
-        ("Nikon", 0x0034) => match value { // ShutterMode
+        ("Nikon", 0x0034) => match value {
+            // ShutterMode
             0 => Some("Mechanical"),
             16 => Some("Electronic"),
             48 => Some("Electronic Front Curtain"),
@@ -6722,13 +7429,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             96 => Some("Electronic (High Speed)"),
             _ => None,
         },
-        ("Nikon", 0x0036) => match value { // PictureControlAdjust
+        ("Nikon", 0x0036) => match value {
+            // PictureControlAdjust
             0 => Some("Default Settings"),
             1 => Some("Quick Adjust"),
             2 => Some("Full Control"),
             _ => None,
         },
-        ("Nikon", 0x0037) => match value { // AutoCaptureRecordingTime
+        ("Nikon", 0x0037) => match value {
+            // AutoCaptureRecordingTime
             0 => Some("1 Sec"),
             1 => Some("3 Sec"),
             2 => Some("5 Sec"),
@@ -6745,7 +7454,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             13 => Some("30 Min"),
             _ => None,
         },
-        ("Nikon", 0x0038) => match value { // AutoCaptureWaitTime
+        ("Nikon", 0x0038) => match value {
+            // AutoCaptureWaitTime
             0 => Some("No Wait"),
             1 => Some("10 Sec"),
             2 => Some("30 Sec"),
@@ -6761,13 +7471,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             12 => Some("3 Min"),
             _ => None,
         },
-        ("Nikon", 0x003E) => match value { // ImageSizeRAW
+        ("Nikon", 0x003E) => match value {
+            // ImageSizeRAW
             1 => Some("Large"),
             2 => Some("Medium"),
             3 => Some("Small"),
             _ => None,
         },
-        ("Nikon", 0x003F) => match value { // FilterEffect
+        ("Nikon", 0x003F) => match value {
+            // FilterEffect
             128 => Some("Off"),
             129 => Some("Yellow"),
             130 => Some("Orange"),
@@ -6776,7 +7488,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("n/a"),
             _ => None,
         },
-        ("Nikon", 0x0040) => match value { // ToningEffect
+        ("Nikon", 0x0040) => match value {
+            // ToningEffect
             128 => Some("B&W"),
             129 => Some("Sepia"),
             130 => Some("Cyanotype"),
@@ -6790,7 +7503,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("n/a"),
             _ => None,
         },
-        ("Nikon", 0x0044) => match value { // WhiteBalance
+        ("Nikon", 0x0044) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Shade"),
@@ -6799,7 +7513,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Manual"),
             _ => None,
         },
-        ("Nikon", 0x0047) => match value { // FilterEffect
+        ("Nikon", 0x0047) => match value {
+            // FilterEffect
             128 => Some("Off"),
             129 => Some("Yellow"),
             130 => Some("Orange"),
@@ -6808,7 +7523,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("n/a"),
             _ => None,
         },
-        ("Nikon", 0x0048) => match value { // HighFrameRate
+        ("Nikon", 0x0048) => match value {
+            // HighFrameRate
             0 => Some("Off"),
             1 => Some("CH"),
             2 => Some("CH*"),
@@ -6818,17 +7534,20 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("C15"),
             _ => None,
         },
-        ("Nikon", 0x004A) => match value { // FocusResult
+        ("Nikon", 0x004A) => match value {
+            // FocusResult
             0 => Some("Out of Focus"),
             1 => Some("Focus"),
             _ => None,
         },
-        ("Nikon", 0x0052) => match value { // ContrastDetectAFInFocus
+        ("Nikon", 0x0052) => match value {
+            // ContrastDetectAFInFocus
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Nikon", 0x005C) => match value { // ReleaseMode
+        ("Nikon", 0x005C) => match value {
+            // ReleaseMode
             0 => Some("Continuous Low"),
             1 => Some("Continuous High"),
             2 => Some("Continuous High (Extended)"),
@@ -6836,23 +7555,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Single Frame"),
             _ => None,
         },
-        ("Nikon", 0x005F) => match value { // LensMountType
+        ("Nikon", 0x005F) => match value {
+            // LensMountType
             0 => Some("Z-mount"),
             1 => Some("F-mount"),
             _ => None,
         },
-        ("Nikon", 0x0060) => match value { // ScanImageEnhancer
+        ("Nikon", 0x0060) => match value {
+            // ScanImageEnhancer
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0066) => match value { // VR_0x66
+        ("Nikon", 0x0066) => match value {
+            // VR_0x66
             0 => Some("Off"),
             1 => Some("On (normal)"),
             2 => Some("On (active)"),
             _ => None,
         },
-        ("Nikon", 0x006A) => match value { // AutoCaptureCriteriaSubjectType
+        ("Nikon", 0x006A) => match value {
+            // AutoCaptureCriteriaSubjectType
             0 => Some("Off"),
             1 => Some("Auto"),
             2 => Some("People"),
@@ -6863,25 +7586,29 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Faces"),
             _ => None,
         },
-        ("Nikon", 0x0075) => match value { // VibrationReduction
+        ("Nikon", 0x0075) => match value {
+            // VibrationReduction
             0 => Some("Off"),
             1 => Some("On (1)"),
             2 => Some("On (2)"),
             3 => Some("On (3)"),
             _ => None,
         },
-        ("Nikon", 0x007D) => match value { // ShutterTrigger
+        ("Nikon", 0x007D) => match value {
+            // ShutterTrigger
             0 => Some("Timer"),
             15 => Some("Cable Release/Remote"),
             195 => Some("Shutter Button"),
             _ => None,
         },
-        ("Nikon", 0x0082) => match value { // VibrationReduction
+        ("Nikon", 0x0082) => match value {
+            // VibrationReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0087) => match value { // FlashMode
+        ("Nikon", 0x0087) => match value {
+            // FlashMode
             0 => Some("Did Not Fire"),
             1 => Some("Fired, Manual"),
             3 => Some("Not Ready"),
@@ -6891,13 +7618,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             18 => Some("LED Light"),
             _ => None,
         },
-        ("Nikon", 0x008C) => match value { // MultipleExposureMode
+        ("Nikon", 0x008C) => match value {
+            // MultipleExposureMode
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("On (Series)"),
             _ => None,
         },
-        ("Nikon", 0x0093) => match value { // NEFCompression
+        ("Nikon", 0x0093) => match value {
+            // NEFCompression
             1 => Some("Lossy (type 1)"),
             2 => Some("Uncompressed"),
             3 => Some("Lossless"),
@@ -6912,26 +7641,30 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             14 => Some("High Efficiency*"),
             _ => None,
         },
-        ("Nikon", 0x0098) => match value { // MultipleExposureMode
+        ("Nikon", 0x0098) => match value {
+            // MultipleExposureMode
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("On (Series)"),
             _ => None,
         },
-        ("Nikon", 0x009A) => match value { // MultipleExposureMode
+        ("Nikon", 0x009A) => match value {
+            // MultipleExposureMode
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("On (Series)"),
             _ => None,
         },
-        ("Nikon", 0x009D) => match value { // DateStampMode
+        ("Nikon", 0x009D) => match value {
+            // DateStampMode
             0 => Some("Off"),
             1 => Some("Date & Time"),
             2 => Some("Date"),
             3 => Some("Date Counter"),
             _ => None,
         },
-        ("Nikon", 0x00B1) => match value { // HighISONoiseReduction
+        ("Nikon", 0x00B1) => match value {
+            // HighISONoiseReduction
             0 => Some("Off"),
             1 => Some("Minimal"),
             2 => Some("Low"),
@@ -6941,138 +7674,162 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("High"),
             _ => None,
         },
-        ("Nikon", 0x00B8) => match value { // IntervalExposureSmoothing
+        ("Nikon", 0x00B8) => match value {
+            // IntervalExposureSmoothing
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x00BA) => match value { // IntervalPriority
+        ("Nikon", 0x00BA) => match value {
+            // IntervalPriority
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x00BF) => match value { // SilentPhotography
+        ("Nikon", 0x00BF) => match value {
+            // SilentPhotography
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x00D0) => match value { // IntervalExposureSmoothing
+        ("Nikon", 0x00D0) => match value {
+            // IntervalExposureSmoothing
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x00D2) => match value { // IntervalPriority
+        ("Nikon", 0x00D2) => match value {
+            // IntervalPriority
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x00E8) => match value { // FocusShiftExposureLock
+        ("Nikon", 0x00E8) => match value {
+            // FocusShiftExposureLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x00F4) => match value { // FocusShiftExposureLock
+        ("Nikon", 0x00F4) => match value {
+            // FocusShiftExposureLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0100) => match value { // FocusShiftExposureLock
+        ("Nikon", 0x0100) => match value {
+            // FocusShiftExposureLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0104) => match value { // FocusShiftExposureLock
+        ("Nikon", 0x0104) => match value {
+            // FocusShiftExposureLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0112) => match value { // PhotoShootingMenuBank
+        ("Nikon", 0x0112) => match value {
+            // PhotoShootingMenuBank
             0 => Some("A"),
             1 => Some("B"),
             2 => Some("C"),
             3 => Some("D"),
             _ => None,
         },
-        ("Nikon", 0x0114) => match value { // ExtendedMenuBanks
+        ("Nikon", 0x0114) => match value {
+            // ExtendedMenuBanks
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x011E) => match value { // PhotoShootingMenuBank
+        ("Nikon", 0x011E) => match value {
+            // PhotoShootingMenuBank
             0 => Some("A"),
             1 => Some("B"),
             2 => Some("C"),
             3 => Some("D"),
             _ => None,
         },
-        ("Nikon", 0x0120) => match value { // ExtendedMenuBanks
+        ("Nikon", 0x0120) => match value {
+            // ExtendedMenuBanks
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0122) => match value { // PhotoShootingMenuBank
+        ("Nikon", 0x0122) => match value {
+            // PhotoShootingMenuBank
             0 => Some("A"),
             1 => Some("B"),
             2 => Some("C"),
             3 => Some("D"),
             _ => None,
         },
-        ("Nikon", 0x0124) => match value { // ExtendedMenuBanks
+        ("Nikon", 0x0124) => match value {
+            // ExtendedMenuBanks
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0128) => match value { // ResolutionUnit
+        ("Nikon", 0x0128) => match value {
+            // ResolutionUnit
             1 => Some("None"),
             2 => Some("inches"),
             3 => Some("cm"),
             _ => None,
         },
-        ("Nikon", 0x0134) => match value { // PhotoShootingMenuBankImageArea
+        ("Nikon", 0x0134) => match value {
+            // PhotoShootingMenuBankImageArea
             0 => Some("FX"),
             1 => Some("DX"),
             4 => Some("16:9"),
             8 => Some("1:1"),
             _ => None,
         },
-        ("Nikon", 0x013C) => match value { // SecondarySlotFunction
+        ("Nikon", 0x013C) => match value {
+            // SecondarySlotFunction
             0 => Some("Overflow"),
             2 => Some("Backup"),
             3 => Some("NEF Primary + JPG Secondary"),
             _ => None,
         },
-        ("Nikon", 0x0142) => match value { // AutoISO
+        ("Nikon", 0x0142) => match value {
+            // AutoISO
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0143) => match value { // AutoDistortionControl
+        ("Nikon", 0x0143) => match value {
+            // AutoDistortionControl
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0144) => match value { // PhotoShootingMenuBankImageArea
+        ("Nikon", 0x0144) => match value {
+            // PhotoShootingMenuBankImageArea
             0 => Some("FX"),
             1 => Some("DX"),
             4 => Some("16:9"),
             8 => Some("1:1"),
             _ => None,
         },
-        ("Nikon", 0x0146) => match value { // NikonMeteringMode
+        ("Nikon", 0x0146) => match value {
+            // NikonMeteringMode
             0 => Some("Matrix"),
             1 => Some("Center"),
             2 => Some("Spot"),
             3 => Some("Highlight"),
             _ => None,
         },
-        ("Nikon", 0x0148) => match value { // PhotoShootingMenuBankImageArea
+        ("Nikon", 0x0148) => match value {
+            // PhotoShootingMenuBankImageArea
             0 => Some("FX"),
             1 => Some("DX"),
             4 => Some("16:9"),
             8 => Some("1:1"),
             _ => None,
         },
-        ("Nikon", 0x014E) => match value { // ISOAutoShutterTime
+        ("Nikon", 0x014E) => match value {
+            // ISOAutoShutterTime
             -15 => Some("Auto"),
             -12 => Some("15 s"),
             -9 => Some("8 s"),
@@ -7123,30 +7880,35 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             42 => Some("1/16000 s"),
             _ => None,
         },
-        ("Nikon", 0x0152) => match value { // AutoISO
+        ("Nikon", 0x0152) => match value {
+            // AutoISO
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0156) => match value { // AutoISO
+        ("Nikon", 0x0156) => match value {
+            // AutoISO
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x015A) => match value { // FlashWirelessOption
+        ("Nikon", 0x015A) => match value {
+            // FlashWirelessOption
             0 => Some("Off"),
             1 => Some("Optical AWL"),
             2 => Some("Optical/Radio AWL"),
             3 => Some("Radio AWL"),
             _ => None,
         },
-        ("Nikon", 0x015C) => match value { // FlashRemoteControl
+        ("Nikon", 0x015C) => match value {
+            // FlashRemoteControl
             0 => Some("Group"),
             1 => Some("Quick Wireless"),
             2 => Some("Remote Repeating"),
             _ => None,
         },
-        ("Nikon", 0x015E) => match value { // ISOAutoShutterTime
+        ("Nikon", 0x015E) => match value {
+            // ISOAutoShutterTime
             -15 => Some("Auto"),
             -12 => Some("15 s"),
             -9 => Some("8 s"),
@@ -7197,14 +7959,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             42 => Some("1/16000 s"),
             _ => None,
         },
-        ("Nikon", 0x0160) => match value { // FlashMasterControlMode
+        ("Nikon", 0x0160) => match value {
+            // FlashMasterControlMode
             0 => Some("TTL"),
             1 => Some("Manual"),
             2 => Some("Auto"),
             3 => Some("Off"),
             _ => None,
         },
-        ("Nikon", 0x0162) => match value { // ISOAutoShutterTime
+        ("Nikon", 0x0162) => match value {
+            // ISOAutoShutterTime
             -15 => Some("Auto"),
             -12 => Some("15 s"),
             -9 => Some("8 s"),
@@ -7255,7 +8019,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             42 => Some("1/16000 s"),
             _ => None,
         },
-        ("Nikon", 0x016C) => match value { // HighFrameRate
+        ("Nikon", 0x016C) => match value {
+            // HighFrameRate
             0 => Some("Off"),
             1 => Some("CH"),
             2 => Some("CH*"),
@@ -7265,39 +8030,46 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("C15"),
             _ => None,
         },
-        ("Nikon", 0x0184) => match value { // IntervalExposureSmoothing
+        ("Nikon", 0x0184) => match value {
+            // IntervalExposureSmoothing
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0186) => match value { // IntervalPriority
+        ("Nikon", 0x0186) => match value {
+            // IntervalPriority
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x019C) => match value { // NoiseReduction
+        ("Nikon", 0x019C) => match value {
+            // NoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x01A0) => match value { // MovieVignetteControl
+        ("Nikon", 0x01A0) => match value {
+            // MovieVignetteControl
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Normal"),
             3 => Some("High"),
             _ => None,
         },
-        ("Nikon", 0x01A2) => match value { // DiffractionCompensation
+        ("Nikon", 0x01A2) => match value {
+            // DiffractionCompensation
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x01A4) => match value { // FlickerReductionShooting
+        ("Nikon", 0x01A4) => match value {
+            // FlickerReductionShooting
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x01A8) => match value { // FlashControlMode
+        ("Nikon", 0x01A8) => match value {
+            // FlashControlMode
             0 => Some("TTL"),
             1 => Some("Auto External Flash"),
             2 => Some("GN (distance priority)"),
@@ -7305,7 +8077,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Repeating Flash"),
             _ => None,
         },
-        ("Nikon", 0x01AE) => match value { // FlashGNDistance
+        ("Nikon", 0x01AE) => match value {
+            // FlashGNDistance
             1 => Some("0.1 m"),
             2 => Some("0.2 m"),
             3 => Some("0.3 m"),
@@ -7345,36 +8118,42 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("n/a"),
             _ => None,
         },
-        ("Nikon", 0x01B0) => match value { // MovieVignetteControl
+        ("Nikon", 0x01B0) => match value {
+            // MovieVignetteControl
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Normal"),
             3 => Some("High"),
             _ => None,
         },
-        ("Nikon", 0x01B2) => match value { // DiffractionCompensation
+        ("Nikon", 0x01B2) => match value {
+            // DiffractionCompensation
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x01B4) => match value { // MovieVignetteControl
+        ("Nikon", 0x01B4) => match value {
+            // MovieVignetteControl
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Normal"),
             3 => Some("High"),
             _ => None,
         },
-        ("Nikon", 0x01B6) => match value { // DiffractionCompensation
+        ("Nikon", 0x01B6) => match value {
+            // DiffractionCompensation
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x01B8) => match value { // FlickerReductionShooting
+        ("Nikon", 0x01B8) => match value {
+            // FlickerReductionShooting
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x01BC) => match value { // FlashControlMode
+        ("Nikon", 0x01BC) => match value {
+            // FlashControlMode
             0 => Some("TTL"),
             1 => Some("Auto External Flash"),
             2 => Some("GN (distance priority)"),
@@ -7382,7 +8161,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Repeating Flash"),
             _ => None,
         },
-        ("Nikon", 0x01C2) => match value { // FlashGNDistance
+        ("Nikon", 0x01C2) => match value {
+            // FlashGNDistance
             1 => Some("0.1 m"),
             2 => Some("0.2 m"),
             3 => Some("0.3 m"),
@@ -7422,39 +8202,45 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("n/a"),
             _ => None,
         },
-        ("Nikon", 0x01C8) => match value { // FlashWirelessOption
+        ("Nikon", 0x01C8) => match value {
+            // FlashWirelessOption
             0 => Some("Off"),
             1 => Some("Optical AWL"),
             2 => Some("Optical/Radio AWL"),
             3 => Some("Radio AWL"),
             _ => None,
         },
-        ("Nikon", 0x01D0) => match value { // FlashRemoteControl
+        ("Nikon", 0x01D0) => match value {
+            // FlashRemoteControl
             0 => Some("Group"),
             1 => Some("Quick Wireless"),
             2 => Some("Remote Repeating"),
             _ => None,
         },
-        ("Nikon", 0x01DC) => match value { // FlashWirelessOption
+        ("Nikon", 0x01DC) => match value {
+            // FlashWirelessOption
             0 => Some("Off"),
             1 => Some("Optical AWL"),
             2 => Some("Optical/Radio AWL"),
             3 => Some("Radio AWL"),
             _ => None,
         },
-        ("Nikon", 0x01F4) => match value { // IntervalExposureSmoothing
+        ("Nikon", 0x01F4) => match value {
+            // IntervalExposureSmoothing
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x01F6) => match value { // MovieFrameSize
+        ("Nikon", 0x01F6) => match value {
+            // MovieFrameSize
             1 => Some("1920x1080"),
             2 => Some("3840x2160"),
             3 => Some("7680x4320"),
             7 => Some("5376x3024"),
             _ => None,
         },
-        ("Nikon", 0x01F8) => match value { // MovieFrameRate
+        ("Nikon", 0x01F8) => match value {
+            // MovieFrameRate
             0 => Some("120p"),
             1 => Some("100p"),
             2 => Some("60p"),
@@ -7464,17 +8250,20 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("24p"),
             _ => None,
         },
-        ("Nikon", 0x01FE) => match value { // MovieType
+        ("Nikon", 0x01FE) => match value {
+            // MovieType
             0 => Some("MOV"),
             1 => Some("MP4"),
             _ => None,
         },
-        ("Nikon", 0x020E) => match value { // DiffractionCompensation
+        ("Nikon", 0x020E) => match value {
+            // DiffractionCompensation
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0210) => match value { // AFAreaMode
+        ("Nikon", 0x0210) => match value {
+            // AFAreaMode
             0 => Some("Pinpoint"),
             1 => Some("Single"),
             2 => Some("Dynamic"),
@@ -7487,18 +8276,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             13 => Some("Wide (C2)"),
             _ => None,
         },
-        ("Nikon", 0x0212) => match value { // VRMode
+        ("Nikon", 0x0212) => match value {
+            // VRMode
             0 => Some("Off"),
             1 => Some("Normal"),
             2 => Some("Sport"),
             _ => None,
         },
-        ("Nikon", 0x0213) => match value { // YCbCrPositioning
+        ("Nikon", 0x0213) => match value {
+            // YCbCrPositioning
             1 => Some("Centered"),
             2 => Some("Co-sited"),
             _ => None,
         },
-        ("Nikon", 0x0214) => match value { // FlashControlMode
+        ("Nikon", 0x0214) => match value {
+            // FlashControlMode
             0 => Some("TTL"),
             1 => Some("Auto External Flash"),
             2 => Some("GN (distance priority)"),
@@ -7506,7 +8298,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Repeating Flash"),
             _ => None,
         },
-        ("Nikon", 0x0216) => match value { // BracketSet
+        ("Nikon", 0x0216) => match value {
+            // BracketSet
             0 => Some("AE/Flash"),
             1 => Some("AE"),
             2 => Some("Flash"),
@@ -7514,7 +8307,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Active-D Lighting"),
             _ => None,
         },
-        ("Nikon", 0x0218) => match value { // BracketProgram
+        ("Nikon", 0x0218) => match value {
+            // BracketProgram
             0 => Some("Disabled"),
             2 => Some("2F"),
             3 => Some("3F"),
@@ -7524,7 +8318,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("9F"),
             _ => None,
         },
-        ("Nikon", 0x021A) => match value { // BracketIncrement
+        ("Nikon", 0x021A) => match value {
+            // BracketIncrement
             0 => Some("0.3"),
             1 => Some("0.5"),
             2 => Some("0.7"),
@@ -7539,7 +8334,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("2.7"),
             _ => None,
         },
-        ("Nikon", 0x0224) => match value { // AFAreaMode
+        ("Nikon", 0x0224) => match value {
+            // AFAreaMode
             0 => Some("Pinpoint"),
             1 => Some("Single"),
             2 => Some("Dynamic"),
@@ -7552,19 +8348,22 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             13 => Some("Wide (C2)"),
             _ => None,
         },
-        ("Nikon", 0x0226) => match value { // VRMode
+        ("Nikon", 0x0226) => match value {
+            // VRMode
             0 => Some("Off"),
             1 => Some("Normal"),
             2 => Some("Sport"),
             _ => None,
         },
-        ("Nikon", 0x0228) => match value { // FlashRemoteControl
+        ("Nikon", 0x0228) => match value {
+            // FlashRemoteControl
             0 => Some("Group"),
             1 => Some("Quick Wireless"),
             2 => Some("Remote Repeating"),
             _ => None,
         },
-        ("Nikon", 0x022A) => match value { // BracketSet
+        ("Nikon", 0x022A) => match value {
+            // BracketSet
             0 => Some("AE/Flash"),
             1 => Some("AE"),
             2 => Some("Flash"),
@@ -7572,7 +8371,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Active-D Lighting"),
             _ => None,
         },
-        ("Nikon", 0x022C) => match value { // BracketProgram
+        ("Nikon", 0x022C) => match value {
+            // BracketProgram
             0 => Some("Disabled"),
             2 => Some("2F"),
             3 => Some("3F"),
@@ -7582,7 +8382,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("9F"),
             _ => None,
         },
-        ("Nikon", 0x022E) => match value { // BracketIncrement
+        ("Nikon", 0x022E) => match value {
+            // BracketIncrement
             0 => Some("0.3"),
             1 => Some("0.5"),
             2 => Some("0.7"),
@@ -7597,23 +8398,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("2.7"),
             _ => None,
         },
-        ("Nikon", 0x0234) => match value { // FlashWirelessOption
+        ("Nikon", 0x0234) => match value {
+            // FlashWirelessOption
             0 => Some("Optical AWL"),
             1 => Some("Off"),
             _ => None,
         },
-        ("Nikon", 0x023A) => match value { // HDR
+        ("Nikon", 0x023A) => match value {
+            // HDR
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("On (Series)"),
             _ => None,
         },
-        ("Nikon", 0x023C) => match value { // DXCropAlert
+        ("Nikon", 0x023C) => match value {
+            // DXCropAlert
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x023E) => match value { // SubjectDetection
+        ("Nikon", 0x023E) => match value {
+            // SubjectDetection
             0 => Some("Off"),
             1 => Some("Auto"),
             2 => Some("People"),
@@ -7624,24 +8429,28 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Faces"),
             _ => None,
         },
-        ("Nikon", 0x0240) => match value { // SecondarySlotFunction
+        ("Nikon", 0x0240) => match value {
+            // SecondarySlotFunction
             0 => Some("Overflow"),
             1 => Some("Backup"),
             2 => Some("NEF Primary + JPG Secondary"),
             3 => Some("JPG Primary + JPG Secondary"),
             _ => None,
         },
-        ("Nikon", 0x0241) => match value { // MovieDiffractionCompensation
+        ("Nikon", 0x0241) => match value {
+            // MovieDiffractionCompensation
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0242) => match value { // MovieAutoDistortionControl
+        ("Nikon", 0x0242) => match value {
+            // MovieAutoDistortionControl
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0246) => match value { // HDRLevel
+        ("Nikon", 0x0246) => match value {
+            // HDRLevel
             0 => Some("Auto"),
             1 => Some("Extra High"),
             2 => Some("High"),
@@ -7649,36 +8458,42 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Low"),
             _ => None,
         },
-        ("Nikon", 0x0248) => match value { // MovieFocusMode
+        ("Nikon", 0x0248) => match value {
+            // MovieFocusMode
             0 => Some("Manual"),
             1 => Some("AF-S"),
             2 => Some("AF-C"),
             4 => Some("AF-F"),
             _ => None,
         },
-        ("Nikon", 0x024A) => match value { // Slot2JpgSize
+        ("Nikon", 0x024A) => match value {
+            // Slot2JpgSize
             0 => Some("Large (8256x5504)"),
             1 => Some("Medium (6192x4128)"),
             2 => Some("Small (4128x2752)"),
             _ => None,
         },
-        ("Nikon", 0x024E) => match value { // MovieVibrationReduction
+        ("Nikon", 0x024E) => match value {
+            // MovieVibrationReduction
             0 => Some("Off"),
             1 => Some("On (Normal)"),
             2 => Some("On (Sport)"),
             _ => None,
         },
-        ("Nikon", 0x024F) => match value { // MovieVibrationReductionSameAsPhoto
+        ("Nikon", 0x024F) => match value {
+            // MovieVibrationReductionSameAsPhoto
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Nikon", 0x0250) => match value { // DXCropAlert
+        ("Nikon", 0x0250) => match value {
+            // DXCropAlert
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0252) => match value { // SubjectDetection
+        ("Nikon", 0x0252) => match value {
+            // SubjectDetection
             0 => Some("Off"),
             1 => Some("Auto"),
             2 => Some("People"),
@@ -7689,18 +8504,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Faces"),
             _ => None,
         },
-        ("Nikon", 0x0254) => match value { // DynamicAFAreaSize
+        ("Nikon", 0x0254) => match value {
+            // DynamicAFAreaSize
             0 => Some("Small"),
             1 => Some("Medium"),
             2 => Some("Large"),
             _ => None,
         },
-        ("Nikon", 0x025C) => match value { // MovieImageArea
+        ("Nikon", 0x025C) => match value {
+            // MovieImageArea
             0 => Some("FX"),
             1 => Some("DX"),
             _ => None,
         },
-        ("Nikon", 0x0266) => match value { // MovieType
+        ("Nikon", 0x0266) => match value {
+            // MovieType
             1 => Some("H.264 8-bit (MP4)"),
             2 => Some("H.265 8-bit (MOV)"),
             3 => Some("H.265 10-bit (MOV)"),
@@ -7709,34 +8527,40 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("NRAW 12-bit (NEV)"),
             _ => None,
         },
-        ("Nikon", 0x026A) => match value { // MovieISOAutoControlManualMode
+        ("Nikon", 0x026A) => match value {
+            // MovieISOAutoControlManualMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x026E) => match value { // PortraitImpressionBalance
+        ("Nikon", 0x026E) => match value {
+            // PortraitImpressionBalance
             0 => Some("Off"),
             1 => Some("Mode 1"),
             2 => Some("Mode 2"),
             3 => Some("Mode 3"),
             _ => None,
         },
-        ("Nikon", 0x027C) => match value { // HighFrequencyFlickerReduction
+        ("Nikon", 0x027C) => match value {
+            // HighFrequencyFlickerReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0286) => match value { // MovieImageArea
+        ("Nikon", 0x0286) => match value {
+            // MovieImageArea
             0 => Some("FX"),
             1 => Some("DX"),
             _ => None,
         },
-        ("Nikon", 0x0288) => match value { // AutoISO
+        ("Nikon", 0x0288) => match value {
+            // AutoISO
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x028A) => match value { // ISOAutoHiLimit
+        ("Nikon", 0x028A) => match value {
+            // ISOAutoHiLimit
             5 => Some("ISO 200"),
             6 => Some("ISO 250"),
             7 => Some("ISO 320"),
@@ -7769,7 +8593,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             35 => Some("ISO Hi 1.7"),
             _ => None,
         },
-        ("Nikon", 0x0290) => match value { // MovieType
+        ("Nikon", 0x0290) => match value {
+            // MovieType
             1 => Some("H.264 8-bit (MP4)"),
             2 => Some("H.265 8-bit (MOV)"),
             3 => Some("H.265 10-bit (MOV)"),
@@ -7778,39 +8603,45 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("NRAW 12-bit (NEV)"),
             _ => None,
         },
-        ("Nikon", 0x0294) => match value { // MovieISOAutoControlManualMode
+        ("Nikon", 0x0294) => match value {
+            // MovieISOAutoControlManualMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x02BA) => match value { // MovieHighISONoiseReduction
+        ("Nikon", 0x02BA) => match value {
+            // MovieHighISONoiseReduction
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Normal"),
             3 => Some("High"),
             _ => None,
         },
-        ("Nikon", 0x02C0) => match value { // MovieFlickerReduction
+        ("Nikon", 0x02C0) => match value {
+            // MovieFlickerReduction
             0 => Some("Auto"),
             1 => Some("50Hz"),
             2 => Some("60Hz"),
             _ => None,
         },
-        ("Nikon", 0x02C2) => match value { // MovieMeteringMode
+        ("Nikon", 0x02C2) => match value {
+            // MovieMeteringMode
             0 => Some("Matrix"),
             1 => Some("Center"),
             2 => Some("Spot"),
             3 => Some("Highlight"),
             _ => None,
         },
-        ("Nikon", 0x02C4) => match value { // MovieFocusMode
+        ("Nikon", 0x02C4) => match value {
+            // MovieFocusMode
             0 => Some("Manual"),
             1 => Some("AF-S"),
             2 => Some("AF-C"),
             4 => Some("AF-F"),
             _ => None,
         },
-        ("Nikon", 0x02C6) => match value { // MovieAFAreaMode
+        ("Nikon", 0x02C6) => match value {
+            // MovieAFAreaMode
             0 => Some("Pinpoint"),
             1 => Some("Single"),
             2 => Some("Dynamic"),
@@ -7823,39 +8654,46 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             13 => Some("Wide (C2)"),
             _ => None,
         },
-        ("Nikon", 0x02C8) => match value { // MovieVRMode
+        ("Nikon", 0x02C8) => match value {
+            // MovieVRMode
             0 => Some("Off"),
             1 => Some("Normal"),
             2 => Some("Sport"),
             _ => None,
         },
-        ("Nikon", 0x02CA) => match value { // MovieType
+        ("Nikon", 0x02CA) => match value {
+            // MovieType
             0 => Some("MOV"),
             1 => Some("MP4"),
             _ => None,
         },
-        ("Nikon", 0x02CC) => match value { // MovieElectronicVR
+        ("Nikon", 0x02CC) => match value {
+            // MovieElectronicVR
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x02CE) => match value { // MovieSoundRecording
+        ("Nikon", 0x02CE) => match value {
+            // MovieSoundRecording
             0 => Some("Off"),
             1 => Some("Auto"),
             2 => Some("Manual"),
             _ => None,
         },
-        ("Nikon", 0x02CF) => match value { // AutoDistortionControl
+        ("Nikon", 0x02CF) => match value {
+            // AutoDistortionControl
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x02D0) => match value { // FlickerReductionShooting
+        ("Nikon", 0x02D0) => match value {
+            // FlickerReductionShooting
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x02D1) => match value { // AFFineTuneAdj
+        ("Nikon", 0x02D1) => match value {
+            // AFFineTuneAdj
             0 => Some("0"),
             58 => Some("+1"),
             59 => Some("+2"),
@@ -7899,34 +8737,40 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             57539 => Some("-15"),
             _ => None,
         },
-        ("Nikon", 0x02D2) => match value { // MicrophoneAttenuator
+        ("Nikon", 0x02D2) => match value {
+            // MicrophoneAttenuator
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x02D4) => match value { // MicrophoneFrequencyResponse
+        ("Nikon", 0x02D4) => match value {
+            // MicrophoneFrequencyResponse
             0 => Some("Wide Range"),
             1 => Some("Vocal Range"),
             _ => None,
         },
-        ("Nikon", 0x02D6) => match value { // WindNoiseReduction
+        ("Nikon", 0x02D6) => match value {
+            // WindNoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x02DA) => match value { // MovieImageArea
+        ("Nikon", 0x02DA) => match value {
+            // MovieImageArea
             0 => Some("FX"),
             1 => Some("DX"),
             _ => None,
         },
-        ("Nikon", 0x02E2) => match value { // MovieHighISONoiseReduction
+        ("Nikon", 0x02E2) => match value {
+            // MovieHighISONoiseReduction
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Normal"),
             3 => Some("High"),
             _ => None,
         },
-        ("Nikon", 0x02E4) => match value { // MovieType
+        ("Nikon", 0x02E4) => match value {
+            // MovieType
             1 => Some("H.264 8-bit (MP4)"),
             2 => Some("H.265 8-bit (MOV)"),
             3 => Some("H.265 10-bit (MOV)"),
@@ -7935,34 +8779,39 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("NRAW 12-bit (NEV)"),
             _ => None,
         },
-        ("Nikon", 0x02E6) => match value { // FlashWirelessOption
+        ("Nikon", 0x02E6) => match value {
+            // FlashWirelessOption
             0 => Some("Off"),
             1 => Some("Optical AWL"),
             2 => Some("Optical/Radio AWL"),
             3 => Some("Radio AWL"),
             _ => None,
         },
-        ("Nikon", 0x02E8) => match value { // MovieFlickerReduction
+        ("Nikon", 0x02E8) => match value {
+            // MovieFlickerReduction
             0 => Some("Auto"),
             1 => Some("50Hz"),
             2 => Some("60Hz"),
             _ => None,
         },
-        ("Nikon", 0x02EA) => match value { // MovieMeteringMode
+        ("Nikon", 0x02EA) => match value {
+            // MovieMeteringMode
             0 => Some("Matrix"),
             1 => Some("Center"),
             2 => Some("Spot"),
             3 => Some("Highlight"),
             _ => None,
         },
-        ("Nikon", 0x02EC) => match value { // MovieFocusMode
+        ("Nikon", 0x02EC) => match value {
+            // MovieFocusMode
             0 => Some("Manual"),
             1 => Some("AF-S"),
             2 => Some("AF-C"),
             4 => Some("AF-F"),
             _ => None,
         },
-        ("Nikon", 0x02EE) => match value { // MovieAFAreaMode
+        ("Nikon", 0x02EE) => match value {
+            // MovieAFAreaMode
             0 => Some("Pinpoint"),
             1 => Some("Single"),
             2 => Some("Dynamic"),
@@ -7975,64 +8824,75 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             13 => Some("Wide (C2)"),
             _ => None,
         },
-        ("Nikon", 0x02F0) => match value { // MovieVRMode
+        ("Nikon", 0x02F0) => match value {
+            // MovieVRMode
             0 => Some("Off"),
             1 => Some("Normal"),
             2 => Some("Sport"),
             _ => None,
         },
-        ("Nikon", 0x02F2) => match value { // MovieFrameSize
+        ("Nikon", 0x02F2) => match value {
+            // MovieFrameSize
             1 => Some("1920x1080"),
             2 => Some("3840x2160"),
             3 => Some("7680x4320"),
             7 => Some("5376x3024"),
             _ => None,
         },
-        ("Nikon", 0x02F4) => match value { // MovieElectronicVR
+        ("Nikon", 0x02F4) => match value {
+            // MovieElectronicVR
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x02F6) => match value { // MovieSoundRecording
+        ("Nikon", 0x02F6) => match value {
+            // MovieSoundRecording
             0 => Some("Off"),
             1 => Some("Auto"),
             2 => Some("Manual"),
             _ => None,
         },
-        ("Nikon", 0x02FA) => match value { // MicrophoneAttenuator
+        ("Nikon", 0x02FA) => match value {
+            // MicrophoneAttenuator
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x02FB) => match value { // MovieDXCropAlert
+        ("Nikon", 0x02FB) => match value {
+            // MovieDXCropAlert
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x02FC) => match value { // MicrophoneFrequencyResponse
+        ("Nikon", 0x02FC) => match value {
+            // MicrophoneFrequencyResponse
             0 => Some("Wide Range"),
             1 => Some("Vocal Range"),
             _ => None,
         },
-        ("Nikon", 0x02FE) => match value { // WindNoiseReduction
+        ("Nikon", 0x02FE) => match value {
+            // WindNoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0314) => match value { // MovieToneMap
+        ("Nikon", 0x0314) => match value {
+            // MovieToneMap
             0 => Some("SDR"),
             1 => Some("HLG"),
             2 => Some("N-Log"),
             _ => None,
         },
-        ("Nikon", 0x031A) => match value { // MovieFrameSize
+        ("Nikon", 0x031A) => match value {
+            // MovieFrameSize
             1 => Some("1920x1080"),
             2 => Some("3840x2160"),
             3 => Some("7680x4320"),
             7 => Some("5376x3024"),
             _ => None,
         },
-        ("Nikon", 0x031C) => match value { // MovieFrameRate
+        ("Nikon", 0x031C) => match value {
+            // MovieFrameRate
             0 => Some("120p"),
             1 => Some("100p"),
             2 => Some("60p"),
@@ -8042,17 +8902,20 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("24p"),
             _ => None,
         },
-        ("Nikon", 0x0322) => match value { // MicrophoneJackPower
+        ("Nikon", 0x0322) => match value {
+            // MicrophoneJackPower
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0323) => match value { // MovieDXCropAlert
+        ("Nikon", 0x0323) => match value {
+            // MovieDXCropAlert
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0324) => match value { // MovieSubjectDetection
+        ("Nikon", 0x0324) => match value {
+            // MovieSubjectDetection
             0 => Some("Off"),
             1 => Some("Auto"),
             2 => Some("People"),
@@ -8063,39 +8926,45 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Faces"),
             _ => None,
         },
-        ("Nikon", 0x032C) => match value { // MovieHighResZoom
+        ("Nikon", 0x032C) => match value {
+            // MovieHighResZoom
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0336) => match value { // MovieHighISONoiseReduction
+        ("Nikon", 0x0336) => match value {
+            // MovieHighISONoiseReduction
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Normal"),
             3 => Some("High"),
             _ => None,
         },
-        ("Nikon", 0x033C) => match value { // MovieFlickerReduction
+        ("Nikon", 0x033C) => match value {
+            // MovieFlickerReduction
             0 => Some("Auto"),
             1 => Some("50Hz"),
             2 => Some("60Hz"),
             _ => None,
         },
-        ("Nikon", 0x033E) => match value { // MovieMeteringMode
+        ("Nikon", 0x033E) => match value {
+            // MovieMeteringMode
             0 => Some("Matrix"),
             1 => Some("Center"),
             2 => Some("Spot"),
             3 => Some("Highlight"),
             _ => None,
         },
-        ("Nikon", 0x0340) => match value { // MovieFocusMode
+        ("Nikon", 0x0340) => match value {
+            // MovieFocusMode
             0 => Some("Manual"),
             1 => Some("AF-S"),
             2 => Some("AF-C"),
             4 => Some("AF-F"),
             _ => None,
         },
-        ("Nikon", 0x0342) => match value { // MovieAFAreaMode
+        ("Nikon", 0x0342) => match value {
+            // MovieAFAreaMode
             0 => Some("Pinpoint"),
             1 => Some("Single"),
             2 => Some("Dynamic"),
@@ -8108,13 +8977,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             13 => Some("Wide (C2)"),
             _ => None,
         },
-        ("Nikon", 0x0344) => match value { // MovieVRMode
+        ("Nikon", 0x0344) => match value {
+            // MovieVRMode
             0 => Some("Off"),
             1 => Some("Normal"),
             2 => Some("Sport"),
             _ => None,
         },
-        ("Nikon", 0x0346) => match value { // BracketSet
+        ("Nikon", 0x0346) => match value {
+            // BracketSet
             0 => Some("AE/Flash"),
             1 => Some("AE"),
             2 => Some("Flash"),
@@ -8122,46 +8993,54 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Active-D Lighting"),
             _ => None,
         },
-        ("Nikon", 0x0348) => match value { // MovieElectronicVR
+        ("Nikon", 0x0348) => match value {
+            // MovieElectronicVR
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x034A) => match value { // MovieSoundRecording
+        ("Nikon", 0x034A) => match value {
+            // MovieSoundRecording
             0 => Some("Off"),
             1 => Some("Auto"),
             2 => Some("Manual"),
             _ => None,
         },
-        ("Nikon", 0x034E) => match value { // MicrophoneAttenuator
+        ("Nikon", 0x034E) => match value {
+            // MicrophoneAttenuator
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0350) => match value { // MicrophoneFrequencyResponse
+        ("Nikon", 0x0350) => match value {
+            // MicrophoneFrequencyResponse
             0 => Some("Wide Range"),
             1 => Some("Vocal Range"),
             _ => None,
         },
-        ("Nikon", 0x0352) => match value { // WindNoiseReduction
+        ("Nikon", 0x0352) => match value {
+            // WindNoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0354) => match value { // HDR
+        ("Nikon", 0x0354) => match value {
+            // HDR
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("On (Series)"),
             _ => None,
         },
-        ("Nikon", 0x035A) => match value { // SecondarySlotFunction
+        ("Nikon", 0x035A) => match value {
+            // SecondarySlotFunction
             0 => Some("Overflow"),
             1 => Some("Backup"),
             2 => Some("NEF Primary + JPG Secondary"),
             3 => Some("JPG Primary + JPG Secondary"),
             _ => None,
         },
-        ("Nikon", 0x0360) => match value { // HDRLevel
+        ("Nikon", 0x0360) => match value {
+            // HDRLevel
             0 => Some("Auto"),
             1 => Some("Extra High"),
             2 => Some("High"),
@@ -8169,13 +9048,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Low"),
             _ => None,
         },
-        ("Nikon", 0x0364) => match value { // Slot2JpgSize
+        ("Nikon", 0x0364) => match value {
+            // Slot2JpgSize
             0 => Some("Large (6048x4032)"),
             1 => Some("Medium (4528x3024)"),
             2 => Some("Small (3024x2016)"),
             _ => None,
         },
-        ("Nikon", 0x036E) => match value { // SubjectDetection
+        ("Nikon", 0x036E) => match value {
+            // SubjectDetection
             0 => Some("Off"),
             1 => Some("Auto"),
             2 => Some("People"),
@@ -8186,20 +9067,23 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Faces"),
             _ => None,
         },
-        ("Nikon", 0x0370) => match value { // DynamicAFAreaSize
+        ("Nikon", 0x0370) => match value {
+            // DynamicAFAreaSize
             0 => Some("Small"),
             1 => Some("Medium"),
             2 => Some("Large"),
             _ => None,
         },
-        ("Nikon", 0x0372) => match value { // MovieFrameSize
+        ("Nikon", 0x0372) => match value {
+            // MovieFrameSize
             1 => Some("1920x1080"),
             2 => Some("3840x2160"),
             3 => Some("7680x4320"),
             7 => Some("5376x3024"),
             _ => None,
         },
-        ("Nikon", 0x0374) => match value { // MovieFrameRate
+        ("Nikon", 0x0374) => match value {
+            // MovieFrameRate
             0 => Some("120p"),
             1 => Some("100p"),
             2 => Some("60p"),
@@ -8209,17 +9093,20 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("24p"),
             _ => None,
         },
-        ("Nikon", 0x0376) => match value { // MicrophoneJackPower
+        ("Nikon", 0x0376) => match value {
+            // MicrophoneJackPower
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0377) => match value { // MovieDXCropAlert
+        ("Nikon", 0x0377) => match value {
+            // MovieDXCropAlert
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0378) => match value { // MovieSubjectDetection
+        ("Nikon", 0x0378) => match value {
+            // MovieSubjectDetection
             0 => Some("Off"),
             1 => Some("Auto"),
             2 => Some("People"),
@@ -8230,42 +9117,49 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Faces"),
             _ => None,
         },
-        ("Nikon", 0x0380) => match value { // MovieHighResZoom
+        ("Nikon", 0x0380) => match value {
+            // MovieHighResZoom
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0386) => match value { // HighFrequencyFlickerReduction
+        ("Nikon", 0x0386) => match value {
+            // HighFrequencyFlickerReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0388) => match value { // PixelShiftShooting
+        ("Nikon", 0x0388) => match value {
+            // PixelShiftShooting
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("On (Series)"),
             _ => None,
         },
-        ("Nikon", 0x038A) => match value { // PixelShiftNumberShots
+        ("Nikon", 0x038A) => match value {
+            // PixelShiftNumberShots
             0 => Some("4"),
             1 => Some("8"),
             2 => Some("16"),
             3 => Some("32"),
             _ => None,
         },
-        ("Nikon", 0x03EA) => match value { // SubjectDetectionAreaMF
+        ("Nikon", 0x03EA) => match value {
+            // SubjectDetectionAreaMF
             0 => Some("Off"),
             1 => Some("All"),
             2 => Some("Wide (L)"),
             3 => Some("Wide (S)"),
             _ => None,
         },
-        ("Nikon", 0x03EC) => match value { // LinkVRToFocusPoint
+        ("Nikon", 0x03EC) => match value {
+            // LinkVRToFocusPoint
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0414) => match value { // MovieFrameRateH264
+        ("Nikon", 0x0414) => match value {
+            // MovieFrameRateH264
             0 => Some("240p"),
             1 => Some("200p"),
             2 => Some("120p"),
@@ -8277,7 +9171,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("24p"),
             _ => None,
         },
-        ("Nikon", 0x041A) => match value { // MovieType
+        ("Nikon", 0x041A) => match value {
+            // MovieType
             1 => Some("H.264 8-bit (MP4)"),
             2 => Some("H.265 8-bit (MOV)"),
             3 => Some("H.265 10-bit (MOV)"),
@@ -8286,14 +9181,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("NRAW 12-bit (NEV)"),
             _ => None,
         },
-        ("Nikon", 0x048A) => match value { // MovieFrameSize
+        ("Nikon", 0x048A) => match value {
+            // MovieFrameSize
             1 => Some("1920x1080"),
             2 => Some("3840x2160"),
             3 => Some("7680x4320"),
             7 => Some("5376x3024"),
             _ => None,
         },
-        ("Nikon", 0x048C) => match value { // MovieFrameRate
+        ("Nikon", 0x048C) => match value {
+            // MovieFrameRate
             0 => Some("240p"),
             1 => Some("200p"),
             2 => Some("120p"),
@@ -8305,19 +9202,22 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("24p"),
             _ => None,
         },
-        ("Nikon", 0x0532) => match value { // FlickerReductionIndicator
+        ("Nikon", 0x0532) => match value {
+            // FlickerReductionIndicator
             0 => Some("On"),
             1 => Some("Off"),
             _ => None,
         },
-        ("Nikon", 0x0592) => match value { // Language
+        ("Nikon", 0x0592) => match value {
+            // Language
             4 => Some("English"),
             5 => Some("Spanish"),
             7 => Some("French"),
             15 => Some("Portuguese"),
             _ => None,
         },
-        ("Nikon", 0x0594) => match value { // TimeZone
+        ("Nikon", 0x0594) => match value {
+            // TimeZone
             3 => Some("+10:00 (Sydney)"),
             5 => Some("+09:00 (Tokyo)"),
             6 => Some("+08:00 (Beijing, Honk Kong, Sinapore)"),
@@ -8344,19 +9244,22 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             30 => Some("-10:00 (Hawaii)"),
             _ => None,
         },
-        ("Nikon", 0x05B0) => match value { // AFFineTune
+        ("Nikon", 0x05B0) => match value {
+            // AFFineTune
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x05C2) => match value { // Language
+        ("Nikon", 0x05C2) => match value {
+            // Language
             4 => Some("English"),
             5 => Some("Spanish"),
             7 => Some("French"),
             15 => Some("Portuguese"),
             _ => None,
         },
-        ("Nikon", 0x05C4) => match value { // TimeZone
+        ("Nikon", 0x05C4) => match value {
+            // TimeZone
             3 => Some("+10:00 (Sydney)"),
             5 => Some("+09:00 (Tokyo)"),
             6 => Some("+08:00 (Beijing, Honk Kong, Sinapore)"),
@@ -8383,7 +9286,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             30 => Some("-10:00 (Hawaii)"),
             _ => None,
         },
-        ("Nikon", 0x05CA) => match value { // MonitorBrightness
+        ("Nikon", 0x05CA) => match value {
+            // MonitorBrightness
             0 => Some("-5"),
             1 => Some("-4"),
             2 => Some("-3"),
@@ -8401,14 +9305,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             17 => Some("Lo1"),
             _ => None,
         },
-        ("Nikon", 0x05DA) => match value { // Language
+        ("Nikon", 0x05DA) => match value {
+            // Language
             4 => Some("English"),
             5 => Some("Spanish"),
             7 => Some("French"),
             15 => Some("Portuguese"),
             _ => None,
         },
-        ("Nikon", 0x05DC) => match value { // TimeZone
+        ("Nikon", 0x05DC) => match value {
+            // TimeZone
             3 => Some("+10:00 (Sydney)"),
             5 => Some("+09:00 (Tokyo)"),
             6 => Some("+08:00 (Beijing, Honk Kong, Sinapore)"),
@@ -8435,12 +9341,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             30 => Some("-10:00 (Hawaii)"),
             _ => None,
         },
-        ("Nikon", 0x05E0) => match value { // AFFineTune
+        ("Nikon", 0x05E0) => match value {
+            // AFFineTune
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x05E2) => match value { // MonitorBrightness
+        ("Nikon", 0x05E2) => match value {
+            // MonitorBrightness
             0 => Some("-5"),
             1 => Some("-4"),
             2 => Some("-3"),
@@ -8458,12 +9366,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             17 => Some("Lo1"),
             _ => None,
         },
-        ("Nikon", 0x05F8) => match value { // AFFineTune
+        ("Nikon", 0x05F8) => match value {
+            // AFFineTune
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0610) => match value { // HDMIOutputResolution
+        ("Nikon", 0x0610) => match value {
+            // HDMIOutputResolution
             0 => Some("Auto"),
             1 => Some("4320p"),
             2 => Some("2160p"),
@@ -8474,22 +9384,26 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("480p"),
             _ => None,
         },
-        ("Nikon", 0x061D) => match value { // SetClockFromLocationData
+        ("Nikon", 0x061D) => match value {
+            // SetClockFromLocationData
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0624) => match value { // AirplaneMode
+        ("Nikon", 0x0624) => match value {
+            // AirplaneMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0625) => match value { // EmptySlotRelease
+        ("Nikon", 0x0625) => match value {
+            // EmptySlotRelease
             0 => Some("Disable Release"),
             1 => Some("Enable Release"),
             _ => None,
         },
-        ("Nikon", 0x0640) => match value { // HDMIOutputResolution
+        ("Nikon", 0x0640) => match value {
+            // HDMIOutputResolution
             0 => Some("Auto"),
             1 => Some("4320p"),
             2 => Some("2160p"),
@@ -8500,57 +9414,68 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("480p"),
             _ => None,
         },
-        ("Nikon", 0x0648) => match value { // EnergySavingMode
+        ("Nikon", 0x0648) => match value {
+            // EnergySavingMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x064D) => match value { // SetClockFromLocationData
+        ("Nikon", 0x064D) => match value {
+            // SetClockFromLocationData
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0654) => match value { // AirplaneMode
+        ("Nikon", 0x0654) => match value {
+            // AirplaneMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0655) => match value { // EmptySlotRelease
+        ("Nikon", 0x0655) => match value {
+            // EmptySlotRelease
             0 => Some("Disable Release"),
             1 => Some("Enable Release"),
             _ => None,
         },
-        ("Nikon", 0x0660) => match value { // RecordLocationData
+        ("Nikon", 0x0660) => match value {
+            // RecordLocationData
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0664) => match value { // USBPowerDelivery
+        ("Nikon", 0x0664) => match value {
+            // USBPowerDelivery
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x066D) => match value { // SensorShield
+        ("Nikon", 0x066D) => match value {
+            // SensorShield
             0 => Some("Stays Open"),
             1 => Some("Closes"),
             _ => None,
         },
-        ("Nikon", 0x0678) => match value { // EnergySavingMode
+        ("Nikon", 0x0678) => match value {
+            // EnergySavingMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0690) => match value { // RecordLocationData
+        ("Nikon", 0x0690) => match value {
+            // RecordLocationData
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0694) => match value { // USBPowerDelivery
+        ("Nikon", 0x0694) => match value {
+            // USBPowerDelivery
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x069A) => match value { // MonitorBrightness
+        ("Nikon", 0x069A) => match value {
+            // MonitorBrightness
             0 => Some("-5"),
             1 => Some("-4"),
             2 => Some("-3"),
@@ -8568,19 +9493,22 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             17 => Some("Lo1"),
             _ => None,
         },
-        ("Nikon", 0x069D) => match value { // SensorShield
+        ("Nikon", 0x069D) => match value {
+            // SensorShield
             0 => Some("Stays Open"),
             1 => Some("Closes"),
             _ => None,
         },
-        ("Nikon", 0x06A2) => match value { // Language
+        ("Nikon", 0x06A2) => match value {
+            // Language
             4 => Some("English"),
             5 => Some("Spanish"),
             7 => Some("French"),
             15 => Some("Portuguese"),
             _ => None,
         },
-        ("Nikon", 0x06A4) => match value { // TimeZone
+        ("Nikon", 0x06A4) => match value {
+            // TimeZone
             3 => Some("+10:00 (Sydney)"),
             5 => Some("+09:00 (Tokyo)"),
             6 => Some("+08:00 (Beijing, Honk Kong, Sinapore)"),
@@ -8607,7 +9535,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             30 => Some("-10:00 (Hawaii)"),
             _ => None,
         },
-        ("Nikon", 0x06A8) => match value { // HDMIOutputResolution
+        ("Nikon", 0x06A8) => match value {
+            // HDMIOutputResolution
             0 => Some("Auto"),
             1 => Some("4320p"),
             2 => Some("2160p"),
@@ -8618,7 +9547,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("480p"),
             _ => None,
         },
-        ("Nikon", 0x06AA) => match value { // MonitorBrightness
+        ("Nikon", 0x06AA) => match value {
+            // MonitorBrightness
             0 => Some("-5"),
             1 => Some("-4"),
             2 => Some("-3"),
@@ -8636,37 +9566,44 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             17 => Some("Lo1"),
             _ => None,
         },
-        ("Nikon", 0x06B0) => match value { // AFFineTune
+        ("Nikon", 0x06B0) => match value {
+            // AFFineTune
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x06B5) => match value { // SetClockFromLocationData
+        ("Nikon", 0x06B5) => match value {
+            // SetClockFromLocationData
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x06BC) => match value { // AirplaneMode
+        ("Nikon", 0x06BC) => match value {
+            // AirplaneMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x06BD) => match value { // EmptySlotRelease
+        ("Nikon", 0x06BD) => match value {
+            // EmptySlotRelease
             0 => Some("Disable Release"),
             1 => Some("Enable Release"),
             _ => None,
         },
-        ("Nikon", 0x06C0) => match value { // AFFineTune
+        ("Nikon", 0x06C0) => match value {
+            // AFFineTune
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x06DA) => match value { // FocusShiftAutoReset
+        ("Nikon", 0x06DA) => match value {
+            // FocusShiftAutoReset
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x06DD) => match value { // PhotoShootingMenuBankImageArea
+        ("Nikon", 0x06DD) => match value {
+            // PhotoShootingMenuBankImageArea
             0 => Some("FX (36x24)"),
             1 => Some("DX (24x16)"),
             2 => Some("5:4 (30x24)"),
@@ -8674,27 +9611,32 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("1:1 (24x24)"),
             _ => None,
         },
-        ("Nikon", 0x06E0) => match value { // EnergySavingMode
+        ("Nikon", 0x06E0) => match value {
+            // EnergySavingMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x06F8) => match value { // RecordLocationData
+        ("Nikon", 0x06F8) => match value {
+            // RecordLocationData
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x06FC) => match value { // USBPowerDelivery
+        ("Nikon", 0x06FC) => match value {
+            // USBPowerDelivery
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0705) => match value { // SensorShield
+        ("Nikon", 0x0705) => match value {
+            // SensorShield
             0 => Some("Stays Open"),
             1 => Some("Closes"),
             _ => None,
         },
-        ("Nikon", 0x0710) => match value { // HDMIOutputResolution
+        ("Nikon", 0x0710) => match value {
+            // HDMIOutputResolution
             0 => Some("Auto"),
             1 => Some("4320p"),
             2 => Some("2160p"),
@@ -8705,31 +9647,36 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("480p"),
             _ => None,
         },
-        ("Nikon", 0x0712) => match value { // PreReleaseBurstLength
+        ("Nikon", 0x0712) => match value {
+            // PreReleaseBurstLength
             0 => Some("None"),
             1 => Some("0.3 Sec"),
             2 => Some("0.5 Sec"),
             3 => Some("1 Sec"),
             _ => None,
         },
-        ("Nikon", 0x0714) => match value { // PostReleaseBurstLength
+        ("Nikon", 0x0714) => match value {
+            // PostReleaseBurstLength
             0 => Some("1 Sec"),
             1 => Some("2 Sec"),
             2 => Some("3 Sec"),
             3 => Some("Max"),
             _ => None,
         },
-        ("Nikon", 0x0722) => match value { // AirplaneMode
+        ("Nikon", 0x0722) => match value {
+            // AirplaneMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0723) => match value { // EmptySlotRelease
+        ("Nikon", 0x0723) => match value {
+            // EmptySlotRelease
             0 => Some("Disable Release"),
             1 => Some("Enable Release"),
             _ => None,
         },
-        ("Nikon", 0x0746) => match value { // AutoCapturePreset
+        ("Nikon", 0x0746) => match value {
+            // AutoCapturePreset
             0 => Some("1"),
             1 => Some("2"),
             2 => Some("3"),
@@ -8737,22 +9684,26 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("5"),
             _ => None,
         },
-        ("Nikon", 0x0748) => match value { // FocusShiftAutoReset
+        ("Nikon", 0x0748) => match value {
+            // FocusShiftAutoReset
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x0762) => match value { // USBPowerDelivery
+        ("Nikon", 0x0762) => match value {
+            // USBPowerDelivery
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x076B) => match value { // SensorShield
+        ("Nikon", 0x076B) => match value {
+            // SensorShield
             0 => Some("Stays Open"),
             1 => Some("Closes"),
             _ => None,
         },
-        ("Nikon", 0x0770) => match value { // HDMIOutputResolution
+        ("Nikon", 0x0770) => match value {
+            // HDMIOutputResolution
             0 => Some("Auto"),
             1 => Some("4320p"),
             2 => Some("2160p"),
@@ -8763,59 +9714,69 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("480p"),
             _ => None,
         },
-        ("Nikon", 0x0782) => match value { // PreReleaseBurstLength
+        ("Nikon", 0x0782) => match value {
+            // PreReleaseBurstLength
             0 => Some("None"),
             1 => Some("0.3 Sec"),
             2 => Some("0.5 Sec"),
             3 => Some("1 Sec"),
             _ => None,
         },
-        ("Nikon", 0x0783) => match value { // EmptySlotRelease
+        ("Nikon", 0x0783) => match value {
+            // EmptySlotRelease
             0 => Some("Disable Release"),
             1 => Some("Enable Release"),
             _ => None,
         },
-        ("Nikon", 0x0784) => match value { // PostReleaseBurstLength
+        ("Nikon", 0x0784) => match value {
+            // PostReleaseBurstLength
             0 => Some("1 Sec"),
             1 => Some("2 Sec"),
             2 => Some("3 Sec"),
             3 => Some("Max"),
             _ => None,
         },
-        ("Nikon", 0x07A6) => match value { // EnergySavingMode
+        ("Nikon", 0x07A6) => match value {
+            // EnergySavingMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x07C2) => match value { // USBPowerDelivery
+        ("Nikon", 0x07C2) => match value {
+            // USBPowerDelivery
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x07CB) => match value { // SensorShield
+        ("Nikon", 0x07CB) => match value {
+            // SensorShield
             0 => Some("Stays Open"),
             1 => Some("Closes"),
             _ => None,
         },
-        ("Nikon", 0x07D2) => match value { // ViewModeShowEffectsOfSettings
+        ("Nikon", 0x07D2) => match value {
+            // ViewModeShowEffectsOfSettings
             0 => Some("Always"),
             1 => Some("Only When Flash Not Used"),
             _ => None,
         },
-        ("Nikon", 0x07FE) => match value { // PixelShiftShooting
+        ("Nikon", 0x07FE) => match value {
+            // PixelShiftShooting
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("On (Series)"),
             _ => None,
         },
-        ("Nikon", 0x0800) => match value { // PixelShiftNumberShots
+        ("Nikon", 0x0800) => match value {
+            // PixelShiftNumberShots
             0 => Some("4"),
             1 => Some("8"),
             2 => Some("16"),
             3 => Some("32"),
             _ => None,
         },
-        ("Nikon", 0x0802) => match value { // PixelShiftDelay
+        ("Nikon", 0x0802) => match value {
+            // PixelShiftDelay
             0 => Some("Off"),
             1 => Some("1 s"),
             2 => Some("2 s"),
@@ -8824,31 +9785,36 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("10 s"),
             _ => None,
         },
-        ("Nikon", 0x0804) => match value { // CommandDialFrameAdvanceZoom
+        ("Nikon", 0x0804) => match value {
+            // CommandDialFrameAdvanceZoom
             0 => Some("Hold"),
             1 => Some("Focus Point"),
             2 => Some("Face Priority"),
             _ => None,
         },
-        ("Nikon", 0x0806) => match value { // SubCommandDialFrameAdvanceZoom
+        ("Nikon", 0x0806) => match value {
+            // SubCommandDialFrameAdvanceZoom
             0 => Some("Hold"),
             1 => Some("Focus Point"),
             2 => Some("Face Priority"),
             _ => None,
         },
-        ("Nikon", 0x089E) => match value { // MaximumApertureLV
+        ("Nikon", 0x089E) => match value {
+            // MaximumApertureLV
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x08FC) => match value { // Language
+        ("Nikon", 0x08FC) => match value {
+            // Language
             4 => Some("English"),
             5 => Some("Spanish"),
             7 => Some("French"),
             15 => Some("Portuguese"),
             _ => None,
         },
-        ("Nikon", 0x08FE) => match value { // TimeZone
+        ("Nikon", 0x08FE) => match value {
+            // TimeZone
             3 => Some("+10:00 (Sydney)"),
             5 => Some("+09:00 (Tokyo)"),
             6 => Some("+08:00 (Beijing, Honk Kong, Sinapore)"),
@@ -8875,7 +9841,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             30 => Some("-10:00 (Hawaii)"),
             _ => None,
         },
-        ("Nikon", 0x0904) => match value { // MonitorBrightness
+        ("Nikon", 0x0904) => match value {
+            // MonitorBrightness
             0 => Some("-5"),
             1 => Some("-4"),
             2 => Some("-3"),
@@ -8893,42 +9860,50 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             17 => Some("Lo1"),
             _ => None,
         },
-        ("Nikon", 0x098C) => match value { // EmptySlotRelease
+        ("Nikon", 0x098C) => match value {
+            // EmptySlotRelease
             0 => Some("Disable Release"),
             1 => Some("Enable Release"),
             _ => None,
         },
-        ("Nikon", 0x0992) => match value { // EnergySavingMode
+        ("Nikon", 0x0992) => match value {
+            // EnergySavingMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x09AC) => match value { // USBPowerDelivery
+        ("Nikon", 0x09AC) => match value {
+            // USBPowerDelivery
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x09B0) => match value { // SaveFocusPosition
+        ("Nikon", 0x09B0) => match value {
+            // SaveFocusPosition
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x09B7) => match value { // SilentPhotography
+        ("Nikon", 0x09B7) => match value {
+            // SilentPhotography
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x09C0) => match value { // AirplaneMode
+        ("Nikon", 0x09C0) => match value {
+            // AirplaneMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x1013) => match value { // ElectronicVR
+        ("Nikon", 0x1013) => match value {
+            // ElectronicVR
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Nikon", 0x174C) => match value { // AEBracketingSteps
+        ("Nikon", 0x174C) => match value {
+            // AEBracketingSteps
             0 => Some("AE Bracketing Disabled"),
             32 => Some("AE Bracketing Disabled"),
             48 => Some("AE Bracketing Disabled"),
@@ -8980,7 +9955,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             214 => Some("5F3"),
             _ => None,
         },
-        ("Nikon", 0x174D) => match value { // WBBracketingSteps
+        ("Nikon", 0x174D) => match value {
+            // WBBracketingSteps
             0 => Some("WB Bracketing Disabled"),
             1 => Some("b3F 1"),
             2 => Some("A3F 1"),
@@ -9010,7 +9986,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             40 => Some("9F 3"),
             _ => None,
         },
-        ("Nikon", 0x184D) => match value { // ReleaseMode
+        ("Nikon", 0x184D) => match value {
+            // ReleaseMode
             0 => Some("Single Frame"),
             1 => Some("Continuous High Speed"),
             3 => Some("Continuous Low Speed"),
@@ -9019,13 +9996,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             64 => Some("Quiet"),
             _ => None,
         },
-        ("Nikon", 0x18C2) => match value { // MultiSelectorLiveViewMode
+        ("Nikon", 0x18C2) => match value {
+            // MultiSelectorLiveViewMode
             0 => Some("Reset"),
             1 => Some("Zoom"),
             3 => Some("None"),
             _ => None,
         },
-        ("Nikon", 0x18EA) => match value { // ISOAutoShutterTime
+        ("Nikon", 0x18EA) => match value {
+            // ISOAutoShutterTime
             0 => Some("1/4000 s"),
             1 => Some("1/3200 s"),
             2 => Some("1/2500 s"),
@@ -9065,7 +10044,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             36 => Some("Auto (Fastest)"),
             _ => None,
         },
-        ("Nikon", 0x18EB) => match value { // ISOAutoHiLimit
+        ("Nikon", 0x18EB) => match value {
+            // ISOAutoHiLimit
             36 => Some("ISO 200"),
             38 => Some("ISO 250"),
             39 => Some("ISO 280"),
@@ -9109,50 +10089,58 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             114 => Some("ISO Hi 5.0"),
             _ => None,
         },
-        ("Nikon", 0x1978) => match value { // ShutterTrigger
+        ("Nikon", 0x1978) => match value {
+            // ShutterTrigger
             0 => Some("Timer"),
             15 => Some("Cable Release/Remote"),
             195 => Some("Shutter Button"),
             _ => None,
         },
-        ("Nikon", 0x3693) => match value { // Rotation
+        ("Nikon", 0x3693) => match value {
+            // Rotation
             0 => Some("Horizontal"),
             1 => Some("Rotate 270 CW"),
             2 => Some("Rotate 90 CW"),
             3 => Some("Rotate 180"),
             _ => None,
         },
-        ("Nikon", 0x38BE) => match value { // Rotation
+        ("Nikon", 0x38BE) => match value {
+            // Rotation
             0 => Some("Horizontal"),
             1 => Some("Rotate 270 CW"),
             2 => Some("Rotate 90 CW"),
             3 => Some("Rotate 180"),
             _ => None,
         },
-        ("NikonCapture", 0x0000) => match value { // RedEyeCorrection
+        ("NikonCapture", 0x0000) => match value {
+            // RedEyeCorrection
             0 => Some("Off"),
             1 => Some("Automatic"),
             2 => Some("Click on Eyes"),
             _ => None,
         },
-        ("NikonCapture", 0x0004) => match value { // EdgeNoiseReduction
+        ("NikonCapture", 0x0004) => match value {
+            // EdgeNoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCapture", 0x0005) => match value { // ColorMoireReductionMode
+        ("NikonCapture", 0x0005) => match value {
+            // ColorMoireReductionMode
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Medium"),
             3 => Some("High"),
             _ => None,
         },
-        ("NikonCapture", 0x0008) => match value { // EnhanceDarkTones
+        ("NikonCapture", 0x0008) => match value {
+            // EnhanceDarkTones
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCapture", 0x0010) => match value { // WBAdjMode
+        ("NikonCapture", 0x0010) => match value {
+            // WBAdjMode
             1 => Some("Use Gray Point"),
             2 => Some("Recorded Value"),
             3 => Some("Use Temperature"),
@@ -9162,13 +10150,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Auto1"),
             _ => None,
         },
-        ("NikonCapture", 0x0011) => match value { // NoiseReductionMethod
+        ("NikonCapture", 0x0011) => match value {
+            // NoiseReductionMethod
             0 => Some("Faster"),
             1 => Some("Better Quality"),
             2 => Some("Better Quality 2013"),
             _ => None,
         },
-        ("NikonCapture", 0x0013) => match value { // Unsharp1Color
+        ("NikonCapture", 0x0013) => match value {
+            // Unsharp1Color
             0 => Some("RGB"),
             1 => Some("Red"),
             2 => Some("Green"),
@@ -9178,7 +10168,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Cyan"),
             _ => None,
         },
-        ("NikonCapture", 0x0014) => match value { // WBAdjLighting
+        ("NikonCapture", 0x0014) => match value {
+            // WBAdjLighting
             0 => Some("None"),
             256 => Some("Incandescent"),
             512 => Some("Daylight (direct sunlight)"),
@@ -9203,17 +10194,20 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             1536 => Some("Sodium Vapor Lamps"),
             _ => None,
         },
-        ("NikonCapture", 0x0015) => match value { // ColorMoireReduction
+        ("NikonCapture", 0x0015) => match value {
+            // ColorMoireReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCapture", 0x0017) => match value { // NoiseReduction
+        ("NikonCapture", 0x0017) => match value {
+            // NoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCapture", 0x002E) => match value { // Unsharp2Color
+        ("NikonCapture", 0x002E) => match value {
+            // Unsharp2Color
             0 => Some("RGB"),
             1 => Some("Red"),
             2 => Some("Green"),
@@ -9223,7 +10217,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Cyan"),
             _ => None,
         },
-        ("NikonCapture", 0x0049) => match value { // Unsharp3Color
+        ("NikonCapture", 0x0049) => match value {
+            // Unsharp3Color
             0 => Some("RGB"),
             1 => Some("Red"),
             2 => Some("Green"),
@@ -9233,7 +10228,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Cyan"),
             _ => None,
         },
-        ("NikonCapture", 0x0064) => match value { // Unsharp4Color
+        ("NikonCapture", 0x0064) => match value {
+            // Unsharp4Color
             0 => Some("RGB"),
             1 => Some("Red"),
             2 => Some("Green"),
@@ -9243,37 +10239,44 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Cyan"),
             _ => None,
         },
-        ("NikonCustom", 0x0001) => match value { // LimitReleaseModeSelCL
+        ("NikonCustom", 0x0001) => match value {
+            // LimitReleaseModeSelCL
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x0002) => match value { // LimitReleaseModeSelCH
+        ("NikonCustom", 0x0002) => match value {
+            // LimitReleaseModeSelCH
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x0003) => match value { // LimitReleaseModeSelC30
+        ("NikonCustom", 0x0003) => match value {
+            // LimitReleaseModeSelC30
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x0004) => match value { // LimitReleaseModeSelC120
+        ("NikonCustom", 0x0004) => match value {
+            // LimitReleaseModeSelC120
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x0005) => match value { // LimitReleaseModeSelSelf
+        ("NikonCustom", 0x0005) => match value {
+            // LimitReleaseModeSelSelf
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x0006) => match value { // ReleaseButtonToUseDial
+        ("NikonCustom", 0x0006) => match value {
+            // ReleaseButtonToUseDial
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("NikonCustom", 0x0007) => match value { // BlockShotAFResponse
+        ("NikonCustom", 0x0007) => match value {
+            // BlockShotAFResponse
             1 => Some("1 (Quick)"),
             2 => Some("2"),
             3 => Some("3 (Normal)"),
@@ -9281,163 +10284,192 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("5 (Delayed)"),
             _ => None,
         },
-        ("NikonCustom", 0x0008) => match value { // ReleaseButtonToUseDial
+        ("NikonCustom", 0x0008) => match value {
+            // ReleaseButtonToUseDial
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("NikonCustom", 0x000B) => match value { // AFPointSel
+        ("NikonCustom", 0x000B) => match value {
+            // AFPointSel
             0 => Some("Use All"),
             1 => Some("Use Half"),
             _ => None,
         },
-        ("NikonCustom", 0x000D) => match value { // StoreByOrientation
+        ("NikonCustom", 0x000D) => match value {
+            // StoreByOrientation
             0 => Some("Off"),
             1 => Some("Focus Point"),
             2 => Some("Focus Point and AF-area mode"),
             _ => None,
         },
-        ("NikonCustom", 0x000F) => match value { // AFActivation
+        ("NikonCustom", 0x000F) => match value {
+            // AFActivation
             0 => Some("AF-On Only"),
             1 => Some("Shutter/AF-On"),
             _ => None,
         },
-        ("NikonCustom", 0x0015) => match value { // LimitAFAreaModeSelAuto
+        ("NikonCustom", 0x0015) => match value {
+            // LimitAFAreaModeSelAuto
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x0016) => match value { // FocusPointWrap
+        ("NikonCustom", 0x0016) => match value {
+            // FocusPointWrap
             0 => Some("No Wrap"),
             1 => Some("Wrap"),
             _ => None,
         },
-        ("NikonCustom", 0x0017) => match value { // ManualFocusPointIllumination
+        ("NikonCustom", 0x0017) => match value {
+            // ManualFocusPointIllumination
             0 => Some("On During Focus Point Selection Only"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0018) => match value { // DynamicAreaAFAssist
+        ("NikonCustom", 0x0018) => match value {
+            // DynamicAreaAFAssist
             0 => Some("Focus Point Only"),
             1 => Some("Focus and Surrounding Points"),
             _ => None,
         },
-        ("NikonCustom", 0x001A) => match value { // ManualFocusRingInAFMode
+        ("NikonCustom", 0x001A) => match value {
+            // ManualFocusRingInAFMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x001B) => match value { // ExposureControlStepSize
+        ("NikonCustom", 0x001B) => match value {
+            // ExposureControlStepSize
             0 => Some("1/3 EV"),
             1 => Some("1/2 EV"),
             2 => Some("1 EV"),
             _ => None,
         },
-        ("NikonCustom", 0x001D) => match value { // EasyExposureCompensation
+        ("NikonCustom", 0x001D) => match value {
+            // EasyExposureCompensation
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("On (auto reset)"),
             _ => None,
         },
-        ("NikonCustom", 0x001F) => match value { // CenterWeightedAreaSize
+        ("NikonCustom", 0x001F) => match value {
+            // CenterWeightedAreaSize
             0 => Some("8 mm"),
             1 => Some("12 mm"),
             4 => Some("Average"),
             _ => None,
         },
-        ("NikonCustom", 0x0021) => match value { // CenterWeightedAreaSize
+        ("NikonCustom", 0x0021) => match value {
+            // CenterWeightedAreaSize
             0 => Some("Standard"),
             1 => Some("Small"),
             4 => Some("Average"),
             _ => None,
         },
-        ("NikonCustom", 0x002B) => match value { // SelfTimerTime
+        ("NikonCustom", 0x002B) => match value {
+            // SelfTimerTime
             0 => Some("2 s"),
             1 => Some("5 s"),
             2 => Some("10 s"),
             3 => Some("20 s"),
             _ => None,
         },
-        ("NikonCustom", 0x002D) => match value { // SelfTimerTime
+        ("NikonCustom", 0x002D) => match value {
+            // SelfTimerTime
             0 => Some("2 s"),
             1 => Some("5 s"),
             2 => Some("10 s"),
             3 => Some("20 s"),
             _ => None,
         },
-        ("NikonCustom", 0x0031) => match value { // SelfTimerShotInterval
+        ("NikonCustom", 0x0031) => match value {
+            // SelfTimerShotInterval
             0 => Some("0.5 s"),
             1 => Some("1 s"),
             2 => Some("2 s"),
             3 => Some("3 s"),
             _ => None,
         },
-        ("NikonCustom", 0x0035) => match value { // SelfTimerShotInterval
+        ("NikonCustom", 0x0035) => match value {
+            // SelfTimerShotInterval
             0 => Some("0.5 s"),
             1 => Some("1 s"),
             2 => Some("2 s"),
             3 => Some("3 s"),
             _ => None,
         },
-        ("NikonCustom", 0x0041) => match value { // SyncReleaseMode
+        ("NikonCustom", 0x0041) => match value {
+            // SyncReleaseMode
             0 => Some("No Sync"),
             1 => Some("Sync"),
             _ => None,
         },
-        ("NikonCustom", 0x0045) => match value { // LimitSelectableImageAreaDX
+        ("NikonCustom", 0x0045) => match value {
+            // LimitSelectableImageAreaDX
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x0046) => match value { // LimitSelectableImageArea1To1
+        ("NikonCustom", 0x0046) => match value {
+            // LimitSelectableImageArea1To1
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x0047) => match value { // LimitSelectableImageArea16To9
+        ("NikonCustom", 0x0047) => match value {
+            // LimitSelectableImageArea16To9
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x0048) => match value { // FileNumberSequence
+        ("NikonCustom", 0x0048) => match value {
+            // FileNumberSequence
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0049) => match value { // FocusPeakingLevel
+        ("NikonCustom", 0x0049) => match value {
+            // FocusPeakingLevel
             0 => Some("High Sensitivity"),
             1 => Some("Standard Sensitivity"),
             2 => Some("Low Sensitivity"),
             _ => None,
         },
-        ("NikonCustom", 0x004B) => match value { // FocusPeakingHighlightColor
+        ("NikonCustom", 0x004B) => match value {
+            // FocusPeakingHighlightColor
             0 => Some("Red"),
             1 => Some("Yellow"),
             2 => Some("Blue"),
             3 => Some("White"),
             _ => None,
         },
-        ("NikonCustom", 0x004C) => match value { // LimitSelectableImageArea1To1
+        ("NikonCustom", 0x004C) => match value {
+            // LimitSelectableImageArea1To1
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x004D) => match value { // LimitSelectableImageArea16To9
+        ("NikonCustom", 0x004D) => match value {
+            // LimitSelectableImageArea16To9
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x004E) => match value { // FileNumberSequence
+        ("NikonCustom", 0x004E) => match value {
+            // FileNumberSequence
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0051) => match value { // ContinuousModeDisplay
+        ("NikonCustom", 0x0051) => match value {
+            // ContinuousModeDisplay
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0053) => match value { // FlashSyncSpeed
+        ("NikonCustom", 0x0053) => match value {
+            // FlashSyncSpeed
             0 => Some("1/60 s"),
             1 => Some("1/80 s"),
             2 => Some("1/100 s"),
@@ -9447,12 +10479,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("1/250 s"),
             _ => None,
         },
-        ("NikonCustom", 0x0055) => match value { // HighSpeedSync
+        ("NikonCustom", 0x0055) => match value {
+            // HighSpeedSync
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0057) => match value { // FlashShutterSpeed
+        ("NikonCustom", 0x0057) => match value {
+            // FlashShutterSpeed
             0 => Some("1 s"),
             1 => Some("1/2 s"),
             2 => Some("1/4 s"),
@@ -9467,22 +10501,26 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("2 s"),
             _ => None,
         },
-        ("NikonCustom", 0x0059) => match value { // FlashExposureCompArea
+        ("NikonCustom", 0x0059) => match value {
+            // FlashExposureCompArea
             0 => Some("Entire Frame"),
             1 => Some("Background Only"),
             _ => None,
         },
-        ("NikonCustom", 0x005B) => match value { // AutoFlashISOSensitivity
+        ("NikonCustom", 0x005B) => match value {
+            // AutoFlashISOSensitivity
             0 => Some("Subject and Background"),
             1 => Some("Subject Only"),
             _ => None,
         },
-        ("NikonCustom", 0x005D) => match value { // ModelingFlash
+        ("NikonCustom", 0x005D) => match value {
+            // ModelingFlash
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x005F) => match value { // AutoBracketModeM
+        ("NikonCustom", 0x005F) => match value {
+            // AutoBracketModeM
             0 => Some("Flash/Speed"),
             1 => Some("Flash/Speed/Aperture"),
             2 => Some("Flash/Aperture"),
@@ -9490,12 +10528,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Flash/ISO"),
             _ => None,
         },
-        ("NikonCustom", 0x0061) => match value { // AutoBracketOrder
+        ("NikonCustom", 0x0061) => match value {
+            // AutoBracketOrder
             0 => Some("0,-,+"),
             1 => Some("-,0,+"),
             _ => None,
         },
-        ("NikonCustom", 0x0063) => match value { // AutoBracketModeM
+        ("NikonCustom", 0x0063) => match value {
+            // AutoBracketModeM
             0 => Some("Flash/Speed"),
             1 => Some("Flash/Speed/Aperture"),
             2 => Some("Flash/Aperture"),
@@ -9503,12 +10543,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Flash/ISO"),
             _ => None,
         },
-        ("NikonCustom", 0x0065) => match value { // AutoBracketOrder
+        ("NikonCustom", 0x0065) => match value {
+            // AutoBracketOrder
             0 => Some("0,-,+"),
             1 => Some("-,0,+"),
             _ => None,
         },
-        ("NikonCustom", 0x00AD) => match value { // LensControlRing
+        ("NikonCustom", 0x00AD) => match value {
+            // LensControlRing
             0 => Some("None (Disabled)"),
             1 => Some("Focus (M/A)"),
             2 => Some("ISO Sensitivity"),
@@ -9516,7 +10558,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Aperture"),
             _ => None,
         },
-        ("NikonCustom", 0x00B1) => match value { // LensControlRing
+        ("NikonCustom", 0x00B1) => match value {
+            // LensControlRing
             0 => Some("None (Disabled)"),
             1 => Some("Focus (M/A)"),
             2 => Some("ISO Sensitivity"),
@@ -9524,47 +10567,56 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Aperture"),
             _ => None,
         },
-        ("NikonCustom", 0x00B7) => match value { // ShutterSpeedLock
+        ("NikonCustom", 0x00B7) => match value {
+            // ShutterSpeedLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x00B8) => match value { // ApertureLock
+        ("NikonCustom", 0x00B8) => match value {
+            // ApertureLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x00BB) => match value { // ShutterSpeedLock
+        ("NikonCustom", 0x00BB) => match value {
+            // ShutterSpeedLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x00BC) => match value { // ApertureLock
+        ("NikonCustom", 0x00BC) => match value {
+            // ApertureLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x00BF) => match value { // UseDialWithoutHold
+        ("NikonCustom", 0x00BF) => match value {
+            // UseDialWithoutHold
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x00C1) => match value { // ReverseIndicators
+        ("NikonCustom", 0x00C1) => match value {
+            // ReverseIndicators
             0 => Some("+ 0 -"),
             1 => Some("- 0 +"),
             _ => None,
         },
-        ("NikonCustom", 0x00C3) => match value { // UseDialWithoutHold
+        ("NikonCustom", 0x00C3) => match value {
+            // UseDialWithoutHold
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x00C5) => match value { // ReverseIndicators
+        ("NikonCustom", 0x00C5) => match value {
+            // ReverseIndicators
             0 => Some("+ 0 -"),
             1 => Some("- 0 +"),
             _ => None,
         },
-        ("NikonCustom", 0x00D7) => match value { // MovieLensControlRing
+        ("NikonCustom", 0x00D7) => match value {
+            // MovieLensControlRing
             0 => Some("None (Disabled)"),
             2 => Some("ISO Sensitivity"),
             3 => Some("Exposure Compensation"),
@@ -9572,12 +10624,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Hi-Res Zoom"),
             _ => None,
         },
-        ("NikonCustom", 0x00DF) => match value { // MovieAFSpeedApply
+        ("NikonCustom", 0x00DF) => match value {
+            // MovieAFSpeedApply
             0 => Some("Always"),
             1 => Some("Only During Recording"),
             _ => None,
         },
-        ("NikonCustom", 0x00E1) => match value { // MovieAFTrackingSensitivity
+        ("NikonCustom", 0x00E1) => match value {
+            // MovieAFTrackingSensitivity
             0 => Some("1 (High)"),
             1 => Some("2"),
             2 => Some("3"),
@@ -9587,12 +10641,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("7 (Low)"),
             _ => None,
         },
-        ("NikonCustom", 0x00E7) => match value { // MovieAFSpeedApply
+        ("NikonCustom", 0x00E7) => match value {
+            // MovieAFSpeedApply
             0 => Some("Always"),
             1 => Some("Only During Recording"),
             _ => None,
         },
-        ("NikonCustom", 0x00E9) => match value { // MovieAFTrackingSensitivity
+        ("NikonCustom", 0x00E9) => match value {
+            // MovieAFTrackingSensitivity
             0 => Some("1 (High)"),
             1 => Some("2"),
             2 => Some("3"),
@@ -9602,42 +10658,50 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("7 (Low)"),
             _ => None,
         },
-        ("NikonCustom", 0x00F1) => match value { // LCDIllumination
+        ("NikonCustom", 0x00F1) => match value {
+            // LCDIllumination
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x00F2) => match value { // ExtendedShutterSpeeds
+        ("NikonCustom", 0x00F2) => match value {
+            // ExtendedShutterSpeeds
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x00F5) => match value { // FocusPointPersistence
+        ("NikonCustom", 0x00F5) => match value {
+            // FocusPointPersistence
             0 => Some("Auto"),
             1 => Some("Off"),
             _ => None,
         },
-        ("NikonCustom", 0x0101) => match value { // LCDIllumination
+        ("NikonCustom", 0x0101) => match value {
+            // LCDIllumination
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0102) => match value { // ExtendedShutterSpeeds
+        ("NikonCustom", 0x0102) => match value {
+            // ExtendedShutterSpeeds
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0103) => match value { // SubjectMotion
+        ("NikonCustom", 0x0103) => match value {
+            // SubjectMotion
             0 => Some("Erratic"),
             1 => Some("Steady"),
             _ => None,
         },
-        ("NikonCustom", 0x0105) => match value { // FocusPointPersistence
+        ("NikonCustom", 0x0105) => match value {
+            // FocusPointPersistence
             0 => Some("Auto"),
             1 => Some("Off"),
             _ => None,
         },
-        ("NikonCustom", 0x0107) => match value { // AutoFocusModeRestrictions
+        ("NikonCustom", 0x0107) => match value {
+            // AutoFocusModeRestrictions
             0 => Some("AF-S"),
             1 => Some("AF-C"),
             2 => Some("Full-time AF"),
@@ -9645,32 +10709,38 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("No Restrictions"),
             _ => None,
         },
-        ("NikonCustom", 0x0111) => match value { // FlashBurstPriority
+        ("NikonCustom", 0x0111) => match value {
+            // FlashBurstPriority
             0 => Some("Frame Rate"),
             1 => Some("Exposure"),
             _ => None,
         },
-        ("NikonCustom", 0x0117) => match value { // LCDIllumination
+        ("NikonCustom", 0x0117) => match value {
+            // LCDIllumination
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0118) => match value { // ExtendedShutterSpeeds
+        ("NikonCustom", 0x0118) => match value {
+            // ExtendedShutterSpeeds
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0119) => match value { // SubjectMotion
+        ("NikonCustom", 0x0119) => match value {
+            // SubjectMotion
             0 => Some("Erratic"),
             1 => Some("Steady"),
             _ => None,
         },
-        ("NikonCustom", 0x011B) => match value { // FocusPointPersistence
+        ("NikonCustom", 0x011B) => match value {
+            // FocusPointPersistence
             0 => Some("Auto"),
             1 => Some("Off"),
             _ => None,
         },
-        ("NikonCustom", 0x011D) => match value { // AutoFocusModeRestrictions
+        ("NikonCustom", 0x011D) => match value {
+            // AutoFocusModeRestrictions
             0 => Some("AF-S"),
             1 => Some("AF-C"),
             2 => Some("Full-time AF"),
@@ -9678,22 +10748,26 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("No Restrictions"),
             _ => None,
         },
-        ("NikonCustom", 0x0125) => match value { // VerticalMultiSelectorPlaybackMode
+        ("NikonCustom", 0x0125) => match value {
+            // VerticalMultiSelectorPlaybackMode
             0 => Some("Image Scroll L/R"),
             1 => Some("Image Scroll Up/Down"),
             _ => None,
         },
-        ("NikonCustom", 0x0129) => match value { // FlashBurstPriority
+        ("NikonCustom", 0x0129) => match value {
+            // FlashBurstPriority
             0 => Some("Frame Rate"),
             1 => Some("Exposure"),
             _ => None,
         },
-        ("NikonCustom", 0x013D) => match value { // VerticalMultiSelectorPlaybackMode
+        ("NikonCustom", 0x013D) => match value {
+            // VerticalMultiSelectorPlaybackMode
             0 => Some("Image Scroll L/R"),
             1 => Some("Image Scroll Up/Down"),
             _ => None,
         },
-        ("NikonCustom", 0x0145) => match value { // PlaybackFlickUp
+        ("NikonCustom", 0x0145) => match value {
+            // PlaybackFlickUp
             0 => Some("Rating"),
             1 => Some("Select To Send (PC)"),
             2 => Some("Select To Send (FTP)"),
@@ -9702,7 +10776,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("None"),
             _ => None,
         },
-        ("NikonCustom", 0x0149) => match value { // PlaybackFlickDown
+        ("NikonCustom", 0x0149) => match value {
+            // PlaybackFlickDown
             0 => Some("Rating"),
             1 => Some("Select To Send (PC)"),
             2 => Some("Select To Send (FTP)"),
@@ -9711,18 +10786,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("None"),
             _ => None,
         },
-        ("NikonCustom", 0x014D) => match value { // ISOStepSize
+        ("NikonCustom", 0x014D) => match value {
+            // ISOStepSize
             0 => Some("1/3 EV"),
             1 => Some("1/2 EV"),
             2 => Some("1 EV"),
             _ => None,
         },
-        ("NikonCustom", 0x0154) => match value { // TouchFn
+        ("NikonCustom", 0x0154) => match value {
+            // TouchFn
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0155) => match value { // PlaybackFlickUp
+        ("NikonCustom", 0x0155) => match value {
+            // PlaybackFlickUp
             0 => Some("Rating"),
             1 => Some("Select To Send (PC)"),
             2 => Some("Select To Send (FTP)"),
@@ -9731,7 +10809,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("None"),
             _ => None,
         },
-        ("NikonCustom", 0x0159) => match value { // PlaybackFlickDown
+        ("NikonCustom", 0x0159) => match value {
+            // PlaybackFlickDown
             0 => Some("Rating"),
             1 => Some("Select To Send (PC)"),
             2 => Some("Select To Send (FTP)"),
@@ -9740,7 +10819,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("None"),
             _ => None,
         },
-        ("NikonCustom", 0x015B) => match value { // TouchFnAreaTall
+        ("NikonCustom", 0x015B) => match value {
+            // TouchFnAreaTall
             0 => Some("Entire Frame"),
             1 => Some("Right Half"),
             2 => Some("Top Right Quadrant"),
@@ -9752,18 +10832,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Bottom Half"),
             _ => None,
         },
-        ("NikonCustom", 0x015D) => match value { // ISOStepSize
+        ("NikonCustom", 0x015D) => match value {
+            // ISOStepSize
             0 => Some("1/3 EV"),
             1 => Some("1/2 EV"),
             2 => Some("1 EV"),
             _ => None,
         },
-        ("NikonCustom", 0x015E) => match value { // EVFImageFrame
+        ("NikonCustom", 0x015E) => match value {
+            // EVFImageFrame
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x015F) => match value { // EVFGrid
+        ("NikonCustom", 0x015F) => match value {
+            // EVFGrid
             0 => Some("3x3"),
             1 => Some("4x4"),
             2 => Some("2.35:1"),
@@ -9775,22 +10858,26 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("90%"),
             _ => None,
         },
-        ("NikonCustom", 0x0161) => match value { // VirtualHorizonStyle
+        ("NikonCustom", 0x0161) => match value {
+            // VirtualHorizonStyle
             0 => Some("Type A (Cockpit)"),
             1 => Some("Type B (Sides)"),
             _ => None,
         },
-        ("NikonCustom", 0x0163) => match value { // ReverseFocusRing
+        ("NikonCustom", 0x0163) => match value {
+            // ReverseFocusRing
             0 => Some("Not Reversed"),
             1 => Some("Reversed"),
             _ => None,
         },
-        ("NikonCustom", 0x0164) => match value { // EVFImageFrame
+        ("NikonCustom", 0x0164) => match value {
+            // EVFImageFrame
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0165) => match value { // EVFGrid
+        ("NikonCustom", 0x0165) => match value {
+            // EVFGrid
             0 => Some("3x3"),
             1 => Some("4x4"),
             2 => Some("2.35:1"),
@@ -9802,12 +10889,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("90%"),
             _ => None,
         },
-        ("NikonCustom", 0x0167) => match value { // VirtualHorizonStyle
+        ("NikonCustom", 0x0167) => match value {
+            // VirtualHorizonStyle
             0 => Some("Type A (Cockpit)"),
             1 => Some("Type B (Sides)"),
             _ => None,
         },
-        ("NikonCustom", 0x016D) => match value { // PlaybackFlickUp
+        ("NikonCustom", 0x016D) => match value {
+            // PlaybackFlickUp
             0 => Some("Rating"),
             1 => Some("Select To Send (PC)"),
             2 => Some("Select To Send (FTP)"),
@@ -9816,7 +10905,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("None"),
             _ => None,
         },
-        ("NikonCustom", 0x0171) => match value { // PlaybackFlickDown
+        ("NikonCustom", 0x0171) => match value {
+            // PlaybackFlickDown
             0 => Some("Rating"),
             1 => Some("Select To Send (PC)"),
             2 => Some("Select To Send (FTP)"),
@@ -9825,23 +10915,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("None"),
             _ => None,
         },
-        ("NikonCustom", 0x0175) => match value { // ISOStepSize
+        ("NikonCustom", 0x0175) => match value {
+            // ISOStepSize
             0 => Some("1/3 EV"),
             1 => Some("1/2 EV"),
             2 => Some("1 EV"),
             _ => None,
         },
-        ("NikonCustom", 0x017B) => match value { // ReverseFocusRing
+        ("NikonCustom", 0x017B) => match value {
+            // ReverseFocusRing
             0 => Some("Not Reversed"),
             1 => Some("Reversed"),
             _ => None,
         },
-        ("NikonCustom", 0x017C) => match value { // EVFImageFrame
+        ("NikonCustom", 0x017C) => match value {
+            // EVFImageFrame
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x017D) => match value { // EVFGrid
+        ("NikonCustom", 0x017D) => match value {
+            // EVFGrid
             0 => Some("3x3"),
             1 => Some("4x4"),
             2 => Some("2.35:1"),
@@ -9853,12 +10947,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("90%"),
             _ => None,
         },
-        ("NikonCustom", 0x017F) => match value { // VirtualHorizonStyle
+        ("NikonCustom", 0x017F) => match value {
+            // VirtualHorizonStyle
             0 => Some("Type A (Cockpit)"),
             1 => Some("Type B (Sides)"),
             _ => None,
         },
-        ("NikonCustom", 0x01CB) => match value { // CommandDialPlaybackMode
+        ("NikonCustom", 0x01CB) => match value {
+            // CommandDialPlaybackMode
             0 => Some("1 Frame"),
             1 => Some("10 Frames"),
             2 => Some("50 Frames"),
@@ -9873,7 +10969,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("Uploaded to Computer"),
             _ => None,
         },
-        ("NikonCustom", 0x01CD) => match value { // CommandDialVideoPlaybackMode
+        ("NikonCustom", 0x01CD) => match value {
+            // CommandDialVideoPlaybackMode
             0 => Some("2 s"),
             1 => Some("5 s"),
             2 => Some("10 s"),
@@ -9884,7 +10981,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Playback Speed"),
             _ => None,
         },
-        ("NikonCustom", 0x01CF) => match value { // SubCommandDialPlaybackMode
+        ("NikonCustom", 0x01CF) => match value {
+            // SubCommandDialPlaybackMode
             0 => Some("1 Frame"),
             1 => Some("10 Frames"),
             2 => Some("50 Frames"),
@@ -9899,7 +10997,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("Uploaded to Computer"),
             _ => None,
         },
-        ("NikonCustom", 0x01D1) => match value { // SubCommandDialVideoPlaybackMode
+        ("NikonCustom", 0x01D1) => match value {
+            // SubCommandDialVideoPlaybackMode
             0 => Some("2 s"),
             1 => Some("5 s"),
             2 => Some("10 s"),
@@ -9910,17 +11009,20 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Playback Speed"),
             _ => None,
         },
-        ("NikonCustom", 0x01D3) => match value { // FocusPointLock
+        ("NikonCustom", 0x01D3) => match value {
+            // FocusPointLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x01D5) => match value { // ControlRingResponse
+        ("NikonCustom", 0x01D5) => match value {
+            // ControlRingResponse
             0 => Some("High"),
             1 => Some("Low"),
             _ => None,
         },
-        ("NikonCustom", 0x01E3) => match value { // CommandDialPlaybackMode
+        ("NikonCustom", 0x01E3) => match value {
+            // CommandDialPlaybackMode
             0 => Some("1 Frame"),
             1 => Some("10 Frames"),
             2 => Some("50 Frames"),
@@ -9935,7 +11037,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("Uploaded to Computer"),
             _ => None,
         },
-        ("NikonCustom", 0x01E5) => match value { // CommandDialVideoPlaybackMode
+        ("NikonCustom", 0x01E5) => match value {
+            // CommandDialVideoPlaybackMode
             0 => Some("2 s"),
             1 => Some("5 s"),
             2 => Some("10 s"),
@@ -9946,7 +11049,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Playback Speed"),
             _ => None,
         },
-        ("NikonCustom", 0x01E7) => match value { // SubCommandDialPlaybackMode
+        ("NikonCustom", 0x01E7) => match value {
+            // SubCommandDialPlaybackMode
             0 => Some("1 Frame"),
             1 => Some("10 Frames"),
             2 => Some("50 Frames"),
@@ -9961,7 +11065,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("Uploaded to Computer"),
             _ => None,
         },
-        ("NikonCustom", 0x01E9) => match value { // SubCommandDialVideoPlaybackMode
+        ("NikonCustom", 0x01E9) => match value {
+            // SubCommandDialVideoPlaybackMode
             0 => Some("2 s"),
             1 => Some("5 s"),
             2 => Some("10 s"),
@@ -9972,22 +11077,26 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Playback Speed"),
             _ => None,
         },
-        ("NikonCustom", 0x01EB) => match value { // FocusPointLock
+        ("NikonCustom", 0x01EB) => match value {
+            // FocusPointLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x01ED) => match value { // ControlRingResponse
+        ("NikonCustom", 0x01ED) => match value {
+            // ControlRingResponse
             0 => Some("High"),
             1 => Some("Low"),
             _ => None,
         },
-        ("NikonCustom", 0x020C) => match value { // MovieLimitAFAreaModeSelAuto
+        ("NikonCustom", 0x020C) => match value {
+            // MovieLimitAFAreaModeSelAuto
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x020D) => match value { // MovieAutoFocusModeRestrictions
+        ("NikonCustom", 0x020D) => match value {
+            // MovieAutoFocusModeRestrictions
             0 => Some("AF-S"),
             1 => Some("AF-C"),
             2 => Some("Full-time AF"),
@@ -9995,23 +11104,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("No Restrictions"),
             _ => None,
         },
-        ("NikonCustom", 0x020F) => match value { // HDMIViewAssist
+        ("NikonCustom", 0x020F) => match value {
+            // HDMIViewAssist
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0211) => match value { // ZebraPatternToneRange
+        ("NikonCustom", 0x0211) => match value {
+            // ZebraPatternToneRange
             0 => Some("Off"),
             1 => Some("Highlights"),
             2 => Some("Midtones"),
             _ => None,
         },
-        ("NikonCustom", 0x0213) => match value { // MovieZebraPattern
+        ("NikonCustom", 0x0213) => match value {
+            // MovieZebraPattern
             0 => Some("Pattern 1"),
             1 => Some("Pattern 2"),
             _ => None,
         },
-        ("NikonCustom", 0x021D) => match value { // MovieEVFGrid
+        ("NikonCustom", 0x021D) => match value {
+            // MovieEVFGrid
             0 => Some("3x3"),
             1 => Some("4x4"),
             2 => Some("2.35:1"),
@@ -10023,12 +11136,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("90%"),
             _ => None,
         },
-        ("NikonCustom", 0x0224) => match value { // MovieLimitAFAreaModeSelAuto
+        ("NikonCustom", 0x0224) => match value {
+            // MovieLimitAFAreaModeSelAuto
             0 => Some("Limit"),
             1 => Some("No Limit"),
             _ => None,
         },
-        ("NikonCustom", 0x0225) => match value { // MovieAutoFocusModeRestrictions
+        ("NikonCustom", 0x0225) => match value {
+            // MovieAutoFocusModeRestrictions
             0 => Some("AF-S"),
             1 => Some("AF-C"),
             2 => Some("Full-time AF"),
@@ -10036,38 +11151,45 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("No Restrictions"),
             _ => None,
         },
-        ("NikonCustom", 0x0226) => match value { // MovieFocusPointLock
+        ("NikonCustom", 0x0226) => match value {
+            // MovieFocusPointLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0227) => match value { // HDMIViewAssist
+        ("NikonCustom", 0x0227) => match value {
+            // HDMIViewAssist
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0229) => match value { // ZebraPatternToneRange
+        ("NikonCustom", 0x0229) => match value {
+            // ZebraPatternToneRange
             0 => Some("Off"),
             1 => Some("Highlights"),
             2 => Some("Midtones"),
             _ => None,
         },
-        ("NikonCustom", 0x022B) => match value { // MovieZebraPattern
+        ("NikonCustom", 0x022B) => match value {
+            // MovieZebraPattern
             0 => Some("Pattern 1"),
             1 => Some("Pattern 2"),
             _ => None,
         },
-        ("NikonCustom", 0x022F) => match value { // FocusPeakingDisplay
+        ("NikonCustom", 0x022F) => match value {
+            // FocusPeakingDisplay
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0233) => match value { // MatrixMetering
+        ("NikonCustom", 0x0233) => match value {
+            // MatrixMetering
             0 => Some("Face Detection Off"),
             1 => Some("Face Detection On"),
             _ => None,
         },
-        ("NikonCustom", 0x0235) => match value { // MovieEVFGrid
+        ("NikonCustom", 0x0235) => match value {
+            // MovieEVFGrid
             0 => Some("3x3"),
             1 => Some("4x4"),
             2 => Some("2.35:1"),
@@ -10079,101 +11201,119 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("90%"),
             _ => None,
         },
-        ("NikonCustom", 0x0237) => match value { // KeepExposure
+        ("NikonCustom", 0x0237) => match value {
+            // KeepExposure
             0 => Some("Off"),
             1 => Some("Shutter Speed"),
             2 => Some("ISO"),
             _ => None,
         },
-        ("NikonCustom", 0x023D) => match value { // MovieShutterSpeedLock
+        ("NikonCustom", 0x023D) => match value {
+            // MovieShutterSpeedLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x023E) => match value { // MovieFocusPointLock
+        ("NikonCustom", 0x023E) => match value {
+            // MovieFocusPointLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0249) => match value { // StarlightView
+        ("NikonCustom", 0x0249) => match value {
+            // StarlightView
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x024B) => match value { // MatrixMetering
+        ("NikonCustom", 0x024B) => match value {
+            // MatrixMetering
             0 => Some("Face Detection Off"),
             1 => Some("Face Detection On"),
             _ => None,
         },
-        ("NikonCustom", 0x024D) => match value { // FocusPeakingDisplay
+        ("NikonCustom", 0x024D) => match value {
+            // FocusPeakingDisplay
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x024F) => match value { // KeepExposure
+        ("NikonCustom", 0x024F) => match value {
+            // KeepExposure
             0 => Some("Off"),
             1 => Some("Shutter Speed"),
             2 => Some("ISO"),
             _ => None,
         },
-        ("NikonCustom", 0x0259) => match value { // MovieApertureLock
+        ("NikonCustom", 0x0259) => match value {
+            // MovieApertureLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x025F) => match value { // FlickAdvanceDirection
+        ("NikonCustom", 0x025F) => match value {
+            // FlickAdvanceDirection
             0 => Some("Left to Right"),
             1 => Some("Right to Left"),
             _ => None,
         },
-        ("NikonCustom", 0x0261) => match value { // StarlightView
+        ("NikonCustom", 0x0261) => match value {
+            // StarlightView
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0263) => match value { // EVFWarmDisplayMode
+        ("NikonCustom", 0x0263) => match value {
+            // EVFWarmDisplayMode
             0 => Some("Off"),
             1 => Some("Mode 1"),
             2 => Some("Mode 2"),
             _ => None,
         },
-        ("NikonCustom", 0x0267) => match value { // EVFReleaseIndicator
+        ("NikonCustom", 0x0267) => match value {
+            // EVFReleaseIndicator
             0 => Some("Off"),
             1 => Some("Type A (Dark)"),
             2 => Some("Type B (Border)"),
             3 => Some("Type C (Sides)"),
             _ => None,
         },
-        ("NikonCustom", 0x0271) => match value { // MovieApertureLock
+        ("NikonCustom", 0x0271) => match value {
+            // MovieApertureLock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("NikonCustom", 0x0277) => match value { // FlickAdvanceDirection
+        ("NikonCustom", 0x0277) => match value {
+            // FlickAdvanceDirection
             0 => Some("Left to Right"),
             1 => Some("Right to Left"),
             _ => None,
         },
-        ("NikonCustom", 0x0287) => match value { // PreReleaseBurstLength
+        ("NikonCustom", 0x0287) => match value {
+            // PreReleaseBurstLength
             0 => Some("None"),
             1 => Some("0.3 Sec"),
             2 => Some("0.5 Sec"),
             3 => Some("1 Sec"),
             _ => None,
         },
-        ("NikonCustom", 0x0289) => match value { // PostReleaseBurstLength
+        ("NikonCustom", 0x0289) => match value {
+            // PostReleaseBurstLength
             0 => Some("1 Sec"),
             1 => Some("2 Sec"),
             2 => Some("3 Sec"),
             3 => Some("Max"),
             _ => None,
         },
-        ("NikonCustom", 0x02A9) => match value { // ViewModeShowEffectsOfSettings
+        ("NikonCustom", 0x02A9) => match value {
+            // ViewModeShowEffectsOfSettings
             0 => Some("Always"),
             1 => Some("Only When Flash Not Used"),
             _ => None,
         },
-        ("NikonSettings", 0x0003) => match value { // ISOAutoShutterTime
+        ("NikonSettings", 0x0003) => match value {
+            // ISOAutoShutterTime
             1 => Some("Auto (Slowest)"),
             2 => Some("Auto (Slower)"),
             3 => Some("Auto"),
@@ -10233,84 +11373,99 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             57 => Some("30 s"),
             _ => None,
         },
-        ("NikonSettings", 0x000B) => match value { // FlickerReductionShooting
+        ("NikonSettings", 0x000B) => match value {
+            // FlickerReductionShooting
             1 => Some("Enable"),
             2 => Some("Disable"),
             _ => None,
         },
-        ("NikonSettings", 0x000C) => match value { // FlickerReductionIndicator
+        ("NikonSettings", 0x000C) => match value {
+            // FlickerReductionIndicator
             1 => Some("Enable"),
             2 => Some("Disable"),
             _ => None,
         },
-        ("NikonSettings", 0x000E) => match value { // MovieISOAutoControlManualMode
+        ("NikonSettings", 0x000E) => match value {
+            // MovieISOAutoControlManualMode
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x000F) => match value { // MovieWhiteBalanceSameAsPhoto
+        ("NikonSettings", 0x000F) => match value {
+            // MovieWhiteBalanceSameAsPhoto
             1 => Some("Yes"),
             2 => Some("No"),
             _ => None,
         },
-        ("NikonSettings", 0x0022) => match value { // AFActivation
+        ("NikonSettings", 0x0022) => match value {
+            // AFActivation
             1 => Some("Shutter/AF-On"),
             2 => Some("AF-On Only"),
             _ => None,
         },
-        ("NikonSettings", 0x0023) => match value { // FocusPointWrap
+        ("NikonSettings", 0x0023) => match value {
+            // FocusPointWrap
             1 => Some("Wrap"),
             2 => Some("No Wrap"),
             _ => None,
         },
-        ("NikonSettings", 0x0025) => match value { // ManualFocusPointIllumination
+        ("NikonSettings", 0x0025) => match value {
+            // ManualFocusPointIllumination
             1 => Some("On"),
             2 => Some("On During Focus Point Selection Only"),
             _ => None,
         },
-        ("NikonSettings", 0x0027) => match value { // ManualFocusRingInAFMode
+        ("NikonSettings", 0x0027) => match value {
+            // ManualFocusRingInAFMode
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0029) => match value { // ISOStepSize
+        ("NikonSettings", 0x0029) => match value {
+            // ISOStepSize
             1 => Some("1/3 EV"),
             2 => Some("1/2 EV"),
             3 => Some("1 EV"),
             _ => None,
         },
-        ("NikonSettings", 0x002A) => match value { // ExposureControlStepSize
+        ("NikonSettings", 0x002A) => match value {
+            // ExposureControlStepSize
             1 => Some("1/3 EV"),
             2 => Some("1/2 EV"),
             3 => Some("1 EV"),
             _ => None,
         },
-        ("NikonSettings", 0x002B) => match value { // EasyExposureCompensation
+        ("NikonSettings", 0x002B) => match value {
+            // EasyExposureCompensation
             1 => Some("On (auto reset)"),
             2 => Some("On"),
             3 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x002C) => match value { // MatrixMetering
+        ("NikonSettings", 0x002C) => match value {
+            // MatrixMetering
             1 => Some("Face Detection On"),
             2 => Some("Face Detection Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0035) => match value { // SelfTimerTime
+        ("NikonSettings", 0x0035) => match value {
+            // SelfTimerTime
             1 => Some("2 s"),
             2 => Some("5 s"),
             3 => Some("10 s"),
             4 => Some("20 s"),
             _ => None,
         },
-        ("NikonSettings", 0x0037) => match value { // SelfTimerShotInterval
+        ("NikonSettings", 0x0037) => match value {
+            // SelfTimerShotInterval
             1 => Some("0.5 s"),
             2 => Some("1 s"),
             3 => Some("2 s"),
             4 => Some("3 s"),
             _ => None,
         },
-        ("NikonSettings", 0x0038) => match value { // PlaybackMonitorOffTime
+        ("NikonSettings", 0x0038) => match value {
+            // PlaybackMonitorOffTime
             1 => Some("4 s"),
             2 => Some("10 s"),
             3 => Some("20 s"),
@@ -10319,7 +11474,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("10 min"),
             _ => None,
         },
-        ("NikonSettings", 0x0039) => match value { // MenuMonitorOffTime
+        ("NikonSettings", 0x0039) => match value {
+            // MenuMonitorOffTime
             1 => Some("4 s"),
             2 => Some("10 s"),
             3 => Some("20 s"),
@@ -10328,7 +11484,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("10 min"),
             _ => None,
         },
-        ("NikonSettings", 0x003A) => match value { // ShootingInfoMonitorOffTime
+        ("NikonSettings", 0x003A) => match value {
+            // ShootingInfoMonitorOffTime
             1 => Some("4 s"),
             2 => Some("10 s"),
             3 => Some("20 s"),
@@ -10337,7 +11494,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("10 min"),
             _ => None,
         },
-        ("NikonSettings", 0x003B) => match value { // ImageReviewMonitorOffTime
+        ("NikonSettings", 0x003B) => match value {
+            // ImageReviewMonitorOffTime
             1 => Some("2 s"),
             2 => Some("4 s"),
             3 => Some("10 s"),
@@ -10347,7 +11505,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("10 min"),
             _ => None,
         },
-        ("NikonSettings", 0x003C) => match value { // LiveViewMonitorOffTime
+        ("NikonSettings", 0x003C) => match value {
+            // LiveViewMonitorOffTime
             1 => Some("5 min"),
             2 => Some("10 min"),
             3 => Some("15 min"),
@@ -10356,7 +11515,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x0040) => match value { // ExposureDelayMode
+        ("NikonSettings", 0x0040) => match value {
+            // ExposureDelayMode
             1 => Some("3 s"),
             2 => Some("2 s"),
             3 => Some("1 s"),
@@ -10365,27 +11525,32 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0042) => match value { // FileNumberSequence
+        ("NikonSettings", 0x0042) => match value {
+            // FileNumberSequence
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0043) => match value { // FramingGridDisplay
+        ("NikonSettings", 0x0043) => match value {
+            // FramingGridDisplay
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0045) => match value { // LCDIllumination
+        ("NikonSettings", 0x0045) => match value {
+            // LCDIllumination
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0046) => match value { // OpticalVR
+        ("NikonSettings", 0x0046) => match value {
+            // OpticalVR
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0048) => match value { // FlashShutterSpeed
+        ("NikonSettings", 0x0048) => match value {
+            // FlashShutterSpeed
             1 => Some("1/60 s"),
             2 => Some("1/30 s"),
             3 => Some("1/15 s"),
@@ -10396,24 +11561,28 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("2 s"),
             _ => None,
         },
-        ("NikonSettings", 0x0049) => match value { // FlashExposureCompArea
+        ("NikonSettings", 0x0049) => match value {
+            // FlashExposureCompArea
             1 => Some("Entire Frame"),
             2 => Some("Background Only"),
             _ => None,
         },
-        ("NikonSettings", 0x004A) => match value { // AutoFlashISOSensitivity
+        ("NikonSettings", 0x004A) => match value {
+            // AutoFlashISOSensitivity
             1 => Some("Subject and Background"),
             2 => Some("Subject Only"),
             _ => None,
         },
-        ("NikonSettings", 0x0051) => match value { // AssignBktButton
+        ("NikonSettings", 0x0051) => match value {
+            // AssignBktButton
             1 => Some("Auto Bracketing"),
             2 => Some("Multiple Exposure"),
             3 => Some("HDR (high dynamic range)"),
             4 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x0056) => match value { // MultiSelectorLiveView
+        ("NikonSettings", 0x0056) => match value {
+            // MultiSelectorLiveView
             1 => Some("Select Center Focus Point"),
             2 => Some("Zoom (Low)"),
             3 => Some("Zoom (1:1)"),
@@ -10421,13 +11590,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x005B) => match value { // CmdDialsMenuAndPlayback
+        ("NikonSettings", 0x005B) => match value {
+            // CmdDialsMenuAndPlayback
             1 => Some("On"),
             2 => Some("On (Image Review Excluded)"),
             3 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x005C) => match value { // SubDialFrameAdvance
+        ("NikonSettings", 0x005C) => match value {
+            // SubDialFrameAdvance
             1 => Some("10 Frames"),
             2 => Some("50 Frames"),
             3 => Some("Rating"),
@@ -10437,34 +11608,40 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Folder"),
             _ => None,
         },
-        ("NikonSettings", 0x005D) => match value { // ReleaseButtonToUseDial
+        ("NikonSettings", 0x005D) => match value {
+            // ReleaseButtonToUseDial
             1 => Some("Yes"),
             2 => Some("No"),
             _ => None,
         },
-        ("NikonSettings", 0x005E) => match value { // ReverseIndicators
+        ("NikonSettings", 0x005E) => match value {
+            // ReverseIndicators
             1 => Some("+ 0 -"),
             2 => Some("- 0 +"),
             _ => None,
         },
-        ("NikonSettings", 0x0062) => match value { // MovieShutterButton
+        ("NikonSettings", 0x0062) => match value {
+            // MovieShutterButton
             1 => Some("Take Photo"),
             2 => Some("Record Movie"),
             _ => None,
         },
-        ("NikonSettings", 0x0063) => match value { // Language
+        ("NikonSettings", 0x0063) => match value {
+            // Language
             5 => Some("English"),
             6 => Some("Spanish"),
             8 => Some("French"),
             15 => Some("Portuguese (Br)"),
             _ => None,
         },
-        ("NikonSettings", 0x0074) => match value { // FlickAdvanceDirection
+        ("NikonSettings", 0x0074) => match value {
+            // FlickAdvanceDirection
             1 => Some("Right to Left"),
             2 => Some("Left to Right"),
             _ => None,
         },
-        ("NikonSettings", 0x0075) => match value { // HDMIOutputResolution
+        ("NikonSettings", 0x0075) => match value {
+            // HDMIOutputResolution
             1 => Some("Auto"),
             2 => Some("2160p"),
             3 => Some("1080p"),
@@ -10474,35 +11651,41 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("480p"),
             _ => None,
         },
-        ("NikonSettings", 0x0077) => match value { // HDMIOutputRange
+        ("NikonSettings", 0x0077) => match value {
+            // HDMIOutputRange
             1 => Some("Auto"),
             2 => Some("Limit"),
             3 => Some("Full"),
             _ => None,
         },
-        ("NikonSettings", 0x008D) => match value { // FocusPeakingHighlightColor
+        ("NikonSettings", 0x008D) => match value {
+            // FocusPeakingHighlightColor
             1 => Some("Red"),
             2 => Some("Yellow"),
             3 => Some("Blue"),
             4 => Some("White"),
             _ => None,
         },
-        ("NikonSettings", 0x008E) => match value { // ContinuousModeDisplay
+        ("NikonSettings", 0x008E) => match value {
+            // ContinuousModeDisplay
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x008F) => match value { // ShutterSpeedLock
+        ("NikonSettings", 0x008F) => match value {
+            // ShutterSpeedLock
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0090) => match value { // ApertureLock
+        ("NikonSettings", 0x0090) => match value {
+            // ApertureLock
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0091) => match value { // MovieHighlightDisplayThreshold
+        ("NikonSettings", 0x0091) => match value {
+            // MovieHighlightDisplayThreshold
             1 => Some("255"),
             2 => Some("248"),
             3 => Some("235"),
@@ -10513,12 +11696,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("180"),
             _ => None,
         },
-        ("NikonSettings", 0x0092) => match value { // HDMIExternalRecorder
+        ("NikonSettings", 0x0092) => match value {
+            // HDMIExternalRecorder
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0093) => match value { // BlockShotAFResponse
+        ("NikonSettings", 0x0093) => match value {
+            // BlockShotAFResponse
             1 => Some("1 (Quick)"),
             2 => Some("2"),
             3 => Some("3 (Normal)"),
@@ -10526,40 +11711,47 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("5 (Delay)"),
             _ => None,
         },
-        ("NikonSettings", 0x0094) => match value { // SubjectMotion
+        ("NikonSettings", 0x0094) => match value {
+            // SubjectMotion
             1 => Some("Erratic"),
             2 => Some("Steady"),
             _ => None,
         },
-        ("NikonSettings", 0x0099) => match value { // DynamicAreaAFAssist
+        ("NikonSettings", 0x0099) => match value {
+            // DynamicAreaAFAssist
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x009A) => match value { // ExposureCompStepSize
+        ("NikonSettings", 0x009A) => match value {
+            // ExposureCompStepSize
             1 => Some("1/3 EV"),
             2 => Some("1/2 EV"),
             3 => Some("1 EV"),
             _ => None,
         },
-        ("NikonSettings", 0x009B) => match value { // SyncReleaseMode
+        ("NikonSettings", 0x009B) => match value {
+            // SyncReleaseMode
             1 => Some("Sync"),
             2 => Some("No Sync"),
             _ => None,
         },
-        ("NikonSettings", 0x009C) => match value { // ModelingFlash
+        ("NikonSettings", 0x009C) => match value {
+            // ModelingFlash
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x009D) => match value { // AutoBracketModeM
+        ("NikonSettings", 0x009D) => match value {
+            // AutoBracketModeM
             1 => Some("Flash/Speed"),
             2 => Some("Flash/Speed/Aperture"),
             3 => Some("Flash/Aperture"),
             4 => Some("Flash Only"),
             _ => None,
         },
-        ("NikonSettings", 0x009E) => match value { // PreviewButton
+        ("NikonSettings", 0x009E) => match value {
+            // PreviewButton
             1 => Some("Preset Focus Point - Press To Recall"),
             2 => Some("Preset Focus Point - Hold To Recall"),
             3 => Some("AF-AreaMode S"),
@@ -10616,33 +11808,39 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             56 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x00A4) => match value { // SubSelector
+        ("NikonSettings", 0x00A4) => match value {
+            // SubSelector
             1 => Some("Same as MultiSelector"),
             2 => Some("Focus Point Selection"),
             _ => None,
         },
-        ("NikonSettings", 0x00A8) => match value { // CmdDialsApertureSetting
+        ("NikonSettings", 0x00A8) => match value {
+            // CmdDialsApertureSetting
             1 => Some("Sub-command Dial"),
             2 => Some("Aperture Ring"),
             _ => None,
         },
-        ("NikonSettings", 0x00A9) => match value { // MultiSelector
+        ("NikonSettings", 0x00A9) => match value {
+            // MultiSelector
             1 => Some("Restart Standby Timer"),
             2 => Some("Do Nothing"),
             _ => None,
         },
-        ("NikonSettings", 0x00AA) => match value { // LiveViewButtonOptions
+        ("NikonSettings", 0x00AA) => match value {
+            // LiveViewButtonOptions
             1 => Some("Enable"),
             2 => Some("Enable (Standby Timer Active)"),
             3 => Some("Disable"),
             _ => None,
         },
-        ("NikonSettings", 0x00AB) => match value { // LightSwitch
+        ("NikonSettings", 0x00AB) => match value {
+            // LightSwitch
             1 => Some("LCD Backlight"),
             2 => Some("LCD Backlight and Shooting Information"),
             _ => None,
         },
-        ("NikonSettings", 0x00B5) => match value { // MovieFunc2Button
+        ("NikonSettings", 0x00B5) => match value {
+            // MovieFunc2Button
             1 => Some("Grid Display"),
             2 => Some("Zoom (Low)"),
             3 => Some("Zoom (1:1)"),
@@ -10652,115 +11850,136 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x00B8) => match value { // LimitAFAreaModeSelD9
+        ("NikonSettings", 0x00B8) => match value {
+            // LimitAFAreaModeSelD9
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00B9) => match value { // LimitAFAreaModeSelD25
+        ("NikonSettings", 0x00B9) => match value {
+            // LimitAFAreaModeSelD25
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00BC) => match value { // LimitAFAreaModeSel3D
+        ("NikonSettings", 0x00BC) => match value {
+            // LimitAFAreaModeSel3D
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00BD) => match value { // LimitAFAreaModeSelGroup
+        ("NikonSettings", 0x00BD) => match value {
+            // LimitAFAreaModeSelGroup
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00BE) => match value { // LimitAFAreaModeSelAuto
+        ("NikonSettings", 0x00BE) => match value {
+            // LimitAFAreaModeSelAuto
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00BF) => match value { // LimitSelectableImageArea30x20
+        ("NikonSettings", 0x00BF) => match value {
+            // LimitSelectableImageArea30x20
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00C0) => match value { // LimitSelectableImageAreaDX
+        ("NikonSettings", 0x00C0) => match value {
+            // LimitSelectableImageAreaDX
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00C1) => match value { // LimitSelectableImageArea5To4
+        ("NikonSettings", 0x00C1) => match value {
+            // LimitSelectableImageArea5To4
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00C2) => match value { // LimitSelectableImageArea1To1
+        ("NikonSettings", 0x00C2) => match value {
+            // LimitSelectableImageArea1To1
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00D4) => match value { // PhotoShootingMenuBank
+        ("NikonSettings", 0x00D4) => match value {
+            // PhotoShootingMenuBank
             1 => Some("A"),
             2 => Some("B"),
             3 => Some("C"),
             4 => Some("D"),
             _ => None,
         },
-        ("NikonSettings", 0x00D5) => match value { // CustomSettingsBank
+        ("NikonSettings", 0x00D5) => match value {
+            // CustomSettingsBank
             1 => Some("A"),
             2 => Some("B"),
             3 => Some("C"),
             4 => Some("D"),
             _ => None,
         },
-        ("NikonSettings", 0x00DA) => match value { // LowLightAF
+        ("NikonSettings", 0x00DA) => match value {
+            // LowLightAF
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x00DB) => match value { // LimitSelectableImageAreaDX
+        ("NikonSettings", 0x00DB) => match value {
+            // LimitSelectableImageAreaDX
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00DC) => match value { // LimitSelectableImageArea5To4
+        ("NikonSettings", 0x00DC) => match value {
+            // LimitSelectableImageArea5To4
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00DD) => match value { // LimitSelectableImageArea1To1
+        ("NikonSettings", 0x00DD) => match value {
+            // LimitSelectableImageArea1To1
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00DE) => match value { // LimitSelectableImageArea16To9
+        ("NikonSettings", 0x00DE) => match value {
+            // LimitSelectableImageArea16To9
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x00DF) => match value { // ApplySettingsToLiveView
+        ("NikonSettings", 0x00DF) => match value {
+            // ApplySettingsToLiveView
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x00E0) => match value { // FocusPeakingLevel
+        ("NikonSettings", 0x00E0) => match value {
+            // FocusPeakingLevel
             1 => Some("High Sensitivity"),
             2 => Some("Standard Sensitivity"),
             3 => Some("Low Sensitivity"),
             4 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x00EA) => match value { // LensControlRing
+        ("NikonSettings", 0x00EA) => match value {
+            // LensControlRing
             1 => Some("Aperture"),
             2 => Some("Exposure Compensation"),
             3 => Some("ISO Sensitivity"),
             4 => Some("None (Disabled)"),
             _ => None,
         },
-        ("NikonSettings", 0x00EF) => match value { // MovieAFSpeedApply
+        ("NikonSettings", 0x00EF) => match value {
+            // MovieAFSpeedApply
             1 => Some("Always"),
             2 => Some("Only During Recording"),
             _ => None,
         },
-        ("NikonSettings", 0x00F0) => match value { // MovieAFTrackingSensitivity
+        ("NikonSettings", 0x00F0) => match value {
+            // MovieAFTrackingSensitivity
             1 => Some("1 (High)"),
             2 => Some("2"),
             3 => Some("3"),
@@ -10770,76 +11989,90 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("7 (Low)"),
             _ => None,
         },
-        ("NikonSettings", 0x00F1) => match value { // MovieHighlightDisplayPattern
+        ("NikonSettings", 0x00F1) => match value {
+            // MovieHighlightDisplayPattern
             1 => Some("Pattern 1"),
             2 => Some("Pattern 2"),
             3 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x00F2) => match value { // SubDialFrameAdvanceRating5
+        ("NikonSettings", 0x00F2) => match value {
+            // SubDialFrameAdvanceRating5
             1 => Some("No"),
             2 => Some("Yes"),
             _ => None,
         },
-        ("NikonSettings", 0x00F3) => match value { // SubDialFrameAdvanceRating4
+        ("NikonSettings", 0x00F3) => match value {
+            // SubDialFrameAdvanceRating4
             1 => Some("No"),
             2 => Some("Yes"),
             _ => None,
         },
-        ("NikonSettings", 0x00F4) => match value { // SubDialFrameAdvanceRating3
+        ("NikonSettings", 0x00F4) => match value {
+            // SubDialFrameAdvanceRating3
             1 => Some("No"),
             2 => Some("Yes"),
             _ => None,
         },
-        ("NikonSettings", 0x00F5) => match value { // SubDialFrameAdvanceRating2
+        ("NikonSettings", 0x00F5) => match value {
+            // SubDialFrameAdvanceRating2
             1 => Some("No"),
             2 => Some("Yes"),
             _ => None,
         },
-        ("NikonSettings", 0x00F6) => match value { // SubDialFrameAdvanceRating1
+        ("NikonSettings", 0x00F6) => match value {
+            // SubDialFrameAdvanceRating1
             1 => Some("No"),
             2 => Some("Yes"),
             _ => None,
         },
-        ("NikonSettings", 0x00F7) => match value { // SubDialFrameAdvanceRating0
+        ("NikonSettings", 0x00F7) => match value {
+            // SubDialFrameAdvanceRating0
             1 => Some("No"),
             2 => Some("Yes"),
             _ => None,
         },
-        ("NikonSettings", 0x00FB) => match value { // SecondarySlotFunction
+        ("NikonSettings", 0x00FB) => match value {
+            // SecondarySlotFunction
             1 => Some("Overflow"),
             2 => Some("Backup"),
             3 => Some("NEF Primary + JPG Secondary"),
             4 => Some("JPG Primary + JPG Secondary"),
             _ => None,
         },
-        ("NikonSettings", 0x00FC) => match value { // SilentPhotography
+        ("NikonSettings", 0x00FC) => match value {
+            // SilentPhotography
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x00FD) => match value { // ExtendedShutterSpeeds
+        ("NikonSettings", 0x00FD) => match value {
+            // ExtendedShutterSpeeds
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0102) => match value { // HDMIBitDepth
+        ("NikonSettings", 0x0102) => match value {
+            // HDMIBitDepth
             1 => Some("8 Bit"),
             2 => Some("10 Bit"),
             5 => Some("Auto"),
             _ => None,
         },
-        ("NikonSettings", 0x0103) => match value { // HDMIOutputHDR
+        ("NikonSettings", 0x0103) => match value {
+            // HDMIOutputHDR
             2 => Some("On"),
             3 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0104) => match value { // HDMIViewAssist
+        ("NikonSettings", 0x0104) => match value {
+            // HDMIViewAssist
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0109) => match value { // BracketSet
+        ("NikonSettings", 0x0109) => match value {
+            // BracketSet
             1 => Some("AE/Flash"),
             2 => Some("AE"),
             3 => Some("Flash"),
@@ -10847,7 +12080,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Active-D Lighting"),
             _ => None,
         },
-        ("NikonSettings", 0x010C) => match value { // BracketIncrement
+        ("NikonSettings", 0x010C) => match value {
+            // BracketIncrement
             0 => Some("Off"),
             1 => Some("Off, Low"),
             2 => Some("Off, Normal"),
@@ -10859,7 +12093,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Off, Low, Normal, High, Extra High"),
             _ => None,
         },
-        ("NikonSettings", 0x0116) => match value { // GroupAreaC1
+        ("NikonSettings", 0x0116) => match value {
+            // GroupAreaC1
             1 => Some("1x7"),
             2 => Some("1x5"),
             3 => Some("3x7"),
@@ -10879,50 +12114,59 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             17 => Some("15x1"),
             _ => None,
         },
-        ("NikonSettings", 0x0117) => match value { // AutoAreaAFStartingPoint
+        ("NikonSettings", 0x0117) => match value {
+            // AutoAreaAFStartingPoint
             1 => Some("Enable"),
             2 => Some("Disable"),
             _ => None,
         },
-        ("NikonSettings", 0x0118) => match value { // FocusPointPersistence
+        ("NikonSettings", 0x0118) => match value {
+            // FocusPointPersistence
             1 => Some("Auto"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x0119) => match value { // LimitAFAreaModeSelD49
+        ("NikonSettings", 0x0119) => match value {
+            // LimitAFAreaModeSelD49
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x011A) => match value { // LimitAFAreaModeSelD105
+        ("NikonSettings", 0x011A) => match value {
+            // LimitAFAreaModeSelD105
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x011B) => match value { // LimitAFAreaModeSelGroupC1
+        ("NikonSettings", 0x011B) => match value {
+            // LimitAFAreaModeSelGroupC1
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x011C) => match value { // LimitAFAreaModeSelGroupC2
+        ("NikonSettings", 0x011C) => match value {
+            // LimitAFAreaModeSelGroupC2
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x011D) => match value { // AutoFocusModeRestrictions
+        ("NikonSettings", 0x011D) => match value {
+            // AutoFocusModeRestrictions
             1 => Some("AF-S"),
             2 => Some("AF-C"),
             3 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x011E) => match value { // FocusPointBrightness
+        ("NikonSettings", 0x011E) => match value {
+            // FocusPointBrightness
             1 => Some("Extra High"),
             2 => Some("High"),
             3 => Some("Normal"),
             4 => Some("Low"),
             _ => None,
         },
-        ("NikonSettings", 0x0121) => match value { // QuietShutterShootingSpeed
+        ("NikonSettings", 0x0121) => match value {
+            // QuietShutterShootingSpeed
             1 => Some("Single"),
             2 => Some("5 fps"),
             3 => Some("4 fps"),
@@ -10931,91 +12175,108 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("1 fps"),
             _ => None,
         },
-        ("NikonSettings", 0x0122) => match value { // LimitReleaseModeSelCL
+        ("NikonSettings", 0x0122) => match value {
+            // LimitReleaseModeSelCL
             0 => Some("No Limit"),
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x0123) => match value { // LimitReleaseModeSelCH
+        ("NikonSettings", 0x0123) => match value {
+            // LimitReleaseModeSelCH
             0 => Some("No Limit"),
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x0124) => match value { // LimitReleaseModeSelQ
+        ("NikonSettings", 0x0124) => match value {
+            // LimitReleaseModeSelQ
             0 => Some("No Limit"),
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x0125) => match value { // LimitReleaseModeSelTimer
+        ("NikonSettings", 0x0125) => match value {
+            // LimitReleaseModeSelTimer
             0 => Some("No Limit"),
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x0127) => match value { // LimitSelectableImageArea16To9
+        ("NikonSettings", 0x0127) => match value {
+            // LimitSelectableImageArea16To9
             1 => Some("Limit"),
             2 => Some("No Limit"),
             _ => None,
         },
-        ("NikonSettings", 0x0128) => match value { // RearControPanelDisplay
+        ("NikonSettings", 0x0128) => match value {
+            // RearControPanelDisplay
             1 => Some("Release Mode"),
             2 => Some("Frame Count"),
             _ => None,
         },
-        ("NikonSettings", 0x0129) => match value { // FlashBurstPriority
+        ("NikonSettings", 0x0129) => match value {
+            // FlashBurstPriority
             1 => Some("Frame Rate"),
             2 => Some("Exposure"),
             _ => None,
         },
-        ("NikonSettings", 0x012A) => match value { // RecallShootFuncExposureMode
+        ("NikonSettings", 0x012A) => match value {
+            // RecallShootFuncExposureMode
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("NikonSettings", 0x012B) => match value { // RecallShootFuncShutterSpeed
+        ("NikonSettings", 0x012B) => match value {
+            // RecallShootFuncShutterSpeed
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("NikonSettings", 0x012C) => match value { // RecallShootFuncAperture
+        ("NikonSettings", 0x012C) => match value {
+            // RecallShootFuncAperture
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("NikonSettings", 0x012D) => match value { // RecallShootFuncExposureComp
+        ("NikonSettings", 0x012D) => match value {
+            // RecallShootFuncExposureComp
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("NikonSettings", 0x012E) => match value { // RecallShootFuncISO
+        ("NikonSettings", 0x012E) => match value {
+            // RecallShootFuncISO
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("NikonSettings", 0x012F) => match value { // RecallShootFuncMeteringMode
+        ("NikonSettings", 0x012F) => match value {
+            // RecallShootFuncMeteringMode
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("NikonSettings", 0x0130) => match value { // RecallShootFuncWhiteBalance
+        ("NikonSettings", 0x0130) => match value {
+            // RecallShootFuncWhiteBalance
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("NikonSettings", 0x0131) => match value { // RecallShootFuncAFAreaMode
+        ("NikonSettings", 0x0131) => match value {
+            // RecallShootFuncAFAreaMode
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("NikonSettings", 0x0132) => match value { // RecallShootFuncFocusTracking
+        ("NikonSettings", 0x0132) => match value {
+            // RecallShootFuncFocusTracking
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("NikonSettings", 0x0134) => match value { // VerticalFuncButton
+        ("NikonSettings", 0x0134) => match value {
+            // VerticalFuncButton
             1 => Some("Preset Focus Point"),
             2 => Some("AE Lock (hold)"),
             3 => Some("AE/WB Lock (hold)"),
@@ -11050,7 +12311,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x0135) => match value { // Func3Button
+        ("NikonSettings", 0x0135) => match value {
+            // Func3Button
             1 => Some("Voice Memo"),
             2 => Some("Select To Send"),
             3 => Some("Wired LAN"),
@@ -11067,12 +12329,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             14 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x0137) => match value { // VerticalMultiSelector
+        ("NikonSettings", 0x0137) => match value {
+            // VerticalMultiSelector
             1 => Some("Same as MultiSelector"),
             2 => Some("Focus Point Selection"),
             _ => None,
         },
-        ("NikonSettings", 0x0138) => match value { // MeteringButton
+        ("NikonSettings", 0x0138) => match value {
+            // MeteringButton
             1 => Some("Photo Shooting Bank"),
             2 => Some("Image Area"),
             3 => Some("Active-D Lighting"),
@@ -11084,7 +12348,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x0139) => match value { // PlaybackFlickUp
+        ("NikonSettings", 0x0139) => match value {
+            // PlaybackFlickUp
             1 => Some("Rating"),
             2 => Some("Select To Send"),
             3 => Some("Protect"),
@@ -11092,7 +12357,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x013A) => match value { // PlaybackFlickUpRating
+        ("NikonSettings", 0x013A) => match value {
+            // PlaybackFlickUpRating
             1 => Some("Rating 5"),
             2 => Some("Rating 4"),
             3 => Some("Rating 3"),
@@ -11101,7 +12367,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Candidate for Deletion"),
             _ => None,
         },
-        ("NikonSettings", 0x013B) => match value { // PlaybackFlickDown
+        ("NikonSettings", 0x013B) => match value {
+            // PlaybackFlickDown
             1 => Some("Rating"),
             2 => Some("Select To Send"),
             3 => Some("Protect"),
@@ -11109,7 +12376,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x013C) => match value { // PlaybackFlickDownRating
+        ("NikonSettings", 0x013C) => match value {
+            // PlaybackFlickDownRating
             1 => Some("Rating 5"),
             2 => Some("Rating 4"),
             3 => Some("Rating 3"),
@@ -11118,20 +12386,23 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Candidate for Deletion"),
             _ => None,
         },
-        ("NikonSettings", 0x013D) => match value { // MovieFunc3Button
+        ("NikonSettings", 0x013D) => match value {
+            // MovieFunc3Button
             1 => Some("Record Movie"),
             2 => Some("My Menu"),
             3 => Some("My Menu Top Item"),
             4 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x0150) => match value { // ShutterType
+        ("NikonSettings", 0x0150) => match value {
+            // ShutterType
             1 => Some("Auto"),
             2 => Some("Mechanical"),
             3 => Some("Electronic"),
             _ => None,
         },
-        ("NikonSettings", 0x0151) => match value { // LensFunc2Button
+        ("NikonSettings", 0x0151) => match value {
+            // LensFunc2Button
             1 => Some("AF-On"),
             2 => Some("AF Lock Only"),
             3 => Some("AE Lock (hold)"),
@@ -11160,32 +12431,38 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             28 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x0158) => match value { // USBPowerDelivery
+        ("NikonSettings", 0x0158) => match value {
+            // USBPowerDelivery
             1 => Some("Enable"),
             2 => Some("Disable"),
             _ => None,
         },
-        ("NikonSettings", 0x0159) => match value { // EnergySavingMode
+        ("NikonSettings", 0x0159) => match value {
+            // EnergySavingMode
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x015C) => match value { // BracketingBurstOptions
+        ("NikonSettings", 0x015C) => match value {
+            // BracketingBurstOptions
             1 => Some("Enable"),
             2 => Some("Disable"),
             _ => None,
         },
-        ("NikonSettings", 0x015E) => match value { // PrimarySlot
+        ("NikonSettings", 0x015E) => match value {
+            // PrimarySlot
             1 => Some("CFexpress/XQD Card"),
             2 => Some("SD Card"),
             _ => None,
         },
-        ("NikonSettings", 0x015F) => match value { // ReverseFocusRing
+        ("NikonSettings", 0x015F) => match value {
+            // ReverseFocusRing
             1 => Some("Not Reversed"),
             2 => Some("Reversed"),
             _ => None,
         },
-        ("NikonSettings", 0x0160) => match value { // VerticalFuncButton
+        ("NikonSettings", 0x0160) => match value {
+            // VerticalFuncButton
             1 => Some("AE Lock (hold)"),
             2 => Some("AE Lock (reset on release)"),
             3 => Some("FV Lock"),
@@ -11206,7 +12483,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             18 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x0161) => match value { // VerticalAFOnButton
+        ("NikonSettings", 0x0161) => match value {
+            // VerticalAFOnButton
             1 => Some("Same as AF-On Button"),
             2 => Some("Select Center Focus Point"),
             3 => Some("AF-On"),
@@ -11222,12 +12500,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             13 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x0162) => match value { // VerticalMultiSelector
+        ("NikonSettings", 0x0162) => match value {
+            // VerticalMultiSelector
             1 => Some("Same as MultiSelector"),
             2 => Some("Focus Point Selection"),
             _ => None,
         },
-        ("NikonSettings", 0x0164) => match value { // VerticalMovieFuncButton
+        ("NikonSettings", 0x0164) => match value {
+            // VerticalMovieFuncButton
             1 => Some("LiveView Info Display On/Off"),
             2 => Some("Record Movie"),
             3 => Some("Exposure Compensation"),
@@ -11235,7 +12515,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x0165) => match value { // VerticalMovieAFOnButton
+        ("NikonSettings", 0x0165) => match value {
+            // VerticalMovieAFOnButton
             1 => Some("Same as AF-On"),
             2 => Some("Center Focus Point"),
             3 => Some("AF-On"),
@@ -11251,12 +12532,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             13 => Some("None"),
             _ => None,
         },
-        ("NikonSettings", 0x016D) => match value { // SaveFocus
+        ("NikonSettings", 0x016D) => match value {
+            // SaveFocus
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("NikonSettings", 0x016E) => match value { // AFAreaMode
+        ("NikonSettings", 0x016E) => match value {
+            // AFAreaMode
             2 => Some("Single-point"),
             3 => Some("Dynamic-area"),
             4 => Some("Wide (S)"),
@@ -11268,7 +12551,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             10 => Some("Auto (Animals)"),
             _ => None,
         },
-        ("NikonSettings", 0x016F) => match value { // MovieAFAreaMode
+        ("NikonSettings", 0x016F) => match value {
+            // MovieAFAreaMode
             1 => Some("Single-point"),
             2 => Some("Wide (S)"),
             3 => Some("Wide (L)"),
@@ -11279,31 +12563,36 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Auto (Animals)"),
             _ => None,
         },
-        ("NikonSettings", 0x0170) => match value { // PreferSubSelectorCenter
+        ("NikonSettings", 0x0170) => match value {
+            // PreferSubSelectorCenter
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("NikonSettings", 0x0171) => match value { // KeepExposureWithTeleconverter
+        ("NikonSettings", 0x0171) => match value {
+            // KeepExposureWithTeleconverter
             1 => Some("Off"),
             2 => Some("Shutter Speed"),
             3 => Some("ISO"),
             _ => None,
         },
-        ("NikonSettings", 0x0174) => match value { // FocusPointSelectionSpeed
+        ("NikonSettings", 0x0174) => match value {
+            // FocusPointSelectionSpeed
             1 => Some("Normal"),
             2 => Some("High"),
             3 => Some("Very High"),
             _ => None,
         },
-        ("Nintendo", 0x0030) => match value { // Category
+        ("Nintendo", 0x0030) => match value {
+            // Category
             0 => Some("(none)"),
             4096 => Some("Mii"),
             8192 => Some("Man"),
             16384 => Some("Woman"),
             _ => None,
         },
-        ("Olympus", 0x000A) => match value { // SubjectDetectStatus
+        ("Olympus", 0x000A) => match value {
+            // SubjectDetectStatus
             0 => Some("No Data"),
             257 => Some("Subject and L1 Detail Detected"),
             258 => Some("Subject and L2 Detail Detected"),
@@ -11314,7 +12603,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             772 => Some("No Subject or Face Detected"),
             _ => None,
         },
-        ("Olympus", 0x0018) => match value { // Model
+        ("Olympus", 0x0018) => match value {
+            // Model
             472 => Some("u7040,S7040"),
             473 => Some("u9010,S9010"),
             475 => Some("SP800UZ"),
@@ -11326,40 +12616,47 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             575 => Some("SP-620UZ"),
             _ => None,
         },
-        ("Olympus", 0x0100) => match value { // PreviewImageValid
+        ("Olympus", 0x0100) => match value {
+            // PreviewImageValid
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Olympus", 0x0101) => match value { // RawDevWhiteBalance
+        ("Olympus", 0x0101) => match value {
+            // RawDevWhiteBalance
             1 => Some("Color Temperature"),
             2 => Some("Gray Point"),
             _ => None,
         },
-        ("Olympus", 0x0108) => match value { // RawDevColorSpace
+        ("Olympus", 0x0108) => match value {
+            // RawDevColorSpace
             0 => Some("sRGB"),
             1 => Some("Adobe RGB"),
             2 => Some("Pro Photo RGB"),
             _ => None,
         },
-        ("Olympus", 0x0109) => match value { // RawDevColorSpace
+        ("Olympus", 0x0109) => match value {
+            // RawDevColorSpace
             0 => Some("sRGB"),
             1 => Some("Adobe RGB"),
             2 => Some("Pro Photo RGB"),
             _ => None,
         },
-        ("Olympus", 0x010A) => match value { // RawDevNoiseReduction
+        ("Olympus", 0x010A) => match value {
+            // RawDevNoiseReduction
             0 => Some("Noise Reduction"),
             1 => Some("Noise Filter"),
             2 => Some("Noise Filter (ISO Boost)"),
             _ => None,
         },
-        ("Olympus", 0x010B) => match value { // RawDevEngine
+        ("Olympus", 0x010B) => match value {
+            // RawDevEngine
             0 => Some("High Speed"),
             1 => Some("High Function"),
             _ => None,
         },
-        ("Olympus", 0x010C) => match value { // RawDevPictureMode
+        ("Olympus", 0x010C) => match value {
+            // RawDevPictureMode
             1 => Some("Vivid"),
             2 => Some("Natural"),
             3 => Some("Muted"),
@@ -11367,7 +12664,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             512 => Some("Sepia"),
             _ => None,
         },
-        ("Olympus", 0x0110) => match value { // RawDevPM_BWFilter
+        ("Olympus", 0x0110) => match value {
+            // RawDevPM_BWFilter
             1 => Some("Neutral"),
             2 => Some("Yellow"),
             3 => Some("Orange"),
@@ -11375,7 +12673,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Green"),
             _ => None,
         },
-        ("Olympus", 0x0111) => match value { // RawDevPMPictureTone
+        ("Olympus", 0x0111) => match value {
+            // RawDevPMPictureTone
             1 => Some("Neutral"),
             2 => Some("Sepia"),
             3 => Some("Blue"),
@@ -11383,12 +12682,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Green"),
             _ => None,
         },
-        ("Olympus", 0x0119) => match value { // RawDevAutoGradation
+        ("Olympus", 0x0119) => match value {
+            // RawDevAutoGradation
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Olympus", 0x0200) => match value { // ExposureMode
+        ("Olympus", 0x0200) => match value {
+            // ExposureMode
             1 => Some("Manual"),
             2 => Some("Program"),
             3 => Some("Aperture-priority AE"),
@@ -11396,12 +12697,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Program-shift"),
             _ => None,
         },
-        ("Olympus", 0x0201) => match value { // AELock
+        ("Olympus", 0x0201) => match value {
+            // AELock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Olympus", 0x0202) => match value { // MeteringMode
+        ("Olympus", 0x0202) => match value {
+            // MeteringMode
             2 => Some("Center-weighted average"),
             3 => Some("Spot"),
             5 => Some("ESP"),
@@ -11410,45 +12713,53 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             1027 => Some("Spot+Shadow control"),
             _ => None,
         },
-        ("Olympus", 0x0203) => match value { // BWMode
+        ("Olympus", 0x0203) => match value {
+            // BWMode
             0 => Some("Off"),
             1 => Some("On"),
             6 => Some("(none)"),
             _ => None,
         },
-        ("Olympus", 0x0204) => match value { // NDFilter
+        ("Olympus", 0x0204) => match value {
+            // NDFilter
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Olympus", 0x0209) => match value { // AutoFocus
+        ("Olympus", 0x0209) => match value {
+            // AutoFocus
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Olympus", 0x0300) => match value { // MacroMode
+        ("Olympus", 0x0300) => match value {
+            // MacroMode
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("Super Macro"),
             _ => None,
         },
-        ("Olympus", 0x0302) => match value { // OneTouchWB
+        ("Olympus", 0x0302) => match value {
+            // OneTouchWB
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("On (Preset)"),
             _ => None,
         },
-        ("Olympus", 0x0303) => match value { // AFSearch
+        ("Olympus", 0x0303) => match value {
+            // AFSearch
             0 => Some("Not Ready"),
             1 => Some("Ready"),
             _ => None,
         },
-        ("Olympus", 0x0306) => match value { // AFFineTune
+        ("Olympus", 0x0306) => match value {
+            // AFFineTune
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Olympus", 0x0309) => match value { // AISubjectTrackingMode
+        ("Olympus", 0x0309) => match value {
+            // AISubjectTrackingMode
             0 => Some("Off"),
             256 => Some("Motorsports; Object Not Found"),
             257 => Some("Motorsports; Racing Car Found"),
@@ -11468,7 +12779,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             1537 => Some("Human; Object Found"),
             _ => None,
         },
-        ("Olympus", 0x0400) => match value { // FlashMode
+        ("Olympus", 0x0400) => match value {
+            // FlashMode
             0 => Some("On"),
             1 => Some("Fill-in"),
             2 => Some("Red-eye"),
@@ -11477,7 +12789,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("2nd Curtain"),
             _ => None,
         },
-        ("Olympus", 0x0403) => match value { // FlashRemoteControl
+        ("Olympus", 0x0403) => match value {
+            // FlashRemoteControl
             0 => Some("Off"),
             1 => Some("Channel 1, Low"),
             2 => Some("Channel 2, Low"),
@@ -11493,7 +12806,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             20 => Some("Channel 4, High"),
             _ => None,
         },
-        ("Olympus", 0x0500) => match value { // WhiteBalance2
+        ("Olympus", 0x0500) => match value {
+            // WhiteBalance2
             0 => Some("Auto"),
             1 => Some("Auto (Keep Warm Color Off)"),
             16 => Some("7500K (Fine Weather with Shade)"),
@@ -11519,7 +12833,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             515 => Some("Custom WB 4"),
             _ => None,
         },
-        ("Olympus", 0x0504) => match value { // ModifiedSaturation
+        ("Olympus", 0x0504) => match value {
+            // ModifiedSaturation
             0 => Some("Off"),
             1 => Some("CM1 (Red Enhance)"),
             2 => Some("CM2 (Green Enhance)"),
@@ -11527,13 +12842,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("CM4 (Skin Tones)"),
             _ => None,
         },
-        ("Olympus", 0x0507) => match value { // ColorSpace
+        ("Olympus", 0x0507) => match value {
+            // ColorSpace
             0 => Some("sRGB"),
             1 => Some("Adobe RGB"),
             2 => Some("Pro Photo RGB"),
             _ => None,
         },
-        ("Olympus", 0x0509) => match value { // SceneMode
+        ("Olympus", 0x0509) => match value {
+            // SceneMode
             0 => Some("Standard"),
             6 => Some("Auto"),
             7 => Some("Sport"),
@@ -11598,24 +12915,28 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             206 => Some("Multi Focus Shot"),
             _ => None,
         },
-        ("Olympus", 0x050A) => match value { // NoiseReduction
+        ("Olympus", 0x050A) => match value {
+            // NoiseReduction
             0 => Some("Noise Reduction"),
             1 => Some("Noise Filter"),
             2 => Some("Noise Filter (ISO Boost)"),
             3 => Some("Auto"),
             _ => None,
         },
-        ("Olympus", 0x050B) => match value { // DistortionCorrection
+        ("Olympus", 0x050B) => match value {
+            // DistortionCorrection
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Olympus", 0x050C) => match value { // ShadingCompensation
+        ("Olympus", 0x050C) => match value {
+            // ShadingCompensation
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Olympus", 0x0525) => match value { // PictureModeBWFilter
+        ("Olympus", 0x0525) => match value {
+            // PictureModeBWFilter
             0 => Some("n/a"),
             1 => Some("Neutral"),
             2 => Some("Yellow"),
@@ -11624,7 +12945,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Green"),
             _ => None,
         },
-        ("Olympus", 0x0526) => match value { // PictureModeTone
+        ("Olympus", 0x0526) => match value {
+            // PictureModeTone
             0 => Some("n/a"),
             1 => Some("Neutral"),
             2 => Some("Sepia"),
@@ -11633,14 +12955,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Green"),
             _ => None,
         },
-        ("Olympus", 0x0538) => match value { // FilmGrainEffect
+        ("Olympus", 0x0538) => match value {
+            // FilmGrainEffect
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Medium"),
             3 => Some("High"),
             _ => None,
         },
-        ("Olympus", 0x053B) => match value { // MonochromeColor
+        ("Olympus", 0x053B) => match value {
+            // MonochromeColor
             0 => Some("(none)"),
             1 => Some("Normal"),
             2 => Some("Sepia"),
@@ -11649,7 +12973,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Green"),
             _ => None,
         },
-        ("Olympus", 0x0603) => match value { // ImageQuality2
+        ("Olympus", 0x0603) => match value {
+            // ImageQuality2
             1 => Some("SQ"),
             2 => Some("HQ"),
             3 => Some("SHQ"),
@@ -11657,7 +12982,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("SQ (5)"),
             _ => None,
         },
-        ("Olympus", 0x0604) => match value { // ImageStabilization
+        ("Olympus", 0x0604) => match value {
+            // ImageStabilization
             0 => Some("Off"),
             1 => Some("On, S-IS1 (All Direction Shake IS)"),
             2 => Some("On, S-IS2 (Vertical Shake IS)"),
@@ -11665,12 +12991,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("On, S-IS Auto"),
             _ => None,
         },
-        ("Olympus", 0x0902) => match value { // ExtendedWBDetect
+        ("Olympus", 0x0902) => match value {
+            // ExtendedWBDetect
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Olympus", 0x1000) => match value { // LightSource
+        ("Olympus", 0x1000) => match value {
+            // LightSource
             0 => Some("Unknown"),
             16 => Some("Shade"),
             17 => Some("Cloudy"),
@@ -11685,7 +13013,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             512 => Some("Custom 1-4"),
             _ => None,
         },
-        ("Olympus", 0x1001) => match value { // FlashModel
+        ("Olympus", 0x1001) => match value {
+            // FlashModel
             0 => Some("None"),
             1 => Some("FL-20"),
             2 => Some("FL-50"),
@@ -11700,98 +13029,116 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             15 => Some("FL-900R"),
             _ => None,
         },
-        ("Olympus", 0x1004) => match value { // FlashMode
+        ("Olympus", 0x1004) => match value {
+            // FlashMode
             2 => Some("On"),
             3 => Some("Off"),
             _ => None,
         },
-        ("Olympus", 0x1005) => match value { // FlashDevice
+        ("Olympus", 0x1005) => match value {
+            // FlashDevice
             0 => Some("None"),
             1 => Some("Internal"),
             4 => Some("External"),
             5 => Some("Internal + External"),
             _ => None,
         },
-        ("Olympus", 0x100A) => match value { // FocusRange
+        ("Olympus", 0x100A) => match value {
+            // FocusRange
             0 => Some("Normal"),
             1 => Some("Macro"),
             _ => None,
         },
-        ("Olympus", 0x100B) => match value { // FocusMode
+        ("Olympus", 0x100B) => match value {
+            // FocusMode
             0 => Some("Auto"),
             1 => Some("Manual"),
             _ => None,
         },
-        ("Olympus", 0x100F) => match value { // Sharpness
+        ("Olympus", 0x100F) => match value {
+            // Sharpness
             0 => Some("Normal"),
             1 => Some("Hard"),
             2 => Some("Soft"),
             _ => None,
         },
-        ("Olympus", 0x1010) => match value { // NoiseReduction2
+        ("Olympus", 0x1010) => match value {
+            // NoiseReduction2
             0 => Some("Noise Reduction"),
             1 => Some("Noise Filter"),
             2 => Some("Noise Filter (ISO Boost)"),
             _ => None,
         },
-        ("Olympus", 0x1011) => match value { // DistortionCorrection2
+        ("Olympus", 0x1011) => match value {
+            // DistortionCorrection2
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Olympus", 0x1012) => match value { // ShadingCompensation2
+        ("Olympus", 0x1012) => match value {
+            // ShadingCompensation2
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Olympus", 0x1026) => match value { // ExternalFlashBounce
+        ("Olympus", 0x1026) => match value {
+            // ExternalFlashBounce
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Olympus", 0x1029) => match value { // Contrast
+        ("Olympus", 0x1029) => match value {
+            // Contrast
             0 => Some("High"),
             1 => Some("Normal"),
             2 => Some("Low"),
             _ => None,
         },
-        ("Olympus", 0x1035) => match value { // PreviewImageValid
+        ("Olympus", 0x1035) => match value {
+            // PreviewImageValid
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Olympus", 0x1039) => match value { // CCDScanMode
+        ("Olympus", 0x1039) => match value {
+            // CCDScanMode
             0 => Some("Interlaced"),
             1 => Some("Progressive"),
             _ => None,
         },
-        ("Olympus", 0x103A) => match value { // NoiseReduction
+        ("Olympus", 0x103A) => match value {
+            // NoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Olympus", 0x1204) => match value { // ExternalFlashBounce
+        ("Olympus", 0x1204) => match value {
+            // ExternalFlashBounce
             0 => Some("Bounce or Off"),
             1 => Some("Direct"),
             _ => None,
         },
-        ("Olympus", 0x120A) => match value { // MacroLED
+        ("Olympus", 0x120A) => match value {
+            // MacroLED
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Olympus", 0x1901) => match value { // KeystoneDirection
+        ("Olympus", 0x1901) => match value {
+            // KeystoneDirection
             0 => Some("Vertical"),
             1 => Some("Horizontal"),
             _ => None,
         },
-        ("Olympus", 0x2110) => match value { // GNDFilterType
+        ("Olympus", 0x2110) => match value {
+            // GNDFilterType
             0 => Some("High"),
             1 => Some("Medium"),
             2 => Some("Soft"),
             _ => None,
         },
-        ("PCX", 0x0001) => match value { // Software
+        ("PCX", 0x0001) => match value {
+            // Software
             0 => Some("PC Paintbrush 2.5"),
             2 => Some("PC Paintbrush 2.8 (with palette)"),
             3 => Some("PC Paintbrush 2.8 (without palette)"),
@@ -11799,13 +13146,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("PC Paintbrush 3.0+"),
             _ => None,
         },
-        ("PCX", 0x0044) => match value { // ColorMode
+        ("PCX", 0x0044) => match value {
+            // ColorMode
             0 => Some("n/a"),
             1 => Some("Color Palette"),
             2 => Some("Grayscale"),
             _ => None,
         },
-        ("PGF", 0x0014) => match value { // ColorMode
+        ("PGF", 0x0014) => match value {
+            // ColorMode
             0 => Some("Bitmap"),
             1 => Some("Grayscale"),
             2 => Some("Indexed"),
@@ -11816,12 +13165,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("Lab"),
             _ => None,
         },
-        ("PNG", 0x0000) => match value { // StereoMode
+        ("PNG", 0x0000) => match value {
+            // StereoMode
             0 => Some("Cross-fuse Layout"),
             1 => Some("Diverging-fuse Layout"),
             _ => None,
         },
-        ("PNG", 0x0001) => match value { // TransferCharacteristics
+        ("PNG", 0x0001) => match value {
+            // TransferCharacteristics
             0 => Some("For future use (0)"),
             1 => Some("BT.709"),
             2 => Some("Unspecified"),
@@ -11843,7 +13194,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             18 => Some("BT.2100 HLG, ARIB STD-B67"),
             _ => None,
         },
-        ("PNG", 0x0002) => match value { // MatrixCoefficients
+        ("PNG", 0x0002) => match value {
+            // MatrixCoefficients
             0 => Some("Identity matrix"),
             1 => Some("BT.709"),
             2 => Some("Unspecified"),
@@ -11861,12 +13213,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             14 => Some("BT.2100 ICtCp"),
             _ => None,
         },
-        ("PNG", 0x0008) => match value { // PixelUnits
+        ("PNG", 0x0008) => match value {
+            // PixelUnits
             0 => Some("Unknown"),
             1 => Some("meters"),
             _ => None,
         },
-        ("PNG", 0x0009) => match value { // ColorType
+        ("PNG", 0x0009) => match value {
+            // ColorType
             0 => Some("Grayscale"),
             2 => Some("RGB"),
             3 => Some("Palette"),
@@ -11874,42 +13228,49 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("RGB with Alpha"),
             _ => None,
         },
-        ("PNG", 0x000C) => match value { // Interlace
+        ("PNG", 0x000C) => match value {
+            // Interlace
             0 => Some("Noninterlaced"),
             1 => Some("Adam7 Interlace"),
             _ => None,
         },
-        ("PSP", 0x0006) => match value { // CreatorAppID
+        ("PSP", 0x0006) => match value {
+            // CreatorAppID
             0 => Some("Unknown"),
             1 => Some("Paint Shop Pro"),
             _ => None,
         },
-        ("PSP", 0x0010) => match value { // ResolutionUnit
+        ("PSP", 0x0010) => match value {
+            // ResolutionUnit
             0 => Some("None"),
             1 => Some("inches"),
             2 => Some("cm"),
             _ => None,
         },
-        ("PSP", 0x0011) => match value { // Compression
+        ("PSP", 0x0011) => match value {
+            // Compression
             0 => Some("None"),
             1 => Some("RLE"),
             2 => Some("LZ77"),
             3 => Some("JPEG"),
             _ => None,
         },
-        ("Palm", 0x0000) => match value { // Compression
+        ("Palm", 0x0000) => match value {
+            // Compression
             1 => Some("None"),
             2 => Some("PalmDOC"),
             17480 => Some("HUFF/CDIC"),
             _ => None,
         },
-        ("Palm", 0x0003) => match value { // Encryption
+        ("Palm", 0x0003) => match value {
+            // Encryption
             0 => Some("None"),
             1 => Some("Old Mobipocket"),
             2 => Some("Mobipocket"),
             _ => None,
         },
-        ("Palm", 0x0006) => match value { // MobiType
+        ("Palm", 0x0006) => match value {
+            // MobiType
             2 => Some("Mobipocket Book"),
             3 => Some("PalmDoc Book"),
             4 => Some("Audio"),
@@ -11926,12 +13287,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             518 => Some("HTML"),
             _ => None,
         },
-        ("Palm", 0x0007) => match value { // CodePage
+        ("Palm", 0x0007) => match value {
+            // CodePage
             1252 => Some("Windows Latin 1 (Western European)"),
             65001 => Some("Unicode (UTF-8)"),
             _ => None,
         },
-        ("Palm", 0x00CC) => match value { // CreatorSoftware
+        ("Palm", 0x00CC) => match value {
+            // CreatorSoftware
             1 => Some("Mobigen"),
             2 => Some("Mobipocket"),
             200 => Some("Kindlegen (Windows)"),
@@ -11939,12 +13302,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             202 => Some("Kindlegen (Mac)"),
             _ => None,
         },
-        ("Palm", 0x0194) => match value { // TextToSpeech
+        ("Palm", 0x0194) => match value {
+            // TextToSpeech
             0 => Some("Enabled"),
             1 => Some("Disabled"),
             _ => None,
         },
-        ("Panasonic", 0x0001) => match value { // ImageQuality
+        ("Panasonic", 0x0001) => match value {
+            // ImageQuality
             1 => Some("TIFF"),
             2 => Some("High"),
             3 => Some("Normal"),
@@ -11955,7 +13320,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             12 => Some("4k Movie"),
             _ => None,
         },
-        ("Panasonic", 0x0003) => match value { // WhiteBalance
+        ("Panasonic", 0x0003) => match value {
+            // WhiteBalance
             1 => Some("Auto"),
             2 => Some("Daylight"),
             3 => Some("Cloudy"),
@@ -11971,7 +13337,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             19 => Some("Auto (cool)"),
             _ => None,
         },
-        ("Panasonic", 0x0007) => match value { // FocusMode
+        ("Panasonic", 0x0007) => match value {
+            // FocusMode
             1 => Some("Auto"),
             2 => Some("Manual"),
             4 => Some("Auto, Focus button"),
@@ -11981,7 +13348,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("AF-F"),
             _ => None,
         },
-        ("Panasonic", 0x001A) => match value { // ImageStabilization
+        ("Panasonic", 0x001A) => match value {
+            // ImageStabilization
             2 => Some("On, Optical"),
             3 => Some("Off"),
             4 => Some("On, Mode 2"),
@@ -11994,14 +13362,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             12 => Some("Dual2 IS Panning"),
             _ => None,
         },
-        ("Panasonic", 0x001C) => match value { // MacroMode
+        ("Panasonic", 0x001C) => match value {
+            // MacroMode
             1 => Some("On"),
             2 => Some("Off"),
             257 => Some("Tele-Macro"),
             513 => Some("Macro Zoom"),
             _ => None,
         },
-        ("Panasonic", 0x001F) => match value { // ShootingMode
+        ("Panasonic", 0x001F) => match value {
+            // ShootingMode
             1 => Some("Normal"),
             2 => Some("Portrait"),
             3 => Some("Scenery"),
@@ -12084,13 +13454,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             92 => Some("Handheld Night Shot"),
             _ => None,
         },
-        ("Panasonic", 0x0020) => match value { // Audio
+        ("Panasonic", 0x0020) => match value {
+            // Audio
             1 => Some("Yes"),
             2 => Some("No"),
             3 => Some("Stereo"),
             _ => None,
         },
-        ("Panasonic", 0x0028) => match value { // ColorEffect
+        ("Panasonic", 0x0028) => match value {
+            // ColorEffect
             1 => Some("Off"),
             2 => Some("Warm"),
             3 => Some("Cool"),
@@ -12100,7 +13472,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Vivid"),
             _ => None,
         },
-        ("Panasonic", 0x002A) => match value { // BurstMode
+        ("Panasonic", 0x002A) => match value {
+            // BurstMode
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("Auto Exposure Bracketing (AEB)"),
@@ -12111,7 +13484,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             18 => Some("Aperture Bracketing"),
             _ => None,
         },
-        ("Panasonic", 0x002D) => match value { // NoiseReduction
+        ("Panasonic", 0x002D) => match value {
+            // NoiseReduction
             0 => Some("Standard"),
             1 => Some("Low (-1)"),
             2 => Some("High (+1)"),
@@ -12126,7 +13500,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("-1"),
             _ => None,
         },
-        ("Panasonic", 0x002E) => match value { // SelfTimer
+        ("Panasonic", 0x002E) => match value {
+            // SelfTimer
             0 => Some("Off (0)"),
             1 => Some("Off"),
             2 => Some("10 s"),
@@ -12137,39 +13512,45 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             778 => Some("3 photos after 10 s"),
             _ => None,
         },
-        ("Panasonic", 0x0030) => match value { // Rotation
+        ("Panasonic", 0x0030) => match value {
+            // Rotation
             1 => Some("Horizontal (normal)"),
             3 => Some("Rotate 180"),
             6 => Some("Rotate 90 CW"),
             8 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Panasonic", 0x0031) => match value { // AFAssistLamp
+        ("Panasonic", 0x0031) => match value {
+            // AFAssistLamp
             1 => Some("Fired"),
             2 => Some("Enabled but Not Used"),
             3 => Some("Disabled but Required"),
             4 => Some("Disabled and Not Required"),
             _ => None,
         },
-        ("Panasonic", 0x0032) => match value { // ColorMode
+        ("Panasonic", 0x0032) => match value {
+            // ColorMode
             0 => Some("Normal"),
             1 => Some("Natural"),
             2 => Some("Vivid"),
             _ => None,
         },
-        ("Panasonic", 0x0034) => match value { // OpticalZoomMode
+        ("Panasonic", 0x0034) => match value {
+            // OpticalZoomMode
             1 => Some("Standard"),
             2 => Some("Extended"),
             _ => None,
         },
-        ("Panasonic", 0x0035) => match value { // ConversionLens
+        ("Panasonic", 0x0035) => match value {
+            // ConversionLens
             1 => Some("Off"),
             2 => Some("Wide"),
             3 => Some("Telephoto"),
             4 => Some("Macro"),
             _ => None,
         },
-        ("Panasonic", 0x0038) => match value { // BatteryLevel
+        ("Panasonic", 0x0038) => match value {
+            // BatteryLevel
             1 => Some("Full"),
             2 => Some("Medium"),
             3 => Some("Low"),
@@ -12179,22 +13560,26 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             256 => Some("n/a"),
             _ => None,
         },
-        ("Panasonic", 0x003A) => match value { // WorldTimeLocation
+        ("Panasonic", 0x003A) => match value {
+            // WorldTimeLocation
             1 => Some("Home"),
             2 => Some("Destination"),
             _ => None,
         },
-        ("Panasonic", 0x003B) => match value { // TextStamp
+        ("Panasonic", 0x003B) => match value {
+            // TextStamp
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("Panasonic", 0x003E) => match value { // TextStamp
+        ("Panasonic", 0x003E) => match value {
+            // TextStamp
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("Panasonic", 0x0042) => match value { // FilmMode
+        ("Panasonic", 0x0042) => match value {
+            // FilmMode
             0 => Some("n/a"),
             1 => Some("Standard (color)"),
             2 => Some("Dynamic (color)"),
@@ -12210,7 +13595,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             12 => Some("Multi Film"),
             _ => None,
         },
-        ("Panasonic", 0x0043) => match value { // JPEGQuality
+        ("Panasonic", 0x0043) => match value {
+            // JPEGQuality
             0 => Some("n/a (Movie)"),
             2 => Some("High"),
             3 => Some("Standard"),
@@ -12218,7 +13604,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("n/a (RAW only)"),
             _ => None,
         },
-        ("Panasonic", 0x0045) => match value { // BracketSettings
+        ("Panasonic", 0x0045) => match value {
+            // BracketSettings
             0 => Some("No Bracket"),
             1 => Some("3 Images, Sequence 0/-/+"),
             2 => Some("3 Images, Sequence -/0/+"),
@@ -12228,30 +13615,35 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("7 Images, Sequence -/0/+"),
             _ => None,
         },
-        ("Panasonic", 0x0048) => match value { // FlashCurtain
+        ("Panasonic", 0x0048) => match value {
+            // FlashCurtain
             0 => Some("n/a"),
             1 => Some("1st"),
             2 => Some("2nd"),
             _ => None,
         },
-        ("Panasonic", 0x0049) => match value { // LongExposureNoiseReduction
+        ("Panasonic", 0x0049) => match value {
+            // LongExposureNoiseReduction
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("Panasonic", 0x005D) => match value { // IntelligentExposure
+        ("Panasonic", 0x005D) => match value {
+            // IntelligentExposure
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Standard"),
             3 => Some("High"),
             _ => None,
         },
-        ("Panasonic", 0x0062) => match value { // FlashWarning
+        ("Panasonic", 0x0062) => match value {
+            // FlashWarning
             0 => Some("No"),
             1 => Some("Yes (flash required but disabled)"),
             _ => None,
         },
-        ("Panasonic", 0x0070) => match value { // IntelligentResolution
+        ("Panasonic", 0x0070) => match value {
+            // IntelligentResolution
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Standard"),
@@ -12259,12 +13651,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Extended"),
             _ => None,
         },
-        ("Panasonic", 0x007C) => match value { // ClearRetouch
+        ("Panasonic", 0x007C) => match value {
+            // ClearRetouch
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Panasonic", 0x0089) => match value { // PhotoStyle
+        ("Panasonic", 0x0089) => match value {
+            // PhotoStyle
             0 => Some("Auto"),
             1 => Some("Standard or Custom"),
             2 => Some("Vivid"),
@@ -12281,12 +13675,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             18 => Some("Cinelike D2"),
             _ => None,
         },
-        ("Panasonic", 0x008A) => match value { // ShadingCompensation
+        ("Panasonic", 0x008A) => match value {
+            // ShadingCompensation
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Panasonic", 0x008F) => match value { // CameraOrientation
+        ("Panasonic", 0x008F) => match value {
+            // CameraOrientation
             0 => Some("Normal"),
             1 => Some("Rotate CW"),
             2 => Some("Rotate 180"),
@@ -12295,7 +13691,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Tilt Downwards"),
             _ => None,
         },
-        ("Panasonic", 0x0093) => match value { // SweepPanoramaDirection
+        ("Panasonic", 0x0093) => match value {
+            // SweepPanoramaDirection
             0 => Some("Off"),
             1 => Some("Left to Right"),
             2 => Some("Right to Left"),
@@ -12303,14 +13700,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Bottom to Top"),
             _ => None,
         },
-        ("Panasonic", 0x0096) => match value { // TimerRecording
+        ("Panasonic", 0x0096) => match value {
+            // TimerRecording
             0 => Some("Off"),
             1 => Some("Time Lapse"),
             2 => Some("Stop-motion Animation"),
             3 => Some("Focus Bracketing"),
             _ => None,
         },
-        ("Panasonic", 0x009E) => match value { // HDR
+        ("Panasonic", 0x009E) => match value {
+            // HDR
             0 => Some("Off"),
             100 => Some("1 EV"),
             200 => Some("2 EV"),
@@ -12320,18 +13719,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             33068 => Some("3 EV (Auto)"),
             _ => None,
         },
-        ("Panasonic", 0x009F) => match value { // ShutterType
+        ("Panasonic", 0x009F) => match value {
+            // ShutterType
             0 => Some("Mechanical"),
             1 => Some("Electronic"),
             2 => Some("Hybrid"),
             _ => None,
         },
-        ("Panasonic", 0x00AB) => match value { // TouchAE
+        ("Panasonic", 0x00AB) => match value {
+            // TouchAE
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Panasonic", 0x00AC) => match value { // MonochromeFilterEffect
+        ("Panasonic", 0x00AC) => match value {
+            // MonochromeFilterEffect
             0 => Some("Off"),
             1 => Some("Yellow"),
             2 => Some("Orange"),
@@ -12339,23 +13741,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Green"),
             _ => None,
         },
-        ("Panasonic", 0x00B3) => match value { // VideoBurstResolution
+        ("Panasonic", 0x00B3) => match value {
+            // VideoBurstResolution
             1 => Some("Off or 4K"),
             4 => Some("6K"),
             _ => None,
         },
-        ("Panasonic", 0x00B4) => match value { // MultiExposure
+        ("Panasonic", 0x00B4) => match value {
+            // MultiExposure
             0 => Some("n/a"),
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("Panasonic", 0x00B9) => match value { // RedEyeRemoval
+        ("Panasonic", 0x00B9) => match value {
+            // RedEyeRemoval
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Panasonic", 0x00BB) => match value { // VideoBurstMode
+        ("Panasonic", 0x00BB) => match value {
+            // VideoBurstMode
             1 => Some("Off"),
             4 => Some("Post Focus"),
             24 => Some("4K Burst"),
@@ -12368,39 +13774,46 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4097 => Some("High Resolution Mode"),
             _ => None,
         },
-        ("Panasonic", 0x00BC) => match value { // DiffractionCorrection
+        ("Panasonic", 0x00BC) => match value {
+            // DiffractionCorrection
             0 => Some("Off"),
             1 => Some("Auto"),
             _ => None,
         },
-        ("Panasonic", 0x00BE) => match value { // LongExposureNRUsed
+        ("Panasonic", 0x00BE) => match value {
+            // LongExposureNRUsed
             1 => Some("No"),
             2 => Some("Yes"),
             _ => None,
         },
-        ("Panasonic", 0x00C1) => match value { // VideoPreburst
+        ("Panasonic", 0x00C1) => match value {
+            // VideoPreburst
             0 => Some("No"),
             1 => Some("4K or 6K"),
             _ => None,
         },
-        ("Panasonic", 0x00CA) => match value { // SensorType
+        ("Panasonic", 0x00CA) => match value {
+            // SensorType
             0 => Some("Multi-aspect"),
             1 => Some("Standard"),
             _ => None,
         },
-        ("Panasonic", 0x00D2) => match value { // MonochromeGrainEffect
+        ("Panasonic", 0x00D2) => match value {
+            // MonochromeGrainEffect
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Standard"),
             3 => Some("High"),
             _ => None,
         },
-        ("Panasonic", 0x00D4) => match value { // HybridLogGamma
+        ("Panasonic", 0x00D4) => match value {
+            // HybridLogGamma
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Panasonic", 0x00E9) => match value { // AFSubjectDetection
+        ("Panasonic", 0x00E9) => match value {
+            // AFSubjectDetection
             0 => Some("n/a"),
             1 => Some("Human Eye/Face/Body"),
             2 => Some("Animal"),
@@ -12417,24 +13830,28 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             13 => Some("Airplane (nose priority)"),
             _ => None,
         },
-        ("Panasonic", 0x00EE) => match value { // DynamicRangeBoost
+        ("Panasonic", 0x00EE) => match value {
+            // DynamicRangeBoost
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Panasonic", 0x0300) => match value { // Quality
+        ("Panasonic", 0x0300) => match value {
+            // Quality
             1 => Some("Fine"),
             2 => Some("Basic"),
             _ => None,
         },
-        ("Panasonic", 0x0302) => match value { // UserProfile
+        ("Panasonic", 0x0302) => match value {
+            // UserProfile
             1 => Some("User Profile 1"),
             2 => Some("User Profile 2"),
             3 => Some("User Profile 3"),
             4 => Some("User Profile 0 (Dynamic)"),
             _ => None,
         },
-        ("Panasonic", 0x0304) => match value { // WhiteBalance
+        ("Panasonic", 0x0304) => match value {
+            // WhiteBalance
             0 => Some("Auto or Manual"),
             1 => Some("Daylight"),
             2 => Some("Fluorescent"),
@@ -12444,7 +13861,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("Shade"),
             _ => None,
         },
-        ("Panasonic", 0x300A) => match value { // Contrast
+        ("Panasonic", 0x300A) => match value {
+            // Contrast
             0 => Some("Low"),
             1 => Some("Medium Low"),
             2 => Some("Normal"),
@@ -12452,7 +13870,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("High"),
             _ => None,
         },
-        ("Panasonic", 0x300B) => match value { // Sharpening
+        ("Panasonic", 0x300B) => match value {
+            // Sharpening
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Normal"),
@@ -12460,7 +13879,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("High"),
             _ => None,
         },
-        ("Panasonic", 0x300D) => match value { // Saturation
+        ("Panasonic", 0x300D) => match value {
+            // Saturation
             0 => Some("Low"),
             1 => Some("Medium Low"),
             2 => Some("Normal"),
@@ -12470,7 +13890,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Vintage B&W"),
             _ => None,
         },
-        ("Panasonic", 0x3033) => match value { // WhiteBalance
+        ("Panasonic", 0x3033) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Tungsten"),
             2 => Some("Fluorescent"),
@@ -12483,12 +13904,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("Kelvin"),
             _ => None,
         },
-        ("Panasonic", 0x3034) => match value { // JPEGQuality
+        ("Panasonic", 0x3034) => match value {
+            // JPEGQuality
             94 => Some("Basic"),
             97 => Some("Fine"),
             _ => None,
         },
-        ("Panasonic", 0x303A) => match value { // JPEGSize
+        ("Panasonic", 0x303A) => match value {
+            // JPEGSize
             0 => Some("5216x3472"),
             1 => Some("3840x2592"),
             2 => Some("2592x1728"),
@@ -12496,38 +13919,45 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("1280x864"),
             _ => None,
         },
-        ("Panasonic", 0x8002) => match value { // HighlightWarning
+        ("Panasonic", 0x8002) => match value {
+            // HighlightWarning
             0 => Some("Disabled"),
             1 => Some("No"),
             2 => Some("Yes"),
             _ => None,
         },
-        ("Panasonic", 0x8003) => match value { // DarkFocusEnvironment
+        ("Panasonic", 0x8003) => match value {
+            // DarkFocusEnvironment
             1 => Some("No"),
             2 => Some("Yes"),
             _ => None,
         },
-        ("Panasonic", 0x8007) => match value { // FlashFired
+        ("Panasonic", 0x8007) => match value {
+            // FlashFired
             0 => Some("Yes"),
             1 => Some("No"),
             _ => None,
         },
-        ("Panasonic", 0x8008) => match value { // TextStamp
+        ("Panasonic", 0x8008) => match value {
+            // TextStamp
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("Panasonic", 0x8009) => match value { // TextStamp
+        ("Panasonic", 0x8009) => match value {
+            // TextStamp
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("PanasonicRaw", 0x0001) => match value { // DistortionCorrection
+        ("PanasonicRaw", 0x0001) => match value {
+            // DistortionCorrection
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("PanasonicRaw", 0x0009) => match value { // CFAPattern
+        ("PanasonicRaw", 0x0009) => match value {
+            // CFAPattern
             0 => Some("n/a"),
             1 => Some("[Red,Green][Green,Blue]"),
             2 => Some("[Green,Red][Blue,Green]"),
@@ -12535,44 +13965,52 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("[Blue,Green][Green,Red]"),
             _ => None,
         },
-        ("PanasonicRaw", 0x000B) => match value { // Compression
+        ("PanasonicRaw", 0x000B) => match value {
+            // Compression
             34316 => Some("Panasonic RAW 1"),
             34826 => Some("Panasonic RAW 2"),
             34828 => Some("Panasonic RAW 3"),
             34830 => Some("Panasonic RAW 4"),
             _ => None,
         },
-        ("PanasonicRaw", 0x0121) => match value { // Multishot
+        ("PanasonicRaw", 0x0121) => match value {
+            // Multishot
             0 => Some("Off"),
             65536 => Some("Pixel Shift"),
             _ => None,
         },
-        ("PanasonicRaw", 0x1001) => match value { // MultishotOn
+        ("PanasonicRaw", 0x1001) => match value {
+            // MultishotOn
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("PanasonicRaw", 0x1102) => match value { // FlashFired
+        ("PanasonicRaw", 0x1102) => match value {
+            // FlashFired
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("PanasonicRaw", 0x1200) => match value { // LensAttached
+        ("PanasonicRaw", 0x1200) => match value {
+            // LensAttached
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("PanasonicRaw", 0x1305) => match value { // HighISOMode
+        ("PanasonicRaw", 0x1305) => match value {
+            // HighISOMode
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("PanasonicRaw", 0x1412) => match value { // FacesDetected
+        ("PanasonicRaw", 0x1412) => match value {
+            // FacesDetected
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("PanasonicRaw", 0x3300) => match value { // WhiteBalanceSet
+        ("PanasonicRaw", 0x3300) => match value {
+            // WhiteBalanceSet
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -12590,7 +14028,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             16 => Some("AWBc"),
             _ => None,
         },
-        ("PanasonicRaw", 0x3600) => match value { // WhiteBalanceDetected
+        ("PanasonicRaw", 0x3600) => match value {
+            // WhiteBalanceDetected
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -12608,7 +14047,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             16 => Some("AWBc"),
             _ => None,
         },
-        ("Parrot", 0x0001) => match value { // PilotingMode
+        ("Parrot", 0x0001) => match value {
+            // PilotingMode
             0 => Some("Manual"),
             1 => Some("Return Home"),
             2 => Some("Flight Plan"),
@@ -12617,7 +14057,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Move To"),
             _ => None,
         },
-        ("Parrot", 0x001C) => match value { // AutomationAnimation
+        ("Parrot", 0x001C) => match value {
+            // AutomationAnimation
             0 => Some("None"),
             1 => Some("Orbit"),
             2 => Some("Boomerang"),
@@ -12635,42 +14076,49 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             14 => Some("Position Twist Up"),
             _ => None,
         },
-        ("Parrot", 0x001D) => match value { // AutomationFlags
+        ("Parrot", 0x001D) => match value {
+            // AutomationFlags
             0 => Some("Follow-me enabled"),
             1 => Some("Look-at-me enabled"),
             2 => Some("Angle locked"),
             _ => None,
         },
-        ("Pentax", 0x0000) => match value { // PixelShiftResolution
+        ("Pentax", 0x0000) => match value {
+            // PixelShiftResolution
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Pentax", 0x0001) => match value { // RecordingMode
+        ("Pentax", 0x0001) => match value {
+            // RecordingMode
             0 => Some("Auto"),
             1 => Some("Night Scene"),
             2 => Some("Manual"),
             _ => None,
         },
-        ("Pentax", 0x0002) => match value { // Quality
+        ("Pentax", 0x0002) => match value {
+            // Quality
             0 => Some("Good"),
             1 => Some("Better"),
             2 => Some("Best"),
             _ => None,
         },
-        ("Pentax", 0x0003) => match value { // FocusMode
+        ("Pentax", 0x0003) => match value {
+            // FocusMode
             2 => Some("Custom"),
             3 => Some("Auto"),
             _ => None,
         },
-        ("Pentax", 0x0004) => match value { // FlashMode
+        ("Pentax", 0x0004) => match value {
+            // FlashMode
             1 => Some("Auto"),
             2 => Some("On"),
             4 => Some("Off"),
             6 => Some("Red-eye reduction"),
             _ => None,
         },
-        ("Pentax", 0x0006) => match value { // AEProgramMode
+        ("Pentax", 0x0006) => match value {
+            // AEProgramMode
             0 => Some("M, P or TAv"),
             1 => Some("Av, B or X"),
             2 => Some("Tv"),
@@ -12703,7 +14151,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             216 => Some("HDR"),
             _ => None,
         },
-        ("Pentax", 0x0007) => match value { // WhiteBalance
+        ("Pentax", 0x0007) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Shade"),
@@ -12712,7 +14161,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Manual"),
             _ => None,
         },
-        ("Pentax", 0x0008) => match value { // ExposureBracketStepSize
+        ("Pentax", 0x0008) => match value {
+            // ExposureBracketStepSize
             3 => Some("0.3"),
             4 => Some("0.5"),
             5 => Some("0.7"),
@@ -12723,7 +14173,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             16 => Some("2.0"),
             _ => None,
         },
-        ("Pentax", 0x0009) => match value { // BracketShotNumber
+        ("Pentax", 0x0009) => match value {
+            // BracketShotNumber
             0 => Some("n/a"),
             2 => Some("1 of 2"),
             3 => Some("1 of 3"),
@@ -12737,7 +14188,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             69 => Some("5 of 5"),
             _ => None,
         },
-        ("Pentax", 0x000A) => match value { // WhiteBalanceSet
+        ("Pentax", 0x000A) => match value {
+            // WhiteBalanceSet
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Shade"),
@@ -12753,25 +14205,29 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             14 => Some("Set Color Temperature 3"),
             _ => None,
         },
-        ("Pentax", 0x000B) => match value { // Sharpness
+        ("Pentax", 0x000B) => match value {
+            // Sharpness
             0 => Some("Normal"),
             1 => Some("Soft"),
             2 => Some("Hard"),
             _ => None,
         },
-        ("Pentax", 0x000C) => match value { // Contrast
+        ("Pentax", 0x000C) => match value {
+            // Contrast
             0 => Some("Normal"),
             1 => Some("Low"),
             2 => Some("High"),
             _ => None,
         },
-        ("Pentax", 0x000D) => match value { // Saturation
+        ("Pentax", 0x000D) => match value {
+            // Saturation
             0 => Some("Normal"),
             1 => Some("Low"),
             2 => Some("High"),
             _ => None,
         },
-        ("Pentax", 0x000F) => match value { // SceneMode
+        ("Pentax", 0x000F) => match value {
+            // SceneMode
             0 => Some("Off"),
             1 => Some("HDR"),
             4 => Some("Auto PICT"),
@@ -12797,7 +14253,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             29 => Some("Backlight Silhouette"),
             _ => None,
         },
-        ("Pentax", 0x0010) => match value { // GripBatteryState
+        ("Pentax", 0x0010) => match value {
+            // GripBatteryState
             0 => Some("Empty or Missing"),
             1 => Some("Almost Empty"),
             2 => Some("Running Low"),
@@ -12806,18 +14263,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Full"),
             _ => None,
         },
-        ("Pentax", 0x0014) => match value { // ISO
+        ("Pentax", 0x0014) => match value {
+            // ISO
             65534 => Some("Auto 2"),
             65535 => Some("Auto"),
             _ => None,
         },
-        ("Pentax", 0x0017) => match value { // ColorFilter
+        ("Pentax", 0x0017) => match value {
+            // ColorFilter
             1 => Some("Full"),
             2 => Some("Black & White"),
             3 => Some("Sepia"),
             _ => None,
         },
-        ("Pentax", 0x0019) => match value { // ExternalFlashExposureComp
+        ("Pentax", 0x0019) => match value {
+            // ExternalFlashExposureComp
             0 => Some("n/a"),
             144 => Some("n/a (Manual Mode)"),
             164 => Some("-3.0"),
@@ -12831,18 +14291,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             180 => Some("1.0"),
             _ => None,
         },
-        ("Pentax", 0x001A) => match value { // ExternalFlashBounce
+        ("Pentax", 0x001A) => match value {
+            // ExternalFlashBounce
             0 => Some("n/a"),
             16 => Some("Direct"),
             48 => Some("Bounce"),
             _ => None,
         },
-        ("Pentax", 0x0022) => match value { // WorldTimeLocation
+        ("Pentax", 0x0022) => match value {
+            // WorldTimeLocation
             0 => Some("Hometown"),
             1 => Some("Destination"),
             _ => None,
         },
-        ("Pentax", 0x0023) => match value { // HometownCity
+        ("Pentax", 0x0023) => match value {
+            // HometownCity
             0 => Some("Pago Pago"),
             1 => Some("Honolulu"),
             2 => Some("Anchorage"),
@@ -12920,7 +14383,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             74 => Some("Budapest"),
             _ => None,
         },
-        ("Pentax", 0x0024) => match value { // DestinationCity
+        ("Pentax", 0x0024) => match value {
+            // DestinationCity
             0 => Some("Pago Pago"),
             1 => Some("Honolulu"),
             2 => Some("Anchorage"),
@@ -12998,22 +14462,26 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             74 => Some("Budapest"),
             _ => None,
         },
-        ("Pentax", 0x0025) => match value { // HometownDST
+        ("Pentax", 0x0025) => match value {
+            // HometownDST
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Pentax", 0x0026) => match value { // DestinationDST
+        ("Pentax", 0x0026) => match value {
+            // DestinationDST
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Pentax", 0x0037) => match value { // ColorSpace
+        ("Pentax", 0x0037) => match value {
+            // ColorSpace
             0 => Some("sRGB"),
             1 => Some("Adobe RGB"),
             _ => None,
         },
-        ("Pentax", 0x003C) => match value { // AFPointsInFocus
+        ("Pentax", 0x003C) => match value {
+            // AFPointsInFocus
             0 => Some("Upper-left"),
             1 => Some("Top"),
             2 => Some("Upper-right"),
@@ -13027,7 +14495,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             10 => Some("Lower-right"),
             _ => None,
         },
-        ("Pentax", 0x0044) => match value { // WhiteBalance
+        ("Pentax", 0x0044) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Shade"),
@@ -13036,17 +14505,20 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Manual"),
             _ => None,
         },
-        ("Pentax", 0x0048) => match value { // AELock
+        ("Pentax", 0x0048) => match value {
+            // AELock
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Pentax", 0x0049) => match value { // NoiseReduction
+        ("Pentax", 0x0049) => match value {
+            // NoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Pentax", 0x004F) => match value { // ImageTone
+        ("Pentax", 0x004F) => match value {
+            // ImageTone
             0 => Some("Natural"),
             1 => Some("Bright"),
             2 => Some("Portrait"),
@@ -13076,7 +14548,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32770 => Some("Soft"),
             _ => None,
         },
-        ("Pentax", 0x0062) => match value { // RawDevelopmentProcess
+        ("Pentax", 0x0062) => match value {
+            // RawDevelopmentProcess
             1 => Some("1 (K10D,K200D,K2000,K-m)"),
             3 => Some("3 (K20D)"),
             4 => Some("4 (K-7)"),
@@ -13099,17 +14572,20 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             21 => Some("21 (K-3IIIMonochrome)"),
             _ => None,
         },
-        ("Pentax", 0x0067) => match value { // Hue
+        ("Pentax", 0x0067) => match value {
+            // Hue
             1 => Some("Normal"),
             65535 => Some("None"),
             _ => None,
         },
-        ("Pentax", 0x006F) => match value { // ContrastHighlightShadowAdj
+        ("Pentax", 0x006F) => match value {
+            // ContrastHighlightShadowAdj
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Pentax", 0x0073) => match value { // MonochromeFilterEffect
+        ("Pentax", 0x0073) => match value {
+            // MonochromeFilterEffect
             1 => Some("Green"),
             2 => Some("Yellow"),
             3 => Some("Orange"),
@@ -13121,13 +14597,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("None"),
             _ => None,
         },
-        ("Pentax", 0x0079) => match value { // ShadowCorrection
+        ("Pentax", 0x0079) => match value {
+            // ShadowCorrection
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("Auto 2"),
             _ => None,
         },
-        ("Pentax", 0x007B) => match value { // CrossProcess
+        ("Pentax", 0x007B) => match value {
+            // CrossProcess
             0 => Some("Off"),
             1 => Some("Random"),
             2 => Some("Preset 1"),
@@ -13138,7 +14616,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             35 => Some("Favorite 3"),
             _ => None,
         },
-        ("Pentax", 0x007F) => match value { // BleachBypassToning
+        ("Pentax", 0x007F) => match value {
+            // BleachBypassToning
             0 => Some("Off"),
             1 => Some("Green"),
             2 => Some("Yellow"),
@@ -13151,65 +14630,76 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Pentax", 0x0080) => match value { // AspectRatio
+        ("Pentax", 0x0080) => match value {
+            // AspectRatio
             0 => Some("4:3"),
             1 => Some("3:2"),
             2 => Some("16:9"),
             3 => Some("1:1"),
             _ => None,
         },
-        ("Pentax", 0x0087) => match value { // ShutterType
+        ("Pentax", 0x0087) => match value {
+            // ShutterType
             0 => Some("Normal"),
             1 => Some("Electronic"),
             _ => None,
         },
-        ("Pentax", 0x0088) => match value { // NeutralDensityFilter
+        ("Pentax", 0x0088) => match value {
+            // NeutralDensityFilter
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Pentax", 0x0103) => match value { // GPSAltitudeRef
+        ("Pentax", 0x0103) => match value {
+            // GPSAltitudeRef
             0 => Some("Above Sea Level"),
             1 => Some("Below Sea Level"),
             _ => None,
         },
-        ("Pentax", 0x0139) => match value { // GPSMeasureMode
+        ("Pentax", 0x0139) => match value {
+            // GPSMeasureMode
             2 => Some("2-Dimensional Measurement"),
             3 => Some("3-Dimensional Measurement"),
             _ => None,
         },
-        ("Pentax", 0x01FA) => match value { // LiveView
+        ("Pentax", 0x01FA) => match value {
+            // LiveView
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Pentax", 0x01FD) => match value { // AFHold
+        ("Pentax", 0x01FD) => match value {
+            // AFHold
             0 => Some("Off"),
             1 => Some("Short"),
             2 => Some("Medium"),
             3 => Some("Long"),
             _ => None,
         },
-        ("Pentax", 0x0221) => match value { // AFCHold
+        ("Pentax", 0x0221) => match value {
+            // AFCHold
             0 => Some("Low"),
             1 => Some("Medium"),
             2 => Some("High"),
             3 => Some("Off"),
             _ => None,
         },
-        ("Pentax", 0x0960) => match value { // SubjectRecognition
+        ("Pentax", 0x0960) => match value {
+            // SubjectRecognition
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("PhaseOne", 0x0100) => match value { // CameraOrientation
+        ("PhaseOne", 0x0100) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             3 => Some("Rotate 180"),
             _ => None,
         },
-        ("PhaseOne", 0x010E) => match value { // RawFormat
+        ("PhaseOne", 0x010E) => match value {
+            // RawFormat
             0 => Some("Uncompressed"),
             1 => Some("RAW 1"),
             2 => Some("RAW 2"),
@@ -13219,7 +14709,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("IIQ L16"),
             _ => None,
         },
-        ("PhaseOne", 0x0263) => match value { // SequenceKind
+        ("PhaseOne", 0x0263) => match value {
+            // SequenceKind
             0 => Some("Bracketing: Shutter Speed"),
             1 => Some("Bracketing: Aperture"),
             2 => Some("Bracketing: ISO"),
@@ -13229,14 +14720,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Focus Stacking"),
             _ => None,
         },
-        ("PhotoCD", 0x0003) => match value { // CompressionClass
+        ("PhotoCD", 0x0003) => match value {
+            // CompressionClass
             0 => Some("Class 1 - 35mm film; Pictoral hard copy"),
             1 => Some("Class 2 - Large format film"),
             2 => Some("Class 3 - Text and graphics, high resolution"),
             3 => Some("Class 4 - Text and graphics, high dynamic range"),
             _ => None,
         },
-        ("PhotoCD", 0x0015) => match value { // ImageMedium
+        ("PhotoCD", 0x0015) => match value {
+            // ImageMedium
             0 => Some("Color negative"),
             1 => Some("Color reversal"),
             2 => Some("Color hard copy"),
@@ -13248,7 +14741,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Synthetic image"),
             _ => None,
         },
-        ("PhotoCD", 0x0084) => match value { // CharacterSet
+        ("PhotoCD", 0x0084) => match value {
+            // CharacterSet
             1 => Some("38 characters ISO 646"),
             2 => Some("65 characters ISO 646"),
             3 => Some("95 characters ISO 646"),
@@ -13257,38 +14751,44 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Includes characters not ISO 2375 registered"),
             _ => None,
         },
-        ("PhotoCD", 0x00E6) => match value { // SceneBalanceAlgorithmCommand
+        ("PhotoCD", 0x00E6) => match value {
+            // SceneBalanceAlgorithmCommand
             0 => Some("Neutral SBA On, Color SBA On"),
             1 => Some("Neutral SBA Off, Color SBA Off"),
             2 => Some("Neutral SBA On, Color SBA Off"),
             3 => Some("Neutral SBA Off, Color SBA On"),
             _ => None,
         },
-        ("PhotoCD", 0x014B) => match value { // CopyrightStatus
+        ("PhotoCD", 0x014B) => match value {
+            // CopyrightStatus
             1 => Some("Restrictions apply"),
             255 => Some("Not specified"),
             _ => None,
         },
-        ("PhotoCD", 0x0602) => match value { // Orientation
+        ("PhotoCD", 0x0602) => match value {
+            // Orientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 270 CW"),
             2 => Some("Rotate 180"),
             3 => Some("Rotate 90 CW"),
             _ => None,
         },
-        ("PhotoMechanic", 0x00D8) => match value { // Rotation
+        ("PhotoMechanic", 0x00D8) => match value {
+            // Rotation
             0 => Some("0"),
             1 => Some("90"),
             2 => Some("180"),
             3 => Some("270"),
             _ => None,
         },
-        ("PhotoMechanic", 0x00DD) => match value { // Tagged
+        ("PhotoMechanic", 0x00DD) => match value {
+            // Tagged
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("PhotoMechanic", 0x00DE) => match value { // ColorClass
+        ("PhotoMechanic", 0x00DE) => match value {
+            // ColorClass
             0 => Some("0 (None)"),
             1 => Some("1 (Winner)"),
             2 => Some("2 (Winner alt)"),
@@ -13300,35 +14800,41 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("8 (Trash)"),
             _ => None,
         },
-        ("Photoshop", 0x0000) => match value { // Compression
+        ("Photoshop", 0x0000) => match value {
+            // Compression
             0 => Some("Uncompressed"),
             1 => Some("RLE"),
             2 => Some("ZIP without prediction"),
             3 => Some("ZIP with prediction"),
             _ => None,
         },
-        ("Photoshop", 0x0001) => match value { // PhotoshopFormat
+        ("Photoshop", 0x0001) => match value {
+            // PhotoshopFormat
             0 => Some("Standard"),
             1 => Some("Optimized"),
             257 => Some("Progressive"),
             _ => None,
         },
-        ("Photoshop", 0x0002) => match value { // DisplayedUnitsX
+        ("Photoshop", 0x0002) => match value {
+            // DisplayedUnitsX
             1 => Some("inches"),
             2 => Some("cm"),
             _ => None,
         },
-        ("Photoshop", 0x0004) => match value { // HasRealMergedData
+        ("Photoshop", 0x0004) => match value {
+            // HasRealMergedData
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Photoshop", 0x0006) => match value { // DisplayedUnitsY
+        ("Photoshop", 0x0006) => match value {
+            // DisplayedUnitsY
             1 => Some("inches"),
             2 => Some("cm"),
             _ => None,
         },
-        ("Photoshop", 0x000C) => match value { // ColorMode
+        ("Photoshop", 0x000C) => match value {
+            // ColorMode
             0 => Some("Bitmap"),
             1 => Some("Grayscale"),
             2 => Some("Indexed"),
@@ -13339,12 +14845,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("Lab"),
             _ => None,
         },
-        ("Photoshop", 0x040A) => match value { // CopyrightFlag
+        ("Photoshop", 0x040A) => match value {
+            // CopyrightFlag
             0 => Some("False"),
             1 => Some("True"),
             _ => None,
         },
-        ("QuickTime", 0x0000) => match value { // DisplaySize
+        ("QuickTime", 0x0000) => match value {
+            // DisplaySize
             0 => Some("Normal"),
             1 => Some("Double Size"),
             2 => Some("Half Size"),
@@ -13352,19 +14860,22 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Current Size"),
             _ => None,
         },
-        ("QuickTime", 0x0002) => match value { // GPSAltitudeRef
+        ("QuickTime", 0x0002) => match value {
+            // GPSAltitudeRef
             0 => Some("Above Sea Level"),
             1 => Some("Below Sea Level"),
             _ => None,
         },
-        ("QuickTime", 0x0003) => match value { // ChromaFormat
+        ("QuickTime", 0x0003) => match value {
+            // ChromaFormat
             0 => Some("YUV 4:4:4"),
             2 => Some("YUV 4:2:2"),
             3 => Some("YUV 4:2:0"),
             7 => Some("Monochrome 4:0:0"),
             _ => None,
         },
-        ("QuickTime", 0x0004) => match value { // GenGraphicsMode
+        ("QuickTime", 0x0004) => match value {
+            // GenGraphicsMode
             0 => Some("srcCopy"),
             1 => Some("srcOr"),
             2 => Some("srcXor"),
@@ -13398,7 +14909,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             272 => Some("Component Alpha"),
             _ => None,
         },
-        ("QuickTime", 0x0006) => match value { // TextFace
+        ("QuickTime", 0x0006) => match value {
+            // TextFace
             0 => Some("Bold"),
             1 => Some("Italic"),
             2 => Some("Underline"),
@@ -13408,7 +14920,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Extend"),
             _ => None,
         },
-        ("QuickTime", 0x0008) => match value { // AudioChannelTypes
+        ("QuickTime", 0x0008) => match value {
+            // AudioChannelTypes
             0 => Some("Left"),
             1 => Some("Right"),
             2 => Some("Center"),
@@ -13429,17 +14942,20 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             17 => Some("TopBackRight"),
             _ => None,
         },
-        ("QuickTime", 0x000A) => match value { // VendorID
+        ("QuickTime", 0x000A) => match value {
+            // VendorID
             1 => Some("Olympus (pr01)"),
             20 => Some("Olympus (fe20)"),
             _ => None,
         },
-        ("QuickTime", 0x000C) => match value { // HandlerVendorID
+        ("QuickTime", 0x000C) => match value {
+            // HandlerVendorID
             1 => Some("Olympus (pr01)"),
             20 => Some("Olympus (fe20)"),
             _ => None,
         },
-        ("QuickTime", 0x0010) => match value { // Channel1Label
+        ("QuickTime", 0x0010) => match value {
+            // Channel1Label
             0 => Some("Unused"),
             1 => Some("Left"),
             2 => Some("Right"),
@@ -13506,19 +15022,22 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4294967295 => Some("Unknown"),
             _ => None,
         },
-        ("QuickTime", 0x0014) => match value { // Channel1Flags
+        ("QuickTime", 0x0014) => match value {
+            // Channel1Flags
             0 => Some("Rectangular"),
             1 => Some("Spherical"),
             2 => Some("Meters"),
             _ => None,
         },
-        ("QuickTime", 0x0015) => match value { // ConstantFrameRate
+        ("QuickTime", 0x0015) => match value {
+            // ConstantFrameRate
             0 => Some("Unknown"),
             1 => Some("Constant Frame Rate"),
             2 => Some("Each Temporal Layer is Constant Frame Rate"),
             _ => None,
         },
-        ("QuickTime", 0x0024) => match value { // Channel2Label
+        ("QuickTime", 0x0024) => match value {
+            // Channel2Label
             0 => Some("Unused"),
             1 => Some("Left"),
             2 => Some("Right"),
@@ -13585,13 +15104,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4294967295 => Some("Unknown"),
             _ => None,
         },
-        ("QuickTime", 0x0028) => match value { // Channel2Flags
+        ("QuickTime", 0x0028) => match value {
+            // Channel2Flags
             0 => Some("Rectangular"),
             1 => Some("Spherical"),
             2 => Some("Meters"),
             _ => None,
         },
-        ("QuickTime", 0x0038) => match value { // Channel3Label
+        ("QuickTime", 0x0038) => match value {
+            // Channel3Label
             0 => Some("Unused"),
             1 => Some("Left"),
             2 => Some("Right"),
@@ -13658,13 +15179,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4294967295 => Some("Unknown"),
             _ => None,
         },
-        ("QuickTime", 0x003C) => match value { // Channel3Flags
+        ("QuickTime", 0x003C) => match value {
+            // Channel3Flags
             0 => Some("Rectangular"),
             1 => Some("Spherical"),
             2 => Some("Meters"),
             _ => None,
         },
-        ("QuickTime", 0x004C) => match value { // Channel4Label
+        ("QuickTime", 0x004C) => match value {
+            // Channel4Label
             0 => Some("Unused"),
             1 => Some("Left"),
             2 => Some("Right"),
@@ -13731,13 +15254,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4294967295 => Some("Unknown"),
             _ => None,
         },
-        ("QuickTime", 0x0050) => match value { // Channel4Flags
+        ("QuickTime", 0x0050) => match value {
+            // Channel4Flags
             0 => Some("Rectangular"),
             1 => Some("Spherical"),
             2 => Some("Meters"),
             _ => None,
         },
-        ("QuickTime", 0x0060) => match value { // Channel5Label
+        ("QuickTime", 0x0060) => match value {
+            // Channel5Label
             0 => Some("Unused"),
             1 => Some("Left"),
             2 => Some("Right"),
@@ -13804,13 +15329,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4294967295 => Some("Unknown"),
             _ => None,
         },
-        ("QuickTime", 0x0064) => match value { // Channel5Flags
+        ("QuickTime", 0x0064) => match value {
+            // Channel5Flags
             0 => Some("Rectangular"),
             1 => Some("Spherical"),
             2 => Some("Meters"),
             _ => None,
         },
-        ("QuickTime", 0x0074) => match value { // Channel6Label
+        ("QuickTime", 0x0074) => match value {
+            // Channel6Label
             0 => Some("Unused"),
             1 => Some("Left"),
             2 => Some("Right"),
@@ -13877,13 +15404,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4294967295 => Some("Unknown"),
             _ => None,
         },
-        ("QuickTime", 0x0078) => match value { // Channel6Flags
+        ("QuickTime", 0x0078) => match value {
+            // Channel6Flags
             0 => Some("Rectangular"),
             1 => Some("Spherical"),
             2 => Some("Meters"),
             _ => None,
         },
-        ("QuickTime", 0x0088) => match value { // Channel7Label
+        ("QuickTime", 0x0088) => match value {
+            // Channel7Label
             0 => Some("Unused"),
             1 => Some("Left"),
             2 => Some("Right"),
@@ -13950,13 +15479,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4294967295 => Some("Unknown"),
             _ => None,
         },
-        ("QuickTime", 0x008C) => match value { // Channel7Flags
+        ("QuickTime", 0x008C) => match value {
+            // Channel7Flags
             0 => Some("Rectangular"),
             1 => Some("Spherical"),
             2 => Some("Meters"),
             _ => None,
         },
-        ("QuickTime", 0x009C) => match value { // Channel8Label
+        ("QuickTime", 0x009C) => match value {
+            // Channel8Label
             0 => Some("Unused"),
             1 => Some("Left"),
             2 => Some("Right"),
@@ -14023,13 +15554,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4294967295 => Some("Unknown"),
             _ => None,
         },
-        ("QuickTime", 0x00A0) => match value { // Channel8Flags
+        ("QuickTime", 0x00A0) => match value {
+            // Channel8Flags
             0 => Some("Rectangular"),
             1 => Some("Spherical"),
             2 => Some("Meters"),
             _ => None,
         },
-        ("RIFF", 0x0000) => match value { // AcidizerFlags
+        ("RIFF", 0x0000) => match value {
+            // AcidizerFlags
             0 => Some("One shot"),
             1 => Some("Root note set"),
             2 => Some("Stretch"),
@@ -14037,19 +15570,22 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("High octave"),
             _ => None,
         },
-        ("RIFF", 0x0001) => match value { // AlphaFiltering
+        ("RIFF", 0x0001) => match value {
+            // AlphaFiltering
             0 => Some("none"),
             1 => Some("Horizontal"),
             2 => Some("Vertical"),
             3 => Some("Gradient"),
             _ => None,
         },
-        ("RIFF", 0x0002) => match value { // AlphaCompression
+        ("RIFF", 0x0002) => match value {
+            // AlphaCompression
             0 => Some("none"),
             1 => Some("Lossless"),
             _ => None,
         },
-        ("RIFF", 0x0004) => match value { // RootNote
+        ("RIFF", 0x0004) => match value {
+            // RootNote
             48 => Some("C"),
             49 => Some("C#"),
             50 => Some("D"),
@@ -14076,7 +15612,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             71 => Some("High B"),
             _ => None,
         },
-        ("RIFF", 0x0005) => match value { // SMPTEFormat
+        ("RIFF", 0x0005) => match value {
+            // SMPTEFormat
             0 => Some("none"),
             24 => Some("24 fps"),
             25 => Some("25 fps"),
@@ -14084,14 +15621,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             30 => Some("30 fps"),
             _ => None,
         },
-        ("Real", 0x000A) => match value { // Flags
+        ("Real", 0x000A) => match value {
+            // Flags
             0 => Some("Allow Recording"),
             1 => Some("Perfect Play"),
             2 => Some("Live"),
             3 => Some("Allow Download"),
             _ => None,
         },
-        ("Reconyx", 0x0012) => match value { // MoonPhase
+        ("Reconyx", 0x0012) => match value {
+            // MoonPhase
             0 => Some("New"),
             1 => Some("New Crescent"),
             2 => Some("First Quarter"),
@@ -14102,12 +15641,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Old Crescent"),
             _ => None,
         },
-        ("Reconyx", 0x0028) => match value { // InfraredIlluminator
+        ("Reconyx", 0x0028) => match value {
+            // InfraredIlluminator
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Reconyx", 0x0036) => match value { // DayOfWeek
+        ("Reconyx", 0x0036) => match value {
+            // DayOfWeek
             1 => Some("Sunday"),
             2 => Some("Monday"),
             3 => Some("Tuesday"),
@@ -14117,7 +15658,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Saturday"),
             _ => None,
         },
-        ("Reconyx", 0x0037) => match value { // MoonPhase
+        ("Reconyx", 0x0037) => match value {
+            // MoonPhase
             0 => Some("New"),
             1 => Some("New Crescent"),
             2 => Some("First Quarter"),
@@ -14128,7 +15670,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Old Crescent"),
             _ => None,
         },
-        ("Reconyx", 0x0042) => match value { // DayOfWeek
+        ("Reconyx", 0x0042) => match value {
+            // DayOfWeek
             0 => Some("Sunday"),
             1 => Some("Monday"),
             2 => Some("Tuesday"),
@@ -14138,7 +15681,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Saturday"),
             _ => None,
         },
-        ("Reconyx", 0x0043) => match value { // MoonPhase
+        ("Reconyx", 0x0043) => match value {
+            // MoonPhase
             0 => Some("New"),
             1 => Some("New Crescent"),
             2 => Some("First Quarter"),
@@ -14149,17 +15693,20 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Old Crescent"),
             _ => None,
         },
-        ("Reconyx", 0x0044) => match value { // Flash
+        ("Reconyx", 0x0044) => match value {
+            // Flash
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Reconyx", 0x0048) => match value { // Illumination
+        ("Reconyx", 0x0048) => match value {
+            // Illumination
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Reconyx", 0x004A) => match value { // DayOfWeek
+        ("Reconyx", 0x004A) => match value {
+            // DayOfWeek
             0 => Some("Sunday"),
             1 => Some("Monday"),
             2 => Some("Tuesday"),
@@ -14169,7 +15716,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Saturday"),
             _ => None,
         },
-        ("Reconyx", 0x004C) => match value { // MoonPhase
+        ("Reconyx", 0x004C) => match value {
+            // MoonPhase
             0 => Some("New"),
             1 => Some("New Crescent"),
             2 => Some("First Quarter"),
@@ -14180,14 +15728,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Old Crescent"),
             _ => None,
         },
-        ("Reconyx", 0x004F) => match value { // BatteryType
+        ("Reconyx", 0x004F) => match value {
+            // BatteryType
             1 => Some("NiMH"),
             2 => Some("Lithium"),
             3 => Some("External"),
             4 => Some("SC10 Solar"),
             _ => None,
         },
-        ("Reconyx", 0x005A) => match value { // DayOfWeek
+        ("Reconyx", 0x005A) => match value {
+            // DayOfWeek
             1 => Some("Sunday"),
             2 => Some("Monday"),
             3 => Some("Tuesday"),
@@ -14197,7 +15747,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Saturday"),
             _ => None,
         },
-        ("Reconyx", 0x005C) => match value { // MoonPhase
+        ("Reconyx", 0x005C) => match value {
+            // MoonPhase
             0 => Some("New"),
             1 => Some("New Crescent"),
             2 => Some("First Quarter"),
@@ -14208,36 +15759,42 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Old Crescent"),
             _ => None,
         },
-        ("Reconyx", 0x006A) => match value { // Flash
+        ("Reconyx", 0x006A) => match value {
+            // Flash
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Reconyx", 0x0074) => match value { // BatteryType
+        ("Reconyx", 0x0074) => match value {
+            // BatteryType
             0 => Some("Lithium"),
             1 => Some("NiMH"),
             2 => Some("Alkaline"),
             3 => Some("Lead Acid"),
             _ => None,
         },
-        ("Ricoh", 0x0020) => match value { // FlashMode
+        ("Ricoh", 0x0020) => match value {
+            // FlashMode
             0 => Some("Off"),
             1 => Some("Auto"),
             2 => Some("On"),
             _ => None,
         },
-        ("Ricoh", 0x0021) => match value { // Macro
+        ("Ricoh", 0x0021) => match value {
+            // Macro
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Ricoh", 0x0022) => match value { // Sharpness
+        ("Ricoh", 0x0022) => match value {
+            // Sharpness
             0 => Some("Sharp"),
             1 => Some("Normal"),
             2 => Some("Soft"),
             _ => None,
         },
-        ("Ricoh", 0x0026) => match value { // WhiteBalance
+        ("Ricoh", 0x0026) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Cloudy"),
@@ -14248,13 +15805,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             9 => Some("Multi-pattern Auto"),
             _ => None,
         },
-        ("Ricoh", 0x0027) => match value { // ISOSetting
+        ("Ricoh", 0x0027) => match value {
+            // ISOSetting
             0 => Some("Auto"),
             9 => Some("Auto"),
             11 => Some("100 (Low)"),
             _ => None,
         },
-        ("Ricoh", 0x0028) => match value { // Saturation
+        ("Ricoh", 0x0028) => match value {
+            // Saturation
             0 => Some("High"),
             1 => Some("Normal"),
             2 => Some("Low"),
@@ -14264,25 +15823,29 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             10 => Some("Natural"),
             _ => None,
         },
-        ("Ricoh", 0x002A) => match value { // NoiseReduction
+        ("Ricoh", 0x002A) => match value {
+            // NoiseReduction
             0 => Some("Off"),
             1 => Some("Weak"),
             2 => Some("Strong"),
             3 => Some("Max"),
             _ => None,
         },
-        ("Ricoh", 0x1000) => match value { // RecordingFormat
+        ("Ricoh", 0x1000) => match value {
+            // RecordingFormat
             2 => Some("JPEG"),
             3 => Some("DNG"),
             _ => None,
         },
-        ("Ricoh", 0x1002) => match value { // DriveMode
+        ("Ricoh", 0x1002) => match value {
+            // DriveMode
             0 => Some("Single-frame"),
             1 => Some("Continuous"),
             8 => Some("AF-priority Continuous"),
             _ => None,
         },
-        ("Ricoh", 0x1006) => match value { // FocusMode
+        ("Ricoh", 0x1006) => match value {
+            // FocusMode
             1 => Some("Manual"),
             2 => Some("Multi AF"),
             3 => Some("Spot AF"),
@@ -14294,7 +15857,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             10 => Some("Movie"),
             _ => None,
         },
-        ("Ricoh", 0x1007) => match value { // AutoBracketing
+        ("Ricoh", 0x1007) => match value {
+            // AutoBracketing
             0 => Some("Off"),
             9 => Some("AE"),
             11 => Some("WB"),
@@ -14304,12 +15868,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             19 => Some("Effect"),
             _ => None,
         },
-        ("Ricoh", 0x1009) => match value { // MacroMode
+        ("Ricoh", 0x1009) => match value {
+            // MacroMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Ricoh", 0x100A) => match value { // FlashMode
+        ("Ricoh", 0x100A) => match value {
+            // FlashMode
             0 => Some("Off"),
             1 => Some("Auto, Fired"),
             2 => Some("On"),
@@ -14321,7 +15887,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("Auto, Did not fire"),
             _ => None,
         },
-        ("Ricoh", 0x100C) => match value { // ManualFlashOutput
+        ("Ricoh", 0x100C) => match value {
+            // ManualFlashOutput
             -288 => Some("1/64"),
             -240 => Some("1/32"),
             -216 => Some("1/22"),
@@ -14336,26 +15903,30 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             0 => Some("Full"),
             _ => None,
         },
-        ("Ricoh", 0x100D) => match value { // FullPressSnap
+        ("Ricoh", 0x100D) => match value {
+            // FullPressSnap
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Ricoh", 0x100E) => match value { // DynamicRangeExpansion
+        ("Ricoh", 0x100E) => match value {
+            // DynamicRangeExpansion
             0 => Some("Off"),
             3 => Some("Weak"),
             4 => Some("Medium"),
             5 => Some("Strong"),
             _ => None,
         },
-        ("Ricoh", 0x100F) => match value { // NoiseReduction
+        ("Ricoh", 0x100F) => match value {
+            // NoiseReduction
             0 => Some("Off"),
             1 => Some("Weak"),
             2 => Some("Medium"),
             3 => Some("Strong"),
             _ => None,
         },
-        ("Ricoh", 0x1010) => match value { // ImageEffects
+        ("Ricoh", 0x1010) => match value {
+            // ImageEffects
             0 => Some("Standard"),
             1 => Some("Vivid"),
             3 => Some("Black & White"),
@@ -14371,14 +15942,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             17 => Some("High Key"),
             _ => None,
         },
-        ("Ricoh", 0x1011) => match value { // Vignetting
+        ("Ricoh", 0x1011) => match value {
+            // Vignetting
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Medium"),
             3 => Some("High"),
             _ => None,
         },
-        ("Ricoh", 0x1015) => match value { // ToningEffect
+        ("Ricoh", 0x1015) => match value {
+            // ToningEffect
             0 => Some("Off"),
             1 => Some("Sepia"),
             2 => Some("Red"),
@@ -14389,7 +15962,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("Color"),
             _ => None,
         },
-        ("Ricoh", 0x1016) => match value { // HueAdjust
+        ("Ricoh", 0x1016) => match value {
+            // HueAdjust
             0 => Some("Off"),
             1 => Some("Basic"),
             2 => Some("Magenta"),
@@ -14399,33 +15973,39 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Cool"),
             _ => None,
         },
-        ("Ricoh", 0x1017) => match value { // WideAdapter
+        ("Ricoh", 0x1017) => match value {
+            // WideAdapter
             0 => Some("Not Attached"),
             2 => Some("Attached"),
             _ => None,
         },
-        ("Ricoh", 0x1018) => match value { // CropMode
+        ("Ricoh", 0x1018) => match value {
+            // CropMode
             0 => Some("Off"),
             1 => Some("On (35mm)"),
             2 => Some("On (47mm)"),
             _ => None,
         },
-        ("Ricoh", 0x1019) => match value { // NDFilter
+        ("Ricoh", 0x1019) => match value {
+            // NDFilter
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Ricoh", 0x1200) => match value { // AFStatus
+        ("Ricoh", 0x1200) => match value {
+            // AFStatus
             0 => Some("Out of Focus"),
             1 => Some("In Focus"),
             _ => None,
         },
-        ("Ricoh", 0x1205) => match value { // AFAreaMode
+        ("Ricoh", 0x1205) => match value {
+            // AFAreaMode
             0 => Some("Auto"),
             2 => Some("Manual"),
             _ => None,
         },
-        ("Samsung", 0x0000) => match value { // PictureWizardMode
+        ("Samsung", 0x0000) => match value {
+            // PictureWizardMode
             0 => Some("Standard"),
             1 => Some("Vivid"),
             2 => Some("Portrait"),
@@ -14441,7 +16021,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("n/a"),
             _ => None,
         },
-        ("Samsung", 0x0002) => match value { // DeviceType
+        ("Samsung", 0x0002) => match value {
+            // DeviceType
             4096 => Some("Compact Digital Camera"),
             8192 => Some("High-end NX Camera"),
             12288 => Some("HXM Video Camera"),
@@ -14449,7 +16030,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             3145728 => Some("SMX Video Camera"),
             _ => None,
         },
-        ("Samsung", 0x0003) => match value { // SamsungModelID
+        ("Samsung", 0x0003) => match value {
+            // SamsungModelID
             16781340 => Some("NX10"),
             16781862 => Some("HMX-S15BP"),
             16781875 => Some("HMX-Q10"),
@@ -14494,43 +16076,51 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             655519746 => Some("SMX-C20N"),
             _ => None,
         },
-        ("Samsung", 0x0040) => match value { // RawDataByteOrder
+        ("Samsung", 0x0040) => match value {
+            // RawDataByteOrder
             0 => Some("Little-endian (Intel, II)"),
             1 => Some("Big-endian (Motorola, MM)"),
             _ => None,
         },
-        ("Samsung", 0x0041) => match value { // WhiteBalanceSetup
+        ("Samsung", 0x0041) => match value {
+            // WhiteBalanceSetup
             0 => Some("Auto"),
             1 => Some("Manual"),
             _ => None,
         },
-        ("Samsung", 0x0050) => match value { // RawDataCFAPattern
+        ("Samsung", 0x0050) => match value {
+            // RawDataCFAPattern
             0 => Some("Unchanged"),
             1 => Some("Swap"),
             65535 => Some("Roll"),
             _ => None,
         },
-        ("Samsung", 0x0100) => match value { // FaceDetect
+        ("Samsung", 0x0100) => match value {
+            // FaceDetect
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Samsung", 0x0120) => match value { // FaceRecognition
+        ("Samsung", 0x0120) => match value {
+            // FaceRecognition
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Samsung", 0xA011) => match value { // ColorSpace
+        ("Samsung", 0xA011) => match value {
+            // ColorSpace
             0 => Some("sRGB"),
             1 => Some("Adobe RGB"),
             _ => None,
         },
-        ("Samsung", 0xA012) => match value { // SmartRange
+        ("Samsung", 0xA012) => match value {
+            // SmartRange
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sanyo", 0x0044) => match value { // WhiteBalance
+        ("Sanyo", 0x0044) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Daylight"),
             2 => Some("Shade"),
@@ -14539,7 +16129,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Manual"),
             _ => None,
         },
-        ("Sanyo", 0x0201) => match value { // SanyoQuality
+        ("Sanyo", 0x0201) => match value {
+            // SanyoQuality
             0 => Some("Normal/Very Low"),
             1 => Some("Normal/Low"),
             2 => Some("Normal/Medium Low"),
@@ -14566,76 +16157,90 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             519 => Some("Super Fine/Super High"),
             _ => None,
         },
-        ("Sanyo", 0x0202) => match value { // Macro
+        ("Sanyo", 0x0202) => match value {
+            // Macro
             0 => Some("Normal"),
             1 => Some("Macro"),
             2 => Some("View"),
             3 => Some("Manual"),
             _ => None,
         },
-        ("Sanyo", 0x020E) => match value { // SequentialShot
+        ("Sanyo", 0x020E) => match value {
+            // SequentialShot
             0 => Some("None"),
             1 => Some("Standard"),
             2 => Some("Best"),
             3 => Some("Adjust Exposure"),
             _ => None,
         },
-        ("Sanyo", 0x020F) => match value { // WideRange
+        ("Sanyo", 0x020F) => match value {
+            // WideRange
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sanyo", 0x0210) => match value { // ColorAdjustmentMode
+        ("Sanyo", 0x0210) => match value {
+            // ColorAdjustmentMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sanyo", 0x0213) => match value { // QuickShot
+        ("Sanyo", 0x0213) => match value {
+            // QuickShot
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sanyo", 0x0214) => match value { // SelfTimer
+        ("Sanyo", 0x0214) => match value {
+            // SelfTimer
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sanyo", 0x0216) => match value { // VoiceMemo
+        ("Sanyo", 0x0216) => match value {
+            // VoiceMemo
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sanyo", 0x0217) => match value { // RecordShutterRelease
+        ("Sanyo", 0x0217) => match value {
+            // RecordShutterRelease
             0 => Some("Record while down"),
             1 => Some("Press start, press stop"),
             _ => None,
         },
-        ("Sanyo", 0x0218) => match value { // FlickerReduce
+        ("Sanyo", 0x0218) => match value {
+            // FlickerReduce
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sanyo", 0x0219) => match value { // OpticalZoomOn
+        ("Sanyo", 0x0219) => match value {
+            // OpticalZoomOn
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sanyo", 0x021B) => match value { // DigitalZoomOn
+        ("Sanyo", 0x021B) => match value {
+            // DigitalZoomOn
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sanyo", 0x021D) => match value { // LightSourceSpecial
+        ("Sanyo", 0x021D) => match value {
+            // LightSourceSpecial
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sanyo", 0x021E) => match value { // Resaved
+        ("Sanyo", 0x021E) => match value {
+            // Resaved
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Sanyo", 0x021F) => match value { // SceneSelect
+        ("Sanyo", 0x021F) => match value {
+            // SceneSelect
             0 => Some("Off"),
             1 => Some("Sport"),
             2 => Some("TV"),
@@ -14645,21 +16250,24 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Lamp"),
             _ => None,
         },
-        ("Sanyo", 0x0224) => match value { // SequenceShotInterval
+        ("Sanyo", 0x0224) => match value {
+            // SequenceShotInterval
             0 => Some("5 frames/s"),
             1 => Some("10 frames/s"),
             2 => Some("15 frames/s"),
             3 => Some("20 frames/s"),
             _ => None,
         },
-        ("Sanyo", 0x0225) => match value { // FlashMode
+        ("Sanyo", 0x0225) => match value {
+            // FlashMode
             0 => Some("Auto"),
             1 => Some("Force"),
             2 => Some("Disabled"),
             3 => Some("Red eye"),
             _ => None,
         },
-        ("Sigma", 0x002C) => match value { // ColorMode
+        ("Sigma", 0x002C) => match value {
+            // ColorMode
             0 => Some("n/a"),
             1 => Some("Sepia"),
             2 => Some("B&W"),
@@ -14671,7 +16279,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             8 => Some("FOV Classic Blue"),
             _ => None,
         },
-        ("Sony", 0x0001) => match value { // DriveMode2
+        ("Sony", 0x0001) => match value {
+            // DriveMode2
             16 => Some("Single Frame"),
             33 => Some("Continuous High"),
             34 => Some("Continuous Low"),
@@ -14685,19 +16294,22 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             192 => Some("Remote Commander"),
             _ => None,
         },
-        ("Sony", 0x0002) => match value { // AFType
+        ("Sony", 0x0002) => match value {
+            // AFType
             0 => Some("?? n.a."),
             1 => Some("15-point"),
             2 => Some("19-point"),
             3 => Some("79-point"),
             _ => None,
         },
-        ("Sony", 0x0003) => match value { // PanoramaDirection
+        ("Sony", 0x0003) => match value {
+            // PanoramaDirection
             0 => Some("Left or Up"),
             1 => Some("Right or Down"),
             _ => None,
         },
-        ("Sony", 0x0004) => match value { // AFPointsSelected
+        ("Sony", 0x0004) => match value {
+            // AFPointsSelected
             0 => Some("Center"),
             1 => Some("Top"),
             2 => Some("Upper-right"),
@@ -14725,7 +16337,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4294967295 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0x0005) => match value { // FocusMode
+        ("Sony", 0x0005) => match value {
+            // FocusMode
             0 => Some("Manual"),
             2 => Some("AF-S"),
             3 => Some("AF-C"),
@@ -14734,7 +16347,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("AF-D"),
             _ => None,
         },
-        ("Sony", 0x0006) => match value { // FocusModeSetting
+        ("Sony", 0x0006) => match value {
+            // FocusModeSetting
             17 => Some("AF-S"),
             18 => Some("AF-C"),
             19 => Some("AF-A"),
@@ -14742,20 +16356,23 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             48 => Some("DMF"),
             _ => None,
         },
-        ("Sony", 0x0007) => match value { // MeteringMode
+        ("Sony", 0x0007) => match value {
+            // MeteringMode
             1 => Some("Multi-segment"),
             2 => Some("Center-weighted average"),
             3 => Some("Spot"),
             _ => None,
         },
-        ("Sony", 0x0008) => match value { // LensMount2
+        ("Sony", 0x0008) => match value {
+            // LensMount2
             0 => Some("Unknown"),
             1 => Some("A-mount (1)"),
             4 => Some("E-mount"),
             5 => Some("A-mount (5)"),
             _ => None,
         },
-        ("Sony", 0x0009) => match value { // SonyImageSize
+        ("Sony", 0x0009) => match value {
+            // SonyImageSize
             21 => Some("Large (3:2)"),
             22 => Some("Medium (3:2)"),
             23 => Some("Small (3:2)"),
@@ -14764,14 +16381,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             27 => Some("Small (16:9)"),
             _ => None,
         },
-        ("Sony", 0x000A) => match value { // AFAreaMode
+        ("Sony", 0x000A) => match value {
+            // AFAreaMode
             0 => Some("Wide"),
             1 => Some("Spot"),
             2 => Some("Local"),
             3 => Some("Zone"),
             _ => None,
         },
-        ("Sony", 0x000B) => match value { // FocusMode
+        ("Sony", 0x000B) => match value {
+            // FocusMode
             0 => Some("Manual"),
             2 => Some("AF-S"),
             3 => Some("AF-C"),
@@ -14780,23 +16399,27 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("AF-D"),
             _ => None,
         },
-        ("Sony", 0x000C) => match value { // DynamicRangeOptimizerSetting
+        ("Sony", 0x000C) => match value {
+            // DynamicRangeOptimizerSetting
             1 => Some("Off"),
             16 => Some("On (Auto)"),
             17 => Some("On (Manual)"),
             _ => None,
         },
-        ("Sony", 0x000D) => match value { // IntelligentAuto
+        ("Sony", 0x000D) => match value {
+            // IntelligentAuto
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x000E) => match value { // IntelligentAuto
+        ("Sony", 0x000E) => match value {
+            // IntelligentAuto
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x000F) => match value { // CreativeStyleSetting
+        ("Sony", 0x000F) => match value {
+            // CreativeStyleSetting
             16 => Some("Standard"),
             32 => Some("Vivid"),
             64 => Some("Portrait"),
@@ -14805,34 +16428,40 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             160 => Some("Sunset"),
             _ => None,
         },
-        ("Sony", 0x0011) => match value { // ImageStabilization
+        ("Sony", 0x0011) => match value {
+            // ImageStabilization
             0 => Some("Off"),
             64 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x0012) => match value { // DigitalZoom
+        ("Sony", 0x0012) => match value {
+            // DigitalZoom
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Sony", 0x0013) => match value { // MeteringMode
+        ("Sony", 0x0013) => match value {
+            // MeteringMode
             1 => Some("Multi-segment"),
             2 => Some("Center-weighted average"),
             4 => Some("Spot"),
             _ => None,
         },
-        ("Sony", 0x0014) => match value { // ImageStabilizationSetting
+        ("Sony", 0x0014) => match value {
+            // ImageStabilizationSetting
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x0015) => match value { // MeteringMode
+        ("Sony", 0x0015) => match value {
+            // MeteringMode
             1 => Some("Multi-segment"),
             2 => Some("Center-weighted average"),
             4 => Some("Spot"),
             _ => None,
         },
-        ("Sony", 0x0016) => match value { // FocusMode
+        ("Sony", 0x0016) => match value {
+            // FocusMode
             0 => Some("Manual"),
             2 => Some("AF-S"),
             3 => Some("AF-C"),
@@ -14841,7 +16470,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("AF-D"),
             _ => None,
         },
-        ("Sony", 0x0017) => match value { // AFAreaMode
+        ("Sony", 0x0017) => match value {
+            // AFAreaMode
             0 => Some("Multi"),
             1 => Some("Center"),
             2 => Some("Spot"),
@@ -14858,19 +16488,22 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("Manual"),
             _ => None,
         },
-        ("Sony", 0x0018) => match value { // CameraOrientation
+        ("Sony", 0x0018) => match value {
+            // CameraOrientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             3 => Some("Rotate 180"),
             _ => None,
         },
-        ("Sony", 0x0019) => match value { // FaceDetection
+        ("Sony", 0x0019) => match value {
+            // FaceDetection
             1 => Some("Off"),
             16 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x001A) => match value { // CreativeStyle
+        ("Sony", 0x001A) => match value {
+            // CreativeStyle
             1 => Some("Standard"),
             2 => Some("Vivid"),
             3 => Some("Portrait"),
@@ -14887,14 +16520,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             16 => Some("Sepia"),
             _ => None,
         },
-        ("Sony", 0x001B) => match value { // Orientation
+        ("Sony", 0x001B) => match value {
+            // Orientation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 270 CW"),
             2 => Some("Rotate 180"),
             3 => Some("Rotate 90 CW"),
             _ => None,
         },
-        ("Sony", 0x001C) => match value { // AFPointSelected
+        ("Sony", 0x001C) => match value {
+            // AFPointSelected
             0 => Some("Auto"),
             1 => Some("Center"),
             2 => Some("Top"),
@@ -14913,13 +16548,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             15 => Some("Near Left"),
             _ => None,
         },
-        ("Sony", 0x001D) => match value { // ImageQuality
+        ("Sony", 0x001D) => match value {
+            // ImageQuality
             8 => Some("Snap Shot"),
             23 => Some("Standard"),
             51 => Some("Fine"),
             _ => None,
         },
-        ("Sony", 0x001E) => match value { // SequenceLength
+        ("Sony", 0x001E) => match value {
+            // SequenceLength
             0 => Some("Continuous"),
             1 => Some("1 file"),
             2 => Some("2 files"),
@@ -14930,13 +16567,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             10 => Some("10 files"),
             _ => None,
         },
-        ("Sony", 0x001F) => match value { // FlashControl
+        ("Sony", 0x001F) => match value {
+            // FlashControl
             0 => Some("ADI"),
             1 => Some("Pre-flash TTL"),
             2 => Some("Manual"),
             _ => None,
         },
-        ("Sony", 0x0020) => match value { // FlashMode
+        ("Sony", 0x0020) => match value {
+            // FlashMode
             1 => Some("Flash Off"),
             16 => Some("Autoflash"),
             17 => Some("Fill-flash"),
@@ -14945,12 +16584,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             20 => Some("Wireless"),
             _ => None,
         },
-        ("Sony", 0x0021) => match value { // FlashControl
+        ("Sony", 0x0021) => match value {
+            // FlashControl
             1 => Some("ADI Flash"),
             2 => Some("Pre-flash TTL"),
             _ => None,
         },
-        ("Sony", 0x0022) => match value { // SequenceLength
+        ("Sony", 0x0022) => match value {
+            // SequenceLength
             0 => Some("Continuous"),
             1 => Some("1 shot"),
             2 => Some("2 shots"),
@@ -14963,74 +16604,86 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             200 => Some("Continuous - Sweep Panorama"),
             _ => None,
         },
-        ("Sony", 0x0023) => match value { // FlashControl
+        ("Sony", 0x0023) => match value {
+            // FlashControl
             0 => Some("ADI"),
             1 => Some("Pre-flash TTL"),
             2 => Some("Manual"),
             _ => None,
         },
-        ("Sony", 0x0024) => match value { // CameraOrientation
+        ("Sony", 0x0024) => match value {
+            // CameraOrientation
             1 => Some("Horizontal (normal)"),
             3 => Some("Rotate 180"),
             6 => Some("Rotate 90 CW"),
             8 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Sony", 0x0025) => match value { // Quality2
+        ("Sony", 0x0025) => match value {
+            // Quality2
             0 => Some("JPEG"),
             1 => Some("RAW"),
             2 => Some("RAW + JPEG"),
             3 => Some("JPEG + MPO"),
             _ => None,
         },
-        ("Sony", 0x0026) => match value { // HighISONoiseReduction
+        ("Sony", 0x0026) => match value {
+            // HighISONoiseReduction
             16 => Some("Low"),
             17 => Some("High"),
             19 => Some("Auto"),
             _ => None,
         },
-        ("Sony", 0x0027) => match value { // SmileShutterMode
+        ("Sony", 0x0027) => match value {
+            // SmileShutterMode
             17 => Some("Slight Smile"),
             18 => Some("Normal Smile"),
             19 => Some("Big Smile"),
             _ => None,
         },
-        ("Sony", 0x0028) => match value { // CameraOrientation
+        ("Sony", 0x0028) => match value {
+            // CameraOrientation
             1 => Some("Horizontal (normal)"),
             3 => Some("Rotate 180"),
             6 => Some("Rotate 90 CW"),
             8 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Sony", 0x0029) => match value { // CameraOrientation
+        ("Sony", 0x0029) => match value {
+            // CameraOrientation
             1 => Some("Horizontal (normal)"),
             3 => Some("Rotate 180"),
             6 => Some("Rotate 90 CW"),
             8 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Sony", 0x002A) => match value { // AFWithShutter
+        ("Sony", 0x002A) => match value {
+            // AFWithShutter
             0 => Some("On"),
             1 => Some("Off"),
             _ => None,
         },
-        ("Sony", 0x002B) => match value { // LongExposureNoiseReduction
+        ("Sony", 0x002B) => match value {
+            // LongExposureNoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x002C) => match value { // Shutter
+        ("Sony", 0x002C) => match value {
+            // Shutter
             0 => Some("Silent / Electronic"),
             56 => Some("Mechanical"),
             _ => None,
         },
-        ("Sony", 0x002D) => match value { // HDRSetting
+        ("Sony", 0x002D) => match value {
+            // HDRSetting
             1 => Some("Off"),
             16 => Some("On (Auto)"),
             17 => Some("On (Manual)"),
             _ => None,
         },
-        ("Sony", 0x002E) => match value { // HDRLevel
+        ("Sony", 0x002E) => match value {
+            // HDRLevel
             33 => Some("1 EV"),
             34 => Some("1.5 EV"),
             35 => Some("2 EV"),
@@ -15042,18 +16695,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             41 => Some("6 EV"),
             _ => None,
         },
-        ("Sony", 0x002F) => match value { // ViewingMode
+        ("Sony", 0x002F) => match value {
+            // ViewingMode
             16 => Some("ViewFinder"),
             33 => Some("Focus Check Live View"),
             34 => Some("Quick AF Live View"),
             _ => None,
         },
-        ("Sony", 0x0030) => match value { // FaceDetection
+        ("Sony", 0x0030) => match value {
+            // FaceDetection
             1 => Some("Off"),
             16 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x0031) => match value { // FlashStatus
+        ("Sony", 0x0031) => match value {
+            // FlashStatus
             0 => Some("No Flash present"),
             2 => Some("Flash Inhibited"),
             64 => Some("Built-in Flash present"),
@@ -15063,19 +16719,22 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             129 => Some("External Flash Fired"),
             _ => None,
         },
-        ("Sony", 0x0032) => match value { // SweepPanoramaSize
+        ("Sony", 0x0032) => match value {
+            // SweepPanoramaSize
             1 => Some("Standard"),
             2 => Some("Wide"),
             _ => None,
         },
-        ("Sony", 0x0033) => match value { // SweepPanoramaDirection
+        ("Sony", 0x0033) => match value {
+            // SweepPanoramaDirection
             1 => Some("Right"),
             2 => Some("Left"),
             3 => Some("Up"),
             4 => Some("Down"),
             _ => None,
         },
-        ("Sony", 0x0034) => match value { // DriveMode
+        ("Sony", 0x0034) => match value {
+            // DriveMode
             16 => Some("Single Frame"),
             33 => Some("Continuous High"),
             34 => Some("Continuous Low"),
@@ -15095,7 +16754,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             214 => Some("Continuous - 3D Sweep Panorama"),
             _ => None,
         },
-        ("Sony", 0x0035) => match value { // ExposureProgram
+        ("Sony", 0x0035) => match value {
+            // ExposureProgram
             0 => Some("Program AE"),
             1 => Some("Aperture-priority AE"),
             2 => Some("Shutter speed priority AE"),
@@ -15132,13 +16792,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             46 => Some("Party"),
             _ => None,
         },
-        ("Sony", 0x0036) => match value { // LiveViewAFSetting
+        ("Sony", 0x0036) => match value {
+            // LiveViewAFSetting
             0 => Some("n/a"),
             1 => Some("Phase-detect AF"),
             2 => Some("Contrast AF"),
             _ => None,
         },
-        ("Sony", 0x0037) => match value { // CreativeStyle
+        ("Sony", 0x0037) => match value {
+            // CreativeStyle
             0 => Some("Standard"),
             1 => Some("Vivid"),
             2 => Some("Neutral"),
@@ -15161,7 +16823,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("Off"),
             _ => None,
         },
-        ("Sony", 0x003A) => match value { // AFAreaMode
+        ("Sony", 0x003A) => match value {
+            // AFAreaMode
             0 => Some("Wide"),
             1 => Some("Center"),
             2 => Some("Flexible Spot"),
@@ -15169,7 +16832,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Expanded Flexible Spot"),
             _ => None,
         },
-        ("Sony", 0x003C) => match value { // ExposureProgram
+        ("Sony", 0x003C) => match value {
+            // ExposureProgram
             0 => Some("Auto"),
             1 => Some("Manual"),
             2 => Some("Program AE"),
@@ -15186,30 +16850,35 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             35 => Some("Auto No Flash"),
             _ => None,
         },
-        ("Sony", 0x003D) => match value { // ImageStabilizationSetting
+        ("Sony", 0x003D) => match value {
+            // ImageStabilizationSetting
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x003E) => match value { // FlashAction
+        ("Sony", 0x003E) => match value {
+            // FlashAction
             0 => Some("Did not fire"),
             1 => Some("Fired"),
             2 => Some("External Flash, Did not fire"),
             3 => Some("External Flash, Fired"),
             _ => None,
         },
-        ("Sony", 0x003F) => match value { // Rotation
+        ("Sony", 0x003F) => match value {
+            // Rotation
             0 => Some("Horizontal (normal)"),
             1 => Some("Rotate 90 CW"),
             2 => Some("Rotate 270 CW"),
             _ => None,
         },
-        ("Sony", 0x0040) => match value { // AELock
+        ("Sony", 0x0040) => match value {
+            // AELock
             1 => Some("Off"),
             2 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x0041) => match value { // CreativeStyle
+        ("Sony", 0x0041) => match value {
+            // CreativeStyle
             1 => Some("Standard"),
             2 => Some("Vivid"),
             3 => Some("Portrait"),
@@ -15226,14 +16895,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             16 => Some("Sepia"),
             _ => None,
         },
-        ("Sony", 0x0042) => match value { // HighISONoiseReduction
+        ("Sony", 0x0042) => match value {
+            // HighISONoiseReduction
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Normal"),
             3 => Some("High"),
             _ => None,
         },
-        ("Sony", 0x0043) => match value { // ExposureProgram
+        ("Sony", 0x0043) => match value {
+            // ExposureProgram
             0 => Some("Program AE"),
             1 => Some("Aperture-priority AE"),
             2 => Some("Shutter speed priority AE"),
@@ -15270,31 +16941,36 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             46 => Some("Party"),
             _ => None,
         },
-        ("Sony", 0x0044) => match value { // LongExposureNoiseReduction
+        ("Sony", 0x0044) => match value {
+            // LongExposureNoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x0048) => match value { // LensMount
+        ("Sony", 0x0048) => match value {
+            // LensMount
             0 => Some("Unknown"),
             1 => Some("A-mount"),
             2 => Some("E-mount"),
             3 => Some("A-mount (3)"),
             _ => None,
         },
-        ("Sony", 0x0049) => match value { // LensFormat
+        ("Sony", 0x0049) => match value {
+            // LensFormat
             0 => Some("Unknown"),
             1 => Some("APS-C"),
             2 => Some("Full-frame"),
             _ => None,
         },
-        ("Sony", 0x004A) => match value { // LensMount
+        ("Sony", 0x004A) => match value {
+            // LensMount
             0 => Some("Unknown"),
             1 => Some("A-mount"),
             2 => Some("E-mount"),
             _ => None,
         },
-        ("Sony", 0x004C) => match value { // FlashAction2
+        ("Sony", 0x004C) => match value {
+            // FlashAction2
             1 => Some("Fired, Autoflash"),
             2 => Some("Fired, Fill-flash"),
             3 => Some("Fired, Rear Sync"),
@@ -15306,14 +16982,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             34 => Some("Fired, Fill-flash, HSS"),
             _ => None,
         },
-        ("Sony", 0x004D) => match value { // FocusMode
+        ("Sony", 0x004D) => match value {
+            // FocusMode
             0 => Some("Manual"),
             1 => Some("AF-S"),
             2 => Some("AF-C"),
             3 => Some("AF-A"),
             _ => None,
         },
-        ("Sony", 0x0050) => match value { // BatteryState
+        ("Sony", 0x0050) => match value {
+            // BatteryState
             2 => Some("Empty"),
             3 => Some("Very Low"),
             4 => Some("Low"),
@@ -15321,25 +16999,29 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Full"),
             _ => None,
         },
-        ("Sony", 0x0053) => match value { // FocusStatus
+        ("Sony", 0x0053) => match value {
+            // FocusStatus
             0 => Some("Confirmed"),
             1 => Some("Failed"),
             2 => Some("Tracking"),
             4 => Some("Not confirmed, Tracking"),
             _ => None,
         },
-        ("Sony", 0x0054) => match value { // SonyImageSize
+        ("Sony", 0x0054) => match value {
+            // SonyImageSize
             1 => Some("Large"),
             2 => Some("Medium"),
             3 => Some("Small"),
             _ => None,
         },
-        ("Sony", 0x0055) => match value { // AspectRatio
+        ("Sony", 0x0055) => match value {
+            // AspectRatio
             1 => Some("3:2"),
             2 => Some("16:9"),
             _ => None,
         },
-        ("Sony", 0x0056) => match value { // Quality
+        ("Sony", 0x0056) => match value {
+            // Quality
             0 => Some("RAW"),
             2 => Some("CRAW"),
             16 => Some("Extra Fine"),
@@ -15349,68 +17031,80 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             48 => Some("Standard"),
             _ => None,
         },
-        ("Sony", 0x0058) => match value { // ExposureLevelIncrements
+        ("Sony", 0x0058) => match value {
+            // ExposureLevelIncrements
             33 => Some("1/3 EV"),
             50 => Some("1/2 EV"),
             _ => None,
         },
-        ("Sony", 0x005A) => match value { // DistortionCorrParamsPresent
+        ("Sony", 0x005A) => match value {
+            // DistortionCorrParamsPresent
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Sony", 0x005B) => match value { // DistortionCorrection
+        ("Sony", 0x005B) => match value {
+            // DistortionCorrection
             0 => Some("None"),
             1 => Some("Applied"),
             _ => None,
         },
-        ("Sony", 0x005D) => match value { // LensFormat
+        ("Sony", 0x005D) => match value {
+            // LensFormat
             0 => Some("Unknown"),
             1 => Some("APS-C"),
             2 => Some("Full-frame"),
             _ => None,
         },
-        ("Sony", 0x005E) => match value { // LensMount
+        ("Sony", 0x005E) => match value {
+            // LensMount
             0 => Some("Unknown"),
             1 => Some("A-mount"),
             2 => Some("E-mount"),
             _ => None,
         },
-        ("Sony", 0x0069) => match value { // RedEyeReduction
+        ("Sony", 0x0069) => match value {
+            // RedEyeReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x006A) => match value { // RedEyeReduction
+        ("Sony", 0x006A) => match value {
+            // RedEyeReduction
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x0076) => match value { // Flash
+        ("Sony", 0x0076) => match value {
+            // Flash
             0 => Some("No Flash"),
             1 => Some("Fired"),
             _ => None,
         },
-        ("Sony", 0x0077) => match value { // FlashAction2
+        ("Sony", 0x0077) => match value {
+            // FlashAction2
             0 => Some("Did not fire"),
             2 => Some("External Flash fired (2)"),
             3 => Some("Built-in Flash fired"),
             4 => Some("External Flash fired (4)"),
             _ => None,
         },
-        ("Sony", 0x0078) => match value { // FlashActionExternal
+        ("Sony", 0x0078) => match value {
+            // FlashActionExternal
             121 => Some("Fired"),
             122 => Some("Fired"),
             136 => Some("Did not fire"),
             _ => None,
         },
-        ("Sony", 0x007C) => match value { // FlashActionExternal
+        ("Sony", 0x007C) => match value {
+            // FlashActionExternal
             136 => Some("Did not fire"),
             167 => Some("Fired"),
             182 => Some("Fired, HSS"),
             _ => None,
         },
-        ("Sony", 0x007E) => match value { // DriveMode
+        ("Sony", 0x007E) => match value {
+            // DriveMode
             1 => Some("Single Frame"),
             2 => Some("Continuous High"),
             4 => Some("Self-timer 10 sec"),
@@ -15420,7 +17114,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             11 => Some("Continuous Self-timer"),
             _ => None,
         },
-        ("Sony", 0x007F) => match value { // FlashMode
+        ("Sony", 0x007F) => match value {
+            // FlashMode
             0 => Some("Autoflash"),
             2 => Some("Rear Sync"),
             3 => Some("Wireless"),
@@ -15429,74 +17124,87 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("Slow Sync"),
             _ => None,
         },
-        ("Sony", 0x0082) => match value { // FlashStatus
+        ("Sony", 0x0082) => match value {
+            // FlashStatus
             0 => Some("None"),
             2 => Some("External"),
             _ => None,
         },
-        ("Sony", 0x0083) => match value { // AFButtonPressed
+        ("Sony", 0x0083) => match value {
+            // AFButtonPressed
             1 => Some("No"),
             16 => Some("Yes"),
             _ => None,
         },
-        ("Sony", 0x0084) => match value { // LiveViewMetering
+        ("Sony", 0x0084) => match value {
+            // LiveViewMetering
             0 => Some("n/a"),
             16 => Some("40 Segment"),
             32 => Some("1200-zone Evaluative"),
             _ => None,
         },
-        ("Sony", 0x0085) => match value { // ViewingMode2
+        ("Sony", 0x0085) => match value {
+            // ViewingMode2
             0 => Some("n/a"),
             16 => Some("Viewfinder"),
             33 => Some("Focus Check Live View"),
             34 => Some("Quick AF Live View"),
             _ => None,
         },
-        ("Sony", 0x0086) => match value { // AELock
+        ("Sony", 0x0086) => match value {
+            // AELock
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("Sony", 0x0088) => match value { // FlashStatusExternal
+        ("Sony", 0x0088) => match value {
+            // FlashStatusExternal
             1 => Some("None"),
             2 => Some("Off"),
             3 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x008A) => match value { // LensAF
+        ("Sony", 0x008A) => match value {
+            // LensAF
             1 => Some("No"),
             16 => Some("AF Lens"),
             _ => None,
         },
-        ("Sony", 0x008B) => match value { // LiveViewFocusMode
+        ("Sony", 0x008B) => match value {
+            // LiveViewFocusMode
             0 => Some("n/a"),
             1 => Some("AF"),
             16 => Some("Manual"),
             _ => None,
         },
-        ("Sony", 0x008E) => match value { // LensSAM
+        ("Sony", 0x008E) => match value {
+            // LensSAM
             1 => Some("No"),
             16 => Some("SAM Lens"),
             _ => None,
         },
-        ("Sony", 0x0099) => match value { // LensMount
+        ("Sony", 0x0099) => match value {
+            // LensMount
             1 => Some("Unknown"),
             16 => Some("A-mount"),
             17 => Some("E-mount"),
             _ => None,
         },
-        ("Sony", 0x009B) => match value { // LensOSS
+        ("Sony", 0x009B) => match value {
+            // LensOSS
             1 => Some("No"),
             16 => Some("OSS Lens"),
             17 => Some("OSS Lens (NEX-VG)"),
             _ => None,
         },
-        ("Sony", 0x00BD) => match value { // FaceDetection
+        ("Sony", 0x00BD) => match value {
+            // FaceDetection
             0 => Some("Off"),
             98 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x0102) => match value { // Quality
+        ("Sony", 0x0102) => match value {
+            // Quality
             0 => Some("RAW"),
             1 => Some("Super Fine"),
             2 => Some("Fine"),
@@ -15510,29 +17218,34 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4294967295 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0x0105) => match value { // LensMount
+        ("Sony", 0x0105) => match value {
+            // LensMount
             0 => Some("Unknown"),
             1 => Some("A-mount"),
             2 => Some("E-mount"),
             _ => None,
         },
-        ("Sony", 0x0106) => match value { // LensFormat
+        ("Sony", 0x0106) => match value {
+            // LensFormat
             0 => Some("Unknown"),
             1 => Some("APS-C"),
             2 => Some("Full-frame"),
             _ => None,
         },
-        ("Sony", 0x010B) => match value { // DistortionCorrParamsPresent
+        ("Sony", 0x010B) => match value {
+            // DistortionCorrParamsPresent
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Sony", 0x010C) => match value { // SequenceNumber
+        ("Sony", 0x010C) => match value {
+            // SequenceNumber
             0 => Some("Single"),
             255 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0x0115) => match value { // WhiteBalance
+        ("Sony", 0x0115) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             1 => Some("Color Temperature/Color Filter"),
             16 => Some("Daylight"),
@@ -15545,27 +17258,32 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             128 => Some("Underwater"),
             _ => None,
         },
-        ("Sony", 0x0131) => match value { // AFMicroAdjMode
+        ("Sony", 0x0131) => match value {
+            // AFMicroAdjMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x0133) => match value { // ShutterType
+        ("Sony", 0x0133) => match value {
+            // ShutterType
             7 => Some("Electronic"),
             23 => Some("Mechanical"),
             _ => None,
         },
-        ("Sony", 0x0139) => match value { // ShutterType
+        ("Sony", 0x0139) => match value {
+            // ShutterType
             7 => Some("Electronic"),
             23 => Some("Mechanical"),
             _ => None,
         },
-        ("Sony", 0x013F) => match value { // ShutterType
+        ("Sony", 0x013F) => match value {
+            // ShutterType
             7 => Some("Electronic"),
             23 => Some("Mechanical"),
             _ => None,
         },
-        ("Sony", 0x016E) => match value { // AFPointsUsed
+        ("Sony", 0x016E) => match value {
+            // AFPointsUsed
             0 => Some("Center"),
             1 => Some("Top"),
             2 => Some("Upper-right"),
@@ -15587,7 +17305,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             18 => Some("Upper Far Left"),
             _ => None,
         },
-        ("Sony", 0x017E) => match value { // ExposureProgram
+        ("Sony", 0x017E) => match value {
+            // ExposureProgram
             0 => Some("Program AE"),
             1 => Some("Aperture-priority AE"),
             2 => Some("Shutter speed priority AE"),
@@ -15624,96 +17343,113 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             46 => Some("Party"),
             _ => None,
         },
-        ("Sony", 0x0283) => match value { // AFButtonPressed
+        ("Sony", 0x0283) => match value {
+            // AFButtonPressed
             1 => Some("No"),
             16 => Some("Yes"),
             _ => None,
         },
-        ("Sony", 0x0284) => match value { // LiveViewMetering
+        ("Sony", 0x0284) => match value {
+            // LiveViewMetering
             0 => Some("n/a"),
             16 => Some("40 Segment"),
             32 => Some("1200-zone Evaluative"),
             _ => None,
         },
-        ("Sony", 0x0285) => match value { // ViewingMode2
+        ("Sony", 0x0285) => match value {
+            // ViewingMode2
             0 => Some("n/a"),
             16 => Some("Viewfinder"),
             33 => Some("Focus Check Live View"),
             34 => Some("Quick AF Live View"),
             _ => None,
         },
-        ("Sony", 0x0286) => match value { // AELock
+        ("Sony", 0x0286) => match value {
+            // AELock
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("Sony", 0x0288) => match value { // FlashStatusExternal
+        ("Sony", 0x0288) => match value {
+            // FlashStatusExternal
             1 => Some("None"),
             2 => Some("Off"),
             3 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x028B) => match value { // LiveViewFocusMode
+        ("Sony", 0x028B) => match value {
+            // LiveViewFocusMode
             0 => Some("n/a"),
             1 => Some("AF"),
             16 => Some("Manual"),
             _ => None,
         },
-        ("Sony", 0x030C) => match value { // SequenceNumber
+        ("Sony", 0x030C) => match value {
+            // SequenceNumber
             0 => Some("Single"),
             255 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0x0600) => match value { // DistortionCorrParamsPresent
+        ("Sony", 0x0600) => match value {
+            // DistortionCorrParamsPresent
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Sony", 0x0601) => match value { // DistortionCorrection
+        ("Sony", 0x0601) => match value {
+            // DistortionCorrection
             0 => Some("None"),
             1 => Some("Applied"),
             _ => None,
         },
-        ("Sony", 0x0603) => match value { // LensFormat
+        ("Sony", 0x0603) => match value {
+            // LensFormat
             0 => Some("Unknown"),
             1 => Some("APS-C"),
             2 => Some("Full-frame"),
             _ => None,
         },
-        ("Sony", 0x0604) => match value { // LensMount
+        ("Sony", 0x0604) => match value {
+            // LensMount
             0 => Some("Unknown"),
             1 => Some("A-mount"),
             2 => Some("E-mount"),
             _ => None,
         },
-        ("Sony", 0x1000) => match value { // MultiBurstMode
+        ("Sony", 0x1000) => match value {
+            // MultiBurstMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x17F1) => match value { // LensFormat
+        ("Sony", 0x17F1) => match value {
+            // LensFormat
             0 => Some("Unknown"),
             1 => Some("APS-C"),
             2 => Some("Full-frame"),
             _ => None,
         },
-        ("Sony", 0x17F2) => match value { // LensMount
+        ("Sony", 0x17F2) => match value {
+            // LensMount
             0 => Some("Unknown"),
             1 => Some("A-mount"),
             2 => Some("E-mount"),
             _ => None,
         },
-        ("Sony", 0x17F8) => match value { // DistortionCorrParamsPresent
+        ("Sony", 0x17F8) => match value {
+            // DistortionCorrParamsPresent
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Sony", 0x17F9) => match value { // DistortionCorrParamsNumber
+        ("Sony", 0x17F9) => match value {
+            // DistortionCorrParamsNumber
             11 => Some("11 (APS-C)"),
             16 => Some("16 (Full-frame)"),
             _ => None,
         },
-        ("Sony", 0x188C) => match value { // AspectRatio
+        ("Sony", 0x188C) => match value {
+            // AspectRatio
             0 => Some("16:9"),
             1 => Some("4:3"),
             2 => Some("3:2"),
@@ -15721,73 +17457,86 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Panorama"),
             _ => None,
         },
-        ("Sony", 0x1891) => match value { // LensFormat
+        ("Sony", 0x1891) => match value {
+            // LensFormat
             0 => Some("Unknown"),
             1 => Some("APS-C"),
             2 => Some("Full-frame"),
             _ => None,
         },
-        ("Sony", 0x1892) => match value { // LensMount
+        ("Sony", 0x1892) => match value {
+            // LensMount
             0 => Some("Unknown"),
             1 => Some("A-mount"),
             2 => Some("E-mount"),
             _ => None,
         },
-        ("Sony", 0x1898) => match value { // DistortionCorrParamsPresent
+        ("Sony", 0x1898) => match value {
+            // DistortionCorrParamsPresent
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Sony", 0x1899) => match value { // DistortionCorrParamsNumber
+        ("Sony", 0x1899) => match value {
+            // DistortionCorrParamsNumber
             11 => Some("11 (APS-C)"),
             16 => Some("16 (Full-frame)"),
             _ => None,
         },
-        ("Sony", 0x18BD) => match value { // LensFormat
+        ("Sony", 0x18BD) => match value {
+            // LensFormat
             0 => Some("Unknown"),
             1 => Some("APS-C"),
             2 => Some("Full-frame"),
             _ => None,
         },
-        ("Sony", 0x18BE) => match value { // LensMount
+        ("Sony", 0x18BE) => match value {
+            // LensMount
             0 => Some("Unknown"),
             1 => Some("A-mount"),
             2 => Some("E-mount"),
             _ => None,
         },
-        ("Sony", 0x18C4) => match value { // DistortionCorrParamsPresent
+        ("Sony", 0x18C4) => match value {
+            // DistortionCorrParamsPresent
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Sony", 0x18C5) => match value { // DistortionCorrParamsNumber
+        ("Sony", 0x18C5) => match value {
+            // DistortionCorrParamsNumber
             11 => Some("11 (APS-C)"),
             16 => Some("16 (Full-frame)"),
             _ => None,
         },
-        ("Sony", 0x18ED) => match value { // LensFormat
+        ("Sony", 0x18ED) => match value {
+            // LensFormat
             0 => Some("Unknown"),
             1 => Some("APS-C"),
             2 => Some("Full-frame"),
             _ => None,
         },
-        ("Sony", 0x18EE) => match value { // LensMount
+        ("Sony", 0x18EE) => match value {
+            // LensMount
             0 => Some("Unknown"),
             1 => Some("A-mount"),
             2 => Some("E-mount"),
             _ => None,
         },
-        ("Sony", 0x18F4) => match value { // DistortionCorrParamsPresent
+        ("Sony", 0x18F4) => match value {
+            // DistortionCorrParamsPresent
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Sony", 0x18F5) => match value { // DistortionCorrParamsNumber
+        ("Sony", 0x18F5) => match value {
+            // DistortionCorrParamsNumber
             11 => Some("11 (APS-C)"),
             16 => Some("16 (Full-frame)"),
             _ => None,
         },
-        ("Sony", 0x192C) => match value { // AspectRatio
+        ("Sony", 0x192C) => match value {
+            // AspectRatio
             0 => Some("16:9"),
             1 => Some("4:3"),
             2 => Some("3:2"),
@@ -15795,7 +17544,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Panorama"),
             _ => None,
         },
-        ("Sony", 0x1958) => match value { // AspectRatio
+        ("Sony", 0x1958) => match value {
+            // AspectRatio
             0 => Some("16:9"),
             1 => Some("4:3"),
             2 => Some("3:2"),
@@ -15803,7 +17553,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Panorama"),
             _ => None,
         },
-        ("Sony", 0x1A88) => match value { // AspectRatio
+        ("Sony", 0x1A88) => match value {
+            // AspectRatio
             0 => Some("16:9"),
             1 => Some("4:3"),
             2 => Some("3:2"),
@@ -15811,7 +17562,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("Panorama"),
             _ => None,
         },
-        ("Sony", 0x2008) => match value { // LongExposureNoiseReduction
+        ("Sony", 0x2008) => match value {
+            // LongExposureNoiseReduction
             0 => Some("Off"),
             1 => Some("On (unused)"),
             65537 => Some("On (dark subtracted)"),
@@ -15820,7 +17572,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4294967295 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0x2009) => match value { // HighISONoiseReduction
+        ("Sony", 0x2009) => match value {
+            // HighISONoiseReduction
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Normal"),
@@ -15829,13 +17582,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0x200B) => match value { // MultiFrameNoiseReduction
+        ("Sony", 0x200B) => match value {
+            // MultiFrameNoiseReduction
             0 => Some("Off"),
             1 => Some("On"),
             255 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0x200E) => match value { // PictureEffect
+        ("Sony", 0x200E) => match value {
+            // PictureEffect
             0 => Some("Off"),
             1 => Some("Toy Camera"),
             2 => Some("Pop Color"),
@@ -15874,7 +17629,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             114 => Some("Illustration (high)"),
             _ => None,
         },
-        ("Sony", 0x200F) => match value { // SoftSkinEffect
+        ("Sony", 0x200F) => match value {
+            // SoftSkinEffect
             0 => Some("Off"),
             1 => Some("Low"),
             2 => Some("Mid"),
@@ -15882,30 +17638,35 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4294967295 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0x2011) => match value { // VignettingCorrection
+        ("Sony", 0x2011) => match value {
+            // VignettingCorrection
             0 => Some("Off"),
             2 => Some("Auto"),
             4294967295 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0x2012) => match value { // LateralChromaticAberration
+        ("Sony", 0x2012) => match value {
+            // LateralChromaticAberration
             0 => Some("Off"),
             2 => Some("Auto"),
             4294967295 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0x2013) => match value { // DistortionCorrectionSetting
+        ("Sony", 0x2013) => match value {
+            // DistortionCorrectionSetting
             0 => Some("Off"),
             2 => Some("Auto"),
             4294967295 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0x2016) => match value { // AutoPortraitFramed
+        ("Sony", 0x2016) => match value {
+            // AutoPortraitFramed
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("Sony", 0x2017) => match value { // FlashAction
+        ("Sony", 0x2017) => match value {
+            // FlashAction
             0 => Some("Did not fire"),
             1 => Some("Flash Fired"),
             2 => Some("External Flash Fired"),
@@ -15913,12 +17674,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             5 => Some("External Flash ???"),
             _ => None,
         },
-        ("Sony", 0x201A) => match value { // ElectronicFrontCurtainShutter
+        ("Sony", 0x201A) => match value {
+            // ElectronicFrontCurtainShutter
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Sony", 0x201B) => match value { // FocusMode
+        ("Sony", 0x201B) => match value {
+            // FocusMode
             0 => Some("Manual"),
             2 => Some("AF-S"),
             3 => Some("AF-C"),
@@ -15927,18 +17690,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("AF-D"),
             _ => None,
         },
-        ("Sony", 0x2021) => match value { // AFTracking
+        ("Sony", 0x2021) => match value {
+            // AFTracking
             0 => Some("Off"),
             1 => Some("Face tracking"),
             2 => Some("Lock On AF"),
             _ => None,
         },
-        ("Sony", 0x2023) => match value { // MultiFrameNREffect
+        ("Sony", 0x2023) => match value {
+            // MultiFrameNREffect
             0 => Some("Normal"),
             1 => Some("High"),
             _ => None,
         },
-        ("Sony", 0x2029) => match value { // RAWFileType
+        ("Sony", 0x2029) => match value {
+            // RAWFileType
             0 => Some("Compressed RAW"),
             1 => Some("Uncompressed RAW"),
             2 => Some("Lossless Compressed RAW"),
@@ -15946,13 +17712,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0x202B) => match value { // PrioritySetInAWB
+        ("Sony", 0x202B) => match value {
+            // PrioritySetInAWB
             0 => Some("Standard"),
             1 => Some("Ambience"),
             2 => Some("White"),
             _ => None,
         },
-        ("Sony", 0x202C) => match value { // MeteringMode2
+        ("Sony", 0x202C) => match value {
+            // MeteringMode2
             256 => Some("Multi-segment"),
             512 => Some("Center-weighted average"),
             769 => Some("Spot (Standard)"),
@@ -15961,18 +17729,21 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             1280 => Some("Highlight"),
             _ => None,
         },
-        ("Sony", 0x205C) => match value { // StepCropShooting
+        ("Sony", 0x205C) => match value {
+            // StepCropShooting
             0 => Some("35mm (Off)"),
             1 => Some("50mm"),
             2 => Some("70mm"),
             _ => None,
         },
-        ("Sony", 0x850A) => match value { // GPSMeasureMode
+        ("Sony", 0x850A) => match value {
+            // GPSMeasureMode
             2 => Some("2-Dimensional Measurement"),
             3 => Some("3-Dimensional Measurement"),
             _ => None,
         },
-        ("Sony", 0x9401) => match value { // Tag9401
+        ("Sony", 0x9401) => match value {
+            // Tag9401
             0 => Some("Disabled"),
             1 => Some("Auto"),
             3 => Some("Lv1"),
@@ -15983,13 +17754,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("Off"),
             _ => None,
         },
-        ("Sony", 0xB024) => match value { // ZoneMatching
+        ("Sony", 0xB024) => match value {
+            // ZoneMatching
             0 => Some("ISO Setting Used"),
             1 => Some("High Key"),
             2 => Some("Low Key"),
             _ => None,
         },
-        ("Sony", 0xB025) => match value { // DynamicRangeOptimizer
+        ("Sony", 0xB025) => match value {
+            // DynamicRangeOptimizer
             0 => Some("Off"),
             1 => Some("Standard"),
             2 => Some("Advanced Auto"),
@@ -16006,20 +17779,23 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             20 => Some("Lv5"),
             _ => None,
         },
-        ("Sony", 0xB026) => match value { // ImageStabilization
+        ("Sony", 0xB026) => match value {
+            // ImageStabilization
             0 => Some("Off"),
             1 => Some("On"),
             4294967295 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0xB040) => match value { // Macro
+        ("Sony", 0xB040) => match value {
+            // Macro
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("Close Focus"),
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0xB041) => match value { // ExposureMode
+        ("Sony", 0xB041) => match value {
+            // ExposureMode
             0 => Some("Program AE"),
             1 => Some("Portrait"),
             2 => Some("Beach"),
@@ -16053,27 +17829,31 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0xB042) => match value { // FocusMode
+        ("Sony", 0xB042) => match value {
+            // FocusMode
             1 => Some("AF-S"),
             2 => Some("AF-C"),
             4 => Some("Permanent-AF"),
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0xB044) => match value { // AFIlluminator
+        ("Sony", 0xB044) => match value {
+            // AFIlluminator
             0 => Some("Off"),
             1 => Some("Auto"),
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0xB047) => match value { // JPEGQuality
+        ("Sony", 0xB047) => match value {
+            // JPEGQuality
             0 => Some("Standard"),
             1 => Some("Fine"),
             2 => Some("Extra Fine"),
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0xB048) => match value { // FlashLevel
+        ("Sony", 0xB048) => match value {
+            // FlashLevel
             -32768 => Some("Low"),
             -9 => Some("-9/3"),
             -8 => Some("-8/3"),
@@ -16096,7 +17876,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             32767 => Some("High"),
             _ => None,
         },
-        ("Sony", 0xB049) => match value { // ReleaseMode
+        ("Sony", 0xB049) => match value {
+            // ReleaseMode
             0 => Some("Normal"),
             2 => Some("Continuous"),
             5 => Some("Exposure Bracketing"),
@@ -16105,12 +17886,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0xB04A) => match value { // SequenceNumber
+        ("Sony", 0xB04A) => match value {
+            // SequenceNumber
             0 => Some("Single"),
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0xB04E) => match value { // FocusMode
+        ("Sony", 0xB04E) => match value {
+            // FocusMode
             0 => Some("Manual"),
             2 => Some("AF-S"),
             3 => Some("AF-C"),
@@ -16118,13 +17901,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             6 => Some("DMF"),
             _ => None,
         },
-        ("Sony", 0xB04F) => match value { // DynamicRangeOptimizer
+        ("Sony", 0xB04F) => match value {
+            // DynamicRangeOptimizer
             0 => Some("Off"),
             1 => Some("Standard"),
             2 => Some("Plus"),
             _ => None,
         },
-        ("Sony", 0xB050) => match value { // HighISONoiseReduction2
+        ("Sony", 0xB050) => match value {
+            // HighISONoiseReduction2
             0 => Some("Normal"),
             1 => Some("High"),
             2 => Some("Low"),
@@ -16132,13 +17917,15 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             65535 => Some("n/a"),
             _ => None,
         },
-        ("Sony", 0xB052) => match value { // IntelligentAuto
+        ("Sony", 0xB052) => match value {
+            // IntelligentAuto
             0 => Some("Off"),
             1 => Some("On"),
             2 => Some("Advanced"),
             _ => None,
         },
-        ("Sony", 0xB054) => match value { // WhiteBalance
+        ("Sony", 0xB054) => match value {
+            // WhiteBalance
             0 => Some("Auto"),
             4 => Some("Custom"),
             5 => Some("Daylight"),
@@ -16155,7 +17942,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             19 => Some("Underwater Auto"),
             _ => None,
         },
-        ("Sony", 0xE303) => match value { // WhiteBalance
+        ("Sony", 0xE303) => match value {
+            // WhiteBalance
             1 => Some("Incandescent"),
             2 => Some("Fluorescent"),
             4 => Some("Daylight"),
@@ -16164,7 +17952,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("Preset"),
             _ => None,
         },
-        ("SonyIDC", 0x8000) => match value { // IDCCreativeStyle
+        ("SonyIDC", 0x8000) => match value {
+            // IDCCreativeStyle
             1 => Some("Camera Setting"),
             2 => Some("Standard"),
             3 => Some("Real"),
@@ -16184,12 +17973,14 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             17 => Some("Sepia"),
             _ => None,
         },
-        ("SonyIDC", 0x8001) => match value { // CreativeStyleWasChanged
+        ("SonyIDC", 0x8001) => match value {
+            // CreativeStyleWasChanged
             0 => Some("No"),
             1 => Some("Yes"),
             _ => None,
         },
-        ("SonyIDC", 0x8002) => match value { // PresetWhiteBalance
+        ("SonyIDC", 0x8002) => match value {
+            // PresetWhiteBalance
             1 => Some("Camera Setting"),
             2 => Some("Color Temperature"),
             3 => Some("Specify Gray Point"),
@@ -16205,74 +17996,88 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             13 => Some("Auto"),
             _ => None,
         },
-        ("SonyIDC", 0x801E) => match value { // NoiseReductionMode
+        ("SonyIDC", 0x801E) => match value {
+            // NoiseReductionMode
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("SonyIDC", 0x8026) => match value { // HighlightColorDistortReduct
+        ("SonyIDC", 0x8026) => match value {
+            // HighlightColorDistortReduct
             0 => Some("Standard"),
             1 => Some("Advanced"),
             _ => None,
         },
-        ("SonyIDC", 0x8040) => match value { // DistortionCompensation
+        ("SonyIDC", 0x8040) => match value {
+            // DistortionCompensation
             -1 => Some("n/a"),
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("SonyIDC", 0x900D) => match value { // ChromaticAberrationCorrection
+        ("SonyIDC", 0x900D) => match value {
+            // ChromaticAberrationCorrection
             1 => Some("On"),
             2 => Some("Off"),
             _ => None,
         },
-        ("SonyIDC", 0x900E) => match value { // InclinationCorrection
+        ("SonyIDC", 0x900E) => match value {
+            // InclinationCorrection
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("SonyIDC", 0x9010) => match value { // Cropping
+        ("SonyIDC", 0x9010) => match value {
+            // Cropping
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("SonyIDC", 0x9013) => match value { // PxShiftPeriphEdgeNR
+        ("SonyIDC", 0x9013) => match value {
+            // PxShiftPeriphEdgeNR
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("Stim", 0x0000) => match value { // CropYCommonOffset
+        ("Stim", 0x0000) => match value {
+            // CropYCommonOffset
             0 => Some("Common Offset Setting"),
             1 => Some("Individual Offset Setting"),
             _ => None,
         },
-        ("Stim", 0x0002) => match value { // ImageArrangement
+        ("Stim", 0x0002) => match value {
+            // ImageArrangement
             0 => Some("Parallel View Alignment"),
             1 => Some("Cross View Alignment"),
             _ => None,
         },
-        ("Stim", 0x0009) => match value { // ViewType
+        ("Stim", 0x0009) => match value {
+            // ViewType
             0 => Some("No Pop-up Effect"),
             1 => Some("Pop-up Effect"),
             _ => None,
         },
-        ("Stim", 0x000A) => match value { // RepresentativeImage
+        ("Stim", 0x000A) => match value {
+            // RepresentativeImage
             0 => Some("Left Viewpoint"),
             1 => Some("Right Viewpoint"),
             _ => None,
         },
-        ("Stim", 0x000B) => match value { // ConvergenceBaseImage
+        ("Stim", 0x000B) => match value {
+            // ConvergenceBaseImage
             0 => Some("Left Viewpoint"),
             1 => Some("Right Viewpoint"),
             255 => Some("Equivalent for Both Viewpoints"),
             _ => None,
         },
-        ("Stim", 0x0010) => match value { // InitialDisplayEffect
+        ("Stim", 0x0010) => match value {
+            // InitialDisplayEffect
             0 => Some("Off"),
             1 => Some("On"),
             _ => None,
         },
-        ("TNEF", 0x3705) => match value { // AttachMethod
+        ("TNEF", 0x3705) => match value {
+            // AttachMethod
             0 => Some("Attachment Created"),
             1 => Some("AttachData"),
             2 => Some("AttachLongPathName (recipients with access)"),
@@ -16282,34 +18087,40 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             7 => Some("AttachLongPathName (using AttachmentProviderType)"),
             _ => None,
         },
-        ("Theora", 0x001D) => match value { // ColorSpace
+        ("Theora", 0x001D) => match value {
+            // ColorSpace
             0 => Some("Undefined"),
             1 => Some("Rec. 470M"),
             2 => Some("Rec. 470BG"),
             _ => None,
         },
-        ("Theora", 0x0022) => match value { // PixelFormat
+        ("Theora", 0x0022) => match value {
+            // PixelFormat
             0 => Some("4:2:0"),
             2 => Some("4:2:2"),
             3 => Some("4:4:4"),
             _ => None,
         },
-        ("WavPack", 0x0002) => match value { // AudioType
+        ("WavPack", 0x0002) => match value {
+            // AudioType
             0 => Some("Stereo"),
             1 => Some("Mono"),
             _ => None,
         },
-        ("WavPack", 0x0003) => match value { // Compression
+        ("WavPack", 0x0003) => match value {
+            // Compression
             0 => Some("Lossless"),
             1 => Some("Hybrid"),
             _ => None,
         },
-        ("WavPack", 0x0004) => match value { // DataFormat
+        ("WavPack", 0x0004) => match value {
+            // DataFormat
             0 => Some("Integer"),
             1 => Some("Floating Point"),
             _ => None,
         },
-        ("ZIP", 0x0003) => match value { // Flags
+        ("ZIP", 0x0003) => match value {
+            // Flags
             0 => Some("Text"),
             1 => Some("CRC16"),
             2 => Some("ExtraFields"),
@@ -16317,7 +18128,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             4 => Some("Comment"),
             _ => None,
         },
-        ("ZIP", 0x0004) => match value { // ZipCompression
+        ("ZIP", 0x0004) => match value {
+            // ZipCompression
             0 => Some("None"),
             1 => Some("Shrunk"),
             2 => Some("Reduced with compression factor 1"),
@@ -16338,14 +18150,16 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             98 => Some("PPMd version I, Rev 1"),
             _ => None,
         },
-        ("ZIP", 0x0008) => match value { // OperatingSystem
+        ("ZIP", 0x0008) => match value {
+            // OperatingSystem
             0 => Some("MS-DOS"),
             1 => Some("OS/2"),
             2 => Some("Win32"),
             3 => Some("Unix"),
             _ => None,
         },
-        ("ZIP", 0x0009) => match value { // OperatingSystem
+        ("ZIP", 0x0009) => match value {
+            // OperatingSystem
             0 => Some("FAT filesystem (MS-DOS, OS/2, NT/Win32)"),
             1 => Some("Amiga"),
             2 => Some("VMS (or OpenVMS)"),
@@ -16363,7 +18177,8 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
             255 => Some("unknown"),
             _ => None,
         },
-        ("ZIP", 0x0012) => match value { // PackingMethod
+        ("ZIP", 0x0012) => match value {
+            // PackingMethod
             48 => Some("Stored"),
             49 => Some("Fastest"),
             50 => Some("Fast"),
@@ -26210,8 +28025,10 @@ pub fn print_conv_by_name(tag_name: &str, value: i64) -> Option<&'static str> {
             34 => Some("4500K (Neutral white fluorescent)"),
             35 => Some("4000K (Cool white fluorescent)"),
             36 => Some("White Fluorescent"),
-            48 => Some("3600K (TungsteExtracted 3507 tags with 30187 entries from 222 files
-n light-like)"),
+            48 => Some(
+                "3600K (TungsteExtracted 3507 tags with 30187 entries from 222 files
+n light-like)",
+            ),
             67 => Some("Underwater"),
             256 => Some("One Touch WB 1"),
             257 => Some("One Touch WB 2"),

@@ -17,16 +17,38 @@ pub fn flash_mode(v: u64) -> Option<&'static str> {
 /// Print conversion for Nikon ShootingMode (tag 0x0089) - bitmask.
 pub fn shooting_mode(v: u16) -> String {
     let mut modes = Vec::new();
-    if v & 0x0001 != 0 { modes.push("Continuous"); }
-    if v & 0x0002 != 0 { modes.push("Delay"); }
-    if v & 0x0004 != 0 { modes.push("PC Control"); }
-    if v & 0x0008 != 0 { modes.push("Self-timer"); }
-    if v & 0x0010 != 0 { modes.push("Exposure Bracketing"); }
-    if v & 0x0020 != 0 { modes.push("Auto ISO"); }
-    if v & 0x0040 != 0 { modes.push("White-Balance Bracketing"); }
-    if v & 0x0080 != 0 { modes.push("IR Control"); }
-    if v & 0x0100 != 0 { modes.push("D-Lighting Bracketing"); }
-    if modes.is_empty() { "Single-Frame".to_string() } else { modes.join(", ") }
+    if v & 0x0001 != 0 {
+        modes.push("Continuous");
+    }
+    if v & 0x0002 != 0 {
+        modes.push("Delay");
+    }
+    if v & 0x0004 != 0 {
+        modes.push("PC Control");
+    }
+    if v & 0x0008 != 0 {
+        modes.push("Self-timer");
+    }
+    if v & 0x0010 != 0 {
+        modes.push("Exposure Bracketing");
+    }
+    if v & 0x0020 != 0 {
+        modes.push("Auto ISO");
+    }
+    if v & 0x0040 != 0 {
+        modes.push("White-Balance Bracketing");
+    }
+    if v & 0x0080 != 0 {
+        modes.push("IR Control");
+    }
+    if v & 0x0100 != 0 {
+        modes.push("D-Lighting Bracketing");
+    }
+    if modes.is_empty() {
+        "Single-Frame".to_string()
+    } else {
+        modes.join(", ")
+    }
 }
 
 /// Print conversion for Nikon ColorSpace (tag 0x001E).

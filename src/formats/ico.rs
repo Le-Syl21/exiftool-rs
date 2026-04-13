@@ -21,20 +21,33 @@ pub fn read_ico(data: &[u8]) -> Result<Vec<Tag>> {
     // Only extract tags from first image entry (like Perl does)
     let pos = 6;
     if num_images > 0 && pos + 16 <= data.len() {
-        let w = if data[pos] == 0 { 256u16 } else { data[pos] as u16 };
-        let h = if data[pos + 1] == 0 { 256u16 } else { data[pos + 1] as u16 };
+        let w = if data[pos] == 0 {
+            256u16
+        } else {
+            data[pos] as u16
+        };
+        let h = if data[pos + 1] == 0 {
+            256u16
+        } else {
+            data[pos + 1] as u16
+        };
         let num_colors = data[pos + 2] as u16;
         // byte 3 is reserved
         let color_planes = u16::from_le_bytes([data[pos + 4], data[pos + 5]]);
         let bits_per_pixel = u16::from_le_bytes([data[pos + 6], data[pos + 7]]);
-        let img_size = u32::from_le_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]]);
+        let img_size =
+            u32::from_le_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]]);
 
         tags.push(mk("ImageWidth", "Image Width", Value::U16(w)));
         tags.push(mk("ImageHeight", "Image Height", Value::U16(h)));
         tags.push(mk("NumColors", "Num Colors", Value::U16(num_colors)));
         if is_ico {
             tags.push(mk("ColorPlanes", "Color Planes", Value::U16(color_planes)));
-            tags.push(mk("BitsPerPixel", "Bits Per Pixel", Value::U16(bits_per_pixel)));
+            tags.push(mk(
+                "BitsPerPixel",
+                "Bits Per Pixel",
+                Value::U16(bits_per_pixel),
+            ));
         }
         tags.push(mk("ImageLength", "Image Length", Value::U32(img_size)));
     }

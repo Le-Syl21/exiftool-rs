@@ -4,12 +4,17 @@
 use crate::error::{Error, Result};
 
 const UUID_XMP: [u8; 16] = [
-    0xBE, 0x7A, 0xCF, 0xCB, 0x97, 0xA9, 0x42, 0xE8,
-    0x9C, 0x71, 0x99, 0x94, 0x91, 0xE3, 0xAF, 0xAC,
+    0xBE, 0x7A, 0xCF, 0xCB, 0x97, 0xA9, 0x42, 0xE8, 0x9C, 0x71, 0x99, 0x94, 0x91, 0xE3, 0xAF, 0xAC,
 ];
 
-pub fn write_jp2(source: &[u8], new_xmp: Option<&[u8]>, new_exif: Option<&[u8]>) -> Result<Vec<u8>> {
-    if source.len() < 12 { return Err(Error::InvalidData("file too small".into())); }
+pub fn write_jp2(
+    source: &[u8],
+    new_xmp: Option<&[u8]>,
+    new_exif: Option<&[u8]>,
+) -> Result<Vec<u8>> {
+    if source.len() < 12 {
+        return Err(Error::InvalidData("file too small".into()));
+    }
     let mut output = Vec::with_capacity(source.len());
     let mut pos = 0;
     let mut wrote_xmp = false;
@@ -21,13 +26,28 @@ pub fn write_jp2(source: &[u8], new_xmp: Option<&[u8]>, new_exif: Option<&[u8]>)
     }
 
     while pos + 8 <= source.len() {
-        let box_size = u32::from_be_bytes([source[pos], source[pos+1], source[pos+2], source[pos+3]]) as usize;
-        let box_type = &source[pos+4..pos+8];
-        let actual_size = if box_size == 0 { source.len() - pos } else { box_size };
-        if actual_size < 8 || pos + actual_size > source.len() { break; }
+        let box_size = u32::from_be_bytes([
+            source[pos],
+            source[pos + 1],
+            source[pos + 2],
+            source[pos + 3],
+        ]) as usize;
+        let box_type = &source[pos + 4..pos + 8];
+        let actual_size = if box_size == 0 {
+            source.len() - pos
+        } else {
+            box_size
+        };
+        if actual_size < 8 || pos + actual_size > source.len() {
+            break;
+        }
 
         match box_type {
-            b"uuid" if actual_size > 24 && &source[pos+8..pos+24] == UUID_XMP && new_xmp.is_some() => {
+            b"uuid"
+                if actual_size > 24
+                    && &source[pos + 8..pos + 24] == UUID_XMP
+                    && new_xmp.is_some() =>
+            {
                 // Replace XMP uuid box
                 if let Some(xmp) = new_xmp {
                     write_box(&mut output, b"uuid", &UUID_XMP, xmp);
@@ -54,7 +74,7 @@ pub fn write_jp2(source: &[u8], new_xmp: Option<&[u8]>, new_exif: Option<&[u8]>)
                 }
             }
             _ => {
-                output.extend_from_slice(&source[pos..pos+actual_size]);
+                output.extend_from_slice(&source[pos..pos + actual_size]);
             }
         }
         pos += actual_size;

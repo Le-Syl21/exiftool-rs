@@ -3,7 +3,9 @@
 use crate::error::Result;
 
 pub fn write_id3(source: &[u8], changes: &[(&str, &str)]) -> Result<Vec<u8>> {
-    if changes.is_empty() { return Ok(source.to_vec()); }
+    if changes.is_empty() {
+        return Ok(source.to_vec());
+    }
 
     // Build new ID3v2.3 tag
     let mut frames = Vec::new();
@@ -21,7 +23,9 @@ pub fn write_id3(source: &[u8], changes: &[(&str, &str)]) -> Result<Vec<u8>> {
         }
     }
 
-    if frames.is_empty() { return Ok(source.to_vec()); }
+    if frames.is_empty() {
+        return Ok(source.to_vec());
+    }
 
     let mut output = Vec::with_capacity(source.len() + frames.len() + 10);
 
@@ -30,7 +34,7 @@ pub fn write_id3(source: &[u8], changes: &[(&str, &str)]) -> Result<Vec<u8>> {
     output.push(3); // version 2.3
     output.push(0); // revision
     output.push(0); // flags
-    // Sync-safe size
+                    // Sync-safe size
     let size = frames.len() as u32;
     output.push(((size >> 21) & 0x7F) as u8);
     output.push(((size >> 14) & 0x7F) as u8);
@@ -40,10 +44,15 @@ pub fn write_id3(source: &[u8], changes: &[(&str, &str)]) -> Result<Vec<u8>> {
 
     // Skip existing ID3v2 tag if present
     let audio_start = if source.starts_with(b"ID3") && source.len() >= 10 {
-        let old_size = (((source[6] as usize) << 21) | ((source[7] as usize) << 14)
-            | ((source[8] as usize) << 7) | source[9] as usize) + 10;
+        let old_size = (((source[6] as usize) << 21)
+            | ((source[7] as usize) << 14)
+            | ((source[8] as usize) << 7)
+            | source[9] as usize)
+            + 10;
         old_size.min(source.len())
-    } else { 0 };
+    } else {
+        0
+    };
 
     output.extend_from_slice(&source[audio_start..]);
     Ok(output)

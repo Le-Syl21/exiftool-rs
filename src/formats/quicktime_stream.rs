@@ -47,11 +47,7 @@ pub struct StreamState {
 
 /// Extract timed metadata tags from MP4 sample data.
 /// Called after normal atom parsing when `extract_embedded > 0`.
-pub fn extract_stream_tags(
-    data: &[u8],
-    tracks: &[TrackInfo],
-    _extract_embedded: u8,
-) -> Vec<Tag> {
+pub fn extract_stream_tags(data: &[u8], tracks: &[TrackInfo], _extract_embedded: u8) -> Vec<Tag> {
     let mut tags = Vec::new();
     let mut doc_count: u32 = 0;
 
@@ -74,8 +70,7 @@ pub fn extract_stream_tags(
             if s.offset as usize + s.size as usize > data.len() || s.size == 0 {
                 continue;
             }
-            let sample_data =
-                &data[s.offset as usize..(s.offset as usize + s.size as usize)];
+            let sample_data = &data[s.offset as usize..(s.offset as usize + s.size as usize)];
 
             let mut sample_tags = Vec::new();
 
@@ -324,8 +319,7 @@ fn process_freegps(data: &[u8], tags: &mut Vec<Tag>) -> bool {
     }
 
     // Type 3/17: Novatek binary at offset 72 (A[NS][EW]\0)
-    if data.len() > 75 && data[72] == b'A' && is_ns(data[73]) && is_ew(data[74]) && data[75] == 0
-    {
+    if data.len() > 75 && data[72] == b'A' && is_ns(data[73]) && is_ew(data[74]) && data[75] == 0 {
         return process_freegps_novatek(data, tags);
     }
 
@@ -351,8 +345,7 @@ fn process_freegps(data: &[u8], tags: &mut Vec<Tag>) -> bool {
     }
 
     // Type 10: Vantrue S1 (A[NS][EW]\0 at offset 64)
-    if data.len() > 100 && data[64] == b'A' && is_ns(data[65]) && is_ew(data[66]) && data[67] == 0
-    {
+    if data.len() > 100 && data[64] == b'A' && is_ns(data[65]) && is_ew(data[66]) && data[67] == 0 {
         return process_freegps_vantrue_s1(data, tags);
     }
 
@@ -369,17 +362,12 @@ fn process_freegps(data: &[u8], tags: &mut Vec<Tag>) -> bool {
     }
 
     // Type 13: INNOVV (A[NS][EW]\0 at offset 16)
-    if data.len() > 48 && data[16] == b'A' && is_ns(data[17]) && is_ew(data[18]) && data[19] == 0
-    {
+    if data.len() > 48 && data[16] == b'A' && is_ns(data[17]) && is_ew(data[18]) && data[19] == 0 {
         return process_freegps_innovv(data, tags);
     }
 
     // Type 15: Vantrue N4 (A at 28, [NS] at 40, [EW] at 56)
-    if data.len() > 80
-        && data[28] == b'A'
-        && is_ns(data[40])
-        && is_ew(data[56])
-    {
+    if data.len() > 80 && data[28] == b'A' && is_ns(data[40]) && is_ew(data[56]) {
         return process_freegps_vantrue_n4(data, tags);
     }
 
@@ -695,8 +683,12 @@ fn process_freegps_type12(data: &[u8], tags: &mut Vec<Tag>) -> bool {
         "{:04}:{:02}:{:02} {:02}:{:02}:{:02}Z",
         full_yr, mon, day, hr, min, sec
     )));
-    tags.push(mk_gps_lat(lat_dd * if lat_ref == b'S' { -1.0 } else { 1.0 }));
-    tags.push(mk_gps_lon(lon_dd * if lon_ref == b'W' { -1.0 } else { 1.0 }));
+    tags.push(mk_gps_lat(
+        lat_dd * if lat_ref == b'S' { -1.0 } else { 1.0 },
+    ));
+    tags.push(mk_gps_lon(
+        lon_dd * if lon_ref == b'W' { -1.0 } else { 1.0 },
+    ));
     tags.push(mk_gps_spd(spd));
     tags.push(mk_gps_trk(trk));
 
@@ -722,8 +714,12 @@ fn process_freegps_innovv(data: &[u8], tags: &mut Vec<Tag>) -> bool {
         let trk = get_f32_le(data, pos + 16) as f64;
 
         let (lat_dd, lon_dd) = convert_lat_lon(lat, lon);
-        tags.push(mk_gps_lat(lat_dd * if lat_ref == b'S' { -1.0 } else { 1.0 }));
-        tags.push(mk_gps_lon(lon_dd * if lon_ref == b'W' { -1.0 } else { 1.0 }));
+        tags.push(mk_gps_lat(
+            lat_dd * if lat_ref == b'S' { -1.0 } else { 1.0 },
+        ));
+        tags.push(mk_gps_lon(
+            lon_dd * if lon_ref == b'W' { -1.0 } else { 1.0 },
+        ));
         tags.push(mk_gps_spd(spd));
         tags.push(mk_gps_trk(trk));
         found = true;
@@ -791,7 +787,15 @@ fn process_freegps_nextbase_binary(data: &[u8], tags: &mut Vec<Tag>) -> bool {
         let min = data[pos + 9];
         let sec10 = get_u16_be(data, pos + 10);
 
-        if yr < 2000 || yr > 2200 || mon < 1 || mon > 12 || day < 1 || day > 31 || hr > 59 || min > 59 || sec10 > 600
+        if yr < 2000
+            || yr > 2200
+            || mon < 1
+            || mon > 12
+            || day < 1
+            || day > 31
+            || hr > 59
+            || min > 59
+            || sec10 > 600
         {
             break;
         }
@@ -904,8 +908,8 @@ fn process_camm(data: &[u8], tags: &mut Vec<Tag>) -> bool {
                 if data.len() >= 0x38 {
                     let vel_east = get_f32_le(data, 0x2c);
                     let vel_north = get_f32_le(data, 0x30);
-                    let speed = ((vel_east * vel_east + vel_north * vel_north) as f64).sqrt()
-                        * MPS_TO_KPH;
+                    let speed =
+                        ((vel_east * vel_east + vel_north * vel_north) as f64).sqrt() * MPS_TO_KPH;
                     tags.push(mk_gps_spd(speed));
                 }
                 return true;
@@ -983,8 +987,7 @@ fn process_gpmf_klv(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) 
             }
         } else if fourcc == b"GPSU" && type_byte == b'U' && total_data >= 16 {
             // GPS UTC time: "yymmddhhmmss.sss"
-            if let Ok(s) = std::str::from_utf8(&data[data_start..data_start + total_data.min(16)])
-            {
+            if let Ok(s) = std::str::from_utf8(&data[data_start..data_start + total_data.min(16)]) {
                 let s = s.trim_end_matches('\0');
                 if s.len() >= 12 {
                     let dt = format!(
@@ -1389,7 +1392,8 @@ fn process_text(data: &[u8], tags: &mut Vec<Tag>) -> bool {
     }
 
     // Garmin PNDM format
-    if data.len() >= 20 && (data.starts_with(b"PNDM") || (data.len() > 4 && &data[4..8.min(data.len())] == b"PNDM"))
+    if data.len() >= 20
+        && (data.starts_with(b"PNDM") || (data.len() > 4 && &data[4..8.min(data.len())] == b"PNDM"))
     {
         return process_garmin_pndm(data, tags);
     }
@@ -1530,7 +1534,11 @@ fn process_kenwood(data: &[u8], tags: &mut Vec<Tag>) -> bool {
                         continue;
                     }
                     // Skip second date (14 digits + separator)
-                    let after2 = if after.len() > 15 { &after[15..] } else { after };
+                    let after2 = if after.len() > 15 {
+                        &after[15..]
+                    } else {
+                        after
+                    };
 
                     // [NS]digits[EW]digits
                     if !after2.is_empty() && is_ns(after2[0]) {
@@ -1615,9 +1623,12 @@ fn scan_mdat_for_freegps(data: &[u8], tags: &mut Vec<Tag>, doc_count: &mut u32) 
             // freeGPS header: 4 bytes before "freeGPS " is the atom size
             if abs_pos >= 4 {
                 let atom_start = abs_pos - 4;
-                let atom_size =
-                    u32::from_be_bytes([data[atom_start], data[atom_start + 1], data[atom_start + 2], data[atom_start + 3]])
-                        as usize;
+                let atom_size = u32::from_be_bytes([
+                    data[atom_start],
+                    data[atom_start + 1],
+                    data[atom_start + 2],
+                    data[atom_start + 3],
+                ]) as usize;
                 let atom_size = if atom_size < 12 { 12 } else { atom_size };
                 let end = (atom_start + atom_size).min(data.len());
                 let block = &data[atom_start..end];

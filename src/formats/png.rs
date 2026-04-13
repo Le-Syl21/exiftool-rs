@@ -63,11 +63,7 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
                     "Image Height",
                     Value::U32(height),
                 ));
-                tags.push(make_png_tag(
-                    "BitDepth",
-                    "Bit Depth",
-                    Value::U8(bit_depth),
-                ));
+                tags.push(make_png_tag("BitDepth", "Bit Depth", Value::U8(bit_depth)));
                 tags.push(make_png_tag(
                     "ColorType",
                     "Color Type",
@@ -88,32 +84,51 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
                     0 => "Deflate/Inflate",
                     _ => "Unknown",
                 };
-                tags.push(make_png_tag("Compression", "Compression", Value::String(compression.into())));
+                tags.push(make_png_tag(
+                    "Compression",
+                    "Compression",
+                    Value::String(compression.into()),
+                ));
                 let filter = match chunk_data[11] {
                     0 => "Adaptive",
                     _ => "Unknown",
                 };
-                tags.push(make_png_tag("Filter", "Filter", Value::String(filter.into())));
+                tags.push(make_png_tag(
+                    "Filter",
+                    "Filter",
+                    Value::String(filter.into()),
+                ));
                 let interlace = match chunk_data[12] {
                     0 => "Noninterlaced",
                     1 => "Adam7 Interlace",
                     _ => "Unknown",
                 };
-                tags.push(make_png_tag("Interlace", "Interlace", Value::String(interlace.into())));
+                tags.push(make_png_tag(
+                    "Interlace",
+                    "Interlace",
+                    Value::String(interlace.into()),
+                ));
             }
 
             // bKGD - Background color
             b"bKGD" if !chunk_data.is_empty() => {
                 let bg = if chunk_data.len() >= 6 {
-                    format!("{} {} {}", u16::from_be_bytes([chunk_data[0], chunk_data[1]]),
+                    format!(
+                        "{} {} {}",
+                        u16::from_be_bytes([chunk_data[0], chunk_data[1]]),
                         u16::from_be_bytes([chunk_data[2], chunk_data[3]]),
-                        u16::from_be_bytes([chunk_data[4], chunk_data[5]]))
+                        u16::from_be_bytes([chunk_data[4], chunk_data[5]])
+                    )
                 } else if chunk_data.len() >= 2 {
                     u16::from_be_bytes([chunk_data[0], chunk_data[1]]).to_string()
                 } else {
                     chunk_data[0].to_string()
                 };
-                tags.push(make_png_tag("BackgroundColor", "Background Color", Value::String(bg)));
+                tags.push(make_png_tag(
+                    "BackgroundColor",
+                    "Background Color",
+                    Value::String(bg),
+                ));
             }
 
             // tEXt - Uncompressed text
@@ -123,8 +138,7 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
                 }
                 if let Some(null_pos) = chunk_data.iter().position(|&b| b == 0) {
                     let key = crate::encoding::decode_latin1(&chunk_data[..null_pos]);
-                    let val =
-                        crate::encoding::decode_latin1(&chunk_data[null_pos + 1..]);
+                    let val = crate::encoding::decode_latin1(&chunk_data[null_pos + 1..]);
                     // Check for XMP in tEXt chunk
                     if key == "XML:com.adobe.xmp" {
                         if let Ok(xmp_tags) = crate::metadata::XmpReader::read(val.as_bytes()) {
@@ -145,12 +159,10 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
             }
 
             // eXIf - EXIF data (PNG 1.5+)
-            b"eXIf" => {
-                match ExifReader::read(chunk_data) {
-                    Ok(exif_tags) => tags.extend(exif_tags),
-                    Err(_) => {}
-                }
-            }
+            b"eXIf" => match ExifReader::read(chunk_data) {
+                Ok(exif_tags) => tags.extend(exif_tags),
+                Err(_) => {}
+            },
 
             // pHYs - Physical pixel dimensions
             b"pHYs" if chunk_len >= 9 => {
@@ -240,7 +252,8 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
         let warn_msg = if text_after_idat_count > 1 {
             format!("[minor] Text/EXIF chunk(s) found after PNG IDAT (may be ignored by some readers) [x{}]", text_after_idat_count)
         } else {
-            "[minor] Text/EXIF chunk(s) found after PNG IDAT (may be ignored by some readers)".to_string()
+            "[minor] Text/EXIF chunk(s) found after PNG IDAT (may be ignored by some readers)"
+                .to_string()
         };
         tags.push(Tag {
             id: TagId::Text("Warning".into()),

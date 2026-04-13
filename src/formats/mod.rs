@@ -1,5 +1,4 @@
 pub mod aiff;
-pub mod capture_one;
 pub mod ape;
 pub mod asf;
 pub mod audible;
@@ -7,6 +6,7 @@ pub mod bmp;
 pub mod bzz;
 pub mod canon_raw;
 pub mod canon_vrd;
+pub mod capture_one;
 pub mod dicom;
 pub mod djvu;
 pub mod dpx;

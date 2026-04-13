@@ -30,10 +30,18 @@ pub fn read_exe(data: &[u8]) -> Result<Vec<Tag>> {
     // Mach-O Universal/Fat
     if data.starts_with(&[0xCA, 0xFE, 0xBA, 0xBE]) {
         let mut tags = Vec::new();
-        tags.push(mk("ExeType", "Executable Type", Value::String("Mach-O Universal Binary".into())));
+        tags.push(mk(
+            "ExeType",
+            "Executable Type",
+            Value::String("Mach-O Universal Binary".into()),
+        ));
         if data.len() >= 8 {
             let num_arch = u32::from_be_bytes([data[4], data[5], data[6], data[7]]);
-            tags.push(mk("NumArchitectures", "Architectures", Value::U32(num_arch)));
+            tags.push(mk(
+                "NumArchitectures",
+                "Architectures",
+                Value::U32(num_arch),
+            ));
         }
         return Ok(tags);
     }
@@ -69,7 +77,10 @@ fn read_ar(data: &[u8]) -> Result<Vec<Tag>> {
 
         if first_entry {
             // Extract CreateDate from ar_date field (Unix timestamp string)
-            let date_str = std::str::from_utf8(&entry[16..28]).unwrap_or("").trim().to_string();
+            let date_str = std::str::from_utf8(&entry[16..28])
+                .unwrap_or("")
+                .trim()
+                .to_string();
             if let Ok(unix_ts) = date_str.parse::<i64>() {
                 // Convert Unix timestamp to ExifTool date format
                 let date = unix_to_exif_date(unix_ts);
@@ -98,7 +109,9 @@ fn read_ar(data: &[u8]) -> Result<Vec<Tag>> {
                 let is_64 = member[3] == 0xCF || member[0] == 0xCF;
                 if let Ok(mut macho_tags) = read_macho(member, is_64) {
                     // Remove ExeType if present (static lib doesn't need it)
-                    macho_tags.retain(|t| t.name != "ExeType" && t.name != "ObjectFileType" && t.name != "ObjectFlags");
+                    macho_tags.retain(|t| {
+                        t.name != "ExeType" && t.name != "ObjectFileType" && t.name != "ObjectFlags"
+                    });
                     tags.extend(macho_tags);
                 }
                 break; // got what we need
@@ -141,7 +154,20 @@ fn unix_to_exif_date(ts: i64) -> String {
         year += 1;
     }
     let leap = is_leap_year(year);
-    let month_days = [31i64, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let month_days = [
+        31i64,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
     let mut month = 1i32;
     for &md in &month_days {
         if days < md {
@@ -151,7 +177,10 @@ fn unix_to_exif_date(ts: i64) -> String {
         month += 1;
     }
     let day = days + 1;
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}+00:00", year, month, day, hour, minute, second)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}+00:00",
+        year, month, day, hour, minute, second
+    )
 }
 
 fn is_leap_year(y: i32) -> bool {
@@ -208,7 +237,11 @@ fn read_pe(data: &[u8]) -> Result<Vec<Tag>> {
         0xaa64 => "ARM64 little endian",
         _ => "Unknown",
     };
-    tags.push(mk("MachineType", "Machine Type", Value::String(machine_str.into())));
+    tags.push(mk(
+        "MachineType",
+        "Machine Type",
+        Value::String(machine_str.into()),
+    ));
 
     let num_sections = u16::from_le_bytes([coff[2], coff[3]]);
     let chars = u16::from_le_bytes([coff[18], coff[19]]);
@@ -225,7 +258,11 @@ fn read_pe(data: &[u8]) -> Result<Vec<Tag>> {
 
     // ImageFileCharacteristics bitmask
     let chars_str = pe_image_file_chars(chars);
-    tags.push(mk("ImageFileCharacteristics", "Image File Characteristics", Value::String(chars_str)));
+    tags.push(mk(
+        "ImageFileCharacteristics",
+        "Image File Characteristics",
+        Value::String(chars_str),
+    ));
 
     // Optional header starts at coff[20]
     let opt_size = u16::from_le_bytes([coff[16], coff[17]]) as usize;
@@ -250,36 +287,64 @@ fn read_pe(data: &[u8]) -> Result<Vec<Tag>> {
     if opt.len() >= 4 {
         let linker_maj = opt[2];
         let linker_min = opt[3];
-        tags.push(mk("LinkerVersion", "Linker Version", Value::String(format!("{}.{}", linker_maj, linker_min))));
+        tags.push(mk(
+            "LinkerVersion",
+            "Linker Version",
+            Value::String(format!("{}.{}", linker_maj, linker_min)),
+        ));
     }
 
     if opt.len() >= 12 {
         let code_size = u32::from_le_bytes([opt[4], opt[5], opt[6], opt[7]]);
         tags.push(mk("CodeSize", "Code Size", Value::U32(code_size)));
         let init_data = u32::from_le_bytes([opt[8], opt[9], opt[10], opt[11]]);
-        tags.push(mk("InitializedDataSize", "Initialized Data Size", Value::U32(init_data)));
+        tags.push(mk(
+            "InitializedDataSize",
+            "Initialized Data Size",
+            Value::U32(init_data),
+        ));
     }
 
     if opt.len() >= 20 {
         let uninit_data = u32::from_le_bytes([opt[12], opt[13], opt[14], opt[15]]);
-        tags.push(mk("UninitializedDataSize", "Uninitialized Data Size", Value::U32(uninit_data)));
+        tags.push(mk(
+            "UninitializedDataSize",
+            "Uninitialized Data Size",
+            Value::U32(uninit_data),
+        ));
         let entry_point = u32::from_le_bytes([opt[16], opt[17], opt[18], opt[19]]);
-        tags.push(mk("EntryPoint", "Entry Point", Value::String(format!("0x{:x}", entry_point))));
+        tags.push(mk(
+            "EntryPoint",
+            "Entry Point",
+            Value::String(format!("0x{:x}", entry_point)),
+        ));
     }
 
     if opt.len() >= 48 {
         let os_maj = u16::from_le_bytes([opt[40], opt[41]]);
         let os_min = u16::from_le_bytes([opt[42], opt[43]]);
-        tags.push(mk("OSVersion", "OS Version", Value::String(format!("{}.{}", os_maj, os_min))));
+        tags.push(mk(
+            "OSVersion",
+            "OS Version",
+            Value::String(format!("{}.{}", os_maj, os_min)),
+        ));
         let img_maj = u16::from_le_bytes([opt[44], opt[45]]);
         let img_min = u16::from_le_bytes([opt[46], opt[47]]);
-        tags.push(mk("ImageVersion", "Image Version", Value::String(format!("{}.{}", img_maj, img_min))));
+        tags.push(mk(
+            "ImageVersion",
+            "Image Version",
+            Value::String(format!("{}.{}", img_maj, img_min)),
+        ));
     }
 
     if opt.len() >= 56 {
         let ss_maj = u16::from_le_bytes([opt[48], opt[49]]);
         let ss_min = u16::from_le_bytes([opt[50], opt[51]]);
-        tags.push(mk("SubsystemVersion", "Subsystem Version", Value::String(format!("{}.{}", ss_maj, ss_min))));
+        tags.push(mk(
+            "SubsystemVersion",
+            "Subsystem Version",
+            Value::String(format!("{}.{}", ss_maj, ss_min)),
+        ));
     }
 
     if opt.len() >= 72 {
@@ -299,7 +364,11 @@ fn read_pe(data: &[u8]) -> Result<Vec<Tag>> {
             14 => "XBOX",
             _ => "Unknown",
         };
-        tags.push(mk("Subsystem", "Subsystem", Value::String(subsystem_str.into())));
+        tags.push(mk(
+            "Subsystem",
+            "Subsystem",
+            Value::String(subsystem_str.into()),
+        ));
     }
 
     // Parse sections to find .rsrc
@@ -317,12 +386,12 @@ fn read_pe(data: &[u8]) -> Result<Vec<Tag>> {
 
     for i in 0..num_sections as usize {
         let s = sections_offset + i * 40;
-        let va = u32::from_le_bytes([data[s+12], data[s+13], data[s+14], data[s+15]]);
-        let size = u32::from_le_bytes([data[s+16], data[s+17], data[s+18], data[s+19]]);
-        let raw = u32::from_le_bytes([data[s+20], data[s+21], data[s+22], data[s+23]]);
+        let va = u32::from_le_bytes([data[s + 12], data[s + 13], data[s + 14], data[s + 15]]);
+        let size = u32::from_le_bytes([data[s + 16], data[s + 17], data[s + 18], data[s + 19]]);
+        let raw = u32::from_le_bytes([data[s + 20], data[s + 21], data[s + 22], data[s + 23]]);
         sections.push((va, size, raw));
 
-        let sname = &data[s..s+8];
+        let sname = &data[s..s + 8];
         if sname.starts_with(b".rsrc") {
             rsrc_va = va;
             rsrc_raw = raw;
@@ -361,7 +430,12 @@ fn va_to_offset(va: u32, sections: &[(u32, u32, u32)]) -> Option<usize> {
 }
 
 /// Find the raw file offset of the Version resource data
-fn find_version_resource(rsrc: &[u8], _rsrc_va: u32, sections: &[(u32, u32, u32)], data: &[u8]) -> Option<usize> {
+fn find_version_resource(
+    rsrc: &[u8],
+    _rsrc_va: u32,
+    sections: &[(u32, u32, u32)],
+    data: &[u8],
+) -> Option<usize> {
     // Resource directory: 16-byte header + entries
     // entry: u32 name, u32 offset_or_data
     if rsrc.len() < 16 {
@@ -377,8 +451,18 @@ fn find_version_resource(rsrc: &[u8], _rsrc_va: u32, sections: &[(u32, u32, u32)
         if entry_off + 8 > rsrc.len() {
             break;
         }
-        let name = u32::from_le_bytes([rsrc[entry_off], rsrc[entry_off+1], rsrc[entry_off+2], rsrc[entry_off+3]]);
-        let ptr = u32::from_le_bytes([rsrc[entry_off+4], rsrc[entry_off+5], rsrc[entry_off+6], rsrc[entry_off+7]]);
+        let name = u32::from_le_bytes([
+            rsrc[entry_off],
+            rsrc[entry_off + 1],
+            rsrc[entry_off + 2],
+            rsrc[entry_off + 3],
+        ]);
+        let ptr = u32::from_le_bytes([
+            rsrc[entry_off + 4],
+            rsrc[entry_off + 5],
+            rsrc[entry_off + 6],
+            rsrc[entry_off + 7],
+        ]);
 
         if name != 16 {
             continue; // not RT_VERSION
@@ -392,8 +476,8 @@ fn find_version_resource(rsrc: &[u8], _rsrc_va: u32, sections: &[(u32, u32, u32)
         if l1_off + 16 > rsrc.len() {
             continue;
         }
-        let l1_named = u16::from_le_bytes([rsrc[l1_off+12], rsrc[l1_off+13]]) as usize;
-        let l1_id = u16::from_le_bytes([rsrc[l1_off+14], rsrc[l1_off+15]]) as usize;
+        let l1_named = u16::from_le_bytes([rsrc[l1_off + 12], rsrc[l1_off + 13]]) as usize;
+        let l1_id = u16::from_le_bytes([rsrc[l1_off + 14], rsrc[l1_off + 15]]) as usize;
         let l1_total = l1_named + l1_id;
 
         for j in 0..l1_total {
@@ -401,7 +485,7 @@ fn find_version_resource(rsrc: &[u8], _rsrc_va: u32, sections: &[(u32, u32, u32)
             if e1 + 8 > rsrc.len() {
                 break;
             }
-            let ptr1 = u32::from_le_bytes([rsrc[e1+4], rsrc[e1+5], rsrc[e1+6], rsrc[e1+7]]);
+            let ptr1 = u32::from_le_bytes([rsrc[e1 + 4], rsrc[e1 + 5], rsrc[e1 + 6], rsrc[e1 + 7]]);
 
             // Level 2: language directory
             if ptr1 & 0x80000000 == 0 {
@@ -411,8 +495,8 @@ fn find_version_resource(rsrc: &[u8], _rsrc_va: u32, sections: &[(u32, u32, u32)
             if l2_off + 16 > rsrc.len() {
                 continue;
             }
-            let l2_named = u16::from_le_bytes([rsrc[l2_off+12], rsrc[l2_off+13]]) as usize;
-            let l2_id = u16::from_le_bytes([rsrc[l2_off+14], rsrc[l2_off+15]]) as usize;
+            let l2_named = u16::from_le_bytes([rsrc[l2_off + 12], rsrc[l2_off + 13]]) as usize;
+            let l2_id = u16::from_le_bytes([rsrc[l2_off + 14], rsrc[l2_off + 15]]) as usize;
             let l2_total = l2_named + l2_id;
 
             for k in 0..l2_total {
@@ -420,7 +504,8 @@ fn find_version_resource(rsrc: &[u8], _rsrc_va: u32, sections: &[(u32, u32, u32)
                 if e2 + 8 > rsrc.len() {
                     break;
                 }
-                let ptr2 = u32::from_le_bytes([rsrc[e2+4], rsrc[e2+5], rsrc[e2+6], rsrc[e2+7]]);
+                let ptr2 =
+                    u32::from_le_bytes([rsrc[e2 + 4], rsrc[e2 + 5], rsrc[e2 + 6], rsrc[e2 + 7]]);
 
                 if ptr2 & 0x80000000 != 0 {
                     continue; // should be a leaf
@@ -431,7 +516,12 @@ fn find_version_resource(rsrc: &[u8], _rsrc_va: u32, sections: &[(u32, u32, u32)
                 if data_entry_off + 16 > rsrc.len() {
                     continue;
                 }
-                let data_va = u32::from_le_bytes([rsrc[data_entry_off], rsrc[data_entry_off+1], rsrc[data_entry_off+2], rsrc[data_entry_off+3]]);
+                let data_va = u32::from_le_bytes([
+                    rsrc[data_entry_off],
+                    rsrc[data_entry_off + 1],
+                    rsrc[data_entry_off + 2],
+                    rsrc[data_entry_off + 3],
+                ]);
                 // Convert VA to file offset
                 if let Some(file_off) = va_to_offset(data_va, sections) {
                     if file_off < data.len() {
@@ -449,7 +539,7 @@ fn read_utf16_str(data: &[u8], start: usize, end: usize) -> (String, usize) {
     let mut pos = start;
     let mut chars: Vec<u16> = Vec::new();
     while pos + 2 <= end {
-        let ch = u16::from_le_bytes([data[pos], data[pos+1]]);
+        let ch = u16::from_le_bytes([data[pos], data[pos + 1]]);
         pos += 2;
         if ch == 0 {
             break;
@@ -468,9 +558,9 @@ fn parse_vs_version_info(data: &[u8], start: usize, tags: &mut Vec<Tag>) {
     if start + 6 > data.len() {
         return;
     }
-    let total_len = u16::from_le_bytes([data[start], data[start+1]]) as usize;
-    let val_len = u16::from_le_bytes([data[start+2], data[start+3]]) as usize;
-    let _typ = u16::from_le_bytes([data[start+4], data[start+5]]);
+    let total_len = u16::from_le_bytes([data[start], data[start + 1]]) as usize;
+    let val_len = u16::from_le_bytes([data[start + 2], data[start + 3]]) as usize;
+    let _typ = u16::from_le_bytes([data[start + 4], data[start + 5]]);
 
     let end = (start + total_len).min(data.len());
 
@@ -489,18 +579,42 @@ fn parse_vs_version_info(data: &[u8], start: usize, tags: &mut Vec<Tag>) {
             // FileVersionMS/LS at offset 8
             let fv_ms = u32::from_le_bytes([ffi[8], ffi[9], ffi[10], ffi[11]]);
             let fv_ls = u32::from_le_bytes([ffi[12], ffi[13], ffi[14], ffi[15]]);
-            let file_ver = format!("{}.{}.{}.{}", fv_ms >> 16, fv_ms & 0xffff, fv_ls >> 16, fv_ls & 0xffff);
-            tags.push(mk("FileVersionNumber", "File Version Number", Value::String(file_ver)));
+            let file_ver = format!(
+                "{}.{}.{}.{}",
+                fv_ms >> 16,
+                fv_ms & 0xffff,
+                fv_ls >> 16,
+                fv_ls & 0xffff
+            );
+            tags.push(mk(
+                "FileVersionNumber",
+                "File Version Number",
+                Value::String(file_ver),
+            ));
 
             // ProductVersionMS/LS at offset 16
             let pv_ms = u32::from_le_bytes([ffi[16], ffi[17], ffi[18], ffi[19]]);
             let pv_ls = u32::from_le_bytes([ffi[20], ffi[21], ffi[22], ffi[23]]);
-            let prod_ver = format!("{}.{}.{}.{}", pv_ms >> 16, pv_ms & 0xffff, pv_ls >> 16, pv_ls & 0xffff);
-            tags.push(mk("ProductVersionNumber", "Product Version Number", Value::String(prod_ver)));
+            let prod_ver = format!(
+                "{}.{}.{}.{}",
+                pv_ms >> 16,
+                pv_ms & 0xffff,
+                pv_ls >> 16,
+                pv_ls & 0xffff
+            );
+            tags.push(mk(
+                "ProductVersionNumber",
+                "Product Version Number",
+                Value::String(prod_ver),
+            ));
 
             // FileFlagsMask at offset 24
             let ff_mask = u32::from_le_bytes([ffi[24], ffi[25], ffi[26], ffi[27]]);
-            tags.push(mk("FileFlagsMask", "File Flags Mask", Value::String(format!("0x{:04x}", ff_mask))));
+            tags.push(mk(
+                "FileFlagsMask",
+                "File Flags Mask",
+                Value::String(format!("0x{:04x}", ff_mask)),
+            ));
 
             // FileFlags at offset 28
             let ff = u32::from_le_bytes([ffi[28], ffi[29], ffi[30], ffi[31]]);
@@ -528,7 +642,11 @@ fn parse_vs_version_info(data: &[u8], start: usize, tags: &mut Vec<Tag>) {
             if !fos_str.is_empty() {
                 tags.push(mk("FileOS", "File OS", Value::String(fos_str.into())));
             } else {
-                tags.push(mk("FileOS", "File OS", Value::String(format!("0x{:04x}", fos))));
+                tags.push(mk(
+                    "FileOS",
+                    "File OS",
+                    Value::String(format!("0x{:04x}", fos)),
+                ));
             }
 
             // ObjectFileType at offset 36
@@ -544,7 +662,11 @@ fn parse_vs_version_info(data: &[u8], start: usize, tags: &mut Vec<Tag>) {
                 _ => "",
             };
             if !oft_str.is_empty() {
-                tags.push(mk("ObjectFileType", "Object File Type", Value::String(oft_str.into())));
+                tags.push(mk(
+                    "ObjectFileType",
+                    "Object File Type",
+                    Value::String(oft_str.into()),
+                ));
             }
 
             // FileSubtype at offset 40
@@ -557,8 +679,8 @@ fn parse_vs_version_info(data: &[u8], start: usize, tags: &mut Vec<Tag>) {
     let mut pos = key_end + val_len;
     pos = (pos + 3) & !3; // align to 4 bytes
     while pos + 6 <= end {
-        let child_len = u16::from_le_bytes([data[pos], data[pos+1]]) as usize;
-        let child_val_len = u16::from_le_bytes([data[pos+2], data[pos+3]]) as usize;
+        let child_len = u16::from_le_bytes([data[pos], data[pos + 1]]) as usize;
+        let child_val_len = u16::from_le_bytes([data[pos + 2], data[pos + 3]]) as usize;
         let child_end = (pos + child_len).min(end);
 
         let (child_key, child_key_end) = read_utf16_str(data, pos + 6, child_end);
@@ -583,7 +705,7 @@ fn parse_string_file_info(data: &[u8], start: usize, end: usize, tags: &mut Vec<
     if pos + 6 > end {
         return;
     }
-    let st_len = u16::from_le_bytes([data[pos], data[pos+1]]) as usize;
+    let st_len = u16::from_le_bytes([data[pos], data[pos + 1]]) as usize;
     if st_len == 0 {
         return;
     }
@@ -595,7 +717,11 @@ fn parse_string_file_info(data: &[u8], start: usize, end: usize, tags: &mut Vec<
     // Extract LanguageCode and CharacterSet
     if lang_char.len() >= 4 {
         let lang_code = &lang_char[..4];
-        let char_set = if lang_char.len() > 4 { &lang_char[4..] } else { "" };
+        let char_set = if lang_char.len() > 4 {
+            &lang_char[4..]
+        } else {
+            ""
+        };
 
         let lang_name = match lang_code.to_uppercase().as_str() {
             "0409" => "English (U.S.)",
@@ -622,7 +748,11 @@ fn parse_string_file_info(data: &[u8], start: usize, end: usize, tags: &mut Vec<
             "1009" => "English (Canadian)",
             _ => lang_code,
         };
-        tags.push(mk("LanguageCode", "Language Code", Value::String(lang_name.to_string())));
+        tags.push(mk(
+            "LanguageCode",
+            "Language Code",
+            Value::String(lang_name.to_string()),
+        ));
 
         if !char_set.is_empty() {
             let cs_name = match char_set.to_uppercase().as_str() {
@@ -641,15 +771,19 @@ fn parse_string_file_info(data: &[u8], start: usize, end: usize, tags: &mut Vec<
                 "04E8" => "Windows, Arabic",
                 _ => char_set,
             };
-            tags.push(mk("CharacterSet", "Character Set", Value::String(cs_name.to_string())));
+            tags.push(mk(
+                "CharacterSet",
+                "Character Set",
+                Value::String(cs_name.to_string()),
+            ));
         }
     }
 
     // Parse string entries
     let mut spos = key_end;
     while spos + 6 <= st_end {
-        let s_len = u16::from_le_bytes([data[spos], data[spos+1]]) as usize;
-        let s_val_len = u16::from_le_bytes([data[spos+2], data[spos+3]]) as usize;
+        let s_len = u16::from_le_bytes([data[spos], data[spos + 1]]) as usize;
+        let s_val_len = u16::from_le_bytes([data[spos + 2], data[spos + 3]]) as usize;
         if s_len == 0 {
             break;
         }
@@ -681,33 +815,79 @@ fn parse_string_file_info(data: &[u8], start: usize, end: usize, tags: &mut Vec<
 
 fn pe_image_file_chars(flags: u16) -> String {
     let mut parts = Vec::new();
-    if flags & (1 << 0) != 0 { parts.push("No relocs"); }
-    if flags & (1 << 1) != 0 { parts.push("Executable"); }
-    if flags & (1 << 2) != 0 { parts.push("No line numbers"); }
-    if flags & (1 << 3) != 0 { parts.push("No symbols"); }
-    if flags & (1 << 4) != 0 { parts.push("Aggressive working-set trim"); }
-    if flags & (1 << 5) != 0 { parts.push("Large address aware"); }
-    if flags & (1 << 7) != 0 { parts.push("Bytes reversed lo"); }
-    if flags & (1 << 8) != 0 { parts.push("32-bit"); }
-    if flags & (1 << 9) != 0 { parts.push("No debug"); }
-    if flags & (1 << 10) != 0 { parts.push("Removable run from swap"); }
-    if flags & (1 << 11) != 0 { parts.push("Net run from swap"); }
-    if flags & (1 << 12) != 0 { parts.push("System file"); }
-    if flags & (1 << 13) != 0 { parts.push("DLL"); }
-    if flags & (1 << 14) != 0 { parts.push("Uniprocessor only"); }
-    if flags & (1 << 15) != 0 { parts.push("Bytes reversed hi"); }
+    if flags & (1 << 0) != 0 {
+        parts.push("No relocs");
+    }
+    if flags & (1 << 1) != 0 {
+        parts.push("Executable");
+    }
+    if flags & (1 << 2) != 0 {
+        parts.push("No line numbers");
+    }
+    if flags & (1 << 3) != 0 {
+        parts.push("No symbols");
+    }
+    if flags & (1 << 4) != 0 {
+        parts.push("Aggressive working-set trim");
+    }
+    if flags & (1 << 5) != 0 {
+        parts.push("Large address aware");
+    }
+    if flags & (1 << 7) != 0 {
+        parts.push("Bytes reversed lo");
+    }
+    if flags & (1 << 8) != 0 {
+        parts.push("32-bit");
+    }
+    if flags & (1 << 9) != 0 {
+        parts.push("No debug");
+    }
+    if flags & (1 << 10) != 0 {
+        parts.push("Removable run from swap");
+    }
+    if flags & (1 << 11) != 0 {
+        parts.push("Net run from swap");
+    }
+    if flags & (1 << 12) != 0 {
+        parts.push("System file");
+    }
+    if flags & (1 << 13) != 0 {
+        parts.push("DLL");
+    }
+    if flags & (1 << 14) != 0 {
+        parts.push("Uniprocessor only");
+    }
+    if flags & (1 << 15) != 0 {
+        parts.push("Bytes reversed hi");
+    }
     parts.join(", ")
 }
 
 fn pe_file_flags(flags: u16) -> String {
     let mut parts = Vec::new();
-    if flags & (1 << 0) != 0 { parts.push("Debug"); }
-    if flags & (1 << 1) != 0 { parts.push("Pre-release"); }
-    if flags & (1 << 2) != 0 { parts.push("Patched"); }
-    if flags & (1 << 3) != 0 { parts.push("Private build"); }
-    if flags & (1 << 4) != 0 { parts.push("Info inferred"); }
-    if flags & (1 << 5) != 0 { parts.push("Special build"); }
-    if parts.is_empty() { "(none)".into() } else { parts.join(", ") }
+    if flags & (1 << 0) != 0 {
+        parts.push("Debug");
+    }
+    if flags & (1 << 1) != 0 {
+        parts.push("Pre-release");
+    }
+    if flags & (1 << 2) != 0 {
+        parts.push("Patched");
+    }
+    if flags & (1 << 3) != 0 {
+        parts.push("Private build");
+    }
+    if flags & (1 << 4) != 0 {
+        parts.push("Info inferred");
+    }
+    if flags & (1 << 5) != 0 {
+        parts.push("Special build");
+    }
+    if parts.is_empty() {
+        "(none)".into()
+    } else {
+        parts.join(", ")
+    }
 }
 
 fn read_elf(data: &[u8]) -> Result<Vec<Tag>> {
@@ -735,8 +915,16 @@ fn read_elf(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Other",
     };
 
-    tags.push(mk("CPUType", "CPU Type", Value::String(format!("ELF {}", class))));
-    tags.push(mk("CPUByteOrder", "CPU Byte Order", Value::String(endian.into())));
+    tags.push(mk(
+        "CPUType",
+        "CPU Type",
+        Value::String(format!("ELF {}", class)),
+    ));
+    tags.push(mk(
+        "CPUByteOrder",
+        "CPU Byte Order",
+        Value::String(endian.into()),
+    ));
 
     let is_le = data[5] == 1;
     let elf_type = if is_le {
@@ -751,7 +939,11 @@ fn read_elf(data: &[u8]) -> Result<Vec<Tag>> {
         4 => "Core Dump",
         _ => "Unknown",
     };
-    tags.push(mk("ObjectFileType", "Object File Type", Value::String(type_str.into())));
+    tags.push(mk(
+        "ObjectFileType",
+        "Object File Type",
+        Value::String(type_str.into()),
+    ));
 
     let machine = if is_le {
         u16::from_le_bytes([data[18], data[19]])
@@ -767,7 +959,11 @@ fn read_elf(data: &[u8]) -> Result<Vec<Tag>> {
         183 => "ARM64",
         _ => "Unknown",
     };
-    tags.push(mk("CPUArchitecture", "CPU Architecture", Value::String(machine_str.into())));
+    tags.push(mk(
+        "CPUArchitecture",
+        "CPU Architecture",
+        Value::String(machine_str.into()),
+    ));
 
     Ok(tags)
 }
@@ -784,8 +980,16 @@ fn read_macho(data: &[u8], is_64: bool) -> Result<Vec<Tag>> {
     let arch_str = if is_64 { "64 bit" } else { "32 bit" };
     let order_str = if is_le { "Little endian" } else { "Big endian" };
 
-    tags.push(mk("CPUArchitecture", "CPU Architecture", Value::String(arch_str.into())));
-    tags.push(mk("CPUByteOrder", "CPU Byte Order", Value::String(order_str.into())));
+    tags.push(mk(
+        "CPUArchitecture",
+        "CPU Architecture",
+        Value::String(arch_str.into()),
+    ));
+    tags.push(mk(
+        "CPUByteOrder",
+        "CPU Byte Order",
+        Value::String(order_str.into()),
+    ));
 
     if data.len() < 28 {
         return Ok(tags);
@@ -802,14 +1006,22 @@ fn read_macho(data: &[u8], is_64: bool) -> Result<Vec<Tag>> {
 
     let read_u32 = |offset: usize| -> u32 {
         if is_le {
-            u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]])
+            u32::from_le_bytes([
+                data[offset],
+                data[offset + 1],
+                data[offset + 2],
+                data[offset + 3],
+            ])
         } else {
-            u32::from_be_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]])
+            u32::from_be_bytes([
+                data[offset],
+                data[offset + 1],
+                data[offset + 2],
+                data[offset + 3],
+            ])
         }
     };
-    let read_i32 = |offset: usize| -> i32 {
-        read_u32(offset) as i32
-    };
+    let read_i32 = |offset: usize| -> i32 { read_u32(offset) as i32 };
 
     let cpu_type = read_i32(4);
     let cpu_subtype = read_i32(8);
@@ -820,7 +1032,7 @@ fn read_macho(data: &[u8], is_64: bool) -> Result<Vec<Tag>> {
     let cpu_base = cpu_type & 0x00FFFFFF;
     let has_64_flag = (cpu_type as u32) & 0x01000000 != 0;
     let cpu_name = match cpu_base {
-        0xFFFFFF => "Any",  // -1 & 0xFFFFFF
+        0xFFFFFF => "Any", // -1 & 0xFFFFFF
         1 => "VAX",
         2 => "ROMP",
         4 => "NS32032",
@@ -854,17 +1066,24 @@ fn read_macho(data: &[u8], is_64: bool) -> Result<Vec<Tag>> {
     let lookup_key = format!("{} {}", cpu_base, sub_base);
     let subtype_name = macho_cpu_subtype(&lookup_key);
     let cpu_subtype_str = if sub_has_64 || (has_64_flag && !subtype_name.is_empty()) {
-        format!("{} 64-bit", if subtype_name.is_empty() {
-            format!("Unknown ({} {})", cpu_type, cpu_subtype)
-        } else {
-            subtype_name.to_string()
-        })
+        format!(
+            "{} 64-bit",
+            if subtype_name.is_empty() {
+                format!("Unknown ({} {})", cpu_type, cpu_subtype)
+            } else {
+                subtype_name.to_string()
+            }
+        )
     } else if subtype_name.is_empty() {
         format!("Unknown ({} {})", cpu_type, cpu_subtype)
     } else {
         subtype_name.to_string()
     };
-    tags.push(mk("CPUSubtype", "CPU Subtype", Value::String(cpu_subtype_str)));
+    tags.push(mk(
+        "CPUSubtype",
+        "CPU Subtype",
+        Value::String(cpu_subtype_str),
+    ));
 
     // ObjectFileType
     let obj_type_str = match file_type {
@@ -881,7 +1100,11 @@ fn read_macho(data: &[u8], is_64: bool) -> Result<Vec<Tag>> {
         11 => "x86_64 kexts",
         _ => "Unknown",
     };
-    tags.push(mk("ObjectFileType", "Object File Type", Value::String(obj_type_str.into())));
+    tags.push(mk(
+        "ObjectFileType",
+        "Object File Type",
+        Value::String(obj_type_str.into()),
+    ));
 
     // ObjectFlags: bitmask decoding
     let flag_names = [
@@ -1037,7 +1260,13 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         id: TagId::Text(name.to_string()),
         name: name.to_string(),
         description: description.to_string(),
-        group: TagGroup { family0: "EXE".into(), family1: "EXE".into(), family2: "Other".into() },
-        raw_value: value, print_value: pv, priority: 0,
+        group: TagGroup {
+            family0: "EXE".into(),
+            family1: "EXE".into(),
+            family2: "Other".into(),
+        },
+        raw_value: value,
+        print_value: pv,
+        priority: 0,
     }
 }

@@ -38,16 +38,106 @@ struct DvProfile {
 }
 
 const DV_PROFILES: &[DvProfile] = &[
-    DvProfile { dsf: 0, video_stype: 0x0,  frame_size: 120000, video_format: "IEC 61834, SMPTE-314M - 525/60 (NTSC)", colorimetry: "4:1:1", frame_rate: 30000.0/1001.0, image_height: 480,  image_width: 720  },
-    DvProfile { dsf: 1, video_stype: 0x0,  frame_size: 144000, video_format: "IEC 61834 - 625/50 (PAL)",              colorimetry: "4:2:0", frame_rate: 25.0,            image_height: 576,  image_width: 720  },
-    DvProfile { dsf: 1, video_stype: 0x0,  frame_size: 144000, video_format: "SMPTE-314M - 625/50 (PAL)",             colorimetry: "4:1:1", frame_rate: 25.0,            image_height: 576,  image_width: 720  },
-    DvProfile { dsf: 0, video_stype: 0x4,  frame_size: 240000, video_format: "DVCPRO50: SMPTE-314M - 525/60 (NTSC) 50 Mbps", colorimetry: "4:2:2", frame_rate: 30000.0/1001.0, image_height: 480, image_width: 720 },
-    DvProfile { dsf: 1, video_stype: 0x4,  frame_size: 288000, video_format: "DVCPRO50: SMPTE-314M - 625/50 (PAL) 50 Mbps",  colorimetry: "4:2:2", frame_rate: 25.0,        image_height: 576,  image_width: 720  },
-    DvProfile { dsf: 0, video_stype: 0x14, frame_size: 480000, video_format: "DVCPRO HD: SMPTE-370M - 1080i60 100 Mbps",     colorimetry: "4:2:2", frame_rate: 30000.0/1001.0, image_height: 1080, image_width: 1280 },
-    DvProfile { dsf: 1, video_stype: 0x14, frame_size: 576000, video_format: "DVCPRO HD: SMPTE-370M - 1080i50 100 Mbps",     colorimetry: "4:2:2", frame_rate: 25.0,        image_height: 1080, image_width: 1440 },
-    DvProfile { dsf: 0, video_stype: 0x18, frame_size: 240000, video_format: "DVCPRO HD: SMPTE-370M - 720p60 100 Mbps",      colorimetry: "4:2:2", frame_rate: 60000.0/1001.0, image_height: 720, image_width: 960  },
-    DvProfile { dsf: 1, video_stype: 0x18, frame_size: 288000, video_format: "DVCPRO HD: SMPTE-370M - 720p50 100 Mbps",      colorimetry: "4:2:2", frame_rate: 50.0,        image_height: 720,  image_width: 960  },
-    DvProfile { dsf: 1, video_stype: 0x1,  frame_size: 144000, video_format: "IEC 61883-5 - 625/50 (PAL)",            colorimetry: "4:2:0", frame_rate: 25.0,            image_height: 576,  image_width: 720  },
+    DvProfile {
+        dsf: 0,
+        video_stype: 0x0,
+        frame_size: 120000,
+        video_format: "IEC 61834, SMPTE-314M - 525/60 (NTSC)",
+        colorimetry: "4:1:1",
+        frame_rate: 30000.0 / 1001.0,
+        image_height: 480,
+        image_width: 720,
+    },
+    DvProfile {
+        dsf: 1,
+        video_stype: 0x0,
+        frame_size: 144000,
+        video_format: "IEC 61834 - 625/50 (PAL)",
+        colorimetry: "4:2:0",
+        frame_rate: 25.0,
+        image_height: 576,
+        image_width: 720,
+    },
+    DvProfile {
+        dsf: 1,
+        video_stype: 0x0,
+        frame_size: 144000,
+        video_format: "SMPTE-314M - 625/50 (PAL)",
+        colorimetry: "4:1:1",
+        frame_rate: 25.0,
+        image_height: 576,
+        image_width: 720,
+    },
+    DvProfile {
+        dsf: 0,
+        video_stype: 0x4,
+        frame_size: 240000,
+        video_format: "DVCPRO50: SMPTE-314M - 525/60 (NTSC) 50 Mbps",
+        colorimetry: "4:2:2",
+        frame_rate: 30000.0 / 1001.0,
+        image_height: 480,
+        image_width: 720,
+    },
+    DvProfile {
+        dsf: 1,
+        video_stype: 0x4,
+        frame_size: 288000,
+        video_format: "DVCPRO50: SMPTE-314M - 625/50 (PAL) 50 Mbps",
+        colorimetry: "4:2:2",
+        frame_rate: 25.0,
+        image_height: 576,
+        image_width: 720,
+    },
+    DvProfile {
+        dsf: 0,
+        video_stype: 0x14,
+        frame_size: 480000,
+        video_format: "DVCPRO HD: SMPTE-370M - 1080i60 100 Mbps",
+        colorimetry: "4:2:2",
+        frame_rate: 30000.0 / 1001.0,
+        image_height: 1080,
+        image_width: 1280,
+    },
+    DvProfile {
+        dsf: 1,
+        video_stype: 0x14,
+        frame_size: 576000,
+        video_format: "DVCPRO HD: SMPTE-370M - 1080i50 100 Mbps",
+        colorimetry: "4:2:2",
+        frame_rate: 25.0,
+        image_height: 1080,
+        image_width: 1440,
+    },
+    DvProfile {
+        dsf: 0,
+        video_stype: 0x18,
+        frame_size: 240000,
+        video_format: "DVCPRO HD: SMPTE-370M - 720p60 100 Mbps",
+        colorimetry: "4:2:2",
+        frame_rate: 60000.0 / 1001.0,
+        image_height: 720,
+        image_width: 960,
+    },
+    DvProfile {
+        dsf: 1,
+        video_stype: 0x18,
+        frame_size: 288000,
+        video_format: "DVCPRO HD: SMPTE-370M - 720p50 100 Mbps",
+        colorimetry: "4:2:2",
+        frame_rate: 50.0,
+        image_height: 720,
+        image_width: 960,
+    },
+    DvProfile {
+        dsf: 1,
+        video_stype: 0x1,
+        frame_size: 144000,
+        video_format: "IEC 61883-5 - 625/50 (PAL)",
+        colorimetry: "4:2:0",
+        frame_rate: 25.0,
+        image_height: 576,
+        image_width: 720,
+    },
 ];
 
 /// Format bitrate in the way Perl ConvertBitrate does (e.g., "28.8 Mbps")
@@ -80,7 +170,12 @@ fn format_duration(secs: f64) -> String {
     } else if secs < 3600.0 {
         format!("{}:{:05.2}", secs as u64 / 60, secs % 60.0)
     } else {
-        format!("{}:{:02}:{:05.2}", secs as u64 / 3600, (secs as u64 % 3600) / 60, secs % 60.0)
+        format!(
+            "{}:{:02}:{:05.2}",
+            secs as u64 / 3600,
+            (secs as u64 % 3600) / 60,
+            secs % 60.0
+        )
     }
 }
 
@@ -108,7 +203,9 @@ pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
     let profile = if dsf == 1 && stype == 0 && (data[start + 4] & 0x07) != 0 {
         &DV_PROFILES[2]
     } else {
-        let found = DV_PROFILES.iter().find(|p| p.dsf == dsf && p.video_stype == stype);
+        let found = DV_PROFILES
+            .iter()
+            .find(|p| p.dsf == dsf && p.video_stype == stype);
         match found {
             Some(p) => p,
             None => return Ok(Vec::new()),
@@ -126,13 +223,19 @@ pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
     let mut pos = start;
     for _i in 1..6usize {
         pos += 80;
-        if pos >= data.len() { break; }
+        if pos >= data.len() {
+            break;
+        }
         let block_type = data[pos];
-        if (block_type & 0xf0) != 0x50 { continue; } // VAUX type
+        if (block_type & 0xf0) != 0x50 {
+            continue;
+        } // VAUX type
 
         for j in 0..15usize {
             let p = pos + j * 5 + 3;
-            if p + 4 >= data.len() { break; }
+            if p + 4 >= data.len() {
+                break;
+            }
             let t = data[p];
             if t == 0x61 {
                 // video control
@@ -158,7 +261,11 @@ pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
                 if date_raw.chars().any(|c| c.is_ascii_lowercase()) {
                     date = None;
                 } else {
-                    let year_prefix = if year_str < "90".to_string() { "20" } else { "19" };
+                    let year_prefix = if year_str < "90".to_string() {
+                        "20"
+                    } else {
+                        "19"
+                    };
                     date = Some(format!("{}{}", year_prefix, date_raw));
                 }
                 time = None;
@@ -180,16 +287,32 @@ pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
         tags.push(mk_str("DateTimeOriginal", &format!("{} {}", d, ti)));
     }
 
-    tags.push(mk("ImageWidth", Value::U32(profile.image_width), profile.image_width.to_string()));
-    tags.push(mk("ImageHeight", Value::U32(profile.image_height), profile.image_height.to_string()));
+    tags.push(mk(
+        "ImageWidth",
+        Value::U32(profile.image_width),
+        profile.image_width.to_string(),
+    ));
+    tags.push(mk(
+        "ImageHeight",
+        Value::U32(profile.image_height),
+        profile.image_height.to_string(),
+    ));
 
     // Calculate duration and bitrate
     let byte_rate = profile.frame_size as f64 * profile.frame_rate;
     let total_bitrate = 8.0 * byte_rate;
     let duration = file_size as f64 / byte_rate;
 
-    tags.push(mk("Duration", Value::String(format!("{:.10}", duration)), format_duration(duration)));
-    tags.push(mk("TotalBitrate", Value::String(format!("{}", total_bitrate as u64)), format_bitrate(total_bitrate)));
+    tags.push(mk(
+        "Duration",
+        Value::String(format!("{:.10}", duration)),
+        format_duration(duration),
+    ));
+    tags.push(mk(
+        "TotalBitrate",
+        Value::String(format!("{}", total_bitrate as u64)),
+        format_bitrate(total_bitrate),
+    ));
     tags.push(mk_str("VideoFormat", profile.video_format));
 
     // VideoScanType and AspectRatio (only if date/time was found)
@@ -235,10 +358,18 @@ pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
                 2 => 32000,
                 _ => unreachable!(),
             };
-            tags.push(mk("AudioSampleRate", Value::U32(sample_rate), sample_rate.to_string()));
+            tags.push(mk(
+                "AudioSampleRate",
+                Value::U32(sample_rate),
+                sample_rate.to_string(),
+            ));
         }
 
-        let atype2 = if atype == 0 && quant != 0 && freq == 2 { 2 } else { atype };
+        let atype2 = if atype == 0 && quant != 0 && freq == 2 {
+            2
+        } else {
+            atype
+        };
         if atype2 < 4 {
             let channels = match atype2 {
                 0 => 2u32,
@@ -247,7 +378,11 @@ pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
                 3 => 8,
                 _ => 0,
             };
-            tags.push(mk("AudioChannels", Value::U32(channels), channels.to_string()));
+            tags.push(mk(
+                "AudioChannels",
+                Value::U32(channels),
+                channels.to_string(),
+            ));
         }
 
         let bits = if quant != 0 { 12u32 } else { 16 };
@@ -260,8 +395,11 @@ pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
 fn find_dif_start(data: &[u8]) -> crate::error::Result<Option<usize>> {
     // Try pattern 1: \x1f\x07\x00[\x3f\xbf]
     for i in 0..data.len().saturating_sub(4) {
-        if data[i] == 0x1f && data[i+1] == 0x07 && data[i+2] == 0x00
-            && (data[i+3] == 0x3f || data[i+3] == 0xbf) {
+        if data[i] == 0x1f
+            && data[i + 1] == 0x07
+            && data[i + 2] == 0x00
+            && (data[i + 3] == 0x3f || data[i + 3] == 0xbf)
+        {
             return Ok(Some(i.saturating_sub(i % 80)));
         }
     }
@@ -270,10 +408,10 @@ fn find_dif_start(data: &[u8]) -> crate::error::Result<Option<usize>> {
     let pat1 = [0xff, 0x3f, 0x07, 0x00];
     let _pat2 = [0xff, 0x3f, 0x07, 0x01];
     for i in 0..data.len().saturating_sub(167) {
-        let matches = (data[i] == 0x00 || data[i] == 0xff) &&
-            data[i+1..i+5] == pat1[1..5] &&
-            i + 167 < data.len() &&
-            data[i+81..i+85] == [0xff, 0x3f, 0x07, 0x01];
+        let matches = (data[i] == 0x00 || data[i] == 0xff)
+            && data[i + 1..i + 5] == pat1[1..5]
+            && i + 167 < data.len()
+            && data[i + 81..i + 85] == [0xff, 0x3f, 0x07, 0x01];
         if matches {
             let start = i.saturating_sub(163);
             if start + 163 < data.len() {

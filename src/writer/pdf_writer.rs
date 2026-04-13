@@ -39,8 +39,7 @@ pub fn write_pdf(
 /// Find a PDF key in the file (e.g., "/Title").
 fn find_pdf_key(data: &[u8], key: &str) -> Option<usize> {
     let key_bytes = key.as_bytes();
-    data.windows(key_bytes.len())
-        .position(|w| w == key_bytes)
+    data.windows(key_bytes.len()).position(|w| w == key_bytes)
 }
 
 /// Replace a PDF string value after the key position.
@@ -68,7 +67,9 @@ fn replace_pdf_value(data: &mut Vec<u8>, after_key: usize, new_value: &str) {
             match rest[end] {
                 b'(' => depth += 1,
                 b')' => depth -= 1,
-                b'\\' => { end += 1; } // skip escaped char
+                b'\\' => {
+                    end += 1;
+                } // skip escaped char
                 _ => {}
             }
             end += 1;
@@ -98,7 +99,12 @@ fn replace_pdf_value(data: &mut Vec<u8>, after_key: usize, new_value: &str) {
         }
     } else if rest[pos] == b'<' {
         // Hex string: find '>'
-        let end = rest[pos..].iter().position(|&b| b == b'>').unwrap_or(rest.len()) + pos + 1;
+        let end = rest[pos..]
+            .iter()
+            .position(|&b| b == b'>')
+            .unwrap_or(rest.len())
+            + pos
+            + 1;
         let abs_end = after_key + end;
 
         // Replace with literal string

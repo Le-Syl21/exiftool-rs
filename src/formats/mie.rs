@@ -20,7 +20,12 @@ pub fn read_mie(data: &[u8]) -> Result<Vec<Tag>> {
     Ok(tags)
 }
 
-fn parse_mie_group(data: &[u8], pos: &mut usize, group_name: &str, tags: &mut Vec<Tag>) -> Result<()> {
+fn parse_mie_group(
+    data: &[u8],
+    pos: &mut usize,
+    group_name: &str,
+    tags: &mut Vec<Tag>,
+) -> Result<()> {
     while *pos + 4 <= data.len() {
         let sync = data[*pos];
         if sync != b'~' {
@@ -38,7 +43,8 @@ fn parse_mie_group(data: &[u8], pos: &mut usize, group_name: &str, tags: &mut Ve
             }
         }
         let tag_name = if tag_len > 0 {
-            let name = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos + tag_len]).to_string();
+            let name =
+                crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos + tag_len]).to_string();
             *pos += tag_len;
             name
         } else {
@@ -54,7 +60,10 @@ fn parse_mie_group(data: &[u8], pos: &mut usize, group_name: &str, tags: &mut Ve
             val_len = match n {
                 1 => data[*pos] as usize,
                 2 => u16::from_be_bytes([data[*pos], data[*pos + 1]]) as usize,
-                4 => u32::from_be_bytes([data[*pos], data[*pos + 1], data[*pos + 2], data[*pos + 3]]) as usize,
+                4 => {
+                    u32::from_be_bytes([data[*pos], data[*pos + 1], data[*pos + 2], data[*pos + 3]])
+                        as usize
+                }
                 _ => break,
             };
             *pos += n;
@@ -155,11 +164,17 @@ fn parse_mie_value(format_type: u8, data: &[u8]) -> Value {
     match format_type {
         0x20 | 0x28 => {
             // ASCII string or UTF-8
-            Value::String(crate::encoding::decode_utf8_or_latin1(data).trim_end_matches('\0').to_string())
+            Value::String(
+                crate::encoding::decode_utf8_or_latin1(data)
+                    .trim_end_matches('\0')
+                    .to_string(),
+            )
         }
         0x30 | 0x38 => {
             // String list (null-separated)
-            let s = crate::encoding::decode_utf8_or_latin1(data).trim_end_matches('\0').to_string();
+            let s = crate::encoding::decode_utf8_or_latin1(data)
+                .trim_end_matches('\0')
+                .to_string();
             Value::String(s.replace('\0', ", "))
         }
         0x40 => {
@@ -182,7 +197,12 @@ fn parse_mie_value(format_type: u8, data: &[u8]) -> Value {
                 if vals.len() == 1 {
                     Value::U16(vals[0])
                 } else {
-                    Value::String(vals.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" "))
+                    Value::String(
+                        vals.iter()
+                            .map(|v| v.to_string())
+                            .collect::<Vec<_>>()
+                            .join(" "),
+                    )
                 }
             } else {
                 Value::Binary(data.to_vec())
@@ -248,7 +268,9 @@ fn parse_mie_value(format_type: u8, data: &[u8]) -> Value {
         0x73 => {
             // double
             if data.len() >= 8 {
-                let f = f64::from_be_bytes([data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]]);
+                let f = f64::from_be_bytes([
+                    data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7],
+                ]);
                 Value::String(format!("{}", f))
             } else {
                 Value::Binary(data.to_vec())

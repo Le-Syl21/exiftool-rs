@@ -57,11 +57,14 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
     // Duration composite: (FileSize - ID3Size) * 8 / AudioBitrate_bps
     // (approximate, matching Perl's MPEG::Composite Duration formula)
     {
-        let audio_bitrate_bps = tags.iter()
+        let audio_bitrate_bps = tags
+            .iter()
             .find(|t| t.name == "AudioBitrate")
             .and_then(|t| {
                 // print_value is like "128 kbps"
-                t.print_value.split_whitespace().next()
+                t.print_value
+                    .split_whitespace()
+                    .next()
                     .and_then(|s| s.parse::<u64>().ok())
                     .map(|kbps| kbps * 1000)
             });
@@ -78,9 +81,17 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
 
     // DateTimeOriginal from Year (ID3 composite, like Perl ID3::Composite DateTimeOriginal)
     if !tags.iter().any(|t| t.name == "DateTimeOriginal") {
-        if let Some(year) = tags.iter().find(|t| t.name == "Year").map(|t| t.print_value.clone()) {
+        if let Some(year) = tags
+            .iter()
+            .find(|t| t.name == "Year")
+            .map(|t| t.print_value.clone())
+        {
             if !year.is_empty() {
-                tags.push(mk("DateTimeOriginal", "Date/Time Original", Value::String(year)));
+                tags.push(mk(
+                    "DateTimeOriginal",
+                    "Date/Time Original",
+                    Value::String(year),
+                ));
             }
         }
     }
@@ -125,8 +136,9 @@ fn read_id3v2(data: &[u8]) -> Result<Vec<Tag>> {
             if frame_id[0] == 0 {
                 break;
             }
-            let frame_size =
-                ((data[pos + 3] as usize) << 16) | ((data[pos + 4] as usize) << 8) | data[pos + 5] as usize;
+            let frame_size = ((data[pos + 3] as usize) << 16)
+                | ((data[pos + 4] as usize) << 8)
+                | data[pos + 5] as usize;
             pos += 6;
             if frame_size == 0 || pos + frame_size > end {
                 break;
@@ -147,7 +159,8 @@ fn read_id3v2(data: &[u8]) -> Result<Vec<Tag>> {
             let frame_size = if version == 4 {
                 syncsafe_u32(&data[pos + 4..pos + 8]) as usize
             } else {
-                u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]) as usize
+                u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                    as usize
             };
             let _flags = u16::from_be_bytes([data[pos + 8], data[pos + 9]]);
             pos += 10;
@@ -276,7 +289,9 @@ fn decode_id3v2_frame(frame_id: &[u8], data: &[u8]) -> Option<Tag> {
         }
         "TXXX" => return decode_txxx_frame(data),
         "WOAR" => {
-            let url = crate::encoding::decode_utf8_or_latin1(data).trim_end_matches('\0').to_string();
+            let url = crate::encoding::decode_utf8_or_latin1(data)
+                .trim_end_matches('\0')
+                .to_string();
             return Some(mk("ArtistURL", "Artist URL", Value::String(url)));
         }
         "WXXX" => return decode_wxxx_frame(data),
@@ -416,14 +431,22 @@ fn decode_pic_frame(data: &[u8]) -> Vec<Tag> {
     let pic_type_str = picture_type_str(pic_type);
 
     let mut tags = Vec::new();
-    tags.push(mk("PictureFormat", "Picture Format", Value::String(image_format)));
-    tags.push(mk("PictureType", "Picture Type", Value::String(pic_type_str.to_string())));
-    tags.push(mk("PictureDescription", "Picture Description", Value::String(description)));
     tags.push(mk(
-        "Picture",
-        "Picture",
-        Value::Binary(image_data.to_vec()),
+        "PictureFormat",
+        "Picture Format",
+        Value::String(image_format),
     ));
+    tags.push(mk(
+        "PictureType",
+        "Picture Type",
+        Value::String(pic_type_str.to_string()),
+    ));
+    tags.push(mk(
+        "PictureDescription",
+        "Picture Description",
+        Value::String(description),
+    ));
+    tags.push(mk("Picture", "Picture", Value::Binary(image_data.to_vec())));
     tags
 }
 
@@ -450,11 +473,7 @@ fn decode_apic_primary(data: &[u8]) -> Option<Tag> {
     // Description (encoded, null-terminated)
     let (_, image_data) = split_encoded_string(rest, encoding);
 
-    Some(mk(
-        "Picture",
-        "Picture",
-        Value::Binary(image_data.to_vec()),
-    ))
+    Some(mk("Picture", "Picture", Value::Binary(image_data.to_vec())))
 }
 
 /// Decode RVA frame (ID3v2.2 relative volume adjustment).
@@ -465,25 +484,31 @@ fn decode_rva_frame(data: &[u8]) -> Option<Tag> {
     }
     let mut dat: Vec<u8> = data.to_vec();
     let flag = dat.remove(0) as u32;
-    if dat.is_empty() { return None; }
+    if dat.is_empty() {
+        return None;
+    }
     let bits = dat.remove(0) as u32;
-    if bits == 0 { return None; }
+    if bits == 0 {
+        return None;
+    }
     let bytes = ((bits + 7) / 8) as usize;
 
     // channels: (name, vol_idx, peak_idx, flag_bit)
     let channels: &[(&str, usize, usize, u32)] = &[
-        ("Right",       0, 2, 0x01),
-        ("Left",        1, 3, 0x02),
-        ("Back-right",  4, 6, 0x04),
-        ("Back-left",   5, 7, 0x08),
-        ("Center",      8, 9, 0x10),
-        ("Bass",        10, 11, 0x20),
+        ("Right", 0, 2, 0x01),
+        ("Left", 1, 3, 0x02),
+        ("Back-right", 4, 6, 0x04),
+        ("Back-left", 5, 7, 0x08),
+        ("Center", 8, 9, 0x10),
+        ("Bass", 10, 11, 0x20),
     ];
 
     let mut parts = Vec::new();
     for &(name, vol_idx, peak_idx, flag_bit) in channels {
         let j = peak_idx * bytes;
-        if dat.len() < j + bytes { break; }
+        if dat.len() < j + bytes {
+            break;
+        }
         let i = vol_idx * bytes;
         let mut rel: i64 = 0;
         for b in 0..bytes {
@@ -537,7 +562,9 @@ fn decode_wxxx_frame(data: &[u8]) -> Option<Tag> {
     let rest = &data[1..];
     let (desc_bytes, url_bytes) = split_encoded_string(rest, encoding);
     let desc = decode_raw_text(desc_bytes, encoding);
-    let url = crate::encoding::decode_utf8_or_latin1(url_bytes).trim_end_matches('\0').to_string();
+    let url = crate::encoding::decode_utf8_or_latin1(url_bytes)
+        .trim_end_matches('\0')
+        .to_string();
     let desc = desc.trim_end_matches('\0');
     let name = if desc.is_empty() { "UserURL" } else { desc };
 
@@ -656,10 +683,18 @@ fn read_id3v1(data: &[u8]) -> Vec<Tag> {
     let comment = latin1_string(&data[97..127]);
     let genre_idx = data[127] as usize;
 
-    if !title.is_empty() { tags.push(mk("Title", "Title", Value::String(title))); }
-    if !artist.is_empty() { tags.push(mk("Artist", "Artist", Value::String(artist))); }
-    if !album.is_empty() { tags.push(mk("Album", "Album", Value::String(album))); }
-    if !year.is_empty() { tags.push(mk("Year", "Year", Value::String(year))); }
+    if !title.is_empty() {
+        tags.push(mk("Title", "Title", Value::String(title)));
+    }
+    if !artist.is_empty() {
+        tags.push(mk("Artist", "Artist", Value::String(artist)));
+    }
+    if !album.is_empty() {
+        tags.push(mk("Album", "Album", Value::String(album)));
+    }
+    if !year.is_empty() {
+        tags.push(mk("Year", "Year", Value::String(year)));
+    }
 
     // ID3v1.1: if byte 125 is 0 and byte 126 is non-zero, byte 126 is track number
     if data[125] == 0 && data[126] != 0 {
@@ -673,7 +708,11 @@ fn read_id3v1(data: &[u8]) -> Vec<Tag> {
     }
 
     if genre_idx < GENRES.len() {
-        tags.push(mk("Genre", "Genre", Value::String(GENRES[genre_idx].to_string())));
+        tags.push(mk(
+            "Genre",
+            "Genre",
+            Value::String(GENRES[genre_idx].to_string()),
+        ));
     }
 
     tags
@@ -759,24 +798,44 @@ fn parse_mpeg_header(data: &[u8], start: usize) -> Option<Vec<Tag>> {
     // Matching Perl's MPEG.pm Audio table exactly
     let bitrate = if version == 3 && layer == 3 {
         // MPEG1 Layer 1
-        [0u32, 32000, 64000, 96000, 128000, 160000, 192000, 224000, 256000, 288000, 320000, 352000, 384000, 416000, 448000, 0]
-            .get(bitrate_idx).copied()?
+        [
+            0u32, 32000, 64000, 96000, 128000, 160000, 192000, 224000, 256000, 288000, 320000,
+            352000, 384000, 416000, 448000, 0,
+        ]
+        .get(bitrate_idx)
+        .copied()?
     } else if version == 3 && layer == 2 {
         // MPEG1 Layer 2
-        [0u32, 32000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000, 320000, 384000, 0]
-            .get(bitrate_idx).copied()?
+        [
+            0u32, 32000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000,
+            256000, 320000, 384000, 0,
+        ]
+        .get(bitrate_idx)
+        .copied()?
     } else if version == 3 && layer == 1 {
         // MPEG1 Layer 3
-        [0u32, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000, 320000, 0]
-            .get(bitrate_idx).copied()?
+        [
+            0u32, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000,
+            224000, 256000, 320000, 0,
+        ]
+        .get(bitrate_idx)
+        .copied()?
     } else if (version == 0 || version == 2) && layer == 3 {
         // MPEG2/2.5 Layer 1
-        [0u32, 32000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 144000, 160000, 176000, 192000, 224000, 256000, 0]
-            .get(bitrate_idx).copied()?
+        [
+            0u32, 32000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 144000, 160000, 176000,
+            192000, 224000, 256000, 0,
+        ]
+        .get(bitrate_idx)
+        .copied()?
     } else if (version == 0 || version == 2) && (layer == 1 || layer == 2) {
         // MPEG2/2.5 Layer 2 or 3
-        [0u32, 8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 144000, 160000, 0]
-            .get(bitrate_idx).copied()?
+        [
+            0u32, 8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000,
+            128000, 144000, 160000, 0,
+        ]
+        .get(bitrate_idx)
+        .copied()?
     } else {
         0
     };
@@ -807,11 +866,7 @@ fn parse_mpeg_header(data: &[u8], start: usize) -> Option<Vec<Tag>> {
     ));
 
     // AudioLayer: the layer number
-    tags.push(mk(
-        "AudioLayer",
-        "Audio Layer",
-        Value::U32(audio_layer),
-    ));
+    tags.push(mk("AudioLayer", "Audio Layer", Value::U32(audio_layer)));
 
     if bitrate > 0 {
         // Perl: "128 kbps" format via ConvertBitrate
@@ -822,11 +877,7 @@ fn parse_mpeg_header(data: &[u8], start: usize) -> Option<Vec<Tag>> {
         ));
     }
     if sample_rate > 0 {
-        tags.push(mk(
-            "SampleRate",
-            "Sample Rate",
-            Value::U32(sample_rate),
-        ));
+        tags.push(mk("SampleRate", "Sample Rate", Value::U32(sample_rate)));
     }
     tags.push(mk(
         "ChannelMode",
@@ -898,38 +949,196 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
 
 /// ID3v1 genre list (index 0-191). Matches Perl's %genre hash.
 static GENRES: &[&str] = &[
-    "Blues", "Classic Rock", "Country", "Dance", "Disco", "Funk", "Grunge",
-    "Hip-Hop", "Jazz", "Metal", "New Age", "Oldies", "Other", "Pop", "R&B",
-    "Rap", "Reggae", "Rock", "Techno", "Industrial", "Alternative", "Ska",
-    "Death Metal", "Pranks", "Soundtrack", "Euro-Techno", "Ambient",
-    "Trip-Hop", "Vocal", "Jazz+Funk", "Fusion", "Trance", "Classical",
-    "Instrumental", "Acid", "House", "Game", "Sound Clip", "Gospel", "Noise",
-    "Alt. Rock", "Bass", "Soul", "Punk", "Space", "Meditative",
-    "Instrumental Pop", "Instrumental Rock", "Ethnic", "Gothic", "Darkwave",
-    "Techno-Industrial", "Electronic", "Pop-Folk", "Eurodance", "Dream",
-    "Southern Rock", "Comedy", "Cult", "Gangsta Rap", "Top 40", "Christian Rap",
-    "Pop/Funk", "Jungle", "Native American", "Cabaret", "New Wave",
-    "Psychedelic", "Rave", "Showtunes", "Trailer", "Lo-Fi", "Tribal",
-    "Acid Punk", "Acid Jazz", "Polka", "Retro", "Musical", "Rock & Roll",
-    "Hard Rock", "Folk", "Folk-Rock", "National Folk", "Swing", "Fast-Fusion",
-    "Bebop", "Latin", "Revival", "Celtic", "Bluegrass", "Avantgarde",
-    "Gothic Rock", "Progressive Rock", "Psychedelic Rock", "Symphonic Rock",
-    "Slow Rock", "Big Band", "Chorus", "Easy Listening", "Acoustic", "Humour",
-    "Speech", "Chanson", "Opera", "Chamber Music", "Sonata", "Symphony",
-    "Booty Bass", "Primus", "Porn Groove", "Satire", "Slow Jam", "Club",
-    "Tango", "Samba", "Folklore", "Ballad", "Power Ballad", "Rhythmic Soul",
-    "Freestyle", "Duet", "Punk Rock", "Drum Solo", "A Cappella", "Euro-House",
-    "Dance Hall", "Goa", "Drum & Bass", "Club-House", "Hardcore",
-    "Terror", "Indie", "BritPop", "Afro-Punk", "Polsk Punk", "Beat",
-    "Christian Gangsta Rap", "Heavy Metal", "Black Metal", "Crossover",
-    "Contemporary Christian", "Christian Rock", "Merengue", "Salsa",
-    "Thrash Metal", "Anime", "JPop", "Synthpop", "Abstract", "Art Rock",
-    "Baroque", "Bhangra", "Big Beat", "Breakbeat", "Chillout", "Downtempo",
-    "Dub", "EBM", "Eclectic", "Electro", "Electroclash", "Emo", "Experimental",
-    "Garage", "Global", "IDM", "Illbient", "Industro-Goth", "Jam Band",
-    "Krautrock", "Leftfield", "Lounge", "Math Rock", "New Romantic",
-    "Nu-Breakz", "Post-Punk", "Post-Rock", "Psytrance", "Shoegaze",
-    "Space Rock", "Trop Rock", "World Music", "Neoclassical", "Audiobook",
-    "Audio Theatre", "Neue Deutsche Welle", "Podcast", "Indie Rock",
-    "G-Funk", "Dubstep", "Garage Rock", "Psybient",
+    "Blues",
+    "Classic Rock",
+    "Country",
+    "Dance",
+    "Disco",
+    "Funk",
+    "Grunge",
+    "Hip-Hop",
+    "Jazz",
+    "Metal",
+    "New Age",
+    "Oldies",
+    "Other",
+    "Pop",
+    "R&B",
+    "Rap",
+    "Reggae",
+    "Rock",
+    "Techno",
+    "Industrial",
+    "Alternative",
+    "Ska",
+    "Death Metal",
+    "Pranks",
+    "Soundtrack",
+    "Euro-Techno",
+    "Ambient",
+    "Trip-Hop",
+    "Vocal",
+    "Jazz+Funk",
+    "Fusion",
+    "Trance",
+    "Classical",
+    "Instrumental",
+    "Acid",
+    "House",
+    "Game",
+    "Sound Clip",
+    "Gospel",
+    "Noise",
+    "Alt. Rock",
+    "Bass",
+    "Soul",
+    "Punk",
+    "Space",
+    "Meditative",
+    "Instrumental Pop",
+    "Instrumental Rock",
+    "Ethnic",
+    "Gothic",
+    "Darkwave",
+    "Techno-Industrial",
+    "Electronic",
+    "Pop-Folk",
+    "Eurodance",
+    "Dream",
+    "Southern Rock",
+    "Comedy",
+    "Cult",
+    "Gangsta Rap",
+    "Top 40",
+    "Christian Rap",
+    "Pop/Funk",
+    "Jungle",
+    "Native American",
+    "Cabaret",
+    "New Wave",
+    "Psychedelic",
+    "Rave",
+    "Showtunes",
+    "Trailer",
+    "Lo-Fi",
+    "Tribal",
+    "Acid Punk",
+    "Acid Jazz",
+    "Polka",
+    "Retro",
+    "Musical",
+    "Rock & Roll",
+    "Hard Rock",
+    "Folk",
+    "Folk-Rock",
+    "National Folk",
+    "Swing",
+    "Fast-Fusion",
+    "Bebop",
+    "Latin",
+    "Revival",
+    "Celtic",
+    "Bluegrass",
+    "Avantgarde",
+    "Gothic Rock",
+    "Progressive Rock",
+    "Psychedelic Rock",
+    "Symphonic Rock",
+    "Slow Rock",
+    "Big Band",
+    "Chorus",
+    "Easy Listening",
+    "Acoustic",
+    "Humour",
+    "Speech",
+    "Chanson",
+    "Opera",
+    "Chamber Music",
+    "Sonata",
+    "Symphony",
+    "Booty Bass",
+    "Primus",
+    "Porn Groove",
+    "Satire",
+    "Slow Jam",
+    "Club",
+    "Tango",
+    "Samba",
+    "Folklore",
+    "Ballad",
+    "Power Ballad",
+    "Rhythmic Soul",
+    "Freestyle",
+    "Duet",
+    "Punk Rock",
+    "Drum Solo",
+    "A Cappella",
+    "Euro-House",
+    "Dance Hall",
+    "Goa",
+    "Drum & Bass",
+    "Club-House",
+    "Hardcore",
+    "Terror",
+    "Indie",
+    "BritPop",
+    "Afro-Punk",
+    "Polsk Punk",
+    "Beat",
+    "Christian Gangsta Rap",
+    "Heavy Metal",
+    "Black Metal",
+    "Crossover",
+    "Contemporary Christian",
+    "Christian Rock",
+    "Merengue",
+    "Salsa",
+    "Thrash Metal",
+    "Anime",
+    "JPop",
+    "Synthpop",
+    "Abstract",
+    "Art Rock",
+    "Baroque",
+    "Bhangra",
+    "Big Beat",
+    "Breakbeat",
+    "Chillout",
+    "Downtempo",
+    "Dub",
+    "EBM",
+    "Eclectic",
+    "Electro",
+    "Electroclash",
+    "Emo",
+    "Experimental",
+    "Garage",
+    "Global",
+    "IDM",
+    "Illbient",
+    "Industro-Goth",
+    "Jam Band",
+    "Krautrock",
+    "Leftfield",
+    "Lounge",
+    "Math Rock",
+    "New Romantic",
+    "Nu-Breakz",
+    "Post-Punk",
+    "Post-Rock",
+    "Psytrance",
+    "Shoegaze",
+    "Space Rock",
+    "Trop Rock",
+    "World Music",
+    "Neoclassical",
+    "Audiobook",
+    "Audio Theatre",
+    "Neue Deutsche Welle",
+    "Podcast",
+    "Indie Rock",
+    "G-Funk",
+    "Dubstep",
+    "Garage Rock",
+    "Psybient",
 ];

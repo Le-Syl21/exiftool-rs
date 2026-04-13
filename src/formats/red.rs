@@ -39,13 +39,17 @@ fn mk_print(name: &str, value: Value, print: String) -> Tag {
 }
 
 fn read_u16_be(data: &[u8], off: usize) -> u16 {
-    if off + 2 > data.len() { return 0; }
-    u16::from_be_bytes([data[off], data[off+1]])
+    if off + 2 > data.len() {
+        return 0;
+    }
+    u16::from_be_bytes([data[off], data[off + 1]])
 }
 
 fn read_u32_be(data: &[u8], off: usize) -> u32 {
-    if off + 4 > data.len() { return 0; }
-    u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]])
+    if off + 4 > data.len() {
+        return 0;
+    }
+    u32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]])
 }
 
 fn read_i32_be(data: &[u8], off: usize) -> i32 {
@@ -53,15 +57,26 @@ fn read_i32_be(data: &[u8], off: usize) -> i32 {
 }
 
 fn read_f32_be(data: &[u8], off: usize) -> f32 {
-    if off + 4 > data.len() { return 0.0; }
-    f32::from_bits(u32::from_be_bytes([data[off], data[off+1], data[off+2], data[off+3]]))
+    if off + 4 > data.len() {
+        return 0.0;
+    }
+    f32::from_bits(u32::from_be_bytes([
+        data[off],
+        data[off + 1],
+        data[off + 2],
+        data[off + 3],
+    ]))
 }
 
 fn read_str(data: &[u8], off: usize, len: usize) -> String {
-    if off + len > data.len() { return String::new(); }
-    let s = &data[off..off+len];
+    if off + len > data.len() {
+        return String::new();
+    }
+    let s = &data[off..off + len];
     let end = s.iter().position(|&b| b == 0).unwrap_or(len);
-    crate::encoding::decode_utf8_or_latin1(&s[..end]).trim().to_string()
+    crate::encoding::decode_utf8_or_latin1(&s[..end])
+        .trim()
+        .to_string()
 }
 
 fn convert_date(val: &str) -> String {
@@ -90,7 +105,15 @@ fn convert_time(val: &str) -> String {
 /// Format a datetime from "YYYYMMDDHHMMSS"
 fn convert_datetime(val: &str) -> String {
     if val.len() >= 14 {
-        format!("{}:{}:{} {}:{}:{}", &val[0..4], &val[4..6], &val[6..8], &val[8..10], &val[10..12], &val[12..14])
+        format!(
+            "{}:{}:{} {}:{}:{}",
+            &val[0..4],
+            &val[4..6],
+            &val[6..8],
+            &val[8..10],
+            &val[10..12],
+            &val[12..14]
+        )
     } else {
         val.to_string()
     }
@@ -102,16 +125,21 @@ fn parse_red_dir(buff: &[u8], dir_start: usize, dir_end: usize, tags: &mut Vec<T
 
     while pos + 4 <= dir_end {
         let len = read_u16_be(buff, pos) as usize;
-        if len < 4 || pos + len > dir_end { break; }
+        if len < 4 || pos + len > dir_end {
+            break;
+        }
         let tag = read_u16_be(buff, pos + 2) as u32;
         let fmt_code = tag >> 12;
-        let data = &buff[pos+4..pos+len];
+        let data = &buff[pos + 4..pos + len];
 
         match fmt_code {
-            1 => { // string
+            1 => {
+                // string
                 let s = {
                     let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
-                    crate::encoding::decode_utf8_or_latin1(&data[..end]).trim().to_string()
+                    crate::encoding::decode_utf8_or_latin1(&data[..end])
+                        .trim()
+                        .to_string()
                 };
                 if !s.is_empty() {
                     match tag {
@@ -162,7 +190,8 @@ fn parse_red_dir(buff: &[u8], dir_start: usize, dir_end: usize, tags: &mut Vec<T
                     }
                 }
             }
-            2 => { // float
+            2 => {
+                // float
                 if data.len() >= 4 {
                     let f = read_f32_be(data, 0);
                     match tag {
@@ -172,7 +201,7 @@ fn parse_red_dir(buff: &[u8], dir_start: usize, dir_end: usize, tags: &mut Vec<T
                             let count = data.len() / 4;
                             let mut vals = Vec::new();
                             for i in 0..count {
-                                let v = read_f32_be(data, i*4);
+                                let v = read_f32_be(data, i * 4);
                                 vals.push(format!("{}", v));
                             }
                             tags.push(mk("RGBCurves", Value::String(vals.join(" "))));
@@ -185,7 +214,8 @@ fn parse_red_dir(buff: &[u8], dir_start: usize, dir_end: usize, tags: &mut Vec<T
                     }
                 }
             }
-            4 => { // int16u
+            4 => {
+                // int16u
                 if data.len() >= 2 {
                     match tag {
                         0x4037 => {
@@ -195,7 +225,10 @@ fn parse_red_dir(buff: &[u8], dir_start: usize, dir_end: usize, tags: &mut Vec<T
                                 let b = read_u16_be(data, 2);
                                 let c = read_u16_be(data, 4);
                                 let d2 = read_u16_be(data, 6);
-                                tags.push(mk("CropArea", Value::String(format!("{} {} {} {}", a, b, c, d2))));
+                                tags.push(mk(
+                                    "CropArea",
+                                    Value::String(format!("{} {} {} {}", a, b, c, d2)),
+                                ));
                             }
                         }
                         0x403b => {
@@ -215,13 +248,18 @@ fn parse_red_dir(buff: &[u8], dir_start: usize, dir_end: usize, tags: &mut Vec<T
                     }
                 }
             }
-            6 => { // int32s
+            6 => {
+                // int32s
                 if data.len() >= 4 {
                     match tag {
                         0x606c => {
                             let v = read_i32_be(data, 0);
                             let meters = v as f64 / 1000.0;
-                            tags.push(mk_print("FocusDistance", Value::F64(meters), format!("{} m", meters)));
+                            tags.push(mk_print(
+                                "FocusDistance",
+                                Value::F64(meters),
+                                format!("{} m", meters),
+                            ));
                         }
                         _ => {}
                     }
@@ -284,7 +322,10 @@ pub fn read_r3d(data: &[u8]) -> Result<Vec<Tag>> {
                         let fr = num as f64 / den as f64;
                         let print = format!("{:.3}", fr);
                         // Trim trailing zeros
-                        let print = print.trim_end_matches('0').trim_end_matches('.').to_string();
+                        let print = print
+                            .trim_end_matches('0')
+                            .trim_end_matches('.')
+                            .to_string();
                         tags.push(mk_print("FrameRate", Value::F64(fr), print));
                     }
                 }
@@ -322,9 +363,21 @@ pub fn read_r3d(data: &[u8]) -> Result<Vec<Tag>> {
             }
 
             // rdi records
-            let rdi_count = if 0x40 < block_size { data[0x40] as usize } else { 0 };
-            let rda_count = if 0x41 < block_size { data[0x41] as usize } else { 0 };
-            let rdx_count = if 0x42 < block_size { data[0x42] as usize } else { 0 };
+            let rdi_count = if 0x40 < block_size {
+                data[0x40] as usize
+            } else {
+                0
+            };
+            let rda_count = if 0x41 < block_size {
+                data[0x41] as usize
+            } else {
+                0
+            };
+            let rdx_count = if 0x42 < block_size {
+                data[0x42] as usize
+            } else {
+                0
+            };
 
             // First rdi record starts at 0x44
             let first_rdi = 0x44;
@@ -344,17 +397,17 @@ pub fn read_r3d(data: &[u8]) -> Result<Vec<Tag>> {
                     if a0 > 0 {
                         let fr = (a1 * 0x10000 + a2) as f64 / a0 as f64;
                         let print = format!("{:.3}", fr);
-                        let print = print.trim_end_matches('0').trim_end_matches('.').to_string();
+                        let print = print
+                            .trim_end_matches('0')
+                            .trim_end_matches('.')
+                            .to_string();
                         tags.push(mk_print("FrameRate", Value::F64(fr), print));
                     }
                 }
             }
 
             // Directory starts after header records
-            let dir_start = 0x44
-                + rdi_count * 0x18
-                + rda_count * 0x14
-                + rdx_count * 0x10;
+            let dir_start = 0x44 + rdi_count * 0x18 + rda_count * 0x14 + rdx_count * 0x10;
 
             if dir_start + 2 <= block_size {
                 let dir_len = read_u16_be(data, dir_start) as usize;

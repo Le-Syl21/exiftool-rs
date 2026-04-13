@@ -17,24 +17,24 @@ pub fn read_rtf(data: &[u8]) -> Result<Vec<Tag>> {
     if let Some(info_content) = find_rtf_group(&text, "info") {
         // Process info group commands: {\cmd value} or {\* \cmd value}
         let cmd_map = [
-            ("title",    "Title"),
-            ("subject",  "Subject"),
-            ("author",   "Author"),
-            ("manager",  "Manager"),
-            ("company",  "Company"),
-            ("copyright","Copyright"),
+            ("title", "Title"),
+            ("subject", "Subject"),
+            ("author", "Author"),
+            ("manager", "Manager"),
+            ("company", "Company"),
+            ("copyright", "Copyright"),
             ("operator", "LastModifiedBy"),
             ("category", "Category"),
             ("keywords", "Keywords"),
-            ("comment",  "Comment"),
-            ("doccomm",  "Comments"),
-            ("hlinkbase","HyperlinkBase"),
+            ("comment", "Comment"),
+            ("doccomm", "Comments"),
+            ("hlinkbase", "HyperlinkBase"),
         ];
         let date_cmds = [
             ("creatim", "CreateDate"),
-            ("revtim",  "ModifyDate"),
+            ("revtim", "ModifyDate"),
             ("printim", "LastPrinted"),
-            ("buptim",  "BackupTime"),
+            ("buptim", "BackupTime"),
         ];
 
         // Iterate over {group} blocks inside info
@@ -51,7 +51,9 @@ pub fn read_rtf(data: &[u8]) -> Result<Vec<Tag>> {
                     break;
                 }
             }
-            if found_date { continue; }
+            if found_date {
+                continue;
+            }
 
             // text commands
             for (kw, name) in &cmd_map {
@@ -85,13 +87,17 @@ pub fn read_rtf(data: &[u8]) -> Result<Vec<Tag>> {
             }
             let mut p = search_pos + 1;
             // skip whitespace
-            while p < prop_len && (prop_chars[p] == '\n' || prop_chars[p] == '\r' || prop_chars[p] == ' ') {
+            while p < prop_len
+                && (prop_chars[p] == '\n' || prop_chars[p] == '\r' || prop_chars[p] == ' ')
+            {
                 p += 1;
             }
             // skip optional \*
-            if p + 1 < prop_len && prop_chars[p] == '\\' && prop_chars[p+1] == '*' {
+            if p + 1 < prop_len && prop_chars[p] == '\\' && prop_chars[p + 1] == '*' {
                 p += 2;
-                while p < prop_len && (prop_chars[p] == '\n' || prop_chars[p] == '\r' || prop_chars[p] == ' ') {
+                while p < prop_len
+                    && (prop_chars[p] == '\n' || prop_chars[p] == '\r' || prop_chars[p] == ' ')
+                {
                     p += 1;
                 }
             }
@@ -113,7 +119,9 @@ pub fn read_rtf(data: &[u8]) -> Result<Vec<Tag>> {
             let cmd: String = prop_chars[cmd_start..p].iter().collect();
 
             // skip optional terminator
-            if p < prop_len && (prop_chars[p] == ' ' || prop_chars[p] == '\n' || prop_chars[p] == '\r') {
+            if p < prop_len
+                && (prop_chars[p] == ' ' || prop_chars[p] == '\n' || prop_chars[p] == '\r')
+            {
                 p += 1;
             }
 
@@ -165,12 +173,15 @@ fn find_rtf_group_star(text: &str, cmd: &str) -> Option<String> {
     while let Some(p) = text[pos..].find(search) {
         let start = pos + p;
         let after = &text[start + 3..]; // after "{\*"
-        let trimmed = after.trim_start_matches(|c: char| c == ' ' || c == '\n' || c == '\r' || c == '\t');
+        let trimmed =
+            after.trim_start_matches(|c: char| c == ' ' || c == '\n' || c == '\r' || c == '\t');
         if trimmed.starts_with(&format!("\\{}", cmd_escape)) {
             // Found it - skip to after the command
             let skip = 3 + (after.len() - trimmed.len()) + 1 + cmd_escape.len();
             let rest_pos = start + skip;
-            if rest_pos > text.len() { break; }
+            if rest_pos > text.len() {
+                break;
+            }
             let rest = &text[rest_pos..];
             let rest = rest.trim_start_matches(|c: char| c == ' ' || c == '\n' || c == '\r');
             return read_to_matching_brace(rest);
@@ -228,7 +239,9 @@ fn extract_rtf_groups(text: &str) -> Vec<(bool, String, String)> {
         pos += 1; // skip '{'
 
         // Skip whitespace
-        while pos < bytes.len() && (bytes[pos] == b' ' || bytes[pos] == b'\n' || bytes[pos] == b'\r') {
+        while pos < bytes.len()
+            && (bytes[pos] == b' ' || bytes[pos] == b'\n' || bytes[pos] == b'\r')
+        {
             pos += 1;
         }
 
@@ -236,7 +249,9 @@ fn extract_rtf_groups(text: &str) -> Vec<(bool, String, String)> {
         let is_star = if pos + 1 < bytes.len() && bytes[pos] == b'\\' && bytes[pos + 1] == b'*' {
             pos += 2;
             // skip whitespace
-            while pos < bytes.len() && (bytes[pos] == b' ' || bytes[pos] == b'\n' || bytes[pos] == b'\r') {
+            while pos < bytes.len()
+                && (bytes[pos] == b' ' || bytes[pos] == b'\n' || bytes[pos] == b'\r')
+            {
                 pos += 1;
             }
             true
@@ -320,8 +335,13 @@ fn parse_rtf_date(text: &str) -> Option<String> {
     let hr = extract_rtf_num(text, "\\hr").unwrap_or(0);
     let min = extract_rtf_num(text, "\\min").unwrap_or(0);
     let sec = extract_rtf_num(text, "\\sec").unwrap_or(0);
-    if yr == 0 { return None; }
-    Some(format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", yr, mo, dy, hr, min, sec))
+    if yr == 0 {
+        return None;
+    }
+    Some(format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+        yr, mo, dy, hr, min, sec
+    ))
 }
 
 fn extract_rtf_num(text: &str, keyword: &str) -> Option<u32> {
@@ -359,8 +379,14 @@ fn unescape_rtf(text: &str) -> String {
                         result.push(ch);
                     }
                 }
-                Some(&'n') => { chars.next(); result.push('\n'); }
-                Some(&'t') => { chars.next(); result.push('\t'); }
+                Some(&'n') => {
+                    chars.next();
+                    result.push('\n');
+                }
+                Some(&'t') => {
+                    chars.next();
+                    result.push('\t');
+                }
                 _ => {
                     // Skip control word
                     let mut word = String::new();
@@ -439,7 +465,13 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         id: TagId::Text(name.to_string()),
         name: name.to_string(),
         description: description.to_string(),
-        group: TagGroup { family0: "RTF".into(), family1: "RTF".into(), family2: "Document".into() },
-        raw_value: value, print_value: pv, priority: 0,
+        group: TagGroup {
+            family0: "RTF".into(),
+            family1: "RTF".into(),
+            family2: "Document".into(),
+        },
+        raw_value: value,
+        print_value: pv,
+        priority: 0,
     }
 }

@@ -91,11 +91,7 @@ fn process_mpeg_video(data: &[u8]) -> Vec<Tag> {
     // Bits 32-49: VideoBitrate (18 bits from w2)
     let video_bitrate_raw = (w2 >> 14) & 0x3FFFF;
 
-    tags.push(mk_video(
-        "ImageWidth",
-        Value::U32(width),
-        width.to_string(),
-    ));
+    tags.push(mk_video("ImageWidth", Value::U32(width), width.to_string()));
     tags.push(mk_video(
         "ImageHeight",
         Value::U32(height),
@@ -221,22 +217,14 @@ fn parse_mpeg_audio_header(word: u32) -> Option<Vec<Tag>> {
         3 => 1,
         _ => return None,
     };
-    tags.push(mk_audio(
-        "AudioLayer",
-        Value::U8(layer),
-        layer.to_string(),
-    ));
+    tags.push(mk_audio("AudioLayer", Value::U8(layer), layer.to_string()));
 
     // Bits 16-19: Audio Bitrate
     let bitrate_index = ((word >> 12) & 0xF) as usize;
     let bitrate = lookup_audio_bitrate(version_bits, layer_bits, bitrate_index);
     if let Some(br) = bitrate {
         if br > 0 {
-            tags.push(mk_audio(
-                "AudioBitrate",
-                Value::U32(br),
-                format_bitrate(br),
-            ));
+            tags.push(mk_audio("AudioBitrate", Value::U32(br), format_bitrate(br)));
         }
     }
 
@@ -267,11 +255,7 @@ fn parse_mpeg_audio_header(word: u32) -> Option<Vec<Tag>> {
         _ => None,
     };
     if let Some(sr) = sample_rate {
-        tags.push(mk_audio(
-            "SampleRate",
-            Value::U32(sr),
-            sr.to_string(),
-        ));
+        tags.push(mk_audio("SampleRate", Value::U32(sr), sr.to_string()));
     }
 
     // Bits 24-25: Channel Mode
@@ -469,7 +453,9 @@ pub fn read_mpeg(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     if tags.is_empty() {
-        return Err(Error::InvalidData("no MPEG video or audio headers found".into()));
+        return Err(Error::InvalidData(
+            "no MPEG video or audio headers found".into(),
+        ));
     }
 
     Ok(tags)

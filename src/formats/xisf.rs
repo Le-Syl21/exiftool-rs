@@ -61,7 +61,11 @@ fn parse_xisf_xml(xml: &str, tags: &mut Vec<Tag>) {
         }
 
         if let Some(v) = extract_attr(img_attrs, "sampleFormat") {
-            tags.push(mk("ImageSampleFormat", "Image Sample Format", Value::String(v)));
+            tags.push(mk(
+                "ImageSampleFormat",
+                "Image Sample Format",
+                Value::String(v),
+            ));
         }
         if let Some(v) = extract_attr(img_attrs, "colorSpace") {
             tags.push(mk("ColorSpace", "Color Space", Value::String(v)));
@@ -72,22 +76,34 @@ fn parse_xisf_xml(xml: &str, tags: &mut Vec<Tag>) {
 
         // Parse <Data> child element within Image block
         // Find Image end tag or next major element
-        let img_block_end = img_section.find("</Image>")
+        let img_block_end = img_section
+            .find("</Image>")
             .or_else(|| img_section.find("<Metadata"))
             .unwrap_or(img_section.len());
         let img_block = &img_section[..img_block_end];
 
         // <Data compression="zlib:65536" encoding="base64">...</Data>
-        if let Some(data_start) = img_block.find("<Data ").or_else(|| img_block.find("<Data>")) {
+        if let Some(data_start) = img_block
+            .find("<Data ")
+            .or_else(|| img_block.find("<Data>"))
+        {
             let data_section = &img_block[data_start..];
             let data_tag_end = data_section.find('>').unwrap_or(data_section.len());
             let data_attrs = &data_section[5..data_tag_end]; // skip "<Data"
 
             if let Some(v) = extract_attr(data_attrs, "compression") {
-                tags.push(mk("ImageDataCompression", "Image Data Compression", Value::String(v)));
+                tags.push(mk(
+                    "ImageDataCompression",
+                    "Image Data Compression",
+                    Value::String(v),
+                ));
             }
             if let Some(v) = extract_attr(data_attrs, "encoding") {
-                tags.push(mk("ImageDataEncoding", "Image Data Encoding", Value::String(v)));
+                tags.push(mk(
+                    "ImageDataEncoding",
+                    "Image Data Encoding",
+                    Value::String(v),
+                ));
             }
 
             // Store binary image data
@@ -96,7 +112,11 @@ fn parse_xisf_xml(xml: &str, tags: &mut Vec<Tag>) {
                 if let Some(text_end) = after.find('<') {
                     let b64 = after[..text_end].trim();
                     if !b64.is_empty() {
-                        tags.push(mk("ImageData", "Image Data", Value::Binary(b64.as_bytes().to_vec())));
+                        tags.push(mk(
+                            "ImageData",
+                            "Image Data",
+                            Value::Binary(b64.as_bytes().to_vec()),
+                        ));
                     }
                 }
             }
@@ -105,7 +125,8 @@ fn parse_xisf_xml(xml: &str, tags: &mut Vec<Tag>) {
         // <Resolution horizontal="72" vertical="72" unit="inch"/>
         if let Some(res_start) = img_block.find("<Resolution ") {
             let res_section = &img_block[res_start..];
-            let res_end = res_section.find("/>")
+            let res_end = res_section
+                .find("/>")
                 .or_else(|| res_section.find('>'))
                 .unwrap_or(res_section.len());
             let res_attrs = &res_section[12..res_end]; // skip "<Resolution "
@@ -127,7 +148,10 @@ fn parse_xisf_xml(xml: &str, tags: &mut Vec<Tag>) {
     let meta_start_opt = xml.find("<Metadata>").or_else(|| xml.find("<Metadata "));
     if let Some(meta_start) = meta_start_opt {
         let meta_section = &xml[meta_start..];
-        let meta_end = meta_section.find("</Metadata>").map(|e| e + 11).unwrap_or(meta_section.len());
+        let meta_end = meta_section
+            .find("</Metadata>")
+            .map(|e| e + 11)
+            .unwrap_or(meta_section.len());
         parse_property_elements(&meta_section[..meta_end], tags);
     }
 }
@@ -141,7 +165,9 @@ fn parse_property_elements(xml: &str, tags: &mut Vec<Tag>) {
         // Self-closing: .../> — but only if /> comes before the next >
         // With text content: ...>text</Property>
         let tag_end = section.find('>').unwrap_or(section.len());
-        let end = if tag_end < section.len() && section.as_bytes().get(tag_end.saturating_sub(1)) == Some(&b'/') {
+        let end = if tag_end < section.len()
+            && section.as_bytes().get(tag_end.saturating_sub(1)) == Some(&b'/')
+        {
             // Self-closing: />
             tag_end + 1
         } else if let Some(close) = section.find("</Property>") {
@@ -154,8 +180,7 @@ fn parse_property_elements(xml: &str, tags: &mut Vec<Tag>) {
         if let Some(id) = extract_attr(inner, "id") {
             // Remove XISF: namespace prefix
             let bare_id = id.trim_start_matches("XISF:");
-            let val = extract_attr(inner, "value")
-                .or_else(|| extract_element_text(inner));
+            let val = extract_attr(inner, "value").or_else(|| extract_element_text(inner));
             if let Some(val) = val {
                 let tag_name = xisf_property_to_tag(bare_id);
                 if !tag_name.is_empty() {
@@ -171,7 +196,9 @@ fn parse_property_elements(xml: &str, tags: &mut Vec<Tag>) {
         }
 
         let advance = p + end;
-        if advance >= search.len() { break; }
+        if advance >= search.len() {
+            break;
+        }
         search = &search[advance..];
     }
 }

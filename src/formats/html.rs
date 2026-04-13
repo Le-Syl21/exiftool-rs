@@ -50,7 +50,11 @@ pub fn read_html(data: &[u8]) -> Result<Vec<Tag>> {
             if !name_raw.is_empty() && !content.is_empty() {
                 let (tag_name, _group) = map_html_meta_name(&name_raw);
                 if !tag_name.is_empty() {
-                    tags.push(mk(&tag_name, &name_raw, Value::String(html_decode(&content))));
+                    tags.push(mk(
+                        &tag_name,
+                        &name_raw,
+                        Value::String(html_decode(&content)),
+                    ));
                 }
             }
         }
@@ -263,8 +267,16 @@ fn parse_office_xml_section(xml: &str, section: &str, tags: &mut Vec<Tag>) {
     let open = format!("<{}>", section);
     let close = format!("</{}>", section);
 
-    let start = if let Some(p) = xml.find(&open) { p + open.len() } else { return; };
-    let end = if let Some(p) = xml[start..].find(&close) { start + p } else { return; };
+    let start = if let Some(p) = xml.find(&open) {
+        p + open.len()
+    } else {
+        return;
+    };
+    let end = if let Some(p) = xml[start..].find(&close) {
+        start + p
+    } else {
+        return;
+    };
 
     let section_xml = &xml[start..end];
 
@@ -300,7 +312,11 @@ fn parse_office_xml_section(xml: &str, section: &str, tags: &mut Vec<Tag>) {
             let val = xml_decode(&val);
             if !val.is_empty() {
                 // Convert date fields
-                let val = if tag_name.contains("Date") || tag_name.contains("Created") || tag_name.contains("Saved") || tag_name.contains("Printed") {
+                let val = if tag_name.contains("Date")
+                    || tag_name.contains("Created")
+                    || tag_name.contains("Saved")
+                    || tag_name.contains("Printed")
+                {
                     convert_xmp_date(&val)
                 } else if *tag_name == "TotalEditTime" {
                     // TotalTime is in minutes in Office XML
@@ -327,8 +343,16 @@ fn parse_office_custom_props(xml: &str, tags: &mut Vec<Tag>) {
     let open = "<o:CustomDocumentProperties>";
     let close = "</o:CustomDocumentProperties>";
 
-    let start = if let Some(p) = xml.find(open) { p + open.len() } else { return; };
-    let end = if let Some(p) = xml[start..].find(close) { start + p } else { return; };
+    let start = if let Some(p) = xml.find(open) {
+        p + open.len()
+    } else {
+        return;
+    };
+    let end = if let Some(p) = xml[start..].find(close) {
+        start + p
+    } else {
+        return;
+    };
 
     let section = &xml[start..end];
 
@@ -340,23 +364,32 @@ fn parse_office_custom_props(xml: &str, tags: &mut Vec<Tag>) {
         let rest = &section[abs_start + 3..]; // skip "<o:"
 
         // Get tag name (up to '>' or ' ')
-        let name_end = rest.find(|c: char| c == '>' || c == ' ' || c == '/').unwrap_or(rest.len());
+        let name_end = rest
+            .find(|c: char| c == '>' || c == ' ' || c == '/')
+            .unwrap_or(rest.len());
         let raw_tag_name = &rest[..name_end];
 
         // Find '>' to get past attributes
-        let close_bracket = if let Some(p) = rest.find('>') { p } else { break; };
+        let close_bracket = if let Some(p) = rest.find('>') {
+            p
+        } else {
+            break;
+        };
         let content_start = abs_start + 3 + close_bracket + 1;
 
         // Find closing tag
         let close_tag = format!("</o:{}>", raw_tag_name);
         if let Some(close_pos) = section[content_start..].find(&close_tag) {
-            let value = section[content_start..content_start + close_pos].trim().to_string();
+            let value = section[content_start..content_start + close_pos]
+                .trim()
+                .to_string();
             let value = xml_decode(&value);
 
             // Decode _x0020_ as space and create clean tag name
             let clean_name = raw_tag_name.replace("_x0020_", " ");
             // Convert to ExifTool-style: capitalize words, remove spaces
-            let tag_name = clean_name.split_whitespace()
+            let tag_name = clean_name
+                .split_whitespace()
                 .map(|w| {
                     let mut chars = w.chars();
                     match chars.next() {
@@ -434,7 +467,9 @@ fn extract_attr(tag: &str, attr_name: &str) -> Option<String> {
         let end = rest[1..].find('\'')?;
         Some(rest[1..1 + end].to_string())
     } else {
-        let end = rest.find(|c: char| c.is_whitespace() || c == '>' || c == '/').unwrap_or(rest.len());
+        let end = rest
+            .find(|c: char| c.is_whitespace() || c == '>' || c == '/')
+            .unwrap_or(rest.len());
         Some(rest[..end].to_string())
     }
 }
@@ -449,7 +484,13 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         id: TagId::Text(name.to_string()),
         name: name.to_string(),
         description: description.to_string(),
-        group: TagGroup { family0: "HTML".into(), family1: "HTML".into(), family2: "Document".into() },
-        raw_value: value, print_value: pv, priority: 0,
+        group: TagGroup {
+            family0: "HTML".into(),
+            family1: "HTML".into(),
+            family2: "Document".into(),
+        },
+        raw_value: value,
+        print_value: pv,
+        priority: 0,
     }
 }

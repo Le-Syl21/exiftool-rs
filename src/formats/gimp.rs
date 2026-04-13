@@ -15,16 +15,26 @@ pub fn read_xcf(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 
     // Header: "gimp xcf " + version(5 bytes) + \0 + width(4) + height(4) + colormode(4)
-    let version_str = crate::encoding::decode_utf8_or_latin1(&data[9..14]).trim_end_matches('\0').to_string();
+    let version_str = crate::encoding::decode_utf8_or_latin1(&data[9..14])
+        .trim_end_matches('\0')
+        .to_string();
     let version_num = match version_str.as_str() {
         "file\0" | "file" => "0".to_string(),
         _ => {
             // "v001" -> "1", "v013" -> "13"
             let s = version_str.trim_start_matches('v').trim_start_matches('0');
-            if s.is_empty() { "0".to_string() } else { s.to_string() }
+            if s.is_empty() {
+                "0".to_string()
+            } else {
+                s.to_string()
+            }
         }
     };
-    tags.push(mk("XCFVersion", "XCF Version", Value::String(version_num.clone())));
+    tags.push(mk(
+        "XCFVersion",
+        "XCF Version",
+        Value::String(version_num.clone()),
+    ));
 
     let width = u32::from_be_bytes([data[14], data[15], data[16], data[17]]);
     let height = u32::from_be_bytes([data[18], data[19], data[20], data[21]]);
@@ -39,7 +49,11 @@ pub fn read_xcf(data: &[u8]) -> Result<Vec<Tag>> {
         2 => "Indexed Color",
         _ => "Unknown",
     };
-    tags.push(mk("ColorMode", "Color Mode", Value::String(color_mode_str.into())));
+    tags.push(mk(
+        "ColorMode",
+        "Color Mode",
+        Value::String(color_mode_str.into()),
+    ));
 
     // Skip precision for XCF version >= 4
     let version_int: u32 = version_num.parse().unwrap_or(0);
@@ -50,8 +64,11 @@ pub fn read_xcf(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Read properties
     while pos + 8 <= data.len() {
-        let prop_type = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]);
-        let prop_size = u32::from_be_bytes([data[pos+4], data[pos+5], data[pos+6], data[pos+7]]) as usize;
+        let prop_type =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]);
+        let prop_size =
+            u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                as usize;
         pos += 8;
 
         if prop_type == 0 {
@@ -81,16 +98,39 @@ pub fn read_xcf(data: &[u8]) -> Result<Vec<Tag>> {
             19 => {
                 // Resolution (2 floats)
                 if prop_size >= 8 {
-                    let x_res = f32::from_be_bytes([prop_data[0], prop_data[1], prop_data[2], prop_data[3]]);
-                    let y_res = f32::from_be_bytes([prop_data[4], prop_data[5], prop_data[6], prop_data[7]]);
-                    tags.push(mk("XResolution", "X Resolution", Value::String(format!("{}", x_res as u32))));
-                    tags.push(mk("YResolution", "Y Resolution", Value::String(format!("{}", y_res as u32))));
+                    let x_res = f32::from_be_bytes([
+                        prop_data[0],
+                        prop_data[1],
+                        prop_data[2],
+                        prop_data[3],
+                    ]);
+                    let y_res = f32::from_be_bytes([
+                        prop_data[4],
+                        prop_data[5],
+                        prop_data[6],
+                        prop_data[7],
+                    ]);
+                    tags.push(mk(
+                        "XResolution",
+                        "X Resolution",
+                        Value::String(format!("{}", x_res as u32)),
+                    ));
+                    tags.push(mk(
+                        "YResolution",
+                        "Y Resolution",
+                        Value::String(format!("{}", y_res as u32)),
+                    ));
                 }
             }
             20 => {
                 // Tattoo
                 if prop_size >= 4 {
-                    let tattoo = u32::from_be_bytes([prop_data[0], prop_data[1], prop_data[2], prop_data[3]]);
+                    let tattoo = u32::from_be_bytes([
+                        prop_data[0],
+                        prop_data[1],
+                        prop_data[2],
+                        prop_data[3],
+                    ]);
                     tags.push(mk("Tattoo", "Tattoo", Value::U32(tattoo)));
                 }
             }
@@ -101,7 +141,12 @@ pub fn read_xcf(data: &[u8]) -> Result<Vec<Tag>> {
             22 => {
                 // Units
                 if prop_size >= 4 {
-                    let units = u32::from_be_bytes([prop_data[0], prop_data[1], prop_data[2], prop_data[3]]);
+                    let units = u32::from_be_bytes([
+                        prop_data[0],
+                        prop_data[1],
+                        prop_data[2],
+                        prop_data[3],
+                    ]);
                     let units_str = match units {
                         1 => "Inches",
                         2 => "mm",
@@ -127,7 +172,8 @@ fn parse_parasites(data: &[u8], tags: &mut Vec<Tag>) {
     let mut pos = 0;
     while pos + 4 <= data.len() {
         // Name length (4 bytes)
-        let name_len = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
+        let name_len =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
         pos += 4;
 
         if pos + name_len + 8 > data.len() {
@@ -136,7 +182,9 @@ fn parse_parasites(data: &[u8], tags: &mut Vec<Tag>) {
 
         // Name string
         let name_bytes = &data[pos..pos + name_len];
-        let name = crate::encoding::decode_utf8_or_latin1(name_bytes).trim_end_matches('\0').to_string();
+        let name = crate::encoding::decode_utf8_or_latin1(name_bytes)
+            .trim_end_matches('\0')
+            .to_string();
         pos += name_len;
 
         // Flags (4 bytes) — skip
@@ -146,7 +194,8 @@ fn parse_parasites(data: &[u8], tags: &mut Vec<Tag>) {
         if pos + 4 > data.len() {
             break;
         }
-        let data_size = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
+        let data_size =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
         pos += 4;
 
         if pos + data_size > data.len() {
@@ -185,7 +234,9 @@ fn parse_parasites(data: &[u8], tags: &mut Vec<Tag>) {
                 }
             }
             "gimp-comment" => {
-                let comment = crate::encoding::decode_utf8_or_latin1(parasite_data).trim_end_matches('\0').to_string();
+                let comment = crate::encoding::decode_utf8_or_latin1(parasite_data)
+                    .trim_end_matches('\0')
+                    .to_string();
                 if !comment.is_empty() {
                     tags.push(mk("Comment", "Comment", Value::String(comment)));
                 }

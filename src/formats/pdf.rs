@@ -17,12 +17,22 @@ pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 
     // PDF version from header
-    let header_end = data.iter().position(|&b| b == b'\n' || b == b'\r').unwrap_or(20).min(20);
-    let version = crate::encoding::decode_utf8_or_latin1(&data[5..header_end]).trim().to_string();
+    let header_end = data
+        .iter()
+        .position(|&b| b == b'\n' || b == b'\r')
+        .unwrap_or(20)
+        .min(20);
+    let version = crate::encoding::decode_utf8_or_latin1(&data[5..header_end])
+        .trim()
+        .to_string();
     tags.push(mk("PDFVersion", "PDF Version", Value::String(version)));
 
     // Find startxref (near end of file)
-    let search_start = if data.len() > 1024 { data.len() - 1024 } else { 0 };
+    let search_start = if data.len() > 1024 {
+        data.len() - 1024
+    } else {
+        0
+    };
     let tail = &data[search_start..];
 
     // Find "startxref" marker
@@ -62,15 +72,27 @@ pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
     let page_count = count_pattern(data, b"/Type /Page") + count_pattern(data, b"/Type/Page");
     // Subtract catalog /Type /Pages entries
     let pages_count = count_pattern(data, b"/Type /Pages") + count_pattern(data, b"/Type/Pages");
-    let actual_pages = if page_count > pages_count { page_count - pages_count } else { page_count };
+    let actual_pages = if page_count > pages_count {
+        page_count - pages_count
+    } else {
+        page_count
+    };
     if actual_pages > 0 {
-        tags.push(mk("PageCount", "Page Count", Value::U32(actual_pages as u32)));
+        tags.push(mk(
+            "PageCount",
+            "Page Count",
+            Value::U32(actual_pages as u32),
+        ));
     }
 
     // Linearized? Perl always emits "Yes" or "No"
     // A linearized PDF has /Linearized key in its first object dict
     let is_linearized = find_bytes(&data[..data.len().min(4096)], b"/Linearized").is_some();
-    tags.push(mk("Linearized", "Linearized", Value::String(if is_linearized { "Yes" } else { "No" }.into())));
+    tags.push(mk(
+        "Linearized",
+        "Linearized",
+        Value::String(if is_linearized { "Yes" } else { "No" }.into()),
+    ));
 
     // Encrypted?
     if find_bytes(&data[..data.len().min(8192)], b"/Encrypt").is_some() {
@@ -146,7 +168,9 @@ fn extract_pdf_string_value_bytes(dict: &[u8], key: &[u8]) -> Option<String> {
     let key_pos = find_bytes(dict, key)?;
     let rest = &dict[key_pos + key.len()..];
     // Skip whitespace
-    let start = rest.iter().position(|&b| b != b' ' && b != b'\t' && b != b'\r' && b != b'\n')?;
+    let start = rest
+        .iter()
+        .position(|&b| b != b' ' && b != b'\t' && b != b'\r' && b != b'\n')?;
     let rest = &rest[start..];
 
     if rest.first() == Some(&b'(') {
@@ -164,7 +188,9 @@ fn extract_pdf_string_value_bytes(dict: &[u8], key: &[u8]) -> Option<String> {
                         break;
                     }
                 }
-                b'\\' => { i += 1; } // skip escaped byte
+                b'\\' => {
+                    i += 1;
+                } // skip escaped byte
                 _ => {}
             }
             i += 1;
@@ -338,7 +364,12 @@ fn convert_pdf_date(s: &str) -> String {
     if s.len() >= 14 {
         format!(
             "{}:{}:{} {}:{}:{}",
-            &s[0..4], &s[4..6], &s[6..8], &s[8..10], &s[10..12], &s[12..14]
+            &s[0..4],
+            &s[4..6],
+            &s[6..8],
+            &s[8..10],
+            &s[10..12],
+            &s[12..14]
         )
     } else if s.len() >= 8 {
         format!("{}:{}:{}", &s[0..4], &s[4..6], &s[6..8])
@@ -399,7 +430,8 @@ fn extract_media_box_from_page(data: &[u8]) -> Option<String> {
     let mut search_start = 0;
     while search_start < text.len() {
         // Find the next /Type /Pages (with optional spaces)
-        let pages_pos = text[search_start..].find("/Type /Pages")
+        let pages_pos = text[search_start..]
+            .find("/Type /Pages")
             .or_else(|| text[search_start..].find("/Type/Pages"));
         let pages_pos = match pages_pos {
             Some(p) => search_start + p,
@@ -409,7 +441,10 @@ fn extract_media_box_from_page(data: &[u8]) -> Option<String> {
         // Search backward for <<
         let dict_start = text[..pages_pos].rfind("<<").unwrap_or(0);
         // Search forward for >>
-        let dict_end = text[pages_pos..].find(">>").map(|p| pages_pos + p + 2).unwrap_or(text.len());
+        let dict_end = text[pages_pos..]
+            .find(">>")
+            .map(|p| pages_pos + p + 2)
+            .unwrap_or(text.len());
         let dict = &text[dict_start..dict_end];
         // Look for /MediaBox within this dict
         if let Some(mb_pos) = dict.find("/MediaBox") {
@@ -420,15 +455,18 @@ fn extract_media_box_from_page(data: &[u8]) -> Option<String> {
                     let inner = &rest_trimmed[1..end];
                     let nums: Vec<&str> = inner.split_whitespace().collect();
                     if nums.len() >= 4 {
-                        let formatted: Vec<String> = nums[..4].iter().map(|s| {
-                            if let Ok(i) = s.parse::<i64>() {
-                                i.to_string()
-                            } else if let Ok(f) = s.parse::<f64>() {
-                                format!("{}", f)
-                            } else {
-                                s.to_string()
-                            }
-                        }).collect();
+                        let formatted: Vec<String> = nums[..4]
+                            .iter()
+                            .map(|s| {
+                                if let Ok(i) = s.parse::<i64>() {
+                                    i.to_string()
+                                } else if let Ok(f) = s.parse::<f64>() {
+                                    format!("{}", f)
+                                } else {
+                                    s.to_string()
+                                }
+                            })
+                            .collect();
                         return Some(formatted.join(", "));
                     }
                 }
@@ -458,7 +496,11 @@ fn scan_for_photoshop_irbs(data: &[u8], tags: &mut Vec<Tag>) {
             psd::read_irb_resources(data, block_start, end, &mut irb_tags);
             if !irb_tags.is_empty() {
                 // Perl doesn't emit CurrentIPTCDigest for PDF files
-                tags.extend(irb_tags.into_iter().filter(|t| t.name != "CurrentIPTCDigest"));
+                tags.extend(
+                    irb_tags
+                        .into_iter()
+                        .filter(|t| t.name != "CurrentIPTCDigest"),
+                );
                 return; // Only parse once
             }
             search_pos = abs_pos + 4;

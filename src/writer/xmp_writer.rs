@@ -71,7 +71,9 @@ pub fn build_xmp(properties: &[XmpProperty]) -> String {
 
     // Padding for in-place editing (ExifTool adds ~2kB of padding)
     for _ in 0..24 {
-        xml.push_str("                                                                                \n");
+        xml.push_str(
+            "                                                                                \n",
+        );
     }
 
     xml.push_str("<?xpacket end='w'?>");
@@ -85,7 +87,11 @@ fn write_property(xml: &mut String, ns: &str, prop: &XmpProperty) {
             if let Some(val) = prop.values.first() {
                 xml.push_str(&format!(
                     "  <{}:{}>{}</{}:{}>\n",
-                    ns, prop.property, escape_xml(val), ns, prop.property
+                    ns,
+                    prop.property,
+                    escape_xml(val),
+                    ns,
+                    prop.property
                 ));
             }
         }

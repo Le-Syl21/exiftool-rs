@@ -166,7 +166,9 @@ pub fn add_makernote_tag(
 }
 
 fn read_u16(data: &[u8], offset: usize, bo: ByteOrderMark) -> u16 {
-    if offset + 2 > data.len() { return 0; }
+    if offset + 2 > data.len() {
+        return 0;
+    }
     match bo {
         ByteOrderMark::LittleEndian => u16::from_le_bytes([data[offset], data[offset + 1]]),
         ByteOrderMark::BigEndian => u16::from_be_bytes([data[offset], data[offset + 1]]),
@@ -174,15 +176,29 @@ fn read_u16(data: &[u8], offset: usize, bo: ByteOrderMark) -> u16 {
 }
 
 fn read_u32(data: &[u8], offset: usize, bo: ByteOrderMark) -> u32 {
-    if offset + 4 > data.len() { return 0; }
+    if offset + 4 > data.len() {
+        return 0;
+    }
     match bo {
-        ByteOrderMark::LittleEndian => u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]),
-        ByteOrderMark::BigEndian => u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]),
+        ByteOrderMark::LittleEndian => u32::from_le_bytes([
+            data[offset],
+            data[offset + 1],
+            data[offset + 2],
+            data[offset + 3],
+        ]),
+        ByteOrderMark::BigEndian => u32::from_be_bytes([
+            data[offset],
+            data[offset + 1],
+            data[offset + 2],
+            data[offset + 3],
+        ]),
     }
 }
 
 fn write_u16(data: &mut [u8], offset: usize, value: u16, bo: ByteOrderMark) {
-    if offset + 2 > data.len() { return; }
+    if offset + 2 > data.len() {
+        return;
+    }
     let bytes = match bo {
         ByteOrderMark::LittleEndian => value.to_le_bytes(),
         ByteOrderMark::BigEndian => value.to_be_bytes(),
@@ -191,7 +207,9 @@ fn write_u16(data: &mut [u8], offset: usize, value: u16, bo: ByteOrderMark) {
 }
 
 fn write_u32(data: &mut [u8], offset: usize, value: u32, bo: ByteOrderMark) {
-    if offset + 4 > data.len() { return; }
+    if offset + 4 > data.len() {
+        return;
+    }
     let bytes = match bo {
         ByteOrderMark::LittleEndian => value.to_le_bytes(),
         ByteOrderMark::BigEndian => value.to_be_bytes(),

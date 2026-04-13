@@ -79,9 +79,8 @@ fn parse_stream_info(data: &[u8], tags: &mut Vec<Tag>) {
     let frame_size_min = ((data[4] as u32) << 16) | ((data[5] as u32) << 8) | data[6] as u32;
     let frame_size_max = ((data[7] as u32) << 16) | ((data[8] as u32) << 8) | data[9] as u32;
 
-    let sample_rate = ((data[10] as u32) << 12)
-        | ((data[11] as u32) << 4)
-        | ((data[12] as u32) >> 4);
+    let sample_rate =
+        ((data[10] as u32) << 12) | ((data[11] as u32) << 4) | ((data[12] as u32) >> 4);
 
     let channels = ((data[12] >> 1) & 0x07) + 1;
     let bits_per_sample = (((data[12] & 0x01) as u16) << 4) | ((data[13] >> 4) as u16) + 1;
@@ -93,19 +92,46 @@ fn parse_stream_info(data: &[u8], tags: &mut Vec<Tag>) {
         | data[17] as u64;
 
     let md5 = if data.len() >= 34 {
-        data[18..34].iter().map(|b| format!("{:02x}", b)).collect::<String>()
+        data[18..34]
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>()
     } else {
         String::new()
     };
 
-    tags.push(mk("BlockSizeMin", "Block Size Min", Value::U16(block_size_min)));
-    tags.push(mk("BlockSizeMax", "Block Size Max", Value::U16(block_size_max)));
-    tags.push(mk("FrameSizeMin", "Frame Size Min", Value::U32(frame_size_min)));
-    tags.push(mk("FrameSizeMax", "Frame Size Max", Value::U32(frame_size_max)));
+    tags.push(mk(
+        "BlockSizeMin",
+        "Block Size Min",
+        Value::U16(block_size_min),
+    ));
+    tags.push(mk(
+        "BlockSizeMax",
+        "Block Size Max",
+        Value::U16(block_size_max),
+    ));
+    tags.push(mk(
+        "FrameSizeMin",
+        "Frame Size Min",
+        Value::U32(frame_size_min),
+    ));
+    tags.push(mk(
+        "FrameSizeMax",
+        "Frame Size Max",
+        Value::U32(frame_size_max),
+    ));
     tags.push(mk("SampleRate", "Sample Rate", Value::U32(sample_rate)));
     tags.push(mk("Channels", "Channels", Value::U8(channels)));
-    tags.push(mk("BitsPerSample", "Bits Per Sample", Value::U16(bits_per_sample)));
-    tags.push(mk("TotalSamples", "Total Samples", Value::String(total_samples.to_string())));
+    tags.push(mk(
+        "BitsPerSample",
+        "Bits Per Sample",
+        Value::U16(bits_per_sample),
+    ));
+    tags.push(mk(
+        "TotalSamples",
+        "Total Samples",
+        Value::String(total_samples.to_string()),
+    ));
     if !md5.is_empty() {
         tags.push(mk("MD5Signature", "MD5 Signature", Value::String(md5)));
     }
@@ -150,7 +176,8 @@ pub fn parse_vorbis_comments(data: &[u8], tags: &mut Vec<Tag>) {
         if pos + 4 > data.len() {
             break;
         }
-        let comment_len = u32::from_le_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+        let comment_len =
+            u32::from_le_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
         pos += 4;
 
         if pos + comment_len > data.len() {
@@ -191,7 +218,11 @@ pub fn parse_vorbis_comments(data: &[u8], tags: &mut Vec<Tag>) {
             } else {
                 (name.to_string(), description.to_string())
             };
-            tags.push(mk(&final_name, &final_desc, Value::String(value.to_string())));
+            tags.push(mk(
+                &final_name,
+                &final_desc,
+                Value::String(value.to_string()),
+            ));
         }
     }
 }
@@ -214,7 +245,8 @@ pub fn parse_flac_picture(data: &[u8], tags: &mut Vec<Tag>) {
     if pos + 4 > data.len() {
         return;
     }
-    let desc_len = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+    let desc_len =
+        u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
     pos += 4;
     let desc = if desc_len > 0 && pos + desc_len <= data.len() {
         crate::encoding::decode_utf8_or_latin1(&data[pos..pos + desc_len]).to_string()
@@ -229,13 +261,19 @@ pub fn parse_flac_picture(data: &[u8], tags: &mut Vec<Tag>) {
     let width = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]);
     let height = u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]);
     let depth = u32::from_be_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]]);
-    let num_colors = u32::from_be_bytes([data[pos + 12], data[pos + 13], data[pos + 14], data[pos + 15]]);
+    let num_colors = u32::from_be_bytes([
+        data[pos + 12],
+        data[pos + 13],
+        data[pos + 14],
+        data[pos + 15],
+    ]);
     pos += 16;
 
     if pos + 4 > data.len() {
         return;
     }
-    let pic_data_len = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+    let pic_data_len =
+        u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
     pos += 4;
 
     let type_str = match pic_type {
@@ -264,18 +302,46 @@ pub fn parse_flac_picture(data: &[u8], tags: &mut Vec<Tag>) {
     };
 
     // Emit individual tags matching ExifTool's Perl output
-    tags.push(mk("PictureType", "Picture Type", Value::String(type_str.to_string())));
-    tags.push(mk("PictureMIMEType", "Picture MIME Type", Value::String(mime.clone())));
+    tags.push(mk(
+        "PictureType",
+        "Picture Type",
+        Value::String(type_str.to_string()),
+    ));
+    tags.push(mk(
+        "PictureMIMEType",
+        "Picture MIME Type",
+        Value::String(mime.clone()),
+    ));
     if !desc.is_empty() {
-        tags.push(mk("PictureDescription", "Picture Description", Value::String(desc)));
+        tags.push(mk(
+            "PictureDescription",
+            "Picture Description",
+            Value::String(desc),
+        ));
     } else {
-        tags.push(mk("PictureDescription", "Picture Description", Value::String(String::new())));
+        tags.push(mk(
+            "PictureDescription",
+            "Picture Description",
+            Value::String(String::new()),
+        ));
     }
     tags.push(mk("PictureWidth", "Picture Width", Value::U32(width)));
     tags.push(mk("PictureHeight", "Picture Height", Value::U32(height)));
-    tags.push(mk("PictureBitsPerPixel", "Picture Bits Per Pixel", Value::U32(depth)));
-    tags.push(mk("PictureIndexedColors", "Picture Indexed Colors", Value::U32(num_colors)));
-    tags.push(mk("PictureLength", "Picture Length", Value::U32(pic_data_len as u32)));
+    tags.push(mk(
+        "PictureBitsPerPixel",
+        "Picture Bits Per Pixel",
+        Value::U32(depth),
+    ));
+    tags.push(mk(
+        "PictureIndexedColors",
+        "Picture Indexed Colors",
+        Value::U32(num_colors),
+    ));
+    tags.push(mk(
+        "PictureLength",
+        "Picture Length",
+        Value::U32(pic_data_len as u32),
+    ));
 
     // Include the actual picture data
     let pic_end = (pos + pic_data_len).min(data.len());
@@ -293,23 +359,28 @@ pub fn base64_decode(input: &str) -> Option<Vec<u8>> {
         table[c as usize] = i as u8;
     }
 
-    let input: Vec<u8> = input.bytes().filter(|&c| c != b'\n' && c != b'\r' && c != b' ').collect();
+    let input: Vec<u8> = input
+        .bytes()
+        .filter(|&c| c != b'\n' && c != b'\r' && c != b' ')
+        .collect();
     let mut out = Vec::with_capacity(input.len() * 3 / 4);
 
     let mut i = 0;
     while i + 3 < input.len() {
         let a = table[input[i] as usize];
-        let b = table[input[i+1] as usize];
-        let c = table[input[i+2] as usize];
-        let d = table[input[i+3] as usize];
+        let b = table[input[i + 1] as usize];
+        let c = table[input[i + 2] as usize];
+        let d = table[input[i + 3] as usize];
 
-        if a == 255 || b == 255 { break; }
+        if a == 255 || b == 255 {
+            break;
+        }
 
         out.push((a << 2) | (b >> 4));
-        if input[i+2] != b'=' && c != 255 {
+        if input[i + 2] != b'=' && c != 255 {
             out.push((b << 4) | (c >> 2));
         }
-        if input[i+3] != b'=' && d != 255 {
+        if input[i + 3] != b'=' && d != 255 {
             out.push((c << 6) | d);
         }
         i += 4;
@@ -368,11 +439,19 @@ fn vorbis_field_name(field: &str) -> (&str, &str) {
             // Handle namespace:key patterns (e.g. MEDIAJUKEBOX:DATE → MediajukeboxDate)
             if let Some(colon) = field.find(':') {
                 let ns = &field[..colon];
-                let key = &field[colon+1..];
+                let key = &field[colon + 1..];
                 // Convert to CamelCase: MEDIAJUKEBOX → Mediajukebox, DATE → Date
-                let _ns_cc = ns.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default()
+                let _ns_cc = ns
+                    .chars()
+                    .next()
+                    .map(|c| c.to_uppercase().to_string())
+                    .unwrap_or_default()
                     + &ns[1..].to_lowercase();
-                let _key_cc = key.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default()
+                let _key_cc = key
+                    .chars()
+                    .next()
+                    .map(|c| c.to_uppercase().to_string())
+                    .unwrap_or_default()
                     + &key[1..].to_lowercase();
                 // We can't return borrowed str for dynamic strings, so use field as-is
                 // The caller handles this case separately

@@ -11,7 +11,9 @@ pub fn write_postscript(source: &[u8], changes: &[(&str, &str)]) -> Result<Vec<u
         offset = u32::from_le_bytes([source[4], source[5], source[6], source[7]]) as usize;
     }
 
-    if offset + 4 > source.len() || (!source[offset..].starts_with(b"%!PS") && !source[offset..].starts_with(b"%!Ad")) {
+    if offset + 4 > source.len()
+        || (!source[offset..].starts_with(b"%!PS") && !source[offset..].starts_with(b"%!Ad"))
+    {
         return Err(Error::InvalidData("not a PostScript file".into()));
     }
 

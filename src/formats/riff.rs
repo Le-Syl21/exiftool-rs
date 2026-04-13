@@ -5,8 +5,8 @@
 //! Mirrors ExifTool's RIFF.pm.
 
 use crate::error::{Error, Result};
-use crate::metadata::{ExifReader, XmpReader};
 use crate::metadata::exif::ByteOrderMark;
+use crate::metadata::{ExifReader, XmpReader};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
@@ -44,7 +44,9 @@ fn read_webp_chunks(data: &[u8], start: usize, tags: &mut Vec<Tag>) -> Result<()
 
     while pos + 8 <= data.len() {
         let chunk_id = &data[pos..pos + 4];
-        let chunk_size = u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]) as usize;
+        let chunk_size =
+            u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                as usize;
         let chunk_data_start = pos + 8;
         let chunk_data_end = chunk_data_start + chunk_size;
 
@@ -58,9 +60,8 @@ fn read_webp_chunks(data: &[u8], start: usize, tags: &mut Vec<Tag>) -> Result<()
             b"VP8 " => {
                 if chunk_data.len() >= 10 {
                     // VP8 frame header: 3 bytes frame tag, then dimensions
-                    let frame_tag = u32::from_le_bytes([
-                        chunk_data[0], chunk_data[1], chunk_data[2], 0,
-                    ]);
+                    let frame_tag =
+                        u32::from_le_bytes([chunk_data[0], chunk_data[1], chunk_data[2], 0]);
                     let is_keyframe = (frame_tag & 1) == 0;
                     if is_keyframe && chunk_data.len() >= 10 {
                         // Check for VP8 signature 0x9D012A
@@ -72,29 +73,76 @@ fn read_webp_chunks(data: &[u8], start: usize, tags: &mut Vec<Tag>) -> Result<()
                                 1 => "1 (bilinear reconstruction, simple loop)",
                                 2 => "2 (bilinear reconstruction, no loop)",
                                 3 => "3 (no reconstruction, no loop)",
-                                v => return {
-                                    // fallback: just use number
-                                    let width = u16::from_le_bytes([chunk_data[6], chunk_data[7]]) & 0x3FFF;
-                                    let height = u16::from_le_bytes([chunk_data[8], chunk_data[9]]) & 0x3FFF;
-                                    let hscale = (u16::from_le_bytes([chunk_data[6], chunk_data[7]]) >> 14) & 0x3;
-                                    let vscale = (u16::from_le_bytes([chunk_data[8], chunk_data[9]]) >> 14) & 0x3;
-                                    tags.push(mk_webp("VP8Version", "VP8 Version", Value::String(format!("{}", v))));
-                                    tags.push(mk_webp("ImageWidth", "Image Width", Value::U16(width)));
-                                    tags.push(mk_webp("HorizontalScale", "Horizontal Scale", Value::U16(hscale)));
-                                    tags.push(mk_webp("ImageHeight", "Image Height", Value::U16(height)));
-                                    tags.push(mk_webp("VerticalScale", "Vertical Scale", Value::U16(vscale)));
-                                    Ok(())
-                                },
+                                v => {
+                                    return {
+                                        // fallback: just use number
+                                        let width =
+                                            u16::from_le_bytes([chunk_data[6], chunk_data[7]])
+                                                & 0x3FFF;
+                                        let height =
+                                            u16::from_le_bytes([chunk_data[8], chunk_data[9]])
+                                                & 0x3FFF;
+                                        let hscale =
+                                            (u16::from_le_bytes([chunk_data[6], chunk_data[7]])
+                                                >> 14)
+                                                & 0x3;
+                                        let vscale =
+                                            (u16::from_le_bytes([chunk_data[8], chunk_data[9]])
+                                                >> 14)
+                                                & 0x3;
+                                        tags.push(mk_webp(
+                                            "VP8Version",
+                                            "VP8 Version",
+                                            Value::String(format!("{}", v)),
+                                        ));
+                                        tags.push(mk_webp(
+                                            "ImageWidth",
+                                            "Image Width",
+                                            Value::U16(width),
+                                        ));
+                                        tags.push(mk_webp(
+                                            "HorizontalScale",
+                                            "Horizontal Scale",
+                                            Value::U16(hscale),
+                                        ));
+                                        tags.push(mk_webp(
+                                            "ImageHeight",
+                                            "Image Height",
+                                            Value::U16(height),
+                                        ));
+                                        tags.push(mk_webp(
+                                            "VerticalScale",
+                                            "Vertical Scale",
+                                            Value::U16(vscale),
+                                        ));
+                                        Ok(())
+                                    }
+                                }
                             };
                             let width = u16::from_le_bytes([chunk_data[6], chunk_data[7]]) & 0x3FFF;
-                            let height = u16::from_le_bytes([chunk_data[8], chunk_data[9]]) & 0x3FFF;
-                            let hscale = (u16::from_le_bytes([chunk_data[6], chunk_data[7]]) >> 14) & 0x3;
-                            let vscale = (u16::from_le_bytes([chunk_data[8], chunk_data[9]]) >> 14) & 0x3;
-                            tags.push(mk_webp("VP8Version", "VP8 Version", Value::String(version_str.into())));
+                            let height =
+                                u16::from_le_bytes([chunk_data[8], chunk_data[9]]) & 0x3FFF;
+                            let hscale =
+                                (u16::from_le_bytes([chunk_data[6], chunk_data[7]]) >> 14) & 0x3;
+                            let vscale =
+                                (u16::from_le_bytes([chunk_data[8], chunk_data[9]]) >> 14) & 0x3;
+                            tags.push(mk_webp(
+                                "VP8Version",
+                                "VP8 Version",
+                                Value::String(version_str.into()),
+                            ));
                             tags.push(mk_webp("ImageWidth", "Image Width", Value::U16(width)));
-                            tags.push(mk_webp("HorizontalScale", "Horizontal Scale", Value::U16(hscale)));
+                            tags.push(mk_webp(
+                                "HorizontalScale",
+                                "Horizontal Scale",
+                                Value::U16(hscale),
+                            ));
                             tags.push(mk_webp("ImageHeight", "Image Height", Value::U16(height)));
-                            tags.push(mk_webp("VerticalScale", "Vertical Scale", Value::U16(vscale)));
+                            tags.push(mk_webp(
+                                "VerticalScale",
+                                "Vertical Scale",
+                                Value::U16(vscale),
+                            ));
                         }
                     }
                 }
@@ -104,20 +152,38 @@ fn read_webp_chunks(data: &[u8], start: usize, tags: &mut Vec<Tag>) -> Result<()
                 if chunk_data.len() >= 5 && chunk_data[0] == 0x2F {
                     // Bits are packed: width is bits 1..14 (14 bits), height is bits 15..28
                     // The spec: read 32 bits starting at byte 1
-                    let bits = u32::from_le_bytes([chunk_data[1], chunk_data[2], chunk_data[3], chunk_data[4]]);
+                    let bits = u32::from_le_bytes([
+                        chunk_data[1],
+                        chunk_data[2],
+                        chunk_data[3],
+                        chunk_data[4],
+                    ]);
                     let width = (bits & 0x3FFF) + 1;
                     let height = ((bits >> 14) & 0x3FFF) + 1;
                     let alpha = (bits >> 28) & 1;
                     tags.push(mk_webp("ImageWidth", "Image Width", Value::U32(width)));
                     tags.push(mk_webp("ImageHeight", "Image Height", Value::U32(height)));
-                    tags.push(mk_webp("AlphaIsUsed", "Alpha Is Used", Value::String(if alpha != 0 { "Yes".into() } else { "No".into() })));
+                    tags.push(mk_webp(
+                        "AlphaIsUsed",
+                        "Alpha Is Used",
+                        Value::String(if alpha != 0 {
+                            "Yes".into()
+                        } else {
+                            "No".into()
+                        }),
+                    ));
                 }
             }
             // VP8X extended format
             b"VP8X" => {
                 if chunk_data.len() >= 10 {
                     // Flags (32-bit little-endian)
-                    let flags = u32::from_le_bytes([chunk_data[0], chunk_data[1], chunk_data[2], chunk_data[3]]);
+                    let flags = u32::from_le_bytes([
+                        chunk_data[0],
+                        chunk_data[1],
+                        chunk_data[2],
+                        chunk_data[3],
+                    ]);
                     // Width/Height are 24-bit LE at offsets 4 and 7
                     let width = (chunk_data[4] as u32)
                         | ((chunk_data[5] as u32) << 8)
@@ -129,17 +195,35 @@ fn read_webp_chunks(data: &[u8], start: usize, tags: &mut Vec<Tag>) -> Result<()
                     // Build WebP_Flags string (matching Perl ExifTool bitmask output)
                     // Perl bit positions: 1=Animation, 2=XMP, 3=EXIF, 4=Alpha, 5=ICC Profile
                     let mut flag_parts = Vec::new();
-                    if flags & (1 << 1) != 0 { flag_parts.push("Animation"); }
-                    if flags & (1 << 2) != 0 { flag_parts.push("XMP"); }
-                    if flags & (1 << 3) != 0 { flag_parts.push("EXIF"); }
-                    if flags & (1 << 4) != 0 { flag_parts.push("Alpha"); }
-                    if flags & (1 << 5) != 0 { flag_parts.push("ICC Profile"); }
+                    if flags & (1 << 1) != 0 {
+                        flag_parts.push("Animation");
+                    }
+                    if flags & (1 << 2) != 0 {
+                        flag_parts.push("XMP");
+                    }
+                    if flags & (1 << 3) != 0 {
+                        flag_parts.push("EXIF");
+                    }
+                    if flags & (1 << 4) != 0 {
+                        flag_parts.push("Alpha");
+                    }
+                    if flags & (1 << 5) != 0 {
+                        flag_parts.push("ICC Profile");
+                    }
                     if !flag_parts.is_empty() {
-                        tags.push(mk_webp("WebP_Flags", "WebP Flags", Value::String(flag_parts.join(", "))));
+                        tags.push(mk_webp(
+                            "WebP_Flags",
+                            "WebP Flags",
+                            Value::String(flag_parts.join(", ")),
+                        ));
                     }
 
                     tags.push(mk_webp("ImageWidth", "Image Width", Value::U32(width + 1)));
-                    tags.push(mk_webp("ImageHeight", "Image Height", Value::U32(height + 1)));
+                    tags.push(mk_webp(
+                        "ImageHeight",
+                        "Image Height",
+                        Value::U32(height + 1),
+                    ));
                 }
             }
             // ALPH chunk (WebP alpha)
@@ -168,9 +252,21 @@ fn read_webp_chunks(data: &[u8], start: usize, tags: &mut Vec<Tag>) -> Result<()
                         _ => "Unknown",
                     };
 
-                    tags.push(mk_webp("AlphaPreprocessing", "Alpha Preprocessing", Value::String(preprocessing_str.into())));
-                    tags.push(mk_webp("AlphaFiltering", "Alpha Filtering", Value::String(filtering_str.into())));
-                    tags.push(mk_webp("AlphaCompression", "Alpha Compression", Value::String(compression_str.into())));
+                    tags.push(mk_webp(
+                        "AlphaPreprocessing",
+                        "Alpha Preprocessing",
+                        Value::String(preprocessing_str.into()),
+                    ));
+                    tags.push(mk_webp(
+                        "AlphaFiltering",
+                        "Alpha Filtering",
+                        Value::String(filtering_str.into()),
+                    ));
+                    tags.push(mk_webp(
+                        "AlphaCompression",
+                        "Alpha Compression",
+                        Value::String(compression_str.into()),
+                    ));
                 }
             }
             // EXIF data
@@ -203,7 +299,10 @@ fn read_webp_chunks(data: &[u8], start: usize, tags: &mut Vec<Tag>) -> Result<()
             b"ANIM" => {
                 if chunk_data.len() >= 6 {
                     let bg_color = u32::from_le_bytes([
-                        chunk_data[0], chunk_data[1], chunk_data[2], chunk_data[3],
+                        chunk_data[0],
+                        chunk_data[1],
+                        chunk_data[2],
+                        chunk_data[3],
                     ]);
                     let loop_count = u16::from_le_bytes([chunk_data[4], chunk_data[5]]);
                     tags.push(mk_webp(
@@ -301,9 +400,9 @@ fn read_riff_chunks(
 
     while pos + 8 <= end {
         let chunk_id = &data[pos..pos + 4];
-        let chunk_size = u32::from_le_bytes([
-            data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7],
-        ]) as usize;
+        let chunk_size =
+            u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                as usize;
         let chunk_data_start = pos + 8;
         let chunk_data_end = (chunk_data_start + chunk_size).min(end);
 
@@ -318,42 +417,93 @@ fn read_riff_chunks(
                     let list_type = &data[chunk_data_start..chunk_data_start + 4];
                     match list_type {
                         b"INFO" => {
-                            read_info_chunks(data, chunk_data_start + 4, chunk_data_end, tags, family)?;
+                            read_info_chunks(
+                                data,
+                                chunk_data_start + 4,
+                                chunk_data_end,
+                                tags,
+                                family,
+                            )?;
                         }
                         b"INF0" => {
                             // Some files use '0' instead of 'O'
-                            read_info_chunks(data, chunk_data_start + 4, chunk_data_end, tags, family)?;
+                            read_info_chunks(
+                                data,
+                                chunk_data_start + 4,
+                                chunk_data_end,
+                                tags,
+                                family,
+                            )?;
                         }
                         b"hdrl" => {
                             // AVI header list - contains avih and strl
                             state.depth += 1;
-                            read_riff_chunks(data, chunk_data_start + 4, chunk_data_end, tags, family, state)?;
+                            read_riff_chunks(
+                                data,
+                                chunk_data_start + 4,
+                                chunk_data_end,
+                                tags,
+                                family,
+                                state,
+                            )?;
                             state.depth -= 1;
                         }
                         b"strl" => {
                             state.depth += 1;
-                            read_riff_chunks(data, chunk_data_start + 4, chunk_data_end, tags, family, state)?;
+                            read_riff_chunks(
+                                data,
+                                chunk_data_start + 4,
+                                chunk_data_end,
+                                tags,
+                                family,
+                                state,
+                            )?;
                             state.depth -= 1;
                         }
                         b"odml" => {
                             // OpenDML extended AVI header
                             state.depth += 1;
-                            read_riff_chunks(data, chunk_data_start + 4, chunk_data_end, tags, family, state)?;
+                            read_riff_chunks(
+                                data,
+                                chunk_data_start + 4,
+                                chunk_data_end,
+                                tags,
+                                family,
+                                state,
+                            )?;
                             state.depth -= 1;
                         }
                         b"exif" => {
                             // EXIF data in AVI/WAV LIST exif chunk
-                            read_exif_list_chunks(data, chunk_data_start + 4, chunk_data_end, tags, family)?;
+                            read_exif_list_chunks(
+                                data,
+                                chunk_data_start + 4,
+                                chunk_data_end,
+                                tags,
+                                family,
+                            )?;
                         }
                         b"adtl" => {
                             // Associated data list
                             state.depth += 1;
-                            read_riff_chunks(data, chunk_data_start + 4, chunk_data_end, tags, family, state)?;
+                            read_riff_chunks(
+                                data,
+                                chunk_data_start + 4,
+                                chunk_data_end,
+                                tags,
+                                family,
+                                state,
+                            )?;
                             state.depth -= 1;
                         }
                         b"hydt" | b"pntx" => {
                             // Pentax metadata LIST (LIST hydt / LIST pntx)
-                            read_pentax_avi_chunks(data, chunk_data_start + 4, chunk_data_end, tags)?;
+                            read_pentax_avi_chunks(
+                                data,
+                                chunk_data_start + 4,
+                                chunk_data_end,
+                                tags,
+                            )?;
                         }
                         _ => {}
                     }
@@ -380,18 +530,48 @@ fn read_riff_chunks(
                         let fps = 1_000_000.0_f64 / us_per_frame as f64;
                         // ExifTool prints as int($val * 1000 + 0.5) / 1000
                         let fps_rounded = (fps * 1000.0 + 0.5).floor() / 1000.0;
-                        tags.push(mk_riff(family, "FrameRate", "Frame Rate", Value::String(format!("{}", fps_rounded))));
+                        tags.push(mk_riff(
+                            family,
+                            "FrameRate",
+                            "Frame Rate",
+                            Value::String(format!("{}", fps_rounded)),
+                        ));
                     }
 
                     // MaxDataRate: ExifTool prints as "X kB/s" (sprintf("%.4g %s", $tmp, $unit))
                     let kbps = max_data_rate as f64 / 1000.0;
                     let max_data_rate_str = format_sig4(kbps, "kB/s");
-                    tags.push(mk_riff(family, "MaxDataRate", "Max Data Rate", Value::String(max_data_rate_str)));
+                    tags.push(mk_riff(
+                        family,
+                        "MaxDataRate",
+                        "Max Data Rate",
+                        Value::String(max_data_rate_str),
+                    ));
 
-                    tags.push(mk_riff(family, "FrameCount", "Frame Count", Value::U32(total_frames)));
-                    tags.push(mk_riff(family, "StreamCount", "Stream Count", Value::U32(stream_count)));
-                    tags.push(mk_riff(family, "ImageWidth", "Image Width", Value::U32(width)));
-                    tags.push(mk_riff(family, "ImageHeight", "Image Height", Value::U32(height)));
+                    tags.push(mk_riff(
+                        family,
+                        "FrameCount",
+                        "Frame Count",
+                        Value::U32(total_frames),
+                    ));
+                    tags.push(mk_riff(
+                        family,
+                        "StreamCount",
+                        "Stream Count",
+                        Value::U32(stream_count),
+                    ));
+                    tags.push(mk_riff(
+                        family,
+                        "ImageWidth",
+                        "Image Width",
+                        Value::U32(width),
+                    ));
+                    tags.push(mk_riff(
+                        family,
+                        "ImageHeight",
+                        "Image Height",
+                        Value::U32(height),
+                    ));
                 }
             }
             // Stream Header (strh)
@@ -413,15 +593,32 @@ fn read_riff_chunks(
                             "iavs" => "Interleaved Audio+Video",
                             _ => &fcc_type,
                         };
-                        tags.push(mk_riff(family, "StreamType", "Stream Type", Value::String(stream_type_str.to_string())));
+                        tags.push(mk_riff(
+                            family,
+                            "StreamType",
+                            "Stream Type",
+                            Value::String(stream_type_str.to_string()),
+                        ));
                     }
 
                     if chunk_size >= 8 {
-                        let fcc_handler = crate::encoding::decode_utf8_or_latin1(&cd[4..8]).trim_end_matches('\0').to_string();
+                        let fcc_handler = crate::encoding::decode_utf8_or_latin1(&cd[4..8])
+                            .trim_end_matches('\0')
+                            .to_string();
                         if fcc_type == "vids" {
-                            tags.push(mk_riff(family, "VideoCodec", "Video Codec", Value::String(fcc_handler)));
+                            tags.push(mk_riff(
+                                family,
+                                "VideoCodec",
+                                "Video Codec",
+                                Value::String(fcc_handler),
+                            ));
                         } else if fcc_type == "auds" {
-                            tags.push(mk_riff(family, "AudioCodec", "Audio Codec", Value::String(fcc_handler)));
+                            tags.push(mk_riff(
+                                family,
+                                "AudioCodec",
+                                "Audio Codec",
+                                Value::String(fcc_handler),
+                            ));
                         }
                     }
 
@@ -434,13 +631,23 @@ fn read_riff_chunks(
                             // AudioSampleRate = rate/scale
                             let audio_rate = rate as f64 / scale as f64;
                             let audio_rate_rounded = (audio_rate * 100.0 + 0.5).floor() / 100.0;
-                            tags.push(mk_riff(family, "AudioSampleRate", "Audio Sample Rate", Value::String(format!("{}", audio_rate_rounded))));
+                            tags.push(mk_riff(
+                                family,
+                                "AudioSampleRate",
+                                "Audio Sample Rate",
+                                Value::String(format!("{}", audio_rate_rounded)),
+                            ));
                         } else if fcc_type == "vids" && scale > 0 {
                             // VideoFrameRate = rate/scale
                             let vfr = rate as f64 / scale as f64;
                             let vfr_rounded = (vfr * 1000.0 + 0.5).floor() / 1000.0;
                             state.video_frame_rate = Some(vfr);
-                            tags.push(mk_riff(family, "VideoFrameRate", "Video Frame Rate", Value::String(format!("{}", vfr_rounded))));
+                            tags.push(mk_riff(
+                                family,
+                                "VideoFrameRate",
+                                "Video Frame Rate",
+                                Value::String(format!("{}", vfr_rounded)),
+                            ));
                         }
                     }
 
@@ -448,10 +655,20 @@ fn read_riff_chunks(
                     if chunk_size >= 36 {
                         let length = u32::from_le_bytes([cd[32], cd[33], cd[34], cd[35]]);
                         if fcc_type == "auds" {
-                            tags.push(mk_riff(family, "AudioSampleCount", "Audio Sample Count", Value::U32(length)));
+                            tags.push(mk_riff(
+                                family,
+                                "AudioSampleCount",
+                                "Audio Sample Count",
+                                Value::U32(length),
+                            ));
                         } else if fcc_type == "vids" {
                             state.video_frame_count = length;
-                            tags.push(mk_riff(family, "VideoFrameCount", "Video Frame Count", Value::U32(length)));
+                            tags.push(mk_riff(
+                                family,
+                                "VideoFrameCount",
+                                "Video Frame Count",
+                                Value::U32(length),
+                            ));
                         }
                     }
 
@@ -466,7 +683,12 @@ fn read_riff_chunks(
                         } else {
                             format!("{}", quality)
                         };
-                        tags.push(mk_riff(family, "Quality", "Quality", Value::String(quality_str)));
+                        tags.push(mk_riff(
+                            family,
+                            "Quality",
+                            "Quality",
+                            Value::String(quality_str),
+                        ));
 
                         let sample_size_str = if sample_size == 0 {
                             "Variable".to_string()
@@ -475,7 +697,12 @@ fn read_riff_chunks(
                         } else {
                             format!("{} bytes", sample_size)
                         };
-                        tags.push(mk_riff(family, "SampleSize", "Sample Size", Value::String(sample_size_str)));
+                        tags.push(mk_riff(
+                            family,
+                            "SampleSize",
+                            "Sample Size",
+                            Value::String(sample_size_str),
+                        ));
                     }
                 }
             }
@@ -488,7 +715,13 @@ fn read_riff_chunks(
                     }
                     Some("vids") => {
                         // BITMAPINFOHEADER
-                        parse_bitmapinfoheader(data, chunk_data_start, chunk_data_end, tags, family);
+                        parse_bitmapinfoheader(
+                            data,
+                            chunk_data_start,
+                            chunk_data_end,
+                            tags,
+                            family,
+                        );
                     }
                     _ => {}
                 }
@@ -500,7 +733,9 @@ fn read_riff_chunks(
                     let tag = &data[chunk_data_start..chunk_data_start + 4];
                     if tag == b"AVIF" && chunk_data_end >= chunk_data_start + 8 {
                         // EXIF data starts at offset 8 in strd
-                        if let Ok(exif_tags) = ExifReader::read(&data[chunk_data_start + 8..chunk_data_end]) {
+                        if let Ok(exif_tags) =
+                            ExifReader::read(&data[chunk_data_start + 8..chunk_data_end])
+                        {
                             tags.extend(exif_tags);
                         }
                     }
@@ -511,7 +746,12 @@ fn read_riff_chunks(
                 if chunk_size >= 4 {
                     let cd = &data[chunk_data_start..chunk_data_end];
                     let total_frame_count = u32::from_le_bytes([cd[0], cd[1], cd[2], cd[3]]);
-                    tags.push(mk_riff(family, "TotalFrameCount", "Total Frame Count", Value::U32(total_frame_count)));
+                    tags.push(mk_riff(
+                        family,
+                        "TotalFrameCount",
+                        "Total Frame Count",
+                        Value::U32(total_frame_count),
+                    ));
                 }
             }
             // Audio Format (WAV fmt chunk at top level)
@@ -529,12 +769,18 @@ fn read_riff_chunks(
             }
             // IDIT - DateTimeOriginal (top-level or in hdrl)
             b"IDIT" => {
-                let s = crate::encoding::decode_utf8_or_latin1(&data[chunk_data_start..chunk_data_end])
-                    .trim_end_matches('\0')
-                    .to_string();
+                let s =
+                    crate::encoding::decode_utf8_or_latin1(&data[chunk_data_start..chunk_data_end])
+                        .trim_end_matches('\0')
+                        .to_string();
                 if !s.is_empty() {
                     let converted = convert_riff_date(&s);
-                    tags.push(mk_riff(family, "DateTimeOriginal", "Date/Time Original", Value::String(converted)));
+                    tags.push(mk_riff(
+                        family,
+                        "DateTimeOriginal",
+                        "Date/Time Original",
+                        Value::String(converted),
+                    ));
                 }
             }
             // EXIF chunk
@@ -557,7 +803,14 @@ fn read_riff_chunks(
             }
             // Broadcast extension (WAV bext)
             b"bext" => {
-                parse_bext(data, chunk_data_start, chunk_data_end, chunk_size, tags, family);
+                parse_bext(
+                    data,
+                    chunk_data_start,
+                    chunk_data_end,
+                    chunk_size,
+                    tags,
+                    family,
+                );
             }
             _ => {}
         }
@@ -574,10 +827,19 @@ fn read_riff_chunks(
     // After processing all chunks, compute Duration for WAV
     // Use data chunk size, or fall back to file size (like Perl ExifTool)
     if family == "WAV" && state.avg_bytes_per_sec > 0 {
-        let effective_len = if state.data_len > 0 { state.data_len } else { state.file_size };
+        let effective_len = if state.data_len > 0 {
+            state.data_len
+        } else {
+            state.file_size
+        };
         if effective_len > 0 {
             let duration = effective_len as f64 / state.avg_bytes_per_sec as f64;
-            tags.push(mk_riff(family, "Duration", "Duration", Value::String(format_duration(duration))));
+            tags.push(mk_riff(
+                family,
+                "Duration",
+                "Duration",
+                Value::String(format_duration(duration)),
+            ));
         }
     }
 
@@ -590,7 +852,11 @@ fn read_riff_chunks(
                 let dur1 = state.total_frames as f64 / fps;
                 let dur2 = vc as f64 / vfr;
                 let rat = dur1 / dur2;
-                if rat > 1.9 && rat < 3.1 { dur2 } else { dur1 }
+                if rat > 1.9 && rat < 3.1 {
+                    dur2
+                } else {
+                    dur1
+                }
             } else if state.total_frames > 0 {
                 state.total_frames as f64 / fps
             } else {
@@ -602,7 +868,12 @@ fn read_riff_chunks(
             0.0
         };
         if dur > 0.0 {
-            tags.push(mk_riff(family, "Duration", "Duration", Value::String(format_duration(dur))));
+            tags.push(mk_riff(
+                family,
+                "Duration",
+                "Duration",
+                Value::String(format_duration(dur)),
+            ));
         }
     }
 
@@ -622,19 +893,50 @@ fn parse_wave_format(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>,
     let avg_bytes = u32::from_le_bytes([cd[8], cd[9], cd[10], cd[11]]);
 
     let encoding = audio_encoding_name(format_tag);
-    tags.push(mk_riff(family, "Encoding", "Encoding", Value::String(encoding.into())));
-    tags.push(mk_riff(family, "NumChannels", "Num Channels", Value::U16(channels)));
-    tags.push(mk_riff(family, "SampleRate", "Sample Rate", Value::U32(sample_rate)));
-    tags.push(mk_riff(family, "AvgBytesPerSec", "Avg Bytes Per Sec", Value::U32(avg_bytes)));
+    tags.push(mk_riff(
+        family,
+        "Encoding",
+        "Encoding",
+        Value::String(encoding.into()),
+    ));
+    tags.push(mk_riff(
+        family,
+        "NumChannels",
+        "Num Channels",
+        Value::U16(channels),
+    ));
+    tags.push(mk_riff(
+        family,
+        "SampleRate",
+        "Sample Rate",
+        Value::U32(sample_rate),
+    ));
+    tags.push(mk_riff(
+        family,
+        "AvgBytesPerSec",
+        "Avg Bytes Per Sec",
+        Value::U32(avg_bytes),
+    ));
 
     if chunk_size >= 16 {
         let bits_per_sample = u16::from_le_bytes([cd[14], cd[15]]);
-        tags.push(mk_riff(family, "BitsPerSample", "Bits Per Sample", Value::U16(bits_per_sample)));
+        tags.push(mk_riff(
+            family,
+            "BitsPerSample",
+            "Bits Per Sample",
+            Value::U16(bits_per_sample),
+        ));
     }
 }
 
 /// Parse BITMAPINFOHEADER (strf for video streams)
-fn parse_bitmapinfoheader(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, family: &str) {
+fn parse_bitmapinfoheader(
+    data: &[u8],
+    start: usize,
+    end: usize,
+    tags: &mut Vec<Tag>,
+    family: &str,
+) {
     let chunk_size = end - start;
     if chunk_size < 40 {
         return;
@@ -644,13 +946,18 @@ fn parse_bitmapinfoheader(data: &[u8], start: usize, end: usize, tags: &mut Vec<
     // Size of structure = BMPVersion indicator
     let bmp_size = u32::from_le_bytes([cd[0], cd[1], cd[2], cd[3]]);
     let bmp_version = match bmp_size {
-        40  => "Windows V3",
-        68  => "AVI BMP structure?",
+        40 => "Windows V3",
+        68 => "AVI BMP structure?",
         108 => "Windows V4",
         124 => "Windows V5",
-        _   => "Unknown",
+        _ => "Unknown",
     };
-    tags.push(mk_riff(family, "BMPVersion", "BMP Version", Value::String(bmp_version.into())));
+    tags.push(mk_riff(
+        family,
+        "BMPVersion",
+        "BMP Version",
+        Value::String(bmp_version.into()),
+    ));
 
     // Width/Height are at offsets 4/8 but avih already emitted them; skip redundant ImageWidth/Height here
     // (ExifTool does emit them from strf too via BMP::Main, but they're the same values)
@@ -660,7 +967,12 @@ fn parse_bitmapinfoheader(data: &[u8], start: usize, end: usize, tags: &mut Vec<
 
     // BitDepth at offset 14 (int16u)
     let bit_depth = u16::from_le_bytes([cd[14], cd[15]]);
-    tags.push(mk_riff(family, "BitDepth", "Bit Depth", Value::U16(bit_depth)));
+    tags.push(mk_riff(
+        family,
+        "BitDepth",
+        "Bit Depth",
+        Value::U16(bit_depth),
+    ));
 
     // Compression at offset 16 (int32u, but often a FourCC)
     let compression_raw = u32::from_le_bytes([cd[16], cd[17], cd[18], cd[19]]);
@@ -679,19 +991,39 @@ fn parse_bitmapinfoheader(data: &[u8], start: usize, end: usize, tags: &mut Vec<
             _ => format!("{}", compression_raw).into(),
         }
     };
-    tags.push(mk_riff(family, "Compression", "Compression", Value::String(compression_str.to_string())));
+    tags.push(mk_riff(
+        family,
+        "Compression",
+        "Compression",
+        Value::String(compression_str.to_string()),
+    ));
 
     // ImageLength at offset 20 (int32u)
     let image_length = u32::from_le_bytes([cd[20], cd[21], cd[22], cd[23]]);
-    tags.push(mk_riff(family, "ImageLength", "Image Length", Value::U32(image_length)));
+    tags.push(mk_riff(
+        family,
+        "ImageLength",
+        "Image Length",
+        Value::U32(image_length),
+    ));
 
     // PixelsPerMeterX at offset 24
     let ppm_x = u32::from_le_bytes([cd[24], cd[25], cd[26], cd[27]]);
-    tags.push(mk_riff(family, "PixelsPerMeterX", "Pixels Per Meter X", Value::U32(ppm_x)));
+    tags.push(mk_riff(
+        family,
+        "PixelsPerMeterX",
+        "Pixels Per Meter X",
+        Value::U32(ppm_x),
+    ));
 
     // PixelsPerMeterY at offset 28
     let ppm_y = u32::from_le_bytes([cd[28], cd[29], cd[30], cd[31]]);
-    tags.push(mk_riff(family, "PixelsPerMeterY", "Pixels Per Meter Y", Value::U32(ppm_y)));
+    tags.push(mk_riff(
+        family,
+        "PixelsPerMeterY",
+        "Pixels Per Meter Y",
+        Value::U32(ppm_y),
+    ));
 
     // NumColors at offset 32
     let num_colors = u32::from_le_bytes([cd[32], cd[33], cd[34], cd[35]]);
@@ -700,7 +1032,12 @@ fn parse_bitmapinfoheader(data: &[u8], start: usize, end: usize, tags: &mut Vec<
     } else {
         format!("{}", num_colors)
     };
-    tags.push(mk_riff(family, "NumColors", "Num Colors", Value::String(num_colors_str)));
+    tags.push(mk_riff(
+        family,
+        "NumColors",
+        "Num Colors",
+        Value::String(num_colors_str),
+    ));
 
     // NumImportantColors at offset 36
     let num_important = u32::from_le_bytes([cd[36], cd[37], cd[38], cd[39]]);
@@ -709,11 +1046,23 @@ fn parse_bitmapinfoheader(data: &[u8], start: usize, end: usize, tags: &mut Vec<
     } else {
         format!("{}", num_important)
     };
-    tags.push(mk_riff(family, "NumImportantColors", "Num Important Colors", Value::String(num_important_str)));
+    tags.push(mk_riff(
+        family,
+        "NumImportantColors",
+        "Num Important Colors",
+        Value::String(num_important_str),
+    ));
 }
 
 /// Parse broadcast audio extension chunk (bext)
-fn parse_bext(data: &[u8], start: usize, end: usize, chunk_size: usize, tags: &mut Vec<Tag>, family: &str) {
+fn parse_bext(
+    data: &[u8],
+    start: usize,
+    end: usize,
+    chunk_size: usize,
+    tags: &mut Vec<Tag>,
+    family: &str,
+) {
     if chunk_size < 256 {
         return;
     }
@@ -724,7 +1073,12 @@ fn parse_bext(data: &[u8], start: usize, end: usize, chunk_size: usize, tags: &m
         .trim_end_matches('\0')
         .to_string();
     if !description.is_empty() {
-        tags.push(mk_riff(family, "Description", "Description", Value::String(description)));
+        tags.push(mk_riff(
+            family,
+            "Description",
+            "Description",
+            Value::String(description),
+        ));
     }
 
     if cd.len() >= 288 {
@@ -733,7 +1087,12 @@ fn parse_bext(data: &[u8], start: usize, end: usize, chunk_size: usize, tags: &m
             .trim_end_matches('\0')
             .to_string();
         if !originator.is_empty() {
-            tags.push(mk_riff(family, "Originator", "Originator", Value::String(originator)));
+            tags.push(mk_riff(
+                family,
+                "Originator",
+                "Originator",
+                Value::String(originator),
+            ));
         }
     }
 
@@ -743,7 +1102,12 @@ fn parse_bext(data: &[u8], start: usize, end: usize, chunk_size: usize, tags: &m
             .trim_end_matches('\0')
             .to_string();
         if !orig_ref.is_empty() {
-            tags.push(mk_riff(family, "OriginatorReference", "Originator Reference", Value::String(orig_ref)));
+            tags.push(mk_riff(
+                family,
+                "OriginatorReference",
+                "Originator Reference",
+                Value::String(orig_ref),
+            ));
         }
     }
 
@@ -760,7 +1124,12 @@ fn parse_bext(data: &[u8], start: usize, end: usize, chunk_size: usize, tags: &m
             } else {
                 converted
             };
-            tags.push(mk_riff(family, "DateTimeOriginal", "Date/Time Original", Value::String(converted.trim().to_string())));
+            tags.push(mk_riff(
+                family,
+                "DateTimeOriginal",
+                "Date/Time Original",
+                Value::String(converted.trim().to_string()),
+            ));
         }
     }
 }
@@ -768,14 +1137,19 @@ fn parse_bext(data: &[u8], start: usize, end: usize, chunk_size: usize, tags: &m
 /// Read Pentax AVI sub-chunks from LIST hydt or LIST pntx.
 /// Contains hymn or mknt chunks with Pentax MakerNotes (Pentax::Main IFD).
 /// Mirrors Perl: LIST_hydt => PentaxData => TagTable Pentax::AVI => hymn => MakerNotes.
-fn read_pentax_avi_chunks(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) -> Result<()> {
+fn read_pentax_avi_chunks(
+    data: &[u8],
+    start: usize,
+    end: usize,
+    tags: &mut Vec<Tag>,
+) -> Result<()> {
     let mut pos = start;
 
     while pos + 8 <= end {
         let chunk_id = &data[pos..pos + 4];
-        let chunk_size = u32::from_le_bytes([
-            data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7],
-        ]) as usize;
+        let chunk_size =
+            u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                as usize;
         let data_start = pos + 8;
         let data_end = (data_start + chunk_size).min(end);
 
@@ -797,7 +1171,12 @@ fn read_pentax_avi_chunks(data: &[u8], start: usize, end: usize, tags: &mut Vec<
                         ByteOrderMark::LittleEndian
                     };
                     let mn_tags = crate::metadata::makernotes::parse_makernotes(
-                        mn_data, 0, mn_data.len(), "PENTAX", "", bo,
+                        mn_data,
+                        0,
+                        mn_data.len(),
+                        "PENTAX",
+                        "",
+                        bo,
                     );
                     tags.extend(mn_tags);
                 }
@@ -812,14 +1191,20 @@ fn read_pentax_avi_chunks(data: &[u8], start: usize, end: usize, tags: &mut Vec<
 }
 
 /// Read LIST exif sub-chunks (EXIF 2.3 WAV metadata)
-fn read_exif_list_chunks(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, family: &str) -> Result<()> {
+fn read_exif_list_chunks(
+    data: &[u8],
+    start: usize,
+    end: usize,
+    tags: &mut Vec<Tag>,
+    family: &str,
+) -> Result<()> {
     let mut pos = start;
 
     while pos + 8 <= end {
         let chunk_id = std::str::from_utf8(&data[pos..pos + 4]).unwrap_or("????");
-        let chunk_size = u32::from_le_bytes([
-            data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7],
-        ]) as usize;
+        let chunk_size =
+            u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                as usize;
         pos += 8;
 
         if pos + chunk_size > end {
@@ -833,13 +1218,43 @@ fn read_exif_list_chunks(data: &[u8], start: usize, end: usize, tags: &mut Vec<T
 
         if !value.is_empty() {
             match chunk_id {
-                "ever" => tags.push(mk_riff(family, "ExifVersion", "Exif Version", Value::String(value))),
-                "erel" => tags.push(mk_riff(family, "RelatedImageFile", "Related Image File", Value::String(value))),
-                "etim" => tags.push(mk_riff(family, "TimeCreated", "Time Created", Value::String(value))),
+                "ever" => tags.push(mk_riff(
+                    family,
+                    "ExifVersion",
+                    "Exif Version",
+                    Value::String(value),
+                )),
+                "erel" => tags.push(mk_riff(
+                    family,
+                    "RelatedImageFile",
+                    "Related Image File",
+                    Value::String(value),
+                )),
+                "etim" => tags.push(mk_riff(
+                    family,
+                    "TimeCreated",
+                    "Time Created",
+                    Value::String(value),
+                )),
                 "ecor" => tags.push(mk_riff(family, "Make", "Make", Value::String(value))),
-                "emdl" => tags.push(mk_riff(family, "Model", "Camera Model Name", Value::String(value))),
-                "emnt" => tags.push(mk_riff(family, "MakerNotes", "Maker Notes", Value::Binary(raw_bytes.to_vec()))),
-                "eucm" => tags.push(mk_riff(family, "UserComment", "User Comment", Value::String(value))),
+                "emdl" => tags.push(mk_riff(
+                    family,
+                    "Model",
+                    "Camera Model Name",
+                    Value::String(value),
+                )),
+                "emnt" => tags.push(mk_riff(
+                    family,
+                    "MakerNotes",
+                    "Maker Notes",
+                    Value::Binary(raw_bytes.to_vec()),
+                )),
+                "eucm" => tags.push(mk_riff(
+                    family,
+                    "UserComment",
+                    "User Comment",
+                    Value::String(value),
+                )),
                 _ => {}
             }
         }
@@ -862,9 +1277,9 @@ fn read_info_chunks(
 
     while pos + 8 <= end {
         let chunk_id = std::str::from_utf8(&data[pos..pos + 4]).unwrap_or("????");
-        let chunk_size = u32::from_le_bytes([
-            data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7],
-        ]) as usize;
+        let chunk_size =
+            u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                as usize;
         pos += 8;
 
         if pos + chunk_size > end {
@@ -993,8 +1408,7 @@ fn audio_encoding_name(format_tag: u16) -> &'static str {
 /// Convert RIFF date string to EXIF format (YYYY:MM:DD HH:MM:SS)
 fn convert_riff_date(val: &str) -> String {
     let months = [
-        "jan", "feb", "mar", "apr", "may", "jun",
-        "jul", "aug", "sep", "oct", "nov", "dec",
+        "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
     ];
     let parts: Vec<&str> = val.split_whitespace().collect();
 
@@ -1041,48 +1455,87 @@ fn parse_casio_date(val: &str) -> Option<String> {
     }
     let year: u32 = val[0..4].parse().ok()?;
     let mut pos = 4;
-    if pos >= len || bytes[pos] != b'/' { return None; }
+    if pos >= len || bytes[pos] != b'/' {
+        return None;
+    }
     pos += 1;
     // Skip optional spaces
-    while pos < len && bytes[pos] == b' ' { pos += 1; }
+    while pos < len && bytes[pos] == b' ' {
+        pos += 1;
+    }
     // Parse MM
     let month_start = pos;
-    while pos < len && bytes[pos].is_ascii_digit() { pos += 1; }
-    if pos == month_start { return None; }
+    while pos < len && bytes[pos].is_ascii_digit() {
+        pos += 1;
+    }
+    if pos == month_start {
+        return None;
+    }
     let month: u32 = val[month_start..pos].parse().ok()?;
-    if pos >= len || bytes[pos] != b'/' { return None; }
+    if pos >= len || bytes[pos] != b'/' {
+        return None;
+    }
     pos += 1;
     // Skip optional spaces
-    while pos < len && bytes[pos] == b' ' { pos += 1; }
+    while pos < len && bytes[pos] == b' ' {
+        pos += 1;
+    }
     // Parse DD
     let day_start = pos;
-    while pos < len && bytes[pos].is_ascii_digit() { pos += 1; }
-    if pos == day_start { return None; }
+    while pos < len && bytes[pos].is_ascii_digit() {
+        pos += 1;
+    }
+    if pos == day_start {
+        return None;
+    }
     let day: u32 = val[day_start..pos].parse().ok()?;
     // Skip optional trailing '/'
-    if pos < len && bytes[pos] == b'/' { pos += 1; }
+    if pos < len && bytes[pos] == b'/' {
+        pos += 1;
+    }
     // Skip whitespace
-    while pos < len && bytes[pos] == b' ' { pos += 1; }
-    if pos >= len { return None; }
+    while pos < len && bytes[pos] == b' ' {
+        pos += 1;
+    }
+    if pos >= len {
+        return None;
+    }
     // Parse HH
     let hh_start = pos;
-    while pos < len && bytes[pos].is_ascii_digit() { pos += 1; }
-    if pos == hh_start { return None; }
+    while pos < len && bytes[pos].is_ascii_digit() {
+        pos += 1;
+    }
+    if pos == hh_start {
+        return None;
+    }
     let hh: u32 = val[hh_start..pos].parse().ok()?;
-    if pos >= len || bytes[pos] != b':' { return None; }
+    if pos >= len || bytes[pos] != b':' {
+        return None;
+    }
     pos += 1;
     // Skip optional spaces
-    while pos < len && bytes[pos] == b' ' { pos += 1; }
+    while pos < len && bytes[pos] == b' ' {
+        pos += 1;
+    }
     // Parse MM (minutes)
     let mm_start = pos;
-    while pos < len && bytes[pos].is_ascii_digit() { pos += 1; }
-    if pos == mm_start { return None; }
+    while pos < len && bytes[pos].is_ascii_digit() {
+        pos += 1;
+    }
+    if pos == mm_start {
+        return None;
+    }
     let mm: u32 = val[mm_start..pos].parse().ok()?;
     // Skip optional spaces and check for PM
-    while pos < len && bytes[pos] == b' ' { pos += 1; }
+    while pos < len && bytes[pos] == b' ' {
+        pos += 1;
+    }
     let pm = pos < len && (bytes[pos] == b'P' || bytes[pos] == b'p');
     let hh_final = if pm { hh + 12 } else { hh };
-    Some(format!("{:04}:{:02}:{:02} {:02}:{:02}:00", year, month, day, hh_final, mm))
+    Some(format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:00",
+        year, month, day, hh_final, mm
+    ))
 }
 
 /// Format duration in seconds like ExifTool's ConvertDuration
@@ -1116,7 +1569,11 @@ fn format_sig4(val: f64, unit: &str) -> String {
         return format!("0 {}", unit);
     }
     let magnitude = val.abs().log10().floor() as i32;
-    let decimals = if magnitude >= 3 { 0 } else { (3 - magnitude).max(0) as usize };
+    let decimals = if magnitude >= 3 {
+        0
+    } else {
+        (3 - magnitude).max(0) as usize
+    };
     let s = format!("{:.prec$}", val, prec = decimals);
     // Remove trailing zeros after decimal point
     let s = if s.contains('.') {
@@ -1153,7 +1610,11 @@ fn mk_riff(family: &str, name: &str, description: &str, value: Value) -> Tag {
         group: TagGroup {
             family0: "RIFF".into(),
             family1: family.into(),
-            family2: if family == "AVI" { "Video".into() } else { "Audio".into() },
+            family2: if family == "AVI" {
+                "Video".into()
+            } else {
+                "Audio".into()
+            },
         },
         raw_value: value,
         print_value,

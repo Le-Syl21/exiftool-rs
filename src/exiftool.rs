@@ -13,7 +13,10 @@ use crate::formats;
 use crate::metadata::exif::ByteOrderMark;
 use crate::tag::Tag;
 use crate::value::Value;
-use crate::writer::{exif_writer, iptc_writer, jpeg_writer, matroska_writer, mp4_writer, pdf_writer, png_writer, psd_writer, tiff_writer, webp_writer, xmp_writer};
+use crate::writer::{
+    exif_writer, iptc_writer, jpeg_writer, matroska_writer, mp4_writer, pdf_writer, png_writer,
+    psd_writer, tiff_writer, webp_writer, xmp_writer,
+};
 
 /// Processing options for metadata extraction.
 #[derive(Debug, Clone)]
@@ -151,7 +154,10 @@ impl ExifTool {
     /// ```
     pub fn set_new_value(&mut self, tag: &str, value: Option<&str>) {
         let (group, tag_name) = if let Some(colon_pos) = tag.find(':') {
-            (Some(tag[..colon_pos].to_string()), tag[colon_pos + 1..].to_string())
+            (
+                Some(tag[..colon_pos].to_string()),
+                tag[colon_pos + 1..].to_string(),
+            )
         } else {
             (None, tag.to_string())
         };
@@ -255,7 +261,11 @@ impl ExifTool {
     ///
     /// If `dst_path` is the same as `src_path`, the file is modified in-place
     /// (via a temporary file).
-    pub fn write_info<P: AsRef<Path>, Q: AsRef<Path>>(&self, src_path: P, dst_path: Q) -> Result<u32> {
+    pub fn write_info<P: AsRef<Path>, Q: AsRef<Path>>(
+        &self,
+        src_path: P,
+        dst_path: Q,
+    ) -> Result<u32> {
         let src_path = src_path.as_ref();
         let dst_path = dst_path.as_ref();
         let data = fs::read(src_path).map_err(Error::Io)?;
@@ -276,56 +286,84 @@ impl ExifTool {
         match file_type {
             FileType::Jpeg => self.write_jpeg(data),
             FileType::Png => self.write_png(data),
-            FileType::Tiff | FileType::Dng | FileType::Cr2 | FileType::Nef
-            | FileType::Arw | FileType::Orf | FileType::Pef => self.write_tiff(data),
+            FileType::Tiff
+            | FileType::Dng
+            | FileType::Cr2
+            | FileType::Nef
+            | FileType::Arw
+            | FileType::Orf
+            | FileType::Pef => self.write_tiff(data),
             FileType::WebP => self.write_webp(data),
-            FileType::Mp4 | FileType::QuickTime | FileType::M4a
-            | FileType::ThreeGP | FileType::F4v => self.write_mp4(data),
+            FileType::Mp4
+            | FileType::QuickTime
+            | FileType::M4a
+            | FileType::ThreeGP
+            | FileType::F4v => self.write_mp4(data),
             FileType::Psd => self.write_psd(data),
             FileType::Pdf => self.write_pdf(data),
             FileType::Heif | FileType::Avif => self.write_mp4(data),
             FileType::Mkv | FileType::WebM => self.write_matroska(data),
             FileType::Gif => {
-                let comment = self.new_values.iter()
+                let comment = self
+                    .new_values
+                    .iter()
                     .find(|nv| nv.tag.to_lowercase() == "comment")
                     .and_then(|nv| nv.value.clone());
                 crate::writer::gif_writer::write_gif(data, comment.as_deref())
             }
             FileType::Flac => {
-                let changes: Vec<(&str, &str)> = self.new_values.iter()
+                let changes: Vec<(&str, &str)> = self
+                    .new_values
+                    .iter()
                     .filter_map(|nv| Some((nv.tag.as_str(), nv.value.as_deref()?)))
                     .collect();
                 crate::writer::flac_writer::write_flac(data, &changes)
             }
             FileType::Mp3 | FileType::Aiff => {
-                let changes: Vec<(&str, &str)> = self.new_values.iter()
+                let changes: Vec<(&str, &str)> = self
+                    .new_values
+                    .iter()
                     .filter_map(|nv| Some((nv.tag.as_str(), nv.value.as_deref()?)))
                     .collect();
                 crate::writer::id3_writer::write_id3(data, &changes)
             }
             FileType::Jp2 | FileType::Jxl => {
-                let new_xmp = if self.new_values.iter().any(|nv| nv.group.as_deref() == Some("XMP")) {
-                    let refs: Vec<&NewValue> = self.new_values.iter()
+                let new_xmp = if self
+                    .new_values
+                    .iter()
+                    .any(|nv| nv.group.as_deref() == Some("XMP"))
+                {
+                    let refs: Vec<&NewValue> = self
+                        .new_values
+                        .iter()
                         .filter(|nv| nv.group.as_deref() == Some("XMP"))
                         .collect();
                     Some(self.build_new_xmp(&refs))
-                } else { None };
+                } else {
+                    None
+                };
                 crate::writer::jp2_writer::write_jp2(data, new_xmp.as_deref(), None)
             }
             FileType::PostScript => {
-                let changes: Vec<(&str, &str)> = self.new_values.iter()
+                let changes: Vec<(&str, &str)> = self
+                    .new_values
+                    .iter()
                     .filter_map(|nv| Some((nv.tag.as_str(), nv.value.as_deref()?)))
                     .collect();
                 crate::writer::ps_writer::write_postscript(data, &changes)
             }
             FileType::Ogg | FileType::Opus => {
-                let changes: Vec<(&str, &str)> = self.new_values.iter()
+                let changes: Vec<(&str, &str)> = self
+                    .new_values
+                    .iter()
                     .filter_map(|nv| Some((nv.tag.as_str(), nv.value.as_deref()?)))
                     .collect();
                 crate::writer::ogg_writer::write_ogg(data, &changes)
             }
             FileType::Xmp => {
-                let props: Vec<xmp_writer::XmpProperty> = self.new_values.iter()
+                let props: Vec<xmp_writer::XmpProperty> = self
+                    .new_values
+                    .iter()
                     .filter_map(|nv| {
                         let val = nv.value.as_deref()?;
                         Some(xmp_writer::XmpProperty {
@@ -338,7 +376,10 @@ impl ExifTool {
                     .collect();
                 Ok(crate::writer::xmp_sidecar_writer::write_xmp_sidecar(&props))
             }
-            _ => Err(Error::UnsupportedFileType(format!("writing not yet supported for {}", file_type))),
+            _ => Err(Error::UnsupportedFileType(format!(
+                "writing not yet supported for {}",
+                file_type
+            ))),
         }
     }
 
@@ -350,45 +391,122 @@ impl ExifTool {
 
         // EXIF tags supported by exif_writer
         const EXIF_TAGS: &[&str] = &[
-            "imagedescription", "make", "model", "orientation",
-            "xresolution", "yresolution", "resolutionunit", "software",
-            "modifydate", "datetime", "artist", "copyright",
-            "datetimeoriginal", "createdate", "datetimedigitized",
-            "usercomment", "imageuniqueid", "ownername", "cameraownername",
-            "serialnumber", "bodyserialnumber", "lensmake", "lensmodel", "lensserialnumber",
+            "imagedescription",
+            "make",
+            "model",
+            "orientation",
+            "xresolution",
+            "yresolution",
+            "resolutionunit",
+            "software",
+            "modifydate",
+            "datetime",
+            "artist",
+            "copyright",
+            "datetimeoriginal",
+            "createdate",
+            "datetimedigitized",
+            "usercomment",
+            "imageuniqueid",
+            "ownername",
+            "cameraownername",
+            "serialnumber",
+            "bodyserialnumber",
+            "lensmake",
+            "lensmodel",
+            "lensserialnumber",
         ];
 
         // IPTC tags supported by iptc_writer
         const IPTC_TAGS: &[&str] = &[
-            "objectname", "title", "urgency", "category", "supplementalcategories",
-            "keywords", "specialinstructions", "datecreated", "timecreated",
-            "by-line", "author", "byline", "by-linetitle", "authorsposition", "bylinetitle",
-            "city", "sub-location", "sublocation", "province-state", "state", "provincestate",
-            "country-primarylocationcode", "countrycode",
-            "country-primarylocationname", "country",
-            "headline", "credit", "source", "copyrightnotice",
-            "contact", "caption-abstract", "caption", "description",
-            "writer-editor", "captionwriter",
+            "objectname",
+            "title",
+            "urgency",
+            "category",
+            "supplementalcategories",
+            "keywords",
+            "specialinstructions",
+            "datecreated",
+            "timecreated",
+            "by-line",
+            "author",
+            "byline",
+            "by-linetitle",
+            "authorsposition",
+            "bylinetitle",
+            "city",
+            "sub-location",
+            "sublocation",
+            "province-state",
+            "state",
+            "provincestate",
+            "country-primarylocationcode",
+            "countrycode",
+            "country-primarylocationname",
+            "country",
+            "headline",
+            "credit",
+            "source",
+            "copyrightnotice",
+            "contact",
+            "caption-abstract",
+            "caption",
+            "description",
+            "writer-editor",
+            "captionwriter",
         ];
 
         // XMP auto-detected tags (no group prefix needed)
         const XMP_AUTO_TAGS: &[&str] = &[
-            "title", "description", "subject", "creator", "rights",
-            "keywords", "rating", "label", "hierarchicalsubject",
+            "title",
+            "description",
+            "subject",
+            "creator",
+            "rights",
+            "keywords",
+            "rating",
+            "label",
+            "hierarchicalsubject",
         ];
 
         // ID3 tags
         const ID3_TAGS: &[&str] = &[
-            "title", "artist", "album", "year", "date", "track",
-            "genre", "comment", "composer", "albumartist",
-            "encoder", "encodedby", "publisher", "copyright", "bpm", "lyrics",
+            "title",
+            "artist",
+            "album",
+            "year",
+            "date",
+            "track",
+            "genre",
+            "comment",
+            "composer",
+            "albumartist",
+            "encoder",
+            "encodedby",
+            "publisher",
+            "copyright",
+            "bpm",
+            "lyrics",
         ];
 
         // MP4/MOV ilst tags
         const MP4_TAGS: &[&str] = &[
-            "title", "artist", "album", "year", "date", "comment",
-            "genre", "composer", "writer", "encoder", "encodedby",
-            "grouping", "lyrics", "description", "albumartist", "copyright",
+            "title",
+            "artist",
+            "album",
+            "year",
+            "date",
+            "comment",
+            "genre",
+            "composer",
+            "writer",
+            "encoder",
+            "encodedby",
+            "grouping",
+            "lyrics",
+            "description",
+            "albumartist",
+            "copyright",
         ];
 
         // PDF Info dict tags
@@ -398,13 +516,23 @@ impl ExifTool {
 
         // PostScript DSC tags
         const PS_TAGS: &[&str] = &[
-            "title", "creator", "author", "for", "creationdate", "createdate",
+            "title",
+            "creator",
+            "author",
+            "for",
+            "creationdate",
+            "createdate",
         ];
 
         match file_type {
             // Open-ended: any tag name accepted
-            FileType::Png | FileType::Flac | FileType::Mkv | FileType::WebM
-            | FileType::Ogg | FileType::Opus | FileType::Xmp => None,
+            FileType::Png
+            | FileType::Flac
+            | FileType::Mkv
+            | FileType::WebM
+            | FileType::Ogg
+            | FileType::Opus
+            | FileType::Xmp => None,
 
             // JPEG: EXIF + IPTC + XMP auto + comment
             FileType::Jpeg => {
@@ -417,8 +545,13 @@ impl ExifTool {
             }
 
             // TIFF-based: EXIF only
-            FileType::Tiff | FileType::Dng | FileType::Cr2 | FileType::Nef
-            | FileType::Arw | FileType::Orf | FileType::Pef => {
+            FileType::Tiff
+            | FileType::Dng
+            | FileType::Cr2
+            | FileType::Nef
+            | FileType::Arw
+            | FileType::Orf
+            | FileType::Pef => {
                 let mut set: HashSet<&str> = HashSet::new();
                 set.extend(EXIF_TAGS);
                 Some(set)
@@ -433,8 +566,13 @@ impl ExifTool {
             }
 
             // MP4/MOV/HEIF: ilst + XMP auto
-            FileType::Mp4 | FileType::QuickTime | FileType::M4a
-            | FileType::ThreeGP | FileType::F4v | FileType::Heif | FileType::Avif => {
+            FileType::Mp4
+            | FileType::QuickTime
+            | FileType::M4a
+            | FileType::ThreeGP
+            | FileType::F4v
+            | FileType::Heif
+            | FileType::Avif => {
                 let mut set: HashSet<&str> = HashSet::new();
                 set.extend(MP4_TAGS);
                 set.extend(XMP_AUTO_TAGS);
@@ -487,9 +625,18 @@ impl ExifTool {
             // Check for group deletion
             if nv.value.is_none() && nv.tag == "*" {
                 match group_upper.as_str() {
-                    "EXIF" => { remove_exif = true; continue; }
-                    "XMP" => { remove_xmp = true; continue; }
-                    "IPTC" => { remove_iptc = true; continue; }
+                    "EXIF" => {
+                        remove_exif = true;
+                        continue;
+                    }
+                    "XMP" => {
+                        remove_xmp = true;
+                        continue;
+                    }
+                    "IPTC" => {
+                        remove_iptc = true;
+                        continue;
+                    }
                     _ => {}
                 }
             }
@@ -604,7 +751,8 @@ impl ExifTool {
             let value_str = nv.value.as_deref().unwrap_or("");
             let group = nv.group.as_deref().unwrap_or("");
 
-            if let Some((tag_id, format, encoded)) = encode_exif_tag(&nv.tag, value_str, group, bo) {
+            if let Some((tag_id, format, encoded)) = encode_exif_tag(&nv.tag, value_str, group, bo)
+            {
                 let entry = exif_writer::IfdEntry {
                     tag: tag_id,
                     format,
@@ -643,7 +791,9 @@ impl ExifTool {
 
         // Collect text-based changes
         // We need to hold the strings in vectors that live long enough
-        let owned_pairs: Vec<(String, String)> = self.new_values.iter()
+        let owned_pairs: Vec<(String, String)> = self
+            .new_values
+            .iter()
             .filter(|nv| nv.value.is_some())
             .map(|nv| (nv.tag.clone(), nv.value.clone().unwrap()))
             .collect();
@@ -672,32 +822,52 @@ impl ExifTool {
                 "XMP" => xmp_values.push(nv),
                 "IPTC" => iptc_values.push(nv),
                 _ => {
-                    if is_xmp_tag(&nv.tag) { xmp_values.push(nv); }
-                    else { iptc_values.push(nv); }
+                    if is_xmp_tag(&nv.tag) {
+                        xmp_values.push(nv);
+                    } else {
+                        iptc_values.push(nv);
+                    }
                 }
             }
         }
 
         let new_iptc = if !iptc_values.is_empty() {
-            let records: Vec<_> = iptc_values.iter().filter_map(|nv| {
-                let value = nv.value.as_deref()?;
-                let (record, dataset) = iptc_writer::tag_name_to_iptc(&nv.tag)?;
-                Some(iptc_writer::IptcRecord { record, dataset, data: value.as_bytes().to_vec() })
-            }).collect();
-            if records.is_empty() { None } else { Some(iptc_writer::build_iptc(&records)) }
-        } else { None };
+            let records: Vec<_> = iptc_values
+                .iter()
+                .filter_map(|nv| {
+                    let value = nv.value.as_deref()?;
+                    let (record, dataset) = iptc_writer::tag_name_to_iptc(&nv.tag)?;
+                    Some(iptc_writer::IptcRecord {
+                        record,
+                        dataset,
+                        data: value.as_bytes().to_vec(),
+                    })
+                })
+                .collect();
+            if records.is_empty() {
+                None
+            } else {
+                Some(iptc_writer::build_iptc(&records))
+            }
+        } else {
+            None
+        };
 
         let new_xmp = if !xmp_values.is_empty() {
             let refs: Vec<&NewValue> = xmp_values.iter().copied().collect();
             Some(self.build_new_xmp(&refs))
-        } else { None };
+        } else {
+            None
+        };
 
         psd_writer::write_psd(data, new_iptc.as_deref(), new_xmp.as_deref())
     }
 
     /// Write metadata changes to Matroska (MKV/WebM) data.
     fn write_matroska(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let changes: Vec<(&str, &str)> = self.new_values.iter()
+        let changes: Vec<(&str, &str)> = self
+            .new_values
+            .iter()
             .filter_map(|nv| {
                 let value = nv.value.as_deref()?;
                 Some((nv.tag.as_str(), value))
@@ -709,7 +879,9 @@ impl ExifTool {
 
     /// Write metadata changes to PDF data.
     fn write_pdf(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let changes: Vec<(&str, &str)> = self.new_values.iter()
+        let changes: Vec<(&str, &str)> = self
+            .new_values
+            .iter()
             .filter_map(|nv| {
                 let value = nv.value.as_deref()?;
                 Some((nv.tag.as_str(), value))
@@ -725,7 +897,9 @@ impl ExifTool {
         let mut xmp_values: Vec<&NewValue> = Vec::new();
 
         for nv in &self.new_values {
-            if nv.value.is_none() { continue; }
+            if nv.value.is_none() {
+                continue;
+            }
             let group = nv.group.as_deref().unwrap_or("").to_uppercase();
             if group == "XMP" {
                 xmp_values.push(nv);
@@ -734,9 +908,8 @@ impl ExifTool {
             }
         }
 
-        let tag_refs: Vec<(&[u8; 4], &str)> = ilst_tags.iter()
-            .map(|(k, v)| (k, v.as_str()))
-            .collect();
+        let tag_refs: Vec<(&[u8; 4], &str)> =
+            ilst_tags.iter().map(|(k, v)| (k, v.as_str())).collect();
 
         let new_xmp = if !xmp_values.is_empty() {
             let refs: Vec<&NewValue> = xmp_values.iter().copied().collect();
@@ -758,8 +931,12 @@ impl ExifTool {
         for nv in &self.new_values {
             let group = nv.group.as_deref().unwrap_or("").to_uppercase();
             if nv.value.is_none() && nv.tag == "*" {
-                if group == "EXIF" { remove_exif = true; }
-                if group == "XMP" { remove_xmp = true; }
+                if group == "EXIF" {
+                    remove_exif = true;
+                }
+                if group == "XMP" {
+                    remove_xmp = true;
+                }
                 continue;
             }
             match group.as_str() {
@@ -774,8 +951,13 @@ impl ExifTool {
             for nv in &exif_values {
                 if let Some(ref v) = nv.value {
                     let group = nv.group.as_deref().unwrap_or("");
-                    if let Some((tag_id, format, encoded)) = encode_exif_tag(&nv.tag, v, group, bo) {
-                        entries.push(exif_writer::IfdEntry { tag: tag_id, format, data: encoded });
+                    if let Some((tag_id, format, encoded)) = encode_exif_tag(&nv.tag, v, group, bo)
+                    {
+                        entries.push(exif_writer::IfdEntry {
+                            tag: tag_id,
+                            format,
+                            data: encoded,
+                        });
                     }
                 }
             }
@@ -815,7 +997,8 @@ impl ExifTool {
         for nv in &self.new_values {
             if let Some(ref value) = nv.value {
                 let group = nv.group.as_deref().unwrap_or("");
-                if let Some((tag_id, _format, encoded)) = encode_exif_tag(&nv.tag, value, group, bo) {
+                if let Some((tag_id, _format, encoded)) = encode_exif_tag(&nv.tag, value, group, bo)
+                {
                     changes.push((tag_id, encoded));
                 }
             }
@@ -844,7 +1027,10 @@ impl ExifTool {
                 _ => xmp_writer::XmpPropertyType::Simple,
             };
 
-            let values = if matches!(prop_type, xmp_writer::XmpPropertyType::Bag | xmp_writer::XmpPropertyType::Seq) {
+            let values = if matches!(
+                prop_type,
+                xmp_writer::XmpPropertyType::Bag | xmp_writer::XmpPropertyType::Seq
+            ) {
                 value_str.split(',').map(|s| s.trim().to_string()).collect()
             } else {
                 vec![value_str]
@@ -888,9 +1074,9 @@ impl ExifTool {
         let file_type_result = self.detect_file_type(data, path);
         let (file_type, mut tags) = match file_type_result {
             Ok(ft) => {
-                let t = self.process_file(data, ft).or_else(|_| {
-                    self.process_by_extension(data, path)
-                })?;
+                let t = self
+                    .process_file(data, ft)
+                    .or_else(|_| self.process_by_extension(data, path))?;
                 (Some(ft), t)
             }
             Err(_) => {
@@ -950,9 +1136,16 @@ impl ExifTool {
         let file_tag = |name: &str, val: Value| -> Tag {
             Tag {
                 id: crate::tag::TagId::Text(name.to_string()),
-                name: name.to_string(), description: name.to_string(),
-                group: crate::tag::TagGroup { family0: "File".into(), family1: "File".into(), family2: "Other".into() },
-                raw_value: val.clone(), print_value: val.to_display_string(), priority: 0,
+                name: name.to_string(),
+                description: name.to_string(),
+                group: crate::tag::TagGroup {
+                    family0: "File".into(),
+                    family1: "File".into(),
+                    family2: "Other".into(),
+                },
+                raw_value: val.clone(),
+                print_value: val.to_display_string(),
+                priority: 0,
             }
         };
 
@@ -965,33 +1158,48 @@ impl ExifTool {
         // Use the canonical (first) extension from the FileType, matching Perl ExifTool behavior.
         let canonical_ext = file_type.extensions().first().copied().unwrap_or("");
         if !canonical_ext.is_empty() {
-            tags.push(file_tag("FileTypeExtension", Value::String(canonical_ext.to_string())));
+            tags.push(file_tag(
+                "FileTypeExtension",
+                Value::String(canonical_ext.to_string()),
+            ));
         }
 
         #[cfg(unix)]
         if let Ok(metadata) = fs::metadata(path) {
             use std::os::unix::fs::MetadataExt;
             let mode = metadata.mode();
-            tags.push(file_tag("FilePermissions", Value::String(format!("{:o}", mode & 0o7777))));
+            tags.push(file_tag(
+                "FilePermissions",
+                Value::String(format!("{:o}", mode & 0o7777)),
+            ));
 
             // FileModifyDate
             if let Ok(modified) = metadata.modified() {
                 if let Ok(dur) = modified.duration_since(std::time::UNIX_EPOCH) {
                     let secs = dur.as_secs() as i64;
-                    tags.push(file_tag("FileModifyDate", Value::String(unix_to_datetime(secs))));
+                    tags.push(file_tag(
+                        "FileModifyDate",
+                        Value::String(unix_to_datetime(secs)),
+                    ));
                 }
             }
             // FileAccessDate
             if let Ok(accessed) = metadata.accessed() {
                 if let Ok(dur) = accessed.duration_since(std::time::UNIX_EPOCH) {
                     let secs = dur.as_secs() as i64;
-                    tags.push(file_tag("FileAccessDate", Value::String(unix_to_datetime(secs))));
+                    tags.push(file_tag(
+                        "FileAccessDate",
+                        Value::String(unix_to_datetime(secs)),
+                    ));
                 }
             }
             // FileInodeChangeDate (ctime on Unix)
             let ctime = metadata.ctime();
             if ctime > 0 {
-                tags.push(file_tag("FileInodeChangeDate", Value::String(unix_to_datetime(ctime))));
+                tags.push(file_tag(
+                    "FileInodeChangeDate",
+                    Value::String(unix_to_datetime(ctime)),
+                ));
             }
         }
 
@@ -1001,16 +1209,22 @@ impl ExifTool {
                 // Check EXIF in JPEG or TIFF header or WebP/RIFF EXIF chunk
                 let check: Option<&[u8]> = if data.starts_with(&[0xFF, 0xD8]) {
                     // JPEG: find APP1 EXIF header
-                    data.windows(6).position(|w| w == b"Exif\0\0")
-                        .map(|p| &data[p+6..])
+                    data.windows(6)
+                        .position(|w| w == b"Exif\0\0")
+                        .map(|p| &data[p + 6..])
                 } else if data.starts_with(b"FUJIFILMCCD-RAW") && data.len() >= 0x60 {
                     // RAF: look in the embedded JPEG for EXIF byte order
-                    let jpeg_offset = u32::from_be_bytes([data[0x54], data[0x55], data[0x56], data[0x57]]) as usize;
-                    let jpeg_length = u32::from_be_bytes([data[0x58], data[0x59], data[0x5A], data[0x5B]]) as usize;
+                    let jpeg_offset =
+                        u32::from_be_bytes([data[0x54], data[0x55], data[0x56], data[0x57]])
+                            as usize;
+                    let jpeg_length =
+                        u32::from_be_bytes([data[0x58], data[0x59], data[0x5A], data[0x5B]])
+                            as usize;
                     if jpeg_offset > 0 && jpeg_offset + jpeg_length <= data.len() {
                         let jpeg = &data[jpeg_offset..jpeg_offset + jpeg_length];
-                        jpeg.windows(6).position(|w| w == b"Exif\0\0")
-                            .map(|p| &jpeg[p+6..])
+                        jpeg.windows(6)
+                            .position(|w| w == b"Exif\0\0")
+                            .map(|p| &jpeg[p + 6..])
                     } else {
                         None
                     }
@@ -1019,13 +1233,22 @@ impl ExifTool {
                     let mut riff_bo: Option<&[u8]> = None;
                     let mut pos = 12usize;
                     while pos + 8 <= data.len() {
-                        let cid = &data[pos..pos+4];
-                        let csz = u32::from_le_bytes([data[pos+4],data[pos+5],data[pos+6],data[pos+7]]) as usize;
+                        let cid = &data[pos..pos + 4];
+                        let csz = u32::from_le_bytes([
+                            data[pos + 4],
+                            data[pos + 5],
+                            data[pos + 6],
+                            data[pos + 7],
+                        ]) as usize;
                         let cstart = pos + 8;
                         let cend = (cstart + csz).min(data.len());
                         if cid == b"EXIF" && cend > cstart {
                             let exif_data = &data[cstart..cend];
-                            let tiff = if exif_data.starts_with(b"Exif\0\0") { &exif_data[6..] } else { exif_data };
+                            let tiff = if exif_data.starts_with(b"Exif\0\0") {
+                                &exif_data[6..]
+                            } else {
+                                exif_data
+                            };
                             riff_bo = Some(tiff);
                             break;
                         }
@@ -1041,13 +1264,20 @@ impl ExifTool {
                     let mut jxl_bo: Option<String> = None;
                     let mut jpos = 12usize; // skip JXL signature box
                     while jpos + 8 <= data.len() {
-                        let bsize = u32::from_be_bytes([data[jpos], data[jpos+1], data[jpos+2], data[jpos+3]]) as usize;
-                        let btype = &data[jpos+4..jpos+8];
-                        if bsize < 8 || jpos + bsize > data.len() { break; }
+                        let bsize = u32::from_be_bytes([
+                            data[jpos],
+                            data[jpos + 1],
+                            data[jpos + 2],
+                            data[jpos + 3],
+                        ]) as usize;
+                        let btype = &data[jpos + 4..jpos + 8];
+                        if bsize < 8 || jpos + bsize > data.len() {
+                            break;
+                        }
                         if btype == b"brob" && jpos + bsize > 12 {
-                            let inner_type = &data[jpos+8..jpos+12];
+                            let inner_type = &data[jpos + 8..jpos + 12];
                             if inner_type == b"Exif" || inner_type == b"exif" {
-                                let brotli_payload = &data[jpos+12..jpos+bsize];
+                                let brotli_payload = &data[jpos + 12..jpos + bsize];
                                 use std::io::Cursor;
                                 let mut inp = Cursor::new(brotli_payload);
                                 let mut out: Vec<u8> = Vec::new();
@@ -1077,14 +1307,21 @@ impl ExifTool {
                     // MRW: find TTW segment which contains TIFF/EXIF data
                     let mrw_data_offset = if data.len() >= 8 {
                         u32::from_be_bytes([data[4], data[5], data[6], data[7]]) as usize + 8
-                    } else { 0 };
+                    } else {
+                        0
+                    };
                     let mut mrw_bo: Option<&[u8]> = None;
                     let mut mpos = 8usize;
                     while mpos + 8 <= mrw_data_offset.min(data.len()) {
-                        let seg_tag = &data[mpos..mpos+4];
-                        let seg_len = u32::from_be_bytes([data[mpos+4], data[mpos+5], data[mpos+6], data[mpos+7]]) as usize;
+                        let seg_tag = &data[mpos..mpos + 4];
+                        let seg_len = u32::from_be_bytes([
+                            data[mpos + 4],
+                            data[mpos + 5],
+                            data[mpos + 6],
+                            data[mpos + 7],
+                        ]) as usize;
                         if seg_tag == b"\x00TTW" && mpos + 8 + seg_len <= data.len() {
-                            mrw_bo = Some(&data[mpos+8..mpos+8+seg_len]);
+                            mrw_bo = Some(&data[mpos + 8..mpos + 8 + seg_len]);
                             break;
                         }
                         mpos += 8 + seg_len;
@@ -1094,23 +1331,37 @@ impl ExifTool {
                     Some(&data[..])
                 };
                 if let Some(tiff) = check {
-                    if tiff.starts_with(b"II") { "Little-endian (Intel, II)" }
-                    else if tiff.starts_with(b"MM") { "Big-endian (Motorola, MM)" }
-                    else { "" }
-                } else { "" }
-            } else { "" };
+                    if tiff.starts_with(b"II") {
+                        "Little-endian (Intel, II)"
+                    } else if tiff.starts_with(b"MM") {
+                        "Big-endian (Motorola, MM)"
+                    } else {
+                        ""
+                    }
+                } else {
+                    ""
+                }
+            } else {
+                ""
+            };
             // Suppress ExifByteOrder for BigTIFF, Canon VRD/DR4 (Perl doesn't output it for these)
             // Also skip if already emitted by ExifReader (TIFF-based formats)
             let already_has_exifbyteorder = tags.iter().any(|t| t.name == "ExifByteOrder");
-            if !bo_str.is_empty() && !already_has_exifbyteorder
+            if !bo_str.is_empty()
+                && !already_has_exifbyteorder
                 && file_type != FileType::Btf
-                && file_type != FileType::Dr4 && file_type != FileType::Vrd
-                && file_type != FileType::Crw {
+                && file_type != FileType::Dr4
+                && file_type != FileType::Vrd
+                && file_type != FileType::Crw
+            {
                 tags.push(file_tag("ExifByteOrder", Value::String(bo_str.to_string())));
             }
         }
 
-        tags.push(file_tag("ExifToolVersion", Value::String(crate::VERSION.to_string())));
+        tags.push(file_tag(
+            "ExifToolVersion",
+            Value::String(crate::VERSION.to_string()),
+        ));
 
         // Compute composite tags
         let composite = crate::composite::compute_composite_tags(&tags);
@@ -1122,8 +1373,9 @@ impl ExifTool {
         // don't match).  Our composite.rs uses a simpler fallback that picks up any non-empty
         // LensModel, so we remove LensID when the image is from a FLIR camera with FFF data.
         {
-            let is_flir_fff = tags.iter().any(|t| t.group.family0 == "APP1"
-                && t.group.family1 == "FLIR");
+            let is_flir_fff = tags
+                .iter()
+                .any(|t| t.group.family0 == "APP1" && t.group.family1 == "FLIR");
             if is_flir_fff {
                 tags.retain(|t| !(t.name == "LensID" && t.group.family0 == "Composite"));
             }
@@ -1134,8 +1386,11 @@ impl ExifTool {
         // Our composite.rs generates Lens for any manufacturer that has MinFocalLength +
         // MaxFocalLength (e.g., Olympus Equipment sub-IFD).  Remove it for non-Canon cameras.
         {
-            let make = tags.iter().find(|t| t.name == "Make")
-                .map(|t| t.print_value.clone()).unwrap_or_default();
+            let make = tags
+                .iter()
+                .find(|t| t.name == "Make")
+                .map(|t| t.print_value.clone())
+                .unwrap_or_default();
             if !make.to_uppercase().contains("CANON") {
                 tags.retain(|t| t.name != "Lens" || t.group.family0 != "Composite");
             }
@@ -1147,8 +1402,9 @@ impl ExifTool {
         {
             let riff_priority_zero_tags = ["Quality", "SampleSize", "StreamType"];
             for tag_name in &riff_priority_zero_tags {
-                let has_makernotes = tags.iter().any(|t| t.name == *tag_name
-                    && t.group.family0 != "RIFF");
+                let has_makernotes = tags
+                    .iter()
+                    .any(|t| t.name == *tag_name && t.group.family0 != "RIFF");
                 if has_makernotes {
                     tags.retain(|t| !(t.name == *tag_name && t.group.family0 == "RIFF"));
                 }
@@ -1160,7 +1416,9 @@ impl ExifTool {
         if !self.options.duplicates {
             let mut best_priority: HashMap<String, i32> = HashMap::new();
             for tag in &tags {
-                let entry = best_priority.entry(tag.name.clone()).or_insert(tag.priority);
+                let entry = best_priority
+                    .entry(tag.name.clone())
+                    .or_insert(tag.priority);
                 if tag.priority > *entry {
                     *entry = tag.priority;
                 }
@@ -1257,7 +1515,8 @@ impl ExifTool {
             }
             // Override to PhotoCD if extension is .pcd (file starts with 0xFF padding)
             if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                if ext.eq_ignore_ascii_case("pcd") && data.len() >= 2056
+                if ext.eq_ignore_ascii_case("pcd")
+                    && data.len() >= 2056
                     && &data[2048..2055] == b"PCD_IPI"
                 {
                     return Ok(FileType::PhotoCd);
@@ -1356,7 +1615,9 @@ impl ExifTool {
             | FileType::Crm
             | FileType::F4v
             | FileType::Mqv
-            | FileType::Lrv => formats::quicktime::read_quicktime_with_ee(data, self.options.extract_embedded),
+            | FileType::Lrv => {
+                formats::quicktime::read_quicktime_with_ee(data, self.options.extract_embedded)
+            }
             FileType::Mkv | FileType::WebM => formats::matroska::read_matroska(data),
             FileType::Asf | FileType::Wmv | FileType::Wma => formats::asf::read_asf(data),
             FileType::Wtv => formats::wtv::read_wtv(data),
@@ -1376,14 +1637,20 @@ impl ExifTool {
             FileType::PostScript => {
                 // PFA fonts start with %!PS-AdobeFont or %!FontType1
                 if data.starts_with(b"%!PS-AdobeFont") || data.starts_with(b"%!FontType1") {
-                    formats::font::read_pfa(data).or_else(|_| formats::postscript::read_postscript(data))
+                    formats::font::read_pfa(data)
+                        .or_else(|_| formats::postscript::read_postscript(data))
                 } else {
                     formats::postscript::read_postscript(data)
                 }
             }
             FileType::Eip => formats::capture_one::read_eip(data),
-            FileType::Zip | FileType::Docx | FileType::Xlsx | FileType::Pptx
-            | FileType::Doc | FileType::Xls | FileType::Ppt => formats::zip::read_zip(data),
+            FileType::Zip
+            | FileType::Docx
+            | FileType::Xlsx
+            | FileType::Pptx
+            | FileType::Doc
+            | FileType::Xls
+            | FileType::Ppt => formats::zip::read_zip(data),
             FileType::Rtf => formats::rtf::read_rtf(data),
             FileType::InDesign => formats::misc::read_indesign(data),
             FileType::Pcap => formats::misc::read_pcap(data),
@@ -1424,12 +1691,8 @@ impl ExifTool {
             FileType::Ape => formats::ape::read_ape(data),
             FileType::Mpc => formats::ape::read_mpc(data),
             FileType::Aac => formats::misc::read_aac(data),
-            FileType::RealAudio => {
-                formats::misc::read_real_audio(data).or_else(|_| Ok(Vec::new()))
-            }
-            FileType::RealMedia => {
-                formats::misc::read_real_media(data).or_else(|_| Ok(Vec::new()))
-            }
+            FileType::RealAudio => formats::misc::read_real_audio(data).or_else(|_| Ok(Vec::new())),
+            FileType::RealMedia => formats::misc::read_real_media(data).or_else(|_| Ok(Vec::new())),
             // Misc formats
             FileType::Czi => formats::misc::read_czi(data).or_else(|_| Ok(Vec::new())),
             FileType::PhotoCd => formats::misc::read_photo_cd(data).or_else(|_| Ok(Vec::new())),
@@ -1484,8 +1747,14 @@ impl ExifTool {
             }
             FileType::KyoceraRaw => formats::misc::read_kyocera_raw(data),
             FileType::PortableFloatMap => formats::misc::read_pfm(data),
-            FileType::Ods | FileType::Odt | FileType::Odp | FileType::Odg |
-            FileType::Odf | FileType::Odb | FileType::Odi | FileType::Odc => formats::zip::read_zip(data),
+            FileType::Ods
+            | FileType::Odt
+            | FileType::Odp
+            | FileType::Odg
+            | FileType::Odf
+            | FileType::Odb
+            | FileType::Odi
+            | FileType::Odc => formats::zip::read_zip(data),
             FileType::Lif => formats::misc::read_lif(data),
             FileType::Rwz => formats::misc::read_rawzor(data),
             FileType::Jxr => formats::misc::read_jxr(data),
@@ -1514,12 +1783,8 @@ impl ExifTool {
             "json" => formats::misc::read_json(data),
             "svg" => formats::misc::read_svg(data),
             "ram" => formats::misc::read_ram(data).or_else(|_| Ok(Vec::new())),
-            "txt" | "log" | "igc" => {
-                Ok(compute_text_tags(data, false))
-            }
-            "csv" => {
-                Ok(compute_text_tags(data, true))
-            }
+            "txt" | "log" | "igc" => Ok(compute_text_tags(data, false)),
+            "csv" => Ok(compute_text_tags(data, true)),
             "url" => formats::lnk::read_url(data).or_else(|_| Ok(Vec::new())),
             "lnk" => formats::lnk::read_lnk(data).or_else(|_| Ok(Vec::new())),
             "gpx" | "kml" | "xml" | "inx" => formats::xmp_file::read_xmp(data),
@@ -1545,13 +1810,13 @@ impl ExifTool {
                     formats::vcard::read_vcf(data).or_else(|_| Ok(Vec::new()))
                 }
             }
-            "xcf" => Ok(Vec::new()),      // GIMP
+            "xcf" => Ok(Vec::new()), // GIMP
             "vrd" => formats::canon_vrd::read_vrd(data).or_else(|_| Ok(Vec::new())),
             "dr4" => formats::canon_vrd::read_dr4(data).or_else(|_| Ok(Vec::new())),
             "indd" | "indt" => Ok(Vec::new()), // InDesign
             "x3f" => formats::sigma_raw::read_x3f(data).or_else(|_| Ok(Vec::new())),
-            "mie" => Ok(Vec::new()),       // MIE
-            "exr" => Ok(Vec::new()),       // OpenEXR
+            "mie" => Ok(Vec::new()), // MIE
+            "exr" => Ok(Vec::new()), // OpenEXR
             "wpg" => formats::misc::read_wpg(data).or_else(|_| Ok(Vec::new())),
             "moi" => formats::misc::read_moi(data).or_else(|_| Ok(Vec::new())),
             "macos" => formats::misc::read_macos(data).or_else(|_| Ok(Vec::new())),
@@ -1561,15 +1826,14 @@ impl ExifTool {
             "ppt" | "fpx" => formats::flashpix::read_fpx(data).or_else(|_| Ok(Vec::new())),
             "fpf" => formats::flir_fpf::read_fpf(data).or_else(|_| Ok(Vec::new())),
             "itc" => formats::misc::read_itc(data).or_else(|_| Ok(Vec::new())),
-            "mpg" | "mpeg" | "m1v" | "m2v" | "mpv" => formats::mpeg::read_mpeg(data).or_else(|_| Ok(Vec::new())),
+            "mpg" | "mpeg" | "m1v" | "m2v" | "mpv" => {
+                formats::mpeg::read_mpeg(data).or_else(|_| Ok(Vec::new()))
+            }
             "dv" => formats::dv::read_dv(data, data.len() as u64).or_else(|_| Ok(Vec::new())),
             "czi" => formats::misc::read_czi(data).or_else(|_| Ok(Vec::new())),
             "miff" => formats::miff::read_miff(data).or_else(|_| Ok(Vec::new())),
-            "lfp" | "mrc"
-            | "dss" | "mobi" | "psp" | "pgf" | "raw"
-            | "pmp" | "torrent"
-            | "xisf" | "mxf"
-            | "dfont" => Ok(Vec::new()),
+            "lfp" | "mrc" | "dss" | "mobi" | "psp" | "pgf" | "raw" | "pmp" | "torrent" | "xisf"
+            | "mxf" | "dfont" => Ok(Vec::new()),
             "iso" => formats::iso::read_iso(data).or_else(|_| Ok(Vec::new())),
             "afm" => formats::font::read_afm(data).or_else(|_| Ok(Vec::new())),
             "pfa" => formats::font::read_pfa(data).or_else(|_| Ok(Vec::new())),
@@ -1609,7 +1873,9 @@ fn detect_opendocument_type(data: &[u8]) -> Option<FileType> {
     if content_start >= content_end {
         return None;
     }
-    let mime = std::str::from_utf8(&data[content_start..content_end]).unwrap_or("").trim();
+    let mime = std::str::from_utf8(&data[content_start..content_end])
+        .unwrap_or("")
+        .trim();
     match mime {
         "application/vnd.oasis.opendocument.spreadsheet" => Some(FileType::Ods),
         "application/vnd.oasis.opendocument.text" => Some(FileType::Odt),
@@ -1655,8 +1921,9 @@ enum ExifIfdGroup {
 fn classify_exif_tag(tag_id: u16) -> ExifIfdGroup {
     match tag_id {
         // ExifIFD tags
-        0x829A..=0x829D | 0x8822..=0x8827 | 0x8830 | 0x9000..=0x9292
-        | 0xA000..=0xA435 => ExifIfdGroup::ExifIfd,
+        0x829A..=0x829D | 0x8822..=0x8827 | 0x8830 | 0x9000..=0x9292 | 0xA000..=0xA435 => {
+            ExifIfdGroup::ExifIfd
+        }
         // GPS tags
         0x0000..=0x001F if tag_id <= 0x001F => ExifIfdGroup::Gps,
         // Everything else → IFD0
@@ -1665,7 +1932,10 @@ fn classify_exif_tag(tag_id: u16) -> ExifIfdGroup {
 }
 
 /// Extract existing EXIF entries from a JPEG file's APP1 segment.
-fn extract_existing_exif_entries(jpeg_data: &[u8], target_bo: ByteOrderMark) -> Vec<exif_writer::IfdEntry> {
+fn extract_existing_exif_entries(
+    jpeg_data: &[u8],
+    target_bo: ByteOrderMark,
+) -> Vec<exif_writer::IfdEntry> {
     let mut entries = Vec::new();
 
     // Find EXIF APP1 segment
@@ -1724,7 +1994,13 @@ fn extract_ifd_entries(
     let src_bo = header.byte_order;
 
     // Read IFD0
-    read_ifd_for_merge(tiff_data, header.ifd0_offset as usize, src_bo, target_bo, entries);
+    read_ifd_for_merge(
+        tiff_data,
+        header.ifd0_offset as usize,
+        src_bo,
+        target_bo,
+        entries,
+    );
 
     // Find ExifIFD and GPS pointers
     let ifd0_offset = header.ifd0_offset as usize;
@@ -1890,7 +2166,9 @@ fn reencode_bytes(
 }
 
 fn read_u16_bo(data: &[u8], offset: usize, bo: ByteOrderMark) -> u16 {
-    if offset + 2 > data.len() { return 0; }
+    if offset + 2 > data.len() {
+        return 0;
+    }
     match bo {
         ByteOrderMark::LittleEndian => u16::from_le_bytes([data[offset], data[offset + 1]]),
         ByteOrderMark::BigEndian => u16::from_be_bytes([data[offset], data[offset + 1]]),
@@ -1898,10 +2176,22 @@ fn read_u16_bo(data: &[u8], offset: usize, bo: ByteOrderMark) -> u16 {
 }
 
 fn read_u32_bo(data: &[u8], offset: usize, bo: ByteOrderMark) -> u32 {
-    if offset + 4 > data.len() { return 0; }
+    if offset + 4 > data.len() {
+        return 0;
+    }
     match bo {
-        ByteOrderMark::LittleEndian => u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]),
-        ByteOrderMark::BigEndian => u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]),
+        ByteOrderMark::LittleEndian => u32::from_le_bytes([
+            data[offset],
+            data[offset + 1],
+            data[offset + 2],
+            data[offset + 3],
+        ]),
+        ByteOrderMark::BigEndian => u32::from_be_bytes([
+            data[offset],
+            data[offset + 1],
+            data[offset + 2],
+            data[offset + 3],
+        ]),
     }
 }
 
@@ -1996,7 +2286,13 @@ pub fn shift_datetime(datetime: &str, shift: &str) -> Option<String> {
         match m {
             1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
             4 | 6 | 9 | 11 => 30,
-            2 => if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 { 29 } else { 28 },
+            2 => {
+                if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {
+                    29
+                } else {
+                    28
+                }
+            }
             _ => 30,
         }
     };
@@ -2032,20 +2328,49 @@ fn unix_to_datetime(secs: i64) -> String {
     let mut y = 1970i32;
     let mut rem = days;
     loop {
-        let dy = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 { 366 } else { 365 };
-        if rem < dy { break; }
+        let dy = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {
+            366
+        } else {
+            365
+        };
+        if rem < dy {
+            break;
+        }
         rem -= dy;
         y += 1;
     }
     let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
-    let months = [31, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let months = [
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
     let mut mo = 1;
     for &dm in &months {
-        if rem < dm { break; }
+        if rem < dm {
+            break;
+        }
         rem -= dm;
         mo += 1;
     }
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", y, mo, rem + 1, h, m, s)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+        y,
+        mo,
+        rem + 1,
+        h,
+        m,
+        s
+    )
 }
 
 fn format_file_size(bytes: u64) -> String {
@@ -2064,8 +2389,15 @@ fn format_file_size(bytes: u64) -> String {
 fn is_xmp_tag(tag: &str) -> bool {
     matches!(
         tag.to_lowercase().as_str(),
-        "title" | "description" | "subject" | "creator" | "rights"
-        | "keywords" | "rating" | "label" | "hierarchicalsubject"
+        "title"
+            | "description"
+            | "subject"
+            | "creator"
+            | "rights"
+            | "keywords"
+            | "rating"
+            | "label"
+            | "hierarchicalsubject"
     )
 }
 
@@ -2149,21 +2481,31 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
     let mut tags = Vec::new();
     let mk = |name: &str, val: String| Tag {
         id: crate::tag::TagId::Text(name.into()),
-        name: name.into(), description: name.into(),
-        group: crate::tag::TagGroup { family0: "File".into(), family1: "File".into(), family2: "Other".into() },
-        raw_value: Value::String(val.clone()), print_value: val, priority: 0,
+        name: name.into(),
+        description: name.into(),
+        group: crate::tag::TagGroup {
+            family0: "File".into(),
+            family1: "File".into(),
+            family2: "Other".into(),
+        },
+        raw_value: Value::String(val.clone()),
+        print_value: val,
+        priority: 0,
     };
 
     // Detect encoding and BOM
     let is_ascii = data.iter().all(|&b| b < 128);
     let has_utf8_bom = data.starts_with(&[0xEF, 0xBB, 0xBF]);
-    let has_utf16le_bom = data.starts_with(&[0xFF, 0xFE]) && !data.starts_with(&[0xFF, 0xFE, 0x00, 0x00]);
+    let has_utf16le_bom =
+        data.starts_with(&[0xFF, 0xFE]) && !data.starts_with(&[0xFF, 0xFE, 0x00, 0x00]);
     let has_utf16be_bom = data.starts_with(&[0xFE, 0xFF]);
     let has_utf32le_bom = data.starts_with(&[0xFF, 0xFE, 0x00, 0x00]);
     let has_utf32be_bom = data.starts_with(&[0x00, 0x00, 0xFE, 0xFF]);
 
     // Detect if file has weird non-text control characters (like multi-byte unicode without BOM)
-    let has_weird_ctrl = data.iter().any(|&b| (b <= 0x06) || (b >= 0x0e && b <= 0x1a) || (b >= 0x1c && b <= 0x1f) || b == 0x7f);
+    let has_weird_ctrl = data
+        .iter()
+        .any(|&b| (b <= 0x06) || (b >= 0x0e && b <= 0x1a) || (b >= 0x1c && b <= 0x1f) || b == 0x7f);
 
     let (encoding, is_bom, is_utf16) = if has_utf32le_bom {
         ("utf-32le", true, false)
@@ -2206,10 +2548,15 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
     // Count newlines and detect type
     let has_cr = data.contains(&b'\r');
     let has_lf = data.contains(&b'\n');
-    let newline_type = if has_cr && has_lf { "Windows CRLF" }
-        else if has_lf { "Unix LF" }
-        else if has_cr { "Macintosh CR" }
-        else { "(none)" };
+    let newline_type = if has_cr && has_lf {
+        "Windows CRLF"
+    } else if has_lf {
+        "Unix LF"
+    } else if has_cr {
+        "Macintosh CR"
+    } else {
+        "(none)"
+    };
     tags.push(mk("Newlines", newline_type.into()));
 
     if is_csv {
@@ -2240,11 +2587,16 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
                     ncols = 1;
                 }
                 // Detect quoting
-                if line.contains('"') { quot = "\""; }
-                else if line.contains('\'') { quot = "'"; }
+                if line.contains('"') {
+                    quot = "\"";
+                } else if line.contains('\'') {
+                    quot = "'";
+                }
             }
             nrows += 1;
-            if nrows >= 1000 { break; }
+            if nrows >= 1000 {
+                break;
+            }
         }
 
         let delim_display = match delim {
@@ -2268,7 +2620,11 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
     } else if !is_utf16 {
         // Line count and word count for plain text files (not UTF-16/32)
         let line_count = data.iter().filter(|&&b| b == b'\n').count();
-        let line_count = if line_count == 0 && !data.is_empty() { 1 } else { line_count };
+        let line_count = if line_count == 0 && !data.is_empty() {
+            1
+        } else {
+            line_count
+        };
         tags.push(mk("LineCount", line_count.to_string()));
 
         let text = crate::encoding::decode_utf8_or_latin1(data);

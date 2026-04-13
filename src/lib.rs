@@ -63,18 +63,17 @@ pub mod config;
 pub mod encoding;
 pub mod error;
 
-
-pub mod geolocation;
-pub mod i18n;
 pub mod exiftool;
 pub mod file_type;
 pub mod formats;
+pub mod geolocation;
+pub mod i18n;
+pub mod md5;
 pub mod metadata;
 pub mod tag;
 pub mod tags;
 pub mod value;
 pub mod writer;
-pub mod md5;
 
 // Re-export main types at crate root
 pub use crate::error::{Error, Result};
@@ -84,9 +83,7 @@ pub use crate::tag::{Tag, TagGroup, TagId};
 pub use crate::value::Value;
 
 /// Convenience function: extract metadata from a file in one call.
-pub fn image_info<P: AsRef<std::path::Path>>(
-    path: P,
-) -> Result<ImageInfo> {
+pub fn image_info<P: AsRef<std::path::Path>>(path: P) -> Result<ImageInfo> {
     ExifTool::new().image_info(path)
 }
 

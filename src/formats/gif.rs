@@ -22,21 +22,45 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
     let packed = data[10];
     let has_gct = (packed & 0x80) != 0;
     let color_resolution = ((packed >> 4) & 0x07) + 1;
-    let gct_size = if has_gct { 3 * (1 << ((packed & 0x07) + 1)) } else { 0 };
+    let gct_size = if has_gct {
+        3 * (1 << ((packed & 0x07) + 1))
+    } else {
+        0
+    };
     let bg_color = data[11];
     let _aspect_ratio = data[12];
 
     tags.push(mk("ImageWidth", "Image Width", Value::U16(width)));
     tags.push(mk("ImageHeight", "Image Height", Value::U16(height)));
-    tags.push(mk("HasColorMap", "Has Color Map", Value::String(if has_gct { "Yes" } else { "No" }.into())));
-    tags.push(mk("ColorResolutionDepth", "Color Resolution Depth", Value::U8(color_resolution)));
-    tags.push(mk("BitsPerPixel", "Bits Per Pixel", Value::U8((packed & 0x07) + 1)));
-    tags.push(mk("BackgroundColor", "Background Color", Value::U8(bg_color)));
+    tags.push(mk(
+        "HasColorMap",
+        "Has Color Map",
+        Value::String(if has_gct { "Yes" } else { "No" }.into()),
+    ));
+    tags.push(mk(
+        "ColorResolutionDepth",
+        "Color Resolution Depth",
+        Value::U8(color_resolution),
+    ));
+    tags.push(mk(
+        "BitsPerPixel",
+        "Bits Per Pixel",
+        Value::U8((packed & 0x07) + 1),
+    ));
+    tags.push(mk(
+        "BackgroundColor",
+        "Background Color",
+        Value::U8(bg_color),
+    ));
     // PixelAspectRatio: 0 = square pixels (undef), otherwise (val+15)/64
     let aspect_ratio = data[12];
     if aspect_ratio != 0 {
         let par = (aspect_ratio as f64 + 15.0) / 64.0;
-        tags.push(mk("PixelAspectRatio", "Pixel Aspect Ratio", Value::String(format!("{:.4}", par))));
+        tags.push(mk(
+            "PixelAspectRatio",
+            "Pixel Aspect Ratio",
+            Value::String(format!("{:.4}", par)),
+        ));
     } else {
         tags.push(mk("PixelAspectRatio", "Pixel Aspect Ratio", Value::U8(1)));
     }
@@ -55,7 +79,11 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
                 }
                 let local_packed = data[pos + 9];
                 let has_lct = (local_packed & 0x80) != 0;
-                let lct_size = if has_lct { 3 * (1 << ((local_packed & 0x07) + 1)) } else { 0 };
+                let lct_size = if has_lct {
+                    3 * (1 << ((local_packed & 0x07) + 1))
+                } else {
+                    0
+                };
                 pos += 10 + lct_size;
                 // Skip LZW minimum code size
                 if pos >= data.len() {
@@ -81,7 +109,10 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
                         if !comment.is_empty() {
                             let text = crate::encoding::decode_utf8_or_latin1(&comment).to_string();
                             // Normalize newlines to ".." to match ExifTool output format
-                            let text = text.replace("\r\n", "..").replace('\n', "..").replace('\r', "..");
+                            let text = text
+                                .replace("\r\n", "..")
+                                .replace('\n', "..")
+                                .replace('\r', "..");
                             tags.push(mk("Comment", "Comment", Value::String(text)));
                         }
                     }
@@ -135,11 +166,12 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
                                     // Strip the 258-byte landing zone from the end
                                     // The landing zone ends with "\x01\x00" (last sub-block of 1 byte = 0x00)
                                     // Find the real end: last occurrence of "?xpacket end"
-                                    let xmp_slice = if let Some(end_pos) = find_xpacket_end(&xmp_data) {
-                                        &xmp_data[..end_pos]
-                                    } else {
-                                        &xmp_data
-                                    };
+                                    let xmp_slice =
+                                        if let Some(end_pos) = find_xpacket_end(&xmp_data) {
+                                            &xmp_data[..end_pos]
+                                        } else {
+                                            &xmp_data
+                                        };
                                     if let Ok(xmp_tags) =
                                         crate::metadata::XmpReader::read(xmp_slice)
                                     {
@@ -151,9 +183,7 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
                                 let (icc_data, new_pos) = read_sub_blocks(data, pos);
                                 pos = new_pos;
                                 if !icc_data.is_empty() {
-                                    if let Ok(icc_tags) =
-                                        crate::formats::icc::read_icc(&icc_data)
-                                    {
+                                    if let Ok(icc_tags) = crate::formats::icc::read_icc(&icc_data) {
                                         tags.extend(icc_tags);
                                     }
                                 }
@@ -242,9 +272,16 @@ fn read_sub_blocks_include_len(data: &[u8], mut pos: usize) -> (Vec<u8>, usize) 
 fn find_xpacket_end(data: &[u8]) -> Option<usize> {
     // Search for "?xpacket end=" from near the end
     let pattern = b"?xpacket end=";
-    let start = if data.len() > 512 { data.len() - 512 } else { 0 };
+    let start = if data.len() > 512 {
+        data.len() - 512
+    } else {
+        0
+    };
     let search_range = &data[start..];
-    if let Some(rel_pos) = search_range.windows(pattern.len()).rposition(|w| w == pattern) {
+    if let Some(rel_pos) = search_range
+        .windows(pattern.len())
+        .rposition(|w| w == pattern)
+    {
         let abs_pos = start + rel_pos;
         // Find the closing "?>" after this position
         if let Some(end_rel) = data[abs_pos..].windows(2).position(|w| w == b"?>") {

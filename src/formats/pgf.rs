@@ -16,7 +16,11 @@ pub fn read_pgf(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Version byte at offset 3
     let version = data[3];
-    tags.push(mk("PGFVersion", "PGF Version", Value::String(format!("0x{:02x}", version))));
+    tags.push(mk(
+        "PGFVersion",
+        "PGF Version",
+        Value::String(format!("0x{:02x}", version)),
+    ));
 
     if version != 0x36 {
         // Unsupported version, return what we have
@@ -51,7 +55,11 @@ pub fn read_pgf(data: &[u8]) -> Result<Vec<Tag>> {
     }
     // offset 19: ColorComponents (int8u)
     if data.len() >= 20 {
-        tags.push(mk("ColorComponents", "Color Components", Value::U8(data[19])));
+        tags.push(mk(
+            "ColorComponents",
+            "Color Components",
+            Value::U8(data[19]),
+        ));
     }
     // offset 20: ColorMode (int8u)
     if data.len() >= 21 {
@@ -67,7 +75,11 @@ pub fn read_pgf(data: &[u8]) -> Result<Vec<Tag>> {
             9 => "Lab",
             _ => "Unknown",
         };
-        tags.push(mk("ColorMode", "Color Mode", Value::String(mode_str.into())));
+        tags.push(mk(
+            "ColorMode",
+            "Color Mode",
+            Value::String(mode_str.into()),
+        ));
         // offset 21-23: BackgroundColor (int8u[3])
         if data.len() >= 24 {
             let bg = format!("{} {} {}", data[21], data[22], data[23]);
@@ -95,8 +107,8 @@ pub fn read_pgf(data: &[u8]) -> Result<Vec<Tag>> {
                 // Add PNG tags, but skip dimension tags (PGF header has the correct ones)
                 for mut tag in png_tags {
                     match tag.name.as_str() {
-                        "ImageWidth" | "ImageHeight" | "ImageSize" | "Megapixels"
-                        | "FileType" | "FileTypeExtension" | "MIMEType" => continue,
+                        "ImageWidth" | "ImageHeight" | "ImageSize" | "Megapixels" | "FileType"
+                        | "FileTypeExtension" | "MIMEType" => continue,
                         _ => {}
                     }
                     tag.priority = 2; // higher priority than default

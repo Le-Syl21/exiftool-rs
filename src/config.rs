@@ -72,7 +72,8 @@ impl Config {
         let mut config = Config::default();
 
         // Remove comments
-        let lines: Vec<&str> = content.lines()
+        let lines: Vec<&str> = content
+            .lines()
             .map(|l| l.split('#').next().unwrap_or("").trim())
             .collect();
         let text = lines.join("\n");
@@ -111,7 +112,9 @@ fn parse_user_tags(block: &str, tags: &mut Vec<UserTag>) {
         let rest = &block[abs_pos + 2..];
 
         // Read hex number
-        let hex_end = rest.find(|c: char| !c.is_ascii_hexdigit()).unwrap_or(rest.len());
+        let hex_end = rest
+            .find(|c: char| !c.is_ascii_hexdigit())
+            .unwrap_or(rest.len());
         if let Ok(tag_id) = u16::from_str_radix(&rest[..hex_end], 16) {
             // Find Name
             if let Some(name_pos) = rest.find("Name") {
@@ -136,7 +139,11 @@ fn parse_shortcuts(block: &str, shortcuts: &mut Vec<Shortcut>) {
     for line in block.lines() {
         let line = line.trim();
         if let Some(arrow) = line.find("=>") {
-            let name = line[..arrow].trim().trim_matches('\'').trim_matches('"').to_string();
+            let name = line[..arrow]
+                .trim()
+                .trim_matches('\'')
+                .trim_matches('"')
+                .to_string();
             let rest = &line[arrow + 2..];
 
             // Parse array ['Tag1', 'Tag2']

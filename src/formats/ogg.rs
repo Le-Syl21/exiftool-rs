@@ -54,9 +54,10 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     // Detect if this is a FLAC-in-OGG stream
-    let is_flac_in_ogg = packets.first().map(|p|
-        p.len() >= 5 && p[0] == 0x7F && &p[1..5] == b"FLAC"
-    ).unwrap_or(false);
+    let is_flac_in_ogg = packets
+        .first()
+        .map(|p| p.len() >= 5 && p[0] == 0x7F && &p[1..5] == b"FLAC")
+        .unwrap_or(false);
 
     // Process packets
     for (_i, packet) in packets.iter().enumerate() {
@@ -109,7 +110,9 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
     // Compute Duration from last OGG page's granule position / sample rate
     // Don't compute Duration for Opus (Perl doesn't output it for short files)
     let is_opus = tags.iter().any(|t| t.name == "OpusVersion");
-    let sample_rate = if is_opus { 0 } else {
+    let sample_rate = if is_opus {
+        0
+    } else {
         tags.iter()
             .find(|t| t.name == "SampleRate")
             .and_then(|t| t.raw_value.as_u64())
@@ -124,18 +127,31 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
                 let page_pos = search + p;
                 if page_pos + 14 <= data.len() {
                     let gp = u64::from_le_bytes([
-                        data[page_pos+6], data[page_pos+7], data[page_pos+8], data[page_pos+9],
-                        data[page_pos+10], data[page_pos+11], data[page_pos+12], data[page_pos+13],
+                        data[page_pos + 6],
+                        data[page_pos + 7],
+                        data[page_pos + 8],
+                        data[page_pos + 9],
+                        data[page_pos + 10],
+                        data[page_pos + 11],
+                        data[page_pos + 12],
+                        data[page_pos + 13],
                     ]);
-                    if gp != u64::MAX && gp > 0 { last_granule = Some(gp); }
+                    if gp != u64::MAX && gp > 0 {
+                        last_granule = Some(gp);
+                    }
                 }
                 search = page_pos + 4;
-            } else { break; }
+            } else {
+                break;
+            }
         }
         if let Some(granule) = last_granule {
             let duration = granule as f64 / sample_rate as f64;
-            tags.push(mk("Duration", "Duration",
-                Value::String(format!("{:.2} s (approx)", duration))));
+            tags.push(mk(
+                "Duration",
+                "Duration",
+                Value::String(format!("{:.2} s (approx)", duration)),
+            ));
         }
     }
 
@@ -147,7 +163,9 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
 fn parse_flac_in_ogg_packet(packet: &[u8], tags: &mut Vec<Tag>) {
     // After \x7FFLAC (5 bytes) + version(2) + num_headers(2) = 9 bytes header
     // Then the native FLAC stream starting with "fLaC" magic
-    if packet.len() < 9 { return; }
+    if packet.len() < 9 {
+        return;
+    }
     let flac_data = &packet[9..];
     // Pass to FLAC reader (it expects "fLaC" magic at start)
     if flac_data.starts_with(b"fLaC") {
@@ -208,12 +226,20 @@ fn parse_opus_identification(packet: &[u8], tags: &mut Vec<Tag>) {
     let output_gain = i16::from_le_bytes([d[8], d[9]]);
 
     // Perl tag names: OpusVersion, AudioChannels, SampleRate, OutputGain
-    tags.push(mk("OpusVersion", "Opus Version", Value::String(format!("{}/{}", version >> 4, version & 0x0f))));
+    tags.push(mk(
+        "OpusVersion",
+        "Opus Version",
+        Value::String(format!("{}/{}", version >> 4, version & 0x0f)),
+    ));
     tags.push(mk("AudioChannels", "Audio Channels", Value::U8(channels)));
     tags.push(mk("SampleRate", "Sample Rate", Value::U32(sample_rate)));
     // OutputGain in dB: value / 256.0
     let gain_db = output_gain as f64 / 256.0;
-    tags.push(mk("OutputGain", "Output Gain", Value::String(format!("{:.2} dB", gain_db))));
+    tags.push(mk(
+        "OutputGain",
+        "Output Gain",
+        Value::String(format!("{:.2} dB", gain_db)),
+    ));
 }
 
 fn parse_theora_identification(packet: &[u8], tags: &mut Vec<Tag>) {
@@ -227,7 +253,11 @@ fn parse_theora_identification(packet: &[u8], tags: &mut Vec<Tag>) {
     let width = ((d[3] as u32) << 8 | d[4] as u32) << 4;
     let height = ((d[5] as u32) << 8 | d[6] as u32) << 4;
 
-    tags.push(mk("VideoFormat", "Video Format", Value::String(format!("Theora {}.{}.{}", major_ver, minor_ver, rev_ver))));
+    tags.push(mk(
+        "VideoFormat",
+        "Video Format",
+        Value::String(format!("Theora {}.{}.{}", major_ver, minor_ver, rev_ver)),
+    ));
     tags.push(mk("ImageWidth", "Image Width", Value::U32(width)));
     tags.push(mk("ImageHeight", "Image Height", Value::U32(height)));
 }

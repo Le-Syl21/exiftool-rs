@@ -22,7 +22,11 @@ pub fn read_psp(data: &[u8]) -> Result<Vec<Tag>> {
 
     let major = u16::from_le_bytes([data[32], data[33]]);
     let minor = u16::from_le_bytes([data[34], data[35]]);
-    tags.push(mk("FileVersion", "File Version", Value::String(format!("{}.{}", major, minor))));
+    tags.push(mk(
+        "FileVersion",
+        "File Version",
+        Value::String(format!("{}.{}", major, minor)),
+    ));
 
     // Block header length depends on version:
     // version > 3: 10 bytes; version <= 3: 14 bytes
@@ -38,8 +42,10 @@ pub fn read_psp(data: &[u8]) -> Result<Vec<Tag>> {
 
         let block_type = u16::from_le_bytes([data[pos + 4], data[pos + 5]]);
         let block_len = u32::from_le_bytes([
-            data[pos + hlen - 4], data[pos + hlen - 3],
-            data[pos + hlen - 2], data[pos + hlen - 1],
+            data[pos + hlen - 4],
+            data[pos + hlen - 3],
+            data[pos + hlen - 2],
+            data[pos + hlen - 1],
         ]) as usize;
 
         pos += hlen;
@@ -92,7 +98,11 @@ fn parse_image_block(data: &[u8], tags: &mut Vec<Tag>) {
     let res_bytes: [u8; 8] = data[8..16].try_into().unwrap_or([0; 8]);
     let resolution = f64::from_le_bytes(res_bytes);
     if resolution > 0.0 {
-        tags.push(mk("ImageResolution", "Image Resolution", Value::String(format!("{}", resolution))));
+        tags.push(mk(
+            "ImageResolution",
+            "Image Resolution",
+            Value::String(format!("{}", resolution)),
+        ));
     }
     if data.len() < 17 {
         return;
@@ -105,7 +115,11 @@ fn parse_image_block(data: &[u8], tags: &mut Vec<Tag>) {
         2 => "cm",
         _ => "Unknown",
     };
-    tags.push(mk("ResolutionUnit", "Resolution Unit", Value::String(unit_str.into())));
+    tags.push(mk(
+        "ResolutionUnit",
+        "Resolution Unit",
+        Value::String(unit_str.into()),
+    ));
     if data.len() < 19 {
         return;
     }
@@ -118,7 +132,11 @@ fn parse_image_block(data: &[u8], tags: &mut Vec<Tag>) {
         3 => "JPEG",
         _ => "Unknown",
     };
-    tags.push(mk("Compression", "Compression", Value::String(comp_str.into())));
+    tags.push(mk(
+        "Compression",
+        "Compression",
+        Value::String(comp_str.into()),
+    ));
     if data.len() < 21 {
         return;
     }
@@ -140,8 +158,16 @@ fn parse_image_block(data: &[u8], tags: &mut Vec<Tag>) {
 
     // XResolution and YResolution (same value, stored as resolution)
     if resolution > 0.0 {
-        tags.push(mk("XResolution", "X Resolution", Value::String(format!("{}", resolution))));
-        tags.push(mk("YResolution", "Y Resolution", Value::String(format!("{}", resolution))));
+        tags.push(mk(
+            "XResolution",
+            "X Resolution",
+            Value::String(format!("{}", resolution)),
+        ));
+        tags.push(mk(
+            "YResolution",
+            "Y Resolution",
+            Value::String(format!("{}", resolution)),
+        ));
     }
 }
 
@@ -153,7 +179,8 @@ fn parse_creator_block(data: &[u8], tags: &mut Vec<Tag>) {
             break;
         }
         let tag = u16::from_le_bytes([data[pos + 4], data[pos + 5]]);
-        let len = u32::from_le_bytes([data[pos + 6], data[pos + 7], data[pos + 8], data[pos + 9]]) as usize;
+        let len = u32::from_le_bytes([data[pos + 6], data[pos + 7], data[pos + 8], data[pos + 9]])
+            as usize;
         pos += 10;
 
         if pos + len > data.len() {
@@ -173,7 +200,9 @@ fn parse_creator_block(data: &[u8], tags: &mut Vec<Tag>) {
             1 => {
                 // CreateDate (int32u unix timestamp)
                 if val_data.len() >= 4 {
-                    let ts = u32::from_le_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]) as i64;
+                    let ts =
+                        u32::from_le_bytes([val_data[0], val_data[1], val_data[2], val_data[3]])
+                            as i64;
                     let dt = unix_to_exif_date(ts);
                     tags.push(mk("CreateDate", "Create Date", Value::String(dt)));
                 }
@@ -181,7 +210,9 @@ fn parse_creator_block(data: &[u8], tags: &mut Vec<Tag>) {
             2 => {
                 // ModifyDate
                 if val_data.len() >= 4 {
-                    let ts = u32::from_le_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]) as i64;
+                    let ts =
+                        u32::from_le_bytes([val_data[0], val_data[1], val_data[2], val_data[3]])
+                            as i64;
                     let dt = unix_to_exif_date(ts);
                     tags.push(mk("ModifyDate", "Modify Date", Value::String(dt)));
                 }
@@ -207,7 +238,8 @@ fn parse_creator_block(data: &[u8], tags: &mut Vec<Tag>) {
             6 => {
                 // CreatorAppID
                 if val_data.len() >= 4 {
-                    let id = u32::from_le_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]);
+                    let id =
+                        u32::from_le_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]);
                     let name = match id {
                         0 => "Unknown".to_string(),
                         1 => "Paint Shop Pro".to_string(),
@@ -219,8 +251,15 @@ fn parse_creator_block(data: &[u8], tags: &mut Vec<Tag>) {
             7 => {
                 // CreatorAppVersion (4 bytes little-endian, reversed)
                 if val_data.len() >= 4 {
-                    let v = format!("{}.{}.{}.{}", val_data[3], val_data[2], val_data[1], val_data[0]);
-                    tags.push(mk("CreatorAppVersion", "Creator App Version", Value::String(v)));
+                    let v = format!(
+                        "{}.{}.{}.{}",
+                        val_data[3], val_data[2], val_data[1], val_data[0]
+                    );
+                    tags.push(mk(
+                        "CreatorAppVersion",
+                        "Creator App Version",
+                        Value::String(v),
+                    ));
                 }
             }
             _ => {}
@@ -236,7 +275,8 @@ fn parse_ext_block(data: &[u8], tags: &mut Vec<Tag>) {
             break;
         }
         let tag = u16::from_le_bytes([data[pos + 4], data[pos + 5]]);
-        let len = u32::from_le_bytes([data[pos + 6], data[pos + 7], data[pos + 8], data[pos + 9]]) as usize;
+        let len = u32::from_le_bytes([data[pos + 6], data[pos + 7], data[pos + 8], data[pos + 9]])
+            as usize;
         pos += 10;
 
         if pos + len > data.len() {
@@ -275,15 +315,32 @@ fn unix_to_exif_date(ts: i64) -> String {
     let mut rem = days;
     loop {
         let dy = if is_leap(year) { 366i64 } else { 365i64 };
-        if rem < dy { break; }
+        if rem < dy {
+            break;
+        }
         rem -= dy;
         year += 1;
     }
     let leap = is_leap(year);
-    let month_days = [31i64, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let month_days = [
+        31i64,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
     let mut month = 1i32;
     for &dm in &month_days {
-        if rem < dm { break; }
+        if rem < dm {
+            break;
+        }
         rem -= dm;
         month += 1;
     }
@@ -291,17 +348,30 @@ fn unix_to_exif_date(ts: i64) -> String {
     let offset_hours = utc_offset / 3600;
     let offset_mins = (utc_offset.abs() % 3600) / 60;
     let sign = if utc_offset >= 0 { '+' } else { '-' };
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
-        year, month, day, hour, minute, second,
-        sign, offset_hours.abs(), offset_mins)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        sign,
+        offset_hours.abs(),
+        offset_mins
+    )
 }
 
 fn get_local_utc_offset() -> i64 {
     if let Ok(tz) = std::env::var("TZ") {
         let tz = tz.trim();
         if let Some(sign_pos) = tz.rfind(['+', '-']) {
-            let sign: i64 = if &tz[sign_pos..sign_pos+1] == "+" { 1 } else { -1 };
-            if let Ok(h) = tz[sign_pos+1..].parse::<i64>() {
+            let sign: i64 = if &tz[sign_pos..sign_pos + 1] == "+" {
+                1
+            } else {
+                -1
+            };
+            if let Ok(h) = tz[sign_pos + 1..].parse::<i64>() {
                 return -sign * h * 3600;
             }
         }

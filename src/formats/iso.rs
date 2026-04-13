@@ -45,11 +45,17 @@ fn trim_spaces(s: &str) -> &str {
 
 /// Parse ISO 9660 7.1.3 date/time (17 bytes: YYYYMMDDHHmmssss_tz)
 fn parse_iso_datetime(data: &[u8]) -> Option<String> {
-    if data.len() < 17 { return None; }
+    if data.len() < 17 {
+        return None;
+    }
     // Check if non-zero
-    if data[..16].iter().all(|&b| b == b'0' || b == 0 || b == b' ') { return None; }
+    if data[..16].iter().all(|&b| b == b'0' || b == 0 || b == b' ') {
+        return None;
+    }
     let s = std::str::from_utf8(&data[..16]).ok()?;
-    if s.chars().all(|c| c == '0' || c == ' ') { return None; }
+    if s.chars().all(|c| c == '0' || c == ' ') {
+        return None;
+    }
 
     let year = &s[0..4];
     let month = &s[4..6];
@@ -70,12 +76,17 @@ fn parse_iso_datetime(data: &[u8]) -> Option<String> {
         format!("{}{:02}:{:02}", sign, abs / 60, abs % 60)
     };
 
-    Some(format!("{}:{}:{} {}:{}:{}.{}{}", year, month, day, hour, min, sec, csec, tz_str))
+    Some(format!(
+        "{}:{}:{} {}:{}:{}.{}{}",
+        year, month, day, hour, min, sec, csec, tz_str
+    ))
 }
 
 /// Parse ISO 9660 "short" date (7 bytes: YYMMDDHHMMSS_tz)
 fn parse_short_datetime(data: &[u8]) -> Option<String> {
-    if data.len() < 7 { return None; }
+    if data.len() < 7 {
+        return None;
+    }
     let year = data[0] as u32 + 1900;
     let month = data[1];
     let day = data[2];
@@ -91,7 +102,10 @@ fn parse_short_datetime(data: &[u8]) -> Option<String> {
         let abs = tz_mins.abs();
         format!("{}{:02}:{:02}", sign, abs / 60, abs % 60)
     };
-    Some(format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}", year, month, day, hour, min, sec, tz_str))
+    Some(format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}",
+        year, month, day, hour, min, sec, tz_str
+    ))
 }
 
 /// Format file size like Perl ConvertFileSize (e.g., "391 MB")
@@ -108,13 +122,17 @@ fn format_file_size(bytes: u64) -> String {
 }
 
 fn read_le_u32(data: &[u8], off: usize) -> u32 {
-    if off + 4 > data.len() { return 0; }
-    u32::from_le_bytes([data[off], data[off+1], data[off+2], data[off+3]])
+    if off + 4 > data.len() {
+        return 0;
+    }
+    u32::from_le_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]])
 }
 
 fn read_le_u16(data: &[u8], off: usize) -> u16 {
-    if off + 2 > data.len() { return 0; }
-    u16::from_le_bytes([data[off], data[off+1]])
+    if off + 2 > data.len() {
+        return 0;
+    }
+    u16::from_le_bytes([data[off], data[off + 1]])
 }
 
 pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
@@ -131,14 +149,14 @@ pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
 
         // Check magic: type byte + "CD001"
         let vol_type = sector[0];
-        if &sector[1..6] != b"CD001" { break; }
+        if &sector[1..6] != b"CD001" {
+            break;
+        }
 
         match vol_type {
             0 => {
                 // Boot Record
-                let boot_system = trim_spaces(
-                    std::str::from_utf8(&sector[7..39]).unwrap_or("")
-                );
+                let boot_system = trim_spaces(std::str::from_utf8(&sector[7..39]).unwrap_or(""));
                 // Always extract BootSystem even if empty (indicates bootable)
                 tags.push(mk("BootSystem", Value::String(boot_system.to_string())));
             }
@@ -146,7 +164,9 @@ pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                 // Primary Volume Descriptor
                 // VolumeName at offset 40, 32 bytes
                 let vol_name = trim_spaces(
-                    std::str::from_utf8(&sector[40..72]).unwrap_or("").trim_end_matches('\0')
+                    std::str::from_utf8(&sector[40..72])
+                        .unwrap_or("")
+                        .trim_end_matches('\0'),
                 );
                 if !vol_name.is_empty() {
                     tags.push(mk("VolumeName", Value::String(vol_name.to_string())));
@@ -169,7 +189,9 @@ pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
 
                 // VolumeSetName at offset 190, 128 bytes
                 let set_name = trim_spaces(
-                    std::str::from_utf8(&sector[190..318]).unwrap_or("").trim_end_matches('\0')
+                    std::str::from_utf8(&sector[190..318])
+                        .unwrap_or("")
+                        .trim_end_matches('\0'),
                 );
                 if !set_name.is_empty() {
                     tags.push(mk("VolumeSetName", Value::String(set_name.to_string())));
@@ -177,7 +199,9 @@ pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
 
                 // Publisher at offset 318, 128 bytes
                 let publisher = trim_spaces(
-                    std::str::from_utf8(&sector[318..446]).unwrap_or("").trim_end_matches('\0')
+                    std::str::from_utf8(&sector[318..446])
+                        .unwrap_or("")
+                        .trim_end_matches('\0'),
                 );
                 if !publisher.is_empty() {
                     tags.push(mk("Publisher", Value::String(publisher.to_string())));
@@ -185,7 +209,9 @@ pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
 
                 // DataPreparer at offset 446, 128 bytes
                 let preparer = trim_spaces(
-                    std::str::from_utf8(&sector[446..574]).unwrap_or("").trim_end_matches('\0')
+                    std::str::from_utf8(&sector[446..574])
+                        .unwrap_or("")
+                        .trim_end_matches('\0'),
                 );
                 if !preparer.is_empty() {
                     tags.push(mk("DataPreparer", Value::String(preparer.to_string())));
@@ -193,7 +219,9 @@ pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
 
                 // Software at offset 574, 128 bytes
                 let software = trim_spaces(
-                    std::str::from_utf8(&sector[574..702]).unwrap_or("").trim_end_matches('\0')
+                    std::str::from_utf8(&sector[574..702])
+                        .unwrap_or("")
+                        .trim_end_matches('\0'),
                 );
                 if !software.is_empty() {
                     tags.push(mk("Software", Value::String(software.to_string())));
@@ -201,26 +229,41 @@ pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
 
                 // CopyrightFileName at offset 702, 38 bytes
                 let copyright_fn = trim_spaces(
-                    std::str::from_utf8(&sector[702..740]).unwrap_or("").trim_end_matches('\0')
+                    std::str::from_utf8(&sector[702..740])
+                        .unwrap_or("")
+                        .trim_end_matches('\0'),
                 );
                 if !copyright_fn.is_empty() {
-                    tags.push(mk("CopyrightFileName", Value::String(copyright_fn.to_string())));
+                    tags.push(mk(
+                        "CopyrightFileName",
+                        Value::String(copyright_fn.to_string()),
+                    ));
                 }
 
                 // AbstractFileName at offset 740, 36 bytes
                 let abstract_fn = trim_spaces(
-                    std::str::from_utf8(&sector[740..776]).unwrap_or("").trim_end_matches('\0')
+                    std::str::from_utf8(&sector[740..776])
+                        .unwrap_or("")
+                        .trim_end_matches('\0'),
                 );
                 if !abstract_fn.is_empty() {
-                    tags.push(mk("AbstractFileName", Value::String(abstract_fn.to_string())));
+                    tags.push(mk(
+                        "AbstractFileName",
+                        Value::String(abstract_fn.to_string()),
+                    ));
                 }
 
                 // BibligraphicFileName at offset 776, 37 bytes
                 let biblio_fn = trim_spaces(
-                    std::str::from_utf8(&sector[776..813]).unwrap_or("").trim_end_matches('\0')
+                    std::str::from_utf8(&sector[776..813])
+                        .unwrap_or("")
+                        .trim_end_matches('\0'),
                 );
                 if !biblio_fn.is_empty() {
-                    tags.push(mk("BibligraphicFileName", Value::String(biblio_fn.to_string())));
+                    tags.push(mk(
+                        "BibligraphicFileName",
+                        Value::String(biblio_fn.to_string()),
+                    ));
                 }
 
                 // VolumeCreateDate at offset 813, 17 bytes
@@ -239,7 +282,11 @@ pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
 
                 // VolumeSize composite: block_count * block_size
                 let total_bytes = block_count as u64 * block_size as u64;
-                tags.push(mk_with_print("VolumeSize", Value::String(total_bytes.to_string()), format_file_size(total_bytes)));
+                tags.push(mk_with_print(
+                    "VolumeSize",
+                    Value::String(total_bytes.to_string()),
+                    format_file_size(total_bytes),
+                ));
             }
             255 => {
                 // Terminator

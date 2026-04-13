@@ -5,8 +5,8 @@
 
 use crate::error::{Error, Result};
 use crate::tag::{Tag, TagGroup, TagId};
-use crate::value::Value;
 use crate::value::format_g15;
+use crate::value::Value;
 
 fn mk(name: &str, value: Value) -> Tag {
     let pv = value.to_display_string();
@@ -58,46 +58,89 @@ fn mk_time(name: &str, value: Value, print: String) -> Tag {
 }
 
 fn read_u32_le(data: &[u8], offset: usize) -> u32 {
-    if offset + 4 > data.len() { return 0; }
-    u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]])
+    if offset + 4 > data.len() {
+        return 0;
+    }
+    u32::from_le_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+    ])
 }
 
 fn read_i32_le(data: &[u8], offset: usize) -> i32 {
-    if offset + 4 > data.len() { return 0; }
-    i32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]])
+    if offset + 4 > data.len() {
+        return 0;
+    }
+    i32::from_le_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+    ])
 }
 
 fn read_f32_le(data: &[u8], offset: usize) -> f32 {
-    if offset + 4 > data.len() { return 0.0; }
-    f32::from_bits(u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]))
+    if offset + 4 > data.len() {
+        return 0.0;
+    }
+    f32::from_bits(u32::from_le_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+    ]))
 }
 
 fn read_f64_le(data: &[u8], offset: usize) -> f64 {
-    if offset + 8 > data.len() { return 0.0; }
+    if offset + 8 > data.len() {
+        return 0.0;
+    }
     f64::from_bits(u64::from_le_bytes([
-        data[offset], data[offset+1], data[offset+2], data[offset+3],
-        data[offset+4], data[offset+5], data[offset+6], data[offset+7],
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+        data[offset + 4],
+        data[offset + 5],
+        data[offset + 6],
+        data[offset + 7],
     ]))
 }
 
 fn read_u64_le(data: &[u8], offset: usize) -> u64 {
-    if offset + 8 > data.len() { return 0; }
+    if offset + 8 > data.len() {
+        return 0;
+    }
     u64::from_le_bytes([
-        data[offset], data[offset+1], data[offset+2], data[offset+3],
-        data[offset+4], data[offset+5], data[offset+6], data[offset+7],
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+        data[offset + 4],
+        data[offset + 5],
+        data[offset + 6],
+        data[offset + 7],
     ])
 }
 
 fn read_str(data: &[u8], offset: usize, len: usize) -> String {
-    if offset + len > data.len() { return String::new(); }
-    let s = &data[offset..offset+len];
+    if offset + len > data.len() {
+        return String::new();
+    }
+    let s = &data[offset..offset + len];
     let end = s.iter().position(|&b| b == 0).unwrap_or(len);
-    crate::encoding::decode_utf8_or_latin1(&s[..end]).trim_end().to_string()
+    crate::encoding::decode_utf8_or_latin1(&s[..end])
+        .trim_end()
+        .to_string()
 }
 
 /// Convert Unix timestamp (seconds since 1970-01-01) to ExifTool datetime string.
 fn unix_to_exif_datetime(secs: i64) -> String {
-    if secs < 0 { return String::new(); }
+    if secs < 0 {
+        return String::new();
+    }
     let days = secs / 86400;
     let time_secs = secs % 86400;
     let h = time_secs / 3600;
@@ -106,20 +149,49 @@ fn unix_to_exif_datetime(secs: i64) -> String {
     let mut y = 1970i32;
     let mut rem = days;
     loop {
-        let dy = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 { 366 } else { 365 };
-        if rem < dy { break; }
+        let dy = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {
+            366
+        } else {
+            365
+        };
+        if rem < dy {
+            break;
+        }
         rem -= dy;
         y += 1;
     }
     let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
-    let months = [31i64, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let months = [
+        31i64,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
     let mut mo = 1;
     for &dm in &months {
-        if rem < dm { break; }
+        if rem < dm {
+            break;
+        }
         rem -= dm;
         mo += 1;
     }
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", y, mo, rem + 1, h, m, s)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+        y,
+        mo,
+        rem + 1,
+        h,
+        m,
+        s
+    )
 }
 
 /// Convert OLE Automation date (days since Dec 30, 1899) to ExifTool datetime string.
@@ -176,7 +248,11 @@ fn process_mrc_header(data: &[u8], tags: &mut Vec<Tag>) -> (u32, u32, String) {
         6 => "16-bit unsigned integer",
         _ => "Unknown",
     };
-    tags.push(mk_print("ImageMode", Value::U32(image_mode), mode_str.to_string()));
+    tags.push(mk_print(
+        "ImageMode",
+        Value::U32(image_mode),
+        mode_str.to_string(),
+    ));
 
     // Field 4 (offset 16): StartPoint — int32u[3]
     {
@@ -237,21 +313,40 @@ fn process_mrc_header(data: &[u8], tags: &mut Vec<Tag>) -> (u32, u32, String) {
     // Field 16 (offset 64): ImageWidthAxis — int32u, PrintConv {1=>X, 2=>Y, 3=>Z}
     {
         let v = read_u32_le(data, 64);
-        let print = match v { 1 => "X", 2 => "Y", 3 => "Z", _ => "Unknown" };
+        let print = match v {
+            1 => "X",
+            2 => "Y",
+            3 => "Z",
+            _ => "Unknown",
+        };
         tags.push(mk_print("ImageWidthAxis", Value::U32(v), print.to_string()));
     }
 
     // Field 17 (offset 68): ImageHeightAxis
     {
         let v = read_u32_le(data, 68);
-        let print = match v { 1 => "X", 2 => "Y", 3 => "Z", _ => "Unknown" };
-        tags.push(mk_print("ImageHeightAxis", Value::U32(v), print.to_string()));
+        let print = match v {
+            1 => "X",
+            2 => "Y",
+            3 => "Z",
+            _ => "Unknown",
+        };
+        tags.push(mk_print(
+            "ImageHeightAxis",
+            Value::U32(v),
+            print.to_string(),
+        ));
     }
 
     // Field 18 (offset 72): ImageDepthAxis
     {
         let v = read_u32_le(data, 72);
-        let print = match v { 1 => "X", 2 => "Y", 3 => "Z", _ => "Unknown" };
+        let print = match v {
+            1 => "X",
+            2 => "Y",
+            3 => "Z",
+            _ => "Unknown",
+        };
         tags.push(mk_print("ImageDepthAxis", Value::U32(v), print.to_string()));
     }
 
@@ -285,7 +380,10 @@ fn process_mrc_header(data: &[u8], tags: &mut Vec<Tag>) -> (u32, u32, String) {
 
     // Field 26 (offset 104): ExtendedHeaderType — string[4]
     let ext_hdr_type = read_str(data, 104, 4);
-    tags.push(mk("ExtendedHeaderType", Value::String(ext_hdr_type.clone())));
+    tags.push(mk(
+        "ExtendedHeaderType",
+        Value::String(ext_hdr_type.clone()),
+    ));
 
     // Field 27 (offset 108): MRCVersion — int32u
     {
@@ -311,7 +409,12 @@ fn process_mrc_header(data: &[u8], tags: &mut Vec<Tag>) -> (u32, u32, String) {
         let b2 = data[214];
         let b3 = data[215];
         let print = format!("0x{:02x} 0x{:02x} 0x{:02x} 0x{:02x}", b0, b1, b2, b3);
-        let v = Value::List(vec![Value::U8(b0), Value::U8(b1), Value::U8(b2), Value::U8(b3)]);
+        let v = Value::List(vec![
+            Value::U8(b0),
+            Value::U8(b1),
+            Value::U8(b2),
+            Value::U8(b3),
+        ]);
         tags.push(mk_print("MachineStamp", v, print));
     }
 
@@ -329,7 +432,10 @@ fn process_mrc_header(data: &[u8], tags: &mut Vec<Tag>) -> (u32, u32, String) {
     // Each label starts at offset 224 + (label_num * 80)
     // Field 56 (offset 224 = 56*4): Label0 if n_lab > 0
     // Field 76 (offset 304 = 76*4): Label1 if n_lab > 1, etc.
-    let label_names = ["Label0","Label1","Label2","Label3","Label4","Label5","Label6","Label7","Label8","Label9"];
+    let label_names = [
+        "Label0", "Label1", "Label2", "Label3", "Label4", "Label5", "Label6", "Label7", "Label8",
+        "Label9",
+    ];
     for (i, &label_name) in label_names.iter().enumerate() {
         if n_lab as usize > i {
             let offset = 224 + i * 80;
@@ -482,7 +588,11 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
     // Offset 244: InstrumentMode — int32u, if bitm & 0x2000000, PrintConv {1=>TEM, 2=>STEM}
     if bitm & 0x2000000 != 0 {
         let v = read_u32_le(data, 244);
-        let print = match v { 1 => "TEM", 2 => "STEM", _ => "Unknown" };
+        let print = match v {
+            1 => "TEM",
+            2 => "STEM",
+            _ => "Unknown",
+        };
         tags.push(mk_print("InstrumentMode", Value::U32(v), print.to_string()));
     }
 
@@ -490,7 +600,11 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
     // PrintConv {1=>Diffraction, 2=>Imaging}
     if bitm & 0x4000000 != 0 {
         let v = read_u32_le(data, 248);
-        let print = match v { 1 => "Diffraction", 2 => "Imaging", _ => "Unknown" };
+        let print = match v {
+            1 => "Diffraction",
+            2 => "Imaging",
+            _ => "Unknown",
+        };
         tags.push(mk_print("ProjectionMode", Value::U32(v), print.to_string()));
     }
 
@@ -509,7 +623,11 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
     // Offset 284: ProbeMode — int32u, if bitm & 0x20000000, PrintConv {1=>Nano, 2=>Micro}
     if bitm & 0x20000000 != 0 {
         let v = read_u32_le(data, 284);
-        let print = match v { 1 => "Nano", 2 => "Micro", _ => "Unknown" };
+        let print = match v {
+            1 => "Nano",
+            2 => "Micro",
+            _ => "Unknown",
+        };
         tags.push(mk_print("ProbeMode", Value::U32(v), print.to_string()));
     }
 
@@ -574,7 +692,11 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
             if data.len() > 353 {
                 let v = data[353];
                 let print = if v == 0 { "No" } else { "Yes" };
-                tags.push(mk_print("WideConvergenceAngleRange", Value::U8(v), print.to_string()));
+                tags.push(mk_print(
+                    "WideConvergenceAngleRange",
+                    Value::U8(v),
+                    print.to_string(),
+                ));
             }
         }
 
@@ -703,7 +825,11 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
             if data.len() > 472 {
                 let v = data[472];
                 let print = if v == 0 { "No" } else { "Yes" };
-                tags.push(mk_print("DirectDetElectronCounting", Value::U8(v), print.to_string()));
+                tags.push(mk_print(
+                    "DirectDetElectronCounting",
+                    Value::U8(v),
+                    print.to_string(),
+                ));
             }
         }
 
@@ -712,7 +838,11 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
             if data.len() > 473 {
                 let v = data[473];
                 let print = if v == 0 { "No" } else { "Yes" };
-                tags.push(mk_print("DirectDetAlignFrames", Value::U8(v), print.to_string()));
+                tags.push(mk_print(
+                    "DirectDetAlignFrames",
+                    Value::U8(v),
+                    print.to_string(),
+                ));
             }
         }
     }
@@ -808,13 +938,21 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
         // Offset 635: EnergyIntervalLower — double, if bitm & 0x1000000
         if bitm & 0x1000000 != 0 {
             let v = read_f64_le(data, 635);
-            tags.push(mk_print("EnergyIntervalLower", Value::F64(v), format_g15(v)));
+            tags.push(mk_print(
+                "EnergyIntervalLower",
+                Value::F64(v),
+                format_g15(v),
+            ));
         }
 
         // Offset 643: EnergyIntervalHigher — double, if bitm & 0x2000000
         if bitm & 0x2000000 != 0 {
             let v = read_f64_le(data, 643);
-            tags.push(mk_print("EnergyIntervalHigher", Value::F64(v), format_g15(v)));
+            tags.push(mk_print(
+                "EnergyIntervalHigher",
+                Value::F64(v),
+                format_g15(v),
+            ));
         }
 
         // Offset 651: Method — int32u, if bitm & 0x4000000
@@ -886,7 +1024,11 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
         // Offset 776: DiffractionPatternRotation — double, if bitm & 0x08
         if bitm & 0x08 != 0 {
             let v = read_f64_le(data, 776);
-            tags.push(mk_print("DiffractionPatternRotation", Value::F64(v), format_g15(v)));
+            tags.push(mk_print(
+                "DiffractionPatternRotation",
+                Value::F64(v),
+                format_g15(v),
+            ));
         }
 
         // Offset 784: ImageRotation — double, if bitm & 0x10
@@ -898,8 +1040,17 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
         // Offset 792: ScanModeEnumeration — int32u, if bitm & 0x20
         if bitm & 0x20 != 0 {
             let v = read_u32_le(data, 792);
-            let print = match v { 0 => "Other", 1 => "Raster", 2 => "Serpentine", _ => "Unknown" };
-            tags.push(mk_print("ScanModeEnumeration", Value::U32(v), print.to_string()));
+            let print = match v {
+                0 => "Other",
+                1 => "Raster",
+                2 => "Serpentine",
+                _ => "Unknown",
+            };
+            tags.push(mk_print(
+                "ScanModeEnumeration",
+                Value::U32(v),
+                print.to_string(),
+            ));
         }
 
         // Offset 796: AcquisitionTimeStamp — int64u microseconds since Unix epoch, if bitm & 0x40
@@ -1002,8 +1153,7 @@ pub fn read_mrc(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 
     // Process main 1024-byte header
-    let (ext_hdr_size, image_depth, ext_hdr_type) =
-        process_mrc_header(&data[..1024], &mut tags);
+    let (ext_hdr_size, image_depth, ext_hdr_type) = process_mrc_header(&data[..1024], &mut tags);
 
     // Process extended header (FEI1 or FEI2)
     if ext_hdr_size > 0 && (ext_hdr_type.starts_with("FEI1") || ext_hdr_type.starts_with("FEI2")) {
@@ -1015,7 +1165,8 @@ pub fn read_mrc(data: &[u8]) -> Result<Vec<Tag>> {
             if section_size > 0 && section_size <= ext_hdr_size as usize {
                 // Check: size * ImageDepth <= ExtendedHeaderSize (from Perl validation)
                 if section_size * (image_depth as usize) <= ext_hdr_size as usize {
-                    let section_data = &data[ext_start..ext_start + section_size.min(data.len() - ext_start)];
+                    let section_data =
+                        &data[ext_start..ext_start + section_size.min(data.len() - ext_start)];
                     process_fei12_header(section_data, &mut tags);
                     // Perl warns: 'Use the ExtractEmbedded option to read metadata for all frames'
                     // if there are more frames (we only read the first)

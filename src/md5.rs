@@ -7,30 +7,39 @@ pub fn md5(data: &[u8]) -> [u8; 16] {
     // Pad message
     let mut msg = data.to_vec();
     msg.push(0x80);
-    while msg.len() % 64 != 56 { msg.push(0); }
+    while msg.len() % 64 != 56 {
+        msg.push(0);
+    }
     msg.extend_from_slice(&orig_len.to_le_bytes());
 
     // Process 64-byte blocks
     for chunk in msg.chunks_exact(64) {
         let mut m = [0u32; 16];
         for i in 0..16 {
-            m[i] = u32::from_le_bytes([chunk[i*4], chunk[i*4+1], chunk[i*4+2], chunk[i*4+3]]);
+            m[i] = u32::from_le_bytes([
+                chunk[i * 4],
+                chunk[i * 4 + 1],
+                chunk[i * 4 + 2],
+                chunk[i * 4 + 3],
+            ]);
         }
         let (mut a, mut b, mut c, mut d) = (state[0], state[1], state[2], state[3]);
 
         for i in 0..64u32 {
             let (f, g) = match i {
-                0..=15 =>  ((b & c) | (!b & d), i as usize),
-                16..=31 => ((d & b) | (!d & c), (5*i + 1) as usize % 16),
-                32..=47 => (b ^ c ^ d, (3*i + 5) as usize % 16),
-                _ =>       (c ^ (b | !d), (7*i) as usize % 16),
+                0..=15 => ((b & c) | (!b & d), i as usize),
+                16..=31 => ((d & b) | (!d & c), (5 * i + 1) as usize % 16),
+                32..=47 => (b ^ c ^ d, (3 * i + 5) as usize % 16),
+                _ => (c ^ (b | !d), (7 * i) as usize % 16),
             };
             let temp = d;
             d = c;
             c = b;
             b = b.wrapping_add(
-                (a.wrapping_add(f).wrapping_add(K[i as usize]).wrapping_add(m[g]))
-                .rotate_left(S[i as usize])
+                (a.wrapping_add(f)
+                    .wrapping_add(K[i as usize])
+                    .wrapping_add(m[g]))
+                .rotate_left(S[i as usize]),
             );
             a = temp;
         }
@@ -42,7 +51,7 @@ pub fn md5(data: &[u8]) -> [u8; 16] {
 
     let mut digest = [0u8; 16];
     for (i, &s) in state.iter().enumerate() {
-        digest[i*4..i*4+4].copy_from_slice(&s.to_le_bytes());
+        digest[i * 4..i * 4 + 4].copy_from_slice(&s.to_le_bytes());
     }
     digest
 }
@@ -52,10 +61,9 @@ pub fn md5_hex(data: &[u8]) -> String {
 }
 
 static S: [u32; 64] = [
-    7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,
-    5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,
-    4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,
-    6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9,
+    14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 6, 10, 15,
+    21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
 ];
 
 static K: [u32; 64] = [

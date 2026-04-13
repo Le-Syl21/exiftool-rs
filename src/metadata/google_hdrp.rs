@@ -46,13 +46,22 @@ fn base64_decode(s: &str) -> Option<Vec<u8>> {
         let mut t = [-1i8; 256];
         let mut i = 0u8;
         // A-Z = 0-25
-        while i < 26 { t[(b'A' + i) as usize] = i as i8; i += 1; }
+        while i < 26 {
+            t[(b'A' + i) as usize] = i as i8;
+            i += 1;
+        }
         // a-z = 26-51
         i = 0;
-        while i < 26 { t[(b'a' + i) as usize] = (i + 26) as i8; i += 1; }
+        while i < 26 {
+            t[(b'a' + i) as usize] = (i + 26) as i8;
+            i += 1;
+        }
         // 0-9 = 52-61
         i = 0;
-        while i < 10 { t[(b'0' + i) as usize] = (i + 52) as i8; i += 1; }
+        while i < 10 {
+            t[(b'0' + i) as usize] = (i + 52) as i8;
+            i += 1;
+        }
         t[b'+' as usize] = 62;
         t[b'/' as usize] = 63;
         t[b'=' as usize] = 0; // padding
@@ -60,21 +69,25 @@ fn base64_decode(s: &str) -> Option<Vec<u8>> {
     };
 
     let bytes: Vec<u8> = s.bytes().filter(|&b| !b.is_ascii_whitespace()).collect();
-    if bytes.is_empty() { return None; }
+    if bytes.is_empty() {
+        return None;
+    }
 
     let mut out = Vec::with_capacity(bytes.len() * 3 / 4);
     let mut i = 0;
     while i + 3 < bytes.len() {
         let a = TABLE[bytes[i] as usize];
-        let b = TABLE[bytes[i+1] as usize];
-        let c = TABLE[bytes[i+2] as usize];
-        let d = TABLE[bytes[i+3] as usize];
-        if a < 0 || b < 0 { return None; }
+        let b = TABLE[bytes[i + 1] as usize];
+        let c = TABLE[bytes[i + 2] as usize];
+        let d = TABLE[bytes[i + 3] as usize];
+        if a < 0 || b < 0 {
+            return None;
+        }
         out.push(((a as u8) << 2) | ((b as u8) >> 4));
-        if bytes[i+2] != b'=' {
+        if bytes[i + 2] != b'=' {
             out.push(((b as u8) << 4) | ((c as u8) >> 2));
         }
-        if bytes[i+3] != b'=' {
+        if bytes[i + 3] != b'=' {
             out.push(((c as u8) << 6) | (d as u8));
         }
         i += 4;
@@ -100,7 +113,8 @@ fn hdrp_decrypt(data: &[u8]) -> Option<Vec<u8>> {
     let mut words: Vec<u32> = {
         let mut padded = payload.to_vec();
         padded.extend_from_slice(&[0u8; 8][..pad]);
-        padded.chunks_exact(4)
+        padded
+            .chunks_exact(4)
             .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
             .collect()
     };
@@ -155,9 +169,7 @@ fn hdrp_decrypt(data: &[u8]) -> Option<Vec<u8>> {
     }
 
     // Reassemble into bytes, remove padding
-    let mut result: Vec<u8> = words.iter()
-        .flat_map(|w| w.to_le_bytes())
-        .collect();
+    let mut result: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
     if pad > 0 {
         result.truncate(result.len().saturating_sub(pad));
     }
@@ -170,14 +182,19 @@ fn hdrp_decrypt(data: &[u8]) -> Option<Vec<u8>> {
 
 struct BitReader<'a> {
     data: &'a [u8],
-    pos: usize,     // next byte to load into bit buffer
-    bits: u32,      // LSB-first bit buffer
-    nbits: u32,     // number of valid bits in buffer
+    pos: usize, // next byte to load into bit buffer
+    bits: u32,  // LSB-first bit buffer
+    nbits: u32, // number of valid bits in buffer
 }
 
 impl<'a> BitReader<'a> {
     fn new(data: &'a [u8]) -> Self {
-        BitReader { data, pos: 0, bits: 0, nbits: 0 }
+        BitReader {
+            data,
+            pos: 0,
+            bits: 0,
+            nbits: 0,
+        }
     }
 
     fn fill(&mut self) {
@@ -189,9 +206,13 @@ impl<'a> BitReader<'a> {
     }
 
     fn read_bits(&mut self, n: u32) -> Option<u32> {
-        if n == 0 { return Some(0); }
+        if n == 0 {
+            return Some(0);
+        }
         self.fill();
-        if self.nbits < n { return None; }
+        if self.nbits < n {
+            return None;
+        }
         let val = self.bits & ((1u32 << n) - 1);
         self.bits >>= n;
         self.nbits -= n;
@@ -240,12 +261,16 @@ impl<'a> BitReader<'a> {
 /// Returns (table, max_bits) where table is indexed by reversed bit pattern.
 fn build_huffman(lengths: &[u8]) -> Option<(Vec<(u16, u8)>, u8)> {
     let max_bits = *lengths.iter().max()? as usize;
-    if max_bits == 0 { return Some((vec![], 0)); }
+    if max_bits == 0 {
+        return Some((vec![], 0));
+    }
 
     // Count symbols at each bit length
     let mut bl_count = vec![0u32; max_bits + 1];
     for &l in lengths {
-        if l > 0 { bl_count[l as usize] += 1; }
+        if l > 0 {
+            bl_count[l as usize] += 1;
+        }
     }
 
     // Compute starting codes
@@ -262,7 +287,9 @@ fn build_huffman(lengths: &[u8]) -> Option<(Vec<(u16, u8)>, u8)> {
     let mut table: Vec<(u16, u8)> = vec![(0xffff, 0); table_size];
 
     for (sym, &len) in lengths.iter().enumerate() {
-        if len == 0 { continue; }
+        if len == 0 {
+            continue;
+        }
         let c = next_code[len as usize];
         next_code[len as usize] += 1;
         // Reverse the code bits so we can use LSB-first bit reading
@@ -290,10 +317,14 @@ fn reverse_bits(v: u32, n: u8) -> u32 {
 
 fn huffman_decode(br: &mut BitReader, table: &[(u16, u8)], max_bits: u8) -> Option<u16> {
     br.fill();
-    if max_bits == 0 { return None; }
+    if max_bits == 0 {
+        return None;
+    }
     let peeked = br.bits & ((1 << max_bits) - 1);
     let (sym, len) = table[peeked as usize];
-    if len == 0 || sym == 0xffff { return None; }
+    if len == 0 || sym == 0xffff {
+        return None;
+    }
     br.bits >>= len;
     br.nbits -= len as u32;
     Some(sym)
@@ -303,7 +334,15 @@ fn huffman_decode(br: &mut BitReader, table: &[(u16, u8)], max_bits: u8) -> Opti
 fn fixed_literal_lengths() -> Vec<u8> {
     let mut v = Vec::with_capacity(288);
     for i in 0u16..288 {
-        let l = if i < 144 { 8 } else if i < 256 { 9 } else if i < 280 { 7 } else { 8 };
+        let l = if i < 144 {
+            8
+        } else if i < 256 {
+            9
+        } else if i < 280 {
+            7
+        } else {
+            8
+        };
         v.push(l);
     }
     v
@@ -315,40 +354,51 @@ fn fixed_distance_lengths() -> Vec<u8> {
 
 // Length/distance decode tables from RFC 1951
 fn decode_length(code: u16, br: &mut BitReader) -> Option<u16> {
-    if code < 257 { return None; }
-    if code == 285 { return Some(258); }
+    if code < 257 {
+        return None;
+    }
+    if code == 285 {
+        return Some(258);
+    }
     let extra_bits_table = [
-        0u32, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2,
-        3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0
+        0u32, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0,
     ];
     let base_table = [
-        3u16, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31,
-        35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258
+        3u16, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99,
+        115, 131, 163, 195, 227, 258,
     ];
     let idx = (code - 257) as usize;
-    if idx >= 29 { return None; }
+    if idx >= 29 {
+        return None;
+    }
     let extra = br.read_bits(extra_bits_table[idx])?;
     Some(base_table[idx] + extra as u16)
 }
 
 fn decode_distance(code: u16, br: &mut BitReader) -> Option<u32> {
-    if code >= 30 { return None; }
+    if code >= 30 {
+        return None;
+    }
     let extra_bits_table = [
-        0u32, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
-        7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13
+        0u32, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12,
+        12, 13, 13,
     ];
     let base_table = [
-        1u32, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
-        257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145,
-        8193, 12289, 16385, 24577
+        1u32, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025,
+        1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577,
     ];
     let extra = br.read_bits(extra_bits_table[code as usize])?;
     Some(base_table[code as usize] + extra)
 }
 
-fn inflate_block(br: &mut BitReader, lit_table: &[(u16, u8)], lit_max: u8,
-                 dist_table: &[(u16, u8)], dist_max: u8,
-                 out: &mut Vec<u8>) -> Option<bool> {
+fn inflate_block(
+    br: &mut BitReader,
+    lit_table: &[(u16, u8)],
+    lit_max: u8,
+    dist_table: &[(u16, u8)],
+    dist_max: u8,
+    out: &mut Vec<u8>,
+) -> Option<bool> {
     loop {
         let sym = huffman_decode(br, lit_table, lit_max)?;
         if sym < 256 {
@@ -359,7 +409,9 @@ fn inflate_block(br: &mut BitReader, lit_table: &[(u16, u8)], lit_max: u8,
             let length = decode_length(sym, br)? as usize;
             let dist_code = huffman_decode(br, dist_table, dist_max)?;
             let dist = decode_distance(dist_code, br)? as usize;
-            if dist > out.len() { return None; }
+            if dist > out.len() {
+                return None;
+            }
             let start = out.len() - dist;
             for i in 0..length {
                 let b = out[start + i % dist];
@@ -383,7 +435,9 @@ fn deflate_decompress(data: &[u8]) -> Option<Vec<u8>> {
                 br.align_byte();
                 let len = br.read_aligned_u16_le()? as usize;
                 let nlen = br.read_aligned_u16_le()? as usize;
-                if (len ^ nlen) & 0xffff != 0xffff { return None; }
+                if (len ^ nlen) & 0xffff != 0xffff {
+                    return None;
+                }
                 for _ in 0..len {
                     out.push(br.read_aligned_byte()?);
                 }
@@ -394,7 +448,14 @@ fn deflate_decompress(data: &[u8]) -> Option<Vec<u8>> {
                 let dist_lens = fixed_distance_lengths();
                 let (lit_table, lit_max) = build_huffman(&lit_lens)?;
                 let (dist_table, dist_max) = build_huffman(&dist_lens)?;
-                inflate_block(&mut br, &lit_table, lit_max, &dist_table, dist_max, &mut out)?;
+                inflate_block(
+                    &mut br,
+                    &lit_table,
+                    lit_max,
+                    &dist_table,
+                    dist_max,
+                    &mut out,
+                )?;
             }
             2 => {
                 // Dynamic Huffman
@@ -403,7 +464,9 @@ fn deflate_decompress(data: &[u8]) -> Option<Vec<u8>> {
                 let hclen = br.read_bits(4)? as usize + 4;
 
                 // Code length alphabet order
-                let cl_order = [16usize, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+                let cl_order = [
+                    16usize, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15,
+                ];
                 let mut cl_lengths = vec![0u8; 19];
                 for i in 0..hclen {
                     cl_lengths[cl_order[i]] = br.read_bits(3)? as u8;
@@ -420,63 +483,94 @@ fn deflate_decompress(data: &[u8]) -> Option<Vec<u8>> {
                         16 => {
                             let extra = br.read_bits(2)? as usize + 3;
                             let last = *all_lengths.last()?;
-                            for _ in 0..extra { all_lengths.push(last); }
+                            for _ in 0..extra {
+                                all_lengths.push(last);
+                            }
                         }
                         17 => {
                             let extra = br.read_bits(3)? as usize + 3;
-                            for _ in 0..extra { all_lengths.push(0); }
+                            for _ in 0..extra {
+                                all_lengths.push(0);
+                            }
                         }
                         18 => {
                             let extra = br.read_bits(7)? as usize + 11;
-                            for _ in 0..extra { all_lengths.push(0); }
+                            for _ in 0..extra {
+                                all_lengths.push(0);
+                            }
                         }
                         _ => return None,
                     }
                 }
                 let lit_lens = &all_lengths[..hlit];
-                let dist_lens = &all_lengths[hlit..hlit+hdist];
+                let dist_lens = &all_lengths[hlit..hlit + hdist];
                 let (lit_table, lit_max) = build_huffman(lit_lens)?;
                 let (dist_table, dist_max) = build_huffman(dist_lens)?;
-                inflate_block(&mut br, &lit_table, lit_max, &dist_table, dist_max, &mut out)?;
+                inflate_block(
+                    &mut br,
+                    &lit_table,
+                    lit_max,
+                    &dist_table,
+                    dist_max,
+                    &mut out,
+                )?;
             }
             _ => return None,
         }
 
-        if bfinal == 1 { break; }
+        if bfinal == 1 {
+            break;
+        }
     }
     Some(out)
 }
 
 /// Decompress gzip-compressed data (RFC 1952 wrapper + DEFLATE payload).
 fn gunzip(data: &[u8]) -> Option<Vec<u8>> {
-    if data.len() < 18 { return None; }
-    if data[0] != 0x1f || data[1] != 0x8b { return None; }
+    if data.len() < 18 {
+        return None;
+    }
+    if data[0] != 0x1f || data[1] != 0x8b {
+        return None;
+    }
     let method = data[2];
-    if method != 8 { return None; }
+    if method != 8 {
+        return None;
+    }
     let flags = data[3];
 
     let mut pos = 10usize;
     // Skip FEXTRA
     if flags & 0x04 != 0 {
-        if pos + 2 > data.len() { return None; }
-        let xlen = u16::from_le_bytes([data[pos], data[pos+1]]) as usize;
+        if pos + 2 > data.len() {
+            return None;
+        }
+        let xlen = u16::from_le_bytes([data[pos], data[pos + 1]]) as usize;
         pos += 2 + xlen;
     }
     // Skip FNAME
     if flags & 0x08 != 0 {
-        while pos < data.len() && data[pos] != 0 { pos += 1; }
+        while pos < data.len() && data[pos] != 0 {
+            pos += 1;
+        }
         pos += 1;
     }
     // Skip FCOMMENT
     if flags & 0x10 != 0 {
-        while pos < data.len() && data[pos] != 0 { pos += 1; }
+        while pos < data.len() && data[pos] != 0 {
+            pos += 1;
+        }
         pos += 1;
     }
     // Skip CRC16
-    if flags & 0x02 != 0 { pos += 2; }
+    if flags & 0x02 != 0 {
+        pos += 2;
+    }
 
-    if pos + 8 > data.len() { return None; }
-    let compressed = &data[pos..data.len()-8];
+    if pos + 8 > data.len() {
+        return None;
+    }
+    let compressed = &data[pos..data.len() - 8];
     deflate_decompress(compressed)
 }
 
@@ -495,13 +589,19 @@ fn read_varint(data: &[u8], pos: usize) -> Option<(u64, usize)> {
     let mut shift = 0u32;
     let mut p = pos;
     loop {
-        if p >= data.len() { return None; }
+        if p >= data.len() {
+            return None;
+        }
         let b = data[p] as u64;
         p += 1;
         val |= (b & 0x7f) << shift;
-        if b & 0x80 == 0 { break; }
+        if b & 0x80 == 0 {
+            break;
+        }
         shift += 7;
-        if shift >= 70 { return None; } // malformed
+        if shift >= 70 {
+            return None;
+        } // malformed
     }
     Some((val, p))
 }
@@ -510,13 +610,15 @@ fn read_varint(data: &[u8], pos: usize) -> Option<(u64, usize)> {
 fn read_len_delimited<'a>(data: &'a [u8], pos: usize) -> Option<(&'a [u8], usize)> {
     let (len, p) = read_varint(data, pos)?;
     let end = p + len as usize;
-    if end > data.len() { return None; }
+    if end > data.len() {
+        return None;
+    }
     Some((&data[p..end], end))
 }
 
 /// Tag info for a known protobuf field path.
 struct FieldDef {
-    path: &'static str,  // e.g. "1-1", "12-8"
+    path: &'static str, // e.g. "1-1", "12-8"
     name: &'static str,
     fmt: FieldFmt,
     group2: &'static str,
@@ -526,32 +628,127 @@ struct FieldDef {
 enum FieldFmt {
     String,
     Binary,
-    Unsigned,   // varint as unsigned integer
-    Float,      // 4-byte IEEE float
+    Unsigned,     // varint as unsigned integer
+    Float,        // 4-byte IEEE float
     FloatDiv1000, // float / 1000 (ExposureTime conversion)
-    UnixTimeMs, // varint / 1000 → Unix timestamp with milliseconds
+    UnixTimeMs,   // varint / 1000 → Unix timestamp with milliseconds
 }
 
 static HDRP_FIELDS: &[FieldDef] = &[
-    FieldDef { path: "1-1", name: "ImageName",           fmt: FieldFmt::String,      group2: "Image" },
-    FieldDef { path: "1-2", name: "ImageData",           fmt: FieldFmt::Binary,      group2: "Image" },
-    FieldDef { path: "2",   name: "TimeLogText",         fmt: FieldFmt::Binary,      group2: "Image" },
-    FieldDef { path: "3",   name: "SummaryText",         fmt: FieldFmt::Binary,      group2: "Image" },
-    FieldDef { path: "9-3", name: "FrameCount",          fmt: FieldFmt::Unsigned,    group2: "Image" },
-    FieldDef { path: "12-1", name: "DeviceMake",         fmt: FieldFmt::String,      group2: "Device" },
-    FieldDef { path: "12-2", name: "DeviceModel",        fmt: FieldFmt::String,      group2: "Device" },
-    FieldDef { path: "12-3", name: "DeviceCodename",     fmt: FieldFmt::String,      group2: "Device" },
-    FieldDef { path: "12-4", name: "DeviceHardwareRevision", fmt: FieldFmt::String,  group2: "Device" },
-    FieldDef { path: "12-6", name: "HDRPSoftware",       fmt: FieldFmt::String,      group2: "Device" },
-    FieldDef { path: "12-7", name: "AndroidRelease",     fmt: FieldFmt::String,      group2: "Device" },
-    FieldDef { path: "12-8", name: "SoftwareDate",       fmt: FieldFmt::UnixTimeMs,  group2: "Time" },
-    FieldDef { path: "12-9", name: "Application",        fmt: FieldFmt::String,      group2: "Device" },
-    FieldDef { path: "12-10", name: "AppVersion",        fmt: FieldFmt::String,      group2: "Device" },
-    FieldDef { path: "12-12-1", name: "ExposureTimeMin", fmt: FieldFmt::FloatDiv1000, group2: "Camera" },
-    FieldDef { path: "12-12-2", name: "ExposureTimeMax", fmt: FieldFmt::FloatDiv1000, group2: "Camera" },
-    FieldDef { path: "12-13-1", name: "ISOMin",          fmt: FieldFmt::Float,       group2: "Camera" },
-    FieldDef { path: "12-13-2", name: "ISOMax",          fmt: FieldFmt::Float,       group2: "Camera" },
-    FieldDef { path: "12-14",   name: "MaxAnalogISO",    fmt: FieldFmt::Float,       group2: "Camera" },
+    FieldDef {
+        path: "1-1",
+        name: "ImageName",
+        fmt: FieldFmt::String,
+        group2: "Image",
+    },
+    FieldDef {
+        path: "1-2",
+        name: "ImageData",
+        fmt: FieldFmt::Binary,
+        group2: "Image",
+    },
+    FieldDef {
+        path: "2",
+        name: "TimeLogText",
+        fmt: FieldFmt::Binary,
+        group2: "Image",
+    },
+    FieldDef {
+        path: "3",
+        name: "SummaryText",
+        fmt: FieldFmt::Binary,
+        group2: "Image",
+    },
+    FieldDef {
+        path: "9-3",
+        name: "FrameCount",
+        fmt: FieldFmt::Unsigned,
+        group2: "Image",
+    },
+    FieldDef {
+        path: "12-1",
+        name: "DeviceMake",
+        fmt: FieldFmt::String,
+        group2: "Device",
+    },
+    FieldDef {
+        path: "12-2",
+        name: "DeviceModel",
+        fmt: FieldFmt::String,
+        group2: "Device",
+    },
+    FieldDef {
+        path: "12-3",
+        name: "DeviceCodename",
+        fmt: FieldFmt::String,
+        group2: "Device",
+    },
+    FieldDef {
+        path: "12-4",
+        name: "DeviceHardwareRevision",
+        fmt: FieldFmt::String,
+        group2: "Device",
+    },
+    FieldDef {
+        path: "12-6",
+        name: "HDRPSoftware",
+        fmt: FieldFmt::String,
+        group2: "Device",
+    },
+    FieldDef {
+        path: "12-7",
+        name: "AndroidRelease",
+        fmt: FieldFmt::String,
+        group2: "Device",
+    },
+    FieldDef {
+        path: "12-8",
+        name: "SoftwareDate",
+        fmt: FieldFmt::UnixTimeMs,
+        group2: "Time",
+    },
+    FieldDef {
+        path: "12-9",
+        name: "Application",
+        fmt: FieldFmt::String,
+        group2: "Device",
+    },
+    FieldDef {
+        path: "12-10",
+        name: "AppVersion",
+        fmt: FieldFmt::String,
+        group2: "Device",
+    },
+    FieldDef {
+        path: "12-12-1",
+        name: "ExposureTimeMin",
+        fmt: FieldFmt::FloatDiv1000,
+        group2: "Camera",
+    },
+    FieldDef {
+        path: "12-12-2",
+        name: "ExposureTimeMax",
+        fmt: FieldFmt::FloatDiv1000,
+        group2: "Camera",
+    },
+    FieldDef {
+        path: "12-13-1",
+        name: "ISOMin",
+        fmt: FieldFmt::Float,
+        group2: "Camera",
+    },
+    FieldDef {
+        path: "12-13-2",
+        name: "ISOMax",
+        fmt: FieldFmt::Float,
+        group2: "Camera",
+    },
+    FieldDef {
+        path: "12-14",
+        name: "MaxAnalogISO",
+        fmt: FieldFmt::Float,
+        group2: "Camera",
+    },
 ];
 
 fn make_tag(name: &str, group2: &str, raw: Value, print: String) -> Tag {
@@ -624,7 +821,9 @@ fn parse_protobuf(data: &[u8], prefix: &str, tags: &mut Vec<Tag>) {
             }
             1 => {
                 // 64-bit
-                if pos + 8 > data.len() { break; }
+                if pos + 8 > data.len() {
+                    break;
+                }
                 pos += 8;
             }
             2 => {
@@ -640,20 +839,31 @@ fn parse_protobuf(data: &[u8], prefix: &str, tags: &mut Vec<Tag>) {
                     match def.fmt {
                         FieldFmt::String => {
                             let s = crate::encoding::decode_utf8_or_latin1(bytes).to_string();
-                            tags.push(make_tag(def.name, def.group2,
-                                Value::String(s.clone()), s));
+                            tags.push(make_tag(def.name, def.group2, Value::String(s.clone()), s));
                         }
                         FieldFmt::Binary => {
                             // Store as binary; ExifTool shows "(Binary data N bytes)"
-                            let print = format!("(Binary data {} bytes, use -b option to extract)", bytes.len());
-                            tags.push(make_tag(def.name, def.group2,
-                                Value::Binary(bytes.to_vec()), print));
+                            let print = format!(
+                                "(Binary data {} bytes, use -b option to extract)",
+                                bytes.len()
+                            );
+                            tags.push(make_tag(
+                                def.name,
+                                def.group2,
+                                Value::Binary(bytes.to_vec()),
+                                print,
+                            ));
                         }
                         FieldFmt::Float | FieldFmt::FloatDiv1000 => {
                             // 4-byte float in a len-delimited wrapper
                             if bytes.len() >= 4 {
-                                let f = f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-                                let v = if matches!(def.fmt, FieldFmt::FloatDiv1000) { f as f64 / 1000.0 } else { f as f64 };
+                                let f =
+                                    f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+                                let v = if matches!(def.fmt, FieldFmt::FloatDiv1000) {
+                                    f as f64 / 1000.0
+                                } else {
+                                    f as f64
+                                };
                                 let s = format_float(v);
                                 tags.push(make_tag(def.name, def.group2, Value::F64(v), s));
                             }
@@ -670,14 +880,20 @@ fn parse_protobuf(data: &[u8], prefix: &str, tags: &mut Vec<Tag>) {
             }
             5 => {
                 // 32-bit
-                if pos + 4 > data.len() { break; }
-                let bytes = &data[pos..pos+4];
+                if pos + 4 > data.len() {
+                    break;
+                }
+                let bytes = &data[pos..pos + 4];
                 pos += 4;
 
                 if let Some(def) = HDRP_FIELDS.iter().find(|d| d.path == path) {
                     if matches!(def.fmt, FieldFmt::Float | FieldFmt::FloatDiv1000) {
                         let f = f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-                        let v = if matches!(def.fmt, FieldFmt::FloatDiv1000) { f as f64 / 1000.0 } else { f as f64 };
+                        let v = if matches!(def.fmt, FieldFmt::FloatDiv1000) {
+                            f as f64 / 1000.0
+                        } else {
+                            f as f64
+                        };
                         let s = format_float(v);
                         tags.push(make_tag(def.name, def.group2, Value::F64(v), s));
                     }
@@ -714,7 +930,9 @@ fn format_float(v: f64) -> String {
 
 /// Format like printf("%.{prec}g", v) - significant digits, strip trailing zeros
 fn format_g(v: f64, prec: usize) -> String {
-    if v == 0.0 { return "0".to_string(); }
+    if v == 0.0 {
+        return "0".to_string();
+    }
     let abs = v.abs();
     // Use scientific notation if exponent >= prec or exponent < -4
     let exp = abs.log10().floor() as i32;
@@ -727,7 +945,11 @@ fn format_g(v: f64, prec: usize) -> String {
         normalize_sci(s)
     } else {
         // Fixed notation with enough precision
-        let decimals = if exp >= 0 { prec.saturating_sub(exp as usize + 1) } else { prec + (-exp - 1) as usize };
+        let decimals = if exp >= 0 {
+            prec.saturating_sub(exp as usize + 1)
+        } else {
+            prec + (-exp - 1) as usize
+        };
         let s = format!("{:.prec$}", v, prec = decimals);
         // Strip trailing zeros after decimal point
         strip_trailing_zeros(s)
@@ -738,7 +960,7 @@ fn normalize_sci(s: String) -> String {
     // Convert Rust "1.234e5" to Perl "1.234e+05" or "1.234e-05"
     if let Some(e_pos) = s.find('e') {
         let mantissa = &s[..e_pos];
-        let exp_str = &s[e_pos+1..];
+        let exp_str = &s[e_pos + 1..];
         let mantissa = strip_trailing_zeros(mantissa.to_string());
         let exp: i32 = exp_str.parse().unwrap_or(0);
         if exp >= 0 {
@@ -768,8 +990,10 @@ fn format_unix_time_ms(secs: i64, ms: u32) -> String {
     // Simple Unix timestamp to date conversion
     // Days since epoch
     let (year, month, day, hour, min, sec) = unix_to_datetime(secs);
-    format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:03}+00:00",
-        year, month, day, hour, min, sec, ms)
+    format!(
+        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:03}+00:00",
+        year, month, day, hour, min, sec, ms
+    )
 }
 
 fn unix_to_datetime(secs: i64) -> (i32, u32, u32, u32, u32, u32) {
@@ -786,11 +1010,11 @@ fn unix_to_datetime(secs: i64) -> (i32, u32, u32, u32, u32, u32) {
     let z = days + 719468;
     let era = if z >= 0 { z } else { z - 146096 } / 146097;
     let doe = z - era * 146097;
-    let yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
     let y = yoe + era * 400;
-    let doy = doe - (365*yoe + yoe/4 - yoe/100);
-    let mp = (5*doy + 2) / 153;
-    let d = doy - (153*mp + 2)/5 + 1;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
     let y = if m <= 2 { y + 1 } else { y };
 
@@ -848,26 +1072,41 @@ mod actual_data_tests {
         let b64_path = "/tmp/hdrp_b64.txt";
         if let Ok(b64) = std::fs::read_to_string(b64_path) {
             let b64 = b64.trim();
-            
+
             // Step 1: base64 decode
             let raw = base64_decode(b64).expect("b64 decode failed");
             assert!(raw.len() > 5, "too short: {}", raw.len());
             assert_eq!(&raw[..4], b"HDRP", "not HDRP: {:?}", &raw[..4]);
             assert_eq!(raw[4], 3, "wrong version: {}", raw[4]);
-            
+
             // Step 2: decrypt
             let decrypted = hdrp_decrypt(&raw).expect("decrypt failed");
             assert!(decrypted.len() > 2, "decrypt too short");
-            assert_eq!(decrypted[0], 0x1f, "not gzip magic[0]: {:02x}", decrypted[0]);
-            assert_eq!(decrypted[1], 0x8b, "not gzip magic[1]: {:02x}", decrypted[1]);
-            
+            assert_eq!(
+                decrypted[0], 0x1f,
+                "not gzip magic[0]: {:02x}",
+                decrypted[0]
+            );
+            assert_eq!(
+                decrypted[1], 0x8b,
+                "not gzip magic[1]: {:02x}",
+                decrypted[1]
+            );
+
             // Step 3: gunzip
             let decompressed = gunzip(&decrypted).expect("gunzip failed");
             assert!(!decompressed.is_empty(), "decompressed is empty");
-            eprintln!("decompressed {} bytes, first 20: {}", 
+            eprintln!(
+                "decompressed {} bytes, first 20: {}",
                 decompressed.len(),
-                decompressed.iter().take(20).map(|b| format!("{:02x}", b)).collect::<Vec<_>>().join(" "));
-            
+                decompressed
+                    .iter()
+                    .take(20)
+                    .map(|b| format!("{:02x}", b))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            );
+
             // Step 4: parse protobuf
             let tags = parse_hdrp_protobuf(&decompressed);
             eprintln!("Found {} tags", tags.len());

@@ -24,7 +24,9 @@ impl<'a> DispatchContext<'a> {
     pub fn version_prefix(&self) -> &str {
         if self.data.len() >= 4 {
             std::str::from_utf8(&self.data[..4]).unwrap_or("")
-        } else { "" }
+        } else {
+            ""
+        }
     }
     pub fn first_byte(&self) -> u8 {
         self.data.first().copied().unwrap_or(0)
@@ -38,61 +40,67 @@ impl<'a> DispatchContext<'a> {
 pub fn dispatch_canon_camera_info(ctx: &DispatchContext) -> Vec<Tag> {
     let m = ctx.model;
     // Exact order from Canon.pm lines 1307-1494
-    let variant = if m.contains("1DS") || (m.contains("1D") && !m.contains("Mark") && !m.contains("1DX")) {
-        "CameraInfo1D"
-    } else if m.contains("1D") && m.contains("Mark II") && !m.contains("Mark III") && !m.contains("Mark IV") && !m.contains("II N") {
-        "CameraInfo1DmkII"
-    } else if m.contains("1D") && m.contains("Mark II N") {
-        "CameraInfo1DmkIIN"
-    } else if m.contains("1D") && m.contains("Mark III") {
-        "CameraInfo1DmkIII"
-    } else if m.contains("1D Mark IV") {
-        "CameraInfo1DmkIV"
-    } else if m.contains("1D X") {
-        "CameraInfo1DX"
-    } else if m.contains("5D") && !m.contains("Mark") {
-        "CameraInfo5D"
-    } else if m.contains("5D Mark II") && !m.contains("Mark III") {
-        "CameraInfo5DmkII"
-    } else if m.contains("5D Mark III") {
-        "CameraInfo5DmkIII"
-    } else if m.contains("6D") && !m.contains("Mark") {
-        "CameraInfo6D"
-    } else if m.contains("7D") && !m.contains("Mark") {
-        "CameraInfo7D"
-    } else if m.contains("40D") {
-        "CameraInfo40D"
-    } else if m.contains("50D") {
-        "CameraInfo50D"
-    } else if m.contains("60D") {
-        "CameraInfo60D"
-    } else if m.contains("70D") {
-        "CameraInfo70D"
-    } else if m.contains("80D") {
-        "CameraInfo80D"
-    } else if m.contains("450D") || m.contains("REBEL XSi") || m.contains("Kiss X2") {
-        "CameraInfo450D"
-    } else if m.contains("500D") || m.contains("REBEL T1i") || m.contains("Kiss X3") {
-        "CameraInfo500D"
-    } else if m.contains("550D") || m.contains("REBEL T2i") || m.contains("Kiss X4") {
-        "CameraInfo550D"
-    } else if m.contains("600D") || m.contains("REBEL T3i") || m.contains("Kiss X5") {
-        "CameraInfo600D"
-    } else if m.contains("650D") || m.contains("REBEL T4i") || m.contains("Kiss X6i") {
-        "CameraInfo650D"
-    } else if m.contains("700D") || m.contains("REBEL T5i") || m.contains("Kiss X7i") {
-        "CameraInfo650D" // reuses 650D
-    } else if m.contains("750D") || m.contains("Rebel T6i") || m.contains("Kiss X8i") {
-        "CameraInfo750D"
-    } else if m.contains("1000D") || m.contains("REBEL XS") || m.contains("Kiss F") {
-        "CameraInfo1000D"
-    } else if m.contains("1100D") || m.contains("REBEL T3") || m.contains("Kiss X50") {
-        "CameraInfo600D" // reuses 600D
-    } else if m.contains("EOS R5") || m.contains("EOS R6") {
-        "CameraInfoR6"
-    } else {
-        return Vec::new();
-    };
+    let variant =
+        if m.contains("1DS") || (m.contains("1D") && !m.contains("Mark") && !m.contains("1DX")) {
+            "CameraInfo1D"
+        } else if m.contains("1D")
+            && m.contains("Mark II")
+            && !m.contains("Mark III")
+            && !m.contains("Mark IV")
+            && !m.contains("II N")
+        {
+            "CameraInfo1DmkII"
+        } else if m.contains("1D") && m.contains("Mark II N") {
+            "CameraInfo1DmkIIN"
+        } else if m.contains("1D") && m.contains("Mark III") {
+            "CameraInfo1DmkIII"
+        } else if m.contains("1D Mark IV") {
+            "CameraInfo1DmkIV"
+        } else if m.contains("1D X") {
+            "CameraInfo1DX"
+        } else if m.contains("5D") && !m.contains("Mark") {
+            "CameraInfo5D"
+        } else if m.contains("5D Mark II") && !m.contains("Mark III") {
+            "CameraInfo5DmkII"
+        } else if m.contains("5D Mark III") {
+            "CameraInfo5DmkIII"
+        } else if m.contains("6D") && !m.contains("Mark") {
+            "CameraInfo6D"
+        } else if m.contains("7D") && !m.contains("Mark") {
+            "CameraInfo7D"
+        } else if m.contains("40D") {
+            "CameraInfo40D"
+        } else if m.contains("50D") {
+            "CameraInfo50D"
+        } else if m.contains("60D") {
+            "CameraInfo60D"
+        } else if m.contains("70D") {
+            "CameraInfo70D"
+        } else if m.contains("80D") {
+            "CameraInfo80D"
+        } else if m.contains("450D") || m.contains("REBEL XSi") || m.contains("Kiss X2") {
+            "CameraInfo450D"
+        } else if m.contains("500D") || m.contains("REBEL T1i") || m.contains("Kiss X3") {
+            "CameraInfo500D"
+        } else if m.contains("550D") || m.contains("REBEL T2i") || m.contains("Kiss X4") {
+            "CameraInfo550D"
+        } else if m.contains("600D") || m.contains("REBEL T3i") || m.contains("Kiss X5") {
+            "CameraInfo600D"
+        } else if m.contains("650D") || m.contains("REBEL T4i") || m.contains("Kiss X6i") {
+            "CameraInfo650D"
+        } else if m.contains("700D") || m.contains("REBEL T5i") || m.contains("Kiss X7i") {
+            "CameraInfo650D" // reuses 650D
+        } else if m.contains("750D") || m.contains("Rebel T6i") || m.contains("Kiss X8i") {
+            "CameraInfo750D"
+        } else if m.contains("1000D") || m.contains("REBEL XS") || m.contains("Kiss F") {
+            "CameraInfo1000D"
+        } else if m.contains("1100D") || m.contains("REBEL T3") || m.contains("Kiss X50") {
+            "CameraInfo600D" // reuses 600D
+        } else if m.contains("EOS R5") || m.contains("EOS R6") {
+            "CameraInfoR6"
+        } else {
+            return Vec::new();
+        };
     vec![mk("Canon", "CameraInfoVariant", variant)]
 }
 
@@ -175,7 +183,9 @@ pub fn dispatch_nikon_lens_data(ctx: &DispatchContext) -> Vec<Tag> {
 
     // Unencrypted versions: extract full lens info
     if !encrypted && d.len() >= 13 {
-        if d[4] > 0 { tags.push(mk("Nikon", "ExitPupilPosition", &format!("{}", d[4]))); }
+        if d[4] > 0 {
+            tags.push(mk("Nikon", "ExitPupilPosition", &format!("{}", d[4])));
+        }
         if d[5] > 0 {
             let ap = 2.0_f64.powf(d[5] as f64 / 24.0);
             tags.push(mk("Nikon", "AFAperture", &format!("{:.1}", ap)));
@@ -195,13 +205,19 @@ pub fn dispatch_nikon_lens_data(ctx: &DispatchContext) -> Vec<Tag> {
             let ap = 2.0_f64.powf(d[5] as f64 / 24.0);
             tags.push(mk("Nikon", "AFAperture", &format!("{:.1}", ap)));
         }
-        if d.len() > 0x08 { tags.push(mk("Nikon", "FocusPosition", &format!("0x{:02X}", d[0x08]))); }
+        if d.len() > 0x08 {
+            tags.push(mk("Nikon", "FocusPosition", &format!("0x{:02X}", d[0x08])));
+        }
         if d.len() > 0x09 && d[0x09] > 0 {
             let dist = 0.01 * 10.0_f64.powf(d[0x09] as f64 / 40.0);
             tags.push(mk("Nikon", "FocusDistance", &format!("{:.2} m", dist)));
         }
-        if d.len() > 0x0A { tags.push(mkn("Nikon", "MCUVersion", d[0x0A] as i32)); }
-        if d.len() > 0x0B { tags.push(mk("Nikon", "LensIDNumber", &format!("{}", d[0x0B]))); }
+        if d.len() > 0x0A {
+            tags.push(mkn("Nikon", "MCUVersion", d[0x0A] as i32));
+        }
+        if d.len() > 0x0B {
+            tags.push(mk("Nikon", "LensIDNumber", &format!("{}", d[0x0B])));
+        }
         if d.len() > 0x0D && d[0x0D] > 0 {
             let fl = 5.0 * 2.0_f64.powf(d[0x0D] as f64 / 24.0);
             tags.push(mk("Nikon", "MinFocalLength", &format!("{:.1}", fl)));
@@ -237,19 +253,38 @@ pub fn dispatch_nikon_af_info2(ctx: &DispatchContext) -> Vec<Tag> {
     let mut tags = vec![mk("Nikon", "AFInfo2Version", ver)];
 
     if d.len() >= 8 {
-        tags.push(mk("Nikon", "ContrastDetectAF", if d[4] == 0 { "Off" } else { "On" }));
+        tags.push(mk(
+            "Nikon",
+            "ContrastDetectAF",
+            if d[4] == 0 { "Off" } else { "On" },
+        ));
         let af_area = match d[5] {
-            0 => "Single Area", 1 => "Dynamic Area", 2 => "Dynamic Area (closest)",
-            3 => "Group Dynamic", 4 => "Dynamic Area (9 points)",
-            5 => "Dynamic Area (21 points)", 6 => "Dynamic Area (51 points)",
-            8 => "Auto-area", 10 => "Dynamic Area (pinpoint)",
-            12 => "Wide (S)", 14 => "Wide (L)", _ => "",
+            0 => "Single Area",
+            1 => "Dynamic Area",
+            2 => "Dynamic Area (closest)",
+            3 => "Group Dynamic",
+            4 => "Dynamic Area (9 points)",
+            5 => "Dynamic Area (21 points)",
+            6 => "Dynamic Area (51 points)",
+            8 => "Auto-area",
+            10 => "Dynamic Area (pinpoint)",
+            12 => "Wide (S)",
+            14 => "Wide (L)",
+            _ => "",
         };
-        if !af_area.is_empty() { tags.push(mk("Nikon", "AFAreaMode", af_area)); }
+        if !af_area.is_empty() {
+            tags.push(mk("Nikon", "AFAreaMode", af_area));
+        }
         let phase = match d[6] {
-            0 => "Off", 1 => "On (51-point)", 2 => "On (11-point)",
-            3 => "On (39-point)", 4 => "On (73-point)", 5 => "On (5-point)",
-            6 => "On (105-point)", 7 => "On (153-point)", _ => "On",
+            0 => "Off",
+            1 => "On (51-point)",
+            2 => "On (11-point)",
+            3 => "On (39-point)",
+            4 => "On (73-point)",
+            5 => "On (5-point)",
+            6 => "On (105-point)",
+            7 => "On (153-point)",
+            _ => "On",
         };
         tags.push(mk("Nikon", "PhaseDetectAF", phase));
     }
@@ -263,9 +298,9 @@ pub fn dispatch_nikon_af_info2(ctx: &DispatchContext) -> Vec<Tag> {
 
 pub fn dispatch_sony_camera_settings(ctx: &DispatchContext) -> Vec<Tag> {
     let variant = match ctx.count {
-        280 | 364 => "CameraSettings",     // A200/A300/A350/A700/A850/A900
-        332 => "CameraSettings2",          // A230/A290/A330/A380/A390
-        1536 | 2048 => "CameraSettings3",  // NEX/A5xx/A33/A55 (LittleEndian)
+        280 | 364 => "CameraSettings",    // A200/A300/A350/A700/A850/A900
+        332 => "CameraSettings2",         // A230/A290/A330/A380/A390
+        1536 | 2048 => "CameraSettings3", // NEX/A5xx/A33/A55 (LittleEndian)
         _ => return Vec::new(),
     };
     vec![mk("Sony", "CameraSettingsVariant", variant)]
@@ -277,21 +312,51 @@ pub fn dispatch_sony_camera_settings(ctx: &DispatchContext) -> Vec<Tag> {
 
 pub fn dispatch_sony_tag2010(ctx: &DispatchContext) -> Vec<Tag> {
     let m = ctx.model;
-    let variant = if m == "NEX-5N" { "Tag2010a" }
-    else if m.starts_with("SLT-A65") || m.starts_with("SLT-A77") || m.starts_with("NEX-7")
-         || m.starts_with("NEX-VG20") || m == "Lunar" { "Tag2010b" }
-    else if m.starts_with("SLT-A37") || m.starts_with("SLT-A57") || m == "NEX-F3" { "Tag2010c" }
-    else if m.starts_with("DSC-HX") || m.starts_with("DSC-TX") || m.starts_with("DSC-WX") { "Tag2010d" }
-    else if m.starts_with("SLT-A99") || m == "HV" || m.starts_with("SLT-A58")
-         || m.starts_with("ILCE-3") || m.starts_with("NEX-") || m.starts_with("DSC-RX1")
-         || m == "DSC-RX100" || m == "Stellar" { "Tag2010e" }
-    else if m == "DSC-RX100M2" || m.starts_with("DSC-QX1") { "Tag2010f" }
-    else if m.starts_with("ILCE-7") || m.starts_with("ILCE-5") || m.starts_with("ILCE-6000")
-         || m.starts_with("ILCA-") || m.starts_with("DSC-RX10") || m.starts_with("DSC-RX100M3") { "Tag2010g" }
-    else if m.starts_with("ILCE-63") || m.starts_with("ILCE-65") || m.starts_with("ILCE-7RM2")
-         || m.starts_with("ILCE-7SM2") || m.starts_with("ILCA-99M2") { "Tag2010h" }
-    else if m.starts_with("ILCE-") || m.starts_with("ZV-") { "Tag2010i" }
-    else { return Vec::new(); };
+    let variant = if m == "NEX-5N" {
+        "Tag2010a"
+    } else if m.starts_with("SLT-A65")
+        || m.starts_with("SLT-A77")
+        || m.starts_with("NEX-7")
+        || m.starts_with("NEX-VG20")
+        || m == "Lunar"
+    {
+        "Tag2010b"
+    } else if m.starts_with("SLT-A37") || m.starts_with("SLT-A57") || m == "NEX-F3" {
+        "Tag2010c"
+    } else if m.starts_with("DSC-HX") || m.starts_with("DSC-TX") || m.starts_with("DSC-WX") {
+        "Tag2010d"
+    } else if m.starts_with("SLT-A99")
+        || m == "HV"
+        || m.starts_with("SLT-A58")
+        || m.starts_with("ILCE-3")
+        || m.starts_with("NEX-")
+        || m.starts_with("DSC-RX1")
+        || m == "DSC-RX100"
+        || m == "Stellar"
+    {
+        "Tag2010e"
+    } else if m == "DSC-RX100M2" || m.starts_with("DSC-QX1") {
+        "Tag2010f"
+    } else if m.starts_with("ILCE-7")
+        || m.starts_with("ILCE-5")
+        || m.starts_with("ILCE-6000")
+        || m.starts_with("ILCA-")
+        || m.starts_with("DSC-RX10")
+        || m.starts_with("DSC-RX100M3")
+    {
+        "Tag2010g"
+    } else if m.starts_with("ILCE-63")
+        || m.starts_with("ILCE-65")
+        || m.starts_with("ILCE-7RM2")
+        || m.starts_with("ILCE-7SM2")
+        || m.starts_with("ILCA-99M2")
+    {
+        "Tag2010h"
+    } else if m.starts_with("ILCE-") || m.starts_with("ZV-") {
+        "Tag2010i"
+    } else {
+        return Vec::new();
+    };
 
     // All Tag2010 variants are encrypted
     vec![mk("Sony", "EncryptedVariant", variant)]
@@ -320,7 +385,11 @@ fn mk(module: &str, name: &str, value: &str) -> Tag {
         id: TagId::Text(name.to_string()),
         name: name.to_string(),
         description: name.to_string(),
-        group: TagGroup { family0: "MakerNotes".into(), family1: module.into(), family2: "Camera".into() },
+        group: TagGroup {
+            family0: "MakerNotes".into(),
+            family1: module.into(),
+            family2: "Camera".into(),
+        },
         raw_value: Value::String(value.to_string()),
         print_value: value.to_string(),
         priority: 0,
@@ -332,7 +401,11 @@ fn mkn(module: &str, name: &str, value: i32) -> Tag {
         id: TagId::Text(name.to_string()),
         name: name.to_string(),
         description: name.to_string(),
-        group: TagGroup { family0: "MakerNotes".into(), family1: module.into(), family2: "Camera".into() },
+        group: TagGroup {
+            family0: "MakerNotes".into(),
+            family1: module.into(),
+            family2: "Camera".into(),
+        },
         raw_value: Value::I32(value),
         print_value: value.to_string(),
         priority: 0,

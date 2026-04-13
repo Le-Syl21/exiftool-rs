@@ -78,7 +78,10 @@ fn emit_hdrp_makernote(b64_value: &str, tags: &mut Vec<Tag>) {
 
     // Emit HDRPlusMakerNote as a binary tag (ExifTool shows "(Binary data N bytes...)")
     let raw_bytes = b64_value.trim().len() * 3 / 4; // approximate decoded size
-    let print = format!("(Binary data {} bytes, use -b option to extract)", raw_bytes);
+    let print = format!(
+        "(Binary data {} bytes, use -b option to extract)",
+        raw_bytes
+    );
     tags.push(Tag {
         id: TagId::Text("GCamera:HdrPlusMakernote".into()),
         name: "HDRPlusMakerNote".into(),
@@ -106,17 +109,23 @@ impl XmpReader {
         // Handle UTF-16/32 BOM and convert to UTF-8 (from Perl XMP.pm line 4286)
         // For UTF-16 inputs we need an owned String to borrow from; for UTF-8 we borrow directly.
         let converted: Option<String> = if data.starts_with(&[0xFE, 0xFF]) {
-            let units: Vec<u16> = data[2..].chunks_exact(2)
-                .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
+            let units: Vec<u16> = data[2..]
+                .chunks_exact(2)
+                .map(|c| u16::from_be_bytes([c[0], c[1]]))
+                .collect();
             Some(String::from_utf16_lossy(&units))
         } else if data.starts_with(&[0xFF, 0xFE]) && !data.starts_with(&[0xFF, 0xFE, 0x00, 0x00]) {
-            let units: Vec<u16> = data[2..].chunks_exact(2)
-                .map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+            let units: Vec<u16> = data[2..]
+                .chunks_exact(2)
+                .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                .collect();
             Some(String::from_utf16_lossy(&units))
         } else if data.len() > 4 && data[0] == 0 && data[1] != 0 {
             // UTF-16 BE without BOM (starts with \0<)
-            let units: Vec<u16> = data.chunks_exact(2)
-                .map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
+            let units: Vec<u16> = data
+                .chunks_exact(2)
+                .map(|c| u16::from_be_bytes([c[0], c[1]]))
+                .collect();
             Some(String::from_utf16_lossy(&units))
         } else {
             None
@@ -149,14 +158,17 @@ impl XmpReader {
             let trimmed = xml_for_parse.trim_start();
             trimmed.starts_with("<?xml") && {
                 // Look for <?aid on one of the first few lines
-                trimmed.lines().take(5).any(|l| l.trim_start().starts_with("<?aid "))
+                trimmed
+                    .lines()
+                    .take(5)
+                    .any(|l| l.trim_start().starts_with("<?aid "))
             }
         };
         if is_inx {
             // Extract XMP from CDATA: find '<![CDATA[<?xpacket begin' ... '<?xpacket end...?>]]>'
             if let Some(cdata_start) = xml_for_parse.find("<![CDATA[<?xpacket begin") {
                 let xmp_start = cdata_start + 9; // skip '<![CDATA['
-                // Find the end: '<?xpacket end="r"?>]]>' or '<?xpacket end="w"?>]]>'
+                                                 // Find the end: '<?xpacket end="r"?>]]>' or '<?xpacket end="w"?>]]>'
                 if let Some(end_marker) = xml_for_parse[xmp_start..].find("<?xpacket end=") {
                     let after_end = xmp_start + end_marker;
                     if let Some(close) = xml_for_parse[after_end..].find("?>") {
@@ -199,7 +211,8 @@ impl XmpReader {
         let mut in_rdf_li = false;
         let mut list_values: Vec<String> = Vec::new();
         // Track depths where we should emit even with empty text (ExifTool et:id format)
-        let mut emit_empty_depths: std::collections::HashSet<usize> = std::collections::HashSet::new();
+        let mut emit_empty_depths: std::collections::HashSet<usize> =
+            std::collections::HashSet::new();
         // Track elements with rdf:parseType='Resource' (bare structs).
         // Each entry is the path depth at which we entered such an element.
         let mut parse_resource_depths: Vec<usize> = Vec::new();
@@ -248,7 +261,8 @@ impl XmpReader {
                     let has_et_id = attributes.iter().any(|a| {
                         a.name.local_name == "id"
                             && (a.name.prefix.as_deref() == Some("et")
-                                || a.name.namespace.as_deref() == Some("http://ns.exiftool.org/1.0/"))
+                                || a.name.namespace.as_deref()
+                                    == Some("http://ns.exiftool.org/1.0/"))
                     });
                     if has_et_id {
                         emit_empty_depths.insert(path.len());
@@ -257,7 +271,8 @@ impl XmpReader {
                     // Track rdf:parseType='Resource' (bare struct context)
                     let has_parse_resource = attributes.iter().any(|a| {
                         a.name.local_name == "parseType"
-                            && (a.name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                            && (a.name.namespace.as_deref()
+                                == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                                 || a.name.prefix.as_deref() == Some("rdf"))
                             && a.value == "Resource"
                     });
@@ -273,7 +288,11 @@ impl XmpReader {
                                     id: TagId::Text("x:xmptk".into()),
                                     name: "XMPToolkit".into(),
                                     description: "XMP Toolkit".into(),
-                                    group: TagGroup { family0: "XMP".into(), family1: "XMP-x".into(), family2: "Other".into() },
+                                    group: TagGroup {
+                                        family0: "XMP".into(),
+                                        family1: "XMP-x".into(),
+                                        family2: "Other".into(),
+                                    },
                                     raw_value: Value::String(attr.value.clone()),
                                     print_value: attr.value.clone(),
                                     priority: 0,
@@ -288,12 +307,14 @@ impl XmpReader {
                     // This is for non-Description elements that reference a nodeID bag/blank-node.
                     if name.local_name != "Description"
                         && name.local_name != "RDF"
-                        && name.namespace.as_deref() != Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        && name.namespace.as_deref()
+                            != Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
                         if let Some(node_ref) = attributes.iter().find(|a| {
                             a.name.local_name == "nodeID"
                                 && (a.name.prefix.as_deref() == Some("rdf")
-                                    || a.name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))
+                                    || a.name.namespace.as_deref()
+                                        == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))
                         }) {
                             let node_id = &node_ref.value;
                             if let Some(bag_values) = node_bags.get(node_id) {
@@ -309,11 +330,19 @@ impl XmpReader {
                                 let value = if bag_values.len() == 1 {
                                     Value::String(bag_values[0].clone())
                                 } else {
-                                    Value::List(bag_values.iter().map(|s| Value::String(s.clone())).collect())
+                                    Value::List(
+                                        bag_values
+                                            .iter()
+                                            .map(|s| Value::String(s.clone()))
+                                            .collect(),
+                                    )
                                 };
                                 let pv = value.to_display_string();
                                 tags.push(Tag {
-                                    id: TagId::Text(format!("{}:{}", group_prefix, name.local_name)),
+                                    id: TagId::Text(format!(
+                                        "{}:{}",
+                                        group_prefix, name.local_name
+                                    )),
                                     name: full_name.clone(),
                                     description: full_name,
                                     group: TagGroup {
@@ -332,10 +361,13 @@ impl XmpReader {
                                 let elem_prefix_ns = namespace_prefix(elem_ns);
                                 let elem_group = if elem_prefix_ns.is_empty() {
                                     name.prefix.as_deref().unwrap_or("XMP")
-                                } else { elem_prefix_ns };
+                                } else {
+                                    elem_prefix_ns
+                                };
                                 let parent_uc = ucfirst(&strip_non_ascii(&name.local_name));
                                 // Build prefix from ancestor path + this element
-                                let anc_prefix = build_struct_tag_prefix_without_last(&path, &name.local_name);
+                                let anc_prefix =
+                                    build_struct_tag_prefix_without_last(&path, &name.local_name);
                                 let elem_flat = if anc_prefix.is_empty() {
                                     parent_uc.clone()
                                 } else {
@@ -344,7 +376,11 @@ impl XmpReader {
                                 };
                                 for (prop_ns, prop_local, prop_val) in bn_props {
                                     let prop_prefix = namespace_prefix(prop_ns);
-                                    let prop_group = if prop_prefix.is_empty() { elem_group } else { prop_prefix };
+                                    let prop_group = if prop_prefix.is_empty() {
+                                        elem_group
+                                    } else {
+                                        prop_prefix
+                                    };
                                     let prop_cat = namespace_category(prop_group);
                                     let prop_uc = ucfirst(&strip_non_ascii(prop_local));
                                     let stripped = strip_struct_prefix(&elem_flat, &prop_uc);
@@ -378,12 +414,14 @@ impl XmpReader {
                     if name.local_name != "Description"
                         && name.local_name != "RDF"
                         && !in_suppressed_bn
-                        && name.namespace.as_deref() != Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        && name.namespace.as_deref()
+                            != Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
                         if let Some(res_attr) = attributes.iter().find(|a| {
                             a.name.local_name == "resource"
                                 && (a.name.prefix.as_deref() == Some("rdf")
-                                    || a.name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))
+                                    || a.name.namespace.as_deref()
+                                        == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))
                         }) {
                             let resource_val = res_attr.value.clone();
                             let ns_uri = name.namespace.as_deref().unwrap_or("");
@@ -397,10 +435,13 @@ impl XmpReader {
                             // Build full tag name using ancestor path
                             let remapped = remap_xmp_tag_name(group_prefix, &name.local_name);
                             let full_name = if !parse_resource_depths.is_empty() {
-                                let ancestor_prefix = build_struct_tag_prefix_without_last(&path, &name.local_name);
+                                let ancestor_prefix =
+                                    build_struct_tag_prefix_without_last(&path, &name.local_name);
                                 if !ancestor_prefix.is_empty() {
-                                    let field_stripped = strip_struct_prefix(&ancestor_prefix, &remapped);
-                                    let candidate = format!("{}{}", ancestor_prefix, field_stripped);
+                                    let field_stripped =
+                                        strip_struct_prefix(&ancestor_prefix, &remapped);
+                                    let candidate =
+                                        format!("{}{}", ancestor_prefix, field_stripped);
                                     apply_flat_name_remap(&candidate).to_string()
                                 } else {
                                     apply_flat_name_remap(&remapped).to_string()
@@ -427,15 +468,30 @@ impl XmpReader {
                     // Pre-check: is this a top-level nodeID Description that should suppress direct emission?
                     // Only suppress if the nodeID is also referenced inline (inside a property element).
                     let rdf_ns_check = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-                    let desc_node_id = attributes.iter().find(|a| {
-                        a.name.local_name == "nodeID"
-                            && (a.name.prefix.as_deref() == Some("rdf") || a.name.namespace.as_deref() == Some(rdf_ns_check))
-                    }).map(|a| a.value.clone());
+                    let desc_node_id = attributes
+                        .iter()
+                        .find(|a| {
+                            a.name.local_name == "nodeID"
+                                && (a.name.prefix.as_deref() == Some("rdf")
+                                    || a.name.namespace.as_deref() == Some(rdf_ns_check))
+                        })
+                        .map(|a| a.value.clone());
                     let is_top_level_blank_node_desc = name.local_name == "Description"
                         && name.namespace.as_deref() == Some(rdf_ns_check)
-                        && desc_node_id.as_ref().map(|nid| inline_referenced_node_ids.contains(nid.as_str())).unwrap_or(false)
-                        && path.iter().rev().nth(1)
-                            .map(|(ns, ln)| ns == rdf_ns_check || ln == "RDF" || ln == "xmpmeta" || ln == "xapmeta")
+                        && desc_node_id
+                            .as_ref()
+                            .map(|nid| inline_referenced_node_ids.contains(nid.as_str()))
+                            .unwrap_or(false)
+                        && path
+                            .iter()
+                            .rev()
+                            .nth(1)
+                            .map(|(ns, ln)| {
+                                ns == rdf_ns_check
+                                    || ln == "RDF"
+                                    || ln == "xmpmeta"
+                                    || ln == "xapmeta"
+                            })
                             .unwrap_or(true); // if no parent, treat as top-level
 
                     // Extract attributes on rdf:Description as tags
@@ -448,10 +504,16 @@ impl XmpReader {
                                 if !attr.value.is_empty() {
                                     tags.push(Tag {
                                         id: TagId::Text("rdf:about".into()),
-                                        name: "About".into(), description: "About".into(),
-                                        group: TagGroup { family0: "XMP".into(), family1: "XMP-rdf".into(), family2: "Other".into() },
+                                        name: "About".into(),
+                                        description: "About".into(),
+                                        group: TagGroup {
+                                            family0: "XMP".into(),
+                                            family1: "XMP-rdf".into(),
+                                            family2: "Other".into(),
+                                        },
                                         raw_value: Value::String(attr.value.clone()),
-                                        print_value: attr.value.clone(), priority: 0,
+                                        print_value: attr.value.clone(),
+                                        priority: 0,
                                     });
                                 }
                                 continue;
@@ -459,17 +521,26 @@ impl XmpReader {
                             // Skip rdf:nodeID on Description (it's just an identifier, not a value)
                             if attr.name.local_name == "nodeID"
                                 && (attr.name.prefix.as_deref() == Some("rdf")
-                                    || attr.name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))
+                                    || attr.name.namespace.as_deref()
+                                        == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))
                             {
                                 continue;
                             }
-                            if attr.name.prefix.as_deref() == Some("xmlns") { continue; }
-                            if attr.name.local_name.starts_with("xmlns") { continue; }
+                            if attr.name.prefix.as_deref() == Some("xmlns") {
+                                continue;
+                            }
+                            if attr.name.local_name.starts_with("xmlns") {
+                                continue;
+                            }
                             // Skip ExifTool-internal attributes (et:toolkit, et:id, et:desc, etc.)
                             if attr.name.prefix.as_deref() == Some("et")
-                                || attr.name.namespace.as_deref() == Some("http://ns.exiftool.org/1.0/")
-                                || attr.name.namespace.as_deref() == Some("http://ns.exiftool.ca/1.0/")
-                            { continue; }
+                                || attr.name.namespace.as_deref()
+                                    == Some("http://ns.exiftool.org/1.0/")
+                                || attr.name.namespace.as_deref()
+                                    == Some("http://ns.exiftool.ca/1.0/")
+                            {
+                                continue;
+                            }
 
                             let attr_ns = attr.name.namespace.as_deref().unwrap_or("");
                             let attr_prefix = namespace_prefix(attr_ns);
@@ -482,27 +553,34 @@ impl XmpReader {
                             {
                                 // Special handling: GCamera:HdrPlusMakernote / GCamera:hdrp_makernote
                                 // → emit HDRPlusMakerNote (binary) + decode HDRP sub-tags (non-empty only)
-                                if !attr.value.is_empty() && group_prefix == "GCamera" && is_hdrp_makernote_attr(&attr.name.local_name) {
+                                if !attr.value.is_empty()
+                                    && group_prefix == "GCamera"
+                                    && is_hdrp_makernote_attr(&attr.name.local_name)
+                                {
                                     emit_hdrp_makernote(&attr.value, &mut tags);
                                     continue;
                                 }
 
                                 let category = namespace_category(group_prefix);
-                                let remapped = remap_xmp_tag_name(group_prefix, &attr.name.local_name);
+                                let remapped =
+                                    remap_xmp_tag_name(group_prefix, &attr.name.local_name);
                                 // If Description is inline inside a property element,
                                 // prefix the tag with the property element's name.
                                 // path = [..., parent_prop, Description] → parent_prop is rev().nth(1)
                                 let rdf_ns2 = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-                                let full_name = if let Some(parent_elem) = path.iter().rev().nth(1) {
+                                let full_name = if let Some(parent_elem) = path.iter().rev().nth(1)
+                                {
                                     if parent_elem.0 != rdf_ns2
                                         && parent_elem.1 != "RDF"
                                         && parent_elem.1 != "xmpmeta"
                                         && parent_elem.1 != "xapmeta"
                                     {
                                         let parent_uc = ucfirst(&strip_non_ascii(&parent_elem.1));
-                                        let field_uc = ucfirst(&strip_non_ascii(&attr.name.local_name));
+                                        let field_uc =
+                                            ucfirst(&strip_non_ascii(&attr.name.local_name));
                                         let stripped = strip_struct_prefix(&parent_uc, &field_uc);
-                                        apply_flat_name_remap(&format!("{}{}", parent_uc, stripped)).to_string()
+                                        apply_flat_name_remap(&format!("{}{}", parent_uc, stripped))
+                                            .to_string()
                                     } else {
                                         remapped
                                     }
@@ -510,7 +588,10 @@ impl XmpReader {
                                     remapped
                                 };
                                 tags.push(Tag {
-                                    id: TagId::Text(format!("{}:{}", group_prefix, attr.name.local_name)),
+                                    id: TagId::Text(format!(
+                                        "{}:{}",
+                                        group_prefix, attr.name.local_name
+                                    )),
                                     name: full_name.clone(),
                                     description: full_name,
                                     group: TagGroup {
@@ -531,16 +612,26 @@ impl XmpReader {
                     // Top-level blank-node Descriptions that are inline-referenced suppress direct emission.
                     // Top-level blank-node Descriptions NOT inline-referenced emit their props directly here.
                     let rdf_ns = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-                    if name.local_name == "Description" && name.namespace.as_deref() == Some(rdf_ns) {
+                    if name.local_name == "Description" && name.namespace.as_deref() == Some(rdf_ns)
+                    {
                         if let Some(nid_attr) = attributes.iter().find(|a| {
                             a.name.local_name == "nodeID"
-                                && (a.name.prefix.as_deref() == Some("rdf") || a.name.namespace.as_deref() == Some(rdf_ns))
+                                && (a.name.prefix.as_deref() == Some("rdf")
+                                    || a.name.namespace.as_deref() == Some(rdf_ns))
                         }) {
                             let nid = nid_attr.value.clone();
                             // Check if parent is a non-RDF property element (inline reference)
-                            let parent_is_property = path.iter().rev().nth(1).map(|(pns, pln)| {
-                                pns != rdf_ns && pln != "RDF" && pln != "xmpmeta" && pln != "xapmeta"
-                            }).unwrap_or(false);
+                            let parent_is_property = path
+                                .iter()
+                                .rev()
+                                .nth(1)
+                                .map(|(pns, pln)| {
+                                    pns != rdf_ns
+                                        && pln != "RDF"
+                                        && pln != "xmpmeta"
+                                        && pln != "xapmeta"
+                                })
+                                .unwrap_or(false);
 
                             if parent_is_property {
                                 // Inline blank-node: parent property will claim these props
@@ -557,11 +648,18 @@ impl XmpReader {
                                 if let Some(bn_props) = blank_node_props.get(nid.as_str()) {
                                     for (prop_ns, prop_local, prop_val) in bn_props.clone() {
                                         let prop_prefix = namespace_prefix(&prop_ns);
-                                        let prop_prefix = if prop_prefix.is_empty() { "XMP" } else { prop_prefix };
+                                        let prop_prefix = if prop_prefix.is_empty() {
+                                            "XMP"
+                                        } else {
+                                            prop_prefix
+                                        };
                                         let category = namespace_category(prop_prefix);
                                         let remapped = remap_xmp_tag_name(prop_prefix, &prop_local);
                                         tags.push(Tag {
-                                            id: TagId::Text(format!("{}:{}", prop_prefix, prop_local)),
+                                            id: TagId::Text(format!(
+                                                "{}:{}",
+                                                prop_prefix, prop_local
+                                            )),
                                             name: remapped.clone(),
                                             description: remapped,
                                             group: TagGroup {
@@ -607,7 +705,8 @@ impl XmpReader {
                         // Build struct parent context: path of ancestor names BEFORE this element.
                         // path already includes the current element (just pushed), so we use
                         // build_struct_tag_prefix_without_last to exclude the current element.
-                        let ancestors_prefix = build_struct_tag_prefix_without_last(&path, &name.local_name);
+                        let ancestors_prefix =
+                            build_struct_tag_prefix_without_last(&path, &name.local_name);
                         let elem_uc = ucfirst(&strip_non_ascii(&name.local_name));
                         // Full path including this element: ancestors_prefix + elem_uc (with strip)
                         let elem_flat = if ancestors_prefix.is_empty() {
@@ -619,15 +718,31 @@ impl XmpReader {
 
                         for attr in &attributes {
                             // Skip xmlns, rdf:*, et:*, xml:* attributes
-                            if attr.name.prefix.as_deref() == Some("xmlns") { continue; }
-                            if attr.name.local_name.starts_with("xmlns") { continue; }
+                            if attr.name.prefix.as_deref() == Some("xmlns") {
+                                continue;
+                            }
+                            if attr.name.local_name.starts_with("xmlns") {
+                                continue;
+                            }
                             if attr.name.prefix.as_deref() == Some("rdf")
-                                || attr.name.namespace.as_deref() == Some(rdf_ns) { continue; }
+                                || attr.name.namespace.as_deref() == Some(rdf_ns)
+                            {
+                                continue;
+                            }
                             if attr.name.prefix.as_deref() == Some("et")
-                                || attr.name.namespace.as_deref() == Some("http://ns.exiftool.org/1.0/")
-                                || attr.name.namespace.as_deref() == Some("http://ns.exiftool.ca/1.0/") { continue; }
+                                || attr.name.namespace.as_deref()
+                                    == Some("http://ns.exiftool.org/1.0/")
+                                || attr.name.namespace.as_deref()
+                                    == Some("http://ns.exiftool.ca/1.0/")
+                            {
+                                continue;
+                            }
                             if attr.name.prefix.as_deref() == Some("xml")
-                                || attr.name.namespace.as_deref() == Some("http://www.w3.org/XML/1998/namespace") { continue; }
+                                || attr.name.namespace.as_deref()
+                                    == Some("http://www.w3.org/XML/1998/namespace")
+                            {
+                                continue;
+                            }
 
                             let attr_ns = attr.name.namespace.as_deref().unwrap_or("");
                             let attr_prefix_resolved = namespace_prefix(attr_ns);
@@ -662,7 +777,8 @@ impl XmpReader {
                     // Detect GContainer:Directory/rdf:Seq entry
                     // Path looks like: [..., (GContainer_ns, "Directory"), (rdf_ns, "Seq")]
                     if name.local_name == "Seq"
-                        && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        && name.namespace.as_deref()
+                            == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
                         // Check if the parent is GContainer:Directory
                         if let Some(parent) = path.iter().rev().nth(1) {
@@ -677,19 +793,25 @@ impl XmpReader {
                     // Inside GContainer Seq: rdf:li starts a struct item
                     if in_gcontainer_seq
                         && name.local_name == "li"
-                        && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        && name.namespace.as_deref()
+                            == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
                         in_gcontainer_li = true;
                         in_rdf_li = true;
                     } else if name.local_name == "li"
-                        && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        && name.namespace.as_deref()
+                            == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
                         if in_lang_alt {
                             // Inner rdf:li inside rdf:Alt — track the xml:lang attribute
-                            current_li_lang = attributes.iter()
-                                .find(|a| a.name.local_name == "lang"
-                                    && (a.name.prefix.as_deref() == Some("xml")
-                                        || a.name.namespace.as_deref() == Some("http://www.w3.org/XML/1998/namespace")))
+                            current_li_lang = attributes
+                                .iter()
+                                .find(|a| {
+                                    a.name.local_name == "lang"
+                                        && (a.name.prefix.as_deref() == Some("xml")
+                                            || a.name.namespace.as_deref()
+                                                == Some("http://www.w3.org/XML/1998/namespace"))
+                                })
                                 .map(|a| a.value.clone());
                         }
                         // Note: outer rdf:li increment happens when it closes (to correctly track which item we're on)
@@ -698,7 +820,8 @@ impl XmpReader {
 
                     // Detect rdf:Alt
                     if name.local_name == "Alt"
-                        && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        && name.namespace.as_deref()
+                            == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
                         in_lang_alt = true;
                         // Check if we're inside an outer rdf:li (Bag item)
@@ -707,8 +830,10 @@ impl XmpReader {
                         if depth >= 3 {
                             let li_elem = &path[depth - 2]; // li (just before Alt)
                             let bag_elem = &path[depth - 3]; // Bag
-                            if li_elem.1 == "li" && li_elem.0 == "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-                                && bag_elem.1 == "Bag" && bag_elem.0 == "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                            if li_elem.1 == "li"
+                                && li_elem.0 == "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                                && bag_elem.1 == "Bag"
+                                && bag_elem.0 == "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
                             {
                                 lang_alt_in_bag = true;
                             }
@@ -719,13 +844,16 @@ impl XmpReader {
                     // These are struct fields: Item:Mime, Item:Semantic, Item:Length
                     if in_gcontainer_li
                         && name.local_name == "Item"
-                        && name.namespace.as_deref() == Some("http://ns.google.com/photos/1.0/container/")
+                        && name.namespace.as_deref()
+                            == Some("http://ns.google.com/photos/1.0/container/")
                     {
                         // Collect Item:Mime, Item:Semantic, Item:Length for this li entry
                         let mut found: std::collections::HashMap<String, String> =
                             std::collections::HashMap::new();
                         for attr in &attributes {
-                            if attr.name.namespace.as_deref() == Some("http://ns.google.com/photos/1.0/container/item/") {
+                            if attr.name.namespace.as_deref()
+                                == Some("http://ns.google.com/photos/1.0/container/item/")
+                            {
                                 let field = ucfirst(&attr.name.local_name);
                                 found.insert(field, attr.value.clone());
                             }
@@ -735,7 +863,8 @@ impl XmpReader {
                         let known = ["Mime", "Semantic", "Length"];
                         for k in &known {
                             if let Some(v) = found.get(*k) {
-                                gcontainer_fields.entry(k.to_string())
+                                gcontainer_fields
+                                    .entry(k.to_string())
                                     .or_default()
                                     .push(v.clone());
                             }
@@ -750,11 +879,14 @@ impl XmpReader {
 
                     // Handle rdf:li list items
                     if name.local_name == "li"
-                        && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        && name.namespace.as_deref()
+                            == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
                         if in_lang_alt {
                             // Inner rdf:li inside rdf:Alt — store by lang
-                            let lang = current_li_lang.take().unwrap_or_else(|| "x-default".to_string());
+                            let lang = current_li_lang
+                                .take()
+                                .unwrap_or_else(|| "x-default".to_string());
                             let text = normalize_xml_text(&current_text);
                             // Present-but-empty → Some(""), absent → padding with None below
                             let opt_text: Option<String> = Some(text.clone());
@@ -798,7 +930,8 @@ impl XmpReader {
                     if (name.local_name == "Seq"
                         || name.local_name == "Bag"
                         || name.local_name == "Alt")
-                        && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        && name.namespace.as_deref()
+                            == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
                         // Handle closing rdf:Alt (simple lang-alt or end of inner Alt in bag-of-alt)
                         if name.local_name == "Alt" {
@@ -823,38 +956,66 @@ impl XmpReader {
                                 // or we're inside any rdf:parseType="Resource" struct.
                                 let rdf_ns = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
                                 let in_struct_li_alt = !parse_resource_depths.is_empty()
-                                    || path.iter().rev().nth(2)
+                                    || path
+                                        .iter()
+                                        .rev()
+                                        .nth(2)
                                         .map(|(ns, ln)| ln == "li" && ns == rdf_ns)
                                         .unwrap_or(false);
-                                let (full_tag_name, emit_group_prefix, emit_category) = if in_struct_li_alt {
-                                    // Use full ancestor path prefix (excluding current tag_name)
-                                    // path currently has: ..., struct_ancestors..., li, tag_name, Alt
-                                    // We want the prefix from ancestors before tag_name
-                                    let ancestor_prefix = build_struct_tag_prefix_without_last(&path, &tag_name);
-                                    let field_uc = ucfirst(&strip_non_ascii(&tag_name));
-                                    if !ancestor_prefix.is_empty() {
-                                        let stripped = strip_struct_prefix(&ancestor_prefix, &field_uc);
-                                        let flat_raw = format!("{}{}", ancestor_prefix, stripped);
-                                        let flat = apply_flat_name_remap(&flat_raw).to_string();
-                                        // Find namespace from struct parent
-                                        let sp_gp = path.iter().rev()
-                                            .skip(2)
-                                            .skip_while(|(ns, ln)| ln == "li" || ln == "Bag" || ln == "Seq" || ln == "Alt" || ns == rdf_ns)
-                                            .find(|(ns, ln)| ln != "Description" && ns != rdf_ns)
-                                            .map(|(sp_ns, _)| {
-                                                let p = namespace_prefix(sp_ns);
-                                                if p.is_empty() { group_prefix } else { p }
-                                            })
-                                            .unwrap_or(group_prefix);
-                                        let cat = namespace_category(sp_gp);
-                                        (flat, sp_gp.to_string(), cat.to_string())
+                                let (full_tag_name, emit_group_prefix, emit_category) =
+                                    if in_struct_li_alt {
+                                        // Use full ancestor path prefix (excluding current tag_name)
+                                        // path currently has: ..., struct_ancestors..., li, tag_name, Alt
+                                        // We want the prefix from ancestors before tag_name
+                                        let ancestor_prefix =
+                                            build_struct_tag_prefix_without_last(&path, &tag_name);
+                                        let field_uc = ucfirst(&strip_non_ascii(&tag_name));
+                                        if !ancestor_prefix.is_empty() {
+                                            let stripped =
+                                                strip_struct_prefix(&ancestor_prefix, &field_uc);
+                                            let flat_raw =
+                                                format!("{}{}", ancestor_prefix, stripped);
+                                            let flat = apply_flat_name_remap(&flat_raw).to_string();
+                                            // Find namespace from struct parent
+                                            let sp_gp = path
+                                                .iter()
+                                                .rev()
+                                                .skip(2)
+                                                .skip_while(|(ns, ln)| {
+                                                    ln == "li"
+                                                        || ln == "Bag"
+                                                        || ln == "Seq"
+                                                        || ln == "Alt"
+                                                        || ns == rdf_ns
+                                                })
+                                                .find(|(ns, ln)| {
+                                                    ln != "Description" && ns != rdf_ns
+                                                })
+                                                .map(|(sp_ns, _)| {
+                                                    let p = namespace_prefix(sp_ns);
+                                                    if p.is_empty() {
+                                                        group_prefix
+                                                    } else {
+                                                        p
+                                                    }
+                                                })
+                                                .unwrap_or(group_prefix);
+                                            let cat = namespace_category(sp_gp);
+                                            (flat, sp_gp.to_string(), cat.to_string())
+                                        } else {
+                                            (
+                                                ucfirst(&strip_non_ascii(&tag_name)),
+                                                group_prefix.to_string(),
+                                                category.to_string(),
+                                            )
+                                        }
                                     } else {
-                                        (ucfirst(&strip_non_ascii(&tag_name)), group_prefix.to_string(), category.to_string())
-                                    }
-                                } else {
-                                    let tn = apply_flat_name_remap(&ucfirst(&strip_non_ascii(&tag_name))).to_string();
-                                    (tn, group_prefix.to_string(), category.to_string())
-                                };
+                                        let tn = apply_flat_name_remap(&ucfirst(&strip_non_ascii(
+                                            &tag_name,
+                                        )))
+                                        .to_string();
+                                        (tn, group_prefix.to_string(), category.to_string())
+                                    };
 
                                 // Emit x-default as main tag
                                 // Only emit if there's at least one non-empty value
@@ -863,11 +1024,19 @@ impl XmpReader {
                                     let main_val = if list_values.len() == 1 {
                                         Value::String(list_values[0].clone())
                                     } else {
-                                        Value::List(list_values.iter().map(|s| Value::String(s.clone())).collect())
+                                        Value::List(
+                                            list_values
+                                                .iter()
+                                                .map(|s| Value::String(s.clone()))
+                                                .collect(),
+                                        )
                                     };
                                     let pv = main_val.to_display_string();
                                     tags.push(Tag {
-                                        id: TagId::Text(format!("{}:{}", emit_group_prefix, tag_name)),
+                                        id: TagId::Text(format!(
+                                            "{}:{}",
+                                            emit_group_prefix, tag_name
+                                        )),
                                         name: full_tag_name.clone(),
                                         description: full_tag_name.clone(),
                                         group: TagGroup {
@@ -882,23 +1051,31 @@ impl XmpReader {
                                 }
                                 list_values.clear();
                                 // Emit per-lang variants as TagName-lang
-                                let mut lang_keys: Vec<String> = bag_lang_values.keys().cloned().collect();
+                                let mut lang_keys: Vec<String> =
+                                    bag_lang_values.keys().cloned().collect();
                                 lang_keys.sort();
                                 for lang in &lang_keys {
                                     let vals = &bag_lang_values[lang];
-                                    let non_none: Vec<String> = vals.iter()
-                                        .filter_map(|v| v.clone())
-                                        .collect();
+                                    let non_none: Vec<String> =
+                                        vals.iter().filter_map(|v| v.clone()).collect();
                                     if !non_none.is_empty() {
                                         let lang_tag = format!("{}-{}", full_tag_name, lang);
                                         let val = if non_none.len() == 1 {
                                             Value::String(non_none[0].clone())
                                         } else {
-                                            Value::List(non_none.iter().map(|s| Value::String(s.clone())).collect())
+                                            Value::List(
+                                                non_none
+                                                    .iter()
+                                                    .map(|s| Value::String(s.clone()))
+                                                    .collect(),
+                                            )
                                         };
                                         let pv = val.to_display_string();
                                         tags.push(Tag {
-                                            id: TagId::Text(format!("{}-{}:{}", emit_group_prefix, lang, tag_name)),
+                                            id: TagId::Text(format!(
+                                                "{}-{}:{}",
+                                                emit_group_prefix, lang, tag_name
+                                            )),
                                             name: lang_tag.clone(),
                                             description: lang_tag.clone(),
                                             group: TagGroup {
@@ -931,7 +1108,8 @@ impl XmpReader {
                                 let category = namespace_category(group_prefix);
 
                                 // Build full flat name from ancestor path
-                                let ancestor_prefix = build_struct_tag_prefix_without_last(&path, &tag_name);
+                                let ancestor_prefix =
+                                    build_struct_tag_prefix_without_last(&path, &tag_name);
                                 let field_uc = ucfirst(&strip_non_ascii(&tag_name));
                                 let full_flat_base = if !ancestor_prefix.is_empty() {
                                     let stripped = strip_struct_prefix(&ancestor_prefix, &field_uc);
@@ -942,12 +1120,17 @@ impl XmpReader {
                                 };
 
                                 // Collect all language codes (maintaining insertion order: x-default first)
-                                let mut lang_keys: Vec<String> = bag_lang_values.keys().cloned().collect();
+                                let mut lang_keys: Vec<String> =
+                                    bag_lang_values.keys().cloned().collect();
                                 // Put x-default first
                                 lang_keys.sort_by(|a, b| {
-                                    if a == "x-default" { std::cmp::Ordering::Less }
-                                    else if b == "x-default" { std::cmp::Ordering::Greater }
-                                    else { a.cmp(b) }
+                                    if a == "x-default" {
+                                        std::cmp::Ordering::Less
+                                    } else if b == "x-default" {
+                                        std::cmp::Ordering::Greater
+                                    } else {
+                                        a.cmp(b)
+                                    }
                                 });
 
                                 for lang in &lang_keys {
@@ -960,7 +1143,8 @@ impl XmpReader {
                                     //
                                     // For x-default: skip None (absent items shouldn't affect default)
                                     // For other langs: skip None (absent), keep Some("") (present but empty)
-                                    let joined: String = vals.iter()
+                                    let joined: String = vals
+                                        .iter()
                                         .filter_map(|v| v.as_deref()) // None filtered out
                                         .collect::<Vec<_>>()
                                         .join(", ");
@@ -1008,7 +1192,9 @@ impl XmpReader {
                                 let value = if values.len() == 1 {
                                     Value::String(values[0].clone())
                                 } else {
-                                    Value::List(values.iter().map(|s| Value::String(s.clone())).collect())
+                                    Value::List(
+                                        values.iter().map(|s| Value::String(s.clone())).collect(),
+                                    )
                                 };
                                 let print_value = value.to_display_string();
                                 tags.push(Tag {
@@ -1032,7 +1218,9 @@ impl XmpReader {
                                 let prefix = namespace_prefix(&parent.0);
                                 let tag_name = &parent.1;
                                 // Skip RDF structural elements (RDF, Description, etc.)
-                                if tag_name == "RDF" || tag_name == "xmpmeta" || tag_name == "xapmeta"
+                                if tag_name == "RDF"
+                                    || tag_name == "xmpmeta"
+                                    || tag_name == "xapmeta"
                                     || parent.0 == "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
                                     || parent.0 == "adobe:ns:meta/"
                                 {
@@ -1041,8 +1229,7 @@ impl XmpReader {
                                     current_text.clear();
                                     continue;
                                 }
-                                let group_prefix =
-                                    if prefix.is_empty() { "XMP" } else { prefix };
+                                let group_prefix = if prefix.is_empty() { "XMP" } else { prefix };
                                 let _category = namespace_category(group_prefix);
 
                                 let value = if list_values.len() == 1 {
@@ -1057,21 +1244,41 @@ impl XmpReader {
                                 };
 
                                 // Use full ancestor path for struct flattening
-                                let ancestor_prefix = build_struct_tag_prefix_without_last(&path, tag_name);
+                                let ancestor_prefix =
+                                    build_struct_tag_prefix_without_last(&path, tag_name);
                                 let field_uc = ucfirst(&strip_non_ascii(tag_name));
-                                let (full_name, emit_group_prefix) = if !ancestor_prefix.is_empty() {
-                                    let field_stripped = strip_struct_prefix(&ancestor_prefix, &field_uc);
+                                let (full_name, emit_group_prefix) = if !ancestor_prefix.is_empty()
+                                {
+                                    let field_stripped =
+                                        strip_struct_prefix(&ancestor_prefix, &field_uc);
                                     let raw = format!("{}{}", ancestor_prefix, field_stripped);
                                     let flat = apply_flat_name_remap(&raw).to_string();
                                     // Find namespace from the outermost struct ancestor
-                                    let sp_gp = path.iter().rev()
+                                    let sp_gp = path
+                                        .iter()
+                                        .rev()
                                         .skip(1) // skip current list element (Seq/Bag/Alt)
                                         .skip(1) // skip tag_name
-                                        .skip_while(|(ns, ln)| ln == "li" || ln == "Bag" || ln == "Seq" || ln == "Alt" || ns == "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-                                        .find(|(ns, ln)| ln != "Description" && ns != "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                                        .skip_while(|(ns, ln)| {
+                                            ln == "li"
+                                                || ln == "Bag"
+                                                || ln == "Seq"
+                                                || ln == "Alt"
+                                                || ns
+                                                    == "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                                        })
+                                        .find(|(ns, ln)| {
+                                            ln != "Description"
+                                                && ns
+                                                    != "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                                        })
                                         .map(|(sp_ns, _)| {
                                             let p = namespace_prefix(sp_ns);
-                                            if p.is_empty() { group_prefix } else { p }
+                                            if p.is_empty() {
+                                                group_prefix
+                                            } else {
+                                                p
+                                            }
                                         })
                                         .unwrap_or(group_prefix);
                                     (flat, sp_gp.to_string())
@@ -1106,16 +1313,20 @@ impl XmpReader {
 
                     // Struct properties inside rdf:li (e.g., stJob:name inside xmpBJ:JobRef/Bag/li)
                     // Perl flattens as "{FullPathPrefix}{FieldName}" → "JobRefName"
-                    if !normalize_xml_text(&current_text).is_empty() && in_rdf_li
-                        && name.namespace.as_deref() != Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                    if !normalize_xml_text(&current_text).is_empty()
+                        && in_rdf_li
+                        && name.namespace.as_deref()
+                            != Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                         && name.local_name != "Description"
                     {
                         // Build the full ancestor prefix for struct flattening,
                         // excluding the current element (which is the field itself).
-                        let ancestor_prefix = build_struct_tag_prefix_without_last(&path, &name.local_name);
+                        let ancestor_prefix =
+                            build_struct_tag_prefix_without_last(&path, &name.local_name);
                         if !ancestor_prefix.is_empty() {
                             let field_local = ucfirst(&strip_non_ascii(&name.local_name));
-                            let field_stripped = strip_struct_prefix(&ancestor_prefix, &field_local);
+                            let field_stripped =
+                                strip_struct_prefix(&ancestor_prefix, &field_local);
                             let flat_name_raw = format!("{}{}", ancestor_prefix, field_stripped);
                             let flat_name = apply_flat_name_remap(&flat_name_raw).to_string();
                             let prefix = namespace_prefix(ns_uri);
@@ -1123,10 +1334,16 @@ impl XmpReader {
                             let category = namespace_category(group_prefix);
                             tags.push(Tag {
                                 id: TagId::Text(format!("{}:{}", group_prefix, flat_name)),
-                                name: flat_name.clone(), description: flat_name,
-                                group: TagGroup { family0: "XMP".into(), family1: format!("XMP-{}", group_prefix), family2: category.into() },
+                                name: flat_name.clone(),
+                                description: flat_name,
+                                group: TagGroup {
+                                    family0: "XMP".into(),
+                                    family1: format!("XMP-{}", group_prefix),
+                                    family2: category.into(),
+                                },
                                 raw_value: parse_xmp_value(&normalize_xml_text(&current_text)),
-                                print_value: normalize_xml_text(&current_text), priority: 0,
+                                print_value: normalize_xml_text(&current_text),
+                                priority: 0,
                             });
                         }
                         path.pop();
@@ -1140,7 +1357,10 @@ impl XmpReader {
                     let in_suppressed_blank_node = suppress_direct_emit_depth
                         .map(|d| path.len() > d)
                         .unwrap_or(false);
-                    if (!normalize_xml_text(&current_text).is_empty() || has_et_depth) && !in_rdf_li && !in_suppressed_blank_node {
+                    if (!normalize_xml_text(&current_text).is_empty() || has_et_depth)
+                        && !in_rdf_li
+                        && !in_suppressed_blank_node
+                    {
                         let prefix = namespace_prefix(ns_uri);
                         let tag_name = &name.local_name;
 
@@ -1160,9 +1380,11 @@ impl XmpReader {
                             // Applies when inside rdf:parseType="Resource" structs OR when
                             // nested inside a property element (e.g., blank-node Description).
                             let remapped = remap_xmp_tag_name(group_prefix, tag_name);
-                            let ancestor_prefix = build_struct_tag_prefix_without_last(&path, tag_name);
+                            let ancestor_prefix =
+                                build_struct_tag_prefix_without_last(&path, tag_name);
                             let full_name = if !ancestor_prefix.is_empty() {
-                                let field_stripped = strip_struct_prefix(&ancestor_prefix, &remapped);
+                                let field_stripped =
+                                    strip_struct_prefix(&ancestor_prefix, &remapped);
                                 let candidate = format!("{}{}", ancestor_prefix, field_stripped);
                                 apply_flat_name_remap(&candidate).to_string()
                             } else {
@@ -1195,30 +1417,46 @@ impl XmpReader {
                     // prefixed with the parent property element's name.
                     // Also clear suppress_direct_emit_depth when the top-level nodeID Description closes.
                     if name.local_name == "Description"
-                        && name.namespace.as_deref() == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        && name.namespace.as_deref()
+                            == Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                     {
                         // Clear suppression if this Description was the suppressed one
                         if suppress_direct_emit_depth == Some(path.len()) {
                             suppress_direct_emit_depth = None;
                         }
 
-                        if let Some((node_id, parent_local)) = inline_blank_node_stack.last().cloned() {
+                        if let Some((node_id, parent_local)) =
+                            inline_blank_node_stack.last().cloned()
+                        {
                             // Check this Description is closing (path should end with Description)
-                            if path.last().map(|(_, ln)| ln == "Description").unwrap_or(false) {
+                            if path
+                                .last()
+                                .map(|(_, ln)| ln == "Description")
+                                .unwrap_or(false)
+                            {
                                 inline_blank_node_stack.pop();
                                 if let Some(bn_props) = blank_node_props.get(&node_id) {
                                     let parent_uc = ucfirst(&strip_non_ascii(&parent_local));
                                     // Find the parent element's namespace to get group prefix
-                                    let parent_ns = path.iter().rev().nth(1)
+                                    let parent_ns = path
+                                        .iter()
+                                        .rev()
+                                        .nth(1)
                                         .map(|(ns, _)| ns.as_str())
                                         .unwrap_or("");
                                     let parent_prefix_ns = namespace_prefix(parent_ns);
                                     let parent_group = if parent_prefix_ns.is_empty() {
                                         "XMP"
-                                    } else { parent_prefix_ns };
+                                    } else {
+                                        parent_prefix_ns
+                                    };
                                     for (prop_ns, prop_local, prop_val) in bn_props {
                                         let prop_prefix = namespace_prefix(prop_ns);
-                                        let prop_group = if prop_prefix.is_empty() { parent_group } else { prop_prefix };
+                                        let prop_group = if prop_prefix.is_empty() {
+                                            parent_group
+                                        } else {
+                                            prop_prefix
+                                        };
                                         let prop_cat = namespace_category(prop_group);
                                         let prop_uc = ucfirst(&strip_non_ascii(prop_local));
                                         let stripped = strip_struct_prefix(&parent_uc, &prop_uc);
@@ -1255,20 +1493,22 @@ impl XmpReader {
         }
 
         // Post-processing: emit GainMap Warning if DirectoryItemSemantic contains "GainMap"
-        let has_gainmap = tags.iter().any(|t| {
-            t.name == "DirectoryItemSemantic"
-                && t.print_value.contains("GainMap")
-        });
+        let has_gainmap = tags
+            .iter()
+            .any(|t| t.name == "DirectoryItemSemantic" && t.print_value.contains("GainMap"));
         if has_gainmap {
             // Find DirectoryItemMime and DirectoryItemLength for the GainMap entry
             // Emit warning about GainMap image/jpeg not found in trailer
-            let gainmap_mime = tags.iter()
+            let gainmap_mime = tags
+                .iter()
                 .find(|t| t.name == "DirectoryItemSemantic")
                 .and_then(|t| {
                     // Find the semantic that is GainMap and get the corresponding Mime
                     // For simplicity, look for GainMap in the values
                     if let Value::List(ref items) = t.raw_value {
-                        items.iter().enumerate()
+                        items
+                            .iter()
+                            .enumerate()
                             .find(|(_, v)| v.to_display_string() == "GainMap")
                             .map(|(i, _)| i)
                     } else {
@@ -1280,7 +1520,13 @@ impl XmpReader {
                         .find(|t| t.name == "DirectoryItemMime")
                         .and_then(|t| match &t.raw_value {
                             Value::List(items) => items.get(idx).map(|v| v.to_display_string()),
-                            Value::String(s) => if idx == 0 { Some(s.clone()) } else { None },
+                            Value::String(s) => {
+                                if idx == 0 {
+                                    Some(s.clone())
+                                } else {
+                                    None
+                                }
+                            }
                             _ => None,
                         })
                 })
@@ -1309,11 +1555,13 @@ impl XmpReader {
         // This mirrors ExifTool's XMP Composite Flash tag.
         if !tags.iter().any(|t| t.name == "Flash") {
             let get_bool = |name: &str| -> Option<bool> {
-                tags.iter().find(|t| t.name == name)
+                tags.iter()
+                    .find(|t| t.name == name)
                     .map(|t| t.print_value.to_lowercase() == "true")
             };
             let get_int = |name: &str| -> Option<u32> {
-                tags.iter().find(|t| t.name == name)
+                tags.iter()
+                    .find(|t| t.name == name)
                     .and_then(|t| t.print_value.parse::<u32>().ok())
             };
             let flash_fired = get_bool("FlashFired");
@@ -1322,15 +1570,28 @@ impl XmpReader {
             let flash_function = get_bool("FlashFunction");
             let flash_red_eye = get_bool("FlashRedEyeMode");
             // Only emit if we have at least one relevant tag
-            if flash_fired.is_some() || flash_return.is_some() || flash_mode.is_some()
-                || flash_function.is_some() || flash_red_eye.is_some()
+            if flash_fired.is_some()
+                || flash_return.is_some()
+                || flash_mode.is_some()
+                || flash_function.is_some()
+                || flash_red_eye.is_some()
             {
-                let val: u32 =
-                    (if flash_fired.unwrap_or(false) { 0x01 } else { 0 }) |
-                    ((flash_return.unwrap_or(0) & 0x03) << 1) |
-                    ((flash_mode.unwrap_or(0) & 0x03) << 3) |
-                    (if flash_function.unwrap_or(false) { 0x20 } else { 0 }) |
-                    (if flash_red_eye.unwrap_or(false) { 0x40 } else { 0 });
+                let val: u32 = (if flash_fired.unwrap_or(false) {
+                    0x01
+                } else {
+                    0
+                }) | ((flash_return.unwrap_or(0) & 0x03) << 1)
+                    | ((flash_mode.unwrap_or(0) & 0x03) << 3)
+                    | (if flash_function.unwrap_or(false) {
+                        0x20
+                    } else {
+                        0
+                    })
+                    | (if flash_red_eye.unwrap_or(false) {
+                        0x40
+                    } else {
+                        0
+                    });
                 let flash_str = flash_numeric_to_string(val);
                 tags.push(Tag {
                     id: TagId::Text("Flash:Flash".into()),
@@ -1363,7 +1624,8 @@ impl XmpReader {
 /// values appended to the first occurrence (comma-separated).
 fn aggregate_duplicate_xmp_tags(tags: Vec<Tag>) -> Vec<Tag> {
     let mut result: Vec<Tag> = Vec::with_capacity(tags.len());
-    let mut name_to_idx: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut name_to_idx: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
 
     for tag in tags {
         if let Some(&idx) = name_to_idx.get(&tag.name) {
@@ -1416,14 +1678,16 @@ fn flash_numeric_to_string(val: u32) -> String {
     }
 }
 
-
 /// Like build_struct_tag_prefix but excludes the element with the given local name
 /// (used when path already includes the current element but we want the prefix without it).
 fn build_struct_tag_prefix_without_last(path: &[(String, String)], exclude_ln: &str) -> String {
     build_struct_tag_prefix_excluding(path, Some(exclude_ln))
 }
 
-fn build_struct_tag_prefix_excluding(path: &[(String, String)], exclude_last: Option<&str>) -> String {
+fn build_struct_tag_prefix_excluding(
+    path: &[(String, String)],
+    exclude_last: Option<&str>,
+) -> String {
     let rdf_ns = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     let mut result = String::new();
     let effective_path: &[(String, String)] = if let Some(excl) = exclude_last {
@@ -1440,8 +1704,11 @@ fn build_struct_tag_prefix_excluding(path: &[(String, String)], exclude_last: Op
         path
     };
     for (ns, ln) in effective_path {
-        if ns == rdf_ns || ln == "Description" || ln == "RDF"
-            || ln == "xmpmeta" || ln == "xapmeta"
+        if ns == rdf_ns
+            || ln == "Description"
+            || ln == "RDF"
+            || ln == "xmpmeta"
+            || ln == "xapmeta"
             || ns == "adobe:ns:meta/"
         {
             continue;
@@ -1546,72 +1813,74 @@ fn apply_flat_name_remap(name: &str) -> String {
 
     let mapped = match name {
         // IPTC Extension: ArtworkOrObject struct
-        "ArtworkOrObjectAOCopyrightNotice"           => "ArtworkCopyrightNotice",
-        "ArtworkOrObjectAOCreator"                   => "ArtworkCreator",
-        "ArtworkOrObjectAODateCreated"               => "ArtworkDateCreated",
-        "ArtworkOrObjectAOSource"                    => "ArtworkSource",
-        "ArtworkOrObjectAOSourceInvNo"               => "ArtworkSourceInventoryNo",
-        "ArtworkOrObjectAOTitle"                     => "ArtworkTitle",
+        "ArtworkOrObjectAOCopyrightNotice" => "ArtworkCopyrightNotice",
+        "ArtworkOrObjectAOCreator" => "ArtworkCreator",
+        "ArtworkOrObjectAODateCreated" => "ArtworkDateCreated",
+        "ArtworkOrObjectAOSource" => "ArtworkSource",
+        "ArtworkOrObjectAOSourceInvNo" => "ArtworkSourceInventoryNo",
+        "ArtworkOrObjectAOTitle" => "ArtworkTitle",
         "ArtworkOrObjectAOCurrentCopyrightOwnerName" => "ArtworkCopyrightOwnerName",
-        "ArtworkOrObjectAOCurrentCopyrightOwnerId"   => "ArtworkCopyrightOwnerID",
-        "ArtworkOrObjectAOCurrentLicensorName"       => "ArtworkLicensorName",
-        "ArtworkOrObjectAOCurrentLicensorId"         => "ArtworkLicensorID",
-        "ArtworkOrObjectAOCreatorId"                 => "ArtworkCreatorID",
-        "ArtworkOrObjectAOCircaDateCreated"          => "ArtworkCircaDateCreated",
-        "ArtworkOrObjectAOStylePeriod"               => "ArtworkStylePeriod",
-        "ArtworkOrObjectAOSourceInvURL"              => "ArtworkSourceInvURL",
-        "ArtworkOrObjectAOContentDescription"        => "ArtworkContentDescription",
-        "ArtworkOrObjectAOContributionDescription"   => "ArtworkContributionDescription",
-        "ArtworkOrObjectAOPhysicalDescription"       => "ArtworkPhysicalDescription",
+        "ArtworkOrObjectAOCurrentCopyrightOwnerId" => "ArtworkCopyrightOwnerID",
+        "ArtworkOrObjectAOCurrentLicensorName" => "ArtworkLicensorName",
+        "ArtworkOrObjectAOCurrentLicensorId" => "ArtworkLicensorID",
+        "ArtworkOrObjectAOCreatorId" => "ArtworkCreatorID",
+        "ArtworkOrObjectAOCircaDateCreated" => "ArtworkCircaDateCreated",
+        "ArtworkOrObjectAOStylePeriod" => "ArtworkStylePeriod",
+        "ArtworkOrObjectAOSourceInvURL" => "ArtworkSourceInvURL",
+        "ArtworkOrObjectAOContentDescription" => "ArtworkContentDescription",
+        "ArtworkOrObjectAOContributionDescription" => "ArtworkContributionDescription",
+        "ArtworkOrObjectAOPhysicalDescription" => "ArtworkPhysicalDescription",
         // MWG Regions: Regions struct flat names (property path → Name)
-        "RegionsRegionListName"            => "RegionName",
-        "RegionsRegionListType"            => "RegionType",
-        "RegionsRegionListDescription"     => "RegionDescription",
-        "RegionsRegionListFocusUsage"      => "RegionFocusUsage",
-        "RegionsRegionListBarCodeValue"    => "RegionBarCodeValue",
-        "RegionsRegionListSeeAlso"         => "RegionSeeAlso",
-        "RegionsRegionListRotation"        => "RegionRotation",
-        "RegionsRegionListAreaH"           => "RegionAreaH",
-        "RegionsRegionListAreaW"           => "RegionAreaW",
-        "RegionsRegionListAreaX"           => "RegionAreaX",
-        "RegionsRegionListAreaY"           => "RegionAreaY",
-        "RegionsRegionListAreaD"           => "RegionAreaD",
-        "RegionsRegionListAreaUnit"        => "RegionAreaUnit",
+        "RegionsRegionListName" => "RegionName",
+        "RegionsRegionListType" => "RegionType",
+        "RegionsRegionListDescription" => "RegionDescription",
+        "RegionsRegionListFocusUsage" => "RegionFocusUsage",
+        "RegionsRegionListBarCodeValue" => "RegionBarCodeValue",
+        "RegionsRegionListSeeAlso" => "RegionSeeAlso",
+        "RegionsRegionListRotation" => "RegionRotation",
+        "RegionsRegionListAreaH" => "RegionAreaH",
+        "RegionsRegionListAreaW" => "RegionAreaW",
+        "RegionsRegionListAreaX" => "RegionAreaX",
+        "RegionsRegionListAreaY" => "RegionAreaY",
+        "RegionsRegionListAreaD" => "RegionAreaD",
+        "RegionsRegionListAreaUnit" => "RegionAreaUnit",
         // MWG Keywords: Keywords struct flat names
-        "KeywordsHierarchyKeyword"                                     => "HierarchicalKeywords1",
-        "KeywordsHierarchyChildrenKeyword"                             => "HierarchicalKeywords2",
-        "KeywordsHierarchyChildrenChildrenKeyword"                     => "HierarchicalKeywords3",
-        "KeywordsHierarchyChildrenChildrenChildrenKeyword"             => "HierarchicalKeywords4",
-        "KeywordsHierarchyChildrenChildrenChildrenChildrenKeyword"     => "HierarchicalKeywords5",
-        "KeywordsHierarchyChildrenChildrenChildrenChildrenChildrenKeyword" => "HierarchicalKeywords6",
+        "KeywordsHierarchyKeyword" => "HierarchicalKeywords1",
+        "KeywordsHierarchyChildrenKeyword" => "HierarchicalKeywords2",
+        "KeywordsHierarchyChildrenChildrenKeyword" => "HierarchicalKeywords3",
+        "KeywordsHierarchyChildrenChildrenChildrenKeyword" => "HierarchicalKeywords4",
+        "KeywordsHierarchyChildrenChildrenChildrenChildrenKeyword" => "HierarchicalKeywords5",
+        "KeywordsHierarchyChildrenChildrenChildrenChildrenChildrenKeyword" => {
+            "HierarchicalKeywords6"
+        }
         // xmpTPg: Colorants struct (FlatName => 'Colorant')
-        "ColorantsSwatchName"    => "ColorantSwatchName",
-        "ColorantsMode"          => "ColorantMode",
-        "ColorantsType"          => "ColorantType",
-        "ColorantsCyan"          => "ColorantCyan",
-        "ColorantsMagenta"       => "ColorantMagenta",
-        "ColorantsYellow"        => "ColorantYellow",
-        "ColorantsBlack"         => "ColorantBlack",
-        "ColorantsGray"          => "ColorantGray",
-        "ColorantsRed"           => "ColorantRed",
-        "ColorantsGreen"         => "ColorantGreen",
-        "ColorantsBlue"          => "ColorantBlue",
-        "ColorantsL"             => "ColorantL",
-        "ColorantsA"             => "ColorantA",
-        "ColorantsB"             => "ColorantB",
+        "ColorantsSwatchName" => "ColorantSwatchName",
+        "ColorantsMode" => "ColorantMode",
+        "ColorantsType" => "ColorantType",
+        "ColorantsCyan" => "ColorantCyan",
+        "ColorantsMagenta" => "ColorantMagenta",
+        "ColorantsYellow" => "ColorantYellow",
+        "ColorantsBlack" => "ColorantBlack",
+        "ColorantsGray" => "ColorantGray",
+        "ColorantsRed" => "ColorantRed",
+        "ColorantsGreen" => "ColorantGreen",
+        "ColorantsBlue" => "ColorantBlue",
+        "ColorantsL" => "ColorantL",
+        "ColorantsA" => "ColorantA",
+        "ColorantsB" => "ColorantB",
         // xmpTPg: Fonts struct (FlatName => '' → fields stand alone)
-        "FontsFontName"          => "FontName",
-        "FontsFontFamily"        => "FontFamily",
-        "FontsFontFace"          => "FontFace",
-        "FontsFontType"          => "FontType",
-        "FontsVersionString"     => "FontVersion",
-        "FontsComposite"         => "FontComposite",
-        "FontsFontFileName"      => "FontFileName",
+        "FontsFontName" => "FontName",
+        "FontsFontFamily" => "FontFamily",
+        "FontsFontFace" => "FontFace",
+        "FontsFontType" => "FontType",
+        "FontsVersionString" => "FontVersion",
+        "FontsComposite" => "FontComposite",
+        "FontsFontFileName" => "FontFileName",
         // xmp: Thumbnails struct
-        "ThumbnailsFormat"       => "ThumbnailFormat",
-        "ThumbnailsWidth"        => "ThumbnailWidth",
-        "ThumbnailsHeight"       => "ThumbnailHeight",
-        "ThumbnailsImage"        => "ThumbnailImage",
+        "ThumbnailsFormat" => "ThumbnailFormat",
+        "ThumbnailsWidth" => "ThumbnailWidth",
+        "ThumbnailsHeight" => "ThumbnailHeight",
+        "ThumbnailsImage" => "ThumbnailImage",
         _ => name,
     };
     mapped.to_string()
@@ -1624,9 +1893,11 @@ fn parse_xmp_value(text: &str) -> Value {
     // Try rational: N/D where N and D are integers (no whitespace)
     if let Some(slash) = text.find('/') {
         let num_str = &text[..slash];
-        let den_str = &text[slash+1..];
-        if !num_str.is_empty() && !den_str.is_empty()
-            && !num_str.contains(' ') && !den_str.contains(' ')
+        let den_str = &text[slash + 1..];
+        if !num_str.is_empty()
+            && !den_str.is_empty()
+            && !num_str.contains(' ')
+            && !den_str.contains(' ')
         {
             if let (Ok(n), Ok(d)) = (num_str.parse::<i64>(), den_str.parse::<u64>()) {
                 if d > 0 {
@@ -1740,7 +2011,12 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
 
     for event in parser {
         match event {
-            Ok(XmlEvent::StartElement { name, attributes, namespace, .. }) => {
+            Ok(XmlEvent::StartElement {
+                name,
+                attributes,
+                namespace,
+                ..
+            }) => {
                 let local = xml_elem_to_camel(&name.local_name);
                 let path_str = format!("{}{}", path.join(""), local);
                 // Mark parent as having a child element
@@ -1755,7 +2031,7 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                 // xml-rs exposes xmlns in the namespace mappings
                 // The default namespace (no prefix) is exposed via namespace.get("")
                 // We look for newly-declared default NS at this element
-                
+
                 // Check if there's a new default namespace declared at this element
                 // xml-rs merges namespaces so we check the full namespace map
                 // The simplest approach: check if attributes contain xmlns-like entries
@@ -1775,9 +2051,16 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                             let pv = val.to_display_string();
                             tags.push(Tag {
                                 id: TagId::Text(format!("XMP:{}", tag_name)),
-                                name: tag_name.clone(), description: tag_name,
-                                group: TagGroup { family0: "XMP".into(), family1: "XMP".into(), family2: "Other".into() },
-                                raw_value: val, print_value: pv, priority: 0,
+                                name: tag_name.clone(),
+                                description: tag_name,
+                                group: TagGroup {
+                                    family0: "XMP".into(),
+                                    family1: "XMP".into(),
+                                    family2: "Other".into(),
+                                },
+                                raw_value: val,
+                                print_value: pv,
+                                priority: 0,
                             });
                         }
                     }
@@ -1803,16 +2086,25 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                         let pfx = namespace_prefix(attr_ns);
                         let group_pfx = if pfx.is_empty() {
                             aname.prefix.as_deref().unwrap_or("XMP")
-                        } else { pfx };
+                        } else {
+                            pfx
+                        };
                         // Normalize attribute value to collapse internal whitespace/newlines
                         let attr_val = normalize_xml_text(&attr.value);
                         let val = Value::String(attr_val.clone());
                         let pv = val.to_display_string();
                         tags.push(Tag {
                             id: TagId::Text(format!("XMP:{}", tag_name)),
-                            name: tag_name.clone(), description: tag_name,
-                            group: TagGroup { family0: "XMP".into(), family1: format!("XMP-{}", group_pfx), family2: "Other".into() },
-                            raw_value: val, print_value: pv, priority: 0,
+                            name: tag_name.clone(),
+                            description: tag_name,
+                            group: TagGroup {
+                                family0: "XMP".into(),
+                                family1: format!("XMP-{}", group_pfx),
+                                family2: "Other".into(),
+                            },
+                            raw_value: val,
+                            print_value: pv,
+                            priority: 0,
                         });
                     }
                 }
@@ -1832,9 +2124,16 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                         let pv = val.to_display_string();
                         tags.push(Tag {
                             id: TagId::Text(format!("XMP:{}", tag_name)),
-                            name: tag_name.clone(), description: tag_name,
-                            group: TagGroup { family0: "XMP".into(), family1: "XMP".into(), family2: "Other".into() },
-                            raw_value: val, print_value: pv, priority: 0,
+                            name: tag_name.clone(),
+                            description: tag_name,
+                            group: TagGroup {
+                                family0: "XMP".into(),
+                                family1: "XMP".into(),
+                                family2: "Other".into(),
+                            },
+                            raw_value: val,
+                            print_value: pv,
+                            priority: 0,
                         });
                     }
                 }
@@ -1913,8 +2212,11 @@ fn fix_malformed_xml(xml: &str) -> String {
                     let inner = rest[1..gt_rel].trim();
                     let is_self_closing = inner.ends_with('/');
                     if !is_self_closing {
-                        let tag_name = inner.split(|c: char| c.is_whitespace() || c == '/')
-                            .next().unwrap_or("").to_string();
+                        let tag_name = inner
+                            .split(|c: char| c.is_whitespace() || c == '/')
+                            .next()
+                            .unwrap_or("")
+                            .to_string();
                         if !tag_name.is_empty() {
                             stack.push(tag_name);
                         }
@@ -1944,20 +2246,24 @@ fn sanitize_xmp_xml(xml: &str) -> String {
     let mut i = 0;
     while i < chars.len() {
         let c = chars[i];
-        if !in_pi && i + 1 < chars.len() && c == '<' && chars[i+1] == '?' {
+        if !in_pi && i + 1 < chars.len() && c == '<' && chars[i + 1] == '?' {
             in_pi = true;
             result.push(c);
-        } else if in_pi && c == '?' && i + 1 < chars.len() && chars[i+1] == '>' {
+        } else if in_pi && c == '?' && i + 1 < chars.len() && chars[i + 1] == '>' {
             in_pi = false;
             result.push(c);
-            result.push(chars[i+1]);
+            result.push(chars[i + 1]);
             i += 2;
             continue;
         } else if in_pi {
             // Replace invalid XML chars in PI with space
-            if c == '\t' || c == '\n' || c == '\r' || (c as u32 >= 0x20 && c as u32 <= 0xD7FF)
+            if c == '\t'
+                || c == '\n'
+                || c == '\r'
+                || (c as u32 >= 0x20 && c as u32 <= 0xD7FF)
                 || (c as u32 >= 0xE000 && c as u32 <= 0xFFFD)
-                || (c as u32 >= 0x10000 && c as u32 <= 0x10FFFF) {
+                || (c as u32 >= 0x10000 && c as u32 <= 0x10FFFF)
+            {
                 result.push(c);
             } else {
                 result.push(' ');
@@ -1985,7 +2291,9 @@ fn collect_node_bag_values(xml: &str) -> std::collections::HashMap<String, Vec<S
 
     for event in parser {
         match event {
-            Ok(XmlEvent::StartElement { name, attributes, .. }) => {
+            Ok(XmlEvent::StartElement {
+                name, attributes, ..
+            }) => {
                 current_text.clear();
                 let local = &name.local_name;
                 let ns = name.namespace.as_deref().unwrap_or("");
@@ -2045,7 +2353,9 @@ fn collect_inline_referenced_node_ids(xml: &str) -> std::collections::HashSet<St
 
     for event in parser {
         match event {
-            Ok(XmlEvent::StartElement { name, attributes, .. }) => {
+            Ok(XmlEvent::StartElement {
+                name, attributes, ..
+            }) => {
                 let local = name.local_name.clone();
                 let ns = name.namespace.as_deref().unwrap_or("").to_string();
 
@@ -2059,11 +2369,14 @@ fn collect_inline_referenced_node_ids(xml: &str) -> std::collections::HashSet<St
                         // Determine if this Description is inline-referenced:
                         // it must have a non-RDF, non-xmpmeta, non-RDF-container parent.
                         // Direct children of rdf:RDF, x:xmpmeta, x:xapmeta are top-level.
-                        let parent_is_top_level = path.last().map(|(pns, pln)| {
-                            (pln == "RDF" && pns == rdf_ns)
-                                || pln == "xmpmeta"
-                                || pln == "xapmeta"
-                        }).unwrap_or(true);
+                        let parent_is_top_level = path
+                            .last()
+                            .map(|(pns, pln)| {
+                                (pln == "RDF" && pns == rdf_ns)
+                                    || pln == "xmpmeta"
+                                    || pln == "xapmeta"
+                            })
+                            .unwrap_or(true);
 
                         if !parent_is_top_level {
                             set.insert(nid_attr.value.clone());
@@ -2087,9 +2400,12 @@ fn collect_inline_referenced_node_ids(xml: &str) -> std::collections::HashSet<St
 /// Returns a map from nodeID → Vec<(namespace_uri, local_name, value)>.
 /// Handles attributes on Description, child elements with text, and rdf:resource attributes.
 /// Multiple Descriptions with the same nodeID are merged.
-fn collect_blank_node_properties(xml: &str) -> std::collections::HashMap<String, Vec<(String, String, String)>> {
+fn collect_blank_node_properties(
+    xml: &str,
+) -> std::collections::HashMap<String, Vec<(String, String, String)>> {
     use xml::reader::{EventReader, XmlEvent};
-    let mut map: std::collections::HashMap<String, Vec<(String, String, String)>> = std::collections::HashMap::new();
+    let mut map: std::collections::HashMap<String, Vec<(String, String, String)>> =
+        std::collections::HashMap::new();
     let parser = EventReader::from_str(xml);
     let mut current_node_id: Option<String> = None;
     let mut current_text = String::new();
@@ -2100,7 +2416,9 @@ fn collect_blank_node_properties(xml: &str) -> std::collections::HashMap<String,
 
     for event in parser {
         match event {
-            Ok(XmlEvent::StartElement { name, attributes, .. }) => {
+            Ok(XmlEvent::StartElement {
+                name, attributes, ..
+            }) => {
                 current_text.clear();
                 let local = &name.local_name;
                 let ns = name.namespace.as_deref().unwrap_or("");
@@ -2109,17 +2427,28 @@ fn collect_blank_node_properties(xml: &str) -> std::collections::HashMap<String,
                     // Check for rdf:nodeID
                     if let Some(nid_attr) = attributes.iter().find(|a| {
                         a.name.local_name == "nodeID"
-                            && (a.name.prefix.as_deref() == Some("rdf") || a.name.namespace.as_deref() == Some(rdf_ns))
+                            && (a.name.prefix.as_deref() == Some("rdf")
+                                || a.name.namespace.as_deref() == Some(rdf_ns))
                     }) {
                         let nid = nid_attr.value.clone();
                         current_node_id = Some(nid.clone());
                         // Collect attribute properties (non-xmlns, non-rdf, non-about)
                         let entry = map.entry(nid).or_default();
                         for attr in &attributes {
-                            if attr.name.local_name == "nodeID" || attr.name.local_name == "about" { continue; }
-                            if attr.name.prefix.as_deref() == Some("xmlns") { continue; }
-                            if attr.name.local_name.starts_with("xmlns") { continue; }
-                            if attr.name.prefix.as_deref() == Some("rdf") || attr.name.namespace.as_deref() == Some(rdf_ns) { continue; }
+                            if attr.name.local_name == "nodeID" || attr.name.local_name == "about" {
+                                continue;
+                            }
+                            if attr.name.prefix.as_deref() == Some("xmlns") {
+                                continue;
+                            }
+                            if attr.name.local_name.starts_with("xmlns") {
+                                continue;
+                            }
+                            if attr.name.prefix.as_deref() == Some("rdf")
+                                || attr.name.namespace.as_deref() == Some(rdf_ns)
+                            {
+                                continue;
+                            }
                             let attr_ns = attr.name.namespace.as_deref().unwrap_or("").to_string();
                             entry.push((attr_ns, attr.name.local_name.clone(), attr.value.clone()));
                         }
@@ -2131,7 +2460,8 @@ fn collect_blank_node_properties(xml: &str) -> std::collections::HashMap<String,
                     current_prop_local = local.clone();
                     // Check for rdf:resource attribute
                     if let Some(res_attr) = attributes.iter().find(|a| {
-                        a.name.local_name == "resource" && a.name.namespace.as_deref() == Some(rdf_ns)
+                        a.name.local_name == "resource"
+                            && a.name.namespace.as_deref() == Some(rdf_ns)
                     }) {
                         let nid = current_node_id.as_ref().unwrap().clone();
                         let entry = map.entry(nid).or_default();
