@@ -1612,7 +1612,7 @@ impl ExifTool {
             | FileType::Rw2
             | FileType::Srf => formats::tiff::read_tiff(data),
             // Phase One IIQ: TIFF + PhaseOne maker note block
-            FileType::Iiq => formats::misc::read_iiq(data),
+            FileType::Iiq => formats::iiq::read_iiq(data),
             // Image formats
             FileType::Gif => formats::gif::read_gif(data),
             FileType::Bmp => formats::bmp::read_bmp(data),
@@ -1671,20 +1671,20 @@ impl ExifTool {
             | FileType::Xls
             | FileType::Ppt => formats::zip::read_zip(data),
             FileType::Rtf => formats::rtf::read_rtf(data),
-            FileType::InDesign => formats::misc::read_indesign(data),
-            FileType::Pcap => formats::misc::read_pcap(data),
-            FileType::Pcapng => formats::misc::read_pcapng(data),
+            FileType::InDesign => formats::indesign::read_indesign(data),
+            FileType::Pcap => formats::pcap::read_pcap(data),
+            FileType::Pcapng => formats::pcap::read_pcapng(data),
             // Canon VRD / DR4
             FileType::Vrd => formats::canon_vrd::read_vrd(data).or_else(|_| Ok(Vec::new())),
             FileType::Dr4 => formats::canon_vrd::read_dr4(data).or_else(|_| Ok(Vec::new())),
             // Metadata / Other
             FileType::Xmp => formats::xmp_file::read_xmp(data),
-            FileType::Svg => formats::misc::read_svg(data),
+            FileType::Svg => formats::svg::read_svg(data),
             FileType::Html => {
                 // SVG files that weren't detected by magic (e.g., via extension fallback)
                 let is_svg = data.windows(4).take(512).any(|w| w == b"<svg");
                 if is_svg {
-                    formats::misc::read_svg(data)
+                    formats::svg::read_svg(data)
                 } else {
                     formats::html::read_html(data)
                 }
@@ -1709,37 +1709,41 @@ impl ExifTool {
             FileType::WavPack | FileType::Dsf => formats::id3::read_mp3(data),
             FileType::Ape => formats::ape::read_ape(data),
             FileType::Mpc => formats::ape::read_mpc(data),
-            FileType::Aac => formats::misc::read_aac(data),
-            FileType::RealAudio => formats::misc::read_real_audio(data).or_else(|_| Ok(Vec::new())),
-            FileType::RealMedia => formats::misc::read_real_media(data).or_else(|_| Ok(Vec::new())),
+            FileType::Aac => formats::aac::read_aac(data),
+            FileType::RealAudio => {
+                formats::real_audio::read_real_audio(data).or_else(|_| Ok(Vec::new()))
+            }
+            FileType::RealMedia => {
+                formats::real_media::read_real_media(data).or_else(|_| Ok(Vec::new()))
+            }
             // Misc formats
-            FileType::Czi => formats::misc::read_czi(data).or_else(|_| Ok(Vec::new())),
-            FileType::PhotoCd => formats::misc::read_photo_cd(data).or_else(|_| Ok(Vec::new())),
+            FileType::Czi => formats::czi::read_czi(data).or_else(|_| Ok(Vec::new())),
+            FileType::PhotoCd => formats::photo_cd::read_photo_cd(data).or_else(|_| Ok(Vec::new())),
             FileType::Dicom => formats::dicom::read_dicom(data),
-            FileType::Fits => formats::misc::read_fits(data),
-            FileType::Flv => formats::misc::read_flv(data),
-            FileType::Mxf => formats::misc::read_mxf(data).or_else(|_| Ok(Vec::new())),
-            FileType::Swf => formats::misc::read_swf(data),
-            FileType::Hdr => formats::misc::read_hdr(data),
+            FileType::Fits => formats::fits::read_fits(data),
+            FileType::Flv => formats::flv::read_flv(data),
+            FileType::Mxf => formats::mxf::read_mxf(data).or_else(|_| Ok(Vec::new())),
+            FileType::Swf => formats::swf::read_swf(data),
+            FileType::Hdr => formats::hdr::read_hdr(data),
             FileType::DjVu => formats::djvu::read_djvu(data),
             FileType::Xcf => formats::gimp::read_xcf(data),
             FileType::Mie => formats::mie::read_mie(data),
             FileType::Lfp => formats::lytro::read_lfp(data),
             // FileType::Miff dispatched via string extension below
             FileType::Fpf => formats::flir_fpf::read_fpf(data),
-            FileType::Flif => formats::misc::read_flif(data),
-            FileType::Bpg => formats::misc::read_bpg(data),
-            FileType::Pcx => formats::misc::read_pcx(data),
-            FileType::Pict => formats::misc::read_pict(data),
+            FileType::Flif => formats::flif::read_flif(data),
+            FileType::Bpg => formats::bpg::read_bpg(data),
+            FileType::Pcx => formats::pcx::read_pcx(data),
+            FileType::Pict => formats::pict::read_pict(data),
             FileType::Mpeg => formats::mpeg::read_mpeg(data),
-            FileType::M2ts => formats::misc::read_m2ts(data, self.options.extract_embedded),
-            FileType::Gzip => formats::misc::read_gzip(data),
-            FileType::Rar => formats::misc::read_rar(data),
-            FileType::SevenZ => formats::misc::read_7z(data),
-            FileType::Dss => formats::misc::read_dss(data),
-            FileType::Moi => formats::misc::read_moi(data),
-            FileType::MacOs => formats::misc::read_macos(data),
-            FileType::Json => formats::misc::read_json(data),
+            FileType::M2ts => formats::m2ts::read_m2ts(data, self.options.extract_embedded),
+            FileType::Gzip => formats::gzip::read_gzip(data),
+            FileType::Rar => formats::rar::read_rar(data),
+            FileType::SevenZ => formats::sevenz::read_7z(data),
+            FileType::Dss => formats::dss::read_dss(data),
+            FileType::Moi => formats::moi::read_moi(data),
+            FileType::MacOs => formats::macos::read_macos(data),
+            FileType::Json => formats::json_format::read_json(data),
             // New formats
             FileType::Pgf => formats::pgf::read_pgf(data),
             FileType::Xisf => formats::xisf::read_xisf(data),
@@ -1764,8 +1768,8 @@ impl ExifTool {
                     formats::plist::read_aae_plist(data)
                 }
             }
-            FileType::KyoceraRaw => formats::misc::read_kyocera_raw(data),
-            FileType::PortableFloatMap => formats::misc::read_pfm(data),
+            FileType::KyoceraRaw => formats::kyocera_raw::read_kyocera_raw(data),
+            FileType::PortableFloatMap => formats::pfm::read_pfm(data),
             FileType::Ods
             | FileType::Odt
             | FileType::Odp
@@ -1774,9 +1778,9 @@ impl ExifTool {
             | FileType::Odb
             | FileType::Odi
             | FileType::Odc => formats::zip::read_zip(data),
-            FileType::Lif => formats::misc::read_lif(data),
-            FileType::Rwz => formats::misc::read_rawzor(data),
-            FileType::Jxr => formats::misc::read_jxr(data),
+            FileType::Lif => formats::lif::read_lif(data),
+            FileType::Rwz => formats::rawzor::read_rawzor(data),
+            FileType::Jxr => formats::jxr::read_jxr(data),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }
@@ -1790,18 +1794,18 @@ impl ExifTool {
             .to_ascii_lowercase();
 
         match ext.as_str() {
-            "ppm" | "pgm" | "pbm" => formats::misc::read_ppm(data),
+            "ppm" | "pgm" | "pbm" => formats::ppm::read_ppm(data),
             "pfm" => {
                 // PFM can be Portable Float Map or Printer Font Metrics
                 if data.len() >= 3 && data[0] == b'P' && (data[1] == b'f' || data[1] == b'F') {
-                    formats::misc::read_ppm(data)
+                    formats::ppm::read_ppm(data)
                 } else {
                     Ok(Vec::new()) // Printer Font Metrics
                 }
             }
-            "json" => formats::misc::read_json(data),
-            "svg" => formats::misc::read_svg(data),
-            "ram" => formats::misc::read_ram(data).or_else(|_| Ok(Vec::new())),
+            "json" => formats::json_format::read_json(data),
+            "svg" => formats::svg::read_svg(data),
+            "ram" => formats::ram::read_ram(data).or_else(|_| Ok(Vec::new())),
             "txt" | "log" | "igc" => Ok(compute_text_tags(data, false)),
             "csv" => Ok(compute_text_tags(data, true)),
             "url" => formats::lnk::read_url(data).or_else(|_| Ok(Vec::new())),
@@ -1836,20 +1840,20 @@ impl ExifTool {
             "x3f" => formats::sigma_raw::read_x3f(data).or_else(|_| Ok(Vec::new())),
             "mie" => Ok(Vec::new()), // MIE
             "exr" => Ok(Vec::new()), // OpenEXR
-            "wpg" => formats::misc::read_wpg(data).or_else(|_| Ok(Vec::new())),
-            "moi" => formats::misc::read_moi(data).or_else(|_| Ok(Vec::new())),
-            "macos" => formats::misc::read_macos(data).or_else(|_| Ok(Vec::new())),
+            "wpg" => formats::wpg::read_wpg(data).or_else(|_| Ok(Vec::new())),
+            "moi" => formats::moi::read_moi(data).or_else(|_| Ok(Vec::new())),
+            "macos" => formats::macos::read_macos(data).or_else(|_| Ok(Vec::new())),
             "dpx" => formats::dpx::read_dpx(data).or_else(|_| Ok(Vec::new())),
             "r3d" => formats::red::read_r3d(data).or_else(|_| Ok(Vec::new())),
             "tnef" => formats::tnef::read_tnef(data).or_else(|_| Ok(Vec::new())),
             "ppt" | "fpx" => formats::flashpix::read_fpx(data).or_else(|_| Ok(Vec::new())),
             "fpf" => formats::flir_fpf::read_fpf(data).or_else(|_| Ok(Vec::new())),
-            "itc" => formats::misc::read_itc(data).or_else(|_| Ok(Vec::new())),
+            "itc" => formats::itc::read_itc(data).or_else(|_| Ok(Vec::new())),
             "mpg" | "mpeg" | "m1v" | "m2v" | "mpv" => {
                 formats::mpeg::read_mpeg(data).or_else(|_| Ok(Vec::new()))
             }
             "dv" => formats::dv::read_dv(data, data.len() as u64).or_else(|_| Ok(Vec::new())),
-            "czi" => formats::misc::read_czi(data).or_else(|_| Ok(Vec::new())),
+            "czi" => formats::czi::read_czi(data).or_else(|_| Ok(Vec::new())),
             "miff" => formats::miff::read_miff(data).or_else(|_| Ok(Vec::new())),
             "lfp" | "mrc" | "dss" | "mobi" | "psp" | "pgf" | "raw" | "pmp" | "torrent" | "xisf"
             | "mxf" | "dfont" => Ok(Vec::new()),
