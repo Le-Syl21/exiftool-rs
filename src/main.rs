@@ -633,7 +633,6 @@ fn main() {
     let et = ExifTool::with_options(options);
 
     // Sort files by tag value if -fileOrder specified
-    let mut files = files;
     if let Some(ref order_tag) = file_order {
         sort_files_by_tag(&et, &mut files, order_tag);
     }
@@ -963,6 +962,7 @@ fn sort_files_by_tag(et: &ExifTool, files: &mut Vec<String>, tag_name: &str) {
 }
 
 /// Full-featured text output with all options.
+#[allow(clippy::too_many_arguments)]
 fn print_text_full(
     et: &ExifTool,
     files: &[String],
@@ -1149,35 +1149,32 @@ fn print_binary(et: &ExifTool, files: &[String]) {
 /// Print using a format string. $TagName is replaced with tag values.
 fn print_formatted(et: &ExifTool, files: &[String], format: &str) {
     for file in files {
-        match et.extract_info(file) {
-            Ok(tags) => {
-                let mut output = format.to_string();
-                // Replace $TagName with values
-                for tag in &tags {
-                    let pattern = format!("${}", tag.name);
-                    if output.contains(&pattern) {
-                        output = output.replace(&pattern, &tag.print_value);
-                    }
+        if let Ok(tags) = et.extract_info(file) {
+            let mut output = format.to_string();
+            // Replace $TagName with values
+            for tag in &tags {
+                let pattern = format!("${}", tag.name);
+                if output.contains(&pattern) {
+                    output = output.replace(&pattern, &tag.print_value);
                 }
-                // Also support $filename, $directory
-                output = output.replace(
-                    "$filename",
-                    Path::new(file)
-                        .file_name()
-                        .and_then(|f| f.to_str())
-                        .unwrap_or(""),
-                );
-                output = output.replace(
-                    "$directory",
-                    Path::new(file)
-                        .parent()
-                        .and_then(|p| p.to_str())
-                        .unwrap_or(""),
-                );
-                // Clean up unreplaced variables
-                println!("{}", output);
             }
-            Err(_) => {}
+            // Also support $filename, $directory
+            output = output.replace(
+                "$filename",
+                Path::new(file)
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .unwrap_or(""),
+            );
+            output = output.replace(
+                "$directory",
+                Path::new(file)
+                    .parent()
+                    .and_then(|p| p.to_str())
+                    .unwrap_or(""),
+            );
+            // Clean up unreplaced variables
+            println!("{}", output);
         }
     }
 }
@@ -1185,13 +1182,10 @@ fn print_formatted(et: &ExifTool, files: &[String], format: &str) {
 /// Print tab-separated output.
 fn print_tab(et: &ExifTool, files: &[String]) {
     for file in files {
-        match et.extract_info(file) {
-            Ok(tags) => {
-                for tag in &tags {
-                    println!("{}\t{}\t{}", file, tag.name, tag.print_value);
-                }
+        if let Ok(tags) = et.extract_info(file) {
+            for tag in &tags {
+                println!("{}\t{}\t{}", file, tag.name, tag.print_value);
             }
-            Err(_) => {}
         }
     }
 }
@@ -1383,7 +1377,7 @@ fn print_html_dump(file: &str) {
         let ascii: String = data[row..end]
             .iter()
             .map(|&b| {
-                if b >= 0x20 && b < 0x7f {
+                if (0x20..0x7f).contains(&b) {
                     b as char
                 } else {
                     '.'
@@ -1435,18 +1429,15 @@ fn print_csv(et: &ExifTool, files: &[String]) {
     let mut all_results: Vec<(String, Vec<(String, String)>)> = Vec::new();
 
     for file in files {
-        match et.extract_info(file) {
-            Ok(tags) => {
-                let mut row: Vec<(String, String)> = Vec::new();
-                for tag in &tags {
-                    if !all_tags.contains(&tag.name) {
-                        all_tags.push(tag.name.clone());
-                    }
-                    row.push((tag.name.clone(), tag.print_value.clone()));
+        if let Ok(tags) = et.extract_info(file) {
+            let mut row: Vec<(String, String)> = Vec::new();
+            for tag in &tags {
+                if !all_tags.contains(&tag.name) {
+                    all_tags.push(tag.name.clone());
                 }
-                all_results.push((file.clone(), row));
+                row.push((tag.name.clone(), tag.print_value.clone()));
             }
-            Err(_) => {}
+            all_results.push((file.clone(), row));
         }
     }
 
@@ -1478,23 +1469,20 @@ fn print_xml(et: &ExifTool, files: &[String]) {
     println!("  xmlns:et='http://ns.exiftool.org/1.0/'>");
 
     for file in files {
-        match et.extract_info(file) {
-            Ok(tags) => {
-                println!("  <rdf:Description rdf:about='{}'>", escape_xml(file));
-                for tag in &tags {
-                    let ns = tag.group.family0.to_lowercase();
-                    println!(
-                        "    <et:{}:{} rdf:datatype='string'>{}</et:{}:{}>",
-                        ns,
-                        tag.name,
-                        escape_xml(&tag.print_value),
-                        ns,
-                        tag.name
-                    );
-                }
-                println!("  </rdf:Description>");
+        if let Ok(tags) = et.extract_info(file) {
+            println!("  <rdf:Description rdf:about='{}'>", escape_xml(file));
+            for tag in &tags {
+                let ns = tag.group.family0.to_lowercase();
+                println!(
+                    "    <et:{}:{} rdf:datatype='string'>{}</et:{}:{}>",
+                    ns,
+                    tag.name,
+                    escape_xml(&tag.print_value),
+                    ns,
+                    tag.name
+                );
             }
-            Err(_) => {}
+            println!("  </rdf:Description>");
         }
     }
 
@@ -1548,7 +1536,7 @@ fn sanitize_display_value(s: &str) -> String {
     for ch in s.chars() {
         if ch == '\0' {
             // remove null bytes
-        } else if ch >= '\x01' && ch <= '\x1f' || ch == '\x7f' {
+        } else if ('\x01'..='\x1f').contains(&ch) || ch == '\x7f' {
             result.push('.');
         } else {
             result.push(ch);

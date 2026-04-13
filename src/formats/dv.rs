@@ -405,11 +405,10 @@ fn find_dif_start(data: &[u8]) -> crate::error::Result<Option<usize>> {
     }
 
     // Try pattern 2: look for sync sequence
-    let pat1 = [0xff, 0x3f, 0x07, 0x00];
-    let _pat2 = [0xff, 0x3f, 0x07, 0x01];
+    let pat1 = [0x3f, 0x07, 0x00];
     for i in 0..data.len().saturating_sub(167) {
         let matches = (data[i] == 0x00 || data[i] == 0xff)
-            && data[i + 1..i + 5] == pat1[1..5]
+            && data[i + 1..i + 4] == pat1
             && i + 167 < data.len()
             && data[i + 81..i + 85] == [0xff, 0x3f, 0x07, 0x01];
         if matches {

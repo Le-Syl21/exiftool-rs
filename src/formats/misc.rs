@@ -5438,6 +5438,7 @@ fn sevenz_skip_folder(data: &[u8], pos: &mut usize) -> usize {
 
 /// Skip properties until End marker (0x00).
 fn sevenz_skip_to_end(data: &[u8], pos: &mut usize) -> bool {
+    #[allow(clippy::never_loop)]
     loop {
         if *pos >= data.len() {
             return false;
@@ -5471,6 +5472,7 @@ fn sevenz_skip_to_end(data: &[u8], pos: &mut usize) -> bool {
             return false;
         }
 
+        // Unknown property ID — can't skip without knowing its size
         return false;
     }
 }

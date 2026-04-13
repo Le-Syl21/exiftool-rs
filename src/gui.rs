@@ -140,7 +140,7 @@ impl App {
             show_about: false,
             pending_edits: Vec::new(),
             editing: None,
-            lang: forced_lang.unwrap_or_else(|| exiftool_rs::i18n::detect_system_language()),
+            lang: forced_lang.unwrap_or_else(exiftool_rs::i18n::detect_system_language),
             languages: exiftool_rs::i18n::AVAILABLE_LANGUAGES.to_vec(),
             translations: None,
             status: String::new(),
@@ -400,11 +400,9 @@ impl eframe::App for App {
                 self.current = 0;
                 self.load_current();
             }
-            if i.key_pressed(egui::Key::End) {
-                if !self.files.is_empty() {
-                    self.current = self.files.len() - 1;
-                    self.load_current();
-                }
+            if i.key_pressed(egui::Key::End) && !self.files.is_empty() {
+                self.current = self.files.len() - 1;
+                self.load_current();
             }
         });
 
@@ -438,7 +436,7 @@ impl eframe::App for App {
                 // Show flash feedback on copy/save buttons
                 let is_flashing = self
                     .flash_until
-                    .map_or(false, |t| t > std::time::Instant::now());
+                    .is_some_and(|t| t > std::time::Instant::now());
                 if is_flashing {
                     ctx.request_repaint();
                 }
@@ -463,35 +461,34 @@ impl eframe::App for App {
                     .button(exiftool_rs::i18n::ui_text(&self.lang, "save"))
                     .on_hover_text(exiftool_rs::i18n::ui_text(&self.lang, "tooltip_save"))
                     .clicked()
+                    && !self.pending_edits.is_empty()
                 {
-                    if !self.pending_edits.is_empty() {
-                        if let Some(path) = self.files.get(self.current) {
-                            let path_str = path.to_string_lossy().to_string();
-                            let mut et = ExifTool::new();
-                            for (tag, value) in &self.pending_edits {
-                                et.set_new_value(tag, Some(value));
+                    if let Some(path) = self.files.get(self.current) {
+                        let path_str = path.to_string_lossy().to_string();
+                        let mut et = ExifTool::new();
+                        for (tag, value) in &self.pending_edits {
+                            et.set_new_value(tag, Some(value));
+                        }
+                        match et.write_info(&path_str, &path_str) {
+                            Ok(_) => {
+                                self.status = format!(
+                                    "{} {}",
+                                    self.pending_edits.len(),
+                                    exiftool_rs::i18n::ui_text(&self.lang, "saved")
+                                );
+                                self.pending_edits.clear();
+                                self.load_current();
+                                self.flash_until = Some(
+                                    std::time::Instant::now()
+                                        + std::time::Duration::from_millis(800),
+                                );
                             }
-                            match et.write_info(&path_str, &path_str) {
-                                Ok(_) => {
-                                    self.status = format!(
-                                        "{} {}",
-                                        self.pending_edits.len(),
-                                        exiftool_rs::i18n::ui_text(&self.lang, "saved")
-                                    );
-                                    self.pending_edits.clear();
-                                    self.load_current();
-                                    self.flash_until = Some(
-                                        std::time::Instant::now()
-                                            + std::time::Duration::from_millis(800),
-                                    );
-                                }
-                                Err(e) => {
-                                    self.status = format!(
-                                        "{}: {}",
-                                        exiftool_rs::i18n::ui_text(&self.lang, "save_error"),
-                                        e
-                                    );
-                                }
+                            Err(e) => {
+                                self.status = format!(
+                                    "{}: {}",
+                                    exiftool_rs::i18n::ui_text(&self.lang, "save_error"),
+                                    e
+                                );
                             }
                         }
                     }
@@ -584,7 +581,7 @@ impl eframe::App for App {
         // Status bar
         let is_flashing = self
             .flash_until
-            .map_or(false, |t| t > std::time::Instant::now());
+            .is_some_and(|t| t > std::time::Instant::now());
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if is_flashing {
