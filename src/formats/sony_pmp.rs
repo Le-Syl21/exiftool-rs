@@ -82,7 +82,7 @@ pub fn read_sony_pmp(data: &[u8]) -> Result<Vec<Tag>> {
                 tags.push(mk("ImageQuality", "Image Quality", Value::U8(n)));
                 parse_rest(&data, jpg_start, jpg_len, &mut tags);
                 Ok(tags)
-            }
+            };
         }
     };
     tags.push(mk(

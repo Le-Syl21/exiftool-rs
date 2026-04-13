@@ -116,7 +116,7 @@ fn read_webp_chunks(data: &[u8], start: usize, tags: &mut Vec<Tag>) -> Result<()
                                             Value::U16(vscale),
                                         ));
                                         Ok(())
-                                    }
+                                    };
                                 }
                             };
                             let width = u16::from_le_bytes([chunk_data[6], chunk_data[7]]) & 0x3FFF;
