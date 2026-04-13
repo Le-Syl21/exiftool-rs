@@ -119,8 +119,8 @@ fn normalize_vcard_tag(raw_tag: &str) -> String {
         "X-socialprofile" => "SocialProfile".into(),
         _ => {
             // Remove X- prefix for custom tags
-            if tag_id.starts_with("X-") {
-                ucfirst_lower(&tag_id[2..])
+            if let Some(stripped) = tag_id.strip_prefix("X-") {
+                ucfirst_lower(stripped)
             } else {
                 tag_id
             }
@@ -195,8 +195,8 @@ fn normalize_ical_tag(raw_tag: &str) -> String {
         _ => {
             if tag_id.starts_with("X-microsoft-") {
                 ucfirst(&raw_tag[12..])
-            } else if tag_id.starts_with("X-") {
-                ucfirst_lower(&tag_id[2..])
+            } else if let Some(stripped) = tag_id.strip_prefix("X-") {
+                ucfirst_lower(stripped)
             } else {
                 tag_id
             }
@@ -252,9 +252,7 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
     // Skip group prefix (e.g., "item1.")
     let tag_start = if let Some(dot) = line.find('.') {
         // Only skip if before the colon and semicolon
-        let first_sep = line
-            .find(|c: char| c == ':' || c == ';')
-            .unwrap_or(line.len());
+        let first_sep = line.find([':', ';']).unwrap_or(line.len());
         if dot < first_sep {
             dot + 1
         } else {
@@ -356,8 +354,8 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
                 }
                 "geo" => {
                     // Remove "geo:" prefix if present
-                    let v = if param_val.starts_with("geo:") {
-                        param_val[4..].to_string()
+                    let v = if let Some(stripped) = param_val.strip_prefix("geo:") {
+                        stripped.to_string()
                     } else {
                         param_val
                     };
@@ -406,7 +404,6 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
 
     // Check for inline base64 data: "data:type/subtype;base64,"
     let mut extra_types = Vec::new();
-    let final_value;
 
     if let Some(rest) = value_str.strip_prefix("data:") {
         if let Some(semi) = rest.find(';') {
@@ -422,18 +419,15 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
                 // The actual base64 data comes after "data:type/sub;base64,"
                 // (value computed below)
                 // Note: we'll replace this with binary indicator below
-            } else {
             }
-        } else {
         }
-    } else {
     }
 
     // Apply encoding
-    final_value = match encoding.as_deref() {
+    let final_value = match encoding.as_deref() {
         Some("base64") | Some("b") => {
             // For PHOTO/LOGO/SOUND - just indicate binary
-            format!("(Binary data, use -b option to extract)")
+            "(Binary data, use -b option to extract)".to_string()
         }
         Some("quoted-printable") => decode_qp(value_str),
         _ => unescape_vcard(value_str),

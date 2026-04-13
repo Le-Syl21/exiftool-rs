@@ -22,20 +22,20 @@ pub fn sony_decrypt_words(data: &mut [u8], start: usize, key: u32) {
     // Step 1: Generate initial 4 keystream words from seed key
     let mut pad = [0u32; 128]; // 0x80 entries
     let mut k = key;
-    for i in 0..4 {
+    for p in pad.iter_mut().take(4) {
         let lo = (k & 0xFFFF).wrapping_mul(0x0EDD).wrapping_add(1);
         let hi = (k >> 16)
             .wrapping_mul(0x0EDD)
             .wrapping_add((k & 0xFFFF).wrapping_mul(0x02E9))
             .wrapping_add(lo >> 16);
         k = ((hi & 0xFFFF) << 16) | (lo & 0xFFFF);
-        pad[i] = k;
+        *p = k;
     }
 
     // Step 2: Extend to 127-word keystream using LFSR
-    pad[3] = (pad[3] << 1 | (pad[0] ^ pad[2]) >> 31) & 0xFFFFFFFF;
+    pad[3] = pad[3] << 1 | (pad[0] ^ pad[2]) >> 31;
     for i in 4..0x7F {
-        pad[i] = ((pad[i - 4] ^ pad[i - 2]) << 1 | (pad[i - 3] ^ pad[i - 1]) >> 31) & 0xFFFFFFFF;
+        pad[i] = (pad[i - 4] ^ pad[i - 2]) << 1 | (pad[i - 3] ^ pad[i - 1]) >> 31;
     }
 
     // Step 3: XOR data words with evolving keystream

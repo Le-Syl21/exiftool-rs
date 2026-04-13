@@ -167,11 +167,7 @@ pub fn parse_makernotes(
 
     // Kodak binary: "KDK INFO" or "KDK" — not IFD, decode directly
     if mn_data.starts_with(b"KDK") {
-        let start = if mn_data.starts_with(b"KDK INFO") {
-            8
-        } else {
-            8
-        };
+        let start = 8;
         return decode_kodak_binary(&mn_data[start..]);
     }
 
@@ -1073,7 +1069,7 @@ fn pentax_ev(val: i32) -> f64 {
     let mut v = val as f64;
     if val & 0x01 != 0 {
         let sign = if val < 0 { -1.0_f64 } else { 1.0_f64 };
-        let frac = (val.abs() & 0x07) as i32;
+        let frac = val.abs() & 0x07;
         if frac == 0x03 {
             v += sign * (8.0 / 3.0 - frac as f64);
         } else if frac == 0x05 {
@@ -1301,11 +1297,7 @@ fn pentax_special_tag_conv(
         }
         // Quality (0x0008): int16u — PrintConv lookup
         0x0008 if (data_type == 3 || data_type == 8) && count == 1 && value_data.len() >= 2 => {
-            let v = if data_type == 3 {
-                u16::from_be_bytes([value_data[0], value_data[1]])
-            } else {
-                u16::from_be_bytes([value_data[0], value_data[1]])
-            };
+            let v = u16::from_be_bytes([value_data[0], value_data[1]]);
             let s = match v {
                 0 => "Good",
                 1 => "Better",
@@ -1617,7 +1609,7 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: 
     let pb = |name: &str, v: &str| mk_pentax(name, v);
 
     // Byte 0: PictureMode2
-    if data.len() > 0 {
+    if !data.is_empty() {
         let b = data[0];
         let s = match b {
             0 => "Scene Mode",
@@ -2106,7 +2098,7 @@ fn decode_pentax_ae_info(data: &[u8]) -> Vec<Tag> {
     let pb = |name: &str, v: &str| mk_pentax(name, v);
 
     // Byte 0: AEExposureTime — 24*exp(-(val-32)*ln(2)/8)
-    if data.len() > 0 {
+    if !data.is_empty() {
         let raw = data[0] as f64;
         let tv = 24.0 * (-(raw - 32.0) * std::f64::consts::LN_2 / 8.0).exp();
         tags.push(pb("AEExposureTime", &print_exposure_time(tv)));
@@ -2373,7 +2365,7 @@ fn decode_pentax_lens_data(d: &[u8], tags: &mut Vec<Tag>) {
     let pb = |name: &str, v: &str| mk_pentax(name, v);
 
     // Byte 0: AutoAperture(bit0), MinAperture(bits 1-2), LensFStops(bits 4-6)
-    if d.len() > 0 {
+    if !d.is_empty() {
         let b = d[0];
         let aa = b & 0x01;
         tags.push(pb("AutoAperture", if aa == 0 { "On" } else { "Off" }));
@@ -3967,7 +3959,7 @@ fn read_makernote_ifd_with_base(
     }
 
     let entry_count = read_u16(data, ifd_offset, byte_order) as usize;
-    if manufacturer == Manufacturer::Canon {}
+
     if entry_count == 0 || entry_count > 500 {
         return;
     }
@@ -3988,8 +3980,6 @@ fn read_makernote_ifd_with_base(
         let data_type = read_u16(data, entry_offset + 2, byte_order);
         let count = read_u32(data, entry_offset + 4, byte_order);
         let value_offset = read_u32(data, entry_offset + 8, byte_order);
-
-        if manufacturer == Manufacturer::Canon {}
 
         // Validate entry
         if data_type == 0 || data_type > 13 || count > 100000 {
@@ -4056,13 +4046,12 @@ fn read_makernote_ifd_with_base(
             use crate::tags::sub_tables_generated::{self as subs, DispatchContext};
 
             let dispatch_ctx = DispatchContext {
-                model: &model_name,
+                model: model_name,
                 data: value_data,
                 count: count as usize,
                 byte_order_le: byte_order == ByteOrderMark::LittleEndian,
             };
 
-            if manufacturer == Manufacturer::Canon {}
             let sub_tags = match (manufacturer, tag_id) {
                 // Canon sub-tables
                 (Manufacturer::Canon, 0x0001) => {
@@ -5159,16 +5148,15 @@ fn read_makernote_ifd_with_base(
         //   1. format=ifd/int32u → offset to sub-IFD
         //   2. format=undefined → data IS the sub-IFD inline
         if (manufacturer == Manufacturer::Olympus || manufacturer == Manufacturer::OlympusNew)
-            && tag_id >= 0x2010
-            && tag_id <= 0x2050
+            && (0x2010..=0x2050).contains(&tag_id)
         {
             // Determine context-specific tag table
             let oly_table: &[(u16, &str)] = match tag_id {
-                0x2010 => &crate::tags::makernotes::OLYMPUS_EQUIPMENT,
-                0x2020 => &crate::tags::makernotes::OLYMPUS_CAMERA_SETTINGS,
-                0x2030 | 0x2031 => &crate::tags::makernotes::OLYMPUS_RAW_DEV,
-                0x2040 => &crate::tags::makernotes::OLYMPUS_IMAGE_PROCESSING,
-                0x2050 => &crate::tags::makernotes::OLYMPUS_FOCUS_INFO,
+                0x2010 => crate::tags::makernotes::OLYMPUS_EQUIPMENT,
+                0x2020 => crate::tags::makernotes::OLYMPUS_CAMERA_SETTINGS,
+                0x2030 | 0x2031 => crate::tags::makernotes::OLYMPUS_RAW_DEV,
+                0x2040 => crate::tags::makernotes::OLYMPUS_IMAGE_PROCESSING,
+                0x2050 => crate::tags::makernotes::OLYMPUS_FOCUS_INFO,
                 _ => &[],
             };
 
@@ -5423,10 +5411,11 @@ fn read_makernote_ifd_with_base(
         }
 
         // Canon ImageUniqueID (0x0028): suppress if all-zero bytes (Perl RawConv)
-        if manufacturer == Manufacturer::Canon && tag_id == 0x0028 {
-            if value_data.iter().all(|&b| b == 0) {
-                continue;
-            }
+        if manufacturer == Manufacturer::Canon
+            && tag_id == 0x0028
+            && value_data.iter().all(|&b| b == 0)
+        {
+            continue;
         }
 
         // Nikon: suppress tags that are SubDirectory in sub-tables but wrongly matched from generated
@@ -6465,7 +6454,7 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
         // PrintConv: '$val ? sprintf("%.2fV", $val * 5 / 186) : "n/a"'
         let fbl = 0x26cusize;
         if fbl < count {
-            let v = rdu(fbl) as u16;
+            let v = rdu(fbl);
             let pv = if v > 0 {
                 format!("{:.2}V", v as f64 * 5.0 / 186.0)
             } else {
@@ -6989,24 +6978,18 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
         Manufacturer::Nikon | Manufacturer::NikonOld => {
             let v = value.as_u64();
             match tag_id {
-                0x0087 => v
-                    .and_then(|v| nikon_conv::flash_mode(v))
-                    .map(|s| s.to_string()),
+                0x0087 => v.and_then(nikon_conv::flash_mode).map(|s| s.to_string()),
                 0x0089 => v.map(|v| nikon_conv::shooting_mode(v as u16)),
-                0x001E => v
-                    .and_then(|v| nikon_conv::color_space(v))
-                    .map(|s| s.to_string()),
+                0x001E => v.and_then(nikon_conv::color_space).map(|s| s.to_string()),
                 0x0022 => v
-                    .and_then(|v| nikon_conv::active_d_lighting(v))
+                    .and_then(nikon_conv::active_d_lighting)
                     .map(|s| s.to_string()),
                 0x002A => v
-                    .and_then(|v| nikon_conv::vignette_control(v))
+                    .and_then(nikon_conv::vignette_control)
                     .map(|s| s.to_string()),
-                0x00B1 => v
-                    .and_then(|v| nikon_conv::high_iso_nr(v))
-                    .map(|s| s.to_string()),
+                0x00B1 => v.and_then(nikon_conv::high_iso_nr).map(|s| s.to_string()),
                 0x0093 => v
-                    .and_then(|v| nikon_conv::nef_compression(v))
+                    .and_then(nikon_conv::nef_compression)
                     .map(|s| s.to_string()),
                 _ => None,
             }
@@ -7017,22 +7000,12 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 0xB020 => value
                     .as_str()
                     .map(|s| sony_conv::creative_style(s).to_string()),
-                0xB023 => v
-                    .and_then(|v| sony_conv::scene_mode(v))
-                    .map(|s| s.to_string()),
-                0xB025 => v.and_then(|v| sony_conv::dro(v)).map(|s| s.to_string()),
-                0xB029 => v
-                    .and_then(|v| sony_conv::color_mode(v))
-                    .map(|s| s.to_string()),
-                0xB041 => v
-                    .and_then(|v| sony_conv::exposure_mode(v))
-                    .map(|s| s.to_string()),
-                0x201B => v
-                    .and_then(|v| sony_conv::focus_mode(v))
-                    .map(|s| s.to_string()),
-                0x201C => v
-                    .and_then(|v| sony_conv::af_area_mode(v))
-                    .map(|s| s.to_string()),
+                0xB023 => v.and_then(sony_conv::scene_mode).map(|s| s.to_string()),
+                0xB025 => v.and_then(sony_conv::dro).map(|s| s.to_string()),
+                0xB029 => v.and_then(sony_conv::color_mode).map(|s| s.to_string()),
+                0xB041 => v.and_then(sony_conv::exposure_mode).map(|s| s.to_string()),
+                0x201B => v.and_then(sony_conv::focus_mode).map(|s| s.to_string()),
+                0x201C => v.and_then(sony_conv::af_area_mode).map(|s| s.to_string()),
                 _ => None,
             }
         }
@@ -7555,7 +7528,7 @@ fn decode_canon_ambience(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
     if data.iter().all(|&b| b == 0) {
         return tags;
     }
-    let off = 1 * 4;
+    let off = 4;
     if off + 4 > data.len() {
         return tags;
     }

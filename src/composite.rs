@@ -314,19 +314,17 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         if make.to_uppercase().contains("NIKON") {
             // AutoFocus from FocusMode (only from MakerNotes, not XMP)
             if let Some(fm_tag) = tags.iter().find(|t| t.name == "FocusMode") {
-                if fm_tag.group.family0 != "XMP" {
-                    if find_tag(&composite, "AutoFocus").is_none() {
-                        let af = if fm_tag.print_value.contains("Manual") {
-                            "Off"
-                        } else {
-                            "On"
-                        };
-                        composite.push(mk_composite(
-                            "AutoFocus",
-                            "Auto Focus",
-                            Value::String(af.into()),
-                        ));
-                    }
+                if fm_tag.group.family0 != "XMP" && find_tag(&composite, "AutoFocus").is_none() {
+                    let af = if fm_tag.print_value.contains("Manual") {
+                        "Off"
+                    } else {
+                        "On"
+                    };
+                    composite.push(mk_composite(
+                        "AutoFocus",
+                        "Auto Focus",
+                        Value::String(af.into()),
+                    ));
                 }
             }
             // LensSpec from Lens+LensType
@@ -381,11 +379,11 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
             find_tag_value(tags, "CFARepeatPatternDim"),
         ) {
             let dims: Vec<usize> = dim
-                .split(|c: char| c == ',' || c == ' ')
+                .split([',', ' '])
                 .filter_map(|s| s.trim().parse().ok())
                 .collect();
             let vals: Vec<u8> = pat
-                .split(|c: char| c == ',' || c == ' ')
+                .split([',', ' '])
                 .filter_map(|s| s.trim().parse().ok())
                 .collect();
             if dims.len() == 2 && dims[0] > 0 && dims[1] > 0 && vals.len() >= dims[0] * dims[1] {
@@ -472,7 +470,7 @@ fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<Vec<u8>> {
     let strip_len = find_tag(tags, "StripByteCounts")?.raw_value.as_u64()? as u32;
     let bps_str = find_tag_value(tags, "BitsPerSample").unwrap_or_default();
     let bps_vals: Vec<u16> = bps_str
-        .split(|c: char| c == ',' || c == ' ')
+        .split([',', ' '])
         .filter_map(|s| s.trim().parse().ok())
         .collect();
     if bps_vals.is_empty() {
@@ -617,7 +615,7 @@ fn find_tag_f64(tags: &[Tag], name: &str) -> Option<f64> {
                 // Try parsing from print value (strip units like "mm", "m", etc.)
                 t.print_value
                     .split(',')
-                    .last()
+                    .next_back()
                     .and_then(|s| {
                         let s = s.trim();
                         // Try direct parse first, then strip common suffixes
@@ -1033,7 +1031,7 @@ fn make_subsec_date(
         modified = true;
     }
     // Only add offset if date doesn't already have timezone (contains '+' or '-' after time part)
-    if !offset.is_empty() && !dt.contains('+') && !(dt.len() > 10 && dt[10..].contains('-')) {
+    if !(offset.is_empty() || dt.contains('+') || dt.len() > 10 && dt[10..].contains('-')) {
         result = format!("{}{}", result, offset.trim());
         modified = true;
     }
@@ -1729,7 +1727,7 @@ fn compute_geolocation(tags: &[Tag]) -> Option<Vec<Tag>> {
 
     // Load database (cached via OnceLock)
     static DB: OnceLock<Option<GeolocationDb>> = OnceLock::new();
-    let db = DB.get_or_init(|| GeolocationDb::load_default());
+    let db = DB.get_or_init(GeolocationDb::load_default);
 
     let db = db.as_ref()?;
     let city = db.find_nearest(lat, lon)?;

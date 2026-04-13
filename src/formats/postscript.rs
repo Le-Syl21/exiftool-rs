@@ -157,8 +157,7 @@ fn parse_photoshop_blocks(text: &str, tags: &mut Vec<Tag>) {
                 continue;
             } // skip header line
             let line = line.trim();
-            if line.starts_with("% ") {
-                let hex_part = &line[2..];
+            if let Some(hex_part) = line.strip_prefix("% ") {
                 hex_str.push_str(hex_part);
             }
         }
@@ -246,7 +245,7 @@ fn parse_photoshop_irb(data: &[u8], tags: &mut Vec<Tag>) {
 fn parse_image_data_comment(text: &str, tags: &mut Vec<Tag>) {
     for line in text.lines() {
         if let Some(rest) = line.strip_prefix("%ImageData:") {
-            let parts: Vec<&str> = rest.trim().split_whitespace().collect();
+            let parts: Vec<&str> = rest.split_whitespace().collect();
             if parts.len() >= 2 {
                 if let Ok(w) = parts[0].parse::<u32>() {
                     tags.push(mk("ImageWidth", "Image Width", Value::U32(w)));

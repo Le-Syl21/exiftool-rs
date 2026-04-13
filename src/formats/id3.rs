@@ -430,23 +430,24 @@ fn decode_pic_frame(data: &[u8]) -> Vec<Tag> {
 
     let pic_type_str = picture_type_str(pic_type);
 
-    let mut tags = Vec::new();
-    tags.push(mk(
-        "PictureFormat",
-        "Picture Format",
-        Value::String(image_format),
-    ));
-    tags.push(mk(
-        "PictureType",
-        "Picture Type",
-        Value::String(pic_type_str.to_string()),
-    ));
-    tags.push(mk(
-        "PictureDescription",
-        "Picture Description",
-        Value::String(description),
-    ));
-    tags.push(mk("Picture", "Picture", Value::Binary(image_data.to_vec())));
+    let tags = vec![
+        mk(
+            "PictureFormat",
+            "Picture Format",
+            Value::String(image_format),
+        ),
+        mk(
+            "PictureType",
+            "Picture Type",
+            Value::String(pic_type_str.to_string()),
+        ),
+        mk(
+            "PictureDescription",
+            "Picture Description",
+            Value::String(description),
+        ),
+        mk("Picture", "Picture", Value::Binary(image_data.to_vec())),
+    ];
     tags
 }
 

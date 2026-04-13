@@ -327,7 +327,7 @@ fn process_metadata(data: &[u8], tags: &mut Vec<Tag>) {
 
     while pos + 0x18 < end {
         // Check sentinel GUID
-        if &data[pos..pos + 16] != &METADATA_ENTRY_GUID {
+        if data[pos..pos + 16] != METADATA_ENTRY_GUID {
             break;
         }
 
@@ -462,7 +462,7 @@ pub fn read_wtv(data: &[u8]) -> Result<Vec<Tag>> {
     if data.len() < 0x60 {
         return Err(Error::InvalidData("WTV file too small".into()));
     }
-    if &data[..16] != &WTV_MAGIC {
+    if data[..16] != WTV_MAGIC {
         return Err(Error::InvalidData("not a WTV file".into()));
     }
 
@@ -490,7 +490,7 @@ pub fn read_wtv(data: &[u8]) -> Result<Vec<Tag>> {
 
     while pos + 0x28 < directory.len() {
         // Check directory entry GUID
-        if &directory[pos..pos + 16] != &DIR_ENTRY_GUID {
+        if directory[pos..pos + 16] != DIR_ENTRY_GUID {
             if pos > 0 {
                 break; // no more entries
             }

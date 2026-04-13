@@ -854,7 +854,7 @@ impl ExifTool {
         };
 
         let new_xmp = if !xmp_values.is_empty() {
-            let refs: Vec<&NewValue> = xmp_values.iter().copied().collect();
+            let refs: Vec<&NewValue> = xmp_values.to_vec();
             Some(self.build_new_xmp(&refs))
         } else {
             None
@@ -912,7 +912,7 @@ impl ExifTool {
             ilst_tags.iter().map(|(k, v)| (k, v.as_str())).collect();
 
         let new_xmp = if !xmp_values.is_empty() {
-            let refs: Vec<&NewValue> = xmp_values.iter().copied().collect();
+            let refs: Vec<&NewValue> = xmp_values.to_vec();
             Some(self.build_new_xmp(&refs))
         } else {
             None
@@ -971,7 +971,7 @@ impl ExifTool {
         };
 
         let new_xmp = if !xmp_values.is_empty() {
-            Some(self.build_new_xmp(&xmp_values.iter().map(|v| *v).collect::<Vec<_>>()))
+            Some(self.build_new_xmp(&xmp_values.to_vec()))
         } else {
             None
         };
@@ -1328,7 +1328,7 @@ impl ExifTool {
                     }
                     mrw_bo
                 } else {
-                    Some(&data[..])
+                    Some(data)
                 };
                 if let Some(tiff) = check {
                     if tiff.starts_with(b"II") {
@@ -1566,7 +1566,6 @@ impl ExifTool {
     }
 
     /// Dispatch to the appropriate format reader.
-
     fn process_file(&self, data: &[u8], file_type: FileType) -> Result<Vec<Tag>> {
         match file_type {
             FileType::Jpeg | FileType::Jps => formats::jpeg::read_jpeg(data),
@@ -2217,10 +2216,10 @@ fn value_to_filename(value: &str) -> String {
 /// Parse a date shift string like "+1:0:0" (add 1 hour) or "-0:30:0" (subtract 30 min).
 /// Returns (sign, hours, minutes, seconds).
 pub fn parse_date_shift(shift: &str) -> Option<(i32, u32, u32, u32)> {
-    let (sign, rest) = if shift.starts_with('-') {
-        (-1, &shift[1..])
-    } else if shift.starts_with('+') {
-        (1, &shift[1..])
+    let (sign, rest) = if let Some(stripped) = shift.strip_prefix('-') {
+        (-1, stripped)
+    } else if let Some(stripped) = shift.strip_prefix('+') {
+        (1, stripped)
     } else {
         (1, shift)
     };
@@ -2267,7 +2266,7 @@ pub fn shift_datetime(datetime: &str, shift: &str) -> Option<String> {
         + sign as i64 * (hours * 3600 + minutes * 60 + seconds) as i64;
 
     let days_shift = if total_secs < 0 {
-        -1 - (-total_secs - 1) as i64 / 86400
+        -1 - (-total_secs - 1) / 86400
     } else {
         total_secs / 86400
     };
@@ -2503,9 +2502,9 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
     let has_utf32be_bom = data.starts_with(&[0x00, 0x00, 0xFE, 0xFF]);
 
     // Detect if file has weird non-text control characters (like multi-byte unicode without BOM)
-    let has_weird_ctrl = data
-        .iter()
-        .any(|&b| (b <= 0x06) || (b >= 0x0e && b <= 0x1a) || (b >= 0x1c && b <= 0x1f) || b == 0x7f);
+    let has_weird_ctrl = data.iter().any(|&b| {
+        (b <= 0x06) || (0x0e..=0x1a).contains(&b) || (0x1c..=0x1f).contains(&b) || b == 0x7f
+    });
 
     let (encoding, is_bom, is_utf16) = if has_utf32le_bom {
         ("utf-32le", true, false)
@@ -2532,7 +2531,7 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
                 // For simplicity: valid UTF-8 without BOM = utf-8
                 ("utf-8", false, false)
             }
-        } else if !data.iter().any(|&b| b >= 0x80 && b <= 0x9f) {
+        } else if !data.iter().any(|&b| (0x80..=0x9f).contains(&b)) {
             ("iso-8859-1", false, false)
         } else {
             ("unknown-8bit", false, false)

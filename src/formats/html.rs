@@ -364,9 +364,7 @@ fn parse_office_custom_props(xml: &str, tags: &mut Vec<Tag>) {
         let rest = &section[abs_start + 3..]; // skip "<o:"
 
         // Get tag name (up to '>' or ' ')
-        let name_end = rest
-            .find(|c: char| c == '>' || c == ' ' || c == '/')
-            .unwrap_or(rest.len());
+        let name_end = rest.find(['>', ' ', '/']).unwrap_or(rest.len());
         let raw_tag_name = &rest[..name_end];
 
         // Find '>' to get past attributes
@@ -460,12 +458,12 @@ fn extract_attr(tag: &str, attr_name: &str) -> Option<String> {
     let rest = &tag[pos + pattern.len()..];
     let rest = rest.trim_start();
 
-    if rest.starts_with('"') {
-        let end = rest[1..].find('"')?;
-        Some(rest[1..1 + end].to_string())
-    } else if rest.starts_with('\'') {
-        let end = rest[1..].find('\'')?;
-        Some(rest[1..1 + end].to_string())
+    if let Some(stripped) = rest.strip_prefix('"') {
+        let end = stripped.find('"')?;
+        Some(stripped[..end].to_string())
+    } else if let Some(stripped) = rest.strip_prefix('\'') {
+        let end = stripped.find('\'')?;
+        Some(stripped[..end].to_string())
     } else {
         let end = rest
             .find(|c: char| c.is_whitespace() || c == '>' || c == '/')

@@ -37,6 +37,7 @@ impl<'a> DispatchContext<'a> {
 // Canon: CameraInfo (0x000D) — 36 variants by Model regex
 // ============================================================================
 
+#[allow(clippy::if_same_then_else)]
 pub fn dispatch_canon_camera_info(ctx: &DispatchContext) -> Vec<Tag> {
     let m = ctx.model;
     // Exact order from Canon.pm lines 1307-1494

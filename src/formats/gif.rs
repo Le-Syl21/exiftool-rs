@@ -109,10 +109,7 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
                         if !comment.is_empty() {
                             let text = crate::encoding::decode_utf8_or_latin1(&comment).to_string();
                             // Normalize newlines to ".." to match ExifTool output format
-                            let text = text
-                                .replace("\r\n", "..")
-                                .replace('\n', "..")
-                                .replace('\r', "..");
+                            let text = text.replace("\r\n", "..").replace(['\n', '\r'], "..");
                             tags.push(mk("Comment", "Comment", Value::String(text)));
                         }
                     }

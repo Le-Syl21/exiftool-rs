@@ -67,7 +67,7 @@ pub fn read_openexr(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
         return Ok(Vec::new());
     }
     // Magic: 0x762f3101 (little-endian)
-    if &data[0..4] != &[0x76, 0x2f, 0x31, 0x01] {
+    if data[0..4] != [0x76, 0x2f, 0x31, 0x01] {
         return Ok(Vec::new());
     }
 
@@ -294,7 +294,7 @@ pub fn read_openexr(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                         val_data[3],
                     ]));
                     // Format like Perl: integer if whole, else float
-                    let s = if v.fract() == 0.0 && v >= 0.0 && v < 1e9 {
+                    let s = if v.fract() == 0.0 && (0.0..1e9).contains(&v) {
                         format!("{}", v as i64)
                     } else {
                         format!("{}", v)

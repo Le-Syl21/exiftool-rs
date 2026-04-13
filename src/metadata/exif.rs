@@ -310,9 +310,8 @@ impl ExifReader {
                             // IPTC-NAA stored as uint32 list - convert back to bytes (big-endian)
                             let mut bytes = Vec::with_capacity(items.len() * 4);
                             for item in items {
-                                match item {
-                                    Value::U32(v) => bytes.extend_from_slice(&v.to_be_bytes()),
-                                    _ => {}
+                                if let Value::U32(v) = item {
+                                    bytes.extend_from_slice(&v.to_be_bytes())
                                 }
                             }
                             if bytes.is_empty() {
@@ -745,10 +744,10 @@ impl ExifReader {
                 }
                 // Suppress GPS tag 0x0006 (GPSAltitude) when value is 0/0
                 0x0006 if ifd_name == "GPS" => {
-                    if let Some(val) = read_ifd_value(data, &entry, header.byte_order) {
-                        if let Value::URational(0, 0) = val {
-                            continue;
-                        }
+                    if let Some(Value::URational(0, 0)) =
+                        read_ifd_value(data, &entry, header.byte_order)
+                    {
+                        continue;
                     }
                 }
                 // In SubIFD, tag 0x0201 = JpgFromRawStart (JPEG preview offset)
@@ -1623,12 +1622,12 @@ fn geotiff_key_to_tag(key_id: u16, value: &str) -> (String, String) {
         0x0C07 => return ("ProjStdParallel2".to_string(), value.to_string()),
         0x0C08 => return ("ProjNatOriginLong".to_string(), value.to_string()),
         0x0C09 => return ("ProjNatOriginLat".to_string(), value.to_string()),
-        0x0C0a => return ("ProjFalseEasting".to_string(), value.to_string()),
-        0x0C0b => return ("ProjFalseNorthing".to_string(), value.to_string()),
-        0x0C0c => return ("ProjFalseOriginLong".to_string(), value.to_string()),
-        0x0C0d => return ("ProjFalseOriginLat".to_string(), value.to_string()),
-        0x0C0e => return ("ProjFalseOriginEasting".to_string(), value.to_string()),
-        0x0C0f => return ("ProjFalseOriginNorthing".to_string(), value.to_string()),
+        0x0c0a => return ("ProjFalseEasting".to_string(), value.to_string()),
+        0x0c0b => return ("ProjFalseNorthing".to_string(), value.to_string()),
+        0x0c0c => return ("ProjFalseOriginLong".to_string(), value.to_string()),
+        0x0c0d => return ("ProjFalseOriginLat".to_string(), value.to_string()),
+        0x0c0e => return ("ProjFalseOriginEasting".to_string(), value.to_string()),
+        0x0c0f => return ("ProjFalseOriginNorthing".to_string(), value.to_string()),
         0x0C10 => return ("ProjCenterLong".to_string(), value.to_string()),
         0x0C11 => return ("ProjCenterLat".to_string(), value.to_string()),
         0x0C12 => return ("ProjCenterEasting".to_string(), value.to_string()),

@@ -66,14 +66,10 @@ pub fn read_j2c(data: &[u8]) -> Result<Vec<Tag>> {
             0x64 => {
                 // CME: comment and extension
                 if seg_data.len() >= 2 {
-                    let reg = u16::from_be_bytes([seg_data[0], seg_data[1]]);
+                    let _reg = u16::from_be_bytes([seg_data[0], seg_data[1]]);
                     let val = &seg_data[2..];
                     if !val.is_empty() {
-                        let comment = if reg == 1 {
-                            crate::encoding::decode_utf8_or_latin1(val)
-                        } else {
-                            crate::encoding::decode_utf8_or_latin1(val)
-                        };
+                        let comment = crate::encoding::decode_utf8_or_latin1(val);
                         tags.push(mk("Comment", "Comment", Value::String(comment)));
                     }
                 }
@@ -327,7 +323,7 @@ fn parse_boxes(
                     let uuid = &data[content_start..content_start + 16];
                     let payload = &data[content_start + 16..content_end];
 
-                    if uuid == &UUID_XMP {
+                    if uuid == UUID_XMP {
                         // XMP by UUID
                         if let Ok(xmp_tags) = XmpReader::read(payload) {
                             tags.extend(xmp_tags);
@@ -337,7 +333,7 @@ fn parse_boxes(
                         if let Ok(exif_tags) = ExifReader::read(payload) {
                             tags.extend(exif_tags);
                         }
-                    } else if uuid == &UUID_EXIF {
+                    } else if uuid == UUID_EXIF {
                         // Alternative EXIF UUID (from our constant)
                         if let Ok(exif_tags) = ExifReader::read(payload) {
                             tags.extend(exif_tags);
@@ -348,7 +344,7 @@ fn parse_boxes(
                             0xb1, 0x4b, 0xf8, 0xbd, 0x08, 0x3d, 0x4b, 0x43, 0xa5, 0xae, 0x8c, 0xd7,
                             0xd5, 0xa6, 0xce, 0x03,
                         ];
-                        if uuid == &UUID_GEOJP2 {
+                        if uuid == UUID_GEOJP2 {
                             // GeoTIFF data: TIFF file
                             if let Ok(geo_tags) = ExifReader::read(payload) {
                                 tags.extend(geo_tags);

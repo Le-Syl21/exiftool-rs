@@ -58,10 +58,10 @@ pub fn read_font(data: &[u8]) -> Result<Vec<Tag>> {
             && (dat_off == 0x100
                 || (dat_off as u64 + dat_len as u64 == map_off as u64)
                 || (map_off as u64 + map_len as u64 <= data.len() as u64))
+            && read_dfont(data, &mut tags).is_ok()
+            && !tags.is_empty()
         {
-            if read_dfont(data, &mut tags).is_ok() && !tags.is_empty() {
-                return Ok(tags);
-            }
+            return Ok(tags);
         }
     }
 
@@ -667,10 +667,10 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
         if line.contains("FontInfo") && (line.contains("begin") || line.contains("dict begin")) {
             in_font_info = true;
         }
-        if line.contains("currentdict end") || line.contains("end\n") || line.trim() == "end" {
-            if in_font_info {
-                in_font_info = false;
-            }
+        if (line.contains("currentdict end") || line.contains("end\n") || line.trim() == "end")
+            && in_font_info
+        {
+            in_font_info = false;
         }
 
         // Parse /key value lines (both inside and outside FontInfo for top-level attrs)
@@ -678,7 +678,7 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
             let line_trimmed = line.trim();
             if let Some(rest) = line_trimmed.strip_prefix('/') {
                 // Parse /Key value
-                if let Some((key, val_part)) = rest.split_once(|c: char| c == ' ' || c == '\t') {
+                if let Some((key, val_part)) = rest.split_once([' ', '\t']) {
                     let val = val_part.trim();
                     let val_str = if val.starts_with('(') && val.contains(')') {
                         // PostScript string literal (value)
@@ -688,9 +688,9 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
                         } else {
                             inner.to_string()
                         }
-                    } else if val.starts_with('/') {
+                    } else if let Some(stripped) = val.strip_prefix('/') {
                         // /Key /Value
-                        val[1..].split_whitespace().next().unwrap_or("").to_string()
+                        stripped.split_whitespace().next().unwrap_or("").to_string()
                     } else {
                         // /Key value (number, boolean)
                         val.split_whitespace().next().unwrap_or("").to_string()
@@ -788,8 +788,7 @@ pub fn read_afm(data: &[u8]) -> Result<Vec<Tag>> {
 
     for line in text.lines() {
         // Comment lines: "Comment key: value" or "Comment text"
-        if line.starts_with("Comment ") {
-            let rest = &line[8..];
+        if let Some(rest) = line.strip_prefix("Comment ") {
             // Check for "Comment Creation Date: ..."
             if let Some(stripped) = rest.strip_prefix("Creation Date: ") {
                 create_date = Some(stripped.trim().to_string());
@@ -805,7 +804,7 @@ pub fn read_afm(data: &[u8]) -> Result<Vec<Tag>> {
         }
 
         // Key value pairs separated by first whitespace
-        if let Some((key, value)) = line.split_once(|c: char| c == ' ' || c == '\t') {
+        if let Some((key, value)) = line.split_once([' ', '\t']) {
             let key = key.trim();
             let value = value.trim();
 

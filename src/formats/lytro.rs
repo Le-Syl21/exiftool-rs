@@ -286,8 +286,7 @@ fn tag_path_to_name(tag_path: &str) -> (String, bool) {
     let cleaned = cleaned.replace("ParametersVendorContentComLytroTags", "");
 
     // Step 3: check and strip leading Devices
-    if cleaned.starts_with("Devices") {
-        let stripped = &cleaned["Devices".len()..];
+    if let Some(stripped) = cleaned.strip_prefix("Devices") {
         (stripped.to_string(), true)
     } else {
         (cleaned, false)

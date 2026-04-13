@@ -45,7 +45,7 @@ pub fn write_jp2(
         match box_type {
             b"uuid"
                 if actual_size > 24
-                    && &source[pos + 8..pos + 24] == UUID_XMP
+                    && source[pos + 8..pos + 24] == UUID_XMP
                     && new_xmp.is_some() =>
             {
                 // Replace XMP uuid box

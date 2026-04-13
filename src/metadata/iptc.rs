@@ -20,6 +20,7 @@ impl IptcReader {
     ///   - 1 byte:  dataset number
     ///   - 2 bytes: data length (big-endian), or extended if >= 0x8000
     ///   - N bytes: data
+    ///
     /// Pre-scan IPTC data for CodedCharacterSet (record 1, dataset 90).
     /// Returns true if UTF-8 is indicated (ESC %G = bytes 0x1B 0x25 0x47).
     fn detect_iptc_charset(data: &[u8]) -> bool {
@@ -91,7 +92,7 @@ impl IptcReader {
 
             // Check for PhotoMechanic SoftEdit fields BEFORE string decoding
             // (These are int32s, not strings, so must be decoded as binary)
-            if record == 2 && dataset >= 209 && dataset <= 222 {
+            if record == 2 && (209..=222).contains(&dataset) {
                 // Decode as binary (int32s)
                 let bin_value = Value::Binary(value_data.to_vec());
                 if let Some((pm_name, pm_print)) = lookup_photomechanic(dataset, &bin_value) {

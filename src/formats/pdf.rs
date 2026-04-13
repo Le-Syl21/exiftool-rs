@@ -231,7 +231,7 @@ fn decode_pdf_literal_bytes(raw: &[u8]) -> String {
                 b')' => bytes.push(b')'),
                 b'\\' => bytes.push(b'\\'),
                 b'0'..=b'7' => {
-                    let mut val = (raw[i] - b'0') as u8;
+                    let mut val = raw[i] - b'0';
                     if i + 1 < raw.len() && raw[i + 1] >= b'0' && raw[i + 1] <= b'7' {
                         i += 1;
                         val = val * 8 + (raw[i] - b'0');

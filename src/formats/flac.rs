@@ -83,7 +83,7 @@ fn parse_stream_info(data: &[u8], tags: &mut Vec<Tag>) {
         ((data[10] as u32) << 12) | ((data[11] as u32) << 4) | ((data[12] as u32) >> 4);
 
     let channels = ((data[12] >> 1) & 0x07) + 1;
-    let bits_per_sample = (((data[12] & 0x01) as u16) << 4) | ((data[13] >> 4) as u16) + 1;
+    let bits_per_sample = ((((data[12] & 0x01) as u16) << 4) | ((data[13] >> 4) as u16)) + 1;
 
     let total_samples = (((data[13] & 0x0F) as u64) << 32)
         | ((data[14] as u64) << 24)
@@ -390,7 +390,7 @@ pub fn base64_decode(input: &str) -> Option<Vec<u8>> {
 
 /// Convert "SOME WORDS" to "SomeWords" (CamelCase, spaces/underscores removed).
 fn to_camel_case(s: &str) -> String {
-    s.split(|c: char| c == ' ' || c == '_')
+    s.split([' ', '_'])
         .filter(|w| !w.is_empty())
         .map(|w| {
             let mut chars = w.chars();
@@ -457,7 +457,7 @@ fn vorbis_field_name(field: &str) -> (&str, &str) {
                 // The caller handles this case separately
                 return (field, field);
             }
-            return (field, field);
+            (field, field)
         }
     }
 }

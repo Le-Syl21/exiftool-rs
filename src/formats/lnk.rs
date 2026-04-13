@@ -131,7 +131,7 @@ fn dos_time(val: u32) -> Option<String> {
     let day = val & 0x1f;
     let hour = (val >> 27) & 0x1f;
     let min = (val >> 21) & 0x3f;
-    let sec = ((val >> 15) & 0x3e) as u32; // 2-second resolution, bits 20-15
+    let sec = (val >> 15) & 0x3e; // 2-second resolution, bits 20-15
     if month == 0 || day == 0 {
         return None;
     }
@@ -777,11 +777,9 @@ fn process_lnk_header(data: &[u8], tags: &mut Vec<Tag>) {
             "(none)".to_string()
         } else {
             let ch = hk & 0xff;
-            let mut key = if ch >= 0x30 && ch <= 0x39 {
+            let mut key = if (0x30..=0x39).contains(&ch) || (0x41..=0x5a).contains(&ch) {
                 format!("{}", (ch as u8) as char)
-            } else if ch >= 0x41 && ch <= 0x5a {
-                format!("{}", (ch as u8) as char)
-            } else if ch >= 0x70 && ch <= 0x87 {
+            } else if (0x70..=0x87).contains(&ch) {
                 format!("F{}", ch - 0x6f)
             } else if ch == 0x90 {
                 "Num Lock".to_string()
@@ -1040,7 +1038,7 @@ fn extract_item00_strings(data: &[u8], off: usize, tags: &mut Vec<Tag>, tag_name
         for segment in sub.split(|&b| b == 0) {
             let s: String = segment
                 .iter()
-                .filter(|&&b| b >= 0x20 && b <= 0x7f)
+                .filter(|&&b| (0x20..=0x7f).contains(&b))
                 .map(|&b| b as char)
                 .collect();
             if !s.is_empty() {
@@ -1280,7 +1278,7 @@ fn process_network_location(data: &[u8], tags: &mut Vec<Tag>) {
     for segment in sub.split(|&b| b == 0) {
         let s: String = segment
             .iter()
-            .filter(|&&b| b >= 0x20 && b <= 0x7f)
+            .filter(|&&b| (0x20..=0x7f).contains(&b))
             .map(|&b| b as char)
             .collect();
         if !s.is_empty() {
@@ -1414,7 +1412,7 @@ fn process_vendor_data(data: &[u8], tags: &mut Vec<Tag>) {
         for segment in data[2..].split(|&b| b == 0) {
             let s: String = segment
                 .iter()
-                .filter(|&&b| b >= 0x20 && b <= 0x7e)
+                .filter(|&&b| (0x20..=0x7e).contains(&b))
                 .map(|&b| b as char)
                 .collect();
             if s.len() >= 3 {
@@ -1893,8 +1891,8 @@ pub fn read_lnk(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
     }
 
     // Check CLSID: 01 14 02 00 00 00 00 00 C0 00 00 00 00 00 00 46
-    let clsid_ok = &data[4..20]
-        == &[
+    let clsid_ok = data[4..20]
+        == [
             0x01, 0x14, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x46,
         ];
@@ -2030,8 +2028,8 @@ pub fn read_url(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
     // Check if it's a binary LNK (magic check)
     if data.len() >= 20 {
         let clsid_ok = data.len() >= 20
-            && &data[4..20]
-                == &[
+            && data[4..20]
+                == [
                     0x01, 0x14, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00,
                     0x00, 0x00, 0x46,
                 ];

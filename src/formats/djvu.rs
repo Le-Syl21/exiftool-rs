@@ -229,10 +229,10 @@ fn extract_sexpr_value(text: &str, name: &str) -> Option<String> {
 
 fn extract_sexpr_string(text: &str) -> Option<String> {
     let text = text.trim_start();
-    if text.starts_with('"') {
+    if let Some(stripped) = text.strip_prefix('"') {
         // Parse quoted string
         let mut result = String::new();
-        let mut chars = text[1..].chars();
+        let mut chars = stripped.chars();
         loop {
             match chars.next() {
                 None => break,

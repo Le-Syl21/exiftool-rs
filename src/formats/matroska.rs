@@ -633,8 +633,8 @@ fn read_vint_raw(data: &[u8], pos: usize) -> Result<(u64, usize)> {
 fn read_uint(data: &[u8], pos: usize, size: usize) -> u64 {
     let end = (pos + size).min(data.len());
     let mut value = 0u64;
-    for i in pos..end {
-        value = (value << 8) | data[i] as u64;
+    for &byte in &data[pos..end] {
+        value = (value << 8) | byte as u64;
     }
     value
 }

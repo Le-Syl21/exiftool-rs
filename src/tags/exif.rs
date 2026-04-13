@@ -16,11 +16,11 @@ pub struct TagInfo {
 /// Lookup tag info by IFD name and tag ID.
 pub fn lookup(ifd: &str, tag_id: u16) -> Option<&'static TagInfo> {
     let table = match ifd {
-        "IFD0" | "IFD1" => &IFD0_TAGS[..],
-        "ExifIFD" => &EXIF_IFD_TAGS[..],
-        "GPS" => &GPS_TAGS[..],
-        "InteropIFD" => &INTEROP_TAGS[..],
-        _ => &IFD0_TAGS[..],
+        "IFD0" | "IFD1" => IFD0_TAGS,
+        "ExifIFD" => EXIF_IFD_TAGS,
+        "GPS" => GPS_TAGS,
+        "InteropIFD" => INTEROP_TAGS,
+        _ => IFD0_TAGS,
     };
 
     table.iter().find(|t| t.tag_id == tag_id)
@@ -338,7 +338,7 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
         // FileSource
         ("ExifIFD", 0xA300) => {
             if let Value::Undefined(ref data) = value {
-                if data.len() >= 1 {
+                if !data.is_empty() {
                     return Some(
                         match data[0] {
                             1 => "Film Scanner",
@@ -354,7 +354,7 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
         // SceneType
         ("ExifIFD", 0xA301) => {
             if let Value::Undefined(ref data) = value {
-                if data.len() >= 1 && data[0] == 1 {
+                if !data.is_empty() && data[0] == 1 {
                     return Some("Directly photographed".to_string());
                 }
             }

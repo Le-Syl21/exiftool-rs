@@ -227,9 +227,8 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
 /// Returns (value_string, is_continued) where is_continued means value ends with '&'.
 fn fits_parse_value(s: &str) -> (String, bool) {
     let s = s.trim_start();
-    if s.starts_with('\'') {
+    if let Some(inner) = s.strip_prefix('\'') {
         // Quoted string: parse until closing quote (doubled quotes are escaped)
-        let inner = &s[1..];
         let mut result = String::new();
         let mut chars = inner.chars().peekable();
         loop {
@@ -259,9 +258,9 @@ fn fits_parse_value(s: &str) -> (String, bool) {
     } else {
         // Non-quoted: take everything up to comment marker /
         // Remove trailing spaces and comment
-        let val = s.splitn(2, '/').next().unwrap_or("").trim().to_string();
+        let val = s.split('/').next().unwrap_or("").trim().to_string();
         // Re-format float exponents: D/E -> e
-        let val = val.replace('D', "e").replace('E', "e");
+        let val = val.replace(['D', 'E'], "e");
         if val.is_empty() {
             return (String::new(), false);
         }
@@ -278,7 +277,7 @@ fn fits_parse_continued_value(s: &str) -> (String, bool) {
 /// Known keywords get special names; others get generated from keyword.
 fn fits_keyword_to_name(keyword: &str) -> String {
     match keyword {
-        "SIMPLE" => return String::new(), // Perl internal only
+        "SIMPLE" => String::new(), // Perl internal only
         "BITPIX" => "Bitpix".into(),
         "NAXIS" => "Naxis".into(),
         "NAXIS1" => "Naxis1".into(),
@@ -1117,7 +1116,7 @@ pub fn read_swf(data: &[u8]) -> Result<Vec<Tag>> {
         "SWF",
         "Compressed",
         "Compressed",
-        Value::String(if compressed { "False" } else { "False" }.into()),
+        Value::String(if compressed { "True" } else { "False" }.into()),
     ));
 
     // Parse SWF body (starting at byte 8)
@@ -1152,8 +1151,8 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
     // Read bit string
     let mut bit_str = 0u64;
     let bytes_to_read = n_bytes.min(8);
-    for i in 0..bytes_to_read {
-        bit_str = (bit_str << 8) | body[i] as u64;
+    for item in body.iter().take(bytes_to_read) {
+        bit_str = (bit_str << 8) | *item as u64;
     }
     // Shift to align: the first 5 bits are nBits, then we have 4 * nBits values
     let total_64 = bytes_to_read * 8;
@@ -1235,7 +1234,7 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
     let mut found_attributes = false;
     while tag_pos + 2 <= body.len() {
         let code = u16::from_le_bytes([body[tag_pos], body[tag_pos + 1]]);
-        let tag_type = (code >> 6) as u16;
+        let tag_type = code >> 6;
         let short_len = (code & 0x3F) as usize;
         tag_pos += 2;
 
@@ -2385,12 +2384,7 @@ pub fn read_bpg(data: &[u8]) -> Result<Vec<Tag>> {
         flag_parts.push("Extension Present");
     }
     let flags_str = flag_parts.join(", ");
-    tags.push(mktag(
-        "BPG",
-        "Flags",
-        "Flags",
-        Value::String(flags_str.into()),
-    ));
+    tags.push(mktag("BPG", "Flags", "Flags", Value::String(flags_str)));
 
     // Width, height, and image length are ue7-encoded starting at offset 6
     let mut pos = 6;
@@ -2561,24 +2555,28 @@ pub fn read_pict(data: &[u8]) -> Result<Vec<Tag>> {
         // Version 2: next 2 bytes are 0x02ff, then check for extended
         // d[12..14] = 0x02ff, d[14..16] = 0x0c00
         // d[16..18]: 0xffff = normal, 0xfffe = extended
-        if d.len() >= 18 && d[12] == 0x02 && d[13] == 0xff {
-            if d[16] == 0xff && d[17] == 0xfe && d.len() >= 36 {
-                // Extended version 2: resolution at offsets 24..28 and 28..32 (x8 skip from byte 16)
-                // From Perl: unpack('x8N2', $buff) where buff starts at byte after 0x0011 opcode
-                // $buff was read starting at position 12 (after 12-byte first read)
-                // x8 skips bytes 12..20, N2 reads bytes 20..24 and 24..28 in original data
-                // Actually the 28 bytes buff starts after the 12-byte header
-                // In d: after opcode 0x0011 at d[10..12], read 28 bytes: d[12..40]
-                // x8 skip => skip d[12..20], N2 => d[20..24] and d[24..28]
-                let h_fixed = i32::from_be_bytes([d[20], d[21], d[22], d[23]]);
-                let v_fixed = i32::from_be_bytes([d[24], d[25], d[26], d[27]]);
-                if h_fixed != 0 && v_fixed != 0 {
-                    h_res = Some(h_fixed as f64 / 65536.0);
-                    v_res = Some(v_fixed as f64 / 65536.0);
-                    // Scale dimensions from 72-dpi equivalent
-                    w = (w as f64 * h_res.unwrap() / 72.0 + 0.5) as i32;
-                    h = (h as f64 * v_res.unwrap() / 72.0 + 0.5) as i32;
-                }
+        if d.len() >= 18
+            && d[12] == 0x02
+            && d[13] == 0xff
+            && d[16] == 0xff
+            && d[17] == 0xfe
+            && d.len() >= 36
+        {
+            // Extended version 2: resolution at offsets 24..28 and 28..32 (x8 skip from byte 16)
+            // From Perl: unpack('x8N2', $buff) where buff starts at byte after 0x0011 opcode
+            // $buff was read starting at position 12 (after 12-byte first read)
+            // x8 skips bytes 12..20, N2 reads bytes 20..24 and 24..28 in original data
+            // Actually the 28 bytes buff starts after the 12-byte header
+            // In d: after opcode 0x0011 at d[10..12], read 28 bytes: d[12..40]
+            // x8 skip => skip d[12..20], N2 => d[20..24] and d[24..28]
+            let h_fixed = i32::from_be_bytes([d[20], d[21], d[22], d[23]]);
+            let v_fixed = i32::from_be_bytes([d[24], d[25], d[26], d[27]]);
+            if h_fixed != 0 && v_fixed != 0 {
+                h_res = Some(h_fixed as f64 / 65536.0);
+                v_res = Some(v_fixed as f64 / 65536.0);
+                // Scale dimensions from 72-dpi equivalent
+                w = (w as f64 * h_res.unwrap() / 72.0 + 0.5) as i32;
+                h = (h as f64 * v_res.unwrap() / 72.0 + 0.5) as i32;
             }
         }
     }
@@ -3387,7 +3385,7 @@ fn m2ts_parse_sps(sps_nal: &[u8]) -> Option<(u32, u32)> {
     let w = (pic_w + 1) * 16 - 4 * cl - 4 * cr;
     let h = ((pic_h + 1) * (2 - frame_mbs_only)) * 16 - m * ct - m * cb;
     // Validity check matching ExifTool H264.pm
-    if w >= 160 && w <= 4096 && h >= 120 && h <= 3072 {
+    if (160..=4096).contains(&w) && (120..=3072).contains(&h) {
         Some((w, h))
     } else {
         None
@@ -5614,7 +5612,7 @@ fn sevenz_read_names(data: &[u8], num_files: usize, filenames: &mut [Option<Stri
     }
 
     let mut pos = 1;
-    for i in 0..num_files {
+    for item in filenames.iter_mut().take(num_files) {
         let mut utf16_units = Vec::new();
         loop {
             if pos + 2 > data.len() {
@@ -5628,7 +5626,7 @@ fn sevenz_read_names(data: &[u8], num_files: usize, filenames: &mut [Option<Stri
             utf16_units.push(ch);
         }
         if !utf16_units.is_empty() {
-            filenames[i] = Some(String::from_utf16_lossy(&utf16_units));
+            *item = Some(String::from_utf16_lossy(&utf16_units));
         }
     }
 }
@@ -5813,7 +5811,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                 }
 
                 // SVG body elements (desc, title, etc.) - NOT metadata, NOT root svg
-                if !in_metadata && path.len() >= 1 {
+                if !in_metadata && !path.is_empty() {
                     in_svg_body = true;
                     // Mark parent as having a child
                     if let Some(last) = had_child.last_mut() {
@@ -6510,13 +6508,11 @@ fn json_key_to_tag_name(key: &str) -> String {
     while i < chars.len() {
         let c = chars[i];
         result.push(c);
-        if !c.is_ascii_alphabetic() && i + 1 < chars.len() {
-            if chars[i + 1].is_ascii_lowercase() {
-                let uc = chars[i + 1].to_ascii_uppercase();
-                result.push(uc);
-                i += 2;
-                continue;
-            }
+        if !c.is_ascii_alphabetic() && i + 1 < chars.len() && chars[i + 1].is_ascii_lowercase() {
+            let uc = chars[i + 1].to_ascii_uppercase();
+            result.push(uc);
+            i += 2;
+            continue;
         }
         i += 1;
     }
@@ -6869,7 +6865,7 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
         Value::String(format!("{}.{}", ver, rev)),
     ));
 
-    if ver < 1 || ver > 2 {
+    if !(1..=2).contains(&ver) {
         return Ok(tags);
     }
 
@@ -7216,15 +7212,14 @@ pub fn read_ram(data: &[u8]) -> Result<Vec<Tag>> {
             continue;
         }
         // Validate http:// URLs
-        if line.starts_with("http://") {
-            if !line.ends_with(".ra")
-                && !line.ends_with(".rm")
-                && !line.ends_with(".rv")
-                && !line.ends_with(".rmvb")
-                && !line.ends_with(".smil")
-            {
-                continue;
-            }
+        if line.starts_with("http://")
+            && !line.ends_with(".ra")
+            && !line.ends_with(".rm")
+            && !line.ends_with(".rv")
+            && !line.ends_with(".rmvb")
+            && !line.ends_with(".smil")
+        {
+            continue;
         }
         if valid_protocols.iter().any(|p| line.starts_with(p)) {
             tags.push(mktag("Real", "URL", "URL", Value::String(line.into())));
@@ -7922,7 +7917,7 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
         return Err(Error::InvalidData("not an ITC file".into()));
     }
     let first_size = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
-    if &data[4..8] != b"itch" || first_size < 0x1c || first_size >= 0x10000 {
+    if &data[4..8] != b"itch" || !(0x1c..0x10000).contains(&first_size) {
         return Err(Error::InvalidData("not an ITC file".into()));
     }
 
@@ -7934,7 +7929,7 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
             u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
         let block_tag = &data[pos + 4..pos + 8];
 
-        if block_size < 8 || block_size >= 0x80000000 {
+        if !(8..0x80000000).contains(&block_size) {
             break;
         }
         if pos + block_size > data.len() {
@@ -8237,7 +8232,7 @@ fn czi_parse_xml(xml: &str, tags: &mut Vec<Tag>) {
             }
             Ok(XmlEvent::EndElement { .. }) => {
                 let is_ignored = ignored.pop().unwrap_or(false);
-                let is_leaf = has_child.pop().unwrap_or(false) == false;
+                let is_leaf = !has_child.pop().unwrap_or(false);
 
                 if !is_ignored {
                     if is_leaf {
@@ -8431,10 +8426,9 @@ fn czi_shorten_tag_name(name: &str) -> String {
 fn regex_replace(s: &str, pat: &str, replacement: &str) -> String {
     // For simple patterns, use manual string matching
     // For patterns with anchors or groups, implement manually
-    if pat.starts_with('^') {
-        let pat_body = &pat[1..];
-        if s.starts_with(pat_body) {
-            return format!("{}{}", replacement, &s[pat_body.len()..]);
+    if let Some(pat_body) = pat.strip_prefix('^') {
+        if let Some(stripped) = s.strip_prefix(pat_body) {
+            return format!("{}{}", replacement, stripped);
         }
         return s.to_string();
     }
@@ -8453,8 +8447,7 @@ fn regex_replace(s: &str, pat: &str, replacement: &str) -> String {
 
 fn regex_replace_first(s: &str, pat: &str, replacement: &str) -> String {
     // Handle patterns like "Setups?" (optional s) and "Parameters?"
-    let variants: Vec<&str> = if pat.ends_with('?') {
-        let base = &pat[..pat.len() - 1];
+    let variants: Vec<&str> = if let Some(base) = pat.strip_suffix('?') {
         let long = pat.trim_end_matches('?');
         // "Setups?" → try "Setups" then "Setup"
         // We need both variants
@@ -9108,7 +9101,7 @@ fn real_parse_prop_value(
 
 fn real_parse_date(s: &str) -> String {
     // Parse "D/M/YYYY H:MM:SS" or "DD/MM/YYYY HH:MM:SS"
-    let parts: Vec<&str> = s.split(|c| c == '/' || c == ' ' || c == ':').collect();
+    let parts: Vec<&str> = s.split(['/', ' ', ':']).collect();
     if parts.len() >= 6 {
         let day: u32 = parts[0].parse().unwrap_or(0);
         let month: u32 = parts[1].parse().unwrap_or(0);
@@ -10067,8 +10060,7 @@ fn pcd_rtrim_str(bytes: &[u8]) -> String {
     // Perl's string[] format reads to null terminator, then trims trailing spaces/NULs
     let null_end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
     let s = crate::encoding::decode_utf8_or_latin1(&bytes[..null_end]);
-    s.trim_end_matches(|c: char| c == ' ' || c == '\0')
-        .to_string()
+    s.trim_end_matches([' ', '\0']).to_string()
 }
 
 fn pcd_film_id_name(n: u32) -> &'static str {
@@ -11019,7 +11011,7 @@ pub fn read_jxr(data: &[u8]) -> Result<Vec<Tag>> {
     // JXR is TIFF-based: "II" + 0xBC byte at offset 2
     // The TIFF reader handles IFD parsing; JXR uses standard EXIF IFD tags
     // plus HD Photo-specific tags (0xBC01-0xBC82) which are in the EXIF tag tables.
-    if data.len() < 8 || data[0] != b'I' || data[1] != b'I' || (data[2] & 0xFF) != 0xBC {
+    if data.len() < 8 || data[0] != b'I' || data[1] != b'I' || data[2] != 0xBC {
         return Err(Error::InvalidData("not a JPEG XR file".into()));
     }
 

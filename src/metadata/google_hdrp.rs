@@ -153,7 +153,7 @@ fn hdrp_decrypt(data: &[u8]) -> Option<Vec<u8>> {
 
         // Multiply key by 0x2545f4914f6cdd1d (64-bit × 64-bit, keep low 64 bits)
         // Perl uses 16-bit chunks to avoid overflow; we use u128 in Rust
-        let key64: u64 = ((hi as u64) << 32) | lo;
+        let key64: u64 = (hi << 32) | lo;
         let product = (key64 as u128).wrapping_mul(0x2545f4914f6cdd1d_u128);
         let result64 = product as u64;
         lo = result64 & 0xffffffff;
@@ -293,7 +293,7 @@ fn build_huffman(lengths: &[u8]) -> Option<(Vec<(u16, u8)>, u8)> {
         let c = next_code[len as usize];
         next_code[len as usize] += 1;
         // Reverse the code bits so we can use LSB-first bit reading
-        let rev = reverse_bits(c, len as u8);
+        let rev = reverse_bits(c, len);
         // Fill all entries that start with this code
         let step = 1usize << len;
         let mut idx = rev as usize;
@@ -489,15 +489,11 @@ fn deflate_decompress(data: &[u8]) -> Option<Vec<u8>> {
                         }
                         17 => {
                             let extra = br.read_bits(3)? as usize + 3;
-                            for _ in 0..extra {
-                                all_lengths.push(0);
-                            }
+                            all_lengths.resize(all_lengths.len() + extra, 0);
                         }
                         18 => {
                             let extra = br.read_bits(7)? as usize + 11;
-                            for _ in 0..extra {
-                                all_lengths.push(0);
-                            }
+                            all_lengths.resize(all_lengths.len() + extra, 0);
                         }
                         _ => return None,
                     }
@@ -607,7 +603,7 @@ fn read_varint(data: &[u8], pos: usize) -> Option<(u64, usize)> {
 }
 
 /// Read length-delimited bytes from data at `pos`. Returns (bytes, new_pos) or None.
-fn read_len_delimited<'a>(data: &'a [u8], pos: usize) -> Option<(&'a [u8], usize)> {
+fn read_len_delimited(data: &[u8], pos: usize) -> Option<(&[u8], usize)> {
     let (len, p) = read_varint(data, pos)?;
     let end = p + len as usize;
     if end > data.len() {
@@ -939,7 +935,7 @@ fn format_g(v: f64, prec: usize) -> String {
     if exp >= prec as i32 || exp < -4 {
         // Scientific notation
         let _mantissa = v / 10f64.powi(exp);
-        let decimals = if prec > 1 { prec - 1 } else { 0 };
+        let decimals = prec.saturating_sub(1);
         let s = format!("{:.prec$e}", v, prec = decimals);
         // Perl uses e+XX format
         normalize_sci(s)

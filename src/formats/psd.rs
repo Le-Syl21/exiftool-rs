@@ -162,7 +162,7 @@ fn scan_photomechanic_trailer(data: &[u8], tags: &mut Vec<Tag>) {
         if search_data[pos] == 0x1C && search_data[pos + 1] == 0x02 {
             let dataset = search_data[pos + 2];
             // Check if this is a PhotoMechanic dataset
-            if dataset >= 209 && dataset <= 239 {
+            if (209..=239).contains(&dataset) {
                 let len = u16::from_be_bytes([search_data[pos + 3], search_data[pos + 4]]) as usize;
                 if len == 4 && pos + 9 <= search_data.len() {
                     // This looks like a valid PhotoMechanic IPTC record

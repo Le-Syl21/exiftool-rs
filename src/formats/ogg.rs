@@ -60,7 +60,7 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
         .unwrap_or(false);
 
     // Process packets
-    for (_i, packet) in packets.iter().enumerate() {
+    for packet in &packets {
         if packet.len() < 4 {
             continue;
         }

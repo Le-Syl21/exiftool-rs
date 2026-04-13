@@ -8,18 +8,18 @@ use crate::metadata::makernotes::Manufacturer;
 /// Lookup tag name by manufacturer and tag ID.
 pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'static str) {
     let table = match manufacturer {
-        Manufacturer::Canon => &CANON_TAGS[..],
-        Manufacturer::Nikon | Manufacturer::NikonOld => &NIKON_TAGS[..],
-        Manufacturer::Sony => &SONY_TAGS[..],
-        Manufacturer::Pentax => &PENTAX_MAIN_IFD_TAGS[..], // Main IFD overrides to avoid generated table collisions
-        Manufacturer::Olympus | Manufacturer::OlympusNew => &OLYMPUS_TAGS[..],
-        Manufacturer::Panasonic => &PANASONIC_TAGS[..],
-        Manufacturer::Fujifilm => &FUJIFILM_TAGS[..],
-        Manufacturer::Samsung => &SAMSUNG_TAGS[..],
-        Manufacturer::Sigma => &SIGMA_TAGS[..],
-        Manufacturer::Casio => &CASIO_TAGS[..],
+        Manufacturer::Canon => CANON_TAGS,
+        Manufacturer::Nikon | Manufacturer::NikonOld => NIKON_TAGS,
+        Manufacturer::Sony => SONY_TAGS,
+        Manufacturer::Pentax => PENTAX_MAIN_IFD_TAGS, // Main IFD overrides to avoid generated table collisions
+        Manufacturer::Olympus | Manufacturer::OlympusNew => OLYMPUS_TAGS,
+        Manufacturer::Panasonic => PANASONIC_TAGS,
+        Manufacturer::Fujifilm => FUJIFILM_TAGS,
+        Manufacturer::Samsung => SAMSUNG_TAGS,
+        Manufacturer::Sigma => SIGMA_TAGS,
+        Manufacturer::Casio => CASIO_TAGS,
         Manufacturer::CasioType2 => &[][..], // Uses inline table below
-        Manufacturer::Apple => &APPLE_TAGS[..],
+        Manufacturer::Apple => APPLE_TAGS,
         Manufacturer::Ricoh
         | Manufacturer::Minolta
         | Manufacturer::Google
@@ -36,18 +36,18 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
 
     // Fallback to generated tables
     let gen_table = match manufacturer {
-        Manufacturer::Canon => Some(&super::generated::GENERATED_CANON_TAGS[..]),
+        Manufacturer::Canon => Some(super::generated::GENERATED_CANON_TAGS),
         Manufacturer::Nikon | Manufacturer::NikonOld => {
-            Some(&super::generated::GENERATED_NIKON_TAGS[..])
+            Some(super::generated::GENERATED_NIKON_TAGS)
         }
-        Manufacturer::Sony => Some(&super::generated::GENERATED_SONY_TAGS[..]),
+        Manufacturer::Sony => Some(super::generated::GENERATED_SONY_TAGS),
         Manufacturer::Olympus | Manufacturer::OlympusNew => {
-            Some(&super::generated::GENERATED_OLYMPUS_TAGS[..])
+            Some(super::generated::GENERATED_OLYMPUS_TAGS)
         }
-        Manufacturer::Pentax => Some(&super::generated::GENERATED_PENTAX_TAGS[..]),
-        Manufacturer::Panasonic => Some(&super::generated::GENERATED_PANASONIC_TAGS[..]),
-        Manufacturer::Fujifilm => Some(&super::generated::GENERATED_FUJIFILM_TAGS[..]),
-        Manufacturer::Samsung => Some(&super::generated::GENERATED_SAMSUNG_TAGS[..]),
+        Manufacturer::Pentax => Some(super::generated::GENERATED_PENTAX_TAGS),
+        Manufacturer::Panasonic => Some(super::generated::GENERATED_PANASONIC_TAGS),
+        Manufacturer::Fujifilm => Some(super::generated::GENERATED_FUJIFILM_TAGS),
+        Manufacturer::Samsung => Some(super::generated::GENERATED_SAMSUNG_TAGS),
         _ => None,
     };
 

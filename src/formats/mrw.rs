@@ -277,7 +277,7 @@ fn convert_wb_mode(val: u8) -> String {
         .map(|&(_, v)| v)
         .unwrap_or("Unknown");
     let mut s = base.to_string();
-    if hi >= 6 && hi <= 12 {
+    if (6..=12).contains(&hi) {
         s.push_str(&format!(" ({})", hi as i8 - 8));
     }
     s

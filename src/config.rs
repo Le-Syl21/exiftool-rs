@@ -171,12 +171,12 @@ fn extract_perl_string(text: &str) -> Option<String> {
     let rest = &text[arrow + 2..];
     let rest = rest.trim();
 
-    if rest.starts_with('\'') {
-        let end = rest[1..].find('\'')?;
-        Some(rest[1..1 + end].to_string())
-    } else if rest.starts_with('"') {
-        let end = rest[1..].find('"')?;
-        Some(rest[1..1 + end].to_string())
+    if let Some(stripped) = rest.strip_prefix('\'') {
+        let end = stripped.find('\'')?;
+        Some(stripped[..end].to_string())
+    } else if let Some(stripped) = rest.strip_prefix('"') {
+        let end = stripped.find('"')?;
+        Some(stripped[..end].to_string())
     } else {
         None
     }

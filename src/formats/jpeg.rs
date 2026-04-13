@@ -71,123 +71,125 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
         }
 
         // SOF markers (0xC0-0xCF except 0xC4 DHT and 0xCC DAC) — extract image dimensions
-        if (0xC0..=0xCF).contains(&marker) && marker != 0xC4 && marker != 0xCC {
-            if pos + 2 <= data.len() {
-                let sof_len = u16::from_be_bytes([data[pos], data[pos + 1]]) as usize;
-                if pos + sof_len <= data.len() && sof_len >= 8 {
-                    let sof = &data[pos + 2..pos + sof_len];
-                    let precision = sof[0];
-                    let height = u16::from_be_bytes([sof[1], sof[2]]);
-                    let width = u16::from_be_bytes([sof[3], sof[4]]);
-                    let components = sof[5];
+        if (0xC0..=0xCF).contains(&marker)
+            && marker != 0xC4
+            && marker != 0xCC
+            && pos + 2 <= data.len()
+        {
+            let sof_len = u16::from_be_bytes([data[pos], data[pos + 1]]) as usize;
+            if pos + sof_len <= data.len() && sof_len >= 8 {
+                let sof = &data[pos + 2..pos + sof_len];
+                let precision = sof[0];
+                let height = u16::from_be_bytes([sof[1], sof[2]]);
+                let width = u16::from_be_bytes([sof[3], sof[4]]);
+                let components = sof[5];
 
-                    tags.push(crate::tag::Tag {
-                        id: crate::tag::TagId::Text("ImageWidth".into()),
-                        name: "ImageWidth".into(),
-                        description: "Image Width".into(),
-                        group: crate::tag::TagGroup {
-                            family0: "File".into(),
-                            family1: "File".into(),
-                            family2: "Image".into(),
-                        },
-                        raw_value: crate::value::Value::U16(width),
-                        print_value: width.to_string(),
-                        priority: 0,
-                    });
-                    tags.push(crate::tag::Tag {
-                        id: crate::tag::TagId::Text("ImageHeight".into()),
-                        name: "ImageHeight".into(),
-                        description: "Image Height".into(),
-                        group: crate::tag::TagGroup {
-                            family0: "File".into(),
-                            family1: "File".into(),
-                            family2: "Image".into(),
-                        },
-                        raw_value: crate::value::Value::U16(height),
-                        print_value: height.to_string(),
-                        priority: 0,
-                    });
-                    tags.push(crate::tag::Tag {
-                        id: crate::tag::TagId::Text("BitsPerSample".into()),
-                        name: "BitsPerSample".into(),
-                        description: "Bits Per Sample".into(),
-                        group: crate::tag::TagGroup {
-                            family0: "File".into(),
-                            family1: "File".into(),
-                            family2: "Image".into(),
-                        },
-                        raw_value: crate::value::Value::U8(precision),
-                        print_value: precision.to_string(),
-                        priority: 0,
-                    });
-                    tags.push(crate::tag::Tag {
-                        id: crate::tag::TagId::Text("ColorComponents".into()),
-                        name: "ColorComponents".into(),
-                        description: "Color Components".into(),
-                        group: crate::tag::TagGroup {
-                            family0: "File".into(),
-                            family1: "File".into(),
-                            family2: "Image".into(),
-                        },
-                        raw_value: crate::value::Value::U8(components),
-                        print_value: components.to_string(),
-                        priority: 0,
-                    });
+                tags.push(crate::tag::Tag {
+                    id: crate::tag::TagId::Text("ImageWidth".into()),
+                    name: "ImageWidth".into(),
+                    description: "Image Width".into(),
+                    group: crate::tag::TagGroup {
+                        family0: "File".into(),
+                        family1: "File".into(),
+                        family2: "Image".into(),
+                    },
+                    raw_value: crate::value::Value::U16(width),
+                    print_value: width.to_string(),
+                    priority: 0,
+                });
+                tags.push(crate::tag::Tag {
+                    id: crate::tag::TagId::Text("ImageHeight".into()),
+                    name: "ImageHeight".into(),
+                    description: "Image Height".into(),
+                    group: crate::tag::TagGroup {
+                        family0: "File".into(),
+                        family1: "File".into(),
+                        family2: "Image".into(),
+                    },
+                    raw_value: crate::value::Value::U16(height),
+                    print_value: height.to_string(),
+                    priority: 0,
+                });
+                tags.push(crate::tag::Tag {
+                    id: crate::tag::TagId::Text("BitsPerSample".into()),
+                    name: "BitsPerSample".into(),
+                    description: "Bits Per Sample".into(),
+                    group: crate::tag::TagGroup {
+                        family0: "File".into(),
+                        family1: "File".into(),
+                        family2: "Image".into(),
+                    },
+                    raw_value: crate::value::Value::U8(precision),
+                    print_value: precision.to_string(),
+                    priority: 0,
+                });
+                tags.push(crate::tag::Tag {
+                    id: crate::tag::TagId::Text("ColorComponents".into()),
+                    name: "ColorComponents".into(),
+                    description: "Color Components".into(),
+                    group: crate::tag::TagGroup {
+                        family0: "File".into(),
+                        family1: "File".into(),
+                        family2: "Image".into(),
+                    },
+                    raw_value: crate::value::Value::U8(components),
+                    print_value: components.to_string(),
+                    priority: 0,
+                });
 
-                    let enc_process = match marker {
-                        0xC0 => "Baseline DCT, Huffman coding",
-                        0xC1 => "Extended sequential DCT, Huffman coding",
-                        0xC2 => "Progressive DCT, Huffman coding",
-                        0xC3 => "Lossless, Huffman coding",
-                        0xC9 => "Extended sequential DCT, arithmetic coding",
-                        0xCA => "Progressive DCT, arithmetic coding",
-                        0xCB => "Lossless, arithmetic coding",
-                        _ => "Unknown",
+                let enc_process = match marker {
+                    0xC0 => "Baseline DCT, Huffman coding",
+                    0xC1 => "Extended sequential DCT, Huffman coding",
+                    0xC2 => "Progressive DCT, Huffman coding",
+                    0xC3 => "Lossless, Huffman coding",
+                    0xC9 => "Extended sequential DCT, arithmetic coding",
+                    0xCA => "Progressive DCT, arithmetic coding",
+                    0xCB => "Lossless, arithmetic coding",
+                    _ => "Unknown",
+                };
+                tags.push(crate::tag::Tag {
+                    id: crate::tag::TagId::Text("EncodingProcess".into()),
+                    name: "EncodingProcess".into(),
+                    description: "Encoding Process".into(),
+                    group: crate::tag::TagGroup {
+                        family0: "File".into(),
+                        family1: "File".into(),
+                        family2: "Image".into(),
+                    },
+                    raw_value: crate::value::Value::U8(marker - 0xC0),
+                    print_value: enc_process.to_string(),
+                    priority: 0,
+                });
+
+                // YCbCr SubSampling (from component sampling factors)
+                if components >= 3 && sof.len() >= 6 + components as usize * 3 {
+                    let h_sample = (sof[7] >> 4) & 0x0F;
+                    let v_sample = sof[7] & 0x0F;
+                    let subsampling = if h_sample == 2 && v_sample == 2 {
+                        "YCbCr4:2:0".to_string()
+                    } else if h_sample == 2 && v_sample == 1 {
+                        "YCbCr4:2:2".to_string()
+                    } else if h_sample == 1 && v_sample == 1 {
+                        "YCbCr4:4:4".to_string()
+                    } else {
+                        format!("YCbCr {}:{}", h_sample, v_sample)
                     };
                     tags.push(crate::tag::Tag {
-                        id: crate::tag::TagId::Text("EncodingProcess".into()),
-                        name: "EncodingProcess".into(),
-                        description: "Encoding Process".into(),
+                        id: crate::tag::TagId::Text("YCbCrSubSampling".into()),
+                        name: "YCbCrSubSampling".into(),
+                        description: "YCbCr Sub Sampling".into(),
                         group: crate::tag::TagGroup {
                             family0: "File".into(),
                             family1: "File".into(),
                             family2: "Image".into(),
                         },
-                        raw_value: crate::value::Value::U8(marker - 0xC0),
-                        print_value: enc_process.to_string(),
+                        raw_value: crate::value::Value::String(format!(
+                            "{} {}",
+                            h_sample, v_sample
+                        )),
+                        print_value: subsampling,
                         priority: 0,
                     });
-
-                    // YCbCr SubSampling (from component sampling factors)
-                    if components >= 3 && sof.len() >= 6 + components as usize * 3 {
-                        let h_sample = (sof[7] >> 4) & 0x0F;
-                        let v_sample = sof[7] & 0x0F;
-                        let subsampling = if h_sample == 2 && v_sample == 2 {
-                            "YCbCr4:2:0".to_string()
-                        } else if h_sample == 2 && v_sample == 1 {
-                            "YCbCr4:2:2".to_string()
-                        } else if h_sample == 1 && v_sample == 1 {
-                            "YCbCr4:4:4".to_string()
-                        } else {
-                            format!("YCbCr {}:{}", h_sample, v_sample)
-                        };
-                        tags.push(crate::tag::Tag {
-                            id: crate::tag::TagId::Text("YCbCrSubSampling".into()),
-                            name: "YCbCrSubSampling".into(),
-                            description: "YCbCr Sub Sampling".into(),
-                            group: crate::tag::TagGroup {
-                                family0: "File".into(),
-                                family1: "File".into(),
-                                family2: "Image".into(),
-                            },
-                            raw_value: crate::value::Value::String(format!(
-                                "{} {}",
-                                h_sample, v_sample
-                            )),
-                            print_value: subsampling,
-                            priority: 0,
-                        });
-                    }
                 }
             }
         }
@@ -331,17 +333,15 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 // EXIF data
                 if seg_data.len() > EXIF_HEADER.len() && seg_data.starts_with(EXIF_HEADER) {
                     let exif_data = &seg_data[EXIF_HEADER.len()..];
-                    match ExifReader::read(exif_data) {
-                        Ok(exif_tags) => tags.extend(exif_tags),
-                        Err(_) => {} // silently skip malformed EXIF
+                    if let Ok(exif_tags) = ExifReader::read(exif_data) {
+                        tags.extend(exif_tags);
                     }
                 }
                 // XMP data (standard)
                 else if seg_data.len() > XMP_HEADER.len() && seg_data.starts_with(XMP_HEADER) {
                     let xmp_data = &seg_data[XMP_HEADER.len()..];
-                    match XmpReader::read(xmp_data) {
-                        Ok(xmp_tags) => tags.extend(xmp_tags),
-                        Err(_) => {}
+                    if let Ok(xmp_tags) = XmpReader::read(xmp_data) {
+                        tags.extend(xmp_tags)
                     }
                 }
                 // Casio QVCI APP1 segment
@@ -432,10 +432,8 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         // Process once all chunks are collected
                         if flir_count >= flir_total.unwrap() {
                             let mut flir_data = Vec::new();
-                            for chunk in &flir_chunks {
-                                if let Some(c) = chunk {
-                                    flir_data.extend_from_slice(c);
-                                }
+                            for c in flir_chunks.iter().flatten() {
+                                flir_data.extend_from_slice(c);
                             }
                             flir_chunks.clear();
                             flir_count = 0;
@@ -619,9 +617,8 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                             print_value: digest,
                             priority: 0,
                         });
-                        match IptcReader::read(&iptc_data) {
-                            Ok(iptc_tags) => tags.extend(iptc_tags),
-                            Err(_) => {}
+                        if let Ok(iptc_tags) = IptcReader::read(&iptc_data) {
+                            tags.extend(iptc_tags)
                         }
                     }
                 }
@@ -785,7 +782,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                                                                  // numEntries at offset 12+6=18 from start
                                                                  // AXS header: tag(4) + version(2) + numEntries(2) + reserved(4) = 12 bytes
                                                                  // Perl: numEntries = Get16u(buff, 6)
-                let num_entries = rd16_afcp(&data, start_pos + 6) as usize;
+                let num_entries = rd16_afcp(data, start_pos + 6) as usize;
 
                 // Directory: 12 bytes each, starts right after the 12-byte header
                 let dir_start = start_pos + 12;
@@ -795,8 +792,8 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         break;
                     }
                     let tag = &data[eoff..eoff + 4];
-                    let size = rd32_afcp(&data, eoff + 4) as usize;
-                    let offset = rd32_afcp(&data, eoff + 8) as usize;
+                    let size = rd32_afcp(data, eoff + 4) as usize;
+                    let offset = rd32_afcp(data, eoff + 8) as usize;
 
                     if tag == b"IPTC" && offset + size <= data.len() {
                         let iptc_raw = &data[offset..offset + size];
@@ -1103,7 +1100,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
             let contained_len =
                 u32::from_be_bytes([footer[20], footer[21], footer[22], footer[23]]) as usize;
             let total_len = contained_len.saturating_add(0x5c);
-            if total_len < 0x60 || total_len > 0x800000 {
+            if !(0x60..=0x800000).contains(&total_len) {
                 continue;
             }
             if footer_end < total_len {
@@ -1234,8 +1231,8 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
             // Remove "Quality" from MakerNotes (FLIR tag 0x0003 = Emissivity, already in FFF)
             // Remove "LensID" composite (LensModel "FOL7" doesn't match Perl's /(mm|\d\/F)/ pattern)
             tags.retain(|t| {
-                !(t.name == "Quality" && t.group.family0 == "MakerNotes")
-                    && !(t.name == "LensID" && t.group.family0 == "Composite")
+                !(t.name == "Quality" && t.group.family0 == "MakerNotes"
+                    || t.name == "LensID" && t.group.family0 == "Composite")
             });
             // Add ImageTemperatureMax (FLIR MakerNote tag 0x0001, rational64s) by parsing
             // the EXIF APP1 MakerNote IFD directly, since it's dropped by the generic decoder.
@@ -1289,7 +1286,7 @@ fn process_nitf(data: &[u8]) -> Vec<crate::tag::Tag> {
     };
 
     tags.push(mk("NITFVersion", format!("{}.{:02}", data[0], data[1])));
-    let fmt_byte = data[2] & 0xFF;
+    let fmt_byte = data[2];
     tags.push(mk(
         "ImageFormat",
         if fmt_byte == b'B' {
@@ -1514,7 +1511,7 @@ fn process_eppim(tiff_data: &[u8]) -> Vec<crate::tag::Tag> {
         return tags;
     }
     let is_le = tiff_data[0] == b'I' && tiff_data[1] == b'I';
-    if !is_le && !(tiff_data[0] == b'M' && tiff_data[1] == b'M') {
+    if !(is_le || tiff_data[0] == b'M' && tiff_data[1] == b'M') {
         return tags;
     }
     let r16 = |d: &[u8], off: usize| -> u16 {
@@ -2004,29 +2001,26 @@ fn parse_samsung_seft(data: &[u8], block_end: usize) -> Vec<crate::tag::Tag> {
             .to_string();
         let value_bytes = &buf2[8 + name_len..];
 
-        match entry_type {
-            0x0100 => {
-                // EmbeddedAudioFileName (name field) + EmbeddedAudioFile (data field)
-                if !name_str.is_empty() {
-                    tags.push(mk_sam(
-                        "EmbeddedAudioFileName",
-                        crate::value::Value::String(name_str.clone()),
-                        name_str,
-                    ));
-                }
-                if !value_bytes.is_empty() {
-                    tags.push(mk_sam(
-                        "EmbeddedAudioFile",
-                        crate::value::Value::Binary(value_bytes.to_vec()),
-                        format!(
-                            "(Binary data {} bytes, use -b option to extract)",
-                            value_bytes.len()
-                        ),
-                    ));
-                }
+        if entry_type == 0x0100 {
+            // EmbeddedAudioFileName (name field) + EmbeddedAudioFile (data field)
+            if !name_str.is_empty() {
+                tags.push(mk_sam(
+                    "EmbeddedAudioFileName",
+                    crate::value::Value::String(name_str.clone()),
+                    name_str,
+                ));
             }
-            _ => {} // Skip other types (0x0800 = metadata, etc.)
-        }
+            if !value_bytes.is_empty() {
+                tags.push(mk_sam(
+                    "EmbeddedAudioFile",
+                    crate::value::Value::Binary(value_bytes.to_vec()),
+                    format!(
+                        "(Binary data {} bytes, use -b option to extract)",
+                        value_bytes.len()
+                    ),
+                ));
+            }
+        } // Skip other types (0x0800 = metadata, etc.)
     }
 
     tags
@@ -2283,7 +2277,7 @@ fn float8g(v: f32) -> String {
     // Parse the exponent to decide fixed vs scientific
     if let Some(e_pos) = formatted.find('e') {
         let exp: i32 = formatted[e_pos + 1..].parse().unwrap_or(0);
-        if exp >= -4 && exp < 8 {
+        if (-4..8).contains(&exp) {
             // Fixed notation: compute decimal places = 7 - exp (8 sig digits, 1 before decimal)
             let decimals = (7 - exp).max(0) as usize;
             let s = format!("{:.*}", decimals, v);
@@ -2324,7 +2318,7 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
     // Detect byte order from version at offset 0x14
     let _ver_be = u32::from_be_bytes([data[0x14], data[0x15], data[0x16], data[0x17]]);
     let ver_le = u32::from_le_bytes([data[0x14], data[0x15], data[0x16], data[0x17]]);
-    let le = ver_le >= 100 && ver_le < 200;
+    let le = (100..200).contains(&ver_le);
 
     let rd32 = |off: usize| -> u32 {
         if off + 4 > data.len() {
@@ -3101,7 +3095,7 @@ fn decode_photoshop_irb(id: u16, data: &[u8]) -> String {
         }
         _ => {
             // Generic: try as string
-            if data.iter().all(|&b| b >= 0x20 && b < 0x7F || b == 0) {
+            if data.iter().all(|&b| (0x20..0x7F).contains(&b) || b == 0) {
                 crate::encoding::decode_utf8_or_latin1(data)
                     .trim_end_matches('\0')
                     .to_string()
@@ -3247,7 +3241,7 @@ fn process_app12_picture_info(data: &[u8]) -> Vec<crate::tag::Tag> {
     let mut tags = Vec::new();
     let mut section = String::new();
 
-    for line in text.split(|c| c == '\r' || c == '\n' || c == '\0') {
+    for line in text.split(['\r', '\n', '\0']) {
         let line = line.trim();
         if line.is_empty() {
             continue;
@@ -3269,11 +3263,7 @@ fn process_app12_picture_info(data: &[u8]) -> Vec<crate::tag::Tag> {
 /// separated by spaces when two key= tokens appear on the same line).
 fn parse_app12_kv_line(line: &str, section: &str, tags: &mut Vec<crate::tag::Tag>) {
     let mut remaining = line;
-    loop {
-        let eq_pos = match app12_find_key_start(remaining) {
-            Some(p) => p,
-            None => break,
-        };
+    while let Some(eq_pos) = app12_find_key_start(remaining) {
         let kv = &remaining[eq_pos..];
         let eq = match kv.find('=') {
             Some(p) => p,
@@ -3486,7 +3476,7 @@ fn parse_mpf_inner(seg_data: &[u8], jpeg_data: &[u8]) -> Option<Vec<crate::tag::
     let tiff_base = seg_data.as_ptr() as usize - jpeg_data.as_ptr() as usize + 4;
 
     // Byte order mark
-    let big_endian = match (mpf.get(0)?, mpf.get(1)?) {
+    let big_endian = match (mpf.first()?, mpf.get(1)?) {
         (b'M', b'M') => true,
         (b'I', b'I') => false,
         _ => return None,
@@ -4271,7 +4261,7 @@ fn parse_vrd1(d: &[u8], mk: &impl Fn(&str, String) -> crate::tag::Tag) -> Vec<cr
             return String::new();
         }
         let count = ru16(off) as usize;
-        if count < 2 || count > 10 {
+        if !(2..=10).contains(&count) {
             return String::new();
         }
         let mut parts = Vec::new();
@@ -4555,12 +4545,11 @@ fn parse_gpmf_records(data: &[u8], tags: &mut Vec<crate::tag::Tag>, depth: usize
             val_data[0].to_string()
         } else if (fmt == 0x53 || fmt == 0x73) && size >= 2 {
             if count == 1 {
-                let v = if fmt == 0x73 {
+                if fmt == 0x73 {
                     (i16::from_be_bytes([val_data[0], val_data[1]])).to_string()
                 } else {
                     u16::from_be_bytes([val_data[0], val_data[1]]).to_string()
-                };
-                v
+                }
             } else {
                 format!("(Binary data {} bytes)", size)
             }
@@ -5869,7 +5858,7 @@ fn extract_ciff_freebytes(data: &[u8]) -> Vec<crate::tag::Tag> {
         return Vec::new();
     }
     let is_le = data[0] == b'I' && data[1] == b'I';
-    if !is_le && !(data[0] == b'M' && data[1] == b'M') {
+    if !(is_le || data[0] == b'M' && data[1] == b'M') {
         return Vec::new();
     }
     let hlen = if is_le {

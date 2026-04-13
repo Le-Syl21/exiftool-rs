@@ -988,14 +988,14 @@ fn parse_bitmapinfoheader(
             3 => "Bitfields".into(),
             4 => "JPEG".into(),
             5 => "PNG".into(),
-            _ => format!("{}", compression_raw).into(),
+            _ => format!("{}", compression_raw),
         }
     };
     tags.push(mk_riff(
         family,
         "Compression",
         "Compression",
-        Value::String(compression_str.to_string()),
+        Value::String(compression_str),
     ));
 
     // ImageLength at offset 20 (int32u)
@@ -1428,7 +1428,7 @@ fn convert_riff_date(val: &str) -> String {
     }
 
     // Format: "YYYY-MM-DD HH:MM:SS" or "YYYY/MM/DD HH:MM:SS"
-    let normalized = val.replace('/', ":").replace('-', ":");
+    let normalized = val.replace(['/', '-'], ":");
     if let Some(colon_pos) = normalized.find(' ') {
         let date_part = &normalized[..colon_pos];
         let time_part = normalized[colon_pos + 1..].trim();

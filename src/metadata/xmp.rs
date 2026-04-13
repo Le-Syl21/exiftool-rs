@@ -2114,7 +2114,7 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
             }
             Ok(XmlEvent::EndElement { .. }) => {
                 let text = normalize_xml_text(&current_text);
-                let is_leaf = has_children.last().copied().unwrap_or(false) == false;
+                let is_leaf = !has_children.last().copied().unwrap_or(false);
                 // Emit tag if: has text content OR is a leaf node (no child elements, i.e. empty element)
                 if (is_leaf || !text.is_empty()) && !path.is_empty() {
                     let tag_name = path.join("");

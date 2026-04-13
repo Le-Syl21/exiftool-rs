@@ -83,7 +83,7 @@ fn parse_zip_central_directory(data: &[u8]) -> Option<Vec<ZipEntry>> {
         return None;
     }
     // Search for EOCD signature from end
-    let search_start = if len > 65557 { len - 65557 } else { 0 };
+    let search_start = len.saturating_sub(65557);
     let eocd_pos = {
         let mut found = None;
         let mut i = len.saturating_sub(22);

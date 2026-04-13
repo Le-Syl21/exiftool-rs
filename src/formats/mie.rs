@@ -37,10 +37,8 @@ fn parse_mie_group(
         *pos += 4;
 
         // Read tag name
-        if tag_len > 0 {
-            if *pos + tag_len > data.len() {
-                break;
-            }
+        if tag_len > 0 && *pos + tag_len > data.len() {
+            break;
         }
         let tag_name = if tag_len > 0 {
             let name =
@@ -149,7 +147,7 @@ fn parse_mie_group(
                 group: TagGroup {
                     family0: "MIE".into(),
                     family1: group_name.into(),
-                    family2: family2.into(),
+                    family2,
                 },
                 print_value: value.to_display_string(),
                 raw_value: value,
@@ -349,17 +347,7 @@ fn resolve_tag_name(group: &str, tag: &str) -> (String, String) {
             };
             (name.into(), "Document".into())
         }
-        "MIE-Geo" => {
-            let name = match tag {
-                "Address" => "Address",
-                "City" => "City",
-                "Country" => "Country",
-                "PostalCode" => "PostalCode",
-                "State" => "State",
-                _ => tag,
-            };
-            (name.into(), "Location".into())
-        }
+        "MIE-Geo" => (tag.into(), "Location".into()),
         "MIE-GPS" => {
             let name = match tag {
                 "Altitude" => "GPSAltitude",
@@ -473,17 +461,7 @@ fn resolve_tag_name(group: &str, tag: &str) -> (String, String) {
             };
             (name.into(), "Camera".into())
         }
-        "MIE-Orient" => {
-            let name = match tag {
-                "Rotation" => "Rotation",
-                "Azimuth" => "Azimuth",
-                "Declination" => "Declination",
-                "Elevation" => "Elevation",
-                "RightAscension" => "RightAscension",
-                _ => tag,
-            };
-            (name.into(), "Camera".into())
-        }
+        "MIE-Orient" => (tag.into(), "Camera".into()),
         "MIE-Audio" => {
             let name = match tag {
                 "0Type" => "RelatedAudioFileType",

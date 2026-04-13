@@ -688,25 +688,21 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
         }
 
         // Offset 353: WideConvergenceAngleRange — int8u bool, if bitm & 0x40
-        if bitm & 0x40 != 0 {
-            if data.len() > 353 {
-                let v = data[353];
-                let print = if v == 0 { "No" } else { "Yes" };
-                tags.push(mk_print(
-                    "WideConvergenceAngleRange",
-                    Value::U8(v),
-                    print.to_string(),
-                ));
-            }
+        if bitm & 0x40 != 0 && data.len() > 353 {
+            let v = data[353];
+            let print = if v == 0 { "No" } else { "Yes" };
+            tags.push(mk_print(
+                "WideConvergenceAngleRange",
+                Value::U8(v),
+                print.to_string(),
+            ));
         }
 
         // Offset 354: SlitInserted — int8u bool, if bitm & 0x80
-        if bitm & 0x80 != 0 {
-            if data.len() > 354 {
-                let v = data[354];
-                let print = if v == 0 { "No" } else { "Yes" };
-                tags.push(mk_print("SlitInserted", Value::U8(v), print.to_string()));
-            }
+        if bitm & 0x80 != 0 && data.len() > 354 {
+            let v = data[354];
+            let print = if v == 0 { "No" } else { "Yes" };
+            tags.push(mk_print("SlitInserted", Value::U8(v), print.to_string()));
         }
 
         // Offset 355: SlitWidth — double, if bitm & 0x100
@@ -806,12 +802,10 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
         }
 
         // Offset 467: CetaNoiseReduct — int8u bool, if bitm & 0x1000000
-        if bitm & 0x1000000 != 0 {
-            if data.len() > 467 {
-                let v = data[467];
-                let print = if v == 0 { "No" } else { "Yes" };
-                tags.push(mk_print("CetaNoiseReduct", Value::U8(v), print.to_string()));
-            }
+        if bitm & 0x1000000 != 0 && data.len() > 467 {
+            let v = data[467];
+            let print = if v == 0 { "No" } else { "Yes" };
+            tags.push(mk_print("CetaNoiseReduct", Value::U8(v), print.to_string()));
         }
 
         // Offset 468: CetaFramesSummed — int32u, if bitm & 0x2000000
@@ -821,29 +815,25 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
         }
 
         // Offset 472: DirectDetElectronCounting — int8u bool, if bitm & 0x4000000
-        if bitm & 0x4000000 != 0 {
-            if data.len() > 472 {
-                let v = data[472];
-                let print = if v == 0 { "No" } else { "Yes" };
-                tags.push(mk_print(
-                    "DirectDetElectronCounting",
-                    Value::U8(v),
-                    print.to_string(),
-                ));
-            }
+        if bitm & 0x4000000 != 0 && data.len() > 472 {
+            let v = data[472];
+            let print = if v == 0 { "No" } else { "Yes" };
+            tags.push(mk_print(
+                "DirectDetElectronCounting",
+                Value::U8(v),
+                print.to_string(),
+            ));
         }
 
         // Offset 473: DirectDetAlignFrames — int8u bool, if bitm & 0x8000000
-        if bitm & 0x8000000 != 0 {
-            if data.len() > 473 {
-                let v = data[473];
-                let print = if v == 0 { "No" } else { "Yes" };
-                tags.push(mk_print(
-                    "DirectDetAlignFrames",
-                    Value::U8(v),
-                    print.to_string(),
-                ));
-            }
+        if bitm & 0x8000000 != 0 && data.len() > 473 {
+            let v = data[473];
+            let print = if v == 0 { "No" } else { "Yes" };
+            tags.push(mk_print(
+                "DirectDetAlignFrames",
+                Value::U8(v),
+                print.to_string(),
+            ));
         }
     }
 
@@ -855,12 +845,10 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
         bitm = bitmask3;
 
         // Offset 518: PhasePlate — int8u bool, if bitm & 0x40
-        if bitm & 0x40 != 0 {
-            if data.len() > 518 {
-                let v = data[518];
-                let print = if v == 0 { "No" } else { "Yes" };
-                tags.push(mk_print("PhasePlate", Value::U8(v), print.to_string()));
-            }
+        if bitm & 0x40 != 0 && data.len() > 518 {
+            let v = data[518];
+            let print = if v == 0 { "No" } else { "Yes" };
+            tags.push(mk_print("PhasePlate", Value::U8(v), print.to_string()));
         }
 
         // Offset 519: STEMDetectorName — string[16], if bitm & 0x80
@@ -962,12 +950,10 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
         }
 
         // Offset 655: IsDoseFraction — int8u bool, if bitm & 0x8000000
-        if bitm & 0x8000000 != 0 {
-            if data.len() > 655 {
-                let v = data[655];
-                let print = if v == 0 { "No" } else { "Yes" };
-                tags.push(mk_print("IsDoseFraction", Value::U8(v), print.to_string()));
-            }
+        if bitm & 0x8000000 != 0 && data.len() > 655 {
+            let v = data[655];
+            let print = if v == 0 { "No" } else { "Yes" };
+            tags.push(mk_print("IsDoseFraction", Value::U8(v), print.to_string()));
         }
 
         // Offset 656: FractionNumber — int32u, if bitm & 0x10000000
@@ -1143,9 +1129,7 @@ pub fn read_mrc(data: &[u8]) -> Result<Vec<Tag>> {
     // Machine stamp check: offset 212 must be 0x44/0x44 (LE), 0x44/0x41, or 0x11/0x11
     let ms0 = data[212];
     let ms1 = data[213];
-    let valid_stamp = (ms0 == 0x44 && ms1 == 0x44)
-        || (ms0 == 0x44 && ms1 == 0x41)
-        || (ms0 == 0x11 && ms1 == 0x11);
+    let valid_stamp = (ms1 == 0x41 || ms1 == 0x44) && ms0 == 0x44 || (ms0 == 0x11 && ms1 == 0x11);
     if !valid_stamp {
         return Err(Error::InvalidData("Invalid MRC machine stamp".into()));
     }

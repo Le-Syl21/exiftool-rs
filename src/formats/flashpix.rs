@@ -168,9 +168,8 @@ fn read_sector_chain(data: &[u8], fat: &[u32], start_sector: u32, sector_size: u
 fn parse_fat(data: &[u8], sector_size: usize, difat: &[u32], fat_sector_count: u32) -> Vec<u32> {
     let mut fat = Vec::new();
     let entries_per_sector = sector_size / 4;
-    let mut fat_sectors_read = 0;
 
-    for &sect in difat {
+    for (fat_sectors_read, &sect) in difat.iter().enumerate() {
         if sect == FREESECT || sect == END_OF_CHAIN {
             break;
         }
@@ -184,7 +183,6 @@ fn parse_fat(data: &[u8], sector_size: usize, difat: &[u32], fat_sector_count: u
         for i in 0..entries_per_sector {
             fat.push(r32(data, off + i * 4));
         }
-        fat_sectors_read += 1;
     }
 
     fat
@@ -284,7 +282,9 @@ fn process_properties(data: &[u8], is_summary: bool, tags: &mut Vec<Tag>) {
             }
             if prop_id == 1 {
                 let vtype = r32(data, val_off) & 0xFFF;
-                if vtype == 2 && val_off + 6 <= data.len() {}
+                if vtype == 2 && val_off + 6 > data.len() {
+                    break;
+                }
                 break;
             }
         }
@@ -705,8 +705,8 @@ fn process_summary_prop(prop_id: u32, val: String, tags: &mut Vec<Tag>) {
         0x09 => tags.push(mk("RevisionNumber", Value::String(val))),
         0x0a => {
             // TotalEditTime as time span (seconds)
-            let secs = if val.starts_with("TIMESPAN:") {
-                val[9..].parse::<f64>().unwrap_or(0.0)
+            let secs = if let Some(stripped) = val.strip_prefix("TIMESPAN:") {
+                stripped.parse::<f64>().unwrap_or(0.0)
             } else {
                 val.parse::<f64>().unwrap_or(0.0)
             };
@@ -966,8 +966,8 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
 
         // Build tag name from dictionary name
         // Remove leading "Custom " prefix if present
-        let clean_name = if name.starts_with("Custom ") {
-            &name[7..]
+        let clean_name = if let Some(stripped) = name.strip_prefix("Custom ") {
+            stripped
         } else {
             &name[..]
         };
@@ -1152,7 +1152,7 @@ fn read_mini_stream_chain(
 
 pub fn read_fpx(data: &[u8]) -> Result<Vec<Tag>> {
     // OLE2 Compound File magic: D0 CF 11 E0 A1 B1 1A E1
-    if data.len() < HDR_SIZE || &data[0..8] != &[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1] {
+    if data.len() < HDR_SIZE || data[0..8] != [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1] {
         return Err(Error::InvalidData("not an OLE2 compound file".into()));
     }
 
@@ -1162,7 +1162,7 @@ pub fn read_fpx(data: &[u8]) -> Result<Vec<Tag>> {
     } else {
         1 << sector_size_exp
     };
-    if sector_size < 64 || sector_size > 65536 {
+    if !(64..=65536).contains(&sector_size) {
         return Err(Error::InvalidData("invalid OLE sector size".into()));
     }
 

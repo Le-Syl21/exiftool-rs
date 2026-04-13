@@ -14,7 +14,7 @@ pub fn read_crw(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Byte order (first 2 bytes)
     let is_le = data[0] == b'I' && data[1] == b'I';
-    if !is_le && !(data[0] == b'M' && data[1] == b'M') {
+    if !is_le && (data[0] != b'M' || data[1] != b'M') {
         return Err(Error::InvalidData("invalid CRW byte order".into()));
     }
 

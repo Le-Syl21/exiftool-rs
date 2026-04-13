@@ -161,13 +161,13 @@ impl GeolocationDb {
 
         // Read string lists
         // Countries: "CCCountryName\n" (2-char code + name on same line)
-        let countries = read_country_list(&data, &mut pos);
-        skip_separator(&data, &mut pos);
-        let regions = read_string_list(&data, &mut pos);
-        skip_separator(&data, &mut pos);
-        let subregions = read_string_list(&data, &mut pos);
-        skip_separator(&data, &mut pos);
-        let timezones = read_string_list(&data, &mut pos);
+        let countries = read_country_list(data, &mut pos);
+        skip_separator(data, &mut pos);
+        let regions = read_string_list(data, &mut pos);
+        skip_separator(data, &mut pos);
+        let subregions = read_string_list(data, &mut pos);
+        skip_separator(data, &mut pos);
+        let timezones = read_string_list(data, &mut pos);
 
         Some(GeolocationDb {
             cities,
@@ -261,6 +261,11 @@ impl GeolocationDb {
     /// Number of cities in the database.
     pub fn len(&self) -> usize {
         self.cities.len()
+    }
+
+    /// Returns true if the database contains no cities.
+    pub fn is_empty(&self) -> bool {
+        self.cities.is_empty()
     }
 }
 

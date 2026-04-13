@@ -159,10 +159,11 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
             }
 
             // eXIf - EXIF data (PNG 1.5+)
-            b"eXIf" => match ExifReader::read(chunk_data) {
-                Ok(exif_tags) => tags.extend(exif_tags),
-                Err(_) => {}
-            },
+            b"eXIf" => {
+                if let Ok(exif_tags) = ExifReader::read(chunk_data) {
+                    tags.extend(exif_tags);
+                }
+            }
 
             // pHYs - Physical pixel dimensions
             b"pHYs" if chunk_len >= 9 => {

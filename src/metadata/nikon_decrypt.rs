@@ -15,7 +15,7 @@ pub fn nikon_decrypt(data: &mut [u8], serial: u32, shutter_count: u32, start: us
     }
 
     // Derive key bytes from serial and shutter count
-    let key: u8 = ((shutter_count >> 0) as u8)
+    let key: u8 = (shutter_count as u8)
         ^ ((shutter_count >> 8) as u8)
         ^ ((shutter_count >> 16) as u8)
         ^ ((shutter_count >> 24) as u8);

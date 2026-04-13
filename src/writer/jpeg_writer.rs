@@ -20,6 +20,7 @@ pub struct JpegSegment {
 /// `new_iptc` is the new IPTC/Photoshop data, or None to keep existing.
 /// `new_comment` is the new JPEG comment, or None to keep existing.
 /// `remove_exif` / `remove_xmp` / `remove_iptc` / `remove_comment`: if true, remove that segment.
+#[allow(clippy::too_many_arguments)]
 pub fn write_jpeg(
     source: &[u8],
     new_exif: Option<&[u8]>,

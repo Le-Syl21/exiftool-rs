@@ -159,7 +159,7 @@ fn find_rtf_group(text: &str, cmd: &str) -> Option<String> {
     let pos = text.find(&pattern)?;
     let rest = &text[pos + pattern.len()..];
     // skip optional non-alpha terminator
-    let rest = rest.trim_start_matches(|c: char| c == ' ' || c == '\n' || c == '\r');
+    let rest = rest.trim_start_matches([' ', '\n', '\r']);
     read_to_matching_brace(rest)
 }
 
@@ -173,8 +173,7 @@ fn find_rtf_group_star(text: &str, cmd: &str) -> Option<String> {
     while let Some(p) = text[pos..].find(search) {
         let start = pos + p;
         let after = &text[start + 3..]; // after "{\*"
-        let trimmed =
-            after.trim_start_matches(|c: char| c == ' ' || c == '\n' || c == '\r' || c == '\t');
+        let trimmed = after.trim_start_matches([' ', '\n', '\r', '\t']);
         if trimmed.starts_with(&format!("\\{}", cmd_escape)) {
             // Found it - skip to after the command
             let skip = 3 + (after.len() - trimmed.len()) + 1 + cmd_escape.len();
@@ -183,7 +182,7 @@ fn find_rtf_group_star(text: &str, cmd: &str) -> Option<String> {
                 break;
             }
             let rest = &text[rest_pos..];
-            let rest = rest.trim_start_matches(|c: char| c == ' ' || c == '\n' || c == '\r');
+            let rest = rest.trim_start_matches([' ', '\n', '\r']);
             return read_to_matching_brace(rest);
         }
         pos = start + 1;
@@ -279,9 +278,7 @@ fn extract_rtf_groups(text: &str) -> Vec<(bool, String, String)> {
         let cmd = crate::encoding::decode_utf8_or_latin1(&bytes[cmd_start..pos]).to_string();
 
         // skip optional terminator (space, newline, or digit sequence)
-        if pos < bytes.len() && bytes[pos] == b' ' {
-            pos += 1;
-        } else if pos < bytes.len() && (bytes[pos] == b'\n' || bytes[pos] == b'\r') {
+        if pos < bytes.len() && (bytes[pos] == b' ' || bytes[pos] == b'\n' || bytes[pos] == b'\r') {
             pos += 1;
         }
         // Skip numeric argument if present
@@ -412,10 +409,8 @@ fn unescape_rtf(text: &str) -> String {
                             break;
                         }
                     }
-                    if !digits.is_empty() {
-                        if chars.peek() == Some(&' ') {
-                            chars.next();
-                        }
+                    if !digits.is_empty() && chars.peek() == Some(&' ') {
+                        chars.next();
                     }
                     // Handle unicode \uN
                     if word == "u" {

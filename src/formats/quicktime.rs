@@ -109,8 +109,10 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
     }
 
     // Parse atom tree
-    let mut state = QtState::default();
-    state.extract_embedded = extract_embedded;
+    let mut state = QtState {
+        extract_embedded,
+        ..Default::default()
+    };
     parse_atoms(data, 0, data.len(), &mut tags, &mut state, 0);
 
     // Compute composite AvgBitrate from MediaDataSize and Duration
@@ -274,7 +276,7 @@ fn parse_canon_ctmd(data: &[u8], start: usize, size: usize, tags: &mut Vec<Tag>)
                     tags.push(mk("TimeStamp", "Time Stamp", Value::String(ts)));
                 }
             }
-            7 | 8 | 9 => {
+            7..=9 => {
                 // ExifInfo: records of size(4LE)+tag(4LE)+TIFF_data
                 // Tags: 0x8769=ExifIFD, 0x927C=MakerNote
                 let mut epos = 0;
@@ -1189,8 +1191,8 @@ fn calc_rotation_from_matrix(bytes: &[u8]) -> i32 {
     }
 
     // Generic: compute from atan2
-    let angle = ((angle_deg % 360) + 360) % 360;
-    angle
+
+    ((angle_deg % 360) + 360) % 360
 }
 
 /// Parse media header (mdhd).
@@ -2045,7 +2047,7 @@ fn parse_stts(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
             tags.push(mk(
                 "SampleTime",
                 "Sample Time",
-                Value::String(format!("{} s", sample_time_s as u32)),
+                Value::String(format!("{} s", { sample_time_s })),
             ));
             tags.push(mk(
                 "SampleDuration",

@@ -223,9 +223,7 @@ fn compute_samples(track: &TrackInfo) -> Vec<SampleInfo> {
             // Advance stts
             if has_time {
                 time_acc += stts_delta as u64;
-                if stts_remaining > 0 {
-                    stts_remaining -= 1;
-                }
+                stts_remaining = stts_remaining.saturating_sub(1);
                 if stts_remaining == 0 {
                     stts_idx += 1;
                     if stts_idx < stts_flat.len() {
@@ -503,7 +501,7 @@ fn process_freegps_novatek(data: &[u8], tags: &mut Vec<Tag>) -> bool {
     let lat_ref = data[0x49];
     let lon_ref = data[0x4a];
 
-    if mon < 1 || mon > 12 || day < 1 || day > 31 {
+    if !(1..=12).contains(&mon) || !(1..=31).contains(&day) {
         return false;
     }
 
@@ -552,7 +550,7 @@ fn process_freegps_viofo(data: &[u8], extra_offset: usize, tags: &mut Vec<Tag>) 
     let lat_ref = d[0x29]; // N or S
     let lon_ref = d[0x2a]; // E or W
 
-    if mon < 1 || mon > 12 || day < 1 || day > 31 {
+    if !(1..=12).contains(&mon) || !(1..=31).contains(&day) {
         return false;
     }
 
@@ -590,7 +588,7 @@ fn process_freegps_akaso(data: &[u8], tags: &mut Vec<Tag>) -> bool {
     let mon = get_u32_le(data, 88);
     let day = get_u32_le(data, 92);
 
-    if mon < 1 || mon > 12 {
+    if !(1..=12).contains(&mon) {
         return false;
     }
 
@@ -627,7 +625,7 @@ fn process_freegps_vantrue_s1(data: &[u8], tags: &mut Vec<Tag>) -> bool {
     let min = get_u32_le(data, 84);
     let sec = get_u32_le(data, 88);
 
-    if mon < 1 || mon > 12 || day < 1 || day > 31 {
+    if !(1..=12).contains(&mon) || !(1..=31).contains(&day) {
         return false;
     }
 
@@ -666,7 +664,7 @@ fn process_freegps_type12(data: &[u8], tags: &mut Vec<Tag>) -> bool {
     let mon = get_u32_le(data, 0x74);
     let day = get_u32_le(data, 0x78);
 
-    if mon < 1 || mon > 12 {
+    if !(1..=12).contains(&mon) {
         return false;
     }
 
@@ -749,7 +747,7 @@ fn process_freegps_vantrue_n4(data: &[u8], tags: &mut Vec<Tag>) -> bool {
     let mon = get_u32_le(data, 84);
     let day = get_u32_le(data, 88);
 
-    if mon < 1 || mon > 12 {
+    if !(1..=12).contains(&mon) {
         return false;
     }
 
@@ -787,12 +785,9 @@ fn process_freegps_nextbase_binary(data: &[u8], tags: &mut Vec<Tag>) -> bool {
         let min = data[pos + 9];
         let sec10 = get_u16_be(data, pos + 10);
 
-        if yr < 2000
-            || yr > 2200
-            || mon < 1
-            || mon > 12
-            || day < 1
-            || day > 31
+        if !(2000..=2200).contains(&yr)
+            || !(1..=12).contains(&mon)
+            || !(1..=31).contains(&day)
             || hr > 59
             || min > 59
             || sec10 > 600
@@ -1087,7 +1082,7 @@ fn process_tx3g(data: &[u8], tags: &mut Vec<Tag>) -> bool {
 
     // Autel Evo II drone: HOME(W: lon, N: lat) datetime
     if text.starts_with("HOME(") {
-        return process_tx3g_autel(&text, tags);
+        return process_tx3g_autel(text, tags);
     }
 
     // Try key:value pairs
@@ -1670,11 +1665,7 @@ fn convert_lat_lon(lat: f64, lon: f64) -> (f64, f64) {
 }
 
 fn signed_u32(v: u32) -> i32 {
-    if v < 0x80000000 {
-        v as i32
-    } else {
-        v as i32 // wraps correctly in Rust
-    }
+    v as i32 // wraps correctly in Rust for values >= 0x80000000
 }
 
 fn get_u16_be(data: &[u8], off: usize) -> u16 {

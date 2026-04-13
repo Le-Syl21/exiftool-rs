@@ -363,7 +363,7 @@ pub fn read_dicom(data: &[u8]) -> Result<Vec<Tag>> {
         if let Some(ts) = transfer_syntax.take() {
             // Only process transfer syntax when we've left group 2
             let grp = read_u16(data, pos, big_endian);
-            if grp != 0x0002 || group2end.map_or(false, |end| pos >= end) {
+            if grp != 0x0002 || group2end.is_some_and(|end| pos >= end) {
                 if ts.starts_with("1.2.840.10008.1.2.") || ts.starts_with("1.2.840.10008.1.2") {
                     // Check for implicit VR
                     if ts == "1.2.840.10008.1.2" {
@@ -424,12 +424,10 @@ pub fn read_dicom(data: &[u8]) -> Result<Vec<Tag>> {
         pos += val_len;
 
         // Track group 2 end
-        if group == 0x0002 {
-            if element == 0x0000 && val_len == 4 {
-                let group_len = read_u32(val_data, 0, big_endian) as usize;
-                // group2end is relative to end of this element
-                group2end = Some(pos + group_len);
-            }
+        if group == 0x0002 && element == 0x0000 && val_len == 4 {
+            let group_len = read_u32(val_data, 0, big_endian) as usize;
+            // group2end is relative to end of this element
+            group2end = Some(pos + group_len);
         }
 
         // Look up tag info

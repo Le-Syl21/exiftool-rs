@@ -41,7 +41,7 @@ pub fn read_iwork(data: &[u8]) -> Result<Vec<Tag>> {
             data[pos + 23],
             data[pos + 24],
             data[pos + 25],
-        ]) as u32;
+        ]);
         let name_len = u16::from_le_bytes([data[pos + 26], data[pos + 27]]) as usize;
         let extra_len = u16::from_le_bytes([data[pos + 28], data[pos + 29]]) as usize;
         let required_version = u16::from_le_bytes([data[pos + 4], data[pos + 5]]);
@@ -265,7 +265,7 @@ fn parse_zip_central_directory(data: &[u8]) -> Option<Vec<ZipEntry>> {
         return None;
     }
     // Search for EOCD signature from end of file (allow up to 65535 bytes comment)
-    let search_start = if len > 65557 { len - 65557 } else { 0 };
+    let search_start = len.saturating_sub(65557);
     let eocd_pos = {
         let mut found = None;
         let mut i = len.saturating_sub(22);
@@ -800,8 +800,8 @@ fn parse_vt_vector_pairs(xml: &str) -> String {
     }
     // Interleave
     for (s, n) in strs.iter().zip(nums.iter()) {
-        results.push(format!("{}", s));
-        results.push(format!("{}", n));
+        results.push(s.to_string());
+        results.push(n.to_string());
     }
     results.join(", ")
 }

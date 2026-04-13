@@ -3,7 +3,7 @@
 //! DO NOT EDIT MANUALLY.
 
 /// Total tags extracted: 411
-
+///
 pub struct GenTagInfo {
     pub tag_id: u16,
     pub name: &'static str,

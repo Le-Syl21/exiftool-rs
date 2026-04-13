@@ -621,7 +621,7 @@ fn parse_distortion_info(data: &[u8], le: bool) -> Vec<Tag> {
     // Index 7: DistortionCorrection — masked (low nibble), byte index = 7*2 = 14
     if data.len() >= 16 {
         let v7 = read_i16(7);
-        let masked = (v7 as i16 & 0x0f) as i64;
+        let masked = (v7 & 0x0f) as i64;
         let pv = match masked {
             0 => "Off",
             1 => "On",
@@ -1529,11 +1529,11 @@ fn geotiff_epsg_datum(value: i64) -> Option<String> {
 /// ProjectedCSType print conversion (EPSG PCS codes).
 fn geotiff_epsg_pcs(value: i64) -> Option<String> {
     // WGS84 UTM zones 1N-60N (32601-32660)
-    if value >= 32601 && value <= 32660 {
+    if (32601..=32660).contains(&value) {
         return Some(format!("WGS84 UTM zone {}N", value - 32600));
     }
     // WGS84 UTM zones 1S-60S (32701-32760)
-    if value >= 32701 && value <= 32760 {
+    if (32701..=32760).contains(&value) {
         return Some(format!("WGS84 UTM zone {}S", value - 32700));
     }
     let s = match value {

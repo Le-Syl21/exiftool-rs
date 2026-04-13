@@ -264,7 +264,7 @@ fn tone_curve_print(vals: &[u32]) -> String {
             .join(" ");
     }
     let n = vals[0] as usize;
-    if n < 2 || n > 10 {
+    if !(2..=10).contains(&n) {
         return vals
             .iter()
             .map(|v| v.to_string())
@@ -753,6 +753,7 @@ fn process_dr4_entries(data: &[u8], pos: usize, num_entries: usize, tags: &mut V
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn process_dr4_tag(
     data: &[u8],
     tag: u32,
@@ -2080,7 +2081,7 @@ fn tone_curve_print_u16(vals: &[u16]) -> String {
             .join(" ");
     }
     let n = vals[0] as usize;
-    if n < 2 || n > 10 {
+    if !(2..=10).contains(&n) {
         return vals
             .iter()
             .map(|v| v.to_string())

@@ -790,7 +790,7 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
 
 pub fn decode_focal_length(values: &[u16], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
-    if let Some(&v) = values.get(0) {
+    if let Some(&v) = values.first() {
         if v != 0 {
             let pv = match v {
                 1 => "Fixed",

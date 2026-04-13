@@ -2,7 +2,7 @@
 ///
 /// Mirrors ExifTool's %fileTypeLookup, %magicNumber, and %mimeType.
 /// Covers all 150+ formats supported by ExifTool.
-
+///
 /// Known file types that exiftool can process.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[allow(non_camel_case_types)]
@@ -950,11 +950,14 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
                 return Some(FileType::Iiq);
             }
             // ORF: "IIRO" or "IIRS" (Olympus)
-            if header.len() >= 4 && is_le && header[0] == b'I' && header[1] == b'I' {
-                if header.len() >= 8 {
-                    // Check for ORF signature at specific offsets (Olympus uses standard TIFF with specific patterns)
-                    // For now, fall through to generic TIFF and detect by extension
-                }
+            if header.len() >= 4
+                && is_le
+                && header[0] == b'I'
+                && header[1] == b'I'
+                && header.len() >= 8
+            {
+                // Check for ORF signature at specific offsets (Olympus uses standard TIFF with specific patterns)
+                // For now, fall through to generic TIFF and detect by extension
             }
             // BigTIFF: magic 43 instead of 42
             // (handled below)
@@ -1091,7 +1094,7 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // JPEG XR / HD Photo: "II" + 0xBC byte at offset 2 (TIFF-like but identifier 0xBC)
-    if header.len() >= 4 && header[0] == b'I' && header[1] == b'I' && (header[2] & 0xFF) == 0xBC {
+    if header.len() >= 4 && header[0] == b'I' && header[1] == b'I' && header[2] == 0xBC {
         return Some(FileType::Jxr);
     }
 
@@ -1235,7 +1238,7 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // MPEG-2 TS: 0x47 sync byte every 188 or 192 bytes
-    if header.len() >= 1 && header[0] == 0x47 {
+    if !header.is_empty() && header[0] == 0x47 {
         if header.len() >= 376 && header[188] == 0x47 {
             return Some(FileType::M2ts);
         }
@@ -1285,10 +1288,11 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
     }
 
     // AIFF: "FORM" + "AIFF" or "AIFC"
-    if header.len() >= 12 && header.starts_with(b"FORM") {
-        if &header[8..12] == b"AIFF" || &header[8..12] == b"AIFC" {
-            return Some(FileType::Aiff);
-        }
+    if header.len() >= 12
+        && header.starts_with(b"FORM")
+        && (&header[8..12] == b"AIFF" || &header[8..12] == b"AIFC")
+    {
+        return Some(FileType::Aiff);
     }
 
     // APE: "MAC "
@@ -1437,10 +1441,7 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
         {
             let ms0 = header[212];
             let ms1 = header[213];
-            if (ms0 == 0x44 && ms1 == 0x44)
-                || (ms0 == 0x44 && ms1 == 0x41)
-                || (ms0 == 0x11 && ms1 == 0x11)
-            {
+            if (ms1 == 0x41 || ms1 == 0x44) && ms0 == 0x44 || (ms0 == 0x11 && ms1 == 0x11) {
                 return Some(FileType::Mrc);
             }
         }

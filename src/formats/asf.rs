@@ -47,7 +47,7 @@ const GUID_VIDEO_STREAM: [u8; 16] = [
 ];
 
 pub fn read_asf(data: &[u8]) -> Result<Vec<Tag>> {
-    if data.len() < 30 || &data[..16] != ASF_HEADER_GUID {
+    if data.len() < 30 || data[..16] != ASF_HEADER_GUID {
         return Err(Error::InvalidData("not an ASF file".into()));
     }
 

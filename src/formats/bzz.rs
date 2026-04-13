@@ -82,14 +82,14 @@ const MAXBLOCK: usize = 4096 * 1024;
 // Build the ffzt (find first zero) lookup table
 fn make_ffzt() -> [u32; 256] {
     let mut t = [0u32; 256];
-    for i in 0..256 {
+    for (i, t_val) in t.iter_mut().enumerate() {
         let mut count = 0u32;
         let mut j = i as u8;
         while j & 0x80 != 0 {
             count += 1;
             j = j.wrapping_shl(1);
         }
-        t[i] = count;
+        *t_val = count;
     }
     t
 }
@@ -411,9 +411,9 @@ pub fn decode(data: &[u8]) -> Option<Vec<u8>> {
 
     // Compute prefix sums of count
     let mut last: usize = 1;
-    for c in 0..256 {
-        let tmp = count[c];
-        count[c] = last;
+    for count_val in count.iter_mut() {
+        let tmp = *count_val;
+        *count_val = last;
         last += tmp;
     }
 

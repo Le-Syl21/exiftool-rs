@@ -261,11 +261,7 @@ pub fn read_dv(data: &[u8], file_size: u64) -> crate::error::Result<Vec<Tag>> {
                 if date_raw.chars().any(|c| c.is_ascii_lowercase()) {
                     date = None;
                 } else {
-                    let year_prefix = if year_str < "90".to_string() {
-                        "20"
-                    } else {
-                        "19"
-                    };
+                    let year_prefix = if year_str.as_str() < "90" { "20" } else { "19" };
                     date = Some(format!("{}{}", year_prefix, date_raw));
                 }
                 time = None;

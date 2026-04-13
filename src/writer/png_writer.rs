@@ -69,7 +69,7 @@ pub fn write_png(
                     .unwrap_or(chunk_data.len());
                 let keyword = crate::encoding::decode_latin1(&chunk_data[..null_pos]);
 
-                if remove_text.iter().any(|&k| k == keyword.as_str()) {
+                if remove_text.contains(&keyword.as_str()) {
                     pos = chunk_end;
                     continue; // Skip this chunk
                 }

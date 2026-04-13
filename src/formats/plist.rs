@@ -442,7 +442,7 @@ fn flatten_plist_value(
         }
         PlistValue::Array(arr) => {
             // Join array of strings/values comma-separated
-            let parts: Vec<String> = arr.iter().map(|v| plist_value_to_string(v)).collect();
+            let parts: Vec<String> = arr.iter().map(plist_value_to_string).collect();
             let tag_name = plist_key_path_to_tag_name(key_path);
             let tag_val = parts.join(", ");
             tags.push(mk_plist_tag(tag_name, Value::String(tag_val), group));
