@@ -5270,12 +5270,27 @@ fn read_makernote_ifd_with_base(
 
         // Look up tag name
         let group_name = manufacturer_group_name(manufacturer);
-        let (name, description) = mn_tags::lookup(manufacturer, tag_id);
+        let (raw_name, raw_desc) = mn_tags::lookup(manufacturer, tag_id);
 
-        // Suppress Unknown tags
-        if name == "Unknown" || name.contains("Unknown") {
-            continue;
-        }
+        // Suppress Unknown tags (unless -u/-U is active)
+        let (name, description): (&str, &str) =
+            if raw_name == "Unknown" || raw_name.contains("Unknown") {
+                if crate::metadata::exif::get_show_unknown() == 0 {
+                    continue;
+                }
+                // Fall through — will be renamed to hex below
+                (raw_name, raw_desc)
+            } else {
+                (raw_name, raw_desc)
+            };
+        // Rename unknown tags to hex format
+        let unknown_hex;
+        let (name, description) = if name == "Unknown" || name.contains("Unknown") {
+            unknown_hex = format!("Tag0x{:04X}", tag_id);
+            (unknown_hex.as_str(), unknown_hex.as_str())
+        } else {
+            (name, description)
+        };
 
         // Suppress Canon tag 0x0000
         if tag_id == 0x0000 && manufacturer == Manufacturer::Canon {
@@ -5519,29 +5534,46 @@ fn read_makernote_ifd_with_base(
         }
 
         // Apply manufacturer-specific print conversions
-        let print_value = apply_mn_print_conv(manufacturer, tag_id, &value)
-            .or_else(|| {
-                // Fallback to generated print conversions
-                let module = manufacturer_group_name(manufacturer);
-                value
-                    .as_u64()
-                    .and_then(|v| {
-                        crate::tags::print_conv_generated::print_conv(module, tag_id, v as i64)
-                    })
-                    .map(|s| s.to_string())
-                    .or_else(|| {
-                        // Try by tag name
-                        value
-                            .as_u64()
-                            .and_then(|v| {
-                                crate::tags::print_conv_generated::print_conv_by_name(
-                                    name, v as i64,
-                                )
-                            })
-                            .map(|s| s.to_string())
-                    })
-            })
-            .unwrap_or_else(|| value.to_display_string());
+        let print_value = if name.starts_with("Tag0x")
+            && crate::metadata::exif::get_show_unknown() >= 2
+        {
+            // -U mode: show binary data for unknown tags
+            match &value {
+                Value::Binary(bytes) | Value::Undefined(bytes) => bytes
+                    .iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect::<Vec<_>>()
+                    .join(" "),
+                _ => value.to_display_string(),
+            }
+        } else if name.starts_with("Tag0x") {
+            // -u mode: show unknown tags but use standard display for values
+            value.to_display_string()
+        } else {
+            apply_mn_print_conv(manufacturer, tag_id, &value)
+                .or_else(|| {
+                    // Fallback to generated print conversions
+                    let module = manufacturer_group_name(manufacturer);
+                    value
+                        .as_u64()
+                        .and_then(|v| {
+                            crate::tags::print_conv_generated::print_conv(module, tag_id, v as i64)
+                        })
+                        .map(|s| s.to_string())
+                        .or_else(|| {
+                            // Try by tag name
+                            value
+                                .as_u64()
+                                .and_then(|v| {
+                                    crate::tags::print_conv_generated::print_conv_by_name(
+                                        name, v as i64,
+                                    )
+                                })
+                                .map(|s| s.to_string())
+                        })
+                })
+                .unwrap_or_else(|| value.to_display_string())
+        };
 
         // Track Pentax PreviewImage offset/length for post-loop synthesis
         if manufacturer == Manufacturer::Pentax {

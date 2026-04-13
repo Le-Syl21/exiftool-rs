@@ -4,6 +4,121 @@ use std::path::Path;
 use std::process;
 use unicode_width::UnicodeWidthStr;
 
+/// Check if a tag name is a date/time tag.
+fn is_date_tag(name: &str) -> bool {
+    let lower = name.to_lowercase();
+    lower.contains("date") || lower.contains("time")
+}
+
+/// Format a date string using a strftime-like format.
+/// Parses dates in ExifTool format: `YYYY:MM:DD HH:MM:SS` (with optional timezone suffix).
+fn format_date(value: &str, format: &str) -> String {
+    // Try to parse YYYY:MM:DD HH:MM:SS or YYYY:MM:DD HH:MM:SS+HH:MM etc.
+    let base = value.trim();
+    // Extract the core datetime part (first 19 chars if long enough)
+    if base.len() < 10 {
+        return value.to_string();
+    }
+
+    let date_part = &base[..std::cmp::min(base.len(), 10)];
+    let parts: Vec<&str> = date_part.split(':').collect();
+    if parts.len() < 3 {
+        // Try dash-separated
+        let parts2: Vec<&str> = date_part.split('-').collect();
+        if parts2.len() < 3 {
+            return value.to_string();
+        }
+        return format_date_parts(
+            parts2[0],
+            parts2[1],
+            parts2[2],
+            if base.len() >= 19 { &base[11..19] } else { "" },
+            base,
+            format,
+        );
+    }
+
+    let time_str = if base.len() >= 19 { &base[11..19] } else { "" };
+
+    format_date_parts(parts[0], parts[1], parts[2], time_str, base, format)
+}
+
+fn format_date_parts(
+    year: &str,
+    month: &str,
+    day: &str,
+    time_str: &str,
+    original: &str,
+    format: &str,
+) -> String {
+    let (hour, minute, second) = if time_str.len() >= 8 {
+        let tp: Vec<&str> = time_str.split(':').collect();
+        if tp.len() >= 3 {
+            (tp[0], tp[1], tp[2])
+        } else {
+            ("00", "00", "00")
+        }
+    } else {
+        ("00", "00", "00")
+    };
+
+    // Extract timezone suffix if present (everything after the time part)
+    let tz_suffix = if original.len() > 19 {
+        &original[19..]
+    } else {
+        ""
+    };
+
+    let month_num: u32 = month.parse().unwrap_or(1);
+    let month_names = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ];
+    let month_abbrev = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+
+    let year_2digit = if year.len() >= 4 { &year[2..4] } else { year };
+
+    let mut result = format.to_string();
+    result = result.replace("%Y", year);
+    result = result.replace("%y", year_2digit);
+    result = result.replace("%m", month);
+    result = result.replace("%d", day);
+    result = result.replace("%H", hour);
+    result = result.replace("%M", minute);
+    result = result.replace("%S", second);
+    result = result.replace(
+        "%B",
+        if (1..=12).contains(&month_num) {
+            month_names[(month_num - 1) as usize]
+        } else {
+            "Unknown"
+        },
+    );
+    result = result.replace(
+        "%b",
+        if (1..=12).contains(&month_num) {
+            month_abbrev[(month_num - 1) as usize]
+        } else {
+            "Unk"
+        },
+    );
+    result = result.replace("%z", tz_suffix);
+    result = result.replace("%%", "%");
+    result
+}
+
 /// Pad a string to a fixed display width (handles CJK/wide chars correctly)
 fn pad_display(s: &str, width: usize) -> String {
     let display_w = UnicodeWidthStr::width(s);
@@ -47,12 +162,15 @@ fn main() {
     let mut show_tag_ids = false;
     let mut quiet = false;
     let mut no_composites = false;
-    let mut _show_unknown = false;
-    let mut _preserve_dates = false;
+    let mut preserve_dates = false;
     let mut exclude_tags: Vec<String> = Vec::new();
-    let mut _date_format: Option<String> = None;
-    let mut _separator: Option<String> = None;
-    let mut _output_file: Option<String> = None;
+    let mut date_format: Option<String> = None;
+    let mut separator: Option<String> = None;
+    let mut output_file: Option<String> = None;
+    let mut process_one = false;
+    let mut delete_original = false;
+    let mut restore_original = false;
+    let mut ignore_dirs: Vec<String> = Vec::new();
     let mut list_tags = false;
     let mut file_order: Option<String> = None;
     let mut args_output = false;
@@ -64,6 +182,8 @@ fn main() {
     let mut html_dump = false;
     let mut scan_for_xmp = false;
     let mut lang: Option<String> = None;
+    let mut geotag_file: Option<String> = None;
+    let mut preview_extract = false;
 
     let mut i = 1;
     while i < args.len() {
@@ -99,10 +219,10 @@ fn main() {
             "-D" | "-tagID" => show_tag_ids = true,
             "-e" | "-composite" => no_composites = true,
             "-q" | "-quiet" => quiet = true,
-            "-u" | "-unknown" => _show_unknown = true,
-            "-U" | "-unknown2" => _show_unknown = true,
+            "-u" | "-unknown" => options.show_unknown = 1,
+            "-U" | "-unknown2" => options.show_unknown = 2,
             "-m" | "-ignoreMinorErrors" => { /* ignored, we're lenient by default */ }
-            "-P" | "-preserve" => _preserve_dates = true,
+            "-P" | "-preserve" => preserve_dates = true,
             "-progress" => {
                 progress = true;
             }
@@ -136,10 +256,10 @@ fn main() {
                 }
             }
             "-delete_original" | "-deleteOriginal" => {
-                // Delete _original backup files
+                delete_original = true;
             }
             "-restore_original" | "-restoreOriginal" => {
-                // Restore from _original backup
+                restore_original = true;
             }
             "-diff" => {
                 if i + 1 < args.len() {
@@ -186,7 +306,8 @@ fn main() {
             "-geotag" => {
                 if i + 1 < args.len() {
                     i += 1;
-                } // consume GPX file
+                    geotag_file = Some(args[i].clone());
+                }
             }
             "-geosync" => {
                 if i + 1 < args.len() {
@@ -209,7 +330,8 @@ fn main() {
             "-i" | "-ignore" => {
                 if i + 1 < args.len() {
                     i += 1;
-                } // consume dir to ignore
+                    ignore_dirs.push(args[i].clone());
+                }
             }
             "-k" | "-pause" => {
                 // Pause before terminating (Windows)
@@ -231,7 +353,9 @@ fn main() {
                     i += 1;
                 } // consume API option
             }
-            "-one" | "-1" => { /* process only first file */ }
+            "-one" | "-1" => {
+                process_one = true;
+            }
             "-overwrite_original_in_place" => overwrite_original = true,
             "-password" => {
                 if i + 1 < args.len() {
@@ -241,7 +365,14 @@ fn main() {
             "-php" | "-phpFormat" => {
                 php_output = true;
             }
-            "-preview" => { /* extract preview image */ }
+            "-preview" => {
+                preview_extract = true;
+                options.requested_tags.push("PreviewImage".into());
+                options.requested_tags.push("ThumbnailImage".into());
+                options.requested_tags.push("JpgFromRaw".into());
+                options.requested_tags.push("OtherImage".into());
+                options.requested_tags.push("ThumbnailTIFF".into());
+            }
             "-require" => {
                 if i + 1 < args.len() {
                     i += 1;
@@ -453,21 +584,21 @@ fn main() {
                 }
                 process::exit(0);
             }
-            "-d" => {
+            "-d" | "-dateFormat" | "-dateformat" => {
                 if i + 1 < args.len() {
-                    _date_format = Some(args[i + 1].clone());
+                    date_format = Some(args[i + 1].clone());
                     i += 1;
                 }
             }
-            "-sep" => {
+            "-sep" | "-separator" => {
                 if i + 1 < args.len() {
-                    _separator = Some(args[i + 1].clone());
+                    separator = Some(args[i + 1].clone());
                     i += 1;
                 }
             }
-            "-o" => {
+            "-o" | "-out" => {
                 if i + 1 < args.len() {
-                    _output_file = Some(args[i + 1].clone());
+                    output_file = Some(args[i + 1].clone());
                     i += 1;
                 }
             }
@@ -573,7 +704,7 @@ fn main() {
         for f in &files {
             let path = Path::new(f);
             if path.is_dir() {
-                collect_files(path, &ext_filter, &mut expanded);
+                collect_files(path, &ext_filter, &ignore_dirs, &mut expanded);
             } else {
                 expanded.push(f.clone());
             }
@@ -592,6 +723,33 @@ fn main() {
         });
     }
 
+    // Process only first file (-1 / -one)
+    if process_one {
+        files.truncate(1);
+    }
+
+    // Delete _original backup files
+    if delete_original {
+        for file in &files {
+            let original = format!("{}_original", file);
+            if Path::new(&original).exists() && std::fs::remove_file(&original).is_ok() {
+                println!("    Removed {}", original);
+            }
+        }
+        return;
+    }
+
+    // Restore from _original backup
+    if restore_original {
+        for file in &files {
+            let original = format!("{}_original", file);
+            if Path::new(&original).exists() && std::fs::rename(&original, file).is_ok() {
+                println!("    Restored {} from {}", file, original);
+            }
+        }
+        return;
+    }
+
     // Filename rename mode
     if let Some(ref tag_name) = filename_tag {
         let et = ExifTool::with_options(options.clone());
@@ -604,6 +762,73 @@ fn main() {
         return;
     }
 
+    // Geotag mode: read GPX track and write GPS tags to images
+    if let Some(ref gpx_path) = geotag_file {
+        match std::fs::read_to_string(gpx_path) {
+            Ok(gpx_data) => {
+                let points = exiftool_rs::geotag::parse_gpx(&gpx_data);
+                if points.is_empty() {
+                    eprintln!("Warning: No track points found in {}", gpx_path);
+                } else {
+                    let reader = ExifTool::with_options(options.clone());
+                    for file in &files {
+                        if let Ok(file_tags) = reader.extract_info(file) {
+                            // Find DateTimeOriginal
+                            let dto = file_tags
+                                .iter()
+                                .find(|t| t.name == "DateTimeOriginal")
+                                .or_else(|| file_tags.iter().find(|t| t.name == "CreateDate"));
+                            if let Some(dt_tag) = dto {
+                                if let Some(ts) =
+                                    exiftool_rs::geotag::parse_exif_datetime(&dt_tag.print_value)
+                                {
+                                    if let Some(gps) =
+                                        exiftool_rs::geotag::find_gps_for_time(&points, ts)
+                                    {
+                                        let lat_abs = gps.lat.abs();
+                                        let lon_abs = gps.lon.abs();
+                                        let lat_str = format!("{:.6}", lat_abs);
+                                        let lon_str = format!("{:.6}", lon_abs);
+                                        let alt_str = format!("{:.1}", gps.ele);
+                                        let lat_ref = if gps.lat >= 0.0 { "N" } else { "S" };
+                                        let lon_ref = if gps.lon >= 0.0 { "E" } else { "W" };
+
+                                        write_tags.push(("GPSLatitude".to_string(), lat_str));
+                                        write_tags.push((
+                                            "GPSLatitudeRef".to_string(),
+                                            lat_ref.to_string(),
+                                        ));
+                                        write_tags.push(("GPSLongitude".to_string(), lon_str));
+                                        write_tags.push((
+                                            "GPSLongitudeRef".to_string(),
+                                            lon_ref.to_string(),
+                                        ));
+                                        write_tags.push(("GPSAltitude".to_string(), alt_str));
+                                    } else {
+                                        eprintln!("Warning: No GPS data for timestamp in {}", file);
+                                    }
+                                } else {
+                                    eprintln!(
+                                        "Warning: Could not parse date '{}' in {}",
+                                        dt_tag.print_value, file
+                                    );
+                                }
+                            } else {
+                                eprintln!("Warning: No DateTimeOriginal found in {}", file);
+                            }
+                        } else {
+                            eprintln!("Warning: Could not read metadata from {}", file);
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Error reading GPX file {}: {}", gpx_path, e);
+                process::exit(1);
+            }
+        }
+    }
+
     // Write mode
     if !write_tags.is_empty() || !delete_tags.is_empty() || tags_from_file.is_some() {
         run_write_mode(
@@ -613,6 +838,9 @@ fn main() {
             overwrite_original,
             options,
             tags_from_file.as_deref(),
+            preserve_dates,
+            output_file.as_deref(),
+            separator.as_deref(),
         );
         return;
     }
@@ -646,6 +874,12 @@ fn main() {
 
     if files.is_empty() && !quiet {
         eprintln!("No matching files");
+        return;
+    }
+
+    // Preview extraction mode
+    if preview_extract {
+        extract_previews(&et, &files, quiet);
         return;
     }
 
@@ -750,6 +984,8 @@ fn main() {
                 no_composites,
                 numeric,
                 &translations,
+                date_format.as_deref(),
+                separator.as_deref(),
             );
         }
     }
@@ -832,6 +1068,7 @@ fn run_stay_open(options: Options, show_groups: bool, short_names: bool, json: b
 // Write mode
 // ============================================================================
 
+#[allow(clippy::too_many_arguments)]
 fn run_write_mode(
     files: &[String],
     write_tags: &[(String, String)],
@@ -839,6 +1076,9 @@ fn run_write_mode(
     overwrite_original: bool,
     options: Options,
     tags_from_file: Option<&str>,
+    preserve_dates: bool,
+    output_file: Option<&str>,
+    separator: Option<&str>,
 ) {
     let mut et = ExifTool::with_options(options);
 
@@ -864,7 +1104,19 @@ fn run_write_mode(
             }
             continue;
         }
-        et.set_new_value(tag, Some(value));
+        // If separator is set, split value by separator and set each part
+        if let Some(sep) = separator {
+            let parts: Vec<&str> = value.split(sep).map(|s| s.trim()).collect();
+            if parts.len() > 1 {
+                for part in &parts {
+                    et.set_new_value(tag, Some(part));
+                }
+            } else {
+                et.set_new_value(tag, Some(value));
+            }
+        } else {
+            et.set_new_value(tag, Some(value));
+        }
     }
     for tag in delete_tags {
         et.set_new_value(tag, None);
@@ -904,7 +1156,19 @@ fn run_write_mode(
             }
         }
 
-        let dst = if overwrite_original {
+        let dst = if let Some(out) = output_file {
+            // -o: output to specified file or directory
+            let out_path = Path::new(out);
+            if out_path.is_dir() {
+                let fname = Path::new(file)
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .unwrap_or("output");
+                out_path.join(fname).to_string_lossy().to_string()
+            } else {
+                out.to_string()
+            }
+        } else if overwrite_original {
             file.clone()
         } else {
             let path = Path::new(file);
@@ -919,10 +1183,26 @@ fn run_write_mode(
                 .to_string_lossy()
                 .to_string()
         };
+
+        // Save mtime before writing if -P is set
+        let mtime = if preserve_dates {
+            std::fs::metadata(&dst).ok().and_then(|m| m.modified().ok())
+        } else {
+            None
+        };
+
         match et.write_info(file, &dst) {
             Ok(n) => {
                 _total_written += n;
-                if overwrite_original {
+
+                // Restore mtime if -P was specified
+                if let Some(t) = mtime {
+                    let _ = filetime::set_file_mtime(&dst, filetime::FileTime::from_system_time(t));
+                }
+
+                if output_file.is_some() {
+                    println!("    {} tag(s) written to {}", n, dst);
+                } else if overwrite_original {
                     println!("    1 image files updated");
                 } else {
                     println!("    {} tag(s) written to {}", n, dst);
@@ -975,6 +1255,8 @@ fn print_text_full(
     no_composites: bool,
     numeric: bool,
     translations: &Option<std::collections::HashMap<&str, &str>>,
+    date_format: Option<&str>,
+    separator: Option<&str>,
 ) {
     let multiple = files.len() > 1;
     for file in files {
@@ -996,7 +1278,17 @@ fn print_text_full(
                 }
                 for tag in &tags {
                     let val_raw = tag.display_value(numeric);
-                    let val = sanitize_display_value(&val_raw);
+                    let mut val = sanitize_display_value(&val_raw);
+                    // Apply -sep: replace default ", " list separator
+                    if let Some(sep) = separator {
+                        val = val.replace(", ", sep);
+                    }
+                    // Apply -d: format date/time values
+                    if let Some(fmt) = date_format {
+                        if is_date_tag(&tag.name) {
+                            val = format_date(&val, fmt);
+                        }
+                    }
                     let id_prefix = if show_tag_ids {
                         format!("[{}] ", tag.id)
                     } else {
@@ -1139,6 +1431,90 @@ fn print_binary(et: &ExifTool, files: &[String]) {
                             let _ = stdout.write_all(b"\n");
                         }
                     }
+                }
+            }
+            Err(e) => eprintln!("Error: {} - {}", file, e),
+        }
+    }
+}
+
+/// Detect image format from magic bytes and return the appropriate file extension.
+fn detect_image_ext(data: &[u8]) -> &'static str {
+    if data.len() >= 2 && data[0] == 0xFF && data[1] == 0xD8 {
+        "jpg"
+    } else if data.len() >= 4 && (data[0..4] == *b"II\x2a\x00" || data[0..4] == *b"MM\x00\x2a") {
+        "tiff"
+    } else if data.len() >= 8 && data[0..4] == *b"\x89PNG" {
+        "png"
+    } else {
+        "dat"
+    }
+}
+
+/// Preview tag names to look for, in priority order.
+const PREVIEW_TAG_NAMES: &[&str] = &[
+    "PreviewImage",
+    "JpgFromRaw",
+    "OtherImage",
+    "ThumbnailImage",
+    "ThumbnailTIFF",
+];
+
+/// Extract embedded preview/thumbnail images and write them to files.
+fn extract_previews(et: &ExifTool, files: &[String], quiet: bool) {
+    for file in files {
+        match et.extract_info(file) {
+            Ok(tags) => {
+                let path = Path::new(file);
+                let stem = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("output");
+                let parent = path.parent().unwrap_or_else(|| Path::new("."));
+                let mut found = false;
+
+                // Iterate in priority order so larger previews come first
+                for &preview_name in PREVIEW_TAG_NAMES {
+                    for tag in &tags {
+                        if !tag.name.eq_ignore_ascii_case(preview_name) {
+                            continue;
+                        }
+                        let data = match &tag.raw_value {
+                            exiftool_rs::Value::Binary(d) => d,
+                            exiftool_rs::Value::Undefined(d) => d,
+                            _ => continue,
+                        };
+                        if data.is_empty() {
+                            continue;
+                        }
+                        let ext = detect_image_ext(data);
+                        let suffix = tag.name.to_lowercase().replace("image", "");
+                        let suffix = if suffix == "preview" || suffix.is_empty() {
+                            "preview".to_string()
+                        } else {
+                            suffix
+                        };
+                        let out_path = parent.join(format!("{}_{}.{}", stem, suffix, ext));
+                        match std::fs::write(&out_path, data) {
+                            Ok(()) => {
+                                if !quiet {
+                                    println!(
+                                        "{}: wrote {} ({} bytes)",
+                                        file,
+                                        out_path.display(),
+                                        data.len()
+                                    );
+                                }
+                                found = true;
+                            }
+                            Err(e) => {
+                                eprintln!("Error writing {}: {}", out_path.display(), e);
+                            }
+                        }
+                    }
+                }
+                if !found && !quiet {
+                    eprintln!("{}: no preview image found", file);
                 }
             }
             Err(e) => eprintln!("Error: {} - {}", file, e),
@@ -1493,7 +1869,12 @@ fn print_xml(et: &ExifTool, files: &[String]) {
 // Directory recursion
 // ============================================================================
 
-fn collect_files(dir: &Path, ext_filter: &Option<String>, files: &mut Vec<String>) {
+fn collect_files(
+    dir: &Path,
+    ext_filter: &Option<String>,
+    ignore_dirs: &[String],
+    files: &mut Vec<String>,
+) {
     let entries = match std::fs::read_dir(dir) {
         Ok(e) => e,
         Err(_) => return,
@@ -1506,7 +1887,13 @@ fn collect_files(dir: &Path, ext_filter: &Option<String>, files: &mut Vec<String
         };
         let path = entry.path();
         if path.is_dir() {
-            collect_files(&path, ext_filter, files);
+            // Skip ignored directories
+            if let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) {
+                if ignore_dirs.iter().any(|d| d == dir_name) {
+                    continue;
+                }
+            }
+            collect_files(&path, ext_filter, ignore_dirs, files);
         } else if path.is_file() {
             if let Some(ref ext) = ext_filter {
                 if path

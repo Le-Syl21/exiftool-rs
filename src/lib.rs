@@ -67,6 +67,7 @@ pub mod exiftool;
 pub mod file_type;
 pub mod formats;
 pub mod geolocation;
+pub mod geotag;
 pub mod i18n;
 pub mod md5;
 pub mod metadata;

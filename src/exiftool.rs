@@ -31,6 +31,8 @@ pub struct Options {
     pub requested_tags: Vec<String>,
     /// Extract embedded documents/data (video frames, etc.). Level: 0=off, 1=-ee, 2=-ee2, 3=-ee3.
     pub extract_embedded: u8,
+    /// Show unknown tags: 0=off, 1=-u (show unknown), 2=-U (show unknown + binary data).
+    pub show_unknown: u8,
 }
 
 impl Default for Options {
@@ -41,6 +43,7 @@ impl Default for Options {
             fast_scan: 0,
             requested_tags: Vec::new(),
             extract_embedded: 0,
+            show_unknown: 0,
         }
     }
 }
@@ -1071,6 +1074,9 @@ impl ExifTool {
 
     /// Extract metadata from in-memory data.
     pub fn extract_info_from_bytes(&self, data: &[u8], path: &Path) -> Result<Vec<Tag>> {
+        // Propagate show_unknown to EXIF/MakerNotes parsers via thread-local
+        crate::metadata::exif::set_show_unknown(self.options.show_unknown);
+
         let file_type_result = self.detect_file_type(data, path);
         let (file_type, mut tags) = match file_type_result {
             Ok(ft) => {

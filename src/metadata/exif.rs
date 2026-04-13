@@ -5,10 +5,26 @@
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 
+use std::cell::Cell;
+
 use crate::error::{Error, Result};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::tags::exif as exif_tags;
 use crate::value::Value;
+
+thread_local! {
+    static SHOW_UNKNOWN: Cell<u8> = const { Cell::new(0) };
+}
+
+/// Set the show_unknown level for the current thread (used by MakerNotes).
+pub fn set_show_unknown(level: u8) {
+    SHOW_UNKNOWN.with(|s| s.set(level));
+}
+
+/// Get the show_unknown level for the current thread (used by MakerNotes).
+pub fn get_show_unknown() -> u8 {
+    SHOW_UNKNOWN.with(|s| s.get())
+}
 
 /// Byte order of the TIFF data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1002,19 +1018,34 @@ impl ExifReader {
                     continue;
                 }
 
-                let print_value = exif_tags::print_conv(ifd_name, entry.tag, &value)
-                    .or_else(|| {
-                        // Fallback to generated print conversions
-                        value
-                            .as_u64()
-                            .and_then(|v| {
-                                crate::tags::print_conv_generated::print_conv_by_name(
-                                    &name, v as i64,
-                                )
-                            })
-                            .map(|s| s.to_string())
-                    })
-                    .unwrap_or_else(|| value.to_display_string());
+                let print_value = if name.starts_with("Tag0x") && get_show_unknown() >= 2 {
+                    // -U mode: show binary data for unknown tags
+                    match &value {
+                        Value::Binary(bytes) | Value::Undefined(bytes) => bytes
+                            .iter()
+                            .map(|b| format!("{:02x}", b))
+                            .collect::<Vec<_>>()
+                            .join(" "),
+                        _ => value.to_display_string(),
+                    }
+                } else if name.starts_with("Tag0x") {
+                    // -u mode: show unknown tags but use standard display for values
+                    value.to_display_string()
+                } else {
+                    exif_tags::print_conv(ifd_name, entry.tag, &value)
+                        .or_else(|| {
+                            // Fallback to generated print conversions
+                            value
+                                .as_u64()
+                                .and_then(|v| {
+                                    crate::tags::print_conv_generated::print_conv_by_name(
+                                        &name, v as i64,
+                                    )
+                                })
+                                .map(|s| s.to_string())
+                        })
+                        .unwrap_or_else(|| value.to_display_string())
+                };
 
                 tags.push(Tag {
                     id: TagId::Numeric(entry.tag),
