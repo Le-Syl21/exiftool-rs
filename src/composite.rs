@@ -4410,3 +4410,189 @@ static NIKON_LENS_IDS: &[([u8; 8], &str)] = &[
         "Sony FE 70-300mm F4.5-5.6 G OSS",
     ),
 ];
+
+// ============================================================================
+// MWG (Metadata Working Group) composite tags
+// ============================================================================
+
+/// MWG tag mapping: (mwg_name, description, sources) where sources are checked
+/// in priority order. Each source is (group_prefix, tag_name).
+/// `group_prefix` is matched against family0 or family1; empty means any group.
+#[allow(clippy::type_complexity)]
+const MWG_MAPPINGS: &[(&str, &str, &[(&str, &str)])] = &[
+    (
+        "Description",
+        "Description",
+        &[
+            ("XMP", "Description"),
+            ("EXIF", "ImageDescription"),
+            ("IPTC", "Caption-Abstract"),
+        ],
+    ),
+    (
+        "DateTimeOriginal",
+        "Date/Time Original",
+        &[
+            ("EXIF", "DateTimeOriginal"),
+            ("XMP", "DateCreated"),
+            ("IPTC", "DateCreated"),
+        ],
+    ),
+    (
+        "CreateDate",
+        "Create Date",
+        &[
+            ("XMP", "CreateDate"),
+            ("EXIF", "CreateDate"),
+            ("IPTC", "DigitalCreationDate"),
+        ],
+    ),
+    (
+        "Copyright",
+        "Copyright",
+        &[
+            ("XMP", "Rights"),
+            ("EXIF", "Copyright"),
+            ("IPTC", "CopyrightNotice"),
+        ],
+    ),
+    (
+        "Creator",
+        "Creator",
+        &[("XMP", "Creator"), ("EXIF", "Artist"), ("IPTC", "By-line")],
+    ),
+    (
+        "Keywords",
+        "Keywords",
+        &[("XMP", "Subject"), ("IPTC", "Keywords")],
+    ),
+    ("City", "City", &[("XMP", "City"), ("IPTC", "City")]),
+    (
+        "State",
+        "State",
+        &[("XMP", "State"), ("IPTC", "Province-State")],
+    ),
+    (
+        "Country",
+        "Country",
+        &[("XMP", "Country"), ("IPTC", "Country-PrimaryLocationName")],
+    ),
+    (
+        "Location",
+        "Location",
+        &[("XMP", "Location"), ("IPTC", "Sub-location")],
+    ),
+    ("Rating", "Rating", &[("XMP", "Rating")]),
+];
+
+/// Compute MWG composite tags from existing tags.
+///
+/// For each MWG mapping, checks sources in priority order and creates a
+/// composite tag with the first found value.
+pub fn compute_mwg_composites(tags: &[Tag]) -> Vec<Tag> {
+    let mut mwg_tags = Vec::new();
+
+    for &(mwg_name, description, sources) in MWG_MAPPINGS {
+        // Find the first matching source tag
+        let found = sources
+            .iter()
+            .find_map(|&(group, tag_name)| find_tag_with_group(tags, tag_name, group));
+
+        if let Some(source_tag) = found {
+            mwg_tags.push(Tag {
+                id: TagId::Text(format!("MWG:{}", mwg_name)),
+                name: mwg_name.to_string(),
+                description: description.to_string(),
+                group: TagGroup {
+                    family0: "Composite".to_string(),
+                    family1: "MWG".to_string(),
+                    family2: "Other".to_string(),
+                },
+                raw_value: source_tag.raw_value.clone(),
+                print_value: source_tag.print_value.clone(),
+                priority: 10, // High priority so MWG tags take precedence
+            });
+        }
+    }
+
+    mwg_tags
+}
+
+/// Find a tag matching the given name and group prefix.
+fn find_tag_with_group<'a>(tags: &'a [Tag], name: &str, group: &str) -> Option<&'a Tag> {
+    let name_lower = name.to_lowercase();
+    let group_lower = group.to_lowercase();
+    tags.iter().find(|t| {
+        t.name.to_lowercase() == name_lower
+            && (t.group.family0.to_lowercase().contains(&group_lower)
+                || t.group.family1.to_lowercase().contains(&group_lower))
+    })
+}
+
+/// MWG write tag mapping: (mwg_tag_name, write_targets).
+/// Each write target is "Group:TagName" for `set_new_value`.
+const MWG_WRITE_MAPPINGS: &[(&str, &[&str])] = &[
+    (
+        "Description",
+        &[
+            "XMP-dc:Description",
+            "EXIF:ImageDescription",
+            "IPTC:Caption-Abstract",
+        ],
+    ),
+    (
+        "DateTimeOriginal",
+        &[
+            "EXIF:DateTimeOriginal",
+            "XMP-photoshop:DateCreated",
+            "IPTC:DateCreated",
+        ],
+    ),
+    (
+        "CreateDate",
+        &[
+            "XMP-xmp:CreateDate",
+            "EXIF:CreateDate",
+            "IPTC:DigitalCreationDate",
+        ],
+    ),
+    (
+        "Copyright",
+        &["XMP-dc:Rights", "EXIF:Copyright", "IPTC:CopyrightNotice"],
+    ),
+    (
+        "Creator",
+        &["XMP-dc:Creator", "EXIF:Artist", "IPTC:By-line"],
+    ),
+    ("Keywords", &["XMP-dc:Subject", "IPTC:Keywords"]),
+    ("City", &["XMP-photoshop:City", "IPTC:City"]),
+    ("State", &["XMP-photoshop:State", "IPTC:Province-State"]),
+    (
+        "Country",
+        &["XMP-photoshop:Country", "IPTC:Country-PrimaryLocationName"],
+    ),
+    ("Location", &["XMP-iptcCore:Location", "IPTC:Sub-location"]),
+    ("Rating", &["XMP-xmp:Rating"]),
+];
+
+/// Expand an MWG tag name into the list of concrete tags to write.
+///
+/// If the tag matches an MWG name (case-insensitive), returns all corresponding
+/// write targets. Otherwise returns the original tag unchanged.
+pub fn expand_mwg_write_tag(tag: &str) -> Vec<String> {
+    // Strip any "MWG:" prefix if present
+    let bare = if let Some(stripped) = tag.strip_prefix("MWG:") {
+        stripped
+    } else {
+        tag
+    };
+
+    for &(mwg_name, targets) in MWG_WRITE_MAPPINGS {
+        if bare.eq_ignore_ascii_case(mwg_name) {
+            return targets.iter().map(|t| t.to_string()).collect();
+        }
+    }
+
+    // Not an MWG tag, return as-is
+    vec![tag.to_string()]
+}

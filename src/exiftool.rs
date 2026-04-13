@@ -33,6 +33,10 @@ pub struct Options {
     pub extract_embedded: u8,
     /// Show unknown tags: 0=off, 1=-u (show unknown), 2=-U (show unknown + binary data).
     pub show_unknown: u8,
+    /// Process compressed data in files (-z option).
+    pub process_compressed: bool,
+    /// Use MWG (Metadata Working Group) composite tags for reading/writing.
+    pub use_mwg: bool,
 }
 
 impl Default for Options {
@@ -44,6 +48,8 @@ impl Default for Options {
             requested_tags: Vec::new(),
             extract_embedded: 0,
             show_unknown: 0,
+            process_compressed: false,
+            use_mwg: false,
         }
     }
 }
@@ -1076,6 +1082,8 @@ impl ExifTool {
     pub fn extract_info_from_bytes(&self, data: &[u8], path: &Path) -> Result<Vec<Tag>> {
         // Propagate show_unknown to EXIF/MakerNotes parsers via thread-local
         crate::metadata::exif::set_show_unknown(self.options.show_unknown);
+        // Propagate process_compressed to format readers via thread-local
+        crate::formats::pdf::set_process_compressed(self.options.process_compressed);
 
         let file_type_result = self.detect_file_type(data, path);
         let (file_type, mut tags) = match file_type_result {
@@ -1372,6 +1380,12 @@ impl ExifTool {
         // Compute composite tags
         let composite = crate::composite::compute_composite_tags(&tags);
         tags.extend(composite);
+
+        // MWG (Metadata Working Group) composite tags
+        if self.options.use_mwg {
+            let mwg = crate::composite::compute_mwg_composites(&tags);
+            tags.extend(mwg);
+        }
 
         // FLIR post-processing: remove LensID composite for FLIR cameras.
         // Perl's LensID composite requires LensType EXIF tag (not present in FLIR images),

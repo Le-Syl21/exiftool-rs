@@ -3,11 +3,28 @@
 //! Parses PDF Info dictionary and embedded XMP metadata stream.
 //! Mirrors ExifTool's PDF.pm.
 
+use std::cell::Cell;
+use std::io::Read;
+
 use crate::error::{Error, Result};
 use crate::formats::psd;
 use crate::metadata::XmpReader;
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
+
+thread_local! {
+    static PROCESS_COMPRESSED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Set whether to process compressed data (used by -z option).
+pub fn set_process_compressed(enabled: bool) {
+    PROCESS_COMPRESSED.with(|c| c.set(enabled));
+}
+
+/// Get whether compressed data processing is enabled.
+fn get_process_compressed() -> bool {
+    PROCESS_COMPRESSED.with(|c| c.get())
+}
 
 pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
     if data.len() < 8 || !data.starts_with(b"%PDF-") {
@@ -402,15 +419,31 @@ fn scan_for_info_and_xmp(data: &[u8], tags: &mut Vec<Tag>) {
                     stream_start
                 };
 
+                // Check if this stream uses FlateDecode (compressed)
+                let header_region = &data[abs_pos..(abs_pos + stream_pos).min(data.len())];
+                let is_flate = find_bytes(header_region, b"/FlateDecode").is_some();
+
                 // Find "endstream"
                 if let Some(end_pos) = find_bytes(&data[stream_start..], b"endstream") {
-                    let xmp_data = &data[stream_start..stream_start + end_pos];
-                    // Verify it looks like XMP
-                    if find_bytes(xmp_data, b"<x:xmpmeta").is_some()
-                        || find_bytes(xmp_data, b"<?xpacket").is_some()
+                    let raw_data = &data[stream_start..stream_start + end_pos];
+
+                    // Try raw data first, then decompress if -z is set
+                    if find_bytes(raw_data, b"<x:xmpmeta").is_some()
+                        || find_bytes(raw_data, b"<?xpacket").is_some()
                     {
-                        if let Ok(xmp_tags) = XmpReader::read(xmp_data) {
+                        if let Ok(xmp_tags) = XmpReader::read(raw_data) {
                             tags.extend(xmp_tags);
+                        }
+                    } else if is_flate && get_process_compressed() {
+                        // Attempt zlib decompression for FlateDecode streams
+                        if let Some(decompressed) = try_zlib_decompress(raw_data) {
+                            if find_bytes(&decompressed, b"<x:xmpmeta").is_some()
+                                || find_bytes(&decompressed, b"<?xpacket").is_some()
+                            {
+                                if let Ok(xmp_tags) = XmpReader::read(&decompressed) {
+                                    tags.extend(xmp_tags);
+                                }
+                            }
                         }
                     }
                 }
@@ -508,6 +541,34 @@ fn scan_for_photoshop_irbs(data: &[u8], tags: &mut Vec<Tag>) {
             break;
         }
     }
+}
+
+/// Try to decompress zlib (FlateDecode) data, returning None on failure.
+fn try_zlib_decompress(data: &[u8]) -> Option<Vec<u8>> {
+    // PDF FlateDecode uses zlib format (not raw deflate)
+    let mut decoder = flate2::read::ZlibDecoder::new(data);
+    let mut buf = Vec::new();
+    // Limit decompressed size to 64 MB to avoid memory issues
+    decoder
+        .by_ref()
+        .take(64 * 1024 * 1024)
+        .read_to_end(&mut buf)
+        .ok()?;
+    if buf.is_empty() {
+        // Try raw deflate as fallback (some PDFs omit the zlib header)
+        let mut decoder = flate2::read::DeflateDecoder::new(data);
+        let mut buf2 = Vec::new();
+        decoder
+            .by_ref()
+            .take(64 * 1024 * 1024)
+            .read_to_end(&mut buf2)
+            .ok()?;
+        if buf2.is_empty() {
+            return None;
+        }
+        return Some(buf2);
+    }
+    Some(buf)
 }
 
 fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {

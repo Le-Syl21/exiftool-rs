@@ -382,7 +382,9 @@ fn main() {
                 scan_for_xmp = true;
             }
             "-struct" | "-s2" | "-s1" => short_names = true,
-            "-use" | "-useMWG" | "-usemwg" => { /* use MWG composite tags */ }
+            "-use" | "-useMWG" | "-usemwg" => {
+                options.use_mwg = true;
+            }
             "-validate" => {
                 validate = true;
             }
@@ -396,7 +398,9 @@ fn main() {
                     i += 1;
                 }
             }
-            "-z" | "-zip" => { /* process compressed data */ }
+            "-z" | "-zip" => {
+                options.process_compressed = true;
+            }
             "-common_args" => {
                 // Load arguments from file
                 if i + 1 < args.len() {
@@ -1080,6 +1084,7 @@ fn run_write_mode(
     output_file: Option<&str>,
     separator: Option<&str>,
 ) {
+    let use_mwg = options.use_mwg;
     let mut et = ExifTool::with_options(options);
 
     // Copy tags from source file if specified
@@ -1090,8 +1095,33 @@ fn run_write_mode(
         }
     }
 
+    // MWG write expansion: when -useMWG is active, expand MWG tag names
+    // to write to all corresponding locations (EXIF + IPTC + XMP).
+    let write_tags_expanded: Vec<(String, String)> = if use_mwg {
+        write_tags
+            .iter()
+            .flat_map(|(tag, value)| {
+                let expansions = exiftool_rs::composite::expand_mwg_write_tag(tag);
+                expansions
+                    .into_iter()
+                    .map(|t| (t, value.clone()))
+                    .collect::<Vec<_>>()
+            })
+            .collect()
+    } else {
+        write_tags.to_vec()
+    };
+    let delete_tags_expanded: Vec<String> = if use_mwg {
+        delete_tags
+            .iter()
+            .flat_map(|tag| exiftool_rs::composite::expand_mwg_write_tag(tag))
+            .collect()
+    } else {
+        delete_tags.to_vec()
+    };
+
     // Handle date shifts and regular tags
-    for (tag, value) in write_tags {
+    for (tag, value) in &write_tags_expanded {
         if tag.starts_with("__SHIFT__:") {
             // Date shift: __SHIFT__:TagName:+H:M:S
             let parts: Vec<&str> = tag.splitn(3, ':').collect();
@@ -1118,12 +1148,12 @@ fn run_write_mode(
             et.set_new_value(tag, Some(value));
         }
     }
-    for tag in delete_tags {
+    for tag in &delete_tags_expanded {
         et.set_new_value(tag, None);
     }
 
     // Process date shifts per file
-    let shifts: Vec<(&str, &str)> = write_tags
+    let shifts: Vec<(&str, &str)> = write_tags_expanded
         .iter()
         .filter(|(t, _)| t.starts_with("__SHIFT__:"))
         .filter_map(|(t, _)| {
