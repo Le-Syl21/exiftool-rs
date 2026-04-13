@@ -1786,4 +1786,98 @@ mod tests {
             FileType::all().len()
         );
     }
+
+    #[test]
+    fn test_detect_mp4_ftyp_isom() {
+        let mut header = [0u8; 16];
+        // size=16, type=ftyp, brand=isom
+        header[0..4].copy_from_slice(&[0x00, 0x00, 0x00, 0x10]);
+        header[4..8].copy_from_slice(b"ftyp");
+        header[8..12].copy_from_slice(b"isom");
+        assert_eq!(detect_from_magic(&header), Some(FileType::Mp4));
+    }
+
+    #[test]
+    fn test_detect_mp4_ftyp_mp42() {
+        let mut header = [0u8; 16];
+        header[0..4].copy_from_slice(&[0x00, 0x00, 0x00, 0x10]);
+        header[4..8].copy_from_slice(b"ftyp");
+        header[8..12].copy_from_slice(b"mp42");
+        assert_eq!(detect_from_magic(&header), Some(FileType::Mp4));
+    }
+
+    #[test]
+    fn test_detect_mkv_ebml() {
+        // Matroska/WebM EBML header
+        let header = [0x1A, 0x45, 0xDF, 0xA3, 0x93, 0x42, 0x82, 0x88];
+        assert_eq!(detect_from_magic(&header), Some(FileType::Mkv));
+    }
+
+    #[test]
+    fn test_detect_flif() {
+        assert_eq!(
+            detect_from_magic(b"FLIF\x30\x00\x01\x00"),
+            Some(FileType::Flif)
+        );
+    }
+
+    #[test]
+    fn test_detect_bpg() {
+        assert_eq!(
+            detect_from_magic(&[0x42, 0x50, 0x47, 0xFB, 0x00, 0x00]),
+            Some(FileType::Bpg)
+        );
+    }
+
+    #[test]
+    fn test_detect_exe_mz() {
+        // PE/MZ header
+        assert_eq!(
+            detect_from_magic(b"MZ\x90\x00\x03\x00\x00\x00"),
+            Some(FileType::Exe)
+        );
+    }
+
+    #[test]
+    fn test_detect_elf() {
+        assert_eq!(
+            detect_from_magic(&[0x7F, b'E', b'L', b'F', 0x02, 0x01]),
+            Some(FileType::Exe)
+        );
+    }
+
+    #[test]
+    fn test_detect_macho_64_le() {
+        // Mach-O 64-bit little-endian
+        assert_eq!(
+            detect_from_magic(&[0xCF, 0xFA, 0xED, 0xFE, 0x07, 0x00]),
+            Some(FileType::Exe)
+        );
+    }
+
+    #[test]
+    fn test_detect_macho_32_be() {
+        // Mach-O 32-bit big-endian
+        assert_eq!(
+            detect_from_magic(&[0xFE, 0xED, 0xFA, 0xCE, 0x00, 0x00]),
+            Some(FileType::Exe)
+        );
+    }
+
+    #[test]
+    fn test_detect_macho_fat() {
+        // Mach-O Universal/Fat binary
+        assert_eq!(
+            detect_from_magic(&[0xCA, 0xFE, 0xBA, 0xBE, 0x00, 0x00]),
+            Some(FileType::Exe)
+        );
+    }
+
+    #[test]
+    fn test_detect_dicom() {
+        // DICOM: "DICM" at offset 128
+        let mut header = vec![0u8; 136];
+        header[128..132].copy_from_slice(b"DICM");
+        assert_eq!(detect_from_magic(&header), Some(FileType::Dicom));
+    }
 }

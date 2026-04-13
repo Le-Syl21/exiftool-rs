@@ -4596,3 +4596,299 @@ pub fn expand_mwg_write_tag(tag: &str) -> Vec<String> {
     // Not an MWG tag, return as-is
     vec![tag.to_string()]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Helper to create a tag with the given name, group family0/family1, and value.
+    fn make_tag(name: &str, family0: &str, family1: &str, value: &str) -> Tag {
+        Tag {
+            id: TagId::Text(format!("{}:{}", family0, name)),
+            name: name.to_string(),
+            description: name.to_string(),
+            group: TagGroup {
+                family0: family0.to_string(),
+                family1: family1.to_string(),
+                family2: "Other".to_string(),
+            },
+            raw_value: Value::String(value.to_string()),
+            print_value: value.to_string(),
+            priority: 0,
+        }
+    }
+
+    #[test]
+    fn test_mwg_description_priority() {
+        // XMP-dc:Description should take priority over EXIF:ImageDescription
+        let tags = vec![
+            make_tag("ImageDescription", "EXIF", "IFD0", "EXIF description"),
+            make_tag("Description", "XMP", "XMP-dc", "XMP description"),
+        ];
+        let mwg = compute_mwg_composites(&tags);
+        let desc = mwg.iter().find(|t| t.name == "Description");
+        assert!(desc.is_some(), "MWG Description should be present");
+        assert_eq!(desc.unwrap().print_value, "XMP description");
+    }
+
+    #[test]
+    fn test_mwg_no_source_tags() {
+        // Empty tag list should produce no MWG composites
+        let mwg = compute_mwg_composites(&[]);
+        assert!(mwg.is_empty(), "No MWG composites from empty tags");
+    }
+
+    #[test]
+    fn test_mwg_fallback_to_exif() {
+        // When only EXIF tag is present, MWG should fall back to it
+        let tags = vec![make_tag("ImageDescription", "EXIF", "IFD0", "EXIF only")];
+        let mwg = compute_mwg_composites(&tags);
+        let desc = mwg.iter().find(|t| t.name == "Description");
+        assert!(desc.is_some(), "MWG Description should fall back to EXIF");
+        assert_eq!(desc.unwrap().print_value, "EXIF only");
+    }
+
+    #[test]
+    fn test_expand_mwg_write_tag() {
+        // "Description" should expand to XMP, EXIF, and IPTC targets
+        let targets = expand_mwg_write_tag("Description");
+        assert_eq!(targets.len(), 3);
+        assert!(targets.contains(&"XMP-dc:Description".to_string()));
+        assert!(targets.contains(&"EXIF:ImageDescription".to_string()));
+        assert!(targets.contains(&"IPTC:Caption-Abstract".to_string()));
+    }
+
+    #[test]
+    fn test_expand_mwg_write_tag_with_prefix() {
+        // "MWG:Description" should also expand
+        let targets = expand_mwg_write_tag("MWG:Description");
+        assert_eq!(targets.len(), 3);
+    }
+
+    #[test]
+    fn test_expand_mwg_write_tag_non_mwg() {
+        // Non-MWG tag should be returned as-is
+        let targets = expand_mwg_write_tag("Artist");
+        assert_eq!(targets, vec!["Artist".to_string()]);
+    }
+
+    #[test]
+    fn test_expand_mwg_write_tag_case_insensitive() {
+        let targets = expand_mwg_write_tag("description");
+        assert_eq!(targets.len(), 3);
+    }
+
+    // ── Composite tag computation tests ────────────────────────────
+
+    /// Helper to create an EXIF tag with a typed Value.
+    fn make_exif_tag(name: &str, value: Value, print: &str) -> Tag {
+        Tag {
+            id: TagId::Numeric(0),
+            name: name.to_string(),
+            description: name.to_string(),
+            group: TagGroup {
+                family0: "EXIF".to_string(),
+                family1: "ExifIFD".to_string(),
+                family2: "Image".to_string(),
+            },
+            raw_value: value,
+            print_value: print.to_string(),
+            priority: 0,
+        }
+    }
+
+    fn make_gps_tag(name: &str, value: Value, print: &str) -> Tag {
+        Tag {
+            id: TagId::Numeric(0),
+            name: name.to_string(),
+            description: name.to_string(),
+            group: TagGroup {
+                family0: "EXIF".to_string(),
+                family1: "GPS".to_string(),
+                family2: "Location".to_string(),
+            },
+            raw_value: value,
+            print_value: print.to_string(),
+            priority: 0,
+        }
+    }
+
+    #[test]
+    fn empty_tags_produce_no_composites() {
+        let result = compute_composite_tags(&[]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn image_size_from_width_and_height() {
+        let tags = vec![
+            make_exif_tag("ImageWidth", Value::U32(1920), "1920"),
+            make_exif_tag("ImageHeight", Value::U32(1080), "1080"),
+        ];
+        let composites = compute_composite_tags(&tags);
+        let size = composites.iter().find(|t| t.name == "ImageSize");
+        assert!(size.is_some(), "ImageSize composite not found");
+        assert_eq!(size.unwrap().print_value, "1920x1080");
+    }
+
+    #[test]
+    fn megapixels_from_image_size() {
+        let tags = vec![
+            make_exif_tag("ImageWidth", Value::U32(4000), "4000"),
+            make_exif_tag("ImageHeight", Value::U32(3000), "3000"),
+        ];
+        let composites = compute_composite_tags(&tags);
+        let mp = composites.iter().find(|t| t.name == "Megapixels");
+        assert!(mp.is_some(), "Megapixels composite not found");
+        assert_eq!(mp.unwrap().print_value, "12.0");
+    }
+
+    #[test]
+    fn gps_position_from_lat_lon() {
+        let tags = vec![
+            make_gps_tag(
+                "GPSLatitude",
+                Value::List(vec![
+                    Value::URational(48, 1),
+                    Value::URational(51, 1),
+                    Value::URational(24, 1),
+                ]),
+                "48 deg 51' 24\"",
+            ),
+            make_gps_tag("GPSLatitudeRef", Value::String("N".into()), "N"),
+            make_gps_tag(
+                "GPSLongitude",
+                Value::List(vec![
+                    Value::URational(2, 1),
+                    Value::URational(21, 1),
+                    Value::URational(7, 1),
+                ]),
+                "2 deg 21' 7\"",
+            ),
+            make_gps_tag("GPSLongitudeRef", Value::String("E".into()), "E"),
+        ];
+        let composites = compute_composite_tags(&tags);
+        let pos = composites.iter().find(|t| t.name == "GPSPosition");
+        assert!(pos.is_some(), "GPSPosition composite not found");
+        let pv = &pos.unwrap().print_value;
+        assert!(pv.contains("deg"), "expected degrees in: {}", pv);
+        assert!(pv.contains(", "), "expected comma separator in: {}", pv);
+    }
+
+    #[test]
+    fn gps_position_south_west_negative() {
+        let tags = vec![
+            make_gps_tag(
+                "GPSLatitude",
+                Value::List(vec![
+                    Value::URational(33, 1),
+                    Value::URational(52, 1),
+                    Value::URational(0, 1),
+                ]),
+                "33 deg 52' 0\"",
+            ),
+            make_gps_tag("GPSLatitudeRef", Value::String("S".into()), "S"),
+            make_gps_tag(
+                "GPSLongitude",
+                Value::List(vec![
+                    Value::URational(151, 1),
+                    Value::URational(12, 1),
+                    Value::URational(0, 1),
+                ]),
+                "151 deg 12' 0\"",
+            ),
+            make_gps_tag("GPSLongitudeRef", Value::String("W".into()), "W"),
+        ];
+        let composites = compute_composite_tags(&tags);
+        let pos = composites.iter().find(|t| t.name == "GPSPosition");
+        assert!(pos.is_some(), "GPSPosition composite not found");
+        let pv = &pos.unwrap().print_value;
+        assert!(pv.starts_with('-'), "expected negative latitude in: {}", pv);
+        let parts: Vec<&str> = pv.split(", ").collect();
+        assert!(
+            parts.len() == 2 && parts[1].starts_with('-'),
+            "expected negative longitude in: {}",
+            pv
+        );
+    }
+
+    #[test]
+    fn shutter_speed_from_exposure_time() {
+        let tags = vec![make_exif_tag(
+            "ExposureTime",
+            Value::URational(1, 125),
+            "1/125",
+        )];
+        let composites = compute_composite_tags(&tags);
+        let ss = composites.iter().find(|t| t.name == "ShutterSpeed");
+        assert!(ss.is_some(), "ShutterSpeed composite not found");
+    }
+
+    #[test]
+    fn aperture_from_fnumber() {
+        let tags = vec![make_exif_tag("FNumber", Value::URational(28, 10), "2.8")];
+        let composites = compute_composite_tags(&tags);
+        let ap = composites.iter().find(|t| t.name == "Aperture");
+        assert!(ap.is_some(), "Aperture composite not found");
+        assert_eq!(ap.unwrap().print_value, "2.8");
+    }
+
+    #[test]
+    fn light_value_from_aperture_shutter_iso() {
+        let tags = vec![
+            make_exif_tag("FNumber", Value::URational(4, 1), "4.0"),
+            make_exif_tag("ExposureTime", Value::URational(1, 125), "1/125"),
+            make_exif_tag("ISO", Value::U16(100), "100"),
+        ];
+        let composites = compute_composite_tags(&tags);
+        let lv = composites.iter().find(|t| t.name == "LightValue");
+        assert!(lv.is_some(), "LightValue composite not found");
+        let val: f64 = lv
+            .unwrap()
+            .print_value
+            .parse()
+            .expect("LV should be numeric");
+        assert!((val - 11.0).abs() < 1.0, "LV expected ~11, got: {}", val);
+    }
+
+    #[test]
+    fn no_gps_without_longitude() {
+        let tags = vec![make_gps_tag(
+            "GPSLatitude",
+            Value::List(vec![
+                Value::URational(48, 1),
+                Value::URational(51, 1),
+                Value::URational(24, 1),
+            ]),
+            "48 deg 51' 24\"",
+        )];
+        let composites = compute_composite_tags(&tags);
+        assert!(
+            composites.iter().all(|t| t.name != "GPSPosition"),
+            "GPSPosition should not be generated without GPSLongitude"
+        );
+    }
+
+    #[test]
+    fn no_image_size_without_height() {
+        let tags = vec![make_exif_tag("ImageWidth", Value::U32(800), "800")];
+        let composites = compute_composite_tags(&tags);
+        assert!(
+            composites.iter().all(|t| t.name != "ImageSize"),
+            "ImageSize should not be generated without ImageHeight"
+        );
+    }
+
+    #[test]
+    fn composite_tags_in_composite_group() {
+        let tags = vec![
+            make_exif_tag("ImageWidth", Value::U32(640), "640"),
+            make_exif_tag("ImageHeight", Value::U32(480), "480"),
+        ];
+        let composites = compute_composite_tags(&tags);
+        for tag in &composites {
+            assert_eq!(tag.group.family0, "Composite");
+            assert_eq!(tag.group.family1, "Composite");
+        }
+    }
+}

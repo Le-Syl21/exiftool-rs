@@ -60,3 +60,100 @@ impl std::fmt::Display for TagId {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_tag(raw: Value, print: &str) -> Tag {
+        Tag {
+            id: TagId::Numeric(0x0001),
+            name: "TestTag".to_string(),
+            description: "Test Tag".to_string(),
+            group: TagGroup {
+                family0: "EXIF".to_string(),
+                family1: "IFD0".to_string(),
+                family2: "Image".to_string(),
+            },
+            raw_value: raw,
+            print_value: print.to_string(),
+            priority: 0,
+        }
+    }
+
+    // ── TagId Display ──────────────────────────────────────────────
+
+    #[test]
+    fn tag_id_numeric_display_low() {
+        assert_eq!(format!("{}", TagId::Numeric(0x0001)), "0x0001");
+    }
+
+    #[test]
+    fn tag_id_numeric_display_hex() {
+        assert_eq!(format!("{}", TagId::Numeric(0x00FF)), "0x00ff");
+    }
+
+    #[test]
+    fn tag_id_numeric_display_zero() {
+        assert_eq!(format!("{}", TagId::Numeric(0)), "0x0000");
+    }
+
+    #[test]
+    fn tag_id_numeric_display_max() {
+        assert_eq!(format!("{}", TagId::Numeric(0xFFFF)), "0xffff");
+    }
+
+    #[test]
+    fn tag_id_text_display() {
+        assert_eq!(format!("{}", TagId::Text("dc:title".into())), "dc:title");
+    }
+
+    #[test]
+    fn tag_id_text_display_empty() {
+        assert_eq!(format!("{}", TagId::Text(String::new())), "");
+    }
+
+    // ── Tag::display_value ─────────────────────────────────────────
+
+    #[test]
+    fn display_value_numeric_true_returns_raw() {
+        let tag = make_tag(Value::URational(1, 100), "0.01 s");
+        assert_eq!(tag.display_value(true), "1/100");
+    }
+
+    #[test]
+    fn display_value_numeric_false_returns_print() {
+        let tag = make_tag(Value::URational(1, 100), "0.01 s");
+        assert_eq!(tag.display_value(false), "0.01 s");
+    }
+
+    #[test]
+    fn display_value_string_raw() {
+        let tag = make_tag(Value::String("Canon EOS R5".into()), "Canon EOS R5");
+        assert_eq!(tag.display_value(true), "Canon EOS R5");
+        assert_eq!(tag.display_value(false), "Canon EOS R5");
+    }
+
+    // ── TagId equality ─────────────────────────────────────────────
+
+    #[test]
+    fn tag_id_equality() {
+        assert_eq!(TagId::Numeric(42), TagId::Numeric(42));
+        assert_ne!(TagId::Numeric(1), TagId::Numeric(2));
+        assert_eq!(TagId::Text("foo".into()), TagId::Text("foo".into()));
+        assert_ne!(TagId::Numeric(1), TagId::Text("1".into()));
+    }
+
+    // ── TagGroup equality ──────────────────────────────────────────
+
+    #[test]
+    fn tag_group_equality() {
+        let g1 = TagGroup {
+            family0: "EXIF".into(),
+            family1: "IFD0".into(),
+            family2: "Image".into(),
+        };
+        let g2 = g1.clone();
+        assert_eq!(g1, g2);
+    }
+}

@@ -170,3 +170,315 @@ pub fn format_g_prec(v: f64, prec: usize) -> String {
         format!("{}{}", mantissa_trimmed, exp_str)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── to_display_string ──────────────────────────────────────────
+
+    #[test]
+    fn display_string() {
+        assert_eq!(Value::String("hello".into()).to_display_string(), "hello");
+    }
+
+    #[test]
+    fn display_u8() {
+        assert_eq!(Value::U8(42).to_display_string(), "42");
+    }
+
+    #[test]
+    fn display_u16() {
+        assert_eq!(Value::U16(1024).to_display_string(), "1024");
+    }
+
+    #[test]
+    fn display_u32() {
+        assert_eq!(Value::U32(100_000).to_display_string(), "100000");
+    }
+
+    #[test]
+    fn display_i16() {
+        assert_eq!(Value::I16(-123).to_display_string(), "-123");
+    }
+
+    #[test]
+    fn display_i32() {
+        assert_eq!(Value::I32(-999_999).to_display_string(), "-999999");
+    }
+
+    #[test]
+    fn display_urational_exact_division() {
+        assert_eq!(Value::URational(100, 10).to_display_string(), "10");
+    }
+
+    #[test]
+    fn display_urational_non_exact() {
+        assert_eq!(Value::URational(1, 3).to_display_string(), "1/3");
+    }
+
+    #[test]
+    fn display_urational_zero_zero() {
+        assert_eq!(Value::URational(0, 0).to_display_string(), "undef");
+    }
+
+    #[test]
+    fn display_urational_n_over_zero() {
+        assert_eq!(Value::URational(5, 0).to_display_string(), "inf");
+    }
+
+    #[test]
+    fn display_irational_exact() {
+        assert_eq!(Value::IRational(-10, 5).to_display_string(), "-2");
+    }
+
+    #[test]
+    fn display_irational_non_exact() {
+        assert_eq!(Value::IRational(7, 3).to_display_string(), "7/3");
+    }
+
+    #[test]
+    fn display_irational_positive_inf() {
+        assert_eq!(Value::IRational(1, 0).to_display_string(), "inf");
+    }
+
+    #[test]
+    fn display_irational_zero_inf() {
+        // n=0 d=0 → n >= 0, so "inf"
+        assert_eq!(Value::IRational(0, 0).to_display_string(), "inf");
+    }
+
+    #[test]
+    fn display_irational_negative_inf() {
+        assert_eq!(Value::IRational(-3, 0).to_display_string(), "-inf");
+    }
+
+    #[test]
+    fn display_f32() {
+        let s = Value::F32(3.14).to_display_string();
+        assert!(s.starts_with("3.14"), "got: {}", s);
+    }
+
+    #[test]
+    fn display_f64() {
+        assert_eq!(Value::F64(2.5).to_display_string(), "2.5");
+    }
+
+    #[test]
+    fn display_binary() {
+        assert_eq!(
+            Value::Binary(vec![0, 1, 2]).to_display_string(),
+            "(Binary data 3 bytes)"
+        );
+    }
+
+    #[test]
+    fn display_list() {
+        let list = Value::List(vec![Value::U16(640), Value::U16(480)]);
+        assert_eq!(list.to_display_string(), "640, 480");
+    }
+
+    #[test]
+    fn display_undefined() {
+        assert_eq!(
+            Value::Undefined(vec![0xAB; 5]).to_display_string(),
+            "(Undefined 5 bytes)"
+        );
+    }
+
+    // ── as_f64 ─────────────────────────────────────────────────────
+
+    #[test]
+    fn as_f64_u8() {
+        assert_eq!(Value::U8(10).as_f64(), Some(10.0));
+    }
+
+    #[test]
+    fn as_f64_u16() {
+        assert_eq!(Value::U16(300).as_f64(), Some(300.0));
+    }
+
+    #[test]
+    fn as_f64_u32() {
+        assert_eq!(Value::U32(70_000).as_f64(), Some(70_000.0));
+    }
+
+    #[test]
+    fn as_f64_i16() {
+        assert_eq!(Value::I16(-50).as_f64(), Some(-50.0));
+    }
+
+    #[test]
+    fn as_f64_i32() {
+        assert_eq!(Value::I32(-1_000_000).as_f64(), Some(-1_000_000.0));
+    }
+
+    #[test]
+    fn as_f64_f32() {
+        let val = Value::F32(1.5).as_f64().unwrap();
+        assert!((val - 1.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn as_f64_f64() {
+        assert_eq!(Value::F64(9.99).as_f64(), Some(9.99));
+    }
+
+    #[test]
+    fn as_f64_urational() {
+        let val = Value::URational(1, 4).as_f64().unwrap();
+        assert!((val - 0.25).abs() < 1e-10);
+    }
+
+    #[test]
+    fn as_f64_urational_zero_denom() {
+        assert_eq!(Value::URational(5, 0).as_f64(), None);
+    }
+
+    #[test]
+    fn as_f64_irational() {
+        let val = Value::IRational(-3, 2).as_f64().unwrap();
+        assert!((val - -1.5).abs() < 1e-10);
+    }
+
+    #[test]
+    fn as_f64_irational_zero_denom() {
+        assert_eq!(Value::IRational(-1, 0).as_f64(), None);
+    }
+
+    #[test]
+    fn as_f64_string_none() {
+        assert_eq!(Value::String("hi".into()).as_f64(), None);
+    }
+
+    #[test]
+    fn as_f64_binary_none() {
+        assert_eq!(Value::Binary(vec![1]).as_f64(), None);
+    }
+
+    #[test]
+    fn as_f64_undefined_none() {
+        assert_eq!(Value::Undefined(vec![1]).as_f64(), None);
+    }
+
+    // ── as_str ─────────────────────────────────────────────────────
+
+    #[test]
+    fn as_str_string() {
+        assert_eq!(Value::String("test".into()).as_str(), Some("test"));
+    }
+
+    #[test]
+    fn as_str_non_string() {
+        assert_eq!(Value::U8(1).as_str(), None);
+        assert_eq!(Value::Binary(vec![]).as_str(), None);
+        assert_eq!(Value::F64(1.0).as_str(), None);
+    }
+
+    // ── as_u64 ─────────────────────────────────────────────────────
+
+    #[test]
+    fn as_u64_unsigned_types() {
+        assert_eq!(Value::U8(255).as_u64(), Some(255));
+        assert_eq!(Value::U16(65535).as_u64(), Some(65535));
+        assert_eq!(Value::U32(0xFFFFFFFF).as_u64(), Some(0xFFFFFFFF));
+    }
+
+    #[test]
+    fn as_u64_signed_none() {
+        assert_eq!(Value::I16(1).as_u64(), None);
+        assert_eq!(Value::I32(1).as_u64(), None);
+    }
+
+    #[test]
+    fn as_u64_other_none() {
+        assert_eq!(Value::String("42".into()).as_u64(), None);
+        assert_eq!(Value::F64(1.0).as_u64(), None);
+        assert_eq!(Value::Binary(vec![]).as_u64(), None);
+        assert_eq!(Value::Undefined(vec![]).as_u64(), None);
+    }
+
+    // ── Display trait ──────────────────────────────────────────────
+
+    #[test]
+    fn display_trait_delegates() {
+        let v = Value::URational(1, 3);
+        assert_eq!(format!("{}", v), "1/3");
+    }
+
+    // ── format_g15 / format_g_prec ─────────────────────────────────
+
+    #[test]
+    fn format_g15_zero() {
+        assert_eq!(format_g15(0.0), "0");
+    }
+
+    #[test]
+    fn format_g15_integer() {
+        assert_eq!(format_g15(42.0), "42");
+    }
+
+    #[test]
+    fn format_g15_simple_decimal() {
+        assert_eq!(format_g15(3.5), "3.5");
+    }
+
+    #[test]
+    fn format_g15_negative() {
+        assert_eq!(format_g15(-1.25), "-1.25");
+    }
+
+    #[test]
+    fn format_g15_large_value_scientific() {
+        // 1e+20 should use exponential
+        let s = format_g15(1e20);
+        assert!(s.contains("e+"), "expected scientific notation, got: {}", s);
+    }
+
+    #[test]
+    fn format_g15_small_value_scientific() {
+        // 1e-5 is < 1e-4, should use exponential
+        let s = format_g15(1e-5);
+        assert!(s.contains("e-"), "expected scientific notation, got: {}", s);
+    }
+
+    #[test]
+    fn format_g15_borderline_fixed() {
+        // 0.0001 = 1e-4 → exp = -4, which is >= -4, so fixed format
+        let s = format_g15(0.0001);
+        assert_eq!(s, "0.0001");
+    }
+
+    #[test]
+    fn format_g_prec_low_precision() {
+        // 3 significant digits for pi
+        let s = format_g_prec(std::f64::consts::PI, 3);
+        assert_eq!(s, "3.14");
+    }
+
+    #[test]
+    fn format_g_prec_one_digit() {
+        let s = format_g_prec(7.7, 1);
+        assert_eq!(s, "8");
+    }
+
+    #[test]
+    fn format_g15_trailing_zeros_stripped() {
+        // 1.5 should not produce "1.500000..."
+        let s = format_g15(1.5);
+        assert!(!s.ends_with('0'), "trailing zeros not stripped: {}", s);
+    }
+
+    #[test]
+    fn format_g15_very_large() {
+        let s = format_g15(1.23456789e+100);
+        assert!(s.starts_with("1.23456789"), "got: {}", s);
+        assert!(s.contains("e+100"), "got: {}", s);
+    }
+
+    #[test]
+    fn format_g15_very_small_negative() {
+        let s = format_g15(-5.5e-10);
+        assert!(s.starts_with("-5.5e-"), "got: {}", s);
+    }
+}

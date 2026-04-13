@@ -2657,3 +2657,112 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
 
     tags
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_has_default_options() {
+        let et = ExifTool::new();
+        assert!(!et.options().duplicates);
+        assert!(et.options().print_conv);
+        assert_eq!(et.options().fast_scan, 0);
+        assert!(et.options().requested_tags.is_empty());
+        assert_eq!(et.options().extract_embedded, 0);
+        assert_eq!(et.options().show_unknown, 0);
+        assert!(!et.options().process_compressed);
+        assert!(!et.options().use_mwg);
+    }
+
+    #[test]
+    fn with_options_preserves_custom() {
+        let opts = Options {
+            duplicates: true,
+            print_conv: false,
+            fast_scan: 2,
+            requested_tags: vec!["Artist".to_string()],
+            extract_embedded: 1,
+            show_unknown: 1,
+            process_compressed: true,
+            use_mwg: true,
+        };
+        let et = ExifTool::with_options(opts.clone());
+        assert!(et.options().duplicates);
+        assert!(!et.options().print_conv);
+        assert_eq!(et.options().fast_scan, 2);
+        assert_eq!(et.options().requested_tags, vec!["Artist".to_string()]);
+        assert_eq!(et.options().extract_embedded, 1);
+        assert_eq!(et.options().show_unknown, 1);
+        assert!(et.options().process_compressed);
+        assert!(et.options().use_mwg);
+    }
+
+    #[test]
+    fn set_new_value_simple_tag() {
+        let mut et = ExifTool::new();
+        et.set_new_value("Artist", Some("John"));
+        assert_eq!(et.new_values.len(), 1);
+        assert_eq!(et.new_values[0].tag, "Artist");
+        assert_eq!(et.new_values[0].group, None);
+        assert_eq!(et.new_values[0].value, Some("John".to_string()));
+    }
+
+    #[test]
+    fn set_new_value_with_group_prefix() {
+        let mut et = ExifTool::new();
+        et.set_new_value("XMP:Title", Some("Test"));
+        assert_eq!(et.new_values.len(), 1);
+        assert_eq!(et.new_values[0].tag, "Title");
+        assert_eq!(et.new_values[0].group, Some("XMP".to_string()));
+        assert_eq!(et.new_values[0].value, Some("Test".to_string()));
+    }
+
+    #[test]
+    fn set_new_value_delete() {
+        let mut et = ExifTool::new();
+        et.set_new_value("Comment", None);
+        assert_eq!(et.new_values.len(), 1);
+        assert_eq!(et.new_values[0].tag, "Comment");
+        assert_eq!(et.new_values[0].value, None);
+    }
+
+    #[test]
+    fn clear_new_values_empties_queue() {
+        let mut et = ExifTool::new();
+        et.set_new_value("Artist", Some("A"));
+        et.set_new_value("Copyright", Some("B"));
+        assert_eq!(et.new_values.len(), 2);
+        et.clear_new_values();
+        assert!(et.new_values.is_empty());
+    }
+
+    #[test]
+    fn set_new_value_multiple() {
+        let mut et = ExifTool::new();
+        et.set_new_value("Artist", Some("John"));
+        et.set_new_value("IPTC:Keywords", Some("test"));
+        et.set_new_value("XMP:Subject", None);
+        assert_eq!(et.new_values.len(), 3);
+        assert_eq!(et.new_values[1].group, Some("IPTC".to_string()));
+        assert_eq!(et.new_values[1].tag, "Keywords");
+        assert_eq!(et.new_values[2].value, None);
+    }
+
+    #[test]
+    fn options_mut_modifies() {
+        let mut et = ExifTool::new();
+        et.options_mut().duplicates = true;
+        et.options_mut().fast_scan = 3;
+        assert!(et.options().duplicates);
+        assert_eq!(et.options().fast_scan, 3);
+    }
+
+    #[test]
+    fn default_options() {
+        let opts = Options::default();
+        assert!(!opts.duplicates);
+        assert!(opts.print_conv);
+        assert_eq!(opts.fast_scan, 0);
+    }
+}

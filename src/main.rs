@@ -2041,3 +2041,55 @@ fn print_usage() {
     eprintln!("GUI (requires --features gui):");
     eprintln!("  exiftool-rs-gui [FILE|DIR]   Open metadata viewer/editor");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_date_basic() {
+        assert_eq!(format_date("2024:01:15 10:30:45", "%Y-%m-%d"), "2024-01-15");
+    }
+
+    #[test]
+    fn test_format_date_time_only() {
+        assert_eq!(format_date("2024:01:15 10:30:45", "%H:%M:%S"), "10:30:45");
+    }
+
+    #[test]
+    fn test_format_date_full() {
+        assert_eq!(
+            format_date("2024:01:15 10:30:45", "%Y-%m-%dT%H:%M:%S"),
+            "2024-01-15T10:30:45"
+        );
+    }
+
+    #[test]
+    fn test_format_date_short_year() {
+        assert_eq!(format_date("2024:01:15 10:30:45", "%y/%m/%d"), "24/01/15");
+    }
+
+    #[test]
+    fn test_format_date_month_names() {
+        let result = format_date("2024:01:15 10:30:45", "%B");
+        assert_eq!(result, "January");
+        let result = format_date("2024:03:15 10:30:45", "%b");
+        assert_eq!(result, "Mar");
+    }
+
+    #[test]
+    fn test_format_date_invalid() {
+        // Non-date strings should be returned as-is
+        assert_eq!(format_date("not a date", "%Y-%m-%d"), "not a date");
+    }
+
+    #[test]
+    fn test_is_date_tag() {
+        assert!(is_date_tag("DateTimeOriginal"));
+        assert!(is_date_tag("CreateDate"));
+        assert!(is_date_tag("ModifyDate"));
+        assert!(is_date_tag("GPSDateTime"));
+        assert!(!is_date_tag("Artist"));
+        assert!(!is_date_tag("ImageWidth"));
+    }
+}
