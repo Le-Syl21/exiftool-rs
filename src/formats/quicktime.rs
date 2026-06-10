@@ -48,6 +48,8 @@ struct QtState {
     stream_current: super::quicktime_stream::TrackInfo,
     /// stsd format for the current track (meta_format)
     current_stsd_format: Option<String>,
+    /// Mapping from 1-based key index to string
+    keys_map: Vec<String>,
 }
 
 pub fn read_quicktime(data: &[u8]) -> Result<Vec<Tag>> {
@@ -460,13 +462,44 @@ fn parse_atoms(
             }
             // Metadata container: meta has a 4-byte version/flags before sub-atoms
             b"meta" => {
-                if content_start + 4 <= content_end {
-                    parse_atoms(data, content_start + 4, content_end, tags, state, depth + 1);
+                parse_atoms(data, content_start, content_end, tags, state, depth + 1);
+            }
+            // Atomic structure of keys: version(1) + flags(3) + entry_count(4) + entry_list
+            b"keys" => {
+                let d = &data[content_start..content_end];
+                if d.len() < 8 {
+                    return;
+                }
+                let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
+                let mut pos = 8;
+                for _ in 0..entry_count {
+                    if pos + 8 > d.len() {
+                        break;
+                    }
+                    let size =
+                        u32::from_be_bytes([d[pos], d[pos + 1], d[pos + 2], d[pos + 3]]) as usize;
+                    if size < 8 || pos + size > d.len() {
+                        break;
+                    }
+                    // Skip key_namespace (4 bytes)
+                    // Bytes 4-7 are typically 0
+                    // String starts at pos+8, with length size-8, and is null-terminated
+                    let key_bytes = &d[pos + 8..pos + size];
+                    let null_pos = key_bytes
+                        .iter()
+                        .position(|&b| b == 0)
+                        .unwrap_or(key_bytes.len());
+                    let key_str =
+                        crate::encoding::decode_utf8_or_latin1(&key_bytes[..null_pos]).to_string();
+                    if !key_str.is_empty() {
+                        state.keys_map.push(key_str);
+                    }
+                    pos += size;
                 }
             }
             // iTunes item list
             b"ilst" => {
-                parse_ilst(data, content_start, content_end, tags);
+                parse_ilst(data, content_start, content_end, tags, state);
             }
             // Movie header
             b"mvhd" => {
@@ -2239,35 +2272,63 @@ fn apply_ilst_print_conv(item_type: &[u8], value: &str) -> String {
 }
 
 /// Parse iTunes metadata item list (ilst).
-fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
+fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state: &mut QtState) {
     let mut pos = start;
-
     while pos + 8 <= end {
-        let item_size =
+        let size =
             u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
-        let item_type = &data[pos + 4..pos + 8];
-        let item_end = pos + item_size;
-
-        if item_size < 8 || item_end > end {
+        if size < 8 || pos + size > end {
             break;
         }
+        let item_type_or_index = &data[pos + 4..pos + 8];
+        let content_start = pos + 8;
+        let content_end = pos + size;
 
-        if item_type == b"----" {
-            // mean/name/data triplet (iTunes reverse-DNS tags)
-            parse_ilst_triplet(data, pos + 8, item_end, tags);
+        // Check if keys mode is used (keys_map is present and not empty)
+        if !state.keys_map.is_empty() {
+            // Entries are key indices (32-bit big-endian integers)
+            let key_index = u32::from_be_bytes([
+                item_type_or_index[0],
+                item_type_or_index[1],
+                item_type_or_index[2],
+                item_type_or_index[3],
+            ]) as usize;
+            if key_index >= 1 && key_index <= state.keys_map.len() {
+                let key = &state.keys_map[key_index - 1];
+                if let Some(value) = find_data_atom(data, content_start, content_end) {
+                    let (name, desc) = map_key_to_tag(key);
+                    if !name.is_empty() {
+                        tags.push(mk(name, desc, Value::String(value)));
+                    }
+                }
+            }
         } else {
-            // Find the 'data' atom inside this item
-            if let Some(value) = find_data_atom(data, pos + 8, item_end) {
-                let (name, description) = ilst_tag_name(item_type);
-                if !name.is_empty() {
-                    // Apply PrintConv for specific tags
-                    let display_value = apply_ilst_print_conv(item_type, &value);
-                    tags.push(mk(name, description, Value::String(display_value)));
+            // Traditional mode: item_type is a four-character code (e.g., b"©mak")
+            if item_type_or_index == b"----" {
+                // mean/name/data triplet
+                parse_ilst_triplet(data, pos + 8, content_end, tags);
+            } else {
+                if let Some(value) = find_data_atom(data, content_start, content_end) {
+                    let (name, desc) = ilst_tag_name(item_type_or_index);
+                    if !name.is_empty() {
+                        let display_value = apply_ilst_print_conv(item_type_or_index, &value);
+                        tags.push(mk(name, desc, Value::String(display_value)));
+                    }
                 }
             }
         }
 
-        pos = item_end;
+        pos += size;
+    }
+}
+
+fn map_key_to_tag(key: &str) -> (&str, &str) {
+    match key {
+        "com.android.version" => ("AndroidVersion", "Android Version"),
+        "com.android.manufacturer" => ("AndroidMake", "Android Make"),
+        "com.android.model" => ("AndroidModel", "Android Model"),
+        // Additional mappings can be added as needed
+        _ => (key, key),
     }
 }
 
