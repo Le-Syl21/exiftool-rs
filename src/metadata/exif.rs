@@ -459,6 +459,31 @@ impl ExifReader {
             }
         }
 
+        // ExifTool uses the full-resolution sub-IFD (SubfileType = "Full-resolution
+        // image") for the primary image dimensions. When such a sub-IFD exists (e.g. the
+        // real raw image in a DNG/NEF whose IFD0 is a small reduced-resolution preview),
+        // promote its ImageWidth/ImageHeight to the front so they win first-by-name and
+        // feed the ImageSize/Megapixels composites.
+        let fullres_group = tags
+            .iter()
+            .find(|t| {
+                t.name == "SubfileType"
+                    && t.print_value == "Full-resolution image"
+                    && t.group.family1 != "IFD0"
+            })
+            .map(|t| t.group.family1.clone());
+        if let Some(group) = fullres_group {
+            for dim in ["ImageHeight", "ImageWidth"] {
+                if let Some(pos) = tags
+                    .iter()
+                    .position(|t| t.name == dim && t.group.family1 == group)
+                {
+                    let t = tags.remove(pos);
+                    tags.insert(0, t);
+                }
+            }
+        }
+
         Ok(tags)
     }
 

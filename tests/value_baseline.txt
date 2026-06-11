@@ -216,15 +216,11 @@ DNG.dng	FocalLength35efl
 DNG.dng	FocalPlaneXResolution
 DNG.dng	FocalPlaneYResolution
 DNG.dng	HyperfocalDistance
-DNG.dng	ImageHeight
-DNG.dng	ImageSize
-DNG.dng	ImageWidth
 DNG.dng	Lens
 DNG.dng	Lens35efl
 DNG.dng	LensInfo
 DNG.dng	ManualFlashOutput
 DNG.dng	MaxAperture
-DNG.dng	Megapixels
 DNG.dng	MinAperture
 DNG.dng	PhotometricInterpretation
 DNG.dng	RawDataUniqueID
@@ -662,10 +658,7 @@ Nikon.nef	ExposureDifference
 Nikon.nef	FilmType
 Nikon.nef	FocusPosition
 Nikon.nef	ISOSetting
-Nikon.nef	ImageHeight
 Nikon.nef	ImageOptimization
-Nikon.nef	ImageSize
-Nikon.nef	ImageWidth
 Nikon.nef	Lens
 Nikon.nef	LensFStops
 Nikon.nef	LensSpec
@@ -674,7 +667,6 @@ Nikon.nef	LightSource
 Nikon.nef	MCUVersion
 Nikon.nef	MakerNoteVersion
 Nikon.nef	MaxFocalLength
-Nikon.nef	Megapixels
 Nikon.nef	MinFocalLength
 Nikon.nef	PhotometricInterpretation
 Nikon.nef	PreviewImageStart
