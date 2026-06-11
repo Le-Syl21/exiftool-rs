@@ -309,18 +309,17 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 return Some(s.to_string());
             }
         }
-        // ColorSpace
+        // ColorSpace (PrintHex; default "Unknown (0xN)").
         ("ExifIFD", 0xA001) => {
             if let Some(v) = value.as_u64() {
-                return Some(
-                    match v {
-                        1 => "sRGB",
-                        2 => "Adobe RGB",
-                        0xFFFF => "Uncalibrated",
-                        _ => return None,
-                    }
-                    .to_string(),
-                );
+                return Some(match v {
+                    1 => "sRGB".to_string(),
+                    2 => "Adobe RGB".to_string(),
+                    0xFFFD => "Wide Gamut RGB".to_string(),
+                    0xFFFE => "ICC Profile".to_string(),
+                    0xFFFF => "Uncalibrated".to_string(),
+                    n => format!("Unknown (0x{:x})", n),
+                });
             }
         }
         // ExposureTime — ExifTool's PrintExposureTime: "1/60" or "4" (no " s").

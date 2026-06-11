@@ -137,7 +137,6 @@ Geotag.gpx	GpxSchemaLocation
 Geotag.gpx	GpxTrkTrksegTrkptTime
 Geotag.kml	KmlDocumentPlacemarkTrackWhen
 Geotag.xml	HistoryRunTrackTrackpointTime
-GoPro.jpg	ColorSpace
 GoPro.jpg	ExposureCompensation
 GoPro.jpg	FlashpixVersion
 GoPro.jpg	MediaUniqueID
