@@ -5991,6 +5991,11 @@ fn read_makernote_ifd_with_base(
             } else {
                 format!("{:010}", n)
             }
+        } else if manufacturer == Manufacturer::Panasonic
+            && matches!(name, "FacesDetected" | "SequenceNumber")
+        {
+            // Panasonic counts: raw number, not the generic by-name enum (No/Single).
+            value.to_display_string()
         } else if manufacturer == Manufacturer::Panasonic && name == "ContrastMode" {
             match value.as_u64() {
                 Some(0) => "Normal".to_string(),
