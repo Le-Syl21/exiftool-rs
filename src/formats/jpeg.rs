@@ -2498,7 +2498,10 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     }
                     tags.push(mk("PeakSpectralSensitivity", format!("{:.1} um", rf(440))));
                     tags.push(mk("FocusStepCount", rd32(444).to_string()));
-                    tags.push(mk("FocusDistance", format!("{:.1} m", rf(448))));
+                    // FocusDistance: float at 0x45c=1116 (Perl).
+                    if rec.len() >= 1120 {
+                        tags.push(mk("FocusDistance", format!("{:.1} m", rf(1116))));
+                    }
                     // PlanckO (int32s) and PlanckR2 (float)
                     if rec.len() >= 784 {
                         let planck_o = if ci_le {

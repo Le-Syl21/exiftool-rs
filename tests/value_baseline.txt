@@ -126,7 +126,6 @@ FITS.fits	Comment
 FLIR.jpg	CameraTemperatureMinWarn
 FLIR.jpg	CameraTemperatureRangeMin
 FLIR.jpg	DateTimeOriginal
-FLIR.jpg	FocusDistance
 FLIR.jpg	FrameRate
 FLIR.jpg	PeakSpectralSensitivity
 FLIR.jpg	RawThermalImage
