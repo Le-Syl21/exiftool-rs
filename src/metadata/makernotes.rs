@@ -8276,6 +8276,35 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Pentax => match tag_id {
+            // FocusMode (0x000d, non-Asahi models): enum.
+            0x000d => value.as_u64().and_then(|v| {
+                match v {
+                    0x00 => Some("Normal"),
+                    0x01 => Some("Macro"),
+                    0x02 => Some("Infinity"),
+                    0x03 => Some("Manual"),
+                    0x04 => Some("Super Macro"),
+                    0x05 => Some("Pan Focus"),
+                    0x06 => Some("Auto-area"),
+                    0x07 => Some("Zone Select"),
+                    0x08 => Some("Select"),
+                    0x09 => Some("Pinpoint"),
+                    0x0a => Some("Tracking"),
+                    0x0b => Some("Continuous"),
+                    0x0c => Some("Snap"),
+                    0x10 => Some("AF-S (Focus-priority)"),
+                    0x11 => Some("AF-C (Focus-priority)"),
+                    0x12 => Some("AF-A (Focus-priority)"),
+                    0x20 => Some("Contrast-detect (Focus-priority)"),
+                    0x21 => Some("Tracking Contrast-detect (Focus-priority)"),
+                    0x110 => Some("AF-S (Release-priority)"),
+                    0x111 => Some("AF-C (Release-priority)"),
+                    0x112 => Some("AF-A (Release-priority)"),
+                    0x120 => Some("Contrast-detect (Release-priority)"),
+                    _ => None,
+                }
+                .map(str::to_string)
+            }),
             // MeteringMode (0x0017): 0=Multi-segment, 1=Center-weighted, 2=Spot, 6=Highlight.
             0x0017 => value.as_u64().and_then(|v| {
                 match v {
