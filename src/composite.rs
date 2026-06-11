@@ -145,10 +145,8 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         composite.push(t);
     }
 
-    // Geolocation: reverse geocode from GPS coordinates
-    if let Some(geo_tags) = compute_geolocation(tags) {
-        composite.extend(geo_tags);
-    }
+    // Geolocation is opt-in (ExifTool's `Geolocation` API option): emitted by the
+    // caller, gated on `Options::geolocation`. See `compute_geolocation`.
 
     // ScaleFactor35efl + FocalLength35efl + Lens35efl
     if let Some(sf_tags) = compute_35efl(tags) {
@@ -1712,7 +1710,11 @@ fn compute_dof(tags: &[Tag]) -> Option<Vec<Tag>> {
 }
 
 /// Reverse geocode GPS position using Geolocation.dat.
-fn compute_geolocation(tags: &[Tag]) -> Option<Vec<Tag>> {
+/// Reverse-geocode `Geolocation*` tags from GPS coordinates.
+///
+/// ExifTool only emits these with the `Geolocation` API option enabled, so the
+/// caller gates this on `Options::geolocation` (off by default).
+pub fn compute_geolocation(tags: &[Tag]) -> Option<Vec<Tag>> {
     use crate::geolocation::GeolocationDb;
     use std::sync::OnceLock;
 
@@ -1734,38 +1736,38 @@ fn compute_geolocation(tags: &[Tag]) -> Option<Vec<Tag>> {
 
     let mut geo_tags = Vec::new();
     geo_tags.push(mk_composite(
-        "GPSCity",
-        "GPS City",
+        "GeolocationCity",
+        "Geolocation City",
         Value::String(city.name.clone()),
     ));
     geo_tags.push(mk_composite(
-        "GPSCountryCode",
-        "GPS Country Code",
+        "GeolocationCountryCode",
+        "Geolocation Country Code",
         Value::String(city.country_code.clone()),
     ));
     geo_tags.push(mk_composite(
-        "GPSCountry",
-        "GPS Country",
+        "GeolocationCountry",
+        "Geolocation Country",
         Value::String(city.country.clone()),
     ));
     if !city.region.is_empty() {
         geo_tags.push(mk_composite(
-            "GPSRegion",
-            "GPS Region",
+            "GeolocationRegion",
+            "Geolocation Region",
             Value::String(city.region.clone()),
         ));
     }
     if !city.subregion.is_empty() {
         geo_tags.push(mk_composite(
-            "GPSSubregion",
-            "GPS Subregion",
+            "GeolocationSubregion",
+            "Geolocation Subregion",
             Value::String(city.subregion.clone()),
         ));
     }
     if !city.timezone.is_empty() {
         geo_tags.push(mk_composite(
-            "GPSTimezone",
-            "GPS Timezone",
+            "GeolocationTimeZone",
+            "Geolocation Time Zone",
             Value::String(city.timezone.clone()),
         ));
     }

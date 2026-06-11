@@ -1246,7 +1246,10 @@ impl XmpReader {
                                 // Use full ancestor path for struct flattening
                                 let ancestor_prefix =
                                     build_struct_tag_prefix_without_last(&path, tag_name);
-                                let field_uc = ucfirst(&strip_non_ascii(tag_name));
+                                // Apply ExifTool's XMP Name overrides (e.g. exif:ISOSpeedRatings
+                                // → ISO) to list-valued properties too — the other emission paths
+                                // already call remap_xmp_tag_name; this one used a raw ucfirst.
+                                let field_uc = remap_xmp_tag_name(group_prefix, tag_name);
                                 let (full_name, emit_group_prefix) = if !ancestor_prefix.is_empty()
                                 {
                                     let field_stripped =
@@ -1776,6 +1779,8 @@ fn remap_xmp_tag_name(group_prefix: &str, local_name: &str) -> String {
         ("exif", "PixelXDimension") => "ExifImageWidth".into(),
         ("exif", "PixelYDimension") => "ExifImageHeight".into(),
         ("exif", "ExposureBiasValue") => "ExposureCompensation".into(),
+        // ExifTool XMP.pm: exif:ISOSpeedRatings is named ISO (deprecated EXIF 2.2 name).
+        ("exif", "ISOSpeedRatings") => "ISO".into(),
         // photoshop: namespace remappings
         ("photoshop", "ICCProfile") => "ICCProfileName".into(),
         ("photoshop", "ColorMode") => "ColorMode".into(),

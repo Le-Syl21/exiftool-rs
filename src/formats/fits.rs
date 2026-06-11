@@ -93,6 +93,11 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
 
         // Map known keywords, generate names for others
         let tag_name = fits_keyword_to_name(&keyword);
+        // SIMPLE is the FITS magic, not a tag — ExifTool doesn't emit it (it maps
+        // to an empty name here). Skip any keyword with no tag name.
+        if tag_name.is_empty() {
+            continue;
+        }
         let tag_desc = fits_tag_description(&tag_name);
 
         if is_continued {

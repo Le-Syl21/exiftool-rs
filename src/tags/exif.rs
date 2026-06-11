@@ -163,27 +163,23 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 );
             }
         }
-        // ExposureTime - format as "1/X s"
+        // ExposureTime — ExifTool's PrintExposureTime: "1/60" or "4" (no " s").
         ("ExifIFD", 0x829A) => {
             if let Value::URational(n, d) = value {
                 if *d != 0 {
-                    if *n == 1 {
-                        return Some(format!("1/{} s", d));
-                    } else {
-                        let secs = *n as f64 / *d as f64;
-                        if secs >= 1.0 {
-                            return Some(format!("{} s", secs));
-                        } else {
-                            return Some(format!("1/{} s", (*d as f64 / *n as f64).round() as u64));
-                        }
+                    let secs = *n as f64 / *d as f64;
+                    if secs > 0.0 && secs < 0.250_01 {
+                        return Some(format!("1/{}", (0.5 + 1.0 / secs).floor() as i64));
                     }
+                    let s = format!("{:.1}", secs);
+                    return Some(s.strip_suffix(".0").map(str::to_string).unwrap_or(s));
                 }
             }
         }
-        // FNumber - format as "f/X.Y"
+        // FNumber — ExifTool: sprintf("%.1f"), e.g. "14.0" (no "f/" prefix).
         ("ExifIFD", 0x829D) => {
             if let Some(v) = value.as_f64() {
-                return Some(format!("f/{:.1}", v));
+                return Some(format!("{:.1}", v));
             }
         }
         // FocalLength - format as "X.Y mm"
@@ -399,12 +395,14 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 );
             }
         }
-        // ExifVersion / FlashpixVersion
+        // ExifVersion / FlashpixVersion — ExifTool shows the raw 4-char string
+        // (e.g. "0221"), only stripping trailing nulls; no decimal point.
         ("ExifIFD", 0x9000) | ("ExifIFD", 0xA000) => {
             if let Value::Undefined(ref data) = value {
                 let s = crate::encoding::decode_utf8_or_latin1(data);
-                if s.len() == 4 {
-                    return Some(format!("{}.{}", &s[0..2], &s[2..4]));
+                let s = s.trim_end_matches('\0');
+                if !s.is_empty() {
+                    return Some(s.to_string());
                 }
             }
         }

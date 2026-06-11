@@ -1,0 +1,5 @@
+# Parity baseline: known deltas between exiftool-rs and ExifTool tag names.
+# `regression_tag_names` fails on any NEW delta (a tag that newly disappears
+# = regression, or a new spurious tag). Improvements are allowed.
+# Regenerate: UPDATE_PARITY_BASELINE=1 cargo test --test regression regression_tag_names
+# Format: <file>\t<missing|extra>\t<tag>

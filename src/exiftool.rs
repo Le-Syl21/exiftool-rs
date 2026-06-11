@@ -37,6 +37,9 @@ pub struct Options {
     pub process_compressed: bool,
     /// Use MWG (Metadata Working Group) composite tags for reading/writing.
     pub use_mwg: bool,
+    /// Reverse-geocode `Geolocation*` tags from GPS coordinates
+    /// (ExifTool's `Geolocation` API option). Off by default, like ExifTool.
+    pub geolocation: bool,
 }
 
 impl Default for Options {
@@ -50,6 +53,7 @@ impl Default for Options {
             show_unknown: 0,
             process_compressed: false,
             use_mwg: false,
+            geolocation: false,
         }
     }
 }
@@ -1381,6 +1385,13 @@ impl ExifTool {
         let composite = crate::composite::compute_composite_tags(&tags);
         tags.extend(composite);
 
+        // Geolocation is opt-in, matching ExifTool's `Geolocation` API option.
+        if self.options.geolocation {
+            if let Some(geo) = crate::composite::compute_geolocation(&tags) {
+                tags.extend(geo);
+            }
+        }
+
         // MWG (Metadata Working Group) composite tags
         if self.options.use_mwg {
             let mwg = crate::composite::compute_mwg_composites(&tags);
@@ -2686,6 +2697,7 @@ mod tests {
             show_unknown: 1,
             process_compressed: true,
             use_mwg: true,
+            geolocation: true,
         };
         let et = ExifTool::with_options(opts.clone());
         assert!(et.options().duplicates);
