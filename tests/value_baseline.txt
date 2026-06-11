@@ -286,9 +286,7 @@ Palm.mobi	CreateDate
 Palm.mobi	Description
 Palm.mobi	LastBackupDate
 Palm.mobi	ModifyDate
-Panasonic.jpg	AFAreaMode
 Panasonic.jpg	VideoFrameRate
-Panasonic.rw2	AFAreaMode
 Panasonic.rw2	ThumbnailOffset
 Panasonic.rw2	VideoFrameRate
 Panasonic.rw2	XResolution

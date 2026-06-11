@@ -8388,6 +8388,42 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Panasonic => match tag_id {
+            // AFAreaMode (0x000f, "other models"): int8u[2] string-keyed enum.
+            0x000f => {
+                let s = match value {
+                    Value::Binary(b) | Value::Undefined(b) => {
+                        b.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ")
+                    }
+                    other => other.to_display_string(),
+                };
+                match s.as_str() {
+                    "0 1" => Some("9-area"),
+                    "0 16" => Some("3-area (high speed)"),
+                    "0 23" => Some("23-area"),
+                    "0 49" => Some("49-area"),
+                    "0 225" => Some("225-area"),
+                    "1 0" => Some("Spot Focusing"),
+                    "1 1" => Some("5-area"),
+                    "16" => Some("Normal?"),
+                    "16 0" => Some("1-area"),
+                    "16 16" => Some("1-area (high speed)"),
+                    "16 32" => Some("1-area +"),
+                    "17 0" => Some("Full Area"),
+                    "32 0" => Some("Tracking"),
+                    "32 1" => Some("3-area (left)?"),
+                    "32 2" => Some("3-area (center)?"),
+                    "32 3" => Some("3-area (right)?"),
+                    "32 16" => Some("Zone"),
+                    "32 18" => Some("Zone (horizontal/vertical)"),
+                    "64 0" => Some("Face Detect"),
+                    "64 1" => Some("Face Detect (animal detect on)"),
+                    "64 2" => Some("Face Detect (animal detect off)"),
+                    "128 0" => Some("Pinpoint focus"),
+                    "240 0" => Some("Tracking"),
+                    _ => None,
+                }
+                .map(str::to_string)
+            }
             // InternalSerialNumber (undef[16]): "(MMM) YYYY:MM:DD no. NNNN".
             0x0025 => {
                 let bytes: Option<&[u8]> = match value {
