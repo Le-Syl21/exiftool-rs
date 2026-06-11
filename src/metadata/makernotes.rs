@@ -537,6 +537,25 @@ fn canon_custom_350d(tag: u8, val: u8) -> Option<(&'static str, String)> {
 }
 
 /// Decode Canon CustomFunctions2 (from Perl CanonCustom.pm ProcessCanonCustom2).
+/// Multi-value CustomFunctions2 PrintConvs (1D Mark III): per-index conversions joined
+/// with "; ". First value is Disable/Enable.
+fn canon_cf2_1d3_multi(tag_id: u32, vals: &[u32]) -> Option<String> {
+    if vals.is_empty() {
+        return None;
+    }
+    let de = if vals[0] == 0 { "Disable" } else { "Enable" };
+    match tag_id {
+        // (ISOSpeedRange/ApertureRange/ShutterSpeedRange encode their bounds and are
+        // left raw rather than guessed.)
+        0x0109 | 0x010a if vals.len() >= 2 => {
+            Some(format!("{}; Flags 0x{:x}", de, vals[1]))
+        }
+        0x0610 if vals.len() >= 3 => Some(format!("{}; Hi {}; Lo {}", de, vals[1], vals[2])),
+        0x0611 if vals.len() >= 2 => Some(format!("{}; {} shots", de, vals[1])),
+        _ => None,
+    }
+}
+
 /// Canon CustomFunctions2 PrintConvs for the EOS-1D Mark III (CanonCustom::Functions2,
 /// the `/\b1D.../` model branches). Single-value enums only; validated by the ratchet.
 fn canon_cf2_1d3_pc(tag_id: u32, val: u32) -> Option<&'static str> {
@@ -620,6 +639,12 @@ fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark, model: &str) -
             } else {
                 0
             };
+            let all_vals: Vec<u32> = (0..num_vals)
+                .filter_map(|i| {
+                    let o = pos + i * 4;
+                    (o + 4 <= data.len()).then(|| read_u32(data, o, bo))
+                })
+                .collect();
 
             // Look up tag name from CustomFunctions2 table
             // Tag 0x0103: ISOSpeedRange for 1D models, ISOExpansion for others
@@ -636,6 +661,13 @@ fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark, model: &str) -
                     .then(|| canon_cf2_1d3_pc(tag_id, val))
                     .flatten()
                     .map(str::to_string)
+                    .or_else(|| {
+                        if is_1d3 && num_vals > 1 {
+                            canon_cf2_1d3_multi(tag_id, &all_vals)
+                        } else {
+                            None
+                        }
+                    })
                     .or_else(|| {
                         crate::tags::print_conv_generated::print_conv_by_name(name, val as i64)
                             .map(str::to_string)

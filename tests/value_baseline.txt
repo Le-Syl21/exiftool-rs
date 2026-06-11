@@ -28,8 +28,6 @@ Canon1DmkIII.jpg	AFMicroadjustment
 Canon1DmkIII.jpg	ApertureRange
 Canon1DmkIII.jpg	ApplyShootingMeteringMode
 Canon1DmkIII.jpg	BlueBalance
-Canon1DmkIII.jpg	ContinuousShootingSpeed
-Canon1DmkIII.jpg	ContinuousShotLimit
 Canon1DmkIII.jpg	FocusingScreen
 Canon1DmkIII.jpg	HighISONoiseReduction
 Canon1DmkIII.jpg	ISOSpeedRange
@@ -44,8 +42,6 @@ Canon1DmkIII.jpg	Sharpness
 Canon1DmkIII.jpg	ShutterButtonAFOnButton
 Canon1DmkIII.jpg	ShutterSpeedRange
 Canon1DmkIII.jpg	TimerLength
-Canon1DmkIII.jpg	UsableMeteringModes
-Canon1DmkIII.jpg	UsableShootingModes
 Canon1DmkIII.jpg	VRDOffset
 CanonRaw.cr2	AFPointsInFocus
 CanonRaw.cr2	BlueBalance
