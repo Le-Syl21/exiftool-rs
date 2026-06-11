@@ -2417,10 +2417,11 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     tags.push(mk("CameraTemperatureRangeMin", fmt_celsius(148)));
                     tags.push(mk("CameraTemperatureMaxClip", fmt_celsius(152)));
                     tags.push(mk("CameraTemperatureMinClip", fmt_celsius(156)));
-                    tags.push(mk("CameraTemperatureMaxSaturated", fmt_celsius(160)));
-                    tags.push(mk("CameraTemperatureMinSaturated", fmt_celsius(164)));
-                    tags.push(mk("CameraTemperatureMaxWarn", fmt_celsius(168)));
-                    tags.push(mk("CameraTemperatureMinWarn", fmt_celsius(172)));
+                    // Perl FLIR offsets: 0xa0 Warn, 0xa8 Saturated (Max/Min interleaved).
+                    tags.push(mk("CameraTemperatureMaxWarn", fmt_celsius(160)));
+                    tags.push(mk("CameraTemperatureMinWarn", fmt_celsius(164)));
+                    tags.push(mk("CameraTemperatureMaxSaturated", fmt_celsius(168)));
+                    tags.push(mk("CameraTemperatureMinSaturated", fmt_celsius(172)));
                     // Strings at fixed offsets
                     if rec.len() >= 260 {
                         let cam_model = crate::encoding::decode_utf8_or_latin1(&rec[212..244])
