@@ -66,7 +66,18 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("MacroMode", Value::I16(v), pv));
     }
     if let Some(v) = get(2) {
-        tags.push(mkt("SelfTimer", Value::I16(v), v.to_string()));
+        // Perl: 'Off' unless val; else (val&0xfff)/10 . ' s' . (val&0x4000 ? ', Custom' : '')
+        let uv = v as u16;
+        let pv = if uv == 0 {
+            "Off".to_string()
+        } else {
+            format!(
+                "{} s{}",
+                crate::value::format_g15((uv & 0xfff) as f64 / 10.0),
+                if uv & 0x4000 != 0 { ", Custom" } else { "" }
+            )
+        };
+        tags.push(mkt("SelfTimer", Value::I16(v), pv));
     }
     if let Some(v) = get(3) {
         tags.push(mkt_pc("Quality", v));

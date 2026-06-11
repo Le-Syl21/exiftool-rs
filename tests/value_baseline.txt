@@ -32,13 +32,11 @@ Canon.jpg	AFPointsInFocus
 Canon.jpg	BlueBalance
 Canon.jpg	DOF
 Canon.jpg	FOV
-Canon.jpg	FileNumber
 Canon.jpg	FlashModel
 Canon.jpg	FocalLength35efl
 Canon.jpg	HyperfocalDistance
 Canon.jpg	Lens35efl
 Canon.jpg	RedBalance
-Canon.jpg	SelfTimer
 Canon.jpg	SelfTimer2
 Canon.jpg	SerialNumber
 Canon.jpg	Sharpness
@@ -71,7 +69,6 @@ Canon1DmkIII.jpg	PictureStylePC
 Canon1DmkIII.jpg	PictureStyleUserDef
 Canon1DmkIII.jpg	RawMeasuredRGGB
 Canon1DmkIII.jpg	SelectableAFPoint
-Canon1DmkIII.jpg	SelfTimer
 Canon1DmkIII.jpg	SetButtonWhenShooting
 Canon1DmkIII.jpg	Sharpness
 Canon1DmkIII.jpg	ShutterButtonAFOnButton
@@ -100,7 +97,6 @@ CanonRaw.cr2	Lens35efl
 CanonRaw.cr2	ManualFlashOutput
 CanonRaw.cr2	Megapixels
 CanonRaw.cr2	RedBalance
-CanonRaw.cr2	SelfTimer
 CanonRaw.cr2	SelfTimer2
 CanonRaw.cr2	SerialNumber
 CanonRaw.cr2	TargetAperture
@@ -130,7 +126,6 @@ CanonRaw.cr3	PictureStylePC
 CanonRaw.cr3	PictureStyleUserDef
 CanonRaw.cr3	PreviewImage
 CanonRaw.cr3	RFLensType
-CanonRaw.cr3	SelfTimer
 CanonRaw.cr3	Sharpness
 CanonRaw.cr3	ShutterSpeed
 CanonRaw.cr3	SourceImageHeight
@@ -151,7 +146,6 @@ CanonRaw.crw	RawJpgQuality
 CanonRaw.crw	RawJpgSize
 CanonRaw.crw	RawJpgWidth
 CanonRaw.crw	RedBalance
-CanonRaw.crw	SelfTimer
 CanonRaw.crw	SelfTimer2
 CanonRaw.crw	Sharpness
 CanonRaw.crw	TargetAperture
@@ -193,7 +187,6 @@ DNG.dng	PhotometricInterpretation
 DNG.dng	RawDataUniqueID
 DNG.dng	RedBalance
 DNG.dng	SamplesPerPixel
-DNG.dng	SelfTimer
 DNG.dng	SelfTimer2
 DNG.dng	SerialNumber
 DNG.dng	TargetAperture

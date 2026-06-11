@@ -7237,6 +7237,16 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 .as_u64()
                 .and_then(|n| crate::tags::canon_sub::canon_model_id(n as i64))
                 .map(str::to_string),
+            // FileNumber: insert a dash before the last 4 digits (s/(\d+)(\d{4})/$1-$2/)
+            0x0008 => value.as_u64().map(|n| {
+                let s = n.to_string();
+                if s.len() > 4 {
+                    let (a, b) = s.split_at(s.len() - 4);
+                    format!("{}-{}", a, b)
+                } else {
+                    s
+                }
+            }),
             _ => None,
         },
         Manufacturer::Sony => {
