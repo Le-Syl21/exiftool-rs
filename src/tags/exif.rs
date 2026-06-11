@@ -186,11 +186,40 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 );
             }
         }
-        // Flash
-        ("ExifIFD", 0x9209) => {
+        // Flash (Perl %flash table, keyed by the int16u bitmask)
+        (_, 0x9209) => {
             if let Some(v) = value.as_u64() {
-                let fired = if v & 1 != 0 { "Fired" } else { "No Flash" };
-                return Some(fired.to_string());
+                let s = match v {
+                    0x00 => "No Flash",
+                    0x01 => "Fired",
+                    0x05 => "Fired, Return not detected",
+                    0x07 => "Fired, Return detected",
+                    0x08 => "On, Did not fire",
+                    0x09 => "On, Fired",
+                    0x0d => "On, Return not detected",
+                    0x0f => "On, Return detected",
+                    0x10 => "Off, Did not fire",
+                    0x14 => "Off, Did not fire, Return not detected",
+                    0x18 => "Auto, Did not fire",
+                    0x19 => "Auto, Fired",
+                    0x1d => "Auto, Fired, Return not detected",
+                    0x1f => "Auto, Fired, Return detected",
+                    0x20 => "No flash function",
+                    0x30 => "Off, No flash function",
+                    0x41 => "Fired, Red-eye reduction",
+                    0x45 => "Fired, Red-eye reduction, Return not detected",
+                    0x47 => "Fired, Red-eye reduction, Return detected",
+                    0x49 => "On, Red-eye reduction",
+                    0x4d => "On, Red-eye reduction, Return not detected",
+                    0x4f => "On, Red-eye reduction, Return detected",
+                    0x50 => "Off, Red-eye reduction",
+                    0x58 => "Auto, Did not fire, Red-eye reduction",
+                    0x59 => "Auto, Fired, Red-eye reduction",
+                    0x5d => "Auto, Fired, Red-eye reduction, Return not detected",
+                    0x5f => "Auto, Fired, Red-eye reduction, Return detected",
+                    _ => return None,
+                };
+                return Some(s.to_string());
             }
         }
         // ColorSpace
