@@ -858,8 +858,92 @@ pub fn decode_focal_length(values: &[u16], model: &str) -> Vec<Tag> {
 }
 
 /// Emit a CameraSettings enum tag, applying the generated PrintConv (raw fallback).
+/// Canon CameraSettings PrintConvs that differ from the generic by-name table
+/// (ported from Canon.pm %canonQuality, %canonImageSize and the EasyMode hash).
+fn canon_cs_pc(name: &str, v: i16) -> Option<&'static str> {
+    match name {
+        "Quality" => Some(match v {
+            -1 => "n/a",
+            1 => "Economy",
+            2 => "Normal",
+            3 => "Fine",
+            4 => "RAW",
+            5 => "Superfine",
+            7 => "CRAW",
+            130 => "Light (RAW)",
+            131 => "Standard (RAW)",
+            _ => return None,
+        }),
+        "CanonImageSize" => Some(match v {
+            -1 => "n/a",
+            0 => "Large",
+            1 => "Medium",
+            2 => "Small",
+            5 => "Medium 1",
+            6 => "Medium 2",
+            7 => "Medium 3",
+            8 => "Postcard",
+            9 => "Widescreen",
+            10 => "Medium Widescreen",
+            14 => "Small 1",
+            15 => "Small 2",
+            16 => "Small 3",
+            128 => "640x480 Movie",
+            129 => "Medium Movie",
+            130 => "Small Movie",
+            137 => "1280x720 Movie",
+            142 => "1920x1080 Movie",
+            143 => "4096x2160 Movie",
+            _ => return None,
+        }),
+        "EasyMode" => Some(match v {
+            0 => "Full auto",
+            1 => "Manual",
+            2 => "Landscape",
+            3 => "Fast shutter",
+            4 => "Slow shutter",
+            5 => "Night",
+            6 => "Gray Scale",
+            7 => "Sepia",
+            8 => "Portrait",
+            9 => "Sports",
+            10 => "Macro",
+            11 => "Black & White",
+            12 => "Pan focus",
+            13 => "Vivid",
+            14 => "Neutral",
+            15 => "Flash Off",
+            16 => "Long Shutter",
+            17 => "Super Macro",
+            18 => "Foliage",
+            19 => "Indoor",
+            20 => "Fireworks",
+            21 => "Beach",
+            22 => "Underwater",
+            23 => "Snow",
+            24 => "Kids & Pets",
+            25 => "Night Snapshot",
+            26 => "Digital Macro",
+            27 => "My Colors",
+            28 => "Movie Snap",
+            29 => "Super Macro 2",
+            30 => "Color Accent",
+            31 => "Color Swap",
+            32 => "Aquarium",
+            33 => "ISO 3200",
+            34 => "ISO 6400",
+            35 => "Creative Light Effect",
+            36 => "Easy",
+            37 => "Quick Shot",
+            _ => return None,
+        }),
+        _ => None,
+    }
+}
+
 fn mkt_pc(name: &str, v: i16) -> Tag {
-    let pv = crate::tags::print_conv_generated::print_conv_by_name(name, v as i64)
+    let pv = canon_cs_pc(name, v)
+        .or_else(|| crate::tags::print_conv_generated::print_conv_by_name(name, v as i64))
         .map(str::to_string)
         .unwrap_or_else(|| v.to_string());
     mkt(name, Value::I16(v), pv)
