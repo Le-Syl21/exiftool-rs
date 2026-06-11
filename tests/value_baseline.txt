@@ -119,7 +119,6 @@ Canon1DmkIII.jpg	ContinuousShotLimit
 Canon1DmkIII.jpg	Contrast
 Canon1DmkIII.jpg	DialDirectionTvAv
 Canon1DmkIII.jpg	DriveMode
-Canon1DmkIII.jpg	DustRemovalData
 Canon1DmkIII.jpg	ETTLII
 Canon1DmkIII.jpg	EasyMode
 Canon1DmkIII.jpg	ExposureLevelIncrements
@@ -244,7 +243,6 @@ CanonRaw.cr3	Contrast
 CanonRaw.cr3	CreateDate
 CanonRaw.cr3	CustomControls
 CanonRaw.cr3	DriveMode
-CanonRaw.cr3	DustRemovalData
 CanonRaw.cr3	EasyMode
 CanonRaw.cr3	ExposureTime
 CanonRaw.cr3	FNumber
@@ -331,7 +329,6 @@ Casio2.jpg	Flash
 Casio2.jpg	Make
 Casio2.jpg	Model
 Casio2.jpg	ObjectDistance
-Casio2.jpg	PreviewImage
 Casio2.jpg	PreviewImageSize
 Casio2.jpg	PreviewImageStart
 Casio2.jpg	Software
@@ -719,7 +716,6 @@ Geotag_DJI_2020-12-02_[07-50-31].csv	MIMEType
 GoPro.jpg	AutoRotation
 GoPro.jpg	ColorSpace
 GoPro.jpg	CompressedBitsPerPixel
-GoPro.jpg	DeviceSettingDescription
 GoPro.jpg	DigitalZoomOn
 GoPro.jpg	ExposureCompensation
 GoPro.jpg	ExposureIndex
@@ -1005,7 +1001,6 @@ Motorola.jpg	ThumbnailImage
 Motorola.jpg	ThumbnailOffset
 Nikon.jpg	AuxiliaryLens
 Nikon.jpg	ColorMode
-Nikon.jpg	DataDump
 Nikon.jpg	FlashSetting
 Nikon.jpg	FocusMode
 Nikon.jpg	ISOSelection
@@ -1029,7 +1024,6 @@ Nikon.nef	CMMFlags
 Nikon.nef	ColorHue
 Nikon.nef	Compression
 Nikon.nef	ConnectionSpaceIlluminant
-Nikon.nef	ContrastCurve
 Nikon.nef	CropBottom
 Nikon.nef	CropLeft
 Nikon.nef	CropOutputHeight
@@ -1074,7 +1068,6 @@ Nikon.nef	MaxFocalLength
 Nikon.nef	MediaWhitePoint
 Nikon.nef	Megapixels
 Nikon.nef	MinFocalLength
-Nikon.nef	NEFLinearizationTable
 Nikon.nef	PhotometricInterpretation
 Nikon.nef	PreviewImage
 Nikon.nef	PreviewImageStart
@@ -1385,7 +1378,6 @@ Palm.mobi	ModifyDate
 Palm.mobi	UncompressedTextLength
 Panasonic.jpg	AFAreaMode
 Panasonic.jpg	ContrastMode
-Panasonic.jpg	DataDump
 Panasonic.jpg	FirmwareVersion
 Panasonic.jpg	Flash
 Panasonic.jpg	InternalSerialNumber
@@ -1399,7 +1391,6 @@ Panasonic.rw2	AFAreaMode
 Panasonic.rw2	AFPointPosition
 Panasonic.rw2	BabyAge
 Panasonic.rw2	ContrastMode
-Panasonic.rw2	DataDump
 Panasonic.rw2	FacesDetected
 Panasonic.rw2	FirmwareVersion
 Panasonic.rw2	Flash

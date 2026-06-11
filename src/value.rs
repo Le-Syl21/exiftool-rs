@@ -77,7 +77,9 @@ impl Value {
                 .map(|v| v.to_display_string())
                 .collect::<Vec<_>>()
                 .join(", "),
-            Value::Undefined(data) => format!("(Undefined {} bytes)", data.len()),
+            Value::Undefined(data) => {
+                format!("(Binary data {} bytes, use -b option to extract)", data.len())
+            }
         }
     }
 
@@ -284,7 +286,7 @@ mod tests {
     fn display_undefined() {
         assert_eq!(
             Value::Undefined(vec![0xAB; 5]).to_display_string(),
-            "(Undefined 5 bytes)"
+            "(Binary data 5 bytes, use -b option to extract)"
         );
     }
 
