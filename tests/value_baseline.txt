@@ -96,7 +96,6 @@ Casio2.jpg	BestShotMode
 Casio2.jpg	DOF
 Casio2.jpg	FirmwareDate
 Casio2.jpg	ObjectDistance
-Casio2.jpg	PreviewImageSize
 Casio2.jpg	WhiteBalance
 CasioQVCI.jpg	DateTimeOriginal
 CasioQVCI.jpg	ManufactureCode
@@ -625,7 +624,6 @@ Pentax.jpg	LensType
 Pentax.jpg	MeteringMode
 Pentax.jpg	PentaxModelID
 Pentax.jpg	PreviewImageBorders
-Pentax.jpg	PreviewImageSize
 Pentax.jpg	Rotation
 Pentax.jpg	SRActive
 Pentax.jpg	Saturation
@@ -714,7 +712,6 @@ SigmaDP2.x3f	Megapixels
 SigmaDP2.x3f	MeteringMode
 SigmaDP2.x3f	NetExposureCompensation
 SigmaDP2.x3f	PreviewImage
-SigmaDP2.x3f	PreviewImageSize
 SigmaDP2.x3f	PreviewImageStart
 SigmaDP2.x3f	Quality
 SigmaDP2.x3f	SensorID
