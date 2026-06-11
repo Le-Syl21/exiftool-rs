@@ -8014,11 +8014,21 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                     let r = if c != 0.0 { a * (bb / c) } else { 0.0 };
                     crate::value::format_g15(r)
                 }),
-                // ExposureDifference (0x000e) / ExposureTuning (0x001c): undef, a*(b/c) raw.
-                0x000e | 0x001c => mn_undef_bytes(value).map(|b| {
+                // ExposureDifference (0x000e): undef a*(b/c), PrintConv $val?"%+.1f":0.
+                0x000e => mn_undef_bytes(value).map(|b| {
                     let (a, bb, c) = (b[0] as i8 as f64, b[1] as i8 as f64, b[2] as i8 as f64);
                     let r = if c != 0.0 { a * (bb / c) } else { 0.0 };
-                    crate::value::format_g15(r)
+                    if r == 0.0 {
+                        "0".to_string()
+                    } else {
+                        format!("{:+.1}", r)
+                    }
+                }),
+                // ExposureTuning (0x001c): undef a*(b/c), PrintConv PrintFraction.
+                0x001c => mn_undef_bytes(value).map(|b| {
+                    let (a, bb, c) = (b[0] as i8 as f64, b[1] as i8 as f64, b[2] as i8 as f64);
+                    let r = if c != 0.0 { a * (bb / c) } else { 0.0 };
+                    crate::tags::exif::print_fraction(r)
                 }),
                 // FlashExposureBracketValue (0x0018): undef, a*(b/c), PrintConv %.1f.
                 0x0018 => mn_undef_bytes(value).map(|b| {

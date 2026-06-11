@@ -266,7 +266,6 @@ NikonD2Hs.jpg	PreviewImageStart
 NikonD2Hs.jpg	RedBalance
 NikonD70.jpg	AFPointsInFocus
 NikonD70.jpg	CFAPattern
-NikonD70.jpg	ExposureDifference
 NikonD70.jpg	ExternalFlashExposureComp
 NikonD70.jpg	ExternalFlashFirmware
 NikonD70.jpg	LensID
