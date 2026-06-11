@@ -268,7 +268,6 @@ MacOS.macos	XAttrMDItemUserTags
 MacOS.macos	XAttrMDItemWhereFroms
 MacOS.macos	XAttrMDLabel
 MacOS.macos	XAttrQuarantine
-Matroska.mkv	DateTimeOriginal
 Matroska.mkv	DefaultDuration
 Matroska.mkv	Duration
 Matroska.mkv	TimecodeScale

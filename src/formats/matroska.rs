@@ -146,13 +146,18 @@ fn parse_info(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
                 ));
             }
             0x4461 => {
-                // DateUTC (signed int, nanoseconds since 2001-01-01)
+                // DateUTC (signed int, nanoseconds since 2001-01-01); ConvertDateTime
+                // renders it as UTC with a trailing "Z".
                 let ns = read_int(data, pos, size);
                 let unix_secs = ns / 1_000_000_000 + 978307200; // 2001-01-01 epoch to Unix epoch
+                let dt = format!(
+                    "{}Z",
+                    crate::formats::aiff::aiff_unix_to_datetime(unix_secs)
+                );
                 tags.push(mk(
                     "DateTimeOriginal",
                     "Date/Time Original",
-                    Value::String(format!("{}", unix_secs)),
+                    Value::String(dt),
                 ));
             }
             0x7BA9 => {

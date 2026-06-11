@@ -211,7 +211,7 @@ fn decode_ieee_extended(data: &[u8]) -> f64 {
 
 /// Convert Unix timestamp to "YYYY:MM:DD HH:MM:SS" (UTC, without timezone suffix).
 /// Mirrors Perl's ConvertUnixTime($val) for AIFF CommentTime.
-fn aiff_unix_to_datetime(secs: i64) -> String {
+pub(crate) fn aiff_unix_to_datetime(secs: i64) -> String {
     let days = secs / 86400;
     let time = secs % 86400;
     let h = time / 3600;
