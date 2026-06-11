@@ -1569,6 +1569,17 @@ impl ExifTool {
                     }
                 }
             }
+            // TIFF magic covers many RAW variants (DNG, NEF, ARW, …); ExifTool refines
+            // the type by extension since they share the TIFF structure.
+            if ft == FileType::Tiff {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if let Some(ext_ft) = file_type::detect_from_extension(ext) {
+                        if ext_ft != FileType::Tiff && is_tiff_based(ext_ft) {
+                            return Ok(ext_ft);
+                        }
+                    }
+                }
+            }
             // For ZIP files, check if it's an EIP (by extension) or OpenDocument format
             if ft == FileType::Zip {
                 // Check extension first for EIP
@@ -1887,6 +1898,32 @@ impl Default for ExifTool {
 
 /// Detect OpenDocument file type by reading the `mimetype` entry from a ZIP.
 /// Returns None if not an OpenDocument file.
+/// Whether a FileType is a TIFF-based RAW variant (shares TIFF magic, refined by extension).
+fn is_tiff_based(ft: FileType) -> bool {
+    matches!(
+        ft,
+        FileType::Dng
+            | FileType::Cr2
+            | FileType::Nef
+            | FileType::Arw
+            | FileType::Sr2
+            | FileType::Orf
+            | FileType::Pef
+            | FileType::Erf
+            | FileType::Rwl
+            | FileType::Mef
+            | FileType::Srw
+            | FileType::Gpr
+            | FileType::Arq
+            | FileType::ThreeFR
+            | FileType::Dcr
+            | FileType::Rw2
+            | FileType::Srf
+            | FileType::Iiq
+            | FileType::Btf
+    )
+}
+
 fn detect_opendocument_type(data: &[u8]) -> Option<FileType> {
     // OpenDocument ZIPs have "mimetype" as the FIRST local file entry (uncompressed)
     if data.len() < 30 || data[0..4] != [0x50, 0x4B, 0x03, 0x04] {

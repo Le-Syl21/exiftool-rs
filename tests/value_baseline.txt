@@ -280,8 +280,6 @@ DNG.dng	DateTimeOriginal
 DNG.dng	DriveMode
 DNG.dng	EasyMode
 DNG.dng	FOV
-DNG.dng	FileType
-DNG.dng	FileTypeExtension
 DNG.dng	FlashGuideNumber
 DNG.dng	FlashModel
 DNG.dng	FlashReturn
@@ -296,7 +294,6 @@ DNG.dng	ImageWidth
 DNG.dng	Lens
 DNG.dng	Lens35efl
 DNG.dng	LensInfo
-DNG.dng	MIMEType
 DNG.dng	ManualFlashOutput
 DNG.dng	MaxAperture
 DNG.dng	MaxFocalLength
@@ -785,8 +782,6 @@ Nikon.nef	ExitPupilPosition
 Nikon.nef	ExposureAdj
 Nikon.nef	ExposureAdj2
 Nikon.nef	ExposureDifference
-Nikon.nef	FileType
-Nikon.nef	FileTypeExtension
 Nikon.nef	FilmType
 Nikon.nef	FocusMode
 Nikon.nef	FocusPosition
@@ -801,7 +796,6 @@ Nikon.nef	LensSpec
 Nikon.nef	LensType
 Nikon.nef	LightSource
 Nikon.nef	MCUVersion
-Nikon.nef	MIMEType
 Nikon.nef	MakerNoteVersion
 Nikon.nef	MaxFocalLength
 Nikon.nef	Megapixels
