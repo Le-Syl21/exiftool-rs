@@ -4906,7 +4906,7 @@ mod tests {
                     Value::URational(52, 1),
                     Value::URational(0, 1),
                 ]),
-                "33 deg 52' 0\"",
+                "33 deg 52' 0\" S",
             ),
             make_gps_tag("GPSLatitudeRef", Value::String("S".into()), "S"),
             make_gps_tag(
@@ -4916,7 +4916,7 @@ mod tests {
                     Value::URational(12, 1),
                     Value::URational(0, 1),
                 ]),
-                "151 deg 12' 0\"",
+                "151 deg 12' 0\" W",
             ),
             make_gps_tag("GPSLongitudeRef", Value::String("W".into()), "W"),
         ];
@@ -4924,11 +4924,12 @@ mod tests {
         let pos = composites.iter().find(|t| t.name == "GPSPosition");
         assert!(pos.is_some(), "GPSPosition composite not found");
         let pv = &pos.unwrap().print_value;
-        assert!(pv.starts_with('-'), "expected negative latitude in: {}", pv);
+        // ExifTool's print form joins the two coordinate print values (which carry
+        // their N/S/E/W hemisphere suffix) with ", " — it never emits a negative sign.
         let parts: Vec<&str> = pv.split(", ").collect();
         assert!(
-            parts.len() == 2 && parts[1].starts_with('-'),
-            "expected negative longitude in: {}",
+            parts.len() == 2 && parts[0].ends_with(" S") && parts[1].ends_with(" W"),
+            "expected S/W hemisphere suffixes in: {}",
             pv
         );
     }
