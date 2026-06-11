@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use memmap2::Mmap;
 
 use crate::error::{Error, Result};
 use crate::file_type::{self, FileType};
@@ -1073,9 +1074,25 @@ impl ExifTool {
     /// Returns the full `Tag` structs with groups, raw values, etc.
     pub fn extract_info<P: AsRef<Path>>(&self, path: P) -> Result<Vec<Tag>> {
         let path = path.as_ref();
-        let data = fs::read(path).map_err(Error::Io)?;
-
-        self.extract_info_from_bytes(&data, path)
+        
+        // Try memory mapping first for large files
+        match self.extract_info_mmap(path) {
+            Ok(tags) => Ok(tags),
+            // Fallback to regular read if mmap fails (e.g., small files, special files)
+            Err(_) => {
+                let data = fs::read(path).map_err(Error::Io)?;
+                self.extract_info_from_bytes(&data, path)
+            }
+        }
+    }
+    
+    /// Extract metadata using memory-mapped file for efficient access to large files
+    fn extract_info_mmap<P: AsRef<Path>>(&self, path: P) -> Result<Vec<Tag>> {
+        let path = path.as_ref();
+        let file = fs::File::open(path).map_err(Error::Io)?;
+        let mmap = unsafe { Mmap::map(&file) }.map_err(Error::Io)?;
+        
+        self.extract_info_from_bytes(&mmap, path)
     }
 
     /// Extract metadata from in-memory data.
@@ -1377,14 +1394,16 @@ impl ExifTool {
             Value::String(crate::VERSION.to_string()),
         ));
 
-        // Compute composite tags
-        let composite = crate::composite::compute_composite_tags(&tags);
-        tags.extend(composite);
+        // Compute composite tags (skip if fast_scan >= 1)
+        if self.options.fast_scan < 1 {
+            let composite = crate::composite::compute_composite_tags(&tags);
+            tags.extend(composite);
 
-        // MWG (Metadata Working Group) composite tags
-        if self.options.use_mwg {
-            let mwg = crate::composite::compute_mwg_composites(&tags);
-            tags.extend(mwg);
+            // MWG (Metadata Working Group) composite tags
+            if self.options.use_mwg {
+                let mwg = crate::composite::compute_mwg_composites(&tags);
+                tags.extend(mwg);
+            }
         }
 
         // FLIR post-processing: remove LensID composite for FLIR cameras.
