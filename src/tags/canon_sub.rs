@@ -51,7 +51,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("SelfTimer", Value::I16(v), v.to_string()));
     }
     if let Some(v) = get(3) {
-        tags.push(mkt("Quality", Value::I16(v), v.to_string()));
+        tags.push(mkt_pc("Quality", v));
     }
     if let Some(v) = get(4) {
         let pv = match v {
@@ -144,10 +144,10 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("RecordMode", Value::I16(v), pv));
     }
     if let Some(v) = get(10) {
-        tags.push(mkt("CanonImageSize", Value::I16(v), v.to_string()));
+        tags.push(mkt_pc("CanonImageSize", v));
     }
     if let Some(v) = get(11) {
-        tags.push(mkt("EasyMode", Value::I16(v), v.to_string()));
+        tags.push(mkt_pc("EasyMode", v));
     }
     if let Some(v) = get(12) {
         let pv = match v {
@@ -165,12 +165,14 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("DigitalZoom", Value::I16(v), pv));
     }
     if let Some(v) = get(13) {
-        tags.push(mkt("Contrast", Value::I16(v), v.to_string()));
+        tags.push(mkt_pc("Contrast", v));
     }
     if let Some(v) = get(14) {
-        tags.push(mkt("Saturation", Value::I16(v), v.to_string()));
+        tags.push(mkt_pc("Saturation", v));
     }
     if let Some(v) = get(15) {
+        // Sharpness scale is model-dependent; the generated PrintConv mis-converts
+        // some bodies, so keep the raw value.
         tags.push(mkt("Sharpness", Value::I16(v), v.to_string()));
     }
     if let Some(v) = get(16) {
@@ -300,7 +302,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("MinAperture", Value::I16(v), v.to_string()));
     }
     if let Some(v) = get(28) {
-        tags.push(mkt("FlashModel", Value::I16(v), v.to_string()));
+        tags.push(mkt_pc("FlashModel", v));
     }
     if let Some(v) = get(29) {
         // FlashBits: BITMASK PrintConv
@@ -430,7 +432,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("ManualFlashOutput", Value::I16(v), pv));
     }
     if let Some(v) = get(42) {
-        tags.push(mkt("ColorTone", Value::I16(v), v.to_string()));
+        tags.push(mkt_pc("ColorTone", v));
     }
     if let Some(v) = get(46) {
         let pv = match v {
@@ -558,7 +560,12 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
     }
     if let Some(v) = get(12) {
         if v != 0 {
-            tags.push(mkt("CameraTemperature", Value::I16(v), v.to_string()));
+            // ExifTool: ValueConv $val - 128, PrintConv "$val C".
+            tags.push(mkt(
+                "CameraTemperature",
+                Value::I16(v),
+                format!("{} C", v as i32 - 128),
+            ));
         }
     }
     if let Some(v) = get(13) {
@@ -844,6 +851,14 @@ pub fn decode_focal_length(values: &[u16], model: &str) -> Vec<Tag> {
         }
     }
     tags
+}
+
+/// Emit a CameraSettings enum tag, applying the generated PrintConv (raw fallback).
+fn mkt_pc(name: &str, v: i16) -> Tag {
+    let pv = crate::tags::print_conv_generated::print_conv_by_name(name, v as i64)
+        .map(str::to_string)
+        .unwrap_or_else(|| v.to_string());
+    mkt(name, Value::I16(v), pv)
 }
 
 fn mkt(name: &str, raw: Value, print_val: String) -> Tag {

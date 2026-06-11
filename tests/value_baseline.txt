@@ -96,13 +96,11 @@ Canon1DmkIII.jpg	AFPointDisplayDuringFocus
 Canon1DmkIII.jpg	ApertureRange
 Canon1DmkIII.jpg	ApplyShootingMeteringMode
 Canon1DmkIII.jpg	BlueBalance
-Canon1DmkIII.jpg	CameraTemperature
 Canon1DmkIII.jpg	CanonImageSize
 Canon1DmkIII.jpg	CanonModelID
 Canon1DmkIII.jpg	ColorTone
 Canon1DmkIII.jpg	ContinuousShootingSpeed
 Canon1DmkIII.jpg	ContinuousShotLimit
-Canon1DmkIII.jpg	Contrast
 Canon1DmkIII.jpg	DriveMode
 Canon1DmkIII.jpg	EasyMode
 Canon1DmkIII.jpg	ExposureLevelIncrements
@@ -127,7 +125,6 @@ Canon1DmkIII.jpg	MinAperture
 Canon1DmkIII.jpg	MinFocalLength
 Canon1DmkIII.jpg	PictureStylePC
 Canon1DmkIII.jpg	PictureStyleUserDef
-Canon1DmkIII.jpg	Quality
 Canon1DmkIII.jpg	RawMeasuredRGGB
 Canon1DmkIII.jpg	RedBalance
 Canon1DmkIII.jpg	Saturation
@@ -159,7 +156,6 @@ CanonRaw.cr2	CR2CFAPattern
 CanonRaw.cr2	CanonImageSize
 CanonRaw.cr2	CanonModelID
 CanonRaw.cr2	ColorTone
-CanonRaw.cr2	Contrast
 CanonRaw.cr2	DriveMode
 CanonRaw.cr2	EasyMode
 CanonRaw.cr2	FOV
@@ -198,12 +194,10 @@ CanonRaw.cr3	BlueBalance
 CanonRaw.cr3	BracketMode
 CanonRaw.cr3	BracketShotNumber
 CanonRaw.cr3	BracketValue
-CanonRaw.cr3	CameraTemperature
 CanonRaw.cr3	CanonImageSize
 CanonRaw.cr3	CanonModelID
 CanonRaw.cr3	ColorTone
 CanonRaw.cr3	CompatibleBrands
-CanonRaw.cr3	Contrast
 CanonRaw.cr3	CreateDate
 CanonRaw.cr3	CustomControls
 CanonRaw.cr3	DriveMode
@@ -325,7 +319,6 @@ DNG.dng	ColorMatrix1
 DNG.dng	ColorMatrix2
 DNG.dng	ColorTone
 DNG.dng	Compression
-DNG.dng	Contrast
 DNG.dng	CustomRendered
 DNG.dng	DNGBackwardVersion
 DNG.dng	DNGLensInfo
