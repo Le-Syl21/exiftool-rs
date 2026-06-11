@@ -5991,6 +5991,37 @@ fn read_makernote_ifd_with_base(
             } else {
                 format!("{:010}", n)
             }
+        } else if manufacturer == Manufacturer::Panasonic && name == "ContrastMode" {
+            match value.as_u64() {
+                Some(0) => "Normal".to_string(),
+                Some(1) => "Low".to_string(),
+                Some(2) => "High".to_string(),
+                Some(5) => "Normal 2".to_string(),
+                Some(6) => "Medium Low".to_string(),
+                Some(7) => "Medium High".to_string(),
+                _ => value.to_display_string(),
+            }
+        } else if manufacturer == Manufacturer::Panasonic && name == "SceneMode" {
+            // 0 => Off, then %shootingMode.
+            let s = match value.as_u64() {
+                Some(0) => "Off",
+                Some(1) => "Normal",
+                Some(2) => "Portrait",
+                Some(3) => "Scenery",
+                Some(4) => "Sports",
+                Some(5) => "Night Portrait",
+                Some(6) => "Program",
+                Some(7) => "Aperture Priority",
+                Some(8) => "Shutter Priority",
+                Some(9) => "Macro",
+                Some(11) => "Manual",
+                _ => "",
+            };
+            if s.is_empty() {
+                value.to_display_string()
+            } else {
+                s.to_string()
+            }
         } else if name.ends_with("ImageSize") && value.to_display_string().contains(' ') {
             // ExifTool joins the two dimensions with "x" (320 240 -> 320x240).
             value.to_display_string().replace(' ', "x")
