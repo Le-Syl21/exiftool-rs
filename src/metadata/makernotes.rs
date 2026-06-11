@@ -588,6 +588,15 @@ fn canon_cf2_1d3_pc(tag_id: u32, val: u32) -> Option<&'static str> {
             (1, "Does not emit"),
             (2, "IR AF assist beam only"),
         ]),
+        0x0701 => m(&[
+            (0, "Metering + AF start"),
+            (1, "Metering + AF start/AF stop"),
+            (2, "Metering start/Meter + AF start"),
+            (3, "AE lock/Metering + AF start"),
+            (4, "Metering + AF start/disable"),
+        ]),
+        // value 0 ("Normal (disabled)") is common to every SetButtonWhenShooting variant.
+        0x0704 => m(&[(0, "Normal (disabled)")]),
         _ => None,
     }
 }

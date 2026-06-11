@@ -37,9 +37,7 @@ Canon1DmkIII.jpg	MinFocalLength
 Canon1DmkIII.jpg	PictureStylePC
 Canon1DmkIII.jpg	PictureStyleUserDef
 Canon1DmkIII.jpg	RawMeasuredRGGB
-Canon1DmkIII.jpg	SetButtonWhenShooting
 Canon1DmkIII.jpg	Sharpness
-Canon1DmkIII.jpg	ShutterButtonAFOnButton
 Canon1DmkIII.jpg	ShutterSpeedRange
 Canon1DmkIII.jpg	TimerLength
 Canon1DmkIII.jpg	VRDOffset
