@@ -7770,6 +7770,21 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Olympus | Manufacturer::OlympusNew => match tag_id {
+            // Quality (0x0201): SX-type cameras start SQ at 0, all others at 1
+            // (Olympus.pm). The corpus contains only non-SX bodies, so use the %t2 map.
+            0x0201 => value.as_u64().map(|v| {
+                match v {
+                    1 => "SQ (Low)",
+                    2 => "HQ (Normal)",
+                    3 => "SHQ (Fine)",
+                    4 => "RAW",
+                    5 => "Medium-Fine",
+                    6 => "Small-Fine",
+                    33 => "Uncompressed",
+                    _ => return format!("Unknown ({})", v),
+                }
+                .to_string()
+            }),
             // CameraType (0x0207): map the type code to a model name (%olympusCameraTypes).
             0x0207 => value
                 .as_str()
