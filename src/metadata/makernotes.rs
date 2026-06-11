@@ -5727,12 +5727,10 @@ pub fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderM
             }
         }
         2 => {
-            // ASCII
-            Value::String(
-                crate::encoding::decode_utf8_or_latin1(data)
-                    .trim_end_matches('\0')
-                    .to_string(),
-            )
+            // ASCII: truncate at the first null (s/\0.*//s) then drop trailing blanks.
+            let s = crate::encoding::decode_utf8_or_latin1(data);
+            let s = s.split('\0').next().unwrap_or("").trim_end().to_string();
+            Value::String(s)
         }
         3 => {
             // SHORT

@@ -103,6 +103,65 @@ pub fn parse_tiff_header(data: &[u8]) -> Result<TiffHeader> {
     })
 }
 
+/// Tags where the EXIF IFD value takes priority over a same-named MakerNotes tag
+/// (structural/authoritative EXIF). For all other duplicates, MakerNotes wins —
+/// matching ExifTool's group priority.
+pub(crate) const EXIF_PRIMARY_TAGS: &[&str] = &[
+    "ThumbnailOffset",
+    "ThumbnailLength",
+    "ThumbnailImage",
+    "StripOffsets",
+    "StripByteCounts",
+    "PreviewImageStart",
+    "PreviewImageLength",
+    "PreviewImage",
+    "ImageWidth",
+    "ImageHeight",
+    "BitsPerSample",
+    "Compression",
+    "PhotometricInterpretation",
+    "SamplesPerPixel",
+    "RowsPerStrip",
+    "PlanarConfiguration",
+    "XResolution",
+    "YResolution",
+    "ResolutionUnit",
+    "Orientation",
+    "Make",
+    "Model",
+    "Software",
+    "ExifByteOrder",
+    "CR2CFAPattern",
+    "RawImageSegmentation",
+    "ColorSpace",
+    "ExifVersion",
+    "FlashpixVersion",
+    "ExifImageWidth",
+    "ExifImageHeight",
+    "InteropIndex",
+    "InteropVersion",
+    "DateTimeOriginal",
+    "CreateDate",
+    "ModifyDate",
+    "DateTime",
+    "FocalPlaneXResolution",
+    "FocalPlaneYResolution",
+    "FocalPlaneResolutionUnit",
+    "CustomRendered",
+    "ExposureMode",
+    "SceneCaptureType",
+    "Flash",
+    "FocalLength",
+    "ISO",
+    "ExposureTime",
+    "ExposureProgram",
+    "FNumber",
+    "ShutterSpeedValue",
+    "ApertureValue",
+    "ComponentsConfiguration",
+    "UserComment",
+];
+
 /// EXIF metadata reader.
 pub struct ExifReader;
 
@@ -260,61 +319,7 @@ impl ExifReader {
             // Other tags: MakerNotes wins (remove EXIF version, add MakerNotes version).
             {
                 // Tags where EXIF takes priority over MakerNotes (structural/authoritative EXIF)
-                let exif_primary: &[&str] = &[
-                    "ThumbnailOffset",
-                    "ThumbnailLength",
-                    "ThumbnailImage",
-                    "StripOffsets",
-                    "StripByteCounts",
-                    "PreviewImageStart",
-                    "PreviewImageLength",
-                    "PreviewImage",
-                    "ImageWidth",
-                    "ImageHeight",
-                    "BitsPerSample",
-                    "Compression",
-                    "PhotometricInterpretation",
-                    "SamplesPerPixel",
-                    "RowsPerStrip",
-                    "PlanarConfiguration",
-                    "XResolution",
-                    "YResolution",
-                    "ResolutionUnit",
-                    "Orientation",
-                    "Make",
-                    "Model",
-                    "Software",
-                    "ExifByteOrder",
-                    "CR2CFAPattern",
-                    "RawImageSegmentation",
-                    "ColorSpace",
-                    "ExifVersion",
-                    "FlashpixVersion",
-                    "ExifImageWidth",
-                    "ExifImageHeight",
-                    "InteropIndex",
-                    "InteropVersion",
-                    "DateTimeOriginal",
-                    "CreateDate",
-                    "ModifyDate",
-                    "DateTime",
-                    "FocalPlaneXResolution",
-                    "FocalPlaneYResolution",
-                    "FocalPlaneResolutionUnit",
-                    "CustomRendered",
-                    "ExposureMode",
-                    "SceneCaptureType",
-                    "Flash",
-                    "FocalLength",
-                    "ISO",
-                    "ExposureTime",
-                    "ExposureProgram",
-                    "FNumber",
-                    "ShutterSpeedValue",
-                    "ApertureValue",
-                    "ComponentsConfiguration",
-                    "UserComment",
-                ];
+                let exif_primary: &[&str] = EXIF_PRIMARY_TAGS;
                 let mn_name_set: std::collections::HashSet<String> =
                     mn_tags.iter().map(|t| t.name.clone()).collect();
                 let exif_has: std::collections::HashSet<String> =
@@ -608,12 +613,18 @@ impl ExifReader {
                                 "Warning",
                             ];
                             for mn_tag in mn_tags {
-                                // Skip EXIF-primary tags and DNG-suppressed tags
-                                if tags.iter().any(|t| t.name == mn_tag.name) {
-                                    continue;
-                                }
                                 if dng_suppress.contains(&mn_tag.name.as_str()) {
                                     continue;
+                                }
+                                let exists = tags.iter().any(|t| t.name == mn_tag.name);
+                                if exists {
+                                    // EXIF-primary tags: EXIF wins, skip MakerNotes.
+                                    // Other tags: MakerNotes wins — drop the existing
+                                    // EXIF/XMP duplicates and add the MakerNotes version.
+                                    if EXIF_PRIMARY_TAGS.contains(&mn_tag.name.as_str()) {
+                                        continue;
+                                    }
+                                    tags.retain(|t| t.name != mn_tag.name);
                                 }
                                 tags.push(mn_tag);
                             }

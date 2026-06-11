@@ -120,7 +120,6 @@ CanonRaw.cr2	ManualFlashOutput
 CanonRaw.cr2	MaxAperture
 CanonRaw.cr2	Megapixels
 CanonRaw.cr2	MinAperture
-CanonRaw.cr2	OwnerName
 CanonRaw.cr2	RedBalance
 CanonRaw.cr2	Saturation
 CanonRaw.cr2	SelfTimer
@@ -232,7 +231,6 @@ DNG.dng	LensInfo
 DNG.dng	ManualFlashOutput
 DNG.dng	MaxAperture
 DNG.dng	Megapixels
-DNG.dng	MeteringMode
 DNG.dng	MinAperture
 DNG.dng	PhotometricInterpretation
 DNG.dng	RawDataUniqueID
@@ -362,7 +360,6 @@ FotoStation.jpg	ObjectCycle
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
 FujiFilm.jpg	FocusMode
-FujiFilm.jpg	Quality
 FujiFilm.jpg	Sharpness
 FujiFilm.jpg	ShutterSpeed
 FujiFilm.jpg	Version
@@ -374,7 +371,6 @@ FujiFilm.raf	ImageSize
 FujiFilm.raf	InternalSerialNumber
 FujiFilm.raf	Megapixels
 FujiFilm.raf	Model
-FujiFilm.raf	Quality
 FujiFilm.raf	Saturation
 FujiFilm.raf	SequenceNumber
 FujiFilm.raf	Sharpness
@@ -639,13 +635,10 @@ Minolta.mrw	WhiteBalance
 Minolta.mrw	WideFocusZone
 Nikon.jpg	AuxiliaryLens
 Nikon.jpg	ColorMode
-Nikon.jpg	FlashSetting
-Nikon.jpg	FocusMode
 Nikon.jpg	ISOSelection
 Nikon.jpg	ImageAdjustment
 Nikon.jpg	MakerNoteVersion
 Nikon.jpg	Quality
-Nikon.jpg	SceneMode
 Nikon.jpg	Sharpness
 Nikon.jpg	WhiteBalance
 Nikon.nef	AFPointsInFocus
@@ -673,7 +666,6 @@ Nikon.nef	ExposureAdj
 Nikon.nef	ExposureAdj2
 Nikon.nef	ExposureDifference
 Nikon.nef	FilmType
-Nikon.nef	FocusMode
 Nikon.nef	FocusPosition
 Nikon.nef	ISOSetting
 Nikon.nef	ImageHeight
@@ -694,7 +686,6 @@ Nikon.nef	PhotometricInterpretation
 Nikon.nef	PreviewImageStart
 Nikon.nef	ProfileCMMType
 Nikon.nef	ProgramShift
-Nikon.nef	Quality
 Nikon.nef	RowsPerStrip
 Nikon.nef	SamplesPerPixel
 Nikon.nef	Saturation
@@ -702,8 +693,6 @@ Nikon.nef	SensorPixelSize
 Nikon.nef	Sharpness
 Nikon.nef	StripOffsets
 Nikon.nef	SubfileType
-Nikon.nef	ToneComp
-Nikon.nef	VariProgram
 Nikon.nef	WBAdjBlueBalance
 Nikon.nef	WBAdjLighting
 Nikon.nef	WBAdjRedBalance
@@ -722,8 +711,6 @@ NikonD2Hs.jpg	ExternalFlashFirmware
 NikonD2Hs.jpg	FOV
 NikonD2Hs.jpg	FlashExposureBracketValue
 NikonD2Hs.jpg	FlashSetting
-NikonD2Hs.jpg	FlashType
-NikonD2Hs.jpg	FocusMode
 NikonD2Hs.jpg	ISOSetting
 NikonD2Hs.jpg	Lens
 NikonD2Hs.jpg	LensFStops
@@ -757,7 +744,6 @@ NikonD70.jpg	FOV
 NikonD70.jpg	FlashExposureBracketValue
 NikonD70.jpg	FlashExposureComp
 NikonD70.jpg	FlashSetting
-NikonD70.jpg	FocusMode
 NikonD70.jpg	ISO
 NikonD70.jpg	ISOSetting
 NikonD70.jpg	ImageOptimization
@@ -779,8 +765,6 @@ NikonD70.jpg	Saturation
 NikonD70.jpg	SensorPixelSize
 NikonD70.jpg	SerialNumber
 NikonD70.jpg	Sharpness
-NikonD70.jpg	ToneComp
-NikonD70.jpg	VariProgram
 NikonD70.jpg	WhiteBalance
 Olympus.jpg	CameraID
 Olympus.jpg	CameraType
@@ -816,7 +800,6 @@ Olympus2.jpg	Gradation
 Olympus2.jpg	ImageProcessingVersion
 Olympus2.jpg	ImageStabilization
 Olympus2.jpg	InternalFlash
-Olympus2.jpg	InternalSerialNumber
 Olympus2.jpg	ManometerPressure
 Olympus2.jpg	ManometerReading
 Olympus2.jpg	MeteringMode
@@ -829,7 +812,6 @@ Olympus2.jpg	RawDevEditStatus
 Olympus2.jpg	RawDevVersion
 Olympus2.jpg	RedBalance
 Olympus2.jpg	SceneMode
-Olympus2.jpg	SerialNumber
 Olympus2.jpg	SharpnessSetting
 Olympus2.jpg	SpecialMode
 Olympus2.jpg	WhiteBalanceTemperature
@@ -860,7 +842,6 @@ OlympusE1.jpg	FocusMode
 OlympusE1.jpg	FocusProcess
 OlympusE1.jpg	ImageProcessingVersion
 OlympusE1.jpg	InternalFlash
-OlympusE1.jpg	InternalSerialNumber
 OlympusE1.jpg	LensFirmwareVersion
 OlympusE1.jpg	LensProperties
 OlympusE1.jpg	MaxAperture
@@ -875,7 +856,6 @@ OlympusE1.jpg	RawDevSettings
 OlympusE1.jpg	RawDevVersion
 OlympusE1.jpg	RedBalance
 OlympusE1.jpg	SensorTemperature
-OlympusE1.jpg	SerialNumber
 OlympusE1.jpg	SharpnessSetting
 OlympusE1.jpg	SpecialMode
 OlympusE1.jpg	WhiteBalanceTemperature
@@ -936,7 +916,6 @@ Panasonic.rw2	TimeSincePowerOn
 Panasonic.rw2	TravelDay
 Panasonic.rw2	VideoFrameRate
 Panasonic.rw2	XResolution
-Pentax.avi	FirmwareVersion
 Pentax.avi	Software
 Pentax.jpg	AEMeteringSegments
 Pentax.jpg	AEXv
@@ -1033,7 +1012,6 @@ Sanyo.jpg	DataDump
 Sanyo.jpg	FlashMode
 Sanyo.jpg	Macro
 Sanyo.jpg	SelfTimer
-Sigma.jpg	AutoBracket
 Sigma.jpg	ColorAdjustment
 Sigma.jpg	Contrast
 Sigma.jpg	ExposureCompensation
@@ -1046,7 +1024,6 @@ Sigma.jpg	Shadow
 Sigma.jpg	Sharpness
 Sigma.jpg	X3FillLight
 Sigma.x3f	LensType
-SigmaDP2.x3f	AutoBracket
 SigmaDP2.x3f	BracketShot
 SigmaDP2.x3f	Calibration
 SigmaDP2.x3f	CameraName
