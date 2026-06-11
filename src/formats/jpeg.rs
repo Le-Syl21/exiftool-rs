@@ -5199,7 +5199,10 @@ fn decode_infray_sensor(data: &[u8]) -> Vec<crate::tag::Tag> {
         tags.push(mk("VisibleSensorAperture", format!("{}", rf32(0x2C0))));
     }
     if data.len() > 0x2C8 {
-        tags.push(mk("VisibleFocalLength", format!("{}", rf32(0x2C4))));
+        tags.push(mk(
+            "VisibleFocalLength",
+            crate::value::format_g15(rf32(0x2C4) as f64),
+        ));
     }
 
     tags

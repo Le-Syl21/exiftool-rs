@@ -184,7 +184,6 @@ InfiRay.jpg	GPSLongitudeRef
 InfiRay.jpg	IJPEGTempVersion
 InfiRay.jpg	IJPEGVersion
 InfiRay.jpg	IRSensorSerialNumber
-InfiRay.jpg	VisibleFocalLength
 InfiRay.jpg	VisibleSensorAperture
 InfiRay.jpg	VisibleSensorSerialNumber
 JVC.jpg	CPUVersions
