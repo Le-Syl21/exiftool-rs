@@ -1478,6 +1478,16 @@ impl ExifTool {
                 }
             }
             tags.retain(|t| t.priority >= *best_priority.get(&t.name).unwrap_or(&0));
+
+            // EXIF/IPTC/MakerNotes outrank XMP for the same tag name (ExifTool default
+            // group priority). Drop an XMP duplicate only when a non-XMP source at the
+            // same (now-max) priority exists.
+            let has_non_xmp: std::collections::HashSet<String> = tags
+                .iter()
+                .filter(|t| t.group.family0 != "XMP" && !t.print_value.is_empty())
+                .map(|t| t.name.clone())
+                .collect();
+            tags.retain(|t| t.group.family0 != "XMP" || !has_non_xmp.contains(&t.name));
         }
 
         // Filter by requested tags if specified

@@ -76,11 +76,7 @@ DNG.dng	BitsPerSample
 DNG.dng	CFAPlaneColor
 DNG.dng	Compression
 DNG.dng	DNGLensInfo
-DNG.dng	DateTimeOriginal
 DNG.dng	FlashReturn
-DNG.dng	FocalPlaneXResolution
-DNG.dng	FocalPlaneYResolution
-DNG.dng	Lens
 DNG.dng	LensInfo
 DNG.dng	PhotometricInterpretation
 DNG.dng	RawDataUniqueID
@@ -480,7 +476,6 @@ QuickTime.heic	MediaDataOffset
 QuickTime.m4a	Compilation
 QuickTime.m4a	HandlerType
 QuickTime.m4a	TrackVolume
-QuickTime.mov	Album
 QuickTime.mov	HandlerClass
 QuickTime.mov	HandlerType
 QuickTime.mov	HandlerVendorID
