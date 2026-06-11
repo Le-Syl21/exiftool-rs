@@ -335,7 +335,6 @@ Olympus2.jpg	CameraType2
 Olympus2.jpg	ColorMatrix
 Olympus2.jpg	CustomSaturation
 Olympus2.jpg	DigitalZoom
-Olympus2.jpg	DriveMode
 Olympus2.jpg	ExternalFlashBounce
 Olympus2.jpg	Gradation
 Olympus2.jpg	ImageStabilization
@@ -352,7 +351,6 @@ OlympusE1.jpg	CameraType2
 OlympusE1.jpg	ColorMatrix
 OlympusE1.jpg	CustomSaturation
 OlympusE1.jpg	DigitalZoom
-OlympusE1.jpg	DriveMode
 OlympusE1.jpg	EquipmentVersion
 OlympusE1.jpg	ExternalFlashBounce
 OlympusE1.jpg	FocusInfoVersion

@@ -881,6 +881,74 @@ fn minolta_white_balance(val: u32) -> String {
     format!("Unknown ({})", val)
 }
 
+/// Port of Olympus.pm CameraSettings DriveMode PrintConv (0x600): mode, shot number,
+/// mode bits, shutter mode and (newer models) shooting-mode byte.
+fn olympus_drive_mode(val: &str) -> String {
+    let v: Vec<i64> = val.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+    if v.is_empty() {
+        return val.to_string();
+    }
+    let a = v[0];
+    let b = v.get(1).copied().unwrap_or(0);
+    let c = v.get(2).copied();
+    let e = v.get(4).copied();
+    let f = v.get(5).copied().unwrap_or(0);
+    let b_str = if b != 0 { format!(", Shot {}", b) } else { String::new() };
+    let e_str = match e {
+        None | Some(4) => String::new(),
+        Some(0) => "; Mechanical shutter".to_string(),
+        Some(2) => "; Anti-shock".to_string(),
+        Some(x) => format!("; Unknown ({})", x),
+    };
+    let a_str = if a == 5 && c.is_some() {
+        let bits = [
+            (0, "AE"),
+            (1, "WB"),
+            (2, "FL"),
+            (3, "MF"),
+            (4, "ISO"),
+            (5, "AE Auto"),
+            (6, "Focus"),
+        ];
+        let cv = c.unwrap();
+        let set: Vec<&str> = bits.iter().filter(|(i, _)| cv & (1 << i) != 0).map(|(_, s)| *s).collect();
+        let joined = if set.is_empty() { "(none)".to_string() } else { set.join("+") };
+        format!("{} Bracketing", joined)
+    } else if f != 0 {
+        match f {
+            0x01 | 0x11 | 0x21 => "Single Shot",
+            0x02 | 0x12 | 0x22 => "Sequential L",
+            0x03 | 0x13 | 0x23 => "Sequential H",
+            0x07 | 0x17 | 0x27 => "Sequential",
+            0x14 => "Self-Timer 12 sec",
+            0x15 | 0x24 => "Self-Timer 2 sec",
+            0x16 | 0x26 => "Custom Self-Timer",
+            0x25 => "Self-Timer 12 sec",
+            0x28 => "Sequential SH1",
+            0x29 => "Sequential SH2",
+            0x30 => "HighRes Shot",
+            0x41 => "ProCap H",
+            0x42 => "ProCap L",
+            0x43 => "ProCap",
+            0x48 => "ProCap SH1",
+            0x49 => "ProCap SH2",
+            _ => return format!("Unknown ({}){}{}", f, b_str, e_str),
+        }
+        .to_string()
+    } else {
+        match a {
+            0 => "Single Shot",
+            1 => "Continuous Shooting",
+            2 => "Exposure Bracketing",
+            3 => "White Balance Bracketing",
+            4 => "Exposure+WB Bracketing",
+            _ => return format!("Unknown ({}){}{}", a, b_str, e_str),
+        }
+        .to_string()
+    };
+    format!("{}{}{}", a_str, b_str, e_str)
+}
+
 /// Olympus CameraSettings (sub-IFD 0x2020) PrintConvs that the generic by-name table
 /// gets wrong (ported from Olympus::CameraSettings). Keyed by sub-tag id.
 fn olympus_camera_settings_pc(stid: u16, v: u64) -> Option<String> {
@@ -5644,6 +5712,8 @@ fn read_makernote_ifd_with_base(
                             "1" | "1 0" => "On".to_string(),
                             other => other.to_string(),
                         }
+                    } else if name == "DriveMode" {
+                        olympus_drive_mode(&val.to_display_string())
                     } else if name == "FocalPlaneDiagonal" {
                         format!("{} mm", val.to_display_string()) // Perl: '"$val mm"'
                     } else if name == "ManometerPressure" {
