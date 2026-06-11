@@ -84,7 +84,10 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     {
         let mut all: Vec<Tag> = tags.to_vec();
         all.extend(composite.iter().cloned());
-        if let Some(sz) = compute_image_size(&all) {
+        if let Some(mut sz) = compute_image_size(&all) {
+            // The computed ImageSize is authoritative over an extracted same-named tag
+            // (e.g. an APP12 PictureInfo ImageSize), matching ExifTool's Composite priority.
+            sz.priority = 1;
             composite.push(sz);
         }
     }
@@ -93,7 +96,8 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     {
         let mut all: Vec<Tag> = tags.to_vec();
         all.extend(composite.iter().cloned());
-        if let Some(mp) = compute_megapixels(&all) {
+        if let Some(mut mp) = compute_megapixels(&all) {
+            mp.priority = 1;
             composite.push(mp);
         }
     }
