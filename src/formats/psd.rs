@@ -134,6 +134,48 @@ pub fn read_psd(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
+    // Merged image data section: follows the layer & mask section. Its first int16u
+    // is the Compression code (Photoshop::ImageData, from Photoshop.pm).
+    {
+        let lp = irb_end;
+        let (lsize, lhdr) = if is_psb && lp + 8 <= data.len() {
+            (
+                u64::from_be_bytes([
+                    data[lp],
+                    data[lp + 1],
+                    data[lp + 2],
+                    data[lp + 3],
+                    data[lp + 4],
+                    data[lp + 5],
+                    data[lp + 6],
+                    data[lp + 7],
+                ]) as usize,
+                8,
+            )
+        } else if lp + 4 <= data.len() {
+            (
+                u32::from_be_bytes([data[lp], data[lp + 1], data[lp + 2], data[lp + 3]]) as usize,
+                4,
+            )
+        } else {
+            (0, 0)
+        };
+        let img_pos = lp + lhdr + lsize;
+        if lhdr != 0 && img_pos + 2 <= data.len() {
+            let comp = u16::from_be_bytes([data[img_pos], data[img_pos + 1]]);
+            let comp_str = match comp {
+                0 => "Uncompressed",
+                1 => "RLE",
+                2 => "ZIP without prediction",
+                3 => "ZIP with prediction",
+                _ => "Unknown",
+            };
+            let mut t = mk("Compression", "Compression", Value::String(comp_str.into()));
+            t.priority = 1;
+            tags.push(t);
+        }
+    }
+
     // Look for PhotoMechanic IPTC trailer at end of file
     // The trailer is raw IPTC data appended to the PSD file
     scan_photomechanic_trailer(data, &mut tags);

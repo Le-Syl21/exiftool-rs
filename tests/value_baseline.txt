@@ -310,7 +310,6 @@ Pentax.jpg	SlaveFlashMeteringSegments
 Pentax.jpg	TvExposureTimeSetting
 PhaseOne.iiq	ThumbnailTIFF
 PhotoMechanic.jpg	Prefs
-Photoshop.psd	Compression
 PostScript.eps	Creator
 PostScript.eps	Title
 QuickTime.heic	MediaDataOffset
