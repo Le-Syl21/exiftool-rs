@@ -5565,7 +5565,10 @@ fn read_makernote_ifd_with_base(
                     // Special print conversions for Olympus Equipment sub-IFD
                     // LensType (Equipment 0x0201): 6 int8u bytes → key "%x %.2x %.2x" (bytes 0,2,3) → lens name
                     // Extender (Equipment 0x0301): 6 int8u bytes → key "%x %.2x" (bytes 0,2) → extender name
-                    let pv: String = if tag_id == 0x2010 && stid == 0x0201 && sdt == 1 && scnt >= 4
+                    let pv: String = if tag_id == 0x2010 && stid == 0x020b && sval.len() >= 2 {
+                        // LensProperties: PrintConv sprintf("0x%x").
+                        format!("0x{:x}", read_u16(sval, 0, byte_order))
+                    } else if tag_id == 0x2010 && stid == 0x0201 && sdt == 1 && scnt >= 4
                     {
                         // LensType: ValueConv = sprintf("%x %.2x %.2x", bytes[0], bytes[2], bytes[3])
                         let b0 = sval.first().copied().unwrap_or(0) as u32;

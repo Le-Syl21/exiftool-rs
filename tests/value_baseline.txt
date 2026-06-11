@@ -301,7 +301,6 @@ OlympusE1.jpg	ExternalFlashBounce
 OlympusE1.jpg	FocusInfoVersion
 OlympusE1.jpg	ImageProcessingVersion
 OlympusE1.jpg	LensFirmwareVersion
-OlympusE1.jpg	LensProperties
 OlympusE1.jpg	RawDevVersion
 OlympusE1.jpg	SensorTemperature
 Opus.opus	OpusVersion
