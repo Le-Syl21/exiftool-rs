@@ -8114,6 +8114,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             }
         }
         Manufacturer::Canon => match tag_id {
+            // BatteryType (0x0038, count 76): RawConv skips 4 bytes then the string.
+            0x0038 => mn_undef_bytes(value).filter(|b| b.len() == 76).map(|b| {
+                let s: String = b[4..].iter().map(|&c| c as char).collect();
+                s.split('\0').next().unwrap_or("").trim_end().to_string()
+            }),
             // ImageUniqueID (0x0028): undef, ValueConv unpack("H*") -> hex string.
             0x0028 => mn_undef_bytes(value)
                 .map(|b| b.iter().map(|c| format!("{:02x}", c)).collect::<String>()),
