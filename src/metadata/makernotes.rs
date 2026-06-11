@@ -5996,6 +5996,16 @@ fn read_makernote_ifd_with_base(
         {
             // Panasonic counts: raw number, not the generic by-name enum (No/Single).
             value.to_display_string()
+        } else if manufacturer == Manufacturer::Panasonic && name == "FirmwareVersion" {
+            // undef[4] of control bytes -> components joined with "." (0.1.0.0).
+            match &value {
+                Value::Binary(b) | Value::Undefined(b) if b.len() == 4 => b
+                    .iter()
+                    .map(|c| c.to_string())
+                    .collect::<Vec<_>>()
+                    .join("."),
+                _ => value.to_display_string(),
+            }
         } else if manufacturer == Manufacturer::Panasonic && name == "ContrastMode" {
             match value.as_u64() {
                 Some(0) => "Normal".to_string(),

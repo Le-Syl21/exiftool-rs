@@ -581,13 +581,11 @@ Palm.mobi	LastBackupDate
 Palm.mobi	ModifyDate
 Palm.mobi	UncompressedTextLength
 Panasonic.jpg	AFAreaMode
-Panasonic.jpg	FirmwareVersion
 Panasonic.jpg	InternalSerialNumber
 Panasonic.jpg	TimeSincePowerOn
 Panasonic.jpg	VideoFrameRate
 Panasonic.rw2	AFAreaMode
 Panasonic.rw2	AFPointPosition
-Panasonic.rw2	FirmwareVersion
 Panasonic.rw2	InternalSerialNumber
 Panasonic.rw2	Saturation
 Panasonic.rw2	ThumbnailOffset
