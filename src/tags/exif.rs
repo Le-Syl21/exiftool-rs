@@ -579,6 +579,24 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 }
             }
         }
+        // YCbCrSubSampling (0x0212): int16u[2] keyed string enum.
+        (_, 0x0212) => {
+            let s = value.to_display_string();
+            let label = match s.trim() {
+                "1 1" => Some("YCbCr4:4:4 (1 1)"),
+                "2 1" => Some("YCbCr4:2:2 (2 1)"),
+                "2 2" => Some("YCbCr4:2:0 (2 2)"),
+                "4 1" => Some("YCbCr4:1:1 (4 1)"),
+                "4 2" => Some("YCbCr4:1:0 (4 2)"),
+                "1 2" => Some("YCbCr4:4:0 (1 2)"),
+                "1 4" => Some("YCbCr4:4:1 (1 4)"),
+                "2 4" => Some("YCbCr4:2:1 (2 4)"),
+                _ => None,
+            };
+            if let Some(l) = label {
+                return Some(l.to_string());
+            }
+        }
         // CR2CFAPattern (0xc5e0): ValueConv + PrintConv collapsed to the colour grid.
         (_, 0xC5E0) => {
             if let Some(v) = value.as_u64() {

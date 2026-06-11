@@ -71,7 +71,6 @@ DNG.dng	PhotometricInterpretation
 DNG.dng	RawDataUniqueID
 DNG.dng	SamplesPerPixel
 DNG.dng	ThumbnailTIFF
-DNG.dng	YCbCrSubSampling
 DjVu.djvu	Creator
 DjVu.djvu	SubfileType
 DjVu.djvu	Subject
@@ -141,7 +140,6 @@ FujiFilm.raf	ThumbnailOffset
 FujiFilm.raf	Version
 GE.jpg	GEMake
 GE.jpg	GEModel
-GIF.gif	PixelAspectRatio
 GPS.jpg	Aperture
 GPS.jpg	City
 GPS.jpg	FNumber

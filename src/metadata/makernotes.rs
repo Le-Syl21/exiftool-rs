@@ -3764,7 +3764,7 @@ fn decrypt_nikon_subtables(
                             tags.push(mk_nikon_str("AFAperture", &format!("{:.1}", ap)));
                         }
                         if d[8] > 0 {
-                            tags.push(mk_nikon_str("FocusPosition", &format!("0x{:02X}", d[8])));
+                            tags.push(mk_nikon_str("FocusPosition", &format!("0x{:02x}", d[8])));
                         }
                         if d[9] > 0 {
                             let dist = 0.01 * 10.0_f64.powf(d[9] as f64 / 40.0);

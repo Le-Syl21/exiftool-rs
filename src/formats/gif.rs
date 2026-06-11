@@ -59,7 +59,7 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
         tags.push(mk(
             "PixelAspectRatio",
             "Pixel Aspect Ratio",
-            Value::String(format!("{:.4}", par)),
+            Value::String(crate::value::format_g15(par)),
         ));
     } else {
         tags.push(mk("PixelAspectRatio", "Pixel Aspect Ratio", Value::U8(1)));
