@@ -7660,6 +7660,50 @@ fn patch_word(s: &str, from: &str, to: &str) -> String {
     result
 }
 
+/// Port of FujiFilm.pm InternalSerialNumber PrintConv: the trailing hex run is the
+/// camera body number (decoded ASCII), preceded by a yymmdd manufacture date.
+fn fuji_internal_serial(val: &str) -> String {
+    let trimmed = val.trim_end_matches(['\0', ' ', '\t', '\r', '\n']);
+    let chars: Vec<char> = trimmed.chars().collect();
+    let n = chars.len();
+    if n >= 18 {
+        // yymmdd occupies [n-18 .. n-12]; the last 12 chars are the tail ($6).
+        let date: String = chars[n - 18..n - 12].iter().collect();
+        if date.chars().all(|c| c.is_ascii_digit()) {
+            let mm: u32 = date[2..4].parse().unwrap_or(0);
+            let dd: u32 = date[4..6].parse().unwrap_or(0);
+            if (1..=12).contains(&mm) && (1..=31).contains(&dd) {
+                // Maximal trailing run of hex digits ending at n-18 is the body number.
+                let mut start = n - 18;
+                while start > 0 && chars[start - 1].is_ascii_hexdigit() {
+                    start -= 1;
+                }
+                let hex: String = chars[start..n - 18].iter().collect();
+                if let Some(sn) = hex_to_ascii(&hex) {
+                    let prefix: String = chars[..start].iter().collect();
+                    let tail: String = chars[n - 12..].iter().collect();
+                    let yy: u32 = date[0..2].parse().unwrap_or(0);
+                    let yr = yy + if yy < 70 { 2000 } else { 1900 };
+                    return format!("{}{} {}:{:02}:{:02} {}", prefix, sn, yr, mm, dd, tail);
+                }
+            }
+        }
+    }
+    trimmed.to_string()
+}
+
+/// Decode an even-length hex string to its ASCII bytes (Perl `pack "H*"`).
+fn hex_to_ascii(hex: &str) -> Option<String> {
+    if hex.is_empty() || hex.len() % 2 != 0 {
+        return None;
+    }
+    let bytes: Option<Vec<u8>> = (0..hex.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).ok())
+        .collect();
+    bytes.map(|b| b.iter().map(|&c| c as char).collect())
+}
+
 fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -> Option<String> {
     use crate::tags::{nikon_conv, sony_conv};
 
@@ -7816,6 +7860,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 _ => None,
             }
         }
+        Manufacturer::Fujifilm => match tag_id {
+            // InternalSerialNumber: decode the hex body number + manufacture date.
+            0x0010 => value.as_str().map(fuji_internal_serial),
+            _ => None,
+        },
         Manufacturer::Panasonic => match tag_id {
             // Contrast/Saturation/Sharpness: Exif::printParameter (0 => Normal, else +N/-N).
             0x0039 | 0x0040 | 0x0041 => value.as_f64().filter(|f| f.fract() == 0.0).map(|f| {
