@@ -62,7 +62,6 @@ DICOM.dcm	PixelData
 DNG.dng	AFPointsInFocus
 DNG.dng	BitsPerSample
 DNG.dng	Compression
-DNG.dng	DNGLensInfo
 DNG.dng	LensInfo
 DNG.dng	PhotometricInterpretation
 DNG.dng	RawDataUniqueID
@@ -360,7 +359,6 @@ Sanyo.jpg	DataDump
 Sanyo.jpg	FlashMode
 Sanyo.jpg	Macro
 Sanyo.jpg	SelfTimer
-Sigma.jpg	Shadow
 Sigma.jpg	X3FillLight
 Sigma.x3f	LensType
 SigmaDP2.x3f	BracketShot

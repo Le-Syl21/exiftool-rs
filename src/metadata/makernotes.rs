@@ -8419,6 +8419,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             0x000d => value
                 .as_str()
                 .map(|s| s.replacen("Cont:", "", 1).trim().to_string()),
+            // Shadow (string form): ValueConv strips "Shad:".
+            0x000e => value
+                .as_str()
+                .map(|s| s.replacen("Shad:", "", 1).trim().to_string()),
             // Saturation (string form): ValueConv strips "Satu:".
             0x0010 => value
                 .as_str()

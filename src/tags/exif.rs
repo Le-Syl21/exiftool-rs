@@ -649,8 +649,8 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 ));
             }
         }
-        // LensInfo (Exif::PrintLensInfo): 4 values → "min-max mm f/min-max".
-        (_, 0xA432) => {
+        // LensInfo (0xA432) / DNGLensInfo (0xC630): Exif::PrintLensInfo.
+        (_, 0xA432) | (_, 0xC630) => {
             let s = value.to_display_string();
             if let Some(formatted) = print_lens_info(&s) {
                 return Some(formatted);
