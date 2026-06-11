@@ -54,7 +54,6 @@ CanonRaw.crw	RawJpgSize
 CanonRaw.crw	RawJpgWidth
 CanonRaw.crw	RedBalance
 CanonRaw.crw	Sharpness
-CanonVRD.dr4	ShootingDistance
 Casio2.jpg	DOF
 Casio2.jpg	FirmwareDate
 CasioQVCI.jpg	ManufactureCode

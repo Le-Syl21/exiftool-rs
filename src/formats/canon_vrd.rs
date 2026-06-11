@@ -1241,9 +1241,9 @@ fn dr4_tag_name_and_print<'a>(
             ("ColorMoireReduction", print)
         }
         0x20701 => {
-            // ShootingDistance: val/10, formatted as "%"
+            // ShootingDistance: ValueConv val/10, PrintConv "%.0f%%" of (val*100).
             let print = match val {
-                Value::F64(v) => format!("{:.0}%", v * 100.0),
+                Value::F64(v) => format!("{:.0}%", (v / 10.0) * 100.0),
                 Value::I32(v) => {
                     let fv = *v as f64 / 10.0;
                     format!("{:.0}%", fv * 100.0)
