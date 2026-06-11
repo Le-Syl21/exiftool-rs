@@ -385,6 +385,16 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                             .trim_end_matches('\0')
                             .replace('.', ":")
                             .to_string();
+                        // YYYY:MM:DD:HH:MM:SS -> YYYY:MM:DD HH:MM:SS
+                        let parts: Vec<&str> = dt.split(':').collect();
+                        let dt = if parts.len() == 6 {
+                            format!(
+                                "{}:{}:{} {}:{}:{}",
+                                parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+                            )
+                        } else {
+                            dt
+                        };
                         if !dt.is_empty() {
                             tags.push(mk("DateTimeOriginal", dt));
                         }
