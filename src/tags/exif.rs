@@ -81,6 +81,26 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 return Some(joined.join("."));
             }
         }
+        // SubfileType / NewSubfileType (%subfileType)
+        (_, 0x00FE) => {
+            if let Some(v) = value.as_u64() {
+                let s = match v {
+                    0 => "Full-resolution image",
+                    1 => "Reduced-resolution image",
+                    2 => "Single page of multi-page image",
+                    3 => "Single page of multi-page reduced-resolution image",
+                    4 => "Transparency mask",
+                    5 => "Transparency mask of reduced-resolution image",
+                    6 => "Transparency mask of multi-page image",
+                    7 => "Transparency mask of reduced-resolution multi-page image",
+                    8 => "Depth map",
+                    9 => "Depth map of reduced-resolution image",
+                    16 => "Enhanced image data",
+                    _ => return None,
+                };
+                return Some(s.to_string());
+            }
+        }
         // Orientation
         (_, 0x0112) => {
             if let Some(v) = value.as_u64() {

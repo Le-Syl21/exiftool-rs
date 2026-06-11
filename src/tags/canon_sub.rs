@@ -289,13 +289,15 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         }
     }
     if let Some(v) = get(23) {
-        tags.push(mkt("MaxFocalLength", Value::I16(v), v.to_string()));
+        // Perl Canon CameraSettings: PrintConv => '"$val mm"'
+        tags.push(mkt("MaxFocalLength", Value::I16(v), format!("{} mm", v)));
     }
     if let Some(v) = get(24) {
-        tags.push(mkt("MinFocalLength", Value::I16(v), v.to_string()));
+        tags.push(mkt("MinFocalLength", Value::I16(v), format!("{} mm", v)));
     }
     if let Some(v) = get(25) {
-        tags.push(mkt("FocalUnits", Value::I16(v), v.to_string()));
+        // Perl Canon: PrintConv => '"$val/mm"'
+        tags.push(mkt("FocalUnits", Value::I16(v), format!("{}/mm", v)));
     }
     if let Some(v) = get(26) {
         tags.push(mkt("MaxAperture", Value::I16(v), v.to_string()));

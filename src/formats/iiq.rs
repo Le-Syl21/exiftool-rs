@@ -39,14 +39,14 @@ pub fn read_iiq(data: &[u8]) -> Result<Vec<Tag>> {
                 remove_indices.insert(i);
                 continue;
             }
-            // Remove the first SubfileType (IFD0's "full image" marker = value 0)
+            // Remove the first SubfileType (IFD0's "full image" marker = value 0).
+            // Match on the raw numeric value (the print value is now "Full-resolution image").
             if t.name == "SubfileType" && !subfile_type_removed {
-                let raw_v = if let Value::String(ref v) = t.raw_value {
-                    v.as_str()
-                } else {
-                    ""
-                };
-                if raw_v == "0" || t.print_value == "0" {
+                let is_zero = t.raw_value.as_u64() == Some(0)
+                    || matches!(&t.raw_value, Value::String(v) if v == "0")
+                    || t.print_value == "0"
+                    || t.print_value == "Full-resolution image";
+                if is_zero {
                     remove_indices.insert(i);
                     subfile_type_removed = true;
                     continue;

@@ -45,14 +45,11 @@ Canon.jpg	FileNumber
 Canon.jpg	FlashGuideNumber
 Canon.jpg	FlashModel
 Canon.jpg	FocalLength35efl
-Canon.jpg	FocalUnits
 Canon.jpg	HyperfocalDistance
 Canon.jpg	Lens35efl
 Canon.jpg	MacroMode
 Canon.jpg	MaxAperture
-Canon.jpg	MaxFocalLength
 Canon.jpg	MinAperture
-Canon.jpg	MinFocalLength
 Canon.jpg	Quality
 Canon.jpg	RedBalance
 Canon.jpg	Saturation
@@ -82,7 +79,6 @@ Canon1DmkIII.jpg	FilterEffectUserDef1
 Canon1DmkIII.jpg	FilterEffectUserDef2
 Canon1DmkIII.jpg	FilterEffectUserDef3
 Canon1DmkIII.jpg	FlashModel
-Canon1DmkIII.jpg	FocalUnits
 Canon1DmkIII.jpg	FocusingScreen
 Canon1DmkIII.jpg	HighISONoiseReduction
 Canon1DmkIII.jpg	ISOSpeedRange
@@ -126,16 +122,13 @@ CanonRaw.cr2	FOV
 CanonRaw.cr2	FlashGuideNumber
 CanonRaw.cr2	FlashModel
 CanonRaw.cr2	FocalLength35efl
-CanonRaw.cr2	FocalUnits
 CanonRaw.cr2	HyperfocalDistance
 CanonRaw.cr2	ImageSize
 CanonRaw.cr2	Lens35efl
 CanonRaw.cr2	ManualFlashOutput
 CanonRaw.cr2	MaxAperture
-CanonRaw.cr2	MaxFocalLength
 CanonRaw.cr2	Megapixels
 CanonRaw.cr2	MinAperture
-CanonRaw.cr2	MinFocalLength
 CanonRaw.cr2	OwnerName
 CanonRaw.cr2	Quality
 CanonRaw.cr2	RedBalance
@@ -162,7 +155,6 @@ CanonRaw.cr3	ExposureTime
 CanonRaw.cr3	FNumber
 CanonRaw.cr3	FlashGuideNumber
 CanonRaw.cr3	FlashModel
-CanonRaw.cr3	FocalUnits
 CanonRaw.cr3	HandlerType
 CanonRaw.cr3	HyperfocalDistance
 CanonRaw.cr3	ISOExpansion
@@ -170,11 +162,9 @@ CanonRaw.cr3	ImageUniqueID
 CanonRaw.cr3	LensInfo
 CanonRaw.cr3	LightValue
 CanonRaw.cr3	MaxAperture
-CanonRaw.cr3	MaxFocalLength
 CanonRaw.cr3	MediaCreateDate
 CanonRaw.cr3	MediaModifyDate
 CanonRaw.cr3	MinAperture
-CanonRaw.cr3	MinFocalLength
 CanonRaw.cr3	ModifyDate
 CanonRaw.cr3	PictureStylePC
 CanonRaw.cr3	PictureStyleUserDef
@@ -202,13 +192,10 @@ CanonRaw.crw	DigitalZoom
 CanonRaw.crw	DriveMode
 CanonRaw.crw	EasyMode
 CanonRaw.crw	FlashModel
-CanonRaw.crw	FocalUnits
 CanonRaw.crw	MacroMode
 CanonRaw.crw	MaxAperture
-CanonRaw.crw	MaxFocalLength
 CanonRaw.crw	MeasuredEV
 CanonRaw.crw	MinAperture
-CanonRaw.crw	MinFocalLength
 CanonRaw.crw	Quality
 CanonRaw.crw	ROMOperationMode
 CanonRaw.crw	RawJpgHeight
@@ -255,7 +242,6 @@ DNG.dng	FlashReturn
 DNG.dng	FocalLength35efl
 DNG.dng	FocalPlaneXResolution
 DNG.dng	FocalPlaneYResolution
-DNG.dng	FocalUnits
 DNG.dng	HyperfocalDistance
 DNG.dng	ImageHeight
 DNG.dng	ImageSize
@@ -265,11 +251,9 @@ DNG.dng	Lens35efl
 DNG.dng	LensInfo
 DNG.dng	ManualFlashOutput
 DNG.dng	MaxAperture
-DNG.dng	MaxFocalLength
 DNG.dng	Megapixels
 DNG.dng	MeteringMode
 DNG.dng	MinAperture
-DNG.dng	MinFocalLength
 DNG.dng	PhotometricInterpretation
 DNG.dng	Quality
 DNG.dng	RawDataUniqueID
@@ -279,7 +263,6 @@ DNG.dng	Saturation
 DNG.dng	SelfTimer
 DNG.dng	SelfTimer2
 DNG.dng	SerialNumber
-DNG.dng	SubfileType
 DNG.dng	TargetAperture
 DNG.dng	ThumbnailTIFF
 DNG.dng	VRDOffset
@@ -356,7 +339,6 @@ ExifTool.tif	DeviceManufacturer
 ExifTool.tif	MeasurementBacking
 ExifTool.tif	MeasurementFlare
 ExifTool.tif	ProfileCreator
-ExifTool.tif	SubfileType
 ExifTool.tif	Technology
 ExifTool.tif	ViewingCondIlluminant
 FITS.fits	Comment
@@ -1010,7 +992,6 @@ Pentax.jpg	ShutterCount
 Pentax.jpg	SlaveFlashMeteringSegments
 Pentax.jpg	TvExposureTimeSetting
 Pentax.jpg	WhiteBalanceMode
-PhaseOne.iiq	SubfileType
 PhaseOne.iiq	ThumbnailTIFF
 PhotoMechanic.jpg	DateTimeCreated
 PhotoMechanic.jpg	DateTimeOriginal
