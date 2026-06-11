@@ -274,7 +274,6 @@ Olympus.jpg	FocalPlaneDiagonal
 Olympus2.jpg	AFAreas
 Olympus2.jpg	AFPoint
 Olympus2.jpg	CameraType2
-Olympus2.jpg	CustomSaturation
 Olympus2.jpg	ExternalFlashBounce
 Olympus2.jpg	ImageStabilization
 Olympus2.jpg	ManometerReading
@@ -285,7 +284,6 @@ OlympusE1.jpg	AFPoint
 OlympusE1.jpg	BlueBalance
 OlympusE1.jpg	CameraSettingsVersion
 OlympusE1.jpg	CameraType2
-OlympusE1.jpg	CustomSaturation
 OlympusE1.jpg	EquipmentVersion
 OlympusE1.jpg	ExternalFlashBounce
 OlympusE1.jpg	FocusInfoVersion

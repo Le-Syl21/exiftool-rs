@@ -5741,6 +5741,22 @@ fn read_makernote_ifd_with_base(
                             })
                             .collect::<Vec<_>>()
                             .join(" ")
+                    } else if name == "CustomSaturation" {
+                        // 3 numbers: value, min, max. E-1 uses CS-relative labels.
+                        let v: Vec<i64> = val
+                            .to_display_string()
+                            .split_whitespace()
+                            .filter_map(|s| s.parse().ok())
+                            .collect();
+                        if v.len() == 3 {
+                            if model_name.starts_with("E-1") {
+                                format!("CS{} (min CS0, max CS{})", v[0] - v[1], v[2] - v[1])
+                            } else {
+                                format!("{} (min {}, max {})", v[0], v[1], v[2])
+                            }
+                        } else {
+                            val.to_display_string()
+                        }
                     } else if name == "Gradation" {
                         match val.to_display_string().as_str() {
                             "0 0 0" => "n/a".to_string(),
