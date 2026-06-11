@@ -466,7 +466,6 @@ Matroska.mkv	TimecodeScale
 Matroska.mkv	TrackNumber
 Matroska.mkv	TrackType
 Matroska.mkv	TrackUID
-Minolta.jpg	FOV
 Minolta.jpg	PrintIMVersion
 Minolta.mrw	ColorMode
 Minolta.mrw	Contrast
@@ -575,7 +574,6 @@ NikonD70.jpg	ExitPupilPosition
 NikonD70.jpg	ExposureDifference
 NikonD70.jpg	ExternalFlashExposureComp
 NikonD70.jpg	ExternalFlashFirmware
-NikonD70.jpg	FOV
 NikonD70.jpg	FlashExposureBracketValue
 NikonD70.jpg	FlashExposureComp
 NikonD70.jpg	FlashSetting

@@ -941,13 +941,28 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
         format!("{:.3} mm", coc),
     ));
 
-    // FOV
-    let fov = 2.0 * (36.0 / (2.0 * fl35_val)).atan() * 180.0 / std::f64::consts::PI;
-    result.push(mk_composite(
-        "FOV",
-        "Field of View",
-        Value::String(format!("{:.1} deg", fov)),
-    ));
+    // FOV — Perl Exif::Composite FOV: atan2(36, 2*FL*ScaleFactor*corr), with a focus-
+    // distance correction and an optional field-width suffix.
+    {
+        let fd = find_tag_f64(tags, "FocusDistance").filter(|v| v.is_finite() && *v > 0.0);
+        let mut corr = 1.0;
+        if let Some(d_m) = fd {
+            let d = 1000.0 * d_m - fl;
+            if d > 0.0 {
+                corr += fl / d;
+            }
+        }
+        let fd2 = 36.0_f64.atan2(2.0 * fl * scale * corr);
+        let fov_deg = fd2 * 360.0 / 3.14159;
+        let mut fov_str = format!("{:.1} deg", fov_deg);
+        if let Some(d_m) = fd {
+            if d_m > 0.0 && d_m < 10000.0 {
+                let width = 2.0 * d_m * fd2.sin() / fd2.cos();
+                fov_str.push_str(&format!(" ({:.2} m)", width));
+            }
+        }
+        result.push(mk_composite("FOV", "Field of View", Value::String(fov_str)));
+    }
 
     // Lens + Lens35efl (Canon-specific)
     let make = find_tag_value(tags, "Make").unwrap_or_default();
