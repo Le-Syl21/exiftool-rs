@@ -439,7 +439,6 @@ RIFF.avi	XMPToolkit
 RIFF.wav	Make
 RIFF.webp	AlphaFiltering
 RTF.rtf	Comments
-RTF.rtf	Company
 Real.ra	Copyright
 Real.rm	MIMEType
 Ricoh.jpg	FirmwareVersion

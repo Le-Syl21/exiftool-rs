@@ -432,7 +432,9 @@ fn unescape_rtf(text: &str) -> String {
             result.push(c);
         }
     }
-    result.trim().to_string()
+    // Only strip trailing whitespace — a control word delimited by a newline can leave a
+    // significant leading space in the value (ExifTool preserves it).
+    result.trim_end().to_string()
 }
 
 /// Map an RTF symbol control word to its Unicode character.
