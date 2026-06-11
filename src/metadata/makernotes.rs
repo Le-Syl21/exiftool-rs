@@ -785,6 +785,70 @@ fn minolta_white_balance(val: u32) -> String {
     format!("Unknown ({})", val)
 }
 
+/// Olympus CameraSettings (sub-IFD 0x2020) PrintConvs that the generic by-name table
+/// gets wrong (ported from Olympus::CameraSettings). Keyed by sub-tag id.
+fn olympus_camera_settings_pc(stid: u16, v: u64) -> Option<String> {
+    let enum_pc = |table: &[(u64, &str)]| -> Option<String> {
+        table
+            .iter()
+            .find(|(k, _)| *k == v)
+            .map(|(_, s)| s.to_string())
+    };
+    match stid {
+        0x202 => enum_pc(&[
+            (2, "Center-weighted average"),
+            (3, "Spot"),
+            (5, "ESP"),
+            (261, "Pattern+AF"),
+            (515, "Spot+Highlight control"),
+            (1027, "Spot+Shadow control"),
+        ]),
+        0x301 => enum_pc(&[
+            (0, "Single AF"),
+            (1, "Sequential shooting AF"),
+            (2, "Continuous AF"),
+            (3, "Multi AF"),
+            (4, "Face Detect"),
+            (10, "MF"),
+        ]),
+        0x302 => enum_pc(&[(0, "AF Not Used"), (1, "AF Used")]),
+        0x400 => {
+            if v == 0 {
+                Some("Off".to_string())
+            } else {
+                let bits = [
+                    "On",
+                    "Fill-in",
+                    "Red-eye",
+                    "Slow-sync",
+                    "Forced On",
+                    "2nd Curtain",
+                ];
+                let set: Vec<&str> = bits
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, _)| v & (1 << i) != 0)
+                    .map(|(_, s)| *s)
+                    .collect();
+                Some(if set.is_empty() {
+                    v.to_string()
+                } else {
+                    set.join(", ")
+                })
+            }
+        }
+        0x501 => Some(if v != 0 { v.to_string() } else { "Auto".to_string() }),
+        0x509 => enum_pc(&[
+            (0, "Standard"),
+            (6, "Auto"),
+            (7, "Sport"),
+            (8, "Portrait"),
+            (9, "Landscape+Portrait"),
+        ]),
+        _ => None,
+    }
+}
+
 /// Decode Minolta CameraSettings (int32u, Perl Minolta::CameraSettings) with PrintConvs.
 fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark, model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
@@ -5329,6 +5393,11 @@ fn read_makernote_ifd_with_base(
                         // Olympus version tags are undef[4] ASCII (e.g. "0100", "0111").
                         // (FirmwareVersion tags are int32u and stay numeric.)
                         sval.iter().map(|&c| c as char).collect()
+                    } else if let Some(pc) = (tag_id == 0x2020)
+                        .then(|| val.as_u64().and_then(|v| olympus_camera_settings_pc(stid, v)))
+                        .flatten()
+                    {
+                        pc
                     } else {
                         // Apply the generated enum PrintConv by tag name (Olympus sub-IFD
                         // tables: AELock -> Off, FocusMode -> Single AF, …).
