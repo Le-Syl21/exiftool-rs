@@ -991,8 +991,16 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
         tags.push(mk("KodakModel", model));
     }
 
-    tags.push(mk("Quality", d[9].to_string()));
-    tags.push(mk("BurstMode", d[10].to_string()));
+    let kpc = |v: u64, table: &[(u64, &str)]| -> String {
+        table
+            .iter()
+            .find(|(k, _)| *k == v)
+            .map(|(_, s)| s.to_string())
+            .unwrap_or_else(|| v.to_string())
+    };
+
+    tags.push(mk("Quality", kpc(d[9] as u64, &[(1, "Fine"), (2, "Normal")])));
+    tags.push(mk("BurstMode", kpc(d[10] as u64, &[(0, "Off"), (1, "On")])));
 
     let w = u16::from_be_bytes([d[12], d[13]]);
     let h = u16::from_be_bytes([d[14], d[15]]);
@@ -1003,8 +1011,8 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
     tags.push(mk("YearCreated", year.to_string()));
     tags.push(mk("MonthDayCreated", format!("{:02}:{:02}", d[18], d[19])));
 
-    tags.push(mk("ShutterMode", d[27].to_string()));
-    tags.push(mk("MeteringMode", d[28].to_string()));
+    tags.push(mk("ShutterMode", kpc(d[27] as u64, &[(0, "Auto"), (8, "Aperture Priority"), (32, "Manual?")])));
+    tags.push(mk("MeteringMode", kpc(d[28] as u64, &[(0, "Multi-segment"), (1, "Center-weighted average"), (2, "Spot")])));
 
     let fnum = u16::from_be_bytes([d[30], d[31]]);
     tags.push(mk("FNumber", format!("{:.1}", fnum as f64 / 100.0)));
@@ -1017,7 +1025,7 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
     let comp = i16::from_be_bytes([d[36], d[37]]);
     tags.push(mk("ExposureCompensation", comp.to_string()));
 
-    tags.push(mk("FocusMode", d[56].to_string()));
+    tags.push(mk("FocusMode", kpc(d[56] as u64, &[(0, "Normal"), (2, "Macro")])));
 
     // TimeCreated at offset 0x14
     if d.len() > 0x16 {
@@ -1029,7 +1037,7 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
 
     // WhiteBalance at offset 0x40
     if d.len() > 0x40 {
-        tags.push(mk("WhiteBalance", d[0x40].to_string()));
+        tags.push(mk("WhiteBalance", kpc(d[0x40] as u64, &[(0, "Auto"), (1, "Flash?"), (2, "Tungsten"), (3, "Daylight")])));
     }
     // ISO at offset 0x60
     if d.len() > 0x61 {
@@ -1038,35 +1046,28 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
             u16::from_be_bytes([d[0x60], d[0x61]]).to_string(),
         ));
     }
-    // Sharpness at offset 0x6b
+    // FlashMode 0x5c (PrintHex), FlashFired 0x5d, ISOSetting 0x5e (int16u)
+    if d.len() > 0x5f {
+        tags.push(mk("FlashMode", kpc(d[0x5c] as u64, &[(0x00, "Auto"), (0x01, "Fill Flash"), (0x02, "Off"), (0x03, "Red-Eye"), (0x10, "Fill Flash"), (0x20, "Off"), (0x40, "Red-Eye?")])));
+        tags.push(mk("FlashFired", kpc(d[0x5d] as u64, &[(0, "No"), (1, "Yes")])));
+        let iso = u16::from_be_bytes([d[0x5e], d[0x5f]]);
+        tags.push(mk("ISOSetting", if iso != 0 { iso.to_string() } else { "Auto".to_string() }));
+    }
+    // TotalZoom 0x62, DateTimeStamp 0x64 (int16u, val ? "Mode $val" : "Off")
+    if d.len() > 0x65 {
+        tags.push(mk("TotalZoom", u16::from_be_bytes([d[0x62], d[0x63]]).to_string()));
+        let dts = u16::from_be_bytes([d[0x64], d[0x65]]);
+        tags.push(mk("DateTimeStamp", if dts != 0 { format!("Mode {}", dts) } else { "Off".to_string() }));
+    }
+    // ColorMode 0x66 (int16u, PrintHex), DigitalZoom 0x68 (int16u, /100)
+    if d.len() > 0x69 {
+        tags.push(mk("ColorMode", kpc(u16::from_be_bytes([d[0x66], d[0x67]]) as u64, &[(0x01, "B&W"), (0x02, "Sepia"), (0x03, "B&W Yellow Filter"), (0x04, "B&W Red Filter"), (0x20, "Saturated Color"), (0x40, "Neutral Color")])));
+        let dz = u16::from_be_bytes([d[0x68], d[0x69]]);
+        tags.push(mk("DigitalZoom", crate::value::format_g15(dz as f64 / 100.0)));
+    }
+    // Sharpness 0x6b (int8s, printParameter: 0 -> Normal)
     if d.len() > 0x6b {
-        tags.push(mk("Sharpness", d[0x6b].to_string()));
-    }
-    if d.len() > 98 {
-        tags.push(mk(
-            "TotalZoom",
-            u16::from_be_bytes([d[96], d[97]]).to_string(),
-        ));
-        tags.push(mk("DateTimeStamp", d[98].to_string()));
-    }
-    if d.len() > 102 {
-        tags.push(mk(
-            "ColorMode",
-            u32::from_be_bytes([d[100], d[101], d[102], d[103]]).to_string(),
-        ));
-        tags.push(mk(
-            "DigitalZoom",
-            u32::from_be_bytes([d[104], d[105], d[106], d[107]]).to_string(),
-        ));
-    }
-    // 0x6b: Sharpness (int8s) — Perl Kodak::Main
-    if d.len() > 0x6b {
-        tags.push(mk("Sharpness", (d[0x6b] as i8).to_string()));
-    }
-    if d.len() > 94 {
-        tags.push(mk("FlashMode", d[92].to_string()));
-        tags.push(mk("FlashFired", d[93].to_string()));
-        tags.push(mk("ISOSetting", d[94].to_string()));
+        tags.push(mk("Sharpness", minolta_print_parameter(d[0x6b] as i8 as i64)));
     }
     if d.len() > 112 {
         tags.push(mk(
