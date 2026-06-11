@@ -735,11 +735,13 @@ impl ExifReader {
                         1 | 2 | 6 | 7 => entry.count as usize,
                         _ => 0,
                     };
-                    if total_size > 11 {
+                    if total_size >= 12 {
                         let off = entry.value_offset as usize;
-                        if off + 11 <= data.len() && &data[off..off + 7] == b"PrintIM" {
+                        if off + 12 <= data.len() && &data[off..off + 7] == b"PrintIM" {
+                            // "PrintIM\0" is 8 bytes; the 4-byte version follows.
                             let ver =
-                                crate::encoding::decode_utf8_or_latin1(&data[off + 7..off + 11])
+                                crate::encoding::decode_utf8_or_latin1(&data[off + 8..off + 12])
+                                    .trim_end_matches('\0')
                                     .to_string();
                             tags.push(Tag {
                                 id: TagId::Text("PrintIMVersion".into()),

@@ -4911,9 +4911,11 @@ fn read_makernote_ifd_with_base(
                 (Manufacturer::Nikon, 0x00B7) => subs::dispatch_nikon_af_info2(&dispatch_ctx),
                 // PrintIM in MakerNotes (tag 0x0E00) — extract version
                 (_, 0x0E00) => {
-                    if value_data.len() > 11 && value_data.starts_with(b"PrintIM") {
-                        let ver =
-                            crate::encoding::decode_utf8_or_latin1(&value_data[7..11]).to_string();
+                    if value_data.len() >= 12 && value_data.starts_with(b"PrintIM") {
+                        // "PrintIM\0" is 8 bytes; the 4-byte version follows.
+                        let ver = crate::encoding::decode_utf8_or_latin1(&value_data[8..12])
+                            .trim_end_matches('\0')
+                            .to_string();
                         vec![Tag {
                             id: TagId::Text("PrintIMVersion".into()),
                             name: "PrintIMVersion".into(),

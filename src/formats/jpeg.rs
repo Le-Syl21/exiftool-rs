@@ -1559,10 +1559,12 @@ fn process_eppim(tiff_data: &[u8]) -> Vec<crate::tag::Tag> {
                 2 => count,
                 _ => 0,
             };
-            if size >= 11 && voff + size <= tiff_data.len() {
+            if size >= 12 && voff + size <= tiff_data.len() {
                 let pm = &tiff_data[voff..voff + size];
                 if pm.starts_with(b"PrintIM") {
-                    let ver = crate::encoding::decode_utf8_or_latin1(&pm[7..11])
+                    // "PrintIM\0" is 8 bytes; the 4-byte version follows (ExifTool:
+                    // substr($dataPt, $offset + 8, 4)).
+                    let ver = crate::encoding::decode_utf8_or_latin1(&pm[8..12])
                         .trim_end_matches('\0')
                         .to_string();
                     tags.push(crate::tag::Tag {

@@ -210,9 +210,14 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
         ));
     }
 
-    // ProfileID (bytes 84-99, MD5)
+    // ProfileID (bytes 84-99, MD5) — ExifTool shows "0" when not computed (all zero).
     if data.len() >= 100 {
-        let id: String = data[84..100].iter().map(|b| format!("{:02x}", b)).collect();
+        let raw = &data[84..100];
+        let id = if raw.iter().all(|&b| b == 0) {
+            "0".to_string()
+        } else {
+            raw.iter().map(|b| format!("{:02x}", b)).collect()
+        };
         tags.push(mk("ProfileID", "Profile ID", Value::String(id)));
     }
 
