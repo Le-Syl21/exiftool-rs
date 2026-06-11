@@ -366,7 +366,6 @@ PDF.pdf	Creator
 PLIST-bin.plist	TestBoolean
 PLIST-bin.plist	TestDate
 PLIST-bin.plist	TestDictWhen
-PLUS.xmp	ColorMode
 PLUS.xmp	CopyrightStatus
 PLUS.xmp	CreditLineRequired
 PLUS.xmp	ImageAlterationConstraints
@@ -499,7 +498,6 @@ XMP.jpg	MeasurementFlare
 XMP.jpg	Technology
 XMP.jpg	ViewingCondIlluminant
 XMP.xml	Iso
-XMP.xmp	ColorMode
 XMP.xmp	ComponentsConfiguration
 XMP.xmp	FlashReturn
 XMP.xmp	NativeDigest

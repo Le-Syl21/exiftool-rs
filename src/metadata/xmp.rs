@@ -1678,6 +1678,21 @@ impl XmpReader {
             if let Some(reformatted) = convert_xmp_date(&tag.print_value) {
                 tag.print_value = reformatted;
             }
+            // XMP-photoshop ColorMode enum (Photoshop colour modes).
+            if tag.name == "ColorMode" {
+                tag.print_value = match tag.print_value.trim() {
+                    "0" => "Bitmap",
+                    "1" => "Grayscale",
+                    "2" => "Indexed",
+                    "3" => "RGB",
+                    "4" => "CMYK",
+                    "7" => "Multichannel",
+                    "8" => "Duotone",
+                    "9" => "Lab",
+                    other => other,
+                }
+                .to_string();
+            }
             // XMP-photoshop Urgency uses the IPTC urgency labels.
             if tag.name == "Urgency" {
                 tag.print_value = match tag.print_value.trim() {
