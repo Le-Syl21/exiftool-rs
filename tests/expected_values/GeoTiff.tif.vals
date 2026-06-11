@@ -1,0 +1,30 @@
+BitsPerSample	8
+ColorMap	(Binary data 1536 bytes, use -b option to extract)
+Compression	Uncompressed
+ExifByteOrder	Big-endian (Motorola, MM)
+FileTypeExtension	tif
+FileType	TIFF
+GeogCitation	Hough UTM zone 17N
+GeogGeodeticDatum	User Defined
+GeographicType	User Defined
+GeogSemiMajorAxis	6378270
+GeogSemiMinorAxis	6356794.343479
+GeoTiffVersion	1.1.0
+GTModelType	Projected
+GTRasterType	Pixel Is Area
+ImageHeight	24
+ImageSize	25x24
+ImageWidth	25
+Megapixels	0.000600
+MIMEType	image/tiff
+ModelTransform	33.4179196429669 35.8363313794284 0 691955.165684031 35.8363313794284 -33.4179196429669 0 2791710.99012603 0 0 0 0 0 0 0 1
+PCSCitation	Hough UTM zone 17N
+PhotometricInterpretation	RGB Palette
+ProjectedCSType	User Defined
+Projection	UTM zone 17N
+ResolutionUnit	inches
+RowsPerStrip	24
+StripByteCounts	600
+StripOffsets	2060
+XResolution	72
+YResolution	72

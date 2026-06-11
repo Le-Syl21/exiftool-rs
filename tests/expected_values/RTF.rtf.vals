@@ -1,0 +1,13 @@
+Author	an author {with braces}
+Comments	ストロボ.フラッシュ未発光、強制発光モード(end).another line
+Company	 a company \with backslashes and leading space\
+Copyright	© 2010 Phil Harvey
+CustomNumber	123456
+CustomString	ABCDEF
+FileTypeExtension	rtf
+FileType	RTF
+Keywords	keyword1, keyword2
+MIMEType	text/rtf
+ModifyDate	2010:06:19 20:00:00
+Subject	a “subject” in funny quotes
+Title	ExifTool RTF test (with spécîål çhars)

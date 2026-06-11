@@ -1,0 +1,113 @@
+BitsPerSample	8
+ChromaBarMax	80
+ChromaBarMin	-20
+ColorComponents	3
+CorrectionAsix	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+DeviceTemp	25.00 C
+Distance	0.25 m
+Emissivity	0.99
+EncodingProcess	Baseline DCT, Huffman coding
+EnvironmentTemp	25.00 C
+ExifByteOrder	Big-endian (Motorola, MM)
+FactDefA0	0
+FactDefA1	0
+FactDefB0	0
+FactDefB1	0
+FactDefDist	32
+FactDefEmissivity	-128
+FactDefP0	9178
+FactDefP1	621
+FactDefP2	65534
+FactDefTa	300
+FactDefTau	-128
+FactDefTu	300
+FactRelLensTemp	128
+FactRelSensorTemp	7301
+FactRelShutterTemp	128
+FactStatusDistOK	1
+FactStatusEnvOK	1
+FactStatusGain	1
+FactStatusTempMap	1
+FileTypeExtension	jpg
+FileType	JPEG
+FusionIntensity	100.0 %
+GainStable	1
+GPSAltitudeRef	Above Sea Level
+GPSDateStamp	
+GPSDateTime	 00:00:00Z
+GPSLatitude	
+GPSLatitudeRef	Unknown ()
+GPSLongitude	
+GPSLongitudeRef	Unknown ()
+GPSProcessingMethod	
+GPSSpeedRef	Unknown ()
+GPSSpeed	undef
+GPSTimeStamp	00:00:00
+Humidity	50.0 %
+IJPEGDispType	1
+IJPEGMirrorFlip	0
+IJPEGOrgType	4
+IJPEGRotate	0
+IJPEGTempVersion	0 1 0 0
+IJPEGVersion	0 2 0 1
+ImageColorSwitchable	1
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+ImagingData	(Binary data 20 bytes, use -b option to extract)
+IntegralTime	400
+IntegratTimeHdr	500
+IRDataFormat	0
+IRDataSize	98304
+IRFocalLength	3.20
+IRImageBpp	8
+IRImageHeight	384
+IRImageWidth	256
+IRSensorAperture	1.10
+IRSensorFirmware	2.07.01.00
+IRSensorManufacturer	infisense
+IRSensorName	P2_USB_IR
+IRSensorPartNumber	P2_B_V2.0_2080100019B15656148
+IRSensorSerialNumber	P200019B15656148
+IsothermalMax	80
+IsothermalMin	-20
+JFIFVersion	1.01
+LightSource	Unknown
+Make	Infisense
+Megapixels	0.000064
+MIMEType	image/jpeg
+MixMode	0
+Model	P2_USB_IR
+ModifyDate	2023:02:08 12:24:35
+OffsetAdjustment	2
+Orientation	Horizontal (normal)
+ReferenceTemp	25.00 C
+ResolutionUnit	None
+ShowCenterTemp	1
+ShowMaxTemp	1
+ShowMinTemp	1
+TempControlEnable	1
+TempDataFormat	0
+TempDataSize	98304
+TempImageBpp	8
+TempImageHeight	384
+TempImageWidth	256
+TempMeasureCount	0
+TempUnit	0
+ThermalColorPalette	3
+VisibleDataFormat	0
+VisibleDataSize	98304
+VisibleFocalLength	3.20000004768372
+VisibleImageBpp	8
+VisibleImageHeight	0
+VisibleImageWidth	0
+VisibleSensorAperture	1.10000002384186
+VisibleSensorFirmware	2.07.01.00
+VisibleSensorManufacturer	infisense
+VisibleSensorName	P2_USB_IR
+VisibleSensorPartNumber	P2_B_V2.0_2080100019B15656148
+VisibleSensorSerialNumber	P200019B15656148
+WorkingMode	1
+XResolution	1
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	1

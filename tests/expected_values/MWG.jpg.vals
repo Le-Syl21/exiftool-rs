@@ -1,0 +1,50 @@
+ApplicationRecordVersion	2
+Artist	RIGHT1of2-EXIF-Creator; RIGHT2of2-EXIF-Creator
+BitsPerSample	8
+By-line                         : WRONG1of2-IPTC-Creator, WRONG2of2-IPTC-Creator
+Caption-Abstract                : WRONG-IPTC-Description
+City	RIGHT-XMP-City
+ColorComponents	3
+ColorSpace	Uncalibrated
+ComponentsConfiguration	Y, Cb, Cr, -
+CopyrightNotice	WRONG-IPTC-Copyright
+Country-PrimaryLocationName     : RIGHT-IPTC-Country
+Creator	WRONG1of2-XMP-Creator, WRONG2of2-XMP-Creator
+DateCreated	1993:01:01 03:11:11.311+01:00
+DateTimeCreated	1992:01:01 02:11:11+01:00
+DateTimeOriginal	2001:01:01 01:11:11
+Description	WRONG-XMP-Description
+DigitalCreationDate	2002:02:02
+DigitalCreationDateTime	2002:02:02 02:22:22+02:00
+DigitalCreationTime	02:22:22+02:00
+EncodingProcess	Baseline DCT, Huffman coding
+ExifByteOrder	Big-endian (Motorola, MM)
+ExifVersion	0220
+FileTypeExtension	jpg
+FileType	JPEG
+FlashpixVersion	0100
+ImageDescription	RIGHT-EXIF-Description
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+Keywords	WRONG1of2-IPTC-Keywords, WRONG2of2-IPTC-Keywords
+Megapixels	0.000064
+MIMEType	image/jpeg
+ModifyDate	2003:03:03 03:33:33.333+03:00
+Orientation	Rotate 90 CW
+Province-State                  : RIGHT-IPTC-State
+Rating	3
+ResolutionUnit	inches
+Rights	RIGHT-XMP-Copyright
+Subject	RIGHT1of2-XMP-Keywords, RIGHT2of2-XMP-Keywords
+Sub-location                    : RIGHT-IPTC-Location
+SubSecDateTimeOriginal	2001:01:01 01:11:11.111
+SubSecTime	133
+SubSecTimeDigitized	122
+SubSecTimeOriginal	111
+TimeCreated	02:11:11+01:00
+XMPToolkit	Image::ExifTool 7.98
+XResolution	96
+YCbCrPositioning	Centered
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	96

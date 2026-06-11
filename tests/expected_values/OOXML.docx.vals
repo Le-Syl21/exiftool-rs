@@ -1,0 +1,12 @@
+FileTypeExtension	zip
+FileType	ZIP
+MIMEType	application/zip
+Warning	Install Archive::Zip to decode compressed ZIP information
+ZipBitFlag	0
+ZipCompressedSize	362
+ZipCompression	Deflated
+ZipCRC	0x815b4431
+ZipFileName	[Content_Types].xml
+ZipModifyDate	1980:01:01 00:00:00
+ZipRequiredVersion	20
+ZipUncompressedSize	1489

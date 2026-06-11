@@ -1,0 +1,207 @@
+AEBBracketValue	0
+AFAreaHeight	188
+AFAreaWidth	189
+AFAreaXPositions	0 -1237 -742 0 742 1237 0
+AFAreaYPositions	-617 0 0 0 0 0 617
+AFAssistBeam	Emits
+AFImageHeight	2304
+AFImageWidth	3456
+AFPointsInFocus	3
+Aperture	8.0
+ApertureValue	8.0
+AutoExposureBracketing	Off
+AutoISO	100
+AutoRotate	None
+BaseISO	400
+BitsPerSample	8 8 8
+BlackMaskBottomBorder	0
+BlackMaskLeftBorder	0
+BlackMaskRightBorder	0
+BlackMaskTopBorder	0
+BlueBalance	1.993255
+BracketMode	Off
+BracketShotNumber	0
+BracketValue	0
+BulbDuration	0
+CameraType	EOS Mid-range
+CanonExposureMode	Aperture-priority AE
+CanonFirmwareVersion	Firmware 1.0.2
+CanonFlashMode	Off
+CanonImageHeight	2304
+CanonImageSize	n/a
+CanonImageType	Canon EOS 350D DIGITAL
+CanonImageWidth	3456
+CanonModelID	EOS Digital Rebel XT / 350D / Kiss Digital N
+CircleOfConfusion	0.019 mm
+ColorSpace	sRGB
+ColorTempAsShot	3064
+ColorTempAuto	3064
+ColorTempCloudy	6000
+ColorTempCustom1	5200
+ColorTempCustom2	5200
+ColorTempDaylight	5200
+ColorTemperature	5200
+ColorTempFlash	6440
+ColorTempFluorescent	3905
+ColorTempShade	7000
+ColorTempTungsten	3201
+ColorTone	Normal
+ComponentsConfiguration	-, -, -, -
+Compression	JPEG (old-style)
+ContinuousDrive	Single
+Contrast	Normal
+ControlMode	Camera Local Control
+CR2CFAPattern	[Red,Green][Green,Blue]
+CreateDate	2005:08:03 18:59:18
+CustomRendered	Normal
+DateTimeOriginal	2005:08:03 18:59:18
+DigitalGain	0
+DigitalZoom	None
+DriveMode	Single-frame Shooting
+EasyMode	Manual
+ETTLII	Evaluative
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	2304
+ExifImageWidth	3456
+ExifVersion	0221
+ExposureCompensation	0
+ExposureLevelIncrements	1/3 Stop
+ExposureMode	Auto
+ExposureProgram	Aperture-priority AE
+ExposureTime	1/15
+FileNumber	100-0024
+FileType	CR2
+FileTypeExtension	cr2
+FilterEffect	None
+FlashBits	(none)
+FlashExposureComp	0
+FlashGuideNumber	0
+FlashModel	n/a
+Flash	Off, Did not fire
+FlashpixVersion	0100
+FlashSyncSpeedAv	Auto
+FNumber	8.0
+FocalLength35efl	55.0 mm (35 mm equivalent: 89.2 mm)
+FocalLength	55.0 mm
+FocalPlaneResolutionUnit	inches
+FocalPlaneXResolution	3954.23341
+FocalPlaneXSize	23.04 mm
+FocalPlaneYResolution	3958.762887
+FocalPlaneYSize	15.37 mm
+FocalType	Zoom
+FocalUnits	1/mm
+FocusContinuous	Single
+FocusMode	One-shot AF
+FocusRange	Not Known
+FOV	22.8 deg
+HyperfocalDistance	20.42 m
+ImageHeight	1024
+ImageSize	3456x2304
+ImageWidth	1536
+InteropIndex	R98 - DCF basic file (sRGB)
+InteropVersion	0100
+ISO	400
+Lens	18.0 - 55.0 mm
+Lens35efl	18.0 - 55.0 mm (35 mm equivalent: 29.2 - 89.2 mm)
+LensID	Unknown 18-55mm
+LensType	n/a
+LightValue	7.9
+LongExposureNoiseReduction2	Off
+LongExposureNoiseReduction	Off
+MacroMode	Normal
+Make	Canon
+ManualFlashOutput	n/a
+MaxAperture	4
+MaxFocalLength	55 mm
+MeasuredEV2	8.125
+MeasuredEV	8.00
+MeasuredRGGB	580 1024 1024 500
+Megapixels	8.0
+MeteringMode	Center-weighted average
+MIMEType	image/x-canon-cr2
+MinAperture	27
+MinFocalLength	18 mm
+MirrorLockup	Disable
+Model	Canon EOS 350D DIGITAL
+ModifyDate	2005:08:03 18:59:18
+NDFilter	n/a
+NumAFPoints	7
+OpticalZoomCode	n/a
+Orientation	Horizontal (normal)
+OriginalDecisionDataOffset	0
+OwnerName	unknown
+PhotoEffect	Off
+PhotometricInterpretation	RGB
+PictureStyle	None
+PlanarConfiguration	Chunky
+PreviewImage	(Binary data 26 bytes, use -b option to extract)
+PreviewImageLength	26
+PreviewImageStart	8680
+Quality	RAW
+RawImageSegmentation	1 1758 1758
+RecordMode	CR2
+RedBalance	1.688027
+ResolutionUnit	inches
+RowsPerStrip	256
+SamplesPerPixel	3
+Saturation	Normal
+ScaleFactor35efl	1.6
+SceneCaptureType	Standard
+SelfTimer2	0
+SelfTimer	Off
+SensorBlueLevel	0
+SensorBottomBorder	2322
+SensorHeight	2328
+SensorLeftBorder	52
+SensorRedLevel	0
+SensorRightBorder	3507
+SensorTopBorder	19
+SensorWidth	3516
+SequenceNumber	0
+SerialNumber	0123456789
+SerialNumberFormat	Format 2
+SetButtonCrossKeysFunc	Normal
+Sharpness	0
+SharpnessFrequency	n/a
+ShootingMode	Aperture-priority AE
+Shutter-AELock                  : AF/AE lock
+ShutterCurtainSync	1st-curtain sync
+ShutterSpeed	1/15
+ShutterSpeedValue	1/15
+SlowShutter	None
+StripByteCounts	16
+StripOffsets	8648
+TargetAperture	8
+TargetExposureTime	1/15
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailImageValidArea	0 159 7 112
+ThumbnailLength	28
+ThumbnailOffset	8620
+ToneCurve	Standard
+ToningEffect	None
+UserComment	
+ValidAFPoints	7
+VRDOffset	0
+WBBracketMode	Off
+WBBracketValueAB	0
+WBBracketValueGM	0
+WB_RGGBLevels                   : 2002 1185 1187 2364
+WB_RGGBLevelsAsShot             : 2002 1185 1187 2364
+WB_RGGBLevelsAuto               : 1720 1022 1024 2031
+WB_RGGBLevelsCloudy             : 2512 1022 1024 1355
+WB_RGGBLevelsCustom1            : 2312 1022 1024 1501
+WB_RGGBLevelsCustom2            : 2312 1022 1024 1501
+WB_RGGBLevelsDaylight           : 2312 1022 1024 1501
+WB_RGGBLevelsFlash              : 2606 1022 1024 1308
+WB_RGGBLevelsFluorescent        : 1944 1022 1024 2015
+WB_RGGBLevelsShade              : 2714 1022 1024 1246
+WB_RGGBLevelsTungsten           : 1523 1022 1024 2397
+WBShiftAB	0
+WBShiftGM	0
+WhiteBalance	Auto
+WhiteBalanceBlue	0
+WhiteBalanceRed	0
+XResolution	72
+YResolution	72
+ZoomSourceWidth	0
+ZoomTargetWidth	0

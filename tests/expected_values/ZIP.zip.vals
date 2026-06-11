@@ -1,0 +1,11 @@
+FileTypeExtension	zip
+FileType	ZIP
+MIMEType	application/zip
+ZipBitFlag	0
+ZipCompressedSize	19
+ZipCompression	None
+ZipCRC	0x6e17461a
+ZipFileName	test.txt
+ZipModifyDate	2008:08:28 09:54:46
+ZipRequiredVersion	10
+ZipUncompressedSize	19

@@ -1,0 +1,73 @@
+AFAreaMode	Single Area
+AFPoint	Center
+AFPointsInFocus	(none)
+Aperture	9.4
+AutoFocus	On
+AuxiliaryLens	Off
+BitsPerSample	8
+ColorComponents	3
+ColorMode	Color
+ColorSpace	sRGB
+ComponentsConfiguration	Y, Cb, Cr, -
+CompressedBitsPerPixel	3
+Compression	JPEG (old-style)
+CreateDate	2001:08:01 12:57:23
+DataDump	(Binary data 122 bytes, use -b option to extract)
+DateTimeOriginal	2001:08:01 12:57:23
+DigitalZoom	1
+EncodingProcess	Baseline DCT, Huffman coding
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	1200
+ExifImageWidth	1600
+ExifVersion	0210
+ExposureCompensation	0
+ExposureProgram	Program AE
+ExposureTime	1/213
+FileSource	Digital Camera
+FileTypeExtension	jpg
+FileType	JPEG
+Flash	No Flash
+FlashpixVersion	0100
+FlashSetting	
+FNumber	9.4
+FocalLength35efl	8.6 mm
+FocalLength	8.6 mm
+FocusMode	AF-C
+ImageAdjustment	Normal
+ImageDescription	
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+InteropIndex	R98 - DCF basic file (sRGB)
+InteropVersion	0100
+ISO	100
+ISOSelection	Auto
+LightSource	Unknown
+LightValue	14.2
+Make	NIKON
+MakerNoteVersion	1.00
+ManualFocusDistance	undef
+MaxApertureValue	3.4
+Megapixels	0.000064
+MeteringMode	Multi-segment
+MIMEType	image/jpeg
+Model	E775
+ModifyDate	2001:08:01 12:57:23
+Orientation	Horizontal (normal)
+PrintIMVersion	0100
+Quality	Fine
+ResolutionUnit	inches
+SceneMode	
+SceneType	Directly photographed
+Sharpness	Auto
+ShutterSpeed	1/213
+Software	E775v1.3u
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailLength	28
+ThumbnailOffset	1426
+UserComment	
+WhiteBalance	Auto
+XResolution	300
+YCbCrPositioning	Co-sited
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	300

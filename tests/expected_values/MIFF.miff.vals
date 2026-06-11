@@ -1,0 +1,95 @@
+Aperture	3.5
+ApertureValue	3.5
+ApplicationRecordVersion	2
+Artist	Phil Harvey
+BrightnessValue	2
+By-line                         : Phil Harvey
+Caption-Abstract                : MIFF test
+Category	1
+City	Kingston
+Class	DirectClass
+ColorSpace	sRGB
+ComponentsConfiguration	Y, Cb, Cr, -
+CompressedBitsPerPixel	1.6
+Compression	JPEG (old-style)
+Copyright	Copyright 2004 Phil Harvey
+CopyrightFlag	False
+Country	Canada
+Country-PrimaryLocationName     : Canada
+CreateDate	2001:05:19 18:36:41
+Creator	Phil Harvey
+Credit	My Credit
+DateCreated	2004:02:26
+DateTimeOriginal	2001:05:19 18:36:41
+Depth	8
+Description	UTF-16 (big-endian) encoded XMP
+DisplayedUnitsX	inches
+DisplayedUnitsY	inches
+DocumentID	adobe:docid:photoshop:4cc7b857-69d0-11d8-8ac4-bb59c92f0d9a
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	8
+ExifImageWidth	8
+ExifVersion	0210
+ExposureCompensation	0
+ExposureProgram	Program AE
+FileSource	Digital Camera
+FileTypeExtension	miff
+FileType	MIFF
+Flash	Fired
+FlashpixVersion	0100
+FNumber	3.5
+FocalLength35efl	6.0 mm
+FocalLength	6.0 mm
+FocalPlaneResolutionUnit	cm
+FocalPlaneXResolution	3053
+FocalPlaneYResolution	3053
+GlobalAltitude	30
+GlobalAngle	30
+ID	ImageMagick
+ImageDescription	A witty caption
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+IPTCDigest	9e02efbd9bdc1dc192279e30a0e27323
+ISO	100
+JobRefName	My Job
+Keywords	ExifTool, Test, MIFF
+LightValue	9.6
+Make	FUJIFILM
+Marked	False
+Matte	False
+MaxApertureValue	3.5
+Megapixels	0.000064
+MeteringMode	Multi-segment
+MIMEType	application/x-magick-image
+Model	FinePix2400Zoom
+ModifyDate	2005:07:21 07:47:01
+Orientation	Horizontal (normal)
+PhotoshopFormat	Standard
+PhotoshopQuality	2
+PrintPosition	0 0
+PrintScale	1
+PrintStyle	Centered
+Province-State                  : Ont
+Resolution	72x72
+ResolutionUnit	inches
+Rights	Copyright 2004 Phil Harvey
+SceneType	Directly photographed
+SensingMethod	One-chip color area
+ShutterSpeed	1/64
+ShutterSpeedValue	1/64
+Software	Adobe Photoshop 7.0
+Subject	MIFF, Test
+ThumbnailLength	0
+ThumbnailOffset	854
+Title	Test IPTC picture
+Units	pixels-per-inch
+Urgency	8 (least urgent)
+URL	https://exiftool.org/
+URL_List                        : 
+WebStatement	https://exiftool.org/
+Writer-Editor                   : I wrote it
+XMPToolkit	Image::ExifTool 5.47
+XResolution	72
+YCbCrPositioning	Co-sited
+YResolution	72

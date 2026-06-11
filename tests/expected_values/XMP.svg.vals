@@ -1,0 +1,25 @@
+About	http://example.org/myfoo
+Copyright	Alisha Jucevic
+Creator	Irving Bird, Mary Lambert
+Date	2000:04:11
+DescDescrEmph	myfoo
+Description	$three $bar $thousands $dollars $from 1998 $through 2000
+DescSceneContains	$three $graph-bar
+DescSceneWhat	widget $growth
+DescSceneWhen	1998 $through 2000
+DescTitle	This is a financial report
+FileTypeExtension	svg
+FileType	SVG
+Format	image/svg+xml
+ImageHeight	3in
+ImageWidth	4in
+JUMBF	(Binary data 413 bytes, use -b option to extract)
+JUMDLabel	cai
+JUMDType	(cacb)-0011-0010-800000aa00389b71
+Language	en
+Location	Salem, Oregon
+MIMEType	image/svg+xml
+Publisher	Example Organization
+SVGVersion	1.1
+Title	MyFoo Financial Report
+Xmlns	http://www.w3.org/2000/svg

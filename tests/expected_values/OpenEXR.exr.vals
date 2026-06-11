@@ -1,0 +1,17 @@
+Channels	A half 1 1, B half 1 1, G half 1 1, R half 1 1
+Compression	PIZ
+DataWindow	0 0 2 1
+DisplayWindow	0 0 2 1
+EXRVersion	2
+FileType	EXR
+FileTypeExtension	exr
+Flags	(none)
+ImageHeight	2
+ImageSize	3x2
+ImageWidth	3
+LineOrder	Increasing Y
+Megapixels	0.000006
+MIMEType	image/x-exr
+PixelAspectRatio	1
+ScreenWindowCenter	0 0
+ScreenWindowWidth	1

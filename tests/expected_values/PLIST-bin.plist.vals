@@ -1,0 +1,13 @@
+FileTypeExtension	plist
+FileType	PLIST
+MIMEType	application/x-plist
+TestArray	one, two, three
+TestBoolean	False
+TestData	(Binary data 12 bytes, use -b option to extract)
+TestDate	2013:02:22 13:49:10+01:00
+TestDictAuthor	Phil
+TestDictWhen	2000:01:02 09:04:05+01:00
+TestInteger	256
+TestReal	1.4
+TestString	ExifTool PLIST test
+TestUnicode	ExîfTöøl PLIST tést

@@ -1,0 +1,37 @@
+Aperture	4.9
+CameraType	A
+ColorTemperature	4800
+CropArea	0 0 5120 2560
+DateCreated	2016:01:18
+DateTimeOriginal	2016:01:18 21:35:55
+FileTypeExtension	r3d
+FileType	R3D
+Filter	STANDARD
+FirmwareVersion	6.2.34
+FNumber	4.9
+FocalLength	24
+FocalLength35efl	24.0 mm
+FocusDistance	-0.001 m
+FrameRate	23.976
+ImageHeight	2560
+ImageSize	5120x2560
+ImageWidth	5120
+ISO	1280
+Megapixels	13.1
+MIMEType	video/x-red-r3d
+Model	S-WEAPON
+OriginalFileName	A106_C037_0118G5_002.R3D
+OriginalFrameRate	23.976
+RedcodeVersion	2
+ReelNumber	106
+RGBCurves	0 0 0.25 0.25 0.5 0.5 0.75 0.75 1 1 0 0 0.25 0.25 0.5 0.5 0.75 0.75 1 1 0 0 0.25 0.25 0.5 0.5 0.75 0.75 1 1
+SerialNumber	130-246-CE5
+StartEdgeCode	01:49:54:11
+StartTimecode	21:36:16:18
+StorageFormatDate	2016:01:18
+StorageFormatTime	21:35:55
+StorageSerialNumber	15240FC80DE7
+StorageType	RED 512GB V4
+Take	037
+TimeCreated	21:35:55
+VideoFormat	5K 2:1

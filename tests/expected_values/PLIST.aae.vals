@@ -1,0 +1,18 @@
+AdjustmentBaseVersion	0
+AdjustmentEditorBundleID	
+AdjustmentFormatIdentifier	com.apple.video.slomo
+AdjustmentFormatVersion	1.1
+AdjustmentRenderTypes	0
+FileType	AAE
+FileTypeExtension	aae
+MIMEType	application/vnd.apple.photos
+SlowMotionRate	0.125
+SlowMotionRegions	
+SlowMotionRegionsDurationEpoch	0
+SlowMotionRegionsDurationFlags	Valid
+SlowMotionRegionsDurationTimeScale: 1000000000
+SlowMotionRegionsDurationValue	29382500000
+SlowMotionRegionsStartTimeEpoch	0
+SlowMotionRegionsStartTimeFlags	Valid
+SlowMotionRegionsStartTimeScale	1000000000
+SlowMotionRegionsStartTimeValue	6296250000

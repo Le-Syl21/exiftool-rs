@@ -1,0 +1,13 @@
+Command	pfilt -1 -e 1 -m .25 -2 -x /3 -y /3
+Exposure	3.512179e-001
+FileTypeExtension	hdr
+FileType	HDR
+Format	32-bit_rle_rgbe
+ImageHeight	1
+ImageSize	1x1
+ImageWidth	1
+Megapixels	0.000001
+MIMEType	image/vnd.radiance
+Orientation	Horizontal (normal)
+Software	RADIANCE 3.1.8 lastmod Thu Sep 17 20:49:56 PDT 1998 by droberts on escher
+View	-vtv -vp 0.832108 2.26053 1.8 -vd 0.984193 0.177099 0 -vu 0 0 1 -vh 100 -vv 100 -vo 0 -va 0 -vs 0 -vl 0

@@ -1,0 +1,148 @@
+AFAperture	4.6
+AFAreaMode	Single Area
+AFPoint	Center
+AFPointsInFocus	Center
+Aperture	5.0
+AutoFocus	On
+BitsPerSample	8
+BlueBalance	1.410156
+CFAPattern	[Blue,Green][Green,Red]
+CircleOfConfusion	0.020 mm
+ColorComponents	3
+ColorHue	Mode2
+ColorSpace	Uncalibrated
+ComponentsConfiguration	Y, Cb, Cr, -
+CompressedBitsPerPixel	4
+Compression	JPEG (old-style)
+Contrast	Normal
+CreateDate	2005:01:14 08:57:59
+CustomRendered	Custom
+DateTimeOriginal	2005:01:14 08:57:59
+DigitalZoomRatio	1
+DOF	0.02 m (0.62 - 0.64 m)
+EffectiveMaxAperture	4.5
+EncodingProcess	Baseline DCT, Huffman coding
+ExifByteOrder	Big-endian (Motorola, MM)
+ExifImageHeight	2000
+ExifImageWidth	3008
+ExifVersion	0221
+ExitPupilPosition	89.0 mm
+ExposureBracketValue	0
+ExposureCompensation	0
+ExposureDifference	-4.9
+ExposureMode	Auto
+ExposureProgram	Aperture-priority AE
+ExposureTime	1/60
+ExternalFlashExposureComp	0
+ExternalFlashFirmware	n/a
+ExternalFlashFlags	(none)
+FileSource	Digital Camera
+FileTypeExtension	jpg
+FileType	JPEG
+Flash	Auto, Fired, Return detected
+FlashCommanderMode	Off
+FlashCompensation	0
+FlashControlMode	Off
+FlashExposureBracketValue	0.0
+FlashExposureComp	-5/3
+FlashGNDistance	0
+FlashGroupACompensation	0
+FlashGroupAControlMode	Off
+FlashGroupBCompensation	0
+FlashGroupBControlMode	Off
+FlashInfoVersion	0100
+FlashMode	Fired, TTL Mode
+FlashpixVersion	0100
+FlashSetting	Normal
+FlashSource	None
+FlashType	Built-in,TTL
+FNumber	5.0
+FocalLength35efl	56.0 mm (35 mm equivalent: 84.0 mm)
+FocalLength	56.0 mm
+FocalLengthIn35mmFormat	84 mm
+FocusDistance	0.63 m
+FocusMode	AF-S
+FocusPosition	0x21
+FOV	22.1 deg (0.25 m)
+GainControl	None
+Gamma	2.2
+HueAdjustment	0
+HyperfocalDistance	31.31 m
+ImageBoundary	0 0 3008 2000
+ImageDataSize	2361498
+ImageHeight	47
+ImageOptimization	Custom
+ImageSize	71x47
+ImageWidth	71
+InteropIndex	R03 - DCF option file (Adobe RGB)
+InteropVersion	0100
+ISO	200
+ISOSetting	200
+JFIFVersion	1.01
+Lens	18-70mm f/3.5-4.5
+LensDataVersion	0101
+LensFStops	5.33
+LensID	AF-S DX Zoom-Nikkor 18-70mm f/3.5-4.5G IF-ED
+LensIDNumber	127
+LensSpec	18-70mm f/3.5-4.5 G
+LensType	G
+LightSource	Speedlight
+LightValue	9.6
+Make	NIKON CORPORATION
+MakerNoteVersion	2.10
+MaxApertureAtMaxFocal	4.5
+MaxApertureAtMinFocal	3.6
+MaxApertureValue	4.4
+MaxFocalLength	71.3 mm
+MCUVersion	132
+Megapixels	0.003
+MeteringMode	Multi-segment
+MIMEType	image/jpeg
+MinFocalLength	18.3 mm
+Model	NIKON D70
+ModifyDate	2005:01:14 08:57:59
+NoiseReduction	Off
+Orientation	Horizontal (normal)
+PreviewImage	(Binary data 26 bytes, use -b option to extract)
+PreviewImageLength	26
+PreviewImageStart	2466
+PrimaryChromaticities	0.64 0.33 0.21 0.71 0.15 0.06
+ProgramShift	0
+Quality	Fine
+RedBalance	2.332031
+ResolutionUnit	inches
+Saturation	High
+ScaleFactor35efl	1.5
+SceneCaptureType	Standard
+SceneType	Directly photographed
+SensingMethod	One-chip color area
+SensorPixelSize	7.8 x 7.8 um
+SerialNumber	No= 20025585
+Sharpness	Hard
+ShootingMode	Continuous
+ShotInfoVersion	0103
+ShutterCount	526
+ShutterSpeed	1/60
+Software	Ver.1.02
+SubjectDistanceRange	Unknown
+SubSecCreateDate	2005:01:14 08:57:59.20
+SubSecDateTimeOriginal	2005:01:14 08:57:59.20
+SubSecModifyDate	2005:01:14 08:57:59.20
+SubSecTime	20
+SubSecTimeDigitized	20
+SubSecTimeOriginal	20
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailLength	28
+ThumbnailOffset	2696
+ToneComp	CS
+UserComment	curve: fotogenics point and shoot
+VariProgram	
+WB_RGBGLevels                   : 597 256 361 256
+WhiteBalance	Auto
+WhiteBalanceFineTune	0
+WhitePoint	0.313 0.329
+XResolution	300
+YCbCrCoefficients	0.299 0.587 0.114
+YCbCrPositioning	Co-sited
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	300

@@ -1,0 +1,18 @@
+AbstractFileName	abstract.txt
+BibligraphicFileName	index.txt
+BootSystem	EL TORITO SPECIFICATION
+CopyrightFileName	copyright.txt
+DataPreparer	Phil Harvey
+FileTypeExtension	iso
+FileType	ISO
+MIMEType	application/x-iso9660-image
+Publisher	PH Publishing
+RootDirectoryCreateDate	2016:01:08 10:00:26+00:00
+Software	hdiutil 10.10v398
+VolumeBlockCount	190976
+VolumeBlockSize	2048
+VolumeCreateDate	2016:01:08 10:00:26.00+00:00
+VolumeModifyDate	2016:01:08 10:00:26.00+00:00
+VolumeName	ExifTool Test Vol. 1
+VolumeSetName	ExifTool Test Set
+VolumeSize	391 MB

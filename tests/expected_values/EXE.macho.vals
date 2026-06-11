@@ -1,0 +1,9 @@
+CPUArchitecture	32 bit
+CPUByteOrder	Big endian
+CPUSubtype	PowerPC (all)
+CPUType	PowerPC
+FileTypeExtension	
+FileType	Mach-O executable
+MIMEType	application/octet-stream
+ObjectFileType	Demand paged executable
+ObjectFlags	No undefs, Dyld link, Two level

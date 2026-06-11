@@ -1,0 +1,24 @@
+AnnounceList1	udp://tracker.bogus.com:80/announce
+AnnounceList2	udp://tracker.bogus2.com:80/announce
+AnnounceList3	udp://tracker.bogus3.com:80/announce
+Announce	udp://tracker.bogus.com:80/announce
+Comment	Test BitTorrent description file
+CreateDate	2013:09:06 17:33:59+02:00
+Creator	uTorrent/1840
+Encoding	UTF-8
+File1Length	3.7 MB
+File1Path	exiftool-9.35.zip
+File2Length	3.7 MB
+File2Path	Image-ExifTool-9.35.tar.gz
+File3Length	2.4 MB
+File3Path	ExifTool-9.35.dmg
+File4Length	11 kB
+File4Path	docs/README
+FileTypeExtension	torrent
+FileType	Torrent
+MIMEType	application/x-bittorrent
+Name	Image-ExifTool-9.35
+PieceLength	1048576
+Pieces	(Binary data 200 bytes, use -b option to extract)
+URLList1	http://seed.bogus.com/
+URLList2	http://seed.bogus2.com/

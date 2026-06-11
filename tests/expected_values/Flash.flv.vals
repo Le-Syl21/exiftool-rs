@@ -1,0 +1,46 @@
+AudioBitrate	65.8 kbps
+AudioBitsPerSample	16
+AudioChannels	1 (mono)
+AudioCodecID	2
+AudioDelay	0.039
+AudioEncoding	MP3
+AudioSampleRate	11025
+AudioSampleSize	16
+AudioSize	26299
+CanSeekToEnd	Yes
+CuePoint0Name	Cue1
+CuePoint0Time	0
+CuePoint0Type	event
+CuePoint1Name	Cue2
+CuePoint1ParameterParam1	value1
+CuePoint1ParameterParam2	value2
+CuePoint1Time	0.324
+CuePoint1Type	navigation
+DataSize	187002
+Duration	3.09 s
+FileSizeBytes	187691
+FileTypeExtension	flv
+FileType	FLV
+FrameRate	20
+HasAudio	Yes
+HasCuePoints	Yes
+HasKeyFrames	Yes
+HasMetadata	Yes
+HasVideo	Yes
+ImageHeight	240
+ImageSize	320x240
+ImageWidth	320
+KeyFramePositions	1463, 32674, 143320, 181650
+KeyFramesTimes	0.039, 0.363, 1.839, 3.039
+LastKeyFrameTime	3.039
+LastTimeStamp	3.039
+Megapixels	0.077
+MetadataCreator	inlet media FLVTool2 v1.0.6 - http://www.inlet-media.de/flvtool2
+MetadataDate	2007:06:12 15:03:11.528553-04:00
+MIMEType	video/x-flv
+Stereo	No
+Test	this
+VideoBitrate	419 kbps
+VideoCodecID	4
+VideoEncoding	On2 VP6
+VideoSize	159544

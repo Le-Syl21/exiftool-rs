@@ -1,0 +1,25 @@
+BackgroundColor	0 0 0
+BitDepth	8
+BitsPerPixel	24
+ColorComponents	3
+ColorMode	RGB
+ColorType	RGB
+Comment	ExifTool PGF Test
+Compression	Deflate/Inflate
+FileTypeExtension	pgf
+FileType	PGF
+Filter	Adaptive
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+Interlace	Noninterlaced
+Megapixels	0.000064
+MIMEType	image/pgf
+PGFVersion	0x36
+PixelsPerUnitX	2835
+PixelsPerUnitY	2835
+PixelUnits	meters
+PyramidLevels	0
+Quality	0
+SRGBRendering	Perceptual
+Warning	[minor] Text/EXIF chunk(s) found after PGF IDAT (may be ignored by some readers)

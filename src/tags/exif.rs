@@ -239,10 +239,7 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                     } else {
                         crate::encoding::decode_utf8_or_latin1(body).to_string()
                     };
-                    return Some(
-                        text.trim_end_matches(|c: char| c == '\0' || c == ' ')
-                            .to_string(),
-                    );
+                    return Some(text.trim_end_matches(['\0', ' ']).to_string());
                 }
             }
         }

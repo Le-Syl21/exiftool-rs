@@ -1,0 +1,62 @@
+Album	album
+AlbumArtist	album artist
+Artist	Phil Harvey
+AudioBitsPerSample	16
+AudioChannels	2
+AudioFormat	mp4a
+AudioSampleRate	44100
+AvgBitrate	0 bps
+Balance	0
+BeatsPerMinute	120
+Comment	comments
+CompatibleBrands	M4A , mp42, isom
+Compilation	No
+Composer	Composer
+ContentCreateDate	2006
+CoverArt	(Binary data 19 bytes, use -b option to extract)
+CreateDate	2005:06:29 19:02:19
+CurrentTime	0 s
+DiskNumber	1 of 3
+Duration	29.05 s
+Encoder	iTunes v4.9, QuickTime 7.0.1
+FileTypeExtension	m4a
+FileType	M4A
+Genre	Children’s Music
+Grouping	grouping
+HandlerType	Metadata
+HandlerVendorID	Apple
+Lyrics	these are lyrics
+MajorBrand	Apple iTunes AAC-LC (.M4A) Audio
+MatrixStructure	1 0 0 0 1 0 0 0 1
+MediaCreateDate	2005:06:29 19:02:19
+MediaDataOffset	5237
+MediaDataSize	0
+MediaDuration	29.06 s
+MediaHeaderVersion	0
+MediaLanguageCode	und
+MediaModifyDate	2006:09:22 11:06:45
+MediaTimeScale	32000
+MIMEType	audio/mp4
+MinorVersion	0.0.0
+ModifyDate	2006:09:22 11:06:45
+MovieHeaderVersion	0
+NextTrackID	2
+PlayGap	No Gap
+PosterTime	0 s
+PreferredRate	1
+PreferredVolume	100.00%
+PreviewDuration	0 s
+PreviewTime	0 s
+SelectionDuration	0 s
+SelectionTime	0 s
+TimeScale	600
+Title	Sample
+TrackCreateDate	2005:06:29 19:02:19
+TrackDuration	29.05 s
+TrackHeaderVersion	0
+TrackID	1
+TrackLayer	0
+TrackModifyDate	2006:09:22 11:06:45
+TrackNumber	1 of 2
+TrackVolume	100.00%
+VolumeNormalization	80 0 610 0 289C 0 0 0 0 0

@@ -1,0 +1,257 @@
+ActiveArea	14 42 2328 3516
+AEBBracketValue	0
+AFAreaHeight	188
+AFAreaWidth	189
+AFAreaXPositions	0 -1237 -742 0 742 1237 0
+AFAreaYPositions	-617 0 0 0 0 0 617
+AFAssistBeam	Emits
+AFImageHeight	2304
+AFImageWidth	3456
+AFPointsInFocus	3
+AnalogBalance	1 1 1
+AntiAliasStrength	1
+Aperture	8.0
+ApertureValue	8.0
+Artist	unknown
+AsShotNeutral	0.592408 1 0.501692
+AutoExposureBracketing	Off
+AutoISO	100
+AutoRotate	None
+BaseISO	400
+BaselineExposure	0.25
+BaselineNoise	1.33
+BaselineSharpness	1.5
+BayerGreenSplit	0
+BestQualityScale	1
+BitsPerSample	16
+BlackLevel	0
+BlackLevelRepeatDim	1 1
+BlackMaskBottomBorder	0
+BlackMaskLeftBorder	0
+BlackMaskRightBorder	0
+BlackMaskTopBorder	0
+BlueBalance	1.993255
+BracketMode	Off
+BracketShotNumber	0
+BracketValue	0
+BulbDuration	0
+CalibrationIlluminant1	Standard Light A
+CalibrationIlluminant2	D65
+CameraCalibration1	1.0069 0 0 0 1 0 0 0 1.0027
+CameraCalibration2	1.0069 0 0 0 1 0 0 0 1.0027
+CameraSerialNumber	012345678
+CameraType	EOS Mid-range
+CanonExposureMode	Aperture-priority AE
+CanonFirmwareVersion	Firmware 1.0.2
+CanonFlashMode	Off
+CanonImageHeight	2304
+CanonImageSize	n/a
+CanonImageType	Canon EOS 350D DIGITAL
+CanonImageWidth	3456
+CanonModelID	EOS Digital Rebel XT / 350D / Kiss Digital N
+CFALayout	Rectangular
+CFAPattern2	0 1 1 2
+CFAPattern	[Red,Green][Green,Blue]
+CFAPlaneColor	Red,Green,Blue
+CFARepeatPatternDim	2 2
+CircleOfConfusion	0.019 mm
+ColorMatrix1	0.6159 -0.0945 -0.0745 -0.6846 1.3563 0.3684 -0.0802 0.1086 0.7555
+ColorMatrix2	0.6018 -0.0617 -0.0965 -0.8645 1.5881 0.2975 -0.153 0.1719 0.7642
+ColorTempAsShot	3064
+ColorTempAuto	3064
+ColorTempCloudy	6000
+ColorTempCustom1	5200
+ColorTempCustom2	5200
+ColorTempDaylight	5200
+ColorTemperature	5200
+ColorTempFlash	6440
+ColorTempFluorescent	3905
+ColorTempShade	7000
+ColorTempTungsten	3201
+ColorTone	Normal
+Compression	JPEG
+ContinuousDrive	Single
+Contrast	Normal
+ControlMode	Camera Local Control
+CreateDate	2005:08:03 18:59:18
+Creator	unknown
+CustomRendered	Normal
+DateTime	2005:08:03 18:59:18-04:00
+DateTimeDigitized	2005:08:03 18:59:18-04:00
+DateTimeOriginal	2005:08:03 18:59:18
+DefaultCropOrigin	10 5
+DefaultCropSize	3456 2304
+DefaultScale	1 1
+DigitalGain	0
+DigitalZoom	None
+DNGBackwardVersion	1.1.0.0
+DNGLensInfo	18-55mm f/?
+DNGVersion	1.1.0.0
+DriveMode	Single-frame Shooting
+EasyMode	Manual
+ETTLII	Evaluative
+ExifByteOrder	Big-endian (Motorola, MM)
+ExifVersion	0221
+ExposureCompensation	0
+ExposureLevelIncrements	1/3 Stop
+ExposureMode	Auto
+ExposureProgram	Aperture-priority AE
+ExposureTime	1/15
+FileNumber	100-0024
+FileType	DNG
+FileTypeExtension	dng
+FilterEffect	None
+Firmware	1.0.2
+FlashBits	(none)
+FlashCompensation	0
+FlashExposureComp	0
+FlashFired	False
+FlashFunction	False
+FlashGuideNumber	0
+FlashModel	n/a
+FlashMode	Off
+Flash	Off, Did not fire
+FlashRedEyeMode	False
+FlashReturn	No return detection
+FlashSyncSpeedAv	Auto
+FNumber	8.0
+FocalLength35efl	55.0 mm (35 mm equivalent: 89.2 mm)
+FocalLength	55.0 mm
+FocalPlaneResolutionUnit	inches
+FocalPlaneXResolution	3954.23341
+FocalPlaneXSize	23.04 mm
+FocalPlaneYResolution	3958.762887
+FocalPlaneYSize	15.37 mm
+FocalType	Zoom
+FocalUnits	1/mm
+FocusContinuous	Single
+FocusMode	One-shot AF
+FocusRange	Not Known
+FOV	22.8 deg
+HyperfocalDistance	20.42 m
+ImageHeight	2328
+ImageNumber	24
+ImageSize	3516x2328
+ImageWidth	3516
+ISO	400
+JpgFromRaw	(Binary data 29 bytes, use -b option to extract)
+JpgFromRawLength	29
+JpgFromRawStart	13070
+Lens	18.0 - 55.0 mm
+Lens35efl	18.0 - 55.0 mm (35 mm equivalent: 29.2 - 89.2 mm)
+LensID	Unknown 18-55mm
+LensInfo	18-55mm f/?
+LensType	n/a
+LightValue	7.9
+LinearResponseLimit	1
+LocalizedCameraModel	Canon EOS 350D Digital
+LongExposureNoiseReduction2	Off
+LongExposureNoiseReduction	Off
+MacroMode	Normal
+Make	Canon
+MakerNoteByteOrder	Little-endian (Intel, II)
+ManualFlashOutput	n/a
+MaskedAreas	14 0 2328 40
+MaxAperture	4
+MaxApertureValue	4.0
+MaxFocalLength	55 mm
+MeasuredEV2	8.125
+MeasuredEV	8.00
+MeasuredRGGB	580 1024 1024 500
+Megapixels	8.2
+MeteringMode	Center-weighted average
+MIMEType	image/x-adobe-dng
+MinAperture	27
+MinFocalLength	18 mm
+MirrorLockup	Disable
+Model	Canon EOS 350D DIGITAL
+ModifyDate	2005:08:03 18:59:18
+NDFilter	n/a
+NumAFPoints	7
+OpticalZoomCode	n/a
+Orientation	Horizontal (normal)
+OriginalDecisionDataOffset	0
+OriginalRawFileName	Canon350D.CR2
+OwnerName	unknown
+PhotoEffect	Off
+PhotometricInterpretation	Color Filter Array
+PictureStyle	None
+PlanarConfiguration	Chunky
+PreviewImage	(Binary data 26 bytes, use -b option to extract)
+PreviewImageLength	26
+PreviewImageStart	12780
+Quality	RAW
+RawDataUniqueID	0358DB4E08632D90925171A6BB8848A2
+RecordMode	CR2
+RedBalance	1.688027
+ReferenceBlackWhite	0 255 128 255 128 255
+RowsPerStrip	8
+SamplesPerPixel	1
+Saturation	Normal
+ScaleFactor35efl	1.6
+SceneCaptureType	Standard
+SelfTimer2	0
+SelfTimer	Off
+SensorBlueLevel	0
+SensorBottomBorder	2322
+SensorHeight	2328
+SensorLeftBorder	52
+SensorRedLevel	0
+SensorRightBorder	3507
+SensorTopBorder	19
+SensorWidth	3516
+SequenceNumber	0
+SerialNumber	0012345678
+SerialNumberFormat	Format 2
+SetButtonCrossKeysFunc	Normal
+ShadowScale	1
+Sharpness	0
+SharpnessFrequency	n/a
+ShootingMode	Aperture-priority AE
+Shutter-AELock                  : AF/AE lock
+ShutterCurtainSync	1st-curtain sync
+ShutterSpeed	1/15
+ShutterSpeedValue	1/15
+SlowShutter	None
+StripByteCounts	192
+StripOffsets	13470
+SubfileType	Reduced-resolution image
+TargetAperture	8
+TargetExposureTime	1/15
+ThumbnailImageValidArea	0 159 7 112
+ThumbnailTIFF	(Binary data 408 bytes, use -b option to extract)
+TileByteCounts	22
+TileLength	240
+TileOffsets	12494
+TileWidth	256
+ToneCurve	Standard
+ToningEffect	None
+UniqueCameraModel	Canon EOS 350D
+ValidAFPoints	7
+VRDOffset	0
+WBBracketMode	Off
+WBBracketValueAB	0
+WBBracketValueGM	0
+WB_RGGBLevels                   : 2002 1185 1187 2364
+WB_RGGBLevelsAsShot             : 2002 1185 1187 2364
+WB_RGGBLevelsAuto               : 1720 1022 1024 2031
+WB_RGGBLevelsCloudy             : 2512 1022 1024 1355
+WB_RGGBLevelsCustom1            : 2312 1022 1024 1501
+WB_RGGBLevelsCustom2            : 2312 1022 1024 1501
+WB_RGGBLevelsDaylight           : 2312 1022 1024 1501
+WB_RGGBLevelsFlash              : 2606 1022 1024 1308
+WB_RGGBLevelsFluorescent        : 1944 1022 1024 2015
+WB_RGGBLevelsShade              : 2714 1022 1024 1246
+WB_RGGBLevelsTungsten           : 1523 1022 1024 2397
+WBShiftAB	0
+WBShiftGM	0
+WhiteBalance	Auto
+WhiteBalanceBlue	0
+WhiteBalanceRed	0
+WhiteLevel	4095
+XMPToolkit	XMP toolkit 3.0-28, framework 1.6
+YCbCrCoefficients	0.299 0.587 0.114
+YCbCrPositioning	Co-sited
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+ZoomSourceWidth	0
+ZoomTargetWidth	0

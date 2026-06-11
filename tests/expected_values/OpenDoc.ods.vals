@@ -1,0 +1,12 @@
+FileTypeExtension	ods
+FileType	ODS
+MIMEType	application/vnd.oasis.opendocument.spreadsheet
+Warning	Install Archive::Zip to decode compressed ZIP information
+ZipBitFlag	0x0800
+ZipCompressedSize	46
+ZipCompression	None
+ZipCRC	0x8a396c85
+ZipFileName	mimetype
+ZipModifyDate	2010:04:19 09:18:04
+ZipRequiredVersion	20
+ZipUncompressedSize	46

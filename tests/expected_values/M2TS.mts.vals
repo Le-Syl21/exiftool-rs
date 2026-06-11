@@ -1,0 +1,23 @@
+ApertureSetting	2.4
+AudioBitrate	256 kbps
+AudioChannels	2
+AudioSampleRate	48000
+AudioStreamType	A52/AC-3 Audio
+DateTimeOriginal	2008:12:31 23:16:24+01:00
+Duration	0 s
+ExposureTime	1/25
+FileTypeExtension	mts
+FileType	M2TS
+Gain	9 dB
+ImageHeight	1080
+ImageSize	1920x1080
+ImageStabilization	n/a
+ImageWidth	1920
+Make	Canon
+Megapixels	2.1
+MIMEType	video/m2ts
+RecordingMode	FXP
+ShutterSpeed	1/25
+SurroundMode	Not indicated
+VideoStreamType	H.264 (AVC) Video
+Warning	[minor] The ExtractEmbedded option may find more tags in the video data

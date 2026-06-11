@@ -1,0 +1,102 @@
+Aperture	2.8
+ApertureValue	2.8
+AutoISOMax	3200
+AutoISOMin	3200
+AutoRotation	Up
+BitsPerSample	8
+CameraSerialNumber	C3221324657219
+CircleOfConfusion	0.006 mm
+ColorComponents	3
+ColorMode	FLAT
+ColorSpace	Unknown (0x0)
+ComponentsConfiguration	Y, Cb, Cr, -
+CompressedBitsPerPixel	0.003367003367
+Compression	JPEG (old-style)
+Contrast	Normal
+CreateDate	2017:10:03 10:58:29
+CustomRendered	Normal
+DateTimeOriginal	2017:10:03 10:58:29
+DeviceName	Photo Global Settings
+DeviceSettingDescription	(Binary data 4 bytes, use -b option to extract)
+DigitalZoom	0
+DigitalZoomOn	Yes
+DigitalZoomRatio	1
+EncodingProcess	Baseline DCT, Huffman coding
+ExifByteOrder	Big-endian (Motorola, MM)
+ExifImageHeight	3000
+ExifImageWidth	4000
+ExifVersion	0221
+ExposureCompensation	0.0
+ExposureIndex	3.614421976e-10
+ExposureMode	Auto
+ExposureProgram	Program AE
+ExposureTime	1/1205
+ExposureType	
+FileSource	Digital Camera
+FileTypeExtension	jpg
+FileType	JPEG
+FirmwareVersion	HD6.01.01.51.00
+Flash	No flash function
+FlashpixVersion	....
+FNumber	2.8
+FocalLength	3.0 mm
+FocalLength35efl	3.0 mm (35 mm equivalent: 15.0 mm)
+FocalLengthIn35mmFormat	15 mm
+FOV	100.4 deg
+GainControl	None
+GPSAltitude	3.9 m Below Sea Level
+GPSAltitudeRef	Below Sea Level
+GPSDateStamp	2017:10:03
+GPSDateTime	2017:10:03 14:58:14Z
+GPSLatitude	40 deg 39' 30.31" N
+GPSLatitudeRef	North
+GPSLongitude	73 deg 59' 36.08" W
+GPSLongitudeRef	West
+GPSPosition	40 deg 39' 30.31" N, 73 deg 59' 36.08" W
+GPSTimeStamp	14:58:14
+HDRSetting	0
+HyperfocalDistance	0.53 m
+ImageDescription	DCIM\100GOPRO\GOPR0482.JPG
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+InteropIndex	R98 - DCF basic file (sRGB)
+InteropVersion	0100
+ISO	100
+LightSource	Unknown
+LightValue	13.2
+Make	GoPro
+MaxApertureValue	2.8
+MediaUniqueID	491b313ca89d1416a556fce1d0cc7e5a00000000000000000000000000000000
+Megapixels	0.000064
+MeteringMode	Average
+MIMEType	image/jpeg
+Model	HERO6 Black
+ModifyDate	2017:10:03 10:58:29
+Orientation	Horizontal (normal)
+PhotoResolution	12MP_W
+Protune	On
+Rate	4_1SEC
+ResolutionUnit	inches
+Saturation	Normal
+ScaleFactor35efl	5.0
+SceneCaptureType	Landscape
+SceneType	Directly photographed
+SensingMethod	One-chip color area
+SerialNumber	C3221324657219
+Sharpness	HIGH
+ShutterSpeed	1/1205
+ShutterSpeedValue	1/1024
+Software	HD6.01.01.51.00
+SpotMeter	No
+SubjectDistance	0 m
+SubjectDistanceRange	Unknown
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailLength	28
+ThumbnailOffset	3754
+Warning	[minor] Unrecognized MakerNotes
+WhiteBalance	AUTO
+XResolution	72
+YCbCrPositioning	Centered
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	72

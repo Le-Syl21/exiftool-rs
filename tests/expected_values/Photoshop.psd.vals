@@ -1,0 +1,94 @@
+About	uuid:c197d41e-f8f7-11d9-b03e-c023c3939af5
+ApplicationRecordVersion	2
+Artist	Phil Harvey
+AuthorsPosition	Supreme leader
+BitDepth	8
+BlueMatrixColumn	0.14896 0.07225 0.69312
+BlueTRC	(Binary data 14 bytes, use -b option to extract)
+By-line                         : Phil Harvey
+By-lineTitle                    : Supreme leader
+Caption-Abstract                : This is a teeny weeny white square
+CaptionWriter	Me too
+CMMFlags	Not Embedded, Independent
+ColorClass	6 (Typical alt)
+ColorMode	RGB
+ColorSpaceData	RGB
+ColorSpace	Uncalibrated
+Compression	RLE
+ConnectionSpaceIlluminant	0.9642 1 0.82491
+CopyrightFlag	False
+Copyright	Free for all
+CopyrightNotice	Free for all
+Creator	Phil Harvey
+CropBottom	1072
+CropLeft	438
+CropRight	890
+CropTop	618
+Description	This is a teeny weeny white square
+DeviceAttributes	Reflective, Glossy, Positive, Color
+DeviceManufacturer	none
+DeviceModel	
+DisplayedUnitsX	inches
+DisplayedUnitsY	inches
+DocumentID	adobe:docid:photoshop:c197d41a-f8f7-11d9-b03e-c023c3939af5
+ExifByteOrder	Big-endian (Motorola, MM)
+ExifImageHeight	8
+ExifImageWidth	8
+FileTypeExtension	psd
+FileType	PSD
+GlobalAltitude	30
+GlobalAngle	120
+GreenMatrixColumn	0.33972 0.67259 0.11333
+GreenTRC	(Binary data 14 bytes, use -b option to extract)
+HasRealMergedData	Yes
+ImageDescription	This is a teeny weeny white square
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+IPTCDigest	b765e54396f2885e9a76ff4ad665b190
+JobRefName	This isn't a job
+LayerCount	0
+MediaBlackPoint	0 0 0
+MediaWhitePoint	0.95045 1 1.08905
+Megapixels	0.000064
+MIMEType	application/vnd.adobe.photoshop
+ModifyDate	2005:07:18 08:27:14
+NumChannels	3
+NumSlices	1
+ObjectName	Test Picture
+Orientation	Horizontal (normal)
+PrimaryPlatform	Apple Computer Inc.
+PrintPosition	0 0
+PrintScale	1
+PrintStyle	Centered
+ProfileClass	Display Device Profile
+ProfileCMMType	Adobe Systems Inc.
+ProfileConnectionSpace	XYZ
+ProfileCopyright	Copyright 1999 Adobe Systems Incorporated
+ProfileCreator	Adobe Systems Inc.
+ProfileDateTime	1999:06:03 00:00:00
+ProfileDescription	Apple RGB
+ProfileFileSignature	acsp
+ProfileID	0
+ProfileVersion	2.1.0
+ReaderName	Adobe Photoshop 7.0
+RedMatrixColumn	0.47554 0.25516 0.01845
+RedTRC	(Binary data 14 bytes, use -b option to extract)
+RenderingIntent	Media-Relative Colorimetric
+ResolutionUnit	inches
+Rights	Free for all
+Rotation	180
+SlicesGroupName	b
+Software	Adobe Photoshop 7.0
+Tagged	Yes
+ThumbnailLength	0
+ThumbnailOffset	390
+Title	Test Picture
+URL	https://exiftool.org/
+URL_List                        : 
+WebStatement	https://exiftool.org/
+Writer-Editor                   : Me too
+WriterName	Adobe Photoshop
+XMPToolkit	XMP toolkit 2.8.2-33, framework 1.5
+XResolution	72
+YResolution	72

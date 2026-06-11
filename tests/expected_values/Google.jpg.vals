@@ -1,0 +1,123 @@
+AndroidRelease	google/husky/husky:14/UD1A.230803.041/10808477:user/release-keys
+Aperture	1.7
+ApertureValue	1.7
+Application	com.google.android.GoogleCamera
+AppVersion	9.1.098.570503546.23
+BitsPerSample	8
+BrightnessValue	-1.98
+CircleOfConfusion	0.009 mm
+ColorComponents	3
+ColorSpace	sRGB
+ComponentsConfiguration	Y, Cb, Cr, -
+CompositeImage	Composite Image Captured While Shooting
+Compression	JPEG (old-style)
+Contrast	Normal
+CreateDate	2023:10:06 22:53:51
+CustomRendered	Custom
+DateTimeOriginal	2023:10:06 22:53:51
+DeviceCodename	husky
+DeviceHardwareRevision	MP1.0
+DeviceMake	Google
+DeviceModel	Pixel 8 Pro
+DigitalZoomRatio	2
+DirectoryItemLength	52666
+DirectoryItemMime	image/jpeg, image/jpeg
+DirectoryItemSemantic	Primary, GainMap
+DOF	inf (2.77 m - inf)
+EncodingProcess	Baseline DCT, Huffman coding
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	4080
+ExifImageWidth	3072
+ExifVersion	0232
+ExposureCompensation	0
+ExposureMode	Auto
+ExposureProgram	Program AE
+ExposureTime	1/33
+ExposureTimeMax	32
+ExposureTimeMin	2.63449996709824e-05
+FileTypeExtension	jpg
+FileType	JPEG
+Flash	Off, Did not fire
+FlashpixVersion	0100
+FNumber	1.7
+FocalLength35efl	6.9 mm (35 mm equivalent: 24.0 mm)
+FocalLength	6.9 mm
+FocalLengthIn35mmFormat	24 mm
+FOV	73.7 deg
+FrameCount	11
+GPSAltitude	634 m Above Sea Level
+GPSAltitudeRef	Above Sea Level
+GPSDateStamp	2023:10:06
+GPSDateTime	2023:10:06 20:52:10Z
+GPSImgDirection	164
+GPSImgDirectionRef	Magnetic North
+GPSLatitude	40 deg 24' 0.25" N
+GPSLatitudeRef	North
+GPSLongitude	3 deg 42' 52.73" W
+GPSLongitudeRef	West
+GPSPosition	40 deg 24' 0.25" N, 3 deg 42' 52.73" W
+GPSTimeStamp	20:52:10
+GPSVersionID	2.2.0.0
+HasExtendedXMP	22971CCA47F8A8E11D0A48E790AF56C7
+HDRPlusMakerNote	(Binary data 38356 bytes, use -b option to extract)
+HDRPSoftware	HDR+ 1.0.570503588
+HyperfocalDistance	3.28 m
+ImageData	(Binary data 9236 bytes, use -b option to extract)
+ImageHeight	8
+ImageName	Finished image
+ImageSize	8x8
+ImageWidth	8
+InteropIndex	R98 - DCF basic file (sRGB)
+InteropVersion	0100
+ISO	1160
+ISOMax	10666.666015625
+ISOMin	20.8333320617676
+JFIFVersion	1.02
+LensID	Pixel 8 Pro back camera 6.9mm f/1.68
+LensMake	Google
+LensModel	Pixel 8 Pro back camera 6.9mm f/1.68
+LightValue	3.0
+Make	Google
+MaxAnalogISO	666.666625976562
+MaxApertureValue	1.7
+Megapixels	0.000064
+MeteringMode	Center-weighted average
+MIMEType	image/jpeg
+Model	Pixel 8 Pro
+ModifyDate	2023:10:06 22:53:51
+OffsetTime	+02:00
+OffsetTimeDigitized	+02:00
+OffsetTimeOriginal	+02:00
+Orientation	Horizontal (normal)
+ResolutionUnit	inches
+Saturation	Normal
+ScaleFactor35efl	3.5
+SceneCaptureType	Standard
+SceneType	Directly photographed
+SensingMethod	One-chip color area
+Sharpness	Normal
+ShutterSpeed	1/33
+ShutterSpeedValue	1/33
+SoftwareDate	2023:09:14 12:57:19.000+02:00
+Software	HDR+ 1.0.570503588zd
+SubjectDistance	17.853 m
+SubjectDistanceRange	Distant
+SubSecCreateDate	2023:10:06 22:53:51.724+02:00
+SubSecDateTimeOriginal	2023:10:06 22:53:51.724+02:00
+SubSecModifyDate	2023:10:06 22:53:51.724+02:00
+SubSecTime	724
+SubSecTimeDigitized	724
+SubSecTimeOriginal	724
+SummaryText	(Binary data 13164 bytes, use -b option to extract)
+ThumbnailImage	(Binary data 23 bytes, use -b option to extract)
+ThumbnailLength	23
+ThumbnailOffset	1322
+TimeLogText	(Binary data 3600 bytes, use -b option to extract)
+Version	1.0
+Warning	[minor] Error reading GainMap image/jpeg from trailer
+WhiteBalance	Auto
+XMPToolkit	Adobe XMP Core 5.1.0-jc003
+XResolution	72
+YCbCrPositioning	Centered
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	72

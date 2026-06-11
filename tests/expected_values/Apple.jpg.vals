@@ -1,0 +1,98 @@
+AccelerationVector	-0.6483164083 0.002264119004 -0.7500767578
+AEAverage	185
+AEStable	Yes
+AETarget	177
+AFStable	Yes
+Aperture	1.8
+ApertureValue	1.8
+BitsPerSample	8
+BrightnessValue	2.846551724
+CircleOfConfusion	0.004 mm
+ColorComponents	3
+ColorSpace	Uncalibrated
+ComponentsConfiguration	Y, Cb, Cr, -
+Compression	JPEG (old-style)
+CreateDate	2016:09:28 18:18:05
+DateTimeOriginal	2016:09:28 18:18:05
+EncodingProcess	Baseline DCT, Huffman coding
+ExifByteOrder	Big-endian (Motorola, MM)
+ExifImageHeight	3024
+ExifImageWidth	4032
+ExifVersion	0221
+ExposureCompensation	0
+ExposureMode	Auto
+ExposureProgram	Program AE
+ExposureTime	1/20
+FileTypeExtension	jpg
+FileType	JPEG
+Flash	Off, Did not fire
+FlashpixVersion	0100
+FNumber	1.8
+FocalLength35efl	4.0 mm (35 mm equivalent: 28.0 mm)
+FocalLength	4.0 mm
+FocalLengthIn35mmFormat	28 mm
+FocusDistanceRange	0.54 - 0.68 m
+FOV	65.5 deg
+GPSAltitude	72.3 m Above Sea Level
+GPSAltitudeRef	Above Sea Level
+GPSDateStamp	2016:09:28
+GPSDateTime	2016:09:28 17:17:58.65Z
+GPSDestBearing	342.0498753
+GPSDestBearingRef	True North
+GPSHPositioningError	165 m
+GPSImgDirection	342.0498753
+GPSImgDirectionRef	True North
+GPSLatitude	53 deg 22' 58.25" N
+GPSLatitudeRef	North
+GPSLongitude	1 deg 27' 24.04" W
+GPSLongitudeRef	West
+GPSPosition	53 deg 22' 58.25" N, 1 deg 27' 24.04" W
+GPSSpeed	0
+GPSSpeedRef	km/h
+GPSTimeStamp	17:17:58.65
+HyperfocalDistance	2.07 m
+ImageCaptureType	Unknown (5)
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+ISO	40
+LensID	iPhone 7 back camera 3.99mm f/1.8
+LensInfo	3.99mm f/1.8
+LensMake	Apple
+LensModel	iPhone 7 back camera 3.99mm f/1.8
+LightValue	7.3
+Make	Apple
+MakerNoteVersion	4
+Megapixels	0.000064
+MeteringMode	Multi-segment
+MIMEType	image/jpeg
+Model	iPhone 7
+ModifyDate	2016:09:28 18:18:05
+OISMode	2
+Orientation	Horizontal (normal)
+ResolutionUnit	inches
+RunTimeEpoch	0
+RunTimeFlags	Valid
+RunTimeScale	1000000000
+RunTimeSincePowerUp	11:02:52
+RunTimeValue	39772089846958
+ScaleFactor35efl	7.0
+SceneCaptureType	Standard
+SceneType	Directly photographed
+SensingMethod	One-chip color area
+ShutterSpeed	1/20
+ShutterSpeedValue	1/20
+Software	10.0.2
+SubjectArea	2015 1511 2217 1330
+SubSecCreateDate	2016:09:28 18:18:05.813
+SubSecDateTimeOriginal	2016:09:28 18:18:05.813
+SubSecTimeDigitized	813
+SubSecTimeOriginal	813
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailLength	28
+ThumbnailOffset	2078
+WhiteBalance	Auto
+XResolution	72
+YCbCrPositioning	Centered
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	72

@@ -1,0 +1,11 @@
+CompatibleBrands	jxl
+FileTypeExtension	jxl
+FileType	JXL
+ImageHeight	130
+ImageSize	200x130
+ImageWidth	200
+MajorBrand	JPEG XL Image (.JXL)
+Megapixels	0.026
+MIMEType	image/jxl
+MinorVersion	0.0.0
+Warning	Install IO::Uncompress::Brotli to decode Brotli-compressed metadata [x2]

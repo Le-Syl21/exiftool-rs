@@ -1,0 +1,32 @@
+AggregationId	BK_ADBL_123456
+Author	Philip J Harvey
+Codec	mp332
+Copyright	©2015, Philip J Harvey; (P)2015 ExifTool Publisher
+CoverArt	(Binary data 18 bytes, use -b option to extract)
+CPUType	1
+Description	This is the book description
+EncryptedBlocks	23421
+FileType	AA
+FileTypeExtension	aa
+HeaderKey	1234569717 192057361 0712658018 4878930500
+HeaderSeed	1234567890
+IsAggregation	collection
+LicenseCount	1
+LicenseList	12345678
+LongDescription	This is the long book description
+MIMEType	audio/audible
+Narrator	Nobody that I know
+ParentId	BK_ADBL_123456
+ParentShortTitle	Test2 (Unabridged)
+ParentTitle	This is the title of the parent (Unabridged)
+Price	98.95
+ProductId	BK_ADBL_123456a_mp332
+Provider	ExifTool Test Lib
+PublishDate	08-APR-2015
+PublishDateStart	08-APR-2015
+ShortDescription	This is the short description
+ShortTitle	Short Titley (Unabridged)
+Tag7eb298ac1328	64863450EA7B67906FE619AC697E60D13630E760
+TitleId	BK_ADBL_123456a
+Title	Test: This is the title of the big book (Unabridged)
+UserAlias	LKJ4HDY872HSVJ

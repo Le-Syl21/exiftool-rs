@@ -1,0 +1,50 @@
+Aperture	3.8
+BitsPerSample	8
+ColorComponents	3
+ColorSpace	sRGB
+ComponentsConfiguration	Y, Cb, Cr, -
+Compression	JPEG (old-style)
+CreateDate	2002:07:14 22:59:31
+DateTimeOriginal	2002:07:14 22:59:31
+EncodingProcess	Baseline DCT, Huffman coding
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	768
+ExifImageWidth	1024
+ExifVersion	0210
+ExposureCompensation	0
+ExposureProgram	Program AE
+ExposureTime	1/30
+FileTypeExtension	jpg
+FileType	JPEG
+Flash	No Flash
+FlashpixVersion	0100
+FNumber	3.8
+FocalLength	17.5 mm
+FocalLength35efl	17.5 mm
+ImageDescription	GC-X1E Image
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+InteropIndex	R98 - DCF basic file (sRGB)
+InteropVersion	0100
+ISO	80
+LightValue	9.1
+Make	JVC
+MakerNoteVersion	0100
+MaxApertureValue	3.8
+Megapixels	0.000064
+MeteringMode	Multi-segment
+MIMEType	image/jpeg
+Model	GC-X1E
+ModifyDate	2002:07:14 22:59:31
+Orientation	Horizontal (normal)
+Quality	Fine
+ResolutionUnit	inches
+ShutterSpeed	1/30
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailLength	28
+ThumbnailOffset	670
+XResolution	72
+YCbCrPositioning	Co-sited
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	72

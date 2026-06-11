@@ -1,0 +1,18 @@
+AudioChannels	1
+Encoder	opusenc from opus-tools 0.1.9
+FileTypeExtension	opus
+FileType	OPUS
+MIMEType	audio/ogg
+OpusVersion	1
+OutputGain	1
+Picture	(Binary data 85 bytes, use -b option to extract)
+PictureBitsPerPixel	1
+PictureDescription	cover pic
+PictureHeight	16
+PictureIndexedColors	0
+PictureLength	85
+PictureMIMEType	image/png
+PictureType	Front Cover
+PictureWidth	16
+SampleRate	7872
+Vendor	libopus 1.1

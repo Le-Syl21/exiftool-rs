@@ -1,0 +1,12 @@
+ByteOrder	Little-endian (Intel, II)
+DeviceName	\Device\NPF_Loopback
+FileTypeExtension	pcapng
+FileType	PCAPNG
+Hardware	Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz (with SSE4.2)
+LinkType	BSD Loopback
+MIMEType	application/vnd.tcpdump.pcap
+OperatingSystem	64-bit Windows 10 (1809), build 17763
+PCAPVersion	PCAPNG 1.0
+TimeStamp	2020:10:13 16:12:07.025764+02:00
+TimeStampResolution	1e-06
+UserApplication	Dumpcap (Wireshark) 3.3.0 (v3.3.0-0-gc37f1e4de0c0)

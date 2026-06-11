@@ -1,0 +1,18 @@
+BareList1	a1
+BareList2	b1, b2
+BareStructItem1	a1
+BareStructItem2	a2
+Contributor	me
+FileTypeExtension	xmp
+FileType	XMP
+LocationCreatedCity	one, two, three
+LocationCreatedCountryCode	1, 2, 4
+MIMEType	application/rdf+xml
+StructList1Item1	b1
+StructList1Item2	b2
+StructList2Item1	c1-1
+StructList2Item2	c2-1
+StructList2TestList1	x1
+StructList2TestList2	y1, y2
+Subject	one, two
+XMPToolkit	Image::ExifTool 7.77

@@ -1,0 +1,31 @@
+AverageFrameRate	0
+BitDepthChroma	8
+BitDepthLuma	8
+ChromaFormat	4:2:0
+CompatibleBrands	mif1, heic, hevc
+ConstantFrameRate	Unknown
+ConstraintIndicatorFlags	144 0 0 0 0 0
+FileTypeExtension	heif
+FileType	HEIF
+GeneralLevelIDC	120 (level 4.0)
+GeneralProfileIDC	Main
+GeneralProfileSpace	Conforming
+GeneralTierFlag	Main Tier
+GenProfileCompatibilityFlags	Main 10, Main
+HandlerType	Picture
+HEVCConfigurationVersion	1
+ImageHeight	1064
+ImageSize	1596x1064
+ImageSpatialExtent	1596x1064
+ImageWidth	1596
+MajorBrand	High Efficiency Image Format still image (.HEIF)
+MediaDataOffset	605
+MediaDataSize	18
+Megapixels	1.7
+MIMEType	image/heif
+MinorVersion	0.0.0
+MinSpatialSegmentationIDC	0
+NumTemporalLayers	1
+ParallelismType	0
+PrimaryItemReference	20002
+TemporalIDNested	Yes

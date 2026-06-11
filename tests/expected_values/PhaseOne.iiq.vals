@@ -1,0 +1,69 @@
+Aperture	5.6
+ApertureValue	5.6
+BitsPerSample	8 8 8
+BlackLevel	1024
+BlackLevelData	(Binary data 65 bytes, use -b option to extract)
+BlueBalance	1.41912
+CameraOrientation	Horizontal (normal)
+ColorMatrix1	1.280 -0.280 0.000 -0.050 1.180 -0.130 0.000 -0.250 1.250
+ColorMatrix2	1.950 -0.950 0.000 -0.250 1.750 -0.500 0.000 -0.950 1.950
+CompressedBitsPerPixel	3
+Compression	Uncompressed
+CreateDate	2013:06:19 15:44:21
+DateTimeOriginal	2013:06:19 15:44:21
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	5484
+ExifImageWidth	7320
+ExifVersion	0220
+ExposureTime	1/1250
+FileTypeExtension	iiq
+FileType	IIQ
+FirmwareVersions	Credo 40, Factory Firmware: 1.01.4
+FNumber	5.6
+FocalLength35efl	80.0 mm
+FocalLength	80.0 mm
+ImageHeight	5484
+ImageNumber	1288
+ImageSize	7320x5484
+ImageUniqueID	00004C20007000000400E05800000508
+ImageWidth	7320
+ISO	100
+LensID	Mamiya LS 80mm f/2.8 D
+LensModel	Mamiya LS 80mm f/2.8 D
+LightSource	Daylight
+LightValue	15.3
+Make	Leaf
+Megapixels	40.1
+MIMEType	image/x-raw
+Model	Credo 40
+PhotometricInterpretation	RGB
+PlanarConfiguration	Chunky
+Rating	0
+RawData	(Binary data 15 bytes, use -b option to extract)
+RawFormat	IIQ L
+RedBalance	1.30548
+ResolutionUnit	inches
+RowsPerStrip	1
+SamplesPerPixel	3
+SensingMethod	One-chip color area
+SensorDefects	(Binary data 12 bytes, use -b option to extract)
+SensorHeight	5536
+SensorLeftMargin	36
+SensorTemperature2	37.00 C
+SensorTemperature	37.00 C
+SensorTopMargin	6
+SensorWidth	7372
+SerialNumber	LD001055
+ShutterSpeed	1/1250
+ShutterSpeedValue	1/1250
+Software	Camera back, Firmware: 1.01.4
+SplitColumn	3696
+StripByteCounts	3
+StripOffsets	3356
+SubfileType	Reduced-resolution image
+System	Digital Camera Back
+ThumbnailTIFF	(Binary data 219 bytes, use -b option to extract)
+WB_RGBLevels                    : 1.30548012256622 1 1.41912007331848
+WhiteBalance	Manual
+XResolution	341.3333333
+YResolution	341.3333333

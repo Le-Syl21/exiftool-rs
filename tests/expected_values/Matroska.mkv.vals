@@ -1,0 +1,33 @@
+AudioChannels	2
+AudioCodecID	A_MPEG/L3
+AudioSampleRate	48000
+CodecDecodeAll	Yes
+DateTimeOriginal	2010:02:03 21:17:48Z
+DefaultDuration	24 ms
+DisplayHeight	576
+DisplayWidth	768
+DocType	matroska
+DocTypeReadVersion	1
+DocTypeVersion	1
+Duration	0:02:29
+FileTypeExtension	mkv
+FileType	MKV
+ImageHeight	576
+ImageSize	704x576
+ImageWidth	704
+Megapixels	0.406
+MIMEType	video/x-matroska
+MuxingApp	libebml v0.7.8 + libmatroska v0.8.1
+TimecodeScale	1 ms
+TrackDefault	Yes
+TrackForced	No
+TrackLanguage	und
+TrackNumber	2
+TrackTimecodeScale	1
+TrackType	Audio
+TrackUID	e1183bf4
+TrackUsed	Yes
+VideoCodecID	V_MPEG4/ISO/AVC
+VideoFrameRate	25
+VideoScanType	Undetermined
+WritingApp	mkvmerge v2.4.0 ('Fumbling Towards Ecstasy') built on Dec  3 2008 16:22:41

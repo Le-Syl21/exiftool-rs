@@ -1,0 +1,29 @@
+About	http://www.w3.org/TR/rdf-syntax-grammar
+AttributionName	some attr
+CountryCode	CA
+Creator	bad_list_type_A, bad_list_type_B
+Custom0020Property00201	a custom property value
+Custom0020Property00202	some other value
+FileTypeExtension	xmp
+FileType	XMP
+ManifestLinkForm	EmbedByReference
+ManifestReferenceFilePath	C:\some path\file.ext
+MIMEType	application/rdf+xml
+ProgrammerExclamation	doh!
+ProgrammerFood	cookies
+ProgrammerFullName	Phil Harvey
+ProgrammerHomePage	https://exiftool.org/
+ProgrammerState	confusion
+Scene	scene1
+SupervisorExclamation	doh!
+SupervisorFood	cookies
+SupervisorFullName	Phil Harvey
+SupervisorHomePage	https://exiftool.org/
+SupervisorState	confusion
+TesterExclamation	doh!
+TesterFood	cookies
+TesterFullName	Phil Harvey
+TesterHomePage	https://exiftool.org/
+TesterState	confusion
+Title	ExifTool common node, nonstandard namespace prefix, and bad list type tests
+XMPToolkit	Image::ExifTool 6.32

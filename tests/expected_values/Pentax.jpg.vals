@@ -1,0 +1,198 @@
+AEAperture	12.9
+AEApertureSteps	28
+AEBXv	0
+AEExposureTime	1/101
+AE_ISO                          : 100
+AELock	Off
+AEMaxAperture2	4.0
+AEMaxAperture	4.0
+AEMeteringMode	Multi-segment
+AEMeteringSegments	13.5 13.6 13.5 13.2 13.6 15.0 13.8 12.9 13.8 16.4 14.4 13.9 14.4 15.8 14.0 16.0
+AEMinAperture	23
+AEMinExposureTime	1/3862
+AEProgramMode	Av, B or X
+AEXv	-0.625
+AFDefocus	2
+AFIntegrationTime	0 ms
+AFPointMode	Select
+AFPointSelected2	Center
+AFPointSelected	Center
+AFPointsInFocus	Center (horizontal)
+AFPredictor	4
+Aperture	13.0
+ApertureRingUse	Permitted
+AutoAperture	On
+AutoBracketing	0 EV, No Extended Bracket
+AvApertureSetting	12.7
+BaseExposureCompensation	+0.7
+BitsPerSample	8
+BlackPoint	0 0 0 0
+BodyBatteryADLoad	168 (7.4V, 47%)
+BodyBatteryADNoLoad	173 (7.6V, 51%)
+BodyBatteryState	Full
+BracketShotNumber	n/a
+CameraTemperature	12 C
+CircleOfConfusion	0.020 mm
+ColorComponents	3
+ColorSpace	sRGB
+ComponentsConfiguration	Y, Cb, Cr, -
+Compression	JPEG (old-style)
+Contrast	Normal
+CPUFirmwareVersion	1.30.00.18
+CreateDate	2008:03:02 12:01:23
+CustomRendered	Normal
+DataScaling	8192
+Date	2008:03:02
+DateTimeOriginal	2008:03:02 12:01:23
+DestinationCity	New York
+DestinationDST	No
+DriveMode2	Single-frame
+DriveMode	Single-frame; No Timer; Shutter Button; Single Exposure
+DSPFirmwareVersion	1.30.00.18
+E-DialInProgram                 : Tv or Av
+EffectiveLV	14.8
+EncodingProcess	Baseline DCT, Huffman coding
+EVSteps	1/3 EV Steps
+ExifByteOrder	Big-endian (Motorola, MM)
+ExifImageHeight	2000
+ExifImageWidth	3008
+ExifVersion	0221
+ExposureBracketStepSize	0.3
+ExposureCompensation	+0.7
+ExposureMode	Manual
+ExposureProgram	Aperture-priority AE
+ExposureTime	1/100
+ExternalFlashBounce	n/a
+ExternalFlashExposureComp	n/a
+ExternalFlashGuideNumber	n/a
+ExternalFlashMode	Off
+FileSource	Digital Camera
+FileTypeExtension	jpg
+FileType	JPEG
+FlashExposureComp	0
+FlashExposureCompSet	0
+FlashMeteringSegments	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+FlashMode	Off, Did not fire; Internal
+Flash	Off, Did not fire
+FlashOptions2	Wireless (Master)
+FlashOptions	Wireless (Master)
+FlashpixVersion	0100
+FlashStatus	Off
+FNumber	13.0
+FocalLength	10.0 mm
+FocalLength35efl	10.0 mm (35 mm equivalent: 15.0 mm)
+FocalLengthIn35mmFormat	15 mm
+FocusMode2	AF-S
+FocusMode	AF-S (Focus-priority)
+FocusRangeIndex	7 (very far)
+FOV	100.4 deg
+GripBatteryADLoad	1
+GripBatteryADNoLoad	5
+GripBatteryState	Empty or Missing
+HometownCity	Toronto
+HometownDST	No
+HyperfocalDistance	0.38 m
+ImageEditCount	0
+ImageEditing	None
+ImageHeight	8
+ImageSize	8x8
+ImageTone	Natural
+ImageWidth	8
+InternalFlashMode	Did not fire, Wireless (Master)
+InternalFlashStrength	18
+InternalSerialNumber	132352
+InteropIndex	R98 - DCF basic file (sRGB)
+InteropVersion	0100
+ISO	100
+ISOFloor	100
+ISOSetting	Manual
+JFIFVersion	1.01
+JpgRecordedPixels	6 MP
+LensFocalLength	10.0 mm
+LensFStops	8.5
+LensID	Sigma AF 10-20mm F4-5.6 EX DC
+LensType	Sigma or Tamron Lens (3 44)
+LightValue	14.0
+Make	PENTAX Corporation
+ManufactureDate	2007:09:13
+MaxAperture	3.9
+Megapixels	0.000064
+MeteringMode2	Multi-segment
+MeteringMode3	Multi-segment
+MeteringMode	Multi-segment
+MIMEType	image/jpeg
+MinAperture	22
+MinFocusDistance	0.49-0.50 m
+Model	PENTAX K10D
+ModifyDate	2008:03:02 12:01:23
+MultipleExposureSet	Off
+NoiseReduction	Off
+NominalMaxAperture	4.0
+NominalMinAperture	23
+Orientation	Rotate 270 CW
+PentaxModelID	K10D
+PentaxModelType	0
+PentaxVersion	3.0.0.0
+PictureMode2	Aperture Priority
+PictureMode	Aperture Priority; 1/3 EV steps
+PowerSource	Body Battery
+PreviewImage	(Binary data 26 bytes, use -b option to extract)
+PreviewImageBorders	28 28 0 0
+PreviewImageLength	26
+PreviewImageSize	640x480
+PreviewImageStart	2446
+PrintIMVersion	0300
+ProductionCode	2.1
+ProgramLine	Normal
+Quality	Better
+RawAndJpgRecording	RAW+JPEG (PEF, Better)
+RawDevelopmentProcess	1 (K10D,K200D,K2000,K-m)
+ResolutionUnit	inches
+Rotation	Rotate 270 CW
+Saturation	Normal
+ScaleFactor35efl	1.5
+SceneCaptureType	Standard
+SceneType	Directly photographed
+SensingMethod	One-chip color area
+SensitivityAdjust	0
+SensitivitySteps	1 EV Steps
+ShakeReduction	On
+Sharpness	Normal
+ShutterCount	1648
+ShutterSpeed	1/100
+SlaveFlashMeteringSegments	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+Software	K10D Ver 1.30
+SRActive	Yes
+SRFocalLength	10 mm
+SRHalfPressTime	1.53 s
+SRResult	Stabilized
+SubjectDistanceRange	Distant
+SvISOSetting	100
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailLength	28
+ThumbnailOffset	2418
+Time	12:01:23
+TTL_DA_ADown                    : 0
+TTL_DA_AUp                      : 0
+TTL_DA_BDown                    : 0
+TTL_DA_BUp                      : 0
+TvExposureTimeSetting	1/203
+WB_RGGBLevelsCloudy             : 14560 8192 8192 7782
+WB_RGGBLevelsDaylight           : 13600 8192 8192 8765
+WB_RGGBLevelsFlash              : 13632 8192 8192 8601
+WB_RGGBLevelsFluorescentD       : 17376 8192 8192 8847
+WB_RGGBLevelsFluorescentN       : 14528 8192 8192 10076
+WB_RGGBLevelsFluorescentW       : 13088 8192 8192 12206
+WB_RGGBLevelsShade              : 16128 8192 8192 6635
+WB_RGGBLevelsTungsten           : 8192 8192 8192 20971
+WBShiftAB	0
+WBShiftGM	0
+WhiteBalance	Auto
+WhiteBalanceMode	Auto (Daylight)
+WhiteBalanceSet	Auto
+WhitePoint	13568 8192 8192 9088
+WorldTimeLocation	Hometown
+XResolution	72
+YCbCrPositioning	Co-sited
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	72

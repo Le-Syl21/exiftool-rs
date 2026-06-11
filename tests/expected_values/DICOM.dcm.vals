@@ -1,0 +1,101 @@
+AccessionNumber	
+AcquisitionDate	2001:03:16
+AcquisitionMatrix	0 256 256 0
+AcquisitionNumber	31763
+AcquisitionTime	14:34:15
+AdditionalPatientHistory	
+BitsAllocated	16
+BitsStored	16
+CardiacNumberOfImages	0
+Columns	256
+ContentDate	2001:03:23
+ContentTime	14:30:22
+EchoNumber	1
+EchoTime	22.0000
+EchoTrainLength	8
+FileMetaInfoGroupLength	180
+FileMetaInfoVersion	0 1
+FileType	DICOM
+FileTypeExtension	dcm
+FlipAngle	90
+FrameOfReferenceUID	0.0.0.0.4.8811.2.20010413115754.12432
+HeartRate	0
+HighBit	15
+ImageOrientation	1.00000\0.00000\0.00000\0.00000\0.990960\0.134158
+ImageOrientationPatient	1.00000\0.00000\0.00000\0.00000\0.990960\0.134158
+ImagePosition	-110.500\-96.2063\59.0425
+ImagePositionPatient	-110.500\-96.2063\59.0425
+ImagesInAcquisition	1
+ImageType	ORIGINAL\PRIMARY\MPR
+ImagingFrequency	63.8615
+ImplementationClassUID	0.0.0.0
+ImplementationVersionName	NOTSPECIFIED
+InPlanePhaseEncodingDirection	ROW
+InstanceNumber	20
+InstitutionName	
+LargestImagePixelValue	784
+MagneticFieldStrength	1.50000
+Manufacturer	GE Medical Systems
+ManufacturersModelName	SIGNA
+MediaStorageSOPClassUID	MR Image Storage
+MediaStorageSOPInstanceUID	0.0.0.0.1.8811.2.20.20010413115754.12432
+MIMEType	application/dicom
+Modality	MR
+MRAcquisitionType	2D
+NumberOfAverages	1.00000
+NumberOfPhaseEncodingSteps	256
+OperatorsName	EC
+PatientAge	028Y
+PatientBirthDate	
+PatientID	123456
+PatientName	
+PatientOrientation	L\PH
+PatientPosition	HFS
+PatientSex	F
+PatientWeight	61.2350
+PerformingPhysicianName	
+PhotometricInterpretation	MONOCHROME2
+PixelBandwidth	31.2500
+PixelData	(Binary data 53 bytes, use -b option to extract)
+PixelPaddingValue	0
+PixelRepresentation	Signed
+PixelSpacing	0.859375\0.859375
+PositionReferenceIndicator	NA
+ProtocolName	CLINICAL BRAIN
+ReceiveCoilName	HEAD
+ReconstructionDiameter	220.000
+ReferringPhysicianName	
+RepetitionTime	2300.00
+RescaleIntercept	0
+RescaleSlope	1
+RescaleType	SIGNAL INTENSITY (UNITLESS)
+Rows	256
+SamplesPerPixel	1
+SAR	0.0313309
+ScanningSequence	SE
+ScanOptions	SP
+SequenceName	fse
+SequenceVariant	SK
+SeriesDate	2001:03:16
+SeriesDescription	FSE PD AXIAL OBL
+SeriesInstanceUID	0.0.0.0.3.8811.2.20010413115754.12432
+SeriesNumber	2
+SeriesTime	14:34:14
+SliceLocation	73.8000
+SliceThickness	5.00000
+SmallestImagePixelValue	0
+SoftwareVersion	3
+SOPClassUID	MR Image Storage
+SOPInstanceUID	0.0.0.0.1.8811.2.20.20010413115754.12432
+SourceApplicationEntityTitle	NOTSPECIFIED
+SpacingBetweenSlices	2.00000
+StationName	MRS1
+StudyDate	2001:03:16
+StudyDescription	BRAIN
+StudyID	8811
+StudyInstanceUID	0.0.0.0.2.8811.20010413115754.12432
+StudyTime	14:30:08
+TransferSyntaxUID	Explicit VR Little Endian
+TriggerWindow	0
+WindowCenter	0
+WindowWidth	0

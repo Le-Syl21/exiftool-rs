@@ -1,0 +1,34 @@
+ApplicationName	ExifTool
+ApplicationPlatform	MXFLib (darwin on x86_64)
+ApplicationSupplierName	Phil Harvey
+ApplicationVersionString	Based on MXFLib 1.0.1(16)-Release
+AudioSampleRate	7872
+AverageBytesPerSecond	7872
+BitsPerAudioSample	8
+BlockAlign	1
+ChannelCount	1
+ComponentDataDefinition	Sound Essence Track
+ContainerLastModifyDate	2010:12:20 00:14:40.228
+CreateDate	2010:12:20 00:14:40.224
+DropFrame	False
+Duration	0 s
+EditRate	1
+EssenceLength	0 s
+EssenceStreamID	1
+FileTypeExtension	mxf
+FileType	MXF
+LinkedTrackID	2
+LockedIndicator	False
+MIMEType	application/mxf
+ModifyDate	2010:12:20 00:14:40.228
+MXFVersion	1.2
+Origin	0 s
+PackageLastModifyDate	2010:12:20 00:14:40.224
+RoundedTimecodeTimebase	1
+SampleRate	1
+SDKVersion	1.2
+StartTimecode	0 s
+ToolkitVersion	1.0.1.16 released
+TrackID	2
+TrackName	Sound Track
+TrackNumber	369164801

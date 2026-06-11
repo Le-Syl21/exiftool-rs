@@ -172,6 +172,132 @@ fn regression_tag_names() {
     );
 }
 
+// ── Tag-VALUE parity, with its own ratcheting baseline ─────────────────────
+//
+// Same idea as the name parity above, but compares the *printed value* of each
+// tag against ExifTool (tests/expected_values/<file>.vals, name<TAB>value, with
+// volatile system tags excluded). A delta is keyed on (file, tag) — its value
+// differs from ExifTool. New deltas fail; fixes tighten the baseline.
+//
+// Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
+
+const VALUE_BASELINE: &str = "tests/value_baseline.txt";
+
+fn current_value_deltas() -> (BTreeSet<(String, String)>, usize) {
+    use std::collections::HashMap;
+    let images_dir = Path::new("tests/images");
+    let expected_dir = Path::new("tests/expected_values");
+
+    let mut entries: Vec<_> = std::fs::read_dir(images_dir)
+        .unwrap()
+        .map(|e| e.unwrap())
+        .collect();
+    entries.sort_by_key(|e| e.file_name());
+
+    let mut deltas = BTreeSet::new();
+    let mut tested = 0;
+
+    for entry in entries {
+        let file_name = entry.file_name().to_string_lossy().to_string();
+        let vals_path = expected_dir.join(format!("{file_name}.vals"));
+        if !vals_path.exists() {
+            continue;
+        }
+
+        let tags = safe_extract(&entry.path()).unwrap_or_default();
+        // First printed value per tag name (ExifTool -s shows the priority tag).
+        let mut actual: HashMap<&str, &str> = HashMap::new();
+        for t in &tags {
+            actual.entry(t.name.as_str()).or_insert(t.print_value.as_str());
+        }
+
+        let content = std::fs::read(&vals_path)
+            .map(|b| String::from_utf8_lossy(&b).into_owned())
+            .unwrap_or_default();
+        for line in content.lines() {
+            let mut it = line.splitn(2, '\t');
+            let (name, expected) = match (it.next(), it.next()) {
+                (Some(n), Some(v)) => (n, v),
+                _ => continue,
+            };
+            if let Some(got) = actual.get(name) {
+                if *got != expected {
+                    deltas.insert((file_name.clone(), name.to_string()));
+                }
+            }
+        }
+        tested += 1;
+    }
+
+    (deltas, tested)
+}
+
+fn read_value_baseline() -> BTreeSet<(String, String)> {
+    std::fs::read_to_string(VALUE_BASELINE)
+        .unwrap_or_default()
+        .lines()
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .filter_map(|l| {
+            let mut it = l.splitn(2, '\t');
+            Some((it.next()?.to_string(), it.next()?.to_string()))
+        })
+        .collect()
+}
+
+fn write_value_baseline(deltas: &BTreeSet<(String, String)>) {
+    let mut out = String::from(
+        "# Value-parity baseline: (file, tag) whose printed value differs from ExifTool.\n\
+         # New deltas fail regression_tag_values; fixes tighten it.\n\
+         # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values\n",
+    );
+    for (file, tag) in deltas {
+        out.push_str(file);
+        out.push('\t');
+        out.push_str(tag);
+        out.push('\n');
+    }
+    std::fs::write(VALUE_BASELINE, out).unwrap();
+}
+
+#[test]
+fn regression_tag_values() {
+    let (current, tested) = current_value_deltas();
+    assert!(tested >= 100, "Expected at least 100 files, got {tested}");
+
+    if std::env::var_os("UPDATE_VALUE_BASELINE").is_some() {
+        write_value_baseline(&current);
+        eprintln!("Wrote {VALUE_BASELINE}: {} value delta(s) over {tested} files.", current.len());
+        return;
+    }
+
+    // Enforced in release only (debug panics on overflow, skewing the corpus).
+    if cfg!(debug_assertions) {
+        eprintln!("debug build: value parity not enforced. Run `cargo test --release`.");
+        return;
+    }
+
+    let baseline = read_value_baseline();
+    let regressions: Vec<_> = current.difference(&baseline).collect();
+    let improvements = baseline.difference(&current).count();
+    if improvements > 0 {
+        eprintln!(
+            "✨ {improvements} value delta(s) fixed — tighten with \
+             `UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values`."
+        );
+    }
+    assert!(
+        regressions.is_empty(),
+        "{} NEW tag-value delta(s) vs ExifTool:\n{}\n\nIf intentional, regenerate with \
+         UPDATE_VALUE_BASELINE=1.",
+        regressions.len(),
+        regressions
+            .iter()
+            .map(|(f, t)| format!("  {f}\t{t}"))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
+}
+
 #[test]
 fn all_test_files_parse_without_panic() {
     let images_dir = Path::new("tests/images");

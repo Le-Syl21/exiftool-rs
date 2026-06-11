@@ -1,0 +1,49 @@
+Alarm1Action	AUDIO
+Alarm1AlarmUID	C514D9BB-BDB3-4A5F-B580-9287459DA35C
+Alarm1Attachment	Basso
+Alarm1DefaultAlarm	TRUE
+Alarm1LocalDefaultAlarm	TRUE
+Alarm1Trigger	-PT5M
+Alarm1UID	C514D9BB-BDB3-4A5F-B580-9287459DA35C
+Alarm2Action	AUDIO
+Alarm2AlarmUID	70894F68-E6F8-4C00-A737-73D4CDCF0525
+Alarm2Attachment	Basso
+Alarm2DefaultAlarm	TRUE
+Alarm2Trigger	-PT5M
+Alarm2UID	70894F68-E6F8-4C00-A737-73D4CDCF0525
+CalendarColor	#CC73E1
+CalendarName	Calendar
+CalendarScale	GREGORIAN
+DateCreated	2012:08:07 15:27:46Z
+DateTimeEnd	2013:11:25 13:30:00
+DateTimeEndTimezoneID	Canada/Eastern
+DateTimeStamp	2015:04:08 14:29:41Z
+DateTimeStart	2013:11:25 12:30:00
+DateTimeStartTimezoneID	Canada/Eastern
+DaylightDateTimeStart	2007:03:11 02:00:00
+DaylightRecurrenceRule	FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+DaylightTimezoneName	EDT
+DaylightTimezoneOffsetFrom	-0500
+DaylightTimezoneOffsetTo	-0400
+ExceptionDateTimes	2015:04:27 12:30:00
+ExceptionDateTimesTimezoneID	Canada/Eastern
+FileTypeExtension	ics
+FileType	ICS
+Location	501
+Method	PUBLISH
+MIMEType	text/calendar
+RecurrenceID	20131125T123000
+RecurrenceIDTimezoneID	Canada/Eastern
+RecurrenceRule	FREQ=WEEKLY;INTERVAL=1;BYDAY=MO;WKST=SU
+SequenceNumber	0
+StandardDateTimeStart	2007:11:04 02:00:00
+StandardRecurrenceRule	FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
+StandardTimezoneName	EST
+StandardTimezoneOffsetFrom	-0400
+StandardTimezoneOffsetTo	-0500
+Summary	Group meeting
+TimeTransparency	OPAQUE
+TimeZone2	America/Toronto
+TimezoneID	America/Toronto
+UID	5E9B5BEF-C3D9-452C-AB1A-613510B5BA52
+VCalendarVersion	2.0

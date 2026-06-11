@@ -1,0 +1,314 @@
+AEBBracketValue	0
+AFAreaHeights	299 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+AFAreaMode	Face + Tracking
+AFAreaWidths	337 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+AFAreaXPositions	392 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+AFAreaYPositions	-327 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+AFImageHeight	4000
+AFImageWidth	6000
+AFMicroAdjMode	Disable
+AFMicroAdjValue	0
+AFPointsInFocus	0
+AFPointsSelected	0
+AmbienceSelection	Standard
+AntiFlicker	Off
+Aperture	3.5
+ApertureValue	3.5
+Artist	
+AspectRatio	3:2
+AutoExposureBracketing	Off
+AutoISO	100
+AutoLightingOptimizer	Standard
+AutoRotate	None
+AvgBitrate	329 kbps
+BaseISO	12800
+BatteryType	LP-E12
+BitDepth	24
+BitsPerSample	8 8 8
+BlackMaskBottomBorder	0
+BlackMaskLeftBorder	0
+BlackMaskRightBorder	0
+BlackMaskTopBorder	0
+BlueBalance	1.74707
+BracketMode	Off
+BracketShotNumber	0
+BracketValue	0
+BulbDuration	0
+CameraISO	Auto
+CameraTemperature	38 C
+CameraType	EOS High-end
+CanonExposureMode	Aperture-priority AE
+CanonFirmwareVersion	Firmware Version 1.0.0
+CanonFlashMode	Off
+CanonImageHeight	4000
+CanonImageSize	Large
+CanonImageType	Canon EOS M50
+CanonImageWidth	6000
+CanonModelID	EOS M50 / Kiss M
+ChromaticAberrationSetting	On
+CircleOfConfusion	0.019 mm
+ColorDataVersion	16 (M50)
+ColorSpace	sRGB
+ColorTempAsShot	3284
+ColorTempAuto	3284
+ColorTempCloudy	6000
+ColorTempDaylight	5200
+ColorTemperature	5200
+ColorTempFlash	6166
+ColorTempFluorescent	3687
+ColorTempKelvin	5200
+ColorTempMeasured	3284
+ColorTempShade	7000
+ColorTempTungsten	3200
+ColorTone	Normal
+CompatibleBrands	crx , isom
+ComponentsConfiguration	Y, Cb, Cr, -
+Compression	JPEG (old-style)
+CompressorID	CRAW
+CompressorVersion	CanonCR3_001/00.09.00/00.00.00
+ConditionalFEC	0
+ContinuousDrive	Single
+Contrast	Normal
+ControlMode	Camera Local Control
+Copyright	
+CreateDate	2018:02:21 13:08:56+01:00
+CropBottomMargin	0
+CropLeftMargin	0
+CroppedImageHeight	4000
+CroppedImageLeft	0
+CroppedImageTop	0
+CroppedImageWidth	6000
+CropRightMargin	0
+CropTopMargin	0
+CurrentTime	0 s
+CustomControls	0 19 3 10 23 73 71 61 29 0 7 3 4
+CustomPictureStyleFileName	
+CustomRendered	Normal
+DateTimeOriginal	2018:02:21 12:08:56
+DaylightSavings	Off
+DigitalGain	0
+DigitalLensOptimizer	Off
+DigitalLensOptimizerSetting	Off
+DigitalZoom	None
+DistortionCorrectionSetting	Off
+DOF	0.03 m (0.22 - 0.25 m)
+DriveMode	Single-frame Shooting
+DualPixelRaw	Off
+Duration	1.00 s
+DustRemovalData	(Binary data 1024 bytes, use -b option to extract)
+EasyMode	Manual
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	4000
+ExifImageWidth	6000
+ExifVersion	0231
+ExposureCompensation	0
+ExposureMode	Auto
+ExposureProgram	Aperture-priority AE
+ExposureTime	1/80
+FileType	CR3
+FileTypeExtension	cr3
+FirmwareVersion	1.0.0
+FisheyeFilter	Off
+FlashBits	E-TTL
+FlashExposureComp	0
+FlashExposureLock	Off
+FlashGuideNumber	0
+FlashModel	n/a
+Flash	No Flash
+FlashpixVersion	0100
+FlashType	Built-In Flash
+FNumber	3.5
+FocalLength	15.0 mm
+FocalLength35efl	15.0 mm (35 mm equivalent: 23.3 mm)
+FocalPlaneResolutionUnit	inches
+FocalPlaneXResolution	6514.65798
+FocalPlaneYResolution	6734.006734
+FocalUnits	1/mm
+FocusDistanceLower	0.22 m
+FocusDistanceUpper	0.24 m
+FocusMode	One-shot AF (Live View)
+FocusRange	Not Known
+FOV	75.3 deg
+GPSVersionID	2.3.0.0
+GrainyBWFilter	Off
+GraphicsMode	srcCopy
+HandlerType	NRT Metadata
+HDREffect	Natural
+HDR	Off
+HighISONoiseReduction	Standard
+HighlightTonePriority	Off
+HyperfocalDistance	3.33 m
+ImageHeight	4000
+ImageSize	6000x4000
+ImageUniqueID	3b7f679f6bf5d5e1b60ca2b2f051a029
+ImageWidth	6000
+InternalSerialNumber	CG0156580
+ISO	12800
+ISOExpansion	Off
+JpgFromRaw	(Binary data 29 bytes, use -b option to extract)
+Lens	15.0 - 45.0 mm
+Lens35efl	15.0 - 45.0 mm (35 mm equivalent: 23.3 - 69.9 mm)
+LensID	Canon EF-M 15-45mm f/3.5-6.3 IS STM
+LensInfo	15-45mm f/0
+LensModel	EF-M15-45mm f/3.5-6.3 IS STM
+LensSerialNumber	0000000000
+LensType	Canon EF-M 15-45mm f/3.5-6.3 IS STM
+LightValue	2.9
+LinearityUpperMargin	10025
+LiveViewShooting	On
+LongExposureNoiseReduction	Off
+MacroMode	Normal
+MajorBrand	Canon Raw (.CRX)
+Make	Canon
+ManualFlashOutput	n/a
+MatrixStructure	1 0 0 0 1 0 0 0 1
+MaxAperture	3.6
+MaxFocalLength	45 mm
+MeasuredEV2	1.625
+MeasuredEV	2.75
+MeasuredRGGB	1183 1024 1024 461
+MediaCreateDate	2018:02:21 13:08:56+01:00
+MediaDataOffset	11437
+MediaDataSize	41065
+MediaDuration	1.00 s
+MediaHeaderVersion	0
+MediaLanguageCode	eng
+MediaModifyDate	2018:02:21 13:08:56+01:00
+MediaTimeScale	1
+Megapixels	24.0
+MetaFormat	CTMD
+MeteringMode	Evaluative
+MIMEType	image/x-canon-cr3
+MinAperture	23
+MinFocalLength	15 mm
+MiniatureFilter	Off
+MiniatureFilterOrientation	Horizontal
+MiniatureFilterParameter	0
+MiniatureFilterPosition	0
+MinorVersion	0.0.1
+Model	Canon EOS M50
+ModifyDate	2018:02:21 13:08:56+01:00
+MovieHeaderVersion	0
+NDFilter	n/a
+NextTrackID	5
+NormalWhiteLevel	13035
+NumAFPoints	143
+OffsetTime	+00:00
+OffsetTimeDigitized	+00:00
+OffsetTimeOriginal	+00:00
+OpColor	0 0 0
+OpticalZoomCode	n/a
+Orientation	Horizontal (normal)
+OwnerName	
+PaintingFilter	Off
+PerChannelBlackLevel	2049 2045 2045 2050
+PeripheralIlluminationCorr	Off
+PeripheralLightingSetting	On
+PictureStyle	Auto
+PictureStylePC	None; None; None
+PictureStyleUserDef	Auto; Auto; Auto
+PosterTime	0 s
+PreferredRate	1
+PreferredVolume	100.00%
+PreviewDuration	0 s
+PreviewImage	(Binary data 26 bytes, use -b option to extract)
+PreviewTime	0 s
+Quality	RAW
+Rating	0
+RawJpgSize	Large
+RecommendedExposureIndex	12800
+RecordMode	CR3+JPEG
+RedBalance	1.078125
+RedEyeReduction	Off
+ResolutionUnit	inches
+RetractLensOnPowerOff	Enable
+RFLensType	n/a
+Rotation	0
+SafetyShift	Disable
+SampleDuration	1.00 s
+SampleTime	0 s
+Saturation	Normal
+ScaleFactor35efl	1.6
+SceneCaptureType	Standard
+SelectionDuration	0 s
+SelectionTime	0 s
+SelfTimer	Off
+SensitivityType	Recommended Exposure Index
+SensorBlueLevel	0
+SensorBottomBorder	4047
+SensorHeight	4056
+SensorLeftBorder	276
+SensorRedLevel	0
+SensorRightBorder	6275
+SensorTopBorder	48
+SensorWidth	6288
+SequenceNumber	0
+SerialNumber	613040000565
+Sharpness	4
+SharpnessFrequency	n/a
+ShootingMode	Aperture-priority AE
+ShutterCurtainHack	1st-curtain sync
+ShutterMode	Electronic First Curtain
+ShutterReleaseWithoutLens	Disable
+ShutterSpeed	1/80
+ShutterSpeedValue	1/83
+SlowShutter	None
+SoftFocusFilter	Off
+SourceImageHeight	4056
+SourceImageWidth	6288
+SpecularWhiteLevel	14338
+SRAWQuality	n/a
+SubSecCreateDate	2018:02:21 12:08:56.21+00:00
+SubSecDateTimeOriginal	2018:02:21 12:08:56.21+00:00
+SubSecModifyDate	2018:02:21 12:08:56.21+00:00
+SubSecTime	21
+SubSecTimeDigitized	21
+SubSecTimeOriginal	21
+TargetAperture	3.6
+TargetExposureTime	1/81
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailImageValidArea	0 159 6 113
+TimeScale	1
+TimeStamp	2018:02:21 12:08:56.21
+TimeZone	+00:00
+TimeZoneCity	London
+ToneCurve	Standard
+ToyCameraFilter	Off
+TrackCreateDate	2018:02:21 13:08:56+01:00
+TrackDuration	1.00 s
+TrackHeaderVersion	0
+TrackID	1
+TrackLayer	0
+TrackModifyDate	2018:02:21 13:08:56+01:00
+TrackVolume	0.00%
+UnsharpMaskFineness	2
+UnsharpMaskThreshold	4
+UserComment	
+ValidAFPoints	1
+VideoFrameRate	1
+VignettingCorrVersion	32
+VRDOffset	0
+WatercolorFilter	Off
+WBBracketMode	Off
+WBBracketValueAB	0
+WBBracketValueGM	0
+WB_RGGBLevels                   : 1104 1024 1024 1789
+WB_RGGBLevelsAsShot             : 1104 1024 1024 1789
+WB_RGGBLevelsAuto               : 1104 1024 1024 1789
+WB_RGGBLevelsCloudy             : 1670 1024 1024 1229
+WB_RGGBLevelsDaylight           : 1549 1024 1024 1316
+WB_RGGBLevelsFlash              : 1697 1024 1024 1218
+WB_RGGBLevelsFluorescent        : 1303 1024 1024 1771
+WB_RGGBLevelsKelvin             : 1549 1024 1024 1316
+WB_RGGBLevelsMeasured           : 1104 1024 1024 1789
+WB_RGGBLevelsShade              : 1792 1024 1024 1147
+WB_RGGBLevelsTungsten           : 1104 1024 1024 1879
+WBShiftAB	0
+WBShiftGM	0
+WhiteBalance	Auto
+WhiteBalanceBlue	0
+WhiteBalanceRed	0
+XResolution	72
+YResolution	72
+ZoomSourceWidth	0
+ZoomTargetWidth	0

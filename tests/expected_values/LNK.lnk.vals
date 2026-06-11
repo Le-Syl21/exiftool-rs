@@ -1,0 +1,46 @@
+AccessDate	2009:09:20 04:42:56+02:00
+CommandLineArguments	-d %Y%m%d-%H%M%S.%%e "-filename<datetimeoriginal" -v
+CommonPathSuffix	
+CreateDate	2009:09:05 12:18:49+02:00
+CursorSize	25
+Description	Rename file name with image date and time
+DriveSerialNumber	C8F0-D326
+DriveType	Fixed Disk
+FileAttributes	Normal
+FileTypeExtension	lnk
+FileType	LNK
+FillAttributes	0x07
+Flags	IDList, LinkInfo, Description, RelativePath, WorkingDir, CommandArgs, Unicode
+FontFamily	Modern
+FontName	8514oem
+FontSize	10 x 20
+FontWeight	400
+FullScreen	No
+HistoryBufferSize	50
+HotKey	(none)
+IconIndex	(none)
+InsertMode	Yes
+LocalBasePath	C:\Documents and Settings\Phil\Desktop\exiftool(-k).exe
+MachineID	yukkypc
+MIMEType	application/octet-stream
+ModifyDate	2009:09:11 12:38:00+02:00
+NumHistoryBuffers	4
+OperatingSystem	Windows XP, 2003
+PopupFillAttributes	0xf5
+QuickEdit	No
+RelativePath	.\exiftool(-k).exe
+RemoveHistoryDuplicates	No
+RunWindow	Normal
+ScreenBufferSize	80 x 500
+TargetFileAccessDate	2009:09:20 03:00:10
+TargetFileAttributes	Normal
+TargetFileCreateDate	2009:09:05 10:18:50
+TargetFileDOSName	EXIFTO~2.EXE
+TargetFileModifyDate	2009:09:11 10:38:00
+TargetFileName	exiftool(-k).exe
+TargetFileSize	3988946
+VolumeLabel	
+WindowOrigin	135 x 80
+WindowOriginAuto	Yes
+WindowSize	80 x 25
+WorkingDirectory	C:\Documents and Settings\Phil\Desktop

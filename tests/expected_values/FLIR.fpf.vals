@@ -1,0 +1,41 @@
+ActualScaleMax	277.1
+ActualScaleMin	267.3
+AtmosphericTemperature	20.0 C
+CalculatedScaleMax	279.6
+CalculatedScaleMin	260.0
+CameraModel	FLIR E40
+CameraPartNumber	49001-2001
+CameraScaleMax	277.1
+CameraScaleMin	267.3
+CameraSerialNumber	49033333
+CameraTemperatureRangeMax	120.0 C
+CameraTemperatureRangeMin	-20.0 C
+ComputedAtmosphericTrans	0.99
+DateTimeOriginal	2013:02:22 11:19:20.891
+Emissivity	0.95
+EstimatedAtmosphericTrans	0.00
+ExternalTriggerCount	0
+FileTypeExtension	fpf
+FileType	FPF
+FilterModel	
+FilterPartNumber	
+FilterSerialNumber	
+FPFVersion	2
+ImageDataOffset	892
+ImageHeight	120
+ImagePixelFormat	4-byte float
+ImageSize	160x120
+ImageType	Temperature
+ImageWidth	160
+IRWindowTemperature	20.0 C
+IRWindowTransmission	1.00
+LensModel	FOL18
+LensPartNumber	
+LensSerialNumber	
+Megapixels	0.019
+MIMEType	image/x-flir-fpf
+ObjectDistance	1.00 m
+ReferenceTemperature	20.0 C
+ReflectedApparentTemperature	20.0 C
+RelativeHumidity	50.0 %
+SequenceFrameNumber	1

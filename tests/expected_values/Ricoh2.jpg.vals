@@ -1,0 +1,99 @@
+Aperture	5.5
+ApertureValue	5.7
+Azimuth	E
+BitsPerSample	8
+BrightnessValue	9.6
+ColorComponents	3
+ColorSpace	sRGB
+ComponentsConfiguration	Y, Cb, Cr, -
+CompressedBitsPerPixel	3.2
+Compression	JPEG (old-style)
+Condition	Good
+Copyright	(C) by Caplio Pro G3 User
+CreateDate	2006:05:26 11:48:48
+DateTimeOriginal	2006:05:26 11:48:48
+EncodingProcess	Baseline DCT, Huffman coding
+ExifByteOrder	Big-endian (Motorola, MM)
+ExifImageHeight	1536
+ExifImageWidth	2048
+ExifVersion	0220
+ExposureCompensation	-1
+ExposureMode	Auto
+ExposureProgram	Program AE
+ExposureTime	1/1740
+FileTypeExtension	jpg
+FileType	JPEG
+FirmwareVersion	22.19
+Flash	Auto, Did not fire
+FlashpixVersion	0100
+FNumber	5.5
+FocalLength35efl	5.7 mm
+FocalLength	5.7 mm
+GPSAltitude	117 m Above Sea Level
+GPSAltitudeRef	Above Sea Level
+GPSDateStamp	2006:05:26
+GPSDateTime	2006:05:26 10:47:24Z
+GPSDestBearingRef	Unknown ()
+GPSDestBearing	undef
+GPSDestDistanceRef	Unknown ()
+GPSDestDistance	undef
+GPSDifferential	No Correction
+GPSDOP	2.6
+GPSImgDirection	20
+GPSImgDirectionRef	True North
+GPSLatitude	42 deg 2' 4.47" N
+GPSLatitudeRef	North
+GPSLongitude	0 deg 30' 27.01" W
+GPSLongitudeRef	West
+GPSMapDatum	WGS-84
+GPSMeasureMode	3-Dimensional Measurement
+GPSPosition	42 deg 2' 4.47" N, 0 deg 30' 27.01" W
+GPSSatellites	24,23,20,17,13,11,04
+GPSSpeed	0
+GPSSpeedRef	knots
+GPSStatus	Measurement Active
+GPSTimeStamp	10:47:24
+GPSTrack	20
+GPSTrackRef	True North
+GPSVersionID	2.2.0.0
+ImageDescription	
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+InternalSerialNumber	00000000000000012207000003100957
+InteropIndex	R98 - DCF basic file (sRGB)
+InteropVersion	0100
+ISO	125
+LightSource	Unknown
+LightValue	15.4
+Lit	No
+Location	Roundabout
+Make	RICOH
+MakerNoteType	Rdc
+ManufactureDate1	2005:06:06
+ManufactureDate2	2003:08:19
+MaxApertureValue	2.5
+Megapixels	0.000064
+MeteringMode	Spot
+MIMEType	image/jpeg
+Model	Caplio Pro G3
+ModifyDate	2006:05:26 11:48:48
+Orientation	Horizontal (normal)
+PrintIMVersion	0250
+ResolutionUnit	inches
+RicohDate	2006:05:26 11:48:48
+RicohImageHeight	1536
+RicohImageWidth	2048
+SceneCaptureType	Standard
+Sharpness	Hard
+ShutterSpeed	1/1740
+SignType	Information
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailLength	28
+ThumbnailOffset	2492
+UserComment	GCM_TAG
+WhiteBalance	Auto
+XResolution	72
+YCbCrPositioning	Co-sited
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	72

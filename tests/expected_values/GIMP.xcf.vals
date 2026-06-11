@@ -1,0 +1,57 @@
+Artist	Phil Harvey
+BlueMatrixColumn	0.1492 0.06322 0.74463
+BlueTRC	(Binary data 14 bytes, use -b option to extract)
+CMMFlags	Not Embedded, Independent
+ColorMode	RGB Color
+ColorSpaceData	RGB
+ColorSpace	Uncalibrated
+Compression	RLE Encoding
+ConnectionSpaceIlluminant	0.9642 1 0.82491
+Copyright	Free for all
+Creator	Phil Harvey
+Description	ExifTool XCF test
+DeviceAttributes	Reflective, Glossy, Positive, Color
+DeviceManufacturer	none
+DeviceModel	
+ExifByteOrder	Big-endian (Motorola, MM)
+ExifImageHeight	8
+ExifImageWidth	8
+ExifVersion	0210
+FileTypeExtension	xcf
+FileType	XCF
+FlashpixVersion	0100
+GreenMatrixColumn	0.20525 0.62566 0.06087
+GreenTRC	(Binary data 14 bytes, use -b option to extract)
+ImageDescription	This is a teeny weeny white square
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+MediaWhitePoint	0.9505 1 1.0891
+Megapixels	0.000064
+MIMEType	image/x-xcf
+ModifyDate	2005:07:18 08:27:14
+Orientation	Horizontal (normal)
+PrimaryPlatform	Apple Computer Inc.
+ProfileClass	Display Device Profile
+ProfileCMMType	Nikon Corporation
+ProfileConnectionSpace	XYZ
+ProfileCopyright	Nikon Inc. & Nikon Corporation 2001
+ProfileCreator	
+ProfileDateTime	1999:12:07 18:59:22
+ProfileDescription	Nikon Adobe RGB 4.0.0.3000
+ProfileFileSignature	acsp
+ProfileID	0
+ProfileVersion	2.2.0
+RedMatrixColumn	0.60976 0.31113 0.01947
+RedTRC	(Binary data 14 bytes, use -b option to extract)
+RenderingIntent	Perceptual
+ResolutionUnit	inches
+Rights	Free for all
+Software	Adobe Photoshop 7.0
+Tattoo	2
+Title	Test Picture
+Units	Inches
+WebStatement	https://exiftool.org/
+XCFVersion	0
+XResolution	72
+YResolution	72

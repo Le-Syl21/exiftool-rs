@@ -1,0 +1,19 @@
+BitsPerSample	8
+BlockSizeMax	4608
+BlockSizeMin	4608
+Channels	2
+Copyright	Phil Harvey
+FileTypeExtension	flac
+FileType	FLAC
+FrameSizeMax	0
+FrameSizeMin	16777215
+MD5Signature	d41d8cd98f00b204e9800998ecf8427e
+MIMEType	audio/flac
+ReplayGainAlbumGain	-24601.00 dB
+ReplayGainAlbumPeak	0.00000000
+ReplayGainTrackGain	-24601.00 dB
+ReplayGainTrackPeak	0.00000000
+SampleRate	8000
+Title	ExifTool test
+TotalSamples	0
+Vendor	reference libFLAC 1.1.2 20050205

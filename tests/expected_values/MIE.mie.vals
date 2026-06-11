@@ -1,0 +1,63 @@
+Aperture	3.5
+City	Kingston
+ColorSpace	sRGB
+ColorTemperature	5200
+Comment-cn_ZH                   : 我能吞下玻璃而不伤身体。
+Comment-de_DE                   : Ich kann Glas essen, ohne mir weh zu tun.
+Comment-el_GR                   : Μπορώ να φάω σπασμένα γυαλιά χωρίς να πάθω τίποτα.
+Comment-en_CA                   : I can eat glass and it doesn't hurt me, eh.
+Comment-en_GB                   : I say, I can eat glass and it doesn't hurt me old boy.
+Comment-en_US                   : Dude! Munching glass don't bust my chops.
+Comment-es_ES                   : Puedo comer vidrio, no me hace daño.
+Comment-fr_FR                   : Je peux manger du verre, ça ne me fait pas de mal.
+Comment-hi_IN                   : मैं काँच खा सकता हूँ, मुझे उस से कोई पीडा नहीं होती.
+Comment	I can eat glass and it doesn't hurt me.
+Comment-it_IT                   : Posso mangiare il vetro e non mi fa male.
+Comment-ja_JP                   : 私はガラスを食べられます。それは私を傷つけません。
+Comment-ru_RU                   : Я могу есть стекло, оно мне не вредит.
+ComponentsConfiguration	YCbCr
+Contrast	1
+Copyright	© Copyright Phil Harvey
+Country	Canada
+CreateDate	2001:05:19 18:36:41
+DateTimeOriginal	2001:05:19 18:36:41
+ExposureCompensation	0
+ExposureMode	Manual
+ExposureTime	4
+FileTypeExtension	mie
+FileType	MIE
+FlashExposureComp	0
+FlashGuideNumber	0
+FNumber	3.5
+FocusMode	Manual Focus
+ImageSize	100x80
+ISO	100
+Keywords	ExifTool, Test, MIE
+LightValue	1.6
+Make	FUJIFILM
+MaxAperture	4
+Megapixels	0.008
+MIEVersion	1.1
+MIMEType	image/x-mie-jpeg
+MinAperture	27
+Model	FinePix2400Zoom
+ModifyDate	2004:02:26 09:36:46
+OwnerName	Phil Harvey
+References	http://www.columbia.edu/kermit/utf8.html (Comment strings)
+Resolution	118x118(/cm)
+Rotation	90
+Saturation	1
+SerialNumber	0560012345
+Sharpness	1
+ShootingMode	Manual
+ShutterSpeed	4
+Software	Adobe Photoshop 7.0
+State	Ont
+SubfileData	(Binary data 20 bytes, use -b option to extract)
+SubfileMIMEType	image/jpeg
+SubfileName	dummy.jpg
+SubfileType	JPEG
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailImageSize	160x120
+Title	Test IPTC picture
+URL	https://exiftool.org/

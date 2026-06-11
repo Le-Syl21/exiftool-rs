@@ -1,0 +1,159 @@
+AEBBracketValue	0
+AFAreaHeight	151
+AFAreaWidth	151
+AFAreaXPositions	1014 608 0 0 0 -608 -1014
+AFAreaYPositions	0 0 -506 0 506 0 0
+AFImageHeight	2048
+AFImageWidth	3072
+AFPoint	Manual AF point selection
+AFPointsInFocus	3
+Aperture	3.6
+AutoExposureBracketing	Off
+AutoISO	100
+AutoRotate	None
+BaseISO	100
+BlackMaskBottomBorder	1856
+BlackMaskLeftBorder	24
+BlackMaskRightBorder	40
+BlackMaskTopBorder	224
+BlueBalance	1.119663
+BracketMode	Off
+BracketShotNumber	0
+BracketValue	0
+BulbDuration	0
+CameraISO	n/a
+CameraType	EOS Mid-range
+CanonExposureMode	Program AE
+CanonFileDescription	EOS DIGITAL REBEL CMOS RAW
+CanonFirmwareVersion	Firmware Version 1.1.1
+CanonFlashMode	On
+CanonImageHeight	2048
+CanonImageSize	Large
+CanonImageType	CRW:EOS DIGITAL REBEL CMOS RAW
+CanonImageWidth	3072
+CanonModelID	EOS Digital Rebel / 300D / Kiss Digital
+CircleOfConfusion	0.019 mm
+ColorBitDepth	24
+ColorBW	257
+ColorSpace	sRGB
+ColorTemperature	5200
+ColorTone	Normal
+ComponentBitDepth	8
+CompressedDataLength	4120111
+CompressedDataOffset	514
+ConditionalFEC	+2/3
+ContinuousDrive	Continuous
+Contrast	+1
+ControlMode	Camera Local Control
+DateTimeOriginal	2003:11:10 17:39:26
+DecoderTableNumber	1
+Description	CRW with embedded XMP
+DigitalZoom	Unknown (-1)
+DOF	0.41 m (1.13 - 1.54 m)
+DriveMode	Continuous Shooting
+EasyMode	Manual
+ExposureCompensation	0
+ExposureTime	1/64
+FileFormat	CRW
+FileNumber	116-1602
+FileType	CRW
+FileTypeExtension	crw
+FlashBits	E-TTL, Built-in
+FlashExposureComp	+2/3
+FlashModel	n/a
+FlashType	Built-In Flash
+FNumber	3.6
+FocalLength	24 mm
+FocalLength35efl	24.0 mm (35 mm equivalent: 37.2 mm)
+FocalPlaneXSize	23.22 mm
+FocalPlaneYSize	15.49 mm
+FocalUnits	1/mm
+FocusDistanceLower	1.19 m
+FocusDistanceUpper	1.42 m
+FocusMode	AI Focus AF
+FocusRange	Not Known
+FOV	51.6 deg
+HyperfocalDistance	8.34 m
+ImageHeight	2048
+ImageSize	3072x2048
+ImageWidth	3072
+ISO	100
+JpgFromRaw	(Binary data 29 bytes, use -b option to extract)
+Lens	18.0 - 55.0 mm
+Lens35efl	18.0 - 55.0 mm (35 mm equivalent: 27.9 - 85.3 mm)
+LensID	Unknown 18-55mm
+LensType	n/a
+LightValue	9.7
+MacroMode	Unknown (0)
+Make	Canon
+ManualFlashOutput	n/a
+MaxAperture	3.6
+MaxFocalLength	55 mm
+MeasuredEV	0.00
+MeasuredEV2	-0.125
+Megapixels	6.3
+MeteringMode	Evaluative
+MIMEType	image/x-canon-crw
+MinAperture	22
+MinFocalLength	18 mm
+Model	Canon EOS DIGITAL REBEL
+NDFilter	n/a
+NumAFPoints	7
+OpticalZoomCode	n/a
+OriginalFileName	CRW_1602.CRW
+OwnerName	Phil Harvey
+PixelAspectRatio	1
+Quality	RAW
+RawData	(Binary data 22 bytes, use -b option to extract)
+RawJpgHeight	1360
+RawJpgQuality	Fine
+RawJpgSize	Medium
+RawJpgWidth	2048
+RecordID	0
+RecordMode	CRW+THM
+RedBalance	2.092604
+RedEyeReduction	Off
+ROMOperationMode	USA
+Rotation	0
+Saturation	+1
+ScaleFactor35efl	1.6
+SelfTimer2	0
+SelfTimer	Off
+SensorBottomBorder	2063
+SensorHeight	2068
+SensorLeftBorder	72
+SensorRightBorder	3143
+SensorTopBorder	16
+SensorWidth	3152
+SequenceNumber	0
+SerialNumber	0560018150
+SerialNumberFormat	Format 1
+Sharpness	+1
+ShootingMode	Program AE
+ShutterCurtainHack	1st-curtain sync
+ShutterSpeed	1/64
+SlowShutter	None
+TargetAperture	3.6
+TargetCompressionRatio	10
+TargetExposureTime	1/60
+TargetImageType	Real-world Subject
+ThumbnailFileName	CRW_1602.THM
+TimeZoneCode	0
+TimeZoneInfo	0
+UserComment	
+ValidAFPoints	7
+WB_RGGBBlackLevels              : 125 124 125 124
+WB_RGGBLevels                   : 1740 832 831 931
+WB_RGGBLevelsAuto               : 1740 832 831 931
+WB_RGGBLevelsCloudy             : 1878 832 831 903
+WB_RGGBLevelsCustom             : 1722 832 831 989
+WB_RGGBLevelsDaylight           : 1722 832 831 989
+WB_RGGBLevelsFlash              : 1964 832 831 877
+WB_RGGBLevelsFluorescent        : 1506 842 841 1381
+WB_RGGBLevelsKelvin             : 1722 832 831 988
+WB_RGGBLevelsShade              : 2035 832 831 839
+WB_RGGBLevelsTungsten           : 1228 913 912 1668
+WhiteBalance	Auto
+XMPToolkit	Image::ExifTool 8.31
+ZoomSourceWidth	3072
+ZoomTargetWidth	3072

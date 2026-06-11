@@ -1,0 +1,58 @@
+APP14Flags0	(none)
+APP14Flags1	(none)
+ApplicationRecordVersion	2
+BitsPerSample	8
+By-line                         : Phil Harvey
+By-lineTitle                    : My Position
+Caption-Abstract                : A witty caption
+Category	1
+City	Kingston
+ColorComponents	3
+ColorTransform	YCbCr
+CopyrightFlag	False
+CopyrightNotice	Copyright 2004 Phil Harvey
+Country-PrimaryLocationName     : Canada
+Credit	My Credit
+DateCreated	2004:02:26
+DCTEncodeVersion	100
+DisplayedUnitsX	inches
+DisplayedUnitsY	inches
+EncodingProcess	Baseline DCT, Huffman coding
+FileTypeExtension	jpg
+FileType	JPEG
+GlobalAltitude	30
+GlobalAngle	30
+HasRealMergedData	Yes
+Headline	No headline
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+IPTCDigest	05ad1770b1a95f1f9788ac995fa647da
+JFIFVersion	1.02
+Keywords	ExifTool, Test, IPTC
+Megapixels	0.000064
+MIMEType	image/jpeg
+NumSlices	1
+ObjectName	Test IPTC picture
+OriginalTransmissionReference	What is a transmission reference
+PhotoshopFormat	Standard
+PhotoshopQuality	7
+PrintPosition	0 0
+PrintScale	1
+PrintStyle	Centered
+Province-State                  : Ont
+ReaderName	Adobe Photoshop 7.0
+ResolutionUnit	inches
+SlicesGroupName	IPTC
+Source	I'm the source
+SpecialInstructions	What instructions
+SupplementalCategories	amazing, image, utilities
+Urgency	8 (least urgent)
+URL	https://exiftool.org/
+URL_List                        : 
+Warning	IPTCDigest is not current. XMP may be out of sync
+Writer-Editor                   : I wrote it
+WriterName	Adobe Photoshop
+XResolution	72
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	72

@@ -1,0 +1,16 @@
+BitsPerSample	8
+ColorComponents	3
+EncodingProcess	Baseline DCT, Huffman coding
+FileTypeExtension	jps
+FileType	JPS
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+JPSComment	test comment
+JPSFlags	Left field first
+JPSLayout	Over Under
+JPSSeparation	0
+JPSType	Stereo
+Megapixels	0.000064
+MIMEType	image/x-jps
+YCbCrSubSampling	YCbCr4:2:0 (2 2)

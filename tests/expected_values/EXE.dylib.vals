@@ -1,0 +1,9 @@
+CPUArchitecture	64 bit
+CPUByteOrder	Little endian
+CPUSubtype	i386 (all) 64-bit
+CPUType	x86 64-bit
+FileTypeExtension	dylib
+FileType	Mach-O dynamic link library
+MIMEType	application/octet-stream
+ObjectFileType	Dynamically bound shared library
+ObjectFlags	No undefs, Dyld link, Two level, No reexported dylibs

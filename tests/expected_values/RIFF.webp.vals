@@ -1,0 +1,22 @@
+AlphaCompression	Lossless
+AlphaFiltering	Horizontal
+AlphaPreprocessing	Level Reduction
+Artist	me
+ExifByteOrder	Big-endian (Motorola, MM)
+FileType	Extended WEBP
+FileTypeExtension	webp
+HorizontalScale	0
+ImageHeight	1
+ImageSize	1x1
+ImageWidth	1
+Megapixels	0.000001
+MIMEType	image/webp
+ResolutionUnit	inches
+Subject	test
+VerticalScale	0
+VP8Version	2 (bilinear reconstruction, no loop)
+WebP_Flags                      : XMP, EXIF, Alpha
+XMPToolkit	Image::ExifTool 12.46
+XResolution	72
+YCbCrPositioning	Centered
+YResolution	72

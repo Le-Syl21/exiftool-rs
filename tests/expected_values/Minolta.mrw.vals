@@ -1,0 +1,118 @@
+Aperture	2.8
+BayerPattern	RGGB
+BitDepth	12
+BlueBalance	1.988281
+BracketStep	2/3 EV
+Brightness	0.75
+BrightnessValue	0.7
+BWFilter	0
+CircleOfConfusion	0.008 mm
+ColorBalanceBlue	1.98828125
+ColorBalanceGreen	1
+ColorBalanceRed	1.7109375
+ColorFilter	0
+ColorMode	Natural color
+ColorSpace	sRGB
+CompressedImageSize	16072064
+Compression	Uncompressed
+Contrast	0
+CreateDate	2004:11:18 23:14:58
+CustomRendered	Normal
+DateTimeOriginal	2004:11:18 23:14:58
+DECPosition	Filter
+DigitalZoom	Off
+DigitalZoomRatio	0
+DOF	inf (2.40 m - inf)
+DriveMode	Single
+ExifByteOrder	Big-endian (Motorola, MM)
+ExifVersion	0221
+ExposureCompensation	0
+ExposureMode	Manual
+ExposureProgram	Manual
+ExposureTime	1/5
+FileNumberMemory	On
+FileTypeExtension	mrw
+FileType	MRW
+FirmwareID	27200001
+FlashExposureComp	0
+FlashFired	No
+FlashMetering	ADI (Advanced Distance Integration)
+FlashMode	Fill flash
+Flash	Off, Did not fire
+FNumber	2.8
+FocalLength35efl	7.2 mm (35 mm equivalent: 28.0 mm)
+FocalLength	7.2 mm
+FocalLengthIn35mmFormat	28 mm
+FocusArea	Spot Focus
+FocusDistance	inf
+FocusMode	AF
+FolderName	Standard Form
+FOV	65.5 deg
+GainControl	None
+Hue	0
+HyperfocalDistance	2.40 m
+ImageDescription	KONICA MINOLTA DIGITAL CAMERA
+ImageHeight	2448
+ImageSize	3264x2448
+ImageStabilization	On
+ImageWidth	3264
+InternalFlash	No
+IntervalLength	60
+IntervalMode	Still Image
+IntervalNumber	2
+ISO	64
+ISOSetting	65
+LastFileNumber	294
+LightSource	Unknown
+LightValue	5.9
+MacroMode	Off
+Make	Konica Minolta Camera, Inc.
+MakerNoteVersion	MLT0
+MaxAperture	2.7
+MaxApertureValue	2.8
+Megapixels	8.0
+MeteringMode	Unknown
+MIMEType	image/x-minolta-mrw
+MinoltaDate	2004:11:18
+MinoltaImageSize	640x480
+MinoltaModelID	DiMAGE A2 or S414
+MinoltaQuality	Raw
+MinoltaTime	23:14:58
+Model	DiMAGE A2
+ModifyDate	2004:11:18 23:14:58
+Orientation	Horizontal (normal)
+PreviewImage	(Binary data 26 bytes, use -b option to extract)
+PreviewImageLength	26
+PreviewImageStart	2082
+PrintIMVersion	0250
+ProgramMode	None
+RawDepth	12
+RedBalance	1.710938
+Saturation	0
+ScaleFactor35efl	3.9
+SceneCaptureType	Standard
+SceneMode	Standard
+SensorHeight	2456
+SensorWidth	3272
+Sharpness	0
+ShutterSpeed	1/5
+Software	DiMAGE A2 Ver.1.12
+SpotFocusPointX	1632
+SpotFocusPointY	1224
+StorageMethod	Linear
+SubjectArea	1632 1224 320 384
+SubjectDistanceRange	Distant
+SubjectProgram	None
+UserComment	
+WBMode	Auto (0)
+WB_RBLevelsCloudy               : 565 330
+WB_RBLevelsCoolWhiteF           : 441 545
+WB_RBLevelsCustom               : 565 330
+WB_RBLevelsDaylight             : 503 357
+WB_RBLevelsFlash                : 523 339
+WB_RBLevelsTungsten             : 278 738
+WB_RGGBLevels                   : 438 256 256 509
+WBScale	2 2 2 2
+WhiteBalance	Auto
+WideFocusZone	Unknown (7)
+ZoneMatching	ISO Setting Used

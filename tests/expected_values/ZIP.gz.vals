@@ -1,0 +1,10 @@
+ArchivedFileName	test.txt
+Comment	This is a test comment
+Compression	Deflated
+ExtraFlags	Maximum Compression
+FileTypeExtension	gz
+FileType	GZIP
+Flags	FileName, Comment
+MIMEType	application/x-gzip
+ModifyDate	2009:11:05 17:09:24+01:00
+OperatingSystem	Unix

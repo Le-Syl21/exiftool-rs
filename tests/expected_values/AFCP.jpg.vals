@@ -1,0 +1,31 @@
+ApplicationRecordVersion	2
+BitsPerSample	8
+By-line                         : byline
+By-lineTitle                    : byline title
+Caption-Abstract                : ExifTool AFCP test
+Category	p
+City	city
+ColorComponents	3
+CopyrightNotice	copy freely
+Country-PrimaryLocationName     : country name
+Credit	credit
+DateCreated	2005:12:23
+EncodingProcess	Baseline DCT, Huffman coding
+FileTypeExtension	jpg
+FileType	JPEG
+Headline	headline
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+Keywords	keyword
+Megapixels	0.000064
+MIMEType	image/jpeg
+ObjectName	object name
+OriginalTransmissionReference	otr
+Province-State                  : state
+Source	source
+SpecialInstructions	special instructions
+SupplementalCategories	supp cat
+Urgency	2
+Writer-Editor                   : caption writer
+YCbCrSubSampling	YCbCr4:2:0 (2 2)

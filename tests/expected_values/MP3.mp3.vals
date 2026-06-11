@@ -1,0 +1,32 @@
+Album	Phil's Greatest Hits
+Artist	Phil Harvey
+AudioBitrate	128 kbps
+AudioLayer	3
+ChannelMode	Joint Stereo
+Comment	My Comments
+Composer	A Composer
+CopyrightFlag	True
+DateTimeOriginal	2005
+Duration	0.00 s (approx)
+Emphasis	None
+FileTypeExtension	mp3
+FileType	MP3
+Genre	Testing
+Grouping	This group
+ID3Size	391
+IntensityStereo	Off
+Lyrics	Do-wap she-bang
+MIMEType	audio/mpeg
+MPEGAudioVersion	1
+MSStereo	On
+OriginalMedia	True
+PartOfSet	1/2
+Picture	(Binary data 15 bytes, use -b option to extract)
+PictureDescription	comment
+PictureFormat	JPG
+PictureType	Other
+RelativeVolumeAdjustment	+18.0% Right, +18.0% Left
+SampleRate	44100
+Title	ExifTool Test
+Track	1/5
+Year	2005

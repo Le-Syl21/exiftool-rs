@@ -1,0 +1,168 @@
+AdvancedSceneMode	Off
+AdvancedSceneType	1
+AFAreaMode	1-area
+AFAssistLamp	Enabled but Not Used
+AFPointPosition	0.5 0.5
+Aperture	4.0
+Audio	No
+BabyAge	(not set)
+BatteryLevel	Full
+BitsPerSample	12
+BlackLevelBlue	0
+BlackLevelGreen	0
+BlackLevelRed	0
+BlueBalance	1.665399
+BurstMode	Off
+CFAPattern	[Blue,Green][Green,Red]
+CircleOfConfusion	0.006 mm
+ColorComponents	3
+ColorEffect	Off
+ColorMode	Normal
+ColorSpace	sRGB
+ColorTempKelvin	0
+ComponentsConfiguration	Y, Cb, Cr, -
+CompressedBitsPerPixel	2
+Compression	Panasonic RAW 1
+ContrastMode	Normal
+Contrast	Normal
+ConversionLens	Off
+CreateDate	2008:08:06 15:21:56
+CustomRendered	Normal
+DarkFocusEnvironment	No
+DataDump	(Binary data 8200 bytes, use -b option to extract)
+DateTimeOriginal	2008:08:06 15:21:56
+DigitalZoomRatio	0
+DistortionCorrection	On
+DistortionParam02	0.010772705078125
+DistortionParam04	0.02056884765625
+DistortionParam08	0.12359619140625
+DistortionParam09	0.00579833984375
+DistortionParam11	-0.02374267578125
+DistortionScale	1
+EncodingProcess	Baseline DCT, Huffman coding
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	1440
+ExifImageWidth	1920
+ExifVersion	0221
+ExposureCompensation	0
+ExposureMode	Auto
+ExposureProgram	Aperture-priority AE
+ExposureTime	1/250
+FacesDetected	0
+FileSource	Digital Camera
+FileTypeExtension	rw2
+FileType	RW2
+FilmMode	Standard (color)
+FirmwareVersion	0.1.0.0
+FlashBias	0
+FlashCurtain	n/a
+Flash	Off, Did not fire
+FlashpixVersion	0100
+FNumber	4.0
+FocalLength35efl	5.1 mm (35 mm equivalent: 24.0 mm)
+FocalLength	5.1 mm
+FocalLengthIn35mmFormat	24 mm
+FocusMode	Auto
+FOV	73.7 deg
+GainControl	None
+HighISOMultiplierBlue	0
+HighISOMultiplierGreen	0
+HighISOMultiplierRed	0
+HighlightWarning	Yes
+HyperfocalDistance	1.02 m
+ImageHeight	2736
+ImageQuality	RAW
+ImageSize	3648x2736
+ImageStabilization	On, Mode 2
+ImageWidth	3648
+InternalSerialNumber	(F35) 2008:07:01 no. 0058
+InteropIndex	R98 - DCF basic file (sRGB)
+InteropVersion	0100
+ISO	80
+JPEGQuality	High
+JpgFromRaw	(Binary data 10785 bytes, use -b option to extract)
+LightSource	Unknown
+LightValue	12.3
+LinearityLimitBlue	4095
+LinearityLimitGreen	4095
+LinearityLimitRed	4095
+MacroMode	Off
+Make	Panasonic
+MakerNoteVersion	0130
+MaxApertureValue	2.0
+Megapixels	10.0
+MeteringMode	Multi-segment
+MIMEType	image/x-panasonic-rw2
+Model	DMC-LX3
+ModifyDate	2008:08:06 15:21:56
+NoiseReductionParams	3 100 1 1 1 200 2 2 2 400 4 4 4
+NoiseReduction	Standard
+NumFacePositions	0
+NumWBEntries	7
+OpticalZoomMode	Standard
+Orientation	Horizontal (normal)
+PanasonicExifVersion	0270
+PanasonicImageHeight	2736
+PanasonicImageWidth	3648
+PanasonicRawVersion	0300
+PrintIMVersion	0250
+ProgramISO	80
+RawDataOffset	12322
+RawFormat	4
+RedBalance	2.1673
+ResolutionUnit	inches
+Rotation	Horizontal (normal)
+RowsPerStrip	2754
+SamplesPerPixel	1
+Saturation	Normal
+ScaleFactor35efl	4.7
+SceneCaptureType	Standard
+SceneMode	Off
+SceneType	Directly photographed
+SelfTimer	Off
+SensingMethod	One-chip color area
+SensorBottomBorder	2742
+SensorHeight	2754
+SensorLeftBorder	8
+SensorRightBorder	3656
+SensorTopBorder	6
+SensorWidth	3724
+SequenceNumber	0
+Sharpness	Normal
+ShootingMode	Aperture Priority
+ShutterSpeed	1/250
+Software	Ver.1.0
+StripByteCounts	20511792
+StripOffsets	4294967295
+TextStamp	Off
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailLength	28
+ThumbnailOffset	11976
+TimeSincePowerOn	00:10:33.08
+TravelDay	n/a
+VideoFrameRate	n/a
+WBBlueLevel	438
+WBGreenLevel	263
+WBRedLevel	570
+WB_RGBLevels1                   : 573 256 416
+WB_RGBLevels2                   : 630 256 387
+WB_RGBLevels3                   : 702 256 355
+WB_RGBLevels4                   : 378 256 592
+WB_RGBLevels5                   : 651 256 377
+WB_RGBLevels6                   : 590 256 421
+WB_RGBLevels7                   : 378 256 592
+WBShiftAB	0
+WBShiftGM	0
+WBType1	Fine Weather
+WBType2	Cloudy
+WBType3	Shade
+WBType4	Tungsten (Incandescent)
+WBType5	Flash
+WBType6	D55
+WBType7	ISO Studio Tungsten
+WhiteBalance	Auto
+WorldTimeLocation	Home
+XResolution	180
+YCbCrPositioning	Co-sited
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	180

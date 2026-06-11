@@ -1,0 +1,21 @@
+FileTypeExtension	xml
+FileType	XML
+KmlDocumentDescription	
+KmlDocumentName	Location history from 11/13/2013 to 11/13/2013
+KmlDocumentOpen	1
+KmlDocumentPlacemarkDescription	Location history for Latitude User from 11/13/2013 to 11/13/2013
+KmlDocumentPlacemarkName	Latitude User
+KmlDocumentPlacemarkStyleUrl	#multiTrack
+KmlDocumentPlacemarkTrackAltitudeMode: clampToGround
+KmlDocumentPlacemarkTrackCoord	-106.026069 34.166232 0
+KmlDocumentPlacemarkTrackWhen	2013:11:13 01:03:34.245-08:00
+KmlDocumentStyleIconStyleIconHref: http://earth.google.com/images/kml-icons/track-directional/track-0.png
+KmlDocumentStyleIconStyleScale	1.2
+KmlDocumentStyleId	multiTrack_n
+KmlDocumentStyleLineStyleColor	99ffac59
+KmlDocumentStyleLineStyleWidth	6
+KmlDocumentStyleMapId	multiTrack
+KmlDocumentStyleMapPairKey	normal
+KmlDocumentStyleMapPairStyleUrl	#multiTrack_n
+KmlXmlns	http://www.opengis.net/kml/2.2
+MIMEType	application/xml

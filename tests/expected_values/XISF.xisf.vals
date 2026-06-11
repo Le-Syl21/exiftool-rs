@@ -1,0 +1,25 @@
+ColorSpace	Gray
+CompressionCodecs	zlib+sh
+CompressionLevel	0
+CreateDate	2019:09:18 22:57:08Z
+CreatorApplication	PixInsight 01.08.06.1457
+CreatorModule	XISF module version 01.00.09.0187
+CreatorOS	Linux
+FileTypeExtension	xisf
+FileType	XISF
+ImageData	(Binary data 112 bytes, use -b option to extract)
+ImageDataCompression	zlib:65536
+ImageDataEncoding	base64
+ImageGeometry	256:256:1
+ImageHeight	256
+ImageLocation	embedded
+ImageSampleFormat	UInt8
+ImageSize	256x256
+ImageWidth	256
+Megapixels	0.066
+MIMEType	image/x-xisf
+NumPlanes	1
+ResolutionUnit	inch
+XML	(Binary data 1161 bytes, use -b option to extract)
+XResolution	72
+YResolution	72

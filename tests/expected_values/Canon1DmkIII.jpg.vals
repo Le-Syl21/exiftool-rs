@@ -1,0 +1,329 @@
+AddAspectRatioInfo	Off
+AddOriginalDecisionData	Off
+AEBAutoCancel	On
+AEBBracketValue	0
+AEBSequence	0,-,+
+AEBShotCount	7 shots
+AFAreaHeights	168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168 168
+AFAreaMode	Single-point AF
+AFAreaWidths	112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112 112
+AFAreaXPositions	-625 -416 -209 0 209 416 625 -917 -723 -520 -311 -104 104 311 520 723 917 -1041 -832 -625 -416 -206 0 206 416 625 832 1041 -917 -723 -520 -311 -104 104 311 520 723 917 -625 -416 -209 0 209 416 625
+AFAreaYPositions	-554 -554 -554 -554 -554 -554 -554 -277 -277 -277 -277 -277 -277 -277 -277 -277 -277 0 0 0 0 0 0 0 0 0 0 0 277 277 277 277 277 277 277 277 277 277 554 554 554 554 554 554 554
+AFAssistBeam	Emits
+AFImageHeight	2592
+AFImageWidth	3888
+AFMicroAdjMode	Disable
+AFMicroadjustment	Disable; 0; 0; 0; 0
+AFMicroAdjValue	0
+AFOnAELockButtonSwitch	Disable
+AFPointAreaExpansion	Disable
+AFPointAutoSelection	Control-direct:disable/Main:enable
+AFPointBrightness	Normal
+AFPointDisplayDuringFocus	On
+AFPointsInFocus	13
+AFPointsSelected	13
+AIServoImagePriority	1: AF, 2: Tracking
+AIServoTrackingMethod	Main focus point priority
+AIServoTrackingSensitivity	Standard
+Aperture	5.6
+ApertureRange	Disable; Closed 91; Open 1
+ApertureValue	5.7
+ApplyShootingMeteringMode	Disable; 0; 0; 3; 112; 48; 0; 0
+AspectRatio	3:2
+AutoExposureBracketing	Off
+AutoISO	100
+AverageBlackLevel	1024 1024 1024 1024
+AvSettingWithoutLens	Disable
+BaseISO	3200
+BitsPerSample	8
+BlackMaskBottomBorder	0
+BlackMaskLeftBorder	0
+BlackMaskRightBorder	0
+BlackMaskTopBorder	0
+BlueBalance	1.325195
+BracketMode	Off
+BracketShotNumber	0
+BracketValue	0
+BulbDuration	0
+ButtonFunctionControlOff	Normal (enable)
+CameraOrientation	Horizontal (normal)
+CameraTemperature	26 C
+CameraType	EOS High-end
+CanonExposureMode	Program AE
+CanonFirmwareVersion	Firmware Version 5.3.1
+CanonFlashMode	External flash
+CanonImageHeight	2592
+CanonImageSize	Large
+CanonImageType	Canon EOS-1D Mark III
+CanonImageWidth	3888
+CanonModelID	EOS-1D Mark III
+CircleOfConfusion	0.023 mm
+ColorComponents	3
+ColorDataVersion	2 (1DmkIII)
+ColorSpace	sRGB
+ColorTempAsShot	6142
+ColorTempAuto	6142
+ColorTempCloudy	6000
+ColorTempDaylight	5200
+ColorTemperature	5200
+ColorTempFlash	6777
+ColorTempFluorescent	3768
+ColorTempKelvin	5210
+ColorTempMeasured	6142
+ColorTempShade	7000
+ColorTempTungsten	3200
+ColorToneFaithful	0
+ColorToneLandscape	0
+ColorToneNeutral	0
+ColorTone	Normal
+ColorTonePortrait	0
+ColorToneStandard	0
+ColorToneUserDef1	0
+ColorToneUserDef2	0
+ColorToneUserDef3	0
+ComponentsConfiguration	Y, Cb, Cr, -
+Compression	JPEG (old-style)
+ContinuousDrive	Continuous, High
+ContinuousShootingSpeed	Disable; Hi 10; Lo 3
+ContinuousShotLimit	Disable; 99 shots
+ContrastFaithful	0
+ContrastLandscape	0
+ContrastMonochrome	0
+ContrastNeutral	0
+Contrast	Normal
+ContrastPortrait	0
+ContrastStandard	0
+ContrastUserDef1	0
+ContrastUserDef2	0
+ContrastUserDef3	0
+ControlMode	Camera Local Control
+CreateDate	2007:02:22 17:02:42
+CropBottomMargin	0
+CropLeftMargin	0
+CroppedImageHeight	2592
+CroppedImageLeft	0
+CroppedImageTop	0
+CroppedImageWidth	3888
+CropRightMargin	0
+CropTopMargin	0
+CustomPictureStyleFileName	
+CustomRendered	Normal
+DateTimeOriginal	2007:02:22 17:02:42
+DialDirectionTvAv	Normal
+DigitalGain	0
+DigitalZoom	None
+DirectoryIndex	108
+DOF	0.60 m (1.41 - 2.01 m)
+DriveMode	Continuous Shooting
+DustRemovalData	(Binary data 1024 bytes, use -b option to extract)
+EasyMode	Manual
+EncodingProcess	Baseline DCT, Huffman coding
+ETTLII	Evaluative
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	2592
+ExifImageWidth	3888
+ExifVersion	0221
+ExposureCompensation	0
+ExposureLevelIncrements	1/3-stop set, 1/3-stop comp.
+ExposureMode	Auto
+ExposureModeInManual	Specified metering mode
+ExposureProgram	Program AE
+ExposureTime	1/125
+FileIndex	232
+FileNumber	108-0232
+FileTypeExtension	jpg
+FileType	JPEG
+FilterEffectMonochrome	None
+FilterEffectUserDef1	None
+FilterEffectUserDef2	None
+FilterEffectUserDef3	None
+FirmwareVersion	5.3.1
+FlashBatteryLevel	5.08V
+FlashBits	(none)
+FlashExposureComp	0
+FlashFiring	Fires
+FlashModel	Speedlite 580EX II
+Flash	On, Fired
+FlashOutput	11%
+FlashpixVersion	0100
+FlashSyncSpeedAv	Auto
+FNumber	5.6
+FocalLength	35.0 mm
+FocalLength35efl	35.0 mm (35 mm equivalent: 44.8 mm)
+FocalPlaneResolutionUnit	inches
+FocalPlaneXResolution	3512.195122
+FocalPlaneYResolution	3521.73913
+FocalUnits	1/mm
+FocusDistanceLower	1.13 m
+FocusDistanceUpper	2.19 m
+FocusingScreen	Ec-CIV
+FocusMode	AI Servo AF
+FocusRange	Not Known
+FOV	43.7 deg
+GPSVersionID	2.2.0.0
+HighISONoiseReduction	Off
+HighlightTonePriority	Disable
+HyperfocalDistance	9.33 m
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+InfoButtonWhenShooting	Displays camera settings
+InternalSerialNumber	G002669
+InteropIndex	R98 - DCF basic file (sRGB)
+InteropVersion	0100
+ISO	3200
+ISOSpeedIncrements	1/3 Stop
+ISOSpeedRange	Disable; Max 3200; Min 100
+LCDIlluminationDuringBulb	Off
+Lens	16.0 - 35.0 mm
+Lens35efl	16.0 - 35.0 mm (35 mm equivalent: 20.5 - 44.8 mm)
+LensAFStopButton	AF stop
+LensDriveNoAF	Focus search on
+LensID	Canon EF 16-35mm f/2.8L II USM
+LensModel	EF16-35mm f/2.8L II USM
+LensType	Canon EF 16-35mm f/2.8L II USM
+LightValue	6.9
+LiveViewExposureSimulation	Disable (LCD auto adjust)
+LiveViewShooting	Off
+LockMicrophoneButton	Protect (hold:record memo)
+LongExposureNoiseReduction2	Off
+LongExposureNoiseReduction	Off
+MacroMode	Normal
+Make	Canon
+ManualFlashOutput	n/a
+ManualTv	Tv=Main/Av=Control
+MaxAperture	2.8
+MaxFocalLength	35 mm
+MeasuredEV2	3.75
+MeasuredEV	3.62
+MeasuredRGGB	663 1024 1024 611
+Megapixels	0.000064
+MeteringMode	Evaluative
+MIMEType	image/jpeg
+MinAperture	23
+MinFocalLength	16 mm
+MirrorLockup	Disable
+Model	Canon EOS-1D Mark III
+ModifyDate	2007:02:22 17:02:42
+NDFilter	n/a
+NumAFPoints	45
+OpticalZoomCode	n/a
+Orientation	Horizontal (normal)
+OriginalDecisionData	(Binary data 512 bytes, use -b option to extract)
+OriginalDecisionDataOffset	3326
+OwnerName	
+PictureStyle	Neutral
+PictureStylePC	n/a; n/a; n/a
+PictureStyleUserDef	Standard; Standard; Standard
+Quality	Fine
+QuickControlDialInMeter	Exposure comp/Aperture
+RawJpgSize	Large
+RawMeasuredRGGB	294111 455756 464315 279659
+RecordMode	CR2+JPEG
+RedBalance	2.22168
+ResolutionUnit	inches
+SafetyShift	Disable
+SaturationFaithful	0
+SaturationLandscape	0
+SaturationNeutral	0
+Saturation	Normal
+SaturationPortrait	0
+SaturationStandard	0
+SaturationUserDef1	0
+SaturationUserDef2	0
+SaturationUserDef3	0
+ScaleFactor35efl	1.3
+SceneCaptureType	Standard
+SelectableAFPoint	19 points
+SelfTimer	Off
+SensorBlueLevel	0
+SensorBottomBorder	2616
+SensorHeight	2622
+SensorLeftBorder	88
+SensorRedLevel	0
+SensorRightBorder	3975
+SensorTopBorder	25
+SensorWidth	3984
+SequenceNumber	0
+SerialNumber	500292
+SerialNumberFormat	Format 2
+SetButtonWhenShooting	Normal (disabled)
+Sharpness	0
+SharpnessFaithful	0
+SharpnessFrequency	n/a
+SharpnessLandscape	4
+SharpnessMonochrome	3
+SharpnessNeutral	0
+SharpnessPortrait	2
+SharpnessStandard	3
+SharpnessUserDef1	3
+SharpnessUserDef2	3
+SharpnessUserDef3	3
+ShootingMode	Program AE
+ShortReleaseTimeLag	Disable
+ShutterButtonAFOnButton	Metering + AF start
+ShutterCount	1
+ShutterCurtainSync	1st-curtain sync
+ShutterSpeed	1/125
+ShutterSpeedRange	Disable; Hi 1/8192; Lo 32
+ShutterSpeedValue	1/128
+SlowShutter	None
+SpotMeterLinkToAFPoint	Disable (use center AF point)
+SRAWQuality	n/a
+SubSecCreateDate	2007:02:22 17:02:42.81
+SubSecDateTimeOriginal	2007:02:22 17:02:42.81
+SubSecModifyDate	2007:02:22 17:02:42.81
+SubSecTime	81
+SubSecTimeDigitized	81
+SubSecTimeOriginal	81
+SwitchToRegisteredAFPoint	Disable
+TargetAperture	5.7
+TargetExposureTime	1/128
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailImageValidArea	0 159 7 112
+ThumbnailLength	28
+ThumbnailOffset	8060
+TimerLength	Disable; 6 s: 6; 16 s: 16; After release: 2
+TimeStamp1	2007:02:22 17:02:42
+TimeStamp	1970:01:02 01:30:10
+ToneCurve	Standard
+ToningEffectMonochrome	None
+ToningEffectUserDef1	None
+ToningEffectUserDef2	None
+ToningEffectUserDef3	None
+UsableMeteringModes	Disable; Flags 0xf0
+UsableShootingModes	Disable; Flags 0xfc
+UserComment	
+UserDef1PictureStyle	Standard
+UserDef2PictureStyle	Standard
+UserDef3PictureStyle	Standard
+USMLensElectronicMF	Enable after one-shot AF
+ValidAFPoints	45
+ViewInfoDuringExposure	Disable
+VRDOffset	0
+WBBracketMode	Off
+WBBracketValueAB	0
+WBBracketValueGM	0
+WBMediaImageSizeSetting	Rear LCD panel
+WB_RGGBLevels                   : 2275 1024 1024 1357
+WB_RGGBLevelsAsShot             : 2275 1024 1024 1357
+WB_RGGBLevelsAuto               : 2275 1024 1024 1357
+WB_RGGBLevelsCloudy             : 2270 1024 1024 1382
+WB_RGGBLevelsDaylight           : 2101 1024 1024 1535
+WB_RGGBLevelsFlash              : 2422 1024 1024 1295
+WB_RGGBLevelsFluorescent        : 1938 1073 1073 2419
+WB_RGGBLevelsKelvin             : 2101 1024 1024 1535
+WB_RGGBLevelsMeasured           : 2272 1026 1021 1355
+WB_RGGBLevelsShade              : 2433 1024 1024 1259
+WB_RGGBLevelsTungsten           : 1603 1134 1134 2760
+WBShiftAB	0
+WBShiftGM	0
+WhiteBalance	Auto
+WhiteBalanceBlue	0
+WhiteBalanceRed	0
+XResolution	72
+YCbCrPositioning	Co-sited
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	72
+ZoomSourceWidth	0
+ZoomTargetWidth	0

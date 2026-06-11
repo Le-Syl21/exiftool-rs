@@ -1,0 +1,16 @@
+Author	Jane Doe
+Comment	This is an example URL shortcut for demonstration purposes.
+Desc	The official example website.
+FileTypeExtension	url
+FileType	URL
+HotKey	1582
+IconFile	C:\Windows\System32\shell32.dll
+IconIndex	15
+IDList	2000000000000000
+MIMEType	application/x-mswinurl
+Modified	1999:07:20 17:49:01+02:00
+Roamed	1
+ShowCommand	Maximized
+URL	https://www.example.com
+WhatsNew	Updated link and added new features to the site.
+WorkingDirectory	C:\Users\Public\Documents

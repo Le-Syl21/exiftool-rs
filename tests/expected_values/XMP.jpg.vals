@@ -1,0 +1,126 @@
+About	uuid:80056b68-1045-fa97-3401-6f4ed84cd53d
+Aperture	3.5
+ApertureValue	3.5
+APP14Flags0	(none)
+APP14Flags1	(none)
+Artist	Phil Harvey
+AuthorsPosition	My Position
+BitsPerSample	8
+BlueMatrixColumn	0.14307 0.06061 0.7141
+BlueTRC	(Binary data 2060 bytes, use -b option to extract)
+BrightnessValue	2
+CaptionWriter	I wrote it
+Category	1
+City	Kingston
+CMMFlags	Not Embedded, Independent
+ColorComponents	3
+ColorSpaceData	RGB
+ColorSpace	sRGB
+ColorTransform	YCbCr
+ComponentsConfiguration	Y, Cb, Cr, -
+CompressedBitsPerPixel	1.6
+Compression	JPEG (old-style)
+ConnectionSpaceIlluminant	0.9642 1 0.82491
+Copyright	Copyright 2004 Phil Harvey
+Country	Canada
+CreateDate	2001:05:19 18:36:41
+Creator	Phil Harvey
+Credit	My Credit
+DateCreated	2004:02:26
+DateTimeOriginal	2001:05:19 18:36:41
+DCTEncodeVersion	100
+Description	UTF-16 (big-endian) encoded XMP
+DeviceAttributes	Reflective, Glossy, Positive, Color
+DeviceManufacturer	Hewlett-Packard
+DeviceMfgDesc	IEC http://www.iec.ch
+DeviceModelDesc	IEC 61966-2.1 Default RGB colour space - sRGB
+DeviceModel	sRGB
+DocumentID	adobe:docid:photoshop:4cc7b857-69d0-11d8-8ac4-bb59c92f0d9a
+EncodingProcess	Baseline DCT, Huffman coding
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	80
+ExifImageWidth	100
+ExifVersion	0210
+ExposureCompensation	0
+ExposureProgram	Program AE
+FileSource	Digital Camera
+FileTypeExtension	jpg
+FileType	JPEG
+Flash	Fired
+FlashpixVersion	0100
+FNumber	3.5
+FocalLength35efl	6.0 mm
+FocalLength	6.0 mm
+FocalPlaneResolutionUnit	cm
+FocalPlaneXResolution	3053
+FocalPlaneYResolution	3053
+GreenMatrixColumn	0.38515 0.71687 0.09708
+GreenTRC	(Binary data 2060 bytes, use -b option to extract)
+Headline	No headline
+ImageDescription	A witty caption
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+Instructions	What instructions
+ISO	100
+JFIFVersion	1.02
+JobRefName	My Job
+LightValue	9.6
+Luminance	76.03647 80 87.12462
+Make	FUJIFILM
+Marked	False
+MaxApertureValue	3.5
+MeasurementBacking	0 0 0
+MeasurementFlare	0.999%
+MeasurementGeometry	Unknown
+MeasurementIlluminant	D65
+MeasurementObserver	CIE 1931
+MediaBlackPoint	0 0 0
+MediaWhitePoint	0.95045 1 1.08905
+Megapixels	0.000064
+MeteringMode	Multi-segment
+MIMEType	image/jpeg
+Model	FinePix2400Zoom
+ModifyDate	2004:02:26 09:36:46
+Orientation	Horizontal (normal)
+PrimaryPlatform	Microsoft Corporation
+ProfileClass	Display Device Profile
+ProfileCMMType	Linotronic
+ProfileConnectionSpace	XYZ
+ProfileCopyright	Copyright (c) 1998 Hewlett-Packard Company
+ProfileCreator	Hewlett-Packard
+ProfileDateTime	1998:02:09 06:49:00
+ProfileDescription	sRGB IEC61966-2.1
+ProfileFileSignature	acsp
+ProfileID	0
+ProfileVersion	2.1.0
+RedMatrixColumn	0.43607 0.22249 0.01392
+RedTRC	(Binary data 2060 bytes, use -b option to extract)
+RenderingIntent	Perceptual
+ResolutionUnit	inches
+Rights	Copyright 2004 Phil Harvey
+SceneType	Directly photographed
+SensingMethod	One-chip color area
+ShutterSpeed	1/64
+ShutterSpeedValue	1/64
+Software	Adobe Photoshop 7.0
+Source	I'm the source
+State	Ont
+Subject	ExifTool, Test, XMP
+SupplementalCategories	amazing, image, utilities
+Technology	Cathode Ray Tube Display
+ThumbnailLength	0
+ThumbnailOffset	872
+Title	Test IPTC picture
+TransmissionReference	What is a transmission reference?
+Urgency	8 (least urgent)
+ViewingCondDesc	Reference Viewing Condition in IEC61966-2.1
+ViewingCondIlluminant	19.6445 20.3718 16.8089
+ViewingCondIlluminantType	D50
+ViewingCondSurround	3.92889 4.07439 3.36179
+WebStatement	https://exiftool.org/
+XMPToolkit	Image::ExifTool 4.73
+XResolution	72
+YCbCrPositioning	Co-sited
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	72

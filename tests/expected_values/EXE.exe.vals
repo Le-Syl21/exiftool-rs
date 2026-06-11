@@ -1,0 +1,34 @@
+CharacterSet	Unicode
+CodeSize	2048
+CompanyName	Phil Harvey
+EntryPoint	0x1000
+FileDescription	ExifTool EXE Test File
+FileFlags	Debug
+FileFlagsMask	0x003f
+FileOS	Win32
+FileSubtype	0
+FileTypeExtension	exe
+FileType	Win32 EXE
+FileVersion	1.2.3.4b
+FileVersionNumber	1.2.3.4
+ImageFileCharacteristics	No relocs, Executable, No line numbers, No symbols, 32-bit, No debug
+ImageVersion	1.0
+InitializedDataSize	4096
+InternalName	Skippy the wonder cow
+LanguageCode	English (U.S.)
+LegalCopyright	Copyright (c) 2008
+LegalTrademarks	none
+LinkerVersion	2.56
+MachineType	Intel 386 or later, and compatibles
+MIMEType	application/octet-stream
+ObjectFileType	Executable application
+OriginalFileName	EXE.exe
+OSVersion	4.0
+PEType	PE32
+ProductName	This is not a product
+ProductVersion	5.6.7.8b
+ProductVersionNumber	5.6.7.8
+SubsystemVersion	4.0
+Subsystem	Windows command line
+TimeStamp	2008:09:08 14:01:24+02:00
+UninitializedDataSize	512

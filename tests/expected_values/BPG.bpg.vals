@@ -1,0 +1,81 @@
+Alpha	No Alpha Plane
+Aperture	5.6
+ApertureValue	5.6
+BitDepth	8
+BlueMatrixColumn	0.14919 0.06322 0.74457
+BlueTRC	(Binary data 14 bytes, use -b option to extract)
+CircleOfConfusion	0.019 mm
+CMMFlags	Not Embedded, Independent
+ColorSpaceData	RGB
+ColorSpace	sRGB
+ComponentsConfiguration	Y, Cb, Cr, -
+ConnectionSpaceIlluminant	0.9642 1 0.82491
+CreateDate	2003:10:31 15:44:19
+CustomRendered	Normal
+DateTimeOriginal	2003:10:31 15:44:19
+DeviceAttributes	Reflective, Glossy, Positive, Color
+DeviceManufacturer	none
+DeviceModel	
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	3072
+ExifImageWidth	2048
+ExifVersion	0220
+ExposureCompensation	0
+ExposureMode	Auto
+ExposureTime	1/60
+FileType	BPG
+FileTypeExtension	bpg
+Flags	Extension Present
+Flash	On, Fired
+FlashpixVersion	0100
+FNumber	5.6
+FocalLength35efl	55.0 mm (35 mm equivalent: 87.4 mm)
+FocalLength	55.0 mm
+FocalPlaneResolutionUnit	inches
+FocalPlaneXResolution	3442.016807
+FocalPlaneYResolution	3443.946154
+FOV	23.3 deg
+GreenMatrixColumn	0.20528 0.62567 0.06087
+GreenTRC	(Binary data 14 bytes, use -b option to extract)
+HyperfocalDistance	28.56 m
+ImageHeight	16
+ImageLength	0
+ImageSize	16x16
+ImageWidth	16
+ISO	100
+LightValue	10.9
+Make	Canon
+MediaBlackPoint	0 0 0
+MediaWhitePoint	0.95045 1 1.08905
+Megapixels	0.000256
+MIMEType	image/bpg
+Model	Canon EOS DIGITAL REBEL
+ModifyDate	2003:10:31 15:44:19
+Orientation	Horizontal (normal)
+PixelFormat	4:2:2 (chroma at 0.5, 0)
+PrimaryPlatform	Apple Computer Inc.
+ProfileClass	Display Device Profile
+ProfileCMMType	Adobe Systems Inc.
+ProfileConnectionSpace	XYZ
+ProfileCopyright	Copyright 1999 Adobe Systems Incorporated
+ProfileCreator	Adobe Systems Inc.
+ProfileDateTime	1999:06:03 00:00:00
+ProfileDescription	Adobe RGB (1998)
+ProfileFileSignature	acsp
+ProfileID	0
+ProfileVersion	2.1.0
+RedMatrixColumn	0.60974 0.31111 0.01947
+RedTRC	(Binary data 14 bytes, use -b option to extract)
+RenderingIntent	Perceptual
+ResolutionUnit	inches
+ScaleFactor35efl	1.6
+SceneCaptureType	Standard
+ShutterSpeed	1/60
+ShutterSpeedValue	1/60
+UserComment	
+Warning	[minor] Ignored extra byte at start of EXIF extension
+WhiteBalance	Auto
+XMPToolkit	Image::ExifTool 10.22
+XResolution	180
+YCbCrPositioning	Centered
+YResolution	180

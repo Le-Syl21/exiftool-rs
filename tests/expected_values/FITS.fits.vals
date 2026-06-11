@@ -1,0 +1,34 @@
+Bitpix	8
+Checksum	mB6cn96ZmA6bm96Z
+Clockapp	T
+Comment	MJD = JD - 2400000.5
+CreateDate	28/01/97
+Creator	XFF - Revision: 5.3.2
+Datasum	         0
+DecObj	-7.20808030e+01
+Equinox	2000.0
+Extend	T
+FileTypeExtension	fits
+FileType	FITS
+MIMEType	image/fits
+Mjdreff	6.965740740000e-04
+Mjdrefi	49353
+Naxis	0
+Object	47_TUCANAE_Slew
+ObservationDate	09/12/96
+ObservationDateEnd	09/12/96
+ObservationTime	11:56:26
+ObservationTimeEnd	12:01:40
+Observer	FAN  LEI
+ObsId	10080-01-02-00A
+Origin	XTE-SOC
+Radecsys	FK5
+RaObj	6.02170000e+00
+Tassign	SATELLITE
+Tierabso	1.000e+00
+Tierrela	1.000e-06
+Timeref	LOCAL
+Timesys	TT
+Timeunit	s
+Timezero	3.37843167e+00
+Timversn	XFF/95-004

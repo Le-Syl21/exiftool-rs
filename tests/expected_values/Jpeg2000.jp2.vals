@@ -1,0 +1,55 @@
+Artist	me
+BitsPerComponent	8 Bits, Unsigned
+BitsPerSample	8
+ColorSpace	sRGB
+ColorSpecApproximation	Not Specified
+ColorSpecMethod	Enumerated
+ColorSpecPrecedence	0
+CompatibleBrands	jp2
+Compression	JPEG 2000
+ContentDescriptionCaption	Wide Dynamic Range Scene
+ContentDescriptionEventDescription: Project Prototype
+ContentDescriptionEventEventType: Capture Device Test 1234
+ContentDescriptionLocationAddressAddrComp: 70 Lighthouse St
+ContentDescriptionLocationAddressAddrCompType: Street
+ContentDescriptionLocationAddressCountry: US
+ContentDescriptionLocationAddressType: Test Scene Location
+ContentDescriptionLocationAddressZipcode: 14612
+ContentDescriptionSchemaLocation: http://www.jpeg.org/jpx/1.0/xml.http://www.jpeg.org/metadata/15444-2.xsd
+ContentDescriptionThingId	5431
+ContentDescriptionThingName	Macbeth chart
+ContentDescriptionThingPositionRectHeight: 39
+ContentDescriptionThingPositionRectWidth: 59
+ContentDescriptionThingPositionRectX: 562
+ContentDescriptionThingPositionRectY: 286
+ContentDescriptionXmlns	http://www.jpeg.org/jpx/1.0/xml
+ExifByteOrder	Big-endian (Motorola, MM)
+FileTypeExtension	jp2
+FileType	JP2
+GeoTiffVersion	1.1.0
+GTCitation	NAD83 / UTM zone 18N
+GTModelType	Projected
+GTRasterType	Pixel Is Area
+ImageCreationGeneralCreationInfoCreationTime: 2001:08:01 15:40:00.000-06:00
+ImageCreationSchemaLocation	http://www.jpeg.org/jpx/1.0/xml.http://www.jpeg.org/metadata/15444-2.xsd
+ImageCreationXmlns	http://www.jpeg.org/jpx/1.0/xml
+ImageHeight	16
+ImageSize	16x16
+ImageWidth	16
+MajorBrand	JPEG 2000 Image (.JP2)
+Megapixels	0.000256
+MIMEType	image/jp2
+MinorVersion	0.0.0
+ModelTiePoint	0 0 0 334159.28 4429865.18 0
+NumberOfComponents	3
+PixelScale	1 1 0
+PlanarConfiguration	Chunky
+ProjectedCSType	NAD83 UTM zone 18N
+ProjLinearUnits	Linear Meter
+ResolutionUnit	inches
+SamplesPerPixel	1
+StripByteCounts	0
+StripOffsets	101
+XResolution	72
+YCbCrPositioning	Centered
+YResolution	72

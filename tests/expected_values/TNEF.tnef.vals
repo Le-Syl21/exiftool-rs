@@ -1,0 +1,37 @@
+AlternateRecipientAllowed	True
+AppVersion	11.0
+ClientSubmitTime	2004:02:17 20:25:35+01:00
+CodePage	Windows Latin 1 (Western European)
+CorrelationKey	<2896107D7E52DF4DB5D10536DBFEFAD07E37@user.example.com>
+CreateDate	2004:02:17 21:26:10+01:00
+CreatorName	Test21uw2
+FileTypeExtension	tnef
+FileType	TNEF
+Hidden	False
+InternetCodePage	1252
+InternetMessageID	<2896107D7E52DF4DB5D10536DBFEFAD07E37@jeseogpuw2.mydomuw2.extest.microsoft.com>
+LastModifierName	Test21uw2
+LocalUserID	1033
+MessageBodyRTF	(Binary data 171 bytes, use -b option to extract)
+MessageClass	IPM.Microsoft Mail.Note
+MessageCodePage	1252
+MessageID	757BB19CDE936A4087D90BB784C58E3B
+MessageModifyDate	2004:02:17 12:26:09
+MIMEType	application/vnd.ms-tnef
+ModifyDate	2004:02:17 21:26:10+01:00
+NormalizedSubject	Simple subject
+Priority	High
+ReadOnly	False
+ReceivedByAddressType	SMTP
+ReceivedByEmailAddress	Test21uw2@mydomuw2.extest.microsoft.com
+ReceivedByName	Test21uw2
+ReceivedRepresentingAddressType	SMTP
+ReceivedRepresentingEmailAddress: Test21uw2@mydomuw2.extest.microsoft.com
+ReceivedRepresentingName	Test21uw2
+SenderName	Test21uw2
+SentDate	2004:02:17 11:25:35
+SpamConfidenceLevel	-1
+Subject	Simple subject
+SyncBodyCount	13
+SyncBodyData	SIMPLEMESSAGE
+TNEFVersion	0.1.0.0

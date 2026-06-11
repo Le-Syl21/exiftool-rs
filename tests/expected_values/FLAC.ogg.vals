@@ -1,0 +1,13 @@
+BitsPerSample	8
+BlockSizeMax	4608
+BlockSizeMin	4608
+Channels	2
+FileTypeExtension	ogg
+FileType	OGG
+FrameSizeMax	0
+FrameSizeMin	0
+MD5Signature	00000000000000000000000000000000
+MIMEType	audio/ogg
+SampleRate	8000
+TotalSamples	0
+Vendor	reference libFLAC 1.1.2 20050205

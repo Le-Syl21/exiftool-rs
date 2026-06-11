@@ -1,0 +1,39 @@
+ABLabel	Other
+AB_UID                          : EBAC8BE8-E695-457F-AE4D-E076ECEEA002:ABPerson
+AddressHomePref	;;Home St.;City;ON;K0K0K0;Canada
+AddressOtherGeolocation	12.3457, 78.910
+AddressOtherLabel	Test.Label
+AddressOther	;;Other Rd.;City;ON;K0K0K0;Canada
+AddressWork	;;Work St.;City;ON;K0K0K0;Canada
+AIMHomePref	AIMName
+Birthday	1900:01:02
+EmailInternetHomePref	someone@home.email
+EmailInternet	someone@other.email
+EmailInternetWork	someone@work.email
+FileTypeExtension	vcf
+FileType	VCard
+FormattedName	Phil Harvey
+ICQPref	ICQName
+IMPP	aim:ICQName
+IMPPHomePref	aim:AIMName
+IMPPWork	xmpp:FacebookName
+LabelWork	12 Cucumber St...SaladVille ON..Canada
+LogoImageJpeg	(Binary data 18 bytes, use -b option to extract)
+MIMEType	text/vcard
+Name	Harvey;Phil;;;
+Note-fr                         : Oui!
+Note	This is "a", comma, \backslash.newline.note!
+Organization	ExifTool;
+PhotoJpeg	(Binary data 18 bytes, use -b option to extract)
+Software	-//Apple Inc.//Mac OS X 10.10.2//EN
+SoundOgg	http://example.com/sound.ogg
+TelephoneCellVoicePref	555-0000
+TelephoneHomeVoice	555-2222
+TelephoneIphoneCellVoice	555-1111
+TelephoneMain	555-4444
+TelephoneOtherVoice	555-8888
+TelephonePager	555-6666
+TelephoneWorkFax	555-5555
+TelephoneWorkVoice	555-3333
+URLPref	https://exiftool.org/
+VCardVersion	3.0

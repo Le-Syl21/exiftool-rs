@@ -1,0 +1,10 @@
+FileTypeExtension	xml
+FileType	XML
+HistoryRunTrackTrackpointPositionAltitude: 142.893
+HistoryRunTrackTrackpointPositionLatitude: 43.64986
+HistoryRunTrackTrackpointPositionLongitude: -79.58321
+HistoryRunTrackTrackpointTime	2004:08:28 13:45:00Z
+HistorySchemaLocation	http://www.garmin.com/xmlschemas/ForerunnerLogbook http://www.garmin.com/xmlschemas/ForerunnerLogbookv1.xsd
+HistoryVersion	1
+HistoryXmlns	http://www.garmin.com/xmlschemas/ForerunnerLogbook
+MIMEType	application/xml

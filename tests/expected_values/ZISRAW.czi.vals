@@ -1,0 +1,34 @@
+EyePieceDepthOfField	0.487202380952381
+EyePieceFieldOfView	23
+EyePieceId	MTBEyePiece
+EyePieceIsAvailable	true
+EyePieceIsBroken	false
+EyePieceIsBrokenReason	
+EyePieceIsLightSink	false
+EyePieceIsLightSource	false
+EyePieceMag	10
+EyePieceModel	
+EyePieceMotorization	None
+EyePieceName	10x Eyepiece SF23
+EyePieceTotalFieldOfView	0.575
+EyePieceTotalMag	400
+EyePieceUniqueName	Eyepiece.10x_23
+FileGUID	8fae1a521bc8714e97e12b82ec8fa652
+FileType	CZI
+FileTypeExtension	czi
+MicroscopeDeviceRefId	MTBCameraAdapter_MTBSideportChanger_Left
+MicroscopeId	Microscope
+MicroscopeIsAvailable	true
+MicroscopeIsBroken	false
+MicroscopeIsBrokenReason	
+MicroscopeIsLightSink	false
+MicroscopeIsLightSource	false
+MicroscopeModel	
+MicroscopeMotorization	Motorized
+MicroscopeName	Axio Observer.Z1
+MicroscopeStandSpecification	Inverted
+MicroscopeUniqueName	AquilaZ.Stand
+MIMEType	image/x-zeiss-czi
+PrimaryFileGUID	8fae1a521bc8714e97e12b82ec8fa652
+XML	(Binary data 1003 bytes, use -b option to extract)
+ZISRAWVersion	1.0

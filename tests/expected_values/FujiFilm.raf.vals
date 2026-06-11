@@ -1,0 +1,120 @@
+AFMode	Single Point
+Aperture	8.0
+ApertureValue	8.0
+AutoBracketing	Off
+BitsPerSample	8
+BlueBalance	1.341146
+BrightnessValue	8.41
+CircleOfConfusion	0.020 mm
+ColorComponents	3
+ColorSpace	sRGB
+ComponentsConfiguration	Y, Cb, Cr, -
+CompressedBitsPerPixel	3
+Compression	JPEG (old-style)
+Contrast	Normal
+Copyright	
+CreateDate	2007:05:22 13:58:30
+CustomRendered	Normal
+DateTimeOriginal	2007:05:22 13:58:30
+DynamicRangeSetting	Auto
+DynamicRange	Wide
+EncodingProcess	Baseline DCT, Huffman coding
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	960
+ExifImageWidth	1440
+ExifVersion	0221
+ExposureCompensation	0
+ExposureCount	1
+ExposureMode	Manual
+ExposureProgram	Manual
+ExposureTime	1/250
+FacesDetected	0
+FileSource	Digital Camera
+FileTypeExtension	raf
+FileType	RAF
+FilmMode	F0/Standard (Provia)
+FlashExposureComp	0
+Flash	Off, Did not fire
+FlashpixVersion	0100
+FNumber	8.0
+FocalLength35efl	70.0 mm (35 mm equivalent: 105.0 mm)
+FocalLength	70.0 mm
+FocalLengthIn35mmFormat	105 mm
+FocalPlaneResolutionUnit	cm
+FocalPlaneXResolution	630
+FocalPlaneYResolution	630
+FocusMode	Auto
+FOV	19.5 deg
+FujiFlashMode	Off
+FujiLayout	1 2 1 0
+GPSVersionID	2.2.0.0
+HyperfocalDistance	30.58 m
+ImageHeight	8
+ImageSize	4256x1424
+ImageWidth	8
+InternalSerialNumber	FPX20582698 Y-1146 2007:02:19 8C0020100A84
+InteropIndex	R98 - DCF basic file (sRGB)
+InteropVersion	0100
+ISO	100
+LightSource	Unknown
+LightValue	14.0
+Make	FUJIFILM
+MaxApertureAtMaxFocal	2.8
+MaxApertureAtMinFocal	2.8
+MaxApertureValue	2.8
+MaxFocalLength	70
+Megapixels	6.1
+MeteringMode	Multi-segment
+MIMEType	image/x-fujifilm-raf
+MinFocalLength	28
+Model	FinePix S5Pro
+ModifyDate	2007:05:22 13:58:30
+NoiseReduction	Normal
+Orientation	Horizontal (normal)
+PictureMode	Manual
+PreviewImage	(Binary data 12167 bytes, use -b option to extract)
+PrintIMVersion	0250
+Quality	NORMAL
+RAFCompression	Uncompressed
+RAFVersion	0106
+RawExposureBias	0
+RawImageCroppedSize	4256x1424
+RawImageCropTopLeft	10 48
+RawImageFullSize	4352x1444
+RawImageSize	4288x1440
+RedBalance	1.565104
+RelativeExposure	0
+ResolutionUnit	inches
+Saturation	Normal
+ScaleFactor35efl	1.5
+SceneCaptureType	Standard
+SceneType	Directly photographed
+SensingMethod	One-chip color area
+SequenceNumber	0
+Sharpness	Normal
+ShutterSpeed	1/250
+ShutterSpeedValue	1/256
+SlowSync	Off
+Software	Digital Camera FinePix S5Pro   Ver1.06
+SubjectDistanceRange	Unknown
+ThumbnailImage	(Binary data 9362 bytes, use -b option to extract)
+ThumbnailLength	9362
+ThumbnailOffset	2704
+UserComment	
+Version	0130
+WB_GRGBLevels                   : 384 601 384 515
+WB_GRGBLevelsAuto               : 384 601 384 515
+WB_GRGBLevelsCloudy             : 384 679 384 438
+WB_GRGBLevelsDaylight           : 384 601 384 515
+WB_GRGBLevelsDaylightFluor      : 384 775 384 460
+WB_GRGBLevelsDayWhiteFluor      : 384 648 384 573
+WB_GRGBLevelsLivingRoomWarmWhiteFluor: 384 419 384 920
+WB_GRGBLevelsTungsten           : 384 384 384 832
+WB_GRGBLevelsWarmWhiteFluor     : 384 509 384 878
+WB_GRGBLevelsWhiteFluorescent   : 384 644 384 711
+WhiteBalance	Auto
+WhiteBalanceFineTune	Red +0, Blue +0
+XResolution	72
+YCbCrPositioning	Co-sited
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	72

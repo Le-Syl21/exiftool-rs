@@ -1,0 +1,91 @@
+AlphaTilt	-64.0024700625157
+Application	Tomography
+AppliedDefocus	-1.5e-06
+AppVersion	4.10.0.65
+BetaTilt	0
+BinningHeight	1
+BinningWidth	1
+Bitmask1	0xffffffff
+Bitmask2	0x0cfff01f
+Bitmask3	0x007e8040
+Bitmask4	0x00000000
+CameraLength	0
+CameraName	BM-Falcon
+CellAlpha	90
+CellBeta	90
+CellDepth	0
+CellGamma	90
+CellHeight	15289.4248046875
+CellWidth	15289.4248046875
+ConvergenceAngle	0
+Defocus	-1.5e-06
+DensityMax	5662
+DensityMean	3155.2578125
+DensityMin	1958
+DirectDetAlignFrames	No
+DirectDetElectronCounting	No
+Dose	3.51360899930879e+20
+DualAxisRot	0
+DwellTime	0
+EFTEMOn	No
+ExtendedHeaderSize	1536
+ExtendedHeaderType	FEI1
+FileTypeExtension	mrc
+FileType	MRC
+FullScanFOV_X                   : 0.473917752802174
+FullScanFOV_Y                   : 0.473917752802174
+GridSize	4096 4096 2
+HighMagnificationMode	SA
+HighTension	200000
+IlluminationArea	0.473917752802174
+ImageDepth	2
+ImageDepthAxis	Z
+ImageHeight	4096
+ImageHeightAxis	Y
+ImageMode	16-bit unsigned integer
+ImageSize	4096x4096
+ImageWidth	4096
+ImageWidthAxis	X
+InstrumentMode	TEM
+IntegrationTime	0.299076
+Intensity	0.473917752802174
+MachineStamp	0x44 0x44 0x00 0x00
+Magnification	28000
+Megapixels	16.8
+MetadataSize	768
+MetadataVersion	0
+MicroscopeID	6419
+MicroscopeType	TALOS-D5197
+MIMEType	image/x-mrc
+MRCVersion	20140
+NumberOfLabels	0
+ObjectiveLens	HM
+Origin	0 0 0
+PhasePlate	Yes
+PixelSizeX	3.73276964893421e-10
+PixelSizeY	3.73276964893421e-10
+ProbeMode	Nano
+ProjectionMode	Imaging
+ReadoutAreaBottom	4096
+ReadoutAreaLeft	0
+ReadoutAreaRight	4096
+ReadoutAreaTop	0
+RMSDeviation	-1
+ScanSizeBottom	0
+ScanSizeLeft	0
+ScanSizeRight	0
+ScanSizeTop	0
+ShiftOffsetX	0
+ShiftOffsetY	0
+ShiftX	-0.00204008771106601
+ShiftY	0.009031618013978
+SpaceGroupNumber	0
+SpotIndex	7
+StartPoint	0 0 0
+STEMDefocus	-1.5e-06
+TiltAxisAngle	-0.847676487969243
+TimeStamp	2020:10:21 13:54:27
+Warning	[minor] Use the ExtractEmbedded option to read metadata for all frames
+XStage	-8.8173405e-05
+YStage	-2.8139594e-05
+ZStage	3.536763e-05

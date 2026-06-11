@@ -1,0 +1,338 @@
+About	uuid:80056b68-1045-fa97-3401-6f4ed84cd53d
+AdobeCMType	3
+AECCurrentExpIndex	308
+AECCurrentSensorLuma	22
+AFPosition	26
+Album	2013-09-01
+Alpha	1.000000
+Aperture	3.5
+ApertureValue	6.2
+APP14Flags0	(none)
+APP14Flags1	(none)
+ApplicationRecordVersion	2
+Artist	Phil Harvey
+ASF5Enable	1
+ASF5ExposureIndex1	180
+ASF5ExposureIndex2	270
+ASF5FilterMode	0
+ASF5MaxExposureIndex	290
+AuthorsPosition	My Position
+AWBSampleDecision	7
+Azimuth	E
+BaseISO	100
+Beta	1.000000
+BitDepth	8
+BitsPerSample	8
+BlocksPerColumn	1
+BlocksPerRow	1
+BlueCurveLimits	255 0 255 0
+BlueCurvePoints	(0,0) (255,255)
+BlueMatrixColumn	0.14919 0.06322 0.74457
+BlueTRC	(Binary data 14 bytes, use -b option to extract)
+BrightnessAdj	0
+BrightnessValue	2
+By-line                         : Phil Harvey
+By-lineTitle                    : My Position
+CameraType	SR84
+CanonFileDescription	
+CanonFirmwareVersion	Firmware Version 01.00
+CanonImageType	AUT:Full automatic mode
+Caption-Abstract                : A witty caption
+CaptionWriter	I wrote it
+CaptureConditionsPAR	1
+Category	1
+CheckMark	Clear
+CircleOfConfusion	0.004 mm
+City	Kingston
+CMMFlags	Not Embedded, Independent
+CodePage	Unicode UTF-16, little endian
+ColorBitDepth	24
+ColorBW	1
+ColorClass	6 (Typical alt)
+ColorComponents	3
+ColorMode	1
+ColorPlanes	3
+ColorSpaceData	RGB
+ColorSpace	YCbCr, ITU-R BT 709, video
+ColorToneAdj	0
+ColorTransform	YCbCr
+Comment	© PhotoStudio Unicode comment..
+ComponentBitDepth	8
+ComponentsConfiguration	Y, Cb, Cr, -
+CompressedBitsPerPixel	1.6
+Compression	JPEG
+Condition	Good
+ConnectionSpaceIlluminant	0.9642 1 0.82491
+ConstrainedCropHeight	0
+ConstrainedCropWidth	0
+ContrastAdj	0
+ContTake	0
+Copyright	© 2006 Phil Harvey
+CopyrightFlag	False
+CopyrightNotice	Copyright 2004 Phil Harvey
+CorrectionMethod	0
+Country	Canada
+Country-PrimaryLocationName     : Canada
+CreateDate	2001:05:19 18:36:41
+CreatingApplication	Digita
+Creator	Phil Harvey
+Credit	My Credit
+CropActive	No
+CropAspectRatio	Free
+CropBottom	86.25%
+CropHeight	0
+CropLeft	24.557%
+CropRight	30.676%
+CropRotation	0
+CropTop	21.25%
+CropWidth	0
+Date	2013:09:01 20:12:19
+DateCreated	2004:02:26
+DateTimeOriginal	1998:05:01 21:33:18
+DCTEncodeVersion	100
+DependentImage1EntryNumber	0
+DependentImage2EntryNumber	0
+Description	UTF-16 (big-endian) encoded XMP
+DeviceAttributes	Reflective, Glossy, Positive, Color
+DeviceManufacturer	none
+DeviceModel	
+DisplayedUnitsX	inches
+DisplayedUnitsY	inches
+DocumentID	adobe:docid:photoshop:4cc7b857-69d0-11d8-8ac4-bb59c92f0d9a
+DynamicRangeMax	4095
+DynamicRangeMin	0
+EmbeddedAudioFile	(Binary data 16 bytes, use -b option to extract)
+EmbeddedAudioFileName	SoundShot_000
+EncodingProcess	Baseline DCT, Huffman coding
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	80
+ExifImageWidth	100
+ExifVersion	0210
+ExposureCompensation	1
+ExposureProgram	Program AE
+ExposureTime	1/155
+ExtensionClassID	10000230-6FC0-11D0-BD01-00609719A180
+ExtensionCreateDate	1999:05:14 21:47:25
+ExtensionDescription	Presized image for LCD display
+ExtensionModifyDate	1999:05:14 21:47:25
+ExtensionName	Screen nail
+ExtensionPersistence	Invalidated By Modification
+FileFormat	JPEG (lossy)
+FileNumber	45
+FileSource	Digital Camera
+FileTypeExtension	jpg
+FileType	JPEG
+FilmCategory	2
+FilmGencode	2
+FilmProductCode	37
+FilmSize	1
+Flags	0x1010000
+Flash	Fired
+FlashGuideNumber	0
+FlashpixVersion	0100
+FlashThreshold	0
+FNumber	3.5
+FocalLength35efl	6.0 mm (35 mm equivalent: 41.4 mm)
+FocalLength	6.0 mm
+FocalPlaneResolutionUnit	cm
+FocalPlaneXResolution	3053
+FocalPlaneXSize	5.05 mm
+FocalPlaneYResolution	3053
+FocalPlaneYSize	3.71 mm
+FocalType	Fixed
+FOV	47.0 deg
+FrameNumber	0
+FreeBytes	(Binary data 12 bytes, use -b option to extract)
+GlobalAltitude	30
+GlobalAngle	30
+GreenCurveLimits	255 0 255 0
+GreenCurvePoints	(0,0) (255,255)
+GreenMatrixColumn	0.20528 0.62567 0.06087
+GreenTRC	(Binary data 14 bytes, use -b option to extract)
+HasRealMergedData	Yes
+Headline	No headline
+HyperfocalDistance	2.36 m
+ID	AGFA DIGITAL CAMERA
+ImageClass	General Purpose
+ImageColor	Monochrome
+ImageDescription	A witty caption
+ImageFormat	IMode B
+ImageHeight	8
+ImageRotationStatus	0
+ImageSize	8x8
+ImageSourceEK	1
+ImageWidth	8
+Instructions	What instructions
+InterleavedField	Not Interleaved
+IPTCDigest	05ad1770b1a95f1f9788ac995fa647da
+ISO	100
+JFIFVersion	1.01
+JobRefName	My Job
+JPEG-HDRVersion                 : 11
+JPEGProcess	Baseline sequential DCT, Huffman coding, 8-bit samples
+JSONInfo	{"com.android.camera.joint.fullview.orientation":0,"com.android.camera.hdr":20737,"com.android.camera.fisheye":-1,"com.android.camera.joint.conshoot":0,"com.android.camera.moduleid":"photo","com.android.camera.joint.motioncapture":0,"version":1000,"com.android.camera.joint.fullview":false}
+JUMDLabel	cai
+JUMDType	(cacb)-0011-0010-800000aa00389b71
+Keywords	jambalaya
+LightS	0
+LightValue	10.9
+Lit	No
+Ln0	0.122262
+Ln1	2.634655
+Location	Roundabout
+LuminanceCurveLimits	255 0 255 0
+LuminanceCurvePoints	(0,0) (255,255)
+Macro	Off
+Make	Canon
+Marked	False
+MaxApertureValue	3.5
+MeasuredEV	16.25
+MediaBlackPoint	0 0 0
+MediaWhitePoint	0.95045 1 1.08905
+Megapixels	0.000064
+MetadataNumber	0100
+MeteringMode	Multi-segment
+MIMEType	image/jpeg
+ModelAndVersion	Version 9
+Model	Canon PowerShot A5
+ModifyDate	2004:02:26 09:36:46
+MPFVersion	0100
+MPImageFlags	Dependent child image
+MPImageFormat	JPEG
+MPImageLength	1039273
+MPImageStart	5945405
+MPImageType	Large Thumbnail (full HD equivalent)
+Name	Glass home at night
+NITFVersion	2.00
+NumberOfImages	2
+NumSlices	1
+ObjectName	Test IPTC picture
+Orientation	Horizontal (normal)
+OriginalFileName	C:\DC97\CTG_0000\AUT_0045.JPG
+OriginalImageHeight	16
+OriginalImageWidth	16
+OriginalTransmissionReference	What is a transmission reference
+OwnerName	
+People	Santa
+PhotoshopFormat	Standard
+PhotoshopQuality	7
+PicLen	561039
+PixelAspectRatio	1
+Places	Jamaica
+PreviewImage	(Binary data 1039273 bytes, use -b option to extract)
+PrimaryPlatform	Apple Computer Inc.
+PrintIMVersion	0250
+PrintPosition	0 0
+PrintScale	1
+PrintStyle	Centered
+ProfileClass	Display Device Profile
+ProfileCMMType	Adobe Systems Inc.
+ProfileConnectionSpace	XYZ
+ProfileCopyright	Copyright 1999 Adobe Systems Incorporated
+ProfileCreator	Adobe Systems Inc.
+ProfileDateTime	1999:06:03 00:00:00
+ProfileDescription	Adobe RGB (1998)
+ProfileFileSignature	acsp
+ProfileID	0
+ProfileVersion	2.1.0
+Protect	0
+Province-State                  : Ont
+Quality	70
+RatioImage	(Binary data 19 bytes, use -b option to extract)
+RawBrightnessAdj	0.00
+RawColorAdj	Shot Settings
+RawCustomSaturation	0
+RawCustomTone	0
+ReaderName	Adobe Photoshop 7.0
+RecordID	0
+RedCurveLimits	255 0 255 0
+RedCurvePoints	(0,0) (255,255)
+RedMatrixColumn	0.60974 0.31111 0.01947
+RedTRC	(Binary data 14 bytes, use -b option to extract)
+RenderingIntent	Perceptual
+Resolution	5
+ResolutionUnit	inches
+RGBCurveLimits	255 0 255 0
+RGBCurvePoints	(0,0) (255,255)
+Rights	Copyright 2004 Phil Harvey
+RollGuidElements	00000000000000000000000000000000
+ROMOperationMode	USA
+Rotation	0
+S0	1e8,0,11b0,6f72,15cf,4225,4225,1050000,a1e0004,0,2f0030d,2f102c5,2880090,0,0
+S2n	2.269635e+03
+SaturationAdj	100
+SBAExposureRecord	(Binary data 368 bytes, use -b option to extract)
+SBAInputImageBitDepth	12 12 12
+SBAInputImageColorspace	3
+SBA_RGBShifts                   : 0 0 0
+ScaleFactor35efl	6.9
+SceneType	Directly photographed
+ScreenNail	(Binary data 5917 bytes, use -b option to extract)
+SensingMethod	One-chip color area
+SerialNumber	#00000001
+SharpnessAdj	0
+ShutterReleaseMethod	Single Shot
+ShutterReleaseTiming	Priority on focus
+ShutterSpeed	1/155
+ShutterSpeedValue	1/83
+SignType	Information
+SlicesGroupName	IPTC
+Software	Adobe Photoshop 7.0
+Source	I'm the source
+SpecialInstructions	What instructions
+SPIFFVersion	1.2
+State	Ont
+Storage-StreamPathname          : /.Screen Nail_bd0100609719a180
+StreamBitDepth	8
+StreamColor	Monochrome
+Subject	ExifTool, Test, XMP
+SupplementalCategories	amazing, image, utilities
+T0	11b15600,1290000,e00c0f,2,0,0
+TagB	332
+Tagged	Yes
+TagQ	96
+TagR	293
+TargetCompressionRatio	2
+TargetDistanceSetting	476 mm
+TargetImageType	Real-world Subject
+ThmLen	3802
+ThumbnailFileName	C:\DC97\CTG_0000\THM_0045.JPG
+ThumbnailImage	(Binary data 1558 bytes, use -b option to extract)
+ThumbnailLength	0
+ThumbnailOffset	852
+TimeZoneCode	0
+TimeZoneInfo	0
+Title	Test IPTC picture
+ToneCurveActive	No
+ToneCurveInterpolation	Curve
+ToneCurveMode	RGB
+ToneCurveProperty	Shot Settings
+Tool_Name                       : Media Center
+Tool_Version                    : 19.0.67
+TrailerSignature	
+TransmissionReference	What is a transmission reference?
+Urgency	8 (least urgent)
+URL	https://exiftool.org/
+URL_List                        : 
+UsedExtensionNumbers	1
+UserAdjSBA_RGBShifts            : (Binary data 5 bytes, use -b option to extract)
+Version	v84-71
+VRDVersion	1.0.0
+Warning	IPTCDigest is not current. XMP may be out of sync
+WBAdjColorTemp	5600
+WBAdjRGGBLevels	0 0 0 0
+WBFineTuneActive	No
+WBFineTuneSaturation	0
+WBFineTuneTone	0
+WebStatement	https://exiftool.org/
+WhiteBalanceAdj	Shot Settings
+WorkColorSpace	sRGB
+Writer-Editor                   : I wrote it
+WriterName	Adobe Photoshop
+XMPToolkit	Image::ExifTool 4.73
+XResolution	300
+XYResolution	9
+YCbCrPositioning	Co-sited
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	300
+Zoom	2.1

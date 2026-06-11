@@ -1,0 +1,96 @@
+AngleAdj	13.08
+AquaHSL	0.2 0.3 0.4
+AutoLightingOptimizerOn	Yes
+AutoLightingOptimizer	Strong
+BlueCurvePoints	(3,4) (132,113) (255,255)
+BlueHSL	0.5 0.6 0.7
+CheckMark	Clear
+ChromaticAberration	121
+ChromaticAberrationBlue	-0.5
+ChromaticAberrationOn	Yes
+ChromaticAberrationRed	-0.1
+ChrominanceNoiseReduction	2.7
+ColorBlurOn	Yes
+ColorHue	-10
+ColorSaturationAdj	1.6
+ColorToneAdj	0.7
+ContrastAdj	-1
+CropActive	Yes
+CropAngle	13.08
+CropAspectRatio	Custom
+CropAspectRatioCustom	2 1
+CropHeight	1476
+CropOriginalHeight	3648
+CropOriginalWidth	5472
+CropRotatedOriginalHeight	4740
+CropRotatedOriginalWidth	6089
+CropRotation	0
+CropWidth	2952
+CropX	2060
+CropY	1291
+DistortionCorrection	48
+DistortionCorrectionOn	Yes
+DLOOn	No
+DLOSetting	50
+DR4CameraModel	EOS 7D Mark II
+FileType	DR4
+FileTypeExtension	dr4
+GammaBlackPoint	+0.000
+GammaColorTone	0
+GammaContrast	0
+GammaCurveOutputRange	0 16383
+GammaHighlight	0
+GammaLinear	No
+GammaMidPoint	+0.000
+GammaSaturation	0
+GammaShadow	0
+GammaSharpnessStrength	3
+GammaUnsharpMaskFineness	4
+GammaUnsharpMaskStrength	3
+GammaUnsharpMaskThreshold	4
+GammaWhitePoint	+0.000
+GreenCurvePoints	(1,2) (125,139) (254,253)
+GreenHSL	-0.1 0 0.1
+HighlightAdj	0.5
+LensFocalLength	135
+LuminanceNoiseReduction	4.4
+MagentaHSL	1.1 1.2 1.3
+MIMEType	application/octet-stream
+MonochromeFilterEffect	None
+MonochromeToningEffect	None
+OrangeHSL	-0.7 -0.6 -0.5
+PeripheralIllumination	34
+PeripheralIlluminationOn	Yes
+PictureStyle	Neutral
+PurpleHSL	0.8 0.9 1
+Rating	4
+RawBrightnessAdj	0
+RedCurvePoints	(2,3) (126,116) (254,253)
+RedHSL	-1 -0.9 -0.8
+RGBCurvePoints	(0,79) (117,172) (242,255)
+Rotation	0
+SaturationAdj	98
+ShadowAdj	-0.1
+SharpnessAdjOn	Yes
+SharpnessAdj	Unsharp Mask
+SharpnessStrength	0
+ShootingDistance	100%
+StampToolCount	0
+ToneCurveBrightness	34
+ToneCurveColorSpace	Luminance
+ToneCurveContrast	-20
+ToneCurveInputRange	0 242
+ToneCurveOriginal	No
+ToneCurveOutputRange	79 255
+ToneCurveShape	Straight
+ToneCurveX	117
+ToneCurveY	172
+UnsharpMaskFineness	2
+UnsharpMaskStrength	3
+UnsharpMaskThreshold	7.2
+WBAdjBlueAmber	3
+WBAdjColorTemp	5200
+WBAdjMagentaGreen	-5
+WhiteBalanceAdj	Cloudy
+WorkColorSpace	Wide Gamut RGB
+YellowHSL	-0.4 -0.3 -0.2

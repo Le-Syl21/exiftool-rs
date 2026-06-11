@@ -1,0 +1,21 @@
+Album	The Test Album
+Artist	Who Knows
+AudioChannels	2
+Comment	a nice comment
+CoverArt	(Binary data 1351 bytes, use -b option to extract)
+CoverArtMIMEType	image/jpeg
+Date	2006
+Duration	1.34 s (approx)
+FileTypeExtension	ogg
+FileType	OGG
+Genre	Funk
+MediajukeboxDate	38718
+MediajukeboxToolName	Media Center
+MediajukeboxToolVersion	11.1.197
+MIMEType	audio/ogg
+NominalBitrate	32 kbps
+SampleRate	22050
+Title	A 4s sample for testing embedded cover art
+TrackNumber	1
+Vendor	AO; aoTuV b4b [20051117] (based on Xiph.Org's libVorbis)
+VorbisVersion	0

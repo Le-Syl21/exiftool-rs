@@ -1,0 +1,9 @@
+ColumnCount	6
+Delimiter	Comma
+FileType	CSV
+FileTypeExtension	csv
+MIMEEncoding	us-ascii
+MIMEType	text/csv
+Newlines	Unix LF
+Quoting	(none)
+RowCount	3

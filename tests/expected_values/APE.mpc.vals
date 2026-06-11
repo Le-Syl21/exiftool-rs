@@ -1,0 +1,37 @@
+Album	Phil's Greatest Hits
+Artist	Phil Harvey
+Comment	My Comments
+Composer	A Composer
+CoverArtFront	(Binary data 1761 bytes, use -b option to extract)
+CoverArtFrontDesc	X:\_kuvat\Kraftwerk - Cover Art Test.jpg
+DateTimeOriginal	2005
+EncoderVersion	1.1.5
+FastSeek	No
+FileTypeExtension	mpc
+FileType	MPC
+Gapless	Yes
+Genre	Testing
+Grouping	This group
+ID3Size	391
+Lyrics	Do-wap she-bang
+MaxBand	28
+MediaJukeboxDate	38353
+MIMEType	audio/x-musepack
+PartOfSet	1/2
+Picture	(Binary data 15 bytes, use -b option to extract)
+PictureDescription	comment
+PictureFormat	JPG
+PictureType	Other
+Quality	5 (Standard)
+RelativeVolumeAdjustment	+18.0% Right, +18.0% Left
+ReplayGainAlbumGain	0
+ReplayGainAlbumPeak	0
+ReplayGainTrackGain	0
+ReplayGainTrackPeak	0
+SampleRate	44100
+Title	ExifTool Test
+ToolName	Media Center
+ToolVersion	11.1.102
+TotalFrames	102
+Track	1/5
+Year	2005

@@ -1,0 +1,111 @@
+BlueCurveLimits	255 0 255 0
+BlueCurvePoints	(0,0) (5,19) (10,32) (57,104) (104,156) (152,199) (200,233) (227,247) (255,255)
+BrightnessAdj	0
+CheckMark	3
+ColorToneAdj	0
+ConstrainedCropHeight	1.2
+ConstrainedCropWidth	5.5
+ContrastAdj	0
+CropActive	Yes
+CropAspectRatio	Free
+CropHeight	123
+CropLeft	1164
+CropTop	608
+CropWidth	564
+CustomColorTone	4
+CustomContrast	0
+CustomLinear	No
+CustomOutputHighlightPoint	4095
+CustomOutputShadowPoint	0
+CustomRawHighlightPoint	4095
+CustomRawShadowPoint	6
+CustomSaturation	2
+CustomSharpness	7
+DynamicRangeMax	4095
+DynamicRangeMin	0
+FaithfulOutputHighlightPoint	4095
+FaithfulOutputShadowPoint	0
+FaithfulRawColorTone	4
+FaithfulRawContrast	0
+FaithfulRawHighlightPoint	4095
+FaithfulRawLinear	No
+FaithfulRawSaturation	2
+FaithfulRawShadowPoint	6
+FaithfulRawSharpness	7
+FileTypeExtension	vrd
+FileType	VRD
+GreenCurveLimits	248 7 240 4
+GreenCurvePoints	(7,4) (11,23) (16,34) (59,100) (104,147) (149,187) (196,219) (221,232) (248,240)
+IsCustomPictureStyle	No
+LandscapeOutputHighlightPoint	4095
+LandscapeOutputShadowPoint	0
+LandscapeRawColorTone	4
+LandscapeRawContrast	0
+LandscapeRawHighlightPoint	4095
+LandscapeRawLinear	No
+LandscapeRawSaturation	2
+LandscapeRawShadowPoint	6
+LandscapeRawSharpness	7
+LuminanceCurveLimits	255 0 255 0
+LuminanceCurvePoints	(0,0) (255,255)
+MIMEType	application/octet-stream
+MonochromeContrast	3
+MonochromeFilterEffect	Yellow
+MonochromeLinear	No
+MonochromeOutputHighlightPoint	4095
+MonochromeOutputShadowPoint	0
+MonochromeRawHighlightPoint	4095
+MonochromeRawShadowPoint	0
+MonochromeSharpness	4
+MonochromeToningEffect	Purple
+NeutralOutputHighlightPoint	4095
+NeutralOutputShadowPoint	0
+NeutralRawColorTone	4
+NeutralRawContrast	0
+NeutralRawHighlightPoint	4095
+NeutralRawLinear	No
+NeutralRawSaturation	2
+NeutralRawShadowPoint	6
+NeutralRawSharpness	7
+PictureStyle	Standard
+PortraitOutputHighlightPoint	4095
+PortraitOutputShadowPoint	0
+PortraitRawColorTone	4
+PortraitRawContrast	0
+PortraitRawHighlightPoint	4095
+PortraitRawLinear	No
+PortraitRawSaturation	2
+PortraitRawShadowPoint	6
+PortraitRawSharpness	7
+RawBrightnessAdj	-0.83
+RawColorAdj	Shot Settings
+RawCustomSaturation	0
+RawCustomTone	0
+RedCurveLimits	255 0 255 0
+RedCurvePoints	(0,0) (5,16) (11,30) (58,101) (106,154) (154,198) (202,233) (228,246) (255,255)
+RGBCurveLimits	255 0 255 0
+RGBCurvePoints	(0,0) (255,255)
+Rotation	0
+SaturationAdj	119
+SharpnessAdj	0
+StandardOutputHighlightPoint	4095
+StandardOutputShadowPoint	0
+StandardRawColorTone	-4
+StandardRawContrast	0
+StandardRawHighlightPoint	4095
+StandardRawLinear	No
+StandardRawSaturation	0
+StandardRawShadowPoint	0
+StandardRawSharpness	1
+ToneCurveActive	Yes
+ToneCurveInterpolation	Curve
+ToneCurveMode	RGB
+ToneCurveProperty	Shot Settings
+VRDVersion	2.0.0
+WBAdjColorTemp	5600
+WBAdjRGGBLevels	1856 832 832 928
+WBFineTuneActive	Yes
+WBFineTuneSaturation	0
+WBFineTuneTone	358
+WhiteBalanceAdj	Manual (Click)
+WorkColorSpace	ColorMatch RGB
