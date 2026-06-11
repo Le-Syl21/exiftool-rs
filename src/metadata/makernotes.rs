@@ -7850,6 +7850,14 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                     format!("{} m", crate::value::format_g15(v as f64 / 1000.0))
                 }
             }),
+            // FlashMode (Type1 0x0004): default-model enum (4 => Red-eye Reduction).
+            0x0004 => value.as_u64().and_then(|v| match v {
+                1 => Some("Auto"),
+                2 => Some("On"),
+                3 => Some("Off"),
+                4 => Some("Red-eye Reduction"),
+                _ => None,
+            }.map(str::to_string)),
             0x3007 => value.as_u64().and_then(|v| match v {
                 0 => Some("Off"),
                 1 => Some("Auto"),
