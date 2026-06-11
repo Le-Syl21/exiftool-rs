@@ -160,6 +160,11 @@ pub(crate) const EXIF_PRIMARY_TAGS: &[&str] = &[
     "ApertureValue",
     "ComponentsConfiguration",
     "UserComment",
+    // Standard EXIF image-parameter tags (0xa408-0xa40c) take priority over the
+    // manufacturer's MakerNote duplicate when both are present (ExifTool default).
+    "Contrast",
+    "Saturation",
+    "Sharpness",
 ];
 
 /// EXIF metadata reader.

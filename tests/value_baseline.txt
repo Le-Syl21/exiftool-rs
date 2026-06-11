@@ -165,9 +165,7 @@ FujiFilm.raf	FacesDetected
 FujiFilm.raf	FocusMode
 FujiFilm.raf	InternalSerialNumber
 FujiFilm.raf	Model
-FujiFilm.raf	Saturation
 FujiFilm.raf	SequenceNumber
-FujiFilm.raf	Sharpness
 FujiFilm.raf	ThumbnailOffset
 FujiFilm.raf	Version
 FujiFilm.raf	WhiteBalanceFineTune
@@ -346,7 +344,6 @@ NikonD2Hs.jpg	PreviewImageStart
 NikonD2Hs.jpg	ProgramShift
 NikonD2Hs.jpg	RedBalance
 NikonD2Hs.jpg	SensorPixelSize
-NikonD2Hs.jpg	Sharpness
 NikonD70.jpg	AFPointsInFocus
 NikonD70.jpg	CFAPattern
 NikonD70.jpg	EffectiveMaxAperture
@@ -366,9 +363,7 @@ NikonD70.jpg	MaxFocalLength
 NikonD70.jpg	MinFocalLength
 NikonD70.jpg	PreviewImageStart
 NikonD70.jpg	ProgramShift
-NikonD70.jpg	Saturation
 NikonD70.jpg	SensorPixelSize
-NikonD70.jpg	Sharpness
 Olympus.jpg	CameraID
 Olympus.jpg	CameraType
 Olympus.jpg	DataDump
@@ -459,7 +454,6 @@ Pentax.jpg	AutoBracketing
 Pentax.jpg	BodyBatteryADLoad
 Pentax.jpg	BodyBatteryADNoLoad
 Pentax.jpg	CameraTemperature
-Pentax.jpg	Contrast
 Pentax.jpg	DriveMode
 Pentax.jpg	EffectiveLV
 Pentax.jpg	FlashMeteringSegments
@@ -473,9 +467,7 @@ Pentax.jpg	PentaxModelID
 Pentax.jpg	PreviewImageBorders
 Pentax.jpg	Rotation
 Pentax.jpg	SRActive
-Pentax.jpg	Saturation
 Pentax.jpg	SensitivityAdjust
-Pentax.jpg	Sharpness
 Pentax.jpg	ShutterCount
 Pentax.jpg	SlaveFlashMeteringSegments
 Pentax.jpg	TvExposureTimeSetting
@@ -517,7 +509,6 @@ Ricoh2.jpg	FirmwareVersion
 Ricoh2.jpg	InternalSerialNumber
 Ricoh2.jpg	ManufactureDate1
 Ricoh2.jpg	ManufactureDate2
-Ricoh2.jpg	Sharpness
 Ricoh2.jpg	UserComment
 Sanyo.jpg	DataDump
 Sanyo.jpg	FlashMode
