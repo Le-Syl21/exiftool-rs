@@ -414,13 +414,12 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
             if let Value::String(s) = value {
                 return Some(
                     match s.as_str() {
-                        "N" => "North",
-                        "S" => "South",
-                        "E" => "East",
-                        "W" => "West",
-                        _ => return None,
-                    }
-                    .to_string(),
+                        "N" => "North".to_string(),
+                        "S" => "South".to_string(),
+                        "E" => "East".to_string(),
+                        "W" => "West".to_string(),
+                        other => format!("Unknown ({})", other.trim()),
+                    },
                 );
             }
         }

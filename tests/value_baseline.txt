@@ -171,9 +171,7 @@ ISO.iso	BootSystem
 ISO.iso	VolumeSize
 ITC.itc	DataType
 InfiRay.jpg	GPSLatitude
-InfiRay.jpg	GPSLatitudeRef
 InfiRay.jpg	GPSLongitude
-InfiRay.jpg	GPSLongitudeRef
 InfiRay.jpg	IJPEGTempVersion
 InfiRay.jpg	IJPEGVersion
 InfiRay.jpg	VisibleSensorAperture
