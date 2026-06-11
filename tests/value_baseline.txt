@@ -12,7 +12,6 @@ ASF.wmv	SendDuration
 Apple.jpg	AccelerationVector
 Apple.jpg	FocusDistanceRange
 Apple.jpg	LensInfo
-Audible.aa	Copyright
 BigTIFF.btf	MIMEType
 Canon.jpg	BlueBalance
 Canon.jpg	DOF

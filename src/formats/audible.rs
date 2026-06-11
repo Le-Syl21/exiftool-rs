@@ -133,8 +133,48 @@ fn parse_metadata(data: &[u8], tags: &mut Vec<Tag>) {
         }
 
         let tag_name = audible_tag_name(&tag);
-        tags.push(mk(&tag_name, &tag_name, Value::String(val)));
+        tags.push(mk(&tag_name, &tag_name, Value::String(decode_html_entities(&val))));
     }
+}
+
+/// Decode HTML/XML entities (numeric &#NNN;/&#xHH; and the common named ones).
+fn decode_html_entities(s: &str) -> String {
+    if !s.contains('&') {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(amp) = rest.find('&') {
+        out.push_str(&rest[..amp]);
+        let tail = &rest[amp..];
+        if let Some(semi) = tail.find(';').filter(|&i| i <= 10) {
+            let ent = &tail[1..semi];
+            let decoded = if let Some(hex) = ent.strip_prefix("#x").or_else(|| ent.strip_prefix("#X")) {
+                u32::from_str_radix(hex, 16).ok().and_then(char::from_u32)
+            } else if let Some(dec) = ent.strip_prefix('#') {
+                dec.parse::<u32>().ok().and_then(char::from_u32)
+            } else {
+                match ent {
+                    "amp" => Some('&'),
+                    "lt" => Some('<'),
+                    "gt" => Some('>'),
+                    "quot" => Some('"'),
+                    "apos" => Some('\''),
+                    "copy" => Some('\u{a9}'),
+                    _ => None,
+                }
+            };
+            if let Some(c) = decoded {
+                out.push(c);
+                rest = &tail[semi + 1..];
+                continue;
+            }
+        }
+        out.push('&');
+        rest = &tail[1..];
+    }
+    out.push_str(rest);
+    out
 }
 
 fn audible_tag_name(key: &str) -> String {
