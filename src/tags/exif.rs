@@ -576,6 +576,12 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 }
             }
         }
+        // ExposureCompensation / ExposureBiasValue (Exif::PrintFraction)
+        (_, 0x9204) => {
+            if let Some(v) = value.as_f64() {
+                return Some(print_fraction(v));
+            }
+        }
         // Compression (IFD0/IFD1)
         (_, 0x0103) => {
             if let Some(v) = value.as_u64() {
@@ -713,6 +719,29 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
 
 /// Format a double or list of doubles with Perl-style %.15g precision and space separator.
 /// This matches ExifTool's output format for GeoTiff coordinate arrays.
+/// Port of Exif.pm `PrintFraction`: render a signed value as +N, +N/2, +N/3,
+/// or %+.3g, with a round-off guard.
+pub fn print_fraction(mut val: f64) -> String {
+    val *= 1.00001; // avoid round-off errors
+    if val == 0.0 {
+        "0".to_string()
+    } else if (val.trunc() / val) > 0.999 {
+        format!("{:+}", val.trunc() as i64)
+    } else if (((val * 2.0).trunc()) / (val * 2.0)) > 0.999 {
+        format!("{:+}/2", (val * 2.0).trunc() as i64)
+    } else if (((val * 3.0).trunc()) / (val * 3.0)) > 0.999 {
+        format!("{:+}/3", (val * 3.0).trunc() as i64)
+    } else {
+        // Perl sprintf("%+.3g", $val) — 3 significant digits, forced sign.
+        let s = crate::value::format_g_prec(val, 3);
+        if val > 0.0 {
+            format!("+{}", s)
+        } else {
+            s
+        }
+    }
+}
+
 pub fn format_geotiff_doubles(value: &Value) -> String {
     match value {
         Value::F64(v) => crate::value::format_g15(*v),

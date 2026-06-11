@@ -176,7 +176,6 @@ GE.jpg	GEModel
 GIF.gif	PixelAspectRatio
 GPS.jpg	Aperture
 GPS.jpg	City
-GPS.jpg	ExposureCompensation
 GPS.jpg	FNumber
 GPS.jpg	FileSource
 GPS.jpg	SceneType
@@ -529,7 +528,6 @@ Sanyo.jpg	Macro
 Sanyo.jpg	SelfTimer
 Sigma.jpg	ColorAdjustment
 Sigma.jpg	Contrast
-Sigma.jpg	ExposureCompensation
 Sigma.jpg	FileSource
 Sigma.jpg	Highlight
 Sigma.jpg	Quality

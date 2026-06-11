@@ -7788,6 +7788,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             }
         }
         Manufacturer::Sigma => match tag_id {
+            // ExposureCompensation (string form): ValueConv strips "Expo:".
+            0x000c => value
+                .as_str()
+                .map(|s| s.replacen("Expo:", "", 1).trim().to_string()),
             // MeteringMode: string-keyed PrintConv (Sigma.pm 0x0009).
             0x0009 => value.as_str().and_then(|s| {
                 Some(
