@@ -138,7 +138,6 @@ Font.pfb	Notice
 FotoStation.jpg	ObjectCycle
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
-FujiFilm.jpg	Sharpness
 FujiFilm.jpg	Version
 FujiFilm.raf	DynamicRange
 FujiFilm.raf	FacesDetected

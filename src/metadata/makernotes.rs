@@ -8072,6 +8072,24 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
         Manufacturer::Fujifilm => match tag_id {
             // InternalSerialNumber: decode the hex body number + manufacture date.
             0x0010 => value.as_str().map(fuji_internal_serial),
+            // Sharpness (0x1001): PrintHex enum.
+            0x1001 => value.as_u64().and_then(|v| {
+                match v {
+                    0x00 => Some("-4 (softest)"),
+                    0x01 => Some("-3 (very soft)"),
+                    0x02 => Some("-2 (soft)"),
+                    0x03 => Some("0 (normal)"),
+                    0x04 => Some("+2 (hard)"),
+                    0x05 => Some("+3 (very hard)"),
+                    0x06 => Some("+4 (hardest)"),
+                    0x82 => Some("-1 (medium soft)"),
+                    0x84 => Some("+1 (medium hard)"),
+                    0x8000 => Some("Film Simulation"),
+                    0xffff => Some("n/a"),
+                    _ => None,
+                }
+                .map(str::to_string)
+            }),
             // FocusMode (0x1021): 0=Auto, 1=Manual, 65535=Movie.
             0x1021 => value.as_u64().and_then(|v| {
                 match v {
