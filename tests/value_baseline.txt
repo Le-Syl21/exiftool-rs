@@ -529,7 +529,6 @@ Olympus2.jpg	ManometerReading
 Olympus2.jpg	PanoramaMode
 Olympus2.jpg	PreviewImageStart
 Olympus2.jpg	Quality
-Olympus2.jpg	RawDevEditStatus
 Olympus2.jpg	SpecialMode
 OlympusE1.jpg	AFAreas
 OlympusE1.jpg	AFPoint
@@ -550,8 +549,6 @@ OlympusE1.jpg	ImageProcessingVersion
 OlympusE1.jpg	LensFirmwareVersion
 OlympusE1.jpg	LensProperties
 OlympusE1.jpg	Quality
-OlympusE1.jpg	RawDevEditStatus
-OlympusE1.jpg	RawDevSettings
 OlympusE1.jpg	RawDevVersion
 OlympusE1.jpg	SensorTemperature
 OlympusE1.jpg	SpecialMode

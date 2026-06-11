@@ -5584,6 +5584,44 @@ fn read_makernote_ifd_with_base(
                             }
                             None => val.to_display_string(),
                         }
+                    } else if name == "RawDevEditStatus" {
+                        match val.as_u64() {
+                            Some(0) => "Original".to_string(),
+                            Some(1) => "Edited (Landscape)".to_string(),
+                            Some(6) | Some(8) => "Edited (Portrait)".to_string(),
+                            _ => val.to_display_string(),
+                        }
+                    } else if name == "RawDevSettings" && val.as_u64() == Some(0) {
+                        "(none)".to_string()
+                    } else if name == "AFPoint" {
+                        let s = match val.as_u64() {
+                            Some(0x00) => "(none)",
+                            Some(0x01) => "Top-left (horizontal)",
+                            Some(0x02) => "Top-center (horizontal)",
+                            Some(0x03) => "Top-right (horizontal)",
+                            Some(0x04) => "Left (horizontal)",
+                            Some(0x05) => "Mid-left (horizontal)",
+                            Some(0x06) => "Center (horizontal)",
+                            Some(0x07) => "Mid-right (horizontal)",
+                            Some(0x08) => "Right (horizontal)",
+                            Some(0x09) => "Bottom-left (horizontal)",
+                            Some(0x0a) => "Bottom-center (horizontal)",
+                            Some(0x0b) => "Bottom-right (horizontal)",
+                            Some(0x0c) => "Top-left (vertical)",
+                            Some(0x0d) => "Top-center (vertical)",
+                            Some(0x0e) => "Top-right (vertical)",
+                            Some(0x0f) => "Left (vertical)",
+                            Some(0x10) => "Mid-left (vertical)",
+                            Some(0x11) => "Center (vertical)",
+                            Some(0x12) => "Mid-right (vertical)",
+                            Some(0x13) => "Right (vertical)",
+                            _ => "",
+                        };
+                        if s.is_empty() {
+                            val.to_display_string()
+                        } else {
+                            s.to_string()
+                        }
                     } else if name == "FlashType" {
                         match val.as_u64() {
                             Some(0) => "None".to_string(),
