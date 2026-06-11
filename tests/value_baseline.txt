@@ -312,7 +312,6 @@ NikonD70.jpg	ExposureDifference
 NikonD70.jpg	ExternalFlashExposureComp
 NikonD70.jpg	ExternalFlashFirmware
 NikonD70.jpg	FlashExposureBracketValue
-NikonD70.jpg	FlashExposureComp
 NikonD70.jpg	ISO
 NikonD70.jpg	LensID
 NikonD70.jpg	LensSpec

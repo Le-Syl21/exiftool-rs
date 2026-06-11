@@ -7967,6 +7967,12 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                     let r = if c != 0.0 { a * (bb / c) } else { 0.0 };
                     crate::value::format_g15(r)
                 }),
+                // FlashExposureComp (0x0012): undef[4], a*(b/c) then PrintFraction.
+                0x0012 => mn_undef_bytes(value).map(|b| {
+                    let (a, bb, c) = (b[0] as i8 as f64, b[1] as i8 as f64, b[2] as i8 as f64);
+                    let r = if c != 0.0 { a * (bb / c) } else { 0.0 };
+                    crate::tags::exif::print_fraction(r)
+                }),
                 // LensFStops (0x008b): undef[4], unsigned a*(b/c), PrintConv %.2f.
                 0x008b => mn_undef_bytes(value).map(|b| {
                     let (a, bb, c) = (b[0] as f64, b[1] as f64, b[2] as f64);
