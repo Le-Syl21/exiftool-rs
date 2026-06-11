@@ -183,9 +183,7 @@ InfiRay.jpg	GPSLongitude
 InfiRay.jpg	GPSLongitudeRef
 InfiRay.jpg	IJPEGTempVersion
 InfiRay.jpg	IJPEGVersion
-InfiRay.jpg	IRSensorSerialNumber
 InfiRay.jpg	VisibleSensorAperture
-InfiRay.jpg	VisibleSensorSerialNumber
 JVC.jpg	CPUVersions
 JVC.jpg	Quality
 JXL2.jxl	CompatibleBrands

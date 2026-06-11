@@ -5124,9 +5124,9 @@ fn decode_infray_sensor(data: &[u8]) -> Vec<crate::tag::Tag> {
         if off + len > data.len() {
             return String::new();
         }
-        crate::encoding::decode_utf8_or_latin1(&data[off..off + len])
-            .trim_end_matches('\0')
-            .to_string()
+        // ExifTool string[N] truncates at the first null (s/\0.*//s).
+        let s = crate::encoding::decode_utf8_or_latin1(&data[off..off + len]);
+        s.split('\0').next().unwrap_or("").to_string()
     };
 
     let rf32 = |off: usize| -> f32 {
