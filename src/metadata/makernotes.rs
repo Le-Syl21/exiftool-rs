@@ -7692,6 +7692,31 @@ fn fuji_internal_serial(val: &str) -> String {
     trimmed.to_string()
 }
 
+/// Port of Panasonic.pm InternalSerialNumber PrintConv: "(MMM) YYYY:MM:DD no. NNNN"
+/// from a 16-byte block matching ^(.{3})(\d{2})(\d{2})(\d{2})(\d{4}).
+fn panasonic_internal_serial(bytes: &[u8]) -> Option<String> {
+    let s: String = bytes.iter().map(|&c| c as char).collect();
+    let c: Vec<char> = s.chars().collect();
+    if c.len() < 13 {
+        return None;
+    }
+    if !c[3..13].iter().all(|ch| ch.is_ascii_digit()) {
+        return None;
+    }
+    let prefix: String = c[0..3].iter().collect();
+    let digits: String = c[3..13].iter().collect();
+    let yy: u32 = digits[0..2].parse().ok()?;
+    let yr = yy + if yy < 70 { 2000 } else { 1900 };
+    Some(format!(
+        "({}) {}:{}:{} no. {}",
+        prefix,
+        yr,
+        &digits[2..4],
+        &digits[4..6],
+        &digits[6..10]
+    ))
+}
+
 /// Decode an even-length hex string to its ASCII bytes (Perl `pack "H*"`).
 fn hex_to_ascii(hex: &str) -> Option<String> {
     if hex.is_empty() || hex.len() % 2 != 0 {
@@ -7866,6 +7891,14 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Panasonic => match tag_id {
+            // InternalSerialNumber (undef[16]): "(MMM) YYYY:MM:DD no. NNNN".
+            0x0025 => {
+                let bytes: Option<&[u8]> = match value {
+                    Value::Binary(b) | Value::Undefined(b) => Some(b.as_slice()),
+                    _ => None,
+                };
+                bytes.and_then(panasonic_internal_serial)
+            }
             // Contrast/Saturation/Sharpness: Exif::printParameter (0 => Normal, else +N/-N).
             0x0039 | 0x0040 | 0x0041 => value.as_f64().filter(|f| f.fract() == 0.0).map(|f| {
                 let v = f as i64;
