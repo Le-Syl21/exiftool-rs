@@ -332,7 +332,6 @@ Nikon.nef	ISOSetting
 Nikon.nef	Lens
 Nikon.nef	LensFStops
 Nikon.nef	LensSpec
-Nikon.nef	LensType
 Nikon.nef	MCUVersion
 Nikon.nef	MaxFocalLength
 Nikon.nef	MinFocalLength
@@ -361,7 +360,6 @@ NikonD2Hs.jpg	Lens
 NikonD2Hs.jpg	LensFStops
 NikonD2Hs.jpg	LensID
 NikonD2Hs.jpg	LensSpec
-NikonD2Hs.jpg	LensType
 NikonD2Hs.jpg	MCUVersion
 NikonD2Hs.jpg	PreviewImageStart
 NikonD2Hs.jpg	ProgramShift
@@ -383,7 +381,6 @@ NikonD70.jpg	Lens
 NikonD70.jpg	LensFStops
 NikonD70.jpg	LensID
 NikonD70.jpg	LensSpec
-NikonD70.jpg	LensType
 NikonD70.jpg	MCUVersion
 NikonD70.jpg	MaxFocalLength
 NikonD70.jpg	MinFocalLength

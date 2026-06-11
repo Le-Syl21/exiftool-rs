@@ -120,3 +120,53 @@ pub fn nef_compression(v: u64) -> Option<&'static str> {
         _ => return None,
     })
 }
+
+/// Print conversion for Nikon LensType (tag 0x0083): a DecodeBits bitmask with
+/// post-processing (Nikon.pm). 0 => "AF".
+pub fn lens_type(v: u64) -> String {
+    if v == 0 {
+        return "AF".to_string();
+    }
+    const BITS: &[(u32, &str)] = &[
+        (0, "MF"),
+        (1, "D"),
+        (2, "G"),
+        (3, "VR"),
+        (4, "1"),
+        (5, "FT-1"),
+        (6, "E"),
+        (7, "AF-P"),
+    ];
+    // DecodeBits: collect labels for each set bit (unknown bits -> "[n]").
+    let mut parts: Vec<String> = Vec::new();
+    for i in 0..32 {
+        if v & (1 << i) != 0 {
+            match BITS.iter().find(|(b, _)| *b == i) {
+                Some((_, label)) => parts.push((*label).to_string()),
+                None => parts.push(format!("[{}]", i)),
+            }
+        }
+    }
+    let mut s = parts.join(", ");
+    // Perl post-processing:
+    s = s.replace(',', ""); // remove commas
+    s = s.replace("D G", "G"); // \bD G\b -> G
+    if s.contains(" E") {
+        s = s.replace(" E", "");
+        // put "E" at the start instead of "G"
+        if let Some(rest) = s.strip_prefix("G ") {
+            s = format!("E {}", rest);
+        } else {
+            s = format!("E {}", s);
+        }
+    }
+    if s.contains(" 1") {
+        s = s.replace(" 1", "");
+        s = format!("1 {}", s);
+    }
+    if s.contains("FT-1 ") {
+        s = s.replace("FT-1 ", "");
+        s = format!("{} FT-1", s);
+    }
+    s
+}

@@ -7699,6 +7699,7 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 0x0093 => v
                     .and_then(nikon_conv::nef_compression)
                     .map(|s| s.to_string()),
+                0x0083 => v.map(nikon_conv::lens_type),
                 _ => None,
             }
         }
