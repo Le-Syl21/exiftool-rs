@@ -37,7 +37,6 @@ Canon.jpg	HyperfocalDistance
 Canon.jpg	Lens35efl
 Canon.jpg	RedBalance
 Canon.jpg	SelfTimer2
-Canon.jpg	SerialNumber
 Canon.jpg	Sharpness
 Canon.jpg	ShootingMode
 Canon.jpg	TargetAperture
@@ -95,7 +94,6 @@ CanonRaw.cr2	ManualFlashOutput
 CanonRaw.cr2	Megapixels
 CanonRaw.cr2	RedBalance
 CanonRaw.cr2	SelfTimer2
-CanonRaw.cr2	SerialNumber
 CanonRaw.cr2	TargetAperture
 CanonRaw.cr2	VRDOffset
 CanonRaw.cr3	Aperture
@@ -182,7 +180,6 @@ DNG.dng	RawDataUniqueID
 DNG.dng	RedBalance
 DNG.dng	SamplesPerPixel
 DNG.dng	SelfTimer2
-DNG.dng	SerialNumber
 DNG.dng	TargetAperture
 DNG.dng	ThumbnailTIFF
 DNG.dng	VRDOffset

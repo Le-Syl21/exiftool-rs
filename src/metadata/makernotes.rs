@@ -5736,6 +5736,19 @@ fn read_makernote_ifd_with_base(
         } else if name.starts_with("Tag0x") {
             // -u mode: show unknown tags but use standard display for values
             value.to_display_string()
+        } else if manufacturer == Manufacturer::Canon
+            && name == "SerialNumber"
+            && value.as_u64().is_some()
+        {
+            // Canon Main SerialNumber: %.4x%.5d (EOS D30), %.6u (EOS-1D), else %.10u.
+            let n = value.as_u64().unwrap();
+            if model_name.contains("EOS D30") {
+                format!("{:04x}{:05}", n >> 16, n & 0xffff)
+            } else if model_name.contains("EOS-1D") {
+                format!("{:06}", n)
+            } else {
+                format!("{:010}", n)
+            }
         } else if name == "MakerNoteVersion" {
             // undef[4] shown as ASCII (Minolta 'MLT0', Panasonic '0130'); Nikon's
             // numeric form "0210" becomes "2.10" (ValueConv).
