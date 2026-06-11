@@ -5556,6 +5556,20 @@ fn read_makernote_ifd_with_base(
                         } else {
                             disp.clone()
                         }
+                    } else if name == "FlashType" {
+                        match val.as_u64() {
+                            Some(0) => "None".to_string(),
+                            Some(2) => "Simple E-System".to_string(),
+                            Some(3) => "E-System".to_string(),
+                            Some(4) => "E-System (body powered)".to_string(),
+                            _ => val.to_display_string(),
+                        }
+                    } else if matches!(name, "InternalFlash" | "ExternalFlash") {
+                        match val.to_display_string().as_str() {
+                            "0" | "0 0" => "Off".to_string(),
+                            "1" | "1 0" => "On".to_string(),
+                            other => other.to_string(),
+                        }
                     } else if name == "FocalPlaneDiagonal" {
                         format!("{} mm", val.to_display_string()) // Perl: '"$val mm"'
                     } else if name == "ManometerPressure" {
