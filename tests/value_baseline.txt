@@ -462,7 +462,6 @@ RIFF.wav	Make
 RIFF.webp	AlphaFiltering
 RTF.rtf	Comments
 RTF.rtf	Company
-RTF.rtf	Subject
 Real.ra	Copyright
 Real.rm	MIMEType
 Ricoh.jpg	FirmwareVersion

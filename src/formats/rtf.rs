@@ -419,8 +419,11 @@ fn unescape_rtf(text: &str) -> String {
                                 result.push(ch);
                             }
                         }
+                    } else if let Some(ch) = rtf_symbol(&word) {
+                        // Common RTF symbol control words (smart quotes, dashes, …).
+                        result.push(ch);
                     }
-                    // For other control words (ldblquote, rdblquote, etc.), ignore them
+                    // Other control words are ignored.
                 }
             }
         } else if c == '\n' || c == '\r' {
@@ -430,6 +433,21 @@ fn unescape_rtf(text: &str) -> String {
         }
     }
     result.trim().to_string()
+}
+
+/// Map an RTF symbol control word to its Unicode character.
+fn rtf_symbol(word: &str) -> Option<char> {
+    Some(match word {
+        "ldblquote" => '\u{201C}',
+        "rdblquote" => '\u{201D}',
+        "lquote" => '\u{2018}',
+        "rquote" => '\u{2019}',
+        "emdash" => '\u{2014}',
+        "endash" => '\u{2013}',
+        "bullet" => '\u{2022}',
+        "tab" => '\t',
+        _ => return None,
+    })
 }
 
 /// Convert RTF user property name to tag name (capitalize words, strip invalid chars)
