@@ -2235,6 +2235,14 @@ fn apply_ilst_print_conv(item_type: &[u8], value: &str) -> String {
                 _ => value.to_string(),
             }
         }
+        b"cpil" => {
+            // Compilation: 0='No', 1='Yes'
+            match value {
+                "0" => "No".to_string(),
+                "1" => "Yes".to_string(),
+                _ => value.to_string(),
+            }
+        }
         _ => value.to_string(),
     }
 }

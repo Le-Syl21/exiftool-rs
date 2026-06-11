@@ -7988,6 +7988,17 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
         Manufacturer::Fujifilm => match tag_id {
             // InternalSerialNumber: decode the hex body number + manufacture date.
             0x0010 => value.as_str().map(fuji_internal_serial),
+            // AFMode (0x1022): enum (No / Single Point / Zone / Wide/Tracking).
+            0x1022 => value.as_u64().and_then(|v| {
+                match v {
+                    0 => Some("No"),
+                    1 => Some("Single Point"),
+                    256 => Some("Zone"),
+                    512 => Some("Wide/Tracking"),
+                    _ => None,
+                }
+                .map(str::to_string)
+            }),
             _ => None,
         },
         Manufacturer::Ricoh => match tag_id {
@@ -8059,6 +8070,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             0x0011 => value
                 .as_str()
                 .map(|s| s.replacen("Shar:", "", 1).trim().to_string()),
+            // ColorAdjustment (string form): ValueConv strips "CC:".
+            0x0014 => value
+                .as_str()
+                .map(|s| s.replacen("CC:", "", 1).trim().to_string()),
             // MeteringMode: string-keyed PrintConv (Sigma.pm 0x0009).
             0x0009 => value.as_str().and_then(|s| {
                 Some(

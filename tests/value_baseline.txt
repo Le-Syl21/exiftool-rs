@@ -143,7 +143,6 @@ FotoStation.jpg	ObjectPreviewFileVersion
 FujiFilm.jpg	FocusMode
 FujiFilm.jpg	Sharpness
 FujiFilm.jpg	Version
-FujiFilm.raf	AFMode
 FujiFilm.raf	DynamicRange
 FujiFilm.raf	FacesDetected
 FujiFilm.raf	FocusMode
@@ -427,7 +426,6 @@ Photoshop.psd	Compression
 PostScript.eps	Creator
 PostScript.eps	Title
 QuickTime.heic	MediaDataOffset
-QuickTime.m4a	Compilation
 QuickTime.m4a	HandlerType
 QuickTime.m4a	TrackVolume
 QuickTime.mov	HandlerClass
@@ -455,7 +453,6 @@ Sanyo.jpg	DataDump
 Sanyo.jpg	FlashMode
 Sanyo.jpg	Macro
 Sanyo.jpg	SelfTimer
-Sigma.jpg	ColorAdjustment
 Sigma.jpg	FileSource
 Sigma.jpg	Highlight
 Sigma.jpg	Shadow
