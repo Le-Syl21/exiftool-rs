@@ -136,7 +136,6 @@ GE.jpg	GEMake
 GE.jpg	GEModel
 GPS.jpg	Aperture
 GPS.jpg	City
-GPS.jpg	SceneType
 GeoTiff.tif	GeogGeodeticDatum
 GeoTiff.tif	Projection
 Geotag.gpx	GpxSchemaLocation

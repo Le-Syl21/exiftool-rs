@@ -574,11 +574,15 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 }
             }
         }
-        // SceneType
+        // SceneType: 1 => Directly photographed, else Unknown (N).
         ("ExifIFD", 0xA301) => {
             if let Value::Undefined(ref data) = value {
-                if !data.is_empty() && data[0] == 1 {
-                    return Some("Directly photographed".to_string());
+                if !data.is_empty() {
+                    return Some(if data[0] == 1 {
+                        "Directly photographed".to_string()
+                    } else {
+                        format!("Unknown ({})", data[0])
+                    });
                 }
             }
         }
