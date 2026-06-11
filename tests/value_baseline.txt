@@ -334,7 +334,6 @@ Pentax.jpg	FocusMode
 Pentax.jpg	ImageEditing
 Pentax.jpg	LensID
 Pentax.jpg	LensType
-Pentax.jpg	MeteringMode
 Pentax.jpg	PentaxModelID
 Pentax.jpg	PreviewImageBorders
 Pentax.jpg	Rotation

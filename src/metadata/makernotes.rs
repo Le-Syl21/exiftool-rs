@@ -8276,6 +8276,17 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Pentax => match tag_id {
+            // MeteringMode (0x0017): 0=Multi-segment, 1=Center-weighted, 2=Spot, 6=Highlight.
+            0x0017 => value.as_u64().and_then(|v| {
+                match v {
+                    0 => Some("Multi-segment"),
+                    1 => Some("Center-weighted average"),
+                    2 => Some("Spot"),
+                    6 => Some("Highlight"),
+                    _ => None,
+                }
+                .map(str::to_string)
+            }),
             // WhiteBalanceMode (0x001a): enum.
             0x001a => value.as_u64().and_then(|v| {
                 match v {
