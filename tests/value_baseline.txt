@@ -268,7 +268,6 @@ FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
 FujiFilm.jpg	FocusMode
 FujiFilm.jpg	Sharpness
-FujiFilm.jpg	ShutterSpeed
 FujiFilm.jpg	Version
 FujiFilm.raf	AFMode
 FujiFilm.raf	DynamicRange
@@ -297,7 +296,6 @@ GPS.jpg	ExposureCompensation
 GPS.jpg	FNumber
 GPS.jpg	FileSource
 GPS.jpg	SceneType
-GPS.jpg	ShutterSpeed
 GeoTiff.tif	ColorMap
 GeoTiff.tif	GeogGeodeticDatum
 GeoTiff.tif	Projection
@@ -413,7 +411,6 @@ MIFF.miff	FileType
 MIFF.miff	FileTypeExtension
 MIFF.miff	MIMEType
 MIFF.miff	PhotoshopQuality
-MIFF.miff	ShutterSpeed
 MIFF.miff	ThumbnailOffset
 MWG.jpg	City
 MWG.jpg	DateCreated
@@ -635,7 +632,6 @@ Opus.opus	OutputGain
 PCAP.pcapng	TimeStamp
 PDF.pdf	CreateDate
 PDF.pdf	Creator
-PDF.pdf	ShutterSpeed
 PDF.pdf	Urgency
 PGF.pgf	Warning
 PLIST-bin.plist	TestBoolean
@@ -756,7 +752,6 @@ Real.rm	MIMEType
 Ricoh.jpg	FirmwareVersion
 Ricoh.jpg	ManufactureDate1
 Ricoh.jpg	Sharpness
-Ricoh.jpg	ShutterSpeed
 Ricoh2.jpg	FirmwareVersion
 Ricoh2.jpg	GPSDestBearingRef
 Ricoh2.jpg	GPSDestDistanceRef
@@ -846,7 +841,6 @@ XMP.jpg	DeviceManufacturer
 XMP.jpg	MeasurementBacking
 XMP.jpg	MeasurementFlare
 XMP.jpg	ProfileCreator
-XMP.jpg	ShutterSpeed
 XMP.jpg	Technology
 XMP.jpg	Urgency
 XMP.jpg	ViewingCondIlluminant

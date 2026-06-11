@@ -39,14 +39,8 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     // ShutterSpeed from ShutterSpeedValue (APEX) if no ExposureTime
     if find_tag(tags, "ShutterSpeed").is_none() && find_tag(tags, "ExposureTime").is_none() {
         if let Some(ssv) = find_tag_f64(tags, "ShutterSpeedValue") {
-            let speed = 2.0_f64.powf(-ssv);
-            let print = if speed >= 1.0 {
-                format!("{:.0} s", speed)
-            } else if speed > 0.0 {
-                format!("1/{:.0} s", 1.0 / speed)
-            } else {
-                "0".to_string()
-            };
+            // Perl Composite ShutterSpeed: PrintExposureTime(2^-ApertureValue), no " s".
+            let print = crate::tags::canon_sub::print_exposure_time(2.0_f64.powf(-ssv));
             composite.push(mk_composite(
                 "ShutterSpeed",
                 "Shutter Speed",
