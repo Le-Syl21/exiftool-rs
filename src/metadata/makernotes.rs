@@ -719,9 +719,76 @@ fn canon_custom2_name(id: u32) -> &'static str {
     }
 }
 
-/// Decode Minolta CameraSettings (int32u format, from Perl Minolta.pm).
-fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
+/// ExifTool Exif::PrintParameter: 0 -> "Normal", positive -> "+N", negative -> "N".
+fn minolta_print_parameter(val: i64) -> String {
+    match val.cmp(&0) {
+        std::cmp::Ordering::Equal => "Normal".to_string(),
+        std::cmp::Ordering::Greater => format!("+{}", val),
+        std::cmp::Ordering::Less => val.to_string(),
+    }
+}
+
+/// ExifTool Exif::PrintFraction (simplified for the integer/half/third cases).
+fn minolta_print_fraction(val: f64) -> String {
+    let v = val * 1.00001;
+    if v == 0.0 {
+        "0".to_string()
+    } else if (v.round() / v - 1.0).abs() < 0.001 {
+        format!("{:+}", v as i64)
+    } else if ((v * 2.0).round() / (v * 2.0) - 1.0).abs() < 0.001 {
+        format!("{:+}/2", (v * 2.0) as i64)
+    } else if ((v * 3.0).round() / (v * 3.0) - 1.0).abs() < 0.001 {
+        format!("{:+}/3", (v * 3.0) as i64)
+    } else {
+        format!("{:+.3}", v)
+    }
+}
+
+/// Minolta WhiteBalance (Minolta::ConvertWhiteBalance, common values).
+fn minolta_white_balance(val: u32) -> String {
+    let base = match val {
+        0 => "Auto",
+        1 => "Daylight",
+        2 => "Cloudy",
+        3 => "Tungsten",
+        5 => "Custom",
+        7 => "Fluorescent",
+        8 => "Fluorescent 2",
+        11 => "Custom 2",
+        12 => "Custom 3",
+        _ => "",
+    };
+    if !base.is_empty() {
+        return base.to_string();
+    }
+    if val & 0xffff0000 != 0 {
+        let ty = (val & 0xff000000) + 0x800000;
+        let name = match ty {
+            0x0800000 => "Auto",
+            0x1800000 => "Daylight",
+            0x2800000 => "Cloudy",
+            0x3800000 => "Tungsten",
+            0x4800000 => "Flash",
+            0x5800000 => "Fluorescent",
+            0x6800000 => "Shade",
+            0x7800000 => "Custom1",
+            0x8800000 => "Custom2",
+            0x9800000 => "Custom3",
+            _ => "",
+        };
+        if !name.is_empty() {
+            let shift = (val as i64 - ty as i64) / 0x10000;
+            return format!("{}{:+}", name, shift);
+        }
+        return format!("Unknown (0x{:x})", val);
+    }
+    format!("Unknown ({})", val)
+}
+
+/// Decode Minolta CameraSettings (int32u, Perl Minolta::CameraSettings) with PrintConvs.
+fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark, model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
+    let max_idx = data.len() / 4;
     let rd = |idx: usize| -> u32 {
         let off = idx * 4;
         if off + 4 > data.len() {
@@ -742,65 +809,91 @@ fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
         print_value: val,
         priority: 0,
     };
+    // Saturation/Contrast/ColorFilter signed offset (DiMAGE A2 = 5, else 3).
+    let param_off: i64 = if model.contains("DiMAGE A2") { 5 } else { 3 };
+    let enum_pc = |v: u32, table: &[(u32, &str)]| -> String {
+        table
+            .iter()
+            .find(|(k, _)| *k == v)
+            .map(|(_, s)| s.to_string())
+            .unwrap_or_else(|| v.to_string())
+    };
 
-    static FIELDS: &[(usize, &str)] = &[
-        (1, "ExposureMode"),
-        (2, "FlashMode"),
-        (3, "WhiteBalance"),
-        (4, "MinoltaImageSize"),
-        (5, "MinoltaQuality"),
-        (6, "DriveMode"),
-        (7, "MeteringMode"),
-        (8, "ISO"),
-        (9, "ExposureTime"),
-        (10, "FNumber"),
-        (11, "MacroMode"),
-        (12, "DigitalZoom"),
-        (13, "ExposureCompensation"),
-        (14, "BracketStep"),
-        (16, "IntervalLength"),
-        (17, "IntervalNumber"),
-        (18, "FocalLength"),
-        (19, "FocusDistance"),
-        (20, "FlashFired"),
-        (21, "MinoltaDate"),
-        (22, "MinoltaTime"),
-        (23, "MaxAperture"),
-        (26, "FileNumberMemory"),
-        (27, "LastFileNumber"),
-        (28, "ColorBalanceRed"),
-        (29, "ColorBalanceGreen"),
-        (30, "ColorBalanceBlue"),
-        (31, "Saturation"),
-        (32, "Contrast"),
-        (33, "Sharpness"),
-        (34, "SubjectProgram"),
-        (35, "FlashExposureComp"),
-        (36, "ISOSetting"),
-        (37, "MinoltaModelID"),
-        (38, "IntervalMode"),
-        (39, "FolderName"),
-        (40, "ColorMode"),
-        (41, "ColorFilter"),
-        (42, "BWFilter"),
-        (43, "InternalFlash"),
-        (44, "Brightness"),
-        (45, "SpotFocusPointX"),
-        (46, "SpotFocusPointY"),
-        (47, "WideFocusZone"),
-        (48, "FocusMode"),
-        (49, "FocusArea"),
-        (50, "DECPosition"),
-        // (52, "DataImprint"), // Condition: DiMAGE 7Hi only
-        (63, "FlashMetering"),
-    ];
-
-    let max_idx = data.len() / 4;
-    for &(idx, name) in FIELDS {
-        if idx < max_idx {
-            let val = rd(idx);
-            tags.push(mk(name, val.to_string()));
-        }
+    for idx in 0..max_idx {
+        let v = rd(idx);
+        let (name, pv): (&str, String) = match idx {
+            1 => ("ExposureMode", enum_pc(v, &[(0, "Program"), (1, "Aperture Priority"), (2, "Shutter Priority"), (3, "Manual")])),
+            2 => ("FlashMode", enum_pc(v, &[(0, "Fill flash"), (1, "Red-eye reduction"), (2, "Rear flash sync"), (3, "Wireless"), (4, "Off?")])),
+            3 => ("WhiteBalance", minolta_white_balance(v)),
+            4 => ("MinoltaImageSize", enum_pc(v, &[(0, "Full"), (1, "1600x1200"), (2, "1280x960"), (3, "640x480"), (6, "2080x1560"), (7, "2560x1920"), (8, "3264x2176")])),
+            5 => ("MinoltaQuality", enum_pc(v, &[(0, "Raw"), (1, "Super Fine"), (2, "Fine"), (3, "Standard"), (4, "Economy"), (5, "Extra Fine")])),
+            6 => ("DriveMode", enum_pc(v, &[(0, "Single"), (1, "Continuous"), (2, "Self-timer"), (4, "Bracketing"), (5, "Interval"), (6, "UHS continuous"), (7, "HS continuous")])),
+            7 => ("MeteringMode", enum_pc(v, &[(0, "Multi-segment"), (1, "Center-weighted average"), (2, "Spot")])),
+            8 => ("ISO", format!("{}", (2f64.powf((v as f64 - 48.0) / 8.0) * 100.0 + 0.5) as i64)),
+            9 => ("ExposureTime", crate::tags::canon_sub::print_exposure_time(2f64.powf((48.0 - v as f64) / 8.0))),
+            10 => ("FNumber", format!("{:.1}", 2f64.powf((v as f64 - 8.0) / 16.0))),
+            11 => ("MacroMode", enum_pc(v, &[(0, "Off"), (1, "On")])),
+            12 => ("DigitalZoom", enum_pc(v, &[(0, "Off"), (1, "Electronic magnification"), (2, "2x")])),
+            13 => ("ExposureCompensation", minolta_print_fraction(v as f64 / 3.0 - 2.0)),
+            14 => ("BracketStep", enum_pc(v, &[(0, "1/3 EV"), (1, "2/3 EV"), (2, "1 EV")])),
+            16 => ("IntervalLength", v.to_string()),
+            17 => ("IntervalNumber", v.to_string()),
+            18 => ("FocalLength", format!("{:.1} mm", v as f64 / 256.0)),
+            19 => {
+                // raw value (meters, 0 = infinity) kept numeric so composites (DOF) use it.
+                let pv = if v != 0 {
+                    format!("{} m", v as f64 / 1000.0)
+                } else {
+                    "inf".to_string()
+                };
+                tags.push(Tag {
+                    id: TagId::Text("FocusDistance".into()),
+                    name: "FocusDistance".into(),
+                    description: "FocusDistance".into(),
+                    group: TagGroup {
+                        family0: "MakerNotes".into(),
+                        family1: "Minolta".into(),
+                        family2: "Camera".into(),
+                    },
+                    raw_value: Value::F64(v as f64 / 1000.0),
+                    print_value: pv,
+                    priority: 0,
+                });
+                continue;
+            }
+            20 => ("FlashFired", enum_pc(v, &[(0, "No"), (1, "Yes")])),
+            21 => ("MinoltaDate", format!("{:04}:{:02}:{:02}", v >> 16, (v & 0xff00) >> 8, v & 0xff)),
+            22 => ("MinoltaTime", format!("{:02}:{:02}:{:02}", v >> 16, (v & 0xff00) >> 8, v & 0xff)),
+            23 => ("MaxAperture", format!("{:.1}", 2f64.powf((v as f64 - 8.0) / 16.0))),
+            26 => ("FileNumberMemory", enum_pc(v, &[(0, "Off"), (1, "On")])),
+            27 => ("LastFileNumber", v.to_string()),
+            28 => ("ColorBalanceRed", crate::value::format_g15(v as f64 / 256.0)),
+            29 => ("ColorBalanceGreen", crate::value::format_g15(v as f64 / 256.0)),
+            30 => ("ColorBalanceBlue", crate::value::format_g15(v as f64 / 256.0)),
+            31 => ("Saturation", minolta_print_parameter(v as i64 - param_off)),
+            32 => ("Contrast", minolta_print_parameter(v as i64 - param_off)),
+            33 => ("Sharpness", enum_pc(v, &[(0, "Hard"), (1, "Normal"), (2, "Soft")])),
+            34 => ("SubjectProgram", enum_pc(v, &[(0, "None"), (1, "Portrait"), (2, "Text"), (3, "Night portrait"), (4, "Sunset"), (5, "Sports action")])),
+            35 => ("FlashExposureComp", minolta_print_fraction((v as f64 - 6.0) / 3.0)),
+            36 => ("ISOSetting", enum_pc(v, &[(0, "100"), (1, "200"), (2, "400"), (3, "800"), (4, "Auto"), (5, "64")])),
+            37 => ("MinoltaModelID", enum_pc(v, &[(0, "DiMAGE 7, X1, X21 or X31"), (1, "DiMAGE 5"), (2, "DiMAGE S304"), (3, "DiMAGE S404"), (4, "DiMAGE 7i"), (5, "DiMAGE 7Hi"), (6, "DiMAGE A1"), (7, "DiMAGE A2 or S414")])),
+            38 => ("IntervalMode", enum_pc(v, &[(0, "Still Image"), (1, "Time-lapse Movie")])),
+            39 => ("FolderName", enum_pc(v, &[(0, "Standard Form"), (1, "Data Form")])),
+            40 => ("ColorMode", enum_pc(v, &[(0, "Natural color"), (1, "Black & White"), (2, "Vivid color"), (3, "Solarization"), (4, "Adobe RGB")])),
+            41 => ("ColorFilter", (v as i64 - param_off).to_string()),
+            42 => ("BWFilter", v.to_string()),
+            43 => ("InternalFlash", enum_pc(v, &[(0, "No"), (1, "Fired")])),
+            44 => ("Brightness", crate::value::format_g15(v as f64 / 8.0 - 6.0)),
+            45 => ("SpotFocusPointX", v.to_string()),
+            46 => ("SpotFocusPointY", v.to_string()),
+            47 => ("WideFocusZone", enum_pc(v, &[(0, "No zone"), (1, "Center zone (horizontal orientation)"), (2, "Center zone (vertical orientation)"), (3, "Left zone"), (4, "Right zone")])),
+            48 => ("FocusMode", enum_pc(v, &[(0, "AF"), (1, "MF")])),
+            49 => ("FocusArea", enum_pc(v, &[(0, "Wide Focus (normal)"), (1, "Spot Focus")])),
+            50 => ("DECPosition", enum_pc(v, &[(0, "Exposure"), (1, "Contrast"), (2, "Saturation"), (3, "Filter")])),
+            63 => ("FlashMetering", enum_pc(v, &[(0, "ADI (Advanced Distance Integration)"), (1, "Pre-flash TTL"), (2, "Manual flash control")])),
+            _ => continue,
+        };
+        tags.push(mk(name, pv));
     }
     tags
 }
@@ -4979,7 +5072,7 @@ fn read_makernote_ifd_with_base(
                 }
                 // Minolta CameraSettings binary sub-table (int32u format)
                 (Manufacturer::Minolta, 0x0001) | (Manufacturer::Minolta, 0x0003) => {
-                    decode_minolta_camera_settings(value_data, byte_order)
+                    decode_minolta_camera_settings(value_data, byte_order, model_name)
                 }
                 // Minolta ImageStabilization (tag 0x0018): exists only when IS is enabled for DiMAGE A1/A2/X1
                 (Manufacturer::Minolta, 0x0018) => {

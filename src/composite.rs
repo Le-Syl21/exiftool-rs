@@ -1661,7 +1661,8 @@ fn compute_dof(tags: &[Tag]) -> Option<Vec<Tag>> {
     let d = find_tag_f64(tags, "FocusDistance")
         .or_else(|| {
             find_tag_value(tags, "FocusDistance")
-                .and_then(|s| s.split_whitespace().next()?.parse().ok())
+                .and_then(|s| s.split_whitespace().next()?.parse::<f64>().ok())
+                .filter(|v| v.is_finite())
         })
         // Perl: $val[4] || $val[5] || $val[6] — 0 means "not available" for these
         .or_else(|| find_tag_f64(tags, "SubjectDistance").filter(|&v| v > 0.0))
