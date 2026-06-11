@@ -1678,6 +1678,16 @@ impl XmpReader {
             if let Some(reformatted) = convert_xmp_date(&tag.print_value) {
                 tag.print_value = reformatted;
             }
+            // XMP-photoshop Urgency uses the IPTC urgency labels.
+            if tag.name == "Urgency" {
+                tag.print_value = match tag.print_value.trim() {
+                    "0" => "0 (reserved)".to_string(),
+                    "1" => "1 (most urgent)".to_string(),
+                    "5" => "5 (normal urgency)".to_string(),
+                    "8" => "8 (least urgent)".to_string(),
+                    other => other.to_string(),
+                };
+            }
         }
 
         // Post-processing: aggregate duplicate tag names (same name, different values)

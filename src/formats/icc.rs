@@ -207,8 +207,11 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
     let dev_model = if dev_model_raw.iter().all(|&b| b == 0) {
         String::new()
     } else {
+        // string[4]: truncate at the first null (e.g. [0,0,0,1] -> "").
         crate::encoding::decode_utf8_or_latin1(dev_model_raw)
-            .trim_end_matches('\0')
+            .split('\0')
+            .next()
+            .unwrap_or("")
             .trim()
             .to_string()
     };

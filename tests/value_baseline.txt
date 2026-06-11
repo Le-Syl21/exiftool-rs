@@ -166,7 +166,6 @@ ExifTool.jpg	ShutterSpeed
 ExifTool.jpg	ShutterSpeedValue
 ExifTool.jpg	TargetDistanceSetting
 ExifTool.jpg	URL
-ExifTool.jpg	Urgency
 ExifTool.jpg	Warning
 ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
@@ -177,7 +176,6 @@ ExifTool.tif	Technology
 ExifTool.tif	ViewingCondIlluminant
 FITS.fits	Comment
 FITS.fits	MIMEType
-FLIF.flif	DeviceModel
 FLIR.jpg	CameraTemperatureMaxSaturated
 FLIR.jpg	CameraTemperatureMaxWarn
 FLIR.jpg	CameraTemperatureMinSaturated
@@ -231,9 +229,7 @@ FujiFilm.raf	Version
 FujiFilm.raf	WhiteBalanceFineTune
 GE.jpg	GEMake
 GE.jpg	GEModel
-GIF.gif	DeviceModel
 GIF.gif	PixelAspectRatio
-GIMP.xcf	DeviceModel
 GPS.jpg	Aperture
 GPS.jpg	City
 GPS.jpg	ExposureCompensation
@@ -272,7 +268,6 @@ HTML.html	Creator
 HTML.html	Description
 HTML.html	RevisionNumber
 HTML.html	Subject
-ICC_Profile.icc	DeviceModel
 IPTC.jpg	APP14Flags0
 IPTC.jpg	APP14Flags1
 IPTC.jpg	Warning
@@ -397,7 +392,6 @@ Nikon.nef	CropRight
 Nikon.nef	CropScaledResolution
 Nikon.nef	CropSourceResolution
 Nikon.nef	CropTop
-Nikon.nef	DeviceModel
 Nikon.nef	EffectiveMaxAperture
 Nikon.nef	ExitPupilPosition
 Nikon.nef	ExposureAdj
@@ -542,7 +536,6 @@ Opus.opus	OutputGain
 PCAP.pcapng	TimeStamp
 PDF.pdf	CreateDate
 PDF.pdf	Creator
-PDF.pdf	Urgency
 PGF.pgf	Warning
 PLIST-bin.plist	TestBoolean
 PLIST-bin.plist	TestDate
@@ -612,7 +605,6 @@ PostScript.eps	Creator
 PostScript.eps	FileType
 PostScript.eps	FileTypeExtension
 PostScript.eps	Title
-PostScript.eps	Urgency
 QuickTime.heic	MediaDataOffset
 QuickTime.m4a	Compilation
 QuickTime.m4a	HandlerType
@@ -727,7 +719,6 @@ XMP.jpg	DeviceManufacturer
 XMP.jpg	MeasurementBacking
 XMP.jpg	MeasurementFlare
 XMP.jpg	Technology
-XMP.jpg	Urgency
 XMP.jpg	ViewingCondIlluminant
 XMP.xml	Iso
 XMP.xmp	CircleOfConfusion
