@@ -632,13 +632,10 @@ fn find_tag_f64(tags: &[Tag], name: &str) -> Option<f64> {
 fn compute_gps_position(tags: &[Tag]) -> Option<Tag> {
     let lat_tag = find_tag(tags, "GPSLatitude")?;
     let lon_tag = find_tag(tags, "GPSLongitude")?;
-    let lat_ref = find_tag_value(tags, "GPSLatitudeRef").unwrap_or_default();
-    let lon_ref = find_tag_value(tags, "GPSLongitudeRef").unwrap_or_default();
+    // GPSLatitude/GPSLongitude already carry ExifTool's "D deg M' S\" REF" print value.
+    let (lat, lon) = (lat_tag.print_value.clone(), lon_tag.print_value.clone());
 
-    let lat = format_gps_coord(&lat_tag.raw_value, &lat_ref);
-    let lon = format_gps_coord(&lon_tag.raw_value, &lon_ref);
-
-    if lat.is_empty() || lon.is_empty() {
+    if lat.is_empty() || lon.is_empty() || lat.contains("undef") || lon.contains("undef") {
         return None;
     }
 
