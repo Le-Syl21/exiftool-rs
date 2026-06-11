@@ -684,15 +684,22 @@ fn read_string(data: &[u8], pos: usize, size: usize) -> String {
         .to_string()
 }
 
+/// Port of ExifTool ConvertDuration: "%.2f s" under 30 s, else "H:MM:SS".
 fn format_duration(seconds: f64) -> String {
-    let hours = (seconds / 3600.0) as u32;
-    let minutes = ((seconds % 3600.0) / 60.0) as u32;
-    let secs = seconds % 60.0;
-    if hours > 0 {
-        format!("{}:{:02}:{:05.2}", hours, minutes, secs)
-    } else {
-        format!("{}:{:05.2}", minutes, secs)
+    if seconds == 0.0 {
+        return "0 s".to_string();
     }
+    let (sign, mut t) = if seconds >= 0.0 { ("", seconds) } else { ("-", -seconds) };
+    if t < 30.0 {
+        return format!("{}{:.2} s", sign, t);
+    }
+    t += 0.5; // round to nearest second
+    let h = (t / 3600.0) as i64;
+    t -= (h * 3600) as f64;
+    let m = (t / 60.0) as i64;
+    t -= (m * 60) as f64;
+    let s = t as i64;
+    format!("{}{}:{:02}:{:02}", sign, h, m, s)
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {
