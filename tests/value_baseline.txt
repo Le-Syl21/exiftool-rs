@@ -294,8 +294,6 @@ DNG.dng	CustomRendered
 DNG.dng	DNGBackwardVersion
 DNG.dng	DNGLensInfo
 DNG.dng	DNGVersion
-DNG.dng	DateTime
-DNG.dng	DateTimeDigitized
 DNG.dng	DateTimeOriginal
 DNG.dng	DriveMode
 DNG.dng	EasyMode
@@ -396,7 +394,6 @@ ExifTool.jpg	CropBottom
 ExifTool.jpg	CropLeft
 ExifTool.jpg	CropRight
 ExifTool.jpg	CropTop
-ExifTool.jpg	DateCreated
 ExifTool.jpg	DateTimeOriginal
 ExifTool.jpg	DeviceAttributes
 ExifTool.jpg	ExposureCompensation
@@ -447,8 +444,6 @@ ExifTool.tif	RedTRC
 ExifTool.tif	SubfileType
 ExifTool.tif	Technology
 ExifTool.tif	ViewingCondIlluminant
-ExtendedXMP.jpg	CreationDate
-ExtendedXMP.jpg	ModDate
 FITS.fits	Comment
 FITS.fits	MIMEType
 FLIF.flif	BlueMatrixColumn
@@ -659,10 +654,7 @@ ITC.itc	DataType
 ITC.itc	FileType
 ITC.itc	FileTypeExtension
 ITC.itc	MIMEType
-InDesign.indd	CreateDate
 InDesign.indd	FileTypeExtension
-InDesign.indd	MetadataDate
-InDesign.indd	ModifyDate
 InfiRay.jpg	GPSDateTime
 InfiRay.jpg	GPSLatitude
 InfiRay.jpg	GPSLatitudeRef
@@ -759,7 +751,6 @@ MWG.jpg	DateCreated
 MWG.jpg	DateTimeCreated
 MWG.jpg	DigitalCreationDateTime
 MWG.jpg	DigitalCreationTime
-MWG.jpg	ModifyDate
 MWG.jpg	TimeCreated
 MacOS.macos	XAttrLastUsedDate
 MacOS.macos	XAttrMDItemDownloadedDate
@@ -1182,7 +1173,6 @@ PCAP.pcapng	TimeStamp
 PDF.pdf	CompressedBitsPerPixel
 PDF.pdf	CreateDate
 PDF.pdf	Creator
-PDF.pdf	DateCreated
 PDF.pdf	ShutterSpeed
 PDF.pdf	Urgency
 PGF.pgf	Warning
@@ -1199,7 +1189,6 @@ PLUS.xmp	ImageFileConstraints
 PLUS.xmp	ImageFileFormatAsDelivered
 PLUS.xmp	ImageFileSizeAsDelivered
 PLUS.xmp	MediaSummaryCode
-PLUS.xmp	MetadataDate
 PLUS.xmp	PhotometricInterpretation
 PLUS.xmp	Reuse
 PSP.psp	Copyright
@@ -1301,7 +1290,6 @@ Photoshop.psd	ProfileCreator
 Photoshop.psd	RedMatrixColumn
 Photoshop.psd	RedTRC
 PostScript.eps	Creator
-PostScript.eps	DateCreated
 PostScript.eps	FileType
 PostScript.eps	FileTypeExtension
 PostScript.eps	Title
@@ -1326,9 +1314,7 @@ QuickTime.mov	Information
 QuickTime.mov	LightValue
 QuickTime.mov	MediaTimeScale
 QuickTime.mov	Megapixels
-QuickTime.mov	MetadataDate
 QuickTime.mov	XMPToolkit
-RIFF.avi	MetadataDate
 RIFF.avi	XMPToolkit
 RIFF.wav	Make
 RIFF.webp	AlphaFiltering
@@ -1467,19 +1453,15 @@ WPG.wpg	FileTypeExtension
 WPG.wpg	MIMEType
 WTV.wtv	SubtitleDescription
 XISF.xisf	MIMEType
-XMP.inx	CreateDate
 XMP.inx	FileType
 XMP.inx	FileTypeExtension
 XMP.inx	MIMEType
-XMP.inx	MetadataDate
-XMP.inx	ModifyDate
 XMP.jpg	APP14Flags0
 XMP.jpg	APP14Flags1
 XMP.jpg	BlueMatrixColumn
 XMP.jpg	BlueTRC
 XMP.jpg	CMMFlags
 XMP.jpg	ConnectionSpaceIlluminant
-XMP.jpg	DateCreated
 XMP.jpg	DeviceAttributes
 XMP.jpg	DeviceManufacturer
 XMP.jpg	GreenMatrixColumn
@@ -1497,7 +1479,6 @@ XMP.jpg	Technology
 XMP.jpg	ThumbnailOffset
 XMP.jpg	Urgency
 XMP.jpg	ViewingCondIlluminant
-XMP.svg	Date
 XMP.xml	FileType
 XMP.xml	FileTypeExtension
 XMP.xml	Iso
@@ -1508,10 +1489,7 @@ XMP.xmp	ColorMode
 XMP.xmp	ColorSpace
 XMP.xmp	ComponentsConfiguration
 XMP.xmp	CompressedBitsPerPixel
-XMP.xmp	CreateDate
 XMP.xmp	CustomRendered
-XMP.xmp	DateTimeDigitized
-XMP.xmp	DateTimeOriginal
 XMP.xmp	DigitalZoomRatio
 XMP.xmp	ExposureCompensation
 XMP.xmp	ExposureMode
@@ -1528,9 +1506,7 @@ XMP.xmp	FocalPlaneXResolution
 XMP.xmp	FocalPlaneYResolution
 XMP.xmp	HyperfocalDistance
 XMP.xmp	MaxApertureValue
-XMP.xmp	MetadataDate
 XMP.xmp	MeteringMode
-XMP.xmp	ModifyDate
 XMP.xmp	NativeDigest
 XMP.xmp	Orientation
 XMP.xmp	ResolutionUnit

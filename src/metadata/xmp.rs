@@ -1640,6 +1640,14 @@ impl XmpReader {
             }
         }
 
+        // ExifTool reformats XMP ISO-8601 dates to its own "YYYY:MM:DD HH:MM:SS" form
+        // (ConvertXMPDate). Apply to any value matching the strict date pattern.
+        for tag in tags.iter_mut() {
+            if let Some(reformatted) = convert_xmp_date(&tag.print_value) {
+                tag.print_value = reformatted;
+            }
+        }
+
         // Post-processing: aggregate duplicate tag names (same name, different values)
         // into a single tag with comma-joined print_value. This matches ExifTool behavior
         // where repeated struct properties (e.g. in Bag/Seq items) are combined into one tag.
@@ -1922,6 +1930,55 @@ fn apply_flat_name_remap(name: &str) -> String {
 /// Parse an XMP text value into the appropriate Value type.
 /// XMP rational values (e.g., "28/10", "5800/1000") are stored as Value::URational
 /// so that composite computation can parse them as f64.
+/// Reformat an XMP ISO-8601 date/time to ExifTool's "YYYY:MM:DD HH:MM[:SS][TZ]" form.
+/// Mirrors Image::ExifTool::XMP::ConvertXMPDate. Returns None if the string is not a date.
+fn convert_xmp_date(val: &str) -> Option<String> {
+    let b = val.as_bytes();
+    let dig = |s: &[u8]| !s.is_empty() && s.iter().all(|c| c.is_ascii_digit());
+
+    // Branch 1: YYYY-MM-DD[T ]HH:MM[:SS] <tz/frac>
+    // Perl: /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}:\d{2})(:\d{2})?\s*(\S*)$/
+    if b.len() >= 16
+        && b[4] == b'-'
+        && b[7] == b'-'
+        && (b[10] == b'T' || b[10] == b' ')
+        && dig(&b[0..4])
+        && dig(&b[5..7])
+        && dig(&b[8..10])
+        && dig(&b[11..13])
+        && b[13] == b':'
+        && dig(&b[14..16])
+    {
+        let date = format!("{}:{}:{}", &val[0..4], &val[5..7], &val[8..10]);
+        let hhmm = &val[11..16];
+        let mut idx = 16;
+        let mut secs = "";
+        if b.len() >= 19 && b[16] == b':' && dig(&b[17..19]) {
+            secs = &val[16..19];
+            idx = 19;
+        }
+        // Skip optional whitespace, then keep the remaining non-space blob (tz/frac).
+        let tail = val[idx..].trim_start();
+        if tail.contains(char::is_whitespace) {
+            return None;
+        }
+        return Some(format!("{} {}{}{}", date, hhmm, secs, tail));
+    }
+
+    // Branch 2 (date only): YYYY-MM or YYYY-MM-DD → replace '-' with ':'.
+    let date_only = (val.len() == 7 && b[4] == b'-' && dig(&b[0..4]) && dig(&b[5..7]))
+        || (val.len() == 10
+            && b[4] == b'-'
+            && b[7] == b'-'
+            && dig(&b[0..4])
+            && dig(&b[5..7])
+            && dig(&b[8..10]));
+    if date_only {
+        return Some(val.replace('-', ":"));
+    }
+    None
+}
+
 /// Apply the EXIF PrintConv to exif: namespace XMP tags, matching ExifTool which
 /// shares the EXIF tag table's conversions for the XMP exif schema. Only the cases
 /// that differ from the plain numeric display are handled here.
