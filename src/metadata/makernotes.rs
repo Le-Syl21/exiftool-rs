@@ -7704,6 +7704,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                     .and_then(nikon_conv::nef_compression)
                     .map(|s| s.to_string()),
                 0x0083 => v.map(nikon_conv::lens_type),
+                // ISOSetting (int16u[2], "0 200"): PrintConv s/^0 //.
+                0x0013 => {
+                    let disp = value.to_display_string();
+                    Some(disp.strip_prefix("0 ").unwrap_or(&disp).to_string())
+                }
                 _ => None,
             }
         }
@@ -7782,6 +7787,21 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 _ => None,
             }
         }
+        Manufacturer::Sigma => match tag_id {
+            // MeteringMode: string-keyed PrintConv (Sigma.pm 0x0009).
+            0x0009 => value.as_str().and_then(|s| {
+                Some(
+                    match s.trim() {
+                        "A" => "Average",
+                        "C" => "Center-weighted average",
+                        "8" => "Multi-segment",
+                        _ => return None,
+                    }
+                    .to_string(),
+                )
+            }),
+            _ => None,
+        },
         _ => None,
     }
 }

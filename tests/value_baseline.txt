@@ -312,7 +312,6 @@ Nikon.nef	ExposureAdj2
 Nikon.nef	ExposureDifference
 Nikon.nef	FilmType
 Nikon.nef	FocusPosition
-Nikon.nef	ISOSetting
 Nikon.nef	Lens
 Nikon.nef	LensFStops
 Nikon.nef	LensSpec
@@ -339,7 +338,6 @@ NikonD2Hs.jpg	ExternalFlashExposureComp
 NikonD2Hs.jpg	ExternalFlashFirmware
 NikonD2Hs.jpg	FOV
 NikonD2Hs.jpg	FlashExposureBracketValue
-NikonD2Hs.jpg	ISOSetting
 NikonD2Hs.jpg	Lens
 NikonD2Hs.jpg	LensFStops
 NikonD2Hs.jpg	LensID
@@ -360,7 +358,6 @@ NikonD70.jpg	ExternalFlashFirmware
 NikonD70.jpg	FlashExposureBracketValue
 NikonD70.jpg	FlashExposureComp
 NikonD70.jpg	ISO
-NikonD70.jpg	ISOSetting
 NikonD70.jpg	Lens
 NikonD70.jpg	LensFStops
 NikonD70.jpg	LensID
@@ -535,7 +532,6 @@ Sigma.jpg	Contrast
 Sigma.jpg	ExposureCompensation
 Sigma.jpg	FileSource
 Sigma.jpg	Highlight
-Sigma.jpg	MeteringMode
 Sigma.jpg	Quality
 Sigma.jpg	Saturation
 Sigma.jpg	Shadow
@@ -555,7 +551,6 @@ SigmaDP2.x3f	ImageWidth
 SigmaDP2.x3f	LensID
 SigmaDP2.x3f	LensType
 SigmaDP2.x3f	Megapixels
-SigmaDP2.x3f	MeteringMode
 SigmaDP2.x3f	NetExposureCompensation
 SigmaDP2.x3f	PreviewImage
 SigmaDP2.x3f	PreviewImageStart
