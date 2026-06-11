@@ -5318,6 +5318,14 @@ fn read_makernote_ifd_with_base(
                             // Rename "Type" to "CameraType" to avoid conflict
                             let key = if key == "Type" { "CameraType" } else { key };
                             if !key.is_empty() && !val.is_empty() {
+                                // CameraType codes map to model names (%olympusCameraTypes).
+                                let print_val = if key == "CameraType" {
+                                    crate::tags::olympus_camera_types::olympus_camera_type(val)
+                                        .unwrap_or(val)
+                                        .to_string()
+                                } else {
+                                    val.to_string()
+                                };
                                 t.push(Tag {
                                     id: TagId::Text(key.to_string()),
                                     name: key.to_string(),
@@ -5328,7 +5336,7 @@ fn read_makernote_ifd_with_base(
                                         family2: "Camera".into(),
                                     },
                                     raw_value: Value::String(val.to_string()),
-                                    print_value: val.to_string(),
+                                    print_value: print_val,
                                     priority: 0,
                                 });
                             }
@@ -7677,6 +7685,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Olympus | Manufacturer::OlympusNew => match tag_id {
+            // CameraType (0x0207): map the type code to a model name (%olympusCameraTypes).
+            0x0207 => value
+                .as_str()
+                .and_then(|s| crate::tags::olympus_camera_types::olympus_camera_type(s.trim()))
+                .map(|s| s.to_string()),
             // RedBalance/BlueBalance: int16u[2], ValueConv = first/256, printed %.7g.
             0x1017 | 0x1018 => {
                 let first = match value {
