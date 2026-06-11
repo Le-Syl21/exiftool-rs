@@ -236,10 +236,12 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
         let creator = if raw.iter().all(|&b| b == 0) {
             String::new()
         } else {
-            crate::encoding::decode_utf8_or_latin1(raw)
+            let code = crate::encoding::decode_utf8_or_latin1(raw)
                 .trim_end_matches('\0')
                 .trim()
-                .to_string()
+                .to_string();
+            // ProfileCreator is a registered ICC vendor signature (ADBE -> Adobe Systems Inc.).
+            icc_vendor(&code).map(str::to_string).unwrap_or(code)
         };
         tags.push(mk(
             "ProfileCreator",

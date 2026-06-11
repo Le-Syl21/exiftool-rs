@@ -17,7 +17,6 @@ Apple.jpg	GPSHPositioningError
 Apple.jpg	ImageCaptureType
 Apple.jpg	LensInfo
 Audible.aa	Copyright
-BPG.bpg	ProfileCreator
 BigTIFF.btf	MIMEType
 Canon.jpg	BlueBalance
 Canon.jpg	DOF
@@ -206,7 +205,6 @@ ExifTool.jpg	LightValue
 ExifTool.jpg	Make
 ExifTool.jpg	Megapixels
 ExifTool.jpg	Model
-ExifTool.jpg	ProfileCreator
 ExifTool.jpg	Quality
 ExifTool.jpg	SerialNumber
 ExifTool.jpg	ShutterReleaseMethod
@@ -222,7 +220,6 @@ ExifTool.jpg	YResolution
 ExifTool.tif	DeviceManufacturer
 ExifTool.tif	MeasurementBacking
 ExifTool.tif	MeasurementFlare
-ExifTool.tif	ProfileCreator
 ExifTool.tif	Technology
 ExifTool.tif	ViewingCondIlluminant
 FITS.fits	Comment
@@ -713,7 +710,6 @@ Pentax.jpg	WhiteBalanceMode
 PhaseOne.iiq	ThumbnailTIFF
 PhotoMechanic.jpg	Prefs
 Photoshop.psd	Compression
-Photoshop.psd	ProfileCreator
 PostScript.eps	Creator
 PostScript.eps	FileType
 PostScript.eps	FileTypeExtension
@@ -840,7 +836,6 @@ XMP.jpg	APP14Flags1
 XMP.jpg	DeviceManufacturer
 XMP.jpg	MeasurementBacking
 XMP.jpg	MeasurementFlare
-XMP.jpg	ProfileCreator
 XMP.jpg	Technology
 XMP.jpg	Urgency
 XMP.jpg	ViewingCondIlluminant
