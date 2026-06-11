@@ -386,7 +386,6 @@ VCard.vcf	LogoImageJpeg
 VCard.vcf	Note
 VCard.vcf	PhotoJpeg
 VCard.vcf	TelephoneOtherVoice
-Vorbis.ogg	CoverArt
 Vorbis.ogg	Duration
 WTV.wtv	SubtitleDescription
 XMP.jpg	DeviceManufacturer

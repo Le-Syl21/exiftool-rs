@@ -218,6 +218,17 @@ pub fn parse_vorbis_comments(data: &[u8], tags: &mut Vec<Tag>) {
             } else {
                 (name.to_string(), description.to_string())
             };
+            // CoverArt is a base64-encoded image (ValueConv DecodeBase64) → binary.
+            if final_name == "CoverArt" {
+                if let Some(bin) = base64_decode(value) {
+                    let pv =
+                        format!("(Binary data {} bytes, use -b option to extract)", bin.len());
+                    let mut t = mk(&final_name, &final_desc, Value::Binary(bin));
+                    t.print_value = pv;
+                    tags.push(t);
+                    continue;
+                }
+            }
             tags.push(mk(
                 &final_name,
                 &final_desc,
