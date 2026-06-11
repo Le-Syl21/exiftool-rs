@@ -545,6 +545,17 @@ fn icc_vendor(code: &str) -> Option<&'static str> {
         "SUNW" => "Sun Microsystems Inc.",
         "TGNT" => "Taligent Inc.",
         "HP" => "Hewlett-Packard",
+        "NKON" => "Nikon Corporation",
+        "CANO" => "Canon",
+        "EPSO" => "Epson",
+        "FF" => "Fujifilm",
+        "KONI" => "Konica Minolta",
+        "LOGO" => "Logo",
+        "SONY" => "Sony Corporation",
+        "DL&C" => "Digital Light & Color",
+        "GMG" => "GMG",
+        "ZC00" => "Zoran Corporation",
+        "ICC" => "ICC",
         _ => return None,
     })
 }

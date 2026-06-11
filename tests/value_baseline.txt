@@ -223,7 +223,6 @@ ExifTool.tif	ViewingCondIlluminant
 FITS.fits	Comment
 FITS.fits	MIMEType
 FLIF.flif	DeviceModel
-FLIF.flif	ProfileCMMType
 FLIR.jpg	CameraTemperatureMaxSaturated
 FLIR.jpg	CameraTemperatureMaxWarn
 FLIR.jpg	CameraTemperatureMinSaturated
@@ -280,9 +279,7 @@ GE.jpg	GEMake
 GE.jpg	GEModel
 GIF.gif	DeviceModel
 GIF.gif	PixelAspectRatio
-GIF.gif	ProfileCMMType
 GIMP.xcf	DeviceModel
-GIMP.xcf	ProfileCMMType
 GPS.jpg	Aperture
 GPS.jpg	City
 GPS.jpg	ExposureCompensation
@@ -328,7 +325,6 @@ HTML.html	Description
 HTML.html	RevisionNumber
 HTML.html	Subject
 ICC_Profile.icc	DeviceModel
-ICC_Profile.icc	ProfileCMMType
 IPTC.jpg	APP14Flags0
 IPTC.jpg	APP14Flags1
 IPTC.jpg	Warning
@@ -474,7 +470,6 @@ Nikon.nef	MaxFocalLength
 Nikon.nef	MinFocalLength
 Nikon.nef	PhotometricInterpretation
 Nikon.nef	PreviewImageStart
-Nikon.nef	ProfileCMMType
 Nikon.nef	ProgramShift
 Nikon.nef	RowsPerStrip
 Nikon.nef	SamplesPerPixel
