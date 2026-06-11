@@ -35,8 +35,6 @@ Apple.jpg	LensInfo
 Apple.jpg	ThumbnailImage
 Apple.jpg	ThumbnailOffset
 Audible.aa	Copyright
-BPG.bpg	CMMFlags
-BPG.bpg	DeviceAttributes
 BPG.bpg	Flash
 BPG.bpg	FocalPlaneXResolution
 BPG.bpg	FocalPlaneYResolution
@@ -362,7 +360,6 @@ EXE.so	ObjectFileType
 ExifTool.jpg	APP14Flags0
 ExifTool.jpg	APP14Flags1
 ExifTool.jpg	ApertureValue
-ExifTool.jpg	CMMFlags
 ExifTool.jpg	ColorSpace
 ExifTool.jpg	Comment
 ExifTool.jpg	Compression
@@ -372,7 +369,6 @@ ExifTool.jpg	CropLeft
 ExifTool.jpg	CropRight
 ExifTool.jpg	CropTop
 ExifTool.jpg	DateTimeOriginal
-ExifTool.jpg	DeviceAttributes
 ExifTool.jpg	ExposureCompensation
 ExifTool.jpg	ExposureTime
 ExifTool.jpg	ImageHeight
@@ -396,8 +392,6 @@ ExifTool.jpg	Urgency
 ExifTool.jpg	Warning
 ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
-ExifTool.tif	CMMFlags
-ExifTool.tif	DeviceAttributes
 ExifTool.tif	DeviceManufacturer
 ExifTool.tif	MeasurementBacking
 ExifTool.tif	MeasurementFlare
@@ -407,8 +401,6 @@ ExifTool.tif	Technology
 ExifTool.tif	ViewingCondIlluminant
 FITS.fits	Comment
 FITS.fits	MIMEType
-FLIF.flif	CMMFlags
-FLIF.flif	DeviceAttributes
 FLIF.flif	DeviceModel
 FLIF.flif	ProfileCMMType
 FLIR.jpg	CameraTemperatureMaxSaturated
@@ -484,13 +476,9 @@ GE.jpg	GEMake
 GE.jpg	GEModel
 GE.jpg	ThumbnailImage
 GE.jpg	ThumbnailOffset
-GIF.gif	CMMFlags
-GIF.gif	DeviceAttributes
 GIF.gif	DeviceModel
 GIF.gif	PixelAspectRatio
 GIF.gif	ProfileCMMType
-GIMP.xcf	CMMFlags
-GIMP.xcf	DeviceAttributes
 GIMP.xcf	DeviceModel
 GIMP.xcf	ProfileCMMType
 GPS.jpg	Aperture
@@ -567,8 +555,6 @@ HTML.html	Creator
 HTML.html	Description
 HTML.html	RevisionNumber
 HTML.html	Subject
-ICC_Profile.icc	CMMFlags
-ICC_Profile.icc	DeviceAttributes
 ICC_Profile.icc	DeviceModel
 ICC_Profile.icc	ProfileCMMType
 IPTC.jpg	APP14Flags0
@@ -800,7 +786,6 @@ Nikon.jpg	WhiteBalance
 Nikon.nef	AFPointsInFocus
 Nikon.nef	BitsPerSample
 Nikon.nef	CFAPattern
-Nikon.nef	CMMFlags
 Nikon.nef	ColorHue
 Nikon.nef	Compression
 Nikon.nef	CropBottom
@@ -816,7 +801,6 @@ Nikon.nef	CropRight
 Nikon.nef	CropScaledResolution
 Nikon.nef	CropSourceResolution
 Nikon.nef	CropTop
-Nikon.nef	DeviceAttributes
 Nikon.nef	DeviceModel
 Nikon.nef	EffectiveMaxAperture
 Nikon.nef	ExitPupilPosition
@@ -1196,9 +1180,7 @@ PhotoMechanic.jpg	DateTimeCreated
 PhotoMechanic.jpg	DateTimeOriginal
 PhotoMechanic.jpg	Prefs
 PhotoMechanic.jpg	TimeCreated
-Photoshop.psd	CMMFlags
 Photoshop.psd	Compression
-Photoshop.psd	DeviceAttributes
 Photoshop.psd	ProfileCreator
 PostScript.eps	Creator
 PostScript.eps	FileType
@@ -1369,8 +1351,6 @@ XMP.inx	FileTypeExtension
 XMP.inx	MIMEType
 XMP.jpg	APP14Flags0
 XMP.jpg	APP14Flags1
-XMP.jpg	CMMFlags
-XMP.jpg	DeviceAttributes
 XMP.jpg	DeviceManufacturer
 XMP.jpg	MeasurementBacking
 XMP.jpg	MeasurementFlare

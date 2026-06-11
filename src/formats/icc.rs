@@ -152,20 +152,43 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
 
     // CMMFlags (bytes 44-47)
     let flags = u32::from_be_bytes([data[44], data[45], data[46], data[47]]);
-    tags.push(mk(
-        "CMMFlags",
-        "CMM Flags",
-        Value::String(format!("0x{:08X}", flags)),
-    ));
+    let cmm_flags = format!(
+        "{}{}",
+        if flags & 0x01 != 0 {
+            "Embedded, "
+        } else {
+            "Not Embedded, "
+        },
+        if flags & 0x02 != 0 {
+            "Not Independent"
+        } else {
+            "Independent"
+        }
+    );
+    tags.push(mk("CMMFlags", "CMM Flags", Value::String(cmm_flags)));
 
-    // DeviceAttributes (bytes 56-63)
-    let attr = u64::from_be_bytes([
-        data[56], data[57], data[58], data[59], data[60], data[61], data[62], data[63],
-    ]);
+    // DeviceAttributes (bytes 56-63, int32u[2]); ExifTool's PrintConv uses the
+    // second word ($v[1] = bytes 60-63) for the reflective/glossy/etc. flags.
+    let attr = u32::from_be_bytes([data[60], data[61], data[62], data[63]]);
+    let dev_attr = format!(
+        "{}{}{}{}",
+        if attr & 0x01 != 0 {
+            "Transparency, "
+        } else {
+            "Reflective, "
+        },
+        if attr & 0x02 != 0 { "Matte, " } else { "Glossy, " },
+        if attr & 0x04 != 0 {
+            "Negative, "
+        } else {
+            "Positive, "
+        },
+        if attr & 0x08 != 0 { "B&W" } else { "Color" }
+    );
     tags.push(mk(
         "DeviceAttributes",
         "Device Attributes",
-        Value::String(format!("{}", attr)),
+        Value::String(dev_attr),
     ));
 
     // Device manufacturer (bytes 48-51) and model (52-55)
