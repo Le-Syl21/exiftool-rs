@@ -1133,7 +1133,7 @@ impl ExifReader {
                             family2: "Image".into(),
                         },
                         raw_value: Value::Binary(data[off..off + len].to_vec()),
-                        print_value: format!("(Binary data {} bytes)", len),
+                        print_value: format!("(Binary data {} bytes, use -b option to extract)", len),
                         priority: 0,
                     });
                 }

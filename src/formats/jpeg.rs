@@ -2553,7 +2553,7 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     // Palette data
                     let pc = rec[0] as usize;
                     if pc > 0 && 112 + pc * 3 <= rec.len() {
-                        tags.push(mk("Palette", format!("(Binary data {} bytes)", pc * 3)));
+                        tags.push(mk("Palette", format!("(Binary data {} bytes, use -b option to extract)", pc * 3)));
                     }
                 }
             }
@@ -2593,7 +2593,7 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     tags.push(mk("RawThermalImageType", type_str.into()));
                     tags.push(mk(
                         "RawThermalImage",
-                        format!("(Binary data {} bytes)", rec.len()),
+                        format!("(Binary data {} bytes, use -b option to extract)", rec.len()),
                     ));
                 }
             }
@@ -4555,7 +4555,7 @@ fn parse_gpmf_records(data: &[u8], tags: &mut Vec<crate::tag::Tag>, depth: usize
                     u16::from_be_bytes([val_data[0], val_data[1]]).to_string()
                 }
             } else {
-                format!("(Binary data {} bytes)", size)
+                format!("(Binary data {} bytes, use -b option to extract)", size)
             }
         } else if (fmt == 0x4c || fmt == 0x6c) && size >= 4 {
             if count == 1 {
@@ -4567,14 +4567,14 @@ fn parse_gpmf_records(data: &[u8], tags: &mut Vec<crate::tag::Tag>, depth: usize
                         .to_string()
                 }
             } else {
-                format!("(Binary data {} bytes)", size)
+                format!("(Binary data {} bytes, use -b option to extract)", size)
             }
         } else if fmt == 0x66 && size >= 4 {
             if count == 1 {
                 let v = f32::from_be_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]);
                 format!("{}", v)
             } else {
-                format!("(Binary data {} bytes)", size)
+                format!("(Binary data {} bytes, use -b option to extract)", size)
             }
         } else if fmt == 0x64 && size >= 8 {
             if count == 1 {
@@ -4590,10 +4590,10 @@ fn parse_gpmf_records(data: &[u8], tags: &mut Vec<crate::tag::Tag>, depth: usize
                 ]);
                 format!("{}", v)
             } else {
-                format!("(Binary data {} bytes)", size)
+                format!("(Binary data {} bytes, use -b option to extract)", size)
             }
         } else if size > 256 {
-            format!("(Binary data {} bytes)", size)
+            format!("(Binary data {} bytes, use -b option to extract)", size)
         } else {
             crate::encoding::decode_utf8_or_latin1(val_data)
                 .trim_end_matches('\0')

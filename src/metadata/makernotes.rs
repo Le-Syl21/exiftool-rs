@@ -2989,7 +2989,7 @@ fn decode_preview_ifd(data: &[u8], offset: usize, bo: ByteOrderMark) -> Vec<Tag>
                             family2: "Image".into(),
                         },
                         raw_value: Value::Binary(Vec::new()), // placeholder
-                        print_value: format!("(Binary data {} bytes)", val),
+                        print_value: format!("(Binary data {} bytes, use -b option to extract)", val),
                         priority: 0,
                     });
                 }
@@ -4971,7 +4971,7 @@ fn read_makernote_ifd_with_base(
                                 family2: "Image".into(),
                             },
                             raw_value: Value::Binary(Vec::new()),
-                            print_value: format!("(Binary data {} bytes)", len_val),
+                            print_value: format!("(Binary data {} bytes, use -b option to extract)", len_val),
                             priority: 0,
                         });
                     }
