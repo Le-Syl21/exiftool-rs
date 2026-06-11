@@ -161,7 +161,6 @@ GPS.jpg	City
 GPS.jpg	FNumber
 GPS.jpg	FileSource
 GPS.jpg	SceneType
-GeoTiff.tif	ColorMap
 GeoTiff.tif	GeogGeodeticDatum
 GeoTiff.tif	Projection
 Geotag.gpx	GpxSchemaLocation

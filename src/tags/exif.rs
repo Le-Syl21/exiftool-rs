@@ -576,6 +576,20 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 }
             }
         }
+        // ColorMap (0x0140): ExifTool marks it Binary => 1 (shown as a placeholder).
+        (_, 0x0140) => {
+            let bytes = match value {
+                Value::List(items) => items.len() * 2,
+                Value::Binary(b) | Value::Undefined(b) => b.len(),
+                _ => 0,
+            };
+            if bytes > 0 {
+                return Some(format!(
+                    "(Binary data {} bytes, use -b option to extract)",
+                    bytes
+                ));
+            }
+        }
         // LensInfo (Exif::PrintLensInfo): 4 values → "min-max mm f/min-max".
         (_, 0xA432) => {
             let s = value.to_display_string();
