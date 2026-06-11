@@ -8149,6 +8149,15 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Ricoh => match tag_id {
+            // FirmwareVersion (0x0002): "Rev0104" => sprintf("%.2f", 104/100).
+            0x0002 => value.as_str().map(|s| {
+                if let Some(digits) = s.strip_prefix("Rev") {
+                    if let Ok(n) = digits.parse::<f64>() {
+                        return format!("{:.2}", n / 100.0);
+                    }
+                }
+                s.to_string()
+            }),
             // 0x0005: printable bytes => SerialNumber (handled by name elsewhere);
             // non-printable => InternalSerialNumber as hex (ValueConv unpack "H*").
             0x0005 => {
