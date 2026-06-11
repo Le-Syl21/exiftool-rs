@@ -436,7 +436,6 @@ TNEF.tnef	CreateDate
 TNEF.tnef	MessageBodyRTF
 TNEF.tnef	ModifyDate
 Torrent.torrent	CreateDate
-Torrent.torrent	File4Length
 VCard.ics	Alarm1AlarmUID
 VCard.ics	Alarm1UID
 VCard.ics	DateTimeEnd

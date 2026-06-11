@@ -274,15 +274,23 @@ fn process_info(info: &[(String, Bencode)], tags: &mut Vec<Tag>) {
     }
 }
 
+/// Port of ExifTool ConvertFileSize (decimal units): %.1f below 10× a unit, %.0f above.
 fn convert_file_size(bytes: i64) -> String {
-    if bytes >= 1_000_000_000 {
-        format!("{:.1} GB", bytes as f64 / 1_000_000_000.0)
-    } else if bytes >= 1_000_000 {
-        format!("{:.1} MB", bytes as f64 / 1_000_000.0)
-    } else if bytes >= 1_000 {
-        format!("{:.1} kB", bytes as f64 / 1_000.0)
-    } else {
+    let v = bytes as f64;
+    if bytes < 2000 {
         format!("{} bytes", bytes)
+    } else if bytes < 10_000 {
+        format!("{:.1} kB", v / 1000.0)
+    } else if bytes < 2_000_000 {
+        format!("{:.0} kB", v / 1000.0)
+    } else if bytes < 10_000_000 {
+        format!("{:.1} MB", v / 1_000_000.0)
+    } else if bytes < 2_000_000_000 {
+        format!("{:.0} MB", v / 1_000_000.0)
+    } else if bytes < 10_000_000_000 {
+        format!("{:.1} GB", v / 1_000_000_000.0)
+    } else {
+        format!("{:.0} GB", v / 1_000_000_000.0)
     }
 }
 
