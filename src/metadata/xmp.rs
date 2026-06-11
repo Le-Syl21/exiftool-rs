@@ -1640,6 +1640,36 @@ impl XmpReader {
             }
         }
 
+        // ExifTool shares the EXIF tag table for the XMP exif:/tiff: schemas, applying
+        // the same ValueConv (rational → decimal) and PrintConv (FNumber → "2.8",
+        // ExposureProgram → "Aperture-priority AE", …). Recompute those print values.
+        for tag in tags.iter_mut() {
+            let fam1 = tag.group.family1.as_str();
+            if fam1 != "XMP-exif" && fam1 != "XMP-tiff" {
+                continue;
+            }
+            // Flash is a structured XMP type decomposed by its own handler ("Off, Did
+            // not fire"); the scalar EXIF Flash PrintConv ("No Flash") does not apply.
+            if tag.name == "Flash" {
+                continue;
+            }
+            // Coerce plain integer strings to numbers so enum PrintConvs (as_u64) apply.
+            let numv = match &tag.raw_value {
+                Value::String(s) => match s.parse::<i64>() {
+                    Ok(i) if i >= 0 => Value::U32(i as u32),
+                    Ok(i) => Value::I32(i as i32),
+                    Err(_) => tag.raw_value.clone(),
+                },
+                other => other.clone(),
+            };
+            if let Some(pv) = crate::tags::exif::print_conv_by_tag_name(&tag.name, &numv) {
+                tag.print_value = pv;
+            } else if matches!(numv, Value::URational(..) | Value::IRational(..)) {
+                // No PrintConv: ExifTool still ValueConvs the rational to its decimal form.
+                tag.print_value = numv.to_display_string();
+            }
+        }
+
         // ExifTool reformats XMP ISO-8601 dates to its own "YYYY:MM:DD HH:MM:SS" form
         // (ConvertXMPDate). Apply to any value matching the strict date pattern.
         for tag in tags.iter_mut() {

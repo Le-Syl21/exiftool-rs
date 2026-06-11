@@ -26,6 +26,39 @@ pub fn lookup(ifd: &str, tag_id: u16) -> Option<&'static TagInfo> {
     table.iter().find(|t| t.tag_id == tag_id)
 }
 
+/// Reverse lookup: find the (ifd, tag_id) for an EXIF tag name. Searches ExifIFD
+/// first (where most photographic tags live), then IFD0, GPS and Interop.
+pub fn tag_id_by_name(name: &str) -> Option<(&'static str, u16)> {
+    for (ifd, table) in [
+        ("ExifIFD", EXIF_IFD_TAGS),
+        ("IFD0", IFD0_TAGS),
+        ("GPS", GPS_TAGS),
+        ("InteropIFD", INTEROP_TAGS),
+    ] {
+        if let Some(t) = table.iter().find(|t| t.name == name) {
+            return Some((ifd, t.tag_id));
+        }
+    }
+    None
+}
+
+/// Apply the EXIF print-conversion chain to a tag identified by name. Used for
+/// XMP exif:/tiff: namespace tags, which ExifTool shares with the EXIF table:
+/// hand-written conv, then generated enum conv. Returns None if neither applies.
+pub fn print_conv_by_tag_name(name: &str, value: &Value) -> Option<String> {
+    if let Some((ifd, id)) = tag_id_by_name(name) {
+        if let Some(s) = print_conv(ifd, id, value) {
+            return Some(s);
+        }
+    }
+    if let Some(v) = value.as_u64() {
+        if let Some(s) = super::print_conv_generated::print_conv_by_name(name, v as i64) {
+            return Some(s.to_string());
+        }
+    }
+    None
+}
+
 /// Lookup tag name from generated tables (fallback for unknown tags).
 pub fn lookup_generated(tag_id: u16) -> Option<(&'static str, &'static str)> {
     super::generated::GENERATED_EXIF_TAGS
