@@ -109,6 +109,35 @@ pub struct ExifReader;
 impl ExifReader {
     /// Parse EXIF data from a byte slice (starting at the TIFF header).
     pub fn read(data: &[u8]) -> Result<Vec<Tag>> {
+        Self::read_with_base(data, 0)
+    }
+
+    /// Parse EXIF data, adding `base` (the TIFF header's offset within the file) to
+    /// offset-type tags so they read as absolute file offsets, matching ExifTool.
+    pub fn read_with_base(data: &[u8], base: usize) -> Result<Vec<Tag>> {
+        let mut tags = Self::read_inner(data)?;
+        if base != 0 {
+            // ExifTool reports these IsOffset tags relative to the start of the file.
+            const OFFSET_TAGS: &[&str] = &[
+                "ThumbnailOffset",
+                "PreviewImageStart",
+                "JpgFromRawStart",
+                "OtherImageStart",
+            ];
+            for t in tags.iter_mut() {
+                if OFFSET_TAGS.contains(&t.name.as_str()) {
+                    if let Some(off) = t.raw_value.as_u64() {
+                        let abs = off + base as u64;
+                        t.raw_value = Value::U32(abs as u32);
+                        t.print_value = abs.to_string();
+                    }
+                }
+            }
+        }
+        Ok(tags)
+    }
+
+    fn read_inner(data: &[u8]) -> Result<Vec<Tag>> {
         let header = parse_tiff_header(data)?;
         let mut tags = Vec::new();
 

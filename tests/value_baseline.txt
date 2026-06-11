@@ -29,7 +29,6 @@ Apple.jpg	GPSSpeedRef
 Apple.jpg	GPSTimeStamp
 Apple.jpg	ImageCaptureType
 Apple.jpg	LensInfo
-Apple.jpg	ThumbnailOffset
 Audible.aa	Copyright
 BPG.bpg	Flash
 BPG.bpg	ProfileCreator
@@ -109,7 +108,6 @@ Canon1DmkIII.jpg	ShutterButtonAFOnButton
 Canon1DmkIII.jpg	ShutterSpeedRange
 Canon1DmkIII.jpg	SwitchToRegisteredAFPoint
 Canon1DmkIII.jpg	TargetAperture
-Canon1DmkIII.jpg	ThumbnailOffset
 Canon1DmkIII.jpg	TimerLength
 Canon1DmkIII.jpg	ToningEffectMonochrome
 Canon1DmkIII.jpg	ToningEffectUserDef1
@@ -230,7 +228,6 @@ CanonRaw.crw	TargetAperture
 CanonVRD.dr4	ShootingDistance
 Casio.jpg	FlashMode
 Casio.jpg	ObjectDistance
-Casio.jpg	ThumbnailOffset
 Casio2.jpg	AFPointPosition
 Casio2.jpg	BestShotMode
 Casio2.jpg	DOF
@@ -238,8 +235,6 @@ Casio2.jpg	FirmwareDate
 Casio2.jpg	Flash
 Casio2.jpg	ObjectDistance
 Casio2.jpg	PreviewImageSize
-Casio2.jpg	PreviewImageStart
-Casio2.jpg	ThumbnailOffset
 Casio2.jpg	WhiteBalance
 CasioQVCI.jpg	DateTimeOriginal
 CasioQVCI.jpg	ManufactureCode
@@ -357,7 +352,6 @@ ExifTool.jpg	ShutterReleaseTiming
 ExifTool.jpg	ShutterSpeed
 ExifTool.jpg	ShutterSpeedValue
 ExifTool.jpg	TargetDistanceSetting
-ExifTool.jpg	ThumbnailOffset
 ExifTool.jpg	URL
 ExifTool.jpg	Urgency
 ExifTool.jpg	Warning
@@ -385,7 +379,6 @@ FLIR.jpg	FrameRate
 FLIR.jpg	PeakSpectralSensitivity
 FLIR.jpg	RawThermalImage
 FLIR.jpg	SubjectDistance
-FLIR.jpg	ThumbnailOffset
 FlashPix.ppt	FileType
 FlashPix.ppt	FileTypeExtension
 FlashPix.ppt	HeadingPairs
@@ -416,7 +409,6 @@ FujiFilm.jpg	FocusMode
 FujiFilm.jpg	Quality
 FujiFilm.jpg	Sharpness
 FujiFilm.jpg	ShutterSpeed
-FujiFilm.jpg	ThumbnailOffset
 FujiFilm.jpg	Version
 FujiFilm.raf	AFMode
 FujiFilm.raf	DynamicRange
@@ -437,7 +429,6 @@ FujiFilm.raf	WhiteBalanceFineTune
 GE.jpg	Flash
 GE.jpg	GEMake
 GE.jpg	GEModel
-GE.jpg	ThumbnailOffset
 GIF.gif	DeviceModel
 GIF.gif	PixelAspectRatio
 GIF.gif	ProfileCMMType
@@ -454,7 +445,6 @@ GPS.jpg	GPSPosition
 GPS.jpg	GPSTimeStamp
 GPS.jpg	SceneType
 GPS.jpg	ShutterSpeed
-GPS.jpg	ThumbnailOffset
 GeoTiff.tif	ColorMap
 GeoTiff.tif	GeogGeodeticDatum
 GeoTiff.tif	Projection
@@ -489,7 +479,6 @@ GoPro.jpg	Protune
 GoPro.jpg	Sharpness
 GoPro.jpg	SpotMeter
 GoPro.jpg	SubjectDistance
-GoPro.jpg	ThumbnailOffset
 GoPro.jpg	WhiteBalance
 Google.jpg	DirectoryItemMime
 Google.jpg	Flash
@@ -505,7 +494,6 @@ Google.jpg	ImageData
 Google.jpg	ImageName
 Google.jpg	SoftwareDate
 Google.jpg	SubjectDistance
-Google.jpg	ThumbnailOffset
 HTML.html	Creator
 HTML.html	Description
 HTML.html	RevisionNumber
@@ -545,9 +533,7 @@ InfiRay.jpg	VisibleSensorSerialNumber
 JVC.jpg	CPUVersions
 JVC.jpg	Flash
 JVC.jpg	Quality
-JVC.jpg	ThumbnailOffset
 JVC2.jpg	Quality
-JVC2.jpg	ThumbnailOffset
 JXL.jxl	FileType
 JXL2.jxl	CompatibleBrands
 Jpeg2000.jp2	CompatibleBrands
@@ -579,7 +565,6 @@ Kodak.jpg	SequenceNumber
 Kodak.jpg	Sharpness
 Kodak.jpg	ShutterMode
 Kodak.jpg	ShutterSpeed
-Kodak.jpg	ThumbnailOffset
 Kodak.jpg	TimeCreated
 Kodak.jpg	TotalZoom
 Kodak.jpg	UsedExtensionNumbers
@@ -664,12 +649,10 @@ Minolta.jpg	MinoltaImageSize
 Minolta.jpg	MinoltaModelID
 Minolta.jpg	MinoltaQuality
 Minolta.jpg	MinoltaTime
-Minolta.jpg	PreviewImageStart
 Minolta.jpg	PrintIMVersion
 Minolta.jpg	Saturation
 Minolta.jpg	Sharpness
 Minolta.jpg	SubjectProgram
-Minolta.jpg	ThumbnailOffset
 Minolta.jpg	WhiteBalance
 Minolta.jpg	WideFocusZone
 Minolta.mrw	BracketStep
@@ -710,7 +693,6 @@ Minolta.mrw	SubjectProgram
 Minolta.mrw	WhiteBalance
 Minolta.mrw	WideFocusZone
 Motorola.jpg	Flash
-Motorola.jpg	ThumbnailOffset
 Nikon.jpg	AuxiliaryLens
 Nikon.jpg	ColorMode
 Nikon.jpg	FlashSetting
@@ -721,7 +703,6 @@ Nikon.jpg	MakerNoteVersion
 Nikon.jpg	Quality
 Nikon.jpg	SceneMode
 Nikon.jpg	Sharpness
-Nikon.jpg	ThumbnailOffset
 Nikon.jpg	WhiteBalance
 Nikon.nef	AFPointsInFocus
 Nikon.nef	BitsPerSample
@@ -818,7 +799,6 @@ NikonD2Hs.jpg	RedBalance
 NikonD2Hs.jpg	Saturation
 NikonD2Hs.jpg	SensorPixelSize
 NikonD2Hs.jpg	Sharpness
-NikonD2Hs.jpg	ThumbnailOffset
 NikonD2Hs.jpg	ToneComp
 NikonD2Hs.jpg	WhiteBalance
 NikonD70.jpg	AFPointsInFocus
@@ -856,7 +836,6 @@ NikonD70.jpg	Saturation
 NikonD70.jpg	SensorPixelSize
 NikonD70.jpg	SerialNumber
 NikonD70.jpg	Sharpness
-NikonD70.jpg	ThumbnailOffset
 NikonD70.jpg	ToneComp
 NikonD70.jpg	VariProgram
 NikonD70.jpg	WhiteBalance
@@ -867,7 +846,6 @@ Olympus.jpg	DigitalZoom
 Olympus.jpg	FocalPlaneDiagonal
 Olympus.jpg	Quality
 Olympus.jpg	SpecialMode
-Olympus.jpg	ThumbnailOffset
 Olympus2.jpg	AFAreas
 Olympus2.jpg	AFPoint
 Olympus2.jpg	BodyFirmwareVersion
@@ -912,7 +890,6 @@ Olympus2.jpg	SceneMode
 Olympus2.jpg	SerialNumber
 Olympus2.jpg	SharpnessSetting
 Olympus2.jpg	SpecialMode
-Olympus2.jpg	ThumbnailOffset
 Olympus2.jpg	WhiteBalanceTemperature
 OlympusE1.jpg	AFAreas
 OlympusE1.jpg	AFPoint
@@ -949,7 +926,6 @@ OlympusE1.jpg	MaxApertureAtMaxFocal
 OlympusE1.jpg	MeteringMode
 OlympusE1.jpg	NoiseReduction
 OlympusE1.jpg	NoiseReduction2
-OlympusE1.jpg	PreviewImageStart
 OlympusE1.jpg	Quality
 OlympusE1.jpg	RawDevEditStatus
 OlympusE1.jpg	RawDevNoiseReduction
@@ -960,7 +936,6 @@ OlympusE1.jpg	SensorTemperature
 OlympusE1.jpg	SerialNumber
 OlympusE1.jpg	SharpnessSetting
 OlympusE1.jpg	SpecialMode
-OlympusE1.jpg	ThumbnailOffset
 OlympusE1.jpg	WhiteBalanceTemperature
 Opus.opus	FileType
 Opus.opus	FileTypeExtension
@@ -1001,7 +976,6 @@ Panasonic.jpg	Flash
 Panasonic.jpg	InternalSerialNumber
 Panasonic.jpg	PanasonicExifVersion
 Panasonic.jpg	SequenceNumber
-Panasonic.jpg	ThumbnailOffset
 Panasonic.jpg	TimeSincePowerOn
 Panasonic.jpg	VideoFrameRate
 Panasonic.rw2	AFAreaMode
@@ -1045,7 +1019,6 @@ Pentax.jpg	MeteringMode
 Pentax.jpg	PentaxModelID
 Pentax.jpg	PreviewImageBorders
 Pentax.jpg	PreviewImageSize
-Pentax.jpg	PreviewImageStart
 Pentax.jpg	Rotation
 Pentax.jpg	SRActive
 Pentax.jpg	Saturation
@@ -1053,7 +1026,6 @@ Pentax.jpg	SensitivityAdjust
 Pentax.jpg	Sharpness
 Pentax.jpg	ShutterCount
 Pentax.jpg	SlaveFlashMeteringSegments
-Pentax.jpg	ThumbnailOffset
 Pentax.jpg	TvExposureTimeSetting
 Pentax.jpg	WhiteBalanceMode
 PhaseOne.iiq	SubfileType
@@ -1103,7 +1075,6 @@ Ricoh.jpg	FirmwareVersion
 Ricoh.jpg	ManufactureDate1
 Ricoh.jpg	Sharpness
 Ricoh.jpg	ShutterSpeed
-Ricoh.jpg	ThumbnailOffset
 Ricoh2.jpg	FirmwareVersion
 Ricoh2.jpg	Flash
 Ricoh2.jpg	GPSAltitude
@@ -1123,14 +1094,12 @@ Ricoh2.jpg	InternalSerialNumber
 Ricoh2.jpg	ManufactureDate1
 Ricoh2.jpg	ManufactureDate2
 Ricoh2.jpg	Sharpness
-Ricoh2.jpg	ThumbnailOffset
 Ricoh2.jpg	UserComment
 Sanyo.jpg	DataDump
 Sanyo.jpg	Flash
 Sanyo.jpg	FlashMode
 Sanyo.jpg	Macro
 Sanyo.jpg	SelfTimer
-Sanyo.jpg	ThumbnailOffset
 Sigma.jpg	AutoBracket
 Sigma.jpg	ColorAdjustment
 Sigma.jpg	Contrast
@@ -1142,7 +1111,6 @@ Sigma.jpg	Quality
 Sigma.jpg	Saturation
 Sigma.jpg	Shadow
 Sigma.jpg	Sharpness
-Sigma.jpg	ThumbnailOffset
 Sigma.jpg	X3FillLight
 Sigma.x3f	LensType
 SigmaDP2.x3f	AutoBracket
@@ -1171,7 +1139,6 @@ SigmaDP2.x3f	SensorTemperature
 SigmaDP2.x3f	ThumbnailOffset
 SigmaDP2.x3f	X3FillLight
 Sony.jpg	Flash
-Sony.jpg	ThumbnailOffset
 TNEF.tnef	ClientSubmitTime
 TNEF.tnef	CorrelationKey
 TNEF.tnef	CreateDate
@@ -1183,7 +1150,6 @@ TNEF.tnef	ModifyDate
 Torrent.torrent	CreateDate
 Torrent.torrent	File4Length
 Unknown.jpg	Flash
-Unknown.jpg	ThumbnailOffset
 VCard.ics	Alarm1AlarmUID
 VCard.ics	Alarm1UID
 VCard.ics	DateTimeEnd
@@ -1218,7 +1184,6 @@ XMP.jpg	MeasurementFlare
 XMP.jpg	ProfileCreator
 XMP.jpg	ShutterSpeed
 XMP.jpg	Technology
-XMP.jpg	ThumbnailOffset
 XMP.jpg	Urgency
 XMP.jpg	ViewingCondIlluminant
 XMP.xml	FileType

@@ -211,6 +211,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
         }
 
         let seg_data = &data[pos + 2..pos + seg_len];
+        let seg_data_offset = pos + 2;
         pos += seg_len;
 
         match marker {
@@ -335,7 +336,10 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 // EXIF data
                 if seg_data.len() > EXIF_HEADER.len() && seg_data.starts_with(EXIF_HEADER) {
                     let exif_data = &seg_data[EXIF_HEADER.len()..];
-                    if let Ok(exif_tags) = ExifReader::read(exif_data) {
+                    // Base = file offset of the TIFF header (after the "Exif\0\0" header),
+                    // so offset-type tags (ThumbnailOffset, …) become absolute.
+                    let base = seg_data_offset + EXIF_HEADER.len();
+                    if let Ok(exif_tags) = ExifReader::read_with_base(exif_data, base) {
                         tags.extend(exif_tags);
                     }
                 }
