@@ -845,6 +845,37 @@ fn compute_light_value(tags: &[Tag]) -> Option<Tag> {
 }
 
 /// Compute 35mm equivalent focal length and scale factor.
+/// Canon CalcSensorDiag (Canon.pm): the sensor diagonal in mm, derived from the
+/// rational denominators of FocalPlaneX/YResolution (sensor size in inches × 1000).
+fn canon_sensor_diag(tags: &[Tag]) -> Option<f64> {
+    let make = find_tag_value(tags, "Make").unwrap_or_default();
+    if !make.contains("Canon") {
+        return None;
+    }
+    let rat = |name: &str| -> Option<(u32, u32)> {
+        match find_tag(tags, name)?.raw_value {
+            Value::URational(n, d) => Some((n, d)),
+            _ => None,
+        }
+    };
+    let (xn, xd) = rat("FocalPlaneXResolution")?;
+    let (yn, yd) = rat("FocalPlaneYResolution")?;
+    // Verify the Canon assumptions (numerators = px×1000, denominators = inches×1000).
+    if xn % 1000 == 0
+        && yn % 1000 == 0
+        && xn >= 640_000
+        && yn >= 480_000
+        && xn < 10_000_000
+        && yn < 10_000_000
+        && (61..1500).contains(&xd)
+        && (61..1000).contains(&yd)
+        && xd != yd
+    {
+        return Some(((xd as f64).powi(2) + (yd as f64).powi(2)).sqrt() * 0.0254);
+    }
+    None
+}
+
 fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
     let fl = find_tag_f64(tags, "FocalLength")?;
     if fl <= 0.0 {
@@ -861,6 +892,9 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
         } else {
             return None;
         }
+    } else if let Some(diag) = canon_sensor_diag(tags) {
+        // Canon CalcSensorDiag takes precedence over FocalPlaneDiagonal/Size (Canon.pm).
+        43.2666 / diag
     } else if let Some(diag) = find_tag_f64(tags, "FocalPlaneDiagonal").or_else(|| {
         find_tag_value(tags, "FocalPlaneDiagonal")
             .and_then(|s| s.split_whitespace().next()?.parse().ok())
