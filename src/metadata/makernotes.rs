@@ -8136,6 +8136,23 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Pentax => match tag_id {
+            // WhiteBalanceMode (0x001a): enum.
+            0x001a => value.as_u64().and_then(|v| {
+                match v {
+                    1 => Some("Auto (Daylight)"),
+                    2 => Some("Auto (Shade)"),
+                    3 => Some("Auto (Flash)"),
+                    4 => Some("Auto (Tungsten)"),
+                    6 => Some("Auto (Daylight Fluorescent)"),
+                    7 => Some("Auto (Day White Fluorescent)"),
+                    8 => Some("Auto (White Fluorescent)"),
+                    10 => Some("Auto (Cloudy)"),
+                    0xfffe => Some("Unknown"),
+                    0xffff => Some("User-Selected"),
+                    _ => None,
+                }
+                .map(str::to_string)
+            }),
             // CameraTemperature (0x0047): int8s, PrintConv "$val C".
             0x0047 => value
                 .as_f64()

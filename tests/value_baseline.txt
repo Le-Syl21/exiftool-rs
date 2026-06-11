@@ -403,7 +403,6 @@ Pentax.jpg	SensitivityAdjust
 Pentax.jpg	ShutterCount
 Pentax.jpg	SlaveFlashMeteringSegments
 Pentax.jpg	TvExposureTimeSetting
-Pentax.jpg	WhiteBalanceMode
 PhaseOne.iiq	ThumbnailTIFF
 PhotoMechanic.jpg	Prefs
 Photoshop.psd	Compression
