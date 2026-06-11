@@ -7682,6 +7682,22 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 5 => Some("Children"),
                 _ => None,
             }.map(str::to_string)),
+            // Type2 WhiteBalance: enum with ExifTool's "Unknown (N)" default.
+            0x2012 => value.as_u64().map(|v| {
+                match v {
+                    0 => "Manual",
+                    1 => "Daylight",
+                    2 => "Cloudy",
+                    3 => "Shade",
+                    4 => "Flash?",
+                    6 => "Fluorescent",
+                    9 => "Tungsten?",
+                    10 => "Tungsten",
+                    12 => "Flash",
+                    _ => return format!("Unknown ({})", v),
+                }
+                .to_string()
+            }),
             _ => None,
         },
         Manufacturer::Olympus | Manufacturer::OlympusNew => match tag_id {

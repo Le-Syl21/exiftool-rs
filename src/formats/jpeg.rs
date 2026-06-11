@@ -1215,8 +1215,10 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         family1: "ExifTool".into(),
                         family2: "Other".into(),
                     },
-                    raw_value: crate::value::Value::String("IPTCDigest is not current".into()),
-                    print_value: "IPTCDigest is not current".into(),
+                    raw_value: crate::value::Value::String(
+                        "IPTCDigest is not current. XMP may be out of sync".into(),
+                    ),
+                    print_value: "IPTCDigest is not current. XMP may be out of sync".into(),
                     priority: 0,
                 });
             }

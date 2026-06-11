@@ -65,7 +65,6 @@ Casio.jpg	FlashMode
 Casio2.jpg	AFPointPosition
 Casio2.jpg	DOF
 Casio2.jpg	FirmwareDate
-Casio2.jpg	WhiteBalance
 CasioQVCI.jpg	ManufactureCode
 CasioQVCI.jpg	ManufactureIndex
 CasioQVCI.jpg	ModelType
@@ -123,7 +122,6 @@ ExifTool.jpg	ShutterSpeed
 ExifTool.jpg	ShutterSpeedValue
 ExifTool.jpg	TargetDistanceSetting
 ExifTool.jpg	URL
-ExifTool.jpg	Warning
 ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
 ExifTool.tif	DeviceManufacturer
@@ -194,7 +192,6 @@ HTML.html	RevisionNumber
 HTML.html	Subject
 IPTC.jpg	APP14Flags0
 IPTC.jpg	APP14Flags1
-IPTC.jpg	Warning
 ISO.iso	BootSystem
 ISO.iso	VolumeSize
 ITC.itc	DataType
@@ -400,7 +397,6 @@ Opus.opus	OutputGain
 PCAP.pcapng	TimeStamp
 PDF.pdf	CreateDate
 PDF.pdf	Creator
-PGF.pgf	Warning
 PLIST-bin.plist	TestBoolean
 PLIST-bin.plist	TestDate
 PLIST-bin.plist	TestDictWhen

@@ -111,6 +111,14 @@ pub fn read_pgf(data: &[u8]) -> Result<Vec<Tag>> {
                         | "FileTypeExtension" | "MIMEType" => continue,
                         _ => {}
                     }
+                    // The embedded stream is read by the PNG reader, but the container is
+                    // PGF — ExifTool's "chunks after IDAT" warning names the actual format.
+                    if tag.name == "Warning" {
+                        tag.print_value = tag.print_value.replace("PNG IDAT", "PGF IDAT");
+                        if let crate::value::Value::String(s) = &mut tag.raw_value {
+                            *s = s.replace("PNG IDAT", "PGF IDAT");
+                        }
+                    }
                     tag.priority = 2; // higher priority than default
                     tags.push(tag);
                 }
