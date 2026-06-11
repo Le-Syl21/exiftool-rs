@@ -192,12 +192,13 @@ pub fn read_dpx(data: &[u8]) -> Result<Vec<Tag>> {
     // Format: "YYYY:MM:DD:HH:MM:SS" -> convert to "YYYY:MM:DD HH:MM:SS"
     let create_date_raw = read_str(data, 136, 24);
     if !create_date_raw.is_empty() {
-        let create_date = create_date_raw.replacen(':', " ", 3);
-        // Only keep up to position 19 (YYYY:MM:DD HH:MM:SS)
-        let create_date = if create_date.len() > 19 {
-            create_date[..19].to_string()
+        // Raw "YYYY:MM:DD:HH:MM:SS" -> "YYYY:MM:DD HH:MM:SS" (space only between
+        // the date and the time; the rest keep colons, like ExifTool).
+        let p: Vec<&str> = create_date_raw.trim().split(':').collect();
+        let create_date = if p.len() >= 6 {
+            format!("{}:{}:{} {}:{}:{}", p[0], p[1], p[2], p[3], p[4], p[5])
         } else {
-            create_date
+            create_date_raw.trim().to_string()
         };
         tags.push(mk("CreateDate", Value::String(create_date)));
     }

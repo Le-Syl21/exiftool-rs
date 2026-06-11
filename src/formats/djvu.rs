@@ -370,9 +370,36 @@ fn parse_meta_pairs(text: &str, tags: &mut Vec<Tag>) {
         // Map key to tag name
         let tag_name = djvu_meta_tag_name(key);
         if !value.is_empty() && !tag_name.is_empty() {
+            let value = if matches!(tag_name.as_str(), "CreateDate" | "ModifyDate") {
+                iso_to_exif_date(&value)
+            } else {
+                value
+            };
             tags.push(mk(&tag_name, &tag_name, Value::String(value)));
         }
     }
+}
+
+/// ISO 8601 -> ExifTool date: `2008-09-23T12:31:34-04:00` -> `2008:09:23 12:31:34-04:00`
+/// (date hyphens become colons, `T` becomes a space; time and timezone unchanged).
+fn iso_to_exif_date(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut hyphens = 0;
+    let mut seen_t = false;
+    for c in s.chars() {
+        match c {
+            '-' if !seen_t && hyphens < 2 => {
+                out.push(':');
+                hyphens += 1;
+            }
+            'T' if !seen_t => {
+                out.push(' ');
+                seen_t = true;
+            }
+            _ => out.push(c),
+        }
+    }
+    out
 }
 
 fn djvu_meta_tag_name(key: &str) -> String {

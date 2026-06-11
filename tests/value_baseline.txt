@@ -430,17 +430,14 @@ DNG.dng	VRDOffset
 DNG.dng	WhiteBalance
 DNG.dng	YCbCrCoefficients
 DNG.dng	YCbCrSubSampling
-DPX.dpx	CreateDate
 DPX.dpx	FileType
 DPX.dpx	FileTypeExtension
 DPX.dpx	MIMEType
 DV.dv	FileType
 DV.dv	FileTypeExtension
 DV.dv	MIMEType
-DjVu.djvu	CreateDate
 DjVu.djvu	Creator
 DjVu.djvu	FileType
-DjVu.djvu	ModifyDate
 DjVu.djvu	SubfileType
 DjVu.djvu	Subject
 EXE.a	CreateDate
