@@ -278,12 +278,9 @@ fn parse_ciff_dir(
                 }
             }
             0x08 => {
-                // ASCII string
-                Value::String(
-                    crate::encoding::decode_utf8_or_latin1(value_data)
-                        .trim_end_matches('\0')
-                        .to_string(),
-                )
+                // ASCII string — truncate at the first null (ExifTool string[N] semantics).
+                let s = crate::encoding::decode_utf8_or_latin1(value_data);
+                Value::String(s.split('\0').next().unwrap_or("").trim_end().to_string())
             }
             0x10 => {
                 // int16u: extract first 2 bytes (value may be in 8-byte inline block)
