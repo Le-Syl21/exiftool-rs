@@ -7554,6 +7554,26 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
     use crate::tags::{nikon_conv, sony_conv};
 
     match manufacturer {
+        Manufacturer::Casio | Manufacturer::CasioType2 => match tag_id {
+            // ObjectDistance: val>=0x20000000 ? inf : val/1000, then "$val m".
+            0x0006 | 0x2022 => value.as_u64().map(|v| {
+                if v >= 0x2000_0000 {
+                    "inf".to_string()
+                } else {
+                    format!("{} m", crate::value::format_g15(v as f64 / 1000.0))
+                }
+            }),
+            0x3007 => value.as_u64().and_then(|v| match v {
+                0 => Some("Off"),
+                1 => Some("Auto"),
+                2 => Some("Portrait"),
+                3 => Some("Scenery"),
+                4 => Some("Portrait with Scenery"),
+                5 => Some("Children"),
+                _ => None,
+            }.map(str::to_string)),
+            _ => None,
+        },
         Manufacturer::Olympus | Manufacturer::OlympusNew => match tag_id {
             // RedBalance/BlueBalance: int16u[2], ValueConv = first/256, printed %.7g.
             0x1017 | 0x1018 => {

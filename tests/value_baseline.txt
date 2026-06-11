@@ -84,12 +84,9 @@ CanonRaw.crw	RedBalance
 CanonRaw.crw	Sharpness
 CanonVRD.dr4	ShootingDistance
 Casio.jpg	FlashMode
-Casio.jpg	ObjectDistance
 Casio2.jpg	AFPointPosition
-Casio2.jpg	BestShotMode
 Casio2.jpg	DOF
 Casio2.jpg	FirmwareDate
-Casio2.jpg	ObjectDistance
 Casio2.jpg	WhiteBalance
 CasioQVCI.jpg	DateTimeOriginal
 CasioQVCI.jpg	ManufactureCode
