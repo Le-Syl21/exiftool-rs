@@ -5394,6 +5394,30 @@ fn read_makernote_ifd_with_base(
                         // Olympus version tags are undef[4] ASCII (e.g. "0100", "0111").
                         // (FirmwareVersion tags are int32u and stay numeric.)
                         sval.iter().map(|&c| c as char).collect()
+                    } else if name == "FocusDistance" && sval.len() >= 4 {
+                        // FocusInfo 0x305 int32u[2]: ValueConv = first/1000 (ignore denom),
+                        // PrintConv = val ? "$val m" : "inf". Keep raw numeric for composites.
+                        let num = read_u32(sval, 0, byte_order);
+                        let meters = num as f64 / 1000.0;
+                        let pvf = if num != 0 {
+                            format!("{} m", crate::value::format_g15(meters))
+                        } else {
+                            "inf".to_string()
+                        };
+                        sub_tags.push(Tag {
+                            id: TagId::Text("FocusDistance".into()),
+                            name: "FocusDistance".into(),
+                            description: "FocusDistance".into(),
+                            group: TagGroup {
+                                family0: "MakerNotes".into(),
+                                family1: "Olympus".into(),
+                                family2: "Camera".into(),
+                            },
+                            raw_value: Value::F64(meters),
+                            print_value: pvf,
+                            priority: 0,
+                        });
+                        continue;
                     } else if name == "FocalPlaneDiagonal" {
                         format!("{} mm", val.to_display_string()) // Perl: '"$val mm"'
                     } else if name == "ManometerPressure" {
