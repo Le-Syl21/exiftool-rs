@@ -8476,6 +8476,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             0x000f => value
                 .as_str()
                 .map(|s| s.replacen("High:", "", 1).trim().to_string()),
+            // X3FillLight (string form): ValueConv strips "Fill:".
+            0x0012 => value
+                .as_str()
+                .map(|s| s.replacen("Fill:", "", 1).trim().to_string()),
             // ColorAdjustment (string form): ValueConv strips "CC:".
             0x0014 => value
                 .as_str()

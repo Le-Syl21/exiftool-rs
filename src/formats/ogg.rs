@@ -60,6 +60,7 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
         .unwrap_or(false);
 
     // Process packets
+    let mut nominal_bitrate: Option<i32> = None;
     for packet in &packets {
         if packet.len() < 4 {
             continue;
@@ -87,7 +88,7 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
 
         // Vorbis identification header
         if packet[0] == 1 && &packet[1..7] == b"vorbis" {
-            parse_vorbis_identification(packet, &mut tags);
+            nominal_bitrate = parse_vorbis_identification(packet, &mut tags);
         }
         // Vorbis comment header
         else if packet[0] == 3 && &packet[1..7] == b"vorbis" {
@@ -107,50 +108,18 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    // Compute Duration from last OGG page's granule position / sample rate
-    // Don't compute Duration for Opus (Perl doesn't output it for short files)
-    let is_opus = tags.iter().any(|t| t.name == "OpusVersion");
-    let sample_rate = if is_opus {
-        0
-    } else {
-        tags.iter()
-            .find(|t| t.name == "SampleRate")
-            .and_then(|t| t.raw_value.as_u64())
-            .unwrap_or(0)
-    };
-    if sample_rate > 0 {
-        // Find the last "OggS" page signature and read its granule position
-        let mut last_granule: Option<u64> = None;
-        let mut search = data.len().saturating_sub(65536); // scan last 64KB
-        while search + 27 <= data.len() {
-            if let Some(p) = data[search..].windows(4).position(|w| w == b"OggS") {
-                let page_pos = search + p;
-                if page_pos + 14 <= data.len() {
-                    let gp = u64::from_le_bytes([
-                        data[page_pos + 6],
-                        data[page_pos + 7],
-                        data[page_pos + 8],
-                        data[page_pos + 9],
-                        data[page_pos + 10],
-                        data[page_pos + 11],
-                        data[page_pos + 12],
-                        data[page_pos + 13],
-                    ]);
-                    if gp != u64::MAX && gp > 0 {
-                        last_granule = Some(gp);
-                    }
-                }
-                search = page_pos + 4;
-            } else {
-                break;
-            }
-        }
-        if let Some(granule) = last_granule {
-            let duration = granule as f64 / sample_rate as f64;
+    // Duration is the Vorbis composite (Vorbis.pm): FileSize * 8 / NominalBitrate,
+    // formatted with ConvertDuration + " (approx)". This is only approximate.
+    if let Some(nominal) = nominal_bitrate {
+        if nominal > 0 {
+            let duration = data.len() as f64 * 8.0 / nominal as f64;
             tags.push(mk(
                 "Duration",
                 "Duration",
-                Value::String(format!("{:.2} s (approx)", duration)),
+                Value::String(format!(
+                    "{} (approx)",
+                    convert_duration(duration)
+                )),
             ));
         }
     }
@@ -184,9 +153,9 @@ fn parse_flac_in_ogg_packet(packet: &[u8], tags: &mut Vec<Tag>) {
     }
 }
 
-fn parse_vorbis_identification(packet: &[u8], tags: &mut Vec<Tag>) {
+fn parse_vorbis_identification(packet: &[u8], tags: &mut Vec<Tag>) -> Option<i32> {
     if packet.len() < 30 {
-        return;
+        return None;
     }
     // Skip type byte (1) + "vorbis" (6) = 7 bytes
     let d = &packet[7..];
@@ -210,6 +179,31 @@ fn parse_vorbis_identification(packet: &[u8], tags: &mut Vec<Tag>) {
             "Nominal Bitrate",
             Value::String(format!("{} kbps", nominal_bitrate / 1000)),
         ));
+    }
+    Some(nominal_bitrate)
+}
+
+/// Port of ExifTool ConvertDuration: "%.2f s" under 30 s, else "[D days ]H:MM:SS".
+fn convert_duration(secs: f64) -> String {
+    if secs == 0.0 {
+        return "0 s".to_string();
+    }
+    let sign = if secs < 0.0 { "-" } else { "" };
+    let mut t = secs.abs();
+    if t < 30.0 {
+        return format!("{}{:.2} s", sign, t);
+    }
+    t += 0.5; // round to nearest second
+    let mut h = (t / 3600.0) as i64;
+    t -= (h as f64) * 3600.0;
+    let m = (t / 60.0) as i64;
+    t -= (m as f64) * 60.0;
+    if h > 24 {
+        let d = h / 24;
+        h -= d * 24;
+        format!("{}{} days {}:{:02}:{:02}", sign, d, h, m, t as i64)
+    } else {
+        format!("{}{}:{:02}:{:02}", sign, h, m, t as i64)
     }
 }
 

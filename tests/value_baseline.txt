@@ -340,7 +340,6 @@ Sanyo.jpg	DataDump
 Sanyo.jpg	FlashMode
 Sanyo.jpg	Macro
 Sanyo.jpg	SelfTimer
-Sigma.jpg	X3FillLight
 Sigma.x3f	LensType
 SigmaDP2.x3f	BracketShot
 SigmaDP2.x3f	Calibration
@@ -379,7 +378,6 @@ VCard.vcf	LogoImageJpeg
 VCard.vcf	Note
 VCard.vcf	PhotoJpeg
 VCard.vcf	TelephoneOtherVoice
-Vorbis.ogg	Duration
 WTV.wtv	SubtitleDescription
 XMP.jpg	DeviceManufacturer
 XMP.jpg	MeasurementBacking
