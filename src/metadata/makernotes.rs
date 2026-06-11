@@ -5233,7 +5233,16 @@ fn read_makernote_ifd_with_base(
                             .map(|s| s.to_string())
                             .unwrap_or(key)
                     } else {
-                        val.to_display_string()
+                        // Apply the generated enum PrintConv by tag name (Olympus sub-IFD
+                        // tables: AELock -> Off, FocusMode -> Single AF, …).
+                        val.as_u64()
+                            .and_then(|v| {
+                                crate::tags::print_conv_generated::print_conv_by_name(
+                                    name, v as i64,
+                                )
+                            })
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| val.to_display_string())
                     };
 
                     sub_tags.push(Tag {
