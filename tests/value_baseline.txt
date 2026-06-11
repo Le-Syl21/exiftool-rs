@@ -220,7 +220,6 @@ Minolta.mrw	WhiteBalance
 Minolta.mrw	WideFocusZone
 Nikon.nef	AFPointsInFocus
 Nikon.nef	BitsPerSample
-Nikon.nef	CFAPattern
 Nikon.nef	Compression
 Nikon.nef	CropBottom
 Nikon.nef	CropLeft
@@ -248,7 +247,6 @@ Nikon.nef	SubfileType
 Nikon.nef	WBAdjLighting
 NikonD2Hs.jpg	AFPointsInFocus
 NikonD2Hs.jpg	BlueBalance
-NikonD2Hs.jpg	CFAPattern
 NikonD2Hs.jpg	DOF
 NikonD2Hs.jpg	EffectiveMaxAperture
 NikonD2Hs.jpg	ExternalFlashExposureComp
@@ -259,7 +257,6 @@ NikonD2Hs.jpg	MCUVersion
 NikonD2Hs.jpg	PreviewImageStart
 NikonD2Hs.jpg	RedBalance
 NikonD70.jpg	AFPointsInFocus
-NikonD70.jpg	CFAPattern
 NikonD70.jpg	ExternalFlashExposureComp
 NikonD70.jpg	ExternalFlashFirmware
 NikonD70.jpg	LensID

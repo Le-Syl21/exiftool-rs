@@ -603,6 +603,14 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 return Some(l.to_string());
             }
         }
+        // CFAPattern (0xA302) / CFAPattern2 (0x828E): decode the colour-filter grid.
+        (_, 0xA302) | (_, 0x828E) => {
+            if let Value::Undefined(ref b) = value {
+                if let Some(s) = print_cfa_pattern(b) {
+                    return Some(s);
+                }
+            }
+        }
         // CFAPlaneColor (0xc616): map each plane index to a colour name, join with ",".
         (_, 0xC616) => {
             let cols = ["Red", "Green", "Blue", "Cyan", "Magenta", "Yellow", "White"];
@@ -819,6 +827,49 @@ pub fn print_fraction(mut val: f64) -> String {
             s
         }
     }
+}
+
+/// Decode an EXIF CFAPattern undef block to "[col,col][...]" (Exif PrintCFAPattern).
+/// Layout: int16 horizontal repeat, int16 vertical repeat, then h*v colour indices.
+fn print_cfa_pattern(b: &[u8]) -> Option<String> {
+    if b.len() < 4 {
+        return None;
+    }
+    // Try big-endian then little-endian for the 2x int16 header.
+    for be in [true, false] {
+        let (w, h) = if be {
+            (
+                u16::from_be_bytes([b[0], b[1]]) as usize,
+                u16::from_be_bytes([b[2], b[3]]) as usize,
+            )
+        } else {
+            (
+                u16::from_le_bytes([b[0], b[1]]) as usize,
+                u16::from_le_bytes([b[2], b[3]]) as usize,
+            )
+        };
+        if w == 0 || h == 0 || 4 + w * h > b.len() {
+            continue;
+        }
+        let cols = ["Red", "Green", "Blue", "Cyan", "Magenta", "Yellow", "White"];
+        let mut out = String::from("[");
+        for i in 0..(w * h) {
+            let idx = b[4 + i] as usize;
+            out.push_str(cols.get(idx).copied().unwrap_or("Unknown"));
+            if i + 1 == w * h {
+                break;
+            }
+            // Each row holds `h` (the 2nd value) entries in ExifTool's loop.
+            if (i + 1) % h == 0 {
+                out.push_str("][");
+            } else {
+                out.push(',');
+            }
+        }
+        out.push(']');
+        return Some(out);
+    }
+    None
 }
 
 /// Port of Exif.pm `PrintLensInfo`: 4 values (min/max focal, min/max aperture)
