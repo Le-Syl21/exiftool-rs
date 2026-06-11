@@ -8070,6 +8070,8 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             }
         }
         Manufacturer::Fujifilm => match tag_id {
+            // SequenceNumber (0x1101): raw integer (no PrintConv) — block a wrong by-name conv.
+            0x1101 => Some(value.to_display_string()),
             // InternalSerialNumber: decode the hex body number + manufacture date.
             0x0010 => value.as_str().map(fuji_internal_serial),
             // Sharpness (0x1001): PrintHex enum.

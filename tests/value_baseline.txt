@@ -141,7 +141,6 @@ FujiFilm.jpg	Version
 FujiFilm.raf	DynamicRange
 FujiFilm.raf	FacesDetected
 FujiFilm.raf	Model
-FujiFilm.raf	SequenceNumber
 FujiFilm.raf	ThumbnailOffset
 FujiFilm.raf	Version
 GE.jpg	GEMake
