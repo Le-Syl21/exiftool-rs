@@ -29,7 +29,6 @@ Canon.jpg	RedBalance
 Canon.jpg	SelfTimer2
 Canon.jpg	Sharpness
 Canon.jpg	ShootingMode
-Canon.jpg	TargetAperture
 Canon1DmkIII.jpg	AEBShotCount
 Canon1DmkIII.jpg	AFAssistBeam
 Canon1DmkIII.jpg	AFMicroadjustment
@@ -61,7 +60,6 @@ Canon1DmkIII.jpg	Sharpness
 Canon1DmkIII.jpg	ShutterButtonAFOnButton
 Canon1DmkIII.jpg	ShutterSpeedRange
 Canon1DmkIII.jpg	SwitchToRegisteredAFPoint
-Canon1DmkIII.jpg	TargetAperture
 Canon1DmkIII.jpg	TimerLength
 Canon1DmkIII.jpg	ToningEffectMonochrome
 Canon1DmkIII.jpg	ToningEffectUserDef1
@@ -84,7 +82,6 @@ CanonRaw.cr2	ManualFlashOutput
 CanonRaw.cr2	Megapixels
 CanonRaw.cr2	RedBalance
 CanonRaw.cr2	SelfTimer2
-CanonRaw.cr2	TargetAperture
 CanonRaw.cr2	VRDOffset
 CanonRaw.cr3	Aperture
 CanonRaw.cr3	BatteryType
@@ -114,7 +111,6 @@ CanonRaw.cr3	Sharpness
 CanonRaw.cr3	ShutterSpeed
 CanonRaw.cr3	SourceImageHeight
 CanonRaw.cr3	SourceImageWidth
-CanonRaw.cr3	TargetAperture
 CanonRaw.cr3	TrackCreateDate
 CanonRaw.cr3	TrackModifyDate
 CanonRaw.cr3	VRDOffset
@@ -131,7 +127,6 @@ CanonRaw.crw	RawJpgWidth
 CanonRaw.crw	RedBalance
 CanonRaw.crw	SelfTimer2
 CanonRaw.crw	Sharpness
-CanonRaw.crw	TargetAperture
 CanonVRD.dr4	ShootingDistance
 Casio.jpg	FlashMode
 Casio.jpg	ObjectDistance
@@ -170,7 +165,6 @@ DNG.dng	RawDataUniqueID
 DNG.dng	RedBalance
 DNG.dng	SamplesPerPixel
 DNG.dng	SelfTimer2
-DNG.dng	TargetAperture
 DNG.dng	ThumbnailTIFF
 DNG.dng	VRDOffset
 DNG.dng	YCbCrSubSampling

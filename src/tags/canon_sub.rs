@@ -536,7 +536,12 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         if v > 0 {
             // TargetAperture: ValueConv => 'exp(CanonEv($val)*log(2)/2)', PrintConv => 'sprintf("%.2g",$val)'
             let av = (canon_ev(v as i32) * std::f64::consts::LN_2 / 2.0).exp();
-            tags.push(mkt("TargetAperture", Value::F64(av), format!("{:.2}", av)));
+            // PrintConv => sprintf("%.2g", $val)
+            tags.push(mkt(
+                "TargetAperture",
+                Value::F64(av),
+                crate::value::format_g_prec(av, 2),
+            ));
         }
     }
     if let Some(v) = get(5) {
