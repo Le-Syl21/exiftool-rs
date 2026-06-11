@@ -6173,8 +6173,15 @@ fn read_makernote_ifd_with_base(
             };
             match bytes {
                 Some(b) if b.len() == 4 => {
-                    let s: String = b.iter().map(|&c| c as char).collect();
+                    // Nikon: a binary form (first byte 0x00-0x09) joins the bytes as
+                    // decimal (unpack "CCCC") to "0100", else it is already ASCII "0210".
+                    let s: String = if manufacturer == Manufacturer::Nikon && b[0] <= 9 {
+                        b.iter().map(|x| x.to_string()).collect()
+                    } else {
+                        b.iter().map(|&c| c as char).collect()
+                    };
                     if manufacturer == Manufacturer::Nikon
+                        && s.len() == 4
                         && s.bytes().all(|c| c.is_ascii_digit())
                     {
                         format!("{}.{}", s[0..2].parse::<u32>().unwrap_or(0), &s[2..4])

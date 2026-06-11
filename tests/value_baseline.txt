@@ -240,7 +240,6 @@ Minolta.mrw	Saturation
 Minolta.mrw	Sharpness
 Minolta.mrw	WhiteBalance
 Minolta.mrw	WideFocusZone
-Nikon.jpg	MakerNoteVersion
 Nikon.nef	AFPointsInFocus
 Nikon.nef	BitsPerSample
 Nikon.nef	CFAPattern
