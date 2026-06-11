@@ -1394,7 +1394,9 @@ impl XmpReader {
                                 (Value::String(text_val.clone()), text_val.clone())
                             } else {
                                 let v = parse_xmp_value(&text_val);
-                                let pv = v.to_display_string();
+                                // XMP rationals display at %.15g (Perl ConvertRational),
+                                // unlike EXIF rational64 which rounds to %.10g.
+                                let pv = xmp_rational_decimal(&v).unwrap_or_else(|| v.to_display_string());
                                 (v, pv)
                             };
 
@@ -1664,9 +1666,9 @@ impl XmpReader {
             };
             if let Some(pv) = crate::tags::exif::print_conv_by_tag_name(&tag.name, &numv) {
                 tag.print_value = pv;
-            } else if matches!(numv, Value::URational(..) | Value::IRational(..)) {
-                // No PrintConv: ExifTool still ValueConvs the rational to its decimal form.
-                tag.print_value = numv.to_display_string();
+            } else if let Some(f) = xmp_rational_decimal(&numv) {
+                // No PrintConv: ExifTool ValueConvs the rational to its %.15g decimal form.
+                tag.print_value = f;
             }
         }
 
@@ -1960,6 +1962,24 @@ fn apply_flat_name_remap(name: &str) -> String {
 /// Parse an XMP text value into the appropriate Value type.
 /// XMP rational values (e.g., "28/10", "5800/1000") are stored as Value::URational
 /// so that composite computation can parse them as f64.
+/// Format an XMP rational as its %.15g decimal (Perl ConvertRational divides with no
+/// rounding). Returns None for non-rational values. EXIF rational64 differs (%.10g).
+fn xmp_rational_decimal(v: &Value) -> Option<String> {
+    match v {
+        Value::URational(n, d) if *d != 0 => Some(if *n % *d == 0 {
+            (*n / *d).to_string()
+        } else {
+            crate::value::format_g15(*n as f64 / *d as f64)
+        }),
+        Value::IRational(n, d) if *d != 0 => Some(if *n % *d == 0 {
+            (*n / *d).to_string()
+        } else {
+            crate::value::format_g15(*n as f64 / *d as f64)
+        }),
+        _ => None,
+    }
+}
+
 /// Reformat an XMP ISO-8601 date/time to ExifTool's "YYYY:MM:DD HH:MM[:SS][TZ]" form.
 /// Mirrors Image::ExifTool::XMP::ConvertXMPDate. Returns None if the string is not a date.
 fn convert_xmp_date(val: &str) -> Option<String> {

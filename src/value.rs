@@ -51,8 +51,9 @@ impl Value {
                 } else if *n % *d == 0 {
                     (*n / *d).to_string()
                 } else {
-                    // ExifTool shows the decimal value (Perl %.15g), not the raw fraction.
-                    format_g15(*n as f64 / *d as f64)
+                    // EXIF rational64 is read via RoundFloat(val, 10) = %.10g (ExifTool
+                    // GetRational64u). XMP rationals use %.15g and are formatted separately.
+                    format_g_prec(*n as f64 / *d as f64, 10)
                 }
             }
             Value::IRational(n, d) => {
@@ -65,7 +66,7 @@ impl Value {
                 } else if *n % *d == 0 {
                     (*n / *d).to_string()
                 } else {
-                    format_g15(*n as f64 / *d as f64)
+                    format_g_prec(*n as f64 / *d as f64, 10)
                 }
             }
             Value::F32(v) => format!("{}", v),
@@ -241,7 +242,7 @@ mod tests {
         // ExifTool shows the decimal value (Perl %.15g), not the raw fraction.
         assert_eq!(
             Value::URational(1, 3).to_display_string(),
-            "0.333333333333333"
+            "0.3333333333"
         );
     }
 
@@ -264,7 +265,7 @@ mod tests {
     fn display_irational_non_exact() {
         assert_eq!(
             Value::IRational(7, 3).to_display_string(),
-            "2.33333333333333"
+            "2.333333333"
         );
     }
 
@@ -435,7 +436,7 @@ mod tests {
     #[test]
     fn display_trait_delegates() {
         let v = Value::URational(1, 3);
-        assert_eq!(format!("{}", v), "0.333333333333333");
+        assert_eq!(format!("{}", v), "0.3333333333");
     }
 
     // ── format_g15 / format_g_prec ─────────────────────────────────

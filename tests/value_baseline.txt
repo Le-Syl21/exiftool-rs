@@ -15,15 +15,12 @@ ASF.wmv	SendDuration
 Apple.jpg	AEStable
 Apple.jpg	AFStable
 Apple.jpg	AccelerationVector
-Apple.jpg	BrightnessValue
 Apple.jpg	Flash
 Apple.jpg	FocusDistanceRange
 Apple.jpg	GPSAltitude
 Apple.jpg	GPSDateTime
-Apple.jpg	GPSDestBearing
 Apple.jpg	GPSDestBearingRef
 Apple.jpg	GPSHPositioningError
-Apple.jpg	GPSImgDirection
 Apple.jpg	GPSImgDirectionRef
 Apple.jpg	GPSLatitude
 Apple.jpg	GPSLongitude
@@ -35,8 +32,6 @@ Apple.jpg	LensInfo
 Apple.jpg	ThumbnailOffset
 Audible.aa	Copyright
 BPG.bpg	Flash
-BPG.bpg	FocalPlaneXResolution
-BPG.bpg	FocalPlaneYResolution
 BPG.bpg	ProfileCreator
 BigTIFF.btf	MIMEType
 Canon.jpg	AFPointsInFocus
@@ -53,8 +48,6 @@ Canon.jpg	FileNumber
 Canon.jpg	FlashGuideNumber
 Canon.jpg	FlashModel
 Canon.jpg	FocalLength35efl
-Canon.jpg	FocalPlaneXResolution
-Canon.jpg	FocalPlaneYResolution
 Canon.jpg	FocalUnits
 Canon.jpg	HyperfocalDistance
 Canon.jpg	Lens35efl
@@ -93,8 +86,6 @@ Canon1DmkIII.jpg	FilterEffectUserDef2
 Canon1DmkIII.jpg	FilterEffectUserDef3
 Canon1DmkIII.jpg	Flash
 Canon1DmkIII.jpg	FlashModel
-Canon1DmkIII.jpg	FocalPlaneXResolution
-Canon1DmkIII.jpg	FocalPlaneYResolution
 Canon1DmkIII.jpg	FocalUnits
 Canon1DmkIII.jpg	FocusingScreen
 Canon1DmkIII.jpg	HighISONoiseReduction
@@ -141,8 +132,6 @@ CanonRaw.cr2	Flash
 CanonRaw.cr2	FlashGuideNumber
 CanonRaw.cr2	FlashModel
 CanonRaw.cr2	FocalLength35efl
-CanonRaw.cr2	FocalPlaneXResolution
-CanonRaw.cr2	FocalPlaneYResolution
 CanonRaw.cr2	FocalUnits
 CanonRaw.cr2	HyperfocalDistance
 CanonRaw.cr2	ImageSize
@@ -179,8 +168,6 @@ CanonRaw.cr3	ExposureTime
 CanonRaw.cr3	FNumber
 CanonRaw.cr3	FlashGuideNumber
 CanonRaw.cr3	FlashModel
-CanonRaw.cr3	FocalPlaneXResolution
-CanonRaw.cr3	FocalPlaneYResolution
 CanonRaw.cr3	FocalUnits
 CanonRaw.cr3	HandlerType
 CanonRaw.cr3	HyperfocalDistance
@@ -241,7 +228,6 @@ CanonRaw.crw	SelfTimer2
 CanonRaw.crw	Sharpness
 CanonRaw.crw	TargetAperture
 CanonVRD.dr4	ShootingDistance
-Casio.jpg	CompressedBitsPerPixel
 Casio.jpg	FlashMode
 Casio.jpg	ObjectDistance
 Casio.jpg	ThumbnailOffset
@@ -493,10 +479,8 @@ Geotag.xml	MIMEType
 Geotag3.log	LineCount
 GoPro.jpg	AutoRotation
 GoPro.jpg	ColorSpace
-GoPro.jpg	CompressedBitsPerPixel
 GoPro.jpg	DigitalZoomOn
 GoPro.jpg	ExposureCompensation
-GoPro.jpg	ExposureIndex
 GoPro.jpg	Flash
 GoPro.jpg	FlashpixVersion
 GoPro.jpg	GPSAltitude
@@ -1005,7 +989,6 @@ Opus.opus	FileTypeExtension
 Opus.opus	OpusVersion
 Opus.opus	OutputGain
 PCAP.pcapng	TimeStamp
-PDF.pdf	CompressedBitsPerPixel
 PDF.pdf	CreateDate
 PDF.pdf	Creator
 PDF.pdf	ShutterSpeed
@@ -1101,8 +1084,6 @@ Pentax.jpg	TvExposureTimeSetting
 Pentax.jpg	WhiteBalanceMode
 PhaseOne.iiq	SubfileType
 PhaseOne.iiq	ThumbnailTIFF
-PhaseOne.iiq	XResolution
-PhaseOne.iiq	YResolution
 PhotoMechanic.jpg	DateTimeCreated
 PhotoMechanic.jpg	DateTimeOriginal
 PhotoMechanic.jpg	Prefs
