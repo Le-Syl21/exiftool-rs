@@ -70,6 +70,40 @@ pub fn lookup_generated(tag_id: u16) -> Option<(&'static str, &'static str)> {
 /// Apply print conversion for known tags.
 pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
     match (ifd, tag_id) {
+        // GPS reference/mode enums (string or short values).
+        ("GPS", 0x0009) => {
+            return Some(match value.to_display_string().trim() {
+                "A" => "Measurement Active",
+                "V" => "Measurement Void",
+                _ => return None,
+            }
+            .to_string());
+        }
+        ("GPS", 0x000A) => {
+            return Some(match value.to_display_string().trim() {
+                "2" => "2-Dimensional Measurement",
+                "3" => "3-Dimensional Measurement",
+                _ => return None,
+            }
+            .to_string());
+        }
+        ("GPS", 0x000C) | ("GPS", 0x0019) => {
+            return Some(match value.to_display_string().trim() {
+                "K" => "km/h",
+                "M" => "mph",
+                "N" => "knots",
+                _ => return None,
+            }
+            .to_string());
+        }
+        ("GPS", 0x000E) | ("GPS", 0x0010) | ("GPS", 0x0017) => {
+            return Some(match value.to_display_string().trim() {
+                "M" => "Magnetic North",
+                "T" => "True North",
+                _ => return None,
+            }
+            .to_string());
+        }
         // GPSTimeStamp (3 rationals H M S): ExifTool ConvertTimeStamp -> "HH:MM:SS[.ff]"
         ("GPS", 0x0007) => {
             let parts: Vec<f64> = value

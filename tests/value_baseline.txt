@@ -14,11 +14,8 @@ Apple.jpg	AFStable
 Apple.jpg	AccelerationVector
 Apple.jpg	FocusDistanceRange
 Apple.jpg	GPSAltitude
-Apple.jpg	GPSDestBearingRef
 Apple.jpg	GPSHPositioningError
-Apple.jpg	GPSImgDirectionRef
 Apple.jpg	GPSPosition
-Apple.jpg	GPSSpeedRef
 Apple.jpg	ImageCaptureType
 Apple.jpg	LensInfo
 Audible.aa	Copyright
@@ -342,7 +339,6 @@ GoPro.jpg	SubjectDistance
 GoPro.jpg	WhiteBalance
 Google.jpg	DirectoryItemMime
 Google.jpg	GPSAltitude
-Google.jpg	GPSImgDirectionRef
 Google.jpg	GPSPosition
 Google.jpg	HDRPlusMakerNote
 Google.jpg	ImageData
@@ -778,12 +774,7 @@ Ricoh2.jpg	FirmwareVersion
 Ricoh2.jpg	GPSAltitude
 Ricoh2.jpg	GPSDestBearingRef
 Ricoh2.jpg	GPSDestDistanceRef
-Ricoh2.jpg	GPSImgDirectionRef
-Ricoh2.jpg	GPSMeasureMode
 Ricoh2.jpg	GPSPosition
-Ricoh2.jpg	GPSSpeedRef
-Ricoh2.jpg	GPSStatus
-Ricoh2.jpg	GPSTrackRef
 Ricoh2.jpg	InternalSerialNumber
 Ricoh2.jpg	ManufactureDate1
 Ricoh2.jpg	ManufactureDate2
