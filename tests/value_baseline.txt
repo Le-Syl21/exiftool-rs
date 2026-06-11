@@ -37,7 +37,6 @@ Canon.jpg	ColorTone
 Canon.jpg	Contrast
 Canon.jpg	DOF
 Canon.jpg	DigitalZoom
-Canon.jpg	DriveMode
 Canon.jpg	FOV
 Canon.jpg	FileNumber
 Canon.jpg	FlashModel
@@ -66,7 +65,6 @@ Canon1DmkIII.jpg	BlueBalance
 Canon1DmkIII.jpg	ColorTone
 Canon1DmkIII.jpg	ContinuousShootingSpeed
 Canon1DmkIII.jpg	ContinuousShotLimit
-Canon1DmkIII.jpg	DriveMode
 Canon1DmkIII.jpg	ExposureLevelIncrements
 Canon1DmkIII.jpg	FilterEffectMonochrome
 Canon1DmkIII.jpg	FilterEffectUserDef1
@@ -109,7 +107,6 @@ CanonRaw.cr2	AFPointsInFocus
 CanonRaw.cr2	BlueBalance
 CanonRaw.cr2	CR2CFAPattern
 CanonRaw.cr2	ColorTone
-CanonRaw.cr2	DriveMode
 CanonRaw.cr2	FOV
 CanonRaw.cr2	FlashModel
 CanonRaw.cr2	FocalLength35efl
@@ -137,7 +134,6 @@ CanonRaw.cr3	ColorTone
 CanonRaw.cr3	CompatibleBrands
 CanonRaw.cr3	CreateDate
 CanonRaw.cr3	CustomControls
-CanonRaw.cr3	DriveMode
 CanonRaw.cr3	ExposureTime
 CanonRaw.cr3	FNumber
 CanonRaw.cr3	FlashModel
@@ -173,7 +169,6 @@ CanonRaw.crw	ColorTone
 CanonRaw.crw	Contrast
 CanonRaw.crw	DOF
 CanonRaw.crw	DigitalZoom
-CanonRaw.crw	DriveMode
 CanonRaw.crw	FlashModel
 CanonRaw.crw	MacroMode
 CanonRaw.crw	MaxAperture
@@ -214,7 +209,6 @@ DNG.dng	ColorTone
 DNG.dng	Compression
 DNG.dng	DNGLensInfo
 DNG.dng	DateTimeOriginal
-DNG.dng	DriveMode
 DNG.dng	FOV
 DNG.dng	FlashModel
 DNG.dng	FlashReturn

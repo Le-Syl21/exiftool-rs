@@ -1061,9 +1061,22 @@ fn compute_canon_composites(tags: &[Tag]) -> Option<Vec<Tag>> {
 
     let mut result = Vec::new();
 
-    // DriveMode (from ContinuousDrive)
-    if let Some(cd) = find_tag_value(tags, "ContinuousDrive") {
-        result.push(mk_composite("DriveMode", "Drive Mode", Value::String(cd)));
+    // DriveMode: Perl Canon::Composite — ValueConv '$val[0] ? 0 : ($val[1] ? 1 : 2)'
+    // over (ContinuousDrive, SelfTimer), then PrintConv.
+    if let Some(cd) = find_tag_f64(tags, "ContinuousDrive") {
+        let st = find_tag_f64(tags, "SelfTimer").unwrap_or(0.0);
+        let pv = if cd != 0.0 {
+            "Continuous Shooting"
+        } else if st != 0.0 {
+            "Self-timer Operation"
+        } else {
+            "Single-frame Shooting"
+        };
+        result.push(mk_composite(
+            "DriveMode",
+            "Drive Mode",
+            Value::String(pv.to_string()),
+        ));
     }
 
     // ShootingMode (from CanonExposureMode)
