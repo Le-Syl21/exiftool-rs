@@ -7033,6 +7033,14 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 _ => None,
             }
         }
+        Manufacturer::Canon => match tag_id {
+            // CanonModelID (ExifTool %canonModelID)
+            0x0010 => value
+                .as_u64()
+                .and_then(|n| crate::tags::canon_sub::canon_model_id(n as i64))
+                .map(str::to_string),
+            _ => None,
+        },
         Manufacturer::Sony => {
             let v = value.as_u64();
             match tag_id {
