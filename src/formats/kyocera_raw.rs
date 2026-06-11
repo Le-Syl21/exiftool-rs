@@ -84,12 +84,7 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
         let et_idx = u32::from_be_bytes([data[0x38], data[0x39], data[0x3a], data[0x3b]]);
         let et_val = f64::powf(2.0, et_idx as f64 / 8.0) / 16000.0;
         let print_val = format_exposure_time(et_val);
-        let mut t = mktag(
-            group,
-            "ExposureTime",
-            "Exposure Time",
-            Value::String(format!("{:.10}", et_val)),
-        );
+        let mut t = mktag(group, "ExposureTime", "Exposure Time", Value::F64(et_val));
         t.print_value = print_val;
         tags.push(t);
     }
@@ -113,13 +108,8 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
     if data.len() >= 0x5c {
         let fn_idx = u32::from_be_bytes([data[0x58], data[0x59], data[0x5a], data[0x5b]]);
         let fn_val = f64::powf(2.0, fn_idx as f64 / 16.0);
-        let print_val = format!("{}", (fn_val * 10000.0).round() / 10000.0);
-        let mut t = mktag(
-            group,
-            "FNumber",
-            "F Number",
-            Value::String(format!("{}", fn_val)),
-        );
+        let print_val = crate::value::format_g_prec(fn_val, 2); // Perl: sprintf("%.2g")
+        let mut t = mktag(group, "FNumber", "F Number", Value::F64(fn_val));
         t.print_value = print_val;
         tags.push(t);
     }
@@ -128,13 +118,8 @@ pub fn read_kyocera_raw(data: &[u8]) -> Result<Vec<Tag>> {
     if data.len() >= 0x6c {
         let ma_idx = u32::from_be_bytes([data[0x68], data[0x69], data[0x6a], data[0x6b]]);
         let ma_val = f64::powf(2.0, ma_idx as f64 / 16.0);
-        let print_val = format!("{}", (ma_val * 100.0).round() / 100.0);
-        let mut t = mktag(
-            group,
-            "MaxAperture",
-            "Max Aperture Value",
-            Value::String(format!("{}", ma_val)),
-        );
+        let print_val = crate::value::format_g_prec(ma_val, 2); // Perl: sprintf("%.2g")
+        let mut t = mktag(group, "MaxAperture", "Max Aperture Value", Value::F64(ma_val));
         t.print_value = print_val;
         tags.push(t);
     }

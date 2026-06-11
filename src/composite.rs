@@ -1362,23 +1362,28 @@ fn compute_wb_balance(tags: &[Tag]) -> Option<Vec<Tag>> {
             _ => Vec::new(),
         };
         if parts.len() >= 4 {
-            let (r, g, b) = (parts[0], parts[1], parts[2]);
-            // For RGGB: R/G1, B/G1; For RGBG: R/G, B/G2
-            let g_div = if wb.name.contains("RGBG") {
-                parts[3]
+            // Perl Exif::RedBlueBalance + @rggbLookup: indices for R, G, G, B.
+            // RGGB=[0,1,2,3], RGBG=[0,1,3,2]. green = (L[g1]+L[g2])/2;
+            // RedBalance = L[ri]/green, BlueBalance = L[bi]/green.
+            let (ri, g1i, g2i, bi) = if wb.name.contains("RGBG") {
+                (0, 1, 3, 2)
             } else {
-                g
+                (0, 1, 2, 3)
             };
-            if g > 0.0 && g_div > 0.0 {
+            let green = (parts[g1i] + parts[g2i]) / 2.0;
+            if green > 0.0 {
+                // PrintConv: int($val * 1e6 + 0.5) * 1e-6, then Perl %s = %.15g
+                let red_bal = (parts[ri] / green * 1e6 + 0.5).floor() * 1e-6;
+                let blue_bal = (parts[bi] / green * 1e6 + 0.5).floor() * 1e-6;
                 result.push(mk_composite(
                     "RedBalance",
                     "Red Balance",
-                    Value::String(crate::value::format_g_prec(r / g, 7)),
+                    Value::String(crate::value::format_g15(red_bal)),
                 ));
                 result.push(mk_composite(
                     "BlueBalance",
                     "Blue Balance",
-                    Value::String(crate::value::format_g_prec(b / g_div, 7)),
+                    Value::String(crate::value::format_g15(blue_bal)),
                 ));
             }
         } else if parts.len() == 2 {
