@@ -576,6 +576,13 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 }
             }
         }
+        // LensInfo (Exif::PrintLensInfo): 4 values → "min-max mm f/min-max".
+        (_, 0xA432) => {
+            let s = value.to_display_string();
+            if let Some(formatted) = print_lens_info(&s) {
+                return Some(formatted);
+            }
+        }
         // ExposureCompensation / ExposureBiasValue (Exif::PrintFraction)
         (_, 0x9204) => {
             if let Some(v) = value.as_f64() {
@@ -740,6 +747,41 @@ pub fn print_fraction(mut val: f64) -> String {
             s
         }
     }
+}
+
+/// Port of Exif.pm `PrintLensInfo`: 4 values (min/max focal, min/max aperture)
+/// → "min-max mm f/min-max". Returns None if the value isn't 4 numbers.
+pub fn print_lens_info(val: &str) -> Option<String> {
+    let vals: Vec<&str> = val.split_whitespace().collect();
+    if vals.len() != 4 {
+        return None;
+    }
+    // Each value must be a float, "inf"/"undef" (→ "?").
+    let norm: Vec<String> = vals
+        .iter()
+        .map(|&v| {
+            if v == "inf" || v == "undef" {
+                "?".to_string()
+            } else {
+                v.to_string()
+            }
+        })
+        .collect();
+    if !norm
+        .iter()
+        .all(|v| v == "?" || v.parse::<f64>().is_ok())
+    {
+        return None;
+    }
+    let mut out = norm[0].clone();
+    if norm[1] != "0" && norm[1] != norm[0] {
+        out.push_str(&format!("-{}", norm[1]));
+    }
+    out.push_str(&format!("mm f/{}", norm[2]));
+    if norm[3] != "0" && norm[3] != norm[2] {
+        out.push_str(&format!("-{}", norm[3]));
+    }
+    Some(out)
 }
 
 pub fn format_geotiff_doubles(value: &Value) -> String {

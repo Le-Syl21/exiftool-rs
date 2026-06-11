@@ -7,7 +7,6 @@ ASF.wmv	IsVBR
 ASF.wmv	SendDuration
 Apple.jpg	AccelerationVector
 Apple.jpg	FocusDistanceRange
-Apple.jpg	LensInfo
 Canon.jpg	DOF
 Canon.jpg	Sharpness
 Canon.jpg	ShootingMode
@@ -35,7 +34,6 @@ CanonRaw.cr3	HandlerType
 CanonRaw.cr3	HyperfocalDistance
 CanonRaw.cr3	ISOExpansion
 CanonRaw.cr3	ImageUniqueID
-CanonRaw.cr3	LensInfo
 CanonRaw.cr3	LightValue
 CanonRaw.cr3	MediaCreateDate
 CanonRaw.cr3	MediaModifyDate
