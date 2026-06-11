@@ -1105,6 +1105,27 @@ impl ExifTool {
         };
         let file_type = file_type.unwrap_or(FileType::Zip); // placeholder for file-level tags
 
+        // Some types refine their FileType/MIMEType/extension from the content
+        // (ExifTool SetFileType): e.g. EXE -> "Win32 EXE" / "ELF executable" / Mach-O.
+        let (ft_code, mime_str, ext_str): (String, String, String) =
+            if file_type == FileType::Exe {
+                if let Some((ft, mime, ext)) = exe_subtype(data) {
+                    (ft.to_string(), mime.to_string(), ext.to_string())
+                } else {
+                    (
+                        file_type.code().to_string(),
+                        file_type.mime_type().to_string(),
+                        file_type.extensions().first().copied().unwrap_or("").to_string(),
+                    )
+                }
+            } else {
+                (
+                    file_type.code().to_string(),
+                    file_type.mime_type().to_string(),
+                    file_type.extensions().first().copied().unwrap_or("").to_string(),
+                )
+            };
+
         // Add file-level tags
         tags.push(Tag {
             id: crate::tag::TagId::Text("FileType".into()),
@@ -1118,7 +1139,7 @@ impl ExifTool {
             raw_value: Value::String(format!("{:?}", file_type)),
             // ExifTool's FileType value is the short code ("JPEG"), not the
             // human-readable description ("JPEG image").
-            print_value: file_type.code().to_string(),
+            print_value: ft_code.clone(),
             priority: 0,
         });
 
@@ -1131,8 +1152,8 @@ impl ExifTool {
                 family1: "File".into(),
                 family2: "Other".into(),
             },
-            raw_value: Value::String(file_type.mime_type().to_string()),
-            print_value: file_type.mime_type().to_string(),
+            raw_value: Value::String(mime_str.clone()),
+            print_value: mime_str.clone(),
             priority: 0,
         });
 
@@ -1176,11 +1197,11 @@ impl ExifTool {
             tags.push(file_tag("Directory", Value::String(dir.to_string())));
         }
         // Use the canonical (first) extension from the FileType, matching Perl ExifTool behavior.
-        let canonical_ext = file_type.extensions().first().copied().unwrap_or("");
-        if !canonical_ext.is_empty() {
+        // EXE subtypes emit FileTypeExtension even when empty (ExifTool sets ext='').
+        if !ext_str.is_empty() || file_type == FileType::Exe {
             tags.push(file_tag(
                 "FileTypeExtension",
-                Value::String(canonical_ext.to_string()),
+                Value::String(ext_str.clone()),
             ));
         }
 
@@ -1898,6 +1919,77 @@ impl Default for ExifTool {
 
 /// Detect OpenDocument file type by reading the `mimetype` entry from a ZIP.
 /// Returns None if not an OpenDocument file.
+/// Refine an EXE file's (FileType, MIMEType, FileTypeExtension) from its magic, mirroring
+/// ExifTool's EXE SetFileType. MIME is always application/octet-stream for these.
+fn exe_subtype(d: &[u8]) -> Option<(&'static str, &'static str, &'static str)> {
+    const MIME: &str = "application/octet-stream";
+    if d.len() < 8 {
+        return None;
+    }
+    // ELF: 0x7F 'E' 'L' 'F'; data[5] endianness (1=LE,2=BE); e_type at offset 16 (2 bytes)
+    if &d[0..4] == b"\x7fELF" && d.len() >= 18 {
+        let le = d[5] == 1;
+        let e_type = if le {
+            u16::from_le_bytes([d[16], d[17]])
+        } else {
+            u16::from_be_bytes([d[16], d[17]])
+        };
+        return Some(match e_type {
+            1 => ("ELF relocatable", MIME, "o"),
+            2 => ("ELF executable", MIME, ""),
+            3 => ("ELF shared library", MIME, "so"),
+            4 => ("ELF core file", MIME, ""),
+            _ => ("ELF", MIME, ""),
+        });
+    }
+    // Mach-O thin binary: magic FEEDFACE/FEEDFACF (BE) or CEFAEDFE/CFFAEDFE (LE).
+    let magic_be = u32::from_be_bytes([d[0], d[1], d[2], d[3]]);
+    let macho = matches!(magic_be, 0xFEEDFACE | 0xFEEDFACF | 0xCEFAEDFE | 0xCFFAEDFE);
+    if macho && d.len() >= 16 {
+        let le = matches!(magic_be, 0xCEFAEDFE | 0xCFFAEDFE);
+        let filetype = if le {
+            u32::from_le_bytes([d[12], d[13], d[14], d[15]])
+        } else {
+            u32::from_be_bytes([d[12], d[13], d[14], d[15]])
+        };
+        return Some(match filetype {
+            1 => ("Mach-O object file", MIME, "o"),
+            6 => ("Mach-O dynamic link library", MIME, "dylib"),
+            8 => ("Mach-O dynamic bound bundle", MIME, "dylib"),
+            9 => ("Mach-O dynamic link library stub", MIME, "dylib"),
+            _ => ("Mach-O executable", MIME, ""),
+        });
+    }
+    // Mach-O fat binary: CAFEBABE / BEBAFECA
+    if matches!(magic_be, 0xCAFEBABE | 0xBEBAFECA) {
+        return Some(("Mach-O fat binary executable", MIME, ""));
+    }
+    // ar archive ("!<arch>\n"): static library (Mach-O if it contains Mach-O members).
+    if d.starts_with(b"!<arch>\n") {
+        let is_macho = d.windows(4).take(4096).any(|w| {
+            let m = u32::from_be_bytes([w[0], w[1], w[2], w[3]]);
+            matches!(m, 0xFEEDFACE | 0xFEEDFACF | 0xCEFAEDFE | 0xCFFAEDFE | 0xCAFEBABE)
+        });
+        return Some(if is_macho {
+            ("Mach-O static library", MIME, "a")
+        } else {
+            ("Static library", MIME, "a")
+        });
+    }
+    // PE (Windows): "MZ" then PE header; machine field selects Win32/Win64.
+    if &d[0..2] == b"MZ" && d.len() >= 0x40 {
+        let pe_off = u32::from_le_bytes([d[0x3c], d[0x3d], d[0x3e], d[0x3f]]) as usize;
+        if pe_off + 6 <= d.len() && &d[pe_off..pe_off + 4] == b"PE\0\0" {
+            let machine = u16::from_le_bytes([d[pe_off + 4], d[pe_off + 5]]);
+            return Some(match machine {
+                0x8664 | 0xAA64 => ("Win64 EXE", MIME, "exe"),
+                _ => ("Win32 EXE", MIME, "exe"),
+            });
+        }
+    }
+    None
+}
+
 /// Whether a FileType is a TIFF-based RAW variant (shares TIFF magic, refined by extension).
 fn is_tiff_based(ft: FileType) -> bool {
     matches!(
