@@ -84,7 +84,6 @@ DNG.dng	SamplesPerPixel
 DNG.dng	ThumbnailTIFF
 DNG.dng	YCbCrSubSampling
 DjVu.djvu	Creator
-DjVu.djvu	FileType
 DjVu.djvu	SubfileType
 DjVu.djvu	Subject
 EXE.a	CreateDate
@@ -148,7 +147,6 @@ Font.pfa	Comment
 Font.pfa	Notice
 Font.pfb	Comment
 Font.pfb	Notice
-Font.pfm	MIMEType
 FotoStation.jpg	ObjectCycle
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
@@ -219,7 +217,6 @@ InfiRay.jpg	VisibleSensorSerialNumber
 JVC.jpg	CPUVersions
 JVC.jpg	Quality
 JVC2.jpg	Quality
-JXL.jxl	FileType
 JXL2.jxl	CompatibleBrands
 Jpeg2000.jp2	CompatibleBrands
 Jpeg2000.jp2	ExifByteOrder
@@ -413,7 +410,6 @@ PGF.pgf	Warning
 PLIST-bin.plist	TestBoolean
 PLIST-bin.plist	TestDate
 PLIST-bin.plist	TestDictWhen
-PLIST-xml.plist	MIMEType
 PLUS.xmp	ColorMode
 PLUS.xmp	CopyrightStatus
 PLUS.xmp	CreditLineRequired
@@ -490,7 +486,6 @@ QuickTime.mov	XMPToolkit
 RIFF.avi	XMPToolkit
 RIFF.wav	Make
 RIFF.webp	AlphaFiltering
-RIFF.webp	FileType
 RTF.rtf	Comments
 RTF.rtf	Company
 RTF.rtf	Subject

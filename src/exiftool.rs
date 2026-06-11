@@ -1107,23 +1107,23 @@ impl ExifTool {
 
         // Some types refine their FileType/MIMEType/extension from the content
         // (ExifTool SetFileType): e.g. EXE -> "Win32 EXE" / "ELF executable" / Mach-O.
+        let default_tags = || {
+            (
+                file_type.code().to_string(),
+                file_type.mime_type().to_string(),
+                file_type.extensions().first().copied().unwrap_or("").to_string(),
+            )
+        };
         let (ft_code, mime_str, ext_str): (String, String, String) =
             if file_type == FileType::Exe {
-                if let Some((ft, mime, ext)) = exe_subtype(data) {
-                    (ft.to_string(), mime.to_string(), ext.to_string())
-                } else {
-                    (
-                        file_type.code().to_string(),
-                        file_type.mime_type().to_string(),
-                        file_type.extensions().first().copied().unwrap_or("").to_string(),
-                    )
-                }
+                exe_subtype(data)
+                    .map(|(ft, mime, ext)| (ft.to_string(), mime.to_string(), ext.to_string()))
+                    .unwrap_or_else(default_tags)
+            } else if let Some((code, mime)) = refine_filetype_by_content(file_type, data) {
+                let (_, _, ext) = default_tags();
+                (code, mime, ext)
             } else {
-                (
-                    file_type.code().to_string(),
-                    file_type.mime_type().to_string(),
-                    file_type.extensions().first().copied().unwrap_or("").to_string(),
-                )
+                default_tags()
             };
 
         // Add file-level tags
@@ -2119,6 +2119,34 @@ fn detect_iwork_type(data: &[u8], path: &Path) -> Option<FileType> {
         "numbers" | "nmbtemplate" => Some(FileType::Numbers),
         "pages" => Some(FileType::Pages),
         "key" | "kth" => Some(FileType::Key),
+        _ => None,
+    }
+}
+
+/// Content-dependent FileType code / MIME refinements (ExifTool SetFileType with a
+/// content test). Returns (code, mime); the extension keeps its default.
+fn refine_filetype_by_content(file_type: FileType, data: &[u8]) -> Option<(String, String)> {
+    match file_type {
+        // Printer Font Metrics (font, starts 0x00 0x01/0x02) vs Portable Float Map (image, "PF").
+        FileType::PortableFloatMap if data.len() >= 2 && data[0] == 0x00 && data[1] <= 0x02 => {
+            Some(("PFM".into(), "application/x-font-type1".into()))
+        }
+        // XML property list → application/xml (binary plist keeps application/x-plist).
+        FileType::Plist if !data.starts_with(b"bplist") => {
+            Some(("PLIST".into(), "application/xml".into()))
+        }
+        // Naked JPEG XL codestream (FF 0A) vs the ISOBMFF container.
+        FileType::Jxl if data.starts_with(&[0xFF, 0x0A]) => {
+            Some(("JXL Codestream".into(), file_type.mime_type().to_string()))
+        }
+        // Extended WebP: VP8X chunk at offset 12.
+        FileType::WebP if data.len() >= 16 && &data[12..16] == b"VP8X" => {
+            Some(("Extended WEBP".into(), file_type.mime_type().to_string()))
+        }
+        // Multi-page DjVu: "DJVM" form type at offset 12.
+        FileType::DjVu if data.len() >= 16 && &data[12..16] == b"DJVM" => {
+            Some(("DJVU (multi-page)".into(), file_type.mime_type().to_string()))
+        }
         _ => None,
     }
 }
