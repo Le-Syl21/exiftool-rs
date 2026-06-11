@@ -593,7 +593,12 @@ fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark, model: &str) -
                 canon_custom2_name(tag_id)
             };
             if !name.is_empty() {
-                tags.push(mk_canon_str(name, &val.to_string()));
+                // Apply the generated PrintConv for this custom function (On/Off/
+                // Disable/...), falling back to the raw value for complex ones.
+                let pv = crate::tags::print_conv_generated::print_conv_by_name(name, val as i64)
+                    .map(str::to_string)
+                    .unwrap_or_else(|| val.to_string());
+                tags.push(mk_canon_str(name, &pv));
             } else if tag_id > 0 {
                 // Emit unknown custom functions with their hex ID
                 tags.push(mk_canon_str(
