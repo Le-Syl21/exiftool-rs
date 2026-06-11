@@ -164,7 +164,7 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
             }
         }
         // ExposureTime — ExifTool's PrintExposureTime: "1/60" or "4" (no " s").
-        ("ExifIFD", 0x829A) => {
+        (_, 0x829A) => {
             if let Value::URational(n, d) = value {
                 if *d != 0 {
                     let secs = *n as f64 / *d as f64;
@@ -177,20 +177,20 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
             }
         }
         // FNumber — ExifTool: sprintf("%.1f"), e.g. "14.0" (no "f/" prefix).
-        ("ExifIFD", 0x829D) => {
+        (_, 0x829D) => {
             if let Some(v) = value.as_f64() {
                 return Some(format!("{:.1}", v));
             }
         }
         // ApertureValue / MaxApertureValue — APEX: FNumber = 2^(val/2), "%.1f".
-        ("ExifIFD", 0x9202) | ("ExifIFD", 0x9205) => {
+        (_, 0x9202) | (_, 0x9205) => {
             if let Some(v) = value.as_f64() {
                 return Some(format!("{:.1}", 2f64.powf(v / 2.0)));
             }
         }
         // ShutterSpeedValue — APEX: exposure = 2^(-val) (0 if |val|>=100),
         // then ExifTool's PrintExposureTime.
-        ("ExifIFD", 0x9201) => {
+        (_, 0x9201) => {
             if let Some(v) = value.as_f64() {
                 let secs = if v.abs() < 100.0 { 2f64.powf(-v) } else { 0.0 };
                 if secs > 0.0 && secs < 0.250_01 {

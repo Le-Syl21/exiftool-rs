@@ -32,7 +32,6 @@ Apple.jpg	GPSSpeedRef
 Apple.jpg	GPSTimeStamp
 Apple.jpg	ImageCaptureType
 Apple.jpg	LensInfo
-Apple.jpg	SubjectArea
 Apple.jpg	ThumbnailImage
 Apple.jpg	ThumbnailOffset
 Audible.aa	Copyright
@@ -51,7 +50,6 @@ BPG.bpg	MediaWhitePoint
 BPG.bpg	ProfileCreator
 BPG.bpg	RedMatrixColumn
 BPG.bpg	RedTRC
-BigTIFF.btf	BitsPerSample
 BigTIFF.btf	MIMEType
 Canon.jpg	AFPointsInFocus
 Canon.jpg	BlueBalance
@@ -86,7 +84,6 @@ Canon.jpg	SerialNumber
 Canon.jpg	Sharpness
 Canon.jpg	ShootingMode
 Canon.jpg	TargetAperture
-Canon.jpg	ThumbnailImageValidArea
 Canon1DmkIII.jpg	AEBShotCount
 Canon1DmkIII.jpg	AFAssistBeam
 Canon1DmkIII.jpg	AFMicroadjustment
@@ -135,7 +132,6 @@ Canon1DmkIII.jpg	ShutterSpeedRange
 Canon1DmkIII.jpg	SwitchToRegisteredAFPoint
 Canon1DmkIII.jpg	TargetAperture
 Canon1DmkIII.jpg	ThumbnailImage
-Canon1DmkIII.jpg	ThumbnailImageValidArea
 Canon1DmkIII.jpg	ThumbnailOffset
 Canon1DmkIII.jpg	TimerLength
 Canon1DmkIII.jpg	ToningEffectMonochrome
@@ -148,7 +144,6 @@ Canon1DmkIII.jpg	UserDef1PictureStyle
 Canon1DmkIII.jpg	UserDef2PictureStyle
 Canon1DmkIII.jpg	VRDOffset
 CanonRaw.cr2	AFPointsInFocus
-CanonRaw.cr2	BitsPerSample
 CanonRaw.cr2	BlueBalance
 CanonRaw.cr2	CR2CFAPattern
 CanonRaw.cr2	CanonImageSize
@@ -174,7 +169,6 @@ CanonRaw.cr2	MinAperture
 CanonRaw.cr2	MinFocalLength
 CanonRaw.cr2	OwnerName
 CanonRaw.cr2	Quality
-CanonRaw.cr2	RawImageSegmentation
 CanonRaw.cr2	RedBalance
 CanonRaw.cr2	Saturation
 CanonRaw.cr2	SelfTimer
@@ -182,11 +176,9 @@ CanonRaw.cr2	SelfTimer2
 CanonRaw.cr2	SerialNumber
 CanonRaw.cr2	TargetAperture
 CanonRaw.cr2	ThumbnailImage
-CanonRaw.cr2	ThumbnailImageValidArea
 CanonRaw.cr2	VRDOffset
 CanonRaw.cr3	Aperture
 CanonRaw.cr3	BatteryType
-CanonRaw.cr3	BitsPerSample
 CanonRaw.cr3	BlueBalance
 CanonRaw.cr3	BracketMode
 CanonRaw.cr3	BracketShotNumber
@@ -231,7 +223,6 @@ CanonRaw.cr3	ShutterSpeed
 CanonRaw.cr3	SourceImageHeight
 CanonRaw.cr3	SourceImageWidth
 CanonRaw.cr3	TargetAperture
-CanonRaw.cr3	ThumbnailImageValidArea
 CanonRaw.cr3	TrackCreateDate
 CanonRaw.cr3	TrackModifyDate
 CanonRaw.cr3	VRDOffset
@@ -273,7 +264,6 @@ Casio.jpg	ThumbnailImage
 Casio.jpg	ThumbnailOffset
 Casio2.jpg	AFPointPosition
 Casio2.jpg	BestShotMode
-Casio2.jpg	CompressedBitsPerPixel
 Casio2.jpg	DOF
 Casio2.jpg	FirmwareDate
 Casio2.jpg	Flash
@@ -286,7 +276,6 @@ Casio2.jpg	Software
 Casio2.jpg	ThumbnailImage
 Casio2.jpg	ThumbnailOffset
 Casio2.jpg	WhiteBalance
-Casio2.jpg	WhiteBalanceBias
 CasioQVCI.jpg	DateTimeOriginal
 CasioQVCI.jpg	ManufactureCode
 CasioQVCI.jpg	ManufactureIndex
@@ -294,24 +283,11 @@ CasioQVCI.jpg	ModelType
 DICOM.dcm	FileMetaInfoVersion
 DICOM.dcm	PixelData
 DNG.dng	AFPointsInFocus
-DNG.dng	ActiveArea
-DNG.dng	AnalogBalance
 DNG.dng	ApertureValue
-DNG.dng	AsShotNeutral
-DNG.dng	BaselineExposure
-DNG.dng	BaselineNoise
-DNG.dng	BaselineSharpness
 DNG.dng	BitsPerSample
-DNG.dng	BlackLevelRepeatDim
 DNG.dng	BlueBalance
-DNG.dng	CFAPattern2
 DNG.dng	CFAPlaneColor
-DNG.dng	CFARepeatPatternDim
-DNG.dng	CameraCalibration1
-DNG.dng	CameraCalibration2
 DNG.dng	CanonImageSize
-DNG.dng	ColorMatrix1
-DNG.dng	ColorMatrix2
 DNG.dng	ColorTone
 DNG.dng	Compression
 DNG.dng	CustomRendered
@@ -321,9 +297,6 @@ DNG.dng	DNGVersion
 DNG.dng	DateTime
 DNG.dng	DateTimeDigitized
 DNG.dng	DateTimeOriginal
-DNG.dng	DefaultCropOrigin
-DNG.dng	DefaultCropSize
-DNG.dng	DefaultScale
 DNG.dng	DriveMode
 DNG.dng	EasyMode
 DNG.dng	ExposureMode
@@ -351,7 +324,6 @@ DNG.dng	Lens35efl
 DNG.dng	LensInfo
 DNG.dng	MIMEType
 DNG.dng	ManualFlashOutput
-DNG.dng	MaskedAreas
 DNG.dng	MaxAperture
 DNG.dng	MaxApertureValue
 DNG.dng	MaxFocalLength
@@ -363,21 +335,17 @@ DNG.dng	PhotometricInterpretation
 DNG.dng	Quality
 DNG.dng	RawDataUniqueID
 DNG.dng	RedBalance
-DNG.dng	ReferenceBlackWhite
 DNG.dng	SamplesPerPixel
 DNG.dng	Saturation
 DNG.dng	SceneCaptureType
 DNG.dng	SelfTimer
 DNG.dng	SelfTimer2
 DNG.dng	SerialNumber
-DNG.dng	ShutterSpeedValue
 DNG.dng	SubfileType
 DNG.dng	TargetAperture
-DNG.dng	ThumbnailImageValidArea
 DNG.dng	ThumbnailTIFF
 DNG.dng	VRDOffset
 DNG.dng	WhiteBalance
-DNG.dng	YCbCrCoefficients
 DNG.dng	YCbCrSubSampling
 DV.dv	FileType
 DV.dv	FileTypeExtension
@@ -421,7 +389,6 @@ ExifTool.jpg	BlueTRC
 ExifTool.jpg	CMMFlags
 ExifTool.jpg	ColorSpace
 ExifTool.jpg	Comment
-ExifTool.jpg	CompressedBitsPerPixel
 ExifTool.jpg	Compression
 ExifTool.jpg	ConnectionSpaceIlluminant
 ExifTool.jpg	Copyright
@@ -461,7 +428,6 @@ ExifTool.jpg	Urgency
 ExifTool.jpg	Warning
 ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
-ExifTool.tif	BitsPerSample
 ExifTool.tif	BlueMatrixColumn
 ExifTool.tif	BlueTRC
 ExifTool.tif	CMMFlags
@@ -537,7 +503,6 @@ Font.ttf	MIMEType
 FotoStation.jpg	ObjectCycle
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
-FujiFilm.jpg	CompressedBitsPerPixel
 FujiFilm.jpg	Copyright
 FujiFilm.jpg	FocusMode
 FujiFilm.jpg	Quality
@@ -547,7 +512,6 @@ FujiFilm.jpg	ThumbnailImage
 FujiFilm.jpg	ThumbnailOffset
 FujiFilm.jpg	Version
 FujiFilm.raf	AFMode
-FujiFilm.raf	BrightnessValue
 FujiFilm.raf	Copyright
 FujiFilm.raf	DynamicRange
 FujiFilm.raf	FacesDetected
@@ -556,8 +520,6 @@ FujiFilm.raf	FocusMode
 FujiFilm.raf	GPSVersionID
 FujiFilm.raf	ImageSize
 FujiFilm.raf	InternalSerialNumber
-FujiFilm.raf	MaxApertureAtMaxFocal
-FujiFilm.raf	MaxApertureAtMinFocal
 FujiFilm.raf	Megapixels
 FujiFilm.raf	Model
 FujiFilm.raf	PreviewImage
@@ -600,19 +562,15 @@ GIMP.xcf	ProfileCMMType
 GIMP.xcf	RedMatrixColumn
 GIMP.xcf	RedTRC
 GPS.jpg	Aperture
-GPS.jpg	BrightnessValue
 GPS.jpg	City
 GPS.jpg	ExposureCompensation
 GPS.jpg	FNumber
 GPS.jpg	FileSource
-GPS.jpg	FocalPlaneXResolution
-GPS.jpg	FocalPlaneYResolution
 GPS.jpg	GPSLatitude
 GPS.jpg	GPSLongitude
 GPS.jpg	GPSPosition
 GPS.jpg	GPSTimeStamp
 GPS.jpg	GPSVersionID
-GPS.jpg	ReferenceBlackWhite
 GPS.jpg	SceneType
 GPS.jpg	ShutterSpeed
 GPS.jpg	ThumbnailImage
@@ -656,7 +614,6 @@ GoPro.jpg	SubjectDistance
 GoPro.jpg	ThumbnailImage
 GoPro.jpg	ThumbnailOffset
 GoPro.jpg	WhiteBalance
-Google.jpg	BrightnessValue
 Google.jpg	DirectoryItemMime
 Google.jpg	Flash
 Google.jpg	GPSAltitude
@@ -740,7 +697,6 @@ JXL2.jxl	CompatibleBrands
 Jpeg2000.jp2	CompatibleBrands
 Jpeg2000.jp2	ExifByteOrder
 Jpeg2000.jp2	ImageCreationSchemaLocation
-Jpeg2000.jp2	ModelTiePoint
 Jpeg2000.jp2	StripOffsets
 Kodak.jpg	BurstMode
 Kodak.jpg	ColorMode
@@ -788,12 +744,10 @@ Lytro.lfp	HyperfocalDistance
 Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
 M2TS.mts	FileTypeExtension
-MIE.mie	FNumber
 MIE.mie	ImageSize
 MIE.mie	MIMEType
 MIE.mie	Resolution
 MIE.mie	ThumbnailImageSize
-MIFF.miff	CompressedBitsPerPixel
 MIFF.miff	FileType
 MIFF.miff	FileTypeExtension
 MIFF.miff	MIMEType
@@ -823,7 +777,6 @@ Matroska.mkv	TrackType
 Matroska.mkv	TrackUID
 Minolta.jpg	BracketStep
 Minolta.jpg	Brightness
-Minolta.jpg	BrightnessValue
 Minolta.jpg	ColorBalanceBlue
 Minolta.jpg	ColorBalanceGreen
 Minolta.jpg	ColorBalanceRed
@@ -862,7 +815,6 @@ Minolta.jpg	PreviewImageStart
 Minolta.jpg	PrintIMVersion
 Minolta.jpg	Saturation
 Minolta.jpg	Sharpness
-Minolta.jpg	SubjectArea
 Minolta.jpg	SubjectProgram
 Minolta.jpg	ThumbnailImage
 Minolta.jpg	ThumbnailOffset
@@ -870,7 +822,6 @@ Minolta.jpg	WhiteBalance
 Minolta.jpg	WideFocusZone
 Minolta.mrw	BracketStep
 Minolta.mrw	Brightness
-Minolta.mrw	BrightnessValue
 Minolta.mrw	ColorBalanceBlue
 Minolta.mrw	ColorBalanceGreen
 Minolta.mrw	ColorBalanceRed
@@ -905,7 +856,6 @@ Minolta.mrw	PreviewImage
 Minolta.mrw	Saturation
 Minolta.mrw	Sharpness
 Minolta.mrw	Software
-Minolta.mrw	SubjectArea
 Minolta.mrw	SubjectProgram
 Minolta.mrw	WhiteBalance
 Minolta.mrw	WideFocusZone
@@ -932,8 +882,6 @@ Nikon.nef	BitsPerSample
 Nikon.nef	BlueMatrixColumn
 Nikon.nef	BlueTRC
 Nikon.nef	CFAPattern
-Nikon.nef	CFAPattern2
-Nikon.nef	CFARepeatPatternDim
 Nikon.nef	CMMFlags
 Nikon.nef	ColorHue
 Nikon.nef	Compression
@@ -988,7 +936,6 @@ Nikon.nef	PreviewImageStart
 Nikon.nef	ProfileCMMType
 Nikon.nef	ProgramShift
 Nikon.nef	Quality
-Nikon.nef	RawImageCenter
 Nikon.nef	RedMatrixColumn
 Nikon.nef	RedTRC
 Nikon.nef	RowsPerStrip
@@ -1022,7 +969,6 @@ NikonD2Hs.jpg	FlashType
 NikonD2Hs.jpg	FocusMode
 NikonD2Hs.jpg	GPSVersionID
 NikonD2Hs.jpg	ISOSetting
-NikonD2Hs.jpg	ImageBoundary
 NikonD2Hs.jpg	Lens
 NikonD2Hs.jpg	LensFStops
 NikonD2Hs.jpg	LensID
@@ -1061,10 +1007,8 @@ NikonD70.jpg	FlashExposureBracketValue
 NikonD70.jpg	FlashExposureComp
 NikonD70.jpg	FlashSetting
 NikonD70.jpg	FocusMode
-NikonD70.jpg	Gamma
 NikonD70.jpg	ISO
 NikonD70.jpg	ISOSetting
-NikonD70.jpg	ImageBoundary
 NikonD70.jpg	ImageOptimization
 NikonD70.jpg	Lens
 NikonD70.jpg	LensFStops
@@ -1079,7 +1023,6 @@ NikonD70.jpg	MinFocalLength
 NikonD70.jpg	NoiseReduction
 NikonD70.jpg	PreviewImage
 NikonD70.jpg	PreviewImageStart
-NikonD70.jpg	PrimaryChromaticities
 NikonD70.jpg	ProgramShift
 NikonD70.jpg	Quality
 NikonD70.jpg	Saturation
@@ -1092,15 +1035,12 @@ NikonD70.jpg	ThumbnailOffset
 NikonD70.jpg	ToneComp
 NikonD70.jpg	VariProgram
 NikonD70.jpg	WhiteBalance
-NikonD70.jpg	WhitePoint
-NikonD70.jpg	YCbCrCoefficients
 Olympus.jpg	CameraID
 Olympus.jpg	CameraType
 Olympus.jpg	DataDump
 Olympus.jpg	DigitalZoom
 Olympus.jpg	FocalPlaneDiagonal
 Olympus.jpg	ImageDescription
-Olympus.jpg	LensDistortionParams
 Olympus.jpg	Quality
 Olympus.jpg	SpecialMode
 Olympus.jpg	ThumbnailImage
@@ -1109,7 +1049,6 @@ Olympus2.jpg	AELock
 Olympus2.jpg	AFAreas
 Olympus2.jpg	AFPoint
 Olympus2.jpg	AFSearch
-Olympus2.jpg	BlackLevel2
 Olympus2.jpg	BodyFirmwareVersion
 Olympus2.jpg	CameraID
 Olympus2.jpg	CameraSettingsVersion
@@ -1124,7 +1063,6 @@ Olympus2.jpg	DistortionCorrection
 Olympus2.jpg	DistortionCorrection2
 Olympus2.jpg	DriveMode
 Olympus2.jpg	EquipmentVersion
-Olympus2.jpg	ExposureCompensation
 Olympus2.jpg	ExternalFlash
 Olympus2.jpg	ExternalFlashBounce
 Olympus2.jpg	FOV
@@ -1142,7 +1080,6 @@ Olympus2.jpg	ImageQuality2
 Olympus2.jpg	ImageStabilization
 Olympus2.jpg	InternalFlash
 Olympus2.jpg	InternalSerialNumber
-Olympus2.jpg	LensDistortionParams
 Olympus2.jpg	MacroMode
 Olympus2.jpg	Make
 Olympus2.jpg	ManometerPressure
@@ -1169,26 +1106,19 @@ Olympus2.jpg	SpecialMode
 Olympus2.jpg	ThumbnailImage
 Olympus2.jpg	ThumbnailOffset
 Olympus2.jpg	WhiteBalance2
-Olympus2.jpg	WhiteBalanceBracket
 Olympus2.jpg	WhiteBalanceTemperature
 OlympusE1.jpg	AELock
 OlympusE1.jpg	AFAreas
 OlympusE1.jpg	AFPoint
 OlympusE1.jpg	AFSearch
-OlympusE1.jpg	BlackLevel
-OlympusE1.jpg	BlackLevel2
 OlympusE1.jpg	BlueBalance
 OlympusE1.jpg	BodyFirmwareVersion
 OlympusE1.jpg	CameraID
 OlympusE1.jpg	CameraSettingsVersion
 OlympusE1.jpg	CameraType
 OlympusE1.jpg	CameraType2
-OlympusE1.jpg	ColorControl
 OlympusE1.jpg	ColorMatrix
-OlympusE1.jpg	CompressionFactor
 OlympusE1.jpg	ContrastSetting
-OlympusE1.jpg	CropLeft
-OlympusE1.jpg	CropTop
 OlympusE1.jpg	CustomSaturation
 OlympusE1.jpg	DOF
 OlympusE1.jpg	DigitalZoom
@@ -1212,7 +1142,6 @@ OlympusE1.jpg	ImageProcessingVersion
 OlympusE1.jpg	ImageQuality2
 OlympusE1.jpg	InternalFlash
 OlympusE1.jpg	InternalSerialNumber
-OlympusE1.jpg	LensDistortionParams
 OlympusE1.jpg	LensFirmwareVersion
 OlympusE1.jpg	LensProperties
 OlympusE1.jpg	MacroMode
@@ -1228,14 +1157,10 @@ OlympusE1.jpg	PreviewImageStart
 OlympusE1.jpg	PreviewImageValid
 OlympusE1.jpg	Quality
 OlympusE1.jpg	RawDevColorSpace
-OlympusE1.jpg	RawDevContrastValue
 OlympusE1.jpg	RawDevEditStatus
 OlympusE1.jpg	RawDevEngine
-OlympusE1.jpg	RawDevGrayPoint
 OlympusE1.jpg	RawDevNoiseReduction
-OlympusE1.jpg	RawDevSaturationEmphasis
 OlympusE1.jpg	RawDevSettings
-OlympusE1.jpg	RawDevSharpnessValue
 OlympusE1.jpg	RawDevVersion
 OlympusE1.jpg	RedBalance
 OlympusE1.jpg	SensorTemperature
@@ -1247,7 +1172,6 @@ OlympusE1.jpg	Software
 OlympusE1.jpg	SpecialMode
 OlympusE1.jpg	ThumbnailImage
 OlympusE1.jpg	ThumbnailOffset
-OlympusE1.jpg	ValidBits
 OlympusE1.jpg	WhiteBalance2
 OlympusE1.jpg	WhiteBalanceTemperature
 Opus.opus	FileType
@@ -1323,7 +1247,6 @@ Pentax.jpg	AEMeteringSegments
 Pentax.jpg	AEXv
 Pentax.jpg	AFPointSelected
 Pentax.jpg	AutoBracketing
-Pentax.jpg	BlackPoint
 Pentax.jpg	BodyBatteryADLoad
 Pentax.jpg	BodyBatteryADNoLoad
 Pentax.jpg	CameraTemperature
@@ -1356,8 +1279,6 @@ Pentax.jpg	ThumbnailImage
 Pentax.jpg	ThumbnailOffset
 Pentax.jpg	TvExposureTimeSetting
 Pentax.jpg	WhiteBalanceMode
-Pentax.jpg	WhitePoint
-PhaseOne.iiq	BitsPerSample
 PhaseOne.iiq	SubfileType
 PhaseOne.iiq	ThumbnailTIFF
 PhaseOne.iiq	XResolution
@@ -1417,7 +1338,6 @@ RTF.rtf	Company
 RTF.rtf	Subject
 Real.ra	Copyright
 Real.rm	MIMEType
-Ricoh.jpg	BrightnessValue
 Ricoh.jpg	Copyright
 Ricoh.jpg	FirmwareVersion
 Ricoh.jpg	ImageDescription
@@ -1428,12 +1348,9 @@ Ricoh.jpg	Sharpness
 Ricoh.jpg	ShutterSpeed
 Ricoh.jpg	ThumbnailImage
 Ricoh.jpg	ThumbnailOffset
-Ricoh2.jpg	BrightnessValue
-Ricoh2.jpg	CompressedBitsPerPixel
 Ricoh2.jpg	FirmwareVersion
 Ricoh2.jpg	Flash
 Ricoh2.jpg	GPSAltitude
-Ricoh2.jpg	GPSDOP
 Ricoh2.jpg	GPSDateTime
 Ricoh2.jpg	GPSDestBearingRef
 Ricoh2.jpg	GPSDestDistanceRef
@@ -1459,14 +1376,12 @@ Ricoh2.jpg	Sharpness
 Ricoh2.jpg	ThumbnailImage
 Ricoh2.jpg	ThumbnailOffset
 Ricoh2.jpg	UserComment
-Sanyo.jpg	CompressedBitsPerPixel
 Sanyo.jpg	DataDump
 Sanyo.jpg	Flash
 Sanyo.jpg	FlashMode
 Sanyo.jpg	Macro
 Sanyo.jpg	Model
 Sanyo.jpg	SelfTimer
-Sanyo.jpg	SpecialMode
 Sanyo.jpg	ThumbnailImage
 Sanyo.jpg	ThumbnailOffset
 Sigma.jpg	AutoBracket
@@ -1524,7 +1439,6 @@ TNEF.tnef	MessageBodyRTF
 TNEF.tnef	ModifyDate
 Torrent.torrent	CreateDate
 Torrent.torrent	File4Length
-Unknown.jpg	DigitalZoomRatio
 Unknown.jpg	Flash
 Unknown.jpg	ImageDescription
 Unknown.jpg	Software
@@ -1564,7 +1478,6 @@ XMP.jpg	APP14Flags1
 XMP.jpg	BlueMatrixColumn
 XMP.jpg	BlueTRC
 XMP.jpg	CMMFlags
-XMP.jpg	CompressedBitsPerPixel
 XMP.jpg	ConnectionSpaceIlluminant
 XMP.jpg	DateCreated
 XMP.jpg	DeviceAttributes
@@ -1585,7 +1498,6 @@ XMP.jpg	ThumbnailOffset
 XMP.jpg	Urgency
 XMP.jpg	ViewingCondIlluminant
 XMP.svg	Date
-XMP.xml	ExposureTime
 XMP.xml	FileType
 XMP.xml	FileTypeExtension
 XMP.xml	Iso
@@ -1625,7 +1537,6 @@ XMP.xmp	ResolutionUnit
 XMP.xmp	ScaleFactor35efl
 XMP.xmp	SceneCaptureType
 XMP.xmp	SensingMethod
-XMP.xmp	ShutterSpeed
 XMP.xmp	ShutterSpeedValue
 XMP.xmp	WhiteBalance
 XMP.xmp	XResolution

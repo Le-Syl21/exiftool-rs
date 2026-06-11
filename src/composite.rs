@@ -695,11 +695,17 @@ fn compute_gps_altitude(tags: &[Tag]) -> Option<Tag> {
 
 fn compute_shutter_speed(tags: &[Tag]) -> Option<Tag> {
     let et = find_tag(tags, "ExposureTime")?;
-    // Already has print conversion (e.g., "1/60 s"), just use it
+    // Perl: Composite ShutterSpeed PrintConv = PrintExposureTime($val) applied to the
+    // raw ExposureTime, regardless of how ExposureTime itself is displayed.
+    let print = et
+        .raw_value
+        .as_f64()
+        .map(crate::tags::canon_sub::print_exposure_time)
+        .unwrap_or_else(|| et.print_value.clone());
     Some(mk_composite(
         "ShutterSpeed",
         "Shutter Speed",
-        Value::String(et.print_value.clone()),
+        Value::String(print),
     ))
 }
 

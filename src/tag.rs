@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn display_value_numeric_true_returns_raw() {
         let tag = make_tag(Value::URational(1, 100), "0.01 s");
-        assert_eq!(tag.display_value(true), "1/100");
+        assert_eq!(tag.display_value(true), "0.01");
     }
 
     #[test]

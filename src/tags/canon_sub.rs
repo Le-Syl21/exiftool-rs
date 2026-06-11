@@ -23,10 +23,12 @@ pub fn print_exposure_time(val: f64) -> String {
     if val <= 0.0 {
         return "0".to_string();
     }
-    if val < 0.25 - 0.001 {
+    if val < 0.25001 {
         format!("1/{}", (0.5 + 1.0 / val) as u32)
     } else {
-        format!("{:.1}", (val * 10.0 + 0.5) as u32 as f64 / 10.0)
+        // Perl: sprintf("%.1f",$secs); s/\.0$//;
+        let s = format!("{:.1}", val);
+        s.strip_suffix(".0").map(str::to_string).unwrap_or(s)
     }
 }
 

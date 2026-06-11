@@ -213,6 +213,11 @@ impl XmpReader {
         // Track depths where we should emit even with empty text (ExifTool et:id format)
         let mut emit_empty_depths: std::collections::HashSet<usize> =
             std::collections::HashSet::new();
+        // Track the et:id value per depth (ExifTool -X round-trip format). A numeric id
+        // (e.g. '33434') is a real EXIF tag ExifTool reconverts; a named id (e.g.
+        // 'Exif-ShutterSpeed') is a derived/Composite whose text is already a print value.
+        let mut et_id_at_depth: std::collections::HashMap<usize, String> =
+            std::collections::HashMap::new();
         // Track elements with rdf:parseType='Resource' (bare structs).
         // Each entry is the path depth at which we entered such an element.
         let mut parse_resource_depths: Vec<usize> = Vec::new();
@@ -258,14 +263,15 @@ impl XmpReader {
                     current_text.clear();
 
                     // Track elements with et:id (ExifTool internal format): emit even if empty
-                    let has_et_id = attributes.iter().any(|a| {
+                    let et_id = attributes.iter().find(|a| {
                         a.name.local_name == "id"
                             && (a.name.prefix.as_deref() == Some("et")
                                 || a.name.namespace.as_deref()
                                     == Some("http://ns.exiftool.org/1.0/"))
                     });
-                    if has_et_id {
+                    if let Some(a) = et_id {
                         emit_empty_depths.insert(path.len());
+                        et_id_at_depth.insert(path.len(), a.value.clone());
                     }
 
                     // Track rdf:parseType='Resource' (bare struct context)
@@ -1376,8 +1382,21 @@ impl XmpReader {
                             let category = namespace_category(group_prefix);
 
                             let text_val = normalize_xml_text(&current_text);
-                            let value = parse_xmp_value(&text_val);
-                            let print_value = value.to_display_string();
+                            // In the ExifTool -X round-trip format, an element with a *named*
+                            // et:id (e.g. 'Exif-ShutterSpeed') carries an already-formatted
+                            // print value: keep it literal instead of reparsing "1/213" as a
+                            // rational. A numeric et:id is a real EXIF tag, parsed normally.
+                            let named_et_id = et_id_at_depth
+                                .get(&path.len())
+                                .map(|id| id.parse::<i64>().is_err())
+                                .unwrap_or(false);
+                            let (value, mut print_value) = if named_et_id {
+                                (Value::String(text_val.clone()), text_val.clone())
+                            } else {
+                                let v = parse_xmp_value(&text_val);
+                                let pv = v.to_display_string();
+                                (v, pv)
+                            };
 
                             // Build full ancestor path for struct flattening.
                             // Applies when inside rdf:parseType="Resource" structs OR when
@@ -1393,6 +1412,14 @@ impl XmpReader {
                             } else {
                                 apply_flat_name_remap(&remapped).to_string()
                             };
+
+                            // ExifTool applies the EXIF table's PrintConv to exif: namespace
+                            // XMP tags (e.g. exif:ExposureTime → PrintExposureTime → "1/15").
+                            if let Some(pc) =
+                                xmp_exif_print_override(group_prefix, &full_name, &value)
+                            {
+                                print_value = pc;
+                            }
 
                             tags.push(Tag {
                                 id: TagId::Text(format!("{}:{}", group_prefix, tag_name)),
@@ -1415,6 +1442,7 @@ impl XmpReader {
                         parse_resource_depths.pop();
                     }
                     emit_empty_depths.remove(&path.len());
+                    et_id_at_depth.remove(&path.len());
 
                     // If closing an inline blank-node Description, emit ALL blank node properties
                     // prefixed with the parent property element's name.
@@ -1894,6 +1922,23 @@ fn apply_flat_name_remap(name: &str) -> String {
 /// Parse an XMP text value into the appropriate Value type.
 /// XMP rational values (e.g., "28/10", "5800/1000") are stored as Value::URational
 /// so that composite computation can parse them as f64.
+/// Apply the EXIF PrintConv to exif: namespace XMP tags, matching ExifTool which
+/// shares the EXIF tag table's conversions for the XMP exif schema. Only the cases
+/// that differ from the plain numeric display are handled here.
+fn xmp_exif_print_override(prefix: &str, name: &str, value: &Value) -> Option<String> {
+    if prefix != "exif" {
+        return None;
+    }
+    let v = value.as_f64()?;
+    match name {
+        "ExposureTime" => Some(crate::tags::canon_sub::print_exposure_time(v)),
+        "ShutterSpeedValue" => {
+            Some(crate::tags::canon_sub::print_exposure_time(2f64.powf(-v)))
+        }
+        _ => None,
+    }
+}
+
 fn parse_xmp_value(text: &str) -> Value {
     // Try rational: N/D where N and D are integers (no whitespace)
     if let Some(slash) = text.find('/') {

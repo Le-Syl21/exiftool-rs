@@ -51,7 +51,8 @@ impl Value {
                 } else if *n % *d == 0 {
                     (*n / *d).to_string()
                 } else {
-                    format!("{}/{}", n, d)
+                    // ExifTool shows the decimal value (Perl %.15g), not the raw fraction.
+                    format_g15(*n as f64 / *d as f64)
                 }
             }
             Value::IRational(n, d) => {
@@ -64,7 +65,7 @@ impl Value {
                 } else if *n % *d == 0 {
                     (*n / *d).to_string()
                 } else {
-                    format!("{}/{}", n, d)
+                    format_g15(*n as f64 / *d as f64)
                 }
             }
             Value::F32(v) => format!("{}", v),
@@ -72,11 +73,30 @@ impl Value {
             Value::Binary(data) => {
                 format!("(Binary data {} bytes, use -b option to extract)", data.len())
             }
-            Value::List(items) => items
-                .iter()
-                .map(|v| v.to_display_string())
-                .collect::<Vec<_>>()
-                .join(", "),
+            Value::List(items) => {
+                // ExifTool joins numeric arrays with a space, but string lists
+                // (e.g. IPTC Keywords) with ", ".
+                let numeric = items.iter().all(|v| {
+                    matches!(
+                        v,
+                        Value::U8(_)
+                            | Value::U16(_)
+                            | Value::U32(_)
+                            | Value::I16(_)
+                            | Value::I32(_)
+                            | Value::URational(..)
+                            | Value::IRational(..)
+                            | Value::F32(_)
+                            | Value::F64(_)
+                    )
+                });
+                let sep = if numeric { " " } else { ", " };
+                items
+                    .iter()
+                    .map(|v| v.to_display_string())
+                    .collect::<Vec<_>>()
+                    .join(sep)
+            }
             Value::Undefined(data) => {
                 format!("(Binary data {} bytes, use -b option to extract)", data.len())
             }
@@ -218,7 +238,11 @@ mod tests {
 
     #[test]
     fn display_urational_non_exact() {
-        assert_eq!(Value::URational(1, 3).to_display_string(), "1/3");
+        // ExifTool shows the decimal value (Perl %.15g), not the raw fraction.
+        assert_eq!(
+            Value::URational(1, 3).to_display_string(),
+            "0.333333333333333"
+        );
     }
 
     #[test]
@@ -238,7 +262,10 @@ mod tests {
 
     #[test]
     fn display_irational_non_exact() {
-        assert_eq!(Value::IRational(7, 3).to_display_string(), "7/3");
+        assert_eq!(
+            Value::IRational(7, 3).to_display_string(),
+            "2.33333333333333"
+        );
     }
 
     #[test]
@@ -278,8 +305,9 @@ mod tests {
 
     #[test]
     fn display_list() {
+        // Numeric lists join with a space (ExifTool), string lists with ", ".
         let list = Value::List(vec![Value::U16(640), Value::U16(480)]);
-        assert_eq!(list.to_display_string(), "640, 480");
+        assert_eq!(list.to_display_string(), "640 480");
     }
 
     #[test]
@@ -407,7 +435,7 @@ mod tests {
     #[test]
     fn display_trait_delegates() {
         let v = Value::URational(1, 3);
-        assert_eq!(format!("{}", v), "1/3");
+        assert_eq!(format!("{}", v), "0.333333333333333");
     }
 
     // ── format_g15 / format_g_prec ─────────────────────────────────
