@@ -258,15 +258,11 @@ Geotag.xml	FileTypeExtension
 Geotag.xml	HistoryRunTrackTrackpointTime
 Geotag.xml	MIMEType
 Geotag3.log	LineCount
-GoPro.jpg	AutoRotation
 GoPro.jpg	ColorSpace
-GoPro.jpg	DigitalZoomOn
 GoPro.jpg	ExposureCompensation
 GoPro.jpg	FlashpixVersion
 GoPro.jpg	MediaUniqueID
-GoPro.jpg	Protune
 GoPro.jpg	Sharpness
-GoPro.jpg	SpotMeter
 GoPro.jpg	SubjectDistance
 GoPro.jpg	WhiteBalance
 Google.jpg	DirectoryItemMime

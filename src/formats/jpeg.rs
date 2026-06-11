@@ -4604,6 +4604,18 @@ fn parse_gpmf_records(data: &[u8], tags: &mut Vec<crate::tag::Tag>, depth: usize
                 .to_string()
         };
 
+        // GoPro GPMF PrintConvs for string-enum tags (GoPro.pm).
+        let print_str = match (name, val_str.as_str()) {
+            ("AutoRotation", "U") => "Up".to_string(),
+            ("AutoRotation", "D") => "Down".to_string(),
+            ("AutoRotation", "A") => "Auto".to_string(),
+            ("Protune", "N") => "Off".to_string(),
+            ("Protune", "Y") => "On".to_string(),
+            ("DigitalZoomOn" | "SpotMeter", "N") => "No".to_string(),
+            ("DigitalZoomOn" | "SpotMeter", "Y") => "Yes".to_string(),
+            _ => val_str.clone(),
+        };
+
         // Emit even empty values (Perl does: ExposureType with empty value)
         {
             tags.push(crate::tag::Tag {
@@ -4615,8 +4627,8 @@ fn parse_gpmf_records(data: &[u8], tags: &mut Vec<crate::tag::Tag>, depth: usize
                     family1: "GoPro".into(),
                     family2: "Camera".into(),
                 },
-                raw_value: crate::value::Value::String(val_str.clone()),
-                print_value: val_str,
+                raw_value: crate::value::Value::String(val_str),
+                print_value: print_str,
                 priority: 0,
             });
         }
