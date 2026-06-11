@@ -175,6 +175,13 @@ pub enum FileType {
     // ===== Plain text formats =====
     Txt,
     Csv,
+    Vcard,
+    Ics,
+    Url,
+    Lnk,
+    Ppm,
+    Dpx,
+    Ram,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -347,6 +354,13 @@ impl FileType {
             FileType::Lif => "Leica Image Format",
             FileType::Txt => "Text",
             FileType::Csv => "Comma-Separated Values",
+            FileType::Vcard => "vCard",
+            FileType::Ics => "iCalendar",
+            FileType::Url => "Windows URL Shortcut",
+            FileType::Lnk => "Windows Shortcut",
+            FileType::Ppm => "Portable Pixel Map",
+            FileType::Dpx => "Digital Picture Exchange",
+            FileType::Ram => "Real Audio Metadata",
         }
     }
 
@@ -504,6 +518,13 @@ impl FileType {
             FileType::Lif => "LIF",
             FileType::Txt => "TXT",
             FileType::Csv => "CSV",
+            FileType::Vcard => "VCard",
+            FileType::Ics => "ICS",
+            FileType::Url => "URL",
+            FileType::Lnk => "LNK",
+            FileType::Ppm => "PPM",
+            FileType::Dpx => "DPX",
+            FileType::Ram => "RAM",
         }
     }
 
@@ -662,6 +683,13 @@ impl FileType {
             FileType::Lif => "image/x-leica-lif",
             FileType::Txt => "text/plain",
             FileType::Csv => "text/csv",
+            FileType::Vcard => "text/vcard",
+            FileType::Ics => "text/calendar",
+            FileType::Url => "application/x-mswinurl",
+            FileType::Lnk => "application/octet-stream",
+            FileType::Ppm => "image/x-portable-pixmap",
+            FileType::Dpx => "image/x-dpx",
+            FileType::Ram => "audio/x-pn-realaudio",
         }
     }
 
@@ -826,6 +854,13 @@ impl FileType {
             FileType::Lif => &["lif"],
             FileType::Txt => &["txt", "log", "igc"],
             FileType::Csv => &["csv"],
+            FileType::Vcard => &["vcf", "vcard"],
+            FileType::Ics => &["ics"],
+            FileType::Url => &["url"],
+            FileType::Lnk => &["lnk"],
+            FileType::Ppm => &["ppm"],
+            FileType::Dpx => &["dpx"],
+            FileType::Ram => &["ram"],
         }
     }
 
@@ -926,6 +961,13 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Lif,
     FileType::Txt,
     FileType::Csv,
+    FileType::Vcard,
+    FileType::Ics,
+    FileType::Url,
+    FileType::Lnk,
+    FileType::Ppm,
+    FileType::Dpx,
+    FileType::Ram,
     // RAW
     FileType::Cr2,
     FileType::Cr3,
