@@ -32,7 +32,6 @@ Canon.jpg	AFPointsInFocus
 Canon.jpg	BlueBalance
 Canon.jpg	DOF
 Canon.jpg	FOV
-Canon.jpg	FlashModel
 Canon.jpg	FocalLength35efl
 Canon.jpg	HyperfocalDistance
 Canon.jpg	Lens35efl
@@ -57,7 +56,6 @@ Canon1DmkIII.jpg	FilterEffectMonochrome
 Canon1DmkIII.jpg	FilterEffectUserDef1
 Canon1DmkIII.jpg	FilterEffectUserDef2
 Canon1DmkIII.jpg	FilterEffectUserDef3
-Canon1DmkIII.jpg	FlashModel
 Canon1DmkIII.jpg	FocusingScreen
 Canon1DmkIII.jpg	HighISONoiseReduction
 Canon1DmkIII.jpg	ISOSpeedRange
@@ -89,7 +87,6 @@ CanonRaw.cr2	AFPointsInFocus
 CanonRaw.cr2	BlueBalance
 CanonRaw.cr2	CR2CFAPattern
 CanonRaw.cr2	FOV
-CanonRaw.cr2	FlashModel
 CanonRaw.cr2	FocalLength35efl
 CanonRaw.cr2	HyperfocalDistance
 CanonRaw.cr2	ImageSize
@@ -112,7 +109,6 @@ CanonRaw.cr3	CreateDate
 CanonRaw.cr3	CustomControls
 CanonRaw.cr3	ExposureTime
 CanonRaw.cr3	FNumber
-CanonRaw.cr3	FlashModel
 CanonRaw.cr3	HandlerType
 CanonRaw.cr3	HyperfocalDistance
 CanonRaw.cr3	ISOExpansion
@@ -138,7 +134,6 @@ CanonRaw.crw	AFPoint
 CanonRaw.crw	AFPointsInFocus
 CanonRaw.crw	BlueBalance
 CanonRaw.crw	DOF
-CanonRaw.crw	FlashModel
 CanonRaw.crw	MeasuredEV
 CanonRaw.crw	ROMOperationMode
 CanonRaw.crw	RawJpgHeight
@@ -173,7 +168,6 @@ DNG.dng	Compression
 DNG.dng	DNGLensInfo
 DNG.dng	DateTimeOriginal
 DNG.dng	FOV
-DNG.dng	FlashModel
 DNG.dng	FlashReturn
 DNG.dng	FocalLength35efl
 DNG.dng	FocalPlaneXResolution
