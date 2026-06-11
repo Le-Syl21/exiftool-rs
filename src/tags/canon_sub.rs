@@ -811,7 +811,11 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         // RawConv => '$val >= 0 ? $val : undef' — suppress negative values
         if v >= 0 {
             let val_f = v as f64 / 10.0;
-            tags.push(mkt("SelfTimer2", Value::I16(v), format!("{:.1}", val_f)));
+            tags.push(mkt(
+                "SelfTimer2",
+                Value::I16(v),
+                crate::value::format_g15(val_f),
+            ));
         }
     }
     // FlashOutput: RawConv: '($$self{Model}=~/(PowerShot|IXUS|IXY)/ or $val) ? $val : undef'

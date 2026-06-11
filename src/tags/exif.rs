@@ -70,6 +70,10 @@ pub fn lookup_generated(tag_id: u16) -> Option<(&'static str, &'static str)> {
 /// Apply print conversion for known tags.
 pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
     match (ifd, tag_id) {
+        // GPSHPositioningError: "$val m"
+        ("GPS", 0x001F) => {
+            return Some(format!("{} m", value.to_display_string()));
+        }
         // GPS reference/mode enums (string or short values).
         ("GPS", 0x0009) => {
             return Some(match value.to_display_string().trim() {

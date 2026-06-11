@@ -13,7 +13,6 @@ Apple.jpg	AEStable
 Apple.jpg	AFStable
 Apple.jpg	AccelerationVector
 Apple.jpg	FocusDistanceRange
-Apple.jpg	GPSHPositioningError
 Apple.jpg	ImageCaptureType
 Apple.jpg	LensInfo
 Audible.aa	Copyright
@@ -25,7 +24,6 @@ Canon.jpg	FocalLength35efl
 Canon.jpg	HyperfocalDistance
 Canon.jpg	Lens35efl
 Canon.jpg	RedBalance
-Canon.jpg	SelfTimer2
 Canon.jpg	Sharpness
 Canon.jpg	ShootingMode
 Canon1DmkIII.jpg	AEBShotCount
@@ -78,7 +76,6 @@ CanonRaw.cr2	HyperfocalDistance
 CanonRaw.cr2	Lens35efl
 CanonRaw.cr2	ManualFlashOutput
 CanonRaw.cr2	RedBalance
-CanonRaw.cr2	SelfTimer2
 CanonRaw.cr2	VRDOffset
 CanonRaw.cr3	Aperture
 CanonRaw.cr3	BatteryType
@@ -122,7 +119,6 @@ CanonRaw.crw	RawJpgQuality
 CanonRaw.crw	RawJpgSize
 CanonRaw.crw	RawJpgWidth
 CanonRaw.crw	RedBalance
-CanonRaw.crw	SelfTimer2
 CanonRaw.crw	Sharpness
 CanonVRD.dr4	ShootingDistance
 Casio.jpg	FlashMode
@@ -161,7 +157,6 @@ DNG.dng	PhotometricInterpretation
 DNG.dng	RawDataUniqueID
 DNG.dng	RedBalance
 DNG.dng	SamplesPerPixel
-DNG.dng	SelfTimer2
 DNG.dng	ThumbnailTIFF
 DNG.dng	VRDOffset
 DNG.dng	YCbCrSubSampling
