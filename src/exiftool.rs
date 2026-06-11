@@ -2673,15 +2673,23 @@ fn unix_to_datetime(secs: i64) -> String {
     )
 }
 
+/// Port of ExifTool ConvertFileSize (decimal units): %.1f below 10× a unit, %.0f above.
 fn format_file_size(bytes: u64) -> String {
-    if bytes < 1024 {
+    let v = bytes as f64;
+    if bytes < 2000 {
         format!("{} bytes", bytes)
-    } else if bytes < 1024 * 1024 {
-        format!("{:.1} kB", bytes as f64 / 1024.0)
-    } else if bytes < 1024 * 1024 * 1024 {
-        format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+    } else if bytes < 10_000 {
+        format!("{:.1} kB", v / 1000.0)
+    } else if bytes < 2_000_000 {
+        format!("{:.0} kB", v / 1000.0)
+    } else if bytes < 10_000_000 {
+        format!("{:.1} MB", v / 1_000_000.0)
+    } else if bytes < 2_000_000_000 {
+        format!("{:.0} MB", v / 1_000_000.0)
+    } else if bytes < 10_000_000_000 {
+        format!("{:.1} GB", v / 1_000_000_000.0)
     } else {
-        format!("{:.1} GB", bytes as f64 / (1024.0 * 1024.0 * 1024.0))
+        format!("{:.0} GB", v / 1_000_000_000.0)
     }
 }
 
