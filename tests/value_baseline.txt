@@ -42,7 +42,6 @@ Canon.jpg	DriveMode
 Canon.jpg	EasyMode
 Canon.jpg	FOV
 Canon.jpg	FileNumber
-Canon.jpg	FlashGuideNumber
 Canon.jpg	FlashModel
 Canon.jpg	FocalLength35efl
 Canon.jpg	HyperfocalDistance
@@ -119,7 +118,6 @@ CanonRaw.cr2	ColorTone
 CanonRaw.cr2	DriveMode
 CanonRaw.cr2	EasyMode
 CanonRaw.cr2	FOV
-CanonRaw.cr2	FlashGuideNumber
 CanonRaw.cr2	FlashModel
 CanonRaw.cr2	FocalLength35efl
 CanonRaw.cr2	HyperfocalDistance
@@ -153,7 +151,6 @@ CanonRaw.cr3	DriveMode
 CanonRaw.cr3	EasyMode
 CanonRaw.cr3	ExposureTime
 CanonRaw.cr3	FNumber
-CanonRaw.cr3	FlashGuideNumber
 CanonRaw.cr3	FlashModel
 CanonRaw.cr3	HandlerType
 CanonRaw.cr3	HyperfocalDistance
@@ -236,7 +233,6 @@ DNG.dng	DateTimeOriginal
 DNG.dng	DriveMode
 DNG.dng	EasyMode
 DNG.dng	FOV
-DNG.dng	FlashGuideNumber
 DNG.dng	FlashModel
 DNG.dng	FlashReturn
 DNG.dng	FocalLength35efl
@@ -568,10 +564,6 @@ MIFF.miff	ShutterSpeed
 MIFF.miff	ThumbnailOffset
 MWG.jpg	City
 MWG.jpg	DateCreated
-MWG.jpg	DateTimeCreated
-MWG.jpg	DigitalCreationDateTime
-MWG.jpg	DigitalCreationTime
-MWG.jpg	TimeCreated
 MacOS.macos	XAttrLastUsedDate
 MacOS.macos	XAttrMDItemDownloadedDate
 MacOS.macos	XAttrMDItemFinderComment
@@ -993,10 +985,7 @@ Pentax.jpg	SlaveFlashMeteringSegments
 Pentax.jpg	TvExposureTimeSetting
 Pentax.jpg	WhiteBalanceMode
 PhaseOne.iiq	ThumbnailTIFF
-PhotoMechanic.jpg	DateTimeCreated
-PhotoMechanic.jpg	DateTimeOriginal
 PhotoMechanic.jpg	Prefs
-PhotoMechanic.jpg	TimeCreated
 Photoshop.psd	Compression
 Photoshop.psd	ProfileCreator
 PostScript.eps	Creator

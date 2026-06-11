@@ -185,6 +185,28 @@ impl IptcReader {
 
 /// IPTC PrintConv for the Application Record (record 2): date reformatting and
 /// the Urgency labels, matching ExifTool.
+/// Convert an IPTC time "HHMMSS[±HHMM]" to ExifTool's "HH:MM:SS[±HH:MM]".
+fn convert_iptc_time(s: &str) -> Option<String> {
+    let b = s.as_bytes();
+    if b.len() < 6 || !b[0..6].iter().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let mut out = format!("{}:{}:{}", &s[0..2], &s[2..4], &s[4..6]);
+    let tz = &s[6..];
+    if !tz.is_empty() {
+        let tb = tz.as_bytes();
+        if tb.len() == 5
+            && (tb[0] == b'+' || tb[0] == b'-')
+            && tb[1..].iter().all(|c| c.is_ascii_digit())
+        {
+            out.push_str(&format!("{}{}:{}", &tz[0..1], &tz[1..3], &tz[3..5]));
+        } else {
+            return None;
+        }
+    }
+    Some(out)
+}
+
 fn iptc_print_conv(record: u8, dataset: u8, s: &str) -> Option<String> {
     if record != 2 {
         return None;
@@ -195,6 +217,8 @@ fn iptc_print_conv(record: u8, dataset: u8, s: &str) -> Option<String> {
         55 | 62 if s.len() == 8 && s.bytes().all(|b| b.is_ascii_digit()) => {
             Some(format!("{}:{}:{}", &s[0..4], &s[4..6], &s[6..8]))
         }
+        // TimeCreated (60), DigitalCreationTime (63): HHMMSS[±HHMM] -> HH:MM:SS[±HH:MM]
+        60 | 63 => convert_iptc_time(s),
         // Urgency (10)
         10 => Some(
             match s {

@@ -573,13 +573,13 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         }
     }
     if let Some(v) = get(13) {
-        // RawConv => '$val==-1 ? undef : $val', ValueConv => '$val / 32'
+        // RawConv => '$val==-1 ? undef : $val', ValueConv => '$val / 32' (no PrintConv)
         if v != -1 {
             let val_f = v as f64 / 32.0;
             tags.push(mkt(
                 "FlashGuideNumber",
                 Value::I16(v),
-                format!("{:.2}", val_f),
+                crate::value::format_g15(val_f),
             ));
         }
     }
