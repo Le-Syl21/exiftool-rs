@@ -616,21 +616,16 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         }
     }
     if let Some(v) = get(14) {
-        let pv = match v {
-            12288 => "",
-            12289 => "",
-            12290 => "",
-            12291 => "",
-            12292 => "",
-            12293 => "",
-            12294 => "",
-            12295 => "",
-            _ => "",
-        };
-        let pv = if pv.is_empty() {
-            v.to_string()
+        // Perl: DecodeBits($val, undef, 16) — list set bit numbers, "(none)" if zero.
+        let uv = v as u16;
+        let pv = if uv == 0 {
+            "(none)".to_string()
         } else {
-            pv.to_string()
+            (0..16)
+                .filter(|i| uv & (1 << i) != 0)
+                .map(|i| i.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
         };
         tags.push(mkt("AFPointsInFocus", Value::I16(v), pv));
     }

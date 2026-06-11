@@ -28,7 +28,6 @@ Apple.jpg	LensInfo
 Audible.aa	Copyright
 BPG.bpg	ProfileCreator
 BigTIFF.btf	MIMEType
-Canon.jpg	AFPointsInFocus
 Canon.jpg	BlueBalance
 Canon.jpg	DOF
 Canon.jpg	FOV
