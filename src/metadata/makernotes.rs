@@ -6070,6 +6070,10 @@ fn read_makernote_ifd_with_base(
         } else if name.ends_with("ImageSize") && value.to_display_string().contains(' ') {
             // ExifTool joins the two dimensions with "x" (320 240 -> 320x240).
             value.to_display_string().replace(' ', "x")
+        } else if name == "VRDOffset" {
+            // Canon Main 0xd0 is a raw int32u offset with no PrintConv; it collides
+            // by tag-id with FilterEffectUserDef2 (0 => "None") in a sub-table.
+            value.to_display_string()
         } else if name == "BabyAge" && value.to_display_string() == "9999:99:99 00:00:00" {
             "(not set)".to_string()
         } else if name == "TravelDay" && value.as_u64() == Some(65535) {

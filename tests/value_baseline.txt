@@ -20,10 +20,8 @@ Canon1DmkIII.jpg	RawMeasuredRGGB
 Canon1DmkIII.jpg	Sharpness
 Canon1DmkIII.jpg	ShutterSpeedRange
 Canon1DmkIII.jpg	TimerLength
-Canon1DmkIII.jpg	VRDOffset
 CanonRaw.cr2	AFPointsInFocus
 CanonRaw.cr2	CR2CFAPattern
-CanonRaw.cr2	VRDOffset
 CanonRaw.cr3	Aperture
 CanonRaw.cr3	BatteryType
 CanonRaw.cr3	BracketMode
@@ -50,7 +48,6 @@ CanonRaw.cr3	SourceImageHeight
 CanonRaw.cr3	SourceImageWidth
 CanonRaw.cr3	TrackCreateDate
 CanonRaw.cr3	TrackModifyDate
-CanonRaw.cr3	VRDOffset
 CanonRaw.crw	AFPoint
 CanonRaw.crw	AFPointsInFocus
 CanonRaw.crw	BlueBalance
@@ -89,7 +86,6 @@ DNG.dng	PhotometricInterpretation
 DNG.dng	RawDataUniqueID
 DNG.dng	SamplesPerPixel
 DNG.dng	ThumbnailTIFF
-DNG.dng	VRDOffset
 DNG.dng	YCbCrSubSampling
 DjVu.djvu	Creator
 DjVu.djvu	FileType
