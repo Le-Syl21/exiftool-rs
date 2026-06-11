@@ -14,7 +14,6 @@ Apple.jpg	AFStable
 Apple.jpg	AccelerationVector
 Apple.jpg	FocusDistanceRange
 Apple.jpg	GPSAltitude
-Apple.jpg	GPSDateTime
 Apple.jpg	GPSDestBearingRef
 Apple.jpg	GPSHPositioningError
 Apple.jpg	GPSImgDirectionRef
@@ -22,7 +21,6 @@ Apple.jpg	GPSLatitude
 Apple.jpg	GPSLongitude
 Apple.jpg	GPSPosition
 Apple.jpg	GPSSpeedRef
-Apple.jpg	GPSTimeStamp
 Apple.jpg	ImageCaptureType
 Apple.jpg	LensInfo
 Audible.aa	Copyright
@@ -314,7 +312,6 @@ GPS.jpg	FileSource
 GPS.jpg	GPSLatitude
 GPS.jpg	GPSLongitude
 GPS.jpg	GPSPosition
-GPS.jpg	GPSTimeStamp
 GPS.jpg	SceneType
 GPS.jpg	ShutterSpeed
 GeoTiff.tif	ColorMap
@@ -340,11 +337,9 @@ GoPro.jpg	DigitalZoomOn
 GoPro.jpg	ExposureCompensation
 GoPro.jpg	FlashpixVersion
 GoPro.jpg	GPSAltitude
-GoPro.jpg	GPSDateTime
 GoPro.jpg	GPSLatitude
 GoPro.jpg	GPSLongitude
 GoPro.jpg	GPSPosition
-GoPro.jpg	GPSTimeStamp
 GoPro.jpg	MediaUniqueID
 GoPro.jpg	Protune
 GoPro.jpg	Sharpness
@@ -353,12 +348,10 @@ GoPro.jpg	SubjectDistance
 GoPro.jpg	WhiteBalance
 Google.jpg	DirectoryItemMime
 Google.jpg	GPSAltitude
-Google.jpg	GPSDateTime
 Google.jpg	GPSImgDirectionRef
 Google.jpg	GPSLatitude
 Google.jpg	GPSLongitude
 Google.jpg	GPSPosition
-Google.jpg	GPSTimeStamp
 Google.jpg	HDRPlusMakerNote
 Google.jpg	ImageData
 Google.jpg	ImageName
@@ -383,13 +376,11 @@ ITC.itc	FileType
 ITC.itc	FileTypeExtension
 ITC.itc	MIMEType
 InDesign.indd	FileTypeExtension
-InfiRay.jpg	GPSDateTime
 InfiRay.jpg	GPSLatitude
 InfiRay.jpg	GPSLatitudeRef
 InfiRay.jpg	GPSLongitude
 InfiRay.jpg	GPSLongitudeRef
 InfiRay.jpg	GPSSpeedRef
-InfiRay.jpg	GPSTimeStamp
 InfiRay.jpg	IJPEGTempVersion
 InfiRay.jpg	IJPEGVersion
 InfiRay.jpg	IRSensorSerialNumber
@@ -793,7 +784,6 @@ Ricoh.jpg	Sharpness
 Ricoh.jpg	ShutterSpeed
 Ricoh2.jpg	FirmwareVersion
 Ricoh2.jpg	GPSAltitude
-Ricoh2.jpg	GPSDateTime
 Ricoh2.jpg	GPSDestBearingRef
 Ricoh2.jpg	GPSDestDistanceRef
 Ricoh2.jpg	GPSImgDirectionRef
@@ -803,7 +793,6 @@ Ricoh2.jpg	GPSMeasureMode
 Ricoh2.jpg	GPSPosition
 Ricoh2.jpg	GPSSpeedRef
 Ricoh2.jpg	GPSStatus
-Ricoh2.jpg	GPSTimeStamp
 Ricoh2.jpg	GPSTrackRef
 Ricoh2.jpg	InternalSerialNumber
 Ricoh2.jpg	ManufactureDate1

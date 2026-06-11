@@ -70,6 +70,27 @@ pub fn lookup_generated(tag_id: u16) -> Option<(&'static str, &'static str)> {
 /// Apply print conversion for known tags.
 pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
     match (ifd, tag_id) {
+        // GPSTimeStamp (3 rationals H M S): ExifTool ConvertTimeStamp -> "HH:MM:SS[.ff]"
+        ("GPS", 0x0007) => {
+            let parts: Vec<f64> = value
+                .to_display_string()
+                .split_whitespace()
+                .filter_map(|s| s.parse::<f64>().ok())
+                .collect();
+            if parts.len() == 3 {
+                let total = (parts[0] * 60.0 + parts[1]) * 60.0 + parts[2];
+                let h = (total / 3600.0).floor();
+                let rem = total - h * 3600.0;
+                let m = (rem / 60.0).floor();
+                let secs = rem - m * 60.0;
+                // %012.9f then trim trailing zeros and a bare decimal point.
+                let mut ss = format!("{:012.9}", secs);
+                if ss.contains('.') {
+                    ss = ss.trim_end_matches('0').trim_end_matches('.').to_string();
+                }
+                return Some(format!("{:02}:{:02}:{}", h as i64, m as i64, ss));
+            }
+        }
         // GPSVersionID, DNGVersion, DNGBackwardVersion: join components with "."
         ("GPS", 0x0000) | (_, 0xC612) | (_, 0xC613) => {
             let joined: Vec<String> = value
