@@ -1232,7 +1232,10 @@ fn read_ifd_value(data: &[u8], entry: &IfdEntry, byte_order: ByteOrderMark) -> O
         // ASCII
         2 => {
             let s = crate::encoding::decode_utf8_or_latin1(value_data);
-            Some(Value::String(s.trim_end_matches('\0').to_string()))
+            // ExifTool truncates at the first null (s/\0.*//s) and drops trailing blanks
+            // padding the fixed-width field (e.g. "CASIO COMPUTER CO.,LTD ").
+            let s = s.split('\0').next().unwrap_or("").trim_end().to_string();
+            Some(Value::String(s))
         }
         // SHORT
         3 => {

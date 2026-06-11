@@ -236,12 +236,9 @@ Casio2.jpg	BestShotMode
 Casio2.jpg	DOF
 Casio2.jpg	FirmwareDate
 Casio2.jpg	Flash
-Casio2.jpg	Make
-Casio2.jpg	Model
 Casio2.jpg	ObjectDistance
 Casio2.jpg	PreviewImageSize
 Casio2.jpg	PreviewImageStart
-Casio2.jpg	Software
 Casio2.jpg	ThumbnailOffset
 Casio2.jpg	WhiteBalance
 CasioQVCI.jpg	DateTimeOriginal
@@ -415,7 +412,6 @@ Font.ttf	MIMEType
 FotoStation.jpg	ObjectCycle
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
-FujiFilm.jpg	Copyright
 FujiFilm.jpg	FocusMode
 FujiFilm.jpg	Quality
 FujiFilm.jpg	Sharpness
@@ -423,7 +419,6 @@ FujiFilm.jpg	ShutterSpeed
 FujiFilm.jpg	ThumbnailOffset
 FujiFilm.jpg	Version
 FujiFilm.raf	AFMode
-FujiFilm.raf	Copyright
 FujiFilm.raf	DynamicRange
 FujiFilm.raf	FacesDetected
 FujiFilm.raf	Flash
@@ -549,12 +544,8 @@ InfiRay.jpg	VisibleSensorAperture
 InfiRay.jpg	VisibleSensorSerialNumber
 JVC.jpg	CPUVersions
 JVC.jpg	Flash
-JVC.jpg	ImageDescription
-JVC.jpg	Make
-JVC.jpg	Model
 JVC.jpg	Quality
 JVC.jpg	ThumbnailOffset
-JVC2.jpg	Make
 JVC2.jpg	Quality
 JVC2.jpg	ThumbnailOffset
 JXL.jxl	FileType
@@ -715,7 +706,6 @@ Minolta.mrw	MinoltaModelID
 Minolta.mrw	MinoltaTime
 Minolta.mrw	Saturation
 Minolta.mrw	Sharpness
-Minolta.mrw	Software
 Minolta.mrw	SubjectProgram
 Minolta.mrw	WhiteBalance
 Minolta.mrw	WideFocusZone
@@ -727,7 +717,6 @@ Nikon.jpg	FlashSetting
 Nikon.jpg	FocusMode
 Nikon.jpg	ISOSelection
 Nikon.jpg	ImageAdjustment
-Nikon.jpg	ImageDescription
 Nikon.jpg	MakerNoteVersion
 Nikon.jpg	Quality
 Nikon.jpg	SceneMode
@@ -829,7 +818,6 @@ NikonD2Hs.jpg	RedBalance
 NikonD2Hs.jpg	Saturation
 NikonD2Hs.jpg	SensorPixelSize
 NikonD2Hs.jpg	Sharpness
-NikonD2Hs.jpg	Software
 NikonD2Hs.jpg	ThumbnailOffset
 NikonD2Hs.jpg	ToneComp
 NikonD2Hs.jpg	WhiteBalance
@@ -868,7 +856,6 @@ NikonD70.jpg	Saturation
 NikonD70.jpg	SensorPixelSize
 NikonD70.jpg	SerialNumber
 NikonD70.jpg	Sharpness
-NikonD70.jpg	Software
 NikonD70.jpg	ThumbnailOffset
 NikonD70.jpg	ToneComp
 NikonD70.jpg	VariProgram
@@ -878,7 +865,6 @@ Olympus.jpg	CameraType
 Olympus.jpg	DataDump
 Olympus.jpg	DigitalZoom
 Olympus.jpg	FocalPlaneDiagonal
-Olympus.jpg	ImageDescription
 Olympus.jpg	Quality
 Olympus.jpg	SpecialMode
 Olympus.jpg	ThumbnailOffset
@@ -907,16 +893,13 @@ Olympus2.jpg	FocusInfoVersion
 Olympus2.jpg	FocusMode
 Olympus2.jpg	FocusProcess
 Olympus2.jpg	Gradation
-Olympus2.jpg	ImageDescription
 Olympus2.jpg	ImageProcessingVersion
 Olympus2.jpg	ImageStabilization
 Olympus2.jpg	InternalFlash
 Olympus2.jpg	InternalSerialNumber
-Olympus2.jpg	Make
 Olympus2.jpg	ManometerPressure
 Olympus2.jpg	ManometerReading
 Olympus2.jpg	MeteringMode
-Olympus2.jpg	Model
 Olympus2.jpg	NoiseReduction
 Olympus2.jpg	NoiseReduction2
 Olympus2.jpg	PanoramaMode
@@ -928,7 +911,6 @@ Olympus2.jpg	RedBalance
 Olympus2.jpg	SceneMode
 Olympus2.jpg	SerialNumber
 Olympus2.jpg	SharpnessSetting
-Olympus2.jpg	Software
 Olympus2.jpg	SpecialMode
 Olympus2.jpg	ThumbnailOffset
 Olympus2.jpg	WhiteBalanceTemperature
@@ -957,17 +939,14 @@ OlympusE1.jpg	FocusDistance
 OlympusE1.jpg	FocusInfoVersion
 OlympusE1.jpg	FocusMode
 OlympusE1.jpg	FocusProcess
-OlympusE1.jpg	ImageDescription
 OlympusE1.jpg	ImageProcessingVersion
 OlympusE1.jpg	InternalFlash
 OlympusE1.jpg	InternalSerialNumber
 OlympusE1.jpg	LensFirmwareVersion
 OlympusE1.jpg	LensProperties
-OlympusE1.jpg	Make
 OlympusE1.jpg	MaxAperture
 OlympusE1.jpg	MaxApertureAtMaxFocal
 OlympusE1.jpg	MeteringMode
-OlympusE1.jpg	Model
 OlympusE1.jpg	NoiseReduction
 OlympusE1.jpg	NoiseReduction2
 OlympusE1.jpg	PreviewImageStart
@@ -980,7 +959,6 @@ OlympusE1.jpg	RedBalance
 OlympusE1.jpg	SensorTemperature
 OlympusE1.jpg	SerialNumber
 OlympusE1.jpg	SharpnessSetting
-OlympusE1.jpg	Software
 OlympusE1.jpg	SpecialMode
 OlympusE1.jpg	ThumbnailOffset
 OlympusE1.jpg	WhiteBalanceTemperature
@@ -1039,7 +1017,6 @@ Panasonic.rw2	PanasonicExifVersion
 Panasonic.rw2	Saturation
 Panasonic.rw2	SceneMode
 Panasonic.rw2	SequenceNumber
-Panasonic.rw2	Software
 Panasonic.rw2	ThumbnailOffset
 Panasonic.rw2	TimeSincePowerOn
 Panasonic.rw2	TravelDay
@@ -1064,9 +1041,7 @@ Pentax.jpg	FocusMode
 Pentax.jpg	ImageEditing
 Pentax.jpg	LensID
 Pentax.jpg	LensType
-Pentax.jpg	Make
 Pentax.jpg	MeteringMode
-Pentax.jpg	Model
 Pentax.jpg	PentaxModelID
 Pentax.jpg	PreviewImageBorders
 Pentax.jpg	PreviewImageSize
@@ -1078,7 +1053,6 @@ Pentax.jpg	SensitivityAdjust
 Pentax.jpg	Sharpness
 Pentax.jpg	ShutterCount
 Pentax.jpg	SlaveFlashMeteringSegments
-Pentax.jpg	Software
 Pentax.jpg	ThumbnailOffset
 Pentax.jpg	TvExposureTimeSetting
 Pentax.jpg	WhiteBalanceMode
@@ -1125,12 +1099,8 @@ RTF.rtf	Company
 RTF.rtf	Subject
 Real.ra	Copyright
 Real.rm	MIMEType
-Ricoh.jpg	Copyright
 Ricoh.jpg	FirmwareVersion
-Ricoh.jpg	ImageDescription
-Ricoh.jpg	Make
 Ricoh.jpg	ManufactureDate1
-Ricoh.jpg	Model
 Ricoh.jpg	Sharpness
 Ricoh.jpg	ShutterSpeed
 Ricoh.jpg	ThumbnailOffset
@@ -1143,20 +1113,15 @@ Ricoh2.jpg	GPSDestDistanceRef
 Ricoh2.jpg	GPSImgDirectionRef
 Ricoh2.jpg	GPSLatitude
 Ricoh2.jpg	GPSLongitude
-Ricoh2.jpg	GPSMapDatum
 Ricoh2.jpg	GPSMeasureMode
 Ricoh2.jpg	GPSPosition
-Ricoh2.jpg	GPSSatellites
 Ricoh2.jpg	GPSSpeedRef
 Ricoh2.jpg	GPSStatus
 Ricoh2.jpg	GPSTimeStamp
 Ricoh2.jpg	GPSTrackRef
-Ricoh2.jpg	ImageDescription
 Ricoh2.jpg	InternalSerialNumber
-Ricoh2.jpg	Make
 Ricoh2.jpg	ManufactureDate1
 Ricoh2.jpg	ManufactureDate2
-Ricoh2.jpg	Model
 Ricoh2.jpg	Sharpness
 Ricoh2.jpg	ThumbnailOffset
 Ricoh2.jpg	UserComment
@@ -1164,7 +1129,6 @@ Sanyo.jpg	DataDump
 Sanyo.jpg	Flash
 Sanyo.jpg	FlashMode
 Sanyo.jpg	Macro
-Sanyo.jpg	Model
 Sanyo.jpg	SelfTimer
 Sanyo.jpg	ThumbnailOffset
 Sigma.jpg	AutoBracket
@@ -1207,7 +1171,6 @@ SigmaDP2.x3f	SensorTemperature
 SigmaDP2.x3f	ThumbnailOffset
 SigmaDP2.x3f	X3FillLight
 Sony.jpg	Flash
-Sony.jpg	ImageDescription
 Sony.jpg	ThumbnailOffset
 TNEF.tnef	ClientSubmitTime
 TNEF.tnef	CorrelationKey
@@ -1220,8 +1183,6 @@ TNEF.tnef	ModifyDate
 Torrent.torrent	CreateDate
 Torrent.torrent	File4Length
 Unknown.jpg	Flash
-Unknown.jpg	ImageDescription
-Unknown.jpg	Software
 Unknown.jpg	ThumbnailOffset
 VCard.ics	Alarm1AlarmUID
 VCard.ics	Alarm1UID
