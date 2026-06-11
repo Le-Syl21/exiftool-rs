@@ -1140,7 +1140,7 @@ impl ExifTool {
             // ExifTool's FileType value is the short code ("JPEG"), not the
             // human-readable description ("JPEG image").
             print_value: ft_code.clone(),
-            priority: 0,
+            priority: 1,
         });
 
         tags.push(Tag {
@@ -1154,7 +1154,7 @@ impl ExifTool {
             },
             raw_value: Value::String(mime_str.clone()),
             print_value: mime_str.clone(),
-            priority: 0,
+            priority: 1,
         });
 
         if let Ok(metadata) = fs::metadata(path) {
@@ -1186,7 +1186,7 @@ impl ExifTool {
                 },
                 raw_value: val.clone(),
                 print_value: val.to_display_string(),
-                priority: 0,
+                priority: 1,
             }
         };
 

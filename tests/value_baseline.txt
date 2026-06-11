@@ -833,10 +833,7 @@ XMP.jpg	MeasurementFlare
 XMP.jpg	Technology
 XMP.jpg	Urgency
 XMP.jpg	ViewingCondIlluminant
-XMP.xml	FileType
-XMP.xml	FileTypeExtension
 XMP.xml	Iso
-XMP.xml	MIMEType
 XMP.xmp	CircleOfConfusion
 XMP.xmp	ColorMode
 XMP.xmp	ComponentsConfiguration
