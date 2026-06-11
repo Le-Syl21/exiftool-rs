@@ -217,10 +217,22 @@ fn parse_file_properties(data: &[u8], tags: &mut Vec<Tag>) {
     }
 }
 
+/// Port of ExifTool's ConvertDuration: "%.2f s" under 30 s, else "H:MM:SS".
 fn format_duration(secs: f64) -> String {
-    let mins = (secs / 60.0) as u32;
-    let s = secs % 60.0;
-    format!("{}:{:05.2}", mins, s)
+    if secs == 0.0 {
+        return "0 s".to_string();
+    }
+    let (sign, mut t) = if secs >= 0.0 { ("", secs) } else { ("-", -secs) };
+    if t < 30.0 {
+        return format!("{}{:.2} s", sign, t);
+    }
+    t += 0.5; // round to nearest second
+    let h = (t / 3600.0) as i64;
+    t -= (h * 3600) as f64;
+    let m = (t / 60.0) as i64;
+    t -= (m * 60) as f64;
+    let s = t as i64;
+    format!("{}{}:{:02}:{:02}", sign, h, m, s)
 }
 
 fn parse_content_description(data: &[u8], tags: &mut Vec<Tag>) {
