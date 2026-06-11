@@ -7950,6 +7950,8 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 }
                 .to_string()
             }),
+            // LensProperties (0x020b): PrintConv sprintf("0x%x").
+            0x020b => value.as_u64().map(|v| format!("0x{:x}", v)),
             // DigitalZoom (0x0204): rational, PrintConv appends ".0" if integer.
             0x0204 => {
                 let s = value.to_display_string();
@@ -8126,6 +8128,13 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             }
         }
         Manufacturer::Fujifilm => match tag_id {
+            // Version (0x0000): undef[4] shown as ASCII ("0130").
+            0x0000 => mn_undef_bytes(value).map(|b| {
+                let s: String = b.iter().map(|&c| c as char).collect();
+                s.split('\0').next().unwrap_or("").trim_end().to_string()
+            }),
+            // FacesDetected (0x4100): raw integer (no PrintConv) — block a wrong by-name conv.
+            0x4100 => Some(value.to_display_string()),
             // SequenceNumber (0x1101): raw integer (no PrintConv) — block a wrong by-name conv.
             0x1101 => Some(value.to_display_string()),
             // InternalSerialNumber: decode the hex body number + manufacture date.

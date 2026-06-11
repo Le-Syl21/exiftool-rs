@@ -130,12 +130,9 @@ Font.pfb	Notice
 FotoStation.jpg	ObjectCycle
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
-FujiFilm.jpg	Version
 FujiFilm.raf	DynamicRange
-FujiFilm.raf	FacesDetected
 FujiFilm.raf	Model
 FujiFilm.raf	ThumbnailOffset
-FujiFilm.raf	Version
 GE.jpg	GEMake
 GE.jpg	GEModel
 GPS.jpg	Aperture
