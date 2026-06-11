@@ -401,12 +401,10 @@ Panasonic.rw2	VideoFrameRate
 Panasonic.rw2	XResolution
 Pentax.avi	Software
 Pentax.jpg	AEMeteringSegments
-Pentax.jpg	AEXv
 Pentax.jpg	AFPointSelected
 Pentax.jpg	AutoBracketing
 Pentax.jpg	BodyBatteryADLoad
 Pentax.jpg	BodyBatteryADNoLoad
-Pentax.jpg	CameraTemperature
 Pentax.jpg	DriveMode
 Pentax.jpg	EffectiveLV
 Pentax.jpg	FlashMeteringSegments

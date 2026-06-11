@@ -2379,16 +2379,11 @@ fn decode_pentax_ae_info(data: &[u8]) -> Vec<Tag> {
         let iso = (100.0 * ((raw - 32.0) * std::f64::consts::LN_2 / 8.0).exp() + 0.5) as u32;
         tags.push(pb("AE_ISO", &iso.to_string()));
     }
-    // Byte 3: AEXv — (val-64)/8
+    // Byte 3: AEXv — (val-64)/8 (no PrintConv: shown as the bare ValueConv float).
     if data.len() > 3 {
         let raw = data[3] as f64;
         let v = (raw - 64.0) / 8.0;
-        let s = if v == 0.0 {
-            "0".to_string()
-        } else {
-            format!("{:.4}", v)
-        };
-        tags.push(pb("AEXv", &s));
+        tags.push(pb("AEXv", &crate::value::format_g15(v)));
     }
     // Byte 4: AEBXv (int8s) — val/8
     if data.len() > 4 {
@@ -6331,6 +6326,19 @@ pub fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderM
                 Value::Undefined(data.to_vec())
             }
         }
+        6 => {
+            // SBYTE (int8s)
+            if count == 1 {
+                Value::I16(data[0] as i8 as i16)
+            } else {
+                Value::List(
+                    (0..count as usize)
+                        .filter(|&i| i < data.len())
+                        .map(|i| Value::I16(data[i] as i8 as i16))
+                        .collect(),
+                )
+            }
+        }
         8 => {
             // SSHORT
             if count == 1 {
@@ -7996,6 +8004,14 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 })
                 .map(|b| b.iter().map(|c| format!("{:02x}", c)).collect::<String>())
             }
+            _ => None,
+        },
+        Manufacturer::Pentax => match tag_id {
+            // CameraTemperature (0x0047): int8s, PrintConv "$val C".
+            0x0047 => value
+                .as_f64()
+                .filter(|f| f.fract() == 0.0)
+                .map(|f| format!("{} C", f as i64)),
             _ => None,
         },
         Manufacturer::Panasonic => match tag_id {
