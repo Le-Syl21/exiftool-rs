@@ -9,8 +9,6 @@ ASF.wmv	ImageWidth
 ASF.wmv	IsVBR
 ASF.wmv	Megapixels
 ASF.wmv	SendDuration
-Apple.jpg	AEStable
-Apple.jpg	AFStable
 Apple.jpg	AccelerationVector
 Apple.jpg	FocusDistanceRange
 Apple.jpg	ImageCaptureType

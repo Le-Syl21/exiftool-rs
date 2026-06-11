@@ -5796,24 +5796,20 @@ fn read_makernote_ifd_with_base(
         } else {
             apply_mn_print_conv(manufacturer, tag_id, &value)
                 .or_else(|| {
-                    // Fallback to generated print conversions
+                    // Fallback to generated print conversions. Use as_f64 -> i64 so signed
+                    // values (int16s/int32s, e.g. Apple AEStable) also resolve their enums.
                     let module = manufacturer_group_name(manufacturer);
-                    value
+                    let iv = value
                         .as_u64()
-                        .and_then(|v| {
-                            crate::tags::print_conv_generated::print_conv(module, tag_id, v as i64)
-                        })
+                        .map(|v| v as i64)
+                        .or_else(|| value.as_f64().filter(|f| f.fract() == 0.0).map(|f| f as i64));
+                    iv.and_then(|v| crate::tags::print_conv_generated::print_conv(module, tag_id, v))
                         .map(|s| s.to_string())
                         .or_else(|| {
-                            // Try by tag name
-                            value
-                                .as_u64()
-                                .and_then(|v| {
-                                    crate::tags::print_conv_generated::print_conv_by_name(
-                                        name, v as i64,
-                                    )
-                                })
-                                .map(|s| s.to_string())
+                            iv.and_then(|v| {
+                                crate::tags::print_conv_generated::print_conv_by_name(name, v)
+                            })
+                            .map(|s| s.to_string())
                         })
                 })
                 .unwrap_or_else(|| value.to_display_string())
