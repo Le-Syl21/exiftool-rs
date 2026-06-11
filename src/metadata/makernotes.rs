@@ -7867,6 +7867,13 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 0x0083 => v.map(nikon_conv::lens_type),
                 // Lens (0x0084): rational64u[4] → Exif::PrintLensInfo.
                 0x0084 => crate::tags::exif::print_lens_info(&value.to_display_string()),
+                // SensorPixelSize (0x009a): rational64u[2], PrintConv s/ / x /;"$val um".
+                0x009a => {
+                    let disp = value.to_display_string();
+                    disp.split_whitespace().count().eq(&2).then(|| {
+                        format!("{} um", disp.replacen(' ', " x ", 1))
+                    })
+                }
                 // ISOSetting (int16u[2], "0 200"): PrintConv s/^0 //.
                 0x0013 => {
                     let disp = value.to_display_string();
