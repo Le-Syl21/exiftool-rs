@@ -42,7 +42,6 @@ CanonRaw.cr2	FOV
 CanonRaw.cr2	FocalLength35efl
 CanonRaw.cr2	HyperfocalDistance
 CanonRaw.cr2	Lens35efl
-CanonRaw.cr2	ManualFlashOutput
 CanonRaw.cr2	RedBalance
 CanonRaw.cr2	VRDOffset
 CanonRaw.cr3	Aperture
@@ -117,7 +116,6 @@ DNG.dng	HyperfocalDistance
 DNG.dng	Lens
 DNG.dng	Lens35efl
 DNG.dng	LensInfo
-DNG.dng	ManualFlashOutput
 DNG.dng	PhotometricInterpretation
 DNG.dng	RawDataUniqueID
 DNG.dng	RedBalance

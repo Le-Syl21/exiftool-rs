@@ -452,10 +452,10 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
     if let Some(v) = get(41) {
         let pv = match v {
             0 => "n/a",
-            1280 => "",
-            1282 => "",
-            1284 => "",
-            32767 => "",
+            0x500 => "Full",
+            0x502 => "Medium",
+            0x504 => "Low",
+            0x7fff => "n/a", // EOS models
             _ => "",
         };
         let pv = if pv.is_empty() {
