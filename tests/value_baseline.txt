@@ -399,7 +399,6 @@ Panasonic.rw2	XResolution
 Pentax.avi	Software
 Pentax.jpg	AEMeteringSegments
 Pentax.jpg	AFPointSelected
-Pentax.jpg	AutoBracketing
 Pentax.jpg	BodyBatteryADLoad
 Pentax.jpg	BodyBatteryADNoLoad
 Pentax.jpg	DriveMode

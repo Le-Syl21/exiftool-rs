@@ -8023,6 +8023,39 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 .as_f64()
                 .filter(|f| f.fract() == 0.0)
                 .map(|f| format!("{} C", f as i64)),
+            // AutoBracketing (0x0018): 1-2 int16u (EV step, extended bracket).
+            0x0018 => {
+                let disp = value.to_display_string();
+                let v: Vec<i64> = disp.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+                if v.is_empty() {
+                    return None;
+                }
+                let mut parts: Vec<String> = Vec::new();
+                parts.push(if v[0] != 0 {
+                    format!("{:.1}", v[0])
+                } else {
+                    v[0].to_string()
+                });
+                if v.len() >= 2 {
+                    if v[1] != 0 {
+                        let t = v[1] >> 8;
+                        let name = match t {
+                            1 => "WB-BA",
+                            2 => "WB-GM",
+                            3 => "Saturation",
+                            4 => "Sharpness",
+                            5 => "Contrast",
+                            6 => "Hue",
+                            7 => "HighLowKey",
+                            _ => return Some(format!("{} EV, Unknown({})+{}", parts[0], t, v[1] & 0xff)),
+                        };
+                        parts.push(format!("{}+{}", name, v[1] & 0xff));
+                    } else {
+                        parts.push("No Extended Bracket".to_string());
+                    }
+                }
+                Some(parts.join(" EV, "))
+            }
             _ => None,
         },
         Manufacturer::Panasonic => match tag_id {
