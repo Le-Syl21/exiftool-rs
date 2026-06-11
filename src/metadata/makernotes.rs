@@ -7850,6 +7850,22 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                     format!("{} m", crate::value::format_g15(v as f64 / 1000.0))
                 }
             }),
+            // AFPointPosition (0x2021): int16u[4] → "%.2g %.2g" of x/w, y/h ratios.
+            0x2021 => {
+                let disp = value.to_display_string();
+                let v: Vec<f64> = disp.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+                if v.len() == 4 && v[0] != 65535.0 && v[1] != 0.0 && v[3] != 0.0 {
+                    Some(format!(
+                        "{} {}",
+                        crate::value::format_g_prec(v[0] / v[1], 2),
+                        crate::value::format_g_prec(v[2] / v[3], 2)
+                    ))
+                } else if v.len() == 4 {
+                    Some("n/a".to_string())
+                } else {
+                    None
+                }
+            }
             // FlashMode (Type1 0x0004): default-model enum (4 => Red-eye Reduction).
             0x0004 => value.as_u64().and_then(|v| match v {
                 1 => Some("Auto"),
