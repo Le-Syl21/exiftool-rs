@@ -7943,6 +7943,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 }
                 .to_string()
             }),
+            // CameraID (0x0209): undef but really a string (Olympus.pm Format => 'string').
+            0x0209 => mn_undef_bytes(value).map(|b| {
+                let s: String = b.iter().map(|&c| c as char).collect();
+                s.split('\0').next().unwrap_or("").trim_end().to_string()
+            }),
             // CameraType (0x0207): map the type code to a model name (%olympusCameraTypes).
             0x0207 => value
                 .as_str()
@@ -8262,6 +8267,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             0x0011 => value
                 .as_str()
                 .map(|s| s.replacen("Shar:", "", 1).trim().to_string()),
+            // Highlight (string form): ValueConv strips "High:".
+            0x000f => value
+                .as_str()
+                .map(|s| s.replacen("High:", "", 1).trim().to_string()),
             // ColorAdjustment (string form): ValueConv strips "CC:".
             0x0014 => value
                 .as_str()
