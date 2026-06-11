@@ -1678,6 +1678,20 @@ impl XmpReader {
             if let Some(reformatted) = convert_xmp_date(&tag.print_value) {
                 tag.print_value = reformatted;
             }
+            // XMP-plus vocabulary: strip the LDF URL prefix and map each code.
+            if tag.print_value.contains("ns.useplus.org/ldf/vocab/") {
+                let mapped: Vec<String> = tag
+                    .print_value
+                    .split(", ")
+                    .map(|item| {
+                        let code = item.trim().rsplit('/').next().unwrap_or("").trim();
+                        plus_vocab(code)
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| item.to_string())
+                    })
+                    .collect();
+                tag.print_value = mapped.join(", ");
+            }
             // XMP-exif ComponentsConfiguration (Seq of integers → channel labels).
             if tag.name == "ComponentsConfiguration" {
                 tag.print_value = tag
@@ -2095,6 +2109,82 @@ fn convert_xmp_date(val: &str) -> Option<String> {
 /// Apply the EXIF PrintConv to exif: namespace XMP tags, matching ExifTool which
 /// shares the EXIF tag table's conversions for the XMP exif schema. Only the cases
 /// that differ from the plain numeric display are handled here.
+
+/// Map a PLUS LDF vocabulary code (URL suffix) to its label (PLUS.pm).
+fn plus_vocab(code: &str) -> Option<&'static str> {
+    Some(match code {
+        "AG-A15" => "Age 15",
+        "AG-A16" => "Age 16",
+        "AG-A17" => "Age 17",
+        "AG-A18" => "Age 18",
+        "AG-A19" => "Age 19",
+        "AG-A20" => "Age 20",
+        "AG-A21" => "Age 21",
+        "AG-A22" => "Age 22",
+        "AG-A23" => "Age 23",
+        "AG-A24" => "Age 24",
+        "AG-A25" => "Age 25 or Over",
+        "AG-U14" => "Age 14 or Under",
+        "AG-UNK" => "Age Unknown",
+        "AL-CLR" => "No Colorization",
+        "AL-CRP" => "No Cropping",
+        "AL-DCL" => "No De-Colorization",
+        "AL-FLP" => "No Flipping",
+        "AL-MRG" => "No Merging",
+        "AL-RET" => "No Retouching",
+        "CR-CAI" => "Credit Adjacent To Image",
+        "CR-CCA" => "Credit in Credits Area",
+        "CR-COI" => "Credit on Image",
+        "CR-NRQ" => "Not Required",
+        "CS-PRO" => "Protected",
+        "CS-PUB" => "Public Domain",
+        "CS-UNK" => "Unknown",
+        "CW-AWR" => "Adult Content Warning Required",
+        "CW-NRQ" => "Not Required",
+        "CW-UNK" => "Unknown",
+        "DP-LIC" => "Duplication Only as Necessary Under License",
+        "DP-NDC" => "No Duplication Constraints",
+        "DP-NOD" => "No Duplication",
+        "FF-BMP" => "Windows Bitmap (BMP)",
+        "FF-DNG" => "Digital Negative (DNG)",
+        "FF-EPS" => "Encapsulated PostScript (EPS)",
+        "FF-GIF" => "Graphics Interchange Format (GIF)",
+        "FF-JPG" => "JPEG Interchange Formats (JPG, JIF, JFIF)",
+        "FF-OTR" => "Other",
+        "FF-PIC" => "Macintosh Picture (PICT)",
+        "FF-PNG" => "Portable Network Graphics (PNG)",
+        "FF-PSD" => "Photoshop Document (PSD)",
+        "FF-RAW" => "Proprietary RAW Image Format",
+        "FF-TIF" => "Tagged Image File Format (TIFF)",
+        "FF-WMP" => "Windows Media Photo (HD Photo)",
+        "IF-MFN" => "Maintain File Name",
+        "IF-MFT" => "Maintain File Type",
+        "IF-MID" => "Maintain ID in File Name",
+        "IF-MMD" => "Maintain Metadata",
+        "MR-LMR" => "Limited or Incomplete Model Releases",
+        "MR-NAP" => "Not Applicable",
+        "MR-NON" => "None",
+        "MR-UMR" => "Unlimited Model Releases",
+        "PR-LPR" => "Limited or Incomplete Property Releases",
+        "PR-NAP" => "Not Applicable",
+        "PR-NON" => "None",
+        "PR-UPR" => "Unlimited Property Releases",
+        "RE-NAP" => "Not Applicable",
+        "RE-REU" => "Repeat Use",
+        "SZ-G50" => "Greater than 50 MB",
+        "SZ-U01" => "Up to 1 MB",
+        "SZ-U10" => "Up to 10 MB",
+        "SZ-U30" => "Up to 30 MB",
+        "SZ-U50" => "Up to 50 MB",
+        "TY-ILL" => "Illustrated Image",
+        "TY-MCI" => "Multimedia or Composited Image",
+        "TY-OTR" => "Other",
+        "TY-PHO" => "Photographic Image",
+        "TY-VID" => "Video",
+        _ => return None,
+    })
+}
+
 fn xmp_exif_print_override(prefix: &str, name: &str, value: &Value) -> Option<String> {
     if prefix != "exif" {
         return None;

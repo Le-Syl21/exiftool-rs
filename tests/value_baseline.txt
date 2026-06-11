@@ -298,15 +298,7 @@ PDF.pdf	Creator
 PLIST-bin.plist	TestBoolean
 PLIST-bin.plist	TestDate
 PLIST-bin.plist	TestDictWhen
-PLUS.xmp	CopyrightStatus
-PLUS.xmp	CreditLineRequired
-PLUS.xmp	ImageAlterationConstraints
-PLUS.xmp	ImageDuplicationConstraints
-PLUS.xmp	ImageFileConstraints
-PLUS.xmp	ImageFileFormatAsDelivered
-PLUS.xmp	ImageFileSizeAsDelivered
 PLUS.xmp	MediaSummaryCode
-PLUS.xmp	Reuse
 PSP.psp	Copyright
 PSP.psp	CreateDate
 PSP.psp	ModifyDate
@@ -314,7 +306,6 @@ Palm.mobi	CreateDate
 Palm.mobi	Description
 Palm.mobi	LastBackupDate
 Palm.mobi	ModifyDate
-Palm.mobi	UncompressedTextLength
 Panasonic.jpg	AFAreaMode
 Panasonic.jpg	VideoFrameRate
 Panasonic.rw2	AFAreaMode

@@ -459,15 +459,23 @@ fn is_leap(y: i32) -> bool {
     (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
 }
 
+/// Port of ExifTool ConvertFileSize (decimal): %.1f below 10× a unit, %.0f above.
 fn convert_file_size(bytes: i64) -> String {
-    if bytes >= 1_000_000_000 {
-        format!("{:.1} GB", bytes as f64 / 1_000_000_000.0)
-    } else if bytes >= 1_000_000 {
-        format!("{:.1} MB", bytes as f64 / 1_000_000.0)
-    } else if bytes >= 1_000 {
-        format!("{:.1} kB", bytes as f64 / 1_000.0)
-    } else {
+    let v = bytes as f64;
+    if bytes < 2000 {
         format!("{} bytes", bytes)
+    } else if bytes < 10_000 {
+        format!("{:.1} kB", v / 1000.0)
+    } else if bytes < 2_000_000 {
+        format!("{:.0} kB", v / 1000.0)
+    } else if bytes < 10_000_000 {
+        format!("{:.1} MB", v / 1_000_000.0)
+    } else if bytes < 2_000_000_000 {
+        format!("{:.0} MB", v / 1_000_000.0)
+    } else if bytes < 10_000_000_000 {
+        format!("{:.1} GB", v / 1_000_000_000.0)
+    } else {
+        format!("{:.0} GB", v / 1_000_000_000.0)
     }
 }
 
