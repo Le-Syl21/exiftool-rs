@@ -576,6 +576,19 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 }
             }
         }
+        // CR2CFAPattern (0xc5e0): ValueConv + PrintConv collapsed to the colour grid.
+        (_, 0xC5E0) => {
+            if let Some(v) = value.as_u64() {
+                return match v {
+                    1 => Some("[Red,Green][Green,Blue]"),
+                    2 => Some("[Blue,Green][Green,Red]"),
+                    3 => Some("[Green,Blue][Red,Green]"),
+                    4 => Some("[Green,Red][Blue,Green]"),
+                    _ => None,
+                }
+                .map(str::to_string);
+            }
+        }
         // ColorMap (0x0140): ExifTool marks it Binary => 1 (shown as a placeholder).
         (_, 0x0140) => {
             let bytes = match value {

@@ -19,7 +19,6 @@ Canon1DmkIII.jpg	Sharpness
 Canon1DmkIII.jpg	ShutterSpeedRange
 Canon1DmkIII.jpg	TimerLength
 CanonRaw.cr2	AFPointsInFocus
-CanonRaw.cr2	CR2CFAPattern
 CanonRaw.cr3	Aperture
 CanonRaw.cr3	BatteryType
 CanonRaw.cr3	BracketMode
