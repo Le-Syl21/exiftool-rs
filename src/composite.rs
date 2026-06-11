@@ -329,11 +329,23 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
                     ));
                 }
             }
-            // LensSpec from Lens+LensType
+            // LensSpec from Lens + the Nikon lens-type code (e.g. " G"/" D"), matching
+            // Nikon's ConvertLensSpec which suffixes the type after the focal/aperture spec.
             if find_tag(tags, "LensSpec").is_none() {
                 if let Some(lens) = find_tag_value(tags, "Lens") {
                     if !lens.is_empty() {
-                        composite.push(mk_composite("LensSpec", "Lens Spec", Value::String(lens)));
+                        let mut spec = lens;
+                        if let Some(lt) = find_tag_value(tags, "LensType") {
+                            let lt = lt.trim();
+                            // Append only the short Nikon DecodeBits codes (not "AF"/numeric).
+                            if !lt.is_empty()
+                                && lt != "AF"
+                                && lt.chars().all(|c| c.is_ascii_uppercase() || c == ' ' || c == '-')
+                            {
+                                spec = format!("{} {}", spec, lt);
+                            }
+                        }
+                        composite.push(mk_composite("LensSpec", "Lens Spec", Value::String(spec)));
                     }
                 }
             }

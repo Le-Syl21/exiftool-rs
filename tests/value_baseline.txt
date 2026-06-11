@@ -275,7 +275,6 @@ Nikon.nef	ExposureAdj2
 Nikon.nef	ExposureDifference
 Nikon.nef	FilmType
 Nikon.nef	FocusPosition
-Nikon.nef	LensSpec
 Nikon.nef	MCUVersion
 Nikon.nef	MaxFocalLength
 Nikon.nef	MinFocalLength
@@ -298,7 +297,6 @@ NikonD2Hs.jpg	ExternalFlashFirmware
 NikonD2Hs.jpg	FOV
 NikonD2Hs.jpg	FlashExposureBracketValue
 NikonD2Hs.jpg	LensID
-NikonD2Hs.jpg	LensSpec
 NikonD2Hs.jpg	MCUVersion
 NikonD2Hs.jpg	PreviewImageStart
 NikonD2Hs.jpg	RedBalance
@@ -312,7 +310,6 @@ NikonD70.jpg	ExternalFlashFirmware
 NikonD70.jpg	FlashExposureBracketValue
 NikonD70.jpg	ISO
 NikonD70.jpg	LensID
-NikonD70.jpg	LensSpec
 NikonD70.jpg	MCUVersion
 NikonD70.jpg	MaxFocalLength
 NikonD70.jpg	MinFocalLength
