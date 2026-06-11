@@ -195,6 +195,7 @@ pub enum FileType {
     Dfont,
     Xml,
     Inx,
+    Eps,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -386,6 +387,7 @@ impl FileType {
             FileType::Dfont => "Macintosh Font",
             FileType::Xml => "Extensible Markup Language",
             FileType::Inx => "Adobe InDesign Interchange",
+            FileType::Eps => "Encapsulated PostScript",
         }
     }
 
@@ -562,6 +564,7 @@ impl FileType {
             FileType::Dfont => "DFONT",
             FileType::Xml => "XML",
             FileType::Inx => "INX",
+            FileType::Eps => "EPS",
         }
     }
 
@@ -740,6 +743,7 @@ impl FileType {
             FileType::Dfont => "application/x-dfont",
             FileType::Xml => "application/xml",
             FileType::Inx => "application/x-indesign-interchange",
+            FileType::Eps => "application/postscript",
         }
     }
 
@@ -921,6 +925,7 @@ impl FileType {
             FileType::Dfont => &["dfont"],
             FileType::Xml => &["xml"],
             FileType::Inx => &["inx"],
+            FileType::Eps => &["eps", "epsf", "eps3", "epsi", "ept"],
         }
     }
 
@@ -1040,6 +1045,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Dfont,
     FileType::Xml,
     FileType::Inx,
+    FileType::Eps,
     // RAW
     FileType::Cr2,
     FileType::Cr3,
@@ -1660,6 +1666,16 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
             || header[6..].starts_with(b"%!FontType1-"))
     {
         return Some(FileType::Pfb);
+    }
+
+    // EPS: DOS binary EPS header (C5 D0 D3 C6), or "%!PS-Adobe-N.N EPSF-N.N"
+    if header.starts_with(&[0xC5, 0xD0, 0xD3, 0xC6]) {
+        return Some(FileType::Eps);
+    }
+    if header.starts_with(b"%!PS-Adobe-")
+        && header[..header.len().min(32)].windows(4).any(|w| w == b"EPSF")
+    {
+        return Some(FileType::Eps);
     }
 
     // PostScript: "%!PS" or "%!Adobe"

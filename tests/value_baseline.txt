@@ -166,10 +166,7 @@ FLIR.jpg	FocusDistance
 FLIR.jpg	FrameRate
 FLIR.jpg	PeakSpectralSensitivity
 FLIR.jpg	RawThermalImage
-FlashPix.ppt	FileType
-FlashPix.ppt	FileTypeExtension
 FlashPix.ppt	HeadingPairs
-FlashPix.ppt	MIMEType
 FlashPix.ppt	TitleOfParts
 Font.pfa	Comment
 Font.pfa	Notice
@@ -546,8 +543,6 @@ PhaseOne.iiq	ThumbnailTIFF
 PhotoMechanic.jpg	Prefs
 Photoshop.psd	Compression
 PostScript.eps	Creator
-PostScript.eps	FileType
-PostScript.eps	FileTypeExtension
 PostScript.eps	Title
 QuickTime.heic	MediaDataOffset
 QuickTime.m4a	Compilation
@@ -670,6 +665,3 @@ XMP5.xmp	FlashReturn
 XMP5.xmp	RegionExtensionsFlashMode
 XMP5.xmp	RegionExtensionsFlashReturn
 XMP6.xmp	Test
-iWork.numbers	FileType
-iWork.numbers	FileTypeExtension
-iWork.numbers	MIMEType

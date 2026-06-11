@@ -1628,8 +1628,20 @@ impl ExifTool {
                         return Ok(FileType::Eip);
                     }
                 }
+                // iWork (KEY/PAGES/NUMBERS): ExifTool keys on the file extension once an
+                // iWork marker member is present (ZIP.pm Process_iWork).
+                if let Some(iw) = detect_iwork_type(data, path) {
+                    return Ok(iw);
+                }
                 if let Some(od_type) = detect_opendocument_type(data) {
                     return Ok(od_type);
+                }
+            }
+            // OLE2 compound files (DOC/XLS/PPT/FlashPix) all share the D0CF11E0 magic;
+            // refine by the UTF-16 stream names in the directory.
+            if ft == FileType::Doc {
+                if let Some(ole) = detect_ole2_type(data) {
+                    return Ok(ole);
                 }
             }
             return Ok(ft);
@@ -1733,7 +1745,10 @@ impl ExifTool {
             | FileType::Pptx
             | FileType::Doc
             | FileType::Xls
-            | FileType::Ppt => formats::zip::read_zip(data),
+            | FileType::Ppt
+            | FileType::Numbers
+            | FileType::Pages
+            | FileType::Key => formats::zip::read_zip(data),
             FileType::Rtf => formats::rtf::read_rtf(data),
             FileType::InDesign => formats::indesign::read_indesign(data),
             FileType::Pcap => formats::pcap::read_pcap(data),
@@ -1860,6 +1875,7 @@ impl ExifTool {
             FileType::Xml | FileType::Inx => {
                 formats::xmp_file::read_xmp(data).or_else(|_| Ok(Vec::new()))
             }
+            FileType::Eps => formats::postscript::read_postscript(data),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }
@@ -2048,6 +2064,53 @@ fn is_tiff_based(ft: FileType) -> bool {
             | FileType::Iiq
             | FileType::Btf
     )
+}
+
+/// Refine an OLE2 compound document (DOC/XLS/PPT) by scanning the directory for
+/// well-known UTF-16LE stream names. Returns None (→ keep DOC) when none match.
+fn detect_ole2_type(data: &[u8]) -> Option<FileType> {
+    fn has_utf16(data: &[u8], name: &str) -> bool {
+        let needle: Vec<u8> = name.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
+        data.windows(needle.len()).any(|w| w == needle.as_slice())
+    }
+    if has_utf16(data, "PowerPoint Document") {
+        Some(FileType::Ppt)
+    } else if has_utf16(data, "Workbook") || has_utf16(data, "Book") {
+        Some(FileType::Xls)
+    } else {
+        None
+    }
+}
+
+/// Detect an iWork (KEY/PAGES/NUMBERS) ZIP. ExifTool recognises these by the
+/// presence of an iWork marker member, then maps the file type from the
+/// extension (ZIP.pm `%iWorkType` / Process_iWork).
+fn detect_iwork_type(data: &[u8], path: &Path) -> Option<FileType> {
+    const MARKERS: &[&[u8]] = &[
+        b"index.xml",
+        b"index.apxl",
+        b"QuickLook/Thumbnail.jpg",
+        b"Index/Document.iwa",
+        b"Index/Slide.iwa",
+        b"Index/Tables/DataList.iwa",
+    ];
+    let has_marker = MARKERS
+        .iter()
+        .any(|m| data.windows(m.len()).any(|w| w == *m));
+    if !has_marker {
+        return None;
+    }
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    match ext.as_str() {
+        "numbers" | "nmbtemplate" => Some(FileType::Numbers),
+        "pages" => Some(FileType::Pages),
+        "key" | "kth" => Some(FileType::Key),
+        _ => None,
+    }
 }
 
 fn detect_opendocument_type(data: &[u8]) -> Option<FileType> {
