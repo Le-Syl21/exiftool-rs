@@ -7890,6 +7890,22 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             0x0010 => value.as_str().map(fuji_internal_serial),
             _ => None,
         },
+        Manufacturer::Ricoh => match tag_id {
+            // 0x0005: printable bytes => SerialNumber (handled by name elsewhere);
+            // non-printable => InternalSerialNumber as hex (ValueConv unpack "H*").
+            0x0005 => {
+                let bytes: Option<&[u8]> = match value {
+                    Value::Binary(b) | Value::Undefined(b) => Some(b.as_slice()),
+                    _ => None,
+                };
+                bytes.filter(|b| {
+                    !b.iter()
+                        .all(|&c| c == b'-' || c == b' ' || c == b'_' || c.is_ascii_alphanumeric())
+                })
+                .map(|b| b.iter().map(|c| format!("{:02x}", c)).collect::<String>())
+            }
+            _ => None,
+        },
         Manufacturer::Panasonic => match tag_id {
             // InternalSerialNumber (undef[16]): "(MMM) YYYY:MM:DD no. NNNN".
             0x0025 => {

@@ -482,7 +482,6 @@ Ricoh.jpg	FirmwareVersion
 Ricoh.jpg	ManufactureDate1
 Ricoh.jpg	Sharpness
 Ricoh2.jpg	FirmwareVersion
-Ricoh2.jpg	InternalSerialNumber
 Ricoh2.jpg	ManufactureDate1
 Ricoh2.jpg	ManufactureDate2
 Ricoh2.jpg	UserComment
