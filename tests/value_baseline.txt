@@ -448,7 +448,6 @@ NikonD2Hs.jpg	CFAPattern
 NikonD2Hs.jpg	ColorHue
 NikonD2Hs.jpg	DOF
 NikonD2Hs.jpg	EffectiveMaxAperture
-NikonD2Hs.jpg	ExitPupilPosition
 NikonD2Hs.jpg	ExposureDifference
 NikonD2Hs.jpg	ExposureTuning
 NikonD2Hs.jpg	ExternalFlashExposureComp
@@ -464,8 +463,6 @@ NikonD2Hs.jpg	LensSpec
 NikonD2Hs.jpg	LensType
 NikonD2Hs.jpg	LightSource
 NikonD2Hs.jpg	MCUVersion
-NikonD2Hs.jpg	MaxFocalLength
-NikonD2Hs.jpg	MinFocalLength
 NikonD2Hs.jpg	NoiseReduction
 NikonD2Hs.jpg	PreviewImageStart
 NikonD2Hs.jpg	ProgramShift
