@@ -1342,12 +1342,12 @@ fn compute_wb_balance(tags: &[Tag]) -> Option<Vec<Tag>> {
                 result.push(mk_composite(
                     "RedBalance",
                     "Red Balance",
-                    Value::String(format!("{:.6}", r / g)),
+                    Value::String(crate::value::format_g_prec(r / g, 7)),
                 ));
                 result.push(mk_composite(
                     "BlueBalance",
                     "Blue Balance",
-                    Value::String(format!("{:.6}", b / g_div)),
+                    Value::String(crate::value::format_g_prec(b / g_div, 7)),
                 ));
             }
         } else if parts.len() == 2 {
@@ -1356,12 +1356,12 @@ fn compute_wb_balance(tags: &[Tag]) -> Option<Vec<Tag>> {
             result.push(mk_composite(
                 "RedBalance",
                 "Red Balance",
-                Value::String(format!("{:.6}", r / 256.0)),
+                Value::String(crate::value::format_g_prec(r / 256.0, 7)),
             ));
             result.push(mk_composite(
                 "BlueBalance",
                 "Blue Balance",
-                Value::String(format!("{:.6}", b / 256.0)),
+                Value::String(crate::value::format_g_prec(b / 256.0, 7)),
             ));
         }
     } else if let Some(wb) = find_tag(tags, "WB_GRGBLevels") {

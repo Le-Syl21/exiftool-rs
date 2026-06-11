@@ -83,7 +83,6 @@ Canon1DmkIII.jpg	MinFocalLength
 Canon1DmkIII.jpg	PictureStylePC
 Canon1DmkIII.jpg	PictureStyleUserDef
 Canon1DmkIII.jpg	RawMeasuredRGGB
-Canon1DmkIII.jpg	RedBalance
 Canon1DmkIII.jpg	Saturation
 Canon1DmkIII.jpg	SelectableAFPoint
 Canon1DmkIII.jpg	SelfTimer
@@ -509,7 +508,6 @@ Kodak.jpg	WhiteBalance
 KyoceraRaw.raw	BlueBalance
 KyoceraRaw.raw	FNumber
 KyoceraRaw.raw	MaxAperture
-KyoceraRaw.raw	RedBalance
 LNK.lnk	AccessDate
 LNK.lnk	CreateDate
 LNK.lnk	ModifyDate
@@ -716,7 +714,6 @@ Olympus2.jpg	PanoramaMode
 Olympus2.jpg	PreviewImageStart
 Olympus2.jpg	Quality
 Olympus2.jpg	RawDevEditStatus
-Olympus2.jpg	RedBalance
 Olympus2.jpg	SharpnessSetting
 Olympus2.jpg	SpecialMode
 OlympusE1.jpg	AFAreas
