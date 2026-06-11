@@ -13,7 +13,6 @@ Apple.jpg	AEStable
 Apple.jpg	AFStable
 Apple.jpg	AccelerationVector
 Apple.jpg	FocusDistanceRange
-Apple.jpg	GPSAltitude
 Apple.jpg	GPSHPositioningError
 Apple.jpg	ImageCaptureType
 Apple.jpg	LensInfo
@@ -327,7 +326,6 @@ GoPro.jpg	ColorSpace
 GoPro.jpg	DigitalZoomOn
 GoPro.jpg	ExposureCompensation
 GoPro.jpg	FlashpixVersion
-GoPro.jpg	GPSAltitude
 GoPro.jpg	MediaUniqueID
 GoPro.jpg	Protune
 GoPro.jpg	Sharpness
@@ -335,7 +333,6 @@ GoPro.jpg	SpotMeter
 GoPro.jpg	SubjectDistance
 GoPro.jpg	WhiteBalance
 Google.jpg	DirectoryItemMime
-Google.jpg	GPSAltitude
 Google.jpg	HDRPlusMakerNote
 Google.jpg	ImageData
 Google.jpg	ImageName
@@ -767,7 +764,6 @@ Ricoh.jpg	ManufactureDate1
 Ricoh.jpg	Sharpness
 Ricoh.jpg	ShutterSpeed
 Ricoh2.jpg	FirmwareVersion
-Ricoh2.jpg	GPSAltitude
 Ricoh2.jpg	GPSDestBearingRef
 Ricoh2.jpg	GPSDestDistanceRef
 Ricoh2.jpg	InternalSerialNumber

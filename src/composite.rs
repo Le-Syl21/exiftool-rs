@@ -681,13 +681,19 @@ fn compute_gps_altitude(tags: &[Tag]) -> Option<Tag> {
     let alt_ref = find_tag_value(tags, "GPSAltitudeRef").unwrap_or_default();
 
     let meters = alt.raw_value.as_f64()?;
-    let sign = if alt_ref.contains("Below") { "-" } else { "" };
+    // Perl Composite GPSAltitude: int($val*10)/10 . " m " . (Above|Below) . " Sea Level".
+    let below = alt_ref.contains("Below") || alt_ref.trim() == "1";
+    let trunc = (meters.abs() * 10.0).trunc() / 10.0;
+    let pos = if below { "Below" } else { "Above" };
 
-    Some(mk_composite(
+    let mut t = mk_composite(
         "GPSAltitude",
         "GPS Altitude",
-        Value::String(format!("{}{:.1} m", sign, meters)),
-    ))
+        Value::String(format!("{} m {} Sea Level", crate::value::format_g15(trunc), pos)),
+    );
+    // ExifTool's Composite GPSAltitude overrides the plain EXIF GPSAltitude tag.
+    t.priority = 1;
+    Some(t)
 }
 
 fn compute_shutter_speed(tags: &[Tag]) -> Option<Tag> {
