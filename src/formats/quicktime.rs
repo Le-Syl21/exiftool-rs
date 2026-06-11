@@ -90,10 +90,10 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
             let mut brands = Vec::new();
             let mut pos = 16;
             while pos + 4 <= size.min(data.len()) {
+                // ExifTool keeps each 4-byte brand verbatim (incl. padding spaces).
                 let b = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + 4])
-                    .trim()
-                    .to_string();
-                if !b.is_empty() {
+                    .replace('\0', "");
+                if !b.trim().is_empty() {
                     brands.push(b);
                 }
                 pos += 4;
