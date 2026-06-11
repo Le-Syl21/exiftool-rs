@@ -462,7 +462,18 @@ fn parse_atoms(
             }
             // Metadata container: meta has a 4-byte version/flags before sub-atoms
             b"meta" => {
-                parse_atoms(data, content_start, content_end, tags, state, depth + 1);
+                // Determine if it is an Android video: check if CompatibleBrands contains "mp42".
+                let is_android = tags
+                    .iter()
+                    .any(|t| t.name == "CompatibleBrands" && t.print_value.contains("mp42"));
+
+                if is_android {
+                    parse_atoms(data, content_start, content_end, tags, state, depth + 1);
+                } else {
+                    if content_start + 4 <= content_end {
+                        parse_atoms(data, content_start + 4, content_end, tags, state, depth + 1);
+                    }
+                }
             }
             // Atomic structure of keys: version(1) + flags(3) + entry_count(4) + entry_list
             b"keys" => {
