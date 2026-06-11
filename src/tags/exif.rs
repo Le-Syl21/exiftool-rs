@@ -88,21 +88,21 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
             .to_string());
         }
         ("GPS", 0x000C) | ("GPS", 0x0019) => {
-            return Some(match value.to_display_string().trim() {
-                "K" => "km/h",
-                "M" => "mph",
-                "N" => "knots",
-                _ => return None,
-            }
-            .to_string());
+            let v = value.to_display_string();
+            return Some(match v.trim() {
+                "K" => "km/h".to_string(),
+                "M" => "mph".to_string(),
+                "N" => "knots".to_string(),
+                other => format!("Unknown ({})", other),
+            });
         }
         ("GPS", 0x000E) | ("GPS", 0x0010) | ("GPS", 0x0017) => {
-            return Some(match value.to_display_string().trim() {
-                "M" => "Magnetic North",
-                "T" => "True North",
-                _ => return None,
-            }
-            .to_string());
+            let v = value.to_display_string();
+            return Some(match v.trim() {
+                "M" => "Magnetic North".to_string(),
+                "T" => "True North".to_string(),
+                other => format!("Unknown ({})", other),
+            });
         }
         // GPSTimeStamp (3 rationals H M S): ExifTool ConvertTimeStamp -> "HH:MM:SS[.ff]"
         ("GPS", 0x0007) => {
