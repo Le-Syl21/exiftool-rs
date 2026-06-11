@@ -487,7 +487,6 @@ XMP.jpg	MeasurementFlare
 XMP.jpg	Technology
 XMP.jpg	ViewingCondIlluminant
 XMP.xml	Iso
-XMP.xmp	ComponentsConfiguration
 XMP.xmp	NativeDigest
 XMP4.xmp	StructList2Item1
 XMP4.xmp	StructList2Item2

@@ -1678,6 +1678,24 @@ impl XmpReader {
             if let Some(reformatted) = convert_xmp_date(&tag.print_value) {
                 tag.print_value = reformatted;
             }
+            // XMP-exif ComponentsConfiguration (Seq of integers → channel labels).
+            if tag.name == "ComponentsConfiguration" {
+                tag.print_value = tag
+                    .print_value
+                    .split(", ")
+                    .map(|c| match c.trim() {
+                        "0" => "-",
+                        "1" => "Y",
+                        "2" => "Cb",
+                        "3" => "Cr",
+                        "4" => "R",
+                        "5" => "G",
+                        "6" => "B",
+                        other => other,
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+            }
             // XMP-exif Flash sub-fields (exif:Flash/Return, /Mode).
             if tag.name == "FlashReturn" {
                 tag.print_value = match tag.print_value.trim() {
