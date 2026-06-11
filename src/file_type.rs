@@ -172,6 +172,9 @@ pub enum FileType {
     Eip,
     // ===== Leica Image Format =====
     Lif,
+    // ===== Plain text formats =====
+    Txt,
+    Csv,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -342,6 +345,8 @@ impl FileType {
             FileType::Odc => "ODC",
             FileType::Eip => "EIP",
             FileType::Lif => "Leica Image Format",
+            FileType::Txt => "Text",
+            FileType::Csv => "Comma-Separated Values",
         }
     }
 
@@ -497,6 +502,8 @@ impl FileType {
             FileType::Odc => "ODC",
             FileType::Eip => "EIP",
             FileType::Lif => "LIF",
+            FileType::Txt => "TXT",
+            FileType::Csv => "CSV",
         }
     }
 
@@ -653,6 +660,8 @@ impl FileType {
             FileType::Odc => "application/vnd.oasis.opendocument.chart",
             FileType::Eip => "application/x-captureone",
             FileType::Lif => "image/x-leica-lif",
+            FileType::Txt => "text/plain",
+            FileType::Csv => "text/csv",
         }
     }
 
@@ -815,6 +824,8 @@ impl FileType {
             FileType::Lfp => &["lfp", "lfr"],
             FileType::Eip => &["eip"],
             FileType::Lif => &["lif"],
+            FileType::Txt => &["txt", "log", "igc"],
+            FileType::Csv => &["csv"],
         }
     }
 
@@ -913,6 +924,8 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Mng,
     FileType::PhotoCd,
     FileType::Lif,
+    FileType::Txt,
+    FileType::Csv,
     // RAW
     FileType::Cr2,
     FileType::Cr3,
