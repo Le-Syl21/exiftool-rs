@@ -279,7 +279,6 @@ Olympus2.jpg	CameraType2
 Olympus2.jpg	ColorMatrix
 Olympus2.jpg	CustomSaturation
 Olympus2.jpg	ExternalFlashBounce
-Olympus2.jpg	Gradation
 Olympus2.jpg	ImageStabilization
 Olympus2.jpg	ManometerReading
 Olympus2.jpg	PanoramaMode
