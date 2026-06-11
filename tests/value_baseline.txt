@@ -119,7 +119,6 @@ FLIR.jpg	CameraTemperatureMinWarn
 FLIR.jpg	CameraTemperatureRangeMin
 FLIR.jpg	DateTimeOriginal
 FLIR.jpg	FrameRate
-FLIR.jpg	PeakSpectralSensitivity
 FLIR.jpg	RawThermalImage
 FlashPix.ppt	HeadingPairs
 FlashPix.ppt	TitleOfParts

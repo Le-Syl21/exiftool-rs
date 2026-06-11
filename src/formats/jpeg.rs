@@ -2511,7 +2511,14 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                             .to_string();
                         tags.push(mk("FilterSerialNumber", filter_sn));
                     }
-                    tags.push(mk("PeakSpectralSensitivity", format!("{:.1} um", rf(440))));
+                    // Composite: PeakSpectralSensitivity = 14387.6515 / PlanckB.
+                    let planck_b = rf(92);
+                    if planck_b != 0.0 {
+                        tags.push(mk(
+                            "PeakSpectralSensitivity",
+                            format!("{:.1} um", 14387.6515 / planck_b),
+                        ));
+                    }
                     tags.push(mk("FocusStepCount", rd32(444).to_string()));
                     // FocusDistance: float at 0x45c=1116 (Perl).
                     if rec.len() >= 1120 {
