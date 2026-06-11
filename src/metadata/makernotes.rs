@@ -5996,6 +5996,16 @@ fn read_makernote_ifd_with_base(
         {
             // Panasonic counts: raw number, not the generic by-name enum (No/Single).
             value.to_display_string()
+        } else if manufacturer == Manufacturer::Apple && name == "ImageCaptureType" {
+            match value.as_f64().filter(|f| f.fract() == 0.0).map(|f| f as i64) {
+                Some(1) => "ProRAW".to_string(),
+                Some(2) => "Portrait".to_string(),
+                Some(10) => "Photo".to_string(),
+                Some(11) => "Manual Focus".to_string(),
+                Some(12) => "Scene".to_string(),
+                Some(n) => format!("Unknown ({})", n),
+                None => value.to_display_string(),
+            }
         } else if manufacturer == Manufacturer::Panasonic && name == "TimeSincePowerOn" {
             // ValueConv $val/100 (centiseconds), PrintConv "[DD days ]HH:MM:SS.ss".
             match value.as_u64() {

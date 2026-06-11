@@ -11,7 +11,6 @@ ASF.wmv	Megapixels
 ASF.wmv	SendDuration
 Apple.jpg	AccelerationVector
 Apple.jpg	FocusDistanceRange
-Apple.jpg	ImageCaptureType
 Apple.jpg	LensInfo
 Audible.aa	Copyright
 BigTIFF.btf	MIMEType
