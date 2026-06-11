@@ -5325,6 +5325,10 @@ fn read_makernote_ifd_with_base(
                         crate::tags::makernotes::olympus_extender_name(&key)
                             .map(|s| s.to_string())
                             .unwrap_or(key)
+                    } else if name.ends_with("Version") && sdt == 7 && sval.len() == 4 {
+                        // Olympus version tags are undef[4] ASCII (e.g. "0100", "0111").
+                        // (FirmwareVersion tags are int32u and stay numeric.)
+                        sval.iter().map(|&c| c as char).collect()
                     } else {
                         // Apply the generated enum PrintConv by tag name (Olympus sub-IFD
                         // tables: AELock -> Off, FocusMode -> Single AF, …).

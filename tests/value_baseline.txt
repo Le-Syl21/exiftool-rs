@@ -692,7 +692,6 @@ Olympus2.jpg	AFAreas
 Olympus2.jpg	AFPoint
 Olympus2.jpg	BodyFirmwareVersion
 Olympus2.jpg	CameraID
-Olympus2.jpg	CameraSettingsVersion
 Olympus2.jpg	CameraType
 Olympus2.jpg	CameraType2
 Olympus2.jpg	ColorMatrix
@@ -701,18 +700,15 @@ Olympus2.jpg	CustomSaturation
 Olympus2.jpg	DOF
 Olympus2.jpg	DigitalZoom
 Olympus2.jpg	DriveMode
-Olympus2.jpg	EquipmentVersion
 Olympus2.jpg	ExternalFlash
 Olympus2.jpg	ExternalFlashBounce
 Olympus2.jpg	FOV
 Olympus2.jpg	FlashMode
 Olympus2.jpg	FocalPlaneDiagonal
 Olympus2.jpg	FocusDistance
-Olympus2.jpg	FocusInfoVersion
 Olympus2.jpg	FocusMode
 Olympus2.jpg	FocusProcess
 Olympus2.jpg	Gradation
-Olympus2.jpg	ImageProcessingVersion
 Olympus2.jpg	ImageStabilization
 Olympus2.jpg	InternalFlash
 Olympus2.jpg	ManometerPressure
@@ -724,7 +720,6 @@ Olympus2.jpg	PanoramaMode
 Olympus2.jpg	PreviewImageStart
 Olympus2.jpg	Quality
 Olympus2.jpg	RawDevEditStatus
-Olympus2.jpg	RawDevVersion
 Olympus2.jpg	RedBalance
 Olympus2.jpg	SceneMode
 Olympus2.jpg	SharpnessSetting
