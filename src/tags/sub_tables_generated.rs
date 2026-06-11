@@ -200,7 +200,7 @@ pub fn dispatch_nikon_lens_data(ctx: &DispatchContext) -> Vec<Tag> {
         // 0x11=EffectiveMaxAperture
         if d[4] > 0 {
             let ep = if d[4] > 0 { 2048.0 / d[4] as f64 } else { 0.0 };
-            tags.push(mk("Nikon", "ExitPupilPosition", &format!("{:.1}", ep)));
+            tags.push(mk("Nikon", "ExitPupilPosition", &format!("{:.1} mm", ep)));
         }
         if d[5] > 0 {
             let ap = 2.0_f64.powf(d[5] as f64 / 24.0);
@@ -221,11 +221,11 @@ pub fn dispatch_nikon_lens_data(ctx: &DispatchContext) -> Vec<Tag> {
         }
         if d.len() > 0x0D && d[0x0D] > 0 {
             let fl = 5.0 * 2.0_f64.powf(d[0x0D] as f64 / 24.0);
-            tags.push(mk("Nikon", "MinFocalLength", &format!("{:.1}", fl)));
+            tags.push(mk("Nikon", "MinFocalLength", &format!("{:.1} mm", fl)));
         }
         if d.len() > 0x0E && d[0x0E] > 0 {
             let fl = 5.0 * 2.0_f64.powf(d[0x0E] as f64 / 24.0);
-            tags.push(mk("Nikon", "MaxFocalLength", &format!("{:.1}", fl)));
+            tags.push(mk("Nikon", "MaxFocalLength", &format!("{:.1} mm", fl)));
         }
         if d.len() > 0x0F && d[0x0F] > 0 {
             let ap = 2.0_f64.powf(d[0x0F] as f64 / 24.0);
