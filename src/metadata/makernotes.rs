@@ -7792,6 +7792,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             0x000c => value
                 .as_str()
                 .map(|s| s.replacen("Expo:", "", 1).trim().to_string()),
+            // Quality (string form): ValueConv strips "Qual:".
+            0x0016 => value
+                .as_str()
+                .map(|s| s.replacen("Qual:", "", 1).trim().to_string()),
             // MeteringMode: string-keyed PrintConv (Sigma.pm 0x0009).
             0x0009 => value.as_str().and_then(|s| {
                 Some(

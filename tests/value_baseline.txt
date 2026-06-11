@@ -530,7 +530,6 @@ Sigma.jpg	ColorAdjustment
 Sigma.jpg	Contrast
 Sigma.jpg	FileSource
 Sigma.jpg	Highlight
-Sigma.jpg	Quality
 Sigma.jpg	Saturation
 Sigma.jpg	Shadow
 Sigma.jpg	Sharpness
@@ -552,7 +551,6 @@ SigmaDP2.x3f	Megapixels
 SigmaDP2.x3f	NetExposureCompensation
 SigmaDP2.x3f	PreviewImage
 SigmaDP2.x3f	PreviewImageStart
-SigmaDP2.x3f	Quality
 SigmaDP2.x3f	SensorID
 SigmaDP2.x3f	SensorTemperature
 SigmaDP2.x3f	ThumbnailOffset
