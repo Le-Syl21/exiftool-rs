@@ -84,8 +84,6 @@ EXE.so	CPUArchitecture
 EXE.so	CPUByteOrder
 EXE.so	CPUType
 EXE.so	ObjectFileType
-ExifTool.jpg	APP14Flags0
-ExifTool.jpg	APP14Flags1
 ExifTool.jpg	ApertureValue
 ExifTool.jpg	ColorSpace
 ExifTool.jpg	Comment
@@ -165,8 +163,6 @@ HTML.html	Creator
 HTML.html	Description
 HTML.html	RevisionNumber
 HTML.html	Subject
-IPTC.jpg	APP14Flags0
-IPTC.jpg	APP14Flags1
 ISO.iso	BootSystem
 ISO.iso	VolumeSize
 ITC.itc	DataType
@@ -453,8 +449,6 @@ VCard.vcf	TelephoneOtherVoice
 Vorbis.ogg	CoverArt
 Vorbis.ogg	Duration
 WTV.wtv	SubtitleDescription
-XMP.jpg	APP14Flags0
-XMP.jpg	APP14Flags1
 XMP.jpg	DeviceManufacturer
 XMP.jpg	MeasurementBacking
 XMP.jpg	MeasurementFlare

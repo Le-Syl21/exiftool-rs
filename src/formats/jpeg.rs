@@ -567,17 +567,32 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                             u16::from_be_bytes([d[0], d[1]]).to_string(),
                         ));
                     }
+                    // DecodeBits with a "(none)" default for a zero value.
+                    let app14_flags = |v: u16, bits: &[(u32, &str)]| -> String {
+                        if v == 0 {
+                            return "(none)".to_string();
+                        }
+                        let set: Vec<&str> = bits
+                            .iter()
+                            .filter(|(b, _)| v & (1 << b) != 0)
+                            .map(|(_, s)| *s)
+                            .collect();
+                        if set.is_empty() {
+                            format!("(none) ({})", v)
+                        } else {
+                            set.join(", ")
+                        }
+                    };
                     if d.len() >= 4 {
+                        let v = u16::from_be_bytes([d[2], d[3]]);
                         tags.push(mk(
                             "APP14Flags0",
-                            u16::from_be_bytes([d[2], d[3]]).to_string(),
+                            app14_flags(v, &[(15, "Encoded with Blend=1 downsampling")]),
                         ));
                     }
                     if d.len() >= 6 {
-                        tags.push(mk(
-                            "APP14Flags1",
-                            u16::from_be_bytes([d[4], d[5]]).to_string(),
-                        ));
+                        let v = u16::from_be_bytes([d[4], d[5]]);
+                        tags.push(mk("APP14Flags1", app14_flags(v, &[])));
                     }
                     if d.len() >= 7 {
                         let ct = match d[6] {
