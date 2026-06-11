@@ -213,11 +213,12 @@ pub fn dispatch_nikon_lens_data(ctx: &DispatchContext) -> Vec<Tag> {
             let dist = 0.01 * 10.0_f64.powf(d[0x09] as f64 / 40.0);
             tags.push(mk("Nikon", "FocusDistance", &format!("{:.2} m", dist)));
         }
-        if d.len() > 0x0A {
-            tags.push(mkn("Nikon", "MCUVersion", d[0x0A] as i32));
-        }
         if d.len() > 0x0B {
             tags.push(mk("Nikon", "LensIDNumber", &format!("{}", d[0x0B])));
+        }
+        // MCUVersion at 0x11, EffectiveMaxAperture at 0x12 (Perl LensData01 offsets).
+        if d.len() > 0x11 {
+            tags.push(mkn("Nikon", "MCUVersion", d[0x11] as i32));
         }
         if d.len() > 0x0D && d[0x0D] > 0 {
             let fl = 5.0 * 2.0_f64.powf(d[0x0D] as f64 / 24.0);
@@ -235,8 +236,8 @@ pub fn dispatch_nikon_lens_data(ctx: &DispatchContext) -> Vec<Tag> {
             let ap = 2.0_f64.powf(d[0x10] as f64 / 24.0);
             tags.push(mk("Nikon", "MaxApertureAtMaxFocal", &format!("{:.1}", ap)));
         }
-        if d.len() > 0x11 && d[0x11] > 0 {
-            let ap = 2.0_f64.powf(d[0x11] as f64 / 24.0);
+        if d.len() > 0x12 && d[0x12] > 0 {
+            let ap = 2.0_f64.powf(d[0x12] as f64 / 24.0);
             tags.push(mk("Nikon", "EffectiveMaxAperture", &format!("{:.1}", ap)));
         }
     }

@@ -246,12 +246,10 @@ Nikon.nef	CropRight
 Nikon.nef	CropScaledResolution
 Nikon.nef	CropSourceResolution
 Nikon.nef	CropTop
-Nikon.nef	EffectiveMaxAperture
 Nikon.nef	ExposureAdj
 Nikon.nef	ExposureAdj2
 Nikon.nef	FilmType
 Nikon.nef	FocusPosition
-Nikon.nef	MCUVersion
 Nikon.nef	PhotometricInterpretation
 Nikon.nef	PreviewImageStart
 Nikon.nef	RowsPerStrip
@@ -274,13 +272,11 @@ NikonD2Hs.jpg	PreviewImageStart
 NikonD2Hs.jpg	RedBalance
 NikonD70.jpg	AFPointsInFocus
 NikonD70.jpg	CFAPattern
-NikonD70.jpg	EffectiveMaxAperture
 NikonD70.jpg	ExposureDifference
 NikonD70.jpg	ExternalFlashExposureComp
 NikonD70.jpg	ExternalFlashFirmware
 NikonD70.jpg	FlashExposureBracketValue
 NikonD70.jpg	LensID
-NikonD70.jpg	MCUVersion
 NikonD70.jpg	PreviewImageStart
 Olympus.jpg	CameraType
 Olympus.jpg	DataDump
