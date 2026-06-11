@@ -6,6 +6,24 @@ use crate::error::{Error, Result};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
+/// Read an s15Fixed16 value (Get32s / 0x10000) rounding to 5 decimals, matching
+/// ExifTool's GetFixed32s ("remove insignificant digits").
+fn fixed32s(b: &[u8]) -> f64 {
+    let v = i32::from_be_bytes([b[0], b[1], b[2], b[3]]) as f64 / 65536.0;
+    let r = if v > 0.0 { 0.5 } else { -0.5 };
+    ((v * 1e5 + r) as i64) as f64 / 1e5
+}
+
+/// Format three s15Fixed16 XYZ components Perl-style (%.15g, space-joined).
+fn xyz_str(b: &[u8]) -> String {
+    format!(
+        "{} {} {}",
+        crate::value::format_g15(fixed32s(&b[0..4])),
+        crate::value::format_g15(fixed32s(&b[4..8])),
+        crate::value::format_g15(fixed32s(&b[8..12]))
+    )
+}
+
 pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
     if data.len() < 128 || &data[36..40] != b"acsp" {
         return Err(Error::InvalidData("not an ICC profile".into()));
@@ -182,13 +200,10 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
 
     // ConnectionSpaceIlluminant (bytes 68-79, XYZ)
     if data.len() >= 80 {
-        let x = i32::from_be_bytes([data[68], data[69], data[70], data[71]]) as f64 / 65536.0;
-        let y = i32::from_be_bytes([data[72], data[73], data[74], data[75]]) as f64 / 65536.0;
-        let z = i32::from_be_bytes([data[76], data[77], data[78], data[79]]) as f64 / 65536.0;
         tags.push(mk(
             "ConnectionSpaceIlluminant",
             "Connection Space Illuminant",
-            Value::String(format!("{:.6} {:.6} {:.6}", x, y, z)),
+            Value::String(xyz_str(&data[68..80])),
         ));
     }
 
@@ -307,23 +322,13 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                     let value = match type_sig {
                         b"XYZ " if d.len() >= 20 => {
                             // XYZ type: 3 x s15Fixed16
-                            let x = i32::from_be_bytes([d[8], d[9], d[10], d[11]]) as f64 / 65536.0;
-                            let y =
-                                i32::from_be_bytes([d[12], d[13], d[14], d[15]]) as f64 / 65536.0;
-                            let z =
-                                i32::from_be_bytes([d[16], d[17], d[18], d[19]]) as f64 / 65536.0;
-                            format!("{:.6} {:.6} {:.6}", x, y, z)
+                            xyz_str(&d[8..20])
                         }
-                        b"curv" if d.len() >= 12 => {
-                            let count = u32::from_be_bytes([d[8], d[9], d[10], d[11]]);
-                            if count == 0 {
-                                "Linear".into()
-                            } else if count == 1 && d.len() >= 14 {
-                                let gamma = u16::from_be_bytes([d[12], d[13]]) as f64 / 256.0;
-                                format!("{:.1}", gamma)
-                            } else {
-                                format!("(Binary data {} entries)", count)
-                            }
+                        b"curv" => {
+                            // ExifTool's FormatICCTag only handles XYZ/text types; curveType
+                            // is left as raw binary (e.g. RedTRC -> "(Binary data 14 bytes...)").
+                            tags.push(mk(tag_name, tag_name, Value::Undefined(d.to_vec())));
+                            String::new()
                         }
                         b"desc" if d.len() >= 12 => {
                             let len = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as usize;
