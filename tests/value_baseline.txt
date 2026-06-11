@@ -2,9 +2,6 @@
 # New deltas fail regression_tag_values; fixes tighten it.
 # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
 AIFF.aif	Comment
-APE.ape	CoverArtFront
-APE.mpc	CoverArtFront
-APE.mpc	Picture
 ASF.wmv	Duration
 ASF.wmv	FileType
 ASF.wmv	FileTypeExtension
@@ -14,7 +11,6 @@ ASF.wmv	ImageWidth
 ASF.wmv	IsVBR
 ASF.wmv	MIMEType
 ASF.wmv	Megapixels
-ASF.wmv	Picture
 ASF.wmv	SendDuration
 Apple.jpg	AEStable
 Apple.jpg	AFStable
@@ -40,7 +36,6 @@ Apple.jpg	SubjectArea
 Apple.jpg	ThumbnailImage
 Apple.jpg	ThumbnailOffset
 Audible.aa	Copyright
-Audible.aa	CoverArt
 BPG.bpg	BlueMatrixColumn
 BPG.bpg	BlueTRC
 BPG.bpg	CMMFlags
@@ -605,7 +600,6 @@ Font.pfb	Notice
 Font.pfm	MIMEType
 Font.ttf	MIMEType
 FotoStation.jpg	ObjectCycle
-FotoStation.jpg	ObjectPreviewData
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
 FujiFilm.jpg	CompressedBitsPerPixel
@@ -791,7 +785,6 @@ ISO.iso	VolumeSize
 ITC.itc	DataType
 ITC.itc	FileType
 ITC.itc	FileTypeExtension
-ITC.itc	ImageData
 ITC.itc	MIMEType
 InDesign.indd	CreateDate
 InDesign.indd	FileTypeExtension
@@ -889,8 +882,6 @@ MIE.mie	FNumber
 MIE.mie	ImageSize
 MIE.mie	MIMEType
 MIE.mie	Resolution
-MIE.mie	SubfileData
-MIE.mie	ThumbnailImage
 MIE.mie	ThumbnailImageSize
 MIFF.miff	CompressedBitsPerPixel
 MIFF.miff	FileType
@@ -899,7 +890,6 @@ MIFF.miff	MIMEType
 MIFF.miff	PhotoshopQuality
 MIFF.miff	ShutterSpeed
 MIFF.miff	ThumbnailOffset
-MP3.mp3	Picture
 MWG.jpg	City
 MWG.jpg	DateCreated
 MWG.jpg	DateTimeCreated
@@ -1358,7 +1348,6 @@ Opus.opus	FileType
 Opus.opus	FileTypeExtension
 Opus.opus	OpusVersion
 Opus.opus	OutputGain
-Opus.opus	Picture
 PCAP.pcapng	TimeStamp
 PDF.pdf	CompressedBitsPerPixel
 PDF.pdf	CreateDate
@@ -1368,11 +1357,9 @@ PDF.pdf	ShutterSpeed
 PDF.pdf	Urgency
 PGF.pgf	Warning
 PLIST-bin.plist	TestBoolean
-PLIST-bin.plist	TestData
 PLIST-bin.plist	TestDate
 PLIST-bin.plist	TestDictWhen
 PLIST-xml.plist	MIMEType
-PLIST-xml.plist	TestData
 PLUS.xmp	ColorMode
 PLUS.xmp	CopyrightStatus
 PLUS.xmp	CreditLineRequired
@@ -1524,7 +1511,6 @@ QuickTime.mov	XMPToolkit
 RIFF.avi	MetadataDate
 RIFF.avi	XMPToolkit
 RIFF.wav	Make
-RIFF.wav	MakerNotes
 RIFF.webp	AlphaFiltering
 RIFF.webp	FileType
 RTF.rtf	Comments
@@ -1632,7 +1618,6 @@ Sony.jpg	Flash
 Sony.jpg	ImageDescription
 Sony.jpg	ThumbnailImage
 Sony.jpg	ThumbnailOffset
-Sony.pmp	JpgFromRaw
 TNEF.tnef	ClientSubmitTime
 TNEF.tnef	CorrelationKey
 TNEF.tnef	CreateDate
@@ -1661,7 +1646,6 @@ Text5.txt	FileTypeExtension
 Text5.txt	MIMEType
 Torrent.torrent	CreateDate
 Torrent.torrent	File4Length
-Torrent.torrent	Pieces
 Unknown.jpg	DigitalZoomRatio
 Unknown.jpg	Flash
 Unknown.jpg	ImageDescription
@@ -1696,9 +1680,7 @@ WPG.wpg	FileType
 WPG.wpg	FileTypeExtension
 WPG.wpg	MIMEType
 WTV.wtv	SubtitleDescription
-XISF.xisf	ImageData
 XISF.xisf	MIMEType
-XISF.xisf	XML
 XMP.inx	CreateDate
 XMP.inx	FileType
 XMP.inx	FileTypeExtension

@@ -69,7 +69,9 @@ impl Value {
             }
             Value::F32(v) => format!("{}", v),
             Value::F64(v) => format!("{}", v),
-            Value::Binary(data) => format!("(Binary data {} bytes)", data.len()),
+            Value::Binary(data) => {
+                format!("(Binary data {} bytes, use -b option to extract)", data.len())
+            }
             Value::List(items) => items
                 .iter()
                 .map(|v| v.to_display_string())
@@ -268,7 +270,7 @@ mod tests {
     fn display_binary() {
         assert_eq!(
             Value::Binary(vec![0, 1, 2]).to_display_string(),
-            "(Binary data 3 bytes)"
+            "(Binary data 3 bytes, use -b option to extract)"
         );
     }
 
