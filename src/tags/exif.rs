@@ -182,6 +182,49 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 return Some(format!("{:.1}", v));
             }
         }
+        // ApertureValue / MaxApertureValue — APEX: FNumber = 2^(val/2), "%.1f".
+        ("ExifIFD", 0x9202) | ("ExifIFD", 0x9205) => {
+            if let Some(v) = value.as_f64() {
+                return Some(format!("{:.1}", 2f64.powf(v / 2.0)));
+            }
+        }
+        // ShutterSpeedValue — APEX: exposure = 2^(-val) (0 if |val|>=100),
+        // then ExifTool's PrintExposureTime.
+        ("ExifIFD", 0x9201) => {
+            if let Some(v) = value.as_f64() {
+                let secs = if v.abs() < 100.0 { 2f64.powf(-v) } else { 0.0 };
+                if secs > 0.0 && secs < 0.250_01 {
+                    return Some(format!("1/{}", (0.5 + 1.0 / secs).floor() as i64));
+                }
+                let s = format!("{:.1}", secs);
+                return Some(s.strip_suffix(".0").map(str::to_string).unwrap_or(s));
+            }
+        }
+        // InteropIndex — ExifTool PrintConv.
+        ("InteropIFD", 0x0001) => {
+            if let Value::String(s) = value {
+                let s = s.trim_end_matches('\0').trim();
+                return Some(
+                    match s {
+                        "R98" => "R98 - DCF basic file (sRGB)",
+                        "R03" => "R03 - DCF option file (Adobe RGB)",
+                        "THM" => "THM - DCF thumbnail file",
+                        other => other,
+                    }
+                    .to_string(),
+                );
+            }
+        }
+        // InteropVersion — raw 4-char string like ExifVersion (e.g. "0100").
+        ("InteropIFD", 0x0002) => {
+            if let Value::Undefined(ref data) = value {
+                let s = crate::encoding::decode_utf8_or_latin1(data);
+                let s = s.trim_end_matches('\0');
+                if !s.is_empty() {
+                    return Some(s.to_string());
+                }
+            }
+        }
         // FocalLength - format as "X.Y mm"
         ("ExifIFD", 0x920A) => {
             if let Some(v) = value.as_f64() {
