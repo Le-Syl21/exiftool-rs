@@ -8025,6 +8025,17 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                     let disp = value.to_display_string();
                     Some(disp.strip_prefix("0 ").unwrap_or(&disp).to_string())
                 }
+                // ISO (int16u[2]): s/^0 //; s/^1 (\d+)/Hi $1/.
+                0x0002 => {
+                    let disp = value.to_display_string();
+                    Some(if let Some(rest) = disp.strip_prefix("0 ") {
+                        rest.to_string()
+                    } else if let Some(rest) = disp.strip_prefix("1 ") {
+                        format!("Hi {}", rest)
+                    } else {
+                        disp
+                    })
+                }
                 _ => None,
             }
         }
