@@ -568,7 +568,6 @@ OlympusE1.jpg	RawDevEditStatus
 OlympusE1.jpg	RawDevNoiseReduction
 OlympusE1.jpg	RawDevSettings
 OlympusE1.jpg	RawDevVersion
-OlympusE1.jpg	RedBalance
 OlympusE1.jpg	SensorTemperature
 OlympusE1.jpg	SharpnessSetting
 OlympusE1.jpg	SpecialMode

@@ -7362,6 +7362,17 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
     use crate::tags::{nikon_conv, sony_conv};
 
     match manufacturer {
+        Manufacturer::Olympus | Manufacturer::OlympusNew => match tag_id {
+            // RedBalance/BlueBalance: int16u[2], ValueConv = first/256, printed %.7g.
+            0x1017 | 0x1018 => {
+                let first = match value {
+                    Value::List(items) => items.first().and_then(|v| v.as_u64()),
+                    other => other.as_u64(),
+                };
+                first.map(|n| crate::value::format_g_prec(n as f64 / 256.0, 7))
+            }
+            _ => None,
+        },
         Manufacturer::Nikon | Manufacturer::NikonOld => {
             let v = value.as_u64();
             match tag_id {
