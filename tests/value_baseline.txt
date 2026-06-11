@@ -460,13 +460,9 @@ QuickTime.m4a	TrackVolume
 QuickTime.mov	HandlerClass
 QuickTime.mov	HandlerType
 QuickTime.mov	HandlerVendorID
-QuickTime.mov	ImageHeight
-QuickTime.mov	ImageSize
-QuickTime.mov	ImageWidth
 QuickTime.mov	Information
 QuickTime.mov	LightValue
 QuickTime.mov	MediaTimeScale
-QuickTime.mov	Megapixels
 QuickTime.mov	XMPToolkit
 RIFF.avi	XMPToolkit
 RIFF.wav	Make

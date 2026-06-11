@@ -1104,13 +1104,14 @@ fn parse_tkhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
         ));
     }
 
-    // ImageWidth/Height at data_rest[48..56] (fixed32u = fixed 16.16)
+    // From data_rest[0] (= reserved after duration): layer(8), alt-group(10),
+    // volume(12), reserved(14), matrix(16..52), ImageWidth(52), ImageHeight(56).
     let mut has_video = false;
-    if data_rest.len() >= 56 {
+    if data_rest.len() >= 60 {
         let w_raw =
-            u32::from_be_bytes([data_rest[48], data_rest[49], data_rest[50], data_rest[51]]);
-        let h_raw =
             u32::from_be_bytes([data_rest[52], data_rest[53], data_rest[54], data_rest[55]]);
+        let h_raw =
+            u32::from_be_bytes([data_rest[56], data_rest[57], data_rest[58], data_rest[59]]);
         // FixWrongFormat: if high bits set, the value is actually in wrong format
         let w = fix_wrong_format(w_raw);
         let h = fix_wrong_format(h_raw);
@@ -1121,7 +1122,7 @@ fn parse_tkhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
         }
     }
 
-    // Matrix at data_rest[12..48] (9 int32s)
+    // Matrix at data_rest[12..48] (9 int32s).
     // Only emit Rotation for video tracks (those with valid image dimensions)
     if data_rest.len() >= 48 && has_video {
         let rotation = calc_rotation_from_matrix(&data_rest[12..48]);
