@@ -7775,6 +7775,32 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Olympus | Manufacturer::OlympusNew => match tag_id {
+            // SpecialMode (0x0200): int16u[3] = shooting mode, sequence, panorama dir.
+            0x0200 => {
+                let disp = value.to_display_string();
+                let v: Vec<i64> = disp.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+                if v.len() >= 3 {
+                    let v0 = ["Normal", "Unknown (1)", "Fast", "Panorama"];
+                    let v2 = [
+                        "(none)",
+                        "Left to Right",
+                        "Right to Left",
+                        "Bottom to Top",
+                        "Top to Bottom",
+                    ];
+                    let mode = v0
+                        .get(v[0] as usize)
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| format!("Unknown ({})", v[0]));
+                    let pano = v2
+                        .get(v[2] as usize)
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| format!("Unknown ({})", v[2]));
+                    Some(format!("{}, Sequence: {}, Panorama: {}", mode, v[1], pano))
+                } else {
+                    None
+                }
+            }
             // Quality (0x0201): SX-type cameras start SQ at 0, all others at 1
             // (Olympus.pm). The corpus contains only non-SX bodies, so use the %t2 map.
             0x0201 => value.as_u64().map(|v| {

@@ -348,7 +348,6 @@ Olympus.jpg	CameraType
 Olympus.jpg	DataDump
 Olympus.jpg	DigitalZoom
 Olympus.jpg	FocalPlaneDiagonal
-Olympus.jpg	SpecialMode
 Olympus2.jpg	AFAreas
 Olympus2.jpg	AFPoint
 Olympus2.jpg	BodyFirmwareVersion
@@ -364,7 +363,6 @@ Olympus2.jpg	ImageStabilization
 Olympus2.jpg	ManometerReading
 Olympus2.jpg	PanoramaMode
 Olympus2.jpg	PreviewImageStart
-Olympus2.jpg	SpecialMode
 OlympusE1.jpg	AFAreas
 OlympusE1.jpg	AFPoint
 OlympusE1.jpg	BlueBalance
@@ -384,7 +382,6 @@ OlympusE1.jpg	LensFirmwareVersion
 OlympusE1.jpg	LensProperties
 OlympusE1.jpg	RawDevVersion
 OlympusE1.jpg	SensorTemperature
-OlympusE1.jpg	SpecialMode
 Opus.opus	OpusVersion
 Opus.opus	OutputGain
 PCAP.pcapng	TimeStamp
