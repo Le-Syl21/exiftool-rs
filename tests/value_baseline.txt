@@ -526,8 +526,6 @@ Olympus2.jpg	ExternalFlashBounce
 Olympus2.jpg	Gradation
 Olympus2.jpg	ImageStabilization
 Olympus2.jpg	ManometerReading
-Olympus2.jpg	NoiseReduction
-Olympus2.jpg	NoiseReduction2
 Olympus2.jpg	PanoramaMode
 Olympus2.jpg	PreviewImageStart
 Olympus2.jpg	Quality
@@ -551,11 +549,8 @@ OlympusE1.jpg	FocusInfoVersion
 OlympusE1.jpg	ImageProcessingVersion
 OlympusE1.jpg	LensFirmwareVersion
 OlympusE1.jpg	LensProperties
-OlympusE1.jpg	NoiseReduction
-OlympusE1.jpg	NoiseReduction2
 OlympusE1.jpg	Quality
 OlympusE1.jpg	RawDevEditStatus
-OlympusE1.jpg	RawDevNoiseReduction
 OlympusE1.jpg	RawDevSettings
 OlympusE1.jpg	RawDevVersion
 OlympusE1.jpg	SensorTemperature

@@ -5556,6 +5556,34 @@ fn read_makernote_ifd_with_base(
                         } else {
                             disp.clone()
                         }
+                    } else if matches!(
+                        name,
+                        "NoiseReduction" | "NoiseReduction2" | "RawDevNoiseReduction"
+                    ) {
+                        // Perl: 0 => '(none)', BITMASK { Noise Reduction/Filter/.../Auto }
+                        match val.as_u64() {
+                            Some(0) => "(none)".to_string(),
+                            Some(n) => {
+                                let bits = [
+                                    "Noise Reduction",
+                                    "Noise Filter",
+                                    "Noise Filter (ISO Boost)",
+                                    "Auto",
+                                ];
+                                let set: Vec<&str> = bits
+                                    .iter()
+                                    .enumerate()
+                                    .filter(|(i, _)| n & (1 << i) != 0)
+                                    .map(|(_, s)| *s)
+                                    .collect();
+                                if set.is_empty() {
+                                    n.to_string()
+                                } else {
+                                    set.join(", ")
+                                }
+                            }
+                            None => val.to_display_string(),
+                        }
                     } else if name == "FlashType" {
                         match val.as_u64() {
                             Some(0) => "None".to_string(),
