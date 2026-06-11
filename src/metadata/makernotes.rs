@@ -5394,6 +5394,10 @@ fn read_makernote_ifd_with_base(
                         // Olympus version tags are undef[4] ASCII (e.g. "0100", "0111").
                         // (FirmwareVersion tags are int32u and stay numeric.)
                         sval.iter().map(|&c| c as char).collect()
+                    } else if name == "FocalPlaneDiagonal" {
+                        format!("{} mm", val.to_display_string()) // Perl: '"$val mm"'
+                    } else if name == "ManometerPressure" {
+                        format!("{} kPa", val.to_display_string()) // Perl: '"$val kPa"'
                     } else if let Some(pc) = (tag_id == 0x2020)
                         .then(|| val.as_u64().and_then(|v| olympus_camera_settings_pc(stid, v)))
                         .flatten()
