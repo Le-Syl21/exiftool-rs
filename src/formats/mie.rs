@@ -140,6 +140,13 @@ fn parse_mie_group(
             // Parse value based on format
             let value = parse_mie_value(format_type, value_data);
 
+            // *ImageSize tags join their two dimensions with "x" (Perl tr/ /x/).
+            let print_value = if resolved_name.ends_with("ImageSize") {
+                value.to_display_string().replace(' ', "x")
+            } else {
+                value.to_display_string()
+            };
+
             tags.push(Tag {
                 id: TagId::Text(resolved_name.clone()),
                 name: resolved_name.clone(),
@@ -149,7 +156,7 @@ fn parse_mie_group(
                     family1: group_name.into(),
                     family2,
                 },
-                print_value: value.to_display_string(),
+                print_value,
                 raw_value: value,
                 priority: 0,
             });

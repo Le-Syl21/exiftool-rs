@@ -396,10 +396,8 @@ Lytro.lfp	HyperfocalDistance
 Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
 M2TS.mts	FileTypeExtension
-MIE.mie	ImageSize
 MIE.mie	MIMEType
 MIE.mie	Resolution
-MIE.mie	ThumbnailImageSize
 MIFF.miff	FileType
 MIFF.miff	FileTypeExtension
 MIFF.miff	MIMEType
