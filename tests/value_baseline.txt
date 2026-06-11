@@ -150,7 +150,6 @@ GIF.gif	PixelAspectRatio
 GPS.jpg	Aperture
 GPS.jpg	City
 GPS.jpg	FNumber
-GPS.jpg	FileSource
 GPS.jpg	SceneType
 GeoTiff.tif	GeogGeodeticDatum
 GeoTiff.tif	Projection
@@ -437,7 +436,6 @@ Sanyo.jpg	DataDump
 Sanyo.jpg	FlashMode
 Sanyo.jpg	Macro
 Sanyo.jpg	SelfTimer
-Sigma.jpg	FileSource
 Sigma.jpg	Highlight
 Sigma.jpg	Shadow
 Sigma.jpg	X3FillLight

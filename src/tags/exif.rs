@@ -555,15 +555,18 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
         // FileSource
         ("ExifIFD", 0xA300) => {
             if let Value::Undefined(ref data) = value {
+                // Sigma incorrectly writes this as 4 bytes "\3\0\0\0".
+                if data == b"\x03\x00\x00\x00" {
+                    return Some("Sigma Digital Camera".to_string());
+                }
                 if !data.is_empty() {
                     return Some(
                         match data[0] {
-                            1 => "Film Scanner",
-                            2 => "Reflection Print Scanner",
-                            3 => "Digital Camera",
-                            _ => return None,
-                        }
-                        .to_string(),
+                            1 => "Film Scanner".to_string(),
+                            2 => "Reflection Print Scanner".to_string(),
+                            3 => "Digital Camera".to_string(),
+                            n => format!("Unknown ({})", n),
+                        },
                     );
                 }
             }
