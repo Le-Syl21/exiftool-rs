@@ -7739,6 +7739,14 @@ fn panasonic_internal_serial(bytes: &[u8]) -> Option<String> {
     ))
 }
 
+/// Borrow the raw bytes of an undef/binary Value when it has at least 3 bytes.
+fn mn_undef_bytes(value: &Value) -> Option<&[u8]> {
+    match value {
+        Value::Binary(b) | Value::Undefined(b) if b.len() >= 3 => Some(b.as_slice()),
+        _ => None,
+    }
+}
+
 /// Decode an even-length hex string to its ASCII bytes (Perl `pack "H*"`).
 fn hex_to_ascii(hex: &str) -> Option<String> {
     if hex.is_empty() || hex.len() % 2 != 0 {
@@ -7867,6 +7875,18 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 0x0083 => v.map(nikon_conv::lens_type),
                 // Lens (0x0084): rational64u[4] → Exif::PrintLensInfo.
                 0x0084 => crate::tags::exif::print_lens_info(&value.to_display_string()),
+                // ProgramShift (0x000d): undef[4], signed bytes a*(b/c) or 0.
+                0x000d => mn_undef_bytes(value).map(|b| {
+                    let (a, bb, c) = (b[0] as i8 as f64, b[1] as i8 as f64, b[2] as i8 as f64);
+                    let r = if c != 0.0 { a * (bb / c) } else { 0.0 };
+                    crate::value::format_g15(r)
+                }),
+                // LensFStops (0x008b): undef[4], unsigned a*(b/c), PrintConv %.2f.
+                0x008b => mn_undef_bytes(value).map(|b| {
+                    let (a, bb, c) = (b[0] as f64, b[1] as f64, b[2] as f64);
+                    let r = if c != 0.0 { a * (bb / c) } else { 0.0 };
+                    format!("{:.2}", r)
+                }),
                 // SensorPixelSize (0x009a): rational64u[2], PrintConv s/ / x /;"$val um".
                 0x009a => {
                     let disp = value.to_display_string();
