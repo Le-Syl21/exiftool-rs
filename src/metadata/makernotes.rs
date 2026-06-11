@@ -1195,13 +1195,18 @@ fn decode_jvc_text(data: &[u8]) -> Vec<Tag> {
         let key = &text[key_start..pos];
         pos += 1; // skip ':'
 
-        // Value is next 4 bytes (or until next uppercase letter)
+        // The value runs until the next "XYZ:" key (3 uppercase letters + colon),
+        // a null, or end of data. (JVC values like "FINE"/"STND" are uppercase.)
         let val_start = pos;
-        while pos < bytes.len() && pos - val_start < 4 && !bytes[pos].is_ascii_uppercase() {
-            pos += 1;
-        }
-        // Extend if still lowercase/digits
-        while pos < bytes.len() && !bytes[pos].is_ascii_uppercase() && bytes[pos] != 0 {
+        while pos < bytes.len() && bytes[pos] != 0 {
+            let is_next_key = pos + 3 < bytes.len()
+                && bytes[pos].is_ascii_uppercase()
+                && bytes[pos + 1].is_ascii_uppercase()
+                && bytes[pos + 2].is_ascii_uppercase()
+                && bytes[pos + 3] == b':';
+            if is_next_key {
+                break;
+            }
             pos += 1;
         }
         let val = text[val_start..pos].trim_end_matches('\0').trim();

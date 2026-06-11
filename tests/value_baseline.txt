@@ -204,7 +204,6 @@ InfiRay.jpg	VisibleSensorAperture
 InfiRay.jpg	VisibleSensorSerialNumber
 JVC.jpg	CPUVersions
 JVC.jpg	Quality
-JVC2.jpg	Quality
 JXL2.jxl	CompatibleBrands
 Jpeg2000.jp2	CompatibleBrands
 Jpeg2000.jp2	ExifByteOrder
