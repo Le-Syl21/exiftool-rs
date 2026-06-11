@@ -7833,6 +7833,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             0x0010 => value
                 .as_str()
                 .map(|s| s.replacen("Satu:", "", 1).trim().to_string()),
+            // Sharpness (string form): ValueConv strips "Shar:".
+            0x0011 => value
+                .as_str()
+                .map(|s| s.replacen("Shar:", "", 1).trim().to_string()),
             // MeteringMode: string-keyed PrintConv (Sigma.pm 0x0009).
             0x0009 => value.as_str().and_then(|s| {
                 Some(

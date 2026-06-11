@@ -527,7 +527,6 @@ Sigma.jpg	ColorAdjustment
 Sigma.jpg	FileSource
 Sigma.jpg	Highlight
 Sigma.jpg	Shadow
-Sigma.jpg	Sharpness
 Sigma.jpg	X3FillLight
 Sigma.x3f	LensType
 SigmaDP2.x3f	BracketShot
