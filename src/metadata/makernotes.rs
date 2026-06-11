@@ -7800,6 +7800,22 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 _ => None,
             }
         }
+        Manufacturer::Panasonic => match tag_id {
+            // Contrast/Saturation/Sharpness: Exif::printParameter (0 => Normal, else +N/-N).
+            0x0039 | 0x0040 | 0x0041 => value.as_f64().filter(|f| f.fract() == 0.0).map(|f| {
+                let v = f as i64;
+                if v == 0 {
+                    "Normal".to_string()
+                } else if v > 0 && v > 0xfff0 {
+                    (v - 0x10000).to_string()
+                } else if v > 0 {
+                    format!("+{}", v)
+                } else {
+                    v.to_string()
+                }
+            }),
+            _ => None,
+        },
         Manufacturer::Sigma => match tag_id {
             // ExposureCompensation (string form): ValueConv strips "Expo:".
             0x000c => value

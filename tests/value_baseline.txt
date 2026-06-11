@@ -448,7 +448,6 @@ Panasonic.jpg	VideoFrameRate
 Panasonic.rw2	AFAreaMode
 Panasonic.rw2	AFPointPosition
 Panasonic.rw2	InternalSerialNumber
-Panasonic.rw2	Saturation
 Panasonic.rw2	ThumbnailOffset
 Panasonic.rw2	VideoFrameRate
 Panasonic.rw2	XResolution
