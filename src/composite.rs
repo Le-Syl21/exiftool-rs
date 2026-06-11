@@ -572,7 +572,14 @@ fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<Vec<u8>> {
 
 fn find_tag<'a>(tags: &'a [Tag], name: &str) -> Option<&'a Tag> {
     let name_lower = name.to_lowercase();
-    tags.iter().find(|t| t.name.to_lowercase() == name_lower)
+    // Prefer the highest-priority tag (first among ties) so composites use the same
+    // value ExifTool's priority dedup would surface, not merely the first extracted.
+    tags.iter()
+        .filter(|t| t.name.to_lowercase() == name_lower)
+        .fold(None, |best: Option<&Tag>, t| match best {
+            Some(b) if b.priority >= t.priority => Some(b),
+            _ => Some(t),
+        })
 }
 
 fn find_tag_in_group<'a>(tags: &'a [Tag], name: &str, group: &str) -> Option<&'a Tag> {

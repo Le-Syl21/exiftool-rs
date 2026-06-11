@@ -110,9 +110,7 @@ ExifTool.jpg	CropTop
 ExifTool.jpg	DateTimeOriginal
 ExifTool.jpg	ExposureCompensation
 ExifTool.jpg	ExposureTime
-ExifTool.jpg	ImageHeight
 ExifTool.jpg	ImageSize
-ExifTool.jpg	ImageWidth
 ExifTool.jpg	LightValue
 ExifTool.jpg	Make
 ExifTool.jpg	Megapixels
@@ -207,10 +205,6 @@ InfiRay.jpg	GPSLongitudeRef
 InfiRay.jpg	IJPEGTempVersion
 InfiRay.jpg	IJPEGVersion
 InfiRay.jpg	IRSensorSerialNumber
-InfiRay.jpg	ImageHeight
-InfiRay.jpg	ImageSize
-InfiRay.jpg	ImageWidth
-InfiRay.jpg	Megapixels
 InfiRay.jpg	VisibleFocalLength
 InfiRay.jpg	VisibleSensorAperture
 InfiRay.jpg	VisibleSensorSerialNumber
@@ -515,13 +509,9 @@ SigmaDP2.x3f	CameraName
 SigmaDP2.x3f	ColorAdjustment
 SigmaDP2.x3f	ExposureTime2
 SigmaDP2.x3f	ImageBoardID
-SigmaDP2.x3f	ImageHeight
-SigmaDP2.x3f	ImageSize
 SigmaDP2.x3f	ImageUniqueID
-SigmaDP2.x3f	ImageWidth
 SigmaDP2.x3f	LensID
 SigmaDP2.x3f	LensType
-SigmaDP2.x3f	Megapixels
 SigmaDP2.x3f	NetExposureCompensation
 SigmaDP2.x3f	PreviewImage
 SigmaDP2.x3f	PreviewImageStart

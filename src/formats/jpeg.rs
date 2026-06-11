@@ -95,7 +95,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     },
                     raw_value: crate::value::Value::U16(width),
                     print_value: width.to_string(),
-                    priority: 0,
+                    priority: 1,
                 });
                 tags.push(crate::tag::Tag {
                     id: crate::tag::TagId::Text("ImageHeight".into()),
@@ -108,7 +108,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     },
                     raw_value: crate::value::Value::U16(height),
                     print_value: height.to_string(),
-                    priority: 0,
+                    priority: 1,
                 });
                 tags.push(crate::tag::Tag {
                     id: crate::tag::TagId::Text("BitsPerSample".into()),
