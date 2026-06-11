@@ -632,10 +632,11 @@ fn parse_stream_properties(data: &[u8], tags: &mut Vec<Tag>) {
             "Audio Sample Rate",
             Value::U32(sample_rate),
         ));
-    } else if guid_matches(stream_guid, &GUID_VIDEO_STREAM) && ts.len() >= 11 {
-        // VideoMediaType: 4 bytes width, 4 bytes height at offset 4 and 8
-        let width = u32::from_le_bytes([ts[4], ts[5], ts[6], ts[7]]);
-        let height = u32::from_le_bytes([ts[8], ts[9], ts[10], ts[11]]);
+    } else if guid_matches(stream_guid, &GUID_VIDEO_STREAM) && ts.len() >= 8 {
+        // ASF.pm: ImageWidth (int32u) at object offset 54, ImageHeight at 58 —
+        // i.e. the first two int32u of the type-specific data.
+        let width = u32::from_le_bytes([ts[0], ts[1], ts[2], ts[3]]);
+        let height = u32::from_le_bytes([ts[4], ts[5], ts[6], ts[7]]);
         tags.push(mk("ImageWidth", "Image Width", Value::U32(width)));
         tags.push(mk("ImageHeight", "Image Height", Value::U32(height)));
     }
