@@ -6121,7 +6121,18 @@ fn read_makernote_ifd_with_base(
                             .map(|s| s.to_string())
                         })
                 })
-                .unwrap_or_else(|| value.to_display_string())
+                .unwrap_or_else(|| {
+                    // Nikon's Main table applies FormatString as its default PRINT_CONV,
+                    // fixing the case of all-caps string values (NORMAL -> Normal).
+                    let disp = value.to_display_string();
+                    if manufacturer == Manufacturer::Nikon
+                        && matches!(value, Value::String(_))
+                    {
+                        nikon_format_string(&disp)
+                    } else {
+                        disp
+                    }
+                })
         };
 
         // Track Pentax PreviewImage offset/length for post-loop synthesis
@@ -7548,6 +7559,93 @@ fn mk_canon_str(name: &str, value: &str) -> Tag {
         print_value: value.to_string(),
         priority: 0,
     }
+}
+
+/// Port of Nikon.pm `FormatString` (the Nikon Main table's default PRINT_CONV).
+/// Fixes the case of all-caps string values: each word whose leading run of
+/// uppercase letters contains a vowel is title-cased (e.g. "NORMAL" -> "Normal",
+/// "AUTO" -> "Auto"). Words without a vowel (e.g. "VR") are left untouched.
+pub fn nikon_format_string(input: &str) -> String {
+    const VOWELS: &[u8] = b"AEIOUY";
+    // s/\s+$// — strip trailing whitespace.
+    let bytes: Vec<u8> = input.trim_end().bytes().collect();
+    // Only act if there is an uppercase vowel anywhere.
+    if !bytes.iter().any(|b| VOWELS.contains(b)) {
+        return String::from_utf8_lossy(&bytes).into_owned();
+    }
+    let is_word = |b: u8| b.is_ascii_alphanumeric() || b == b'_';
+    let mut out = bytes.clone();
+    let mut matched_a = false; // a word began with an uppercase vowel
+    let mut matched_b = false; // a word began with an uppercase consonant
+    let mut i = 0;
+    while i < out.len() {
+        let at_word_start = is_word(out[i]) && (i == 0 || !is_word(out[i - 1]));
+        if at_word_start && out[i].is_ascii_uppercase() {
+            // Measure the leading run of uppercase ASCII letters.
+            let start = i;
+            let mut j = i;
+            while j < out.len() && out[j].is_ascii_uppercase() {
+                j += 1;
+            }
+            let run = &out[start..j];
+            let has_vowel = run.iter().any(|b| VOWELS.contains(b));
+            if run.len() >= 2 && has_vowel {
+                if VOWELS.contains(&out[start]) {
+                    matched_a = true;
+                } else {
+                    matched_b = true;
+                }
+                for b in out[start + 1..j].iter_mut() {
+                    *b = b.to_ascii_lowercase();
+                }
+            }
+            // Skip past the whole word.
+            while i < out.len() && is_word(out[i]) {
+                i += 1;
+            }
+            continue;
+        }
+        i += 1;
+    }
+    let mut s = String::from_utf8_lossy(&out).into_owned();
+    // Perl patches applied conditionally to the regex matches.
+    if matched_a {
+        s = patch_word(&s, "Af", "AF");
+        // s/  +.$//s — drop a stray "  X" terminator at the very end.
+        if let Some(pos) = s.rfind("  ") {
+            if pos + 2 <= s.len() && s.len() - pos == 3 {
+                s.truncate(pos);
+            }
+        }
+    }
+    if matched_b {
+        s = patch_word(&s, "Raw", "RAW");
+    }
+    s
+}
+
+/// Replace whole-word occurrences of `from` with `to` (Perl \bword\b semantics).
+fn patch_word(s: &str, from: &str, to: &str) -> String {
+    let is_word = |c: char| c.is_ascii_alphanumeric() || c == '_';
+    let bytes = s.as_bytes();
+    let mut result = String::with_capacity(s.len());
+    let mut i = 0;
+    while i < s.len() {
+        if s[i..].starts_with(from) {
+            let before_ok = i == 0 || !is_word(bytes[i - 1] as char);
+            let after_idx = i + from.len();
+            let after_ok = after_idx >= s.len() || !is_word(bytes[after_idx] as char);
+            if before_ok && after_ok {
+                result.push_str(to);
+                i = after_idx;
+                continue;
+            }
+        }
+        let ch = s[i..].chars().next().unwrap();
+        result.push(ch);
+        i += ch.len_utf8();
+    }
+    result
 }
 
 fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -> Option<String> {
