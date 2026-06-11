@@ -559,8 +559,6 @@ OlympusE1.jpg	ImageProcessingVersion
 OlympusE1.jpg	InternalFlash
 OlympusE1.jpg	LensFirmwareVersion
 OlympusE1.jpg	LensProperties
-OlympusE1.jpg	MaxAperture
-OlympusE1.jpg	MaxApertureAtMaxFocal
 OlympusE1.jpg	NoiseReduction
 OlympusE1.jpg	NoiseReduction2
 OlympusE1.jpg	Quality

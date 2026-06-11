@@ -5535,6 +5535,18 @@ fn read_makernote_ifd_with_base(
                             priority: 0,
                         });
                         continue;
+                    } else if matches!(
+                        name,
+                        "MaxAperture" | "MaxApertureAtMinFocal" | "MaxApertureAtMaxFocal"
+                    ) && val.as_u64().is_some()
+                    {
+                        // Olympus aperture ValueConv: sqrt(2)**($val/256) = 2^(val/512).
+                        let v = val.as_u64().unwrap() as f64;
+                        if v != 0.0 {
+                            format!("{:.1}", 2f64.powf(v / 512.0))
+                        } else {
+                            "0".to_string()
+                        }
                     } else if name == "FocalPlaneDiagonal" {
                         format!("{} mm", val.to_display_string()) // Perl: '"$val mm"'
                     } else if name == "ManometerPressure" {
