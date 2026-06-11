@@ -75,10 +75,8 @@ CanonRaw.cr2	CR2CFAPattern
 CanonRaw.cr2	FOV
 CanonRaw.cr2	FocalLength35efl
 CanonRaw.cr2	HyperfocalDistance
-CanonRaw.cr2	ImageSize
 CanonRaw.cr2	Lens35efl
 CanonRaw.cr2	ManualFlashOutput
-CanonRaw.cr2	Megapixels
 CanonRaw.cr2	RedBalance
 CanonRaw.cr2	SelfTimer2
 CanonRaw.cr2	VRDOffset
@@ -270,9 +268,7 @@ FujiFilm.raf	AFMode
 FujiFilm.raf	DynamicRange
 FujiFilm.raf	FacesDetected
 FujiFilm.raf	FocusMode
-FujiFilm.raf	ImageSize
 FujiFilm.raf	InternalSerialNumber
-FujiFilm.raf	Megapixels
 FujiFilm.raf	Model
 FujiFilm.raf	Saturation
 FujiFilm.raf	SequenceNumber

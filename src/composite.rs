@@ -721,11 +721,30 @@ fn compute_aperture(tags: &[Tag]) -> Option<Tag> {
 }
 
 fn compute_image_size(tags: &[Tag]) -> Option<Tag> {
-    // Perl composite ImageSize requires ImageWidth and ImageHeight (format-native dimensions).
-    // For PanasonicRaw, ImageWidth/ImageHeight composites are computed before this runs.
-    // ExifImageWidth/Height are "Desire" tags only used for Canon/Phase One TIFF-based RAW.
-    // Do not fall back to ExifImageWidth/Height to avoid computing ImageSize for formats
-    // (e.g. PDF) that have embedded EXIF but no native image dimensions.
+    // Perl ImageSize ValueConv: RawImageCroppedSize (RAF) wins; ExifImageWidth/Height for
+    // CR2/IIQ/EIP; otherwise the native ImageWidth/Height.
+    if let Some(rcs) = find_tag_value(tags, "RawImageCroppedSize") {
+        let v = rcs.trim().replace(' ', "x");
+        if !v.is_empty() {
+            return Some(mk_composite("ImageSize", "Image Size", Value::String(v)));
+        }
+    }
+    let ft = find_tag(tags, "FileType")
+        .map(|t| t.print_value.clone())
+        .unwrap_or_default();
+    if matches!(ft.as_str(), "CR2" | "IIQ" | "EIP") {
+        let ew = find_tag(tags, "ExifImageWidth")
+            .and_then(|t| t.raw_value.as_u64().or_else(|| t.print_value.trim().parse().ok()));
+        let eh = find_tag(tags, "ExifImageHeight")
+            .and_then(|t| t.raw_value.as_u64().or_else(|| t.print_value.trim().parse().ok()));
+        if let (Some(w), Some(h)) = (ew, eh) {
+            return Some(mk_composite(
+                "ImageSize",
+                "Image Size",
+                Value::String(format!("{}x{}", w, h)),
+            ));
+        }
+    }
     let width = find_tag(tags, "ImageWidth").and_then(|t| {
         t.raw_value
             .as_u64()
