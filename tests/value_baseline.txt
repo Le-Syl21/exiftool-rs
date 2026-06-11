@@ -90,7 +90,6 @@ ExifTool.jpg	ShutterReleaseMethod
 ExifTool.jpg	ShutterReleaseTiming
 ExifTool.jpg	ShutterSpeed
 ExifTool.jpg	ShutterSpeedValue
-ExifTool.jpg	TargetDistanceSetting
 ExifTool.jpg	URL
 ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
@@ -127,7 +126,6 @@ Geotag.kml	KmlDocumentPlacemarkTrackWhen
 Geotag.xml	HistoryRunTrackTrackpointTime
 GoPro.jpg	ExposureCompensation
 GoPro.jpg	FlashpixVersion
-GoPro.jpg	MediaUniqueID
 GoPro.jpg	Sharpness
 GoPro.jpg	WhiteBalance
 Google.jpg	DirectoryItemMime

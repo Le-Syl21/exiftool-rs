@@ -337,6 +337,13 @@ fn parse_ciff_dir(
                 let n: u32 = raw_print.parse().unwrap_or(0);
                 canon_model_id_str(n)
             }
+            0x1807 => {
+                // TargetDistanceSetting: Format 'float' (raw 4 bytes are a float),
+                // PrintConv "$val mm" (CanonRaw.pm).
+                let bits: u32 = raw_print.parse().unwrap_or(0);
+                let f = f32::from_bits(bits) as f64;
+                format!("{} mm", crate::value::format_g15(f))
+            }
             0x100a => {
                 // TargetImageType: PrintConv
                 match raw_print.parse::<u32>().unwrap_or(99) {

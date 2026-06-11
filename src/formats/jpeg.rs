@@ -4577,7 +4577,13 @@ fn parse_gpmf_records(data: &[u8], tags: &mut Vec<crate::tag::Tag>, depth: usize
         }
 
         // Decode value based on format
-        let val_str = if fmt == 0x63 {
+        let val_str = if name == "MediaUniqueID" && fmt == 0x4c {
+            // MUID PrintConv: each int32u formatted "%.8x" and concatenated (GoPro.pm).
+            val_data
+                .chunks_exact(4)
+                .map(|c| format!("{:08x}", u32::from_be_bytes([c[0], c[1], c[2], c[3]])))
+                .collect::<String>()
+        } else if fmt == 0x63 {
             // string
             crate::encoding::decode_utf8_or_latin1(val_data)
                 .trim_end_matches('\0')
