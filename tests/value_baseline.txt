@@ -3,13 +3,10 @@
 # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
 AIFF.aif	Comment
 ASF.wmv	Duration
-ASF.wmv	FileType
-ASF.wmv	FileTypeExtension
 ASF.wmv	ImageHeight
 ASF.wmv	ImageSize
 ASF.wmv	ImageWidth
 ASF.wmv	IsVBR
-ASF.wmv	MIMEType
 ASF.wmv	Megapixels
 ASF.wmv	SendDuration
 Apple.jpg	AEStable
@@ -725,8 +722,6 @@ OlympusE1.jpg	RedBalance
 OlympusE1.jpg	SensorTemperature
 OlympusE1.jpg	SharpnessSetting
 OlympusE1.jpg	SpecialMode
-Opus.opus	FileType
-Opus.opus	FileTypeExtension
 Opus.opus	OpusVersion
 Opus.opus	OutputGain
 PCAP.pcapng	TimeStamp

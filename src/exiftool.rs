@@ -1590,6 +1590,25 @@ impl ExifTool {
                     }
                 }
             }
+            // ASF is the container for WMV (video) and WMA (audio); refine by extension.
+            if ft == FileType::Asf {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if ext.eq_ignore_ascii_case("wmv") {
+                        return Ok(FileType::Wmv);
+                    }
+                    if ext.eq_ignore_ascii_case("wma") {
+                        return Ok(FileType::Wma);
+                    }
+                }
+            }
+            // Opus is an Ogg stream with the Opus codec.
+            if ft == FileType::Ogg {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if ext.eq_ignore_ascii_case("opus") {
+                        return Ok(FileType::Opus);
+                    }
+                }
+            }
             // TIFF magic covers many RAW variants (DNG, NEF, ARW, …); ExifTool refines
             // the type by extension since they share the TIFF structure.
             if ft == FileType::Tiff {
