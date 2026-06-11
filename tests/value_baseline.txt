@@ -97,7 +97,6 @@ Canon1DmkIII.jpg	FocalPlaneXResolution
 Canon1DmkIII.jpg	FocalPlaneYResolution
 Canon1DmkIII.jpg	FocalUnits
 Canon1DmkIII.jpg	FocusingScreen
-Canon1DmkIII.jpg	GPSVersionID
 Canon1DmkIII.jpg	HighISONoiseReduction
 Canon1DmkIII.jpg	ISOSpeedRange
 Canon1DmkIII.jpg	InfoButtonWhenShooting
@@ -183,7 +182,6 @@ CanonRaw.cr3	FlashModel
 CanonRaw.cr3	FocalPlaneXResolution
 CanonRaw.cr3	FocalPlaneYResolution
 CanonRaw.cr3	FocalUnits
-CanonRaw.cr3	GPSVersionID
 CanonRaw.cr3	HandlerType
 CanonRaw.cr3	HyperfocalDistance
 CanonRaw.cr3	ISOExpansion
@@ -273,9 +271,7 @@ DNG.dng	CFAPlaneColor
 DNG.dng	CanonImageSize
 DNG.dng	ColorTone
 DNG.dng	Compression
-DNG.dng	DNGBackwardVersion
 DNG.dng	DNGLensInfo
-DNG.dng	DNGVersion
 DNG.dng	DateTimeOriginal
 DNG.dng	DriveMode
 DNG.dng	EasyMode
@@ -446,7 +442,6 @@ FujiFilm.raf	DynamicRange
 FujiFilm.raf	FacesDetected
 FujiFilm.raf	Flash
 FujiFilm.raf	FocusMode
-FujiFilm.raf	GPSVersionID
 FujiFilm.raf	ImageSize
 FujiFilm.raf	InternalSerialNumber
 FujiFilm.raf	Megapixels
@@ -476,7 +471,6 @@ GPS.jpg	GPSLatitude
 GPS.jpg	GPSLongitude
 GPS.jpg	GPSPosition
 GPS.jpg	GPSTimeStamp
-GPS.jpg	GPSVersionID
 GPS.jpg	SceneType
 GPS.jpg	ShutterSpeed
 GPS.jpg	ThumbnailOffset
@@ -527,7 +521,6 @@ Google.jpg	GPSLatitude
 Google.jpg	GPSLongitude
 Google.jpg	GPSPosition
 Google.jpg	GPSTimeStamp
-Google.jpg	GPSVersionID
 Google.jpg	HDRPlusMakerNote
 Google.jpg	ImageData
 Google.jpg	ImageName
@@ -743,7 +736,6 @@ Minolta.mrw	SubjectProgram
 Minolta.mrw	WhiteBalance
 Minolta.mrw	WideFocusZone
 Motorola.jpg	Flash
-Motorola.jpg	GPSVersionID
 Motorola.jpg	ThumbnailOffset
 Nikon.jpg	AuxiliaryLens
 Nikon.jpg	ColorMode
@@ -834,7 +826,6 @@ NikonD2Hs.jpg	FlashExposureBracketValue
 NikonD2Hs.jpg	FlashSetting
 NikonD2Hs.jpg	FlashType
 NikonD2Hs.jpg	FocusMode
-NikonD2Hs.jpg	GPSVersionID
 NikonD2Hs.jpg	ISOSetting
 NikonD2Hs.jpg	Lens
 NikonD2Hs.jpg	LensFStops
@@ -1179,7 +1170,6 @@ Ricoh2.jpg	GPSSpeedRef
 Ricoh2.jpg	GPSStatus
 Ricoh2.jpg	GPSTimeStamp
 Ricoh2.jpg	GPSTrackRef
-Ricoh2.jpg	GPSVersionID
 Ricoh2.jpg	ImageDescription
 Ricoh2.jpg	InternalSerialNumber
 Ricoh2.jpg	Make

@@ -70,6 +70,17 @@ pub fn lookup_generated(tag_id: u16) -> Option<(&'static str, &'static str)> {
 /// Apply print conversion for known tags.
 pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
     match (ifd, tag_id) {
+        // GPSVersionID, DNGVersion, DNGBackwardVersion: join components with "."
+        ("GPS", 0x0000) | (_, 0xC612) | (_, 0xC613) => {
+            let joined: Vec<String> = value
+                .to_display_string()
+                .split_whitespace()
+                .map(|s| s.to_string())
+                .collect();
+            if !joined.is_empty() {
+                return Some(joined.join("."));
+            }
+        }
         // Orientation
         (_, 0x0112) => {
             if let Some(v) = value.as_u64() {
