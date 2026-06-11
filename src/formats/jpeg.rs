@@ -165,14 +165,16 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 if components >= 3 && sof.len() >= 6 + components as usize * 3 {
                     let h_sample = (sof[7] >> 4) & 0x0F;
                     let v_sample = sof[7] & 0x0F;
-                    let subsampling = if h_sample == 2 && v_sample == 2 {
-                        "YCbCr4:2:0".to_string()
-                    } else if h_sample == 2 && v_sample == 1 {
-                        "YCbCr4:2:2".to_string()
-                    } else if h_sample == 1 && v_sample == 1 {
-                        "YCbCr4:4:4".to_string()
-                    } else {
-                        format!("YCbCr {}:{}", h_sample, v_sample)
+                    // ExifTool's PrintConv keeps the raw "(h v)" suffix, e.g.
+                    // "YCbCr4:2:0 (2 2)"; unknown pairs show the raw "h v".
+                    let subsampling = match (h_sample, v_sample) {
+                        (1, 1) => format!("YCbCr4:4:4 ({} {})", h_sample, v_sample),
+                        (1, 2) => format!("YCbCr4:4:0 ({} {})", h_sample, v_sample),
+                        (2, 1) => format!("YCbCr4:2:2 ({} {})", h_sample, v_sample),
+                        (2, 2) => format!("YCbCr4:2:0 ({} {})", h_sample, v_sample),
+                        (4, 1) => format!("YCbCr4:1:1 ({} {})", h_sample, v_sample),
+                        (4, 2) => format!("YCbCr4:1:0 ({} {})", h_sample, v_sample),
+                        _ => format!("{} {}", h_sample, v_sample),
                     };
                     tags.push(crate::tag::Tag {
                         id: crate::tag::TagId::Text("YCbCrSubSampling".into()),
