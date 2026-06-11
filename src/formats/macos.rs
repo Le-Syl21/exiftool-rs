@@ -112,7 +112,10 @@ fn parse_attr_block(full_data: &[u8], entry_data: &[u8], tags: &mut Vec<Tag>) {
                     Value::Binary(val_data.to_vec()),
                 ));
             }
-        } else if len > 100 || val_data.contains(&0u8) && !val_data.starts_with(b"0082") {
+        } else if tag_name == "XAttrMDLabel"
+            || len > 100
+            || val_data.contains(&0u8) && !val_data.starts_with(b"0082")
+        {
             // Binary data
             tags.push(mktag(
                 "MacOS",

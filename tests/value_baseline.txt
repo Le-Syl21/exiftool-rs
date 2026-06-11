@@ -231,7 +231,6 @@ MacOS.macos	XAttrMDItemDownloadedDate
 MacOS.macos	XAttrMDItemFinderComment
 MacOS.macos	XAttrMDItemUserTags
 MacOS.macos	XAttrMDItemWhereFroms
-MacOS.macos	XAttrMDLabel
 MacOS.macos	XAttrQuarantine
 Matroska.mkv	DefaultDuration
 Matroska.mkv	Duration
@@ -270,7 +269,6 @@ Nikon.nef	EffectiveMaxAperture
 Nikon.nef	ExitPupilPosition
 Nikon.nef	ExposureAdj
 Nikon.nef	ExposureAdj2
-Nikon.nef	ExposureDifference
 Nikon.nef	FilmType
 Nikon.nef	FocusPosition
 Nikon.nef	MCUVersion
@@ -288,8 +286,6 @@ NikonD2Hs.jpg	BlueBalance
 NikonD2Hs.jpg	CFAPattern
 NikonD2Hs.jpg	DOF
 NikonD2Hs.jpg	EffectiveMaxAperture
-NikonD2Hs.jpg	ExposureDifference
-NikonD2Hs.jpg	ExposureTuning
 NikonD2Hs.jpg	ExternalFlashExposureComp
 NikonD2Hs.jpg	ExternalFlashFirmware
 NikonD2Hs.jpg	FOV
