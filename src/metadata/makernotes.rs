@@ -4452,10 +4452,10 @@ fn read_makernote_ifd_with_base(
                         }
                         // MinFocalLength at 0x113, MaxFocalLength at 0x115 (big-endian int16uRev)
                         if d.len() > 275 {
-                            t.push(mk_canon_str("MinFocalLength", &r16be(0x113).to_string()));
+                            t.push(mk_canon_str("MinFocalLength", &format!("{} mm", r16be(0x113))));
                         }
                         if d.len() > 277 {
-                            t.push(mk_canon_str("MaxFocalLength", &r16be(0x115).to_string()));
+                            t.push(mk_canon_str("MaxFocalLength", &format!("{} mm", r16be(0x115))));
                         }
                         // FirmwareVersion string at 0x136 = 310, length 6
                         if d.len() >= 316 {
