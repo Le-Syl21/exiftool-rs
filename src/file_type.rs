@@ -182,6 +182,17 @@ pub enum FileType {
     Ppm,
     Dpx,
     Ram,
+    // ===== Formats with readers but previously lacking a FileType identity =====
+    Miff,
+    Tnef,
+    Wpg,
+    Dv,
+    Itc,
+    Iso,
+    Afm,
+    Pfa,
+    Pfb,
+    Dfont,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -361,6 +372,16 @@ impl FileType {
             FileType::Ppm => "Portable Pixel Map",
             FileType::Dpx => "Digital Picture Exchange",
             FileType::Ram => "Real Audio Metadata",
+            FileType::Miff => "Magick Image File Format",
+            FileType::Tnef => "Transport Neutral Encapsulation Format",
+            FileType::Wpg => "WordPerfect Graphics",
+            FileType::Dv => "Digital Video",
+            FileType::Itc => "iTunes Cover Flow",
+            FileType::Iso => "ISO 9660 disk image",
+            FileType::Afm => "Adobe Font Metrics",
+            FileType::Pfa => "PostScript Font ASCII",
+            FileType::Pfb => "PostScript Font Binary",
+            FileType::Dfont => "Macintosh Font",
         }
     }
 
@@ -525,6 +546,16 @@ impl FileType {
             FileType::Ppm => "PPM",
             FileType::Dpx => "DPX",
             FileType::Ram => "RAM",
+            FileType::Miff => "MIFF",
+            FileType::Tnef => "TNEF",
+            FileType::Wpg => "WPG",
+            FileType::Dv => "DV",
+            FileType::Itc => "ITC",
+            FileType::Iso => "ISO",
+            FileType::Afm => "AFM",
+            FileType::Pfa => "PFA",
+            FileType::Pfb => "PFB",
+            FileType::Dfont => "DFONT",
         }
     }
 
@@ -690,6 +721,16 @@ impl FileType {
             FileType::Ppm => "image/x-portable-pixmap",
             FileType::Dpx => "image/x-dpx",
             FileType::Ram => "audio/x-pn-realaudio",
+            FileType::Miff => "application/x-magick-image",
+            FileType::Tnef => "application/vnd.ms-tnef",
+            FileType::Wpg => "image/x-wpg",
+            FileType::Dv => "video/x-dv",
+            FileType::Itc => "application/itunes",
+            FileType::Iso => "application/x-iso9660-image",
+            FileType::Afm => "application/x-font-afm",
+            FileType::Pfa => "application/x-font-type1",
+            FileType::Pfb => "application/x-font-type1",
+            FileType::Dfont => "application/x-dfont",
         }
     }
 
@@ -818,9 +859,7 @@ impl FileType {
             FileType::Icc => &["icc", "icm"],
             FileType::Html => &["html", "htm", "xhtml", "svg"],
             FileType::Exe => &["exe", "dll", "elf", "so", "dylib", "a", "macho", "o"],
-            FileType::Font => &[
-                "ttf", "otf", "woff", "woff2", "ttc", "dfont", "afm", "pfa", "pfb",
-            ],
+            FileType::Font => &["ttf", "otf", "woff", "woff2", "ttc"],
             FileType::Swf => &["swf"],
             FileType::Dicom => &["dcm"],
             FileType::Fits => &["fits", "fit", "fts"],
@@ -861,6 +900,16 @@ impl FileType {
             FileType::Ppm => &["ppm"],
             FileType::Dpx => &["dpx"],
             FileType::Ram => &["ram"],
+            FileType::Miff => &["miff", "mif"],
+            FileType::Tnef => &["tnef"],
+            FileType::Wpg => &["wpg"],
+            FileType::Dv => &["dv"],
+            FileType::Itc => &["itc"],
+            FileType::Iso => &["iso"],
+            FileType::Afm => &["afm", "acfm", "amfm"],
+            FileType::Pfa => &["pfa"],
+            FileType::Pfb => &["pfb"],
+            FileType::Dfont => &["dfont"],
         }
     }
 
@@ -968,6 +1017,16 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Ppm,
     FileType::Dpx,
     FileType::Ram,
+    FileType::Miff,
+    FileType::Tnef,
+    FileType::Wpg,
+    FileType::Dv,
+    FileType::Itc,
+    FileType::Iso,
+    FileType::Afm,
+    FileType::Pfa,
+    FileType::Pfb,
+    FileType::Dfont,
     // RAW
     FileType::Cr2,
     FileType::Cr3,
@@ -1562,9 +1621,67 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
         return Some(FileType::Pdf);
     }
 
+    // AFM (Adobe Font Metrics): "StartFontMetrics" / "StartCompFontMetrics" / "StartMasterFontMetrics"
+    if header.starts_with(b"StartFontMetrics")
+        || header.starts_with(b"StartCompFontMetrics")
+        || header.starts_with(b"StartMasterFontMetrics")
+    {
+        return Some(FileType::Afm);
+    }
+
+    // PFA (PostScript Type 1 ASCII font): %!PS-AdobeFont- / %!PS-Bitstream  / %!FontType1-
+    // (must precede the generic PostScript "%!PS" test)
+    if header.starts_with(b"%!PS-AdobeFont-")
+        || header.starts_with(b"%!PS-Bitstream ")
+        || header.starts_with(b"%!FontType1-")
+    {
+        return Some(FileType::Pfa);
+    }
+
+    // PFB (PostScript Type 1 Binary font): 0x80 0x01 <len32> then the PFA text at offset 6
+    if header.len() >= 21
+        && header[0] == 0x80
+        && header[1] == 0x01
+        && (header[6..].starts_with(b"%!PS-AdobeFont-")
+            || header[6..].starts_with(b"%!PS-Bitstream ")
+            || header[6..].starts_with(b"%!FontType1-"))
+    {
+        return Some(FileType::Pfb);
+    }
+
     // PostScript: "%!PS" or "%!Adobe"
     if header.starts_with(b"%!PS") || header.starts_with(b"%!Adobe") {
         return Some(FileType::PostScript);
+    }
+
+    // MIFF (Magick Image File Format): "id=ImageMagick"
+    if header.starts_with(b"id=ImageMagick") {
+        return Some(FileType::Miff);
+    }
+
+    // TNEF (Transport Neutral Encapsulation Format): signature 0x223e9f78 (little-endian)
+    if header.starts_with(&[0x78, 0x9f, 0x3e, 0x22]) {
+        return Some(FileType::Tnef);
+    }
+
+    // WPG (WordPerfect Graphics): 0xff "WPC"
+    if header.starts_with(&[0xff, 0x57, 0x50, 0x43]) {
+        return Some(FileType::Wpg);
+    }
+
+    // DV (Digital Video): 1F 07 00 [3F|BF]
+    if header.len() >= 4
+        && header[0] == 0x1f
+        && header[1] == 0x07
+        && header[2] == 0x00
+        && (header[3] == 0x3f || header[3] == 0xbf)
+    {
+        return Some(FileType::Dv);
+    }
+
+    // ITC (iTunes Cover Flow): ".{4}itch"
+    if header.len() >= 8 && &header[4..8] == b"itch" {
+        return Some(FileType::Itc);
     }
 
     // MS Office legacy (DOC/XLS/PPT): OLE2 compound binary D0 CF 11 E0

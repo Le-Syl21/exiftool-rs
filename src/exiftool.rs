@@ -1536,7 +1536,7 @@ impl ExifTool {
             if ft == FileType::Ico {
                 if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
                     if ext.eq_ignore_ascii_case("dfont") {
-                        return Ok(FileType::Font);
+                        return Ok(FileType::Dfont);
                     }
                 }
             }
@@ -1845,6 +1845,18 @@ impl ExifTool {
             FileType::Lif => formats::lif::read_lif(data),
             FileType::Rwz => formats::rawzor::read_rawzor(data),
             FileType::Jxr => formats::jxr::read_jxr(data),
+            FileType::Miff => formats::miff::read_miff(data).or_else(|_| Ok(Vec::new())),
+            FileType::Tnef => formats::tnef::read_tnef(data).or_else(|_| Ok(Vec::new())),
+            FileType::Wpg => formats::wpg::read_wpg(data).or_else(|_| Ok(Vec::new())),
+            FileType::Dv => {
+                formats::dv::read_dv(data, data.len() as u64).or_else(|_| Ok(Vec::new()))
+            }
+            FileType::Itc => formats::itc::read_itc(data).or_else(|_| Ok(Vec::new())),
+            FileType::Iso => formats::iso::read_iso(data).or_else(|_| Ok(Vec::new())),
+            FileType::Afm => formats::font::read_afm(data).or_else(|_| Ok(Vec::new())),
+            FileType::Pfa => formats::font::read_pfa(data).or_else(|_| Ok(Vec::new())),
+            FileType::Pfb => formats::font::read_pfb(data).or_else(|_| Ok(Vec::new())),
+            FileType::Dfont => formats::font::read_font(data).or_else(|_| Ok(Vec::new())),
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }
