@@ -336,10 +336,14 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 }
             }
         }
-        // FNumber — ExifTool: sprintf("%.1f"), e.g. "14.0" (no "f/" prefix).
+        // FNumber — Exif::PrintFNumber: "%.2f" below f/1, else "%.1f".
         (_, 0x829D) => {
             if let Some(v) = value.as_f64() {
-                return Some(format!("{:.1}", v));
+                return Some(if v > 0.0 && v < 1.0 {
+                    format!("{:.2}", v)
+                } else {
+                    format!("{:.1}", v)
+                });
             }
         }
         // ApertureValue / MaxApertureValue — APEX: FNumber = 2^(val/2), "%.1f".

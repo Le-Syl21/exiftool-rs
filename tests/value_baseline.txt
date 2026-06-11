@@ -140,7 +140,6 @@ GE.jpg	GEMake
 GE.jpg	GEModel
 GPS.jpg	Aperture
 GPS.jpg	City
-GPS.jpg	FNumber
 GPS.jpg	SceneType
 GeoTiff.tif	GeogGeodeticDatum
 GeoTiff.tif	Projection
@@ -291,7 +290,6 @@ NikonD70.jpg	MinFocalLength
 NikonD70.jpg	PreviewImageStart
 Olympus.jpg	CameraType
 Olympus.jpg	DataDump
-Olympus.jpg	DigitalZoom
 Olympus.jpg	FocalPlaneDiagonal
 Olympus2.jpg	AFAreas
 Olympus2.jpg	AFPoint
@@ -299,7 +297,6 @@ Olympus2.jpg	BodyFirmwareVersion
 Olympus2.jpg	CameraType2
 Olympus2.jpg	ColorMatrix
 Olympus2.jpg	CustomSaturation
-Olympus2.jpg	DigitalZoom
 Olympus2.jpg	ExternalFlashBounce
 Olympus2.jpg	Gradation
 Olympus2.jpg	ImageStabilization
@@ -314,7 +311,6 @@ OlympusE1.jpg	CameraSettingsVersion
 OlympusE1.jpg	CameraType2
 OlympusE1.jpg	ColorMatrix
 OlympusE1.jpg	CustomSaturation
-OlympusE1.jpg	DigitalZoom
 OlympusE1.jpg	EquipmentVersion
 OlympusE1.jpg	ExternalFlashBounce
 OlympusE1.jpg	FocusInfoVersion

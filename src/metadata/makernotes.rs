@@ -7950,6 +7950,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 }
                 .to_string()
             }),
+            // DigitalZoom (0x0204): rational, PrintConv appends ".0" if integer.
+            0x0204 => {
+                let s = value.to_display_string();
+                Some(if s.contains('.') { s } else { format!("{}.0", s) })
+            }
             // CameraID (0x0209): undef but really a string (Olympus.pm Format => 'string').
             0x0209 => mn_undef_bytes(value).map(|b| {
                 let s: String = b.iter().map(|&c| c as char).collect();
