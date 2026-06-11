@@ -1706,7 +1706,7 @@ impl XmpReader {
                 }
                 .to_string();
             }
-            if tag.name == "FlashMode" {
+            if tag.name == "FlashMode" || tag.name.ends_with("FlashMode") {
                 tag.print_value = match tag.print_value.trim() {
                     "0" => "Unknown",
                     "1" => "On",

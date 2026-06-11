@@ -436,6 +436,5 @@ XMP.xml	Iso
 XMP.xmp	NativeDigest
 XMP4.xmp	StructList2Item1
 XMP4.xmp	StructList2Item2
-XMP5.xmp	RegionExtensionsFlashMode
 XMP5.xmp	RegionExtensionsFlashReturn
 XMP6.xmp	Test
