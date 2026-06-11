@@ -265,7 +265,6 @@ NikonD2Hs.jpg	EffectiveMaxAperture
 NikonD2Hs.jpg	ExternalFlashExposureComp
 NikonD2Hs.jpg	ExternalFlashFirmware
 NikonD2Hs.jpg	FOV
-NikonD2Hs.jpg	FlashExposureBracketValue
 NikonD2Hs.jpg	LensID
 NikonD2Hs.jpg	MCUVersion
 NikonD2Hs.jpg	PreviewImageStart
@@ -275,7 +274,6 @@ NikonD70.jpg	CFAPattern
 NikonD70.jpg	ExposureDifference
 NikonD70.jpg	ExternalFlashExposureComp
 NikonD70.jpg	ExternalFlashFirmware
-NikonD70.jpg	FlashExposureBracketValue
 NikonD70.jpg	LensID
 NikonD70.jpg	PreviewImageStart
 Olympus.jpg	CameraType
