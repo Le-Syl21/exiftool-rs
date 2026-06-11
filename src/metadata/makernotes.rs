@@ -537,6 +537,42 @@ fn canon_custom_350d(tag: u8, val: u8) -> Option<(&'static str, String)> {
 }
 
 /// Decode Canon CustomFunctions2 (from Perl CanonCustom.pm ProcessCanonCustom2).
+/// Canon CustomFunctions2 PrintConvs for the EOS-1D Mark III (CanonCustom::Functions2,
+/// the `/\b1D.../` model branches). Single-value enums only; validated by the ratchet.
+fn canon_cf2_1d3_pc(tag_id: u32, val: u32) -> Option<&'static str> {
+    let m = |t: &[(u32, &'static str)]| t.iter().find(|(k, _)| *k == val).map(|(_, s)| *s);
+    match tag_id {
+        0x0101 => m(&[
+            (0, "1/3-stop set, 1/3-stop comp."),
+            (1, "1-stop set, 1/3-stop comp."),
+            (2, "1/2-stop set, 1/2-stop comp."),
+        ]),
+        0x0106 => m(&[(0, "3 shots"), (1, "2 shots"), (2, "5 shots"), (3, "7 shots")]),
+        0x0409 => m(&[
+            (0, "Displays camera settings"),
+            (1, "Displays shooting functions"),
+        ]),
+        0x0508 => m(&[(0, "Disable"), (1, "Enable")]),
+        0x0509 => m(&[
+            (0, "19 points"),
+            (1, "Inner 9 points"),
+            (2, "Outer 9 points"),
+        ]),
+        0x050a => m(&[
+            (0, "Disable"),
+            (1, "Switch with multi-controller"),
+            (2, "Only while AEL is pressed"),
+        ]),
+        0x050c => m(&[(0, "On"), (1, "Off"), (2, "On (when focus achieved)")]),
+        0x050e => m(&[
+            (0, "Emits"),
+            (1, "Does not emit"),
+            (2, "IR AF assist beam only"),
+        ]),
+        _ => None,
+    }
+}
+
 fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark, model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if data.len() < 8 {
@@ -593,10 +629,17 @@ fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark, model: &str) -
                 canon_custom2_name(tag_id)
             };
             if !name.is_empty() {
-                // Apply the generated PrintConv for this custom function (On/Off/
-                // Disable/...), falling back to the raw value for complex ones.
-                let pv = crate::tags::print_conv_generated::print_conv_by_name(name, val as i64)
+                // 1D Mark III uses the CanonCustom::Functions2 model-specific PrintConvs,
+                // which differ from the generic by-name table; prefer them when applicable.
+                let is_1d3 = model.contains("1D Mark III") || model.contains("1Ds Mark III");
+                let pv = (is_1d3 && num_vals == 1)
+                    .then(|| canon_cf2_1d3_pc(tag_id, val))
+                    .flatten()
                     .map(str::to_string)
+                    .or_else(|| {
+                        crate::tags::print_conv_generated::print_conv_by_name(name, val as i64)
+                            .map(str::to_string)
+                    })
                     .unwrap_or_else(|| val.to_string());
                 tags.push(mk_canon_str(name, &pv));
             } else if tag_id > 0 {
