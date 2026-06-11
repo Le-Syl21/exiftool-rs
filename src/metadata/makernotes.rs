@@ -7387,6 +7387,48 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 .as_u64()
                 .and_then(|n| crate::tags::canon_sub::canon_model_id(n as i64))
                 .map(str::to_string),
+            // PictureStyleUserDef / PictureStylePC: int16u[3], each via %pictureStyles
+            0x4008 | 0x4009 => {
+                let ps = |v: u32| -> &'static str {
+                    match v {
+                        0x00 => "None",
+                        0x01 | 0x81 => "Standard",
+                        0x02 | 0x82 => "Portrait",
+                        0x83 => "Landscape",
+                        0x84 => "Neutral",
+                        0x85 => "Faithful",
+                        0x86 => "Monochrome",
+                        0x87 => "Auto",
+                        0x88 => "Fine Detail",
+                        0x21 => "User Def. 1",
+                        0x22 => "User Def. 2",
+                        0x23 => "User Def. 3",
+                        0x41 => "PC 1",
+                        0x42 => "PC 2",
+                        0x43 => "PC 3",
+                        0xff | 0xffff => "n/a",
+                        _ => "",
+                    }
+                };
+                if let Value::List(items) = value {
+                    let parts: Vec<String> = items
+                        .iter()
+                        .filter_map(|v| v.as_u64())
+                        .map(|v| {
+                            let s = ps(v as u32);
+                            if s.is_empty() {
+                                v.to_string()
+                            } else {
+                                s.to_string()
+                            }
+                        })
+                        .collect();
+                    if !parts.is_empty() {
+                        return Some(parts.join("; "));
+                    }
+                }
+                None
+            }
             // FileNumber: insert a dash before the last 4 digits (s/(\d+)(\d{4})/$1-$2/)
             0x0008 => value.as_u64().map(|n| {
                 let s = n.to_string();
