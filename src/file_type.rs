@@ -193,6 +193,8 @@ pub enum FileType {
     Pfa,
     Pfb,
     Dfont,
+    Xml,
+    Inx,
 }
 
 /// Indicates the read/write capability for a file type.
@@ -382,6 +384,8 @@ impl FileType {
             FileType::Pfa => "PostScript Font ASCII",
             FileType::Pfb => "PostScript Font Binary",
             FileType::Dfont => "Macintosh Font",
+            FileType::Xml => "Extensible Markup Language",
+            FileType::Inx => "Adobe InDesign Interchange",
         }
     }
 
@@ -556,6 +560,8 @@ impl FileType {
             FileType::Pfa => "PFA",
             FileType::Pfb => "PFB",
             FileType::Dfont => "DFONT",
+            FileType::Xml => "XML",
+            FileType::Inx => "INX",
         }
     }
 
@@ -563,7 +569,8 @@ impl FileType {
     pub fn mime_type(self) -> &'static str {
         match self {
             FileType::Jpeg => "image/jpeg",
-            FileType::Tiff | FileType::Btf => "image/tiff",
+            FileType::Tiff => "image/tiff",
+            FileType::Btf => "image/x-tiff-big",
             FileType::Png => "image/png",
             FileType::Gif => "image/gif",
             FileType::Bmp => "image/bmp",
@@ -680,10 +687,10 @@ impl FileType {
             FileType::Icc => "application/vnd.iccprofile",
             FileType::Html => "text/html",
             FileType::Exe => "application/x-dosexec",
-            FileType::Font => "font/sfnt",
+            FileType::Font => "application/font-ttf",
             FileType::Swf => "application/x-shockwave-flash",
             FileType::Dicom => "application/dicom",
-            FileType::Fits => "application/fits",
+            FileType::Fits => "image/fits",
             FileType::Mrc => "image/x-mrc",
             FileType::Moi => "application/octet-stream",
             FileType::MacOs => "application/unknown",
@@ -692,7 +699,7 @@ impl FileType {
             FileType::Pcapng => "application/vnd.tcpdump.pcap",
             FileType::Svg => "image/svg+xml",
             FileType::Pgf => "image/pgf",
-            FileType::Xisf => "application/xisf",
+            FileType::Xisf => "image/x-xisf",
             FileType::Torrent => "application/x-bittorrent",
             FileType::Mobi => "application/x-mobipocket-ebook",
             FileType::SonyPmp => "image/x-sony-pmp",
@@ -731,6 +738,8 @@ impl FileType {
             FileType::Pfa => "application/x-font-type1",
             FileType::Pfb => "application/x-font-type1",
             FileType::Dfont => "application/x-dfont",
+            FileType::Xml => "application/xml",
+            FileType::Inx => "application/x-indesign-interchange",
         }
     }
 
@@ -802,7 +811,7 @@ impl FileType {
             FileType::Flv => &["flv"],
             FileType::Mxf => &["mxf"],
             FileType::Czi => &["czi"],
-            FileType::M2ts => &["m2ts", "mts", "m2t", "ts"],
+            FileType::M2ts => &["mts", "m2ts", "m2t", "ts"],
             FileType::Mpeg => &["mpg", "mpeg", "m2v", "mpv"],
             FileType::ThreeGP => &["3gp", "3gpp", "3g2", "3gp2"],
             FileType::RealMedia => &["rm", "rv", "rmvb"],
@@ -843,7 +852,7 @@ impl FileType {
             FileType::Numbers => &["numbers", "nmbtemplate"],
             FileType::Pages => &["pages"],
             FileType::Key => &["key", "kth"],
-            FileType::InDesign => &["ind", "indd", "indt"],
+            FileType::InDesign => &["indd", "ind", "indt"],
             FileType::Rtf => &["rtf"],
             // Archives
             FileType::Zip => &["zip"],
@@ -851,7 +860,7 @@ impl FileType {
             FileType::SevenZ => &["7z"],
             FileType::Gzip => &["gz", "gzip"],
             // Metadata / Other
-            FileType::Xmp => &["xmp", "inx", "xml"],
+            FileType::Xmp => &["xmp"],
             FileType::Mie => &["mie"],
             FileType::Exv => &["exv"],
             FileType::Vrd => &["vrd"],
@@ -910,6 +919,8 @@ impl FileType {
             FileType::Pfa => &["pfa"],
             FileType::Pfb => &["pfb"],
             FileType::Dfont => &["dfont"],
+            FileType::Xml => &["xml"],
+            FileType::Inx => &["inx"],
         }
     }
 
@@ -1027,6 +1038,8 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Pfa,
     FileType::Pfb,
     FileType::Dfont,
+    FileType::Xml,
+    FileType::Inx,
     // RAW
     FileType::Cr2,
     FileType::Cr3,
@@ -1812,8 +1825,12 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
         {
             return Some(FileType::Plist);
         }
-        // Default XML → XMP (most XML files ExifTool handles contain XMP)
-        return Some(FileType::Xmp);
+        // Adobe InDesign Interchange: "<?aid" processing instruction
+        if preview.windows(5).any(|w| w == b"<?aid") {
+            return Some(FileType::Inx);
+        }
+        // Default XML → XML (ExifTool reports plain XML; XMP needs rdf/xmpmeta)
+        return Some(FileType::Xml);
     }
 
     // HTML

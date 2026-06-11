@@ -1556,8 +1556,8 @@ impl ExifTool {
                     }
                 }
             }
-            // Override XMP to PLIST/AAE if extension is .plist or .aae
-            if ft == FileType::Xmp {
+            // Override XMP/XML to PLIST/AAE if extension is .plist or .aae
+            if ft == FileType::Xmp || ft == FileType::Xml {
                 if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
                     if ext.eq_ignore_ascii_case("plist") {
                         return Ok(FileType::Plist);
@@ -1857,6 +1857,9 @@ impl ExifTool {
             FileType::Pfa => formats::font::read_pfa(data).or_else(|_| Ok(Vec::new())),
             FileType::Pfb => formats::font::read_pfb(data).or_else(|_| Ok(Vec::new())),
             FileType::Dfont => formats::font::read_font(data).or_else(|_| Ok(Vec::new())),
+            FileType::Xml | FileType::Inx => {
+                formats::xmp_file::read_xmp(data).or_else(|_| Ok(Vec::new()))
+            }
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }

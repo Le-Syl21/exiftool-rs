@@ -12,7 +12,6 @@ ASF.wmv	SendDuration
 Apple.jpg	AccelerationVector
 Apple.jpg	FocusDistanceRange
 Apple.jpg	LensInfo
-BigTIFF.btf	MIMEType
 Canon.jpg	DOF
 Canon.jpg	FOV
 Canon.jpg	FocalLength35efl
@@ -160,7 +159,6 @@ ExifTool.tif	MeasurementFlare
 ExifTool.tif	Technology
 ExifTool.tif	ViewingCondIlluminant
 FITS.fits	Comment
-FITS.fits	MIMEType
 FLIR.jpg	CameraTemperatureMinWarn
 FLIR.jpg	CameraTemperatureRangeMin
 FLIR.jpg	DateTimeOriginal
@@ -178,7 +176,6 @@ Font.pfa	Notice
 Font.pfb	Comment
 Font.pfb	Notice
 Font.pfm	MIMEType
-Font.ttf	MIMEType
 FotoStation.jpg	ObjectCycle
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
@@ -209,19 +206,10 @@ GPS.jpg	SceneType
 GeoTiff.tif	ColorMap
 GeoTiff.tif	GeogGeodeticDatum
 GeoTiff.tif	Projection
-Geotag.gpx	FileType
-Geotag.gpx	FileTypeExtension
 Geotag.gpx	GpxSchemaLocation
 Geotag.gpx	GpxTrkTrksegTrkptTime
-Geotag.gpx	MIMEType
-Geotag.kml	FileType
-Geotag.kml	FileTypeExtension
 Geotag.kml	KmlDocumentPlacemarkTrackWhen
-Geotag.kml	MIMEType
-Geotag.xml	FileType
-Geotag.xml	FileTypeExtension
 Geotag.xml	HistoryRunTrackTrackpointTime
-Geotag.xml	MIMEType
 Geotag3.log	LineCount
 GoPro.jpg	ColorSpace
 GoPro.jpg	ExposureCompensation
@@ -244,7 +232,6 @@ IPTC.jpg	Warning
 ISO.iso	BootSystem
 ISO.iso	VolumeSize
 ITC.itc	DataType
-InDesign.indd	FileTypeExtension
 InfiRay.jpg	GPSLatitude
 InfiRay.jpg	GPSLatitudeRef
 InfiRay.jpg	GPSLongitude
@@ -294,7 +281,6 @@ Lytro.lfp	FocalPlaneXResolution
 Lytro.lfp	HyperfocalDistance
 Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
-M2TS.mts	FileTypeExtension
 MIE.mie	MIMEType
 MIE.mie	Resolution
 MIFF.miff	PhotoshopQuality
@@ -661,10 +647,6 @@ VCard.vcf	TelephoneOtherVoice
 Vorbis.ogg	CoverArt
 Vorbis.ogg	Duration
 WTV.wtv	SubtitleDescription
-XISF.xisf	MIMEType
-XMP.inx	FileType
-XMP.inx	FileTypeExtension
-XMP.inx	MIMEType
 XMP.jpg	APP14Flags0
 XMP.jpg	APP14Flags1
 XMP.jpg	DeviceManufacturer
