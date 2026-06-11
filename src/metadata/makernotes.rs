@@ -5726,6 +5726,18 @@ fn read_makernote_ifd_with_base(
                         }
                     } else if name == "DriveMode" {
                         olympus_drive_mode(&val.to_display_string())
+                    } else if name == "ColorMatrix" {
+                        // Format => 'int16s': reinterpret each unsigned value as signed.
+                        val.to_display_string()
+                            .split_whitespace()
+                            .map(|s| {
+                                s.parse::<i64>()
+                                    .map(|v| if v > 32767 { v - 65536 } else { v })
+                                    .map(|v| v.to_string())
+                                    .unwrap_or_else(|_| s.to_string())
+                            })
+                            .collect::<Vec<_>>()
+                            .join(" ")
                     } else if name == "Gradation" {
                         match val.to_display_string().as_str() {
                             "0 0 0" => "n/a".to_string(),
