@@ -1678,6 +1678,26 @@ impl XmpReader {
             if let Some(reformatted) = convert_xmp_date(&tag.print_value) {
                 tag.print_value = reformatted;
             }
+            // XMP-exif Flash sub-fields (exif:Flash/Return, /Mode).
+            if tag.name == "FlashReturn" {
+                tag.print_value = match tag.print_value.trim() {
+                    "0" => "No return detection",
+                    "2" => "Return not detected",
+                    "3" => "Return detected",
+                    other => other,
+                }
+                .to_string();
+            }
+            if tag.name == "FlashMode" {
+                tag.print_value = match tag.print_value.trim() {
+                    "0" => "Unknown",
+                    "1" => "On",
+                    "2" => "Off",
+                    "3" => "Auto",
+                    other => other,
+                }
+                .to_string();
+            }
             // XMP-photoshop ColorMode enum (Photoshop colour modes).
             if tag.name == "ColorMode" {
                 tag.print_value = match tag.print_value.trim() {
