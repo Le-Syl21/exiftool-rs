@@ -48,8 +48,6 @@ BPG.bpg	GreenMatrixColumn
 BPG.bpg	GreenTRC
 BPG.bpg	MediaBlackPoint
 BPG.bpg	MediaWhitePoint
-BPG.bpg	PrimaryPlatform
-BPG.bpg	ProfileCMMType
 BPG.bpg	ProfileCreator
 BPG.bpg	RedMatrixColumn
 BPG.bpg	RedTRC
@@ -499,8 +497,6 @@ ExifTool.jpg	MediaBlackPoint
 ExifTool.jpg	MediaWhitePoint
 ExifTool.jpg	Megapixels
 ExifTool.jpg	Model
-ExifTool.jpg	PrimaryPlatform
-ExifTool.jpg	ProfileCMMType
 ExifTool.jpg	ProfileCreator
 ExifTool.jpg	Quality
 ExifTool.jpg	RedMatrixColumn
@@ -531,8 +527,6 @@ ExifTool.tif	MeasurementBacking
 ExifTool.tif	MeasurementFlare
 ExifTool.tif	MediaBlackPoint
 ExifTool.tif	MediaWhitePoint
-ExifTool.tif	PrimaryPlatform
-ExifTool.tif	ProfileCMMType
 ExifTool.tif	ProfileCreator
 ExifTool.tif	RedMatrixColumn
 ExifTool.tif	RedTRC
@@ -552,7 +546,6 @@ FLIF.flif	DeviceModel
 FLIF.flif	GreenMatrixColumn
 FLIF.flif	GreenTRC
 FLIF.flif	MediaWhitePoint
-FLIF.flif	PrimaryPlatform
 FLIF.flif	ProfileCMMType
 FLIF.flif	RedMatrixColumn
 FLIF.flif	RedTRC
@@ -643,7 +636,6 @@ GIF.gif	GreenMatrixColumn
 GIF.gif	GreenTRC
 GIF.gif	MediaWhitePoint
 GIF.gif	PixelAspectRatio
-GIF.gif	PrimaryPlatform
 GIF.gif	ProfileCMMType
 GIF.gif	RedMatrixColumn
 GIF.gif	RedTRC
@@ -656,7 +648,6 @@ GIMP.xcf	DeviceModel
 GIMP.xcf	GreenMatrixColumn
 GIMP.xcf	GreenTRC
 GIMP.xcf	MediaWhitePoint
-GIMP.xcf	PrimaryPlatform
 GIMP.xcf	ProfileCMMType
 GIMP.xcf	RedMatrixColumn
 GIMP.xcf	RedTRC
@@ -763,7 +754,6 @@ ICC_Profile.icc	DeviceModel
 ICC_Profile.icc	GreenMatrixColumn
 ICC_Profile.icc	GreenTRC
 ICC_Profile.icc	MediaWhitePoint
-ICC_Profile.icc	PrimaryPlatform
 ICC_Profile.icc	ProfileCMMType
 ICC_Profile.icc	RedMatrixColumn
 ICC_Profile.icc	RedTRC
@@ -1068,7 +1058,6 @@ Nikon.nef	MinFocalLength
 Nikon.nef	PhotometricInterpretation
 Nikon.nef	PreviewImage
 Nikon.nef	PreviewImageStart
-Nikon.nef	PrimaryPlatform
 Nikon.nef	ProfileCMMType
 Nikon.nef	ProgramShift
 Nikon.nef	Quality
@@ -1463,8 +1452,6 @@ Photoshop.psd	GreenMatrixColumn
 Photoshop.psd	GreenTRC
 Photoshop.psd	MediaBlackPoint
 Photoshop.psd	MediaWhitePoint
-Photoshop.psd	PrimaryPlatform
-Photoshop.psd	ProfileCMMType
 Photoshop.psd	ProfileCreator
 Photoshop.psd	RedMatrixColumn
 Photoshop.psd	RedTRC
@@ -1692,8 +1679,6 @@ XMP.jpg	MeasurementBacking
 XMP.jpg	MeasurementFlare
 XMP.jpg	MediaBlackPoint
 XMP.jpg	MediaWhitePoint
-XMP.jpg	PrimaryPlatform
-XMP.jpg	ProfileCMMType
 XMP.jpg	ProfileCreator
 XMP.jpg	RedMatrixColumn
 XMP.jpg	RedTRC

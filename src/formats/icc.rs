@@ -17,11 +17,10 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
         .trim()
         .to_string();
     if !preferred_cmm.is_empty() && preferred_cmm != "\0\0\0\0" {
-        tags.push(mk(
-            "ProfileCMMType",
-            "Profile CMM Type",
-            Value::String(preferred_cmm),
-        ));
+        let cmm = icc_vendor(&preferred_cmm)
+            .map(str::to_string)
+            .unwrap_or(preferred_cmm);
+        tags.push(mk("ProfileCMMType", "Profile CMM Type", Value::String(cmm)));
     }
 
     let major = data[8];
@@ -103,10 +102,11 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
         .trim()
         .to_string();
     let platform_name = match platform.as_str() {
-        "APPL" => "Apple",
-        "MSFT" => "Microsoft",
-        "SGI " => "SGI",
-        "SUNW" => "Sun Microsystems",
+        "APPL" => "Apple Computer Inc.",
+        "MSFT" => "Microsoft Corporation",
+        "SGI" => "Silicon Graphics Inc.",
+        "SUNW" => "Sun Microsystems Inc.",
+        "TGNT" => "Taligent Inc.",
         _ => &platform,
     };
     if !platform_name.is_empty() {
@@ -501,4 +501,20 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
 /// Parse ICC profile tags from raw profile data embedded in JPEG APP2.
 pub fn parse_icc_tags(data: &[u8]) -> Vec<Tag> {
     read_icc(data).unwrap_or_default()
+}
+
+/// ExifTool ICC registered-vendor signatures (subset) for ProfileCMMType etc.
+fn icc_vendor(code: &str) -> Option<&'static str> {
+    Some(match code.trim() {
+        "ADBE" => "Adobe Systems Inc.",
+        "APPL" => "Apple Computer Inc.",
+        "MSFT" => "Microsoft Corporation",
+        "KODA" => "Kodak",
+        "Lino" | "LINO" | "lino" => "Linotronic",
+        "SGI" => "Silicon Graphics Inc.",
+        "SUNW" => "Sun Microsystems Inc.",
+        "TGNT" => "Taligent Inc.",
+        "HP" => "Hewlett-Packard",
+        _ => return None,
+    })
 }
