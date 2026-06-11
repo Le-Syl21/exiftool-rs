@@ -573,7 +573,6 @@ Minolta.jpg	ISOSetting
 Minolta.jpg	InternalFlash
 Minolta.jpg	IntervalMode
 Minolta.jpg	MacroMode
-Minolta.jpg	MakerNoteVersion
 Minolta.jpg	MaxAperture
 Minolta.jpg	MeteringMode
 Minolta.jpg	MinoltaDate
@@ -611,7 +610,6 @@ Minolta.mrw	ISOSetting
 Minolta.mrw	InternalFlash
 Minolta.mrw	IntervalMode
 Minolta.mrw	MacroMode
-Minolta.mrw	MakerNoteVersion
 Minolta.mrw	MaxAperture
 Minolta.mrw	MeteringMode
 Minolta.mrw	MinoltaDate
@@ -665,7 +663,6 @@ Nikon.nef	LensSpec
 Nikon.nef	LensType
 Nikon.nef	LightSource
 Nikon.nef	MCUVersion
-Nikon.nef	MakerNoteVersion
 Nikon.nef	MaxFocalLength
 Nikon.nef	MinFocalLength
 Nikon.nef	PhotometricInterpretation
@@ -705,7 +702,6 @@ NikonD2Hs.jpg	LensSpec
 NikonD2Hs.jpg	LensType
 NikonD2Hs.jpg	LightSource
 NikonD2Hs.jpg	MCUVersion
-NikonD2Hs.jpg	MakerNoteVersion
 NikonD2Hs.jpg	MaxFocalLength
 NikonD2Hs.jpg	MinFocalLength
 NikonD2Hs.jpg	NoiseReduction
@@ -740,7 +736,6 @@ NikonD70.jpg	LensSpec
 NikonD70.jpg	LensType
 NikonD70.jpg	LightSource
 NikonD70.jpg	MCUVersion
-NikonD70.jpg	MakerNoteVersion
 NikonD70.jpg	MaxFocalLength
 NikonD70.jpg	MinFocalLength
 NikonD70.jpg	NoiseReduction
@@ -892,7 +887,6 @@ Panasonic.rw2	ContrastMode
 Panasonic.rw2	FacesDetected
 Panasonic.rw2	FirmwareVersion
 Panasonic.rw2	InternalSerialNumber
-Panasonic.rw2	MakerNoteVersion
 Panasonic.rw2	PanasonicExifVersion
 Panasonic.rw2	Saturation
 Panasonic.rw2	SceneMode
@@ -1022,7 +1016,6 @@ SigmaDP2.x3f	ImageUniqueID
 SigmaDP2.x3f	ImageWidth
 SigmaDP2.x3f	LensID
 SigmaDP2.x3f	LensType
-SigmaDP2.x3f	MakerNoteVersion
 SigmaDP2.x3f	Megapixels
 SigmaDP2.x3f	MeteringMode
 SigmaDP2.x3f	NetExposureCompensation
