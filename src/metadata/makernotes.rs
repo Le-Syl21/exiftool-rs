@@ -7988,6 +7988,22 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
         Manufacturer::Fujifilm => match tag_id {
             // InternalSerialNumber: decode the hex body number + manufacture date.
             0x0010 => value.as_str().map(fuji_internal_serial),
+            // FocusMode (0x1021): 0=Auto, 1=Manual, 65535=Movie.
+            0x1021 => value.as_u64().and_then(|v| {
+                match v {
+                    0 => Some("Auto"),
+                    1 => Some("Manual"),
+                    65535 => Some("Movie"),
+                    _ => None,
+                }
+                .map(str::to_string)
+            }),
+            // WhiteBalanceFineTune (0x100a): int32s[2] → "Red %+d, Blue %+d".
+            0x100a => {
+                let disp = value.to_display_string();
+                let v: Vec<i64> = disp.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+                (v.len() == 2).then(|| format!("Red {:+}, Blue {:+}", v[0], v[1]))
+            }
             // AFMode (0x1022): enum (No / Single Point / Zone / Wide/Tracking).
             0x1022 => value.as_u64().and_then(|v| {
                 match v {

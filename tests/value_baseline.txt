@@ -140,17 +140,14 @@ Font.pfb	Notice
 FotoStation.jpg	ObjectCycle
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
-FujiFilm.jpg	FocusMode
 FujiFilm.jpg	Sharpness
 FujiFilm.jpg	Version
 FujiFilm.raf	DynamicRange
 FujiFilm.raf	FacesDetected
-FujiFilm.raf	FocusMode
 FujiFilm.raf	Model
 FujiFilm.raf	SequenceNumber
 FujiFilm.raf	ThumbnailOffset
 FujiFilm.raf	Version
-FujiFilm.raf	WhiteBalanceFineTune
 GE.jpg	GEMake
 GE.jpg	GEModel
 GIF.gif	PixelAspectRatio
