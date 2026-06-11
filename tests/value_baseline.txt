@@ -5,7 +5,6 @@ AIFF.aif	Comment
 ASF.wmv	Duration
 ASF.wmv	IsVBR
 ASF.wmv	SendDuration
-Apple.jpg	AccelerationVector
 Apple.jpg	FocusDistanceRange
 Canon.jpg	DOF
 Canon.jpg	Sharpness
@@ -286,7 +285,6 @@ Nikon.nef	ExposureAdj2
 Nikon.nef	ExposureDifference
 Nikon.nef	FilmType
 Nikon.nef	FocusPosition
-Nikon.nef	Lens
 Nikon.nef	LensFStops
 Nikon.nef	LensSpec
 Nikon.nef	MCUVersion
@@ -312,7 +310,6 @@ NikonD2Hs.jpg	ExternalFlashExposureComp
 NikonD2Hs.jpg	ExternalFlashFirmware
 NikonD2Hs.jpg	FOV
 NikonD2Hs.jpg	FlashExposureBracketValue
-NikonD2Hs.jpg	Lens
 NikonD2Hs.jpg	LensFStops
 NikonD2Hs.jpg	LensID
 NikonD2Hs.jpg	LensSpec
@@ -331,7 +328,6 @@ NikonD70.jpg	ExternalFlashFirmware
 NikonD70.jpg	FlashExposureBracketValue
 NikonD70.jpg	FlashExposureComp
 NikonD70.jpg	ISO
-NikonD70.jpg	Lens
 NikonD70.jpg	LensFStops
 NikonD70.jpg	LensID
 NikonD70.jpg	LensSpec
@@ -409,7 +405,6 @@ Palm.mobi	UncompressedTextLength
 Panasonic.jpg	AFAreaMode
 Panasonic.jpg	VideoFrameRate
 Panasonic.rw2	AFAreaMode
-Panasonic.rw2	AFPointPosition
 Panasonic.rw2	ThumbnailOffset
 Panasonic.rw2	VideoFrameRate
 Panasonic.rw2	XResolution
@@ -482,7 +477,6 @@ Sigma.x3f	LensType
 SigmaDP2.x3f	BracketShot
 SigmaDP2.x3f	Calibration
 SigmaDP2.x3f	CameraName
-SigmaDP2.x3f	ColorAdjustment
 SigmaDP2.x3f	ExposureTime2
 SigmaDP2.x3f	ImageBoardID
 SigmaDP2.x3f	ImageUniqueID

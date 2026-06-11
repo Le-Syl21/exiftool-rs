@@ -269,9 +269,15 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     // LensID fallback: use LensModel, Lens, or LensType if no LensID computed by 35efl
     // Only create when the value looks like a real camera lens (contains "mm" or "f/")
     if !composite.iter().any(|t| t.name == "LensID") {
+        // Skip the "Lens" fallback when a Nikon LensData hex lookup is possible below
+        // (LensIDNumber present) — that yields the full lens name, not just "18-70mm".
+        let nikon_lensid_possible = find_tag(tags, "LensIDNumber").is_some();
         let lens_val = find_tag_value(tags, "LensModel")
             .filter(|v| !v.is_empty() && (v.contains("mm") || v.to_lowercase().contains("f/")))
             .or_else(|| {
+                if nikon_lensid_possible {
+                    return None;
+                }
                 find_tag_value(tags, "Lens")
                     .filter(|v| !v.is_empty() && (v.contains("mm") || v.contains("/F")))
             })

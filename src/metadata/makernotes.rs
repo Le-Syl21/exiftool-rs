@@ -6321,6 +6321,12 @@ pub fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderM
             // RATIONAL
             if count == 1 && data.len() >= 8 {
                 Value::URational(read_u32(data, 0, bo), read_u32(data, 4, bo))
+            } else if count >= 1 && data.len() >= (count as usize) * 8 {
+                Value::List(
+                    (0..count as usize)
+                        .map(|i| Value::URational(read_u32(data, i * 8, bo), read_u32(data, i * 8 + 4, bo)))
+                        .collect(),
+                )
             } else {
                 Value::Undefined(data.to_vec())
             }
@@ -6353,6 +6359,17 @@ pub fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderM
             // SRATIONAL
             if count == 1 && data.len() >= 8 {
                 Value::IRational(read_u32(data, 0, bo) as i32, read_u32(data, 4, bo) as i32)
+            } else if count >= 1 && data.len() >= (count as usize) * 8 {
+                Value::List(
+                    (0..count as usize)
+                        .map(|i| {
+                            Value::IRational(
+                                read_u32(data, i * 8, bo) as i32,
+                                read_u32(data, i * 8 + 4, bo) as i32,
+                            )
+                        })
+                        .collect(),
+                )
             } else {
                 Value::Undefined(data.to_vec())
             }
@@ -7848,6 +7865,8 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                     .and_then(nikon_conv::nef_compression)
                     .map(|s| s.to_string()),
                 0x0083 => v.map(nikon_conv::lens_type),
+                // Lens (0x0084): rational64u[4] → Exif::PrintLensInfo.
+                0x0084 => crate::tags::exif::print_lens_info(&value.to_display_string()),
                 // ISOSetting (int16u[2], "0 200"): PrintConv s/^0 //.
                 0x0013 => {
                     let disp = value.to_display_string();
