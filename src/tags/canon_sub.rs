@@ -32,20 +32,36 @@ pub fn print_exposure_time(val: f64) -> String {
     }
 }
 
+/// Canon printParameter: RawConv suppresses 0x7fff, then 0 -> Normal, +N / -N.
+fn canon_param(v: i16) -> Option<String> {
+    if v == 0x7fff {
+        return None;
+    }
+    Some(match v.cmp(&0) {
+        std::cmp::Ordering::Equal => "Normal".to_string(),
+        std::cmp::Ordering::Greater => format!("+{}", v),
+        std::cmp::Ordering::Less => v.to_string(),
+    })
+}
+
+/// Canon aperture APEX: 2^(CanonEv(val)/2), printed with %.2g.
+fn canon_aperture(v: i16) -> Option<String> {
+    if v <= 0 {
+        return None;
+    }
+    let f = 2f64.powf(canon_ev(v as i32) / 2.0);
+    Some(crate::value::format_g_prec(f, 2))
+}
+
 pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
     let mut tags = Vec::new();
     let get = |idx: usize| -> Option<i16> { values.get(idx).copied() };
 
     if let Some(v) = get(1) {
         let pv = match v {
-            1 => "Macro",
-            2 => "Normal",
-            _ => "",
-        };
-        let pv = if pv.is_empty() {
-            v.to_string()
-        } else {
-            pv.to_string()
+            1 => "Macro".to_string(),
+            2 => "Normal".to_string(),
+            _ => format!("Unknown ({})", v),
         };
         tags.push(mkt("MacroMode", Value::I16(v), pv));
     }
@@ -153,28 +169,27 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
     }
     if let Some(v) = get(12) {
         let pv = match v {
-            0 => "None",
-            1 => "2x",
-            2 => "4x",
-            3 => "Other",
-            _ => "",
-        };
-        let pv = if pv.is_empty() {
-            v.to_string()
-        } else {
-            pv.to_string()
+            0 => "None".to_string(),
+            1 => "2x".to_string(),
+            2 => "4x".to_string(),
+            3 => "Other".to_string(),
+            _ => format!("Unknown ({})", v),
         };
         tags.push(mkt("DigitalZoom", Value::I16(v), pv));
     }
     if let Some(v) = get(13) {
-        tags.push(mkt_pc("Contrast", v));
+        if let Some(pv) = canon_param(v) {
+            tags.push(mkt("Contrast", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(14) {
-        tags.push(mkt_pc("Saturation", v));
+        if let Some(pv) = canon_param(v) {
+            tags.push(mkt("Saturation", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(15) {
-        // Sharpness scale is model-dependent; the generated PrintConv mis-converts
-        // some bodies, so keep the raw value.
+        // Canon Sharpness scale is model-dependent and, on bodies with a ProcessingInfo
+        // Sharpness, that value takes priority in ExifTool — keep the raw value here.
         tags.push(mkt("Sharpness", Value::I16(v), v.to_string()));
     }
     if let Some(v) = get(16) {
@@ -300,10 +315,14 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("FocalUnits", Value::I16(v), format!("{}/mm", v)));
     }
     if let Some(v) = get(26) {
-        tags.push(mkt("MaxAperture", Value::I16(v), v.to_string()));
+        if let Some(pv) = canon_aperture(v) {
+            tags.push(mkt("MaxAperture", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(27) {
-        tags.push(mkt("MinAperture", Value::I16(v), v.to_string()));
+        if let Some(pv) = canon_aperture(v) {
+            tags.push(mkt("MinAperture", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(28) {
         tags.push(mkt_pc("FlashModel", v));
@@ -436,7 +455,9 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         tags.push(mkt("ManualFlashOutput", Value::I16(v), pv));
     }
     if let Some(v) = get(42) {
-        tags.push(mkt_pc("ColorTone", v));
+        if let Some(pv) = canon_param(v) {
+            tags.push(mkt("ColorTone", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(46) {
         let pv = match v {
