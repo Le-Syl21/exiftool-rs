@@ -525,10 +525,8 @@ Sanyo.jpg	FlashMode
 Sanyo.jpg	Macro
 Sanyo.jpg	SelfTimer
 Sigma.jpg	ColorAdjustment
-Sigma.jpg	Contrast
 Sigma.jpg	FileSource
 Sigma.jpg	Highlight
-Sigma.jpg	Saturation
 Sigma.jpg	Shadow
 Sigma.jpg	Sharpness
 Sigma.jpg	X3FillLight

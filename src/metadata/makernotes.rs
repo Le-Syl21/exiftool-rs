@@ -7809,6 +7809,14 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             0x0016 => value
                 .as_str()
                 .map(|s| s.replacen("Qual:", "", 1).trim().to_string()),
+            // Contrast (string form): ValueConv strips "Cont:".
+            0x000d => value
+                .as_str()
+                .map(|s| s.replacen("Cont:", "", 1).trim().to_string()),
+            // Saturation (string form): ValueConv strips "Satu:".
+            0x0010 => value
+                .as_str()
+                .map(|s| s.replacen("Satu:", "", 1).trim().to_string()),
             // MeteringMode: string-keyed PrintConv (Sigma.pm 0x0009).
             0x0009 => value.as_str().and_then(|s| {
                 Some(
