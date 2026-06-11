@@ -5996,6 +5996,26 @@ fn read_makernote_ifd_with_base(
         {
             // Panasonic counts: raw number, not the generic by-name enum (No/Single).
             value.to_display_string()
+        } else if manufacturer == Manufacturer::Panasonic && name == "TimeSincePowerOn" {
+            // ValueConv $val/100 (centiseconds), PrintConv "[DD days ]HH:MM:SS.ss".
+            match value.as_u64() {
+                Some(v) => {
+                    let total = v as f64 / 100.0;
+                    let days = (total / 86400.0).floor();
+                    let mut rem = total - days * 86400.0;
+                    let h = (rem / 3600.0).floor();
+                    rem -= h * 3600.0;
+                    let m = (rem / 60.0).floor();
+                    let ss = rem - m * 60.0;
+                    let prefix = if days > 0.0 {
+                        format!("{} days ", days as i64)
+                    } else {
+                        String::new()
+                    };
+                    format!("{}{:02}:{:02}:{:05.2}", prefix, h as i64, m as i64, ss)
+                }
+                None => value.to_display_string(),
+            }
         } else if manufacturer == Manufacturer::Panasonic && name == "FirmwareVersion" {
             // undef[4] of control bytes -> components joined with "." (0.1.0.0).
             match &value {
