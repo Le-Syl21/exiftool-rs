@@ -139,10 +139,33 @@ impl IptcReader {
                 }
             };
 
-            let print_value = value.to_display_string();
+            let base = value.to_display_string();
+            let print_value = iptc_print_conv(record, dataset, &base).unwrap_or(base);
+
+            // Repeatable datasets (Keywords, SupplementalCategories, ...) appear
+            // multiple times; ExifTool combines them into one comma-joined list.
+            let id_num = ((record as u16) << 8) | dataset as u16;
+            if let Some(existing) = tags
+                .iter_mut()
+                .find(|t| matches!(t.id, TagId::Numeric(n) if n == id_num))
+            {
+                let prev = std::mem::replace(&mut existing.raw_value, Value::U8(0));
+                let mut items = match prev {
+                    Value::List(v) => v,
+                    single => vec![single],
+                };
+                items.push(value);
+                existing.print_value = items
+                    .iter()
+                    .map(|v| v.to_display_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                existing.raw_value = Value::List(items);
+                continue;
+            }
 
             tags.push(Tag {
-                id: TagId::Numeric(((record as u16) << 8) | dataset as u16),
+                id: TagId::Numeric(id_num),
                 name,
                 description,
                 group: TagGroup {
@@ -157,6 +180,33 @@ impl IptcReader {
         }
 
         Ok(tags)
+    }
+}
+
+/// IPTC PrintConv for the Application Record (record 2): date reformatting and
+/// the Urgency labels, matching ExifTool.
+fn iptc_print_conv(record: u8, dataset: u8, s: &str) -> Option<String> {
+    if record != 2 {
+        return None;
+    }
+    let s = s.trim();
+    match dataset {
+        // DateCreated (55), DigitizationDate (62): YYYYMMDD -> YYYY:MM:DD
+        55 | 62 if s.len() == 8 && s.bytes().all(|b| b.is_ascii_digit()) => {
+            Some(format!("{}:{}:{}", &s[0..4], &s[4..6], &s[6..8]))
+        }
+        // Urgency (10)
+        10 => Some(
+            match s {
+                "0" => "0 (reserved)",
+                "1" => "1 (most urgent)",
+                "5" => "5 (normal urgency)",
+                "8" => "8 (least urgent)",
+                _ => return None,
+            }
+            .to_string(),
+        ),
+        _ => None,
     }
 }
 

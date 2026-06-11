@@ -225,6 +225,27 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 }
             }
         }
+        // UserComment — 8-byte charset ID prefix, then the comment text.
+        ("ExifIFD", 0x9286) => {
+            if let Value::Undefined(ref data) = value {
+                if data.len() >= 8 {
+                    let (charset, body) = data.split_at(8);
+                    let text = if charset.starts_with(b"UNICODE") {
+                        let u16s: Vec<u16> = body
+                            .chunks_exact(2)
+                            .map(|c| u16::from_be_bytes([c[0], c[1]]))
+                            .collect();
+                        String::from_utf16_lossy(&u16s)
+                    } else {
+                        crate::encoding::decode_utf8_or_latin1(body).to_string()
+                    };
+                    return Some(
+                        text.trim_end_matches(|c: char| c == '\0' || c == ' ')
+                            .to_string(),
+                    );
+                }
+            }
+        }
         // FocalLength - format as "X.Y mm"
         ("ExifIFD", 0x920A) => {
             if let Some(v) = value.as_f64() {
