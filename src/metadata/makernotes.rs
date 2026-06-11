@@ -5994,6 +5994,18 @@ fn read_makernote_ifd_with_base(
         } else if name.ends_with("ImageSize") && value.to_display_string().contains(' ') {
             // ExifTool joins the two dimensions with "x" (320 240 -> 320x240).
             value.to_display_string().replace(' ', "x")
+        } else if name == "BabyAge" && value.to_display_string() == "9999:99:99 00:00:00" {
+            "(not set)".to_string()
+        } else if name == "TravelDay" && value.as_u64() == Some(65535) {
+            "n/a".to_string()
+        } else if name == "PanasonicExifVersion" {
+            // undef[4] shown as ASCII (e.g. "0270").
+            match &value {
+                Value::Binary(b) | Value::Undefined(b) if b.len() == 4 => {
+                    b.iter().map(|&c| c as char).collect()
+                }
+                _ => value.to_display_string(),
+            }
         } else if name == "MakerNoteVersion" {
             // undef[4] shown as ASCII (Minolta 'MLT0', Panasonic '0130'); Nikon's
             // numeric form "0210" becomes "2.10" (ValueConv).
