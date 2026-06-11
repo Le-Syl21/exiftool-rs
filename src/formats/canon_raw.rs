@@ -652,10 +652,10 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             // RawJpgInfo (SubDirectory → CanonRaw::RawJpgInfo, FORMAT=int16u, FIRST_ENTRY=1)
             // Index 1=RawJpgQuality, 2=RawJpgSize, 3=RawJpgWidth, 4=RawJpgHeight
             // FIRST_ENTRY=1 means byte offset of index N = (N-1)*2
+            // The block starts with a leading int16 (count), so index 1 sits at byte 2.
             let n = data.len() / 2;
             if n >= 2 {
-                // Index 1 = RawJpgQuality (byte 0)
-                let quality = ru16(data, 0);
+                let quality = ru16(data, 2);
                 let q_pv = match quality {
                     1 => "Economy".to_string(),
                     2 => "Normal".to_string(),
@@ -666,8 +666,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                 tags.push(mk_raw("RawJpgQuality", Value::U16(quality), q_pv));
             }
             if n >= 3 {
-                // Index 2 = RawJpgSize (byte 2)
-                let size = ru16(data, 2);
+                let size = ru16(data, 4);
                 let s_pv = match size {
                     0 => "Large".to_string(),
                     1 => "Medium".to_string(),
@@ -677,13 +676,11 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                 tags.push(mk_raw("RawJpgSize", Value::U16(size), s_pv));
             }
             if n >= 4 {
-                // Index 3 = RawJpgWidth (byte 4)
-                let w = ru16(data, 4);
+                let w = ru16(data, 6);
                 tags.push(mk_raw("RawJpgWidth", Value::U16(w), w.to_string()));
             }
             if n >= 5 {
-                // Index 4 = RawJpgHeight (byte 6)
-                let h = ru16(data, 6);
+                let h = ru16(data, 8);
                 tags.push(mk_raw("RawJpgHeight", Value::U16(h), h.to_string()));
             }
             true

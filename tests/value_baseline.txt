@@ -45,10 +45,6 @@ CanonRaw.crw	AFPointsInFocus
 CanonRaw.crw	BlueBalance
 CanonRaw.crw	DOF
 CanonRaw.crw	MeasuredEV
-CanonRaw.crw	RawJpgHeight
-CanonRaw.crw	RawJpgQuality
-CanonRaw.crw	RawJpgSize
-CanonRaw.crw	RawJpgWidth
 CanonRaw.crw	RedBalance
 CanonRaw.crw	Sharpness
 Casio2.jpg	DOF
