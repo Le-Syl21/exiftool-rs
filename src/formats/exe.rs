@@ -915,11 +915,7 @@ fn read_elf(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Other",
     };
 
-    tags.push(mk(
-        "CPUType",
-        "CPU Type",
-        Value::String(format!("ELF {}", class)),
-    ));
+    let _ = class;
     tags.push(mk(
         "CPUByteOrder",
         "CPU Byte Order",
@@ -933,10 +929,10 @@ fn read_elf(data: &[u8]) -> Result<Vec<Tag>> {
         u16::from_be_bytes([data[16], data[17]])
     };
     let type_str = match elf_type {
-        1 => "Relocatable",
-        2 => "Executable",
-        3 => "Shared Object",
-        4 => "Core Dump",
+        1 => "Relocatable file",
+        2 => "Executable file",
+        3 => "Shared object file",
+        4 => "Core file",
         _ => "Unknown",
     };
     tags.push(mk(
@@ -951,18 +947,27 @@ fn read_elf(data: &[u8]) -> Result<Vec<Tag>> {
         u16::from_be_bytes([data[18], data[19]])
     };
     let machine_str = match machine {
-        3 => "Intel 386",
-        8 => "MIPS",
+        3 => "i386",
+        8 => "MIPS R3000",
         20 => "PowerPC",
-        40 => "ARM",
-        62 => "AMD64",
-        183 => "ARM64",
+        40 => "Arm (up to Armv7/AArch32)",
+        62 => "AMD x86-64",
+        183 => "Arm 64-bits (Armv8/AArch64)",
         _ => "Unknown",
     };
+    // CPUType is the machine; CPUArchitecture is the address size (ELF class).
+    tags.push(mk("CPUType", "CPU Type", Value::String(machine_str.into())));
     tags.push(mk(
         "CPUArchitecture",
         "CPU Architecture",
-        Value::String(machine_str.into()),
+        Value::String(
+            match data[4] {
+                1 => "32 bit",
+                2 => "64 bit",
+                _ => "Unknown",
+            }
+            .into(),
+        ),
     ));
 
     Ok(tags)

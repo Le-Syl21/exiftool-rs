@@ -71,15 +71,9 @@ DjVu.djvu	Creator
 DjVu.djvu	SubfileType
 DjVu.djvu	Subject
 EXE.a	CreateDate
-EXE.elf	CPUArchitecture
 EXE.elf	CPUByteOrder
-EXE.elf	CPUType
-EXE.elf	ObjectFileType
 EXE.exe	TimeStamp
-EXE.so	CPUArchitecture
 EXE.so	CPUByteOrder
-EXE.so	CPUType
-EXE.so	ObjectFileType
 ExifTool.jpg	ApertureValue
 ExifTool.jpg	ColorSpace
 ExifTool.jpg	Comment
