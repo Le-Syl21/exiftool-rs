@@ -612,9 +612,7 @@ Nikon.nef	SensorPixelSize
 Nikon.nef	Sharpness
 Nikon.nef	StripOffsets
 Nikon.nef	SubfileType
-Nikon.nef	WBAdjBlueBalance
 Nikon.nef	WBAdjLighting
-Nikon.nef	WBAdjRedBalance
 Nikon.nef	WhiteBalance
 NikonD2Hs.jpg	AFPointsInFocus
 NikonD2Hs.jpg	BlueBalance

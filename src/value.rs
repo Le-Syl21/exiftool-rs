@@ -70,7 +70,8 @@ impl Value {
                 }
             }
             Value::F32(v) => format!("{}", v),
-            Value::F64(v) => format!("{}", v),
+            // ExifTool stringifies doubles with Perl's %.15g.
+            Value::F64(v) => format_g15(*v),
             Value::Binary(data) => {
                 format!("(Binary data {} bytes, use -b option to extract)", data.len())
             }
