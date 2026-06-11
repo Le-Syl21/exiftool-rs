@@ -625,10 +625,6 @@ QuickTime.m4a	Compilation
 QuickTime.m4a	HandlerType
 QuickTime.m4a	TrackVolume
 QuickTime.mov	Album
-QuickTime.mov	Artist
-QuickTime.mov	Comment
-QuickTime.mov	Composer
-QuickTime.mov	Genre
 QuickTime.mov	HandlerClass
 QuickTime.mov	HandlerType
 QuickTime.mov	HandlerVendorID

@@ -2396,7 +2396,7 @@ fn parse_qt_text_atom(
     let text_start = start + 4;
 
     if text_start + text_len <= end {
-        let text = crate::encoding::decode_utf8_or_latin1(&data[text_start..text_start + text_len])
+        let text = decode_qt_text(&data[text_start..text_start + text_len])
             .trim_end_matches('\0')
             .to_string();
         if !text.is_empty() {
@@ -2408,6 +2408,35 @@ fn parse_qt_text_atom(
             // Unknown © tags are skipped (they may be handled elsewhere)
         }
     }
+}
+
+/// Decode a classic QuickTime text value: valid UTF-8 if possible, otherwise MacRoman
+/// (the encoding used by old-style \xa9 udta atoms with Macintosh language codes).
+fn decode_qt_text(bytes: &[u8]) -> String {
+    if let Ok(s) = std::str::from_utf8(bytes) {
+        return s.to_string();
+    }
+    // MacRoman high half (0x80-0xFF) -> Unicode.
+    const HIGH: [char; 128] = [
+        'Ä', 'Å', 'Ç', 'É', 'Ñ', 'Ö', 'Ü', 'á', 'à', 'â', 'ä', 'ã', 'å', 'ç', 'é', 'è', 'ê', 'ë',
+        'í', 'ì', 'î', 'ï', 'ñ', 'ó', 'ò', 'ô', 'ö', 'õ', 'ú', 'ù', 'û', 'ü', '†', '°', '¢', '£',
+        '§', '•', '¶', 'ß', '®', '©', '™', '´', '¨', '≠', 'Æ', 'Ø', '∞', '±', '≤', '≥', '¥', 'µ',
+        '∂', '∑', '∏', 'π', '∫', 'ª', 'º', 'Ω', 'æ', 'ø', '¿', '¡', '¬', '√', 'ƒ', '≈', '∆', '«',
+        '»', '…', '\u{a0}', 'À', 'Ã', 'Õ', 'Œ', 'œ', '–', '—', '“', '”', '‘', '’', '÷', '◊', 'ÿ',
+        'Ÿ', '⁄', '€', '‹', '›', 'ﬁ', 'ﬂ', '‡', '·', '‚', '„', '‰', 'Â', 'Ê', 'Á', 'Ë', 'È', 'Í',
+        'Î', 'Ï', 'Ì', 'Ó', 'Ô', '\u{f8ff}', 'Ò', 'Ú', 'Û', 'Ù', 'ı', 'ˆ', '˜', '¯', '˘', '˙', '˚',
+        '¸', '˝', '˛', 'ˇ',
+    ];
+    bytes
+        .iter()
+        .map(|&b| {
+            if b < 0x80 {
+                b as char
+            } else {
+                HIGH[(b - 0x80) as usize]
+            }
+        })
+        .collect()
 }
 
 /// Map ilst item types to tag names.
