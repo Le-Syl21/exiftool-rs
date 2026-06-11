@@ -17,8 +17,6 @@ Apple.jpg	GPSAltitude
 Apple.jpg	GPSDestBearingRef
 Apple.jpg	GPSHPositioningError
 Apple.jpg	GPSImgDirectionRef
-Apple.jpg	GPSLatitude
-Apple.jpg	GPSLongitude
 Apple.jpg	GPSPosition
 Apple.jpg	GPSSpeedRef
 Apple.jpg	ImageCaptureType
@@ -309,8 +307,6 @@ GPS.jpg	City
 GPS.jpg	ExposureCompensation
 GPS.jpg	FNumber
 GPS.jpg	FileSource
-GPS.jpg	GPSLatitude
-GPS.jpg	GPSLongitude
 GPS.jpg	GPSPosition
 GPS.jpg	SceneType
 GPS.jpg	ShutterSpeed
@@ -337,8 +333,6 @@ GoPro.jpg	DigitalZoomOn
 GoPro.jpg	ExposureCompensation
 GoPro.jpg	FlashpixVersion
 GoPro.jpg	GPSAltitude
-GoPro.jpg	GPSLatitude
-GoPro.jpg	GPSLongitude
 GoPro.jpg	GPSPosition
 GoPro.jpg	MediaUniqueID
 GoPro.jpg	Protune
@@ -349,8 +343,6 @@ GoPro.jpg	WhiteBalance
 Google.jpg	DirectoryItemMime
 Google.jpg	GPSAltitude
 Google.jpg	GPSImgDirectionRef
-Google.jpg	GPSLatitude
-Google.jpg	GPSLongitude
 Google.jpg	GPSPosition
 Google.jpg	HDRPlusMakerNote
 Google.jpg	ImageData
@@ -787,8 +779,6 @@ Ricoh2.jpg	GPSAltitude
 Ricoh2.jpg	GPSDestBearingRef
 Ricoh2.jpg	GPSDestDistanceRef
 Ricoh2.jpg	GPSImgDirectionRef
-Ricoh2.jpg	GPSLatitude
-Ricoh2.jpg	GPSLongitude
 Ricoh2.jpg	GPSMeasureMode
 Ricoh2.jpg	GPSPosition
 Ricoh2.jpg	GPSSpeedRef

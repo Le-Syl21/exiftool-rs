@@ -459,6 +459,41 @@ impl ExifReader {
             }
         }
 
+        // GPSLatitude/GPSLongitude print as "D deg M' S.SS\" REF" (ExifTool ToDMS),
+        // normalising fractional minutes into seconds and appending the hemisphere ref.
+        for (coord, reftag) in [
+            ("GPSLatitude", "GPSLatitudeRef"),
+            ("GPSLongitude", "GPSLongitudeRef"),
+        ] {
+            let r = tags
+                .iter()
+                .find(|t| t.name == reftag)
+                .map(|t| t.raw_value.to_display_string())
+                .and_then(|s| s.chars().next())
+                .filter(|c| "NSEW".contains(*c));
+            if let Some(refc) = r {
+                if let Some(t) = tags.iter_mut().find(|t| t.name == coord) {
+                    let parts: Vec<f64> = t
+                        .raw_value
+                        .to_display_string()
+                        .split_whitespace()
+                        .filter_map(|s| s.parse::<f64>().ok())
+                        .collect();
+                    if parts.len() == 3 {
+                        let dec = parts[0] + parts[1] / 60.0 + parts[2] / 3600.0;
+                        let deg = dec.floor();
+                        let rem = (dec - deg) * 60.0;
+                        let min = rem.floor();
+                        let sec = (rem - min) * 60.0;
+                        t.print_value = format!(
+                            "{} deg {}' {:.2}\" {}",
+                            deg as i64, min as i64, sec, refc
+                        );
+                    }
+                }
+            }
+        }
+
         // ExifTool uses the full-resolution sub-IFD (SubfileType = "Full-resolution
         // image") for the primary image dimensions. When such a sub-IFD exists (e.g. the
         // real raw image in a DNG/NEF whose IFD0 is a small reduced-resolution preview),
