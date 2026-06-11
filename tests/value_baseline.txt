@@ -35,10 +35,6 @@ Canon1DmkIII.jpg	BlueBalance
 Canon1DmkIII.jpg	ContinuousShootingSpeed
 Canon1DmkIII.jpg	ContinuousShotLimit
 Canon1DmkIII.jpg	ExposureLevelIncrements
-Canon1DmkIII.jpg	FilterEffectMonochrome
-Canon1DmkIII.jpg	FilterEffectUserDef1
-Canon1DmkIII.jpg	FilterEffectUserDef2
-Canon1DmkIII.jpg	FilterEffectUserDef3
 Canon1DmkIII.jpg	FocusingScreen
 Canon1DmkIII.jpg	HighISONoiseReduction
 Canon1DmkIII.jpg	ISOSpeedRange
@@ -56,14 +52,8 @@ Canon1DmkIII.jpg	ShutterButtonAFOnButton
 Canon1DmkIII.jpg	ShutterSpeedRange
 Canon1DmkIII.jpg	SwitchToRegisteredAFPoint
 Canon1DmkIII.jpg	TimerLength
-Canon1DmkIII.jpg	ToningEffectMonochrome
-Canon1DmkIII.jpg	ToningEffectUserDef1
-Canon1DmkIII.jpg	ToningEffectUserDef2
-Canon1DmkIII.jpg	ToningEffectUserDef3
 Canon1DmkIII.jpg	UsableMeteringModes
 Canon1DmkIII.jpg	UsableShootingModes
-Canon1DmkIII.jpg	UserDef1PictureStyle
-Canon1DmkIII.jpg	UserDef2PictureStyle
 Canon1DmkIII.jpg	VRDOffset
 CanonRaw.cr2	AFPointsInFocus
 CanonRaw.cr2	BlueBalance

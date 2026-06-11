@@ -4462,28 +4462,49 @@ fn read_makernote_ifd_with_base(
                                         d[abs + 2],
                                         d[abs + 3],
                                     ]);
-                                    // UserDefNPictureStyle: print as picture style name
-                                    let pv =
-                                        if name.starts_with("UserDef") && name.ends_with("Style") {
-                                            let s = match v as u32 {
-                                                0x41 => "Standard",
-                                                0x42 => "Portrait",
-                                                0x43 => "Landscape",
-                                                0x44 => "Neutral",
-                                                0x45 => "Faithful",
-                                                0x51 => "Monochrome",
-                                                0x81 => "Standard",
-                                                0x82 => "Portrait",
-                                                _ => "",
-                                            };
-                                            if s.is_empty() {
-                                                v.to_string()
-                                            } else {
-                                                s.to_string()
-                                            }
-                                        } else {
-                                            v.to_string()
+                                    // UserDefNPictureStyle: int16u picture-style id; the other
+                                    // FilterEffect/ToningEffect fields are small enums.
+                                    let pv = if name.starts_with("UserDef")
+                                        && name.ends_with("Style")
+                                    {
+                                        let s = match (v as u32) & 0xff {
+                                            0x41 | 0x81 => "Standard",
+                                            0x42 | 0x82 => "Portrait",
+                                            0x43 | 0x83 => "Landscape",
+                                            0x44 | 0x84 => "Neutral",
+                                            0x45 | 0x85 => "Faithful",
+                                            0x51 | 0x91 => "Monochrome",
+                                            _ => "",
                                         };
+                                        if s.is_empty() {
+                                            v.to_string()
+                                        } else {
+                                            s.to_string()
+                                        }
+                                    } else if name.starts_with("FilterEffect") {
+                                        match v {
+                                            0 => "None",
+                                            1 => "Yellow",
+                                            2 => "Orange",
+                                            3 => "Red",
+                                            4 => "Green",
+                                            _ => "",
+                                        }
+                                        .to_string()
+                                    } else if name.starts_with("ToningEffect") {
+                                        match v {
+                                            0 => "None",
+                                            1 => "Sepia",
+                                            2 => "Blue",
+                                            3 => "Purple",
+                                            4 => "Green",
+                                            _ => "",
+                                        }
+                                        .to_string()
+                                    } else {
+                                        v.to_string()
+                                    };
+                                    let pv = if pv.is_empty() { v.to_string() } else { pv };
                                     t.push(mk_canon_str(name, &pv));
                                 }
                             }
