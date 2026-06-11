@@ -1116,7 +1116,9 @@ impl ExifTool {
                 family2: "Other".into(),
             },
             raw_value: Value::String(format!("{:?}", file_type)),
-            print_value: file_type.description().to_string(),
+            // ExifTool's FileType value is the short code ("JPEG"), not the
+            // human-readable description ("JPEG image").
+            print_value: file_type.code().to_string(),
             priority: 0,
         });
 
