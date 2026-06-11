@@ -5547,6 +5547,15 @@ fn read_makernote_ifd_with_base(
                         } else {
                             "0".to_string()
                         }
+                    } else if matches!(name, "ContrastSetting" | "SharpnessSetting") {
+                        // Perl: "$v[0] (min $v[1], max $v[2])"
+                        let disp = val.to_display_string();
+                        let parts: Vec<&str> = disp.split_whitespace().collect();
+                        if parts.len() >= 3 {
+                            format!("{} (min {}, max {})", parts[0], parts[1], parts[2])
+                        } else {
+                            disp.clone()
+                        }
                     } else if name == "FocalPlaneDiagonal" {
                         format!("{} mm", val.to_display_string()) // Perl: '"$val mm"'
                     } else if name == "ManometerPressure" {
