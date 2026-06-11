@@ -61,7 +61,6 @@ DICOM.dcm	FileMetaInfoVersion
 DICOM.dcm	PixelData
 DNG.dng	AFPointsInFocus
 DNG.dng	BitsPerSample
-DNG.dng	CFAPlaneColor
 DNG.dng	Compression
 DNG.dng	DNGLensInfo
 DNG.dng	LensInfo
@@ -127,7 +126,6 @@ Font.pfb	Notice
 FotoStation.jpg	ObjectCycle
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
-FujiFilm.raf	DynamicRange
 FujiFilm.raf	Model
 FujiFilm.raf	ThumbnailOffset
 GE.jpg	GEMake

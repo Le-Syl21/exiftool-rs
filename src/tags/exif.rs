@@ -604,6 +604,24 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 return Some(l.to_string());
             }
         }
+        // CFAPlaneColor (0xc616): map each plane index to a colour name, join with ",".
+        (_, 0xC616) => {
+            let cols = ["Red", "Green", "Blue", "Cyan", "Magenta", "Yellow", "White"];
+            let s = value.to_display_string();
+            let mapped: Vec<String> = s
+                .split_whitespace()
+                .map(|n| {
+                    n.parse::<usize>()
+                        .ok()
+                        .and_then(|i| cols.get(i))
+                        .map(|c| c.to_string())
+                        .unwrap_or_else(|| format!("Unknown({})", n))
+                })
+                .collect();
+            if !mapped.is_empty() {
+                return Some(mapped.join(","));
+            }
+        }
         // CR2CFAPattern (0xc5e0): ValueConv + PrintConv collapsed to the colour grid.
         (_, 0xC5E0) => {
             if let Some(v) = value.as_u64() {

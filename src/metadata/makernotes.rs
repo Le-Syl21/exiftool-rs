@@ -8203,6 +8203,15 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             0x1101 => Some(value.to_display_string()),
             // InternalSerialNumber: decode the hex body number + manufacture date.
             0x0010 => value.as_str().map(fuji_internal_serial),
+            // DynamicRange (0x1400): 1=Standard, 3=Wide.
+            0x1400 => value.as_u64().and_then(|v| {
+                match v {
+                    1 => Some("Standard"),
+                    3 => Some("Wide"),
+                    _ => None,
+                }
+                .map(str::to_string)
+            }),
             // Sharpness (0x1001): PrintHex enum.
             0x1001 => value.as_u64().and_then(|v| {
                 match v {
