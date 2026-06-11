@@ -2919,11 +2919,13 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
         }
     } else if !is_utf16 {
         // Line count and word count for plain text files (not UTF-16/32)
-        let line_count = data.iter().filter(|&&b| b == b'\n').count();
-        let line_count = if line_count == 0 && !data.is_empty() {
-            1
+        // ExifTool counts each ReadLine, so trailing content without a final newline
+        // still counts as a line.
+        let nl_count = data.iter().filter(|&&b| b == b'\n').count();
+        let line_count = if !data.is_empty() && data.last() != Some(&b'\n') {
+            nl_count + 1
         } else {
-            line_count
+            nl_count
         };
         tags.push(mk("LineCount", line_count.to_string()));
 

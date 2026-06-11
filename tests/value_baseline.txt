@@ -153,7 +153,6 @@ Geotag.gpx	GpxSchemaLocation
 Geotag.gpx	GpxTrkTrksegTrkptTime
 Geotag.kml	KmlDocumentPlacemarkTrackWhen
 Geotag.xml	HistoryRunTrackTrackpointTime
-Geotag3.log	LineCount
 GoPro.jpg	ColorSpace
 GoPro.jpg	ExposureCompensation
 GoPro.jpg	FlashpixVersion
