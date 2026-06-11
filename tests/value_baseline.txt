@@ -28,10 +28,8 @@ Canon1DmkIII.jpg	AFMicroadjustment
 Canon1DmkIII.jpg	ApertureRange
 Canon1DmkIII.jpg	ApplyShootingMeteringMode
 Canon1DmkIII.jpg	BlueBalance
-Canon1DmkIII.jpg	FocusingScreen
 Canon1DmkIII.jpg	HighISONoiseReduction
 Canon1DmkIII.jpg	ISOSpeedRange
-Canon1DmkIII.jpg	LockMicrophoneButton
 Canon1DmkIII.jpg	MaxFocalLength
 Canon1DmkIII.jpg	MinFocalLength
 Canon1DmkIII.jpg	PictureStylePC

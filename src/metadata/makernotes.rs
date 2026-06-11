@@ -597,6 +597,18 @@ fn canon_cf2_1d3_pc(tag_id: u32, val: u32) -> Option<&'static str> {
         ]),
         // value 0 ("Normal (disabled)") is common to every SetButtonWhenShooting variant.
         0x0704 => m(&[(0, "Normal (disabled)")]),
+        0x0709 => m(&[
+            (0, "Protect (hold:record memo)"),
+            (1, "Record memo (protect:disable)"),
+            (2, "Play memo (hold:record memo)"),
+            (3, "Rating (protect/memo:disable)"),
+        ]),
+        0x080b => m(&[
+            (0, "Ec-CIV"),
+            (1, "Ec-A,B,C,CII,CIII,D,H,I,L"),
+            (2, "Ec-S"),
+            (3, "Ec-N,R"),
+        ]),
         _ => None,
     }
 }
