@@ -103,7 +103,6 @@ ExifTool.tif	DeviceManufacturer
 ExifTool.tif	MeasurementBacking
 ExifTool.tif	MeasurementFlare
 ExifTool.tif	Technology
-ExifTool.tif	ViewingCondIlluminant
 FITS.fits	Comment
 FLIR.jpg	CameraTemperatureMinWarn
 FLIR.jpg	CameraTemperatureRangeMin
@@ -394,7 +393,6 @@ XMP.jpg	DeviceManufacturer
 XMP.jpg	MeasurementBacking
 XMP.jpg	MeasurementFlare
 XMP.jpg	Technology
-XMP.jpg	ViewingCondIlluminant
 XMP.xml	Iso
 XMP.xmp	NativeDigest
 XMP4.xmp	StructList2Item1

@@ -464,10 +464,12 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                                 i32::from_be_bytes([d[12], d[13], d[14], d[15]]) as f64 / 65536.0;
                             let z =
                                 i32::from_be_bytes([d[16], d[17], d[18], d[19]]) as f64 / 65536.0;
+                            // ICC s15Fixed16: round to 5 decimals then %.15g (no trailing zeros).
+                            let f5 = |v: f64| crate::value::format_g15((v * 1e5).round() / 1e5);
                             tags.push(mk(
                                 "ViewingCondIlluminant",
                                 "Viewing Cond Illuminant",
-                                Value::String(format!("{:.5} {:.5} {:.5}", x, y, z)),
+                                Value::String(format!("{} {} {}", f5(x), f5(y), f5(z))),
                             ));
                             let sx =
                                 i32::from_be_bytes([d[20], d[21], d[22], d[23]]) as f64 / 65536.0;
@@ -478,7 +480,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                             tags.push(mk(
                                 "ViewingCondSurround",
                                 "Viewing Cond Surround",
-                                Value::String(format!("{:.5} {:.5} {:.5}", sx, sy, sz)),
+                                Value::String(format!("{} {} {}", f5(sx), f5(sy), f5(sz))),
                             ));
                             if d.len() >= 36 {
                                 let illum_type =
