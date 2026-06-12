@@ -30,7 +30,6 @@ ExifTool.jpg	ShutterSpeedValue
 ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
 FLIR.jpg	RawThermalImage
-FujiFilm.raf	ThumbnailOffset
 Google.jpg	DirectoryItemMime
 Google.jpg	HDRPlusMakerNote
 Google.jpg	ImageData

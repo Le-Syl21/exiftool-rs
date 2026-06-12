@@ -84,7 +84,21 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
         // Try to extract EXIF from embedded JPEG
         if jpeg_data.starts_with(&[0xFF, 0xD8, 0xFF]) {
             if let Ok(jpeg_tags) = crate::formats::jpeg::read_jpeg(jpeg_data) {
-                tags.extend(jpeg_tags);
+                for mut t in jpeg_tags {
+                    // IsOffset tags from the embedded JPEG are JPEG-relative; ExifTool
+                    // reports them as RAF-absolute, so add the JPEG's file position.
+                    if matches!(
+                        t.name.as_str(),
+                        "ThumbnailOffset" | "PreviewImageStart" | "OtherImageStart"
+                    ) {
+                        if let Some(v) = t.raw_value.as_u64() {
+                            let abs = v + jpeg_offset as u64;
+                            t.raw_value = Value::U32(abs as u32);
+                            t.print_value = abs.to_string();
+                        }
+                    }
+                    tags.push(t);
+                }
             }
         }
     }
