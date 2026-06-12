@@ -2753,11 +2753,10 @@ fn parse_pentax_mov(data: &[u8], tags: &mut Vec<Tag>) {
             } else {
                 format!("{}", et)
             };
-            tags.push(mk_makernote(
-                "ExposureTime",
-                "Exposure Time",
-                Value::String(et_str),
-            ));
+            // Numeric raw (full precision) so LightValue/composites use it.
+            let mut t = mk_makernote("ExposureTime", "Exposure Time", Value::F64(et));
+            t.print_value = et_str;
+            tags.push(t);
         }
     }
 

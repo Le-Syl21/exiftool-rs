@@ -56,7 +56,6 @@ Panasonic.rw2	ThumbnailOffset
 Pentax.jpg	LensID
 Pentax.jpg	TvExposureTimeSetting
 QuickTime.heic	MediaDataOffset
-QuickTime.mov	LightValue
 Real.ra	Copyright
 Sanyo.jpg	DataDump
 Sigma.x3f	LensType
