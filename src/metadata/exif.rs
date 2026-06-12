@@ -333,9 +333,15 @@ impl ExifReader {
                 tags.retain(|t| {
                     !mn_name_set.contains(&t.name) || exif_primary.contains(&t.name.as_str())
                 });
-                // Add MakerNotes tags, but skip EXIF-primary tags that EXIF already provides
+                // Add MakerNotes tags, but skip EXIF-primary tags that EXIF already provides.
+                // Exception: a few maker notes carry a more precise authoritative value
+                // (e.g. Kodak FNumber/ExposureTime) that ExifTool reports over EXIF — keep
+                // those so the later precedence pass can promote them.
                 for mn_tag in mn_tags {
-                    if exif_primary.contains(&mn_tag.name.as_str())
+                    let authoritative = mn_tag.group.family1 == "Kodak"
+                        && matches!(mn_tag.name.as_str(), "FNumber" | "ExposureTime");
+                    if !authoritative
+                        && exif_primary.contains(&mn_tag.name.as_str())
                         && exif_has.contains(&mn_tag.name)
                     {
                         // EXIF wins - don't add MakerNotes version

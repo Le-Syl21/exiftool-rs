@@ -52,8 +52,6 @@ Google.jpg	HDRPlusMakerNote
 Google.jpg	ImageData
 Google.jpg	ImageName
 Jpeg2000.jp2	StripOffsets
-Kodak.jpg	ExposureTime
-Kodak.jpg	FNumber
 Kodak.jpg	LightValue
 Kodak.jpg	ShutterSpeed
 Lytro.lfp	FOV

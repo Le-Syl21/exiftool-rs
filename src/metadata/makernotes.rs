@@ -1369,12 +1369,23 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
     tags.push(mk("ShutterMode", kpc(d[27] as u64, &[(0, "Auto"), (8, "Aperture Priority"), (32, "Manual?")])));
     tags.push(mk("MeteringMode", kpc(d[28] as u64, &[(0, "Multi-segment"), (1, "Center-weighted average"), (2, "Spot")])));
 
+    // FNumber (0x1e int16u): ValueConv $val/100, no PrintConv (full precision).
     let fnum = u16::from_be_bytes([d[30], d[31]]);
-    tags.push(mk("FNumber", format!("{:.1}", fnum as f64 / 100.0)));
+    tags.push(mk(
+        "FNumber",
+        crate::value::format_g15(fnum as f64 / 100.0),
+    ));
 
+    // ExposureTime (0x20 int32u): ValueConv $val/1e5, PrintExposureTime.
     let exp = u32::from_be_bytes([d[32], d[33], d[34], d[35]]);
     if exp > 0 {
-        tags.push(mk("ExposureTime", exp.to_string()));
+        let secs = exp as f64 / 1e5;
+        let pv = if secs > 0.0 && secs < 0.25001 {
+            format!("1/{}", (1.0 / secs + 0.5) as i64)
+        } else {
+            crate::value::format_g15(secs)
+        };
+        tags.push(mk("ExposureTime", pv));
     }
 
     let comp = i16::from_be_bytes([d[36], d[37]]);

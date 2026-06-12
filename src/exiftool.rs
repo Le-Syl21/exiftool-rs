@@ -1482,6 +1482,9 @@ impl ExifTool {
                     ("MinoltaRaw", "Saturation"),
                     ("MinoltaRaw", "Sharpness"),
                     ("MinoltaRaw", "ISOSetting"),
+                    // Kodak maker note carries more precise Exposure/FNumber than EXIF.
+                    ("Kodak", "FNumber"),
+                    ("Kodak", "ExposureTime"),
                 ];
                 for (grp, name) in SPECIAL_WINS {
                     if tags
