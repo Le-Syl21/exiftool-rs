@@ -1516,6 +1516,31 @@ impl ExifTool {
                         tags.retain(|t| t.name != *name || t.group.family1 == *grp);
                     }
                 }
+
+                // QuickTime container/handler tags: ExifTool reports the LAST track's
+                // value (e.g. the metadata-track HandlerType), unlike per-track TrackID
+                // which keeps the first. Keep only the last instance of these.
+                const QT_LAST_WINS: &[&str] = &[
+                    "HandlerType",
+                    "HandlerClass",
+                    "HandlerVendorID",
+                    "MediaTimeScale",
+                ];
+                for name in QT_LAST_WINS {
+                    let last = tags
+                        .iter()
+                        .rposition(|t| t.name == *name && t.group.family1 == "QuickTime");
+                    if let Some(li) = last {
+                        let mut i = 0usize;
+                        tags.retain(|t| {
+                            let keep = !(t.name == *name
+                                && t.group.family1 == "QuickTime"
+                                && i != li);
+                            i += 1;
+                            keep
+                        });
+                    }
+                }
             }
 
             let mut best_priority: HashMap<String, i32> = HashMap::new();

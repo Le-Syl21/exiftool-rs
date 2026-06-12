@@ -9,7 +9,6 @@ CanonRaw.cr3	BracketMode
 CanonRaw.cr3	BracketShotNumber
 CanonRaw.cr3	BracketValue
 CanonRaw.cr3	CustomControls
-CanonRaw.cr3	HandlerType
 CanonRaw.cr3	PreviewImage
 CanonRaw.cr3	RFLensType
 CanonRaw.cr3	Sharpness
@@ -75,12 +74,7 @@ Panasonic.rw2	ThumbnailOffset
 Pentax.jpg	LensID
 Pentax.jpg	TvExposureTimeSetting
 QuickTime.heic	MediaDataOffset
-QuickTime.m4a	HandlerType
-QuickTime.mov	HandlerClass
-QuickTime.mov	HandlerType
-QuickTime.mov	HandlerVendorID
 QuickTime.mov	LightValue
-QuickTime.mov	MediaTimeScale
 Real.ra	Copyright
 Sanyo.jpg	DataDump
 Sigma.x3f	LensType
