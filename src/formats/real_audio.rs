@@ -185,7 +185,10 @@ pub fn read_real_audio(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Field 28: Copyright
     if pos + copy_len <= d.len() && copy_len > 0 {
-        let copyright = crate::encoding::decode_utf8_or_latin1(&d[pos..pos + copy_len]).to_string();
+        // ExifTool passes the raw bytes (no Latin-1→UTF-8 conversion), so a high
+        // byte like 0xFC stays a single byte; mirror that with from_utf8_lossy
+        // (invalid sequences → U+FFFD) rather than decoding Latin-1.
+        let copyright = String::from_utf8_lossy(&d[pos..pos + copy_len]).into_owned();
         tags.push(mktag(
             "Real",
             "Copyright",
