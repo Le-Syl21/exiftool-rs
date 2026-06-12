@@ -371,6 +371,23 @@ pub fn parse_makernotes_exif_base(
         tags.retain(|t| seen_names.insert(t.name.clone()));
     }
 
+    // Minolta ColorMode: the CameraSettings block (tag 0x0001/0x0003, processed
+    // first) and the direct 0x0101 tag both define ColorMode. ExifTool's 0x0101
+    // is Priority => 0 ("Other ColorMode is more reliable"), so the earlier
+    // CameraSettings value wins. Keep the first occurrence.
+    if info.manufacturer == Manufacturer::Minolta {
+        let mut seen_color_mode = false;
+        tags.retain(|t| {
+            if t.name == "ColorMode" {
+                if seen_color_mode {
+                    return false;
+                }
+                seen_color_mode = true;
+            }
+            true
+        });
+    }
+
     // Canon post-processing: OriginalDecisionData
     // The OriginalDecisionDataOffset tag gives a JPEG-file-relative offset to 512 bytes of binary data.
     // In TIFF-relative terms, subtract 12 (SOI + APP1-marker + size + "Exif\0\0" = 2+2+2+6=12 bytes).

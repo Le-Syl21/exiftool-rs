@@ -36,7 +36,6 @@ Google.jpg	ImageData
 Google.jpg	ImageName
 Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
-Minolta.mrw	ColorMode
 Olympus.jpg	DataDump
 OlympusE1.jpg	BlueBalance
 PCAP.pcapng	TimeStamp
