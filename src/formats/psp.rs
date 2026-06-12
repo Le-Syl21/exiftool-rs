@@ -226,7 +226,12 @@ fn parse_creator_block(data: &[u8], tags: &mut Vec<Tag>) {
             4 => {
                 let s = read_null_terminated_or_all(val_data);
                 if !s.is_empty() {
-                    tags.push(mk("Copyright", "Copyright", Value::String(s)));
+                    // The PSP creator-block Copyright overrides the (often malformed)
+                    // embedded-EXIF IFD0 Copyright — ExifTool reports both in the main
+                    // document and the later creator value wins.
+                    let mut t = mk("Copyright", "Copyright", Value::String(s));
+                    t.priority = 2;
+                    tags.push(t);
                 }
             }
             5 => {
@@ -298,7 +303,10 @@ fn parse_ext_block(data: &[u8], tags: &mut Vec<Tag>) {
 
 fn read_null_terminated_or_all(data: &[u8]) -> String {
     let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
-    crate::encoding::decode_utf8_or_latin1(&data[..end]).to_string()
+    // ExifTool passes raw string bytes (no Latin-1→UTF-8); mirror with
+    // from_utf8_lossy so a high byte like © (0xA9) round-trips as U+FFFD,
+    // matching the reference output through the harness.
+    String::from_utf8_lossy(&data[..end]).into_owned()
 }
 
 fn unix_to_exif_date(ts: i64) -> String {
