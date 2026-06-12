@@ -2705,9 +2705,14 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                         "DAT"
                     };
                     tags.push(mk("RawThermalImageType", type_str.into()));
+                    // RawThermalImage is the embedded image (from offset 0x20), not
+                    // the whole RawData record — ExifTool reports the image length.
                     tags.push(mk(
                         "RawThermalImage",
-                        format!("(Binary data {} bytes, use -b option to extract)", rec.len()),
+                        format!(
+                            "(Binary data {} bytes, use -b option to extract)",
+                            img_data.len()
+                        ),
                     ));
                 }
             }
