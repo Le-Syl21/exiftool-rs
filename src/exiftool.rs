@@ -1432,6 +1432,18 @@ impl ExifTool {
         let composite = crate::composite::compute_composite_tags(&tags);
         tags.extend(composite);
 
+        // ExifTool's Composite RedBalance/BlueBalance (computed from WB level tags)
+        // is preferred over a manufacturer's own same-named tag. Drop the non-Composite
+        // versions when a Composite one exists so the Composite value wins.
+        for bal in ["RedBalance", "BlueBalance"] {
+            let has_composite = tags
+                .iter()
+                .any(|t| t.name == bal && t.group.family0 == "Composite");
+            if has_composite {
+                tags.retain(|t| t.name != bal || t.group.family0 == "Composite");
+            }
+        }
+
         // Geolocation is opt-in, matching ExifTool's `Geolocation` API option.
         if self.options.geolocation {
             if let Some(geo) = crate::composite::compute_geolocation(&tags) {

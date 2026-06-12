@@ -23,7 +23,6 @@ ExifTool.jpg	ShutterSpeed
 ExifTool.jpg	ShutterSpeedValue
 ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
-OlympusE1.jpg	BlueBalance
 PCAP.pcapng	TimeStamp
 PLUS.xmp	MediaSummaryCode
 PSP.psp	Copyright

@@ -1478,17 +1478,20 @@ fn compute_wb_balance(tags: &[Tag]) -> Option<Vec<Tag>> {
                 ));
             }
         } else if parts.len() == 2 {
-            // WB_RBLevels (Olympus): R/256, B/256
+            // WB_RBLevels (Olympus): green level is 256 (rggbLookup type 8).
+            // PrintConv: int($val * 1e6 + 0.5) * 1e-6 (round half-up, 6 decimals).
             let (r, b) = (parts[0], parts[1]);
+            let red_bal = (r / 256.0 * 1e6 + 0.5).floor() * 1e-6;
+            let blue_bal = (b / 256.0 * 1e6 + 0.5).floor() * 1e-6;
             result.push(mk_composite(
                 "RedBalance",
                 "Red Balance",
-                Value::String(crate::value::format_g_prec(r / 256.0, 7)),
+                Value::String(crate::value::format_g15(red_bal)),
             ));
             result.push(mk_composite(
                 "BlueBalance",
                 "Blue Balance",
-                Value::String(crate::value::format_g_prec(b / 256.0, 7)),
+                Value::String(crate::value::format_g15(blue_bal)),
             ));
         }
     } else if let Some(wb) = find_tag(tags, "WB_GRGBLevels") {
