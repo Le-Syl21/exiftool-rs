@@ -3,7 +3,6 @@
 # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
 ASF.wmv	IsVBR
 Canon1DmkIII.jpg	Sharpness
-CanonRaw.cr2	AFPointsInFocus
 CanonRaw.cr3	BracketMode
 CanonRaw.cr3	BracketShotNumber
 CanonRaw.cr3	BracketValue
@@ -14,7 +13,6 @@ CanonRaw.cr3	Sharpness
 CanonRaw.cr3	SourceImageHeight
 CanonRaw.cr3	SourceImageWidth
 DICOM.dcm	PixelData
-DNG.dng	AFPointsInFocus
 ExifTool.jpg	ApertureValue
 ExifTool.jpg	ColorSpace
 ExifTool.jpg	Comment

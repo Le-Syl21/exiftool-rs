@@ -7467,6 +7467,26 @@ fn decode_canon_afinfo(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag>
             .map(|i| (rd(8 + num_af + i) as i16).to_string())
             .collect();
         tags.push(mk_canon_str("AFAreaYPositions", &y_pos.join(" ")));
+
+        // AFPointsInFocus: ceil(N/16) words after the position arrays, as a bitmask.
+        let focus_words = (num_af + 15) / 16;
+        let focus_base = 8 + num_af * 2;
+        if focus_base + focus_words <= count {
+            let mut bits: u64 = 0;
+            for w in 0..focus_words {
+                bits |= (rd(focus_base + w) as u64) << (w * 16);
+            }
+            let set: Vec<String> = (0..num_af.min(64))
+                .filter(|&b| bits & (1u64 << b) != 0)
+                .map(|b| b.to_string())
+                .collect();
+            let pv = if set.is_empty() {
+                "(none)".to_string()
+            } else {
+                set.join(",")
+            };
+            tags.push(mk_canon_str("AFPointsInFocus", &pv));
+        }
     }
 
     tags
