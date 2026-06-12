@@ -5882,6 +5882,22 @@ fn read_makernote_ifd_with_base(
                         }
                     } else if name == "ManometerPressure" {
                         format!("{} kPa", val.to_display_string()) // Perl: '"$val kPa"'
+                    } else if name == "ManometerReading" {
+                        // int32s[2], each /10, PrintConv "$1 m, $2 ft".
+                        let v: Vec<f64> = val
+                            .to_display_string()
+                            .split_whitespace()
+                            .filter_map(|s| s.parse::<f64>().ok())
+                            .collect();
+                        if v.len() == 2 {
+                            format!(
+                                "{} m, {} ft",
+                                crate::value::format_g15(v[0] / 10.0),
+                                crate::value::format_g15(v[1] / 10.0)
+                            )
+                        } else {
+                            val.to_display_string()
+                        }
                     } else if let Some(pc) = (tag_id == 0x2020)
                         .then(|| val.as_u64().and_then(|v| olympus_camera_settings_pc(stid, v)))
                         .flatten()
