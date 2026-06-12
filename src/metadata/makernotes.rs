@@ -1333,6 +1333,20 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
         print_value: val,
         priority: 0,
     };
+    // Numeric raw + formatted print (so composites can read the value).
+    let mkv = |name: &str, raw: Value, print: String| Tag {
+        id: TagId::Text(name.into()),
+        name: name.into(),
+        description: name.into(),
+        group: TagGroup {
+            family0: "MakerNotes".into(),
+            family1: "Kodak".into(),
+            family2: "Camera".into(),
+        },
+        raw_value: raw,
+        print_value: print,
+        priority: 0,
+    };
 
     if d.len() < 60 {
         return tags;
@@ -1371,10 +1385,8 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
 
     // FNumber (0x1e int16u): ValueConv $val/100, no PrintConv (full precision).
     let fnum = u16::from_be_bytes([d[30], d[31]]);
-    tags.push(mk(
-        "FNumber",
-        crate::value::format_g15(fnum as f64 / 100.0),
-    ));
+    let fval = fnum as f64 / 100.0;
+    tags.push(mkv("FNumber", Value::F64(fval), crate::value::format_g15(fval)));
 
     // ExposureTime (0x20 int32u): ValueConv $val/1e5, PrintExposureTime.
     let exp = u32::from_be_bytes([d[32], d[33], d[34], d[35]]);
@@ -1385,7 +1397,7 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
         } else {
             crate::value::format_g15(secs)
         };
-        tags.push(mk("ExposureTime", pv));
+        tags.push(mkv("ExposureTime", Value::F64(secs), pv));
     }
 
     let comp = i16::from_be_bytes([d[36], d[37]]);
