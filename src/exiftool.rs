@@ -1732,8 +1732,9 @@ impl ExifTool {
                         || g1 == "Track1"
                         || g1 == "JP2"
                         || g1 == "PhotoMechanic"
-                        || g1 == "VCard"
                         || g1 == "DjVu"
+                    // VCard removed: within one vCard, duplicate tags are last-wins
+                    // (TelephoneOtherVoice); the 2nd vCard is demoted to priority -1.
                 }
                 use std::collections::HashMap as HM;
                 // group indices by name

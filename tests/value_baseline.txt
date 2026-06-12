@@ -31,7 +31,6 @@ Real.ra	Copyright
 Sigma.x3f	LensType
 SigmaDP2.x3f	ImageUniqueID
 SigmaDP2.x3f	PreviewImage
-VCard.vcf	TelephoneOtherVoice
 XMP4.xmp	StructList2Item1
 XMP4.xmp	StructList2Item2
 XMP6.xmp	Test

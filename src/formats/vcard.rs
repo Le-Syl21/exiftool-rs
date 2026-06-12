@@ -546,6 +546,9 @@ pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
     // Tag prefix for tags inside sub-components: "Alarm1", "Daylight1", etc.
     // Tags directly inside a top-level component (VEVENT, VTIMEZONE) are FLAT (no prefix).
     let mut top_component: Option<String> = None;
+    // VCard document index: the first BEGIN:VCARD is the main document (priority 0);
+    // subsequent vCards are sub-documents (Doc1+, priority -1) so the main one wins.
+    let mut vcard_count: i32 = 0;
     let mut sub_stack: Vec<(String, u32)> = Vec::new();
     let mut sub_count_stack: Vec<std::collections::HashMap<String, u32>> =
         vec![std::collections::HashMap::new()];
@@ -575,6 +578,9 @@ pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
             if is_begin {
                 if is_outer {
                     // New VCALENDAR/VCARD/VNOTE: reset all tracking
+                    if what_cap == "Vcard" {
+                        vcard_count += 1;
+                    }
                     top_component = None;
                     sub_stack.clear();
                     sub_count_stack = vec![std::collections::HashMap::new()];
@@ -652,14 +658,26 @@ pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                 .collect();
             emit_ical_tag(&parsed, &prefix, &mut tags);
         } else {
-            emit_vcard_tag(&parsed, &mut tags);
+            // 2nd and later vCards are sub-documents (Doc1+) → priority -1.
+            let doc_priority = if vcard_count > 1 { -1 } else { 0 };
+            emit_vcard_tag(&parsed, &mut tags, doc_priority);
         }
     }
 
     Ok(tags)
 }
 
-fn emit_vcard_tag(parsed: &ParsedLine, tags: &mut Vec<Tag>) {
+fn emit_vcard_tag(parsed: &ParsedLine, tags: &mut Vec<Tag>, doc_priority: i32) {
+    let start = tags.len();
+    emit_vcard_tag_inner(parsed, tags);
+    if doc_priority != 0 {
+        for t in &mut tags[start..] {
+            t.priority = doc_priority;
+        }
+    }
+}
+
+fn emit_vcard_tag_inner(parsed: &ParsedLine, tags: &mut Vec<Tag>) {
     let base_name = normalize_vcard_tag(&parsed.tag);
 
     // Build type suffix
