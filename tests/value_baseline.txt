@@ -191,7 +191,6 @@ VCard.vcf	Note
 VCard.vcf	TelephoneOtherVoice
 WTV.wtv	SubtitleDescription
 XMP.xml	Iso
-XMP.xmp	NativeDigest
 XMP4.xmp	StructList2Item1
 XMP4.xmp	StructList2Item2
 XMP6.xmp	Test

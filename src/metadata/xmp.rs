@@ -1796,11 +1796,15 @@ impl XmpReader {
 /// values appended to the first occurrence (comma-separated).
 fn aggregate_duplicate_xmp_tags(tags: Vec<Tag>) -> Vec<Tag> {
     let mut result: Vec<Tag> = Vec::with_capacity(tags.len());
-    let mut name_to_idx: std::collections::HashMap<String, usize> =
+    // Key by (namespace group, name): only merge repeats of the SAME property,
+    // not different-namespace properties that share a local name (ExifTool keeps
+    // those as separate tags, e.g. XMP-xxxx:Test vs XMP-tmp0:Test).
+    let mut name_to_idx: std::collections::HashMap<(String, String), usize> =
         std::collections::HashMap::new();
 
     for tag in tags {
-        if let Some(&idx) = name_to_idx.get(&tag.name) {
+        let key = (tag.group.family1.clone(), tag.name.clone());
+        if let Some(&idx) = name_to_idx.get(&key) {
             // Aggregate: append value to the existing tag
             let existing = &mut result[idx];
             if existing.print_value != tag.print_value {
@@ -1809,7 +1813,7 @@ fn aggregate_duplicate_xmp_tags(tags: Vec<Tag>) -> Vec<Tag> {
             // Don't push a new entry
         } else {
             let idx = result.len();
-            name_to_idx.insert(tag.name.clone(), idx);
+            name_to_idx.insert(key, idx);
             result.push(tag);
         }
     }
