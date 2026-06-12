@@ -916,6 +916,9 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
 
     let mut result = Vec::new();
 
+    // Perl: sqrt(36*36+24*24) — full precision (43.266615305567875), not truncated.
+    let diag35 = (36.0_f64 * 36.0 + 24.0 * 24.0).sqrt();
+
     // Compute scale factor (Perl: CalcScaleFactor35efl)
     // Sources: FocalLengthIn35mmFormat, FocalPlaneDiagonal, FocalPlaneResolution
     let scale = if let Some(fl35) = find_tag_f64(tags, "FocalLengthIn35mmFormat") {
@@ -926,14 +929,14 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
         }
     } else if let Some(diag) = canon_sensor_diag(tags) {
         // Canon CalcSensorDiag takes precedence over FocalPlaneDiagonal/Size (Canon.pm).
-        43.2666 / diag
+        diag35 / diag
     } else if let Some(diag) = find_tag_f64(tags, "FocalPlaneDiagonal").or_else(|| {
         find_tag_value(tags, "FocalPlaneDiagonal")
             .and_then(|s| s.split_whitespace().next()?.parse().ok())
     }) {
         // Sanity check: diagonal must be reasonable (1-100mm)
         if diag > 1.0 && diag < 100.0 {
-            43.2666 / diag
+            diag35 / diag
         } else {
             return None;
         }
@@ -953,7 +956,7 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
             })?;
         let diag = (fpxs * fpxs + fpys * fpys).sqrt();
         if diag > 1.0 && diag < 100.0 {
-            43.2666 / diag
+            diag35 / diag
         } else {
             return None;
         }
@@ -995,7 +998,7 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
         if ratio > 3.0 {
             return None;
         }
-        43.2666 / sensor_diag
+        diag35 / sensor_diag
     };
 
     let fl35_val = fl * scale;

@@ -721,7 +721,7 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         } else {
             format!("{} m", m)
         };
-        tags.push(mkt("FocusDistanceUpper", Value::U16(focus_upper), pv));
+        tags.push(mkt("FocusDistanceUpper", Value::F64(m), pv));
         // FocusDistanceLower: only emit when FocusDistanceUpper is non-zero (Condition)
         if let Some(v) = get(20).map(|v| v as u16) {
             let m = v as f64 / 100.0;
@@ -730,7 +730,7 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
             } else {
                 format!("{} m", m)
             };
-            tags.push(mkt("FocusDistanceLower", Value::U16(v), pv));
+            tags.push(mkt("FocusDistanceLower", Value::F64(m), pv));
         }
     }
     // ShotInfo index 21: FNumber — ValueConv: exp(CanonEv(val)*log(2)/2)

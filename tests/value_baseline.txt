@@ -3,7 +3,6 @@
 # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
 AIFF.aif	Comment
 ASF.wmv	IsVBR
-Canon.jpg	DOF
 Canon1DmkIII.jpg	Sharpness
 CanonRaw.cr2	AFPointsInFocus
 CanonRaw.cr3	Aperture
@@ -25,7 +24,6 @@ CanonRaw.cr3	ShutterSpeed
 CanonRaw.cr3	SourceImageHeight
 CanonRaw.cr3	SourceImageWidth
 CanonRaw.crw	AFPointsInFocus
-CanonRaw.crw	DOF
 CanonRaw.crw	MeasuredEV
 Casio2.jpg	DOF
 DICOM.dcm	PixelData
