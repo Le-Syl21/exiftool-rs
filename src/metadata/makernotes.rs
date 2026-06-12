@@ -5000,11 +5000,16 @@ fn read_makernote_ifd_with_base(
                     let known_format = !variant_tags.is_empty(); // Only decode for known models
                                                                  // Note: variant_tags contains CameraInfoVariant (internal metadata), don't add to output
                     let mut t = Vec::new();
-                    t.extend(decode_canon_camera_info_common(
-                        value_data,
-                        count as usize,
-                        byte_order,
-                    ));
+                    // Bracket* live at indices 3-5 only in recognised CameraInfo variants;
+                    // for unknown layouts they are garbage (and FileInfo provides the real
+                    // values), so only decode the common fields for known formats.
+                    if known_format {
+                        t.extend(decode_canon_camera_info_common(
+                            value_data,
+                            count as usize,
+                            byte_order,
+                        ));
+                    }
                     // Decode CameraInfo1DmkIII fields (FORMAT='int8u', byte offsets)
                     // Perl table: Canon::CameraInfo1DmkIII
                     let d = value_data;
