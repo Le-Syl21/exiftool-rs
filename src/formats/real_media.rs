@@ -21,6 +21,7 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
     let hdr_size = hdr_size.max(8);
     let mut pos = hdr_size;
     let mut first_mdpr = true;
+    let mut stream_mimes: Vec<String> = Vec::new();
 
     // Look for RJMD at specific position based on RMJE footer
     let rjmd_data_opt = real_find_rjmd(data);
@@ -46,7 +47,7 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
         match chunk_id {
             b"PROP" => real_parse_prop(chunk_data, &mut tags),
             b"MDPR" => {
-                real_parse_mdpr(chunk_data, &mut tags, first_mdpr);
+                real_parse_mdpr(chunk_data, &mut tags, first_mdpr, &mut stream_mimes);
                 first_mdpr = false;
             }
             b"CONT" => real_parse_cont(chunk_data, &mut tags),
@@ -54,6 +55,17 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
         }
 
         pos += chunk_size;
+    }
+
+    // ExifTool: override the file MIMEType with the single stream's MIME when there is
+    // exactly one stream (e.g. an audio-only .rm → audio/x-pn-realaudio).
+    if stream_mimes.len() == 1 {
+        let mut t = mktag("File", "MIMEType", "MIME Type", Value::String(stream_mimes[0].clone()));
+        t.group.family0 = "File".into();
+        t.group.family1 = "File".into();
+        t.group.family2 = "Other".into();
+        t.priority = 2;
+        tags.push(t);
     }
 
     // Process RJMD metadata
@@ -203,7 +215,7 @@ fn real_parse_prop(data: &[u8], tags: &mut Vec<Tag>) {
     }
 }
 
-fn real_parse_mdpr(data: &[u8], tags: &mut Vec<Tag>, is_first: bool) {
+fn real_parse_mdpr(data: &[u8], tags: &mut Vec<Tag>, is_first: bool, mimes: &mut Vec<String>) {
     if data.len() < 30 {
         return;
     }
@@ -245,6 +257,10 @@ fn real_parse_mdpr(data: &[u8], tags: &mut Vec<Tag>, is_first: bool) {
     }
     let mime_type = crate::encoding::decode_utf8_or_latin1(&data[off..off + mime_len]).to_string();
     off += mime_len;
+    // ExifTool excludes "logical-*" pseudo-stream MIME types from the override set.
+    if !mime_type.is_empty() && !mime_type.starts_with("logical-") {
+        mimes.push(mime_type.clone());
+    }
 
     // Only emit stream info for first non-logical stream (Perl PRIORITY => 0 = first takes priority)
     if is_first {
