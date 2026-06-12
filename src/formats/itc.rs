@@ -35,11 +35,10 @@ pub fn read_itc(data: &[u8]) -> Result<Vec<Tag>> {
             let body_start = pos + 8;
             let body_end = pos + block_size;
             let body = &data[body_start..body_end];
-            if body.len() >= 20 {
-                let _data_type = &body[0x10 - 8 + 8..]; // offset 0x10 from block start = 0x08 from body
-                                                        // Actually offset 0x10 from the block start means byte 16 from pos
-                                                        // body starts at pos+8, so offset 16 from pos = body[8..12]
-                let dt_bytes = &data[pos + 16..pos + 20];
+            // DataType (undef[4]) is at offset 0x10 within the block body (after the
+            // 8-byte size+tag header), i.e. data[pos+24..pos+28].
+            if body.len() >= 0x14 {
+                let dt_bytes = &data[pos + 8 + 0x10..pos + 8 + 0x14];
                 let dt_str = match dt_bytes {
                     b"artw" => "Artwork",
                     _ => "Unknown",

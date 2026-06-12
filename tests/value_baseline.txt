@@ -108,7 +108,6 @@ HTML.html	Description
 HTML.html	RevisionNumber
 HTML.html	Subject
 ISO.iso	BootSystem
-ITC.itc	DataType
 InfiRay.jpg	GPSLatitude
 InfiRay.jpg	GPSLongitude
 InfiRay.jpg	IJPEGVersion
