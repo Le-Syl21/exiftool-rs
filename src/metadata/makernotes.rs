@@ -911,6 +911,25 @@ fn olympus_print_af_areas(val: &str) -> String {
     }
 }
 
+/// Olympus PanoramaMode PrintConv: "Mode Shot"; 0 → Off, else "<dir>, Shot <n>".
+fn olympus_panorama_mode(disp: &str) -> String {
+    let v: Vec<i64> = disp.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+    match v.first().copied() {
+        Some(0) | None => "Off".to_string(),
+        Some(a) => {
+            let shot = v.get(1).copied().unwrap_or(0);
+            let dir = match a {
+                1 => "Left to Right",
+                2 => "Right to Left",
+                3 => "Bottom to Top",
+                4 => "Top to Bottom",
+                _ => return format!("Unknown ({}), Shot {}", a, shot),
+            };
+            format!("{}, Shot {}", dir, shot)
+        }
+    }
+}
+
 fn olympus_drive_mode(val: &str) -> String {
     let v: Vec<i64> = val.split_whitespace().filter_map(|s| s.parse().ok()).collect();
     if v.is_empty() {
@@ -5782,6 +5801,8 @@ fn read_makernote_ifd_with_base(
                         crate::tags::olympus_camera_types::olympus_camera_type(s.trim())
                             .map(str::to_string)
                             .unwrap_or(s)
+                    } else if name == "PanoramaMode" {
+                        olympus_panorama_mode(&val.to_display_string())
                     } else if stid == 0x1204 && name == "ExternalFlashBounce" {
                         // FlashInfo 0x1204: PrintConv { 0 => 'Bounce or Off', 1 => 'Direct' }.
                         match val.as_u64() {
@@ -8062,6 +8083,8 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Olympus | Manufacturer::OlympusNew => match tag_id {
+            // FocalPlaneDiagonal (0x0205): rational64u, PrintConv '"$val mm"'.
+            0x0205 => Some(format!("{} mm", value.to_display_string())),
             // SpecialMode (0x0200): int16u[3] = shooting mode, sequence, panorama dir.
             0x0200 => {
                 let disp = value.to_display_string();
@@ -8601,6 +8624,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             0x0012 => value
                 .as_str()
                 .map(|s| s.replacen("Fill:", "", 1).trim().to_string()),
+            // ExposureTime2 (0x0033, non-Merrill/Quattro): ValueConv $val*1e-6,
+            // PrintConv PrintExposureTime.
+            0x0033 => value
+                .as_u64()
+                .map(|v| print_exposure_time(v as f64 * 1e-6)),
             // ColorAdjustment (string form): ValueConv strips "CC:".
             0x0014 => value
                 .as_str()

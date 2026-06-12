@@ -223,11 +223,9 @@ NikonD70.jpg	LensID
 NikonD70.jpg	PreviewImageStart
 Olympus.jpg	CameraType
 Olympus.jpg	DataDump
-Olympus.jpg	FocalPlaneDiagonal
 Olympus2.jpg	AFPoint
 Olympus2.jpg	ImageStabilization
 Olympus2.jpg	ManometerReading
-Olympus2.jpg	PanoramaMode
 Olympus2.jpg	PreviewImageStart
 OlympusE1.jpg	AFPoint
 OlympusE1.jpg	BlueBalance
