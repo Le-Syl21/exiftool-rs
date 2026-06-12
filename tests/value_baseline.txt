@@ -91,10 +91,7 @@ ExifTool.jpg	ShutterSpeedValue
 ExifTool.jpg	URL
 ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
-ExifTool.tif	DeviceManufacturer
-ExifTool.tif	MeasurementBacking
 ExifTool.tif	MeasurementFlare
-ExifTool.tif	Technology
 FITS.fits	Comment
 FLIR.jpg	CameraTemperatureMinWarn
 FLIR.jpg	CameraTemperatureRangeMin
@@ -369,10 +366,7 @@ VCard.vcf	Note
 VCard.vcf	PhotoJpeg
 VCard.vcf	TelephoneOtherVoice
 WTV.wtv	SubtitleDescription
-XMP.jpg	DeviceManufacturer
-XMP.jpg	MeasurementBacking
 XMP.jpg	MeasurementFlare
-XMP.jpg	Technology
 XMP.xml	Iso
 XMP.xmp	NativeDigest
 XMP4.xmp	StructList2Item1
