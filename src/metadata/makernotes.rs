@@ -5810,6 +5810,16 @@ fn read_makernote_ifd_with_base(
                             if v == 0 { "Off" } else { "On" },
                         ));
                     }
+                    // index 0x3d (61): RFLensType (int16u; 0 => "n/a")
+                    if n > 0x3d {
+                        let v = read_u16(value_data, 0x3d * 2, byte_order) as i64;
+                        let pv = crate::tags::print_conv_generated::print_conv_by_name(
+                            "RFLensType", v,
+                        )
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| format!("Unknown ({})", v));
+                        t.push(mk_canon_str("RFLensType", &pv));
+                    }
                     t
                 }
                 (Manufacturer::Canon, 0x000F) => {
