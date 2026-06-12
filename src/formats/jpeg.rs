@@ -4545,6 +4545,7 @@ fn gpmf_tag_name(tag: &[u8; 4]) -> &'static str {
         b"ISOG" => "ISO",
         b"SHUT" => "ShutterSpeed",
         b"WBAL" => "WhiteBalance",
+        b"PTWB" => "WhiteBalance", // GoPro settings (GPMF, seen 'AUTO')
         b"WRGB" => "WhiteBalanceRGB",
         b"FACE" => "FaceDetected",
         b"FCNM" => "FaceNumbers",

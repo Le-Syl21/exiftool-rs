@@ -38,7 +38,6 @@ ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
 FLIR.jpg	RawThermalImage
 FujiFilm.raf	ThumbnailOffset
-GoPro.jpg	WhiteBalance
 Google.jpg	DirectoryItemMime
 Google.jpg	HDRPlusMakerNote
 Google.jpg	ImageData
