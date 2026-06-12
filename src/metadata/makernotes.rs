@@ -7518,11 +7518,18 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
         // ValueConv: SwapWords (swap high/low 16-bit words of each 32-bit value)
         let rmb = 0x280usize;
         if rmb + 8 <= count {
+            // ColorData2 (version 2: 1DmkIII/1DSmkIII) stores the int32u words in the
+            // opposite order to ColorData4, so swap the two 16-bit halves accordingly.
+            let v2 = rd(0) == 2;
             let mut vals = Vec::new();
             for i in 0..4 {
-                let lo = rdu(rmb + i * 2) as u32;
-                let hi = rdu(rmb + i * 2 + 1) as u32;
-                vals.push((hi << 16) | lo);
+                let w0 = rdu(rmb + i * 2) as u32;
+                let w1 = rdu(rmb + i * 2 + 1) as u32;
+                vals.push(if v2 {
+                    (w0 << 16) | w1
+                } else {
+                    (w1 << 16) | w0
+                });
             }
             tags.push(mk_canon_str(
                 "RawMeasuredRGGB",
