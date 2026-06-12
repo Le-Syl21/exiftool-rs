@@ -329,8 +329,14 @@ impl ExifReader {
             {
                 // Tags where EXIF takes priority over MakerNotes (structural/authoritative EXIF)
                 let exif_primary: &[&str] = EXIF_PRIMARY_TAGS;
-                let mn_name_set: std::collections::HashSet<String> =
-                    mn_tags.iter().map(|t| t.name.clone()).collect();
+                // Only maker-note tags with non-negative priority remove the EXIF
+                // duplicate. Tags from a PRIORITY=>0 sub-block demoted to -1 (e.g.
+                // Minolta CameraSettings) must not override a standard EXIF tag.
+                let mn_name_set: std::collections::HashSet<String> = mn_tags
+                    .iter()
+                    .filter(|t| t.priority >= 0)
+                    .map(|t| t.name.clone())
+                    .collect();
                 let exif_has: std::collections::HashSet<String> =
                     tags.iter().map(|t| t.name.clone()).collect();
                 // Remove EXIF non-primary tags when MakerNotes provides them (MakerNotes wins)

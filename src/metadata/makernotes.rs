@@ -1258,7 +1258,10 @@ fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark, model: &str) -
         },
         raw_value: Value::String(val.clone()),
         print_value: val,
-        priority: 0,
+        // Minolta::CameraSettings is PRIORITY => 0 in ExifTool ("not as reliable
+        // as other tags"). Mark as -1 so a same-named standard EXIF tag
+        // (MeteringMode etc.) wins instead of being overridden.
+        priority: -1,
     };
     // Saturation/Contrast/ColorFilter signed offset (DiMAGE A2 = 5, else 3).
     let param_off: i64 = if model.contains("DiMAGE A2") { 5 } else { 3 };
