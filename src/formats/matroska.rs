@@ -127,12 +127,13 @@ fn parse_info(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
 
         match id {
             0x2AD7B1 => {
-                // TimecodeScale
+                // TimecodeScale: ValueConv $val/1e9, PrintConv ($val*1000)." ms".
                 timecode_scale = read_uint(data, pos, size);
+                let ms = timecode_scale as f64 / 1e9 * 1000.0;
                 tags.push(mk(
                     "TimecodeScale",
                     "Timecode Scale",
-                    Value::String(format!("{} ns", timecode_scale)),
+                    Value::String(format!("{} ms", crate::value::format_g15(ms))),
                 ));
             }
             0x4489 => {

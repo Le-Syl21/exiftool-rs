@@ -1710,8 +1710,32 @@ impl XmpReader {
                     .collect::<Vec<_>>()
                     .join(", ");
             }
+            // XMP-aux LensInfo: ConvertRationalList (N/D → float, 0/0 → undef, 1/0 →
+            // inf) then Exif::PrintLensInfo → "12-20mm f/3.8-4.5".
+            if tag.name == "LensInfo" {
+                let converted: String = tag
+                    .print_value
+                    .split_whitespace()
+                    .map(|tok| match tok.split_once('/') {
+                        Some((n, d)) => {
+                            let nn: f64 = n.parse().unwrap_or(0.0);
+                            let dd: f64 = d.parse().unwrap_or(0.0);
+                            if dd == 0.0 {
+                                if nn == 0.0 { "undef".to_string() } else { "inf".to_string() }
+                            } else {
+                                crate::value::format_g15(nn / dd)
+                            }
+                        }
+                        None => tok.to_string(),
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                if let Some(formatted) = crate::tags::exif::print_lens_info(&converted) {
+                    tag.print_value = formatted;
+                }
+            }
             // XMP-exif Flash sub-fields (exif:Flash/Return, /Mode).
-            if tag.name == "FlashReturn" {
+            if tag.name.ends_with("FlashReturn") {
                 tag.print_value = match tag.print_value.trim() {
                     "0" => "No return detection",
                     "2" => "Return not detected",

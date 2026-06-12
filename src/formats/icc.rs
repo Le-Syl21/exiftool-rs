@@ -457,12 +457,17 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                                     f5(backing_z)
                                 )),
                             ));
-                            let flare =
-                                u32::from_be_bytes([d[28], d[29], d[30], d[31]]) as f64 / 65536.0;
+                            // fixed32u, GetFixed32u rounds to 5 decimals; PrintConv $val*100."%".
+                            let raw = u32::from_be_bytes([d[28], d[29], d[30], d[31]]) as f64
+                                / 65536.0;
+                            let flare = (raw * 1e5).round() / 1e5;
                             tags.push(mk(
                                 "MeasurementFlare",
                                 "Measurement Flare",
-                                Value::String(format!("{:.4}%", flare * 100.0)),
+                                Value::String(format!(
+                                    "{}%",
+                                    crate::value::format_g15(flare * 100.0)
+                                )),
                             ));
                             String::new() // sub-tags already pushed
                         }
