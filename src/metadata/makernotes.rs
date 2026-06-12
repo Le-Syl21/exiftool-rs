@@ -4319,7 +4319,11 @@ fn decrypt_nikon_subtables(
                         }
                         if d[9] > 0 {
                             let dist = 0.01 * 10.0_f64.powf(d[9] as f64 / 40.0);
-                            tags.push(mk_nikon_str("FocusDistance", &format!("{:.2} m", dist)));
+                            // Numeric raw (full precision) so the DOF/FOV composites
+                            // don't fall back to the rounded "%.2f m" print value.
+                            let mut t = mk_nikon_str("FocusDistance", &format!("{:.2} m", dist));
+                            t.raw_value = Value::F64(dist);
+                            tags.push(t);
                         }
                         // MCUVersion is at 0x11 in LensData01 (not 0x0a).
                         if d.len() > 0x11 {
