@@ -1536,6 +1536,21 @@ impl ExifTool {
                 }
             }
 
+            // QuickTime container dates are primary over an embedded EXIF copy
+            // (ExifTool reports the QuickTime CreateDate/ModifyDate for MOV/CR3/etc.).
+            {
+                for dname in ["CreateDate", "ModifyDate"] {
+                    let has_qt = tags
+                        .iter()
+                        .any(|t| t.name == dname && t.group.family1 == "QuickTime");
+                    if has_qt {
+                        tags.retain(|t| {
+                            t.name != dname || t.group.family1 == "QuickTime"
+                        });
+                    }
+                }
+            }
+
             // ExifTool FoundTag rule (narrow, safe subset): among duplicates of the
             // same tag name that all live in the SAME main-document group (same
             // family1, not a sub-document like IFD1/SubIFD/PreviewIFD/Track2+/Doc2+),

@@ -8,10 +8,8 @@ CanonRaw.cr2	AFPointsInFocus
 CanonRaw.cr3	BracketMode
 CanonRaw.cr3	BracketShotNumber
 CanonRaw.cr3	BracketValue
-CanonRaw.cr3	CreateDate
 CanonRaw.cr3	CustomControls
 CanonRaw.cr3	HandlerType
-CanonRaw.cr3	ModifyDate
 CanonRaw.cr3	PreviewImage
 CanonRaw.cr3	RFLensType
 CanonRaw.cr3	Sharpness
