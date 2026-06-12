@@ -6254,6 +6254,19 @@ fn read_makernote_ifd_with_base(
         {
             // Panasonic counts: raw number, not the generic by-name enum (No/Single).
             value.to_display_string()
+        } else if manufacturer == Manufacturer::Apple && name == "FocusDistanceRange" {
+            // rational64s[2]: sprintf('%.2f - %.2f m', sorted ascending).
+            let v: Vec<f64> = value
+                .to_display_string()
+                .split_whitespace()
+                .filter_map(|s| s.parse().ok())
+                .collect();
+            if v.len() == 2 {
+                let (a, b) = if v[0] <= v[1] { (v[0], v[1]) } else { (v[1], v[0]) };
+                format!("{:.2} - {:.2} m", a, b)
+            } else {
+                value.to_display_string()
+            }
         } else if manufacturer == Manufacturer::Apple && name == "ImageCaptureType" {
             match value.as_f64().filter(|f| f.fract() == 0.0).map(|f| f as i64) {
                 Some(1) => "ProRAW".to_string(),
