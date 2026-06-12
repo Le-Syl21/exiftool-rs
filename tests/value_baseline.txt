@@ -131,7 +131,6 @@ SigmaDP2.x3f	ImageUniqueID
 SigmaDP2.x3f	PreviewImage
 SigmaDP2.x3f	PreviewImageStart
 SigmaDP2.x3f	SensorID
-SigmaDP2.x3f	SensorTemperature
 SigmaDP2.x3f	ThumbnailOffset
 SigmaDP2.x3f	X3FillLight
 TNEF.tnef	CorrelationKey

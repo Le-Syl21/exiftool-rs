@@ -9415,6 +9415,16 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Sigma => match tag_id {
+            // SensorTemperature (0x0039): PrintConv IsInt($val) ? "$val C" : $val.
+            0x0039 => {
+                let s = value.to_display_string();
+                let t = s.trim();
+                if !t.is_empty() && t.chars().all(|c| c.is_ascii_digit() || c == '-') {
+                    Some(format!("{} C", t))
+                } else {
+                    Some(t.to_string())
+                }
+            }
             // ExposureCompensation (string form): ValueConv strips "Expo:".
             0x000c => value
                 .as_str()
