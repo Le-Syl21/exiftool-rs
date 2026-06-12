@@ -1839,6 +1839,14 @@ fn aggregate_duplicate_xmp_tags(tags: Vec<Tag>) -> Vec<Tag> {
         std::collections::HashMap::new();
 
     for tag in tags {
+        // Only genuine XMP tags are list-joined. Injected non-XMP tags (e.g. the
+        // Google HDRP MakerNotes ImageName/ImageData, which ExifTool reports as
+        // separate List entries and resolves last-wins) pass through untouched so
+        // the normal dedup keeps the last instance.
+        if !tag.group.family1.starts_with("XMP") {
+            result.push(tag);
+            continue;
+        }
         let key = (tag.group.family1.clone(), tag.name.clone());
         if let Some(&idx) = name_to_idx.get(&key) {
             // Aggregate: append value to the existing tag

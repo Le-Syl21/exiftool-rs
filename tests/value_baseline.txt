@@ -26,8 +26,6 @@ ExifTool.jpg	ShutterSpeedValue
 ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
 Google.jpg	HDRPlusMakerNote
-Google.jpg	ImageData
-Google.jpg	ImageName
 OlympusE1.jpg	BlueBalance
 PCAP.pcapng	TimeStamp
 PLUS.xmp	MediaSummaryCode
