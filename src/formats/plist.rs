@@ -107,11 +107,12 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
 
     match obj_type {
         0x0 => {
-            // Singleton: null, bool, fill
+            // Singleton: null, bool, fill. NOTE: ExifTool's PLIST.pm maps 0x08 => 'True'
+            // and 0x09 => 'False' (inverted from the binary-plist spec); follow ExifTool.
             match obj_info {
                 0 => Some(PlistValue::Null),
-                8 => Some(PlistValue::Bool(false)),
-                9 => Some(PlistValue::Bool(true)),
+                8 => Some(PlistValue::Bool(true)),
+                9 => Some(PlistValue::Bool(false)),
                 _ => Some(PlistValue::Null),
             }
         }
@@ -449,10 +450,8 @@ fn flatten_plist_value(
         }
         PlistValue::Bool(b) => {
             let tag_name = plist_key_path_to_tag_name(key_path);
-            // Match ExifTool behavior: 0x08=False, 0x09=True in binary plist
-            // But note: ExifTool Perl source has these inverted in the comment
-            // The actual test output shows TestBoolean:False for bplist containing true bool
-            // We use the standard spec: true=True, false=False
+            // ExifTool maps binary-plist 0x08 => 'True', 0x09 => 'False' (the parser
+            // above already follows that inversion), so display the bool directly.
             let s = if *b { "True" } else { "False" };
             tags.push(mk_plist_tag(tag_name, Value::String(s.to_string()), group));
         }

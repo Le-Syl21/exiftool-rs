@@ -210,7 +210,6 @@ OlympusE1.jpg	RawDevVersion
 PCAP.pcapng	TimeStamp
 PDF.pdf	CreateDate
 PDF.pdf	Creator
-PLIST-bin.plist	TestBoolean
 PLIST-bin.plist	TestDate
 PLIST-bin.plist	TestDictWhen
 PLUS.xmp	MediaSummaryCode
