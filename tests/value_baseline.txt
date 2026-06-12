@@ -302,7 +302,6 @@ QuickTime.mov	MediaTimeScale
 QuickTime.mov	XMPToolkit
 RIFF.avi	XMPToolkit
 RIFF.wav	Make
-RIFF.webp	AlphaFiltering
 RTF.rtf	Comments
 Real.ra	Copyright
 Real.rm	MIMEType
@@ -310,7 +309,6 @@ Ricoh.jpg	ManufactureDate1
 Ricoh.jpg	Sharpness
 Ricoh2.jpg	ManufactureDate1
 Ricoh2.jpg	ManufactureDate2
-Ricoh2.jpg	UserComment
 Sanyo.jpg	DataDump
 Sanyo.jpg	FlashMode
 Sanyo.jpg	Macro

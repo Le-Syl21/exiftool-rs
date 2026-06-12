@@ -229,10 +229,12 @@ fn read_webp_chunks(data: &[u8], start: usize, tags: &mut Vec<Tag>) -> Result<()
             // ALPH chunk (WebP alpha)
             b"ALPH" => {
                 if !chunk_data.is_empty() {
+                    // RIFF.pm defines all three tags at byte 0 with Mask 0x03 (no bit
+                    // shift), so each reads the same low two bits of the byte.
                     let byte0 = chunk_data[0];
                     let preprocessing = byte0 & 0x03;
-                    let filtering = (byte0 >> 2) & 0x03;
-                    let compression = (byte0 >> 4) & 0x03;
+                    let filtering = byte0 & 0x03;
+                    let compression = byte0 & 0x03;
 
                     let preprocessing_str = match preprocessing {
                         0 => "none",

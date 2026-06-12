@@ -400,6 +400,12 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                             .collect();
                         String::from_utf16_lossy(&u16s)
                     } else {
+                        // ConvertExifText: for an ASCII/undefined header, truncate the
+                        // text at the first null ($str =~ s/\0.*//s).
+                        let body = match body.iter().position(|&b| b == 0) {
+                            Some(p) => &body[..p],
+                            None => body,
+                        };
                         crate::encoding::decode_utf8_or_latin1(body).to_string()
                     };
                     return Some(text.trim_end_matches(['\0', ' ']).to_string());
