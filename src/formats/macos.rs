@@ -263,13 +263,10 @@ fn format_quarantine(s: &str) -> String {
         let time_hex = parts[1];
         let app = parts[2];
 
-        // Try to parse time_hex as hex timestamp
+        // The time field is a hex Unix timestamp: ConvertUnixTime(hex $a[1]) → UTC.
         let time_str = if let Ok(ts) = i64::from_str_radix(time_hex, 16) {
-            // Mac HFS+ time: seconds since 2001-01-01 or 1904-01-01
-            // QuickTime epoch (2001) is used for Apple timestamps
-            // Actually quarantine uses Unix epoch
-            // Let's just show the raw value
-            format!("(ts={})", ts)
+            let (y, mo, d, h, mi, sc) = crate::formats::pcap::unix_to_datetime(ts);
+            format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", y, mo, d, h, mi, sc)
         } else {
             time_hex.to_string()
         };
