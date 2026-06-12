@@ -316,8 +316,21 @@ fn parse_canon_ctmd(data: &[u8], start: usize, size: usize, tags: &mut Vec<Tag>)
                                 .unwrap_or_default();
                             let mn_tags = parse_canon_cr3_makernotes(edata, &model);
                             for t in mn_tags {
-                                // Replace existing tag with CTMD version (CTMD has priority)
-                                tags.retain(|e| e.name != t.name);
+                                // CTMD replaces the earlier CMT3 MakerNote versions, but
+                                // must not override an authoritative EXIF tag of the same
+                                // name when the Canon copy is lower/equal priority (ExifTool
+                                // keeps ExifIFD FNumber/ExposureTime, which are Canon
+                                // priority-0; but Canon MeteringMode etc. at default
+                                // priority still wins).
+                                // FNumber/ExposureTime are Priority-0 in Canon's table, so
+                                // the authoritative ExifIFD values win; all other Canon tags
+                                // (MeteringMode, etc.) override the EXIF copy.
+                                let exif_wins =
+                                    matches!(t.name.as_str(), "FNumber" | "ExposureTime");
+                                tags.retain(|e| {
+                                    e.name != t.name
+                                        || (exif_wins && e.group.family0 == "EXIF")
+                                });
                                 tags.push(t);
                             }
                         }
