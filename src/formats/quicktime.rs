@@ -739,10 +739,24 @@ fn parse_atoms(
                         // Find PRVW signature in the uuid content
                         let inner = &data[content_start + 16..content_end];
                         if let Some(prvw_pos) = inner.windows(4).position(|w| w == b"PRVW") {
-                            // PRVW: skip 16 bytes (4 tag + 12 header) after "PRVW"
-                            let data_start = prvw_pos + 16;
-                            if data_start < inner.len() {
-                                let prvw_data = &inner[data_start..];
+                            // PRVW layout after the "PRVW" tag: ...(int32u 0, int16u 1,
+                            // width, height, int16u 1), int32u preview length @ +16,
+                            // image data @ +20. ExifTool reports exactly that length.
+                            let len_off = prvw_pos + 16;
+                            let data_start = prvw_pos + 20;
+                            let prvw_len = if len_off + 4 <= inner.len() {
+                                u32::from_be_bytes([
+                                    inner[len_off],
+                                    inner[len_off + 1],
+                                    inner[len_off + 2],
+                                    inner[len_off + 3],
+                                ]) as usize
+                            } else {
+                                0
+                            };
+                            if data_start < inner.len() && prvw_len > 0 {
+                                let end = (data_start + prvw_len).min(inner.len());
+                                let prvw_data = &inner[data_start..end];
                                 let size = prvw_data.len();
                                 tags.push(Tag {
                                     id: TagId::Text("PreviewImage".into()),
