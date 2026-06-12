@@ -1949,7 +1949,9 @@ fn process_graphicconverter(data: &[u8]) -> Vec<crate::tag::Tag> {
         },
         raw_value: crate::value::Value::String(quality_str.clone()),
         print_value: quality_str,
-        priority: 0,
+        // APP15 is processed after the APP12 Ducky/NITF Quality; ExifTool last-wins
+        // makes GraphConv Quality the reported value. GraphConv occurs only here.
+        priority: 2,
     });
 
     tags

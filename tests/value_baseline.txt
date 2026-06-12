@@ -4,7 +4,6 @@
 ASF.wmv	IsVBR
 ExifTool.jpg	Comment
 ExifTool.jpg	Copyright
-ExifTool.jpg	Quality
 PCAP.pcapng	TimeStamp
 PLUS.xmp	MediaSummaryCode
 PSP.psp	Copyright
