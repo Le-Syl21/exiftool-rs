@@ -118,7 +118,6 @@ Minolta.mrw	ISOSetting
 Minolta.mrw	MeteringMode
 Minolta.mrw	Saturation
 Minolta.mrw	Sharpness
-Minolta.mrw	WhiteBalance
 Nikon.nef	BitsPerSample
 Nikon.nef	Compression
 Nikon.nef	FilmType

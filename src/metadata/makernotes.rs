@@ -1010,7 +1010,13 @@ fn minolta_white_balance(val: u32) -> String {
             _ => "",
         };
         if !name.is_empty() {
+            // The 0xN800000 values are direct keys in %minoltaWhiteBalance, so an
+            // exact match (shift 0) yields the bare name — only shifted A2 values
+            // (±N settings of 0x10000) get the "%+.8g" suffix.
             let shift = (val as i64 - ty as i64) / 0x10000;
+            if shift == 0 {
+                return name.to_string();
+            }
             return format!("{}{:+}", name, shift);
         }
         return format!("Unknown (0x{:x})", val);
