@@ -2,11 +2,9 @@
 # New deltas fail regression_tag_values; fixes tighten it.
 # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
 ASF.wmv	IsVBR
-Canon1DmkIII.jpg	Sharpness
 CanonRaw.cr3	CustomControls
 CanonRaw.cr3	PreviewImage
 CanonRaw.cr3	RFLensType
-CanonRaw.cr3	Sharpness
 DICOM.dcm	PixelData
 ExifTool.jpg	ApertureValue
 ExifTool.jpg	ColorSpace

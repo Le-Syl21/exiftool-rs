@@ -5449,7 +5449,19 @@ fn read_makernote_ifd_with_base(
                             pv.to_string()
                         };
                         t.push(mk_canon_str("ToneCurve", &pv));
-                        // index 2 = Sharpness (condition-based 20D/350D excluded, skip)
+                        // index 2: Sharpness — all models except 20D/350D. ExifTool
+                        // Priority => 0 ("maybe not as reliable"), so emit demoted
+                        // (-1): a valid CameraSettings Sharpness still wins, but when
+                        // that one is suppressed (0x7fff) this value surfaces.
+                        if !model_name.contains("20D")
+                            && !model_name.contains("350D")
+                            && !model_name.contains("REBEL XT")
+                            && !model_name.contains("Kiss Digital N")
+                        {
+                            let mut sh = mk_canon_str("Sharpness", &rd(2).to_string());
+                            sh.priority = -1;
+                            t.push(sh);
+                        }
                         // index 3: SharpnessFrequency
                         let sf = rd(3);
                         let pv = match sf {
