@@ -17,7 +17,51 @@ pub fn read_mie(data: &[u8]) -> Result<Vec<Tag>> {
     let mut pos = 0;
     // The top-level is the file itself, containing a "0MIE" directory
     parse_mie_group(data, &mut pos, "MIE-Top", &mut tags)?;
+
+    // ExifTool ModifyMimeType: derive the MIE MIMEType from the (first) subfile's
+    // MIME, inserting "x-mie-" — e.g. subfile image/jpeg → image/x-mie-jpeg.
+    let subfile_mime = tags
+        .iter()
+        .find(|t| t.name == "SubfileMIMEType")
+        .map(|t| t.print_value.clone())
+        .or_else(|| {
+            tags.iter()
+                .find(|t| t.name == "SubfileType")
+                .and_then(|t| mie_type_to_mime(&t.print_value).map(str::to_string))
+        });
+    if let Some(mime) = subfile_mime {
+        if let Some((c, d)) = mime.split_once('/') {
+            let d = d.strip_prefix("x-").unwrap_or(d);
+            // old MIMEType is "application/x-mie", so subtype "x-mie".
+            let new_mime = format!("{}/x-mie-{}", c, d);
+            tags.push(Tag {
+                id: TagId::Text("MIMEType".into()),
+                name: "MIMEType".into(),
+                description: "MIME Type".into(),
+                group: TagGroup {
+                    family0: "File".into(),
+                    family1: "File".into(),
+                    family2: "Other".into(),
+                },
+                raw_value: Value::String(new_mime.clone()),
+                print_value: new_mime,
+                priority: 2,
+            });
+        }
+    }
     Ok(tags)
+}
+
+/// Look up a MIE subfile type name to its MIME type (subset of ExifTool's %mimeType).
+fn mie_type_to_mime(t: &str) -> Option<&'static str> {
+    Some(match t {
+        "JPEG" => "image/jpeg",
+        "TIFF" => "image/tiff",
+        "PNG" => "image/png",
+        "GIF" => "image/gif",
+        "PDF" => "application/pdf",
+        _ => return None,
+    })
 }
 
 fn parse_mie_group(
