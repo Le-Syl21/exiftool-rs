@@ -25,7 +25,6 @@ CanonRaw.cr3	ExposureTime
 CanonRaw.cr3	FNumber
 CanonRaw.cr3	HandlerType
 CanonRaw.cr3	HyperfocalDistance
-CanonRaw.cr3	ISOExpansion
 CanonRaw.cr3	LightValue
 CanonRaw.cr3	MediaCreateDate
 CanonRaw.cr3	MediaModifyDate
@@ -267,7 +266,6 @@ PostScript.eps	Creator
 PostScript.eps	Title
 QuickTime.heic	MediaDataOffset
 QuickTime.m4a	HandlerType
-QuickTime.m4a	TrackVolume
 QuickTime.mov	HandlerClass
 QuickTime.mov	HandlerType
 QuickTime.mov	HandlerVendorID

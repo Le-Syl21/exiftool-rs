@@ -1094,8 +1094,9 @@ fn parse_tkhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
         tags.push(mk("TrackLayer", "Track Layer", Value::U32(layer as u32)));
     }
 
-    if data_rest.len() >= 12 {
-        let vol_raw = u16::from_be_bytes([data_rest[10], data_rest[11]]);
+    if data_rest.len() >= 14 {
+        // tkhd v0: layer@8, alternate_group@10, volume@12 (int16u, /256 → %).
+        let vol_raw = u16::from_be_bytes([data_rest[12], data_rest[13]]);
         let vol_pct = vol_raw as f64 / 256.0 * 100.0;
         tags.push(mk(
             "TrackVolume",

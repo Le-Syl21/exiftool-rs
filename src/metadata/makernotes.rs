@@ -693,6 +693,16 @@ fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark, model: &str) -
                         crate::tags::print_conv_generated::print_conv_by_name(name, val as i64)
                             .map(str::to_string)
                     })
+                    .or_else(|| {
+                        // CanonCustom ISOExpansion: PrintConv => %offOn.
+                        (name == "ISOExpansion")
+                            .then(|| match val {
+                                0 => Some("Off".to_string()),
+                                1 => Some("On".to_string()),
+                                _ => None,
+                            })
+                            .flatten()
+                    })
                     .unwrap_or_else(|| val.to_string());
                 tags.push(mk_canon_str(name, &pv));
             } else if tag_id > 0 {
