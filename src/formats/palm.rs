@@ -368,6 +368,10 @@ fn read_cstr(data: &[u8]) -> String {
 /// Convert Palm timestamp to ExifTool date string.
 /// Palm dates are seconds since Jan 1, 1904 (if >= offset) or Jan 1, 1970
 fn palm_date(ts: i64) -> String {
+    // ExifTool shows an unset (zero) PDB date as "0000:00:00 00:00:00".
+    if ts == 0 {
+        return "0000:00:00 00:00:00".to_string();
+    }
     let mac_epoch_offset: i64 = (66 * 365 + 17) * 24 * 3600;
     let unix_ts = if ts >= mac_epoch_offset {
         ts - mac_epoch_offset
