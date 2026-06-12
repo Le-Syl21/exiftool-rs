@@ -1068,11 +1068,12 @@ fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark, model: &str) -
     // Saturation/Contrast/ColorFilter signed offset (DiMAGE A2 = 5, else 3).
     let param_off: i64 = if model.contains("DiMAGE A2") { 5 } else { 3 };
     let enum_pc = |v: u32, table: &[(u32, &str)]| -> String {
+        // ExifTool renders an unmatched PrintConv hash value as "Unknown ($val)".
         table
             .iter()
             .find(|(k, _)| *k == v)
             .map(|(_, s)| s.to_string())
-            .unwrap_or_else(|| v.to_string())
+            .unwrap_or_else(|| format!("Unknown ({})", v))
     };
 
     for idx in 0..max_idx {
@@ -1251,7 +1252,9 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
     }
     // TotalZoom 0x62, DateTimeStamp 0x64 (int16u, val ? "Mode $val" : "Off")
     if d.len() > 0x65 {
-        tags.push(mk("TotalZoom", u16::from_be_bytes([d[0x62], d[0x63]]).to_string()));
+        // TotalZoom: int16u, ValueConv $val/100.
+        let tz = u16::from_be_bytes([d[0x62], d[0x63]]) as f64 / 100.0;
+        tags.push(mk("TotalZoom", crate::value::format_g15(tz)));
         let dts = u16::from_be_bytes([d[0x64], d[0x65]]);
         tags.push(mk("DateTimeStamp", if dts != 0 { format!("Mode {}", dts) } else { "Off".to_string() }));
     }
