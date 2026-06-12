@@ -2244,7 +2244,9 @@ fn parse_mie_elements(data: &[u8], pos: &mut usize, tags: &mut Vec<crate::tag::T
                 },
                 raw_value: crate::value::Value::String(val_str.clone()),
                 print_value: val_str,
-                priority: 0,
+                // MIE trailer Copyright is reported by ExifTool over the EXIF/Ducky
+                // copies (processed last).
+                priority: if name == "Copyright" { 2 } else { 0 },
             });
         }
     }
