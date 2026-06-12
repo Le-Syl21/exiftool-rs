@@ -94,7 +94,6 @@ Kodak.jpg	FNumber
 Kodak.jpg	KodakModel
 Kodak.jpg	LightValue
 Kodak.jpg	ShutterSpeed
-Kodak.jpg	UsedExtensionNumbers
 Lytro.lfp	FOV
 Lytro.lfp	FocalLength35efl
 Lytro.lfp	HyperfocalDistance

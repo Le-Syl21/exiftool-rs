@@ -5510,7 +5510,10 @@ fn parse_ole_props<'a>(
             if val_off + 4 > data.len() {
                 continue;
             }
-            let vtype = ru32(val_off) & 0xFFF;
+            let vtype_full = ru32(val_off);
+            let is_vector = (vtype_full & 0x1000) != 0;
+            // Base type for scalar arms; vector arms use is_vector + base.
+            let vtype = vtype_full & 0xFFF;
             let tag_name = if prop_id == 1 {
                 Some("CodePage")
             } else {
@@ -5521,7 +5524,7 @@ fn parse_ole_props<'a>(
                 None => continue,
             };
             let val_str = match vtype {
-                2 | 18 => {
+                2 | 18 if !is_vector => {
                     // VT_I2 / VT_UI2
                     if val_off + 6 > data.len() {
                         continue;
@@ -5543,7 +5546,7 @@ fn parse_ole_props<'a>(
                         v.to_string()
                     }
                 }
-                3 => {
+                3 if !is_vector => {
                     if val_off + 8 > data.len() {
                         continue;
                     }
@@ -5606,17 +5609,13 @@ fn parse_ole_props<'a>(
                         format!("{:04}:{:02}:{:02} {:02}:{:02}:{:02}", y, mm, dd, h, m, s)
                     }
                 }
-                0x1002 | 0x1003 | 0x1012 | 0x1013 => {
+                2 | 3 | 18 | 19 if is_vector => {
                     // VT_VECTOR|VT_I2/UI2/I4/UI4
                     if val_off + 8 > data.len() {
                         continue;
                     }
                     let count = ru32(val_off + 4) as usize;
-                    let esz = if vtype == 0x1002 || vtype == 0x1012 {
-                        2usize
-                    } else {
-                        4
-                    };
+                    let esz = if vtype == 2 || vtype == 18 { 2usize } else { 4 };
                     (0..count.min(100))
                         .filter_map(|j| {
                             let eoff = val_off + 8 + j * esz;
