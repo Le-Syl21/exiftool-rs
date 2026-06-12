@@ -8,6 +8,3 @@ PSP.psp	Copyright
 Pentax.jpg	LensID
 Real.ra	Copyright
 Sigma.x3f	LensType
-XMP4.xmp	StructList2Item1
-XMP4.xmp	StructList2Item2
-XMP6.xmp	Test

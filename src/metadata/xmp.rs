@@ -1851,12 +1851,19 @@ fn aggregate_duplicate_xmp_tags(tags: Vec<Tag>) -> Vec<Tag> {
         }
         let key = (tag.group.family1.clone(), tag.name.clone());
         if let Some(&idx) = name_to_idx.get(&key) {
-            // Aggregate: append value to the existing tag
-            let existing = &mut result[idx];
-            if existing.print_value != tag.print_value {
-                existing.print_value = format!("{}, {}", existing.print_value, tag.print_value);
+            // A flattened field from a KNOWN-schema struct list (mwg-kw
+            // HierarchicalKeywords, IPTC LocationCreated/CvTerm…) is List=>1 → join.
+            // An UNKNOWN-namespace struct field (e.g. the test: schema's
+            // StructList2Item1) is NOT a list → ExifTool keeps the first occurrence.
+            let prefix = tag.group.family1.strip_prefix("XMP-").unwrap_or("");
+            if is_known_xmp_prefix(prefix) {
+                let existing = &mut result[idx];
+                if existing.print_value != tag.print_value {
+                    existing.print_value =
+                        format!("{}, {}", existing.print_value, tag.print_value);
+                }
             }
-            // Don't push a new entry
+            // else: keep the first occurrence (don't append, don't push a new entry)
         } else {
             let idx = result.len();
             name_to_idx.insert(key, idx);
@@ -1864,6 +1871,49 @@ fn aggregate_duplicate_xmp_tags(tags: Vec<Tag>) -> Vec<Tag> {
         }
     }
     result
+}
+
+/// Whether an XMP group prefix belongs to a registered schema (one that
+/// `namespace_prefix` recognises). Flattened struct-list fields in such schemas
+/// are List=>1 and joined; unknown-namespace struct fields are kept first-only.
+fn is_known_xmp_prefix(prefix: &str) -> bool {
+    matches!(
+        prefix,
+        "dc" | "xmp"
+            | "xmpMM"
+            | "xmpRights"
+            | "tiff"
+            | "exif"
+            | "aux"
+            | "photoshop"
+            | "crs"
+            | "lr"
+            | "Iptc4xmpCore"
+            | "Iptc4xmpExt"
+            | "GCamera"
+            | "GImage"
+            | "GContainer"
+            | "GContainerItem"
+            | "GDevice"
+            | "xmpNote"
+            | "x"
+            | "pdf"
+            | "xmpBJ"
+            | "stJob"
+            | "xmpTPg"
+            | "xmpG"
+            | "xmpGImg"
+            | "stDim"
+            | "stRef"
+            | "stFnt"
+            | "stMfs"
+            | "rdfs"
+            | "MicrosoftPhoto"
+            | "plus"
+            | "stArea"
+            | "mwg-rs"
+            | "mwg-kw"
+    )
 }
 
 /// Convert numeric flash value to ExifTool flash description string.
