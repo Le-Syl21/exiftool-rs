@@ -2972,11 +2972,11 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: 
         }
     }
 
-    // Byte 18: TvExposureTimeSetting — ValueConv: exp(PentaxEv(val-68)*log(2))
+    // Byte 18: TvExposureTimeSetting — ValueConv: exp(-PentaxEv(val-68)*log(2))
     if data.len() > 18 && is_k10d {
         let raw = data[18] as i32;
         let ev = pentax_ev(raw - 68);
-        let t = (ev * std::f64::consts::LN_2).exp();
+        let t = (-ev * std::f64::consts::LN_2).exp();
         let s = if t > 0.0 {
             if t < 1.0 {
                 format!("1/{}", (1.0 / t + 0.5) as u32)
