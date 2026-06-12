@@ -183,6 +183,21 @@ fn regression_tag_names() {
 
 const VALUE_BASELINE: &str = "tests/value_baseline.txt";
 
+/// Mirror src/main.rs::sanitize_display_value — the `-s` display sanitization.
+fn sanitize_value(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    for ch in s.chars() {
+        if ch == '\0' {
+            // remove null bytes
+        } else if ('\u{01}'..='\u{1f}').contains(&ch) || ch == '\u{7f}' {
+            result.push('.');
+        } else {
+            result.push(ch);
+        }
+    }
+    result.trim_end().to_string()
+}
+
 fn current_value_deltas() -> (BTreeSet<(String, String)>, usize) {
     use std::collections::HashMap;
     let images_dir = Path::new("tests/images");
@@ -206,9 +221,14 @@ fn current_value_deltas() -> (BTreeSet<(String, String)>, usize) {
 
         let tags = safe_extract(&entry.path()).unwrap_or_default();
         // First printed value per tag name (ExifTool -s shows the priority tag).
-        let mut actual: HashMap<&str, &str> = HashMap::new();
+        // Mirror the CLI's `-s` sanitization (control chars -> '.', strip NULs and
+        // trailing whitespace) so we compare what is actually displayed, matching
+        // ExifTool's own -s-derived expected values.
+        let mut actual: HashMap<&str, String> = HashMap::new();
         for t in &tags {
-            actual.entry(t.name.as_str()).or_insert(t.print_value.as_str());
+            actual
+                .entry(t.name.as_str())
+                .or_insert_with(|| sanitize_value(&t.print_value));
         }
 
         let content = std::fs::read(&vals_path)
@@ -221,7 +241,7 @@ fn current_value_deltas() -> (BTreeSet<(String, String)>, usize) {
                 _ => continue,
             };
             if let Some(got) = actual.get(name) {
-                if *got != expected {
+                if got.as_str() != expected {
                     deltas.insert((file_name.clone(), name.to_string()));
                 }
             }
