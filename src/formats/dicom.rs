@@ -500,8 +500,33 @@ fn build_value_string(
     element: u16,
     big_endian: bool,
 ) -> String {
-    // Binary pixel data - return description
-    if (group == 0x7FE0 && element == 0x0010) || val_data.len() > 1024 {
+    // Binary pixel data — ExifTool reports "(Binary data N bytes)" where N is the
+    // length of the *formatted value*, not the raw byte count. For an OW/US (int16u)
+    // PixelData that means the length of the joined int16u string (e.g. 9 values →
+    // "v1 v2 … v9" = 53 chars), not the 18 raw bytes. OB stays the raw byte count.
+    if group == 0x7FE0 && element == 0x0010 {
+        let formatted_len = if matches!(vr, b"OW" | b"US" | b"SS") {
+            let mut vals = Vec::new();
+            let mut i = 0;
+            while i + 2 <= val_data.len() {
+                let v = if big_endian {
+                    u16::from_be_bytes([val_data[i], val_data[i + 1]])
+                } else {
+                    u16::from_le_bytes([val_data[i], val_data[i + 1]])
+                };
+                vals.push(v.to_string());
+                i += 2;
+            }
+            vals.join(" ").len()
+        } else {
+            val_data.len()
+        };
+        return format!(
+            "(Binary data {} bytes, use -b option to extract)",
+            formatted_len
+        );
+    }
+    if val_data.len() > 1024 {
         return format!(
             "(Binary data {} bytes, use -b option to extract)",
             val_data.len()

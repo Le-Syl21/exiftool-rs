@@ -4,7 +4,6 @@
 ASF.wmv	IsVBR
 CanonRaw.cr3	CustomControls
 CanonRaw.cr3	RFLensType
-DICOM.dcm	PixelData
 ExifTool.jpg	ApertureValue
 ExifTool.jpg	ColorSpace
 ExifTool.jpg	Comment
