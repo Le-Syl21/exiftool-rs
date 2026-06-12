@@ -331,7 +331,17 @@ fn parse_pcapng_blocks(data: &[u8], start: usize, is_le: bool, tags: &mut Vec<Ta
         // EPB (Enhanced Packet Block) = type 6
         if block_type == 6 && block_len >= 28 {
             let ts_hi = r32(data, pos + 12) as u64;
-            let ts_lo = r32(data, pos + 16) as u64;
+            // ExifTool reproduces a bug here: ProcessPCAP reads the timestamp low
+            // word via `$raf->Read(\$buff, 4)` — passing a *reference* — so $buff is
+            // never updated and `Get32u($buff,0)` re-reads the first dword of the
+            // option-scan buffer, which is the 4 bytes immediately preceding the EPB
+            // block (the previous block's trailing total-length field). Mirror that to
+            // match: ts_lo = the int32u at (block start − 4), not the real ts low word.
+            let ts_lo = if pos >= 4 {
+                r32(data, pos - 4) as u64
+            } else {
+                r32(data, pos + 16) as u64
+            };
             let ts_raw = (ts_hi << 32) | ts_lo;
             // Default resolution is 1e-6 (microseconds)
             let ts_secs = ts_raw / 1_000_000;
