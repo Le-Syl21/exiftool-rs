@@ -39,12 +39,8 @@ Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
 Minolta.mrw	ColorMode
 Minolta.mrw	MeteringMode
-Nikon.nef	PreviewImageStart
 Nikon.nef	SubfileType
-NikonD2Hs.jpg	PreviewImageStart
-NikonD70.jpg	PreviewImageStart
 Olympus.jpg	DataDump
-Olympus2.jpg	PreviewImageStart
 OlympusE1.jpg	BlueBalance
 PCAP.pcapng	TimeStamp
 PLUS.xmp	MediaSummaryCode

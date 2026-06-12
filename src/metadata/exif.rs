@@ -181,7 +181,7 @@ impl ExifReader {
     /// Parse EXIF data, adding `base` (the TIFF header's offset within the file) to
     /// offset-type tags so they read as absolute file offsets, matching ExifTool.
     pub fn read_with_base(data: &[u8], base: usize) -> Result<Vec<Tag>> {
-        let mut tags = Self::read_inner(data)?;
+        let mut tags = Self::read_inner(data, base)?;
         if base != 0 {
             // ExifTool reports these IsOffset tags relative to the start of the file.
             const OFFSET_TAGS: &[&str] = &[
@@ -203,7 +203,7 @@ impl ExifReader {
         Ok(tags)
     }
 
-    fn read_inner(data: &[u8]) -> Result<Vec<Tag>> {
+    fn read_inner(data: &[u8], exif_base: usize) -> Result<Vec<Tag>> {
         let header = parse_tiff_header(data)?;
         let mut tags = Vec::new();
 
@@ -311,13 +311,14 @@ impl ExifReader {
         };
 
         if let Some((mn_offset, mn_size)) = mn_info {
-            let mn_tags = crate::metadata::makernotes::parse_makernotes(
+            let mn_tags = crate::metadata::makernotes::parse_makernotes_exif_base(
                 data,
                 mn_offset,
                 mn_size,
                 &make,
                 &make_and_model,
                 header.byte_order,
+                exif_base,
             );
             // Remove the raw MakerNote tag and replace with parsed tags
             tags.retain(|t| t.name != "MakerNote");

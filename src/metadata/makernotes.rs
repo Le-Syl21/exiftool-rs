@@ -66,7 +66,7 @@ pub fn parse_canon_cr3_makernotes(data: &[u8], model: &str) -> Vec<Tag> {
         return Vec::new();
     }
     let mut tags = Vec::new();
-    read_makernote_ifd(data, ifd_offset, bo, Manufacturer::Canon, &mut tags, model);
+    read_makernote_ifd(data, ifd_offset, bo, Manufacturer::Canon, &mut tags, model, 0);
     tags
 }
 
@@ -95,6 +95,7 @@ pub fn parse_makernotes_with_base(
         &mut tags,
         model,
         base_fix,
+        0,
     );
     tags
 }
@@ -106,6 +107,21 @@ pub fn parse_makernotes(
     make: &str,
     model: &str,
     parent_byte_order: ByteOrderMark,
+) -> Vec<Tag> {
+    parse_makernotes_exif_base(data, mn_offset, mn_size, make, model, parent_byte_order, 0)
+}
+
+/// Like `parse_makernotes`, but `exif_base` is the absolute file position of
+/// `data[0]` (the EXIF TIFF header). It lets sub-IFD IsOffset tags (Nikon
+/// PreviewImageStart) be reported file-absolute, matching ExifTool.
+pub fn parse_makernotes_exif_base(
+    data: &[u8],
+    mn_offset: usize,
+    mn_size: usize,
+    make: &str,
+    model: &str,
+    parent_byte_order: ByteOrderMark,
+    exif_base: usize,
 ) -> Vec<Tag> {
     if mn_size < 12 || mn_offset + mn_size > data.len() {
         return Vec::new();
@@ -204,6 +220,7 @@ pub fn parse_makernotes(
             &mut tags,
             model,
             base_fix,
+            0,
         );
         // GE.pm forces Format => 'string' on GEMake (0x0300, stored as undef[32]).
         for t in tags.iter_mut() {
@@ -251,6 +268,10 @@ pub fn parse_makernotes(
     // For others (Canon, Sony, Pentax, Panasonic), offsets are relative to the main TIFF header.
     let parse_data;
     let parse_offset;
+    // Offset of `parse_data[0]` within `data`. Combined with `exif_base` it
+    // gives the absolute file position of the parse buffer, used to report
+    // sub-IFD IsOffset tags (Nikon PreviewImageStart) file-absolute.
+    let parse_data_off;
 
     match info.manufacturer {
         Manufacturer::Nikon if info.ifd_offset >= 10 => {
@@ -263,11 +284,13 @@ pub fn parse_makernotes(
             let ifd_off = read_u32(sub, 4, byte_order) as usize;
             parse_data = sub;
             parse_offset = ifd_off;
+            parse_data_off = tiff_start;
         }
         Manufacturer::Nikon => {
             // Headerless Nikon (Coolpix etc.): IFD directly, offsets relative to TIFF
             parse_data = data;
             parse_offset = mn_offset + info.ifd_offset;
+            parse_data_off = 0;
         }
         Manufacturer::OlympusNew => {
             // OLYMPUS\0 + II/MM(2) + version(2) + IFD at byte 12
@@ -275,18 +298,21 @@ pub fn parse_makernotes(
             // Offsets in IFD are relative to start of MakerNote data
             parse_data = &data[mn_offset..(mn_offset + mn_size).min(data.len())];
             parse_offset = 12; // IFD directly at byte 12
+            parse_data_off = mn_offset;
         }
         Manufacturer::Apple => {
             // Apple iOS: IFD at mn_offset+14, offsets relative to mn_offset
             // (Start = valuePtr + 14, Base = start - 14)
             parse_data = &data[mn_offset..(mn_offset + mn_size).min(data.len())];
             parse_offset = 14; // IFD starts at offset 14 within MakerNote
+            parse_data_off = mn_offset;
         }
         Manufacturer::Fujifilm => {
             // FUJIFILM: IFD at OffsetPt (byte 8-11 LE), offsets relative to MN start
             // (from Perl: OffsetPt => '$valuePtr+8', Base => '$start')
             parse_data = &data[mn_offset..(mn_offset + mn_size).min(data.len())];
             parse_offset = info.ifd_offset; // = value read from bytes 8-11
+            parse_data_off = mn_offset;
         }
         _ => {
             // Default: offsets relative to main TIFF header
@@ -306,15 +332,21 @@ pub fn parse_makernotes(
             if is_self_contained {
                 parse_data = mn_bytes;
                 parse_offset = info.ifd_offset;
+                parse_data_off = mn_offset;
             } else {
                 parse_data = data;
                 parse_offset = ifd_abs;
+                parse_data_off = 0;
             }
         }
     }
 
     // Read IFD entries
     let mut tags = Vec::new();
+    // Absolute file position of parse_data[0]. For a TIFF/NEF the EXIF base is
+    // genuinely 0 (TIFF at file start), so this is still the correct absolute
+    // position; for JPEG exif_base is the APP1 TIFF offset (≈12).
+    let mn_file_base = exif_base + parse_data_off;
     read_makernote_ifd(
         parse_data,
         parse_offset,
@@ -322,6 +354,7 @@ pub fn parse_makernotes(
         info.manufacturer,
         &mut tags,
         model,
+        mn_file_base,
     );
 
     // Nikon second pass: decrypt encrypted sub-tables (only for type 2 with TIFF header)
@@ -3840,7 +3873,7 @@ fn decode_apple_runtime(data: &[u8]) -> Vec<Tag> {
 }
 
 /// Decode a PreviewIFD sub-directory — extract PreviewImageStart/Length.
-fn decode_preview_ifd(data: &[u8], offset: usize, bo: ByteOrderMark) -> Vec<Tag> {
+fn decode_preview_ifd(data: &[u8], offset: usize, bo: ByteOrderMark, mn_file_base: usize) -> Vec<Tag> {
     let mut tags = Vec::new();
     if offset + 2 > data.len() {
         return tags;
@@ -3857,7 +3890,10 @@ fn decode_preview_ifd(data: &[u8], offset: usize, bo: ByteOrderMark) -> Vec<Tag>
 
         match tag_id {
             0x0201 => {
-                tags.push(mk_nikon_str("PreviewImageStart", &val.to_string()));
+                // PreviewImageStart is IsOffset, stored relative to the maker-note
+                // TIFF base. ExifTool reports it file-absolute (base + raw).
+                let abs = val as u64 + mn_file_base as u64;
+                tags.push(mk_nikon_str("PreviewImageStart", &abs.to_string()));
             }
             0x0202 => {
                 tags.push(mk_nikon_str("PreviewImageLength", &val.to_string()));
@@ -4835,6 +4871,7 @@ fn read_makernote_ifd(
     manufacturer: Manufacturer,
     tags: &mut Vec<Tag>,
     model_name: &str,
+    mn_file_base: usize,
 ) {
     read_makernote_ifd_with_base(
         data,
@@ -4844,6 +4881,7 @@ fn read_makernote_ifd(
         tags,
         model_name,
         0,
+        mn_file_base,
     );
 }
 
@@ -4855,6 +4893,10 @@ fn read_makernote_ifd_with_base(
     tags: &mut Vec<Tag>,
     model_name: &str,
     base_fix: isize,
+    // Absolute file position of `data[0]` (the buffer base). Used to report
+    // IsOffset tags in sub-IFDs (Nikon PreviewIFD) as file-absolute, matching
+    // ExifTool. 0 = unknown (offsets left as raw buffer-relative values).
+    mn_file_base: usize,
 ) {
     if ifd_offset + 2 > data.len() {
         return;
@@ -5851,7 +5893,7 @@ fn read_makernote_ifd_with_base(
                     let preview_off = read_u32(value_data, 0, byte_order) as usize;
                     // The offset is relative to the beginning of parse_data
                     if preview_off > 0 && preview_off < data.len() {
-                        decode_preview_ifd(data, preview_off, byte_order)
+                        decode_preview_ifd(data, preview_off, byte_order, mn_file_base)
                     } else {
                         Vec::new()
                     }
@@ -7128,6 +7170,21 @@ fn read_makernote_ifd_with_base(
                         ),
                         priority: 0,
                     });
+                }
+            }
+        }
+
+        // Olympus PreviewImageStart (0x1036) is IsOffset relative to the
+        // maker-note base; ExifTool reports it file-absolute (base + raw). Done
+        // after PreviewImage synthesis, which needs the buffer-relative offset.
+        // Stored as a String so the EXIF read_with_base post-pass (which only
+        // touches numeric values) does not add the base a second time.
+        if mn_file_base != 0 {
+            if let Some(t) = tags.iter_mut().find(|t| t.name == "PreviewImageStart") {
+                if let Some(v) = t.raw_value.as_u64() {
+                    let abs = v + mn_file_base as u64;
+                    t.raw_value = Value::String(abs.to_string());
+                    t.print_value = abs.to_string();
                 }
             }
         }
