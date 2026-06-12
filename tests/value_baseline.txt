@@ -246,7 +246,6 @@ Pentax.jpg	AEMeteringSegments
 Pentax.jpg	AFPointSelected
 Pentax.jpg	BodyBatteryADLoad
 Pentax.jpg	BodyBatteryADNoLoad
-Pentax.jpg	DriveMode
 Pentax.jpg	EffectiveLV
 Pentax.jpg	FlashMeteringSegments
 Pentax.jpg	FlashMode
@@ -274,7 +273,6 @@ QuickTime.mov	XMPToolkit
 RIFF.avi	XMPToolkit
 RIFF.wav	Make
 Real.ra	Copyright
-Ricoh.jpg	Sharpness
 Ricoh2.jpg	ManufactureDate1
 Ricoh2.jpg	ManufactureDate2
 Sanyo.jpg	DataDump

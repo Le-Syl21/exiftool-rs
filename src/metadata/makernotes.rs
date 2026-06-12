@@ -1623,57 +1623,57 @@ fn pentax_special_tag_conv(
             };
             Some(vec![mk("PictureMode", &s)])
         }
-        // DriveMode (0x0034): int8u[4], multi-value PrintConv
+        // DriveMode (0x0034): int8u[4], four independent PrintConv hashes (Pentax.pm).
         0x0034 if data_type == 1 && count >= 4 && value_data.len() >= 4 => {
-            let decode_drive = |b: u8| -> &'static str {
-                match b {
-                    0 => "Single-frame",
-                    1 => "Continuous",
-                    2 => "Continuous (Hi)",
-                    3 => "Burst",
-                    4 => "Self-timer (12 s)",
-                    5 => "Self-timer (2 s)",
-                    6 => "Remote Control (3 s delay)",
-                    7 => "Remote Control",
-                    8 => "Exposure Bracket",
-                    9 => "Multiple Exposure",
-                    0xff => "Video",
-                    _ => "",
-                }
+            let pick = |b: u8, table: &[(u8, &str)]| -> String {
+                table
+                    .iter()
+                    .find(|(k, _)| *k == b)
+                    .map(|(_, s)| s.to_string())
+                    .unwrap_or_else(|| format!("Unknown ({})", b))
             };
-            let decode_shots = |b: u8| -> String {
-                match b {
-                    0 | 0xff => "n/a".to_string(),
-                    v => v.to_string(),
-                }
-            };
-            let decode_trigger = |b: u8| -> &'static str {
-                match b {
-                    0 => "Shutter Button",
-                    1 => "Remote Control",
-                    2 => "Mirror Lock-up",
-                    _ => "",
-                }
-            };
-            let s0 = decode_drive(value_data[0]);
-            let s0 = if s0.is_empty() {
-                value_data[0].to_string()
-            } else {
-                s0.to_string()
-            };
-            let s1 = decode_shots(value_data[1]);
-            let s2 = decode_trigger(value_data[2]);
-            let s2 = if s2.is_empty() {
-                value_data[2].to_string()
-            } else {
-                s2.to_string()
-            };
-            let s3 = decode_drive(value_data[3]);
-            let s3 = if s3.is_empty() {
-                value_data[3].to_string()
-            } else {
-                s3.to_string()
-            };
+            let s0 = pick(value_data[0], &[
+                (0, "Single-frame"),
+                (1, "Continuous"),
+                (2, "Continuous (Lo)"),
+                (3, "Burst"),
+                (4, "Continuous (Medium)"),
+                (5, "Continuous (Low)"),
+                (255, "Video"),
+            ]);
+            let s1 = pick(value_data[1], &[
+                (0, "No Timer"),
+                (1, "Self-timer (12 s)"),
+                (2, "Self-timer (2 s)"),
+                (15, "Video"),
+                (16, "Mirror Lock-up"),
+                (255, "n/a"),
+            ]);
+            let s2 = pick(value_data[2], &[
+                (0, "Shutter Button"),
+                (1, "Remote Control (3 s delay)"),
+                (2, "Remote Control"),
+                (4, "Remote Continuous Shooting"),
+            ]);
+            let s3 = pick(value_data[3], &[
+                (0x00, "Single Exposure"),
+                (0x01, "Multiple Exposure"),
+                (0x02, "Composite Average"),
+                (0x03, "Composite Additive"),
+                (0x04, "Composite Bright"),
+                (0x08, "Interval Shooting"),
+                (0x0a, "Interval Composite Average"),
+                (0x0b, "Interval Composite Additive"),
+                (0x0c, "Interval Composite Bright"),
+                (0x0f, "Interval Movie"),
+                (0x10, "HDR"),
+                (0x20, "HDR Strong 1"),
+                (0x30, "HDR Strong 2"),
+                (0x40, "HDR Strong 3"),
+                (0x50, "HDR Manual"),
+                (0xe0, "HDR Auto"),
+                (0xff, "Video"),
+            ]);
             let s = format!("{}; {}; {}; {}", s0, s1, s2, s3);
             Some(vec![mk("DriveMode", &s)])
         }
@@ -8464,6 +8464,17 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Ricoh => match tag_id {
+            // Sharpness (0x1003, non-int16u form): {0:Sharp,1:Normal,2:Soft}.
+            0x1003 => value
+                .as_f64()
+                .filter(|f| f.fract() == 0.0)
+                .map(|f| f as i64)
+                .and_then(|v| match v {
+                    0 => Some("Sharp"),
+                    1 => Some("Normal"),
+                    2 => Some("Soft"),
+                    _ => None,
+                }.map(str::to_string)),
             // FirmwareVersion (0x0002): "Rev0104" => sprintf("%.2f", 104/100).
             0x0002 => value.as_str().map(|s| {
                 if let Some(digits) = s.strip_prefix("Rev") {
