@@ -189,6 +189,7 @@ impl ExifReader {
                 "PreviewImageStart",
                 "JpgFromRawStart",
                 "OtherImageStart",
+                "StripOffsets",
             ];
             for t in tags.iter_mut() {
                 if OFFSET_TAGS.contains(&t.name.as_str()) {

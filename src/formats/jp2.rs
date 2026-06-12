@@ -329,13 +329,17 @@ fn parse_boxes(
                             tags.extend(xmp_tags);
                         }
                     } else if uuid == b"JpgTiffExif->JP2" {
-                        // EXIF: UUID is literally "JpgTiffExif->JP2", payload is TIFF
-                        if let Ok(exif_tags) = ExifReader::read(payload) {
+                        // EXIF: UUID is literally "JpgTiffExif->JP2", payload is TIFF.
+                        // Base = payload's file position so IsOffset tags
+                        // (StripOffsets, ThumbnailOffset…) read file-absolute.
+                        let base = content_start + 16;
+                        if let Ok(exif_tags) = ExifReader::read_with_base(payload, base) {
                             tags.extend(exif_tags);
                         }
                     } else if uuid == UUID_EXIF {
                         // Alternative EXIF UUID (from our constant)
-                        if let Ok(exif_tags) = ExifReader::read(payload) {
+                        let base = content_start + 16;
+                        if let Ok(exif_tags) = ExifReader::read_with_base(payload, base) {
                             tags.extend(exif_tags);
                         }
                     } else {
@@ -345,8 +349,10 @@ fn parse_boxes(
                             0xd5, 0xa6, 0xce, 0x03,
                         ];
                         if uuid == UUID_GEOJP2 {
-                            // GeoTIFF data: TIFF file
-                            if let Ok(geo_tags) = ExifReader::read(payload) {
+                            // GeoTIFF data: TIFF file. Base = payload file position
+                            // so IsOffset tags (StripOffsets) read file-absolute.
+                            let base = content_start + 16;
+                            if let Ok(geo_tags) = ExifReader::read_with_base(payload, base) {
                                 tags.extend(geo_tags);
                             }
                         }
