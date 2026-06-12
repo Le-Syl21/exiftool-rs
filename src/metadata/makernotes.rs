@@ -596,6 +596,11 @@ fn canon_cf2_1d3_multi(tag_id: u32, vals: &[u32]) -> Option<String> {
                 .join("; ");
             Some(format!("{}; {}", f0, rest))
         }
+        // TimerLength: [disableEnable, "6 s: v", "16 s: v", "After release: v"].
+        0x080c if vals.len() >= 4 => Some(format!(
+            "{}; 6 s: {}; 16 s: {}; After release: {}",
+            de, vals[1], vals[2], vals[3]
+        )),
         // ISOSpeedRange: [disableEnable, "Max %.0f", "Min %.0f"].
         0x0103 if vals.len() >= 3 => {
             let conv = |v: u32| -> f64 {
@@ -630,6 +635,8 @@ fn canon_cf2_1d3_pc(tag_id: u32, val: u32) -> Option<&'static str> {
             (2, "1/2-stop set, 1/2-stop comp."),
         ]),
         0x0106 => m(&[(0, "3 shots"), (1, "2 shots"), (2, "5 shots"), (3, "7 shots")]),
+        // HighISONoiseReduction ("other models" → %offOn for 1D Mark III).
+        0x0202 => m(&[(0, "Off"), (1, "On")]),
         0x0409 => m(&[
             (0, "Displays camera settings"),
             (1, "Displays shooting functions"),
