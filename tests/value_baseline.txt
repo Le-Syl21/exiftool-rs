@@ -227,11 +227,9 @@ Palm.mobi	ModifyDate
 Panasonic.rw2	ThumbnailOffset
 Panasonic.rw2	XResolution
 Pentax.avi	Software
-Pentax.jpg	AEMeteringSegments
 Pentax.jpg	AFPointSelected
 Pentax.jpg	BodyBatteryADLoad
 Pentax.jpg	BodyBatteryADNoLoad
-Pentax.jpg	FlashMeteringSegments
 Pentax.jpg	FlashMode
 Pentax.jpg	LensID
 Pentax.jpg	LensType
@@ -239,7 +237,6 @@ Pentax.jpg	PentaxModelID
 Pentax.jpg	Rotation
 Pentax.jpg	SRActive
 Pentax.jpg	ShutterCount
-Pentax.jpg	SlaveFlashMeteringSegments
 Pentax.jpg	TvExposureTimeSetting
 PhaseOne.iiq	ThumbnailTIFF
 PhotoMechanic.jpg	Prefs

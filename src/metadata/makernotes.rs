@@ -8531,6 +8531,28 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Pentax => match tag_id {
+            // AE/Flash/SlaveFlash MeteringSegments (0x0209/0x020a/0x020b): int8u[N],
+            // each byte → 255:'n/a', 0:'0', else "%.1f" of val/8-6.
+            0x0209 | 0x020a | 0x020b => {
+                let bytes: Option<&[u8]> = match value {
+                    Value::Binary(b) | Value::Undefined(b) => Some(b.as_slice()),
+                    _ => None,
+                };
+                bytes.map(|b| {
+                    b.iter()
+                        .map(|&v| {
+                            if v == 255 {
+                                "n/a".to_string()
+                            } else if v == 0 {
+                                "0".to_string()
+                            } else {
+                                format!("{:.1}", v as f64 / 8.0 - 6.0)
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                })
+            }
             // EffectiveLV (0x002d, int16u form): int16s, ValueConv $val/1024, "%.1f".
             0x002d => value.as_u64().map(|v| {
                 let s = if v > 32767 { v as i64 - 65536 } else { v as i64 };
