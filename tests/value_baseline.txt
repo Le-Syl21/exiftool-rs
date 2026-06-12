@@ -79,11 +79,7 @@ MWG.jpg	DateCreated
 MacOS.macos	XAttrMDItemUserTags
 Minolta.jpg	PrintIMVersion
 Minolta.mrw	ColorMode
-Minolta.mrw	Contrast
-Minolta.mrw	ISOSetting
 Minolta.mrw	MeteringMode
-Minolta.mrw	Saturation
-Minolta.mrw	Sharpness
 Nikon.nef	FilmType
 Nikon.nef	PreviewImageStart
 Nikon.nef	SubfileType
