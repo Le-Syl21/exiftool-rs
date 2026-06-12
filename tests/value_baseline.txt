@@ -10,8 +10,6 @@ CanonRaw.cr3	CustomControls
 CanonRaw.cr3	PreviewImage
 CanonRaw.cr3	RFLensType
 CanonRaw.cr3	Sharpness
-CanonRaw.cr3	SourceImageHeight
-CanonRaw.cr3	SourceImageWidth
 DICOM.dcm	PixelData
 ExifTool.jpg	ApertureValue
 ExifTool.jpg	ColorSpace

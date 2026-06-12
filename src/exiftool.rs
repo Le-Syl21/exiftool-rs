@@ -1529,6 +1529,8 @@ impl ExifTool {
                     "HandlerClass",
                     "HandlerVendorID",
                     "MediaTimeScale",
+                    "SourceImageWidth",
+                    "SourceImageHeight",
                 ];
                 for name in QT_LAST_WINS {
                     let last = tags
