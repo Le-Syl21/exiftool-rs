@@ -104,8 +104,6 @@ Kodak.jpg	KodakModel
 Kodak.jpg	LightValue
 Kodak.jpg	ShutterSpeed
 Kodak.jpg	UsedExtensionNumbers
-LNK.lnk	AccessDate
-LNK.url	Modified
 Lytro.lfp	FOV
 Lytro.lfp	FocalLength35efl
 Lytro.lfp	HyperfocalDistance
@@ -219,8 +217,6 @@ SigmaDP2.x3f	CameraName
 SigmaDP2.x3f	ExposureTime2
 SigmaDP2.x3f	ImageBoardID
 SigmaDP2.x3f	ImageUniqueID
-SigmaDP2.x3f	LensID
-SigmaDP2.x3f	LensType
 SigmaDP2.x3f	PreviewImage
 SigmaDP2.x3f	PreviewImageStart
 SigmaDP2.x3f	SensorID

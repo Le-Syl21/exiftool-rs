@@ -54,7 +54,7 @@ fn filetime_to_datetime(lo: u32, hi: u32, _tz_offset_hours: i64) -> Option<Strin
     if filetime == 0 {
         return None;
     }
-    let unix_secs = (filetime as i64) / 10_000_000 - 11_644_473_600;
+    let unix_secs = ((filetime + 5_000_000) / 10_000_000) as i64 - 11_644_473_600;
     // ExifTool prints LNK FILETIMEs in local time (ConvertUnixTime $val, 1).
     Some(crate::formats::gzip::gzip_unix_to_datetime(unix_secs))
 }
@@ -64,7 +64,7 @@ fn filetime64_to_datetime(val: u64) -> Option<String> {
     if val == 0 {
         return None;
     }
-    let unix_secs = (val as i64) / 10_000_000 - 11_644_473_600;
+    let unix_secs = ((val + 5_000_000) / 10_000_000) as i64 - 11_644_473_600;
     let (year, month, day, h, m, s) = unix_to_components(unix_secs);
     Some(format!(
         "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",

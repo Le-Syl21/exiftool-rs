@@ -635,10 +635,11 @@ fn map_prop(key: &str, val: &str) -> Option<(&'static str, &'static str, Value, 
                     if let Ok(hex_val) = u32::from_str_radix(val_trimmed, 16) {
                         lens_type_name(hex_val)
                     } else {
-                        val.to_string()
+                        format!("Unknown ({})", val)
                     }
                 } else {
-                    val.to_string()
+                    // Unrecognised (e.g. empty) lens code: ExifTool shows "Unknown (val)".
+                    format!("Unknown ({})", val)
                 };
             let (r, _) = s(val);
             ("LensType", "Lens Type", r, pv)
