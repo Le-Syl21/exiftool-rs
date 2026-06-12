@@ -3473,7 +3473,7 @@ fn decode_preview_ifd(data: &[u8], offset: usize, bo: ByteOrderMark) -> Vec<Tag>
 }
 
 /// Decode Nikon AFInfo (tag 0x0088).
-fn decode_nikon_afinfo(data: &[u8], _bo: ByteOrderMark) -> Vec<Tag> {
+fn decode_nikon_afinfo(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
     let mut tags = Vec::new();
     if data.len() < 4 {
         return tags;
@@ -3512,9 +3512,11 @@ fn decode_nikon_afinfo(data: &[u8], _bo: ByteOrderMark) -> Vec<Tag> {
         tags.push(mk_nikon_str("AFPoint", af_point));
     }
 
-    // AFPointsInFocus (bytes 2-3, bitmask for 7/11 points)
+    // AFPointsInFocus (bytes 2-3): the Nikon AFInfo BinaryData table is big-endian
+    // regardless of the maker-note byte order.
+    let _ = bo;
     if data.len() >= 4 {
-        let mask = u16::from_le_bytes([data[2], data[3]]);
+        let mask = u16::from_be_bytes([data[2], data[3]]);
         let points: Vec<&str> = (0..11)
             .filter(|&i| mask & (1 << i) != 0)
             .map(|i| match i {
