@@ -3,9 +3,7 @@
 # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
 ASF.wmv	IsVBR
 ExifTool.jpg	ApertureValue
-ExifTool.jpg	ColorSpace
 ExifTool.jpg	Comment
-ExifTool.jpg	Compression
 ExifTool.jpg	Copyright
 ExifTool.jpg	DateTimeOriginal
 ExifTool.jpg	ExposureCompensation
@@ -17,8 +15,6 @@ ExifTool.jpg	Quality
 ExifTool.jpg	SerialNumber
 ExifTool.jpg	ShutterSpeed
 ExifTool.jpg	ShutterSpeedValue
-ExifTool.jpg	XResolution
-ExifTool.jpg	YResolution
 PCAP.pcapng	TimeStamp
 PLUS.xmp	MediaSummaryCode
 PSP.psp	Copyright

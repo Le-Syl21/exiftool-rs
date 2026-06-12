@@ -1660,7 +1660,10 @@ fn process_spiff(data: &[u8]) -> Vec<crate::tag::Tag> {
         },
         raw_value: crate::value::Value::String(val.clone()),
         print_value: val,
-        priority: 0,
+        // SPIFF (APP8) is processed after the EXIF IFDs; ExifTool's last-wins lets
+        // its ColorSpace/Compression/X-YResolution override the EXIF copies. SPIFF
+        // only occurs alongside EXIF in synthetic files, so the boost is safe.
+        priority: 2,
     };
 
     tags.push(mk("SPIFFVersion", format!("{}.{}", data[0], data[1])));
