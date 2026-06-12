@@ -25,7 +25,6 @@ CanonRaw.cr3	SourceImageHeight
 CanonRaw.cr3	SourceImageWidth
 CanonRaw.crw	AFPointsInFocus
 CanonRaw.crw	MeasuredEV
-Casio2.jpg	DOF
 DICOM.dcm	PixelData
 DNG.dng	AFPointsInFocus
 DNG.dng	BitsPerSample

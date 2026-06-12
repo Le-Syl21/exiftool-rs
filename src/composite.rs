@@ -1790,13 +1790,12 @@ fn compute_dof(tags: &[Tag]) -> Option<Vec<Tag>> {
         // Perl: $val[4] || $val[5] || $val[6] — 0 means "not available" for these
         .or_else(|| find_tag_f64(tags, "SubjectDistance").filter(|&v| v > 0.0))
         .or_else(|| {
-            find_tag_f64(tags, "ObjectDistance")
-                .filter(|&v| v > 0.0)
-                .or_else(|| {
-                    find_tag_value(tags, "ObjectDistance")
-                        .and_then(|s| s.split_whitespace().next()?.parse().ok())
-                        .filter(|&v: &f64| v > 0.0)
-                })
+            // Prefer the printed value ("1 m") — it reflects ValueConv ($val/1000),
+            // whereas the raw stays in mm for some makers (Casio).
+            find_tag_value(tags, "ObjectDistance")
+                .and_then(|s| s.split_whitespace().next()?.parse().ok())
+                .filter(|&v: &f64| v > 0.0)
+                .or_else(|| find_tag_f64(tags, "ObjectDistance").filter(|&v| v > 0.0))
         })
         .or_else(|| {
             find_tag_f64(tags, "ApproximateFocusDistance")
