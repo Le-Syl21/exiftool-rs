@@ -2479,11 +2479,11 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: 
     // Byte 17: bit-field tags
     if data.len() > 17 && is_k10d {
         let b = data[17];
-        // 17.1: SRActive (bit 0)
-        let sr = b & 0x01;
+        // SRActive: Mask 0x80 (bit 7).
+        let sr = (b & 0x80) >> 7;
         tags.push(pb("SRActive", if sr != 0 { "Yes" } else { "No" }));
-        // 17.2: Rotation (bits 1-2)
-        let rot = (b >> 1) & 0x03;
+        // Rotation: Mask 0x60 (bits 5-6).
+        let rot = (b >> 5) & 0x03;
         let rot_s = match rot {
             0 => "Horizontal (normal)",
             1 => "Rotate 180",

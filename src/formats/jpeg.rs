@@ -2243,7 +2243,7 @@ fn decode_infray_version(data: &[u8]) -> Vec<crate::tag::Tag> {
 
     tags.push(mk(
         "IJPEGVersion",
-        format!("{}.{}.{}.{}", data[0], data[1], data[2], data[3]),
+        format!("{} {} {} {}", data[0], data[1], data[2], data[3]),
     ));
     if data.len() > 0x11 {
         tags.push(mk("IJPEGOrgType", data[0x0C].to_string()));

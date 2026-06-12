@@ -90,7 +90,6 @@ HTML.html	Subject
 ISO.iso	BootSystem
 InfiRay.jpg	GPSLatitude
 InfiRay.jpg	GPSLongitude
-InfiRay.jpg	IJPEGVersion
 JXL2.jxl	CompatibleBrands
 Jpeg2000.jp2	CompatibleBrands
 Jpeg2000.jp2	ExifByteOrder
@@ -197,8 +196,6 @@ Pentax.jpg	FlashMode
 Pentax.jpg	LensID
 Pentax.jpg	LensType
 Pentax.jpg	PentaxModelID
-Pentax.jpg	Rotation
-Pentax.jpg	SRActive
 Pentax.jpg	ShutterCount
 Pentax.jpg	TvExposureTimeSetting
 PhaseOne.iiq	ThumbnailTIFF
