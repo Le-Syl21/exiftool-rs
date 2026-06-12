@@ -1488,6 +1488,63 @@ impl ExifTool {
                 .map(|t| t.name.clone())
                 .collect();
             tags.retain(|t| t.group.family0 != "XMP" || !has_non_xmp.contains(&t.name));
+
+            // ExifTool FoundTag rule (narrow, safe subset): among duplicates of the
+            // same tag name that all live in the SAME main-document group (same
+            // family1, not a sub-document like IFD1/SubIFD/PreviewIFD/Track2+/Doc2+),
+            // the LAST extracted overrides the earlier ones. Keep only that last
+            // instance so the primary value matches ExifTool's `-TAG` output.
+            {
+                fn is_sub_document(g1: &str) -> bool {
+                    g1 == "IFD1"
+                        || g1.starts_with("SubIFD")
+                        || g1 == "PreviewIFD"
+                        || g1.starts_with("Doc")
+                        || (g1.starts_with("Track")
+                            && g1 != "Track1"
+                            && g1.len() > 5
+                            && g1.as_bytes()[5].is_ascii_digit())
+                        // Container / first-wins groups where ExifTool keeps the FIRST
+                        // duplicate (QuickTime per-track tags are sub-documents; the
+                        // others use first-priority within the module).
+                        || g1 == "QuickTime"
+                        || g1 == "Track1"
+                        || g1 == "JP2"
+                        || g1 == "PhotoMechanic"
+                        || g1 == "VCard"
+                }
+                use std::collections::HashMap as HM;
+                // group indices by name
+                let mut by_name: HM<&str, Vec<usize>> = HM::new();
+                for (i, t) in tags.iter().enumerate() {
+                    by_name.entry(t.name.as_str()).or_default().push(i);
+                }
+                let mut drop: std::collections::HashSet<usize> = std::collections::HashSet::new();
+                for idxs in by_name.values() {
+                    if idxs.len() < 2 {
+                        continue;
+                    }
+                    let g1 = &tags[idxs[0]].group.family1;
+                    // all same family1, same priority, not a sub-document group
+                    let uniform = idxs
+                        .iter()
+                        .all(|&i| &tags[i].group.family1 == g1 && tags[i].priority == tags[idxs[0]].priority);
+                    if uniform && !is_sub_document(g1) {
+                        // drop all but the last
+                        for &i in &idxs[..idxs.len() - 1] {
+                            drop.insert(i);
+                        }
+                    }
+                }
+                if !drop.is_empty() {
+                    let mut i = 0usize;
+                    tags.retain(|_| {
+                        let keep = !drop.contains(&i);
+                        i += 1;
+                        keep
+                    });
+                }
+            }
         }
 
         // Filter by requested tags if specified
