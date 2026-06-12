@@ -195,17 +195,14 @@ fn parse_header2(data: &[u8], ver_f: f64, tags: &mut Vec<Tag>) {
     let hdr_len = if ver_f >= 2.0003 { 104usize } else { 72usize };
     let has_extended = data.len() >= hdr_len + 160;
 
-    // ImageUniqueID: bytes 8..24 (16 bytes) — hex string
+    // ImageUniqueID: bytes 8..24 (16 bytes) — hex string. Demoted to priority -1
+    // so the embedded-JPEG EXIF ImageUniqueID (0xa420), processed later, wins —
+    // matching ExifTool's last-wins ordering.
     if data.len() >= 24 {
         let uid = hex_bytes(&data[8..24]);
-        tags.push(mk_tag_str(
-            "ImageUniqueID",
-            "Image Unique ID",
-            uid,
-            "X3F",
-            "Header",
-            "Camera",
-        ));
+        let mut t = mk_tag_str("ImageUniqueID", "Image Unique ID", uid, "X3F", "Header", "Camera");
+        t.priority = -1;
+        tags.push(t);
     }
 
     // MarkBits: uint32 at offset 24 (position 6 in int32u array starting at 0)
