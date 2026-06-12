@@ -880,7 +880,20 @@ fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark, model: &str) -
                             })
                             .flatten()
                     })
-                    .unwrap_or_else(|| val.to_string());
+                    .unwrap_or_else(|| {
+                        // No PrintConv: ExifTool shows the raw value(s). Multi-value
+                        // entries (e.g. CustomControls) are space-joined, not just the
+                        // first.
+                        if num_vals > 1 {
+                            all_vals
+                                .iter()
+                                .map(|v| v.to_string())
+                                .collect::<Vec<_>>()
+                                .join(" ")
+                        } else {
+                            val.to_string()
+                        }
+                    });
                 tags.push(mk_canon_str(name, &pv));
             } else if tag_id > 0 {
                 // Emit unknown custom functions with their hex ID
