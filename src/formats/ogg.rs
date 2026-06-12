@@ -217,22 +217,19 @@ fn parse_opus_identification(packet: &[u8], tags: &mut Vec<Tag>) {
     let channels = d[1];
     let _pre_skip = u16::from_le_bytes([d[2], d[3]]);
     let sample_rate = u32::from_le_bytes([d[4], d[5], d[6], d[7]]);
-    let output_gain = i16::from_le_bytes([d[8], d[9]]);
+    let output_gain = u16::from_le_bytes([d[8], d[9]]);
 
-    // Perl tag names: OpusVersion, AudioChannels, SampleRate, OutputGain
-    tags.push(mk(
-        "OpusVersion",
-        "Opus Version",
-        Value::String(format!("{}/{}", version >> 4, version & 0x0f)),
-    ));
+    // Perl tag names: OpusVersion, AudioChannels, SampleRate, OutputGain.
+    // OpusVersion (Opus::Header index 0) is the raw int8u value, no formatting.
+    tags.push(mk("OpusVersion", "Opus Version", Value::U8(version)));
     tags.push(mk("AudioChannels", "Audio Channels", Value::U8(channels)));
     tags.push(mk("SampleRate", "Sample Rate", Value::U32(sample_rate)));
-    // OutputGain in dB: value / 256.0
-    let gain_db = output_gain as f64 / 256.0;
+    // OutputGain (Opus::Header index 8, int16u): ValueConv 10 ** ($val/5120).
+    let gain = 10f64.powf(output_gain as f64 / 5120.0);
     tags.push(mk(
         "OutputGain",
         "Output Gain",
-        Value::String(format!("{:.2} dB", gain_db)),
+        Value::String(crate::value::format_g15(gain)),
     ));
 }
 

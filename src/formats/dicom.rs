@@ -607,12 +607,48 @@ fn build_value_string(
             }
             vals.join(" ")
         }
-        b"OB" | b"OW" => {
-            // Binary data
-            format!(
-                "(Binary data {} bytes, use -b option to extract)",
-                val_data.len()
-            )
+        b"OB" | b"OW" | b"OF" => {
+            // ExifTool: elements >1024 bytes are binary; smaller ones are read with
+            // the VR's numeric format (OB=int8u, OW=int16u, OF=float), space-joined.
+            if val_data.len() > 1024 {
+                format!(
+                    "(Binary data {} bytes, use -b option to extract)",
+                    val_data.len()
+                )
+            } else if vr == b"OB" {
+                val_data
+                    .iter()
+                    .map(|b| b.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            } else if vr == b"OW" {
+                val_data
+                    .chunks_exact(2)
+                    .map(|c| {
+                        if big_endian {
+                            u16::from_be_bytes([c[0], c[1]])
+                        } else {
+                            u16::from_le_bytes([c[0], c[1]])
+                        }
+                        .to_string()
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            } else {
+                val_data
+                    .chunks_exact(4)
+                    .map(|c| {
+                        let b = [c[0], c[1], c[2], c[3]];
+                        let v = if big_endian {
+                            f32::from_be_bytes(b)
+                        } else {
+                            f32::from_le_bytes(b)
+                        };
+                        format!("{}", v)
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            }
         }
         b"DA" => {
             // Date: YYYYMMDD

@@ -8322,6 +8322,16 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Pentax => match tag_id {
+            // PreviewImageBorders (0x003e): int8u[4] (top,bottom,left,right) joined.
+            0x003e => match value {
+                Value::Binary(b) | Value::Undefined(b) if b.len() == 4 => Some(
+                    b.iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                ),
+                _ => None,
+            },
             // FocusMode (0x000d, non-Asahi models): enum.
             0x000d => value.as_u64().and_then(|v| {
                 match v {
@@ -8420,6 +8430,14 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Panasonic => match tag_id {
+            // VideoFrameRate (0x27): PrintConv { 0 => 'n/a', OTHER => raw }.
+            0x0027 => value.as_u64().map(|v| {
+                if v == 0 {
+                    "n/a".to_string()
+                } else {
+                    v.to_string()
+                }
+            }),
             // AFAreaMode (0x000f, "other models"): int8u[2] string-keyed enum.
             0x000f => {
                 let s = match value {

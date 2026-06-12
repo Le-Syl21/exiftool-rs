@@ -50,7 +50,6 @@ Casio2.jpg	FirmwareDate
 CasioQVCI.jpg	ManufactureCode
 CasioQVCI.jpg	ManufactureIndex
 CasioQVCI.jpg	ModelType
-DICOM.dcm	FileMetaInfoVersion
 DICOM.dcm	PixelData
 DNG.dng	AFPointsInFocus
 DNG.dng	BitsPerSample
@@ -258,8 +257,6 @@ OlympusE1.jpg	FocusInfoVersion
 OlympusE1.jpg	ImageProcessingVersion
 OlympusE1.jpg	RawDevVersion
 OlympusE1.jpg	SensorTemperature
-Opus.opus	OpusVersion
-Opus.opus	OutputGain
 PCAP.pcapng	TimeStamp
 PDF.pdf	CreateDate
 PDF.pdf	Creator
@@ -274,9 +271,7 @@ Palm.mobi	CreateDate
 Palm.mobi	Description
 Palm.mobi	LastBackupDate
 Palm.mobi	ModifyDate
-Panasonic.jpg	VideoFrameRate
 Panasonic.rw2	ThumbnailOffset
-Panasonic.rw2	VideoFrameRate
 Panasonic.rw2	XResolution
 Pentax.avi	Software
 Pentax.jpg	AEMeteringSegments
@@ -291,7 +286,6 @@ Pentax.jpg	ImageEditing
 Pentax.jpg	LensID
 Pentax.jpg	LensType
 Pentax.jpg	PentaxModelID
-Pentax.jpg	PreviewImageBorders
 Pentax.jpg	Rotation
 Pentax.jpg	SRActive
 Pentax.jpg	SensitivityAdjust
