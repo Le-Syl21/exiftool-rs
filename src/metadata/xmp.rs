@@ -749,6 +749,15 @@ impl XmpReader {
                             {
                                 continue;
                             }
+                            // GContainer Item:* attributes are collected by the
+                            // dedicated gcontainer_fields path (one DirectoryItem*
+                            // tag per field). Skip the generic flattening so they
+                            // aren't emitted a second time (duplicate DirectoryItemMime).
+                            if attr.name.namespace.as_deref()
+                                == Some("http://ns.google.com/photos/1.0/container/item/")
+                            {
+                                continue;
+                            }
 
                             let attr_ns = attr.name.namespace.as_deref().unwrap_or("");
                             let attr_prefix_resolved = namespace_prefix(attr_ns);
