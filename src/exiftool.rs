@@ -1498,6 +1498,8 @@ impl ExifTool {
                     ("GoPro", "WhiteBalance"),
                     ("GoPro", "Sharpness"),
                     ("GoPro", "ExposureCompensation"),
+                    // Embedded ID3 Comment overrides the native container's (AIFF/...).
+                    ("ID3", "Comment"),
                     // Minolta RAW (.mrw PRD/native block) is authoritative for these
                     // over the embedded EXIF maker note copies.
                     ("MinoltaRaw", "Contrast"),
