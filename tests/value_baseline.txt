@@ -50,7 +50,6 @@ OlympusE1.jpg	BlueBalance
 PCAP.pcapng	TimeStamp
 PLUS.xmp	MediaSummaryCode
 PSP.psp	Copyright
-Panasonic.rw2	ThumbnailOffset
 Pentax.jpg	LensID
 Pentax.jpg	TvExposureTimeSetting
 QuickTime.heic	MediaDataOffset

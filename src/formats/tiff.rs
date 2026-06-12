@@ -750,6 +750,7 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
 
     // Collect JpgFromRaw data, WBInfo2 data, DistortionInfo data
     let mut jpg_from_raw: Option<Vec<u8>> = None;
+    let mut jpg_from_raw_offset: u64 = 0; // file position of the embedded JPEG
     let mut wb_info2_data: Option<Vec<u8>> = None;
     let mut distortion_data: Option<Vec<u8>> = None;
     // Track ThumbnailOffset+Length for IFD1
@@ -775,6 +776,7 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
                     let off = e.value_offset as usize;
                     if off + total <= data.len() {
                         jpg_from_raw = Some(data[off..off+total].to_vec());
+                        jpg_from_raw_offset = off as u64;
                     }
                 }
                 // Add JpgFromRaw tag for display
@@ -928,7 +930,7 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
             // Also skip File-group tags from the embedded JPEG.
             let existing_names: std::collections::HashSet<String> =
                 tags.iter().map(|t| t.name.clone()).collect();
-            for t in jpg_tags {
+            for mut t in jpg_tags {
                 // Pass through JPEG SOF tags (EncodingProcess, ColorComponents, YCbCrSubSampling)
                 // from the embedded JPEG as Perl does for RW2 files.
                 if t.group.family0 == "File" {
@@ -945,6 +947,18 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
                 // Skip ExifByteOrder from embedded (already have it)
                 if t.name == "ExifByteOrder" {
                     continue;
+                }
+                // IsOffset tags from the embedded JPEG are JPEG-relative; ExifTool
+                // reports them as RW2-absolute (add the JpgFromRaw file position).
+                if matches!(
+                    t.name.as_str(),
+                    "ThumbnailOffset" | "PreviewImageStart" | "OtherImageStart"
+                ) {
+                    if let Some(v) = t.raw_value.as_u64() {
+                        let abs = v + jpg_from_raw_offset;
+                        t.raw_value = Value::U32(abs as u32);
+                        t.print_value = abs.to_string();
+                    }
                 }
                 // PanasonicTitle/PanasonicTitle2: skip if content is all zeros (Perl RawConv)
                 if t.name == "PanasonicTitle" || t.name == "PanasonicTitle2" {
