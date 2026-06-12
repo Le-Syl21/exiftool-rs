@@ -866,7 +866,11 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                 } else {
                     0.0
                 };
-                tags.push(mk("ShutterSpeedValue", format!("{}", sv)));
+                // ShutterSpeedValue PrintConv: PrintExposureTime(1/2**val) → "1/83".
+                tags.push(mk(
+                    "ShutterSpeedValue",
+                    crate::tags::canon_sub::print_exposure_time(et),
+                ));
                 // Emit ExposureTime for composites
                 let et_print = crate::tags::canon_sub::print_exposure_time(et);
                 tags.push(Tag {
