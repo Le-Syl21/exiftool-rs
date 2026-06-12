@@ -46,9 +46,6 @@ CanonRaw.crw	DOF
 CanonRaw.crw	MeasuredEV
 CanonRaw.crw	RedBalance
 Casio2.jpg	DOF
-CasioQVCI.jpg	ManufactureCode
-CasioQVCI.jpg	ManufactureIndex
-CasioQVCI.jpg	ModelType
 DICOM.dcm	PixelData
 DNG.dng	AFPointsInFocus
 DNG.dng	BitsPerSample
@@ -128,7 +125,6 @@ ISO.iso	BootSystem
 ITC.itc	DataType
 InfiRay.jpg	GPSLatitude
 InfiRay.jpg	GPSLongitude
-InfiRay.jpg	IJPEGTempVersion
 InfiRay.jpg	IJPEGVersion
 InfiRay.jpg	VisibleSensorAperture
 JVC.jpg	CPUVersions

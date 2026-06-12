@@ -399,17 +399,28 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                             tags.push(mk("DateTimeOriginal", dt));
                         }
                     }
-                    // ModelType at 0x62 (4 bytes)
-                    if d.len() > 0x66 {
-                        let mt = u32::from_le_bytes([d[0x62], d[0x63], d[0x64], d[0x65]]);
-                        tags.push(mk("ModelType", mt.to_string()));
+                    // CasioQVCI ASCII string fields (Casio.pm QVCI table): ModelType
+                    // (0x62, string[7]), ManufactureIndex (0x72, string[9]),
+                    // ManufactureCode (0x7c, string[9]). Truncate at the first null.
+                    let qvci_str = |off: usize, len: usize| -> String {
+                        let end = (off + len).min(d.len());
+                        if off >= end {
+                            return String::new();
+                        }
+                        let raw = &d[off..end];
+                        let stop = raw.iter().position(|&b| b == 0).unwrap_or(raw.len());
+                        crate::encoding::decode_utf8_or_latin1(&raw[..stop])
+                            .trim_end()
+                            .to_string()
+                    };
+                    if d.len() > 0x62 {
+                        tags.push(mk("ModelType", qvci_str(0x62, 7)));
                     }
-                    // ManufactureIndex at 0x76, ManufactureCode at 0x7A
-                    if d.len() > 0x7E {
-                        let mi = u32::from_le_bytes([d[0x76], d[0x77], d[0x78], d[0x79]]);
-                        let mc = u32::from_le_bytes([d[0x7A], d[0x7B], d[0x7C], d[0x7D]]);
-                        tags.push(mk("ManufactureIndex", mi.to_string()));
-                        tags.push(mk("ManufactureCode", mc.to_string()));
+                    if d.len() > 0x72 {
+                        tags.push(mk("ManufactureIndex", qvci_str(0x72, 9)));
+                    }
+                    if d.len() > 0x7c {
+                        tags.push(mk("ManufactureCode", qvci_str(0x7c, 9)));
                     }
                     // XResolution, YResolution, ResolutionUnit from TIFF-like structure
                     // (these may be in the EXIF already)
@@ -2295,7 +2306,7 @@ fn decode_infray_version(data: &[u8]) -> Vec<crate::tag::Tag> {
         tags.push(mk(
             "IJPEGTempVersion",
             format!(
-                "{}.{}.{}.{}",
+                "{} {} {} {}",
                 data[0x50], data[0x51], data[0x52], data[0x53]
             ),
         ));
@@ -4871,7 +4882,7 @@ fn decode_infray_factory(data: &[u8]) -> Vec<crate::tag::Tag> {
 
     tags.push(mk(
         "IJPEGTempVersion",
-        format!("{}.{}.{}.{}", data[0], data[1], data[2], data[3]),
+        format!("{} {} {} {}", data[0], data[1], data[2], data[3]),
     ));
     if data.len() > 0x05 {
         tags.push(mk("FactDefEmissivity", ri8(0x04).to_string()));
