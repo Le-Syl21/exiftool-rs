@@ -331,7 +331,7 @@ fn emit_tag(tag_path: &str, json_value: String, tags: &mut Vec<Tag>) {
     let family2 = if is_devices { "Camera" } else { "Image" };
 
     // Numeric raw for tags that feed composites (full precision, not rounded print).
-    let raw_value = if final_name == "FocalLength" {
+    let raw_value = if matches!(final_name.as_str(), "FocalLength" | "FNumber") {
         raw_str
             .parse::<f64>()
             .map(Value::F64)

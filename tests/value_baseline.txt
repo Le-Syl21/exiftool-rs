@@ -36,7 +36,6 @@ Google.jpg	HDRPlusMakerNote
 Google.jpg	ImageData
 Google.jpg	ImageName
 Jpeg2000.jp2	StripOffsets
-Lytro.lfp	HyperfocalDistance
 Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
 MIFF.miff	ThumbnailOffset
