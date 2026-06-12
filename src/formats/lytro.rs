@@ -71,12 +71,23 @@ pub fn read_lfp(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    // Emit JSONMetadata tag (list of all JSON blocks as binary)
-    for block in &json_blocks {
+    // JSONMetadata is Binary => 1, List => 1: one ", "-joined value listing each
+    // JSON block as "(Binary data N bytes)", not the decoded text.
+    if !json_blocks.is_empty() {
+        let joined = json_blocks
+            .iter()
+            .map(|b| {
+                format!(
+                    "(Binary data {} bytes, use -b option to extract)",
+                    b.len()
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
         tags.push(mk_lytro(
             "JSONMetadata",
             "JSON Metadata",
-            Value::String(block.clone()),
+            Value::String(joined),
         ));
     }
 
