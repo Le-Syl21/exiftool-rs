@@ -78,7 +78,6 @@ ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
 FITS.fits	Comment
 FLIR.jpg	DateTimeOriginal
-FLIR.jpg	FrameRate
 FLIR.jpg	RawThermalImage
 FlashPix.ppt	HeadingPairs
 FlashPix.ppt	TitleOfParts

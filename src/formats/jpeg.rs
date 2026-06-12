@@ -2546,10 +2546,15 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                         tags.push(mk("PlanckO", planck_o.to_string()));
                         tags.push(mk("PlanckR2", float8g(rf(780))));
                     }
-                    tags.push(mk(
-                        "FrameRate",
-                        format!("{}", u16::from_le_bytes([rec[452], rec[453]])),
-                    ));
+                    // FrameRate: int16u at record offset 0x464 (FLIR.pm).
+                    if rec.len() >= 0x466 {
+                        let fr = if ci_le {
+                            u16::from_le_bytes([rec[0x464], rec[0x465]])
+                        } else {
+                            u16::from_be_bytes([rec[0x464], rec[0x465]])
+                        };
+                        tags.push(mk("FrameRate", fr.to_string()));
+                    }
 
                     // Additional CameraInfo fields (from Perl FLIR::CameraInfo)
                     if rec.len() >= 830 {
