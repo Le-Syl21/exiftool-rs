@@ -76,8 +76,10 @@ fn is_hdrp_makernote_attr(local_name: &str) -> bool {
 fn emit_hdrp_makernote(b64_value: &str, tags: &mut Vec<Tag>) {
     use crate::metadata::google_hdrp::decode_hdrp_makernote;
 
-    // Emit HDRPlusMakerNote as a binary tag (ExifTool shows "(Binary data N bytes...)")
-    let raw_bytes = b64_value.trim().len() * 3 / 4; // approximate decoded size
+    // Emit HDRPlusMakerNote as a binary tag (ExifTool shows "(Binary data N bytes...)").
+    // ExifTool stores the raw base64 STRING (it isn't base64-decoded for this tag),
+    // so N is the length of that string, not the decoded byte count.
+    let raw_bytes = b64_value.trim().len();
     let print = format!(
         "(Binary data {} bytes, use -b option to extract)",
         raw_bytes
