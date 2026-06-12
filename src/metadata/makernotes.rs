@@ -9492,7 +9492,9 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             // PrintConv PrintExposureTime.
             0x0033 => value
                 .as_u64()
-                .map(|v| print_exposure_time(v as f64 * 1e-6)),
+                .map(|v| v as f64)
+                .or_else(|| value.to_display_string().trim().parse::<f64>().ok())
+                .map(|v| print_exposure_time(v * 1e-6)),
             // ColorAdjustment (string form): ValueConv strips "CC:".
             0x0014 => value
                 .as_str()

@@ -71,7 +71,6 @@ QuickTime.mov	LightValue
 Real.ra	Copyright
 Sanyo.jpg	DataDump
 Sigma.x3f	LensType
-SigmaDP2.x3f	ExposureTime2
 SigmaDP2.x3f	ImageUniqueID
 SigmaDP2.x3f	PreviewImage
 SigmaDP2.x3f	PreviewImageStart
