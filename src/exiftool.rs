@@ -1497,6 +1497,7 @@ impl ExifTool {
                 const SPECIAL_WINS: &[(&str, &str)] = &[
                     ("GoPro", "WhiteBalance"),
                     ("GoPro", "Sharpness"),
+                    ("GoPro", "ExposureCompensation"),
                     // Minolta RAW (.mrw PRD/native block) is authoritative for these
                     // over the embedded EXIF maker note copies.
                     ("MinoltaRaw", "Contrast"),

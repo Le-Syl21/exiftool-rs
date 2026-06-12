@@ -43,7 +43,6 @@ FLIR.jpg	RawThermalImage
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
 FujiFilm.raf	ThumbnailOffset
-GoPro.jpg	ExposureCompensation
 GoPro.jpg	WhiteBalance
 Google.jpg	DirectoryItemMime
 Google.jpg	HDRPlusMakerNote
