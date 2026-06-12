@@ -45,8 +45,6 @@ DNG.dng	ThumbnailTIFF
 DjVu.djvu	Creator
 DjVu.djvu	SubfileType
 DjVu.djvu	Subject
-EXE.a	CreateDate
-EXE.exe	TimeStamp
 ExifTool.jpg	ApertureValue
 ExifTool.jpg	ColorSpace
 ExifTool.jpg	Comment
@@ -92,7 +90,6 @@ Google.jpg	DirectoryItemMime
 Google.jpg	HDRPlusMakerNote
 Google.jpg	ImageData
 Google.jpg	ImageName
-Google.jpg	SoftwareDate
 HTML.html	Creator
 HTML.html	Description
 HTML.html	RevisionNumber
@@ -119,8 +116,6 @@ Kodak.jpg	LightValue
 Kodak.jpg	ShutterSpeed
 Kodak.jpg	UsedExtensionNumbers
 LNK.lnk	AccessDate
-LNK.lnk	CreateDate
-LNK.lnk	ModifyDate
 LNK.url	Modified
 Lytro.lfp	FOV
 Lytro.lfp	FocalLength35efl
@@ -200,16 +195,10 @@ OlympusE1.jpg	RawDevVersion
 PCAP.pcapng	TimeStamp
 PDF.pdf	CreateDate
 PDF.pdf	Creator
-PLIST-bin.plist	TestDate
-PLIST-bin.plist	TestDictWhen
 PLUS.xmp	MediaSummaryCode
 PSP.psp	Copyright
-PSP.psp	CreateDate
-PSP.psp	ModifyDate
-Palm.mobi	CreateDate
 Palm.mobi	Description
 Palm.mobi	LastBackupDate
-Palm.mobi	ModifyDate
 Panasonic.rw2	ThumbnailOffset
 Panasonic.rw2	XResolution
 Pentax.avi	Software
@@ -263,7 +252,6 @@ TNEF.tnef	CorrelationKey
 TNEF.tnef	CreateDate
 TNEF.tnef	MessageBodyRTF
 TNEF.tnef	ModifyDate
-Torrent.torrent	CreateDate
 VCard.ics	Alarm1AlarmUID
 VCard.ics	Alarm1UID
 VCard.ics	DateTimeEnd

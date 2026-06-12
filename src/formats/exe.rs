@@ -83,7 +83,7 @@ fn read_ar(data: &[u8]) -> Result<Vec<Tag>> {
                 .to_string();
             if let Ok(unix_ts) = date_str.parse::<i64>() {
                 // Convert Unix timestamp to ExifTool date format
-                let date = unix_to_exif_date(unix_ts);
+                let date = crate::formats::gzip::gzip_unix_to_datetime(unix_ts);
                 tags.push(mk("CreateDate", "Create Date", Value::String(date)));
             }
             first_entry = false;
@@ -252,7 +252,7 @@ fn read_pe(data: &[u8]) -> Result<Vec<Tag>> {
     let timestamp = u32::from_le_bytes([coff[4], coff[5], coff[6], coff[7]]);
     if timestamp > 0 {
         // Convert Unix timestamp to ExifTool date format
-        let date = unix_to_exif_date(timestamp as i64);
+        let date = crate::formats::gzip::gzip_unix_to_datetime(timestamp as i64);
         tags.push(mk("TimeStamp", "Time Stamp", Value::String(date)));
     }
 

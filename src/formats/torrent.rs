@@ -160,7 +160,7 @@ pub fn read_torrent(data: &[u8]) -> Result<Vec<Tag>> {
             }
             "creation date" => {
                 if let Bencode::Int(ts) = val {
-                    let dt = unix_to_exif_date(*ts);
+                    let dt = crate::formats::gzip::gzip_unix_to_datetime(*ts);
                     tags.push(mk("CreateDate", "Create Date", Value::String(dt)));
                 }
             }

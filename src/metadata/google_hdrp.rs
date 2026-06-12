@@ -983,13 +983,16 @@ fn strip_trailing_zeros(s: String) -> String {
 /// ExifTool uses ConvertUnixTime($val/1000, 1, 3) which gives "YYYY:MM:DD HH:MM:SS.mmm+TZ"
 /// We use UTC since we don't have timezone info.
 fn format_unix_time_ms(secs: i64, ms: u32) -> String {
-    // Simple Unix timestamp to date conversion
-    // Days since epoch
-    let (year, month, day, hour, min, sec) = unix_to_datetime(secs);
-    format!(
-        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:03}+00:00",
-        year, month, day, hour, min, sec, ms
-    )
+    // ExifTool prints in local time (ConvertUnixTime $val,1,3); splice the milliseconds
+    // in before the timezone offset of the local datetime string.
+    let local = crate::formats::gzip::gzip_unix_to_datetime(secs);
+    // local looks like "YYYY:MM:DD HH:MM:SS+HH:MM" — insert ".mmm" before the tz sign.
+    if let Some(tz_pos) = local.rfind(['+', '-']) {
+        if tz_pos > 10 {
+            return format!("{}.{:03}{}", &local[..tz_pos], ms, &local[tz_pos..]);
+        }
+    }
+    format!("{}.{:03}", local, ms)
 }
 
 fn unix_to_datetime(secs: i64) -> (i32, u32, u32, u32, u32, u32) {

@@ -203,7 +203,7 @@ fn parse_creator_block(data: &[u8], tags: &mut Vec<Tag>) {
                     let ts =
                         u32::from_le_bytes([val_data[0], val_data[1], val_data[2], val_data[3]])
                             as i64;
-                    let dt = unix_to_exif_date(ts);
+                    let dt = crate::formats::gzip::gzip_unix_to_datetime(ts);
                     tags.push(mk("CreateDate", "Create Date", Value::String(dt)));
                 }
             }
@@ -213,7 +213,7 @@ fn parse_creator_block(data: &[u8], tags: &mut Vec<Tag>) {
                     let ts =
                         u32::from_le_bytes([val_data[0], val_data[1], val_data[2], val_data[3]])
                             as i64;
-                    let dt = unix_to_exif_date(ts);
+                    let dt = crate::formats::gzip::gzip_unix_to_datetime(ts);
                     tags.push(mk("ModifyDate", "Modify Date", Value::String(dt)));
                 }
             }

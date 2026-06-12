@@ -49,20 +49,14 @@ fn get_url_tz_offset() -> i64 {
 }
 
 /// Convert Windows FILETIME (100-ns intervals since 1601-01-01) to ExifTool datetime
-fn filetime_to_datetime(lo: u32, hi: u32, tz_offset_hours: i64) -> Option<String> {
+fn filetime_to_datetime(lo: u32, hi: u32, _tz_offset_hours: i64) -> Option<String> {
     let filetime = (hi as u64) * 4294967296u64 + (lo as u64);
     if filetime == 0 {
         return None;
     }
     let unix_secs = (filetime as i64) / 10_000_000 - 11_644_473_600;
-    let secs = unix_secs + tz_offset_hours * 3600;
-    let (year, month, day, h, m, s) = unix_to_components(secs);
-    let sign = if tz_offset_hours >= 0 { '+' } else { '-' };
-    let abs_h = tz_offset_hours.unsigned_abs();
-    Some(format!(
-        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:00",
-        year, month, day, h, m, s, sign, abs_h
-    ))
+    // ExifTool prints LNK FILETIMEs in local time (ConvertUnixTime $val, 1).
+    Some(crate::formats::gzip::gzip_unix_to_datetime(unix_secs))
 }
 
 /// Convert a 64-bit FILETIME value to ExifTool datetime (UTC)

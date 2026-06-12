@@ -348,36 +348,20 @@ fn parse_pcapng_blocks(data: &[u8], start: usize, is_le: bool, tags: &mut Vec<Ta
 }
 
 fn format_unix_timestamp(secs: i64, usecs: u64) -> Option<String> {
-    // Simple Unix timestamp to datetime conversion
-    // This is a basic implementation - timezone from local offset
-    // For now, use UTC + known local offset from Perl output
-    // Perl shows: 2020:10:13 16:12:07.025764+02:00
-    // We'll use UTC for simplicity but format it correctly
-
-    // Get local timezone offset using system time
-    let tz_offset_secs = get_local_tz_offset();
-
-    let adjusted = secs + tz_offset_secs as i64;
-
-    // Compute Y/M/D H:M:S from Unix timestamp
-    let (y, mo, d, h, mi, s) = unix_to_datetime(adjusted);
-    let tz_hours = tz_offset_secs / 3600;
-    let tz_mins = (tz_offset_secs.abs() % 3600) / 60;
-    let tz_sign = if tz_offset_secs >= 0 { '+' } else { '-' };
-
-    Some(format!(
-        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:06}{}{:02}:{:02}",
-        y,
-        mo,
-        d,
-        h,
-        mi,
-        s,
-        usecs,
-        tz_sign,
-        tz_hours.abs(),
-        tz_mins
-    ))
+    // ExifTool prints in local time (ConvertUnixTime $val,1,6); splice the microseconds
+    // in before the timezone offset of the local datetime string.
+    let local = crate::formats::gzip::gzip_unix_to_datetime(secs);
+    if let Some(tz_pos) = local.rfind(['+', '-']) {
+        if tz_pos > 10 {
+            return Some(format!(
+                "{}.{:06}{}",
+                &local[..tz_pos],
+                usecs,
+                &local[tz_pos..]
+            ));
+        }
+    }
+    Some(format!("{}.{:06}", local, usecs))
 }
 
 fn get_local_tz_offset() -> i32 {

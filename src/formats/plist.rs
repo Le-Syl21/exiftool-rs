@@ -167,7 +167,8 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
             let secs_since_2001 = f64::from_bits(bits);
             // Convert to unix timestamp (2001-01-01 = 978307200 seconds since 1970-01-01)
             let unix_ts = secs_since_2001 as i64 + 978307200i64;
-            let date_str = unix_ts_to_exif_date(unix_ts);
+            // ExifTool prints plist dates in local time (ConvertUnixTime $val, 1).
+            let date_str = crate::formats::gzip::gzip_unix_to_datetime(unix_ts);
             Some(PlistValue::Date(date_str))
         }
         0x4 => {
