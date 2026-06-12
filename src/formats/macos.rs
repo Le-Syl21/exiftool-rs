@@ -395,56 +395,9 @@ fn parse_simple_bplist(data: &[u8]) -> Option<String> {
                     data[off + 8],
                 ]);
                 let secs = f64::from_bits(bits);
-                // Convert from Apple epoch (2001-01-01) to Unix epoch (1970-01-01)
+                // Apple epoch (2001) → Unix; ExifTool prints in local time.
                 let unix_secs = secs as i64 + 978307200;
-                // Format as date string
-                let days = unix_secs / 86400;
-                let time = unix_secs % 86400;
-                let hour = time / 3600;
-                let min = (time % 3600) / 60;
-                let sec = time % 60;
-                let mut year = 1970i32;
-                let mut rem_days = days;
-                loop {
-                    let dy = if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 {
-                        366
-                    } else {
-                        365
-                    };
-                    if rem_days < dy {
-                        break;
-                    }
-                    rem_days -= dy;
-                    year += 1;
-                }
-                let leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
-                let month_days = [
-                    31i64,
-                    if leap { 29 } else { 28 },
-                    31,
-                    30,
-                    31,
-                    30,
-                    31,
-                    31,
-                    30,
-                    31,
-                    30,
-                    31,
-                ];
-                let mut month = 1i32;
-                for &md in &month_days {
-                    if rem_days < md {
-                        break;
-                    }
-                    rem_days -= md;
-                    month += 1;
-                }
-                let day = rem_days + 1;
-                Some(format!(
-                    "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
-                    year, month, day, hour, min, sec
-                ))
+                Some(crate::formats::gzip::gzip_unix_to_datetime(unix_secs))
             }
             0xA => {
                 // Array: collect items

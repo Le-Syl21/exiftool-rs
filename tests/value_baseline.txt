@@ -122,7 +122,6 @@ MIFF.miff	ThumbnailOffset
 MWG.jpg	City
 MWG.jpg	DateCreated
 MacOS.macos	XAttrLastUsedDate
-MacOS.macos	XAttrMDItemDownloadedDate
 MacOS.macos	XAttrMDItemUserTags
 MacOS.macos	XAttrQuarantine
 Matroska.mkv	DefaultDuration
