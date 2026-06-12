@@ -1339,7 +1339,14 @@ impl XmpReader {
                             let flat_name_raw = format!("{}{}", ancestor_prefix, field_stripped);
                             let flat_name = apply_flat_name_remap(&flat_name_raw).to_string();
                             let prefix = namespace_prefix(ns_uri);
-                            let group_prefix = if prefix.is_empty() { "XMP" } else { prefix };
+                            // Unknown namespace (e.g. ExifTool's own ns.exiftool.org
+                            // URIs): fall back to the element's XML prefix so
+                            // different-namespace properties keep distinct groups.
+                            let group_prefix = if prefix.is_empty() {
+                                name.prefix.as_deref().unwrap_or("XMP")
+                            } else {
+                                prefix
+                            };
                             let category = namespace_category(group_prefix);
                             tags.push(Tag {
                                 id: TagId::Text(format!("{}:{}", group_prefix, flat_name)),
@@ -1378,7 +1385,14 @@ impl XmpReader {
                             && name.namespace.as_deref()
                                 != Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                         {
-                            let group_prefix = if prefix.is_empty() { "XMP" } else { prefix };
+                            // Unknown namespace: fall back to the element's XML prefix
+                            // so different-namespace properties (ExifIFD:ISO vs
+                            // Nikon:ISO) keep distinct groups instead of merging.
+                            let group_prefix = if prefix.is_empty() {
+                                name.prefix.as_deref().unwrap_or("XMP")
+                            } else {
+                                prefix
+                            };
                             let category = namespace_category(group_prefix);
 
                             let text_val = normalize_xml_text(&current_text);

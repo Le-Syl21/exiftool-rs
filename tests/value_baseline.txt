@@ -49,7 +49,6 @@ SigmaDP2.x3f	ImageUniqueID
 SigmaDP2.x3f	PreviewImage
 TNEF.tnef	MessageBodyRTF
 VCard.vcf	TelephoneOtherVoice
-XMP.xml	Iso
 XMP4.xmp	StructList2Item1
 XMP4.xmp	StructList2Item2
 XMP6.xmp	Test
