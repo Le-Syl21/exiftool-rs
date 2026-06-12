@@ -131,7 +131,22 @@ pub fn read_miff(data: &[u8]) -> Result<Vec<Tag>> {
                     // APP1 EXIF: skip "Exif\0\0" header, then parse TIFF
                     let exif_data = &profile_data[EXIF_APP1_HDR.len()..];
                     if let Ok(exif_tags) = ExifReader::read(exif_data) {
-                        tags.extend(exif_tags);
+                        // Perl MIFF.pm sets $dirInfo{Base} = 12 ("the usual
+                        // position for EXIF data: 12 bytes from start of file"),
+                        // so IsOffset tags are reported as raw + 12.
+                        for mut t in exif_tags {
+                            if matches!(
+                                t.name.as_str(),
+                                "ThumbnailOffset" | "PreviewImageStart" | "OtherImageStart"
+                            ) {
+                                if let Some(v) = t.raw_value.as_u64() {
+                                    let abs = v + 12;
+                                    t.raw_value = Value::U32(abs as u32);
+                                    t.print_value = abs.to_string();
+                                }
+                            }
+                            tags.push(t);
+                        }
                     }
                 } else if profile_data.starts_with(XMP_APP1_HDR) {
                     // APP1 XMP: skip header, then parse XMP
