@@ -3120,7 +3120,25 @@ fn decode_pentax_camera_info(data: &[u8], byte_order: ByteOrderMark) -> Vec<Tag>
 
 /// Decode Pentax BatteryInfo (tag 0x0216).
 /// From Perl Pentax::BatteryInfo table.
-fn decode_pentax_battery_info(data: &[u8]) -> Vec<Tag> {
+fn decode_pentax_battery_info(data: &[u8], model: &str) -> Vec<Tag> {
+    // K10D-family A/D battery PrintConv: "%d (%.1fV, %d%%)".
+    let is_k10d = model.contains("K10D")
+        || model.contains("GX10")
+        || model.contains("K20D")
+        || model.contains("GX20");
+    // ADLoad uses ($val-152)*100/34; ADNoLoad uses ($val-155)*100/35.
+    let ad = |v: u8, off: i64, div: i64| -> String {
+        if is_k10d {
+            format!(
+                "{} ({:.1}V, {}%)",
+                v,
+                v as f64 * 8.18 / 186.0,
+                ((v as i64 - off) * 100) / div
+            )
+        } else {
+            v.to_string()
+        }
+    };
     let mut tags = Vec::new();
     let pb = |name: &str, v: &str| mk_pentax(name, v);
     if data.is_empty() {
@@ -3182,10 +3200,10 @@ fn decode_pentax_battery_info(data: &[u8]) -> Vec<Tag> {
 
     // Bytes 2-5: BodyBatteryADNoLoad, BodyBatteryADLoad, GripBatteryADNoLoad, GripBatteryADLoad
     if data.len() > 2 {
-        tags.push(pb("BodyBatteryADNoLoad", &data[2].to_string()));
+        tags.push(pb("BodyBatteryADNoLoad", &ad(data[2], 155, 35)));
     }
     if data.len() > 3 {
-        tags.push(pb("BodyBatteryADLoad", &data[3].to_string()));
+        tags.push(pb("BodyBatteryADLoad", &ad(data[3], 152, 34)));
     }
     if data.len() > 4 {
         tags.push(pb("GripBatteryADNoLoad", &data[4].to_string()));
@@ -5574,7 +5592,9 @@ fn read_makernote_ifd_with_base(
                     }
                 }
                 (Manufacturer::Pentax, 0x0215) => decode_pentax_camera_info(value_data, byte_order),
-                (Manufacturer::Pentax, 0x0216) => decode_pentax_battery_info(value_data),
+                (Manufacturer::Pentax, 0x0216) => {
+                    decode_pentax_battery_info(value_data, model_name)
+                }
                 (Manufacturer::Pentax, 0x021F) => decode_pentax_af_info(value_data, byte_order),
                 (Manufacturer::Pentax, 0x0222) => decode_pentax_color_info(value_data),
                 (Manufacturer::Pentax, 0x003F) => decode_pentax_lens_rec(value_data),

@@ -193,8 +193,6 @@ Panasonic.rw2	ThumbnailOffset
 Panasonic.rw2	XResolution
 Pentax.avi	Software
 Pentax.jpg	AFPointSelected
-Pentax.jpg	BodyBatteryADLoad
-Pentax.jpg	BodyBatteryADNoLoad
 Pentax.jpg	FlashMode
 Pentax.jpg	LensID
 Pentax.jpg	LensType
