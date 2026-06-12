@@ -336,26 +336,44 @@ fn parse_simple_bplist(data: &[u8]) -> Option<String> {
         let type_nibble = (marker & 0xF0) >> 4;
         let info_nibble = marker & 0x0F;
 
+        // For container/string markers, an info nibble of 0xF means the count is stored
+        // in a following integer object (marker 0x1n + 2^n bytes).
+        let read_count = |info: usize, at: usize| -> Option<(usize, usize)> {
+            if info != 0xF {
+                return Some((info, at));
+            }
+            let m = *data.get(at)?;
+            if (m & 0xF0) != 0x10 {
+                return None;
+            }
+            let int_bytes = 1usize << (m & 0x0F);
+            let mut n = 0usize;
+            for j in 0..int_bytes {
+                n = (n << 8) | *data.get(at + 1 + j)? as usize;
+            }
+            Some((n, at + 1 + int_bytes))
+        };
+
         match type_nibble {
             0x5 => {
-                // ASCII string
-                let len = info_nibble as usize;
-                if off + 1 + len > data.len() {
+                // ASCII string (extended length when info nibble is 0xF)
+                let (len, str_off) = read_count(info_nibble as usize, off + 1)?;
+                if str_off + len > data.len() {
                     return None;
                 }
                 Some(
-                    crate::encoding::decode_utf8_or_latin1(&data[off + 1..off + 1 + len])
+                    crate::encoding::decode_utf8_or_latin1(&data[str_off..str_off + len])
                         .to_string(),
                 )
             }
             0x6 => {
-                // Unicode string (UTF-16BE)
-                let len = info_nibble as usize;
+                // Unicode string UTF-16BE (extended length when info nibble is 0xF)
+                let (len, str_off) = read_count(info_nibble as usize, off + 1)?;
                 let byte_len = len * 2;
-                if off + 1 + byte_len > data.len() {
+                if str_off + byte_len > data.len() {
                     return None;
                 }
-                let chars: Vec<u16> = data[off + 1..off + 1 + byte_len]
+                let chars: Vec<u16> = data[str_off..str_off + byte_len]
                     .chunks_exact(2)
                     .map(|c| u16::from_be_bytes([c[0], c[1]]))
                     .collect();

@@ -142,9 +142,7 @@ MWG.jpg	City
 MWG.jpg	DateCreated
 MacOS.macos	XAttrLastUsedDate
 MacOS.macos	XAttrMDItemDownloadedDate
-MacOS.macos	XAttrMDItemFinderComment
 MacOS.macos	XAttrMDItemUserTags
-MacOS.macos	XAttrMDItemWhereFroms
 MacOS.macos	XAttrQuarantine
 Matroska.mkv	DefaultDuration
 Matroska.mkv	TrackNumber
