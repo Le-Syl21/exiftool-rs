@@ -118,6 +118,7 @@ Lytro.lfp	JSONMetadata
 MIFF.miff	ThumbnailOffset
 MWG.jpg	City
 MWG.jpg	DateCreated
+MacOS.macos	XAttrMDItemUserTags
 MacOS.macos	XAttrQuarantine
 Matroska.mkv	DefaultDuration
 Matroska.mkv	TrackNumber
