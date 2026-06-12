@@ -280,7 +280,6 @@ QuickTime.mov	MediaTimeScale
 QuickTime.mov	XMPToolkit
 RIFF.avi	XMPToolkit
 RIFF.wav	Make
-RTF.rtf	Comments
 Real.ra	Copyright
 Real.rm	MIMEType
 Ricoh.jpg	ManufactureDate1

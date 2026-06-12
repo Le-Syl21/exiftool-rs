@@ -358,6 +358,25 @@ fn extract_rtf_num(text: &str, keyword: &str) -> Option<u32> {
 fn unescape_rtf(text: &str) -> String {
     let mut result = String::new();
     let mut chars = text.chars().peekable();
+    // \ucN sets how many fallback "characters" follow each \uNNNN (RTF default 1).
+    let mut uc: usize = 1;
+    // Consume one fallback "unit" from the stream: a \'XX escape or a single char.
+    fn skip_unit(chars: &mut std::iter::Peekable<std::str::Chars>) {
+        match chars.next() {
+            Some('\\') => match chars.peek() {
+                Some(&'\'') => {
+                    chars.next();
+                    chars.next();
+                    chars.next();
+                }
+                Some(_) => {
+                    chars.next();
+                }
+                None => {}
+            },
+            _ => {}
+        }
+    }
     while let Some(c) = chars.next() {
         if c == '\\' {
             match chars.peek() {
@@ -365,27 +384,22 @@ fn unescape_rtf(text: &str) -> String {
                     result.push(nc);
                     chars.next();
                 }
+                // A backslash immediately before a line break is a paragraph break.
+                Some(&'\n') | Some(&'\r') => {
+                    chars.next();
+                    result.push('\n');
+                }
                 Some(&'\'') => {
                     chars.next(); // consume '
                     let h1 = chars.next().unwrap_or('0');
                     let h2 = chars.next().unwrap_or('0');
                     let hex = format!("{}{}", h1, h2);
                     if let Ok(n) = u8::from_str_radix(&hex, 16) {
-                        // Latin-1 character
-                        let ch = char::from(n);
-                        result.push(ch);
+                        result.push(char::from(n));
                     }
                 }
-                Some(&'n') => {
-                    chars.next();
-                    result.push('\n');
-                }
-                Some(&'t') => {
-                    chars.next();
-                    result.push('\t');
-                }
                 _ => {
-                    // Skip control word
+                    // Control word: letters, optional integer, optional single-space delimiter.
                     let mut word = String::new();
                     while let Some(&nc) = chars.peek() {
                         if nc.is_ascii_alphabetic() {
@@ -395,35 +409,41 @@ fn unescape_rtf(text: &str) -> String {
                             break;
                         }
                     }
-                    // skip optional space after control word
-                    if chars.peek() == Some(&' ') {
-                        chars.next();
-                    }
-                    // skip optional digit sequence
                     let mut digits = String::new();
                     while let Some(&nc) = chars.peek() {
-                        if nc.is_ascii_digit() || nc == '-' {
+                        if nc.is_ascii_digit() || (nc == '-' && digits.is_empty()) {
                             digits.push(nc);
                             chars.next();
                         } else {
                             break;
                         }
                     }
-                    if !digits.is_empty() && chars.peek() == Some(&' ') {
+                    if chars.peek() == Some(&' ') {
                         chars.next();
                     }
-                    // Handle unicode \uN
-                    if word == "u" {
-                        if let Ok(n) = digits.parse::<u32>() {
-                            if let Some(ch) = char::from_u32(n) {
+                    match word.as_str() {
+                        "uc" => {
+                            uc = digits.parse::<usize>().unwrap_or(1);
+                        }
+                        "u" => {
+                            if let Ok(n) = digits.parse::<i64>() {
+                                let cp = if n < 0 { (n + 65536) as u32 } else { n as u32 };
+                                if let Some(ch) = char::from_u32(cp) {
+                                    result.push(ch);
+                                }
+                            }
+                            for _ in 0..uc {
+                                skip_unit(&mut chars);
+                            }
+                        }
+                        "par" | "line" => result.push('\n'),
+                        "tab" => result.push('\t'),
+                        _ => {
+                            if let Some(ch) = rtf_symbol(&word) {
                                 result.push(ch);
                             }
                         }
-                    } else if let Some(ch) = rtf_symbol(&word) {
-                        // Common RTF symbol control words (smart quotes, dashes, …).
-                        result.push(ch);
                     }
-                    // Other control words are ignored.
                 }
             }
         } else if c == '\n' || c == '\r' {
@@ -432,6 +452,18 @@ fn unescape_rtf(text: &str) -> String {
             result.push(c);
         }
     }
+    // ExifTool renders control bytes (e.g. the \par newline) as "." for display while
+    // preserving higher Unicode (the Japanese text stays intact).
+    let result: String = result
+        .chars()
+        .map(|c| {
+            if (c as u32) < 0x20 || c as u32 == 0x7f {
+                '.'
+            } else {
+                c
+            }
+        })
+        .collect();
     // Only strip trailing whitespace — a control word delimited by a newline can leave a
     // significant leading space in the value (ExifTool preserves it).
     result.trim_end().to_string()
