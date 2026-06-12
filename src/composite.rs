@@ -1106,11 +1106,82 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
             };
             result.push(mk_composite("LensID", "Lens ID", Value::String(lens_str)));
         } else if !pv.is_empty() && pv != "0" && pv != "n/a" {
-            result.push(mk_composite("LensID", "Lens ID", Value::String(pv)));
+            // PrintLensID: a base "… Lens (key)" may have sub-variants disambiguated
+            // by the actual FocalLength (Pentax "3 44" → "3 44.1", Sigma 0x145 → .1).
+            let resolved = disambiguate_lens_id(&pv, find_tag_f64(tags, "FocalLength"))
+                .unwrap_or(pv);
+            result.push(mk_composite("LensID", "Lens ID", Value::String(resolved)));
         }
     }
 
     Some(result)
+}
+
+/// Parse focal range (short, long mm) from a lens name like
+/// "Sigma AF 10-20mm F4-5.6 EX DC" → (10.0, 20.0). Prime lenses → (f, f).
+fn lens_focal_range(name: &str) -> Option<(f64, f64)> {
+    // Find "<num>[-<num>]mm"
+    let mm = name.find("mm")?;
+    let head = &name[..mm];
+    // Take the trailing focal token (digits, '.', '-').
+    let start = head
+        .rfind(|c: char| !(c.is_ascii_digit() || c == '.' || c == '-'))
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    let tok = &head[start..];
+    if tok.is_empty() {
+        return None;
+    }
+    let mut it = tok.split('-').filter_map(|s| s.parse::<f64>().ok());
+    let sf = it.next()?;
+    let lf = it.next().unwrap_or(sf);
+    if sf > 0.0 {
+        Some((sf, lf))
+    } else {
+        None
+    }
+}
+
+/// PrintLensID sub-variant disambiguation for the LensType values that need it.
+/// Returns the specific lens name when exactly the actual FocalLength selects it.
+fn disambiguate_lens_id(base_print: &str, focal_length: Option<f64>) -> Option<String> {
+    // (base LensType print value, [sub-variant lens names])
+    const SUBVARIANTS: &[(&str, &[&str])] = &[
+        (
+            "Sigma or Tamron Lens (3 44)",
+            &[
+                "Sigma AF 10-20mm F4-5.6 EX DC",
+                "Sigma 12-24mm F4.5-5.6 EX DG",
+                "Sigma 17-70mm F2.8-4.5 DC Macro",
+                "Sigma 18-50mm F3.5-5.6 DC",
+                "Sigma 17-35mm F2.8-4 EX DG",
+                "Tamron 35-90mm F4-5.6 AF",
+                "Sigma AF 18-35mm F3.5-4.5 Aspherical",
+            ],
+        ),
+        (
+            "Sigma Lens (0x145)",
+            &["Sigma 15-30mm F3.5-4.5 EX DG Aspherical"],
+        ),
+    ];
+    let variants = SUBVARIANTS
+        .iter()
+        .find(|(b, _)| *b == base_print)
+        .map(|(_, v)| *v)?;
+    let fl = focal_length?;
+    // Keep variants whose focal range contains the actual FocalLength (±0.5).
+    let mut matches = variants.iter().filter(|name| {
+        lens_focal_range(name)
+            .map(|(sf, lf)| fl >= sf - 0.5 && fl <= lf + 0.5)
+            .unwrap_or(false)
+    });
+    let first = matches.next()?;
+    // Only disambiguate when the match is unambiguous (a single candidate).
+    if matches.next().is_none() {
+        Some((*first).to_string())
+    } else {
+        None
+    }
 }
 
 /// Build SubSec composite date.

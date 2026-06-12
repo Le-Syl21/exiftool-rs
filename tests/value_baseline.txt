@@ -5,6 +5,4 @@ ASF.wmv	IsVBR
 PCAP.pcapng	TimeStamp
 PLUS.xmp	MediaSummaryCode
 PSP.psp	Copyright
-Pentax.jpg	LensID
 Real.ra	Copyright
-Sigma.x3f	LensType

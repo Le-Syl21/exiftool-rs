@@ -882,7 +882,9 @@ fn lens_type_name(hex_val: u32) -> String {
         0x129 => "Sigma 14mm F2.8 EX Aspherical HSM",
         0x12c => "Sigma 20mm F1.8 EX DG Aspherical RF",
         0x130 => "Sigma 30mm F1.4 EX DC HSM",
-        0x145 => "Sigma 15-30mm F3.5-4.5 EX DG Aspherical",
+        // Base "Sigma Lens (0x145)"; the 15-30mm is the 325.1 sub-variant, resolved
+        // by the Composite LensID via FocalLength (see composite::disambiguate_lens_id).
+        0x145 => "Sigma Lens (0x145)",
         0x146 => "Sigma 18-35mm F3.5-4.5 Aspherical",
         0x150 => "Sigma 50mm F2.8 EX DG Macro",
         0x151 => "Sigma 105mm F2.8 EX DG Macro",
