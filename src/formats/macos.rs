@@ -98,6 +98,23 @@ fn parse_attr_block(full_data: &[u8], entry_data: &[u8], tags: &mut Vec<Tag>) {
         // Convert xattr name to ExifTool tag name
         let tag_name = xattr_name_to_tag(&name);
 
+        // XAttrLastUsedDate (com.apple.lastuseddate#PS): first 4 bytes are a
+        // little-endian Unix timestamp; ExifTool shows it in UTC (no timezone).
+        if tag_name == "XAttrLastUsedDate" && val_data.len() >= 4 {
+            let ts = u32::from_le_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]) as i64;
+            let (y, mo, d, h, mi, s) = crate::formats::pcap::unix_to_datetime(ts);
+            tags.push(mktag(
+                "MacOS",
+                &tag_name,
+                &tag_name,
+                Value::String(format!(
+                    "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+                    y, mo, d, h, mi, s
+                )),
+            ));
+            continue;
+        }
+
         // Process value
         if val_data.starts_with(b"bplist0") {
             // Parse simple binary plist (arrays, strings, dates)
