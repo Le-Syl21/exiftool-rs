@@ -141,7 +141,6 @@ PDF.pdf	Creator
 PLUS.xmp	MediaSummaryCode
 PSP.psp	Copyright
 Panasonic.rw2	ThumbnailOffset
-Panasonic.rw2	XResolution
 Pentax.avi	Software
 Pentax.jpg	LensID
 Pentax.jpg	TvExposureTimeSetting

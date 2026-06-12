@@ -149,8 +149,9 @@ fn panasonic_raw_tag(tag: u16) -> Option<(&'static str, &'static str)> {
         0x0117 => ("StripByteCounts", "Image"),
         0x0118 => ("RawDataOffset", "Image"),
         // 0x0119: DistortionInfo (handled separately)
-        0x011a => ("XResolution", "Image"),
-        0x011b => ("YResolution", "Image"),
+        // 0x011a / 0x011b are NOT XResolution/YResolution in RW2 — they are
+        // Panasonic-specific tags absent from PanasonicRaw::Main, so ExifTool
+        // does not decode them here (the real values come from JpgFromRaw EXIF).
         0x011c => ("Gamma", "Image"),
         0x0128 => ("ResolutionUnit", "Image"),
         0x0131 => ("Software", "Image"),
