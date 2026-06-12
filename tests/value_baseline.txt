@@ -114,7 +114,6 @@ ITC.itc	DataType
 InfiRay.jpg	GPSLatitude
 InfiRay.jpg	GPSLongitude
 InfiRay.jpg	IJPEGVersion
-JVC.jpg	Quality
 JXL2.jxl	CompatibleBrands
 Jpeg2000.jp2	CompatibleBrands
 Jpeg2000.jp2	ExifByteOrder
@@ -264,9 +263,6 @@ Real.ra	Copyright
 Ricoh2.jpg	ManufactureDate1
 Ricoh2.jpg	ManufactureDate2
 Sanyo.jpg	DataDump
-Sanyo.jpg	FlashMode
-Sanyo.jpg	Macro
-Sanyo.jpg	SelfTimer
 Sigma.x3f	LensType
 SigmaDP2.x3f	BracketShot
 SigmaDP2.x3f	Calibration

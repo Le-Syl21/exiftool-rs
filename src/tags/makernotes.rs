@@ -24,7 +24,9 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         | Manufacturer::Minolta
         | Manufacturer::Google
         | Manufacturer::DJI
-        | Manufacturer::GE => &[][..],
+        | Manufacturer::GE
+        | Manufacturer::Sanyo
+        | Manufacturer::Jvc => &[][..],
         Manufacturer::Unknown => &[][..], // Will fallback to generated tables
     };
 
@@ -183,10 +185,12 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
             }
         }
     }
-    // Restrict extra table to Unknown/Google/DJI manufacturers only
+    // Restrict extra table to Unknown/Google/DJI/Sanyo/JVC manufacturers only
     if manufacturer == Manufacturer::Unknown
         || manufacturer == Manufacturer::Google
         || manufacturer == Manufacturer::DJI
+        || manufacturer == Manufacturer::Sanyo
+        || manufacturer == Manufacturer::Jvc
     {
         for &(id, name) in extra {
             if id == tag_id {
@@ -233,7 +237,9 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
     }
 
     // DataDump (0x0F00) for Sanyo
-    if manufacturer == Manufacturer::Unknown && tag_id == 0x0F00 {
+    if (manufacturer == Manufacturer::Unknown || manufacturer == Manufacturer::Sanyo)
+        && tag_id == 0x0F00
+    {
         return ("DataDump", "DataDump");
     }
 

@@ -30,6 +30,8 @@ pub enum Manufacturer {
     Google,
     DJI,
     GE,
+    Sanyo,
+    Jvc,
     Unknown,
 }
 
@@ -4001,7 +4003,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
     // (from Perl: Start => '$valuePtr + 8')
     if mn_data.starts_with(b"SANYO\0") {
         return MakerNoteInfo {
-            manufacturer: Manufacturer::Unknown,
+            manufacturer: Manufacturer::Sanyo,
             ifd_offset: 8,
             _base_adjust: 0,
             byte_order: None,
@@ -4177,7 +4179,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
     // (from Perl MakerNotes.pm: Start => '$valuePtr + 4')
     if mn_data.starts_with(b"JVC ") {
         return MakerNoteInfo {
-            manufacturer: Manufacturer::Unknown,
+            manufacturer: Manufacturer::Jvc,
             ifd_offset: 4,
             _base_adjust: 0,
             byte_order: None,
@@ -6700,6 +6702,8 @@ fn manufacturer_group_name(mfr: Manufacturer) -> &'static str {
         Manufacturer::Google => "Google",
         Manufacturer::DJI => "DJI",
         Manufacturer::GE => "GE",
+        Manufacturer::Sanyo => "Sanyo",
+        Manufacturer::Jvc => "JVC",
         Manufacturer::Unknown => "MakerNotes",
     }
 }
