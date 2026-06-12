@@ -2432,8 +2432,9 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     };
                     // Format Kelvin float as Celsius, avoiding -0.0
                     let fmt_celsius = |off: usize| -> String {
-                        let c = rf(off) - 273.15;
-                        let c = if c == 0.0 { 0.0 } else { c }; // normalize -0.0
+                        // Keep the float sign (ExifTool's %.1f prints "-0.0" for tiny
+                        // negatives), so do NOT normalize -0.0 to +0.0.
+                        let c = rf(off) as f64 - 273.15;
                         format!("{:.1} C", c)
                     };
                     tags.push(mk("Emissivity", format!("{:.2}", rf(32))));

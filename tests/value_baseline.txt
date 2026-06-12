@@ -77,8 +77,6 @@ ExifTool.jpg	URL
 ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
 FITS.fits	Comment
-FLIR.jpg	CameraTemperatureMinWarn
-FLIR.jpg	CameraTemperatureRangeMin
 FLIR.jpg	DateTimeOriginal
 FLIR.jpg	FrameRate
 FLIR.jpg	RawThermalImage
