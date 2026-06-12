@@ -1297,11 +1297,9 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
     if d.len() > 0x6b {
         tags.push(mk("Sharpness", minolta_print_parameter(d[0x6b] as i8 as i64)));
     }
-    if d.len() > 112 {
-        tags.push(mk(
-            "SequenceNumber",
-            u32::from_be_bytes([d[108], d[109], d[110], d[111]]).to_string(),
-        ));
+    // SequenceNumber: int8u at offset 0x1d (Kodak.pm Main binary table).
+    if d.len() > 0x1d {
+        tags.push(mk("SequenceNumber", d[0x1d].to_string()));
     }
 
     tags

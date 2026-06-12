@@ -131,7 +131,6 @@ Kodak.jpg	ExtensionPersistence
 Kodak.jpg	FNumber
 Kodak.jpg	KodakModel
 Kodak.jpg	LightValue
-Kodak.jpg	SequenceNumber
 Kodak.jpg	ShutterSpeed
 Kodak.jpg	UsedExtensionNumbers
 LNK.lnk	AccessDate
