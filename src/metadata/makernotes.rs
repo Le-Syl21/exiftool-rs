@@ -5006,12 +5006,38 @@ fn read_makernote_ifd_with_base(
             value = Value::Undefined(value_data.to_vec());
         }
 
-        // Olympus DataDump (0x0f00) / DataDump2 (0x0f01) are Binary => 1: always shown
-        // as "(Binary data N bytes)" rather than decoded into a number list.
-        if matches!(manufacturer, Manufacturer::Olympus | Manufacturer::OlympusNew)
-            && matches!(tag_id, 0x0f00 | 0x0f01)
+        // Olympus DataDump (0x0f00) / DataDump2 (0x0f01) are Binary => 1: shown as
+        // "(Binary data N bytes)". ExifTool's N is length() of the *formatted*
+        // int32u value string (e.g. 30 values → 186 chars), NOT the raw byte
+        // count — same quirk as DICOM PixelData. Emit directly with that length.
+        if matches!(
+            manufacturer,
+            Manufacturer::Olympus | Manufacturer::OlympusNew | Manufacturer::Sanyo
+        ) && matches!(tag_id, 0x0f00 | 0x0f01)
         {
-            value = Value::Binary(value_data.to_vec());
+            let n_vals = value_data.len() / 4;
+            let joined: String = (0..n_vals)
+                .map(|i| read_u32(value_data, i * 4, byte_order).to_string())
+                .collect::<Vec<_>>()
+                .join(" ");
+            let name = if tag_id == 0x0f00 { "DataDump" } else { "DataDump2" };
+            tags.push(Tag {
+                id: TagId::Numeric(tag_id),
+                name: name.into(),
+                description: name.into(),
+                group: TagGroup {
+                    family0: "MakerNotes".into(),
+                    family1: manufacturer_group_name(manufacturer).into(),
+                    family2: "Image".into(),
+                },
+                raw_value: Value::Binary(value_data.to_vec()),
+                print_value: format!(
+                    "(Binary data {} bytes, use -b option to extract)",
+                    joined.len()
+                ),
+                priority: 0,
+            });
+            continue;
         }
 
         // Pentax special tag handling: complex conversions for multi-byte/undefined tags

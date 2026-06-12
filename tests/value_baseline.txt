@@ -31,14 +31,12 @@ Google.jpg	ImageData
 Google.jpg	ImageName
 Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
-Olympus.jpg	DataDump
 OlympusE1.jpg	BlueBalance
 PCAP.pcapng	TimeStamp
 PLUS.xmp	MediaSummaryCode
 PSP.psp	Copyright
 Pentax.jpg	LensID
 Real.ra	Copyright
-Sanyo.jpg	DataDump
 Sigma.x3f	LensType
 SigmaDP2.x3f	ImageUniqueID
 SigmaDP2.x3f	PreviewImage
