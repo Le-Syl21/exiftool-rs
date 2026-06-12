@@ -297,51 +297,30 @@ fn unsharp_color(v: u16) -> &'static str {
 }
 
 fn decode_crop_data(data: &[u8], tags: &mut Vec<Tag>) {
-    // CropData: Format=int32u
-    // 0=CropLeft, 1=CropTop, 2=CropRight, 3=CropBottom
-    // 4=CropOutputWidthInches(double), 6=CropOutputHeightInches(double)
-    // 8=CropScaledResolution(double), 10=CropSourceResolution(double)
-    // 12=CropOutputResolution(double), 14=CropOutputScale(double)
-    // 16=CropOutputWidth, 17=CropOutputHeight, 18=CropOutputPixels
-    if data.len() >= 4 {
-        tags.push(mk("CropLeft", &ru32(data, 0).to_string()));
-    }
-    if data.len() >= 8 {
-        tags.push(mk("CropTop", &ru32(data, 4).to_string()));
-    }
-    if data.len() >= 12 {
-        tags.push(mk("CropRight", &ru32(data, 8).to_string()));
-    }
-    if data.len() >= 16 {
-        tags.push(mk("CropBottom", &ru32(data, 12).to_string()));
-    }
-    if data.len() >= 24 {
-        tags.push(mk("CropOutputWidthInches", &crate::value::format_g15(rf64(data, 16))));
-    }
-    if data.len() >= 32 {
-        tags.push(mk("CropOutputHeightInches", &crate::value::format_g15(rf64(data, 24))));
-    }
-    if data.len() >= 40 {
-        tags.push(mk("CropScaledResolution", &crate::value::format_g15(rf64(data, 32))));
-    }
-    if data.len() >= 48 {
-        tags.push(mk("CropSourceResolution", &crate::value::format_g15(rf64(data, 40))));
-    }
-    if data.len() >= 56 {
-        tags.push(mk("CropOutputResolution", &crate::value::format_g15(rf64(data, 48))));
-    }
-    if data.len() >= 64 {
-        tags.push(mk("CropOutputScale", &crate::value::format_g15(rf64(data, 56))));
-    }
-    if data.len() >= 68 {
-        tags.push(mk("CropOutputWidth", &ru32(data, 64).to_string()));
-    }
-    if data.len() >= 72 {
-        tags.push(mk("CropOutputHeight", &ru32(data, 68).to_string()));
-    }
-    if data.len() >= 76 {
-        tags.push(mk("CropOutputPixels", &ru32(data, 72).to_string()));
-    }
+    // NikonCapture CropData (NikonCapture.pm): all values are doubles at fixed byte
+    // offsets; Left/Top/Right/Bottom/SourceResolution have ValueConv $val/2.
+    let put = |tags: &mut Vec<Tag>, name: &str, off: usize, half: bool| {
+        if off + 8 <= data.len() {
+            let mut v = rf64(data, off);
+            if half {
+                v /= 2.0;
+            }
+            tags.push(mk(name, &crate::value::format_g15(v)));
+        }
+    };
+    put(tags, "CropLeft", 0x1e, true);
+    put(tags, "CropTop", 0x26, true);
+    put(tags, "CropRight", 0x2e, true);
+    put(tags, "CropBottom", 0x36, true);
+    put(tags, "CropOutputWidthInches", 0x8e, false);
+    put(tags, "CropOutputHeightInches", 0x96, false);
+    put(tags, "CropScaledResolution", 0x9e, false);
+    put(tags, "CropSourceResolution", 0xae, true);
+    put(tags, "CropOutputResolution", 0xb6, false);
+    put(tags, "CropOutputScale", 0xbe, false);
+    put(tags, "CropOutputWidth", 0xc6, false);
+    put(tags, "CropOutputHeight", 0xce, false);
+    put(tags, "CropOutputPixels", 0xd6, false);
 }
 
 fn decode_exposure(data: &[u8], tags: &mut Vec<Tag>) {
