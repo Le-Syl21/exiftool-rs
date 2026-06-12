@@ -75,9 +75,6 @@ FujiFilm.raf	ThumbnailOffset
 GE.jpg	GEMake
 GE.jpg	GEModel
 GPS.jpg	City
-Geotag.gpx	GpxTrkTrksegTrkptTime
-Geotag.kml	KmlDocumentPlacemarkTrackWhen
-Geotag.xml	HistoryRunTrackTrackpointTime
 GoPro.jpg	ExposureCompensation
 GoPro.jpg	FlashpixVersion
 GoPro.jpg	Sharpness

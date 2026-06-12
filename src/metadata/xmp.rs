@@ -2492,6 +2492,12 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
             _ => {}
         }
     }
+    // ExifTool reformats ISO-8601 date values to its "YYYY:MM:DD HH:MM:SS" form.
+    for tag in tags.iter_mut() {
+        if let Some(reformatted) = convert_xmp_date(&tag.print_value) {
+            tag.print_value = reformatted;
+        }
+    }
     Ok(tags)
 }
 
