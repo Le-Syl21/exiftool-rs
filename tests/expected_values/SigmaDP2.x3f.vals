@@ -83,7 +83,7 @@ Model	SIGMA DP2
 ModifyDate	2009:11:28 13:05:20
 NetExposureCompensation	0
 Orientation	Horizontal (normal)
-PreviewImage	(Binary data 26 bytes, use -b option to extract)
+PreviewImage	(Binary data 20 bytes, use -b option to extract)
 PreviewImageLength	26
 PreviewImageSize	640x480
 PreviewImageStart	2692
