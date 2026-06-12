@@ -1038,6 +1038,9 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
             }
         }
         let fd2 = 36.0_f64.atan2(2.0 * fl * scale * corr);
+        // ExifTool uses the literal 3.14159 (not full-precision PI) for FOV; matching
+        // it exactly is required for value parity, so keep the approximate constant.
+        #[allow(clippy::approx_constant)]
         let fov_deg = fd2 * 360.0 / 3.14159;
         let mut fov_str = format!("{:.1} deg", fov_deg);
         if let Some(d_m) = fd {
