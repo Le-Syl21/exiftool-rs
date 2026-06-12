@@ -1673,7 +1673,9 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
         return Some(FileType::Eps);
     }
     if header.starts_with(b"%!PS-Adobe-")
-        && header[..header.len().min(32)].windows(4).any(|w| w == b"EPSF")
+        && header[..header.len().min(32)]
+            .windows(4)
+            .any(|w| w == b"EPSF")
     {
         return Some(FileType::Eps);
     }

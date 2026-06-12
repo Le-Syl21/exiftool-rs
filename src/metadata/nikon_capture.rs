@@ -125,7 +125,10 @@ fn decode_nikon_capture_tag(tag_id: u32, data: &[u8], tags: &mut Vec<Tag>) {
         }
         0x2fc08431 => {
             if data.len() >= 8 {
-                tags.push(mk("StraightenAngle", &crate::value::format_g15(rf64(data, 0))));
+                tags.push(mk(
+                    "StraightenAngle",
+                    &crate::value::format_g15(rf64(data, 0)),
+                ));
             }
         }
         0x416391c6 => {
@@ -452,10 +455,16 @@ fn decode_photo_effects(data: &[u8], tags: &mut Vec<Tag>) {
 fn decode_wb_adj(data: &[u8], tags: &mut Vec<Tag>) {
     // 0x00=WBAdjRedBalance(double), 0x08=WBAdjBlueBalance(double), 0x10=WBAdjMode
     if data.len() >= 8 {
-        tags.push(mk("WBAdjRedBalance", &crate::value::format_g15(rf64(data, 0))));
+        tags.push(mk(
+            "WBAdjRedBalance",
+            &crate::value::format_g15(rf64(data, 0)),
+        ));
     }
     if data.len() >= 16 {
-        tags.push(mk("WBAdjBlueBalance", &crate::value::format_g15(rf64(data, 8))));
+        tags.push(mk(
+            "WBAdjBlueBalance",
+            &crate::value::format_g15(rf64(data, 8)),
+        ));
     }
     if data.len() > 16 {
         let m = match data[16] {

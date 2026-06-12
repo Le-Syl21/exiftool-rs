@@ -1331,9 +1331,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 .iter()
                 .any(|t| t.name == "DateTimeOriginal" && t.group.family0 == "APP1");
             if has_flir_dto {
-                tags.retain(|t| {
-                    !(t.name == "DateTimeOriginal" && t.group.family0 != "APP1")
-                });
+                tags.retain(|t| !(t.name == "DateTimeOriginal" && t.group.family0 != "APP1"));
             }
             // Add ImageTemperatureMax (FLIR MakerNote tag 0x0001, rational64s) by parsing
             // the EXIF APP1 MakerNote IFD directly, since it's dropped by the generic decoder.
@@ -2592,7 +2590,7 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     if planck_b != 0.0 {
                         tags.push(mk(
                             "PeakSpectralSensitivity",
-                            format!("{:.1} um", 14387.6515 / planck_b),
+                            format!("{:.1} um", 14_387.651 / planck_b),
                         ));
                     }
                     tags.push(mk("FocusStepCount", rd32(444).to_string()));
@@ -2606,9 +2604,19 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     if rec.len() >= 910 {
                         let ru32 = |off: usize| -> u32 {
                             if ci_le {
-                                u32::from_le_bytes([rec[off], rec[off + 1], rec[off + 2], rec[off + 3]])
+                                u32::from_le_bytes([
+                                    rec[off],
+                                    rec[off + 1],
+                                    rec[off + 2],
+                                    rec[off + 3],
+                                ])
                             } else {
-                                u32::from_be_bytes([rec[off], rec[off + 1], rec[off + 2], rec[off + 3]])
+                                u32::from_be_bytes([
+                                    rec[off],
+                                    rec[off + 1],
+                                    rec[off + 2],
+                                    rec[off + 3],
+                                ])
                             }
                         };
                         let rs16 = |off: usize| -> i16 {
@@ -2721,18 +2729,21 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     // Palette data
                     let pc = rec[0] as usize;
                     if pc > 0 && 112 + pc * 3 <= rec.len() {
-                        tags.push(mk("Palette", format!("(Binary data {} bytes, use -b option to extract)", pc * 3)));
+                        tags.push(mk(
+                            "Palette",
+                            format!("(Binary data {} bytes, use -b option to extract)", pc * 3),
+                        ));
                     }
                 }
             }
-            0x01 => {
+            0x01
                 // RawData — extract dimensions and image type (Perl FLIR::RawData)
                 // FORMAT => 'int16u', FIRST_ENTRY => 0
                 // Entry 0 (bytes 0-1): byte order check (should be 0x0002)
                 // Entry 1 (bytes 2-3): RawThermalImageWidth
                 // Entry 2 (bytes 4-5): RawThermalImageHeight
                 // Entry 16 (bytes 32+): image data starting at offset 0x20
-                if rec.len() >= 34 {
+                if rec.len() >= 34 => {
                     // Determine record byte order from first int16u (should be 0x0002)
                     let rec_le = u16::from_le_bytes([rec[0], rec[1]]) == 0x0002;
                     let rw = |off: usize| -> u16 {
@@ -2769,7 +2780,6 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                         ),
                     ));
                 }
-            }
             _ => {}
         }
     }
@@ -3351,15 +3361,14 @@ fn process_ducky(data: &[u8]) -> Vec<crate::tag::Tag> {
                     }
                 }
             }
-            3 => {
+            3
                 // Copyright: 4-byte char count + UTF-16 BE string
-                if val_bytes.len() >= 4 {
+                if val_bytes.len() >= 4 => {
                     let s = decode_utf16be(&val_bytes[4..]);
                     if !s.is_empty() {
                         tags.push(mk("Copyright", s, "Author"));
                     }
                 }
-            }
             _ => {}
         }
     }

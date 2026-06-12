@@ -102,7 +102,8 @@ fn parse_attr_block(full_data: &[u8], entry_data: &[u8], tags: &mut Vec<Tag>) {
         if tag_name == "XAttrLastUsedDate" && val_data.len() >= 4 {
             // com.apple.lastuseddate#PS: first 4 bytes are a little-endian Unix
             // timestamp; ExifTool shows it in UTC (no timezone).
-            let ts = u32::from_le_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]) as i64;
+            let ts =
+                u32::from_le_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]) as i64;
             let (y, mo, d, h, mi, s) = crate::formats::pcap::unix_to_datetime(ts);
             tags.push(mktag(
                 "MacOS",

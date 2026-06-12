@@ -340,7 +340,9 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
                             // Append only the short Nikon DecodeBits codes (not "AF"/numeric).
                             if !lt.is_empty()
                                 && lt != "AF"
-                                && lt.chars().all(|c| c.is_ascii_uppercase() || c == ' ' || c == '-')
+                                && lt
+                                    .chars()
+                                    .all(|c| c.is_ascii_uppercase() || c == ' ' || c == '-')
                             {
                                 spec = format!("{} {}", spec, lt);
                             }
@@ -670,36 +672,6 @@ fn compute_gps_position(tags: &[Tag]) -> Option<Tag> {
     ))
 }
 
-fn format_gps_coord(value: &Value, reference: &str) -> String {
-    match value {
-        Value::List(items) if items.len() >= 3 => {
-            let deg = match items[0].as_f64() {
-                Some(v) => v,
-                None => return String::new(),
-            };
-            let min = items[1].as_f64().unwrap_or(0.0);
-            let sec = items[2].as_f64().unwrap_or(0.0);
-            let decimal = deg + min / 60.0 + sec / 3600.0;
-            let sign = if reference == "S" || reference == "W" {
-                "-"
-            } else {
-                ""
-            };
-            format!("{}{:.6} deg", sign, decimal)
-        }
-        Value::URational(n, d) if *d > 0 => {
-            let decimal = *n as f64 / *d as f64;
-            let sign = if reference == "S" || reference == "W" {
-                "-"
-            } else {
-                ""
-            };
-            format!("{}{:.6} deg", sign, decimal)
-        }
-        _ => String::new(),
-    }
-}
-
 fn compute_gps_altitude(tags: &[Tag]) -> Option<Tag> {
     let alt = find_tag(tags, "GPSAltitude")?;
     let alt_ref = find_tag_value(tags, "GPSAltitudeRef").unwrap_or_default();
@@ -713,7 +685,11 @@ fn compute_gps_altitude(tags: &[Tag]) -> Option<Tag> {
     let mut t = mk_composite(
         "GPSAltitude",
         "GPS Altitude",
-        Value::String(format!("{} m {} Sea Level", crate::value::format_g15(trunc), pos)),
+        Value::String(format!(
+            "{} m {} Sea Level",
+            crate::value::format_g15(trunc),
+            pos
+        )),
     );
     // ExifTool's Composite GPSAltitude overrides the plain EXIF GPSAltitude tag.
     t.priority = 1;
@@ -765,10 +741,16 @@ fn compute_image_size(tags: &[Tag]) -> Option<Tag> {
         .map(|t| t.print_value.clone())
         .unwrap_or_default();
     if matches!(ft.as_str(), "CR2" | "IIQ" | "EIP") {
-        let ew = find_tag(tags, "ExifImageWidth")
-            .and_then(|t| t.raw_value.as_u64().or_else(|| t.print_value.trim().parse().ok()));
-        let eh = find_tag(tags, "ExifImageHeight")
-            .and_then(|t| t.raw_value.as_u64().or_else(|| t.print_value.trim().parse().ok()));
+        let ew = find_tag(tags, "ExifImageWidth").and_then(|t| {
+            t.raw_value
+                .as_u64()
+                .or_else(|| t.print_value.trim().parse().ok())
+        });
+        let eh = find_tag(tags, "ExifImageHeight").and_then(|t| {
+            t.raw_value
+                .as_u64()
+                .or_else(|| t.print_value.trim().parse().ok())
+        });
         if let (Some(w), Some(h)) = (ew, eh) {
             return Some(mk_composite(
                 "ImageSize",
@@ -1111,8 +1093,8 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
         } else if !pv.is_empty() && pv != "0" && pv != "n/a" {
             // PrintLensID: a base "… Lens (key)" may have sub-variants disambiguated
             // by the actual FocalLength (Pentax "3 44" → "3 44.1", Sigma 0x145 → .1).
-            let resolved = disambiguate_lens_id(&pv, find_tag_f64(tags, "FocalLength"))
-                .unwrap_or(pv);
+            let resolved =
+                disambiguate_lens_id(&pv, find_tag_f64(tags, "FocalLength")).unwrap_or(pv);
             result.push(mk_composite("LensID", "Lens ID", Value::String(resolved)));
         }
     }

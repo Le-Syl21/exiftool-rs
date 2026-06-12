@@ -335,16 +335,13 @@ fn parse_exth(data: &[u8], tags: &mut Vec<Tag>) {
                     ));
                 }
             }
-            207 => {
-                if val_data.len() >= 4 {
-                    let v =
-                        u32::from_be_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]);
-                    tags.push(mk(
-                        "CreatorBuildNumber",
-                        "Creator Build Number",
-                        Value::U32(v),
-                    ));
-                }
+            207 if val_data.len() >= 4 => {
+                let v = u32::from_be_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]);
+                tags.push(mk(
+                    "CreatorBuildNumber",
+                    "Creator Build Number",
+                    Value::U32(v),
+                ));
             }
             _ => {}
         }
@@ -420,27 +417,6 @@ fn palm_date(ts: i64) -> String {
     };
     // ExifTool emits Palm dates in local time (ConvertUnixTime $val, 1).
     crate::formats::gzip::gzip_unix_to_datetime(unix_ts)
-}
-
-fn get_local_utc_offset() -> i64 {
-    if let Ok(tz) = std::env::var("TZ") {
-        let tz = tz.trim();
-        if let Some(sign_pos) = tz.rfind(['+', '-']) {
-            let sign: i64 = if &tz[sign_pos..sign_pos + 1] == "+" {
-                1
-            } else {
-                -1
-            };
-            if let Ok(h) = tz[sign_pos + 1..].parse::<i64>() {
-                return -sign * h * 3600;
-            }
-        }
-    }
-    0
-}
-
-fn is_leap(y: i32) -> bool {
-    (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
 }
 
 /// Port of ExifTool ConvertFileSize (decimal): %.1f below 10× a unit, %.0f above.

@@ -73,7 +73,10 @@ impl Value {
             // ExifTool stringifies doubles with Perl's %.15g.
             Value::F64(v) => format_g15(*v),
             Value::Binary(data) => {
-                format!("(Binary data {} bytes, use -b option to extract)", data.len())
+                format!(
+                    "(Binary data {} bytes, use -b option to extract)",
+                    data.len()
+                )
             }
             Value::List(items) => {
                 // ExifTool joins numeric arrays with a space, but string lists
@@ -100,7 +103,10 @@ impl Value {
                     .join(sep)
             }
             Value::Undefined(data) => {
-                format!("(Binary data {} bytes, use -b option to extract)", data.len())
+                format!(
+                    "(Binary data {} bytes, use -b option to extract)",
+                    data.len()
+                )
             }
         }
     }
@@ -241,10 +247,7 @@ mod tests {
     #[test]
     fn display_urational_non_exact() {
         // ExifTool shows the decimal value (Perl %.15g), not the raw fraction.
-        assert_eq!(
-            Value::URational(1, 3).to_display_string(),
-            "0.3333333333"
-        );
+        assert_eq!(Value::URational(1, 3).to_display_string(), "0.3333333333");
     }
 
     #[test]
@@ -264,10 +267,7 @@ mod tests {
 
     #[test]
     fn display_irational_non_exact() {
-        assert_eq!(
-            Value::IRational(7, 3).to_display_string(),
-            "2.333333333"
-        );
+        assert_eq!(Value::IRational(7, 3).to_display_string(), "2.333333333");
     }
 
     #[test]
@@ -288,8 +288,8 @@ mod tests {
 
     #[test]
     fn display_f32() {
-        let s = Value::F32(3.14).to_display_string();
-        assert!(s.starts_with("3.14"), "got: {}", s);
+        let s = Value::F32(2.75).to_display_string();
+        assert!(s.starts_with("2.75"), "got: {}", s);
     }
 
     #[test]

@@ -483,9 +483,7 @@ fn read_prop_value_ex(
             // Compressed RTF (MS-OXRTFCP): header is compressedSize(4), rawSize(4),
             // magic(4) = "LZFu"/"MELA". ExifTool decompresses and reports the
             // *uncompressed* length (= rawSize field), not the stored byte count.
-            let rtf_raw_size = if len >= 16
-                && matches!(&raw[8..12], b"LZFu" | b"MELA")
-            {
+            let rtf_raw_size = if len >= 16 && matches!(&raw[8..12], b"LZFu" | b"MELA") {
                 Some(read_u32_le(raw, 4) as usize)
             } else {
                 None

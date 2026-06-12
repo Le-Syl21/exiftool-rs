@@ -910,9 +910,9 @@ fn process_camm(data: &[u8], tags: &mut Vec<Tag>) -> bool {
                 return true;
             }
         }
-        7 => {
+        7
             // MagneticField: 3 floats at offset 4
-            if data.len() >= 16 {
+            if data.len() >= 16 => {
                 let x = get_f32_le(data, 4);
                 let y = get_f32_le(data, 8);
                 let z = get_f32_le(data, 12);
@@ -923,7 +923,6 @@ fn process_camm(data: &[u8], tags: &mut Vec<Tag>) -> bool {
                 ));
                 return true;
             }
-        }
         _ => {}
     }
     false

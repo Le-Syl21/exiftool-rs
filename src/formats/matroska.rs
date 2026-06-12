@@ -690,7 +690,11 @@ fn format_duration(seconds: f64) -> String {
     if seconds == 0.0 {
         return "0 s".to_string();
     }
-    let (sign, mut t) = if seconds >= 0.0 { ("", seconds) } else { ("-", -seconds) };
+    let (sign, mut t) = if seconds >= 0.0 {
+        ("", seconds)
+    } else {
+        ("-", -seconds)
+    };
     if t < 30.0 {
         return format!("{}{:.2} s", sign, t);
     }

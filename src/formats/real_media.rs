@@ -60,7 +60,12 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
     // ExifTool: override the file MIMEType with the single stream's MIME when there is
     // exactly one stream (e.g. an audio-only .rm → audio/x-pn-realaudio).
     if stream_mimes.len() == 1 {
-        let mut t = mktag("File", "MIMEType", "MIME Type", Value::String(stream_mimes[0].clone()));
+        let mut t = mktag(
+            "File",
+            "MIMEType",
+            "MIME Type",
+            Value::String(stream_mimes[0].clone()),
+        );
         t.group.family0 = "File".into();
         t.group.family1 = "File".into();
         t.group.family2 = "Other".into();

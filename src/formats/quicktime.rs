@@ -99,8 +99,8 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
             let mut pos = 16;
             while pos + 4 <= size.min(data.len()) {
                 // ExifTool keeps each 4-byte brand verbatim (incl. padding spaces).
-                let b = crate::encoding::decode_utf8_or_latin1(&data[pos..pos + 4])
-                    .replace('\0', "");
+                let b =
+                    crate::encoding::decode_utf8_or_latin1(&data[pos..pos + 4]).replace('\0', "");
                 if !b.trim().is_empty() {
                     brands.push(b);
                 }
@@ -328,8 +328,7 @@ fn parse_canon_ctmd(data: &[u8], start: usize, size: usize, tags: &mut Vec<Tag>)
                                 let exif_wins =
                                     matches!(t.name.as_str(), "FNumber" | "ExposureTime");
                                 tags.retain(|e| {
-                                    e.name != t.name
-                                        || (exif_wins && e.group.family0 == "EXIF")
+                                    e.name != t.name || (exif_wins && e.group.family0 == "EXIF")
                                 });
                                 tags.push(t);
                             }
@@ -2198,14 +2197,13 @@ fn parse_ilst_triplet(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>
                         .to_string();
                 }
             }
-            b"data" => {
+            b"data"
                 // data_type(4) + locale(4) + value
-                if content.len() > 8 {
+                if content.len() > 8 => {
                     data_val = crate::encoding::decode_utf8_or_latin1(&content[8..])
                         .trim_end_matches('\0')
                         .to_string();
                 }
-            }
             _ => {}
         }
 
@@ -2944,9 +2942,9 @@ fn parse_canon_uuid(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) 
                     tags.extend(gps_tags);
                 }
             }
-            b"THMB" => {
+            b"THMB"
                 // ThumbnailImage: skip 16-byte header
-                if content_end > content_start + 16 {
+                if content_end > content_start + 16 => {
                     let thumb_data = &data[content_start + 16..content_end];
                     let size = thumb_data.len();
                     tags.push(Tag {
@@ -2966,7 +2964,6 @@ fn parse_canon_uuid(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) 
                         priority: 0,
                     });
                 }
-            }
             _ => {
                 // CCTP, CTBO, CNCV, free, etc. - ignore
             }

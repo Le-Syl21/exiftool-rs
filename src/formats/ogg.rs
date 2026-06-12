@@ -116,10 +116,7 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
             tags.push(mk(
                 "Duration",
                 "Duration",
-                Value::String(format!(
-                    "{} (approx)",
-                    convert_duration(duration)
-                )),
+                Value::String(format!("{} (approx)", convert_duration(duration))),
             ));
         }
     }

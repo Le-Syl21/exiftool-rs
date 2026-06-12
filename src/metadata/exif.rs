@@ -506,10 +506,8 @@ impl ExifReader {
                         let rem = (dec - deg) * 60.0;
                         let min = rem.floor();
                         let sec = (rem - min) * 60.0;
-                        t.print_value = format!(
-                            "{} deg {}' {:.2}\" {}",
-                            deg as i64, min as i64, sec, refc
-                        );
+                        t.print_value =
+                            format!("{} deg {}' {:.2}\" {}", deg as i64, min as i64, sec, refc);
                     }
                 }
             }
@@ -1260,7 +1258,10 @@ impl ExifReader {
                             family2: "Image".into(),
                         },
                         raw_value: Value::Binary(data[off..off + len].to_vec()),
-                        print_value: format!("(Binary data {} bytes, use -b option to extract)", len),
+                        print_value: format!(
+                            "(Binary data {} bytes, use -b option to extract)",
+                            len
+                        ),
                         priority: 0,
                     });
                 }

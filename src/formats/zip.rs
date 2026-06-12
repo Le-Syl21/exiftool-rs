@@ -922,10 +922,8 @@ fn extract_xml_value(xml: &str, tag: &str) -> Option<String> {
 
     let start = if let Some(p) = xml.find(&open_exact) {
         p + open_exact.len() - 1 // point to '>'
-    } else if let Some(p) = xml.find(&open_attr) {
-        p
     } else {
-        return None;
+        xml.find(&open_attr)?
     };
 
     let after = &xml[start..];

@@ -113,7 +113,7 @@ fn read_dr4_value(data: &[u8], off: usize, len: usize, fmt: u32) -> Value {
         return Value::Binary(Vec::new());
     }
     let elem_size = dr4_format_size(fmt);
-    let count = if elem_size > 0 { len / elem_size } else { 0 };
+    let count = len.checked_div(elem_size).unwrap_or(0);
     match fmt {
         2 => {
             // string
@@ -1439,10 +1439,10 @@ pub fn read_vrd(data: &[u8]) -> Result<Vec<Tag>> {
                 // EditData: VRD version 1/2/3 edit information
                 parse_vrd_edit_data(&data[pos..pos + block_len], &mut tags);
             }
-            0xffff00f7 => {
+            0xffff00f7
                 // Edit4Data: DR4-style edit information embedded in VRD
                 // Inner data uses ProcessEditData format: 4-byte length + DR4 data
-                if block_len >= 8 {
+                if block_len >= 8 => {
                     let inner_len = read_u32_be(data, pos) as usize;
                     let inner_start = pos + 4;
                     if inner_start + inner_len <= pos + block_len {
@@ -1458,7 +1458,6 @@ pub fn read_vrd(data: &[u8]) -> Result<Vec<Tag>> {
                         }
                     }
                 }
-            }
             _ => {}
         }
 

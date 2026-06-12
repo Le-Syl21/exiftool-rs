@@ -298,26 +298,24 @@ fn read_webp_chunks(data: &[u8], start: usize, tags: &mut Vec<Tag>) -> Result<()
                 ));
             }
             // Animation
-            b"ANIM" => {
-                if chunk_data.len() >= 6 {
-                    let bg_color = u32::from_le_bytes([
-                        chunk_data[0],
-                        chunk_data[1],
-                        chunk_data[2],
-                        chunk_data[3],
-                    ]);
-                    let loop_count = u16::from_le_bytes([chunk_data[4], chunk_data[5]]);
-                    tags.push(mk_webp(
-                        "BackgroundColor",
-                        "Background Color",
-                        Value::U32(bg_color),
-                    ));
-                    tags.push(mk_webp(
-                        "AnimationLoopCount",
-                        "Animation Loop Count",
-                        Value::U16(loop_count),
-                    ));
-                }
+            b"ANIM" if chunk_data.len() >= 6 => {
+                let bg_color = u32::from_le_bytes([
+                    chunk_data[0],
+                    chunk_data[1],
+                    chunk_data[2],
+                    chunk_data[3],
+                ]);
+                let loop_count = u16::from_le_bytes([chunk_data[4], chunk_data[5]]);
+                tags.push(mk_webp(
+                    "BackgroundColor",
+                    "Background Color",
+                    Value::U32(bg_color),
+                ));
+                tags.push(mk_webp(
+                    "AnimationLoopCount",
+                    "Animation Loop Count",
+                    Value::U16(loop_count),
+                ));
             }
             _ => {}
         }

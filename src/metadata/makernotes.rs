@@ -66,7 +66,15 @@ pub fn parse_canon_cr3_makernotes(data: &[u8], model: &str) -> Vec<Tag> {
         return Vec::new();
     }
     let mut tags = Vec::new();
-    read_makernote_ifd(data, ifd_offset, bo, Manufacturer::Canon, &mut tags, model, 0);
+    read_makernote_ifd(
+        data,
+        ifd_offset,
+        bo,
+        Manufacturer::Canon,
+        &mut tags,
+        model,
+        0,
+    );
     tags
 }
 
@@ -177,7 +185,7 @@ pub fn parse_makernotes_exif_base(
             _ => info.byte_order.unwrap_or(parent_byte_order),
         };
         let ifd_abs = mn_offset + info.ifd_offset; // = mn_offset + 18
-        // Compute FixBase relative to the GE TIFF base.
+                                                   // Compute FixBase relative to the GE TIFF base.
         let ifd_rel = ifd_abs - ge_tiff; // = 8
         let base_fix = if ifd_abs + 2 <= data.len() {
             let n = read_u16(data, ifd_abs, byte_order) as usize;
@@ -656,9 +664,7 @@ fn canon_cf2_1d3_multi(tag_id: u32, vals: &[u32]) -> Option<String> {
     match tag_id {
         // (ISOSpeedRange/ApertureRange/ShutterSpeedRange encode their bounds and are
         // left raw rather than guessed.)
-        0x0109 | 0x010a if vals.len() >= 2 => {
-            Some(format!("{}; Flags 0x{:x}", de, vals[1]))
-        }
+        0x0109 | 0x010a if vals.len() >= 2 => Some(format!("{}; Flags 0x{:x}", de, vals[1])),
         0x0610 if vals.len() >= 3 => Some(format!("{}; Hi {}; Lo {}", de, vals[1], vals[2])),
         0x0611 if vals.len() >= 2 => Some(format!("{}; {} shots", de, vals[1])),
         // ShutterSpeedRange: [disableEnable, "Hi "+PrintExposureTime, "Lo "+...].
@@ -667,7 +673,12 @@ fn canon_cf2_1d3_multi(tag_id: u32, vals: &[u32]) -> Option<String> {
                 let secs = (-((v as f64) / 8.0 - 7.0) * std::f64::consts::LN_2).exp();
                 print_exposure_time(secs)
             };
-            Some(format!("{}; Hi {}; Lo {}", de, conv(vals[1]), conv(vals[2])))
+            Some(format!(
+                "{}; Hi {}; Lo {}",
+                de,
+                conv(vals[1]),
+                conv(vals[2])
+            ))
         }
         // ApertureRange: [disableEnable, "Closed %.2g", "Open %.2g"].
         0x010d if vals.len() >= 3 => {
@@ -741,7 +752,12 @@ fn canon_cf2_1d3_pc(tag_id: u32, val: u32) -> Option<&'static str> {
             (1, "1-stop set, 1/3-stop comp."),
             (2, "1/2-stop set, 1/2-stop comp."),
         ]),
-        0x0106 => m(&[(0, "3 shots"), (1, "2 shots"), (2, "5 shots"), (3, "7 shots")]),
+        0x0106 => m(&[
+            (0, "3 shots"),
+            (1, "2 shots"),
+            (2, "5 shots"),
+            (3, "7 shots"),
+        ]),
         // HighISONoiseReduction ("other models" → %offOn for 1D Mark III).
         0x0202 => m(&[(0, "Off"), (1, "On")]),
         0x0409 => m(&[
@@ -1119,7 +1135,10 @@ fn olympus_print_af_areas(val: &str) -> String {
 
 /// Olympus PanoramaMode PrintConv: "Mode Shot"; 0 → Off, else "<dir>, Shot <n>".
 fn olympus_panorama_mode(disp: &str) -> String {
-    let v: Vec<i64> = disp.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+    let v: Vec<i64> = disp
+        .split_whitespace()
+        .filter_map(|s| s.parse().ok())
+        .collect();
     match v.first().copied() {
         Some(0) | None => "Off".to_string(),
         Some(a) => {
@@ -1137,7 +1156,10 @@ fn olympus_panorama_mode(disp: &str) -> String {
 }
 
 fn olympus_drive_mode(val: &str) -> String {
-    let v: Vec<i64> = val.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+    let v: Vec<i64> = val
+        .split_whitespace()
+        .filter_map(|s| s.parse().ok())
+        .collect();
     if v.is_empty() {
         return val.to_string();
     }
@@ -1146,14 +1168,18 @@ fn olympus_drive_mode(val: &str) -> String {
     let c = v.get(2).copied();
     let e = v.get(4).copied();
     let f = v.get(5).copied().unwrap_or(0);
-    let b_str = if b != 0 { format!(", Shot {}", b) } else { String::new() };
+    let b_str = if b != 0 {
+        format!(", Shot {}", b)
+    } else {
+        String::new()
+    };
     let e_str = match e {
         None | Some(4) => String::new(),
         Some(0) => "; Mechanical shutter".to_string(),
         Some(2) => "; Anti-shock".to_string(),
         Some(x) => format!("; Unknown ({})", x),
     };
-    let a_str = if a == 5 && c.is_some() {
+    let a_str = if let Some(cv) = c.filter(|_| a == 5) {
         let bits = [
             (0, "AE"),
             (1, "WB"),
@@ -1163,9 +1189,16 @@ fn olympus_drive_mode(val: &str) -> String {
             (5, "AE Auto"),
             (6, "Focus"),
         ];
-        let cv = c.unwrap();
-        let set: Vec<&str> = bits.iter().filter(|(i, _)| cv & (1 << i) != 0).map(|(_, s)| *s).collect();
-        let joined = if set.is_empty() { "(none)".to_string() } else { set.join("+") };
+        let set: Vec<&str> = bits
+            .iter()
+            .filter(|(i, _)| cv & (1 << i) != 0)
+            .map(|(_, s)| *s)
+            .collect();
+        let joined = if set.is_empty() {
+            "(none)".to_string()
+        } else {
+            set.join("+")
+        };
         format!("{} Bracketing", joined)
     } else if f != 0 {
         match f {
@@ -1254,7 +1287,11 @@ fn olympus_camera_settings_pc(stid: u16, v: u64) -> Option<String> {
                 })
             }
         }
-        0x501 => Some(if v != 0 { v.to_string() } else { "Auto".to_string() }),
+        0x501 => Some(if v != 0 {
+            v.to_string()
+        } else {
+            "Auto".to_string()
+        }),
         0x509 => enum_pc(&[
             (0, "Standard"),
             (6, "Auto"),
@@ -1307,20 +1344,115 @@ fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark, model: &str) -
     for idx in 0..max_idx {
         let v = rd(idx);
         let (name, pv): (&str, String) = match idx {
-            1 => ("ExposureMode", enum_pc(v, &[(0, "Program"), (1, "Aperture Priority"), (2, "Shutter Priority"), (3, "Manual")])),
-            2 => ("FlashMode", enum_pc(v, &[(0, "Fill flash"), (1, "Red-eye reduction"), (2, "Rear flash sync"), (3, "Wireless"), (4, "Off?")])),
+            1 => (
+                "ExposureMode",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "Program"),
+                        (1, "Aperture Priority"),
+                        (2, "Shutter Priority"),
+                        (3, "Manual"),
+                    ],
+                ),
+            ),
+            2 => (
+                "FlashMode",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "Fill flash"),
+                        (1, "Red-eye reduction"),
+                        (2, "Rear flash sync"),
+                        (3, "Wireless"),
+                        (4, "Off?"),
+                    ],
+                ),
+            ),
             3 => ("WhiteBalance", minolta_white_balance(v)),
-            4 => ("MinoltaImageSize", enum_pc(v, &[(0, "Full"), (1, "1600x1200"), (2, "1280x960"), (3, "640x480"), (6, "2080x1560"), (7, "2560x1920"), (8, "3264x2176")])),
-            5 => ("MinoltaQuality", enum_pc(v, &[(0, "Raw"), (1, "Super Fine"), (2, "Fine"), (3, "Standard"), (4, "Economy"), (5, "Extra Fine")])),
-            6 => ("DriveMode", enum_pc(v, &[(0, "Single"), (1, "Continuous"), (2, "Self-timer"), (4, "Bracketing"), (5, "Interval"), (6, "UHS continuous"), (7, "HS continuous")])),
-            7 => ("MeteringMode", enum_pc(v, &[(0, "Multi-segment"), (1, "Center-weighted average"), (2, "Spot")])),
-            8 => ("ISO", format!("{}", (2f64.powf((v as f64 - 48.0) / 8.0) * 100.0 + 0.5) as i64)),
-            9 => ("ExposureTime", crate::tags::canon_sub::print_exposure_time(2f64.powf((48.0 - v as f64) / 8.0))),
-            10 => ("FNumber", format!("{:.1}", 2f64.powf((v as f64 - 8.0) / 16.0))),
+            4 => (
+                "MinoltaImageSize",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "Full"),
+                        (1, "1600x1200"),
+                        (2, "1280x960"),
+                        (3, "640x480"),
+                        (6, "2080x1560"),
+                        (7, "2560x1920"),
+                        (8, "3264x2176"),
+                    ],
+                ),
+            ),
+            5 => (
+                "MinoltaQuality",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "Raw"),
+                        (1, "Super Fine"),
+                        (2, "Fine"),
+                        (3, "Standard"),
+                        (4, "Economy"),
+                        (5, "Extra Fine"),
+                    ],
+                ),
+            ),
+            6 => (
+                "DriveMode",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "Single"),
+                        (1, "Continuous"),
+                        (2, "Self-timer"),
+                        (4, "Bracketing"),
+                        (5, "Interval"),
+                        (6, "UHS continuous"),
+                        (7, "HS continuous"),
+                    ],
+                ),
+            ),
+            7 => (
+                "MeteringMode",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "Multi-segment"),
+                        (1, "Center-weighted average"),
+                        (2, "Spot"),
+                    ],
+                ),
+            ),
+            8 => (
+                "ISO",
+                format!(
+                    "{}",
+                    (2f64.powf((v as f64 - 48.0) / 8.0) * 100.0 + 0.5) as i64
+                ),
+            ),
+            9 => (
+                "ExposureTime",
+                crate::tags::canon_sub::print_exposure_time(2f64.powf((48.0 - v as f64) / 8.0)),
+            ),
+            10 => (
+                "FNumber",
+                format!("{:.1}", 2f64.powf((v as f64 - 8.0) / 16.0)),
+            ),
             11 => ("MacroMode", enum_pc(v, &[(0, "Off"), (1, "On")])),
-            12 => ("DigitalZoom", enum_pc(v, &[(0, "Off"), (1, "Electronic magnification"), (2, "2x")])),
-            13 => ("ExposureCompensation", minolta_print_fraction(v as f64 / 3.0 - 2.0)),
-            14 => ("BracketStep", enum_pc(v, &[(0, "1/3 EV"), (1, "2/3 EV"), (2, "1 EV")])),
+            12 => (
+                "DigitalZoom",
+                enum_pc(v, &[(0, "Off"), (1, "Electronic magnification"), (2, "2x")]),
+            ),
+            13 => (
+                "ExposureCompensation",
+                minolta_print_fraction(v as f64 / 3.0 - 2.0),
+            ),
+            14 => (
+                "BracketStep",
+                enum_pc(v, &[(0, "1/3 EV"), (1, "2/3 EV"), (2, "1 EV")]),
+            ),
             16 => ("IntervalLength", v.to_string()),
             17 => ("IntervalNumber", v.to_string()),
             18 => ("FocalLength", format!("{:.1} mm", v as f64 / 256.0)),
@@ -1347,35 +1479,154 @@ fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark, model: &str) -
                 continue;
             }
             20 => ("FlashFired", enum_pc(v, &[(0, "No"), (1, "Yes")])),
-            21 => ("MinoltaDate", format!("{:04}:{:02}:{:02}", v >> 16, (v & 0xff00) >> 8, v & 0xff)),
-            22 => ("MinoltaTime", format!("{:02}:{:02}:{:02}", v >> 16, (v & 0xff00) >> 8, v & 0xff)),
-            23 => ("MaxAperture", format!("{:.1}", 2f64.powf((v as f64 - 8.0) / 16.0))),
+            21 => (
+                "MinoltaDate",
+                format!("{:04}:{:02}:{:02}", v >> 16, (v & 0xff00) >> 8, v & 0xff),
+            ),
+            22 => (
+                "MinoltaTime",
+                format!("{:02}:{:02}:{:02}", v >> 16, (v & 0xff00) >> 8, v & 0xff),
+            ),
+            23 => (
+                "MaxAperture",
+                format!("{:.1}", 2f64.powf((v as f64 - 8.0) / 16.0)),
+            ),
             26 => ("FileNumberMemory", enum_pc(v, &[(0, "Off"), (1, "On")])),
             27 => ("LastFileNumber", v.to_string()),
-            28 => ("ColorBalanceRed", crate::value::format_g15(v as f64 / 256.0)),
-            29 => ("ColorBalanceGreen", crate::value::format_g15(v as f64 / 256.0)),
-            30 => ("ColorBalanceBlue", crate::value::format_g15(v as f64 / 256.0)),
+            28 => (
+                "ColorBalanceRed",
+                crate::value::format_g15(v as f64 / 256.0),
+            ),
+            29 => (
+                "ColorBalanceGreen",
+                crate::value::format_g15(v as f64 / 256.0),
+            ),
+            30 => (
+                "ColorBalanceBlue",
+                crate::value::format_g15(v as f64 / 256.0),
+            ),
             31 => ("Saturation", minolta_print_parameter(v as i64 - param_off)),
             32 => ("Contrast", minolta_print_parameter(v as i64 - param_off)),
-            33 => ("Sharpness", enum_pc(v, &[(0, "Hard"), (1, "Normal"), (2, "Soft")])),
-            34 => ("SubjectProgram", enum_pc(v, &[(0, "None"), (1, "Portrait"), (2, "Text"), (3, "Night portrait"), (4, "Sunset"), (5, "Sports action")])),
-            35 => ("FlashExposureComp", minolta_print_fraction((v as f64 - 6.0) / 3.0)),
-            36 => ("ISOSetting", enum_pc(v, &[(0, "100"), (1, "200"), (2, "400"), (3, "800"), (4, "Auto"), (5, "64")])),
-            37 => ("MinoltaModelID", enum_pc(v, &[(0, "DiMAGE 7, X1, X21 or X31"), (1, "DiMAGE 5"), (2, "DiMAGE S304"), (3, "DiMAGE S404"), (4, "DiMAGE 7i"), (5, "DiMAGE 7Hi"), (6, "DiMAGE A1"), (7, "DiMAGE A2 or S414")])),
-            38 => ("IntervalMode", enum_pc(v, &[(0, "Still Image"), (1, "Time-lapse Movie")])),
-            39 => ("FolderName", enum_pc(v, &[(0, "Standard Form"), (1, "Data Form")])),
-            40 => ("ColorMode", enum_pc(v, &[(0, "Natural color"), (1, "Black & White"), (2, "Vivid color"), (3, "Solarization"), (4, "Adobe RGB")])),
+            33 => (
+                "Sharpness",
+                enum_pc(v, &[(0, "Hard"), (1, "Normal"), (2, "Soft")]),
+            ),
+            34 => (
+                "SubjectProgram",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "None"),
+                        (1, "Portrait"),
+                        (2, "Text"),
+                        (3, "Night portrait"),
+                        (4, "Sunset"),
+                        (5, "Sports action"),
+                    ],
+                ),
+            ),
+            35 => (
+                "FlashExposureComp",
+                minolta_print_fraction((v as f64 - 6.0) / 3.0),
+            ),
+            36 => (
+                "ISOSetting",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "100"),
+                        (1, "200"),
+                        (2, "400"),
+                        (3, "800"),
+                        (4, "Auto"),
+                        (5, "64"),
+                    ],
+                ),
+            ),
+            37 => (
+                "MinoltaModelID",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "DiMAGE 7, X1, X21 or X31"),
+                        (1, "DiMAGE 5"),
+                        (2, "DiMAGE S304"),
+                        (3, "DiMAGE S404"),
+                        (4, "DiMAGE 7i"),
+                        (5, "DiMAGE 7Hi"),
+                        (6, "DiMAGE A1"),
+                        (7, "DiMAGE A2 or S414"),
+                    ],
+                ),
+            ),
+            38 => (
+                "IntervalMode",
+                enum_pc(v, &[(0, "Still Image"), (1, "Time-lapse Movie")]),
+            ),
+            39 => (
+                "FolderName",
+                enum_pc(v, &[(0, "Standard Form"), (1, "Data Form")]),
+            ),
+            40 => (
+                "ColorMode",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "Natural color"),
+                        (1, "Black & White"),
+                        (2, "Vivid color"),
+                        (3, "Solarization"),
+                        (4, "Adobe RGB"),
+                    ],
+                ),
+            ),
             41 => ("ColorFilter", (v as i64 - param_off).to_string()),
             42 => ("BWFilter", v.to_string()),
             43 => ("InternalFlash", enum_pc(v, &[(0, "No"), (1, "Fired")])),
             44 => ("Brightness", crate::value::format_g15(v as f64 / 8.0 - 6.0)),
             45 => ("SpotFocusPointX", v.to_string()),
             46 => ("SpotFocusPointY", v.to_string()),
-            47 => ("WideFocusZone", enum_pc(v, &[(0, "No zone"), (1, "Center zone (horizontal orientation)"), (2, "Center zone (vertical orientation)"), (3, "Left zone"), (4, "Right zone")])),
+            47 => (
+                "WideFocusZone",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "No zone"),
+                        (1, "Center zone (horizontal orientation)"),
+                        (2, "Center zone (vertical orientation)"),
+                        (3, "Left zone"),
+                        (4, "Right zone"),
+                    ],
+                ),
+            ),
             48 => ("FocusMode", enum_pc(v, &[(0, "AF"), (1, "MF")])),
-            49 => ("FocusArea", enum_pc(v, &[(0, "Wide Focus (normal)"), (1, "Spot Focus")])),
-            50 => ("DECPosition", enum_pc(v, &[(0, "Exposure"), (1, "Contrast"), (2, "Saturation"), (3, "Filter")])),
-            63 => ("FlashMetering", enum_pc(v, &[(0, "ADI (Advanced Distance Integration)"), (1, "Pre-flash TTL"), (2, "Manual flash control")])),
+            49 => (
+                "FocusArea",
+                enum_pc(v, &[(0, "Wide Focus (normal)"), (1, "Spot Focus")]),
+            ),
+            50 => (
+                "DECPosition",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "Exposure"),
+                        (1, "Contrast"),
+                        (2, "Saturation"),
+                        (3, "Filter"),
+                    ],
+                ),
+            ),
+            63 => (
+                "FlashMetering",
+                enum_pc(
+                    v,
+                    &[
+                        (0, "ADI (Advanced Distance Integration)"),
+                        (1, "Pre-flash TTL"),
+                        (2, "Manual flash control"),
+                    ],
+                ),
+            ),
             _ => continue,
         };
         tags.push(mk(name, pv));
@@ -1434,7 +1685,10 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
             .unwrap_or_else(|| v.to_string())
     };
 
-    tags.push(mk("Quality", kpc(d[9] as u64, &[(1, "Fine"), (2, "Normal")])));
+    tags.push(mk(
+        "Quality",
+        kpc(d[9] as u64, &[(1, "Fine"), (2, "Normal")]),
+    ));
     tags.push(mk("BurstMode", kpc(d[10] as u64, &[(0, "Off"), (1, "On")])));
 
     let w = u16::from_be_bytes([d[12], d[13]]);
@@ -1446,13 +1700,33 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
     tags.push(mk("YearCreated", year.to_string()));
     tags.push(mk("MonthDayCreated", format!("{:02}:{:02}", d[18], d[19])));
 
-    tags.push(mk("ShutterMode", kpc(d[27] as u64, &[(0, "Auto"), (8, "Aperture Priority"), (32, "Manual?")])));
-    tags.push(mk("MeteringMode", kpc(d[28] as u64, &[(0, "Multi-segment"), (1, "Center-weighted average"), (2, "Spot")])));
+    tags.push(mk(
+        "ShutterMode",
+        kpc(
+            d[27] as u64,
+            &[(0, "Auto"), (8, "Aperture Priority"), (32, "Manual?")],
+        ),
+    ));
+    tags.push(mk(
+        "MeteringMode",
+        kpc(
+            d[28] as u64,
+            &[
+                (0, "Multi-segment"),
+                (1, "Center-weighted average"),
+                (2, "Spot"),
+            ],
+        ),
+    ));
 
     // FNumber (0x1e int16u): ValueConv $val/100, no PrintConv (full precision).
     let fnum = u16::from_be_bytes([d[30], d[31]]);
     let fval = fnum as f64 / 100.0;
-    tags.push(mkv("FNumber", Value::F64(fval), crate::value::format_g15(fval)));
+    tags.push(mkv(
+        "FNumber",
+        Value::F64(fval),
+        crate::value::format_g15(fval),
+    ));
 
     // ExposureTime (0x20 int32u): ValueConv $val/1e5, PrintExposureTime.
     let exp = u32::from_be_bytes([d[32], d[33], d[34], d[35]]);
@@ -1469,7 +1743,10 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
     let comp = i16::from_be_bytes([d[36], d[37]]);
     tags.push(mk("ExposureCompensation", comp.to_string()));
 
-    tags.push(mk("FocusMode", kpc(d[56] as u64, &[(0, "Normal"), (2, "Macro")])));
+    tags.push(mk(
+        "FocusMode",
+        kpc(d[56] as u64, &[(0, "Normal"), (2, "Macro")]),
+    ));
 
     // TimeCreated at offset 0x14: int8u[4], ValueConv "%.2d:%.2d:%.2d.%.2d".
     if d.len() > 0x17 {
@@ -1485,7 +1762,13 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
 
     // WhiteBalance at offset 0x40
     if d.len() > 0x40 {
-        tags.push(mk("WhiteBalance", kpc(d[0x40] as u64, &[(0, "Auto"), (1, "Flash?"), (2, "Tungsten"), (3, "Daylight")])));
+        tags.push(mk(
+            "WhiteBalance",
+            kpc(
+                d[0x40] as u64,
+                &[(0, "Auto"), (1, "Flash?"), (2, "Tungsten"), (3, "Daylight")],
+            ),
+        ));
     }
     // ISO at offset 0x60
     if d.len() > 0x61 {
@@ -1496,10 +1779,34 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
     }
     // FlashMode 0x5c (PrintHex), FlashFired 0x5d, ISOSetting 0x5e (int16u)
     if d.len() > 0x5f {
-        tags.push(mk("FlashMode", kpc(d[0x5c] as u64, &[(0x00, "Auto"), (0x01, "Fill Flash"), (0x02, "Off"), (0x03, "Red-Eye"), (0x10, "Fill Flash"), (0x20, "Off"), (0x40, "Red-Eye?")])));
-        tags.push(mk("FlashFired", kpc(d[0x5d] as u64, &[(0, "No"), (1, "Yes")])));
+        tags.push(mk(
+            "FlashMode",
+            kpc(
+                d[0x5c] as u64,
+                &[
+                    (0x00, "Auto"),
+                    (0x01, "Fill Flash"),
+                    (0x02, "Off"),
+                    (0x03, "Red-Eye"),
+                    (0x10, "Fill Flash"),
+                    (0x20, "Off"),
+                    (0x40, "Red-Eye?"),
+                ],
+            ),
+        ));
+        tags.push(mk(
+            "FlashFired",
+            kpc(d[0x5d] as u64, &[(0, "No"), (1, "Yes")]),
+        ));
         let iso = u16::from_be_bytes([d[0x5e], d[0x5f]]);
-        tags.push(mk("ISOSetting", if iso != 0 { iso.to_string() } else { "Auto".to_string() }));
+        tags.push(mk(
+            "ISOSetting",
+            if iso != 0 {
+                iso.to_string()
+            } else {
+                "Auto".to_string()
+            },
+        ));
     }
     // TotalZoom 0x62, DateTimeStamp 0x64 (int16u, val ? "Mode $val" : "Off")
     if d.len() > 0x65 {
@@ -1507,17 +1814,43 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
         let tz = u16::from_be_bytes([d[0x62], d[0x63]]) as f64 / 100.0;
         tags.push(mk("TotalZoom", crate::value::format_g15(tz)));
         let dts = u16::from_be_bytes([d[0x64], d[0x65]]);
-        tags.push(mk("DateTimeStamp", if dts != 0 { format!("Mode {}", dts) } else { "Off".to_string() }));
+        tags.push(mk(
+            "DateTimeStamp",
+            if dts != 0 {
+                format!("Mode {}", dts)
+            } else {
+                "Off".to_string()
+            },
+        ));
     }
     // ColorMode 0x66 (int16u, PrintHex), DigitalZoom 0x68 (int16u, /100)
     if d.len() > 0x69 {
-        tags.push(mk("ColorMode", kpc(u16::from_be_bytes([d[0x66], d[0x67]]) as u64, &[(0x01, "B&W"), (0x02, "Sepia"), (0x03, "B&W Yellow Filter"), (0x04, "B&W Red Filter"), (0x20, "Saturated Color"), (0x40, "Neutral Color")])));
+        tags.push(mk(
+            "ColorMode",
+            kpc(
+                u16::from_be_bytes([d[0x66], d[0x67]]) as u64,
+                &[
+                    (0x01, "B&W"),
+                    (0x02, "Sepia"),
+                    (0x03, "B&W Yellow Filter"),
+                    (0x04, "B&W Red Filter"),
+                    (0x20, "Saturated Color"),
+                    (0x40, "Neutral Color"),
+                ],
+            ),
+        ));
         let dz = u16::from_be_bytes([d[0x68], d[0x69]]);
-        tags.push(mk("DigitalZoom", crate::value::format_g15(dz as f64 / 100.0)));
+        tags.push(mk(
+            "DigitalZoom",
+            crate::value::format_g15(dz as f64 / 100.0),
+        ));
     }
     // Sharpness 0x6b (int8s, printParameter: 0 -> Normal)
     if d.len() > 0x6b {
-        tags.push(mk("Sharpness", minolta_print_parameter(d[0x6b] as i8 as i64)));
+        tags.push(mk(
+            "Sharpness",
+            minolta_print_parameter(d[0x6b] as i8 as i64),
+        ));
     }
     // SequenceNumber: int8u at offset 0x1d (Kodak.pm Main binary table).
     if d.len() > 0x1d {
@@ -1852,48 +2185,60 @@ fn pentax_special_tag_conv(
                     .map(|(_, s)| s.to_string())
                     .unwrap_or_else(|| format!("Unknown ({})", b))
             };
-            let s0 = pick(value_data[0], &[
-                (0, "Single-frame"),
-                (1, "Continuous"),
-                (2, "Continuous (Lo)"),
-                (3, "Burst"),
-                (4, "Continuous (Medium)"),
-                (5, "Continuous (Low)"),
-                (255, "Video"),
-            ]);
-            let s1 = pick(value_data[1], &[
-                (0, "No Timer"),
-                (1, "Self-timer (12 s)"),
-                (2, "Self-timer (2 s)"),
-                (15, "Video"),
-                (16, "Mirror Lock-up"),
-                (255, "n/a"),
-            ]);
-            let s2 = pick(value_data[2], &[
-                (0, "Shutter Button"),
-                (1, "Remote Control (3 s delay)"),
-                (2, "Remote Control"),
-                (4, "Remote Continuous Shooting"),
-            ]);
-            let s3 = pick(value_data[3], &[
-                (0x00, "Single Exposure"),
-                (0x01, "Multiple Exposure"),
-                (0x02, "Composite Average"),
-                (0x03, "Composite Additive"),
-                (0x04, "Composite Bright"),
-                (0x08, "Interval Shooting"),
-                (0x0a, "Interval Composite Average"),
-                (0x0b, "Interval Composite Additive"),
-                (0x0c, "Interval Composite Bright"),
-                (0x0f, "Interval Movie"),
-                (0x10, "HDR"),
-                (0x20, "HDR Strong 1"),
-                (0x30, "HDR Strong 2"),
-                (0x40, "HDR Strong 3"),
-                (0x50, "HDR Manual"),
-                (0xe0, "HDR Auto"),
-                (0xff, "Video"),
-            ]);
+            let s0 = pick(
+                value_data[0],
+                &[
+                    (0, "Single-frame"),
+                    (1, "Continuous"),
+                    (2, "Continuous (Lo)"),
+                    (3, "Burst"),
+                    (4, "Continuous (Medium)"),
+                    (5, "Continuous (Low)"),
+                    (255, "Video"),
+                ],
+            );
+            let s1 = pick(
+                value_data[1],
+                &[
+                    (0, "No Timer"),
+                    (1, "Self-timer (12 s)"),
+                    (2, "Self-timer (2 s)"),
+                    (15, "Video"),
+                    (16, "Mirror Lock-up"),
+                    (255, "n/a"),
+                ],
+            );
+            let s2 = pick(
+                value_data[2],
+                &[
+                    (0, "Shutter Button"),
+                    (1, "Remote Control (3 s delay)"),
+                    (2, "Remote Control"),
+                    (4, "Remote Continuous Shooting"),
+                ],
+            );
+            let s3 = pick(
+                value_data[3],
+                &[
+                    (0x00, "Single Exposure"),
+                    (0x01, "Multiple Exposure"),
+                    (0x02, "Composite Average"),
+                    (0x03, "Composite Additive"),
+                    (0x04, "Composite Bright"),
+                    (0x08, "Interval Shooting"),
+                    (0x0a, "Interval Composite Average"),
+                    (0x0b, "Interval Composite Additive"),
+                    (0x0c, "Interval Composite Bright"),
+                    (0x0f, "Interval Movie"),
+                    (0x10, "HDR"),
+                    (0x20, "HDR Strong 1"),
+                    (0x30, "HDR Strong 2"),
+                    (0x40, "HDR Strong 3"),
+                    (0x50, "HDR Manual"),
+                    (0xe0, "HDR Auto"),
+                    (0xff, "Video"),
+                ],
+            );
             let s = format!("{}; {}; {}; {}", s0, s1, s2, s3);
             Some(vec![mk("DriveMode", &s)])
         }
@@ -3906,7 +4251,12 @@ fn decode_apple_runtime(data: &[u8]) -> Vec<Tag> {
 }
 
 /// Decode a PreviewIFD sub-directory — extract PreviewImageStart/Length.
-fn decode_preview_ifd(data: &[u8], offset: usize, bo: ByteOrderMark, mn_file_base: usize) -> Vec<Tag> {
+fn decode_preview_ifd(
+    data: &[u8],
+    offset: usize,
+    bo: ByteOrderMark,
+    mn_file_base: usize,
+) -> Vec<Tag> {
     let mut tags = Vec::new();
     if offset + 2 > data.len() {
         return tags;
@@ -3942,7 +4292,10 @@ fn decode_preview_ifd(data: &[u8], offset: usize, bo: ByteOrderMark, mn_file_bas
                             family2: "Image".into(),
                         },
                         raw_value: Value::Binary(Vec::new()), // placeholder
-                        print_value: format!("(Binary data {} bytes, use -b option to extract)", val),
+                        print_value: format!(
+                            "(Binary data {} bytes, use -b option to extract)",
+                            val
+                        ),
                         priority: 0,
                     });
                 }
@@ -4227,9 +4580,9 @@ fn decode_nikon_color_balance(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
                 ));
             }
         }
-        "0102" => {
+        "0102"
             // D2H: WB at offset 6, same format
-            if data.len() >= 14 {
+            if data.len() >= 14 => {
                 let r = read_u16(data, 6, bo);
                 let g = read_u16(data, 8, bo);
                 let b = read_u16(data, 10, bo);
@@ -4239,7 +4592,6 @@ fn decode_nikon_color_balance(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
                     &format!("{} {} {} {}", r, g, b, g2),
                 ));
             }
-        }
         _ => {
             // Unrecognized version - encrypted versions handled by decrypt_nikon_subtables
         }
@@ -4437,12 +4789,12 @@ fn decrypt_nikon_subtables(
                 let params: Option<(usize, usize)> = if ver.starts_with("02") {
                     let xx: u32 = ver[2..4].parse().unwrap_or(0);
                     match xx {
-                        5 => Some((4, 14)),               // 0205 (D50)
-                        9 | 12 | 14 => Some((284, 10)),   // ColorBalance4
-                        11 => Some((284, 16)),            // 0211
-                        13 => Some((284, 10)),            // 0213
-                        15 | 16 | 17 => Some((284, 4)),   // 0215-0217
-                        _ if xx < 11 => Some((284, 6)),   // ColorBalance02
+                        5 => Some((4, 14)),             // 0205 (D50)
+                        9 | 12 | 14 => Some((284, 10)), // ColorBalance4
+                        11 => Some((284, 16)),          // 0211
+                        13 => Some((284, 10)),          // 0213
+                        15..=17 => Some((284, 4)),      // 0215-0217
+                        _ if xx < 11 => Some((284, 6)), // ColorBalance02
                         _ => None,
                     }
                 } else {
@@ -4918,6 +5270,7 @@ fn read_makernote_ifd(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 fn read_makernote_ifd_with_base(
     data: &[u8],
     ifd_offset: usize,
@@ -5033,7 +5386,11 @@ fn read_makernote_ifd_with_base(
                 .map(|i| read_u32(value_data, i * 4, byte_order).to_string())
                 .collect::<Vec<_>>()
                 .join(" ");
-            let name = if tag_id == 0x0f00 { "DataDump" } else { "DataDump2" };
+            let name = if tag_id == 0x0f00 {
+                "DataDump"
+            } else {
+                "DataDump2"
+            };
             tags.push(Tag {
                 id: TagId::Numeric(tag_id),
                 name: name.into(),
@@ -5226,10 +5583,16 @@ fn read_makernote_ifd_with_base(
                         }
                         // MinFocalLength at 0x113, MaxFocalLength at 0x115 (big-endian int16uRev)
                         if d.len() > 275 {
-                            t.push(mk_canon_str("MinFocalLength", &format!("{} mm", r16be(0x113))));
+                            t.push(mk_canon_str(
+                                "MinFocalLength",
+                                &format!("{} mm", r16be(0x113)),
+                            ));
                         }
                         if d.len() > 277 {
-                            t.push(mk_canon_str("MaxFocalLength", &format!("{} mm", r16be(0x115))));
+                            t.push(mk_canon_str(
+                                "MaxFocalLength",
+                                &format!("{} mm", r16be(0x115)),
+                            ));
                         }
                         // FirmwareVersion string at 0x136 = 310, length 6
                         if d.len() >= 316 {
@@ -5334,46 +5697,45 @@ fn read_makernote_ifd_with_base(
                                     ]);
                                     // UserDefNPictureStyle: int16u picture-style id; the other
                                     // FilterEffect/ToningEffect fields are small enums.
-                                    let pv = if name.starts_with("UserDef")
-                                        && name.ends_with("Style")
-                                    {
-                                        let s = match (v as u32) & 0xff {
-                                            0x41 | 0x81 => "Standard",
-                                            0x42 | 0x82 => "Portrait",
-                                            0x43 | 0x83 => "Landscape",
-                                            0x44 | 0x84 => "Neutral",
-                                            0x45 | 0x85 => "Faithful",
-                                            0x51 | 0x91 => "Monochrome",
-                                            _ => "",
-                                        };
-                                        if s.is_empty() {
-                                            v.to_string()
+                                    let pv =
+                                        if name.starts_with("UserDef") && name.ends_with("Style") {
+                                            let s = match (v as u32) & 0xff {
+                                                0x41 | 0x81 => "Standard",
+                                                0x42 | 0x82 => "Portrait",
+                                                0x43 | 0x83 => "Landscape",
+                                                0x44 | 0x84 => "Neutral",
+                                                0x45 | 0x85 => "Faithful",
+                                                0x51 | 0x91 => "Monochrome",
+                                                _ => "",
+                                            };
+                                            if s.is_empty() {
+                                                v.to_string()
+                                            } else {
+                                                s.to_string()
+                                            }
+                                        } else if name.starts_with("FilterEffect") {
+                                            match v {
+                                                0 => "None",
+                                                1 => "Yellow",
+                                                2 => "Orange",
+                                                3 => "Red",
+                                                4 => "Green",
+                                                _ => "",
+                                            }
+                                            .to_string()
+                                        } else if name.starts_with("ToningEffect") {
+                                            match v {
+                                                0 => "None",
+                                                1 => "Sepia",
+                                                2 => "Blue",
+                                                3 => "Purple",
+                                                4 => "Green",
+                                                _ => "",
+                                            }
+                                            .to_string()
                                         } else {
-                                            s.to_string()
-                                        }
-                                    } else if name.starts_with("FilterEffect") {
-                                        match v {
-                                            0 => "None",
-                                            1 => "Yellow",
-                                            2 => "Orange",
-                                            3 => "Red",
-                                            4 => "Green",
-                                            _ => "",
-                                        }
-                                        .to_string()
-                                    } else if name.starts_with("ToningEffect") {
-                                        match v {
-                                            0 => "None",
-                                            1 => "Sepia",
-                                            2 => "Blue",
-                                            3 => "Purple",
-                                            4 => "Green",
-                                            _ => "",
-                                        }
-                                        .to_string()
-                                    } else {
-                                        v.to_string()
-                                    };
+                                            v.to_string()
+                                        };
                                     let pv = if pv.is_empty() { v.to_string() } else { pv };
                                     t.push(mk_canon_str(name, &pv));
                                 }
@@ -5826,11 +6188,10 @@ fn read_makernote_ifd_with_base(
                     // index 0x3d (61): RFLensType (int16u; 0 => "n/a")
                     if n > 0x3d {
                         let v = read_u16(value_data, 0x3d * 2, byte_order) as i64;
-                        let pv = crate::tags::print_conv_generated::print_conv_by_name(
-                            "RFLensType", v,
-                        )
-                        .map(|s| s.to_string())
-                        .unwrap_or_else(|| format!("Unknown ({})", v));
+                        let pv =
+                            crate::tags::print_conv_generated::print_conv_by_name("RFLensType", v)
+                                .map(|s| s.to_string())
+                                .unwrap_or_else(|| format!("Unknown ({})", v));
                         t.push(mk_canon_str("RFLensType", &pv));
                     }
                     t
@@ -6042,7 +6403,10 @@ fn read_makernote_ifd_with_base(
                                 family2: "Image".into(),
                             },
                             raw_value: Value::Binary(Vec::new()),
-                            print_value: format!("(Binary data {} bytes, use -b option to extract)", len_val),
+                            print_value: format!(
+                                "(Binary data {} bytes, use -b option to extract)",
+                                len_val
+                            ),
                             priority: 0,
                         });
                     }
@@ -6311,8 +6675,7 @@ fn read_makernote_ifd_with_base(
                     } else if tag_id == 0x2010 && stid == 0x020b && sval.len() >= 2 {
                         // LensProperties: PrintConv sprintf("0x%x").
                         format!("0x{:x}", read_u16(sval, 0, byte_order))
-                    } else if tag_id == 0x2010 && stid == 0x0201 && sdt == 1 && scnt >= 4
-                    {
+                    } else if tag_id == 0x2010 && stid == 0x0201 && sdt == 1 && scnt >= 4 {
                         // LensType: ValueConv = sprintf("%x %.2x %.2x", bytes[0], bytes[2], bytes[3])
                         let b0 = sval.first().copied().unwrap_or(0) as u32;
                         let b2 = sval.get(2).copied().unwrap_or(0) as u32;
@@ -6565,7 +6928,14 @@ fn read_makernote_ifd_with_base(
                         if b.len() >= 4 && b[..4].iter().all(|&x| x == 0) {
                             "Off".to_string()
                         } else if b.len() >= 45 {
-                            format!("On, {}", if b[44] & 0x01 != 0 { "Mode 1" } else { "Mode 2" })
+                            format!(
+                                "On, {}",
+                                if b[44] & 0x01 != 0 {
+                                    "Mode 1"
+                                } else {
+                                    "Mode 2"
+                                }
+                            )
                         } else {
                             "On".to_string()
                         }
@@ -6586,7 +6956,10 @@ fn read_makernote_ifd_with_base(
                             val.to_display_string()
                         }
                     } else if let Some(pc) = (tag_id == 0x2020)
-                        .then(|| val.as_u64().and_then(|v| olympus_camera_settings_pc(stid, v)))
+                        .then(|| {
+                            val.as_u64()
+                                .and_then(|v| olympus_camera_settings_pc(stid, v))
+                        })
                         .flatten()
                     {
                         pc
@@ -6949,13 +7322,21 @@ fn read_makernote_ifd_with_base(
                 .filter_map(|s| s.parse().ok())
                 .collect();
             if v.len() == 2 {
-                let (a, b) = if v[0] <= v[1] { (v[0], v[1]) } else { (v[1], v[0]) };
+                let (a, b) = if v[0] <= v[1] {
+                    (v[0], v[1])
+                } else {
+                    (v[1], v[0])
+                };
                 format!("{:.2} - {:.2} m", a, b)
             } else {
                 value.to_display_string()
             }
         } else if manufacturer == Manufacturer::Apple && name == "ImageCaptureType" {
-            match value.as_f64().filter(|f| f.fract() == 0.0).map(|f| f as i64) {
+            match value
+                .as_f64()
+                .filter(|f| f.fract() == 0.0)
+                .map(|f| f as i64)
+            {
                 Some(1) => "ProRAW".to_string(),
                 Some(2) => "Portrait".to_string(),
                 Some(10) => "Photo".to_string(),
@@ -7051,13 +7432,9 @@ fn read_makernote_ifd_with_base(
                     }
                     if let Some(ln) = last_null {
                         out.push_str(", ");
-                        for k in (ln + 1)..j {
-                            out.push(chars[k]);
-                        }
+                        out.extend(chars[(ln + 1)..j].iter());
                     } else {
-                        for k in i..j {
-                            out.push(chars[k]);
-                        }
+                        out.extend(chars[i..j].iter());
                     }
                     i = j;
                 } else {
@@ -7118,26 +7495,28 @@ fn read_makernote_ifd_with_base(
                     // Fallback to generated print conversions. Use as_f64 -> i64 so signed
                     // values (int16s/int32s, e.g. Apple AEStable) also resolve their enums.
                     let module = manufacturer_group_name(manufacturer);
-                    let iv = value
-                        .as_u64()
-                        .map(|v| v as i64)
-                        .or_else(|| value.as_f64().filter(|f| f.fract() == 0.0).map(|f| f as i64));
-                    iv.and_then(|v| crate::tags::print_conv_generated::print_conv(module, tag_id, v))
-                        .map(|s| s.to_string())
-                        .or_else(|| {
-                            iv.and_then(|v| {
-                                crate::tags::print_conv_generated::print_conv_by_name(name, v)
-                            })
-                            .map(|s| s.to_string())
+                    let iv = value.as_u64().map(|v| v as i64).or_else(|| {
+                        value
+                            .as_f64()
+                            .filter(|f| f.fract() == 0.0)
+                            .map(|f| f as i64)
+                    });
+                    iv.and_then(|v| {
+                        crate::tags::print_conv_generated::print_conv(module, tag_id, v)
+                    })
+                    .map(|s| s.to_string())
+                    .or_else(|| {
+                        iv.and_then(|v| {
+                            crate::tags::print_conv_generated::print_conv_by_name(name, v)
                         })
+                        .map(|s| s.to_string())
+                    })
                 })
                 .unwrap_or_else(|| {
                     // Nikon's Main table applies FormatString as its default PRINT_CONV,
                     // fixing the case of all-caps string values (NORMAL -> Normal).
                     let disp = value.to_display_string();
-                    if manufacturer == Manufacturer::Nikon
-                        && matches!(value, Value::String(_))
-                    {
+                    if manufacturer == Manufacturer::Nikon && matches!(value, Value::String(_)) {
                         nikon_format_string(&disp)
                     } else {
                         disp
@@ -7354,10 +7733,15 @@ pub fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderM
             // RATIONAL
             if count == 1 && data.len() >= 8 {
                 Value::URational(read_u32(data, 0, bo), read_u32(data, 4, bo))
-            } else if count >= 1 && data.len() >= (count as usize) * 8 {
+            } else if count >= 1 && data.len() >= count * 8 {
                 Value::List(
-                    (0..count as usize)
-                        .map(|i| Value::URational(read_u32(data, i * 8, bo), read_u32(data, i * 8 + 4, bo)))
+                    (0..count)
+                        .map(|i| {
+                            Value::URational(
+                                read_u32(data, i * 8, bo),
+                                read_u32(data, i * 8 + 4, bo),
+                            )
+                        })
                         .collect(),
                 )
             } else {
@@ -7370,7 +7754,7 @@ pub fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderM
                 Value::I16(data[0] as i8 as i16)
             } else {
                 Value::List(
-                    (0..count as usize)
+                    (0..count)
                         .filter(|&i| i < data.len())
                         .map(|i| Value::I16(data[i] as i8 as i16))
                         .collect(),
@@ -7405,9 +7789,9 @@ pub fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderM
             // SRATIONAL
             if count == 1 && data.len() >= 8 {
                 Value::IRational(read_u32(data, 0, bo) as i32, read_u32(data, 4, bo) as i32)
-            } else if count >= 1 && data.len() >= (count as usize) * 8 {
+            } else if count >= 1 && data.len() >= count * 8 {
                 Value::List(
-                    (0..count as usize)
+                    (0..count)
                         .map(|i| {
                             Value::IRational(
                                 read_u32(data, i * 8, bo) as i32,
@@ -8167,11 +8551,7 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
             for i in 0..4 {
                 let w0 = rdu(rmb + i * 2) as u32;
                 let w1 = rdu(rmb + i * 2 + 1) as u32;
-                vals.push(if v2 {
-                    (w0 << 16) | w1
-                } else {
-                    (w1 << 16) | w0
-                });
+                vals.push(if v2 { (w0 << 16) | w1 } else { (w1 << 16) | w0 });
             }
             tags.push(mk_canon_str(
                 "RawMeasuredRGGB",
@@ -8879,7 +9259,7 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                     Value::Binary(b) | Value::Undefined(b) => Some(b.as_slice()),
                     _ => None,
                 };
-                bytes.map(|b| casio_firmware_date(b))
+                bytes.map(casio_firmware_date)
             }
             // ObjectDistance: val>=0x20000000 ? inf : val/1000, then "$val m".
             0x0006 | 0x2022 => value.as_u64().map(|v| {
@@ -8892,7 +9272,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             // AFPointPosition (0x2021): int16u[4] → "%.2g %.2g" of x/w, y/h ratios.
             0x2021 => {
                 let disp = value.to_display_string();
-                let v: Vec<f64> = disp.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+                let v: Vec<f64> = disp
+                    .split_whitespace()
+                    .filter_map(|s| s.parse().ok())
+                    .collect();
                 if v.len() == 4 && v[0] != 65535.0 && v[1] != 0.0 && v[3] != 0.0 {
                     Some(format!(
                         "{} {}",
@@ -8906,22 +9289,28 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 }
             }
             // FlashMode (Type1 0x0004): default-model enum (4 => Red-eye Reduction).
-            0x0004 => value.as_u64().and_then(|v| match v {
-                1 => Some("Auto"),
-                2 => Some("On"),
-                3 => Some("Off"),
-                4 => Some("Red-eye Reduction"),
-                _ => None,
-            }.map(str::to_string)),
-            0x3007 => value.as_u64().and_then(|v| match v {
-                0 => Some("Off"),
-                1 => Some("Auto"),
-                2 => Some("Portrait"),
-                3 => Some("Scenery"),
-                4 => Some("Portrait with Scenery"),
-                5 => Some("Children"),
-                _ => None,
-            }.map(str::to_string)),
+            0x0004 => value.as_u64().and_then(|v| {
+                match v {
+                    1 => Some("Auto"),
+                    2 => Some("On"),
+                    3 => Some("Off"),
+                    4 => Some("Red-eye Reduction"),
+                    _ => None,
+                }
+                .map(str::to_string)
+            }),
+            0x3007 => value.as_u64().and_then(|v| {
+                match v {
+                    0 => Some("Off"),
+                    1 => Some("Auto"),
+                    2 => Some("Portrait"),
+                    3 => Some("Scenery"),
+                    4 => Some("Portrait with Scenery"),
+                    5 => Some("Children"),
+                    _ => None,
+                }
+                .map(str::to_string)
+            }),
             // Type2 WhiteBalance: enum with ExifTool's "Unknown (N)" default.
             0x2012 => value.as_u64().map(|v| {
                 match v {
@@ -8956,7 +9345,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             // SpecialMode (0x0200): int16u[3] = shooting mode, sequence, panorama dir.
             0x0200 => {
                 let disp = value.to_display_string();
-                let v: Vec<i64> = disp.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+                let v: Vec<i64> = disp
+                    .split_whitespace()
+                    .filter_map(|s| s.parse().ok())
+                    .collect();
                 if v.len() >= 3 {
                     let v0 = ["Normal", "Unknown (1)", "Fast", "Panorama"];
                     let v2 = [
@@ -8999,18 +9391,17 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             // DigitalZoom (0x0204): rational, PrintConv appends ".0" if integer.
             0x0204 => {
                 let s = value.to_display_string();
-                Some(if s.contains('.') { s } else { format!("{}.0", s) })
+                Some(if s.contains('.') {
+                    s
+                } else {
+                    format!("{}.0", s)
+                })
             }
             // CameraID (0x0209): undef but really a string (Olympus.pm Format => 'string').
             0x0209 => mn_undef_bytes(value).map(|b| {
                 let s: String = b.iter().map(|&c| c as char).collect();
                 s.split('\0').next().unwrap_or("").trim_end().to_string()
             }),
-            // CameraType (0x0207): map the type code to a model name (%olympusCameraTypes).
-            0x0207 => value
-                .as_str()
-                .and_then(|s| crate::tags::olympus_camera_types::olympus_camera_type(s.trim()))
-                .map(|s| s.to_string()),
             // RedBalance/BlueBalance: int16u[2], ValueConv = first/256, printed %.7g.
             0x1017 | 0x1018 => {
                 let first = match value {
@@ -9084,9 +9475,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 // SensorPixelSize (0x009a): rational64u[2], PrintConv s/ / x /;"$val um".
                 0x009a => {
                     let disp = value.to_display_string();
-                    disp.split_whitespace().count().eq(&2).then(|| {
-                        format!("{} um", disp.replacen(' ', " x ", 1))
-                    })
+                    disp.split_whitespace()
+                        .count()
+                        .eq(&2)
+                        .then(|| format!("{} um", disp.replacen(' ', " x ", 1)))
                 }
                 // ISOSetting (int16u[2], "0 200"): PrintConv s/^0 //.
                 0x0013 => {
@@ -9242,7 +9634,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             // WhiteBalanceFineTune (0x100a): int32s[2] → "Red %+d, Blue %+d".
             0x100a => {
                 let disp = value.to_display_string();
-                let v: Vec<i64> = disp.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+                let v: Vec<i64> = disp
+                    .split_whitespace()
+                    .filter_map(|s| s.parse().ok())
+                    .collect();
                 (v.len() == 2).then(|| format!("Red {:+}, Blue {:+}", v[0], v[1]))
             }
             // AFMode (0x1022): enum (No / Single Point / Zone / Wide/Tracking).
@@ -9264,12 +9659,15 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 .as_f64()
                 .filter(|f| f.fract() == 0.0)
                 .map(|f| f as i64)
-                .and_then(|v| match v {
-                    0 => Some("Sharp"),
-                    1 => Some("Normal"),
-                    2 => Some("Soft"),
-                    _ => None,
-                }.map(str::to_string)),
+                .and_then(|v| {
+                    match v {
+                        0 => Some("Sharp"),
+                        1 => Some("Normal"),
+                        2 => Some("Soft"),
+                        _ => None,
+                    }
+                    .map(str::to_string)
+                }),
             // FirmwareVersion (0x0002): "Rev0104" => sprintf("%.2f", 104/100).
             0x0002 => value.as_str().map(|s| {
                 if let Some(digits) = s.strip_prefix("Rev") {
@@ -9286,11 +9684,13 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                     Value::Binary(b) | Value::Undefined(b) => Some(b.as_slice()),
                     _ => None,
                 };
-                bytes.filter(|b| {
-                    !b.iter()
-                        .all(|&c| c == b'-' || c == b' ' || c == b'_' || c.is_ascii_alphanumeric())
-                })
-                .map(|b| b.iter().map(|c| format!("{:02x}", c)).collect::<String>())
+                bytes
+                    .filter(|b| {
+                        !b.iter().all(|&c| {
+                            c == b'-' || c == b' ' || c == b'_' || c.is_ascii_alphanumeric()
+                        })
+                    })
+                    .map(|b| b.iter().map(|c| format!("{:02x}", c)).collect::<String>())
             }
             _ => None,
         },
@@ -9351,30 +9751,33 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 }
             }
             // AFPointSelected (0x000e, "other models" table — K10D etc.).
-            0x000e => value.as_u64().and_then(|v| match v {
-                0xffff => Some("Auto"),
-                0xfffe => Some("Fixed Center"),
-                0xfffd => Some("Automatic Tracking AF"),
-                0xfffc => Some("Face Detect AF"),
-                0xfffb => Some("AF Select"),
-                0xfffa => Some("Auto 2"),
-                0 => Some("None"),
-                1 => Some("Upper-left"),
-                2 => Some("Top"),
-                3 => Some("Upper-right"),
-                4 => Some("Left"),
-                5 => Some("Mid-left"),
-                6 => Some("Center"),
-                7 => Some("Mid-right"),
-                8 => Some("Right"),
-                9 => Some("Lower-left"),
-                10 => Some("Bottom"),
-                11 => Some("Lower-right"),
-                _ => None,
-            }.map(str::to_string)),
+            0x000e => value.as_u64().and_then(|v| {
+                match v {
+                    0xffff => Some("Auto"),
+                    0xfffe => Some("Fixed Center"),
+                    0xfffd => Some("Automatic Tracking AF"),
+                    0xfffc => Some("Face Detect AF"),
+                    0xfffb => Some("AF Select"),
+                    0xfffa => Some("Auto 2"),
+                    0 => Some("None"),
+                    1 => Some("Upper-left"),
+                    2 => Some("Top"),
+                    3 => Some("Upper-right"),
+                    4 => Some("Left"),
+                    5 => Some("Mid-left"),
+                    6 => Some("Center"),
+                    7 => Some("Mid-right"),
+                    8 => Some("Right"),
+                    9 => Some("Lower-left"),
+                    10 => Some("Bottom"),
+                    11 => Some("Lower-right"),
+                    _ => None,
+                }
+                .map(str::to_string)
+            }),
             // AE/Flash/SlaveFlash MeteringSegments (0x0209/0x020a/0x020b): int8u[N],
             // each byte → 255:'n/a', 0:'0', else "%.1f" of val/8-6.
-            0x0209 | 0x020a | 0x020b => {
+            0x0209..=0x020b => {
                 let bytes: Option<&[u8]> = match value {
                     Value::Binary(b) | Value::Undefined(b) => Some(b.as_slice()),
                     _ => None,
@@ -9396,7 +9799,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             }
             // EffectiveLV (0x002d, int16u form): int16s, ValueConv $val/1024, "%.1f".
             0x002d => value.as_u64().map(|v| {
-                let s = if v > 32767 { v as i64 - 65536 } else { v as i64 };
+                let s = if v > 32767 {
+                    v as i64 - 65536
+                } else {
+                    v as i64
+                };
                 format!("{:.1}", s as f64 / 1024.0)
             }),
             // ImageEditing (0x0032): int8u[2|4] string-keyed enum.
@@ -9406,7 +9813,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                     _ => None,
                 };
                 bytes.map(|b| {
-                    let key = b.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ");
+                    let key = b
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join(" ");
                     match key.as_str() {
                         "0 0" | "0 0 0 0" => "None".to_string(),
                         "0 0 0 4" => "Digital Filter".to_string(),
@@ -9504,7 +9915,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             // AutoBracketing (0x0018): 1-2 int16u (EV step, extended bracket).
             0x0018 => {
                 let disp = value.to_display_string();
-                let v: Vec<i64> = disp.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+                let v: Vec<i64> = disp
+                    .split_whitespace()
+                    .filter_map(|s| s.parse().ok())
+                    .collect();
                 if v.is_empty() {
                     return None;
                 }
@@ -9525,7 +9939,14 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                             5 => "Contrast",
                             6 => "Hue",
                             7 => "HighLowKey",
-                            _ => return Some(format!("{} EV, Unknown({})+{}", parts[0], t, v[1] & 0xff)),
+                            _ => {
+                                return Some(format!(
+                                    "{} EV, Unknown({})+{}",
+                                    parts[0],
+                                    t,
+                                    v[1] & 0xff
+                                ))
+                            }
                         };
                         parts.push(format!("{}+{}", name, v[1] & 0xff));
                     } else {
@@ -9548,9 +9969,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             // AFAreaMode (0x000f, "other models"): int8u[2] string-keyed enum.
             0x000f => {
                 let s = match value {
-                    Value::Binary(b) | Value::Undefined(b) => {
-                        b.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ")
-                    }
+                    Value::Binary(b) | Value::Undefined(b) => b
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join(" "),
                     other => other.to_display_string(),
                 };
                 match s.as_str() {

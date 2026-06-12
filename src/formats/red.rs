@@ -248,9 +248,9 @@ fn parse_red_dir(buff: &[u8], dir_start: usize, dir_end: usize, tags: &mut Vec<T
                     }
                 }
             }
-            6 => {
+            6
                 // int32s
-                if data.len() >= 4 && tag == 0x606c {
+                if data.len() >= 4 && tag == 0x606c => {
                     let v = read_i32_be(data, 0);
                     let meters = v as f64 / 1000.0;
                     tags.push(mk_print(
@@ -259,7 +259,6 @@ fn parse_red_dir(buff: &[u8], dir_start: usize, dir_end: usize, tags: &mut Vec<T
                         format!("{} m", meters),
                     ));
                 }
-            }
             _ => {}
         }
 

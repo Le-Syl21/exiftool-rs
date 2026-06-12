@@ -177,7 +177,11 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
         } else {
             "Reflective, "
         },
-        if attr & 0x02 != 0 { "Matte, " } else { "Glossy, " },
+        if attr & 0x02 != 0 {
+            "Matte, "
+        } else {
+            "Glossy, "
+        },
         if attr & 0x04 != 0 {
             "Negative, "
         } else {
@@ -458,8 +462,8 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                                 )),
                             ));
                             // fixed32u, GetFixed32u rounds to 5 decimals; PrintConv $val*100."%".
-                            let raw = u32::from_be_bytes([d[28], d[29], d[30], d[31]]) as f64
-                                / 65536.0;
+                            let raw =
+                                u32::from_be_bytes([d[28], d[29], d[30], d[31]]) as f64 / 65536.0;
                             let flare = (raw * 1e5).round() / 1e5;
                             tags.push(mk(
                                 "MeasurementFlare",

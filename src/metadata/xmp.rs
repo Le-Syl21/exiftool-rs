@@ -1421,7 +1421,8 @@ impl XmpReader {
                                 let v = parse_xmp_value(&text_val);
                                 // XMP rationals display at %.15g (Perl ConvertRational),
                                 // unlike EXIF rational64 which rounds to %.10g.
-                                let pv = xmp_rational_decimal(&v).unwrap_or_else(|| v.to_display_string());
+                                let pv = xmp_rational_decimal(&v)
+                                    .unwrap_or_else(|| v.to_display_string());
                                 (v, pv)
                             };
 
@@ -1746,7 +1747,11 @@ impl XmpReader {
                             let nn: f64 = n.parse().unwrap_or(0.0);
                             let dd: f64 = d.parse().unwrap_or(0.0);
                             if dd == 0.0 {
-                                if nn == 0.0 { "undef".to_string() } else { "inf".to_string() }
+                                if nn == 0.0 {
+                                    "undef".to_string()
+                                } else {
+                                    "inf".to_string()
+                                }
                             } else {
                                 crate::value::format_g15(nn / dd)
                             }
@@ -1865,8 +1870,7 @@ fn aggregate_duplicate_xmp_tags(tags: Vec<Tag>) -> Vec<Tag> {
             if is_known_xmp_prefix(prefix) {
                 let existing = &mut result[idx];
                 if existing.print_value != tag.print_value {
-                    existing.print_value =
-                        format!("{}, {}", existing.print_value, tag.print_value);
+                    existing.print_value = format!("{}, {}", existing.print_value, tag.print_value);
                 }
             }
             // else: keep the first occurrence (don't append, don't push a new entry)
@@ -2236,10 +2240,6 @@ fn convert_xmp_date(val: &str) -> Option<String> {
     None
 }
 
-/// Apply the EXIF PrintConv to exif: namespace XMP tags, matching ExifTool which
-/// shares the EXIF tag table's conversions for the XMP exif schema. Only the cases
-/// that differ from the plain numeric display are handled here.
-
 /// Expand a PLUS MediaSummaryCode "|PLUS|ver|num|code" string to its human-readable
 /// form, mirroring the %mediaMatrix OTHER PrintConv in PLUS.pm. Returns None if the
 /// value isn't in the encoded "|PLUS|…" form.
@@ -2390,6 +2390,9 @@ fn plus_vocab(code: &str) -> Option<&'static str> {
     })
 }
 
+/// Apply the EXIF PrintConv to exif: namespace XMP tags, matching ExifTool which
+/// shares the EXIF tag table's conversions for the XMP exif schema. Only the cases
+/// that differ from the plain numeric display are handled here.
 fn xmp_exif_print_override(prefix: &str, name: &str, value: &Value) -> Option<String> {
     if prefix != "exif" {
         return None;
@@ -2397,9 +2400,7 @@ fn xmp_exif_print_override(prefix: &str, name: &str, value: &Value) -> Option<St
     let v = value.as_f64()?;
     match name {
         "ExposureTime" => Some(crate::tags::canon_sub::print_exposure_time(v)),
-        "ShutterSpeedValue" => {
-            Some(crate::tags::canon_sub::print_exposure_time(2f64.powf(-v)))
-        }
+        "ShutterSpeedValue" => Some(crate::tags::canon_sub::print_exposure_time(2f64.powf(-v))),
         _ => None,
     }
 }

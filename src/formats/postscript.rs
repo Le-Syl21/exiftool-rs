@@ -221,16 +221,15 @@ fn parse_photoshop_irb(data: &[u8], tags: &mut Vec<Tag>) {
                     tags.extend(iptc_tags);
                 }
             }
-            0x0425 => {
+            0x0425
                 // IPTCDigest (stored as raw 16-byte MD5)
-                if block_data.len() >= 16 {
+                if block_data.len() >= 16 => {
                     let digest = block_data[..16]
                         .iter()
                         .map(|b| format!("{:02x}", b))
                         .collect::<String>();
                     tags.push(mk("IPTCDigest", "IPTC Digest", Value::String(digest)));
                 }
-            }
             _ => {}
         }
 

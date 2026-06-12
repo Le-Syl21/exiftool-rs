@@ -128,34 +128,34 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
                     audio_info_found = true;
                 }
             }
-            0x09 if !video_info_found => {
+            0x09 if !video_info_found
                 // Video tag: first byte = codec info
-                if data_size >= 1 {
-                    let info_byte = data[tag_start];
-                    let codec_id = info_byte & 0x0f;
-                    let codec_name = match codec_id {
-                        2 => "Sorenson H.263",
-                        3 => "Screen video",
-                        4 => "On2 VP6",
-                        5 => "On2 VP6 with alpha",
-                        6 => "Screen video v2",
-                        7 => "H.264",
-                        _ => "Unknown",
-                    };
-                    tags.push(mktag(
-                        "FLV",
-                        "VideoCodecID",
-                        "Video Codec ID",
-                        Value::String(format!("{}", codec_id)),
-                    ));
-                    tags.push(mktag(
-                        "FLV",
-                        "VideoEncoding",
-                        "Video Encoding",
-                        Value::String(codec_name.to_string()),
-                    ));
-                    video_info_found = true;
-                }
+                && data_size >= 1 =>
+            {
+                let info_byte = data[tag_start];
+                let codec_id = info_byte & 0x0f;
+                let codec_name = match codec_id {
+                    2 => "Sorenson H.263",
+                    3 => "Screen video",
+                    4 => "On2 VP6",
+                    5 => "On2 VP6 with alpha",
+                    6 => "Screen video v2",
+                    7 => "H.264",
+                    _ => "Unknown",
+                };
+                tags.push(mktag(
+                    "FLV",
+                    "VideoCodecID",
+                    "Video Codec ID",
+                    Value::String(format!("{}", codec_id)),
+                ));
+                tags.push(mktag(
+                    "FLV",
+                    "VideoEncoding",
+                    "Video Encoding",
+                    Value::String(codec_name.to_string()),
+                ));
+                video_info_found = true;
             }
             _ => {}
         }

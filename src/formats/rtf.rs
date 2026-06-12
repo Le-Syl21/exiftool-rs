@@ -362,8 +362,8 @@ fn unescape_rtf(text: &str) -> String {
     let mut uc: usize = 1;
     // Consume one fallback "unit" from the stream: a \'XX escape or a single char.
     fn skip_unit(chars: &mut std::iter::Peekable<std::str::Chars>) {
-        match chars.next() {
-            Some('\\') => match chars.peek() {
+        if let Some('\\') = chars.next() {
+            match chars.peek() {
                 Some(&'\'') => {
                     chars.next();
                     chars.next();
@@ -373,8 +373,7 @@ fn unescape_rtf(text: &str) -> String {
                     chars.next();
                 }
                 None => {}
-            },
-            _ => {}
+            }
         }
     }
     while let Some(c) = chars.next() {

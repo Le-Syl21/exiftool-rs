@@ -253,9 +253,9 @@ fn parse_creator_block(data: &[u8], tags: &mut Vec<Tag>) {
                     tags.push(mk("CreatorAppID", "Creator App ID", Value::String(name)));
                 }
             }
-            7 => {
+            7
                 // CreatorAppVersion (4 bytes little-endian, reversed)
-                if val_data.len() >= 4 {
+                if val_data.len() >= 4 => {
                     let v = format!(
                         "{}.{}.{}.{}",
                         val_data[3], val_data[2], val_data[1], val_data[0]
@@ -266,7 +266,6 @@ fn parse_creator_block(data: &[u8], tags: &mut Vec<Tag>) {
                         Value::String(v),
                     ));
                 }
-            }
             _ => {}
         }
     }
@@ -307,88 +306,6 @@ fn read_null_terminated_or_all(data: &[u8]) -> String {
     // from_utf8_lossy so a high byte like © (0xA9) round-trips as U+FFFD,
     // matching the reference output through the harness.
     String::from_utf8_lossy(&data[..end]).into_owned()
-}
-
-fn unix_to_exif_date(ts: i64) -> String {
-    let utc_offset = get_local_utc_offset();
-    let adjusted = ts + utc_offset;
-    let secs_per_day = 86400i64;
-    let days = adjusted / secs_per_day;
-    let time_of_day = adjusted.rem_euclid(secs_per_day);
-    let hour = time_of_day / 3600;
-    let minute = (time_of_day % 3600) / 60;
-    let second = time_of_day % 60;
-
-    let mut year = 1970i32;
-    let mut rem = days;
-    loop {
-        let dy = if is_leap(year) { 366i64 } else { 365i64 };
-        if rem < dy {
-            break;
-        }
-        rem -= dy;
-        year += 1;
-    }
-    let leap = is_leap(year);
-    let month_days = [
-        31i64,
-        if leap { 29 } else { 28 },
-        31,
-        30,
-        31,
-        30,
-        31,
-        31,
-        30,
-        31,
-        30,
-        31,
-    ];
-    let mut month = 1i32;
-    for &dm in &month_days {
-        if rem < dm {
-            break;
-        }
-        rem -= dm;
-        month += 1;
-    }
-    let day = rem + 1;
-    let offset_hours = utc_offset / 3600;
-    let offset_mins = (utc_offset.abs() % 3600) / 60;
-    let sign = if utc_offset >= 0 { '+' } else { '-' };
-    format!(
-        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}{}{:02}:{:02}",
-        year,
-        month,
-        day,
-        hour,
-        minute,
-        second,
-        sign,
-        offset_hours.abs(),
-        offset_mins
-    )
-}
-
-fn get_local_utc_offset() -> i64 {
-    if let Ok(tz) = std::env::var("TZ") {
-        let tz = tz.trim();
-        if let Some(sign_pos) = tz.rfind(['+', '-']) {
-            let sign: i64 = if &tz[sign_pos..sign_pos + 1] == "+" {
-                1
-            } else {
-                -1
-            };
-            if let Ok(h) = tz[sign_pos + 1..].parse::<i64>() {
-                return -sign * h * 3600;
-            }
-        }
-    }
-    0
-}
-
-fn is_leap(y: i32) -> bool {
-    (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {

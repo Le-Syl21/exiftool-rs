@@ -286,7 +286,10 @@ fn regression_tag_values() {
 
     if std::env::var_os("UPDATE_VALUE_BASELINE").is_some() {
         write_value_baseline(&current);
-        eprintln!("Wrote {VALUE_BASELINE}: {} value delta(s) over {tested} files.", current.len());
+        eprintln!(
+            "Wrote {VALUE_BASELINE}: {} value delta(s) over {tested} files.",
+            current.len()
+        );
         return;
     }
 

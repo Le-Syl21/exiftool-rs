@@ -365,7 +365,11 @@ pub fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<
                             3 => "5 Scans".to_string(),
                             other => format!("Unknown ({})", other),
                         };
-                        tags.push(mk("ProgressiveScans", "Progressive Scans", Value::String(s)));
+                        tags.push(mk(
+                            "ProgressiveScans",
+                            "Progressive Scans",
+                            Value::String(s),
+                        ));
                     }
                 }
             }

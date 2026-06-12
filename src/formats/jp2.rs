@@ -63,9 +63,9 @@ pub fn read_j2c(data: &[u8]) -> Result<Vec<Tag>> {
                     tags.push(mk("ImageHeight", "Image Height", Value::U32(h)));
                 }
             }
-            0x64 => {
+            0x64
                 // CME: comment and extension
-                if seg_data.len() >= 2 {
+                if seg_data.len() >= 2 => {
                     let _reg = u16::from_be_bytes([seg_data[0], seg_data[1]]);
                     let val = &seg_data[2..];
                     if !val.is_empty() {
@@ -73,7 +73,6 @@ pub fn read_j2c(data: &[u8]) -> Result<Vec<Tag>> {
                         tags.push(mk("Comment", "Comment", Value::String(comment)));
                     }
                 }
-            }
             _ => {}
         }
 

@@ -84,20 +84,24 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
         }
         // GPS reference/mode enums (string or short values).
         ("GPS", 0x0009) => {
-            return Some(match value.to_display_string().trim() {
-                "A" => "Measurement Active",
-                "V" => "Measurement Void",
-                _ => return None,
-            }
-            .to_string());
+            return Some(
+                match value.to_display_string().trim() {
+                    "A" => "Measurement Active",
+                    "V" => "Measurement Void",
+                    _ => return None,
+                }
+                .to_string(),
+            );
         }
         ("GPS", 0x000A) => {
-            return Some(match value.to_display_string().trim() {
-                "2" => "2-Dimensional Measurement",
-                "3" => "3-Dimensional Measurement",
-                _ => return None,
-            }
-            .to_string());
+            return Some(
+                match value.to_display_string().trim() {
+                    "2" => "2-Dimensional Measurement",
+                    "3" => "3-Dimensional Measurement",
+                    _ => return None,
+                }
+                .to_string(),
+            );
         }
         ("GPS", 0x000C) | ("GPS", 0x0019) => {
             let v = value.to_display_string();
@@ -413,24 +417,22 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
             }
         }
         // RawDataUniqueID (0xc65d): undef[16] → uppercase hex (ValueConv uc(unpack H*)).
-        (_, 0xC65D) => {
-            match value {
-                Value::Undefined(b) | Value::Binary(b) => {
-                    return Some(b.iter().map(|x| format!("{:02X}", x)).collect());
-                }
-                Value::List(items) => {
-                    let hex: String = items
-                        .iter()
-                        .filter_map(|v| v.as_u64())
-                        .map(|n| format!("{:02X}", n as u8))
-                        .collect();
-                    if !hex.is_empty() {
-                        return Some(hex);
-                    }
-                }
-                _ => {}
+        (_, 0xC65D) => match value {
+            Value::Undefined(b) | Value::Binary(b) => {
+                return Some(b.iter().map(|x| format!("{:02X}", x)).collect());
             }
-        }
+            Value::List(items) => {
+                let hex: String = items
+                    .iter()
+                    .filter_map(|v| v.as_u64())
+                    .map(|n| format!("{:02X}", n as u8))
+                    .collect();
+                if !hex.is_empty() {
+                    return Some(hex);
+                }
+            }
+            _ => {}
+        },
         // FocalLength - format as "X.Y mm"
         ("ExifIFD", 0x920A) => {
             if let Some(v) = value.as_f64() {
@@ -440,15 +442,13 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
         // GPS Latitude/Longitude Ref
         ("GPS", 0x0001) | ("GPS", 0x0003) => {
             if let Value::String(s) = value {
-                return Some(
-                    match s.as_str() {
-                        "N" => "North".to_string(),
-                        "S" => "South".to_string(),
-                        "E" => "East".to_string(),
-                        "W" => "West".to_string(),
-                        other => format!("Unknown ({})", other.trim()),
-                    },
-                );
+                return Some(match s.as_str() {
+                    "N" => "North".to_string(),
+                    "S" => "South".to_string(),
+                    "E" => "East".to_string(),
+                    "W" => "West".to_string(),
+                    other => format!("Unknown ({})", other.trim()),
+                });
             }
         }
         // GPS Altitude Ref
@@ -587,14 +587,12 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                     return Some("Sigma Digital Camera".to_string());
                 }
                 if !data.is_empty() {
-                    return Some(
-                        match data[0] {
-                            1 => "Film Scanner".to_string(),
-                            2 => "Reflection Print Scanner".to_string(),
-                            3 => "Digital Camera".to_string(),
-                            n => format!("Unknown ({})", n),
-                        },
-                    );
+                    return Some(match data[0] {
+                        1 => "Film Scanner".to_string(),
+                        2 => "Reflection Print Scanner".to_string(),
+                        3 => "Digital Camera".to_string(),
+                        n => format!("Unknown ({})", n),
+                    });
                 }
             }
         }
@@ -915,10 +913,7 @@ pub fn print_lens_info(val: &str) -> Option<String> {
             }
         })
         .collect();
-    if !norm
-        .iter()
-        .all(|v| v == "?" || v.parse::<f64>().is_ok())
-    {
+    if !norm.iter().all(|v| v == "?" || v.parse::<f64>().is_ok()) {
         return None;
     }
     let mut out = norm[0].clone();

@@ -1111,20 +1111,24 @@ impl ExifTool {
             (
                 file_type.code().to_string(),
                 file_type.mime_type().to_string(),
-                file_type.extensions().first().copied().unwrap_or("").to_string(),
+                file_type
+                    .extensions()
+                    .first()
+                    .copied()
+                    .unwrap_or("")
+                    .to_string(),
             )
         };
-        let (ft_code, mime_str, ext_str): (String, String, String) =
-            if file_type == FileType::Exe {
-                exe_subtype(data)
-                    .map(|(ft, mime, ext)| (ft.to_string(), mime.to_string(), ext.to_string()))
-                    .unwrap_or_else(default_tags)
-            } else if let Some((code, mime)) = refine_filetype_by_content(file_type, data) {
-                let (_, _, ext) = default_tags();
-                (code, mime, ext)
-            } else {
-                default_tags()
-            };
+        let (ft_code, mime_str, ext_str): (String, String, String) = if file_type == FileType::Exe {
+            exe_subtype(data)
+                .map(|(ft, mime, ext)| (ft.to_string(), mime.to_string(), ext.to_string()))
+                .unwrap_or_else(default_tags)
+        } else if let Some((code, mime)) = refine_filetype_by_content(file_type, data) {
+            let (_, _, ext) = default_tags();
+            (code, mime, ext)
+        } else {
+            default_tags()
+        };
 
         // Add file-level tags
         tags.push(Tag {
@@ -1558,9 +1562,8 @@ impl ExifTool {
                     if let Some(li) = last {
                         let mut i = 0usize;
                         tags.retain(|t| {
-                            let keep = !(t.name == *name
-                                && t.group.family1 == "QuickTime"
-                                && i != li);
+                            let keep =
+                                !(t.name == *name && t.group.family1 == "QuickTime" && i != li);
                             i += 1;
                             keep
                         });
@@ -1583,9 +1586,8 @@ impl ExifTool {
             // LOWEST priority in ExifTool — XMP and embedded EXIF both win. Drop the
             // native copy when any non-native source provides the same tag.
             {
-                let is_native_doc = |g1: &str| {
-                    matches!(g1, "PDF" | "PostScript" | "DjVu" | "DjVu-Meta")
-                };
+                let is_native_doc =
+                    |g1: &str| matches!(g1, "PDF" | "PostScript" | "DjVu" | "DjVu-Meta");
                 let other_names: std::collections::HashSet<String> = tags
                     .iter()
                     .filter(|t| !is_native_doc(&t.group.family1) && !t.print_value.is_empty())
@@ -1633,10 +1635,7 @@ impl ExifTool {
             {
                 let full_res_ifds: std::collections::HashSet<String> = tags
                     .iter()
-                    .filter(|t| {
-                        t.name == "SubfileType"
-                            && t.print_value == "Full-resolution image"
-                    })
+                    .filter(|t| t.name == "SubfileType" && t.print_value == "Full-resolution image")
                     .map(|t| t.group.family1.clone())
                     .collect();
                 if !full_res_ifds.is_empty() {
@@ -1679,15 +1678,13 @@ impl ExifTool {
             {
                 let last = tags.iter().rposition(|t| {
                     t.name == "SubfileType"
-                        && (t.group.family1 == "IFD0"
-                            || t.group.family1.starts_with("SubIFD"))
+                        && (t.group.family1 == "IFD0" || t.group.family1.starts_with("SubIFD"))
                 });
                 if let Some(li) = last {
                     let mut i = 0usize;
                     tags.retain(|t| {
                         let drop = t.name == "SubfileType"
-                            && (t.group.family1 == "IFD0"
-                                || t.group.family1.starts_with("SubIFD"))
+                            && (t.group.family1 == "IFD0" || t.group.family1.starts_with("SubIFD"))
                             && i != li;
                         i += 1;
                         !drop
@@ -1703,9 +1700,7 @@ impl ExifTool {
                         .iter()
                         .any(|t| t.name == dname && t.group.family1 == "QuickTime");
                     if has_qt {
-                        tags.retain(|t| {
-                            t.name != dname || t.group.family1 == "QuickTime"
-                        });
+                        tags.retain(|t| t.name != dname || t.group.family1 == "QuickTime");
                     }
                 }
             }
@@ -1749,9 +1744,9 @@ impl ExifTool {
                     }
                     let g1 = &tags[idxs[0]].group.family1;
                     // all same family1, same priority, not a sub-document group
-                    let uniform = idxs
-                        .iter()
-                        .all(|&i| &tags[i].group.family1 == g1 && tags[i].priority == tags[idxs[0]].priority);
+                    let uniform = idxs.iter().all(|&i| {
+                        &tags[i].group.family1 == g1 && tags[i].priority == tags[idxs[0]].priority
+                    });
                     if uniform && !is_sub_document(g1) {
                         // drop all but the last
                         for &i in &idxs[..idxs.len() - 1] {
@@ -2308,7 +2303,10 @@ fn exe_subtype(d: &[u8]) -> Option<(&'static str, &'static str, &'static str)> {
     if d.starts_with(b"!<arch>\n") {
         let is_macho = d.windows(4).take(4096).any(|w| {
             let m = u32::from_be_bytes([w[0], w[1], w[2], w[3]]);
-            matches!(m, 0xFEEDFACE | 0xFEEDFACF | 0xCEFAEDFE | 0xCFFAEDFE | 0xCAFEBABE)
+            matches!(
+                m,
+                0xFEEDFACE | 0xFEEDFACF | 0xCEFAEDFE | 0xCFFAEDFE | 0xCAFEBABE
+            )
         });
         return Some(if is_macho {
             ("Mach-O static library", MIME, "a")
@@ -2424,9 +2422,10 @@ fn refine_filetype_by_content(file_type: FileType, data: &[u8]) -> Option<(Strin
             Some(("Extended WEBP".into(), file_type.mime_type().to_string()))
         }
         // Multi-page DjVu: "DJVM" form type at offset 12.
-        FileType::DjVu if data.len() >= 16 && &data[12..16] == b"DJVM" => {
-            Some(("DJVU (multi-page)".into(), file_type.mime_type().to_string()))
-        }
+        FileType::DjVu if data.len() >= 16 && &data[12..16] == b"DJVM" => Some((
+            "DJVU (multi-page)".into(),
+            file_type.mime_type().to_string(),
+        )),
         _ => None,
     }
 }

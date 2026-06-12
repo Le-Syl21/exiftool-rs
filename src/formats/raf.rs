@@ -77,7 +77,10 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
                 family2: "Preview".into(),
             },
             raw_value: Value::Binary(jpeg_data.to_vec()),
-            print_value: format!("(Binary data {} bytes, use -b option to extract)", jpeg_length),
+            print_value: format!(
+                "(Binary data {} bytes, use -b option to extract)",
+                jpeg_length
+            ),
             priority: 0,
         });
 

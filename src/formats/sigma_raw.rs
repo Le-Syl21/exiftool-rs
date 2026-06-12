@@ -97,9 +97,7 @@ pub fn read_x3f(data: &[u8]) -> Result<Vec<Tag>> {
                                     // them as X3F-absolute.
                                     if matches!(
                                         t.name.as_str(),
-                                        "ThumbnailOffset"
-                                            | "PreviewImageStart"
-                                            | "OtherImageStart"
+                                        "ThumbnailOffset" | "PreviewImageStart" | "OtherImageStart"
                                     ) {
                                         if let Some(v) = t.raw_value.as_u64() {
                                             let abs = v + jpeg_base;
@@ -200,7 +198,14 @@ fn parse_header2(data: &[u8], ver_f: f64, tags: &mut Vec<Tag>) {
     // matching ExifTool's last-wins ordering.
     if data.len() >= 24 {
         let uid = hex_bytes(&data[8..24]);
-        let mut t = mk_tag_str("ImageUniqueID", "Image Unique ID", uid, "X3F", "Header", "Camera");
+        let mut t = mk_tag_str(
+            "ImageUniqueID",
+            "Image Unique ID",
+            uid,
+            "X3F",
+            "Header",
+            "Camera",
+        );
         t.priority = -1;
         tags.push(t);
     }
@@ -521,14 +526,24 @@ fn map_prop(key: &str, val: &str) -> Option<(&'static str, &'static str, Value, 
                 .parse::<f64>()
                 .map(crate::tags::exif::print_fraction)
                 .unwrap_or_else(|_| val.to_string());
-            ("ExposureCompensation", "Exposure Compensation", Value::String(val.to_string()), p)
+            (
+                "ExposureCompensation",
+                "Exposure Compensation",
+                Value::String(val.to_string()),
+                p,
+            )
         }
         "EXPNET" => {
             let p = val
                 .parse::<f64>()
                 .map(crate::tags::exif::print_fraction)
                 .unwrap_or_else(|_| val.to_string());
-            ("NetExposureCompensation", "Net Exposure Compensation", Value::String(val.to_string()), p)
+            (
+                "NetExposureCompensation",
+                "Net Exposure Compensation",
+                Value::String(val.to_string()),
+                p,
+            )
         }
         "EXPTIME" => {
             // IntegrationTime: value is in microseconds, store as F64 seconds

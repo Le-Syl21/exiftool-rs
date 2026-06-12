@@ -164,11 +164,9 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
                 }
             }
             // ID3 tags embedded in AIFF
-            b"ID3 " => {
-                if cd.starts_with(b"ID3") {
-                    if let Ok(id3_tags) = crate::formats::id3::read_mp3(cd) {
-                        tags.extend(id3_tags);
-                    }
+            b"ID3 " if cd.starts_with(b"ID3") => {
+                if let Ok(id3_tags) = crate::formats::id3::read_mp3(cd) {
+                    tags.extend(id3_tags);
                 }
             }
             _ => {}

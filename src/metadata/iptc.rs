@@ -224,7 +224,10 @@ fn iptc_print_conv(record: u8, dataset: u8, s: &str) -> Option<String> {
                 "5" => Some("AppleSingle (Apple Computer Inc)"),
                 _ => None,
             };
-            Some(name.map(|n| n.to_string()).unwrap_or_else(|| format!("Unknown ({})", s)))
+            Some(
+                name.map(|n| n.to_string())
+                    .unwrap_or_else(|| format!("Unknown ({})", s)),
+            )
         }
         // DateCreated (55), DigitizationDate (62): YYYYMMDD -> YYYY:MM:DD
         55 | 62 if s.len() == 8 && s.bytes().all(|b| b.is_ascii_digit()) => {
@@ -244,14 +247,12 @@ fn iptc_print_conv(record: u8, dataset: u8, s: &str) -> Option<String> {
             .to_string(),
         ),
         // ObjectCycle (75): PrintConv { a, p, b }, unmatched → "Unknown ($val)".
-        75 => Some(
-            match s {
-                "a" => "Morning".to_string(),
-                "p" => "Evening".to_string(),
-                "b" => "Both Morning and Evening".to_string(),
-                other => format!("Unknown ({})", other),
-            },
-        ),
+        75 => Some(match s {
+            "a" => "Morning".to_string(),
+            "p" => "Evening".to_string(),
+            "b" => "Both Morning and Evening".to_string(),
+            other => format!("Unknown ({})", other),
+        }),
         _ => None,
     }
 }

@@ -131,61 +131,53 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
                         pos = skip_sub_blocks(data, pos);
                     }
                     // Application Extension
-                    0xFF => {
-                        if pos + 12 <= data.len() && data[pos] == 11 {
-                            let app_id = &data[pos + 1..pos + 12];
-                            pos += 12;
+                    0xFF if pos + 12 <= data.len() && data[pos] == 11 => {
+                        let app_id = &data[pos + 1..pos + 12];
+                        pos += 12;
 
-                            if app_id == b"NETSCAPE2.0" || app_id == b"ANIMEXTS1.0" {
-                                // Animation loop count
-                                if pos + 4 <= data.len() && data[pos] == 3 && data[pos + 1] == 1 {
-                                    let loop_count =
-                                        u16::from_le_bytes([data[pos + 2], data[pos + 3]]);
-                                    tags.push(mk(
-                                        "AnimationIterations",
-                                        "Animation Iterations",
-                                        Value::U16(if loop_count == 0 {
-                                            u16::MAX
-                                        } else {
-                                            loop_count
-                                        }),
-                                    ));
+                        if app_id == b"NETSCAPE2.0" || app_id == b"ANIMEXTS1.0" {
+                            // Animation loop count
+                            if pos + 4 <= data.len() && data[pos] == 3 && data[pos + 1] == 1 {
+                                let loop_count = u16::from_le_bytes([data[pos + 2], data[pos + 3]]);
+                                tags.push(mk(
+                                    "AnimationIterations",
+                                    "Animation Iterations",
+                                    Value::U16(if loop_count == 0 {
+                                        u16::MAX
+                                    } else {
+                                        loop_count
+                                    }),
+                                ));
+                            }
+                            pos = skip_sub_blocks(data, pos);
+                        } else if &app_id[..8] == b"XMP Data" {
+                            // XMP metadata — uses IncludeLengthBytes=2:
+                            // sub-block length bytes are part of the data stream
+                            // The raw XMP starts with a length byte followed by XMP content
+                            // We need to read sub-blocks but include the length bytes in the stream
+                            let (xmp_data, new_pos) = read_sub_blocks_include_len(data, pos);
+                            pos = new_pos;
+                            if !xmp_data.is_empty() {
+                                // Strip the 258-byte landing zone from the end
+                                // The landing zone ends with "\x01\x00" (last sub-block of 1 byte = 0x00)
+                                // Find the real end: last occurrence of "?xpacket end"
+                                let xmp_slice = if let Some(end_pos) = find_xpacket_end(&xmp_data) {
+                                    &xmp_data[..end_pos]
+                                } else {
+                                    &xmp_data
+                                };
+                                if let Ok(xmp_tags) = crate::metadata::XmpReader::read(xmp_slice) {
+                                    tags.extend(xmp_tags);
                                 }
-                                pos = skip_sub_blocks(data, pos);
-                            } else if &app_id[..8] == b"XMP Data" {
-                                // XMP metadata — uses IncludeLengthBytes=2:
-                                // sub-block length bytes are part of the data stream
-                                // The raw XMP starts with a length byte followed by XMP content
-                                // We need to read sub-blocks but include the length bytes in the stream
-                                let (xmp_data, new_pos) = read_sub_blocks_include_len(data, pos);
-                                pos = new_pos;
-                                if !xmp_data.is_empty() {
-                                    // Strip the 258-byte landing zone from the end
-                                    // The landing zone ends with "\x01\x00" (last sub-block of 1 byte = 0x00)
-                                    // Find the real end: last occurrence of "?xpacket end"
-                                    let xmp_slice =
-                                        if let Some(end_pos) = find_xpacket_end(&xmp_data) {
-                                            &xmp_data[..end_pos]
-                                        } else {
-                                            &xmp_data
-                                        };
-                                    if let Ok(xmp_tags) =
-                                        crate::metadata::XmpReader::read(xmp_slice)
-                                    {
-                                        tags.extend(xmp_tags);
-                                    }
+                            }
+                        } else if &app_id[..8] == b"ICCRGBG1" {
+                            // ICC Profile
+                            let (icc_data, new_pos) = read_sub_blocks(data, pos);
+                            pos = new_pos;
+                            if !icc_data.is_empty() {
+                                if let Ok(icc_tags) = crate::formats::icc::read_icc(&icc_data) {
+                                    tags.extend(icc_tags);
                                 }
-                            } else if &app_id[..8] == b"ICCRGBG1" {
-                                // ICC Profile
-                                let (icc_data, new_pos) = read_sub_blocks(data, pos);
-                                pos = new_pos;
-                                if !icc_data.is_empty() {
-                                    if let Ok(icc_tags) = crate::formats::icc::read_icc(&icc_data) {
-                                        tags.extend(icc_tags);
-                                    }
-                                }
-                            } else {
-                                pos = skip_sub_blocks(data, pos);
                             }
                         } else {
                             pos = skip_sub_blocks(data, pos);

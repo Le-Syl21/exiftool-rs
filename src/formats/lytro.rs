@@ -76,12 +76,7 @@ pub fn read_lfp(data: &[u8]) -> Result<Vec<Tag>> {
     if !json_blocks.is_empty() {
         let joined = json_blocks
             .iter()
-            .map(|b| {
-                format!(
-                    "(Binary data {} bytes, use -b option to extract)",
-                    b.len()
-                )
-            })
+            .map(|b| format!("(Binary data {} bytes, use -b option to extract)", b.len()))
             .collect::<Vec<_>>()
             .join(", ");
         tags.push(mk_lytro(

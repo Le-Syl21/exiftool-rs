@@ -65,9 +65,9 @@ pub fn read_audible(data: &[u8]) -> Result<Vec<Tag>> {
                     // ExifTool extracts ChapterCount but it's not in the diff we need to fix
                 }
             }
-            11 => {
+            11
                 // Cover art
-                if chunk.len() >= 8 {
+                if chunk.len() >= 8 => {
                     let art_len =
                         u32::from_be_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as usize;
                     let art_off_abs =
@@ -81,7 +81,6 @@ pub fn read_audible(data: &[u8]) -> Result<Vec<Tag>> {
                         }
                     }
                 }
-            }
             _ => {}
         }
     }
@@ -133,7 +132,11 @@ fn parse_metadata(data: &[u8], tags: &mut Vec<Tag>) {
         }
 
         let tag_name = audible_tag_name(&tag);
-        tags.push(mk(&tag_name, &tag_name, Value::String(decode_html_entities(&val))));
+        tags.push(mk(
+            &tag_name,
+            &tag_name,
+            Value::String(decode_html_entities(&val)),
+        ));
     }
 }
 
@@ -149,21 +152,22 @@ fn decode_html_entities(s: &str) -> String {
         let tail = &rest[amp..];
         if let Some(semi) = tail.find(';').filter(|&i| i <= 10) {
             let ent = &tail[1..semi];
-            let decoded = if let Some(hex) = ent.strip_prefix("#x").or_else(|| ent.strip_prefix("#X")) {
-                u32::from_str_radix(hex, 16).ok().and_then(char::from_u32)
-            } else if let Some(dec) = ent.strip_prefix('#') {
-                dec.parse::<u32>().ok().and_then(char::from_u32)
-            } else {
-                match ent {
-                    "amp" => Some('&'),
-                    "lt" => Some('<'),
-                    "gt" => Some('>'),
-                    "quot" => Some('"'),
-                    "apos" => Some('\''),
-                    "copy" => Some('\u{a9}'),
-                    _ => None,
-                }
-            };
+            let decoded =
+                if let Some(hex) = ent.strip_prefix("#x").or_else(|| ent.strip_prefix("#X")) {
+                    u32::from_str_radix(hex, 16).ok().and_then(char::from_u32)
+                } else if let Some(dec) = ent.strip_prefix('#') {
+                    dec.parse::<u32>().ok().and_then(char::from_u32)
+                } else {
+                    match ent {
+                        "amp" => Some('&'),
+                        "lt" => Some('<'),
+                        "gt" => Some('>'),
+                        "quot" => Some('"'),
+                        "apos" => Some('\''),
+                        "copy" => Some('\u{a9}'),
+                        _ => None,
+                    }
+                };
             if let Some(c) = decoded {
                 out.push(c);
                 rest = &tail[semi + 1..];

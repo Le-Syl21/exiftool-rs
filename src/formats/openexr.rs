@@ -324,16 +324,14 @@ pub fn read_openexr(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                     ));
                 }
             }
-            "screenWindowWidth" => {
-                if val_data.len() >= 4 {
-                    let v = f32::from_bits(u32::from_le_bytes([
-                        val_data[0],
-                        val_data[1],
-                        val_data[2],
-                        val_data[3],
-                    ]));
-                    tags.push(mk("ScreenWindowWidth", Value::String(format_float(v))));
-                }
+            "screenWindowWidth" if val_data.len() >= 4 => {
+                let v = f32::from_bits(u32::from_le_bytes([
+                    val_data[0],
+                    val_data[1],
+                    val_data[2],
+                    val_data[3],
+                ]));
+                tags.push(mk("ScreenWindowWidth", Value::String(format_float(v))));
             }
             _ => {
                 // Skip unknown attributes

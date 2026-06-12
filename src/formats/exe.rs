@@ -128,65 +128,6 @@ fn read_ar(data: &[u8]) -> Result<Vec<Tag>> {
     Ok(tags)
 }
 
-/// Convert Unix timestamp to ExifTool date format (YYYY:MM:DD HH:MM:SS+TZ)
-fn unix_to_exif_date(ts: i64) -> String {
-    // Simple Unix timestamp to date conversion (no external crate)
-    // Using basic epoch calculation
-    let secs_per_minute = 60i64;
-    let secs_per_hour = 3600i64;
-    let secs_per_day = 86400i64;
-
-    // Days since epoch
-    let mut days = ts / secs_per_day;
-    let time_of_day = ts % secs_per_day;
-    let hour = time_of_day / secs_per_hour;
-    let minute = (time_of_day % secs_per_hour) / secs_per_minute;
-    let second = time_of_day % secs_per_minute;
-
-    // Calculate year/month/day from days since 1970-01-01
-    let mut year = 1970i32;
-    loop {
-        let days_in_year = if is_leap_year(year) { 366 } else { 365 };
-        if days < days_in_year {
-            break;
-        }
-        days -= days_in_year;
-        year += 1;
-    }
-    let leap = is_leap_year(year);
-    let month_days = [
-        31i64,
-        if leap { 29 } else { 28 },
-        31,
-        30,
-        31,
-        30,
-        31,
-        31,
-        30,
-        31,
-        30,
-        31,
-    ];
-    let mut month = 1i32;
-    for &md in &month_days {
-        if days < md {
-            break;
-        }
-        days -= md;
-        month += 1;
-    }
-    let day = days + 1;
-    format!(
-        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}+00:00",
-        year, month, day, hour, minute, second
-    )
-}
-
-fn is_leap_year(y: i32) -> bool {
-    (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
-}
-
 fn read_pe(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 

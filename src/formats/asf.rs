@@ -222,7 +222,11 @@ fn format_duration(secs: f64) -> String {
     if secs == 0.0 {
         return "0 s".to_string();
     }
-    let (sign, mut t) = if secs >= 0.0 { ("", secs) } else { ("-", -secs) };
+    let (sign, mut t) = if secs >= 0.0 {
+        ("", secs)
+    } else {
+        ("-", -secs)
+    };
     if t < 30.0 {
         return format!("{}{:.2} s", sign, t);
     }

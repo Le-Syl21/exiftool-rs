@@ -138,9 +138,9 @@ pub fn read_xcf(data: &[u8]) -> Result<Vec<Tag>> {
                 // Parasites — contains embedded EXIF, XMP, ICC, etc.
                 parse_parasites(prop_data, &mut tags);
             }
-            22 => {
+            22
                 // Units
-                if prop_size >= 4 {
+                if prop_size >= 4 => {
                     let units = u32::from_be_bytes([
                         prop_data[0],
                         prop_data[1],
@@ -156,7 +156,6 @@ pub fn read_xcf(data: &[u8]) -> Result<Vec<Tag>> {
                     };
                     tags.push(mk("Units", "Units", Value::String(units_str.into())));
                 }
-            }
             _ => {
                 // Skip unknown properties
             }

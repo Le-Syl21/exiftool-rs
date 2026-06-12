@@ -374,15 +374,6 @@ fn format_unix_timestamp(secs: i64, usecs: u64) -> Option<String> {
     Some(format!("{}.{:06}", local, usecs))
 }
 
-fn get_local_tz_offset() -> i32 {
-    // Try to get timezone offset from system
-    // This uses a simple method: compare local time to UTC
-
-    // For now return 0 (UTC) - the test data shows +02:00 but we can't easily detect this
-    // without platform-specific code
-    0
-}
-
 pub(crate) fn unix_to_datetime(secs: i64) -> (i32, u32, u32, u32, u32, u32) {
     // Basic implementation of Unix timestamp to calendar date
     const SECS_PER_DAY: i64 = 86400;

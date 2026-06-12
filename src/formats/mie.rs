@@ -186,13 +186,12 @@ fn parse_mie_group(
             let value = parse_mie_value(format_type, value_data);
 
             // *ImageSize and Resolution join their values with "x" (Perl tr/ /x/).
-            let mut print_value = if resolved_name.ends_with("ImageSize")
-                || resolved_name == "Resolution"
-            {
-                value.to_display_string().replace(' ', "x")
-            } else {
-                value.to_display_string()
-            };
+            let mut print_value =
+                if resolved_name.ends_with("ImageSize") || resolved_name == "Resolution" {
+                    value.to_display_string().replace(' ', "x")
+                } else {
+                    value.to_display_string()
+                };
             // Append the unit modifier as "(unit)" (ExifTool MIE Units handling).
             if let Some(u) = &unit {
                 print_value.push_str(&format!("({})", u));
@@ -298,11 +297,19 @@ fn parse_mie_value(format_type: u8, data: &[u8]) -> Value {
                         if step == 8 {
                             let n = u32::from_be_bytes([c[0], c[1], c[2], c[3]]) as f64;
                             let d = u32::from_be_bytes([c[4], c[5], c[6], c[7]]) as f64;
-                            if d != 0.0 { n / d } else { 0.0 }
+                            if d != 0.0 {
+                                n / d
+                            } else {
+                                0.0
+                            }
                         } else {
                             let n = u16::from_be_bytes([c[0], c[1]]) as f64;
                             let d = u16::from_be_bytes([c[2], c[3]]) as f64;
-                            if d != 0.0 { n / d } else { 0.0 }
+                            if d != 0.0 {
+                                n / d
+                            } else {
+                                0.0
+                            }
                         }
                     })
                     .collect();
