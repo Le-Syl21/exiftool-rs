@@ -337,33 +337,36 @@ pub fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<
             // JPEG Quality (0x0406)
             0x0406 => {
                 if resource_data.len() >= 4 {
-                    let quality = u16::from_be_bytes([resource_data[0], resource_data[1]]);
+                    // Photoshop::JPEG_Quality: FORMAT int16s. PhotoshopQuality = $val + 4.
+                    let quality = i16::from_be_bytes([resource_data[0], resource_data[1]]);
                     let format = u16::from_be_bytes([resource_data[2], resource_data[3]]);
-                    let format_str = match format {
-                        0 => "Standard",
-                        1 => "Optimized",
-                        257 => "Progressive (3 scans)",
-                        258 => "Progressive (4 scans)",
-                        259 => "Progressive (5 scans)",
-                        _ => "Unknown",
-                    };
-                    let q = match quality {
-                        q if q <= 3 => "Low",
-                        q if q <= 5 => "Medium",
-                        q if q <= 8 => "High",
-                        q if q <= 10 => "Very High",
-                        _ => "Maximum",
-                    };
                     tags.push(mk(
                         "PhotoshopQuality",
                         "Photoshop Quality",
-                        Value::String(format!("{} ({})", q, quality)),
+                        Value::String((quality as i32 + 4).to_string()),
                     ));
+                    let format_str = match format {
+                        0x0000 => "Standard",
+                        0x0001 => "Optimized",
+                        0x0101 => "Progressive",
+                        _ => "Unknown",
+                    };
                     tags.push(mk(
                         "PhotoshopFormat",
                         "Photoshop Format",
                         Value::String(format_str.into()),
                     ));
+                    // ProgressiveScans (index 2) only present for the Progressive format.
+                    if format == 0x0101 && resource_data.len() >= 6 {
+                        let scans = i16::from_be_bytes([resource_data[4], resource_data[5]]);
+                        let s = match scans {
+                            1 => "3 Scans".to_string(),
+                            2 => "4 Scans".to_string(),
+                            3 => "5 Scans".to_string(),
+                            other => format!("Unknown ({})", other),
+                        };
+                        tags.push(mk("ProgressiveScans", "Progressive Scans", Value::String(s)));
+                    }
                 }
             }
             // Copyright flag (0x040A)

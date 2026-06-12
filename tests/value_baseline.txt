@@ -154,7 +154,6 @@ Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
 MIE.mie	MIMEType
 MIE.mie	Resolution
-MIFF.miff	PhotoshopQuality
 MIFF.miff	ThumbnailOffset
 MWG.jpg	City
 MWG.jpg	DateCreated
