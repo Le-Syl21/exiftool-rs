@@ -40,8 +40,6 @@ ExifTool.jpg	ShutterSpeedValue
 ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
 FLIR.jpg	RawThermalImage
-FotoStation.jpg	ObjectPreviewFileFormat
-FotoStation.jpg	ObjectPreviewFileVersion
 FujiFilm.raf	ThumbnailOffset
 GoPro.jpg	WhiteBalance
 Google.jpg	DirectoryItemMime

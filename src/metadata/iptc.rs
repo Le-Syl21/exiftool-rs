@@ -213,6 +213,19 @@ fn iptc_print_conv(record: u8, dataset: u8, s: &str) -> Option<String> {
     }
     let s = s.trim();
     match dataset {
+        // ObjectPreviewFileFormat (200): %fileFormat enum; unrecognized -> "Unknown (val)".
+        200 => {
+            let name = match s {
+                "0" => Some("No ObjectData"),
+                "1" => Some("IPTC-NAA Digital Newsphoto Parameter Record"),
+                "2" => Some("IPTC7901 Recommended Message Format"),
+                "3" => Some("Tagged Image File Format (Adobe/Aldus Image data)"),
+                "4" => Some("Illustrator (Adobe Graphics data)"),
+                "5" => Some("AppleSingle (Apple Computer Inc)"),
+                _ => None,
+            };
+            Some(name.map(|n| n.to_string()).unwrap_or_else(|| format!("Unknown ({})", s)))
+        }
         // DateCreated (55), DigitizationDate (62): YYYYMMDD -> YYYY:MM:DD
         55 | 62 if s.len() == 8 && s.bytes().all(|b| b.is_ascii_digit()) => {
             Some(format!("{}:{}:{}", &s[0..4], &s[4..6], &s[6..8]))

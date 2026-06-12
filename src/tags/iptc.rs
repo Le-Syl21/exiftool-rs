@@ -430,14 +430,14 @@ static IPTC_TAGS: &[IptcTagInfo] = &[
         dataset: 200,
         name: "ObjectPreviewFileFormat",
         description: "Object Preview File Format",
-        is_string: false,
+        is_string: true,
     },
     IptcTagInfo {
         record: 2,
         dataset: 201,
         name: "ObjectPreviewFileVersion",
         description: "Object Preview File Version",
-        is_string: false,
+        is_string: true,
     },
     IptcTagInfo {
         record: 2,
