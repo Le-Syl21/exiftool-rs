@@ -243,11 +243,8 @@ SigmaDP2.x3f	SensorID
 SigmaDP2.x3f	SensorTemperature
 SigmaDP2.x3f	ThumbnailOffset
 SigmaDP2.x3f	X3FillLight
-TNEF.tnef	ClientSubmitTime
 TNEF.tnef	CorrelationKey
-TNEF.tnef	CreateDate
 TNEF.tnef	MessageBodyRTF
-TNEF.tnef	ModifyDate
 VCard.ics	Alarm1AlarmUID
 VCard.ics	Alarm1UID
 VCard.ics	DateTimeEnd

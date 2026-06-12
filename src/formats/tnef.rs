@@ -77,12 +77,14 @@ fn filetime_to_datetime(ft: u64) -> Option<String> {
     if ft == 0 {
         return None;
     }
-    // Unix time = (ft / 10_000_000) - 11644473600
-    let secs = (ft / 10_000_000) as i64 - 11644473600;
+    // Unix time = (ft / 10_000_000) - 11644473600, rounded to the nearest second
+    // (ExifTool rounds the fractional FILETIME).
+    let secs = ((ft + 5_000_000) / 10_000_000) as i64 - 11644473600;
     if secs < 0 {
         return None;
     }
-    Some(unix_time_to_str(secs))
+    // ExifTool prints TNEF dates in local time (ConvertUnixTime $val, 1).
+    Some(crate::formats::gzip::gzip_unix_to_datetime(secs))
 }
 
 fn unix_time_to_str(unix: i64) -> String {
