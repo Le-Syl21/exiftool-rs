@@ -37,7 +37,6 @@ CanonRaw.cr3	SourceImageHeight
 CanonRaw.cr3	SourceImageWidth
 CanonRaw.cr3	TrackCreateDate
 CanonRaw.cr3	TrackModifyDate
-CanonRaw.crw	AFPoint
 CanonRaw.crw	AFPointsInFocus
 CanonRaw.crw	BlueBalance
 CanonRaw.crw	DOF

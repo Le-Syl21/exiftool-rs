@@ -268,19 +268,20 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
     }
     if let Some(v) = get(19) {
         if v != 0 {
-            let pv = match v {
-                8197 => "",
-                12288 => "",
-                12289 => "",
-                12290 => "",
-                12291 => "",
-                12292 => "",
-                16385 => "",
-                16390 => "",
+            // Canon AFPoint (PrintHex enum, RawConv $val==0?undef).
+            let pv = match v as u16 {
+                0x2005 => "Manual AF point selection",
+                0x3000 => "None (MF)",
+                0x3001 => "Auto AF point selection",
+                0x3002 => "Right",
+                0x3003 => "Center",
+                0x3004 => "Left",
+                0x4001 => "Auto AF point selection",
+                0x4006 => "Face Detect",
                 _ => "",
             };
             let pv = if pv.is_empty() {
-                v.to_string()
+                format!("Unknown (0x{:x})", v as u16)
             } else {
                 pv.to_string()
             };
