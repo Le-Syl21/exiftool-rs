@@ -6177,7 +6177,12 @@ fn read_makernote_ifd_with_base(
                     } else if name.ends_with("Version") && sdt == 7 && sval.len() == 4 {
                         // Olympus version tags are undef[4] ASCII (e.g. "0100", "0111").
                         // (FirmwareVersion tags are int32u and stay numeric.)
-                        sval.iter().map(|&c| c as char).collect()
+                        // RawConv strips trailing NULs ($val=~s/\0+$//).
+                        sval.iter()
+                            .map(|&c| c as char)
+                            .collect::<String>()
+                            .trim_end_matches('\0')
+                            .to_string()
                     } else if name == "FocusDistance" && sval.len() >= 4 {
                         // FocusInfo 0x305 int32u[2]: ValueConv = first/1000 (ignore denom),
                         // PrintConv = val ? "$val m" : "inf". Keep raw numeric for composites.
