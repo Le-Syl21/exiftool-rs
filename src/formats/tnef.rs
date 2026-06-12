@@ -480,13 +480,25 @@ fn read_prop_value_ex(
             // "<...@host>") is shown by ExifTool as the string; otherwise it stays
             // as a binary-data marker (e.g. RTF bodies with control bytes).
             let raw = &data[*pos..*pos + len];
+            // Compressed RTF (MS-OXRTFCP): header is compressedSize(4), rawSize(4),
+            // magic(4) = "LZFu"/"MELA". ExifTool decompresses and reports the
+            // *uncompressed* length (= rawSize field), not the stored byte count.
+            let rtf_raw_size = if len >= 16
+                && matches!(&raw[8..12], b"LZFu" | b"MELA")
+            {
+                Some(read_u32_le(raw, 4) as usize)
+            } else {
+                None
+            };
             // Ignore trailing NUL padding before judging printability.
             let end = raw.iter().rposition(|&b| b != 0).map_or(0, |p| p + 1);
             let bytes = &raw[..end];
             let printable = !bytes.is_empty()
                 && len <= 256
                 && bytes.iter().all(|&b| (0x20..=0x7e).contains(&b));
-            let s = if printable {
+            let s = if let Some(rs) = rtf_raw_size {
+                format!("(Binary data {} bytes, use -b option to extract)", rs)
+            } else if printable {
                 String::from_utf8_lossy(bytes).to_string()
             } else {
                 format!("(Binary data {} bytes, use -b option to extract)", len)
