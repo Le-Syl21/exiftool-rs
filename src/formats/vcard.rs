@@ -223,7 +223,6 @@ fn is_time_tag_ical(name: &str) -> bool {
             | "ExceptionDateTimes"
             | "RecurrenceDateTimes"
             | "Acknowledged"
-            | "RecurrenceID"
     )
 }
 

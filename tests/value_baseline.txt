@@ -225,7 +225,6 @@ VCard.ics	DateTimeStamp
 VCard.ics	DateTimeStart
 VCard.ics	ExceptionDateTimes
 VCard.ics	Location
-VCard.ics	RecurrenceID
 VCard.ics	TimezoneID
 VCard.vcf	ABLabel
 VCard.vcf	AddressOtherLabel
