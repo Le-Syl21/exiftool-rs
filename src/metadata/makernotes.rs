@@ -8636,6 +8636,28 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Pentax => match tag_id {
+            // AFPointSelected (0x000e, "other models" table — K10D etc.).
+            0x000e => value.as_u64().and_then(|v| match v {
+                0xffff => Some("Auto"),
+                0xfffe => Some("Fixed Center"),
+                0xfffd => Some("Automatic Tracking AF"),
+                0xfffc => Some("Face Detect AF"),
+                0xfffb => Some("AF Select"),
+                0xfffa => Some("Auto 2"),
+                0 => Some("None"),
+                1 => Some("Upper-left"),
+                2 => Some("Top"),
+                3 => Some("Upper-right"),
+                4 => Some("Left"),
+                5 => Some("Mid-left"),
+                6 => Some("Center"),
+                7 => Some("Mid-right"),
+                8 => Some("Right"),
+                9 => Some("Lower-left"),
+                10 => Some("Bottom"),
+                11 => Some("Lower-right"),
+                _ => None,
+            }.map(str::to_string)),
             // AE/Flash/SlaveFlash MeteringSegments (0x0209/0x020a/0x020b): int8u[N],
             // each byte → 255:'n/a', 0:'0', else "%.1f" of val/8-6.
             0x0209 | 0x020a | 0x020b => {
