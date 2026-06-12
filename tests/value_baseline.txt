@@ -16,7 +16,6 @@ CanonRaw.cr3	SourceImageHeight
 CanonRaw.cr3	SourceImageWidth
 DICOM.dcm	PixelData
 DNG.dng	AFPointsInFocus
-DjVu.djvu	SubfileType
 ExifTool.jpg	ApertureValue
 ExifTool.jpg	ColorSpace
 ExifTool.jpg	Comment

@@ -16,14 +16,12 @@ pub fn read_djvu(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
     let form_type = &data[12..16];
 
-    // Determine subfile type
+    // Determine subfile type. ExifTool's %Image::ExifTool::DjVu SubfileType enum only
+    // maps DJVU/DJVI; the multi-page container (DJVM) is reported as FileType, not
+    // SubfileType — its inner DJVU/DJVI forms carry their own SubfileType.
     let subfile_type = match form_type {
         b"DJVU" => "Single-page image",
-        b"DJVM" => "Multi-page document",
-        b"PM44" => "Color IW44",
-        b"BM44" => "Grayscale IW44",
         b"DJVI" => "Shared component",
-        b"THUM" => "Thumbnail image",
         _ => "",
     };
     if !subfile_type.is_empty() {

@@ -1669,6 +1669,7 @@ impl ExifTool {
                         || g1 == "JP2"
                         || g1 == "PhotoMechanic"
                         || g1 == "VCard"
+                        || g1 == "DjVu"
                 }
                 use std::collections::HashMap as HM;
                 // group indices by name
