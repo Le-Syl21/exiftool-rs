@@ -184,7 +184,6 @@ PDF.pdf	CreateDate
 PDF.pdf	Creator
 PLUS.xmp	MediaSummaryCode
 PSP.psp	Copyright
-Palm.mobi	Description
 Panasonic.rw2	ThumbnailOffset
 Panasonic.rw2	XResolution
 Pentax.avi	Software

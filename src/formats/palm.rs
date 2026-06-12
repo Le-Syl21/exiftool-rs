@@ -352,12 +352,52 @@ fn parse_exth(data: &[u8], tags: &mut Vec<Tag>) {
 }
 
 fn extract_str_tag(data: &[u8], name: &str, tags: &mut Vec<Tag>) {
-    let s = crate::encoding::decode_utf8_or_latin1(data)
-        .trim_end_matches('\0')
-        .to_string();
+    // MOBI EXTH text is in the book's code page; treat non-UTF-8 bytes as Windows-1252
+    // (which maps 0x80-0x9F to smart quotes/dashes, unlike Latin-1's control chars).
+    let s = match std::str::from_utf8(data) {
+        Ok(s) => s.to_string(),
+        Err(_) => decode_cp1252(data),
+    };
+    let s = s.trim_end_matches('\0').to_string();
     if !s.is_empty() {
         tags.push(mk(name, name, Value::String(s)));
     }
+}
+
+/// Decode bytes as Windows-1252 (CP1252).
+fn decode_cp1252(data: &[u8]) -> String {
+    data.iter()
+        .map(|&b| match b {
+            0x80 => '\u{20AC}',
+            0x82 => '\u{201A}',
+            0x83 => '\u{0192}',
+            0x84 => '\u{201E}',
+            0x85 => '\u{2026}',
+            0x86 => '\u{2020}',
+            0x87 => '\u{2021}',
+            0x88 => '\u{02C6}',
+            0x89 => '\u{2030}',
+            0x8A => '\u{0160}',
+            0x8B => '\u{2039}',
+            0x8C => '\u{0152}',
+            0x8E => '\u{017D}',
+            0x91 => '\u{2018}',
+            0x92 => '\u{2019}',
+            0x93 => '\u{201C}',
+            0x94 => '\u{201D}',
+            0x95 => '\u{2022}',
+            0x96 => '\u{2013}',
+            0x97 => '\u{2014}',
+            0x98 => '\u{02DC}',
+            0x99 => '\u{2122}',
+            0x9A => '\u{0161}',
+            0x9B => '\u{203A}',
+            0x9C => '\u{0153}',
+            0x9E => '\u{017E}',
+            0x9F => '\u{0178}',
+            other => other as char,
+        })
+        .collect()
 }
 
 fn read_cstr(data: &[u8]) -> String {
