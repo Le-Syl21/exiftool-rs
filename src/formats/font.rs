@@ -623,7 +623,9 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
     let text = crate::encoding::decode_utf8_or_latin1(text_data);
 
     let mut tags = Vec::new();
-    let mut comment_parts: Vec<String> = Vec::new();
+    // PostScript.pm seeds the font Comment accumulator with the literal "1" before
+    // appending matched comment lines (so the value always begins with "1").
+    let mut comment_parts: Vec<String> = vec!["1".to_string()];
     let mut in_font_info = false;
     let mut comment_done = false;
 
@@ -649,11 +651,13 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
             continue;
         }
 
-        // Single % comment (only before EndComments / first non-comment)
+        // Single % comment: PostScript.pm only matches /^%\s+(.*)/ — a "%" followed by
+        // whitespace. This excludes the "%!" version line and "%%" DSC comments. The
+        // captured text keeps any inner "%" (e.g. "% % 2004..." → "% 2004...").
         if line.starts_with('%') && !comment_done {
-            let rest = &line[1..].trim_start();
-            if !rest.is_empty() {
-                comment_parts.push(rest.to_string());
+            let after = &line[1..];
+            if after.starts_with(|c: char| c.is_whitespace()) {
+                comment_parts.push(after.trim_start().to_string());
             }
             continue;
         }
@@ -737,9 +741,10 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    // Add accumulated comment
-    if !comment_parts.is_empty() {
-        let combined = comment_parts.join(".."); // ExifTool joins with ".." separator
+    // Add accumulated comment. PostScript.pm joins lines with "\n"; ExifTool renders
+    // each embedded newline as "." in its single-line display.
+    if comment_parts.len() > 1 {
+        let combined = comment_parts.join(".");
         tags.push(mk("Comment", "Comment", Value::String(combined)));
     }
 
