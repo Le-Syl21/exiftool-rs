@@ -1404,6 +1404,27 @@ impl ExifTool {
             Value::String(crate::VERSION.to_string()),
         ));
 
+        // Promote authoritative specialized-source tags before computing composites,
+        // so derived tags (ShutterSpeed, LightValue, ...) use the primary value.
+        {
+            const SPECIAL_WINS: &[(&str, &str)] = &[
+                ("Kodak", "FNumber"),
+                ("Kodak", "ExposureTime"),
+                ("MinoltaRaw", "Contrast"),
+                ("MinoltaRaw", "Saturation"),
+                ("MinoltaRaw", "Sharpness"),
+                ("MinoltaRaw", "ISOSetting"),
+            ];
+            for (grp, name) in SPECIAL_WINS {
+                if tags
+                    .iter()
+                    .any(|t| t.name == *name && t.group.family1 == *grp)
+                {
+                    tags.retain(|t| t.name != *name || t.group.family1 == *grp);
+                }
+            }
+        }
+
         // Compute composite tags
         let composite = crate::composite::compute_composite_tags(&tags);
         tags.extend(composite);

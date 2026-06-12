@@ -53,7 +53,6 @@ Google.jpg	ImageData
 Google.jpg	ImageName
 Jpeg2000.jp2	StripOffsets
 Kodak.jpg	LightValue
-Kodak.jpg	ShutterSpeed
 Lytro.lfp	FOV
 Lytro.lfp	FocalLength35efl
 Lytro.lfp	HyperfocalDistance
