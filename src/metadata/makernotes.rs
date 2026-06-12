@@ -8793,11 +8793,12 @@ fn decode_ricoh_subdir(data: &[u8], full_data: &[u8], _parent_bo: ByteOrderMark)
             &ifd_data[eoff + 8..eoff + 8 + total_size.min(4)]
         } else {
             let raw_offset = read_u32(ifd_data, eoff + 8, bo) as usize;
-            // Try offset relative to ifd_data first, then to data, then to full_data (absolute TIFF)
-            if raw_offset + total_size <= ifd_data.len() {
-                &ifd_data[raw_offset..raw_offset + total_size]
-            } else if raw_offset + total_size <= data.len() {
+            // Ricoh sub-IFD value offsets are relative to the start of the sub-directory
+            // data (which includes the "[Ricoh Camera Info]" header), so try `data` first.
+            if raw_offset + total_size <= data.len() {
                 &data[raw_offset..raw_offset + total_size]
+            } else if raw_offset + total_size <= ifd_data.len() {
+                &ifd_data[raw_offset..raw_offset + total_size]
             } else if raw_offset + total_size <= full_data.len() {
                 &full_data[raw_offset..raw_offset + total_size]
             } else {

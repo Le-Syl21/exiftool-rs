@@ -274,7 +274,6 @@ QuickTime.mov	XMPToolkit
 RIFF.avi	XMPToolkit
 RIFF.wav	Make
 Real.ra	Copyright
-Ricoh.jpg	ManufactureDate1
 Ricoh.jpg	Sharpness
 Ricoh2.jpg	ManufactureDate1
 Ricoh2.jpg	ManufactureDate2
