@@ -64,8 +64,10 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
 
         // COMMENT and HISTORY: special handling (no '= ' at position 8)
         if keyword == "COMMENT" || keyword == "HISTORY" {
+            // PrintConv strips leading spaces ($val =~ s/^ +//), value strips trailing.
             let val = crate::encoding::decode_utf8_or_latin1(&record[8..])
                 .trim_end()
+                .trim_start_matches(' ')
                 .to_string();
             let name = if keyword == "COMMENT" {
                 "Comment"

@@ -497,6 +497,12 @@ impl ExifReader {
                     }
                 }
             }
+            // Undefined coordinate rationals (0/0 0/0 0/0) yield an empty value.
+            if let Some(t) = tags.iter_mut().find(|t| t.name == coord) {
+                if t.print_value.split_whitespace().all(|p| p == "undef") {
+                    t.print_value = String::new();
+                }
+            }
         }
 
         // ExifTool uses the full-resolution sub-IFD (SubfileType = "Full-resolution
