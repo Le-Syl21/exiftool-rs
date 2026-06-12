@@ -1219,12 +1219,16 @@ fn decode_kodak_binary(d: &[u8]) -> Vec<Tag> {
 
     tags.push(mk("FocusMode", kpc(d[56] as u64, &[(0, "Normal"), (2, "Macro")])));
 
-    // TimeCreated at offset 0x14
-    if d.len() > 0x16 {
+    // TimeCreated at offset 0x14: int8u[4], ValueConv "%.2d:%.2d:%.2d.%.2d".
+    if d.len() > 0x17 {
         let h = d[0x14];
         let m = d[0x15];
         let s = d[0x16];
-        tags.push(mk("TimeCreated", format!("{:02}:{:02}:{:02}", h, m, s)));
+        let ss = d[0x17];
+        tags.push(mk(
+            "TimeCreated",
+            format!("{:02}:{:02}:{:02}.{:02}", h, m, s, ss),
+        ));
     }
 
     // WhiteBalance at offset 0x40

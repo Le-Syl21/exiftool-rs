@@ -151,7 +151,6 @@ Kodak.jpg	KodakModel
 Kodak.jpg	LightValue
 Kodak.jpg	SequenceNumber
 Kodak.jpg	ShutterSpeed
-Kodak.jpg	TimeCreated
 Kodak.jpg	TotalZoom
 Kodak.jpg	UsedExtensionNumbers
 LNK.lnk	AccessDate
