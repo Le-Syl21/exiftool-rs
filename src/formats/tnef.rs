@@ -476,7 +476,21 @@ fn read_prop_value_ex(
             if *pos + len > data.len() {
                 return None;
             }
-            let s = format!("(Binary data {} bytes, use -b option to extract)", len);
+            // A PtypBinary value holding clean printable ASCII (e.g. CorrelationKey's
+            // "<...@host>") is shown by ExifTool as the string; otherwise it stays
+            // as a binary-data marker (e.g. RTF bodies with control bytes).
+            let raw = &data[*pos..*pos + len];
+            // Ignore trailing NUL padding before judging printability.
+            let end = raw.iter().rposition(|&b| b != 0).map_or(0, |p| p + 1);
+            let bytes = &raw[..end];
+            let printable = !bytes.is_empty()
+                && len <= 256
+                && bytes.iter().all(|&b| (0x20..=0x7e).contains(&b));
+            let s = if printable {
+                String::from_utf8_lossy(bytes).to_string()
+            } else {
+                format!("(Binary data {} bytes, use -b option to extract)", len)
+            };
             *pos += (len + 3) & !3;
             Some(s)
         }
