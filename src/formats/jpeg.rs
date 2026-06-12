@@ -1278,6 +1278,16 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 !(t.name == "Quality" && t.group.family0 == "MakerNotes"
                     || t.name == "LensID" && t.group.family0 == "Composite")
             });
+            // FLIR CameraInfo DateTimeOriginal (sub-second + timezone) is authoritative
+            // for thermal images — ExifTool reports it over the plain EXIF value.
+            let has_flir_dto = tags
+                .iter()
+                .any(|t| t.name == "DateTimeOriginal" && t.group.family0 == "APP1");
+            if has_flir_dto {
+                tags.retain(|t| {
+                    !(t.name == "DateTimeOriginal" && t.group.family0 != "APP1")
+                });
+            }
             // Add ImageTemperatureMax (FLIR MakerNote tag 0x0001, rational64s) by parsing
             // the EXIF APP1 MakerNote IFD directly, since it's dropped by the generic decoder.
             if !tags.iter().any(|t| t.name == "ImageTemperatureMax") {
@@ -2535,6 +2545,51 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     // FocusDistance: float at 0x45c=1116 (Perl).
                     if rec.len() >= 1120 {
                         tags.push(mk("FocusDistance", format!("{:.1} m", rf(1116))));
+                    }
+                    // DateTimeOriginal: undef[10] at 0x384=900 (FLIR.pm).
+                    // tm@0, ss(ms)=u32@4 & 0xffff, tz(min, signed)=i16@8.
+                    // ConvertUnixTime(tm - tz*60) . ".mmm" . TimeZoneString(-tz)
+                    if rec.len() >= 910 {
+                        let ru32 = |off: usize| -> u32 {
+                            if ci_le {
+                                u32::from_le_bytes([rec[off], rec[off + 1], rec[off + 2], rec[off + 3]])
+                            } else {
+                                u32::from_be_bytes([rec[off], rec[off + 1], rec[off + 2], rec[off + 3]])
+                            }
+                        };
+                        let rs16 = |off: usize| -> i16 {
+                            if ci_le {
+                                i16::from_le_bytes([rec[off], rec[off + 1]])
+                            } else {
+                                i16::from_be_bytes([rec[off], rec[off + 1]])
+                            }
+                        };
+                        let tm = ru32(900) as i64;
+                        let ss = ru32(904) & 0xffff;
+                        let tz = rs16(908) as i64; // minutes
+                        if tm > 0 {
+                            let local = tm - tz * 60;
+                            let (yr, mo, dy, h, mi, s) =
+                                crate::formats::pcap::unix_to_datetime(local);
+                            // TimeZoneString(-tz): sign and HH:MM of -tz minutes.
+                            let mtz = -tz;
+                            let sign = if mtz < 0 { '-' } else { '+' };
+                            let am = mtz.abs();
+                            let dt = format!(
+                                "{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:03}{}{:02}:{:02}",
+                                yr,
+                                mo,
+                                dy,
+                                h,
+                                mi,
+                                s,
+                                ss,
+                                sign,
+                                am / 60,
+                                am % 60
+                            );
+                            tags.push(mk("DateTimeOriginal", dt));
+                        }
                     }
                     // PlanckO (int32s) and PlanckR2 (float)
                     if rec.len() >= 784 {

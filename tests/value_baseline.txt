@@ -55,7 +55,6 @@ ExifTool.jpg	URL
 ExifTool.jpg	XResolution
 ExifTool.jpg	YResolution
 FITS.fits	Comment
-FLIR.jpg	DateTimeOriginal
 FLIR.jpg	RawThermalImage
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
