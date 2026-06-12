@@ -780,12 +780,10 @@ fn parse_metadata_object(data: &[u8], tags: &mut Vec<Tag>) {
 
         let clean_name = name.trim_start_matches("WM/");
         let val = parse_typed_value(val_bytes, data_type);
-        // Skip tags already set by ExtendedDescr (IsVBR etc.) to avoid duplicates
+        // ExifTool processes the Metadata object after ExtendedContentDescription;
+        // the later value wins (e.g. IsVBR: ExtDescr True, Metadata False → False).
         if !val.is_empty() && !clean_name.is_empty() && is_known_asf_tag(clean_name) {
-            // Only add if not already present (first-wins for Metadata vs ExtendedDescr)
-            if !tags.iter().any(|t| t.name == clean_name) {
-                tags.push(mk(clean_name, clean_name, Value::String(val)));
-            }
+            tags.push(mk(clean_name, clean_name, Value::String(val)));
         }
     }
 }
@@ -838,16 +836,18 @@ fn parse_typed_value(data: &[u8], data_type: u16) -> String {
             data.len()
         ), // Binary
         2 => {
-            // Bool
-            if data.len() >= 2 {
-                let v = u16::from_le_bytes([data[0], data[1]]);
+            // Bool: ExifTool's ReadASF reads it as int32u (4 bytes). When fewer than
+            // 4 bytes are present (Metadata/MetadataLibrary objects store BOOL as 2
+            // bytes), ReadValue yields no value → ExifTool reports "False".
+            if data.len() >= 4 {
+                let v = u32::from_le_bytes([data[0], data[1], data[2], data[3]]);
                 if v != 0 {
                     "True".into()
                 } else {
                     "False".into()
                 }
             } else {
-                String::new()
+                "False".into()
             }
         }
         3 => {
