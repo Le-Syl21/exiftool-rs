@@ -1509,6 +1509,8 @@ impl ExifTool {
                     // Kodak maker note carries more precise Exposure/FNumber than EXIF.
                     ("Kodak", "FNumber"),
                     ("Kodak", "ExposureTime"),
+                    // Sigma maker note X3FillLight (int) is primary over the X3F header.
+                    ("Sigma", "X3FillLight"),
                 ];
                 for (grp, name) in SPECIAL_WINS {
                     if tags
