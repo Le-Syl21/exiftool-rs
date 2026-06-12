@@ -171,11 +171,12 @@ fn parse_mie_group(
             let value_data = &data[*pos..*pos + val_len];
             *pos += val_len;
 
-            // Strip units from tag name: "Tag(unit)" -> "Tag"
-            let clean_tag = if let Some(paren) = tag_name.find('(') {
-                &tag_name[..paren]
+            // Strip the unit modifier from the tag name: "Tag(unit)" -> "Tag", "unit".
+            let (clean_tag, unit) = if let Some(paren) = tag_name.find('(') {
+                let u = tag_name[paren + 1..].trim_end_matches(')');
+                (&tag_name[..paren], Some(u.to_string()))
             } else {
-                &tag_name
+                (tag_name.as_str(), None)
             };
 
             // Resolve tag name based on group and MIE tag name
@@ -184,12 +185,18 @@ fn parse_mie_group(
             // Parse value based on format
             let value = parse_mie_value(format_type, value_data);
 
-            // *ImageSize tags join their two dimensions with "x" (Perl tr/ /x/).
-            let print_value = if resolved_name.ends_with("ImageSize") {
+            // *ImageSize and Resolution join their values with "x" (Perl tr/ /x/).
+            let mut print_value = if resolved_name.ends_with("ImageSize")
+                || resolved_name == "Resolution"
+            {
                 value.to_display_string().replace(' ', "x")
             } else {
                 value.to_display_string()
             };
+            // Append the unit modifier as "(unit)" (ExifTool MIE Units handling).
+            if let Some(u) = &unit {
+                print_value.push_str(&format!("({})", u));
+            }
 
             tags.push(Tag {
                 id: TagId::Text(resolved_name.clone()),
@@ -282,15 +289,33 @@ fn parse_mie_value(format_type: u8, data: &[u8]) -> Value {
             }
         }
         0x52 | 0x53 => {
-            // rational32u or rational64u
-            if format_type == 0x53 && data.len() >= 8 {
-                let num = u32::from_be_bytes([data[0], data[1], data[2], data[3]]);
-                let den = u32::from_be_bytes([data[4], data[5], data[6], data[7]]);
-                Value::URational(num, den)
-            } else if format_type == 0x52 && data.len() >= 4 {
-                let num = u16::from_be_bytes([data[0], data[1]]) as u32;
-                let den = u16::from_be_bytes([data[2], data[3]]) as u32;
-                Value::URational(num, den)
+            // rational32u or rational64u (1 to N values).
+            let step = if format_type == 0x53 { 8 } else { 4 };
+            if data.len() >= step {
+                let nums: Vec<f64> = data
+                    .chunks_exact(step)
+                    .map(|c| {
+                        if step == 8 {
+                            let n = u32::from_be_bytes([c[0], c[1], c[2], c[3]]) as f64;
+                            let d = u32::from_be_bytes([c[4], c[5], c[6], c[7]]) as f64;
+                            if d != 0.0 { n / d } else { 0.0 }
+                        } else {
+                            let n = u16::from_be_bytes([c[0], c[1]]) as f64;
+                            let d = u16::from_be_bytes([c[2], c[3]]) as f64;
+                            if d != 0.0 { n / d } else { 0.0 }
+                        }
+                    })
+                    .collect();
+                if nums.len() == 1 {
+                    Value::String(crate::value::format_g15(nums[0]))
+                } else {
+                    Value::String(
+                        nums.iter()
+                            .map(|v| crate::value::format_g15(*v))
+                            .collect::<Vec<_>>()
+                            .join(" "),
+                    )
+                }
             } else {
                 Value::Binary(data.to_vec())
             }

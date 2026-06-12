@@ -142,7 +142,6 @@ Lytro.lfp	FocalPlaneXResolution
 Lytro.lfp	HyperfocalDistance
 Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
-MIE.mie	Resolution
 MIFF.miff	ThumbnailOffset
 MWG.jpg	City
 MWG.jpg	DateCreated
