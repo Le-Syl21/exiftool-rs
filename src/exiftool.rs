@@ -1489,6 +1489,53 @@ impl ExifTool {
                 .collect();
             tags.retain(|t| t.group.family0 != "XMP" || !has_non_xmp.contains(&t.name));
 
+            // Full-resolution-IFD precedence (TIFF-based RAW like NEF/DNG): the
+            // structural image tags come from the IFD whose SubfileType is
+            // "Full-resolution image" (NewSubfileType bit0 clear), not the
+            // reduced-resolution IFD0/thumbnail. When such an IFD exists, its
+            // structural tags are primary — mirrors ExifTool's directory priority.
+            {
+                let full_res_ifds: std::collections::HashSet<String> = tags
+                    .iter()
+                    .filter(|t| {
+                        t.name == "SubfileType"
+                            && t.print_value == "Full-resolution image"
+                    })
+                    .map(|t| t.group.family1.clone())
+                    .collect();
+                if !full_res_ifds.is_empty() {
+                    // Note: SubfileType itself is NOT promoted — ExifTool keeps each
+                    // IFD's own SubfileType (DNG primary stays IFD0's reduced value).
+                    const STRUCTURAL: &[&str] = &[
+                        "ImageWidth",
+                        "ImageHeight",
+                        "BitsPerSample",
+                        "Compression",
+                        "PhotometricInterpretation",
+                        "SamplesPerPixel",
+                        "StripOffsets",
+                        "StripByteCounts",
+                        "RowsPerStrip",
+                        "PlanarConfiguration",
+                    ];
+                    // For each structural tag that has a full-res instance, drop the
+                    // instances from non-full-res IFDs.
+                    let has_full: std::collections::HashSet<String> = tags
+                        .iter()
+                        .filter(|t| {
+                            STRUCTURAL.contains(&t.name.as_str())
+                                && full_res_ifds.contains(&t.group.family1)
+                        })
+                        .map(|t| t.name.clone())
+                        .collect();
+                    tags.retain(|t| {
+                        !STRUCTURAL.contains(&t.name.as_str())
+                            || !has_full.contains(&t.name)
+                            || full_res_ifds.contains(&t.group.family1)
+                    });
+                }
+            }
+
             // ExifTool FoundTag rule (narrow, safe subset): among duplicates of the
             // same tag name that all live in the SAME main-document group (same
             // family1, not a sub-document like IFD1/SubIFD/PreviewIFD/Track2+/Doc2+),

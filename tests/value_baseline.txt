@@ -19,10 +19,6 @@ CanonRaw.cr3	SourceImageHeight
 CanonRaw.cr3	SourceImageWidth
 DICOM.dcm	PixelData
 DNG.dng	AFPointsInFocus
-DNG.dng	BitsPerSample
-DNG.dng	Compression
-DNG.dng	PhotometricInterpretation
-DNG.dng	SamplesPerPixel
 DjVu.djvu	Creator
 DjVu.djvu	SubfileType
 DjVu.djvu	Subject
@@ -91,14 +87,8 @@ Minolta.mrw	ISOSetting
 Minolta.mrw	MeteringMode
 Minolta.mrw	Saturation
 Minolta.mrw	Sharpness
-Nikon.nef	BitsPerSample
-Nikon.nef	Compression
 Nikon.nef	FilmType
-Nikon.nef	PhotometricInterpretation
 Nikon.nef	PreviewImageStart
-Nikon.nef	RowsPerStrip
-Nikon.nef	SamplesPerPixel
-Nikon.nef	StripOffsets
 Nikon.nef	SubfileType
 NikonD2Hs.jpg	DOF
 NikonD2Hs.jpg	FOV
