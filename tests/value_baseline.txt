@@ -77,7 +77,6 @@ PSP.psp	Copyright
 Panasonic.rw2	ThumbnailOffset
 Pentax.jpg	LensID
 Pentax.jpg	TvExposureTimeSetting
-PhotoMechanic.jpg	Prefs
 QuickTime.heic	MediaDataOffset
 QuickTime.m4a	HandlerType
 QuickTime.mov	HandlerClass

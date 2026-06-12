@@ -1734,6 +1734,19 @@ impl XmpReader {
                     tag.print_value = formatted;
                 }
             }
+            // XMP-photomech Prefs: "T:C:R:Frame" -> labelled fields (PhotoMechanic.pm).
+            if tag.name == "Prefs" {
+                let p: Vec<&str> = tag.print_value.split(':').collect();
+                if p.len() == 4 {
+                    tag.print_value = format!(
+                        "Tagged:{}, ColorClass:{}, Rating:{}, FrameNum:{}",
+                        p[0].trim(),
+                        p[1].trim(),
+                        p[2].trim(),
+                        p[3].trim()
+                    );
+                }
+            }
             // XMP-exif Flash sub-fields (exif:Flash/Return, /Mode).
             if tag.name.ends_with("FlashReturn") {
                 tag.print_value = match tag.print_value.trim() {
