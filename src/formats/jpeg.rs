@@ -3539,6 +3539,11 @@ fn emit_app12_tag(raw_key: &str, raw_val: &str, section: &str, tags: &mut Vec<cr
         }
     };
 
+    let app12_priority = if matches!(tag_name.as_str(), "ExposureTime" | "SerialNumber") {
+        2
+    } else {
+        0
+    };
     tags.push(crate::tag::Tag {
         id: crate::tag::TagId::Text(tag_name.clone()),
         name: tag_name.clone(),
@@ -3550,7 +3555,9 @@ fn emit_app12_tag(raw_key: &str, raw_val: &str, section: &str, tags: &mut Vec<cr
         },
         raw_value: crate::value::Value::String(raw_val.to_string()),
         print_value: print_val,
-        priority: 0,
+        // APP12 PictureInfo ExposureTime/SerialNumber are reported by ExifTool over
+        // the MakerNotes copies (processed later → last-wins).
+        priority: app12_priority,
     });
 }
 

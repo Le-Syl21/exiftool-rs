@@ -4,11 +4,8 @@
 ASF.wmv	IsVBR
 ExifTool.jpg	Comment
 ExifTool.jpg	Copyright
-ExifTool.jpg	ExposureTime
 ExifTool.jpg	LightValue
 ExifTool.jpg	Quality
-ExifTool.jpg	SerialNumber
-ExifTool.jpg	ShutterSpeed
 ExifTool.jpg	ShutterSpeedValue
 PCAP.pcapng	TimeStamp
 PLUS.xmp	MediaSummaryCode
