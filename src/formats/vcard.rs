@@ -426,8 +426,17 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
     // Apply encoding
     let final_value = match encoding.as_deref() {
         Some("base64") | Some("b") => {
-            // For PHOTO/LOGO/SOUND - just indicate binary
-            "(Binary data, use -b option to extract)".to_string()
+            // For PHOTO/LOGO/SOUND - indicate binary with the decoded byte count.
+            // Strip any "data:...;base64," URI prefix before decoding.
+            let b64 = match value_str.split_once("base64,") {
+                Some((_, rest)) => rest,
+                None => value_str,
+            };
+            let cleaned: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
+            let len = crate::formats::flac::base64_decode(&cleaned)
+                .map(|b| b.len())
+                .unwrap_or(0);
+            format!("(Binary data {} bytes, use -b option to extract)", len)
         }
         Some("quoted-printable") => decode_qp(value_str),
         _ => unescape_vcard(value_str),

@@ -137,7 +137,6 @@ LNK.lnk	ModifyDate
 LNK.url	Modified
 Lytro.lfp	FOV
 Lytro.lfp	FocalLength35efl
-Lytro.lfp	FocalPlaneXResolution
 Lytro.lfp	HyperfocalDistance
 Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
@@ -297,9 +296,7 @@ VCard.ics	TimezoneID
 VCard.vcf	ABLabel
 VCard.vcf	AddressOtherLabel
 VCard.vcf	LabelWork
-VCard.vcf	LogoImageJpeg
 VCard.vcf	Note
-VCard.vcf	PhotoJpeg
 VCard.vcf	TelephoneOtherVoice
 WTV.wtv	SubtitleDescription
 XMP.xml	Iso

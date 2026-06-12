@@ -414,7 +414,7 @@ fn apply_tag_mapping(name: &str, raw: &str) -> (String, String, String) {
             // Store converted numeric value in raw for composite calculations
             if let Ok(v) = raw.parse::<f64>() {
                 let ppi = 25.4 / v / 1000.0;
-                let s = format!("{}", ppi);
+                let s = crate::value::format_g15(ppi);
                 ("FocalPlaneXResolution".into(), s.clone(), s)
             } else {
                 (
