@@ -51,8 +51,6 @@ Lytro.lfp	HyperfocalDistance
 Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
 MIFF.miff	ThumbnailOffset
-MWG.jpg	City
-MWG.jpg	DateCreated
 Minolta.jpg	PrintIMVersion
 Minolta.mrw	ColorMode
 Minolta.mrw	MeteringMode

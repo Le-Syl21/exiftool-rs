@@ -1576,6 +1576,22 @@ impl ExifTool {
                 });
             }
 
+            // MWG (Metadata Working Group) reconciliation: for these tags ExifTool
+            // prefers XMP over the IPTC copy. Drop the IPTC version when XMP provides it.
+            {
+                const MWG_XMP_WINS: &[&str] = &["City", "DateCreated"];
+                let xmp_has: std::collections::HashSet<String> = tags
+                    .iter()
+                    .filter(|t| t.group.family0 == "XMP" && !t.print_value.is_empty())
+                    .map(|t| t.name.clone())
+                    .collect();
+                tags.retain(|t| {
+                    !(MWG_XMP_WINS.contains(&t.name.as_str())
+                        && t.group.family0 == "IPTC"
+                        && xmp_has.contains(&t.name))
+                });
+            }
+
             // EXIF/IPTC/MakerNotes outrank XMP for the same tag name (ExifTool default
             // group priority). Drop an XMP duplicate only when a non-XMP source at the
             // same (now-max) priority exists.
