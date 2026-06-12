@@ -12,6 +12,7 @@ Canon1DmkIII.jpg	ApplyShootingMeteringMode
 Canon1DmkIII.jpg	HighISONoiseReduction
 Canon1DmkIII.jpg	ISOSpeedRange
 Canon1DmkIII.jpg	RawMeasuredRGGB
+Canon1DmkIII.jpg	Sharpness
 Canon1DmkIII.jpg	ShutterSpeedRange
 Canon1DmkIII.jpg	TimerLength
 CanonRaw.cr2	AFPointsInFocus
@@ -32,6 +33,7 @@ CanonRaw.cr3	MediaModifyDate
 CanonRaw.cr3	ModifyDate
 CanonRaw.cr3	PreviewImage
 CanonRaw.cr3	RFLensType
+CanonRaw.cr3	Sharpness
 CanonRaw.cr3	ShutterSpeed
 CanonRaw.cr3	SourceImageHeight
 CanonRaw.cr3	SourceImageWidth

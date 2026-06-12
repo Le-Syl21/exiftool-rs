@@ -199,16 +199,15 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         }
     }
     if let Some(v) = get(15) {
-        // RawConv => '$val == 0x7fff ? undef : $val' suppresses 0x7fff (lets a
-        // ProcessingInfo Sharpness win). PrintConv => '$val > 0 ? "+$val" : $val'.
-        if v != 0x7fff_u16 as i16 {
-            let pv = if v > 0 {
-                format!("+{}", v)
-            } else {
-                v.to_string()
-            };
-            tags.push(mkt("Sharpness", Value::I16(v), pv));
-        }
+        // PrintConv => '$val > 0 ? "+$val" : $val'. (We always emit so the tag name
+        // is preserved even for 0x7fff bodies where ExifTool's value comes from
+        // ProcessingInfo Sharpness, which we don't decode.)
+        let pv = if v > 0 {
+            format!("+{}", v)
+        } else {
+            v.to_string()
+        };
+        tags.push(mkt("Sharpness", Value::I16(v), pv));
     }
     if let Some(v) = get(16) {
         // RawConv => '$val == 0x7fff ? undef : $val' (suppress 32767)
