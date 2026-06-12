@@ -352,6 +352,14 @@ fn parse_ciff_dir(
                     _ => raw_print,
                 }
             }
+            0x1010 => {
+                // ShutterReleaseMethod: { 0 => 'Single Shot', 2 => 'Continuous Shooting' }.
+                match raw_print.parse::<u32>().unwrap_or(99) {
+                    0 => "Single Shot".to_string(),
+                    2 => "Continuous Shooting".to_string(),
+                    _ => raw_print,
+                }
+            }
             0x10b4 => {
                 // ColorSpace: PrintConv
                 match raw_print.parse::<u32>().unwrap_or(99) {

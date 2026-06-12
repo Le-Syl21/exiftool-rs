@@ -8500,6 +8500,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Pentax => match tag_id {
+            // EffectiveLV (0x002d, int16u form): int16s, ValueConv $val/1024, "%.1f".
+            0x002d => value.as_u64().map(|v| {
+                let s = if v > 32767 { v as i64 - 65536 } else { v as i64 };
+                format!("{:.1}", s as f64 / 1024.0)
+            }),
             // ImageEditing (0x0032): int8u[2|4] string-keyed enum.
             0x0032 => {
                 let bytes: Option<&[u8]> = match value {

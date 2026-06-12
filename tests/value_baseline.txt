@@ -49,7 +49,6 @@ DNG.dng	BitsPerSample
 DNG.dng	Compression
 DNG.dng	LensInfo
 DNG.dng	PhotometricInterpretation
-DNG.dng	RawDataUniqueID
 DNG.dng	SamplesPerPixel
 DNG.dng	ThumbnailTIFF
 DjVu.djvu	Creator
@@ -74,7 +73,6 @@ ExifTool.jpg	Make
 ExifTool.jpg	Model
 ExifTool.jpg	Quality
 ExifTool.jpg	SerialNumber
-ExifTool.jpg	ShutterReleaseMethod
 ExifTool.jpg	ShutterReleaseTiming
 ExifTool.jpg	ShutterSpeed
 ExifTool.jpg	ShutterSpeedValue
@@ -244,7 +242,6 @@ Pentax.jpg	AEMeteringSegments
 Pentax.jpg	AFPointSelected
 Pentax.jpg	BodyBatteryADLoad
 Pentax.jpg	BodyBatteryADNoLoad
-Pentax.jpg	EffectiveLV
 Pentax.jpg	FlashMeteringSegments
 Pentax.jpg	FlashMode
 Pentax.jpg	LensID

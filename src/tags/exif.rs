@@ -412,6 +412,25 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 }
             }
         }
+        // RawDataUniqueID (0xc65d): undef[16] → uppercase hex (ValueConv uc(unpack H*)).
+        (_, 0xC65D) => {
+            match value {
+                Value::Undefined(b) | Value::Binary(b) => {
+                    return Some(b.iter().map(|x| format!("{:02X}", x)).collect());
+                }
+                Value::List(items) => {
+                    let hex: String = items
+                        .iter()
+                        .filter_map(|v| v.as_u64())
+                        .map(|n| format!("{:02X}", n as u8))
+                        .collect();
+                    if !hex.is_empty() {
+                        return Some(hex);
+                    }
+                }
+                _ => {}
+            }
+        }
         // FocalLength - format as "X.Y mm"
         ("ExifIFD", 0x920A) => {
             if let Some(v) = value.as_f64() {
