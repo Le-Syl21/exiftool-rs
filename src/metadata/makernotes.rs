@@ -4384,7 +4384,15 @@ fn read_makernote_ifd_with_base(
         };
 
         // Decode value
-        let value = decode_mn_value(value_data, data_type, count as usize, byte_order);
+        let mut value = decode_mn_value(value_data, data_type, count as usize, byte_order);
+
+        // Casio FirmwareDate (0x2001) is Format=>'undef' in ExifTool (the "string"
+        // contains embedded nulls), so keep the raw bytes rather than truncating.
+        if matches!(manufacturer, Manufacturer::Casio | Manufacturer::CasioType2)
+            && tag_id == 0x2001
+        {
+            value = Value::Undefined(value_data.to_vec());
+        }
 
         // Pentax special tag handling: complex conversions for multi-byte/undefined tags
         if manufacturer == Manufacturer::Pentax {
@@ -5767,6 +5775,13 @@ fn read_makernote_ifd_with_base(
                         crate::tags::olympus_camera_types::olympus_camera_type(s.trim())
                             .map(str::to_string)
                             .unwrap_or(s)
+                    } else if stid == 0x1204 && name == "ExternalFlashBounce" {
+                        // FlashInfo 0x1204: PrintConv { 0 => 'Bounce or Off', 1 => 'Direct' }.
+                        match val.as_u64() {
+                            Some(0) => "Bounce or Off".to_string(),
+                            Some(1) => "Direct".to_string(),
+                            _ => val.to_display_string(),
+                        }
                     } else if name == "ColorMatrix" {
                         // Format => 'int16s': reinterpret each unsigned value as signed.
                         val.to_display_string()
@@ -7858,6 +7873,40 @@ fn patch_word(s: &str, from: &str, to: &str) -> String {
 
 /// Port of FujiFilm.pm InternalSerialNumber PrintConv: the trailing hex run is the
 /// camera body number (decoded ASCII), preceded by a yymmdd manufacture date.
+/// Casio FirmwareDate PrintConv: undef[18] "YYMM\0\0DDHH\0\0MMSS\0\0" → date/time.
+fn casio_firmware_date(b: &[u8]) -> String {
+    let is_d = |c: u8| c.is_ascii_digit();
+    if b.len() >= 14
+        && b[0..4].iter().all(|&c| is_d(c))
+        && b[4] == 0
+        && b[5] == 0
+        && b[6..10].iter().all(|&c| is_d(c))
+        && b[10] == 0
+        && b[11] == 0
+        && b[12..14].iter().all(|&c| is_d(c))
+    {
+        let s = |r: std::ops::Range<usize>| std::str::from_utf8(&b[r]).unwrap_or("");
+        let yy: u32 = s(0..2).parse().unwrap_or(0);
+        let yr = if yy < 70 { 2000 + yy } else { 1900 + yy };
+        let mut val = format!("{}:{}:{} {}:{}", yr, s(2..4), s(6..8), s(8..10), s(12..14));
+        // Optional seconds at bytes 14..16 if they are two digits.
+        if b.len() >= 16 && b[14..16].iter().all(|&c| is_d(c)) {
+            val.push(':');
+            val.push_str(s(14..16));
+        }
+        return val;
+    }
+    // Fallback: nulls → ".", trim trailing dots, "Unknown (…)".
+    let mut t: String = b
+        .iter()
+        .map(|&c| if c == 0 { '.' } else { c as char })
+        .collect();
+    while t.ends_with('.') {
+        t.pop();
+    }
+    format!("Unknown ({})", t)
+}
+
 fn fuji_internal_serial(val: &str) -> String {
     let trimmed = val.trim_end_matches(['\0', ' ', '\t', '\r', '\n']);
     let chars: Vec<char> = trimmed.chars().collect();
@@ -7938,6 +7987,14 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
 
     match manufacturer {
         Manufacturer::Casio | Manufacturer::CasioType2 => match tag_id {
+            // FirmwareDate (0x2001): undef[18] "YYMM\0\0DDHH\0\0MMSS\0\0".
+            0x2001 => {
+                let bytes: Option<&[u8]> = match value {
+                    Value::Binary(b) | Value::Undefined(b) => Some(b.as_slice()),
+                    _ => None,
+                };
+                bytes.map(|b| casio_firmware_date(b))
+            }
             // ObjectDistance: val>=0x20000000 ? inf : val/1000, then "$val m".
             0x0006 | 0x2022 => value.as_u64().map(|v| {
                 if v >= 0x2000_0000 {
