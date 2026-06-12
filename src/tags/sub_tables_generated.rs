@@ -207,7 +207,7 @@ pub fn dispatch_nikon_lens_data(ctx: &DispatchContext) -> Vec<Tag> {
             tags.push(mk("Nikon", "AFAperture", &format!("{:.1}", ap)));
         }
         if d.len() > 0x08 {
-            tags.push(mk("Nikon", "FocusPosition", &format!("0x{:02X}", d[0x08])));
+            tags.push(mk("Nikon", "FocusPosition", &format!("0x{:02x}", d[0x08])));
         }
         if d.len() > 0x09 && d[0x09] > 0 {
             let dist = 0.01 * 10.0_f64.powf(d[0x09] as f64 / 40.0);

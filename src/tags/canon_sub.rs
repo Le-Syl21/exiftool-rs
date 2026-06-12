@@ -199,9 +199,16 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
         }
     }
     if let Some(v) = get(15) {
-        // Canon Sharpness scale is model-dependent and, on bodies with a ProcessingInfo
-        // Sharpness, that value takes priority in ExifTool — keep the raw value here.
-        tags.push(mkt("Sharpness", Value::I16(v), v.to_string()));
+        // RawConv => '$val == 0x7fff ? undef : $val' suppresses 0x7fff (lets a
+        // ProcessingInfo Sharpness win). PrintConv => '$val > 0 ? "+$val" : $val'.
+        if v != 0x7fff_u16 as i16 {
+            let pv = if v > 0 {
+                format!("+{}", v)
+            } else {
+                v.to_string()
+            };
+            tags.push(mkt("Sharpness", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(16) {
         // RawConv => '$val == 0x7fff ? undef : $val' (suppress 32767)
