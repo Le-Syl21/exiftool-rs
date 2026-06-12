@@ -8479,6 +8479,27 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Pentax => match tag_id {
+            // ImageEditing (0x0032): int8u[2|4] string-keyed enum.
+            0x0032 => {
+                let bytes: Option<&[u8]> = match value {
+                    Value::Binary(b) | Value::Undefined(b) => Some(b.as_slice()),
+                    _ => None,
+                };
+                bytes.map(|b| {
+                    let key = b.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ");
+                    match key.as_str() {
+                        "0 0" | "0 0 0 0" => "None".to_string(),
+                        "0 0 0 4" => "Digital Filter".to_string(),
+                        "1 0 0 0" => "Resized".to_string(),
+                        "2 0 0 0" => "Cropped".to_string(),
+                        "4 0 0 0" => "Digital Filter 4".to_string(),
+                        "6 0 0 0" => "Digital Filter 6".to_string(),
+                        "8 0 0 0" => "Red-eye Correction".to_string(),
+                        "16 0 0 0" => "Frame Synthesis?".to_string(),
+                        other => format!("Unknown ({})", other),
+                    }
+                })
+            }
             // SensitivityAdjust (0x0040): ValueConv ($val-50)/10, PrintConv $val?"%+.1f":0.
             0x0040 => value.as_u64().map(|v| {
                 let adj = (v as f64 - 50.0) / 10.0;

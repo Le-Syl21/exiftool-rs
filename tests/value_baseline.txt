@@ -254,7 +254,6 @@ Pentax.jpg	DriveMode
 Pentax.jpg	EffectiveLV
 Pentax.jpg	FlashMeteringSegments
 Pentax.jpg	FlashMode
-Pentax.jpg	ImageEditing
 Pentax.jpg	LensID
 Pentax.jpg	LensType
 Pentax.jpg	PentaxModelID
