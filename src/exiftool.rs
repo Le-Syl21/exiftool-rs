@@ -1534,6 +1534,10 @@ impl ExifTool {
                     "MediaTimeScale",
                     "SourceImageWidth",
                     "SourceImageHeight",
+                    // Multiple 'mdat' boxes: ExifTool's RawConv overwrites, so the
+                    // last box's offset/size is reported.
+                    "MediaDataOffset",
+                    "MediaDataSize",
                 ];
                 for name in QT_LAST_WINS {
                     let last = tags

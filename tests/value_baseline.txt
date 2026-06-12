@@ -46,7 +46,6 @@ PLUS.xmp	MediaSummaryCode
 PSP.psp	Copyright
 Pentax.jpg	LensID
 Pentax.jpg	TvExposureTimeSetting
-QuickTime.heic	MediaDataOffset
 Real.ra	Copyright
 Sanyo.jpg	DataDump
 Sigma.x3f	LensType
