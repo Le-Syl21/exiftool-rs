@@ -66,8 +66,6 @@ FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
 FujiFilm.raf	Model
 FujiFilm.raf	ThumbnailOffset
-GE.jpg	GEMake
-GE.jpg	GEModel
 GPS.jpg	City
 GoPro.jpg	ExposureCompensation
 GoPro.jpg	FlashpixVersion

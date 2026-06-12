@@ -147,18 +147,75 @@ pub fn parse_makernotes(
             print_value: "[minor] Suspicious MakerNotes offset for tag 0x0200".into(),
             priority: 0,
         });
-        // Still parse what we can
+        // Still parse what we can.
+        // GE has its own TIFF header at mn_offset+10 ("MM"/"II"); the IFD is at
+        // mn_offset+18 and value offsets are relative to that GE TIFF base.
+        // Perl applies FixBase (MakerNotes.pm) — for GE, makeDiff=0 and
+        // fix = -(minPt - ifdEnd) where minPt is the first value offset >= 12.
         let info = detect_manufacturer(mn_data, make);
-        let byte_order = info.byte_order.unwrap_or(parent_byte_order);
-        let ifd_abs = mn_offset + info.ifd_offset;
-        read_makernote_ifd(
+        let ge_tiff = mn_offset + 10;
+        // Byte order from GE's own TIFF header, not the parent.
+        let byte_order = match (data.get(ge_tiff), data.get(ge_tiff + 1)) {
+            (Some(b'M'), Some(b'M')) => ByteOrderMark::BigEndian,
+            (Some(b'I'), Some(b'I')) => ByteOrderMark::LittleEndian,
+            _ => info.byte_order.unwrap_or(parent_byte_order),
+        };
+        let ifd_abs = mn_offset + info.ifd_offset; // = mn_offset + 18
+        // Compute FixBase relative to the GE TIFF base.
+        let ifd_rel = ifd_abs - ge_tiff; // = 8
+        let base_fix = if ifd_abs + 2 <= data.len() {
+            let n = read_u16(data, ifd_abs, byte_order) as usize;
+            let ifd_end_rel = ifd_rel + 2 + 12 * n;
+            // minPt = smallest value offset (>= 12) among blocks larger than 4 bytes.
+            let mut min_pt: Option<usize> = None;
+            for i in 0..n {
+                let e = ifd_abs + 2 + i * 12;
+                if e + 12 > data.len() {
+                    break;
+                }
+                let fmt = read_u16(data, e + 2, byte_order) as usize;
+                let cnt = read_u32(data, e + 4, byte_order) as usize;
+                let tsize = match fmt {
+                    1 | 2 | 6 | 7 => 1,
+                    3 | 8 => 2,
+                    4 | 9 | 11 | 13 => 4,
+                    5 | 10 | 12 => 8,
+                    _ => 0,
+                };
+                if tsize * cnt <= 4 {
+                    continue;
+                }
+                let vp = read_u32(data, e + 8, byte_order) as usize;
+                if vp >= 12 {
+                    min_pt = Some(min_pt.map_or(vp, |m| m.min(vp)));
+                }
+            }
+            // fix = makeDiff(0) - (minPt - ifdEnd); abs base = ge_tiff + value + fix.
+            let fix = min_pt.map_or(0isize, |m| ifd_end_rel as isize - m as isize);
+            ge_tiff as isize + fix
+        } else {
+            ge_tiff as isize
+        };
+        read_makernote_ifd_with_base(
             data,
             ifd_abs,
             byte_order,
             info.manufacturer,
             &mut tags,
             model,
+            base_fix,
         );
+        // GE.pm forces Format => 'string' on GEMake (0x0300, stored as undef[32]).
+        for t in tags.iter_mut() {
+            if t.name == "GEMake" {
+                if let Value::Binary(b) | Value::Undefined(b) = &t.raw_value {
+                    let end = b.iter().position(|&c| c == 0).unwrap_or(b.len());
+                    let s = String::from_utf8_lossy(&b[..end]).trim().to_string();
+                    t.print_value = s.clone();
+                    t.raw_value = Value::String(s);
+                }
+            }
+        }
         return tags;
     }
 
