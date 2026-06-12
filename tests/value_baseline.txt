@@ -71,7 +71,6 @@ ExifTool.jpg	Make
 ExifTool.jpg	Model
 ExifTool.jpg	Quality
 ExifTool.jpg	SerialNumber
-ExifTool.jpg	ShutterReleaseTiming
 ExifTool.jpg	ShutterSpeed
 ExifTool.jpg	ShutterSpeedValue
 ExifTool.jpg	URL

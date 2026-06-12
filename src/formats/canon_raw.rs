@@ -360,6 +360,14 @@ fn parse_ciff_dir(
                     _ => raw_print,
                 }
             }
+            0x1011 => {
+                // ShutterReleaseTiming: { 0 => 'Priority on shutter', 1 => 'Priority on focus' }.
+                match raw_print.parse::<u32>().unwrap_or(99) {
+                    0 => "Priority on shutter".to_string(),
+                    1 => "Priority on focus".to_string(),
+                    _ => raw_print,
+                }
+            }
             0x10b4 => {
                 // ColorSpace: PrintConv
                 match raw_print.parse::<u32>().unwrap_or(99) {
