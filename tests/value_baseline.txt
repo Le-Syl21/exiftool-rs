@@ -148,7 +148,6 @@ Panasonic.rw2	XResolution
 Pentax.avi	Software
 Pentax.jpg	FlashMode
 Pentax.jpg	LensID
-Pentax.jpg	LensType
 Pentax.jpg	ShutterCount
 Pentax.jpg	TvExposureTimeSetting
 PhotoMechanic.jpg	Prefs
