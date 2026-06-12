@@ -1528,6 +1528,26 @@ impl ExifTool {
             }
             tags.retain(|t| t.priority >= *best_priority.get(&t.name).unwrap_or(&0));
 
+            // Document formats (PDF/PostScript/DjVu): their native Info metadata is
+            // LOWER priority than XMP in ExifTool, so XMP wins. Drop the native copy
+            // when an XMP version of the same tag exists.
+            {
+                let xmp_names: std::collections::HashSet<String> = tags
+                    .iter()
+                    .filter(|t| t.group.family0 == "XMP" && !t.print_value.is_empty())
+                    .map(|t| t.name.clone())
+                    .collect();
+                tags.retain(|t| {
+                    // Trapped keeps its native value ('Unknown' vs XMP's raw '/Unknown').
+                    t.name == "Trapped"
+                        || !matches!(
+                            t.group.family1.as_str(),
+                            "PDF" | "PostScript" | "DjVu" | "DjVu-Meta"
+                        )
+                        || !xmp_names.contains(&t.name)
+                });
+            }
+
             // EXIF/IPTC/MakerNotes outrank XMP for the same tag name (ExifTool default
             // group priority). Drop an XMP duplicate only when a non-XMP source at the
             // same (now-max) priority exists.

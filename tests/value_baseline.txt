@@ -17,9 +17,7 @@ CanonRaw.cr3	SourceImageHeight
 CanonRaw.cr3	SourceImageWidth
 DICOM.dcm	PixelData
 DNG.dng	AFPointsInFocus
-DjVu.djvu	Creator
 DjVu.djvu	SubfileType
-DjVu.djvu	Subject
 ExifTool.jpg	ApertureValue
 ExifTool.jpg	ColorSpace
 ExifTool.jpg	Comment
@@ -75,15 +73,12 @@ Olympus2.jpg	PreviewImageStart
 OlympusE1.jpg	BlueBalance
 PCAP.pcapng	TimeStamp
 PDF.pdf	CreateDate
-PDF.pdf	Creator
 PLUS.xmp	MediaSummaryCode
 PSP.psp	Copyright
 Panasonic.rw2	ThumbnailOffset
 Pentax.jpg	LensID
 Pentax.jpg	TvExposureTimeSetting
 PhotoMechanic.jpg	Prefs
-PostScript.eps	Creator
-PostScript.eps	Title
 QuickTime.heic	MediaDataOffset
 QuickTime.m4a	HandlerType
 QuickTime.mov	HandlerClass
