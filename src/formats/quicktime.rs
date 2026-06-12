@@ -50,6 +50,12 @@ struct QtState {
     current_stsd_format: Option<String>,
 }
 
+thread_local! {
+    // ExifTool sets the QuickTimeUTC API option for some containers (notably Canon
+    // CR3): their mvhd/tkhd/mdhd dates are UTC and get converted to local time.
+    static QUICKTIME_UTC: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
 pub fn read_quicktime(data: &[u8]) -> Result<Vec<Tag>> {
     read_quicktime_with_ee(data, 0)
 }
@@ -66,6 +72,8 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
     if data.len() >= 12 && &data[4..8] == b"ftyp" {
         let size = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
         let brand_raw = crate::encoding::decode_utf8_or_latin1(&data[8..12]).to_string();
+        // Canon CR3 ("crx ") dates are UTC → converted to local (QuickTimeUTC).
+        QUICKTIME_UTC.with(|u| u.set(brand_raw == "crx "));
         let brand_display = ftyp_brand_name(&brand_raw)
             .unwrap_or(brand_raw.as_str())
             .to_string();
@@ -2533,6 +2541,12 @@ fn mac_epoch_to_string(secs: u64) -> Option<String> {
         // Try treating as Unix epoch (add back offset to check validity)
         // For now just skip invalid dates
         return None;
+    }
+
+    // QuickTimeUTC containers (CR3): the stored value is UTC; emit it in local time
+    // with the timezone offset (ExifTool ConvertUnixTime $val, 1).
+    if QUICKTIME_UTC.with(|u| u.get()) {
+        return Some(crate::formats::gzip::gzip_unix_to_datetime(unix_secs));
     }
 
     // Simple date conversion
