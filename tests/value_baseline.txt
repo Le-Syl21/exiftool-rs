@@ -26,10 +26,8 @@ CanonRaw.cr3	ShutterSpeed
 CanonRaw.cr3	SourceImageHeight
 CanonRaw.cr3	SourceImageWidth
 CanonRaw.crw	AFPointsInFocus
-CanonRaw.crw	BlueBalance
 CanonRaw.crw	DOF
 CanonRaw.crw	MeasuredEV
-CanonRaw.crw	RedBalance
 Casio2.jpg	DOF
 DICOM.dcm	PixelData
 DNG.dng	AFPointsInFocus

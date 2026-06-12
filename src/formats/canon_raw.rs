@@ -624,9 +624,8 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             //          17-20=Tungsten, 21-24=Fluorescent, 25-28=Flash, 29-32=Custom,
             //          33-36=Kelvin, 37-40=BlackLevels
             let wb4_u = |idx: usize| -> String {
-                // idx is 1-based per Perl FIRST_ENTRY=1
-                // actual byte offset: (idx-1)*2
-                let base = (idx - 1) * 2;
+                // Canon::ColorBalance has FIRST_ENTRY=0, so index N is at byte offset N*2.
+                let base = idx * 2;
                 format!(
                     "{} {} {} {}",
                     ri16(data, base),
