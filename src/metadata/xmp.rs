@@ -2399,8 +2399,21 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                         } else {
                             pfx
                         };
-                        // Normalize attribute value to collapse internal whitespace/newlines
-                        let attr_val = normalize_xml_text(&attr.value);
+                        // ExifTool keeps attribute values verbatim and renders embedded
+                        // control bytes (e.g. a CR separating schemaLocation URLs) as "."
+                        // rather than collapsing whitespace.
+                        let attr_val: String = attr
+                            .value
+                            .trim()
+                            .chars()
+                            .map(|c| {
+                                if (c as u32) < 0x20 || c as u32 == 0x7f {
+                                    '.'
+                                } else {
+                                    c
+                                }
+                            })
+                            .collect();
                         let val = Value::String(attr_val.clone());
                         let pv = val.to_display_string();
                         tags.push(Tag {

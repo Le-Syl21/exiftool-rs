@@ -99,7 +99,6 @@ GE.jpg	GEMake
 GE.jpg	GEModel
 GPS.jpg	Aperture
 GPS.jpg	City
-Geotag.gpx	GpxSchemaLocation
 Geotag.gpx	GpxTrkTrksegTrkptTime
 Geotag.kml	KmlDocumentPlacemarkTrackWhen
 Geotag.xml	HistoryRunTrackTrackpointTime
@@ -125,7 +124,6 @@ JVC.jpg	Quality
 JXL2.jxl	CompatibleBrands
 Jpeg2000.jp2	CompatibleBrands
 Jpeg2000.jp2	ExifByteOrder
-Jpeg2000.jp2	ImageCreationSchemaLocation
 Jpeg2000.jp2	StripOffsets
 Kodak.jpg	CreatingApplication
 Kodak.jpg	ExposureTime
