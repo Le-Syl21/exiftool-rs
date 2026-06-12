@@ -296,8 +296,27 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         && seg_data.len() > 10
                         && &seg_data[6..10] == b"HEAP"
                 } {
-                    // Canon CIFF data embedded in APP0 (from Perl JPEG.pm CIFF condition)
-                    if let Ok(ciff_tags) = crate::formats::canon_raw::read_crw(seg_data) {
+                    // Canon CIFF data embedded in APP0 (from Perl JPEG.pm CIFF condition).
+                    // Processed after the EXIF IFDs; ExifTool last-wins lets the CIFF
+                    // copies (Make/Model/DateTimeOriginal/ApertureValue/…) override the
+                    // EXIF ones. This JPEG-embedded-CIFF path is synthetic-file only
+                    // (real CRW files use the CRW reader), so the boost is safe.
+                    if let Ok(mut ciff_tags) = crate::formats::canon_raw::read_crw(seg_data) {
+                        // Only the tags ExifTool reports from CIFF over EXIF; FNumber/
+                        // FocalLength/ImageWidth etc. stay with the EXIF copy.
+                        for t in &mut ciff_tags {
+                            if matches!(
+                                t.name.as_str(),
+                                "Make"
+                                    | "Model"
+                                    | "ApertureValue"
+                                    | "ShutterSpeedValue"
+                                    | "DateTimeOriginal"
+                                    | "ExposureCompensation"
+                            ) {
+                                t.priority = 2;
+                            }
+                        }
                         tags.extend(ciff_tags);
                     }
                     // Supplementary: extract FreeBytes (tag 0x0001) which canon_raw skips

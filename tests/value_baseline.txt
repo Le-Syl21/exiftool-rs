@@ -2,15 +2,10 @@
 # New deltas fail regression_tag_values; fixes tighten it.
 # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
 ASF.wmv	IsVBR
-ExifTool.jpg	ApertureValue
 ExifTool.jpg	Comment
 ExifTool.jpg	Copyright
-ExifTool.jpg	DateTimeOriginal
-ExifTool.jpg	ExposureCompensation
 ExifTool.jpg	ExposureTime
 ExifTool.jpg	LightValue
-ExifTool.jpg	Make
-ExifTool.jpg	Model
 ExifTool.jpg	Quality
 ExifTool.jpg	SerialNumber
 ExifTool.jpg	ShutterSpeed
