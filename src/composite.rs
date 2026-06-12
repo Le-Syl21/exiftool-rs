@@ -1173,12 +1173,30 @@ fn compute_canon_composites(tags: &[Tag]) -> Option<Vec<Tag>> {
         ));
     }
 
-    // ShootingMode (from CanonExposureMode)
-    if let Some(em) = find_tag_value(tags, "CanonExposureMode") {
+    // ShootingMode (Canon composite): CanonExposureMode/EasyMode with a Bulb override.
+    // ValueConv: $val[0] ? (($val[0] eq "4" and $val[2]) ? 7 : $val[0]) : $val[1] + 10
+    // PrintConv: $val eq "7" ? "Bulb" : ($val[0] ? $prt[0] : $prt[1])
+    if let Some(em_tag) = find_tag(tags, "CanonExposureMode") {
+        let em_raw = em_tag.raw_value.as_f64().map(|f| f as i64);
+        let bulb_set = find_tag(tags, "BulbDuration")
+            .and_then(|t| t.raw_value.as_f64())
+            .map(|v| v != 0.0)
+            .unwrap_or(false);
+        let print = if em_raw.is_some_and(|v| v != 0) {
+            if em_raw == Some(4) && bulb_set {
+                "Bulb".to_string()
+            } else {
+                em_tag.print_value.clone()
+            }
+        } else if let Some(easy) = find_tag(tags, "EasyMode") {
+            easy.print_value.clone()
+        } else {
+            em_tag.print_value.clone()
+        };
         result.push(mk_composite(
             "ShootingMode",
             "Shooting Mode",
-            Value::String(em),
+            Value::String(print),
         ));
     }
 
