@@ -3723,6 +3723,34 @@ fn decode_nikon_afinfo(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
     tags
 }
 
+/// Nikon %flashFirmware PrintConv (Nikon.pm): keyed by "major minor".
+fn nikon_flash_firmware(major: u8, minor: u8) -> String {
+    const TABLE: &[(u8, u8, &str)] = &[
+        (0, 0, "n/a"),
+        (1, 1, "1.01 (SB-800 or Metz 58 AF-1)"),
+        (1, 3, "1.03 (SB-800)"),
+        (2, 1, "2.01 (SB-800)"),
+        (2, 4, "2.04 (SB-600)"),
+        (2, 5, "2.05 (SB-600)"),
+        (3, 1, "3.01 (SU-800 Remote Commander)"),
+        (4, 1, "4.01 (SB-400)"),
+        (4, 2, "4.02 (SB-400)"),
+        (4, 4, "4.04 (SB-400)"),
+        (5, 1, "5.01 (SB-900)"),
+        (5, 2, "5.02 (SB-900)"),
+        (6, 1, "6.01 (SB-700)"),
+        (7, 1, "7.01 (SB-910)"),
+        (14, 3, "14.03 (SB-5000)"),
+    ];
+    for &(a, b, name) in TABLE {
+        if a == major && b == minor {
+            return name.to_string();
+        }
+    }
+    // OTHER: sprintf('%d.%.2d (Unknown model)', major, minor)
+    format!("{}.{:02} (Unknown model)", major, minor)
+}
+
 /// Decode Nikon FlashInfo (tag 0x00A8).
 fn decode_nikon_flashinfo(data: &[u8], _bo: ByteOrderMark) -> Vec<Tag> {
     let mut tags = Vec::new();
@@ -3746,12 +3774,11 @@ fn decode_nikon_flashinfo(data: &[u8], _bo: ByteOrderMark) -> Vec<Tag> {
             tags.push(mk_nikon_str("FlashSource", source));
         }
 
-        // ExternalFlashFirmware (bytes 6-7)
-        if data[6] > 0 {
-            tags.push(mk_nikon_str(
-                "ExternalFlashFirmware",
-                &format!("{}.{:02}", data[6], data[7]),
-            ));
+        // ExternalFlashFirmware (bytes 6-7): %flashFirmware lookup (Nikon.pm).
+        // FlashInfo is NOT encrypted, so always emit ("0 0" => "n/a").
+        if data.len() > 7 {
+            let fw = nikon_flash_firmware(data[6], data[7]);
+            tags.push(mk_nikon_str("ExternalFlashFirmware", &fw));
         }
 
         // ExternalFlashFlags (byte 8)
@@ -4023,48 +4050,8 @@ fn decrypt_nikon_subtables(
                 // Decrypt reveals ShotInfo fields depending on version
                 // For now, extract what we can
             }
-            0x00A8 => {
-                // FlashInfo: decrypt and decode
-                let mut decrypted = data[value_offset..value_offset + total_size].to_vec();
-                crate::metadata::nikon_decrypt::nikon_decrypt(
-                    &mut decrypted,
-                    serial,
-                    shutter_count,
-                    4,
-                );
-
-                // Extract FlashInfo version (first 4 bytes unencrypted)
-                if total_size >= 4 {
-                    let fi_ver =
-                        std::str::from_utf8(&data[value_offset..value_offset + 4]).unwrap_or("");
-                    tags.push(mk_nikon_str("FlashInfoVersion", fi_ver));
-                }
-
-                // Decode FlashInfo fields
-                if decrypted.len() >= 10 {
-                    let flash_source = match decrypted[4] {
-                        0 => "None",
-                        1 => "External",
-                        2 => "Internal",
-                        _ => "",
-                    };
-                    if !flash_source.is_empty() {
-                        tags.push(mk_nikon_str("FlashSource", flash_source));
-                    }
-
-                    // FlashFirmware at offset 6
-                    if decrypted.len() >= 8 {
-                        let fw_major = decrypted[6];
-                        let fw_minor = decrypted[7];
-                        if fw_major > 0 {
-                            tags.push(mk_nikon_str(
-                                "ExternalFlashFirmware",
-                                &format!("{}.{}", fw_major, fw_minor),
-                            ));
-                        }
-                    }
-                }
-            }
+            // 0x00A8 FlashInfo is NOT encrypted — handled (raw) by decode_nikon_flashinfo
+            // in read_makernote_ifd_with_base. Decrypting it here produced garbage.
             0x0098 => {
                 // LensData: decrypt if version 02xx+, then decode using LensData01 offsets
                 let ver = std::str::from_utf8(
