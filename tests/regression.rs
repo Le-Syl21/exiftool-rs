@@ -181,9 +181,11 @@ fn regression_tag_names() {
 //
 // Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
 
+#[cfg(unix)]
 const VALUE_BASELINE: &str = "tests/value_baseline.txt";
 
 /// Mirror src/main.rs::sanitize_display_value — the `-s` display sanitization.
+#[cfg(unix)]
 fn sanitize_value(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     for ch in s.chars() {
@@ -198,8 +200,32 @@ fn sanitize_value(s: &str) -> String {
     result.trim_end().to_string()
 }
 
+/// The value oracle (`.vals`) was produced by Perl ExifTool on a machine in
+/// `Europe/Paris`. A handful of tags (gzip/psp/palm/… mtimes) convert a Unix
+/// timestamp to *local* time, so their printed value depends on the process
+/// timezone. CI runners are UTC, which would spuriously diverge from the oracle.
+/// Pin the test process to `Europe/Paris` (the `TZ` env var overrides
+/// `/etc/localtime` in libc's `localtime_r`) so the conversion is deterministic
+/// on any machine — local dev, Linux CI, or macOS CI alike.
+#[cfg(unix)]
+fn force_oracle_tz() {
+    use std::sync::Once;
+    static TZ_INIT: Once = Once::new();
+    TZ_INIT.call_once(|| {
+        std::env::set_var("TZ", "Europe/Paris");
+        extern "C" {
+            fn tzset();
+        }
+        // SAFETY: tzset() only reads the TZ env var and updates libc's global
+        // timezone state; it is safe to call once before any localtime_r.
+        unsafe { tzset() };
+    });
+}
+
+#[cfg(unix)]
 fn current_value_deltas() -> (BTreeSet<(String, String)>, usize) {
     use std::collections::HashMap;
+    force_oracle_tz();
     let images_dir = Path::new("tests/images");
     let expected_dir = Path::new("tests/expected_values");
 
@@ -252,6 +278,7 @@ fn current_value_deltas() -> (BTreeSet<(String, String)>, usize) {
     (deltas, tested)
 }
 
+#[cfg(unix)]
 fn read_value_baseline() -> BTreeSet<(String, String)> {
     std::fs::read_to_string(VALUE_BASELINE)
         .unwrap_or_default()
@@ -264,6 +291,7 @@ fn read_value_baseline() -> BTreeSet<(String, String)> {
         .collect()
 }
 
+#[cfg(unix)]
 fn write_value_baseline(deltas: &BTreeSet<(String, String)>) {
     let mut out = String::from(
         "# Value-parity baseline: (file, tag) whose printed value differs from ExifTool.\n\
@@ -279,6 +307,12 @@ fn write_value_baseline(deltas: &BTreeSet<(String, String)>) {
     std::fs::write(VALUE_BASELINE, out).unwrap();
 }
 
+// Unix-only: the value oracle pins local-time conversions to Europe/Paris via
+// `force_oracle_tz()`, which relies on libc `tzset`/`localtime_r`. Windows has no
+// `localtime_r` (gzip.rs falls back to a heuristic that can't reproduce IANA
+// zones), so the local-time tags would diverge there. Name parity still runs on
+// Windows; value parity is validated against the Unix Perl reference.
+#[cfg(unix)]
 #[test]
 fn regression_tag_values() {
     let (current, tested) = current_value_deltas();

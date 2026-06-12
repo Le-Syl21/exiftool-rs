@@ -237,12 +237,12 @@ pub(crate) fn gzip_unix_to_datetime(secs: i64) -> String {
 }
 
 /// Get local timezone offset in seconds for a specific Unix timestamp (DST-aware).
-/// Uses libc's localtime_r via raw syscall to account for DST.
+/// Uses libc's localtime_r to account for DST. `struct tm` carries `tm_gmtoff`
+/// on every Unix (glibc, macOS, the BSDs), so this path covers all of them;
+/// Windows lacks `localtime_r` and falls through to the heuristic below.
 fn get_local_tz_offset_for_timestamp(ts: i64) -> i64 {
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     {
-        // Use libc localtime via /proc/self/fd - actually let's use libc directly
-        // since the binary is on Linux we can use the C library through FFI
         use std::mem;
         extern "C" {
             fn localtime_r(timep: *const LibcTimeT, result: *mut TmStruct) -> *mut TmStruct;
