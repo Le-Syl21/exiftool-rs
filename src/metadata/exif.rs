@@ -1723,7 +1723,13 @@ fn geotiff_key_to_tag(key_id: u16, value: &str) -> (String, String) {
             )
         }
         0x0801 => return ("GeogCitation".to_string(), value.to_string()),
-        0x0802 => return ("GeogGeodeticDatum".to_string(), value.to_string()),
+        0x0802 => {
+            let print = match val_u16 {
+                Some(32767) | Some(32766) => "User Defined".to_string(),
+                _ => value.to_string(),
+            };
+            return ("GeogGeodeticDatum".to_string(), print);
+        }
         0x0803 => return ("GeogPrimeMeridian".to_string(), value.to_string()),
         0x0804 => {
             return (
@@ -1750,7 +1756,17 @@ fn geotiff_key_to_tag(key_id: u16, value: &str) -> (String, String) {
             );
         }
         0x0C01 => return ("PCSCitation".to_string(), value.to_string()),
-        0x0C02 => return ("Projection".to_string(), value.to_string()),
+        0x0C02 => {
+            // UTM zones follow a regular range in GeoTiff.pm's Projection table:
+            // 16001-16060 = UTM zone N (north), 16101-16160 = UTM zone N (south).
+            let print = match val_u16 {
+                Some(v @ 16001..=16060) => format!("UTM zone {}N", v - 16000),
+                Some(v @ 16101..=16160) => format!("UTM zone {}S", v - 16100),
+                Some(32767) | Some(32766) => "User Defined".to_string(),
+                _ => value.to_string(),
+            };
+            return ("Projection".to_string(), print);
+        }
         0x0C03 => return ("ProjCoordTrans".to_string(), value.to_string()),
         0x0C04 => {
             return (

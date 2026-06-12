@@ -5761,6 +5761,12 @@ fn read_makernote_ifd_with_base(
                         // Olympus::PrintAFAreas: int32u[64], skip zero points, decode each
                         // as 4 bytes "(c0,c1)-(c2,c3)" with optional named point; else "none".
                         olympus_print_af_areas(&val.to_display_string())
+                    } else if name == "CameraType2" {
+                        // Equipment 0x0100: type code → model via %olympusCameraTypes.
+                        let s = val.to_display_string();
+                        crate::tags::olympus_camera_types::olympus_camera_type(s.trim())
+                            .map(str::to_string)
+                            .unwrap_or(s)
                     } else if name == "ColorMatrix" {
                         // Format => 'int16s': reinterpret each unsigned value as signed.
                         val.to_display_string()
