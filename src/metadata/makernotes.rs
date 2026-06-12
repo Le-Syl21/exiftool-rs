@@ -4119,31 +4119,49 @@ fn decrypt_nikon_subtables(
                 }
             }
             0x0097 => {
-                // ColorBalance: decrypt if version 02xx+
-                // Perl: ColorBalance02 uses DecryptStart=>4, DirOffset=>6
-                // WB_RGGBLevels at offset 4+6=10 (4 × int16u)
+                // ColorBalance: WB_RGGBLevels is int16u[4] at table offset 0, found at
+                // absolute byte (DecryptStart + DirOffset) after decryption. Both depend
+                // on the version (Nikon.pm 0x0097 dispatch).
                 let ver = std::str::from_utf8(
                     &data[value_offset..value_offset + 4.min(data.len() - value_offset)],
                 )
                 .unwrap_or("");
-                if ver.starts_with("02") {
+                // (decrypt_start, dir_offset) per ColorBalance version. None => unhandled.
+                let params: Option<(usize, usize)> = if ver.starts_with("02") {
+                    let xx: u32 = ver[2..4].parse().unwrap_or(0);
+                    match xx {
+                        5 => Some((4, 14)),               // 0205 (D50)
+                        9 | 12 | 14 => Some((284, 10)),   // ColorBalance4
+                        11 => Some((284, 16)),            // 0211
+                        13 => Some((284, 10)),            // 0213
+                        15 | 16 | 17 => Some((284, 4)),   // 0215-0217
+                        _ if xx < 11 => Some((284, 6)),   // ColorBalance02
+                        _ => None,
+                    }
+                } else {
+                    None
+                };
+                if let Some((decrypt_start, dir_offset)) = params {
                     let mut decrypted = data[value_offset..value_offset + total_size].to_vec();
                     crate::metadata::nikon_decrypt::nikon_decrypt(
                         &mut decrypted,
                         serial,
                         shutter_count,
-                        4,
+                        decrypt_start,
                     );
-                    // WB_RGGBLevels at offset 10 (DecryptStart=4 + DirOffset=6)
-                    if decrypted.len() >= 18 {
-                        let off = 10;
-                        let r = u16::from_le_bytes([decrypted[off], decrypted[off + 1]]);
-                        let g1 = u16::from_le_bytes([decrypted[off + 2], decrypted[off + 3]]);
-                        let g2 = u16::from_le_bytes([decrypted[off + 4], decrypted[off + 5]]);
-                        let b = u16::from_le_bytes([decrypted[off + 6], decrypted[off + 7]]);
+                    let off = decrypt_start + dir_offset;
+                    if decrypted.len() >= off + 8 {
+                        // Nikon maker-note int16u — big-endian for these models.
+                        let rd = |i: usize| u16::from_be_bytes([decrypted[i], decrypted[i + 1]]);
                         tags.push(mk_nikon_str(
                             "WB_RGGBLevels",
-                            &format!("{} {} {} {}", r, g1, g2, b),
+                            &format!(
+                                "{} {} {} {}",
+                                rd(off),
+                                rd(off + 2),
+                                rd(off + 4),
+                                rd(off + 6)
+                            ),
                         ));
                     }
                 }
