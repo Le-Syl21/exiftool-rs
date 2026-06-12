@@ -554,6 +554,67 @@ fn canon_cf2_1d3_multi(tag_id: u32, vals: &[u32]) -> Option<String> {
         }
         0x0610 if vals.len() >= 3 => Some(format!("{}; Hi {}; Lo {}", de, vals[1], vals[2])),
         0x0611 if vals.len() >= 2 => Some(format!("{}; {} shots", de, vals[1])),
+        // ShutterSpeedRange: [disableEnable, "Hi "+PrintExposureTime, "Lo "+...].
+        0x010c if vals.len() >= 3 => {
+            let conv = |v: u32| {
+                let secs = (-((v as f64) / 8.0 - 7.0) * std::f64::consts::LN_2).exp();
+                print_exposure_time(secs)
+            };
+            Some(format!("{}; Hi {}; Lo {}", de, conv(vals[1]), conv(vals[2])))
+        }
+        // ApertureRange: [disableEnable, "Closed %.2g", "Open %.2g"].
+        0x010d if vals.len() >= 3 => {
+            let conv = |v: u32| ((v as f64 / 8.0 - 1.0) * std::f64::consts::LN_2 / 2.0).exp();
+            Some(format!(
+                "{}; Closed {}; Open {}",
+                de,
+                crate::value::format_g_prec(conv(vals[1]), 2),
+                crate::value::format_g_prec(conv(vals[2]), 2)
+            ))
+        }
+        // ApplyShootingMeteringMode: field0 disableEnable, remaining fields raw.
+        0x010e if vals.len() >= 8 => {
+            let rest = vals[1..8]
+                .iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<_>>()
+                .join("; ");
+            Some(format!("{}; {}", de, rest))
+        }
+        // AFMicroadjustment: field0 enum, remaining fields raw.
+        0x0507 if vals.len() >= 5 => {
+            let f0 = match vals[0] {
+                0 => "Disable",
+                1 => "Adjust all by same amount",
+                2 => "Adjust by lens",
+                _ => "Disable",
+            };
+            let rest = vals[1..5]
+                .iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<_>>()
+                .join("; ");
+            Some(format!("{}; {}", f0, rest))
+        }
+        // ISOSpeedRange: [disableEnable, "Max %.0f", "Min %.0f"].
+        0x0103 if vals.len() >= 3 => {
+            let conv = |v: u32| -> f64 {
+                let vf = v as f64;
+                if vf < 2.0 {
+                    vf
+                } else if vf < 1000.0 {
+                    ((vf / 8.0 - 9.0) * std::f64::consts::LN_2).exp() * 100.0
+                } else {
+                    0.0
+                }
+            };
+            Some(format!(
+                "{}; Max {:.0}; Min {:.0}",
+                de,
+                conv(vals[1]),
+                conv(vals[2])
+            ))
+        }
         _ => None,
     }
 }

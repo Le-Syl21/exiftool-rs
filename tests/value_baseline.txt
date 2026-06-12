@@ -4,14 +4,9 @@
 AIFF.aif	Comment
 ASF.wmv	IsVBR
 Canon.jpg	DOF
-Canon1DmkIII.jpg	AFMicroadjustment
-Canon1DmkIII.jpg	ApertureRange
-Canon1DmkIII.jpg	ApplyShootingMeteringMode
 Canon1DmkIII.jpg	HighISONoiseReduction
-Canon1DmkIII.jpg	ISOSpeedRange
 Canon1DmkIII.jpg	RawMeasuredRGGB
 Canon1DmkIII.jpg	Sharpness
-Canon1DmkIII.jpg	ShutterSpeedRange
 Canon1DmkIII.jpg	TimerLength
 CanonRaw.cr2	AFPointsInFocus
 CanonRaw.cr3	Aperture
