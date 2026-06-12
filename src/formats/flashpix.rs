@@ -559,7 +559,7 @@ fn process_vector_prop(
                     break;
                 }
                 let s = read_str_bytes(&data[pos..pos + len]);
-                pos += (len + 3) & !3;
+                pos += len; // VT_LPSTR vector elements are not 4-byte padded
                 s
             }
             31 => {
@@ -634,7 +634,7 @@ fn process_vector_prop(
                             break;
                         }
                         let s = read_str_bytes(&data[pos..pos + len]);
-                        pos += (len + 3) & !3;
+                        pos += len; // VT_LPSTR vector elements are not 4-byte padded
                         s
                     }
                     31 => {

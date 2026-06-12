@@ -59,8 +59,6 @@ ExifTool.jpg	YResolution
 FITS.fits	Comment
 FLIR.jpg	DateTimeOriginal
 FLIR.jpg	RawThermalImage
-FlashPix.ppt	HeadingPairs
-FlashPix.ppt	TitleOfParts
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
 FujiFilm.raf	Model
