@@ -1077,8 +1077,12 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
         }
     }
 
-    // LensID (Canon PrintLensID logic)
-    if let Some(lt) = find_tag(tags, "LensType") {
+    // LensID (Canon PrintLensID logic). Skip when a Nikon LensData hex lookup is
+    // possible (LensIDNumber present) — that yields the full lens name, computed
+    // later, not just the LensType bit-field abbreviation ("G").
+    let nikon_lensid_possible =
+        find_tag(tags, "LensIDNumber").is_some() && find_tag(tags, "MinFocalLength").is_some();
+    if let Some(lt) = find_tag(tags, "LensType").filter(|_| !nikon_lensid_possible) {
         let raw_val = lt
             .raw_value
             .as_u64()
@@ -2019,7 +2023,9 @@ fn compute_nikon_lens_id(tags: &[Tag]) -> Option<String> {
     let lens_fstops_byte = find_tag(tags, "LensFStops")
         .and_then(|t| {
             match &t.raw_value {
-                Value::Undefined(bytes) if !bytes.is_empty() => Some(bytes[0]),
+                Value::Undefined(bytes) | Value::Binary(bytes) if !bytes.is_empty() => {
+                    Some(bytes[0])
+                }
                 _ => {
                     // Fall back: reverse from print value (val * 12)
                     t.print_value
