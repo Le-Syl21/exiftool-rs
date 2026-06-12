@@ -9066,6 +9066,61 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Pentax => match tag_id {
+            // FlashMode (0x000c): int16u[2], PrintHex, two separate PrintConv hashes
+            // (mode, then internal/external flash), joined with "; ".
+            0x000c => {
+                let disp = value.to_display_string();
+                let v: Vec<u32> = disp
+                    .split_whitespace()
+                    .filter_map(|s| s.parse().ok())
+                    .collect();
+                if v.len() == 2 {
+                    let m0 = match v[0] {
+                        0x000 => "Auto, Did not fire",
+                        0x001 => "Off, Did not fire",
+                        0x002 => "On, Did not fire",
+                        0x003 => "Auto, Did not fire, Red-eye reduction",
+                        0x005 => "On, Did not fire, Wireless (Master)",
+                        0x100 => "Auto, Fired",
+                        0x102 => "On, Fired",
+                        0x103 => "Auto, Fired, Red-eye reduction",
+                        0x104 => "On, Red-eye reduction",
+                        0x105 => "On, Wireless (Master)",
+                        0x106 => "On, Wireless (Control)",
+                        0x108 => "On, Soft",
+                        0x109 => "On, Slow-sync",
+                        0x10a => "On, Slow-sync, Red-eye reduction",
+                        0x10b => "On, Trailing-curtain Sync",
+                        _ => "",
+                    };
+                    let m1 = match v[1] {
+                        0x000 => "n/a - Off-Auto-Aperture",
+                        0x03f => "Internal",
+                        0x100 => "External, Auto",
+                        0x23f => "External, Flash Problem",
+                        0x300 => "External, Manual",
+                        0x304 => "External, P-TTL Auto",
+                        0x305 => "External, Contrast-control Sync",
+                        0x306 => "External, High-speed Sync",
+                        0x30c => "External, Wireless",
+                        0x30d => "External, Wireless, High-speed Sync",
+                        _ => "",
+                    };
+                    let s0 = if m0.is_empty() {
+                        format!("Unknown (0x{:x})", v[0])
+                    } else {
+                        m0.to_string()
+                    };
+                    let s1 = if m1.is_empty() {
+                        format!("Unknown (0x{:x})", v[1])
+                    } else {
+                        m1.to_string()
+                    };
+                    Some(format!("{}; {}", s0, s1))
+                } else {
+                    None
+                }
+            }
             // AFPointSelected (0x000e, "other models" table — K10D etc.).
             0x000e => value.as_u64().and_then(|v| match v {
                 0xffff => Some("Auto"),

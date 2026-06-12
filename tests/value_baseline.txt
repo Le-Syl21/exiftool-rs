@@ -146,7 +146,6 @@ PSP.psp	Copyright
 Panasonic.rw2	ThumbnailOffset
 Panasonic.rw2	XResolution
 Pentax.avi	Software
-Pentax.jpg	FlashMode
 Pentax.jpg	LensID
 Pentax.jpg	ShutterCount
 Pentax.jpg	TvExposureTimeSetting
