@@ -240,6 +240,7 @@ pub(crate) fn gzip_unix_to_datetime(secs: i64) -> String {
 /// Uses libc's localtime_r to account for DST. `struct tm` carries `tm_gmtoff`
 /// on every Unix (glibc, macOS, the BSDs), so this path covers all of them;
 /// Windows lacks `localtime_r` and falls through to the heuristic below.
+#[cfg_attr(not(unix), allow(unused_variables))]
 fn get_local_tz_offset_for_timestamp(ts: i64) -> i64 {
     #[cfg(unix)]
     {

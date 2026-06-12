@@ -2898,6 +2898,9 @@ pub fn shift_datetime(datetime: &str, shift: &str) -> Option<String> {
     ))
 }
 
+// Only used by the `#[cfg(unix)]` File:System pseudo-tags above (stat-derived
+// FileModifyDate/FileAccessDate/FileInodeChangeDate); dead on Windows otherwise.
+#[cfg(unix)]
 fn unix_to_datetime(secs: i64) -> String {
     let days = secs / 86400;
     let time = secs % 86400;

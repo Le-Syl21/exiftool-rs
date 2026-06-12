@@ -61,13 +61,33 @@ fn current_deltas() -> (BTreeSet<Delta>, usize) {
         // A parse failure / panic counts as "no tags produced" so that a parser
         // regression surfaces as newly-missing tags instead of silently skipping.
         let tags = safe_extract(&entry.path()).unwrap_or_default();
-        let actual: BTreeSet<String> = tags.iter().map(|t| t.name.clone()).collect();
-        let expected: BTreeSet<String> = std::fs::read_to_string(&expected_path)
+        #[cfg_attr(not(windows), allow(unused_mut))]
+        let mut actual: BTreeSet<String> = tags.iter().map(|t| t.name.clone()).collect();
+        #[cfg_attr(not(windows), allow(unused_mut))]
+        let mut expected: BTreeSet<String> = std::fs::read_to_string(&expected_path)
             .unwrap()
             .lines()
             .filter(|l| !l.is_empty())
             .map(str::to_string)
             .collect();
+
+        // The File:System pseudo-tags below are derived from Unix `stat`/permission
+        // bits (and the oracle was generated on Unix). They have no equivalent in the
+        // current Windows code path, so drop them from the comparison there — Windows
+        // still validates name parity for every real format tag.
+        #[cfg(windows)]
+        {
+            const UNIX_FS_TAGS: [&str; 4] = [
+                "FileModifyDate",
+                "FileAccessDate",
+                "FileInodeChangeDate",
+                "FilePermissions",
+            ];
+            for t in UNIX_FS_TAGS {
+                actual.remove(t);
+                expected.remove(t);
+            }
+        }
 
         for t in expected.difference(&actual) {
             deltas.insert((file_name.clone(), "missing", t.clone()));
