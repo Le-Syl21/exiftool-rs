@@ -59,8 +59,6 @@ Sanyo.jpg	DataDump
 Sigma.x3f	LensType
 SigmaDP2.x3f	ImageUniqueID
 SigmaDP2.x3f	PreviewImage
-SigmaDP2.x3f	PreviewImageStart
-SigmaDP2.x3f	ThumbnailOffset
 TNEF.tnef	MessageBodyRTF
 VCard.vcf	TelephoneOtherVoice
 XMP.xml	Iso

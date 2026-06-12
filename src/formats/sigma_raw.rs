@@ -88,9 +88,27 @@ pub fn read_x3f(data: &[u8]) -> Result<Vec<Tag>> {
                         // Full-size JPEG with EXIF becomes JpgFromRaw
                         if img_data.starts_with(b"\xff\xd8\xff\xe1") {
                             found_jpg_from_raw = true;
+                            // The embedded JPEG starts at sec_offset + 28 in the file.
+                            let jpeg_base = (sec_offset + 28) as u64;
                             // Extract EXIF from embedded JPEG
                             if let Ok(jpeg_tags) = crate::formats::jpeg::read_jpeg(img_data) {
-                                tags.extend(jpeg_tags);
+                                for mut t in jpeg_tags {
+                                    // IsOffset tags are JPEG-relative; ExifTool reports
+                                    // them as X3F-absolute.
+                                    if matches!(
+                                        t.name.as_str(),
+                                        "ThumbnailOffset"
+                                            | "PreviewImageStart"
+                                            | "OtherImageStart"
+                                    ) {
+                                        if let Some(v) = t.raw_value.as_u64() {
+                                            let abs = v + jpeg_base;
+                                            t.raw_value = Value::U32(abs as u32);
+                                            t.print_value = abs.to_string();
+                                        }
+                                    }
+                                    tags.push(t);
+                                }
                             }
                             // Also store as JpgFromRaw binary tag
                             tags.push(mk_tag_binary(
