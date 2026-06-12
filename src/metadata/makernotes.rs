@@ -6288,6 +6288,47 @@ fn read_makernote_ifd_with_base(
         } else if name.ends_with("ImageSize") && value.to_display_string().contains(' ') {
             // ExifTool joins the two dimensions with "x" (320 240 -> 320x240).
             value.to_display_string().replace(' ', "x")
+        } else if name == "CPUVersions" && matches!(value, Value::Binary(_) | Value::Undefined(_)) {
+            // JVC 0x0002: ValueConv s/(\s*\0)+$//; s/(\s*\0)+/, /g — replace each run of
+            // (optional-whitespace then null) with ", ", then drop the trailing run.
+            let bytes = match &value {
+                Value::Binary(b) | Value::Undefined(b) => b.as_slice(),
+                _ => &[],
+            };
+            let chars: Vec<char> = bytes.iter().map(|&c| c as char).collect();
+            let mut out = String::new();
+            let mut i = 0;
+            while i < chars.len() {
+                let c = chars[i];
+                if c == '\0' || c.is_whitespace() {
+                    let mut last_null = None;
+                    let mut j = i;
+                    while j < chars.len() && (chars[j] == '\0' || chars[j].is_whitespace()) {
+                        if chars[j] == '\0' {
+                            last_null = Some(j);
+                        }
+                        j += 1;
+                    }
+                    if let Some(ln) = last_null {
+                        out.push_str(", ");
+                        for k in (ln + 1)..j {
+                            out.push(chars[k]);
+                        }
+                    } else {
+                        for k in i..j {
+                            out.push(chars[k]);
+                        }
+                    }
+                    i = j;
+                } else {
+                    out.push(c);
+                    i += 1;
+                }
+            }
+            while out.ends_with(", ") {
+                out.truncate(out.len() - 2);
+            }
+            out
         } else if name == "VRDOffset" {
             // Canon Main 0xd0 is a raw int32u offset with no PrintConv; it collides
             // by tag-id with FilterEffectUserDef2 (0 => "None") in a sub-table.

@@ -122,7 +122,6 @@ ITC.itc	DataType
 InfiRay.jpg	GPSLatitude
 InfiRay.jpg	GPSLongitude
 InfiRay.jpg	IJPEGVersion
-JVC.jpg	CPUVersions
 JVC.jpg	Quality
 JXL2.jxl	CompatibleBrands
 Jpeg2000.jp2	CompatibleBrands
