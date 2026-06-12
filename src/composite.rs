@@ -522,7 +522,7 @@ fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<Vec<u8>> {
     let h = rps;
 
     // Build TIFF IFD entries (little-endian)
-    let num_entries: u16 = 14;
+    let num_entries: u16 = 15;
     let ifd_size = 2 + num_entries as usize * 12 + 4;
     let data_offset = 8 + ifd_size; // after TIFF header + IFD
                                     // BitsPerSample data (if > 1 sample)
@@ -566,6 +566,7 @@ fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<Vec<u8>> {
     add_entry(&mut tiff, 0x0117, 4, 1, strip_len); // StripByteCounts
     add_entry(&mut tiff, 0x011A, 5, 1, resolution_offset as u32); // XResolution
     add_entry(&mut tiff, 0x011B, 5, 1, (resolution_offset + 8) as u32); // YResolution
+    add_entry(&mut tiff, 0x011C, 3, 1, _planar as u32); // PlanarConfiguration
     add_entry(&mut tiff, 0x0128, 3, 1, 2); // ResolutionUnit = inches
 
     // Next IFD offset = 0 (no more IFDs)

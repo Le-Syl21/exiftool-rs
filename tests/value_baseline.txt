@@ -37,7 +37,6 @@ DNG.dng	BitsPerSample
 DNG.dng	Compression
 DNG.dng	PhotometricInterpretation
 DNG.dng	SamplesPerPixel
-DNG.dng	ThumbnailTIFF
 DjVu.djvu	Creator
 DjVu.djvu	SubfileType
 DjVu.djvu	Subject
@@ -198,7 +197,6 @@ Pentax.jpg	LensType
 Pentax.jpg	PentaxModelID
 Pentax.jpg	ShutterCount
 Pentax.jpg	TvExposureTimeSetting
-PhaseOne.iiq	ThumbnailTIFF
 PhotoMechanic.jpg	Prefs
 PostScript.eps	Creator
 PostScript.eps	Title
