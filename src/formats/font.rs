@@ -752,30 +752,55 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
 }
 
 fn unescape_postscript(s: &str) -> String {
+    // Port of PostScript.pm UnescapePostScript: octal escapes \ddd, line
+    // continuation (\CR / \LF → nothing), and \[nrtbf] control chars; any other
+    // escaped char becomes itself (the backslash is dropped).
     let mut result = String::new();
     let mut chars = s.chars().peekable();
     while let Some(c) = chars.next() {
-        if c == '\\' {
-            match chars.next() {
-                Some('n') => result.push('\n'),
-                Some('r') => result.push('\r'),
-                Some('t') => result.push('\t'),
-                Some('b') => result.push('\x08'),
-                Some('f') => result.push('\x0c'),
-                Some('\\') => result.push('\\'),
-                Some('(') => result.push('('),
-                Some(')') => result.push(')'),
-                Some(c) => {
-                    result.push('\\');
-                    result.push(c);
-                }
-                None => result.push('\\'),
-            }
-        } else {
+        if c != '\\' {
             result.push(c);
+            continue;
+        }
+        match chars.next() {
+            Some(d) if ('0'..='7').contains(&d) => {
+                // Up to 3 octal digits total.
+                let mut oct = d.to_digit(8).unwrap();
+                for _ in 0..2 {
+                    match chars.peek() {
+                        Some(&n) if ('0'..='7').contains(&n) => {
+                            oct = oct * 8 + n.to_digit(8).unwrap();
+                            chars.next();
+                        }
+                        _ => break,
+                    }
+                }
+                result.push((oct & 0xff) as u8 as char);
+            }
+            Some('\r') => {
+                if chars.peek() == Some(&'\n') {
+                    chars.next();
+                }
+            }
+            Some('\n') => {}
+            Some('n') => result.push('\n'),
+            Some('r') => result.push('\r'),
+            Some('t') => result.push('\t'),
+            Some('b') => result.push('\x08'),
+            Some('f') => result.push('\x0c'),
+            Some(c) => result.push(c),
+            None => {}
         }
     }
+    // ExifTool renders control bytes as "." and drops NULs for display.
     result
+        .chars()
+        .filter_map(|c| match c {
+            '\0' => None,
+            c if (c as u32) < 0x20 || c as u32 == 0x7f => Some('.'),
+            c => Some(c),
+        })
+        .collect()
 }
 
 /// Read Adobe Font Metrics (.afm) text file.

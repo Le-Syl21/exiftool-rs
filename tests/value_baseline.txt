@@ -99,8 +99,6 @@ FLIR.jpg	FrameRate
 FLIR.jpg	RawThermalImage
 FlashPix.ppt	HeadingPairs
 FlashPix.ppt	TitleOfParts
-Font.pfa	Notice
-Font.pfb	Notice
 FotoStation.jpg	ObjectCycle
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
