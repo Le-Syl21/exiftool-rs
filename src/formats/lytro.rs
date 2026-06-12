@@ -208,6 +208,9 @@ fn extract_array(chars: &[char], pos: &mut usize, parent: &str, tags: &mut Vec<T
     }
     *pos += 1; // skip '['
 
+    // Scalar array elements are joined into a single tag value (", "-separated),
+    // matching ExifTool's List behaviour. Objects in the array recurse separately.
+    let mut scalars: Vec<String> = Vec::new();
     loop {
         skip_ws_comma(chars, pos);
         if *pos >= chars.len() || chars[*pos] == ']' {
@@ -228,16 +231,15 @@ fn extract_array(chars: &[char], pos: &mut usize, parent: &str, tags: &mut Vec<T
                 *pos = end + 1;
             }
             '"' => {
-                let val = read_json_string(chars, pos);
-                emit_tag(parent, val, tags);
+                scalars.push(read_json_string(chars, pos));
             }
             't' => {
                 *pos += 4;
-                emit_tag(parent, "true".to_string(), tags);
+                scalars.push("true".to_string());
             }
             'f' => {
                 *pos += 5;
-                emit_tag(parent, "false".to_string(), tags);
+                scalars.push("false".to_string());
             }
             'n' => {
                 *pos += 4;
@@ -245,10 +247,13 @@ fn extract_array(chars: &[char], pos: &mut usize, parent: &str, tags: &mut Vec<T
             _ => {
                 let num = read_number(chars, pos);
                 if !num.is_empty() {
-                    emit_tag(parent, num, tags);
+                    scalars.push(num);
                 }
             }
         }
+    }
+    if !scalars.is_empty() {
+        emit_tag(parent, scalars.join(", "), tags);
     }
 }
 

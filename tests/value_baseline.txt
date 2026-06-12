@@ -29,7 +29,6 @@ Google.jpg	DirectoryItemMime
 Google.jpg	HDRPlusMakerNote
 Google.jpg	ImageData
 Google.jpg	ImageName
-Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
 OlympusE1.jpg	BlueBalance
 PCAP.pcapng	TimeStamp
