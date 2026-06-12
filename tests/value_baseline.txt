@@ -127,8 +127,6 @@ Minolta.mrw	Sharpness
 Minolta.mrw	WhiteBalance
 Nikon.nef	BitsPerSample
 Nikon.nef	Compression
-Nikon.nef	ExposureAdj
-Nikon.nef	ExposureAdj2
 Nikon.nef	FilmType
 Nikon.nef	PhotometricInterpretation
 Nikon.nef	PreviewImageStart

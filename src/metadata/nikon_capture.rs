@@ -324,13 +324,14 @@ fn decode_crop_data(data: &[u8], tags: &mut Vec<Tag>) {
 }
 
 fn decode_exposure(data: &[u8], tags: &mut Vec<Tag>) {
-    // Exposure: 0=ExposureAdj(double), 8=ExposureAdj2(double), 16=ActiveD-Lighting(int16u)
-    if data.len() >= 8 {
-        tags.push(mk("ExposureAdj", &crate::value::format_g15(rf64(data, 0))));
+    // NikonCapture exposure block: 0x00 ExposureAdj (int16s, /100), 0x12 ExposureAdj2
+    // (double, "%.4f").
+    if data.len() >= 2 {
+        let v = i16::from_le_bytes([data[0], data[1]]) as f64 / 100.0;
+        tags.push(mk("ExposureAdj", &crate::value::format_g15(v)));
     }
-    if data.len() >= 16 {
-        let v = rf64(data, 8);
-        tags.push(mk("ExposureAdj2", &format!("{:.4}", v)));
+    if 0x12 + 8 <= data.len() {
+        tags.push(mk("ExposureAdj2", &format!("{:.4}", rf64(data, 0x12))));
     }
 }
 
