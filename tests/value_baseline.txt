@@ -74,7 +74,6 @@ Google.jpg	DirectoryItemMime
 Google.jpg	HDRPlusMakerNote
 Google.jpg	ImageData
 Google.jpg	ImageName
-HTML.html	Creator
 HTML.html	Description
 HTML.html	RevisionNumber
 HTML.html	Subject

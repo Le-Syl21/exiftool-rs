@@ -62,6 +62,42 @@ pub fn read_html(data: &[u8]) -> Result<Vec<Tag>> {
         search_pos = abs_pos + end.max(5);
     }
 
+    // HTML.pm marks several meta tags as List (Seq/Bag): repeated values are
+    // accumulated into one comma-joined tag rather than emitted separately.
+    const HTML_LIST_TAGS: &[&str] = &[
+        "Keywords",
+        "Robots",
+        "Googlebot",
+        "Contributor",
+        "Coverage",
+        "Creator",
+        "Identifier",
+        "Language",
+        "Publisher",
+        "Relation",
+        "Source",
+        "Subject",
+        "Type",
+    ];
+    {
+        let mut merged: Vec<Tag> = Vec::with_capacity(tags.len());
+        for tag in tags.into_iter() {
+            if HTML_LIST_TAGS.contains(&tag.name.as_str()) {
+                if let Some(existing) = merged
+                    .iter_mut()
+                    .find(|t| t.name == tag.name && t.group.family0 == tag.group.family0)
+                {
+                    let joined = format!("{}, {}", existing.print_value, tag.print_value);
+                    existing.print_value = joined.clone();
+                    existing.raw_value = Value::String(joined);
+                    continue;
+                }
+            }
+            merged.push(tag);
+        }
+        tags = merged;
+    }
+
     // Look for embedded MSO/Office XML (<!--[if gte mso 9]><xml>...</xml>)
     parse_mso_xml(&text, &mut tags);
 
