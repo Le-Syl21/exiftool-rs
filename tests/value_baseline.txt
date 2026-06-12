@@ -7,10 +7,6 @@ ExifTool.jpg	ColorSpace
 ExifTool.jpg	Comment
 ExifTool.jpg	Compression
 ExifTool.jpg	Copyright
-ExifTool.jpg	CropBottom
-ExifTool.jpg	CropLeft
-ExifTool.jpg	CropRight
-ExifTool.jpg	CropTop
 ExifTool.jpg	DateTimeOriginal
 ExifTool.jpg	ExposureCompensation
 ExifTool.jpg	ExposureTime

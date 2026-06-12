@@ -1017,7 +1017,9 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                         },
                         raw_value: crate::value::Value::String(val.clone()),
                         print_value: val,
-                        priority: 0,
+                        // FotoStation is processed after PhotoMechanic; ExifTool's
+                        // last-wins makes its Crop* override the PhotoMechanic copy.
+                        priority: 1,
                     };
                     // rd32s reads signed int32 BE at index*4
                     let rd32s = |idx: usize| -> i32 {
