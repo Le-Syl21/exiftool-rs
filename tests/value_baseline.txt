@@ -229,7 +229,6 @@ OlympusE1.jpg	EquipmentVersion
 OlympusE1.jpg	FocusInfoVersion
 OlympusE1.jpg	ImageProcessingVersion
 OlympusE1.jpg	RawDevVersion
-OlympusE1.jpg	SensorTemperature
 PCAP.pcapng	TimeStamp
 PDF.pdf	CreateDate
 PDF.pdf	Creator

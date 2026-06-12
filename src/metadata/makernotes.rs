@@ -5856,6 +5856,20 @@ fn read_makernote_ifd_with_base(
                         }
                     } else if name == "FocalPlaneDiagonal" {
                         format!("{} mm", val.to_display_string()) // Perl: '"$val mm"'
+                    } else if name == "SensorTemperature" && stid == 0x1500 {
+                        // E-1/E-M5 (or multi-value) → "$val C" (strip " 0 0"); other
+                        // single-value models → ValueConv 84-3*val/26, "%.1f C".
+                        let disp = val.to_display_string();
+                        if model_name.contains("E-1")
+                            || model_name.contains("E-M5")
+                            || disp.contains(' ')
+                        {
+                            format!("{} C", disp.trim_end_matches(" 0 0"))
+                        } else if let Some(v) = val.as_f64() {
+                            format!("{:.1} C", 84.0 - 3.0 * v / 26.0)
+                        } else {
+                            disp
+                        }
                     } else if name == "ManometerPressure" {
                         format!("{} kPa", val.to_display_string()) // Perl: '"$val kPa"'
                     } else if let Some(pc) = (tag_id == 0x2020)
