@@ -501,12 +501,19 @@ fn map_prop(key: &str, val: &str) -> Option<(&'static str, &'static str, Value, 
             ("DriveMode", "Drive Mode", r, p)
         }
         "EXPCOMP" => {
-            let (r, p) = s(val);
-            ("ExposureCompensation", "Exposure Compensation", r, p)
+            // PrintConv => Exif::PrintFraction.
+            let p = val
+                .parse::<f64>()
+                .map(crate::tags::exif::print_fraction)
+                .unwrap_or_else(|_| val.to_string());
+            ("ExposureCompensation", "Exposure Compensation", Value::String(val.to_string()), p)
         }
         "EXPNET" => {
-            let (r, p) = s(val);
-            ("NetExposureCompensation", "Net Exposure Compensation", r, p)
+            let p = val
+                .parse::<f64>()
+                .map(crate::tags::exif::print_fraction)
+                .unwrap_or_else(|_| val.to_string());
+            ("NetExposureCompensation", "Net Exposure Compensation", Value::String(val.to_string()), p)
         }
         "EXPTIME" => {
             // IntegrationTime: value is in microseconds, store as F64 seconds
