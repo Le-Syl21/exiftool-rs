@@ -5987,6 +5987,22 @@ fn read_makernote_ifd_with_base(
                         }
                     } else if name == "ManometerPressure" {
                         format!("{} kPa", val.to_display_string()) // Perl: '"$val kPa"'
+                    } else if name == "ImageStabilization"
+                        && matches!(val, Value::Binary(_) | Value::Undefined(_))
+                    {
+                        // Equipment undef form: "Off" if first 4 bytes are zero, else
+                        // "On, Mode 1/2" from bit 0x01 of byte 44 (Olympus.pm).
+                        let b: &[u8] = match &val {
+                            Value::Binary(b) | Value::Undefined(b) => b.as_slice(),
+                            _ => &[][..],
+                        };
+                        if b.len() >= 4 && b[..4].iter().all(|&x| x == 0) {
+                            "Off".to_string()
+                        } else if b.len() >= 45 {
+                            format!("On, {}", if b[44] & 0x01 != 0 { "Mode 1" } else { "Mode 2" })
+                        } else {
+                            "On".to_string()
+                        }
                     } else if name == "ManometerReading" {
                         // int32s[2], each /10, PrintConv "$1 m, $2 ft".
                         let v: Vec<f64> = val

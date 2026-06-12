@@ -147,7 +147,6 @@ NikonD70.jpg	LensID
 NikonD70.jpg	PreviewImageStart
 Olympus.jpg	CameraType
 Olympus.jpg	DataDump
-Olympus2.jpg	ImageStabilization
 Olympus2.jpg	PreviewImageStart
 OlympusE1.jpg	BlueBalance
 OlympusE1.jpg	CameraSettingsVersion
