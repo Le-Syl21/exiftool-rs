@@ -140,7 +140,6 @@ NikonD2Hs.jpg	RedBalance
 NikonD70.jpg	ExternalFlashFirmware
 NikonD70.jpg	LensID
 NikonD70.jpg	PreviewImageStart
-Olympus.jpg	CameraType
 Olympus.jpg	DataDump
 Olympus2.jpg	PreviewImageStart
 OlympusE1.jpg	BlueBalance

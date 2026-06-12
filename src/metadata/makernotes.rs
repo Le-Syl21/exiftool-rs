@@ -5607,7 +5607,8 @@ fn read_makernote_ifd_with_base(
                         } // skip section headers
                         if let Some(eq) = token.find('=') {
                             let key = &token[..eq];
-                            let val = &token[eq + 1..];
+                            // Values may carry trailing nulls (null-terminated text).
+                            let val = token[eq + 1..].trim_end_matches('\0').trim();
                             // Rename "Type" to "CameraType" to avoid conflict
                             let key = if key == "Type" { "CameraType" } else { key };
                             if !key.is_empty() && !val.is_empty() {
@@ -8372,6 +8373,16 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Olympus | Manufacturer::OlympusNew => match tag_id {
+            // CameraType (0x0207): code → model name (%olympusCameraTypes).
+            0x0207 => {
+                let s = value.to_display_string();
+                let s = s.trim().trim_end_matches('\0').trim();
+                Some(
+                    crate::tags::olympus_camera_types::olympus_camera_type(s)
+                        .unwrap_or(s)
+                        .to_string(),
+                )
+            }
             // FocalPlaneDiagonal (0x0205): rational64u, PrintConv '"$val mm"'.
             0x0205 => Some(format!("{} mm", value.to_display_string())),
             // SpecialMode (0x0200): int16u[3] = shooting mode, sequence, panorama dir.
