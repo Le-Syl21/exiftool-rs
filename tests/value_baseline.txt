@@ -1,4 +1,3 @@
 # Value-parity baseline: (file, tag) whose printed value differs from ExifTool.
 # New deltas fail regression_tag_values; fixes tighten it.
 # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
-PLUS.xmp	MediaSummaryCode

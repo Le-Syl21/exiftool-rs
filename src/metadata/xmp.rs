@@ -1817,6 +1817,12 @@ impl XmpReader {
                     other => other.to_string(),
                 };
             }
+            // PLUS MediaSummaryCode: expand the "|PLUS|…" code to human-readable form.
+            if tag.name == "MediaSummaryCode" {
+                if let Some(expanded) = expand_media_summary_code(&tag.print_value) {
+                    tag.print_value = expanded;
+                }
+            }
         }
 
         // Post-processing: aggregate duplicate tag names (same name, different values)
@@ -2233,6 +2239,81 @@ fn convert_xmp_date(val: &str) -> Option<String> {
 /// Apply the EXIF PrintConv to exif: namespace XMP tags, matching ExifTool which
 /// shares the EXIF tag table's conversions for the XMP exif schema. Only the cases
 /// that differ from the plain numeric display are handled here.
+
+/// Expand a PLUS MediaSummaryCode "|PLUS|ver|num|code" string to its human-readable
+/// form, mirroring the %mediaMatrix OTHER PrintConv in PLUS.pm. Returns None if the
+/// value isn't in the encoded "|PLUS|…" form.
+fn expand_media_summary_code(val: &str) -> Option<String> {
+    use crate::tags::plus_media_matrix::media_matrix;
+    let val = val.to_uppercase();
+    let rest = val.strip_prefix("|PLUS|")?;
+    // Split ver|num|code (code is everything after the second '|').
+    let mut parts = rest.splitn(3, '|');
+    let ver = parts.next()?;
+    let num = parts.next()?;
+    let code: String = parts
+        .next()
+        .unwrap_or("")
+        .chars()
+        .filter(|c| c.is_ascii_digit() || c.is_ascii_uppercase() || *c == '|')
+        .collect();
+
+    // ver "V0121" → "V0121 (LDF Version 1.21)"
+    let mut ver_s = ver.to_string();
+    if let Some(caps) = ver
+        .strip_prefix('V')
+        .filter(|s| s.chars().all(|c| c.is_ascii_digit()) && s.len() >= 3)
+    {
+        let digits = caps.trim_start_matches('0');
+        // V0*(\d+)(\d{2}): last 2 digits are minor, the rest major.
+        if caps.len() >= 2 {
+            let (maj, min) = caps.split_at(caps.len() - 2);
+            let maj = maj.trim_start_matches('0');
+            let maj = if maj.is_empty() { "0" } else { maj };
+            let _ = digits;
+            ver_s = format!("{} (LDF Version {}.{})", ver, maj, min);
+        }
+    }
+    // num "U004" → "U004 (4 Media Usages:)"
+    let mut num_s = num.to_string();
+    if let Some(d) = num.strip_prefix('U') {
+        if d.chars().all(|c| c.is_ascii_digit()) && !d.is_empty() {
+            let n = d.trim_start_matches('0');
+            let n = if n.is_empty() { "0" } else { n };
+            num_s = format!("{} ({} Media Usages:)", num, n);
+        }
+    }
+
+    let mut out = format!("PLUS {} {}", ver_s, num_s);
+    // Iterate over \d[A-Z]{3} tokens in the code.
+    let bytes: Vec<char> = code.chars().collect();
+    let mut i = 0;
+    while i + 4 <= bytes.len() {
+        if bytes[i].is_ascii_digit()
+            && bytes[i + 1].is_ascii_uppercase()
+            && bytes[i + 2].is_ascii_uppercase()
+            && bytes[i + 3].is_ascii_uppercase()
+        {
+            let mmid: String = bytes[i..i + 4].iter().collect();
+            if let Some(desc) = media_matrix(&mmid) {
+                out.push_str(&format!(" {} ({})", mmid, desc));
+            } else if &mmid[..2] == "1I" {
+                let c1 = bytes[i + 2] as u32;
+                let c2 = bytes[i + 3] as u32;
+                let n = (c1 - 65) * 26 + (c2 - 65) + 1;
+                out.push_str(&format!("; {} ({} Usage Items:)", mmid, n));
+            } else if &mmid[..3] == "1UN" {
+                out.push_str(&format!(" (Usage Number {})", bytes[i + 3]));
+            } else {
+                out.push_str(&format!(" {}", mmid));
+            }
+            i += 4;
+        } else {
+            i += 1;
+        }
+    }
+    Some(out)
+}
 
 /// Map a PLUS LDF vocabulary code (URL suffix) to its label (PLUS.pm).
 fn plus_vocab(code: &str) -> Option<&'static str> {

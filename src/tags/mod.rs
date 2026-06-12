@@ -5,6 +5,7 @@ pub mod iptc;
 pub mod makernotes;
 pub mod nikon_conv;
 pub mod olympus_camera_types;
+pub mod plus_media_matrix;
 pub mod print_conv_generated;
 pub mod sony_conv;
 pub mod sub_tables_generated;
