@@ -38,7 +38,6 @@ Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
 Minolta.mrw	ColorMode
 Minolta.mrw	MeteringMode
-Nikon.nef	SubfileType
 Olympus.jpg	DataDump
 OlympusE1.jpg	BlueBalance
 PCAP.pcapng	TimeStamp

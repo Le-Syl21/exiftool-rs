@@ -1660,6 +1660,29 @@ impl ExifTool {
                 }
             }
 
+            // SubfileType across the IFD0/SubIFD image pyramid: ExifTool extracts
+            // each IFD in order and the LAST value wins (NEF → SubIFD1's
+            // full-res 0; DNG → the trailing reduced SubIFD's 1). SubIFDs are
+            // otherwise first-wins, so this is a targeted exception.
+            {
+                let last = tags.iter().rposition(|t| {
+                    t.name == "SubfileType"
+                        && (t.group.family1 == "IFD0"
+                            || t.group.family1.starts_with("SubIFD"))
+                });
+                if let Some(li) = last {
+                    let mut i = 0usize;
+                    tags.retain(|t| {
+                        let drop = t.name == "SubfileType"
+                            && (t.group.family1 == "IFD0"
+                                || t.group.family1.starts_with("SubIFD"))
+                            && i != li;
+                        i += 1;
+                        !drop
+                    });
+                }
+            }
+
             // QuickTime container dates are primary over an embedded EXIF copy
             // (ExifTool reports the QuickTime CreateDate/ModifyDate for MOV/CR3/etc.).
             {
