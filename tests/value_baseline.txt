@@ -147,7 +147,6 @@ Panasonic.rw2	ThumbnailOffset
 Panasonic.rw2	XResolution
 Pentax.avi	Software
 Pentax.jpg	LensID
-Pentax.jpg	ShutterCount
 Pentax.jpg	TvExposureTimeSetting
 PhotoMechanic.jpg	Prefs
 PostScript.eps	Creator

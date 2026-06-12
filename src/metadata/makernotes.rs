@@ -4844,6 +4844,9 @@ fn read_makernote_ifd_with_base(
     // Pentax PreviewImage state: track PreviewImageStart and PreviewImageLength
     let mut pentax_preview_start: Option<usize> = None;
     let mut pentax_preview_length: Option<usize> = None;
+    // Pentax ShutterCount (0x00A7) is encrypted with Date (0x0006) and Time (0x0007).
+    let mut pentax_date_raw: Option<Vec<u8>> = None;
+    let mut pentax_time_raw: Option<Vec<u8>> = None;
 
     for i in 0..entry_count {
         let entry_offset = entries_start + i * 12;
@@ -4924,6 +4927,12 @@ fn read_makernote_ifd_with_base(
 
         // Pentax special tag handling: complex conversions for multi-byte/undefined tags
         if manufacturer == Manufacturer::Pentax {
+            // Capture raw Date (0x0006) / Time (0x0007) bytes for ShutterCount decryption.
+            if tag_id == 0x0006 && value_data.len() >= 4 {
+                pentax_date_raw = Some(value_data[..4].to_vec());
+            } else if tag_id == 0x0007 && value_data.len() >= 3 {
+                pentax_time_raw = Some(value_data[..3].to_vec());
+            }
             if let Some(special_tags) =
                 pentax_special_tag_conv(tag_id, data_type, count, value_data)
             {
@@ -7021,6 +7030,31 @@ fn read_makernote_ifd_with_base(
                     print_value: format!("(Binary data {} bytes, use -b option to extract)", len),
                     priority: 0,
                 });
+            }
+        }
+    }
+
+    // Decrypt Pentax ShutterCount (0x00A7): val ^ date ^ (0xffffffff - time),
+    // where date/time come from the raw Date (0x0006) and Time (0x0007) bytes.
+    if manufacturer == Manufacturer::Pentax {
+        if let (Some(date), Some(time)) = (&pentax_date_raw, &pentax_time_raw) {
+            if date.len() == 4 && time.len() >= 3 {
+                if let Some(sc) = tags.iter_mut().find(|t| t.name == "ShutterCount") {
+                    let raw: Option<u32> = match &sc.raw_value {
+                        Value::Undefined(b) | Value::Binary(b) if b.len() == 4 => {
+                            Some(u32::from_be_bytes([b[0], b[1], b[2], b[3]]))
+                        }
+                        _ => None,
+                    };
+                    if let Some(v) = raw {
+                        let d = u32::from_be_bytes([date[0], date[1], date[2], date[3]]);
+                        // time padded with a null byte: unpack('N', time . "\0")
+                        let t = u32::from_be_bytes([time[0], time[1], time[2], 0]);
+                        let count = v ^ d ^ (0xffff_ffffu32.wrapping_sub(t));
+                        sc.raw_value = Value::U32(count);
+                        sc.print_value = count.to_string();
+                    }
+                }
             }
         }
     }
