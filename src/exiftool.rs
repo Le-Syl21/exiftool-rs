@@ -1414,6 +1414,9 @@ impl ExifTool {
                 ("MinoltaRaw", "Saturation"),
                 ("MinoltaRaw", "Sharpness"),
                 ("MinoltaRaw", "ISOSetting"),
+                // Lytro's own FocalLength (full precision) is primary over embedded EXIF;
+                // the 35efl/FOV/HyperfocalDistance composites must use it.
+                ("Lytro", "FocalLength"),
             ];
             for (grp, name) in SPECIAL_WINS {
                 if tags

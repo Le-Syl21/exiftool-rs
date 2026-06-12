@@ -330,9 +330,19 @@ fn emit_tag(tag_path: &str, json_value: String, tags: &mut Vec<Tag>) {
 
     let family2 = if is_devices { "Camera" } else { "Image" };
 
+    // Numeric raw for tags that feed composites (full precision, not rounded print).
+    let raw_value = if final_name == "FocalLength" {
+        raw_str
+            .parse::<f64>()
+            .map(Value::F64)
+            .unwrap_or_else(|_| Value::String(raw_str.clone()))
+    } else {
+        Value::String(raw_str.clone())
+    };
+
     // Check if tag with this name already exists; if so update it (last-write-wins for arrays)
     if let Some(existing) = tags.iter_mut().find(|t| t.name == final_name) {
-        existing.raw_value = Value::String(raw_str.clone());
+        existing.raw_value = raw_value;
         existing.print_value = print_value.clone();
         return;
     }
@@ -346,7 +356,7 @@ fn emit_tag(tag_path: &str, json_value: String, tags: &mut Vec<Tag>) {
             family1: "Lytro".into(),
             family2: family2.into(),
         },
-        raw_value: Value::String(raw_str),
+        raw_value,
         print_value,
         priority: 0,
     });
