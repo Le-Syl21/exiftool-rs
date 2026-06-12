@@ -51,7 +51,6 @@ FujiFilm.raf	ThumbnailOffset
 GPS.jpg	City
 GoPro.jpg	ExposureCompensation
 GoPro.jpg	FlashpixVersion
-GoPro.jpg	Sharpness
 GoPro.jpg	WhiteBalance
 Google.jpg	DirectoryItemMime
 Google.jpg	HDRPlusMakerNote

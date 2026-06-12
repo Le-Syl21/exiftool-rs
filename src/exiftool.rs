@@ -1468,6 +1468,25 @@ impl ExifTool {
         // Priority-based deduplication: when the same tag name appears multiple times,
         // keep only the one with the highest priority (e.g., EXIF over JFIF, FFF over MakerNote).
         if !self.options.duplicates {
+            // Specialized-source precedence: a few container/sidecar groups are
+            // authoritative for specific tags and win over a generic EXIF copy
+            // (ExifTool reports the GoPro GPMF value). Applied before the priority
+            // dedup so the (priority-0) specialized tag isn't pruned first.
+            {
+                const SPECIAL_WINS: &[(&str, &str)] = &[
+                    ("GoPro", "WhiteBalance"),
+                    ("GoPro", "Sharpness"),
+                ];
+                for (grp, name) in SPECIAL_WINS {
+                    if tags
+                        .iter()
+                        .any(|t| t.name == *name && t.group.family1 == *grp)
+                    {
+                        tags.retain(|t| t.name != *name || t.group.family1 == *grp);
+                    }
+                }
+            }
+
             let mut best_priority: HashMap<String, i32> = HashMap::new();
             for tag in &tags {
                 let entry = best_priority
