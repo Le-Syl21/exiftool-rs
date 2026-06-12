@@ -494,7 +494,36 @@ fn decode_wb_adj(data: &[u8], tags: &mut Vec<Tag>) {
     }
     if data.len() >= 22 {
         let v = ru16(data, 20);
-        tags.push(mk("WBAdjLighting", &format!("0x{:x}", v)));
+        let s = match v {
+            0x000 => "None",
+            0x100 => "Incandescent",
+            0x200 => "Daylight (direct sunlight)",
+            0x201 => "Daylight (shade)",
+            0x202 => "Daylight (cloudy)",
+            0x300 => "Standard Fluorescent (warm white)",
+            0x301 => "Standard Fluorescent (3700K)",
+            0x302 => "Standard Fluorescent (cool white)",
+            0x303 => "Standard Fluorescent (5000K)",
+            0x304 => "Standard Fluorescent (daylight)",
+            0x305 => "Standard Fluorescent (high temperature mercury vapor)",
+            0x400 => "High Color Rendering Fluorescent (warm white)",
+            0x401 => "High Color Rendering Fluorescent (3700K)",
+            0x402 => "High Color Rendering Fluorescent (cool white)",
+            0x403 => "High Color Rendering Fluorescent (5000K)",
+            0x404 => "High Color Rendering Fluorescent (daylight)",
+            0x500 => "Flash",
+            0x501 => "Flash (FL-G1 filter)",
+            0x502 => "Flash (FL-G2 filter)",
+            0x503 => "Flash (TN-A1 filter)",
+            0x504 => "Flash (TN-A2 filter)",
+            0x600 => "Sodium Vapor Lamps",
+            _ => "",
+        };
+        if s.is_empty() {
+            tags.push(mk("WBAdjLighting", &format!("Unknown (0x{:x})", v)));
+        } else {
+            tags.push(mk("WBAdjLighting", s));
+        }
     }
     if data.len() >= 26 {
         let v = ru16(data, 24);

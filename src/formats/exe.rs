@@ -903,8 +903,8 @@ fn read_elf(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Unknown",
     };
     let endian = match data[5] {
-        1 => "Little-endian",
-        2 => "Big-endian",
+        1 => "Little endian",
+        2 => "Big endian",
         _ => "Unknown",
     };
     let _os_abi = match data[7] {

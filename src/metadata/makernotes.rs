@@ -4420,6 +4420,14 @@ fn read_makernote_ifd_with_base(
             value = Value::Undefined(value_data.to_vec());
         }
 
+        // Olympus DataDump (0x0f00) / DataDump2 (0x0f01) are Binary => 1: always shown
+        // as "(Binary data N bytes)" rather than decoded into a number list.
+        if matches!(manufacturer, Manufacturer::Olympus | Manufacturer::OlympusNew)
+            && matches!(tag_id, 0x0f00 | 0x0f01)
+        {
+            value = Value::Binary(value_data.to_vec());
+        }
+
         // Pentax special tag handling: complex conversions for multi-byte/undefined tags
         if manufacturer == Manufacturer::Pentax {
             if let Some(special_tags) =

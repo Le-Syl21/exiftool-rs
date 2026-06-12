@@ -58,9 +58,7 @@ DjVu.djvu	Creator
 DjVu.djvu	SubfileType
 DjVu.djvu	Subject
 EXE.a	CreateDate
-EXE.elf	CPUByteOrder
 EXE.exe	TimeStamp
-EXE.so	CPUByteOrder
 ExifTool.jpg	ApertureValue
 ExifTool.jpg	ColorSpace
 ExifTool.jpg	Comment
@@ -205,7 +203,6 @@ Nikon.nef	RowsPerStrip
 Nikon.nef	SamplesPerPixel
 Nikon.nef	StripOffsets
 Nikon.nef	SubfileType
-Nikon.nef	WBAdjLighting
 NikonD2Hs.jpg	AFPointsInFocus
 NikonD2Hs.jpg	BlueBalance
 NikonD2Hs.jpg	DOF
