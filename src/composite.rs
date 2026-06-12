@@ -742,11 +742,13 @@ fn compute_aperture(tags: &[Tag]) -> Option<Tag> {
     if val <= 0.0 {
         return None;
     }
-    Some(mk_composite(
-        "Aperture",
-        "Aperture",
-        Value::String(format!("{:.1}", val)),
-    ))
+    // PrintFNumber: "%.2f" below f/1, else "%.1f".
+    let print = if val < 1.0 {
+        format!("{:.2}", val)
+    } else {
+        format!("{:.1}", val)
+    };
+    Some(mk_composite("Aperture", "Aperture", Value::String(print)))
 }
 
 fn compute_image_size(tags: &[Tag]) -> Option<Tag> {

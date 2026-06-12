@@ -92,7 +92,6 @@ FujiFilm.raf	Model
 FujiFilm.raf	ThumbnailOffset
 GE.jpg	GEMake
 GE.jpg	GEModel
-GPS.jpg	Aperture
 GPS.jpg	City
 Geotag.gpx	GpxTrkTrksegTrkptTime
 Geotag.kml	KmlDocumentPlacemarkTrackWhen
