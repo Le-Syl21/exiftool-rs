@@ -883,6 +883,34 @@ fn minolta_white_balance(val: u32) -> String {
 
 /// Port of Olympus.pm CameraSettings DriveMode PrintConv (0x600): mode, shot number,
 /// mode bits, shutter mode and (newer models) shooting-mode byte.
+/// Olympus::PrintAFAreas — int32u[64] AF point coordinates. Each non-zero value is
+/// unpacked as 4 bytes "(c0,c1)-(c2,c3)" with an optional named point; empty => "none".
+fn olympus_print_af_areas(val: &str) -> String {
+    let mut out: Vec<String> = Vec::new();
+    for tok in val.split_whitespace() {
+        let pt: u32 = match tok.parse() {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        if pt == 0 {
+            continue;
+        }
+        let name = match pt {
+            0x3679_4285 => "Left ",
+            0x7979_8585 => "Center ",
+            0xBD79_C985 => "Right ",
+            _ => "",
+        };
+        let b = pt.to_be_bytes();
+        out.push(format!("{}({},{})-({},{})", name, b[0], b[1], b[2], b[3]));
+    }
+    if out.is_empty() {
+        "none".to_string()
+    } else {
+        out.join(", ")
+    }
+}
+
 fn olympus_drive_mode(val: &str) -> String {
     let v: Vec<i64> = val.split_whitespace().filter_map(|s| s.parse().ok()).collect();
     if v.is_empty() {
@@ -5729,6 +5757,10 @@ fn read_makernote_ifd_with_base(
                         }
                     } else if name == "DriveMode" {
                         olympus_drive_mode(&val.to_display_string())
+                    } else if name == "AFAreas" {
+                        // Olympus::PrintAFAreas: int32u[64], skip zero points, decode each
+                        // as 4 bytes "(c0,c1)-(c2,c3)" with optional named point; else "none".
+                        olympus_print_af_areas(&val.to_display_string())
                     } else if name == "ColorMatrix" {
                         // Format => 'int16s': reinterpret each unsigned value as signed.
                         val.to_display_string()
