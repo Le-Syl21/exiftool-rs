@@ -150,6 +150,8 @@ pub(crate) const EXIF_PRIMARY_TAGS: &[&str] = &[
     "CustomRendered",
     "ExposureMode",
     "SceneCaptureType",
+    // IFD0 PrintIM wins over a MakerNotes PrintIM copy.
+    "PrintIMVersion",
     "Flash",
     "FocalLength",
     "ISO",

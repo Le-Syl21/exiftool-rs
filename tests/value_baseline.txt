@@ -47,7 +47,6 @@ Lytro.lfp	HyperfocalDistance
 Lytro.lfp	ImageColorCcmRgbToSrgbArray
 Lytro.lfp	JSONMetadata
 MIFF.miff	ThumbnailOffset
-Minolta.jpg	PrintIMVersion
 Minolta.mrw	ColorMode
 Minolta.mrw	MeteringMode
 Nikon.nef	PreviewImageStart
