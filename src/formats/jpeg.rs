@@ -758,6 +758,32 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     tags.extend(process_app12_picture_info(seg_data));
                 }
             }
+            // APP10 — PhotoStudio Unicode comment: "UNICODE\0" + UTF-16BE text
+            // (Perl JPEG.pm APP10 Comment). Emitted before COM so it wins (file order).
+            0xEA => {
+                if seg_data.starts_with(b"UNICODE\0") {
+                    let comment = decode_utf16be(&seg_data[8..])
+                        .trim_end_matches('\0')
+                        .to_string();
+                    if !comment.is_empty() {
+                        tags.push(crate::tag::Tag {
+                            id: crate::tag::TagId::Text("Comment".into()),
+                            name: "Comment".into(),
+                            description: "JPEG Comment".into(),
+                            group: crate::tag::TagGroup {
+                                family0: "File".into(),
+                                family1: "Comment".into(),
+                                family2: "Image".into(),
+                            },
+                            raw_value: crate::value::Value::String(comment.clone()),
+                            print_value: comment,
+                            // ExifTool reports the APP10 Unicode comment over the COM
+                            // "a comment" (it appears first). Boost so it wins the dedup.
+                            priority: 2,
+                        });
+                    }
+                }
+            }
             // APP15 — GraphicConverter quality
             0xEF => {
                 tags.extend(process_graphicconverter(seg_data));
