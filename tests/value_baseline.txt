@@ -128,9 +128,7 @@ Nikon.nef	StripOffsets
 Nikon.nef	SubfileType
 NikonD2Hs.jpg	BlueBalance
 NikonD2Hs.jpg	DOF
-NikonD2Hs.jpg	EffectiveMaxAperture
 NikonD2Hs.jpg	FOV
-NikonD2Hs.jpg	MCUVersion
 NikonD2Hs.jpg	PreviewImageStart
 NikonD2Hs.jpg	RedBalance
 NikonD70.jpg	PreviewImageStart

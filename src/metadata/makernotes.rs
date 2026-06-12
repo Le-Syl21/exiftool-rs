@@ -4087,8 +4087,9 @@ fn decrypt_nikon_subtables(
                             let dist = 0.01 * 10.0_f64.powf(d[9] as f64 / 40.0);
                             tags.push(mk_nikon_str("FocusDistance", &format!("{:.2} m", dist)));
                         }
-                        if d.len() > 0x0A {
-                            tags.push(mk_nikon_str("MCUVersion", &d[0x0A].to_string()));
+                        // MCUVersion is at 0x11 in LensData01 (not 0x0a).
+                        if d.len() > 0x11 {
+                            tags.push(mk_nikon_str("MCUVersion", &d[0x11].to_string()));
                         }
                         if d.len() > 0x0B {
                             tags.push(mk_nikon_str("LensIDNumber", &d[0x0B].to_string()));
@@ -4109,8 +4110,9 @@ fn decrypt_nikon_subtables(
                             let ap = 2.0_f64.powf(d[0x10] as f64 / 24.0);
                             tags.push(mk_nikon_str("MaxApertureAtMaxFocal", &format!("{:.1}", ap)));
                         }
-                        if d.len() > 0x11 && d[0x11] > 0 {
-                            let ap = 2.0_f64.powf(d[0x11] as f64 / 24.0);
+                        // EffectiveMaxAperture is at 0x12 in LensData01 (not 0x11).
+                        if d.len() > 0x12 && d[0x12] > 0 {
+                            let ap = 2.0_f64.powf(d[0x12] as f64 / 24.0);
                             tags.push(mk_nikon_str("EffectiveMaxAperture", &format!("{:.1}", ap)));
                         }
                     }
