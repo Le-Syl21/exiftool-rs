@@ -230,6 +230,15 @@ fn iptc_print_conv(record: u8, dataset: u8, s: &str) -> Option<String> {
             }
             .to_string(),
         ),
+        // ObjectCycle (75): PrintConv { a, p, b }, unmatched → "Unknown ($val)".
+        75 => Some(
+            match s {
+                "a" => "Morning".to_string(),
+                "p" => "Evening".to_string(),
+                "b" => "Both Morning and Evening".to_string(),
+                other => format!("Unknown ({})", other),
+            },
+        ),
         _ => None,
     }
 }

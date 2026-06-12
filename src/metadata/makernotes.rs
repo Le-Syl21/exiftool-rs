@@ -8416,6 +8416,15 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             _ => None,
         },
         Manufacturer::Pentax => match tag_id {
+            // SensitivityAdjust (0x0040): ValueConv ($val-50)/10, PrintConv $val?"%+.1f":0.
+            0x0040 => value.as_u64().map(|v| {
+                let adj = (v as f64 - 50.0) / 10.0;
+                if adj == 0.0 {
+                    "0".to_string()
+                } else {
+                    format!("{:+.1}", adj)
+                }
+            }),
             // PreviewImageBorders (0x003e): int8u[4] (top,bottom,left,right) joined.
             0x003e => match value {
                 Value::Binary(b) | Value::Undefined(b) if b.len() == 4 => Some(

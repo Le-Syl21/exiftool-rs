@@ -94,7 +94,6 @@ FLIR.jpg	FrameRate
 FLIR.jpg	RawThermalImage
 FlashPix.ppt	HeadingPairs
 FlashPix.ppt	TitleOfParts
-FotoStation.jpg	ObjectCycle
 FotoStation.jpg	ObjectPreviewFileFormat
 FotoStation.jpg	ObjectPreviewFileVersion
 FujiFilm.raf	Model
@@ -266,7 +265,6 @@ Pentax.jpg	LensType
 Pentax.jpg	PentaxModelID
 Pentax.jpg	Rotation
 Pentax.jpg	SRActive
-Pentax.jpg	SensitivityAdjust
 Pentax.jpg	ShutterCount
 Pentax.jpg	SlaveFlashMeteringSegments
 Pentax.jpg	TvExposureTimeSetting
