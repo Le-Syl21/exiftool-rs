@@ -159,7 +159,6 @@ Pentax.avi	Software
 Pentax.jpg	FlashMode
 Pentax.jpg	LensID
 Pentax.jpg	LensType
-Pentax.jpg	PentaxModelID
 Pentax.jpg	ShutterCount
 Pentax.jpg	TvExposureTimeSetting
 PhotoMechanic.jpg	Prefs
@@ -203,7 +202,6 @@ VCard.ics	DateTimeStart
 VCard.ics	ExceptionDateTimes
 VCard.ics	Location
 VCard.ics	TimezoneID
-VCard.vcf	ABLabel
 VCard.vcf	AddressOtherLabel
 VCard.vcf	LabelWork
 VCard.vcf	Note

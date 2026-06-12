@@ -679,11 +679,21 @@ fn emit_vcard_tag(parsed: &ParsedLine, tags: &mut Vec<Tag>) {
     let val = parsed.value.clone();
 
     // Convert datetime if needed
-    let display_val = if is_time_tag_vcard(&base_name) {
+    let mut display_val = if is_time_tag_vcard(&base_name) {
         convert_datetime(&val)
     } else {
         val.clone()
     };
+
+    // ABLabel PrintConv (VCard.pm): strip the Apple "_$!<...>!$_" wrapper.
+    if full_name == "ABLabel" {
+        if let Some(inner) = display_val
+            .strip_prefix("_$!<")
+            .and_then(|s| s.strip_suffix(">!$_"))
+        {
+            display_val = inner.to_string();
+        }
+    }
 
     tags.push(mk(&full_name, display_val));
 
