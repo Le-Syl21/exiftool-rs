@@ -1153,6 +1153,7 @@ dependencies = [
  "filetime",
  "flate2",
  "image",
+ "memmap2",
  "noto-fonts-dl",
  "rfd",
  "tempfile",

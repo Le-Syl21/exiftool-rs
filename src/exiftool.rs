@@ -1077,8 +1077,12 @@ impl ExifTool {
     /// Returns the full `Tag` structs with groups, raw values, etc.
     pub fn extract_info<P: AsRef<Path>>(&self, path: P) -> Result<Vec<Tag>> {
         let path = path.as_ref();
-        let data = fs::read(path).map_err(Error::Io)?;
-
+        // Memory-map the file instead of reading it fully into a Vec. Our format
+        // readers walk container structures by offset (mp4/mov skip `mdat`, Matroska
+        // stops at the first Cluster), so only the header pages are ever faulted in —
+        // a multi-gigabyte video is parsed by touching a few MB, not by allocating
+        // and reading the whole file. Falls back to a plain read when mapping fails.
+        let data = map_file_for_read(path)?;
         self.extract_info_from_bytes(&data, path)
     }
 
@@ -1171,7 +1175,9 @@ impl ExifTool {
                     family1: "File".into(),
                     family2: "Other".into(),
                 },
-                raw_value: Value::U32(metadata.len() as u32),
+                // String, not U32: a file may exceed 4 GB (`as u32` would silently
+                // truncate). `-n` prints this verbatim, matching Perl's raw byte count.
+                raw_value: Value::String(metadata.len().to_string()),
                 print_value: format_file_size(metadata.len()),
                 priority: 0,
             });
@@ -1213,18 +1219,33 @@ impl ExifTool {
         if let Ok(metadata) = fs::metadata(path) {
             use std::os::unix::fs::MetadataExt;
             let mode = metadata.mode();
-            tags.push(file_tag(
-                "FilePermissions",
-                Value::String(format!("{:o}", mode & 0o7777)),
-            ));
+            // Port of ExifTool's FilePermissions: ValueConv is the full mode in octal
+            // (`sprintf "%.3o"`, includes the file-type bits), PrintConv is the ls-style
+            // "-rw-rw-r--" string built from those same bits.
+            tags.push(Tag {
+                id: crate::tag::TagId::Text("FilePermissions".into()),
+                name: "FilePermissions".into(),
+                description: "FilePermissions".into(),
+                group: crate::tag::TagGroup {
+                    family0: "File".into(),
+                    family1: "File".into(),
+                    family2: "Other".into(),
+                },
+                raw_value: Value::String(format!("{:o}", mode)),
+                print_value: format_file_permissions(mode),
+                priority: 1,
+            });
 
+            // Dates use ConvertUnixTime($val, 1): local time with a numeric TZ offset
+            // (e.g. "2026:06:13 15:14:15+02:00"), same conversion as GZIP's ModifyDate.
+            use crate::formats::gzip::gzip_unix_to_datetime;
             // FileModifyDate
             if let Ok(modified) = metadata.modified() {
                 if let Ok(dur) = modified.duration_since(std::time::UNIX_EPOCH) {
                     let secs = dur.as_secs() as i64;
                     tags.push(file_tag(
                         "FileModifyDate",
-                        Value::String(unix_to_datetime(secs)),
+                        Value::String(gzip_unix_to_datetime(secs)),
                     ));
                 }
             }
@@ -1234,7 +1255,7 @@ impl ExifTool {
                     let secs = dur.as_secs() as i64;
                     tags.push(file_tag(
                         "FileAccessDate",
-                        Value::String(unix_to_datetime(secs)),
+                        Value::String(gzip_unix_to_datetime(secs)),
                     ));
                 }
             }
@@ -1243,7 +1264,7 @@ impl ExifTool {
             if ctime > 0 {
                 tags.push(file_tag(
                     "FileInodeChangeDate",
-                    Value::String(unix_to_datetime(ctime)),
+                    Value::String(gzip_unix_to_datetime(ctime)),
                 ));
             }
         }
@@ -1720,16 +1741,19 @@ impl ExifTool {
                             && g1 != "Track1"
                             && g1.len() > 5
                             && g1.as_bytes()[5].is_ascii_digit())
-                        // Container / first-wins groups where ExifTool keeps the FIRST
-                        // duplicate (QuickTime per-track tags are sub-documents; the
-                        // others use first-priority within the module).
-                        || g1 == "QuickTime"
+                    // VCard removed: within one vCard, duplicate tags are last-wins
+                    // (TelephoneOtherVoice); the 2nd vCard is demoted to priority -1.
+                }
+                // Container groups where ExifTool keeps the FIRST duplicate for its
+                // Priority-0 tags (e.g. QuickTime tkhd tags). Default-priority tags in
+                // these same groups (priority >= 1, e.g. mdhd/hdlr) still follow the
+                // normal last-wins rule, so they are NOT blanket-excluded here.
+                fn is_first_wins_group(g1: &str) -> bool {
+                    g1 == "QuickTime"
                         || g1 == "Track1"
                         || g1 == "JP2"
                         || g1 == "PhotoMechanic"
                         || g1 == "DjVu"
-                    // VCard removed: within one vCard, duplicate tags are last-wins
-                    // (TelephoneOtherVoice); the 2nd vCard is demoted to priority -1.
                 }
                 use std::collections::HashMap as HM;
                 // group indices by name
@@ -1743,15 +1767,28 @@ impl ExifTool {
                         continue;
                     }
                     let g1 = &tags[idxs[0]].group.family1;
-                    // all same family1, same priority, not a sub-document group
-                    let uniform = idxs.iter().all(|&i| {
-                        &tags[i].group.family1 == g1 && tags[i].priority == tags[idxs[0]].priority
-                    });
-                    if uniform && !is_sub_document(g1) {
-                        // drop all but the last
-                        for &i in &idxs[..idxs.len() - 1] {
+                    let priority = tags[idxs[0]].priority;
+                    // all same family1, same priority, not a real sub-document group
+                    let uniform = idxs
+                        .iter()
+                        .all(|&i| &tags[i].group.family1 == g1 && tags[i].priority == priority);
+                    if !uniform || is_sub_document(g1) {
+                        continue;
+                    }
+                    // In a first-wins container, Priority-0 duplicates keep the FIRST
+                    // (ExifTool promotes the stored 0-priority tag), so drop the rest;
+                    // default-priority (>= 1) tags fall through to last-wins below.
+                    // Outside such containers, last-wins always.
+                    if is_first_wins_group(g1) && priority == 0 {
+                        // keep idxs[0], drop the later duplicates
+                        for &i in &idxs[1..] {
                             drop.insert(i);
                         }
+                        continue;
+                    }
+                    // drop all but the last (last extracted wins)
+                    for &i in &idxs[..idxs.len() - 1] {
+                        drop.insert(i);
                     }
                 }
                 if !drop.is_empty() {
@@ -2898,61 +2935,69 @@ pub fn shift_datetime(datetime: &str, shift: &str) -> Option<String> {
     ))
 }
 
-// Only used by the `#[cfg(unix)]` File:System pseudo-tags above (stat-derived
-// FileModifyDate/FileAccessDate/FileInodeChangeDate); dead on Windows otherwise.
+// Only used by the `#[cfg(unix)]` File:System FilePermissions pseudo-tag above;
+// not compiled on Windows (which lacks Unix mode bits).
+//
+// Port of ExifTool's FilePermissions PrintConv: a leading file-type character
+// (`-` for a regular file, `d`, `l`, …) followed by nine r/w/x flags for
+// owner/group/other, e.g. mode 0o100664 → "-rw-rw-r--".
 #[cfg(unix)]
-fn unix_to_datetime(secs: i64) -> String {
-    let days = secs / 86400;
-    let time = secs % 86400;
-    let h = time / 3600;
-    let m = (time % 3600) / 60;
-    let s = time % 60;
-    let mut y = 1970i32;
-    let mut rem = days;
-    loop {
-        let dy = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {
-            366
-        } else {
-            365
-        };
-        if rem < dy {
-            break;
+fn format_file_permissions(mode: u32) -> String {
+    let type_char = match mode & 0o170000 {
+        0o010000 => 'p', // FIFO
+        0o020000 => 'c', // character special
+        0o040000 => 'd', // directory
+        0o060000 => 'b', // block special
+        0o120000 => 'l', // symlink
+        0o140000 => 's', // socket
+        _ => '-',
+    };
+    let mut s = String::with_capacity(10);
+    s.push(type_char);
+    let mut mask = 0o400u32;
+    while mask > 0 {
+        for ch in ['r', 'w', 'x'] {
+            s.push(if mode & mask != 0 { ch } else { '-' });
+            mask >>= 1;
         }
-        rem -= dy;
-        y += 1;
     }
-    let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
-    let months = [
-        31,
-        if leap { 29 } else { 28 },
-        31,
-        30,
-        31,
-        30,
-        31,
-        31,
-        30,
-        31,
-        30,
-        31,
-    ];
-    let mut mo = 1;
-    for &dm in &months {
-        if rem < dm {
-            break;
+    s
+}
+
+/// File contents exposed as a byte slice, backed either by a memory map or — when
+/// mapping is unavailable (empty file, unsupported FS, mapping error) — an owned
+/// buffer. Both `Deref` to `[u8]` so callers are agnostic to the backing store.
+enum FileData {
+    Mapped(memmap2::Mmap),
+    Owned(Vec<u8>),
+}
+
+impl std::ops::Deref for FileData {
+    type Target = [u8];
+    fn deref(&self) -> &[u8] {
+        match self {
+            FileData::Mapped(m) => m,
+            FileData::Owned(v) => v,
         }
-        rem -= dm;
-        mo += 1;
     }
-    format!(
-        "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
-        y,
-        mo,
-        rem + 1,
-        h,
-        m,
-        s
-    )
+}
+
+/// Map a file read-only for parsing. Zero-length files (which cannot be mapped)
+/// and any mapping failure fall back to a plain `fs::read`.
+fn map_file_for_read(path: &Path) -> Result<FileData> {
+    let file = fs::File::open(path).map_err(Error::Io)?;
+    let len = file.metadata().map_err(Error::Io)?.len();
+    if len == 0 {
+        return Ok(FileData::Owned(Vec::new()));
+    }
+    // SAFETY: the mapping is only ever read, never written, and the `Mmap` is
+    // dropped before `extract_info` returns. If another process truncates the
+    // file mid-parse the kernel may raise SIGBUS — the same exposure ExifTool's
+    // own random-access reads have; acceptable for a read-only metadata tool.
+    match unsafe { memmap2::Mmap::map(&file) } {
+        Ok(m) => Ok(FileData::Mapped(m)),
+        Err(_) => Ok(FileData::Owned(fs::read(path).map_err(Error::Io)?)),
+    }
 }
 
 /// Port of ExifTool ConvertFileSize (decimal units): %.1f below 10× a unit, %.0f above.

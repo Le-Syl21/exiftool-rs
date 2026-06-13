@@ -48,6 +48,9 @@ struct QtState {
     stream_current: super::quicktime_stream::TrackInfo,
     /// stsd format for the current track (meta_format)
     current_stsd_format: Option<String>,
+    /// Ordered key names from a `keys` atom (QuickTime Keys metadata). A following
+    /// `ilst` references these by 1-based index instead of a 4-char tag code.
+    item_list_keys: Vec<String>,
 }
 
 thread_local! {
@@ -478,15 +481,37 @@ fn parse_atoms(
             b"udta" => {
                 parse_atoms(data, content_start, content_end, tags, state, depth + 1);
             }
-            // Metadata container: meta has a 4-byte version/flags before sub-atoms
+            // Metadata container. `meta` is a FullBox (4-byte version/flags before its
+            // children) in ISO BMFF, but a plain container in QuickTime — Android MP4s
+            // often use the QuickTime form. Detect which by checking whether the first
+            // child is `hdlr`: present at offset 4 ⇒ QuickTime (no version/flags),
+            // present at offset 8 ⇒ ISO (skip version/flags).
             b"meta" => {
-                if content_start + 4 <= content_end {
-                    parse_atoms(data, content_start + 4, content_end, tags, state, depth + 1);
+                let off = if content_start + 8 <= content_end
+                    && &data[content_start + 4..content_start + 8] == b"hdlr"
+                {
+                    0
+                } else {
+                    4
+                };
+                if content_start + off <= content_end {
+                    parse_atoms(
+                        data,
+                        content_start + off,
+                        content_end,
+                        tags,
+                        state,
+                        depth + 1,
+                    );
                 }
             }
-            // iTunes item list
+            // Keys atom: ordered key definitions for the following ilst (Keys metadata)
+            b"keys" => {
+                parse_keys(data, content_start, content_end, state);
+            }
+            // iTunes item list (4-char codes) or Keys-indexed list
             b"ilst" => {
-                parse_ilst(data, content_start, content_end, tags);
+                parse_ilst(data, content_start, content_end, tags, state);
             }
             // Movie header
             b"mvhd" => {
@@ -496,13 +521,23 @@ fn parse_atoms(
             b"tkhd" => {
                 parse_tkhd(data, content_start, content_end, tags, state);
             }
-            // Media header
+            // Media header. mdhd tags are default-priority in ExifTool (last
+            // extracted wins across tracks), unlike the Priority-0 tkhd tags.
             b"mdhd" => {
+                let n = tags.len();
                 parse_mdhd(data, content_start, content_end, tags, state);
+                for t in &mut tags[n..] {
+                    t.priority = 1;
+                }
             }
-            // Handler reference
+            // Handler reference. hdlr tags (HandlerType/HandlerDescription) are
+            // also default-priority (last wins), so a later track overrides.
             b"hdlr" => {
+                let n = tags.len();
                 parse_hdlr(data, content_start, content_end, tags, state);
+                for t in &mut tags[n..] {
+                    t.priority = 1;
+                }
             }
             // Video media header
             b"vmhd" => {
@@ -788,6 +823,32 @@ fn parse_atoms(
                         }
                     }
                 }
+            }
+            // Preview/thumbnail images stored as whole-atom binaries in udta.
+            // mcvr (Xiaomi) and snal (DJI) → PreviewImage; tnal (DJI) → ThumbnailImage.
+            b"mcvr" | b"snal" | b"tnal" => {
+                let img = &data[content_start..content_end];
+                let (name, desc) = if atom_type == b"tnal" {
+                    ("ThumbnailImage", "Thumbnail Image")
+                } else {
+                    ("PreviewImage", "Preview Image")
+                };
+                tags.push(Tag {
+                    id: TagId::Text(name.into()),
+                    name: name.into(),
+                    description: desc.into(),
+                    group: TagGroup {
+                        family0: "QuickTime".into(),
+                        family1: "QuickTime".into(),
+                        family2: "Preview".into(),
+                    },
+                    raw_value: Value::Binary(img.to_vec()),
+                    print_value: format!(
+                        "(Binary data {} bytes, use -b option to extract)",
+                        img.len()
+                    ),
+                    priority: 0,
+                });
             }
             // XMP in udta XMP_ atom
             b"XMP_" => {
@@ -1141,6 +1202,21 @@ fn parse_tkhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
 
     // From data_rest[0] (= reserved after duration): layer(8), alt-group(10),
     // volume(12), reserved(14), matrix(16..52), ImageWidth(52), ImageHeight(56).
+
+    // MatrixStructure (9 fixed-point int32s at offset 16) — emitted per track,
+    // matching Perl. The previous code mis-read it from offset 12 (4 bytes early,
+    // landing on volume+reserved), which zeroed out the rotation submatrix.
+    if data_rest.len() >= 52 {
+        let matrix_str = parse_matrix_structure(&data_rest[16..52]);
+        if !matrix_str.is_empty() {
+            tags.push(mk(
+                "MatrixStructure",
+                "Matrix Structure",
+                Value::String(matrix_str),
+            ));
+        }
+    }
+
     let mut has_video = false;
     if data_rest.len() >= 60 {
         let w_raw =
@@ -1157,15 +1233,17 @@ fn parse_tkhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
         }
     }
 
-    // Matrix at data_rest[12..48] (9 int32s).
-    // Only emit Rotation for video tracks (those with valid image dimensions)
-    if data_rest.len() >= 48 && has_video {
-        let rotation = calc_rotation_from_matrix(&data_rest[12..48]);
-        tags.push(mk(
-            "Rotation",
-            "Rotation",
-            Value::String(format!("{}", rotation)),
-        ));
+    // Rotation from the matrix (offset 16..52). Only for video tracks, and only
+    // when the matrix actually encodes a rotation (GetRotationAngle → Some).
+    if data_rest.len() >= 52 && has_video {
+        if let Some(rotation) = calc_rotation_from_matrix(&data_rest[16..52]) {
+            // `{}` renders 90.0 as "90" and 90.001 as "90.001", matching Perl.
+            tags.push(mk(
+                "Rotation",
+                "Rotation",
+                Value::String(format!("{}", rotation)),
+            ));
+        }
     }
 }
 
@@ -1184,51 +1262,28 @@ fn fix_wrong_format(val: u32) -> u32 {
     }
 }
 
-/// Calculate rotation angle (degrees) from a 3x3 matrix in fixed-point bytes.
-fn calc_rotation_from_matrix(bytes: &[u8]) -> i32 {
-    if bytes.len() < 36 {
-        return 0;
+/// Calculate the clockwise rotation angle (degrees) from the track matrix.
+/// Direct port of ExifTool's `QuickTime::GetRotationAngle`: it uses only the
+/// top-left 2×2 of the matrix (the displayed fixed-16.16 values `a[0]`, `a[1]`),
+/// returns `None` when both are zero, and rounds to 3 decimals. The literal
+/// `3.14159` (not full π) is kept to match ExifTool's output bit-for-bit.
+#[allow(clippy::approx_constant)] // 3.14159 is ExifTool's literal, intentional for parity
+fn calc_rotation_from_matrix(bytes: &[u8]) -> Option<f64> {
+    if bytes.len() < 8 {
+        return None;
     }
-    // Elements [0][0], [0][1], [1][0], [1][1] determine rotation
-    // In fixed 16.16 format:
-    let a = i32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]); // [0][0]
-    let b = i32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]); // [0][1]
-    let _c = i32::from_be_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]); // [0][2] (2.30)
-    let d = i32::from_be_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]); // [1][0]
-    let e = i32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]); // [1][1]
-
-    // Convert to floats (fixed 16.16)
-    let af = a as f64 / 65536.0;
-    let bf = b as f64 / 65536.0;
-    let df = d as f64 / 65536.0;
-    let ef = e as f64 / 65536.0;
-
-    // Determine rotation angle
-    // Typical rotation matrices:
-    // 0°:   [[1,0],[0,1]]
-    // 90°:  [[0,1],[-1,0]]
-    // 180°: [[-1,0],[0,-1]]
-    // 270°: [[0,-1],[1,0]]
-    let angle_rad = af.atan2(bf);
-    let angle_deg = (angle_rad * 180.0 / std::f64::consts::PI).round() as i32;
-
-    // Normalize
-    if (af - 1.0).abs() < 0.01 && ef.abs() < 0.01 && df.abs() < 0.01 {
-        return 0;
+    // a[0] and a[1] are fixed 16.16.
+    let a0 = i32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as f64 / 65536.0;
+    let a1 = i32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]) as f64 / 65536.0;
+    if a0 == 0.0 && a1 == 0.0 {
+        return None;
     }
-    if af.abs() < 0.01 && (bf - 1.0).abs() < 0.01 && (df + 1.0).abs() < 0.01 && ef.abs() < 0.01 {
-        return 90;
+    let mut angle = a1.atan2(a0) * 180.0 / 3.14159;
+    if angle < 0.0 {
+        angle += 360.0;
     }
-    if (af + 1.0).abs() < 0.01 && ef.abs() < 0.01 && df.abs() < 0.01 {
-        return 180;
-    }
-    if af.abs() < 0.01 && (bf + 1.0).abs() < 0.01 && (df - 1.0).abs() < 0.01 && ef.abs() < 0.01 {
-        return 270;
-    }
-
-    // Generic: compute from atan2
-
-    ((angle_deg % 360) + 360) % 360
+    // int($angle * 1000 + 0.5) / 1000 — round-half-up to milli-degrees.
+    Some(((angle * 1000.0) + 0.5).floor() / 1000.0)
 }
 
 /// Parse media header (mdhd).
@@ -2041,9 +2096,149 @@ fn parse_stsd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
             let bitdepth = u16::from_be_bytes([entry[82], entry[83]]);
             tags.push(mk("BitDepth", "Bit Depth", Value::U32(bitdepth as u32)));
         }
+
+        // Child atoms of the VisualSampleEntry begin at byte 86 (after the 78-byte
+        // fixed header). Walk them to extract `colr` (color representation).
+        let children_end = entry_size.min(entry.len());
+        let mut cpos = 86;
+        while cpos + 8 <= children_end {
+            let csize = u32::from_be_bytes([
+                entry[cpos],
+                entry[cpos + 1],
+                entry[cpos + 2],
+                entry[cpos + 3],
+            ]) as usize;
+            let ctype = &entry[cpos + 4..cpos + 8];
+            if csize < 8 || cpos + csize > children_end {
+                break;
+            }
+            if ctype == b"colr" {
+                parse_colr(&entry[cpos + 8..cpos + csize], tags);
+            }
+            cpos += csize;
+        }
     }
 
     let _ = entry_size;
+}
+
+/// Parse a `colr` atom. Port of ExifTool's QuickTime ColorRep table: for the
+/// `nclx`/`nclc` color types it emits ColorProfiles + the BT.x enums; `prof`/`rICC`
+/// carry an ICC profile (handled elsewhere) and are skipped here.
+fn parse_colr(d: &[u8], tags: &mut Vec<Tag>) {
+    if d.len() < 4 {
+        return;
+    }
+    let profile = &d[0..4];
+    if profile == b"prof" || profile == b"rICC" {
+        return; // ICC profile, not a color-representation record
+    }
+    let profile_str = crate::encoding::decode_utf8_or_latin1(profile).to_string();
+    tags.push(mk(
+        "ColorProfiles",
+        "Color Profiles",
+        Value::String(profile_str),
+    ));
+    if d.len() >= 6 {
+        let v = u16::from_be_bytes([d[4], d[5]]);
+        tags.push(mk(
+            "ColorPrimaries",
+            "Color Primaries",
+            Value::String(color_primaries_name(v)),
+        ));
+    }
+    if d.len() >= 8 {
+        let v = u16::from_be_bytes([d[6], d[7]]);
+        tags.push(mk(
+            "TransferCharacteristics",
+            "Transfer Characteristics",
+            Value::String(transfer_characteristics_name(v)),
+        ));
+    }
+    if d.len() >= 10 {
+        let v = u16::from_be_bytes([d[8], d[9]]);
+        tags.push(mk(
+            "MatrixCoefficients",
+            "Matrix Coefficients",
+            Value::String(matrix_coefficients_name(v)),
+        ));
+    }
+    if d.len() >= 11 {
+        // VideoFullRangeFlag: bit 0x80 of the byte at offset 10.
+        let full = d[10] & 0x80 != 0;
+        tags.push(mk(
+            "VideoFullRangeFlag",
+            "Video Full Range Flag",
+            Value::String(if full { "Full" } else { "Limited" }.into()),
+        ));
+    }
+}
+
+fn color_primaries_name(v: u16) -> String {
+    match v {
+        1 => "BT.709",
+        2 => "Unspecified",
+        4 => "BT.470 System M (historical)",
+        5 => "BT.470 System B, G (historical)",
+        6 => "BT.601",
+        7 => "SMPTE 240",
+        8 => "Generic film (color filters using illuminant C)",
+        9 => "BT.2020, BT.2100",
+        10 => "SMPTE 428 (CIE 1931 XYZ)",
+        11 => "SMPTE RP 431-2",
+        12 => "SMPTE EG 432-1",
+        22 => "EBU Tech. 3213-E",
+        _ => return v.to_string(),
+    }
+    .to_string()
+}
+
+fn transfer_characteristics_name(v: u16) -> String {
+    match v {
+        0 => "For future use (0)",
+        1 => "BT.709",
+        2 => "Unspecified",
+        3 => "For future use (3)",
+        4 => "BT.470 System M (historical)",
+        5 => "BT.470 System B, G (historical)",
+        6 => "BT.601",
+        7 => "SMPTE 240 M",
+        8 => "Linear",
+        9 => "Logarithmic (100 : 1 range)",
+        10 => "Logarithmic (100 * Sqrt(10) : 1 range)",
+        11 => "IEC 61966-2-4",
+        12 => "BT.1361",
+        13 => "sRGB or sYCC",
+        14 => "BT.2020 10-bit systems",
+        15 => "BT.2020 12-bit systems",
+        16 => "SMPTE ST 2084, ITU BT.2100 PQ",
+        17 => "SMPTE ST 428",
+        18 => "BT.2100 HLG, ARIB STD-B67",
+        _ => return v.to_string(),
+    }
+    .to_string()
+}
+
+fn matrix_coefficients_name(v: u16) -> String {
+    match v {
+        0 => "Identity matrix",
+        1 => "BT.709",
+        2 => "Unspecified",
+        3 => "For future use (3)",
+        4 => "US FCC 73.628",
+        5 => "BT.470 System B, G (historical)",
+        6 => "BT.601",
+        7 => "SMPTE 240 M",
+        8 => "YCgCo",
+        9 => "BT.2020 non-constant luminance, BT.2100 YCbCr",
+        10 => "BT.2020 constant luminance",
+        11 => "SMPTE ST 2085 YDzDx",
+        12 => "Chromaticity-derived non-constant luminance",
+        13 => "Chromaticity-derived constant luminance",
+        14 => "BT.2100 ICtCp",
+        _ => return v.to_string(),
+    }
+    .to_string()
 }
 
 /// Parse time-to-sample table (stts) to compute VideoFrameRate.
@@ -2282,7 +2477,42 @@ fn apply_ilst_print_conv(item_type: &[u8], value: &str) -> String {
 }
 
 /// Parse iTunes metadata item list (ilst).
-fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
+/// Parse a `keys` atom (QuickTime Keys metadata): a 4-byte version/flags, a
+/// 4-byte entry count, then `count` entries of `size(4) + namespace(4) + key`.
+/// The ordered key strings are stored on the state for the following `ilst`.
+fn parse_keys(data: &[u8], start: usize, end: usize, state: &mut QtState) {
+    if start + 8 > end {
+        return;
+    }
+    let count = u32::from_be_bytes([
+        data[start + 4],
+        data[start + 5],
+        data[start + 6],
+        data[start + 7],
+    ]) as usize;
+    let mut keys = Vec::with_capacity(count.min(1024));
+    let mut pos = start + 8;
+    for _ in 0..count {
+        if pos + 8 > end {
+            break;
+        }
+        let size =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+        if size < 8 || pos + size > end {
+            break;
+        }
+        // bytes [pos+4..pos+8] are the namespace (e.g. "mdta"); the key follows.
+        let key = String::from_utf8_lossy(&data[pos + 8..pos + size]).into_owned();
+        keys.push(key);
+        pos += size;
+    }
+    state.item_list_keys = keys;
+}
+
+fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state: &mut QtState) {
+    // When a preceding `keys` atom defined key names, this ilst is Keys metadata:
+    // each item's 4-byte "type" is a 1-based index into that list, not a tag code.
+    let keys = std::mem::take(&mut state.item_list_keys);
     let mut pos = start;
 
     while pos + 8 <= end {
@@ -2295,7 +2525,18 @@ fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
             break;
         }
 
-        if item_type == b"----" {
+        if !keys.is_empty() {
+            // Keys-indexed item: resolve the index to a key name, then to a tag.
+            let idx = u32::from_be_bytes([item_type[0], item_type[1], item_type[2], item_type[3]])
+                as usize;
+            if idx >= 1 && idx <= keys.len() {
+                if let Some(value) = find_data_atom(data, pos + 8, item_end) {
+                    if let Some((name, description)) = keys_tag_name(&keys[idx - 1]) {
+                        tags.push(mk(name, description, Value::String(value)));
+                    }
+                }
+            }
+        } else if item_type == b"----" {
             // mean/name/data triplet (iTunes reverse-DNS tags)
             parse_ilst_triplet(data, pos + 8, item_end, tags);
         } else {
@@ -2311,6 +2552,49 @@ fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
         }
 
         pos = item_end;
+    }
+}
+
+/// Map a QuickTime Keys key string to (tag name, description). Apple keys carry a
+/// `com.apple.quicktime.` prefix that is stripped before lookup; other vendors
+/// (Android, Xiaomi, Samsung) use the full reverse-DNS key. Port of the relevant
+/// entries of ExifTool's `QuickTime::Keys` table. Unmapped keys return `None`.
+fn keys_tag_name(key: &str) -> Option<(&'static str, &'static str)> {
+    // Non-Apple namespaces are matched on the full key first.
+    let mapped = match key {
+        "com.android.version" => Some(("AndroidVersion", "Android Version")),
+        "com.android.manufacturer" => Some(("AndroidMake", "Android Make")),
+        "com.android.model" => Some(("AndroidModel", "Android Model")),
+        "com.android.capture.fps" => Some(("AndroidCaptureFPS", "Android Capture FPS")),
+        "xiaomi.exifInfo.videoinfo" => Some(("XiaomiExifInfo", "Xiaomi Exif Info")),
+        "com.xiaomi.hdr10" => Some(("XiaomiHDR10", "Xiaomi HDR10")),
+        "com.xiaomi.preview_video_cover" => {
+            Some(("XiaomiPreviewVideoCover", "Xiaomi Preview Video Cover"))
+        }
+        "samsung.android.utc_offset" => Some(("AndroidTimeZone", "Android Time Zone")),
+        "content.identifier" => Some(("ContentIdentifier", "Content Identifier")),
+        _ => None,
+    };
+    if mapped.is_some() {
+        return mapped;
+    }
+    // Apple namespace: strip the prefix and match the short key.
+    let short = key.strip_prefix("com.apple.quicktime.")?;
+    match short {
+        "make" => Some(("Make", "Make")),
+        "model" => Some(("Model", "Model")),
+        "software" => Some(("Software", "Software")),
+        "creationdate" => Some(("CreationDate", "Creation Date")),
+        "version" => Some(("Version", "Version")),
+        "author" => Some(("Author", "Author")),
+        "title" => Some(("Title", "Title")),
+        "displayname" => Some(("DisplayName", "Display Name")),
+        "description" => Some(("Description", "Description")),
+        "comment" => Some(("Comment", "Comment")),
+        "copyright" => Some(("Copyright", "Copyright")),
+        "keywords" => Some(("Keywords", "Keywords")),
+        "location.ISO6709" => Some(("GPSCoordinates", "GPS Coordinates")),
+        _ => None,
     }
 }
 
