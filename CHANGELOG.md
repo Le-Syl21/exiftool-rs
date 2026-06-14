@@ -2,6 +2,47 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [0.6.1] - 2026-06-14
+
+### Performance
+
+- **Memory-mapped reads.** Files are now `mmap`-ed instead of being read fully
+  into memory. The container readers walk by offset (MP4/MOV skip `mdat`,
+  Matroska stops at the first `Cluster`, Android MP4s keep `moov` at the end), so
+  only the header pages are faulted in. A multi-gigabyte video is parsed by
+  touching a few MB rather than allocating and reading the whole file: a real
+  2 GB MP4 now parses in ~0 ms with ~9 MB RSS (was a multi-minute stall on very
+  large files). Falls back to a plain read when mapping is unavailable. (#5)
+
+### Added
+
+- **QuickTime Keys metadata**: Android device info `AndroidMake`, `AndroidModel`,
+  `AndroidVersion` (and other mapped `keys`/`ilst` entries), with QuickTime-style
+  `meta` (no version/flags) detection. (#5)
+- **Color representation** (`colr` atom): `ColorProfiles`, `ColorPrimaries`,
+  `TransferCharacteristics`, `MatrixCoefficients`, `VideoFullRangeFlag`.
+- **PreviewImage / ThumbnailImage** from QuickTime `mcvr`/`snal`/`tnal` atoms.
+
+### Fixed
+
+- **Rotation**: the per-track `tkhd` matrix was read 4 bytes early (zeroing the
+  rotation sub-matrix); now read at the correct offset and computed via an exact
+  port of ExifTool's `GetRotationAngle`. `MatrixStructure` is now emitted per
+  track.
+- **FilePermissions**: emit the ls-style `-rw-rw-r--` string (with the full octal
+  mode as the `-n` value) instead of bare `664`.
+- **File dates**: `FileModifyDate`/`FileAccessDate`/`FileInodeChangeDate` now use
+  local time with a numeric timezone offset, matching `ConvertUnixTime($val,1)`.
+- **FileSize**: raw value stored without 32-bit truncation (files > 4 GB).
+- **QuickTime duplicate-tag priority**: `mdhd`/`hdlr` tags follow last-wins while
+  `tkhd` tags are Priority-0 (first-wins), matching ExifTool's `FoundTag` rule —
+  correct primary `HandlerType`/`MediaDuration`/etc. on multi-track files.
+
+### Test corpus
+
+- Added `tests/images/Android.mp4` (sample from #5) with `.tags`/`.vals` oracles;
+  0 name and 0 value deltas vs ExifTool 13.53.
+
 ## [0.6.0] - 2026-06-12
 
 ### Highlights
