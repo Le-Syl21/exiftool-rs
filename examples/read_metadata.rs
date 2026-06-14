@@ -9,6 +9,7 @@ fn main() {
         std::process::exit(1);
     }
 
+    let start_init = std::time::Instant::now();
     let et = exiftool_rs::ExifTool::new();
     match et.extract_info(&args[1]) {
         Ok(tags) => {
@@ -19,4 +20,6 @@ fn main() {
         }
         Err(e) => eprintln!("Error: {}", e),
     }
+    let duration_init = start_init.elapsed();
+    println!("共计耗时：{} 毫秒", duration_init.as_millis());
 }

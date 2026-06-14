@@ -3,10 +3,10 @@
 //! This is the main entry point for reading metadata from files.
 //! Mirrors ExifTool.pm's ImageInfo/ExtractInfo/GetInfo pipeline.
 
+use memmap2::Mmap;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use memmap2::Mmap;
 
 use crate::error::{Error, Result};
 use crate::file_type::{self, FileType};
@@ -1074,24 +1074,57 @@ impl ExifTool {
     /// Returns the full `Tag` structs with groups, raw values, etc.
     pub fn extract_info<P: AsRef<Path>>(&self, path: P) -> Result<Vec<Tag>> {
         let path = path.as_ref();
-        
-        // Try memory mapping first for large files
-        match self.extract_info_mmap(path) {
-            Ok(tags) => Ok(tags),
-            // Fallback to regular read if mmap fails (e.g., small files, special files)
+
+        // For small-to-medium files, pre-read into memory is faster than mmap
+        // because the parser needs full sequential scan (JPEG markers, EXIF IFDs, etc.)
+        // mmap page-fault overhead dominates for small files on Windows.
+        // For large files, mmap avoids loading the entire file into memory.
+        const MMAP_THRESHOLD: u64 = 50 * 1024 * 1024; // 50 MB
+
+        let file = match fs::File::open(path) {
+            Ok(f) => f,
+            Err(e) => return Err(Error::Io(e)),
+        };
+
+        let file_size = match file.metadata().map(|m| m.len()) {
+            Ok(size) => size,
             Err(_) => {
-                let data = fs::read(path).map_err(Error::Io)?;
-                self.extract_info_from_bytes(&data, path)
+                // Cannot determine file size, fall back to regular read
+                let data = match fs::read(path) {
+                    Ok(d) => d,
+                    Err(e) => return Err(Error::Io(e)),
+                };
+                return self.extract_info_from_bytes(&data, path);
+            }
+        };
+
+        if file_size <= MMAP_THRESHOLD {
+            // Small file: pre-read into memory for efficient sequential scanning
+            let data = match fs::read(path) {
+                Ok(d) => d,
+                Err(e) => return Err(Error::Io(e)),
+            };
+            self.extract_info_from_bytes(&data, path)
+        } else {
+            // Large file: use mmap to avoid loading the entire file
+            match self.extract_info_from_mmap(file, path) {
+                Ok(tags) => Ok(tags),
+                Err(_) => {
+                    let data = match fs::read(path) {
+                        Ok(d) => d,
+                        Err(e) => return Err(Error::Io(e)),
+                    };
+                    self.extract_info_from_bytes(&data, path)
+                }
             }
         }
     }
-    
+
     /// Extract metadata using memory-mapped file for efficient access to large files
-    fn extract_info_mmap<P: AsRef<Path>>(&self, path: P) -> Result<Vec<Tag>> {
+    fn extract_info_from_mmap<P: AsRef<Path>>(&self, file: fs::File, path: P) -> Result<Vec<Tag>> {
         let path = path.as_ref();
-        let file = fs::File::open(path).map_err(Error::Io)?;
         let mmap = unsafe { Mmap::map(&file) }.map_err(Error::Io)?;
-        
+
         self.extract_info_from_bytes(&mmap, path)
     }
 
@@ -1239,10 +1272,10 @@ impl ExifTool {
             let bo_str = if data.len() > 8 {
                 // Check EXIF in JPEG or TIFF header or WebP/RIFF EXIF chunk
                 let check: Option<&[u8]> = if data.starts_with(&[0xFF, 0xD8]) {
-                    // JPEG: find APP1 EXIF header
-                    data.windows(6)
-                        .position(|w| w == b"Exif\0\0")
-                        .map(|p| &data[p + 6..])
+                    // JPEG: find APP1 EXIF header (only search first 512KB)
+                    let search_end = data.len().min(512 * 1024);
+                    let found_pos = data[..search_end].windows(6).position(|w| w == b"Exif\0\0");
+                    found_pos.map(|p| &data[p + 6..])
                 } else if data.starts_with(b"FUJIFILMCCD-RAW") && data.len() >= 0x60 {
                     // RAF: look in the embedded JPEG for EXIF byte order
                     let jpeg_offset =
@@ -1253,7 +1286,9 @@ impl ExifTool {
                             as usize;
                     if jpeg_offset > 0 && jpeg_offset + jpeg_length <= data.len() {
                         let jpeg = &data[jpeg_offset..jpeg_offset + jpeg_length];
-                        jpeg.windows(6)
+                        let jpeg_search_end = jpeg.len().min(512 * 1024);
+                        jpeg[..jpeg_search_end]
+                            .windows(6)
                             .position(|w| w == b"Exif\0\0")
                             .map(|p| &jpeg[p + 6..])
                     } else {

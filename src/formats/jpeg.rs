@@ -807,106 +807,113 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    // PhotoMechanic trailer: "cbipcbbl" signature anywhere after SOS (from Perl PhotoMechanic.pm)
-    // The trailer can be followed by other trailers (CanonVRD, Samsung, etc.)
-    // so we scan the whole file forward for the "cbipcbbl" signature.
-    if let Some(pm_sig_pos) = data.windows(8).position(|w| w == b"cbipcbbl") {
-        // Layout: pm_data(size bytes) + size(4 BE) + "cbipcbbl"(8)
-        if pm_sig_pos >= 12 {
-            let size = u32::from_be_bytes([
-                data[pm_sig_pos - 4],
-                data[pm_sig_pos - 3],
-                data[pm_sig_pos - 2],
-                data[pm_sig_pos - 1],
-            ]) as usize;
-            if size > 0 && pm_sig_pos >= 4 + size {
-                let pm_data = &data[pm_sig_pos - 4 - size..pm_sig_pos - 4];
-                // PhotoMechanic data is in IPTC format (record 2, datasets 209+)
-                // But also contains standard IPTC records
-                if let Some(start) = pm_data.iter().position(|&b| b == 0x1C) {
-                    if let Ok(iptc_tags) = IptcReader::read(&pm_data[start..]) {
-                        // Map PM-specific datasets to tag names
-                        for tag in &iptc_tags {
-                            tags.push(tag.clone());
-                        }
-                    }
-                    // Also extract PM-specific tags with custom names
-                    let mut pos = start;
-                    while pos + 5 <= pm_data.len() {
-                        if pm_data[pos] != 0x1C {
-                            break;
-                        }
-                        let rec = pm_data[pos + 1];
-                        let ds = pm_data[pos + 2];
-                        let len = u16::from_be_bytes([pm_data[pos + 3], pm_data[pos + 4]]) as usize;
-                        pos += 5;
-                        if pos + len > pm_data.len() {
-                            break;
-                        }
-                        let val_bytes = &pm_data[pos..pos + len];
-                        let name = match (rec, ds) {
-                            (2, 216) => "Rotation",
-                            (2, 217) => "CropLeft",
-                            (2, 218) => "CropTop",
-                            (2, 219) => "CropRight",
-                            (2, 220) => "CropBottom",
-                            (2, 221) => "Tagged",
-                            (2, 222) => "ColorClass",
-                            _ => {
-                                pos += len;
-                                continue;
+    // PhotoMechanic trailer: "cbipcbbl" signature near the end of file (from Perl PhotoMechanic.pm)
+    // Only search the last 256 KB — trailers are appended at the end, no need to scan the entire file.
+    if data.len() > 12 {
+        let search_start = data.len().saturating_sub(256 * 1024);
+        if let Some(pm_rel_pos) = data[search_start..]
+            .windows(8)
+            .position(|w| w == b"cbipcbbl")
+        {
+            let pm_sig_pos = search_start + pm_rel_pos;
+            // Layout: pm_data(size bytes) + size(4 BE) + "cbipcbbl"(8)
+            if pm_sig_pos >= 12 {
+                let size = u32::from_be_bytes([
+                    data[pm_sig_pos - 4],
+                    data[pm_sig_pos - 3],
+                    data[pm_sig_pos - 2],
+                    data[pm_sig_pos - 1],
+                ]) as usize;
+                if size > 0 && pm_sig_pos >= 4 + size {
+                    let pm_data = &data[pm_sig_pos - 4 - size..pm_sig_pos - 4];
+                    // PhotoMechanic data is in IPTC format (record 2, datasets 209+)
+                    // But also contains standard IPTC records
+                    if let Some(start) = pm_data.iter().position(|&b| b == 0x1C) {
+                        if let Ok(iptc_tags) = IptcReader::read(&pm_data[start..]) {
+                            // Map PM-specific datasets to tag names
+                            for tag in &iptc_tags {
+                                tags.push(tag.clone());
                             }
-                        };
-                        let raw_int = if len == 4 {
-                            i32::from_be_bytes([
-                                val_bytes[0],
-                                val_bytes[1],
-                                val_bytes[2],
-                                val_bytes[3],
-                            ])
-                        } else if len == 2 {
-                            i16::from_be_bytes([val_bytes[0], val_bytes[1]]) as i32
-                        } else {
-                            0
-                        };
-                        let raw_val = raw_int.to_string();
-                        // Apply print conversions (from Perl PhotoMechanic.pm)
-                        let print_val = match (rec, ds) {
-                            (2, 221) => match raw_int {
-                                // Tagged: 0=No, 1=Yes
-                                0 => "No".to_string(),
-                                1 => "Yes".to_string(),
+                        }
+                        // Also extract PM-specific tags with custom names
+                        let mut pos = start;
+                        while pos + 5 <= pm_data.len() {
+                            if pm_data[pos] != 0x1C {
+                                break;
+                            }
+                            let rec = pm_data[pos + 1];
+                            let ds = pm_data[pos + 2];
+                            let len =
+                                u16::from_be_bytes([pm_data[pos + 3], pm_data[pos + 4]]) as usize;
+                            pos += 5;
+                            if pos + len > pm_data.len() {
+                                break;
+                            }
+                            let val_bytes = &pm_data[pos..pos + len];
+                            let name = match (rec, ds) {
+                                (2, 216) => "Rotation",
+                                (2, 217) => "CropLeft",
+                                (2, 218) => "CropTop",
+                                (2, 219) => "CropRight",
+                                (2, 220) => "CropBottom",
+                                (2, 221) => "Tagged",
+                                (2, 222) => "ColorClass",
+                                _ => {
+                                    pos += len;
+                                    continue;
+                                }
+                            };
+                            let raw_int = if len == 4 {
+                                i32::from_be_bytes([
+                                    val_bytes[0],
+                                    val_bytes[1],
+                                    val_bytes[2],
+                                    val_bytes[3],
+                                ])
+                            } else if len == 2 {
+                                i16::from_be_bytes([val_bytes[0], val_bytes[1]]) as i32
+                            } else {
+                                0
+                            };
+                            let raw_val = raw_int.to_string();
+                            // Apply print conversions (from Perl PhotoMechanic.pm)
+                            let print_val = match (rec, ds) {
+                                (2, 221) => match raw_int {
+                                    // Tagged: 0=No, 1=Yes
+                                    0 => "No".to_string(),
+                                    1 => "Yes".to_string(),
+                                    _ => raw_val.clone(),
+                                },
+                                (2, 222) => match raw_int {
+                                    // ColorClass
+                                    0 => "0 (None)".to_string(),
+                                    1 => "1 (Winner)".to_string(),
+                                    2 => "2 (Winner alt)".to_string(),
+                                    3 => "3 (Superior)".to_string(),
+                                    4 => "4 (Superior alt)".to_string(),
+                                    5 => "5 (Typical)".to_string(),
+                                    6 => "6 (Typical alt)".to_string(),
+                                    7 => "7 (Extras)".to_string(),
+                                    8 => "8 (Trash)".to_string(),
+                                    _ => raw_val.clone(),
+                                },
                                 _ => raw_val.clone(),
-                            },
-                            (2, 222) => match raw_int {
-                                // ColorClass
-                                0 => "0 (None)".to_string(),
-                                1 => "1 (Winner)".to_string(),
-                                2 => "2 (Winner alt)".to_string(),
-                                3 => "3 (Superior)".to_string(),
-                                4 => "4 (Superior alt)".to_string(),
-                                5 => "5 (Typical)".to_string(),
-                                6 => "6 (Typical alt)".to_string(),
-                                7 => "7 (Extras)".to_string(),
-                                8 => "8 (Trash)".to_string(),
-                                _ => raw_val.clone(),
-                            },
-                            _ => raw_val.clone(),
-                        };
-                        tags.push(crate::tag::Tag {
-                            id: crate::tag::TagId::Text(name.into()),
-                            name: name.into(),
-                            description: name.into(),
-                            group: crate::tag::TagGroup {
-                                family0: "PhotoMechanic".into(),
-                                family1: "PhotoMechanic".into(),
-                                family2: "Image".into(),
-                            },
-                            raw_value: crate::value::Value::String(raw_val),
-                            print_value: print_val,
-                            priority: 0,
-                        });
-                        pos += len;
+                            };
+                            tags.push(crate::tag::Tag {
+                                id: crate::tag::TagId::Text(name.into()),
+                                name: name.into(),
+                                description: name.into(),
+                                group: crate::tag::TagGroup {
+                                    family0: "PhotoMechanic".into(),
+                                    family1: "PhotoMechanic".into(),
+                                    family2: "Image".into(),
+                                },
+                                raw_value: crate::value::Value::String(raw_val),
+                                print_value: print_val,
+                                priority: 0,
+                            });
+                            pos += len;
+                        }
                     }
                 }
             }
@@ -914,19 +921,26 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     // FotoStation trailer: 0xa1b2c3d4 signature (from Perl FotoStation.pm)
-    // Blocks can appear anywhere in file (other trailers may follow them).
-    // Each block footer: tag(2) + size(4) + sig(4). The sig is the LAST 4 bytes of each block.
-    // We scan the entire file for all occurrences of the signature.
+    // Blocks appear near the end of the file. Limit search to the last 256 KB.
     {
         let fs_sig = [0xa1u8, 0xb2, 0xc3, 0xd4];
+        let search_domain = if data.len() > 256 * 1024 {
+            &data[data.len() - 256 * 1024..]
+        } else {
+            data
+        };
+        let domain_offset = data.len() - search_domain.len();
         let mut search_start = 0usize;
-        while search_start + 4 <= data.len() {
-            let found = data[search_start..].windows(4).position(|w| w == fs_sig);
-            let sig_pos = match found {
+        while search_start + 4 <= search_domain.len() {
+            let found = search_domain[search_start..]
+                .windows(4)
+                .position(|w| w == fs_sig);
+            let rel_pos = match found {
                 Some(p) => search_start + p,
                 None => break,
             };
-            search_start = sig_pos + 4; // next search starts after this sig
+            search_start = rel_pos + 4; // next search starts after this sig
+            let sig_pos = domain_offset + rel_pos;
 
             // Footer is the 10 bytes ending at sig_pos+4: tag(2)+size(4)+sig(4)
             // footer starts at sig_pos-6
@@ -1052,15 +1066,18 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     // FotoStation/PhotoMechanic trailers: scan for Photoshop segments after SOS
-    // These are APP13 segments embedded after the image data
+    // These are APP13 segments embedded after the image data (trailer only, near end of file)
     {
         let sos_pos = data.windows(2).position(|w| w == [0xFF, 0xDA]);
         if let Some(sp) = sos_pos {
-            // Scan rest of file for additional Photoshop segments
+            // Only search the last 256 KB of the tail for Photoshop headers
             let rest = &data[sp..];
-            // Look for "Photoshop 3.0\0" or "cbipcbbl" markers
-            if let Some(ps_pos) = rest.windows(14).position(|w| w == PHOTOSHOP_HEADER) {
-                let ps_data = &rest[ps_pos + PHOTOSHOP_HEADER.len()..];
+            let tail_start = rest.len().saturating_sub(256 * 1024);
+            if let Some(ps_pos) = rest[tail_start..]
+                .windows(14)
+                .position(|w| w == PHOTOSHOP_HEADER)
+            {
+                let ps_data = &rest[tail_start + ps_pos + PHOTOSHOP_HEADER.len()..];
                 let (iptc2, irb2) = extract_photoshop_irbs(ps_data);
                 tags.extend(irb2);
                 if let Some(iptc2_data) = iptc2 {
@@ -1081,11 +1098,13 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
     {
         let sig = CANON_VRD_SIG;
         let sig_len = sig.len(); // 20 bytes
+        let vrd_start_offset = data.len().saturating_sub(256 * 1024);
         let mut search_end = data.len();
-        'vrd_scan: while search_end >= sig_len + 0x40 {
-            let found = data[..search_end].windows(sig_len).rposition(|w| w == sig);
+        'vrd_scan: while search_end > vrd_start_offset + sig_len + 0x40 {
+            let search_domain = &data[vrd_start_offset..search_end];
+            let found = search_domain.windows(sig_len).rposition(|w| w == sig);
             let candidate = match found {
-                Some(p) => p,
+                Some(p) => vrd_start_offset + p,
                 None => break,
             };
             search_end = candidate; // advance backwards for next iteration
@@ -1126,7 +1145,14 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
     // SEFH directory: "SEFH" + u32le_version + u32le_count + (count * 12-byte entries).
     // Each entry: u16_padding + u16le_type + u32le_noff + u32le_size.
     // Each block: u32le_type_marker + u32le_namelen + name + data.
-    if let Some(qdiobs_pos) = data.windows(6).rposition(|w| w == b"QDIOBS") {
+    if let Some(qdiobs_pos) = data[data.len().saturating_sub(256 * 1024)..]
+        .windows(6)
+        .rposition(|w| w == b"QDIOBS")
+    {
+        let qdiobs_pos = data
+            .len()
+            .saturating_sub(256 * 1024)
+            .saturating_add(qdiobs_pos);
         // JSON data follows "QDIOBSvivo" or similar prefix in the Vivo-style trailer block.
         let after = &data[qdiobs_pos + 6..];
         if let Some(json_start) = after.iter().position(|&b| b == b'{') {
@@ -1172,8 +1198,12 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
         tags.extend(parse_samsung_seft(data, block_end));
     }
 
-    // MIE trailer: scan for "~\x10\x04\xfe" outer MIE group signature (from Perl MIE.pm).
-    if let Some(mie_pos) = data.windows(4).rposition(|w| w == b"\x7e\x10\x04\xfe") {
+    // MIE trailer: scan for "~\x10\x04\xfe" outer MIE group signature (near end of file).
+    if let Some(mie_rel) = data[data.len().saturating_sub(256 * 1024)..]
+        .windows(4)
+        .rposition(|w| w == b"\x7e\x10\x04\xfe")
+    {
+        let mie_pos = data.len().saturating_sub(256 * 1024) + mie_rel;
         let mie_data = &data[mie_pos..];
         tags.extend(parse_mie_trailer(mie_data));
     }
