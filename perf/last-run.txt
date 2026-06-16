@@ -1,0 +1,29 @@
+exiftool-rs performance report
+================================
+when     : 2026-06-16 09:10:52Z  (commit 4e0f3a4)
+host     : linux/x86_64, 12 cores, 15.0 GB RAM
+cpu      : Intel(R) Core(TM) i7-8700K CPU @ 3.70GHz
+
+host benchmarks (normalize cross-machine comparison):
+  cpu    :      560 Mops/s
+  ram    :      8.4 GB/s
+  disk   :     3440 MB/s write   2484 MB/s read (warm)
+
+corpus   : 194 files, 2.00 MB total parsed in 80.99 ms  (24.6 MB/s)
+
+slowest files (best-of-50 per file):
+     6.399 ms       41417 B  Google.jpg
+     2.799 ms       26106 B  ExifTool.jpg
+     2.264 ms       52502 B  CanonRaw.cr3
+     2.233 ms       13662 B  DNG.dng
+     1.930 ms        6586 B  XMP.xml
+     1.702 ms        8337 B  Canon1DmkIII.jpg
+     1.307 ms       10314 B  XMP.jpg
+     1.252 ms        8907 B  PDF.pdf
+     1.230 ms        6188 B  Nikon.nef
+     1.217 ms       17369 B  Photoshop.psd
+     1.190 ms        4721 B  XMP5.xmp
+     1.127 ms        3790 B  XMP.xmp
+     1.104 ms        4763 B  PLUS.xmp
+     1.077 ms        8724 B  CanonRaw.cr2
+     1.040 ms        2721 B  Pentax.jpg

@@ -1,0 +1,2 @@
+epoch	commit	os	arch	cores	ram_gb	cpu_mops	ram_gbps	disk_w_mbps	disk_r_mbps	files	corpus_bytes	parse_ms	parse_mb_per_s
+1781601052	4e0f3a4	linux	x86_64	12	15.0	560	8.4	3440	2484	194	1995123	80.99	24.6

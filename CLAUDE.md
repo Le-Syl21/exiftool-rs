@@ -94,6 +94,19 @@ for f in ../exiftool/t/images/*; do target/release/exiftool -s "$f"; done
 diff <(target/release/exiftool -s -n photo.jpg) <(perl ../exiftool/exiftool -s -n photo.jpg)
 ```
 
+### Scalability & performance
+
+- `tests/large_file.rs` builds a sparse multi-GB MP4 at run time and asserts
+  metadata is still extracted — a regression guard for the mmap reader (issue #5).
+  Unix-only; runs in normal `cargo test`.
+- `tests/perf_report.rs` is an `#[ignore]`d, non-blocking perf harness. Run it to
+  record a data point; it micro-benchmarks the host (CPU/RAM/disk) so runs stay
+  comparable across machines, and appends to `perf/history.tsv` (+ `perf/last-run.txt`):
+
+  ```sh
+  cargo test --release --test perf_report -- --ignored --nocapture
+  ```
+
 ## Adding a New Format
 
 1. Create `src/formats/myformat.rs` with `pub fn read_myformat(data: &[u8]) -> Result<Vec<Tag>>`

@@ -5,7 +5,7 @@ AudioBitsPerSample	16
 AudioChannels	2
 AudioFormat	mp4a
 AudioSampleRate	48000
-AvgBitrate	21.1 Mbps
+AvgBitrate	0 bps
 Balance	0
 BitDepth	24
 ColorPrimaries	BT.709
@@ -28,8 +28,8 @@ MajorBrand	MP4 v2 [ISO 14496-14]
 MatrixCoefficients	BT.709
 MatrixStructure	1 0 0 0 1 0 0 0 1
 MediaCreateDate	2026:06:13 04:03:08
-MediaDataOffset	405278
-MediaDataSize	5610854
+MediaDataOffset	405270
+MediaDataSize	0
 MediaDuration	2.10 s
 MediaHeaderVersion	0
 MediaModifyDate	2026:06:13 04:03:08
