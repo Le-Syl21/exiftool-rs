@@ -14,7 +14,7 @@ jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -63,7 +63,7 @@ jobs:
     name: ${{ matrix.label }}
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -209,7 +209,7 @@ jobs:
         run: Compress-Archive -Path target/release/exiftool-rs.exe -DestinationPath exiftool-rs-cli-${{ matrix.label }}.zip
 
       - name: Upload CLI artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: exiftool-rs-cli-${{ matrix.label }}
           path: exiftool-rs-cli-${{ matrix.label }}.*
@@ -224,36 +224,104 @@ jobs:
         run: Compress-Archive -Path target/release/exiftool-rs-gui.exe -DestinationPath exiftool-rs-gui-${{ matrix.label }}.zip
 
       - name: Upload GUI artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: exiftool-rs-gui-${{ matrix.label }}
           path: exiftool-rs-gui-${{ matrix.label }}.*
 
-  release:
+  # Authenticode-sign the Windows CLI + GUI with ssign — the Linux runner signs
+  # them via Certum (no Windows, no vendor stack). Gated by the `signing`
+  # environment (owner approval); the release below needs it.
+  sign-windows:
     needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: signing
+    steps:
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install ssign
+        run: cargo install ssign
+
+      - name: Download CLI artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: exiftool-rs-cli-windows-x86_64
+          path: dl
+
+      - name: Download GUI artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: exiftool-rs-gui-windows-x86_64
+          path: dl
+
+      - name: Sign CLI + GUI with ssign (via Certum)
+        env:
+          CERTUM_EMAIL: ${{ secrets.CERTUM_EMAIL }}
+          CERTUM_OTP: ${{ secrets.CERTUM_OTP }}
+        run: |
+          cd dl
+          unzip -o exiftool-rs-cli-windows-x86_64.zip
+          unzip -o exiftool-rs-gui-windows-x86_64.zip
+          ssign --verbose \
+            -n "exiftool-rs" -u "https://github.com/${{ github.repository }}" \
+            exiftool-rs.exe exiftool-rs-gui.exe
+          sudo apt-get update -qq && sudo apt-get install -y osslsigncode
+          for f in exiftool-rs.exe exiftool-rs-gui.exe; do
+            osslsigncode verify "$f" 2>&1 | grep -q "Calculated message digest"
+          done
+          rm -f exiftool-rs-cli-windows-x86_64.zip exiftool-rs-gui-windows-x86_64.zip
+          zip -j exiftool-rs-cli-windows-x86_64.zip exiftool-rs.exe
+          zip -j exiftool-rs-gui-windows-x86_64.zip exiftool-rs-gui.exe
+
+      - name: Re-upload signed CLI
+        uses: actions/upload-artifact@v7
+        with:
+          name: exiftool-rs-cli-windows-x86_64
+          path: dl/exiftool-rs-cli-windows-x86_64.zip
+          overwrite: true
+
+      - name: Re-upload signed GUI
+        uses: actions/upload-artifact@v7
+        with:
+          name: exiftool-rs-gui-windows-x86_64
+          path: dl/exiftool-rs-gui-windows-x86_64.zip
+          overwrite: true
+
+  release:
+    needs: [build, sign-windows]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     permissions:
       contents: write
 
     steps:
+      # Download outside the repo working tree so `cargo publish` (after the
+      # checkout below) sees a clean tree.
       - name: Download all artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
-          path: artifacts
+          path: ${{ runner.temp }}/artifacts
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
-          files: artifacts/**/*
+          files: ${{ runner.temp }}/artifacts/**/*
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Publish to crates.io
-        run: cargo publish
+        run: |
+          if cargo publish 2>&1 | tee /tmp/publish.log; then
+            echo "published"
+          elif grep -q "already exists" /tmp/publish.log; then
+            echo "this version is already on crates.io — nothing to do"
+          else
+            exit 1
+          fi
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_TOKEN }}
