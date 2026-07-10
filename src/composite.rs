@@ -923,7 +923,7 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
             return None;
         }
     } else if let Some(fpxs) = find_tag_f64(tags, "FocalPlaneXSize")
-        .and_then(|v| if v < 100.0 { Some(v) } else { None }) // Skip raw U16 values (914 etc.)
+        .filter(|&v| v < 100.0) // Skip raw U16 values (914 etc.)
         .or_else(|| {
             find_tag_value(tags, "FocalPlaneXSize")
                 .and_then(|s| s.split_whitespace().next()?.parse::<f64>().ok())
@@ -931,7 +931,7 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
     {
         // FocalPlaneXSize/YSize path (mm values)
         let fpys = find_tag_f64(tags, "FocalPlaneYSize")
-            .and_then(|v| if v < 100.0 { Some(v) } else { None })
+            .filter(|&v| v < 100.0)
             .or_else(|| {
                 find_tag_value(tags, "FocalPlaneYSize")
                     .and_then(|s| s.split_whitespace().next()?.parse::<f64>().ok())

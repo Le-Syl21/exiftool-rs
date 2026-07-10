@@ -311,8 +311,8 @@ pub fn tag_to_ilst_key(tag: &str) -> Option<[u8; 4]> {
         "grouping" => [0xA9, b'g', b'r', b'p'],
         "lyrics" => [0xA9, b'l', b'y', b'r'],
         "description" => [0xA9, b'd', b'e', b's'],
-        "albumartist" => [b'a', b'A', b'R', b'T'],
-        "copyright" => [b'c', b'p', b'r', b't'],
+        "albumartist" => *b"aART",
+        "copyright" => *b"cprt",
         _ => return None,
     })
 }

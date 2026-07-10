@@ -1120,7 +1120,7 @@ fn parse_bext(
             // Convert YYYY-MM-DD to YYYY:MM:DD
             let converted = dt_str.replace('-', ":");
             let converted = if converted.len() >= 10 {
-                format!("{} {}", &converted[..10], &converted[10..].trim())
+                format!("{} {}", &converted[..10], converted[10..].trim())
             } else {
                 converted
             };

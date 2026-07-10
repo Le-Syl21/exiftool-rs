@@ -238,10 +238,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: signing
     steps:
-      - uses: dtolnay/rust-toolchain@stable
-
-      - name: Install ssign
-        run: cargo install ssign
+      - name: Install ssign (prebuilt binary from the latest release)
+        run: |
+          curl -fsSL https://github.com/Le-Syl21/ssign/releases/latest/download/ssign-linux-x86_64.tar.gz | tar xz
+          sudo install -m755 ssign /usr/local/bin/ssign
 
       - name: Download CLI artifact
         uses: actions/download-artifact@v8
