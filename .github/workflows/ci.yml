@@ -307,6 +307,8 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
+          # Tags pré-release (v*-rc/-beta) marqués « pre-release » dans l'UI GitHub.
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: ${{ runner.temp }}/artifacts/**/*
 
       - uses: actions/checkout@v7
@@ -315,6 +317,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Publish to crates.io
+        # Pas de publish crates.io sur les pré-releases (v*-rc/-beta) : un publish est
+        # définitif. Ces tags ne produisent que binaires signés + Release GitHub.
+        if: ${{ !contains(github.ref_name, '-') }}
         run: |
           if cargo publish 2>&1 | tee /tmp/publish.log; then
             echo "published"
