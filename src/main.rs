@@ -197,6 +197,10 @@ fn main() {
                 println!("There is NO WARRANTY, to the extent permitted by law.");
                 process::exit(0);
             }
+            "-listf" | "--list-formats" => {
+                print_supported_extensions();
+                process::exit(0);
+            }
             "-h" | "--help" | "-help" => {
                 print_usage();
                 process::exit(0);
@@ -230,8 +234,11 @@ fn main() {
             "-t" | "-tab" => tab_output = true,
             "-T" => tab_output = true,
             "-sort" => sort_tags = true,
-            "-list" | "-listx" | "-listw" | "-listr" | "-listf" | "-listd" | "-listg1"
-            | "-listgeo" | "-listwf" => list_tags = true,
+            // -listf est traité plus haut : l'amont y liste les extensions
+            // supportées, pas un résumé. Les autres -list* gardent le résumé
+            // générique faute d'équivalent implémenté.
+            "-list" | "-listx" | "-listw" | "-listr" | "-listd" | "-listg1" | "-listgeo"
+            | "-listwf" => list_tags = true,
             "-args" | "-argFormat" => {
                 args_output = true;
             }
@@ -1987,6 +1994,33 @@ fn escape_xml(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
+/// Liste les extensions supportées, au même format que `exiftool -listf`.
+///
+/// Sert la parité CLI, et alimente le job `upstream-drift` qui compare cette
+/// sortie à celle de l'amont.
+fn print_supported_extensions() {
+    let mut exts: Vec<String> = exiftool_rs::FileType::all()
+        .iter()
+        .flat_map(|ft| ft.extensions().iter().map(|e| e.to_ascii_uppercase()))
+        .collect();
+    exts.sort();
+    exts.dedup();
+
+    println!("Supported file extensions:");
+    let mut line = String::from(" ");
+    for ext in &exts {
+        if line.len() + 1 + ext.len() > 79 {
+            println!("{line}");
+            line = String::from(" ");
+        }
+        line.push(' ');
+        line.push_str(ext);
+    }
+    if !line.trim().is_empty() {
+        println!("{line}");
+    }
+}
+
 fn print_usage() {
     eprintln!("exiftool-rs {}", exiftool_rs::VERSION);
     eprintln!("A Rust implementation of ExifTool — read/write metadata in 55+ file formats");
@@ -1995,6 +2029,7 @@ fn print_usage() {
     eprintln!();
     eprintln!("Read options:");
     eprintln!("  -j, -json             Output in JSON format");
+    eprintln!("  -listf                List supported file extensions");
     eprintln!("  -csv                  Output in CSV format");
     eprintln!("  -X, -xml              Output in XML/RDF format");
     eprintln!("  -args                 Output as -TAG=VALUE (for piping back)");

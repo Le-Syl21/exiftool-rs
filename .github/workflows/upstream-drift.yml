@@ -1,0 +1,103 @@
+name: Upstream drift
+
+# Détecte ce qu'ExifTool amont a gagné et que ce port n'a pas. Motivation : le
+# support Garmin FIT est arrivé en 13.56 (avril 2026) et n'a été remarqué que
+# six versions plus tard, par hasard. Rien ne le signalait.
+#
+# Deux signaux, volontairement distincts :
+#
+#  1. Corpus de test — un fichier apparu dans t/images/ amont. Signal FORT :
+#     quand ExifTool gagne un format, il ajoute son fichier de test. C'est
+#     aussi le seul qui aurait attrapé Garmin FIT, car le signal par extension
+#     y est aveugle : ce port associe déjà .fit à FITS (un format d'astronomie
+#     sans rapport), donc l'extension figurait des deux côtés.
+#
+#  2. Extensions — diff de `exiftool -listf` contre `exiftool-rs -listf`.
+#     Signal FAIBLE et bruyant : liste aussi tout ce qu'on ne portera jamais.
+#     Utile seulement pour repérer un format sans fichier de test.
+on:
+  schedule:
+    - cron: '0 6 1 * *'      # le 1er de chaque mois
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4  # stable
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+
+      - name: Checkout ExifTool amont
+        run: git clone -q --depth 1 https://github.com/exiftool/exiftool.git /tmp/exiftool
+
+      - name: Comparer
+        id: diff
+        run: |
+          set -euo pipefail
+          export LC_ALL=C
+
+          upstream_ver=$(cd /tmp/exiftool && perl exiftool -ver)
+          ported_ver=$(grep -oE 'ExifTool v?[0-9]+\.[0-9]+' README.md | head -1 | grep -oE '[0-9]+\.[0-9]+')
+
+          ls /tmp/exiftool/t/images/ | sort > /tmp/up-corpus.txt
+          ls tests/images/           | sort > /tmp/my-corpus.txt
+          comm -23 /tmp/up-corpus.txt /tmp/my-corpus.txt > /tmp/new-files.txt || true
+
+          cargo build --release --quiet --bin exiftool-rs
+          (cd /tmp/exiftool && perl exiftool -listf) | tail -n +2 | tr ' ' '\n' | grep . | sort -u > /tmp/up-ext.txt
+          ./target/release/exiftool-rs -listf        | tail -n +2 | tr ' ' '\n' | grep . | sort -u > /tmp/my-ext.txt
+          comm -23 /tmp/up-ext.txt /tmp/my-ext.txt > /tmp/new-ext.txt || true
+
+          {
+            echo "## ExifTool amont : \`$upstream_ver\` — porté ici : \`$ported_ver\`"
+            echo
+            if [ -s /tmp/new-files.txt ]; then
+              echo "### 🔴 Fichiers de test présents en amont, absents ici"
+              echo
+              echo "Quand ExifTool gagne un format, il ajoute son fichier de test."
+              echo "Chaque ligne est probablement une couverture nouvelle à porter."
+              echo
+              echo '```'
+              cat /tmp/new-files.txt
+              echo '```'
+            else
+              echo "### ✅ Corpus de test aligné sur l'amont"
+            fi
+            echo
+            echo "<details><summary>Extensions déclarées en amont et pas ici ($(wc -l < /tmp/new-ext.txt))</summary>"
+            echo
+            echo "Signal secondaire et bruyant : contient aussi les formats qu'on ne portera pas."
+            echo
+            echo '```'
+            tr '\n' ' ' < /tmp/new-ext.txt | fold -sw 76
+            echo '```'
+            echo "</details>"
+          } > /tmp/report.md
+
+          if [ -s /tmp/new-files.txt ]; then echo "drift=yes" >> "$GITHUB_OUTPUT"; else echo "drift=no" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Ouvrir ou mettre à jour l'issue
+        if: steps.diff.outputs.drift == 'yes'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          title="Dérive amont : de nouveaux fichiers de test ExifTool ne sont pas couverts"
+          existing=$(gh issue list --state open --search "$title in:title" --json number -q '.[0].number' || true)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file /tmp/report.md
+          else
+            gh issue create --title "$title" --body-file /tmp/report.md
+          fi
+
+      - name: Résumé
+        run: cat /tmp/report.md >> "$GITHUB_STEP_SUMMARY"
