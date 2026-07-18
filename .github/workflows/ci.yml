@@ -22,6 +22,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4  # stable
         with:
+          toolchain: stable
           components: rustfmt, clippy
 
       # Garde-fou posé au tout début du pipeline : le tag doit correspondre à la
@@ -91,6 +92,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4  # stable
         with:
+          toolchain: stable
           # Sans cette ligne, `--target` échouerait sur la compilation croisée
           # macOS x86_64 (le runner macos-latest est arm64).
           targets: ${{ matrix.target }}
@@ -448,6 +450,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4  # stable
+        with:
+          toolchain: stable
 
       - name: Get a temporary crates.io token (OIDC)
         id: auth
