@@ -88,9 +88,57 @@ jobs:
         # generated (debug panics on arithmetic overflow, skewing the parity corpus).
         run: cargo test --release
 
-      # --- Apple signing & notarization ---
+      # --- Empaquetage (binaires non signés ; la signature Apple est faite plus
+      # bas, dans un job dédié derrière l'environnement `signing`). ---
+
+      # --- Package CLI ---
+      - name: Package CLI (Unix)
+        if: runner.os != 'Windows'
+        run: tar czf exiftool-rs-cli-${{ matrix.label }}.tar.gz -C target/release exiftool-rs
+
+      - name: Package CLI (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path target/release/exiftool-rs.exe -DestinationPath exiftool-rs-cli-${{ matrix.label }}.zip
+
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: exiftool-rs-cli-${{ matrix.label }}
+          path: exiftool-rs-cli-${{ matrix.label }}.*
+
+      # --- Package GUI ---
+      - name: Package GUI (Unix)
+        if: runner.os != 'Windows'
+        run: tar czf exiftool-rs-gui-${{ matrix.label }}.tar.gz -C target/release exiftool-rs-gui
+
+      - name: Package GUI (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path target/release/exiftool-rs-gui.exe -DestinationPath exiftool-rs-gui-${{ matrix.label }}.zip
+
+      - name: Upload GUI artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: exiftool-rs-gui-${{ matrix.label }}
+          path: exiftool-rs-gui-${{ matrix.label }}.*
+
+  # Signature + notarisation Apple du CLI et de la GUI. Derrière `signing` au même
+  # titre que Windows : les secrets Apple sont désormais des secrets d'environnement
+  # (illisibles depuis le job `build`, qui ne déclare aucun environnement), et une
+  # signature Developer ID engage l'identité du propriétaire — elle ne doit jamais
+  # partir sans approbation explicite.
+  sign-apple:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-latest
+    environment: signing
+    steps:
+      - name: Download the macOS artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: exiftool-rs-*-macos-*
+          path: dl
+
       - name: Import Apple Developer ID certificate
-        if: runner.os == 'macOS'
         env:
           APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -110,35 +158,12 @@ jobs:
             -S apple-tool:,apple: \
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-      - name: Sign binaries (macOS)
-        if: runner.os == 'macOS'
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          SIGN_ID="Developer ID Application: Sylvain Gargasson ($APPLE_TEAM_ID)"
-          codesign --force --options runtime \
-            --sign "$SIGN_ID" \
-            --timestamp \
-            target/release/exiftool-rs
-          codesign --force --options runtime \
-            --sign "$SIGN_ID" \
-            --timestamp \
-            target/release/exiftool-rs-gui
-
-      - name: Notarize binaries (macOS, tags only)
-        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
+      - name: Sign & notarize the macOS binaries
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          ditto -c -k --keepParent \
-            target/release/exiftool-rs \
-            $RUNNER_TEMP/exiftool-rs-cli.zip
-          ditto -c -k --keepParent \
-            target/release/exiftool-rs-gui \
-            $RUNNER_TEMP/exiftool-rs-gui.zip
-
           # Submit and poll with timeout + retry (3 attempts, 5/15/45 min backoff)
           notarize_once() {
             local zip="$1" label="$2" timeout="$3"
@@ -195,39 +220,83 @@ jobs:
             return 1
           }
 
-          notarize "$RUNNER_TEMP/exiftool-rs-cli.zip" "CLI" &
-          notarize "$RUNNER_TEMP/exiftool-rs-gui.zip" "GUI" &
-          wait
+          SIGN_ID="Developer ID Application: Sylvain Gargasson ($APPLE_TEAM_ID)"
 
-      # --- Package CLI ---
-      - name: Package CLI (Unix)
-        if: runner.os != 'Windows'
-        run: tar czf exiftool-rs-cli-${{ matrix.label }}.tar.gz -C target/release exiftool-rs
+          # Les quatre artefacts macOS : CLI + GUI, pour chaque architecture. Le
+          # nom du binaire dans l'archive dépend de la variante, pas du label.
+          artifacts=(
+            "exiftool-rs-cli-macos-arm64:exiftool-rs"
+            "exiftool-rs-gui-macos-arm64:exiftool-rs-gui"
+            "exiftool-rs-cli-macos-x86_64:exiftool-rs"
+            "exiftool-rs-gui-macos-x86_64:exiftool-rs-gui"
+          )
 
-      - name: Package CLI (Windows)
-        if: runner.os == 'Windows'
-        run: Compress-Archive -Path target/release/exiftool-rs.exe -DestinationPath exiftool-rs-cli-${{ matrix.label }}.zip
+          # 1) Signature + vérification, puis zip destiné à la notarisation.
+          for entry in "${artifacts[@]}"; do
+            art="${entry%%:*}"
+            bin="${entry##*:}"
+            echo "::group::sign $art"
+            work="$RUNNER_TEMP/$art"
+            mkdir -p "$work"
+            tar xzf "dl/$art/$art.tar.gz" -C "$work"
 
-      - name: Upload CLI artifact
+            codesign --force --options runtime \
+              --sign "$SIGN_ID" \
+              --timestamp "$work/$bin"
+            codesign --verify --strict --verbose=2 "$work/$bin"
+
+            ditto -c -k --keepParent "$work/$bin" "$RUNNER_TEMP/$art.zip"
+            echo "::endgroup::"
+          done
+
+          # 2) Notarisation en parallèle (chaque soumission passe des minutes à
+          # attendre Apple), puis on collecte les codes de retour un par un.
+          pids=()
+          for entry in "${artifacts[@]}"; do
+            art="${entry%%:*}"
+            notarize "$RUNNER_TEMP/$art.zip" "$art" &
+            pids+=("$!")
+          done
+          failed=0
+          for i in "${!pids[@]}"; do
+            wait "${pids[$i]}" || { echo "::error::${artifacts[$i]%%:*} : notarisation échouée"; failed=1; }
+          done
+          [ $failed -eq 0 ] || exit 1
+
+          # 3) Ré-empaquetage des binaires signés, sous leur nom d'origine.
+          for entry in "${artifacts[@]}"; do
+            art="${entry%%:*}"
+            bin="${entry##*:}"
+            tar czf "$art.tar.gz" -C "$RUNNER_TEMP/$art" "$bin"
+          done
+
+      - name: Re-upload the signed CLI arm64 artifact
         uses: actions/upload-artifact@v7
         with:
-          name: exiftool-rs-cli-${{ matrix.label }}
-          path: exiftool-rs-cli-${{ matrix.label }}.*
+          name: exiftool-rs-cli-macos-arm64
+          path: exiftool-rs-cli-macos-arm64.tar.gz
+          overwrite: true
 
-      # --- Package GUI ---
-      - name: Package GUI (Unix)
-        if: runner.os != 'Windows'
-        run: tar czf exiftool-rs-gui-${{ matrix.label }}.tar.gz -C target/release exiftool-rs-gui
-
-      - name: Package GUI (Windows)
-        if: runner.os == 'Windows'
-        run: Compress-Archive -Path target/release/exiftool-rs-gui.exe -DestinationPath exiftool-rs-gui-${{ matrix.label }}.zip
-
-      - name: Upload GUI artifact
+      - name: Re-upload the signed GUI arm64 artifact
         uses: actions/upload-artifact@v7
         with:
-          name: exiftool-rs-gui-${{ matrix.label }}
-          path: exiftool-rs-gui-${{ matrix.label }}.*
+          name: exiftool-rs-gui-macos-arm64
+          path: exiftool-rs-gui-macos-arm64.tar.gz
+          overwrite: true
+
+      - name: Re-upload the signed CLI x86_64 artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: exiftool-rs-cli-macos-x86_64
+          path: exiftool-rs-cli-macos-x86_64.tar.gz
+          overwrite: true
+
+      - name: Re-upload the signed GUI x86_64 artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: exiftool-rs-gui-macos-x86_64
+          path: exiftool-rs-gui-macos-x86_64.tar.gz
+          overwrite: true
 
   # Authenticode-sign the Windows CLI + GUI with ssign — the Linux runner signs
   # them via Certum (no Windows, no vendor stack). Gated by the `signing`
@@ -311,7 +380,7 @@ jobs:
           overwrite: true
 
   release:
-    needs: [build, sign-windows]
+    needs: [build, sign-windows, sign-apple]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     permissions:
