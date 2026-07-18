@@ -1,10 +1,13 @@
 name: CI
 
+# Aucun build sur push `main` : le travail arrive en direct sur main, donc un
+# build par commit ne ferait que du bruit. Les gates tournent sur PR, sur tag
+# (avant toute signature/publication) et à la demande.
 on:
   push:
-    branches: [main]
     tags: ['v*']
   pull_request:
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
