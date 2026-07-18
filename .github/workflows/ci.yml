@@ -67,6 +67,10 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          # Sans cette ligne, `--target` échouerait sur la compilation croisée
+          # macOS x86_64 (le runner macos-latest est arm64).
+          targets: ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@v2
 
@@ -77,10 +81,10 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libxdo-dev libglib2.0-dev
 
       - name: Build CLI (with icon on Windows)
-        run: cargo build --release ${{ runner.os == 'Windows' && '--features win-icon' || '' }}
+        run: cargo build --release --target ${{ matrix.target }} ${{ runner.os == 'Windows' && '--features win-icon' || '' }}
 
       - name: Build GUI (with icon on Windows)
-        run: cargo build --release --features gui${{ runner.os == 'Windows' && ',win-icon' || '' }}
+        run: cargo build --release --target ${{ matrix.target }} --features gui${{ runner.os == 'Windows' && ',win-icon' || '' }}
 
       - name: Run tests
         if: matrix.target != 'x86_64-apple-darwin'
@@ -94,11 +98,11 @@ jobs:
       # --- Package CLI ---
       - name: Package CLI (Unix)
         if: runner.os != 'Windows'
-        run: tar czf exiftool-rs-cli-${{ matrix.label }}.tar.gz -C target/release exiftool-rs
+        run: tar czf exiftool-rs-cli-${{ matrix.label }}.tar.gz -C target/${{ matrix.target }}/release exiftool-rs
 
       - name: Package CLI (Windows)
         if: runner.os == 'Windows'
-        run: Compress-Archive -Path target/release/exiftool-rs.exe -DestinationPath exiftool-rs-cli-${{ matrix.label }}.zip
+        run: Compress-Archive -Path target/${{ matrix.target }}/release/exiftool-rs.exe -DestinationPath exiftool-rs-cli-${{ matrix.label }}.zip
 
       - name: Upload CLI artifact
         uses: actions/upload-artifact@v7
@@ -109,11 +113,11 @@ jobs:
       # --- Package GUI ---
       - name: Package GUI (Unix)
         if: runner.os != 'Windows'
-        run: tar czf exiftool-rs-gui-${{ matrix.label }}.tar.gz -C target/release exiftool-rs-gui
+        run: tar czf exiftool-rs-gui-${{ matrix.label }}.tar.gz -C target/${{ matrix.target }}/release exiftool-rs-gui
 
       - name: Package GUI (Windows)
         if: runner.os == 'Windows'
-        run: Compress-Archive -Path target/release/exiftool-rs-gui.exe -DestinationPath exiftool-rs-gui-${{ matrix.label }}.zip
+        run: Compress-Archive -Path target/${{ matrix.target }}/release/exiftool-rs-gui.exe -DestinationPath exiftool-rs-gui-${{ matrix.label }}.zip
 
       - name: Upload GUI artifact
         uses: actions/upload-artifact@v7
