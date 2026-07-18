@@ -16,3 +16,10 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: ci
+    ignore:
+      # dtolnay/rust-toolchain n'a pas de « versions » : la réf désigne le
+      # toolchain Rust à installer. Dependabot la lisait comme un numéro de
+      # version d'action et proposait @1.92 -> @1.100, ce qui viderait un job
+      # MSRV de son sens (et 1.100 n'existe même pas). La version voulue vit
+      # désormais dans `with: toolchain:`, hors de sa portée.
+      - dependency-name: dtolnay/rust-toolchain
