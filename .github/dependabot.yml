@@ -1,0 +1,18 @@
+version: 2
+
+# Les actions tierces sont épinglées au SHA : un tag de version est mutable
+# (en mars 2026, 76 des 77 tags de trivy-action ont été force-pushés vers du
+# code malveillant), seul un SHA est immuable. La contrepartie, c'est qu'on ne
+# reçoit plus les correctifs automatiquement — c'est le rôle de Dependabot, qui
+# sait mettre à jour un SHA épinglé et garder le commentaire de version à jour.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    # Une seule PR groupée plutôt qu'une par action.
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
