@@ -6617,7 +6617,18 @@ fn read_makernote_ifd_with_base(
             };
 
             if !sub_tags.is_empty() {
-                tags.extend(sub_tags);
+                // The custom-function blocks are decoded by CanonCustom.pm, a
+                // module of its own, so its tags carry its own family-1 group.
+                let group1 = match (manufacturer, tag_id) {
+                    (Manufacturer::Canon, 0x000F | 0x0099) => Some("CanonCustom"),
+                    _ => None,
+                };
+                for mut tag in sub_tags {
+                    if let Some(g1) = group1 {
+                        tag.group.family1 = g1.to_string();
+                    }
+                    tags.push(tag);
+                }
                 continue;
             }
         }
