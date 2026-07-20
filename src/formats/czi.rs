@@ -19,7 +19,7 @@ pub fn read_czi(data: &[u8]) -> Result<Vec<Tag>> {
         let minor = u32::from_le_bytes([data[0x24], data[0x25], data[0x26], data[0x27]]);
         let version = format!("{}.{}", major, minor);
         tags.push(mktag(
-            "ZISRAW",
+            "File",
             "ZISRAWVersion",
             "ZISRAW Version",
             Value::String(version),
@@ -30,7 +30,7 @@ pub fn read_czi(data: &[u8]) -> Result<Vec<Tag>> {
     if data.len() >= 0x40 {
         let guid = hex_encode(&data[0x30..0x40]);
         tags.push(mktag(
-            "ZISRAW",
+            "File",
             "PrimaryFileGUID",
             "Primary File GUID",
             Value::String(guid),
@@ -41,7 +41,7 @@ pub fn read_czi(data: &[u8]) -> Result<Vec<Tag>> {
     if data.len() >= 0x50 {
         let guid = hex_encode(&data[0x40..0x50]);
         tags.push(mktag(
-            "ZISRAW",
+            "File",
             "FileGUID",
             "File GUID",
             Value::String(guid),
@@ -68,7 +68,7 @@ pub fn read_czi(data: &[u8]) -> Result<Vec<Tag>> {
                     let xml_bytes = &data[xml_start..xml_start + xml_len];
                     // Emit XML as binary data tag
                     tags.push(mktag(
-                        "ZISRAW",
+                        "XML",
                         "XML",
                         "XML",
                         Value::String(format!(
@@ -136,7 +136,7 @@ fn czi_parse_xml(xml: &str, tags: &mut Vec<Tag>) {
                         let tag_name = czi_shorten_tag_name(&raw_tag);
                         if !tag_name.is_empty() {
                             let val = attr.value.trim().to_string();
-                            tags.push(mktag("ZISRAW", &tag_name, &tag_name, Value::String(val)));
+                            tags.push(mktag("XML", &tag_name, &tag_name, Value::String(val)));
                         }
                     }
                 } else {
@@ -169,7 +169,7 @@ fn czi_parse_xml(xml: &str, tags: &mut Vec<Tag>) {
                             let tag_name = czi_shorten_tag_name(&path_str);
                             if !tag_name.is_empty() {
                                 tags.push(mktag(
-                                    "ZISRAW",
+                                    "XML",
                                     &tag_name,
                                     &tag_name,
                                     Value::String(text),

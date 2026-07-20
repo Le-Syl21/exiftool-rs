@@ -21,6 +21,7 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
     let hdr_size = hdr_size.max(8);
     let mut pos = hdr_size;
     let mut first_mdpr = true;
+    let mut mdpr_count = 0u32;
     let mut stream_mimes: Vec<String> = Vec::new();
 
     // Look for RJMD at specific position based on RMJE footer
@@ -44,14 +45,35 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
 
         let chunk_data = &data[pos + 10..pos + chunk_size];
 
-        match chunk_id {
-            b"PROP" => real_parse_prop(chunk_data, &mut tags),
+        // ExifTool names the family-1 group after the chunk the tags came from,
+        // numbering repeated chunks from the second one on (Real-MDPR,
+        // Real-MDPR2, ...).
+        let before = tags.len();
+        let group1 = match chunk_id {
+            b"PROP" => {
+                real_parse_prop(chunk_data, &mut tags);
+                Some("Real-PROP".to_string())
+            }
             b"MDPR" => {
                 real_parse_mdpr(chunk_data, &mut tags, first_mdpr, &mut stream_mimes);
                 first_mdpr = false;
+                mdpr_count += 1;
+                Some(if mdpr_count == 1 {
+                    "Real-MDPR".to_string()
+                } else {
+                    format!("Real-MDPR{mdpr_count}")
+                })
             }
-            b"CONT" => real_parse_cont(chunk_data, &mut tags),
-            _ => {}
+            b"CONT" => {
+                real_parse_cont(chunk_data, &mut tags);
+                Some("Real-CONT".to_string())
+            }
+            _ => None,
+        };
+        if let Some(g1) = group1 {
+            for tag in &mut tags[before..] {
+                tag.group.family1 = g1.clone();
+            }
         }
 
         pos += chunk_size;
@@ -75,13 +97,21 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Process RJMD metadata
     if let Some(rjmd_data) = rjmd_data_opt {
+        let before = tags.len();
         real_parse_rjmd(&rjmd_data, &mut tags);
+        for tag in &mut tags[before..] {
+            tag.group.family1 = "Real-RJMD".into();
+        }
     }
 
     // Check for ID3v1 at last 128 bytes
     if data.len() >= 128 && data[data.len() - 128..data.len() - 125] == *b"TAG" {
         let id3_data = &data[data.len() - 128..];
+        let before = tags.len();
         real_parse_id3v1(id3_data, &mut tags);
+        for tag in &mut tags[before..] {
+            tag.group.family1 = "ID3v1".into();
+        }
     }
 
     Ok(tags)

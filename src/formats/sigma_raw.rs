@@ -28,8 +28,8 @@ pub fn read_x3f(data: &[u8]) -> Result<Vec<Tag>> {
         "FileVersion",
         "File Version",
         ver_str,
-        "X3F",
-        "Main",
+        "SigmaRaw",
+        "SigmaRaw",
         "Image",
     ));
 
@@ -113,8 +113,8 @@ pub fn read_x3f(data: &[u8]) -> Result<Vec<Tag>> {
                                 "JpgFromRaw",
                                 "Jpg From Raw",
                                 img_data.to_vec(),
-                                "X3F",
-                                "Main",
+                                "SigmaRaw",
+                                "SigmaRaw",
                                 "Preview",
                             ));
                         } else {
@@ -123,8 +123,8 @@ pub fn read_x3f(data: &[u8]) -> Result<Vec<Tag>> {
                                 "PreviewImage",
                                 "Preview Image",
                                 img_data.to_vec(),
-                                "X3F",
-                                "Main",
+                                "SigmaRaw",
+                                "SigmaRaw",
                                 "Preview",
                             ));
                         }
@@ -136,8 +136,8 @@ pub fn read_x3f(data: &[u8]) -> Result<Vec<Tag>> {
                             "PreviewImage",
                             "Preview Image",
                             img_data.to_vec(),
-                            "X3F",
-                            "Main",
+                            "SigmaRaw",
+                            "SigmaRaw",
                             "Preview",
                         ));
                     }
@@ -149,8 +149,8 @@ pub fn read_x3f(data: &[u8]) -> Result<Vec<Tag>> {
                         "PreviewImage",
                         "Preview Image",
                         img_data.to_vec(),
-                        "X3F",
-                        "Main",
+                        "SigmaRaw",
+                        "SigmaRaw",
                         "Preview",
                     ));
                 }
@@ -202,8 +202,8 @@ fn parse_header2(data: &[u8], ver_f: f64, tags: &mut Vec<Tag>) {
             "ImageUniqueID",
             "Image Unique ID",
             uid,
-            "X3F",
-            "Header",
+            "SigmaRaw",
+            "SigmaRaw",
             "Camera",
         );
         t.priority = -1;
@@ -223,8 +223,8 @@ fn parse_header2(data: &[u8], ver_f: f64, tags: &mut Vec<Tag>) {
             "MarkBits",
             "Mark Bits",
             mark_str,
-            "X3F",
-            "Header",
+            "SigmaRaw",
+            "SigmaRaw",
             "Image",
         ));
     }
@@ -236,8 +236,8 @@ fn parse_header2(data: &[u8], ver_f: f64, tags: &mut Vec<Tag>) {
             "ImageWidth",
             "Image Width",
             w,
-            "X3F",
-            "Header",
+            "SigmaRaw",
+            "SigmaRaw",
             "Image",
         ));
     }
@@ -249,8 +249,8 @@ fn parse_header2(data: &[u8], ver_f: f64, tags: &mut Vec<Tag>) {
             "ImageHeight",
             "Image Height",
             h,
-            "X3F",
-            "Header",
+            "SigmaRaw",
+            "SigmaRaw",
             "Image",
         ));
     }
@@ -259,7 +259,7 @@ fn parse_header2(data: &[u8], ver_f: f64, tags: &mut Vec<Tag>) {
     if data.len() >= 40 {
         let r = u32_le(data, 36);
         tags.push(mk_tag_u32(
-            "Rotation", "Rotation", r, "X3F", "Header", "Image",
+            "Rotation", "Rotation", r, "SigmaRaw", "SigmaRaw", "Image",
         ));
     }
 
@@ -271,8 +271,8 @@ fn parse_header2(data: &[u8], ver_f: f64, tags: &mut Vec<Tag>) {
                 "WhiteBalance",
                 "White Balance",
                 wb,
-                "X3F",
-                "Header",
+                "SigmaRaw",
+                "SigmaRaw",
                 "Camera",
             ));
         }
@@ -286,8 +286,8 @@ fn parse_header2(data: &[u8], ver_f: f64, tags: &mut Vec<Tag>) {
                 "SceneCaptureType",
                 "Scene Capture Type",
                 sct,
-                "X3F",
-                "Header",
+                "SigmaRaw",
+                "SigmaRaw",
                 "Image",
             ));
         }
@@ -331,8 +331,8 @@ fn parse_header2(data: &[u8], ver_f: f64, tags: &mut Vec<Tag>) {
                 name,
                 name,
                 val_str,
-                "X3F",
-                "HeaderExt",
+                "SigmaRaw",
+                "SigmaRaw",
                 "Camera",
             ));
         }
@@ -348,8 +348,8 @@ fn parse_header4(data: &[u8], tags: &mut Vec<Tag>) {
             "ImageWidth",
             "Image Width",
             w,
-            "X3F",
-            "Header",
+            "SigmaRaw",
+            "SigmaRaw",
             "Image",
         ));
     }
@@ -360,8 +360,8 @@ fn parse_header4(data: &[u8], tags: &mut Vec<Tag>) {
             "ImageHeight",
             "Image Height",
             h,
-            "X3F",
-            "Header",
+            "SigmaRaw",
+            "SigmaRaw",
             "Image",
         ));
     }
@@ -369,7 +369,7 @@ fn parse_header4(data: &[u8], tags: &mut Vec<Tag>) {
     if data.len() >= 52 {
         let r = u32_le(data, 48);
         tags.push(mk_tag_u32(
-            "Rotation", "Rotation", r, "X3F", "Header", "Image",
+            "Rotation", "Rotation", r, "SigmaRaw", "SigmaRaw", "Image",
         ));
     }
 }
@@ -427,8 +427,8 @@ fn parse_properties(sec_data: &[u8], tags: &mut Vec<Tag>) {
                 name: tag_name.to_string(),
                 description: tag_desc.to_string(),
                 group: TagGroup {
-                    family0: "X3F".to_string(),
-                    family1: "Properties".to_string(),
+                    family0: "SigmaRaw".to_string(),
+                    family1: "SigmaRaw".to_string(),
                     family2: "Camera".to_string(),
                     family3: "Main".into(),
                 },

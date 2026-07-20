@@ -7,6 +7,15 @@ use crate::value::Value;
 
 /// Parse RealAudio (.ra) files. Mirrors ExifTool's Real.pm ProcessReal for RA.
 pub fn read_real_audio(data: &[u8]) -> Result<Vec<Tag>> {
+    let mut tags = read_ra4(data)?;
+    // ExifTool names the family-1 group after the version-4 header table.
+    for tag in &mut tags {
+        tag.group.family1 = "Real-RA4".into();
+    }
+    Ok(tags)
+}
+
+fn read_ra4(data: &[u8]) -> Result<Vec<Tag>> {
     if data.len() < 8 || !data.starts_with(b".ra\xfd") {
         return Err(Error::InvalidData("not a RealAudio file".into()));
     }
