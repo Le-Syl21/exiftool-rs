@@ -1130,25 +1130,15 @@ Sigma.jpg	ee	missing	0	Software	SIGMA PhotoPro 2.0.0.1586
 Sigma.jpg	ee	missing	0	WhiteBalance	Manual
 SigmaDP2.x3f	default	extra	0	BurstShot	0
 SigmaDP2.x3f	default	extra	0	Contrast	Normal
-SigmaDP2.x3f	default	extra	0	DateTimeOriginal	2009:11:28 13:05:20
 SigmaDP2.x3f	default	extra	0	DriveMode	Single Shot
 SigmaDP2.x3f	default	extra	0	ExposureCompensation	0
-SigmaDP2.x3f	default	extra	0	ExposureProgram	Program
-SigmaDP2.x3f	default	extra	0	ExposureTime	1/10
-SigmaDP2.x3f	default	extra	0	FNumber	2.8
-SigmaDP2.x3f	default	extra	0	FocalLength	24.2 mm
-SigmaDP2.x3f	default	extra	0	FocalLengthIn35mmFormat	41.0 mm
 SigmaDP2.x3f	default	extra	0	Highlight	0
-SigmaDP2.x3f	default	extra	0	ISO	100
 SigmaDP2.x3f	default	extra	0	LensApertureRange	2.8 to 14
 SigmaDP2.x3f	default	extra	0	LensFocalRange	24.2
-SigmaDP2.x3f	default	extra	0	Make	SIGMA
 SigmaDP2.x3f	default	extra	0	MeteringMode	8-segment
-SigmaDP2.x3f	default	extra	0	Model	SIGMA DP2
 SigmaDP2.x3f	default	extra	0	PreviewImage	(Binary data 20 bytes, use -b option to extract)
 SigmaDP2.x3f	default	extra	0	Quality	High
 SigmaDP2.x3f	default	extra	0	Saturation	Low
-SigmaDP2.x3f	default	extra	0	SceneCaptureType	Standard
 SigmaDP2.x3f	default	extra	0	SensorTemperature	20 C
 SigmaDP2.x3f	default	extra	0	SerialNumber	1008382
 SigmaDP2.x3f	default	extra	0	Shadow	0

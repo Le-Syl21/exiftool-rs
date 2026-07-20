@@ -1692,6 +1692,37 @@ impl ExifTool {
                 .collect();
             tags.retain(|t| t.group.family0 != "XMP" || !has_non_xmp.contains(&t.name));
 
+            // A table upstream declares `PRIORITY => 0` loses to the EXIF copy of
+            // the same tag. The FoundTag pass below only arbitrates within one
+            // family 0, so this cross-source demotion has to happen here.
+            //
+            // SigmaRaw.pm: "PRIORITY => 0, # (because these aren't writable like
+            // the EXIF ones)" — an X3F repeats Make, Model, ISO, ExposureTime and
+            // twenty more in its own header, and ExifTool reports the EXIF copy.
+            // The demotion is against EXIF only, exactly as that comment says: the
+            // X3F header still beats the Sigma MakerNotes for Contrast, Sharpness,
+            // Saturation, Shadow and Highlight, where ExifTool keeps its value.
+            {
+                const LOW_PRIORITY_TABLES: &[&str] = &["SigmaRaw"];
+                let has_other: std::collections::HashSet<&str> = tags
+                    .iter()
+                    .filter(|t| t.group.family0 == "EXIF" && !t.print_value.is_empty())
+                    .map(|t| t.name.as_str())
+                    .collect();
+                let drop: std::collections::HashSet<String> = tags
+                    .iter()
+                    .filter(|t| {
+                        LOW_PRIORITY_TABLES.contains(&t.group.family1.as_str())
+                            && has_other.contains(t.name.as_str())
+                    })
+                    .map(|t| t.name.clone())
+                    .collect();
+                tags.retain(|t| {
+                    !LOW_PRIORITY_TABLES.contains(&t.group.family1.as_str())
+                        || !drop.contains(&t.name)
+                });
+            }
+
             // Full-resolution-IFD precedence (TIFF-based RAW like NEF/DNG): the
             // structural image tags come from the IFD whose SubfileType is
             // "Full-resolution image" (NewSubfileType bit0 clear), not the
