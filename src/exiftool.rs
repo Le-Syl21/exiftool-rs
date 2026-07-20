@@ -2243,7 +2243,7 @@ impl ExifTool {
             | FileType::Ppt
             | FileType::Numbers
             | FileType::Pages
-            | FileType::Key => formats::zip::read_zip(data),
+            | FileType::Key => formats::zip::read_zip(data, self.options.extract_embedded),
             FileType::Rtf => formats::rtf::read_rtf(data),
             FileType::InDesign => formats::indesign::read_indesign(data),
             FileType::Pcap => formats::pcap::read_pcap(data),
@@ -2352,7 +2352,7 @@ impl ExifTool {
             | FileType::Odf
             | FileType::Odb
             | FileType::Odi
-            | FileType::Odc => formats::zip::read_zip(data),
+            | FileType::Odc => formats::zip::read_zip(data, self.options.extract_embedded),
             FileType::Lif => formats::lif::read_lif(data),
             FileType::Rwz => formats::rawzor::read_rawzor(data),
             FileType::Jxr => formats::jxr::read_jxr(data),

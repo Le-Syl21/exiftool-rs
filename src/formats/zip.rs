@@ -392,7 +392,11 @@ fn zip_entry_data<'a>(data: &'a [u8], entry: &ZipEntry) -> Option<&'a [u8]> {
     Some(&data[data_start..data_end])
 }
 
-pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
+/// Reads a ZIP container. With `extract_embedded` on, ExifTool describes EVERY
+/// archive member instead of just the first, each member in its own family-3
+/// document (`Doc1`, `Doc2`, …); without it, only the first member is described
+/// and it stays in the main document.
+pub fn read_zip(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     if data.len() < 30 || !data.starts_with(&[0x50, 0x4B, 0x03, 0x04]) {
         return Err(Error::InvalidData("not a ZIP file".into()));
     }
@@ -437,13 +441,26 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
     let mut has_content_types = false;
     let mut has_mimetype = false;
     let mut first_entry = true;
+    let mut entry_number = 1usize;
 
     for entry in &entries {
         let filename = &entry.filename;
 
-        // Emit per-file tags for the first file (matching Perl behavior)
-        // Skip for OpenDocument files
-        if first_entry && !is_opendoc {
+        // Describe the member: the first one only, unless -ee asks for all.
+        // Skip for OpenDocument files.
+        if (first_entry || extract_embedded > 0) && !is_opendoc {
+            let doc = if extract_embedded > 0 {
+                Some(entry_number)
+            } else {
+                None
+            };
+            let mk = |name: &str, description: &str, value: Value| -> Tag {
+                let mut t = mk(name, description, value);
+                if let Some(n) = doc {
+                    t.group.family3 = format!("Doc{n}");
+                }
+                t
+            };
             let bit_flag_str = if entry.bit_flag != 0 {
                 format!("0x{:04x}", entry.bit_flag)
             } else {
@@ -495,6 +512,7 @@ pub fn read_zip(data: &[u8]) -> Result<Vec<Tag>> {
         if first_entry {
             first_entry = false;
         }
+        entry_number += 1;
 
         if filename == "[Content_Types].xml" {
             has_content_types = true;
