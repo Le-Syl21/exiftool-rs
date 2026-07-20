@@ -489,7 +489,6 @@ PLIST.aae	SlowMotionRegionsStartTimeEpoch	family1
 PLIST.aae	SlowMotionRegionsStartTimeFlags	family1
 PLIST.aae	SlowMotionRegionsStartTimeScale	family1
 PLIST.aae	SlowMotionRegionsStartTimeValue	family1
-PLUS.xmp	DigitalSourceType	family1
 PNG.png	Comment	family1
 PPM.ppm	Comment	family2
 PSP.psp	Copyright	family1
@@ -515,7 +514,6 @@ PhotoMechanic.jpg	EditStatus	family1
 PhotoMechanic.jpg	EditStatus	family2
 PhotoMechanic.jpg	Headline	family1
 PhotoMechanic.jpg	Headline	family2
-PhotoMechanic.jpg	Prefs	family1
 PhotoMechanic.jpg	Source	family1
 PhotoMechanic.jpg	SupplementalCategories	family1
 PhotoMechanic.jpg	SupplementalCategories	family2
@@ -820,7 +818,6 @@ XMP.xml	YResolution	family2
 XMP.xmp	Flash	family1
 XMP.xmp	Rights-fr	family2
 XMP3.xmp	AttributionName	family1
-XMP3.xmp	CountryCode	family1
 XMP3.xmp	Custom0020Property00201	family2
 XMP3.xmp	Custom0020Property00202	family2
 XMP3.xmp	ManifestLinkForm	family1
@@ -829,20 +826,14 @@ XMP3.xmp	ProgrammerExclamation	family1
 XMP3.xmp	ProgrammerFood	family1
 XMP3.xmp	ProgrammerFullName	family1
 XMP3.xmp	ProgrammerHomePage	family1
-XMP3.xmp	Scene	family1
 XMP3.xmp	SupervisorFullName	family1
 XMP3.xmp	SupervisorHomePage	family1
 XMP3.xmp	SupervisorState	family1
 XMP4.xmp	BareList1	family1
 XMP4.xmp	BareList2	family1
-XMP4.xmp	LocationCreatedCity	family1
-XMP4.xmp	LocationCreatedCountryCode	family1
 XMP4.xmp	StructList2TestList1	family1
 XMP4.xmp	StructList2TestList2	family1
-XMP5.xmp	ArtworkTitle	family1
-XMP5.xmp	ArtworkTitle-de	family1
 XMP5.xmp	ArtworkTitle-de	family2
-XMP5.xmp	ArtworkTitle-fr	family1
 XMP5.xmp	ArtworkTitle-fr	family2
 XMP5.xmp	BTestTagField1-en-CA	family1
 XMP5.xmp	BTestTagField1-en-US	family1
@@ -862,10 +853,6 @@ XMP5.xmp	RegionExtensionsFlashReturn	family1
 XMP5.xmp	RegionExtensionsFlashReturn	family2
 XMP5.xmp	RegionExtensionsUsageTerms-fr	family2
 XMP5.xmp	RegionSeeAlso	family1
-XMP7.xmp	LocationShownCity	family1
-XMP7.xmp	LocationShownCountryCode	family1
-XMP8.xmp	AboutCvTermCvId	family1
-XMP8.xmp	AboutCvTermName	family1
 XMP9.xmp	Custom1-de	family2
 XMP9.xmp	Custom1-fr	family2
 ZISRAW.czi	EyePieceDepthOfField	family2

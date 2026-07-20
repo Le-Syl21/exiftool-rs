@@ -1853,10 +1853,41 @@ impl XmpReader {
         // into a single tag with comma-joined print_value. This matches ExifTool behavior
         // where repeated struct properties (e.g. in Bag/Seq items) are combined into one tag.
         // For exact duplicate names, keep only the first instance but join all values.
-        let tags = aggregate_duplicate_xmp_tags(tags);
+        let mut tags = aggregate_duplicate_xmp_tags(tags);
+
+        // Last of all, give the family-1 groups the names ExifTool reports. This
+        // runs after every lookup keyed on the namespace prefix recorded in the
+        // file, so it renames only what the user sees.
+        for tag in &mut tags {
+            if let Some(prefix) = tag.group.family1.strip_prefix("XMP-") {
+                if let Some(short) = exiftool_namespace_alias(prefix) {
+                    tag.group.family1 = format!("XMP-{short}");
+                }
+            }
+        }
 
         Ok(tags)
     }
+}
+
+/// ExifTool's name for an XMP namespace prefix, when it differs from the one
+/// written in the file.
+///
+/// `%stdXlatNS` in XMP.pm, described there as "shorten ugly namespace prefixes":
+/// a file records `Iptc4xmpCore`, and ExifTool reports the group as
+/// `XMP-iptcCore`. The mapping renames family-1 groups only -- the prefix used
+/// inside the XML is untouched.
+fn exiftool_namespace_alias(prefix: &str) -> Option<&'static str> {
+    Some(match prefix {
+        "Iptc4xmpCore" => "iptcCore",
+        "Iptc4xmpExt" => "iptcExt",
+        "photomechanic" => "photomech",
+        "MicrosoftPhoto" => "microsoft",
+        "prismusagerights" => "pur",
+        "GettyImagesGIFT" => "getty",
+        "hdr_metadata" => "hdr",
+        _ => return None,
+    })
 }
 
 /// Aggregate tags with the same name into a single tag with comma-joined values.
