@@ -960,7 +960,13 @@ impl ExifReader {
                         };
                         for (idx, &off) in offsets.iter().enumerate() {
                             if (off as usize) < data.len() {
-                                let sub_name = format!("SubIFD{}", idx);
+                                // ExifTool leaves the first SubIFD unnumbered and
+                                // numbers the rest from 1.
+                                let sub_name = if idx == 0 {
+                                    "SubIFD".to_string()
+                                } else {
+                                    format!("SubIFD{}", idx)
+                                };
                                 let before_idx = tags.len();
                                 let _ = Self::read_ifd(data, header, off, &sub_name, tags);
 
