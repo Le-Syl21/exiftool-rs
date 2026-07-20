@@ -430,54 +430,121 @@ fn all_test_files_parse_without_panic() {
     );
 }
 
-// ── ExtractEmbedded (-ee) parity on Garmin FIT ──────────────────────────────
+// ── Garmin FIT parity, both extraction modes ────────────────────────────────
 //
 // Without -ee, ExifTool reports only the first message of each type; with -ee it
-// reports the whole time series (one set of tags per `Record` message).
-// This test compares the complete "name<TAB>value" multiset against ExifTool,
-// volatile system tags excluded. It exists because the main harness only tests
-// the default mode: -ee support once shipped broken (5 tags per message instead
-// of 13) without any test noticing.
-#[cfg(unix)]
-#[test]
-fn fit_extract_embedded_parity() {
-    use exiftool_rs::Options;
+// reports the whole time series (one set of tags per `Record` message, each in
+// its own family-3 document).
+//
+// Both tests compare the complete "name<TAB>value" multiset against an ExifTool
+// 13.59 baseline, volatile system tags excluded. They exist because the main
+// harness only covers the default mode: -ee support once shipped broken (5 tags
+// per message instead of 13) without any test noticing.
 
-    let expected = std::fs::read_to_string("tests/expected_values/Garmin.fit.ee.vals")
-        .expect("missing -ee baseline");
+/// Tags whose value depends on the machine, the clock or the crate version.
+#[cfg(unix)]
+const FIT_VOLATILE_TAGS: &[&str] = &[
+    "Directory",
+    "ExifToolVersion",
+    "FileAccessDate",
+    "FileInodeChangeDate",
+    "FileModifyDate",
+    "FileName",
+    "FilePermissions",
+    "FileSize",
+];
+
+/// Asserts that `Garmin.fit` extracted with the given `extract_embedded` setting
+/// yields exactly the `name<TAB>value` multiset recorded in `baseline`.
+///
+/// On failure, reports the tag counts and the actual offending pairs rather than
+/// dumping two sorted lists of ~180 lines.
+#[cfg(unix)]
+fn assert_fit_parity(extract_embedded: u8, baseline: &str, mode: &str) {
+    use exiftool_rs::Options;
+    use std::collections::BTreeMap;
+
+    let expected = std::fs::read_to_string(baseline)
+        .unwrap_or_else(|e| panic!("missing baseline {baseline}: {e}"));
     let mut want: Vec<String> = expected.lines().map(|l| l.to_string()).collect();
     want.sort();
 
     let et = ExifTool::with_options(Options {
-        extract_embedded: 1,
+        extract_embedded,
         ..Default::default()
     });
     let tags = et
         .extract_info(Path::new("tests/images/Garmin.fit"))
         .expect("FIT extraction");
 
-    const VOLATILE: &[&str] = &[
-        "Directory",
-        "ExifToolVersion",
-        "FileAccessDate",
-        "FileInodeChangeDate",
-        "FileModifyDate",
-        "FileName",
-        "FilePermissions",
-        "FileSize",
-    ];
     let mut got: Vec<String> = tags
         .iter()
-        .filter(|t| !VOLATILE.contains(&t.name.as_str()))
+        .filter(|t| !FIT_VOLATILE_TAGS.contains(&t.name.as_str()))
         .map(|t| format!("{}\t{}", t.name, sanitize_value(&t.print_value)))
         .collect();
     got.sort();
 
-    assert_eq!(
-        got,
-        want,
-        "-ee parity broken on Garmin.fit ({} tags obtained, {} expected)",
+    if got == want {
+        return;
+    }
+
+    // Multiset difference: a tag repeated N times upstream must appear N times
+    // here too, so count occurrences rather than comparing sets.
+    let mut delta: BTreeMap<&str, i32> = BTreeMap::new();
+    for line in &got {
+        *delta.entry(line.as_str()).or_default() += 1;
+    }
+    for line in &want {
+        *delta.entry(line.as_str()).or_default() -= 1;
+    }
+
+    let mut unexpected: Vec<String> = Vec::new();
+    let mut missing: Vec<String> = Vec::new();
+    for (line, count) in &delta {
+        let target = if *count > 0 {
+            &mut unexpected
+        } else {
+            &mut missing
+        };
+        for _ in 0..count.abs() {
+            target.push((*line).replace('\t', " = "));
+        }
+    }
+
+    const SHOW: usize = 8;
+    let sample = |label: &str, list: &[String]| -> String {
+        if list.is_empty() {
+            return String::new();
+        }
+        let mut s = format!("\n  {} {}:", list.len(), label);
+        for line in list.iter().take(SHOW) {
+            s.push_str(&format!("\n    {line}"));
+        }
+        if list.len() > SHOW {
+            s.push_str(&format!("\n    ... and {} more", list.len() - SHOW));
+        }
+        s
+    };
+
+    panic!(
+        "Garmin.fit parity broken in {mode} mode: {} tags extracted, {} expected; \
+         {} name/value pairs differ.{}{}",
         got.len(),
-        want.len()
+        want.len(),
+        unexpected.len() + missing.len(),
+        sample("unexpected (we emit, ExifTool does not)", &unexpected),
+        sample("missing (ExifTool emits, we do not)", &missing),
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn fit_default_parity() {
+    assert_fit_parity(0, "tests/expected_values/Garmin.fit.vals", "default");
+}
+
+#[cfg(unix)]
+#[test]
+fn fit_extract_embedded_parity() {
+    assert_fit_parity(1, "tests/expected_values/Garmin.fit.ee.vals", "-ee");
 }
