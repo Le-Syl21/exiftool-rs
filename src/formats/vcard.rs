@@ -548,6 +548,13 @@ pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
     // Tag prefix for tags inside sub-components: "Alarm1", "Daylight1", etc.
     // Tags directly inside a top-level component (VEVENT, VTIMEZONE) are FLAT (no prefix).
     let mut top_component: Option<String> = None;
+    // How many times each top-level component has been opened so far. ExifTool
+    // names the family-1 group after the component and its instance number
+    // (`$component . $compNum{$component}`), so the tags of the second VEVENT in
+    // a calendar are reported under Event2. Counting is per component type and
+    // spans the whole file.
+    let mut component_count: std::collections::HashMap<String, u32> =
+        std::collections::HashMap::new();
     // VCard document index: the first BEGIN:VCARD is the main document (priority 0);
     // subsequent vCards are sub-documents (Doc1+, priority -1) so the main one wins.
     let mut vcard_count: i32 = 0;
@@ -588,6 +595,7 @@ pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                     sub_count_stack = vec![std::collections::HashMap::new()];
                 } else if is_ical_component(&what_no_v) && top_component.is_none() {
                     // New top-level isComponent (VEVENT, VTIMEZONE, etc.) while not in one
+                    *component_count.entry(what_no_v.clone()).or_insert(0) += 1;
                     top_component = Some(what_no_v);
                     // Reset sub-component tracking for each new top-level component
                     sub_stack.clear();
@@ -658,7 +666,13 @@ pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                     }
                 })
                 .collect();
-            emit_ical_tag(&parsed, &prefix, &mut tags);
+            // Tags inside a top-level component are grouped under that component
+            // and its instance number; anything outside one stays in VCalendar.
+            let group1 = match &top_component {
+                Some(c) => format!("{}{}", c, component_count.get(c).copied().unwrap_or(1)),
+                None => "VCalendar".to_string(),
+            };
+            emit_ical_tag(&parsed, &prefix, &group1, &mut tags);
         } else {
             // 2nd and later vCards are sub-documents (Doc1+) → priority -1.
             let doc_priority = if vcard_count > 1 { -1 } else { 0 };
@@ -728,7 +742,7 @@ fn emit_vcard_tag_inner(parsed: &ParsedLine, tags: &mut Vec<Tag>) {
     }
 }
 
-fn emit_ical_tag(parsed: &ParsedLine, component_prefix: &str, tags: &mut Vec<Tag>) {
+fn emit_ical_tag(parsed: &ParsedLine, component_prefix: &str, group1: &str, tags: &mut Vec<Tag>) {
     let base_name = normalize_ical_tag(&parsed.tag);
 
     let full_name = if component_prefix.is_empty() {
@@ -747,7 +761,7 @@ fn emit_ical_tag(parsed: &ParsedLine, component_prefix: &str, tags: &mut Vec<Tag
 
     let mut tag = mk_ical(&full_name, display_val);
     tag.group.family0 = "VCalendar".into();
-    tag.group.family1 = "VCalendar".into();
+    tag.group.family1 = group1.into();
     tags.push(tag);
 
     // TZID parameter
@@ -755,7 +769,7 @@ fn emit_ical_tag(parsed: &ParsedLine, component_prefix: &str, tags: &mut Vec<Tag
         let tzid_tag = format!("{}TimezoneID", full_name);
         let mut t = mk_ical(&tzid_tag, tzid_val.clone());
         t.group.family0 = "VCalendar".into();
-        t.group.family1 = "VCalendar".into();
+        t.group.family1 = group1.into();
         tags.push(t);
     }
 }
