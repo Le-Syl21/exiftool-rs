@@ -31,6 +31,11 @@ while ($content =~ /^\s+(0x[0-9a-fA-F]+)\s*=>\s*\{(.*?)\}/gms) {
     my $desc = $name;
     $desc =~ s/([a-z])([A-Z])/$1 $2/g;
 
+    # A guess from the tag name, and a poor one: ExifTool takes family 2 from
+    # the tag's Groups override or its table's GROUPS default, which makes
+    # ExposureTime an Image tag and not a Time one. This value is only
+    # provisional — extraction re-derives family 2 from ExifTool's own tables
+    # (scripts/gen_group2.pl) before handing the tags back.
     my $f2 = 'Image';
     $f2 = 'Camera' if $name =~ /^(Make|Model|Lens|Serial|Owner|Body|Firmware|ISO|Exposure|Aperture|Shutter|Focus|Flash|Meter|WhiteBalance|Saturation|Contrast|Sharpness|DigitalZoom|SceneCapture|Gain|NoiseReduction|Sensitivity|Custom)/i;
     $f2 = 'Time' if $name =~ /Date|Time/i;
