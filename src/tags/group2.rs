@@ -27,11 +27,16 @@ fn lookup<'a>(table: &'a [Family2Entry], key: &str) -> Option<&'a [&'static str]
         .map(|i| table[i].1)
 }
 
+/// Family 2 of `%Image::ExifTool::XMP::other`, the table ExifTool invents tags
+/// in when it meets an XMP property from a namespace it has no schema for.
+const XMP_UNKNOWN_NAMESPACE: &str = "Unknown";
+
 /// Pick a category out of the candidates ExifTool uses for one key.
 ///
-/// A single candidate is the answer. Several mean the category depends on the
-/// originating table, so `current` wins if it is one of them; otherwise there is
-/// nothing better to go on than the first candidate.
+/// A single candidate is the answer. Several mean the tables disagree and none
+/// is more common than the others, so the category depends on the originating
+/// table: `current` wins if it is one of them, otherwise there is nothing better
+/// to go on than the first candidate.
 fn choose(candidates: &[&'static str], current: &str) -> &'static str {
     if candidates.len() == 1 {
         return candidates[0];
@@ -68,6 +73,12 @@ pub fn family2_for(
     let key2 = format!("{family0}{SEP}{name}");
     if let Some(c) = lookup(FAMILY2_BY_G0_NAME, &key2) {
         return Some(choose(c, current));
+    }
+    // An XMP property none of ExifTool's schemas describe goes to XMP::other,
+    // whose category is Unknown. Falling through to the bare name would drag in
+    // an unrelated namespace's answer, so stop here.
+    if family0 == "XMP" {
+        return Some(XMP_UNKNOWN_NAMESPACE);
     }
     lookup(FAMILY2_BY_NAME, name).map(|c| choose(c, current))
 }
@@ -116,6 +127,19 @@ mod tests {
         assert_eq!(
             family2_for("Nonexistent", "Nonexistent", "BitsPerSample", "Image"),
             Some("Image")
+        );
+    }
+
+    #[test]
+    fn xmp_property_from_an_unschemed_namespace_is_unknown() {
+        assert_eq!(
+            family2_for("XMP", "XMP-XMP", "KmlDocumentPlacemarkName", "Other"),
+            Some("Unknown")
+        );
+        // A property ExifTool does know keeps its schema's category.
+        assert_eq!(
+            family2_for("XMP", "XMP-dc", "Creator", "Other"),
+            Some("Author")
         );
     }
 
