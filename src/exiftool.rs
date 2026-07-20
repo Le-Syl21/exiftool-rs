@@ -2122,6 +2122,7 @@ impl ExifTool {
             FileType::PhotoCd => formats::photo_cd::read_photo_cd(data).or_else(|_| Ok(Vec::new())),
             FileType::Dicom => formats::dicom::read_dicom(data),
             FileType::Fits => formats::fits::read_fits(data),
+            FileType::Fit => formats::fit::read_fit(data),
             FileType::Flv => formats::flv::read_flv(data),
             FileType::Mxf => formats::mxf::read_mxf(data).or_else(|_| Ok(Vec::new())),
             FileType::Swf => formats::swf::read_swf(data),

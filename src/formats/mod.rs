@@ -16,6 +16,8 @@ pub mod dpx;
 pub mod dss;
 pub mod dv;
 pub mod exe;
+pub mod fit;
+pub mod fit_tables;
 pub mod fits;
 pub mod flac;
 pub mod flashpix;

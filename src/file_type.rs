@@ -135,6 +135,7 @@ pub enum FileType {
     Swf,
     Dicom,
     Fits,
+    Fit,
     // ===== Newly added =====
     Mrc,
     Moi,
@@ -348,6 +349,7 @@ impl FileType {
             FileType::Swf => "Shockwave Flash",
             FileType::Dicom => "DICOM medical image",
             FileType::Fits => "FITS astronomical image",
+            FileType::Fit => "Garmin Flexible and Interoperable Data Transfer",
             FileType::Mrc => "MRC image",
             FileType::Moi => "MOI",
             FileType::MacOs => "MacOS",
@@ -525,6 +527,7 @@ impl FileType {
             FileType::Swf => "SWF",
             FileType::Dicom => "DICOM",
             FileType::Fits => "FITS",
+            FileType::Fit => "FIT",
             FileType::Mrc => "MRC",
             FileType::Moi => "MOI",
             FileType::MacOs => "MacOS",
@@ -694,6 +697,7 @@ impl FileType {
             FileType::Swf => "application/x-shockwave-flash",
             FileType::Dicom => "application/dicom",
             FileType::Fits => "image/fits",
+            FileType::Fit => "application/fit",
             FileType::Mrc => "image/x-mrc",
             FileType::Moi => "application/octet-stream",
             FileType::MacOs => "application/unknown",
@@ -875,7 +879,8 @@ impl FileType {
             FileType::Font => &["ttf", "otf", "woff", "woff2", "ttc"],
             FileType::Swf => &["swf"],
             FileType::Dicom => &["dcm"],
-            FileType::Fits => &["fits", "fit", "fts"],
+            FileType::Fits => &["fits", "fts"],
+            FileType::Fit => &["fit"],
             FileType::Mrc => &["mrc"],
             FileType::Moi => &["moi"],
             FileType::MacOs => &["macos"],
@@ -1143,6 +1148,7 @@ static ALL_FILE_TYPES: &[FileType] = &[
     FileType::Swf,
     FileType::Dicom,
     FileType::Fits,
+    FileType::Fit,
     FileType::Mrc,
     FileType::Moi,
     FileType::MacOs,
@@ -1803,6 +1809,12 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
                 return Some(FileType::Mrc);
             }
         }
+    }
+
+    // Garmin FIT: ".FIT" at offset 8 (must precede the .fit extension fallback,
+    // which would otherwise collide with the FITS astronomical format)
+    if header.len() >= 12 && &header[8..12] == b".FIT" {
+        return Some(FileType::Fit);
     }
 
     // FITS: "SIMPLE  ="
