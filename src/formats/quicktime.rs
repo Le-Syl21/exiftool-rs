@@ -51,6 +51,24 @@ struct QtState {
     /// Ordered key names from a `keys` atom (QuickTime Keys metadata). A following
     /// `ilst` references these by 1-based index instead of a 4-char tag code.
     item_list_keys: Vec<String>,
+    /// How many `trak` atoms have been entered. ExifTool names each track's
+    /// family-1 group `Track1`, `Track2`, … in the order they appear.
+    track_count: u32,
+    /// Index of the first tag produced by the innermost `meta` atom, so an
+    /// enclosing `udta` does not claim it as its own.
+    meta_tags_from: usize,
+}
+
+/// Give every tag added since `before` the family-1 group of the directory that
+/// produced it. Only the default `QuickTime` group is overwritten: a tag that
+/// already claimed a more specific group (a maker note, an embedded EXIF IFD)
+/// keeps it.
+fn regroup_since(tags: &mut [Tag], before: usize, group1: &str) {
+    for tag in &mut tags[before..] {
+        if tag.group.family1 == "QuickTime" {
+            tag.group.family1 = group1.to_string();
+        }
+    }
 }
 
 thread_local! {
@@ -452,6 +470,9 @@ fn parse_atoms(
                 parse_atoms(data, content_start, content_end, tags, state, depth + 1);
             }
             b"trak" => {
+                state.track_count += 1;
+                let track_group = format!("Track{}", state.track_count);
+                let before_track = tags.len();
                 // Finalize previous stream track (if any) before starting a new one
                 if state.extract_embedded > 0
                     && (state.stream_current.handler_type != [0; 4]
@@ -465,6 +486,7 @@ fn parse_atoms(
                 state.current_track_is_ctmd = false;
                 state.current_track_is_jpeg = false;
                 parse_atoms(data, content_start, content_end, tags, state, depth + 1);
+                regroup_since(tags, before_track, &track_group);
             }
             // mdia: recurse but reset media-level state
             b"mdia" => {
@@ -480,7 +502,22 @@ fn parse_atoms(
             }
             // User data
             b"udta" => {
+                let before_udta = tags.len();
+                let meta_before = state.meta_tags_from;
                 parse_atoms(data, content_start, content_end, tags, state, depth + 1);
+                // Only udta's own atoms are UserData. A `meta` box nested in it
+                // carries its own tables — ItemList/Keys, already stamped, plus
+                // an `hdlr` that stays at movie level — so its range is skipped.
+                let meta_range = state.meta_tags_from.max(before_udta);
+                regroup_since(tags, before_udta, "UserData");
+                if state.meta_tags_from > meta_before {
+                    for tag in &mut tags[meta_range..] {
+                        if tag.group.family1 == "UserData" {
+                            tag.group.family1 = "QuickTime".into();
+                        }
+                    }
+                }
+                state.meta_tags_from = meta_before;
             }
             // Metadata container. `meta` is a FullBox (4-byte version/flags before its
             // children) in ISO BMFF, but a plain container in QuickTime — Android MP4s
@@ -488,6 +525,7 @@ fn parse_atoms(
             // child is `hdlr`: present at offset 4 ⇒ QuickTime (no version/flags),
             // present at offset 8 ⇒ ISO (skip version/flags).
             b"meta" => {
+                state.meta_tags_from = tags.len();
                 let off = if content_start + 8 <= content_end
                     && &data[content_start + 4..content_start + 8] == b"hdlr"
                 {
@@ -512,7 +550,16 @@ fn parse_atoms(
             }
             // iTunes item list (4-char codes) or Keys-indexed list
             b"ilst" => {
+                // An ilst preceded by a `keys` atom is Keys metadata; otherwise
+                // it is the iTunes item list.
+                let group1 = if state.item_list_keys.is_empty() {
+                    "ItemList"
+                } else {
+                    "Keys"
+                };
+                let before_ilst = tags.len();
                 parse_ilst(data, content_start, content_end, tags, state);
+                regroup_since(tags, before_ilst, group1);
             }
             // Movie header
             b"mvhd" => {

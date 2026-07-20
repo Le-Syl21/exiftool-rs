@@ -71,6 +71,11 @@ pub fn family2_for(
     // 'CIFF' }`), so the categories must be looked up under the real ones.
     let aliases: &[&str] = if family1 == "CIFF" {
         &["CanonRaw", "Canon"]
+    } else if family0 == "QuickTime" && family1 != "QuickTime" {
+        // A QuickTime tag's family-1 group names the directory it was found in
+        // (Track1, ItemList, UserData, …); the categories are keyed on the
+        // container itself.
+        &["QuickTime"]
     } else {
         &[]
     };
