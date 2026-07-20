@@ -375,6 +375,166 @@ fn regression_tag_values() {
     );
 }
 
+// ── Tag-GROUP parity, with its own ratcheting baseline ─────────────────────
+//
+// Same ratchet as the name and value parity above, applied to the group a tag is
+// assigned to. `tests/expected_groups/<file>.grps` holds, for every tag ExifTool
+// extracts, the family-1 and family-2 group it puts the tag in:
+//
+//     <tag name><TAB><family1><TAB><family2>
+//
+// Regenerate the oracle with `scripts/gen_group_baselines.sh` (needs Perl
+// ExifTool); see that script for the exact recipe.
+//
+// A delta is keyed on (file, tag, family), so a family-1 fix tightens the net
+// even while family 2 is still wrong for the same tag. Unlike the `.vals`
+// oracle, nothing is excluded here: the volatile System/ExifTool pseudo-tags
+// have unstable VALUES but perfectly stable GROUPS.
+//
+// Tags we do not extract at all are simply skipped — that gap is already
+// measured by `regression_tag_names`.
+//
+// Regenerate: UPDATE_GROUP_BASELINE=1 cargo test --release --test regression regression_tag_groups
+
+const GROUP_BASELINE: &str = "tests/group_baseline.txt";
+
+/// `(file, tag, "family1" | "family2")`.
+type GroupDelta = (String, String, &'static str);
+
+fn current_group_deltas() -> (BTreeSet<GroupDelta>, usize) {
+    use std::collections::HashMap;
+    let images_dir = Path::new("tests/images");
+    let expected_dir = Path::new("tests/expected_groups");
+
+    let mut entries: Vec<_> = std::fs::read_dir(images_dir)
+        .unwrap()
+        .map(|e| e.unwrap())
+        .collect();
+    entries.sort_by_key(|e| e.file_name());
+
+    let mut deltas = BTreeSet::new();
+    let mut tested = 0;
+
+    for entry in entries {
+        let file_name = entry.file_name().to_string_lossy().to_string();
+        let grps_path = expected_dir.join(format!("{file_name}.grps"));
+        if !grps_path.exists() {
+            continue;
+        }
+
+        let tags = safe_extract(&entry.path()).unwrap_or_default();
+        // First occurrence per tag name, the same convention the oracle uses.
+        let mut actual: HashMap<&str, (&str, &str)> = HashMap::new();
+        for t in &tags {
+            actual
+                .entry(t.name.as_str())
+                .or_insert((t.group.family1.as_str(), t.group.family2.as_str()));
+        }
+
+        let content = std::fs::read_to_string(&grps_path).unwrap_or_default();
+        for line in content.lines() {
+            let mut it = line.splitn(3, '\t');
+            let (name, want1, want2) = match (it.next(), it.next(), it.next()) {
+                (Some(n), Some(a), Some(b)) => (n, a, b),
+                _ => continue,
+            };
+            let Some(&(got1, got2)) = actual.get(name) else {
+                continue;
+            };
+            if got1 != want1 {
+                deltas.insert((file_name.clone(), name.to_string(), "family1"));
+            }
+            if got2 != want2 {
+                deltas.insert((file_name.clone(), name.to_string(), "family2"));
+            }
+        }
+        tested += 1;
+    }
+
+    (deltas, tested)
+}
+
+fn read_group_baseline() -> BTreeSet<GroupDelta> {
+    std::fs::read_to_string(GROUP_BASELINE)
+        .unwrap_or_default()
+        .lines()
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .filter_map(|l| {
+            let mut it = l.splitn(3, '\t');
+            let file = it.next()?.to_string();
+            let tag = it.next()?.to_string();
+            let family = match it.next()? {
+                "family1" => "family1",
+                "family2" => "family2",
+                _ => return None,
+            };
+            Some((file, tag, family))
+        })
+        .collect()
+}
+
+fn write_group_baseline(deltas: &BTreeSet<GroupDelta>) {
+    let mut out = String::from(
+        "# Group-parity baseline: (file, tag, family) whose group differs from ExifTool.\n\
+         # New deltas fail regression_tag_groups; fixes tighten it.\n\
+         # Oracle: tests/expected_groups/*.grps, produced by scripts/gen_group_baselines.sh\n\
+         # Regenerate: UPDATE_GROUP_BASELINE=1 cargo test --release --test regression regression_tag_groups\n\
+         # Format: <file>\\t<tag>\\t<family1|family2>\n",
+    );
+    for (file, tag, family) in deltas {
+        out.push_str(file);
+        out.push('\t');
+        out.push_str(tag);
+        out.push('\t');
+        out.push_str(family);
+        out.push('\n');
+    }
+    std::fs::write(GROUP_BASELINE, out).unwrap();
+}
+
+#[test]
+fn regression_tag_groups() {
+    let (current, tested) = current_group_deltas();
+    assert!(tested >= 100, "Expected at least 100 files, got {tested}");
+
+    if std::env::var_os("UPDATE_GROUP_BASELINE").is_some() {
+        write_group_baseline(&current);
+        eprintln!(
+            "Wrote {GROUP_BASELINE}: {} group delta(s) over {tested} files.",
+            current.len()
+        );
+        return;
+    }
+
+    // Enforced in release only (debug panics on overflow, skewing the corpus),
+    // exactly like its name- and value-parity siblings.
+    if cfg!(debug_assertions) {
+        eprintln!("debug build: group parity not enforced. Run `cargo test --release`.");
+        return;
+    }
+
+    let baseline = read_group_baseline();
+    let regressions: Vec<_> = current.difference(&baseline).collect();
+    let improvements = baseline.difference(&current).count();
+    if improvements > 0 {
+        eprintln!(
+            "✨ {improvements} group delta(s) fixed — tighten with \
+             `UPDATE_GROUP_BASELINE=1 cargo test --release --test regression regression_tag_groups`."
+        );
+    }
+    assert!(
+        regressions.is_empty(),
+        "{} NEW tag-group delta(s) vs ExifTool:\n{}\n\nIf intentional, regenerate with \
+         UPDATE_GROUP_BASELINE=1.",
+        regressions.len(),
+        regressions
+            .iter()
+            .map(|(f, t, fam)| format!("  {f}\t{t}\t{fam}"))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
+}
+
 #[test]
 fn all_test_files_parse_without_panic() {
     let images_dir = Path::new("tests/images");
