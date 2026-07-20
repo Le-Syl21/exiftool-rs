@@ -41,16 +41,25 @@ pub fn read_html(data: &[u8]) -> Result<Vec<Tag>> {
         let end = rest.find('>').unwrap_or(rest.len());
         let meta_tag = &rest[..end];
 
+        // `http-equiv` is a namespace of its own in ExifTool, so remember which
+        // attribute carried the name.
+        let mut from_http_equiv = false;
         let name = extract_attr(meta_tag, "name")
             .or_else(|| extract_attr(meta_tag, "property"))
-            .or_else(|| extract_attr(meta_tag, "http-equiv"));
+            .or_else(|| {
+                let v = extract_attr(meta_tag, "http-equiv");
+                from_http_equiv = v.is_some();
+                v
+            });
         let content = extract_attr(meta_tag, "content");
 
         if let (Some(name_raw), Some(content)) = (name, content) {
             if !name_raw.is_empty() && !content.is_empty() {
-                let (tag_name, _group) = map_html_meta_name(&name_raw);
+                let (tag_name, group) = map_html_meta_name(&name_raw);
+                let group = if from_http_equiv { "equiv" } else { &group };
                 if !tag_name.is_empty() {
-                    tags.push(mk(
+                    tags.push(mk_group(
+                        &meta_group1(group),
                         &tag_name,
                         &name_raw,
                         Value::String(html_decode(&content)),
@@ -368,7 +377,7 @@ fn parse_office_xml_section(xml: &str, section: &str, tags: &mut Vec<Tag>) {
                 } else {
                     val
                 };
-                tags.push(mk(tag_name, tag_name, Value::String(val)));
+                tags.push(mk_office(tag_name, tag_name, Value::String(val)));
             }
         }
     }
@@ -434,7 +443,7 @@ fn parse_office_custom_props(xml: &str, tags: &mut Vec<Tag>) {
                 .collect::<String>();
 
             if !tag_name.is_empty() && !value.is_empty() {
-                tags.push(mk(&tag_name, &clean_name, Value::String(value)));
+                tags.push(mk_office(&tag_name, &clean_name, Value::String(value)));
             }
 
             pos = content_start + close_pos + close_tag.len();
@@ -512,7 +521,28 @@ fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack.windows(needle.len()).position(|w| w == needle)
 }
 
+/// Family-1 group of a `<meta>` tag, from the namespace prefix
+/// [`map_html_meta_name`] recognised. ExifTool keeps one table per namespace and
+/// names the group after it.
+fn meta_group1(namespace: &str) -> String {
+    match namespace {
+        "HTML" => "HTML".to_string(),
+        // http-equiv meta tags are the one namespace not named after HTML.
+        "equiv" => "HTTP-equiv".to_string(),
+        ns => format!("HTML-{ns}"),
+    }
+}
+
+/// Build a tag from the Microsoft Office XML block an exported document carries.
+fn mk_office(name: &str, description: &str, value: Value) -> Tag {
+    mk_group("HTML-office", name, description, value)
+}
+
 fn mk(name: &str, description: &str, value: Value) -> Tag {
+    mk_group("HTML", name, description, value)
+}
+
+fn mk_group(group1: &str, name: &str, description: &str, value: Value) -> Tag {
     let pv = value.to_display_string();
     Tag {
         id: TagId::Text(name.to_string()),
@@ -520,7 +550,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         description: description.to_string(),
         group: TagGroup {
             family0: "HTML".into(),
-            family1: "HTML".into(),
+            family1: group1.into(),
             family2: "Document".into(),
             family3: "Main".into(),
         },

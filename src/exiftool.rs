@@ -1797,8 +1797,21 @@ impl ExifTool {
                     // Same family1, same family3 document and same priority, and
                     // not a sub-document group: only then do the duplicates
                     // describe one and the same thing, so that last-wins applies.
+                    // HTML.pm splits its tags across one table per `<meta>`
+                    // namespace, all at the same priority, so a duplicate name
+                    // resolves last-wins across those tables. Everywhere else we
+                    // require the same family 1, which is the conservative
+                    // reading: a differing family 1 usually means the two tags
+                    // describe different things.
+                    let same_source = |i: usize| -> bool {
+                        if group.family0 == "HTML" {
+                            tags[i].group.family0 == "HTML"
+                        } else {
+                            &tags[i].group.family1 == g1
+                        }
+                    };
                     let uniform = idxs.iter().all(|&i| {
-                        &tags[i].group.family1 == g1
+                        same_source(i)
                             && tags[i].group.family3 == group.family3
                             && tags[i].priority == priority
                     });
