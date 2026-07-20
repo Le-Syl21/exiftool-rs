@@ -8,6 +8,17 @@ use crate::tag::{Tag, TagGroup, TagId};
 use crate::tags::iptc as iptc_tags;
 use crate::value::Value;
 
+/// Family-1 group of an IPTC directory sitting where the format says it should
+/// (`JPEG-APP13-Photoshop-IPTC`, `TIFF-IFD0-IPTC`, …), and of every IPTC block
+/// in a format that has no standard location at all (PDF, MIFF, …).
+const STANDARD_GROUP1: &str = "IPTC";
+
+/// Family-1 group of an IPTC directory found in an unexpected place inside a
+/// format that *does* define a standard one. ExifTool's `ProcessIPTC` counts
+/// those and appends the count + 1 to the group name, so the first is `IPTC2`.
+/// We only ever see one per file, so the counter is not modelled.
+const NONSTANDARD_GROUP1: &str = "IPTC2";
+
 /// IPTC metadata reader.
 pub struct IptcReader;
 
@@ -50,7 +61,19 @@ impl IptcReader {
         false
     }
 
+    /// Read an IPTC directory found at the format's standard location.
     pub fn read(data: &[u8]) -> Result<Vec<Tag>> {
+        Self::read_in_group(data, STANDARD_GROUP1)
+    }
+
+    /// Read an IPTC directory found somewhere ExifTool does not expect one — a
+    /// JPEG trailer, a maker note — which lands in its own numbered family-1
+    /// group. See [`NONSTANDARD_GROUP1`].
+    pub fn read_nonstandard(data: &[u8]) -> Result<Vec<Tag>> {
+        Self::read_in_group(data, NONSTANDARD_GROUP1)
+    }
+
+    fn read_in_group(data: &[u8], group1: &str) -> Result<Vec<Tag>> {
         let mut tags = Vec::new();
         let is_utf8 = Self::detect_iptc_charset(data);
         let mut pos = 0;
@@ -83,12 +106,13 @@ impl IptcReader {
             let value_data = &data[pos..pos + length];
             pos += length;
 
-            // Only handle Application Record (record 2) for now, it has the useful tags
-            let ifd_name = match record {
-                1 => "IPTCEnvelope",
-                2 => "IPTCApplication",
-                _ => continue,
-            };
+            // Only handle Envelope (record 1) and Application (record 2); the
+            // rest carry no tags we surface. The record does NOT select the
+            // family-1 group: ExifTool names it after the IPTC *directory*, so
+            // both records share the group passed in by the caller.
+            if !matches!(record, 1 | 2) {
+                continue;
+            }
 
             // Check for PhotoMechanic SoftEdit fields BEFORE string decoding
             // (These are int32s, not strings, so must be decoded as binary)
@@ -171,7 +195,7 @@ impl IptcReader {
                 description,
                 group: TagGroup {
                     family0: "IPTC".to_string(),
-                    family1: ifd_name.to_string(),
+                    family1: group1.to_string(),
                     family2: "Other".to_string(),
                     family3: "Main".into(),
                 },

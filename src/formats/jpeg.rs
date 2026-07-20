@@ -901,7 +901,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     if tag == b"IPTC" && offset + size <= data.len() {
                         let iptc_raw = &data[offset..offset + size];
                         let iptc_start = iptc_raw.iter().position(|&b| b == 0x1C).unwrap_or(0);
-                        if let Ok(iptc_tags) = IptcReader::read(&iptc_raw[iptc_start..]) {
+                        if let Ok(iptc_tags) = IptcReader::read_nonstandard(&iptc_raw[iptc_start..]) {
                             tags.extend(iptc_tags);
                         }
                     }
@@ -1060,7 +1060,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 0x01 => {
                     // IPTC data
                     if let Some(start) = rec_data.iter().position(|&b| b == 0x1C) {
-                        if let Ok(iptc_tags) = IptcReader::read(&rec_data[start..]) {
+                        if let Ok(iptc_tags) = IptcReader::read_nonstandard(&rec_data[start..]) {
                             tags.extend(iptc_tags);
                         }
                     }

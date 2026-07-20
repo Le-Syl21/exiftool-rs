@@ -270,6 +270,14 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
         tags.push(mk("ProfileID", "Profile ID", Value::String(id)));
     }
 
+    // Everything above comes from the 128-byte profile header, which ExifTool
+    // parses with %Image::ExifTool::ICC_Profile::Header — a table whose family-1
+    // group is `ICC-header`, not `ICC_Profile`. Only the tag table below keeps
+    // the `ICC_Profile` group.
+    for tag in &mut tags {
+        tag.group.family1 = "ICC-header".into();
+    }
+
     // Profile description tag - search in tag table
     if data.len() >= 132 {
         let tag_count = u32::from_be_bytes([data[128], data[129], data[130], data[131]]) as usize;
