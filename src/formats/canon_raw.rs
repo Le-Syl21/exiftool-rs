@@ -88,6 +88,10 @@ fn find_xmp_end(data: &[u8], xmp_start: usize) -> Option<usize> {
     None
 }
 
+/// Walk one CIFF directory. Its own entries belong to ExifTool's
+/// `CanonRaw::Main` table (family-1 group `CanonRaw`); the binary sub-directories
+/// it points at are the ordinary Canon maker-note tables, so
+/// [`parse_ciff_binary_subdir`] groups those under `Canon`.
 fn parse_ciff_dir(
     data: &[u8],
     block_start: usize,
@@ -192,7 +196,7 @@ fn parse_ciff_dir(
                     description: "Raw Data".into(),
                     group: TagGroup {
                         family0: "MakerNotes".into(),
-                        family1: "MakerNotes".into(),
+                        family1: "CanonRaw".into(),
                         family2: "Camera".into(),
                         family3: "Main".into(),
                     },
@@ -214,7 +218,7 @@ fn parse_ciff_dir(
                     description: "Jpg From Raw".into(),
                     group: TagGroup {
                         family0: "MakerNotes".into(),
-                        family1: "MakerNotes".into(),
+                        family1: "CanonRaw".into(),
                         family2: "Camera".into(),
                         family3: "Main".into(),
                     },
@@ -236,7 +240,7 @@ fn parse_ciff_dir(
                     description: "Thumbnail Image".into(),
                     group: TagGroup {
                         family0: "MakerNotes".into(),
-                        family1: "MakerNotes".into(),
+                        family1: "CanonRaw".into(),
                         family2: "Camera".into(),
                         family3: "Main".into(),
                     },
@@ -388,7 +392,7 @@ fn parse_ciff_dir(
             description: description.to_string(),
             group: TagGroup {
                 family0: "MakerNotes".into(),
-                family1: "MakerNotes".into(),
+                family1: "CanonRaw".into(),
                 family2: "Camera".into(),
                 family3: "Main".into(),
             },
@@ -403,6 +407,20 @@ fn parse_ciff_dir(
 /// Returns true if the tag was handled (sub-tags emitted), false otherwise.
 /// Based on Perl CanonRaw.pm SubDirectory/ProcessBinaryData tables.
 fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Vec<Tag>) -> bool {
+    // Which module owns the sub-table this CIFF tag points at. The ones staying
+    // inside CanonRaw.pm keep its `CanonRaw` family-1 group; the rest hand off to
+    // the ordinary Canon maker-note tables and become `Canon`.
+    let group1 = match tag_id {
+        0x080a  // CanonRaw::MakeModel
+        | 0x10b5 // CanonRaw::RawJpgInfo
+        | 0x1803 // CanonRaw::ImageFormat
+        | 0x180e // CanonRaw::TimeStamp
+        | 0x1810 // CanonRaw::ImageInfo
+        | 0x1813 // CanonRaw::FlashInfo
+        | 0x1835 // CanonRaw::DecoderTable
+        => "CanonRaw",
+        _ => "Canon",
+    };
     let mk = |name: &str, val: String| -> Tag {
         Tag {
             id: TagId::Text(name.into()),
@@ -410,7 +428,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             description: name.into(),
             group: TagGroup {
                 family0: "MakerNotes".into(),
-                family1: "MakerNotes".into(),
+                family1: group1.into(),
                 family2: "Camera".into(),
                 family3: "Main".into(),
             },
@@ -426,7 +444,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             description: name.into(),
             group: TagGroup {
                 family0: "MakerNotes".into(),
-                family1: "MakerNotes".into(),
+                family1: group1.into(),
                 family2: "Camera".into(),
                 family3: "Main".into(),
             },
@@ -489,7 +507,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                 tags.push(Tag {
                     group: TagGroup {
                         family0: "MakerNotes".into(),
-                        family1: "MakerNotes".into(),
+                        family1: group1.into(),
                         family2: "Camera".into(),
                         family3: "Main".into(),
                     },
@@ -506,7 +524,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                 tags.push(Tag {
                     group: TagGroup {
                         family0: "MakerNotes".into(),
-                        family1: "MakerNotes".into(),
+                        family1: group1.into(),
                         family2: "Camera".into(),
                         family3: "Main".into(),
                     },
@@ -827,6 +845,15 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
         }
         0x1814 => {
             // MeasuredEV (NOT a SubDirectory; single float with ValueConv $val+5)
+            //
+            // This is CanonRaw::ExposureInfo, so ExifTool groups it `CanonRaw`,
+            // and we deliberately do not. Canon::ShotInfo also carries a
+            // MeasuredEV, and ExifTool reaches the ExposureInfo one first while
+            // our CIFF walk reaches ShotInfo first. Splitting the two groups
+            // stops duplicate resolution from collapsing them, and the wrong
+            // MeasuredEV value would then survive. One group delta buys value
+            // parity; fixing it properly means matching ExifTool's CIFF
+            // traversal order.
             if data.len() >= 4 {
                 let raw = rf32(data, 0);
                 let val = raw + 5.0;
@@ -887,7 +914,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                     description: "Exposure Time".into(),
                     group: TagGroup {
                         family0: "MakerNotes".into(),
-                        family1: "MakerNotes".into(),
+                        family1: group1.into(),
                         family2: "Camera".into(),
                         family3: "Main".into(),
                     },
@@ -908,7 +935,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                     description: "F Number".into(),
                     group: TagGroup {
                         family0: "MakerNotes".into(),
-                        family1: "MakerNotes".into(),
+                        family1: group1.into(),
                         family2: "Camera".into(),
                         family3: "Main".into(),
                     },
@@ -964,7 +991,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                         description: "Focal Length".into(),
                         group: TagGroup {
                             family0: "MakerNotes".into(),
-                            family1: "MakerNotes".into(),
+                            family1: group1.into(),
                             family2: "Camera".into(),
                             family3: "Main".into(),
                         },
@@ -985,7 +1012,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                         description: "Focal Plane X Size".into(),
                         group: TagGroup {
                             family0: "MakerNotes".into(),
-                            family1: "MakerNotes".into(),
+                            family1: group1.into(),
                             family2: "Camera".into(),
                             family3: "Main".into(),
                         },
@@ -1006,7 +1033,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                         description: "Focal Plane Y Size".into(),
                         group: TagGroup {
                             family0: "MakerNotes".into(),
-                            family1: "MakerNotes".into(),
+                            family1: group1.into(),
                             family2: "Camera".into(),
                             family3: "Main".into(),
                         },
