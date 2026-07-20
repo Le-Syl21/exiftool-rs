@@ -1748,6 +1748,12 @@ impl ExifTool {
                 // Priority-0 tags (e.g. QuickTime tkhd tags). Default-priority tags in
                 // these same groups (priority >= 1, e.g. mdhd/hdlr) still follow the
                 // normal last-wins rule, so they are NOT blanket-excluded here.
+                // Avec ExtractEmbedded, ExifTool place chaque message répété d'un
+                // fichier FIT dans son propre document (famille 3 : Doc1, Doc2…) et
+                // ne déduplique qu'à l'intérieur d'un document. Notre modèle de
+                // groupes n'a pas de famille 3 : on exempte donc ces tags de la
+                // règle « le dernier gagne », qui sinon n'en garderait qu'un seul.
+                let fit_embedded = file_type == FileType::Fit && self.options.extract_embedded > 0;
                 fn is_first_wins_group(g1: &str) -> bool {
                     g1 == "QuickTime"
                         || g1 == "Track1"
@@ -1772,7 +1778,7 @@ impl ExifTool {
                     let uniform = idxs
                         .iter()
                         .all(|&i| &tags[i].group.family1 == g1 && tags[i].priority == priority);
-                    if !uniform || is_sub_document(g1) {
+                    if !uniform || is_sub_document(g1) || fit_embedded {
                         continue;
                     }
                     // In a first-wins container, Priority-0 duplicates keep the FIRST
@@ -2122,7 +2128,7 @@ impl ExifTool {
             FileType::PhotoCd => formats::photo_cd::read_photo_cd(data).or_else(|_| Ok(Vec::new())),
             FileType::Dicom => formats::dicom::read_dicom(data),
             FileType::Fits => formats::fits::read_fits(data),
-            FileType::Fit => formats::fit::read_fit(data),
+            FileType::Fit => formats::fit::read_fit_with_ee(data, self.options.extract_embedded),
             FileType::Flv => formats::flv::read_flv(data),
             FileType::Mxf => formats::mxf::read_mxf(data).or_else(|_| Ok(Vec::new())),
             FileType::Swf => formats::swf::read_swf(data),

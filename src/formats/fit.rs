@@ -341,6 +341,14 @@ fn mk_tag(group1: &str, name: &str, raw: Value, print: String) -> Tag {
 
 /// Lit un fichier Garmin FIT et renvoie ses tags.
 pub fn read_fit(data: &[u8]) -> Result<Vec<Tag>> {
+    read_fit_with_ee(data, 0)
+}
+
+/// Idem, avec l'option ExtractEmbedded : sans elle, ExifTool ne rend que le
+/// premier message de chaque type ; avec elle, il rend toute la série temporelle
+/// (un jeu de tags par message) et n'émet plus l'avertissement.
+pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
+    let ee = extract_embedded > 0;
     if data.len() < 12 || &data[8..12] != b".FIT" {
         return Err(Error::InvalidData("not a Garmin FIT file".into()));
     }
@@ -365,20 +373,22 @@ pub fn read_fit(data: &[u8]) -> Result<Vec<Tag>> {
         print_value: data[1].to_string(),
         priority: 0,
     });
-    let warn = "[minor] Use ExtractEmbedded option to extract all timed metadata";
-    tags.push(Tag {
-        id: TagId::Text("Warning".into()),
-        name: "Warning".into(),
-        description: "Warning".into(),
-        group: TagGroup {
-            family0: "ExifTool".into(),
-            family1: "ExifTool".into(),
-            family2: "Other".into(),
-        },
-        raw_value: Value::String(warn.into()),
-        print_value: warn.into(),
-        priority: 0,
-    });
+    if !ee {
+        let warn = "[minor] Use ExtractEmbedded option to extract all timed metadata";
+        tags.push(Tag {
+            id: TagId::Text("Warning".into()),
+            name: "Warning".into(),
+            description: "Warning".into(),
+            group: TagGroup {
+                family0: "ExifTool".into(),
+                family1: "ExifTool".into(),
+                family2: "Other".into(),
+            },
+            raw_value: Value::String(warn.into()),
+            print_value: warn.into(),
+            priority: 0,
+        });
+    }
 
     // 16 définitions de messages locaux au plus (4 bits d'identifiant).
     let mut defs: Vec<Option<MsgDef>> = (0..16).map(|_| None).collect();
@@ -495,7 +505,7 @@ pub fn read_fit(data: &[u8]) -> Result<Vec<Tag>> {
             break;
         }
         // Sans ExtractEmbedded, un seul message par type global.
-        if done.contains(&def.global_num) {
+        if !ee && done.contains(&def.global_num) {
             pos += def.size;
             continue;
         }
@@ -614,6 +624,11 @@ pub fn read_fit(data: &[u8]) -> Result<Vec<Tag>> {
             let print = print_text(&field.print, &conv, &raw);
             tags.push(mk_tag(def.name, field.name, Value::String(raw), print));
         }
+    }
+
+    // Avec ExtractEmbedded, ExifTool rend chaque occurrence : pas de fusion.
+    if ee {
+        return Ok(tags);
     }
 
     // ExifTool conserve la DERNIÈRE occurrence d'un même nom de tag ; le moteur

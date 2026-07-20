@@ -1,0 +1,175 @@
+AccumulatedPower	3324880 watts
+AvgCadence	13 rpm
+AvgCadence	13 rpm
+AvgCadencePosition	255 255
+AvgCadencePosition	255 255
+AvgFractionalCadence	0.53125 rpm
+AvgFractionalCadence	0.53125 rpm
+AvgHeartRate	87 bpm
+AvgHeartRate	87 bpm
+AvgLeftPowerPhase	255 255 255 255
+AvgLeftPowerPhase	255 255 255 255
+AvgLeftPowerPhasePeak	255 255 255 255
+AvgLeftPowerPhasePeak	255 255 255 255
+AvgPowerPosition	65535 65535
+AvgPowerPosition	65535 65535
+AvgRightPowerPhase	255 255 255 255
+AvgRightPowerPhase	255 255 255 255
+AvgRightPowerPhasePeak	255 255 255 255
+AvgRightPowerPhasePeak	255 255 255 255
+AvgTemperature	28 C
+AvgTemperature	28 C
+BeginningBodyBattery	75
+BodyBattery	75
+BodyBattery	75
+BodyBattery	75
+BodyBattery	75
+Cadence	0 rpm
+Cadence	0 rpm
+Cadence	0 rpm
+Cadence	58 rpm
+Cadence	60 rpm
+CycleLength16	0 m
+CycleLength16	0 m
+CycleLength16	0 m
+CycleLength16	0 m
+CycleLength16	0 m
+Distance	0 m
+Distance	14.35 m
+Distance	184075.6 m
+Distance	26.9 m
+Distance	3.83 m
+EndingBodyBattery	68
+EnhancedAvgAltitude	71.6 m
+EnhancedAvgSpeed	0.378 m/s
+EnhancedAvgSpeed	0.378 m/s
+EnhancedMaxAltitude	86.8 m
+EnhancedMaxAltitude	86.8 m
+EnhancedMaxSpeed	2.986 m/s
+EnhancedMaxSpeed	2.986 m/s
+EnhancedMinAltitude	53.4 m
+EnhancedMinAltitude	53.4 m
+EstSweatLoss	591
+EstSweatLoss	591 ml
+Event	Lap
+Event	Session
+EventType	Stop
+EventType	Stop
+FileType	FIT
+FileTypeExtension	fit
+FirstLapIndex	0
+FractionalCadence	0 rpm
+FractionalCadence	0 rpm
+FractionalCadence	0 rpm
+FractionalCadence	0.5 rpm
+FractionalCadence	0.5 rpm
+GPSAltitude	17.8 m
+GPSAltitude	63.8 m
+GPSAltitude	63.8 m
+GPSAltitude	64.8 m
+GPSAltitude	66 m
+GPSAltitude	88.4 m
+GPSDateTime	2026:04:01 16:00:24+02:00
+GPSDateTime	2026:04:01 16:00:24+02:00
+GPSDestLatitude	32 deg 43' 58.12" N
+GPSDestLatitude	32 deg 43' 58.12" N
+GPSDestLongitude	117 deg 9' 14.85" W
+GPSDestLongitude	117 deg 9' 14.85" W
+GPSLatitude	20 deg 30' 16.51" N
+GPSLatitude	32 deg 43' 57.65" N
+GPSLatitude	32 deg 43' 57.97" N
+GPSLatitude	32 deg 43' 57.97" N
+GPSLatitude	32 deg 43' 57.99" N
+GPSLatitude	32 deg 43' 58.03" N
+GPSLongitude	117 deg 9' 14.38" W
+GPSLongitude	117 deg 9' 14.63" W
+GPSLongitude	117 deg 9' 14.97" W
+GPSLongitude	117 deg 9' 15.05" W
+GPSLongitude	117 deg 9' 15.05" W
+GPSLongitude	86 deg 57' 23.85" W
+GPSPosition	32 deg 43' 57.97" N, 117 deg 9' 15.05" W
+GPSSpeed	0 km/h
+GPSSpeed	0 km/h
+GPSSpeed	3.2508 km/h
+GPSSpeed	5.0724 km/h
+GPSSpeed	5.4072 km/h
+GPSSpeed	5.4756 km/h
+HeartRate	127 bpm
+HeartRate	67 bpm
+HeartRate	69 bpm
+HeartRate	69 bpm
+HeartRate	69 bpm
+Intensity	Active
+LapTrigger	Session End
+MIMEType	application/fit
+MaxCadence	88 rpm
+MaxCadence	88 rpm
+MaxCadencePosition	255 255
+MaxCadencePosition	255 255
+MaxFractionalCadence	0 rpm
+MaxFractionalCadence	0 rpm
+MaxHeartRate	108 bpm
+MaxHeartRate	108 bpm
+MaxPowerPosition	65535 65535
+MaxPowerPosition	65535 65535
+MaxTemperature	29 C
+MaxTemperature	29 C
+MessageIndex	0
+MessageIndex	0
+MetabolicCalories	87 kcal
+MinHeartRate	66 bpm
+MinTemperature	27 C
+MinTemperature	27 C
+NECLatitude	32 deg 43' 59.98" N
+NECLatitude	32 deg 43' 59.98" N
+NECLongitude	117 deg 9' 7.56" W
+NECLongitude	117 deg 9' 7.56" W
+NumLaps	1
+PrimaryBenefit	Recovery
+ProtocolVersion	16
+RestingCalories	87 kcal
+SWCLatitude	32 deg 43' 57.49" N
+SWCLatitude	32 deg 43' 57.49" N
+SWCLongitude	117 deg 9' 15.63" W
+SWCLongitude	117 deg 9' 15.63" W
+Sport	Mountaineering
+Sport	Mountaineering
+SportProfileName	Birding
+SubSport	Generic
+SubSport	Generic
+Temperature	27 C
+Temperature	27 C
+Temperature	27 C
+Temperature	27 C
+Temperature	32 C
+TimeStamp	2019:11:24 22:28:43+01:00
+TimeStamp	2026:04:01 16:00:24+02:00
+TimeStamp	2026:04:01 16:00:24+02:00
+TimeStamp	2026:04:01 16:00:24+02:00
+TimeStamp	2026:04:01 16:00:34+02:00
+TimeStamp	2026:04:01 16:00:44+02:00
+TimeStamp	2026:04:01 16:00:54+02:00
+TotalAnaerobicTrainingEffect	0
+TotalAscent	29 m
+TotalAscent	29 m
+TotalCalories	233 kcal
+TotalCalories	233 kcal
+TotalCycles	1174 cycles
+TotalCycles	1174 cycles
+TotalDescent	34 m
+TotalDescent	34 m
+TotalDistance	1345.5 m
+TotalDistance	1345.5 m
+TotalElapsedTime	3564.089 s
+TotalElapsedTime	3564.089 s
+TotalSets	0
+TotalTimerTime	3564.089 s
+TotalTimerTime	3564.089 s
+TotalTrainingEffect	0.5
+TrainingLoadPeak	3.70919799804688
+Trigger	Activity End
+Volume	0 kg
+WristHeartRate	67 bpm
+WristHeartRate	69 bpm
+WristHeartRate	69 bpm
+WristHeartRate	69 bpm

@@ -429,3 +429,55 @@ fn all_test_files_parse_without_panic() {
         ok
     );
 }
+
+// ── Parité ExtractEmbedded (-ee) sur Garmin FIT ─────────────────────────────
+//
+// Sans -ee, ExifTool ne rend que le premier message de chaque type ; avec -ee
+// il rend toute la série temporelle (un jeu de tags par message `Record`).
+// Ce test compare le multi-ensemble complet « nom<TAB>valeur » à ExifTool,
+// tags système volatils exclus. Il existe parce que le harnais principal ne
+// teste que le mode par défaut : le support -ee a été livré cassé une fois
+// (5 tags par message au lieu de 13) sans qu'aucun test ne le voie.
+#[cfg(unix)]
+#[test]
+fn fit_extract_embedded_parity() {
+    use exiftool_rs::Options;
+
+    let expected = std::fs::read_to_string("tests/expected_values/Garmin.fit.ee.vals")
+        .expect("baseline -ee absent");
+    let mut want: Vec<String> = expected.lines().map(|l| l.to_string()).collect();
+    want.sort();
+
+    let et = ExifTool::with_options(Options {
+        extract_embedded: 1,
+        ..Default::default()
+    });
+    let tags = et
+        .extract_info(Path::new("tests/images/Garmin.fit"))
+        .expect("extraction FIT");
+
+    const VOLATILE: &[&str] = &[
+        "Directory",
+        "ExifToolVersion",
+        "FileAccessDate",
+        "FileInodeChangeDate",
+        "FileModifyDate",
+        "FileName",
+        "FilePermissions",
+        "FileSize",
+    ];
+    let mut got: Vec<String> = tags
+        .iter()
+        .filter(|t| !VOLATILE.contains(&t.name.as_str()))
+        .map(|t| format!("{}\t{}", t.name, sanitize_value(&t.print_value)))
+        .collect();
+    got.sort();
+
+    assert_eq!(
+        got,
+        want,
+        "parité -ee rompue sur Garmin.fit ({} tags obtenus, {} attendus)",
+        got.len(),
+        want.len()
+    );
+}
