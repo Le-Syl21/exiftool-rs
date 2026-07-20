@@ -441,9 +441,8 @@ pub fn read_zip(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     let mut has_content_types = false;
     let mut has_mimetype = false;
     let mut first_entry = true;
-    let mut entry_number = 1usize;
 
-    for entry in &entries {
+    for (entry_number, entry) in (1usize..).zip(entries.iter()) {
         let filename = &entry.filename;
 
         // Describe the member: the first one only, unless -ee asks for all.
@@ -512,7 +511,6 @@ pub fn read_zip(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
         if first_entry {
             first_entry = false;
         }
-        entry_number += 1;
 
         if filename == "[Content_Types].xml" {
             has_content_types = true;
