@@ -218,9 +218,10 @@ impl ExifReader {
             name: "ExifByteOrder".to_string(),
             description: "Exif Byte Order".to_string(),
             group: TagGroup {
-                family0: "EXIF".to_string(),
-                family1: "IFD0".to_string(),
-                family2: "ExifTool".to_string(),
+                // ExifTool raises ExifByteOrder at file level, not from IFD0.
+                family0: "File".to_string(),
+                family1: "File".to_string(),
+                family2: "Image".to_string(),
                 family3: "Main".into(),
             },
             raw_value: Value::String(bo_str.to_string()),
@@ -1627,8 +1628,9 @@ fn process_geotiff_keys(tags: &mut Vec<Tag>) {
         name: "GeoTiffVersion".to_string(),
         description: "GeoTiff Version".to_string(),
         group: TagGroup {
-            family0: "EXIF".into(),
-            family1: "IFD0".into(),
+            // GeoTiff.pm's own group, not the IFD0 tag that carries the keys.
+            family0: "GeoTiff".into(),
+            family1: "GeoTiff".into(),
             family2: "Location".into(),
             family3: "Main".into(),
         },

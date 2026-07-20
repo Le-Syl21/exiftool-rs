@@ -737,9 +737,10 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
         name: "ExifByteOrder".into(),
         description: "Exif Byte Order".into(),
         group: TagGroup {
-            family0: "EXIF".into(),
-            family1: "IFD0".into(),
-            family2: "ExifTool".into(),
+            // ExifTool raises ExifByteOrder at file level, not from IFD0.
+            family0: "File".into(),
+            family1: "File".into(),
+            family2: "Image".into(),
             family3: "Main".into(),
         },
         raw_value: Value::String(bo_str.to_string()),
@@ -1271,8 +1272,10 @@ fn make_geotiff_tag(
         name: name.to_string(),
         description: description.to_string(),
         group: TagGroup {
-            family0: "EXIF".to_string(),
-            family1: "IFD0".to_string(),
+            // GeoTIFF keys live in an IFD0 tag but ExifTool reads them with
+            // GeoTiff.pm, which is a group of its own.
+            family0: "GeoTiff".to_string(),
+            family1: "GeoTiff".to_string(),
             family2: "Location".to_string(),
             family3: "Main".into(),
         },
