@@ -358,11 +358,25 @@ fn parse_boxes(
                     }
                 }
             }
-            // XML box (XMP)
+            // XML box. Jpeg2000.pm hands it to `Image::ExifTool::XMP::XML`, a
+            // table whose groups are `{ 0 => 'XML', 1 => 'XML' }` -- the XMP
+            // parser is reused, but the tags are NOT XMP. A property carrying a
+            // namespace prefix keeps it (XML-xsi); one without stays plain XML.
             b"xml " => {
                 let payload = &data[content_start..content_end];
                 if let Ok(xmp_tags) = XmpReader::read(payload) {
-                    tags.extend(xmp_tags);
+                    tags.extend(xmp_tags.into_iter().map(|mut t| {
+                        let suffix = t.group.family1.strip_prefix("XMP-").unwrap_or("");
+                        t.group.family1 = if suffix.is_empty() || suffix == "XMP" {
+                            "XML".to_string()
+                        } else {
+                            format!("XML-{suffix}")
+                        };
+                        t.group.family0 = "XML".into();
+                        // The table's own default category (`2 => 'Unknown'`).
+                        t.group.family2 = "Unknown".into();
+                        t
+                    }));
                 }
             }
             // JXL codestream
