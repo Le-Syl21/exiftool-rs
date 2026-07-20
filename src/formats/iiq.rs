@@ -282,7 +282,10 @@ fn iiq_decode_tag(
     tags: &mut Vec<Tag>,
 ) {
     let push = |tags: &mut Vec<Tag>, name: &str, desc: &str, val: String| {
-        tags.push(mktag("MakerNotes", name, desc, Value::String(val)));
+        let mut tag = mktag("MakerNotes", name, desc, Value::String(val));
+        // Image::ExifTool::PhaseOne::Main: family 1 is the module name.
+        tag.group.family1 = "PhaseOne".into();
+        tags.push(tag);
     };
 
     match tag_id {
@@ -650,12 +653,14 @@ fn iiq_parse_sensor_calibration(
             if etag == 0x0400 {
                 // SensorDefects (binary undef)
                 let display = format!("(Binary data {} bytes, use -b option to extract)", esize);
-                tags.push(mktag(
+                let mut tag = mktag(
                     "MakerNotes",
                     "SensorDefects",
                     "Sensor Defects",
                     Value::String(display),
-                ));
+                );
+                tag.group.family1 = "PhaseOne".into();
+                tags.push(tag);
                 break;
             }
         }

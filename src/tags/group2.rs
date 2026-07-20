@@ -66,9 +66,19 @@ pub fn family2_for(
     name: &str,
     current: &str,
 ) -> Option<&'static str> {
-    let key3 = format!("{family0}{SEP}{family1}{SEP}{name}");
-    if let Some(c) = lookup(FAMILY2_BY_G0_G1_NAME, &key3) {
-        return Some(choose(c, current));
+    // A CIFF record embedded in a JPEG is read with the very tables a .crw file
+    // uses; ExifTool only overrides their family-1 group name (`Groups => { 1 =>
+    // 'CIFF' }`), so the categories must be looked up under the real ones.
+    let aliases: &[&str] = if family1 == "CIFF" {
+        &["CanonRaw", "Canon"]
+    } else {
+        &[]
+    };
+    for g1 in std::iter::once(family1).chain(aliases.iter().copied()) {
+        let key3 = format!("{family0}{SEP}{g1}{SEP}{name}");
+        if let Some(c) = lookup(FAMILY2_BY_G0_G1_NAME, &key3) {
+            return Some(choose(c, current));
+        }
     }
     let key2 = format!("{family0}{SEP}{name}");
     if let Some(c) = lookup(FAMILY2_BY_G0_NAME, &key2) {

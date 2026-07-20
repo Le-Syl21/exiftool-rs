@@ -325,10 +325,19 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                                 t.priority = 2;
                             }
                         }
+                        // A CIFF block inside a JPEG is one directory for
+                        // ExifTool, named CIFF — not the CanonRaw/Canon split a
+                        // real .crw file gets.
+                        for tag in &mut ciff_tags {
+                            tag.group.family1 = "CIFF".into();
+                        }
                         tags.extend(ciff_tags);
                     }
                     // Supplementary: extract FreeBytes (tag 0x0001) which canon_raw skips
-                    tags.extend(extract_ciff_freebytes(seg_data));
+                    for mut tag in extract_ciff_freebytes(seg_data) {
+                        tag.group.family1 = "CIFF".into();
+                        tags.push(tag);
+                    }
                 } else if seg_data.starts_with(b"AVI1") && seg_data.len() > 4 {
                     // AVI1 APP0: from AVI JPEG frames (from Perl JPEG.pm/JPEG::AVI1)
                     // Data after "AVI1" (4 bytes): index 0 (int8u) = InterleavedField

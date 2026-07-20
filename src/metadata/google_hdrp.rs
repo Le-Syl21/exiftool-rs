@@ -753,10 +753,10 @@ fn make_tag(name: &str, group2: &str, raw: Value, print: String) -> Tag {
         name: name.to_string(),
         description: name.to_string(),
         group: TagGroup {
-            // ExifTool shows these as [MakerNotes] with -G (family1 defaults to "MakerNotes"
-            // when GROUPS doesn't specify family1 for the HDRPlusMakerNote table)
+            // Image::ExifTool::Google::HDRPlusMakerNote: family 1 is the module
+            // name, Google.
             family0: "MakerNotes".into(),
-            family1: "MakerNotes".into(),
+            family1: "Google".into(),
             family2: group2.into(),
             family3: "Main".into(),
         },
