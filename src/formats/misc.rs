@@ -3,6 +3,12 @@
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
+/// Build a tag whose family-0 and family-1 groups are both `family`.
+///
+/// `family` is the name of the ExifTool table the tag comes from, not the file
+/// type: several formats ExifTool parses inline (BMP, PCX, PGF, ICO, PPM, PICT,
+/// BPG, FLIF, WPG, PCAP) have tables grouped `File`, so their readers pass
+/// `"File"` here.
 pub(crate) fn mktag(family: &str, name: &str, description: &str, value: Value) -> Tag {
     let pv = value.to_display_string();
     Tag {

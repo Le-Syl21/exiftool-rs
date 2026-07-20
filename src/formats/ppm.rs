@@ -32,7 +32,7 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
         };
         let color_space = if cs_char == b'F' { "RGB" } else { "Monochrome" };
         tags.push(mktag(
-            "PFM",
+            "File",
             "ColorSpace",
             "Color Space",
             Value::String(color_space.into()),
@@ -43,8 +43,8 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
             let parts: Vec<&str> = wh_line.split_whitespace().collect();
             if parts.len() >= 2 {
                 if let (Ok(w), Ok(h)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
-                    tags.push(mktag("PFM", "ImageWidth", "Image Width", Value::U32(w)));
-                    tags.push(mktag("PFM", "ImageHeight", "Image Height", Value::U32(h)));
+                    tags.push(mktag("File", "ImageWidth", "Image Width", Value::U32(w)));
+                    tags.push(mktag("File", "ImageHeight", "Image Height", Value::U32(h)));
                 }
             }
         }
@@ -58,7 +58,7 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
                     "Little-endian"
                 };
                 tags.push(mktag(
-                    "PFM",
+                    "File",
                     "ByteOrder",
                     "Byte Order",
                     Value::String(byte_order.into()),
@@ -143,17 +143,17 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
                 .trim_end_matches('\n')
                 .trim_end_matches('\r')
                 .to_string();
-            tags.push(mktag("PPM", "Comment", "Comment", Value::String(comment)));
+            tags.push(mktag("File", "Comment", "Comment", Value::String(comment)));
         }
 
         if let Some(w) = width {
-            tags.push(mktag("PPM", "ImageWidth", "Image Width", Value::U32(w)));
+            tags.push(mktag("File", "ImageWidth", "Image Width", Value::U32(w)));
         }
         if let Some(h) = height {
-            tags.push(mktag("PPM", "ImageHeight", "Image Height", Value::U32(h)));
+            tags.push(mktag("File", "ImageHeight", "Image Height", Value::U32(h)));
         }
         if let Some(mv) = maxval {
-            tags.push(mktag("PPM", "MaxVal", "Max Val", Value::U32(mv)));
+            tags.push(mktag("File", "MaxVal", "Max Val", Value::U32(mv)));
         }
     }
 

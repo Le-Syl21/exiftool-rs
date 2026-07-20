@@ -19,7 +19,7 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
     let ver = data[10];
     let rev = data[11];
     tags.push(mktag(
-        "WPG",
+        "File",
         "WPGVersion",
         "WPG Version",
         Value::String(format!("{}.{}", ver, rev)),
@@ -276,7 +276,7 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
 
     if let Some(w) = image_width_inches {
         tags.push(mktag(
-            "WPG",
+            "File",
             "ImageWidthInches",
             "Image Width Inches",
             Value::String(format!("{:.2}", w)),
@@ -284,7 +284,7 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
     }
     if let Some(h) = image_height_inches {
         tags.push(mktag(
-            "WPG",
+            "File",
             "ImageHeightInches",
             "Image Height Inches",
             Value::String(format!("{:.2}", h)),
@@ -292,7 +292,7 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
     }
     if !records.is_empty() {
         let joined = records.join(", ");
-        tags.push(mktag("WPG", "Records", "Records", Value::String(joined)));
+        tags.push(mktag("File", "Records", "Records", Value::String(joined)));
     }
 
     Ok(tags)

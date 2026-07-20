@@ -63,11 +63,11 @@ pub fn read_pict(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    tags.push(mktag("PICT", "ImageWidth", "Image Width", Value::I32(w)));
-    tags.push(mktag("PICT", "ImageHeight", "Image Height", Value::I32(h)));
+    tags.push(mktag("File", "ImageWidth", "Image Width", Value::I32(w)));
+    tags.push(mktag("File", "ImageHeight", "Image Height", Value::I32(h)));
     if let Some(hr) = h_res {
         tags.push(mktag(
-            "PICT",
+            "File",
             "XResolution",
             "X Resolution",
             Value::String(format!("{}", hr as i64)),
@@ -75,7 +75,7 @@ pub fn read_pict(data: &[u8]) -> Result<Vec<Tag>> {
     }
     if let Some(vr) = v_res {
         tags.push(mktag(
-            "PICT",
+            "File",
             "YResolution",
             "Y Resolution",
             Value::String(format!("{}", vr as i64)),

@@ -36,7 +36,7 @@ pub fn read_bpg(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Unknown",
     };
     tags.push(mktag(
-        "BPG",
+        "File",
         "PixelFormat",
         "Pixel Format",
         Value::String(pf_name.into()),
@@ -49,14 +49,14 @@ pub fn read_bpg(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "No Alpha Plane",
     };
     tags.push(mktag(
-        "BPG",
+        "File",
         "Alpha",
         "Alpha",
         Value::String(alpha_name.into()),
     ));
 
     tags.push(mktag(
-        "BPG",
+        "File",
         "BitDepth",
         "Bit Depth",
         Value::U32(bit_depth as u32),
@@ -74,13 +74,13 @@ pub fn read_bpg(data: &[u8]) -> Result<Vec<Tag>> {
         flag_parts.push("Extension Present");
     }
     let flags_str = flag_parts.join(", ");
-    tags.push(mktag("BPG", "Flags", "Flags", Value::String(flags_str)));
+    tags.push(mktag("File", "Flags", "Flags", Value::String(flags_str)));
 
     // Width, height, and image length are ue7-encoded starting at offset 6
     let mut pos = 6;
     if let Some((w, consumed)) = read_bpg_ue(data, pos) {
         tags.push(mktag(
-            "BPG",
+            "File",
             "ImageWidth",
             "Image Width",
             Value::U32(w as u32),
@@ -88,7 +88,7 @@ pub fn read_bpg(data: &[u8]) -> Result<Vec<Tag>> {
         pos += consumed;
         if let Some((h, consumed)) = read_bpg_ue(data, pos) {
             tags.push(mktag(
-                "BPG",
+                "File",
                 "ImageHeight",
                 "Image Height",
                 Value::U32(h as u32),
@@ -96,7 +96,7 @@ pub fn read_bpg(data: &[u8]) -> Result<Vec<Tag>> {
             pos += consumed;
             if let Some((img_len, consumed)) = read_bpg_ue(data, pos) {
                 tags.push(mktag(
-                    "BPG",
+                    "File",
                     "ImageLength",
                     "Image Length",
                     Value::U32(img_len as u32),

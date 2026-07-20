@@ -43,19 +43,19 @@ pub fn read_pcap(data: &[u8]) -> Result<Vec<Tag>> {
         "Big-endian (Motorola, MM)"
     };
     tags.push(mktag(
-        "PCAP",
+        "File",
         "ByteOrder",
         "Byte Order",
         Value::String(bo_str.into()),
     ));
     tags.push(mktag(
-        "PCAP",
+        "File",
         "PCAPVersion",
         "PCAP Version",
         Value::String(format!("PCAP {}.{}", maj, min)),
     ));
     tags.push(mktag(
-        "PCAP",
+        "File",
         "LinkType",
         "Link Type",
         Value::String(pcap_link_type_name(link_type)),
@@ -115,13 +115,13 @@ pub fn read_pcapng(data: &[u8]) -> Result<Vec<Tag>> {
         "Big-endian (Motorola, MM)"
     };
     tags.push(mktag(
-        "PCAP",
+        "File",
         "ByteOrder",
         "Byte Order",
         Value::String(bo_str.into()),
     ));
     tags.push(mktag(
-        "PCAP",
+        "File",
         "PCAPVersion",
         "PCAP Version",
         Value::String(format!("PCAPNG {}.{}", maj, min)),
@@ -151,7 +151,7 @@ pub fn read_pcapng(data: &[u8]) -> Result<Vec<Tag>> {
             let link_type = r32(data, idb_start + 8) & 0xFFFF;
             let link_name = pcap_link_type_name(link_type);
             tags.push(mktag(
-                "PCAP",
+                "File",
                 "LinkType",
                 "Link Type",
                 Value::String(link_name),
@@ -213,13 +213,13 @@ fn parse_pcapng_options(
             ("shb", 2) => {
                 // shb_hardware
                 let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
-                tags.push(mktag("PCAP", "Hardware", "Hardware", Value::String(s)));
+                tags.push(mktag("File", "Hardware", "Hardware", Value::String(s)));
             }
             ("shb", 3) => {
                 // shb_os
                 let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
                 tags.push(mktag(
-                    "PCAP",
+                    "File",
                     "OperatingSystem",
                     "Operating System",
                     Value::String(s),
@@ -229,7 +229,7 @@ fn parse_pcapng_options(
                 // shb_userappl
                 let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
                 tags.push(mktag(
-                    "PCAP",
+                    "File",
                     "UserApplication",
                     "User Application",
                     Value::String(s),
@@ -238,7 +238,7 @@ fn parse_pcapng_options(
             ("idb", 2) => {
                 // if_name
                 let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
-                tags.push(mktag("PCAP", "DeviceName", "Device Name", Value::String(s)));
+                tags.push(mktag("File", "DeviceName", "Device Name", Value::String(s)));
             }
             ("idb", 9) => {
                 // if_tsresol: timestamp resolution
@@ -254,7 +254,7 @@ fn parse_pcapng_options(
                         format!("1e-{:02}", exp)
                     };
                     tags.push(mktag(
-                        "PCAP",
+                        "File",
                         "TimeStampResolution",
                         "Time Stamp Resolution",
                         Value::String(resolution),
@@ -266,7 +266,7 @@ fn parse_pcapng_options(
                 let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
                 if !tags.iter().any(|t| t.name == "OperatingSystem") {
                     tags.push(mktag(
-                        "PCAP",
+                        "File",
                         "OperatingSystem",
                         "Operating System",
                         Value::String(s),
@@ -348,7 +348,7 @@ fn parse_pcapng_blocks(data: &[u8], start: usize, is_le: bool, tags: &mut Vec<Ta
             let ts_usecs = ts_raw % 1_000_000;
             // Format as ExifTool does: YYYY:MM:DD HH:MM:SS.ssssss+ZZ:ZZ
             if let Some(dt) = format_unix_timestamp(ts_secs as i64, ts_usecs) {
-                tags.push(mktag("PCAP", "TimeStamp", "Time Stamp", Value::String(dt)));
+                tags.push(mktag("File", "TimeStamp", "Time Stamp", Value::String(dt)));
             }
             break; // Only need first packet timestamp
         }

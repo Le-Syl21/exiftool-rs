@@ -30,7 +30,7 @@ pub fn read_pcx(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Unknown",
     };
     tags.push(mktag(
-        "PCX",
+        "File",
         "Manufacturer",
         "Manufacturer",
         Value::String(mfr_str.into()),
@@ -45,7 +45,7 @@ pub fn read_pcx(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Unknown",
     };
     tags.push(mktag(
-        "PCX",
+        "File",
         "Software",
         "Software",
         Value::String(sw_str.into()),
@@ -56,52 +56,52 @@ pub fn read_pcx(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Unknown",
     };
     tags.push(mktag(
-        "PCX",
+        "File",
         "Encoding",
         "Encoding",
         Value::String(enc_str.into()),
     ));
 
     tags.push(mktag(
-        "PCX",
+        "File",
         "BitsPerPixel",
         "Bits Per Pixel",
         Value::U8(bpp),
     ));
-    tags.push(mktag("PCX", "LeftMargin", "Left Margin", Value::U16(xmin)));
-    tags.push(mktag("PCX", "TopMargin", "Top Margin", Value::U16(ymin)));
+    tags.push(mktag("File", "LeftMargin", "Left Margin", Value::U16(xmin)));
+    tags.push(mktag("File", "TopMargin", "Top Margin", Value::U16(ymin)));
     tags.push(mktag(
-        "PCX",
+        "File",
         "ImageWidth",
         "Image Width",
         Value::U16(xmax - xmin + 1),
     ));
     tags.push(mktag(
-        "PCX",
+        "File",
         "ImageHeight",
         "Image Height",
         Value::U16(ymax - ymin + 1),
     ));
     tags.push(mktag(
-        "PCX",
+        "File",
         "XResolution",
         "X Resolution",
         Value::U16(hdpi),
     ));
     tags.push(mktag(
-        "PCX",
+        "File",
         "YResolution",
         "Y Resolution",
         Value::U16(vdpi),
     ));
     tags.push(mktag(
-        "PCX",
+        "File",
         "ColorPlanes",
         "Color Planes",
         Value::U8(num_planes),
     ));
     tags.push(mktag(
-        "PCX",
+        "File",
         "BytesPerLine",
         "Bytes Per Line",
         Value::U16(bytes_per_line),
@@ -114,7 +114,7 @@ pub fn read_pcx(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Unknown",
     };
     tags.push(mktag(
-        "PCX",
+        "File",
         "ColorMode",
         "Color Mode",
         Value::String(cm_str.into()),

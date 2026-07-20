@@ -152,8 +152,8 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         name: name.to_string(),
         description: description.to_string(),
         group: TagGroup {
-            family0: "BMP".into(),
-            family1: "BMP".into(),
+            family0: "File".into(),
+            family1: "File".into(),
             family2: "Image".into(),
             family3: "Main".into(),
         },

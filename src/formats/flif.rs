@@ -34,7 +34,7 @@ pub fn read_flif(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Unknown",
     };
     tags.push(mktag(
-        "FLIF",
+        "File",
         "ImageType",
         "Image Type",
         Value::String(image_type.into()),
@@ -48,7 +48,7 @@ pub fn read_flif(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Unknown",
     };
     tags.push(mktag(
-        "FLIF",
+        "File",
         "BitDepth",
         "Bit Depth",
         Value::String(bit_depth.into()),
@@ -59,7 +59,7 @@ pub fn read_flif(data: &[u8]) -> Result<Vec<Tag>> {
     if let Some((w, consumed)) = read_flif_varint(data, pos) {
         let width = (w + 1) as u32;
         tags.push(mktag(
-            "FLIF",
+            "File",
             "ImageWidth",
             "Image Width",
             Value::U32(width),
@@ -68,7 +68,7 @@ pub fn read_flif(data: &[u8]) -> Result<Vec<Tag>> {
         if let Some((h, consumed2)) = read_flif_varint(data, pos) {
             let height = (h + 1) as u32;
             tags.push(mktag(
-                "FLIF",
+                "File",
                 "ImageHeight",
                 "Image Height",
                 Value::U32(height),
@@ -80,7 +80,7 @@ pub fn read_flif(data: &[u8]) -> Result<Vec<Tag>> {
                 if let Some((frames, consumed3)) = read_flif_varint(data, pos) {
                     let frame_count = (frames + 2) as u32;
                     tags.push(mktag(
-                        "FLIF",
+                        "File",
                         "AnimationFrames",
                         "Animation Frames",
                         Value::U32(frame_count),
@@ -106,7 +106,7 @@ pub fn read_flif(data: &[u8]) -> Result<Vec<Tag>> {
                 _ => "Unknown",
             };
             tags.push(mktag(
-                "FLIF",
+                "File",
                 "Encoding",
                 "Encoding",
                 Value::String(encoding.into()),
