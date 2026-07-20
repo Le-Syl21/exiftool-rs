@@ -1186,7 +1186,13 @@ impl ExifTool {
             });
         }
 
-        // Add more file-level tags
+        // Add more file-level tags.
+        //
+        // The File/File/Other group below is only a default: the pseudo-tags that
+        // ExifTool places elsewhere (FileName, Directory, the File*Date tags,
+        // ExifToolVersion, …) have their groups resolved from `FILE_LEVEL_GROUPS`
+        // at the end of extraction. Tags that genuinely belong to File:File, such
+        // as FileTypeExtension and ExifByteOrder, keep this default.
         let file_tag = |name: &str, val: Value| -> Tag {
             Tag {
                 id: crate::tag::TagId::Text(name.to_string()),
@@ -1818,6 +1824,19 @@ impl ExifTool {
                         keep
                     });
                 }
+            }
+        }
+
+        // Resolve the file-level pseudo-tags through their ExifTool table. This
+        // runs last, after duplicate resolution, so re-grouping a tag can never
+        // perturb which instance survives: the pass rewrites group assignment
+        // only, never a tag's name or value. Family 3 is preserved, so a Warning
+        // raised inside an embedded document stays in that document.
+        for tag in &mut tags {
+            if let Some((f0, f1, f2)) = file_level_group(&tag.name) {
+                tag.group.family0 = f0.to_string();
+                tag.group.family1 = f1.to_string();
+                tag.group.family2 = f2.to_string();
             }
         }
 
@@ -2953,6 +2972,41 @@ pub fn shift_datetime(datetime: &str, shift: &str) -> Option<String> {
         "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
         new_year, new_month, new_day, new_hour, new_min, new_sec
     ))
+}
+
+/// Group assignment of the file-level pseudo-tags, ported from
+/// `%Image::ExifTool::System` and the `%allGroupsExifTool` entries of
+/// `%Image::ExifTool::Extra` in `ExifTool.pm`.
+///
+/// ExifTool resolves these tags through a single table, so their groups do not
+/// depend on which parser produced them: `Warning` is reported in the `ExifTool`
+/// group whether it was raised by the PNG, QuickTime or MRC reader. Only family 1
+/// splits the System tags out of `File` — their family 0 stays `File`, matching
+/// `exiftool -G0`. The ExifTool pseudo-tags sit in `ExifTool` for all three
+/// families.
+///
+/// Entries are `(name, family0, family1, family2)`.
+const FILE_LEVEL_GROUPS: &[(&str, &str, &str, &str)] = &[
+    ("Directory", "File", "System", "Other"),
+    ("Error", "ExifTool", "ExifTool", "ExifTool"),
+    ("ExifToolVersion", "ExifTool", "ExifTool", "ExifTool"),
+    ("FileAccessDate", "File", "System", "Time"),
+    ("FileCreateDate", "File", "System", "Time"),
+    ("FileInodeChangeDate", "File", "System", "Time"),
+    ("FileModifyDate", "File", "System", "Time"),
+    ("FileName", "File", "System", "Other"),
+    ("FilePermissions", "File", "System", "Other"),
+    ("FileSize", "File", "System", "Other"),
+    ("Warning", "ExifTool", "ExifTool", "ExifTool"),
+];
+
+/// The `(family0, family1, family2)` groups [`FILE_LEVEL_GROUPS`] assigns to
+/// `name`, or `None` if `name` is not a file-level pseudo-tag.
+fn file_level_group(name: &str) -> Option<(&'static str, &'static str, &'static str)> {
+    FILE_LEVEL_GROUPS
+        .iter()
+        .find(|(n, ..)| *n == name)
+        .map(|&(_, f0, f1, f2)| (f0, f1, f2))
 }
 
 // Only used by the `#[cfg(unix)]` File:System FilePermissions pseudo-tag above;
