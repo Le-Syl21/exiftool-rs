@@ -1210,6 +1210,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
             family0: "EXE".into(),
             family1: "EXE".into(),
             family2: "Other".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value: pv,

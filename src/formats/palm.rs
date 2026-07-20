@@ -449,6 +449,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
             family0: "Palm".into(),
             family1: "Palm".into(),
             family2: "Document".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value: pv,

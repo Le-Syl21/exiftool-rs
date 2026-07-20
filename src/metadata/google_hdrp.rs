@@ -758,6 +758,7 @@ fn make_tag(name: &str, group2: &str, raw: Value, print: String) -> Tag {
             family0: "MakerNotes".into(),
             family1: "MakerNotes".into(),
             family2: group2.into(),
+            family3: "Main".into(),
         },
         raw_value: raw,
         print_value: print,

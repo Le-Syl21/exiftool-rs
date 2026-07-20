@@ -599,6 +599,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
             family0: "PDF".into(),
             family1: "PDF".into(),
             family2: "Document".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value,

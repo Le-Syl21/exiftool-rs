@@ -1143,6 +1143,7 @@ impl ExifTool {
                 family0: "File".into(),
                 family1: "File".into(),
                 family2: "Other".into(),
+                family3: "Main".into(),
             },
             raw_value: Value::String(format!("{:?}", file_type)),
             // ExifTool's FileType value is the short code ("JPEG"), not the
@@ -1159,6 +1160,7 @@ impl ExifTool {
                 family0: "File".into(),
                 family1: "File".into(),
                 family2: "Other".into(),
+                family3: "Main".into(),
             },
             raw_value: Value::String(mime_str.clone()),
             print_value: mime_str.clone(),
@@ -1174,6 +1176,7 @@ impl ExifTool {
                     family0: "File".into(),
                     family1: "File".into(),
                     family2: "Other".into(),
+                    family3: "Main".into(),
                 },
                 // String, not U32: a file may exceed 4 GB (`as u32` would silently
                 // truncate). `-n` prints this verbatim, matching Perl's raw byte count.
@@ -1193,6 +1196,7 @@ impl ExifTool {
                     family0: "File".into(),
                     family1: "File".into(),
                     family2: "Other".into(),
+                    family3: "Main".into(),
                 },
                 raw_value: val.clone(),
                 print_value: val.to_display_string(),
@@ -1230,6 +1234,7 @@ impl ExifTool {
                     family0: "File".into(),
                     family1: "File".into(),
                     family2: "Other".into(),
+                    family3: "Main".into(),
                 },
                 raw_value: Value::String(format!("{:o}", mode)),
                 print_value: format_file_permissions(mode),
@@ -3129,6 +3134,7 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
             family0: "File".into(),
             family1: "File".into(),
             family2: "Other".into(),
+            family3: "Main".into(),
         },
         raw_value: Value::String(val.clone()),
         print_value: val,

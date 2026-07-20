@@ -855,6 +855,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
             family0: "ICC_Profile".into(),
             family1: "ICC_Profile".into(),
             family2: "Image".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value: pv,

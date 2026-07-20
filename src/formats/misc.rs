@@ -13,6 +13,7 @@ pub(crate) fn mktag(family: &str, name: &str, description: &str, value: Value) -
             family0: family.into(),
             family1: family.into(),
             family2: "Other".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value: pv,

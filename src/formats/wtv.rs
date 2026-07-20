@@ -34,6 +34,7 @@ fn mk_wtv(name: &str, value: Value, print: String) -> Tag {
             family0: "WTV".into(),
             family1: "WTV".into(),
             family2: "Video".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value: print,

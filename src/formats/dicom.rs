@@ -466,6 +466,7 @@ pub fn read_dicom(data: &[u8]) -> Result<Vec<Tag>> {
                 family0: "DICOM".into(),
                 family1: "DICOM".into(),
                 family2: "Image".into(),
+                family3: "Main".into(),
             },
             raw_value: Value::String(value_str),
             print_value: print_val,

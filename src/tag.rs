@@ -1,6 +1,6 @@
 use crate::value::Value;
 
-/// Identifies the metadata group hierarchy (mirrors ExifTool's Group0/Group1/Group2).
+/// Identifies the metadata group hierarchy (mirrors ExifTool's Group0..Group3).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TagGroup {
     /// Family 0: Information type (EXIF, IPTC, XMP, ICC_Profile, etc.)
@@ -9,6 +9,28 @@ pub struct TagGroup {
     pub family1: String,
     /// Family 2: Category (Image, Camera, Location, Time, Author, etc.)
     pub family2: String,
+    /// Family 3: Document number ([`MAIN_DOCUMENT`], "Doc1", "Doc2", etc.).
+    ///
+    /// Tags read from the file itself belong to the main document. Formats that
+    /// carry repeated or embedded sub-documents (e.g. the timed messages of a
+    /// Garmin FIT file under `ExtractEmbedded`) place each one in its own
+    /// numbered document, exactly as ExifTool's `-G3` output does.
+    pub family3: String,
+}
+
+/// Family 3 value for tags belonging to the file's main document.
+pub const MAIN_DOCUMENT: &str = "Main";
+
+impl Default for TagGroup {
+    /// An empty group in the main document.
+    fn default() -> Self {
+        Self {
+            family0: String::new(),
+            family1: String::new(),
+            family2: String::new(),
+            family3: MAIN_DOCUMENT.to_string(),
+        }
+    }
 }
 
 /// A resolved metadata tag with its value and metadata.
@@ -74,6 +96,7 @@ mod tests {
                 family0: "EXIF".to_string(),
                 family1: "IFD0".to_string(),
                 family2: "Image".to_string(),
+                family3: "Main".into(),
             },
             raw_value: raw,
             print_value: print.to_string(),
@@ -152,6 +175,7 @@ mod tests {
             family0: "EXIF".into(),
             family1: "IFD0".into(),
             family2: "Image".into(),
+            family3: "Main".into(),
         };
         let g2 = g1.clone();
         assert_eq!(g1, g2);

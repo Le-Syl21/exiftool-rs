@@ -212,6 +212,7 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
                     family0: "QuickTime".into(),
                     family1: "QuickTime".into(),
                     family2: "Preview".into(),
+                    family3: "Main".into(),
                 },
                 raw_value: Value::Binary(jpg_data.to_vec()),
                 print_value: format!("(Binary data {} bytes, use -b option to extract)", jpg_sz),
@@ -800,6 +801,7 @@ fn parse_atoms(
                                         family0: "QuickTime".into(),
                                         family1: "QuickTime".into(),
                                         family2: "Preview".into(),
+                                        family3: "Main".into(),
                                     },
                                     raw_value: Value::Binary(prvw_data.to_vec()),
                                     print_value: format!(
@@ -841,6 +843,7 @@ fn parse_atoms(
                         family0: "QuickTime".into(),
                         family1: "QuickTime".into(),
                         family2: "Preview".into(),
+                        family3: "Main".into(),
                     },
                     raw_value: Value::Binary(img.to_vec()),
                     print_value: format!(
@@ -3000,6 +3003,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
             family0: "QuickTime".into(),
             family1: "QuickTime".into(),
             family2: "Video".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value,
@@ -3017,6 +3021,7 @@ fn mk_makernote(name: &str, description: &str, value: Value) -> Tag {
             family0: "MakerNotes".into(),
             family1: "MakerNotes".into(),
             family2: "Camera".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value,
@@ -3239,7 +3244,7 @@ fn parse_canon_uuid(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) 
                             family0: "MakerNotes".into(),
                             family1: "Canon".into(),
                             family2: "Preview".into(),
-                        },
+                         family3: "Main".into(), },
                         raw_value: Value::Binary(thumb_data.to_vec()),
                         print_value: format!(
                             "(Binary data {} bytes, use -b option to extract)",

@@ -1594,6 +1594,7 @@ fn mk_webp(name: &str, description: &str, value: Value) -> Tag {
             family0: "RIFF".into(),
             family1: "WebP".into(),
             family2: "Image".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value,
@@ -1615,6 +1616,7 @@ fn mk_riff(family: &str, name: &str, description: &str, value: Value) -> Tag {
             } else {
                 "Audio".into()
             },
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value,

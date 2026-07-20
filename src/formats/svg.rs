@@ -188,6 +188,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                                     family0: "JUMBF".into(),
                                     family1: "JUMBF".into(),
                                     family2: "Image".into(),
+                                    family3: "Main".into(),
                                 };
                                 let print = format!(
                                     "(Binary data {} bytes, use -b option to extract)",
@@ -280,6 +281,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                         family0: "JUMBF".into(),
                         family1: "JUMBF".into(),
                         family2: "Image".into(),
+                        family3: "Main".into(),
                     };
                     let print = format!(
                         "(Binary data {} bytes, use -b option to extract)",
@@ -373,6 +375,7 @@ fn parse_jumbf_jumd_svg(data: &[u8], tags: &mut Vec<Tag>, emit_desc: bool) {
         family0: "JUMBF".into(),
         family1: "JUMBF".into(),
         family2: "Image".into(),
+        family3: "Main".into(),
     };
 
     let mut pos = 0;

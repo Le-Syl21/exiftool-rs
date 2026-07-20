@@ -62,6 +62,7 @@ fn make_miff_tag(name: &str, value: String) -> Tag {
             family0: "MIFF".into(),
             family1: "MIFF".into(),
             family2: "Image".into(),
+            family3: "Main".into(),
         },
         raw_value: Value::String(value.clone()),
         print_value: value,

@@ -75,6 +75,7 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
                 family0: "RAF".into(),
                 family1: "RAF".into(),
                 family2: "Preview".into(),
+                family3: "Main".into(),
             },
             raw_value: Value::Binary(jpeg_data.to_vec()),
             print_value: format!(
@@ -383,6 +384,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
             family0: "RAF".into(),
             family1: "RAF".into(),
             family2: "Camera".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value: pv,
@@ -399,6 +401,7 @@ fn mk_loc(name: &str, description: &str, value: Value, print: String) -> Tag {
             family0: "RAF".into(),
             family1: "RAF".into(),
             family2: "Camera".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value: print,

@@ -601,6 +601,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
             family0: "Font".into(),
             family1: "Font".into(),
             family2: "Other".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value: pv,
@@ -1228,6 +1229,7 @@ fn mk_font(group: &str, name: &str, desc: &str, val: Value) -> Tag {
             family0: "File".to_string(),
             family1: group.to_string(),
             family2: "Document".to_string(),
+            family3: "Main".into(),
         },
     }
 }

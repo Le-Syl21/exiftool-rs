@@ -497,6 +497,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
             family0: "FLAC".into(),
             family1: "FLAC".into(),
             family2: "Audio".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value,

@@ -283,6 +283,7 @@ fn mktag_font(name: &str, description: &str, value: Value) -> Tag {
             family0: "File".to_string(),
             family1: "Font".to_string(),
             family2: "Document".to_string(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value: pv,

@@ -998,6 +998,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
             family0: "ASF".into(),
             family1: "ASF".into(),
             family2: "Video".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value: pv,

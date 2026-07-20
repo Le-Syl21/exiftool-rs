@@ -284,6 +284,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
             family0: "XML".into(),
             family1: "XML".into(),
             family2: "Image".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value: pv,

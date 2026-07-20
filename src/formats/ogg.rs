@@ -260,6 +260,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
             family0: "Vorbis".into(),
             family1: "Ogg".into(),
             family2: "Audio".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value,

@@ -587,6 +587,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
             family0: "JP2".into(),
             family1: "JP2".into(),
             family2: "Image".into(),
+            family3: "Main".into(),
         },
         raw_value: value,
         print_value,

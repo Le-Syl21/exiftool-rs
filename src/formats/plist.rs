@@ -315,6 +315,7 @@ pub fn read_binary_plist_tags(data: &[u8]) -> Result<Vec<Tag>> {
         family0: "PLIST".into(),
         family1: "PLIST".into(),
         family2: "Document".into(),
+        family3: "Main".into(),
     };
 
     flatten_plist_dict(&map, &[], &group, &mut tags);
@@ -474,6 +475,7 @@ pub fn read_xml_plist(data: &[u8]) -> Result<Vec<Tag>> {
         family0: "PLIST".into(),
         family1: "XML".into(),
         family2: "Document".into(),
+        family3: "Main".into(),
     };
 
     // Parse the plist dict recursively
@@ -790,6 +792,7 @@ pub fn read_aae_plist(data: &[u8]) -> Result<Vec<Tag>> {
         family0: "PLIST".into(),
         family1: "XML".into(),
         family2: "Document".into(),
+        family3: "Main".into(),
     };
 
     // Parse outer XML plist dict

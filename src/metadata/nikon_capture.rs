@@ -16,6 +16,7 @@ fn mk(name: &str, val: &str) -> Tag {
             family0: "MakerNotes".into(),
             family1: "NikonCapture".into(),
             family2: "Image".into(),
+            family3: "Main".into(),
         },
         raw_value: Value::String(val.into()),
         print_value: val.into(),

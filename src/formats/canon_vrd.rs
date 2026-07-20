@@ -23,6 +23,7 @@ fn mktag(group: &str, name: &str, raw: Value, print: String) -> Tag {
             family0: group.to_string(),
             family1: group.to_string(),
             family2: "Image".to_string(),
+            family3: "Main".into(),
         },
         raw_value: raw,
         print_value: print,
