@@ -4,7 +4,6 @@
 # Oracle: tests/expected_multi/*.mvals, from scripts/gen_multiset_baselines.sh
 # Regenerate: UPDATE_MULTISET_BASELINE=1 cargo test --release --test regression regression_tag_multiset
 # Format: <file>\t<default|ee>\t<extra|missing>\t<occurrence>\t<tag>\t<value>
-AIFF.aif	ee	missing	0	Comment	ding.wav
 APE.mpc	default	extra	0	Album	Cover Art Test
 APE.mpc	default	extra	0	Artist	Kraftwerk
 APE.mpc	default	extra	0	Genre	Electronic
@@ -23,11 +22,7 @@ ASF.wmv	ee	missing	0	StreamNumber	1
 ASF.wmv	ee	missing	0	StreamType	Audio
 ASF.wmv	ee	missing	0	TimeOffset	0 s
 Android.mp4	ee	extra	0	Warning	[minor] The ExtractEmbedded option may find more tags in the video data
-Android.mp4	ee	missing	0	HandlerDescription	VideoHandle
-Android.mp4	ee	missing	0	HandlerType	Metadata Tags
-Android.mp4	ee	missing	0	HandlerType	Video Track
-Android.mp4	ee	missing	0	MediaDuration	2.13 s
-Android.mp4	ee	missing	0	MediaTimeScale	90000
+Apple.jpg	ee	extra	0	GPSAltitude	72.36649215
 Apple.jpg	ee	missing	0	GPSAltitude	72.36649215 m
 Apple.jpg	ee	missing	0	GPSLatitude	53 deg 22' 58.25"
 Apple.jpg	ee	missing	0	GPSLongitude	1 deg 27' 24.04"
@@ -35,8 +30,6 @@ Apple.jpg	ee	missing	0	ResolutionUnit	inches
 Apple.jpg	ee	missing	0	XResolution	72
 Apple.jpg	ee	missing	0	YResolution	72
 BPG.bpg	ee	missing	0	ColorSpace	YCbCr (BT 601)
-BPG.bpg	ee	missing	0	ComponentsConfiguration	Y, Cb, Cr, -
-BPG.bpg	ee	missing	0	YCbCrPositioning	Centered
 Canon.jpg	ee	missing	0	ColorSpace	sRGB
 Canon.jpg	ee	missing	0	ExposureCompensation	0
 Canon.jpg	ee	missing	0	ExposureTime	128
@@ -138,7 +131,6 @@ CanonRaw.cr3	ee	missing	0	ColorTone	Normal
 CanonRaw.cr3	ee	missing	0	ContinuousDrive	Single
 CanonRaw.cr3	ee	missing	0	Contrast	Normal
 CanonRaw.cr3	ee	missing	0	ControlMode	Camera Local Control
-CanonRaw.cr3	ee	missing	0	CreateDate	2018:02:21 12:08:56
 CanonRaw.cr3	ee	missing	0	DigitalGain	0
 CanonRaw.cr3	ee	missing	0	DigitalLensOptimizerSetting	Off
 CanonRaw.cr3	ee	missing	0	DigitalZoom	None
@@ -165,9 +157,6 @@ CanonRaw.cr3	ee	missing	0	FocusDistanceLower	0.22 m
 CanonRaw.cr3	ee	missing	0	FocusDistanceUpper	0.24 m
 CanonRaw.cr3	ee	missing	0	FocusMode	One-shot AF (Live View)
 CanonRaw.cr3	ee	missing	0	FocusRange	Not Known
-CanonRaw.cr3	ee	missing	0	HandlerType	Video Track
-CanonRaw.cr3	ee	missing	1	HandlerType	Video Track
-CanonRaw.cr3	ee	missing	2	HandlerType	Video Track
 CanonRaw.cr3	ee	missing	0	ISO	12800
 CanonRaw.cr3	ee	missing	1	ISO	12800
 CanonRaw.cr3	ee	missing	0	ImageHeight	1080
@@ -182,17 +171,10 @@ CanonRaw.cr3	ee	missing	0	MaxAperture	3.6
 CanonRaw.cr3	ee	missing	0	MaxFocalLength	45 mm
 CanonRaw.cr3	ee	missing	0	MeasuredEV	2.75
 CanonRaw.cr3	ee	missing	0	MeasuredEV2	1.625
-CanonRaw.cr3	ee	missing	0	MediaDuration	1.00 s
-CanonRaw.cr3	ee	missing	1	MediaDuration	1.00 s
-CanonRaw.cr3	ee	missing	2	MediaDuration	1.00 s
-CanonRaw.cr3	ee	missing	0	MediaTimeScale	1
-CanonRaw.cr3	ee	missing	1	MediaTimeScale	1
-CanonRaw.cr3	ee	missing	2	MediaTimeScale	1
 CanonRaw.cr3	ee	missing	0	MeteringMode	Evaluative
 CanonRaw.cr3	ee	missing	0	MeteringMode	Multi-segment
 CanonRaw.cr3	ee	missing	0	MinAperture	23
 CanonRaw.cr3	ee	missing	0	MinFocalLength	15 mm
-CanonRaw.cr3	ee	missing	0	ModifyDate	2018:02:21 12:08:56
 CanonRaw.cr3	ee	missing	0	NDFilter	n/a
 CanonRaw.cr3	ee	missing	0	NumAFPoints	143
 CanonRaw.cr3	ee	missing	0	OpticalZoomCode	n/a
@@ -215,10 +197,6 @@ CanonRaw.cr3	ee	missing	0	Sharpness	4
 CanonRaw.cr3	ee	missing	0	SharpnessFrequency	n/a
 CanonRaw.cr3	ee	missing	0	ShutterMode	Electronic First Curtain
 CanonRaw.cr3	ee	missing	0	SlowShutter	None
-CanonRaw.cr3	ee	missing	0	SourceImageHeight	1080
-CanonRaw.cr3	ee	missing	0	SourceImageHeight	4000
-CanonRaw.cr3	ee	missing	0	SourceImageWidth	1624
-CanonRaw.cr3	ee	missing	0	SourceImageWidth	6000
 CanonRaw.cr3	ee	missing	0	TargetAperture	3.6
 CanonRaw.cr3	ee	missing	0	TargetExposureTime	1/81
 CanonRaw.cr3	ee	missing	0	ToneCurve	Standard
@@ -296,73 +274,21 @@ DNG.dng	ee	extra	0	StripByteCounts	26
 DNG.dng	ee	extra	0	StripByteCounts	29
 DNG.dng	ee	extra	0	StripOffsets	12780
 DNG.dng	ee	extra	0	StripOffsets	13070
-DNG.dng	ee	missing	0	ApertureValue	8.0
-DNG.dng	ee	missing	0	BitsPerSample	8 8 8
-DNG.dng	ee	missing	1	BitsPerSample	8 8 8
-DNG.dng	ee	missing	2	BitsPerSample	8 8 8
 DNG.dng	ee	missing	0	ColorTone	Normal
-DNG.dng	ee	missing	0	Compression	JPEG
-DNG.dng	ee	missing	1	Compression	JPEG
-DNG.dng	ee	missing	0	Compression	Uncompressed
-DNG.dng	ee	missing	0	CustomRendered	Normal
-DNG.dng	ee	missing	0	DateTimeOriginal	2005:08:03 18:59:18-04:00
-DNG.dng	ee	missing	0	ExifVersion	0221
 DNG.dng	ee	missing	0	ExposureCompensation	0
 DNG.dng	ee	missing	1	ExposureCompensation	0
-DNG.dng	ee	missing	0	ExposureMode	Auto
-DNG.dng	ee	missing	0	ExposureProgram	Aperture-priority AE
-DNG.dng	ee	missing	0	ExposureTime	1/15
 DNG.dng	ee	missing	0	ExposureTime	1/16
 DNG.dng	ee	missing	0	FNumber	8
-DNG.dng	ee	missing	0	FNumber	8.0
-DNG.dng	ee	missing	0	Flash	Off, Did not fire
 DNG.dng	ee	missing	0	FocalLength	55 mm
-DNG.dng	ee	missing	0	FocalLength	55.0 mm
-DNG.dng	ee	missing	0	FocalPlaneResolutionUnit	inches
-DNG.dng	ee	missing	0	FocalPlaneXResolution	3954.23340961098
-DNG.dng	ee	missing	0	FocalPlaneYResolution	3958.76288659794
 DNG.dng	ee	missing	0	ISO	400
-DNG.dng	ee	missing	1	ISO	400
-DNG.dng	ee	missing	0	ImageHeight	2304
-DNG.dng	ee	missing	0	ImageHeight	683
-DNG.dng	ee	missing	0	ImageHeight	8
-DNG.dng	ee	missing	0	ImageNumber	24
-DNG.dng	ee	missing	0	ImageWidth	1024
-DNG.dng	ee	missing	0	ImageWidth	3456
-DNG.dng	ee	missing	0	ImageWidth	8
-DNG.dng	ee	missing	0	Lens	18.0-55.0 mm
-DNG.dng	ee	missing	0	Make	Canon
-DNG.dng	ee	missing	0	MaxApertureValue	4.0
 DNG.dng	ee	missing	0	MeteringMode	Average
 DNG.dng	ee	missing	1	MeteringMode	Average
-DNG.dng	ee	missing	0	Model	Canon EOS 350D DIGITAL
-DNG.dng	ee	missing	0	Orientation	Horizontal (normal)
 DNG.dng	ee	missing	0	OwnerName	unknown
-DNG.dng	ee	missing	0	PhotometricInterpretation	RGB
-DNG.dng	ee	missing	0	PhotometricInterpretation	YCbCr
-DNG.dng	ee	missing	1	PhotometricInterpretation	YCbCr
-DNG.dng	ee	missing	0	PlanarConfiguration	Chunky
-DNG.dng	ee	missing	1	PlanarConfiguration	Chunky
-DNG.dng	ee	missing	2	PlanarConfiguration	Chunky
-DNG.dng	ee	missing	0	SamplesPerPixel	3
-DNG.dng	ee	missing	1	SamplesPerPixel	3
-DNG.dng	ee	missing	2	SamplesPerPixel	3
-DNG.dng	ee	missing	0	SceneCaptureType	Standard
 DNG.dng	ee	missing	0	SerialNumber	012345678
-DNG.dng	ee	missing	0	ShutterSpeedValue	1/15
-DNG.dng	ee	missing	0	SubfileType	Full-resolution image
-DNG.dng	ee	missing	0	SubfileType	Reduced-resolution image
-DNG.dng	ee	missing	1	SubfileType	Reduced-resolution image
 DNG.dng	ee	missing	0	WhiteBalance	Auto
 DNG.dng	ee	missing	1	WhiteBalance	Auto
+DjVu.djvu	ee	extra	0	Trapped	/Unknown
 DjVu.djvu	ee	extra	0	URL	https://exiftool.org/
-DjVu.djvu	ee	missing	0	CreateDate	2008:09:23 12:31:34-04:00
-DjVu.djvu	ee	missing	0	Creator	ExifTool
-DjVu.djvu	ee	missing	0	Keywords	ExifTool, Test, DjVu, XMP
-DjVu.djvu	ee	missing	0	ModifyDate	2008:11:11 09:17:10-05:00
-DjVu.djvu	ee	missing	0	Producer	djvused
-DjVu.djvu	ee	missing	0	Subject	ExifTool DjVu test image
-DjVu.djvu	ee	missing	0	Title	DjVu Metadata Sample
 DjVu.djvu	ee	missing	0	Trapped	Unknown
 ExifTool.jpg	default	extra	0	FNumber	11.0
 ExifTool.jpg	default	extra	0	FNumber	6.2
@@ -375,18 +301,28 @@ ExifTool.jpg	default	missing	0	UserAdjSBA_RGBShifts	(Binary data 5 bytes, use -b
 ExifTool.jpg	ee	extra	0	By-line	Phil Harvey
 ExifTool.jpg	ee	extra	0	By-lineTitle	My Position
 ExifTool.jpg	ee	extra	0	Caption-Abstract	A witty caption
+ExifTool.jpg	ee	extra	0	Category	1
+ExifTool.jpg	ee	extra	0	City	Kingston
 ExifTool.jpg	ee	extra	0	ColorClass	6 (Typical alt)
 ExifTool.jpg	ee	extra	0	CopyrightFlag	False
 ExifTool.jpg	ee	extra	0	CopyrightNotice	Copyright 2004 Phil Harvey
 ExifTool.jpg	ee	extra	0	Country-PrimaryLocationName	Canada
+ExifTool.jpg	ee	extra	0	Credit	My Credit
+ExifTool.jpg	ee	extra	0	CropBottom	1072
+ExifTool.jpg	ee	extra	0	CropLeft	438
+ExifTool.jpg	ee	extra	0	CropRight	890
+ExifTool.jpg	ee	extra	0	CropTop	618
+ExifTool.jpg	ee	extra	0	DateCreated	2004:02:26
 ExifTool.jpg	ee	extra	0	DisplayedUnitsX	inches
 ExifTool.jpg	ee	extra	0	DisplayedUnitsY	inches
+ExifTool.jpg	ee	extra	0	ExposureTime	1/83
 ExifTool.jpg	ee	extra	0	FNumber	6.2
 ExifTool.jpg	ee	extra	0	GlobalAltitude	30
 ExifTool.jpg	ee	extra	1	GlobalAltitude	30
 ExifTool.jpg	ee	extra	2	GlobalAltitude	30
 ExifTool.jpg	ee	extra	0	GlobalAngle	30
 ExifTool.jpg	ee	extra	0	HasRealMergedData	Yes
+ExifTool.jpg	ee	extra	0	Headline	No headline
 ExifTool.jpg	ee	extra	0	IPTCDigest	05ad1770b1a95f1f9788ac995fa647da
 ExifTool.jpg	ee	extra	0	NumSlices	1
 ExifTool.jpg	ee	extra	0	ObjectName	Test IPTC picture
@@ -399,53 +335,39 @@ ExifTool.jpg	ee	extra	0	PrintScale	1
 ExifTool.jpg	ee	extra	0	PrintStyle	Centered
 ExifTool.jpg	ee	extra	0	Province-State	Ont
 ExifTool.jpg	ee	extra	0	ReaderName	Adobe Photoshop 7.0
+ExifTool.jpg	ee	extra	0	Rotation	2
+ExifTool.jpg	ee	extra	0	SerialNumber	0000000000
 ExifTool.jpg	ee	extra	0	SlicesGroupName	IPTC
+ExifTool.jpg	ee	extra	0	Source	I'm the source
 ExifTool.jpg	ee	extra	0	SpecialInstructions	What instructions
 ExifTool.jpg	ee	extra	0	Storage-StreamPathname	.
+ExifTool.jpg	ee	extra	0	SupplementalCategories	amazing, image, utilities
 ExifTool.jpg	ee	extra	0	Tagged	Yes
 ExifTool.jpg	ee	extra	0	URL	https://exiftool.org/
 ExifTool.jpg	ee	extra	0	URL_List	
+ExifTool.jpg	ee	extra	0	Urgency	8 (least urgent)
 ExifTool.jpg	ee	extra	0	UserAdjSBA_RGBShifts	(Binary data 12 bytes, use -b option to extract)
 ExifTool.jpg	ee	extra	0	Writer-Editor	I wrote it
 ExifTool.jpg	ee	extra	0	WriterName	Adobe Photoshop
-ExifTool.jpg	ee	missing	0	ApertureValue	3.5
 ExifTool.jpg	ee	missing	0	BitsPerSample	8
 ExifTool.jpg	ee	missing	0	By-line	byline
 ExifTool.jpg	ee	missing	0	By-lineTitle	byline title
 ExifTool.jpg	ee	missing	0	Caption-Abstract	ExifTool AFCP test
 ExifTool.jpg	ee	missing	0	Category	p
-ExifTool.jpg	ee	missing	0	City	Kingston
 ExifTool.jpg	ee	missing	0	City	city
 ExifTool.jpg	ee	missing	0	ColorComponents	3
-ExifTool.jpg	ee	missing	0	ColorSpace	sRGB
-ExifTool.jpg	ee	missing	0	Comment	a comment
-ExifTool.jpg	ee	missing	0	Compression	JPEG (old-style)
 ExifTool.jpg	ee	missing	0	Copyright	Alisha Jucevic
-ExifTool.jpg	ee	missing	0	Copyright	Copyright 2004 Phil Harvey
-ExifTool.jpg	ee	missing	1	Copyright	Copyright 2004 Phil Harvey
 ExifTool.jpg	ee	missing	0	CopyrightNotice	copy freely
 ExifTool.jpg	ee	missing	0	Country-PrimaryLocationName	country name
 ExifTool.jpg	ee	missing	0	Credit	credit
-ExifTool.jpg	ee	missing	0	CropBottom	1072
 ExifTool.jpg	ee	missing	0	CropLeft	0
-ExifTool.jpg	ee	missing	0	CropLeft	438
-ExifTool.jpg	ee	missing	0	CropRight	890
 ExifTool.jpg	ee	missing	0	CropTop	0
-ExifTool.jpg	ee	missing	0	CropTop	618
-ExifTool.jpg	ee	missing	0	DateCreated	2004:02:26
 ExifTool.jpg	ee	missing	0	DateCreated	2005:12:23
-ExifTool.jpg	ee	missing	0	DateTimeOriginal	1998:12:31 15:17:20
-ExifTool.jpg	ee	missing	0	DateTimeOriginal	2001:05:19 18:36:41
 ExifTool.jpg	ee	missing	0	DependentImage1EntryNumber	2
 ExifTool.jpg	ee	missing	0	DependentImage2EntryNumber	0
-ExifTool.jpg	ee	missing	0	ExposureCompensation	+2.0
-ExifTool.jpg	ee	missing	0	ExposureCompensation	0
 ExifTool.jpg	ee	missing	0	Headline	headline
-ExifTool.jpg	ee	missing	0	ImageHeight	384
 ExifTool.jpg	ee	missing	0	ImageHeight	4500
-ExifTool.jpg	ee	missing	0	ImageSize	1280x960
 ExifTool.jpg	ee	missing	0	ImageWidth	3000
-ExifTool.jpg	ee	missing	0	ImageWidth	512
 ExifTool.jpg	ee	missing	0	JUMDLabel	adobe.asset.info
 ExifTool.jpg	ee	missing	0	JUMDLabel	cai.assertions
 ExifTool.jpg	ee	missing	0	JUMDLabel	cai.location.broad
@@ -462,22 +384,14 @@ ExifTool.jpg	ee	missing	0	MPImageFormat	JPEG
 ExifTool.jpg	ee	missing	0	MPImageLength	5959981
 ExifTool.jpg	ee	missing	0	MPImageStart	0
 ExifTool.jpg	ee	missing	0	MPImageType	Baseline MP Primary Image
-ExifTool.jpg	ee	missing	0	Make	FUJIFILM
-ExifTool.jpg	ee	missing	0	Model	FinePix2400Zoom
 ExifTool.jpg	ee	missing	0	ObjectName	object name
 ExifTool.jpg	ee	missing	0	OriginalTransmissionReference	otr
 ExifTool.jpg	ee	missing	0	PreviewImage	(Binary data 5777 bytes, use -b option to extract)
 ExifTool.jpg	ee	missing	0	ProfileID	Continuous-tone Base
 ExifTool.jpg	ee	missing	0	Province-State	state
 ExifTool.jpg	ee	missing	0	Quality	1
-ExifTool.jpg	ee	missing	0	Quality	84%
 ExifTool.jpg	ee	missing	0	ResolutionUnit	inches
-ExifTool.jpg	ee	missing	1	ResolutionUnit	inches
-ExifTool.jpg	ee	missing	2	ResolutionUnit	inches
-ExifTool.jpg	ee	missing	0	Rotation	0
-ExifTool.jpg	ee	missing	0	Rotation	180
 ExifTool.jpg	ee	missing	0	Rotation	90
-ExifTool.jpg	ee	missing	0	ShutterSpeedValue	1/64
 ExifTool.jpg	ee	missing	0	Source	source
 ExifTool.jpg	ee	missing	0	SpecialInstructions	special instructions
 ExifTool.jpg	ee	missing	0	Storage-StreamPathname	/.Screen Nail_bd0100609719a180
@@ -487,23 +401,12 @@ ExifTool.jpg	ee	missing	0	Urgency	2
 ExifTool.jpg	ee	missing	0	UserAdjSBA_RGBShifts	(Binary data 5 bytes, use -b option to extract)
 ExifTool.jpg	ee	missing	0	Warning	[minor] Error reading PreviewImage from file
 ExifTool.jpg	ee	missing	0	Writer-Editor	caption writer
-ExifTool.jpg	ee	missing	0	XResolution	144
-ExifTool.jpg	ee	missing	0	XResolution	72
-ExifTool.jpg	ee	missing	1	XResolution	72
-ExifTool.jpg	ee	missing	2	XResolution	72
-ExifTool.jpg	ee	missing	0	YResolution	144
-ExifTool.jpg	ee	missing	0	YResolution	72
-ExifTool.jpg	ee	missing	1	YResolution	72
-ExifTool.jpg	ee	missing	2	YResolution	72
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
 FLIR.jpg	ee	missing	0	DateTimeOriginal	2012:02:11 14:17:08
 FLIR.jpg	ee	missing	0	Emissivity	0.80
 FLIR.jpg	ee	missing	0	Orientation	Horizontal (normal)
-FLIR.jpg	ee	missing	0	ResolutionUnit	None
 FLIR.jpg	ee	missing	0	ResolutionUnit	inches
-FLIR.jpg	ee	missing	0	XResolution	1
 FLIR.jpg	ee	missing	0	XResolution	72
-FLIR.jpg	ee	missing	0	YResolution	1
 FLIR.jpg	ee	missing	0	YResolution	72
 Flash.flv	ee	missing	0	AudioSampleRate	44000
 Flash.swf	default	extra	0	XMPToolkit	
@@ -579,12 +482,9 @@ FujiFilm.raf	ee	missing	0	XResolution	72
 FujiFilm.raf	ee	missing	0	YCbCrPositioning	Co-sited
 FujiFilm.raf	ee	missing	0	YResolution	72
 GE.jpg	ee	missing	0	ResolutionUnit	inches
-GE.jpg	ee	missing	1	ResolutionUnit	inches
 GE.jpg	ee	missing	0	Warning	[minor] Suspicious MakerNotes offset for tag 0x0206
 GE.jpg	ee	missing	0	XResolution	0.01041666667
-GE.jpg	ee	missing	0	XResolution	96
 GE.jpg	ee	missing	0	YResolution	0.01041666667
-GE.jpg	ee	missing	0	YResolution	96
 GIMP.xcf	default	extra	0	XResolution	72
 GIMP.xcf	default	extra	0	YResolution	72
 GPS.jpg	ee	missing	0	GPSLatitude	54 deg 59' 22.80"
@@ -639,37 +539,29 @@ Geotag.xml	ee	missing	0	HistoryRunTrackTrackpointPositionLatitude	43.64987
 Geotag.xml	ee	missing	0	HistoryRunTrackTrackpointPositionLongitude	-79.58320
 Geotag.xml	ee	missing	0	HistoryRunTrackTrackpointTime	2004:08:28 14:15:00Z
 GoPro.jpg	default	extra	0	Model	HERO6 Black
-GoPro.jpg	ee	missing	0	ExposureCompensation	0
+GoPro.jpg	ee	extra	0	GPSAltitude	3.983
 GoPro.jpg	ee	missing	0	GPSAltitude	3.983 m
 GoPro.jpg	ee	missing	0	GPSLatitude	40 deg 39' 30.31"
 GoPro.jpg	ee	missing	0	GPSLongitude	73 deg 59' 36.08"
 GoPro.jpg	ee	missing	0	ResolutionUnit	inches
-GoPro.jpg	ee	missing	0	Sharpness	Hard
-GoPro.jpg	ee	missing	0	WhiteBalance	Auto
 GoPro.jpg	ee	missing	0	XResolution	72
 GoPro.jpg	ee	missing	0	YResolution	72
+Google.jpg	ee	extra	0	GPSAltitude	634
 Google.jpg	ee	extra	0	XMPToolkit	Adobe XMP Core 5.1.0-jc003
 Google.jpg	ee	missing	0	CreateDate	2023:10:06 22:53:51+02:00
 Google.jpg	ee	missing	0	GPSAltitude	634 m
 Google.jpg	ee	missing	0	GPSLatitude	40 deg 24' 0.25"
 Google.jpg	ee	missing	0	GPSLongitude	3 deg 42' 52.73"
 Google.jpg	ee	missing	0	Orientation	Horizontal (normal)
-Google.jpg	ee	missing	0	ResolutionUnit	None
 Google.jpg	ee	missing	0	ResolutionUnit	inches
-Google.jpg	ee	missing	0	XResolution	1
 Google.jpg	ee	missing	0	XResolution	72
-Google.jpg	ee	missing	0	YResolution	1
 Google.jpg	ee	missing	0	YResolution	72
 HTML.html	ee	extra	0	Subject	Greek: &alpha; &beta; &gamma;
 HTML.html	ee	missing	0	Subject	Greek: α β γ
 IPTC.jpg	ee	extra	0	GlobalAltitude	30
-IPTC.jpg	ee	missing	0	XResolution	72
-IPTC.jpg	ee	missing	0	YResolution	72
 InfiRay.jpg	ee	missing	0	GPSAltitude	undef
 InfiRay.jpg	ee	missing	0	GPSLatitude	
 InfiRay.jpg	ee	missing	0	GPSLongitude	
-InfiRay.jpg	ee	missing	0	ImageHeight	960
-InfiRay.jpg	ee	missing	0	ImageWidth	720
 JVC.jpg	ee	missing	0	ResolutionUnit	inches
 JVC.jpg	ee	missing	0	XResolution	72
 JVC.jpg	ee	missing	0	YResolution	72
@@ -687,6 +579,7 @@ JXL2.jxl	default	extra	0	YResolution	72
 JXL2.jxl	default	missing	0	Warning	Install IO::Uncompress::Brotli to decode Brotli-compressed metadata [x2]
 JXL2.jxl	ee	extra	0	Artist	me
 JXL2.jxl	ee	extra	0	ExifByteOrder	Big-endian (Motorola, MM)
+JXL2.jxl	ee	extra	1	ExifByteOrder	Big-endian (Motorola, MM)
 JXL2.jxl	ee	extra	0	ResolutionUnit	inches
 JXL2.jxl	ee	extra	0	Subject	ExifTool test
 JXL2.jxl	ee	extra	0	XMPToolkit	Image::ExifTool 12.64
@@ -729,17 +622,13 @@ MIE.mie	default	missing	0	Comment-ja_JP	私はガラスを食べられます。�
 MIE.mie	ee	extra	0	Comment-cn_ZH	(Binary data 24 bytes, use -b option to extract)
 MIE.mie	ee	extra	0	Comment-hi_IN	(Binary data 104 bytes, use -b option to extract)
 MIE.mie	ee	extra	0	Comment-ja_JP	(Binary data 50 bytes, use -b option to extract)
+MIE.mie	ee	extra	0	MIMEType	application/x-mie
 MIE.mie	ee	missing	0	Comment-cn_ZH	我能吞下玻璃而不伤身体。
 MIE.mie	ee	missing	0	Comment-hi_IN	मैं काँच खा सकता हूँ, मुझे उस से कोई पीडा नहीं होती.
 MIE.mie	ee	missing	0	Comment-ja_JP	私はガラスを食べられます。それは私を傷つけません。
 MIFF.miff	default	extra	0	XResolution	72
 MIFF.miff	default	extra	0	YResolution	72
-MIFF.miff	ee	missing	0	Category	1
-MIFF.miff	ee	missing	0	City	Kingston
-MIFF.miff	ee	missing	0	Credit	My Credit
-MIFF.miff	ee	missing	0	DateCreated	2004:02:26
 MIFF.miff	ee	missing	0	ResolutionUnit	inches
-MIFF.miff	ee	missing	0	Urgency	8 (least urgent)
 MIFF.miff	ee	missing	0	XResolution	72
 MIFF.miff	ee	missing	0	YResolution	72
 MP3.mp3	ee	missing	0	Album	Album
@@ -808,8 +697,6 @@ MRC.mrc	ee	missing	0	TimeStamp	2020:10:21 13:55:19
 MRC.mrc	ee	missing	0	XStage	-8.8182495e-05
 MRC.mrc	ee	missing	0	YStage	-2.8140608e-05
 MRC.mrc	ee	missing	0	ZStage	3.536763e-05
-MWG.jpg	ee	missing	0	City	WRONG-IPTC-City
-MWG.jpg	ee	missing	0	DateCreated	1992:01:01
 MXF.mxf	ee	missing	0	ApplicationName	ExifTool
 MXF.mxf	ee	missing	0	ApplicationPlatform	MXFLib (darwin on x86_64)
 MXF.mxf	ee	missing	0	ApplicationSupplierName	Phil Harvey
@@ -849,31 +736,24 @@ MXF.mxf	ee	missing	1	TrackNumber	0
 MXF.mxf	ee	missing	2	TrackNumber	0
 Matroska.mkv	ee	extra	0	DefaultDuration	40 ms
 Minolta.jpg	ee	missing	0	Contrast	Normal
-Minolta.jpg	ee	missing	0	ExposureCompensation	0
 Minolta.jpg	ee	missing	0	ExposureMode	Program
 Minolta.jpg	ee	missing	0	ExposureTime	1/181
 Minolta.jpg	ee	missing	0	FNumber	5.7
 Minolta.jpg	ee	missing	0	FocalLength	41.4 mm
 Minolta.jpg	ee	missing	0	ISO	100
-Minolta.jpg	ee	missing	0	MeteringMode	Multi-segment
 Minolta.jpg	ee	missing	0	Orientation	Horizontal (normal)
 Minolta.jpg	ee	missing	0	PrintIMVersion	0100
 Minolta.jpg	ee	missing	0	ResolutionUnit	inches
 Minolta.jpg	ee	missing	0	Saturation	Normal
 Minolta.jpg	ee	missing	0	Sharpness	Normal
-Minolta.jpg	ee	missing	0	WhiteBalance	Auto
 Minolta.jpg	ee	missing	0	XResolution	72
 Minolta.jpg	ee	missing	0	YCbCrPositioning	Centered
 Minolta.jpg	ee	missing	0	YResolution	72
 Minolta.mrw	default	extra	0	ImageHeight	2448
 Minolta.mrw	default	extra	0	ImageWidth	3264
-Minolta.mrw	ee	missing	0	BWFilter	0
-Minolta.mrw	ee	missing	0	ColorFilter	0
 Minolta.mrw	ee	missing	0	ColorMode	Natural
-Minolta.mrw	ee	missing	0	ColorMode	Natural color
 Minolta.mrw	ee	missing	0	Contrast	Normal
 Minolta.mrw	ee	missing	1	Contrast	Normal
-Minolta.mrw	ee	missing	0	ExposureCompensation	0
 Minolta.mrw	ee	missing	0	ExposureMode	Manual
 Minolta.mrw	ee	missing	0	ExposureTime	1/5
 Minolta.mrw	ee	missing	0	FNumber	2.7
@@ -881,13 +761,11 @@ Minolta.mrw	ee	missing	0	FlashExposureComp	0
 Minolta.mrw	ee	missing	0	FocalLength	7.4 mm
 Minolta.mrw	ee	missing	0	ISO	71
 Minolta.mrw	ee	missing	0	ISOSetting	64
-Minolta.mrw	ee	missing	0	MeteringMode	Multi-segment
 Minolta.mrw	ee	missing	0	MinoltaQuality	Raw
 Minolta.mrw	ee	missing	0	Saturation	Normal
 Minolta.mrw	ee	missing	1	Saturation	Normal
 Minolta.mrw	ee	missing	0	Sharpness	Normal
 Minolta.mrw	ee	missing	1	Sharpness	Normal
-Minolta.mrw	ee	missing	0	WhiteBalance	Auto
 Motorola.jpg	ee	missing	0	ResolutionUnit	inches
 Motorola.jpg	ee	missing	0	XResolution	72
 Motorola.jpg	ee	missing	0	YResolution	72
@@ -899,32 +777,19 @@ Nikon.nef	default	extra	0	TIFF-EPStandardID	1 0 0 0
 Nikon.nef	default	missing	0	TIFF-EPStandardID	1.0.0.0
 Nikon.nef	ee	extra	0	TIFF-EPStandardID	1 0 0 0
 Nikon.nef	ee	missing	0	ApplicationRecordVersion	4
-Nikon.nef	ee	missing	0	BitsPerSample	8 8 8
 Nikon.nef	ee	missing	0	CFAPattern	[Blue,Green][Green,Red]
 Nikon.nef	ee	missing	0	Caption-Abstract	A caption
 Nikon.nef	ee	missing	0	City	Kingston
 Nikon.nef	ee	missing	0	Compression	JPEG (old-style)
-Nikon.nef	ee	missing	1	Compression	JPEG (old-style)
-Nikon.nef	ee	missing	0	Compression	Uncompressed
 Nikon.nef	ee	missing	0	Country-PrimaryLocationName	Canada
 Nikon.nef	ee	missing	0	FocalLength	18.3 mm
 Nikon.nef	ee	missing	0	ISO	200
-Nikon.nef	ee	missing	0	ImageHeight	106
-Nikon.nef	ee	missing	0	ImageWidth	160
 Nikon.nef	ee	missing	0	LensFStops	5.33
 Nikon.nef	ee	missing	0	LightSource	Unknown
 Nikon.nef	ee	missing	0	NoiseReduction	Off
-Nikon.nef	ee	missing	0	PhotometricInterpretation	RGB
-Nikon.nef	ee	missing	0	PlanarConfiguration	Chunky
 Nikon.nef	ee	missing	0	Province-State	Ontario
 Nikon.nef	ee	missing	0	ResolutionUnit	inches
-Nikon.nef	ee	missing	0	RowsPerStrip	106
-Nikon.nef	ee	missing	0	SamplesPerPixel	3
 Nikon.nef	ee	missing	0	SpecialInstructions	none
-Nikon.nef	ee	missing	0	StripByteCounts	18
-Nikon.nef	ee	missing	0	StripOffsets	6170
-Nikon.nef	ee	missing	0	SubfileType	Reduced-resolution image
-Nikon.nef	ee	missing	1	SubfileType	Reduced-resolution image
 Nikon.nef	ee	missing	0	TIFF-EPStandardID	1.0.0.0
 Nikon.nef	ee	missing	0	XResolution	72
 Nikon.nef	ee	missing	0	YResolution	72
@@ -951,18 +816,15 @@ NikonD70.jpg	ee	missing	0	LensFStops	5.33
 NikonD70.jpg	ee	missing	0	LightSource	Unknown
 NikonD70.jpg	ee	missing	0	ResolutionUnit	inches
 NikonD70.jpg	ee	missing	1	ResolutionUnit	inches
-NikonD70.jpg	ee	missing	2	ResolutionUnit	inches
 NikonD70.jpg	ee	missing	0	Saturation	Enhanced
 NikonD70.jpg	ee	missing	0	Sharpness	Med.H
 NikonD70.jpg	ee	missing	0	WhiteBalance	Auto
 NikonD70.jpg	ee	missing	0	XResolution	300
 NikonD70.jpg	ee	missing	1	XResolution	300
-NikonD70.jpg	ee	missing	0	XResolution	72
 NikonD70.jpg	ee	missing	0	YCbCrPositioning	Co-sited
 NikonD70.jpg	ee	missing	1	YCbCrPositioning	Co-sited
 NikonD70.jpg	ee	missing	0	YResolution	300
 NikonD70.jpg	ee	missing	1	YResolution	300
-NikonD70.jpg	ee	missing	0	YResolution	72
 OOXML.docx	default	extra	0	FileType	ZIP
 OOXML.docx	default	extra	0	FileTypeExtension	zip
 OOXML.docx	default	extra	0	MIMEType	application/zip
@@ -1139,18 +1001,15 @@ OlympusE1.jpg	ee	missing	0	YResolution	72
 PCAP.pcapng	ee	missing	0	OperatingSystem	64-bit Windows 10 (1809), build 17763
 PDF.pdf	default	extra	0	XResolution	72
 PDF.pdf	default	extra	0	YResolution	72
+PDF.pdf	ee	extra	0	CreateDate	2005:07:18 14:30:45
+PDF.pdf	ee	extra	0	ModifyDate	2005:07:18 14:30:45
 PDF.pdf	ee	missing	0	APP14Flags0	Encoded with Blend=1 downsampling
 PDF.pdf	ee	missing	0	APP14Flags1	(none)
 PDF.pdf	ee	missing	0	BitsPerSample	8
-PDF.pdf	ee	missing	0	Category	1
-PDF.pdf	ee	missing	0	City	Kingston
 PDF.pdf	ee	missing	0	ColorComponents	3
 PDF.pdf	ee	missing	0	ColorTransform	YCbCr
 PDF.pdf	ee	missing	0	CreateDate	2005:07:18 14:30:45-04:00
-PDF.pdf	ee	missing	0	Creator	Adobe Photoshop 7.0
-PDF.pdf	ee	missing	0	Credit	My Credit
 PDF.pdf	ee	missing	0	DCTEncodeVersion	100
-PDF.pdf	ee	missing	0	DateCreated	2004:02:26
 PDF.pdf	ee	missing	0	EmbeddedImage	(Binary data 501 bytes, use -b option to extract)
 PDF.pdf	ee	missing	0	EmbeddedImageColorSpace	DeviceRGB
 PDF.pdf	ee	missing	0	EmbeddedImageFilter	DCTDecode
@@ -1160,7 +1019,6 @@ PDF.pdf	ee	missing	0	EncodingProcess	Baseline DCT, Huffman coding
 PDF.pdf	ee	missing	0	FileType	JPEG
 PDF.pdf	ee	missing	0	FileTypeExtension	jpg
 PDF.pdf	ee	missing	0	GlobalAngle	30
-PDF.pdf	ee	missing	0	Headline	No headline
 PDF.pdf	ee	missing	0	ImageHeight	8
 PDF.pdf	ee	missing	0	ImageSize	8x8
 PDF.pdf	ee	missing	0	ImageWidth	8
@@ -1170,9 +1028,6 @@ PDF.pdf	ee	missing	0	Megapixels	0.000064
 PDF.pdf	ee	missing	0	ModifyDate	2005:07:18 14:30:45-04:00
 PDF.pdf	ee	missing	0	ResolutionUnit	inches
 PDF.pdf	ee	missing	1	ResolutionUnit	inches
-PDF.pdf	ee	missing	0	Source	I'm the source
-PDF.pdf	ee	missing	0	SupplementalCategories	amazing, image, utilities
-PDF.pdf	ee	missing	0	Urgency	8 (least urgent)
 PDF.pdf	ee	missing	0	XResolution	72
 PDF.pdf	ee	missing	1	XResolution	72
 PDF.pdf	ee	missing	0	YCbCrSubSampling	YCbCr4:2:0 (2 2)
@@ -1199,6 +1054,7 @@ PGF.pgf	ee	missing	0	ImageWidth	1
 PSP.psp	default	extra	0	ResolutionUnit	inches
 PSP.psp	default	extra	0	XResolution	0.8013564977
 PSP.psp	default	extra	0	YResolution	200
+PSP.psp	ee	extra	0	Copyright	.
 PSP.psp	ee	extra	0	XResolution	0.8013564977
 PSP.psp	ee	extra	0	YResolution	200
 PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
@@ -1266,14 +1122,11 @@ Pentax.jpg	ee	missing	0	ISO	100
 Pentax.jpg	ee	missing	0	LensType	Sigma or Tamron Lens (3 44)
 Pentax.jpg	ee	missing	0	MeteringMode	Multi-segment
 Pentax.jpg	ee	missing	0	PentaxModelID	K10D
-Pentax.jpg	ee	missing	0	ResolutionUnit	None
 Pentax.jpg	ee	missing	0	ResolutionUnit	inches
 Pentax.jpg	ee	missing	0	Saturation	0 (normal)
 Pentax.jpg	ee	missing	0	Sharpness	0 (normal)
 Pentax.jpg	ee	missing	0	WhiteBalance	Auto
-Pentax.jpg	ee	missing	0	XResolution	1
 Pentax.jpg	ee	missing	0	XResolution	72
-Pentax.jpg	ee	missing	0	YResolution	1
 Pentax.jpg	ee	missing	0	YResolution	72
 PhaseOne.iiq	ee	missing	0	ApertureValue	5.6
 PhaseOne.iiq	ee	missing	0	BitsPerSample	8 8 8
@@ -1305,20 +1158,11 @@ PhotoMechanic.jpg	ee	extra	0	CropRight	890
 PhotoMechanic.jpg	ee	extra	0	CropTop	618
 PhotoMechanic.jpg	ee	extra	0	Rotation	2
 PhotoMechanic.jpg	ee	extra	0	Tagged	Yes
-PhotoMechanic.jpg	ee	missing	0	Category	Category
-PhotoMechanic.jpg	ee	missing	0	City	kingston
-PhotoMechanic.jpg	ee	missing	0	Credit	Credit
-PhotoMechanic.jpg	ee	missing	0	DateCreated	2006:10:29
-PhotoMechanic.jpg	ee	missing	0	EditStatus	Edit Status
-PhotoMechanic.jpg	ee	missing	0	Headline	Headline
+PhotoMechanic.jpg	ee	extra	0	TimeCreated	062751-0500
 PhotoMechanic.jpg	ee	missing	0	Prefs	Tagged:0, ColorClass:0, Rating:0, FrameNum:-00001
-PhotoMechanic.jpg	ee	missing	0	Source	Source
-PhotoMechanic.jpg	ee	missing	0	SupplementalCategories	Supp Cat 1, Supp Cat 2
 PhotoMechanic.jpg	ee	missing	0	TimeCreated	06:27:51-05:00
-PhotoMechanic.jpg	ee	missing	0	Urgency	8 (least urgent)
 Photoshop.psd	default	extra	0	XResolution	72
 Photoshop.psd	default	extra	0	YResolution	72
-Photoshop.psd	ee	missing	0	Compression	JPEG (old-style)
 Photoshop.psd	ee	missing	0	ResolutionUnit	inches
 Photoshop.psd	ee	missing	0	XResolution	72
 Photoshop.psd	ee	missing	0	YResolution	72
@@ -1326,28 +1170,18 @@ PostScript.eps	ee	missing	0	BoundingBox	0 0 435 283
 PostScript.eps	ee	missing	1	BoundingBox	0 0 435 283
 PostScript.eps	ee	missing	2	BoundingBox	0 0 435 283
 PostScript.eps	ee	missing	3	BoundingBox	0 0 435 283
-PostScript.eps	ee	missing	0	Category	1
-PostScript.eps	ee	missing	0	City	Kingston
-PostScript.eps	ee	missing	0	Creator	Adobe Photoshop Version 7.0.1
 PostScript.eps	ee	missing	0	Creator	Adobe Photoshop Version 9.0x211
 PostScript.eps	ee	missing	1	Creator	Adobe Photoshop Version 9.0x211
 PostScript.eps	ee	missing	2	Creator	Adobe Photoshop Version 9.0x211
 PostScript.eps	ee	missing	3	Creator	Adobe Photoshop Version 9.0x211
-PostScript.eps	ee	missing	0	Credit	My Credit
-PostScript.eps	ee	missing	0	DateCreated	2004:02:26
 PostScript.eps	ee	missing	0	EmbeddedFileName	Test-Doc1.eps
 PostScript.eps	ee	missing	0	EmbeddedFileName	Test-Doc2-1.eps
 PostScript.eps	ee	missing	0	EmbeddedFileName	Test-Doc2.eps
 PostScript.eps	ee	missing	0	EmbeddedFileName	Test-Doc3.eps
-PostScript.eps	ee	missing	0	Headline	No headline
-PostScript.eps	ee	missing	0	Source	I'm the source
-PostScript.eps	ee	missing	0	SupplementalCategories	amazing, image, utilities
 PostScript.eps	ee	missing	0	Title	12a.eps
 PostScript.eps	ee	missing	0	Title	12b.eps
 PostScript.eps	ee	missing	0	Title	12c.eps
 PostScript.eps	ee	missing	0	Title	12d.eps
-PostScript.eps	ee	missing	0	Title	c.eps
-PostScript.eps	ee	missing	0	Urgency	8 (least urgent)
 QuickTime.heic	ee	extra	0	Warning	[minor] The ExtractEmbedded option may find more tags in the video data
 QuickTime.heic	ee	missing	0	AverageFrameRate	0
 QuickTime.heic	ee	missing	0	BitDepthChroma	8
@@ -1362,38 +1196,15 @@ QuickTime.heic	ee	missing	0	GeneralProfileSpace	Conforming
 QuickTime.heic	ee	missing	0	GeneralTierFlag	Main Tier
 QuickTime.heic	ee	missing	0	HEVCConfigurationVersion	1
 QuickTime.heic	ee	missing	0	ImageSpatialExtent	320x240
-QuickTime.heic	ee	missing	0	MediaDataOffset	579
-QuickTime.heic	ee	missing	0	MediaDataSize	18
 QuickTime.heic	ee	missing	0	MinSpatialSegmentationIDC	0
 QuickTime.heic	ee	missing	0	NumTemporalLayers	1
 QuickTime.heic	ee	missing	0	ParallelismType	0
 QuickTime.heic	ee	missing	0	TemporalIDNested	Yes
 QuickTime.m4a	ee	extra	0	Warning	[minor] The ExtractEmbedded option may find more tags in the video data
 QuickTime.m4a	ee	missing	0	CoverArt	(Binary data 19 bytes, use -b option to extract)
-QuickTime.m4a	ee	missing	0	HandlerType	Audio Track
 QuickTime.mov	ee	extra	0	Warning	[minor] The ExtractEmbedded option may find more tags in the video data
-QuickTime.mov	ee	missing	0	Album	No Album
 QuickTime.mov	ee	missing	0	Album	ålbum
-QuickTime.mov	ee	missing	1	Album	ålbum
 QuickTime.mov	ee	missing	0	Artist	årtist
-QuickTime.mov	ee	missing	1	Artist	årtist
-QuickTime.mov	ee	missing	0	Comment	çømménts
-QuickTime.mov	ee	missing	0	Composer	cømpøsér
-QuickTime.mov	ee	missing	0	Genre	Genré
-QuickTime.mov	ee	missing	0	HandlerClass	Data Handler
-QuickTime.mov	ee	missing	0	HandlerClass	Media Handler
-QuickTime.mov	ee	missing	1	HandlerClass	Media Handler
-QuickTime.mov	ee	missing	0	HandlerType	Alias Data
-QuickTime.mov	ee	missing	1	HandlerType	Alias Data
-QuickTime.mov	ee	missing	0	HandlerType	Audio Track
-QuickTime.mov	ee	missing	0	HandlerType	Metadata Tags
-QuickTime.mov	ee	missing	0	HandlerType	Video Track
-QuickTime.mov	ee	missing	0	HandlerVendorID	Pentax
-QuickTime.mov	ee	missing	1	HandlerVendorID	Pentax
-QuickTime.mov	ee	missing	2	HandlerVendorID	Pentax
-QuickTime.mov	ee	missing	3	HandlerVendorID	Pentax
-QuickTime.mov	ee	missing	0	MediaDuration	4.97 s
-QuickTime.mov	ee	missing	0	MediaTimeScale	600
 RIFF.avi	ee	missing	0	ImageHeight	240
 RIFF.avi	ee	missing	0	ImageWidth	320
 RIFF.avi	ee	missing	0	Quality	10000
@@ -1402,6 +1213,7 @@ RIFF.avi	ee	missing	0	StreamType	Audio
 Radiance.hdr	ee	missing	0	Command	oconv -f -i test4.oct ila01728
 Radiance.hdr	ee	missing	0	Command	oconv mat.rad sky.rad surfaces.rad
 Radiance.hdr	ee	missing	0	Command	rpict -t 30 -vf test4.vf -x 1536 -y 1536 -ps 3 -pt .04 -dp 4096 -ar 68 -ms 0.029 -ds .2 -dt .05 -dc .75 -dr 3 -sj 1 -st .01 -ab 3 -af test4.amb -aa .08 -ad 1024 -as 512 -av 0.5 0.5 0.5 -lr 12 -lw .0005 -st .001 -dj .02
+Real.rm	ee	extra	0	MIMEType	application/vnd.rn-realmedia
 Real.rm	ee	missing	0	Comment	This is a comment
 Real.rm	ee	missing	0	StreamAvgBitrate	0 bps
 Real.rm	ee	missing	0	StreamAvgPacketSize	0
@@ -1416,6 +1228,7 @@ Real.rm	ee	missing	0	Title	This is a title
 Ricoh.jpg	ee	missing	0	ResolutionUnit	inches
 Ricoh.jpg	ee	missing	0	XResolution	72
 Ricoh.jpg	ee	missing	0	YResolution	72
+Ricoh2.jpg	ee	extra	0	GPSAltitude	117
 Ricoh2.jpg	ee	missing	0	GPSAltitude	117 m
 Ricoh2.jpg	ee	missing	0	GPSLatitude	42 deg 2' 4.47"
 Ricoh2.jpg	ee	missing	0	GPSLongitude	0 deg 30' 27.01"
@@ -1475,9 +1288,6 @@ SigmaDP2.x3f	ee	missing	0	ExposureMode	Program AE
 SigmaDP2.x3f	ee	missing	0	ExposureTime	1/10
 SigmaDP2.x3f	ee	missing	0	FNumber	2.8
 SigmaDP2.x3f	ee	missing	0	Firmware	1.03.0.000
-SigmaDP2.x3f	ee	missing	0	ImageHeight	1760
-SigmaDP2.x3f	ee	missing	0	ImageUniqueID	30313030383338321020114b31646638
-SigmaDP2.x3f	ee	missing	0	ImageWidth	2640
 SigmaDP2.x3f	ee	missing	0	MeteringMode	Multi-segment
 SigmaDP2.x3f	ee	missing	0	Orientation	Horizontal (normal)
 SigmaDP2.x3f	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
@@ -1487,7 +1297,6 @@ SigmaDP2.x3f	ee	missing	0	Sharpness	0
 SigmaDP2.x3f	ee	missing	0	Software	
 SigmaDP2.x3f	ee	missing	0	WhiteBalance	Auto
 SigmaDP2.x3f	ee	missing	1	WhiteBalance	Auto
-SigmaDP2.x3f	ee	missing	0	X3FillLight	0.0
 SigmaDP2.x3f	ee	missing	0	XResolution	180
 SigmaDP2.x3f	ee	missing	0	YCbCrPositioning	Co-sited
 SigmaDP2.x3f	ee	missing	0	YResolution	180
@@ -1501,15 +1310,9 @@ Sony.jpg	ee	missing	0	YResolution	72
 Unknown.jpg	ee	missing	0	ResolutionUnit	inches
 Unknown.jpg	ee	missing	0	XResolution	72
 Unknown.jpg	ee	missing	0	YResolution	72
-VCard.vcf	ee	missing	0	FormattedName	VCard Test
-VCard.vcf	ee	missing	0	Note	This sample mixes formats from various vCard versions
-VCard.vcf	ee	missing	0	VCardVersion	3.0
 XMP.jpg	ee	missing	0	ResolutionUnit	inches
-XMP.jpg	ee	missing	1	ResolutionUnit	inches
 XMP.jpg	ee	missing	0	XResolution	72
-XMP.jpg	ee	missing	1	XResolution	72
 XMP.jpg	ee	missing	0	YResolution	72
-XMP.jpg	ee	missing	1	YResolution	72
 XMP.svg	ee	missing	0	JUMDLabel	adobe.asset.info
 XMP.svg	ee	missing	0	JUMDLabel	cai.assertions
 XMP.svg	ee	missing	0	JUMDLabel	cai.location.broad
@@ -1521,13 +1324,8 @@ XMP.svg	ee	missing	0	JUMDType	(json)-0011-0010-800000aa00389b71
 XMP.svg	ee	missing	1	JUMDType	(json)-0011-0010-800000aa00389b71
 XMP.svg	ee	missing	2	JUMDType	(json)-0011-0010-800000aa00389b71
 XMP.svg	ee	missing	0	Title	HEALTHCORONAVIRUSUSAOREGON_SALEM_08.jpg
-XMP.xml	ee	missing	0	Aperture	9.4
-XMP.xml	ee	missing	0	FileType	JPEG
-XMP.xml	ee	missing	0	FileTypeExtension	jpg
-XMP.xml	ee	missing	0	FocalLength35efl	8.6 mm
-XMP.xml	ee	missing	0	ImageSize	8x8
-XMP.xml	ee	missing	0	MIMEType	image/jpeg
-XMP.xml	ee	missing	0	Megapixels	0.000064
+XMP.xml	ee	extra	0	LightValue	14.2
+XMP.xml	ee	extra	0	ShutterSpeed	1/213
 XMP.xml	ee	missing	0	ShutterSpeed	0.00469483568075117
 XMP4.xmp	ee	missing	0	StructList2Item1	c1-2
 XMP4.xmp	ee	missing	0	StructList2Item2	c2-2

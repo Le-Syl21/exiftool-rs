@@ -1539,7 +1539,14 @@ impl ExifTool {
 
         // Priority-based deduplication: when the same tag name appears multiple times,
         // keep only the one with the highest priority (e.g., EXIF over JFIF, FFF over MakerNote).
-        if !self.options.duplicates {
+        //
+        // Every pass below collapses same-named tags, which ExifTool only does when
+        // the Duplicates option is off (`CombineInfo`/`GetInfo`). The exiftool CLI
+        // turns Duplicates on together with ExtractEmbedded (`$mt->Options(Duplicates
+        // => 1)` in the -ee branch), so -ee must keep every instance: the IFD1 copy
+        // of XResolution, each ZIP member's Zip* set, every GPX track point.
+        let collapse_duplicates = !self.options.duplicates && self.options.extract_embedded == 0;
+        if collapse_duplicates {
             // Specialized-source precedence: a few container/sidecar groups are
             // authoritative for specific tags and win over a generic EXIF copy
             // (ExifTool reports the GoPro GPMF value). Applied before the priority
@@ -1786,13 +1793,9 @@ impl ExifTool {
             // (`not $$self{DOC_NUM} or $$self{DOC_NUM} eq ...{G3}`), and it flags
             // IFD1/SubIFD/PreviewIFD as low-priority directories.
             //
-            // The whole rule is skipped when the Duplicates option is on, because
-            // ExifTool then keeps every instance (`CombineInfo`/`GetInfo` only
-            // collapse same-named tags when Duplicates is off). The exiftool CLI
-            // turns Duplicates on together with -ee (see `$mt->Options(Duplicates
-            // => 1)` next to the ExtractEmbedded branch), which is why -ee output
-            // keeps every repeated message rather than one merged set.
-            if self.options.extract_embedded == 0 {
+            // Like every pass in this block, the rule only applies when duplicates
+            // are being collapsed — see `collapse_duplicates` above.
+            {
                 // Sources ExifTool gives priority 0, so that a duplicate coming
                 // from them never displaces an already-stored tag:
                 //   * the directories it flags LOW_PRIORITY_DIR (PreviewIFD,
