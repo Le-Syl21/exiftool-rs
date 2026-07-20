@@ -20,7 +20,7 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
     // Compression (byte 2)
     let compress_str = if method == 8 { "Deflated" } else { "Unknown" };
     tags.push(mktag(
-        "GZIP",
+        "ZIP",
         "Compression",
         "Compression",
         Value::String(compress_str.into()),
@@ -45,14 +45,14 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
     } else {
         flag_parts.join(", ")
     };
-    tags.push(mktag("GZIP", "Flags", "Flags", Value::String(flags_str)));
+    tags.push(mktag("ZIP", "Flags", "Flags", Value::String(flags_str)));
 
     // ModifyDate (bytes 4-7, Unix timestamp, local time)
     let mtime = u32::from_le_bytes([data[4], data[5], data[6], data[7]]);
     if mtime > 0 {
         let dt = gzip_unix_to_datetime(mtime as i64);
         tags.push(mktag(
-            "GZIP",
+            "ZIP",
             "ModifyDate",
             "Modify Date",
             Value::String(dt),
@@ -67,7 +67,7 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
         _ => format!("{}", xflags),
     };
     tags.push(mktag(
-        "GZIP",
+        "ZIP",
         "ExtraFlags",
         "Extra Flags",
         Value::String(extra_flags_str),
@@ -93,7 +93,7 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
         _ => "Other",
     };
     tags.push(mktag(
-        "GZIP",
+        "ZIP",
         "OperatingSystem",
         "Operating System",
         Value::String(os_str.into()),
@@ -118,7 +118,7 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
                 crate::encoding::decode_utf8_or_latin1(&data[pos..pos + name_end]).to_string();
             if !filename.is_empty() {
                 tags.push(mktag(
-                    "GZIP",
+                    "ZIP",
                     "ArchivedFileName",
                     "Archived File Name",
                     Value::String(filename),
@@ -136,7 +136,7 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
             let comment =
                 crate::encoding::decode_utf8_or_latin1(&data[pos..pos + comment_end]).to_string();
             if !comment.is_empty() {
-                tags.push(mktag("GZIP", "Comment", "Comment", Value::String(comment)));
+                tags.push(mktag("ZIP", "Comment", "Comment", Value::String(comment)));
             }
         }
     } else {
@@ -154,7 +154,7 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
                 crate::encoding::decode_utf8_or_latin1(&data[pos..pos + name_end]).to_string();
             if !filename.is_empty() {
                 tags.push(mktag(
-                    "GZIP",
+                    "ZIP",
                     "ArchivedFileName",
                     "Archived File Name",
                     Value::String(filename),

@@ -420,7 +420,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                                 2 => "CIE 1964",
                                 _ => "Unknown",
                             };
-                            tags.push(mk(
+                            tags.push(mk_meas(
                                 "MeasurementObserver",
                                 "Measurement Observer",
                                 Value::String(observer.into()),
@@ -430,7 +430,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                                 2 => "0/d or d/0",
                                 _ => "Unknown",
                             };
-                            tags.push(mk(
+                            tags.push(mk_meas(
                                 "MeasurementGeometry",
                                 "Measurement Geometry",
                                 Value::String(geometry.into()),
@@ -446,7 +446,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                                 8 => "F8",
                                 _ => "Unknown",
                             };
-                            tags.push(mk(
+                            tags.push(mk_meas(
                                 "MeasurementIlluminant",
                                 "Measurement Illuminant",
                                 Value::String(illum.into()),
@@ -459,7 +459,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                             let backing_z =
                                 i32::from_be_bytes([d[20], d[21], d[22], d[23]]) as f64 / 65536.0;
                             let f5 = |v: f64| crate::value::format_g15((v * 1e5).round() / 1e5);
-                            tags.push(mk(
+                            tags.push(mk_meas(
                                 "MeasurementBacking",
                                 "Measurement Backing",
                                 Value::String(format!(
@@ -473,7 +473,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                             let raw =
                                 u32::from_be_bytes([d[28], d[29], d[30], d[31]]) as f64 / 65536.0;
                             let flare = (raw * 1e5).round() / 1e5;
-                            tags.push(mk(
+                            tags.push(mk_meas(
                                 "MeasurementFlare",
                                 "Measurement Flare",
                                 Value::String(format!(
@@ -851,6 +851,14 @@ fn icc_technology(sig: &str) -> String {
         other => return other.trim().to_string(),
     }
     .to_string()
+}
+
+/// Build a tag from the `meas` measurement-type structure, which ExifTool reads
+/// with its own table, grouped `ICC-meas`.
+fn mk_meas(name: &str, description: &str, value: Value) -> Tag {
+    let mut tag = mk(name, description, value);
+    tag.group.family1 = "ICC-meas".into();
+    tag
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {

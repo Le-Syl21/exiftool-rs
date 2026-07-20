@@ -3633,7 +3633,8 @@ fn emit_app12_tag(raw_key: &str, raw_val: &str, section: &str, tags: &mut Vec<cr
         description: tag_name,
         group: crate::tag::TagGroup {
             family0: "APP12".into(),
-            family1: "APP12".into(),
+            // ExifTool reads the APP12 text block with its PictureInfo table.
+            family1: "PictureInfo".into(),
             family2: group2.into(),
             family3: "Main".into(),
         },
