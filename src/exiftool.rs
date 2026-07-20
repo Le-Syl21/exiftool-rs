@@ -11,7 +11,7 @@ use crate::error::{Error, Result};
 use crate::file_type::{self, FileType};
 use crate::formats;
 use crate::metadata::exif::ByteOrderMark;
-use crate::tag::Tag;
+use crate::tag::{Tag, TagGroup, MAIN_DOCUMENT};
 use crate::value::Value;
 use crate::writer::{
     exif_writer, iptc_writer, jpeg_writer, matroska_writer, mp4_writer, pdf_writer, png_writer,
@@ -1733,15 +1733,24 @@ impl ExifTool {
 
             // ExifTool FoundTag rule (narrow, safe subset): among duplicates of the
             // same tag name that all live in the SAME main-document group (same
-            // family1, not a sub-document like IFD1/SubIFD/PreviewIFD/Track2+/Doc2+),
-            // the LAST extracted overrides the earlier ones. Keep only that last
-            // instance so the primary value matches ExifTool's `-TAG` output.
-            {
-                fn is_sub_document(g1: &str) -> bool {
-                    g1 == "IFD1"
+            // family1, not a sub-document like IFD1/SubIFD/PreviewIFD/Track2+, and
+            // not a numbered family-3 document), the LAST extracted overrides the
+            // earlier ones. Keep only that last instance so the primary value
+            // matches ExifTool's `-TAG` output.
+            //
+            // The whole rule is skipped when the Duplicates option is on, because
+            // ExifTool then keeps every instance (`CombineInfo`/`GetInfo` only
+            // collapse same-named tags when Duplicates is off). The exiftool CLI
+            // turns Duplicates on together with -ee (see `$mt->Options(Duplicates
+            // => 1)` next to the ExtractEmbedded branch), which is why -ee output
+            // keeps every repeated message rather than one merged set.
+            if self.options.extract_embedded == 0 {
+                fn is_sub_document(g: &TagGroup) -> bool {
+                    let g1 = g.family1.as_str();
+                    g.family3 != MAIN_DOCUMENT
+                        || g1 == "IFD1"
                         || g1.starts_with("SubIFD")
                         || g1 == "PreviewIFD"
-                        || g1.starts_with("Doc")
                         || (g1.starts_with("Track")
                             && g1 != "Track1"
                             && g1.len() > 5
@@ -1753,12 +1762,6 @@ impl ExifTool {
                 // Priority-0 tags (e.g. QuickTime tkhd tags). Default-priority tags in
                 // these same groups (priority >= 1, e.g. mdhd/hdlr) still follow the
                 // normal last-wins rule, so they are NOT blanket-excluded here.
-                // With ExtractEmbedded, ExifTool puts each repeated message of a
-                // FIT file in its own document (family 3: Doc1, Doc2…) and only
-                // deduplicates within a document. Our group model has no family 3,
-                // so exempt these tags from the "last one wins" rule, which would
-                // otherwise keep a single one.
-                let fit_embedded = file_type == FileType::Fit && self.options.extract_embedded > 0;
                 fn is_first_wins_group(g1: &str) -> bool {
                     g1 == "QuickTime"
                         || g1 == "Track1"
@@ -1777,13 +1780,18 @@ impl ExifTool {
                     if idxs.len() < 2 {
                         continue;
                     }
-                    let g1 = &tags[idxs[0]].group.family1;
+                    let group = &tags[idxs[0]].group;
+                    let g1 = &group.family1;
                     let priority = tags[idxs[0]].priority;
-                    // all same family1, same priority, not a real sub-document group
-                    let uniform = idxs
-                        .iter()
-                        .all(|&i| &tags[i].group.family1 == g1 && tags[i].priority == priority);
-                    if !uniform || is_sub_document(g1) || fit_embedded {
+                    // Same family1, same family3 document and same priority, and
+                    // not a sub-document group: only then do the duplicates
+                    // describe one and the same thing, so that last-wins applies.
+                    let uniform = idxs.iter().all(|&i| {
+                        &tags[i].group.family1 == g1
+                            && tags[i].group.family3 == group.family3
+                            && tags[i].priority == priority
+                    });
+                    if !uniform || is_sub_document(group) {
                         continue;
                     }
                     // In a first-wins container, Priority-0 duplicates keep the FIRST

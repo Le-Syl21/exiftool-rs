@@ -8,7 +8,7 @@
 
 use super::fit_tables as tbl;
 use crate::error::{Error, Result};
-use crate::tag::{Tag, TagGroup, TagId};
+use crate::tag::{Tag, TagGroup, TagId, MAIN_DOCUMENT};
 use crate::value::{format_g15, Value};
 
 // ───────────────────────────────── table API ────────────────────────────────
@@ -321,7 +321,19 @@ fn print_text(print: &Print, vals: &[Num], raw: &str) -> String {
     }
 }
 
-fn mk_tag(group1: &str, name: &str, raw: Value, print: String) -> Tag {
+/// Family 3 name for document number `n` (0 being the file's main document).
+///
+/// Mirrors ExifTool's `DOC_NUM`/`DOC_COUNT`: the main document is unnumbered,
+/// every sub-document is `Doc<n>`.
+fn doc_name(n: u32) -> String {
+    if n == 0 {
+        MAIN_DOCUMENT.to_string()
+    } else {
+        format!("Doc{n}")
+    }
+}
+
+fn mk_tag(group1: &str, doc: u32, name: &str, raw: Value, print: String) -> Tag {
     Tag {
         id: TagId::Text(name.to_string()),
         name: name.to_string(),
@@ -330,7 +342,7 @@ fn mk_tag(group1: &str, name: &str, raw: Value, print: String) -> Tag {
             family0: "Garmin".into(),
             family1: group1.into(),
             family2: "Other".into(),
-            family3: "Main".into(),
+            family3: doc_name(doc),
         },
         raw_value: raw,
         print_value: print,
@@ -398,6 +410,11 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     let mut done: Vec<u16> = Vec::new();
     let mut timestamp: i64 = 0;
     let mut pos = hdr_len;
+    // ExifTool's DOC_NUM/DOC_COUNT: a fresh document is opened every time the
+    // current timestamp changes, and every tag extracted afterwards belongs to
+    // it. Everything read before the first timestamp stays in the main document.
+    let mut doc_num: u32 = 0;
+    let mut doc_count: u32 = 0;
 
     while pos < end {
         let flags = data[pos];
@@ -536,12 +553,18 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
         if let Some((val, from_field)) = ts_val {
             if timestamp != val {
                 timestamp = val;
+                // A new timestamp opens a new document, and the TimeStamp tag
+                // below already belongs to it (Perl bumps DOC_NUM before the
+                // matching HandleTag call).
+                doc_count += 1;
+                doc_num = doc_count;
                 // Perl only emits TimeStamp here if the message has no field
                 // table, or if the timestamp comes from a compressed header.
                 if !(extract && from_field) {
                     let secs = val + FIT_EPOCH_OFFSET;
                     tags.push(mk_tag(
                         def.name,
+                        doc_num,
                         "TimeStamp",
                         Value::I32(val as i32),
                         crate::formats::gzip::gzip_unix_to_datetime(secs),
@@ -579,6 +602,7 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                 let text = format!("(Binary data {} bytes)", chunk.len());
                 tags.push(mk_tag(
                     def.name,
+                    doc_num,
                     field.name,
                     Value::Binary(chunk.to_vec()),
                     text,
@@ -594,7 +618,13 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                     continue;
                 }
                 let print = print_text(&field.print, &[], &s);
-                tags.push(mk_tag(def.name, field.name, Value::String(s), print));
+                tags.push(mk_tag(
+                    def.name,
+                    doc_num,
+                    field.name,
+                    Value::String(s),
+                    print,
+                ));
                 continue;
             }
 
@@ -625,7 +655,13 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
             let conv = apply_conv(&field.conv, &vals);
             let raw = value_text(&conv);
             let print = print_text(&field.print, &conv, &raw);
-            tags.push(mk_tag(def.name, field.name, Value::String(raw), print));
+            tags.push(mk_tag(
+                def.name,
+                doc_num,
+                field.name,
+                Value::String(raw),
+                print,
+            ));
         }
     }
 

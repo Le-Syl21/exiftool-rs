@@ -145,6 +145,9 @@ fn main() {
     let mut csv_output = false;
     let mut xml_output = false;
     let mut show_groups = false;
+    // Group family selected by -G<n>/-g<n> (0 = information type, 1 = location,
+    // 2 = category, 3 = document).
+    let mut group_family: u8 = 0;
     let mut short_names = false;
     let mut write_tags: Vec<(String, String)> = Vec::new();
     let mut delete_tags: Vec<String> = Vec::new();
@@ -208,7 +211,10 @@ fn main() {
             "-j" | "--json" | "-json" => json_output = true,
             "-csv" => csv_output = true,
             "-X" | "-xml" => xml_output = true,
-            "-g" | "--group" | "-g0" => show_groups = true,
+            "-g" | "--group" | "-g0" => {
+                show_groups = true;
+                group_family = 0;
+            }
             "-n" | "--num" | "-num" => options.print_conv = false,
             "-s" | "--short" => short_names = true,
             "-S" | "-veryShort" => {
@@ -305,8 +311,16 @@ fn main() {
                     _ => 1,
                 };
             }
-            "-G" | "-G0" | "-G1" | "-G2" | "-G3" | "-G4" | "-G5" | "-G6" => show_groups = true,
-            "-g1" | "-g2" | "-g3" | "-g4" | "-g5" | "-g6" => show_groups = true,
+            "-G" | "-G0" | "-G1" | "-G2" | "-G3" | "-G4" | "-G5" | "-G6" | "-g1" | "-g2"
+            | "-g3" | "-g4" | "-g5" | "-g6" => {
+                show_groups = true;
+                // Trailing digit; a bare -G selects family 0.
+                group_family = arg
+                    .as_bytes()
+                    .last()
+                    .filter(|b| b.is_ascii_digit())
+                    .map_or(0, |b| b - b'0');
+            }
             "-geolocate" | "-geolocation" => {
                 // Reverse geocoding is automatic when GPS is present
             }
@@ -700,7 +714,7 @@ fn main() {
 
     // Stay-open mode: read commands from stdin
     if stay_open {
-        run_stay_open(options, show_groups, short_names, json_output);
+        run_stay_open(options, show_groups, group_family, short_names, json_output);
         return;
     }
 
@@ -987,6 +1001,7 @@ fn main() {
                 &et,
                 &files,
                 show_groups,
+                group_family,
                 short_names,
                 sort_tags,
                 show_tag_ids,
@@ -1002,11 +1017,30 @@ fn main() {
     }
 }
 
+/// Group name to print for ExifTool's `-G<n>`/`-g<n>` family selector.
+///
+/// Families 4 to 6 (instance, path, format) are not modelled by [`TagGroup`],
+/// so they fall back to family 1 rather than printing nothing.
+fn group_for_family(tag: &exiftool_rs::Tag, family: u8) -> &str {
+    match family {
+        0 => &tag.group.family0,
+        2 => &tag.group.family2,
+        3 => &tag.group.family3,
+        _ => &tag.group.family1,
+    }
+}
+
 // ============================================================================
 // Stay-open mode
 // ============================================================================
 
-fn run_stay_open(options: Options, show_groups: bool, short_names: bool, json: bool) {
+fn run_stay_open(
+    options: Options,
+    show_groups: bool,
+    group_family: u8,
+    short_names: bool,
+    json: bool,
+) {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let et = ExifTool::with_options(options);
@@ -1042,7 +1076,7 @@ fn run_stay_open(options: Options, show_groups: bool, short_names: bool, json: b
                                     if show_groups {
                                         println!(
                                             "[{}] {} : {}",
-                                            tag.group.family1,
+                                            group_for_family(tag, group_family),
                                             pad_display(&tag.name, 32),
                                             tag.print_value
                                         );
@@ -1284,6 +1318,7 @@ fn print_text_full(
     et: &ExifTool,
     files: &[String],
     show_groups: bool,
+    group_family: u8,
     short_names: bool,
     sort_tags: bool,
     show_tag_ids: bool,
@@ -1335,7 +1370,7 @@ fn print_text_full(
                         println!(
                             "{}[{}] {} : {}",
                             id_prefix,
-                            tag.group.family1,
+                            group_for_family(tag, group_family),
                             pad_display(&tag.name, 32),
                             val
                         );
