@@ -1709,8 +1709,11 @@ fn process_geotiff_keys(tags: &mut Vec<Tag>) {
             name: tag_name.clone(),
             description: tag_name.clone(),
             group: TagGroup {
-                family0: "EXIF".into(),
-                family1: "IFD0".into(),
+                // GeoTIFF keys travel inside an IFD0 tag, but ExifTool reads
+                // them with GeoTiff.pm, a group of its own -- same as the
+                // GeoTiffVersion tag emitted just above.
+                family0: "GeoTiff".into(),
+                family1: "GeoTiff".into(),
                 family2: "Location".into(),
                 family3: "Main".into(),
             },

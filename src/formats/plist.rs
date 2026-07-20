@@ -809,7 +809,14 @@ pub fn read_aae_plist(data: &[u8]) -> Result<Vec<Tag>> {
     for key in &sorted_keys {
         let val = &root[*key];
         if key.as_str() == "adjustmentData" {
-            // Parse adjustmentData as binary plist, extract nested tags
+            // Parse adjustmentData as binary plist, extract nested tags.
+            // ExifTool switches the family-1 group to PLIST while it reads a
+            // binary plist (`$$et{SET_GROUP1} = 'PLIST'`), so these nested tags
+            // are reported under PLIST while the surrounding XML keys stay XML.
+            let group = TagGroup {
+                family1: "PLIST".into(),
+                ..group.clone()
+            };
             if let PlistValue::Data(ref bytes) = val {
                 let bplist_data = if bytes.starts_with(b"bplist") {
                     bytes.as_slice()
