@@ -98,23 +98,23 @@ enum Invalid {
 /// Table `%baseType` de Garmin.pm : type → (famille, sentinelle invalide).
 fn base_type(t: u8) -> Option<(Kind, Invalid)> {
     Some(match t {
-        0x00 => (Kind::U8, Invalid::Int(0xff)),             // enum
-        0x01 => (Kind::I8, Invalid::Int(0x7f)),             // sint8
-        0x02 => (Kind::U8, Invalid::Int(0xff)),             // uint8
-        0x83 => (Kind::I16, Invalid::Int(0x7fff)),          // sint16
-        0x84 => (Kind::U16, Invalid::Int(0xffff)),          // uint16
-        0x85 => (Kind::I32, Invalid::Int(0x7fff_ffff)),     // sint32
-        0x86 => (Kind::U32, Invalid::Int(0xffff_ffff)),     // uint32
-        0x07 => (Kind::Str, Invalid::Empty),                // string
-        0x88 => (Kind::F32, Invalid::Nan),                  // float32
-        0x89 => (Kind::F64, Invalid::Nan),                  // float64
-        0x0a => (Kind::U8, Invalid::Int(0)),                // uint8z
-        0x8b => (Kind::U16, Invalid::Int(0)),               // uint16z
-        0x8c => (Kind::U32, Invalid::Int(0)),               // uint32z
-        0x0d => (Kind::Bin, Invalid::Never),                // byte
-        0x8e => (Kind::I64, Invalid::Int(i64::MAX)),        // sint64
-        0x8f => (Kind::U64, Invalid::Int(-1)),              // uint64 (0xffff_ffff_ffff_ffff)
-        0x90 => (Kind::U64, Invalid::Int(0)),               // uint64z
+        0x00 => (Kind::U8, Invalid::Int(0xff)),         // enum
+        0x01 => (Kind::I8, Invalid::Int(0x7f)),         // sint8
+        0x02 => (Kind::U8, Invalid::Int(0xff)),         // uint8
+        0x83 => (Kind::I16, Invalid::Int(0x7fff)),      // sint16
+        0x84 => (Kind::U16, Invalid::Int(0xffff)),      // uint16
+        0x85 => (Kind::I32, Invalid::Int(0x7fff_ffff)), // sint32
+        0x86 => (Kind::U32, Invalid::Int(0xffff_ffff)), // uint32
+        0x07 => (Kind::Str, Invalid::Empty),            // string
+        0x88 => (Kind::F32, Invalid::Nan),              // float32
+        0x89 => (Kind::F64, Invalid::Nan),              // float64
+        0x0a => (Kind::U8, Invalid::Int(0)),            // uint8z
+        0x8b => (Kind::U16, Invalid::Int(0)),           // uint16z
+        0x8c => (Kind::U32, Invalid::Int(0)),           // uint32z
+        0x0d => (Kind::Bin, Invalid::Never),            // byte
+        0x8e => (Kind::I64, Invalid::Int(i64::MAX)),    // sint64
+        0x8f => (Kind::U64, Invalid::Int(-1)),          // uint64 (0xffff_ffff_ffff_ffff)
+        0x90 => (Kind::U64, Invalid::Int(0)),           // uint64z
         _ => return None,
     })
 }
@@ -612,12 +612,7 @@ pub fn read_fit(data: &[u8]) -> Result<Vec<Tag>> {
             let conv = apply_conv(&field.conv, &vals);
             let raw = value_text(&conv);
             let print = print_text(&field.print, &conv, &raw);
-            tags.push(mk_tag(
-                def.name,
-                field.name,
-                Value::String(raw),
-                print,
-            ));
+            tags.push(mk_tag(def.name, field.name, Value::String(raw), print));
         }
     }
 
