@@ -357,7 +357,7 @@ impl XmpReader {
                                     description: full_name,
                                     group: TagGroup {
                                         family0: "XMP".into(),
-                                        family1: format!("XMP-{}", group_prefix),
+                                        family1: xmp_family1(&path, &name.local_name, group_prefix),
                                         family2: category.into(),
                                         family3: "Main".into(),
                                     },
@@ -403,7 +403,7 @@ impl XmpReader {
                                         description: flat,
                                         group: TagGroup {
                                             family0: "XMP".into(),
-                                            family1: format!("XMP-{}", prop_group),
+                                            family1: xmp_family1(&path, prop_local, prop_group),
                                             family2: prop_cat.into(),
                                             family3: "Main".into(),
                                         },
@@ -467,7 +467,7 @@ impl XmpReader {
                                 description: full_name,
                                 group: TagGroup {
                                     family0: "XMP".into(),
-                                    family1: format!("XMP-{}", group_prefix),
+                                    family1: xmp_family1(&path, &name.local_name, group_prefix),
                                     family2: category.into(),
                                     family3: "Main".into(),
                                 },
@@ -610,7 +610,11 @@ impl XmpReader {
                                     description: full_name,
                                     group: TagGroup {
                                         family0: "XMP".to_string(),
-                                        family1: format!("XMP-{}", group_prefix),
+                                        family1: xmp_family1(
+                                            &path,
+                                            &attr.name.local_name,
+                                            group_prefix,
+                                        ),
                                         family2: category.to_string(),
                                         family3: "Main".into(),
                                     },
@@ -789,7 +793,7 @@ impl XmpReader {
                                 description: flat_name,
                                 group: TagGroup {
                                     family0: "XMP".into(),
-                                    family1: format!("XMP-{}", elem_group),
+                                    family1: xmp_family1(&path, &attr.name.local_name, elem_group),
                                     family2: category.into(),
                                     family3: "Main".into(),
                                 },
@@ -1067,7 +1071,11 @@ impl XmpReader {
                                         description: full_tag_name.clone(),
                                         group: TagGroup {
                                             family0: "XMP".into(),
-                                            family1: format!("XMP-{}", emit_group_prefix),
+                                            family1: xmp_family1(
+                                                &path,
+                                                &tag_name,
+                                                &emit_group_prefix,
+                                            ),
                                             family2: emit_category.clone(),
                                             family3: "Main".into(),
                                         },
@@ -1107,7 +1115,11 @@ impl XmpReader {
                                             description: lang_tag.clone(),
                                             group: TagGroup {
                                                 family0: "XMP".into(),
-                                                family1: format!("XMP-{}", emit_group_prefix),
+                                                family1: xmp_family1(
+                                                    &path,
+                                                    &tag_name,
+                                                    &emit_group_prefix,
+                                                ),
                                                 family2: emit_category.clone(),
                                                 family3: "Main".into(),
                                             },
@@ -1196,7 +1208,7 @@ impl XmpReader {
                                         description: tag_display,
                                         group: TagGroup {
                                             family0: "XMP".into(),
-                                            family1: format!("XMP-{}", group_prefix),
+                                            family1: xmp_family1(&path, &tag_key, group_prefix),
                                             family2: category.into(),
                                             family3: "Main".into(),
                                         },
@@ -1329,7 +1341,7 @@ impl XmpReader {
                                     description: full_name,
                                     group: TagGroup {
                                         family0: "XMP".to_string(),
-                                        family1: format!("XMP-{}", emit_group_prefix),
+                                        family1: xmp_family1(&path, tag_name, &emit_group_prefix),
                                         family2: emit_cat.to_string(),
                                         family3: "Main".into(),
                                     },
@@ -1379,7 +1391,7 @@ impl XmpReader {
                                 description: flat_name,
                                 group: TagGroup {
                                     family0: "XMP".into(),
-                                    family1: format!("XMP-{}", group_prefix),
+                                    family1: xmp_family1(&path, &name.local_name, group_prefix),
                                     family2: category.into(),
                                     family3: "Main".into(),
                                 },
@@ -1470,7 +1482,7 @@ impl XmpReader {
                                 description: full_name,
                                 group: TagGroup {
                                     family0: "XMP".to_string(),
-                                    family1: format!("XMP-{}", group_prefix),
+                                    family1: xmp_family1(&path, tag_name, group_prefix),
                                     family2: category.to_string(),
                                     family3: "Main".into(),
                                 },
@@ -1545,7 +1557,9 @@ impl XmpReader {
                                                 description: flat,
                                                 group: TagGroup {
                                                     family0: "XMP".into(),
-                                                    family1: format!("XMP-{}", prop_group),
+                                                    family1: xmp_family1(
+                                                        &path, prop_local, prop_group,
+                                                    ),
                                                     family2: prop_cat.into(),
                                                     family3: "Main".into(),
                                                 },
@@ -2007,6 +2021,47 @@ fn flash_numeric_to_string(val: u32) -> String {
         0x5d => "Auto, Fired, Red-eye reduction, Return not detected".into(),
         0x5f => "Auto, Fired, Red-eye reduction, Return detected".into(),
         _ => format!("Unknown (0x{:02x})", val),
+    }
+}
+
+/// Family-1 group prefix of a flattened structure field.
+///
+/// ExifTool flattens a structure into the namespace of the PROPERTY that holds
+/// it, never into the namespaces of the structure's own field types:
+/// `xmpTPg:Fonts` is a list of `stFnt` structures, yet its flattened fields are
+/// all reported under `XMP-xmpTPg`. Namespaces like `stFnt`, `stRef`, `stArea`
+/// or `xmpG` describe a field's *type* and never name a group of their own.
+///
+/// Returns the group prefix of the outermost real property on `path`, skipping
+/// the RDF plumbing the same way [`build_struct_tag_prefix_excluding`] does, or
+/// `None` when there is no enclosing property and the tag is top-level.
+fn xmp_family1(path: &[(String, String)], field_ln: &str, own_prefix: &str) -> String {
+    match struct_root_group_prefix(path, field_ln) {
+        Some(root) => format!("XMP-{root}"),
+        None => format!("XMP-{own_prefix}"),
+    }
+}
+
+/// See [`xmp_family1`]: the group prefix of the outermost enclosing property.
+fn struct_root_group_prefix(path: &[(String, String)], exclude_ln: &str) -> Option<String> {
+    let rdf_ns = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    let end = path
+        .iter()
+        .rposition(|(_, ln)| ln == exclude_ln)
+        .unwrap_or(path.len());
+    let (ns, _) = path[..end].iter().find(|(ns, ln)| {
+        ns != rdf_ns
+            && ns != "adobe:ns:meta/"
+            && !matches!(
+                ln.as_str(),
+                "Description" | "RDF" | "xmpmeta" | "xapmeta" | "Seq" | "Bag" | "Alt" | "li"
+            )
+    })?;
+    let known = namespace_prefix(ns);
+    if known.is_empty() {
+        None
+    } else {
+        Some(known.to_string())
     }
 }
 
