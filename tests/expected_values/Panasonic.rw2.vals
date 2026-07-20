@@ -1,8 +1,8 @@
-AdvancedSceneMode	Off
-AdvancedSceneType	1
 AFAreaMode	1-area
 AFAssistLamp	Enabled but Not Used
 AFPointPosition	0.5 0.5
+AdvancedSceneMode	Off
+AdvancedSceneType	1
 Aperture	4.0
 Audio	No
 BabyAge	(not set)
@@ -23,8 +23,8 @@ ColorTempKelvin	0
 ComponentsConfiguration	Y, Cb, Cr, -
 CompressedBitsPerPixel	2
 Compression	Panasonic RAW 1
-ContrastMode	Normal
 Contrast	Normal
+ContrastMode	Normal
 ConversionLens	Off
 CreateDate	2008:08:06 15:21:56
 CustomRendered	Normal
@@ -48,28 +48,29 @@ ExposureCompensation	0
 ExposureMode	Auto
 ExposureProgram	Aperture-priority AE
 ExposureTime	1/250
+FNumber	4.0
+FOV	73.7 deg
 FacesDetected	0
 FileSource	Digital Camera
-FileTypeExtension	rw2
 FileType	RW2
+FileTypeExtension	rw2
 FilmMode	Standard (color)
 FirmwareVersion	0.1.0.0
+Flash	Off, Did not fire
 FlashBias	0
 FlashCurtain	n/a
-Flash	Off, Did not fire
 FlashpixVersion	0100
-FNumber	4.0
-FocalLength35efl	5.1 mm (35 mm equivalent: 24.0 mm)
 FocalLength	5.1 mm
+FocalLength35efl	5.1 mm (35 mm equivalent: 24.0 mm)
 FocalLengthIn35mmFormat	24 mm
 FocusMode	Auto
-FOV	73.7 deg
 GainControl	None
 HighISOMultiplierBlue	0
 HighISOMultiplierGreen	0
 HighISOMultiplierRed	0
 HighlightWarning	Yes
 HyperfocalDistance	1.02 m
+ISO	80
 ImageHeight	2736
 ImageQuality	RAW
 ImageSize	3648x2736
@@ -78,7 +79,6 @@ ImageWidth	3648
 InternalSerialNumber	(F35) 2008:07:01 no. 0058
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	80
 JPEGQuality	High
 JpgFromRaw	(Binary data 10785 bytes, use -b option to extract)
 LightSource	Unknown
@@ -86,17 +86,17 @@ LightValue	12.3
 LinearityLimitBlue	4095
 LinearityLimitGreen	4095
 LinearityLimitRed	4095
+MIMEType	image/x-panasonic-rw2
 MacroMode	Off
 Make	Panasonic
 MakerNoteVersion	0130
 MaxApertureValue	2.0
 Megapixels	10.0
 MeteringMode	Multi-segment
-MIMEType	image/x-panasonic-rw2
 Model	DMC-LX3
 ModifyDate	2008:08:06 15:21:56
-NoiseReductionParams	3 100 1 1 1 200 2 2 2 400 4 4 4
 NoiseReduction	Standard
+NoiseReductionParams	3 100 1 1 1 200 2 2 2 400 4 4 4
 NumFacePositions	0
 NumWBEntries	7
 OpticalZoomMode	Standard
@@ -144,13 +144,6 @@ VideoFrameRate	n/a
 WBBlueLevel	438
 WBGreenLevel	263
 WBRedLevel	570
-WB_RGBLevels1                   : 573 256 416
-WB_RGBLevels2                   : 630 256 387
-WB_RGBLevels3                   : 702 256 355
-WB_RGBLevels4                   : 378 256 592
-WB_RGBLevels5                   : 651 256 377
-WB_RGBLevels6                   : 590 256 421
-WB_RGBLevels7                   : 378 256 592
 WBShiftAB	0
 WBShiftGM	0
 WBType1	Fine Weather
@@ -160,6 +153,13 @@ WBType4	Tungsten (Incandescent)
 WBType5	Flash
 WBType6	D55
 WBType7	ISO Studio Tungsten
+WB_RGBLevels1	573 256 416
+WB_RGBLevels2	630 256 387
+WB_RGBLevels3	702 256 355
+WB_RGBLevels4	378 256 592
+WB_RGBLevels5	651 256 377
+WB_RGBLevels6	590 256 421
+WB_RGBLevels7	378 256 592
 WhiteBalance	Auto
 WorldTimeLocation	Home
 XResolution	180

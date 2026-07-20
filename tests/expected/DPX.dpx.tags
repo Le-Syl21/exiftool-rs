@@ -5,10 +5,10 @@ ComponentsConfiguration
 Copyright
 CreateDate
 Creator
+DPXFileSize
 DataSign
 Directory
 DittoKey
-DPXFileSize
 EncryptionKey
 ExifToolVersion
 FileAccessDate
@@ -29,8 +29,8 @@ ImageSize
 ImageWidth
 InputDeviceName
 InputDeviceSerialNumber
-Megapixels
 MIMEType
+Megapixels
 Orientation
 OriginalFrameRate
 Project

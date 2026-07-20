@@ -23,6 +23,7 @@ BracketMode	Off
 BracketShotNumber	0
 BracketValue	0
 BulbDuration	0
+CR2CFAPattern	[Red,Green][Green,Blue]
 CameraType	EOS Mid-range
 CanonExposureMode	Aperture-priority AE
 CanonFirmwareVersion	Firmware 1.0.2
@@ -40,26 +41,25 @@ ColorTempCloudy	6000
 ColorTempCustom1	5200
 ColorTempCustom2	5200
 ColorTempDaylight	5200
-ColorTemperature	5200
 ColorTempFlash	6440
 ColorTempFluorescent	3905
 ColorTempShade	7000
 ColorTempTungsten	3201
+ColorTemperature	5200
 ColorTone	Normal
 ComponentsConfiguration	-, -, -, -
 Compression	JPEG (old-style)
 ContinuousDrive	Single
 Contrast	Normal
 ControlMode	Camera Local Control
-CR2CFAPattern	[Red,Green][Green,Blue]
 CreateDate	2005:08:03 18:59:18
 CustomRendered	Normal
 DateTimeOriginal	2005:08:03 18:59:18
 DigitalGain	0
 DigitalZoom	None
 DriveMode	Single-frame Shooting
-EasyMode	Manual
 ETTLII	Evaluative
+EasyMode	Manual
 ExifByteOrder	Little-endian (Intel, II)
 ExifImageHeight	2304
 ExifImageWidth	3456
@@ -69,20 +69,21 @@ ExposureLevelIncrements	1/3 Stop
 ExposureMode	Auto
 ExposureProgram	Aperture-priority AE
 ExposureTime	1/15
+FNumber	8.0
+FOV	22.8 deg
 FileNumber	100-0024
 FileType	CR2
 FileTypeExtension	cr2
 FilterEffect	None
+Flash	Off, Did not fire
 FlashBits	(none)
 FlashExposureComp	0
 FlashGuideNumber	0
 FlashModel	n/a
-Flash	Off, Did not fire
-FlashpixVersion	0100
 FlashSyncSpeedAv	Auto
-FNumber	8.0
-FocalLength35efl	55.0 mm (35 mm equivalent: 89.2 mm)
+FlashpixVersion	0100
 FocalLength	55.0 mm
+FocalLength35efl	55.0 mm (35 mm equivalent: 89.2 mm)
 FocalPlaneResolutionUnit	inches
 FocalPlaneXResolution	3954.23341
 FocalPlaneXSize	23.04 mm
@@ -93,32 +94,31 @@ FocalUnits	1/mm
 FocusContinuous	Single
 FocusMode	One-shot AF
 FocusRange	Not Known
-FOV	22.8 deg
 HyperfocalDistance	20.42 m
+ISO	400
 ImageHeight	1024
 ImageSize	3456x2304
 ImageWidth	1536
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	400
 Lens	18.0 - 55.0 mm
 Lens35efl	18.0 - 55.0 mm (35 mm equivalent: 29.2 - 89.2 mm)
 LensID	Unknown 18-55mm
 LensType	n/a
 LightValue	7.9
-LongExposureNoiseReduction2	Off
 LongExposureNoiseReduction	Off
+LongExposureNoiseReduction2	Off
+MIMEType	image/x-canon-cr2
 MacroMode	Normal
 Make	Canon
 ManualFlashOutput	n/a
 MaxAperture	4
 MaxFocalLength	55 mm
-MeasuredEV2	8.125
 MeasuredEV	8.00
+MeasuredEV2	8.125
 MeasuredRGGB	580 1024 1024 500
 Megapixels	8.0
 MeteringMode	Center-weighted average
-MIMEType	image/x-canon-cr2
 MinAperture	27
 MinFocalLength	18 mm
 MirrorLockup	Disable
@@ -147,8 +147,8 @@ SamplesPerPixel	3
 Saturation	Normal
 ScaleFactor35efl	1.6
 SceneCaptureType	Standard
-SelfTimer2	0
 SelfTimer	Off
+SelfTimer2	0
 SensorBlueLevel	0
 SensorBottomBorder	2322
 SensorHeight	2328
@@ -164,7 +164,7 @@ SetButtonCrossKeysFunc	Normal
 Sharpness	0
 SharpnessFrequency	n/a
 ShootingMode	Aperture-priority AE
-Shutter-AELock                  : AF/AE lock
+Shutter-AELock	AF/AE lock
 ShutterCurtainSync	1st-curtain sync
 ShutterSpeed	1/15
 ShutterSpeedValue	1/15
@@ -180,24 +180,24 @@ ThumbnailOffset	8620
 ToneCurve	Standard
 ToningEffect	None
 UserComment	
-ValidAFPoints	7
 VRDOffset	0
+ValidAFPoints	7
 WBBracketMode	Off
 WBBracketValueAB	0
 WBBracketValueGM	0
-WB_RGGBLevels                   : 2002 1185 1187 2364
-WB_RGGBLevelsAsShot             : 2002 1185 1187 2364
-WB_RGGBLevelsAuto               : 1720 1022 1024 2031
-WB_RGGBLevelsCloudy             : 2512 1022 1024 1355
-WB_RGGBLevelsCustom1            : 2312 1022 1024 1501
-WB_RGGBLevelsCustom2            : 2312 1022 1024 1501
-WB_RGGBLevelsDaylight           : 2312 1022 1024 1501
-WB_RGGBLevelsFlash              : 2606 1022 1024 1308
-WB_RGGBLevelsFluorescent        : 1944 1022 1024 2015
-WB_RGGBLevelsShade              : 2714 1022 1024 1246
-WB_RGGBLevelsTungsten           : 1523 1022 1024 2397
 WBShiftAB	0
 WBShiftGM	0
+WB_RGGBLevels	2002 1185 1187 2364
+WB_RGGBLevelsAsShot	2002 1185 1187 2364
+WB_RGGBLevelsAuto	1720 1022 1024 2031
+WB_RGGBLevelsCloudy	2512 1022 1024 1355
+WB_RGGBLevelsCustom1	2312 1022 1024 1501
+WB_RGGBLevelsCustom2	2312 1022 1024 1501
+WB_RGGBLevelsDaylight	2312 1022 1024 1501
+WB_RGGBLevelsFlash	2606 1022 1024 1308
+WB_RGGBLevelsFluorescent	1944 1022 1024 2015
+WB_RGGBLevelsShade	2714 1022 1024 1246
+WB_RGGBLevelsTungsten	1523 1022 1024 2397
 WhiteBalance	Auto
 WhiteBalanceBlue	0
 WhiteBalanceRed	0

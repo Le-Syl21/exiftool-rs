@@ -14,27 +14,27 @@ ExifVersion	0210
 ExposureCompensation	0
 ExposureProgram	Program AE
 ExposureTime	1/30
-FileTypeExtension	jpg
+FNumber	3.8
 FileType	JPEG
+FileTypeExtension	jpg
 Flash	No Flash
 FlashpixVersion	0100
-FNumber	3.8
 FocalLength	17.5 mm
 FocalLength35efl	17.5 mm
+ISO	80
 ImageDescription	GC-X1E Image
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	80
 LightValue	9.1
+MIMEType	image/jpeg
 Make	JVC
 MakerNoteVersion	0100
 MaxApertureValue	3.8
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 Model	GC-X1E
 ModifyDate	2002:07:14 22:59:31
 Orientation	Horizontal (normal)

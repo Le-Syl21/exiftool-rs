@@ -1,9 +1,9 @@
 Aperture
+BWFilter
 BitsPerSample
 BracketStep
 Brightness
 BrightnessValue
-BWFilter
 CircleOfConfusion
 ColorBalanceBlue
 ColorBalanceGreen
@@ -18,12 +18,12 @@ Compression
 Contrast
 CreateDate
 CustomRendered
-DateTimeOriginal
 DECPosition
+DOF
+DateTimeOriginal
 DigitalZoom
 DigitalZoomRatio
 Directory
-DOF
 DriveMode
 EncodingProcess
 ExifByteOrder
@@ -35,6 +35,8 @@ ExposureCompensation
 ExposureMode
 ExposureProgram
 ExposureTime
+FNumber
+FOV
 FileAccessDate
 FileInodeChangeDate
 FileModifyDate
@@ -49,7 +51,6 @@ FlashExposureComp
 FlashFired
 FlashMode
 FlashpixVersion
-FNumber
 FocalLength
 FocalLength35efl
 FocalLengthIn35mmFormat
@@ -57,9 +58,10 @@ FocusArea
 FocusDistance
 FocusMode
 FolderName
-FOV
 GainControl
 HyperfocalDistance
+ISO
+ISOSetting
 ImageDescription
 ImageHeight
 ImageSize
@@ -70,11 +72,10 @@ InteropVersion
 IntervalLength
 IntervalMode
 IntervalNumber
-ISO
-ISOSetting
 LastFileNumber
 LightSource
 LightValue
+MIMEType
 MacroMode
 Make
 MakerNoteVersion
@@ -82,7 +83,6 @@ MaxAperture
 MaxApertureValue
 Megapixels
 MeteringMode
-MIMEType
 MinoltaDate
 MinoltaImageSize
 MinoltaModelID

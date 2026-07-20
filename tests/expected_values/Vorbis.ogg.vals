@@ -6,13 +6,13 @@ CoverArt	(Binary data 1351 bytes, use -b option to extract)
 CoverArtMIMEType	image/jpeg
 Date	2006
 Duration	1.34 s (approx)
-FileTypeExtension	ogg
 FileType	OGG
+FileTypeExtension	ogg
 Genre	Funk
+MIMEType	audio/ogg
 MediajukeboxDate	38718
 MediajukeboxToolName	Media Center
 MediajukeboxToolVersion	11.1.197
-MIMEType	audio/ogg
 NominalBitrate	32 kbps
 SampleRate	22050
 Title	A 4s sample for testing embedded cover art

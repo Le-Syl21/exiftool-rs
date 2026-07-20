@@ -4,11 +4,11 @@ CountryCode	CA
 Creator	bad_list_type_A, bad_list_type_B
 Custom0020Property00201	a custom property value
 Custom0020Property00202	some other value
-FileTypeExtension	xmp
 FileType	XMP
+FileTypeExtension	xmp
+MIMEType	application/rdf+xml
 ManifestLinkForm	EmbedByReference
 ManifestReferenceFilePath	C:\some path\file.ext
-MIMEType	application/rdf+xml
 ProgrammerExclamation	doh!
 ProgrammerFood	cookies
 ProgrammerFullName	Phil Harvey

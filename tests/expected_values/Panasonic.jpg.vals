@@ -10,8 +10,8 @@ ColorSpace	sRGB
 ComponentsConfiguration	Y, Cb, Cr, -
 CompressedBitsPerPixel	4
 Compression	JPEG (old-style)
-ContrastMode	Normal
 Contrast	Normal
+ContrastMode	Normal
 CreateDate	2004:08:28 15:55:46
 CustomRendered	Normal
 DataDump	(Binary data 5428 bytes, use -b option to extract)
@@ -26,21 +26,22 @@ ExposureCompensation	0
 ExposureMode	Auto
 ExposureProgram	Program AE
 ExposureTime	1/400
-FileSource	Digital Camera
-FileTypeExtension	jpg
-FileType	JPEG
-FirmwareVersion	0.1.0.8
-FlashBias	0
-Flash	Off, Did not fire
-FlashpixVersion	0100
 FNumber	4.0
-FocalLength35efl	4.6 mm (35 mm equivalent: 35.0 mm)
+FOV	54.4 deg
+FileSource	Digital Camera
+FileType	JPEG
+FileTypeExtension	jpg
+FirmwareVersion	0.1.0.8
+Flash	Off, Did not fire
+FlashBias	0
+FlashpixVersion	0100
 FocalLength	4.6 mm
+FocalLength35efl	4.6 mm (35 mm equivalent: 35.0 mm)
 FocalLengthIn35mmFormat	35 mm
 FocusMode	Auto
-FOV	54.4 deg
 GainControl	None
 HyperfocalDistance	1.34 m
+ISO	80
 ImageHeight	8
 ImageQuality	High
 ImageSize	8x8
@@ -49,15 +50,14 @@ ImageWidth	8
 InternalSerialNumber	(S00) 2004:07:19 no. 0102
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	80
 LightSource	Unknown
 LightValue	13.0
+MIMEType	image/jpeg
 MacroMode	Off
 Make	Panasonic
 MaxApertureValue	2.8
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 Model	DMC-FZ3
 ModifyDate	2004:08:28 15:55:46
 NoiseReduction	Standard

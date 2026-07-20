@@ -27,11 +27,11 @@ DaylightTimezoneOffsetFrom	-0500
 DaylightTimezoneOffsetTo	-0400
 ExceptionDateTimes	2015:04:27 12:30:00
 ExceptionDateTimesTimezoneID	Canada/Eastern
-FileTypeExtension	ics
 FileType	ICS
+FileTypeExtension	ics
 Location	501
-Method	PUBLISH
 MIMEType	text/calendar
+Method	PUBLISH
 RecurrenceID	20131125T123000
 RecurrenceIDTimezoneID	Canada/Eastern
 RecurrenceRule	FREQ=WEEKLY;INTERVAL=1;BYDAY=MO;WKST=SU

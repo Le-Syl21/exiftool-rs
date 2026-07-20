@@ -19,13 +19,14 @@ CurrentTime	0 s
 DiskNumber	1 of 3
 Duration	29.05 s
 Encoder	iTunes v4.9, QuickTime 7.0.1
-FileTypeExtension	m4a
 FileType	M4A
+FileTypeExtension	m4a
 Genre	Children’s Music
 Grouping	grouping
 HandlerType	Metadata
 HandlerVendorID	Apple
 Lyrics	these are lyrics
+MIMEType	audio/mp4
 MajorBrand	Apple iTunes AAC-LC (.M4A) Audio
 MatrixStructure	1 0 0 0 1 0 0 0 1
 MediaCreateDate	2005:06:29 19:02:19
@@ -36,7 +37,6 @@ MediaHeaderVersion	0
 MediaLanguageCode	und
 MediaModifyDate	2006:09:22 11:06:45
 MediaTimeScale	32000
-MIMEType	audio/mp4
 MinorVersion	0.0.0
 ModifyDate	2006:09:22 11:06:45
 MovieHeaderVersion	0

@@ -5,11 +5,11 @@ DateTimeOriginal	2005:08:08 16:23:35
 Duration	0.03 s
 Encoding	Microsoft PCM
 ExifVersion	0220
-FileTypeExtension	wav
 FileType	WAV
+FileTypeExtension	wav
+MIMEType	audio/x-wav
 Make	PENTAX Corporation
 MakerNotes	(Binary data 16 bytes, use -b option to extract)
-MIMEType	audio/x-wav
 Model	PENTAX Optio WP
 NumChannels	1
 RelatedImageFile	IMGP1149.JPG

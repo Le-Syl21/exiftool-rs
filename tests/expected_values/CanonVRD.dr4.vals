@@ -1,7 +1,7 @@
 AngleAdj	13.08
 AquaHSL	0.2 0.3 0.4
-AutoLightingOptimizerOn	Yes
 AutoLightingOptimizer	Strong
+AutoLightingOptimizerOn	Yes
 BlueCurvePoints	(3,4) (132,113) (255,255)
 BlueHSL	0.5 0.6 0.7
 CheckMark	Clear
@@ -28,11 +28,11 @@ CropRotation	0
 CropWidth	2952
 CropX	2060
 CropY	1291
-DistortionCorrection	48
-DistortionCorrectionOn	Yes
 DLOOn	No
 DLOSetting	50
 DR4CameraModel	EOS 7D Mark II
+DistortionCorrection	48
+DistortionCorrectionOn	Yes
 FileType	DR4
 FileTypeExtension	dr4
 GammaBlackPoint	+0.000
@@ -54,8 +54,8 @@ GreenHSL	-0.1 0 0.1
 HighlightAdj	0.5
 LensFocalLength	135
 LuminanceNoiseReduction	4.4
-MagentaHSL	1.1 1.2 1.3
 MIMEType	application/octet-stream
+MagentaHSL	1.1 1.2 1.3
 MonochromeFilterEffect	None
 MonochromeToningEffect	None
 OrangeHSL	-0.7 -0.6 -0.5
@@ -63,16 +63,16 @@ PeripheralIllumination	34
 PeripheralIlluminationOn	Yes
 PictureStyle	Neutral
 PurpleHSL	0.8 0.9 1
+RGBCurvePoints	(0,79) (117,172) (242,255)
 Rating	4
 RawBrightnessAdj	0
 RedCurvePoints	(2,3) (126,116) (254,253)
 RedHSL	-1 -0.9 -0.8
-RGBCurvePoints	(0,79) (117,172) (242,255)
 Rotation	0
 SaturationAdj	98
 ShadowAdj	-0.1
-SharpnessAdjOn	Yes
 SharpnessAdj	Unsharp Mask
+SharpnessAdjOn	Yes
 SharpnessStrength	0
 ShootingDistance	100%
 StampToolCount	0

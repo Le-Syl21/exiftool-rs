@@ -8,22 +8,22 @@ Datasum	         0
 DecObj	-7.20808030e+01
 Equinox	2000.0
 Extend	T
-FileTypeExtension	fits
 FileType	FITS
+FileTypeExtension	fits
 MIMEType	image/fits
 Mjdreff	6.965740740000e-04
 Mjdrefi	49353
 Naxis	0
 Object	47_TUCANAE_Slew
+ObsId	10080-01-02-00A
 ObservationDate	09/12/96
 ObservationDateEnd	09/12/96
 ObservationTime	11:56:26
 ObservationTimeEnd	12:01:40
 Observer	FAN  LEI
-ObsId	10080-01-02-00A
 Origin	XTE-SOC
-Radecsys	FK5
 RaObj	6.02170000e+00
+Radecsys	FK5
 Tassign	SATELLITE
 Tierabso	1.000e+00
 Tierrela	1.000e-06

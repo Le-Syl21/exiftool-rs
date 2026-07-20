@@ -3,3 +3,15 @@
 # = regression, or a new spurious tag). Improvements are allowed.
 # Regenerate: UPDATE_PARITY_BASELINE=1 cargo test --test regression regression_tag_names
 # Format: <file>\t<missing|extra>\t<tag>
+FujiFilm.raf	extra	RAFVersion
+FujiFilm.raf	missing	FirmwareVersion
+FujiFilm.raf	missing	WB_GRGBLevelsFlash
+JXL2.jxl	extra	Artist
+JXL2.jxl	extra	ExifByteOrder
+JXL2.jxl	extra	ResolutionUnit
+JXL2.jxl	extra	Subject
+JXL2.jxl	extra	XMPToolkit
+JXL2.jxl	extra	XResolution
+JXL2.jxl	extra	YCbCrPositioning
+JXL2.jxl	extra	YResolution
+JXL2.jxl	missing	Warning

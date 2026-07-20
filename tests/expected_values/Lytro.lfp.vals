@@ -7,16 +7,17 @@ CameraType	lightField
 CircleOfConfusion	0.005 mm
 DateTimeOriginal	2012:04:12 14:10:55.000Z
 ExposureTime	1/250
-FileTypeExtension	lfp
-FileType	LFP
-FirmwareVersion	v1.0a60, vv1.0.0, Thu Feb 23 15:02:57 PST 2012, e10fcca0668db3dbf94ae347248db3da070d21e9, mods=0, ofw=0
 FNumber	1.9
-FocalLength35efl	6.4 mm (35 mm equivalent: 43.0 mm)
-FocalLength	6.4 mm
-FocalPlaneXResolution	18142.8574518282
 FOV	45.5 deg
+FileType	LFP
+FileTypeExtension	lfp
+FirmwareVersion	v1.0a60, vv1.0.0, Thu Feb 23 15:02:57 PST 2012, e10fcca0668db3dbf94ae347248db3da070d21e9, mods=0, ofw=0
+FocalLength	6.4 mm
+FocalLength35efl	6.4 mm (35 mm equivalent: 43.0 mm)
+FocalPlaneXResolution	18142.8574518282
 FrameExposureTime	1/250
 HyperfocalDistance	4.83 m
+ISO	87
 ImageColorCcmRgbToSrgbArray	3.1115827560424804688, -1.9393929243087768555, -0.17218986153602600098, -0.36290559172630310059, 1.6408803462982177734, -0.27797481417655944824, 0.078967012465000152588, -1.1558042764663696289, 2.0768373012542724609
 ImageColorGamma	0.41666001081466674805
 ImageColorWhiteBalanceGainB	1.48046875
@@ -27,22 +28,21 @@ ImageHeight	3280
 ImageLimitExposureBias	+0.0
 ImageModulationExposureBias	-1.2
 ImageRawDetailsMosaicTile	r,gr:gb,b
-ImageRawDetailsMosaicUpperLeftPixel: b
-ImageRawDetailsPixelFormatBlackB: 168
-ImageRawDetailsPixelFormatBlackGb: 168
-ImageRawDetailsPixelFormatBlackGr: 168
-ImageRawDetailsPixelFormatBlackR: 168
-ImageRawDetailsPixelFormatRightShift: 0
-ImageRawDetailsPixelFormatWhiteB: 4095
-ImageRawDetailsPixelFormatWhiteGb: 4095
-ImageRawDetailsPixelFormatWhiteGr: 4095
-ImageRawDetailsPixelFormatWhiteR: 4095
-ImageRawDetailsPixelPackingBitsPerPixel: 12
-ImageRawDetailsPixelPackingEndianness: big
+ImageRawDetailsMosaicUpperLeftPixel	b
+ImageRawDetailsPixelFormatBlackB	168
+ImageRawDetailsPixelFormatBlackGb	168
+ImageRawDetailsPixelFormatBlackGr	168
+ImageRawDetailsPixelFormatBlackR	168
+ImageRawDetailsPixelFormatRightShift	0
+ImageRawDetailsPixelFormatWhiteB	4095
+ImageRawDetailsPixelFormatWhiteGb	4095
+ImageRawDetailsPixelFormatWhiteGr	4095
+ImageRawDetailsPixelFormatWhiteR	4095
+ImageRawDetailsPixelPackingBitsPerPixel	12
+ImageRawDetailsPixelPackingEndianness	big
 ImageRepresentation	rawPacked
 ImageSize	3280x3280
 ImageWidth	3280
-ISO	87
 JSONMetadata	(Binary data 778 bytes, use -b option to extract), (Binary data 3155 bytes, use -b option to extract), (Binary data 131 bytes, use -b option to extract)
 LensExitPupilOffsetZ	0.11637913513183592573
 LensFocusStep	721
@@ -53,9 +53,9 @@ LensTemperatureAdc	2633
 LensZoomStep	981
 LensZoomStepperOffset	-1
 LightValue	10.0
+MIMEType	image/x-lytro-lfp
 Make	Lytro, Inc.
 Megapixels	10.8
-MIMEType	image/x-lytro-lfp
 MlaLensPitch	1.3898614883422850808e-05
 MlaRotation	-0.00028155732434242963791
 MlaScaleFactorX	1
@@ -74,11 +74,11 @@ Orientation	Horizontal (normal)
 PictureDerivationArray	sha1-f58530c3902263bfc1d411cac2b965d635fb6287
 PictureFrameArrayDarkFrame	false
 PictureFrameArrayFrameImageRef	sha1-0360f825e6eed3c7c470fb79a755a54df07fae84
-PictureFrameArrayFrameMetadataRef: sha1-031d1e1d0e65efcd6ea74c811a0bc170498d8574
-PictureFrameArrayFramePrivateMetadataRef: sha1-990a1858fe077fa0601df485704fc1d674a5e6b0
-PictureFrameArrayModulationFrame: false
+PictureFrameArrayFrameMetadataRef	sha1-031d1e1d0e65efcd6ea74c811a0bc170498d8574
+PictureFrameArrayFramePrivateMetadataRef	sha1-990a1858fe077fa0601df485704fc1d674a5e6b0
+PictureFrameArrayModulationFrame	false
 PictureViewArrayType	com.lytro.stars
-PictureViewArrayVendorContentStarred: true
+PictureViewArrayVendorContentStarred	true
 ScaleFactor35efl	6.7
 SensorAnalogGainB	2.03125
 SensorAnalogGainGb	1.75

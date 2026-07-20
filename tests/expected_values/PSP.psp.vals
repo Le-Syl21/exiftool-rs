@@ -6,15 +6,15 @@ CreateDate	2010:01:28 15:23:21+01:00
 CreatorAppID	Paint Shop Pro
 CreatorAppVersion	13.0.0.0
 Description	A description
-FileTypeExtension	psp
 FileType	PSP
+FileTypeExtension	psp
 FileVersion	10.0
 ImageHeight	8
 ImageResolution	200
 ImageSize	8x8
 ImageWidth	8
-Megapixels	0.000064
 MIMEType	image/x-paintshoppro
+Megapixels	0.000064
 ModifyDate	2010:01:28 15:30:26+01:00
 NumColors	16777216
 Planes	1

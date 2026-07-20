@@ -1,6 +1,6 @@
-AdjustmentMode	
 AFMode	AF-S
 AFPoint	Center
+AdjustmentMode	
 Aperture	2.8
 ApertureDisplayed	2.8
 AutoBracket	
@@ -33,29 +33,30 @@ ExposureMode	Auto
 ExposureProgram	Program AE
 ExposureTime	1/10
 ExposureTime2	1/10
+FNumber	2.8
+FOV	47.4 deg
 FileFormat	X3F-S
 FileSource	Digital Camera
-FileTypeExtension	x3f
 FileType	X3F
+FileTypeExtension	x3f
 FileVersion	2.3
 Firmware	1.03.0.000
 FirmwareVersion	1.03.0.000
+Flash	No Flash
 FlashExposureComp	0
 FlashMode	Off
-Flash	No Flash
 FlashpixVersion	0100
-FNumber	2.8
 FocalLength	24.2 mm
 FocalLength35efl	24.2 mm (35 mm equivalent: 41.0 mm)
 FocalLengthIn35mmFormat	41 mm
 Focus	Auto-focus Locked
 FocusMode	AF-S
 FocusSetting	AF
-FOV	47.4 deg
 Gamma	undef
 GreenAdjust	0.0
 Highlight	0.0
 HyperfocalDistance	11.79 m
+ISO	100
 ImageBoardID	
 ImageHeight	8
 ImageSize	8x8
@@ -64,7 +65,6 @@ ImageWidth	8
 IntegrationTime	1/10
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	100
 JpgFromRaw	(Binary data 2676 bytes, use -b option to extract)
 LensApertureRange	2.8 to 14
 LensFocalRange	24.2
@@ -72,18 +72,18 @@ LensID	Unknown ( )
 LensType	Unknown ( )
 LightSource	Unknown
 LightValue	6.3
-MakerNoteVersion	0100
+MIMEType	image/x-sigma-x3f
 Make	SIGMA
+MakerNoteVersion	0100
 MarkBits	(none)
 MaxApertureValue	2.8
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/x-sigma-x3f
 Model	SIGMA DP2
 ModifyDate	2009:11:28 13:05:20
 NetExposureCompensation	0
 Orientation	Horizontal (normal)
-PreviewImage	(Binary data 20 bytes, use -b option to extract)
+PreviewImage	(Binary data 26 bytes, use -b option to extract)
 PreviewImageLength	26
 PreviewImageSize	640x480
 PreviewImageStart	2692

@@ -34,6 +34,7 @@ Grouping
 HandlerType
 HandlerVendorID
 Lyrics
+MIMEType
 MajorBrand
 MatrixStructure
 MediaCreateDate
@@ -44,7 +45,6 @@ MediaHeaderVersion
 MediaLanguageCode
 MediaModifyDate
 MediaTimeScale
-MIMEType
 MinorVersion
 ModifyDate
 MovieHeaderVersion

@@ -4,9 +4,9 @@ BlueMatrixColumn
 BlueTRC
 By-line
 By-lineTitle
+CMMFlags
 Caption-Abstract
 City
-CMMFlags
 ColorSpaceData
 Compression
 ConnectionSpaceIlluminant
@@ -40,6 +40,7 @@ ImageSize
 ImageWidth
 Keywords
 Luminance
+MIMEType
 Make
 MeasurementBacking
 MeasurementFlare
@@ -49,7 +50,6 @@ MeasurementObserver
 MediaBlackPoint
 MediaWhitePoint
 Megapixels
-MIMEType
 Model
 ModifyDate
 ObjectName
@@ -58,8 +58,8 @@ PhotometricInterpretation
 PlanarConfiguration
 Predictor
 PrimaryPlatform
-ProfileClass
 ProfileCMMType
+ProfileClass
 ProfileConnectionSpace
 ProfileCopyright
 ProfileCreator

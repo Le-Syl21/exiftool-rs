@@ -32,15 +32,16 @@ Flash
 FlashpixVersion
 FocalLength
 FocalLength35efl
+ISO
 ImageDescription
 ImageHeight
 ImageSize
 ImageWidth
 InteropIndex
 InteropVersion
-ISO
 LightSource
 LightValue
+MIMEType
 Make
 MakerNoteType
 ManufactureDate1
@@ -48,7 +49,6 @@ ManufactureDate2
 MaxApertureValue
 Megapixels
 MeteringMode
-MIMEType
 Model
 ModifyDate
 Orientation

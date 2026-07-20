@@ -1,3 +1,23 @@
 # Value-parity baseline: (file, tag) whose printed value differs from ExifTool.
 # New deltas fail regression_tag_values; fixes tighten it.
 # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
+CaptureOne.eip	WhiteBalance
+ExifTool.jpg	Storage-StreamPathname
+ExifTool.jpg	UserAdjSBA_RGBShifts
+Font.ttf	FontFamily-he
+Font.ttf	FontName-he
+Font.ttf	FontSubfamily-fr
+Font.ttf	FontSubfamily-ja
+Font.ttf	FontSubfamily-ko
+Font.ttf	FontSubfamily-zh-CN
+Font.ttf	FontSubfamily-zh-TW
+Kodak.jpg	Storage-StreamPathname
+MIE.mie	Comment-cn_ZH
+MIE.mie	Comment-hi_IN
+MIE.mie	Comment-ja_JP
+Nikon.nef	TIFF-EPStandardID
+OOXML.docx	FileType
+OOXML.docx	FileTypeExtension
+OOXML.docx	MIMEType
+SigmaDP2.x3f	PreviewImage
+XMP5.xmp	BTestTagField1-en-US

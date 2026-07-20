@@ -1,12 +1,12 @@
 Author	Jane Doe
 Comment	This is an example URL shortcut for demonstration purposes.
 Desc	The official example website.
-FileTypeExtension	url
 FileType	URL
+FileTypeExtension	url
 HotKey	1582
+IDList	2000000000000000
 IconFile	C:\Windows\System32\shell32.dll
 IconIndex	15
-IDList	2000000000000000
 MIMEType	application/x-mswinurl
 Modified	1999:07:20 17:49:01+02:00
 Roamed	1

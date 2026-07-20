@@ -3,8 +3,8 @@ BareList2	b1, b2
 BareStructItem1	a1
 BareStructItem2	a2
 Contributor	me
-FileTypeExtension	xmp
 FileType	XMP
+FileTypeExtension	xmp
 LocationCreatedCity	one, two, three
 LocationCreatedCountryCode	1, 2, 4
 MIMEType	application/rdf+xml

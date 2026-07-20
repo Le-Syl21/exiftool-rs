@@ -23,6 +23,7 @@ ExposureCompensation
 ExposureMode
 ExposureProgram
 ExposureTime
+FNumber
 FileAccessDate
 FileInodeChangeDate
 FileModifyDate
@@ -34,11 +35,11 @@ FileTypeExtension
 FirmwareVersion
 Flash
 FlashpixVersion
-FNumber
 FocalLength
 FocalLength35efl
 GPSAltitude
 GPSAltitudeRef
+GPSDOP
 GPSDateStamp
 GPSDateTime
 GPSDestBearing
@@ -46,7 +47,6 @@ GPSDestBearingRef
 GPSDestDistance
 GPSDestDistanceRef
 GPSDifferential
-GPSDOP
 GPSImgDirection
 GPSImgDirectionRef
 GPSLatitude
@@ -64,6 +64,7 @@ GPSTimeStamp
 GPSTrack
 GPSTrackRef
 GPSVersionID
+ISO
 ImageDescription
 ImageHeight
 ImageSize
@@ -71,11 +72,11 @@ ImageWidth
 InternalSerialNumber
 InteropIndex
 InteropVersion
-ISO
 LightSource
 LightValue
 Lit
 Location
+MIMEType
 Make
 MakerNoteType
 ManufactureDate1
@@ -83,7 +84,6 @@ ManufactureDate2
 MaxApertureValue
 Megapixels
 MeteringMode
-MIMEType
 Model
 ModifyDate
 Orientation

@@ -1,9 +1,9 @@
 AggregationId	BK_ADBL_123456
 Author	Philip J Harvey
+CPUType	1
 Codec	mp332
 Copyright	©2015, Philip J Harvey; (P)2015 ExifTool Publisher
 CoverArt	(Binary data 18 bytes, use -b option to extract)
-CPUType	1
 Description	This is the book description
 EncryptedBlocks	23421
 FileType	AA
@@ -27,6 +27,6 @@ PublishDateStart	08-APR-2015
 ShortDescription	This is the short description
 ShortTitle	Short Titley (Unabridged)
 Tag7eb298ac1328	64863450EA7B67906FE619AC697E60D13630E760
-TitleId	BK_ADBL_123456a
 Title	Test: This is the title of the big book (Unabridged)
+TitleId	BK_ADBL_123456a
 UserAlias	LKJ4HDY872HSVJ

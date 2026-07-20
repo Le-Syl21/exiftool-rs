@@ -6,19 +6,19 @@ ColorMode	RGB
 ColorType	RGB
 Comment	ExifTool PGF Test
 Compression	Deflate/Inflate
-FileTypeExtension	pgf
 FileType	PGF
+FileTypeExtension	pgf
 Filter	Adaptive
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
 Interlace	Noninterlaced
-Megapixels	0.000064
 MIMEType	image/pgf
+Megapixels	0.000064
 PGFVersion	0x36
+PixelUnits	meters
 PixelsPerUnitX	2835
 PixelsPerUnitY	2835
-PixelUnits	meters
 PyramidLevels	0
 Quality	0
 SRGBRendering	Perceptual

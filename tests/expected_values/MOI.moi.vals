@@ -3,8 +3,8 @@ AudioBitrate	224 kbps
 AudioCodec	AC3
 DateTimeOriginal	2011:05:15 17:58:48.000
 Duration	8.16 s
-FileTypeExtension	moi
 FileType	MOI
+FileTypeExtension	moi
 MIMEType	application/octet-stream
 MOIVersion	V6
 VideoBitrate	8.5 Mbps

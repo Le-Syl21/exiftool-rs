@@ -1,5 +1,5 @@
-FileTypeExtension	xml
 FileType	XML
+FileTypeExtension	xml
 GpxCreator	Wissenbach Map3D 2.21
 GpxSchemaLocation	http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd.                       http://www.cableone.net/cdwissenbach http://www.cableone.net/cdwissenbach/wissenbach.xsd
 GpxTrkCmt	Test Track

@@ -1,5 +1,5 @@
-FileTypeExtension	plist
 FileType	PLIST
+FileTypeExtension	plist
 MIMEType	application/xml
 TestArray	one, two, three
 TestBoolean	True

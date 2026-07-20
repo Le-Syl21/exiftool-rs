@@ -4,9 +4,9 @@ AudioCodec
 AudioSampleCount
 AudioSampleRate
 AvgBytesPerSec
+BMPVersion
 BitDepth
 BitsPerSample
-BMPVersion
 Compression
 Creator
 DateTimeOriginal
@@ -28,10 +28,10 @@ ImageHeight
 ImageLength
 ImageSize
 ImageWidth
+MIMEType
 MaxDataRate
 Megapixels
 MetadataDate
-MIMEType
 NumChannels
 NumColors
 NumImportantColors

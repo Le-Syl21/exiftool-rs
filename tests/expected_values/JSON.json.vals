@@ -1,8 +1,8 @@
 Description	test description
-FileTypeExtension	json
 FileType	JSON
-GeoInfoExif	null
+FileTypeExtension	json
 GeoInfo	null
+GeoInfoExif	null
 ImageViews	0
 License	null
 MIMEType	application/json

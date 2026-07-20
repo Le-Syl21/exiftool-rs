@@ -1,7 +1,7 @@
 ByteOrder	Little-endian (Intel, II)
 DeviceName	\Device\NPF_Loopback
-FileTypeExtension	pcapng
 FileType	PCAPNG
+FileTypeExtension	pcapng
 Hardware	Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz (with SSE4.2)
 LinkType	BSD Loopback
 MIMEType	application/vnd.tcpdump.pcap

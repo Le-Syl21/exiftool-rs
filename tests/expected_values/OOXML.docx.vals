@@ -1,11 +1,69 @@
-FileTypeExtension	zip
-FileType	ZIP
-MIMEType	application/zip
-Warning	Install Archive::Zip to decode compressed ZIP information
+ACustomField	A Custom field contents
+AppVersion	12.0000
+Application	Microsoft Macintosh Word
+Category	category goes here
+Characters	42
+CharactersWithSpaces	45
+CheckedBy	Checked by
+Client	Client
+Company	Company - ExifTool
+CreateDate	2009:10:24 01:41:00Z
+Creator	Author: Jeff
+DateCompleted	2009:10:23 07:00:00Z
+Department	Department
+Description	here are my comments
+Destination	Destination
+Disposition	Disposition
+Division	Division
+DocSecurity	None
+DocumentNumber	35
+Editor	Editor
+FileType	DOCX
+FileTypeExtension	docx
+ForwardTo	Forward to
+Group	Group
+HeadingPairs	Title, 1
+HyperlinkBase	the hyperlink base goes here!
+HyperlinksChanged	No
+Keywords	keyword 1, keyword 2, keyword 3
+Language	Language
+LastModifiedBy	Jeff
+Lines	7
+LinksUpToDate	No
+MIMEType	application/vnd.openxmlformats-officedocument.wordprocessingml.document
+Mailstop	Mailstop
+Manager	Manager: Self
+Matter	Matter
+ModifyDate	2009:10:24 01:48:00Z
+Office	Office
+Owner	Owner
+Pages	1
+Paragraphs	4
+PreviewImage	(Binary data 251 bytes, use -b option to extract)
+Project	Project
+Publisher	Publisher
+Purpose	Purpose
+ReceivedFrom	Received from
+RecordedBy	Recorded by
+RecordedDate	2009:10:20 07:00:00Z
+Reference	Reference
+RevisionNumber	3
+ScaleCrop	No
+SharedDoc	No
+Source	Source
+Status	Status
+Subject	the subject
+TelephoneNumber	415-399-9921
+Template	Normal
+Title	The document title
+TitlesOfParts	The document title
+TotalEditTime	7 minutes
+Typist	Typist
+Words	7
 ZipBitFlag	0
+ZipCRC	0x815b4431
 ZipCompressedSize	362
 ZipCompression	Deflated
-ZipCRC	0x815b4431
 ZipFileName	[Content_Types].xml
 ZipModifyDate	1980:01:01 00:00:00
 ZipRequiredVersion	20

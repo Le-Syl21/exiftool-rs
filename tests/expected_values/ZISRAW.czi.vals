@@ -16,6 +16,7 @@ EyePieceUniqueName	Eyepiece.10x_23
 FileGUID	8fae1a521bc8714e97e12b82ec8fa652
 FileType	CZI
 FileTypeExtension	czi
+MIMEType	image/x-zeiss-czi
 MicroscopeDeviceRefId	MTBCameraAdapter_MTBSideportChanger_Left
 MicroscopeId	Microscope
 MicroscopeIsAvailable	true
@@ -28,7 +29,6 @@ MicroscopeMotorization	Motorized
 MicroscopeName	Axio Observer.Z1
 MicroscopeStandSpecification	Inverted
 MicroscopeUniqueName	AquilaZ.Stand
-MIMEType	image/x-zeiss-czi
 PrimaryFileGUID	8fae1a521bc8714e97e12b82ec8fa652
 XML	(Binary data 1003 bytes, use -b option to extract)
 ZISRAWVersion	1.0

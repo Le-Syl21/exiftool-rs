@@ -4,8 +4,8 @@ BitsPerSample	16
 BytesPerMinute	299743
 Channels	1
 Copyright	** institut für universelle zusammenhänge
-FileTypeExtension	ra
 FileType	RA
+FileTypeExtension	ra
 MIMEType	audio/x-pn-realaudio
 SampleRate	22050
 Title	The Sewing Girls

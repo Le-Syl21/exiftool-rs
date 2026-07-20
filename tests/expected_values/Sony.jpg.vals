@@ -18,28 +18,28 @@ ExposureCompensation	0
 ExposureMode	Auto bracket
 ExposureProgram	Program AE
 ExposureTime	1/250
+FNumber	7.1
 FileSource	Digital Camera
-FileTypeExtension	jpg
 FileType	JPEG
+FileTypeExtension	jpg
 Flash	Off, Did not fire
 FlashpixVersion	0100
-FNumber	7.1
 FocalLength	12.5 mm
 FocalLength35efl	12.5 mm
+ISO	64
 ImageDescription	
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	64
 LightSource	Unknown
 LightValue	14.3
+MIMEType	image/jpeg
 Make	SONY
 MaxApertureValue	2.0
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 Model	DSC-F828
 ModifyDate	2003:12:18 13:51:33
 Orientation	Horizontal (normal)

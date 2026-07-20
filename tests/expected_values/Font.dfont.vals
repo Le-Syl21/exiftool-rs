@@ -1,28 +1,28 @@
 ApplicationVersion	ExifTool 8.0.7 DFONT Test
 CompatibleFontName	Stencil Std
 Copyright	© 1987, 1990, 1994, 2001, 2002 Adobe Systems Incorporated. All rights reserved.
-Copyright-en-US                 : © 1987, 1990, 1994, 2001, 2002 Adobe Systems Incorporated. All rights reserved.
-Designer-en-US                  : Gerry Powell
+Copyright-en-US	© 1987, 1990, 1994, 2001, 2002 Adobe Systems Incorporated. All rights reserved.
 Designer	Gerry Powell
+Designer-en-US	Gerry Powell
 FileType	DFONT
 FileTypeExtension	dfont
-FontFamily-en-US                : Stencil Std
 FontFamily	Stencil Std
-FontName-en-US                  : StencilStd
+FontFamily-en-US	Stencil Std
 FontName	Stencil Std Bold
+FontName-en-US	StencilStd
 FontSubfamily	Bold
-FontSubfamily-en-US             : Regular
+FontSubfamily-en-US	Regular
 FontSubfamilyID	2.025;ADBE;StencilStd
-FontSubfamilyID-en-US           : 2.025;ADBE;StencilStd
-LicenseInfoURL-en-US            : http://www.adobe.com/type/legal.html
+FontSubfamilyID-en-US	2.025;ADBE;StencilStd
 LicenseInfoURL	http://www.adobe.com/type/legal.html
+LicenseInfoURL-en-US	http://www.adobe.com/type/legal.html
 MIMEType	application/x-dfont
-NameTableVersion-en-US          : Version 2.025;PS 002.000;hotconv 1.0.50;makeotf.lib2.0.16970
 NameTableVersion	Version 2.025;PS 002.000;hotconv 1.0.50;makeotf.lib2.0.16970
-PostScriptFontName-en-US        : StencilStd
+NameTableVersion-en-US	Version 2.025;PS 002.000;hotconv 1.0.50;makeotf.lib2.0.16970
 PostScriptFontName	StencilStd
-PreferredSubfamily-en-US        : Bold
-Trademark-en-US                 : Please refer to the Copyright section for the font trademark attribution notices.
+PostScriptFontName-en-US	StencilStd
+PreferredSubfamily-en-US	Bold
 Trademark	Please refer to the Copyright section for the font trademark attribution notices.
-VendorURL-en-US                 : http://www.adobe.com/type
+Trademark-en-US	Please refer to the Copyright section for the font trademark attribution notices.
 VendorURL	http://www.adobe.com/type
+VendorURL-en-US	http://www.adobe.com/type

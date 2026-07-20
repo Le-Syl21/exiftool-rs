@@ -10,9 +10,9 @@ FileType
 FileTypeExtension
 MIMEType
 ZipBitFlag
+ZipCRC
 ZipCompressedSize
 ZipCompression
-ZipCRC
 ZipFileName
 ZipModifyDate
 ZipRequiredVersion

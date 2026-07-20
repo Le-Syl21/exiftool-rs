@@ -1,5 +1,5 @@
-AlbumName	The Real album name
 Album	The album
+AlbumName	The Real album name
 Artist	An artist
 Audiences	56k Dial-up;
 AudioMode	music
@@ -14,14 +14,14 @@ DateTimeOriginal	2003
 Description	Test RM file
 Duration	0.10 s
 FileInfoVersion	0
-FileTypeExtension	rm
 FileType	RM
+FileTypeExtension	rm
 Flags	Allow Recording, Allow Download
 Genre	Rock & Roll
 Keywords	these are keywords
+MIMEType	audio/x-pn-realaudio
 MaxBitrate	32 kbps
 MaxPacketSize	465
-MIMEType	audio/x-pn-realaudio
 ModifyDate	2004:12:05 09:54:03
 NumPackets	16
 NumStreams	2
@@ -40,9 +40,9 @@ StreamPreroll	1.86 s
 StreamStartTime	0
 Title	A title
 TrackCategory	The Real track category
+TrackComments	The Real track comments
 TrackCommentsDataSize	4294967295
 TrackCommentsMimeType	text/plain
-TrackComments	The Real track comments
 TrackLyricsDataSize	1224736768
 TrackLyricsExtension	.txt
 TrackLyricsMimeType	text/plain

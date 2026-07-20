@@ -17,9 +17,9 @@ Compression	JPEG (old-style)
 Contrast	Normal
 CreateDate	2005:01:14 08:57:59
 CustomRendered	Custom
+DOF	0.02 m (0.62 - 0.64 m)
 DateTimeOriginal	2005:01:14 08:57:59
 DigitalZoomRatio	1
-DOF	0.02 m (0.62 - 0.64 m)
 EffectiveMaxAperture	4.5
 EncodingProcess	Baseline DCT, Huffman coding
 ExifByteOrder	Big-endian (Motorola, MM)
@@ -36,9 +36,11 @@ ExposureTime	1/60
 ExternalFlashExposureComp	0
 ExternalFlashFirmware	n/a
 ExternalFlashFlags	(none)
+FNumber	5.0
+FOV	22.1 deg (0.25 m)
 FileSource	Digital Camera
-FileTypeExtension	jpg
 FileType	JPEG
+FileTypeExtension	jpg
 Flash	Auto, Fired, Return detected
 FlashCommanderMode	Off
 FlashCompensation	0
@@ -52,22 +54,22 @@ FlashGroupBCompensation	0
 FlashGroupBControlMode	Off
 FlashInfoVersion	0100
 FlashMode	Fired, TTL Mode
-FlashpixVersion	0100
 FlashSetting	Normal
 FlashSource	None
 FlashType	Built-in,TTL
-FNumber	5.0
-FocalLength35efl	56.0 mm (35 mm equivalent: 84.0 mm)
+FlashpixVersion	0100
 FocalLength	56.0 mm
+FocalLength35efl	56.0 mm (35 mm equivalent: 84.0 mm)
 FocalLengthIn35mmFormat	84 mm
 FocusDistance	0.63 m
 FocusMode	AF-S
 FocusPosition	0x21
-FOV	22.1 deg (0.25 m)
 GainControl	None
 Gamma	2.2
 HueAdjustment	0
 HyperfocalDistance	31.31 m
+ISO	200
+ISOSetting	200
 ImageBoundary	0 0 3008 2000
 ImageDataSize	2361498
 ImageHeight	47
@@ -76,8 +78,6 @@ ImageSize	71x47
 ImageWidth	71
 InteropIndex	R03 - DCF option file (Adobe RGB)
 InteropVersion	0100
-ISO	200
-ISOSetting	200
 JFIFVersion	1.01
 Lens	18-70mm f/3.5-4.5
 LensDataVersion	0101
@@ -88,16 +88,16 @@ LensSpec	18-70mm f/3.5-4.5 G
 LensType	G
 LightSource	Speedlight
 LightValue	9.6
+MCUVersion	132
+MIMEType	image/jpeg
 Make	NIKON CORPORATION
 MakerNoteVersion	2.10
 MaxApertureAtMaxFocal	4.5
 MaxApertureAtMinFocal	3.6
 MaxApertureValue	4.4
 MaxFocalLength	71.3 mm
-MCUVersion	132
 Megapixels	0.003
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 MinFocalLength	18.3 mm
 Model	NIKON D70
 ModifyDate	2005:01:14 08:57:59
@@ -124,20 +124,20 @@ ShotInfoVersion	0103
 ShutterCount	526
 ShutterSpeed	1/60
 Software	Ver.1.02
-SubjectDistanceRange	Unknown
 SubSecCreateDate	2005:01:14 08:57:59.20
 SubSecDateTimeOriginal	2005:01:14 08:57:59.20
 SubSecModifyDate	2005:01:14 08:57:59.20
 SubSecTime	20
 SubSecTimeDigitized	20
 SubSecTimeOriginal	20
+SubjectDistanceRange	Unknown
 ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
 ThumbnailLength	28
 ThumbnailOffset	2696
 ToneComp	CS
 UserComment	curve: fotogenics point and shoot
 VariProgram	
-WB_RGBGLevels                   : 597 256 361 256
+WB_RGBGLevels	597 256 361 256
 WhiteBalance	Auto
 WhiteBalanceFineTune	0
 WhitePoint	0.313 0.329

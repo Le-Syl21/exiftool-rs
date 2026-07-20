@@ -14,9 +14,9 @@ FilePermissions
 FileSize
 FileType
 FileTypeExtension
+MIMEType
 ManifestLinkForm
 ManifestReferenceFilePath
-MIMEType
 ProgrammerExclamation
 ProgrammerFood
 ProgrammerFullName

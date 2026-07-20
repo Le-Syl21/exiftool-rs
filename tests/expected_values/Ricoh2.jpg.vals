@@ -21,24 +21,24 @@ ExposureCompensation	-1
 ExposureMode	Auto
 ExposureProgram	Program AE
 ExposureTime	1/1740
-FileTypeExtension	jpg
+FNumber	5.5
 FileType	JPEG
+FileTypeExtension	jpg
 FirmwareVersion	22.19
 Flash	Auto, Did not fire
 FlashpixVersion	0100
-FNumber	5.5
-FocalLength35efl	5.7 mm
 FocalLength	5.7 mm
+FocalLength35efl	5.7 mm
 GPSAltitude	117 m Above Sea Level
 GPSAltitudeRef	Above Sea Level
+GPSDOP	2.6
 GPSDateStamp	2006:05:26
 GPSDateTime	2006:05:26 10:47:24Z
-GPSDestBearingRef	Unknown ()
 GPSDestBearing	undef
-GPSDestDistanceRef	Unknown ()
+GPSDestBearingRef	Unknown ()
 GPSDestDistance	undef
+GPSDestDistanceRef	Unknown ()
 GPSDifferential	No Correction
-GPSDOP	2.6
 GPSImgDirection	20
 GPSImgDirectionRef	True North
 GPSLatitude	42 deg 2' 4.47" N
@@ -56,6 +56,7 @@ GPSTimeStamp	10:47:24
 GPSTrack	20
 GPSTrackRef	True North
 GPSVersionID	2.2.0.0
+ISO	125
 ImageDescription	
 ImageHeight	8
 ImageSize	8x8
@@ -63,11 +64,11 @@ ImageWidth	8
 InternalSerialNumber	00000000000000012207000003100957
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	125
 LightSource	Unknown
 LightValue	15.4
 Lit	No
 Location	Roundabout
+MIMEType	image/jpeg
 Make	RICOH
 MakerNoteType	Rdc
 ManufactureDate1	2005:06:06
@@ -75,7 +76,6 @@ ManufactureDate2	2003:08:19
 MaxApertureValue	2.5
 Megapixels	0.000064
 MeteringMode	Spot
-MIMEType	image/jpeg
 Model	Caplio Pro G3
 ModifyDate	2006:05:26 11:48:48
 Orientation	Horizontal (normal)

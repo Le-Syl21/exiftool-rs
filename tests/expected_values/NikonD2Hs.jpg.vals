@@ -17,10 +17,10 @@ Compression	JPEG (old-style)
 Contrast	Normal
 CreateDate	2005:03:18 02:55:18
 CustomRendered	Normal
+DOF	0.03 m (0.69 - 0.72 m)
 DateTimeOriginal	2005:03:18 02:55:18
 DeletedImageCount	0
 DigitalZoomRatio	1
-DOF	0.03 m (0.69 - 0.72 m)
 EffectiveMaxAperture	1.8
 EncodingProcess	Baseline DCT, Huffman coding
 ExifByteOrder	Big-endian (Motorola, MM)
@@ -38,9 +38,12 @@ ExposureTuning	0
 ExternalFlashExposureComp	0
 ExternalFlashFirmware	n/a
 ExternalFlashFlags	(none)
+FNumber	4.0
+FOV	25.1 deg (0.32 m)
 FileSource	Digital Camera
-FileTypeExtension	jpg
 FileType	JPEG
+FileTypeExtension	jpg
+Flash	No Flash
 FlashCommanderMode	Off
 FlashCompensation	0
 FlashControlMode	Off
@@ -52,24 +55,23 @@ FlashGroupBCompensation	0
 FlashGroupBControlMode	Off
 FlashInfoVersion	0100
 FlashMode	Did Not Fire
-Flash	No Flash
-FlashpixVersion	0100
 FlashSetting	Normal
 FlashSource	None
 FlashType	
-FNumber	4.0
-FocalLength35efl	50.0 mm (35 mm equivalent: 75.0 mm)
+FlashpixVersion	0100
 FocalLength	50.0 mm
+FocalLength35efl	50.0 mm (35 mm equivalent: 75.0 mm)
 FocalLengthIn35mmFormat	75 mm
 FocusDistance	0.71 m
 FocusMode	AF-C
 FocusPosition	0x11
-FOV	25.1 deg (0.32 m)
-GainControl	Low gain up
 GPSVersionID	2.2.0.0
+GainControl	Low gain up
 HighISONoiseReduction	Normal
 HueAdjustment	0
 HyperfocalDistance	31.20 m
+ISO	800
+ISOSetting	800
 ImageBoundary	0 0 2464 1632
 ImageCount	2
 ImageDataSize	1369271
@@ -78,8 +80,6 @@ ImageSize	8x8
 ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	800
-ISOSetting	800
 Lens	50mm f/1.8
 LensDataVersion	0201
 LensFStops	7.33
@@ -89,16 +89,16 @@ LensSpec	50mm f/1.8 D
 LensType	D
 LightSource	Colored
 LightValue	8.0
+MCUVersion	122
+MIMEType	image/jpeg
 Make	NIKON CORPORATION
 MakerNoteVersion	2.10
 MaxApertureAtMaxFocal	1.8
 MaxApertureAtMinFocal	1.8
 MaxApertureValue	1.7
 MaxFocalLength	50.4 mm
-MCUVersion	122
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 MinFocalLength	50.4 mm
 Model	NIKON D2Hs
 ModifyDate	2005:03:18 02:55:18
@@ -124,21 +124,21 @@ ShotInfoVersion	0206
 ShutterCount	2
 ShutterSpeed	1/125
 Software	Ver.1.00
-SubjectDistanceRange	Unknown
 SubSecCreateDate	2005:03:18 02:55:18.16
 SubSecDateTimeOriginal	2005:03:18 02:55:18.16
 SubSecModifyDate	2005:03:18 02:55:18.16
 SubSecTime	16
 SubSecTimeDigitized	16
 SubSecTimeOriginal	16
+SubjectDistanceRange	Unknown
 ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
 ThumbnailLength	28
 ThumbnailOffset	3202
 ToneComp	Auto
 UserComment	
-WB_RGGBLevels                   : 562 256 256 537
-WhiteBalanceFineTune	0
+WB_RGGBLevels	562 256 256 537
 WhiteBalance	Preset0
+WhiteBalanceFineTune	0
 XResolution	300
 YCbCrPositioning	Co-sited
 YCbCrSubSampling	YCbCr4:2:0 (2 2)

@@ -4,9 +4,9 @@ AudioCodec
 AudioSampleCount	171240
 AudioSampleRate	11024
 AvgBytesPerSec	11024
+BMPVersion	Windows V3
 BitDepth	24
 BitsPerSample	8
-BMPVersion	Windows V3
 Compression	MJPG
 Creator	Phil Harvey
 DateTimeOriginal	2003:03:10 15:04:43
@@ -20,10 +20,10 @@ ImageHeight	240
 ImageLength	230400
 ImageSize	320x240
 ImageWidth	320
+MIMEType	video/x-msvideo
 MaxDataRate	206 kB/s
 Megapixels	0.077
 MetadataDate	2008:09:12 11:17:39-04:00
-MIMEType	video/x-msvideo
 NumChannels	1
 NumColors	Use BitDepth
 NumImportantColors	All

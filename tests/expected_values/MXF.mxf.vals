@@ -15,18 +15,18 @@ Duration	0 s
 EditRate	1
 EssenceLength	0 s
 EssenceStreamID	1
-FileTypeExtension	mxf
 FileType	MXF
+FileTypeExtension	mxf
 LinkedTrackID	2
 LockedIndicator	False
 MIMEType	application/mxf
-ModifyDate	2010:12:20 00:14:40.228
 MXFVersion	1.2
+ModifyDate	2010:12:20 00:14:40.228
 Origin	0 s
 PackageLastModifyDate	2010:12:20 00:14:40.224
 RoundedTimecodeTimebase	1
-SampleRate	1
 SDKVersion	1.2
+SampleRate	1
 StartTimecode	0 s
 ToolkitVersion	1.0.1.16 released
 TrackID	2

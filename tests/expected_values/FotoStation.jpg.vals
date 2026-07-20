@@ -1,6 +1,6 @@
 ApplicationRecordVersion	2
 BitsPerSample	8
-Caption-Abstract                : Caption *** Local Caption *** Local Caption
+Caption-Abstract	Caption *** Local Caption *** Local Caption
 Category	Cat
 ColorComponents	3
 ColorPlanes	3
@@ -12,13 +12,13 @@ CropTop	24.458%
 DocumentNotes	Document Notes
 EditStatus	Edit Status
 EncodingProcess	Baseline DCT, Huffman coding
-FileTypeExtension	jpg
 FileType	JPEG
+FileTypeExtension	jpg
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
-Megapixels	0.000064
 MIMEType	image/jpeg
+Megapixels	0.000064
 ObjectCycle	Unknown (Afternoon)
 ObjectPreviewData	(Binary data 15 bytes, use -b option to extract)
 ObjectPreviewFileFormat	Unknown (Custom Field 01)

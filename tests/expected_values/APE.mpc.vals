@@ -7,16 +7,16 @@ CoverArtFrontDesc	X:\_kuvat\Kraftwerk - Cover Art Test.jpg
 DateTimeOriginal	2005
 EncoderVersion	1.1.5
 FastSeek	No
-FileTypeExtension	mpc
 FileType	MPC
+FileTypeExtension	mpc
 Gapless	Yes
 Genre	Testing
 Grouping	This group
 ID3Size	391
 Lyrics	Do-wap she-bang
+MIMEType	audio/x-musepack
 MaxBand	28
 MediaJukeboxDate	38353
-MIMEType	audio/x-musepack
 PartOfSet	1/2
 Picture	(Binary data 15 bytes, use -b option to extract)
 PictureDescription	comment

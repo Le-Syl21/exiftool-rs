@@ -24,6 +24,7 @@ FilePermissions
 FileSize
 FileType
 FileTypeExtension
+MIMEType
 MicroscopeDeviceRefId
 MicroscopeId
 MicroscopeIsAvailable
@@ -36,7 +37,6 @@ MicroscopeMotorization
 MicroscopeName
 MicroscopeStandSpecification
 MicroscopeUniqueName
-MIMEType
 PrimaryFileGUID
 XML
 ZISRAWVersion

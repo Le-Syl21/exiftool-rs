@@ -1,7 +1,7 @@
 AlphaTilt	-64.0024700625157
+AppVersion	4.10.0.65
 Application	Tomography
 AppliedDefocus	-1.5e-06
-AppVersion	4.10.0.65
 BetaTilt	0
 BinningHeight	1
 BinningWidth	1
@@ -30,10 +30,10 @@ DwellTime	0
 EFTEMOn	No
 ExtendedHeaderSize	1536
 ExtendedHeaderType	FEI1
-FileTypeExtension	mrc
 FileType	MRC
-FullScanFOV_X                   : 0.473917752802174
-FullScanFOV_Y                   : 0.473917752802174
+FileTypeExtension	mrc
+FullScanFOV_X	0.473917752802174
+FullScanFOV_Y	0.473917752802174
 GridSize	4096 4096 2
 HighMagnificationMode	SA
 HighTension	200000
@@ -49,6 +49,8 @@ ImageWidthAxis	X
 InstrumentMode	TEM
 IntegrationTime	0.299076
 Intensity	0.473917752802174
+MIMEType	image/x-mrc
+MRCVersion	20140
 MachineStamp	0x44 0x44 0x00 0x00
 Magnification	28000
 Megapixels	16.8
@@ -56,8 +58,6 @@ MetadataSize	768
 MetadataVersion	0
 MicroscopeID	6419
 MicroscopeType	TALOS-D5197
-MIMEType	image/x-mrc
-MRCVersion	20140
 NumberOfLabels	0
 ObjectiveLens	HM
 Origin	0 0 0
@@ -66,11 +66,12 @@ PixelSizeX	3.73276964893421e-10
 PixelSizeY	3.73276964893421e-10
 ProbeMode	Nano
 ProjectionMode	Imaging
+RMSDeviation	-1
 ReadoutAreaBottom	4096
 ReadoutAreaLeft	0
 ReadoutAreaRight	4096
 ReadoutAreaTop	0
-RMSDeviation	-1
+STEMDefocus	-1.5e-06
 ScanSizeBottom	0
 ScanSizeLeft	0
 ScanSizeRight	0
@@ -82,7 +83,6 @@ ShiftY	0.009031618013978
 SpaceGroupNumber	0
 SpotIndex	7
 StartPoint	0 0 0
-STEMDefocus	-1.5e-06
 TiltAxisAngle	-0.847676487969243
 TimeStamp	2020:10:21 13:54:27
 Warning	[minor] Use the ExtractEmbedded option to read metadata for all frames

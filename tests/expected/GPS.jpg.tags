@@ -30,6 +30,7 @@ ExifToolVersion
 ExifVersion
 ExposureCompensation
 ExposureProgram
+FNumber
 FileAccessDate
 FileInodeChangeDate
 FileModifyDate
@@ -41,7 +42,6 @@ FileType
 FileTypeExtension
 Flash
 FlashpixVersion
-FNumber
 FocalLength
 FocalLength35efl
 FocalPlaneResolutionUnit
@@ -56,16 +56,16 @@ GPSPosition
 GPSTimeStamp
 GPSVersionID
 Headline
+ISO
 ImageDescription
 ImageHeight
 ImageSize
 ImageWidth
-ISO
 Keywords
+MIMEType
 Make
 Megapixels
 MeteringMode
-MIMEType
 Model
 ModifyDate
 ObjectName

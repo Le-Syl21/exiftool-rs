@@ -26,12 +26,12 @@ ImageHeight
 ImageSize
 ImageWidth
 IsVBR
+MIMEType
 MaxBitrate
 MaxPacketSize
 MediaClassPrimaryID
 MediaClassSecondaryID
 Megapixels
-MIMEType
 MinPacketSize
 Picture
 PictureMIMEType

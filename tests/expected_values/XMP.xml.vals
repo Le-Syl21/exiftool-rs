@@ -1,7 +1,7 @@
-About	t/images/Nikon.jpg
 AFAreaMode	Single Area
 AFPoint	Center
 AFPointsInFocus	(none)
+About	t/images/Nikon.jpg
 Aperture	9.4
 AuxiliaryLens	Off
 BitsPerSample	8
@@ -23,16 +23,17 @@ ExifVersion	0210
 ExposureCompensation	0
 ExposureProgram	Program AE
 ExposureTime	0.00469483568075117
-FileSource	Digital Camera
-FileTypeExtension	xmp
-FileType	XMP
-Flash	No Flash
-FlashpixVersion	0100
-FlashSetting	
 FNumber	9.4
-FocalLength35efl	8.6 mm
+FileSource	Digital Camera
+FileType	XMP
+FileTypeExtension	xmp
+Flash	No Flash
+FlashSetting	
+FlashpixVersion	0100
 FocalLength	8.6 mm
+FocalLength35efl	8.6 mm
 FocusMode	AF-C
+ISOSelection	Auto
 ImageAdjustment	Normal
 ImageDescription	
 ImageHeight	8
@@ -41,16 +42,15 @@ ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
 Iso	100
-ISOSelection	Auto
 LightSource	Unknown
 LightValue	14.2
+MIMEType	application/rdf+xml
 Make	NIKON
 MakerNoteVersion	1.00
 ManualFocusDistance	undef
 MaxApertureValue	3.4
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	application/rdf+xml
 Model	E775
 ModifyDate	2001:08:01 12:57:23
 Orientation	Horizontal (normal)

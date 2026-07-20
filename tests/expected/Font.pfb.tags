@@ -3,6 +3,7 @@ CreateDate
 Creator
 Directory
 ExifToolVersion
+FSType
 FileAccessDate
 FileInodeChangeDate
 FileModifyDate
@@ -14,7 +15,6 @@ FileTypeExtension
 FontFamily
 FontName
 FontType
-FSType
 FullName
 IsFixedPitch
 ItalicAngle

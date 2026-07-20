@@ -7,8 +7,8 @@ Description	Rename file name with image date and time
 DriveSerialNumber	C8F0-D326
 DriveType	Fixed Disk
 FileAttributes	Normal
-FileTypeExtension	lnk
 FileType	LNK
+FileTypeExtension	lnk
 FillAttributes	0x07
 Flags	IDList, LinkInfo, Description, RelativePath, WorkingDir, CommandArgs, Unicode
 FontFamily	Modern
@@ -21,8 +21,8 @@ HotKey	(none)
 IconIndex	(none)
 InsertMode	Yes
 LocalBasePath	C:\Documents and Settings\Phil\Desktop\exiftool(-k).exe
-MachineID	yukkypc
 MIMEType	application/octet-stream
+MachineID	yukkypc
 ModifyDate	2009:09:11 12:38:00+02:00
 NumHistoryBuffers	4
 OperatingSystem	Windows XP, 2003

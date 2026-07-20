@@ -1,8 +1,8 @@
-AccelerationVector	-0.6483164083 0.002264119004 -0.7500767578
 AEAverage	185
 AEStable	Yes
 AETarget	177
 AFStable	Yes
+AccelerationVector	-0.6483164083 0.002264119004 -0.7500767578
 Aperture	1.8
 ApertureValue	1.8
 BitsPerSample	8
@@ -23,16 +23,16 @@ ExposureCompensation	0
 ExposureMode	Auto
 ExposureProgram	Program AE
 ExposureTime	1/20
-FileTypeExtension	jpg
+FNumber	1.8
+FOV	65.5 deg
 FileType	JPEG
+FileTypeExtension	jpg
 Flash	Off, Did not fire
 FlashpixVersion	0100
-FNumber	1.8
-FocalLength35efl	4.0 mm (35 mm equivalent: 28.0 mm)
 FocalLength	4.0 mm
+FocalLength35efl	4.0 mm (35 mm equivalent: 28.0 mm)
 FocalLengthIn35mmFormat	28 mm
 FocusDistanceRange	0.54 - 0.68 m
-FOV	65.5 deg
 GPSAltitude	72.3 m Above Sea Level
 GPSAltitudeRef	Above Sea Level
 GPSDateStamp	2016:09:28
@@ -51,21 +51,21 @@ GPSSpeed	0
 GPSSpeedRef	km/h
 GPSTimeStamp	17:17:58.65
 HyperfocalDistance	2.07 m
+ISO	40
 ImageCaptureType	Unknown (5)
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
-ISO	40
 LensID	iPhone 7 back camera 3.99mm f/1.8
 LensInfo	3.99mm f/1.8
 LensMake	Apple
 LensModel	iPhone 7 back camera 3.99mm f/1.8
 LightValue	7.3
+MIMEType	image/jpeg
 Make	Apple
 MakerNoteVersion	4
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 Model	iPhone 7
 ModifyDate	2016:09:28 18:18:05
 OISMode	2
@@ -83,11 +83,11 @@ SensingMethod	One-chip color area
 ShutterSpeed	1/20
 ShutterSpeedValue	1/20
 Software	10.0.2
-SubjectArea	2015 1511 2217 1330
 SubSecCreateDate	2016:09:28 18:18:05.813
 SubSecDateTimeOriginal	2016:09:28 18:18:05.813
 SubSecTimeDigitized	813
 SubSecTimeOriginal	813
+SubjectArea	2015 1511 2217 1330
 ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
 ThumbnailLength	28
 ThumbnailOffset	2078

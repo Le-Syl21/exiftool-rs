@@ -4,24 +4,24 @@ AFPoint	Center (horizontal)
 AFPointDetails	0
 AFSearch	Ready
 Aperture	4.5
+BWMode	Off
 BitsPerSample	8
-BlackLevel2	69 69 69 68
 BlackLevel	69 69 69 68
+BlackLevel2	69 69 69 68
 BlueBalance	1.132813
 BodyFirmwareVersion	1.300
-BWMode	Off
 CameraID	OLYMPUS DIGITAL CAMERA
 CameraSettingsVersion	010
-CameraType2	E-1
 CameraType	E-1
+CameraType2	E-1
 CircleOfConfusion	0.015 mm
 ColorComponents	3
 ColorControl	96 4096 2944 4096 16 128
 ColorMatrix	356 -34 -66 -22 308 -30 6 -126 376
 ColorSpace	sRGB
 ComponentsConfiguration	Y, Cb, Cr, -
-CompressionFactor	2.7
 Compression	JPEG (old-style)
+CompressionFactor	2.7
 Contrast	Normal
 ContrastSetting	0 (min -2, max 2)
 CoringFilter	1536
@@ -32,12 +32,12 @@ CropTop	0 0
 CropWidth	2560
 CustomRendered	Normal
 CustomSaturation	CS2 (min CS0, max CS4)
+DOF	0.17 m (0.63 - 0.80 m)
 DateTimeOriginal	2005:01:05 10:53:41
 DigitalZoom	0.0
 DigitalZoomRatio	0
-DistortionCorrection2	Off
 DistortionCorrection	Off
-DOF	0.17 m (0.63 - 0.80 m)
+DistortionCorrection2	Off
 DriveMode	Continuous Shooting, Shot 2
 EncodingProcess	Baseline DCT, Huffman coding
 Enhancer	576
@@ -50,25 +50,26 @@ ExposureCompensation	0
 ExposureMode	Auto
 ExposureProgram	Program AE
 ExposureTime	1/100
-ExtenderFirmwareVersion	0
 Extender	None
+ExtenderFirmwareVersion	0
 ExtenderSerialNumber	
 ExtenderStatus	Not attached
-ExternalFlashBounce	Bounce or Off
 ExternalFlash	Off
+ExternalFlashBounce	Bounce or Off
 ExternalFlashZoom	0
+FNumber	4.5
+FOV	47.2 deg (0.62 m)
 FileSource	Digital Camera
-FileTypeExtension	jpg
 FileType	JPEG
+FileTypeExtension	jpg
+Flash	No Flash
 FlashExposureComp	0
 FlashFirmwareVersion	0
-FlashModel	None
 FlashMode	Off
-Flash	No Flash
-FlashpixVersion	0100
+FlashModel	None
 FlashSerialNumber	
 FlashType	None
-FNumber	4.5
+FlashpixVersion	0100
 FocalLength	20.0 mm
 FocalLength35efl	20.0 mm (35 mm equivalent: 40.1 mm)
 FocalPlaneDiagonal	21.6 mm
@@ -77,10 +78,10 @@ FocusInfoVersion	010
 FocusMode	Single AF
 FocusProcess	AF Used
 FocusStepCount	332
-FOV	47.2 deg (0.62 m)
 GainBase	256
 GainControl	High gain up
 HyperfocalDistance	5.93 m
+ISO	400
 ImageDescription	OLYMPUS DIGITAL CAMERA
 ImageHeight	8
 ImageProcessingVersion	010
@@ -91,7 +92,6 @@ InternalFlash	Off
 InternalSerialNumber	4001310004375102
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	400
 LensDistortionParams	0 0 0 0 0 0
 LensFirmwareVersion	1.100
 LensID	Olympus Zuiko Digital 14-54mm F2.8-3.5
@@ -100,8 +100,9 @@ LensSerialNumber	050105886
 LensType	Olympus Zuiko Digital 14-54mm F2.8-3.5
 LightSource	Unknown
 LightValue	9.0
-MacroMode	Off
+MIMEType	image/jpeg
 Macro	Off
+MacroMode	Off
 Make	OLYMPUS CORPORATION
 MaxAperture	2.8
 MaxApertureAtMaxFocal	3.5
@@ -109,13 +110,12 @@ MaxApertureValue	2.8
 MaxFocalLength	54
 Megapixels	0.000064
 MeteringMode	ESP
-MIMEType	image/jpeg
 MinFocalLength	14
 Model	E-1
 ModifiedSaturation	Off
 ModifyDate	2005:01:05 10:53:41
-NoiseReduction2	(none)
 NoiseReduction	(none)
+NoiseReduction2	(none)
 OlympusImageHeight	1920
 OlympusImageWidth	2560
 Orientation	Horizontal (normal)
@@ -147,10 +147,10 @@ SceneCaptureType	Standard
 SceneDetect	0
 SensorTemperature	20 C
 SerialNumber	143008611
-ShadingCompensation2	Off
 ShadingCompensation	Off
-SharpnessFactor	576
+ShadingCompensation2	Off
 Sharpness	Hard
+SharpnessFactor	576
 SharpnessSetting	1 (min -3, max 5)
 ShutterSpeed	1/100
 Software	Version 1.3
@@ -160,10 +160,10 @@ ThumbnailLength	28
 ThumbnailOffset	7088
 UserComment	
 ValidBits	12 0
-WB_GLevel                       : 256
-WB_RBLevels                     : 412 290
-WhiteBalance2	Auto
+WB_GLevel	256
+WB_RBLevels	412 290
 WhiteBalance	Auto
+WhiteBalance2	Auto
 WhiteBalanceBracket	0
 WhiteBalanceTemperature	Auto
 XResolution	314

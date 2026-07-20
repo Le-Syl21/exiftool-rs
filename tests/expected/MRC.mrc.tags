@@ -1,7 +1,7 @@
 AlphaTilt
+AppVersion
 Application
 AppliedDefocus
-AppVersion
 BetaTilt
 BinningHeight
 BinningWidth
@@ -57,6 +57,8 @@ ImageWidthAxis
 InstrumentMode
 IntegrationTime
 Intensity
+MIMEType
+MRCVersion
 MachineStamp
 Magnification
 Megapixels
@@ -64,8 +66,6 @@ MetadataSize
 MetadataVersion
 MicroscopeID
 MicroscopeType
-MIMEType
-MRCVersion
 NumberOfLabels
 ObjectiveLens
 Origin
@@ -74,11 +74,12 @@ PixelSizeX
 PixelSizeY
 ProbeMode
 ProjectionMode
+RMSDeviation
 ReadoutAreaBottom
 ReadoutAreaLeft
 ReadoutAreaRight
 ReadoutAreaTop
-RMSDeviation
+STEMDefocus
 ScanSizeBottom
 ScanSizeLeft
 ScanSizeRight
@@ -90,7 +91,6 @@ ShiftY
 SpaceGroupNumber
 SpotIndex
 StartPoint
-STEMDefocus
 TiltAxisAngle
 TimeStamp
 Warning

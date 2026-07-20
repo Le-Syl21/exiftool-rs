@@ -1,7 +1,5 @@
-Artist
 CompatibleBrands
 Directory
-ExifByteOrder
 ExifToolVersion
 FileAccessDate
 FileInodeChangeDate
@@ -14,13 +12,8 @@ FileTypeExtension
 ImageHeight
 ImageSize
 ImageWidth
+MIMEType
 MajorBrand
 Megapixels
-MIMEType
 MinorVersion
-ResolutionUnit
-Subject
-XMPToolkit
-XResolution
-YCbCrPositioning
-YResolution
+Warning

@@ -3,8 +3,8 @@ Compression
 DataWindow
 Directory
 DisplayWindow
-ExifToolVersion
 EXRVersion
+ExifToolVersion
 FileAccessDate
 FileInodeChangeDate
 FileModifyDate
@@ -18,8 +18,8 @@ ImageHeight
 ImageSize
 ImageWidth
 LineOrder
-Megapixels
 MIMEType
+Megapixels
 PixelAspectRatio
 ScreenWindowCenter
 ScreenWindowWidth

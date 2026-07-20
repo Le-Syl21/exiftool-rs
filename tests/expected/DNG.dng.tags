@@ -1,4 +1,3 @@
-ActiveArea
 AEBBracketValue
 AFAreaHeight
 AFAreaWidth
@@ -8,6 +7,7 @@ AFAssistBeam
 AFImageHeight
 AFImageWidth
 AFPointsInFocus
+ActiveArea
 AnalogBalance
 AntiAliasStrength
 Aperture
@@ -35,6 +35,11 @@ BracketMode
 BracketShotNumber
 BracketValue
 BulbDuration
+CFALayout
+CFAPattern
+CFAPattern2
+CFAPlaneColor
+CFARepeatPatternDim
 CalibrationIlluminant1
 CalibrationIlluminant2
 CameraCalibration1
@@ -49,11 +54,6 @@ CanonImageSize
 CanonImageType
 CanonImageWidth
 CanonModelID
-CFALayout
-CFAPattern
-CFAPattern2
-CFAPlaneColor
-CFARepeatPatternDim
 CircleOfConfusion
 ColorMatrix1
 ColorMatrix2
@@ -63,11 +63,11 @@ ColorTempCloudy
 ColorTempCustom1
 ColorTempCustom2
 ColorTempDaylight
-ColorTemperature
 ColorTempFlash
 ColorTempFluorescent
 ColorTempShade
 ColorTempTungsten
+ColorTemperature
 ColorTone
 Compression
 ContinuousDrive
@@ -76,6 +76,9 @@ ControlMode
 CreateDate
 Creator
 CustomRendered
+DNGBackwardVersion
+DNGLensInfo
+DNGVersion
 DateTime
 DateTimeDigitized
 DateTimeOriginal
@@ -85,12 +88,9 @@ DefaultScale
 DigitalGain
 DigitalZoom
 Directory
-DNGBackwardVersion
-DNGLensInfo
-DNGVersion
 DriveMode
-EasyMode
 ETTLII
+EasyMode
 ExifByteOrder
 ExifToolVersion
 ExifVersion
@@ -99,6 +99,8 @@ ExposureLevelIncrements
 ExposureMode
 ExposureProgram
 ExposureTime
+FNumber
+FOV
 FileAccessDate
 FileInodeChangeDate
 FileModifyDate
@@ -122,7 +124,6 @@ FlashModel
 FlashRedEyeMode
 FlashReturn
 FlashSyncSpeedAv
-FNumber
 FocalLength
 FocalLength35efl
 FocalPlaneResolutionUnit
@@ -135,13 +136,12 @@ FocalUnits
 FocusContinuous
 FocusMode
 FocusRange
-FOV
 HyperfocalDistance
+ISO
 ImageHeight
 ImageNumber
 ImageSize
 ImageWidth
-ISO
 JpgFromRaw
 JpgFromRawLength
 JpgFromRawStart
@@ -155,6 +155,7 @@ LinearResponseLimit
 LocalizedCameraModel
 LongExposureNoiseReduction
 LongExposureNoiseReduction2
+MIMEType
 MacroMode
 Make
 MakerNoteByteOrder
@@ -168,7 +169,6 @@ MeasuredEV2
 MeasuredRGGB
 Megapixels
 MeteringMode
-MIMEType
 MinAperture
 MinFocalLength
 MirrorLockup
@@ -235,11 +235,13 @@ TileWidth
 ToneCurve
 ToningEffect
 UniqueCameraModel
-ValidAFPoints
 VRDOffset
+ValidAFPoints
 WBBracketMode
 WBBracketValueAB
 WBBracketValueGM
+WBShiftAB
+WBShiftGM
 WB_RGGBLevels
 WB_RGGBLevelsAsShot
 WB_RGGBLevelsAuto
@@ -251,8 +253,6 @@ WB_RGGBLevelsFlash
 WB_RGGBLevelsFluorescent
 WB_RGGBLevelsShade
 WB_RGGBLevelsTungsten
-WBShiftAB
-WBShiftGM
 WhiteBalance
 WhiteBalanceBlue
 WhiteBalanceRed

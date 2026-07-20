@@ -1,10 +1,10 @@
 Aperture	11.0
 BitsPerSample	8
+CPUVersions	CPU1 2.00, 0, CPU2 0496, 0
 ColorComponents	3
 ColorSpace	sRGB
 ComponentsConfiguration	Y, Cb, Cr, -
 Compression	JPEG (old-style)
-CPUVersions	CPU1 2.00, 0, CPU2 0496, 0
 CreateDate	2004:06:26 12:36:46
 CustomRendered	Normal
 DateTimeOriginal	2004:06:26 12:36:46
@@ -16,13 +16,13 @@ ExifImageWidth	1280
 ExifVersion	0220
 ExposureCompensation	0
 ExposureTime	1/25
-FileTypeExtension	jpg
+FNumber	11.0
 FileType	JPEG
+FileTypeExtension	jpg
 Flash	Off, Did not fire
 FlashpixVersion	0100
-FNumber	11.0
-FocalLength35efl	8.4 mm
 FocalLength	8.4 mm
+FocalLength35efl	8.4 mm
 ImageDescription	
 ImageHeight	8
 ImageSize	8x8
@@ -30,10 +30,10 @@ ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
 LightSource	Daylight
+MIMEType	image/jpeg
 Make	JVC
 Megapixels	0.000064
 MeteringMode	Center-weighted average
-MIMEType	image/jpeg
 Model	GR-DV500
 ModifyDate	2004:06:26 12:36:46
 Orientation	Horizontal (normal)

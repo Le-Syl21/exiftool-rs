@@ -45,6 +45,7 @@ GPSSpeed
 HeartRate
 Intensity
 LapTrigger
+MIMEType
 MaxCadence
 MaxCadencePosition
 MaxFractionalCadence
@@ -53,7 +54,6 @@ MaxPowerPosition
 MaxTemperature
 MessageIndex
 MetabolicCalories
-MIMEType
 MinHeartRate
 MinTemperature
 NECLatitude
@@ -62,11 +62,11 @@ NumLaps
 PrimaryBenefit
 ProtocolVersion
 RestingCalories
+SWCLatitude
+SWCLongitude
 Sport
 SportProfileName
 SubSport
-SWCLatitude
-SWCLongitude
 Temperature
 TimeStamp
 TotalAnaerobicTrainingEffect

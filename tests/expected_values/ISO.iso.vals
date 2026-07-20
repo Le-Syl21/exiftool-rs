@@ -3,8 +3,8 @@ BibligraphicFileName	index.txt
 BootSystem	EL TORITO SPECIFICATION
 CopyrightFileName	copyright.txt
 DataPreparer	Phil Harvey
-FileTypeExtension	iso
 FileType	ISO
+FileTypeExtension	iso
 MIMEType	application/x-iso9660-image
 Publisher	PH Publishing
 RootDirectoryCreateDate	2016:01:08 10:00:26+00:00

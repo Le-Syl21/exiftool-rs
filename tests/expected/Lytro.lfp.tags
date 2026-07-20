@@ -9,6 +9,8 @@ DateTimeOriginal
 Directory
 ExifToolVersion
 ExposureTime
+FNumber
+FOV
 FileAccessDate
 FileInodeChangeDate
 FileModifyDate
@@ -18,13 +20,12 @@ FileSize
 FileType
 FileTypeExtension
 FirmwareVersion
-FNumber
 FocalLength
 FocalLength35efl
 FocalPlaneXResolution
-FOV
 FrameExposureTime
 HyperfocalDistance
+ISO
 ImageColorCcmRgbToSrgbArray
 ImageColorGamma
 ImageColorWhiteBalanceGainB
@@ -50,7 +51,6 @@ ImageRawDetailsPixelPackingEndianness
 ImageRepresentation
 ImageSize
 ImageWidth
-ISO
 JSONMetadata
 LensExitPupilOffsetZ
 LensFocusStep
@@ -61,9 +61,9 @@ LensTemperatureAdc
 LensZoomStep
 LensZoomStepperOffset
 LightValue
+MIMEType
 Make
 Megapixels
-MIMEType
 MlaLensPitch
 MlaRotation
 MlaScaleFactorX

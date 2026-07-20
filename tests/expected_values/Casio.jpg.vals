@@ -17,29 +17,29 @@ ExifVersion	0210
 ExposureCompensation	0
 ExposureProgram	Program AE
 ExposureTime	1/114
+FNumber	2.0
 FileSource	Digital Camera
-FileTypeExtension	jpg
 FileType	JPEG
+FileTypeExtension	jpg
+Flash	No Flash
 FlashIntensity	Normal
 FlashMode	Red-eye Reduction
-Flash	No Flash
 FlashpixVersion	0100
-FNumber	2.0
 FocalLength	13.3 mm
 FocalLength35efl	13.3 mm
 FocusMode	Auto
+ISO	64
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	64
 LightValue	9.5
+MIMEType	image/jpeg
 Make	CASIO
 MaxApertureValue	2.0
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 Model	QV-3000EX
 ModifyDate	2000:03:31 10:44:15
 ObjectDistance	2.5 m

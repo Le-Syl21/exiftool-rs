@@ -1,7 +1,7 @@
 AudioChannels	1
 Encoder	opusenc from opus-tools 0.1.9
-FileTypeExtension	opus
 FileType	OPUS
+FileTypeExtension	opus
 MIMEType	audio/ogg
 OpusVersion	1
 OutputGain	1

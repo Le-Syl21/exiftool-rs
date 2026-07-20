@@ -25,8 +25,8 @@ ImageOrientation	1.00000\0.00000\0.00000\0.00000\0.990960\0.134158
 ImageOrientationPatient	1.00000\0.00000\0.00000\0.00000\0.990960\0.134158
 ImagePosition	-110.500\-96.2063\59.0425
 ImagePositionPatient	-110.500\-96.2063\59.0425
-ImagesInAcquisition	1
 ImageType	ORIGINAL\PRIMARY\MPR
+ImagesInAcquisition	1
 ImagingFrequency	63.8615
 ImplementationClassUID	0.0.0.0
 ImplementationVersionName	NOTSPECIFIED
@@ -34,14 +34,14 @@ InPlanePhaseEncodingDirection	ROW
 InstanceNumber	20
 InstitutionName	
 LargestImagePixelValue	784
+MIMEType	application/dicom
+MRAcquisitionType	2D
 MagneticFieldStrength	1.50000
 Manufacturer	GE Medical Systems
 ManufacturersModelName	SIGNA
 MediaStorageSOPClassUID	MR Image Storage
 MediaStorageSOPInstanceUID	0.0.0.0.1.8811.2.20.20010413115754.12432
-MIMEType	application/dicom
 Modality	MR
-MRAcquisitionType	2D
 NumberOfAverages	1.00000
 NumberOfPhaseEncodingSteps	256
 OperatorsName	EC
@@ -70,10 +70,12 @@ RescaleIntercept	0
 RescaleSlope	1
 RescaleType	SIGNAL INTENSITY (UNITLESS)
 Rows	256
-SamplesPerPixel	1
 SAR	0.0313309
-ScanningSequence	SE
+SOPClassUID	MR Image Storage
+SOPInstanceUID	0.0.0.0.1.8811.2.20.20010413115754.12432
+SamplesPerPixel	1
 ScanOptions	SP
+ScanningSequence	SE
 SequenceName	fse
 SequenceVariant	SK
 SeriesDate	2001:03:16
@@ -85,8 +87,6 @@ SliceLocation	73.8000
 SliceThickness	5.00000
 SmallestImagePixelValue	0
 SoftwareVersion	3
-SOPClassUID	MR Image Storage
-SOPInstanceUID	0.0.0.0.1.8811.2.20.20010413115754.12432
 SourceApplicationEntityTitle	NOTSPECIFIED
 SpacingBetweenSlices	2.00000
 StationName	MRS1

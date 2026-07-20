@@ -17,22 +17,23 @@ ExifImageWidth	2272
 ExifVersion	0210
 ExposureCompensation	0
 ExposureProgram	Program AE
-FileTypeExtension	jpg
 FileType	JPEG
+FileTypeExtension	jpg
 FirmwareVersion	1.04
 Flash	No Flash
 FlashpixVersion	0100
-FocalLength35efl	7.5 mm
 FocalLength	7.5 mm
+FocalLength35efl	7.5 mm
+ISO	150
 ImageDescription	
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	150
 LightSource	Other
 LightValue	10.3
+MIMEType	image/jpeg
 Make	RICOH
 MakerNoteType	RDC
 ManufactureDate1	2001:10:23 00:00:00
@@ -40,7 +41,6 @@ ManufactureDate2	0000:00:00 00:00:00
 MaxApertureValue	2.5
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 Model	Caplio RR1
 ModifyDate	2001:11:07 13:08:41
 Orientation	Horizontal (normal)

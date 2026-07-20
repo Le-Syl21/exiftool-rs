@@ -1,11 +1,11 @@
 Aperture
+BWFilter
 BayerPattern
 BitDepth
 BlueBalance
 BracketStep
 Brightness
 BrightnessValue
-BWFilter
 CircleOfConfusion
 ColorBalanceBlue
 ColorBalanceGreen
@@ -18,12 +18,12 @@ Compression
 Contrast
 CreateDate
 CustomRendered
-DateTimeOriginal
 DECPosition
+DOF
+DateTimeOriginal
 DigitalZoom
 DigitalZoomRatio
 Directory
-DOF
 DriveMode
 ExifByteOrder
 ExifToolVersion
@@ -32,6 +32,8 @@ ExposureCompensation
 ExposureMode
 ExposureProgram
 ExposureTime
+FNumber
+FOV
 FileAccessDate
 FileInodeChangeDate
 FileModifyDate
@@ -47,7 +49,6 @@ FlashExposureComp
 FlashFired
 FlashMetering
 FlashMode
-FNumber
 FocalLength
 FocalLength35efl
 FocalLengthIn35mmFormat
@@ -55,10 +56,11 @@ FocusArea
 FocusDistance
 FocusMode
 FolderName
-FOV
 GainControl
 Hue
 HyperfocalDistance
+ISO
+ISOSetting
 ImageDescription
 ImageHeight
 ImageSize
@@ -68,11 +70,10 @@ InternalFlash
 IntervalLength
 IntervalMode
 IntervalNumber
-ISO
-ISOSetting
 LastFileNumber
 LightSource
 LightValue
+MIMEType
 MacroMode
 Make
 MakerNoteVersion
@@ -80,7 +81,6 @@ MaxAperture
 MaxApertureValue
 Megapixels
 MeteringMode
-MIMEType
 MinoltaDate
 MinoltaImageSize
 MinoltaModelID
@@ -113,6 +113,7 @@ SubjectDistanceRange
 SubjectProgram
 UserComment
 WBMode
+WBScale
 WB_RBLevelsCloudy
 WB_RBLevelsCoolWhiteF
 WB_RBLevelsCustom
@@ -120,7 +121,6 @@ WB_RBLevelsDaylight
 WB_RBLevelsFlash
 WB_RBLevelsTungsten
 WB_RGGBLevels
-WBScale
 WhiteBalance
 WideFocusZone
 ZoneMatching

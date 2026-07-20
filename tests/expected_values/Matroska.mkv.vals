@@ -10,13 +10,13 @@ DocType	matroska
 DocTypeReadVersion	1
 DocTypeVersion	1
 Duration	0:02:29
-FileTypeExtension	mkv
 FileType	MKV
+FileTypeExtension	mkv
 ImageHeight	576
 ImageSize	704x576
 ImageWidth	704
-Megapixels	0.406
 MIMEType	video/x-matroska
+Megapixels	0.406
 MuxingApp	libebml v0.7.8 + libmatroska v0.8.1
 TimecodeScale	1 ms
 TrackDefault	Yes

@@ -1,3 +1,6 @@
+Author	XML	Author
+Comment	XML	Document
+Copyright	XML	Author
 Directory	System	Other
 ExifToolVersion	ExifTool	ExifTool
 FileAccessDate	System	Time
@@ -8,8 +11,11 @@ FilePermissions	System	Other
 FileSize	System	Other
 FileType	File	Other
 FileTypeExtension	File	Other
+Keywords	XML	Document
 MIMEType	File	Other
-Warning	ExifTool	ExifTool
+PreviewImage	File	Preview
+Projects	XML	Document
+Title	XML	Document
 ZipBitFlag	ZIP	Other
 ZipCRC	ZIP	Other
 ZipCompressedSize	ZIP	Other

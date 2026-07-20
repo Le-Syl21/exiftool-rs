@@ -20,12 +20,12 @@ InternetCodePage
 InternetMessageID
 LastModifierName
 LocalUserID
+MIMEType
 MessageBodyRTF
 MessageClass
 MessageCodePage
 MessageID
 MessageModifyDate
-MIMEType
 ModifyDate
 NormalizedSubject
 Priority

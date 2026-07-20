@@ -4,6 +4,7 @@ DateTimeOriginal
 Directory
 ExifToolVersion
 ExposureTime
+FNumber
 FileAccessDate
 FileInodeChangeDate
 FileModifyDate
@@ -13,15 +14,14 @@ FileSize
 FileType
 FileTypeExtension
 FirmwareVersion
-FNumber
 FocalLength
 FocalLength35efl
 ISO
 Lens
 LightValue
+MIMEType
 Make
 MaxAperture
-MIMEType
 Model
 RedBalance
 ShutterSpeed

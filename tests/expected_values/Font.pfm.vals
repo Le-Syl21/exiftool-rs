@@ -5,16 +5,16 @@ CharacterSet	0
 Copyright	Copyright URW Software, Copyright 1992 by URW
 DefaultChar	32
 ExternalLeading	0
-FileTypeExtension	pfm
 FileType	PFM
+FileTypeExtension	pfm
 FirstChar	32
 FontName	URWGroT
 FontType	129
 InternalLeading	0
 Italic	0
 LastChar	255
-MaxWidth	1092
 MIMEType	application/x-font-type1
+MaxWidth	1092
 PFMVersion	1.00
 PitchAndFamily	1
 PixHeight	0

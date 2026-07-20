@@ -27,9 +27,9 @@ FileTypeExtension
 Flags
 Genre
 Keywords
+MIMEType
 MaxBitrate
 MaxPacketSize
-MIMEType
 ModifyDate
 NumPackets
 NumStreams

@@ -18,33 +18,33 @@ ExposureCompensation	0
 ExposureMode	Auto
 ExposureProgram	Program AE
 ExposureTime	1/77
+FNumber	5.1
 FileSource	Digital Camera
-FileTypeExtension	jpg
 FileType	JPEG
+FileTypeExtension	jpg
 Flash	Auto, Did not fire
 FlashpixVersion	0100
-FNumber	5.1
 FocalLength	22.5 mm
 FocalLength35efl	22.5 mm
-GainControl	None
 GEMake	GE DIGITAL CAMERA
 GEModel	E1035
+GainControl	None
+ISO	64
 ImageDescription	GE DIGITAL CAMERA
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	64
 JFIFVersion	1.01
 LightSource	Unknown
 LightValue	11.6
+MIMEType	image/jpeg
 Macro	Off
 Make	General Imaging Co.
 MaxApertureValue	5.1
 Megapixels	0.000064
 MeteringMode	Average
-MIMEType	image/jpeg
 Model	E1035
 ModifyDate	2009:07:05 23:58:52
 Orientation	Horizontal (normal)

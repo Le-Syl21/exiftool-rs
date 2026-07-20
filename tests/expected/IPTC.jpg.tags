@@ -14,8 +14,8 @@ CopyrightNotice
 Country-PrimaryLocationName
 Credit
 CurrentIPTCDigest
-DateCreated
 DCTEncodeVersion
+DateCreated
 Directory
 DisplayedUnitsX
 DisplayedUnitsY
@@ -33,14 +33,14 @@ GlobalAltitude
 GlobalAngle
 HasRealMergedData
 Headline
+IPTCDigest
 ImageHeight
 ImageSize
 ImageWidth
-IPTCDigest
 JFIFVersion
 Keywords
-Megapixels
 MIMEType
+Megapixels
 NumSlices
 ObjectName
 OriginalTransmissionReference
@@ -56,9 +56,9 @@ SlicesGroupName
 Source
 SpecialInstructions
 SupplementalCategories
-Urgency
 URL
 URL_List
+Urgency
 Warning
 Writer-Editor
 WriterName

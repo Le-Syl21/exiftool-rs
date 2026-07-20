@@ -27,13 +27,13 @@ HasColorMap
 ImageHeight
 ImageSize
 ImageWidth
+MIMEType
 MediaWhitePoint
 Megapixels
-MIMEType
 PixelAspectRatio
 PrimaryPlatform
-ProfileClass
 ProfileCMMType
+ProfileClass
 ProfileConnectionSpace
 ProfileCopyright
 ProfileCreator

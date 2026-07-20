@@ -1,5 +1,5 @@
-BitDepth
 BMPVersion
+BitDepth
 Compression
 Directory
 ExifToolVersion
@@ -15,8 +15,8 @@ ImageHeight
 ImageLength
 ImageSize
 ImageWidth
-Megapixels
 MIMEType
+Megapixels
 NumColors
 NumImportantColors
 PixelsPerMeterX

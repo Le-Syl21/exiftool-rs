@@ -23,16 +23,18 @@ ExifVersion	0210
 ExposureCompensation	0
 ExposureProgram	Program AE
 ExposureTime	1/213
-FileSource	Digital Camera
-FileTypeExtension	jpg
-FileType	JPEG
-Flash	No Flash
-FlashpixVersion	0100
-FlashSetting	
 FNumber	9.4
-FocalLength35efl	8.6 mm
+FileSource	Digital Camera
+FileType	JPEG
+FileTypeExtension	jpg
+Flash	No Flash
+FlashSetting	
+FlashpixVersion	0100
 FocalLength	8.6 mm
+FocalLength35efl	8.6 mm
 FocusMode	AF-C
+ISO	100
+ISOSelection	Auto
 ImageAdjustment	Normal
 ImageDescription	
 ImageHeight	8
@@ -40,17 +42,15 @@ ImageSize	8x8
 ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	100
-ISOSelection	Auto
 LightSource	Unknown
 LightValue	14.2
+MIMEType	image/jpeg
 Make	NIKON
 MakerNoteVersion	1.00
 ManualFocusDistance	undef
 MaxApertureValue	3.4
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 Model	E775
 ModifyDate	2001:08:01 12:57:23
 Orientation	Horizontal (normal)

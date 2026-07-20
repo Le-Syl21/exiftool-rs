@@ -15,25 +15,25 @@ DateTimeOriginal	2013:02:22 11:19:20.891
 Emissivity	0.95
 EstimatedAtmosphericTrans	0.00
 ExternalTriggerCount	0
-FileTypeExtension	fpf
+FPFVersion	2
 FileType	FPF
+FileTypeExtension	fpf
 FilterModel	
 FilterPartNumber	
 FilterSerialNumber	
-FPFVersion	2
+IRWindowTemperature	20.0 C
+IRWindowTransmission	1.00
 ImageDataOffset	892
 ImageHeight	120
 ImagePixelFormat	4-byte float
 ImageSize	160x120
 ImageType	Temperature
 ImageWidth	160
-IRWindowTemperature	20.0 C
-IRWindowTransmission	1.00
 LensModel	FOL18
 LensPartNumber	
 LensSerialNumber	
-Megapixels	0.019
 MIMEType	image/x-flir-fpf
+Megapixels	0.019
 ObjectDistance	1.00 m
 ReferenceTemperature	20.0 C
 ReflectedApparentTemperature	20.0 C

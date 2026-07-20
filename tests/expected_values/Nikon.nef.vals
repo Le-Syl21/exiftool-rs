@@ -1,8 +1,8 @@
-AdvancedRaw	On
 AFAperture	3.6
 AFAreaMode	Single Area
 AFPoint	Center
 AFPointsInFocus	Center
+AdvancedRaw	On
 Aperture	3.5
 ApplicationRecordVersion	4
 AutoFocus	On
@@ -13,26 +13,26 @@ BlueBalance	1.860377
 BlueMatrixColumn	0.1492 0.06322 0.74463
 BlueTRC	(Binary data 14 bytes, use -b option to extract)
 BrightnessAdj	0
-Caption-Abstract                : A caption
-CFAPattern2	2 1 1 0
 CFAPattern	[Blue,Green][Green,Red]
+CFAPattern2	2 1 1 0
 CFARepeatPatternDim	2 2
-City	Kingston
 CMMFlags	Not Embedded, Independent
+Caption-Abstract	A caption
+City	Kingston
 ColorAberrationControl	Off
 ColorBalanceAdj	On
-ColorBooster	Off
 ColorBoostLevel	10
 ColorBoostType	People
+ColorBooster	Off
 ColorGain	0.00 0.00 0.00
 ColorHue	Mode2
 ColorMoireReductionMode	Off
-ColorSpaceData	RGB
 ColorSpace	sRGB
+ColorSpaceData	RGB
 Compression	Nikon NEF Compressed
 ConnectionSpaceIlluminant	0.9642 1 0.82491
 ContrastCurve	(Binary data 17 bytes, use -b option to extract)
-Country-PrimaryLocationName     : Canada
+Country-PrimaryLocationName	Canada
 CreateDate	2004:06:09 16:02:35
 CropBottom	2000
 CropLeft	0
@@ -47,20 +47,21 @@ CropRight	3008
 CropScaledResolution	300
 CropSourceResolution	300
 CropTop	0
+CurrentIPTCDigest	4996c61239acf3d1d9fa08228a6f6825
 Curves	On
+D-LightingHQ	Off
+D-LightingHQColorBoost	60
+D-LightingHQHighlight	1
+D-LightingHQSelected	No
+D-LightingHQShadow	50
+D-LightingHS	Off
+D-LightingHSAdjustment	25
+D-LightingHSColorBoost	60
 DateTimeOriginal	2004:06:09 16:02:35
 DeviceAttributes	Reflective, Glossy, Positive, Color
 DeviceManufacturer	none
 DeviceModel	
 DigitalICE	Normal
-D-LightingHQColorBoost          : 60
-D-LightingHQHighlight           : 1
-D-LightingHQ                    : Off
-D-LightingHQSelected            : No
-D-LightingHQShadow              : 50
-D-LightingHSAdjustment          : 25
-D-LightingHSColorBoost          : 60
-D-LightingHS                    : Off
 EdgeNoiseReduction	Off
 EffectiveMaxAperture	3.6
 EnhanceDarkTones	Off
@@ -73,14 +74,14 @@ ExposureCompensation	0
 ExposureDifference	0
 ExposureProgram	Aperture-priority AE
 ExposureTime	1/20
-FileSource	Digital Camera
-FileTypeExtension	nef
-FileType	NEF
-FilmType	POSITIVE
-FlashMode	Did Not Fire
-Flash	No Flash
-FlipHorizontal	No
 FNumber	3.5
+FileSource	Digital Camera
+FileType	NEF
+FileTypeExtension	nef
+FilmType	POSITIVE
+Flash	No Flash
+FlashMode	Did Not Fire
+FlipHorizontal	No
 FocalLength	18.0 mm
 FocalLength35efl	18.0 mm
 FocusDistance	2.37 m
@@ -89,14 +90,14 @@ FocusPosition	0xf1
 GreenMatrixColumn	0.20525 0.62566 0.06087
 GreenTRC	(Binary data 14 bytes, use -b option to extract)
 HueAdjustment	0
-IFD0_Offset                     : 8
+IFD0_Offset	8
+ISO	200
+ISOSetting	200
 ImageDustOff	On
 ImageHeight	2014
 ImageOptimization	Custom
 ImageSize	3040x2014
 ImageWidth	3040
-ISO	200
-ISOSetting	200
 JpgFromRaw	(Binary data 29 bytes, use -b option to extract)
 JpgFromRawLength	29
 JpgFromRawStart	1120
@@ -110,6 +111,8 @@ LensSpec	18-70mm f/3.5-4.5 G
 LensType	G
 LightSource	Natural
 LightValue	6.9
+MCUVersion	132
+MIMEType	image/x-nikon-nef
 Make	NIKON CORPORATION
 MakerNoteVersion	2.10
 MasterGain	0.00
@@ -117,35 +120,33 @@ MaxApertureAtMaxFocal	4.5
 MaxApertureAtMinFocal	3.6
 MaxApertureValue	3.5
 MaxFocalLength	71.3 mm
-MCUVersion	132
 MediaWhitePoint	0.9505 1 1.0891
 Megapixels	6.1
 MeteringMode	Multi-segment
-MIMEType	image/x-nikon-nef
 MinFocalLength	18.3 mm
 Model	NIKON D70
 ModifyDate	2005:08:25 13:09:05
 NEFCompression	Lossy (type 1)
 NEFLinearizationTable	(Binary data 17 bytes, use -b option to extract)
+NoiseReduction	On
 NoiseReductionIntensity	0
 NoiseReductionMethod	Faster
-NoiseReduction	On
 NoiseReductionSharpness	5
 Orientation	Horizontal (normal)
+PhotoEffects	On
 PhotoEffectsBlue	0
 PhotoEffectsGreen	0
-PhotoEffects	On
 PhotoEffectsRed	0
 PhotoEffectsType	None
 PhotometricInterpretation	Color Filter Array
 PlanarConfiguration	Chunky
-PreviewIFD_Offset               : 11362
+PreviewIFD_Offset	11362
 PreviewImage	(Binary data 26 bytes, use -b option to extract)
 PreviewImageLength	26
 PreviewImageStart	5958
 PrimaryPlatform	Apple Computer Inc.
-ProfileClass	Display Device Profile
 ProfileCMMType	Nikon Corporation
+ProfileClass	Display Device Profile
 ProfileConnectionSpace	XYZ
 ProfileCopyright	Nikon Inc. & Nikon Corporation 2001
 ProfileCreator	
@@ -155,7 +156,7 @@ ProfileFileSignature	acsp
 ProfileID	0
 ProfileVersion	2.2.0
 ProgramShift	0
-Province-State                  : Ontario
+Province-State	Ontario
 Quality	RAW
 RawImageCenter	1520 1008
 RedBalance	1.803774
@@ -182,15 +183,15 @@ SpecialInstructions	none
 StraightenAngle	0
 StripByteCounts	18
 StripOffsets	1376
-SubfileType	Full-resolution image
-SubIFD_Offset                   : 1440
+SubIFD_Offset	1440
 SubSecCreateDate	2004:06:09 16:02:35.00
 SubSecDateTimeOriginal	2004:06:09 16:02:35.00
 SubSecModifyDate	2005:08:25 13:09:05.00
 SubSecTime	00
 SubSecTimeDigitized	00
 SubSecTimeOriginal	00
-TIFF-EPStandardID               : 1.0.0.0
+SubfileType	Full-resolution image
+TIFF-EPStandardID	1.0.0.0
 ToneComp	CS
 Unsharp1Color	RGB
 Unsharp1HaloWidth	4
@@ -200,16 +201,16 @@ UnsharpCount	1
 UnsharpMask	Off
 UserComment	
 VariProgram	
-VignetteControlIntensity	80
 VignetteControl	Off
+VignetteControlIntensity	80
 WBAdjBlueBalance	1.6951313394899
 WBAdjLighting	High Color Rendering Fluorescent (5000K)
 WBAdjMode	Use Temperature
 WBAdjRedBalance	2.015162472363
 WBAdjTemperature	5000
-WB_RGBGLevels                   : 478 265 493 265
-WhiteBalanceAdj	On
+WB_RGBGLevels	478 265 493 265
 WhiteBalance	Auto
+WhiteBalanceAdj	On
 WhiteBalanceFineTune	0
 XResolution	300
 YResolution	300

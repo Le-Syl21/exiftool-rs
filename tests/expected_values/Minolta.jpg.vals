@@ -1,9 +1,9 @@
 Aperture	5.6
+BWFilter	0
 BitsPerSample	8
 BracketStep	1/3 EV
 Brightness	7.5
 BrightnessValue	7.5
-BWFilter	0
 CircleOfConfusion	0.008 mm
 ColorBalanceBlue	1.375
 ColorBalanceGreen	1
@@ -18,11 +18,11 @@ Compression	JPEG (old-style)
 Contrast	Normal
 CreateDate	2002:06:01 12:37:27
 CustomRendered	Custom
-DateTimeOriginal	2002:06:01 12:37:27
 DECPosition	Exposure
+DOF	0.19 m (1.91 - 2.10 m)
+DateTimeOriginal	2002:06:01 12:37:27
 DigitalZoom	Off
 DigitalZoomRatio	0
-DOF	0.19 m (1.91 - 2.10 m)
 DriveMode	Single
 EncodingProcess	Baseline DCT, Huffman coding
 ExifByteOrder	Big-endian (Motorola, MM)
@@ -33,25 +33,27 @@ ExposureCompensation	0
 ExposureMode	Auto
 ExposureProgram	Program AE
 ExposureTime	1/180
+FNumber	5.6
+FOV	12.0 deg (0.42 m)
 FileNumberMemory	On
-FileTypeExtension	jpg
 FileType	JPEG
+FileTypeExtension	jpg
+Flash	Off, Did not fire
 FlashExposureComp	0
 FlashFired	No
 FlashMode	Fill flash
-Flash	Off, Did not fire
 FlashpixVersion	0100
-FNumber	5.6
-FocalLength35efl	42.3 mm (35 mm equivalent: 167.0 mm)
 FocalLength	42.3 mm
+FocalLength35efl	42.3 mm (35 mm equivalent: 167.0 mm)
 FocalLengthIn35mmFormat	167 mm
 FocusArea	Wide Focus (normal)
 FocusDistance	2 m
 FocusMode	AF
 FolderName	Standard Form
-FOV	12.0 deg (0.42 m)
 GainControl	None
 HyperfocalDistance	42.01 m
+ISO	100
+ISOSetting	100
 ImageDescription	DCF 1.0
 ImageHeight	8
 ImageSize	8x8
@@ -62,11 +64,10 @@ InteropVersion	0100
 IntervalLength	0
 IntervalMode	Still Image
 IntervalNumber	2
-ISO	100
-ISOSetting	100
 LastFileNumber	32
 LightSource	Unknown
 LightValue	12.5
+MIMEType	image/jpeg
 MacroMode	Off
 Make	Minolta Co., Ltd.
 MakerNoteVersion	MLT0
@@ -74,7 +75,6 @@ MaxAperture	3.4
 MaxApertureValue	3.4
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 MinoltaDate	2002:06:01
 MinoltaImageSize	Full
 MinoltaModelID	DiMAGE 7i

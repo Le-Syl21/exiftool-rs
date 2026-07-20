@@ -3,11 +3,11 @@ AFAreas
 AFPoint
 AFSearch
 Aperture
+BWMode
 BitsPerSample
 BlackLevel2
 BlueBalance
 BodyFirmwareVersion
-BWMode
 CameraID
 CameraSettingsVersion
 CameraType
@@ -25,13 +25,13 @@ CoringFilter
 CreateDate
 CustomRendered
 CustomSaturation
+DOF
 DateTimeOriginal
 DigitalZoom
 DigitalZoomRatio
 Directory
 DistortionCorrection
 DistortionCorrection2
-DOF
 DriveMode
 EncodingProcess
 Enhancer
@@ -48,6 +48,8 @@ ExposureTime
 ExternalFlash
 ExternalFlashBounce
 ExternalFlashZoom
+FNumber
+FOV
 FileAccessDate
 FileInodeChangeDate
 FileModifyDate
@@ -61,7 +63,6 @@ Flash
 FlashExposureComp
 FlashMode
 FlashpixVersion
-FNumber
 FocalLength
 FocalLength35efl
 FocalPlaneDiagonal
@@ -72,10 +73,10 @@ FocusProcess
 FocusStepCount
 FocusStepInfinity
 FocusStepNear
-FOV
 GainControl
 Gradation
 HyperfocalDistance
+ISO
 ImageDescription
 ImageHeight
 ImageProcessingVersion
@@ -87,10 +88,10 @@ InternalFlash
 InternalSerialNumber
 InteropIndex
 InteropVersion
-ISO
 LensDistortionParams
 LightSource
 LightValue
+MIMEType
 Macro
 MacroMode
 Make
@@ -99,7 +100,6 @@ ManometerReading
 MaxApertureValue
 Megapixels
 MeteringMode
-MIMEType
 Model
 ModifiedSaturation
 ModifyDate

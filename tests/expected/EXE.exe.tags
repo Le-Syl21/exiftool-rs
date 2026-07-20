@@ -27,11 +27,11 @@ LanguageCode
 LegalCopyright
 LegalTrademarks
 LinkerVersion
-MachineType
 MIMEType
+MachineType
+OSVersion
 ObjectFileType
 OriginalFileName
-OSVersion
 PEType
 ProductName
 ProductVersion

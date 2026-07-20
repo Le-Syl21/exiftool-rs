@@ -1,6 +1,6 @@
 ACustomField
-Application
 AppVersion
+Application
 Category
 Characters
 CharactersWithSpaces
@@ -38,10 +38,10 @@ Language
 LastModifiedBy
 Lines
 LinksUpToDate
+MIMEType
 Mailstop
 Manager
 Matter
-MIMEType
 ModifyDate
 Office
 Owner
@@ -69,9 +69,9 @@ TotalEditTime
 Typist
 Words
 ZipBitFlag
+ZipCRC
 ZipCompressedSize
 ZipCompression
-ZipCRC
 ZipFileName
 ZipModifyDate
 ZipRequiredVersion

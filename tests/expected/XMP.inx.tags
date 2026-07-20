@@ -29,6 +29,7 @@ FontType
 FontVersion
 Format
 InstanceID
+MIMEType
 ManifestLinkForm
 ManifestPlacedResolutionUnit
 ManifestPlacedXResolution
@@ -36,7 +37,6 @@ ManifestPlacedYResolution
 ManifestReferenceDocumentID
 ManifestReferenceInstanceID
 MetadataDate
-MIMEType
 ModifyDate
 RenditionClass
 ThumbnailFormat

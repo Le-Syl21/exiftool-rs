@@ -21,36 +21,36 @@ ExifVersion	0210
 ExposureCompensation	0
 ExposureProgram	Program AE
 ExposureWarning	Good
-FileSource	Digital Camera
-FileTypeExtension	jpg
-FileType	JPEG
-FlashExposureComp	0
-Flash	Fired
-FlashpixVersion	0100
 FNumber	3.5
-FocalLength35efl	6.0 mm (35 mm equivalent: 39.6 mm)
+FOV	48.9 deg
+FileSource	Digital Camera
+FileType	JPEG
+FileTypeExtension	jpg
+Flash	Fired
+FlashExposureComp	0
+FlashpixVersion	0100
 FocalLength	6.0 mm
+FocalLength35efl	6.0 mm (35 mm equivalent: 39.6 mm)
 FocalPlaneResolutionUnit	cm
 FocalPlaneXResolution	3053
 FocalPlaneYResolution	3053
 FocusMode	Auto
 FocusWarning	Good
-FOV	48.9 deg
 FujiFlashMode	Red-eye reduction
 HyperfocalDistance	2.26 m
+ISO	100
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	100
 LightValue	9.6
+MIMEType	image/jpeg
 Macro	Off
 Make	FUJIFILM
 MaxApertureValue	3.5
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 Model	FinePix2400Zoom
 ModifyDate	2001:05:19 18:36:41
 Orientation	Horizontal (normal)

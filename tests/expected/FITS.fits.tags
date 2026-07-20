@@ -23,15 +23,15 @@ Mjdreff
 Mjdrefi
 Naxis
 Object
+ObsId
 ObservationDate
 ObservationDateEnd
 ObservationTime
 ObservationTimeEnd
 Observer
-ObsId
 Origin
-Radecsys
 RaObj
+Radecsys
 Tassign
 Tierabso
 Tierrela

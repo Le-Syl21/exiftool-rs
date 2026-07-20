@@ -3,16 +3,16 @@ CasioQuality	Economy
 ColorComponents	3
 DateTimeOriginal	1998:10:24 12:08:57
 EncodingProcess	Baseline DCT, Huffman coding
-FileTypeExtension	jpg
 FileType	JPEG
+FileTypeExtension	jpg
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
 JFIFVersion	1.02
+MIMEType	image/jpeg
 ManufactureCode	98000829
 ManufactureIndex	98082901
 Megapixels	0.000064
-MIMEType	image/jpeg
 ModelType	KX-778
 ResolutionUnit	None
 XResolution	1

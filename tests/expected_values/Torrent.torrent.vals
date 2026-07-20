@@ -1,7 +1,7 @@
+Announce	udp://tracker.bogus.com:80/announce
 AnnounceList1	udp://tracker.bogus.com:80/announce
 AnnounceList2	udp://tracker.bogus2.com:80/announce
 AnnounceList3	udp://tracker.bogus3.com:80/announce
-Announce	udp://tracker.bogus.com:80/announce
 Comment	Test BitTorrent description file
 CreateDate	2013:09:06 17:33:59+02:00
 Creator	uTorrent/1840
@@ -14,8 +14,8 @@ File3Length	2.4 MB
 File3Path	ExifTool-9.35.dmg
 File4Length	11 kB
 File4Path	docs/README
-FileTypeExtension	torrent
 FileType	Torrent
+FileTypeExtension	torrent
 MIMEType	application/x-bittorrent
 Name	Image-ExifTool-9.35
 PieceLength	1048576

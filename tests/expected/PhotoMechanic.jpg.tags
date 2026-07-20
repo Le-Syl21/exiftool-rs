@@ -12,9 +12,9 @@ ColorComponents
 CopyrightFlag
 CopyrightNotice
 Country
-CountryCode
 Country-PrimaryLocationCode
 Country-PrimaryLocationName
+CountryCode
 Creator
 Credit
 CropBottom
@@ -46,9 +46,9 @@ ImageSize
 ImageWidth
 Instructions
 Keywords
+MIMEType
 Marked
 Megapixels
-MIMEType
 ObjectName
 Prefs
 Province-State

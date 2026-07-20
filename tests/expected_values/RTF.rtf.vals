@@ -4,8 +4,8 @@ Company	 a company \with backslashes and leading space\
 Copyright	© 2010 Phil Harvey
 CustomNumber	123456
 CustomString	ABCDEF
-FileTypeExtension	rtf
 FileType	RTF
+FileTypeExtension	rtf
 Keywords	keyword1, keyword2
 MIMEType	text/rtf
 ModifyDate	2010:06:19 20:00:00

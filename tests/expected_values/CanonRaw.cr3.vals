@@ -53,13 +53,13 @@ ColorTempAsShot	3284
 ColorTempAuto	3284
 ColorTempCloudy	6000
 ColorTempDaylight	5200
-ColorTemperature	5200
 ColorTempFlash	6166
 ColorTempFluorescent	3687
 ColorTempKelvin	5200
 ColorTempMeasured	3284
 ColorTempShade	7000
 ColorTempTungsten	3200
+ColorTemperature	5200
 ColorTone	Normal
 CompatibleBrands	crx , isom
 ComponentsConfiguration	Y, Cb, Cr, -
@@ -74,16 +74,17 @@ Copyright
 CreateDate	2018:02:21 13:08:56+01:00
 CropBottomMargin	0
 CropLeftMargin	0
+CropRightMargin	0
+CropTopMargin	0
 CroppedImageHeight	4000
 CroppedImageLeft	0
 CroppedImageTop	0
 CroppedImageWidth	6000
-CropRightMargin	0
-CropTopMargin	0
 CurrentTime	0 s
 CustomControls	0 19 3 10 23 73 71 61 29 0 7 3 4
 CustomPictureStyleFileName	
 CustomRendered	Normal
+DOF	0.03 m (0.22 - 0.25 m)
 DateTimeOriginal	2018:02:21 12:08:56
 DaylightSavings	Off
 DigitalGain	0
@@ -91,7 +92,6 @@ DigitalLensOptimizer	Off
 DigitalLensOptimizerSetting	Off
 DigitalZoom	None
 DistortionCorrectionSetting	Off
-DOF	0.03 m (0.22 - 0.25 m)
 DriveMode	Single-frame Shooting
 DualPixelRaw	Off
 Duration	1.00 s
@@ -105,19 +105,20 @@ ExposureCompensation	0
 ExposureMode	Auto
 ExposureProgram	Aperture-priority AE
 ExposureTime	1/80
+FNumber	3.5
+FOV	75.3 deg
 FileType	CR3
 FileTypeExtension	cr3
 FirmwareVersion	1.0.0
 FisheyeFilter	Off
+Flash	No Flash
 FlashBits	E-TTL
 FlashExposureComp	0
 FlashExposureLock	Off
 FlashGuideNumber	0
 FlashModel	n/a
-Flash	No Flash
-FlashpixVersion	0100
 FlashType	Built-In Flash
-FNumber	3.5
+FlashpixVersion	0100
 FocalLength	15.0 mm
 FocalLength35efl	15.0 mm (35 mm equivalent: 23.3 mm)
 FocalPlaneResolutionUnit	inches
@@ -128,23 +129,22 @@ FocusDistanceLower	0.22 m
 FocusDistanceUpper	0.24 m
 FocusMode	One-shot AF (Live View)
 FocusRange	Not Known
-FOV	75.3 deg
 GPSVersionID	2.3.0.0
 GrainyBWFilter	Off
 GraphicsMode	srcCopy
-HandlerType	NRT Metadata
-HDREffect	Natural
 HDR	Off
+HDREffect	Natural
+HandlerType	NRT Metadata
 HighISONoiseReduction	Standard
 HighlightTonePriority	Off
 HyperfocalDistance	3.33 m
+ISO	12800
+ISOExpansion	Off
 ImageHeight	4000
 ImageSize	6000x4000
 ImageUniqueID	3b7f679f6bf5d5e1b60ca2b2f051a029
 ImageWidth	6000
 InternalSerialNumber	CG0156580
-ISO	12800
-ISOExpansion	Off
 JpgFromRaw	(Binary data 29 bytes, use -b option to extract)
 Lens	15.0 - 45.0 mm
 Lens35efl	15.0 - 45.0 mm (35 mm equivalent: 23.3 - 69.9 mm)
@@ -157,6 +157,7 @@ LightValue	2.9
 LinearityUpperMargin	10025
 LiveViewShooting	On
 LongExposureNoiseReduction	Off
+MIMEType	image/x-canon-cr3
 MacroMode	Normal
 MajorBrand	Canon Raw (.CRX)
 Make	Canon
@@ -164,8 +165,8 @@ ManualFlashOutput	n/a
 MatrixStructure	1 0 0 0 1 0 0 0 1
 MaxAperture	3.6
 MaxFocalLength	45 mm
-MeasuredEV2	1.625
 MeasuredEV	2.75
+MeasuredEV2	1.625
 MeasuredRGGB	1183 1024 1024 461
 MediaCreateDate	2018:02:21 13:08:56+01:00
 MediaDataOffset	11437
@@ -178,7 +179,6 @@ MediaTimeScale	1
 Megapixels	24.0
 MetaFormat	CTMD
 MeteringMode	Evaluative
-MIMEType	image/x-canon-cr3
 MinAperture	23
 MinFocalLength	15 mm
 MiniatureFilter	Off
@@ -214,6 +214,7 @@ PreviewDuration	0 s
 PreviewImage	(Binary data 26 bytes, use -b option to extract)
 PreviewTime	0 s
 Quality	RAW
+RFLensType	n/a
 Rating	0
 RawJpgSize	Large
 RecommendedExposureIndex	12800
@@ -222,8 +223,8 @@ RedBalance	1.078125
 RedEyeReduction	Off
 ResolutionUnit	inches
 RetractLensOnPowerOff	Enable
-RFLensType	n/a
 Rotation	0
+SRAWQuality	n/a
 SafetyShift	Disable
 SampleDuration	1.00 s
 SampleTime	0 s
@@ -257,7 +258,6 @@ SoftFocusFilter	Off
 SourceImageHeight	4056
 SourceImageWidth	6288
 SpecularWhiteLevel	14338
-SRAWQuality	n/a
 SubSecCreateDate	2018:02:21 12:08:56.21+00:00
 SubSecDateTimeOriginal	2018:02:21 12:08:56.21+00:00
 SubSecModifyDate	2018:02:21 12:08:56.21+00:00
@@ -284,27 +284,27 @@ TrackVolume	0.00%
 UnsharpMaskFineness	2
 UnsharpMaskThreshold	4
 UserComment	
+VRDOffset	0
 ValidAFPoints	1
 VideoFrameRate	1
 VignettingCorrVersion	32
-VRDOffset	0
-WatercolorFilter	Off
 WBBracketMode	Off
 WBBracketValueAB	0
 WBBracketValueGM	0
-WB_RGGBLevels                   : 1104 1024 1024 1789
-WB_RGGBLevelsAsShot             : 1104 1024 1024 1789
-WB_RGGBLevelsAuto               : 1104 1024 1024 1789
-WB_RGGBLevelsCloudy             : 1670 1024 1024 1229
-WB_RGGBLevelsDaylight           : 1549 1024 1024 1316
-WB_RGGBLevelsFlash              : 1697 1024 1024 1218
-WB_RGGBLevelsFluorescent        : 1303 1024 1024 1771
-WB_RGGBLevelsKelvin             : 1549 1024 1024 1316
-WB_RGGBLevelsMeasured           : 1104 1024 1024 1789
-WB_RGGBLevelsShade              : 1792 1024 1024 1147
-WB_RGGBLevelsTungsten           : 1104 1024 1024 1879
 WBShiftAB	0
 WBShiftGM	0
+WB_RGGBLevels	1104 1024 1024 1789
+WB_RGGBLevelsAsShot	1104 1024 1024 1789
+WB_RGGBLevelsAuto	1104 1024 1024 1789
+WB_RGGBLevelsCloudy	1670 1024 1024 1229
+WB_RGGBLevelsDaylight	1549 1024 1024 1316
+WB_RGGBLevelsFlash	1697 1024 1024 1218
+WB_RGGBLevelsFluorescent	1303 1024 1024 1771
+WB_RGGBLevelsKelvin	1549 1024 1024 1316
+WB_RGGBLevelsMeasured	1104 1024 1024 1789
+WB_RGGBLevelsShade	1792 1024 1024 1147
+WB_RGGBLevelsTungsten	1104 1024 1024 1879
+WatercolorFilter	Off
 WhiteBalance	Auto
 WhiteBalanceBlue	0
 WhiteBalanceRed	0

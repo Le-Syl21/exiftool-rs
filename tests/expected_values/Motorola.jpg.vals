@@ -21,28 +21,28 @@ ExposureCompensation	0
 ExposureMode	Auto
 ExposureProgram	Program AE
 ExposureTime	1/1961
-FileTypeExtension	jpg
+FNumber	2.0
 FileType	JPEG
+FileTypeExtension	jpg
 Flash	Off, Did not fire
 FlashpixVersion	0100
-FNumber	2.0
-FocalLength35efl	4.7 mm
 FocalLength	4.7 mm
+FocalLength35efl	4.7 mm
 GPSMapDatum	WGS-84
 GPSVersionID	2.2.0.0
+ISO	50
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	50
 LightValue	13.9
+MIMEType	image/jpeg
 Make	Motorola
 ManufactureDate	03Jun2015
 MaxApertureValue	2.0
 Megapixels	0.000064
 MeteringMode	Average
-MIMEType	image/jpeg
 Model	XT1575
 ModifyDate	2015:09:18 11:23:37
 ResolutionUnit	inches

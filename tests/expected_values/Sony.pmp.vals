@@ -4,8 +4,8 @@ Comment
 DateTimeOriginal	1998:09:01 20:19:57
 EncodingProcess	Baseline DCT, Huffman coding
 ExposureTime	1/100
-FileTypeExtension	pmp
 FileType	PMP
+FileTypeExtension	pmp
 Flash	No Flash
 ImageHeight	8
 ImageQuality	Standard
@@ -14,9 +14,9 @@ ImageWidth	8
 JpgFromRaw	(Binary data 251 bytes, use -b option to extract)
 JpgFromRawLength	251
 JpgFromRawStart	124
+MIMEType	image/x-sony-pmp
 Make	Sony
 Megapixels	0.000064
-MIMEType	image/x-sony-pmp
 Model	DSC-F1
 ModifyDate	1998:09:01 20:19:57
 Orientation	Horizontal (normal)

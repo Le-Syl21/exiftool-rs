@@ -28,6 +28,7 @@ EncodedPixelsDimensions
 ExifToolVersion
 ExposureCompensation
 ExposureTime
+FNumber
 FileAccessDate
 FileInodeChangeDate
 FileModifyDate
@@ -36,7 +37,6 @@ FilePermissions
 FileSize
 FileType
 FileTypeExtension
-FNumber
 FocalLength
 FocalLength35efl
 Format
@@ -46,13 +46,14 @@ Grouping
 HandlerClass
 HandlerType
 HandlerVendorID
+ISO
 ImageHeight
 ImageSize
 ImageWidth
 Information
-ISO
 LightValue
 Lyrics
+MIMEType
 Make
 MatrixStructure
 MediaCreateDate
@@ -64,7 +65,6 @@ MediaModifyDate
 MediaTimeScale
 Megapixels
 MetadataDate
-MIMEType
 ModifyDate
 MovieHeaderVersion
 NextTrackID

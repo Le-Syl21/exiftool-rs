@@ -15,9 +15,9 @@ FilePermissions
 FileSize
 FileType
 FileTypeExtension
+MIMEType
 Make
 MakerNotes
-MIMEType
 Model
 NumChannels
 RelatedImageFile

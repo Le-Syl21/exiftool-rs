@@ -85,14 +85,14 @@ PortraitRawLinear
 PortraitRawSaturation
 PortraitRawShadowPoint
 PortraitRawSharpness
+RGBCurveLimits
+RGBCurvePoints
 RawBrightnessAdj
 RawColorAdj
 RawCustomSaturation
 RawCustomTone
 RedCurveLimits
 RedCurvePoints
-RGBCurveLimits
-RGBCurvePoints
 Rotation
 SaturationAdj
 SharpnessAdj

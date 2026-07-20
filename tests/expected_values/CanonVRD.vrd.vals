@@ -32,8 +32,8 @@ FaithfulRawLinear	No
 FaithfulRawSaturation	2
 FaithfulRawShadowPoint	6
 FaithfulRawSharpness	7
-FileTypeExtension	vrd
 FileType	VRD
+FileTypeExtension	vrd
 GreenCurveLimits	248 7 240 4
 GreenCurvePoints	(7,4) (11,23) (16,34) (59,100) (104,147) (149,187) (196,219) (221,232) (248,240)
 IsCustomPictureStyle	No
@@ -77,14 +77,14 @@ PortraitRawLinear	No
 PortraitRawSaturation	2
 PortraitRawShadowPoint	6
 PortraitRawSharpness	7
+RGBCurveLimits	255 0 255 0
+RGBCurvePoints	(0,0) (255,255)
 RawBrightnessAdj	-0.83
 RawColorAdj	Shot Settings
 RawCustomSaturation	0
 RawCustomTone	0
 RedCurveLimits	255 0 255 0
 RedCurvePoints	(0,0) (5,16) (11,30) (58,101) (106,154) (154,198) (202,233) (228,246) (255,255)
-RGBCurveLimits	255 0 255 0
-RGBCurvePoints	(0,0) (255,255)
 Rotation	0
 SaturationAdj	119
 SharpnessAdj	0

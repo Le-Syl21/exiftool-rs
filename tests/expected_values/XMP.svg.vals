@@ -3,13 +3,13 @@ Copyright	Alisha Jucevic
 Creator	Irving Bird, Mary Lambert
 Date	2000:04:11
 DescDescrEmph	myfoo
-Description	$three $bar $thousands $dollars $from 1998 $through 2000
 DescSceneContains	$three $graph-bar
 DescSceneWhat	widget $growth
 DescSceneWhen	1998 $through 2000
 DescTitle	This is a financial report
-FileTypeExtension	svg
+Description	$three $bar $thousands $dollars $from 1998 $through 2000
 FileType	SVG
+FileTypeExtension	svg
 Format	image/svg+xml
 ImageHeight	3in
 ImageWidth	4in

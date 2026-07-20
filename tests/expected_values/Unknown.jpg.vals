@@ -20,27 +20,27 @@ ExposureCompensation	0
 ExposureMode	Auto
 ExposureProgram	Program AE
 ExposureTime	1/180
-FileTypeExtension	jpg
+FNumber	2.8
 FileType	JPEG
+FileTypeExtension	jpg
 Flash	Off, Did not fire
 FlashpixVersion	0100
-FNumber	2.8
-FocalLength35efl	57.0 mm
 FocalLength	57.0 mm
+FocalLength35efl	57.0 mm
 GainControl	Low gain up
+ISO	125
 ImageDescription	
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	125
 LightValue	10.1
+MIMEType	image/jpeg
 Make	Rollei
 MaxApertureValue	2.8
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 Model	dk4010
 ModifyDate	2005:08:10 06:24:38
 Orientation	Horizontal (normal)

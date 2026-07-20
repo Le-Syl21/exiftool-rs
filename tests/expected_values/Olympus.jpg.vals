@@ -1,6 +1,6 @@
 Aperture	2.0
-BitsPerSample	8
 BWMode	Off
+BitsPerSample	8
 CameraID	OLYMPUS DIGITAL CAMERA
 CameraType	C2000Z
 CircleOfConfusion	0.005 mm
@@ -21,33 +21,33 @@ ExifVersion	0210
 ExposureCompensation	0
 ExposureProgram	Program AE
 ExposureTime	1/30
+FNumber	2.0
+FOV	49.7 deg
 FileSource	Digital Camera
-FileTypeExtension	jpg
 FileType	JPEG
+FileTypeExtension	jpg
 Flash	Fired
 FlashpixVersion	0100
-FNumber	2.0
-FocalLength35efl	7.0 mm (35 mm equivalent: 38.8 mm)
 FocalLength	7.0 mm
+FocalLength35efl	7.0 mm (35 mm equivalent: 38.8 mm)
 FocalPlaneDiagonal	7.8 mm
-FOV	49.7 deg
 HyperfocalDistance	4.52 m
+ISO	100
 ImageDescription	OLYMPUS DIGITAL CAMERA
 ImageHeight	8
 ImageSize	8x8
 ImageWidth	8
 InteropIndex	R98 - DCF basic file (sRGB)
 InteropVersion	0100
-ISO	100
 LensDistortionParams	-215 -388 -418 -185 -310 -314
 LightSource	Unknown
 LightValue	6.9
+MIMEType	image/jpeg
 Macro	Off
 Make	OLYMPUS OPTICAL CO.,LTD
 MaxApertureValue	2.8
 Megapixels	0.000064
 MeteringMode	Multi-segment
-MIMEType	image/jpeg
 Model	C2000Z
 ModifyDate	1999:12:06 16:38:40
 Orientation	Horizontal (normal)
