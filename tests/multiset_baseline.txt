@@ -212,38 +212,6 @@ CaptureOne.eip	ee	missing	0	NRAmount	25
 CaptureOne.eip	ee	missing	0	Rotation	0
 CaptureOne.eip	ee	missing	0	UUID	133ACDE8-EF48-4978-9AED-5C6B4DDE9CBF
 CaptureOne.eip	ee	missing	0	WhiteBalance	Unknown (5)
-CaptureOne.eip	ee	missing	0	ZipBitFlag	0
-CaptureOne.eip	ee	missing	1	ZipBitFlag	0
-CaptureOne.eip	ee	missing	2	ZipBitFlag	0
-CaptureOne.eip	ee	missing	3	ZipBitFlag	0
-CaptureOne.eip	ee	missing	0	ZipCRC	0x1ad000e6
-CaptureOne.eip	ee	missing	0	ZipCRC	0xb7f04729
-CaptureOne.eip	ee	missing	0	ZipCRC	0xc3481f07
-CaptureOne.eip	ee	missing	0	ZipCRC	0xff76e911
-CaptureOne.eip	ee	missing	0	ZipCompressedSize	130
-CaptureOne.eip	ee	missing	0	ZipCompressedSize	244
-CaptureOne.eip	ee	missing	0	ZipCompressedSize	3280
-CaptureOne.eip	ee	missing	0	ZipCompressedSize	460
-CaptureOne.eip	ee	missing	0	ZipCompression	None
-CaptureOne.eip	ee	missing	1	ZipCompression	None
-CaptureOne.eip	ee	missing	2	ZipCompression	None
-CaptureOne.eip	ee	missing	3	ZipCompression	None
-CaptureOne.eip	ee	missing	0	ZipFileName	CaptureOne/Settings45/0.IIQ.cos
-CaptureOne.eip	ee	missing	0	ZipFileName	CaptureOne/Settings50/0.IIQ.cos
-CaptureOne.eip	ee	missing	0	ZipFileName	manifest.xml
-CaptureOne.eip	ee	missing	0	ZipFileName	manifest50.xml
-CaptureOne.eip	ee	missing	0	ZipModifyDate	2009:04:03 10:14:36
-CaptureOne.eip	ee	missing	0	ZipModifyDate	2009:04:03 10:14:44
-CaptureOne.eip	ee	missing	0	ZipModifyDate	2009:11:03 19:14:12
-CaptureOne.eip	ee	missing	0	ZipModifyDate	2009:11:03 19:55:32
-CaptureOne.eip	ee	missing	0	ZipRequiredVersion	10
-CaptureOne.eip	ee	missing	1	ZipRequiredVersion	10
-CaptureOne.eip	ee	missing	2	ZipRequiredVersion	10
-CaptureOne.eip	ee	missing	3	ZipRequiredVersion	10
-CaptureOne.eip	ee	missing	0	ZipUncompressedSize	130
-CaptureOne.eip	ee	missing	0	ZipUncompressedSize	244
-CaptureOne.eip	ee	missing	0	ZipUncompressedSize	3280
-CaptureOne.eip	ee	missing	0	ZipUncompressedSize	460
 Casio2.jpg	ee	missing	0	Contrast	0
 Casio2.jpg	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
 Casio2.jpg	ee	missing	0	Saturation	0
@@ -1048,27 +1016,3 @@ XMP5.xmp	ee	extra	0	BTestTagField1-en-US	huh?, groovy
 XMP5.xmp	ee	missing	0	BTestTagField1-en-US	groovy
 XMP5.xmp	ee	missing	0	BTestTagField1-en-US	huh?
 XMP6.xmp	ee	missing	0	Test	tabby
-iWork.numbers	ee	missing	0	ZipBitFlag	0
-iWork.numbers	ee	missing	1	ZipBitFlag	0
-iWork.numbers	ee	missing	2	ZipBitFlag	0
-iWork.numbers	ee	missing	0	ZipCRC	0x02b8a153
-iWork.numbers	ee	missing	0	ZipCRC	0xb6fc7f5e
-iWork.numbers	ee	missing	0	ZipCRC	0xe267fa27
-iWork.numbers	ee	missing	0	ZipCompressedSize	238
-iWork.numbers	ee	missing	0	ZipCompressedSize	25
-iWork.numbers	ee	missing	0	ZipCompressedSize	451
-iWork.numbers	ee	missing	0	ZipCompression	Deflated
-iWork.numbers	ee	missing	1	ZipCompression	Deflated
-iWork.numbers	ee	missing	0	ZipCompression	None
-iWork.numbers	ee	missing	0	ZipFileName	QuickLook/Preview.pdf
-iWork.numbers	ee	missing	0	ZipFileName	buildVersionHistory.plist
-iWork.numbers	ee	missing	0	ZipFileName	index.xml
-iWork.numbers	ee	missing	0	ZipModifyDate	2009:11:11 11:57:26
-iWork.numbers	ee	missing	0	ZipModifyDate	2009:11:11 14:35:40
-iWork.numbers	ee	missing	0	ZipModifyDate	2009:11:11 14:37:36
-iWork.numbers	ee	missing	0	ZipRequiredVersion	10
-iWork.numbers	ee	missing	0	ZipRequiredVersion	20
-iWork.numbers	ee	missing	1	ZipRequiredVersion	20
-iWork.numbers	ee	missing	0	ZipUncompressedSize	1026
-iWork.numbers	ee	missing	0	ZipUncompressedSize	25
-iWork.numbers	ee	missing	0	ZipUncompressedSize	643

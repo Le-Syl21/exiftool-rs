@@ -10,13 +10,17 @@ use crate::value::Value;
 
 /// Read Apple iWork ZIP-based document (Numbers, Pages, Keynote).
 /// Extracts metadata from index.xml and PreviewImage from QuickLook/Thumbnail.jpg.
-pub fn read_iwork(data: &[u8]) -> Result<Vec<Tag>> {
+/// Reads an iWork package (Pages/Numbers/Keynote). With `extract_embedded` on,
+/// ExifTool describes every ZIP member, each in its own family-3 document
+/// (`Doc1`, `Doc2`, …); without it, only the first member is described.
+pub fn read_iwork(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     if data.len() < 30 || !data.starts_with(&[0x50, 0x4B, 0x03, 0x04]) {
         return Err(Error::InvalidData("not a ZIP file".into()));
     }
 
     let mut tags = Vec::new();
     let mut first_file = true;
+    let mut member_number = 0usize;
 
     // First pass: collect ZIP directory entries (filename → data range)
     let mut pos = 0usize;
@@ -55,8 +59,17 @@ pub fn read_iwork(data: &[u8]) -> Result<Vec<Tag>> {
             crate::encoding::decode_utf8_or_latin1(&data[name_start..name_start + name_len])
                 .to_string();
 
-        if first_file {
+        member_number += 1;
+        if first_file || extract_embedded > 0 {
             first_file = false;
+            let doc = member_number;
+            let mk = |name: &str, description: &str, value: Value| -> Tag {
+                let mut t = mk(name, description, value);
+                if extract_embedded > 0 {
+                    t.group.family3 = format!("Doc{doc}");
+                }
+                t
+            };
             tags.push(mk(
                 "ZipRequiredVersion",
                 "Required Version",
@@ -418,7 +431,7 @@ pub fn read_zip(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
             }
         }
         if has_index_xml && !has_content_types {
-            return read_iwork(data);
+            return read_iwork(data, extract_embedded);
         }
     }
 

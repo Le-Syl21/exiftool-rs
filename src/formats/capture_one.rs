@@ -369,7 +369,10 @@ fn extract_xml_text(xml: &str, tag: &str) -> Option<String> {
 }
 
 /// Read a CaptureOne EIP file and return all tags.
-pub fn read_eip(data: &[u8]) -> Result<Vec<Tag>> {
+/// Reads a Capture One EIP package. With `extract_embedded` on, ExifTool's
+/// `ProcessEIP` describes every ZIP member, each in its own family-3 document
+/// (`Doc1`, `Doc2`, …); without it, only the first member is described.
+pub fn read_eip(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 
     // Parse the ZIP central directory
@@ -378,46 +381,58 @@ pub fn read_eip(data: &[u8]) -> Result<Vec<Tag>> {
         return Ok(tags);
     }
 
-    // Emit ZIP tags for the FIRST member (matching Perl ExifTool HandleMember behavior)
-    // Perl's ProcessEIP calls HandleMember for every member but we just need the first one.
-    // Actually Perl emits ZIP tags for each member with DOC_NUM, but the primary output
-    // (without -G3) shows only the first set. We emit ZIP tags for the first entry.
+    // Describe the archive members. ExifTool's HandleMember runs for every
+    // member, but each set beyond the first lands in its own family-3 document,
+    // which the default extraction does not report — only -ee does.
     {
-        let first = &entries[0];
-        let bit_flag_str = if first.bit_flag != 0 {
-            format!("0x{:04x}", first.bit_flag)
+        let described = if extract_embedded > 0 {
+            entries.len()
         } else {
-            first.bit_flag.to_string()
+            1
         };
-        tags.push(zip_tag(
-            "ZipRequiredVersion",
-            Value::U16(first.required_version),
-        ));
-        tags.push(zip_tag("ZipBitFlag", Value::String(bit_flag_str)));
-        tags.push(zip_tag(
-            "ZipCompression",
-            Value::String(compression_name(first.compression).to_string()),
-        ));
-        tags.push(zip_tag(
-            "ZipModifyDate",
-            Value::String(format_dos_datetime(first.mod_date, first.mod_time)),
-        ));
-        tags.push(zip_tag(
-            "ZipCRC",
-            Value::String(format!("0x{:08x}", first.crc)),
-        ));
-        tags.push(zip_tag(
-            "ZipCompressedSize",
-            Value::U32(first.compressed_size),
-        ));
-        tags.push(zip_tag(
-            "ZipUncompressedSize",
-            Value::U32(first.uncompressed_size),
-        ));
-        tags.push(zip_tag(
-            "ZipFileName",
-            Value::String(first.filename.clone()),
-        ));
+        for (doc, member) in (1usize..).zip(entries.iter().take(described)) {
+            let bit_flag_str = if member.bit_flag != 0 {
+                format!("0x{:04x}", member.bit_flag)
+            } else {
+                member.bit_flag.to_string()
+            };
+            let zip_tag = |name: &str, value: Value| -> Tag {
+                let mut t = zip_tag(name, value);
+                if extract_embedded > 0 {
+                    t.group.family3 = format!("Doc{doc}");
+                }
+                t
+            };
+            tags.push(zip_tag(
+                "ZipRequiredVersion",
+                Value::U16(member.required_version),
+            ));
+            tags.push(zip_tag("ZipBitFlag", Value::String(bit_flag_str)));
+            tags.push(zip_tag(
+                "ZipCompression",
+                Value::String(compression_name(member.compression).to_string()),
+            ));
+            tags.push(zip_tag(
+                "ZipModifyDate",
+                Value::String(format_dos_datetime(member.mod_date, member.mod_time)),
+            ));
+            tags.push(zip_tag(
+                "ZipCRC",
+                Value::String(format!("0x{:08x}", member.crc)),
+            ));
+            tags.push(zip_tag(
+                "ZipCompressedSize",
+                Value::U32(member.compressed_size),
+            ));
+            tags.push(zip_tag(
+                "ZipUncompressedSize",
+                Value::U32(member.uncompressed_size),
+            ));
+            tags.push(zip_tag(
+                "ZipFileName",
+                Value::String(member.filename.clone()),
+            ));
+        }
     }
 
     // Find manifest files (manifest.xml, manifest50.xml, etc.)

@@ -2233,7 +2233,7 @@ impl ExifTool {
                     formats::postscript::read_postscript(data)
                 }
             }
-            FileType::Eip => formats::capture_one::read_eip(data),
+            FileType::Eip => formats::capture_one::read_eip(data, self.options.extract_embedded),
             FileType::Zip
             | FileType::Docx
             | FileType::Xlsx
