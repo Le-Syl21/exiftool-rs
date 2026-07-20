@@ -3745,16 +3745,16 @@ fn parse_mpf_inner(seg_data: &[u8], jpeg_data: &[u8]) -> Option<Vec<crate::tag::
     }
     let ifd0_off = ru32(mpf, 4)? as usize;
 
-    // Use family1 = "MPF" so that our `-G` output matches Perl's `-G` (family0).
-    // Perl's family0 and family1 for MPF IFD tags are "MPF" and "MPF0" respectively.
-    // Our `-G` flag displays family1, so we set family1 = "MPF" here.
+    // MPF.pm's Main table is `GROUPS => { 0 => 'MPF', 1 => 'MPF0' }`: the MPF
+    // IFD itself is family 1 MPF0, while each MP entry gets its own MPImage#
+    // group below. (A bare `-G` prints family 0, which is MPF either way.)
     let mk_ifd_tag = |name: &str, raw: crate::value::Value, print: String| crate::tag::Tag {
         id: crate::tag::TagId::Text(name.into()),
         name: name.into(),
         description: name.into(),
         group: crate::tag::TagGroup {
             family0: "MPF".into(),
-            family1: "MPF".into(),
+            family1: "MPF0".into(),
             family2: "Image".into(),
             family3: "Main".into(),
         },
@@ -3835,14 +3835,17 @@ fn parse_mpf_inner(seg_data: &[u8], jpeg_data: &[u8]) -> Option<Vec<crate::tag::
         let fmt_raw = (attr >> 24) & 0x07; // bits 26..24
         let type_raw = attr & 0x00FF_FFFF; // bits 23..0
 
-        // Use family1 = "MPF" so that our `-G` output matches Perl's `-G` (family0 = "MPF").
+        // MPF.pm's MPImage table is `GROUPS => { 0 => 'MPF', 1 => 'MPImage' }`,
+        // and ProcessMPImageList numbers the group after the entry: the tags of
+        // the second MP entry are reported under MPImage2.
+        let entry_group = format!("MPImage{}", idx + 1);
         let mk = |name: &str, raw: crate::value::Value, print: String| crate::tag::Tag {
             id: crate::tag::TagId::Text(name.into()),
             name: name.into(),
             description: name.into(),
             group: crate::tag::TagGroup {
                 family0: "MPF".into(),
-                family1: "MPF".into(),
+                family1: entry_group.clone(),
                 family2: "Image".into(),
                 family3: "Main".into(),
             },
@@ -3956,7 +3959,7 @@ fn parse_mpf_inner(seg_data: &[u8], jpeg_data: &[u8]) -> Option<Vec<crate::tag::
                 description: "Preview Image".into(),
                 group: crate::tag::TagGroup {
                     family0: "MPF".into(),
-                    family1: "MPF".into(),
+                    family1: entry_group.clone(),
                     family2: "Image".into(),
                     family3: "Main".into(),
                 },
