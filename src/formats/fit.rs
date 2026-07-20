@@ -1,19 +1,19 @@
-//! Lecteur du format Garmin FIT (Flexible and Interoperable Data Transfer).
+//! Garmin FIT (Flexible and Interoperable Data Transfer) reader.
 //!
-//! Porté de `Image::ExifTool::Garmin::ProcessFIT` (ExifTool 13.59). Les tables
-//! de tags vivent dans [`super::fit_tables`].
+//! Ported from `Image::ExifTool::Garmin::ProcessFIT` (ExifTool 13.59). The tag
+//! tables live in [`super::fit_tables`].
 //!
-//! Comme ExifTool sans l'option `ExtractEmbedded`, seul le PREMIER message de
-//! chaque type global est extrait, et un avertissement `[minor]` est émis.
+//! Like ExifTool without the `ExtractEmbedded` option, only the FIRST message of
+//! each global type is extracted, and a `[minor]` warning is issued.
 
 use super::fit_tables as tbl;
 use crate::error::{Error, Result};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::{format_g15, Value};
 
-// ────────────────────────────── API des tables ──────────────────────────────
+// ───────────────────────────────── table API ────────────────────────────────
 
-/// Une entrée de table de champ FIT : numéro de champ, nom, ValueConv, PrintConv.
+/// A FIT field table entry: field number, name, ValueConv, PrintConv.
 pub(crate) struct Field {
     pub num: u16,
     pub name: &'static str,
@@ -21,13 +21,13 @@ pub(crate) struct Field {
     pub print: Print,
 }
 
-/// Conversion de valeur (`ValueConv` côté Perl).
+/// Value conversion (`ValueConv` on the Perl side).
 pub(crate) enum Conv {
-    /// Valeur brute.
+    /// Raw value.
     None,
-    /// Secondes depuis le 31/12/1989 00:00:00 UTC → epoch Unix.
+    /// Seconds since 1989-12-31 00:00:00 UTC → Unix epoch.
     FitTime,
-    /// Semicercles → degrés (`$val * 180 / 0x80000000`).
+    /// Semicircles → degrees (`$val * 180 / 0x80000000`).
     Semicircles,
     /// `$val / d`
     Div(f64),
@@ -35,27 +35,27 @@ pub(crate) enum Conv {
     Mul(f64),
     /// `$val / d - s`
     DivSub(f64, f64),
-    /// Divise chaque élément d'un tableau par `d`.
+    /// Divides each element of an array by `d`.
     DivEach(f64),
 }
 
-/// Conversion d'affichage (`PrintConv` côté Perl).
+/// Display conversion (`PrintConv` on the Perl side).
 pub(crate) enum Print {
-    /// Aucune.
+    /// None.
     None,
-    /// Table de correspondance valeur → libellé.
+    /// Value → label lookup table.
     Enum(&'static [(i64, &'static str)]),
-    /// Date/heure locale à partir d'un epoch Unix.
+    /// Local date/time built from a Unix epoch.
     DateTime,
-    /// Degrés/minutes/secondes ; `true` pour une latitude, `false` pour une longitude.
+    /// Degrees/minutes/seconds; `true` for a latitude, `false` for a longitude.
     Dms(bool),
-    /// Ajoute une unité au texte de la valeur.
+    /// Appends a unit to the value text.
     Unit(&'static str),
 }
 
-// ─────────────────────────────── types de base ──────────────────────────────
+// ──────────────────────────────── base types ────────────────────────────────
 
-/// Famille de type de base FIT, telle que lue dans un message de définition.
+/// FIT base type family, as read from a definition message.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Kind {
     U8,
@@ -83,19 +83,19 @@ impl Kind {
     }
 }
 
-/// Sentinelle « valeur invalide » d'un type de base FIT.
+/// "Invalid value" sentinel of a FIT base type.
 enum Invalid {
-    /// La valeur entière indiquée marque l'absence de donnée.
+    /// The given integer value marks the absence of data.
     Int(i64),
     /// NaN (float32/float64).
     Nan,
-    /// Chaîne vide.
+    /// Empty string.
     Empty,
-    /// Aucune sentinelle exploitable (type `byte`, comparé à du binaire côté Perl).
+    /// No usable sentinel (`byte` type, compared against binary on the Perl side).
     Never,
 }
 
-/// Table `%baseType` de Garmin.pm : type → (famille, sentinelle invalide).
+/// Garmin.pm's `%baseType` table: type → (family, invalid sentinel).
 fn base_type(t: u8) -> Option<(Kind, Invalid)> {
     Some(match t {
         0x00 => (Kind::U8, Invalid::Int(0xff)),         // enum
@@ -119,7 +119,7 @@ fn base_type(t: u8) -> Option<(Kind, Invalid)> {
     })
 }
 
-/// Un élément lu : entier ou flottant, pour préserver l'affichage entier exact.
+/// One decoded element: integer or float, to preserve exact integer display.
 #[derive(Clone, Copy)]
 enum Num {
     I(i64),
@@ -163,7 +163,7 @@ fn read_num(kind: Kind, buf: &[u8], be: bool) -> Num {
         Kind::U32 => Num::I(int!(u32, 4)),
         Kind::I32 => Num::I(int!(i32, 4)),
         Kind::I64 => Num::I(int!(i64, 8)),
-        // uint64 : conservé en i64 (bit-à-bit) comme le fait la sentinelle -1
+        // uint64: kept as i64 (bit-for-bit), matching the -1 sentinel
         Kind::U64 => Num::I(int!(u64, 8)),
         Kind::F32 => {
             let mut a = [0u8; 4];
@@ -186,9 +186,9 @@ fn read_num(kind: Kind, buf: &[u8], be: bool) -> Num {
     }
 }
 
-// ────────────────────────────────── état ────────────────────────────────────
+// ───────────────────────────────── state ────────────────────────────────────
 
-/// Définition d'un champ à l'intérieur d'un message.
+/// Definition of a field inside a message.
 struct FieldDef {
     num: u16,
     size: usize,
@@ -196,16 +196,16 @@ struct FieldDef {
     dev: bool,
 }
 
-/// Définition d'un message local (renouvelée à chaque message de définition).
+/// Definition of a local message (refreshed by every definition message).
 struct MsgDef {
     big_endian: bool,
     global_num: u16,
     name: &'static str,
     size: usize,
     fields: Vec<FieldDef>,
-    /// Emplacement du champ 253 (TimeStamp) : (taille, type, offset).
+    /// Location of field 253 (TimeStamp): (size, type, offset).
     ts_field: Option<(usize, u8, usize)>,
-    /// Horodatage issu d'un en-tête compressé.
+    /// Timestamp coming from a compressed header.
     ts_value: Option<i64>,
 }
 
@@ -216,8 +216,8 @@ fn message_name(num: u16) -> Option<&'static str> {
         .map(|(_, s)| *s)
 }
 
-/// Table de champs extraite par défaut pour un message donné (les autres sont
-/// marqués `Unknown => 1` côté Perl et ne produisent aucun tag).
+/// Field table extracted by default for a given message (the others are marked
+/// `Unknown => 1` on the Perl side and produce no tags).
 fn fields_for(name: &str) -> Option<&'static [Field]> {
     match name {
         "Session" => Some(tbl::SESSION_FIELDS),
@@ -235,9 +235,9 @@ fn lookup_field(table: &'static [Field], num: u16) -> Option<&'static Field> {
         .or_else(|| tbl::COMMON_FIELDS.iter().find(|f| f.num == num))
 }
 
-// ──────────────────────────── conversions/affichage ─────────────────────────
+// ───────────────────────────── conversions/display ──────────────────────────
 
-/// Décalage entre l'epoch FIT (31/12/1989 00:00:00 UTC) et l'epoch Unix.
+/// Offset between the FIT epoch (1989-12-31 00:00:00 UTC) and the Unix epoch.
 const FIT_EPOCH_OFFSET: i64 = 631_065_600;
 
 fn apply_conv(conv: &Conv, vals: &[Num]) -> Vec<Num> {
@@ -337,16 +337,16 @@ fn mk_tag(group1: &str, name: &str, raw: Value, print: String) -> Tag {
     }
 }
 
-// ─────────────────────────────────── parseur ────────────────────────────────
+// ──────────────────────────────────- parser ─────────────────────────────────
 
-/// Lit un fichier Garmin FIT et renvoie ses tags.
+/// Reads a Garmin FIT file and returns its tags.
 pub fn read_fit(data: &[u8]) -> Result<Vec<Tag>> {
     read_fit_with_ee(data, 0)
 }
 
-/// Idem, avec l'option ExtractEmbedded : sans elle, ExifTool ne rend que le
-/// premier message de chaque type ; avec elle, il rend toute la série temporelle
-/// (un jeu de tags par message) et n'émet plus l'avertissement.
+/// Same, with the ExtractEmbedded option: without it ExifTool reports only the
+/// first message of each type; with it, it reports the whole time series (one set
+/// of tags per message) and no longer issues the warning.
 pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     let ee = extract_embedded > 0;
     if data.len() < 12 || &data[8..12] != b".FIT" {
@@ -359,7 +359,7 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
 
     let mut tags = Vec::new();
 
-    // ProtocolVersion, puis l'avertissement d'ExifTool (`$ee or $et->Warn(...)`).
+    // ProtocolVersion, then ExifTool's warning (`$ee or $et->Warn(...)`).
     tags.push(Tag {
         id: TagId::Text("ProtocolVersion".into()),
         name: "ProtocolVersion".into(),
@@ -390,7 +390,7 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
         });
     }
 
-    // 16 définitions de messages locaux au plus (4 bits d'identifiant).
+    // At most 16 local message definitions (4-bit identifier).
     let mut defs: Vec<Option<MsgDef>> = (0..16).map(|_| None).collect();
     let mut done: Vec<u16> = Vec::new();
     let mut timestamp: i64 = 0;
@@ -402,8 +402,8 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
         let local: usize;
 
         if flags & 0x80 != 0 {
-            // En-tête compressé : l'horodatage courant est mis à jour par un
-            // offset de 5 bits avec rebouclage (cf. commentaire de Garmin.pm).
+            // Compressed header: the current timestamp is updated by a 5-bit
+            // offset with wrap-around (see the comment in Garmin.pm).
             local = ((flags >> 5) & 0x03) as usize;
             let offset = (flags & 0x1f) as i64;
             if offset != 0 {
@@ -419,7 +419,7 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
         } else {
             local = (flags & 0x0f) as usize;
             if flags & 0x40 != 0 {
-                // Message de définition.
+                // Definition message.
                 if pos + 5 > end {
                     break;
                 }
@@ -460,7 +460,7 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                 pos += n_fields * 3;
 
                 if flags & 0x20 != 0 {
-                    // Définitions de champs développeur.
+                    // Developer field definitions.
                     if pos >= end {
                         break;
                     }
@@ -497,14 +497,14 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
             }
         }
 
-        // Message de données.
+        // Data message.
         let Some(def) = defs[local].as_ref() else {
             break;
         };
         if pos + def.size > end {
             break;
         }
-        // Sans ExtractEmbedded, un seul message par type global.
+        // Without ExtractEmbedded, only one message per global type.
         if !ee && done.contains(&def.global_num) {
             pos += def.size;
             continue;
@@ -514,7 +514,7 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
         pos += def.size;
         let be = def.big_endian;
 
-        // Horodatage courant (champ 253 ou en-tête compressé).
+        // Current timestamp (field 253 or compressed header).
         let ts_val = match (def.ts_field, def.ts_value) {
             (Some((size, base, off)), _) => base_type(base).and_then(|(kind, _)| {
                 if off + kind.size() <= body.len() && size >= kind.size() {
@@ -533,8 +533,8 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
         if let Some((val, from_field)) = ts_val {
             if timestamp != val {
                 timestamp = val;
-                // Perl n'émet TimeStamp ici que si le message n'a pas de table
-                // de champs, ou si l'horodatage vient d'un en-tête compressé.
+                // Perl only emits TimeStamp here if the message has no field
+                // table, or if the timestamp comes from a compressed header.
                 if !(extract && from_field) {
                     let secs = val + FIT_EPOCH_OFFSET;
                     tags.push(mk_tag(
@@ -556,8 +556,8 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
             let start = off;
             off += fd.size;
             if fd.dev {
-                // Les champs développeur nécessitent DeveloperDataID/FieldDescription ;
-                // non portés (aucun tag par défaut dans le corpus de référence).
+                // Developer fields need DeveloperDataID/FieldDescription; not
+                // ported (no default tag in the reference corpus).
                 continue;
             }
             let Some((kind, invalid)) = base_type(fd.base) else {
@@ -571,7 +571,7 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
             }
             let chunk = &body[start..start + fd.size];
 
-            // Type `byte` : donnée binaire opaque.
+            // `byte` type: opaque binary data.
             if kind == Kind::Bin {
                 let text = format!("(Binary data {} bytes)", chunk.len());
                 tags.push(mk_tag(
@@ -583,7 +583,7 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                 continue;
             }
 
-            // Type `string` : octets jusqu'au premier NUL.
+            // `string` type: bytes up to the first NUL.
             if kind == Kind::Str {
                 let cut = chunk.iter().position(|&b| b == 0).unwrap_or(chunk.len());
                 let s = crate::encoding::decode_utf8_or_latin1(&chunk[..cut]).to_string();
@@ -605,8 +605,8 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
             if vals.is_empty() {
                 continue;
             }
-            // Perl compare la valeur *entière* (éléments joints) à la sentinelle,
-            // donc seul un scalaire peut être invalidé.
+            // Perl compares the *whole* value (joined elements) against the
+            // sentinel, so only a scalar can ever be invalidated.
             if vals.len() == 1 {
                 let skip = match (&invalid, vals[0]) {
                     (Invalid::Int(s), Num::I(i)) => i == *s,
@@ -626,14 +626,14 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
         }
     }
 
-    // Avec ExtractEmbedded, ExifTool rend chaque occurrence : pas de fusion.
+    // With ExtractEmbedded, ExifTool reports every occurrence: no merging.
     if ee {
         return Ok(tags);
     }
 
-    // ExifTool conserve la DERNIÈRE occurrence d'un même nom de tag ; le moteur
-    // de ce crate garde la première. On dédoublonne donc ici en gardant la
-    // dernière valeur rencontrée, à la position de la première occurrence.
+    // ExifTool keeps the LAST occurrence of a given tag name, while this crate's
+    // engine keeps the first. So deduplicate here, keeping the last value seen at
+    // the position of the first occurrence.
     let mut seen: Vec<String> = Vec::new();
     let mut out: Vec<Option<Tag>> = Vec::new();
     for tag in tags {

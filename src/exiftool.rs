@@ -1748,11 +1748,11 @@ impl ExifTool {
                 // Priority-0 tags (e.g. QuickTime tkhd tags). Default-priority tags in
                 // these same groups (priority >= 1, e.g. mdhd/hdlr) still follow the
                 // normal last-wins rule, so they are NOT blanket-excluded here.
-                // Avec ExtractEmbedded, ExifTool place chaque message répété d'un
-                // fichier FIT dans son propre document (famille 3 : Doc1, Doc2…) et
-                // ne déduplique qu'à l'intérieur d'un document. Notre modèle de
-                // groupes n'a pas de famille 3 : on exempte donc ces tags de la
-                // règle « le dernier gagne », qui sinon n'en garderait qu'un seul.
+                // With ExtractEmbedded, ExifTool puts each repeated message of a
+                // FIT file in its own document (family 3: Doc1, Doc2…) and only
+                // deduplicates within a document. Our group model has no family 3,
+                // so exempt these tags from the "last one wins" rule, which would
+                // otherwise keep a single one.
                 let fit_embedded = file_type == FileType::Fit && self.options.extract_embedded > 0;
                 fn is_first_wins_group(g1: &str) -> bool {
                     g1 == "QuickTime"

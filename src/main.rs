@@ -234,9 +234,9 @@ fn main() {
             "-t" | "-tab" => tab_output = true,
             "-T" => tab_output = true,
             "-sort" => sort_tags = true,
-            // -listf est traité plus haut : l'amont y liste les extensions
-            // supportées, pas un résumé. Les autres -list* gardent le résumé
-            // générique faute d'équivalent implémenté.
+            // -listf is handled above: upstream lists the supported extensions
+            // there, not a summary. The other -list* options keep the generic
+            // summary for lack of an implemented equivalent.
             "-list" | "-listx" | "-listw" | "-listr" | "-listd" | "-listg1" | "-listgeo"
             | "-listwf" => list_tags = true,
             "-args" | "-argFormat" => {
@@ -1994,10 +1994,10 @@ fn escape_xml(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
-/// Liste les extensions supportées, au même format que `exiftool -listf`.
+/// Lists the supported extensions, in the same format as `exiftool -listf`.
 ///
-/// Sert la parité CLI, et alimente le job `upstream-drift` qui compare cette
-/// sortie à celle de l'amont.
+/// Serves CLI parity, and feeds the `upstream-drift` job that compares this
+/// output against upstream's.
 fn print_supported_extensions() {
     let mut exts: Vec<String> = exiftool_rs::FileType::all()
         .iter()

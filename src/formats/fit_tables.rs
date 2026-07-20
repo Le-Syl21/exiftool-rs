@@ -1,10 +1,10 @@
-//! Tables de tags pour le format Garmin FIT.
+//! Tag tables for the Garmin FIT format.
 //!
-//! Ce fichier est généré depuis `Image::ExifTool::Garmin` (ExifTool 13.59) :
-//! seules les tables réellement extraites par défaut sont portées, à savoir les
-//! messages non marqués `Unknown` en amont (Session, Lap, Record, GPS) plus la
-//! table `Common` partagée par tous les messages. Les autres messages sont
-//! `Unknown => 1` côté Perl et ne produisent donc aucun tag sans l'option -u.
+//! This file is generated from `Image::ExifTool::Garmin` (ExifTool 13.59): only
+//! the tables actually extracted by default are ported, namely the messages not
+//! marked `Unknown` upstream (Session, Lap, Record, GPS) plus the `Common` table
+//! shared by every message. The other messages are `Unknown => 1` on the Perl
+//! side and therefore produce no tags without the -u option.
 
 use super::fit::{Conv, Field, Print};
 
@@ -352,7 +352,7 @@ pub(crate) static STROKETYPE: [(i64, &str); 6] = [
 ];
 
 // ==== MESSAGES ====
-/// Numéro de message FIT -> nom (groupe famille 1), porté de Garmin::FIT.
+/// FIT message number -> name (family 1 group), ported from Garmin::FIT.
 pub(crate) static MESSAGE_NAMES: [(u16, &str); 171] = [
     (0, "FileID"),
     (1, "Capabilities"),
@@ -528,7 +528,7 @@ pub(crate) static MESSAGE_NAMES: [(u16, &str); 171] = [
 ];
 
 // ==== FIELDS ====
-/// Champs du message FIT `Common` (porté de Image::ExifTool::Garmin::Common).
+/// Fields of the `Common` FIT message (ported from Image::ExifTool::Garmin::Common).
 pub(crate) static COMMON_FIELDS: &[Field] = &[
     Field {
         num: 250,
@@ -550,7 +550,7 @@ pub(crate) static COMMON_FIELDS: &[Field] = &[
     },
 ];
 
-/// Champs du message FIT `Session` (porté de Image::ExifTool::Garmin::Session).
+/// Fields of the `Session` FIT message (ported from Image::ExifTool::Garmin::Session).
 pub(crate) static SESSION_FIELDS: &[Field] = &[
     Field {
         num: 0,
@@ -1628,7 +1628,7 @@ pub(crate) static SESSION_FIELDS: &[Field] = &[
     },
 ];
 
-/// Champs du message FIT `Lap` (porté de Image::ExifTool::Garmin::Lap).
+/// Fields of the `Lap` FIT message (ported from Image::ExifTool::Garmin::Lap).
 pub(crate) static LAP_FIELDS: &[Field] = &[
     Field {
         num: 0,
@@ -2448,7 +2448,7 @@ pub(crate) static LAP_FIELDS: &[Field] = &[
     },
 ];
 
-/// Champs du message FIT `Record` (porté de Image::ExifTool::Garmin::Record).
+/// Fields of the `Record` FIT message (ported from Image::ExifTool::Garmin::Record).
 pub(crate) static RECORD_FIELDS: &[Field] = &[
     Field {
         num: 0,
@@ -3016,7 +3016,7 @@ pub(crate) static RECORD_FIELDS: &[Field] = &[
     },
 ];
 
-/// Champs du message FIT `GPS` (porté de Image::ExifTool::Garmin::GPS).
+/// Fields of the `GPS` FIT message (ported from Image::ExifTool::Garmin::GPS).
 pub(crate) static GPS_FIELDS: &[Field] = &[
     Field {
         num: 0,
