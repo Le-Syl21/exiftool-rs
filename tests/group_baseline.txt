@@ -504,8 +504,6 @@ Ricoh2.jpg	RicohImageWidth	family1
 Sigma.x3f	WhiteBalance	family2
 SigmaDP2.x3f	PreviewImage	family1
 SigmaDP2.x3f	PreviewImageStart	family2
-SigmaDP2.x3f	SceneCaptureType	family1
-SigmaDP2.x3f	WhiteBalance	family1
 Sony.pmp	ExposureTime	family2
 Sony.pmp	Make	family1
 Sony.pmp	Make	family2

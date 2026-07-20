@@ -1823,6 +1823,12 @@ impl ExifTool {
                 const LOW_PRIORITY_TAGS: &[(&str, &str)] = &[("Canon", "BaseISO")];
                 fn is_low_priority_source(g: &TagGroup, name: &str) -> bool {
                     let g1 = g.family1.as_str();
+                    // A sub-document never displaces the main document's tag:
+                    // ExifTool only lets the incoming tag override when it carries
+                    // no DOC_NUM, or the same one as the tag already stored.
+                    if g.family3 != MAIN_DOCUMENT {
+                        return true;
+                    }
                     if LOW_PRIORITY_TAGS.contains(&(g1, name)) {
                         return true;
                     }
@@ -1845,26 +1851,23 @@ impl ExifTool {
                     }
                 }
                 use std::collections::HashMap as HM;
-                // group indices by name
-                let mut by_name: HM<&str, Vec<usize>> = HM::new();
+                // Only duplicates from the same family 0 and the same family-3
+                // document compete; a different family 0 is a different metadata
+                // source, already arbitrated by the source-precedence passes above,
+                // and a different family 3 is a different document. So the
+                // competition key is (name, family0, family3): a file carrying
+                // XResolution in both EXIF (IFD0 + its IFD1 echo) and Photoshop
+                // still gets its two EXIF instances arbitrated against each other.
+                let mut by_name: HM<(&str, &str), Vec<usize>> = HM::new();
                 for (i, t) in tags.iter().enumerate() {
-                    by_name.entry(t.name.as_str()).or_default().push(i);
+                    by_name
+                        .entry((t.name.as_str(), t.group.family0.as_str()))
+                        .or_default()
+                        .push(i);
                 }
                 let mut drop: std::collections::HashSet<usize> = std::collections::HashSet::new();
                 for idxs in by_name.values() {
                     if idxs.len() < 2 {
-                        continue;
-                    }
-                    let group = &tags[idxs[0]].group;
-                    // Only duplicates from the same family 0 and the same
-                    // family-3 document compete; a different family 0 is a
-                    // different metadata source, already arbitrated by the
-                    // source-precedence passes above.
-                    let comparable = idxs.iter().all(|&i| {
-                        tags[i].group.family0 == group.family0
-                            && tags[i].group.family3 == group.family3
-                    });
-                    if !comparable {
                         continue;
                     }
                     // Replay FoundTag's priority comparison over the instances in

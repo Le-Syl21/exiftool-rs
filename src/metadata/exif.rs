@@ -1221,37 +1221,14 @@ impl ExifReader {
             let ifd1_next = Self::read_ifd(data, header, next_ifd_offset, "IFD1", tags)
                 .ok()
                 .flatten();
-            // Suppress IFD1 tags that duplicate IFD0 tags (only keep thumbnail-specific ones)
-            // In Perl, IFD1 (thumbnail) tags are secondary and don't appear in output if IFD0 has them.
-            {
-                let ifd0_names: std::collections::HashSet<String> = tags[..ifd1_start_idx]
-                    .iter()
-                    .map(|t| t.name.clone())
-                    .collect();
-                let thumbnail_tags = [
-                    "ThumbnailOffset",
-                    "ThumbnailLength",
-                    "ThumbnailImage",
-                    "Compression",
-                    "PhotometricInterpretation",
-                    "JPEGInterchangeFormat",
-                    "JPEGInterchangeFormatLength",
-                    "SubfileType",
-                    "StripOffsets",
-                    "StripByteCounts",
-                ];
-                tags.retain(|t| {
-                    if t.group.family1 != "IFD1" {
-                        return true;
-                    }
-                    // Keep thumbnail-specific tags
-                    if thumbnail_tags.contains(&t.name.as_str()) {
-                        return true;
-                    }
-                    // Suppress IFD1 tags that IFD0 already has
-                    !ifd0_names.contains(&t.name)
-                });
-            }
+            // IFD1 (the thumbnail IFD) repeats several IFD0 tags — XResolution,
+            // YResolution, ResolutionUnit, Orientation… Collapsing them here would
+            // be wrong: ExifTool keeps every instance when the Duplicates option is
+            // on, which the CLI turns on together with -ee. IFD1 is a
+            // LOW_PRIORITY_DIR, so the general FoundTag pass in exiftool.rs keeps
+            // IFD0's copy in the default mode and every copy under -ee. Nothing to
+            // suppress at parse time.
+            let _ = ifd1_start_idx;
 
             // Create ThumbnailImage tag if offset+length are present
             let thumb_offset = tags
