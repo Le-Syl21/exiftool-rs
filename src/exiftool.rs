@@ -1840,6 +1840,29 @@ impl ExifTool {
             }
         }
 
+        // Then re-derive family 2 from ExifTool's own group tables. Each format
+        // reader picks a category as it goes, from partial knowledge; this pass
+        // corrects it against the generated tables, keyed on the family 0/1 the
+        // reader assigned. It runs after the pseudo-tag pass so those keep their
+        // hand-picked groups, and after duplicate resolution for the same reason
+        // as above: family 2 plays no part in choosing which tag survives, so
+        // rewriting it here cannot move a name or a value.
+        for tag in &mut tags {
+            if file_level_group(&tag.name).is_some() {
+                continue;
+            }
+            if let Some(f2) = crate::tags::group2::family2_for(
+                &tag.group.family0,
+                &tag.group.family1,
+                &tag.name,
+                &tag.group.family2,
+            ) {
+                if f2 != tag.group.family2 {
+                    tag.group.family2 = f2.to_string();
+                }
+            }
+        }
+
         // Filter by requested tags if specified
         if !self.options.requested_tags.is_empty() {
             let requested: Vec<String> = self

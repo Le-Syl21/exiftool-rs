@@ -1,6 +1,8 @@
 pub mod canon_sub;
 pub mod exif;
 pub mod generated;
+pub mod group2;
+pub mod group2_generated;
 pub mod iptc;
 pub mod makernotes;
 pub mod nikon_conv;
