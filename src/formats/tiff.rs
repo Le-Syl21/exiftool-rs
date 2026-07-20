@@ -982,6 +982,14 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
                 if t.group.family1 == "IFD0" && existing_names.contains(&t.name) {
                     continue;
                 }
+                // The JpgFromRaw image is a document of its own: ExifTool reports
+                // everything read out of it under Doc1 and keeps the RW2's own
+                // IFD0 as the main document. Duplicate resolution relies on that,
+                // so an ISO read from the embedded EXIF must not displace the
+                // RW2's.
+                if t.group.family3 == "Main" {
+                    t.group.family3 = "Doc1".into();
+                }
                 tags.push(t);
             }
         }

@@ -98,6 +98,29 @@ pub fn family2_for(
     lookup(FAMILY2_BY_NAME, name).map(|c| choose(c, current))
 }
 
+/// Whether an XMP property belongs to no schema ExifTool knows.
+///
+/// Such a property gets a tag description invented on the spot -- XMP.pm's
+/// `{ Name => $name, IsDefault => 1, Priority => 0 }` -- so it carries priority
+/// 0 and can never displace an already-stored tag of the same name. This is the
+/// same lookup [`family2_for`] uses to send the tag to `XMP::other`, but it
+/// reads only the property's own name and namespace, so it may be asked before
+/// family 2 has been resolved.
+///
+/// ```
+/// # use exiftool_rs::tags::group2::xmp_property_is_unknown;
+/// assert!(xmp_property_is_unknown("XMP-Nikon", "Iso"));
+/// assert!(!xmp_property_is_unknown("XMP-dc", "Title"));
+/// ```
+pub fn xmp_property_is_unknown(family1: &str, name: &str) -> bool {
+    let key3 = format!("XMP{SEP}{family1}{SEP}{name}");
+    if lookup(FAMILY2_BY_G0_G1_NAME, &key3).is_some() {
+        return false;
+    }
+    let key2 = format!("XMP{SEP}{name}");
+    lookup(FAMILY2_BY_G0_NAME, &key2).is_none()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

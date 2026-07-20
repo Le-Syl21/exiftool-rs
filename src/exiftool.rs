@@ -1763,12 +1763,28 @@ impl ExifTool {
                 }
             }
 
-            // ExifTool FoundTag rule (narrow, safe subset): among duplicates of the
-            // same tag name that all live in the SAME main-document group (same
-            // family1, not a sub-document like IFD1/SubIFD/PreviewIFD/Track2+, and
-            // not a numbered family-3 document), the LAST extracted overrides the
-            // earlier ones. Keep only that last instance so the primary value
-            // matches ExifTool's `-TAG` output.
+            // ExifTool FoundTag rule. Among duplicates of the same tag name,
+            // ExifTool keeps one primary instance decided purely by priority --
+            // the comparison is group-blind (ExifTool.pm `FoundTag`, "take tag
+            // with highest priority"):
+            //
+            //   * the incoming tag replaces the stored one iff its priority is
+            //     >= the stored tag's priority;
+            //   * a stored priority of 0 is PROMOTED to 1 first ("promote
+            //     existing 0-priority tag so it takes precedence over a new
+            //     0-tag"), so a priority-0 duplicate never displaces anything.
+            //
+            // With ExifTool's two usual priorities that reduces to: the LAST
+            // instance wins at default priority, the FIRST wins when every
+            // instance is priority 0. That single rule replaces what used to be
+            // a hand-maintained list of "first-wins" container groups -- those
+            // groups were simply the places where priority-0 duplicates happened
+            // to have been noticed.
+            //
+            // Sub-documents stay excluded: ExifTool only lets the incoming tag
+            // override when it belongs to the same family-3 document
+            // (`not $$self{DOC_NUM} or $$self{DOC_NUM} eq ...{G3}`), and it flags
+            // IFD1/SubIFD/PreviewIFD as low-priority directories.
             //
             // The whole rule is skipped when the Duplicates option is on, because
             // ExifTool then keeps every instance (`CombineInfo`/`GetInfo` only
@@ -1777,29 +1793,50 @@ impl ExifTool {
             // => 1)` next to the ExtractEmbedded branch), which is why -ee output
             // keeps every repeated message rather than one merged set.
             if self.options.extract_embedded == 0 {
-                fn is_sub_document(g: &TagGroup) -> bool {
+                // Sources ExifTool gives priority 0, so that a duplicate coming
+                // from them never displaces an already-stored tag:
+                //   * the directories it flags LOW_PRIORITY_DIR (PreviewIFD,
+                //     IFD1) and the numbered sub-IFDs and tracks it treats the
+                //     same way -- a thumbnail or a secondary track describes a
+                //     different image, so it must not override the main one;
+                //   * XMP.pm marks its TIFF/EXIF mirror tables `PRIORITY => 0`
+                //     ("not as reliable as actual EXIF tags");
+                //   * an XMP property with no table entry gets a generated
+                //     `{ Name, IsDefault => 1, Priority => 0 }` tagInfo;
+                //   * container tables (QuickTime tkhd, Jpeg2000, ...) whose
+                //     stored tags ExifTool keeps first. Their default-priority
+                //     tags (mdhd/hdlr) carry priority >= 1 here and still follow
+                //     the normal last-wins rule.
+                //
+                // VCard is deliberately absent: within one vCard, duplicate tags
+                // are last-wins (TelephoneOtherVoice); the 2nd vCard is demoted
+                // to priority -1 instead.
+                //
+                // Individual tags carrying their own `Priority => 0`, keyed by
+                // the family-1 group of the table holding them. Canon::ShotInfo
+                // BaseISO is the CIFF case: a .crw stores the value twice, once
+                // in CanonRaw and once in the Canon MakerNotes, and ExifTool
+                // keeps the CanonRaw one.
+                const LOW_PRIORITY_TAGS: &[(&str, &str)] = &[("Canon", "BaseISO")];
+                fn is_low_priority_source(g: &TagGroup, name: &str) -> bool {
                     let g1 = g.family1.as_str();
-                    g.family3 != MAIN_DOCUMENT
-                        || g1 == "IFD1"
-                        || g1.starts_with("SubIFD")
+                    if LOW_PRIORITY_TAGS.contains(&(g1, name)) {
+                        return true;
+                    }
+                    if g.family0 == "XMP" {
+                        return matches!(g1, "XMP-tiff" | "XMP-exif" | "XMP-exifEX")
+                            || crate::tags::group2::xmp_property_is_unknown(g1, name);
+                    }
+                    matches!(
+                        g1,
+                        "QuickTime" | "Track1" | "Jpeg2000" | "PhotoMechanic" | "DjVu"
+                    ) || g1 == "IFD1"
                         || g1 == "PreviewIFD"
+                        || g1.starts_with("SubIFD")
                         || (g1.starts_with("Track")
                             && g1 != "Track1"
                             && g1.len() > 5
                             && g1.as_bytes()[5].is_ascii_digit())
-                    // VCard removed: within one vCard, duplicate tags are last-wins
-                    // (TelephoneOtherVoice); the 2nd vCard is demoted to priority -1.
-                }
-                // Container groups where ExifTool keeps the FIRST duplicate for its
-                // Priority-0 tags (e.g. QuickTime tkhd tags). Default-priority tags in
-                // these same groups (priority >= 1, e.g. mdhd/hdlr) still follow the
-                // normal last-wins rule, so they are NOT blanket-excluded here.
-                fn is_first_wins_group(g1: &str) -> bool {
-                    g1 == "QuickTime"
-                        || g1 == "Track1"
-                        || g1 == "Jpeg2000"
-                        || g1 == "PhotoMechanic"
-                        || g1 == "DjVu"
                 }
                 use std::collections::HashMap as HM;
                 // group indices by name
@@ -1813,46 +1850,42 @@ impl ExifTool {
                         continue;
                     }
                     let group = &tags[idxs[0]].group;
-                    let g1 = &group.family1;
-                    let priority = tags[idxs[0]].priority;
-                    // Same family1, same family3 document and same priority, and
-                    // not a sub-document group: only then do the duplicates
-                    // describe one and the same thing, so that last-wins applies.
-                    // HTML.pm splits its tags across one table per `<meta>`
-                    // namespace, all at the same priority, so a duplicate name
-                    // resolves last-wins across those tables. Everywhere else we
-                    // require the same family 1, which is the conservative
-                    // reading: a differing family 1 usually means the two tags
-                    // describe different things.
-                    let same_source = |i: usize| -> bool {
-                        if group.family0 == "HTML" {
-                            tags[i].group.family0 == "HTML"
+                    // Only duplicates from the same family 0 and the same
+                    // family-3 document compete; a different family 0 is a
+                    // different metadata source, already arbitrated by the
+                    // source-precedence passes above.
+                    let comparable = idxs.iter().all(|&i| {
+                        tags[i].group.family0 == group.family0
+                            && tags[i].group.family3 == group.family3
+                    });
+                    if !comparable {
+                        continue;
+                    }
+                    // Replay FoundTag's priority comparison over the instances in
+                    // extraction order, then keep only the surviving one. A tag
+                    // carries priority 0 only when its source table declares it;
+                    // the struct default of 0 means "unspecified", i.e. ExifTool's
+                    // normal priority of 1.
+                    let eff = |i: usize| -> i32 {
+                        if tags[i].priority == 0
+                            && is_low_priority_source(&tags[i].group, &tags[i].name)
+                        {
+                            0
                         } else {
-                            &tags[i].group.family1 == g1
+                            tags[i].priority.max(1)
                         }
                     };
-                    let uniform = idxs.iter().all(|&i| {
-                        same_source(i)
-                            && tags[i].group.family3 == group.family3
-                            && tags[i].priority == priority
-                    });
-                    if !uniform || is_sub_document(group) {
-                        continue;
+                    let mut winner = idxs[0];
+                    for &i in &idxs[1..] {
+                        // The stored tag's priority is promoted to at least 1.
+                        if eff(i) >= eff(winner).max(1) {
+                            winner = i;
+                        }
                     }
-                    // In a first-wins container, Priority-0 duplicates keep the FIRST
-                    // (ExifTool promotes the stored 0-priority tag), so drop the rest;
-                    // default-priority (>= 1) tags fall through to last-wins below.
-                    // Outside such containers, last-wins always.
-                    if is_first_wins_group(g1) && priority == 0 {
-                        // keep idxs[0], drop the later duplicates
-                        for &i in &idxs[1..] {
+                    for &i in idxs {
+                        if i != winner {
                             drop.insert(i);
                         }
-                        continue;
-                    }
-                    // drop all but the last (last extracted wins)
-                    for &i in &idxs[..idxs.len() - 1] {
-                        drop.insert(i);
                     }
                 }
                 if !drop.is_empty() {
