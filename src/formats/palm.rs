@@ -127,7 +127,7 @@ fn parse_mobi(data: &[u8], offset: usize, tags: &mut Vec<Tag>) {
         17480 => "HUFF/CDIC",
         _ => "Unknown",
     };
-    tags.push(mk(
+    tags.push(mk_mobi(
         "Compression",
         "Compression",
         Value::String(comp_str.into()),
@@ -135,7 +135,7 @@ fn parse_mobi(data: &[u8], offset: usize, tags: &mut Vec<Tag>) {
 
     // Uncompressed text length at bytes 4-7
     let text_len = u32::from_be_bytes([mobi_data[4], mobi_data[5], mobi_data[6], mobi_data[7]]);
-    tags.push(mk(
+    tags.push(mk_mobi(
         "UncompressedTextLength",
         "Uncompressed Text Length",
         Value::String(convert_file_size(text_len as i64)),
@@ -149,7 +149,7 @@ fn parse_mobi(data: &[u8], offset: usize, tags: &mut Vec<Tag>) {
         2 => "Mobipocket",
         _ => "Unknown",
     };
-    tags.push(mk(
+    tags.push(mk_mobi(
         "Encryption",
         "Encryption",
         Value::String(enc_str.into()),
@@ -185,7 +185,7 @@ fn parse_mobi(data: &[u8], offset: usize, tags: &mut Vec<Tag>) {
         518 => "HTML",
         _ => "Unknown",
     };
-    tags.push(mk("MobiType", "Mobi Type", Value::String(type_str.into())));
+    tags.push(mk_mobi("MobiType", "Mobi Type", Value::String(type_str.into())));
 
     // CodePage at offset 28 in MOBI header
     let code_page = u32::from_be_bytes([mobi_hdr[12], mobi_hdr[13], mobi_hdr[14], mobi_hdr[15]]);
@@ -194,13 +194,13 @@ fn parse_mobi(data: &[u8], offset: usize, tags: &mut Vec<Tag>) {
         65001 => "Unicode (UTF-8)".to_string(),
         n => format!("{}", n),
     };
-    tags.push(mk("CodePage", "Code Page", Value::String(cp_str)));
+    tags.push(mk_mobi("CodePage", "Code Page", Value::String(cp_str)));
 
     // MobiVersion at offset 36 in MOBI header
     if mobi_hdr.len() >= 40 {
         let mobi_version =
             u32::from_be_bytes([mobi_hdr[20], mobi_hdr[21], mobi_hdr[22], mobi_hdr[23]]);
-        tags.push(mk("MobiVersion", "Mobi Version", Value::U32(mobi_version)));
+        tags.push(mk_mobi("MobiVersion", "Mobi Version", Value::U32(mobi_version)));
     }
 
     // BookName: offset at byte 84, length at byte 88 (relative to record start = mobi_data)
@@ -220,7 +220,7 @@ fn parse_mobi(data: &[u8], offset: usize, tags: &mut Vec<Tag>) {
             )
             .to_string();
             if !book_name.is_empty() {
-                tags.push(mk("BookName", "Book Name", Value::String(book_name)));
+                tags.push(mk_mobi("BookName", "Book Name", Value::String(book_name)));
             }
         }
     }
@@ -233,7 +233,7 @@ fn parse_mobi(data: &[u8], offset: usize, tags: &mut Vec<Tag>) {
             mobi_data[106],
             mobi_data[107],
         ]);
-        tags.push(mk(
+        tags.push(mk_mobi(
             "MinimumVersion",
             "Minimum Version",
             Value::U32(min_version),
@@ -310,14 +310,14 @@ fn parse_exth(data: &[u8], tags: &mut Vec<Tag>) {
                         202 => "Kindlegen (Mac)".to_string(),
                         n => format!("{}", n),
                     };
-                    tags.push(mk("CreatorSoftware", "Creator Software", Value::String(s)));
+                    tags.push(mk_mobi("CreatorSoftware", "Creator Software", Value::String(s)));
                 }
             }
             205 => {
                 if val_data.len() >= 4 {
                     let v =
                         u32::from_be_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]);
-                    tags.push(mk(
+                    tags.push(mk_mobi(
                         "CreatorMajorVersion",
                         "Creator Major Version",
                         Value::U32(v),
@@ -328,7 +328,7 @@ fn parse_exth(data: &[u8], tags: &mut Vec<Tag>) {
                 if val_data.len() >= 4 {
                     let v =
                         u32::from_be_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]);
-                    tags.push(mk(
+                    tags.push(mk_mobi(
                         "CreatorMinorVersion",
                         "Creator Minor Version",
                         Value::U32(v),
@@ -337,7 +337,7 @@ fn parse_exth(data: &[u8], tags: &mut Vec<Tag>) {
             }
             207 if val_data.len() >= 4 => {
                 let v = u32::from_be_bytes([val_data[0], val_data[1], val_data[2], val_data[3]]);
-                tags.push(mk(
+                tags.push(mk_mobi(
                     "CreatorBuildNumber",
                     "Creator Build Number",
                     Value::U32(v),
@@ -357,7 +357,7 @@ fn extract_str_tag(data: &[u8], name: &str, tags: &mut Vec<Tag>) {
     };
     let s = s.trim_end_matches('\0').to_string();
     if !s.is_empty() {
-        tags.push(mk(name, name, Value::String(s)));
+        tags.push(mk_mobi(name, name, Value::String(s)));
     }
 }
 
@@ -437,6 +437,15 @@ fn convert_file_size(bytes: i64) -> String {
     } else {
         format!("{:.0} GB", v / 1_000_000_000.0)
     }
+}
+
+/// Build a tag from the MOBI header or its EXTH records. ExifTool reads those
+/// with its own `Palm::MOBI` table, whose family-1 group is `MOBI`; only the
+/// enclosing PDB header stays in `Palm`.
+fn mk_mobi(name: &str, description: &str, value: Value) -> Tag {
+    let mut tag = mk(name, description, value);
+    tag.group.family1 = "MOBI".into();
+    tag
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {

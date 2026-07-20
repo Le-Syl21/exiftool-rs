@@ -258,7 +258,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         description: description.to_string(),
         group: TagGroup {
             family0: "Vorbis".into(),
-            family1: "Ogg".into(),
+            family1: "Vorbis".into(),
             family2: "Audio".into(),
             family3: "Main".into(),
         },

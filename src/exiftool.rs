@@ -1771,7 +1771,7 @@ impl ExifTool {
                 fn is_first_wins_group(g1: &str) -> bool {
                     g1 == "QuickTime"
                         || g1 == "Track1"
-                        || g1 == "JP2"
+                        || g1 == "Jpeg2000"
                         || g1 == "PhotoMechanic"
                         || g1 == "DjVu"
                 }

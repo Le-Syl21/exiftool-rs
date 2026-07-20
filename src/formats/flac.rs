@@ -162,7 +162,7 @@ pub fn parse_vorbis_comments(data: &[u8], tags: &mut Vec<Tag>) {
     pos += vendor_len;
 
     if !vendor.is_empty() {
-        tags.push(mk("Vendor", "Encoder", Value::String(vendor)));
+        tags.push(mk_vorbis("Vendor", "Encoder", Value::String(vendor)));
     }
 
     if pos + 4 > data.len() {
@@ -225,13 +225,13 @@ pub fn parse_vorbis_comments(data: &[u8], tags: &mut Vec<Tag>) {
                         "(Binary data {} bytes, use -b option to extract)",
                         bin.len()
                     );
-                    let mut t = mk(&final_name, &final_desc, Value::Binary(bin));
+                    let mut t = mk_vorbis(&final_name, &final_desc, Value::Binary(bin));
                     t.print_value = pv;
                     tags.push(t);
                     continue;
                 }
             }
-            tags.push(mk(
+            tags.push(mk_vorbis(
                 &final_name,
                 &final_desc,
                 Value::String(value.to_string()),
@@ -485,6 +485,16 @@ fn format_duration(seconds: f64) -> String {
     } else {
         format!("{}:{:05.2}", minutes, secs)
     }
+}
+
+/// Build a Vorbis-comment tag. The comment block is a table of its own in
+/// ExifTool (`Image::ExifTool::Vorbis::Comments`), grouped `Vorbis`, whatever
+/// container it was found in — FLAC, Ogg Vorbis or Opus.
+fn mk_vorbis(name: &str, description: &str, value: Value) -> Tag {
+    let mut tag = mk(name, description, value);
+    tag.group.family0 = "Vorbis".into();
+    tag.group.family1 = "Vorbis".into();
+    tag
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {

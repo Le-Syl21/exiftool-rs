@@ -715,13 +715,7 @@ fn read_riff_chunks(
                     }
                     Some("vids") => {
                         // BITMAPINFOHEADER
-                        parse_bitmapinfoheader(
-                            data,
-                            chunk_data_start,
-                            chunk_data_end,
-                            tags,
-                            family,
-                        );
+                        parse_bitmapinfoheader(data, chunk_data_start, chunk_data_end, tags);
                     }
                     _ => {}
                 }
@@ -930,13 +924,7 @@ fn parse_wave_format(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>,
 }
 
 /// Parse BITMAPINFOHEADER (strf for video streams)
-fn parse_bitmapinfoheader(
-    data: &[u8],
-    start: usize,
-    end: usize,
-    tags: &mut Vec<Tag>,
-    family: &str,
-) {
+fn parse_bitmapinfoheader(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
     let chunk_size = end - start;
     if chunk_size < 40 {
         return;
@@ -952,8 +940,7 @@ fn parse_bitmapinfoheader(
         124 => "Windows V5",
         _ => "Unknown",
     };
-    tags.push(mk_riff(
-        family,
+    tags.push(mk_bmp(
         "BMPVersion",
         "BMP Version",
         Value::String(bmp_version.into()),
@@ -963,12 +950,11 @@ fn parse_bitmapinfoheader(
     // (ExifTool does emit them from strf too via BMP::Main, but they're the same values)
     // Planes at offset 12 (int16u)
     let planes = u16::from_le_bytes([cd[12], cd[13]]);
-    tags.push(mk_riff(family, "Planes", "Planes", Value::U16(planes)));
+    tags.push(mk_bmp("Planes", "Planes", Value::U16(planes)));
 
     // BitDepth at offset 14 (int16u)
     let bit_depth = u16::from_le_bytes([cd[14], cd[15]]);
-    tags.push(mk_riff(
-        family,
+    tags.push(mk_bmp(
         "BitDepth",
         "Bit Depth",
         Value::U16(bit_depth),
@@ -991,8 +977,7 @@ fn parse_bitmapinfoheader(
             _ => format!("{}", compression_raw),
         }
     };
-    tags.push(mk_riff(
-        family,
+    tags.push(mk_bmp(
         "Compression",
         "Compression",
         Value::String(compression_str),
@@ -1000,8 +985,7 @@ fn parse_bitmapinfoheader(
 
     // ImageLength at offset 20 (int32u)
     let image_length = u32::from_le_bytes([cd[20], cd[21], cd[22], cd[23]]);
-    tags.push(mk_riff(
-        family,
+    tags.push(mk_bmp(
         "ImageLength",
         "Image Length",
         Value::U32(image_length),
@@ -1009,8 +993,7 @@ fn parse_bitmapinfoheader(
 
     // PixelsPerMeterX at offset 24
     let ppm_x = u32::from_le_bytes([cd[24], cd[25], cd[26], cd[27]]);
-    tags.push(mk_riff(
-        family,
+    tags.push(mk_bmp(
         "PixelsPerMeterX",
         "Pixels Per Meter X",
         Value::U32(ppm_x),
@@ -1018,8 +1001,7 @@ fn parse_bitmapinfoheader(
 
     // PixelsPerMeterY at offset 28
     let ppm_y = u32::from_le_bytes([cd[28], cd[29], cd[30], cd[31]]);
-    tags.push(mk_riff(
-        family,
+    tags.push(mk_bmp(
         "PixelsPerMeterY",
         "Pixels Per Meter Y",
         Value::U32(ppm_y),
@@ -1032,8 +1014,7 @@ fn parse_bitmapinfoheader(
     } else {
         format!("{}", num_colors)
     };
-    tags.push(mk_riff(
-        family,
+    tags.push(mk_bmp(
         "NumColors",
         "Num Colors",
         Value::String(num_colors_str),
@@ -1046,8 +1027,7 @@ fn parse_bitmapinfoheader(
     } else {
         format!("{}", num_important)
     };
-    tags.push(mk_riff(
-        family,
+    tags.push(mk_bmp(
         "NumImportantColors",
         "Num Important Colors",
         Value::String(num_important_str),
@@ -1592,7 +1572,7 @@ fn mk_webp(name: &str, description: &str, value: Value) -> Tag {
         description: description.to_string(),
         group: TagGroup {
             family0: "RIFF".into(),
-            family1: "WebP".into(),
+            family1: "RIFF".into(),
             family2: "Image".into(),
             family3: "Main".into(),
         },
@@ -1600,6 +1580,17 @@ fn mk_webp(name: &str, description: &str, value: Value) -> Tag {
         print_value,
         priority: 0,
     }
+}
+
+/// Build a tag from an AVI `strf` BITMAPINFOHEADER. ExifTool parses that
+/// structure with `Image::ExifTool::BMP::Main`, so the tags land in the `File`
+/// group rather than `RIFF`.
+fn mk_bmp(name: &str, description: &str, value: Value) -> Tag {
+    let mut tag = mk_riff("AVI", name, description, value);
+    tag.group.family0 = "File".into();
+    tag.group.family1 = "File".into();
+    tag.group.family2 = "Image".into();
+    tag
 }
 
 fn mk_riff(family: &str, name: &str, description: &str, value: Value) -> Tag {
@@ -1610,7 +1601,10 @@ fn mk_riff(family: &str, name: &str, description: &str, value: Value) -> Tag {
         description: description.to_string(),
         group: TagGroup {
             family0: "RIFF".into(),
-            family1: family.into(),
+            // ExifTool names every RIFF flavour's family-1 group after the
+            // container format itself; `family` only tells the AVI tables from
+            // the WAV ones for the category below.
+            family1: "RIFF".into(),
             family2: if family == "AVI" {
                 "Video".into()
             } else {

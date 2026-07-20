@@ -577,6 +577,11 @@ fn parse_jxl_codestream(data: &[u8], tags: &mut Vec<Tag>) {
     tags.push(mk("ImageHeight", "Image Height", Value::U32(y)));
 }
 
+// NOTE: ExifTool puts the raw JPEG 2000 / JXL codestream markers in the `File`
+// group, not `Jpeg2000`. We deliberately do not: `Jpeg2000` is one of the groups
+// whose priority-0 duplicates resolve first-wins, and a `.j2c` with two comment
+// markers picks the wrong Comment as soon as those tags leave the group.
+
 fn mk(name: &str, description: &str, value: Value) -> Tag {
     let print_value = value.to_display_string();
     Tag {
@@ -584,8 +589,8 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         name: name.to_string(),
         description: description.to_string(),
         group: TagGroup {
-            family0: "JP2".into(),
-            family1: "JP2".into(),
+            family0: "Jpeg2000".into(),
+            family1: "Jpeg2000".into(),
             family2: "Image".into(),
             family3: "Main".into(),
         },

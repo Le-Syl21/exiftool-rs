@@ -9,7 +9,11 @@ use crate::formats::id3;
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
-fn mk(group0: &str, name: &str, value: Value) -> Tag {
+/// Build a tag in `group0`/`group1`. ExifTool splits these files across three
+/// tables: the Monkey's Audio header is `APE:MAC`, the Musepack header is
+/// `MPC:MPC`, and the APE item tags are `APE:APE` whichever container holds
+/// them.
+fn mk(group0: &str, group1: &str, name: &str, value: Value) -> Tag {
     let pv = value.to_display_string();
     Tag {
         id: TagId::Text(name.to_string()),
@@ -17,7 +21,7 @@ fn mk(group0: &str, name: &str, value: Value) -> Tag {
         description: String::new(),
         group: TagGroup {
             family0: group0.into(),
-            family1: "Main".into(),
+            family1: group1.into(),
             family2: "Audio".into(),
             family3: "Main".into(),
         },
@@ -46,7 +50,7 @@ pub fn read_ape(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     // Look for APE tags (footer at end of file)
-    parse_ape_tags(data, &mut tags, "APE");
+    parse_ape_tags(data, &mut tags);
 
     // Duration composite: (TotalFrames - 1) * BlocksPerFrame + FinalFrameBlocks) / SampleRate
     // Check if we can compute duration
@@ -73,6 +77,7 @@ pub fn read_ape(data: &[u8]) -> Result<Vec<Tag>> {
             let duration_secs = total_blocks as f64 / sr as f64;
             let pv = format_duration(duration_secs);
             let mut tag = mk(
+                "Composite",
                 "Composite",
                 "Duration",
                 Value::String(format!("{:.6}", duration_secs)),
@@ -122,7 +127,7 @@ pub fn read_mpc(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     // Look for APE tags
-    parse_ape_tags(data, &mut tags, "MPC");
+    parse_ape_tags(data, &mut tags);
 
     Ok(tags)
 }
@@ -175,6 +180,7 @@ fn parse_mpc_sv7(data: &[u8], tags: &mut Vec<Tag>) {
     let total_frames = get_bits(32, 63);
     tags.push(mk(
         "MPC",
+        "MPC",
         "TotalFrames",
         Value::String(total_frames.to_string()),
     ));
@@ -189,6 +195,7 @@ fn parse_mpc_sv7(data: &[u8], tags: &mut Vec<Tag>) {
         _ => 44100,
     };
     tags.push(mk(
+        "MPC",
         "MPC",
         "SampleRate",
         Value::String(sample_rate.to_string()),
@@ -211,17 +218,18 @@ fn parse_mpc_sv7(data: &[u8], tags: &mut Vec<Tag>) {
         15 => "10".to_string(),
         _ => quality_val.to_string(),
     };
-    let mut t = mk("MPC", "Quality", Value::String(quality_val.to_string()));
+    let mut t = mk("MPC", "MPC", "Quality", Value::String(quality_val.to_string()));
     t.print_value = quality_str;
     tags.push(t);
 
     // MaxBand: Bit088-093
     let max_band = get_bits(88, 93);
-    tags.push(mk("MPC", "MaxBand", Value::String(max_band.to_string())));
+    tags.push(mk("MPC", "MPC", "MaxBand", Value::String(max_band.to_string())));
 
     // ReplayGainTrackPeak: Bit096-111
     let rg_tp = get_bits(96, 111);
     tags.push(mk(
+        "MPC",
         "MPC",
         "ReplayGainTrackPeak",
         Value::String(rg_tp.to_string()),
@@ -231,6 +239,7 @@ fn parse_mpc_sv7(data: &[u8], tags: &mut Vec<Tag>) {
     let rg_tg = get_bits(112, 127);
     tags.push(mk(
         "MPC",
+        "MPC",
         "ReplayGainTrackGain",
         Value::String(rg_tg.to_string()),
     ));
@@ -238,6 +247,7 @@ fn parse_mpc_sv7(data: &[u8], tags: &mut Vec<Tag>) {
     // ReplayGainAlbumPeak: Bit128-143
     let rg_ap = get_bits(128, 143);
     tags.push(mk(
+        "MPC",
         "MPC",
         "ReplayGainAlbumPeak",
         Value::String(rg_ap.to_string()),
@@ -247,13 +257,14 @@ fn parse_mpc_sv7(data: &[u8], tags: &mut Vec<Tag>) {
     let rg_ag = get_bits(144, 159);
     tags.push(mk(
         "MPC",
+        "MPC",
         "ReplayGainAlbumGain",
         Value::String(rg_ag.to_string()),
     ));
 
     // FastSeek: Bit179
     let fast_seek = get_bits(179, 179);
-    let mut t = mk("MPC", "FastSeek", Value::String(fast_seek.to_string()));
+    let mut t = mk("MPC", "MPC", "FastSeek", Value::String(fast_seek.to_string()));
     t.print_value = if fast_seek == 0 {
         "No".to_string()
     } else {
@@ -263,7 +274,7 @@ fn parse_mpc_sv7(data: &[u8], tags: &mut Vec<Tag>) {
 
     // Gapless: Bit191
     let gapless = get_bits(191, 191);
-    let mut t = mk("MPC", "Gapless", Value::String(gapless.to_string()));
+    let mut t = mk("MPC", "MPC", "Gapless", Value::String(gapless.to_string()));
     t.print_value = if gapless == 0 {
         "No".to_string()
     } else {
@@ -282,7 +293,7 @@ fn parse_mpc_sv7(data: &[u8], tags: &mut Vec<Tag>) {
     } else {
         enc_ver.to_string()
     };
-    let mut t = mk("MPC", "EncoderVersion", Value::String(enc_ver.to_string()));
+    let mut t = mk("MPC", "MPC", "EncoderVersion", Value::String(enc_ver.to_string()));
     t.print_value = enc_ver_str;
     tags.push(t);
 }
@@ -306,27 +317,29 @@ fn parse_mac_header(data: &[u8], tags: &mut Vec<Tag>) {
         let compression = u16::from_le_bytes([hdr[2], hdr[3]]);
         tags.push(mk(
             "APE",
+            "MAC",
             "CompressionLevel",
             Value::String(compression.to_string()),
         ));
         // 3 => Channels (int16u at offset 6)
         let channels = u16::from_le_bytes([hdr[6], hdr[7]]);
-        tags.push(mk("APE", "Channels", Value::String(channels.to_string())));
+        tags.push(mk("APE", "MAC", "Channels", Value::String(channels.to_string())));
         // 4 => SampleRate (int32u at offset 8)
         if hdr.len() >= 12 {
             let sr = u32::from_le_bytes([hdr[8], hdr[9], hdr[10], hdr[11]]);
-            tags.push(mk("APE", "SampleRate", Value::String(sr.to_string())));
+            tags.push(mk("APE", "MAC", "SampleRate", Value::String(sr.to_string())));
         }
         // 10 => TotalFrames (int32u at offset 20)
         if hdr.len() >= 24 {
             let tf = u32::from_le_bytes([hdr[20], hdr[21], hdr[22], hdr[23]]);
-            tags.push(mk("APE", "TotalFrames", Value::String(tf.to_string())));
+            tags.push(mk("APE", "MAC", "TotalFrames", Value::String(tf.to_string())));
         }
         // 12 => FinalFrameBlocks (int32u at offset 24)
         if hdr.len() >= 28 {
             let ffb = u32::from_le_bytes([hdr[24], hdr[25], hdr[26], hdr[27]]);
             tags.push(mk(
                 "APE",
+                "MAC",
                 "FinalFrameBlocks",
                 Value::String(ffb.to_string()),
             ));
@@ -352,19 +365,21 @@ fn parse_mac_header(data: &[u8], tags: &mut Vec<Tag>) {
         let compression = u16::from_le_bytes([hdr[0], hdr[1]]);
         tags.push(mk(
             "APE",
+            "MAC",
             "CompressionLevel",
             Value::String(compression.to_string()),
         ));
         // offset 2 (byte 4) => BlocksPerFrame (int32u)
         if hdr.len() >= 8 {
             let bpf = u32::from_le_bytes([hdr[4], hdr[5], hdr[6], hdr[7]]);
-            tags.push(mk("APE", "BlocksPerFrame", Value::String(bpf.to_string())));
+            tags.push(mk("APE", "MAC", "BlocksPerFrame", Value::String(bpf.to_string())));
         }
         // offset 4 (byte 8) => FinalFrameBlocks (int32u)
         if hdr.len() >= 12 {
             let ffb = u32::from_le_bytes([hdr[8], hdr[9], hdr[10], hdr[11]]);
             tags.push(mk(
                 "APE",
+                "MAC",
                 "FinalFrameBlocks",
                 Value::String(ffb.to_string()),
             ));
@@ -372,29 +387,33 @@ fn parse_mac_header(data: &[u8], tags: &mut Vec<Tag>) {
         // offset 6 (byte 12) => TotalFrames (int32u)
         if hdr.len() >= 16 {
             let tf = u32::from_le_bytes([hdr[12], hdr[13], hdr[14], hdr[15]]);
-            tags.push(mk("APE", "TotalFrames", Value::String(tf.to_string())));
+            tags.push(mk("APE", "MAC", "TotalFrames", Value::String(tf.to_string())));
         }
         // offset 8 (byte 16) => BitsPerSample (int16u)
         if hdr.len() >= 18 {
             let bps = u16::from_le_bytes([hdr[16], hdr[17]]);
-            tags.push(mk("APE", "BitsPerSample", Value::String(bps.to_string())));
+            tags.push(mk("APE", "MAC", "BitsPerSample", Value::String(bps.to_string())));
         }
         // offset 9 (byte 18) => Channels (int16u)
         if hdr.len() >= 20 {
             let ch = u16::from_le_bytes([hdr[18], hdr[19]]);
-            tags.push(mk("APE", "Channels", Value::String(ch.to_string())));
+            tags.push(mk("APE", "MAC", "Channels", Value::String(ch.to_string())));
         }
         // offset 10 (byte 20) => SampleRate (int32u)
         if hdr.len() >= 24 {
             let sr = u32::from_le_bytes([hdr[20], hdr[21], hdr[22], hdr[23]]);
-            tags.push(mk("APE", "SampleRate", Value::String(sr.to_string())));
+            tags.push(mk("APE", "MAC", "SampleRate", Value::String(sr.to_string())));
         }
     }
 }
 
 /// Parse APEv1/APEv2 tags from data.
 /// Looks for APETAGEX footer at the end of the file (before optional ID3v1 tag).
-pub fn parse_ape_tags(data: &[u8], tags: &mut Vec<Tag>, group: &str) {
+/// Read the APE item tags in a file's APEv1/APEv2 footer. These always land
+/// in ExifTool's `APE:APE` group, whether the container is Monkey's Audio or
+/// Musepack.
+pub fn parse_ape_tags(data: &[u8], tags: &mut Vec<Tag>) {
+    const GROUP: &str = "APE";
     // Check for trailing ID3v1 (128 bytes from end starting with "TAG")
     let search_end = if data.len() >= 128 && &data[data.len() - 128..data.len() - 125] == b"TAG" {
         data.len() - 128
@@ -490,20 +509,20 @@ pub fn parse_ape_tags(data: &[u8], tags: &mut Vec<Tag>, group: &str) {
                 // Emit description tag
                 let desc_key = format!("{} Desc", key);
                 let desc_name = ape_key_to_tag_name(&desc_key);
-                tags.push(mk(group, &desc_name, Value::String(desc)));
+                tags.push(mk(GROUP, GROUP, &desc_name, Value::String(desc)));
 
                 // Emit binary cover art tag
-                tags.push(mk(group, &tag_name, Value::Binary(img_data)));
+                tags.push(mk(GROUP, GROUP, &tag_name, Value::Binary(img_data)));
             } else {
-                tags.push(mk(group, &tag_name, Value::Binary(val_bytes.to_vec())));
+                tags.push(mk(GROUP, GROUP, &tag_name, Value::Binary(val_bytes.to_vec())));
             }
         } else if is_binary {
-            tags.push(mk(group, &tag_name, Value::Binary(val_bytes.to_vec())));
+            tags.push(mk(GROUP, GROUP, &tag_name, Value::Binary(val_bytes.to_vec())));
         } else {
             let s = crate::encoding::decode_utf8_or_latin1(val_bytes);
             // Apply known tag transformations
             let (raw_val, print_val) = ape_value_conv(&tag_name, &s);
-            let mut tag = mk(group, &tag_name, raw_val);
+            let mut tag = mk(GROUP, GROUP, &tag_name, raw_val);
             tag.print_value = print_val;
             tags.push(tag);
         }

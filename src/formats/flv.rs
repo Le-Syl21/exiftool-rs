@@ -96,31 +96,31 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
                     let bits = if sample_size == 1 { "16" } else { "8" };
 
                     tags.push(mktag(
-                        "FLV",
+                        "Flash",
                         "AudioCodecID",
                         "Audio Codec ID",
                         Value::String(format!("{}", codec_id)),
                     ));
                     tags.push(mktag(
-                        "FLV",
+                        "Flash",
                         "AudioSampleRate",
                         "Audio Sample Rate",
                         Value::String(sample_rate.to_string()),
                     ));
                     tags.push(mktag(
-                        "FLV",
+                        "Flash",
                         "AudioBitsPerSample",
                         "Audio Bits Per Sample",
                         Value::String(bits.to_string()),
                     ));
                     tags.push(mktag(
-                        "FLV",
+                        "Flash",
                         "AudioChannels",
                         "Audio Channels",
                         Value::String(channels.to_string()),
                     ));
                     tags.push(mktag(
-                        "FLV",
+                        "Flash",
                         "AudioEncoding",
                         "Audio Encoding",
                         Value::String(codec_name.to_string()),
@@ -144,13 +144,13 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
                     _ => "Unknown",
                 };
                 tags.push(mktag(
-                    "FLV",
+                    "Flash",
                     "VideoCodecID",
                     "Video Codec ID",
                     Value::String(format!("{}", codec_id)),
                 ));
                 tags.push(mktag(
-                    "FLV",
+                    "Flash",
                     "VideoEncoding",
                     "Video Encoding",
                     Value::String(codec_name.to_string()),
@@ -167,7 +167,7 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
     // Add HasAudio/HasVideo from header flags
     if has_audio && !tags.iter().any(|t| t.name == "HasAudio") {
         tags.push(mktag(
-            "FLV",
+            "Flash",
             "HasAudio",
             "Has Audio",
             Value::String("Yes".into()),
@@ -175,7 +175,7 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
     }
     if has_video && !tags.iter().any(|t| t.name == "HasVideo") {
         tags.push(mktag(
-            "FLV",
+            "Flash",
             "HasVideo",
             "Has Video",
             Value::String("Yes".into()),
@@ -278,7 +278,7 @@ fn flv_parse_amf_value(
             *pos += 8;
             let tag_name = flv_lookup_tag(compound_key);
             let val_str = flv_apply_conv(&tag_name, val);
-            tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(val_str)));
+            tags.push(mktag("Flash", &tag_name, &tag_name, Value::String(val_str)));
         }
         0x01 => {
             if *pos >= data.len() {
@@ -288,7 +288,7 @@ fn flv_parse_amf_value(
             *pos += 1;
             let tag_name = flv_lookup_tag(compound_key);
             tags.push(mktag(
-                "FLV",
+                "Flash",
                 &tag_name,
                 &tag_name,
                 Value::String(if b { "Yes" } else { "No" }.to_string()),
@@ -307,7 +307,7 @@ fn flv_parse_amf_value(
             *pos += slen;
             let tag_name = flv_lookup_tag(compound_key);
             let s = s.trim_end().to_string();
-            tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(s)));
+            tags.push(mktag("Flash", &tag_name, &tag_name, Value::String(s)));
         }
         0x03 | 0x08 => {
             if val_type == 0x08 {
@@ -397,7 +397,7 @@ fn flv_parse_amf_value(
             if !items.is_empty() {
                 let tag_name = flv_lookup_tag(compound_key);
                 tags.push(mktag(
-                    "FLV",
+                    "Flash",
                     &tag_name,
                     &tag_name,
                     Value::String(items.join(", ")),
@@ -422,7 +422,7 @@ fn flv_parse_amf_value(
             *pos += 10;
             let s = flv_format_date(ms, tz_offset);
             let tag_name = flv_lookup_tag(compound_key);
-            tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(s)));
+            tags.push(mktag("Flash", &tag_name, &tag_name, Value::String(s)));
         }
         0x0c | 0x0f => {
             if *pos + 4 > data.len() {
@@ -438,7 +438,7 @@ fn flv_parse_amf_value(
             let s = crate::encoding::decode_utf8_or_latin1(&data[*pos..*pos + slen]).to_string();
             *pos += slen;
             let tag_name = flv_lookup_tag(compound_key);
-            tags.push(mktag("FLV", &tag_name, &tag_name, Value::String(s)));
+            tags.push(mktag("Flash", &tag_name, &tag_name, Value::String(s)));
         }
         0x05 | 0x06 => { /* null/undefined, no value bytes */ }
         _ => {

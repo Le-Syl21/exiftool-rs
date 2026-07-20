@@ -7851,7 +7851,8 @@ fn manufacturer_group_name(mfr: Manufacturer) -> &'static str {
         Manufacturer::Pentax => "Pentax",
         Manufacturer::Olympus | Manufacturer::OlympusNew => "Olympus",
         Manufacturer::Panasonic => "Panasonic",
-        Manufacturer::Fujifilm => "Fujifilm",
+        // ExifTool spells the group after its FujiFilm.pm module: capital F, capital F.
+        Manufacturer::Fujifilm => "FujiFilm",
         Manufacturer::Samsung => "Samsung",
         Manufacturer::Sigma => "Sigma",
         Manufacturer::Casio | Manufacturer::CasioType2 => "Casio",
