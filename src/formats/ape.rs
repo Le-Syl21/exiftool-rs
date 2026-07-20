@@ -218,13 +218,23 @@ fn parse_mpc_sv7(data: &[u8], tags: &mut Vec<Tag>) {
         15 => "10".to_string(),
         _ => quality_val.to_string(),
     };
-    let mut t = mk("MPC", "MPC", "Quality", Value::String(quality_val.to_string()));
+    let mut t = mk(
+        "MPC",
+        "MPC",
+        "Quality",
+        Value::String(quality_val.to_string()),
+    );
     t.print_value = quality_str;
     tags.push(t);
 
     // MaxBand: Bit088-093
     let max_band = get_bits(88, 93);
-    tags.push(mk("MPC", "MPC", "MaxBand", Value::String(max_band.to_string())));
+    tags.push(mk(
+        "MPC",
+        "MPC",
+        "MaxBand",
+        Value::String(max_band.to_string()),
+    ));
 
     // ReplayGainTrackPeak: Bit096-111
     let rg_tp = get_bits(96, 111);
@@ -264,7 +274,12 @@ fn parse_mpc_sv7(data: &[u8], tags: &mut Vec<Tag>) {
 
     // FastSeek: Bit179
     let fast_seek = get_bits(179, 179);
-    let mut t = mk("MPC", "MPC", "FastSeek", Value::String(fast_seek.to_string()));
+    let mut t = mk(
+        "MPC",
+        "MPC",
+        "FastSeek",
+        Value::String(fast_seek.to_string()),
+    );
     t.print_value = if fast_seek == 0 {
         "No".to_string()
     } else {
@@ -293,7 +308,12 @@ fn parse_mpc_sv7(data: &[u8], tags: &mut Vec<Tag>) {
     } else {
         enc_ver.to_string()
     };
-    let mut t = mk("MPC", "MPC", "EncoderVersion", Value::String(enc_ver.to_string()));
+    let mut t = mk(
+        "MPC",
+        "MPC",
+        "EncoderVersion",
+        Value::String(enc_ver.to_string()),
+    );
     t.print_value = enc_ver_str;
     tags.push(t);
 }
@@ -323,16 +343,31 @@ fn parse_mac_header(data: &[u8], tags: &mut Vec<Tag>) {
         ));
         // 3 => Channels (int16u at offset 6)
         let channels = u16::from_le_bytes([hdr[6], hdr[7]]);
-        tags.push(mk("APE", "MAC", "Channels", Value::String(channels.to_string())));
+        tags.push(mk(
+            "APE",
+            "MAC",
+            "Channels",
+            Value::String(channels.to_string()),
+        ));
         // 4 => SampleRate (int32u at offset 8)
         if hdr.len() >= 12 {
             let sr = u32::from_le_bytes([hdr[8], hdr[9], hdr[10], hdr[11]]);
-            tags.push(mk("APE", "MAC", "SampleRate", Value::String(sr.to_string())));
+            tags.push(mk(
+                "APE",
+                "MAC",
+                "SampleRate",
+                Value::String(sr.to_string()),
+            ));
         }
         // 10 => TotalFrames (int32u at offset 20)
         if hdr.len() >= 24 {
             let tf = u32::from_le_bytes([hdr[20], hdr[21], hdr[22], hdr[23]]);
-            tags.push(mk("APE", "MAC", "TotalFrames", Value::String(tf.to_string())));
+            tags.push(mk(
+                "APE",
+                "MAC",
+                "TotalFrames",
+                Value::String(tf.to_string()),
+            ));
         }
         // 12 => FinalFrameBlocks (int32u at offset 24)
         if hdr.len() >= 28 {
@@ -372,7 +407,12 @@ fn parse_mac_header(data: &[u8], tags: &mut Vec<Tag>) {
         // offset 2 (byte 4) => BlocksPerFrame (int32u)
         if hdr.len() >= 8 {
             let bpf = u32::from_le_bytes([hdr[4], hdr[5], hdr[6], hdr[7]]);
-            tags.push(mk("APE", "MAC", "BlocksPerFrame", Value::String(bpf.to_string())));
+            tags.push(mk(
+                "APE",
+                "MAC",
+                "BlocksPerFrame",
+                Value::String(bpf.to_string()),
+            ));
         }
         // offset 4 (byte 8) => FinalFrameBlocks (int32u)
         if hdr.len() >= 12 {
@@ -387,12 +427,22 @@ fn parse_mac_header(data: &[u8], tags: &mut Vec<Tag>) {
         // offset 6 (byte 12) => TotalFrames (int32u)
         if hdr.len() >= 16 {
             let tf = u32::from_le_bytes([hdr[12], hdr[13], hdr[14], hdr[15]]);
-            tags.push(mk("APE", "MAC", "TotalFrames", Value::String(tf.to_string())));
+            tags.push(mk(
+                "APE",
+                "MAC",
+                "TotalFrames",
+                Value::String(tf.to_string()),
+            ));
         }
         // offset 8 (byte 16) => BitsPerSample (int16u)
         if hdr.len() >= 18 {
             let bps = u16::from_le_bytes([hdr[16], hdr[17]]);
-            tags.push(mk("APE", "MAC", "BitsPerSample", Value::String(bps.to_string())));
+            tags.push(mk(
+                "APE",
+                "MAC",
+                "BitsPerSample",
+                Value::String(bps.to_string()),
+            ));
         }
         // offset 9 (byte 18) => Channels (int16u)
         if hdr.len() >= 20 {
@@ -402,7 +452,12 @@ fn parse_mac_header(data: &[u8], tags: &mut Vec<Tag>) {
         // offset 10 (byte 20) => SampleRate (int32u)
         if hdr.len() >= 24 {
             let sr = u32::from_le_bytes([hdr[20], hdr[21], hdr[22], hdr[23]]);
-            tags.push(mk("APE", "MAC", "SampleRate", Value::String(sr.to_string())));
+            tags.push(mk(
+                "APE",
+                "MAC",
+                "SampleRate",
+                Value::String(sr.to_string()),
+            ));
         }
     }
 }
@@ -514,10 +569,20 @@ pub fn parse_ape_tags(data: &[u8], tags: &mut Vec<Tag>) {
                 // Emit binary cover art tag
                 tags.push(mk(GROUP, GROUP, &tag_name, Value::Binary(img_data)));
             } else {
-                tags.push(mk(GROUP, GROUP, &tag_name, Value::Binary(val_bytes.to_vec())));
+                tags.push(mk(
+                    GROUP,
+                    GROUP,
+                    &tag_name,
+                    Value::Binary(val_bytes.to_vec()),
+                ));
             }
         } else if is_binary {
-            tags.push(mk(GROUP, GROUP, &tag_name, Value::Binary(val_bytes.to_vec())));
+            tags.push(mk(
+                GROUP,
+                GROUP,
+                &tag_name,
+                Value::Binary(val_bytes.to_vec()),
+            ));
         } else {
             let s = crate::encoding::decode_utf8_or_latin1(val_bytes);
             // Apply known tag transformations

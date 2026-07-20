@@ -1592,9 +1592,7 @@ impl ExifTool {
                         })
                         .map(|t| t.name.clone())
                         .collect();
-                    tags.retain(|t| {
-                        t.group.family1 != "UserData" || !drop_names.contains(&t.name)
-                    });
+                    tags.retain(|t| t.group.family1 != "UserData" || !drop_names.contains(&t.name));
                 }
 
                 // QuickTime container/handler tags: ExifTool reports the LAST track's
@@ -1616,9 +1614,8 @@ impl ExifTool {
                 ];
                 // These live in the movie's own group or in a track's (Track1,
                 // Track2, …), so the family-0 group is what identifies them.
-                let is_qt_main = |t: &Tag| {
-                    t.group.family0 == "QuickTime" && t.group.family3 == MAIN_DOCUMENT
-                };
+                let is_qt_main =
+                    |t: &Tag| t.group.family0 == "QuickTime" && t.group.family3 == MAIN_DOCUMENT;
                 for name in QT_LAST_WINS {
                     let last = tags.iter().rposition(|t| t.name == *name && is_qt_main(t));
                     if let Some(li) = last {

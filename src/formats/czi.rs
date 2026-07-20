@@ -40,12 +40,7 @@ pub fn read_czi(data: &[u8]) -> Result<Vec<Tag>> {
     // FileGUID at offset 0x40: 16 bytes as hex
     if data.len() >= 0x50 {
         let guid = hex_encode(&data[0x40..0x50]);
-        tags.push(mktag(
-            "File",
-            "FileGUID",
-            "File GUID",
-            Value::String(guid),
-        ));
+        tags.push(mktag("File", "FileGUID", "File GUID", Value::String(guid)));
     }
 
     // Metadata section offset at byte 92 (0x5C): 64-bit LE
@@ -168,12 +163,7 @@ fn czi_parse_xml(xml: &str, tags: &mut Vec<Tag>) {
                             let path_str = path.join("");
                             let tag_name = czi_shorten_tag_name(&path_str);
                             if !tag_name.is_empty() {
-                                tags.push(mktag(
-                                    "XML",
-                                    &tag_name,
-                                    &tag_name,
-                                    Value::String(text),
-                                ));
+                                tags.push(mktag("XML", &tag_name, &tag_name, Value::String(text)));
                             }
                         }
                     }

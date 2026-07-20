@@ -954,11 +954,7 @@ fn parse_bitmapinfoheader(data: &[u8], start: usize, end: usize, tags: &mut Vec<
 
     // BitDepth at offset 14 (int16u)
     let bit_depth = u16::from_le_bytes([cd[14], cd[15]]);
-    tags.push(mk_bmp(
-        "BitDepth",
-        "Bit Depth",
-        Value::U16(bit_depth),
-    ));
+    tags.push(mk_bmp("BitDepth", "Bit Depth", Value::U16(bit_depth)));
 
     // Compression at offset 16 (int32u, but often a FourCC)
     let compression_raw = u32::from_le_bytes([cd[16], cd[17], cd[18], cd[19]]);

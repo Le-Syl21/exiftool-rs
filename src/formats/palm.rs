@@ -185,7 +185,11 @@ fn parse_mobi(data: &[u8], offset: usize, tags: &mut Vec<Tag>) {
         518 => "HTML",
         _ => "Unknown",
     };
-    tags.push(mk_mobi("MobiType", "Mobi Type", Value::String(type_str.into())));
+    tags.push(mk_mobi(
+        "MobiType",
+        "Mobi Type",
+        Value::String(type_str.into()),
+    ));
 
     // CodePage at offset 28 in MOBI header
     let code_page = u32::from_be_bytes([mobi_hdr[12], mobi_hdr[13], mobi_hdr[14], mobi_hdr[15]]);
@@ -200,7 +204,11 @@ fn parse_mobi(data: &[u8], offset: usize, tags: &mut Vec<Tag>) {
     if mobi_hdr.len() >= 40 {
         let mobi_version =
             u32::from_be_bytes([mobi_hdr[20], mobi_hdr[21], mobi_hdr[22], mobi_hdr[23]]);
-        tags.push(mk_mobi("MobiVersion", "Mobi Version", Value::U32(mobi_version)));
+        tags.push(mk_mobi(
+            "MobiVersion",
+            "Mobi Version",
+            Value::U32(mobi_version),
+        ));
     }
 
     // BookName: offset at byte 84, length at byte 88 (relative to record start = mobi_data)
@@ -310,7 +318,11 @@ fn parse_exth(data: &[u8], tags: &mut Vec<Tag>) {
                         202 => "Kindlegen (Mac)".to_string(),
                         n => format!("{}", n),
                     };
-                    tags.push(mk_mobi("CreatorSoftware", "Creator Software", Value::String(s)));
+                    tags.push(mk_mobi(
+                        "CreatorSoftware",
+                        "Creator Software",
+                        Value::String(s),
+                    ));
                 }
             }
             205 => {

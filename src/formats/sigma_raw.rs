@@ -328,12 +328,7 @@ fn parse_header2(data: &[u8], ver_f: f64, tags: &mut Vec<Tag>) {
                 _ => continue,
             };
             tags.push(mk_tag_str(
-                name,
-                name,
-                val_str,
-                "SigmaRaw",
-                "SigmaRaw",
-                "Camera",
+                name, name, val_str, "SigmaRaw", "SigmaRaw", "Camera",
             ));
         }
     }

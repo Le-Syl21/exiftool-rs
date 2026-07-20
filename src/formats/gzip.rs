@@ -51,12 +51,7 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
     let mtime = u32::from_le_bytes([data[4], data[5], data[6], data[7]]);
     if mtime > 0 {
         let dt = gzip_unix_to_datetime(mtime as i64);
-        tags.push(mktag(
-            "ZIP",
-            "ModifyDate",
-            "Modify Date",
-            Value::String(dt),
-        ));
+        tags.push(mktag("ZIP", "ModifyDate", "Modify Date", Value::String(dt)));
     }
 
     // ExtraFlags (byte 8)
