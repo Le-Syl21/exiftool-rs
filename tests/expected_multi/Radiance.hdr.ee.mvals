@@ -1,0 +1,16 @@
+Command	oconv -f -i test4.oct ila01728
+Command	oconv mat.rad sky.rad surfaces.rad
+Command	pfilt -1 -e 1 -m .25 -2 -x /3 -y /3
+Command	rpict -t 30 -vf test4.vf -x 1536 -y 1536 -ps 3 -pt .04 -dp 4096 -ar 68 -ms 0.029 -ds .2 -dt .05 -dc .75 -dr 3 -sj 1 -st .01 -ab 3 -af test4.amb -aa .08 -ad 1024 -as 512 -av 0.5 0.5 0.5 -lr 12 -lw .0005 -st .001 -dj .02
+Exposure	3.512179e-001
+FileType	HDR
+FileTypeExtension	hdr
+Format	32-bit_rle_rgbe
+ImageHeight	1
+ImageSize	1x1
+ImageWidth	1
+MIMEType	image/vnd.radiance
+Megapixels	0.000001
+Orientation	Horizontal (normal)
+Software	RADIANCE 3.1.8 lastmod Thu Sep 17 20:49:56 PDT 1998 by droberts on escher
+View	-vtv -vp 0.832108 2.26053 1.8 -vd 0.984193 0.177099 0 -vu 0 0 1 -vh 100 -vv 100 -vo 0 -va 0 -vs 0 -vl 0

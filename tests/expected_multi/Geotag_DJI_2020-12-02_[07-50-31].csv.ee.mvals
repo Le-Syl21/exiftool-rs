@@ -1,0 +1,9 @@
+ColumnCount	5
+Delimiter	Comma
+FileType	CSV
+FileTypeExtension	csv
+MIMEEncoding	us-ascii
+MIMEType	text/csv
+Newlines	Windows CRLF
+Quoting	(none)
+RowCount	94

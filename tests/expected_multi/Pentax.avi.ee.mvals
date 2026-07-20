@@ -1,0 +1,124 @@
+AEAperture	3.8
+AEApertureSteps	0
+AEBXv	0
+AEExposureTime	1/55
+AEMaxAperture	4.0
+AEMaxAperture2	3.8
+AEMeteringMode	Multi-segment
+AEMeteringMode2	Multi-segment
+AEMinAperture	27
+AEMinExposureTime	1/5461
+AEProgramMode	Standard
+AEWhiteBalance	Daylight Fluorescent
+AEXv	0
+AE_ISO	519
+AFPointMode	Fixed Center
+AFPointSelected2	Center
+ApertureRingUse	Prohibited
+Artist	
+AudioCodec	
+AudioSampleCount	800000
+AudioSampleRate	32000
+AutoAperture	On
+AvgBytesPerSec	64000
+BMPVersion	Windows V3
+BitDepth	24
+BitsPerSample	16
+BracketShotNumber	n/a
+CPUFirmwareVersion	1.00.00.01
+Compression	MJPG
+Contrast	0 (normal)
+Copyright	
+CrossProcess	Off
+DSPFirmwareVersion	1.00.00.01
+Date	2009:10:27
+DateTimeOriginal	2009:10:27 12:14:00
+DriveMode	Video; n/a; Shutter Button; Video
+DriveMode2	Single-frame
+Duration	25.00 s
+E-DialInProgram	P Shift
+EVSteps	1/3 EV Steps
+Encoding	Microsoft PCM
+ExposureBracketStepSize	0.3
+ExposureCompensation	0
+ExtenderStatus	Not attached
+FNumber	0.0
+FileType	AVI
+FileTypeExtension	avi
+FirmwareVersion	K-x Ver 1.00
+FlashExposureCompSet	-1.0
+FlashOptions	Normal
+FocusMode2	AF-S
+FocusRangeIndex	6 (far)
+FrameCount	600
+FrameRate	24
+HighLowKeyAdj	0
+Hue	Normal
+ISOFloor	100
+ImageHeight	720
+ImageHeight	720
+ImageLength	2764800
+ImageSize	1280x720
+ImageTone	Natural
+ImageWidth	1280
+ImageWidth	1280
+InternalSerialNumber	8007725
+LensFStops	6
+LensFocalLength	23.1 mm
+LensID	smc PENTAX-DA L 18-55mm F3.5-5.6
+LensType	smc PENTAX-DA L 18-55mm F3.5-5.6
+LensType	smc PENTAX-DA L 18-55mm F3.5-5.6
+LevelIndicator	n/a
+MIMEType	video/x-msvideo
+ManufactureDate	2009:09:04
+MaxAperture	3.7
+MaxDataRate	0 kB/s
+Megapixels	0.922
+MeteringMode2	Multi-segment
+MinAperture	32
+MinFocusDistance	0.25-0.28 m
+MonochromeFilterEffect	None
+MonochromeToning	None
+MultipleExposureSet	Off
+NominalMaxAperture	4.0
+NominalMinAperture	27
+NumChannels	1
+NumColors	Use BitDepth
+NumImportantColors	All
+PentaxModelID	K-x
+PentaxModelID	K-x
+PentaxModelType	0
+PentaxVersion	5.1.0.0
+PictureMode	Video (4); 1/3 EV steps
+PictureMode2	Scene Mode
+PixelsPerMeterX	0
+PixelsPerMeterY	0
+Planes	1
+ProductionCode	2.3
+ProgramLine	Normal
+Quality	10000
+Quality	10000
+Quality	Best
+SRFocalLength	23 mm
+SRHalfPressTime	0.00 s
+SRResult	Stabilized, [1], [2], [3], [4]
+SampleRate	32000
+SampleSize	2 bytes
+SampleSize	Variable
+Saturation	0 (normal)
+SerialNumber	3430417
+ShakeReduction	On (7)
+Sharpness	-1 (medium soft)
+Software	PENTAX K-x
+StreamCount	2
+StreamType	Audio
+StreamType	Video
+Time	12:14:34
+TotalFrameCount	600
+VideoCodec	mjpg
+VideoFrameCount	600
+VideoFrameRate	24
+WBShiftAB	0
+WBShiftGM	0
+WhiteBalance	Flash
+WhiteBalanceSet	Auto

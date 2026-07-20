@@ -1,0 +1,128 @@
+BRAmount	0
+Basic_Rating	3
+BitsPerSample	8 8 8
+Brightness	0
+CNRAmount	34
+Clarity	0.000000
+CleanLongExposureAmount	0
+ColorBalance	1.000000;1.000000;1.000000;1.000000
+ColorCorrections	(Binary data 887 bytes, use -b option to extract)
+Color_tag_index	4
+CompatibleVersion	13
+CompressedBitsPerPixel	3
+Compression	Uncompressed
+Contrast	0
+CreateDate	2009:04:03 15:15:20
+Crop	0.000000;0.000000;0.000000;0.000000
+Crop	2087.088867;1690.806274;3868.893555;3158.520264
+DateTimeOriginal	2009:04:03 15:15:20
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	3364
+ExifImageWidth	4490
+ExifVersion	0220
+Exposure	0
+ExposureTime	1/15
+FileType	EIP
+FileTypeExtension	eip
+FilmCurve	PhaseOneP65+-Film Standard.fcrv
+GCurve	
+GCurveB	
+GCurveG	
+GCurveR	
+Highlight	1.000000;1.000000;1.000000;1.000000
+HighlightRecovery	0
+ICCProfile	PhaseOneP65+-Flash.icm
+ISO	200
+ImageHeight	420
+ImageSize	4490x3364
+ImageUniqueID	00E058000066000C01010E13F5000951
+ImageWidth	561
+LensGeoAbr	0.0,0.0000;26929.9,-2103.9001;53859.8,-16831.2012|0.0|0
+LensId	1
+LensOpticCenter	0.000000|0.000000
+LensOpticCenterEnabled	0
+LensRadialBlur	33662.4,9.4255|33662.4,7.4057|0.0|0
+LensShift	0
+LensShiftDirection	0
+LensTilt	0
+LensTiltDirection	0
+LightSource	Other
+MIMEType	application/x-captureone
+Make	Phase One A/S
+Megapixels	15.1
+Midtone	0.000000;0.000000;0.000000;0.000000
+Model	P65+
+Moire	0.000000;8
+NRAmount	18.59756112098694
+NRAmount	25
+PhotometricInterpretation	RGB
+PlanarConfiguration	Chunky
+PurpleFringing	0
+Rating	3
+ResolutionUnit	inches
+Rotation	0
+Rotation	90
+RowsPerStrip	420
+SamplesPerPixel	3
+Saturation	0
+Shadow	0.000000;0.000000;0.000000;0.000000
+ShadowRecovery	0
+ShutterSpeed	1/15
+ShutterSpeedValue	1/15
+StripByteCounts	20
+StripOffsets	32
+SubfileType	Full-resolution image
+TargetEnable	1
+TargetHighlight	1.000000;1.000000;1.000000;1.000000
+TargetShadow	0.000000;0.000000;0.000000;0.000000
+USMAmount	140
+USMRadius	1
+USMThreshold	1
+UUID	133ACDE8-EF48-4978-9AED-5C6B4DDE9CBF
+UUID	43C0DD50-C6FE-4880-A275-7EA545CE1347
+Version	13
+Vignetting	0.000000|0|0|1
+WhiteBalance	1.391000;1.000000;1.474000
+WhiteBalance	Unknown (5)
+XResolution	300
+YResolution	300
+ZipBitFlag	0
+ZipBitFlag	0
+ZipBitFlag	0
+ZipBitFlag	0
+ZipBitFlag	0
+ZipCRC	0x03b54756
+ZipCRC	0x1ad000e6
+ZipCRC	0xb7f04729
+ZipCRC	0xc3481f07
+ZipCRC	0xff76e911
+ZipCompressedSize	130
+ZipCompressedSize	244
+ZipCompressedSize	3280
+ZipCompressedSize	460
+ZipCompressedSize	576
+ZipCompression	None
+ZipCompression	None
+ZipCompression	None
+ZipCompression	None
+ZipCompression	None
+ZipFileName	0.IIQ
+ZipFileName	CaptureOne/Settings45/0.IIQ.cos
+ZipFileName	CaptureOne/Settings50/0.IIQ.cos
+ZipFileName	manifest.xml
+ZipFileName	manifest50.xml
+ZipModifyDate	2009:04:03 10:14:36
+ZipModifyDate	2009:04:03 10:14:36
+ZipModifyDate	2009:04:03 10:14:44
+ZipModifyDate	2009:11:03 19:14:12
+ZipModifyDate	2009:11:03 19:55:32
+ZipRequiredVersion	10
+ZipRequiredVersion	10
+ZipRequiredVersion	10
+ZipRequiredVersion	10
+ZipRequiredVersion	10
+ZipUncompressedSize	130
+ZipUncompressedSize	244
+ZipUncompressedSize	3280
+ZipUncompressedSize	460
+ZipUncompressedSize	576

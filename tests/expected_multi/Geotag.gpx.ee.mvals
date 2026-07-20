@@ -1,0 +1,45 @@
+FileType	XML
+FileTypeExtension	xml
+GpxCreator	Wissenbach Map3D 2.21
+GpxSchemaLocation	http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd.                       http://www.cableone.net/cdwissenbach http://www.cableone.net/cdwissenbach/wissenbach.xsd
+GpxTrkCmt	Test Track
+GpxTrkName	TESTTRK
+GpxTrkTrksegTrkptEle	1472.396484
+GpxTrkTrksegTrkptEle	1474.319092
+GpxTrkTrksegTrkptEle	1479.606201
+GpxTrkTrksegTrkptEle	1481.528809
+GpxTrkTrksegTrkptEle	1488.739014
+GpxTrkTrksegTrkptEle	1491.622803
+GpxTrkTrksegTrkptEle	1496.429443
+GpxTrkTrksegTrkptEle	1502.677979
+GpxTrkTrksegTrkptEle	1507.003906
+GpxTrkTrksegTrkptLat	43.641000
+GpxTrkTrksegTrkptLat	43.641086
+GpxTrkTrksegTrkptLat	43.641450
+GpxTrkTrksegTrkptLat	43.641751
+GpxTrkTrksegTrkptLat	43.641922
+GpxTrkTrksegTrkptLat	43.642030
+GpxTrkTrksegTrkptLat	43.642201
+GpxTrkTrksegTrkptLat	43.642545
+GpxTrkTrksegTrkptLat	43.642824
+GpxTrkTrksegTrkptLon	-116.061502
+GpxTrkTrksegTrkptLon	-116.061587
+GpxTrkTrksegTrkptLon	-116.061738
+GpxTrkTrksegTrkptLon	-116.061802
+GpxTrkTrksegTrkptLon	-116.061995
+GpxTrkTrksegTrkptLon	-116.062059
+GpxTrkTrksegTrkptLon	-116.062102
+GpxTrkTrksegTrkptLon	-116.062231
+GpxTrkTrksegTrkptLon	-116.062338
+GpxTrkTrksegTrkptTime	2003:05:24 17:09:04Z
+GpxTrkTrksegTrkptTime	2003:05:24 17:09:10Z
+GpxTrkTrksegTrkptTime	2003:05:24 17:09:17Z
+GpxTrkTrksegTrkptTime	2003:05:24 17:09:22Z
+GpxTrkTrksegTrkptTime	2003:05:24 17:09:28Z
+GpxTrkTrksegTrkptTime	2003:05:24 17:09:35Z
+GpxTrkTrksegTrkptTime	2003:05:24 17:09:46Z
+GpxTrkTrksegTrkptTime	2003:05:24 17:09:55Z
+GpxTrkTrksegTrkptTime	2003:05:24 17:10:05Z
+GpxVersion	1.0
+GpxXmlns	http://www.topografix.com/GPX/1/0
+MIMEType	application/xml

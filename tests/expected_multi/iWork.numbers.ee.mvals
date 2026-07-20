@@ -1,0 +1,42 @@
+Author	Author Name
+Comment	Comments are a joy to behold.
+Copyright	(c) 2009
+FileType	NUMBERS
+FileTypeExtension	numbers
+Keywords	keyword1,keyword2,keyword3
+MIMEType	application/x-iwork-numbers-sffnumbers
+PreviewImage	(Binary data 27 bytes, use -b option to extract)
+Projects	Project 1, Project 2
+Title	Doc Title, yo
+ZipBitFlag	0
+ZipBitFlag	0
+ZipBitFlag	0
+ZipBitFlag	0
+ZipCRC	0x02b8a153
+ZipCRC	0xb6fc7f5e
+ZipCRC	0xe267fa27
+ZipCRC	0xfa4361e7
+ZipCompressedSize	238
+ZipCompressedSize	25
+ZipCompressedSize	27
+ZipCompressedSize	451
+ZipCompression	Deflated
+ZipCompression	Deflated
+ZipCompression	None
+ZipCompression	None
+ZipFileName	QuickLook/Preview.pdf
+ZipFileName	QuickLook/Thumbnail.jpg
+ZipFileName	buildVersionHistory.plist
+ZipFileName	index.xml
+ZipModifyDate	2009:11:11 11:57:26
+ZipModifyDate	2009:11:11 14:35:40
+ZipModifyDate	2009:11:11 14:37:36
+ZipModifyDate	2009:11:11 14:38:06
+ZipRequiredVersion	10
+ZipRequiredVersion	10
+ZipRequiredVersion	20
+ZipRequiredVersion	20
+ZipUncompressedSize	1026
+ZipUncompressedSize	25
+ZipUncompressedSize	27
+ZipUncompressedSize	643

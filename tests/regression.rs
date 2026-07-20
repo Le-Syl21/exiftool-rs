@@ -535,6 +535,232 @@ fn regression_tag_groups() {
     );
 }
 
+// ── Full-multiset value parity, both extraction modes ──────────────────────
+//
+// The `.vals` ratchet above has two blind spots, both of which hid real bugs:
+//
+//   1. it keeps only the FIRST occurrence per tag name, so emitting a tag twice
+//      where ExifTool emits it once is invisible to it;
+//   2. it only ever runs the default extraction mode, so everything reached
+//      through `-ee` (ExtractEmbedded) is untested but for `Garmin.fit`.
+//
+// This ratchet compares the COMPLETE multiset of `name<TAB>value` pairs — every
+// occurrence, not one per name — for both modes, against
+// `tests/expected_multi/<file>.mvals` and `<file>.ee.mvals`. Those oracles come
+// from Perl ExifTool 13.59 via `scripts/gen_multiset_baselines.sh`; see that
+// script for the exact recipe (in short: `-S` so there is no column padding to
+// mistake for data, records split on `Name: ` headers so multi-line values stay
+// on one line, and the same `-s` sanitization the crate applies).
+//
+// A delta carries an occurrence index so multiplicity ratchets too: emitting a
+// pair a third time when the baseline records two is a NEW delta.
+//
+// Regenerate: UPDATE_MULTISET_BASELINE=1 cargo test --release --test regression regression_tag_multiset
+
+#[cfg(unix)]
+const MULTISET_BASELINE: &str = "tests/multiset_baseline.txt";
+
+/// `(file, "default" | "ee", "extra" | "missing", name, value, occurrence)`.
+#[cfg(unix)]
+type MultiDelta = (String, &'static str, &'static str, String, String, u32);
+
+/// The two extraction modes the ratchet covers: `(Options.extract_embedded,
+/// oracle suffix, baseline label)`.
+#[cfg(unix)]
+const MULTISET_MODES: [(u8, &str, &str); 2] = [(0, ".mvals", "default"), (1, ".ee.mvals", "ee")];
+
+/// `safe_extract`, with an explicit `extract_embedded` setting.
+#[cfg(unix)]
+fn safe_extract_with_ee(path: &Path, extract_embedded: u8) -> Option<Vec<exiftool_rs::Tag>> {
+    use exiftool_rs::Options;
+    let path = path.to_path_buf();
+    let result = panic::catch_unwind(move || {
+        let et = ExifTool::with_options(Options {
+            extract_embedded,
+            ..Default::default()
+        });
+        et.extract_info(&path)
+    });
+    match result {
+        Ok(Ok(tags)) => Some(tags),
+        _ => None,
+    }
+}
+
+/// Returns `(deltas, files compared)` — files being counted once per mode.
+#[cfg(unix)]
+fn current_multiset_deltas() -> (BTreeSet<MultiDelta>, usize) {
+    use std::collections::BTreeMap;
+    force_oracle_tz();
+    let images_dir = Path::new("tests/images");
+    let expected_dir = Path::new("tests/expected_multi");
+
+    let mut entries: Vec<_> = std::fs::read_dir(images_dir)
+        .unwrap()
+        .map(|e| e.unwrap())
+        .collect();
+    entries.sort_by_key(|e| e.file_name());
+
+    let mut deltas = BTreeSet::new();
+    let mut tested = 0;
+
+    for entry in entries {
+        let file_name = entry.file_name().to_string_lossy().to_string();
+        for (extract_embedded, suffix, mode) in MULTISET_MODES {
+            let oracle = expected_dir.join(format!("{file_name}{suffix}"));
+            if !oracle.exists() {
+                continue;
+            }
+
+            // Signed occurrence count per pair: ours adds, ExifTool's subtracts.
+            // What is left is the multiset difference in both directions.
+            let mut balance: BTreeMap<(String, String), i64> = BTreeMap::new();
+
+            let tags = safe_extract_with_ee(&entry.path(), extract_embedded).unwrap_or_default();
+            for t in &tags {
+                if FIT_VOLATILE_TAGS.contains(&t.name.as_str()) {
+                    continue;
+                }
+                let key = (t.name.clone(), sanitize_value(&t.print_value));
+                *balance.entry(key).or_default() += 1;
+            }
+
+            let content = std::fs::read(&oracle)
+                .map(|b| String::from_utf8_lossy(&b).into_owned())
+                .unwrap_or_default();
+            for line in content.lines() {
+                let mut it = line.splitn(2, '\t');
+                let (name, value) = match (it.next(), it.next()) {
+                    (Some(n), Some(v)) => (n, v),
+                    _ => continue,
+                };
+                *balance
+                    .entry((name.to_string(), value.to_string()))
+                    .or_default() -= 1;
+            }
+
+            for ((name, value), count) in balance {
+                let kind = if count > 0 { "extra" } else { "missing" };
+                for occurrence in 0..count.unsigned_abs() as u32 {
+                    deltas.insert((
+                        file_name.clone(),
+                        mode,
+                        kind,
+                        name.clone(),
+                        value.clone(),
+                        occurrence,
+                    ));
+                }
+            }
+            tested += 1;
+        }
+    }
+
+    (deltas, tested)
+}
+
+#[cfg(unix)]
+fn fmt_multi_delta(d: &MultiDelta) -> String {
+    format!("{}\t{}\t{}\t{}\t{}\t{}", d.0, d.1, d.2, d.5, d.3, d.4)
+}
+
+#[cfg(unix)]
+fn read_multiset_baseline() -> BTreeSet<MultiDelta> {
+    std::fs::read(MULTISET_BASELINE)
+        .map(|b| String::from_utf8_lossy(&b).into_owned())
+        .unwrap_or_default()
+        .lines()
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .filter_map(|l| {
+            let mut it = l.splitn(6, '\t');
+            let file = it.next()?.to_string();
+            let mode = match it.next()? {
+                "default" => "default",
+                "ee" => "ee",
+                _ => return None,
+            };
+            let kind = match it.next()? {
+                "extra" => "extra",
+                "missing" => "missing",
+                _ => return None,
+            };
+            let occurrence: u32 = it.next()?.parse().ok()?;
+            let name = it.next()?.to_string();
+            let value = it.next()?.to_string();
+            Some((file, mode, kind, name, value, occurrence))
+        })
+        .collect()
+}
+
+#[cfg(unix)]
+fn write_multiset_baseline(deltas: &BTreeSet<MultiDelta>) {
+    let mut out = String::from(
+        "# Multiset value-parity baseline: every `name<TAB>value` pair we emit a\n\
+         # different number of times than ExifTool, for both extraction modes.\n\
+         # New deltas fail regression_tag_multiset; fixes tighten it.\n\
+         # Oracle: tests/expected_multi/*.mvals, from scripts/gen_multiset_baselines.sh\n\
+         # Regenerate: UPDATE_MULTISET_BASELINE=1 cargo test --release --test regression regression_tag_multiset\n\
+         # Format: <file>\\t<default|ee>\\t<extra|missing>\\t<occurrence>\\t<tag>\\t<value>\n",
+    );
+    for d in deltas {
+        out.push_str(&fmt_multi_delta(d));
+        out.push('\n');
+    }
+    std::fs::write(MULTISET_BASELINE, out).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn regression_tag_multiset() {
+    let (current, tested) = current_multiset_deltas();
+    assert!(
+        tested >= 200,
+        "Expected at least 200 (file, mode) comparisons, got {tested}"
+    );
+
+    if std::env::var_os("UPDATE_MULTISET_BASELINE").is_some() {
+        let default_deltas = current.iter().filter(|d| d.1 == "default").count();
+        let ee_deltas = current.len() - default_deltas;
+        write_multiset_baseline(&current);
+        eprintln!(
+            "Wrote {MULTISET_BASELINE}: {} delta(s) over {tested} (file, mode) pairs \
+             — {default_deltas} default, {ee_deltas} -ee.",
+            current.len()
+        );
+        return;
+    }
+
+    // Enforced in release only (debug panics on overflow, skewing the corpus),
+    // exactly like its name-, value- and group-parity siblings.
+    if cfg!(debug_assertions) {
+        eprintln!("debug build: multiset parity not enforced. Run `cargo test --release`.");
+        return;
+    }
+
+    let baseline = read_multiset_baseline();
+    let regressions: Vec<_> = current.difference(&baseline).collect();
+    let improvements = baseline.difference(&current).count();
+    if improvements > 0 {
+        eprintln!(
+            "✨ {improvements} multiset delta(s) fixed — tighten with \
+             `UPDATE_MULTISET_BASELINE=1 cargo test --release --test regression regression_tag_multiset`."
+        );
+    }
+    const SHOW: usize = 20;
+    assert!(
+        regressions.is_empty(),
+        "{} NEW multiset delta(s) vs ExifTool:\n{}\n\nIf intentional, regenerate with \
+         UPDATE_MULTISET_BASELINE=1.",
+        regressions.len(),
+        regressions
+            .iter()
+            .take(SHOW)
+            .map(|d| format!("  {}", fmt_multi_delta(d)))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
+}
+
 #[test]
 fn all_test_files_parse_without_panic() {
     let images_dir = Path::new("tests/images");

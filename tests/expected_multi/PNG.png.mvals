@@ -1,0 +1,17 @@
+BackgroundColor	0
+BitDepth	1
+ColorType	Grayscale
+Comment	test comment
+Compression	Deflate/Inflate
+Creator	Phil Harvey
+FileType	PNG
+FileTypeExtension	png
+Filter	Adaptive
+ImageHeight	16
+ImageSize	16x16
+ImageWidth	16
+Interlace	Noninterlaced
+MIMEType	image/png
+Megapixels	0.000256
+Warning	[minor] Text/EXIF chunk(s) found after PNG IDAT (may be ignored by some readers) [x2]
+XMPToolkit	Image::ExifTool 6.51

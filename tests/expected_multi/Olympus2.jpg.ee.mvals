@@ -1,0 +1,145 @@
+AELock	Off
+AFAreas	none
+AFPoint	Left (or n/a)
+AFSearch	Not Ready
+Aperture	16.0
+BWMode	Off
+BitsPerSample	8
+BlackLevel2	63 63 63 63
+BlueBalance	1.523438
+BodyFirmwareVersion	1.001
+CameraID	OLYMPUS DIGITAL CAMERA
+CameraSettingsVersion	0100
+CameraType	u760,S760
+CameraType2	u760,S760
+CircleOfConfusion	0.005 mm
+ColorComponents	3
+ColorMatrix	348 -54 -42 -56 422 -114 -2 -132 388
+ColorSpace	sRGB
+ColorSpace	sRGB
+ComponentsConfiguration	Y, Cb, Cr, -
+Compression	JPEG (old-style)
+CompressionFactor	4
+Contrast	Normal
+ContrastSetting	0 (min -2, max 2)
+CoringFilter	15
+CreateDate	2007:02:16 15:09:13
+CustomRendered	Normal
+CustomSaturation	0 (min -2, max 2)
+DOF	inf (4.46 m - inf)
+DateTimeOriginal	2007:02:16 15:09:13
+DigitalZoom	1.0
+DigitalZoomRatio	1
+DistortionCorrection	Off
+DistortionCorrection2	Off
+DriveMode	Single Shot
+EncodingProcess	Baseline DCT, Huffman coding
+Enhancer	38
+EquipmentVersion	0100
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	2304
+ExifImageWidth	3072
+ExifVersion	0221
+ExposureCompensation	-0.7
+ExposureMode	Manual
+ExposureMode	Program
+ExposureProgram	Program AE
+ExposureTime	1/250
+ExternalFlash	Off
+ExternalFlashBounce	Bounce or Off
+ExternalFlashZoom	0
+FNumber	16.0
+FOV	18.4 deg (124.77 m)
+FileSource	Digital Camera
+FileType	JPEG
+FileTypeExtension	jpg
+Flash	Off, Did not fire
+FlashExposureComp	0
+FlashMode	Off
+FlashpixVersion	0100
+FocalLength	19.5 mm
+FocalLength35efl	19.5 mm (35 mm equivalent: 111.3 mm)
+FocalPlaneDiagonal	7.58 mm
+FocalPlaneDiagonal	7.58 mm
+FocusDistance	385.8 m
+FocusInfoVersion	0100
+FocusMode	Single AF
+FocusProcess	AF Not Used
+FocusStepCount	321
+FocusStepInfinity	320
+FocusStepNear	375
+GainControl	None
+Gradation	Normal
+HyperfocalDistance	4.51 m
+ISO	80
+ImageDescription	OLYMPUS DIGITAL CAMERA
+ImageHeight	8
+ImageProcessingVersion	0111
+ImageQuality2	SHQ
+ImageSize	8x8
+ImageStabilization	On, Mode 2
+ImageWidth	8
+InternalFlash	Off
+InternalSerialNumber	0171612001128001
+InteropIndex	R98 - DCF basic file (sRGB)
+InteropVersion	0100
+LensDistortionParams	0 0 0 0 0 0
+LightSource	Unknown
+LightValue	16.3
+MIMEType	image/jpeg
+Macro	Off
+MacroMode	Off
+Make	OLYMPUS IMAGING CORP.
+ManometerPressure	0 kPa
+ManometerReading	0 m, 0 ft
+MaxApertureValue	3.4
+Megapixels	0.000064
+MeteringMode	ESP
+MeteringMode	Multi-segment
+Model	u760,S760
+ModifiedSaturation	Off
+ModifyDate	2007:02:16 15:09:13
+NoiseReduction	(none)
+NoiseReduction2	(none)
+Orientation	Horizontal (normal)
+PanoramaMode	Off
+PreviewImageLength	0
+PreviewImageStart	4294966614
+PreviewImageValid	No
+PrintIMVersion	0300
+Quality	SHQ (Fine)
+RawDevEditStatus	Original
+RawDevVersion	0100
+RedBalance	2.09375
+ResolutionUnit	inches
+ResolutionUnit	inches
+Saturation	Normal
+ScaleFactor35efl	5.7
+SceneCaptureType	Standard
+SceneDetect	0
+SceneMode	Standard
+SerialNumber	C90500055
+ShadingCompensation	Off
+ShadingCompensation2	On
+Sharpness	Normal
+SharpnessSetting	0 (min -2, max 2)
+ShutterSpeed	1/250
+Software	Version 1.0
+SpecialMode	Normal, Sequence: 0, Panorama: (none)
+ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+ThumbnailLength	28
+ThumbnailOffset	7424
+UserComment	
+WB_GLevel	0
+WB_RBLevels	536 390
+WhiteBalance	Auto
+WhiteBalance2	Auto
+WhiteBalanceBracket	0 0
+WhiteBalanceTemperature	Auto
+XResolution	314
+XResolution	72
+YCbCrPositioning	Co-sited
+YCbCrSubSampling	YCbCr4:2:0 (2 2)
+YResolution	314
+YResolution	72
+ZoomStepCount	13

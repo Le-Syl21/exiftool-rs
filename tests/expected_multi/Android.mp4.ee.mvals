@@ -1,0 +1,83 @@
+AndroidMake	Xiaomi
+AndroidModel	Mi 10
+AndroidVersion	13
+AudioBitsPerSample	16
+AudioChannels	2
+AudioFormat	mp4a
+AudioSampleRate	48000
+AvgBitrate	0 bps
+Balance	0
+BitDepth	24
+ColorPrimaries	BT.709
+ColorProfiles	nclx
+CompatibleBrands	isom, mp42
+CompressorID	avc1
+CreateDate	2026:06:13 04:03:08
+CurrentTime	0 s
+Duration	2.13 s
+FileType	MP4
+FileTypeExtension	mp4
+GraphicsMode	srcCopy
+HandlerDescription	SoundHandle
+HandlerDescription	VideoHandle
+HandlerType	Audio Track
+HandlerType	Metadata Tags
+HandlerType	Video Track
+ImageHeight	1080
+ImageSize	1920x1080
+ImageWidth	1920
+MIMEType	video/mp4
+MajorBrand	MP4 v2 [ISO 14496-14]
+MatrixCoefficients	BT.709
+MatrixStructure	0 1 0 -1 0 0 0 0 1
+MatrixStructure	1 0 0 0 1 0 0 0 1
+MatrixStructure	1 0 0 0 1 0 0 0 1
+MediaCreateDate	2026:06:13 04:03:08
+MediaCreateDate	2026:06:13 04:03:08
+MediaDataOffset	405270
+MediaDataSize	0
+MediaDuration	2.10 s
+MediaDuration	2.13 s
+MediaHeaderVersion	0
+MediaHeaderVersion	0
+MediaModifyDate	2026:06:13 04:03:08
+MediaModifyDate	2026:06:13 04:03:08
+MediaTimeScale	48000
+MediaTimeScale	90000
+Megapixels	2.1
+MinorVersion	0.0.0
+ModifyDate	2026:06:13 04:03:08
+MovieHeaderVersion	0
+NextTrackID	3
+OpColor	0 0 0
+PosterTime	0 s
+PreferredRate	1
+PreferredVolume	100.00%
+PreviewDuration	0 s
+PreviewImage	(Binary data 868516 bytes, use -b option to extract)
+PreviewTime	0 s
+Rotation	90
+SelectionDuration	0 s
+SelectionTime	0 s
+SourceImageHeight	1080
+SourceImageWidth	1920
+TimeScale	10000
+TrackCreateDate	2026:06:13 04:03:08
+TrackCreateDate	2026:06:13 04:03:08
+TrackDuration	2.10 s
+TrackDuration	2.13 s
+TrackHeaderVersion	0
+TrackHeaderVersion	0
+TrackID	1
+TrackID	2
+TrackLayer	0
+TrackLayer	0
+TrackModifyDate	2026:06:13 04:03:08
+TrackModifyDate	2026:06:13 04:03:08
+TrackVolume	0.00%
+TrackVolume	100.00%
+TransferCharacteristics	BT.709
+VideoFrameRate	30.059
+VideoFullRangeFlag	Limited
+XResolution	72
+YResolution	72

@@ -1,0 +1,23 @@
+BitsPerSample	8
+ColorComponents	3
+EmbeddedImage	(Binary data 251 bytes, use -b option to extract)
+EmbeddedImageColorSpace	ICCBased
+EmbeddedImageFilter	DCTDecode
+EmbeddedImageHeight	8
+EmbeddedImageWidth	8
+EncodingProcess	Baseline DCT, Huffman coding
+FileType	JPEG
+FileType	PDF
+FileTypeExtension	jpg
+FileTypeExtension	pdf
+ImageHeight	8
+ImageSize	8x8
+ImageWidth	8
+Linearized	No
+MIMEType	application/pdf
+MIMEType	image/jpeg
+MediaBox	0, 0, 612, 792
+Megapixels	0.000064
+PDFVersion	1.3
+PageCount	1
+YCbCrSubSampling	YCbCr4:2:0 (2 2)

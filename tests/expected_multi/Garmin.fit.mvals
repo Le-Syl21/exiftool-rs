@@ -1,0 +1,78 @@
+AvgCadence	13 rpm
+AvgCadencePosition	255 255
+AvgFractionalCadence	0.53125 rpm
+AvgHeartRate	87 bpm
+AvgLeftPowerPhase	255 255 255 255
+AvgLeftPowerPhasePeak	255 255 255 255
+AvgPowerPosition	65535 65535
+AvgRightPowerPhase	255 255 255 255
+AvgRightPowerPhasePeak	255 255 255 255
+AvgTemperature	28 C
+BeginningBodyBattery	75
+BodyBattery	75
+Cadence	0 rpm
+CycleLength16	0 m
+Distance	0 m
+EndingBodyBattery	68
+EnhancedAvgAltitude	71.6 m
+EnhancedAvgSpeed	0.378 m/s
+EnhancedMaxAltitude	86.8 m
+EnhancedMaxSpeed	2.986 m/s
+EnhancedMinAltitude	53.4 m
+EstSweatLoss	591
+Event	Lap
+EventType	Stop
+FileType	FIT
+FileTypeExtension	fit
+FirstLapIndex	0
+FractionalCadence	0 rpm
+GPSAltitude	63.8 m
+GPSDateTime	2026:04:01 16:00:24+02:00
+GPSDestLatitude	32 deg 43' 58.12" N
+GPSDestLongitude	117 deg 9' 14.85" W
+GPSLatitude	32 deg 43' 57.97" N
+GPSLongitude	117 deg 9' 15.05" W
+GPSPosition	32 deg 43' 57.97" N, 117 deg 9' 15.05" W
+GPSSpeed	0 km/h
+HeartRate	69 bpm
+Intensity	Active
+LapTrigger	Session End
+MIMEType	application/fit
+MaxCadence	88 rpm
+MaxCadencePosition	255 255
+MaxFractionalCadence	0 rpm
+MaxHeartRate	108 bpm
+MaxPowerPosition	65535 65535
+MaxTemperature	29 C
+MessageIndex	0
+MetabolicCalories	87 kcal
+MinHeartRate	66 bpm
+MinTemperature	27 C
+NECLatitude	32 deg 43' 59.98" N
+NECLongitude	117 deg 9' 7.56" W
+NumLaps	1
+PrimaryBenefit	Recovery
+ProtocolVersion	16
+RestingCalories	87 kcal
+SWCLatitude	32 deg 43' 57.49" N
+SWCLongitude	117 deg 9' 15.63" W
+Sport	Mountaineering
+SportProfileName	Birding
+SubSport	Generic
+Temperature	27 C
+TimeStamp	2026:04:01 16:00:24+02:00
+TotalAnaerobicTrainingEffect	0
+TotalAscent	29 m
+TotalCalories	233 kcal
+TotalCycles	1174 cycles
+TotalDescent	34 m
+TotalDistance	1345.5 m
+TotalElapsedTime	3564.089 s
+TotalSets	0
+TotalTimerTime	3564.089 s
+TotalTrainingEffect	0.5
+TrainingLoadPeak	3.70919799804688
+Trigger	Activity End
+Volume	0 kg
+Warning	[minor] Use ExtractEmbedded option to extract all timed metadata
+WristHeartRate	69 bpm

@@ -1,0 +1,7 @@
+CPUArchitecture	64 bit
+CPUByteOrder	Little endian
+CPUType	AMD x86-64
+FileType	ELF shared library
+FileTypeExtension	so
+MIMEType	application/octet-stream
+ObjectFileType	Shared object file
