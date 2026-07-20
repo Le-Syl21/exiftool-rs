@@ -1823,20 +1823,23 @@ impl ExifTool {
                     if LOW_PRIORITY_TAGS.contains(&(g1, name)) {
                         return true;
                     }
-                    if g.family0 == "XMP" {
-                        return matches!(g1, "XMP-tiff" | "XMP-exif" | "XMP-exifEX")
-                            || crate::tags::group2::xmp_property_is_unknown(g1, name);
+                    match g.family0.as_str() {
+                        "XMP" => {
+                            matches!(g1, "XMP-tiff" | "XMP-exif" | "XMP-exifEX")
+                                || crate::tags::group2::xmp_property_is_unknown(g1, name)
+                        }
+                        // A QuickTime movie's tracks are separate documents to
+                        // ExifTool, so a track tag never overrides the movie's.
+                        "QuickTime" => g1 == "QuickTime" || g1.starts_with("Track"),
+                        // The thumbnail and preview IFDs, and the sub-IFDs of a
+                        // RAW file, describe a different image than IFD0.
+                        "EXIF" | "MakerNotes" => {
+                            g1 == "IFD1" || g1 == "PreviewIFD" || g1.starts_with("SubIFD")
+                        }
+                        // Matroska and MXF number their tracks too, but keep them
+                        // all in the main document, where last-wins applies.
+                        _ => matches!(g1, "Jpeg2000" | "PhotoMechanic" | "DjVu"),
                     }
-                    matches!(
-                        g1,
-                        "QuickTime" | "Track1" | "Jpeg2000" | "PhotoMechanic" | "DjVu"
-                    ) || g1 == "IFD1"
-                        || g1 == "PreviewIFD"
-                        || g1.starts_with("SubIFD")
-                        || (g1.starts_with("Track")
-                            && g1 != "Track1"
-                            && g1.len() > 5
-                            && g1.as_bytes()[5].is_ascii_digit())
                 }
                 use std::collections::HashMap as HM;
                 // group indices by name

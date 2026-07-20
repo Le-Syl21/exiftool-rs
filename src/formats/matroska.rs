@@ -97,9 +97,17 @@ pub fn read_matroska(data: &[u8]) -> Result<Vec<Tag>> {
         }
 
         match id {
-            0x1549A966 => parse_info(data, pos, pos + size, &mut tags), // Info
+            0x1549A966 => {
+                // Info: ExifTool names this master element's family-1 group after
+                // it (`SET_GROUP1 = 'Info'`).
+                let first = tags.len();
+                parse_info(data, pos, pos + size, &mut tags);
+                for t in &mut tags[first..] {
+                    t.group.family1 = "Info".into();
+                }
+            }
             0x1654AE6B => parse_tracks(data, pos, pos + size, &mut tags), // Tracks
-            0x1254C367 => parse_tags(data, pos, pos + size, &mut tags), // Tags
+            0x1254C367 => parse_tags(data, pos, pos + size, &mut tags),   // Tags
             0x1043A770 => parse_chapters(data, pos, pos + size, &mut tags), // Chapters
             0x1F43B675 => break, // Cluster - stop here (actual media data)
             _ => {}
@@ -207,6 +215,9 @@ fn parse_tracks(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
 fn parse_track_entry(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
     let mut pos = start;
     let mut track_type: u64 = 0;
+    // Index of the first tag covered by the track's family-1 group, and that
+    // group's name; set when TrackNumber is read.
+    let mut track_group: Option<(usize, String)> = None;
 
     // First pass: find TrackType so we can prefix CodecID correctly
     {
@@ -242,6 +253,12 @@ fn parse_track_entry(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>)
                 // TrackNumber (Perl 0x57 → raw 0xD7)
                 let v = read_uint(data, pos, size);
                 tags.push(mk("TrackNumber", "Track Number", Value::U32(v as u32)));
+                // ExifTool sets the family-1 group from here on to Track<number>
+                // ("set Track# family 1 group name for tags directly in the
+                // track"), the track's own number rather than its position, and
+                // clears it again when the TrackEntry ends. Anything read before
+                // TrackNumber therefore keeps the default group.
+                track_group = Some((tags.len() - 1, format!("Track{v}")));
             }
             0x73C5 => {
                 // TrackUID (Perl 0x33C5 → raw 0x73C5)
@@ -365,6 +382,12 @@ fn parse_track_entry(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>)
             _ => {}
         }
         pos += size;
+    }
+
+    if let Some((first, group)) = track_group {
+        for t in &mut tags[first..] {
+            t.group.family1 = group.clone();
+        }
     }
 }
 
