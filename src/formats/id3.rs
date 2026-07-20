@@ -18,8 +18,17 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
     if data.len() >= 10 && data.starts_with(b"ID3") {
         let tag_size = syncsafe_u32(&data[6..10]) as usize;
         id3_len += tag_size + 10;
-        let id3v2_tags = read_id3v2(data)?;
-        tags.extend(id3v2_tags);
+        // ExifTool keeps one table per ID3v2 minor version, and names the
+        // family-1 group after it.
+        let version1 = match data[3] {
+            2 => "ID3v2_2",
+            3 => "ID3v2_3",
+            _ => "ID3v2_4",
+        };
+        for mut tag in read_id3v2(data)? {
+            tag.group.family1 = version1.into();
+            tags.push(tag);
+        }
     }
 
     // Try ID3v1 at end (last 128 bytes)
@@ -29,7 +38,8 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
             id3_len += 128;
             let id3v1_tags = read_id3v1(&data[v1_start..]);
             // Only add v1 tags not already present from v2
-            for t in id3v1_tags {
+            for mut t in id3v1_tags {
+                t.group.family1 = "ID3v1".into();
                 if !tags.iter().any(|existing| existing.name == t.name) {
                     tags.push(t);
                 }
@@ -39,7 +49,11 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Emit ID3Size (total size of ID3 metadata, like Perl's $id3Len)
     if id3_len > 0 {
-        tags.push(mk("ID3Size", "ID3 Size", Value::U32(id3_len as u32)));
+        // ID3Size is not an ID3 tag: ExifTool raises it from the file level.
+        let mut size_tag = mk("ID3Size", "ID3 Size", Value::U32(id3_len as u32));
+        size_tag.group.family0 = "File".into();
+        size_tag.group.family1 = "File".into();
+        tags.push(size_tag);
     }
 
     // Find MPEG audio frame header (after ID3v2 tag if present)
@@ -51,7 +65,12 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
     };
 
     if let Some(mpeg_tags) = parse_mpeg_header(data, audio_start) {
-        tags.extend(mpeg_tags);
+        // The audio frame header is MPEG.pm's, not ID3's.
+        for mut tag in mpeg_tags {
+            tag.group.family0 = "MPEG".into();
+            tag.group.family1 = "MPEG".into();
+            tags.push(tag);
+        }
     }
 
     // Duration composite: (FileSize - ID3Size) * 8 / AudioBitrate_bps

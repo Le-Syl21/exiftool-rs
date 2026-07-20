@@ -1550,7 +1550,12 @@ impl ExifTool {
                     ("GoPro", "Sharpness"),
                     ("GoPro", "ExposureCompensation"),
                     // Embedded ID3 Comment overrides the native container's (AIFF/...).
-                    ("ID3", "Comment"),
+                    // One entry per ID3 table: only one of them can be present,
+                    // since read_mp3 drops an ID3v1 tag already seen in ID3v2.
+                    ("ID3v2_4", "Comment"),
+                    ("ID3v2_3", "Comment"),
+                    ("ID3v2_2", "Comment"),
+                    ("ID3v1", "Comment"),
                     // Minolta RAW (.mrw PRD/native block) is authoritative for these
                     // over the embedded EXIF maker note copies.
                     ("MinoltaRaw", "Contrast"),
