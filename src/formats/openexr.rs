@@ -207,8 +207,11 @@ pub fn read_openexr(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                         ch_name, pix_str, lin_str, x_samp, y_samp
                     ));
                 }
-                let ch_str = channels.join(", ");
-                tags.push(mk("Channels", Value::String(ch_str)));
+                // Channels is a List=>1 tag: keep elements so JSON emits an array.
+                tags.push(mk(
+                    "Channels",
+                    Value::List(channels.into_iter().map(Value::String).collect()),
+                ));
             }
             "compression" => {
                 if let Some(v) = read_le_u8(val_data, 0) {

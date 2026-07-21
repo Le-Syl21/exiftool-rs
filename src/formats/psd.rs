@@ -445,13 +445,9 @@ pub fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<
                         resource_data[2],
                         resource_data[3],
                     ]);
-                    let url_val = if count == 0 {
-                        String::new()
-                    } else {
-                        // Try to extract URL strings (simplified)
-                        String::new()
-                    };
-                    tags.push(mk("URL_List", "URL List", Value::String(url_val)));
+                    let _ = count;
+                    // List=>1 tag: emit as a (here empty) array in JSON.
+                    tags.push(mk("URL_List", "URL List", Value::List(Vec::new())));
                 }
             }
             // Version Info (0x0421) - HasRealMergedData, WriterName, ReaderName

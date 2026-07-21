@@ -291,8 +291,13 @@ pub fn read_wpg(data: &[u8]) -> Result<Vec<Tag>> {
         ));
     }
     if !records.is_empty() {
-        let joined = records.join(", ");
-        tags.push(mktag("File", "Records", "Records", Value::String(joined)));
+        // Records is a List=>1 tag: keep elements so JSON emits an array.
+        tags.push(mktag(
+            "File",
+            "Records",
+            "Records",
+            Value::List(records.into_iter().map(Value::String).collect()),
+        ));
     }
 
     Ok(tags)

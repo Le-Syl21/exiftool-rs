@@ -1938,6 +1938,23 @@ fn aggregate_duplicate_xmp_tags(tags: Vec<Tag>) -> Vec<Tag> {
             if is_known_xmp_prefix(prefix) {
                 let existing = &mut result[idx];
                 if existing.print_value != tag.print_value {
+                    // Grow an element list alongside the joined print string so JSON
+                    // output emits an array (ExifTool keeps these List=>1 flattened
+                    // fields as an array ref). Elements are the per-occurrence print
+                    // strings, so `raw_value` (a Value::List) joined by ", " matches
+                    // `print_value` exactly — the discriminator `json_list_elements`
+                    // relies on.
+                    match &mut existing.raw_value {
+                        Value::List(items) => {
+                            items.push(Value::String(tag.print_value.clone()))
+                        }
+                        _ => {
+                            existing.raw_value = Value::List(vec![
+                                Value::String(existing.print_value.clone()),
+                                Value::String(tag.print_value.clone()),
+                            ]);
+                        }
+                    }
                     existing.print_value = format!("{}, {}", existing.print_value, tag.print_value);
                 }
             }

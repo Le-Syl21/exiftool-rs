@@ -82,7 +82,14 @@ pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Extract MediaBox from page dictionary (only if found within a /Type /Page dict)
     if let Some(media_box) = extract_media_box_from_page(data) {
-        tags.push(mk("MediaBox", "Media Box", Value::String(media_box)));
+        // MediaBox is a 4-element numeric list; keep it as a List so JSON emits an
+        // array. Elements are kept as strings so to_display_string re-joins with
+        // ", " (matching Perl's text form) while each stays a JSON number.
+        tags.push(mk(
+            "MediaBox",
+            "Media Box",
+            Value::List(media_box.into_iter().map(Value::String).collect()),
+        ));
     }
 
     // Count pages (look for /Type /Page entries)
@@ -457,7 +464,7 @@ fn scan_for_info_and_xmp(data: &[u8], tags: &mut Vec<Tag>) {
 
 /// Find /MediaBox in a /Type /Pages dictionary (page tree root, not individual pages).
 /// Perl only reads MediaBox from the Pages node, not from individual Page objects.
-fn extract_media_box_from_page(data: &[u8]) -> Option<String> {
+fn extract_media_box_from_page(data: &[u8]) -> Option<Vec<String>> {
     let text = crate::encoding::decode_utf8_or_latin1(data);
     // Find /Type /Pages or /Type/Pages dictionaries and look for /MediaBox within them
     let mut search_start = 0;
@@ -500,7 +507,7 @@ fn extract_media_box_from_page(data: &[u8]) -> Option<String> {
                                 }
                             })
                             .collect();
-                        return Some(formatted.join(", "));
+                        return Some(formatted);
                     }
                 }
             }

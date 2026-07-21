@@ -3236,8 +3236,10 @@ fn decode_photoshop_irb_subtags(id: u16, data: &[u8], tags: &mut Vec<crate::tag:
         0x041E if data.len() >= 4 => {
             // URLList (from Perl Photoshop::URLList)
             let count = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
-            // Perl always emits URL_List (even when empty)
-            tags.push(mk("URL_List", String::new()));
+            // Perl always emits URL_List (even when empty) as a List=>1 array.
+            let mut url_list_tag = mk("URL_List", String::new());
+            url_list_tag.raw_value = crate::value::Value::List(Vec::new());
+            tags.push(url_list_tag);
             let mut upos = 4;
             for _ in 0..count.min(20) {
                 if upos + 12 > data.len() {

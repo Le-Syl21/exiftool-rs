@@ -446,10 +446,11 @@ fn parse_boxes(
                         }
                     }
                     if !brands.is_empty() {
+                        // List=>1 tag: keep elements so JSON emits an array.
                         tags.push(mk(
                             "CompatibleBrands",
                             "Compatible Brands",
-                            Value::String(brands.join(", ")),
+                            Value::List(brands.into_iter().map(Value::String).collect()),
                         ));
                     }
                 }

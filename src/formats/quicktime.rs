@@ -128,10 +128,13 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
                 pos += 4;
             }
             if !brands.is_empty() {
+                // Keep the brands as a list so JSON emits an array (ExifTool's
+                // CompatibleBrands is List=>1); to_display_string re-joins with
+                // ", " for text output.
                 tags.push(mk(
                     "CompatibleBrands",
                     "Compatible Brands",
-                    Value::String(brands.join(", ")),
+                    Value::List(brands.into_iter().map(Value::String).collect()),
                 ));
             }
         }
