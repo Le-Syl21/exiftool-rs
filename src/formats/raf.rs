@@ -30,15 +30,10 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
         Value::String(version),
     ));
 
-    // Camera model (bytes 0x1C-0x3C, null-terminated)
-    let model_end = data[0x1C..0x3C]
-        .iter()
-        .position(|&b| b == 0)
-        .unwrap_or(0x20);
-    let model = crate::encoding::decode_utf8_or_latin1(&data[0x1C..0x1C + model_end]).to_string();
-    if !model.is_empty() {
-        tags.push(mk("Model", "Camera Model", Value::String(model)));
-    }
+    // The RAF header carries the model name inside its 0x00 string (e.g.
+    // "FUJIFILMCCD-RAW 0201FA392001FinePix S3Pro"), but ExifTool's RAFHeader table
+    // (FujiFilm.pm:1223) does NOT extract it as a Model tag — Model comes solely
+    // from the embedded EXIF IFD0 (with its s/\s+$// RawConv). Emit nothing here.
 
     // RAFCompression at 0x6c (if the first byte is 0x00, it's a valid compression tag)
     if data.len() >= 0x70 && data[0x6c] == 0 {

@@ -385,10 +385,12 @@ pub fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<
                     ));
                 }
             }
-            // URL (0x040B)
+            // URL (0x040B). Photoshop.pm:182 stores the resource verbatim (no trim);
+            // the trailing space padding is kept in the value and stripped only at
+            // text-output time by Printable.
             0x040B => {
                 if let Ok(url) = std::str::from_utf8(resource_data) {
-                    let url = url.trim().to_string();
+                    let url = url.trim_end_matches('\0').to_string();
                     if !url.is_empty() {
                         tags.push(mk("URL", "URL", Value::String(url)));
                     }

@@ -2009,13 +2009,16 @@ fn parse_stsd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
         // Field 24: AudioChannels (int16u) at byte 24
         // Field 26: AudioBitsPerSample (int16u) at byte 26
         // Field 32: AudioSampleRate (fixed32u) at byte 32
+        // QuickTime.pm AudioFormat: Format => 'undef[4]', RawConv keeps it only when
+        // it matches /^[\w ]{4}$/i, and stores it verbatim — e.g. "raw " keeps its
+        // trailing space, it is never trimmed.
         let fmt = crate::encoding::decode_utf8_or_latin1(format).to_string();
-        if fmt.chars().all(|c| c.is_ascii_graphic() || c == ' ') && !fmt.trim().is_empty() {
-            tags.push(mk(
-                "AudioFormat",
-                "Audio Format",
-                Value::String(fmt.trim().to_string()),
-            ));
+        if fmt.chars().count() == 4
+            && fmt
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == ' ')
+        {
+            tags.push(mk("AudioFormat", "Audio Format", Value::String(fmt)));
         }
 
         if entry.len() >= 24 {
