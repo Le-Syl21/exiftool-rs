@@ -52,7 +52,16 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
                 // Script (AMF metadata) tag
                 if !found_meta {
                     let tag_data = &data[tag_start..tag_end];
+                    let start = tags.len();
                     flv_parse_amf_metadata(tag_data, &mut tags);
+                    // Flash::Meta GROUPS => { 2 => 'Video' } (Flash.pm). The
+                    // shared mktag helper defaults to Other; apply the table
+                    // default so dynamic AMF tags (CuePoint*, Test) are Video.
+                    // Predefined Audio/Time overrides are restored by the
+                    // generated family-2 table (Flash\x01<name> keys).
+                    for t in &mut tags[start..] {
+                        t.group.family2 = "Video".into();
+                    }
                     found_meta = true;
                 }
             }

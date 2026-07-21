@@ -101,6 +101,9 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
         real_parse_rjmd(&rjmd_data, &mut tags);
         for tag in &mut tags[before..] {
             tag.group.family1 = "Real-RJMD".into();
+            // Real::RealMedia_RJMD GROUPS => { 1 => 'Real-RJMD', 2 => 'Video' }
+            // (Real.pm), no per-tag overrides.
+            tag.group.family2 = "Video".into();
         }
     }
 
