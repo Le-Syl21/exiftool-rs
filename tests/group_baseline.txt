@@ -93,12 +93,10 @@ DjVu.djvu	Trapped	family1
 ExifTool.jpg	City	family1
 ExifTool.jpg	Comment	family1
 ExifTool.jpg	Copyright	family1
-ExifTool.jpg	CurrentIPTCDigest	family1
 ExifTool.jpg	DateCreated	family1
 ExifTool.jpg	JSONInfo	family1
 ExifTool.jpg	ThumbnailImage	family1
 ExifTool.jpg	TrailerSignature	family1
-ExifTool.tif	CurrentIPTCDigest	family1
 FLIR.jpg	ImageTemperatureMin	family1
 FlashPix.ppt	RevisionNumber	family2
 Font.afm	Comment	family1
@@ -110,7 +108,6 @@ Font.pfb	Comment	family1
 Font.pfb	Comment	family2
 FujiFilm.raf	PreviewImage	family1
 GIF.gif	Comment	family1
-GPS.jpg	CurrentIPTCDigest	family1
 Garmin.fit	MessageIndex	family2
 Geotag.gpx	GpxCreator	family1
 Geotag.gpx	GpxTrkTrksegTrkptLat	family1
@@ -126,7 +123,6 @@ Geotag.kml	KmlDocumentStyleMapId	family1
 Geotag.xml	HistoryRunTrackTrackpointTime	family2
 Geotag.xml	HistoryVersion	family1
 GoPro.jpg	Model	family1
-IPTC.jpg	CurrentIPTCDigest	family1
 ISO.iso	VolumeSize	family1
 JXL.jxl	ImageHeight	family1
 JXL.jxl	ImageWidth	family1
@@ -150,7 +146,6 @@ MIFF.miff	Urgency	family1
 MIFF.miff	Urgency	family2
 MP3.mp3	DateTimeOriginal	family1
 MP3.mp3	Duration	family1
-MWG.jpg	CurrentIPTCDigest	family1
 MXF.mxf	AudioSampleRate	family1
 MXF.mxf	AverageBytesPerSecond	family1
 MXF.mxf	BitsPerAudioSample	family1
@@ -185,7 +180,6 @@ Nikon.nef	CFAPattern	family1
 Nikon.nef	Caption-Abstract	family1
 Nikon.nef	City	family1
 Nikon.nef	Country-PrimaryLocationName	family1
-Nikon.nef	CurrentIPTCDigest	family1
 Nikon.nef	Orientation	family1
 Nikon.nef	PreviewImageLength	family1
 Nikon.nef	PreviewImageLength	family2
@@ -244,7 +238,6 @@ PhotoMechanic.jpg	Category	family1
 PhotoMechanic.jpg	Category	family2
 PhotoMechanic.jpg	CountryCode	family1
 PhotoMechanic.jpg	Credit	family1
-PhotoMechanic.jpg	CurrentIPTCDigest	family1
 PhotoMechanic.jpg	EditStatus	family1
 PhotoMechanic.jpg	EditStatus	family2
 PhotoMechanic.jpg	Headline	family1
@@ -254,11 +247,9 @@ PhotoMechanic.jpg	SupplementalCategories	family1
 PhotoMechanic.jpg	SupplementalCategories	family2
 PhotoMechanic.jpg	Urgency	family1
 PhotoMechanic.jpg	Urgency	family2
-Photoshop.psd	CurrentIPTCDigest	family1
 PostScript.eps	Category	family1
 PostScript.eps	Category	family2
 PostScript.eps	Credit	family1
-PostScript.eps	CurrentIPTCDigest	family1
 PostScript.eps	Headline	family1
 PostScript.eps	Headline	family2
 PostScript.eps	IPTCDigest	family1

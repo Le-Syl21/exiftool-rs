@@ -3137,6 +3137,10 @@ pub fn shift_datetime(datetime: &str, shift: &str) -> Option<String> {
 ///
 /// Entries are `(name, family0, family1, family2)`.
 const FILE_LEVEL_GROUPS: &[(&str, &str, &str, &str)] = &[
+    // ExifTool computes CurrentIPTCDigest with `FoundTag`, so it lands in the
+    // Extra table (`GROUPS => { 0 => 'File', 1 => 'File', 2 => 'Image' }`,
+    // ExifTool.pm line 1285/1771), never a format reader's own group.
+    ("CurrentIPTCDigest", "File", "File", "Image"),
     ("Directory", "File", "System", "Other"),
     ("Error", "ExifTool", "ExifTool", "ExifTool"),
     ("ExifToolVersion", "ExifTool", "ExifTool", "ExifTool"),
