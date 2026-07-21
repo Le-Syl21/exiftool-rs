@@ -938,7 +938,13 @@ fn main() {
     } else if xml_output {
         print_xml(&et, &files);
     } else if json_output {
-        print_json_all(&et, &files, show_groups, group_family);
+        print_json_all(
+            &et,
+            &files,
+            show_groups,
+            group_family,
+            et.options().extract_embedded == 0,
+        );
     } else if args_output {
         print_args(&et, &files);
     } else if php_output {
@@ -1070,7 +1076,14 @@ fn run_stay_open(
                     match et.extract_info(file) {
                         Ok(tags) => {
                             if json {
-                                print_json_tags(&tags, file, false, show_groups, group_family);
+                                print_json_tags(
+                                    &tags,
+                                    file,
+                                    false,
+                                    show_groups,
+                                    group_family,
+                                    et.options().extract_embedded == 0,
+                                );
                             } else {
                                 for tag in &tags {
                                     if show_groups {
@@ -1698,11 +1711,17 @@ fn json_is_number(s: &str) -> bool {
     i == b.len()
 }
 
-fn print_json_all(et: &ExifTool, files: &[String], show_groups: bool, group_family: u8) {
+fn print_json_all(
+    et: &ExifTool,
+    files: &[String],
+    show_groups: bool,
+    group_family: u8,
+    dedup: bool,
+) {
     print!("[");
     for (idx, file) in files.iter().enumerate() {
         match et.extract_info(file) {
-            Ok(tags) => print_json_tags(&tags, file, idx > 0, show_groups, group_family),
+            Ok(tags) => print_json_tags(&tags, file, idx > 0, show_groups, group_family, dedup),
             Err(e) => eprintln!("Error: {} - {}", file, e),
         }
     }
@@ -1715,22 +1734,44 @@ fn print_json_tags(
     prepend_comma: bool,
     show_groups: bool,
     group_family: u8,
+    dedup: bool,
 ) {
     if prepend_comma {
         print!(",");
     }
     println!("{{");
     println!("  \"SourceFile\": \"{}\",", escape_json(filename));
-    for (i, tag) in tags.iter().enumerate() {
-        let comma = if i + 1 < tags.len() { "," } else { "" };
-        // With a -G<n> option ExifTool prefixes each JSON key with the tag's
-        // family-<n> group (e.g. "IFD0:XResolution", "Doc1:TimeStamp"), which
-        // also disambiguates repeated tags across sub-documents.
-        let key = if show_groups {
-            format!("{}:{}", group_for_family(tag, group_family), tag.name)
-        } else {
-            tag.name.clone()
-        };
+    // ExifTool suppresses duplicate tag names in JSON output (`$noDups`,
+    // exiftool:2688): only the primary tag of each name is printed, its "(N)"
+    // copies are skipped, so no key ever repeats. Our tag list already carries the
+    // primary (priority winner) ahead of its copies, so keeping the first
+    // occurrence of each output key reproduces ExifTool's choice. With -G<n> the
+    // key is group-prefixed, and ExifTool resets the no-dup set per group
+    // (exiftool:2765), so the same name in different groups stays distinct — which
+    // deduping on the prefixed key gives us for free.
+    //
+    // Only applied in default extraction: under -ee the primary/copy ordering of
+    // per-document tags does not yet match ExifTool's, so deduping there would keep
+    // the wrong frame's value. -ee JSON is a separate phase, left untouched here.
+    let keyed: Vec<(String, &str)> = {
+        let mut seen = std::collections::HashSet::new();
+        tags.iter()
+            .filter_map(|tag| {
+                let key = if show_groups {
+                    format!("{}:{}", group_for_family(tag, group_family), tag.name)
+                } else {
+                    tag.name.clone()
+                };
+                if !dedup || seen.insert(key.clone()) {
+                    Some((key, tag.print_value.as_str()))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    };
+    for (i, (key, value_str)) in keyed.iter().enumerate() {
+        let comma = if i + 1 < keyed.len() { "," } else { "" };
         // Scalar typing mirrors ExifTool's EscapeJSON (exiftool:3806-3810): a
         // value is emitted unquoted as a JSON number only if it matches its
         // number regex (notably NO leading zero on a multi-digit integer, so
@@ -1738,7 +1779,6 @@ fn print_json_tags(
         // (case-insensitive) become lowercase JSON booleans. Everything else is
         // a quoted, escaped string. The number/bool forms print the value
         // verbatim, exactly as ExifTool returns `$str`.
-        let value_str = &tag.print_value;
         if json_is_number(value_str) {
             println!("  \"{}\": {}{}", key, value_str, comma);
         } else if value_str.eq_ignore_ascii_case("true") || value_str.eq_ignore_ascii_case("false")
