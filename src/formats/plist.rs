@@ -396,7 +396,12 @@ fn flatten_plist_value(
         }
         PlistValue::Date(s) => {
             let tag_name = plist_key_path_to_tag_name(key_path);
-            tags.push(mk_plist_tag(tag_name, Value::String(s.clone()), group));
+            // ExifTool's ProcessPLIST forces group 2 to Time for any <date>
+            // element (PLIST.pm line 214: `$$tagInfo{Groups}{2} = 'Time'`),
+            // overriding the PLIST::Main `Document` default.
+            let mut t = mk_plist_tag(tag_name, Value::String(s.clone()), group);
+            t.group.family2 = "Time".into();
+            tags.push(t);
         }
         PlistValue::Data(bytes) => {
             let tag_name = plist_key_path_to_tag_name(key_path);

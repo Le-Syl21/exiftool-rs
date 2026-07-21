@@ -173,9 +173,6 @@ Jpeg2000.j2c	Comment	family2
 Jpeg2000.j2c	ImageHeight	family1
 Jpeg2000.j2c	ImageWidth	family1
 Jpeg2000.jp2	ImageCreationGeneralCreationInfoCreationTime	family2
-LNK.url	HotKey	family2
-LNK.url	IconIndex	family2
-LNK.url	WorkingDirectory	family2
 M2TS.mts	AudioBitrate	family1
 M2TS.mts	AudioChannels	family1
 M2TS.mts	AudioSampleRate	family1
@@ -378,12 +375,7 @@ PGF.pgf	Comment	family1
 PGF.pgf	PixelUnits	family1
 PGF.pgf	PixelsPerUnitX	family1
 PGF.pgf	PixelsPerUnitY	family1
-PLIST-bin.plist	TestDate	family2
-PLIST-bin.plist	TestDictWhen	family2
-PLIST-xml.plist	TestDate	family2
-PLIST-xml.plist	TestDictWhen	family2
 PNG.png	Comment	family1
-PPM.ppm	Comment	family2
 PSP.psp	Copyright	family1
 PSP.psp	XResolution	family1
 PSP.psp	YResolution	family1

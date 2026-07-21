@@ -2047,7 +2047,14 @@ pub fn read_url(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
             match key {
                 "URL" | "IconFile" | "IconIndex" | "WorkingDirectory" | "HotKey" | "Author"
                 | "WhatsNew" | "Comment" | "Desc" | "Roamed" | "IDList" => {
-                    tags.push(mk_str(key, val));
+                    let mut t = mk_str(key, val);
+                    // The .URL table is GROUPS => { 2 => 'Document' } (LNK.pm line
+                    // 1384). Stamp it on the tags it defines so the Document/Other
+                    // bare-name tie resolves to Document rather than keeping Other.
+                    if matches!(key, "URL" | "IconIndex" | "WorkingDirectory" | "HotKey") {
+                        t.group.family2 = "Document".into();
+                    }
+                    tags.push(t);
                 }
                 "Modified" => {
                     // Hex-encoded 8-byte FILETIME (little-endian uint32 lo + hi)

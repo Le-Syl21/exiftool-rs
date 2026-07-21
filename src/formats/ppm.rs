@@ -143,7 +143,12 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
                 .trim_end_matches('\n')
                 .trim_end_matches('\r')
                 .to_string();
-            tags.push(mktag("File", "Comment", "Comment", Value::String(comment)));
+            // Comment is emitted through ExifTool's Extra table, whose default
+            // is Image (0/1/2 => File/File/Image, ExifTool.pm line 1286); the
+            // bare-name tier alone would leave it Other in the File/File tie.
+            let mut t = mktag("File", "Comment", "Comment", Value::String(comment));
+            t.group.family2 = "Image".into();
+            tags.push(t);
         }
 
         if let Some(w) = width {
