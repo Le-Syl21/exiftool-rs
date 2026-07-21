@@ -117,7 +117,7 @@ fn parse_attr_block(full_data: &[u8], entry_data: &[u8], tags: &mut Vec<Tag>) {
         } else if val_data.starts_with(b"bplist0") {
             // Parse simple binary plist (arrays, strings, dates)
             if let Some(value) = parse_simple_bplist(val_data) {
-                tags.push(mktag("MacOS", &tag_name, &tag_name, Value::String(value)));
+                tags.push(mktag("MacOS", &tag_name, &tag_name, value));
             } else {
                 // Just mark as binary
                 tags.push(mktag(
@@ -281,7 +281,7 @@ fn format_quarantine(s: &str) -> String {
 }
 
 /// Parse a simple binary plist to extract string, array of strings, or date values.
-fn parse_simple_bplist(data: &[u8]) -> Option<String> {
+fn parse_simple_bplist(data: &[u8]) -> Option<Value> {
     if data.len() < 32 || !data.starts_with(b"bplist00") {
         return None;
     }
@@ -456,11 +456,15 @@ fn parse_simple_bplist(data: &[u8]) -> Option<String> {
                     }
                 }
                 if !items.is_empty() {
-                    return Some(items.join(", "));
+                    // A bplist array is List=>1: keep elements so JSON emits an
+                    // array. to_display_string re-joins with ", " for text output.
+                    return Some(Value::List(
+                        items.into_iter().map(Value::String).collect(),
+                    ));
                 }
             }
         }
     }
 
-    Some(result)
+    Some(Value::String(result))
 }

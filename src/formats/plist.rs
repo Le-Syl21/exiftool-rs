@@ -361,11 +361,15 @@ fn flatten_plist_value(
             flatten_plist_dict(inner, key_path, group, tags);
         }
         PlistValue::Array(arr) => {
-            // Join array of strings/values comma-separated
+            // A plist array is List=>1: keep the per-element print strings so JSON
+            // emits an array. to_display_string re-joins with ", " for text output.
             let parts: Vec<String> = arr.iter().map(plist_value_to_string).collect();
             let tag_name = plist_key_path_to_tag_name(key_path);
-            let tag_val = parts.join(", ");
-            tags.push(mk_plist_tag(tag_name, Value::String(tag_val), group));
+            tags.push(mk_plist_tag(
+                tag_name,
+                Value::List(parts.into_iter().map(Value::String).collect()),
+                group,
+            ));
         }
         PlistValue::Bool(b) => {
             let tag_name = plist_key_path_to_tag_name(key_path);
@@ -861,7 +865,11 @@ pub fn read_aae_plist(data: &[u8]) -> Result<Vec<Tag>> {
                                     PlistValue::Bool(b) => {
                                         Value::String(if *b { "True" } else { "False" }.to_string())
                                     }
-                                    PlistValue::Array(_) => Value::String(String::new()),
+                                    PlistValue::Array(arr) => Value::List(
+                                        arr.iter()
+                                            .map(|v| Value::String(plist_value_to_string(v)))
+                                            .collect(),
+                                    ),
                                     _ => Value::String(String::new()),
                                 };
                                 tags.push(mk_plist_tag(tag_name.to_string(), raw_val, &group));
