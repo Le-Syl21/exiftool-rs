@@ -656,6 +656,36 @@ fn find_tag_f64(tags: &[Tag], name: &str) -> Option<f64> {
     })
 }
 
+/// Relabel the `GPS:GPSLatitude`/`GPS:GPSLongitude` instances that ExifTool
+/// reports through its `GPS::Composite` tags (GPS.pm lines 368-405). Each
+/// composite `Require`s `GPS:GPSLatitude` + `GPS:GPSLatitudeRef` and its
+/// `PrintConv` (`ToDMS(..., "N"/"E")`) folds the hemisphere reference into the
+/// value. Our EXIF reader already produced that ref-bearing print value in
+/// place, so the surviving coordinate tag IS the composite ExifTool displays: it
+/// belongs in family 0/1 `Composite` (family 2 `Location`, the table's `GROUPS`
+/// default), not the raw `GPS` group. Gated on the `*Ref` tag exactly as the
+/// `Require` is, so a coordinate with no reference keeps the raw `GPS` group.
+pub fn relabel_gps_composites(tags: &mut [Tag]) {
+    for (coord, reftag) in [
+        ("GPSLatitude", "GPSLatitudeRef"),
+        ("GPSLongitude", "GPSLongitudeRef"),
+    ] {
+        let has_ref = tags
+            .iter()
+            .any(|t| t.name == reftag && t.group.family1 == "GPS");
+        if !has_ref {
+            continue;
+        }
+        for t in tags.iter_mut() {
+            if t.name == coord && t.group.family1 == "GPS" {
+                t.group.family0 = "Composite".into();
+                t.group.family1 = "Composite".into();
+                t.group.family2 = "Location".into();
+            }
+        }
+    }
+}
+
 fn compute_gps_position(tags: &[Tag]) -> Option<Tag> {
     let lat_tag = find_tag(tags, "GPSLatitude")?;
     let lon_tag = find_tag(tags, "GPSLongitude")?;

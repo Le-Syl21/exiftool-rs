@@ -1479,6 +1479,10 @@ impl ExifTool {
         let composite = crate::composite::compute_composite_tags(&tags);
         tags.extend(composite);
 
+        // Report the GPS coordinates ExifTool surfaces through its GPS::Composite
+        // tags in the Composite group, matching its default output.
+        crate::composite::relabel_gps_composites(&mut tags);
+
         // ExifTool's Composite RedBalance/BlueBalance (computed from WB level tags)
         // is preferred over a manufacturer's own same-named tag. Drop the non-Composite
         // versions when a Composite one exists so the Composite value wins.
