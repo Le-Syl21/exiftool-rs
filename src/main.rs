@@ -2082,12 +2082,27 @@ fn sanitize_display_value(s: &str) -> String {
     trimmed.to_string()
 }
 
+/// Escape a string for JSON, mirroring ExifTool's EscapeJSON (exiftool:3817-3821):
+/// drop NUL bytes, escape `" \ \t \n \r`, and escape every other control
+/// character (U+0000..=U+001F and U+007F) as `\uXXXX`. Without the last step a
+/// value carrying a raw control byte produces invalid JSON.
 fn escape_json(s: &str) -> String {
-    s.replace('\\', "\\\\")
-        .replace('"', "\\\"")
-        .replace('\n', "\\n")
-        .replace('\r', "\\r")
-        .replace('\t', "\\t")
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        match ch {
+            '\0' => {} // ExifTool removes all nulls
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\t' => out.push_str("\\t"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            c if (c as u32) < 0x20 || c as u32 == 0x7f => {
+                out.push_str(&format!("\\u{:04X}", c as u32));
+            }
+            c => out.push(c),
+        }
+    }
+    out
 }
 
 fn escape_csv(s: &str) -> String {
