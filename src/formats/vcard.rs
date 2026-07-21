@@ -228,6 +228,35 @@ fn is_time_tag_ical(name: &str) -> bool {
     )
 }
 
+/// Family-2 category of an iCalendar property, per the per-tag `Groups`
+/// overrides in `Image::ExifTool::VCard::VCalendar` (default `Document`). A
+/// compound tag built from a component prefix (Daylight/Standard/…) inherits
+/// the base property's category, exactly as ExifTool's GetVCardTag copies the
+/// source tagInfo's Groups.
+fn ical_family2(base_name: &str) -> &'static str {
+    match base_name {
+        "DateTimeCompleted"
+        | "DateTimeEnd"
+        | "DateTimeDue"
+        | "DateTimeStart"
+        | "TimezoneID"
+        | "TimezoneName"
+        | "TimezoneOffsetFrom"
+        | "TimezoneOffsetTo"
+        | "TimeZoneURL"
+        | "ExceptionDateTimes"
+        | "RecurrenceDateTimes"
+        | "RecurrenceRule"
+        | "DateCreated"
+        | "DateTimeStamp"
+        | "ModifyDate"
+        | "Acknowledged"
+        | "TimeZone2" => "Time",
+        "Geolocation" | "Location" | "MeetingLocations" => "Location",
+        _ => "Document",
+    }
+}
+
 /// Parsed vCard/iCal line
 struct ParsedLine {
     tag: String,
@@ -772,14 +801,17 @@ fn emit_ical_tag(parsed: &ParsedLine, component_prefix: &str, group1: &str, tags
     let mut tag = mk_ical(&full_name, display_val);
     tag.group.family0 = "VCalendar".into();
     tag.group.family1 = group1.into();
+    // Inherit the base property's category (a prefixed component tag keeps it).
+    tag.group.family2 = ical_family2(&base_name).into();
     tags.push(tag);
 
-    // TZID parameter
+    // TZID parameter: ExifTool copies the Tzid tagInfo (TimezoneID, Groups Time).
     if let Some(ref tzid_val) = parsed.tzid {
         let tzid_tag = format!("{}TimezoneID", full_name);
         let mut t = mk_ical(&tzid_tag, tzid_val.clone());
         t.group.family0 = "VCalendar".into();
         t.group.family1 = group1.into();
+        t.group.family2 = "Time".into();
         tags.push(t);
     }
 }

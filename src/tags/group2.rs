@@ -104,6 +104,15 @@ pub fn family2_for(
     if family0 == "FITS" {
         return None;
     }
+    // VCalendar (iCalendar) tags are resolved in full by the VCard reader from
+    // the VCalendar table (Document default, Time/Location overrides, inherited
+    // by prefixed component and TZID-parameter tags). The bare-name tier would
+    // mis-assign a dynamic compound tag whose name collides with an unrelated
+    // table (SequenceNumber -> Camera, Summary -> Video), so keep the reader's
+    // category.
+    if family0 == "VCalendar" {
+        return None;
+    }
     lookup(FAMILY2_BY_NAME, name).map(|c| choose(c, current))
 }
 
