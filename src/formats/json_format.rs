@@ -27,9 +27,7 @@ pub fn read_json(data: &[u8]) -> Result<Vec<Tag>> {
             // (ExifTool flags these List=>1); scalars stay strings.
             let val = match value {
                 PVal::Scalar(s) => Value::String(s),
-                PVal::List(items) => {
-                    Value::List(items.into_iter().map(Value::String).collect())
-                }
+                PVal::List(items) => Value::List(items.into_iter().map(Value::String).collect()),
             };
             tags.push(mktag("JSON", &tag_name, &tag_name, val));
         }

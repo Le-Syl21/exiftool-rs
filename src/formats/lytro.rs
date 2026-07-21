@@ -86,7 +86,11 @@ pub fn read_lfp(data: &[u8]) -> Result<Vec<Tag>> {
                 ))
             })
             .collect();
-        tags.push(mk_lytro("JSONMetadata", "JSON Metadata", Value::List(items)));
+        tags.push(mk_lytro(
+            "JSONMetadata",
+            "JSON Metadata",
+            Value::List(items),
+        ));
     }
 
     // Process each JSON block: extract tags

@@ -458,9 +458,7 @@ fn parse_simple_bplist(data: &[u8]) -> Option<Value> {
                 if !items.is_empty() {
                     // A bplist array is List=>1: keep elements so JSON emits an
                     // array. to_display_string re-joins with ", " for text output.
-                    return Some(Value::List(
-                        items.into_iter().map(Value::String).collect(),
-                    ));
+                    return Some(Value::List(items.into_iter().map(Value::String).collect()));
                 }
             }
         }

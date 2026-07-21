@@ -1757,8 +1757,7 @@ impl XmpReader {
                 // Keep the mapped phrases as the list value so JSON emits an array
                 // (PLUS constraint tags are List=>1 with a per-element PrintConv).
                 if let Value::List(_) = tag.raw_value {
-                    tag.raw_value =
-                        Value::List(mapped.into_iter().map(Value::String).collect());
+                    tag.raw_value = Value::List(mapped.into_iter().map(Value::String).collect());
                 }
             }
             // XMP-exif ComponentsConfiguration (Seq of integers → channel labels).
@@ -1785,8 +1784,7 @@ impl XmpReader {
                 // flat single-valued property (e.g. in a plain .xml) stays scalar,
                 // exactly as ExifTool emits it — so preserve the existing shape.
                 if let Value::List(_) = tag.raw_value {
-                    tag.raw_value =
-                        Value::List(labels.into_iter().map(Value::String).collect());
+                    tag.raw_value = Value::List(labels.into_iter().map(Value::String).collect());
                 }
             }
             // XMP-aux LensInfo: ConvertRationalList (N/D → float, 0/0 → undef, 1/0 →
@@ -1961,9 +1959,7 @@ fn aggregate_duplicate_xmp_tags(tags: Vec<Tag>) -> Vec<Tag> {
                     // `print_value` exactly — the discriminator `json_list_elements`
                     // relies on.
                     match &mut existing.raw_value {
-                        Value::List(items) => {
-                            items.push(Value::String(tag.print_value.clone()))
-                        }
+                        Value::List(items) => items.push(Value::String(tag.print_value.clone())),
                         _ => {
                             existing.raw_value = Value::List(vec![
                                 Value::String(existing.print_value.clone()),

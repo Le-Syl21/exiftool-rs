@@ -263,7 +263,11 @@ fn decode_mie_utf(data: &[u8], utf32: bool, big_endian: bool) -> String {
 /// output is unchanged. A lone string stays scalar.
 fn mie_string_list(s: &str) -> Value {
     if s.contains('\0') {
-        Value::List(s.split('\0').map(|p| Value::String(p.to_string())).collect())
+        Value::List(
+            s.split('\0')
+                .map(|p| Value::String(p.to_string()))
+                .collect(),
+        )
     } else {
         Value::String(s.to_string())
     }
