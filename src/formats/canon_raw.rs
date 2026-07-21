@@ -503,16 +503,15 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             // CanonShotInfo — int16s array, same format as JPEG MakerNote tag 0x0004
             let values: Vec<i16> = (0..data.len() / 2).map(|i| ri16(data, i * 2)).collect();
             let sub_tags = crate::tags::canon_sub::decode_shot_info(&values, "CRW");
-            for t in sub_tags {
-                tags.push(Tag {
-                    group: TagGroup {
-                        family0: "MakerNotes".into(),
-                        family1: group1.into(),
-                        family2: "Camera".into(),
-                        family3: "Main".into(),
-                    },
-                    ..t
-                });
+            for mut t in sub_tags {
+                // Keep the family-2 category decode_shot_info assigned from
+                // Canon::ShotInfo's GROUPS (Image, with the per-tag Camera
+                // overrides it already restores); only the family-1 group name
+                // differs inside a CRW.
+                t.group.family0 = "MakerNotes".into();
+                t.group.family1 = group1.into();
+                t.group.family3 = "Main".into();
+                tags.push(t);
             }
             true
         }
@@ -966,6 +965,11 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             // 1=FocalLength (ValueConv val/FocalUnits)
             // 2=FocalPlaneXSize (int16u, ValueConv val*25.4/1000)
             // 3=FocalPlaneYSize (int16u, ValueConv val*25.4/1000)
+            //
+            // Canon::FocalLength GROUPS => { 2 => 'Image' } (Canon.pm line 2698);
+            // the `mk`/inline helpers default to Camera, so this arm's tags are
+            // re-stamped Image at the end.
+            let focal_start = tags.len();
             if data.len() >= 2 {
                 let focal_type = ru16(data, 0);
                 let ft_str = match focal_type {
@@ -1042,6 +1046,9 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                         priority: 0,
                     });
                 }
+            }
+            for t in &mut tags[focal_start..] {
+                t.group.family2 = "Image".into();
             }
             true
         }

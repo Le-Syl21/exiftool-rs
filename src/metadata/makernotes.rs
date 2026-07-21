@@ -5973,6 +5973,13 @@ fn read_makernote_ifd_with_base(
                         // index 15: UnsharpMaskThreshold
                         t.push(mk_canon_str("UnsharpMaskThreshold", &rd(15).to_string()));
                     }
+                    // Canon::Processing GROUPS => { 2 => 'Image' } (Canon.pm line
+                    // 7203); the whole table shares that default with no per-tag
+                    // Groups override. The shared `mk_canon_str` helper defaults to
+                    // Camera, so stamp the table category here.
+                    for tag in &mut t {
+                        tag.group.family2 = "Image".into();
+                    }
                     t
                 }
                 (Manufacturer::Canon, 0x0093) => {

@@ -27,6 +27,26 @@ fn lookup<'a>(table: &'a [Family2Entry], key: &str) -> Option<&'a [&'static str]
         .map(|i| table[i].1)
 }
 
+/// Canon tag names carried by more than one Canon binary sub-table with
+/// disagreeing `GROUPS => { 2 => ... }`. For these the by-name majority in the
+/// generated tables is unreliable (see the guard in [`family2_for`]) and the
+/// Canon reader's per-sub-table category is authoritative.
+fn is_canon_ambiguous(name: &str) -> bool {
+    matches!(
+        name,
+        "WhiteBalance"
+            | "ColorTemperature"
+            | "PictureStyle"
+            | "Sharpness"
+            | "SharpnessFrequency"
+            | "MeasuredEV"
+            | "MeasuredEV2"
+            | "FocusDistanceUpper"
+            | "FocusDistanceLower"
+            | "FocalLength"
+    )
+}
+
 /// Family 2 of `%Image::ExifTool::XMP::other`, the table ExifTool invents tags
 /// in when it meets an XMP property from a namespace it has no schema for.
 const XMP_UNKNOWN_NAMESPACE: &str = "Unknown";
@@ -120,6 +140,32 @@ pub fn family2_for(
     if family1 == "MinoltaRaw" {
         return None;
     }
+    // A handful of Canon tag names live in several Canon binary sub-tables whose
+    // `GROUPS => { 2 => ... }` disagree: e.g. WhiteBalance/ColorTemperature are
+    // `Image` in Canon::Processing (Canon.pm line 7203) and Canon::ColorData* but
+    // `Camera` in Canon::CameraSettings (line 2220); FocusDistanceUpper/Lower and
+    // MeasuredEV2 are `Image` in Canon::ShotInfo (line 2778) but `Camera` in the
+    // Canon::CameraInfo* tables. Because `-listx` collapses every one of those
+    // sub-tables to the single family-1 group `Canon`, the generated tables cannot
+    // tell them apart and the by-name majority answers `Camera`, which is wrong for
+    // the instance ExifTool actually keeps. The Canon reader decodes each
+    // sub-directory and stamps its true `GROUPS` category (Image for
+    // ShotInfo/FocalLength/Processing/FileInfo/ColorData, Camera for
+    // CameraSettings/CameraInfo), so for these names defer to whatever it set —
+    // exactly as the MinoltaRaw guard does. Only names that genuinely differ per
+    // sub-table are listed, so no unambiguous Canon tag is affected.
+    if matches!(family1, "Canon" | "CanonRaw" | "CIFF") && is_canon_ambiguous(name) {
+        return None;
+    }
+    // Every table under `%Image::ExifTool::CanonVRD::DR4*` shares
+    // `GROUPS => { 1 => 'CanonDR4', 2 => 'Image' }` with no per-tag override
+    // (CanonVRD.pm line 1006 and siblings), so the whole CanonDR4 group is Image.
+    // The DR4 reader already stamps that; the bare-name tier would wrongly pull a
+    // handful (PictureStyle, Rotation, AutoLightingOptimizer) to Camera, so keep
+    // the reader's category.
+    if family1 == "CanonDR4" {
+        return None;
+    }
     lookup(FAMILY2_BY_NAME, name).map(|c| choose(c, current))
 }
 
@@ -209,5 +255,45 @@ mod tests {
     #[test]
     fn unknown_tag_yields_none() {
         assert_eq!(family2_for("EXIF", "IFD0", "NoSuchTagName", "Image"), None);
+    }
+
+    #[test]
+    fn canon_ambiguous_names_defer_to_reader() {
+        // WhiteBalance/FocusDistanceUpper live in several Canon sub-tables whose
+        // categories disagree; the reader knows the real one, so defer to it.
+        assert_eq!(
+            family2_for("MakerNotes", "Canon", "WhiteBalance", "Image"),
+            None
+        );
+        assert_eq!(
+            family2_for("MakerNotes", "CanonRaw", "FocusDistanceUpper", "Camera"),
+            None
+        );
+        // FocalType is a genuine tie (Camera in some tables, Image in others), so
+        // the caller keeps whatever the reader decoded — the Canon::FocalLength
+        // reader now stamps Image, and the tie honours it.
+        assert_eq!(
+            family2_for("MakerNotes", "CIFF", "FocalType", "Image"),
+            Some("Image")
+        );
+        // An unambiguous Canon tag is still resolved from the tables.
+        assert_eq!(
+            family2_for("MakerNotes", "Canon", "SensorWidth", "Camera"),
+            Some("Image")
+        );
+        // Same name outside a Canon group is unaffected by the guard.
+        assert_eq!(
+            family2_for("MakerNotes", "Nikon", "WhiteBalance", "Camera"),
+            Some("Camera")
+        );
+    }
+
+    #[test]
+    fn canon_dr4_group_is_image() {
+        // Every CanonVRD::DR4 table is Image; keep the reader's category.
+        assert_eq!(
+            family2_for("Trailer", "CanonDR4", "PictureStyle", "Image"),
+            None
+        );
     }
 }
