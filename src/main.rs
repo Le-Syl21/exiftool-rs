@@ -1711,6 +1711,27 @@ fn json_is_number(s: &str) -> bool {
     i == b.len()
 }
 
+/// Elements to emit when a tag prints as a JSON array, or `None` for a scalar.
+///
+/// Mirrors ExifTool: a value that is still an ARRAY ref at print time renders as
+/// a JSON array (exiftool `FormatJSON`, default `$joinLists` off). Our faithful
+/// test is that `raw_value` is a `Value::List` whose plain per-element print join
+/// reproduces `print_value` exactly — meaning no scalar-collapsing conversion ran.
+/// Collapsed lists (GPSLatitude/GPSPosition, whose ValueConv rewrites the whole
+/// rational list into one formatted string) fail this test and stay scalar, which
+/// is what ExifTool prints for them. The per-element strings are `print_value`'s
+/// own segments, so any per-element PrintConv (ComponentsConfiguration → Y/Cb/Cr,
+/// PLUS vocab URIs → phrases) is already reflected in each array element.
+fn json_list_elements(tag: &exiftool_rs::Tag) -> Option<Vec<String>> {
+    if let exiftool_rs::Value::List(items) = &tag.raw_value {
+        let elems: Vec<String> = items.iter().map(|v| v.to_display_string()).collect();
+        if elems.join(", ") == tag.print_value {
+            return Some(elems);
+        }
+    }
+    None
+}
+
 fn print_json_all(
     et: &ExifTool,
     files: &[String],
@@ -1753,7 +1774,7 @@ fn print_json_tags(
     // Only applied in default extraction: under -ee the primary/copy ordering of
     // per-document tags does not yet match ExifTool's, so deduping there would keep
     // the wrong frame's value. -ee JSON is a separate phase, left untouched here.
-    let keyed: Vec<(String, &str)> = {
+    let keyed: Vec<(String, &exiftool_rs::Tag)> = {
         let mut seen = std::collections::HashSet::new();
         tags.iter()
             .filter_map(|tag| {
@@ -1763,15 +1784,41 @@ fn print_json_tags(
                     tag.name.clone()
                 };
                 if !dedup || seen.insert(key.clone()) {
-                    Some((key, tag.print_value.as_str()))
+                    Some((key, tag))
                 } else {
                     None
                 }
             })
             .collect()
     };
-    for (i, (key, value_str)) in keyed.iter().enumerate() {
+    for (i, (key, tag)) in keyed.iter().enumerate() {
+        let value_str = tag.print_value.as_str();
         let comma = if i + 1 < keyed.len() { "," } else { "" };
+        // ExifTool's FormatJSON prints an ARRAY-ref value as a JSON array `[...]`
+        // (unless `$joinLists`, only set by -sep/-List — never in default mode).
+        // The faithful reconstruction of "value is an array ref at print time" is:
+        // the tag's `raw_value` is a `Value::List` AND its `print_value` is the
+        // plain per-element print join — i.e. no scalar-collapsing conversion was
+        // applied. GPSLatitude/GPSPosition are rational lists internally but their
+        // ValueConv collapses them into a reformatted scalar string, so their
+        // print_value is NOT the element join and they stay scalar (as ExifTool
+        // emits them). BitsPerSample ("8, 8, 8"), ComponentsConfiguration
+        // ("Y, Cb, Cr, -"), Keywords, Subject, … all keep the join and array.
+        if let Some(elems) = json_list_elements(tag) {
+            print!("  \"{}\": [", key);
+            for (j, el) in elems.iter().enumerate() {
+                let sep = if j + 1 < elems.len() { "," } else { "" };
+                if json_is_number(el) {
+                    print!("{}{}", el, sep);
+                } else if el.eq_ignore_ascii_case("true") || el.eq_ignore_ascii_case("false") {
+                    print!("{}{}", el.to_ascii_lowercase(), sep);
+                } else {
+                    print!("\"{}\"{}", escape_json(el), sep);
+                }
+            }
+            println!("]{}", comma);
+            continue;
+        }
         // Scalar typing mirrors ExifTool's EscapeJSON (exiftool:3806-3810): a
         // value is emitted unquoted as a JSON number only if it matches its
         // number regex (notably NO leading zero on a multi-digit integer, so
