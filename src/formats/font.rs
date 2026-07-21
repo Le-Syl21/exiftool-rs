@@ -379,7 +379,7 @@ fn decode_font_name_string(
     offset: usize,
     length: usize,
     platform: u16,
-    _encoding: u16,
+    encoding: u16,
 ) -> String {
     if offset + length > data.len() {
         return String::new();
@@ -403,16 +403,38 @@ fn decode_font_name_string(
             String::from_utf16_lossy(&units).trim().to_string()
         }
         1 => {
-            // Macintosh: encoding depends on encoding_id
-            // For encoding 0 (MacRoman), treat as Latin-1
-            crate::encoding::decode_utf8_or_latin1(raw)
-                .trim()
-                .to_string()
+            // Macintosh: the encoding ID selects the character set, mirroring
+            // Font.pm's %ttCharset{Macintosh} + $et->Decode($val, $charset).
+            // We port the exact Charset::Mac* tables for the sets that occur in
+            // real fonts; other Mac scripts fall back to Latin-1 as before.
+            match mac_charset(encoding) {
+                Some(cs) => cs.decode(raw).trim().to_string(),
+                None => crate::encoding::decode_utf8_or_latin1(raw)
+                    .trim()
+                    .to_string(),
+            }
         }
         _ => crate::encoding::decode_utf8_or_latin1(raw)
             .trim()
             .to_string(),
     }
+}
+
+/// Map a Macintosh 'name'-table encoding ID to its ported ExifTool charset,
+/// per Font.pm's `%ttCharset{Macintosh}` (0=MacRoman, 1=MacJapanese,
+/// 2=MacChineseTW, 3=MacKorean, 5=MacHebrew, 25=MacChineseCN). Encodings we
+/// have not ported return `None` (Latin-1 fallback).
+fn mac_charset(encoding: u16) -> Option<&'static crate::formats::font_charset::MacCharset> {
+    use crate::formats::font_charset as fc;
+    Some(match encoding {
+        0 => &fc::MACROMAN,
+        1 => &fc::MACJAPANESE,
+        2 => &fc::MACCHINESETW,
+        3 => &fc::MACKOREAN,
+        5 => &fc::MACHEBREW,
+        25 => &fc::MACCHINESECN,
+        _ => return None,
+    })
 }
 
 /// Get language code for a font name table entry.

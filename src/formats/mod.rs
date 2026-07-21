@@ -25,6 +25,7 @@ pub mod flif;
 pub mod flir_fpf;
 pub mod flv;
 pub mod font;
+pub mod font_charset;
 pub mod gif;
 pub mod gimp;
 pub mod gzip;
