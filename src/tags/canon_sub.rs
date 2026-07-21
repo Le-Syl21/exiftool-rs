@@ -842,6 +842,14 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
             tags.push(mkt("FlashOutput", Value::I16(v), v.to_string()));
         }
     }
+    // Canon::ShotInfo GROUPS => { 2 => 'Image' } (Canon.pm). The shared `mkt`
+    // helper defaults to Camera (CameraSettings' category); override to the
+    // table default here. Per-tag `Groups => { 2 => 'Camera' }` overrides
+    // (CameraType, CameraTemperature, …) are restored by the generated
+    // family-2 table in the group2 pass.
+    for t in &mut tags {
+        t.group.family2 = "Image".into();
+    }
     tags
 }
 
@@ -899,6 +907,10 @@ pub fn decode_focal_length(values: &[u16], model: &str) -> Vec<Tag> {
                 format!("{:.2} mm", fpy as f64 / 1000.0 * 25.4),
             ));
         }
+    }
+    // Canon::FocalLength GROUPS => { 2 => 'Image' } (Canon.pm); see decode_shot_info.
+    for t in &mut tags {
+        t.group.family2 = "Image".into();
     }
     tags
 }

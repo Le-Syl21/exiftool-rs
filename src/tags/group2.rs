@@ -95,6 +95,15 @@ pub fn family2_for(
     if family0 == "XMP" {
         return Some(XMP_UNKNOWN_NAMESPACE);
     }
+    // FITS::Main invents a dynamic tag for every keyword it has no entry for,
+    // inheriting its GROUPS => { 2 => 'Image' } default; the reader already
+    // resolves the whole FITS table (Image, plus the Time/Author overrides), so
+    // the bare-name tier must not run — it would mis-assign a dynamic tag whose
+    // name collides with an unrelated table (Checksum -> Location, Creator ->
+    // Author). Keep the reader's category.
+    if family0 == "FITS" {
+        return None;
+    }
     lookup(FAMILY2_BY_NAME, name).map(|c| choose(c, current))
 }
 

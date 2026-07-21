@@ -121,7 +121,29 @@ pub fn read_fits(data: &[u8]) -> Result<Vec<Tag>> {
         ));
     }
 
+    // FITS::Main GROUPS => { 2 => 'Image' } (FITS.pm); the shared `mktag`
+    // helper defaults to Other, so apply the table default here, honouring the
+    // per-tag `Groups => { 2 => ... }` overrides: DATE/DATE-OBS/TIME-OBS/
+    // DATE-END/TIME-END are Time and AUTHOR is Author.
+    for t in &mut tags {
+        t.group.family2 = fits_family2(&t.name).into();
+    }
+
     Ok(tags)
+}
+
+/// Family-2 category for a FITS tag, per `Image::ExifTool::FITS::Main`: the
+/// table default is `Image`, overridden to `Time` for the date/time tags and
+/// `Author` for the AUTHOR keyword.
+fn fits_family2(name: &str) -> &'static str {
+    match name {
+        "CreateDate" | "ObservationDate" | "ObservationTime" | "ObservationDateEnd"
+        | "ObservationTimeEnd" => "Time",
+        // Only the AUTHOR keyword (Name => 'Author') is Author; a CREATOR
+        // keyword is a dynamic tag named "Creator" and stays at the Image default.
+        "Author" => "Author",
+        _ => "Image",
+    }
 }
 
 /// Parse a FITS value field (columns 11-80 of an 80-char record).
