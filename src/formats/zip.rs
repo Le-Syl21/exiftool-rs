@@ -1235,7 +1235,11 @@ fn parse_opendoc_meta(data: &[u8], tags: &mut Vec<Tag>) {
 
     // Extract grddl:transformation attribute from root element
     if let Some(trans) = xml_attr(xml, "grddl:transformation") {
-        tags.push(mk("Transformation", "Transformation", Value::String(trans)));
+        tags.push(mk_grddl(
+            "Transformation",
+            "Transformation",
+            Value::String(trans),
+        ));
     }
 
     // Parse office:meta section
@@ -1262,7 +1266,14 @@ fn parse_opendoc_meta(data: &[u8], tags: &mut Vec<Tag>) {
             } else {
                 val
             };
-            tags.push(mk(tag_name, tag_name, Value::String(val)));
+            // dc:* properties use the XMP::dc table; meta:* the ODF meta
+            // namespace (XMP-meta).
+            let tag = if elem.starts_with("dc:") {
+                mk_dc(tag_name, tag_name, Value::String(val))
+            } else {
+                mk_meta(tag_name, tag_name, Value::String(val))
+            };
+            tags.push(tag);
         }
     }
 
@@ -1282,7 +1293,7 @@ fn parse_opendoc_meta(data: &[u8], tags: &mut Vec<Tag>) {
         ];
         for (attr, tag_name) in &stat_attrs {
             if let Some(val) = xml_attr(elem_str, attr) {
-                tags.push(mk(tag_name, tag_name, Value::String(val)));
+                tags.push(mk_meta(tag_name, tag_name, Value::String(val)));
             }
         }
     }
@@ -1304,14 +1315,18 @@ fn parse_opendoc_meta(data: &[u8], tags: &mut Vec<Tag>) {
             String::new()
         };
         if !name.is_empty() {
-            tags.push(mk(
+            tags.push(mk_meta(
                 "User-definedName",
                 "User-defined Name",
                 Value::String(name),
             ));
         }
         if !value.is_empty() {
-            tags.push(mk("User-defined", "User-defined", Value::String(value)));
+            tags.push(mk_meta(
+                "User-defined",
+                "User-defined",
+                Value::String(value),
+            ));
         }
         let advance = pos + 19;
         if advance >= search.len() {
@@ -1427,5 +1442,27 @@ fn mk_dc(name: &str, description: &str, value: Value) -> Tag {
     let mut t = mk(name, description, value);
     t.group.family0 = "XMP".into();
     t.group.family1 = "XMP-dc".into();
+    t
+}
+
+/// An OpenDocument `meta.xml` property in the ODF `meta:` namespace. ExifTool
+/// runs `meta.xml` through `XMP::Main` (ZIP.pm line 660), so these land in
+/// family 1 `XMP-meta` (family 0 `XMP`); the category pass then reads their
+/// family 2 from the XMP tables (`creation-date` -> Time, the rest Unknown as an
+/// un-schemed namespace).
+fn mk_meta(name: &str, description: &str, value: Value) -> Tag {
+    let mut t = mk(name, description, value);
+    t.group.family0 = "XMP".into();
+    t.group.family1 = "XMP-meta".into();
+    t
+}
+
+/// The `grddl:transformation` attribute on an OpenDocument root element. Read
+/// through `XMP::Main` (ZIP.pm line 660) it lands in family 1 `XMP-grddl`
+/// (family 0 `XMP`).
+fn mk_grddl(name: &str, description: &str, value: Value) -> Tag {
+    let mut t = mk(name, description, value);
+    t.group.family0 = "XMP".into();
+    t.group.family1 = "XMP-grddl".into();
     t
 }
