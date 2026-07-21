@@ -1181,17 +1181,16 @@ impl XmpReader {
                                     // Some("") = lang present but empty → keep as empty slot
                                     // Some(s) = lang present with value s → use s
                                     //
-                                    // For x-default: skip None (absent items shouldn't affect default)
-                                    // For other langs: skip None (absent), keep Some("") (present but empty)
-                                    let joined: String = vals
-                                        .iter()
-                                        .filter_map(|v| v.as_deref()) // None filtered out
-                                        .collect::<Vec<_>>()
-                                        .join(", ");
-
-                                    // Only emit if there's something meaningful
-                                    let has_content = vals.iter().any(|v| v.is_some());
-                                    if !has_content {
+                                    // Each bag item that carries this language yields a SEPARATE
+                                    // tag occurrence, exactly as ExifTool flattens a list of
+                                    // lang-alt structures (one FoundTag per array element). The
+                                    // later `aggregate_duplicate_xmp_tags` pass then applies
+                                    // ExifTool's own de-duplication: a registered (List=>1)
+                                    // schema joins the repeats, while an unregistered namespace
+                                    // keeps only the first — so we must NOT pre-join here.
+                                    let present: Vec<&str> =
+                                        vals.iter().filter_map(|v| v.as_deref()).collect();
+                                    if present.is_empty() {
                                         continue;
                                     }
 
@@ -1202,20 +1201,25 @@ impl XmpReader {
                                         (lt.clone(), lt)
                                     };
 
-                                    tags.push(Tag {
-                                        id: TagId::Text(format!("{}:{}", group_prefix, tag_key)),
-                                        name: tag_key.clone(),
-                                        description: tag_display,
-                                        group: TagGroup {
-                                            family0: "XMP".into(),
-                                            family1: xmp_family1(&path, &tag_key, group_prefix),
-                                            family2: category.into(),
-                                            family3: "Main".into(),
-                                        },
-                                        raw_value: Value::String(joined.clone()),
-                                        print_value: joined,
-                                        priority: 0,
-                                    });
+                                    for value in present {
+                                        tags.push(Tag {
+                                            id: TagId::Text(format!(
+                                                "{}:{}",
+                                                group_prefix, tag_key
+                                            )),
+                                            name: tag_key.clone(),
+                                            description: tag_display.clone(),
+                                            group: TagGroup {
+                                                family0: "XMP".into(),
+                                                family1: xmp_family1(&path, &tag_key, group_prefix),
+                                                family2: category.into(),
+                                                family3: "Main".into(),
+                                            },
+                                            raw_value: Value::String(value.to_string()),
+                                            print_value: value.to_string(),
+                                            priority: 0,
+                                        });
+                                    }
                                 }
                                 bag_lang_values.clear();
                             }
