@@ -70,6 +70,16 @@ pub fn lookup_generated(tag_id: u16) -> Option<(&'static str, &'static str)> {
 /// Apply print conversion for known tags.
 pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
     match (ifd, tag_id) {
+        // TIFF-EPStandardID (Exif.pm 0x9216/0xa216): PrintConv '$val =~ tr/ /./; $val'
+        // — the int8u[4] version bytes are joined with dots ("1 0 0 0" -> "1.0.0.0").
+        ("IFD0", 0x9216)
+        | ("ExifIFD", 0x9216)
+        | ("SubIFD", 0x9216)
+        | ("IFD0", 0xa216)
+        | ("ExifIFD", 0xa216)
+        | ("SubIFD", 0xa216) => {
+            return Some(value.to_display_string().replace(' ', "."));
+        }
         // SubjectDistance: "$val m" (inf/undef passed through).
         ("ExifIFD", 0x9206) => {
             let d = value.to_display_string();
@@ -478,17 +488,17 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 );
             }
         }
-        // WhiteBalance
+        // WhiteBalance — Perl Exif.pm 0xa403 PrintConv is the hash {0=>Auto,1=>Manual}.
+        // A PrintConv hash with no matching key, no BITMASK and no OTHER renders as
+        // "Unknown ($val)" (ExifTool.pm:3633), so an unmatched key must NOT fall through
+        // to the by-name PrintConv fallback (which would mis-map e.g. 5 to Canon's "Flash").
         ("ExifIFD", 0xA403) => {
             if let Some(v) = value.as_u64() {
-                return Some(
-                    match v {
-                        0 => "Auto",
-                        1 => "Manual",
-                        _ => return None,
-                    }
-                    .to_string(),
-                );
+                return Some(match v {
+                    0 => "Auto".to_string(),
+                    1 => "Manual".to_string(),
+                    _ => format!("Unknown ({v})"),
+                });
             }
         }
         // SceneCaptureType
