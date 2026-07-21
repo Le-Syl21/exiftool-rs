@@ -86,14 +86,10 @@ DNG.dng	Creator	family2
 DNG.dng	Flash	family1
 DNG.dng	ThumbnailTIFF	family1
 DNG.dng	WB_RGGBLevels	family1
-DjVu.djvu	Annotation	family1
-DjVu.djvu	Author	family1
 DjVu.djvu	CreateDate	family1
 DjVu.djvu	Keywords	family1
 DjVu.djvu	ModifyDate	family1
-DjVu.djvu	Note	family1
 DjVu.djvu	Trapped	family1
-DjVu.djvu	URL	family1
 ExifTool.jpg	City	family1
 ExifTool.jpg	Comment	family1
 ExifTool.jpg	Copyright	family1
@@ -103,9 +99,6 @@ ExifTool.jpg	JSONInfo	family1
 ExifTool.jpg	ThumbnailImage	family1
 ExifTool.jpg	TrailerSignature	family1
 ExifTool.tif	CurrentIPTCDigest	family1
-ExifTool.tif	ViewingCondIlluminant	family1
-ExifTool.tif	ViewingCondIlluminantType	family1
-ExifTool.tif	ViewingCondSurround	family1
 FLIR.jpg	ImageTemperatureMin	family1
 Flash.swf	Compressed	family1
 Flash.swf	Duration	family1
@@ -356,9 +349,6 @@ Vorbis.ogg	Duration	family2
 XISF.xisf	ImageHeight	family1
 XISF.xisf	ImageWidth	family1
 XISF.xisf	NumPlanes	family1
-XMP.jpg	ViewingCondIlluminant	family1
-XMP.jpg	ViewingCondIlluminantType	family1
-XMP.jpg	ViewingCondSurround	family1
 XMP.svg	Copyright	family1
 XMP.svg	Copyright	family2
 XMP.svg	DescDescrEmph	family1

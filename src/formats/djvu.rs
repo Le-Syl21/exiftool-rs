@@ -184,7 +184,7 @@ fn parse_ant(data: &[u8], tags: &mut Vec<Tag>) {
     while let Some(pos) = search.find("(url ") {
         let from = url_start + pos;
         if let Some(url) = extract_sexpr_value(&text[from..], "url") {
-            tags.push(mk("URL", "URL", Value::String(url)));
+            tags.push(mk_meta("URL", "URL", Value::String(url)));
         }
         let advance = pos + 5;
         if advance >= search.len() {
@@ -373,7 +373,7 @@ fn parse_meta_pairs(text: &str, tags: &mut Vec<Tag>) {
             } else {
                 value
             };
-            tags.push(mk(&tag_name, &tag_name, Value::String(value)));
+            tags.push(mk_meta(&tag_name, &tag_name, Value::String(value)));
         }
     }
 }
@@ -456,4 +456,14 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         print_value: pv,
         priority: 0,
     }
+}
+
+/// A DjVu annotation-metadata tag. ExifTool reads the `metadata`/`url`
+/// annotations with the `DjVu::Meta` table (`GROUPS => { 1 => 'DjVu-Meta' }`,
+/// DjVu.pm line 135), so these sit in family 1 `DjVu-Meta`, not the container
+/// `DjVu` group of the INFO chunk tags.
+fn mk_meta(name: &str, description: &str, value: Value) -> Tag {
+    let mut t = mk(name, description, value);
+    t.group.family1 = "DjVu-Meta".into();
+    t
 }

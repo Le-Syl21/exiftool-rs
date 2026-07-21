@@ -481,7 +481,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                                 i32::from_be_bytes([d[16], d[17], d[18], d[19]]) as f64 / 65536.0;
                             // ICC s15Fixed16: round to 5 decimals then %.15g (no trailing zeros).
                             let f5 = |v: f64| crate::value::format_g15((v * 1e5).round() / 1e5);
-                            tags.push(mk(
+                            tags.push(mk_view(
                                 "ViewingCondIlluminant",
                                 "Viewing Cond Illuminant",
                                 Value::String(format!("{} {} {}", f5(x), f5(y), f5(z))),
@@ -492,7 +492,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                                 i32::from_be_bytes([d[24], d[25], d[26], d[27]]) as f64 / 65536.0;
                             let sz =
                                 i32::from_be_bytes([d[28], d[29], d[30], d[31]]) as f64 / 65536.0;
-                            tags.push(mk(
+                            tags.push(mk_view(
                                 "ViewingCondSurround",
                                 "Viewing Cond Surround",
                                 Value::String(format!("{} {} {}", f5(sx), f5(sy), f5(sz))),
@@ -510,7 +510,7 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
                                         8 => "F8",
                                         _ => "Unknown",
                                     };
-                                tags.push(mk(
+                                tags.push(mk_view(
                                     "ViewingCondIlluminantType",
                                     "Viewing Cond Illuminant Type",
                                     Value::String(illum_type.into()),
@@ -848,6 +848,14 @@ fn icc_technology(sig: &str) -> String {
 fn mk_meas(name: &str, description: &str, value: Value) -> Tag {
     let mut tag = mk(name, description, value);
     tag.group.family1 = "ICC-meas".into();
+    tag
+}
+
+/// Build a tag from the `view` viewingConditionsType structure, which ExifTool
+/// reads with its own table, grouped `ICC-view` (ICC_Profile.pm line 833).
+fn mk_view(name: &str, description: &str, value: Value) -> Tag {
+    let mut tag = mk(name, description, value);
+    tag.group.family1 = "ICC-view".into();
     tag
 }
 
