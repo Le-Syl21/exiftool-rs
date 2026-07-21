@@ -4098,10 +4098,16 @@ fn parse_meta_ifd(data: &[u8]) -> Vec<crate::tag::Tag> {
         let is_binary = matches!(name, "SBAExposureRecord" | "UserAdjSBA_RGBShifts");
 
         let print_value = if is_binary {
-            format!(
-                "(Binary data {} bytes, use -b option to extract)",
-                total_size
-            )
+            // ExifTool's `Binary => 1` sets ValueConv `\$val` (a ref to the *value*),
+            // then ConvertBinary prints "(Binary data <length($val)> bytes...)"
+            // (ExifTool.pm:3539 + 6547). `$val` is what ReadValue produced: the raw
+            // bytes for string/undef formats, or the space-joined numbers otherwise
+            // (int32s[3] of zeros => "0 0 0" => 5 bytes, not the 12 raw bytes).
+            let vlen = match data_type {
+                2 | 7 => total_size,
+                _ => meta_ifd_value_string(data_type, count, val_data, header.byte_order).len(),
+            };
+            format!("(Binary data {} bytes, use -b option to extract)", vlen)
         } else {
             meta_ifd_value_string(data_type, count, val_data, header.byte_order)
         };
@@ -5747,6 +5753,41 @@ fn parse_ole_props<'a>(
                         continue;
                     }
                     ru32(val_off + 4).to_string()
+                }
+                30 | 31 if is_vector => {
+                    // VT_VECTOR of VT_LPSTR/VT_LPWSTR (FlashPix.pm ReadFPXValue):
+                    // a 4-byte element count, then each element is a 4-byte length
+                    // (word count for LPWSTR) followed by the string, truncated at
+                    // its null terminator. Elements are padded to a 4-byte boundary.
+                    if val_off + 8 > data.len() {
+                        continue;
+                    }
+                    let lpwstr = vtype == 31;
+                    let count = ru32(val_off + 4) as usize;
+                    let mut p = val_off + 8;
+                    let mut parts: Vec<String> = Vec::new();
+                    for _ in 0..count.min(100) {
+                        if p + 4 > data.len() {
+                            break;
+                        }
+                        let char_len = ru32(p) as usize;
+                        let byte_len = if lpwstr { char_len * 2 } else { char_len };
+                        if p + 4 + byte_len > data.len() {
+                            break;
+                        }
+                        let s = if lpwstr {
+                            let u16s: Vec<u16> =
+                                (0..char_len).map(|j| ru16(p + 4 + j * 2)).collect();
+                            String::from_utf16_lossy(&u16s)
+                        } else {
+                            crate::encoding::decode_utf8_or_latin1(&data[p + 4..p + 4 + byte_len])
+                        };
+                        // Truncate at the first null (ReadFPXValue: `s/\0.*//s`).
+                        parts.push(s.split('\0').next().unwrap_or("").to_string());
+                        // Advance past this element, padded to a 4-byte boundary.
+                        p += 4 + ((byte_len + 3) & !3);
+                    }
+                    parts.join(", ")
                 }
                 30 => {
                     // VT_LPSTR
