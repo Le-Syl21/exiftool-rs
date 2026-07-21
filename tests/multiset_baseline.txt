@@ -204,14 +204,10 @@ CanonRaw.crw	ee	extra	0	AFPointsInFocus	(none)
 CanonRaw.crw	ee	extra	0	MeasuredEV	4.62
 CanonRaw.crw	ee	missing	0	MeasuredEV	4.625
 CaptureOne.eip	default	extra	0	WhiteBalance	1.391000;1.000000;1.474000
-CaptureOne.eip	default	extra	0	WhiteBalance	Flash
-CaptureOne.eip	default	missing	0	WhiteBalance	Unknown (5)
-CaptureOne.eip	ee	extra	0	WhiteBalance	Flash
 CaptureOne.eip	ee	missing	0	Crop	0.000000;0.000000;0.000000;0.000000
 CaptureOne.eip	ee	missing	0	NRAmount	25
 CaptureOne.eip	ee	missing	0	Rotation	0
 CaptureOne.eip	ee	missing	0	UUID	133ACDE8-EF48-4978-9AED-5C6B4DDE9CBF
-CaptureOne.eip	ee	missing	0	WhiteBalance	Unknown (5)
 Casio2.jpg	ee	missing	0	Contrast	0
 Casio2.jpg	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
 Casio2.jpg	ee	missing	0	Saturation	0
@@ -242,10 +238,6 @@ ExifTool.jpg	default	extra	0	FNumber	11.0
 ExifTool.jpg	default	extra	0	FNumber	6.2
 ExifTool.jpg	default	extra	0	Flash	Off
 ExifTool.jpg	default	extra	0	FocalLength	5 mm
-ExifTool.jpg	default	extra	0	Storage-StreamPathname	.
-ExifTool.jpg	default	extra	0	UserAdjSBA_RGBShifts	(Binary data 12 bytes, use -b option to extract)
-ExifTool.jpg	default	missing	0	Storage-StreamPathname	/.Screen Nail_bd0100609719a180
-ExifTool.jpg	default	missing	0	UserAdjSBA_RGBShifts	(Binary data 5 bytes, use -b option to extract)
 ExifTool.jpg	ee	extra	0	By-line	Phil Harvey
 ExifTool.jpg	ee	extra	0	By-lineTitle	My Position
 ExifTool.jpg	ee	extra	0	Caption-Abstract	A witty caption
@@ -288,13 +280,11 @@ ExifTool.jpg	ee	extra	0	SerialNumber	0000000000
 ExifTool.jpg	ee	extra	0	SlicesGroupName	IPTC
 ExifTool.jpg	ee	extra	0	Source	I'm the source
 ExifTool.jpg	ee	extra	0	SpecialInstructions	What instructions
-ExifTool.jpg	ee	extra	0	Storage-StreamPathname	.
 ExifTool.jpg	ee	extra	0	SupplementalCategories	amazing, image, utilities
 ExifTool.jpg	ee	extra	0	Tagged	Yes
 ExifTool.jpg	ee	extra	0	URL	https://exiftool.org/
 ExifTool.jpg	ee	extra	0	URL_List	
 ExifTool.jpg	ee	extra	0	Urgency	8 (least urgent)
-ExifTool.jpg	ee	extra	0	UserAdjSBA_RGBShifts	(Binary data 12 bytes, use -b option to extract)
 ExifTool.jpg	ee	extra	0	Writer-Editor	I wrote it
 ExifTool.jpg	ee	extra	0	WriterName	Adobe Photoshop
 ExifTool.jpg	ee	extra	0	XResolution	72
@@ -343,11 +333,9 @@ ExifTool.jpg	ee	missing	0	Quality	1
 ExifTool.jpg	ee	missing	0	Rotation	90
 ExifTool.jpg	ee	missing	0	Source	source
 ExifTool.jpg	ee	missing	0	SpecialInstructions	special instructions
-ExifTool.jpg	ee	missing	0	Storage-StreamPathname	/.Screen Nail_bd0100609719a180
 ExifTool.jpg	ee	missing	0	SupplementalCategories	supp cat
 ExifTool.jpg	ee	missing	0	Title	HEALTHCORONAVIRUSUSAOREGON_SALEM_08.jpg
 ExifTool.jpg	ee	missing	0	Urgency	2
-ExifTool.jpg	ee	missing	0	UserAdjSBA_RGBShifts	(Binary data 5 bytes, use -b option to extract)
 ExifTool.jpg	ee	missing	0	Warning	[minor] Error reading PreviewImage from file
 ExifTool.jpg	ee	missing	0	Writer-Editor	caption writer
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
@@ -358,34 +346,6 @@ Flash.swf	default	extra	0	XMPToolkit
 Flash.swf	ee	extra	0	XMPToolkit	
 FlashPix.ppt	ee	missing	0	CodePage	Mac Roman (Western European)
 FlashPix.ppt	ee	missing	1	CodePage	Mac Roman (Western European)
-Font.ttf	default	extra	0	FontFamily-he	øòððä
-Font.ttf	default	extra	0	FontName-he	øòððä
-Font.ttf	default	extra	0	FontSubfamily-fr	Rgulier
-Font.ttf	default	extra	0	FontSubfamily-ja	M[
-Font.ttf	default	extra	0	FontSubfamily-ko	ÀÏ¹Ý
-Font.ttf	default	extra	0	FontSubfamily-zh-CN	³£¹æ
-Font.ttf	default	extra	0	FontSubfamily-zh-TW	¼Ð·ÇÅé
-Font.ttf	default	missing	0	FontFamily-he	רעננה
-Font.ttf	default	missing	0	FontName-he	רעננה
-Font.ttf	default	missing	0	FontSubfamily-fr	Régulier
-Font.ttf	default	missing	0	FontSubfamily-ja	レギュラー
-Font.ttf	default	missing	0	FontSubfamily-ko	일반
-Font.ttf	default	missing	0	FontSubfamily-zh-CN	常规
-Font.ttf	default	missing	0	FontSubfamily-zh-TW	標準體
-Font.ttf	ee	extra	0	FontFamily-he	øòððä
-Font.ttf	ee	extra	0	FontName-he	øòððä
-Font.ttf	ee	extra	0	FontSubfamily-fr	Rgulier
-Font.ttf	ee	extra	0	FontSubfamily-ja	M[
-Font.ttf	ee	extra	0	FontSubfamily-ko	ÀÏ¹Ý
-Font.ttf	ee	extra	0	FontSubfamily-zh-CN	³£¹æ
-Font.ttf	ee	extra	0	FontSubfamily-zh-TW	¼Ð·ÇÅé
-Font.ttf	ee	missing	0	FontFamily-he	רעננה
-Font.ttf	ee	missing	0	FontName-he	רעננה
-Font.ttf	ee	missing	0	FontSubfamily-fr	Régulier
-Font.ttf	ee	missing	0	FontSubfamily-ja	レギュラー
-Font.ttf	ee	missing	0	FontSubfamily-ko	일반
-Font.ttf	ee	missing	0	FontSubfamily-zh-CN	常规
-Font.ttf	ee	missing	0	FontSubfamily-zh-TW	標準體
 FujiFilm.raf	default	extra	0	Model	FinePix S5Pro
 FujiFilm.raf	ee	extra	0	Model	FinePix S5Pro
 FujiFilm.raf	ee	missing	0	Contrast	Normal
@@ -486,34 +446,16 @@ Jpeg2000.jp2	ee	missing	0	ContentDescriptionLocationAddressAddrComp	Charlotte
 Jpeg2000.jp2	ee	missing	0	ContentDescriptionLocationAddressAddrComp	New York
 Jpeg2000.jp2	ee	missing	0	ContentDescriptionLocationAddressAddrCompType	City
 Jpeg2000.jp2	ee	missing	0	ContentDescriptionLocationAddressAddrCompType	State
-Kodak.jpg	default	extra	0	Storage-StreamPathname	.
-Kodak.jpg	default	missing	0	Storage-StreamPathname	/Audio_bd0100609719a180
-Kodak.jpg	ee	extra	0	Storage-StreamPathname	.
-Kodak.jpg	ee	extra	1	Storage-StreamPathname	.
 Kodak.jpg	ee	missing	0	ExposureCompensation	0
 Kodak.jpg	ee	missing	0	ExposureTime	1/180
 Kodak.jpg	ee	missing	0	FNumber	6.7
 Kodak.jpg	ee	missing	0	MeteringMode	Average
-Kodak.jpg	ee	missing	0	Storage-StreamPathname	/.Screen Nail_bd0100609719a180
-Kodak.jpg	ee	missing	0	Storage-StreamPathname	/Audio_bd0100609719a180
 Lytro.lfp	ee	missing	0	ModesRegionOfInterestArrayType	exposure
 Lytro.lfp	ee	missing	0	ModesRegionOfInterestArrayX	0.26874190568923950195
 Lytro.lfp	ee	missing	0	ModesRegionOfInterestArrayY	0.55208665132522583008
 M2TS.mts	default	extra	0	ShutterSpeed	1/25
 M2TS.mts	ee	extra	0	ShutterSpeed	1/25
-MIE.mie	default	extra	0	Comment-cn_ZH	(Binary data 24 bytes, use -b option to extract)
-MIE.mie	default	extra	0	Comment-hi_IN	(Binary data 104 bytes, use -b option to extract)
-MIE.mie	default	extra	0	Comment-ja_JP	(Binary data 50 bytes, use -b option to extract)
-MIE.mie	default	missing	0	Comment-cn_ZH	我能吞下玻璃而不伤身体。
-MIE.mie	default	missing	0	Comment-hi_IN	मैं काँच खा सकता हूँ, मुझे उस से कोई पीडा नहीं होती.
-MIE.mie	default	missing	0	Comment-ja_JP	私はガラスを食べられます。それは私を傷つけません。
-MIE.mie	ee	extra	0	Comment-cn_ZH	(Binary data 24 bytes, use -b option to extract)
-MIE.mie	ee	extra	0	Comment-hi_IN	(Binary data 104 bytes, use -b option to extract)
-MIE.mie	ee	extra	0	Comment-ja_JP	(Binary data 50 bytes, use -b option to extract)
 MIE.mie	ee	extra	0	MIMEType	application/x-mie
-MIE.mie	ee	missing	0	Comment-cn_ZH	我能吞下玻璃而不伤身体。
-MIE.mie	ee	missing	0	Comment-hi_IN	मैं काँच खा सकता हूँ, मुझे उस से कोई पीडा नहीं होती.
-MIE.mie	ee	missing	0	Comment-ja_JP	私はガラスを食べられます。それは私を傷つけません。
 MIFF.miff	default	extra	0	XResolution	72
 MIFF.miff	default	extra	0	YResolution	72
 MP3.mp3	ee	missing	0	Album	Album
@@ -647,9 +589,6 @@ Minolta.mrw	ee	missing	1	Saturation	Normal
 Minolta.mrw	ee	missing	0	Sharpness	Normal
 Minolta.mrw	ee	missing	1	Sharpness	Normal
 Nikon.jpg	ee	missing	0	ISO	0
-Nikon.nef	default	extra	0	TIFF-EPStandardID	1 0 0 0
-Nikon.nef	default	missing	0	TIFF-EPStandardID	1.0.0.0
-Nikon.nef	ee	extra	0	TIFF-EPStandardID	1 0 0 0
 Nikon.nef	ee	missing	0	ApplicationRecordVersion	4
 Nikon.nef	ee	missing	0	CFAPattern	[Blue,Green][Green,Red]
 Nikon.nef	ee	missing	0	Caption-Abstract	A caption
@@ -664,7 +603,6 @@ Nikon.nef	ee	missing	0	NoiseReduction	Off
 Nikon.nef	ee	missing	0	Province-State	Ontario
 Nikon.nef	ee	missing	0	ResolutionUnit	inches
 Nikon.nef	ee	missing	0	SpecialInstructions	none
-Nikon.nef	ee	missing	0	TIFF-EPStandardID	1.0.0.0
 Nikon.nef	ee	missing	0	XResolution	72
 Nikon.nef	ee	missing	0	YResolution	72
 NikonD2Hs.jpg	ee	missing	0	ColorSpace	sRGB
@@ -691,18 +629,6 @@ NikonD70.jpg	ee	missing	0	WhiteBalance	Auto
 NikonD70.jpg	ee	missing	0	XResolution	300
 NikonD70.jpg	ee	missing	0	YCbCrPositioning	Co-sited
 NikonD70.jpg	ee	missing	0	YResolution	300
-OOXML.docx	default	extra	0	FileType	ZIP
-OOXML.docx	default	extra	0	FileTypeExtension	zip
-OOXML.docx	default	extra	0	MIMEType	application/zip
-OOXML.docx	default	missing	0	FileType	DOCX
-OOXML.docx	default	missing	0	FileTypeExtension	docx
-OOXML.docx	default	missing	0	MIMEType	application/vnd.openxmlformats-officedocument.wordprocessingml.document
-OOXML.docx	ee	extra	0	FileType	ZIP
-OOXML.docx	ee	extra	0	FileTypeExtension	zip
-OOXML.docx	ee	extra	0	MIMEType	application/zip
-OOXML.docx	ee	missing	0	FileType	DOCX
-OOXML.docx	ee	missing	0	FileTypeExtension	docx
-OOXML.docx	ee	missing	0	MIMEType	application/vnd.openxmlformats-officedocument.wordprocessingml.document
 Olympus.jpg	ee	missing	0	CameraType	C2000Z
 Olympus2.jpg	ee	missing	0	ColorSpace	sRGB
 Olympus2.jpg	ee	missing	0	ExposureMode	Program
@@ -986,9 +912,5 @@ XMP.xml	ee	extra	0	ShutterSpeed	1/213
 XMP.xml	ee	missing	0	ShutterSpeed	0.00469483568075117
 XMP4.xmp	ee	missing	0	StructList2Item1	c1-2
 XMP4.xmp	ee	missing	0	StructList2Item2	c2-2
-XMP5.xmp	default	extra	0	BTestTagField1-en-US	huh?, groovy
-XMP5.xmp	default	missing	0	BTestTagField1-en-US	huh?
-XMP5.xmp	ee	extra	0	BTestTagField1-en-US	huh?, groovy
 XMP5.xmp	ee	missing	0	BTestTagField1-en-US	groovy
-XMP5.xmp	ee	missing	0	BTestTagField1-en-US	huh?
 XMP6.xmp	ee	missing	0	Test	tabby
