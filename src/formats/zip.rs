@@ -130,8 +130,8 @@ pub fn read_iwork(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                     name: "PreviewImage".into(),
                     description: "Preview Image".into(),
                     group: TagGroup {
-                        family0: "ZIP".into(),
-                        family1: "ZIP".into(),
+                        family0: "File".into(),
+                        family1: "File".into(),
                         family2: "Preview".into(),
                         family3: "Main".into(),
                     },
@@ -807,8 +807,8 @@ pub fn read_zip(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                         name: "PreviewPNG".into(),
                         description: "Preview PNG".into(),
                         group: TagGroup {
-                            family0: "ZIP".into(),
-                            family1: "ZIP".into(),
+                            family0: "File".into(),
+                            family1: "File".into(),
                             family2: "Preview".into(),
                             family3: "Main".into(),
                         },
@@ -868,8 +868,8 @@ pub fn read_zip(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                         name: "PreviewImage".into(),
                         description: "Preview Image".into(),
                         group: TagGroup {
-                            family0: "ZIP".into(),
-                            family1: "ZIP".into(),
+                            family0: "File".into(),
+                            family1: "File".into(),
                             family2: "Preview".into(),
                             family3: "Main".into(),
                         },
@@ -951,7 +951,14 @@ fn parse_ooxml_core(data: &[u8], tags: &mut Vec<Tag>) {
             } else {
                 value
             };
-            tags.push(mk(name, name, Value::String(value)));
+            // Dublin Core properties are read through the XMP::dc table; the rest
+            // stay in OOXML::Main's XML group (OOXML.pm ProcessContents).
+            let tag = if xml_tag.starts_with("dc:") {
+                mk_dc(name, name, Value::String(value))
+            } else {
+                mk_xml(name, name, Value::String(value))
+            };
+            tags.push(tag);
         }
     }
 }
@@ -988,7 +995,7 @@ fn parse_ooxml_app(data: &[u8], tags: &mut Vec<Tag>) {
         if let Some(value) = extract_xml_value(&text, xml_tag) {
             // Convert boolean strings to Yes/No, and DocSecurity to text
             let value = convert_ooxml_value(xml_tag, name, &value);
-            tags.push(mk(name, name, Value::String(value)));
+            tags.push(mk_xml(name, name, Value::String(value)));
         }
     }
 
@@ -997,7 +1004,7 @@ fn parse_ooxml_app(data: &[u8], tags: &mut Vec<Tag>) {
         let pairs = parse_vt_vector_pairs(&hp);
         if !pairs.is_empty() {
             // List=>1 tag: keep elements (strings + numbers) for a JSON array.
-            tags.push(mk(
+            tags.push(mk_xml(
                 "HeadingPairs",
                 "HeadingPairs",
                 Value::List(pairs.into_iter().map(Value::String).collect()),
@@ -1009,7 +1016,11 @@ fn parse_ooxml_app(data: &[u8], tags: &mut Vec<Tag>) {
     if let Some(tp) = extract_xml_value(&text, "TitlesOfParts") {
         let titles = parse_vt_vector_strings(&tp);
         if !titles.is_empty() {
-            tags.push(mk("TitlesOfParts", "TitlesOfParts", Value::String(titles)));
+            tags.push(mk_xml(
+                "TitlesOfParts",
+                "TitlesOfParts",
+                Value::String(titles),
+            ));
         }
     }
 }
@@ -1135,7 +1146,7 @@ fn parse_ooxml_custom(data: &[u8], tags: &mut Vec<Tag>) {
                     } else {
                         value
                     };
-                    tags.push(mk(&tag_name, &name, Value::String(value)));
+                    tags.push(mk_xml(&tag_name, &name, Value::String(value)));
                 }
             }
         }
@@ -1391,4 +1402,30 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         print_value: pv,
         priority: 0,
     }
+}
+
+/// An OOXML docProps content tag. ExifTool reads these through
+/// `OOXML::Main` (`GROUPS => { 0 => 'XML', 1 => 'XML', 2 => 'Document' }`,
+/// OOXML.pm line 56), so the container-level `ZIP` group is wrong for them; only
+/// the structural `Zip*` members stay in `ZIP`. Family 2 is left for the
+/// category pass to resolve against ExifTool's own tables, exactly as it does
+/// for every other reader.
+fn mk_xml(name: &str, description: &str, value: Value) -> Tag {
+    let mut t = mk(name, description, value);
+    t.group.family0 = "XML".into();
+    t.group.family1 = "XML".into();
+    t
+}
+
+/// An OOXML docProps property in the Dublin Core namespace. `OOXML::FoundTag`
+/// switches to the standard `XMP::dc` table when the property's namespace is a
+/// known XMP one (OOXML.pm lines 257-265), so `dc:title`/`dc:creator`/… land in
+/// family 1 `XMP-dc` (family 0 `XMP`), and the category pass reads their
+/// family 2 from the dc schema (Creator -> Author, Title/Subject/Description ->
+/// Image).
+fn mk_dc(name: &str, description: &str, value: Value) -> Tag {
+    let mut t = mk(name, description, value);
+    t.group.family0 = "XMP".into();
+    t.group.family1 = "XMP-dc".into();
+    t
 }
