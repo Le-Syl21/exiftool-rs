@@ -5727,6 +5727,9 @@ fn parse_ole_props<'a>(
                 Some(n) => n,
                 None => continue,
             };
+            // A VT_VECTOR property is a list (FlashPix ReadFPXValue returns an
+            // array ref), so JSON emits an array. Vector arms fill list_parts.
+            let mut list_parts: Option<Vec<String>> = None;
             let val_str = match vtype {
                 2 | 18 if !is_vector => {
                     // VT_I2 / VT_UI2
@@ -5789,7 +5792,12 @@ fn parse_ole_props<'a>(
                         // Advance past this element, padded to a 4-byte boundary.
                         p += 4 + ((byte_len + 3) & !3);
                     }
-                    parts.join(", ")
+                    let joined = parts.join(", ");
+                    // A single-element vector is emitted as a scalar by ExifTool.
+                    if parts.len() > 1 {
+                        list_parts = Some(parts);
+                    }
+                    joined
                 }
                 30 => {
                     // VT_LPSTR
@@ -5855,7 +5863,7 @@ fn parse_ole_props<'a>(
                     }
                     let count = ru32(val_off + 4) as usize;
                     let esz = if vtype == 2 || vtype == 18 { 2usize } else { 4 };
-                    (0..count.min(100))
+                    let parts: Vec<String> = (0..count.min(100))
                         .filter_map(|j| {
                             let eoff = val_off + 8 + j * esz;
                             if eoff + esz > data.len() {
@@ -5867,8 +5875,13 @@ fn parse_ole_props<'a>(
                                 ru32(eoff).to_string()
                             })
                         })
-                        .collect::<Vec<_>>()
-                        .join(", ")
+                        .collect();
+                    let joined = parts.join(", ");
+                    // A single-element vector is emitted as a scalar by ExifTool.
+                    if parts.len() > 1 {
+                        list_parts = Some(parts);
+                    }
+                    joined
                 }
                 72 | 65 => {
                     // VT_CLSID (0x48=72)
@@ -5896,7 +5909,12 @@ fn parse_ole_props<'a>(
                     family2: "Other".into(),
                     family3: "Main".into(),
                 },
-                raw_value: crate::value::Value::String(val_str.clone()),
+                raw_value: match list_parts {
+                    Some(parts) => crate::value::Value::List(
+                        parts.into_iter().map(crate::value::Value::String).collect(),
+                    ),
+                    None => crate::value::Value::String(val_str.clone()),
+                },
                 print_value: val_str,
                 priority: 0,
             });

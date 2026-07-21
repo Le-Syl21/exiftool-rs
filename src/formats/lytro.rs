@@ -74,16 +74,19 @@ pub fn read_lfp(data: &[u8]) -> Result<Vec<Tag>> {
     // JSONMetadata is Binary => 1, List => 1: one ", "-joined value listing each
     // JSON block as "(Binary data N bytes)", not the decoded text.
     if !json_blocks.is_empty() {
-        let joined = json_blocks
+        // List=>1: keep each block description as its own element so JSON emits an
+        // array (the "(Binary data …)" strings contain ", ", so they must never be
+        // reconstructed by splitting — carry them as real elements).
+        let items: Vec<Value> = json_blocks
             .iter()
-            .map(|b| format!("(Binary data {} bytes, use -b option to extract)", b.len()))
-            .collect::<Vec<_>>()
-            .join(", ");
-        tags.push(mk_lytro(
-            "JSONMetadata",
-            "JSON Metadata",
-            Value::String(joined),
-        ));
+            .map(|b| {
+                Value::String(format!(
+                    "(Binary data {} bytes, use -b option to extract)",
+                    b.len()
+                ))
+            })
+            .collect();
+        tags.push(mk_lytro("JSONMetadata", "JSON Metadata", Value::List(items)));
     }
 
     // Process each JSON block: extract tags
@@ -258,7 +261,11 @@ fn extract_array(chars: &[char], pos: &mut usize, parent: &str, tags: &mut Vec<T
             }
         }
     }
-    if !scalars.is_empty() {
+    // A multi-element JSON array is a list; a single scalar element stays scalar,
+    // matching ExifTool (which arrays these count>1 values but not a lone one).
+    if scalars.len() > 1 {
+        emit_tag_list(parent, scalars, tags);
+    } else if !scalars.is_empty() {
         emit_tag(parent, scalars.join(", "), tags);
     }
 }
@@ -331,6 +338,24 @@ fn clean_non_alnum(s: &str) -> String {
 
 /// Emit a tag, applying name transformations and print conversions.
 fn emit_tag(tag_path: &str, json_value: String, tags: &mut Vec<Tag>) {
+    emit_tag_impl(tag_path, json_value, None, tags);
+}
+
+/// Emit a tag whose value came from a JSON array, carrying the per-element strings
+/// so JSON output can render an array (Lytro JSON arrays are List=>1). The output
+/// discriminator only arrays it when the elements re-join to print_value, so a
+/// reformatting conversion still yields a scalar.
+fn emit_tag_list(tag_path: &str, items: Vec<String>, tags: &mut Vec<Tag>) {
+    let joined = items.join(", ");
+    emit_tag_impl(tag_path, joined, Some(items), tags);
+}
+
+fn emit_tag_impl(
+    tag_path: &str,
+    json_value: String,
+    list_items: Option<Vec<String>>,
+    tags: &mut Vec<Tag>,
+) {
     let (name, is_devices) = tag_path_to_name(tag_path);
     if name.is_empty() {
         return;
@@ -342,7 +367,9 @@ fn emit_tag(tag_path: &str, json_value: String, tags: &mut Vec<Tag>) {
     let family2 = if is_devices { "Camera" } else { "Image" };
 
     // Numeric raw for tags that feed composites (full precision, not rounded print).
-    let raw_value = if matches!(final_name.as_str(), "FocalLength" | "FNumber") {
+    let raw_value = if let Some(items) = list_items {
+        Value::List(items.into_iter().map(Value::String).collect())
+    } else if matches!(final_name.as_str(), "FocalLength" | "FNumber") {
         raw_str
             .parse::<f64>()
             .map(Value::F64)
