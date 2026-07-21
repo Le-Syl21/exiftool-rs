@@ -103,32 +103,37 @@ pub fn read_hdr(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Emit tags in a consistent order (matching Perl output order)
     if let Some(cmd) = last_command {
-        tags.push(mktag("HDR", "Command", "Command", Value::String(cmd)));
+        tags.push(mktag("Radiance", "Command", "Command", Value::String(cmd)));
     }
     if let Some(v) = kv_map.get("Exposure") {
         tags.push(mktag(
-            "HDR",
+            "Radiance",
             "Exposure",
             "Exposure",
             Value::String(v.clone()),
         ));
     }
     if let Some(v) = kv_map.get("Format") {
-        tags.push(mktag("HDR", "Format", "Format", Value::String(v.clone())));
+        tags.push(mktag(
+            "Radiance",
+            "Format",
+            "Format",
+            Value::String(v.clone()),
+        ));
     }
     if let Some(h) = kv_map.get("ImageHeight") {
         if let Ok(hv) = h.parse::<u32>() {
-            tags.push(mktag("HDR", "ImageHeight", "Image Height", Value::U32(hv)));
+            tags.push(mktag("File", "ImageHeight", "Image Height", Value::U32(hv)));
         }
     }
     if let Some(w) = kv_map.get("ImageWidth") {
         if let Ok(wv) = w.parse::<u32>() {
-            tags.push(mktag("HDR", "ImageWidth", "Image Width", Value::U32(wv)));
+            tags.push(mktag("File", "ImageWidth", "Image Width", Value::U32(wv)));
         }
     }
     if let Some(v) = kv_map.get("_orient") {
         tags.push(mktag(
-            "HDR",
+            "Radiance",
             "Orientation",
             "Orientation",
             Value::String(v.clone()),
@@ -136,14 +141,14 @@ pub fn read_hdr(data: &[u8]) -> Result<Vec<Tag>> {
     }
     if let Some(v) = kv_map.get("Software") {
         tags.push(mktag(
-            "HDR",
+            "Radiance",
             "Software",
             "Software",
             Value::String(v.clone()),
         ));
     }
     if let Some(v) = kv_map.get("View") {
-        tags.push(mktag("HDR", "View", "View", Value::String(v.clone())));
+        tags.push(mktag("Radiance", "View", "View", Value::String(v.clone())));
     }
 
     let _ = found_dims;

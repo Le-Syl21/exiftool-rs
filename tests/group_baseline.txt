@@ -333,15 +333,6 @@ RIFF.avi	ImageHeight	family1
 RIFF.avi	ImageWidth	family1
 RIFF.wav	Duration	family1
 RIFF.wav	Duration	family2
-Radiance.hdr	Command	family1
-Radiance.hdr	Exposure	family1
-Radiance.hdr	Format	family1
-Radiance.hdr	ImageHeight	family1
-Radiance.hdr	ImageWidth	family1
-Radiance.hdr	Orientation	family1
-Radiance.hdr	Software	family1
-Radiance.hdr	Software	family2
-Radiance.hdr	View	family1
 Ricoh.jpg	RicohImageHeight	family1
 Ricoh.jpg	RicohImageWidth	family1
 Ricoh2.jpg	RicohDate	family1
