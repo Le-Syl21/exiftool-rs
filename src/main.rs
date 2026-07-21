@@ -938,7 +938,7 @@ fn main() {
     } else if xml_output {
         print_xml(&et, &files);
     } else if json_output {
-        print_json_all(&et, &files);
+        print_json_all(&et, &files, show_groups, group_family);
     } else if args_output {
         print_args(&et, &files);
     } else if php_output {
@@ -1070,7 +1070,7 @@ fn run_stay_open(
                     match et.extract_info(file) {
                         Ok(tags) => {
                             if json {
-                                print_json_tags(&tags, file, false);
+                                print_json_tags(&tags, file, false, show_groups, group_family);
                             } else {
                                 for tag in &tags {
                                     if show_groups {
@@ -1638,18 +1638,84 @@ fn print_tab(et: &ExifTool, files: &[String]) {
     }
 }
 
-fn print_json_all(et: &ExifTool, files: &[String]) {
+/// Whether a value is emitted as an unquoted JSON number, matching ExifTool's
+/// EscapeJSON regex `^-?(\d|[1-9]\d{1,14})(\.\d{1,16})?(e[-+]?\d{1,3})?$`
+/// (exiftool:3810). A multi-digit integer with a leading zero is NOT a number,
+/// so version strings such as "0221" stay quoted.
+fn json_is_number(s: &str) -> bool {
+    let b = s.as_bytes();
+    let mut i = 0;
+    if i < b.len() && b[i] == b'-' {
+        i += 1;
+    }
+    // integer part: a lone digit, or [1-9] followed by 1..=14 more digits
+    let int_start = i;
+    if i >= b.len() || !b[i].is_ascii_digit() {
+        return false;
+    }
+    if b[i] == b'0' {
+        i += 1; // a single "0" is allowed only if nothing more follows the int part
+    } else {
+        i += 1;
+        while i < b.len() && b[i].is_ascii_digit() && i - int_start <= 14 {
+            i += 1;
+        }
+    }
+    let int_len = i - int_start;
+    if int_len > 1 && b[int_start] == b'0' {
+        return false; // leading zero on a multi-digit integer
+    }
+    if int_len > 15 {
+        return false;
+    }
+    // optional fractional part: '.' then 1..=16 digits
+    if i < b.len() && b[i] == b'.' {
+        i += 1;
+        let frac_start = i;
+        while i < b.len() && b[i].is_ascii_digit() {
+            i += 1;
+        }
+        let frac_len = i - frac_start;
+        if !(1..=16).contains(&frac_len) {
+            return false;
+        }
+    }
+    // optional exponent: e/E, optional sign, 1..=3 digits
+    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
+        i += 1;
+        if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+            i += 1;
+        }
+        let exp_start = i;
+        while i < b.len() && b[i].is_ascii_digit() {
+            i += 1;
+        }
+        let exp_len = i - exp_start;
+        if !(1..=3).contains(&exp_len) {
+            return false;
+        }
+    }
+    i == b.len()
+}
+
+fn print_json_all(et: &ExifTool, files: &[String], show_groups: bool, group_family: u8) {
     print!("[");
     for (idx, file) in files.iter().enumerate() {
         match et.extract_info(file) {
-            Ok(tags) => print_json_tags(&tags, file, idx > 0),
+            Ok(tags) => print_json_tags(&tags, file, idx > 0, show_groups, group_family),
             Err(e) => eprintln!("Error: {} - {}", file, e),
         }
     }
     println!("]");
 }
 
-fn print_json_tags(tags: &[exiftool_rs::Tag], filename: &str, prepend_comma: bool) {
+fn print_json_tags(
+    tags: &[exiftool_rs::Tag],
+    filename: &str,
+    prepend_comma: bool,
+    show_groups: bool,
+    group_family: u8,
+) {
     if prepend_comma {
         print!(",");
     }
@@ -1657,19 +1723,29 @@ fn print_json_tags(tags: &[exiftool_rs::Tag], filename: &str, prepend_comma: boo
     println!("  \"SourceFile\": \"{}\",", escape_json(filename));
     for (i, tag) in tags.iter().enumerate() {
         let comma = if i + 1 < tags.len() { "," } else { "" };
-        // Try to output numbers as numbers, strings as strings
-        let value_str = &tag.print_value;
-        if let Ok(n) = value_str.parse::<i64>() {
-            println!("  \"{}\": {}{}", tag.name, n, comma);
-        } else if let Ok(f) = value_str.parse::<f64>() {
-            println!("  \"{}\": {}{}", tag.name, f, comma);
+        // With a -G<n> option ExifTool prefixes each JSON key with the tag's
+        // family-<n> group (e.g. "IFD0:XResolution", "Doc1:TimeStamp"), which
+        // also disambiguates repeated tags across sub-documents.
+        let key = if show_groups {
+            format!("{}:{}", group_for_family(tag, group_family), tag.name)
         } else {
-            println!(
-                "  \"{}\": \"{}\"{}",
-                tag.name,
-                escape_json(value_str),
-                comma
-            );
+            tag.name.clone()
+        };
+        // Scalar typing mirrors ExifTool's EscapeJSON (exiftool:3806-3810): a
+        // value is emitted unquoted as a JSON number only if it matches its
+        // number regex (notably NO leading zero on a multi-digit integer, so
+        // version strings like "0221" stay quoted), and "true"/"false"
+        // (case-insensitive) become lowercase JSON booleans. Everything else is
+        // a quoted, escaped string. The number/bool forms print the value
+        // verbatim, exactly as ExifTool returns `$str`.
+        let value_str = &tag.print_value;
+        if json_is_number(value_str) {
+            println!("  \"{}\": {}{}", key, value_str, comma);
+        } else if value_str.eq_ignore_ascii_case("true") || value_str.eq_ignore_ascii_case("false")
+        {
+            println!("  \"{}\": {}{}", key, value_str.to_ascii_lowercase(), comma);
+        } else {
+            println!("  \"{}\": \"{}\"{}", key, escape_json(value_str), comma);
         }
     }
     print!("}}");
