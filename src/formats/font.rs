@@ -206,11 +206,14 @@ pub fn read_dfont(data: &[u8], tags: &mut Vec<Tag>) -> Result<()> {
                     let ver_str =
                         crate::encoding::decode_utf8_or_latin1(&vers_data[p2..p2 + long_len])
                             .to_string();
-                    tags.push(mk(
+                    // RSRC 'vers' resource: RSRC.pm GROUPS => { 2 => 'Document' }.
+                    let mut tag = mk(
                         "ApplicationVersion",
                         "Application Version",
                         Value::String(ver_str),
-                    ));
+                    );
+                    tag.group.family2 = "Document".into();
+                    tags.push(tag);
                 }
             }
         }
@@ -368,7 +371,13 @@ fn parse_name_table(data: &[u8], tags: &mut Vec<Tag>) {
             } else {
                 format!("{} ({})", desc, lang_code)
             };
-            tags.push(mk(&tag_name, &desc_full, Value::String(text)));
+            let mut tag = mk(&tag_name, &desc_full, Value::String(text));
+            // Font 'name' table GROUPS => { 2 => 'Document' }, with name id 0
+            // (Copyright) overridden to Author (Font.pm). Setting it here also
+            // covers the "-<lang>" localized variants, which the by-name family-2
+            // tier cannot reach.
+            tag.group.family2 = if name_id == 0 { "Author" } else { "Document" }.into();
+            tags.push(tag);
         }
     }
 }
