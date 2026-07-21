@@ -214,7 +214,13 @@ fn parse_iwork_metadata(xml: &str, tags: &mut Vec<Tag>) {
                 let values = extract_sfa_strings(block);
                 if !values.is_empty() {
                     let combined = values.join(", ");
-                    let val = Value::String(combined.clone());
+                    // Only sf:projects is List=>1 in ExifTool's iWork.pm; the other
+                    // fields are plain scalars, so keep just Projects as a JSON array.
+                    let val = if *name == "Projects" {
+                        Value::List(values.into_iter().map(Value::String).collect())
+                    } else {
+                        Value::String(combined.clone())
+                    };
                     tags.push(Tag {
                         id: TagId::Text(name.to_string()),
                         name: name.to_string(),
@@ -990,7 +996,12 @@ fn parse_ooxml_app(data: &[u8], tags: &mut Vec<Tag>) {
     if let Some(hp) = extract_xml_value(&text, "HeadingPairs") {
         let pairs = parse_vt_vector_pairs(&hp);
         if !pairs.is_empty() {
-            tags.push(mk("HeadingPairs", "HeadingPairs", Value::String(pairs)));
+            // List=>1 tag: keep elements (strings + numbers) for a JSON array.
+            tags.push(mk(
+                "HeadingPairs",
+                "HeadingPairs",
+                Value::List(pairs.into_iter().map(Value::String).collect()),
+            ));
         }
     }
 
@@ -1038,7 +1049,7 @@ fn convert_ooxml_value(_xml_tag: &str, tag_name: &str, value: &str) -> String {
 }
 
 /// Parse vt:vector with alternating lpstr/i4 values -> "key, value, key, value, ..."
-fn parse_vt_vector_pairs(xml: &str) -> String {
+fn parse_vt_vector_pairs(xml: &str) -> Vec<String> {
     let mut results = Vec::new();
     let mut rest = xml;
     // Extract lpstr values
@@ -1069,7 +1080,7 @@ fn parse_vt_vector_pairs(xml: &str) -> String {
         results.push(s.to_string());
         results.push(n.to_string());
     }
-    results.join(", ")
+    results
 }
 
 /// Parse vt:vector of lpstr -> comma-joined

@@ -257,6 +257,18 @@ fn decode_mie_utf(data: &[u8], utf32: bool, big_endian: bool) -> String {
     out
 }
 
+/// Build the value for a MIE null-separated string list. A value that actually
+/// contains a separator becomes a `Value::List` (so JSON emits an array for these
+/// List=>1 tags, e.g. Keywords); to_display_string re-joins with ", " so text
+/// output is unchanged. A lone string stays scalar.
+fn mie_string_list(s: &str) -> Value {
+    if s.contains('\0') {
+        Value::List(s.split('\0').map(|p| Value::String(p.to_string())).collect())
+    } else {
+        Value::String(s.to_string())
+    }
+}
+
 fn parse_mie_value(format_type: u8, data: &[u8], big_endian: bool) -> Value {
     match format_type {
         0x20 | 0x28 => {
@@ -280,14 +292,14 @@ fn parse_mie_value(format_type: u8, data: &[u8], big_endian: bool) -> Value {
         0x39 | 0x3a => {
             // utf16_list / utf32_list — like above but keep nulls as separators.
             let s = decode_mie_utf(data, format_type == 0x3a, big_endian);
-            Value::String(s.replace('\0', ", "))
+            mie_string_list(&s)
         }
         0x30 | 0x38 => {
             // String list (null-separated)
             let s = crate::encoding::decode_utf8_or_latin1(data)
                 .trim_end_matches('\0')
                 .to_string();
-            Value::String(s.replace('\0', ", "))
+            mie_string_list(&s)
         }
         0x40 => {
             // int8u

@@ -867,7 +867,9 @@ pub fn read_aae_plist(data: &[u8]) -> Result<Vec<Tag>> {
                                     }
                                     PlistValue::Array(arr) => Value::List(
                                         arr.iter()
-                                            .map(|v| Value::String(plist_value_to_string(v)))
+                                            .map(plist_value_to_string)
+                                            .filter(|s| !s.is_empty())
+                                            .map(Value::String)
                                             .collect(),
                                     ),
                                     _ => Value::String(String::new()),

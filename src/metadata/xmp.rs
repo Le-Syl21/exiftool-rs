@@ -1754,24 +1754,40 @@ impl XmpReader {
                     })
                     .collect();
                 tag.print_value = mapped.join(", ");
+                // Keep the mapped phrases as the list value so JSON emits an array
+                // (PLUS constraint tags are List=>1 with a per-element PrintConv).
+                if let Value::List(_) = tag.raw_value {
+                    tag.raw_value =
+                        Value::List(mapped.into_iter().map(Value::String).collect());
+                }
             }
             // XMP-exif ComponentsConfiguration (Seq of integers → channel labels).
             if tag.name == "ComponentsConfiguration" {
-                tag.print_value = tag
+                let labels: Vec<String> = tag
                     .print_value
                     .split(", ")
-                    .map(|c| match c.trim() {
-                        "0" => "-",
-                        "1" => "Y",
-                        "2" => "Cb",
-                        "3" => "Cr",
-                        "4" => "R",
-                        "5" => "G",
-                        "6" => "B",
-                        other => other,
+                    .map(|c| {
+                        match c.trim() {
+                            "0" => "-",
+                            "1" => "Y",
+                            "2" => "Cb",
+                            "3" => "Cr",
+                            "4" => "R",
+                            "5" => "G",
+                            "6" => "B",
+                            other => other,
+                        }
+                        .to_string()
                     })
-                    .collect::<Vec<_>>()
-                    .join(", ");
+                    .collect();
+                tag.print_value = labels.join(", ");
+                // Only the rdf:Seq form is a list (JSON array of channel names). A
+                // flat single-valued property (e.g. in a plain .xml) stays scalar,
+                // exactly as ExifTool emits it — so preserve the existing shape.
+                if let Value::List(_) = tag.raw_value {
+                    tag.raw_value =
+                        Value::List(labels.into_iter().map(Value::String).collect());
+                }
             }
             // XMP-aux LensInfo: ConvertRationalList (N/D → float, 0/0 → undef, 1/0 →
             // inf) then Exif::PrintLensInfo → "12-20mm f/3.8-4.5".

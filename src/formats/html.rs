@@ -96,9 +96,21 @@ pub fn read_html(data: &[u8]) -> Result<Vec<Tag>> {
                     .iter_mut()
                     .find(|t| t.name == tag.name && t.group.family0 == tag.group.family0)
                 {
-                    let joined = format!("{}, {}", existing.print_value, tag.print_value);
-                    existing.print_value = joined.clone();
-                    existing.raw_value = Value::String(joined);
+                    // Grow a list so JSON emits an array for these List=>1 tags,
+                    // keeping print_value as the ", "-joined string.
+                    match &mut existing.raw_value {
+                        Value::List(items) => {
+                            items.push(Value::String(tag.print_value.clone()))
+                        }
+                        _ => {
+                            existing.raw_value = Value::List(vec![
+                                Value::String(existing.print_value.clone()),
+                                Value::String(tag.print_value.clone()),
+                            ]);
+                        }
+                    }
+                    existing.print_value =
+                        format!("{}, {}", existing.print_value, tag.print_value);
                     continue;
                 }
             }
