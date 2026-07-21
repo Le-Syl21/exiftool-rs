@@ -1,5 +1,7 @@
+Artist	IFD0	Author
 CompatibleBrands	Jpeg2000	Video
 Directory	System	Other
+ExifByteOrder	File	Image
 ExifToolVersion	ExifTool	ExifTool
 FileAccessDate	System	Time
 FileInodeChangeDate	System	Time
@@ -16,4 +18,9 @@ MIMEType	File	Other
 MajorBrand	Jpeg2000	Video
 Megapixels	Composite	Image
 MinorVersion	Jpeg2000	Video
-Warning	ExifTool	ExifTool
+ResolutionUnit	IFD0	Image
+Subject	XMP-dc	Image
+XMPToolkit	XMP-x	Document
+XResolution	IFD0	Image
+YCbCrPositioning	IFD0	Image
+YResolution	IFD0	Image

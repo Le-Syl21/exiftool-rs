@@ -1,4 +1,6 @@
+Artist	me
 CompatibleBrands	jxl
+ExifByteOrder	Big-endian (Motorola, MM)
 FileType	JXL
 FileTypeExtension	jxl
 ImageHeight	130
@@ -8,4 +10,9 @@ MIMEType	image/jxl
 MajorBrand	JPEG XL Image (.JXL)
 Megapixels	0.026
 MinorVersion	0.0.0
-Warning	Install IO::Uncompress::Brotli to decode Brotli-compressed metadata [x2]
+ResolutionUnit	inches
+Subject	ExifTool test
+XMPToolkit	Image::ExifTool 12.64
+XResolution	72
+YCbCrPositioning	Centered
+YResolution	72

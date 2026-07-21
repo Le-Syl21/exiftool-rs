@@ -21,9 +21,14 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
 
     let mut tags = Vec::new();
 
-    // Version at offset 0x3C (4 bytes ASCII, e.g., "0106")
+    // FirmwareVersion at offset 0x3C (undef[4], e.g. "0106"). FujiFilm.pm:1229
+    // (renamed from RAFVersion, ref forum17969).
     let version = crate::encoding::decode_utf8_or_latin1(&data[0x3C..0x40]).to_string();
-    tags.push(mk("RAFVersion", "RAF Version", Value::String(version)));
+    tags.push(mk(
+        "FirmwareVersion",
+        "Firmware Version",
+        Value::String(version),
+    ));
 
     // Camera model (bytes 0x1C-0x3C, null-terminated)
     let model_end = data[0x1C..0x3C]
@@ -303,6 +308,12 @@ fn decode_raf_tag(tag_id: u16, data_len: usize, val_data: &[u8], fuji_layout: bo
             val_data,
             "WB_GRGBLevelsTungsten",
             "WB GRGB Levels Tungsten",
+        )),
+        // WB_GRGBLevelsFlash (FujiFilm.pm:1416)
+        0x2410 if data_len >= 8 => Some(decode_wb_grgb(
+            val_data,
+            "WB_GRGBLevelsFlash",
+            "WB GRGB Levels Flash",
         )),
         // WB_GRGBLevels
         0x2ff0 if data_len >= 8 => {

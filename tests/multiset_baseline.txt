@@ -387,13 +387,8 @@ Font.ttf	ee	missing	0	FontSubfamily-ko	일반
 Font.ttf	ee	missing	0	FontSubfamily-zh-CN	常规
 Font.ttf	ee	missing	0	FontSubfamily-zh-TW	標準體
 FujiFilm.raf	default	extra	0	Model	FinePix S5Pro
-FujiFilm.raf	default	extra	0	RAFVersion	0106
-FujiFilm.raf	default	missing	0	FirmwareVersion	0106
-FujiFilm.raf	default	missing	0	WB_GRGBLevelsFlash	384 687 384 454
 FujiFilm.raf	ee	extra	0	Model	FinePix S5Pro
-FujiFilm.raf	ee	extra	0	RAFVersion	0106
 FujiFilm.raf	ee	missing	0	Contrast	Normal
-FujiFilm.raf	ee	missing	0	FirmwareVersion	0106
 FujiFilm.raf	ee	missing	0	FujiLayout	1 2 1 0
 FujiFilm.raf	ee	missing	0	RawExposureBias	0
 FujiFilm.raf	ee	missing	0	RawImageCropTopLeft	10 48
@@ -409,7 +404,6 @@ FujiFilm.raf	ee	missing	0	WB_GRGBLevelsCloudy	384 774 384 513
 FujiFilm.raf	ee	missing	0	WB_GRGBLevelsDayWhiteFluor	384 739 384 671
 FujiFilm.raf	ee	missing	0	WB_GRGBLevelsDaylight	384 685 384 603
 FujiFilm.raf	ee	missing	0	WB_GRGBLevelsDaylightFluor	384 883 384 539
-FujiFilm.raf	ee	missing	0	WB_GRGBLevelsFlash	384 687 384 454
 FujiFilm.raf	ee	missing	0	WB_GRGBLevelsFlash	384 783 384 532
 FujiFilm.raf	ee	missing	0	WB_GRGBLevelsLivingRoomWarmWhiteFluor	384 477 384 1078
 FujiFilm.raf	ee	missing	0	WB_GRGBLevelsTungsten	384 438 384 975
@@ -484,25 +478,7 @@ IPTC.jpg	ee	extra	0	GlobalAltitude	30
 InfiRay.jpg	ee	missing	0	GPSAltitude	undef
 InfiRay.jpg	ee	missing	0	GPSLatitude	
 InfiRay.jpg	ee	missing	0	GPSLongitude	
-JXL2.jxl	default	extra	0	Artist	me
-JXL2.jxl	default	extra	0	ExifByteOrder	Big-endian (Motorola, MM)
-JXL2.jxl	default	extra	0	ResolutionUnit	inches
-JXL2.jxl	default	extra	0	Subject	ExifTool test
-JXL2.jxl	default	extra	0	XMPToolkit	Image::ExifTool 12.64
-JXL2.jxl	default	extra	0	XResolution	72
-JXL2.jxl	default	extra	0	YCbCrPositioning	Centered
-JXL2.jxl	default	extra	0	YResolution	72
-JXL2.jxl	default	missing	0	Warning	Install IO::Uncompress::Brotli to decode Brotli-compressed metadata [x2]
-JXL2.jxl	ee	extra	0	Artist	me
 JXL2.jxl	ee	extra	0	ExifByteOrder	Big-endian (Motorola, MM)
-JXL2.jxl	ee	extra	1	ExifByteOrder	Big-endian (Motorola, MM)
-JXL2.jxl	ee	extra	0	ResolutionUnit	inches
-JXL2.jxl	ee	extra	0	Subject	ExifTool test
-JXL2.jxl	ee	extra	0	XMPToolkit	Image::ExifTool 12.64
-JXL2.jxl	ee	extra	0	XResolution	72
-JXL2.jxl	ee	extra	0	YCbCrPositioning	Centered
-JXL2.jxl	ee	extra	0	YResolution	72
-JXL2.jxl	ee	missing	0	Warning	Install IO::Uncompress::Brotli to decode Brotli-compressed metadata [x2]
 Jpeg2000.jp2	default	extra	0	Compression	Uncompressed
 Jpeg2000.jp2	default	extra	0	ImageHeight	1
 Jpeg2000.jp2	default	extra	0	ImageWidth	1
