@@ -1123,10 +1123,21 @@ impl ExifTool {
                     .to_string(),
             )
         };
+        // Office Open XML (DOCX/XLSX/PPTX/…): ExifTool sub-detects the type from
+        // [Content_Types].xml (ZIP.pm ProcessZIP -> OOXML.pm ProcessDOCX). The ZIP
+        // member tags stay in the [ZIP] group; only the three File-group pseudo-tags
+        // (FileType/MIMEType/FileTypeExtension) change from the generic ZIP identity.
+        let ooxml = if file_type == FileType::Zip {
+            crate::formats::zip::detect_ooxml_type(data, path.extension().and_then(|e| e.to_str()))
+        } else {
+            None
+        };
         let (ft_code, mime_str, ext_str): (String, String, String) = if file_type == FileType::Exe {
             exe_subtype(data)
                 .map(|(ft, mime, ext)| (ft.to_string(), mime.to_string(), ext.to_string()))
                 .unwrap_or_else(default_tags)
+        } else if let Some(triple) = ooxml {
+            triple
         } else if let Some((code, mime)) = refine_filetype_by_content(file_type, data) {
             let (_, _, ext) = default_tags();
             (code, mime, ext)

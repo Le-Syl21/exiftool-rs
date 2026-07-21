@@ -405,6 +405,239 @@ fn zip_entry_data<'a>(data: &'a [u8], entry: &ZipEntry) -> Option<&'a [u8]> {
     Some(&data[data_start..data_end])
 }
 
+/// Office Open XML types, mapping the main-document MIME type (from
+/// `[Content_Types].xml`) to `(FileType code, MIMEType)`. This is the reverse of
+/// ExifTool's `%Image::ExifTool::mimeType` restricted to `%isOOXML` (OOXML.pm
+/// builds `%fileType` the same way). FileTypeExtension is `lc(FileType)` for all
+/// of these (none appear in ExifTool's `%fileTypeExt`).
+const OOXML_MIME_TYPES: &[(&str, &str)] = &[
+    (
+        "DOCX",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ),
+    ("DOCM", "application/vnd.ms-word.document.macroEnabled.12"),
+    (
+        "DOTX",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
+    ),
+    (
+        "DOTM",
+        "application/vnd.ms-word.template.macroEnabledTemplate",
+    ),
+    (
+        "POTX",
+        "application/vnd.openxmlformats-officedocument.presentationml.template",
+    ),
+    (
+        "POTM",
+        "application/vnd.ms-powerpoint.template.macroEnabled.12",
+    ),
+    (
+        "PPAX",
+        "application/vnd.openxmlformats-officedocument.presentationml.addin",
+    ),
+    (
+        "PPAM",
+        "application/vnd.ms-powerpoint.addin.macroEnabled.12",
+    ),
+    (
+        "PPSX",
+        "application/vnd.openxmlformats-officedocument.presentationml.slideshow",
+    ),
+    (
+        "PPSM",
+        "application/vnd.ms-powerpoint.slideshow.macroEnabled.12",
+    ),
+    (
+        "PPTX",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ),
+    (
+        "PPTM",
+        "application/vnd.ms-powerpoint.presentation.macroEnabled.12",
+    ),
+    ("THMX", "application/vnd.ms-officetheme"),
+    ("XLAM", "application/vnd.ms-excel.addin.macroEnabled.12"),
+    (
+        "XLSX",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ),
+    ("XLSM", "application/vnd.ms-excel.sheet.macroEnabled.12"),
+    (
+        "XLSB",
+        "application/vnd.ms-excel.sheet.binary.macroEnabled.12",
+    ),
+    (
+        "XLTX",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.template",
+    ),
+    ("XLTM", "application/vnd.ms-excel.template.macroEnabled.12"),
+    ("VSDX", "application/vnd.ms-visio.drawing"),
+];
+
+/// Extract the main-document ContentType (without the `.main[+xml]` suffix) from
+/// a `[Content_Types].xml` body, mirroring the three fallbacks in ZIP.pm
+/// (`ProcessZIP`, ~line 599): the named main part first, then any `<Override>`
+/// with a `.main` ContentType, then any `.main` ContentType at all.
+fn ooxml_main_mime(buff: &str) -> Option<String> {
+    // Helper: given a match of the `ContentType="...main[+xml]"` attribute value,
+    // return the part before `.main`.
+    fn strip_main(ct: &str) -> Option<String> {
+        let base = ct
+            .strip_suffix(".main+xml")
+            .or_else(|| ct.strip_suffix(".main"))?;
+        Some(base.to_string())
+    }
+
+    // Collect all `PartName="..." ... ContentType="..."` Override elements, in
+    // document order, capturing (part_name, content_type).
+    let mut overrides: Vec<(String, String)> = Vec::new();
+    let mut rest = buff;
+    while let Some(pos) = rest.find("PartName") {
+        let seg = &rest[pos..];
+        // Advance past this PartName for the next iteration regardless of success.
+        rest = &seg[8..];
+        let part = match attr_value(seg, "PartName") {
+            Some(p) => p,
+            None => continue,
+        };
+        // ContentType must appear after PartName in the same element.
+        if let Some(ct) = attr_value(seg, "ContentType") {
+            overrides.push((part, ct));
+        }
+    }
+
+    // 1) the main document with the expected name.
+    for (part, ct) in &overrides {
+        if (part == "/ppt/presentation.xml"
+            || part == "/word/document.xml"
+            || part == "/xl/workbook.xml")
+            && (ct.ends_with(".main+xml") || ct.ends_with(".main"))
+        {
+            if let Some(m) = strip_main(ct) {
+                return Some(m);
+            }
+        }
+    }
+    // 2) any Override with a `.main` ContentType.
+    for (_part, ct) in &overrides {
+        if ct.ends_with(".main+xml") || ct.ends_with(".main") {
+            if let Some(m) = strip_main(ct) {
+                return Some(m);
+            }
+        }
+    }
+    // 3) and if all else fails, any `.main` ContentType anywhere.
+    let mut scan = buff;
+    while let Some(pos) = scan.find("ContentType") {
+        let seg = &scan[pos..];
+        scan = &seg[11..];
+        if let Some(ct) = attr_value(seg, "ContentType") {
+            if ct.ends_with(".main+xml") || ct.ends_with(".main") {
+                if let Some(m) = strip_main(&ct) {
+                    return Some(m);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Read the value of an XML attribute `name` from the start of `seg` (single- or
+/// double-quoted). Scans only up to the next `>` so it stays within one element.
+fn attr_value(seg: &str, name: &str) -> Option<String> {
+    let mut hay = seg;
+    let elem_end = hay.find('>').unwrap_or(hay.len());
+    hay = &hay[..elem_end];
+    let pos = hay.find(name)?;
+    let after = &hay[pos + name.len()..];
+    // skip whitespace + '='
+    let after = after.trim_start();
+    let after = after.strip_prefix('=')?;
+    let after = after.trim_start();
+    let quote = after.chars().next()?;
+    if quote != '"' && quote != '\'' {
+        return None;
+    }
+    let rest = &after[1..];
+    let end = rest.find(quote)?;
+    Some(rest[..end].to_string())
+}
+
+/// Detect an Office Open XML file inside a ZIP and return
+/// `(FileType, MIMEType, FileTypeExtension)` following ExifTool's ZIP.pm +
+/// OOXML.pm logic. Returns `None` if the ZIP is not OOXML (no main MIME and no
+/// `docProps/*.xml` member), leaving it as a plain ZIP.
+///
+/// `file_ext` is the lowercase file extension (e.g. "docx"), used for the two
+/// ExifTool fallbacks (unrecognized MIME, and the default when a member-only
+/// match occurs).
+pub fn detect_ooxml_type(data: &[u8], file_ext: Option<&str>) -> Option<(String, String, String)> {
+    if data.len() < 30 || !data.starts_with(&[0x50, 0x4B, 0x03, 0x04]) {
+        return None;
+    }
+    let entries = parse_zip_central_directory(data)?;
+
+    // Extract the main MIME from [Content_Types].xml, if present.
+    let mut mime: Option<String> = None;
+    for entry in &entries {
+        if entry.filename == "[Content_Types].xml" {
+            if let Some(raw) = zip_entry_data(data, entry) {
+                if let Some(bytes) =
+                    decompress_zip_entry(raw, entry.compression, entry.uncompressed_size as usize)
+                {
+                    let text = crate::encoding::decode_utf8_or_latin1(&bytes);
+                    mime = ooxml_main_mime(&text);
+                }
+            }
+            break;
+        }
+    }
+
+    // ExifTool triggers OOXML processing on a main MIME OR any docProps/*.xml.
+    let has_docprops = entries.iter().any(|e| {
+        (e.filename.starts_with("docProps/"))
+            && (e.filename.ends_with(".xml") || e.filename.ends_with(".XML"))
+    });
+    if mime.is_none() && !has_docprops {
+        return None;
+    }
+
+    // Reverse-map MIME -> FileType (OOXML.pm %fileType). ProcessDOCX defaults an
+    // absent MIME to the DOCX MIME.
+    let effective_mime = mime
+        .clone()
+        .unwrap_or_else(|| OOXML_MIME_TYPES[0].1.to_string());
+    let file_type = OOXML_MIME_TYPES
+        .iter()
+        .find(|(_, m)| *m == effective_mime)
+        .map(|(t, _)| (*t).to_string())
+        .unwrap_or_else(|| {
+            // Unrecognized MIME: use the file extension if it is a known OOXML
+            // extension, else default to DOCX (OOXML.pm ProcessDOCX).
+            match file_ext {
+                Some(ext)
+                    if OOXML_MIME_TYPES
+                        .iter()
+                        .any(|(t, _)| t.eq_ignore_ascii_case(ext)) =>
+                {
+                    ext.to_uppercase()
+                }
+                _ => "DOCX".to_string(),
+            }
+        });
+
+    // MIMEType comes from mimeType{FileType} (SetFileType called with only the
+    // type), and FileTypeExtension is lc(FileType) for every OOXML type.
+    let out_mime = OOXML_MIME_TYPES
+        .iter()
+        .find(|(t, _)| *t == file_type)
+        .map(|(_, m)| (*m).to_string())
+        .unwrap_or(effective_mime);
+    let ext = file_type.to_lowercase();
+    Some((file_type, out_mime, ext))
+}
+
 /// Reads a ZIP container. With `extract_embedded` on, ExifTool describes EVERY
 /// archive member instead of just the first, each member in its own family-3
 /// document (`Doc1`, `Doc2`, …); without it, only the first member is described
