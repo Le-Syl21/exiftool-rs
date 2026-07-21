@@ -396,11 +396,13 @@ fn flv_parse_amf_value(
             }
             if !items.is_empty() {
                 let tag_name = flv_lookup_tag(compound_key);
+                // AMF strict array → List=>1 tag: keep elements so JSON emits an
+                // array (KeyFramePositions, KeyFramesTimes …).
                 tags.push(mktag(
                     "Flash",
                     &tag_name,
                     &tag_name,
-                    Value::String(items.join(", ")),
+                    Value::List(items.into_iter().map(Value::String).collect()),
                 ));
             }
         }

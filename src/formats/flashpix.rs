@@ -683,7 +683,19 @@ fn process_vector_prop(
     if is_summary {
         process_summary_prop(prop_id, combined, tags);
     } else if set_idx == 0 {
-        process_docinfo_prop(prop_id, combined, tags);
+        // HeadingPairs (0x0c) and TitleOfParts (0x0d) are List=>1 tags: keep the
+        // element vector so JSON emits an array (numeric elements stay numbers).
+        match prop_id {
+            0x0c => tags.push(mk(
+                "HeadingPairs",
+                Value::List(vals.into_iter().map(Value::String).collect()),
+            )),
+            0x0d => tags.push(mk(
+                "TitleOfParts",
+                Value::List(vals.into_iter().map(Value::String).collect()),
+            )),
+            _ => process_docinfo_prop(prop_id, combined, tags),
+        }
     } else {
         process_userdefined_prop(prop_id, combined, tags);
     }
@@ -878,7 +890,11 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
                     let blob = &val_data[4..4 + blob_size];
                     if let Some(links) = process_hyperlinks_blob(blob) {
                         if !links.is_empty() {
-                            tags.push(mk("Hyperlinks", Value::String(links)));
+                            // Hyperlinks is List=>1: keep elements for a JSON array.
+                            tags.push(mk(
+                                "Hyperlinks",
+                                Value::List(links.into_iter().map(Value::String).collect()),
+                            ));
                         }
                     }
                 }
@@ -994,7 +1010,7 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
 
 /// Parse the _PID_HLINKS VT_BLOB as an array of VT_VARIANTs
 /// Each hyperlink consists of 6 VT_VARIANTs: [type, flags, name, frame, address, subaddress]
-fn process_hyperlinks_blob(blob: &[u8]) -> Option<String> {
+fn process_hyperlinks_blob(blob: &[u8]) -> Option<Vec<String>> {
     if blob.len() < 4 {
         return None;
     }
@@ -1065,7 +1081,7 @@ fn process_hyperlinks_blob(blob: &[u8]) -> Option<String> {
     if links.is_empty() {
         None
     } else {
-        Some(links.join(", "))
+        Some(links)
     }
 }
 

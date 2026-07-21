@@ -16,23 +16,37 @@ pub fn read_json(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Parse top-level JSON object fields
     if trimmed.starts_with('{') {
-        let mut collected: Vec<(String, String)> = Vec::new();
+        let mut collected: Vec<(String, PVal)> = Vec::new();
         parse_json_object(trimmed, "", &mut collected);
         for (key, value) in collected {
             let tag_name = json_key_to_tag_name(&key);
             if tag_name.is_empty() {
                 continue;
             }
-            tags.push(mktag("JSON", &tag_name, &tag_name, Value::String(value)));
+            // A JSON array field stays a List so JSON output emits an array
+            // (ExifTool flags these List=>1); scalars stay strings.
+            let val = match value {
+                PVal::Scalar(s) => Value::String(s),
+                PVal::List(items) => {
+                    Value::List(items.into_iter().map(Value::String).collect())
+                }
+            };
+            tags.push(mktag("JSON", &tag_name, &tag_name, val));
         }
     }
 
     Ok(tags)
 }
 
+/// A parsed JSON leaf: either a scalar string or an array of element strings.
+enum PVal {
+    Scalar(String),
+    List(Vec<String>),
+}
+
 /// Recursively parse a JSON object, collecting (flat_tag_name, value) pairs.
 /// For nested objects, the key is prepended to nested keys.
-fn parse_json_object(json: &str, prefix: &str, out: &mut Vec<(String, String)>) {
+fn parse_json_object(json: &str, prefix: &str, out: &mut Vec<(String, PVal)>) {
     let mut pos = 0;
     let chars: Vec<char> = json.chars().collect();
 
@@ -75,7 +89,7 @@ fn parse_json_object(json: &str, prefix: &str, out: &mut Vec<(String, String)>) 
         match chars[pos] {
             '"' => {
                 let val = read_json_string(&chars, &mut pos);
-                out.push((full_key, val));
+                out.push((full_key, PVal::Scalar(val)));
             }
             '{' => {
                 let obj_start = pos;
@@ -96,13 +110,13 @@ fn parse_json_object(json: &str, prefix: &str, out: &mut Vec<(String, String)>) 
                     parse_json_array_of_objects(&arr_str, &full_key, &mut sub_map);
                     for (sub_key, vals) in sub_map {
                         if !vals.is_empty() {
-                            out.push((sub_key, vals.join(", ")));
+                            out.push((sub_key, PVal::List(vals)));
                         }
                     }
                 } else {
                     let values = parse_json_array(&arr_str);
                     if !values.is_empty() {
-                        out.push((full_key, values.join(", ")));
+                        out.push((full_key, PVal::List(values)));
                     }
                 }
                 pos = arr_end + 1;
@@ -110,17 +124,17 @@ fn parse_json_object(json: &str, prefix: &str, out: &mut Vec<(String, String)>) 
             'n' => {
                 // null
                 pos += 4;
-                out.push((full_key, "null".into()));
+                out.push((full_key, PVal::Scalar("null".into())));
             }
             't' => {
                 // true
                 pos += 4;
-                out.push((full_key, "1".into()));
+                out.push((full_key, PVal::Scalar("1".into())));
             }
             'f' => {
                 // false
                 pos += 5;
-                out.push((full_key, "0".into()));
+                out.push((full_key, PVal::Scalar("0".into())));
             }
             _ => {
                 // number
@@ -133,7 +147,7 @@ fn parse_json_object(json: &str, prefix: &str, out: &mut Vec<(String, String)>) 
                     pos += 1;
                 }
                 let num: String = chars[num_start..pos].iter().collect();
-                out.push((full_key, num));
+                out.push((full_key, PVal::Scalar(num)));
             }
         }
     }
@@ -242,9 +256,13 @@ fn parse_json_array_of_objects(json: &str, prefix: &str, sub_map: &mut Vec<(Stri
         if chars[pos] == '{' {
             let end = find_matching_bracket(&chars, pos, '{', '}');
             let obj_str: String = chars[pos..end + 1].iter().collect();
-            let mut obj_fields: Vec<(String, String)> = Vec::new();
+            let mut obj_fields: Vec<(String, PVal)> = Vec::new();
             parse_json_object(&obj_str, prefix, &mut obj_fields);
             for (k, v) in obj_fields {
+                let v = match v {
+                    PVal::Scalar(s) => s,
+                    PVal::List(items) => items.join(", "),
+                };
                 if let Some(entry) = sub_map.iter_mut().find(|(sk, _)| sk == &k) {
                     // Append multiple values from nested arrays too
                     for part in v.split(", ") {
