@@ -734,7 +734,17 @@ fn emit_vcard_tag_inner(parsed: &ParsedLine, tags: &mut Vec<Tag>) {
     // Emit extra parameter tags (GEO, LABEL, TZID)
     if let Some(ref geo_val) = parsed.geo {
         let geo_tag = format!("{}{}Geolocation", base_name, type_suffix);
-        tags.push(mk(&geo_tag, geo_val.clone()));
+        let mut t = mk(&geo_tag, geo_val.clone());
+        // The geo value is a "lat, lon" coordinate pair (ExifTool emits it as a
+        // JSON array of two numbers); keep the elements so JSON renders an array.
+        let elems: Vec<Value> = geo_val
+            .split(", ")
+            .map(|s| Value::String(s.to_string()))
+            .collect();
+        if elems.len() > 1 {
+            t.raw_value = Value::List(elems);
+        }
+        tags.push(t);
     }
     if let Some(ref lbl_val) = parsed.label {
         let lbl_tag = format!("{}{}Label", base_name, type_suffix);
