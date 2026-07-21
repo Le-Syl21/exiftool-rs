@@ -1144,6 +1144,27 @@ impl ExifReader {
                     }
                 };
 
+                // Per-tag RawConv that trims trailing blanks. In Exif.pm only a
+                // handful of string tags do this: Make (0x010f), Model (0x0110),
+                // Software (0x0131) and Artist (0x013b) each carry
+                // `RawConv => '$val =~ s/\s+$//'`, and Copyright (0x8298) strips the
+                // blanks preceding its NUL separator (`s/ *\0/\n/; ...; s/\n$//`),
+                // which reduces to a trailing-blank trim for the single-part values.
+                // Every other EXIF string keeps its fixed-width space padding (the
+                // generic 'string' reader only does `s/\0.*//s`); the padding is
+                // dropped from text output later by Printable, not from the value.
+                if matches!(
+                    name.as_str(),
+                    "Make" | "Model" | "Software" | "Artist" | "Copyright"
+                ) {
+                    if let Value::String(ref s) = value {
+                        let trimmed = s.trim_end();
+                        if trimmed.len() != s.len() {
+                            value = Value::String(trimmed.to_string());
+                        }
+                    }
+                }
+
                 // Parse ApplicationNotes (0x02BC) as XMP
                 if name == "ApplicationNotes" {
                     if let Value::Binary(ref xmp_bytes) = value {
@@ -1357,9 +1378,13 @@ fn read_ifd_value(data: &[u8], entry: &IfdEntry, byte_order: ByteOrderMark) -> O
         // ASCII
         2 => {
             let s = crate::encoding::decode_utf8_or_latin1(value_data);
-            // ExifTool truncates at the first null (s/\0.*//s) and drops trailing blanks
-            // padding the fixed-width field (e.g. "CASIO COMPUTER CO.,LTD ").
-            let s = s.split('\0').next().unwrap_or("").trim_end().to_string();
+            // ExifTool truncates at the first null only (ExifTool.pm:10038
+            // `$val =~ s/\0.*//s`). Trailing blanks that pad a fixed-width field
+            // (e.g. "OLYMPUS DIGITAL CAMERA         ") are PRESERVED in the stored
+            // value; they are stripped only at text-output time by Printable
+            // (exiftool:3009 `$val =~ s/\s+$//`), which our text path mirrors in
+            // sanitize_display_value. JSON output keeps them, matching ExifTool.
+            let s = s.split('\0').next().unwrap_or("").to_string();
             Some(Value::String(s))
         }
         // SHORT

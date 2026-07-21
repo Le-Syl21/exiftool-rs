@@ -764,10 +764,11 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    // Add accumulated comment. PostScript.pm joins lines with "\n"; ExifTool renders
-    // each embedded newline as "." in its single-line display.
+    // Add accumulated comment. PostScript.pm joins lines with "\n" and stores the
+    // newlines in the value; ExifTool only renders each embedded newline as "." in
+    // its single-line text display (Printable), keeping them intact for JSON.
     if comment_parts.len() > 1 {
-        let combined = comment_parts.join(".");
+        let combined = comment_parts.join("\n");
         tags.push(mk("Comment", "Comment", Value::String(combined)));
     }
 
@@ -815,15 +816,10 @@ fn unescape_postscript(s: &str) -> String {
             None => {}
         }
     }
-    // ExifTool renders control bytes as "." and drops NULs for display.
+    // UnescapePostScript (PostScript.pm) returns the raw decoded string; ExifTool
+    // renders control bytes as "." only in text display (Printable), so keep them
+    // here to stay ISO with JSON output.
     result
-        .chars()
-        .filter_map(|c| match c {
-            '\0' => None,
-            c if (c as u32) < 0x20 || c as u32 == 0x7f => Some('.'),
-            c => Some(c),
-        })
-        .collect()
 }
 
 /// Read Adobe Font Metrics (.afm) text file.

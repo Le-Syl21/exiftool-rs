@@ -742,11 +742,12 @@ fn real_parse_rjmd_entries(
                 let val_data = &data[value_start..value_start + value_len];
                 let val_str = match entry_type {
                     1 | 2 | 6 | 7 | 8 => {
-                        // string/text/url/date/filename
-                        let s = crate::encoding::decode_utf8_or_latin1(val_data)
-                            .trim_matches('\0')
-                            .to_string();
-                        let s = s.trim_end().to_string();
+                        // string/text/url/date/filename. Real.pm maps these to
+                        // ReadValue with 'string' format, which truncates at the
+                        // first NUL only (s/\0.*//s) and keeps trailing spaces;
+                        // Printable strips them at text-output time, not here.
+                        let s = crate::encoding::decode_utf8_or_latin1(val_data);
+                        let s = s.split('\0').next().unwrap_or("").to_string();
                         if entry_type == 7 {
                             // date: YYYYMMDDHHMMSS format
                             real_parse_rjmd_date(&s)

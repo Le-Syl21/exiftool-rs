@@ -25,10 +25,10 @@ pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
     // Offset 12: Model, string[16]
     if data.len() >= 28 {
         let model_bytes = &data[12..28];
-        let model = crate::encoding::decode_utf8_or_latin1(model_bytes)
-            .trim_end_matches('\0')
-            .trim()
-            .to_string();
+        // Olympus::DSS Model is Format => 'string[16]' (Olympus.pm:4253): ReadValue
+        // truncates at the first NUL only, keeping any trailing space padding.
+        let model = crate::encoding::decode_utf8_or_latin1(model_bytes);
+        let model = model.split('\0').next().unwrap_or("").to_string();
         if !model.is_empty() {
             tags.push(mktag(
                 "Olympus",

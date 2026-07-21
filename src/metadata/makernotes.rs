@@ -6993,6 +6993,12 @@ fn read_makernote_ifd_with_base(
                         } else {
                             val.to_display_string()
                         }
+                    } else if name == "SerialNumber" || name == "LensSerialNumber" {
+                        // Olympus Equipment SerialNumber (0x101) and LensSerialNumber
+                        // (0x202) carry PrintConv => '$val=~s/\s+$//' (Olympus.pm:1615,
+                        // 1666): the raw 'string' keeps its 31-char space padding, but
+                        // the printed value (used by -json) trims the trailing blanks.
+                        val.to_display_string().trim_end().to_string()
                     } else if let Some(pc) = (tag_id == 0x2020)
                         .then(|| {
                             val.as_u64()
@@ -7746,9 +7752,11 @@ pub fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderM
             }
         }
         2 => {
-            // ASCII: truncate at the first null (s/\0.*//s) then drop trailing blanks.
+            // ASCII: the generic 'string' reader truncates at the first NUL only
+            // (ExifTool.pm:10038 `s/\0.*//s`); fixed-width space padding stays in
+            // the value and is stripped only at text-output time by Printable.
             let s = crate::encoding::decode_utf8_or_latin1(data);
-            let s = s.split('\0').next().unwrap_or("").trim_end().to_string();
+            let s = s.split('\0').next().unwrap_or("").to_string();
             Value::String(s)
         }
         3 => {
@@ -9449,8 +9457,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             }
             // CameraID (0x0209): undef but really a string (Olympus.pm Format => 'string').
             0x0209 => mn_undef_bytes(value).map(|b| {
+                // Format => 'string' truncates at the first NUL only and keeps the
+                // trailing space padding (no PrintConv on this tag); Printable strips
+                // it at text-output time, not here.
                 let s: String = b.iter().map(|&c| c as char).collect();
-                s.split('\0').next().unwrap_or("").trim_end().to_string()
+                s.split('\0').next().unwrap_or("").to_string()
             }),
             // RedBalance/BlueBalance: int16u[2], ValueConv = first/256, printed %.7g.
             0x1017 | 0x1018 => {

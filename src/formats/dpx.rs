@@ -45,11 +45,12 @@ fn read_str(data: &[u8], offset: usize, len: usize) -> String {
         return String::new();
     }
     let s = &data[offset..offset + len];
-    // null-terminate
+    // ExifTool 'string[N]' format truncates at the first NUL only
+    // (ExifTool.pm:6311 `s/\0.*//s`); the space padding of these fixed-width
+    // DPX fields is preserved in the value and stripped only at text-output
+    // time by Printable (sanitize_display_value). JSON keeps it, matching Perl.
     let end = s.iter().position(|&b| b == 0).unwrap_or(len);
-    crate::encoding::decode_utf8_or_latin1(&s[..end])
-        .trim()
-        .to_string()
+    crate::encoding::decode_utf8_or_latin1(&s[..end]).to_string()
 }
 
 fn read_u32_be(data: &[u8], offset: usize) -> u32 {

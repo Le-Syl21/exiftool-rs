@@ -2715,21 +2715,11 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                         } else {
                             pfx
                         };
-                        // ExifTool keeps attribute values verbatim and renders embedded
-                        // control bytes (e.g. a CR separating schemaLocation URLs) as "."
-                        // rather than collapsing whitespace.
-                        let attr_val: String = attr
-                            .value
-                            .trim()
-                            .chars()
-                            .map(|c| {
-                                if (c as u32) < 0x20 || c as u32 == 0x7f {
-                                    '.'
-                                } else {
-                                    c
-                                }
-                            })
-                            .collect();
+                        // ExifTool keeps attribute values verbatim, embedded control
+                        // bytes included (e.g. a CR/LF separating schemaLocation URLs);
+                        // they are rendered as "." only in text display (Printable),
+                        // never in the stored value or JSON output.
+                        let attr_val: String = attr.value.trim().to_string();
                         let val = Value::String(attr_val.clone());
                         let pv = val.to_display_string();
                         tags.push(Tag {

@@ -451,18 +451,9 @@ fn unescape_rtf(text: &str) -> String {
             result.push(c);
         }
     }
-    // ExifTool renders control bytes (e.g. the \par newline) as "." for display while
-    // preserving higher Unicode (the Japanese text stays intact).
-    let result: String = result
-        .chars()
-        .map(|c| {
-            if (c as u32) < 0x20 || c as u32 == 0x7f {
-                '.'
-            } else {
-                c
-            }
-        })
-        .collect();
+    // RTF.pm UnescapeRTF keeps decoded control bytes verbatim (a literal tab, or the
+    // newline produced by a "\<line-break>" sequence); ExifTool renders them as "."
+    // only in text display (Printable), never in the stored value or JSON output.
     // Only strip trailing whitespace — a control word delimited by a newline can leave a
     // significant leading space in the value (ExifTool preserves it).
     result.trim_end().to_string()

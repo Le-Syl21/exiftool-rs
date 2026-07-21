@@ -107,9 +107,10 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
                         let (comment, new_pos) = read_sub_blocks(data, pos);
                         pos = new_pos;
                         if !comment.is_empty() {
+                            // GIF.pm stores the comment verbatim (with its embedded
+                            // CR/LF); ExifTool renders control bytes as "." only in
+                            // text display (Printable), keeping them for JSON.
                             let text = crate::encoding::decode_utf8_or_latin1(&comment).to_string();
-                            // Normalize newlines to ".." to match ExifTool output format
-                            let text = text.replace("\r\n", "..").replace(['\n', '\r'], "..");
                             tags.push(mk("Comment", "Comment", Value::String(text)));
                         }
                     }
