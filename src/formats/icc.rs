@@ -67,31 +67,21 @@ pub fn read_icc(data: &[u8]) -> Result<Vec<Tag>> {
         Value::String(class_name.to_string()),
     ));
 
+    // ICC_Profile.pm: ColorSpaceData / ProfileConnectionSpace are Format
+    // 'string[4]' with no PrintConv, so ExifTool outputs the raw 4-byte
+    // signature verbatim ("RGB ", "XYZ ") — trailing spaces are part of the
+    // value; only trailing NULs are stripped by the string format.
     let color_space = crate::encoding::decode_utf8_or_latin1(&data[16..20])
-        .trim()
+        .trim_end_matches('\0')
         .to_string();
-    let cs_name = match color_space.as_str() {
-        "XYZ" => "XYZ",
-        "Lab" => "Lab",
-        "Luv" => "Luv",
-        "YCbr" => "YCbCr",
-        "Yxy" => "Yxy",
-        "RGB" => "RGB",
-        "GRAY" => "Grayscale",
-        "HSV" => "HSV",
-        "HLS" => "HLS",
-        "CMYK" => "CMYK",
-        "CMY" => "CMY",
-        _ => &color_space,
-    };
     tags.push(mk(
         "ColorSpaceData",
         "Color Space",
-        Value::String(cs_name.to_string()),
+        Value::String(color_space),
     ));
 
     let pcs = crate::encoding::decode_utf8_or_latin1(&data[20..24])
-        .trim()
+        .trim_end_matches('\0')
         .to_string();
     tags.push(mk(
         "ProfileConnectionSpace",
