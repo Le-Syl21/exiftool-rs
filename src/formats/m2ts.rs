@@ -5,6 +5,15 @@ use crate::error::{Error, Result};
 use crate::tag::Tag;
 use crate::value::Value;
 
+/// An AC-3 audio-stream tag. ExifTool's `M2TS::AC3` sub-table is
+/// `GROUPS => { 1 => 'AC3', 2 => 'Audio' }` (M2TS.pm line 167): family 1 `AC3`
+/// while family 0 stays the container's `M2TS`.
+fn mk_ac3(name: &str, description: &str, value: Value) -> Tag {
+    let mut t = mktag("M2TS", name, description, value);
+    t.group.family1 = "AC3".into();
+    t
+}
+
 // --- M2TS bit reader for SPS parsing ---
 struct M2tsBitReader<'a> {
     data: &'a [u8],
@@ -858,8 +867,7 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
             if let Some(bi) = si.audio_bitrate_idx {
                 let idx = bi as usize;
                 if idx < bitrates.len() {
-                    tags.push(mktag(
-                        "M2TS",
+                    tags.push(mk_ac3(
                         "AudioBitrate",
                         "Audio Bitrate",
                         Value::String(m2ts_format_bitrate(bitrates[idx])),
@@ -873,8 +881,7 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                     2 => "Dolby surround",
                     _ => "Reserved",
                 };
-                tags.push(mktag(
-                    "M2TS",
+                tags.push(mk_ac3(
                     "SurroundMode",
                     "Surround Mode",
                     Value::String(s.into()),
@@ -892,8 +899,7 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                     7 => "3/2",
                     _ => "Unknown",
                 };
-                tags.push(mktag(
-                    "M2TS",
+                tags.push(mk_ac3(
                     "AudioChannels",
                     "Audio Channels",
                     Value::String(cs.into()),
@@ -908,8 +914,7 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     }
 
     if let Some(sr) = ac3_sample_rate {
-        tags.push(mktag(
-            "M2TS",
+        tags.push(mk_ac3(
             "AudioSampleRate",
             "Audio Sample Rate",
             Value::U32(sr),

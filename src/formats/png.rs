@@ -185,17 +185,17 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
                     1 => "meters",
                     _ => "unknown",
                 };
-                tags.push(make_png_tag(
+                tags.push(make_png_phys_tag(
                     "PixelsPerUnitX",
                     "Pixels Per Unit X",
                     Value::U32(ppux),
                 ));
-                tags.push(make_png_tag(
+                tags.push(make_png_phys_tag(
                     "PixelsPerUnitY",
                     "Pixels Per Unit Y",
                     Value::U32(ppuy),
                 ));
-                tags.push(make_png_tag(
+                tags.push(make_png_phys_tag(
                     "PixelUnits",
                     "Pixel Units",
                     Value::String(unit_str.to_string()),
@@ -291,6 +291,15 @@ fn make_png_tag(name: &str, description: &str, value: Value) -> Tag {
         print_value,
         priority: 0,
     }
+}
+
+/// A tag from the PNG `pHYs` chunk. ExifTool reads it with the `PNG::PhysicalPixel`
+/// table (`GROUPS => { 1 => 'PNG-pHYs' }`, PNG.pm line 446), so it sits in
+/// family 1 `PNG-pHYs`, not the container `PNG` group.
+fn make_png_phys_tag(name: &str, description: &str, value: Value) -> Tag {
+    let mut t = make_png_tag(name, description, value);
+    t.group.family1 = "PNG-pHYs".to_string();
+    t
 }
 
 fn make_png_text_tag(key: &str, value: &str) -> Tag {

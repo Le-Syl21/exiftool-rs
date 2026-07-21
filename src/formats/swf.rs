@@ -26,13 +26,13 @@ pub fn read_swf(data: &[u8]) -> Result<Vec<Tag>> {
     let _file_length = u32::from_le_bytes([data[4], data[5], data[6], data[7]]);
 
     tags.push(mktag(
-        "SWF",
+        "Flash",
         "FlashVersion",
         "Flash Version",
         Value::U8(version),
     ));
     tags.push(mktag(
-        "SWF",
+        "Flash",
         "Compressed",
         "Compressed",
         Value::String(if compressed { "True" } else { "False" }.into()),
@@ -107,9 +107,14 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
     let height = ((ymax - ymin) as f64) / 20.0;
 
     if width >= 0.0 && height >= 0.0 {
-        tags.push(mktag("SWF", "ImageWidth", "Image Width", Value::F64(width)));
         tags.push(mktag(
-            "SWF",
+            "Flash",
+            "ImageWidth",
+            "Image Width",
+            Value::F64(width),
+        ));
+        tags.push(mktag(
+            "Flash",
             "ImageHeight",
             "Image Height",
             Value::F64(height),
@@ -126,13 +131,13 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
     let frame_rate = frame_rate_raw as f64 / 256.0;
 
     tags.push(mktag(
-        "SWF",
+        "Flash",
         "FrameRate",
         "Frame Rate",
         Value::F64(frame_rate),
     ));
     tags.push(mktag(
-        "SWF",
+        "Flash",
         "FrameCount",
         "Frame Count",
         Value::U16(frame_count),
@@ -141,7 +146,7 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
     if frame_rate > 0.0 && frame_count > 0 {
         let duration = frame_count as f64 / frame_rate;
         tags.push(mktag(
-            "SWF",
+            "Flash",
             "Duration",
             "Duration",
             Value::String(format!("{:.2} s", duration)),

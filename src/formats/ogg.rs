@@ -218,12 +218,20 @@ fn parse_opus_identification(packet: &[u8], tags: &mut Vec<Tag>) {
 
     // Perl tag names: OpusVersion, AudioChannels, SampleRate, OutputGain.
     // OpusVersion (Opus::Header index 0) is the raw int8u value, no formatting.
-    tags.push(mk("OpusVersion", "Opus Version", Value::U8(version)));
-    tags.push(mk("AudioChannels", "Audio Channels", Value::U8(channels)));
-    tags.push(mk("SampleRate", "Sample Rate", Value::U32(sample_rate)));
+    tags.push(mk_opus("OpusVersion", "Opus Version", Value::U8(version)));
+    tags.push(mk_opus(
+        "AudioChannels",
+        "Audio Channels",
+        Value::U8(channels),
+    ));
+    tags.push(mk_opus(
+        "SampleRate",
+        "Sample Rate",
+        Value::U32(sample_rate),
+    ));
     // OutputGain (Opus::Header index 8, int16u): ValueConv 10 ** ($val/5120).
     let gain = 10f64.powf(output_gain as f64 / 5120.0);
-    tags.push(mk(
+    tags.push(mk_opus(
         "OutputGain",
         "Output Gain",
         Value::String(crate::value::format_g15(gain)),
@@ -266,4 +274,14 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         print_value,
         priority: 0,
     }
+}
+
+/// A tag from the Opus identification header. ExifTool reads it with
+/// `Opus::Header` (package `Image::ExifTool::Opus`, Opus.pm line 36), so it sits
+/// in family 0/1 `Opus`, not the `Vorbis` group of the Ogg comment tags.
+fn mk_opus(name: &str, description: &str, value: Value) -> Tag {
+    let mut t = mk(name, description, value);
+    t.group.family0 = "Opus".into();
+    t.group.family1 = "Opus".into();
+    t
 }
