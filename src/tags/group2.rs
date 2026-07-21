@@ -113,6 +113,13 @@ pub fn family2_for(
     if family0 == "VCalendar" {
         return None;
     }
+    // The MRW reader assigns each MinoltaRaw sub-table's category directly
+    // (PRD/WBG/Main => Camera, RIF => Image; MinoltaRaw.pm). The bare-name tier
+    // would flip a PRD dimension to Image (ImageWidth, ImageHeight, BitDepth) or
+    // keep a RIF setting at Camera, so keep the reader's category.
+    if family1 == "MinoltaRaw" {
+        return None;
+    }
     lookup(FAMILY2_BY_NAME, name).map(|c| choose(c, current))
 }
 

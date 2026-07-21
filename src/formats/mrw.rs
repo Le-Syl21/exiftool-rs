@@ -140,6 +140,7 @@ pub fn read_mrw(data: &[u8]) -> Result<Vec<Tag>> {
                 }
             }
             b"\0RIF" => {
+                let rif_start = tags.len();
                 // Requested Image Format — from Perl MinoltaRaw::RIF (binary data, big-endian)
                 // Offset 1:  Saturation   (int8s)
                 // Offset 2:  Contrast     (int8s)
@@ -243,6 +244,16 @@ pub fn read_mrw(data: &[u8]) -> Result<Vec<Tag>> {
                 if length > 59 {
                     let hue = seg_data[59] as i8;
                     tags.push(mk_str("Hue", "Hue", hue.to_string()));
+                }
+                // MinoltaRaw::RIF GROUPS => { 2 => 'Image' } (MinoltaRaw.pm); the
+                // mk_* helpers default to Camera (the PRD/WBG/Main category).
+                // ColorMode is excluded: ExifTool's output for that name comes
+                // from Minolta::Main 0x0101 (Camera), which wins first-occurrence.
+                for t in &mut tags[rif_start..] {
+                    if t.name == "ColorMode" {
+                        continue;
+                    }
+                    t.group.family2 = "Image".into();
                 }
             }
             _ => {}
