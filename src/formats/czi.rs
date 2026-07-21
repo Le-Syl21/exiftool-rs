@@ -73,7 +73,14 @@ pub fn read_czi(data: &[u8]) -> Result<Vec<Tag>> {
                     ));
                     // Parse XML metadata
                     if let Ok(xml_str) = std::str::from_utf8(xml_bytes) {
+                        let start = tags.len();
                         czi_parse_xml(xml_str, &mut tags);
+                        // ZISRAW processes the block through XMP::XML, whose
+                        // GROUPS => { 2 => 'Unknown' } (XMP.pm); mktag defaults to
+                        // Other, so apply the table category to the parsed tags.
+                        for t in &mut tags[start..] {
+                            t.group.family2 = "Unknown".into();
+                        }
                     }
                 }
             }
