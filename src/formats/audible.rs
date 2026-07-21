@@ -77,7 +77,10 @@ pub fn read_audible(data: &[u8]) -> Result<Vec<Tag>> {
                         let art_rel = art_off_abs - offset;
                         if art_rel + art_len <= chunk.len() {
                             let art = chunk[art_rel..art_rel + art_len].to_vec();
-                            tags.push(mk("CoverArt", "Cover Art", Value::Binary(art)));
+                            // _cover_art is Groups => { 2 => 'Preview' } (Audible.pm line 45).
+                            let mut t = mk("CoverArt", "Cover Art", Value::Binary(art));
+                            t.group.family2 = "Preview".into();
+                            tags.push(t);
                         }
                     }
                 }
@@ -132,11 +135,20 @@ fn parse_metadata(data: &[u8], tags: &mut Vec<Tag>) {
         }
 
         let tag_name = audible_tag_name(&tag);
-        tags.push(mk(
+        // Per-tag family-2 overrides of the Audible::Main default `Audio`
+        // (Audible.pm lines 31-35): publish dates are Time, author/copyright are
+        // Author. Everything else keeps the table default.
+        let mut t = mk(
             &tag_name,
             &tag_name,
             Value::String(decode_html_entities(&val)),
-        ));
+        );
+        match tag_name.as_str() {
+            "PublishDate" | "PublishDateStart" => t.group.family2 = "Time".into(),
+            "Author" | "Copyright" => t.group.family2 = "Author".into(),
+            _ => {}
+        }
+        tags.push(t);
     }
 }
 

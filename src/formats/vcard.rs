@@ -257,6 +257,21 @@ fn ical_family2(base_name: &str) -> &'static str {
     }
 }
 
+/// Family-2 category of a vCard property, per the per-tag `Groups` overrides in
+/// `Image::ExifTool::VCard::Main` (default `Document`, VCard.pm line 41). A tag
+/// built by suffixing a TYPE parameter (AddressWork, PhotoJpeg) inherits the base
+/// property's category, exactly as ExifTool's GetVCardTag copies the source
+/// tagInfo's Groups.
+fn vcard_family2(base_name: &str) -> &'static str {
+    match base_name {
+        "FormattedName" | "Name" => "Author",
+        "Birthday" | "TimeZone" | "ABDate" => "Time",
+        "Address" | "Geolocation" => "Location",
+        "Photo" => "Preview",
+        _ => "Document",
+    }
+}
+
 /// Parsed vCard/iCal line
 struct ParsedLine {
     tag: String,
@@ -758,12 +773,16 @@ fn emit_vcard_tag_inner(parsed: &ParsedLine, tags: &mut Vec<Tag>) {
         }
     }
 
-    tags.push(mk(&full_name, display_val));
+    let mut main_tag = mk(&full_name, display_val);
+    main_tag.group.family2 = vcard_family2(&base_name).into();
+    tags.push(main_tag);
 
     // Emit extra parameter tags (GEO, LABEL, TZID)
     if let Some(ref geo_val) = parsed.geo {
         let geo_tag = format!("{}{}Geolocation", base_name, type_suffix);
         let mut t = mk(&geo_tag, geo_val.clone());
+        // Geo is Groups => { 2 => 'Location' } (VCard.pm line 57).
+        t.group.family2 = "Location".into();
         // The geo value is a "lat, lon" coordinate pair (ExifTool emits it as a
         // JSON array of two numbers); keep the elements so JSON renders an array.
         let elems: Vec<Value> = geo_val

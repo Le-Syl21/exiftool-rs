@@ -86,6 +86,26 @@ pub fn family2_for(
     name: &str,
     current: &str,
 ) -> Option<&'static str> {
+    // A few readers label a table with a family-0 group of their own choosing
+    // where ExifTool's table declares a different one; the generated tables are
+    // keyed on ExifTool's, so resolve the category under it. The KyoceraRaw
+    // reader stamps family 0 `KyoceraRaw`, but `KyoceraRaw::Main` is
+    // `GROUPS => { 0 => 'MakerNotes' }` (KyoceraRaw.pm line 27), which is where
+    // its FNumber/ISO/WB_RGGBLevels overrides to `Image` live. The Font readers
+    // stamp `File`, but `Font::Main` is group 0 `Font` (Font.pm line 199), where
+    // its `Document` default sits. Both g1 groups are unique to their one table,
+    // so the remap can pull no unrelated category in.
+    // GoPro is the same story from the other side: in a JPEG APP6 segment the
+    // reader (and ExifTool at run time) stamps family 0 `APP6`, but the GoPro
+    // tables carry no family-0 override so `-listx` — and thus the generated
+    // table — keys them under family 0 `GoPro` (GoPro.pm), where the `Camera`
+    // default lives. g1 `GoPro` is unique to those tables.
+    let family0 = match family1 {
+        "KyoceraRaw" => "MakerNotes",
+        "Font" => "Font",
+        "GoPro" => "GoPro",
+        _ => family0,
+    };
     // A CIFF record embedded in a JPEG is read with the very tables a .crw file
     // uses; ExifTool only overrides their family-1 group name (`Groups => { 1 =>
     // 'CIFF' }`), so the categories must be looked up under the real ones.
@@ -131,6 +151,33 @@ pub fn family2_for(
     // table (SequenceNumber -> Camera, Summary -> Video), so keep the reader's
     // category.
     if family0 == "VCalendar" {
+        return None;
+    }
+    // The JSON reader invents a tag for every key it meets; `JSON::Main` is
+    // `GROUPS => { 2 => 'Other' }` and its NOTES say ExifTool extracts any key
+    // "even if not listed" (JSON.pm line 23), so a dynamic key is `Other`. The
+    // reader stamps that; the bare-name tier would drag in an unrelated table's
+    // answer (Description -> Video, Title -> Audio, People -> Image), so keep it.
+    if family0 == "JSON" {
+        return None;
+    }
+    // The Audible reader extracts every key in an .aa metadata dictionary;
+    // `Audible::Main` is `GROUPS => { 2 => 'Audio' }` and its NOTES say any key is
+    // kept "even if not listed" (Audible.pm line 25), so a dynamic key is `Audio`
+    // (the reader also stamps the table's Time/Author/Preview overrides). The
+    // bare-name tier would mis-assign a dynamic key (Codec -> Video,
+    // Description -> Video, ShortDescription -> Image), so keep the reader's.
+    if family0 == "Audible" {
+        return None;
+    }
+    // The VCard reader builds a tag per vCard property, suffixing the TYPE
+    // parameter (AddressWork, PhotoJpeg); `VCard::Main` is `GROUPS => { 2 =>
+    // 'Document' }` with per-property overrides (Adr/Geo -> Location,
+    // Photo -> Preview, Fn/N -> Author, Bday/Tz -> Time; VCard.pm line 40+), which
+    // the reader stamps from the base property. The suffixed name is not in any
+    // table, so the bare-name tier would keep `Document`; defer to the reader —
+    // exactly as the sibling VCalendar guard does.
+    if family0 == "VCard" {
         return None;
     }
     // The MRW reader assigns each MinoltaRaw sub-table's category directly
