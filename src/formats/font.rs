@@ -661,19 +661,32 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
     let mut in_font_info = false;
     let mut comment_done = false;
 
+    // The DSC (`%%`) header comments are ExifTool PostScript::Main tags (package
+    // Image::ExifTool::PostScript, PostScript.pm lines 36/43/58), so they carry
+    // family 0/1 `PostScript`, not the `Font` group of the Type 1 font dict.
+    let mk_ps = |name: &str, description: &str, value: Value| -> Tag {
+        let mut t = mk(name, description, value);
+        t.group.family0 = "PostScript".into();
+        t.group.family1 = "PostScript".into();
+        t
+    };
     for line in text.lines() {
         // DSC comments: %% prefix
         if line.starts_with("%%") {
             if let Some(rest) = line.strip_prefix("%%Title: ") {
-                tags.push(mk("Title", "Title", Value::String(rest.trim().to_string())));
+                tags.push(mk_ps(
+                    "Title",
+                    "Title",
+                    Value::String(rest.trim().to_string()),
+                ));
             } else if let Some(rest) = line.strip_prefix("%%CreationDate: ") {
-                tags.push(mk(
+                tags.push(mk_ps(
                     "CreateDate",
                     "Create Date",
                     Value::String(rest.trim().to_string()),
                 ));
             } else if let Some(rest) = line.strip_prefix("%%Creator: ") {
-                tags.push(mk(
+                tags.push(mk_ps(
                     "Creator",
                     "Creator",
                     Value::String(rest.trim().to_string()),
