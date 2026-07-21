@@ -16,7 +16,10 @@ pub fn read_mie(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
     let mut pos = 0;
     // The top-level is the file itself, containing a "0MIE" directory
-    parse_mie_group(data, &mut pos, "MIE-Top", &mut tags)?;
+    // Byte order is set per MIE group from its format code (0x10 = MM, 0x18 = II;
+    // MIE.pm ProcessMIEGroup: `SetByteOrder($format & 0x08 ? 'II' : 'MM')`). The
+    // outer 0MIE element carries it; big-endian is a safe default until then.
+    parse_mie_group(data, &mut pos, "MIE-Top", &mut tags, true)?;
 
     // ExifTool ModifyMimeType: derive the MIE MIMEType from the (first) subfile's
     // MIME, inserting "x-mie-" — e.g. subfile image/jpeg → image/x-mie-jpeg.
@@ -70,6 +73,7 @@ fn parse_mie_group(
     pos: &mut usize,
     group_name: &str,
     tags: &mut Vec<Tag>,
+    big_endian: bool,
 ) -> Result<()> {
     while *pos + 4 <= data.len() {
         let sync = data[*pos];
@@ -127,7 +131,10 @@ fn parse_mie_group(
 
         // MIE directory (format 0x10 or 0x18)
         if format_type == 0x10 || format_type == 0x18 {
-            // Subdirectory - determine child group name
+            // Subdirectory - determine child group name. The group's format code
+            // selects the byte order for every value inside it (0x10 = MM/BE,
+            // 0x18 = II/LE), per MIE.pm's `$format & 0x08 ? 'II' : 'MM'`.
+            let child_be = format & 0x08 == 0;
             let child_group = resolve_subdir_group(group_name, &tag_name);
 
             if val_len > 0 {
@@ -156,13 +163,14 @@ fn parse_mie_group(
                     }
                     _ => {
                         let mut sub_pos = 0;
-                        let _ = parse_mie_group(value_data, &mut sub_pos, &child_group, tags);
+                        let _ =
+                            parse_mie_group(value_data, &mut sub_pos, &child_group, tags, child_be);
                     }
                 }
                 *pos += val_len;
             } else {
                 // Inline subdirectory — elements follow in-stream until group terminator
-                let _ = parse_mie_group(data, pos, &child_group, tags);
+                let _ = parse_mie_group(data, pos, &child_group, tags, child_be);
             }
         } else if format_type == 0x80 {
             // Free space — skip
@@ -184,7 +192,7 @@ fn parse_mie_group(
             let (resolved_name, family2) = resolve_tag_name(group_name, clean_tag);
 
             // Parse value based on format
-            let value = parse_mie_value(format_type, value_data);
+            let value = parse_mie_value(format_type, value_data, big_endian);
 
             // *ImageSize and Resolution join their values with "x" (Perl tr/ /x/).
             let mut print_value =
@@ -217,7 +225,39 @@ fn parse_mie_group(
     Ok(())
 }
 
-fn parse_mie_value(format_type: u8, data: &[u8]) -> Value {
+/// Decode a MIE utf16/utf32 value to a UTF-8 `String`, honouring the group byte
+/// order. Mirrors MIE.pm ReadMIEValue: unpack as `n`/`N` (MM) or `v`/`V` (II),
+/// then pack the code points as UTF-8.
+fn decode_mie_utf(data: &[u8], utf32: bool, big_endian: bool) -> String {
+    let mut out = String::new();
+    if utf32 {
+        for c in data.chunks_exact(4) {
+            let cp = if big_endian {
+                u32::from_be_bytes([c[0], c[1], c[2], c[3]])
+            } else {
+                u32::from_le_bytes([c[0], c[1], c[2], c[3]])
+            };
+            if let Some(ch) = char::from_u32(cp) {
+                out.push(ch);
+            }
+        }
+    } else {
+        let units: Vec<u16> = data
+            .chunks_exact(2)
+            .map(|c| {
+                if big_endian {
+                    u16::from_be_bytes([c[0], c[1]])
+                } else {
+                    u16::from_le_bytes([c[0], c[1]])
+                }
+            })
+            .collect();
+        out = String::from_utf16_lossy(&units);
+    }
+    out
+}
+
+fn parse_mie_value(format_type: u8, data: &[u8], big_endian: bool) -> Value {
     match format_type {
         0x20 | 0x28 => {
             // ASCII string or UTF-8
@@ -226,6 +266,21 @@ fn parse_mie_value(format_type: u8, data: &[u8]) -> Value {
                     .trim_end_matches('\0')
                     .to_string(),
             )
+        }
+        0x29 | 0x2a => {
+            // utf16 / utf32 — decode to UTF-8 with the group byte order, then
+            // truncate at the first null (MIE.pm ReadMIEValue: `s/\0.*//s`
+            // for non-list formats).
+            let s = decode_mie_utf(data, format_type == 0x2a, big_endian);
+            Value::String(match s.find('\0') {
+                Some(i) => s[..i].to_string(),
+                None => s,
+            })
+        }
+        0x39 | 0x3a => {
+            // utf16_list / utf32_list — like above but keep nulls as separators.
+            let s = decode_mie_utf(data, format_type == 0x3a, big_endian);
+            Value::String(s.replace('\0', ", "))
         }
         0x30 | 0x38 => {
             // String list (null-separated)
