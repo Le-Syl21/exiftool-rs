@@ -203,18 +203,10 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
                     .sum();
 
                 let bitrate = (total_size as f64 * 8.0 / dur + 0.5) as u64;
-                tags.push(mk(
-                    "AvgBitrate",
-                    "Avg Bitrate",
-                    Value::String(convert_bitrate(bitrate)),
-                ));
+                tags.push(mk_avg_bitrate(convert_bitrate(bitrate)));
             } else {
                 // Duration is 0 or effectively zero
-                tags.push(mk(
-                    "AvgBitrate",
-                    "Avg Bitrate",
-                    Value::String("0 bps".to_string()),
-                ));
+                tags.push(mk_avg_bitrate("0 bps".to_string()));
             }
         }
     }
@@ -3170,6 +3162,18 @@ fn ftyp_brand_name(brand: &str) -> Option<&'static str> {
     }
 }
 
+/// `AvgBitrate` is not a QuickTime tag: QuickTime.pm:8649 defines it in the
+/// Composite table (Require MediaDataSize + Duration), so ExifTool reports it as
+/// `Composite:Composite:Video`. It is computed here only because its inputs are
+/// internal to the reader.
+fn mk_avg_bitrate(print_value: String) -> Tag {
+    let mut t = mk("AvgBitrate", "Avg Bitrate", Value::String(print_value));
+    t.group.family0 = "Composite".into();
+    t.group.family1 = "Composite".into();
+    t.group.family2 = "Video".into();
+    t
+}
+
 fn mk(name: &str, description: &str, value: Value) -> Tag {
     let print_value = value.to_display_string();
     Tag {
@@ -3348,11 +3352,17 @@ fn parse_canon_uuid(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) 
                             .trim_end_matches('\0')
                             .to_string();
                     if !s.is_empty() {
-                        tags.push(mk(
+                        // Canon.pm:9660 — %Canon::uuid carries
+                        // GROUPS => { 0 => 'MakerNotes', 1 => 'Canon', 2 => 'Video' }.
+                        let mut t = mk(
                             "CompressorVersion",
                             "Compressor Version",
                             Value::String(s),
-                        ));
+                        );
+                        t.group.family0 = "MakerNotes".into();
+                        t.group.family1 = "Canon".into();
+                        t.group.family2 = "Video".into();
+                        tags.push(t);
                     }
                 }
             }
