@@ -2335,7 +2335,8 @@ impl ExifTool {
             FileType::Fits => formats::fits::read_fits(data),
             FileType::Fit => formats::fit::read_fit_with_ee(data, self.options.extract_embedded),
             FileType::Flv => formats::flv::read_flv(data),
-            FileType::Mxf => formats::mxf::read_mxf(data).or_else(|_| Ok(Vec::new())),
+            FileType::Mxf => formats::mxf::read_mxf(data, self.options.extract_embedded)
+                .or_else(|_| Ok(Vec::new())),
             FileType::Swf => formats::swf::read_swf(data),
             FileType::Hdr => formats::hdr::read_hdr(data),
             FileType::DjVu => formats::djvu::read_djvu(data),

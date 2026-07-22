@@ -129,43 +129,6 @@ MP3.mp3	ee	missing	0	Comment	Comment
 MP3.mp3	ee	missing	0	Genre	Hip-Hop
 MP3.mp3	ee	missing	0	Title	Title
 MP3.mp3	ee	missing	0	Year	2003
-MXF.mxf	ee	missing	0	ApplicationName	ExifTool
-MXF.mxf	ee	missing	0	ApplicationPlatform	MXFLib (darwin on x86_64)
-MXF.mxf	ee	missing	0	ApplicationSupplierName	Phil Harvey
-MXF.mxf	ee	missing	0	ApplicationVersionString	Based on MXFLib 1.0.1(16)-Release
-MXF.mxf	ee	missing	0	ComponentDataDefinition	SMPTE 12M Timecode Track
-MXF.mxf	ee	missing	1	ComponentDataDefinition	SMPTE 12M Timecode Track
-MXF.mxf	ee	missing	2	ComponentDataDefinition	SMPTE 12M Timecode Track
-MXF.mxf	ee	missing	3	ComponentDataDefinition	SMPTE 12M Timecode Track
-MXF.mxf	ee	missing	0	ComponentDataDefinition	Sound Essence Track
-MXF.mxf	ee	missing	0	CreateDate	2010:12:20 00:14:40.224
-MXF.mxf	ee	missing	0	DropFrame	False
-MXF.mxf	ee	missing	0	Duration	0 s
-MXF.mxf	ee	missing	1	Duration	0 s
-MXF.mxf	ee	missing	2	Duration	0 s
-MXF.mxf	ee	missing	3	Duration	0 s
-MXF.mxf	ee	missing	4	Duration	0 s
-MXF.mxf	ee	missing	5	Duration	0 s
-MXF.mxf	ee	missing	0	EditRate	1
-MXF.mxf	ee	missing	1	EditRate	1
-MXF.mxf	ee	missing	2	EditRate	1
-MXF.mxf	ee	missing	0	ModifyDate	2010:12:20 00:14:40.224
-MXF.mxf	ee	missing	0	Origin	0 s
-MXF.mxf	ee	missing	1	Origin	0 s
-MXF.mxf	ee	missing	2	Origin	0 s
-MXF.mxf	ee	missing	0	PackageLastModifyDate	2010:12:20 00:14:40.224
-MXF.mxf	ee	missing	0	RoundedTimecodeTimebase	1
-MXF.mxf	ee	missing	0	StartTimecode	0 s
-MXF.mxf	ee	missing	0	ToolkitVersion	1.0.1.16 released
-MXF.mxf	ee	missing	0	TrackID	1
-MXF.mxf	ee	missing	1	TrackID	1
-MXF.mxf	ee	missing	0	TrackID	2
-MXF.mxf	ee	missing	0	TrackName	Sound Track
-MXF.mxf	ee	missing	0	TrackName	Timecode Track
-MXF.mxf	ee	missing	1	TrackName	Timecode Track
-MXF.mxf	ee	missing	0	TrackNumber	0
-MXF.mxf	ee	missing	1	TrackNumber	0
-MXF.mxf	ee	missing	2	TrackNumber	0
 Matroska.mkv	ee	extra	0	DefaultDuration	40 ms
 Minolta.mrw	ee	missing	0	ColorMode	Natural
 Nikon.nef	ee	missing	0	ApplicationRecordVersion	4
