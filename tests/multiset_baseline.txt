@@ -95,10 +95,6 @@ Casio2.jpg	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to ext
 Casio2.jpg	ee	missing	0	Saturation	0
 Casio2.jpg	ee	missing	0	Sharpness	0
 DNG.dng	ee	extra	0	JpgFromRaw	(Binary data 29 bytes, use -b option to extract)
-DNG.dng	ee	extra	0	StripByteCounts	26
-DNG.dng	ee	extra	0	StripByteCounts	29
-DNG.dng	ee	extra	0	StripOffsets	12780
-DNG.dng	ee	extra	0	StripOffsets	13070
 DNG.dng	ee	missing	0	ColorTone	Normal
 DNG.dng	ee	missing	0	ExposureCompensation	0
 DNG.dng	ee	missing	1	ExposureCompensation	0

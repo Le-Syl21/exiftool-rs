@@ -127,14 +127,10 @@ Nikon.nef	CFAPattern	family1
 Nikon.nef	Caption-Abstract	family1
 Nikon.nef	City	family1
 Nikon.nef	Country-PrimaryLocationName	family1
-Nikon.nef	Orientation	family1
 Nikon.nef	PreviewImageLength	family1
 Nikon.nef	PreviewImageStart	family1
 Nikon.nef	Province-State	family1
-Nikon.nef	ResolutionUnit	family1
 Nikon.nef	SpecialInstructions	family1
-Nikon.nef	XResolution	family1
-Nikon.nef	YResolution	family1
 NikonD2Hs.jpg	Compression	family1
 NikonD2Hs.jpg	PreviewImageLength	family1
 NikonD2Hs.jpg	PreviewImageStart	family1

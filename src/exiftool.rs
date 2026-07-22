@@ -1766,71 +1766,6 @@ impl ExifTool {
                 });
             }
 
-            // Full-resolution-IFD precedence (TIFF-based RAW like NEF/DNG): the
-            // structural image tags come from the IFD whose SubfileType is
-            // "Full-resolution image" (NewSubfileType bit0 clear), not the
-            // reduced-resolution IFD0/thumbnail. When such an IFD exists, its
-            // structural tags are primary — mirrors ExifTool's directory priority.
-            {
-                let full_res_ifds: std::collections::HashSet<String> = tags
-                    .iter()
-                    .filter(|t| t.name == "SubfileType" && t.print_value == "Full-resolution image")
-                    .map(|t| t.group.family1.clone())
-                    .collect();
-                if !full_res_ifds.is_empty() {
-                    // Note: SubfileType itself is NOT promoted — ExifTool keeps each
-                    // IFD's own SubfileType (DNG primary stays IFD0's reduced value).
-                    const STRUCTURAL: &[&str] = &[
-                        "ImageWidth",
-                        "ImageHeight",
-                        "BitsPerSample",
-                        "Compression",
-                        "PhotometricInterpretation",
-                        "SamplesPerPixel",
-                        "StripOffsets",
-                        "StripByteCounts",
-                        "RowsPerStrip",
-                        "PlanarConfiguration",
-                    ];
-                    // For each structural tag that has a full-res instance, drop the
-                    // instances from non-full-res IFDs.
-                    let has_full: std::collections::HashSet<String> = tags
-                        .iter()
-                        .filter(|t| {
-                            STRUCTURAL.contains(&t.name.as_str())
-                                && full_res_ifds.contains(&t.group.family1)
-                        })
-                        .map(|t| t.name.clone())
-                        .collect();
-                    tags.retain(|t| {
-                        !STRUCTURAL.contains(&t.name.as_str())
-                            || !has_full.contains(&t.name)
-                            || full_res_ifds.contains(&t.group.family1)
-                    });
-                }
-            }
-
-            // SubfileType across the IFD0/SubIFD image pyramid: ExifTool extracts
-            // each IFD in order and the LAST value wins (NEF → SubIFD1's
-            // full-res 0; DNG → the trailing reduced SubIFD's 1). SubIFDs are
-            // otherwise first-wins, so this is a targeted exception.
-            {
-                let last = tags.iter().rposition(|t| {
-                    t.name == "SubfileType"
-                        && (t.group.family1 == "IFD0" || t.group.family1.starts_with("SubIFD"))
-                });
-                if let Some(li) = last {
-                    let mut i = 0usize;
-                    tags.retain(|t| {
-                        let drop = t.name == "SubfileType"
-                            && (t.group.family1 == "IFD0" || t.group.family1.starts_with("SubIFD"))
-                            && i != li;
-                        i += 1;
-                        !drop
-                    });
-                }
-            }
-
             // QuickTime container dates are primary over an embedded EXIF copy
             // (ExifTool reports the QuickTime CreateDate/ModifyDate for MOV/CR3/etc.).
             {
@@ -1895,7 +1830,16 @@ impl ExifTool {
                 // in CanonRaw and once in the Canon MakerNotes, and ExifTool
                 // keeps the CanonRaw one.
                 const LOW_PRIORITY_TAGS: &[(&str, &str)] = &[("Canon", "BaseISO")];
-                fn is_low_priority_source(g: &TagGroup, name: &str) -> bool {
+                // ExifTool.pm:4368 initialises `LOW_PRIORITY_DIR = { PreviewIFD => 1 }`
+                // and only two places ever add to it: ProcessJPEG (ExifTool.pm:7317,
+                // `$$self{LOW_PRIORITY_DIR}{IFD1} = 1; # lower priority of IFD1 tags`)
+                // and ProcessTIFF for ARW (ExifTool.pm:8685). So IFD1 is demoted in a
+                // JPEG-family file and in an ARW, but NOT in a plain TIFF/RAW, where
+                // IFD1 keeps the default priority of 1 and so wins by last-wins.
+                // A live dump of `%{$et->{LOW_PRIORITY_DIR}}` over the corpus confirms
+                // it: only the JPEG and JPS files list IFD1.
+                let ifd1_low = matches!(ft_code.as_str(), "JPEG" | "JPS" | "MPO" | "ARW");
+                let is_low_priority_source = |g: &TagGroup, name: &str| -> bool {
                     let g1 = g.family1.as_str();
                     // An invented `XMP::other` tag carries `Priority => 0`
                     // whatever family 0 it reports; see [`duplicate_source`].
@@ -1919,11 +1863,10 @@ impl ExifTool {
                         // A QuickTime movie's tracks are separate documents to
                         // ExifTool, so a track tag never overrides the movie's.
                         "QuickTime" => g1 == "QuickTime" || g1.starts_with("Track"),
-                        // The thumbnail and preview IFDs, and the sub-IFDs of a
-                        // RAW file, describe a different image than IFD0.
-                        "EXIF" | "MakerNotes" => {
-                            g1 == "IFD1" || g1 == "PreviewIFD" || g1.starts_with("SubIFD")
-                        }
+                        // ExifTool's LOW_PRIORITY_DIR. SubIFDs are deliberately
+                        // absent: ExifTool never demotes them, and a NEF's
+                        // full-resolution SubIFD1 must win StripOffsets by last-wins.
+                        "EXIF" | "MakerNotes" => g1 == "PreviewIFD" || (ifd1_low && g1 == "IFD1"),
                         // FujiFilm.pm:1270 declares the RAF directory table
                         // `PRIORITY => 0, # so the first RAF directory takes
                         // precedence`: a RAF file can hold two directories
@@ -1935,7 +1878,62 @@ impl ExifTool {
                         // all in the main document, where last-wins applies.
                         _ => matches!(g1, "Jpeg2000" | "PhotoMechanic" | "DjVu"),
                     }
-                }
+                };
+                // Tags Exif.pm gives an explicit `Priority => 0`. ExifTool.pm:9552
+                // takes the `defined $priority` branch for them, which bypasses
+                // LOW_PRIORITY_DIR entirely and instead promotes the value to 1 when
+                // the directory is the PRIORITY_DIR (ExifTool.pm:9555):
+                //   `$priority = 1 if not $priority and $$self{DIR_NAME} and
+                //                    $$self{DIR_NAME} eq $$self{PRIORITY_DIR};`
+                // So these tags are first-wins across the IFDs, except that the
+                // full-resolution IFD wins outright. Two comments in Exif.pm spell the
+                // intent out: "Priority => 0, # so PRIORITY_DIR takes precedence"
+                // (0x112 Orientation line 691, 0x11a XResolution line 795).
+                //
+                // The list is the complete set of `Priority => 0` entries in
+                // Image::ExifTool::Exif::Main (Exif.pm 493, 501, 509, 524, 532, 576,
+                // 691, 698, 705, 795, 802, 813, 884, 959, 1439, 1449, 1462, 1469,
+                // 2880). Notably absent: StripOffsets (0x111, `IsOffset => 1` only),
+                // StripByteCounts (0x117) and SubfileType (0xfe, which *calls*
+                // SetPriorityDir rather than carrying a Priority) — those keep the
+                // default priority of 1, i.e. plain last-wins.
+                #[rustfmt::skip]
+                const EXIF_PRIORITY0: &[&str] = &[
+                    "ImageWidth",                // 0x100
+                    "ImageHeight",               // 0x101
+                    "BitsPerSample",             // 0x102
+                    "Compression",               // 0x103
+                    "PhotometricInterpretation", // 0x106
+                    "ImageDescription",          // 0x10e
+                    "Orientation",               // 0x112
+                    "SamplesPerPixel",           // 0x115
+                    "RowsPerStrip",              // 0x116
+                    "XResolution",               // 0x11a
+                    "YResolution",               // 0x11b
+                    "PlanarConfiguration",       // 0x11c
+                    "ResolutionUnit",            // 0x128
+                    "PrimaryChromaticities",     // 0x13f
+                    "YCbCrCoefficients",         // 0x211
+                    "YCbCrSubSampling",          // 0x212
+                    "YCbCrPositioning",          // 0x213
+                    "ReferenceBlackWhite",       // 0x214
+                    "WhiteBalance",              // 0xa403
+                ];
+                // ExifTool's PRIORITY_DIR: Exif.pm 0xfe (SubfileType) and 0xff
+                // (OldSubfileType) call `$self->SetPriorityDir()` when the directory
+                // holds the full-resolution image, and SetPriorityDir
+                // (ExifTool.pm:9636) keeps the FIRST one: `$$self{PRIORITY_DIR} =
+                // $$self{DIR_NAME} unless $$self{PRIORITY_DIR}`. DIR_NAME is the
+                // family-1 group name, which a live dump confirms (DNG.dng → SubIFD,
+                // Nikon.nef → SubIFD1).
+                let priority_dir: Option<String> = tags
+                    .iter()
+                    .find(|t| {
+                        t.group.family0 == "EXIF"
+                            && matches!(t.name.as_str(), "SubfileType" | "OldSubfileType")
+                            && t.print_value == "Full-resolution image"
+                    })
+                    .map(|t| t.group.family1.clone());
                 use std::collections::HashMap as HM;
                 // Only duplicates from the same family 0 and the same family-3
                 // document compete; a different family 0 is a different metadata
@@ -1962,12 +1960,22 @@ impl ExifTool {
                     // the struct default of 0 means "unspecified", i.e. ExifTool's
                     // normal priority of 1.
                     let eff = |i: usize| -> i32 {
-                        if tags[i].priority == 0
-                            && is_low_priority_source(&tags[i].group, &tags[i].name)
+                        let t = &tags[i];
+                        // An explicit `Priority => 0` in Exif.pm wins over the
+                        // LOW_PRIORITY_DIR default and is promoted only inside the
+                        // PRIORITY_DIR.
+                        if t.group.family0 == "EXIF"
+                            && t.group.family3 == MAIN_DOCUMENT
+                            && EXIF_PRIORITY0.contains(&t.name.as_str())
                         {
+                            return i32::from(
+                                priority_dir.as_deref() == Some(t.group.family1.as_str()),
+                            );
+                        }
+                        if t.priority == 0 && is_low_priority_source(&t.group, &t.name) {
                             0
                         } else {
-                            tags[i].priority.max(1)
+                            t.priority.max(1)
                         }
                     };
                     let mut winner = idxs[0];

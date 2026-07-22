@@ -998,6 +998,23 @@ impl ExifReader {
                                             || t.raw_value.as_u64() == Some(6))
                                 });
 
+                                // Exif.pm makes 0x111 and 0x117 conditional arrays: the
+                                // StripOffsets / StripByteCounts branch (Exif.pm:638 and
+                                // Exif.pm:738) is skipped when
+                                //   `$$self{TIFF_TYPE} =~ /^(DNG|TIFF)$/ and
+                                //    $$self{Compression} eq '7' and $$self{SubfileType} ne '0'`
+                                // and the next branch names the tag PreviewImageStart /
+                                // PreviewImageLength -- or, in SubIFD2, JpgFromRawStart /
+                                // JpgFromRawLength (Exif.pm:664/761, 675/771). It is a RENAME: such
+                                // a directory has no StripOffsets at all, which is why
+                                // ExifTool reports DNG.dng's IFD0 StripOffsets (13470) as
+                                // primary even though SubIFD2 comes later in the file.
+                                let is_renamed_offset_pair = tags[before_idx..].iter().any(|t| {
+                                    t.name == "Compression" && t.raw_value.as_u64() == Some(7)
+                                }) && tags[before_idx..].iter().any(
+                                    |t| t.name == "SubfileType" && t.raw_value.as_u64() != Some(0),
+                                );
+
                                 if is_jpeg {
                                     // Rename StripOffsets/StripByteCounts based on SubIFD index
                                     // Perl: SubIFD2 → JpgFromRaw*, others → PreviewImage*
@@ -1068,6 +1085,19 @@ impl ExifReader {
                                             });
                                         }
                                     }
+                                }
+
+                                if is_renamed_offset_pair {
+                                    let mut i = 0usize;
+                                    tags.retain(|t| {
+                                        let keep = i < before_idx
+                                            || !matches!(
+                                                t.name.as_str(),
+                                                "StripOffsets" | "StripByteCounts"
+                                            );
+                                        i += 1;
+                                        keep
+                                    });
                                 }
 
                                 // Legacy: Also check for already-named JpgFromRawStart tags
