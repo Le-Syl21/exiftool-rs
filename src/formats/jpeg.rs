@@ -49,6 +49,10 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
     // FlashPix FPXR accumulator: contents list + stream data per index
     let mut fpxr_contents: Vec<FpxrEntry> = Vec::new();
     let mut fpxr_seen = false;
+    // Offset of the real SOS marker, recorded while walking the segment chain.
+    // Scanning the raw bytes for 0xFFDA instead would match inside binary segment
+    // payloads, which makes the trailer scans re-read APP segments as trailers.
+    let mut sos_offset: Option<usize> = None;
 
     while pos + 4 <= data.len() {
         // Find next marker
@@ -67,6 +71,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
 
         // SOS (Start of Scan) means we've reached image data - stop parsing
         if marker == MARKER_SOS {
+            sos_offset = Some(pos - 2);
             break;
         }
 
@@ -857,11 +862,36 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    // AFCP Trailer: scan end of file for "AXS!" or "AXS*" (from Perl AFCP.pm)
-    if data.len() > 24 {
-        let trailer_check = &data[data.len().saturating_sub(12)..];
-        if trailer_check.starts_with(b"AXS!") || trailer_check.starts_with(b"AXS*") {
-            let le = trailer_check[3] == b'*';
+    // Non-standard IPTC directories, keyed by the file offset of the trailer
+    // they came from. ExifTool numbers them in the order ProcessTrailers walks
+    // the trailer chain, which is from the end of the file backwards
+    // (ExifTool.pm:7059-7182), so they are numbered by descending offset once
+    // every trailer has been scanned. See `emit_nonstandard_iptc` below.
+    let mut nonstd_iptc: Vec<(usize, Vec<Tag>)> = Vec::new();
+
+    // AFCP trailer (from Perl AFCP.pm). Perl locates it through
+    // ExifTool.pm:6999 `if ($buff =~ /AXS(!|\*).{8}$/s)`: the 12-byte EOF record
+    // sits at the end of the *trailer*, which is not necessarily the end of the
+    // file — other trailers (PhotoMechanic, CanonVRD, MIE, ...) may follow it.
+    // So scan backwards for the EOF record and validate it by checking that the
+    // start offset it carries points at the same "AXS!"/"AXS*" header
+    // (AFCP.pm:90 `$raf->Read($buff, 12) == 12 and $buff =~ /^$hdr/`).
+    {
+        let mut search_end = data.len();
+        while search_end >= 12 {
+            let found = data[..search_end].windows(4).rposition(|w| {
+                w[0] == b'A' && w[1] == b'X' && w[2] == b'S' && (w[3] == b'!' || w[3] == b'*')
+            });
+            let eof_rec = match found {
+                Some(p) => p,
+                None => break,
+            };
+            search_end = eof_rec;
+            if eof_rec + 12 > data.len() {
+                continue;
+            }
+            // AFCP.pm:88 — "AXS!" is big-endian, "AXS*" little-endian.
+            let le = data[eof_rec + 3] == b'*';
             let rd32_afcp = |d: &[u8], off: usize| -> u32 {
                 if le {
                     u32::from_le_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
@@ -877,46 +907,36 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 }
             };
 
-            let start_pos = rd32_afcp(trailer_check, 4) as usize;
-            if start_pos + 18 < data.len() {
-                let afcp = &data[start_pos..];
-                // AXS header (12 bytes: "AXS!" + start + reserved)
-                // Then: version(4) + numEntries(2)
-                let _num_entries = rd16_afcp(afcp, 18) as usize; // at offset 12+4+2=18? No.
-                                                                 // Actually: AXS!(4) + version_info(4) + num_entries(2) = offset 10
-                                                                 // Perl: vers=substr(buff,4,2), numEntries=Get16u(buff,6)
-                                                                 // buff is the first 8 bytes after seeking to start: AXS! header is 4+4+4=12
-                                                                 // Wait — Perl reads: $raf->Read($buff, 8) after the AXS header (12 bytes)
-                                                                 // So buff = 8 bytes at start_pos+12: version(2) + padding(2) + numEntries(2) + ...
-                                                                 // Actually Perl does: seek(startPos), read(buff,12) = AXS header
-                                                                 // then read(buff,8) = version info: vers=bytes[4..6], numEntries=Get16u(bytes,6)
-                                                                 // So after AXS header (12 bytes), there's 8 bytes of version/numEntries
-                                                                 // numEntries at offset 12+6=18 from start
-                                                                 // AXS header: tag(4) + version(2) + numEntries(2) + reserved(4) = 12 bytes
-                                                                 // Perl: numEntries = Get16u(buff, 6)
-                let num_entries = rd16_afcp(data, start_pos + 6) as usize;
+            // AFCP.pm:89 — the EOF record carries the start of the trailer.
+            let start_pos = rd32_afcp(data, eof_rec + 4) as usize;
+            if start_pos + 12 > data.len() || start_pos >= eof_rec {
+                continue;
+            }
+            if data[start_pos..start_pos + 4] != data[eof_rec..eof_rec + 4] {
+                continue;
+            }
+            // AFCP.pm:143 — header is tag(4) + version(2) + numEntries(2) + reserved(4).
+            let num_entries = rd16_afcp(data, start_pos + 6) as usize;
+            let dir_start = start_pos + 12;
+            for i in 0..num_entries {
+                let eoff = dir_start + i * 12;
+                if eoff + 12 > data.len() {
+                    break;
+                }
+                let tag = &data[eoff..eoff + 4];
+                let size = rd32_afcp(data, eoff + 4) as usize;
+                let offset = rd32_afcp(data, eoff + 8) as usize;
 
-                // Directory: 12 bytes each, starts right after the 12-byte header
-                let dir_start = start_pos + 12;
-                for i in 0..num_entries.min(20) {
-                    let eoff = dir_start + i * 12;
-                    if eoff + 12 > data.len() {
-                        break;
-                    }
-                    let tag = &data[eoff..eoff + 4];
-                    let size = rd32_afcp(data, eoff + 4) as usize;
-                    let offset = rd32_afcp(data, eoff + 8) as usize;
-
-                    if tag == b"IPTC" && offset + size <= data.len() {
-                        let iptc_raw = &data[offset..offset + size];
-                        let iptc_start = iptc_raw.iter().position(|&b| b == 0x1C).unwrap_or(0);
-                        if let Ok(iptc_tags) = IptcReader::read_nonstandard(&iptc_raw[iptc_start..])
-                        {
-                            tags.extend(iptc_tags);
-                        }
+                // AFCP.pm:36 — only the IPTC entry maps to a SubDirectory we read.
+                if tag == b"IPTC" && offset <= data.len() && offset + size <= data.len() {
+                    let iptc_raw = &data[offset..offset + size];
+                    let iptc_start = iptc_raw.iter().position(|&b| b == 0x1C).unwrap_or(0);
+                    if let Ok(iptc_tags) = IptcReader::read_nonstandard(&iptc_raw[iptc_start..]) {
+                        nonstd_iptc.push((start_pos, iptc_tags));
                     }
                 }
             }
+            break;
         }
     }
 
@@ -937,90 +957,12 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 // PhotoMechanic data is in IPTC format (record 2, datasets 209+)
                 // But also contains standard IPTC records
                 if let Some(start) = pm_data.iter().position(|&b| b == 0x1C) {
+                    // PhotoMechanic.pm:38 reuses IPTC::ProcessIPTC, but on the
+                    // PhotoMechanic::Main table: record 2 goes to the SoftEdit
+                    // table, which IptcReader already maps to the PhotoMechanic
+                    // family-1 group with the SoftEdit print conversions.
                     if let Ok(iptc_tags) = IptcReader::read(&pm_data[start..]) {
-                        // Map PM-specific datasets to tag names
-                        for tag in &iptc_tags {
-                            tags.push(tag.clone());
-                        }
-                    }
-                    // Also extract PM-specific tags with custom names
-                    let mut pos = start;
-                    while pos + 5 <= pm_data.len() {
-                        if pm_data[pos] != 0x1C {
-                            break;
-                        }
-                        let rec = pm_data[pos + 1];
-                        let ds = pm_data[pos + 2];
-                        let len = u16::from_be_bytes([pm_data[pos + 3], pm_data[pos + 4]]) as usize;
-                        pos += 5;
-                        if pos + len > pm_data.len() {
-                            break;
-                        }
-                        let val_bytes = &pm_data[pos..pos + len];
-                        let name = match (rec, ds) {
-                            (2, 216) => "Rotation",
-                            (2, 217) => "CropLeft",
-                            (2, 218) => "CropTop",
-                            (2, 219) => "CropRight",
-                            (2, 220) => "CropBottom",
-                            (2, 221) => "Tagged",
-                            (2, 222) => "ColorClass",
-                            _ => {
-                                pos += len;
-                                continue;
-                            }
-                        };
-                        let raw_int = if len == 4 {
-                            i32::from_be_bytes([
-                                val_bytes[0],
-                                val_bytes[1],
-                                val_bytes[2],
-                                val_bytes[3],
-                            ])
-                        } else if len == 2 {
-                            i16::from_be_bytes([val_bytes[0], val_bytes[1]]) as i32
-                        } else {
-                            0
-                        };
-                        let raw_val = raw_int.to_string();
-                        // Apply print conversions (from Perl PhotoMechanic.pm)
-                        let print_val = match (rec, ds) {
-                            (2, 221) => match raw_int {
-                                // Tagged: 0=No, 1=Yes
-                                0 => "No".to_string(),
-                                1 => "Yes".to_string(),
-                                _ => raw_val.clone(),
-                            },
-                            (2, 222) => match raw_int {
-                                // ColorClass
-                                0 => "0 (None)".to_string(),
-                                1 => "1 (Winner)".to_string(),
-                                2 => "2 (Winner alt)".to_string(),
-                                3 => "3 (Superior)".to_string(),
-                                4 => "4 (Superior alt)".to_string(),
-                                5 => "5 (Typical)".to_string(),
-                                6 => "6 (Typical alt)".to_string(),
-                                7 => "7 (Extras)".to_string(),
-                                8 => "8 (Trash)".to_string(),
-                                _ => raw_val.clone(),
-                            },
-                            _ => raw_val.clone(),
-                        };
-                        tags.push(crate::tag::Tag {
-                            id: crate::tag::TagId::Text(name.into()),
-                            name: name.into(),
-                            description: name.into(),
-                            group: crate::tag::TagGroup {
-                                family0: "PhotoMechanic".into(),
-                                family1: "PhotoMechanic".into(),
-                                family2: "Image".into(),
-                                family3: "Main".into(),
-                            },
-                            raw_value: crate::value::Value::String(raw_val),
-                            print_value: print_val,
-                            priority: 0,
-                        });
-                        pos += len;
+                        tags.extend(iptc_tags);
                     }
                 }
             }
@@ -1071,7 +1013,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                     // IPTC data
                     if let Some(start) = rec_data.iter().position(|&b| b == 0x1C) {
                         if let Ok(iptc_tags) = IptcReader::read_nonstandard(&rec_data[start..]) {
-                            tags.extend(iptc_tags);
+                            nonstd_iptc.push((block_start, iptc_tags));
                         }
                     }
                 }
@@ -1171,8 +1113,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
     // FotoStation/PhotoMechanic trailers: scan for Photoshop segments after SOS
     // These are APP13 segments embedded after the image data
     {
-        let sos_pos = data.windows(2).position(|w| w == [0xFF, 0xDA]);
-        if let Some(sp) = sos_pos {
+        if let Some(sp) = sos_offset {
             // Scan rest of file for additional Photoshop segments
             let rest = &data[sp..];
             // Look for "Photoshop 3.0\0" or "cbipcbbl" markers
@@ -1388,6 +1329,23 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 }
             }
         }
+    }
+
+    // IPTC.pm:1097-1101 numbers every non-standard IPTC directory:
+    //     my $count = ($$et{DIR_COUNT}{IPTC} || 0) + 1;
+    //     $$et{SET_GROUP1} = '+' . ($count + 1);
+    // so the first one found is IPTC2, the second IPTC3, and so on. The order is
+    // the order ProcessTrailers walks the chain, from the end of the file
+    // backwards (ExifTool.pm:7059), so sort by descending trailer offset.
+    nonstd_iptc.sort_by_key(|e| std::cmp::Reverse(e.0));
+    for (n, (_, mut iptc_tags)) in nonstd_iptc.into_iter().enumerate() {
+        let group1 = format!("IPTC{}", n + 2);
+        for t in &mut iptc_tags {
+            if t.group.family0 == "IPTC" {
+                t.group.family1.clone_from(&group1);
+            }
+        }
+        tags.extend(iptc_tags);
     }
 
     Ok(tags)

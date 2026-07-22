@@ -1874,6 +1874,12 @@ impl ExifTool {
                         // tags land in family-1 groups RAF and RAF2, and the
                         // first one wins when duplicates are collapsed.
                         "RAF" => true,
+                        // IPTC.pm:1100 sets `$$et{LOW_PRIORITY_DIR}{IPTC} = 1`
+                        // for an IPTC directory found outside the format's
+                        // standard location, right where it numbers its family-1
+                        // group (IPTC2, IPTC3, ...). The standard directory keeps
+                        // the plain `IPTC` group and its normal priority.
+                        "IPTC" => g1 != "IPTC",
                         // Matroska and MXF number their tracks too, but keep them
                         // all in the main document, where last-wins applies.
                         _ => matches!(g1, "Jpeg2000" | "PhotoMechanic" | "DjVu"),

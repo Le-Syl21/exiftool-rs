@@ -115,74 +115,18 @@ ExifTool.jpg	default	extra	0	FNumber	11.0
 ExifTool.jpg	default	extra	0	FNumber	6.2
 ExifTool.jpg	default	extra	0	Flash	Off
 ExifTool.jpg	default	extra	0	FocalLength	5 mm
-ExifTool.jpg	ee	extra	0	By-line	Phil Harvey
-ExifTool.jpg	ee	extra	0	By-lineTitle	My Position
-ExifTool.jpg	ee	extra	0	Caption-Abstract	A witty caption
-ExifTool.jpg	ee	extra	0	Category	1
-ExifTool.jpg	ee	extra	0	City	Kingston
-ExifTool.jpg	ee	extra	0	ColorClass	6 (Typical alt)
-ExifTool.jpg	ee	extra	0	CopyrightFlag	False
-ExifTool.jpg	ee	extra	0	CopyrightNotice	Copyright 2004 Phil Harvey
-ExifTool.jpg	ee	extra	0	Country-PrimaryLocationName	Canada
-ExifTool.jpg	ee	extra	0	Credit	My Credit
-ExifTool.jpg	ee	extra	0	CropBottom	1072
-ExifTool.jpg	ee	extra	0	CropLeft	438
-ExifTool.jpg	ee	extra	0	CropRight	890
-ExifTool.jpg	ee	extra	0	CropTop	618
-ExifTool.jpg	ee	extra	0	DateCreated	2004:02:26
-ExifTool.jpg	ee	extra	0	DisplayedUnitsX	inches
-ExifTool.jpg	ee	extra	0	DisplayedUnitsY	inches
 ExifTool.jpg	ee	extra	0	ExposureTime	1/83
 ExifTool.jpg	ee	extra	0	FNumber	6.2
 ExifTool.jpg	ee	extra	0	GlobalAltitude	30
-ExifTool.jpg	ee	extra	1	GlobalAltitude	30
-ExifTool.jpg	ee	extra	2	GlobalAltitude	30
-ExifTool.jpg	ee	extra	0	GlobalAngle	30
-ExifTool.jpg	ee	extra	0	HasRealMergedData	Yes
-ExifTool.jpg	ee	extra	0	Headline	No headline
-ExifTool.jpg	ee	extra	0	IPTCDigest	05ad1770b1a95f1f9788ac995fa647da
-ExifTool.jpg	ee	extra	0	NumSlices	1
-ExifTool.jpg	ee	extra	0	ObjectName	Test IPTC picture
-ExifTool.jpg	ee	extra	0	OriginalTransmissionReference	What is a transmission reference
-ExifTool.jpg	ee	extra	0	PhotoshopFormat	Standard
-ExifTool.jpg	ee	extra	0	PhotoshopQuality	7
 ExifTool.jpg	ee	extra	0	PreviewImage	(Binary data 1039273 bytes, use -b option to extract)
-ExifTool.jpg	ee	extra	0	PrintPosition	0 0
-ExifTool.jpg	ee	extra	0	PrintScale	1
-ExifTool.jpg	ee	extra	0	PrintStyle	Centered
-ExifTool.jpg	ee	extra	0	Province-State	Ont
-ExifTool.jpg	ee	extra	0	ReaderName	Adobe Photoshop 7.0
-ExifTool.jpg	ee	extra	0	Rotation	2
 ExifTool.jpg	ee	extra	0	SerialNumber	0000000000
-ExifTool.jpg	ee	extra	0	SlicesGroupName	IPTC
-ExifTool.jpg	ee	extra	0	Source	I'm the source
-ExifTool.jpg	ee	extra	0	SpecialInstructions	What instructions
-ExifTool.jpg	ee	extra	0	SupplementalCategories	amazing, image, utilities
-ExifTool.jpg	ee	extra	0	Tagged	Yes
-ExifTool.jpg	ee	extra	0	URL	https://exiftool.org/
-ExifTool.jpg	ee	extra	0	URL_List	
-ExifTool.jpg	ee	extra	0	Urgency	8 (least urgent)
-ExifTool.jpg	ee	extra	0	Writer-Editor	I wrote it
-ExifTool.jpg	ee	extra	0	WriterName	Adobe Photoshop
-ExifTool.jpg	ee	extra	0	XResolution	72
-ExifTool.jpg	ee	extra	0	YResolution	72
 ExifTool.jpg	ee	missing	0	BitsPerSample	8
-ExifTool.jpg	ee	missing	0	By-line	byline
-ExifTool.jpg	ee	missing	0	By-lineTitle	byline title
-ExifTool.jpg	ee	missing	0	Caption-Abstract	ExifTool AFCP test
-ExifTool.jpg	ee	missing	0	Category	p
-ExifTool.jpg	ee	missing	0	City	city
 ExifTool.jpg	ee	missing	0	ColorComponents	3
 ExifTool.jpg	ee	missing	0	Copyright	Alisha Jucevic
-ExifTool.jpg	ee	missing	0	CopyrightNotice	copy freely
-ExifTool.jpg	ee	missing	0	Country-PrimaryLocationName	country name
-ExifTool.jpg	ee	missing	0	Credit	credit
 ExifTool.jpg	ee	missing	0	CropLeft	0
 ExifTool.jpg	ee	missing	0	CropTop	0
-ExifTool.jpg	ee	missing	0	DateCreated	2005:12:23
 ExifTool.jpg	ee	missing	0	DependentImage1EntryNumber	2
 ExifTool.jpg	ee	missing	0	DependentImage2EntryNumber	0
-ExifTool.jpg	ee	missing	0	Headline	headline
 ExifTool.jpg	ee	missing	0	ImageHeight	4500
 ExifTool.jpg	ee	missing	0	ImageWidth	3000
 ExifTool.jpg	ee	missing	0	JUMDLabel	adobe.asset.info
@@ -201,20 +145,12 @@ ExifTool.jpg	ee	missing	0	MPImageFormat	JPEG
 ExifTool.jpg	ee	missing	0	MPImageLength	5959981
 ExifTool.jpg	ee	missing	0	MPImageStart	0
 ExifTool.jpg	ee	missing	0	MPImageType	Baseline MP Primary Image
-ExifTool.jpg	ee	missing	0	ObjectName	object name
-ExifTool.jpg	ee	missing	0	OriginalTransmissionReference	otr
 ExifTool.jpg	ee	missing	0	PreviewImage	(Binary data 5777 bytes, use -b option to extract)
 ExifTool.jpg	ee	missing	0	ProfileID	Continuous-tone Base
-ExifTool.jpg	ee	missing	0	Province-State	state
 ExifTool.jpg	ee	missing	0	Quality	1
 ExifTool.jpg	ee	missing	0	Rotation	90
-ExifTool.jpg	ee	missing	0	Source	source
-ExifTool.jpg	ee	missing	0	SpecialInstructions	special instructions
-ExifTool.jpg	ee	missing	0	SupplementalCategories	supp cat
 ExifTool.jpg	ee	missing	0	Title	HEALTHCORONAVIRUSUSAOREGON_SALEM_08.jpg
-ExifTool.jpg	ee	missing	0	Urgency	2
 ExifTool.jpg	ee	missing	0	Warning	[minor] Error reading PreviewImage from file
-ExifTool.jpg	ee	missing	0	Writer-Editor	caption writer
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
 FLIR.jpg	ee	missing	0	DateTimeOriginal	2012:02:11 14:17:08
 FLIR.jpg	ee	missing	0	Emissivity	0.80
@@ -449,13 +385,6 @@ Pentax.jpg	ee	missing	0	FocalLength	10.0 mm
 Pentax.jpg	ee	missing	0	ISO	100
 Pentax.jpg	ee	missing	0	LensType	Sigma or Tamron Lens (3 44)
 Pentax.jpg	ee	missing	0	PentaxModelID	K10D
-PhotoMechanic.jpg	ee	extra	0	ColorClass	6 (Typical alt)
-PhotoMechanic.jpg	ee	extra	0	CropBottom	1072
-PhotoMechanic.jpg	ee	extra	0	CropLeft	438
-PhotoMechanic.jpg	ee	extra	0	CropRight	890
-PhotoMechanic.jpg	ee	extra	0	CropTop	618
-PhotoMechanic.jpg	ee	extra	0	Rotation	2
-PhotoMechanic.jpg	ee	extra	0	Tagged	Yes
 PhotoMechanic.jpg	ee	extra	0	TimeCreated	062751-0500
 PhotoMechanic.jpg	ee	missing	0	Prefs	Tagged:0, ColorClass:0, Rating:0, FrameNum:-00001
 PhotoMechanic.jpg	ee	missing	0	TimeCreated	06:27:51-05:00
