@@ -313,7 +313,7 @@ fn prefs_print_conv(s: &str) -> String {
             }
             *num = &s[d0..i];
             i += 1; // consume ':'
-            // \s* before the next field
+                    // \s* before the next field
             while i < b.len() && b[i].is_ascii_whitespace() {
                 i += 1;
             }
