@@ -527,15 +527,10 @@ fn parse_stream_properties(data: &[u8], tags: &mut Vec<Tag>) {
         return;
     }
 
-    // Remove previous stream metadata tags (ExifTool overwrites with last stream)
-    for tag_name in &[
-        "StreamType",
-        "ErrorCorrectionType",
-        "TimeOffset",
-        "StreamNumber",
-    ] {
-        tags.retain(|t| &t.name != tag_name);
-    }
+    // Every Stream Properties object is extracted in full. %ASF::StreamProperties
+    // declares no PRIORITY, so ExifTool stores each stream's instance and the
+    // last one wins only when duplicates are collapsed -- it does not overwrite
+    // the earlier streams here.
 
     // StreamType GUID at offset 0
     let stream_guid = &data[0..16];

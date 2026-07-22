@@ -4,10 +4,6 @@
 # Oracle: tests/expected_multi/*.mvals, from scripts/gen_multiset_baselines.sh
 # Regenerate: UPDATE_MULTISET_BASELINE=1 cargo test --release --test regression regression_tag_multiset
 # Format: <file>\t<default|ee>\t<extra|missing>\t<occurrence>\t<tag>\t<value>
-ASF.wmv	ee	missing	0	ErrorCorrectionType	Audio Spread
-ASF.wmv	ee	missing	0	StreamNumber	1
-ASF.wmv	ee	missing	0	StreamType	Audio
-ASF.wmv	ee	missing	0	TimeOffset	0 s
 BPG.bpg	ee	missing	0	ColorSpace	YCbCr (BT 601)
 CaptureOne.eip	ee	missing	0	Crop	0.000000;0.000000;0.000000;0.000000
 CaptureOne.eip	ee	missing	0	NRAmount	25
