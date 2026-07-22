@@ -1478,9 +1478,24 @@ fn process_jumbf_app11(seg_data: &[u8]) -> Vec<crate::tag::Tag> {
     tags
 }
 
-/// Parse a sequence of JUMBF boxes from data.
-/// Each box: LBox(4 BE) + TBox(4) + content(LBox-8 bytes)
+/// Walk a chain of JUMBF boxes, recursing into every `jumb` container.
+///
+/// Jpeg2000.pm:774-795 (ProcessJUMB) numbers the sub-documents: entering a
+/// `jumb` box increments the last element of `jumd_level` when already inside
+/// one, otherwise starts a new top-level number, and DOC_NUM is the elements
+/// joined with `-`. That is what produces Doc1, Doc1-1, Doc1-1-1-1, ...
 fn parse_jumbf_boxes(data: &[u8], tags: &mut Vec<crate::tag::Tag>) {
+    let mut level: Vec<u32> = Vec::new();
+    let mut doc_count: u32 = 0;
+    parse_jumbf_box_chain(data, &mut level, &mut doc_count, tags);
+}
+
+fn parse_jumbf_box_chain(
+    data: &[u8],
+    level: &mut Vec<u32>,
+    doc_count: &mut u32,
+    tags: &mut Vec<crate::tag::Tag>,
+) {
     let mut pos = 0;
     while pos + 8 <= data.len() {
         let lbox =
@@ -1496,21 +1511,39 @@ fn parse_jumbf_boxes(data: &[u8], tags: &mut Vec<crate::tag::Tag>) {
         let content = &data[pos + 8..content_end];
 
         if tbox == b"jumb" {
-            // JUMBF container box: recursively parse contents
-            // Contents: jumd (description) box + content box(es)
-            parse_jumbf_boxes_jumd(content, tags);
+            // Jpeg2000.pm:780-787
+            if level.is_empty() {
+                *doc_count += 1;
+                level.push(*doc_count);
+            } else {
+                *level.last_mut().unwrap() += 1;
+            }
+            let doc = level
+                .iter()
+                .map(u32::to_string)
+                .collect::<Vec<_>>()
+                .join("-");
+            level.push(0);
+            parse_jumbf_box_contents(content, &doc, level, doc_count, tags);
+            level.pop();
+            if level.len() < 2 {
+                level.clear();
+            }
         }
-        // (other box types like 'bfdb', 'bidb', 'json' etc. are not extracted here)
 
         pos += lbox;
-        if pos >= data.len() {
-            break;
-        }
     }
 }
 
-/// Parse the contents of a 'jumb' box: extract JUMDType/JUMDLabel from 'jumd' sub-box.
-fn parse_jumbf_boxes_jumd(data: &[u8], tags: &mut Vec<crate::tag::Tag>) {
+/// Boxes directly inside one `jumb` container: its `jumd` description, nested
+/// `jumb` containers, and the payload boxes we understand.
+fn parse_jumbf_box_contents(
+    data: &[u8],
+    doc: &str,
+    level: &mut Vec<u32>,
+    doc_count: &mut u32,
+    tags: &mut Vec<crate::tag::Tag>,
+) {
     let mut pos = 0;
     while pos + 8 <= data.len() {
         let lbox =
@@ -1526,82 +1559,104 @@ fn parse_jumbf_boxes_jumd(data: &[u8], tags: &mut Vec<crate::tag::Tag>) {
         let content = &data[pos + 8..content_end];
 
         if tbox == b"jumd" {
-            // JUMD description box (from Perl Jpeg2000::JUMD table)
-            // type(16) + toggles(1) + label(null-terminated)
-            if content.len() >= 17 {
-                let type_bytes = &content[..16];
-                let _toggles = content[16];
-                // label: null-terminated string after toggles
-                let label_data = &content[17..];
-                let null_pos = label_data
-                    .iter()
-                    .position(|&b| b == 0)
-                    .unwrap_or(label_data.len());
-                let label =
-                    crate::encoding::decode_utf8_or_latin1(&label_data[..null_pos]).to_string();
-
-                // JUMDType: raw=hex string, print=formatted with dashes
-                let type_hex = type_bytes
-                    .iter()
-                    .map(|b| format!("{:02x}", b))
-                    .collect::<String>();
-                // PrintConv: split into 8-4-4-16, and if first 4 bytes are printable ASCII, show as (ascii)
-                let print_type = {
-                    let a0 = &type_hex[..8];
-                    let a1 = &type_hex[8..12];
-                    let a2 = &type_hex[12..16];
-                    let a3 = &type_hex[16..32];
-                    let ascii4 = &type_bytes[..4];
-                    let is_printable_alpha = ascii4.iter().all(|&b| b.is_ascii_alphanumeric());
-                    if is_printable_alpha {
-                        let ascii_str = crate::encoding::decode_utf8_or_latin1(ascii4);
-                        format!("({})-{}-{}-{}", ascii_str, a1, a2, a3)
-                    } else {
-                        format!("{}-{}-{}-{}", a0, a1, a2, a3)
-                    }
-                };
-
-                let jumbf_group = crate::tag::TagGroup {
-                    family0: "JUMBF".into(),
-                    family1: "JUMBF".into(),
-                    family2: "Image".into(),
-                    family3: "Main".into(),
-                };
-
-                tags.push(crate::tag::Tag {
-                    id: crate::tag::TagId::Text("JUMDType".into()),
-                    name: "JUMDType".into(),
-                    description: "JUMD Type".into(),
-                    group: jumbf_group.clone(),
-                    raw_value: crate::value::Value::String(type_hex),
-                    print_value: print_type,
-                    priority: 0,
-                });
-
-                if !label.is_empty() {
-                    tags.push(crate::tag::Tag {
-                        id: crate::tag::TagId::Text("JUMDLabel".into()),
-                        name: "JUMDLabel".into(),
-                        description: "JUMD Label".into(),
-                        group: jumbf_group,
-                        raw_value: crate::value::Value::String(label.clone()),
-                        print_value: label,
-                        priority: 0,
-                    });
+            tags.extend(parse_jumd_box(content, doc));
+        } else if tbox == b"jumb" {
+            // Jpeg2000.pm:402-407 — a nested JUMBF container.
+            if level.is_empty() {
+                *doc_count += 1;
+                level.push(*doc_count);
+            } else {
+                *level.last_mut().unwrap() += 1;
+            }
+            let sub_doc = level
+                .iter()
+                .map(u32::to_string)
+                .collect::<Vec<_>>()
+                .join("-");
+            level.push(0);
+            parse_jumbf_box_contents(content, &sub_doc, level, doc_count, tags);
+            level.pop();
+            if level.len() < 2 {
+                level.clear();
+            }
+        } else if tbox == b"json" {
+            // Jpeg2000.pm:409-419 — `json` is parsed with the JSON module.
+            if let Ok(json_tags) = crate::formats::json_format::read_json(content) {
+                for mut t in json_tags {
+                    t.group.family3 = doc.to_string();
+                    tags.push(t);
                 }
             }
-            // Only extract the outermost (first) JUMD for now
-            return;
-        } else if tbox == b"jumb" {
-            // Nested jumb box
-            parse_jumbf_boxes_jumd(content, tags);
         }
 
         pos += lbox;
-        if pos >= data.len() {
-            break;
-        }
     }
+}
+
+/// JUMBF description box (Jpeg2000.pm:739-771, %Image::ExifTool::Jpeg2000::JUMD):
+/// type(16) + toggles(1) + optional null-terminated label.
+fn parse_jumd_box(content: &[u8], doc: &str) -> Vec<crate::tag::Tag> {
+    let mut tags = Vec::new();
+    if content.len() < 17 {
+        return tags;
+    }
+    let type_bytes = &content[..16];
+    let label_data = &content[17..];
+    let null_pos = label_data
+        .iter()
+        .position(|&b| b == 0)
+        .unwrap_or(label_data.len());
+    let label = crate::encoding::decode_utf8_or_latin1(&label_data[..null_pos]).to_string();
+
+    let type_hex = type_bytes
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect::<String>();
+    // PrintConv: 8-4-4-16, with the leading 4 bytes shown as ASCII when printable.
+    let print_type = {
+        let a0 = &type_hex[..8];
+        let a1 = &type_hex[8..12];
+        let a2 = &type_hex[12..16];
+        let a3 = &type_hex[16..32];
+        let ascii4 = &type_bytes[..4];
+        if ascii4.iter().all(|&b| b.is_ascii_alphanumeric()) {
+            let ascii_str = crate::encoding::decode_utf8_or_latin1(ascii4);
+            format!("({})-{}-{}-{}", ascii_str, a1, a2, a3)
+        } else {
+            format!("{}-{}-{}-{}", a0, a1, a2, a3)
+        }
+    };
+
+    let jumbf_group = crate::tag::TagGroup {
+        family0: "JUMBF".into(),
+        family1: "JUMBF".into(),
+        family2: "Image".into(),
+        family3: doc.to_string(),
+    };
+
+    tags.push(crate::tag::Tag {
+        id: crate::tag::TagId::Text("JUMDType".into()),
+        name: "JUMDType".into(),
+        description: "JUMD Type".into(),
+        group: jumbf_group.clone(),
+        raw_value: crate::value::Value::String(type_hex),
+        print_value: print_type,
+        priority: 0,
+    });
+
+    if !label.is_empty() {
+        tags.push(crate::tag::Tag {
+            id: crate::tag::TagId::Text("JUMDLabel".into()),
+            name: "JUMDLabel".into(),
+            description: "JUMD Label".into(),
+            group: jumbf_group,
+            raw_value: crate::value::Value::String(label.clone()),
+            print_value: label,
+            priority: 0,
+        });
+    }
+
+    tags
 }
 
 /// Parse EPPIM APP6 segment (Extension of PrintIM).

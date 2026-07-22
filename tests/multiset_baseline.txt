@@ -119,20 +119,7 @@ ExifTool.jpg	ee	extra	0	ExposureTime	1/83
 ExifTool.jpg	ee	extra	0	FNumber	6.2
 ExifTool.jpg	ee	extra	0	GlobalAltitude	30
 ExifTool.jpg	ee	extra	0	SerialNumber	0000000000
-ExifTool.jpg	ee	missing	0	Copyright	Alisha Jucevic
-ExifTool.jpg	ee	missing	0	JUMDLabel	adobe.asset.info
-ExifTool.jpg	ee	missing	0	JUMDLabel	cai.assertions
-ExifTool.jpg	ee	missing	0	JUMDLabel	cai.location.broad
-ExifTool.jpg	ee	missing	0	JUMDLabel	cai.rights
-ExifTool.jpg	ee	missing	0	JUMDLabel	cb.reuters_1
-ExifTool.jpg	ee	missing	0	JUMDType	(caas)-0011-0010-800000aa00389b71
-ExifTool.jpg	ee	missing	0	JUMDType	(cast)-0011-0010-800000aa00389b71
-ExifTool.jpg	ee	missing	0	JUMDType	(json)-0011-0010-800000aa00389b71
-ExifTool.jpg	ee	missing	1	JUMDType	(json)-0011-0010-800000aa00389b71
-ExifTool.jpg	ee	missing	2	JUMDType	(json)-0011-0010-800000aa00389b71
-ExifTool.jpg	ee	missing	0	Location	Salem, Oregon
 ExifTool.jpg	ee	missing	0	PreviewImage	(Binary data 5777 bytes, use -b option to extract)
-ExifTool.jpg	ee	missing	0	Title	HEALTHCORONAVIRUSUSAOREGON_SALEM_08.jpg
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
 FLIR.jpg	ee	missing	0	DateTimeOriginal	2012:02:11 14:17:08
 FLIR.jpg	ee	missing	0	Emissivity	0.80
