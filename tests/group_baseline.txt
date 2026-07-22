@@ -48,12 +48,7 @@ DjVu.djvu	Keywords	family1
 DjVu.djvu	ModifyDate	family1
 DjVu.djvu	Trapped	family1
 ExifTool.jpg	City	family1
-ExifTool.jpg	Comment	family1
-ExifTool.jpg	Copyright	family1
 ExifTool.jpg	DateCreated	family1
-ExifTool.jpg	JSONInfo	family1
-ExifTool.jpg	ThumbnailImage	family1
-ExifTool.jpg	TrailerSignature	family1
 FLIR.jpg	ImageTemperatureMin	family1
 Font.afm	Comment	family1
 Font.afm	Comment	family2

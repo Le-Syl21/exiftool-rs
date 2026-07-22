@@ -296,10 +296,13 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
                                 id: crate::tag::TagId::Text("ThumbnailImage".into()),
                                 name: "ThumbnailImage".into(),
                                 description: "Thumbnail Image".into(),
+                                // ExifTool.pm:2260-2265 — %JFIF::Extension is
+                                // `GROUPS => { 0 => 'JFIF', 1 => 'JFXX', 2 => 'Image' }`
+                                // and its ThumbnailImage overrides family 2 with 'Preview'.
                                 group: crate::tag::TagGroup {
                                     family0: "JFIF".into(),
-                                    family1: "JFIF".into(),
-                                    family2: "Image".into(),
+                                    family1: "JFXX".into(),
+                                    family2: "Preview".into(),
                                     family3: "Main".into(),
                                 },
                                 raw_value: crate::value::Value::Binary(thumb_data.to_vec()),
@@ -806,9 +809,13 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
                             id: crate::tag::TagId::Text("Comment".into()),
                             name: "Comment".into(),
                             description: "JPEG Comment".into(),
+                            // ExifTool.pm:1286/1311 — Comment lives in
+                            // %Image::ExifTool::Extra, `GROUPS => { 0 => 'File',
+                            // 1 => 'File', 2 => 'Image' }`. Its WriteGroup is
+                            // 'Comment', but that is a writing group, not family 1.
                             group: crate::tag::TagGroup {
                                 family0: "File".into(),
-                                family1: "Comment".into(),
+                                family1: "File".into(),
                                 family2: "Image".into(),
                                 family3: "Main".into(),
                             },
@@ -835,9 +842,10 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
                         id: crate::tag::TagId::Text("Comment".into()),
                         name: "Comment".into(),
                         description: "JPEG Comment".into(),
+                        // ExifTool.pm:1286/1311 — see the APP10 comment above.
                         group: crate::tag::TagGroup {
                             family0: "File".into(),
-                            family1: "Comment".into(),
+                            family1: "File".into(),
                             family2: "Image".into(),
                             family3: "Main".into(),
                         },
@@ -1219,10 +1227,13 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
                     id: crate::tag::TagId::Text("JSONInfo".into()),
                     name: "JSONInfo".into(),
                     description: "JSON Info".into(),
+                    // Trailer.pm:17-27 — the JSONInfo written after the "vivo{"
+                    // marker belongs to %Image::ExifTool::Trailer::Vivo,
+                    // `GROUPS => { 0 => 'Trailer', 1 => 'Vivo', 2 => 'Image' }`.
                     group: crate::tag::TagGroup {
                         family0: "Trailer".into(),
-                        family1: "Samsung".into(),
-                        family2: "Other".into(),
+                        family1: "Vivo".into(),
+                        family2: "Image".into(),
                         family3: "Main".into(),
                     },
                     raw_value: crate::value::Value::String(json_str.clone()),
@@ -2248,8 +2259,26 @@ fn parse_mie_trailer(data: &[u8]) -> Vec<crate::tag::Tag> {
     // Groups with val_len>0 have their content embedded in the value bytes.
     let mut tags = Vec::new();
     let mut pos = 0usize;
-    parse_mie_elements(data, &mut pos, &mut tags, 0);
+    parse_mie_elements(data, &mut pos, &mut tags, 0, "MIE-Main");
     tags
+}
+
+/// MIE.pm:1459-1473 — each MIE group carries its own family-1 name, taken from
+/// the GROUPS of the table its DirName selects: the top level is `MIE-Main`
+/// (MIE.pm:126) and the `Document` group is `MIE-Doc` (MIE.pm:238, 296).
+fn mie_group1(name: &str) -> Option<&'static str> {
+    Some(match name {
+        "Document" => "MIE-Doc",
+        "Camera" => "MIE-Camera",
+        "Image" => "MIE-Image",
+        "Audio" => "MIE-Audio",
+        "Video" => "MIE-Video",
+        "Geo" => "MIE-Geo",
+        "Preview" => "MIE-Preview",
+        "Thumbnail" => "MIE-Thumbnail",
+        "MakerNotes" => "MIE-MakerNotes",
+        _ => return None,
+    })
 }
 
 /// Parse MIE elements from `data[pos..]`, recursing into groups.
@@ -2260,7 +2289,13 @@ fn parse_mie_trailer(data: &[u8]) -> Vec<crate::tag::Tag> {
 ///   2. Tag name: tagLen bytes
 ///   3. Extended valLen (if raw_valLen > 252): 2/4/8 bytes
 ///   4. Value: valLen bytes
-fn parse_mie_elements(data: &[u8], pos: &mut usize, tags: &mut Vec<crate::tag::Tag>, depth: usize) {
+fn parse_mie_elements(
+    data: &[u8],
+    pos: &mut usize,
+    tags: &mut Vec<crate::tag::Tag>,
+    depth: usize,
+    group1: &str,
+) {
     if depth > 8 {
         return;
     } // prevent infinite recursion
@@ -2331,7 +2366,8 @@ fn parse_mie_elements(data: &[u8], pos: &mut usize, tags: &mut Vec<crate::tag::T
             // MIE group element
             if val_len == 0 {
                 // Inline group: sub-elements follow immediately in the stream
-                parse_mie_elements(data, pos, tags, depth + 1);
+                let sub_group = mie_group1(&name).unwrap_or(group1);
+                parse_mie_elements(data, pos, tags, depth + 1, sub_group);
             } else {
                 // Embedded group: content is the next val_len bytes
                 if *pos + val_len > data.len() {
@@ -2340,7 +2376,8 @@ fn parse_mie_elements(data: &[u8], pos: &mut usize, tags: &mut Vec<crate::tag::T
                 let sub_data = &data[*pos..*pos + val_len];
                 *pos += val_len;
                 let mut sub_pos = 0usize;
-                parse_mie_elements(sub_data, &mut sub_pos, tags, depth + 1);
+                let sub_group = mie_group1(&name).unwrap_or(group1);
+                parse_mie_elements(sub_data, &mut sub_pos, tags, depth + 1, sub_group);
             }
         } else {
             // Leaf value
@@ -2373,7 +2410,7 @@ fn parse_mie_elements(data: &[u8], pos: &mut usize, tags: &mut Vec<crate::tag::T
                 description: name.clone(),
                 group: crate::tag::TagGroup {
                     family0: "MIE".into(),
-                    family1: "MIE".into(),
+                    family1: group1.into(),
                     family2: "Other".into(),
                     family3: "Main".into(),
                 },
