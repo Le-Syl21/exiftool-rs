@@ -1693,10 +1693,22 @@ impl ExifTool {
             // groups were simply the places where priority-0 duplicates happened
             // to have been noticed.
             //
-            // Sub-documents stay excluded: ExifTool only lets the incoming tag
-            // override when it belongs to the same family-3 document
-            // (`not $$self{DOC_NUM} or $$self{DOC_NUM} eq ...{G3}`), and it flags
-            // IFD1/SubIFD/PreviewIFD as low-priority directories.
+            // The promotion has three exemptions (ExifTool.pm:9541-9548), and all
+            // three collapse into the unconditional `.max(1)` used below:
+            //   * the incoming tag has a DOC_NUM,
+            //   * the tag is `Warning` ("never override a Warning tag because
+            //     they may be added by ValueConv"),
+            //   * the stored tag has no G3, i.e. it belongs to the main document.
+            // Only the remaining case skips the promotion -- a main-document tag
+            // arriving on top of a stored SUB-document one, which is then allowed
+            // to displace it at equal priority ("don't promote sub-document tag
+            // over main document"). That case cannot reach here: the pass at the
+            // top of this block already drops every sub-document tag whose name
+            // the main document also reports, which is the same outcome, and it
+            // is also what the main condition's `not $$self{DOC_NUM} or
+            // ($$self{TAG_EXTRA}{$tag}{G3} and $$self{DOC_NUM} eq ...{G3})` does
+            // in the other direction -- an incoming sub-document tag never takes
+            // the primary key from the main document, nor from another document.
             //
             // Like every pass in this block, the rule only applies when duplicates
             // are being collapsed — see `collapse_duplicates` above.
@@ -1704,17 +1716,18 @@ impl ExifTool {
                 // Sources ExifTool gives priority 0, so that a duplicate coming
                 // from them never displaces an already-stored tag:
                 //   * the directories it flags LOW_PRIORITY_DIR (PreviewIFD,
-                //     IFD1) and the numbered sub-IFDs and tracks it treats the
-                //     same way -- a thumbnail or a secondary track describes a
-                //     different image, so it must not override the main one;
+                //     IFD1) -- a thumbnail describes a different image, so it
+                //     must not override the main one;
                 //   * XMP.pm marks its TIFF/EXIF mirror tables `PRIORITY => 0`
                 //     ("not as reliable as actual EXIF tags");
                 //   * an XMP property with no table entry gets a generated
                 //     `{ Name, IsDefault => 1, Priority => 0 }` tagInfo;
-                //   * container tables (QuickTime tkhd, Jpeg2000, ...) whose
-                //     stored tags ExifTool keeps first. Their default-priority
-                //     tags (mdhd/hdlr) carry priority >= 1 here and still follow
-                //     the normal last-wins rule.
+                //   * container tables (Jpeg2000, PhotoMechanic, ...) whose
+                //     stored tags ExifTool keeps first. A QuickTime track is NOT
+                //     one of them: only the tkhd fields carry `Priority => 0`,
+                //     and they say so tag by tag (see `parse_tkhd`), while the
+                //     mdhd/hdlr/stsd tags keep the normal priority and follow the
+                //     usual last-wins rule.
                 //
                 // VCard is deliberately absent: within one vCard, duplicate tags
                 // are last-wins (TelephoneOtherVoice); the 2nd vCard is demoted
