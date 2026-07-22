@@ -11,6 +11,49 @@ use crate::tag::{Tag, TagGroup, TagId};
 use crate::tags::priority0_generated as priority0;
 use crate::value::Value;
 
+/// Everything needed to give each HEIF item property its ExifTool document
+/// number: the primary item (`pitm`), the item reference graph (`iref`), the
+/// item/property associations (`ipma`) and the deferred `ipco` box.
+#[derive(Default, Clone)]
+struct ItemProps {
+    /// `$$et{PrimaryItem}` — the item ID from `pitm`.
+    primary: u32,
+    /// `$$items{$id}{RefersTo}` — item ID -> the item IDs it refers to.
+    refers_to: Vec<(u32, Vec<u32>)>,
+    /// `$$items{$id}{Association}` — item ID -> 1-based `ipco` property indices.
+    assoc: Vec<(u32, Vec<u32>)>,
+    /// `$$items{$id}{DocNum}` — document number already assigned to an item.
+    doc_num: Vec<(u32, u32)>,
+    /// Byte range of the `ipco` box contents, processed after the `meta` walk.
+    ipco: Option<(usize, usize)>,
+    /// `$$et{DOC_COUNT}` for the item properties.
+    doc_count: u32,
+}
+
+impl ItemProps {
+    fn assoc_of(&self, id: u32) -> Option<&Vec<u32>> {
+        self.assoc.iter().find(|(i, _)| *i == id).map(|(_, a)| a)
+    }
+    fn refers(&self, from: u32, to: u32) -> bool {
+        self.refers_to
+            .iter()
+            .any(|(i, r)| *i == from && r.contains(&to))
+    }
+    fn doc_of(&self, id: u32) -> Option<u32> {
+        self.doc_num.iter().find(|(i, _)| *i == id).map(|(_, d)| *d)
+    }
+}
+
+/// `%dontInherit` (QuickTime.pm:496-505): 1 = neither parent nor child
+/// inherits the property, 2 = the parent does not inherit but the child does.
+fn dont_inherit(tag: &[u8; 4]) -> u8 {
+    match tag {
+        b"ispe" | b"pixi" | b"irot" | b"imir" | b"pasp" => 1,
+        b"hvcC" | b"colr" => 2,
+        _ => 0,
+    }
+}
+
 /// Parser state carried through recursive atom parsing.
 #[derive(Default, Clone)]
 struct QtState {
@@ -30,6 +73,12 @@ struct QtState {
     hevc_config_done: bool,
     /// Whether we already emitted image spatial extent (to avoid duplicates)
     ispe_done: bool,
+    /// HEIF item-property bookkeeping, filled while walking a `meta` box and
+    /// consumed once its children are done (ExifTool defers `ipco` the same way:
+    /// "[Process ipco box later]", QuickTime.pm `HandleItemInfo`).
+    item_props: ItemProps,
+    /// `$$et{DOC_NUM}` while an item property is being extracted (0 = main).
+    current_item_doc: u32,
     /// Whether the current track's stsd format is CTMD
     current_track_is_ctmd: bool,
     /// ExtractEmbedded level (0=off, 1=-ee, 2=-ee2, 3=-ee3)
@@ -227,18 +276,13 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
                 sample_ee,
                 &tags,
             );
-            if !stream_tags.is_empty() {
-                tags.extend(stream_tags);
-            } else if extract_embedded > 0 {
-                tags.push(mk(
-                    "Warning",
-                    "Warning",
-                    Value::String(
-                        "[minor] The ExtractEmbedded option may find more tags in the video data"
-                            .to_string(),
-                    ),
-                ));
-            }
+            // No warning here. QuickTime's EEWarn (QuickTime.pm:9545) exists to
+            // say "you should have used -ee", so every one of its call sites is
+            // guarded by `not $et->Options('ExtractEmbedded')`
+            // (QuickTime.pm:8407 and :10175, QuickTimeStream.pl:2693, :2738,
+            // :2776, :3243). It can never fire when -ee IS in use, which is the
+            // only case this branch is reached in.
+            tags.extend(stream_tags);
         }
     }
 
@@ -600,6 +644,10 @@ fn parse_atoms(
                         depth + 1,
                     );
                 }
+                // The deferred `ipco` box, now that `ipma`/`iref`/`pitm` are known.
+                if let Some((s, e)) = state.item_props.ipco.take() {
+                    process_ipco(data, s, e, tags, state, depth + 1);
+                }
                 state.meta_tags_to = tags.len();
             }
             // Keys atom: ordered key definitions for the following ilst (Keys metadata)
@@ -800,9 +848,20 @@ fn parse_atoms(
             b"iprp" => {
                 parse_atoms(data, content_start, content_end, tags, state, depth + 1);
             }
-            // Item property container (inside iprp)
+            // Item property container (inside iprp). ExifTool defers this box
+            // until the whole `meta` directory has been read, because the
+            // document number of each property depends on `ipma`, which is a
+            // later sibling ("[Process ipco box later]", QuickTime.pm).
             b"ipco" => {
-                parse_atoms(data, content_start, content_end, tags, state, depth + 1);
+                state.item_props.ipco = Some((content_start, content_end));
+            }
+            // Item property association (QuickTime.pm:2977, `ParseItemPropAssoc`)
+            b"ipma" => {
+                parse_ipma(data, content_start, content_end, &mut state.item_props);
+            }
+            // Item reference box: fills `$$items{$id}{RefersTo}`
+            b"iref" => {
+                parse_iref(data, content_start, content_end, &mut state.item_props);
             }
             // HEVC configuration box (only process first one - for primary item)
             b"hvcC" => {
@@ -815,12 +874,23 @@ fn parse_atoms(
             b"ispe" => {
                 if !state.ispe_done {
                     state.ispe_done = true;
-                    parse_ispe(data, content_start, content_end, tags);
+                    parse_ispe(
+                        data,
+                        content_start,
+                        content_end,
+                        tags,
+                        state.current_item_doc,
+                    );
                 }
             }
             // Primary item reference (HEIF)
             b"pitm" => {
                 parse_pitm(data, content_start, content_end, tags);
+                if let Some(t) = tags.last() {
+                    if let Value::U32(id) = t.raw_value {
+                        state.item_props.primary = id;
+                    }
+                }
             }
             // mdat: record offset and size
             b"mdat" => {
@@ -1935,7 +2005,7 @@ fn hevc_compat_flags_to_string(flags: u32) -> String {
 
 /// Parse image spatial extent (ispe) for HEIF/HEIC.
 /// version+flags(4) + width(4) + height(4)
-fn parse_ispe(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
+fn parse_ispe(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, doc_num: u32) {
     let d = &data[start..end];
     if d.len() < 12 {
         return;
@@ -1968,8 +2038,204 @@ fn parse_ispe(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
             t.group.family2 = "Image".into();
             t
         };
-        tags.push(extra(mk("ImageWidth", "Image Width", Value::U32(width))));
-        tags.push(extra(mk("ImageHeight", "Image Height", Value::U32(height))));
+        if doc_num == 0 {
+            tags.push(extra(mk("ImageWidth", "Image Width", Value::U32(width))));
+            tags.push(extra(mk("ImageHeight", "Image Height", Value::U32(height))));
+        }
+    }
+}
+
+/// `ParseItemPropAssoc` (QuickTime.pm:9287-9338): reads the `ipma` box into
+/// `$$items{$id}{Association}`.
+fn parse_ipma(data: &[u8], start: usize, end: usize, items: &mut ItemProps) {
+    let d = &data[start..end];
+    if d.len() < 8 {
+        return;
+    }
+    let ver = d[0];
+    let flg = u32::from_be_bytes([d[0], d[1], d[2], d[3]]);
+    let num = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
+    let mut pos = 8;
+    for _ in 0..num {
+        let id = if ver == 0 {
+            if pos + 3 > d.len() {
+                return;
+            }
+            let v = u16::from_be_bytes([d[pos], d[pos + 1]]) as u32;
+            pos += 2;
+            v
+        } else {
+            if pos + 5 > d.len() {
+                return;
+            }
+            let v = u32::from_be_bytes([d[pos], d[pos + 1], d[pos + 2], d[pos + 3]]);
+            pos += 4;
+            v
+        };
+        let n = d[pos] as usize;
+        pos += 1;
+        let mut assoc = Vec::with_capacity(n);
+        if flg & 0x01 != 0 {
+            if pos + n * 2 > d.len() {
+                return;
+            }
+            for j in 0..n {
+                assoc.push(
+                    (u16::from_be_bytes([d[pos + j * 2], d[pos + j * 2 + 1]]) & 0x7fff) as u32,
+                );
+            }
+            pos += n * 2;
+        } else {
+            if pos + n > d.len() {
+                return;
+            }
+            for j in 0..n {
+                assoc.push((d[pos + j] & 0x7f) as u32);
+            }
+            pos += n;
+        }
+        items.assoc.push((id, assoc));
+    }
+}
+
+/// Reads the `iref` box into `$$items{$id}{RefersTo}` (QuickTime.pm
+/// `ParseItemRef`): each child box is a reference type whose payload is
+/// `from_item_id`, `count`, then `count` referenced item IDs.
+fn parse_iref(data: &[u8], start: usize, end: usize, items: &mut ItemProps) {
+    if start + 4 > end {
+        return;
+    }
+    // FullBox: version 0 uses 16-bit item IDs, version 1 uses 32-bit.
+    let ver = data[start];
+    let id_size = if ver == 0 { 2 } else { 4 };
+    let mut pos = start + 4;
+    while pos + 8 <= end {
+        let size =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+        if size < 8 || pos + size > end {
+            break;
+        }
+        let mut p = pos + 8;
+        let box_end = pos + size;
+        let read_id = |p: usize| -> u32 {
+            if id_size == 2 {
+                u16::from_be_bytes([data[p], data[p + 1]]) as u32
+            } else {
+                u32::from_be_bytes([data[p], data[p + 1], data[p + 2], data[p + 3]])
+            }
+        };
+        if p + id_size + 2 <= box_end {
+            let from = read_id(p);
+            p += id_size;
+            let count = u16::from_be_bytes([data[p], data[p + 1]]) as usize;
+            p += 2;
+            let mut to = Vec::with_capacity(count);
+            for _ in 0..count {
+                if p + id_size > box_end {
+                    break;
+                }
+                to.push(read_id(p));
+                p += id_size;
+            }
+            if !to.is_empty() {
+                match items.refers_to.iter_mut().find(|(i, _)| *i == from) {
+                    Some((_, v)) => v.extend(to),
+                    None => items.refers_to.push((from, to)),
+                }
+            }
+        }
+        pos = box_end;
+    }
+}
+
+/// The document-number rule for an item property (QuickTime.pm:10196-10233).
+///
+/// Walks the items in decreasing ID order looking for the ones associated with
+/// property `index`. A property that belongs to the primary item — or, subject
+/// to `%dontInherit`, to an item describing the primary item — is part of the
+/// main document; otherwise it gets (or reuses) a document number of its own.
+fn item_property_doc_num(items: &mut ItemProps, index: u32, tag: &[u8; 4]) -> u32 {
+    let primary = items.primary;
+    let dont = dont_inherit(tag);
+    let mut doc_num: Option<u32> = None;
+    let mut lowest: Option<u32> = None;
+    let mut ids: Vec<u32> = items.assoc.iter().map(|(i, _)| *i).collect();
+    ids.sort_unstable();
+    'outer: for id in ids.into_iter().rev() {
+        let Some(assoc) = items.assoc_of(id) else {
+            continue;
+        };
+        if !assoc.contains(&index) {
+            continue;
+        }
+        if id == primary
+            || (dont == 0 && items.refers(id, primary))
+            || (dont != 1 && items.refers(primary, id))
+        {
+            doc_num = None;
+            lowest = None;
+            break 'outer;
+        } else if let Some(d) = items.doc_of(id) {
+            doc_num = Some(doc_num.map_or(d, |c: u32| c.min(d)));
+        } else {
+            lowest = Some(id);
+        }
+    }
+    if doc_num.is_none() {
+        if let Some(low) = lowest {
+            items.doc_count += 1;
+            let d = items.doc_count;
+            items.doc_num.push((low, d));
+            doc_num = Some(d);
+        }
+    }
+    doc_num.unwrap_or(0)
+}
+
+/// Process the deferred `ipco` box: each child is an item property, extracted
+/// with the document number [`item_property_doc_num`] gives it. Properties that
+/// land in a sub-document are only kept with the ExtractEmbedded option.
+fn process_ipco(
+    data: &[u8],
+    start: usize,
+    end: usize,
+    tags: &mut Vec<Tag>,
+    state: &mut QtState,
+    depth: u32,
+) {
+    let mut pos = start;
+    let mut index = 0u32;
+    while pos + 8 <= end {
+        let size =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+        if size < 8 || pos + size > end {
+            break;
+        }
+        index += 1;
+        let mut tag = [0u8; 4];
+        tag.copy_from_slice(&data[pos + 4..pos + 8]);
+        let doc = item_property_doc_num(&mut state.item_props, index, &tag);
+        let before = tags.len();
+        // A property in its own document is a fresh instance: the "already
+        // emitted" guards must not swallow it.
+        if doc > 0 {
+            state.hevc_config_done = false;
+            state.ispe_done = false;
+        }
+        state.current_item_doc = doc;
+        parse_atoms(data, pos, pos + size, tags, state, depth);
+        state.current_item_doc = 0;
+        if doc > 0 {
+            if state.extract_embedded == 0 {
+                tags.truncate(before);
+            } else {
+                let group = format!("Doc{doc}");
+                for t in &mut tags[before..] {
+                    t.group.family3 = group.clone();
+                }
+            }
+        }
+        pos += size;
     }
 }
 

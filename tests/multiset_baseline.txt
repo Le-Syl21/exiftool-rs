@@ -15,7 +15,6 @@ ASF.wmv	ee	missing	0	ErrorCorrectionType	Audio Spread
 ASF.wmv	ee	missing	0	StreamNumber	1
 ASF.wmv	ee	missing	0	StreamType	Audio
 ASF.wmv	ee	missing	0	TimeOffset	0 s
-Android.mp4	ee	extra	0	Warning	[minor] The ExtractEmbedded option may find more tags in the video data
 Apple.jpg	ee	extra	0	GPSAltitude	72.36649215
 Apple.jpg	ee	missing	0	GPSAltitude	72.36649215 m
 Apple.jpg	ee	missing	0	GPSLatitude	53 deg 22' 58.25"
@@ -133,27 +132,7 @@ Pentax.jpg	ee	missing	0	ISO	100
 Pentax.jpg	ee	missing	0	LensType	Sigma or Tamron Lens (3 44)
 Pentax.jpg	ee	missing	0	PentaxModelID	K10D
 PhotoMechanic.jpg	ee	missing	0	Prefs	Tagged:0, ColorClass:0, Rating:0, FrameNum:-00001
-QuickTime.heic	ee	extra	0	Warning	[minor] The ExtractEmbedded option may find more tags in the video data
-QuickTime.heic	ee	missing	0	AverageFrameRate	0
-QuickTime.heic	ee	missing	0	BitDepthChroma	8
-QuickTime.heic	ee	missing	0	BitDepthLuma	8
-QuickTime.heic	ee	missing	0	ChromaFormat	4:2:0
-QuickTime.heic	ee	missing	0	ConstantFrameRate	Unknown
-QuickTime.heic	ee	missing	0	ConstraintIndicatorFlags	144 0 0 0 0 0
-QuickTime.heic	ee	missing	0	GenProfileCompatibilityFlags	Main 10, Main
-QuickTime.heic	ee	missing	0	GeneralLevelIDC	60 (level 2.0)
-QuickTime.heic	ee	missing	0	GeneralProfileIDC	Main
-QuickTime.heic	ee	missing	0	GeneralProfileSpace	Conforming
-QuickTime.heic	ee	missing	0	GeneralTierFlag	Main Tier
-QuickTime.heic	ee	missing	0	HEVCConfigurationVersion	1
-QuickTime.heic	ee	missing	0	ImageSpatialExtent	320x240
-QuickTime.heic	ee	missing	0	MinSpatialSegmentationIDC	0
-QuickTime.heic	ee	missing	0	NumTemporalLayers	1
-QuickTime.heic	ee	missing	0	ParallelismType	0
-QuickTime.heic	ee	missing	0	TemporalIDNested	Yes
-QuickTime.m4a	ee	extra	0	Warning	[minor] The ExtractEmbedded option may find more tags in the video data
 QuickTime.m4a	ee	missing	0	CoverArt	(Binary data 19 bytes, use -b option to extract)
-QuickTime.mov	ee	extra	0	Warning	[minor] The ExtractEmbedded option may find more tags in the video data
 QuickTime.mov	ee	missing	0	Album	ålbum
 QuickTime.mov	ee	missing	0	Artist	årtist
 RIFF.avi	ee	missing	0	Quality	10000
