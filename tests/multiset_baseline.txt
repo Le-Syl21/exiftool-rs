@@ -38,10 +38,6 @@ PSP.psp	ee	extra	0	Copyright	.
 PSP.psp	ee	extra	0	XResolution	0.8013564977
 PSP.psp	ee	extra	0	YResolution	200
 PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
-Pentax.avi	ee	missing	0	LensType	smc PENTAX-DA L 18-55mm F3.5-5.6
-Pentax.avi	ee	missing	0	PentaxModelID	K-x
-Pentax.jpg	ee	missing	0	LensType	Sigma or Tamron Lens (3 44)
-Pentax.jpg	ee	missing	0	PentaxModelID	K10D
 PhotoMechanic.jpg	ee	missing	0	Prefs	Tagged:0, ColorClass:0, Rating:0, FrameNum:-00001
 QuickTime.m4a	ee	missing	0	CoverArt	(Binary data 19 bytes, use -b option to extract)
 QuickTime.mov	ee	missing	0	Album	ålbum

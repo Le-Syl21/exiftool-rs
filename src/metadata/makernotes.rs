@@ -357,7 +357,14 @@ pub fn parse_makernotes_exif_base(
     // Mirrors ExifTool's PRIORITY => 0 behavior where subsequent values with the same
     // tag name don't override an already-stored value (e.g., LensType from both
     // LensRec and LensInfo sub-directories).
-    if info.manufacturer == Manufacturer::Pentax {
+    //
+    // This is ExifTool collapsing its name-keyed VALUE hash, not a decision the
+    // Pentax tables make, so it must not run with the Duplicates option on:
+    // ExifTool then reports LensType once for `Pentax::LensRec` (main tag 0x003f,
+    // Pentax.pm:2148) and once for `Pentax::LensInfo` (0x0207, Pentax.pm:2832),
+    // and PentaxModelID once for `Pentax::Main` 0x0005 and once for
+    // `Pentax::CameraInfo` (0x0215, Pentax.pm:4721).
+    if info.manufacturer == Manufacturer::Pentax && !crate::metadata::exif::keep_duplicates() {
         let mut seen_names = std::collections::HashSet::new();
         tags.retain(|t| seen_names.insert(t.name.clone()));
     }
@@ -7130,7 +7137,14 @@ fn read_makernote_ifd_with_base(
                     // decoders key every entry by its NAME, which makes the copies
                     // indistinguishable; stamp the maker-note tag the sub-table was
                     // read from so tags from different tables carry different ids.
-                    if manufacturer == Manufacturer::Canon
+                    //
+                    // Pentax needs exactly the same treatment: LensType is
+                    // defined by both `Pentax::LensRec` (read from main tag
+                    // 0x003f, Pentax.pm:2148) and `Pentax::LensInfo*` (0x0207,
+                    // Pentax.pm:2825-2852), and PentaxModelID by both
+                    // `Pentax::Main` 0x0005 and `Pentax::CameraInfo` (0x0215,
+                    // Pentax.pm:4721). ExifTool reports each of them twice.
+                    if matches!(manufacturer, Manufacturer::Canon | Manufacturer::Pentax)
                         && matches!(&tag.id, TagId::Text(s) if *s == tag.name)
                     {
                         tag.id = TagId::Numeric(tag_id);
