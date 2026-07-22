@@ -168,6 +168,14 @@ sub fallback_after_g0 {
 my %keep2;
 for my $key (sort keys %k2) {
     my ($g0, $name) = split /\x01/, $key;
+    # An XMP property's family 1 IS its namespace, and ExifTool resolves the
+    # property in that namespace's table alone (XMP.pm line 3591 reaches it
+    # through `$Image::ExifTool::XMP::Main{$ns}{SubDirectory}{TagTable}`); a
+    # name it does not hold goes to `XMP::other`, Unknown. A tier keyed on the
+    # bare name would answer for a namespace the property was never in, so
+    # `family2_for` does not consult tier 2 under XMP and nothing is emitted
+    # for it. Tier 3 is then pruned against Unknown, which keeps every XMP key.
+    next if $g0 eq 'XMP';
     $keep2{$key} = 1 if set_key($k2{$key}) ne fallback_after_g0($g0, $name);
 }
 my %keep3;

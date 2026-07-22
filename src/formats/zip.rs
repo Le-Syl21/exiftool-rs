@@ -1260,19 +1260,27 @@ fn parse_opendoc_meta(data: &[u8], tags: &mut Vec<Tag>) {
 
     for (elem, tag_name) in &simple_tags {
         if let Some(val) = xml_element_text(xml, elem) {
-            // Convert ISO dates to ExifTool format
-            let val = if tag_name.ends_with("-date") || *tag_name == "Date" {
-                convert_iso_date(&val)
-            } else {
-                val
-            };
+            // Every property here is invented on the spot, so XMPAutoConv runs
+            // ConvertXMPDate over its value (XMP.pm lines 3673-3686).
+            let converted = crate::metadata::xmp::convert_xmp_date(&val);
+            let is_date = converted.is_some();
+            let val = converted.unwrap_or(val);
             // dc:* properties use the XMP::dc table; meta:* the ODF meta
             // namespace (XMP-meta).
-            let tag = if elem.starts_with("dc:") {
+            let mut tag = if elem.starts_with("dc:") {
                 mk_dc(tag_name, tag_name, Value::String(val))
             } else {
                 mk_meta(tag_name, tag_name, Value::String(val))
             };
+            // `if ($stdDate and $added) { $$tagInfo{Groups}{2} = 'Time' }`
+            // (XMP.pm lines 3683-3685): when the value of a property no schema
+            // describes converts as a standard XMP date, the invented tag's
+            // category becomes Time instead of `XMP::other`'s Unknown. A
+            // property a schema DOES describe — dc:date — keeps its table's.
+            if is_date && crate::tags::group2::xmp_property_is_unknown(&tag.group.family1, tag_name)
+            {
+                tag.group.family2 = "Time".into();
+            }
             tags.push(tag);
         }
     }
@@ -1375,30 +1383,6 @@ fn xml_decode_entities(s: &str) -> String {
         .replace("&gt;", ">")
         .replace("&quot;", "\"")
         .replace("&apos;", "'")
-}
-
-/// Convert ISO 8601 date "2010-04-19T11:16:49.13" to ExifTool format "2010:04:19 11:16:49.13"
-fn convert_iso_date(s: &str) -> String {
-    // Replace first two dashes with colons, and T with space
-    let mut result = String::with_capacity(s.len());
-    let mut dash_count = 0;
-    let mut in_time = false;
-    for c in s.chars() {
-        if !in_time && c == '-' {
-            dash_count += 1;
-            if dash_count <= 2 {
-                result.push(':');
-            } else {
-                result.push(c);
-            }
-        } else if c == 'T' {
-            in_time = true;
-            result.push(' ');
-        } else {
-            result.push(c);
-        }
-    }
-    result
 }
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {

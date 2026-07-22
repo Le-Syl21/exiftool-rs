@@ -22,9 +22,6 @@ MP3.mp3	Duration	family1
 Minolta.jpg	WhiteBalance	family1
 Minolta.mrw	ColorMode	family1
 Minolta.mrw	WhiteBalance	family1
-OpenDoc.ods	Creation-date	family2
-OpenDoc.ods	Keyword	family2
-OpenDoc.ods	Transformation	family2
 OpenEXR.exr	ImageHeight	family1
 OpenEXR.exr	ImageWidth	family1
 PGF.pgf	Comment	family1

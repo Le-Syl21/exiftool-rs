@@ -1803,6 +1803,18 @@ impl XmpReader {
         for tag in tags.iter_mut() {
             if let Some(reformatted) = convert_xmp_date(&tag.print_value) {
                 tag.print_value = reformatted;
+                // `if ($stdDate and $added) { $$tagInfo{Groups}{2} = 'Time' }`
+                // (XMP.pm lines 3683-3685): a property ExifTool has no schema
+                // for is invented as `{ Name, IsDefault => 1, Priority => 0 }`
+                // and XMPAutoConv runs ConvertXMPDate over its value; when that
+                // recognises a standard XMP date the invented tag's category is
+                // overwritten with Time, ahead of `XMP::other`'s Unknown. A
+                // property some schema DOES describe keeps its table's category
+                // whatever its value looks like — `$added` is only set for a tag
+                // that was not already in the table (XMP.pm line 3632).
+                if xmp_property_is_unknown_aliased(&tag.group.family1, &tag.name) {
+                    tag.group.family2 = "Time".into();
+                }
             }
             // XMP-plus vocabulary: strip the LDF URL prefix and map each code.
             if tag.print_value.contains("ns.useplus.org/ldf/vocab/") {
@@ -2073,6 +2085,20 @@ fn exiftool_rdf_groups(uri: &str) -> Option<(String, String)> {
 /// a file records `Iptc4xmpCore`, and ExifTool reports the group as
 /// `XMP-iptcCore`. The mapping renames family-1 groups only -- the prefix used
 /// inside the XML is untouched.
+/// [`crate::tags::group2::xmp_property_is_unknown`] keyed on the group name
+/// ExifTool reports, for a caller that still holds the namespace prefix written
+/// in the file.
+fn xmp_property_is_unknown_aliased(family1: &str, name: &str) -> bool {
+    let resolved = match family1
+        .strip_prefix("XMP-")
+        .and_then(exiftool_namespace_alias)
+    {
+        Some(short) => format!("XMP-{short}"),
+        None => family1.to_string(),
+    };
+    crate::tags::group2::xmp_property_is_unknown(&resolved, name)
+}
+
 fn exiftool_namespace_alias(prefix: &str) -> Option<&'static str> {
     Some(match prefix {
         "Iptc4xmpCore" => "iptcCore",
@@ -2531,7 +2557,7 @@ fn exif_time(val: &str) -> String {
 
 /// Reformat an XMP ISO-8601 date/time to ExifTool's "YYYY:MM:DD HH:MM[:SS][TZ]" form.
 /// Mirrors Image::ExifTool::XMP::ConvertXMPDate. Returns None if the string is not a date.
-fn convert_xmp_date(val: &str) -> Option<String> {
+pub(crate) fn convert_xmp_date(val: &str) -> Option<String> {
     let b = val.as_bytes();
     let dig = |s: &[u8]| !s.is_empty() && s.iter().all(|c| c.is_ascii_digit());
 

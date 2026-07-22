@@ -181,9 +181,15 @@ pub fn family2_for(
             return Some(choose(c, current));
         }
     }
-    let key2 = format!("{family0}{SEP}{name}");
-    if let Some(c) = lookup(FAMILY2_BY_G0_NAME, &key2) {
-        return Some(choose(c, current));
+    // Tier 2 is keyed on the bare name, which under XMP would answer for a
+    // namespace the property was never in: family 1 IS the namespace there, and
+    // ExifTool resolves the property in that one table alone (XMP.pm line 3591).
+    // The generator emits no XMP tier-2 rows for the same reason.
+    if family0 != "XMP" {
+        let key2 = format!("{family0}{SEP}{name}");
+        if let Some(c) = lookup(FAMILY2_BY_G0_NAME, &key2) {
+            return Some(choose(c, current));
+        }
     }
     // An XMP property none of ExifTool's schemas describe goes to XMP::other,
     // whose category is Unknown. Falling through to the bare name would drag in
@@ -196,10 +202,6 @@ pub fn family2_for(
         if let Some(base) = xmp_lang_base(name) {
             let key3 = format!("XMP{SEP}{family1}{SEP}{base}");
             if let Some(c) = lookup(FAMILY2_BY_G0_G1_NAME, &key3) {
-                return Some(choose(c, current));
-            }
-            let key2 = format!("XMP{SEP}{base}");
-            if let Some(c) = lookup(FAMILY2_BY_G0_NAME, &key2) {
                 return Some(choose(c, current));
             }
         }
@@ -388,12 +390,10 @@ pub fn xmp_property_is_unknown(family1: &str, name: &str) -> bool {
 }
 
 fn xmp_name_is_unknown(family1: &str, name: &str) -> bool {
+    // Namespace-scoped, exactly as ExifTool's own lookup is: a name held by
+    // some other namespace says nothing about this one.
     let key3 = format!("XMP{SEP}{family1}{SEP}{name}");
-    if lookup(FAMILY2_BY_G0_G1_NAME, &key3).is_some() {
-        return false;
-    }
-    let key2 = format!("XMP{SEP}{name}");
-    lookup(FAMILY2_BY_G0_NAME, &key2).is_none()
+    lookup(FAMILY2_BY_G0_G1_NAME, &key3).is_none()
 }
 
 /// The base tag name of an XMP alternate-language variant, if `name` is one.
