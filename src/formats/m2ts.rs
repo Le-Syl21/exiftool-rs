@@ -96,7 +96,6 @@ struct M2tsMdpmData {
     gain: Option<String>,
     image_stabilization: Option<String>,
     exposure_time: Option<String>,
-    shutter_speed: Option<String>,
     make: Option<String>,
     recording_mode: Option<String>,
 }
@@ -193,7 +192,6 @@ fn m2ts_parse_mdpm(data: &[u8]) -> Option<M2tsMdpmData> {
         gain: None,
         image_stabilization: None,
         exposure_time: None,
-        shutter_speed: None,
         make: None,
         recording_mode: None,
     };
@@ -291,9 +289,9 @@ fn m2ts_parse_mdpm(data: &[u8]) -> Option<M2tsMdpmData> {
                 if shutter_raw != 0x7fff {
                     let exp_f = shutter_raw as f64 / 28125.0;
                     // Format as fraction using ExifTool::Exif::PrintExposureTime logic
-                    let et_str = m2ts_format_exposure_time(exp_f);
-                    result.exposure_time = Some(et_str.clone());
-                    result.shutter_speed = Some(et_str);
+                    // H264::Shutter defines 1.1 = ExposureTime only; the
+                    // ShutterSpeed seen in ExifTool's output is the Composite.
+                    result.exposure_time = Some(m2ts_format_exposure_time(exp_f));
                 }
             }
             0xE0 => {
@@ -978,14 +976,6 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                 "H264",
                 "ExposureTime",
                 "Exposure Time",
-                Value::String(v.clone()),
-            ));
-        }
-        if let Some(ref v) = mdpm.shutter_speed {
-            tags.push(mktag(
-                "H264",
-                "ShutterSpeed",
-                "Shutter Speed",
                 Value::String(v.clone()),
             ));
         }
