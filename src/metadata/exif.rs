@@ -967,14 +967,11 @@ impl ExifReader {
                     }
                     continue; // Suppress raw PrintIM tag
                 }
-                // Suppress GPS tag 0x0006 (GPSAltitude) when value is 0/0
-                0x0006 if ifd_name == "GPS" => {
-                    if let Some(Value::URational(0, 0)) =
-                        read_ifd_value(data, &entry, header.byte_order)
-                    {
-                        continue;
-                    }
-                }
+                // GPSAltitude with a 0/0 rational is NOT suppressed: GPS.pm gives a
+                // zero-denominator rational the ValueConv string "undef", which the
+                // PrintConv `$val =~ /^(inf|undef)$/ ? $val : "$val m"` passes
+                // through unchanged (GPS.pm:119-125). So it prints "undef", exactly
+                // like the sibling GPSSpeed rational in the same file.
                 // In SubIFD, tag 0x0201 = JpgFromRawStart (JPEG preview offset)
                 0x0201 if ifd_name.starts_with("SubIFD") => {
                     if let Some(val) = read_ifd_value(data, &entry, header.byte_order) {

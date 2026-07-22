@@ -1520,6 +1520,27 @@ impl ExifTool {
         let composite = crate::composite::compute_composite_tags(&tags);
         tags.extend(composite);
 
+        // Composite GPSAltitude (GPS.pm:406) claims the "GPSAltitude" name whenever
+        // its Desire GPSAltitudeRef is present — FoundTag stores the composite and
+        // moves the plain GPS:GPSAltitude aside to "GPSAltitude (1)". When the plain
+        // altitude is a 0/0 rational the composite's ValueConv yields undef, so it
+        // prints nothing; the displaced plain tag is then visible only with the
+        // Duplicates option on. Model that here: with duplicates collapsed and no
+        // real Composite GPSAltitude built, drop the "undef" plain tag.
+        if !(self.options.duplicates || self.options.extract_embedded > 0) {
+            let has_composite_alt = tags
+                .iter()
+                .any(|t| t.name == "GPSAltitude" && t.group.family0 == "Composite");
+            let has_alt_ref = tags.iter().any(|t| t.name == "GPSAltitudeRef");
+            if !has_composite_alt && has_alt_ref {
+                tags.retain(|t| {
+                    !(t.name == "GPSAltitude"
+                        && t.group.family0 == "EXIF"
+                        && t.print_value == "undef")
+                });
+            }
+        }
+
         // No name filter for Composite RedBalance/BlueBalance. `%Exif::Composite`
         // declares them with `Desire` only and no `Priority` (Exif.pm:5235-5260),
         // so a manufacturer's own RedBalance is extracted too; the Composite is
