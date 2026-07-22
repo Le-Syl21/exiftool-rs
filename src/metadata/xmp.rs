@@ -1648,8 +1648,13 @@ impl XmpReader {
                                         let stripped = strip_struct_prefix(&parent_uc, &prop_uc);
                                         let flat_raw = format!("{}{}", parent_uc, stripped);
                                         let flat = apply_flat_name_remap(&flat_raw).to_string();
-                                        // Avoid duplicates (e.g., properties already emitted inline)
-                                        if !tags.iter().any(|t| t.name == flat) {
+                                        // Every field of the blank node is emitted.
+                                        // XMP.pm skips nothing by name here; when a
+                                        // property really does repeat,
+                                        // `aggregate_duplicate_xmp_tags` merges it
+                                        // the way ExifTool merges a repeated XMP
+                                        // property.
+                                        {
                                             tags.push(Tag {
                                                 id: TagId::Text(format!("{}:{}", prop_group, flat)),
                                                 name: flat.clone(),
@@ -1741,70 +1746,11 @@ impl XmpReader {
             });
         }
 
-        // Post-processing: compute Flash composite from FlashFired/Return/Mode/Function/RedEyeMode
-        // This mirrors ExifTool's XMP Composite Flash tag.
-        if !tags.iter().any(|t| t.name == "Flash") {
-            let get_bool = |name: &str| -> Option<bool> {
-                tags.iter()
-                    .find(|t| t.name == name)
-                    .map(|t| t.print_value.to_lowercase() == "true")
-            };
-            let get_int = |name: &str| -> Option<u32> {
-                tags.iter()
-                    .find(|t| t.name == name)
-                    .and_then(|t| t.print_value.parse::<u32>().ok())
-            };
-            let flash_fired = get_bool("FlashFired");
-            let flash_return = get_int("FlashReturn");
-            let flash_mode = get_int("FlashMode");
-            let flash_function = get_bool("FlashFunction");
-            let flash_red_eye = get_bool("FlashRedEyeMode");
-            // Only emit if we have at least one relevant tag
-            if flash_fired.is_some()
-                || flash_return.is_some()
-                || flash_mode.is_some()
-                || flash_function.is_some()
-                || flash_red_eye.is_some()
-            {
-                let val: u32 = (if flash_fired.unwrap_or(false) {
-                    0x01
-                } else {
-                    0
-                }) | ((flash_return.unwrap_or(0) & 0x03) << 1)
-                    | ((flash_mode.unwrap_or(0) & 0x03) << 3)
-                    | (if flash_function.unwrap_or(false) {
-                        0x20
-                    } else {
-                        0
-                    })
-                    | (if flash_red_eye.unwrap_or(false) {
-                        0x40
-                    } else {
-                        0
-                    });
-                let flash_str = flash_numeric_to_string(val);
-                tags.push(Tag {
-                    id: TagId::Text("Flash:Flash".into()),
-                    name: "Flash".into(),
-                    description: "Flash".into(),
-                    // `Flash` of `%Image::ExifTool::XMP::Composite` (XMP.pm:2745,
-                    // 2808). That table declares no GROUPS, so AddCompositeTags
-                    // gives it `{ 0 => 'Composite', 1 => 'Composite' }`
-                    // (ExifTool.pm:5782-5788); the entry's own
-                    // `Groups => { 2 => 'Camera' }` sets family 2. It is a
-                    // Composite, not a property of the exif: schema.
-                    group: TagGroup {
-                        family0: "Composite".into(),
-                        family1: "Composite".into(),
-                        family2: "Camera".into(),
-                        family3: "Main".into(),
-                    },
-                    raw_value: Value::String(format!("{}", val)),
-                    print_value: flash_str,
-                    priority: 0,
-                });
-            }
-        }
+        // The XMP Composite `Flash` (XMP.pm:2808-2840) is NOT built here.
+        // ExifTool builds every Composite in BuildCompositeTags, after the whole
+        // file has been read, so the Composite instance is stored last and wins
+        // the duplicate competition against an EXIF `Flash` at equal priority.
+        // See `composite::compute_xmp_flash`.
 
         // ExifTool shares the EXIF tag table for the XMP exif:/tiff: schemas, applying
         // the same ValueConv (rational → decimal) and PrintConv (FNumber → "2.8",
@@ -2255,7 +2201,9 @@ fn is_known_xmp_prefix(prefix: &str) -> bool {
 }
 
 /// Convert numeric flash value to ExifTool flash description string.
-fn flash_numeric_to_string(val: u32) -> String {
+/// `%Image::ExifTool::Exif::flash` (Exif.pm), the PrintConv of the XMP
+/// Composite Flash tag (XMP.pm:2838).
+pub fn flash_numeric_to_string(val: u32) -> String {
     match val {
         0x00 => "No Flash".into(),
         0x01 => "Fired".into(),

@@ -20,6 +20,10 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         composite.push(rot);
     }
 
+    if let Some(flash) = compute_xmp_flash(tags) {
+        composite.push(flash);
+    }
+
     // GPSPosition: combine GPSLatitude/Ref + GPSLongitude/Ref
     if let Some(pos) = compute_gps_position(tags) {
         composite.push(pos);
@@ -2174,6 +2178,60 @@ fn compute_quicktime_rotation(tags: &[Tag]) -> Option<Tag> {
         "Rotation",
         Value::String(format!("{}", angle)),
     ))
+}
+
+/// XMP Composite `Flash` (XMP.pm:2808-2840).
+///
+/// `Desire => { 0 => 'XMP:FlashFired', 1 => 'XMP:FlashReturn', 2 => 'XMP:FlashMode',
+/// 3 => 'XMP:FlashFunction', 4 => 'XMP:FlashRedEyeMode', 5 => 'XMP:Flash' }`, all
+/// Desire, so the tag is built as soon as any one of them exists. The ValueConv
+/// packs them into the EXIF Flash bitmask and the PrintConv is
+/// `%Image::ExifTool::Exif::flash`.
+///
+/// It has no `Priority` and no `Inhibit`, so it competes with an EXIF `Flash` on
+/// equal terms — and wins, because ExifTool builds Composites after the whole
+/// file has been read (BuildCompositeTags) and equal priorities are last-wins.
+/// That is why this lives here and not in the XMP reader.
+fn compute_xmp_flash(tags: &[Tag]) -> Option<Tag> {
+    let xmp = |name: &str| -> Option<&Tag> {
+        tags.iter()
+            .find(|t| t.name == name && t.group.family0 == "XMP")
+    };
+    // The ValueConv reads the raw XMP property text ('True'/'False', '0'..'3'),
+    // not the printed form the XMP reader later derives from the shared EXIF
+    // PrintConv ('Off', 'No return detection', ...).
+    let get_bool = |name: &str| -> Option<bool> {
+        xmp(name).map(|t| t.raw_value.to_display_string().eq_ignore_ascii_case("true"))
+    };
+    let get_int = |name: &str| -> Option<u32> {
+        xmp(name).and_then(|t| t.raw_value.to_display_string().parse::<u32>().ok())
+    };
+
+    let fired = get_bool("FlashFired");
+    let ret = get_int("FlashReturn");
+    let mode = get_int("FlashMode");
+    let function = get_bool("FlashFunction");
+    let red_eye = get_bool("FlashRedEyeMode");
+    if fired.is_none() && ret.is_none() && mode.is_none() && function.is_none() && red_eye.is_none()
+    {
+        return None;
+    }
+
+    let val: u32 = u32::from(fired.unwrap_or(false))
+        | ((ret.unwrap_or(0) & 0x03) << 1)
+        | ((mode.unwrap_or(0) & 0x03) << 3)
+        | (if function.unwrap_or(false) { 0x20 } else { 0 })
+        | (if red_eye.unwrap_or(false) { 0x40 } else { 0 });
+
+    let mut t = mk_composite_raw(
+        "Flash",
+        "Flash",
+        Value::String(val.to_string()),
+        crate::metadata::xmp::flash_numeric_to_string(val),
+    );
+    // The entry's own `Groups => { 2 => 'Camera' }` (XMP.pm:2820).
+    t.group.family2 = "Camera".into();
+    Some(t)
 }
 
 fn mk_composite_raw(name: &str, description: &str, value: Value, print_value: String) -> Tag {

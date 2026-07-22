@@ -121,7 +121,11 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
         .map(|t| t.print_value.clone())
     {
         if !year.is_empty() {
-            let mut t = mk("DateTimeOriginal", "Date/Time Original", Value::String(year));
+            let mut t = mk(
+                "DateTimeOriginal",
+                "Date/Time Original",
+                Value::String(year),
+            );
             t.group.family0 = "Composite".into();
             t.group.family1 = "Composite".into();
             t.group.family2 = "Time".into();
