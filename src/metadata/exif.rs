@@ -343,16 +343,34 @@ impl ExifReader {
                 header.byte_order,
                 exif_base,
             );
-            // Remove the raw MakerNote tag and replace with parsed tags
-            tags.retain(|t| t.name != "MakerNote");
+            // The parsed tags take the raw MakerNote tag's place in the stream.
+            // ExifTool descends into the maker note the moment ProcessExif reaches
+            // 0x927c inside the ExifIFD (Exif.pm:6113 `ProcessDirectory` on the
+            // SubDirectory), so every maker-note tag is stored BEFORE the walk
+            // resumes and reaches IFD1. That order decides every priority-0 tie:
+            // in a JPEG both `PreviewIFD` and `IFD1` are in LOW_PRIORITY_DIR
+            // (ExifTool.pm:4368 and ProcessJPEG :7317), so the tie is first-wins
+            // and the PreviewIFD copy has to be seen first.
             // In Perl ExifTool, MakerNotes tags with equal/higher priority overwrite EXIF tags.
             // Tags in the EXIF-primary list: EXIF wins (skip MakerNotes duplicate).
             // Other tags: MakerNotes wins (remove EXIF version, add MakerNotes version).
+            // The placeholder is still in `tags` here, so its index is looked up
+            // at splice time — the EXIF-duplicate pruning below runs first and
+            // would invalidate an index taken any earlier.
+            let splice_in = |tags: &mut Vec<Tag>, new: Vec<Tag>| match tags
+                .iter()
+                .position(|t| t.name == "MakerNote")
+            {
+                Some(i) => {
+                    tags.splice(i..=i, new);
+                }
+                None => tags.extend(new),
+            };
             if keep_duplicates() {
                 // Duplicates are kept: ExifTool reports the EXIF and the maker-note
                 // copy of a tag side by side (e.g. FujiFilm Contrast/Saturation/
                 // Sharpness or Panasonic TextStamp under -ee).
-                tags.extend(mn_tags);
+                splice_in(&mut tags, mn_tags);
             } else {
                 // Tags where EXIF takes priority over MakerNotes (structural/authoritative EXIF)
                 let exif_primary: &[&str] = EXIF_PRIMARY_TAGS;
@@ -378,18 +396,25 @@ impl ExifReader {
                 // Exception: a few maker notes carry a more precise authoritative value
                 // (e.g. Kodak FNumber/ExposureTime) that ExifTool reports over EXIF — keep
                 // those so the later precedence pass can promote them.
-                for mn_tag in mn_tags {
-                    let authoritative = mn_tag.group.family1 == "Kodak"
-                        && matches!(mn_tag.name.as_str(), "FNumber" | "ExposureTime");
-                    if !authoritative
-                        && exif_primary.contains(&mn_tag.name.as_str())
-                        && exif_has.contains(&mn_tag.name)
-                    {
-                        // EXIF wins - don't add MakerNotes version
-                        continue;
-                    }
-                    tags.push(mn_tag);
-                }
+                let kept: Vec<Tag> = mn_tags
+                    .into_iter()
+                    .filter(|mn_tag| {
+                        let authoritative = mn_tag.group.family1 == "Kodak"
+                            && matches!(mn_tag.name.as_str(), "FNumber" | "ExposureTime");
+                        // EXIF wins — don't add the MakerNotes version. A
+                        // `PreviewIFD` tag is exempt in both directions: it is
+                        // priority 0 (ExifTool.pm:4368), so the arbitration pass
+                        // in `exiftool` already lets IFD0 beat it, while against
+                        // the equally-demoted IFD1 of a JPEG (ProcessJPEG,
+                        // ExifTool.pm:7317) the tie is first-wins and the
+                        // PreviewIFD copy is the one ExifTool keeps.
+                        authoritative
+                            || mn_tag.group.family1 == "PreviewIFD"
+                            || !exif_primary.contains(&mn_tag.name.as_str())
+                            || !exif_has.contains(&mn_tag.name)
+                    })
+                    .collect();
+                splice_in(&mut tags, kept);
             }
         }
 
