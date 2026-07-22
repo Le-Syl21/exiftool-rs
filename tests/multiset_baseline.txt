@@ -133,22 +133,6 @@ Pentax.jpg	ee	missing	0	ISO	100
 Pentax.jpg	ee	missing	0	LensType	Sigma or Tamron Lens (3 44)
 Pentax.jpg	ee	missing	0	PentaxModelID	K10D
 PhotoMechanic.jpg	ee	missing	0	Prefs	Tagged:0, ColorClass:0, Rating:0, FrameNum:-00001
-PostScript.eps	ee	missing	0	BoundingBox	0 0 435 283
-PostScript.eps	ee	missing	1	BoundingBox	0 0 435 283
-PostScript.eps	ee	missing	2	BoundingBox	0 0 435 283
-PostScript.eps	ee	missing	3	BoundingBox	0 0 435 283
-PostScript.eps	ee	missing	0	Creator	Adobe Photoshop Version 9.0x211
-PostScript.eps	ee	missing	1	Creator	Adobe Photoshop Version 9.0x211
-PostScript.eps	ee	missing	2	Creator	Adobe Photoshop Version 9.0x211
-PostScript.eps	ee	missing	3	Creator	Adobe Photoshop Version 9.0x211
-PostScript.eps	ee	missing	0	EmbeddedFileName	Test-Doc1.eps
-PostScript.eps	ee	missing	0	EmbeddedFileName	Test-Doc2-1.eps
-PostScript.eps	ee	missing	0	EmbeddedFileName	Test-Doc2.eps
-PostScript.eps	ee	missing	0	EmbeddedFileName	Test-Doc3.eps
-PostScript.eps	ee	missing	0	Title	12a.eps
-PostScript.eps	ee	missing	0	Title	12b.eps
-PostScript.eps	ee	missing	0	Title	12c.eps
-PostScript.eps	ee	missing	0	Title	12d.eps
 QuickTime.heic	ee	extra	0	Warning	[minor] The ExtractEmbedded option may find more tags in the video data
 QuickTime.heic	ee	missing	0	AverageFrameRate	0
 QuickTime.heic	ee	missing	0	BitDepthChroma	8

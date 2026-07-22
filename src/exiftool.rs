@@ -2278,10 +2278,11 @@ impl ExifTool {
             FileType::PostScript => {
                 // PFA fonts start with %!PS-AdobeFont or %!FontType1
                 if data.starts_with(b"%!PS-AdobeFont") || data.starts_with(b"%!FontType1") {
-                    formats::font::read_pfa(data)
-                        .or_else(|_| formats::postscript::read_postscript(data))
+                    formats::font::read_pfa(data).or_else(|_| {
+                        formats::postscript::read_postscript(data, self.options.extract_embedded)
+                    })
                 } else {
-                    formats::postscript::read_postscript(data)
+                    formats::postscript::read_postscript(data, self.options.extract_embedded)
                 }
             }
             FileType::Eip => formats::capture_one::read_eip(data, self.options.extract_embedded),
@@ -2423,7 +2424,9 @@ impl ExifTool {
             FileType::Xml | FileType::Inx => {
                 formats::xmp_file::read_xmp(data).or_else(|_| Ok(Vec::new()))
             }
-            FileType::Eps => formats::postscript::read_postscript(data),
+            FileType::Eps => {
+                formats::postscript::read_postscript(data, self.options.extract_embedded)
+            }
             _ => Err(Error::UnsupportedFileType(format!("{}", file_type))),
         }
     }
