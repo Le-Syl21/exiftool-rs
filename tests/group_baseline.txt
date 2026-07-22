@@ -81,7 +81,6 @@ CaptureOne.eip	Highlight	family2
 CaptureOne.eip	Rotation	family2
 CaptureOne.eip	Saturation	family2
 CaptureOne.eip	Shadow	family2
-Casio2.jpg	PreviewImageLength	family2
 DNG.dng	Creator	family2
 DNG.dng	Flash	family1
 DNG.dng	ThumbnailTIFF	family1
@@ -164,12 +163,8 @@ MXF.mxf	StartTimecode	family1
 MXF.mxf	TrackID	family1
 MXF.mxf	TrackName	family1
 MXF.mxf	TrackNumber	family1
-Minolta.jpg	PreviewImageLength	family2
-Minolta.jpg	PreviewImageStart	family2
 Minolta.jpg	WhiteBalance	family1
 Minolta.mrw	ColorMode	family1
-Minolta.mrw	PreviewImageLength	family2
-Minolta.mrw	PreviewImageStart	family2
 Minolta.mrw	WhiteBalance	family1
 Motorola.jpg	BuildNumber	family1
 Motorola.jpg	ManufactureDate	family1
@@ -294,7 +289,6 @@ Ricoh2.jpg	RicohImageHeight	family1
 Ricoh2.jpg	RicohImageWidth	family1
 Sigma.x3f	WhiteBalance	family2
 SigmaDP2.x3f	PreviewImage	family1
-SigmaDP2.x3f	PreviewImageStart	family2
 Sony.pmp	ExposureTime	family2
 Sony.pmp	Make	family1
 Sony.pmp	Make	family2

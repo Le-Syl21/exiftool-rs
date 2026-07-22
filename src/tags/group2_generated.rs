@@ -10,7 +10,7 @@
 /// `(key, categories)`, sorted by key.
 pub type Family2Entry = (&'static str, &'static [&'static str]);
 
-/// Keyed on `"<family0>\u{1}<family1>\u{1}<name>"` (514 entries).
+/// Keyed on `"<family0>\u{1}<family1>\u{1}<name>"` (522 entries).
 pub static FAMILY2_BY_G0_G1_NAME: &[Family2Entry] = &[
     ("FlashPix\u{1}FlashPix\u{1}RevisionNumber", &["Other"]),
     ("FlashPix\u{1}MS-DOC\u{1}RevisionNumber", &["Document"]),
@@ -66,6 +66,7 @@ pub static FAMILY2_BY_G0_G1_NAME: &[Family2Entry] = &[
     ("ID3\u{1}ID3v2_2\u{1}CopyrightURL", &["Author"]),
     ("MIE\u{1}MIE-Audio\u{1}Duration", &["Audio"]),
     ("MIE\u{1}MIE-Video\u{1}Duration", &["Video"]),
+    ("MakerNotes\u{1}AdobeDNG\u{1}MakerNoteCanon", &["Image"]),
     ("MakerNotes\u{1}Apple\u{1}CameraType", &["Image"]),
     ("MakerNotes\u{1}Apple\u{1}ColorTemperature", &["Image"]),
     ("MakerNotes\u{1}Apple\u{1}FocusPosition", &["Image"]),
@@ -97,6 +98,7 @@ pub static FAMILY2_BY_G0_G1_NAME: &[Family2Entry] = &[
         &["Camera"],
     ),
     ("MakerNotes\u{1}Canon\u{1}PeripheralLighting", &["Camera"]),
+    ("MakerNotes\u{1}Canon\u{1}PreviewImageLength", &["Image"]),
     ("MakerNotes\u{1}Canon\u{1}SelfTimer", &["Camera"]),
     ("MakerNotes\u{1}Canon\u{1}SensorHeight", &["Image"]),
     ("MakerNotes\u{1}Canon\u{1}SensorWidth", &["Image"]),
@@ -120,9 +122,9 @@ pub static FAMILY2_BY_G0_G1_NAME: &[Family2Entry] = &[
     ("MakerNotes\u{1}CanonRaw\u{1}ShutterSpeedValue", &["Image"]),
     ("MakerNotes\u{1}Casio\u{1}FacesDetected", &["Image"]),
     ("MakerNotes\u{1}Casio\u{1}HometownCity", &["Camera"]),
+    ("MakerNotes\u{1}Casio\u{1}PreviewImageLength", &["Image"]),
     ("MakerNotes\u{1}Casio\u{1}PreviewImageSize", &["Image"]),
     ("MakerNotes\u{1}DJI\u{1}Histogram", &["Camera"]),
-    ("MakerNotes\u{1}ExifIFD\u{1}MakerNoteCanon", &["Image"]),
     ("MakerNotes\u{1}FujiFilm\u{1}PanoramaDirection", &["Camera"]),
     ("MakerNotes\u{1}FujiFilm\u{1}Parallax", &["Camera"]),
     ("MakerNotes\u{1}FujiFilm\u{1}PeripheralLighting", &["Video"]),
@@ -198,10 +200,6 @@ pub static FAMILY2_BY_G0_G1_NAME: &[Family2Entry] = &[
     ("MakerNotes\u{1}Leica\u{1}BaseISO", &["Camera"]),
     ("MakerNotes\u{1}Leica\u{1}FileIndex", &["Camera"]),
     ("MakerNotes\u{1}Leica\u{1}WB_RGBLevels", &["Camera"]),
-    (
-        "MakerNotes\u{1}MakerNotes\u{1}PreviewImageLength",
-        &["Image"],
-    ),
     ("MakerNotes\u{1}Minolta\u{1}BWFilter", &["Camera"]),
     ("MakerNotes\u{1}Minolta\u{1}BrightnessValue", &["Camera"]),
     (
@@ -209,6 +207,8 @@ pub static FAMILY2_BY_G0_G1_NAME: &[Family2Entry] = &[
         &["Camera"],
     ),
     ("MakerNotes\u{1}Minolta\u{1}PresetWhiteBalance", &["Camera"]),
+    ("MakerNotes\u{1}Minolta\u{1}PreviewImageLength", &["Camera"]),
+    ("MakerNotes\u{1}Minolta\u{1}PreviewImageStart", &["Camera"]),
     (
         "MakerNotes\u{1}Minolta\u{1}WB_RBLevelsCoolWhiteF",
         &["Camera"],
@@ -328,7 +328,6 @@ pub static FAMILY2_BY_G0_G1_NAME: &[Family2Entry] = &[
         "MakerNotes\u{1}Pentax\u{1}PeripheralIlluminationCorr",
         &["Image"],
     ),
-    ("MakerNotes\u{1}Pentax\u{1}PreviewImageLength", &["Camera"]),
     ("MakerNotes\u{1}Pentax\u{1}PreviewImageSize", &["Image"]),
     ("MakerNotes\u{1}Pentax\u{1}ToneCurve", &["Camera"]),
     ("MakerNotes\u{1}Pentax\u{1}WhiteBalanceMode", &["Camera"]),
@@ -336,6 +335,10 @@ pub static FAMILY2_BY_G0_G1_NAME: &[Family2Entry] = &[
     ("MakerNotes\u{1}PhaseOne\u{1}ImageHeight", &["Camera"]),
     ("MakerNotes\u{1}PhaseOne\u{1}ImageWidth", &["Camera"]),
     ("MakerNotes\u{1}PhaseOne\u{1}WB_RGBLevels", &["Camera"]),
+    (
+        "MakerNotes\u{1}PreviewIFD\u{1}PreviewImageLength",
+        &["Image"],
+    ),
     ("MakerNotes\u{1}Reconyx\u{1}FileNumber", &["Camera"]),
     (
         "MakerNotes\u{1}Ricoh\u{1}Accelerometer",
@@ -357,6 +360,7 @@ pub static FAMILY2_BY_G0_G1_NAME: &[Family2Entry] = &[
     ("MakerNotes\u{1}Ricoh\u{1}ISOSetting", &["Image"]),
     ("MakerNotes\u{1}Ricoh\u{1}Macro", &["Image"]),
     ("MakerNotes\u{1}Ricoh\u{1}MakerNoteType", &["Camera"]),
+    ("MakerNotes\u{1}Ricoh\u{1}PreviewImageLength", &["Image"]),
     ("MakerNotes\u{1}Ricoh\u{1}Saturation", &["Camera", "Image"]),
     ("MakerNotes\u{1}Ricoh\u{1}TimeStamp", &["Location"]),
     ("MakerNotes\u{1}Ricoh\u{1}Vignetting", &["Camera"]),
@@ -414,6 +418,7 @@ pub static FAMILY2_BY_G0_G1_NAME: &[Family2Entry] = &[
     ("MakerNotes\u{1}Samsung\u{1}FaceDetect", &["Image"]),
     ("MakerNotes\u{1}Samsung\u{1}ISO", &["Camera", "Image"]),
     ("MakerNotes\u{1}Samsung\u{1}MakerNoteVersion", &["Image"]),
+    ("MakerNotes\u{1}Samsung\u{1}PreviewImageLength", &["Image"]),
     ("MakerNotes\u{1}Samsung\u{1}Quality", &["Video"]),
     ("MakerNotes\u{1}Samsung\u{1}RawData", &["Image"]),
     ("MakerNotes\u{1}Samsung\u{1}Vignetting", &["Image"]),
@@ -426,6 +431,8 @@ pub static FAMILY2_BY_G0_G1_NAME: &[Family2Entry] = &[
     ("MakerNotes\u{1}Sanyo\u{1}FacesDetected", &["Image"]),
     ("MakerNotes\u{1}Sanyo\u{1}SelfTimer", &["Camera"]),
     ("MakerNotes\u{1}Sigma\u{1}AutoBracket", &["Camera"]),
+    ("MakerNotes\u{1}Sigma\u{1}PreviewImageLength", &["Camera"]),
+    ("MakerNotes\u{1}Sigma\u{1}PreviewImageStart", &["Camera"]),
     ("MakerNotes\u{1}Sigma\u{1}WB_RGBLevelsFlash", &["Image"]),
     ("MakerNotes\u{1}Sony\u{1}AmbientTemperature", &["Image"]),
     ("MakerNotes\u{1}Sony\u{1}AspectRatio", &["Image"]),
@@ -468,6 +475,7 @@ pub static FAMILY2_BY_G0_G1_NAME: &[Family2Entry] = &[
     ("MakerNotes\u{1}Sony\u{1}MaxFocalLength", &["Image"]),
     ("MakerNotes\u{1}Sony\u{1}MeteringMode", &["Image"]),
     ("MakerNotes\u{1}Sony\u{1}MinFocalLength", &["Image"]),
+    ("MakerNotes\u{1}Sony\u{1}PreviewImageLength", &["Image"]),
     ("MakerNotes\u{1}Sony\u{1}Rating", &["Camera"]),
     ("MakerNotes\u{1}Sony\u{1}ShutterCount", &["Image"]),
     ("MakerNotes\u{1}Sony\u{1}ShutterType", &["Image"]),
