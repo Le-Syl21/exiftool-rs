@@ -159,6 +159,38 @@ pub fn read_x3f(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
+    // Sigma maker note (inside the embedded JpgFromRaw EXIF) carries an
+    // OffsetPair PreviewImageStart (0x001a) / PreviewImageLength (0x001b), both
+    // gated on `$format eq "int32u"`, with `DataTag => 'PreviewImage'`
+    // (Sigma.pm:421 and :444). ExifTool extracts those bytes as a second
+    // PreviewImage in the MakerNotes:Sigma group. It is emitted after every
+    // SigmaRaw section, so with duplicates collapsed it wins the arbitration by
+    // last-wins over the 20-byte SigmaRaw::IMAG/IMA2 preview, while `-ee` keeps
+    // both. The start offset was already made X3F-absolute when the JpgFromRaw
+    // EXIF was read (the jpeg_base fix-up above), so it indexes `data` directly.
+    let sigma_preview_start = tags
+        .iter()
+        .find(|t| t.name == "PreviewImageStart" && t.group.family1 == "Sigma")
+        .and_then(|t| t.raw_value.as_u64());
+    let sigma_preview_len = tags
+        .iter()
+        .find(|t| t.name == "PreviewImageLength" && t.group.family1 == "Sigma")
+        .and_then(|t| t.raw_value.as_u64());
+    if let (Some(start), Some(len)) = (sigma_preview_start, sigma_preview_len) {
+        let start = start as usize;
+        let len = len as usize;
+        if len > 0 && start.checked_add(len).is_some_and(|end| end <= data.len()) {
+            tags.push(mk_tag_binary(
+                "PreviewImage",
+                "Preview Image",
+                data[start..start + len].to_vec(),
+                "MakerNotes",
+                "Sigma",
+                "Preview",
+            ));
+        }
+    }
+
     Ok(tags)
 }
 

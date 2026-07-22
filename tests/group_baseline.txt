@@ -5,4 +5,3 @@
 # Format: <file>\t<tag>\t<family1|family2>
 DNG.dng	Creator	family2
 PSP.psp	Copyright	family1
-SigmaDP2.x3f	PreviewImage	family1
