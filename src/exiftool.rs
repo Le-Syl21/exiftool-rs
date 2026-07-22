@@ -1644,24 +1644,6 @@ impl ExifTool {
                     }
                 }
 
-                // ExifTool prefers a QuickTime ItemList tag over the same-named
-                // UserData one (its UserData table says so explicitly).
-                {
-                    let in_item_list: std::collections::HashSet<&str> = tags
-                        .iter()
-                        .filter(|t| t.group.family1 == "ItemList")
-                        .map(|t| t.name.as_str())
-                        .collect();
-                    let drop_names: std::collections::HashSet<String> = tags
-                        .iter()
-                        .filter(|t| {
-                            t.group.family1 == "UserData" && in_item_list.contains(t.name.as_str())
-                        })
-                        .map(|t| t.name.clone())
-                        .collect();
-                    tags.retain(|t| t.group.family1 != "UserData" || !drop_names.contains(&t.name));
-                }
-
                 // QuickTime container/handler tags: ExifTool reports the LAST track's
                 // value (e.g. the metadata-track HandlerType), unlike per-track TrackID
                 // which keeps the first. Keep only the last instance of these.
