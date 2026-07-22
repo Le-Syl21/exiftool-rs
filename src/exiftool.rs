@@ -1871,6 +1871,26 @@ impl ExifTool {
                             && t.print_value == "Full-resolution image"
                     })
                     .map(|t| t.group.family1.clone());
+                // QuickTime.pm:10016 — ProcessMOV runs `$$et{PRIORITY_DIR} = 'XMP'
+                // unless $fileType and $fileType eq 'HEIC'` ("have XMP take
+                // priority except for HEIC") before reading any box, and
+                // SetPriorityDir only fills PRIORITY_DIR when it is still empty
+                // (ExifTool.pm:9636), so XMP stays the priority directory for the
+                // whole movie. Its effect is to promote back to 1 every XMP tag
+                // ExifTool would otherwise store at priority 0.
+                let xmp_is_priority_dir = matches!(
+                    file_type,
+                    FileType::Mp4
+                        | FileType::QuickTime
+                        | FileType::M4a
+                        | FileType::ThreeGP
+                        | FileType::Avif
+                        | FileType::Cr3
+                        | FileType::Crm
+                        | FileType::F4v
+                        | FileType::Mqv
+                        | FileType::Lrv
+                ) || (file_type == FileType::Heif && ft_code != "HEIC");
                 use std::collections::HashMap as HM;
                 // The competition is group-blind, exactly as in Perl: `$$self{VALUE}`
                 // holds ONE entry per tag NAME, and FoundTag arbitrates every
@@ -1894,6 +1914,12 @@ impl ExifTool {
                     // normal priority of 1.
                     let eff = |i: usize| -> i32 {
                         let t = &tags[i];
+                        // Perl's DIR_NAME is the directory's own name, `XMP` for
+                        // every XMP directory whatever family-1 group its
+                        // properties end up in (XMP-dc, XMP-xmpDM, ...).
+                        let in_priority_dir = priority_dir.as_deref()
+                            == Some(t.group.family1.as_str())
+                            || (xmp_is_priority_dir && t.group.family0 == "XMP");
                         // A priority the source table stated itself — an explicit
                         // `Priority => 0` or the `Avoid => 1` FoundTag turns into
                         // one. It bypasses the LOW_PRIORITY_DIR default and is
@@ -1904,12 +1930,20 @@ impl ExifTool {
                             if t.group.family3 != MAIN_DOCUMENT {
                                 return 0;
                             }
-                            return i32::from(
-                                priority_dir.as_deref() == Some(t.group.family1.as_str()),
-                            );
+                            return i32::from(in_priority_dir);
                         }
                         if t.priority == 0 && is_low_priority_source(&t.group, &t.name) {
-                            0
+                            // Only a table-stated `Priority => 0` is promoted in
+                            // the priority directory: a LOW_PRIORITY_DIR default
+                            // comes from the `elsif` branch (ExifTool.pm:9557),
+                            // which never looks at PRIORITY_DIR. XMP is the one
+                            // demotion here that FoundTag reaches through the
+                            // `defined $priority` branch.
+                            i32::from(
+                                in_priority_dir
+                                    && t.group.family0 == "XMP"
+                                    && t.group.family3 == MAIN_DOCUMENT,
+                            )
                         } else {
                             t.priority.max(1)
                         }
