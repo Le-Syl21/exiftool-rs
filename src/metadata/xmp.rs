@@ -53,22 +53,48 @@ pub(crate) fn namespace_prefix(uri: &str) -> &str {
     }
 }
 
-/// Record the prefix a namespace URI was declared with, first declaration wins.
+/// Record the prefix an unknown-namespace URI is reported under, resolving prefix
+/// collisions the way ExifTool's `ParseXMPElement` does (XMP.pm:3939-3956).
 ///
-/// ExifTool's `$$et{curNS}` (XMP.pm:3954, `$$curNS{$val} = $usedNS`). The reserved `xml`/`xmlns` prefixes
-/// are never namespace declarations of their own, and the empty URI carries no
-/// namespace, so neither is recorded.
+/// Both maps persist over the whole XMP: `cur_ns` is ExifTool's `$$et{curNS}`
+/// (URI → the prefix it is reported under) and `resolved_uri` is `$$et{curURI}`
+/// (that prefix → URI). A URI ExifTool already knows is handled by the
+/// `namespace_prefix` table and never reaches here. For a genuinely new URI, the
+/// prefix declared in the file is used UNLESS it already names a different URI
+/// (`$$curURI{$ns}`) or is itself a standard prefix (`$nsURI{$ns}`), in which
+/// case a fresh `tmp0`, `tmp1`, … is minted to break the conflict — which is how
+/// two `xxxx:Test` properties from different namespaces become `XMP-xxxx:Test`
+/// and `XMP-tmp0:Test`.
 fn register_declared_prefix(
     cur_ns: &mut std::collections::HashMap<String, String>,
+    resolved_uri: &mut std::collections::HashMap<String, String>,
     uri: &str,
     prefix: &str,
 ) {
     if uri.is_empty() || prefix.is_empty() || prefix == "xml" || prefix == "xmlns" {
         return;
     }
-    cur_ns
-        .entry(uri.to_string())
-        .or_insert_with(|| prefix.to_string());
+    // A URI with a known standard prefix is resolved by `namespace_prefix`; it
+    // does not occupy an entry here (matching ExifTool's `$stdNS` branch, which
+    // touches neither curNS nor curURI).
+    if !namespace_prefix(uri).is_empty() {
+        return;
+    }
+    // Consistent prefix over the whole XMP for a given URI (first wins).
+    if cur_ns.contains_key(uri) {
+        return;
+    }
+    let used = if resolved_uri.contains_key(prefix) || is_known_xmp_prefix(prefix) {
+        let mut i = 0;
+        while resolved_uri.contains_key(&format!("tmp{i}")) {
+            i += 1;
+        }
+        format!("tmp{i}")
+    } else {
+        prefix.to_string()
+    };
+    resolved_uri.insert(used.clone(), uri.to_string());
+    cur_ns.insert(uri.to_string(), used);
 }
 
 /// Family-1 group prefix for an XMP namespace URI.
@@ -310,6 +336,11 @@ impl XmpReader {
         // the entire XMP for a given namespace URI".
         let mut cur_ns: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
+        // Resolved prefix → URI, ExifTool's `$$et{curURI}`. Only holds the
+        // prefixes minted for unknown namespaces; used to detect collisions when
+        // a later namespace reuses a prefix already bound to a different URI.
+        let mut resolved_uri: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
 
         for event in parser {
             match event {
@@ -320,13 +351,13 @@ impl XmpReader {
                     let ns_uri = name.namespace.as_deref().unwrap_or("");
                     if let Some(pfx) = name.prefix.as_deref() {
                         cur_uri.insert(pfx.to_string(), ns_uri.to_string());
-                        register_declared_prefix(&mut cur_ns, ns_uri, pfx);
+                        register_declared_prefix(&mut cur_ns, &mut resolved_uri, ns_uri, pfx);
                     }
                     for a in &attributes {
                         if let (Some(pfx), Some(uri)) =
                             (a.name.prefix.as_deref(), a.name.namespace.as_deref())
                         {
-                            register_declared_prefix(&mut cur_ns, uri, pfx);
+                            register_declared_prefix(&mut cur_ns, &mut resolved_uri, uri, pfx);
                         }
                     }
                     path.push((ns_uri.to_string(), name.local_name.clone()));
@@ -1525,14 +1556,15 @@ impl XmpReader {
                             && name.namespace.as_deref()
                                 != Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                         {
-                            // Unknown namespace: fall back to the element's XML prefix
-                            // so different-namespace properties (ExifIFD:ISO vs
-                            // Nikon:ISO) keep distinct groups instead of merging.
-                            let group_prefix = if prefix.is_empty() {
-                                name.prefix.as_deref().unwrap_or("XMP")
-                            } else {
-                                prefix
-                            };
+                            // Resolve the group prefix through `cur_ns` so an unknown
+                            // namespace keeps the prefix ExifTool assigned it: the same
+                            // one for a given URI across the whole XMP, and a minted
+                            // `tmp0`/`tmp1` when a prefix was reused for a different URI
+                            // (XMP6's two `xxxx:Test`). The literal file prefix would
+                            // otherwise collapse the two namespaces into one group.
+                            let _ = prefix;
+                            let group_prefix_owned = xmp_group_prefix(ns_uri, &cur_ns);
+                            let group_prefix = group_prefix_owned.as_str();
                             let category = namespace_category(group_prefix);
 
                             let text_val = normalize_xml_text(&current_text);
