@@ -649,7 +649,7 @@ fn find_tag<'a>(tags: &'a [Tag], name: &str) -> Option<&'a Tag> {
             // the same value ExifTool's priority dedup would surface, not merely
             // the first extracted.
             .fold(None, |best: Option<&Tag>, t| match best {
-                Some(b) if b.priority >= t.priority => Some(b),
+                Some(b) if b.priority_rank() >= t.priority_rank() => Some(b),
                 _ => Some(t),
             })
     };

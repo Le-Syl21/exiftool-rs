@@ -21,6 +21,34 @@ pub struct TagGroup {
 /// Family 3 value for tags belonging to the file's main document.
 pub const MAIN_DOCUMENT: &str = "Main";
 
+/// Sentinel [`Tag::priority`] meaning "the source table gives this tag a
+/// priority of 0", as opposed to the struct's plain `0`, which means "the
+/// decoder said nothing".
+///
+/// ExifTool draws the same distinction, through definedness rather than a
+/// sentinel. `FoundTag` resolves the priority in two stages: first from the tag
+/// and its table (ExifTool.pm:9469-9472),
+///
+/// ```text
+/// my $priority = $$tagInfo{Priority};
+/// unless (defined $priority) {
+///     $priority = $$tbl{PRIORITY};
+///     $priority = 0 if not defined $priority and $$tagInfo{Avoid};
+/// }
+/// ```
+///
+/// then, only when that left it undefined, from the directory
+/// (ExifTool.pm:9552-9562): 0 for a LOW_PRIORITY_DIR, otherwise the normal
+/// default of 1. A table-stated 0 and an unstated priority therefore take
+/// different branches, and a stated 0 is additionally promoted back to 1 inside
+/// the PRIORITY_DIR. `Avoid => 1` lands in the *stated* branch, since the block
+/// above assigns to `$priority` and thereby defines it.
+///
+/// A distinct value is used rather than a new field because the priority takes
+/// part in the duplicate competition as a plain number everywhere else, and
+/// several readers already set values of their own (-1, 2, 5, 10).
+pub const PRIORITY_EXPLICIT_ZERO: i32 = i32::MIN;
+
 impl Default for TagGroup {
     /// An empty group in the main document.
     fn default() -> Self {
@@ -53,6 +81,20 @@ pub struct Tag {
 }
 
 impl Tag {
+    /// The priority as a plain comparable number, with
+    /// [`PRIORITY_EXPLICIT_ZERO`] folded back to the 0 it stands for.
+    ///
+    /// Use it wherever priorities are merely ranked against each other. Only
+    /// the duplicate arbitration needs to tell a table-stated 0 from an
+    /// unstated priority, and it reads [`Tag::priority`] directly.
+    pub fn priority_rank(&self) -> i32 {
+        if self.priority == PRIORITY_EXPLICIT_ZERO {
+            0
+        } else {
+            self.priority
+        }
+    }
+
     /// Get the display value respecting the print_conv option.
     /// When `numeric` is true (-n flag), returns the raw value.
     /// When `numeric` is false, returns the print-converted value.

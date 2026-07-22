@@ -357,7 +357,7 @@ impl ExifReader {
                 // Minolta CameraSettings) must not override a standard EXIF tag.
                 let mn_name_set: std::collections::HashSet<String> = mn_tags
                     .iter()
-                    .filter(|t| t.priority >= 0)
+                    .filter(|t| t.priority_rank() >= 0)
                     .map(|t| t.name.clone())
                     .collect();
                 let exif_has: std::collections::HashSet<String> =
@@ -1263,6 +1263,17 @@ impl ExifReader {
                         .unwrap_or_else(|| value.to_display_string())
                 };
 
+                // Priority the Exif tables state themselves, whether as an
+                // explicit `Priority => 0` or as the `Avoid => 1` that FoundTag
+                // resolves to one (ExifTool.pm:9469-9472). Only the IFD tag
+                // number identifies it: 0xfe54 Contrast is priority 0 while
+                // 0xa408 Contrast is not, so the name alone would be ambiguous.
+                let priority =
+                    if crate::tags::priority0_generated::exif_is_priority0(entry.tag, &name) {
+                        crate::tag::PRIORITY_EXPLICIT_ZERO
+                    } else {
+                        0
+                    };
                 tags.push(Tag {
                     id: TagId::Numeric(entry.tag),
                     name,
@@ -1275,7 +1286,7 @@ impl ExifReader {
                     },
                     raw_value: value,
                     print_value,
-                    priority: 0,
+                    priority,
                 });
             }
         }

@@ -1700,12 +1700,12 @@ impl ExifTool {
             for tag in &tags {
                 let entry = best_priority
                     .entry(tag.name.clone())
-                    .or_insert(tag.priority);
-                if tag.priority > *entry {
-                    *entry = tag.priority;
+                    .or_insert_with(|| tag.priority_rank());
+                if tag.priority_rank() > *entry {
+                    *entry = tag.priority_rank();
                 }
             }
-            tags.retain(|t| t.priority >= *best_priority.get(&t.name).unwrap_or(&0));
+            tags.retain(|t| t.priority_rank() >= *best_priority.get(&t.name).unwrap_or(&0));
 
             // Document formats (PDF/PostScript/DjVu): their native Info metadata is the
             // LOWEST priority in ExifTool — XMP and embedded EXIF both win. Drop the
@@ -2002,6 +2002,20 @@ impl ExifTool {
                     // normal priority of 1.
                     let eff = |i: usize| -> i32 {
                         let t = &tags[i];
+                        // A priority the source table stated itself — an explicit
+                        // `Priority => 0` or the `Avoid => 1` FoundTag turns into
+                        // one. It bypasses the LOW_PRIORITY_DIR default and is
+                        // promoted back to 1 only inside the PRIORITY_DIR
+                        // (ExifTool.pm:9552-9555). A sub-document still never
+                        // displaces the main document's tag.
+                        if t.priority == crate::tag::PRIORITY_EXPLICIT_ZERO {
+                            if t.group.family3 != MAIN_DOCUMENT {
+                                return 0;
+                            }
+                            return i32::from(
+                                priority_dir.as_deref() == Some(t.group.family1.as_str()),
+                            );
+                        }
                         // An explicit `Priority => 0` in Exif.pm wins over the
                         // LOW_PRIORITY_DIR default and is promoted only inside the
                         // PRIORITY_DIR.
@@ -2111,11 +2125,11 @@ impl ExifTool {
             entry.0 += 1;
 
             if entry.0 == 1 {
-                entry.1 = tag.priority;
+                entry.1 = tag.priority_rank();
                 info.insert(tag.name.clone(), value.clone());
-            } else if tag.priority > entry.1 {
+            } else if tag.priority_rank() > entry.1 {
                 // Higher priority tag replaces the previous one
-                entry.1 = tag.priority;
+                entry.1 = tag.priority_rank();
                 info.insert(tag.name.clone(), value.clone());
             } else if self.options.duplicates {
                 let key = format!("{} [{}:{}]", tag.name, tag.group.family0, tag.group.family1);
