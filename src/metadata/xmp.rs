@@ -12,7 +12,7 @@ use xml::reader::{EventReader, XmlEvent};
 pub struct XmpReader;
 
 /// Known XMP namespace prefixes.
-fn namespace_prefix(uri: &str) -> &str {
+pub(crate) fn namespace_prefix(uri: &str) -> &str {
     match uri {
         "http://purl.org/dc/elements/1.1/" => "dc",
         "http://ns.adobe.com/xap/1.0/" => "xmp",
@@ -50,6 +50,48 @@ fn namespace_prefix(uri: &str) -> &str {
         "http://www.metadataworkinggroup.com/schemas/regions/" => "mwg-rs",
         "http://www.metadataworkinggroup.com/schemas/keywords/" => "mwg-kw",
         _ => "",
+    }
+}
+
+/// Record the prefix a namespace URI was declared with, first declaration wins.
+///
+/// ExifTool's `$$et{curNS}` (XMP.pm:3954, `$$curNS{$val} = $usedNS`). The reserved `xml`/`xmlns` prefixes
+/// are never namespace declarations of their own, and the empty URI carries no
+/// namespace, so neither is recorded.
+fn register_declared_prefix(
+    cur_ns: &mut std::collections::HashMap<String, String>,
+    uri: &str,
+    prefix: &str,
+) {
+    if uri.is_empty() || prefix.is_empty() || prefix == "xml" || prefix == "xmlns" {
+        return;
+    }
+    cur_ns
+        .entry(uri.to_string())
+        .or_insert_with(|| prefix.to_string());
+}
+
+/// Family-1 group prefix for an XMP namespace URI.
+///
+/// ExifTool builds the family-1 group as `"$$tagTablePtr{GROUPS}{0}-$ns"`
+/// (XMP.pm:3718) where `$ns` is the namespace prefix that survived
+/// `ParseXMPElement`'s prefix translation (XMP.pm:3905-3987): a URI ExifTool
+/// knows is rewritten to ExifTool's own prefix for it (`$stdNS = $uri2ns{$val}`
+/// at XMP.pm:3905, applied at XMP.pm:3931-3934), and a URI it does not know
+/// keeps the prefix **declared in the file** (XMP.pm:3943-3955, which registers
+/// that prefix in `$$et{curNS}`).
+///
+/// So an unregistered namespace is NOT collapsed into a generic group: a file
+/// declaring `xmlns:ph='https://exiftool.org/ph/1.0/'` reports `XMP-ph`.
+/// `"XMP"` is only the last resort, for a property with no namespace at all.
+fn xmp_group_prefix(uri: &str, cur_ns: &std::collections::HashMap<String, String>) -> String {
+    let std_prefix = namespace_prefix(uri);
+    if !std_prefix.is_empty() {
+        return std_prefix.to_string();
+    }
+    match cur_ns.get(uri) {
+        Some(declared) => declared.clone(),
+        None => "XMP".to_string(),
     }
 }
 
@@ -261,6 +303,14 @@ impl XmpReader {
         let mut cur_uri: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
 
+        // Namespace URI → prefix, ExifTool's `$$et{curNS}` hash (XMP.pm:3954,
+        // `$$curNS{$val} = $usedNS`). The first prefix seen for a URI wins, so a
+        // namespace re-declared later under a different prefix keeps reporting
+        // the same family-1 group -- XMP.pm:3941 "use a consistent prefix over
+        // the entire XMP for a given namespace URI".
+        let mut cur_ns: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
+
         for event in parser {
             match event {
                 Ok(XmlEvent::StartElement {
@@ -270,6 +320,14 @@ impl XmpReader {
                     let ns_uri = name.namespace.as_deref().unwrap_or("");
                     if let Some(pfx) = name.prefix.as_deref() {
                         cur_uri.insert(pfx.to_string(), ns_uri.to_string());
+                        register_declared_prefix(&mut cur_ns, ns_uri, pfx);
+                    }
+                    for a in &attributes {
+                        if let (Some(pfx), Some(uri)) =
+                            (a.name.prefix.as_deref(), a.name.namespace.as_deref())
+                        {
+                            register_declared_prefix(&mut cur_ns, uri, pfx);
+                        }
                     }
                     path.push((ns_uri.to_string(), name.local_name.clone()));
                     current_text.clear();
@@ -366,7 +424,12 @@ impl XmpReader {
                                     description: full_name,
                                     group: TagGroup {
                                         family0: "XMP".into(),
-                                        family1: xmp_family1(&path, &name.local_name, group_prefix),
+                                        family1: xmp_family1(
+                                            &path,
+                                            &name.local_name,
+                                            group_prefix,
+                                            &cur_ns,
+                                        ),
                                         family2: category.into(),
                                         family3: "Main".into(),
                                     },
@@ -412,7 +475,9 @@ impl XmpReader {
                                         description: flat,
                                         group: TagGroup {
                                             family0: "XMP".into(),
-                                            family1: xmp_family1(&path, prop_local, prop_group),
+                                            family1: xmp_family1(
+                                                &path, prop_local, prop_group, &cur_ns,
+                                            ),
                                             family2: prop_cat.into(),
                                             family3: "Main".into(),
                                         },
@@ -476,7 +541,12 @@ impl XmpReader {
                                 description: full_name,
                                 group: TagGroup {
                                     family0: "XMP".into(),
-                                    family1: xmp_family1(&path, &name.local_name, group_prefix),
+                                    family1: xmp_family1(
+                                        &path,
+                                        &name.local_name,
+                                        group_prefix,
+                                        &cur_ns,
+                                    ),
                                     family2: category.into(),
                                     family3: "Main".into(),
                                 },
@@ -623,6 +693,7 @@ impl XmpReader {
                                             &path,
                                             &attr.name.local_name,
                                             group_prefix,
+                                            &cur_ns,
                                         ),
                                         family2: category.to_string(),
                                         family3: "Main".into(),
@@ -675,12 +746,8 @@ impl XmpReader {
                                 // emit all its blank-node properties directly now.
                                 if let Some(bn_props) = blank_node_props.get(nid.as_str()) {
                                     for (prop_ns, prop_local, prop_val) in bn_props.clone() {
-                                        let prop_prefix = namespace_prefix(&prop_ns);
-                                        let prop_prefix = if prop_prefix.is_empty() {
-                                            "XMP"
-                                        } else {
-                                            prop_prefix
-                                        };
+                                        let prop_prefix = xmp_group_prefix(&prop_ns, &cur_ns);
+                                        let prop_prefix = prop_prefix.as_str();
                                         let category = namespace_category(prop_prefix);
                                         let remapped = remap_xmp_tag_name(prop_prefix, &prop_local);
                                         tags.push(Tag {
@@ -802,7 +869,12 @@ impl XmpReader {
                                 description: flat_name,
                                 group: TagGroup {
                                     family0: "XMP".into(),
-                                    family1: xmp_family1(&path, &attr.name.local_name, elem_group),
+                                    family1: xmp_family1(
+                                        &path,
+                                        &attr.name.local_name,
+                                        elem_group,
+                                        &cur_ns,
+                                    ),
                                     family2: category.into(),
                                     family3: "Main".into(),
                                 },
@@ -985,9 +1057,9 @@ impl XmpReader {
                             // Simple lang-alt (not in bag): emit tag with x-default as main value
                             // and per-lang variants
                             if let Some(parent) = path.iter().rev().nth(1) {
-                                let prefix = namespace_prefix(&parent.0);
                                 let tag_name = parent.1.clone();
-                                let group_prefix = if prefix.is_empty() { "XMP" } else { prefix };
+                                let group_prefix = xmp_group_prefix(&parent.0, &cur_ns);
+                                let group_prefix = group_prefix.as_str();
                                 let category = namespace_category(group_prefix);
 
                                 // Check if this lang-alt field is inside a struct context.
@@ -1084,6 +1156,7 @@ impl XmpReader {
                                                 &path,
                                                 &tag_name,
                                                 &emit_group_prefix,
+                                                &cur_ns,
                                             ),
                                             family2: emit_category.clone(),
                                             family3: "Main".into(),
@@ -1128,6 +1201,7 @@ impl XmpReader {
                                                     &path,
                                                     &tag_name,
                                                     &emit_group_prefix,
+                                                    &cur_ns,
                                                 ),
                                                 family2: emit_category.clone(),
                                                 family3: "Main".into(),
@@ -1151,9 +1225,9 @@ impl XmpReader {
                             bag_item_count = 0;
                             // Find the parent property name using full ancestor path
                             if let Some(parent) = path.iter().rev().nth(1) {
-                                let prefix = namespace_prefix(&parent.0);
                                 let tag_name = parent.1.clone();
-                                let group_prefix = if prefix.is_empty() { "XMP" } else { prefix };
+                                let group_prefix = xmp_group_prefix(&parent.0, &cur_ns);
+                                let group_prefix = group_prefix.as_str();
                                 let category = namespace_category(group_prefix);
 
                                 // Build full flat name from ancestor path
@@ -1220,7 +1294,12 @@ impl XmpReader {
                                             description: tag_display.clone(),
                                             group: TagGroup {
                                                 family0: "XMP".into(),
-                                                family1: xmp_family1(&path, &tag_key, group_prefix),
+                                                family1: xmp_family1(
+                                                    &path,
+                                                    &tag_key,
+                                                    group_prefix,
+                                                    &cur_ns,
+                                                ),
                                                 family2: category.into(),
                                                 family3: "Main".into(),
                                             },
@@ -1270,7 +1349,6 @@ impl XmpReader {
                         } else if !list_values.is_empty() {
                             // The parent element is the actual property
                             if let Some(parent) = path.iter().rev().nth(1) {
-                                let prefix = namespace_prefix(&parent.0);
                                 let tag_name = &parent.1;
                                 // Skip RDF structural elements (RDF, Description, etc.)
                                 if tag_name == "RDF"
@@ -1284,7 +1362,8 @@ impl XmpReader {
                                     current_text.clear();
                                     continue;
                                 }
-                                let group_prefix = if prefix.is_empty() { "XMP" } else { prefix };
+                                let group_prefix = xmp_group_prefix(&parent.0, &cur_ns);
+                                let group_prefix = group_prefix.as_str();
                                 let _category = namespace_category(group_prefix);
 
                                 let value = if list_values.len() == 1 {
@@ -1354,7 +1433,12 @@ impl XmpReader {
                                     description: full_name,
                                     group: TagGroup {
                                         family0: "XMP".to_string(),
-                                        family1: xmp_family1(&path, tag_name, &emit_group_prefix),
+                                        family1: xmp_family1(
+                                            &path,
+                                            tag_name,
+                                            &emit_group_prefix,
+                                            &cur_ns,
+                                        ),
                                         family2: emit_cat.to_string(),
                                         family3: "Main".into(),
                                     },
@@ -1404,7 +1488,12 @@ impl XmpReader {
                                 description: flat_name,
                                 group: TagGroup {
                                     family0: "XMP".into(),
-                                    family1: xmp_family1(&path, &name.local_name, group_prefix),
+                                    family1: xmp_family1(
+                                        &path,
+                                        &name.local_name,
+                                        group_prefix,
+                                        &cur_ns,
+                                    ),
                                     family2: category.into(),
                                     family3: "Main".into(),
                                 },
@@ -1495,7 +1584,7 @@ impl XmpReader {
                                 description: full_name,
                                 group: TagGroup {
                                     family0: "XMP".to_string(),
-                                    family1: xmp_family1(&path, tag_name, group_prefix),
+                                    family1: xmp_family1(&path, tag_name, group_prefix, &cur_ns),
                                     family2: category.to_string(),
                                     family3: "Main".into(),
                                 },
@@ -1544,18 +1633,15 @@ impl XmpReader {
                                         .nth(1)
                                         .map(|(ns, _)| ns.as_str())
                                         .unwrap_or("");
-                                    let parent_prefix_ns = namespace_prefix(parent_ns);
-                                    let parent_group = if parent_prefix_ns.is_empty() {
-                                        "XMP"
-                                    } else {
-                                        parent_prefix_ns
-                                    };
+                                    let parent_group = xmp_group_prefix(parent_ns, &cur_ns);
                                     for (prop_ns, prop_local, prop_val) in bn_props {
-                                        let prop_prefix = namespace_prefix(prop_ns);
-                                        let prop_group = if prop_prefix.is_empty() {
-                                            parent_group
+                                        let own = xmp_group_prefix(prop_ns, &cur_ns);
+                                        // A property with no namespace of its own
+                                        // inherits the enclosing property's group.
+                                        let prop_group: &str = if own == "XMP" {
+                                            parent_group.as_str()
                                         } else {
-                                            prop_prefix
+                                            own.as_str()
                                         };
                                         let prop_cat = namespace_category(prop_group);
                                         let prop_uc = ucfirst(&strip_non_ascii(prop_local));
@@ -1571,7 +1657,7 @@ impl XmpReader {
                                                 group: TagGroup {
                                                     family0: "XMP".into(),
                                                     family1: xmp_family1(
-                                                        &path, prop_local, prop_group,
+                                                        &path, prop_local, prop_group, &cur_ns,
                                                     ),
                                                     family2: prop_cat.into(),
                                                     family3: "Main".into(),
@@ -1701,9 +1787,15 @@ impl XmpReader {
                     id: TagId::Text("Flash:Flash".into()),
                     name: "Flash".into(),
                     description: "Flash".into(),
+                    // `Flash` of `%Image::ExifTool::XMP::Composite` (XMP.pm:2745,
+                    // 2808). That table declares no GROUPS, so AddCompositeTags
+                    // gives it `{ 0 => 'Composite', 1 => 'Composite' }`
+                    // (ExifTool.pm:5782-5788); the entry's own
+                    // `Groups => { 2 => 'Camera' }` sets family 2. It is a
+                    // Composite, not a property of the exif: schema.
                     group: TagGroup {
-                        family0: "XMP".into(),
-                        family1: "XMP-exif".into(),
+                        family0: "Composite".into(),
+                        family1: "Composite".into(),
                         family2: "Camera".into(),
                         family3: "Main".into(),
                     },
@@ -2207,15 +2299,24 @@ fn flash_numeric_to_string(val: u32) -> String {
 /// Returns the group prefix of the outermost real property on `path`, skipping
 /// the RDF plumbing the same way [`build_struct_tag_prefix_excluding`] does, or
 /// `None` when there is no enclosing property and the tag is top-level.
-fn xmp_family1(path: &[(String, String)], field_ln: &str, own_prefix: &str) -> String {
-    match struct_root_group_prefix(path, field_ln) {
+fn xmp_family1(
+    path: &[(String, String)],
+    field_ln: &str,
+    own_prefix: &str,
+    cur_ns: &std::collections::HashMap<String, String>,
+) -> String {
+    match struct_root_group_prefix(path, field_ln, cur_ns) {
         Some(root) => format!("XMP-{root}"),
         None => format!("XMP-{own_prefix}"),
     }
 }
 
 /// See [`xmp_family1`]: the group prefix of the outermost enclosing property.
-fn struct_root_group_prefix(path: &[(String, String)], exclude_ln: &str) -> Option<String> {
+fn struct_root_group_prefix(
+    path: &[(String, String)],
+    exclude_ln: &str,
+    cur_ns: &std::collections::HashMap<String, String>,
+) -> Option<String> {
     let rdf_ns = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     let end = path
         .iter()
@@ -2229,11 +2330,11 @@ fn struct_root_group_prefix(path: &[(String, String)], exclude_ln: &str) -> Opti
                 "Description" | "RDF" | "xmpmeta" | "xapmeta" | "Seq" | "Bag" | "Alt" | "li"
             )
     })?;
-    let known = namespace_prefix(ns);
-    if known.is_empty() {
+    let group = xmp_group_prefix(ns, cur_ns);
+    if group == "XMP" {
         None
     } else {
-        Some(known.to_string())
+        Some(group)
     }
 }
 

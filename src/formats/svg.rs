@@ -6,6 +6,40 @@ use crate::metadata::XmpReader;
 use crate::tag::Tag;
 use crate::value::Value;
 
+/// A tag of `%Image::ExifTool::XMP::SVG` (XMP2.pl:1824-1846).
+///
+/// That table is `GROUPS => { 0 => 'SVG', 1 => 'SVG', 2 => 'Image' }`, and it is
+/// the table FoundXMP picks when the property carries no namespace prefix
+/// (XMP.pm:3449-3454). The category applies to every tag it invents there too,
+/// `Xmlns` included, so it is stamped here rather than left to the family-2
+/// table pass, which only knows the tags ExifTool names explicitly.
+fn svg_tag(name: &str, description: &str, value: Value) -> Tag {
+    let mut tag = mktag("SVG", name, description, value);
+    tag.group.family2 = "Image".into();
+    tag
+}
+
+/// Family-1 group of a property in an SVG file that is NOT in the SVG namespace.
+///
+/// FoundXMP routes such a property to `%Image::ExifTool::XMP::otherSVG`
+/// (XMP.pm:3455-3458), whose `GROUPS => { 0 => 'SVG', 2 => 'Unknown' }`
+/// (XMP2.pl:1849-1852) has no family 1: XMP.pm:3718 builds it as
+/// `"$$tagTablePtr{GROUPS}{0}-$ns"`, i.e. `SVG-<prefix>`, where `<prefix>` is
+/// the prefix the file declared -- rewritten to ExifTool's own prefix first if
+/// the URI is one ExifTool knows (XMP.pm:3925-3931).
+fn svg_group_prefix(uri: &str, declared: Option<&str>) -> Option<String> {
+    let declared = declared?;
+    if declared.is_empty() || declared == "svg" || declared == "xml" || declared == "xmlns" {
+        return None;
+    }
+    let std_prefix = crate::metadata::xmp::namespace_prefix(uri);
+    if std_prefix.is_empty() {
+        Some(declared.to_string())
+    } else {
+        Some(std_prefix.to_string())
+    }
+}
+
 pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
     let text = crate::encoding::decode_utf8_or_latin1(data);
 
@@ -34,6 +68,15 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                                  // Track whether each path element had child elements (to skip mixed-content text).
                                  // True = had at least one child element. Parallel to `path`.
     let mut had_child: Vec<bool> = Vec::new();
+    // Family-1 group prefix contributed by each path element, parallel to `path`:
+    // `None` for a property in the SVG namespace itself. GetXMPTagID keeps the
+    // namespace of the FIRST property that contributes to the tag name and has
+    // one (`$namespace = $ns unless $namespace`, XMP.pm:3064), so the emit below
+    // takes the first `Some` along the path.
+    let mut path_group: Vec<Option<String>> = Vec::new();
+    // Prefix the c2pa manifest element was declared with, for its `SVG-<prefix>`
+    // family-1 group (XMP.pm:3718).
+    let mut c2pa_prefix = String::from("c2pa");
 
     for event in EventReader::from_str(text.as_str()) {
         match event {
@@ -50,46 +93,39 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                 if local == "svg" && path.is_empty() {
                     path.push("Svg".into());
                     had_child.push(false);
+                    path_group.push(None);
                     for attr in &attributes {
                         match attr.name.local_name.as_str() {
-                            "width" => tags.push(mktag(
-                                "SVG",
+                            "width" => tags.push(svg_tag(
                                 "ImageWidth",
                                 "Image Width",
                                 Value::String(attr.value.clone()),
                             )),
-                            "height" => tags.push(mktag(
-                                "SVG",
+                            "height" => tags.push(svg_tag(
                                 "ImageHeight",
                                 "Image Height",
                                 Value::String(attr.value.clone()),
                             )),
-                            "version" => tags.push(mktag(
-                                "SVG",
+                            "version" => tags.push(svg_tag(
                                 "SVGVersion",
                                 "SVG Version",
                                 Value::String(attr.value.clone()),
                             )),
-                            "viewBox" | "viewbox" => tags.push(mktag(
-                                "SVG",
+                            "viewBox" | "viewbox" => tags.push(svg_tag(
                                 "ViewBox",
                                 "View Box",
                                 Value::String(attr.value.clone()),
                             )),
-                            "id" => tags.push(mktag(
-                                "SVG",
-                                "ID",
-                                "ID",
-                                Value::String(attr.value.clone()),
-                            )),
+                            "id" => {
+                                tags.push(svg_tag("ID", "ID", Value::String(attr.value.clone())))
+                            }
                             _ => {}
                         }
                     }
                     // Extract default namespace (xmlns="...") from the namespace map
                     if let Some(default_ns) = namespace.get("") {
                         if !default_ns.is_empty() {
-                            tags.push(mktag(
-                                "SVG",
+                            tags.push(svg_tag(
                                 "Xmlns",
                                 "XMLNS",
                                 Value::String(default_ns.to_string()),
@@ -109,6 +145,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                     }
                     path.push("Metadata".into());
                     had_child.push(false);
+                    path_group.push(None);
                     current_text.clear();
                     continue;
                 }
@@ -134,6 +171,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                     // Starting c2pa:manifest
                     if name.prefix.as_deref() == Some("c2pa") || local == "manifest" {
                         in_c2pa = 1;
+                        c2pa_prefix = name.prefix.as_deref().unwrap_or("c2pa").to_string();
                         current_text.clear();
                         continue;
                     }
@@ -152,12 +190,14 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                     let ucfirst_local = svg_ucfirst(local);
                     path.push(ucfirst_local);
                     had_child.push(false);
+                    path_group.push(svg_group_prefix(ns, name.prefix.as_deref()));
                     current_text.clear();
                     continue;
                 }
 
                 path.push(svg_ucfirst(local));
                 had_child.push(false);
+                path_group.push(svg_group_prefix(ns, name.prefix.as_deref()));
                 current_text.clear();
             }
             Ok(XmlEvent::Characters(t)) | Ok(XmlEvent::CData(t)) => {
@@ -184,12 +224,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                             .collect::<String>();
                         if !b64.is_empty() {
                             if let Ok(jumbf_data) = base64_decode(&b64) {
-                                let jumbf_group = crate::tag::TagGroup {
-                                    family0: "JUMBF".into(),
-                                    family1: "JUMBF".into(),
-                                    family2: "Image".into(),
-                                    family3: "Main".into(),
-                                };
+                                let jumbf_group = manifest_group(&c2pa_prefix);
                                 let print = format!(
                                     "(Binary data {} bytes, use -b option to extract)",
                                     jumbf_data.len()
@@ -216,6 +251,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                     in_metadata = false;
                     path.pop();
                     had_child.pop();
+                    path_group.pop();
                     current_text.clear();
                     continue;
                 }
@@ -235,10 +271,22 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
                         // Build tag name from path (skip root "Svg")
                         let tag_name = path.iter().skip(1).cloned().collect::<String>();
                         if !tag_name.is_empty() {
-                            tags.push(mktag("SVG", &tag_name, &tag_name, Value::String(t)));
+                            match path_group.iter().skip(1).flatten().next() {
+                                // A non-SVG namespace: XMP::otherSVG, family 1
+                                // `SVG-<prefix>` and family 2 `Unknown`.
+                                Some(prefix) => {
+                                    let mut tag =
+                                        mktag("SVG", &tag_name, &tag_name, Value::String(t));
+                                    tag.group.family1 = format!("SVG-{prefix}");
+                                    tag.group.family2 = "Unknown".into();
+                                    tags.push(tag);
+                                }
+                                None => tags.push(svg_tag(&tag_name, &tag_name, Value::String(t))),
+                            }
                         }
                     }
                     path.pop();
+                    path_group.pop();
                     // If we've returned to Svg level (path.len() == 1), exit svg_body
                     if path.len() <= 1 {
                         in_svg_body = false;
@@ -249,6 +297,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
 
                 path.pop();
                 had_child.pop();
+                path_group.pop();
                 current_text.clear();
             }
             Err(_) => break,
@@ -277,12 +326,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
             let b64: String = b64_content.chars().filter(|c| !c.is_whitespace()).collect();
             if !b64.is_empty() {
                 if let Ok(jumbf_data) = base64_decode(&b64) {
-                    let jumbf_group = crate::tag::TagGroup {
-                        family0: "JUMBF".into(),
-                        family1: "JUMBF".into(),
-                        family2: "Image".into(),
-                        family3: "Main".into(),
-                    };
+                    let jumbf_group = manifest_group("c2pa");
                     let print = format!(
                         "(Binary data {} bytes, use -b option to extract)",
                         jumbf_data.len()
@@ -303,6 +347,47 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     Ok(tags)
+}
+
+/// Groups of the `JUMBF` tag an SVG's `c2pa:manifest` property produces.
+///
+/// The tag is `'c2pa:manifest' => { Name => 'JUMBF', Groups => { 0 => 'JUMBF' } }`
+/// of `%Image::ExifTool::XMP::otherSVG` (XMP2.pl:1853-1861): family 0 is
+/// overridden to `JUMBF`, but family 1 and 2 are the ones the table gives every
+/// property in a foreign namespace -- `SVG-<prefix>` (XMP.pm:3718) and `Unknown`
+/// (XMP2.pl:1850). The JUMBF boxes *inside* the manifest are a different table
+/// and keep their own groups.
+fn manifest_group(prefix: &str) -> crate::tag::TagGroup {
+    crate::tag::TagGroup {
+        family0: "JUMBF".into(),
+        family1: format!("SVG-{prefix}"),
+        family2: "Unknown".into(),
+        family3: "Main".into(),
+    }
+}
+
+/// Groups of the JUMBF box tags: `%Image::ExifTool::Jpeg2000::Main`,
+/// `GROUPS => { 0 => 'JUMBF', 2 => 'Image' }`.
+fn jumbf_box_group() -> crate::tag::TagGroup {
+    crate::tag::TagGroup {
+        family0: "JUMBF".into(),
+        family1: "JUMBF".into(),
+        family2: "Image".into(),
+        family3: "Main".into(),
+    }
+}
+
+/// Groups of the tags a JUMBF `json` box produces: that box is a SubDirectory to
+/// `Image::ExifTool::JSON::Main` (Jpeg2000.pm:410-418), whose
+/// `GROUPS => { 0 => 'JSON', 1 => 'JSON', 2 => 'Other' }` (JSON.pm:23) applies to
+/// every tag ProcessJSON invents in it.
+fn json_box_group() -> crate::tag::TagGroup {
+    crate::tag::TagGroup {
+        family0: "JSON".into(),
+        family1: "JSON".into(),
+        family2: "Other".into(),
+        family3: "Main".into(),
+    }
 }
 
 /// UCfirst a string, preserving the rest as-is (for SVG element name path building).
@@ -371,12 +456,7 @@ fn parse_jumbf_boxes_svg(data: &[u8], tags: &mut Vec<Tag>, top_level: bool) {
 }
 
 fn parse_jumbf_jumd_svg(data: &[u8], tags: &mut Vec<Tag>, emit_desc: bool) {
-    let jumbf_group = crate::tag::TagGroup {
-        family0: "JUMBF".into(),
-        family1: "JUMBF".into(),
-        family2: "Image".into(),
-        family3: "Main".into(),
-    };
+    let jumbf_group = jumbf_box_group();
 
     let mut pos = 0;
     let mut found_jumd = false;
@@ -442,7 +522,7 @@ fn parse_jumbf_jumd_svg(data: &[u8], tags: &mut Vec<Tag>, emit_desc: bool) {
         } else if tbox == b"json" {
             // Parse JSON content to extract named fields
             if let Ok(json_str) = std::str::from_utf8(content) {
-                parse_jumbf_json_svg(json_str.trim(), tags, &jumbf_group);
+                parse_jumbf_json_svg(json_str.trim(), tags, &json_box_group());
             }
         } else if tbox == b"jumb" {
             // Nested container: recurse without emitting JUMDType/Label again
