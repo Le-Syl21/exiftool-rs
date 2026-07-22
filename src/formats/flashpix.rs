@@ -701,14 +701,19 @@ fn process_vector_prop(
     }
 }
 
+/// Property ID 1 is CodePage in EVERY property set, not only SummaryInfo:
+/// ProcessProperties resolves it from the SummaryInfo table whenever the ID is
+/// not a dictionary entry — "check for common tag ID's: Dictionary, CodePage and
+/// LocaleIndicator" (FlashPix.pm:1775-1781).
+fn push_code_page(val: String, tags: &mut Vec<Tag>) {
+    let cp: u32 = val.parse().unwrap_or(0);
+    let cp_name = codepage_name(cp);
+    tags.push(mk_print("CodePage", Value::String(val), cp_name));
+}
+
 fn process_summary_prop(prop_id: u32, val: String, tags: &mut Vec<Tag>) {
     match prop_id {
-        0x01 => {
-            // CodePage
-            let cp: u32 = val.parse().unwrap_or(0);
-            let cp_name = codepage_name(cp);
-            tags.push(mk_print("CodePage", Value::String(val), cp_name));
-        }
+        0x01 => push_code_page(val, tags),
         0x02 => tags.push(mk("Title", Value::String(val))),
         0x03 => tags.push(mk("Subject", Value::String(val))),
         0x04 => tags.push(mk("Author", Value::String(val))),
@@ -740,6 +745,7 @@ fn process_summary_prop(prop_id: u32, val: String, tags: &mut Vec<Tag>) {
 
 fn process_docinfo_prop(prop_id: u32, val: String, tags: &mut Vec<Tag>) {
     match prop_id {
+        0x01 => push_code_page(val, tags),
         0x02 => tags.push(mk("Category", Value::String(val))),
         0x03 => tags.push(mk("PresentationTarget", Value::String(val))),
         0x04 => tags.push(mk("Bytes", Value::String(val))),
@@ -841,9 +847,24 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
             break;
         }
         let prop_id = r32(data, off);
-        if prop_id == 0 || prop_id == 1 {
+        if prop_id == 0 {
             continue;
-        } // skip dictionary and codepage
+        } // the dictionary itself
+        // ID 1 is not custom unless the dictionary claims it, so it resolves to
+        // SummaryInfo's CodePage here too (FlashPix.pm:1777-1779).
+        if prop_id == 1 && !dict.contains_key(&1) {
+            let prop_off = r32(data, off + 4) as usize;
+            let val_off = set_offset + prop_off;
+            if val_off + 4 < data.len() {
+                let vtype = r32(data, val_off) & 0xFFF;
+                if let Some(v) = extract_prop_val(vtype, &data[val_off + 4..]) {
+                    if !v.is_empty() {
+                        push_code_page(v, tags);
+                    }
+                }
+            }
+            continue;
+        }
 
         let name = match dict.get(&prop_id) {
             Some(n) => n.clone(),
