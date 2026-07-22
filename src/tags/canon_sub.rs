@@ -5,7 +5,7 @@ use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
 /// Canon EV conversion — mirrors Perl's CanonEv() with 1/3 and 2/3 step handling
-fn canon_ev(val: i32) -> f64 {
+pub fn canon_ev(val: i32) -> f64 {
     let sign: f64 = if val < 0 { -1.0 } else { 1.0 };
     let v = val.unsigned_abs();
     let frac = v & 0x1F;
@@ -16,6 +16,36 @@ fn canon_ev(val: i32) -> f64 {
         _ => frac as f64,
     };
     sign * (int_part as f64 + frac_val) / 0x20 as f64
+}
+
+/// Canon.pm:1119 `%pictureStyles` (used with the PrintHex flag).
+pub fn canon_picture_style(val: u32) -> Option<&'static str> {
+    Some(match val {
+        0x00 => "None",
+        0x01 => "Standard",
+        0x02 => "Portrait",
+        0x03 => "High Saturation",
+        0x04 => "Adobe RGB",
+        0x05 => "Low Saturation",
+        0x06 => "CM Set 1",
+        0x07 => "CM Set 2",
+        0x21 => "User Def. 1",
+        0x22 => "User Def. 2",
+        0x23 => "User Def. 3",
+        0x41 => "PC 1",
+        0x42 => "PC 2",
+        0x43 => "PC 3",
+        0x81 => "Standard",
+        0x82 => "Portrait",
+        0x83 => "Landscape",
+        0x84 => "Neutral",
+        0x85 => "Faithful",
+        0x86 => "Monochrome",
+        0x87 => "Auto",
+        0x88 => "Fine Detail",
+        0xff | 0xffff => "n/a",
+        _ => return None,
+    })
 }
 
 /// Print exposure time like Perl's PrintExposureTime
@@ -756,7 +786,8 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
                     family3: "Main".into(),
                 },
                 raw_value: Value::F64(fnum),
-                print_value: format!("{:.1}", fnum),
+                // Canon.pm:2964 — PrintConv => 'sprintf("%.2g",$val)'.
+                print_value: crate::value::format_g_prec(fnum, 2),
                 priority: 0,
             });
         }
@@ -857,7 +888,7 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
     tags
 }
 
-pub fn decode_focal_length(values: &[u16], model: &str) -> Vec<Tag> {
+pub fn decode_focal_length(values: &[u16], model: &str, focal_units: u16) -> Vec<Tag> {
     let mut tags = Vec::new();
     if let Some(&v) = values.first() {
         if v != 0 {
@@ -874,8 +905,21 @@ pub fn decode_focal_length(values: &[u16], model: &str) -> Vec<Tag> {
             tags.push(mkt("FocalType", Value::U16(v), pv));
         }
     }
-    // FocalLength has Priority=0 in Perl (EXIF FocalLength takes precedence)
-    // Suppress to avoid duplicates.
+    // Canon.pm:2709 index 1 — FocalLength. Priority => 0 (the EXIF FocalLength is
+    // more reliable), RawConv => '$val ? $val : undef', ValueConv => '$val /
+    // ($$self{FocalUnits} || 1)', PrintConv => '"$val mm"'. Priority only decides
+    // which copy survives the name-keyed collapse; with the Duplicates option on
+    // ExifTool reports this one next to the EXIF tag, so it must be decoded.
+    if let Some(&v) = values.get(1) {
+        if v != 0 {
+            let fl = v as f64 / if focal_units == 0 { 1.0 } else { focal_units as f64 };
+            tags.push(mkt(
+                "FocalLength",
+                Value::F64(fl),
+                format!("{} mm", crate::value::format_g15(fl)),
+            ));
+        }
+    }
     // FocalPlaneXSize/YSize for older Canon models (Perl: Canon::FocalLength table)
     // Only present for some lower-end models, not 1D/5D/7D series
     let model_upper = model.to_uppercase();

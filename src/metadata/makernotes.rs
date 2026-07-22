@@ -5504,23 +5504,28 @@ fn read_makernote_ifd_with_base(
                     let values: Vec<u16> = (0..count as usize)
                         .map(|i| read_u16(value_data, i * 2, byte_order))
                         .collect();
-                    crate::tags::canon_sub::decode_focal_length(&values, model_name)
+                    // Canon.pm:2721 ValueConv => '$val / ($$self{FocalUnits} || 1)'.
+                    // FocalUnits is a DATAMEMBER of CameraSettings (tag 0x0001),
+                    // which the maker note always stores before tag 0x0002.
+                    let focal_units = tags
+                        .iter()
+                        .find(|t| t.name == "FocalUnits")
+                        .and_then(|t| t.raw_value.as_f64())
+                        .unwrap_or(0.0) as u16;
+                    crate::tags::canon_sub::decode_focal_length(&values, model_name, focal_units)
                 }
                 (Manufacturer::Canon, 0x000D) => {
                     let variant_tags = subs::dispatch_canon_camera_info(&dispatch_ctx);
                     let known_format = !variant_tags.is_empty(); // Only decode for known models
                                                                  // Note: variant_tags contains CameraInfoVariant (internal metadata), don't add to output
                     let mut t = Vec::new();
-                    // Bracket* live at indices 3-5 only in recognised CameraInfo variants;
-                    // for unknown layouts they are garbage (and FileInfo provides the real
-                    // values), so only decode the common fields for known formats.
-                    if known_format {
-                        t.extend(decode_canon_camera_info_common(
-                            value_data,
-                            count as usize,
-                            byte_order,
-                        ));
-                    }
+                    // NOTE: BracketMode/BracketValue/BracketShotNumber are NOT
+                    // CameraInfo tags. Canon.pm defines them at indices 3/4/5 of
+                    // Canon::FileInfo alone (Canon.pm:6929-6940, maker-note tag
+                    // 0x0093, decoded separately below); in every CameraInfo
+                    // variant those offsets hold something else — 0x03/0x04/0x06 of
+                    // CameraInfo1DmkIII are FNumber/ExposureTime/ISO
+                    // (Canon.pm:3433-3435).
                     // Decode CameraInfo1DmkIII fields (FORMAT='int8u', byte offsets)
                     // Perl table: Canon::CameraInfo1DmkIII
                     let d = value_data;
@@ -5557,6 +5562,55 @@ fn read_makernote_ifd_with_base(
                                 0
                             }
                         };
+                        // 0x03 FNumber — Canon.pm:3433 with %ciFNumber
+                        // (Canon.pm:3087): Format int8u, RawConv suppresses 0,
+                        // ValueConv 'exp(($val-8)/16*log(2))',
+                        // PrintConv 'sprintf("%.2g",$val)'.
+                        if d.len() > 0x03 && rb(0x03) != 0 {
+                            let f = (((rb(0x03) as f64) - 8.0) / 16.0
+                                * std::f64::consts::LN_2)
+                                .exp();
+                            t.push(mk_canon_str(
+                                "FNumber",
+                                &crate::value::format_g_prec(f, 2),
+                            ));
+                        }
+                        // 0x04 ExposureTime — %ciExposureTime (Canon.pm:3097):
+                        // ValueConv 'exp(4*log(2)*(1-CanonEv($val-24)))',
+                        // PrintConv Exif::PrintExposureTime.
+                        if d.len() > 0x04 && rb(0x04) != 0 {
+                            let ev = crate::tags::canon_sub::canon_ev(rb(0x04) as i32 - 24);
+                            let secs = (4.0 * std::f64::consts::LN_2 * (1.0 - ev)).exp();
+                            t.push(mk_canon_str(
+                                "ExposureTime",
+                                &crate::tags::canon_sub::print_exposure_time(secs),
+                            ));
+                        }
+                        // 0x06 ISO — %ciISO (Canon.pm:3107): ValueConv
+                        // '100*exp(($val/8-9)*log(2))', PrintConv 'sprintf("%.0f",$val)'.
+                        // (no RawConv: emitted even when the byte is zero)
+                        if d.len() > 0x06 {
+                            let iso = 100.0
+                                * ((rb(0x06) as f64 / 8.0 - 9.0) * std::f64::consts::LN_2).exp();
+                            t.push(mk_canon_str("ISO", &format!("{:.0}", iso)));
+                        }
+                        // 0x18 CameraTemperature — %ciCameraTemperature
+                        // (Canon.pm:3116): ValueConv '$val - 128', PrintConv '"$val C"'.
+                        if d.len() > 0x18 {
+                            t.push(mk_canon_str(
+                                "CameraTemperature",
+                                &format!("{} C", rb(0x18) as i32 - 128),
+                            ));
+                        }
+                        // 0x1d FocalLength — %ciFocalLength (Canon.pm:3134):
+                        // Format int16uRev (big-endian), RawConv suppresses 0,
+                        // PrintConv '"$val mm"'.
+                        if d.len() > 0x1e {
+                            let fl = r16be(0x1d);
+                            if fl != 0 {
+                                t.push(mk_canon_str("FocalLength", &format!("{} mm", fl)));
+                            }
+                        }
                         // Single-byte fields (int8u)
                         if d.len() > 48 {
                             t.push(mk_canon_str("CameraOrientation", &{
@@ -5598,8 +5652,13 @@ fn read_makernote_ifd_with_base(
                                 }
                             }
                         }
+                        // 0x86 PictureStyle — Canon.pm:3466, PrintHex + %pictureStyles.
                         if d.len() > 134 {
-                            t.push(mk_canon_str("PictureStyle", &rb(0x86).to_string()));
+                            let ps = rb(0x86);
+                            let pv = crate::tags::canon_sub::canon_picture_style(ps as u32)
+                                .map(str::to_string)
+                                .unwrap_or_else(|| format!("Unknown (0x{:x})", ps));
+                            t.push(mk_canon_str("PictureStyle", &pv));
                         }
                         // int16u fields (little-endian)
                         if d.len() > 96 {
@@ -6663,6 +6722,21 @@ fn read_makernote_ifd_with_base(
                 for mut tag in sub_tags {
                     if let Some(g1) = group1 {
                         tag.group.family1 = g1.to_string();
+                    }
+                    // Canon defines the same tag NAME in several binary sub-tables
+                    // (Canon.pm: FocusDistanceUpper in CameraInfo1DmkIII 0x43 and
+                    // FileInfo 20, ColorTemperature in CameraInfo1DmkIII 0x62 and
+                    // ProcessingInfo 9, MinFocalLength in CameraSettings 0x17 and
+                    // CameraInfo1DmkIII 0x113, ...). ExifTool reports one entry per
+                    // table under the Duplicates option, so the name-keyed collapse
+                    // in metadata::exif must be able to tell them apart. Our Canon
+                    // decoders key every entry by its NAME, which makes the copies
+                    // indistinguishable; stamp the maker-note tag the sub-table was
+                    // read from so tags from different tables carry different ids.
+                    if manufacturer == Manufacturer::Canon
+                        && matches!(&tag.id, TagId::Text(s) if *s == tag.name)
+                    {
+                        tag.id = TagId::Numeric(tag_id);
                     }
                     tags.push(tag);
                 }
@@ -7953,70 +8027,6 @@ fn manufacturer_group_name(mfr: Manufacturer) -> &'static str {
         Manufacturer::Jvc => "JVC",
         Manufacturer::Unknown => "MakerNotes",
     }
-}
-
-/// Apply manufacturer-specific print conversions.
-/// Decode Canon CameraInfo common fields (indices 3-5: BracketMode/Value/ShotNumber).
-/// These are present in all CameraInfo variants at the same indices.
-fn decode_canon_camera_info_common(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag> {
-    let mut tags = Vec::new();
-    if count < 6 {
-        return tags;
-    }
-
-    // The format varies (int8u for most, int16s for some), but indices 3-5 are common
-    // For int8u format: each element is 1 byte
-    // For int16s format: each element is 2 bytes
-    // Detect based on data size vs count
-    let elem_size = if data.len() >= count * 2 { 2 } else { 1 };
-
-    let read_val = |idx: usize| -> i32 {
-        if elem_size == 2 {
-            read_u16(data, idx * 2, bo) as i16 as i32
-        } else {
-            if idx < data.len() {
-                data[idx] as i8 as i32
-            } else {
-                0
-            }
-        }
-    };
-
-    let bracket_mode = read_val(3);
-    let bracket_value = read_val(4);
-    let bracket_shot = read_val(5);
-
-    let bm_str = match bracket_mode {
-        0 => "Off",
-        1 => "AEB",
-        2 => "FEB",
-        3 => "ISO",
-        4 => "WB",
-        _ => "",
-    };
-    let bm_print = if bm_str.is_empty() {
-        bracket_mode.to_string()
-    } else {
-        bm_str.to_string()
-    };
-    tags.push(Tag {
-        id: TagId::Text("BracketMode".into()),
-        name: "BracketMode".into(),
-        description: "Bracket Mode".into(),
-        group: TagGroup {
-            family0: "MakerNotes".into(),
-            family1: "Canon".into(),
-            family2: "Camera".into(),
-            family3: "Main".into(),
-        },
-        raw_value: Value::I32(bracket_mode),
-        print_value: bm_print,
-        priority: 0,
-    });
-    tags.push(mk_canon("BracketValue", Value::I32(bracket_value)));
-    tags.push(mk_canon("BracketShotNumber", Value::I32(bracket_shot)));
-
-    tags
 }
 
 /// Decode Canon ColorBalance (tag 0x00A9).

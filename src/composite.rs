@@ -1417,10 +1417,12 @@ fn compute_canon_composites(tags: &[Tag]) -> Option<Vec<Tag>> {
         }
     }
 
-    // Canon ISO composite:
+    // Canon ISO composite (Canon.pm:10050):
     // Perl: use CameraISO if numeric, else BaseISO * AutoISO / 100
-    // Priority=0 (EXIF ISO takes precedence over Canon ISO composite)
-    if find_tag(tags, "ISO").is_none() {
+    // Priority => 0 only decides which entry survives the name-keyed collapse, so
+    // the composite still has to be built when the Duplicates option is on — Perl
+    // then reports it next to EXIF:ISO.
+    if crate::metadata::exif::keep_duplicates() || find_tag(tags, "ISO").is_none() {
         let camera_iso_str = find_tag_value(tags, "CameraISO");
         let iso_val = camera_iso_str
             .as_deref()
