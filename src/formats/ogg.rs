@@ -113,11 +113,19 @@ pub fn read_ogg(data: &[u8]) -> Result<Vec<Tag>> {
     if let Some(nominal) = nominal_bitrate {
         if nominal > 0 {
             let duration = data.len() as f64 * 8.0 / nominal as f64;
-            tags.push(mk(
+            // `%Image::ExifTool::Vorbis::Composite` (Vorbis.pm line 138)
+            // declares no GROUPS, so this takes the Composite table's own —
+            // Composite/Composite (ExifTool.pm line 2303) with family 2
+            // defaulting to Other.
+            let mut tag = mk(
                 "Duration",
                 "Duration",
                 Value::String(format!("{} (approx)", convert_duration(duration))),
-            ));
+            );
+            tag.group.family0 = "Composite".into();
+            tag.group.family1 = "Composite".into();
+            tag.group.family2 = "Other".into();
+            tags.push(tag);
         }
     }
 

@@ -132,6 +132,23 @@ for my $table_name (sort keys %Image::ExifTool::allTables) {
     }
 }
 
+# ── Composite tags: every category counts equally ───────────────────────────
+#
+# AddCompositeTags merges every module's Composite table into the single
+# `%Image::ExifTool::Composite` (ExifTool.pm line 2302), whose GROUPS supply
+# families 0 and 1, so all Composite tags share one key per NAME. A name several
+# modules define then collapses: `Duration` is `Other` in AIFF::Composite and
+# Vorbis::Composite, `Audio` in APE::Composite and `Video` in MPEG::Composite.
+# Frequency means nothing here — each entry is a distinct definition and only the
+# composite engine knows which one it evaluated — so level the counts and let
+# every category through, which makes `family2_for` defer to the caller.
+for my $h (\%k3, \%k2) {
+    for my $key (keys %$h) {
+        next unless $key =~ /^Composite\x01/;
+        $_ = 1 for values %{$h->{$key}};
+    }
+}
+
 # The categories tied for the most tables under one key, sorted. Everything
 # else is dropped: it never wins, so storing it would only bloat the tables.
 sub top {

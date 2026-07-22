@@ -349,8 +349,18 @@ pub fn read_openexr(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
     if let Some([x1, y1, x2, y2]) = dim {
         let w = (x2 - x1 + 1) as u32;
         let h = (y2 - y1 + 1) as u32;
-        tags.push(mk("ImageWidth", Value::U32(w)));
-        tags.push(mk("ImageHeight", Value::U32(h)));
+        // `$et->FoundTag('ImageWidth', ...)` / `('ImageHeight', ...)`
+        // (OpenEXR.pm lines 319-320): a bare NAME, so both resolve through
+        // `%Image::ExifTool::Extra` — File/File/Image (ExifTool.pm lines
+        // 1285 and 1670-1671) — not the OpenEXR table.
+        let mk_file = |name: &str, v: u32| {
+            let mut t = mk(name, Value::U32(v));
+            t.group.family0 = "File".into();
+            t.group.family1 = "File".into();
+            t
+        };
+        tags.push(mk_file("ImageWidth", w));
+        tags.push(mk_file("ImageHeight", h));
     }
 
     Ok(tags)

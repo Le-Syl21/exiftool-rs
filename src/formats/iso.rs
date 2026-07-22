@@ -290,13 +290,19 @@ pub fn read_iso(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                     }
                 }
 
-                // VolumeSize composite: block_count * block_size
+                // `%Image::ExifTool::ISO::Composite` VolumeSize (ISO.pm lines
+                // 117-126): a composite tag, so families 0 and 1 come from
+                // `%Image::ExifTool::Composite` (ExifTool.pm line 2303) and
+                // family 2 from its own `GROUPS => { 2 => 'Other' }`.
                 let total_bytes = block_count as u64 * block_size as u64;
-                tags.push(mk_with_print(
+                let mut tag = mk_with_print(
                     "VolumeSize",
                     Value::String(total_bytes.to_string()),
                     format_file_size(total_bytes),
-                ));
+                );
+                tag.group.family0 = "Composite".into();
+                tag.group.family1 = "Composite".into();
+                tags.push(tag);
             }
             255 => {
                 // Terminator

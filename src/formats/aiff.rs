@@ -71,7 +71,15 @@ pub fn read_aiff(data: &[u8]) -> Result<Vec<Tag>> {
                             let s = dur_u % 60;
                             format!("{}:{:02}:{:02}", h, m, s)
                         };
-                        tags.push(mk("Duration", "Duration", Value::String(dur_str)));
+                        // `%Image::ExifTool::AIFF::Composite` (AIFF.pm line
+                        // 136) declares no GROUPS, so this takes the Composite
+                        // table's own — Composite/Composite (ExifTool.pm line
+                        // 2303) with family 2 defaulting to Other.
+                        let mut tag = mk("Duration", "Duration", Value::String(dur_str));
+                        tag.group.family0 = "Composite".into();
+                        tag.group.family1 = "Composite".into();
+                        tag.group.family2 = "Other".into();
+                        tags.push(tag);
                     }
 
                     // AIFC compression type

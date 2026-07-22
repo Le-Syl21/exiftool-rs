@@ -2880,7 +2880,13 @@ fn parse_ilst_triplet(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>
     };
 
     if !display_value.is_empty() {
-        tags.push(mk(tag_name, tag_desc, Value::String(display_value)));
+        // `%Image::ExifTool::QuickTime::iTunesInfo`,
+        // `GROUPS => { 1 => 'iTunes', 2 => 'Audio' }` (QuickTime.pm line 948):
+        // the '----' triplets are a family-1 group of their own, not ItemList.
+        let mut tag = mk(tag_name, tag_desc, Value::String(display_value));
+        tag.group.family1 = "iTunes".into();
+        tag.group.family2 = "Audio".into();
+        tags.push(tag);
     }
 }
 

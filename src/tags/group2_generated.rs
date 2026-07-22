@@ -9562,7 +9562,7 @@ pub static FAMILY2_BY_G0_NAME: &[Family2Entry] = &[
     ("CanonVRD\u{1}PictureStyle", &["Image"]),
     ("CanonVRD\u{1}Rotation", &["Image"]),
     ("CanonVRD\u{1}XMP", &["Other"]),
-    ("Composite\u{1}Duration", &["Other"]),
+    ("Composite\u{1}Duration", &["Audio", "Other", "Video"]),
     ("Composite\u{1}HiddenData", &["Camera"]),
     ("Composite\u{1}ImageHeight", &["Image", "Other"]),
     ("Composite\u{1}ImageWidth", &["Image", "Other"]),

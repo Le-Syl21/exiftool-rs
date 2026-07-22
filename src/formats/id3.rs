@@ -105,7 +105,14 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
                 let duration_secs = (8 * audio_bytes) as f64 / bps as f64;
                 // Format like Perl: "0.02 s (approx)"
                 let print = format!("{:.2} s (approx)", duration_secs);
-                tags.push(mk("Duration", "Duration", Value::String(print)));
+                // `%Image::ExifTool::MPEG::Composite` Duration,
+                // `Groups => { 2 => 'Video' }` (MPEG.pm line 386), reported in
+                // the Composite group like every composite tag.
+                let mut tag = mk("Duration", "Duration", Value::String(print));
+                tag.group.family0 = "Composite".into();
+                tag.group.family1 = "Composite".into();
+                tag.group.family2 = "Video".into();
+                tags.push(tag);
             }
         }
     }

@@ -3,26 +3,16 @@
 # Oracle: tests/expected_groups/*.grps, produced by scripts/gen_group_baselines.sh
 # Regenerate: UPDATE_GROUP_BASELINE=1 cargo test --release --test regression regression_tag_groups
 # Format: <file>\t<tag>\t<family1|family2>
-AIFF.aif	Duration	family1
-AIFF.aif	Duration	family2
-APE.ape	Duration	family2
 Canon1DmkIII.jpg	WhiteBalance	family2
 DNG.dng	Creator	family2
 FujiFilm.raf	PreviewImage	family1
-ISO.iso	VolumeSize	family1
-MP3.mp3	Duration	family1
 Minolta.jpg	WhiteBalance	family1
 Minolta.mrw	ColorMode	family1
 Minolta.mrw	WhiteBalance	family1
-OpenEXR.exr	ImageHeight	family1
-OpenEXR.exr	ImageWidth	family1
 PSP.psp	Copyright	family1
 Pentax.jpg	ISO	family1
 Pentax.jpg	ISO	family2
-QuickTime.m4a	VolumeNormalization	family1
 SigmaDP2.x3f	PreviewImage	family1
-Vorbis.ogg	Duration	family1
-Vorbis.ogg	Duration	family2
 XMP.xml	LightValue	family1
 XMP.xml	LightValue	family2
 XMP3.xmp	Custom0020Property00201	family2
