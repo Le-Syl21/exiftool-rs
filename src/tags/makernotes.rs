@@ -159,6 +159,10 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
             (0x3006, "HometownCity"),
             (0x3007, "BestShotMode"),
             (0x3008, "AutoISO"),
+            // Casio.pm:1591-1605 — `Format => 'int16s'` over an `undef` value.
+            (0x3011, "Sharpness"),
+            (0x3012, "Contrast"),
+            (0x3013, "Saturation"),
             (0x3014, "ISO"),
             (0x3015, "ColorMode"),
             (0x3016, "Enhancement"),

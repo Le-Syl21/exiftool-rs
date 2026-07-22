@@ -9,10 +9,6 @@ CaptureOne.eip	ee	missing	0	Crop	0.000000;0.000000;0.000000;0.000000
 CaptureOne.eip	ee	missing	0	NRAmount	25
 CaptureOne.eip	ee	missing	0	Rotation	0
 CaptureOne.eip	ee	missing	0	UUID	133ACDE8-EF48-4978-9AED-5C6B4DDE9CBF
-Casio2.jpg	ee	missing	0	Contrast	0
-Casio2.jpg	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
-Casio2.jpg	ee	missing	0	Saturation	0
-Casio2.jpg	ee	missing	0	Sharpness	0
 DjVu.djvu	ee	extra	0	URL	https://exiftool.org/
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
 FlashPix.ppt	ee	missing	0	CodePage	Mac Roman (Western European)

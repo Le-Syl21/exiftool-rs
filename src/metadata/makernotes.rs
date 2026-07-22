@@ -5789,6 +5789,16 @@ fn read_makernote_ifd_with_base(
             value = Value::Undefined(value_data.to_vec());
         }
 
+        // Casio.pm:1591-1605 — Sharpness (0x3011), Contrast (0x3012) and
+        // Saturation (0x3013) are `Writable => 'undef'` but carry
+        // `Format => 'int16s'`, so the two stored bytes are one signed word.
+        if manufacturer == Manufacturer::CasioType2
+            && matches!(tag_id, 0x3011..=0x3013)
+            && value_data.len() >= 2
+        {
+            value = Value::I16(read_u16(value_data, 0, byte_order) as i16);
+        }
+
         // Olympus DataDump (0x0f00) / DataDump2 (0x0f01) are Binary => 1: shown as
         // "(Binary data N bytes)". ExifTool's N is length() of the *formatted*
         // int32u value string (e.g. 30 values → 186 chars), NOT the raw byte
@@ -8189,6 +8199,42 @@ fn read_makernote_ifd_with_base(
         }
     }
 
+    // Casio.pm:288-306 — Type2 0x0003 PreviewImageLength and 0x0004
+    // PreviewImageStart are an OffsetPair with `DataTag => 'PreviewImage'`, so
+    // ExifTool extracts a PreviewImage from them as well as from 0x2000, which
+    // holds the very same bytes ("nasty that they double-reference the image!",
+    // Casio.pm:403-404). Both are reported.
+    if manufacturer == Manufacturer::CasioType2 {
+        let start = tags
+            .iter()
+            .find(|t| t.name == "PreviewImageStart")
+            .and_then(|t| t.raw_value.as_u64())
+            .map(|v| v as usize);
+        let len = tags
+            .iter()
+            .find(|t| t.name == "PreviewImageLength")
+            .and_then(|t| t.raw_value.as_u64())
+            .map(|v| v as usize);
+        if let (Some(start), Some(len)) = (start, len) {
+            if len > 0 && start > 0 && start + len <= data.len() {
+                tags.push(Tag {
+                    id: TagId::Text("PreviewImage".to_string()),
+                    name: "PreviewImage".to_string(),
+                    description: "Preview Image".to_string(),
+                    group: TagGroup {
+                        family0: "MakerNotes".to_string(),
+                        family1: "Casio".to_string(),
+                        family2: "Preview".to_string(),
+                        family3: "Main".into(),
+                    },
+                    raw_value: Value::Binary(data[start..start + len].to_vec()),
+                    print_value: format!("(Binary data {} bytes, use -b option to extract)", len),
+                    priority: 0,
+                });
+            }
+        }
+    }
+
     // Decrypt Pentax ShutterCount (0x00A7): val ^ date ^ (0xffffffff - time),
     // where date/time come from the raw Date (0x0006) and Time (0x0007) bytes.
     if manufacturer == Manufacturer::Pentax {
@@ -9785,6 +9831,11 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 };
                 bytes.map(casio_firmware_date)
             }
+            // Casio.pm:1591-1605 — Sharpness/Contrast/Saturation of Type2 carry
+            // no PrintConv at all, so the signed value prints as it is. Answering
+            // here also keeps the name-keyed fallback from applying the unrelated
+            // Normal/Low/High enum of the EXIF tags of the same name.
+            0x3011..=0x3013 => Some(value.to_display_string()),
             // ObjectDistance: val>=0x20000000 ? inf : val/1000, then "$val m".
             0x0006 | 0x2022 => value.as_u64().map(|v| {
                 if v >= 0x2000_0000 {
