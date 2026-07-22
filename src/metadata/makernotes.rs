@@ -37,6 +37,11 @@ pub enum Manufacturer {
     /// GetTagTable then fills from the module name (ExifTool.pm:8982-8990). The
     /// tag IDs live in the shared table, so this variant only names the group.
     Motorola,
+    /// `%Image::ExifTool::FLIR::Main` (FLIR.pm:53-92) — the maker note of a FLIR
+    /// thermal camera, dispatched by MakerNotes.pm:108-117 on
+    /// `$$self{Make} =~ /^(FLIR Systems|Teledyne FLIR)/` with no header
+    /// (`Start => '$valuePtr'`), so the IFD begins at offset 0.
+    Flir,
     Unknown,
 }
 
@@ -5530,6 +5535,9 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
         Manufacturer::DJI
     } else if make_upper.starts_with("GENERAL") || make_upper.starts_with("GEDSC") {
         Manufacturer::GE
+    } else if make_upper.starts_with("FLIR SYSTEMS") || make_upper.starts_with("TELEDYNE FLIR") {
+        // MakerNotes.pm:111.
+        Manufacturer::Flir
     } else {
         Manufacturer::Unknown
     };
@@ -7779,6 +7787,13 @@ fn read_makernote_ifd_with_base(
         } else if name.starts_with("Tag0x") {
             // -u mode: show unknown tags but use standard display for values
             value.to_display_string()
+        } else if manufacturer == Manufacturer::Flir && name == "Emissivity" {
+            // FLIR.pm:72-77 — `PrintConv => 'sprintf("%.2f",$val)'`.
+            value
+                .to_display_string()
+                .parse::<f64>()
+                .map(|v| format!("{:.2}", v))
+                .unwrap_or_else(|_| value.to_display_string())
         } else if manufacturer == Manufacturer::Canon
             && name == "SerialNumber"
             && value.as_u64().is_some()
@@ -8050,7 +8065,13 @@ fn read_makernote_ifd_with_base(
             },
             raw_value: value,
             print_value,
-            priority: 0,
+            // `%FLIR::Main` is `PRIORITY => 0, # (unreliable)` (FLIR.pm:58), so
+            // its Emissivity never displaces the FFF one.
+            priority: if manufacturer == Manufacturer::Flir {
+                crate::tag::PRIORITY_EXPLICIT_ZERO
+            } else {
+                0
+            },
         });
     }
 
@@ -8304,6 +8325,7 @@ fn manufacturer_group_name(mfr: Manufacturer) -> &'static str {
         Manufacturer::Sanyo => "Sanyo",
         Manufacturer::Jvc => "JVC",
         Manufacturer::Motorola => "Motorola",
+        Manufacturer::Flir => "FLIR",
         Manufacturer::Unknown => "MakerNotes",
     }
 }

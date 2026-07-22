@@ -23,8 +23,6 @@ Casio2.jpg	ee	missing	0	Saturation	0
 Casio2.jpg	ee	missing	0	Sharpness	0
 DjVu.djvu	ee	extra	0	URL	https://exiftool.org/
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
-FLIR.jpg	ee	missing	0	DateTimeOriginal	2012:02:11 14:17:08
-FLIR.jpg	ee	missing	0	Emissivity	0.80
 FlashPix.ppt	ee	missing	0	CodePage	Mac Roman (Western European)
 FlashPix.ppt	ee	missing	1	CodePage	Mac Roman (Western European)
 GPS.jpg	ee	missing	0	GPSLatitude	54 deg 59' 22.80"

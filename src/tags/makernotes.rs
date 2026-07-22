@@ -27,6 +27,7 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         | Manufacturer::GE
         | Manufacturer::Sanyo
         | Manufacturer::Jvc => &[][..],
+        Manufacturer::Flir => FLIR_TAGS,
         // Motorola shares the generic tables: Motorola.pm defines only the four
         // IDs already listed there (0x5500, 0x5501, 0x665e, 0x6705).
         Manufacturer::Motorola | Manufacturer::Unknown => &[][..], // Will fallback to generated tables
@@ -1684,6 +1685,15 @@ pub fn olympus_lens_type_name(key: &str) -> Option<&'static str> {
         .find(|&&(k, _)| k == key)
         .map(|&(_, v)| v)
 }
+
+/// `%Image::ExifTool::FLIR::Main` (FLIR.pm:53-92). 0x04-0x06 carry
+/// `Unknown => 1` and are therefore not extracted without -u, and 0x07 onward
+/// are only comments in the Perl table.
+pub static FLIR_TAGS: &[(u16, &str, &str)] = &[
+    (0x0001, "ImageTemperatureMax", "Image Temperature Max"),
+    (0x0002, "ImageTemperatureMin", "Image Temperature Min"),
+    (0x0003, "Emissivity", "Emissivity"),
+];
 
 // Olympus Extender print conversion
 // Key format: sprintf("%x %.2x", byte0, byte2)
