@@ -8208,16 +8208,17 @@ fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag
         // AFPointsInFocus: ceil(num_af/16) int16s words, decoded as bitmask
         let focus_words = (num_af + 15) / 16;
         let focus_base = base + num_af * 4;
+        // DecodeBits over int16s[(NumAFPoints+15)/16]: bit b lives in word b/16
+        // at position b%16. A body with more than 64 AF points needs more than
+        // four words, so the bits do not fit in a single integer.
+        let bit_set = |first_word: usize, b: usize| -> bool {
+            rd(first_word + b / 16) & (1u16 << (b % 16)) != 0
+        };
         if focus_base + focus_words <= count {
-            let mut focus_bits: u64 = 0;
-            for w in 0..focus_words {
-                let word = rd(focus_base + w) as u64;
-                focus_bits |= word << (w * 16);
-            }
             // Print as decimal bit index of set bits
             let mut set_bits: Vec<u32> = Vec::new();
-            for b in 0..num_af.min(64) {
-                if focus_bits & (1u64 << b) != 0 {
+            for b in 0..num_af {
+                if bit_set(focus_base, b) {
                     set_bits.push(b as u32);
                 }
             }
@@ -8237,14 +8238,9 @@ fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag
             // AFPointsSelected: another ceil(num_af/16) words (EOS models)
             let sel_base = focus_base + focus_words;
             if sel_base + focus_words <= count {
-                let mut sel_bits: u64 = 0;
-                for w in 0..focus_words {
-                    let word = rd(sel_base + w) as u64;
-                    sel_bits |= word << (w * 16);
-                }
                 let mut sel_set: Vec<u32> = Vec::new();
-                for b in 0..num_af.min(64) {
-                    if sel_bits & (1u64 << b) != 0 {
+                for b in 0..num_af {
+                    if bit_set(sel_base, b) {
                         sel_set.push(b as u32);
                     }
                 }

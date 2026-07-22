@@ -629,18 +629,22 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         }
     }
     if let Some(v) = get(14) {
-        // Perl: DecodeBits($val, undef, 16) — list set bit numbers, "(none)" if zero.
-        let uv = v as u16;
-        let pv = if uv == 0 {
-            "(none)".to_string()
-        } else {
-            (0..16)
-                .filter(|i| uv & (1 << i) != 0)
-                .map(|i| i.to_string())
-                .collect::<Vec<_>>()
-                .join(",")
-        };
-        tags.push(mkt("AFPointsInFocus", Value::I16(v), pv));
+        // Canon::ShotInfo tag 14: PrintHex with a fixed PrintConv table, and
+        // `RawConv => '$val==0 ? undef : $val'` drops the tag entirely when 0.
+        if v != 0 {
+            let pv = match v as u16 {
+                0x3000 => "None (MF)".to_string(),
+                0x3001 => "Right".to_string(),
+                0x3002 => "Center".to_string(),
+                0x3003 => "Center+Right".to_string(),
+                0x3004 => "Left".to_string(),
+                0x3005 => "Left+Right".to_string(),
+                0x3006 => "Left+Center".to_string(),
+                0x3007 => "All".to_string(),
+                other => format!("Unknown (0x{:x})", other),
+            };
+            tags.push(mkt("AFPointsInFocus", Value::I16(v), pv));
+        }
     }
     if let Some(v) = get(15) {
         // FlashExposureComp: ValueConv => 'CanonEv($val)', PrintConv => PrintFraction

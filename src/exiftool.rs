@@ -1562,6 +1562,28 @@ impl ExifTool {
         // of XResolution, each ZIP member's Zip* set, every GPX track point.
         let collapse_duplicates = !self.options.duplicates && self.options.extract_embedded == 0;
         if collapse_duplicates {
+            // Perl keys its extracted-info hash on the tag NAME alone, so with the
+            // Duplicates option off a tag found in a sub-document is dropped as
+            // soon as the file already reported that name — whatever source
+            // either of them came from, since `FoundTag` never lets a tag
+            // carrying a DOC_NUM override one that does not. (Below, competition
+            // is keyed on the family-0 source, which cannot express that.) This is
+            // why a CR3 read without `-ee` shows the Canon Timed MetaData
+            // FocalLength only when the main document has no FocalLength.
+            {
+                let mut seen: std::collections::HashSet<&str> = tags
+                    .iter()
+                    .filter(|t| t.group.family3 == MAIN_DOCUMENT)
+                    .map(|t| t.name.as_str())
+                    .collect();
+                let mut keep = Vec::with_capacity(tags.len());
+                for t in &tags {
+                    keep.push(t.group.family3 == MAIN_DOCUMENT || seen.insert(t.name.as_str()));
+                }
+                let mut it = keep.into_iter();
+                tags.retain(|_| it.next().unwrap_or(true));
+            }
+
             // Specialized-source precedence: a few container/sidecar groups are
             // authoritative for specific tags and win over a generic EXIF copy
             // (ExifTool reports the GoPro GPMF value). Applied before the priority

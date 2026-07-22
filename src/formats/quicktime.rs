@@ -29,17 +29,8 @@ struct QtState {
     hevc_config_done: bool,
     /// Whether we already emitted image spatial extent (to avoid duplicates)
     ispe_done: bool,
-    /// CTMD sample offset in file (from co64/stco in meta handler track)
-    ctmd_offset: Option<u64>,
-    /// CTMD sample size in bytes
-    ctmd_size: Option<u32>,
     /// Whether the current track's stsd format is CTMD
     current_track_is_ctmd: bool,
-    /// Whether the current track's stsd format is JPEG (for JpgFromRaw)
-    current_track_is_jpeg: bool,
-    /// JPEG track sample offset and size (for JpgFromRaw extraction)
-    jpeg_offset: Option<u64>,
-    jpeg_size: Option<u32>,
     /// ExtractEmbedded level (0=off, 1=-ee, 2=-ee2, 3=-ee3)
     extract_embedded: u8,
     /// Completed tracks for timed metadata extraction
@@ -88,13 +79,15 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
     }
 
     let mut tags = Vec::new();
+    let mut is_crx = false;
 
     // Check for ftyp
     if data.len() >= 12 && &data[4..8] == b"ftyp" {
         let size = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
         let brand_raw = crate::encoding::decode_utf8_or_latin1(&data[8..12]).to_string();
         // Canon CR3 ("crx ") dates are UTC → converted to local (QuickTimeUTC).
-        QUICKTIME_UTC.with(|u| u.set(brand_raw == "crx "));
+        is_crx = brand_raw == "crx ";
+        QUICKTIME_UTC.with(|u| u.set(is_crx));
         let brand_display = ftyp_brand_name(&brand_raw)
             .unwrap_or(brand_raw.as_str())
             .to_string();
@@ -140,9 +133,20 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
         }
     }
 
+    // ExifTool turns ExtractEmbedded on by itself for CRX (Canon CR3/CRM) files —
+    // "temporarily set ExtractEmbedded option for CRX files", QuickTime.pm line
+    // 10010 — so the JpgFromRaw preview and the Canon Timed MetaData samples are
+    // read even without `-ee`. Whether the user asked for `-ee` still matters for
+    // the missing-embedded-data warning, so keep both levels.
+    let sample_ee = if is_crx {
+        extract_embedded.max(1)
+    } else {
+        extract_embedded
+    };
+
     // Parse atom tree
     let mut state = QtState {
-        extract_embedded,
+        extract_embedded: sample_ee,
         ..Default::default()
     };
     parse_atoms(data, 0, data.len(), &mut tags, &mut state, 0);
@@ -210,40 +214,10 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
         }
     }
 
-    // Parse Canon CTMD (Canon Timed MetaData) if found
-    if let (Some(ctmd_off), Some(ctmd_sz)) = (state.ctmd_offset, state.ctmd_size) {
-        let ctmd_off = ctmd_off as usize;
-        let ctmd_sz = ctmd_sz as usize;
-        if ctmd_off + ctmd_sz <= data.len() {
-            parse_canon_ctmd(data, ctmd_off, ctmd_sz, &mut tags);
-        }
-    }
-
-    // Extract JpgFromRaw from JPEG track sample data
-    if let (Some(jpg_off), Some(jpg_sz)) = (state.jpeg_offset, state.jpeg_size) {
-        let jpg_off = jpg_off as usize;
-        let jpg_sz = jpg_sz as usize;
-        if jpg_sz > 0 && jpg_off + jpg_sz <= data.len() {
-            let jpg_data = &data[jpg_off..jpg_off + jpg_sz];
-            tags.push(Tag {
-                id: TagId::Text("JpgFromRaw".into()),
-                name: "JpgFromRaw".into(),
-                description: "Jpg From Raw".into(),
-                group: TagGroup {
-                    family0: "QuickTime".into(),
-                    family1: "QuickTime".into(),
-                    family2: "Preview".into(),
-                    family3: "Main".into(),
-                },
-                raw_value: Value::Binary(jpg_data.to_vec()),
-                print_value: format!("(Binary data {} bytes, use -b option to extract)", jpg_sz),
-                priority: 0,
-            });
-        }
-    }
-
-    // Extract timed metadata from stream tracks when -ee is used
-    if extract_embedded > 0 {
+    // Extract timed metadata from the sample tables (ExifTool's ProcessSamples,
+    // QuickTimeStream.pl line 1304). Each sample that yields anything becomes its
+    // own family-3 document.
+    if sample_ee > 0 {
         // Finalize the last track being built (if any)
         if state.stream_current.handler_type != [0; 4] || state.stream_current.meta_format.is_some()
         {
@@ -253,11 +227,12 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
             let stream_tags = super::quicktime_stream::extract_stream_tags(
                 data,
                 &state.stream_tracks,
-                extract_embedded,
+                sample_ee,
+                &tags,
             );
             if !stream_tags.is_empty() {
                 tags.extend(stream_tags);
-            } else {
+            } else if extract_embedded > 0 {
                 tags.push(mk(
                     "Warning",
                     "Warning",
@@ -273,28 +248,44 @@ pub fn read_quicktime_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<T
     Ok(tags)
 }
 
-/// Parse Canon CTMD (Canon Timed MetaData) records.
-/// Format: records of size(4LE) + type(2LE) + header(6) + data.
-/// Types 7/8/9 contain ExifInfo with embedded MakerNotes.
-fn parse_canon_ctmd(data: &[u8], start: usize, size: usize, tags: &mut Vec<Tag>) {
-    let end = start + size;
-    let mut pos = start;
+/// Parse one Canon Timed MetaData sample (`Image::ExifTool::Canon::ProcessCTMD`,
+/// Canon.pm line 10760).
+///
+/// A sample is a sequence of records: size(int32u) + type(int16u) + a 6-byte
+/// header of unknown meaning, then `size - 12` bytes of payload. A record shorter
+/// than 12 bytes, or one that runs past the end of the sample, ends the walk
+/// (Canon.pm lines 10783-10784).
+///
+/// `main_tags` is the file's main document, read only to pick up the camera Model
+/// needed to select the Canon maker-note sub-tables.
+pub(super) fn process_ctmd(sample: &[u8], main_tags: &[Tag], out: &mut Vec<Tag>) -> bool {
+    let mut pos = 0usize;
 
-    while pos + 12 < end {
-        let rec_size =
-            u32::from_le_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
-        let rec_type = u16::from_le_bytes([data[pos + 4], data[pos + 5]]);
+    // Canon.pm line 10766: `while ($pos + 6 < $dirLen)`.
+    while pos + 6 < sample.len() {
+        if pos + 6 > sample.len() {
+            break;
+        }
+        let rec_size = u32::from_le_bytes([
+            sample[pos],
+            sample[pos + 1],
+            sample[pos + 2],
+            sample[pos + 3],
+        ]) as usize;
+        let rec_type = u16::from_le_bytes([sample[pos + 4], sample[pos + 5]]);
 
-        if rec_size < 12 || pos + rec_size > end {
+        // "Short CTMD record" / "Truncated CTMD record" (Canon.pm 10783-10784).
+        if rec_size < 12 || pos + rec_size > sample.len() {
             break;
         }
 
-        let rec_data = &data[pos + 12..pos + rec_size];
+        let rec_data = &sample[pos + 12..pos + rec_size];
 
         match rec_type {
             1 => {
-                // TimeStamp: 2 bytes skip + year(2LE) + month + day + hour + min + sec + centisec
-                if rec_data.len() >= 9 {
+                // TimeStamp (Canon.pm line 9799): 'x2vCCCCCC' — 2 bytes skipped,
+                // then int16u year and six int8u fields.
+                if rec_data.len() >= 10 {
                     let year = u16::from_le_bytes([rec_data[2], rec_data[3]]);
                     let ts = format!(
                         "{:04}:{:02}:{:02} {:02}:{:02}:{:02}.{:02}",
@@ -304,14 +295,60 @@ fn parse_canon_ctmd(data: &[u8], start: usize, size: usize, tags: &mut Vec<Tag>)
                         rec_data[6],
                         rec_data[7],
                         rec_data[8],
-                        if rec_data.len() > 9 { rec_data[9] } else { 0 }
+                        rec_data[9]
                     );
-                    tags.push(mk("TimeStamp", "Time Stamp", Value::String(ts)));
+                    out.push(mk_ctmd(
+                        "TimeStamp",
+                        "Time Stamp",
+                        "Time",
+                        Value::String(ts),
+                    ));
+                }
+            }
+            4 => {
+                // FocalInfo (Canon.pm line 9855): binary data, FORMAT int32u, so
+                // entry 0 sits at byte 0 and holds a rational32u (two int16u).
+                if let Some(v) = rational32u(rec_data, 0) {
+                    out.push(mk_ctmd(
+                        "FocalLength",
+                        "Focal Length",
+                        "Image",
+                        Value::String(format!("{:.1} mm", v)),
+                    ));
+                }
+            }
+            5 => {
+                // ExposureInfo (Canon.pm line 9867): FORMAT int32u, so entry N
+                // starts at byte 4*N — FNumber (rational32u) at 0, ExposureTime
+                // (rational32u) at 4, ISO (int32u) at 8.
+                if let Some(v) = rational32u(rec_data, 0) {
+                    // Exif::PrintFNumber (Exif.pm line 5715): "%.2f" below f/1.
+                    let s = if v < 1.0 {
+                        format!("{:.2}", v)
+                    } else {
+                        format!("{:.1}", v)
+                    };
+                    out.push(mk_ctmd("FNumber", "F Number", "Image", Value::String(s)));
+                }
+                if let Some(v) = rational32u(rec_data, 4) {
+                    out.push(mk_ctmd(
+                        "ExposureTime",
+                        "Exposure Time",
+                        "Image",
+                        Value::String(crate::tags::canon_sub::print_exposure_time(v)),
+                    ));
+                }
+                if rec_data.len() >= 12 {
+                    let iso =
+                        u32::from_le_bytes([rec_data[8], rec_data[9], rec_data[10], rec_data[11]])
+                            & 0x7fff_ffff;
+                    out.push(mk_ctmd("ISO", "ISO", "Image", Value::U32(iso)));
                 }
             }
             7..=9 => {
-                // ExifInfo: records of size(4LE)+tag(4LE)+TIFF_data
-                // Tags: 0x8769=ExifIFD, 0x927C=MakerNote
+                // ExifInfo (Canon.pm line 9835 table, ProcessExifInfo line 10729):
+                // records of size(int32u) + tag(int32u) + TIFF data.
+                // Tags: 0x8769 = ExifIFD, 0x927c = MakerNoteCanon.
                 let mut epos = 0;
                 while epos + 8 < rec_data.len() {
                     let elen = u32::from_le_bytes([
@@ -332,40 +369,16 @@ fn parse_canon_ctmd(data: &[u8], start: usize, size: usize, tags: &mut Vec<Tag>)
                     let edata = &rec_data[epos + 8..epos + elen];
                     match etag {
                         0x927C => {
-                            // MakerNoteCanon: TIFF containing Canon MakerNote IFD
-                            // CTMD has the full MakerNote — replace any CMT3 versions
-                            let model = tags
+                            let model = main_tags
                                 .iter()
                                 .find(|t| t.name == "Model")
                                 .map(|t| t.print_value.clone())
                                 .unwrap_or_default();
-                            let mn_tags = parse_canon_cr3_makernotes(edata, &model);
-                            for t in mn_tags {
-                                // CTMD replaces the earlier CMT3 MakerNote versions, but
-                                // must not override an authoritative EXIF tag of the same
-                                // name when the Canon copy is lower/equal priority (ExifTool
-                                // keeps ExifIFD FNumber/ExposureTime, which are Canon
-                                // priority-0; but Canon MeteringMode etc. at default
-                                // priority still wins).
-                                // FNumber/ExposureTime are Priority-0 in Canon's table, so
-                                // the authoritative ExifIFD values win; all other Canon tags
-                                // (MeteringMode, etc.) override the EXIF copy.
-                                let exif_wins =
-                                    matches!(t.name.as_str(), "FNumber" | "ExposureTime");
-                                tags.retain(|e| {
-                                    e.name != t.name || (exif_wins && e.group.family0 == "EXIF")
-                                });
-                                tags.push(t);
-                            }
+                            out.extend(parse_canon_cr3_makernotes(edata, &model));
                         }
                         0x8769 => {
-                            // ExifIFD: parse as TIFF
                             if let Ok(exif_tags) = crate::metadata::ExifReader::read(edata) {
-                                for t in exif_tags {
-                                    if !tags.iter().any(|e| e.name == t.name) {
-                                        tags.push(t);
-                                    }
-                                }
+                                out.extend(exif_tags);
                             }
                         }
                         _ => {}
@@ -378,6 +391,44 @@ fn parse_canon_ctmd(data: &[u8], start: usize, size: usize, tags: &mut Vec<Tag>)
 
         pos += rec_size;
     }
+
+    !out.is_empty()
+}
+
+/// A tag from one of the Canon Timed MetaData tables, which all carry
+/// `GROUPS => { 0 => 'MakerNotes', 1 => 'Canon', 2 => 'Image' }` (Canon.pm lines
+/// 9793 for CTMD, 9856 for FocalInfo, 9868 for ExposureInfo); TimeStamp
+/// overrides family 2 with 'Time'.
+fn mk_ctmd(name: &str, description: &str, family2: &str, value: Value) -> Tag {
+    let print_value = value.to_display_string();
+    Tag {
+        id: TagId::Text(name.to_string()),
+        name: name.to_string(),
+        description: description.to_string(),
+        group: TagGroup {
+            family0: "MakerNotes".into(),
+            family1: "Canon".into(),
+            family2: family2.into(),
+            family3: "Main".into(),
+        },
+        raw_value: value,
+        print_value,
+        priority: 0,
+    }
+}
+
+/// ExifTool's `rational32u`: a numerator and a denominator, each `int16u`
+/// (little-endian here — `ProcessCTMD` calls `SetByteOrder('II')`, Canon.pm 10765).
+fn rational32u(data: &[u8], off: usize) -> Option<f64> {
+    if off + 4 > data.len() {
+        return None;
+    }
+    let num = u16::from_le_bytes([data[off], data[off + 1]]) as f64;
+    let den = u16::from_le_bytes([data[off + 2], data[off + 3]]) as f64;
+    if den == 0.0 {
+        return None;
+    }
+    Some(num / den)
 }
 
 /// Convert a bitrate in bps to a human-readable string.
@@ -483,11 +534,13 @@ fn parse_atoms(
                 {
                     state.stream_tracks.push(state.stream_current.clone());
                 }
-                state.stream_current = super::quicktime_stream::TrackInfo::default();
+                state.stream_current = super::quicktime_stream::TrackInfo {
+                    track_number: state.track_count,
+                    ..Default::default()
+                };
                 state.current_stsd_format = None;
                 // Reset per-track CTMD flag when entering a new track
                 state.current_track_is_ctmd = false;
-                state.current_track_is_jpeg = false;
                 parse_atoms(data, content_start, content_end, tags, state, depth + 1);
                 regroup_since(tags, before_track, &track_group);
             }
@@ -606,19 +659,12 @@ fn parse_atoms(
             b"stts" => {
                 parse_stts(data, content_start, content_end, tags, state);
             }
-            // Chunk offset table (32-bit) - used to locate CTMD/JPEG sample data
+            // Chunk offset table (32-bit) — sample start offsets
             b"stco" => {
                 let d = &data[content_start..content_end];
                 if d.len() >= 12 {
                     let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
                     if entry_count > 0 && d.len() >= 8 + entry_count * 4 {
-                        let offset = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as u64;
-                        if state.current_track_is_ctmd && state.ctmd_offset.is_none() {
-                            state.ctmd_offset = Some(offset);
-                        }
-                        if state.current_track_is_jpeg && state.jpeg_offset.is_none() {
-                            state.jpeg_offset = Some(offset);
-                        }
                         // Collect all chunk offsets for stream extraction
                         if state.extract_embedded > 0 {
                             let max_entries = entry_count.min((d.len() - 8) / 4);
@@ -635,21 +681,12 @@ fn parse_atoms(
                     }
                 }
             }
-            // Chunk offset table (64-bit) - used to locate CTMD sample data
+            // Chunk offset table (64-bit) — sample start offsets
             b"co64" => {
                 let d = &data[content_start..content_end];
                 if d.len() >= 16 {
                     let entry_count = u32::from_be_bytes([d[4], d[5], d[6], d[7]]) as usize;
                     if entry_count > 0 && d.len() >= 8 + entry_count * 8 {
-                        let offset = u64::from_be_bytes([
-                            d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-                        ]);
-                        if state.current_track_is_ctmd && state.ctmd_offset.is_none() {
-                            state.ctmd_offset = Some(offset);
-                        }
-                        if state.current_track_is_jpeg && state.jpeg_offset.is_none() {
-                            state.jpeg_offset = Some(offset);
-                        }
                         // Collect all chunk offsets for stream extraction
                         if state.extract_embedded > 0 {
                             let max_entries = entry_count.min((d.len() - 8) / 8);
@@ -670,25 +707,12 @@ fn parse_atoms(
                     }
                 }
             }
-            // Sample sizes - used to get CTMD/JPEG sample size
+            // Sample sizes
             b"stsz" => {
                 let d = &data[content_start..content_end];
                 if d.len() >= 12 {
                     let sample_size = u32::from_be_bytes([d[4], d[5], d[6], d[7]]);
                     let sample_count = u32::from_be_bytes([d[8], d[9], d[10], d[11]]) as usize;
-                    let first_size = if sample_size > 0 {
-                        sample_size
-                    } else if d.len() >= 16 {
-                        u32::from_be_bytes([d[12], d[13], d[14], d[15]])
-                    } else {
-                        0
-                    };
-                    if state.current_track_is_ctmd && state.ctmd_size.is_none() && first_size > 0 {
-                        state.ctmd_size = Some(first_size);
-                    }
-                    if state.current_track_is_jpeg && state.jpeg_size.is_none() && first_size > 0 {
-                        state.jpeg_size = Some(first_size);
-                    }
                     // Collect all sample sizes for stream extraction
                     if state.extract_embedded > 0 {
                         if sample_size > 0 {
@@ -1958,6 +1982,48 @@ fn parse_pitm(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
     ));
 }
 
+/// Where the child atoms of a hybrid "binary data + QuickTime container" block
+/// start, or `None` if it holds none — port of `ProcessHybrid` (QuickTime.pm line
+/// 9660). The scan looks, from byte 8 on, for a chain of well-formed atoms whose
+/// last one ends exactly at the end of the block.
+fn hybrid_child_start(entry: &[u8]) -> Option<usize> {
+    let end = entry.len();
+    let mut pos = 8usize;
+    let mut probe = pos;
+    while pos + 8 <= end {
+        if probe + 8 > end {
+            pos += 1;
+            probe = pos;
+            continue;
+        }
+        // "look only for well-behaved tag ID's" (\w or space)
+        let well_behaved = entry[probe + 4..probe + 8]
+            .iter()
+            .all(|&b| b.is_ascii_alphanumeric() || b == b'_' || b == b' ');
+        if !well_behaved {
+            pos += 1;
+            probe = pos;
+            continue;
+        }
+        let size = u32::from_be_bytes([
+            entry[probe],
+            entry[probe + 1],
+            entry[probe + 2],
+            entry[probe + 3],
+        ]) as usize;
+        if size + probe == end {
+            return Some(pos);
+        }
+        if size < 8 || size + probe + 8 > end {
+            pos += 1;
+            probe = pos;
+        } else {
+            probe += size;
+        }
+    }
+    None
+}
+
 /// Parse sample description (stsd) for codec info.
 /// The stsd contains: version+flags(4), entry_count(4), then entries.
 /// Each entry: size(4), format(4), reserved(6), data_ref_index(2), then format-specific data.
@@ -1991,10 +2057,30 @@ fn parse_stsd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
             Value::String("CTMD".into()),
         ));
     }
-    // Check for JPEG or CRAW format (Canon CR3 JpgFromRaw track)
-    // First CRAW track in CR3 contains JpgFromRaw data
-    if format == b"JPEG" || (format == b"CRAW" && state.jpeg_offset.is_none()) {
-        state.current_track_is_jpeg = true;
+    // A video track is walked for samples only when its sample description holds
+    // one of the boxes ExifTool saves for it — `vide => { %eeStd, JPEG => 'stsd' }`
+    // (QuickTime.pm line 525). In a CR3 all three image tracks are 'CRAW'; only the
+    // preview track carries a nested 'JPEG' box.
+    if state.extract_embedded > 0 && entry_size >= 8 && entry_size <= entry.len() {
+        let entry = &entry[..entry_size];
+        if let Some(child_start) = hybrid_child_start(entry) {
+            let mut pos = child_start;
+            while pos + 8 <= entry.len() {
+                let size = u32::from_be_bytes([
+                    entry[pos],
+                    entry[pos + 1],
+                    entry[pos + 2],
+                    entry[pos + 3],
+                ]) as usize;
+                if size < 8 || pos + size > entry.len() {
+                    break;
+                }
+                if &entry[pos + 4..pos + 8] == b"JPEG" {
+                    state.stream_current.has_jpeg_box = true;
+                }
+                pos += size;
+            }
+        }
     }
 
     // Record meta format for stream extraction
@@ -2322,26 +2408,9 @@ fn parse_stts(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
         }
     }
 
-    // For metadata tracks (handler "meta"), emit SampleTime and SampleDuration
-    if &state.handler_type == b"meta" && state.current_track_is_ctmd {
-        if entry_count > 0 {
-            let off = 8;
-            let _count = u32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]]);
-            let delta = u32::from_be_bytes([d[off + 4], d[off + 5], d[off + 6], d[off + 7]]);
-            // SampleTime=0, SampleDuration=count/delta (simplified)
-            let sample_time_s = 0u32;
-            let sample_dur_s = delta as f64; // In Perl, uses movie timescale; simplified here
-            tags.push(mk(
-                "SampleTime",
-                "Sample Time",
-                Value::String(format!("{} s", { sample_time_s })),
-            ));
-            tags.push(mk(
-                "SampleDuration",
-                "Sample Duration",
-                Value::String(format!("{:.2} s", sample_dur_s)),
-            ));
-        }
+    // A 'meta' handler has no frame rate to compute; its sample times come from
+    // ProcessSamples, not from here.
+    if &state.handler_type == b"meta" {
         return;
     }
 
@@ -3265,15 +3334,33 @@ fn parse_canon_uuid(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) 
                 }
             }
             b"CMT3" => {
-                // MakerNoteCanon: TIFF whose IFD0 IS the Canon MakerNotes IFD
-                // Note: CMT3 has incomplete sub-tables (truncated ColorData).
-                // CTMD type 8 has the full MakerNote with correct ColorData.
-                // Only add CMT3 tags that CTMD doesn't provide (CTMD parsed later).
+                // MakerNoteCanon: TIFF whose IFD0 IS the Canon MakerNotes IFD.
+                // CMT3 is read after CMT2, so ExifTool's FoundTag ("take tag with
+                // highest priority", incoming wins on a tie) makes the Canon copy
+                // of a tag the ExifIFD also carries the one reported once
+                // duplicates are collapsed. Our duplicate resolution only
+                // arbitrates within one family-0 source, so drop the superseded
+                // ExifIFD copy here.
                 if content_end > content_start {
                     let tiff_data = &data[content_start..content_end];
                     let mn_tags = parse_canon_cr3_makernotes(tiff_data, &model);
-                    // Store CMT3 tags — they may be overwritten by CTMD later
-                    tags.extend(mn_tags);
+                    // Restricted to the tags where the difference has been checked
+                    // against Perl's own output for a CR3: Canon.pm gives its
+                    // MeteringMode, WhiteBalance and ExposureCompensation no
+                    // `Priority => 0`, so the Canon copy is what ExifTool reports.
+                    // Tags Canon.pm does mark `Priority => 0` (FocalLength line
+                    // 2710, BaseISO 2789, FNumber 2959, ExposureTime 2973/2986,
+                    // OwnerName 4088, LensSerialNumber 4211, ISO 10055) must not
+                    // displace anything, and the rest are left alone rather than
+                    // guessed at.
+                    const CANON_SUPERSEDES_EXIF: &[&str] =
+                        &["ExposureCompensation", "MeteringMode", "WhiteBalance"];
+                    for t in mn_tags {
+                        if CANON_SUPERSEDES_EXIF.contains(&t.name.as_str()) {
+                            tags.retain(|e| e.name != t.name || e.group.family0 != "EXIF");
+                        }
+                        tags.push(t);
+                    }
                 }
             }
             b"CMT4" => {

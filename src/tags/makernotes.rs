@@ -38,7 +38,15 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
 
     // Fallback to generated tables
     let gen_table = match manufacturer {
-        Manufacturer::Canon => Some(super::generated::GENERATED_CANON_TAGS),
+        // The generated Canon table merges %Canon::Main with the Canon sub-tables
+        // (ColorData, ShotInfo, …), whose entry indices collide with maker-note
+        // tag IDs: index 0x3d of ColorData is RFLensType, index 0x3f is
+        // WB_RGGBLevelsAsShot, while %Canon::Main has no 0x003d and no 0x003f at
+        // all. Consult the merged table only for IDs %Canon::Main really defines.
+        Manufacturer::Canon if CANON_MAIN_IDS.binary_search(&tag_id).is_ok() => {
+            Some(super::generated::GENERATED_CANON_TAGS)
+        }
+        Manufacturer::Canon => None,
         Manufacturer::Nikon | Manufacturer::NikonOld => {
             Some(super::generated::GENERATED_NIKON_TAGS)
         }
@@ -247,6 +255,20 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
 }
 
 // Tag table format: (tag_id, name, description)
+
+/// Tag IDs defined by `%Image::ExifTool::Canon::Main` (Canon.pm), sorted.
+/// The Canon maker note's main IFD knows no others; anything else in the merged
+/// generated table is a sub-table entry index that happens to share the number.
+static CANON_MAIN_IDS: &[u16] = &[
+    0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000a, 0x000c, 0x000d,
+    0x000e, 0x000f, 0x0010, 0x0011, 0x0012, 0x0013, 0x0015, 0x001a, 0x001c, 0x001d, 0x001e, 0x0023,
+    0x0024, 0x0025, 0x0026, 0x0027, 0x0028, 0x0029, 0x002f, 0x0035, 0x0038, 0x003c, 0x0081, 0x0082,
+    0x0083, 0x0090, 0x0091, 0x0092, 0x0093, 0x0094, 0x0095, 0x0096, 0x0097, 0x0098, 0x0099, 0x009a,
+    0x00a0, 0x00a1, 0x00a2, 0x00a3, 0x00a4, 0x00a9, 0x00aa, 0x00ae, 0x00b0, 0x00b1, 0x00b2, 0x00b3,
+    0x00b4, 0x00b6, 0x00d0, 0x00e0, 0x4001, 0x4002, 0x4003, 0x4005, 0x4008, 0x4009, 0x4010, 0x4013,
+    0x4015, 0x4016, 0x4018, 0x4019, 0x4020, 0x4021, 0x4024, 0x4025, 0x4026, 0x4028, 0x403f, 0x4053,
+    0x4059,
+];
 
 static CANON_TAGS: &[(u16, &str, &str)] = &[
     (0x0001, "CanonCameraSettings", "Camera Settings"),

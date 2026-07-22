@@ -7,6 +7,10 @@
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
+/// Handler types processed according to their MetaFormat / OtherFormat
+/// (`%processByMetaFormat`, QuickTimeStream.pl line 78).
+const PROCESS_BY_META_FORMAT: &[&[u8; 4]] = &[b"meta", b"data", b"sbtl", b"ctbx"];
+
 // ─── conversion factors ───
 const KNOTS_TO_KPH: f64 = 1.852;
 const MPS_TO_KPH: f64 = 3.6;
@@ -17,8 +21,15 @@ const MPH_TO_KPH: f64 = 1.60934;
 /// Information about one timed-metadata track.
 #[derive(Debug, Clone, Default)]
 pub struct TrackInfo {
+    /// 1-based index of the `trak` atom in the file. ExifTool sets `SET_GROUP1`
+    /// to `Track<n>` while walking a track's samples, so every tag those samples
+    /// produce reports that family-1 group whatever table it came from.
+    pub track_number: u32,
     /// Handler type (e.g. b"vide", b"soun", b"meta", b"text", etc.)
     pub handler_type: [u8; 4],
+    /// Whether the sample description holds a nested `JPEG` box, the marker
+    /// ExifTool uses to decide a video track carries a JpgFromRaw preview.
+    pub has_jpeg_box: bool,
     /// MetaFormat / OtherFormat from stsd (e.g. "gpmd", "camm", "mebx", "tx3g", etc.)
     pub meta_format: Option<String>,
     /// Media timescale from mdhd
@@ -46,25 +57,43 @@ pub struct StreamState {
 // ─── public entry point ───
 
 /// Extract timed metadata tags from MP4 sample data.
-/// Called after normal atom parsing when `extract_embedded > 0`.
-pub fn extract_stream_tags(data: &[u8], tracks: &[TrackInfo], _extract_embedded: u8) -> Vec<Tag> {
+///
+/// Port of `ProcessSamples` (QuickTimeStream.pl line 1304). `main_tags` is the
+/// file's main document, read only where a sample parser needs context from it
+/// (the camera Model, for Canon Timed MetaData).
+pub fn extract_stream_tags(
+    data: &[u8],
+    tracks: &[TrackInfo],
+    _extract_embedded: u8,
+    main_tags: &[Tag],
+) -> Vec<Tag> {
     let mut tags = Vec::new();
     let mut doc_count: u32 = 0;
 
     for track in tracks {
-        let handler = &track.handler_type;
-        // Skip audio/video tracks (we only want timed metadata)
-        if handler == b"soun" || handler == b"vide" {
+        // Handler-type selection, QuickTimeStream.pl lines 1319-1331: a video
+        // track is walked only when its sample description names a format we can
+        // decode (`$$ee{JPEG}`, the CR3 preview), an audio track never is, and
+        // any other handler goes through as itself.
+        let handler = track.handler_type;
+        let meta_format = track.meta_format.as_deref().unwrap_or("");
+        let sample_type: [u8; 4] = if &handler == b"vide" {
+            if track.has_jpeg_box {
+                *b"JPEG"
+            } else {
+                continue;
+            }
+        } else if &handler == b"soun" {
             continue;
-        }
+        } else {
+            handler
+        };
 
         // Compute per-sample (offset, size, time, duration)
         let samples = compute_samples(track);
         if samples.is_empty() {
             continue;
         }
-
-        let meta_format = track.meta_format.as_deref().unwrap_or("");
 
         for s in &samples {
             if s.offset as usize + s.size as usize > data.len() || s.size == 0 {
@@ -74,42 +103,56 @@ pub fn extract_stream_tags(data: &[u8], tracks: &[TrackInfo], _extract_embedded:
 
             let mut sample_tags = Vec::new();
 
-            // Dispatch based on handler_type and meta_format
-            let dispatched = dispatch_sample(
-                sample_data,
-                handler,
-                meta_format,
-                s.time,
-                s.duration,
-                &mut sample_tags,
-            );
+            let dispatched = if &sample_type == b"JPEG" {
+                // QuickTime::Stream 'JPEG' tag (QuickTimeStream.pl line 316):
+                // JpgFromRaw, validated as an image by ValidateImage().
+                process_jpg_from_raw(sample_data, &mut sample_tags)
+            } else if PROCESS_BY_META_FORMAT.contains(&&handler) && meta_format == "CTMD" {
+                // QuickTime::Stream 'CTMD' tag (QuickTimeStream.pl line 227)
+                // → Image::ExifTool::Canon::CTMD.
+                super::quicktime::process_ctmd(sample_data, main_tags, &mut sample_tags)
+            } else {
+                dispatch_sample(
+                    sample_data,
+                    &handler,
+                    meta_format,
+                    s.time,
+                    s.duration,
+                    &mut sample_tags,
+                )
+            };
 
             if dispatched && !sample_tags.is_empty() {
                 doc_count += 1;
-                // Prepend SampleTime / SampleDuration
+                // FoundSomething (QuickTimeStream.pl line 967) opens the document
+                // with the sample's decoding time and duration.
+                if let Some(d) = s.duration {
+                    sample_tags.insert(
+                        0,
+                        mk_stream(
+                            "SampleDuration",
+                            "Sample Duration",
+                            Value::String(convert_duration(d)),
+                        ),
+                    );
+                }
                 if let Some(t) = s.time {
                     sample_tags.insert(
                         0,
                         mk_stream(
                             "SampleTime",
                             "Sample Time",
-                            Value::String(format!("{:.6}", t)),
+                            Value::String(convert_duration(t)),
                         ),
                     );
                 }
-                if let Some(d) = s.duration {
-                    sample_tags.insert(
-                        1,
-                        mk_stream(
-                            "SampleDuration",
-                            "Sample Duration",
-                            Value::String(format!("{:.6}", d)),
-                        ),
-                    );
-                }
-                // Tag each with document number
+                let doc = format!("Doc{}", doc_count);
+                let group1 = format!("Track{}", track.track_number);
                 for t in &mut sample_tags {
-                    t.description = format!("{} (Doc{})", t.description, doc_count);
+                    t.group.family3 = doc.clone();
+                    if track.track_number > 0 {
+                        t.group.family1 = group1.clone();
+                    }
                 }
                 tags.extend(sample_tags);
             }
@@ -122,6 +165,54 @@ pub fn extract_stream_tags(data: &[u8], tracks: &[TrackInfo], _extract_embedded:
     }
 
     tags
+}
+
+/// `JpgFromRaw` from a CR3 preview sample. ExifTool runs it through
+/// `ValidateImage()` (ExifTool.pm line 6414), which warns about a value that is
+/// not a JPEG but still keeps it unless the tag was specifically requested.
+fn process_jpg_from_raw(sample: &[u8], tags: &mut Vec<Tag>) -> bool {
+    if sample.is_empty() {
+        return false;
+    }
+    tags.push(Tag {
+        id: TagId::Text("JpgFromRaw".into()),
+        name: "JpgFromRaw".into(),
+        description: "Jpg From Raw".into(),
+        group: TagGroup {
+            family0: "QuickTime".into(),
+            family1: "QuickTime".into(),
+            family2: "Preview".into(),
+            family3: "Main".into(),
+        },
+        raw_value: Value::Binary(sample.to_vec()),
+        print_value: format!(
+            "(Binary data {} bytes, use -b option to extract)",
+            sample.len()
+        ),
+        priority: 0,
+    });
+    true
+}
+
+/// ExifTool's `ConvertDuration` (ExifTool.pm line 6877), the PrintConv of
+/// `SampleTime` and `SampleDuration` (QuickTimeStream.pl lines 161-162).
+fn convert_duration(secs: f64) -> String {
+    if secs == 0.0 {
+        return "0 s".to_string();
+    }
+    let (sign, t) = if secs < 0.0 { ("-", -secs) } else { ("", secs) };
+    if t < 30.0 {
+        return format!("{}{:.2} s", sign, t);
+    }
+    let rounded = (t + 0.5) as u64;
+    let h = rounded / 3600;
+    let m = (rounded / 60) % 60;
+    let s = rounded % 60;
+    if h > 24 {
+        let d = h / 24;
+        return format!("{}{} days {}:{:02}:{:02}", sign, d, h - d * 24, m, s);
+    }
+    format!("{}{}:{:02}:{:02}", sign, h, m, s)
 }
 
 // ─── sample computation ───
@@ -1631,7 +1722,7 @@ fn scan_mdat_for_freegps(data: &[u8], tags: &mut Vec<Tag>, doc_count: &mut u32) 
                 if process_freegps(block, &mut sample_tags) && !sample_tags.is_empty() {
                     *doc_count += 1;
                     for t in &mut sample_tags {
-                        t.description = format!("{} (Doc{})", t.description, doc_count);
+                        t.group.family3 = format!("Doc{}", doc_count);
                     }
                     tags.extend(sample_tags);
                 }
