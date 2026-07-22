@@ -62,6 +62,24 @@ pub fn read_bpg(data: &[u8]) -> Result<Vec<Tag>> {
         Value::U32(bit_depth as u32),
     ));
 
+    // ColorSpace (BPG::Main 4.3, mask 0x00f0): a plain PrintConv hash with no
+    // default entry, so an unlisted value prints as the raw number.
+    let cs_name = match (word & 0x00f0) >> 4 {
+        0 => "YCbCr (BT 601)".to_string(),
+        1 => "RGB".to_string(),
+        2 => "YCgCo".to_string(),
+        3 => "YCbCr (BT 709)".to_string(),
+        4 => "YCbCr (BT 2020)".to_string(),
+        5 => "BT 2020 Constant Luminance".to_string(),
+        n => n.to_string(),
+    };
+    tags.push(mktag(
+        "File",
+        "ColorSpace",
+        "Color Space",
+        Value::String(cs_name),
+    ));
+
     // Flags: bitmask (bit 0=Animation, bit 1=Limited Range, bit 3=Extension Present)
     let mut flag_parts: Vec<&str> = Vec::new();
     if flags & 0x0001 != 0 {
