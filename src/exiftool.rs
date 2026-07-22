@@ -1743,19 +1743,6 @@ impl ExifTool {
                 });
             }
 
-            // QuickTime container dates are primary over an embedded EXIF copy
-            // (ExifTool reports the QuickTime CreateDate/ModifyDate for MOV/CR3/etc.).
-            {
-                for dname in ["CreateDate", "ModifyDate"] {
-                    let has_qt = tags
-                        .iter()
-                        .any(|t| t.name == dname && t.group.family1 == "QuickTime");
-                    if has_qt {
-                        tags.retain(|t| t.name != dname || t.group.family1 == "QuickTime");
-                    }
-                }
-            }
-
             // ExifTool FoundTag rule. Among duplicates of the same tag name,
             // ExifTool keeps one primary instance decided purely by priority --
             // the comparison is group-blind (ExifTool.pm `FoundTag`, "take tag
@@ -1905,7 +1892,17 @@ impl ExifTool {
                         }
                         // A QuickTime movie's tracks are separate documents to
                         // ExifTool, so a track tag never overrides the movie's.
-                        "QuickTime" => g1 == "QuickTime" || g1.starts_with("Track"),
+                        // The movie's own tags keep the default priority: the sole
+                        // `PRIORITY => 0` table in QuickTime.pm is Bitrate (:1162,
+                        // "often filled with zeros"), whose three tags are named here.
+                        "QuickTime" => {
+                            g1.starts_with("Track")
+                                || (g1 == "QuickTime"
+                                    && matches!(
+                                        name,
+                                        "AverageBitrate" | "BufferSize" | "MaxBitrate"
+                                    ))
+                        }
                         // ExifTool's LOW_PRIORITY_DIR. SubIFDs are deliberately
                         // absent: ExifTool never demotes them, and a NEF's
                         // full-resolution SubIFD1 must win StripOffsets by last-wins.
