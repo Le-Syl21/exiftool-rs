@@ -111,7 +111,14 @@ pub fn read_gif(data: &[u8]) -> Result<Vec<Tag>> {
                             // CR/LF); ExifTool renders control bytes as "." only in
                             // text display (Printable), keeping them for JSON.
                             let text = crate::encoding::decode_utf8_or_latin1(&comment).to_string();
-                            tags.push(mk("Comment", "Comment", Value::String(text)));
+                            // `$et->FoundTag('Comment', $comment)` (GIF.pm line
+                            // 406): a bare NAME, so it resolves through
+                            // `%Image::ExifTool::Extra` — File/File/Image
+                            // (ExifTool.pm line 1311) — not the GIF table.
+                            let mut tag = mk("Comment", "Comment", Value::String(text));
+                            tag.group.family0 = "File".into();
+                            tag.group.family1 = "File".into();
+                            tags.push(tag);
                         }
                     }
                     // Graphic Control Extension

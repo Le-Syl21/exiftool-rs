@@ -310,7 +310,12 @@ fn make_png_text_tag(key: &str, value: &str) -> Tag {
         description: mapped_name.to_string(),
         group: TagGroup {
             family0: "PNG".to_string(),
-            family1: "PNG-tEXt".to_string(),
+            // `%Image::ExifTool::PNG::TextualData` (PNG.pm line 592) states
+            // only `GROUPS => { 2 => 'Image' }`, so families 0 and 1 both fall
+            // back to the module name, `PNG` — the tEXt/zTXt/iTXt chunk a tag
+            // came out of is not a group of its own (unlike pHYs and cICP,
+            // which do declare one).
+            family1: "PNG".to_string(),
             family2: "Image".to_string(),
             family3: "Main".into(),
         },

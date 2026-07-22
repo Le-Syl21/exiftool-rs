@@ -8,15 +8,7 @@ AIFF.aif	Duration	family2
 APE.ape	Duration	family2
 Canon1DmkIII.jpg	WhiteBalance	family2
 DNG.dng	Creator	family2
-Font.afm	Comment	family1
-Font.afm	Comment	family2
-Font.dfont	ApplicationVersion	family1
-Font.pfa	Comment	family1
-Font.pfa	Comment	family2
-Font.pfb	Comment	family1
-Font.pfb	Comment	family2
 FujiFilm.raf	PreviewImage	family1
-GIF.gif	Comment	family1
 ISO.iso	VolumeSize	family1
 MP3.mp3	Duration	family1
 Minolta.jpg	WhiteBalance	family1
@@ -24,8 +16,6 @@ Minolta.mrw	ColorMode	family1
 Minolta.mrw	WhiteBalance	family1
 OpenEXR.exr	ImageHeight	family1
 OpenEXR.exr	ImageWidth	family1
-PGF.pgf	Comment	family1
-PNG.png	Comment	family1
 PSP.psp	Copyright	family1
 Pentax.jpg	ISO	family1
 Pentax.jpg	ISO	family2

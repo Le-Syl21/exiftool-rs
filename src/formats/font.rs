@@ -206,12 +206,18 @@ pub fn read_dfont(data: &[u8], tags: &mut Vec<Tag>) -> Result<()> {
                     let ver_str =
                         crate::encoding::decode_utf8_or_latin1(&vers_data[p2..p2 + long_len])
                             .to_string();
-                    // RSRC 'vers' resource: RSRC.pm GROUPS => { 2 => 'Document' }.
+                    // Read with `%Image::ExifTool::RSRC::Main`
+                    // (`'vers_0x0001' => 'ApplicationVersion'`, RSRC.pm line 49),
+                    // a table of its own: family 2 is its `Document` default
+                    // (line 23) and families 0 and 1 fall back to the module
+                    // name, RSRC.
                     let mut tag = mk(
                         "ApplicationVersion",
                         "Application Version",
                         Value::String(ver_str),
                     );
+                    tag.group.family0 = "RSRC".into();
+                    tag.group.family1 = "RSRC".into();
                     tag.group.family2 = "Document".into();
                     tags.push(tag);
                 }
@@ -640,6 +646,18 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
     }
 }
 
+/// The PostScript font comment, reported with `$et->FoundTag('Comment', ...)`
+/// (Font.pm line 605). A bare NAME resolves through
+/// `%Image::ExifTool::Extra` — File/File/Image (ExifTool.pm line 1311) — so it
+/// does not belong to the Font group the rest of the table sits in.
+fn mk_extra_comment(value: String) -> Tag {
+    let mut t = mk("Comment", "Comment", Value::String(value));
+    t.group.family0 = "File".into();
+    t.group.family1 = "File".into();
+    t.group.family2 = "Image".into();
+    t
+}
+
 /// Read PostScript Type 1 ASCII font (.pfa) file.
 /// Mirrors ExifTool's PostScript.pm + Font.pm PSInfo handling.
 pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
@@ -791,7 +809,7 @@ pub fn read_pfa(data: &[u8]) -> Result<Vec<Tag>> {
     // its single-line text display (Printable), keeping them intact for JSON.
     if comment_parts.len() > 1 {
         let combined = comment_parts.join("\n");
-        tags.push(mk("Comment", "Comment", Value::String(combined)));
+        tags.push(mk_extra_comment(combined));
     }
 
     Ok(tags)
@@ -865,11 +883,7 @@ pub fn read_afm(data: &[u8]) -> Result<Vec<Tag>> {
                 create_date = Some(stripped.trim().to_string());
             } else if create_date.is_none() && !rest.is_empty() {
                 // First non-date comment becomes Comment tag
-                tags.push(mk(
-                    "Comment",
-                    "Comment",
-                    Value::String(rest.trim().to_string()),
-                ));
+                tags.push(mk_extra_comment(rest.trim().to_string()));
             }
             continue;
         }
