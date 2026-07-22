@@ -8,6 +8,7 @@ use crate::error::{Error, Result};
 use crate::metadata::makernotes::parse_canon_cr3_makernotes;
 use crate::metadata::{ExifReader, XmpReader};
 use crate::tag::{Tag, TagGroup, TagId};
+use crate::tags::priority0_generated as priority0;
 use crate::value::Value;
 
 /// Parser state carried through recursive atom parsing.
@@ -2656,8 +2657,13 @@ fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
                 as usize;
             if idx >= 1 && idx <= keys.len() {
                 if let Some(value) = find_data_atom(data, pos + 8, item_end) {
-                    if let Some((name, description)) = keys_tag_name(&keys[idx - 1]) {
-                        tags.push(mk(name, description, Value::String(value)));
+                    let key = &keys[idx - 1];
+                    if let Some((name, description)) = keys_tag_name(key) {
+                        let mut t = mk(name, description, Value::String(value));
+                        if priority0::keys_is_priority0(key.as_bytes()) {
+                            t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+                        }
+                        tags.push(t);
                     }
                 }
             }
@@ -2671,7 +2677,14 @@ fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
                 if !name.is_empty() {
                     // Apply PrintConv for specific tags
                     let display_value = apply_ilst_print_conv(item_type, &value);
-                    tags.push(mk(name, description, Value::String(display_value)));
+                    let mut t = mk(name, description, Value::String(display_value));
+                    // `Avoid => 1` on the ItemList entry. Only the atom code
+                    // tells them apart: `desc` is priority 0 where `\xa9des` is
+                    // not, and both are named Description.
+                    if priority0::item_list_is_priority0(item_type) {
+                        t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+                    }
+                    tags.push(t);
                 }
             }
         }
@@ -2855,7 +2868,14 @@ fn parse_qt_text_atom(
             let key = crate::encoding::decode_utf8_or_latin1(&atom_type[1..4]).to_string();
             let (static_name, static_desc) = qt_text_name(&key);
             if !static_name.is_empty() {
-                tags.push(mk(static_name, static_desc, Value::String(text)));
+                let mut t = mk(static_name, static_desc, Value::String(text));
+                // `Avoid => 1` on the UserData entry — again only the atom code
+                // separates them: `\xa9mdl` is priority 0 and `\xa9mod` is not,
+                // both named Model.
+                if priority0::user_data_is_priority0(atom_type) {
+                    t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+                }
+                tags.push(t);
             }
             // Unknown © tags are skipped (they may be handled elsewhere)
         }

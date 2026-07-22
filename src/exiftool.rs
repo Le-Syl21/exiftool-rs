@@ -1924,46 +1924,6 @@ impl ExifTool {
                         _ => matches!(g1, "Jpeg2000" | "PhotoMechanic" | "DjVu"),
                     }
                 };
-                // Tags Exif.pm gives an explicit `Priority => 0`. ExifTool.pm:9552
-                // takes the `defined $priority` branch for them, which bypasses
-                // LOW_PRIORITY_DIR entirely and instead promotes the value to 1 when
-                // the directory is the PRIORITY_DIR (ExifTool.pm:9555):
-                //   `$priority = 1 if not $priority and $$self{DIR_NAME} and
-                //                    $$self{DIR_NAME} eq $$self{PRIORITY_DIR};`
-                // So these tags are first-wins across the IFDs, except that the
-                // full-resolution IFD wins outright. Two comments in Exif.pm spell the
-                // intent out: "Priority => 0, # so PRIORITY_DIR takes precedence"
-                // (0x112 Orientation line 691, 0x11a XResolution line 795).
-                //
-                // The list is the complete set of `Priority => 0` entries in
-                // Image::ExifTool::Exif::Main (Exif.pm 493, 501, 509, 524, 532, 576,
-                // 691, 698, 705, 795, 802, 813, 884, 959, 1439, 1449, 1462, 1469,
-                // 2880). Notably absent: StripOffsets (0x111, `IsOffset => 1` only),
-                // StripByteCounts (0x117) and SubfileType (0xfe, which *calls*
-                // SetPriorityDir rather than carrying a Priority) — those keep the
-                // default priority of 1, i.e. plain last-wins.
-                #[rustfmt::skip]
-                const EXIF_PRIORITY0: &[&str] = &[
-                    "ImageWidth",                // 0x100
-                    "ImageHeight",               // 0x101
-                    "BitsPerSample",             // 0x102
-                    "Compression",               // 0x103
-                    "PhotometricInterpretation", // 0x106
-                    "ImageDescription",          // 0x10e
-                    "Orientation",               // 0x112
-                    "SamplesPerPixel",           // 0x115
-                    "RowsPerStrip",              // 0x116
-                    "XResolution",               // 0x11a
-                    "YResolution",               // 0x11b
-                    "PlanarConfiguration",       // 0x11c
-                    "ResolutionUnit",            // 0x128
-                    "PrimaryChromaticities",     // 0x13f
-                    "YCbCrCoefficients",         // 0x211
-                    "YCbCrSubSampling",          // 0x212
-                    "YCbCrPositioning",          // 0x213
-                    "ReferenceBlackWhite",       // 0x214
-                    "WhiteBalance",              // 0xa403
-                ];
                 // ExifTool's PRIORITY_DIR: Exif.pm 0xfe (SubfileType) and 0xff
                 // (OldSubfileType) call `$self->SetPriorityDir()` when the directory
                 // holds the full-resolution image, and SetPriorityDir
@@ -2012,17 +1972,6 @@ impl ExifTool {
                             if t.group.family3 != MAIN_DOCUMENT {
                                 return 0;
                             }
-                            return i32::from(
-                                priority_dir.as_deref() == Some(t.group.family1.as_str()),
-                            );
-                        }
-                        // An explicit `Priority => 0` in Exif.pm wins over the
-                        // LOW_PRIORITY_DIR default and is promoted only inside the
-                        // PRIORITY_DIR.
-                        if t.group.family0 == "EXIF"
-                            && t.group.family3 == MAIN_DOCUMENT
-                            && EXIF_PRIORITY0.contains(&t.name.as_str())
-                        {
                             return i32::from(
                                 priority_dir.as_deref() == Some(t.group.family1.as_str()),
                             );

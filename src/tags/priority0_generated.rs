@@ -783,6 +783,7 @@ pub fn exif_is_priority0(id: u16, name: &str) -> bool {
 }
 
 /// QuickTime `ItemList` atom codes stored at priority 0, sorted.
+#[rustfmt::skip]
 static ITEM_LIST_PRIORITY0: &[&[u8]] = &[
     b"albm",
     b"desc",
@@ -796,6 +797,7 @@ static ITEM_LIST_PRIORITY0: &[&[u8]] = &[
 ];
 
 /// QuickTime `UserData` atom codes stored at priority 0, sorted.
+#[rustfmt::skip]
 static USER_DATA_PRIORITY0: &[&[u8]] = &[
     b"@day",
     b"@mak",
@@ -829,6 +831,7 @@ static USER_DATA_PRIORITY0: &[&[u8]] = &[
 ];
 
 /// QuickTime `Keys` key names stored at priority 0, sorted.
+#[rustfmt::skip]
 static KEYS_PRIORITY0: &[&[u8]] = &[
     b"compatible_brands",
     b"creation_time",

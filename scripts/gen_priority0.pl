@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# Generate the set of XMP properties ExifTool stores at priority 0.
+# Generate the sets of tags ExifTool stores at priority 0.
 #
 # `FoundTag` (ExifTool.pm:9469-9472) resolves a tag's priority in three steps:
 #
@@ -195,6 +195,7 @@ pub fn exif_is_priority0(id: u16, name: &str) -> bool {
 }
 
 /// QuickTime `ItemList` atom codes stored at priority 0, sorted.
+#[rustfmt::skip]
 static ITEM_LIST_PRIORITY0: &[&[u8]] = &[
 MIDDLE2
 
@@ -213,6 +214,7 @@ print <<'MIDDLE3';
 ];
 
 /// QuickTime `UserData` atom codes stored at priority 0, sorted.
+#[rustfmt::skip]
 static USER_DATA_PRIORITY0: &[&[u8]] = &[
 MIDDLE3
 
@@ -222,6 +224,7 @@ print <<'MIDDLE4';
 ];
 
 /// QuickTime `Keys` key names stored at priority 0, sorted.
+#[rustfmt::skip]
 static KEYS_PRIORITY0: &[&[u8]] = &[
 MIDDLE4
 
