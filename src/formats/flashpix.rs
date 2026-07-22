@@ -847,9 +847,10 @@ fn process_userdefined_with_dict(data: &[u8], set_offset: usize, tags: &mut Vec<
             break;
         }
         let prop_id = r32(data, off);
+        // The dictionary itself.
         if prop_id == 0 {
             continue;
-        } // the dictionary itself
+        }
         // ID 1 is not custom unless the dictionary claims it, so it resolves to
         // SummaryInfo's CodePage here too (FlashPix.pm:1777-1779).
         if prop_id == 1 && !dict.contains_key(&1) {
