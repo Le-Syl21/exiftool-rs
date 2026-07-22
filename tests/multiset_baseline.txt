@@ -96,12 +96,6 @@ Pentax.avi	ee	missing	0	Quality	10000
 Pentax.avi	ee	missing	1	Quality	10000
 Pentax.avi	ee	missing	0	SampleSize	2 bytes
 Pentax.avi	ee	missing	0	StreamType	Audio
-Pentax.jpg	ee	extra	0	ExposureTime	1000
-Pentax.jpg	ee	extra	0	FocalLength	1000
-Pentax.jpg	ee	extra	0	ISO	6
-Pentax.jpg	ee	missing	0	ExposureTime	1/100
-Pentax.jpg	ee	missing	0	FocalLength	10.0 mm
-Pentax.jpg	ee	missing	0	ISO	100
 Pentax.jpg	ee	missing	0	LensType	Sigma or Tamron Lens (3 44)
 Pentax.jpg	ee	missing	0	PentaxModelID	K10D
 PhotoMechanic.jpg	ee	missing	0	Prefs	Tagged:0, ColorClass:0, Rating:0, FrameNum:-00001

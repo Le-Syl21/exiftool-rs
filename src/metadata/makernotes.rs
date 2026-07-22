@@ -2049,10 +2049,71 @@ fn pentax_special_tag_conv(
     data_type: u16,
     count: u32,
     value_data: &[u8],
+    byte_order: ByteOrderMark,
+    model: &str,
 ) -> Option<Vec<Tag>> {
     let mk = |name: &str, val: &str| mk_pentax(name, val);
+    let u16_at = |o: usize| -> u64 {
+        let v = match byte_order {
+            ByteOrderMark::LittleEndian => u16::from_le_bytes([value_data[o], value_data[o + 1]]),
+            _ => u16::from_be_bytes([value_data[o], value_data[o + 1]]),
+        };
+        v as u64
+    };
+    let u32_at = |o: usize| -> u64 {
+        let b = [
+            value_data[o],
+            value_data[o + 1],
+            value_data[o + 2],
+            value_data[o + 3],
+        ];
+        let v = match byte_order {
+            ByteOrderMark::LittleEndian => u32::from_le_bytes(b),
+            _ => u32::from_be_bytes(b),
+        };
+        v as u64
+    };
 
     match tag_id {
+        // PentaxModelID (0x0005): int32u with a PrintConv table (Pentax.pm:959).
+        0x0005 if data_type == 4 && count == 1 && value_data.len() >= 4 => {
+            let id = u32_at(0) as u32;
+            Some(vec![mk("PentaxModelID", &pentax_model_id_print(id))])
+        }
+        // ExposureTime (0x0012): int32u, ValueConv `$val * 1e-5`, PrintConv
+        // PrintExposureTime unless the Bulb sentinel (Pentax.pm:1471-1480).
+        0x0012 if data_type == 4 && count == 1 && value_data.len() >= 4 => {
+            let raw = u32_at(0);
+            let val = raw as f64 * 1e-5;
+            let pv = if val > 42949.0 {
+                "Unknown (Bulb)".to_string()
+            } else {
+                print_exposure_time(val)
+            };
+            Some(vec![mk("ExposureTime", &pv)])
+        }
+        // ISO (0x0014): int16u with a PrintConv table (Pentax.pm:1491-1560).
+        0x0014 if data_type == 3 && count == 1 && value_data.len() >= 2 => {
+            let raw = u16_at(0);
+            let pv = pentax_iso_print(raw).unwrap_or_else(|| format!("Unknown ({raw})"));
+            Some(vec![mk("ISO", &pv)])
+        }
+        // FocalLength (0x001d): int32u. The Optio branch divides by 10, every
+        // other model by 100 (Pentax.pm:1739-1765).
+        0x001d if data_type == 4 && count == 1 && value_data.len() >= 4 => {
+            let raw = u32_at(0) as f64;
+            let optio = model.strip_prefix("PENTAX Optio ").is_some_and(|rest| {
+                ["30", "33WR", "43WR", "450", "550", "555", "750Z", "X"]
+                    .iter()
+                    .any(|m| {
+                        rest.strip_prefix(m).is_some_and(|t| {
+                            !t.starts_with(|c: char| c.is_alphanumeric() || c == '_')
+                        })
+                    })
+            });
+            let val = if optio { raw / 10.0 } else { raw / 100.0 };
+            Some(vec![mk("FocalLength", &format!("{val:.1} mm"))])
+        }
         // PentaxVersion (0x0000): int8u[4], PrintConv: tr/ /./; $val
         0x0000 if data_type == 1 && count == 4 && value_data.len() >= 4 => {
             let s = format!(
@@ -2899,6 +2960,190 @@ fn print_exposure_time(val: f64) -> String {
     }
     let inv = (1.0 / val).round() as u64;
     format!("1/{}", inv)
+}
+
+/// PrintConv of Pentax ISO (Pentax.pm:1496-1560).
+fn pentax_iso_print(raw: u64) -> Option<String> {
+    const THIRD_EV: [u64; 43] = [
+        50, 64, 80, 100, 125, 160, 200, 250, 320, 400, 500, 640, 800, 1000, 1250, 1600, 2000, 2500,
+        3200, 4000, 5000, 6400, 8000, 10000, 12800, 16000, 20000, 25600, 32000, 40000, 51200,
+        64000, 80000, 102400, 128000, 160000, 204800, 256000, 320000, 409600, 512000, 640000,
+        819200,
+    ];
+    const HALF_EV: [u64; 15] = [
+        50, 70, 100, 140, 200, 280, 400, 560, 800, 1100, 1600, 2200, 3200, 4500, 6400,
+    ];
+    if (3..=45).contains(&raw) {
+        return Some(THIRD_EV[(raw - 3) as usize].to_string());
+    }
+    if (258..=272).contains(&raw) {
+        return Some(HALF_EV[(raw - 258) as usize].to_string());
+    }
+    // The Optio 330/430 oddballs report the speed itself.
+    if matches!(raw, 50 | 100 | 200 | 400 | 800 | 1600 | 3200) {
+        return Some(raw.to_string());
+    }
+    None
+}
+
+/// %pentaxModelID (Pentax.pm), the PrintConv of tag 0x0005.
+static PENTAX_MODEL_ID: &[(u32, &str)] = &[
+    (0x0000d, "Optio 330/430"),
+    (0x12926, "Optio 230"),
+    (0x12958, "Optio 330GS"),
+    (0x12962, "Optio 450/550"),
+    (0x1296c, "Optio S"),
+    (0x12971, "Optio S V1.01"),
+    (0x12994, "*ist D"),
+    (0x129b2, "Optio 33L"),
+    (0x129bc, "Optio 33LF"),
+    (0x129c6, "Optio 33WR/43WR/555"),
+    (0x129d5, "Optio S4"),
+    (0x12a02, "Optio MX"),
+    (0x12a0c, "Optio S40"),
+    (0x12a16, "Optio S4i"),
+    (0x12a34, "Optio 30"),
+    (0x12a52, "Optio S30"),
+    (0x12a66, "Optio 750Z"),
+    (0x12a70, "Optio SV"),
+    (0x12a75, "Optio SVi"),
+    (0x12a7a, "Optio X"),
+    (0x12a8e, "Optio S5i"),
+    (0x12a98, "Optio S50"),
+    (0x12aa2, "*ist DS"),
+    (0x12ab6, "Optio MX4"),
+    (0x12ac0, "Optio S5n"),
+    (0x12aca, "Optio WP"),
+    (0x12afc, "Optio S55"),
+    (0x12b10, "Optio S5z"),
+    (0x12b1a, "*ist DL"),
+    (0x12b24, "Optio S60"),
+    (0x12b2e, "Optio S45"),
+    (0x12b38, "Optio S6"),
+    (0x12b4c, "Optio WPi"),
+    (0x12b56, "BenQ DC X600"),
+    (0x12b60, "*ist DS2"),
+    (0x12b62, "Samsung GX-1S"),
+    (0x12b6a, "Optio A10"),
+    (0x12b7e, "*ist DL2"),
+    (0x12b80, "Samsung GX-1L"),
+    (0x12b9c, "K100D"),
+    (0x12b9d, "K110D"),
+    (0x12ba2, "K100D Super"),
+    (0x12bb0, "Optio T10/T20"),
+    (0x12be2, "Optio W10"),
+    (0x12bf6, "Optio M10"),
+    (0x12c1e, "K10D"),
+    (0x12c20, "Samsung GX10"),
+    (0x12c28, "Optio S7"),
+    (0x12c2d, "Optio L20"),
+    (0x12c32, "Optio M20"),
+    (0x12c3c, "Optio W20"),
+    (0x12c46, "Optio A20"),
+    (0x12c78, "Optio E30"),
+    (0x12c7d, "Optio E35"),
+    (0x12c82, "Optio T30"),
+    (0x12c8c, "Optio M30"),
+    (0x12c91, "Optio L30"),
+    (0x12c96, "Optio W30"),
+    (0x12ca0, "Optio A30"),
+    (0x12cb4, "Optio E40"),
+    (0x12cbe, "Optio M40"),
+    (0x12cc3, "Optio L40"),
+    (0x12cc5, "Optio L36"),
+    (0x12cc8, "Optio Z10"),
+    (0x12cd2, "K20D"),
+    (0x12cd4, "Samsung GX20"),
+    (0x12cdc, "Optio S10"),
+    (0x12ce6, "Optio A40"),
+    (0x12cf0, "Optio V10"),
+    (0x12cfa, "K200D"),
+    (0x12d04, "Optio S12"),
+    (0x12d0e, "Optio E50"),
+    (0x12d18, "Optio M50"),
+    (0x12d22, "Optio L50"),
+    (0x12d2c, "Optio V20"),
+    (0x12d40, "Optio W60"),
+    (0x12d4a, "Optio M60"),
+    (0x12d68, "Optio E60/M90"),
+    (0x12d72, "K2000"),
+    (0x12d73, "K-m"),
+    (0x12d86, "Optio P70"),
+    (0x12d90, "Optio L70"),
+    (0x12d9a, "Optio E70"),
+    (0x12dae, "X70"),
+    (0x12db8, "K-7"),
+    (0x12dcc, "Optio W80"),
+    (0x12dea, "Optio P80"),
+    (0x12df4, "Optio WS80"),
+    (0x12dfe, "K-x"),
+    (0x12e08, "645D"),
+    (0x12e12, "Optio E80"),
+    (0x12e30, "Optio W90"),
+    (0x12e3a, "Optio I-10"),
+    (0x12e44, "Optio H90"),
+    (0x12e4e, "Optio E90"),
+    (0x12e58, "X90"),
+    (0x12e6c, "K-r"),
+    (0x12e76, "K-5"),
+    (0x12e8a, "Optio RS1000/RS1500"),
+    (0x12e94, "Optio RZ10"),
+    (0x12e9e, "Optio LS1000"),
+    (0x12ebc, "Optio WG-1 GPS"),
+    (0x12ed0, "Optio S1"),
+    (0x12ee4, "Q"),
+    (0x12ef8, "K-01"),
+    (0x12f0c, "Optio RZ18"),
+    (0x12f16, "Optio VS20"),
+    (0x12f2a, "Optio WG-2 GPS"),
+    (0x12f48, "Optio LS465"),
+    (0x12f52, "K-30"),
+    (0x12f5c, "X-5"),
+    (0x12f66, "Q10"),
+    (0x12f70, "K-5 II"),
+    (0x12f71, "K-5 II s"),
+    (0x12f7a, "Q7"),
+    (0x12f84, "MX-1"),
+    (0x12f8e, "WG-3 GPS"),
+    (0x12f98, "WG-3"),
+    (0x12fa2, "WG-10"),
+    (0x12fb6, "K-50"),
+    (0x12fc0, "K-3"),
+    (0x12fca, "K-500"),
+    (0x12fe8, "WG-4"),
+    (0x12fde, "WG-4 GPS"),
+    (0x13006, "WG-20"),
+    (0x13010, "645Z"),
+    (0x1301a, "K-S1"),
+    (0x13024, "K-S2"),
+    (0x1302e, "Q-S1"),
+    (0x13056, "WG-30"),
+    (0x1307e, "WG-30W"),
+    (0x13088, "WG-5 GPS"),
+    (0x13092, "K-1"),
+    (0x1309c, "K-3 II"),
+    (0x131f0, "WG-M2"),
+    (0x1320e, "GR III"),
+    (0x13222, "K-70"),
+    (0x1322c, "KP"),
+    (0x13240, "K-1 Mark II"),
+    (0x13254, "K-3 Mark III"),
+    (0x13290, "WG-70"),
+    (0x1329a, "GR IIIx"),
+    (0x132b8, "KF"),
+    (0x132d6, "K-3 Mark III Monochrome"),
+    (0x132e0, "GR IV"),
+    (0x13330, "GR IV Monochrome"),
+];
+
+/// PrintConv of PentaxModelID: `PrintHex => 1`, so an unlisted ID prints as
+/// `Unknown (0x...)` (Pentax.pm:959-967, :4721-4727).
+fn pentax_model_id_print(id: u32) -> String {
+    PENTAX_MODEL_ID
+        .iter()
+        .find(|(k, _)| *k == id)
+        .map(|(_, v)| v.to_string())
+        .unwrap_or_else(|| format!("Unknown (0x{id:x})"))
 }
 
 /// Decode Pentax CameraSettings (tag 0x0205, 23 bytes).
@@ -3925,7 +4170,15 @@ fn decode_pentax_camera_info(data: &[u8], byte_order: ByteOrderMark) -> Vec<Tag>
         return tags;
     }
 
-    // Word 0: PentaxModelID (priority 0 — skip)
+    // Word 0: PentaxModelID. `Priority => 0` (Pentax.pm:4723) only makes it
+    // lose the duplicate competition; it is still extracted.
+    {
+        let id = read_u32(data, 0, byte_order);
+        let mut t = pb("PentaxModelID", &pentax_model_id_print(id));
+        t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+        tags.push(t);
+    }
+
     // Word 1: ManufactureDate — format YYYYMMDD as YYYY:MM:DD
     if data.len() >= 8 {
         let raw = read_u32(data, 4, byte_order);
@@ -5504,9 +5757,9 @@ fn read_makernote_ifd_with_base(
             } else if tag_id == 0x0007 && value_data.len() >= 3 {
                 pentax_time_raw = Some(value_data[..3].to_vec());
             }
-            if let Some(special_tags) =
-                pentax_special_tag_conv(tag_id, data_type, count, value_data)
-            {
+            if let Some(special_tags) = pentax_special_tag_conv(
+                tag_id, data_type, count, value_data, byte_order, model_name,
+            ) {
                 tags.extend(special_tags);
                 continue;
             }
