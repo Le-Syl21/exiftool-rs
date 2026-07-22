@@ -2982,7 +2982,7 @@ fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
             let idx = u32::from_be_bytes([item_type[0], item_type[1], item_type[2], item_type[3]])
                 as usize;
             if idx >= 1 && idx <= keys.len() {
-                if let Some(value) = find_data_atom(data, pos + 8, item_end) {
+                for value in find_data_atoms(data, pos + 8, item_end) {
                     let key = &keys[idx - 1];
                     if let Some((name, description)) = keys_tag_name(key) {
                         let mut t = mk(name, description, Value::String(value));
@@ -2997,8 +2997,8 @@ fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
             // mean/name/data triplet (iTunes reverse-DNS tags)
             parse_ilst_triplet(data, pos + 8, item_end, tags);
         } else {
-            // Find the 'data' atom inside this item
-            if let Some(value) = find_data_atom(data, pos + 8, item_end) {
+            // Every 'data' atom inside this item is its own instance.
+            for value in find_data_atoms(data, pos + 8, item_end) {
                 let (name, description) = ilst_tag_name(item_type);
                 if !name.is_empty() {
                     // Apply PrintConv for specific tags
@@ -3045,6 +3045,10 @@ fn keys_tag_name(key: &str) -> Option<(&'static str, &'static str)> {
     // Apple namespace: strip the prefix and match the short key.
     let short = key.strip_prefix("com.apple.quicktime.")?;
     match short {
+        // QuickTime.pm %Keys: `album => 'Album'`, and `artist => { }` — a bare
+        // hash takes the ucfirst'd key as its tag name.
+        "album" => Some(("Album", "Album")),
+        "artist" => Some(("Artist", "Artist")),
         "make" => Some(("Make", "Make")),
         "model" => Some(("Model", "Model")),
         "software" => Some(("Software", "Software")),
@@ -3062,8 +3066,13 @@ fn keys_tag_name(key: &str) -> Option<(&'static str, &'static str)> {
     }
 }
 
-/// Find and decode the 'data' atom inside an ilst item.
-fn find_data_atom(data: &[u8], start: usize, end: usize) -> Option<String> {
+/// Find and decode every `data` atom of an ilst item, in order.
+///
+/// ProcessMOV walks the atoms of an ItemList/Keys item and calls HandleTag for
+/// each one it recognises, so an item holding two `data` atoms — QuickTime.m4a's
+/// `covr` does — yields two instances of the tag, not one.
+fn find_data_atoms(data: &[u8], start: usize, end: usize) -> Vec<String> {
+    let mut out = Vec::new();
     let mut pos = start;
 
     while pos + 16 <= end {
@@ -3080,7 +3089,7 @@ fn find_data_atom(data: &[u8], start: usize, end: usize) -> Option<String> {
                 u32::from_be_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]]);
             let value_data = &data[pos + 16..pos + size];
 
-            return Some(match data_type & 0xFF {
+            out.push(match data_type & 0xFF {
                 1 => {
                     // UTF-8
                     crate::encoding::decode_utf8_or_latin1(value_data).to_string()
@@ -3167,7 +3176,7 @@ fn find_data_atom(data: &[u8], start: usize, end: usize) -> Option<String> {
         pos += size;
     }
 
-    None
+    out
 }
 
 /// Parse QuickTime text atom (©xxx at container level).
