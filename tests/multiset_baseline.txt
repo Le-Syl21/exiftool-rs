@@ -87,19 +87,12 @@ PSP.psp	ee	extra	0	YResolution	200
 PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
 Pentax.avi	ee	missing	0	LensType	smc PENTAX-DA L 18-55mm F3.5-5.6
 Pentax.avi	ee	missing	0	PentaxModelID	K-x
-Pentax.avi	ee	missing	0	Quality	10000
-Pentax.avi	ee	missing	1	Quality	10000
-Pentax.avi	ee	missing	0	SampleSize	2 bytes
-Pentax.avi	ee	missing	0	StreamType	Audio
 Pentax.jpg	ee	missing	0	LensType	Sigma or Tamron Lens (3 44)
 Pentax.jpg	ee	missing	0	PentaxModelID	K10D
 PhotoMechanic.jpg	ee	missing	0	Prefs	Tagged:0, ColorClass:0, Rating:0, FrameNum:-00001
 QuickTime.m4a	ee	missing	0	CoverArt	(Binary data 19 bytes, use -b option to extract)
 QuickTime.mov	ee	missing	0	Album	ålbum
 QuickTime.mov	ee	missing	0	Artist	årtist
-RIFF.avi	ee	missing	0	Quality	10000
-RIFF.avi	ee	missing	0	SampleSize	1 byte
-RIFF.avi	ee	missing	0	StreamType	Audio
 Radiance.hdr	ee	missing	0	Command	oconv -f -i test4.oct ila01728
 Radiance.hdr	ee	missing	0	Command	oconv mat.rad sky.rad surfaces.rad
 Radiance.hdr	ee	missing	0	Command	rpict -t 30 -vf test4.vf -x 1536 -y 1536 -ps 3 -pt .04 -dp 4096 -ar 68 -ms 0.029 -ds .2 -dt .05 -dc .75 -dr 3 -sj 1 -st .01 -ab 3 -af test4.amb -aa .08 -ad 1024 -as 512 -av 0.5 0.5 0.5 -lr 12 -lw .0005 -st .001 -dj .02

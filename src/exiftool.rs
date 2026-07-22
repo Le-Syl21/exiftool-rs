@@ -1590,21 +1590,6 @@ impl ExifTool {
             }
         }
 
-        // Priority-based deduplication: when the same tag name appears from both RIFF (priority 0)
-        // and MakerNotes/EXIF (priority 0 but higher-quality source), remove the RIFF copy.
-        // Mirrors ExifTool's PRIORITY => 0 behavior for RIFF StreamHeader tags.
-        {
-            let riff_priority_zero_tags = ["Quality", "SampleSize", "StreamType"];
-            for tag_name in &riff_priority_zero_tags {
-                let has_makernotes = tags
-                    .iter()
-                    .any(|t| t.name == *tag_name && t.group.family0 != "RIFF");
-                if has_makernotes {
-                    tags.retain(|t| !(t.name == *tag_name && t.group.family0 == "RIFF"));
-                }
-            }
-        }
-
         // Priority-based deduplication: when the same tag name appears multiple times,
         // keep only the one with the highest priority (e.g., EXIF over JFIF, FFF over MakerNote).
         //

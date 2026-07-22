@@ -581,39 +581,35 @@ fn read_riff_chunks(
                     let fcc_type = crate::encoding::decode_utf8_or_latin1(&cd[0..4]).to_string();
                     state.current_stream_type = Some(fcc_type.clone());
                     state.stream_count_seen += 1;
-                    let is_first_stream = state.stream_count_seen == 1;
 
-                    // StreamType — Perl uses PRIORITY=>0 so only first stream wins
-                    if is_first_stream {
-                        let stream_type_str = match fcc_type.as_str() {
-                            "auds" => "Audio",
-                            "mids" => "MIDI",
-                            "txts" => "Text",
-                            "vids" => "Video",
-                            "iavs" => "Interleaved Audio+Video",
-                            _ => &fcc_type,
-                        };
-                        tags.push(mk_riff(
-                            family,
-                            "StreamType",
-                            "Stream Type",
-                            Value::String(stream_type_str.to_string()),
-                        ));
-                    }
+                    let stream_type_str = match fcc_type.as_str() {
+                        "auds" => "Audio",
+                        "mids" => "MIDI",
+                        "txts" => "Text",
+                        "vids" => "Video",
+                        "iavs" => "Interleaved Audio+Video",
+                        _ => &fcc_type,
+                    };
+                    tags.push(mk_strh(
+                        family,
+                        "StreamType",
+                        "Stream Type",
+                        Value::String(stream_type_str.to_string()),
+                    ));
 
                     if chunk_size >= 8 {
                         let fcc_handler = crate::encoding::decode_utf8_or_latin1(&cd[4..8])
                             .trim_end_matches('\0')
                             .to_string();
                         if fcc_type == "vids" {
-                            tags.push(mk_riff(
+                            tags.push(mk_strh(
                                 family,
                                 "VideoCodec",
                                 "Video Codec",
                                 Value::String(fcc_handler),
                             ));
                         } else if fcc_type == "auds" {
-                            tags.push(mk_riff(
+                            tags.push(mk_strh(
                                 family,
                                 "AudioCodec",
                                 "Audio Codec",
@@ -631,7 +627,7 @@ fn read_riff_chunks(
                             // AudioSampleRate = rate/scale
                             let audio_rate = rate as f64 / scale as f64;
                             let audio_rate_rounded = (audio_rate * 100.0 + 0.5).floor() / 100.0;
-                            tags.push(mk_riff(
+                            tags.push(mk_strh(
                                 family,
                                 "AudioSampleRate",
                                 "Audio Sample Rate",
@@ -642,7 +638,7 @@ fn read_riff_chunks(
                             let vfr = rate as f64 / scale as f64;
                             let vfr_rounded = (vfr * 1000.0 + 0.5).floor() / 1000.0;
                             state.video_frame_rate = Some(vfr);
-                            tags.push(mk_riff(
+                            tags.push(mk_strh(
                                 family,
                                 "VideoFrameRate",
                                 "Video Frame Rate",
@@ -655,7 +651,7 @@ fn read_riff_chunks(
                     if chunk_size >= 36 {
                         let length = u32::from_le_bytes([cd[32], cd[33], cd[34], cd[35]]);
                         if fcc_type == "auds" {
-                            tags.push(mk_riff(
+                            tags.push(mk_strh(
                                 family,
                                 "AudioSampleCount",
                                 "Audio Sample Count",
@@ -663,7 +659,7 @@ fn read_riff_chunks(
                             ));
                         } else if fcc_type == "vids" {
                             state.video_frame_count = length;
-                            tags.push(mk_riff(
+                            tags.push(mk_strh(
                                 family,
                                 "VideoFrameCount",
                                 "Video Frame Count",
@@ -673,8 +669,7 @@ fn read_riff_chunks(
                     }
 
                     // Quality (offset 40) and SampleSize (offset 44)
-                    // Perl uses PRIORITY=>0 so only first stream's values are kept
-                    if chunk_size >= 48 && is_first_stream {
+                    if chunk_size >= 48 {
                         let quality = u32::from_le_bytes([cd[40], cd[41], cd[42], cd[43]]);
                         let sample_size = u32::from_le_bytes([cd[44], cd[45], cd[46], cd[47]]);
 
@@ -683,7 +678,7 @@ fn read_riff_chunks(
                         } else {
                             format!("{}", quality)
                         };
-                        tags.push(mk_riff(
+                        tags.push(mk_strh(
                             family,
                             "Quality",
                             "Quality",
@@ -697,7 +692,7 @@ fn read_riff_chunks(
                         } else {
                             format!("{} bytes", sample_size)
                         };
-                        tags.push(mk_riff(
+                        tags.push(mk_strh(
                             family,
                             "SampleSize",
                             "Sample Size",
@@ -1598,6 +1593,17 @@ fn mk_bmp(name: &str, description: &str, value: Value) -> Tag {
     tag.group.family0 = "File".into();
     tag.group.family1 = "File".into();
     tag.group.family2 = "Image".into();
+    tag
+}
+
+/// A tag of `%Image::ExifTool::RIFF::StreamHeader`, whose table is
+/// `PRIORITY => 0,  # so we get values from the first stream` (RIFF.pm:1165).
+/// Every stream's header is still processed in full; the stated priority is what
+/// makes the first stream's value the one reported when duplicates are collapsed,
+/// and what keeps a maker note's Quality from being displaced by the AVI one.
+fn mk_strh(family: &str, name: &str, description: &str, value: Value) -> Tag {
+    let mut tag = mk_riff(family, name, description, value);
+    tag.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
     tag
 }
 
