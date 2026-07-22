@@ -1495,7 +1495,7 @@ fn process_jumbf_app11(seg_data: &[u8]) -> Vec<crate::tag::Tag> {
 /// `jumb` box increments the last element of `jumd_level` when already inside
 /// one, otherwise starts a new top-level number, and DOC_NUM is the elements
 /// joined with `-`. That is what produces Doc1, Doc1-1, Doc1-1-1-1, ...
-fn parse_jumbf_boxes(data: &[u8], tags: &mut Vec<crate::tag::Tag>) {
+pub(crate) fn parse_jumbf_boxes(data: &[u8], tags: &mut Vec<crate::tag::Tag>) {
     let mut level: Vec<u32> = Vec::new();
     let mut doc_count: u32 = 0;
     parse_jumbf_box_chain(data, &mut level, &mut doc_count, tags);
@@ -1529,11 +1529,14 @@ fn parse_jumbf_box_chain(
             } else {
                 *level.last_mut().unwrap() += 1;
             }
-            let doc = level
-                .iter()
-                .map(u32::to_string)
-                .collect::<Vec<_>>()
-                .join("-");
+            let doc = format!(
+                "Doc{}",
+                level
+                    .iter()
+                    .map(u32::to_string)
+                    .collect::<Vec<_>>()
+                    .join("-")
+            );
             level.push(0);
             parse_jumbf_box_contents(content, &doc, level, doc_count, tags);
             level.pop();
@@ -1579,11 +1582,14 @@ fn parse_jumbf_box_contents(
             } else {
                 *level.last_mut().unwrap() += 1;
             }
-            let sub_doc = level
-                .iter()
-                .map(u32::to_string)
-                .collect::<Vec<_>>()
-                .join("-");
+            let sub_doc = format!(
+                "Doc{}",
+                level
+                    .iter()
+                    .map(u32::to_string)
+                    .collect::<Vec<_>>()
+                    .join("-")
+            );
             level.push(0);
             parse_jumbf_box_contents(content, &sub_doc, level, doc_count, tags);
             level.pop();

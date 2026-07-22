@@ -134,17 +134,6 @@ Ricoh2.jpg	ee	missing	0	GPSLongitude	0 deg 30' 27.01"
 SigmaDP2.x3f	default	extra	0	PreviewImage	(Binary data 20 bytes, use -b option to extract)
 SigmaDP2.x3f	default	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
 SigmaDP2.x3f	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
-XMP.svg	ee	missing	0	JUMDLabel	adobe.asset.info
-XMP.svg	ee	missing	0	JUMDLabel	cai.assertions
-XMP.svg	ee	missing	0	JUMDLabel	cai.location.broad
-XMP.svg	ee	missing	0	JUMDLabel	cai.rights
-XMP.svg	ee	missing	0	JUMDLabel	cb.reuters_1
-XMP.svg	ee	missing	0	JUMDType	(caas)-0011-0010-800000aa00389b71
-XMP.svg	ee	missing	0	JUMDType	(cast)-0011-0010-800000aa00389b71
-XMP.svg	ee	missing	0	JUMDType	(json)-0011-0010-800000aa00389b71
-XMP.svg	ee	missing	1	JUMDType	(json)-0011-0010-800000aa00389b71
-XMP.svg	ee	missing	2	JUMDType	(json)-0011-0010-800000aa00389b71
-XMP.svg	ee	missing	0	Title	HEALTHCORONAVIRUSUSAOREGON_SALEM_08.jpg
 XMP.xml	ee	extra	0	LightValue	14.2
 XMP.xml	ee	extra	0	ShutterSpeed	1/213
 XMP.xml	ee	missing	0	ShutterSpeed	0.00469483568075117
