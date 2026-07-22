@@ -373,7 +373,12 @@ pub fn parse_makernotes_exif_base(
     // first) and the direct 0x0101 tag both define ColorMode. ExifTool's 0x0101
     // is Priority => 0 ("Other ColorMode is more reliable"), so the earlier
     // CameraSettings value wins. Keep the first occurrence.
-    if info.manufacturer == Manufacturer::Minolta {
+    //
+    // Priority arbitrates ExifTool's name-keyed VALUE hash, so — exactly like the
+    // Pentax collapse above — this only applies when the Duplicates option is off.
+    // With `-ee` ExifTool reports both: the CameraSettings entry and Main 0x0101
+    // (Minolta.pm:795).
+    if info.manufacturer == Manufacturer::Minolta && !crate::metadata::exif::keep_duplicates() {
         let mut seen_color_mode = false;
         tags.retain(|t| {
             if t.name == "ColorMode" {
@@ -10713,6 +10718,34 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                     }
                     .to_string(),
                 )
+            }),
+            _ => None,
+        },
+        Manufacturer::Minolta => match tag_id {
+            // Minolta.pm:795 — 0x0101 is a Condition list; the first entry
+            // (`$self->{Make} !~ /^SONY/`, PrintConv => \%minoltaColorMode) is the
+            // one a Minolta maker note takes. The generator skips Condition lists,
+            // hence the hand-written arm.
+            0x0101 => value.as_u64().and_then(|v| {
+                match v {
+                    0 => Some("Natural color"),
+                    1 => Some("Black & White"),
+                    2 => Some("Vivid color"),
+                    3 => Some("Solarization"),
+                    4 => Some("Adobe RGB"),
+                    5 => Some("Sepia"),
+                    9 => Some("Natural"),
+                    12 => Some("Portrait"),
+                    13 => Some("Natural sRGB"),
+                    14 => Some("Natural+ sRGB"),
+                    15 => Some("Landscape"),
+                    16 => Some("Evening"),
+                    17 => Some("Night Scene"),
+                    18 => Some("Night Portrait"),
+                    0x84 => Some("Embed Adobe RGB"),
+                    _ => None,
+                }
+                .map(str::to_string)
             }),
             _ => None,
         },

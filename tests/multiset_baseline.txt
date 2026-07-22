@@ -19,7 +19,6 @@ Kodak.jpg	ee	missing	0	FNumber	6.7
 Lytro.lfp	ee	missing	0	ModesRegionOfInterestArrayType	exposure
 Lytro.lfp	ee	missing	0	ModesRegionOfInterestArrayX	0.26874190568923950195
 Lytro.lfp	ee	missing	0	ModesRegionOfInterestArrayY	0.55208665132522583008
-Minolta.mrw	ee	missing	0	ColorMode	Natural
 PSP.psp	ee	extra	0	Copyright	© 2010 Phil Harvey
 PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
 PhotoMechanic.jpg	ee	missing	0	Prefs	Tagged:0, ColorClass:0, Rating:0, FrameNum:-00001
