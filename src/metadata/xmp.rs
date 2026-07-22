@@ -1801,6 +1801,19 @@ impl XmpReader {
         // ExifTool reformats XMP ISO-8601 dates to its own "YYYY:MM:DD HH:MM:SS" form
         // (ConvertXMPDate). Apply to any value matching the strict date pattern.
         for tag in tags.iter_mut() {
+            // `if (($new or $fmt eq 'rational') and ConvertRational($val))`
+            // (XMP.pm line 3678), tried BEFORE the date conversion: for a
+            // property no schema describes, XMPAutoConv turns an `int/int`
+            // value into its quotient (XMP.pm lines 3400-3412). This is what
+            // makes an ExifTool-written `Composite:ShutterSpeed` of `1/213`
+            // read back as 0.00469483568075117.
+            if let Some(quotient) = convert_xmp_rational(&tag.print_value) {
+                if xmp_property_is_unknown_aliased(&tag.group.family1, &tag.name) {
+                    tag.print_value = quotient.clone();
+                    tag.raw_value = Value::String(quotient);
+                    continue;
+                }
+            }
             if let Some(reformatted) = convert_xmp_date(&tag.print_value) {
                 tag.print_value = reformatted;
                 // `if ($stdDate and $added) { $$tagInfo{Groups}{2} = 'Time' }`
@@ -2553,6 +2566,28 @@ fn exif_time(val: &str) -> String {
         }
     }
     s
+}
+
+/// `Image::ExifTool::XMP::ConvertRational` (XMP.pm lines 3400-3412): a value of
+/// the exact shape `int/int` becomes its quotient, `inf` when the denominator is
+/// zero and the numerator is not, `undef` when both are.
+fn convert_xmp_rational(val: &str) -> Option<String> {
+    let (num, den) = val.split_once('/')?;
+    let parse = |s: &str| -> Option<i64> {
+        let digits = s.strip_prefix('-').unwrap_or(s);
+        if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
+        }
+        s.parse().ok()
+    };
+    let (num, den) = (parse(num)?, parse(den)?);
+    Some(if den != 0 {
+        crate::value::format_g15(num as f64 / den as f64)
+    } else if num != 0 {
+        "inf".to_string()
+    } else {
+        "undef".to_string()
+    })
 }
 
 /// Reformat an XMP ISO-8601 date/time to ExifTool's "YYYY:MM:DD HH:MM[:SS][TZ]" form.
