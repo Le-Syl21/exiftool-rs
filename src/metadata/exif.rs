@@ -529,18 +529,44 @@ impl ExifReader {
             // under one name.
             let by_id = keep_duplicates();
             if tags.iter().any(|t| t.group.family0 == "MakerNotes") {
-                // Walk backwards, keeping the last occurrence of each key.
-                let mut seen: std::collections::HashSet<(&str, Option<&TagId>)> =
-                    std::collections::HashSet::new();
-                let mut keep = vec![false; tags.len()];
-                for (i, t) in tags.iter().enumerate().rev() {
+                // Replay FoundTag's comparison rather than simply keeping the
+                // last occurrence: an incoming tag takes the name only when its
+                // priority is >= the stored one's, and a stored 0 is promoted to
+                // 1 first (ExifTool.pm:9544-9560). A sub-table that states
+                // `PRIORITY => 0` — every Canon::CameraInfo* (Canon.pm:3162 and
+                // siblings) — therefore does not displace the value an earlier
+                // sub-table stored, which is how Canon::ShotInfo keeps
+                // WhiteBalance against CameraInfo1DmkIII's.
+                let eff = |t: &Tag| -> i32 {
+                    if t.priority == crate::tag::PRIORITY_EXPLICIT_ZERO {
+                        0
+                    } else if t.priority == 0 {
+                        1
+                    } else {
+                        t.priority
+                    }
+                };
+                let promoted = |p: i32| if p == 0 { 1 } else { p };
+                let mut winner: std::collections::HashMap<(&str, Option<&TagId>), usize> =
+                    std::collections::HashMap::new();
+                let mut keep = vec![true; tags.len()];
+                for (i, t) in tags.iter().enumerate() {
                     if t.group.family0 != "MakerNotes" {
-                        keep[i] = true;
                         continue;
                     }
                     let key = (t.name.as_str(), if by_id { Some(&t.id) } else { None });
-                    if seen.insert(key) {
-                        keep[i] = true; // first seen in reverse = last occurrence
+                    match winner.get(&key).copied() {
+                        None => {
+                            winner.insert(key, i);
+                        }
+                        Some(w) => {
+                            if eff(t) >= promoted(eff(&tags[w])) {
+                                keep[w] = false;
+                                winner.insert(key, i);
+                            } else {
+                                keep[i] = false;
+                            }
+                        }
                     }
                 }
                 let mut iter = keep.iter();

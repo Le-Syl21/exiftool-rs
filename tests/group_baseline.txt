@@ -3,7 +3,6 @@
 # Oracle: tests/expected_groups/*.grps, produced by scripts/gen_group_baselines.sh
 # Regenerate: UPDATE_GROUP_BASELINE=1 cargo test --release --test regression regression_tag_groups
 # Format: <file>\t<tag>\t<family1|family2>
-Canon1DmkIII.jpg	WhiteBalance	family2
 DNG.dng	Creator	family2
 FujiFilm.raf	PreviewImage	family1
 PSP.psp	Copyright	family1

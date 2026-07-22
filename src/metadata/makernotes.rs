@@ -5972,13 +5972,6 @@ fn read_makernote_ifd_with_base(
                             let iso = 100.0
                                 * ((rb(0x06) as f64 / 8.0 - 9.0) * std::f64::consts::LN_2).exp();
                             t.push(mk_canon_str("ISO", &format!("{:.0}", iso)));
-                            // Every Canon::CameraInfo* table is `PRIORITY => 0,
-                            // # these tags are not reliable since they change
-                            // with firmware version` (Canon.pm line 3162 and
-                            // siblings), so this ISO never displaces the EXIF one.
-                            if let Some(t) = t.last_mut() {
-                                t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
-                            }
                         }
                         // 0x18 CameraTemperature — %ciCameraTemperature
                         // (Canon.pm:3116): ValueConv '$val - 128', PrintConv '"$val C"'.
@@ -6261,6 +6254,14 @@ fn read_makernote_ifd_with_base(
                                 t.push(mk_canon_str("FirmwareVersion", &fw));
                             }
                         }
+                    }
+                    // Every Canon::CameraInfo* table is `PRIORITY => 0, # these
+                    // tags are not reliable since they change with firmware
+                    // version` (Canon.pm line 3162 and siblings), so none of
+                    // these ever displaces a value stored before it — the
+                    // ShotInfo WhiteBalance read earlier keeps the name.
+                    for tag in &mut t {
+                        tag.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
                     }
                     t
                 }
