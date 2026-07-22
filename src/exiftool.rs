@@ -1481,11 +1481,29 @@ impl ExifTool {
         {
             const SPECIAL_WINS: &[(&str, &str)] =
                 &[("Kodak", "FNumber"), ("Kodak", "ExposureTime")];
+            //
+            // Dropping the loser is only correct while duplicates are being
+            // collapsed. With the Duplicates option on (which `-ee` turns on,
+            // exiftool line 1030) ExifTool still lists BOTH — `-ee` on Kodak.jpg
+            // prints ExifIFD 0x829a `ExposureTime: 1/180` and Kodak 0x0020
+            // `ExposureTime: 1/216` — so there the promotion has to leave the
+            // loser in place, in its original position, and only make the winner
+            // the one the composites read.
+            let keep_dups = self.options.duplicates || self.options.extract_embedded > 0;
             for (grp, name) in SPECIAL_WINS {
-                if tags
+                if !tags
                     .iter()
                     .any(|t| t.name == *name && t.group.family1 == *grp)
                 {
+                    continue;
+                }
+                if keep_dups {
+                    for t in tags.iter_mut() {
+                        if t.name == *name && t.group.family1 == *grp {
+                            t.priority = t.priority_rank() + 1;
+                        }
+                    }
+                } else {
                     tags.retain(|t| t.name != *name || t.group.family1 == *grp);
                 }
             }
