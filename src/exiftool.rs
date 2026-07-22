@@ -1753,37 +1753,6 @@ impl ExifTool {
                 .collect();
             tags.retain(|t| duplicate_source(&t.group) != "XMP" || !has_non_xmp.contains(&t.name));
 
-            // A table upstream declares `PRIORITY => 0` loses to the EXIF copy of
-            // the same tag. The FoundTag pass below only arbitrates within one
-            // family 0, so this cross-source demotion has to happen here.
-            //
-            // SigmaRaw.pm: "PRIORITY => 0, # (because these aren't writable like
-            // the EXIF ones)" — an X3F repeats Make, Model, ISO, ExposureTime and
-            // twenty more in its own header, and ExifTool reports the EXIF copy.
-            // The demotion is against EXIF only, exactly as that comment says: the
-            // X3F header still beats the Sigma MakerNotes for Contrast, Sharpness,
-            // Saturation, Shadow and Highlight, where ExifTool keeps its value.
-            {
-                const LOW_PRIORITY_TABLES: &[&str] = &["SigmaRaw"];
-                let has_other: std::collections::HashSet<&str> = tags
-                    .iter()
-                    .filter(|t| t.group.family0 == "EXIF" && !t.print_value.is_empty())
-                    .map(|t| t.name.as_str())
-                    .collect();
-                let drop: std::collections::HashSet<String> = tags
-                    .iter()
-                    .filter(|t| {
-                        LOW_PRIORITY_TABLES.contains(&t.group.family1.as_str())
-                            && has_other.contains(t.name.as_str())
-                    })
-                    .map(|t| t.name.clone())
-                    .collect();
-                tags.retain(|t| {
-                    !LOW_PRIORITY_TABLES.contains(&t.group.family1.as_str())
-                        || !drop.contains(&t.name)
-                });
-            }
-
             // QuickTime container dates are primary over an embedded EXIF copy
             // (ExifTool reports the QuickTime CreateDate/ModifyDate for MOV/CR3/etc.).
             {
@@ -1898,10 +1867,14 @@ impl ExifTool {
                     "FocusMode", "ISO", "ImageBoardID", "ImagerBoardID",
                     "IntegrationTime", "LensApertureRange", "LensFocalRange",
                     "LensType", "Make", "MeteringMode", "Model",
-                    "NetExposureCompensation", "Quality", "SensorID",
-                    "SensorTemperature", "SerialNumber", "ShutterSpeedDisplayed",
-                    "VersionBF", "WhiteBalance",
+                    "NetExposureCompensation", "Quality", "SceneCaptureType",
+                    "SensorID", "SensorTemperature", "SerialNumber",
+                    "ShutterSpeedDisplayed", "VersionBF", "WhiteBalance",
                 ];
+                // SceneCaptureType above is also an X3F Header2 field
+                // (SigmaRaw.pm:94) at the default priority. Listing it costs
+                // nothing: the header copy is emitted before the PROP one, and a
+                // priority-0 tie is first-wins, so the header value still leads.
                 // ExifTool.pm:4368 initialises `LOW_PRIORITY_DIR = { PreviewIFD => 1 }`
                 // and only two places ever add to it: ProcessJPEG (ExifTool.pm:7317,
                 // `$$self{LOW_PRIORITY_DIR}{IFD1} = 1; # lower priority of IFD1 tags`)
