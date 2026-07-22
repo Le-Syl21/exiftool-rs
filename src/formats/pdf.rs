@@ -74,11 +74,21 @@ pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    // Scan for Info dictionary objects and XMP streams
-    scan_for_info_and_xmp(data, &mut tags);
-
-    // Scan for embedded Photoshop IRBs (IPTC, EXIF, ICC etc.)
-    scan_for_photoshop_irbs(data, &mut tags);
+    // The XMP stream and the Photoshop IRB hold the same IPTC fields (Category,
+    // Credit, Headline, Source, SupplementalCategories, Urgency), so whichever
+    // is read last wins. ExifTool walks the document catalog key by key in the
+    // order the file writes them — `ProcessDict` takes its tag list straight
+    // from the parsed dictionary (`my @tags = @{$$dict{_tags}}`, PDF.pm:1837) —
+    // and the catalog reaches the XMP through `/Metadata` and the Photoshop IRB
+    // through `/Pages` (→ Page → PieceInfo → AdobePhotoshop → Private →
+    // ImageResources). So the two catalog keys decide the order.
+    if catalog_lists_metadata_first(data) {
+        scan_for_xmp(data, &mut tags);
+        scan_for_photoshop_irbs(data, &mut tags);
+    } else {
+        scan_for_photoshop_irbs(data, &mut tags);
+        scan_for_xmp(data, &mut tags);
+    }
 
     // Extract MediaBox from page dictionary (only if found within a /Type /Page dict)
     if let Some(media_box) = extract_media_box_from_page(data) {
@@ -402,8 +412,42 @@ fn convert_pdf_date(s: &str) -> String {
     }
 }
 
-/// Scan file for Info dictionary and XMP metadata stream.
-fn scan_for_info_and_xmp(data: &[u8], tags: &mut Vec<Tag>) {
+/// Whether the document catalog names `/Metadata` before `/Pages`, i.e. whether
+/// ExifTool reaches the XMP stream before the Photoshop image resources.
+///
+/// A catalog without a `/Metadata` key (or without a catalog at all) answers
+/// false, which leaves the Photoshop IRB first — the same result ExifTool gets
+/// when there is no XMP to compete with.
+fn catalog_lists_metadata_first(data: &[u8]) -> bool {
+    let mut pos = 0;
+    while pos < data.len() {
+        let hit = match find_bytes(&data[pos..], b"/Type /Catalog")
+            .or_else(|| find_bytes(&data[pos..], b"/Type/Catalog"))
+        {
+            Some(p) => pos + p,
+            None => return false,
+        };
+        // The catalog dictionary ends at its closing `>>`; a 4 KiB window is
+        // ample for a catalog, which holds only references.
+        let end = (hit + 4096).min(data.len());
+        let dict = &data[hit..end];
+        let dict = match find_bytes(dict, b">>") {
+            Some(e) => &dict[..e],
+            None => dict,
+        };
+        let metadata = find_bytes(dict, b"/Metadata");
+        let pages = find_bytes(dict, b"/Pages");
+        match (metadata, pages) {
+            (Some(m), Some(p)) => return m < p,
+            (Some(_), None) => return true,
+            _ => pos = hit + 1,
+        }
+    }
+    false
+}
+
+/// Scan file for the XMP metadata stream.
+fn scan_for_xmp(data: &[u8], tags: &mut Vec<Tag>) {
     // Look for XMP metadata stream: /Type /Metadata /Subtype /XML
     let mut search_pos = 0;
     while search_pos < data.len() {

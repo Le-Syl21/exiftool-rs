@@ -118,21 +118,42 @@ pub fn read_postscript(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    // Look for embedded XMP
-    if let Some(xmp_start) = find_bytes(&data[offset..], b"<?xpacket begin") {
-        let xmp_data = &data[offset + xmp_start..];
-        if let Some(xmp_end) = find_bytes(xmp_data, b"<?xpacket end") {
-            let end = xmp_end + 20; // Include the end tag
-            if let Ok(xmp_tags) = XmpReader::read(&xmp_data[..end.min(xmp_data.len())]) {
-                tags.extend(xmp_tags);
-            }
-        }
-    }
+    // The Photoshop IRB and the XMP packet are read in the order they appear in
+    // the file, because that is the only order ExifTool knows: ProcessPS reads
+    // the document line by line (PostScript.pm:560-640), handling
+    // `%BeginPhotoshop` and a stray `<?xpacket begin` wherever each turns up.
+    // The two carry the same IPTC fields (Category, Credit, Headline, Source,
+    // SupplementalCategories, Urgency), so document order alone decides which
+    // one is stored last — and last wins.
+    let xmp_at = find_bytes(&data[offset..], b"<?xpacket begin");
+    let irb_at = find_bytes(&data[offset..], b"%BeginPhotoshop:");
+    let xmp_first = match (xmp_at, irb_at) {
+        (Some(x), Some(i)) => x < i,
+        _ => true,
+    };
 
-    // Look for %BeginPhotoshop blocks (Photoshop IRB data encoded as hex)
     let full_text = crate::encoding::decode_utf8_or_latin1(&data[offset..]);
     let full_text = full_text.replace('\r', "\n");
-    parse_photoshop_blocks(&full_text, &mut tags);
+
+    let read_xmp = |tags: &mut Vec<Tag>| {
+        if let Some(xmp_start) = xmp_at {
+            let xmp_data = &data[offset + xmp_start..];
+            if let Some(xmp_end) = find_bytes(xmp_data, b"<?xpacket end") {
+                let end = xmp_end + 20; // Include the end tag
+                if let Ok(xmp_tags) = XmpReader::read(&xmp_data[..end.min(xmp_data.len())]) {
+                    tags.extend(xmp_tags);
+                }
+            }
+        }
+    };
+
+    if xmp_first {
+        read_xmp(&mut tags);
+        parse_photoshop_blocks(&full_text, &mut tags);
+    } else {
+        parse_photoshop_blocks(&full_text, &mut tags);
+        read_xmp(&mut tags);
+    }
 
     // Parse %ImageData: for image dimensions
     parse_image_data_comment(&full_text, &mut tags);

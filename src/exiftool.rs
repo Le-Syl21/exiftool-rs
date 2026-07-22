@@ -1726,22 +1726,6 @@ impl ExifTool {
                 });
             }
 
-            // MWG (Metadata Working Group) reconciliation: for these tags ExifTool
-            // prefers XMP over the IPTC copy. Drop the IPTC version when XMP provides it.
-            {
-                const MWG_XMP_WINS: &[&str] = &["City", "DateCreated"];
-                let xmp_has: std::collections::HashSet<String> = tags
-                    .iter()
-                    .filter(|t| t.group.family0 == "XMP" && !t.print_value.is_empty())
-                    .map(|t| t.name.clone())
-                    .collect();
-                tags.retain(|t| {
-                    !(MWG_XMP_WINS.contains(&t.name.as_str())
-                        && t.group.family0 == "IPTC"
-                        && xmp_has.contains(&t.name))
-                });
-            }
-
             // ExifTool FoundTag rule. Among duplicates of the same tag name,
             // ExifTool keeps one primary instance decided purely by priority --
             // the comparison is group-blind (ExifTool.pm `FoundTag`, "take tag
