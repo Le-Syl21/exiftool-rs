@@ -8,10 +8,6 @@ ASF.wmv	ee	missing	0	ErrorCorrectionType	Audio Spread
 ASF.wmv	ee	missing	0	StreamNumber	1
 ASF.wmv	ee	missing	0	StreamType	Audio
 ASF.wmv	ee	missing	0	TimeOffset	0 s
-Apple.jpg	ee	extra	0	GPSAltitude	72.36649215
-Apple.jpg	ee	missing	0	GPSAltitude	72.36649215 m
-Apple.jpg	ee	missing	0	GPSLatitude	53 deg 22' 58.25"
-Apple.jpg	ee	missing	0	GPSLongitude	1 deg 27' 24.04"
 BPG.bpg	ee	missing	0	ColorSpace	YCbCr (BT 601)
 CaptureOne.eip	ee	missing	0	Crop	0.000000;0.000000;0.000000;0.000000
 CaptureOne.eip	ee	missing	0	NRAmount	25
@@ -25,23 +21,11 @@ DjVu.djvu	ee	extra	0	URL	https://exiftool.org/
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
 FlashPix.ppt	ee	missing	0	CodePage	Mac Roman (Western European)
 FlashPix.ppt	ee	missing	1	CodePage	Mac Roman (Western European)
-GPS.jpg	ee	missing	0	GPSLatitude	54 deg 59' 22.80"
-GPS.jpg	ee	missing	0	GPSLongitude	1 deg 54' 51.00"
-GoPro.jpg	ee	extra	0	GPSAltitude	3.983
-GoPro.jpg	ee	missing	0	GPSAltitude	3.983 m
-GoPro.jpg	ee	missing	0	GPSLatitude	40 deg 39' 30.31"
-GoPro.jpg	ee	missing	0	GPSLongitude	73 deg 59' 36.08"
-Google.jpg	ee	extra	0	GPSAltitude	634
 Google.jpg	ee	extra	0	XMPToolkit	Adobe XMP Core 5.1.0-jc003
 Google.jpg	ee	missing	0	CreateDate	2023:10:06 22:53:51+02:00
-Google.jpg	ee	missing	0	GPSAltitude	634 m
-Google.jpg	ee	missing	0	GPSLatitude	40 deg 24' 0.25"
-Google.jpg	ee	missing	0	GPSLongitude	3 deg 42' 52.73"
 HTML.html	ee	extra	0	Subject	Greek: &alpha; &beta; &gamma;
 HTML.html	ee	missing	0	Subject	Greek: α β γ
 InfiRay.jpg	ee	missing	0	GPSAltitude	undef
-InfiRay.jpg	ee	missing	0	GPSLatitude	
-InfiRay.jpg	ee	missing	0	GPSLongitude	
 JXL2.jxl	ee	extra	0	ExifByteOrder	Big-endian (Motorola, MM)
 Kodak.jpg	ee	missing	0	ExposureTime	1/180
 Kodak.jpg	ee	missing	0	FNumber	6.7
@@ -86,10 +70,6 @@ QuickTime.mov	ee	missing	0	Artist	årtist
 Radiance.hdr	ee	missing	0	Command	oconv -f -i test4.oct ila01728
 Radiance.hdr	ee	missing	0	Command	oconv mat.rad sky.rad surfaces.rad
 Radiance.hdr	ee	missing	0	Command	rpict -t 30 -vf test4.vf -x 1536 -y 1536 -ps 3 -pt .04 -dp 4096 -ar 68 -ms 0.029 -ds .2 -dt .05 -dc .75 -dr 3 -sj 1 -st .01 -ab 3 -af test4.amb -aa .08 -ad 1024 -as 512 -av 0.5 0.5 0.5 -lr 12 -lw .0005 -st .001 -dj .02
-Ricoh2.jpg	ee	extra	0	GPSAltitude	117
-Ricoh2.jpg	ee	missing	0	GPSAltitude	117 m
-Ricoh2.jpg	ee	missing	0	GPSLatitude	42 deg 2' 4.47"
-Ricoh2.jpg	ee	missing	0	GPSLongitude	0 deg 30' 27.01"
 SigmaDP2.x3f	default	extra	0	PreviewImage	(Binary data 20 bytes, use -b option to extract)
 SigmaDP2.x3f	default	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
 SigmaDP2.x3f	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)

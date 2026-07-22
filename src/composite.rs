@@ -746,39 +746,74 @@ fn find_tag_f64(tags: &[Tag], name: &str) -> Option<f64> {
     })
 }
 
-/// Relabel the `GPS:GPSLatitude`/`GPS:GPSLongitude` instances that ExifTool
-/// reports through its `GPS::Composite` tags (GPS.pm lines 368-405). Each
-/// composite `Require`s `GPS:GPSLatitude` + `GPS:GPSLatitudeRef` and its
-/// `PrintConv` (`ToDMS(..., "N"/"E")`) folds the hemisphere reference into the
-/// value. Our EXIF reader already produced that ref-bearing print value in
-/// place, so the surviving coordinate tag IS the composite ExifTool displays: it
-/// belongs in family 0/1 `Composite` (family 2 `Location`, the table's `GROUPS`
-/// default), not the raw `GPS` group. Gated on the `*Ref` tag exactly as the
-/// `Require` is, so a coordinate with no reference keeps the raw `GPS` group.
-pub fn relabel_gps_composites(tags: &mut [Tag]) {
-    for (coord, reftag) in [
-        ("GPSLatitude", "GPSLatitudeRef"),
-        ("GPSLongitude", "GPSLongitudeRef"),
+/// GPS Composite `GPSLatitude` / `GPSLongitude` (GPS.pm:367-405).
+///
+/// `Require => { 0 => 'GPS:GPSLatitude', 1 => 'GPS:GPSLatitudeRef' }`,
+/// `ValueConv => '$val[1] =~ /^S/i ? -$val[0] : $val[0]'` and
+/// `PrintConv => ToDMS($self, $val, 1, "N")` — the hemisphere reference is folded
+/// into the Composite's printed value, not into the GPS tag's. `Avoid => 1` with
+/// an explicit `Priority => 1` puts it at the normal priority, so being built
+/// last it wins the duplicate competition against the GPS tag of the same name.
+pub fn gps_coordinates(tags: &[Tag]) -> Vec<Tag> {
+    let mut out = Vec::new();
+    for (coord, reftag, pos_ref, neg_ref) in [
+        ("GPSLatitude", "GPSLatitudeRef", 'N', 'S'),
+        ("GPSLongitude", "GPSLongitudeRef", 'E', 'W'),
     ] {
-        let has_ref = tags
+        // `Require` is satisfied by the mere presence of both tags, whatever
+        // their values.
+        let Some(refv) = tags
             .iter()
-            .any(|t| t.name == reftag && t.group.family1 == "GPS");
-        if !has_ref {
+            .find(|t| t.name == reftag && t.group.family1 == "GPS")
+            .map(|t| t.raw_value.to_display_string())
+        else {
             continue;
-        }
-        for t in tags.iter_mut() {
-            if t.name == coord && t.group.family1 == "GPS" {
-                t.group.family0 = "Composite".into();
-                t.group.family1 = "Composite".into();
-                t.group.family2 = "Location".into();
-            }
-        }
+        };
+        let Some(src) = tags
+            .iter()
+            .find(|t| t.name == coord && t.group.family1 == "GPS")
+        else {
+            continue;
+        };
+        // ValueConv negates on a South/West reference, and ToDMS then derives the
+        // printed hemisphere letter from that sign (GPS.pm:1063-1080). ToDMS
+        // returns an empty value untouched, without a reference, when there is
+        // nothing to convert (GPS.pm:1057-1061).
+        let negative = refv
+            .chars()
+            .next()
+            .is_some_and(|c| c.eq_ignore_ascii_case(&neg_ref));
+        let print = if src.print_value.is_empty() {
+            String::new()
+        } else {
+            format!(
+                "{} {}",
+                src.print_value,
+                if negative { neg_ref } else { pos_ref }
+            )
+        };
+        let mut t = mk_composite_raw(
+            coord,
+            src.description.clone().as_str(),
+            src.raw_value.clone(),
+            print,
+        );
+        t.group.family2 = "Location".into();
+        out.push(t);
     }
+    out
 }
-
 fn compute_gps_position(tags: &[Tag]) -> Option<Tag> {
-    let lat_tag = find_tag(tags, "GPSLatitude")?;
-    let lon_tag = find_tag(tags, "GPSLongitude")?;
+    // GPS.pm:346-355 — GPSPosition `Require`s `Composite:GPSLatitude` and
+    // `Composite:GPSLongitude`, i.e. the ref-bearing values, not the plain GPS
+    // ones.
+    let composite_coord = |name: &str| -> Option<&Tag> {
+        tags.iter()
+            .find(|t| t.name == name && t.group.family0 == "Composite")
+            .or_else(|| find_tag(tags, name))
+    };
+    let lat_tag = composite_coord("GPSLatitude")?;
+    let lon_tag = composite_coord("GPSLongitude")?;
     // GPSLatitude/GPSLongitude already carry ExifTool's "D deg M' S\" REF" print value.
     let (lat, lon) = (lat_tag.print_value.clone(), lon_tag.print_value.clone());
 

@@ -1528,13 +1528,16 @@ impl ExifTool {
             }
         }
 
+        // GPS::Composite GPSLatitude/GPSLongitude first: the other composites
+        // (GPSPosition) Require them, and ExifTool resolves inter-composite
+        // dependencies the same way (BuildCompositeTags defers a composite whose
+        // requirements are themselves composites).
+        let gps = crate::composite::gps_coordinates(&tags);
+        tags.extend(gps);
+
         // Compute composite tags
         let composite = crate::composite::compute_composite_tags(&tags);
         tags.extend(composite);
-
-        // Report the GPS coordinates ExifTool surfaces through its GPS::Composite
-        // tags in the Composite group, matching its default output.
-        crate::composite::relabel_gps_composites(&mut tags);
 
         // No name filter for Composite RedBalance/BlueBalance. `%Exif::Composite`
         // declares them with `Desire` only and no `Priority` (Exif.pm:5235-5260),

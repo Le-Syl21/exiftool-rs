@@ -88,6 +88,15 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
             }
             return Some(format!("{} m", d));
         }
+        // GPSAltitude (GPS.pm:119-126): PrintConv
+        // '$val =~ /^(inf|undef)$/ ? $val : "$val m"'.
+        ("GPS", 0x0006) => {
+            let d = value.to_display_string();
+            if d == "inf" || d == "undef" || d.is_empty() {
+                return Some(d);
+            }
+            return Some(format!("{} m", d));
+        }
         // GPSHPositioningError: "$val m"
         ("GPS", 0x001F) => {
             return Some(format!("{} m", value.to_display_string()));
