@@ -64,12 +64,10 @@ CanonRaw.cr3	default	extra	0	ExposureTime	1/70
 CanonRaw.cr3	default	extra	0	FNumber	3.6
 CanonRaw.cr3	default	extra	0	ImageHeight	4000
 CanonRaw.cr3	default	extra	0	ImageWidth	6000
-CanonRaw.cr3	default	extra	0	LensInfo	(Binary data 30 bytes, use -b option to extract)
 CanonRaw.cr3	default	extra	0	LensModel	EF-M15-45mm f/3.5-6.3 IS STM
 CanonRaw.cr3	default	extra	0	OwnerName	
 CanonRaw.cr3	default	extra	0	XResolution	72
 CanonRaw.cr3	default	extra	0	YResolution	72
-CanonRaw.cr3	ee	extra	0	LensInfo	(Binary data 30 bytes, use -b option to extract)
 CanonRaw.cr3	ee	extra	0	Rotation	0
 CanonRaw.cr3	ee	extra	1	Rotation	0
 CanonRaw.cr3	ee	missing	0	ExifByteOrder	Little-endian (Intel, II)
@@ -118,8 +116,6 @@ ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
 FLIR.jpg	ee	missing	0	DateTimeOriginal	2012:02:11 14:17:08
 FLIR.jpg	ee	missing	0	Emissivity	0.80
 Flash.flv	ee	missing	0	AudioSampleRate	44000
-Flash.swf	default	extra	0	XMPToolkit	
-Flash.swf	ee	extra	0	XMPToolkit	
 FlashPix.ppt	ee	missing	0	CodePage	Mac Roman (Western European)
 FlashPix.ppt	ee	missing	1	CodePage	Mac Roman (Western European)
 GE.jpg	ee	missing	0	Warning	[minor] Suspicious MakerNotes offset for tag 0x0206

@@ -205,13 +205,9 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
                         }
                     }
                 }
-                // Also store raw XMP
-                tags.push(mktag(
-                    "SWF",
-                    "XMPToolkit",
-                    "XMP Toolkit",
-                    Value::String(extract_xmp_toolkit(xmp_data)),
-                ));
+                // Flash.pm:682 hands SWF tag 77 straight to XMP::Main and defines no
+                // SWF-group tag of its own, so XMPToolkit only ever comes from the
+                // XMP packet (x:xmptk), never from a separate SWF pseudo-tag.
                 break;
             }
             _ => {}
@@ -220,22 +216,4 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
         tag_pos += tag_len;
     }
     let _ = found_attributes;
-}
-
-fn extract_xmp_toolkit(xmp: &[u8]) -> String {
-    let text = crate::encoding::decode_utf8_or_latin1(xmp);
-    // Look for xmp:CreatorTool or xmptk attribute
-    if let Some(start) = text.find("xmptk=\"") {
-        let after = &text[start + 7..];
-        if let Some(end) = after.find('"') {
-            return after[..end].to_string();
-        }
-    }
-    if let Some(start) = text.find("<xmp:CreatorTool>") {
-        let after = &text[start + 17..];
-        if let Some(end) = after.find("</") {
-            return after[..end].to_string();
-        }
-    }
-    String::new()
 }

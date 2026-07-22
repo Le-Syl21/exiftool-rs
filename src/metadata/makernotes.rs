@@ -7224,6 +7224,7 @@ fn read_makernote_ifd_with_base(
             (Manufacturer::Canon, 0x4015) | // VignettingCorr
             (Manufacturer::Canon, 0x4016) | // VignettingCorr2
             (Manufacturer::Canon, 0x4018) | // LightingOpt
+            (Manufacturer::Canon, 0x4019) | // LensInfo (Canon.pm:2138 SubDirectory -> Canon::LensInfo)
             (Manufacturer::Canon, 0x4020) | // AmbienceInfo
             (Manufacturer::Canon, 0x4024) | // FilterInfo
             (Manufacturer::Canon, 0x4025) | // HDRInfo
