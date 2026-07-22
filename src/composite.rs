@@ -297,7 +297,10 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     // Nikon SerialNumber (from InternalSerialNumber) - Nikon only
     {
         let make = find_tag_value(tags, "Make").unwrap_or_default();
-        if make.to_uppercase().contains("NIKON") && find_tag(tags, "SerialNumber").is_none() {
+        if make.to_uppercase().contains("NIKON")
+            && maker_note_module_used(tags, "Nikon")
+            && find_tag(tags, "SerialNumber").is_none()
+        {
             if let Some(sn) = find_tag_value(tags, "InternalSerialNumber") {
                 composite.push(mk_composite(
                     "SerialNumber",
@@ -313,10 +316,13 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     // Nikon-specific composites
     {
         let make = find_tag_value(tags, "Make").unwrap_or_default();
-        if make.to_uppercase().contains("NIKON") {
-            // AutoFocus from FocusMode (only from MakerNotes, not XMP)
+        // Nikon.pm registers these composites only when it is loaded, i.e. only
+        // when a Nikon maker note was really decoded (Nikon.pm line 13525).
+        let nikon_module = maker_note_module_used(tags, "Nikon");
+        if make.to_uppercase().contains("NIKON") && nikon_module {
+            // AutoFocus from FocusMode
             if let Some(fm_tag) = tags.iter().find(|t| t.name == "FocusMode") {
-                if fm_tag.group.family0 != "XMP" && find_tag(&composite, "AutoFocus").is_none() {
+                if find_tag(&composite, "AutoFocus").is_none() {
                     let af = if fm_tag.print_value.contains("Manual") {
                         "Off"
                     } else {
@@ -606,6 +612,31 @@ fn find_tag<'a>(tags: &'a [Tag], name: &str) -> Option<&'a Tag> {
             Some(b) if b.priority >= t.priority => Some(b),
             _ => Some(t),
         })
+}
+
+/// Whether a manufacturer's maker-note module was actually used to read this
+/// file.
+///
+/// Perl registers a maker-note module's composites with `AddCompositeTags` at
+/// module load time — `Image::ExifTool::AddCompositeTags('Image::ExifTool::Nikon')`
+/// (Nikon.pm line 13525) runs when `Nikon.pm` is required, which only happens
+/// when a Nikon maker note is actually decoded. A file that never loads the
+/// module therefore never gets its composites, whatever groups its tags carry.
+///
+/// Our engine keeps every composite resident, so the same question has to be
+/// asked of the tag list. A maker-note reader keys every entry it decodes by the
+/// tag NUMBER it read it at, so a numeric tag id under `MakerNotes:<module>` is
+/// exactly the trace of that module having run. Groups alone will not do: an
+/// ExifTool-written RDF/XML dump restores `MakerNotes:Nikon` on properties that
+/// were read from an XMP sidecar (XMP.pm lines 3599-3614), and reading a sidecar
+/// loads no maker-note module at all — those properties are keyed by their XMP
+/// property path, never by a number.
+fn maker_note_module_used(tags: &[Tag], module: &str) -> bool {
+    tags.iter().any(|t| {
+        t.group.family0 == "MakerNotes"
+            && t.group.family1 == module
+            && matches!(t.id, TagId::Numeric(_))
+    })
 }
 
 fn find_tag_in_group<'a>(tags: &'a [Tag], name: &str, group: &str) -> Option<&'a Tag> {

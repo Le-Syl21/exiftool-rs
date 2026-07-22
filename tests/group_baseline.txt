@@ -297,9 +297,6 @@ XMP.svg	Location	family2
 XMP.svg	Xmlns	family2
 XMP.xml	LightValue	family1
 XMP.xml	LightValue	family2
-XMP.xml	ResolutionUnit	family1
-XMP.xml	XResolution	family1
-XMP.xml	YResolution	family1
 XMP.xmp	Flash	family1
 XMP.xmp	Rights-fr	family2
 XMP3.xmp	AttributionName	family1

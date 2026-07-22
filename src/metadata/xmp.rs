@@ -257,7 +257,7 @@ impl XmpReader {
 
         // Namespace prefix → URI, ExifTool's `$$et{curURI}` hash. Only consulted
         // to recognise an ExifTool-written RDF/XML dump; see
-        // [`exiftool_rdf_group1`].
+        // [`exiftool_rdf_groups`].
         let mut cur_uri: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
 
@@ -1910,7 +1910,7 @@ impl XmpReader {
         // Restore the original groups of an ExifTool-written RDF/XML dump. The
         // magic lives in XMP.pm lines 3599-3614 and runs on the invented tagInfo
         // of every property whose namespace URI ExifTool recognises as one of its
-        // own; see [`exiftool_rdf_group1`] for the rule itself. It sets families 0
+        // own; see [`exiftool_rdf_groups`] for the rule itself. It sets families 0
         // and 1 only, so family 2 keeps the containing table's default: these
         // properties are unknown to every schema, so they live in
         // `%Image::ExifTool::XMP::other`, `GROUPS => { 2 => 'Unknown' }` (XMP.pm
@@ -1928,8 +1928,9 @@ impl XmpReader {
                 .family1
                 .strip_prefix("XMP-")
                 .and_then(|prefix| cur_uri.get(prefix))
-                .and_then(|uri| exiftool_rdf_group1(uri));
-            if let Some(group1) = restored {
+                .and_then(|uri| exiftool_rdf_groups(uri));
+            if let Some((group0, group1)) = restored {
+                tag.group.family0 = group0;
                 tag.group.family1 = group1;
                 tag.group.family2 = "Unknown".into();
             }
@@ -1939,8 +1940,8 @@ impl XmpReader {
     }
 }
 
-/// The original family-1 group encoded in an ExifTool-written RDF/XML namespace
-/// URI, or `None` when the URI is not one of ExifTool's own.
+/// The original family-0 and family-1 groups encoded in an ExifTool-written
+/// RDF/XML namespace URI, or `None` when the URI is not one of ExifTool's own.
 ///
 /// `exiftool -X` invents a namespace per source group, of the form
 /// `http://ns.exiftool.org/<family0>/<family1>/1.0/` (or `.../<family0>/1.0/`
@@ -1968,24 +1969,30 @@ impl XmpReader {
 /// }
 /// ```
 ///
-/// So `EXIF/IFD0/1.0/` gives group 1 `IFD0`, `MakerNotes/Nikon/1.0/` gives
-/// `Nikon`, `File/1.0/` gives `XML-File` (the second capture is the version, and
-/// starts with a digit) and `File/System/1.0/` gives `XML-System`.
+/// So `EXIF/IFD0/1.0/` gives `(EXIF, IFD0)`, `MakerNotes/Nikon/1.0/` gives
+/// `(MakerNotes, Nikon)`, `File/1.0/` gives `(XML, XML-File)` (the second
+/// capture is the version, and starts with a digit) and `File/System/1.0/` gives
+/// `(XML, XML-System)`.
 ///
-/// Only family 1 is returned. Perl also stamps family 0 (`EXIF`, `MakerNotes`,
-/// `XML`, …), but our family-2 resolution keys on the family 0/1 pair to find
-/// the ExifTool table a tag came from, and these tags come from
-/// `%Image::ExifTool::XMP::other` — not from the EXIF or MakerNotes tables whose
-/// name their URI carries. Family 0 therefore stays `XMP`, which is what says
-/// "invented in an XMP table" to `tags::group2::family2_for`; that guard is what
-/// keeps their category at `Unknown`.
+/// The restored groups say where the property was read from in the SOURCE file;
+/// they say nothing about the table the tag now lives in. The tag itself is
+/// still invented in `%Image::ExifTool::XMP::other`, so its family 2 stays that
+/// table's `GROUPS => { 2 => 'Unknown' }` default (XMP.pm line 2740) and no
+/// group-2 lookup keyed on families 0/1 may answer for it — see the `Unknown`
+/// guard at the top of [`crate::tags::group2::family2_for`].
+///
+/// They also say nothing about which ExifTool modules were LOADED reading this
+/// file: `Image::ExifTool::Nikon` is never loaded for an XMP sidecar, so the
+/// composites it registers with `AddCompositeTags` (Nikon.pm line 13525) do not
+/// exist here even though a property now reports group `MakerNotes:Nikon` — see
+/// `composite::maker_note_module_used`.
 ///
 /// `StaticGroup1` marks the group as final so nothing downstream renames it. We
 /// have no later family-1 rewrite for XMP tags — the two that exist, the
 /// `%stdXlatNS` alias pass and the flattened-struct root lookup, both run before
 /// this one and both key on the `XMP-` prefix this pass removes — so the flag
 /// needs no separate representation.
-fn exiftool_rdf_group1(uri: &str) -> Option<String> {
+fn exiftool_rdf_groups(uri: &str) -> Option<(String, String)> {
     // Perl: m{^http://ns.exiftool.(?:ca|org)/(.*?)/(.*?)/} — two non-greedy path
     // segments, so the two captures end at the first and second '/'.
     let rest = uri
@@ -1997,12 +2004,12 @@ fn exiftool_rdf_group1(uri: &str) -> Option<String> {
     // The second capture is only a match if a closing '/' follows it.
     segments.next()?;
     if group1 == "System" {
-        return Some("XML-System".to_string());
+        return Some(("XML".to_string(), "XML-System".to_string()));
     }
     if group1.starts_with(|c: char| c.is_ascii_digit()) {
-        return Some(format!("XML-{group0}"));
+        return Some(("XML".to_string(), format!("XML-{group0}")));
     }
-    Some(group1.to_string())
+    Some((group0.to_string(), group1.to_string()))
 }
 
 /// ExifTool's name for an XMP namespace prefix, when it differs from the one

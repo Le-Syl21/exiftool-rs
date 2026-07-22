@@ -86,6 +86,23 @@ pub fn family2_for(
     name: &str,
     current: &str,
 ) -> Option<&'static str> {
+    // `Unknown` is not a category any ExifTool table hands out for a tag it
+    // describes; it is the default of the tables ExifTool invents entries in for
+    // material it has NO description for — `%Image::ExifTool::XMP::other`,
+    // `GROUPS => { 2 => 'Unknown' }` (XMP.pm line 2740) above all. A reader that
+    // already settled on it has said "this tag is in no ExifTool table", so the
+    // lookups below — all keyed on the tag's NAME — have nothing to contribute
+    // and could only drag in an unrelated table's answer.
+    //
+    // This is what keeps the category of a property read back from an
+    // ExifTool-written RDF/XML dump at `Unknown`. ExifTool restores such a
+    // property's ORIGINAL families 0 and 1 from the namespace URI it was written
+    // under — `EXIF:IFD0`, `MakerNotes:Nikon`, `XML:XML-File`, … (XMP.pm lines
+    // 3599-3614) — but the tag itself is still invented in `XMP::other`, so its
+    // groups no longer name the table it came from and cannot key the lookup.
+    if current == XMP_UNKNOWN_NAMESPACE {
+        return None;
+    }
     // A few readers label a table with a family-0 group of their own choosing
     // where ExifTool's table declares a different one; the generated tables are
     // keyed on ExifTool's, so resolve the category under it. The KyoceraRaw
@@ -128,17 +145,6 @@ pub fn family2_for(
     };
     if maker_ambiguous {
         return None;
-    }
-    // Reading back an ExifTool-written RDF/XML dump, ExifTool restores each
-    // property's ORIGINAL family-1 group from the namespace URI it was written
-    // under — `IFD0`, `ExifIFD`, `Nikon`, `XML-File`, … (XMP.pm lines 3599-3614).
-    // That magic sets families 0 and 1 only: the tag itself is still invented in
-    // `%Image::ExifTool::XMP::other`, `GROUPS => { 2 => 'Unknown' }` (XMP.pm line
-    // 2740), so no name tier may answer for it. A family-1 group that is neither
-    // `XMP` nor `XMP-<prefix>` is exactly what tells those restored tags apart
-    // from a schema-backed XMP property.
-    if family0 == "XMP" && family1 != "XMP" && !family1.starts_with("XMP-") {
-        return Some(XMP_UNKNOWN_NAMESPACE);
     }
     // A CIFF record embedded in a JPEG is read with the very tables a .crw file
     // uses; ExifTool only overrides their family-1 group name (`Groups => { 1 =>

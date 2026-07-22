@@ -1702,10 +1702,10 @@ impl ExifTool {
             // same (now-max) priority exists.
             let has_non_xmp: std::collections::HashSet<String> = tags
                 .iter()
-                .filter(|t| t.group.family0 != "XMP" && !t.print_value.is_empty())
+                .filter(|t| duplicate_source(&t.group) != "XMP" && !t.print_value.is_empty())
                 .map(|t| t.name.clone())
                 .collect();
-            tags.retain(|t| t.group.family0 != "XMP" || !has_non_xmp.contains(&t.name));
+            tags.retain(|t| duplicate_source(&t.group) != "XMP" || !has_non_xmp.contains(&t.name));
 
             // A table upstream declares `PRIORITY => 0` loses to the EXIF copy of
             // the same tag. The FoundTag pass below only arbitrates within one
@@ -1869,6 +1869,11 @@ impl ExifTool {
                 const LOW_PRIORITY_TAGS: &[(&str, &str)] = &[("Canon", "BaseISO")];
                 fn is_low_priority_source(g: &TagGroup, name: &str) -> bool {
                     let g1 = g.family1.as_str();
+                    // An invented `XMP::other` tag carries `Priority => 0`
+                    // whatever family 0 it reports; see [`duplicate_source`].
+                    if g.family2 == "Unknown" {
+                        return true;
+                    }
                     // A sub-document never displaces the main document's tag:
                     // ExifTool only lets the incoming tag override when it carries
                     // no DOC_NUM, or the same one as the tag already stored.
@@ -1907,7 +1912,7 @@ impl ExifTool {
                 let mut by_name: HM<(&str, &str), Vec<usize>> = HM::new();
                 for (i, t) in tags.iter().enumerate() {
                     by_name
-                        .entry((t.name.as_str(), t.group.family0.as_str()))
+                        .entry((t.name.as_str(), duplicate_source(&t.group)))
                         .or_default()
                         .push(i);
                 }
@@ -3153,6 +3158,28 @@ const FILE_LEVEL_GROUPS: &[(&str, &str, &str, &str)] = &[
     ("FileSize", "File", "System", "Other"),
     ("Warning", "ExifTool", "ExifTool", "ExifTool"),
 ];
+
+/// The metadata source a tag competes under during duplicate resolution.
+///
+/// Normally that is its family-0 group. The exception is a tag ExifTool invented
+/// on the spot for material no schema of its describes: XMP.pm builds it a
+/// tagInfo of `{ Name => $name, IsDefault => 1, Priority => 0 }` in
+/// `%Image::ExifTool::XMP::other`, whose `GROUPS => { 2 => 'Unknown' }` (XMP.pm
+/// line 2740) is the family-2 our readers stamp on it. Such a tag is an XMP
+/// property whatever family 0 it REPORTS: reading back an ExifTool-written
+/// RDF/XML dump, XMP.pm lines 3599-3614 overwrite its families 0 and 1 with the
+/// groups the property had in the source file (`EXIF`, `MakerNotes`, `XML`, …),
+/// but that is a reporting group only — the tag still sits in an XMP table, at
+/// priority 0, so it must keep losing to a same-named tag from a real source
+/// (and compete with its restored siblings, which Perl's group-blind `FoundTag`
+/// does by construction).
+fn duplicate_source(group: &TagGroup) -> &str {
+    if group.family2 == "Unknown" {
+        "XMP"
+    } else {
+        group.family0.as_str()
+    }
+}
 
 /// The `(family0, family1, family2)` groups [`FILE_LEVEL_GROUPS`] assigns to
 /// `name`, or `None` if `name` is not a file-level pseudo-tag.
