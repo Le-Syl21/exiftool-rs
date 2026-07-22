@@ -4286,15 +4286,23 @@ fn decode_preview_ifd(
         let tag_id = read_u16(data, eoff, bo);
         let val = read_u32(data, eoff + 8, bo);
 
+        // `Nikon::PreviewIFD` is `GROUPS => { 0 => 'MakerNotes', 1 =>
+        // 'PreviewIFD', 2 => 'Image' }` (Nikon.pm line 5389) and neither 0x201
+        // nor 0x202 overrides family 2, so both are Image — not the `Camera`
+        // that `mk_nikon_str` gives a Nikon::Main tag.
+        let image = |mut t: Tag| {
+            t.group.family2 = "Image".into();
+            t
+        };
         match tag_id {
             0x0201 => {
                 // PreviewImageStart is IsOffset, stored relative to the maker-note
                 // TIFF base. ExifTool reports it file-absolute (base + raw).
                 let abs = val as u64 + mn_file_base as u64;
-                tags.push(mk_nikon_str("PreviewImageStart", &abs.to_string()));
+                tags.push(image(mk_nikon_str("PreviewImageStart", &abs.to_string())));
             }
             0x0202 => {
-                tags.push(mk_nikon_str("PreviewImageLength", &val.to_string()));
+                tags.push(image(mk_nikon_str("PreviewImageLength", &val.to_string())));
                 // Also emit PreviewImage as binary marker
                 if val > 0 {
                     tags.push(Tag {
@@ -4614,6 +4622,28 @@ fn decode_nikon_color_balance(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
     }
 
     tags
+}
+
+/// Family-2 category of a maker-note Main-table entry.
+///
+/// Every maker's `Main` table defaults to `GROUPS => { 2 => 'Camera' }`, but a
+/// few entries override it with their own `Groups => { 2 => ... }`. `-listx`
+/// cannot be used to recover those: it prints the tag's WriteGroup in place of
+/// family 1 (TagInfoXML.pm line 191), so all these entries collapse onto the
+/// same generated key as the maker's binary sub-tables and the majority vote
+/// answers `Camera`. The reader knows exactly which entry it decoded, so it
+/// stamps the override here and the generated tables' tie honours it.
+fn main_table_family2(manufacturer: Manufacturer, tag_id: u16) -> &'static str {
+    match (manufacturer, tag_id) {
+        // Pentax::Main 0x0003 PreviewImageLength and 0x0004 PreviewImageStart:
+        // `Groups => { 2 => 'Image' }` (Pentax.pm lines 944 and 954) against the
+        // table default `Camera` (line 862).
+        (Manufacturer::Pentax, 0x0003 | 0x0004) => "Image",
+        // Nikon::Main 0x0002 ISO: `Groups => { 2 => 'Image' }` (Nikon.pm line
+        // 1804) against the table default `Camera` (line 1783).
+        (Manufacturer::Nikon, 0x0002) => "Image",
+        _ => "Camera",
+    }
 }
 
 fn mk_nikon_str(name: &str, value: &str) -> Tag {
@@ -7599,7 +7629,7 @@ fn read_makernote_ifd_with_base(
             group: TagGroup {
                 family0: "MakerNotes".to_string(),
                 family1: group_name.to_string(),
-                family2: "Camera".to_string(),
+                family2: main_table_family2(manufacturer, tag_id).to_string(),
                 family3: "Main".into(),
             },
             raw_value: value,

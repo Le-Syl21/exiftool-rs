@@ -267,13 +267,18 @@ fn parse_header2(data: &[u8], ver_f: f64, tags: &mut Vec<Tag>) {
     if data.len() >= 72 {
         let wb = read_cstr(&data[40..72]);
         if !wb.is_empty() {
+            // `SigmaRaw::Header` (SigmaRaw.pm line 67) declares no GROUPS, so
+            // it takes ExifTool's module-name default with `2 => 'Other'`
+            // (ExifTool.pm line 8991) and tag 10 adds no override (line 90).
+            // Only `SigmaRaw::Properties` is `2 => 'Camera'` (line 137), and its
+            // WB_DESC entry is a different WhiteBalance.
             tags.push(mk_tag_str(
                 "WhiteBalance",
                 "White Balance",
                 wb,
                 "SigmaRaw",
                 "SigmaRaw",
-                "Camera",
+                "Other",
             ));
         }
     }

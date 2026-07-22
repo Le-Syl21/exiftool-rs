@@ -106,6 +106,29 @@ pub fn family2_for(
         "GoPro" => "GoPro",
         _ => family0,
     };
+    // Three tag names live in a sub-table whose `GROUPS => { 2 => ... }` is
+    // outvoted by its siblings, all of which share the same family-1 group so no
+    // tier can separate them:
+    //   * `Nikon::Main` 0x0002 ISO is `Groups => { 2 => 'Image' }` (Nikon.pm line
+    //     1804) while the ISO of every other Nikon table is `Camera`.
+    //   * `Sony::PMP` is `GROUPS => { 0 => 'MakerNotes', 2 => 'Image' }` (Sony.pm
+    //     line 10632) and its ExposureTime (line 10693) adds no override, while
+    //     the Sony maker-note tables put ExposureTime in `Camera`.
+    //   * `FlashPix::SummaryInfo` is `GROUPS => { 2 => 'Document' }`
+    //     (FlashPix.pm line 388) and its RevisionNumber (line 407) adds no
+    //     override, but `FlashPix::DataObject` (line 884) and its siblings are
+    //     `Other` and outvote it.
+    // Each reader stamps the category of the table it actually decoded, so defer
+    // to it — exactly as the Canon guard below does.
+    let maker_ambiguous = match family1 {
+        "Nikon" => name == "ISO",
+        "Sony" => family0 == "MakerNotes" && name == "ExposureTime",
+        "FlashPix" => name == "RevisionNumber",
+        _ => false,
+    };
+    if maker_ambiguous {
+        return None;
+    }
     // A CIFF record embedded in a JPEG is read with the very tables a .crw file
     // uses; ExifTool only overrides their family-1 group name (`Groups => { 1 =>
     // 'CIFF' }`), so the categories must be looked up under the real ones.
@@ -211,6 +234,15 @@ pub fn family2_for(
     // handful (PictureStyle, Rotation, AutoLightingOptimizer) to Camera, so keep
     // the reader's category.
     if family1 == "CanonDR4" {
+        return None;
+    }
+    // The DSS reader resolves `Olympus::DSS` in full — `GROUPS => { 0 =>
+    // 'MakerNotes', 2 => 'Audio' }` (Olympus.pm line 4243) with the StartTime /
+    // EndTime `Time` overrides — and it is the only reader that stamps family 0
+    // `Olympus` (the Olympus maker-note reader stamps `MakerNotes`). The
+    // bare-name tier would drag in an unrelated table's answer (Model -> Camera,
+    // Duration -> Video), so keep the reader's category.
+    if family0 == "Olympus" {
         return None;
     }
     lookup(FAMILY2_BY_NAME, name).map(|c| choose(c, current))
@@ -331,6 +363,45 @@ mod tests {
         // Same name outside a Canon group is unaffected by the guard.
         assert_eq!(
             family2_for("MakerNotes", "Nikon", "WhiteBalance", "Camera"),
+            Some("Camera")
+        );
+    }
+
+    #[test]
+    fn outvoted_sub_table_names_defer_to_reader() {
+        // Nikon::Main ISO is Image but every other Nikon table's ISO is Camera.
+        assert_eq!(family2_for("MakerNotes", "Nikon", "ISO", "Image"), None);
+        // Sony::PMP is an Image table; the Sony maker-note tables are Camera.
+        assert_eq!(
+            family2_for("MakerNotes", "Sony", "ExposureTime", "Image"),
+            None
+        );
+        // FlashPix::SummaryInfo is Document; the sibling property sets are Other.
+        assert_eq!(
+            family2_for("FlashPix", "FlashPix", "RevisionNumber", "Document"),
+            None
+        );
+        // A neighbouring name in the same group is still resolved from the tables.
+        assert_eq!(
+            family2_for("FlashPix", "FlashPix", "Dictionary", "Document"),
+            Some("Other")
+        );
+        assert_eq!(
+            family2_for("MakerNotes", "Nikon", "WhiteBalance", "Image"),
+            Some("Camera")
+        );
+    }
+
+    #[test]
+    fn olympus_dss_group_is_resolved_by_the_reader() {
+        // Olympus::DSS is Audio with Time overrides; the bare name would answer
+        // Camera for Model and Video for Duration.
+        assert_eq!(family2_for("Olympus", "Olympus", "Model", "Audio"), None);
+        assert_eq!(family2_for("Olympus", "Olympus", "Duration", "Audio"), None);
+        // The Olympus maker notes are family 0 MakerNotes and unaffected: their
+        // Model is resolved from the tables as usual.
+        assert_eq!(
+            family2_for("MakerNotes", "Olympus", "Model", "Audio"),
             Some("Camera")
         );
     }

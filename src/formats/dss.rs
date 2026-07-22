@@ -5,6 +5,16 @@ use crate::error::{Error, Result};
 use crate::tag::Tag;
 use crate::value::Value;
 
+/// Build a tag of `Olympus::DSS`, which is
+/// `GROUPS => { 0 => 'MakerNotes', 2 => 'Audio' }` (Olympus.pm line 4243): every
+/// entry is `Audio` unless it overrides family 2 itself, and only StartTime and
+/// EndTime do, with `Groups => { 2 => 'Time' }` (lines 4257 and 4264).
+fn dss_tag(name: &str, description: &str, value: Value, category: &str) -> Tag {
+    let mut tag = mktag("Olympus", name, description, value);
+    tag.group.family2 = category.to_string();
+    tag
+}
+
 /// Parse DSS (Digital Speech Standard) voice recorder files.
 /// Mirrors ExifTool's Olympus::ProcessDSS().
 pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
@@ -30,11 +40,11 @@ pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
         let model = crate::encoding::decode_utf8_or_latin1(model_bytes);
         let model = model.split('\0').next().unwrap_or("").to_string();
         if !model.is_empty() {
-            tags.push(mktag(
-                "Olympus",
+            tags.push(dss_tag(
                 "Model",
                 "Camera Model Name",
                 Value::String(model),
+                "Audio",
             ));
         }
     }
@@ -44,11 +54,11 @@ pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
         let st_bytes = &data[38..50];
         let st_str = crate::encoding::decode_utf8_or_latin1(st_bytes);
         if let Some(dt) = parse_dss_time(&st_str) {
-            tags.push(mktag(
-                "Olympus",
+            tags.push(dss_tag(
                 "StartTime",
                 "Start Time",
                 Value::String(dt),
+                "Time",
             ));
         }
     }
@@ -58,7 +68,7 @@ pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
         let et_bytes = &data[50..62];
         let et_str = crate::encoding::decode_utf8_or_latin1(et_bytes);
         if let Some(dt) = parse_dss_time(&et_str) {
-            tags.push(mktag("Olympus", "EndTime", "End Time", Value::String(dt)));
+            tags.push(dss_tag("EndTime", "End Time", Value::String(dt), "Time"));
         }
     }
 
@@ -68,11 +78,11 @@ pub fn read_dss(data: &[u8]) -> Result<Vec<Tag>> {
         let dur_str = crate::encoding::decode_utf8_or_latin1(dur_bytes);
         if let Some(dur_secs) = parse_dss_duration(&dur_str) {
             let dur_display = dss_convert_duration(dur_secs);
-            tags.push(mktag(
-                "Olympus",
+            tags.push(dss_tag(
                 "Duration",
                 "Duration",
                 Value::String(dur_display),
+                "Audio",
             ));
         }
     }

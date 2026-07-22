@@ -97,7 +97,6 @@ ExifTool.jpg	JSONInfo	family1
 ExifTool.jpg	ThumbnailImage	family1
 ExifTool.jpg	TrailerSignature	family1
 FLIR.jpg	ImageTemperatureMin	family1
-FlashPix.ppt	RevisionNumber	family2
 Font.afm	Comment	family1
 Font.afm	Comment	family2
 Font.dfont	ApplicationVersion	family1
@@ -177,7 +176,6 @@ Nikon.nef	City	family1
 Nikon.nef	Country-PrimaryLocationName	family1
 Nikon.nef	Orientation	family1
 Nikon.nef	PreviewImageLength	family1
-Nikon.nef	PreviewImageLength	family2
 Nikon.nef	PreviewImageStart	family1
 Nikon.nef	Province-State	family1
 Nikon.nef	ResolutionUnit	family1
@@ -186,16 +184,11 @@ Nikon.nef	XResolution	family1
 Nikon.nef	YResolution	family1
 NikonD2Hs.jpg	Compression	family1
 NikonD2Hs.jpg	PreviewImageLength	family1
-NikonD2Hs.jpg	PreviewImageLength	family2
 NikonD2Hs.jpg	PreviewImageStart	family1
 NikonD70.jpg	Compression	family1
-NikonD70.jpg	ISO	family2
 NikonD70.jpg	PreviewImageLength	family1
-NikonD70.jpg	PreviewImageLength	family2
 NikonD70.jpg	PreviewImageStart	family1
 OOXML.docx	ACustomField	family2
-Olympus.dss	Duration	family2
-Olympus.dss	Model	family2
 OlympusE1.jpg	ExtenderStatus	family1
 OpenDoc.ods	Creation-date	family2
 OpenDoc.ods	Keyword	family2
@@ -224,7 +217,6 @@ Pentax.avi	ImageHeight	family1
 Pentax.avi	ImageWidth	family1
 Pentax.jpg	ISO	family1
 Pentax.jpg	ISO	family2
-Pentax.jpg	PreviewImageLength	family2
 PhaseOne.iiq	FocalLength	family1
 PhaseOne.iiq	ISO	family1
 PhaseOne.iiq	ISO	family2
@@ -289,7 +281,6 @@ Ricoh2.jpg	RicohImageHeight	family1
 Ricoh2.jpg	RicohImageWidth	family1
 Sigma.x3f	WhiteBalance	family2
 SigmaDP2.x3f	PreviewImage	family1
-Sony.pmp	ExposureTime	family2
 Sony.pmp	Make	family1
 Sony.pmp	Make	family2
 Sony.pmp	Model	family1
