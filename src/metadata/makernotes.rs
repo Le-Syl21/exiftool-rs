@@ -1230,6 +1230,14 @@ fn olympus_camera_settings_pc(stid: u16, v: u64) -> Option<String> {
             .map(|(_, s)| s.to_string())
     };
     match stid {
+        // Olympus.pm:1811-1820 (%Olympus::CameraSettings 0x200).
+        0x200 => enum_pc(&[
+            (1, "Manual"),
+            (2, "Program"),
+            (3, "Aperture-priority AE"),
+            (4, "Shutter speed priority AE"),
+            (5, "Program-shift"),
+        ]),
         0x202 => enum_pc(&[
             (2, "Center-weighted average"),
             (3, "Spot"),
@@ -1277,6 +1285,9 @@ fn olympus_camera_settings_pc(stid: u16, v: u64) -> Option<String> {
         } else {
             "Auto".to_string()
         }),
+        // Olympus.pm:2130-2137 (%Olympus::CameraSettings 0x507). The generic
+        // by-name table would apply the EXIF ColorSpace PrintConv instead.
+        0x507 => enum_pc(&[(0, "sRGB"), (1, "Adobe RGB"), (2, "Pro Photo RGB")]),
         0x509 => enum_pc(&[
             (0, "Standard"),
             (6, "Auto"),
@@ -9837,13 +9848,16 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 let s: String = b.iter().map(|&c| c as char).collect();
                 s.split('\0').next().unwrap_or("").to_string()
             }),
-            // RedBalance/BlueBalance: int16u[2], ValueConv = first/256, printed %.7g.
+            // Olympus.pm:1042-1055 — RedBalance/BlueBalance are int16u[2] with
+            // `ValueConv => '$val=~s/ .*//; $val / 256'` and no PrintConv, so the
+            // ValueConv number is printed as Perl stringifies it (%.15g), not
+            // rounded to 7 significant digits.
             0x1017 | 0x1018 => {
                 let first = match value {
                     Value::List(items) => items.first().and_then(|v| v.as_u64()),
                     other => other.as_u64(),
                 };
-                first.map(|n| crate::value::format_g_prec(n as f64 / 256.0, 7))
+                first.map(|n| crate::value::format_g_prec(n as f64 / 256.0, 15))
             }
             _ => None,
         },

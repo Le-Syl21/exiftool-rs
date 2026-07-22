@@ -120,23 +120,10 @@ pub fn read_mrw(data: &[u8]) -> Result<Vec<Tag>> {
                         "WB RGGB Levels",
                         format!("{} {} {} {}", r, g1, g2, b),
                     ));
-                    // Also compute Red/Blue balance as float
-                    if g1 > 0 {
-                        let red_bal = r as f64 / g1 as f64;
-                        tags.push(mk_str(
-                            "RedBalance",
-                            "Red Balance",
-                            format!("{:.6}", red_bal),
-                        ));
-                    }
-                    if g2 > 0 {
-                        let blue_bal = b as f64 / g2 as f64;
-                        tags.push(mk_str(
-                            "BlueBalance",
-                            "Blue Balance",
-                            format!("{:.6}", blue_bal),
-                        ));
-                    }
+                    // %MinoltaRaw::WBG (MinoltaRaw.pm:113-140) holds WBScale and
+                    // WB_RGGBLevels only. Red/BlueBalance are not MRW tags: they
+                    // are the Exif Composite (Exif.pm:5235), derived from
+                    // WB_RGGBLevels after the file has been read.
                 }
             }
             b"\0RIF" => {

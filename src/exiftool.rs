@@ -1536,17 +1536,11 @@ impl ExifTool {
         // tags in the Composite group, matching its default output.
         crate::composite::relabel_gps_composites(&mut tags);
 
-        // ExifTool's Composite RedBalance/BlueBalance (computed from WB level tags)
-        // is preferred over a manufacturer's own same-named tag. Drop the non-Composite
-        // versions when a Composite one exists so the Composite value wins.
-        for bal in ["RedBalance", "BlueBalance"] {
-            let has_composite = tags
-                .iter()
-                .any(|t| t.name == bal && t.group.family0 == "Composite");
-            if has_composite {
-                tags.retain(|t| t.name != bal || t.group.family0 == "Composite");
-            }
-        }
+        // No name filter for Composite RedBalance/BlueBalance. `%Exif::Composite`
+        // declares them with `Desire` only and no `Priority` (Exif.pm:5235-5260),
+        // so a manufacturer's own RedBalance is extracted too; the Composite is
+        // built after the file has been read, and therefore wins the duplicate
+        // competition by last-wins when duplicates are collapsed.
 
         // Geolocation is opt-in, matching ExifTool's `Geolocation` API option.
         if self.options.geolocation {

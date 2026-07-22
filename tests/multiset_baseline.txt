@@ -69,16 +69,6 @@ NikonD70.jpg	ee	missing	0	ResolutionUnit	inches
 NikonD70.jpg	ee	missing	0	XResolution	300
 NikonD70.jpg	ee	missing	0	YCbCrPositioning	Co-sited
 NikonD70.jpg	ee	missing	0	YResolution	300
-Olympus2.jpg	ee	extra	0	ColorSpace	Calibrated RGB
-Olympus2.jpg	ee	extra	0	ExposureMode	Auto bracket
-Olympus2.jpg	ee	missing	0	ColorSpace	sRGB
-Olympus2.jpg	ee	missing	0	ExposureMode	Program
-OlympusE1.jpg	ee	extra	0	ColorSpace	Calibrated RGB
-OlympusE1.jpg	ee	extra	0	ExposureMode	Auto bracket
-OlympusE1.jpg	ee	missing	0	BlueBalance	1.1328125
-OlympusE1.jpg	ee	missing	0	ColorSpace	sRGB
-OlympusE1.jpg	ee	missing	0	ExposureMode	Program
-OlympusE1.jpg	ee	missing	0	RedBalance	1.609375
 PGF.pgf	ee	missing	0	ImageHeight	1
 PGF.pgf	ee	missing	0	ImageWidth	1
 PSP.psp	ee	extra	0	Copyright	.
