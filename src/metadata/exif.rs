@@ -731,16 +731,11 @@ impl ExifReader {
                                 if dng_suppress.contains(&mn_tag.name.as_str()) {
                                     continue;
                                 }
-                                let exists = tags.iter().any(|t| t.name == mn_tag.name);
-                                if exists {
-                                    // EXIF-primary tags: EXIF wins, skip MakerNotes.
-                                    // Other tags: MakerNotes wins — drop the existing
-                                    // EXIF/XMP duplicates and add the MakerNotes version.
-                                    if EXIF_PRIMARY_TAGS.contains(&mn_tag.name.as_str()) {
-                                        continue;
-                                    }
-                                    tags.retain(|t| t.name != mn_tag.name);
-                                }
+                                // No name-collision filtering here: ExifTool
+                                // extracts the maker note in full and lets the
+                                // duplicate arbitration pick a winner later,
+                                // which is the only step the Duplicates option
+                                // (and therefore -ee) turns off.
                                 tags.push(mn_tag);
                             }
                         }
@@ -1105,7 +1100,12 @@ impl ExifReader {
                                     });
                                 }
 
-                                // Legacy: Also check for already-named JpgFromRawStart tags
+                                // Also handle a SubIFD whose 0x0201/0x0202 pair was
+                                // already named JpgFromRawStart/Length when it was read
+                                // -- but only if the rename branch above has not already
+                                // produced the image, or it would be reported twice.
+                                let jpg_done =
+                                    tags[before_idx..].iter().any(|t| t.name == "JpgFromRaw");
                                 let jpg_start = tags[before_idx..]
                                     .iter()
                                     .find(|t| t.name == "JpgFromRawStart")
@@ -1114,7 +1114,9 @@ impl ExifReader {
                                     .iter()
                                     .find(|t| t.name == "JpgFromRawLength")
                                     .and_then(|t| t.raw_value.as_u64());
-                                if let (Some(start), Some(len)) = (jpg_start, jpg_len) {
+                                if let (false, Some(start), Some(len)) =
+                                    (jpg_done, jpg_start, jpg_len)
+                                {
                                     let start = start as usize;
                                     let len = len as usize;
                                     if len > 0 && start + len <= data.len() {

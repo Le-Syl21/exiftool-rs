@@ -21,19 +21,6 @@ Casio2.jpg	ee	missing	0	Contrast	0
 Casio2.jpg	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
 Casio2.jpg	ee	missing	0	Saturation	0
 Casio2.jpg	ee	missing	0	Sharpness	0
-DNG.dng	ee	extra	0	JpgFromRaw	(Binary data 29 bytes, use -b option to extract)
-DNG.dng	ee	missing	0	ColorTone	Normal
-DNG.dng	ee	missing	0	ExposureCompensation	0
-DNG.dng	ee	missing	1	ExposureCompensation	0
-DNG.dng	ee	missing	0	ExposureTime	1/16
-DNG.dng	ee	missing	0	FNumber	8
-DNG.dng	ee	missing	0	FocalLength	55 mm
-DNG.dng	ee	missing	0	MeteringMode	Average
-DNG.dng	ee	missing	1	MeteringMode	Average
-DNG.dng	ee	missing	0	OwnerName	unknown
-DNG.dng	ee	missing	0	SerialNumber	012345678
-DNG.dng	ee	missing	0	WhiteBalance	Auto
-DNG.dng	ee	missing	1	WhiteBalance	Auto
 DjVu.djvu	ee	extra	0	URL	https://exiftool.org/
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
 FLIR.jpg	ee	missing	0	DateTimeOriginal	2012:02:11 14:17:08
