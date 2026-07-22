@@ -9,10 +9,7 @@ AIFF.aif	Duration	family2
 APE.ape	Duration	family2
 APE.mpc	DateTimeOriginal	family1
 Android.mp4	MatrixStructure	family1
-Canon.jpg	WB_RGGBLevels	family1
-Canon1DmkIII.jpg	WB_RGGBLevels	family1
 Canon1DmkIII.jpg	WhiteBalance	family2
-CanonRaw.cr2	WB_RGGBLevels	family1
 CanonRaw.cr3	BitDepth	family1
 CanonRaw.cr3	CompressorID	family1
 CanonRaw.cr3	GraphicsMode	family1
@@ -23,7 +20,6 @@ CanonRaw.cr3	XResolution	family1
 CanonRaw.cr3	YResolution	family1
 DNG.dng	Creator	family2
 DNG.dng	Flash	family1
-DNG.dng	WB_RGGBLevels	family1
 DjVu.djvu	CreateDate	family1
 DjVu.djvu	Keywords	family1
 DjVu.djvu	ModifyDate	family1

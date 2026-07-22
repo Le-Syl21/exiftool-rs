@@ -8106,14 +8106,6 @@ fn decode_canon_color_balance(data: &[u8], count: usize, bo: ByteOrderMark) -> V
                 &format!("WB_RGGBLevels{}", name),
                 &format!("{} {} {} {}", r, g1, b, g2),
             ));
-
-            // First entry (Auto) is also WB_RGGBLevels
-            if *name == "Auto" {
-                tags.push(mk_canon_str(
-                    "WB_RGGBLevels",
-                    &format!("{} {} {} {}", r, g1, b, g2),
-                ));
-            }
         }
 
         offset += 4;
@@ -8660,10 +8652,9 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
             }
         }
 
-        // WB_RGGBLevels alias (same as AsShot)
-        if cc + 4 < count {
-            tags.push(mk_canon_str("WB_RGGBLevels", &wb4(cc)));
-        }
+        // NOTE: WB_RGGBLevels is not a ColorData tag — Canon.pm:10031 defines it
+        // in the Canon Composite table ('$val[1] ? $val[1] : $val[($val[0]||0)+2]'
+        // over WB_RGGBLevelsAsShot and the per-preset sets), so composite.rs owns it.
 
         // AverageBlackLevel at index 0xe7 (231) — int16u[4]
         let abl = 0xe7usize;
@@ -8851,10 +8842,9 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
             }
         }
 
-        // WB_RGGBLevels alias (same as AsShot)
-        if 0x19 + 4 < count {
-            tags.push(mk_canon_str("WB_RGGBLevels", &wb4(0x19)));
-        }
+        // NOTE: WB_RGGBLevels is not a ColorData tag — Canon.pm:10031 defines it
+        // in the Canon Composite table ('$val[1] ? $val[1] : $val[($val[0]||0)+2]'
+        // over WB_RGGBLevelsAsShot and the per-preset sets), so composite.rs owns it.
     } else if count == 796 {
         // ColorData3 layout (1DmkIIN, 5D, 30D, 400D — count=796, version=1)
         // WB entries at specific indices (from Perl Canon::ColorData3):
@@ -8979,10 +8969,9 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
             }
         }
 
-        // WB_RGGBLevels alias (same as AsShot)
-        if 0x3f + 4 < count {
-            tags.push(mk_canon_str("WB_RGGBLevels", &wb4(0x3f)));
-        }
+        // NOTE: WB_RGGBLevels is not a ColorData tag — Canon.pm:10031 defines it
+        // in the Canon Composite table ('$val[1] ? $val[1] : $val[($val[0]||0)+2]'
+        // over WB_RGGBLevelsAsShot and the per-preset sets), so composite.rs owns it.
 
         // RawMeasuredRGGB at 0x287 (647) — int32u[4] with word swap
         let rmb = 0x287usize;
