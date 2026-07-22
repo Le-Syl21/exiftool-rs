@@ -636,14 +636,24 @@ fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<(Vec<u8>, String, String)> {
 
 fn find_tag<'a>(tags: &'a [Tag], name: &str) -> Option<&'a Tag> {
     let name_lower = name.to_lowercase();
-    // Prefer the highest-priority tag (first among ties) so composites use the same
-    // value ExifTool's priority dedup would surface, not merely the first extracted.
-    tags.iter()
-        .filter(|t| t.name.to_lowercase() == name_lower)
-        .fold(None, |best: Option<&Tag>, t| match best {
-            Some(b) if b.priority >= t.priority => Some(b),
-            _ => Some(t),
-        })
+    // Composites read ExifTool's primary (unnumbered) tag key. A sub-document tag
+    // never becomes that key: FoundTag only lets the incoming tag take it over
+    // when it carries no DOC_NUM or the same one (ExifTool.pm:9564). So the main
+    // document wins outright, and only if it has no instance do sub-documents
+    // compete.
+    let pick = |main_only: bool| {
+        tags.iter()
+            .filter(|t| t.name.to_lowercase() == name_lower)
+            .filter(|t| !main_only || t.group.family3 == "Main")
+            // Prefer the highest-priority tag (first among ties) so composites use
+            // the same value ExifTool's priority dedup would surface, not merely
+            // the first extracted.
+            .fold(None, |best: Option<&Tag>, t| match best {
+                Some(b) if b.priority >= t.priority => Some(b),
+                _ => Some(t),
+            })
+    };
+    pick(true).or_else(|| pick(false))
 }
 
 /// Whether a manufacturer's maker-note module was actually used to read this

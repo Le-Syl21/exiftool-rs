@@ -422,28 +422,18 @@ PSP.psp	ee	extra	0	XResolution	0.8013564977
 PSP.psp	ee	extra	0	YResolution	200
 PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
 Panasonic.rw2	ee	missing	0	BabyAge	(not set)
-Panasonic.rw2	ee	missing	0	BitsPerSample	8
 Panasonic.rw2	ee	missing	0	CreateDate	2008:08:06 15:21:56
 Panasonic.rw2	ee	missing	0	DateTimeOriginal	2008:08:06 15:21:56
-Panasonic.rw2	ee	missing	0	ExifByteOrder	Little-endian (Intel, II)
 Panasonic.rw2	ee	missing	0	ExifVersion	0221
 Panasonic.rw2	ee	missing	0	ExposureCompensation	0
 Panasonic.rw2	ee	missing	0	ExposureProgram	Aperture-priority AE
 Panasonic.rw2	ee	missing	0	ExposureTime	1/250
 Panasonic.rw2	ee	missing	0	FNumber	4.0
 Panasonic.rw2	ee	missing	0	FileSource	Digital Camera
-Panasonic.rw2	ee	missing	0	FileType	JPEG
-Panasonic.rw2	ee	missing	0	FileTypeExtension	jpg
 Panasonic.rw2	ee	missing	0	Flash	Off, Did not fire
 Panasonic.rw2	ee	missing	0	FocalLength	5.1 mm
-Panasonic.rw2	ee	missing	0	ImageHeight	8
-Panasonic.rw2	ee	missing	0	ImageWidth	8
-Panasonic.rw2	ee	missing	0	MIMEType	image/jpeg
-Panasonic.rw2	ee	missing	0	Make	Panasonic
 Panasonic.rw2	ee	missing	0	MaxApertureValue	2.0
 Panasonic.rw2	ee	missing	0	MeteringMode	Multi-segment
-Panasonic.rw2	ee	missing	0	Model	DMC-LX3
-Panasonic.rw2	ee	missing	0	Orientation	Horizontal (normal)
 Panasonic.rw2	ee	missing	0	TextStamp	Off
 Panasonic.rw2	ee	missing	1	TextStamp	Off
 Panasonic.rw2	ee	missing	2	TextStamp	Off

@@ -27,7 +27,7 @@ pub fn set_keep_duplicates(keep: bool) {
 }
 
 /// Whether duplicate tag names must all be kept.
-fn keep_duplicates() -> bool {
+pub fn keep_duplicates() -> bool {
     KEEP_DUPLICATES.with(|s| s.get())
 }
 

@@ -937,10 +937,34 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
             // Also skip File-group tags from the embedded JPEG.
             let existing_names: std::collections::HashSet<String> =
                 tags.iter().map(|t| t.name.clone()).collect();
+            // With duplicates kept the embedded JPEG is a document of its own and
+            // ExifTool reports its File pseudo-tags and its IFD0 copies of
+            // Make/Model/Orientation next to the RW2's own (ExifTool.pm:7314 calls
+            // SetFileType again when DOC_NUM is set and ExtractEmbedded is on).
+            // With duplicates collapsed those copies lose to the main document's,
+            // which is what the pruning below reproduces.
+            let keep_dups = crate::metadata::exif::keep_duplicates();
+            if keep_dups {
+                for (name, desc, value) in [
+                    ("FileType", "File Type", "JPEG"),
+                    ("FileTypeExtension", "File Type Extension", "jpg"),
+                    ("MIMEType", "MIME Type", "image/jpeg"),
+                ] {
+                    let mut t = crate::formats::misc::mktag(
+                        "File",
+                        name,
+                        desc,
+                        Value::String(value.to_string()),
+                    );
+                    t.group.family1 = "File".into();
+                    t.group.family3 = "Doc1".into();
+                    tags.push(t);
+                }
+            }
             for mut t in jpg_tags {
                 // Pass through JPEG SOF tags (EncodingProcess, ColorComponents, YCbCrSubSampling)
                 // from the embedded JPEG as Perl does for RW2 files.
-                if t.group.family0 == "File" {
+                if !keep_dups && t.group.family0 == "File" {
                     match t.name.as_str() {
                         "EncodingProcess" | "ColorComponents" | "YCbCrSubSampling" => {
                             // Keep these: Perl includes them from the embedded JpgFromRaw
@@ -952,7 +976,7 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
                     continue;
                 }
                 // Skip ExifByteOrder from embedded (already have it)
-                if t.name == "ExifByteOrder" {
+                if !keep_dups && t.name == "ExifByteOrder" {
                     continue;
                 }
                 // IsOffset tags from the embedded JPEG are JPEG-relative; ExifTool
@@ -979,7 +1003,7 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
                     }
                 }
                 // Skip IFD0 tags already extracted (Make, Model, etc.)
-                if t.group.family1 == "IFD0" && existing_names.contains(&t.name) {
+                if !keep_dups && t.group.family1 == "IFD0" && existing_names.contains(&t.name) {
                     continue;
                 }
                 // The JpgFromRaw image is a document of its own: ExifTool reports
