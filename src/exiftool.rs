@@ -1477,18 +1477,17 @@ impl ExifTool {
 
         // Promote authoritative specialized-source tags before computing composites,
         // so derived tags (ShutterSpeed, LightValue, ...) use the primary value.
+        //
+        // ExifTool builds composites from `$$self{VALUE}`, i.e. from the winner of
+        // the duplicate arbitration, and Kodak's own ExposureTime/FNumber are found
+        // after the ExifIFD ones, so they are what its Composite ShutterSpeed and
+        // LightValue use. Here composites are computed before that arbitration, so
+        // the winner has to be brought forward for these two names. The rest of the
+        // list this used to hold (MinoltaRaw, Lytro) is gone: the group-blind
+        // FoundTag pass now settles those by last-wins on its own.
         {
-            const SPECIAL_WINS: &[(&str, &str)] = &[
-                ("Kodak", "FNumber"),
-                ("Kodak", "ExposureTime"),
-                ("MinoltaRaw", "Contrast"),
-                ("MinoltaRaw", "Saturation"),
-                ("MinoltaRaw", "Sharpness"),
-                ("MinoltaRaw", "ISOSetting"),
-                // Lytro's own FocalLength (full precision) is primary over embedded EXIF;
-                // the 35efl/FOV/HyperfocalDistance composites must use it.
-                ("Lytro", "FocalLength"),
-            ];
+            const SPECIAL_WINS: &[(&str, &str)] =
+                &[("Kodak", "FNumber"), ("Kodak", "ExposureTime")];
             for (grp, name) in SPECIAL_WINS {
                 if tags
                     .iter()
