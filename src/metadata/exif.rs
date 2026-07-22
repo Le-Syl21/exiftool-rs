@@ -219,21 +219,17 @@ impl ExifReader {
         Ok(tags)
     }
 
-    fn read_inner(data: &[u8], exif_base: usize) -> Result<Vec<Tag>> {
-        let header = parse_tiff_header(data)?;
-        let mut tags = Vec::new();
-
-        // Emit ExifByteOrder tag
-        let bo_str = match header.byte_order {
+    /// ExifTool raises ExifByteOrder at file level, not from IFD0.
+    fn exif_byte_order_tag(byte_order: ByteOrderMark) -> Tag {
+        let bo_str = match byte_order {
             ByteOrderMark::LittleEndian => "Little-endian (Intel, II)",
             ByteOrderMark::BigEndian => "Big-endian (Motorola, MM)",
         };
-        tags.push(Tag {
+        Tag {
             id: TagId::Text("ExifByteOrder".to_string()),
             name: "ExifByteOrder".to_string(),
             description: "Exif Byte Order".to_string(),
             group: TagGroup {
-                // ExifTool raises ExifByteOrder at file level, not from IFD0.
                 family0: "File".to_string(),
                 family1: "File".to_string(),
                 family2: "Image".to_string(),
@@ -242,7 +238,15 @@ impl ExifReader {
             raw_value: Value::String(bo_str.to_string()),
             print_value: bo_str.to_string(),
             priority: 0,
-        });
+        }
+    }
+
+    fn read_inner(data: &[u8], exif_base: usize) -> Result<Vec<Tag>> {
+        let header = parse_tiff_header(data)?;
+        let mut tags = Vec::new();
+
+        // Emit ExifByteOrder tag
+        tags.push(Self::exif_byte_order_tag(header.byte_order));
 
         // Detect CR2: "CR" at offset 8 in TIFF data
         let is_cr2 = data.len() > 10 && &data[8..10] == b"CR";
@@ -1376,13 +1380,18 @@ impl ExifReader {
 
     /// Parse a TIFF where IFD0 is treated as a named IFD (e.g. "GPS", "ExifIFD").
     /// Used for CR3 CMT4 (GPS-only TIFF) and CMT2 (ExifIFD-only TIFF).
-    /// Does NOT emit ExifByteOrder or do MakerNote/IFD1 processing.
+    /// Does no MakerNote/IFD1 processing.
     pub fn read_as_named_ifd(data: &[u8], ifd_name: &str) -> Vec<Tag> {
         let header = match parse_tiff_header(data) {
             Ok(h) => h,
             Err(_) => return Vec::new(),
         };
         let mut tags = Vec::new();
+        // Each of these boxes is a TIFF file of its own, and ExifTool's
+        // ProcessTIFF raises ExifByteOrder once per TIFF it processes — a CR3
+        // therefore reports it for CMT1, CMT2 and CMT4 (verified with -v2 on
+        // CanonRaw.cr3; CMT3 goes through the maker-note path and raises none).
+        tags.push(Self::exif_byte_order_tag(header.byte_order));
         let _ = Self::read_ifd(data, &header, header.ifd0_offset, ifd_name, &mut tags);
         tags
     }

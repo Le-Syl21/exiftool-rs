@@ -760,7 +760,8 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
             let scaled = ["20D", "350D", "REBEL XT", "Kiss Digital N"]
                 .iter()
                 .any(|m| word_bounded(model, m));
-            let et = (-ev * std::f64::consts::LN_2).exp() * if scaled { 1000.0 / 32.0 } else { 1.0 };
+            let et =
+                (-ev * std::f64::consts::LN_2).exp() * if scaled { 1000.0 / 32.0 } else { 1.0 };
             let pv = crate::tags::canon_sub::print_exposure_time(et);
             tags.push(Tag {
                 id: TagId::Text("ExposureTime".into()),
@@ -944,7 +945,12 @@ pub fn decode_focal_length(values: &[u16], model: &str, focal_units: u16) -> Vec
     // ExifTool reports this one next to the EXIF tag, so it must be decoded.
     if let Some(&v) = values.get(1) {
         if v != 0 {
-            let fl = v as f64 / if focal_units == 0 { 1.0 } else { focal_units as f64 };
+            let fl = v as f64
+                / if focal_units == 0 {
+                    1.0
+                } else {
+                    focal_units as f64
+                };
             tags.push(mkt(
                 "FocalLength",
                 Value::F64(fl),

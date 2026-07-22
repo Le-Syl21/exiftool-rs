@@ -2249,10 +2249,13 @@ fn parse_stsd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
             tags.push(mk("BitDepth", "Bit Depth", Value::U32(bitdepth as u32)));
         }
 
-        // Child atoms of the VisualSampleEntry begin at byte 86 (after the 78-byte
-        // fixed header). Walk them to extract `colr` (color representation).
+        // Child atoms of the VisualSampleEntry normally begin at byte 86 (after
+        // the 78-byte fixed header), but some codecs pad first — Canon's CRAW puts
+        // its `CMP1` box at byte 90. ExifTool locates them with ProcessHybrid
+        // (QuickTime.pm:9660), so prefer that and keep 86 as the fallback.
+        // Walk them to extract `colr` and `CMP1`.
         let children_end = entry_size.min(entry.len());
-        let mut cpos = 86;
+        let mut cpos = hybrid_child_start(&entry[..children_end]).unwrap_or(86);
         while cpos + 8 <= children_end {
             let csize = u32::from_be_bytes([
                 entry[cpos],
@@ -2266,12 +2269,46 @@ fn parse_stsd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
             }
             if ctype == b"colr" {
                 parse_colr(&entry[cpos + 8..cpos + csize], tags);
+            } else if ctype == b"CMP1" {
+                parse_cmp1(&entry[cpos + 8..cpos + csize], tags);
             }
             cpos += csize;
         }
     }
 
     let _ = entry_size;
+}
+
+/// Parse the Canon CR3 `CMP1` atom that lives inside a CRAW sample description
+/// (QuickTime.pm:7703 dispatches it to `Image::ExifTool::Canon::CMP1`).
+/// Canon.pm:9766: FORMAT int16u, FIRST_ENTRY 0, so index 8 is byte 16 and index
+/// 10 is byte 20, both read as int32u; both are named ImageWidth/ImageHeight and
+/// grouped MakerNotes:<track>:Image.
+fn parse_cmp1(d: &[u8], tags: &mut Vec<Tag>) {
+    let mut push = |name: &str, desc: &str, off: usize| {
+        if off + 4 <= d.len() {
+            let v = u32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]]);
+            tags.push(Tag {
+                id: TagId::Numeric((off / 2) as u16),
+                name: name.into(),
+                description: desc.into(),
+                group: TagGroup {
+                    family0: "MakerNotes".into(),
+                    // Rewritten to the enclosing TrackN by `regroup_since`.
+                    family1: "QuickTime".into(),
+                    family2: "Image".into(),
+                    family3: "Main".into(),
+                },
+                raw_value: Value::U32(v),
+                print_value: v.to_string(),
+                // Canon.pm:9771 — PRIORITY => 0, so the IFD0 ImageWidth/Height
+                // stay the reported ones once duplicates are collapsed.
+                priority: crate::tag::PRIORITY_EXPLICIT_ZERO,
+            });
+        }
+    };
+    push("ImageWidth", "Image Width", 16);
+    push("ImageHeight", "Image Height", 20);
 }
 
 /// Parse a `colr` atom. Port of ExifTool's QuickTime ColorRep table: for the
@@ -3384,8 +3421,11 @@ fn parse_canon_uuid(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) 
                     // guessed at.
                     const CANON_SUPERSEDES_EXIF: &[&str] =
                         &["ExposureCompensation", "MeteringMode", "WhiteBalance"];
+                    // With the Duplicates option on ExifTool reports both copies,
+                    // so the arbitration must not throw either away.
+                    let collapsing = !crate::metadata::exif::keep_duplicates();
                     for t in mn_tags {
-                        if CANON_SUPERSEDES_EXIF.contains(&t.name.as_str()) {
+                        if collapsing && CANON_SUPERSEDES_EXIF.contains(&t.name.as_str()) {
                             tags.retain(|e| e.name != t.name || e.group.family0 != "EXIF");
                         }
                         tags.push(t);

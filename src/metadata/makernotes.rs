@@ -5567,13 +5567,9 @@ fn read_makernote_ifd_with_base(
                         // ValueConv 'exp(($val-8)/16*log(2))',
                         // PrintConv 'sprintf("%.2g",$val)'.
                         if d.len() > 0x03 && rb(0x03) != 0 {
-                            let f = (((rb(0x03) as f64) - 8.0) / 16.0
-                                * std::f64::consts::LN_2)
-                                .exp();
-                            t.push(mk_canon_str(
-                                "FNumber",
-                                &crate::value::format_g_prec(f, 2),
-                            ));
+                            let f =
+                                (((rb(0x03) as f64) - 8.0) / 16.0 * std::f64::consts::LN_2).exp();
+                            t.push(mk_canon_str("FNumber", &crate::value::format_g_prec(f, 2)));
                         }
                         // 0x04 ExposureTime — %ciExposureTime (Canon.pm:3097):
                         // ValueConv 'exp(4*log(2)*(1-CanonEv($val-24)))',
