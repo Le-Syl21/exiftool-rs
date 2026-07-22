@@ -1374,48 +1374,11 @@ impl ExifTool {
                     }
                     riff_bo
                 } else if data.starts_with(&[0x00, 0x00, 0x00, 0x0C, b'J', b'X', b'L', b' ']) {
-                    // JXL container: scan for brob Exif box and decompress to get byte order
-                    let mut jxl_bo: Option<String> = None;
-                    let mut jpos = 12usize; // skip JXL signature box
-                    while jpos + 8 <= data.len() {
-                        let bsize = u32::from_be_bytes([
-                            data[jpos],
-                            data[jpos + 1],
-                            data[jpos + 2],
-                            data[jpos + 3],
-                        ]) as usize;
-                        let btype = &data[jpos + 4..jpos + 8];
-                        if bsize < 8 || jpos + bsize > data.len() {
-                            break;
-                        }
-                        if btype == b"brob" && jpos + bsize > 12 {
-                            let inner_type = &data[jpos + 8..jpos + 12];
-                            if inner_type == b"Exif" || inner_type == b"exif" {
-                                let brotli_payload = &data[jpos + 12..jpos + bsize];
-                                use std::io::Cursor;
-                                let mut inp = Cursor::new(brotli_payload);
-                                let mut out: Vec<u8> = Vec::new();
-                                if brotli::BrotliDecompress(&mut inp, &mut out).is_ok() {
-                                    let exif_start = if out.len() > 4 { 4 } else { 0 };
-                                    if exif_start < out.len() {
-                                        if out[exif_start..].starts_with(b"MM") {
-                                            jxl_bo = Some("Big-endian (Motorola, MM)".to_string());
-                                        } else if out[exif_start..].starts_with(b"II") {
-                                            jxl_bo = Some("Little-endian (Intel, II)".to_string());
-                                        }
-                                    }
-                                }
-                                break;
-                            }
-                        }
-                        jpos += bsize;
-                    }
-                    if let Some(bo) = jxl_bo {
-                        if !bo.is_empty() && file_type != FileType::Btf {
-                            pre.push(file_tag("ExifByteOrder", Value::String(bo)));
-                        }
-                    }
-                    // Return None to skip the generic byte order check below
+                    // JXL container: the Exif payload lives in an (optionally
+                    // brotli-compressed) box that Jpeg2000.pm hands to ProcessTIFF,
+                    // and ProcessTIFF is what raises ExifByteOrder — in box order,
+                    // after the container's own tags. The JXL reader already does
+                    // that, so no pre-scan value is contributed here.
                     None
                 } else if data.starts_with(&[0x00, b'M', b'R', b'M']) {
                     // MRW: find TTW segment which contains TIFF/EXIF data
