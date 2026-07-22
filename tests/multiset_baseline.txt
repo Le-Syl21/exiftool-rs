@@ -21,8 +21,6 @@ Apple.jpg	ee	missing	0	GPSAltitude	72.36649215 m
 Apple.jpg	ee	missing	0	GPSLatitude	53 deg 22' 58.25"
 Apple.jpg	ee	missing	0	GPSLongitude	1 deg 27' 24.04"
 BPG.bpg	ee	missing	0	ColorSpace	YCbCr (BT 601)
-CanonRaw.cr3	ee	extra	0	Rotation	0
-CanonRaw.cr3	ee	extra	1	Rotation	0
 CaptureOne.eip	ee	missing	0	Crop	0.000000;0.000000;0.000000;0.000000
 CaptureOne.eip	ee	missing	0	NRAmount	25
 CaptureOne.eip	ee	missing	0	Rotation	0

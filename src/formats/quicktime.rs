@@ -1320,18 +1320,10 @@ fn parse_tkhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
         }
     }
 
-    // Rotation from the matrix (offset 16..52). Only for video tracks, and only
-    // when the matrix actually encodes a rotation (GetRotationAngle → Some).
-    if data_rest.len() >= 52 && has_video {
-        if let Some(rotation) = calc_rotation_from_matrix(&data_rest[16..52]) {
-            // `{}` renders 90.0 as "90" and 90.001 as "90.001", matching Perl.
-            tags.push(mk(
-                "Rotation",
-                "Rotation",
-                Value::String(format!("{}", rotation)),
-            ));
-        }
-    }
+    // NOTE: Rotation is not a track tag. QuickTime.pm:8632 makes it a Composite
+    // built by CalcRotation (QuickTime.pm:8797) from the first video track's
+    // MatrixStructure — see `composite::compute_quicktime_rotation`.
+    let _ = has_video;
 }
 
 /// FixWrongFormat: if val & 0xfff00000 (high bits set), use upper 16 bits.
@@ -1349,19 +1341,16 @@ fn fix_wrong_format(val: u32) -> u32 {
     }
 }
 
-/// Calculate the clockwise rotation angle (degrees) from the track matrix.
-/// Direct port of ExifTool's `QuickTime::GetRotationAngle`: it uses only the
-/// top-left 2×2 of the matrix (the displayed fixed-16.16 values `a[0]`, `a[1]`),
-/// returns `None` when both are zero, and rounds to 3 decimals. The literal
-/// `3.14159` (not full π) is kept to match ExifTool's output bit-for-bit.
+/// Calculate the clockwise rotation angle (degrees) from a MatrixStructure value.
+/// Direct port of ExifTool's `QuickTime::GetRotationAngle` (QuickTime.pm:8782),
+/// which reads the printed matrix: it uses only `a[0]` and `a[1]`, returns `None`
+/// when both are zero, and rounds to 3 decimals. The literal `3.14159` (not full
+/// π) is kept to match ExifTool's output bit-for-bit.
 #[allow(clippy::approx_constant)] // 3.14159 is ExifTool's literal, intentional for parity
-fn calc_rotation_from_matrix(bytes: &[u8]) -> Option<f64> {
-    if bytes.len() < 8 {
-        return None;
-    }
-    // a[0] and a[1] are fixed 16.16.
-    let a0 = i32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as f64 / 65536.0;
-    let a1 = i32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]) as f64 / 65536.0;
+pub fn rotation_angle_from_matrix(matrix: &str) -> Option<f64> {
+    let mut it = matrix.split_whitespace();
+    let a0: f64 = it.next()?.parse().ok()?;
+    let a1: f64 = it.next()?.parse().ok()?;
     if a0 == 0.0 && a1 == 0.0 {
         return None;
     }

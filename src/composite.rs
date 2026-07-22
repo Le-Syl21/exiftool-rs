@@ -16,6 +16,10 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         composite.extend(canon_tags);
     }
 
+    if let Some(rot) = compute_quicktime_rotation(tags) {
+        composite.push(rot);
+    }
+
     // GPSPosition: combine GPSLatitude/Ref + GPSLongitude/Ref
     if let Some(pos) = compute_gps_position(tags) {
         composite.push(pos);
@@ -2135,6 +2139,35 @@ fn compute_hyperfocal(tags: &[Tag]) -> Option<Tag> {
         "HyperfocalDistance",
         "Hyperfocal Distance",
         Value::String(format!("{:.2} m", h_m)),
+    ))
+}
+
+/// QuickTime Composite `Rotation` (QuickTime.pm:8632): Require MatrixStructure
+/// and HandlerType, ValueConv `CalcRotation` (QuickTime.pm:8797). CalcRotation
+/// walks the HandlerType entries for the first one whose value is 'vide', notes
+/// its family-1 group, then takes the MatrixStructure of that same group and
+/// runs it through GetRotationAngle. One value per file, in the Composite group
+/// — not one per track.
+fn compute_quicktime_rotation(tags: &[Tag]) -> Option<Tag> {
+    let track = tags
+        .iter()
+        .find(|t| {
+            t.name == "HandlerType"
+                && t.group.family0 == "QuickTime"
+                && t.print_value == "Video Track"
+        })?
+        .group
+        .family1
+        .clone();
+    let matrix = tags.iter().find(|t| {
+        t.name == "MatrixStructure" && t.group.family0 == "QuickTime" && t.group.family1 == track
+    })?;
+    let angle = crate::formats::quicktime::rotation_angle_from_matrix(&matrix.print_value)?;
+    // `{}` renders 90.0 as "90" and 90.001 as "90.001", matching Perl.
+    Some(mk_composite(
+        "Rotation",
+        "Rotation",
+        Value::String(format!("{}", angle)),
     ))
 }
 
