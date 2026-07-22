@@ -15,6 +15,7 @@
 
 use super::group2_generated::{
     Family2Entry, FAMILY2_BY_G0_G1_NAME, FAMILY2_BY_G0_NAME, FAMILY2_BY_NAME,
+    XMP_OWN_FAMILY2_BY_NAME,
 };
 
 /// Separator between key components. Cannot occur in a group or tag name.
@@ -110,6 +111,13 @@ pub fn family2_for(
     // all keyed on the name — could only drag in an unrelated table's category.
     if family0 == "ExifTool" {
         return None;
+    }
+    // A field of MWG's variable-namespace `Extensions` structure gets its
+    // category from the top-level tag it was copied from, not from the
+    // namespace it happens to be written in. See
+    // [`mwg_region_extension_family2`].
+    if family0 == "XMP" && family1 == "XMP-mwg-rs" && name.starts_with("RegionExtensions") {
+        return mwg_region_extension_family2(name);
     }
     // A few readers label a table with a family-0 group of their own choosing
     // where ExifTool's table declares a different one; the generated tables are
@@ -307,6 +315,50 @@ pub fn family2_for(
         return None;
     }
     lookup(FAMILY2_BY_NAME, name).map(|c| choose(c, current))
+}
+
+/// `GROUPS => { 2 => 'Image' }` of `%Image::ExifTool::MWG::Regions`
+/// (MWG.pm line 459), the table that holds the `Extensions` structure.
+const MWG_RS_DEFAULT_FAMILY2: &str = "Image";
+
+/// Family 2 of a field of MWG's `Extensions` structure (`RegionExtensions*`).
+///
+/// `%sExtensions` is a *variable-namespace* structure — `NAMESPACE => undef`
+/// (MWG.pm line 406) — so its fields may be any top-level XMP property, and
+/// none is pre-defined. XMP.pm lines 3573-3583 builds such a field's tagInfo
+/// from the top-level tag of the matching namespace and deliberately drops its
+/// group hash, keeping only the tag's *own* family-2 override:
+///
+/// ```text
+///     delete $$tagInfo{Groups};
+///     $$tagInfo{Groups}{2} = $$sti{Groups}{2} if $$sti{Groups};
+/// ```
+///
+/// So `RegionExtensionsArtworkTitle` is `Author` because the flattened
+/// `XMP-iptcExt:ArtworkTitle` carries an explicit `Groups{2}` (materialised on
+/// every flat tag by `AddFlattenedTags`, XMP.pm lines 3196-3203), while
+/// `RegionExtensionsUsageTerms` is *not* `Author`: `XMP-xmpRights:UsageTerms`
+/// is a plain `{ Writable => 'lang-alt' }` (XMP.pm line 1090) that inherits its
+/// table's `Author` default, so the `if $$sti{Groups}` guard copies nothing and
+/// the field falls back to the containing `MWG::Regions` default, `Image`. A
+/// field in a namespace ExifTool has no schema for — `myXMPns:` here — finds no
+/// top-level tag at all and lands on that same default.
+///
+/// The lookup is by NAME because that is all a flattened tag name preserves;
+/// [`XMP_OWN_FAMILY2_BY_NAME`] answers with every override the name carries
+/// across ExifTool's XMP namespace tables, and more than one means the field's
+/// namespace would be needed to choose. That is not recoverable here, so the
+/// reader's category stands.
+fn mwg_region_extension_family2(name: &str) -> Option<&'static str> {
+    let field = name.strip_prefix("RegionExtensions")?;
+    // An alternate-language variant is a copy of the base tagInfo, so ExifTool
+    // looks the base name up — see [`xmp_lang_base`].
+    let base = xmp_lang_base(field).unwrap_or(field);
+    match lookup(XMP_OWN_FAMILY2_BY_NAME, base) {
+        None | Some([""]) => Some(MWG_RS_DEFAULT_FAMILY2),
+        Some([own]) => Some(own),
+        Some(_) => None,
+    }
 }
 
 /// Whether an XMP property belongs to no schema ExifTool knows.

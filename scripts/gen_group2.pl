@@ -65,6 +65,45 @@ Image::ExifTool::LoadAllTables();
 my $et = Image::ExifTool->new;
 no warnings 'once';    # %Image::ExifTool::allTables is populated above
 
+# ── The family-2 override a top-level XMP tag carries ON ITS OWN ────────────
+#
+# A field of a variable-namespace XMP structure (`NAMESPACE => undef`, the only
+# pre-defined one being MWG's %sExtensions, MWG.pm line 406) does not take its
+# category from the namespace it is written in. XMP.pm lines 3573-3583 build its
+# tagInfo from the corresponding top-level tag and copy across *only that tag's
+# own* `Groups{2}`:
+#
+#     delete $$tagInfo{Groups};
+#     $$tagInfo{Groups}{2} = $$sti{Groups}{2} if $$sti{Groups};
+#
+# so a top-level tag that relies on its table's GROUPS default carries nothing
+# over, and the field falls back to the containing structure's table default.
+# The three tiers below cannot express this: they store the *resolved* category,
+# with the table default already merged in, and cannot tell an explicit
+# `Groups => { 2 => ... }` from an inherited one.
+#
+# This must be collected BEFORE the main walk: `GetGroup` fills a tagInfo's
+# missing families in from its table and flags it `GotGroups`
+# (ExifTool.pm lines 3828-3838), which erases the very distinction we are after.
+#
+# The tables walked are exactly the ones XMP.pm line 3591 reaches through
+# `$Image::ExifTool::XMP::Main{$ns}{SubDirectory}{TagTable}`. The empty string
+# records "this tag has no `Groups{2}` of its own".
+my %own;
+for my $ns (sort keys %Image::ExifTool::XMP::Main) {
+    my $tg = $Image::ExifTool::XMP::Main{$ns};
+    next unless ref $tg eq 'HASH' and $$tg{SubDirectory};
+    my $tbl = Image::ExifTool::GetTagTable($$tg{SubDirectory}{TagTable}) or next;
+    Image::ExifTool::XMP::AddFlattenedTags($tbl);
+    for my $tag_id (Image::ExifTool::TagTableKeys($tbl)) {
+        for my $ti (Image::ExifTool::GetTagInfoList($tbl, $tag_id)) {
+            my $name = $$ti{Name};
+            next unless defined $name and $name =~ /^[A-Za-z0-9_\-]+$/;
+            $own{$name}{ ($$ti{Groups} && $$ti{Groups}{2}) ? $$ti{Groups}{2} : '' } = 1;
+        }
+    }
+}
+
 my (%k3, %k2, %k1);
 for my $table_name (sort keys %Image::ExifTool::allTables) {
     my $table = Image::ExifTool::GetTagTable($table_name);
@@ -171,3 +210,23 @@ sub emit {
 emit('FAMILY2_BY_G0_G1_NAME', 'Keyed on `"<family0>\\u{1}<family1>\\u{1}<name>"`', \%k3, \%keep3);
 emit('FAMILY2_BY_G0_NAME',    'Keyed on `"<family0>\\u{1}<name>"`',                \%k2, \%keep2);
 emit('FAMILY2_BY_NAME',       'Keyed on `"<name>"`',                               \%k1, undef);
+
+# ── Emit the XMP own-override table ─────────────────────────────────────────
+#
+# See the collection of %own above for the rule this serves. A name that yields
+# several different answers is undecidable from a flattened tag name alone (the
+# field's namespace is not recoverable from it) and the caller keeps what it
+# had. Names whose only answer is "" are omitted: the caller already falls back
+# to the containing structure's table default when a name is absent.
+{
+    my @keys = sort grep { join('', keys %{$own{$_}}) ne '' } keys %own;
+    printf "\n/// Own family-2 override of each top-level XMP tag NAME (%d entries).\n"
+        . "///\n/// `\"\"` means the tag declares none of its own. Several entries mean the\n"
+        . "/// answer depends on the namespace and cannot be decided from the name.\n"
+        . "pub static XMP_OWN_FAMILY2_BY_NAME: &[Family2Entry] = &[\n", scalar @keys;
+    for my $name (@keys) {
+        my $cats = join ', ', map { "\"$_\"" } sort keys %{$own{$name}};
+        print "    (\"$name\", &[$cats]),\n";
+    }
+    print "];\n";
+}
