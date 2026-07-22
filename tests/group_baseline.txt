@@ -10,5 +10,3 @@ PSP.psp	Copyright	family1
 SigmaDP2.x3f	PreviewImage	family1
 XMP.xml	LightValue	family1
 XMP.xml	LightValue	family2
-XMP3.xmp	Custom0020Property00201	family2
-XMP3.xmp	Custom0020Property00202	family2

@@ -15,7 +15,7 @@
 
 use super::group2_generated::{
     Family2Entry, FAMILY2_BY_G0_G1_NAME, FAMILY2_BY_G0_NAME, FAMILY2_BY_NAME,
-    XMP_OWN_FAMILY2_BY_NAME,
+    XMP_NAMESPACE_FAMILY2, XMP_OWN_FAMILY2_BY_NAME,
 };
 
 /// Separator between key components. Cannot occur in a group or tag name.
@@ -208,7 +208,19 @@ pub fn family2_for(
         if current == "Time" {
             return None;
         }
-        return Some(XMP_UNKNOWN_NAMESPACE);
+        // HandleXMPTag reaches the property's namespace table through
+        // `%Image::ExifTool::XMP::Main` (XMP.pm lines 3445-3448) and only falls
+        // back to `Image::ExifTool::XMP::other` when there is no such entry
+        // (line 3471). A property a KNOWN namespace has no entry for is
+        // invented in that namespace's own table (line 3595), so it takes ITS
+        // default rather than XMP::other's Unknown: an arbitrary `pdfx:`
+        // property is Document (XMP.pm line 1246).
+        return Some(
+            XMP_NAMESPACE_FAMILY2
+                .binary_search_by(|(g, _)| (*g).cmp(family1))
+                .map(|i| XMP_NAMESPACE_FAMILY2[i].1)
+                .unwrap_or(XMP_UNKNOWN_NAMESPACE),
+        );
     }
     // FITS::Main invents a dynamic tag for every keyword it has no entry for,
     // inheriting its GROUPS => { 2 => 'Image' } default; the reader already

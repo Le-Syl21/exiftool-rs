@@ -89,11 +89,25 @@ no warnings 'once';    # %Image::ExifTool::allTables is populated above
 # The tables walked are exactly the ones XMP.pm line 3591 reaches through
 # `$Image::ExifTool::XMP::Main{$ns}{SubDirectory}{TagTable}`. The empty string
 # records "this tag has no `Groups{2}` of its own".
+# ── The category an XMP namespace gives a property it does not describe ─────
+#
+# HandleXMPTag looks the property's namespace up in `%Image::ExifTool::XMP::Main`
+# and reads its table (XMP.pm lines 3445-3448); only when there is no such entry
+# does it fall back to `Image::ExifTool::XMP::other` (line 3471), whose
+# `GROUPS => { 2 => 'Unknown' }` (line 2740) is what an un-schemed namespace
+# gets. A property a KNOWN namespace has no entry for is invented in that
+# namespace's own table (line 3595) and so takes ITS default — `XMP-pdfx` has
+# `GROUPS => { 1 => 'XMP-pdfx', 2 => 'Document' }` (XMP.pm line 1246), which is
+# why an arbitrary pdfx property is Document and not Unknown.
+my %ns_default;
 my %own;
 for my $ns (sort keys %Image::ExifTool::XMP::Main) {
     my $tg = $Image::ExifTool::XMP::Main{$ns};
     next unless ref $tg eq 'HASH' and $$tg{SubDirectory};
     my $tbl = Image::ExifTool::GetTagTable($$tg{SubDirectory}{TagTable}) or next;
+    my $g1 = $$tbl{GROUPS}{1};
+    my $g2 = $$tbl{GROUPS}{2};
+    $ns_default{$g1} = $g2 if defined $g1 and defined $g2 and $g1 =~ /^XMP-/;
     Image::ExifTool::XMP::AddFlattenedTags($tbl);
     for my $tag_id (Image::ExifTool::TagTableKeys($tbl)) {
         for my $ti (Image::ExifTool::GetTagInfoList($tbl, $tag_id)) {
@@ -235,6 +249,18 @@ sub emit {
 emit('FAMILY2_BY_G0_G1_NAME', 'Keyed on `"<family0>\\u{1}<family1>\\u{1}<name>"`', \%k3, \%keep3);
 emit('FAMILY2_BY_G0_NAME',    'Keyed on `"<family0>\\u{1}<name>"`',                \%k2, \%keep2);
 emit('FAMILY2_BY_NAME',       'Keyed on `"<name>"`',                               \%k1, undef);
+
+# ── Emit the per-namespace default ──────────────────────────────────────────
+{
+    my @keys = sort keys %ns_default;
+    printf "\n/// The family 2 each XMP namespace table gives a property it does not\n"
+        . "/// describe (%d entries), sorted by group name.\n"
+        . "///\n/// A namespace ExifTool has no table for is absent: such a property goes to\n"
+        . "/// `%%Image::ExifTool::XMP::other` instead, whose category is Unknown.\n"
+        . "pub static XMP_NAMESPACE_FAMILY2: &[(&str, &str)] = &[\n", scalar @keys;
+    print qq{    ("$_", "$ns_default{$_}"),\n} for @keys;
+    print "];\n";
+}
 
 # ── Emit the XMP own-override table ─────────────────────────────────────────
 #
