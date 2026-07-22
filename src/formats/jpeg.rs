@@ -874,7 +874,22 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
             assembled.extend_from_slice(chunk);
         }
         if let Ok(ext_tags) = XmpReader::read(&assembled) {
-            tags.extend(ext_tags);
+            // XMPToolkit is a "recognized attribute" ExifTool re-extracts only
+            // `unless (defined $$et{VALUE}{XMPToolkit} and ... eq $tval)`
+            // (XMP.pm:4128-4131). The extended XMP packet repeats the main
+            // packet's x:xmptk, so its identical XMPToolkit is skipped — even
+            // under the Duplicates option, which is why this guard lives here and
+            // not in the group-blind collapse that `-ee` bypasses.
+            for t in ext_tags {
+                if t.name == "XMPToolkit"
+                    && tags
+                        .iter()
+                        .any(|e| e.name == "XMPToolkit" && e.print_value == t.print_value)
+                {
+                    continue;
+                }
+                tags.push(t);
+            }
         }
     }
 

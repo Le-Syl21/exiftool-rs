@@ -4,8 +4,6 @@
 # Oracle: tests/expected_multi/*.mvals, from scripts/gen_multiset_baselines.sh
 # Regenerate: UPDATE_MULTISET_BASELINE=1 cargo test --release --test regression regression_tag_multiset
 # Format: <file>\t<default|ee>\t<extra|missing>\t<occurrence>\t<tag>\t<value>
-ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
-Google.jpg	ee	extra	0	XMPToolkit	Adobe XMP Core 5.1.0-jc003
 Google.jpg	ee	missing	0	CreateDate	2023:10:06 22:53:51+02:00
 PSP.psp	ee	extra	0	Copyright	© 2010 Phil Harvey
 PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
