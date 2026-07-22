@@ -810,6 +810,9 @@ static SIGMA_TAGS: &[(u16, &str, &str)] = &[
     (0x0024, "Calibration", "Calibration"),
     (0x002c, "ColorMode", "Color Mode"),
     (0x0030, "LensApertureRange", "Lens Aperture Range"),
+    // Sigma.pm:629/638 — MakerNoteSigmaVer < 3 (all but SD1/Merrill/Quattro)
+    (0x0031, "FNumber", "F Number"),
+    (0x0032, "ExposureTime", "Exposure Time"),
     (0x0033, "ExposureTime2", "Exposure Time 2"),
     (0x0034, "BurstShot", "Burst Shot"),
     (0x0035, "ExposureCompensation", "Exposure Compensation"),

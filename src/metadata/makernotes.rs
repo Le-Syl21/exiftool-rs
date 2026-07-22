@@ -9339,6 +9339,16 @@ fn hex_to_ascii(hex: &str) -> Option<String> {
     bytes.map(|b| b.iter().map(|&c| c as char).collect())
 }
 
+/// Sigma writes several tags as `"Prefix:value"` strings but some cameras write
+/// them as rationals (Sigma.pm:300). Strip the prefix from the string form and
+/// print the rational form as-is.
+fn strip_sigma_prefix(value: &Value, prefix: &str) -> String {
+    match value.as_str() {
+        Some(s) => s.replacen(prefix, "", 1).trim().to_string(),
+        None => value.to_display_string(),
+    }
+}
+
 fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -> Option<String> {
     use crate::tags::{nikon_conv, sony_conv};
 
@@ -10151,22 +10161,14 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             0x0016 => value
                 .as_str()
                 .map(|s| s.replacen("Qual:", "", 1).trim().to_string()),
-            // Contrast (string form): ValueConv strips "Cont:".
-            0x000d => value
-                .as_str()
-                .map(|s| s.replacen("Cont:", "", 1).trim().to_string()),
-            // Shadow (string form): ValueConv strips "Shad:".
-            0x000e => value
-                .as_str()
-                .map(|s| s.replacen("Shad:", "", 1).trim().to_string()),
-            // Saturation (string form): ValueConv strips "Satu:".
-            0x0010 => value
-                .as_str()
-                .map(|s| s.replacen("Satu:", "", 1).trim().to_string()),
-            // Sharpness (string form): ValueConv strips "Shar:".
-            0x0011 => value
-                .as_str()
-                .map(|s| s.replacen("Shar:", "", 1).trim().to_string()),
+            // Contrast/Shadow/Saturation/Sharpness (Sigma.pm:314-360): both the
+            // string and the rational variant are printed raw — neither carries a
+            // PrintConv — so return a value in every case, otherwise the generic
+            // by-name fallback would map 0 to "Normal".
+            0x000d => Some(strip_sigma_prefix(value, "Cont:")),
+            0x000e => Some(strip_sigma_prefix(value, "Shad:")),
+            0x0010 => Some(strip_sigma_prefix(value, "Satu:")),
+            0x0011 => Some(strip_sigma_prefix(value, "Shar:")),
             // Highlight (string form): ValueConv strips "High:".
             0x000f => value
                 .as_str()
@@ -10175,6 +10177,10 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
             0x0012 => value
                 .as_str()
                 .map(|s| s.replacen("Fill:", "", 1).trim().to_string()),
+            // FNumber (0x0031, Sigma.pm:629): rational64u, PrintConv "%.1f".
+            0x0031 => value.as_f64().map(|v| format!("{:.1}", v)),
+            // ExposureTime (0x0032, Sigma.pm:638): rational64u, PrintExposureTime.
+            0x0032 => value.as_f64().map(print_exposure_time),
             // ExposureTime2 (0x0033, non-Merrill/Quattro): ValueConv $val*1e-6,
             // PrintConv PrintExposureTime.
             0x0033 => value

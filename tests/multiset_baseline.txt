@@ -529,7 +529,7 @@ Ricoh2.jpg	ee	missing	0	GPSAltitude	117 m
 Ricoh2.jpg	ee	missing	0	GPSLatitude	42 deg 2' 4.47"
 Ricoh2.jpg	ee	missing	0	GPSLongitude	0 deg 30' 27.01"
 SigmaDP2.x3f	default	extra	0	BurstShot	0
-SigmaDP2.x3f	default	extra	0	Contrast	Normal
+SigmaDP2.x3f	default	extra	0	Contrast	0
 SigmaDP2.x3f	default	extra	0	DriveMode	Single Shot
 SigmaDP2.x3f	default	extra	0	ExposureCompensation	0
 SigmaDP2.x3f	default	extra	0	Highlight	0
@@ -538,23 +538,15 @@ SigmaDP2.x3f	default	extra	0	LensFocalRange	24.2
 SigmaDP2.x3f	default	extra	0	MeteringMode	8-segment
 SigmaDP2.x3f	default	extra	0	PreviewImage	(Binary data 20 bytes, use -b option to extract)
 SigmaDP2.x3f	default	extra	0	Quality	High
-SigmaDP2.x3f	default	extra	0	Saturation	Low
+SigmaDP2.x3f	default	extra	0	Saturation	0
 SigmaDP2.x3f	default	extra	0	SensorTemperature	20 C
 SigmaDP2.x3f	default	extra	0	SerialNumber	1008382
 SigmaDP2.x3f	default	extra	0	Shadow	0
-SigmaDP2.x3f	default	extra	0	Sharpness	Normal
+SigmaDP2.x3f	default	extra	0	Sharpness	0
 SigmaDP2.x3f	default	extra	0	WhiteBalance	Auto
 SigmaDP2.x3f	default	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
-SigmaDP2.x3f	ee	extra	0	Contrast	Normal
-SigmaDP2.x3f	ee	extra	0	Saturation	Low
-SigmaDP2.x3f	ee	extra	0	Sharpness	Normal
-SigmaDP2.x3f	ee	missing	0	Contrast	0
-SigmaDP2.x3f	ee	missing	0	ExposureTime	1/10
-SigmaDP2.x3f	ee	missing	0	FNumber	2.8
 SigmaDP2.x3f	ee	missing	0	Firmware	1.03.0.000
 SigmaDP2.x3f	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
-SigmaDP2.x3f	ee	missing	0	Saturation	0
-SigmaDP2.x3f	ee	missing	0	Sharpness	0
 SigmaDP2.x3f	ee	missing	0	WhiteBalance	Auto
 XMP.svg	ee	missing	0	JUMDLabel	adobe.asset.info
 XMP.svg	ee	missing	0	JUMDLabel	cai.assertions
