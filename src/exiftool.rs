@@ -1643,39 +1643,6 @@ impl ExifTool {
                         tags.retain(|t| t.name != *name || t.group.family1 == *grp);
                     }
                 }
-
-                // QuickTime container/handler tags: ExifTool reports the LAST track's
-                // value (e.g. the metadata-track HandlerType), unlike per-track TrackID
-                // which keeps the first. Keep only the last instance of these.
-                const QT_LAST_WINS: &[&str] = &[
-                    "HandlerType",
-                    "HandlerClass",
-                    "HandlerDescription",
-                    "HandlerVendorID",
-                    "MediaTimeScale",
-                    "MediaDuration",
-                    "SourceImageWidth",
-                    "SourceImageHeight",
-                    // Multiple 'mdat' boxes: ExifTool's RawConv overwrites, so the
-                    // last box's offset/size is reported.
-                    "MediaDataOffset",
-                    "MediaDataSize",
-                ];
-                // These live in the movie's own group or in a track's (Track1,
-                // Track2, …), so the family-0 group is what identifies them.
-                let is_qt_main =
-                    |t: &Tag| t.group.family0 == "QuickTime" && t.group.family3 == MAIN_DOCUMENT;
-                for name in QT_LAST_WINS {
-                    let last = tags.iter().rposition(|t| t.name == *name && is_qt_main(t));
-                    if let Some(li) = last {
-                        let mut i = 0usize;
-                        tags.retain(|t| {
-                            let keep = !(t.name == *name && is_qt_main(t) && i != li);
-                            i += 1;
-                            keep
-                        });
-                    }
-                }
             }
 
             let mut best_priority: HashMap<String, i32> = HashMap::new();
