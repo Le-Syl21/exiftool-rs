@@ -1743,16 +1743,6 @@ impl ExifTool {
                 });
             }
 
-            // EXIF/IPTC/MakerNotes outrank XMP for the same tag name (ExifTool default
-            // group priority). Drop an XMP duplicate only when a non-XMP source at the
-            // same (now-max) priority exists.
-            let has_non_xmp: std::collections::HashSet<String> = tags
-                .iter()
-                .filter(|t| duplicate_source(&t.group) != "XMP" && !t.print_value.is_empty())
-                .map(|t| t.name.clone())
-                .collect();
-            tags.retain(|t| duplicate_source(&t.group) != "XMP" || !has_non_xmp.contains(&t.name));
-
             // QuickTime container dates are primary over an embedded EXIF copy
             // (ExifTool reports the QuickTime CreateDate/ModifyDate for MOV/CR3/etc.).
             {
@@ -1887,7 +1877,8 @@ impl ExifTool {
                 let is_low_priority_source = |g: &TagGroup, name: &str| -> bool {
                     let g1 = g.family1.as_str();
                     // An invented `XMP::other` tag carries `Priority => 0`
-                    // whatever family 0 it reports; see [`duplicate_source`].
+                    // whatever family 0 it reports: XMP.pm builds such a tagInfo as
+                    // `{ Name, IsDefault => 1, Priority => 0 }` (XMP.pm:3595).
                     if g.family2 == "Unknown" {
                         return true;
                     }
@@ -1904,8 +1895,12 @@ impl ExifTool {
                         return true;
                     }
                     match g.family0.as_str() {
+                        // The XMP properties ExifTool stores at priority 0 — the
+                        // `PRIORITY => 0` mirror tables and every `Avoid => 1`
+                        // property, which FoundTag demotes at ExifTool.pm:9472.
+                        // See `scripts/gen_priority0.pl`.
                         "XMP" => {
-                            matches!(g1, "XMP-tiff" | "XMP-exif" | "XMP-exifEX")
+                            crate::tags::priority0_generated::xmp_is_priority0(g1, name)
                                 || crate::tags::group2::xmp_property_is_unknown(g1, name)
                         }
                         // A QuickTime movie's tracks are separate documents to
@@ -3256,28 +3251,6 @@ const FILE_LEVEL_GROUPS: &[(&str, &str, &str, &str)] = &[
     ("FileSize", "File", "System", "Other"),
     ("Warning", "ExifTool", "ExifTool", "ExifTool"),
 ];
-
-/// The metadata source a tag competes under during duplicate resolution.
-///
-/// Normally that is its family-0 group. The exception is a tag ExifTool invented
-/// on the spot for material no schema of its describes: XMP.pm builds it a
-/// tagInfo of `{ Name => $name, IsDefault => 1, Priority => 0 }` in
-/// `%Image::ExifTool::XMP::other`, whose `GROUPS => { 2 => 'Unknown' }` (XMP.pm
-/// line 2740) is the family-2 our readers stamp on it. Such a tag is an XMP
-/// property whatever family 0 it REPORTS: reading back an ExifTool-written
-/// RDF/XML dump, XMP.pm lines 3599-3614 overwrite its families 0 and 1 with the
-/// groups the property had in the source file (`EXIF`, `MakerNotes`, `XML`, …),
-/// but that is a reporting group only — the tag still sits in an XMP table, at
-/// priority 0, so it must keep losing to a same-named tag from a real source
-/// (and compete with its restored siblings, which Perl's group-blind `FoundTag`
-/// does by construction).
-fn duplicate_source(group: &TagGroup) -> &str {
-    if group.family2 == "Unknown" {
-        "XMP"
-    } else {
-        group.family0.as_str()
-    }
-}
 
 /// The `(family0, family1, family2)` groups [`FILE_LEVEL_GROUPS`] assigns to
 /// `name`, or `None` if `name` is not a file-level pseudo-tag.

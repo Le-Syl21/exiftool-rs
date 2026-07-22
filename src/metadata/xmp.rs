@@ -1744,6 +1744,35 @@ impl XmpReader {
             }
         }
 
+        // XMP.pm:1232-1236 gives pdf:Trapped a ValueConv that drops the leading
+        // slash a PDF writes ("/True", "/False", "/Unknown"); its PrintConv then
+        // passes the three bare names through unchanged.
+        for tag in tags.iter_mut() {
+            if tag.group.family1 == "XMP-pdf" && tag.name == "Trapped" {
+                if let Some(rest) = tag.print_value.strip_prefix('/') {
+                    tag.print_value = rest.to_string();
+                }
+                if let Value::String(s) = &tag.raw_value {
+                    if let Some(rest) = s.strip_prefix('/') {
+                        tag.raw_value = Value::String(rest.to_string());
+                    }
+                }
+            }
+        }
+
+        // PhotoMechanic.pm:134-139 runs photomechanic:TimeCreated through
+        // Exif::ExifTime, the same ValueConv IPTC.pm uses for its own time tags:
+        // it inserts the ':' separators an IPTC-style "HHMMSS±HHMM" omits.
+        for tag in tags.iter_mut() {
+            // (the family-1 group is still the prefix written in the file here;
+            // `exiftool_namespace_alias` shortens it further down)
+            if tag.group.family1 == "XMP-photomechanic" && tag.name == "TimeCreated" {
+                let converted = exif_time(&tag.print_value);
+                tag.print_value = converted.clone();
+                tag.raw_value = Value::String(converted);
+            }
+        }
+
         // ExifTool reformats XMP ISO-8601 dates to its own "YYYY:MM:DD HH:MM:SS" form
         // (ConvertXMPDate). Apply to any value matching the strict date pattern.
         for tag in tags.iter_mut() {
@@ -2437,6 +2466,31 @@ fn xmp_rational_decimal(v: &Value) -> Option<String> {
         }),
         _ => None,
     }
+}
+
+/// Port of `Image::ExifTool::Exif::ExifTime` (Exif.pm:6085): normalise a compact
+/// IPTC-style time to "HH:MM:SS[±HH:MM]" by inserting the separators it omits.
+fn exif_time(val: &str) -> String {
+    let mut s: String = val.replace(' ', ":");
+    while s.ends_with('\0') {
+        s.pop();
+    }
+    let b = s.as_bytes();
+    let dig = |i: usize| b.get(i).is_some_and(u8::is_ascii_digit);
+    // `s/^(\d{2})(\d{2})(\d{2})/$1:$2:$3/`
+    if b.len() >= 6 && (0..6).all(dig) {
+        s = format!("{}:{}:{}{}", &s[0..2], &s[2..4], &s[4..6], &s[6..]);
+    }
+    // `s/([+-]\d{2})(\d{2})\s*$/$1:$2/`
+    let t = s.trim_end();
+    let b = t.as_bytes();
+    if b.len() >= 5 {
+        let i = b.len() - 5;
+        if (b[i] == b'+' || b[i] == b'-') && b[i + 1..].iter().all(u8::is_ascii_digit) {
+            s = format!("{}:{}", &t[..i + 3], &t[i + 3..]);
+        }
+    }
+    s
 }
 
 /// Reformat an XMP ISO-8601 date/time to ExifTool's "YYYY:MM:DD HH:MM[:SS][TZ]" form.

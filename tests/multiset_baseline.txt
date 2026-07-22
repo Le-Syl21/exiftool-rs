@@ -90,9 +90,7 @@ DNG.dng	ee	missing	0	OwnerName	unknown
 DNG.dng	ee	missing	0	SerialNumber	012345678
 DNG.dng	ee	missing	0	WhiteBalance	Auto
 DNG.dng	ee	missing	1	WhiteBalance	Auto
-DjVu.djvu	ee	extra	0	Trapped	/Unknown
 DjVu.djvu	ee	extra	0	URL	https://exiftool.org/
-DjVu.djvu	ee	missing	0	Trapped	Unknown
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
 FLIR.jpg	ee	missing	0	DateTimeOriginal	2012:02:11 14:17:08
 FLIR.jpg	ee	missing	0	Emissivity	0.80
@@ -308,9 +306,7 @@ Pentax.jpg	ee	missing	0	FocalLength	10.0 mm
 Pentax.jpg	ee	missing	0	ISO	100
 Pentax.jpg	ee	missing	0	LensType	Sigma or Tamron Lens (3 44)
 Pentax.jpg	ee	missing	0	PentaxModelID	K10D
-PhotoMechanic.jpg	ee	extra	0	TimeCreated	062751-0500
 PhotoMechanic.jpg	ee	missing	0	Prefs	Tagged:0, ColorClass:0, Rating:0, FrameNum:-00001
-PhotoMechanic.jpg	ee	missing	0	TimeCreated	06:27:51-05:00
 PostScript.eps	ee	missing	0	BoundingBox	0 0 435 283
 PostScript.eps	ee	missing	1	BoundingBox	0 0 435 283
 PostScript.eps	ee	missing	2	BoundingBox	0 0 435 283
