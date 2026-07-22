@@ -5936,6 +5936,38 @@ fn read_makernote_ifd_with_base(
                     }
                     t
                 }
+                // Canon::ColorInfo (Canon.pm:8953, maker-note tag 0x4003):
+                // FORMAT int16s, FIRST_ENTRY 1. Index 1 Saturation is conditional
+                // on Model =~ /EOS-1D/, index 2 ColorTone uses printParameter and
+                // index 3 ColorSpace is dropped when zero.
+                (Manufacturer::Canon, 0x4003) => {
+                    let mut t = Vec::new();
+                    let rd = |i: usize| -> i16 { read_u16(value_data, i * 2, byte_order) as i16 };
+                    let n = count as usize;
+                    if n >= 2 && model_name.contains("EOS-1D") {
+                        if let Some(pv) = crate::tags::canon_sub::canon_param_print(rd(1)) {
+                            t.push(mk_canon_str("Saturation", &pv));
+                        }
+                    }
+                    if n >= 3 {
+                        if let Some(pv) = crate::tags::canon_sub::canon_param_print(rd(2)) {
+                            t.push(mk_canon_str("ColorTone", &pv));
+                        }
+                    }
+                    if n >= 4 {
+                        let cs = rd(3);
+                        let pv = match cs {
+                            0 => None,
+                            1 => Some("sRGB".to_string()),
+                            2 => Some("Adobe RGB".to_string()),
+                            _ => Some(cs.to_string()),
+                        };
+                        if let Some(pv) = pv {
+                            t.push(mk_canon_str("ColorSpace", &pv));
+                        }
+                    }
+                    t
+                }
                 (Manufacturer::Canon, 0x00A0) => {
                     // Canon ProcessingInfo: int16s format (from Perl Canon::Processing)
                     // FIRST_ENTRY=1, so index i corresponds to int16s[i] (0-based in data)

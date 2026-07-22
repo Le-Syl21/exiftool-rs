@@ -868,8 +868,9 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             if data.len() >= 4 {
                 let raw = rf32(data, 0);
                 let val = raw + 5.0;
-                // Perl: PrintConv not specified, uses default ValueConv output
-                tags.push(mk("MeasuredEV", format!("{:.2}", val)));
+                // CanonRaw.pm:292 declares no PrintConv, so the printed value is
+                // the ValueConv result stringified by Perl (%.15g), not %.2f.
+                tags.push(mk("MeasuredEV", crate::value::format_g15(val as f64)));
             }
             true
         }

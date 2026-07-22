@@ -18,6 +18,21 @@ pub fn canon_ev(val: i32) -> f64 {
     sign * (int_part as f64 + frac_val) / 0x20 as f64
 }
 
+/// Perl `/\bNEEDLE\b/` on `haystack`: a case-sensitive substring match whose two
+/// ends fall on a word boundary (`\w` = `[0-9A-Za-z_]`).
+fn word_bounded(haystack: &str, needle: &str) -> bool {
+    let is_w = |c: u8| c.is_ascii_alphanumeric() || c == b'_';
+    let (h, n) = (haystack.as_bytes(), needle.as_bytes());
+    if n.is_empty() || n.len() > h.len() {
+        return false;
+    }
+    (0..=h.len() - n.len()).any(|i| {
+        &h[i..i + n.len()] == n
+            && !(i > 0 && is_w(h[i - 1]) && is_w(n[0]))
+            && !(i + n.len() < h.len() && is_w(h[i + n.len()]) && is_w(n[n.len() - 1]))
+    })
+}
+
 /// Canon.pm:1119 `%pictureStyles` (used with the PrintHex flag).
 pub fn canon_picture_style(val: u32) -> Option<&'static str> {
     Some(match val {
@@ -67,6 +82,18 @@ fn canon_param(v: i16) -> Option<String> {
     if v == 0x7fff {
         return None;
     }
+    Some(match v.cmp(&0) {
+        std::cmp::Ordering::Equal => "Normal".to_string(),
+        std::cmp::Ordering::Greater => format!("+{}", v),
+        std::cmp::Ordering::Less => v.to_string(),
+    })
+}
+
+/// Perl `%Image::ExifTool::Exif::printParameter` (Exif.pm:327) applied to a
+/// signed 16-bit value: 0 prints "Normal", other values go through
+/// `Exif::PrintParameter` (Exif.pm:5628), which signs positives with "+" — the
+/// ">0xfff0 is a negative in disguise" branch is what int16s already gives us.
+pub fn canon_param_print(v: i16) -> Option<String> {
     Some(match v.cmp(&0) {
         std::cmp::Ordering::Equal => "Normal".to_string(),
         std::cmp::Ordering::Greater => format!("+{}", v),
@@ -727,8 +754,13 @@ pub fn decode_shot_info(values: &[i16], model: &str) -> Vec<Tag> {
         // We can't check file type here, so emit if non-zero
         if v != 0 {
             let ev = canon_ev(v as i32);
-            // Use the generic formula (most models)
-            let et = (-ev * std::f64::consts::LN_2).exp();
+            // Canon.pm:2972 — the first variant applies when
+            // Model =~ /\b(20D|350D|REBEL XT|Kiss Digital N)\b/ and scales by
+            // 1000/32; every other model uses the plain formula (Canon.pm:2989).
+            let scaled = ["20D", "350D", "REBEL XT", "Kiss Digital N"]
+                .iter()
+                .any(|m| word_bounded(model, m));
+            let et = (-ev * std::f64::consts::LN_2).exp() * if scaled { 1000.0 / 32.0 } else { 1.0 };
             let pv = crate::tags::canon_sub::print_exposure_time(et);
             tags.push(Tag {
                 id: TagId::Text("ExposureTime".into()),

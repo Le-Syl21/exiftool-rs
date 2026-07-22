@@ -21,16 +21,6 @@ Apple.jpg	ee	missing	0	GPSAltitude	72.36649215 m
 Apple.jpg	ee	missing	0	GPSLatitude	53 deg 22' 58.25"
 Apple.jpg	ee	missing	0	GPSLongitude	1 deg 27' 24.04"
 BPG.bpg	ee	missing	0	ColorSpace	YCbCr (BT 601)
-CanonRaw.cr2	ee	extra	0	ExposureTime	1/512
-CanonRaw.cr2	ee	missing	0	BitsPerSample	8 8 8
-CanonRaw.cr2	ee	missing	0	ColorTone	Normal
-CanonRaw.cr2	ee	missing	0	Compression	JPEG (old-style)
-CanonRaw.cr2	ee	missing	1	Compression	JPEG (old-style)
-CanonRaw.cr2	ee	missing	0	ExposureTime	1/16
-CanonRaw.cr2	ee	missing	0	ImageHeight	256
-CanonRaw.cr2	ee	missing	0	ImageWidth	384
-CanonRaw.cr2	ee	missing	0	StripByteCounts	16
-CanonRaw.cr2	ee	missing	0	StripOffsets	8664
 CanonRaw.cr3	ee	extra	0	Rotation	0
 CanonRaw.cr3	ee	extra	1	Rotation	0
 CanonRaw.cr3	ee	missing	0	ExifByteOrder	Little-endian (Intel, II)
@@ -42,8 +32,6 @@ CanonRaw.cr3	ee	missing	0	ImageWidth	1624
 CanonRaw.cr3	ee	missing	0	ImageWidth	3144
 CanonRaw.cr3	ee	missing	0	MeteringMode	Multi-segment
 CanonRaw.cr3	ee	missing	0	WhiteBalance	Auto
-CanonRaw.crw	ee	extra	0	MeasuredEV	4.62
-CanonRaw.crw	ee	missing	0	MeasuredEV	4.625
 CaptureOne.eip	ee	missing	0	Crop	0.000000;0.000000;0.000000;0.000000
 CaptureOne.eip	ee	missing	0	NRAmount	25
 CaptureOne.eip	ee	missing	0	Rotation	0

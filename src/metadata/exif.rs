@@ -1141,15 +1141,18 @@ impl ExifReader {
                     }
                     continue;
                 }
-                // In CR2 IFD2 (preview JPEG), suppress StripOffsets/StripByteCounts
-                // because IFD3 has the correct values for the raw data.
-                // Also suppress tags that duplicate IFD0 content (ImageWidth, ImageHeight,
-                // BitsPerSample, Compression) since the first (IFD0) value is preferred.
-                0x0100 | 0x0101 | 0x0102 | 0x0103 | 0x0111 | 0x0117 if ifd_name == "IFD2" => {
+                // CR2 IFD2 (preview JPEG) and IFD3 (raw data) repeat names IFD0
+                // already defines. ExifTool reads them all and lets the name-keyed
+                // collapse pick IFD0's ImageWidth/ImageHeight/BitsPerSample/
+                // Compression and IFD3's StripOffsets/StripByteCounts; with the
+                // Duplicates option on it reports every copy, so only skip them
+                // when we are collapsing.
+                0x0100 | 0x0101 | 0x0102 | 0x0103 | 0x0111 | 0x0117
+                    if ifd_name == "IFD2" && !keep_duplicates() =>
+                {
                     continue;
                 }
-                // In CR2 IFD3 (raw data), suppress Compression (IFD0 value is preferred).
-                0x0103 if ifd_name == "IFD3" => {
+                0x0103 if ifd_name == "IFD3" && !keep_duplicates() => {
                     continue;
                 }
                 _ => {}
