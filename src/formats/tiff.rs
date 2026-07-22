@@ -759,6 +759,8 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
     let mut jpg_from_raw_offset: u64 = 0; // file position of the embedded JPEG
     let mut wb_info2_data: Option<Vec<u8>> = None;
     let mut distortion_data: Option<Vec<u8>> = None;
+    // Offset of the RW2's own ExifIFD (IFD0 tag 0x8769).
+    let mut exif_ifd_offset: Option<u32> = None;
     // Track ThumbnailOffset+Length for IFD1
     let mut thumb_offset: Option<u64> = None;
     let mut thumb_length: Option<u64> = None;
@@ -831,12 +833,19 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
                 distortion_data = Some(bytes);
                 continue;
             }
+            0x8769 => {
+                // ExifOffset: the RW2 carries an ExifIFD of its own, separate from
+                // the one inside JpgFromRaw (PanasonicRaw.pm:359-368 maps 0x8769 to
+                // Exif::Main with DirName 'ExifIFD' and Start => '$val').
+                // Its offset is file-relative, like every RW2 IFD offset.
+                exif_ifd_offset = Some(e.value_offset);
+                continue;
+            }
             // Skip tags that are subdirectories or handled elsewhere
             0x0013 | // WBInfo (old format)
             0x0120 | // CameraIFD
             0x02bc | // ApplicationNotes (XMP)
             0x83bb | // IPTC-NAA
-            0x8769 | // ExifOffset (in embedded JPEG)
             0x8825   // GPS
             => continue,
             _ => {}
@@ -1016,6 +1025,15 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
                 }
                 tags.push(t);
             }
+        }
+    }
+
+    // The RW2's own ExifIFD is the last IFD0 entry, so ExifTool emits it after
+    // everything read from JpgFromRaw. It stays in the main document.
+    if let Some(off) = exif_ifd_offset {
+        for mut t in crate::metadata::exif::ExifReader::read_ifd_at(data, le, off, "ExifIFD") {
+            t.group.family3 = "Main".into();
+            tags.push(t);
         }
     }
 

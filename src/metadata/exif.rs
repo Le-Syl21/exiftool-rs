@@ -1382,6 +1382,24 @@ impl ExifReader {
         let _ = Self::read_ifd(data, &header, header.ifd0_offset, ifd_name, &mut tags);
         tags
     }
+
+    /// Parse a single IFD located at `offset` inside a TIFF-like container whose
+    /// header this reader cannot parse itself (RW2 uses magic 0x55 instead of
+    /// 0x2A). Offsets inside the IFD stay relative to the start of `data`, which
+    /// is what a TIFF IFD always uses. No ExifByteOrder and no IFD1 chaining.
+    pub fn read_ifd_at(data: &[u8], little_endian: bool, offset: u32, ifd_name: &str) -> Vec<Tag> {
+        let header = TiffHeader {
+            byte_order: if little_endian {
+                ByteOrderMark::LittleEndian
+            } else {
+                ByteOrderMark::BigEndian
+            },
+            ifd0_offset: offset,
+        };
+        let mut tags = Vec::new();
+        let _ = Self::read_ifd(data, &header, offset, ifd_name, &mut tags);
+        tags
+    }
 }
 
 fn parse_ifd_entry(data: &[u8], offset: usize, byte_order: ByteOrderMark) -> IfdEntry {
