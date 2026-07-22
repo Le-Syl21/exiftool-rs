@@ -29,8 +29,52 @@ pub fn read_xisf(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Parse XML attributes to extract metadata
     parse_xisf_xml(&xml_str, &mut tags);
+    push_geometry_tags(&mut tags);
 
     Ok(tags)
+}
+
+/// Report the image dimensions ProcessXISF derives from `ImageGeometry`
+/// (XISF.pm lines 137-143).
+///
+/// They come last because ExifTool only reads them back out of the extracted
+/// values once the whole header has been parsed, and they are `File` tags, not
+/// `XML` ones: `FoundTag` is called with a bare NAME, which resolves through
+/// `%Image::ExifTool::Extra` — `GROUPS => { 0 => 'File', 1 => 'File',
+/// 2 => 'Image' }` (ExifTool.pm line 1285), where ImageWidth, ImageHeight and
+/// NumPlanes are all declared (ExifTool.pm lines 1670-1674).
+fn push_geometry_tags(tags: &mut Vec<Tag>) {
+    let Some(geo) = tags
+        .iter()
+        .find(|t| t.name == "ImageGeometry")
+        .and_then(|t| match &t.raw_value {
+            Value::String(s) => Some(s.clone()),
+            _ => None,
+        })
+    else {
+        return;
+    };
+    let parts: Vec<&str> = geo.split(':').collect();
+    let named = [
+        ("ImageWidth", "Image Width"),
+        ("ImageHeight", "Image Height"),
+        ("NumPlanes", "Number of Planes"),
+    ];
+    for (part, (name, description)) in parts.iter().zip(named) {
+        if let Ok(v) = part.parse::<u32>() {
+            tags.push(mk_file(name, description, Value::U32(v)));
+        }
+    }
+}
+
+/// A tag ProcessXISF reports by bare name, so it belongs to
+/// `%Image::ExifTool::Extra` rather than `XISF::Main` — see
+/// [`push_geometry_tags`].
+fn mk_file(name: &str, description: &str, value: Value) -> Tag {
+    let mut tag = mk(name, description, value);
+    tag.group.family0 = "File".into();
+    tag.group.family1 = "File".into();
+    tag
 }
 
 fn parse_xisf_xml(xml: &str, tags: &mut Vec<Tag>) {
@@ -41,21 +85,11 @@ fn parse_xisf_xml(xml: &str, tags: &mut Vec<Tag>) {
         let img_end = img_section.find('>').unwrap_or(img_section.len());
         let img_attrs = &img_section[7..img_end]; // skip "<Image "
 
-        // Parse geometry="W:H:N"
+        // Parse geometry="W:H:N". The dimensions it holds are reported
+        // separately, after the whole header has been read — see
+        // [`push_geometry_tags`].
         if let Some(geo) = extract_attr(img_attrs, "geometry") {
-            let parts: Vec<&str> = geo.split(':').collect();
-            if parts.len() >= 2 {
-                if let Ok(w) = parts[0].parse::<u32>() {
-                    tags.push(mk("ImageWidth", "Image Width", Value::U32(w)));
-                }
-                if let Ok(h) = parts[1].parse::<u32>() {
-                    tags.push(mk("ImageHeight", "Image Height", Value::U32(h)));
-                }
-                if parts.len() >= 3 {
-                    if let Ok(n) = parts[2].parse::<u32>() {
-                        tags.push(mk("NumPlanes", "Number of Planes", Value::U32(n)));
-                    }
-                }
+            if geo.split(':').count() >= 2 {
                 tags.push(mk("ImageGeometry", "Image Geometry", Value::String(geo)));
             }
         }

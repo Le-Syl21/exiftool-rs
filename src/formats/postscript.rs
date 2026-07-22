@@ -596,7 +596,14 @@ fn parse_photoshop_irb(data: &[u8], tags: &mut Vec<Tag>) {
                         .iter()
                         .map(|b| format!("{:02x}", b))
                         .collect::<String>();
-                    tags.push(mk("IPTCDigest", "IPTC Digest", Value::String(digest)));
+                    // `%Image::ExifTool::Photoshop::Main` (Photoshop.pm line
+                    // 101): the IRB is read in the Photoshop group whatever
+                    // container carries it.
+                    let mut tag = mk("IPTCDigest", "IPTC Digest", Value::String(digest));
+                    tag.group.family0 = "Photoshop".into();
+                    tag.group.family1 = "Photoshop".into();
+                    tag.group.family2 = "Image".into();
+                    tags.push(tag);
                 }
             _ => {}
         }
@@ -614,11 +621,17 @@ fn parse_image_data_comment(text: &str, tags: &mut Vec<Tag>) {
         if let Some(rest) = line.strip_prefix("%ImageData:") {
             let parts: Vec<&str> = rest.split_whitespace().collect();
             if parts.len() >= 2 {
-                if let Ok(w) = parts[0].parse::<u32>() {
-                    tags.push(mk("ImageWidth", "Image Width", Value::U32(w)));
-                }
+                // ExifTool does not read these off the comment: it derives them
+                // from ImageData (or, failing that, BoundingBox) in
+                // `%Image::ExifTool::PostScript::Composite`, GROUPS =>
+                // { 2 => 'Image' } (PostScript.pm lines 128-145). Composite
+                // tags are reported in the Composite group for families 0 and
+                // 1, and height is built before width.
                 if let Ok(h) = parts[1].parse::<u32>() {
-                    tags.push(mk("ImageHeight", "Image Height", Value::U32(h)));
+                    tags.push(mk_composite("ImageHeight", "Image Height", Value::U32(h)));
+                }
+                if let Ok(w) = parts[0].parse::<u32>() {
+                    tags.push(mk_composite("ImageWidth", "Image Width", Value::U32(w)));
                 }
             }
             break;
@@ -646,6 +659,15 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         print_value: pv,
         priority: 0,
     }
+}
+
+/// Same as [`mk`], but in the Composite group — see [`parse_image_data_comment`].
+fn mk_composite(name: &str, description: &str, value: Value) -> Tag {
+    let mut tag = mk(name, description, value);
+    tag.group.family0 = "Composite".into();
+    tag.group.family1 = "Composite".into();
+    tag.group.family2 = "Image".into();
+    tag
 }
 
 /// Same as [`mk`], but tagged with the family-3 document number ProcessPS was

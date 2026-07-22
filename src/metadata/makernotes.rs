@@ -6978,11 +6978,28 @@ fn read_makernote_ifd_with_base(
                     // Ricoh ImageInfo: Big-Endian binary (from Perl Ricoh::ImageInfo)
                     let mut t = Vec::new();
                     let d = value_data;
+                    // `%Image::ExifTool::Ricoh::ImageInfo` is a table of its
+                    // own (Ricoh.pm line 482); its tags are read in the Ricoh
+                    // maker-note group, not Nikon's.
+                    let mk_ricoh = |name: &str, value: String| Tag {
+                        id: TagId::Text(name.to_string()),
+                        name: name.to_string(),
+                        description: name.to_string(),
+                        group: TagGroup {
+                            family0: "MakerNotes".into(),
+                            family1: "Ricoh".into(),
+                            family2: "Image".into(),
+                            family3: "Main".into(),
+                        },
+                        raw_value: Value::String(value.clone()),
+                        print_value: value,
+                        priority: 0,
+                    };
                     if d.len() >= 4 {
                         let w = u16::from_be_bytes([d[0], d[1]]);
                         let h = u16::from_be_bytes([d[2], d[3]]);
-                        t.push(mk_nikon_str("RicohImageWidth", &w.to_string()));
-                        t.push(mk_nikon_str("RicohImageHeight", &h.to_string()));
+                        t.push(mk_ricoh("RicohImageWidth", w.to_string()));
+                        t.push(mk_ricoh("RicohImageHeight", h.to_string()));
                     }
                     if d.len() >= 13 {
                         // RicohDate at offset 6 (7 bytes hex-encoded date)
@@ -6990,7 +7007,7 @@ fn read_makernote_ifd_with_base(
                             "{:02x}{:02x}:{:02x}:{:02x} {:02x}:{:02x}:{:02x}",
                             d[6], d[7], d[8], d[9], d[10], d[11], d[12]
                         );
-                        t.push(mk_nikon_str("RicohDate", &date));
+                        t.push(mk_ricoh("RicohDate", date));
                     }
                     // ManufactureDate at offset 28-35 (from Perl Ricoh.pm)
                     // These come from the main Ricoh IFD, not ImageInfo

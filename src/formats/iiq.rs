@@ -174,41 +174,21 @@ pub fn read_iiq(data: &[u8], collapse_duplicates: bool) -> Result<Vec<Tag>> {
         &mut phaseone_tags,
     );
 
-    // Extend with PhaseOne tags, but don't add tags that already exist (skip dups)
-    // Exception: FocalLength from PhaseOne should override EXIF's (remove EXIF version)
-    // Actually: keep PhaseOne version for FocalLength (more accurate), remove EXIF
-    if !collapse_duplicates {
-        // Duplicates are kept: report every PhaseOne instance, exactly like
-        // `exiftool -ee` (which prints PhaseOne ISO/DateTimeOriginal/FocalLength/
-        // SerialNumber alongside the EXIF copies).
-        tags.extend(phaseone_tags);
-    } else {
-        // Build set of existing tag names
-        let _existing: std::collections::HashSet<String> =
-            tags.iter().map(|t| t.name.clone()).collect();
-        // Remove EXIF versions of tags that PhaseOne provides (FocalLength, ISO, ShutterSpeedValue, ApertureValue)
-        let phaseone_names: std::collections::HashSet<String> =
-            phaseone_tags.iter().map(|t| t.name.clone()).collect();
-        // Remove from existing tags those that PhaseOne also provides (PhaseOne wins)
-        // PhaseOne ShutterSpeedValue/ApertureValue are better than EXIF APEX versions
-        let phaseone_overrides: std::collections::HashSet<&str> =
-            ["ShutterSpeedValue", "ApertureValue"]
-                .iter()
-                .cloned()
-                .collect();
-        tags.retain(|t| {
-            !phaseone_overrides.contains(t.name.as_str()) || !phaseone_names.contains(&t.name)
-        });
-
-        // Now add PhaseOne tags, skipping ones already in tags
-        let existing2: std::collections::HashSet<String> =
-            tags.iter().map(|t| t.name.clone()).collect();
-        for t in phaseone_tags {
-            if !existing2.contains(&t.name) {
-                tags.push(t);
-            }
-        }
-    }
+    // The PhaseOne block is IFD0's maker note — `MakerNotePhaseOne`,
+    // `SubDirectory => { TagTable => 'Image::ExifTool::PhaseOne::Main' }`
+    // (MakerNotes.pm lines 840-852) — so ExifTool reads it while it is still in
+    // IFD0, before it ever reaches IFD1. Splice it in there rather than at the
+    // end: `%Image::ExifTool::PhaseOne::Main` states no PRIORITY, so these tags
+    // meet the TIFF ones at equal priority and FoundTag's last-wins rule
+    // (ExifTool.pm:9545-9570) decides every shared name — PhaseOne takes ISO
+    // and FocalLength off ExifIFD, but IFD1, read afterwards, keeps
+    // StripOffsets. The central duplicate arbitration in `exiftool.rs` replays
+    // that rule, so nothing may be dropped here: doing so would be first-wins.
+    let ifd1_start = tags
+        .iter()
+        .position(|t| t.group.family1 == "IFD1")
+        .unwrap_or(tags.len());
+    tags.splice(ifd1_start..ifd1_start, phaseone_tags);
 
     // Add composite tags: RedBalance, BlueBalance from WB_RGBLevels
     {
@@ -449,6 +429,11 @@ fn iiq_decode_tag(
                     "Date/Time Original",
                     crate::metadata::makernotes::unix_time_to_datetime(v),
                 );
+                // `Priority => 0` (PhaseOne.pm line 102), so this copy never
+                // displaces the EXIF DateTimeOriginal read before it.
+                if let Some(t) = tags.last_mut() {
+                    t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+                }
             }
         }
         0x0113 => {
