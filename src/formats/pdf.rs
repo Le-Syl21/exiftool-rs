@@ -26,7 +26,10 @@ fn get_process_compressed() -> bool {
     PROCESS_COMPRESSED.with(|c| c.get())
 }
 
-pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
+/// Read a PDF. `extract_embedded` is ExifTool's ExtractEmbedded level: the
+/// XObject image dictionaries are only walked when it is non-zero
+/// (PDF.pm:1836, `my $embedded = (... $et->Options('ExtractEmbedded'))`).
+pub fn read_pdf(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     if data.len() < 8 || !data.starts_with(b"%PDF-") {
         return Err(Error::InvalidData("not a PDF file".into()));
     }
@@ -131,6 +134,10 @@ pub fn read_pdf(data: &[u8]) -> Result<Vec<Tag>> {
     // Encrypted?
     if find_bytes(&data[..data.len().min(8192)], b"/Encrypt").is_some() {
         tags.push(mk("Encryption", "Encryption", Value::String("Yes".into())));
+    }
+
+    if extract_embedded > 0 {
+        embedded::read_embedded_images(data, &mut tags);
     }
 
     Ok(tags)
@@ -392,24 +399,55 @@ fn decode_pdf_hex_string(hex: &str) -> String {
     decode_pdf_text_bytes(&bytes)
 }
 
-/// Convert PDF date format "D:YYYYMMDDHHmmSS" to standard format.
+/// Convert a PDF date to ExifTool's form. Port of `ConvertPDFDate`
+/// (PDF.pm:634-658): the `D:` prefix is dropped, the date is padded from
+/// `00000101000000`, then a trailing `Z` is kept as-is and a `[-+]HH'mm'`
+/// offset becomes `[-+]HH:mm` (an absent minute field reads `00`).
 fn convert_pdf_date(s: &str) -> String {
     let s = s.trim_start_matches("D:");
-    if s.len() >= 14 {
-        format!(
-            "{}:{}:{} {}:{}:{}",
-            &s[0..4],
-            &s[4..6],
-            &s[6..8],
-            &s[8..10],
-            &s[10..12],
-            &s[12..14]
-        )
-    } else if s.len() >= 8 {
-        format!("{}:{}:{}", &s[0..4], &s[4..6], &s[6..8])
-    } else {
-        s.to_string()
+    let default = "00000101000000";
+    let mut date = s.to_string();
+    if date.len() < default.len() {
+        date.push_str(&default[date.len()..]);
     }
+    if !date.is_char_boundary(14) || !date[..14].bytes().all(|b| b.is_ascii_digit()) {
+        return s.to_string();
+    }
+    let mut out = format!(
+        "{}:{}:{} {}:{}:{}",
+        &date[0..4],
+        &date[4..6],
+        &date[6..8],
+        &date[8..10],
+        &date[10..12],
+        &date[12..14]
+    );
+    let tz = date[14..].trim_start();
+    if tz.starts_with('Z') || tz.starts_with('z') {
+        out.push('Z');
+    } else if let Some(sign) = tz.chars().next().filter(|c| *c == '-' || *c == '+') {
+        let rest = tz[1..].trim_start();
+        let hours: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if !hours.is_empty() {
+            // Perl's separator class is [': ]+; without one the offset is dropped.
+            let rest = &rest[hours.len()..];
+            let sep_len = rest
+                .chars()
+                .take_while(|c| *c == '\'' || *c == ':' || *c == ' ')
+                .count();
+            if sep_len > 0 {
+                let minutes: String = rest[sep_len..]
+                    .chars()
+                    .take_while(|c| c.is_ascii_digit())
+                    .collect();
+                out.push(sign);
+                out.push_str(&hours);
+                out.push(':');
+                out.push_str(if minutes.is_empty() { "00" } else { &minutes });
+            }
+        }
+    }
+    out
 }
 
 /// Whether the document catalog names `/Metadata` before `/Pages`, i.e. whether
@@ -655,5 +693,578 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         raw_value: value,
         print_value,
         priority: 0,
+    }
+}
+
+/// Embedded images: the `/XObject` image dictionaries reachable from the
+/// document catalogue, and the metadata of the images themselves.
+///
+/// ExifTool walks Root → Pages → Kids → Page → Resources → XObject
+/// (PDF.pm:170-322) and, when ExtractEmbedded is on, treats every `Im#` entry of
+/// the XObject dictionary as a sub-document (PDF.pm:367-400 defines the `Im`
+/// table and PDF.pm:1836 the `$embedded` gate). Width, Height, Filter and
+/// ColorSpace are reported as `EmbeddedImage*`; the stream itself is reported as
+/// `EmbeddedImage` and re-read as a file of its own, but only for the two image
+/// filters ExifTool understands (PDF.pm:2164, `if ($filter eq '/DCTDecode' or
+/// $filter eq '/JPXDecode')`).
+mod embedded {
+    use std::collections::HashMap;
+
+    use super::{find_bytes, mk};
+    use crate::tag::{Tag, TagGroup, TagId};
+    use crate::value::Value;
+
+    /// A PDF object, parsed only as far as this walk needs.
+    #[derive(Debug, Clone)]
+    enum Obj {
+        /// Dictionary with its keys in file order — PDF.pm's `_tags`, which is
+        /// the order ProcessDict emits them in (PDF.pm:1837).
+        Dict(Vec<(String, Obj)>),
+        Array(Vec<Obj>),
+        /// A `/Name`, stored without its leading slash (ReadPDFValue, PDF.pm:914).
+        Name(String),
+        /// A number, boolean, null or string token, kept as written.
+        Token(String),
+        /// An `N G R` indirect reference.
+        Ref(u32),
+    }
+
+    impl Obj {
+        fn get(&self, key: &str) -> Option<&Obj> {
+            match self {
+                Obj::Dict(entries) => entries.iter().find(|(k, _)| k == key).map(|(_, v)| v),
+                _ => None,
+            }
+        }
+        fn as_name(&self) -> Option<&str> {
+            match self {
+                Obj::Name(n) => Some(n),
+                _ => None,
+            }
+        }
+        fn as_usize(&self) -> Option<usize> {
+            match self {
+                Obj::Token(t) => t.parse().ok(),
+                _ => None,
+            }
+        }
+    }
+
+    fn is_delim(b: u8) -> bool {
+        matches!(
+            b,
+            b'(' | b')' | b'<' | b'>' | b'[' | b']' | b'{' | b'}' | b'/' | b'%'
+        )
+    }
+
+    fn is_ws(b: u8) -> bool {
+        matches!(b, b'\0' | b'\t' | b'\n' | 0x0c | b'\r' | b' ')
+    }
+
+    struct Parser<'a> {
+        d: &'a [u8],
+        p: usize,
+    }
+
+    impl<'a> Parser<'a> {
+        fn skip_ws(&mut self) {
+            while self.p < self.d.len() {
+                let b = self.d[self.p];
+                if is_ws(b) {
+                    self.p += 1;
+                } else if b == b'%' {
+                    while self.p < self.d.len()
+                        && self.d[self.p] != b'\n'
+                        && self.d[self.p] != b'\r'
+                    {
+                        self.p += 1;
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+
+        fn regular_token(&mut self) -> String {
+            let start = self.p;
+            while self.p < self.d.len() && !is_ws(self.d[self.p]) && !is_delim(self.d[self.p]) {
+                self.p += 1;
+            }
+            String::from_utf8_lossy(&self.d[start..self.p]).into_owned()
+        }
+
+        /// Skip a literal `(...)` string, honouring nesting and backslash escapes.
+        fn skip_literal_string(&mut self) {
+            let mut depth = 0i32;
+            while self.p < self.d.len() {
+                match self.d[self.p] {
+                    b'\\' => self.p += 1,
+                    b'(' => depth += 1,
+                    b')' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            self.p += 1;
+                            return;
+                        }
+                    }
+                    _ => {}
+                }
+                self.p += 1;
+            }
+        }
+
+        fn parse(&mut self, depth: u32) -> Option<Obj> {
+            if depth > 32 {
+                return None;
+            }
+            self.skip_ws();
+            let b = *self.d.get(self.p)?;
+            match b {
+                b'<' if self.d.get(self.p + 1) == Some(&b'<') => {
+                    self.p += 2;
+                    let mut entries = Vec::new();
+                    loop {
+                        self.skip_ws();
+                        if self.p >= self.d.len() {
+                            break;
+                        }
+                        if self.d[self.p] == b'>' {
+                            self.p += 1;
+                            if self.d.get(self.p) == Some(&b'>') {
+                                self.p += 1;
+                            }
+                            break;
+                        }
+                        if self.d[self.p] != b'/' {
+                            // Not a key: the dictionary is malformed, stop here.
+                            break;
+                        }
+                        self.p += 1;
+                        let key = self.regular_token();
+                        let value = self.parse(depth + 1)?;
+                        entries.push((key, value));
+                    }
+                    Some(Obj::Dict(entries))
+                }
+                b'<' => {
+                    // Hex string.
+                    let start = self.p;
+                    while self.p < self.d.len() && self.d[self.p] != b'>' {
+                        self.p += 1;
+                    }
+                    self.p = (self.p + 1).min(self.d.len());
+                    Some(Obj::Token(
+                        String::from_utf8_lossy(&self.d[start..self.p]).into_owned(),
+                    ))
+                }
+                b'[' => {
+                    self.p += 1;
+                    let mut items = Vec::new();
+                    loop {
+                        self.skip_ws();
+                        if self.p >= self.d.len() {
+                            break;
+                        }
+                        if self.d[self.p] == b']' {
+                            self.p += 1;
+                            break;
+                        }
+                        items.push(self.parse(depth + 1)?);
+                    }
+                    Some(Obj::Array(items))
+                }
+                b'(' => {
+                    let start = self.p;
+                    self.skip_literal_string();
+                    Some(Obj::Token(
+                        String::from_utf8_lossy(&self.d[start..self.p]).into_owned(),
+                    ))
+                }
+                b'/' => {
+                    self.p += 1;
+                    Some(Obj::Name(self.regular_token()))
+                }
+                _ if is_delim(b) => None,
+                _ => {
+                    let token = self.regular_token();
+                    if token.is_empty() {
+                        return None;
+                    }
+                    // `N G R` is an indirect reference; anything else is a plain token.
+                    if let Ok(num) = token.parse::<u32>() {
+                        let save = self.p;
+                        self.skip_ws();
+                        let gen = self.regular_token();
+                        if gen.parse::<u32>().is_ok() {
+                            self.skip_ws();
+                            let r = self.regular_token();
+                            if r == "R" {
+                                return Some(Obj::Ref(num));
+                            }
+                        }
+                        self.p = save;
+                    }
+                    Some(Obj::Token(token))
+                }
+            }
+        }
+    }
+
+    /// Map every `N G obj` in the file to the offset just past the `obj` keyword.
+    /// ExifTool uses the cross-reference table; a full scan finds the same
+    /// objects and also survives a stale xref.
+    fn build_object_index(data: &[u8]) -> HashMap<u32, usize> {
+        let mut index = HashMap::new();
+        let mut pos = 0usize;
+        while let Some(rel) = find_bytes(&data[pos..], b"obj") {
+            let at = pos + rel;
+            pos = at + 3;
+            // `obj` must be a token of its own.
+            if at + 3 < data.len() && !is_ws(data[at + 3]) && !is_delim(data[at + 3]) {
+                continue;
+            }
+            // Walk back over "<gen> <num> " to the object number.
+            let mut i = at;
+            let back = |i: &mut usize, want_digits: bool| -> Option<(usize, usize)> {
+                while *i > 0 && is_ws(data[*i - 1]) {
+                    *i -= 1;
+                }
+                let end = *i;
+                while *i > 0 && data[*i - 1].is_ascii_digit() {
+                    *i -= 1;
+                }
+                if want_digits && *i == end {
+                    return None;
+                }
+                Some((*i, end))
+            };
+            let gen = match back(&mut i, true) {
+                Some(r) => r,
+                None => continue,
+            };
+            if gen.0 == gen.1 {
+                continue;
+            }
+            let num = match back(&mut i, true) {
+                Some(r) => r,
+                None => continue,
+            };
+            if let Ok(n) = String::from_utf8_lossy(&data[num.0..num.1]).parse::<u32>() {
+                index.entry(n).or_insert(at + 3);
+            }
+        }
+        index
+    }
+
+    /// Fetch an indirect object: its parsed body plus, when it carries one, the
+    /// byte range of its stream data.
+    fn fetch(data: &[u8], index: &HashMap<u32, usize>, num: u32) -> Option<(Obj, Option<usize>)> {
+        let start = *index.get(&num)?;
+        let mut parser = Parser { d: data, p: start };
+        let obj = parser.parse(0)?;
+        let mut stream_start = None;
+        let mut probe = Parser {
+            d: data,
+            p: parser.p,
+        };
+        probe.skip_ws();
+        if data[probe.p..].starts_with(b"stream") {
+            let mut s = probe.p + 6;
+            if data.get(s) == Some(&b'\r') {
+                s += 1;
+            }
+            if data.get(s) == Some(&b'\n') {
+                s += 1;
+            }
+            stream_start = Some(s);
+        }
+        Some((obj, stream_start))
+    }
+
+    /// Resolve one level of indirection.
+    fn resolve(data: &[u8], index: &HashMap<u32, usize>, obj: &Obj) -> Option<Obj> {
+        match obj {
+            Obj::Ref(n) => fetch(data, index, *n).map(|(o, _)| o),
+            other => Some(other.clone()),
+        }
+    }
+
+    /// The document catalogue: the trailer's `/Root`, or failing that the first
+    /// object declaring `/Type /Catalog`.
+    fn find_catalog(data: &[u8], index: &HashMap<u32, usize>) -> Option<Obj> {
+        let mut pos = 0usize;
+        let mut root: Option<u32> = None;
+        while let Some(rel) = find_bytes(&data[pos..], b"trailer") {
+            let at = pos + rel;
+            pos = at + 7;
+            let mut parser = Parser { d: data, p: pos };
+            if let Some(Obj::Dict(entries)) = parser.parse(0) {
+                if let Some((_, Obj::Ref(n))) = entries.iter().find(|(k, _)| k == "Root") {
+                    root = Some(*n);
+                }
+            }
+        }
+        if let Some(n) = root {
+            if let Some((obj, _)) = fetch(data, index, n) {
+                return Some(obj);
+            }
+        }
+        let mut nums: Vec<u32> = index.keys().copied().collect();
+        nums.sort_unstable();
+        for n in nums {
+            if let Some((obj, _)) = fetch(data, index, n) {
+                if obj.get("Type").and_then(Obj::as_name) == Some("Catalog") {
+                    return Some(obj);
+                }
+            }
+        }
+        None
+    }
+
+    /// Collect the page dictionaries in page-tree order, each paired with the
+    /// `/Resources` in force for it (a Page inherits its parent's).
+    fn collect_pages(
+        data: &[u8],
+        index: &HashMap<u32, usize>,
+        node: &Obj,
+        inherited: Option<&Obj>,
+        depth: u32,
+        out: &mut Vec<Obj>,
+    ) {
+        if depth > 16 || out.len() > 256 {
+            return;
+        }
+        let resources = node
+            .get("Resources")
+            .and_then(|r| resolve(data, index, r))
+            .or_else(|| inherited.cloned());
+        match node.get("Type").and_then(Obj::as_name) {
+            Some("Page") => {
+                if let Some(r) = resources {
+                    out.push(r);
+                }
+            }
+            _ => {
+                let kids = match node.get("Kids").and_then(|k| resolve(data, index, k)) {
+                    Some(Obj::Array(items)) => items,
+                    _ => return,
+                };
+                for kid in &kids {
+                    if let Some(child) = resolve(data, index, kid) {
+                        collect_pages(data, index, &child, resources.as_ref(), depth + 1, out);
+                    }
+                }
+            }
+        }
+    }
+
+    /// `Im0`, `Im12`, … — the XObject keys the `Im` table of PDF.pm:369-377
+    /// matches through ProcessDict's `/^(.*?)(\d+)$/` (PDF.pm:1875).
+    fn is_image_key(key: &str) -> bool {
+        let digits = key.trim_start_matches("Im");
+        key.len() > 2
+            && key.starts_with("Im")
+            && !digits.is_empty()
+            && digits.bytes().all(|b| b.is_ascii_digit())
+    }
+
+    /// Values of a PDF value that ExifTool would report for a List tag: a name,
+    /// or every non-reference element of an array (the `Im` ColorSpace RawConv
+    /// is `ref $val ? undef : $val`, PDF.pm:387).
+    fn list_values(obj: &Obj) -> Vec<String> {
+        match obj {
+            Obj::Name(n) => vec![n.clone()],
+            Obj::Token(t) => vec![t.clone()],
+            Obj::Array(items) => items
+                .iter()
+                .filter_map(|i| match i {
+                    Obj::Name(n) => Some(n.clone()),
+                    Obj::Token(t) => Some(t.clone()),
+                    _ => None,
+                })
+                .collect(),
+            _ => Vec::new(),
+        }
+    }
+
+    fn mk_doc(name: &str, description: &str, value: Value, family2: &str, doc: u32) -> Tag {
+        let mut t = mk(name, description, value);
+        t.description = description.to_string();
+        t.group.family2 = family2.to_string();
+        t.group.family3 = format!("Doc{doc}");
+        t
+    }
+
+    pub(super) fn read_embedded_images(data: &[u8], tags: &mut Vec<Tag>) {
+        let index = build_object_index(data);
+        if index.is_empty() {
+            return;
+        }
+        let catalog = match find_catalog(data, &index) {
+            Some(c) => c,
+            None => return,
+        };
+        let pages = match catalog.get("Pages").and_then(|p| resolve(data, &index, p)) {
+            Some(p) => p,
+            None => return,
+        };
+        let mut resources = Vec::new();
+        collect_pages(data, &index, &pages, None, 0, &mut resources);
+
+        let mut doc = 0u32;
+        let mut seen: Vec<u32> = Vec::new();
+        for res in &resources {
+            let xobject = match res.get("XObject").and_then(|x| resolve(data, &index, x)) {
+                Some(x) => x,
+                None => continue,
+            };
+            let entries = match &xobject {
+                Obj::Dict(e) => e.clone(),
+                _ => continue,
+            };
+            for (key, value) in entries {
+                if !is_image_key(&key) {
+                    continue;
+                }
+                // ExifTool fetches each object once (`$fetched{$$val}`, PDF.pm:1877).
+                let num = match value {
+                    Obj::Ref(n) => {
+                        if seen.contains(&n) {
+                            continue;
+                        }
+                        seen.push(n);
+                        n
+                    }
+                    _ => continue,
+                };
+                let (image, stream_start) = match fetch(data, &index, num) {
+                    Some(r) => r,
+                    None => continue,
+                };
+                let image_entries = match &image {
+                    Obj::Dict(e) => e,
+                    _ => continue,
+                };
+                doc += 1;
+                let mut image_tags = Vec::new();
+                for (key, value) in image_entries {
+                    let value = match resolve(data, &index, value) {
+                        Some(v) => v,
+                        None => continue,
+                    };
+                    match key.as_str() {
+                        "Width" | "Height" => {
+                            if let Some(n) = value.as_usize() {
+                                let name = format!("EmbeddedImage{key}");
+                                image_tags.push(mk_doc(
+                                    &name,
+                                    &format!("Embedded Image {key}"),
+                                    Value::U32(n as u32),
+                                    "Other",
+                                    doc,
+                                ));
+                            }
+                        }
+                        "Filter" | "ColorSpace" => {
+                            let values = list_values(&value);
+                            if values.is_empty() {
+                                continue;
+                            }
+                            let name = format!("EmbeddedImage{key}");
+                            let description = if key == "Filter" {
+                                "Embedded Image Filter"
+                            } else {
+                                "Embedded Image Color Space"
+                            };
+                            let value = if values.len() == 1 {
+                                Value::String(values[0].clone())
+                            } else {
+                                Value::List(values.into_iter().map(Value::String).collect())
+                            };
+                            image_tags.push(mk_doc(&name, description, value, "Other", doc));
+                        }
+                        _ => {}
+                    }
+                }
+
+                // Only the two image filters ExifTool can hand on get their stream
+                // extracted and re-read (PDF.pm:2164). The filter tested is the
+                // LAST of the filter chain (PDF.pm:2160).
+                let filter = image
+                    .get("Filter")
+                    .and_then(|f| resolve(data, &index, f))
+                    .map(|f| list_values(&f))
+                    .and_then(|v| v.last().cloned())
+                    .unwrap_or_default();
+                if filter != "DCTDecode" && filter != "JPXDecode" {
+                    tags.append(&mut image_tags);
+                    continue;
+                }
+                let stream = match stream_start.and_then(|s| {
+                    let len = image
+                        .get("Length")
+                        .and_then(|l| resolve(data, &index, l))
+                        .and_then(|l| l.as_usize())
+                        .or_else(|| find_bytes(&data[s..], b"endstream"))?;
+                    data.get(s..s + len)
+                }) {
+                    Some(s) => s,
+                    None => {
+                        tags.append(&mut image_tags);
+                        continue;
+                    }
+                };
+                image_tags.push(mk_doc(
+                    "EmbeddedImage",
+                    "Embedded Image",
+                    Value::Binary(stream.to_vec()),
+                    "Preview",
+                    doc,
+                ));
+                tags.append(&mut image_tags);
+                read_embedded_file(stream, doc, tags);
+            }
+        }
+    }
+
+    /// Re-read an extracted image stream as a file of its own — ExifTool's
+    /// `$et->ExtractInfo(\$$dict{_stream}, { ReEntry => 1 })` (PDF.pm:2169).
+    fn read_embedded_file(stream: &[u8], doc: u32, tags: &mut Vec<Tag>) {
+        if !stream.starts_with(&[0xff, 0xd8]) {
+            return;
+        }
+        let jpeg_tags = match crate::formats::jpeg::read_jpeg(stream) {
+            Ok(t) => t,
+            Err(_) => return,
+        };
+        // SetFileType on re-entry gives the sub-document its own File pseudo-tags.
+        for (name, description, value) in [
+            ("FileType", "File Type", "JPEG"),
+            ("FileTypeExtension", "File Type Extension", "jpg"),
+            ("MIMEType", "MIME Type", "image/jpeg"),
+        ] {
+            tags.push(Tag {
+                id: TagId::Text(name.to_string()),
+                name: name.to_string(),
+                description: description.to_string(),
+                group: TagGroup {
+                    family0: "File".into(),
+                    family1: "File".into(),
+                    family2: "Other".into(),
+                    family3: format!("Doc{doc}"),
+                },
+                raw_value: Value::String(value.to_string()),
+                print_value: value.to_string(),
+                priority: 0,
+            });
+        }
+        for mut t in jpeg_tags {
+            // Composites are derived once, over the whole file, by the caller.
+            if t.group.family0 == "Composite" {
+                continue;
+            }
+            t.group.family3 = format!("Doc{doc}");
+            tags.push(t);
+        }
     }
 }

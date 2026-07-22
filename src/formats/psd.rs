@@ -398,9 +398,17 @@ pub fn read_irb_resources(data: &[u8], start: usize, end: usize, tags: &mut Vec<
             }
             // Global Angle (0x040D)
             0x040D => {
-                // ExifTool takes the last occurrence of duplicate IRB resource IDs.
-                // Remove any previous GlobalAngle before pushing the new value.
-                tags.retain(|t| t.name != "GlobalAngle");
+                // Photoshop.pm:192-197 converts this resource with unpack("N",$val),
+                // which yields nothing for a resource shorter than 4 bytes (PDF.pdf
+                // carries a 4-byte 0x040d and, further on, a 1-byte one). ExifTool
+                // keys its extracted-info hash on the tag name, so the later,
+                // unconvertible resource takes the base key and shadows the earlier
+                // value — unless the Duplicates option is on, which keeps the earlier
+                // one reachable and printable. So collapse only when duplicates are
+                // being collapsed.
+                if !crate::metadata::exif::keep_duplicates() {
+                    tags.retain(|t| t.name != "GlobalAngle");
+                }
                 if resource_data.len() >= 4 {
                     let angle = u32::from_be_bytes([
                         resource_data[0],

@@ -2261,7 +2261,7 @@ impl ExifTool {
             FileType::Ico => formats::ico::read_ico(data),
             FileType::Icc => formats::icc::read_icc(data),
             // Documents
-            FileType::Pdf => formats::pdf::read_pdf(data),
+            FileType::Pdf => formats::pdf::read_pdf(data, self.options.extract_embedded),
             FileType::PostScript => {
                 // PFA fonts start with %!PS-AdobeFont or %!FontType1
                 if data.starts_with(b"%!PS-AdobeFont") || data.starts_with(b"%!FontType1") {
