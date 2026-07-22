@@ -399,7 +399,12 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
 
     // CFAPattern composite: convert CFAPattern2 + CFARepeatPatternDim to readable format
     // e.g., "0 1 1 2" with dim "2 2" → "[Red,Green][Green,Blue]"
-    if find_tag(tags, "CFAPattern").is_none() {
+    //
+    // `%Exif::Composite` CFAPattern (Exif.pm:5221) only `Require`s
+    // CFARepeatPatternDim and CFAPattern2; an EXIF 0xa302 CFAPattern in the same
+    // file does not suppress it. Both are then stored, and the Composite one —
+    // added last, at the normal priority — is the one ExifTool reports.
+    {
         if let (Some(pat), Some(dim)) = (
             find_tag_value(tags, "CFAPattern2"),
             find_tag_value(tags, "CFARepeatPatternDim"),

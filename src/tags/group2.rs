@@ -183,6 +183,18 @@ pub fn family2_for(
     // the property's value parse as a standard date, because ExifTool then
     // overwrites the invented tag's category with `Time` (XMP.pm line 3684).
     if family0 == "XMP" {
+        // …and except for an alternate-language variant, which is not a table
+        // entry of its own but a copy of the base tag's: see [`xmp_lang_base`].
+        if let Some(base) = xmp_lang_base(name) {
+            let key3 = format!("XMP{SEP}{family1}{SEP}{base}");
+            if let Some(c) = lookup(FAMILY2_BY_G0_G1_NAME, &key3) {
+                return Some(choose(c, current));
+            }
+            let key2 = format!("XMP{SEP}{base}");
+            if let Some(c) = lookup(FAMILY2_BY_G0_NAME, &key2) {
+                return Some(choose(c, current));
+            }
+        }
         if current == "Time" {
             return None;
         }
@@ -312,12 +324,68 @@ pub fn family2_for(
 /// assert!(!xmp_property_is_unknown("XMP-dc", "Title"));
 /// ```
 pub fn xmp_property_is_unknown(family1: &str, name: &str) -> bool {
+    if !xmp_name_is_unknown(family1, name) {
+        return false;
+    }
+    // An alternate-language variant is a copy of the base tag, so it is known
+    // exactly when the base is — see [`xmp_lang_base`].
+    match xmp_lang_base(name) {
+        Some(base) => xmp_name_is_unknown(family1, base),
+        None => true,
+    }
+}
+
+fn xmp_name_is_unknown(family1: &str, name: &str) -> bool {
     let key3 = format!("XMP{SEP}{family1}{SEP}{name}");
     if lookup(FAMILY2_BY_G0_G1_NAME, &key3).is_some() {
         return false;
     }
     let key2 = format!("XMP{SEP}{name}");
     lookup(FAMILY2_BY_G0_NAME, &key2).is_none()
+}
+
+/// The base tag name of an XMP alternate-language variant, if `name` is one.
+///
+/// A `Name-lang` tag is never an entry of its own in any table: GetLangInfo
+/// builds it as `{ %$tagInfo, Name => $$tagInfo{Name} . '-' . $langCode }`
+/// (Writer.pl:4106-4125), a full copy of the base tagInfo — Groups, Priority and
+/// all. So both its family 2 and its "does ExifTool know this tag" answer are
+/// the base tag's.
+///
+/// The suffix is an RFC 3066 code in the case XMP::StandardLangCase gives it
+/// (XMP.pm:3241-3245): a 2-3 letter lowercase primary subtag (or the single
+/// letter `x`/`i`), optionally followed by a 2-letter uppercase region and any
+/// number of lowercase subtags. `Title-fr` and `Title-en-CA` are variants;
+/// `Caption-Abstract` and `Country-PrimaryLocationName` are not.
+fn xmp_lang_base(name: &str) -> Option<&str> {
+    // Scan the dashes right to left and keep the LEFTMOST one whose tail is a
+    // whole language code, so `Title-en-CA` yields `Title`, not `Title-en`.
+    let mut cut = None;
+    for (i, _) in name.rmatch_indices('-') {
+        if i > 0 && is_lang_code(&name[i + 1..]) {
+            cut = Some(i);
+        }
+    }
+    cut.map(|i| &name[..i])
+}
+
+fn is_lang_code(code: &str) -> bool {
+    let mut parts = code.split('-');
+    let primary = parts.next().unwrap_or("");
+    let ok_primary = matches!(primary.len(), 1..=3)
+        && primary.bytes().all(|b| b.is_ascii_lowercase())
+        && (primary.len() > 1 || matches!(primary, "x" | "i"));
+    if !ok_primary {
+        return false;
+    }
+    match parts.next() {
+        None => true,
+        Some(region) => {
+            let ok_region = region.len() == 2 && region.bytes().all(|b| b.is_ascii_uppercase());
+            let ok_rest = parts.all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_lowercase()));
+            ok_region && ok_rest
+        }
+    }
 }
 
 #[cfg(test)]

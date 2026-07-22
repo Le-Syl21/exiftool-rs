@@ -83,16 +83,9 @@ MP3.mp3	ee	missing	0	Title	Title
 MP3.mp3	ee	missing	0	Year	2003
 Matroska.mkv	ee	extra	0	DefaultDuration	40 ms
 Minolta.mrw	ee	missing	0	ColorMode	Natural
-Nikon.nef	ee	missing	0	ApplicationRecordVersion	4
-Nikon.nef	ee	missing	0	CFAPattern	[Blue,Green][Green,Red]
-Nikon.nef	ee	missing	0	Caption-Abstract	A caption
-Nikon.nef	ee	missing	0	City	Kingston
-Nikon.nef	ee	missing	0	Country-PrimaryLocationName	Canada
 Nikon.nef	ee	missing	0	FocalLength	18.3 mm
 Nikon.nef	ee	missing	0	LensFStops	5.33
-Nikon.nef	ee	missing	0	Province-State	Ontario
 Nikon.nef	ee	missing	0	ResolutionUnit	inches
-Nikon.nef	ee	missing	0	SpecialInstructions	none
 Nikon.nef	ee	missing	0	XResolution	72
 Nikon.nef	ee	missing	0	YResolution	72
 NikonD2Hs.jpg	ee	extra	0	Software	(Binary data 24 bytes, use -b option to extract)

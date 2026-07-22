@@ -237,6 +237,31 @@ fn decode_nikon_capture_tag(tag_id: u32, data: &[u8], tags: &mut Vec<Tag>) {
         0x84589434 => decode_brightness(data, tags),
         0xb0384e1e => decode_photo_effects(data, tags),
         0xbf3c6c20 => decode_wb_adj(data, tags),
+        // NikonCapture.pm:188 — `0x9ef5f6e0 => { Name => 'IPTCData',
+        // SubDirectory => { TagTable => 'Image::ExifTool::IPTC::Main' } }`.
+        //
+        // This is not one of the locations IPTC.pm calls standard, so ProcessIPTC
+        // takes the `else` branch (IPTC.pm:1097-1101) and numbers the family-1
+        // group: the first non-standard directory of a file is `IPTC2`.
+        //
+        // It does NOT lose the duplicate to the standard IFD0 directory, even
+        // though that same branch runs `$$et{LOW_PRIORITY_DIR}{IPTC} = 1`
+        // (IPTC.pm:1100): FoundTag keys that flag on `$$self{DIR_NAME}`
+        // (ExifTool.pm:9557-9558), and a SubDirectory with no DirName of its own
+        // is entered under its TAG's name — `IPTCData` here, not `IPTC`. So this
+        // directory keeps the normal priority of 1 and, arriving second, takes
+        // the tag over by last-wins. Stating the priority is what says so: an
+        // unstated 0 would let the family-1 group alone decide, which is how the
+        // Photoshop/AFCP trailers — genuinely entered under DirName `IPTC` — are
+        // demoted.
+        0x9ef5f6e0 => {
+            if let Ok(iptc) = crate::metadata::iptc::IptcReader::read_nonstandard(data) {
+                tags.extend(iptc.into_iter().map(|mut t| {
+                    t.priority = 1;
+                    t
+                }));
+            }
+        }
 
         0x3cfc73c6 => {
             // RedEyeData subdirectory
