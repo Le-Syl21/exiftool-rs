@@ -2916,12 +2916,42 @@ fn normalize_xml_text(s: &str) -> String {
 /// name-based suppression, so the nine `<trkpt>` elements of a GPX track give
 /// nine `GpxTrkTrksegTrkptLat` instances. Collapsing same-named instances is the
 /// Duplicates option's job and happens later, in `ExifTool::read`.
+/// The family-1 group ExifTool gives a property of a plain (non-RDF) XML file.
+///
+/// FoundXMP overrides family 1 only when the namespace is non-empty:
+/// `elsif ($ns and not $$tagInfo{StaticGroup1}) { $et->SetGroup($key,
+/// "$$tagTablePtr{GROUPS}{0}-$ns") }` (XMP.pm:3716-3719). And that namespace is
+/// NOT the leaf property's own: GetXMPTagID keeps the FIRST non-empty prefix
+/// met along the property path — `$namespace = $ns unless $namespace`
+/// (XMP.pm:3064) — which is why `<gx:Track><altitudeMode>` reports under
+/// `XMP-gx` although `altitudeMode` carries no prefix of its own. With no prefix
+/// anywhere on the path the family-1 group stays the table's own, `XMP`.
+fn generic_xml_family1(prefixes: &[&str]) -> String {
+    match prefixes.iter().find(|p| !p.is_empty()) {
+        Some(p) => format!("XMP-{p}"),
+        None => "XMP".to_string(),
+    }
+}
+
+/// The prefix ExifTool would see on a property, from its resolved namespace URI
+/// when we know one, else from the prefix literally written in the document.
+fn xml_prefix_of(uri: Option<&str>, literal: Option<&str>) -> String {
+    let by_uri = namespace_prefix(uri.unwrap_or(""));
+    if !by_uri.is_empty() {
+        by_uri.to_string()
+    } else {
+        literal.unwrap_or("").to_string()
+    }
+}
+
 fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
     use xml::reader::{EventReader, XmlEvent};
     let mut tags = Vec::new();
 
     let parser = EventReader::from_str(xml);
     let mut path: Vec<String> = Vec::new(); // element local names (ucfirst'd)
+                                            // Namespace prefix of each element on `path`, empty when it carries none.
+    let mut prefixes: Vec<String> = Vec::new();
     let mut current_text = String::new();
     // Track whether the current element has had any child elements (to detect leaf nodes)
     // Each entry corresponds to the matching path depth: true = has children
@@ -2948,6 +2978,10 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                     *last = true;
                 }
                 path.push(local.clone());
+                prefixes.push(xml_prefix_of(
+                    name.namespace.as_deref(),
+                    name.prefix.as_deref(),
+                ));
                 has_children.push(false);
                 current_text.clear();
 
@@ -3001,14 +3035,13 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                     // For xsi:schemaLocation → emit as {path}SchemaLocation
                     let attr_local = xml_elem_to_camel(&aname.local_name);
                     let tag_name = format!("{}{}", path_str, attr_local);
-                    // Determine group prefix from namespace
-                    let attr_ns = aname.namespace.as_deref().unwrap_or("");
-                    let pfx = namespace_prefix(attr_ns);
-                    let group_pfx = if pfx.is_empty() {
-                        aname.prefix.as_deref().unwrap_or("XMP")
-                    } else {
-                        pfx
-                    };
+                    // An attribute is the last property on its own path, so the
+                    // enclosing elements' prefixes come first.
+                    let attr_pfx =
+                        xml_prefix_of(aname.namespace.as_deref(), aname.prefix.as_deref());
+                    let mut chain: Vec<&str> = prefixes.iter().map(String::as_str).collect();
+                    chain.push(attr_pfx.as_str());
+                    let family1 = generic_xml_family1(&chain);
                     // ExifTool keeps attribute values verbatim, embedded control
                     // bytes included (e.g. a CR/LF separating schemaLocation URLs);
                     // they are rendered as "." only in text display (Printable),
@@ -3022,7 +3055,7 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                         description: tag_name,
                         group: TagGroup {
                             family0: "XMP".into(),
-                            family1: format!("XMP-{}", group_pfx),
+                            family1: family1.clone(),
                             family2: "Other".into(),
                             family3: "Main".into(),
                         },
@@ -3043,13 +3076,15 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                     let tag_name = path.join("");
                     let val = Value::String(text.clone());
                     let pv = val.to_display_string();
+                    let chain: Vec<&str> = prefixes.iter().map(String::as_str).collect();
+                    let family1 = generic_xml_family1(&chain);
                     tags.push(Tag {
                         id: TagId::Text(format!("XMP:{}", tag_name)),
                         name: tag_name.clone(),
                         description: tag_name,
                         group: TagGroup {
                             family0: "XMP".into(),
-                            family1: "XMP".into(),
+                            family1,
                             family2: "Other".into(),
                             family3: "Main".into(),
                         },
@@ -3061,6 +3096,7 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                 current_text.clear();
                 has_children.pop();
                 path.pop();
+                prefixes.pop();
             }
             Err(_) => continue,
             _ => {}

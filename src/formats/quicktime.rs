@@ -1954,9 +1954,22 @@ fn parse_ispe(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
             "Image Spatial Extent",
             Value::String(extent_str),
         ));
-        // Also emit ImageWidth/Height (only for the primary item, no DOC_NUM)
-        tags.push(mk("ImageWidth", "Image Width", Value::U32(width)));
-        tags.push(mk("ImageHeight", "Image Height", Value::U32(height)));
+        // `ispe`'s RawConv reports the two dimensions with
+        // `$self->FoundTag(ImageWidth => $dim[0])` / `ImageHeight`
+        // (QuickTime.pm:3041-3042) — by NAME, not through the ItemProp table.
+        // FoundTag resolves the name in %Image::ExifTool::Extra
+        // (ExifTool.pm:9462), which does describe both (ExifTool.pm:1670-1671)
+        // and is `GROUPS => { 0 => 'File', 1 => 'File', 2 => 'Image' }`
+        // (ExifTool.pm:1286). So they are File tags, not QuickTime ones.
+        // ("only for the primary item": the RawConv skips them under DOC_NUM.)
+        let extra = |mut t: Tag| {
+            t.group.family0 = "File".into();
+            t.group.family1 = "File".into();
+            t.group.family2 = "Image".into();
+            t
+        };
+        tags.push(extra(mk("ImageWidth", "Image Width", Value::U32(width))));
+        tags.push(extra(mk("ImageHeight", "Image Height", Value::U32(height))));
     }
 }
 
@@ -1975,11 +1988,16 @@ fn parse_pitm(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
     } else {
         return;
     };
-    tags.push(mk(
+    // `pitm` is a leaf of %Image::ExifTool::QuickTime::Meta (QuickTime.pm:2883),
+    // whose `GROUPS => { 1 => 'Meta', 2 => 'Video' }` (QuickTime.pm:2813)
+    // overrides the family-1 group its siblings inherit from QuickTime::Main.
+    let mut t = mk(
         "PrimaryItemReference",
         "Primary Item Reference",
         Value::U32(item_id),
-    ));
+    );
+    t.group.family1 = "Meta".into();
+    tags.push(t);
 }
 
 /// Where the child atoms of a hybrid "binary data + QuickTime container" block
@@ -3201,6 +3219,12 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
     }
 }
 
+/// A tag of `%Image::ExifTool::Pentax::MOV` (Pentax.pm:6324), the only
+/// maker-note table the QuickTime reader decodes itself. Its
+/// `GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' }` names no family 1, and
+/// GetTagTable fills the missing one from the module name —
+/// `$$defaultGroups{1} = $1 unless $$defaultGroups{1}`, `$1` matched by
+/// `Image::.*?::([^:]*)` (ExifTool.pm:8982-8990) — so family 1 is `Pentax`.
 fn mk_makernote(name: &str, description: &str, value: Value) -> Tag {
     let print_value = value.to_display_string();
     Tag {
@@ -3209,7 +3233,7 @@ fn mk_makernote(name: &str, description: &str, value: Value) -> Tag {
         description: description.to_string(),
         group: TagGroup {
             family0: "MakerNotes".into(),
-            family1: "MakerNotes".into(),
+            family1: "Pentax".into(),
             family2: "Camera".into(),
             family3: "Main".into(),
         },
