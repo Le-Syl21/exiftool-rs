@@ -2755,10 +2755,15 @@ fn normalize_xml_text(s: &str) -> String {
 
 /// Read generic (non-RDF) XML files by building tag names from element paths.
 /// This mirrors ExifTool's XMP.pm generic XML handling.
+///
+/// Every occurrence of a property is emitted, duplicates included: XMP.pm's
+/// `FoundXMP` (line 3435) hands each parsed property to `HandleTag` with no
+/// name-based suppression, so the nine `<trkpt>` elements of a GPX track give
+/// nine `GpxTrkTrksegTrkptLat` instances. Collapsing same-named instances is the
+/// Duplicates option's job and happens later, in `ExifTool::read`.
 fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
     use xml::reader::{EventReader, XmlEvent};
     let mut tags = Vec::new();
-    let mut seen_names: std::collections::HashSet<String> = std::collections::HashSet::new();
 
     let parser = EventReader::from_str(xml);
     let mut path: Vec<String> = Vec::new(); // element local names (ucfirst'd)
@@ -2809,87 +2814,7 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                     if let Some(default_ns) = namespace.get("") {
                         // Emit as {RootName}Xmlns = default_ns_uri (CamelCase root name)
                         let tag_name = format!("{}Xmlns", local);
-                        if !seen_names.contains(&tag_name) {
-                            seen_names.insert(tag_name.clone());
-                            let val = Value::String(default_ns.to_string());
-                            let pv = val.to_display_string();
-                            tags.push(Tag {
-                                id: TagId::Text(format!("XMP:{}", tag_name)),
-                                name: tag_name.clone(),
-                                description: tag_name,
-                                group: TagGroup {
-                                    family0: "XMP".into(),
-                                    family1: "XMP".into(),
-                                    family2: "Other".into(),
-                                    family3: "Main".into(),
-                                },
-                                raw_value: val,
-                                print_value: pv,
-                                priority: 0,
-                            });
-                        }
-                    }
-                }
-
-                // Emit attributes as tags (only first occurrence)
-                for attr in &attributes {
-                    let aname = &attr.name;
-                    if aname.prefix.as_deref() == Some("xmlns")
-                        || aname.local_name == "xmlns"
-                        || aname.local_name.starts_with("xmlns:")
-                    {
-                        // Skip xmlns declarations (handled via namespace above)
-                        continue;
-                    }
-                    // For xsi:schemaLocation → emit as {path}SchemaLocation
-                    let attr_local = xml_elem_to_camel(&aname.local_name);
-                    let tag_name = format!("{}{}", path_str, attr_local);
-                    if !seen_names.contains(&tag_name) {
-                        seen_names.insert(tag_name.clone());
-                        // Determine group prefix from namespace
-                        let attr_ns = aname.namespace.as_deref().unwrap_or("");
-                        let pfx = namespace_prefix(attr_ns);
-                        let group_pfx = if pfx.is_empty() {
-                            aname.prefix.as_deref().unwrap_or("XMP")
-                        } else {
-                            pfx
-                        };
-                        // ExifTool keeps attribute values verbatim, embedded control
-                        // bytes included (e.g. a CR/LF separating schemaLocation URLs);
-                        // they are rendered as "." only in text display (Printable),
-                        // never in the stored value or JSON output.
-                        let attr_val: String = attr.value.trim().to_string();
-                        let val = Value::String(attr_val.clone());
-                        let pv = val.to_display_string();
-                        tags.push(Tag {
-                            id: TagId::Text(format!("XMP:{}", tag_name)),
-                            name: tag_name.clone(),
-                            description: tag_name,
-                            group: TagGroup {
-                                family0: "XMP".into(),
-                                family1: format!("XMP-{}", group_pfx),
-                                family2: "Other".into(),
-                                family3: "Main".into(),
-                            },
-                            raw_value: val,
-                            print_value: pv,
-                            priority: 0,
-                        });
-                    }
-                }
-            }
-            Ok(XmlEvent::Characters(text)) | Ok(XmlEvent::CData(text)) => {
-                current_text.push_str(&text);
-            }
-            Ok(XmlEvent::EndElement { .. }) => {
-                let text = normalize_xml_text(&current_text);
-                let is_leaf = !has_children.last().copied().unwrap_or(false);
-                // Emit tag if: has text content OR is a leaf node (no child elements, i.e. empty element)
-                if (is_leaf || !text.is_empty()) && !path.is_empty() {
-                    let tag_name = path.join("");
-                    if !seen_names.contains(&tag_name) {
-                        seen_names.insert(tag_name.clone());
-                        let val = Value::String(text.clone());
+                        let val = Value::String(default_ns.to_string());
                         let pv = val.to_display_string();
                         tags.push(Tag {
                             id: TagId::Text(format!("XMP:{}", tag_name)),
@@ -2906,6 +2831,77 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
                             priority: 0,
                         });
                     }
+                }
+
+                // Emit attributes as tags
+                for attr in &attributes {
+                    let aname = &attr.name;
+                    if aname.prefix.as_deref() == Some("xmlns")
+                        || aname.local_name == "xmlns"
+                        || aname.local_name.starts_with("xmlns:")
+                    {
+                        // Skip xmlns declarations (handled via namespace above)
+                        continue;
+                    }
+                    // For xsi:schemaLocation → emit as {path}SchemaLocation
+                    let attr_local = xml_elem_to_camel(&aname.local_name);
+                    let tag_name = format!("{}{}", path_str, attr_local);
+                    // Determine group prefix from namespace
+                    let attr_ns = aname.namespace.as_deref().unwrap_or("");
+                    let pfx = namespace_prefix(attr_ns);
+                    let group_pfx = if pfx.is_empty() {
+                        aname.prefix.as_deref().unwrap_or("XMP")
+                    } else {
+                        pfx
+                    };
+                    // ExifTool keeps attribute values verbatim, embedded control
+                    // bytes included (e.g. a CR/LF separating schemaLocation URLs);
+                    // they are rendered as "." only in text display (Printable),
+                    // never in the stored value or JSON output.
+                    let attr_val: String = attr.value.trim().to_string();
+                    let val = Value::String(attr_val.clone());
+                    let pv = val.to_display_string();
+                    tags.push(Tag {
+                        id: TagId::Text(format!("XMP:{}", tag_name)),
+                        name: tag_name.clone(),
+                        description: tag_name,
+                        group: TagGroup {
+                            family0: "XMP".into(),
+                            family1: format!("XMP-{}", group_pfx),
+                            family2: "Other".into(),
+                            family3: "Main".into(),
+                        },
+                        raw_value: val,
+                        print_value: pv,
+                        priority: 0,
+                    });
+                }
+            }
+            Ok(XmlEvent::Characters(text)) | Ok(XmlEvent::CData(text)) => {
+                current_text.push_str(&text);
+            }
+            Ok(XmlEvent::EndElement { .. }) => {
+                let text = normalize_xml_text(&current_text);
+                let is_leaf = !has_children.last().copied().unwrap_or(false);
+                // Emit tag if: has text content OR is a leaf node (no child elements, i.e. empty element)
+                if (is_leaf || !text.is_empty()) && !path.is_empty() {
+                    let tag_name = path.join("");
+                    let val = Value::String(text.clone());
+                    let pv = val.to_display_string();
+                    tags.push(Tag {
+                        id: TagId::Text(format!("XMP:{}", tag_name)),
+                        name: tag_name.clone(),
+                        description: tag_name,
+                        group: TagGroup {
+                            family0: "XMP".into(),
+                            family1: "XMP".into(),
+                            family2: "Other".into(),
+                            family3: "Main".into(),
+                        },
+                        raw_value: val,
+                        print_value: pv,
+                        priority: 0,
+                    });
                 }
                 current_text.clear();
                 has_children.pop();

@@ -346,8 +346,6 @@ Flash.swf	default	extra	0	XMPToolkit
 Flash.swf	ee	extra	0	XMPToolkit	
 FlashPix.ppt	ee	missing	0	CodePage	Mac Roman (Western European)
 FlashPix.ppt	ee	missing	1	CodePage	Mac Roman (Western European)
-FujiFilm.raf	default	extra	0	Model	FinePix S5Pro
-FujiFilm.raf	ee	extra	0	Model	FinePix S5Pro
 FujiFilm.raf	ee	missing	0	Contrast	Normal
 FujiFilm.raf	ee	missing	0	FujiLayout	1 2 1 0
 FujiFilm.raf	ee	missing	0	RawExposureBias	0
@@ -375,52 +373,6 @@ GIMP.xcf	default	extra	0	XResolution	72
 GIMP.xcf	default	extra	0	YResolution	72
 GPS.jpg	ee	missing	0	GPSLatitude	54 deg 59' 22.80"
 GPS.jpg	ee	missing	0	GPSLongitude	1 deg 54' 51.00"
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptEle	1474.319092
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptEle	1479.606201
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptEle	1481.528809
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptEle	1488.739014
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptEle	1491.622803
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptEle	1496.429443
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptEle	1502.677979
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptEle	1507.003906
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLat	43.641086
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLat	43.641450
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLat	43.641751
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLat	43.641922
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLat	43.642030
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLat	43.642201
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLat	43.642545
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLat	43.642824
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLon	-116.061502
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLon	-116.061587
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLon	-116.061738
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLon	-116.061802
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLon	-116.061995
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLon	-116.062059
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLon	-116.062102
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptLon	-116.062338
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptTime	2003:05:24 17:09:04Z
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptTime	2003:05:24 17:09:10Z
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptTime	2003:05:24 17:09:17Z
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptTime	2003:05:24 17:09:22Z
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptTime	2003:05:24 17:09:28Z
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptTime	2003:05:24 17:09:35Z
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptTime	2003:05:24 17:09:46Z
-Geotag.gpx	ee	missing	0	GpxTrkTrksegTrkptTime	2003:05:24 17:09:55Z
-Geotag.kml	ee	missing	0	KmlDocumentPlacemarkTrackCoord	-106.027012 34.165476 0
-Geotag.kml	ee	missing	0	KmlDocumentPlacemarkTrackCoord	-106.027854 34.164765 0
-Geotag.kml	ee	missing	0	KmlDocumentPlacemarkTrackWhen	2013:11:13 01:04:35.259-08:00
-Geotag.kml	ee	missing	0	KmlDocumentPlacemarkTrackWhen	2013:11:13 01:05:35.277-08:00
-Geotag.kml	ee	missing	0	KmlDocumentStyleIconStyleIconHref	http://earth.google.com/images/kml-icons/track-directional/track-0.png
-Geotag.kml	ee	missing	0	KmlDocumentStyleId	multiTrack_h
-Geotag.kml	ee	missing	0	KmlDocumentStyleLineStyleColor	99ffac59
-Geotag.kml	ee	missing	0	KmlDocumentStyleLineStyleWidth	8
-Geotag.kml	ee	missing	0	KmlDocumentStyleMapPairKey	highlight
-Geotag.kml	ee	missing	0	KmlDocumentStyleMapPairStyleUrl	#multiTrack_h
-Geotag.xml	ee	missing	0	HistoryRunTrackTrackpointPositionAltitude	150.374
-Geotag.xml	ee	missing	0	HistoryRunTrackTrackpointPositionLatitude	43.64987
-Geotag.xml	ee	missing	0	HistoryRunTrackTrackpointPositionLongitude	-79.58320
-Geotag.xml	ee	missing	0	HistoryRunTrackTrackpointTime	2004:08:28 14:15:00Z
 GoPro.jpg	default	extra	0	Model	HERO6 Black
 GoPro.jpg	ee	extra	0	GPSAltitude	3.983
 GoPro.jpg	ee	missing	0	GPSAltitude	3.983 m
@@ -442,10 +394,6 @@ JXL2.jxl	ee	extra	0	ExifByteOrder	Big-endian (Motorola, MM)
 Jpeg2000.jp2	default	extra	0	Compression	Uncompressed
 Jpeg2000.jp2	default	extra	0	ImageHeight	1
 Jpeg2000.jp2	default	extra	0	ImageWidth	1
-Jpeg2000.jp2	ee	missing	0	ContentDescriptionLocationAddressAddrComp	Charlotte
-Jpeg2000.jp2	ee	missing	0	ContentDescriptionLocationAddressAddrComp	New York
-Jpeg2000.jp2	ee	missing	0	ContentDescriptionLocationAddressAddrCompType	City
-Jpeg2000.jp2	ee	missing	0	ContentDescriptionLocationAddressAddrCompType	State
 Kodak.jpg	ee	missing	0	ExposureCompensation	0
 Kodak.jpg	ee	missing	0	ExposureTime	1/180
 Kodak.jpg	ee	missing	0	FNumber	6.7
