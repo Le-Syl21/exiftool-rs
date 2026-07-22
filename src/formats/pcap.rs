@@ -268,16 +268,18 @@ fn parse_pcapng_options(
                 }
             }
             ("idb", 12) => {
-                // if_os
+                // if_os. PCAP.pm has two separate entries with this name, 'SHB-3'
+                // (PCAP.pm:271) and 'IDB-12' (PCAP.pm:311), both at default
+                // priority in a table with no PRIORITY (PCAP.pm:21-23), so both
+                // are extracted and the usual duplicate arbitration decides which
+                // one is reported when the Duplicates option is off.
                 let s = crate::encoding::decode_utf8_or_latin1(opt_data).to_string();
-                if !tags.iter().any(|t| t.name == "OperatingSystem") {
-                    tags.push(mktag(
-                        "File",
-                        "OperatingSystem",
-                        "Operating System",
-                        Value::String(s),
-                    ));
-                }
+                tags.push(mktag(
+                    "File",
+                    "OperatingSystem",
+                    "Operating System",
+                    Value::String(s),
+                ));
             }
             _ => {}
         }

@@ -110,20 +110,23 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    // DateTimeOriginal from Year (ID3 composite, like Perl ID3::Composite DateTimeOriginal)
-    if !tags.iter().any(|t| t.name == "DateTimeOriginal") {
-        if let Some(year) = tags
-            .iter()
-            .find(|t| t.name == "Year")
-            .map(|t| t.print_value.clone())
-        {
-            if !year.is_empty() {
-                tags.push(mk(
-                    "DateTimeOriginal",
-                    "Date/Time Original",
-                    Value::String(year),
-                ));
-            }
+    // ID3::Composite DateTimeOriginal (ID3.pm:839-859). It is a Composite tag, so
+    // it is reported in the Composite group with `Groups => { 2 => 'Time' }`
+    // (ID3.pm:844), and it carries `Priority => 0` (ID3.pm:845): it never
+    // displaces a DateTimeOriginal found elsewhere, but it is still extracted, so
+    // a duplicate-preserving run reports both.
+    if let Some(year) = tags
+        .iter()
+        .find(|t| t.name == "Year")
+        .map(|t| t.print_value.clone())
+    {
+        if !year.is_empty() {
+            let mut t = mk("DateTimeOriginal", "Date/Time Original", Value::String(year));
+            t.group.family0 = "Composite".into();
+            t.group.family1 = "Composite".into();
+            t.group.family2 = "Time".into();
+            t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+            tags.push(t);
         }
     }
 

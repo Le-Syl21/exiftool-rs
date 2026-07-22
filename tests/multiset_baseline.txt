@@ -25,7 +25,6 @@ DjVu.djvu	ee	extra	0	URL	https://exiftool.org/
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
 FLIR.jpg	ee	missing	0	DateTimeOriginal	2012:02:11 14:17:08
 FLIR.jpg	ee	missing	0	Emissivity	0.80
-Flash.flv	ee	missing	0	AudioSampleRate	44000
 FlashPix.ppt	ee	missing	0	CodePage	Mac Roman (Western European)
 FlashPix.ppt	ee	missing	1	CodePage	Mac Roman (Western European)
 GE.jpg	ee	missing	0	Warning	[minor] Suspicious MakerNotes offset for tag 0x0206
@@ -83,7 +82,6 @@ OlympusE1.jpg	ee	missing	0	BlueBalance	1.1328125
 OlympusE1.jpg	ee	missing	0	ColorSpace	sRGB
 OlympusE1.jpg	ee	missing	0	ExposureMode	Program
 OlympusE1.jpg	ee	missing	0	RedBalance	1.609375
-PCAP.pcapng	ee	missing	0	OperatingSystem	64-bit Windows 10 (1809), build 17763
 PGF.pgf	ee	missing	0	ImageHeight	1
 PGF.pgf	ee	missing	0	ImageWidth	1
 PSP.psp	ee	extra	0	Copyright	.

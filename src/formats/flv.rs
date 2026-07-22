@@ -74,21 +74,22 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
                     let sample_size = (info_byte >> 1) & 0x01;
                     let stereo = info_byte & 0x01;
 
+                    // Flash::Audio Bit0-3 `AudioEncoding` PrintConv (Flash.pm:96-112).
                     let codec_name = match codec_id {
-                        0 => "Uncompressed",
-                        1 => "ADPCM",
-                        2 => "MP3",
-                        3 => "Uncompressed LE",
-                        4 => "Nellymoser 16kHz",
-                        5 => "Nellymoser 8kHz",
-                        6 => "Nellymoser",
-                        7 => "G711 A-law",
-                        8 => "G711 mu-law",
-                        10 => "AAC",
-                        11 => "Speex",
-                        14 => "MP3 8kHz",
-                        15 => "Device-specific",
-                        _ => "Unknown",
+                        0 => "Uncompressed".to_string(),
+                        1 => "ADPCM".to_string(),
+                        2 => "MP3".to_string(),
+                        3 => "PCM-LE (uncompressed)".to_string(),
+                        4 => "Nellymoser 16kHz Mono".to_string(),
+                        5 => "Nellymoser 8kHz Mono".to_string(),
+                        6 => "Nellymoser".to_string(),
+                        7 => "G.711 A-law logarithmic PCM".to_string(),
+                        8 => "G.711 mu-law logarithmic PCM".to_string(),
+                        10 => "AAC".to_string(),
+                        11 => "Speex".to_string(),
+                        13 => "MP3 8-Khz".to_string(),
+                        15 => "Device-specific sound".to_string(),
+                        n => format!("Unknown ({})", n),
                     };
                     let sample_rate = match sample_rate_idx {
                         0 => "5512",
@@ -104,11 +105,15 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
                     };
                     let bits = if sample_size == 1 { "16" } else { "8" };
 
+                    // Emission order is the bit order of %Flash::Audio
+                    // (Flash.pm:93-133): Bit0-3, Bit4-5, Bit6, Bit7. The table has
+                    // no AudioCodecID — that name only ever comes from the Meta
+                    // packet ('audiocodecid', Flash.pm:199).
                     tags.push(mktag(
                         "Flash",
-                        "AudioCodecID",
-                        "Audio Codec ID",
-                        Value::String(format!("{}", codec_id)),
+                        "AudioEncoding",
+                        "Audio Encoding",
+                        Value::String(codec_name),
                     ));
                     tags.push(mktag(
                         "Flash",
@@ -128,12 +133,6 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
                         "Audio Channels",
                         Value::String(channels.to_string()),
                     ));
-                    tags.push(mktag(
-                        "Flash",
-                        "AudioEncoding",
-                        "Audio Encoding",
-                        Value::String(codec_name.to_string()),
-                    ));
                     audio_info_found = true;
                 }
             }
@@ -143,26 +142,24 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
             {
                 let info_byte = data[tag_start];
                 let codec_id = info_byte & 0x0f;
+                // %Flash::Video holds a single tag, Bit4-7 `VideoEncoding`
+                // (Flash.pm:136-153); VideoCodecID only comes from the Meta packet
+                // ('videocodecid').
                 let codec_name = match codec_id {
-                    2 => "Sorenson H.263",
-                    3 => "Screen video",
-                    4 => "On2 VP6",
-                    5 => "On2 VP6 with alpha",
-                    6 => "Screen video v2",
-                    7 => "H.264",
-                    _ => "Unknown",
+                    1 => "JPEG".to_string(),
+                    2 => "Sorensen H.263".to_string(),
+                    3 => "Screen Video".to_string(),
+                    4 => "On2 VP6".to_string(),
+                    5 => "On2 VP6 Alpha".to_string(),
+                    6 => "Screen Video 2".to_string(),
+                    7 => "H.264".to_string(),
+                    n => format!("Unknown ({})", n),
                 };
-                tags.push(mktag(
-                    "Flash",
-                    "VideoCodecID",
-                    "Video Codec ID",
-                    Value::String(format!("{}", codec_id)),
-                ));
                 tags.push(mktag(
                     "Flash",
                     "VideoEncoding",
                     "Video Encoding",
-                    Value::String(codec_name.to_string()),
+                    Value::String(codec_name),
                 ));
                 video_info_found = true;
             }
@@ -173,35 +170,18 @@ pub fn read_flv(data: &[u8]) -> Result<Vec<Tag>> {
         pos = tag_end + 4;
     }
 
-    // Add HasAudio/HasVideo from header flags
-    if has_audio && !tags.iter().any(|t| t.name == "HasAudio") {
-        tags.push(mktag(
-            "Flash",
-            "HasAudio",
-            "Has Audio",
-            Value::String("Yes".into()),
-        ));
-    }
-    if has_video && !tags.iter().any(|t| t.name == "HasVideo") {
-        tags.push(mktag(
-            "Flash",
-            "HasVideo",
-            "Has Video",
-            Value::String("Yes".into()),
-        ));
-    }
-
-    // Deduplicate: keep the last occurrence of each tag name (mirrors Perl's hash-based storage)
-    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-    let mut deduped: Vec<Tag> = Vec::with_capacity(tags.len());
-    for tag in tags.into_iter().rev() {
-        if seen.insert(tag.name.clone()) {
-            deduped.push(tag);
-        }
-    }
-    deduped.reverse();
-
-    Ok(deduped)
+    // No HasAudio/HasVideo is synthesised from the FLV header flags: ProcessFLV
+    // (Flash.pm:467-524) reads them into `$flags` and uses them only to decide
+    // when to stop scanning ("$flags &= ~$mask" / "last unless $flags"). Both
+    // names exist solely as Meta-packet keys ('hasAudio' Flash.pm:199, 'hasVideo'
+    // Flash.pm:203).
+    //
+    // Same-named tags are not collapsed here either. ExifTool stores each
+    // instance through FoundTag, so a file whose Meta packet and whose audio
+    // bit-stream both report AudioSampleRate reports it twice under -ee; the
+    // duplicate arbitration in `ExifTool::read_metadata` picks the winner when
+    // the Duplicates option is off.
+    Ok(tags)
 }
 
 /// Parse AMF metadata from FLV script tag.
