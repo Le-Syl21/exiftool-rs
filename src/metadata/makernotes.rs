@@ -7099,7 +7099,19 @@ fn read_makernote_ifd_with_base(
 
         // Look up tag name
         let group_name = manufacturer_group_name(manufacturer);
-        let (raw_name, raw_desc) = mn_tags::lookup(manufacturer, tag_id);
+        // Sigma.pm:300-312 splits tag 0x000c on the entry format: a string is
+        // ExposureCompensation, anything else is ExposureAdjust, which carries
+        // Unknown => 1 and so is not reported unless -u is on.
+        let sigma_exposure_adjust =
+            manufacturer == Manufacturer::Sigma && tag_id == 0x000c && data_type != 2;
+        if sigma_exposure_adjust && crate::metadata::exif::get_show_unknown() == 0 {
+            continue;
+        }
+        let (raw_name, raw_desc) = if sigma_exposure_adjust {
+            ("ExposureAdjust", "Exposure Adjust")
+        } else {
+            mn_tags::lookup(manufacturer, tag_id)
+        };
 
         // Suppress Unknown tags (unless -u/-U is active)
         let (name, description): (&str, &str) =
@@ -7395,6 +7407,24 @@ fn read_makernote_ifd_with_base(
             } else {
                 format!("{:010}", n)
             }
+        } else if matches!(
+            manufacturer,
+            Manufacturer::Olympus | Manufacturer::OlympusNew
+        ) && name == "ColorMatrix"
+        {
+            // Olympus.pm:1005-1010 — Writable int16u but Format int16s, so the
+            // stored words read as signed (the same conversion the ImageProcessing
+            // 0x0200 copy already gets, Olympus.pm:3111-3116).
+            value
+                .to_display_string()
+                .split_whitespace()
+                .map(|s| {
+                    s.parse::<i64>()
+                        .map(|v| if v > 32767 { v - 65536 } else { v }.to_string())
+                        .unwrap_or_else(|_| s.to_string())
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
         } else if manufacturer == Manufacturer::Panasonic
             && matches!(name, "FacesDetected" | "SequenceNumber")
         {

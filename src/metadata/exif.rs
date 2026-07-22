@@ -473,29 +473,30 @@ impl ExifReader {
         // (e.g., from different sub-tables), keep the last occurrence.
         // Only deduplicate MakerNotes tags (family0 == "MakerNotes") to avoid affecting
         // structural EXIF/IFD tags.
+        //
+        // This is ExifTool collapsing its name-keyed VALUE hash, so it must not run
+        // when the Duplicates option is on: a maker note that genuinely defines the
+        // same name at several tag IDs (Panasonic TextStamp at 0x3b, 0x3e, 0x8008
+        // and 0x8009, BabyAge at 0x33 and 0x8010 — Panasonic.pm:727, 789, 811,
+        // 1570, 1576, 1581) is then reported once per ID.
         {
-            // Find MakerNotes tags that have duplicates
-            let mn_tags_start = tags
-                .iter()
-                .position(|t| t.group.family0 == "MakerNotes")
-                .unwrap_or(tags.len());
-            if mn_tags_start < tags.len() {
-                // For each MakerNotes tag name, find the last occurrence index
-                let mut last_idx: std::collections::HashMap<&str, usize> =
-                    std::collections::HashMap::new();
-                for (i, t) in tags[mn_tags_start..].iter().enumerate() {
-                    last_idx.insert(t.name.as_str(), i + mn_tags_start);
-                }
-                // Retain only the last occurrence of each MakerNotes duplicate
-                let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
-                // Process in reverse, keeping only the last (= rightmost = first in reverse)
+            // With duplicates kept, a name is only collapsed when the SAME tag ID
+            // produced it twice — that is our own sub-table reading a tag the main
+            // table already read, never two IDs the maker note really defines
+            // under one name.
+            let by_id = keep_duplicates();
+            if tags.iter().any(|t| t.group.family0 == "MakerNotes") {
+                // Walk backwards, keeping the last occurrence of each key.
+                let mut seen: std::collections::HashSet<(&str, Option<&TagId>)> =
+                    std::collections::HashSet::new();
                 let mut keep = vec![false; tags.len()];
                 for (i, t) in tags.iter().enumerate().rev() {
                     if t.group.family0 != "MakerNotes" {
                         keep[i] = true;
                         continue;
                     }
-                    if seen.insert(t.name.as_str()) {
+                    let key = (t.name.as_str(), if by_id { Some(&t.id) } else { None });
+                    if seen.insert(key) {
                         keep[i] = true; // first seen in reverse = last occurrence
                     }
                 }

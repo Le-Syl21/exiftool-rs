@@ -168,8 +168,6 @@ MXF.mxf	ee	missing	1	TrackNumber	0
 MXF.mxf	ee	missing	2	TrackNumber	0
 Matroska.mkv	ee	extra	0	DefaultDuration	40 ms
 Minolta.mrw	ee	missing	0	ColorMode	Natural
-Minolta.mrw	ee	missing	0	FlashExposureComp	0
-Minolta.mrw	ee	missing	0	MinoltaQuality	Raw
 Nikon.nef	ee	missing	0	ApplicationRecordVersion	4
 Nikon.nef	ee	missing	0	CFAPattern	[Blue,Green][Green,Red]
 Nikon.nef	ee	missing	0	Caption-Abstract	A caption
@@ -178,7 +176,6 @@ Nikon.nef	ee	missing	0	Compression	JPEG (old-style)
 Nikon.nef	ee	missing	0	Country-PrimaryLocationName	Canada
 Nikon.nef	ee	missing	0	FocalLength	18.3 mm
 Nikon.nef	ee	missing	0	LensFStops	5.33
-Nikon.nef	ee	missing	0	NoiseReduction	Off
 Nikon.nef	ee	missing	0	Province-State	Ontario
 Nikon.nef	ee	missing	0	ResolutionUnit	inches
 Nikon.nef	ee	missing	0	SpecialInstructions	none
@@ -199,22 +196,16 @@ NikonD70.jpg	ee	missing	0	ResolutionUnit	inches
 NikonD70.jpg	ee	missing	0	XResolution	300
 NikonD70.jpg	ee	missing	0	YCbCrPositioning	Co-sited
 NikonD70.jpg	ee	missing	0	YResolution	300
-Olympus.jpg	ee	missing	0	CameraType	C2000Z
 Olympus2.jpg	ee	extra	0	ColorSpace	Calibrated RGB
 Olympus2.jpg	ee	extra	0	ExposureMode	Auto bracket
 Olympus2.jpg	ee	missing	0	ColorSpace	sRGB
 Olympus2.jpg	ee	missing	0	ExposureMode	Program
-Olympus2.jpg	ee	missing	0	FocalPlaneDiagonal	7.58 mm
 OlympusE1.jpg	ee	extra	0	ColorSpace	Calibrated RGB
 OlympusE1.jpg	ee	extra	0	ExposureMode	Auto bracket
 OlympusE1.jpg	ee	missing	0	BlueBalance	1.1328125
-OlympusE1.jpg	ee	missing	0	ColorMatrix	356 -34 -66 -22 308 -30 6 -126 376
 OlympusE1.jpg	ee	missing	0	ColorSpace	sRGB
-OlympusE1.jpg	ee	missing	0	CoringFilter	1536
 OlympusE1.jpg	ee	missing	0	ExposureMode	Program
-OlympusE1.jpg	ee	missing	0	FocalPlaneDiagonal	21.6 mm
 OlympusE1.jpg	ee	missing	0	RedBalance	1.609375
-OlympusE1.jpg	ee	missing	0	ValidBits	12 0
 PCAP.pcapng	ee	missing	0	OperatingSystem	64-bit Windows 10 (1809), build 17763
 PGF.pgf	ee	missing	0	ImageHeight	1
 PGF.pgf	ee	missing	0	ImageWidth	1
@@ -222,10 +213,6 @@ PSP.psp	ee	extra	0	Copyright	.
 PSP.psp	ee	extra	0	XResolution	0.8013564977
 PSP.psp	ee	extra	0	YResolution	200
 PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
-Panasonic.rw2	ee	missing	0	BabyAge	(not set)
-Panasonic.rw2	ee	missing	0	TextStamp	Off
-Panasonic.rw2	ee	missing	1	TextStamp	Off
-Panasonic.rw2	ee	missing	2	TextStamp	Off
 Pentax.avi	ee	missing	0	ImageHeight	720
 Pentax.avi	ee	missing	0	ImageWidth	1280
 Pentax.avi	ee	missing	0	LensType	smc PENTAX-DA L 18-55mm F3.5-5.6
@@ -308,9 +295,7 @@ Ricoh2.jpg	ee	missing	0	GPSLatitude	42 deg 2' 4.47"
 Ricoh2.jpg	ee	missing	0	GPSLongitude	0 deg 30' 27.01"
 SigmaDP2.x3f	default	extra	0	PreviewImage	(Binary data 20 bytes, use -b option to extract)
 SigmaDP2.x3f	default	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
-SigmaDP2.x3f	ee	missing	0	Firmware	1.03.0.000
 SigmaDP2.x3f	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
-SigmaDP2.x3f	ee	missing	0	WhiteBalance	Auto
 XMP.svg	ee	missing	0	JUMDLabel	adobe.asset.info
 XMP.svg	ee	missing	0	JUMDLabel	cai.assertions
 XMP.svg	ee	missing	0	JUMDLabel	cai.location.broad
