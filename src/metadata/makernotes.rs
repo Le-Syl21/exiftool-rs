@@ -1329,10 +1329,14 @@ fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark, model: &str) -
         },
         raw_value: Value::String(val.clone()),
         print_value: val,
-        // Minolta::CameraSettings is PRIORITY => 0 in ExifTool ("not as reliable
-        // as other tags"). Mark as -1 so a same-named standard EXIF tag
-        // (MeteringMode etc.) wins instead of being overridden.
-        priority: -1,
+        // `%Image::ExifTool::Minolta::CameraSettings` is
+        // `PRIORITY => 0, # not as reliable as other tags` (Minolta.pm line 974).
+        // That is a stated 0, not a negative priority: an EXIF tag of normal
+        // priority still takes the name (MeteringMode), but one ExifTool also
+        // demotes to 0 does not — 0xa403 WhiteBalance carries `Priority => 0`
+        // precisely "to keep this WhiteBalance from overriding the MakerNotes
+        // WhiteBalance" (Exif.pm lines 2877-2880).
+        priority: crate::tag::PRIORITY_EXPLICIT_ZERO,
     };
     // Saturation/Contrast/ColorFilter signed offset (DiMAGE A2 = 5, else 3).
     let param_off: i64 = if model.contains("DiMAGE A2") { 5 } else { 3 };

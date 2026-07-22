@@ -374,16 +374,27 @@ impl ExifReader {
             } else {
                 // Tags where EXIF takes priority over MakerNotes (structural/authoritative EXIF)
                 let exif_primary: &[&str] = EXIF_PRIMARY_TAGS;
-                // Only maker-note tags with non-negative priority remove the EXIF
-                // duplicate. Tags from a PRIORITY=>0 sub-block demoted to -1 (e.g.
-                // Minolta CameraSettings) must not override a standard EXIF tag.
+                // Only a maker-note tag ExifTool would let win outright removes
+                // the EXIF duplicate here. A tag whose source table states
+                // `PRIORITY => 0` — Minolta::CameraSettings (Minolta.pm:974) and
+                // its siblings — does not: FoundTag promotes the stored EXIF tag
+                // to 1 first (ExifTool.pm:9544-9551), so it keeps the name unless
+                // it is itself demoted, and only the central arbitration knows
+                // that. Leaving both instances in place is what lets ExifIFD keep
+                // MeteringMode while the maker note takes WhiteBalance, whose
+                // 0xa403 carries `Priority => 0` "to keep this WhiteBalance from
+                // overriding the MakerNotes WhiteBalance" (Exif.pm:2877-2880).
                 // A `PreviewIFD` tag cannot either: ExifTool.pm:4368 initialises
                 // `LOW_PRIORITY_DIR = { PreviewIFD => 1 }`, and `Nikon::PreviewIFD`
                 // says so itself (Nikon.pm:5391, "these tags are priority 0 by
                 // default because PreviewIFD is flagged in LOW_PRIORITY_DIR").
                 let mn_name_set: std::collections::HashSet<String> = mn_tags
                     .iter()
-                    .filter(|t| t.priority_rank() >= 0 && t.group.family1 != "PreviewIFD")
+                    .filter(|t| {
+                        t.priority_rank() >= 0
+                            && t.priority != crate::tag::PRIORITY_EXPLICIT_ZERO
+                            && t.group.family1 != "PreviewIFD"
+                    })
                     .map(|t| t.name.clone())
                     .collect();
                 let exif_has: std::collections::HashSet<String> =

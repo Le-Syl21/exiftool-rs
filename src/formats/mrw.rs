@@ -195,6 +195,12 @@ pub fn read_mrw(data: &[u8]) -> Result<Vec<Tag>> {
                     let cm = seg_data[7];
                     let cm_str = convert_minolta_color_mode(cm as u32);
                     tags.push(mk_str("ColorMode", "Color Mode", cm_str));
+                    // `MinoltaRaw::RIF` entry 7 states `Priority => 0`
+                    // (MinoltaRaw.pm line 204), so this copy never displaces the
+                    // maker-note ColorMode read after it.
+                    if let Some(t) = tags.last_mut() {
+                        t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+                    }
                 }
                 // WB_RBLevels (only for Minolta PRD models — always true for MRW files)
                 for (name, offset) in &[

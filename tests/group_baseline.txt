@@ -6,9 +6,6 @@
 Canon1DmkIII.jpg	WhiteBalance	family2
 DNG.dng	Creator	family2
 FujiFilm.raf	PreviewImage	family1
-Minolta.jpg	WhiteBalance	family1
-Minolta.mrw	ColorMode	family1
-Minolta.mrw	WhiteBalance	family1
 PSP.psp	Copyright	family1
 Pentax.jpg	ISO	family1
 Pentax.jpg	ISO	family2
