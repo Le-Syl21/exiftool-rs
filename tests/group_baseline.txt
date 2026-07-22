@@ -99,15 +99,12 @@ GIF.gif	Comment	family1
 Geotag.gpx	GpxCreator	family1
 Geotag.gpx	GpxTrkTrksegTrkptLat	family1
 Geotag.gpx	GpxTrkTrksegTrkptLon	family1
-Geotag.gpx	GpxTrkTrksegTrkptTime	family2
 Geotag.gpx	GpxVersion	family1
 Geotag.kml	KmlDocumentPlacemarkTrackAltitudeMode	family1
 Geotag.kml	KmlDocumentPlacemarkTrackCoord	family1
 Geotag.kml	KmlDocumentPlacemarkTrackWhen	family1
-Geotag.kml	KmlDocumentPlacemarkTrackWhen	family2
 Geotag.kml	KmlDocumentStyleId	family1
 Geotag.kml	KmlDocumentStyleMapId	family1
-Geotag.xml	HistoryRunTrackTrackpointTime	family2
 Geotag.xml	HistoryVersion	family1
 GoPro.jpg	Model	family1
 ISO.iso	VolumeSize	family1
@@ -119,7 +116,6 @@ Jpeg2000.j2c	Comment	family1
 Jpeg2000.j2c	Comment	family2
 Jpeg2000.j2c	ImageHeight	family1
 Jpeg2000.j2c	ImageWidth	family1
-Jpeg2000.jp2	ImageCreationGeneralCreationInfoCreationTime	family2
 M2TS.mts	ImageHeight	family1
 M2TS.mts	ImageHeight	family2
 M2TS.mts	ImageWidth	family1

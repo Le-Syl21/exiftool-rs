@@ -373,8 +373,13 @@ fn parse_boxes(
                             format!("XML-{suffix}")
                         };
                         t.group.family0 = "XML".into();
-                        // The table's own default category (`2 => 'Unknown'`).
-                        t.group.family2 = "Unknown".into();
+                        // The table's own default category (`2 => 'Unknown'`),
+                        // except for a property whose value the XMP parser read
+                        // as a standard date: ExifTool overwrites the invented
+                        // tag's category with `Time` there (XMP.pm line 3684).
+                        if t.group.family2 != "Time" {
+                            t.group.family2 = "Unknown".into();
+                        }
                         t
                     }));
                 }

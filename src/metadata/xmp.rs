@@ -2806,9 +2806,14 @@ fn read_generic_xml(xml: &str) -> Result<Vec<Tag>> {
         }
     }
     // ExifTool reformats ISO-8601 date values to its "YYYY:MM:DD HH:MM:SS" form.
+    // Every tag here is invented on the spot, so `IsDefault` holds and XMPAutoConv
+    // runs ConvertXMPDate on its value; when that yields a standard date ExifTool
+    // also overwrites the tag's category with `Time` (XMP.pm line 3684), which
+    // outranks the containing table's default.
     for tag in tags.iter_mut() {
         if let Some(reformatted) = convert_xmp_date(&tag.print_value) {
             tag.print_value = reformatted;
+            tag.group.family2 = "Time".into();
         }
     }
     Ok(tags)

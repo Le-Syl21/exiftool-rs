@@ -154,8 +154,13 @@ pub fn family2_for(
     }
     // An XMP property none of ExifTool's schemas describe goes to XMP::other,
     // whose category is Unknown. Falling through to the bare name would drag in
-    // an unrelated namespace's answer, so stop here.
+    // an unrelated namespace's answer, so stop here — except when the reader saw
+    // the property's value parse as a standard date, because ExifTool then
+    // overwrites the invented tag's category with `Time` (XMP.pm line 3684).
     if family0 == "XMP" {
+        if current == "Time" {
+            return None;
+        }
         return Some(XMP_UNKNOWN_NAMESPACE);
     }
     // FITS::Main invents a dynamic tag for every keyword it has no entry for,
