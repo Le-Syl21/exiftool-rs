@@ -1112,8 +1112,15 @@ fn process_fei12_header(data: &[u8], tags: &mut Vec<Tag>) {
     }
 }
 
+fn mk_warning(text: String) -> Tag {
+    mk_print("Warning", Value::String(text.clone()), text)
+}
+
 /// Validate and read an MRC file.
-pub fn read_mrc(data: &[u8]) -> Result<Vec<Tag>> {
+///
+/// `extract_embedded` is the ExtractEmbedded option level: 0 reads only the
+/// first frame of the FEI extended header, anything else walks every frame.
+pub fn read_mrc(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     if data.len() < 1024 {
         return Err(Error::InvalidData("MRC file too small".into()));
     }
@@ -1142,42 +1149,60 @@ pub fn read_mrc(data: &[u8]) -> Result<Vec<Tag>> {
     // Process main 1024-byte header
     let (ext_hdr_size, image_depth, ext_hdr_type) = process_mrc_header(&data[..1024], &mut tags);
 
-    // Process extended header (FEI1 or FEI2)
+    // Process extended header (FEI1 or FEI2) — MRC.pm:269-284.
     if ext_hdr_size > 0 && (ext_hdr_type.starts_with("FEI1") || ext_hdr_type.starts_with("FEI2")) {
         let ext_start = 1024;
-        let ext_end = ext_start + ext_hdr_size as usize;
-        if ext_end <= data.len() {
-            // Read size from first 4 bytes of extended header
-            let section_size = read_u32_le(data, ext_start) as usize;
-            if section_size > 0 && section_size <= ext_hdr_size as usize {
-                // Check: size * ImageDepth <= ExtendedHeaderSize (from Perl validation)
-                if section_size * (image_depth as usize) <= ext_hdr_size as usize {
-                    let section_data =
-                        &data[ext_start..ext_start + section_size.min(data.len() - ext_start)];
-                    process_fei12_header(section_data, &mut tags);
-                    // Perl warns: 'Use the ExtractEmbedded option to read metadata for all frames'
-                    // if there are more frames (we only read the first)
-                    if image_depth > 1 {
-                        tags.push(mk_print(
-                            "Warning",
-                            Value::String("[minor] Use the ExtractEmbedded option to read metadata for all frames".into()),
-                            "[minor] Use the ExtractEmbedded option to read metadata for all frames".into(),
-                        ));
+        // The per-frame metadata size is the first int32u of the extended
+        // header, peeked without consuming it (`$raf->Read($buff,4)` then
+        // `Seek(-4,1)`); a file too short for that peek is a hard stop.
+        if data.len() < ext_start + 4 {
+            tags.push(mk_warning("Error reading extended header".into()));
+            return Ok(tags);
+        }
+        let section_size = read_u32_le(data, ext_start) as usize;
+        // `$size * $$et{ImageDepth} > $$et{ExtendedHeaderSize}` is corruption.
+        if section_size as u64 * image_depth as u64 > ext_hdr_size as u64 {
+            tags.push(mk_warning("Corrupted extended header".into()));
+            return Ok(tags);
+        }
+        // A zero-length frame would leave Perl's loop reading nothing
+        // ImageDepth times; it can never emit a tag, so skip it outright
+        // rather than spin over an attacker-chosen ImageDepth.
+        if section_size > 0 {
+            // One document per frame: frame 0 stays in the main document, each
+            // further frame takes the next `DOC_NUM` (`++$$et{DOC_COUNT}`).
+            let mut frame: u32 = 0;
+            loop {
+                let start = ext_start + frame as usize * section_size;
+                let end = start + section_size;
+                if end > data.len() {
+                    tags.push(mk_warning(format!(
+                        "Error reading extended header {}",
+                        frame
+                    )));
+                    break;
+                }
+                let mut frame_tags = Vec::new();
+                process_fei12_header(&data[start..end], &mut frame_tags);
+                if frame > 0 {
+                    let doc = format!("Doc{}", frame);
+                    for tag in frame_tags.iter_mut() {
+                        tag.group.family3 = doc.clone();
                     }
-                } else {
-                    tags.push(mk_print(
-                        "Warning",
-                        Value::String("Corrupted extended header".into()),
-                        "Corrupted extended header".into(),
+                }
+                tags.append(&mut frame_tags);
+                frame += 1;
+                if frame >= image_depth {
+                    break;
+                }
+                if extract_embedded == 0 {
+                    tags.push(mk_warning(
+                        "[minor] Use the ExtractEmbedded option to read metadata for all frames"
+                            .into(),
                     ));
+                    break;
                 }
             }
-        } else {
-            tags.push(mk_print(
-                "Warning",
-                Value::String("Error reading extended header".into()),
-                "Error reading extended header".into(),
-            ));
         }
     }
 

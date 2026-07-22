@@ -1771,9 +1771,18 @@ fn print_json_tags(
     // (exiftool:2765), so the same name in different groups stays distinct — which
     // deduping on the prefixed key gives us for free.
     //
-    // Only applied in default extraction: under -ee the primary/copy ordering of
-    // per-document tags does not yet match ExifTool's, so deduping there would keep
-    // the wrong frame's value. -ee JSON is a separate phase, left untouched here.
+    // Full deduping is only applied in default extraction: under -ee the
+    // primary/copy ordering of same-named tags from competing sources does not yet
+    // match ExifTool's, so deduping everything there would keep the wrong instance.
+    //
+    // One case is safe whatever the ordering, and is applied in both modes: a tag
+    // belonging to an embedded document can never hold the primary key. FoundTag
+    // only lets an incoming tag take the key over an existing one when
+    // `not $$self{DOC_NUM}` or the stored tag carries the very same G3
+    // (ExifTool.pm:9564-9565), so the copies a sub-document contributes to a name
+    // already claimed by an earlier tag are always the "(N)" ones — MRC's per-frame
+    // FEI headers, a QuickTime track, a FIT record. With -G3 the key already
+    // carries the document, so nothing collides and the rule is inert.
     let keyed: Vec<(String, &exiftool_rs::Tag)> = {
         let mut seen = std::collections::HashSet::new();
         tags.iter()
@@ -1783,7 +1792,8 @@ fn print_json_tags(
                 } else {
                     tag.name.clone()
                 };
-                if !dedup || seen.insert(key.clone()) {
+                let first = seen.insert(key.clone());
+                if first || (!dedup && tag.group.family3 == "Main") {
                     Some((key, tag))
                 } else {
                     None

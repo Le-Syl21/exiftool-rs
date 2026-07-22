@@ -2235,7 +2235,7 @@ impl ExifTool {
             FileType::Crw => formats::canon_raw::read_crw(data),
             FileType::Raf => formats::raf::read_raf(data),
             FileType::Mrw => formats::mrw::read_mrw(data),
-            FileType::Mrc => formats::mrc::read_mrc(data),
+            FileType::Mrc => formats::mrc::read_mrc(data, self.options.extract_embedded),
             // Image formats
             FileType::Jp2 => formats::jp2::read_jp2(data),
             FileType::J2c => formats::jp2::read_j2c(data),
