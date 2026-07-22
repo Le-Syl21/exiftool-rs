@@ -2182,7 +2182,9 @@ fn aggregate_duplicate_xmp_tags(tags: Vec<Tag>) -> Vec<Tag> {
             // A flattened field from a KNOWN-schema struct list (mwg-kw
             // HierarchicalKeywords, IPTC LocationCreated/CvTerm…) is List=>1 → join.
             // An UNKNOWN-namespace struct field (e.g. the test: schema's
-            // StructList2Item1) is NOT a list → ExifTool keeps the first occurrence.
+            // StructList2Item1) is NOT a list, so each occurrence is its own tag:
+            // ExifTool reports them all with the Duplicates option on, and keeps
+            // only the first when it is off.
             let prefix = tag.group.family1.strip_prefix("XMP-").unwrap_or("");
             if is_known_xmp_prefix(prefix) {
                 let existing = &mut result[idx];
@@ -2204,8 +2206,24 @@ fn aggregate_duplicate_xmp_tags(tags: Vec<Tag>) -> Vec<Tag> {
                     }
                     existing.print_value = format!("{}, {}", existing.print_value, tag.print_value);
                 }
+            } else if crate::metadata::exif::keep_duplicates()
+                && !result.iter().any(|t| {
+                    t.name == tag.name
+                        && t.group.family1 == tag.group.family1
+                        && t.print_value == tag.print_value
+                })
+            {
+                // Duplicates option on (implied by -ee): a genuine struct-list
+                // yields one flattened field per list item, and ExifTool reports
+                // them all (XMP4 StructList2Item1 c1-1/c1-2, XMP5's two en-US
+                // lang-alt entries). But a property reached through a repeated
+                // rdf:Description or a shared rdf:nodeID is a SINGLE value ExifTool
+                // resolves once, which our parser re-emits verbatim (XMP3
+                // ProgrammerState, XMP.jpg About). Distinguish the two by value:
+                // keep a new occurrence only when it differs from every prior one.
+                result.push(tag);
             }
-            // else: keep the first occurrence (don't append, don't push a new entry)
+            // else (Duplicates off, or an exact repeat): keep the first only.
         } else {
             let idx = result.len();
             name_to_idx.insert(key, idx);

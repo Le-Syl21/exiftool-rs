@@ -12,6 +12,3 @@ PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
 SigmaDP2.x3f	default	extra	0	PreviewImage	(Binary data 20 bytes, use -b option to extract)
 SigmaDP2.x3f	default	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
 SigmaDP2.x3f	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
-XMP4.xmp	ee	missing	0	StructList2Item1	c1-2
-XMP4.xmp	ee	missing	0	StructList2Item2	c2-2
-XMP5.xmp	ee	missing	0	BTestTagField1-en-US	groovy
