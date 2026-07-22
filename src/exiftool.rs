@@ -1151,65 +1151,28 @@ impl ExifTool {
             default_tags()
         };
 
-        // Add file-level tags
-        tags.push(Tag {
-            id: crate::tag::TagId::Text("FileType".into()),
-            name: "FileType".into(),
-            description: "File Type".into(),
-            group: crate::tag::TagGroup {
-                family0: "File".into(),
-                family1: "File".into(),
-                family2: "Other".into(),
-                family3: "Main".into(),
-            },
-            raw_value: Value::String(format!("{:?}", file_type)),
-            // ExifTool's FileType value is the short code ("JPEG"), not the
-            // human-readable description ("JPEG image").
-            print_value: ft_code.clone(),
-            priority: 1,
-        });
-
-        tags.push(Tag {
-            id: crate::tag::TagId::Text("MIMEType".into()),
-            name: "MIMEType".into(),
-            description: "MIME Type".into(),
-            group: crate::tag::TagGroup {
-                family0: "File".into(),
-                family1: "File".into(),
-                family2: "Other".into(),
-                family3: "Main".into(),
-            },
-            raw_value: Value::String(mime_str.clone()),
-            print_value: mime_str.clone(),
-            priority: 1,
-        });
-
-        if let Ok(metadata) = fs::metadata(path) {
-            tags.push(Tag {
-                id: crate::tag::TagId::Text("FileSize".into()),
-                name: "FileSize".into(),
-                description: "File Size".into(),
-                group: crate::tag::TagGroup {
-                    family0: "File".into(),
-                    family1: "File".into(),
-                    family2: "Other".into(),
-                    family3: "Main".into(),
-                },
-                // String, not U32: a file may exceed 4 GB (`as u32` would silently
-                // truncate). `-n` prints this verbatim, matching Perl's raw byte count.
-                raw_value: Value::String(metadata.len().to_string()),
-                print_value: format_file_size(metadata.len()),
-                priority: 0,
-            });
-        }
-
-        // Add more file-level tags.
+        // File-level pseudo-tags, emitted in ExifTool's own order.
         //
+        // `ExtractInfo` reports them before it hands the file to a format reader:
+        // ExifToolVersion (ExifTool.pm:2779), FileName (:2824), Directory (:2830),
+        // FileSize (:2904), FileModifyDate (:2907), FileAccessDate (:2908),
+        // FileInodeChangeDate (:2910), FilePermissions (:2921). Every format handler
+        // then opens with `SetFileType`, which emits FileType, FileTypeExtension and
+        // MIMEType in that order (ExifTool.pm:9713-9715). ExifByteOrder follows,
+        // reported while the EXIF block itself is read.
+        //
+        // The order is load-bearing, not cosmetic: FoundTag arbitrates duplicates by
+        // priority and then last-wins, so a pseudo-tag emitted after the format tags
+        // would take a name it has to lose. They are collected here and spliced in
+        // front of the format tags.
+        let mut pre: Vec<Tag> = Vec::new();
+
         // The File/File/Other group below is only a default: the pseudo-tags that
         // ExifTool places elsewhere (FileName, Directory, the File*Date tags,
         // ExifToolVersion, …) have their groups resolved from `FILE_LEVEL_GROUPS`
         // at the end of extraction. Tags that genuinely belong to File:File, such
         // as FileTypeExtension and ExifByteOrder, keep this default.
+
         let file_tag = |name: &str, val: Value| -> Tag {
             Tag {
                 id: crate::tag::TagId::Text(name.to_string()),
@@ -1227,29 +1190,77 @@ impl ExifTool {
             }
         };
 
+        pre.push(file_tag(
+            "ExifToolVersion",
+            Value::String(crate::VERSION.to_string()),
+        ));
+
         if let Some(fname) = path.file_name().and_then(|n| n.to_str()) {
-            tags.push(file_tag("FileName", Value::String(fname.to_string())));
+            pre.push(file_tag("FileName", Value::String(fname.to_string())));
         }
         if let Some(dir) = path.parent().and_then(|p| p.to_str()) {
-            tags.push(file_tag("Directory", Value::String(dir.to_string())));
+            pre.push(file_tag("Directory", Value::String(dir.to_string())));
         }
-        // Use the canonical (first) extension from the FileType, matching Perl ExifTool behavior.
-        // EXE subtypes emit FileTypeExtension even when empty (ExifTool sets ext='').
-        if !ext_str.is_empty() || file_type == FileType::Exe {
-            tags.push(file_tag(
-                "FileTypeExtension",
-                Value::String(ext_str.clone()),
-            ));
+
+        if let Ok(metadata) = fs::metadata(path) {
+            pre.push(Tag {
+                id: crate::tag::TagId::Text("FileSize".into()),
+                name: "FileSize".into(),
+                description: "File Size".into(),
+                group: crate::tag::TagGroup {
+                    family0: "File".into(),
+                    family1: "File".into(),
+                    family2: "Other".into(),
+                    family3: "Main".into(),
+                },
+                // String, not U32: a file may exceed 4 GB (`as u32` would silently
+                // truncate). `-n` prints this verbatim, matching Perl's raw byte count.
+                raw_value: Value::String(metadata.len().to_string()),
+                print_value: format_file_size(metadata.len()),
+                priority: 0,
+            });
         }
 
         #[cfg(unix)]
         if let Ok(metadata) = fs::metadata(path) {
             use std::os::unix::fs::MetadataExt;
             let mode = metadata.mode();
+            // Dates use ConvertUnixTime($val, 1): local time with a numeric TZ offset
+            // (e.g. "2026:06:13 15:14:15+02:00"), same conversion as GZIP's ModifyDate.
+            use crate::formats::gzip::gzip_unix_to_datetime;
+            // FileModifyDate
+            if let Ok(modified) = metadata.modified() {
+                if let Ok(dur) = modified.duration_since(std::time::UNIX_EPOCH) {
+                    let secs = dur.as_secs() as i64;
+                    pre.push(file_tag(
+                        "FileModifyDate",
+                        Value::String(gzip_unix_to_datetime(secs)),
+                    ));
+                }
+            }
+            // FileAccessDate
+            if let Ok(accessed) = metadata.accessed() {
+                if let Ok(dur) = accessed.duration_since(std::time::UNIX_EPOCH) {
+                    let secs = dur.as_secs() as i64;
+                    pre.push(file_tag(
+                        "FileAccessDate",
+                        Value::String(gzip_unix_to_datetime(secs)),
+                    ));
+                }
+            }
+            // FileInodeChangeDate (ctime on Unix)
+            let ctime = metadata.ctime();
+            if ctime > 0 {
+                pre.push(file_tag(
+                    "FileInodeChangeDate",
+                    Value::String(gzip_unix_to_datetime(ctime)),
+                ));
+            }
+
             // Port of ExifTool's FilePermissions: ValueConv is the full mode in octal
             // (`sprintf "%.3o"`, includes the file-type bits), PrintConv is the ls-style
             // "-rw-rw-r--" string built from those same bits.
-            tags.push(Tag {
+            pre.push(Tag {
                 id: crate::tag::TagId::Text("FilePermissions".into()),
                 name: "FilePermissions".into(),
                 description: "FilePermissions".into(),
@@ -1263,39 +1274,48 @@ impl ExifTool {
                 print_value: format_file_permissions(mode),
                 priority: 1,
             });
-
-            // Dates use ConvertUnixTime($val, 1): local time with a numeric TZ offset
-            // (e.g. "2026:06:13 15:14:15+02:00"), same conversion as GZIP's ModifyDate.
-            use crate::formats::gzip::gzip_unix_to_datetime;
-            // FileModifyDate
-            if let Ok(modified) = metadata.modified() {
-                if let Ok(dur) = modified.duration_since(std::time::UNIX_EPOCH) {
-                    let secs = dur.as_secs() as i64;
-                    tags.push(file_tag(
-                        "FileModifyDate",
-                        Value::String(gzip_unix_to_datetime(secs)),
-                    ));
-                }
-            }
-            // FileAccessDate
-            if let Ok(accessed) = metadata.accessed() {
-                if let Ok(dur) = accessed.duration_since(std::time::UNIX_EPOCH) {
-                    let secs = dur.as_secs() as i64;
-                    tags.push(file_tag(
-                        "FileAccessDate",
-                        Value::String(gzip_unix_to_datetime(secs)),
-                    ));
-                }
-            }
-            // FileInodeChangeDate (ctime on Unix)
-            let ctime = metadata.ctime();
-            if ctime > 0 {
-                tags.push(file_tag(
-                    "FileInodeChangeDate",
-                    Value::String(gzip_unix_to_datetime(ctime)),
-                ));
-            }
         }
+
+        pre.push(Tag {
+            id: crate::tag::TagId::Text("FileType".into()),
+            name: "FileType".into(),
+            description: "File Type".into(),
+            group: crate::tag::TagGroup {
+                family0: "File".into(),
+                family1: "File".into(),
+                family2: "Other".into(),
+                family3: "Main".into(),
+            },
+            raw_value: Value::String(format!("{:?}", file_type)),
+            // ExifTool's FileType value is the short code ("JPEG"), not the
+            // human-readable description ("JPEG image").
+            print_value: ft_code.clone(),
+            priority: 1,
+        });
+
+        // Use the canonical (first) extension from the FileType, matching Perl ExifTool behavior.
+        // EXE subtypes emit FileTypeExtension even when empty (ExifTool sets ext='').
+        if !ext_str.is_empty() || file_type == FileType::Exe {
+            pre.push(file_tag(
+                "FileTypeExtension",
+                Value::String(ext_str.clone()),
+            ));
+        }
+
+        pre.push(Tag {
+            id: crate::tag::TagId::Text("MIMEType".into()),
+            name: "MIMEType".into(),
+            description: "MIME Type".into(),
+            group: crate::tag::TagGroup {
+                family0: "File".into(),
+                family1: "File".into(),
+                family2: "Other".into(),
+                family3: "Main".into(),
+            },
+            raw_value: Value::String(mime_str.clone()),
+            print_value: mime_str.clone(),
+            priority: 1,
+        });
 
         // ExifByteOrder (from TIFF header)
         {
@@ -1392,7 +1412,7 @@ impl ExifTool {
                     }
                     if let Some(bo) = jxl_bo {
                         if !bo.is_empty() && file_type != FileType::Btf {
-                            tags.push(file_tag("ExifByteOrder", Value::String(bo)));
+                            pre.push(file_tag("ExifByteOrder", Value::String(bo)));
                         }
                     }
                     // Return None to skip the generic byte order check below
@@ -1448,14 +1468,12 @@ impl ExifTool {
                 && file_type != FileType::Vrd
                 && file_type != FileType::Crw
             {
-                tags.push(file_tag("ExifByteOrder", Value::String(bo_str.to_string())));
+                pre.push(file_tag("ExifByteOrder", Value::String(bo_str.to_string())));
             }
         }
 
-        tags.push(file_tag(
-            "ExifToolVersion",
-            Value::String(crate::VERSION.to_string()),
-        ));
+        // The pseudo-tags collected above precede every format tag.
+        tags.splice(0..0, pre);
 
         // Promote authoritative specialized-source tags before computing composites,
         // so derived tags (ShutterSpeed, LightValue, ...) use the primary value.
