@@ -333,21 +333,30 @@ fn parse_track_entry(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>)
                 ));
             }
             0x23E383 => {
-                // DefaultDuration (ns)
+                // Matroska.pm 0x3e383 is a conditional list, not two tags: its first
+                // entry, VideoFrameRate, claims the element when
+                // `$$self{TrackType} == 0x01`, and only when that Condition fails does
+                // the second entry, DefaultDuration, get it. Exactly one is emitted.
                 let v = read_uint(data, pos, size);
-                let ms = v / 1_000_000;
-                tags.push(mk(
-                    "DefaultDuration",
-                    "Default Duration",
-                    Value::String(format!("{} ms", ms)),
-                ));
-                // VideoFrameRate = 1e9 / DefaultDuration
-                if v > 0 && track_type == 1 {
-                    let fps = 1_000_000_000.0 / v as f64;
+                if track_type == 1 {
+                    // ValueConv '$val ? 1e9 / $val : 0'
+                    // PrintConv 'int($val * 1000 + 0.5) / 1000'
+                    let fps = if v != 0 { 1e9 / v as f64 } else { 0.0 };
+                    let rounded = (fps * 1000.0 + 0.5).trunc() / 1000.0;
                     tags.push(mk(
                         "VideoFrameRate",
                         "Video Frame Rate",
-                        Value::String(format!("{:.0}", fps)),
+                        Value::String(crate::value::format_g15(rounded)),
+                    ));
+                } else {
+                    // ValueConv '$val / 1e9', PrintConv '($val * 1000) . " ms"'
+                    tags.push(mk(
+                        "DefaultDuration",
+                        "Default Duration",
+                        Value::String(format!(
+                            "{} ms",
+                            crate::value::format_g15(v as f64 / 1e9 * 1000.0)
+                        )),
                     ));
                 }
             }
