@@ -120,15 +120,9 @@ ExifTool.jpg	ee	extra	0	FNumber	6.2
 ExifTool.jpg	ee	extra	0	GlobalAltitude	30
 ExifTool.jpg	ee	extra	0	PreviewImage	(Binary data 1039273 bytes, use -b option to extract)
 ExifTool.jpg	ee	extra	0	SerialNumber	0000000000
-ExifTool.jpg	ee	missing	0	BitsPerSample	8
-ExifTool.jpg	ee	missing	0	ColorComponents	3
 ExifTool.jpg	ee	missing	0	Copyright	Alisha Jucevic
-ExifTool.jpg	ee	missing	0	CropLeft	0
-ExifTool.jpg	ee	missing	0	CropTop	0
 ExifTool.jpg	ee	missing	0	DependentImage1EntryNumber	2
 ExifTool.jpg	ee	missing	0	DependentImage2EntryNumber	0
-ExifTool.jpg	ee	missing	0	ImageHeight	4500
-ExifTool.jpg	ee	missing	0	ImageWidth	3000
 ExifTool.jpg	ee	missing	0	JUMDLabel	adobe.asset.info
 ExifTool.jpg	ee	missing	0	JUMDLabel	cai.assertions
 ExifTool.jpg	ee	missing	0	JUMDLabel	cai.location.broad
@@ -146,9 +140,6 @@ ExifTool.jpg	ee	missing	0	MPImageLength	5959981
 ExifTool.jpg	ee	missing	0	MPImageStart	0
 ExifTool.jpg	ee	missing	0	MPImageType	Baseline MP Primary Image
 ExifTool.jpg	ee	missing	0	PreviewImage	(Binary data 5777 bytes, use -b option to extract)
-ExifTool.jpg	ee	missing	0	ProfileID	Continuous-tone Base
-ExifTool.jpg	ee	missing	0	Quality	1
-ExifTool.jpg	ee	missing	0	Rotation	90
 ExifTool.jpg	ee	missing	0	Title	HEALTHCORONAVIRUSUSAOREGON_SALEM_08.jpg
 ExifTool.jpg	ee	missing	0	Warning	[minor] Error reading PreviewImage from file
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50

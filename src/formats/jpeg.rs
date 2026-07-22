@@ -1428,6 +1428,10 @@ fn process_nitf(data: &[u8]) -> Vec<crate::tag::Tag> {
             },
         ));
     }
+    // JPEG.pm:751 — `11 => 'Quality'`
+    if data.len() > 11 {
+        tags.push(mk("Quality", data[11].to_string()));
+    }
     if data.len() > 12 {
         tags.push(mk(
             "StreamColor",
@@ -1702,7 +1706,49 @@ fn process_spiff(data: &[u8]) -> Vec<crate::tag::Tag> {
         priority: 2,
     };
 
+    // Five SPIFF tags share a name with a directory ExifTool reads later in the
+    // same file: ImageWidth/ImageHeight/BitsPerSample/ColorComponents come back
+    // from the SOF marker (File group), ProfileID from the APP2 ICC profile
+    // header. With the Duplicates option off — the default; the exiftool CLI
+    // only turns it on together with -ee (exiftool line 1031) — FoundTag's
+    // group-blind last-wins leaves those later copies the winner. Demote the
+    // SPIFF instances so the same arbitration happens here.
+    let mk_low = |name: &str, val: String| crate::tag::Tag {
+        priority: -1,
+        ..mk(name, val)
+    };
+
     tags.push(mk("SPIFFVersion", format!("{}.{}", data[0], data[1])));
+    // JPEG.pm:499-521 — ProfileID(2), ColorComponents(3), ImageHeight(6,int32u),
+    // ImageWidth(10,int32u).
+    if data.len() > 2 {
+        let pid = match data[2] {
+            0 => "Not Specified",
+            1 => "Continuous-tone Base",
+            2 => "Continuous-tone Progressive",
+            3 => "Bi-level Facsimile",
+            4 => "Continuous-tone Facsimile",
+            _ => "",
+        };
+        if !pid.is_empty() {
+            tags.push(mk_low("ProfileID", pid.into()));
+        }
+    }
+    if data.len() > 3 {
+        tags.push(mk_low("ColorComponents", data[3].to_string()));
+    }
+    if data.len() > 9 {
+        tags.push(mk_low(
+            "ImageHeight",
+            u32::from_be_bytes([data[6], data[7], data[8], data[9]]).to_string(),
+        ));
+    }
+    if data.len() > 13 {
+        tags.push(mk_low(
+            "ImageWidth",
+            u32::from_be_bytes([data[10], data[11], data[12], data[13]]).to_string(),
+        ));
+    }
     if data.len() > 14 {
         let cs = match data[14] {
             0 => "Bi-level",
@@ -1722,6 +1768,10 @@ fn process_spiff(data: &[u8]) -> Vec<crate::tag::Tag> {
         if !cs.is_empty() {
             tags.push(mk("ColorSpace", cs.into()));
         }
+    }
+    // JPEG.pm:539 — `15 => 'BitsPerSample'`
+    if data.len() > 15 {
+        tags.push(mk_low("BitsPerSample", data[15].to_string()));
     }
     if data.len() > 16 {
         let comp = match data[16] {
@@ -4515,6 +4565,10 @@ fn parse_vrd1(d: &[u8], mk: &impl Fn(&str, String) -> crate::tag::Tag) -> Vec<cr
         if ru16(0x244) == 0 { "No" } else { "Yes" }.into(),
     ));
 
+    // 0x246: CropLeft, 0x248: CropTop (int16u) — CanonVRD.pm:388-395
+    tags.push(mk("CropLeft", ru16(0x246).to_string()));
+    tags.push(mk("CropTop", ru16(0x248).to_string()));
+
     // 0x24a: CropWidth, 0x24c: CropHeight (int16u)
     tags.push(mk("CropWidth", ru16(0x24a).to_string()));
     tags.push(mk("CropHeight", ru16(0x24c).to_string()));
@@ -4581,6 +4635,16 @@ fn parse_vrd1(d: &[u8], mk: &impl Fn(&str, String) -> crate::tag::Tag) -> Vec<cr
         v => v.to_string(),
     };
     tags.push(mk("CheckMark", cm));
+
+    // 0x26e: Rotation (int16u) — CanonVRD.pm:449-459
+    let rot = match ru16(0x26e) {
+        0 => "0".to_string(),
+        1 => "90".to_string(),
+        2 => "180".to_string(),
+        3 => "270".to_string(),
+        v => v.to_string(),
+    };
+    tags.push(mk("Rotation", rot));
 
     // 0x270: WorkColorSpace (int16u)
     let wcs = match ru16(0x270) {
