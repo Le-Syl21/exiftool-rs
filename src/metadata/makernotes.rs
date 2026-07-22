@@ -4564,6 +4564,35 @@ fn decode_preview_ifd(
                     .unwrap_or_else(|| format!("Unknown ({v})"));
                 tags.push(preview("Compression", Value::U16(v), print));
             }
+            // Nikon.pm:5405-5406 — `0x11a => 'XResolution'` and
+            // `0x11b => 'YResolution'`, plain rational64u, no PrintConv.
+            0x011A | 0x011B if format == 5 => {
+                let name = if tag_id == 0x011A {
+                    "XResolution"
+                } else {
+                    "YResolution"
+                };
+                let ptr = val as usize;
+                if ptr + 8 <= data.len() {
+                    let n = read_u32(data, ptr, bo);
+                    let d = read_u32(data, ptr + 4, bo);
+                    let v = Value::URational(n, d);
+                    let print = v.to_display_string();
+                    tags.push(preview(name, v, print));
+                }
+            }
+            // Nikon.pm:5407-5414 — `0x128 => { Name => 'ResolutionUnit',
+            // PrintConv => { 1 => 'None', 2 => 'inches', 3 => 'cm' } }`.
+            0x0128 if format == 3 => {
+                let v = read_u16(data, eoff + 8, bo);
+                let print = match v {
+                    1 => "None".to_string(),
+                    2 => "inches".to_string(),
+                    3 => "cm".to_string(),
+                    _ => format!("Unknown ({v})"),
+                };
+                tags.push(preview("ResolutionUnit", Value::U16(v), print));
+            }
             0x0201 => {
                 // PreviewImageStart is IsOffset, stored relative to the maker-note
                 // TIFF base. ExifTool reports it file-absolute (base + raw).
@@ -4600,6 +4629,17 @@ fn decode_preview_ifd(
                         priority: 0,
                     });
                 }
+            }
+            // Nikon.pm:5431-5437 — `0x213 => { Name => 'YCbCrPositioning',
+            // PrintConv => { 1 => 'Centered', 2 => 'Co-sited' } }`.
+            0x0213 if format == 3 => {
+                let v = read_u16(data, eoff + 8, bo);
+                let print = match v {
+                    1 => "Centered".to_string(),
+                    2 => "Co-sited".to_string(),
+                    _ => format!("Unknown ({v})"),
+                };
+                tags.push(preview("YCbCrPositioning", Value::U16(v), print));
             }
             _ => {}
         }
@@ -5048,6 +5088,9 @@ fn decrypt_nikon_subtables(
                     // After decryption, decode directly using LensData01 offsets
                     // (same structure as unencrypted 0101, just with encryption removed)
                     tags.push(mk_nikon_str("LensDataVersion", ver));
+                    // Nikon.pm:2830-2838 routes only 020[1-3] to the LensData01
+                    // table; 0204+/04xx/08xx have their own tables.
+                    let lens_data01 = matches!(ver, "0201" | "0202" | "0203");
                     let d = &decrypted;
                     if d.len() >= 0x12 {
                         // Offsets from Perl LensData01 table
@@ -5070,12 +5113,36 @@ fn decrypt_nikon_subtables(
                             t.raw_value = Value::F64(dist);
                             tags.push(t);
                         }
+                        // Nikon.pm:5545-5549 — LensData01 `0x0a => { Name =>
+                        // 'FocalLength', Priority => 0, %nikonFocalConversions }`,
+                        // i.e. ValueConv `5 * 2**($val/24)`, PrintConv
+                        // `sprintf("%.1f mm",$val)`. The stated `Priority => 0`
+                        // keeps it from displacing the ExifIFD FocalLength when
+                        // duplicates are collapsed. Only 020[1-3] is routed to
+                        // LensData01 (Nikon.pm:2830-2838); 0204 and later shift
+                        // every offset from 0x0a on (Nikon.pm:5617-5642).
+                        if lens_data01 && d.len() > 0x0A {
+                            let fl = 5.0 * 2.0_f64.powf(d[0x0A] as f64 / 24.0);
+                            let mut t = mk_nikon_str("FocalLength", &format!("{:.1} mm", fl));
+                            t.raw_value = Value::F64(fl);
+                            t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+                            tags.push(t);
+                        }
                         // MCUVersion is at 0x11 in LensData01 (not 0x0a).
                         if d.len() > 0x11 {
                             tags.push(mk_nikon_str("MCUVersion", &d[0x11].to_string()));
                         }
                         if d.len() > 0x0B {
                             tags.push(mk_nikon_str("LensIDNumber", &d[0x0B].to_string()));
+                        }
+                        // Nikon.pm:5554-5560 — LensData01 `0x0c => { Name =>
+                        // 'LensFStops', ValueConv => '$val / 12', PrintConv =>
+                        // 'sprintf("%.2f", $val)' }`. Same 020[1-3]-only guard.
+                        if lens_data01 && d.len() > 0x0C {
+                            let fs = d[0x0C] as f64 / 12.0;
+                            let mut t = mk_nikon_str("LensFStops", &format!("{:.2}", fs));
+                            t.raw_value = Value::F64(fs);
+                            tags.push(t);
                         }
                         if d.len() > 0x0D && d[0x0D] > 0 {
                             let fl = 5.0 * 2.0_f64.powf(d[0x0D] as f64 / 24.0);

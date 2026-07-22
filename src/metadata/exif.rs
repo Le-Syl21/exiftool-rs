@@ -359,9 +359,13 @@ impl ExifReader {
                 // Only maker-note tags with non-negative priority remove the EXIF
                 // duplicate. Tags from a PRIORITY=>0 sub-block demoted to -1 (e.g.
                 // Minolta CameraSettings) must not override a standard EXIF tag.
+                // A `PreviewIFD` tag cannot either: ExifTool.pm:4368 initialises
+                // `LOW_PRIORITY_DIR = { PreviewIFD => 1 }`, and `Nikon::PreviewIFD`
+                // says so itself (Nikon.pm:5391, "these tags are priority 0 by
+                // default because PreviewIFD is flagged in LOW_PRIORITY_DIR").
                 let mn_name_set: std::collections::HashSet<String> = mn_tags
                     .iter()
-                    .filter(|t| t.priority_rank() >= 0)
+                    .filter(|t| t.priority_rank() >= 0 && t.group.family1 != "PreviewIFD")
                     .map(|t| t.name.clone())
                     .collect();
                 let exif_has: std::collections::HashSet<String> =

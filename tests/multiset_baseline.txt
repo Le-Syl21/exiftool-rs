@@ -31,24 +31,7 @@ Lytro.lfp	ee	missing	0	ModesRegionOfInterestArrayY	0.55208665132522583008
 M2TS.mts	ee	extra	0	ShutterSpeed	1/25
 Matroska.mkv	ee	extra	0	DefaultDuration	40 ms
 Minolta.mrw	ee	missing	0	ColorMode	Natural
-Nikon.nef	ee	missing	0	FocalLength	18.3 mm
-Nikon.nef	ee	missing	0	LensFStops	5.33
-Nikon.nef	ee	missing	0	ResolutionUnit	inches
-Nikon.nef	ee	missing	0	XResolution	72
-Nikon.nef	ee	missing	0	YResolution	72
 NikonD2Hs.jpg	ee	extra	0	Software	(Binary data 24 bytes, use -b option to extract)
-NikonD2Hs.jpg	ee	missing	0	FocalLength	50.4 mm
-NikonD2Hs.jpg	ee	missing	0	LensFStops	7.33
-NikonD2Hs.jpg	ee	missing	0	ResolutionUnit	inches
-NikonD2Hs.jpg	ee	missing	0	XResolution	300
-NikonD2Hs.jpg	ee	missing	0	YCbCrPositioning	Co-sited
-NikonD2Hs.jpg	ee	missing	0	YResolution	300
-NikonD70.jpg	ee	missing	0	FocalLength	56.6 mm
-NikonD70.jpg	ee	missing	0	LensFStops	5.33
-NikonD70.jpg	ee	missing	0	ResolutionUnit	inches
-NikonD70.jpg	ee	missing	0	XResolution	300
-NikonD70.jpg	ee	missing	0	YCbCrPositioning	Co-sited
-NikonD70.jpg	ee	missing	0	YResolution	300
 PGF.pgf	ee	missing	0	ImageHeight	1
 PGF.pgf	ee	missing	0	ImageWidth	1
 PSP.psp	ee	extra	0	Copyright	.

@@ -213,8 +213,27 @@ pub fn dispatch_nikon_lens_data(ctx: &DispatchContext) -> Vec<Tag> {
             let dist = 0.01 * 10.0_f64.powf(d[0x09] as f64 / 40.0);
             tags.push(mk("Nikon", "FocusDistance", &format!("{:.2} m", dist)));
         }
+        // Nikon.pm:5545-5549 — LensData01 `0x0a => { Name => 'FocalLength',
+        // Priority => 0, %nikonFocalConversions }`: ValueConv `5 * 2**($val/24)`,
+        // PrintConv `sprintf("%.1f mm",$val)`. Version 0100 goes to LensData00
+        // instead (Nikon.pm:2820-2828), where 0x0a is MaxApertureAtMinFocal.
+        if ver == "0101" && d.len() > 0x0A {
+            let fl = 5.0 * 2.0_f64.powf(d[0x0A] as f64 / 24.0);
+            let mut t = mk("Nikon", "FocalLength", &format!("{:.1} mm", fl));
+            t.raw_value = Value::F64(fl);
+            t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+            tags.push(t);
+        }
         if d.len() > 0x0B {
             tags.push(mk("Nikon", "LensIDNumber", &format!("{}", d[0x0B])));
+        }
+        // Nikon.pm:5554-5560 — LensData01 `0x0c => { Name => 'LensFStops',
+        // ValueConv => '$val / 12', PrintConv => 'sprintf("%.2f", $val)' }`.
+        if ver == "0101" && d.len() > 0x0C {
+            let fs = d[0x0C] as f64 / 12.0;
+            let mut t = mk("Nikon", "LensFStops", &format!("{:.2}", fs));
+            t.raw_value = Value::F64(fs);
+            tags.push(t);
         }
         // MCUVersion at 0x11, EffectiveMaxAperture at 0x12 (Perl LensData01 offsets).
         if d.len() > 0x11 {
