@@ -28,7 +28,6 @@ Minolta.mrw	ColorMode	family1
 Minolta.mrw	WhiteBalance	family1
 NikonD2Hs.jpg	Compression	family1
 NikonD70.jpg	Compression	family1
-OlympusE1.jpg	ExtenderStatus	family1
 OpenDoc.ods	Creation-date	family2
 OpenDoc.ods	Keyword	family2
 OpenDoc.ods	Transformation	family2

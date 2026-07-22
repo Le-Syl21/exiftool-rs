@@ -24,6 +24,10 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         composite.push(flash);
     }
 
+    if let Some(es) = compute_olympus_extender_status(tags) {
+        composite.push(es);
+    }
+
     // GPSPosition: combine GPSLatitude/Ref + GPSLongitude/Ref
     if let Some(pos) = compute_gps_position(tags) {
         composite.push(pos);
@@ -2178,6 +2182,79 @@ fn compute_quicktime_rotation(tags: &[Tag]) -> Option<Tag> {
         "Rotation",
         Value::String(format!("{}", angle)),
     ))
+}
+
+/// Olympus Composite `ExtenderStatus` (Olympus.pm:4283-4300).
+///
+/// `Require => { 0 => 'Olympus:Extender', 1 => 'Olympus:LensType',
+/// 2 => 'MaxApertureValue' }` — all three, so the tag exists only when all
+/// three do — with `ValueConv => Image::ExifTool::Olympus::ExtenderStatus(
+/// $val[0], $prt[1], $val[2])` and `PrintConv => { 0 => 'Not attached',
+/// 1 => 'Attached', 2 => 'Removed' }`. The table declares
+/// `GROUPS => { 2 => 'Camera' }` (Olympus.pm:4282) and AddCompositeTags supplies
+/// families 0 and 1, so it is reported in the Composite group, not in Olympus.
+fn compute_olympus_extender_status(tags: &[Tag]) -> Option<Tag> {
+    let olympus = |name: &str| -> Option<&Tag> {
+        tags.iter()
+            .find(|t| t.name == name && t.group.family1 == "Olympus")
+    };
+    let extender = olympus("Extender")?;
+    let lens_type = olympus("LensType")?;
+    // $val[2] is the ValueConv f-number. We read the printed f-number, which is
+    // that value rounded for display; it only matters for the 0.2 threshold of
+    // the EC-14 branch below.
+    let max_aperture: f64 = find_tag(tags, "MaxApertureValue")?
+        .print_value
+        .parse()
+        .ok()?;
+
+    // sub ExtenderStatus (Olympus.pm:4337-4352).
+    let key = crate::tags::makernotes::olympus_extender_key(&extender.print_value);
+    let info: Vec<&str> = key.split_whitespace().collect();
+    // "validate that extender identifier is reasonable"
+    //     return 0 unless @info >= 2 and hex($info[1]);
+    let status = if info.len() < 2 || u32::from_str_radix(info[1], 16).unwrap_or(0) == 0 {
+        0u32
+    } else if format!("{} {}", info[0], info[1]) != "0 04" {
+        // "if it's not an EC-14 (id '0 04') then assume it was really attached"
+        1
+    } else {
+        // "$lensType =~ / F(\d+(\.\d+)?)/ or return 1" — the lens's own maximum
+        // aperture, then "return(($maxAperture - $1 > 0.2) ? 1 : 2)".
+        match lens_max_aperture(&lens_type.print_value) {
+            None => 1,
+            Some(f) => {
+                if max_aperture - f > 0.2 {
+                    1
+                } else {
+                    2
+                }
+            }
+        }
+    };
+
+    let print = match status {
+        0 => "Not attached",
+        1 => "Attached",
+        _ => "Removed",
+    };
+    let mut t = mk_composite_raw(
+        "ExtenderStatus",
+        "Extender Status",
+        Value::U32(status),
+        print.to_string(),
+    );
+    t.group.family2 = "Camera".into();
+    Some(t)
+}
+
+/// `$lensType =~ / F(\d+(\.\d+)?)/` (Olympus.pm:4348).
+fn lens_max_aperture(lens_type: &str) -> Option<f64> {
+    let rest = lens_type.split(" F").nth(1)?;
+    let end = rest
+        .find(|c: char| !c.is_ascii_digit() && c != '.')
+        .unwrap_or(rest.len());
+    rest[..end].parse().ok()
 }
 
 /// XMP Composite `Flash` (XMP.pm:2808-2840).

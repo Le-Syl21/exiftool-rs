@@ -8104,7 +8104,13 @@ fn read_makernote_ifd_with_base(
     // Synthesize Olympus PreviewImage from PreviewImageStart + PreviewImageLength
     // (from CameraSettings sub-IFD tags 0x0101 and 0x0102)
     if manufacturer == Manufacturer::Olympus || manufacturer == Manufacturer::OlympusNew {
-        if !tags.iter().any(|t| t.name == "PreviewImage") {
+        // No name filter: Olympus::Main holds two independent OffsetPair/DataTag
+        // pairs for PreviewImage (0x0088/0x0089 at Olympus.pm:649-663 and
+        // 0x1036/0x1037 at Olympus.pm:1122-1140), and ExifTool extracts the image
+        // for each pair it finds. Only one pair exists in any corpus file, and
+        // whichever instance loses the competition is dropped by the duplicate
+        // arbitration, not here.
+        {
             let preview_start = tags
                 .iter()
                 .find(|t| t.name == "PreviewImageStart")
@@ -8150,45 +8156,6 @@ fn read_makernote_ifd_with_base(
                     t.raw_value = Value::String(abs.to_string());
                     t.print_value = abs.to_string();
                 }
-            }
-        }
-
-        // Synthesize ExtenderStatus composite (Perl Olympus.pm ExtenderStatus sub)
-        // Requires: Extender (ValueConv key), LensType (PrintConv string), MaxApertureValue
-        // Since MaxApertureValue comes from EXIF (not available here), we compute what we can:
-        // If Extender key's second token hex value is 0, status = 0 (Not attached)
-        // If key is '0 04' (EC-14), we'd need MaxApertureValue to decide 1 or 2
-        // For all other extenders (non-EC14), status = 1 (Attached)
-        if !tags.iter().any(|t| t.name == "ExtenderStatus") {
-            // Get the Extender raw bytes to compute ValueConv key
-            let extender_pv = tags
-                .iter()
-                .find(|t| t.name == "Extender")
-                .map(|t| t.print_value.clone());
-            if let Some(ext_pv) = extender_pv {
-                // Map print value back to status
-                let (status_val, status_str) = if ext_pv == "None" {
-                    (0u32, "Not attached")
-                } else {
-                    // Extender is attached (covers EC-14, EX-25, EC-20, etc.)
-                    // For EC-14 ('0 04'), Perl checks MaxApertureValue vs lens max aperture.
-                    // Without MaxApertureValue from EXIF here, conservatively say Attached.
-                    (1u32, "Attached")
-                };
-                tags.push(Tag {
-                    id: TagId::Text("ExtenderStatus".to_string()),
-                    name: "ExtenderStatus".to_string(),
-                    description: "Extender Status".to_string(),
-                    group: TagGroup {
-                        family0: "MakerNotes".to_string(),
-                        family1: "Olympus".to_string(),
-                        family2: "Camera".to_string(),
-                        family3: "Main".into(),
-                    },
-                    raw_value: Value::U32(status_val),
-                    print_value: status_str.to_string(),
-                    priority: 0,
-                });
             }
         }
     }

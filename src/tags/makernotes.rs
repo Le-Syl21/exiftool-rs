@@ -1700,3 +1700,15 @@ pub fn olympus_extender_name(key: &str) -> Option<&'static str> {
         .find(|&&(k, _)| k == key)
         .map(|&(_, v)| v)
 }
+
+/// Reverse of [`olympus_extender_name`]: recover the ValueConv key ("0 00",
+/// "0 04", ...) from the printed extender name. The reader stores the printed
+/// name and falls back to the key itself when the PrintConv has no entry, so
+/// this recovers the key in both cases.
+pub fn olympus_extender_key(name: &str) -> &str {
+    OLYMPUS_EXTENDER_TYPES
+        .iter()
+        .find(|&&(_, v)| v == name)
+        .map(|&(k, _)| k)
+        .unwrap_or(name)
+}
