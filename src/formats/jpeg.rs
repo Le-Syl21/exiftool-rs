@@ -1268,22 +1268,9 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
             .map(|t| t.print_value.clone());
         if let (Some(stored_val), Some(current_val)) = (stored, current) {
             if stored_val != current_val {
-                tags.push(crate::tag::Tag {
-                    id: crate::tag::TagId::Text("Warning".into()),
-                    name: "Warning".into(),
-                    description: "Warning".into(),
-                    group: crate::tag::TagGroup {
-                        family0: "ExifTool".into(),
-                        family1: "ExifTool".into(),
-                        family2: "Other".into(),
-                        family3: "Main".into(),
-                    },
-                    raw_value: crate::value::Value::String(
-                        "IPTCDigest is not current. XMP may be out of sync".into(),
-                    ),
-                    print_value: "IPTCDigest is not current. XMP may be out of sync".into(),
-                    priority: 0,
-                });
+                tags.push(crate::tag::warning_tag(
+                    "IPTCDigest is not current. XMP may be out of sync",
+                ));
             }
         }
     }
@@ -4108,20 +4095,7 @@ fn parse_mpf_inner(
                 // `$self->Warn("Error reading $tag from file", $isPreview)` — minor,
                 // and no tag is created.
                 const MSG: &str = "[minor] Error reading PreviewImage from file";
-                tags.push(crate::tag::Tag {
-                    id: crate::tag::TagId::Text("Warning".into()),
-                    name: "Warning".into(),
-                    description: "Warning".into(),
-                    group: crate::tag::TagGroup {
-                        family0: "ExifTool".into(),
-                        family1: "ExifTool".into(),
-                        family2: "Other".into(),
-                        family3: "Main".into(),
-                    },
-                    raw_value: crate::value::Value::String(MSG.into()),
-                    print_value: MSG.into(),
-                    priority: 0,
-                });
+                tags.push(crate::tag::warning_tag(MSG));
             }
         }
     }

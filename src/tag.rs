@@ -49,6 +49,32 @@ pub const MAIN_DOCUMENT: &str = "Main";
 /// several readers already set values of their own (-1, 2, 5, 10).
 pub const PRIORITY_EXPLICIT_ZERO: i32 = i32::MIN;
 
+/// Build a `Warning` tag the way `Image::ExifTool::Warn` does.
+///
+/// `%Image::ExifTool::Extra` declares `Warning => { Priority => 0, Groups =>
+/// \%allGroupsExifTool }` (ExifTool.pm:1298-1300). The stated `Priority => 0` is
+/// what makes the FIRST warning of a file the one reported when duplicates are
+/// collapsed: FoundTag promotes the stored tag's 0 to 1 for `Warning`
+/// unconditionally ("never override a Warning tag because they may be added by
+/// ValueConv", ExifTool.pm:9541-9548), so the incoming 0 never reaches it.
+pub fn warning_tag(message: impl Into<String>) -> Tag {
+    let message = message.into();
+    Tag {
+        id: TagId::Text("Warning".into()),
+        name: "Warning".into(),
+        description: "Warning".into(),
+        group: TagGroup {
+            family0: "ExifTool".into(),
+            family1: "ExifTool".into(),
+            family2: "Other".into(),
+            family3: MAIN_DOCUMENT.into(),
+        },
+        raw_value: crate::value::Value::String(message.clone()),
+        print_value: message,
+        priority: PRIORITY_EXPLICIT_ZERO,
+    }
+}
+
 impl Default for TagGroup {
     /// An empty group in the main document.
     fn default() -> Self {

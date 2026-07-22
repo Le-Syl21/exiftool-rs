@@ -144,41 +144,12 @@ pub fn parse_makernotes_exif_base(
 
     // GoPro MakerNotes: binary format, not IFD (Perl: "Unrecognized MakerNotes")
     if make.to_uppercase().starts_with("GOPRO") {
-        return vec![Tag {
-            id: TagId::Text("Warning".into()),
-            name: "Warning".into(),
-            description: "Warning".into(),
-            group: TagGroup {
-                family0: "ExifTool".into(),
-                family1: "ExifTool".into(),
-                family2: "Other".into(),
-                family3: "Main".into(),
-            },
-            raw_value: Value::String("[minor] Unrecognized MakerNotes".into()),
-            print_value: "[minor] Unrecognized MakerNotes".into(),
-            priority: 0,
-        }];
+        return vec![crate::tag::warning_tag("[minor] Unrecognized MakerNotes")];
     }
 
     // GE MakerNotes: FixBase needed (Perl emits Warning)
     if mn_data.starts_with(b"GE\0\0") || mn_data.starts_with(b"GENIC\0") {
-        // GE offsets need FixBase which we don't implement — emit Warning like Perl
         let mut tags = Vec::new();
-        tags.push(Tag {
-            id: TagId::Text("Warning".into()),
-            name: "Warning".into(),
-            description: "Warning".into(),
-            group: TagGroup {
-                family0: "ExifTool".into(),
-                family1: "ExifTool".into(),
-                family2: "Other".into(),
-                family3: "Main".into(),
-            },
-            raw_value: Value::String("[minor] Suspicious MakerNotes offset for tag 0x0200".into()),
-            print_value: "[minor] Suspicious MakerNotes offset for tag 0x0200".into(),
-            priority: 0,
-        });
-        // Still parse what we can.
         // GE has its own TIFF header at mn_offset+10 ("MM"/"II"); the IFD is at
         // mn_offset+18 and value offsets are relative to that GE TIFF base.
         // Perl applies FixBase (MakerNotes.pm) — for GE, makeDiff=0 and
@@ -5666,33 +5637,48 @@ fn read_makernote_ifd_with_base(
 
         let total_size = type_size * count as usize;
 
+        // Exif.pm:6537-6539, inside the `$size > 4` branch: "offset shouldn't
+        // point into TIFF header",
+        //     $valuePtr < 8 and not $$dirInfo{ZeroOffsetOK} and $suspect = $warnCount;
+        // and Exif.pm:6672-6678 turns that into
+        //     $et->Warn("Suspicious $dir offset for $tagStr", $inMakerNotes)
+        // followed by `next unless $verbose` — the entry is warned about and then
+        // skipped. `ZeroOffsetOK` is set in exactly one place, ProcessSamsung
+        // (Samsung.pm:1708), whose IFD does not come through here.
+        if total_size > 4 && (value_offset as usize) < 8 {
+            let msg = format!(
+                "[minor] Suspicious MakerNotes offset for tag 0x{:04X}",
+                tag_id
+            );
+            // Warn (ExifTool.pm:5616-5645) suppresses a repeat by the warning
+            // STRING — `$$self{WAS_WARNED}{$str}` — not by the tag name.
+            if !tags
+                .iter()
+                .any(|t| t.name == "Warning" && t.print_value == msg)
+            {
+                tags.push(crate::tag::warning_tag(msg));
+            }
+            continue;
+        }
+
         let value_data = if total_size <= 4 {
             &data[entry_offset + 8..(entry_offset + 8 + total_size).min(data.len())]
         } else {
             let off = (value_offset as isize + base_fix) as usize;
             if off + total_size > data.len() {
-                // Emit Warning for suspicious offset (like Perl Exif.pm:6582)
-                if !tags.iter().any(|t| t.name == "Warning") {
-                    tags.push(Tag {
-                        id: TagId::Text("Warning".into()),
-                        name: "Warning".into(),
-                        description: "Warning".into(),
-                        group: TagGroup {
-                            family0: "ExifTool".into(),
-                            family1: "ExifTool".into(),
-                            family2: "Other".into(),
-                            family3: "Main".into(),
-                        },
-                        raw_value: Value::String(format!(
-                            "[minor] Suspicious MakerNotes offset for tag 0x{:04X}",
-                            tag_id
-                        )),
-                        print_value: format!(
-                            "[minor] Suspicious MakerNotes offset for tag 0x{:04X}",
-                            tag_id
-                        ),
-                        priority: 0,
-                    });
+                // `$et->Warn("Suspicious $dir offset for $tagStr", $inMakerNotes)`
+                // (Exif.pm:6675). Warn (ExifTool.pm:5616-5645) suppresses a repeat
+                // by the warning STRING -- `$$self{WAS_WARNED}{$str}` -- not by the
+                // tag name, so one warning per distinct offending tag is stored.
+                let msg = format!(
+                    "[minor] Suspicious MakerNotes offset for tag 0x{:04X}",
+                    tag_id
+                );
+                if !tags
+                    .iter()
+                    .any(|t| t.name == "Warning" && t.print_value == msg)
+                {
+                    tags.push(crate::tag::warning_tag(msg));
                 }
                 continue;
             }

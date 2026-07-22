@@ -256,20 +256,7 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
             "[minor] Text/EXIF chunk(s) found after PNG IDAT (may be ignored by some readers)"
                 .to_string()
         };
-        tags.push(Tag {
-            id: TagId::Text("Warning".into()),
-            name: "Warning".into(),
-            description: "Warning".into(),
-            group: TagGroup {
-                family0: "ExifTool".into(),
-                family1: "ExifTool".into(),
-                family2: "Other".into(),
-                family3: "Main".into(),
-            },
-            raw_value: Value::String(warn_msg.clone()),
-            print_value: warn_msg,
-            priority: 0,
-        });
+        tags.push(crate::tag::warning_tag(warn_msg));
     }
 
     Ok(tags)

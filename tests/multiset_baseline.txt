@@ -27,7 +27,6 @@ FLIR.jpg	ee	missing	0	DateTimeOriginal	2012:02:11 14:17:08
 FLIR.jpg	ee	missing	0	Emissivity	0.80
 FlashPix.ppt	ee	missing	0	CodePage	Mac Roman (Western European)
 FlashPix.ppt	ee	missing	1	CodePage	Mac Roman (Western European)
-GE.jpg	ee	missing	0	Warning	[minor] Suspicious MakerNotes offset for tag 0x0206
 GPS.jpg	ee	missing	0	GPSLatitude	54 deg 59' 22.80"
 GPS.jpg	ee	missing	0	GPSLongitude	1 deg 54' 51.00"
 GoPro.jpg	ee	extra	0	GPSAltitude	3.983

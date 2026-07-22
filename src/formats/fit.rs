@@ -400,20 +400,7 @@ pub fn read_fit_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     });
     if !ee {
         let warn = "[minor] Use ExtractEmbedded option to extract all timed metadata";
-        tags.push(Tag {
-            id: TagId::Text("Warning".into()),
-            name: "Warning".into(),
-            description: "Warning".into(),
-            group: TagGroup {
-                family0: "ExifTool".into(),
-                family1: "ExifTool".into(),
-                family2: "Other".into(),
-                family3: "Main".into(),
-            },
-            raw_value: Value::String(warn.into()),
-            print_value: warn.into(),
-            priority: 0,
-        });
+        tags.push(crate::tag::warning_tag(warn));
     }
 
     // At most 16 local message definitions (4-bit identifier).

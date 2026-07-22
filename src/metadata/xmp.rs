@@ -1730,20 +1730,7 @@ impl XmpReader {
                 "[minor] Error reading GainMap {} from trailer",
                 gainmap_mime
             );
-            tags.push(Tag {
-                id: TagId::Text("Warning".into()),
-                name: "Warning".into(),
-                description: "Warning".into(),
-                group: TagGroup {
-                    family0: "ExifTool".into(),
-                    family1: "ExifTool".into(),
-                    family2: "Other".into(),
-                    family3: "Main".into(),
-                },
-                raw_value: Value::String(warning_msg.clone()),
-                print_value: warning_msg,
-                priority: 0,
-            });
+            tags.push(crate::tag::warning_tag(warning_msg));
         }
 
         // The XMP Composite `Flash` (XMP.pm:2808-2840) is NOT built here.
