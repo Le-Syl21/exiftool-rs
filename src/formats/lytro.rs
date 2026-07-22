@@ -382,11 +382,14 @@ fn emit_tag_impl(
         Value::String(raw_str.clone())
     };
 
-    // Check if tag with this name already exists; if so update it (last-write-wins for arrays)
-    if let Some(existing) = tags.iter_mut().find(|t| t.name == final_name) {
-        existing.raw_value = raw_value;
-        existing.print_value = print_value.clone();
-        return;
+    // Lytro.pm:125 calls `$et->HandleTag` once per JSON property, so an array of
+    // objects yields one instance of every member tag per element and ExifTool
+    // reports them all with the Duplicates option on. With it off, FoundTag's
+    // last-wins arbitration leaves the final instance — and at the final file
+    // order, since the winner takes a fresh FILE_ORDER while the one it displaces
+    // inherits the old key's (ExifTool.pm:9569, 9596).
+    if !crate::metadata::exif::keep_duplicates() {
+        tags.retain(|t| t.name != final_name);
     }
 
     tags.push(Tag {
