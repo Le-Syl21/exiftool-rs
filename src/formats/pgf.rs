@@ -104,11 +104,15 @@ pub fn read_pgf(data: &[u8]) -> Result<Vec<Tag>> {
         if let Some(png_pos) = find_bytes(meta, &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]) {
             let png_data = &meta[png_pos..];
             if let Ok(png_tags) = crate::formats::png::read_png(png_data) {
-                // Add PNG tags, but skip dimension tags (PGF header has the correct ones)
+                // The embedded image is read by a re-entrant ExtractInfo
+                // (PGF.pm line 93), so it reports its own IHDR dimensions
+                // alongside the PGF header's. Only the file-level pseudo-tags
+                // and the composites, which ExifTool builds once for the whole
+                // file, are not repeated.
                 for mut tag in png_tags {
                     match tag.name.as_str() {
-                        "ImageWidth" | "ImageHeight" | "ImageSize" | "Megapixels" | "FileType"
-                        | "FileTypeExtension" | "MIMEType" => continue,
+                        "ImageSize" | "Megapixels" | "FileType" | "FileTypeExtension"
+                        | "MIMEType" => continue,
                         _ => {}
                     }
                     // The embedded stream is read by the PNG reader, but the container is
@@ -119,7 +123,6 @@ pub fn read_pgf(data: &[u8]) -> Result<Vec<Tag>> {
                             *s = s.replace("PNG IDAT", "PGF IDAT");
                         }
                     }
-                    tag.priority = 2; // higher priority than default
                     tags.push(tag);
                 }
             }
@@ -147,6 +150,8 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
         },
         raw_value: value,
         print_value: pv,
+        // `%Image::ExifTool::PGF::Main` is `PRIORITY => 2, # (to take
+        // precedence over PNG tags from embedded image)` (PGF.pm line 24).
         priority: 2,
     }
 }
