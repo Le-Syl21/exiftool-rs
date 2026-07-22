@@ -8,9 +8,6 @@ AIFF.aif	Duration	family2
 APE.ape	Duration	family2
 Canon1DmkIII.jpg	WhiteBalance	family2
 DNG.dng	Creator	family2
-DjVu.djvu	CreateDate	family1
-DjVu.djvu	Keywords	family1
-DjVu.djvu	ModifyDate	family1
 Font.afm	Comment	family1
 Font.afm	Comment	family2
 Font.dfont	ApplicationVersion	family1

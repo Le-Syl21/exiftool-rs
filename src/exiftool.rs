@@ -1672,8 +1672,12 @@ impl ExifTool {
             // LOWEST priority in ExifTool — XMP and embedded EXIF both win. Drop the
             // native copy when any non-native source provides the same tag.
             {
-                let is_native_doc =
-                    |g1: &str| matches!(g1, "PDF" | "PostScript" | "DjVu" | "DjVu-Meta");
+                // DjVu-Meta is deliberately absent: %Image::ExifTool::DjVu::Meta
+                // (DjVu.pm line 132) declares no PRIORITY, so its tags meet XMP's
+                // at the normal priority and FoundTag decides between them. The
+                // DjVu INFO chunk is the low-priority one (`PRIORITY => 0, # first
+                // INFO block takes priority`, DjVu.pm line 60).
+                let is_native_doc = |g1: &str| matches!(g1, "PDF" | "PostScript" | "DjVu");
                 let other_names: std::collections::HashSet<String> = tags
                     .iter()
                     .filter(|t| !is_native_doc(&t.group.family1) && !t.print_value.is_empty())
@@ -1951,6 +1955,20 @@ impl ExifTool {
                         // promoted back to 1 only inside the PRIORITY_DIR
                         // (ExifTool.pm:9552-9555). A sub-document still never
                         // displaces the main document's tag.
+                        // `XMP-pdf:Keywords => { Priority => -1 }`
+                        // (XMP.pm line 1238), the one XMP property ExifTool puts
+                        // below 0. Perl only ever promotes a priority that is
+                        // FALSE, so this one is neither raised to 1 as a stored
+                        // value (ExifTool.pm:9544-9551) nor promoted inside the
+                        // PRIORITY_DIR (:9554): it can never take a name.
+                        if t.group.family0 == "XMP"
+                            && crate::tags::priority0_generated::xmp_is_below_priority0(
+                                &t.group.family1,
+                                &t.name,
+                            )
+                        {
+                            return -1;
+                        }
                         if t.priority == crate::tag::PRIORITY_EXPLICIT_ZERO {
                             if t.group.family3 != MAIN_DOCUMENT {
                                 return 0;
@@ -1973,10 +1991,13 @@ impl ExifTool {
                             t.priority.max(1)
                         }
                     };
+                    // `unless ($oldPriority) { ... $oldPriority = 1 }`
+                    // (ExifTool.pm:9544-9551): a stored priority is promoted only
+                    // when it is FALSE, so 0 becomes 1 and a negative one stays.
+                    let promoted = |p: i32| if p == 0 { 1 } else { p };
                     let mut winner = idxs[0];
                     for &i in &idxs[1..] {
-                        // The stored tag's priority is promoted to at least 1.
-                        if eff(i) >= eff(winner).max(1) {
+                        if eff(i) >= promoted(eff(winner)) {
                             winner = i;
                         }
                     }

@@ -178,21 +178,12 @@ fn parse_ant(data: &[u8], tags: &mut Vec<Tag>) {
         }
     }
 
-    // Look for (url ...) blocks
-    let mut search = text;
-    let mut url_start = 0;
-    while let Some(pos) = search.find("(url ") {
-        let from = url_start + pos;
-        if let Some(url) = extract_sexpr_value(&text[from..], "url") {
-            tags.push(mk_meta("URL", "URL", Value::String(url)));
-        }
-        let advance = pos + 5;
-        if advance >= search.len() {
-            break;
-        }
-        search = &search[advance..];
-        url_start += advance;
-    }
+    // Nothing else: `%Image::ExifTool::DjVu::Ant` (DjVu.pm lines 116-127)
+    // declares only `metadata` and `xmp`, and ProcessAnt skips every other
+    // annotation — `next if ref $tag or not defined $$tagTablePtr{$tag}`. A
+    // top-level `(url ...)` is therefore NOT a tag; the URL ExifTool reports
+    // comes from `url => { Name => 'URL' }` inside the metadata block
+    // (`%Image::ExifTool::DjVu::Meta`, DjVu.pm line 155).
 }
 
 fn find_sexpr(text: &str, name: &str) -> Option<usize> {

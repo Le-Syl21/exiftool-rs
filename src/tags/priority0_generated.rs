@@ -733,6 +733,22 @@ pub fn xmp_is_priority0(family1: &str, name: &str) -> bool {
         .is_ok()
 }
 
+/// `(family1, name)` pairs ExifTool stores BELOW priority 0, sorted for binary
+/// search. A negative priority is not the same as 0: FoundTag only promotes a
+/// stored priority that is false — `unless ($oldPriority) { $oldPriority = 1 }`
+/// (ExifTool.pm:9544-9551) — and only raises a 0 to 1 inside the PRIORITY_DIR
+/// (:9554), so a negative one is left alone on both counts. It therefore never
+/// displaces anything and can itself be displaced by a priority-0 tag.
+static XMP_PRIORITY_BELOW0: &[(&str, &str)] = &[("XMP-pdf", "Keywords")];
+
+/// Whether ExifTool stores the XMP property `name` of namespace group `family1`
+/// below priority 0 — see [`XMP_PRIORITY_BELOW0`].
+pub fn xmp_is_below_priority0(family1: &str, name: &str) -> bool {
+    XMP_PRIORITY_BELOW0
+        .binary_search_by(|&(g, n)| g.cmp(family1).then_with(|| n.cmp(name)))
+        .is_ok()
+}
+
 /// `(IFD tag id, tag name)` pairs an EXIF-family table stores at priority 0,
 /// sorted for binary search. The name is part of the key because 0x011c is
 /// PlanarConfiguration (priority 0) in `Exif::Main` but Gamma (priority 1) in

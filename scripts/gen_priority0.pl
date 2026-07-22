@@ -57,6 +57,7 @@ sub resolve_priority {
 }
 
 my %seen;     # XMP: "group1\tname"
+my %below;    # XMP: "group1\tname", for a priority BELOW 0
 my %exif;     # EXIF: numeric id => { name => priority }
 my %qt;       # QuickTime: "TableName\tatom code" => priority
 
@@ -102,12 +103,16 @@ foreach my $tableName (sort keys %$all) {
             }
 
             next unless $family0 eq 'XMP';
-            next unless defined $priority and $priority == 0;
+            next unless defined $priority and $priority <= 0;
             my $group1 = $$table{GROUPS}{1}
                 // ($$tagInfo{Groups} ? $$tagInfo{Groups}{1} : undef)
                 // next;
             next unless $group1 =~ /^XMP-/;
-            $seen{"$group1\t$name"} = 1;
+            if ($priority < 0) {
+                $below{"$group1\t$name"} = 1;
+            } else {
+                $seen{"$group1\t$name"} = 1;
+            }
         }
     }
 }
@@ -170,12 +175,37 @@ pub fn xmp_is_priority0(family1: &str, name: &str) -> bool {
         .is_ok()
 }
 
+/// `(family1, name)` pairs ExifTool stores BELOW priority 0, sorted for binary
+/// search. A negative priority is not the same as 0: FoundTag only promotes a
+/// stored priority that is false — `unless ($oldPriority) { $oldPriority = 1 }`
+/// (ExifTool.pm:9544-9551) — and only raises a 0 to 1 inside the PRIORITY_DIR
+/// (:9554), so a negative one is left alone on both counts. It therefore never
+/// displaces anything and can itself be displaced by a priority-0 tag.
+static XMP_PRIORITY_BELOW0: &[(&str, &str)] = &[
+MIDDLE
+
+foreach my $entry (sort keys %below) {
+    my ($group1, $name) = split /\t/, $entry;
+    print qq{    ("$group1", "$name"),\n};
+}
+
+print <<'MIDDLE1B';
+];
+
+/// Whether ExifTool stores the XMP property `name` of namespace group `family1`
+/// below priority 0 — see [`XMP_PRIORITY_BELOW0`].
+pub fn xmp_is_below_priority0(family1: &str, name: &str) -> bool {
+    XMP_PRIORITY_BELOW0
+        .binary_search_by(|&(g, n)| g.cmp(family1).then_with(|| n.cmp(name)))
+        .is_ok()
+}
+
 /// `(IFD tag id, tag name)` pairs an EXIF-family table stores at priority 0,
 /// sorted for binary search. The name is part of the key because 0x011c is
 /// PlanarConfiguration (priority 0) in `Exif::Main` but Gamma (priority 1) in
 /// `PanasonicRaw::Main`.
 static EXIF_PRIORITY0: &[(u16, &str)] = &[
-MIDDLE
+MIDDLE1B
 
 foreach my $id (sort { $a <=> $b } keys %exif) {
     foreach my $name (sort keys %{$exif{$id}}) {
