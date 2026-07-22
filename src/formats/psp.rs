@@ -156,19 +156,10 @@ fn parse_image_block(data: &[u8], tags: &mut Vec<Tag>) {
     let num_colors = u32::from_le_bytes([data[23], data[24], data[25], data[26]]);
     tags.push(mk("NumColors", "Number of Colors", Value::U32(num_colors)));
 
-    // XResolution and YResolution (same value, stored as resolution)
-    if resolution > 0.0 {
-        tags.push(mk(
-            "XResolution",
-            "X Resolution",
-            Value::String(format!("{}", resolution)),
-        ));
-        tags.push(mk(
-            "YResolution",
-            "Y Resolution",
-            Value::String(format!("{}", resolution)),
-        ));
-    }
+    // No XResolution/YResolution here: PSP.pm:79-83 gives the image-attributes
+    // block one resolution field, `8 => ImageResolution` (double), plus
+    // ResolutionUnit. The X/YResolution ExifTool reports for a PSP file come
+    // from the embedded EXIF IFD0, read by `parse_ext_block`.
 }
 
 fn parse_creator_block(data: &[u8], tags: &mut Vec<Tag>) {
@@ -290,12 +281,19 @@ fn parse_ext_block(data: &[u8], tags: &mut Vec<Tag>) {
         pos += len;
 
         if tag == 3 && val_data.len() > 14 && &val_data[..6] == b"Exif\0\0" {
-            // EXIF block: starts with "Exif\0\0" then byte order + TIFF header
-            let exif_data = &val_data[6..];
-            if let Ok(exif_tags) = crate::metadata::exif::ExifReader::read(exif_data) {
-                // PSP doesn't expose ExifByteOrder
-                tags.extend(exif_tags.into_iter().filter(|t| t.name != "ExifByteOrder"));
-            }
+            // EXIF block: "Exif\0\0", then an 8-byte TIFF header, then the IFD.
+            // PSP.pm:199-213 spells out the quirk: "They use a standard TIFF
+            // offset to point to the first IFD, but after that the offsets are
+            // relative to the start of the IFD instead of the TIFF base".
+            // ExifTool answers it by processing the directory at Exif+14 with
+            // `Base => $start`, i.e. the IFD is its own offset origin — reading
+            // it as a plain TIFF puts every value 8 bytes off.
+            let little_endian = val_data[6] == b'I';
+            let ifd = &val_data[14..];
+            let exif_tags =
+                crate::metadata::exif::ExifReader::read_ifd_at(ifd, little_endian, 0, "IFD0");
+            // PSP doesn't expose ExifByteOrder
+            tags.extend(exif_tags.into_iter().filter(|t| t.name != "ExifByteOrder"));
         }
     }
 }

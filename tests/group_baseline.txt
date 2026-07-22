@@ -33,8 +33,6 @@ OpenEXR.exr	ImageWidth	family1
 PGF.pgf	Comment	family1
 PNG.png	Comment	family1
 PSP.psp	Copyright	family1
-PSP.psp	XResolution	family1
-PSP.psp	YResolution	family1
 Pentax.jpg	ISO	family1
 Pentax.jpg	ISO	family2
 PhaseOne.iiq	FocalLength	family1

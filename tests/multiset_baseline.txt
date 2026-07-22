@@ -29,9 +29,7 @@ Matroska.mkv	ee	extra	0	DefaultDuration	40 ms
 Minolta.mrw	ee	missing	0	ColorMode	Natural
 PGF.pgf	ee	missing	0	ImageHeight	1
 PGF.pgf	ee	missing	0	ImageWidth	1
-PSP.psp	ee	extra	0	Copyright	.
-PSP.psp	ee	extra	0	XResolution	0.8013564977
-PSP.psp	ee	extra	0	YResolution	200
+PSP.psp	ee	extra	0	Copyright	© 2010 Phil Harvey
 PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
 PhotoMechanic.jpg	ee	missing	0	Prefs	Tagged:0, ColorClass:0, Rating:0, FrameNum:-00001
 QuickTime.m4a	ee	missing	0	CoverArt	(Binary data 19 bytes, use -b option to extract)
