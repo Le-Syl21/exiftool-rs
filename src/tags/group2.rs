@@ -129,6 +129,17 @@ pub fn family2_for(
     if maker_ambiguous {
         return None;
     }
+    // Reading back an ExifTool-written RDF/XML dump, ExifTool restores each
+    // property's ORIGINAL family-1 group from the namespace URI it was written
+    // under — `IFD0`, `ExifIFD`, `Nikon`, `XML-File`, … (XMP.pm lines 3599-3614).
+    // That magic sets families 0 and 1 only: the tag itself is still invented in
+    // `%Image::ExifTool::XMP::other`, `GROUPS => { 2 => 'Unknown' }` (XMP.pm line
+    // 2740), so no name tier may answer for it. A family-1 group that is neither
+    // `XMP` nor `XMP-<prefix>` is exactly what tells those restored tags apart
+    // from a schema-backed XMP property.
+    if family0 == "XMP" && family1 != "XMP" && !family1.starts_with("XMP-") {
+        return Some(XMP_UNKNOWN_NAMESPACE);
+    }
     // A CIFF record embedded in a JPEG is read with the very tables a .crw file
     // uses; ExifTool only overrides their family-1 group name (`Groups => { 1 =>
     // 'CIFF' }`), so the categories must be looked up under the real ones.
