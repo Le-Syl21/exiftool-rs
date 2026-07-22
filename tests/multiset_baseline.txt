@@ -14,8 +14,6 @@ FlashPix.ppt	ee	missing	0	CodePage	Mac Roman (Western European)
 FlashPix.ppt	ee	missing	1	CodePage	Mac Roman (Western European)
 Google.jpg	ee	extra	0	XMPToolkit	Adobe XMP Core 5.1.0-jc003
 Google.jpg	ee	missing	0	CreateDate	2023:10:06 22:53:51+02:00
-HTML.html	ee	extra	0	Subject	Greek: &alpha; &beta; &gamma;
-HTML.html	ee	missing	0	Subject	Greek: α β γ
 InfiRay.jpg	ee	missing	0	GPSAltitude	undef
 JXL2.jxl	ee	extra	0	ExifByteOrder	Big-endian (Motorola, MM)
 Kodak.jpg	ee	missing	0	ExposureTime	1/180
