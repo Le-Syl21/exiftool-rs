@@ -10,7 +10,6 @@ Google.jpg	ee	missing	0	CreateDate	2023:10:06 22:53:51+02:00
 InfiRay.jpg	ee	missing	0	GPSAltitude	undef
 PSP.psp	ee	extra	0	Copyright	© 2010 Phil Harvey
 PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
-PhotoMechanic.jpg	ee	missing	0	Prefs	Tagged:0, ColorClass:0, Rating:0, FrameNum:-00001
 SigmaDP2.x3f	default	extra	0	PreviewImage	(Binary data 20 bytes, use -b option to extract)
 SigmaDP2.x3f	default	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
 SigmaDP2.x3f	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)

@@ -446,6 +446,16 @@ static IPTC_TAGS: &[IptcTagInfo] = &[
         description: "Object Preview Data",
         is_string: false,
     },
+    // IPTC.pm:651 — Prefs, Format => 'string[0,64]', the PhotoMechanic
+    // preferences string. Distinct from the PhotoMechanic trailer's int32s
+    // dataset 221 (Tagged): this one is the variable-length APP13 IPTC string.
+    IptcTagInfo {
+        record: 2,
+        dataset: 221,
+        name: "Prefs",
+        description: "Prefs",
+        is_string: true,
+    },
     IptcTagInfo {
         record: 2,
         dataset: 7,

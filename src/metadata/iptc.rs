@@ -272,6 +272,10 @@ fn iptc_print_conv(record: u8, dataset: u8, s: &str) -> Option<String> {
             }
             .to_string(),
         ),
+        // Prefs (221): IPTC.pm:655 rewrites the first " N: N: N:S" run into the
+        // labelled form "Tagged:N, ColorClass:N, Rating:N, FrameNum:S". The
+        // substitution is applied once; text that doesn't match is returned as-is.
+        221 => Some(prefs_print_conv(s)),
         // ObjectCycle (75): PrintConv { a, p, b }, unmatched → "Unknown ($val)".
         75 => Some(match s {
             "a" => "Morning".to_string(),
@@ -281,6 +285,59 @@ fn iptc_print_conv(record: u8, dataset: u8, s: &str) -> Option<String> {
         }),
         _ => None,
     }
+}
+
+/// Perl PrintConv for IPTC Prefs (record 2 dataset 221, IPTC.pm:655):
+///   `s[\s*(\d+):\s*(\d+):\s*(\d+):\s*(\S*)][Tagged:$1, ColorClass:$2, Rating:$3, FrameNum:$4]`
+/// applied once. `\S*` is greedy but stops at whitespace, so FrameNum captures
+/// the remaining non-space token (e.g. a negative "-00001").
+fn prefs_print_conv(s: &str) -> String {
+    let b = s.as_bytes();
+    // Scan for the leftmost match of the regex.
+    for start in 0..b.len() {
+        let mut i = start;
+        // \s*
+        while i < b.len() && b[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        let mut nums: [&str; 3] = [""; 3];
+        let mut ok = true;
+        for num in &mut nums {
+            let d0 = i;
+            while i < b.len() && b[i].is_ascii_digit() {
+                i += 1;
+            }
+            if i == d0 || i >= b.len() || b[i] != b':' {
+                ok = false;
+                break;
+            }
+            *num = &s[d0..i];
+            i += 1; // consume ':'
+            // \s* before the next field
+            while i < b.len() && b[i].is_ascii_whitespace() {
+                i += 1;
+            }
+        }
+        if !ok {
+            continue;
+        }
+        // (\S*) — the FrameNum token: every following non-whitespace char.
+        let f0 = i;
+        while i < b.len() && !b[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        let frame = &s[f0..i];
+        return format!(
+            "{}Tagged:{}, ColorClass:{}, Rating:{}, FrameNum:{}{}",
+            &s[..start],
+            nums[0],
+            nums[1],
+            nums[2],
+            frame,
+            &s[i..]
+        );
+    }
+    s.to_string()
 }
 
 /// Look up a PhotoMechanic SoftEdit field (IPTC record 2, dataset 209-239).
