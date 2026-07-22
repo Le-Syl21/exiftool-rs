@@ -10132,6 +10132,17 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                     Some(t.to_string())
                 }
             }
+            // ExposureMode (Sigma.pm:282): one-letter code.
+            0x0008 => value.as_str().and_then(|s| {
+                match s.trim() {
+                    "A" => Some("Aperture-priority AE"),
+                    "M" => Some("Manual"),
+                    "P" => Some("Program AE"),
+                    "S" => Some("Shutter speed priority AE"),
+                    _ => None,
+                }
+                .map(str::to_string)
+            }),
             // ExposureCompensation (string form): ValueConv strips "Expo:".
             0x000c => value
                 .as_str()

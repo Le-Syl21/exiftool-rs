@@ -14,6 +14,21 @@ use crate::value::Value;
 
 thread_local! {
     static SHOW_UNKNOWN: Cell<u8> = const { Cell::new(0) };
+    /// Whether every instance of a tag name must be reported. ExifTool's CLI turns
+    /// the Duplicates option on together with -ee, and `FoundTag` then keeps each
+    /// instance under its own key; the name-level pruning in this module reproduces
+    /// the Duplicates-off collapse and must be skipped in that case.
+    static KEEP_DUPLICATES: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Set whether duplicate tag names must all be kept (ExifTool's Duplicates option).
+pub fn set_keep_duplicates(keep: bool) {
+    KEEP_DUPLICATES.with(|s| s.set(keep));
+}
+
+/// Whether duplicate tag names must all be kept.
+fn keep_duplicates() -> bool {
+    KEEP_DUPLICATES.with(|s| s.get())
 }
 
 /// Set the show_unknown level for the current thread (used by MakerNotes).
@@ -329,7 +344,12 @@ impl ExifReader {
             // In Perl ExifTool, MakerNotes tags with equal/higher priority overwrite EXIF tags.
             // Tags in the EXIF-primary list: EXIF wins (skip MakerNotes duplicate).
             // Other tags: MakerNotes wins (remove EXIF version, add MakerNotes version).
-            {
+            if keep_duplicates() {
+                // Duplicates are kept: ExifTool reports the EXIF and the maker-note
+                // copy of a tag side by side (e.g. FujiFilm Contrast/Saturation/
+                // Sharpness or Panasonic TextStamp under -ee).
+                tags.extend(mn_tags);
+            } else {
                 // Tags where EXIF takes priority over MakerNotes (structural/authoritative EXIF)
                 let exif_primary: &[&str] = EXIF_PRIMARY_TAGS;
                 // Only maker-note tags with non-negative priority remove the EXIF

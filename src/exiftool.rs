@@ -1090,6 +1090,12 @@ impl ExifTool {
     pub fn extract_info_from_bytes(&self, data: &[u8], path: &Path) -> Result<Vec<Tag>> {
         // Propagate show_unknown to EXIF/MakerNotes parsers via thread-local
         crate::metadata::exif::set_show_unknown(self.options.show_unknown);
+        // Propagate the Duplicates option (see `collapse_duplicates` below) to the
+        // EXIF/MakerNotes reader, whose name-level pruning must not run when every
+        // instance has to be reported.
+        crate::metadata::exif::set_keep_duplicates(
+            self.options.duplicates || self.options.extract_embedded > 0,
+        );
         // Propagate process_compressed to format readers via thread-local
         crate::formats::pdf::set_process_compressed(self.options.process_compressed);
 
