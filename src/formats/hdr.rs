@@ -1,156 +1,226 @@
 //! Radiance HDR format reader.
+//!
+//! Mirrors `Image::ExifTool::Radiance::ProcessHDR` (Radiance.pm lines 66-107).
 
 use super::misc::mktag;
 use crate::error::{Error, Result};
 use crate::tag::Tag;
 use crate::value::Value;
 
+/// The named entries of `%Image::ExifTool::Radiance::Main` (Radiance.pm lines
+/// 21-61), keyed by the lower-cased header key as ExifTool stores them.
+fn radiance_tag_name(key: &str) -> Option<&'static str> {
+    Some(match key {
+        "software" => "Software",
+        "view" => "View",
+        "format" => "Format",
+        "exposure" => "Exposure",
+        "gamma" => "Gamma",
+        "colorcorr" => "ColorCorrection",
+        "pixaspect" => "PixelAspectRatio",
+        "primaries" => "ColorPrimaries",
+        _ => return None,
+    })
+}
+
+/// The PrintConv of the `_orient` tag (Radiance.pm lines 32-42).
+fn orientation_print_conv(orient: &str) -> Option<&'static str> {
+    Some(match orient {
+        "-Y +X" => "Horizontal (normal)",
+        "-Y -X" => "Mirror horizontal",
+        "+Y -X" => "Rotate 180",
+        "+Y +X" => "Mirror vertical",
+        "+X -Y" => "Mirror horizontal and rotate 270 CW",
+        "+X +Y" => "Rotate 90 CW",
+        "-X +Y" => "Mirror horizontal and rotate 90 CW",
+        "-X -Y" => "Rotate 270 CW",
+        _ => return None,
+    })
+}
+
+/// Name a header key ExifTool has no entry for, as ProcessHDR does
+/// (Radiance.pm lines 96-102): drop every character outside `-_a-zA-Z0-9`,
+/// require more than one to survive, then upper-case the first.
+fn dynamic_tag_name(key: &str) -> Option<String> {
+    let name: String = key
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+        .collect();
+    if name.chars().count() <= 1 {
+        return None;
+    }
+    let mut chars = name.chars();
+    let first = chars.next()?;
+    Some(format!("{}{}", first.to_uppercase(), chars.as_str()))
+}
+
+/// Split a header line the way ProcessHDR's `/^(.*)?\s*=\s*(.*)/` does
+/// (Radiance.pm line 88). `(.*)` is greedy, so the key runs to the LAST `=` on
+/// the line, the `\s*` before it matches nothing and any whitespace in front of
+/// the `=` stays part of the key; the `\s*` after it does eat the whitespace in
+/// front of the value. A line with no `=` is not a key/value pair at all.
+fn split_key_value(line: &str) -> Option<(&str, &str)> {
+    let eq = line.rfind('=')?;
+    let value = line[eq + 1..].trim_start_matches(|c: char| c.is_ascii_whitespace());
+    Some((&line[..eq], value))
+}
+
 pub fn read_hdr(data: &[u8]) -> Result<Vec<Tag>> {
-    if data.len() < 10 || (!data.starts_with(b"#?RADIANCE") && !data.starts_with(b"#?RGBE")) {
+    // `return 0 unless ... $buff =~ /^#\?(RADIANCE|RGBE)\x0a/s` (Radiance.pm
+    // line 75): the signature is a line of its own.
+    let Some(first_end) = data.iter().position(|b| *b == b'\n') else {
+        return Err(Error::InvalidData("not a Radiance HDR file".into()));
+    };
+    let magic = &data[..first_end];
+    if magic != b"#?RADIANCE" && magic != b"#?RGBE" {
         return Err(Error::InvalidData("not a Radiance HDR file".into()));
     }
 
     let mut tags = Vec::new();
-    let text = crate::encoding::decode_utf8_or_latin1(&data[..data.len().min(8192)]);
+    // `local $/ = "\x0a"`, then `chomp`: lines end at a newline and only the
+    // newline is stripped, so a CR stays part of the value.
+    let mut lines = data[first_end..]
+        .split(|b| *b == b'\n')
+        .skip(1)
+        .map(crate::encoding::decode_utf8_or_latin1);
 
-    // Track key-value pairs and commands (last wins for non-list tags)
-    let mut kv_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
-    let mut last_command: Option<String> = None;
-    let mut found_dims = false;
-
-    for line in text.lines() {
-        let line = line.trim_end_matches('\r');
-        // Skip the magic header line
-        if line.starts_with("#?") {
-            continue;
-        }
-        // Comment lines
-        if line.starts_with('#') {
-            continue;
-        }
-        // Empty line marks end of header metadata
-        if line.is_empty() {
-            continue;
-        }
-        // Dimension line (resolution) - last header line before data
-        if line.starts_with("-Y ")
-            || line.starts_with("+Y ")
-            || line.starts_with("-X ")
-            || line.starts_with("+X ")
-        {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 4 {
-                // Format: -Y <h> +X <w> or similar
-                let axis1 = parts[0]; // e.g. "-Y"
-                let axis3 = parts[2]; // e.g. "+X"
-                let orient = format!("{} {}", axis1, axis3);
-                // Map orientation
-                let orient_name = match orient.as_str() {
-                    "-Y +X" => "Horizontal (normal)",
-                    "-Y -X" => "Mirror horizontal",
-                    "+Y -X" => "Rotate 180",
-                    "+Y +X" => "Mirror vertical",
-                    "+X -Y" => "Mirror horizontal and rotate 270 CW",
-                    "+X +Y" => "Rotate 90 CW",
-                    "-X +Y" => "Mirror horizontal and rotate 90 CW",
-                    "-X -Y" => "Rotate 270 CW",
-                    _ => &orient,
-                };
-                kv_map.insert("_orient".to_string(), orient_name.to_string());
-                if let Ok(dim1) = parts[1].parse::<u32>() {
-                    // first axis is Y (height)
-                    if axis1 == "-Y" || axis1 == "+Y" {
-                        kv_map.insert("ImageHeight".to_string(), dim1.to_string());
-                    } else {
-                        kv_map.insert("ImageWidth".to_string(), dim1.to_string());
-                    }
-                }
-                if let Ok(dim2) = parts[3].parse::<u32>() {
-                    if axis3 == "-X" || axis3 == "+X" {
-                        kv_map.insert("ImageWidth".to_string(), dim2.to_string());
-                    } else {
-                        kv_map.insert("ImageHeight".to_string(), dim2.to_string());
-                    }
-                }
-            }
-            found_dims = true;
+    for line in lines.by_ref() {
+        // `last unless length($buff) > 0 and length($buff) < 4096`: an empty
+        // line ends the header, and so does an absurdly long one.
+        if line.is_empty() || line.len() >= 4096 {
             break;
         }
-        // Check for key=value pairs
-        if let Some(eq_pos) = line.find('=') {
-            let key = line[..eq_pos].trim().to_lowercase();
-            let val = line[eq_pos + 1..].trim().to_string();
-            // Map known keys
-            let mapped_key = match key.as_str() {
-                "software" => "Software",
-                "view" => "View",
-                "format" => "Format",
-                "exposure" => "Exposure",
-                "gamma" => "Gamma",
-                "colorcorr" => "ColorCorrection",
-                "pixaspect" => "PixelAspectRatio",
-                "primaries" => "ColorPrimaries",
-                _ => "",
-            };
-            if !mapped_key.is_empty() {
-                kv_map.insert(mapped_key.to_string(), val);
+        if let Some(rest) = line.strip_prefix('#') {
+            // `s/^#\s*//` (Radiance.pm line 84).
+            let comment = rest.trim_start_matches(|c: char| c.is_ascii_whitespace());
+            if !comment.is_empty() {
+                tags.push(mktag(
+                    "Radiance",
+                    "Comment",
+                    "Comment",
+                    Value::String(comment.to_string()),
+                ));
             }
-        } else {
-            // Not a key=value, not a comment, not empty, not dimension: it's a command
-            last_command = Some(line.to_string());
+            continue;
+        }
+        let Some((key, value)) = split_key_value(&line) else {
+            // Anything that is not a comment and holds no `=` is a command.
+            tags.push(mktag(
+                "Radiance",
+                "Command",
+                "Command",
+                Value::String(line.clone()),
+            ));
+            continue;
+        };
+        let key = key.to_lowercase();
+        let name = match radiance_tag_name(&key) {
+            Some(name) => name.to_string(),
+            None => match dynamic_tag_name(&key) {
+                Some(name) => name,
+                // `next unless length($name) > 1`: nothing is extracted.
+                None => continue,
+            },
+        };
+        tags.push(mktag(
+            "Radiance",
+            &name,
+            &name,
+            Value::String(value.to_string()),
+        ));
+    }
+
+    // The line after the header carries the image dimensions (Radiance.pm
+    // lines 103-107). Height is always the first number and width the second,
+    // whichever axes name them.
+    if let Some(line) = lines.next() {
+        if let Some((orient, height, width)) = parse_resolution(&line) {
+            let print = orientation_print_conv(&orient)
+                .map(str::to_string)
+                .unwrap_or(orient);
+            tags.push(mktag(
+                "Radiance",
+                "Orientation",
+                "Orientation",
+                Value::String(print),
+            ));
+            tags.push(mktag(
+                "File",
+                "ImageHeight",
+                "Image Height",
+                Value::U32(height),
+            ));
+            tags.push(mktag(
+                "File",
+                "ImageWidth",
+                "Image Width",
+                Value::U32(width),
+            ));
         }
     }
 
-    // Emit tags in a consistent order (matching Perl output order)
-    if let Some(cmd) = last_command {
-        tags.push(mktag("Radiance", "Command", "Command", Value::String(cmd)));
-    }
-    if let Some(v) = kv_map.get("Exposure") {
-        tags.push(mktag(
-            "Radiance",
-            "Exposure",
-            "Exposure",
-            Value::String(v.clone()),
-        ));
-    }
-    if let Some(v) = kv_map.get("Format") {
-        tags.push(mktag(
-            "Radiance",
-            "Format",
-            "Format",
-            Value::String(v.clone()),
-        ));
-    }
-    if let Some(h) = kv_map.get("ImageHeight") {
-        if let Ok(hv) = h.parse::<u32>() {
-            tags.push(mktag("File", "ImageHeight", "Image Height", Value::U32(hv)));
-        }
-    }
-    if let Some(w) = kv_map.get("ImageWidth") {
-        if let Ok(wv) = w.parse::<u32>() {
-            tags.push(mktag("File", "ImageWidth", "Image Width", Value::U32(wv)));
-        }
-    }
-    if let Some(v) = kv_map.get("_orient") {
-        tags.push(mktag(
-            "Radiance",
-            "Orientation",
-            "Orientation",
-            Value::String(v.clone()),
-        ));
-    }
-    if let Some(v) = kv_map.get("Software") {
-        tags.push(mktag(
-            "Radiance",
-            "Software",
-            "Software",
-            Value::String(v.clone()),
-        ));
-    }
-    if let Some(v) = kv_map.get("View") {
-        tags.push(mktag("Radiance", "View", "View", Value::String(v.clone())));
-    }
-
-    let _ = found_dims;
     Ok(tags)
+}
+
+/// `/([-+][XY])\s*(\d+)\s*([-+][XY])\s*(\d+)/` (Radiance.pm line 104), which
+/// yields `("$1 $3", $2, $4)`.
+fn parse_resolution(line: &str) -> Option<(String, u32, u32)> {
+    let bytes: Vec<char> = line.chars().collect();
+    let mut i = 0;
+    while i < bytes.len() {
+        let Some((axis1, mut j)) = match_axis(&bytes, i) else {
+            i += 1;
+            continue;
+        };
+        j = skip_spaces(&bytes, j);
+        let Some((first, mut j)) = match_digits(&bytes, j) else {
+            i += 1;
+            continue;
+        };
+        j = skip_spaces(&bytes, j);
+        let Some((axis2, mut j)) = match_axis(&bytes, j) else {
+            i += 1;
+            continue;
+        };
+        j = skip_spaces(&bytes, j);
+        let Some((second, _)) = match_digits(&bytes, j) else {
+            i += 1;
+            continue;
+        };
+        return Some((format!("{axis1} {axis2}"), first, second));
+    }
+    None
+}
+
+fn match_axis(chars: &[char], i: usize) -> Option<(String, usize)> {
+    let sign = *chars.get(i)?;
+    let axis = *chars.get(i + 1)?;
+    if matches!(sign, '-' | '+') && matches!(axis, 'X' | 'Y') {
+        Some((format!("{sign}{axis}"), i + 2))
+    } else {
+        None
+    }
+}
+
+fn skip_spaces(chars: &[char], mut i: usize) -> usize {
+    while i < chars.len() && chars[i].is_whitespace() {
+        i += 1;
+    }
+    i
+}
+
+fn match_digits(chars: &[char], i: usize) -> Option<(u32, usize)> {
+    let mut j = i;
+    while j < chars.len() && chars[j].is_ascii_digit() {
+        j += 1;
+    }
+    if j == i {
+        return None;
+    }
+    chars[i..j]
+        .iter()
+        .collect::<String>()
+        .parse()
+        .ok()
+        .map(|v| (v, j))
 }
