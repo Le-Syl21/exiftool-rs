@@ -8,16 +8,7 @@ AIFF.aif	Duration	family1
 AIFF.aif	Duration	family2
 APE.ape	Duration	family2
 APE.mpc	DateTimeOriginal	family1
-Android.mp4	MatrixStructure	family1
 Canon1DmkIII.jpg	WhiteBalance	family2
-CanonRaw.cr3	BitDepth	family1
-CanonRaw.cr3	CompressorID	family1
-CanonRaw.cr3	GraphicsMode	family1
-CanonRaw.cr3	MatrixStructure	family1
-CanonRaw.cr3	OpColor	family1
-CanonRaw.cr3	VideoFrameRate	family1
-CanonRaw.cr3	XResolution	family1
-CanonRaw.cr3	YResolution	family1
 DNG.dng	Creator	family2
 DNG.dng	Flash	family1
 DjVu.djvu	CreateDate	family1
@@ -108,7 +99,6 @@ QuickTime.heic	ImageHeight	family2
 QuickTime.heic	ImageWidth	family1
 QuickTime.heic	ImageWidth	family2
 QuickTime.heic	PrimaryItemReference	family1
-QuickTime.m4a	MatrixStructure	family1
 QuickTime.m4a	VolumeNormalization	family1
 QuickTime.mov	ExposureCompensation	family1
 QuickTime.mov	ExposureTime	family1
@@ -116,7 +106,6 @@ QuickTime.mov	FNumber	family1
 QuickTime.mov	FocalLength	family1
 QuickTime.mov	ISO	family1
 QuickTime.mov	Make	family1
-QuickTime.mov	MatrixStructure	family1
 QuickTime.mov	WhiteBalance	family1
 RIFF.avi	Duration	family1
 RIFF.avi	Duration	family2

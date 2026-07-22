@@ -1190,6 +1190,15 @@ fn parse_matrix_structure(bytes: &[u8]) -> String {
 ///         3=TrackID, 5=TrackDuration, 8=TrackLayer(int16u@32), 9=TrackVolume(int16u@36),
 ///         10=MatrixStructure(fixed32s[9]@40), 19=ImageWidth(fixed32u@76), 20=ImageHeight(fixed32u@80)
 fn parse_tkhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state: &mut QtState) {
+    // Every tkhd field but MatrixStructure carries its own `Priority => 0`
+    // (QuickTime.pm:1503, 1508, 1516, 1524, 1528, 1542, 1547, 1574, 1579), so
+    // the FIRST track wins each of them once duplicates are collapsed, while
+    // MatrixStructure keeps the normal priority and follows last-wins.
+    let mk = |name: &str, description: &str, value: Value| -> Tag {
+        let mut t = mk(name, description, value);
+        t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+        t
+    };
     if start + 4 > end {
         return;
     }
@@ -1288,7 +1297,7 @@ fn parse_tkhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
     if data_rest.len() >= 52 {
         let matrix_str = parse_matrix_structure(&data_rest[16..52]);
         if !matrix_str.is_empty() {
-            tags.push(mk(
+            tags.push(self::mk(
                 "MatrixStructure",
                 "Matrix Structure",
                 Value::String(matrix_str),

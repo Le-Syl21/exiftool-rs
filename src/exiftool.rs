@@ -1855,18 +1855,17 @@ impl ExifTool {
                             crate::tags::priority0_generated::xmp_is_priority0(g1, name)
                                 || crate::tags::group2::xmp_property_is_unknown(g1, name)
                         }
-                        // A QuickTime movie's tracks are separate documents to
-                        // ExifTool, so a track tag never overrides the movie's.
-                        // The movie's own tags keep the default priority: the sole
-                        // `PRIORITY => 0` table in QuickTime.pm is Bitrate (:1162,
-                        // "often filled with zeros"), whose three tags are named here.
+                        // A QuickTime track is NOT a sub-document: ProcessMOV
+                        // only sets `$$et{SET_GROUP1} = 'Track'.++$track`
+                        // (QuickTime.pm:10354) and never touches DOC_NUM for a
+                        // track, so a track tag carries the normal priority and
+                        // the LAST track wins a duplicate. The sole
+                        // `PRIORITY => 0` table in QuickTime.pm is Bitrate
+                        // (:1162, "often filled with zeros"), whose three tags
+                        // are named here.
                         "QuickTime" => {
-                            g1.starts_with("Track")
-                                || (g1 == "QuickTime"
-                                    && matches!(
-                                        name,
-                                        "AverageBitrate" | "BufferSize" | "MaxBitrate"
-                                    ))
+                            g1 == "QuickTime"
+                                && matches!(name, "AverageBitrate" | "BufferSize" | "MaxBitrate")
                         }
                         // ExifTool's LOW_PRIORITY_DIR. SubIFDs are deliberately
                         // absent: ExifTool never demotes them, and a NEF's
