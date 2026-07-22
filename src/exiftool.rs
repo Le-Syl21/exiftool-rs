@@ -2232,7 +2232,10 @@ impl ExifTool {
             | FileType::Rw2
             | FileType::Srf => formats::tiff::read_tiff(data),
             // Phase One IIQ: TIFF + PhaseOne maker note block
-            FileType::Iiq => formats::iiq::read_iiq(data),
+            FileType::Iiq => formats::iiq::read_iiq(
+                data,
+                !self.options.duplicates && self.options.extract_embedded == 0,
+            ),
             // Image formats
             FileType::Gif => formats::gif::read_gif(data),
             FileType::Bmp => formats::bmp::read_bmp(data),

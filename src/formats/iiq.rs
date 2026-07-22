@@ -5,9 +5,29 @@ use crate::error::Result;
 use crate::tag::Tag;
 use crate::value::Value;
 
-pub fn read_iiq(data: &[u8]) -> Result<Vec<Tag>> {
+/// Read a Phase One IIQ file.
+///
+/// `collapse_duplicates` mirrors the engine-wide gate in `exiftool.rs`: ExifTool's
+/// CLI turns the Duplicates option on together with -ee, and every instance of a
+/// tag must then be reported. The name-level pruning below reproduces what
+/// ExifTool's Duplicates-off collapse does for this format, so it must be skipped
+/// when duplicates are kept — an IIQ genuinely holds IFD0, IFD1 and PhaseOne
+/// copies of ImageWidth/StripOffsets/SubfileType, and `exiftool -ee` prints them all.
+pub fn read_iiq(data: &[u8], collapse_duplicates: bool) -> Result<Vec<Tag>> {
     // Read standard TIFF tags first
     let mut tags = crate::formats::tiff::read_tiff(data).unwrap_or_default();
+
+    // ExifByteOrder is added by the outer exiftool.rs code already; drop the
+    // TIFF reader's copy unconditionally (this is not a Duplicates decision).
+    tags.retain(|t| t.name != "ExifByteOrder");
+
+    // Build ThumbnailTIFF now, while both IFDs are still complete: RebuildTIFF
+    // (Exif.pm:6139) reads every required tag from the group of the
+    // reduced-resolution IFD, and the duplicate pruning below would strip IFD1's
+    // copies of BitsPerSample & co.
+    if let Some(t) = crate::composite::build_thumbnail_tiff(&tags) {
+        tags.push(t);
+    }
 
     // For IIQ, the TIFF file has two IFDs:
     // IFD0: has the main camera settings but thumbnail image data (1x1 placeholder)
@@ -17,8 +37,7 @@ pub fn read_iiq(data: &[u8]) -> Result<Vec<Tag>> {
     // 2. Remove duplicate TIFF tags (keep first occurrence)
     // 3. Remove IFD0's StripOffsets/StripByteCounts (keep IFD1's)
     // 4. Remove 1x1 ImageWidth/ImageHeight placeholders
-    // 5. Remove ExifByteOrder (added by the outer exiftool.rs code already)
-    {
+    if collapse_duplicates {
         // First pass: identify which tags to remove
         let mut seen_names: std::collections::HashSet<String> = std::collections::HashSet::new();
         let mut strip_offsets_count = 0;
@@ -34,11 +53,6 @@ pub fn read_iiq(data: &[u8]) -> Result<Vec<Tag>> {
                 .collect();
 
         for (i, t) in tags.iter().enumerate() {
-            // Remove ExifByteOrder (already added by outer exiftool.rs)
-            if t.name == "ExifByteOrder" {
-                remove_indices.insert(i);
-                continue;
-            }
             // Remove the first SubfileType (IFD0's "full image" marker = value 0).
             // Match on the raw numeric value (the print value is now "Full-resolution image").
             if t.name == "SubfileType" && !subfile_type_removed {
@@ -163,7 +177,12 @@ pub fn read_iiq(data: &[u8]) -> Result<Vec<Tag>> {
     // Extend with PhaseOne tags, but don't add tags that already exist (skip dups)
     // Exception: FocalLength from PhaseOne should override EXIF's (remove EXIF version)
     // Actually: keep PhaseOne version for FocalLength (more accurate), remove EXIF
-    {
+    if !collapse_duplicates {
+        // Duplicates are kept: report every PhaseOne instance, exactly like
+        // `exiftool -ee` (which prints PhaseOne ISO/DateTimeOriginal/FocalLength/
+        // SerialNumber alongside the EXIF copies).
+        tags.extend(phaseone_tags);
+    } else {
         // Build set of existing tag names
         let _existing: std::collections::HashSet<String> =
             tags.iter().map(|t| t.name.clone()).collect();
@@ -418,6 +437,20 @@ fn iiq_decode_tag(
             };
             push(tags, "RawFormat", "Raw Format", s);
         }
+        0x0112 => {
+            // DateTimeOriginal (PhaseOne.pm:97): int32u Unix time,
+            // `ValueConv => 'ConvertUnixTime($val)'` (UTC — ExifTool only uses
+            // local time when ConvertUnixTime is called with $isLocal set).
+            if raw.len() >= 4 {
+                let v = iiq_read_u32(raw, 0, is_le);
+                push(
+                    tags,
+                    "DateTimeOriginal",
+                    "Date/Time Original",
+                    crate::metadata::makernotes::unix_time_to_datetime(v),
+                );
+            }
+        }
         0x0113 => {
             let v = if raw.len() >= 4 {
                 iiq_read_u32(raw, 0, is_le)
@@ -459,6 +492,22 @@ fn iiq_decode_tag(
                 "Sensor Temperature 2",
                 format!("{:.2} C", v),
             );
+        }
+        0x021c => {
+            // StripOffsets (PhaseOne.pm:144): `{ Name => 'StripOffsets', Binary => 1 }`.
+            // The table FORMAT is int32s (PhaseOne.pm:32), so the value is the
+            // space-joined list of int32s; the "Binary data N bytes" message counts
+            // the characters of that converted string, as for BlackLevelData.
+            let count = raw.len() / 4;
+            if count > 0 {
+                let s = (0..count)
+                    .map(|i| iiq_read_u32(raw, i * 4, is_le) as i32)
+                    .map(|v| v.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                let display = format!("(Binary data {} bytes, use -b option to extract)", s.len());
+                push(tags, "StripOffsets", "Strip Offsets", display);
+            }
         }
         0x021d => {
             // BlackLevel
@@ -648,7 +697,7 @@ fn iiq_parse_sensor_calibration(
             let eoff = sub_entry_start + j * 12;
             let etag = iiq_read_u32(sub, eoff, sub_is_le);
             let esize = iiq_read_u32(sub, eoff + 4, sub_is_le) as usize;
-            let _eval_ptr = iiq_read_u32(sub, eoff + 8, sub_is_le) as usize;
+            let eval_ptr = iiq_read_u32(sub, eoff + 8, sub_is_le) as usize;
 
             if etag == 0x0400 {
                 // SensorDefects (binary undef)
@@ -661,7 +710,33 @@ fn iiq_parse_sensor_calibration(
                 );
                 tag.group.family1 = "PhaseOne".into();
                 tags.push(tag);
-                break;
+            } else if etag == 0x0407 {
+                // SensorCalibration SerialNumber (PhaseOne.pm:312), a second
+                // copy of the 0x0102 value that ExifTool reports as well.
+                // For the 12-byte sub-IFD entry the value pointer is the last
+                // int32u of the entry and is relative to the sub-block start
+                // (`$valuePtr += $dirStart`, PhaseOne.pm:670).
+                if esize > 4 {
+                    if eval_ptr + esize <= sub.len() {
+                        let mut tag = mktag(
+                            "MakerNotes",
+                            "SerialNumber",
+                            "Serial Number",
+                            Value::String(iiq_read_str(&sub[eval_ptr..eval_ptr + esize])),
+                        );
+                        tag.group.family1 = "PhaseOne".into();
+                        tags.push(tag);
+                    }
+                } else if eoff + 8 + esize <= sub.len() {
+                    let mut tag = mktag(
+                        "MakerNotes",
+                        "SerialNumber",
+                        "Serial Number",
+                        Value::String(iiq_read_str(&sub[eoff + 8..eoff + 8 + esize])),
+                    );
+                    tag.group.family1 = "PhaseOne".into();
+                    tags.push(tag);
+                }
             }
         }
         return;

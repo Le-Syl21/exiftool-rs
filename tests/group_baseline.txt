@@ -42,7 +42,6 @@ CanonRaw.cr3	XResolution	family1
 CanonRaw.cr3	YResolution	family1
 DNG.dng	Creator	family2
 DNG.dng	Flash	family1
-DNG.dng	ThumbnailTIFF	family1
 DNG.dng	WB_RGGBLevels	family1
 DjVu.djvu	CreateDate	family1
 DjVu.djvu	Keywords	family1
@@ -172,7 +171,6 @@ Pentax.jpg	ISO	family2
 PhaseOne.iiq	FocalLength	family1
 PhaseOne.iiq	ISO	family1
 PhaseOne.iiq	ISO	family2
-PhaseOne.iiq	ThumbnailTIFF	family1
 PhotoMechanic.jpg	Category	family1
 PhotoMechanic.jpg	Category	family2
 PhotoMechanic.jpg	CountryCode	family1

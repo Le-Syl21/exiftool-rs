@@ -9058,7 +9058,7 @@ fn decode_canon_color_data(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<
 }
 
 /// Convert Unix timestamp (seconds since 1970-01-01) to Exif datetime string "YYYY:MM:DD HH:MM:SS"
-fn unix_time_to_datetime(secs: u32) -> String {
+pub(crate) fn unix_time_to_datetime(secs: u32) -> String {
     let s = secs as i64;
     let sec = (s % 60) as u32;
     let min_total = s / 60;

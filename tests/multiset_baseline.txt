@@ -517,29 +517,6 @@ Pentax.jpg	ee	missing	0	PentaxModelID	K10D
 Pentax.jpg	ee	missing	0	Saturation	0 (normal)
 Pentax.jpg	ee	missing	0	Sharpness	0 (normal)
 Pentax.jpg	ee	missing	0	WhiteBalance	Auto
-PhaseOne.iiq	ee	missing	0	ApertureValue	5.6
-PhaseOne.iiq	ee	missing	0	BitsPerSample	8 8 8
-PhaseOne.iiq	ee	missing	0	Compression	Uncompressed
-PhaseOne.iiq	ee	missing	0	DateTimeOriginal	2013:06:19 15:44:21
-PhaseOne.iiq	ee	missing	0	FocalLength	80.0 mm
-PhaseOne.iiq	ee	missing	0	ISO	100
-PhaseOne.iiq	ee	missing	0	ImageHeight	1
-PhaseOne.iiq	ee	missing	1	ImageHeight	1
-PhaseOne.iiq	ee	missing	0	ImageWidth	1
-PhaseOne.iiq	ee	missing	1	ImageWidth	1
-PhaseOne.iiq	ee	missing	0	PhotometricInterpretation	RGB
-PhaseOne.iiq	ee	missing	0	PlanarConfiguration	Chunky
-PhaseOne.iiq	ee	missing	0	ResolutionUnit	inches
-PhaseOne.iiq	ee	missing	0	RowsPerStrip	1
-PhaseOne.iiq	ee	missing	0	SamplesPerPixel	3
-PhaseOne.iiq	ee	missing	0	SerialNumber	LD001055
-PhaseOne.iiq	ee	missing	0	ShutterSpeedValue	1/1250
-PhaseOne.iiq	ee	missing	0	StripByteCounts	3
-PhaseOne.iiq	ee	missing	0	StripOffsets	(Binary data 54 bytes, use -b option to extract)
-PhaseOne.iiq	ee	missing	0	StripOffsets	3360
-PhaseOne.iiq	ee	missing	0	SubfileType	Full-resolution image
-PhaseOne.iiq	ee	missing	0	XResolution	341.3333333
-PhaseOne.iiq	ee	missing	0	YResolution	341.3333333
 PhotoMechanic.jpg	ee	extra	0	ColorClass	6 (Typical alt)
 PhotoMechanic.jpg	ee	extra	0	CropBottom	1072
 PhotoMechanic.jpg	ee	extra	0	CropLeft	438

@@ -438,42 +438,74 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     // ThumbnailTIFF composite: rebuild TIFF from IFD tags
     // Requires SubfileType=1 (reduced-resolution) + Compression=1 (uncompressed)
     if find_tag(tags, "ThumbnailTIFF").is_none() {
-        if let Some(tiff_data) = compute_thumbnail_tiff(tags) {
-            let size = tiff_data.len();
-            composite.push(Tag {
-                id: TagId::Text("ThumbnailTIFF".into()),
-                name: "ThumbnailTIFF".into(),
-                description: "Thumbnail TIFF".into(),
-                group: TagGroup {
-                    family0: "Composite".into(),
-                    family1: "Composite".into(),
-                    family2: "Preview".into(),
-                    family3: "Main".into(),
-                },
-                raw_value: Value::Binary(tiff_data),
-                print_value: format!("(Binary data {} bytes, use -b option to extract)", size),
-                priority: 0,
-            });
+        if let Some(t) = build_thumbnail_tiff(tags) {
+            composite.push(t);
         }
     }
 
     composite
 }
 
-/// Build a minimal TIFF file from IFD thumbnail tags
-fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<Vec<u8>> {
-    // Find SubfileType=1 (reduced-resolution image)
-    let subfile = find_tag(tags, "SubfileType")?;
-    let subfile_val = subfile.raw_value.as_u64().or_else(|| {
-        if subfile.print_value.contains("Reduced") {
-            Some(1)
-        } else {
-            subfile.print_value.trim().parse().ok()
-        }
+/// Build the ThumbnailTIFF composite tag, or `None` when the file has no
+/// reduced-resolution uncompressed IFD to rebuild it from.
+///
+/// Exposed so a format reader that prunes duplicate IFD tags (IIQ) can build the
+/// composite while the IFDs are still intact.
+pub(crate) fn build_thumbnail_tiff(tags: &[Tag]) -> Option<Tag> {
+    let (tiff_data, grp0, grp1) = compute_thumbnail_tiff(tags)?;
+    let size = tiff_data.len();
+    Some(Tag {
+        id: TagId::Text("ThumbnailTIFF".into()),
+        name: "ThumbnailTIFF".into(),
+        description: "Thumbnail TIFF".into(),
+        group: TagGroup {
+            // Exif.pm:6206 `($grp0, $grp1) = $et->GetGroup($key)` — the composite
+            // inherits the groups of the SubfileType instance it was rebuilt from,
+            // not the generic Composite group.
+            family0: grp0,
+            family1: grp1,
+            family2: "Preview".into(),
+            family3: "Main".into(),
+        },
+        raw_value: Value::Binary(tiff_data),
+        print_value: format!("(Binary data {} bytes, use -b option to extract)", size),
+        priority: 0,
+    })
+}
+
+/// Build a minimal TIFF file from IFD thumbnail tags.
+///
+/// Port of `Image::ExifTool::Exif::RebuildTIFF` (Exif.pm:6139): it walks every
+/// SubfileType instance, keeps the one equal to 1 (reduced-resolution image,
+/// Exif.pm:6150), remembers that instance's family-1 group
+/// (`my $grp = $et->GetGroup($key, 1)`, Exif.pm:6151) and reads every other
+/// required tag from that same group (`$et->FindValue($_, $grp)`, Exif.pm:6159).
+/// Returns the rebuilt TIFF plus the family-0/1 groups the composite inherits
+/// (Exif.pm:6206).
+fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<(Vec<u8>, String, String)> {
+    // Find the SubfileType instance whose value is 1 (reduced-resolution image).
+    let subfile = tags.iter().find(|t| {
+        t.name == "SubfileType"
+            && t.raw_value
+                .as_u64()
+                .or_else(|| {
+                    if t.print_value.contains("Reduced") {
+                        Some(1)
+                    } else {
+                        t.print_value.trim().parse().ok()
+                    }
+                })
+                .is_some_and(|v| v == 1)
     })?;
-    if subfile_val != 1 {
-        return None;
-    }
+    let grp0 = subfile.group.family0.clone();
+    let grp1 = subfile.group.family1.clone();
+    // Every other required tag comes from that same family-1 group.
+    let scoped: Vec<Tag> = tags
+        .iter()
+        .filter(|t| t.group.family1 == grp1)
+        .cloned()
+        .collect();
+    let tags: &[Tag] = &scoped;
 
     // Compression must be 1 (uncompressed)
     let comp = find_tag(tags, "Compression")?;
@@ -599,7 +631,7 @@ fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<Vec<u8>> {
     // This matches Perl's behavior for the tag NAME (the value is binary data)
     tiff.resize(total_size, 0);
 
-    Some(tiff)
+    Some((tiff, grp0, grp1))
 }
 
 fn find_tag<'a>(tags: &'a [Tag], name: &str) -> Option<&'a Tag> {
