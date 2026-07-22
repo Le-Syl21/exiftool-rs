@@ -59,8 +59,8 @@ pub fn read_j2c(data: &[u8]) -> Result<Vec<Tag>> {
                     let h =
                         u32::from_be_bytes([seg_data[6], seg_data[7], seg_data[8], seg_data[9]]);
                     got_size = true;
-                    tags.push(mk("ImageWidth", "Image Width", Value::U32(w)));
-                    tags.push(mk("ImageHeight", "Image Height", Value::U32(h)));
+                    tags.push(mk_codestream("ImageWidth", "Image Width", Value::U32(w)));
+                    tags.push(mk_codestream("ImageHeight", "Image Height", Value::U32(h)));
                 }
             }
             0x64
@@ -70,7 +70,7 @@ pub fn read_j2c(data: &[u8]) -> Result<Vec<Tag>> {
                     let val = &seg_data[2..];
                     if !val.is_empty() {
                         let comment = crate::encoding::decode_utf8_or_latin1(val);
-                        tags.push(mk("Comment", "Comment", Value::String(comment)));
+                        tags.push(mk_codestream("Comment", "Comment", Value::String(comment)));
                     }
                 }
             _ => {}
@@ -593,14 +593,36 @@ fn parse_jxl_codestream(data: &[u8], tags: &mut Vec<Tag>) {
         }
     };
 
-    tags.push(mk("ImageWidth", "Image Width", Value::U32(x)));
-    tags.push(mk("ImageHeight", "Image Height", Value::U32(y)));
+    tags.push(mk_codestream("ImageWidth", "Image Width", Value::U32(x)));
+    tags.push(mk_codestream("ImageHeight", "Image Height", Value::U32(y)));
 }
 
-// NOTE: ExifTool puts the raw JPEG 2000 / JXL codestream markers in the `File`
-// group, not `Jpeg2000`. We deliberately do not: `Jpeg2000` is one of the groups
-// whose priority-0 duplicates resolve first-wins, and a `.j2c` with two comment
-// markers picks the wrong Comment as soon as those tags leave the group.
+/// A tag read straight out of a raw JPEG 2000 or JXL codestream.
+///
+/// ExifTool reports these through `FoundTag` by NAME — `$et->FoundTag(ImageWidth
+/// => $x)` (Jpeg2000.pm:1507-1508), and `$self->FoundTag('Comment', ...)` from
+/// ProcessJPEG (ExifTool.pm:8432), which is what reads a J2C codestream once its
+/// markers are merged into %jpegMarker (Jpeg2000.pm:1557-1559). FoundTag
+/// resolves the name in `%Image::ExifTool::Extra` (ExifTool.pm:9462), which
+/// describes all three (ExifTool.pm:1311, 1670-1671) and is
+/// `GROUPS => { 0 => 'File', 1 => 'File', 2 => 'Image' }` (ExifTool.pm:1286).
+///
+/// The `Jpeg2000` container boxes are unaffected: those really are Jpeg2000
+/// table tags.
+fn mk_codestream(name: &str, description: &str, value: Value) -> Tag {
+    let mut t = mk(name, description, value);
+    t.group.family0 = "File".into();
+    t.group.family1 = "File".into();
+    t.group.family2 = "Image".into();
+    // %Extra's Comment carries `Priority => 0` — "to preserve order of JPEG COM
+    // segments" (ExifTool.pm:1315). That is a table-stated zero, so a second COM
+    // marker never displaces the first even though `File` is no low-priority
+    // directory; leaving the priority unstated would make the LAST one win.
+    if name == "Comment" {
+        t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+    }
+    t
+}
 
 fn mk(name: &str, description: &str, value: Value) -> Tag {
     let print_value = value.to_display_string();

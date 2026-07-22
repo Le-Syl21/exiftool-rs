@@ -909,8 +909,22 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     }
 
     if let Some((w, h)) = h264_dims {
-        tags.push(mktag("M2TS", "ImageWidth", "Image Width", Value::U32(w)));
-        tags.push(mktag("M2TS", "ImageHeight", "Image Height", Value::U32(h)));
+        // The dimensions come from the H.264 sequence parameter set, which
+        // ExifTool reports through `%Image::ExifTool::H264::Main`
+        // (H264.pm:43-51, `ImageWidth => { }` / `ImageHeight => { }`). That
+        // table is `GROUPS => { 2 => 'Video' }` and names no family 0 or 1, so
+        // GetTagTable fills both from the module name (ExifTool.pm:8982-8990):
+        // `H264`, not the `M2TS` of the container.
+        for (name, description, value) in [
+            ("ImageWidth", "Image Width", Value::U32(w)),
+            ("ImageHeight", "Image Height", Value::U32(h)),
+        ] {
+            let mut t = mktag("M2TS", name, description, value);
+            t.group.family0 = "H264".into();
+            t.group.family1 = "H264".into();
+            t.group.family2 = "Video".into();
+            tags.push(t);
+        }
     }
 
     if let Some(sr) = ac3_sample_rate {

@@ -27,7 +27,9 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
         | Manufacturer::GE
         | Manufacturer::Sanyo
         | Manufacturer::Jvc => &[][..],
-        Manufacturer::Unknown => &[][..], // Will fallback to generated tables
+        // Motorola shares the generic tables: Motorola.pm defines only the four
+        // IDs already listed there (0x5500, 0x5501, 0x665e, 0x6705).
+        Manufacturer::Motorola | Manufacturer::Unknown => &[][..], // Will fallback to generated tables
     };
 
     for &(id, name, desc) in table {
@@ -195,6 +197,7 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
     }
     // Restrict extra table to Unknown/Google/DJI/Sanyo/JVC manufacturers only
     if manufacturer == Manufacturer::Unknown
+        || manufacturer == Manufacturer::Motorola
         || manufacturer == Manufacturer::Google
         || manufacturer == Manufacturer::DJI
         || manufacturer == Manufacturer::Sanyo
@@ -245,7 +248,9 @@ pub fn lookup(manufacturer: Manufacturer, tag_id: u16) -> (&'static str, &'stati
     }
 
     // DataDump (0x0F00) for Sanyo
-    if (manufacturer == Manufacturer::Unknown || manufacturer == Manufacturer::Sanyo)
+    if (manufacturer == Manufacturer::Unknown
+        || manufacturer == Manufacturer::Motorola
+        || manufacturer == Manufacturer::Sanyo)
         && tag_id == 0x0F00
     {
         return ("DataDump", "DataDump");

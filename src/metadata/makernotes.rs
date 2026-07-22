@@ -32,6 +32,11 @@ pub enum Manufacturer {
     GE,
     Sanyo,
     Jvc,
+    /// `%Image::ExifTool::Motorola::Main` (Motorola.pm:23) —
+    /// `GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' }` with no family 1, which
+    /// GetTagTable then fills from the module name (ExifTool.pm:8982-8990). The
+    /// tag IDs live in the shared table, so this variant only names the group.
+    Motorola,
     Unknown,
 }
 
@@ -5067,7 +5072,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
     // Motorola: "MOT\0", Start => valuePtr + 8, Base => start - 8
     if mn_data.starts_with(b"MOT\0") {
         return MakerNoteInfo {
-            manufacturer: Manufacturer::Unknown,
+            manufacturer: Manufacturer::Motorola,
             ifd_offset: 8,
             _base_adjust: 0,
             byte_order: None,
@@ -8092,6 +8097,7 @@ fn manufacturer_group_name(mfr: Manufacturer) -> &'static str {
         Manufacturer::GE => "GE",
         Manufacturer::Sanyo => "Sanyo",
         Manufacturer::Jvc => "JVC",
+        Manufacturer::Motorola => "Motorola",
         Manufacturer::Unknown => "MakerNotes",
     }
 }
