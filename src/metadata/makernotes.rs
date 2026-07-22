@@ -5972,6 +5972,13 @@ fn read_makernote_ifd_with_base(
                             let iso = 100.0
                                 * ((rb(0x06) as f64 / 8.0 - 9.0) * std::f64::consts::LN_2).exp();
                             t.push(mk_canon_str("ISO", &format!("{:.0}", iso)));
+                            // Every Canon::CameraInfo* table is `PRIORITY => 0,
+                            // # these tags are not reliable since they change
+                            // with firmware version` (Canon.pm line 3162 and
+                            // siblings), so this ISO never displaces the EXIF one.
+                            if let Some(t) = t.last_mut() {
+                                t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+                            }
                         }
                         // 0x18 CameraTemperature — %ciCameraTemperature
                         // (Canon.pm:3116): ValueConv '$val - 128', PrintConv '"$val C"'.
@@ -8189,8 +8196,12 @@ fn read_makernote_ifd_with_base(
             raw_value: value,
             print_value,
             // `%FLIR::Main` is `PRIORITY => 0, # (unreliable)` (FLIR.pm:58), so
-            // its Emissivity never displaces the FFF one.
-            priority: if manufacturer == Manufacturer::Flir {
+            // its Emissivity never displaces the FFF one. `Nikon::Main` 0x0002
+            // ISO says the same of itself: `Priority => 0, # the EXIF ISO is
+            // more reliable` (Nikon.pm line 1803).
+            priority: if manufacturer == Manufacturer::Flir
+                || (manufacturer == Manufacturer::Nikon && tag_id == 0x0002)
+            {
                 crate::tag::PRIORITY_EXPLICIT_ZERO
             } else {
                 0

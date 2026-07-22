@@ -169,7 +169,6 @@ pub(crate) const EXIF_PRIMARY_TAGS: &[&str] = &[
     "PrintIMVersion",
     "Flash",
     "FocalLength",
-    "ISO",
     "ExposureTime",
     "ExposureProgram",
     "FNumber",
