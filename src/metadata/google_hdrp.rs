@@ -628,6 +628,7 @@ enum FieldFmt {
     Float,        // 4-byte IEEE float
     FloatDiv1000, // float / 1000 (ExposureTime conversion)
     UnixTimeMs,   // varint / 1000 → Unix timestamp with milliseconds
+    UnixTime,     // varint seconds → local Unix timestamp (ConvertUnixTime $val, 1)
 }
 
 static HDRP_FIELDS: &[FieldDef] = &[
@@ -660,6 +661,13 @@ static HDRP_FIELDS: &[FieldDef] = &[
         name: "FrameCount",
         fmt: FieldFmt::Unsigned,
         group2: "Image",
+    },
+    // Google.pm:539 '9-36-1' CreateDate: Format 'unsigned', ConvertUnixTime($val,1).
+    FieldDef {
+        path: "9-36-1",
+        name: "CreateDate",
+        fmt: FieldFmt::UnixTime,
+        group2: "Time",
     },
     FieldDef {
         path: "12-1",
@@ -808,12 +816,25 @@ fn parse_protobuf(data: &[u8], prefix: &str, tags: &mut Vec<Tag>) {
                             let s = format_unix_time_ms(secs, ms as u32);
                             (Value::String(s.clone()), s)
                         }
+                        FieldFmt::UnixTime => {
+                            // ExifTool: ConvertUnixTime($val, 1) — local time, no
+                            // sub-seconds.
+                            let s = crate::formats::gzip::gzip_unix_to_datetime(val as i64);
+                            (Value::String(s.clone()), s)
+                        }
                         _ => {
                             let s = format!("{}", val);
                             (Value::U32(val as u32), s)
                         }
                     };
-                    tags.push(make_tag(def.name, def.group2, raw, print));
+                    let mut t = make_tag(def.name, def.group2, raw, print);
+                    // Google.pm:542 marks '9-36-1' CreateDate `Priority => 0` ("to
+                    // give EXIF priority"), so the EXIF CreateDate wins when
+                    // duplicates are collapsed; both show under -ee.
+                    if matches!(def.fmt, FieldFmt::UnixTime) {
+                        t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+                    }
+                    tags.push(t);
                 }
             }
             1 => {
