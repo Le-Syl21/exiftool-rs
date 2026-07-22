@@ -107,15 +107,60 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
-    // RAF directory offset at 0x5C and length at 0x60
-    if data.len() >= 0x64 {
-        let dir_offset =
-            u32::from_be_bytes([data[0x5C], data[0x5D], data[0x5E], data[0x5F]]) as usize;
-        let dir_length =
-            u32::from_be_bytes([data[0x60], data[0x61], data[0x62], data[0x63]]) as usize;
-
-        if dir_offset > 0 && dir_offset + dir_length <= data.len() {
-            parse_raf_directory(&data[dir_offset..dir_offset + dir_length], &mut tags);
+    // ExifTool walks five header slots, not just one (FujiFilm.pm:1964):
+    //   foreach $offset (0x48, 0x5c, 0x64, 0x78, 0x80)
+    // Each slot holds an (offset, length) int32u pair:
+    //   0x48 M-RAW header, 0x5c RAF directory, 0x64 FujiIFD directory,
+    //   0x78 RAF1 directory, 0x80 FujiIFD1 directory (FujiFilm.pm:1242-1256).
+    // The loop stops as soon as a slot reaches the embedded JPEG
+    // (`last if $jpos and $offset >= $jpos`, FujiFilm.pm:1965) and skips empty
+    // slots (`next unless $start`, FujiFilm.pm:1972).
+    //
+    // Successive RAF directories get family-1 groups RAF, RAF2, RAF3, ...
+    // via `$$et{SET_GROUP1} = "RAF$rafNum"` with `$rafNum = ($rafNum || 1) + 1`
+    // after each successful directory (FujiFilm.pm:2000-2010).
+    let mut raf_num: u32 = 0;
+    for offset in [0x48usize, 0x5c, 0x64, 0x78, 0x80] {
+        if jpeg_offset != 0 && offset >= jpeg_offset {
+            break;
+        }
+        if data.len() < offset + 8 {
+            break;
+        }
+        let start = u32::from_be_bytes([
+            data[offset],
+            data[offset + 1],
+            data[offset + 2],
+            data[offset + 3],
+        ]) as usize;
+        let len = u32::from_be_bytes([
+            data[offset + 4],
+            data[offset + 5],
+            data[offset + 6],
+            data[offset + 7],
+        ]) as usize;
+        if start == 0 {
+            continue;
+        }
+        // 0x48 (M-RAW header) and 0x64/0x80 (FujiIFD, TIFF-format data on some
+        // models only — FujiFilm.pm:1973-1987) are not decoded here: no sample
+        // in the corpus exercises them, and ExifTool itself reports nothing when
+        // the FujiIFD parse fails.
+        if offset == 0x48 || offset == 0x64 || offset == 0x80 {
+            continue;
+        }
+        if start >= data.len() {
+            continue;
+        }
+        let end = start.saturating_add(len).min(data.len());
+        // raf_num == 0 stands for Perl's empty `$rafNum` suffix.
+        let group1 = if raf_num == 0 {
+            "RAF".to_string()
+        } else {
+            format!("RAF{}", raf_num)
+        };
+        if parse_raf_directory(&data[start..end], &mut tags, &group1) {
+            raf_num = raf_num.max(1) + 1;
         }
     }
 
@@ -124,14 +169,16 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
 
 /// Parse the RAF proprietary directory.
 /// Format: 4-byte entry count (BE), then per entry: 2-byte tag_id, 2-byte data_len, data_len bytes of data.
-fn parse_raf_directory(data: &[u8], tags: &mut Vec<Tag>) {
+/// `group1` is the family-1 group ExifTool assigns via SET_GROUP1 (RAF, RAF2, ...).
+/// Returns true when the directory was parsed (ExifTool only bumps `$rafNum` then).
+fn parse_raf_directory(data: &[u8], tags: &mut Vec<Tag>, group1: &str) -> bool {
     if data.len() < 4 {
-        return;
+        return false;
     }
 
     let num_entries = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
     if num_entries > 256 {
-        return; // Sanity check
+        return false; // Sanity check
     }
 
     let mut pos = 4;
@@ -174,10 +221,12 @@ fn parse_raf_directory(data: &[u8], tags: &mut Vec<Tag>) {
         let val_data = &data[pos..pos + data_len];
         pos += data_len;
 
-        if let Some(tag) = decode_raf_tag(tag_id, data_len, val_data, fuji_layout) {
+        if let Some(mut tag) = decode_raf_tag(tag_id, data_len, val_data, fuji_layout) {
+            tag.group.family1 = group1.to_string();
             tags.push(tag);
         }
     }
+    true
 }
 
 /// Decode a single RAF tag into a Tag struct.

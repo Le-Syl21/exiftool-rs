@@ -1918,6 +1918,13 @@ impl ExifTool {
                         "EXIF" | "MakerNotes" => {
                             g1 == "IFD1" || g1 == "PreviewIFD" || g1.starts_with("SubIFD")
                         }
+                        // FujiFilm.pm:1270 declares the RAF directory table
+                        // `PRIORITY => 0, # so the first RAF directory takes
+                        // precedence`: a RAF file can hold two directories
+                        // (header slots 0x5c and 0x78, FujiFilm.pm:1964), whose
+                        // tags land in family-1 groups RAF and RAF2, and the
+                        // first one wins when duplicates are collapsed.
+                        "RAF" => true,
                         // Matroska and MXF number their tracks too, but keep them
                         // all in the main document, where last-wins applies.
                         _ => matches!(g1, "Jpeg2000" | "PhotoMechanic" | "DjVu"),
