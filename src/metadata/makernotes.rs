@@ -6337,6 +6337,13 @@ fn read_makernote_ifd_with_base(
                                 .unwrap_or_else(|| format!("Unknown ({})", v));
                         t.push(mk_canon_str("RFLensType", &pv));
                     }
+                    // Canon::FileInfo GROUPS => { 2 => 'Image' } (Canon.pm:6847).
+                    // `mk_canon_str` defaults to Camera; the family-2 pass defers to
+                    // the reader for the names several Canon tables disagree on
+                    // (group2.rs `is_canon_ambiguous`), so stamp the table default.
+                    for tag in &mut t {
+                        tag.group.family2 = "Image".into();
+                    }
                     t
                 }
                 (Manufacturer::Canon, 0x000F) => {
