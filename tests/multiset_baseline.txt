@@ -31,7 +31,6 @@ Lytro.lfp	ee	missing	0	ModesRegionOfInterestArrayY	0.55208665132522583008
 M2TS.mts	ee	extra	0	ShutterSpeed	1/25
 Matroska.mkv	ee	extra	0	DefaultDuration	40 ms
 Minolta.mrw	ee	missing	0	ColorMode	Natural
-NikonD2Hs.jpg	ee	extra	0	Software	(Binary data 24 bytes, use -b option to extract)
 PGF.pgf	ee	missing	0	ImageHeight	1
 PGF.pgf	ee	missing	0	ImageWidth	1
 PSP.psp	ee	extra	0	Copyright	.
