@@ -31,6 +31,14 @@ const PHOTOSHOP_HEADER: &[u8] = b"Photoshop 3.0\0";
 
 /// Extract all metadata tags from a JPEG file.
 pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
+    read_jpeg_with_ee(data, 0)
+}
+
+/// Extract all metadata tags from a JPEG file, honouring the ExtractEmbedded
+/// level. A few readers behave differently under `-ee`: ExifTool's exiftool CLI
+/// turns the Binary option on with it, so binary payloads that are merely
+/// described in the default mode are actually read (and can fail).
+pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
     if data.len() < 2 || data[0] != 0xFF || data[1] != MARKER_SOI {
         return Err(Error::InvalidData("not a JPEG file".into()));
     }
@@ -542,7 +550,7 @@ pub fn read_jpeg(data: &[u8]) -> Result<Vec<Tag>> {
                 }
                 // MPF: "MPF\0" header (Multi-Picture Format)
                 else if seg_data.starts_with(b"MPF\0") {
-                    tags.extend(parse_mpf(seg_data, data));
+                    tags.extend(parse_mpf(seg_data, data, extract_embedded));
                 } else if seg_data.starts_with(b"ICC_PROFILE\0") && seg_data.len() > 14 {
                     // ICC_PROFILE header: "ICC_PROFILE\0" + chunk_num(1) + total_chunks(1) + data
                     let icc_data = &seg_data[14..];
@@ -3708,11 +3716,15 @@ fn app12_days_to_ymd(days: i64) -> (i64, u32, u32) {
 ///
 /// MPImageStart offsets in MPF entries are relative to the start of the TIFF
 /// header within the MPF block (= offset 4 within seg_data).
-fn parse_mpf(seg_data: &[u8], jpeg_data: &[u8]) -> Vec<crate::tag::Tag> {
-    parse_mpf_inner(seg_data, jpeg_data).unwrap_or_default()
+fn parse_mpf(seg_data: &[u8], jpeg_data: &[u8], extract_embedded: u8) -> Vec<crate::tag::Tag> {
+    parse_mpf_inner(seg_data, jpeg_data, extract_embedded).unwrap_or_default()
 }
 
-fn parse_mpf_inner(seg_data: &[u8], jpeg_data: &[u8]) -> Option<Vec<crate::tag::Tag>> {
+fn parse_mpf_inner(
+    seg_data: &[u8],
+    jpeg_data: &[u8],
+    extract_embedded: u8,
+) -> Option<Vec<crate::tag::Tag>> {
     let mut tags = Vec::new();
 
     // "MPF\0" is 4 bytes; the TIFF-like block follows immediately.
@@ -3822,6 +3834,8 @@ fn parse_mpf_inner(seg_data: &[u8], jpeg_data: &[u8]) -> Option<Vec<crate::tag::
 
     // --- Parse MP Entries (16 bytes each) ---
     let num_entries = mp_list_byte_count / 16;
+    // MPF.pm:205 `$didPreview` — only the first Large Thumbnail becomes PreviewImage.
+    let mut did_preview = false;
     for idx in 0..num_entries {
         let eoff = mp_list_offset + idx * 16;
         if eoff + 16 > mpf.len() {
@@ -3834,11 +3848,9 @@ fn parse_mpf_inner(seg_data: &[u8], jpeg_data: &[u8]) -> Option<Vec<crate::tag::
         let dep1 = ru16(mpf, eoff + 12)?;
         let dep2 = ru16(mpf, eoff + 14)?;
 
-        // The first MP entry with MPImageStart == 0 is the primary (current) image.
-        // Perl ExifTool does not emit individual tags for it — only for embedded images.
-        if img_off == 0 && idx == 0 {
-            continue;
-        }
+        // MPF.pm:246-250 — ProcessMPImageList runs ProcessBinaryData over EVERY
+        // MP entry, including the primary image whose MPImageStart is 0. Only the
+        // image *extraction* below skips it (MPF.pm:203 `if ($off and $len)`).
 
         // Bit-field extraction from the 32-bit attribute word
         let flags_raw = (attr >> 27) & 0x1F; // bits 31..27
@@ -3929,8 +3941,15 @@ fn parse_mpf_inner(seg_data: &[u8], jpeg_data: &[u8]) -> Option<Vec<crate::tag::
         ));
 
         // MPImageStart — offset in the MPEntry is relative to the start of the
-        // TIFF block within the MPF segment (tiff_base).
-        let abs_start = tiff_base as u64 + img_off as u64;
+        // TIFF block within the MPF segment (tiff_base). MPF.pm:145-148 declares
+        // `IsOffset => '$val'`, and ExifTool.pm:10152-10155 only shifts the value
+        // when that expression is true — so a zero offset (the primary image)
+        // stays zero.
+        let abs_start = if img_off == 0 {
+            0u64
+        } else {
+            tiff_base as u64 + img_off as u64
+        };
         tags.push(mk(
             "MPImageStart",
             crate::value::Value::U32(abs_start as u32),
@@ -3951,32 +3970,61 @@ fn parse_mpf_inner(seg_data: &[u8], jpeg_data: &[u8]) -> Option<Vec<crate::tag::
             dep2.to_string(),
         ));
 
-        // PreviewImage — emit for "Large Thumbnail" type images (high nibble of type == 0x01).
-        // Always create the tag (even when the file is truncated) to match Perl behavior.
-        if (type_raw & 0x0F_0000) == 0x01_0000 && img_len > 0 {
+        // MPF.pm:196-215 (ExtractMPImages) — the first "Large Thumbnail"
+        // (`($type & 0x0f0000) == 0x010000`) becomes PreviewImage, and the entry
+        // is only considered when both MPImageStart and MPImageLength are
+        // non-zero, which excludes the primary image.
+        if img_off != 0 && img_len > 0 && (type_raw & 0x0F_0000) == 0x01_0000 && !did_preview {
+            did_preview = true;
             let start = tiff_base + img_off as usize;
-            let end = start + img_len as usize;
-            // Read available data (may be empty if file is truncated).
-            let preview = if start < jpeg_data.len() {
-                jpeg_data[start..end.min(jpeg_data.len())].to_vec()
+            let end = start.saturating_add(img_len as usize);
+            // ExifTool.pm:9850-9855 — with the Binary option off (and the tag not
+            // explicitly requested) ExtractBinary never touches the file, it just
+            // returns "Binary data $length bytes"; so the tag exists even when the
+            // data does not. ExtractMPImages forces Binary on only under
+            // ExtractEmbedded (MPF.pm:209), which is when the read can fail.
+            if extract_embedded == 0 || end <= jpeg_data.len() {
+                let print = format!("(Binary data {} bytes, use -b option to extract)", img_len);
+                let payload = if end <= jpeg_data.len() {
+                    jpeg_data[start..end].to_vec()
+                } else {
+                    Vec::new()
+                };
+                tags.push(crate::tag::Tag {
+                    id: crate::tag::TagId::Text("PreviewImage".into()),
+                    name: "PreviewImage".into(),
+                    description: "Preview Image".into(),
+                    group: crate::tag::TagGroup {
+                        family0: "MPF".into(),
+                        family1: entry_group.clone(),
+                        family2: "Image".into(),
+                        family3: "Main".into(),
+                    },
+                    raw_value: crate::value::Value::Binary(payload),
+                    print_value: print,
+                    priority: 0,
+                });
             } else {
-                Vec::new()
-            };
-            let print = format!("(Binary data {} bytes, use -b option to extract)", img_len);
-            tags.push(crate::tag::Tag {
-                id: crate::tag::TagId::Text("PreviewImage".into()),
-                name: "PreviewImage".into(),
-                description: "Preview Image".into(),
-                group: crate::tag::TagGroup {
-                    family0: "MPF".into(),
-                    family1: entry_group.clone(),
-                    family2: "Image".into(),
-                    family3: "Main".into(),
-                },
-                raw_value: crate::value::Value::Binary(preview),
-                print_value: print,
-                priority: 0,
-            });
+                // The referenced image lies past the end of the file, and under -ee
+                // ExifTool really tries to read it: ExifTool.pm:9864
+                // `$self->Warn("Error reading $tag from file", $isPreview)` — minor,
+                // and no tag is created.
+                const MSG: &str = "[minor] Error reading PreviewImage from file";
+                tags.push(crate::tag::Tag {
+                    id: crate::tag::TagId::Text("Warning".into()),
+                    name: "Warning".into(),
+                    description: "Warning".into(),
+                    group: crate::tag::TagGroup {
+                        family0: "ExifTool".into(),
+                        family1: "ExifTool".into(),
+                        family2: "Other".into(),
+                        family3: "Main".into(),
+                    },
+                    raw_value: crate::value::Value::String(MSG.into()),
+                    print_value: MSG.into(),
+                    priority: 0,
+                });
+            }
         }
     }
 

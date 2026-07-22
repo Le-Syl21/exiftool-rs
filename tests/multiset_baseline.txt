@@ -118,11 +118,8 @@ ExifTool.jpg	default	extra	0	FocalLength	5 mm
 ExifTool.jpg	ee	extra	0	ExposureTime	1/83
 ExifTool.jpg	ee	extra	0	FNumber	6.2
 ExifTool.jpg	ee	extra	0	GlobalAltitude	30
-ExifTool.jpg	ee	extra	0	PreviewImage	(Binary data 1039273 bytes, use -b option to extract)
 ExifTool.jpg	ee	extra	0	SerialNumber	0000000000
 ExifTool.jpg	ee	missing	0	Copyright	Alisha Jucevic
-ExifTool.jpg	ee	missing	0	DependentImage1EntryNumber	2
-ExifTool.jpg	ee	missing	0	DependentImage2EntryNumber	0
 ExifTool.jpg	ee	missing	0	JUMDLabel	adobe.asset.info
 ExifTool.jpg	ee	missing	0	JUMDLabel	cai.assertions
 ExifTool.jpg	ee	missing	0	JUMDLabel	cai.location.broad
@@ -134,14 +131,8 @@ ExifTool.jpg	ee	missing	0	JUMDType	(json)-0011-0010-800000aa00389b71
 ExifTool.jpg	ee	missing	1	JUMDType	(json)-0011-0010-800000aa00389b71
 ExifTool.jpg	ee	missing	2	JUMDType	(json)-0011-0010-800000aa00389b71
 ExifTool.jpg	ee	missing	0	Location	Salem, Oregon
-ExifTool.jpg	ee	missing	0	MPImageFlags	Dependent parent image
-ExifTool.jpg	ee	missing	0	MPImageFormat	JPEG
-ExifTool.jpg	ee	missing	0	MPImageLength	5959981
-ExifTool.jpg	ee	missing	0	MPImageStart	0
-ExifTool.jpg	ee	missing	0	MPImageType	Baseline MP Primary Image
 ExifTool.jpg	ee	missing	0	PreviewImage	(Binary data 5777 bytes, use -b option to extract)
 ExifTool.jpg	ee	missing	0	Title	HEALTHCORONAVIRUSUSAOREGON_SALEM_08.jpg
-ExifTool.jpg	ee	missing	0	Warning	[minor] Error reading PreviewImage from file
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
 FLIR.jpg	ee	missing	0	DateTimeOriginal	2012:02:11 14:17:08
 FLIR.jpg	ee	missing	0	Emissivity	0.80

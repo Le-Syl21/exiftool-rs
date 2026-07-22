@@ -2228,7 +2228,9 @@ impl ExifTool {
     /// Dispatch to the appropriate format reader.
     fn process_file(&self, data: &[u8], file_type: FileType) -> Result<Vec<Tag>> {
         match file_type {
-            FileType::Jpeg | FileType::Jps => formats::jpeg::read_jpeg(data),
+            FileType::Jpeg | FileType::Jps => {
+                formats::jpeg::read_jpeg_with_ee(data, self.options.extract_embedded)
+            }
             FileType::Png | FileType::Mng => formats::png::read_png(data),
             // All TIFF-based formats (TIFF + most RAW formats)
             FileType::Tiff
