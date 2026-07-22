@@ -35,6 +35,18 @@ pub fn read_crw(data: &[u8]) -> Result<Vec<Tag>> {
     // The root directory starts after the header and spans the rest of the file
     parse_ciff_dir(data, hlen, data.len(), is_le, &mut tags, 0, false);
 
+    // CanonRaw.pm:248-269 — CIFF tag 0x180b is a three-way conditional list:
+    // SerialNumber when `$$self{Model} =~ /EOS D30\b/`, SerialNumber again when
+    // `/EOS/`, and otherwise `UnknownNumber` carrying `Unknown => 1` ("this is
+    // not SerialNumber for PowerShot models"). An Unknown tag is not reported
+    // without -u, so drop ours when the model is not an EOS.
+    if !tags
+        .iter()
+        .any(|t| t.name == "Model" && t.print_value.contains("EOS"))
+    {
+        tags.retain(|t| t.name != "SerialNumber" || t.group.family0 != "MakerNotes");
+    }
+
     // Scan for embedded XMP trailer (outside the CIFF structure).
     // Perl ExifTool calls ProcessTrailers which finds XMP appended after the CIFF block.
     if let Some(xmp_start) = find_xmp(data) {
@@ -905,43 +917,12 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                     "ShutterSpeedValue",
                     crate::tags::canon_sub::print_exposure_time(et),
                 ));
-                // Emit ExposureTime for composites
-                let et_print = crate::tags::canon_sub::print_exposure_time(et);
-                tags.push(Tag {
-                    id: TagId::Text("ExposureTime".into()),
-                    name: "ExposureTime".into(),
-                    description: "Exposure Time".into(),
-                    group: TagGroup {
-                        family0: "MakerNotes".into(),
-                        family1: group1.into(),
-                        family2: "Camera".into(),
-                        family3: "Main".into(),
-                    },
-                    raw_value: Value::F64(et),
-                    print_value: et_print,
-                    priority: 0,
-                });
             }
             if data.len() >= 12 {
                 let av = rf32(data, 8);
                 // ApertureValue ValueConv: '2 ** ($val / 2)'
                 let fn_val = 2.0_f64.powf(av as f64 / 2.0);
                 tags.push(mk("ApertureValue", format!("{:.1}", fn_val)));
-                // Also emit FNumber for composites
-                tags.push(Tag {
-                    id: TagId::Text("FNumber".into()),
-                    name: "FNumber".into(),
-                    description: "F Number".into(),
-                    group: TagGroup {
-                        family0: "MakerNotes".into(),
-                        family1: group1.into(),
-                        family2: "Camera".into(),
-                        family3: "Main".into(),
-                    },
-                    raw_value: Value::F64(fn_val),
-                    print_value: format!("{:.1}", fn_val),
-                    priority: 0,
-                });
             }
             true
         }

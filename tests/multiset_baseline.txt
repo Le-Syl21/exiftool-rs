@@ -112,14 +112,8 @@ DjVu.djvu	ee	extra	0	Trapped	/Unknown
 DjVu.djvu	ee	extra	0	URL	https://exiftool.org/
 DjVu.djvu	ee	missing	0	Trapped	Unknown
 ExifTool.jpg	default	extra	0	FNumber	11.0
-ExifTool.jpg	default	extra	0	FNumber	6.2
 ExifTool.jpg	default	extra	0	Flash	Off
 ExifTool.jpg	default	extra	0	FocalLength	5 mm
-ExifTool.jpg	ee	extra	0	ExposureTime	1/83
-ExifTool.jpg	ee	extra	0	FNumber	6.2
-ExifTool.jpg	ee	extra	0	GlobalAltitude	30
-ExifTool.jpg	ee	extra	0	SerialNumber	0000000000
-ExifTool.jpg	ee	missing	0	PreviewImage	(Binary data 5777 bytes, use -b option to extract)
 ExtendedXMP.jpg	ee	extra	0	XMPToolkit	Image::ExifTool 7.50
 FLIR.jpg	ee	missing	0	DateTimeOriginal	2012:02:11 14:17:08
 FLIR.jpg	ee	missing	0	Emissivity	0.80
@@ -146,7 +140,6 @@ Google.jpg	ee	missing	0	GPSLatitude	40 deg 24' 0.25"
 Google.jpg	ee	missing	0	GPSLongitude	3 deg 42' 52.73"
 HTML.html	ee	extra	0	Subject	Greek: &alpha; &beta; &gamma;
 HTML.html	ee	missing	0	Subject	Greek: α β γ
-IPTC.jpg	ee	extra	0	GlobalAltitude	30
 InfiRay.jpg	ee	missing	0	GPSAltitude	undef
 InfiRay.jpg	ee	missing	0	GPSLatitude	
 InfiRay.jpg	ee	missing	0	GPSLongitude	

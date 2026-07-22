@@ -3123,7 +3123,7 @@ fn photoshop_irb_name(id: u16) -> &'static str {
         0x040B => "URL",
         0x040C => "ThumbnailImage",
         // 0x0414 => DocumentSpecificIDs — suppressed
-        0x0419 => "GlobalAltitude",
+        // 0x0419 => GlobalAltitude — suppressed (decoded via subtags)
         0x041A => "ICC_Profile",
         // 0x041E => URLList — suppressed (decoded via subtags)
         0x0421 => "VersionInfo",
@@ -5712,6 +5712,32 @@ fn process_fpxr_segments(contents: &[FpxrEntry]) -> Vec<crate::tag::Tag> {
                 ),
                 priority: 0,
             });
+            // FlashPix.pm:1208-1223 — the Composite PreviewImage is the JPEG
+            // found inside ScreenNail: `return undef unless $val[0] =~
+            // /\xff\xd8\xff/g; return substr($val[0], pos($val[0])-3)`, reported
+            // in ScreenNail's own groups. Its priority is lowered because a
+            // Composite PreviewImage from another source (MPF) is built after
+            // this one and wins ExifTool's last-wins when Duplicates is off.
+            if let Some(soi) = payload.windows(3).position(|w| w == [0xFF, 0xD8, 0xFF]) {
+                let preview = &payload[soi..];
+                tags.push(crate::tag::Tag {
+                    id: crate::tag::TagId::Text("PreviewImage".into()),
+                    name: "PreviewImage".into(),
+                    description: "Preview Image".into(),
+                    group: crate::tag::TagGroup {
+                        family0: "FlashPix".into(),
+                        family1: "FlashPix".into(),
+                        family2: "Preview".into(),
+                        family3: "Main".into(),
+                    },
+                    raw_value: crate::value::Value::Binary(preview.to_vec()),
+                    print_value: format!(
+                        "(Binary data {} bytes, use -b option to extract)",
+                        preview.len()
+                    ),
+                    priority: -1,
+                });
+            }
             continue;
         }
 
