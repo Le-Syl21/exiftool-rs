@@ -11,6 +11,13 @@ use crate::value::Value;
 pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 
+    // ID3 tags are read here but reported after the audio data: ProcessID3
+    // (ID3.pm:1578 "first process audio data if it exists") runs the audio
+    // module, then FoundTag('ID3Size') (:1606), then the ID3v2 header (:1609)
+    // and the ID3v1 trailer (:1614). Duplicates are last-wins at equal
+    // priority, so an ID3 Title must override the audio format's.
+    let mut id3_tags: Vec<Tag> = Vec::new();
+
     // Calculate ID3 size for ID3Size tag (matches Perl's $id3Len)
     let mut id3_len: usize = 0;
 
@@ -27,7 +34,7 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
         };
         for mut tag in read_id3v2(data)? {
             tag.group.family1 = version1.into();
-            tags.push(tag);
+            id3_tags.push(tag);
         }
     }
 
@@ -40,20 +47,11 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
             // Only add v1 tags not already present from v2
             for mut t in id3v1_tags {
                 t.group.family1 = "ID3v1".into();
-                if !tags.iter().any(|existing| existing.name == t.name) {
-                    tags.push(t);
+                if !id3_tags.iter().any(|existing| existing.name == t.name) {
+                    id3_tags.push(t);
                 }
             }
         }
-    }
-
-    // Emit ID3Size (total size of ID3 metadata, like Perl's $id3Len)
-    if id3_len > 0 {
-        // ID3Size is not an ID3 tag: ExifTool raises it from the file level.
-        let mut size_tag = mk("ID3Size", "ID3 Size", Value::U32(id3_len as u32));
-        size_tag.group.family0 = "File".into();
-        size_tag.group.family1 = "File".into();
-        tags.push(size_tag);
     }
 
     // Find MPEG audio frame header (after ID3v2 tag if present)
@@ -72,6 +70,17 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
             tags.push(tag);
         }
     }
+
+    // Emit ID3Size (total size of ID3 metadata, like Perl's $id3Len), then the
+    // ID3 tags themselves — both after the audio data (ID3.pm:1606-1614).
+    if id3_len > 0 {
+        // ID3Size is not an ID3 tag: ExifTool raises it from the file level.
+        let mut size_tag = mk("ID3Size", "ID3 Size", Value::U32(id3_len as u32));
+        size_tag.group.family0 = "File".into();
+        size_tag.group.family1 = "File".into();
+        tags.push(size_tag);
+    }
+    tags.append(&mut id3_tags);
 
     // Duration composite: (FileSize - ID3Size) * 8 / AudioBitrate_bps
     // (approximate, matching Perl's MPEG::Composite Duration formula)

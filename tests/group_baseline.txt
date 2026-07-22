@@ -22,19 +22,13 @@ CanonRaw.cr2	WB_RGGBLevels	family1
 CanonRaw.cr3	AvgBitrate	family1
 CanonRaw.cr3	AvgBitrate	family2
 CanonRaw.cr3	BitDepth	family1
-CanonRaw.cr3	ColorSpace	family1
-CanonRaw.cr3	ColorSpace	family2
 CanonRaw.cr3	CompressorID	family1
 CanonRaw.cr3	CompressorVersion	family1
 CanonRaw.cr3	FocusDistanceLower	family2
 CanonRaw.cr3	FocusDistanceUpper	family2
 CanonRaw.cr3	GraphicsMode	family1
-CanonRaw.cr3	LensModel	family1
-CanonRaw.cr3	LensModel	family2
 CanonRaw.cr3	MatrixStructure	family1
 CanonRaw.cr3	OpColor	family1
-CanonRaw.cr3	OwnerName	family1
-CanonRaw.cr3	OwnerName	family2
 CanonRaw.cr3	Rotation	family1
 CanonRaw.cr3	Rotation	family2
 CanonRaw.cr3	VideoFrameRate	family1
@@ -69,7 +63,6 @@ Geotag.kml	KmlDocumentPlacemarkTrackWhen	family1
 Geotag.kml	KmlDocumentStyleId	family1
 Geotag.kml	KmlDocumentStyleMapId	family1
 Geotag.xml	HistoryVersion	family1
-GoPro.jpg	Model	family1
 ISO.iso	VolumeSize	family1
 JXL.jxl	ImageHeight	family1
 JXL.jxl	ImageWidth	family1
@@ -83,8 +76,6 @@ M2TS.mts	ImageHeight	family1
 M2TS.mts	ImageHeight	family2
 M2TS.mts	ImageWidth	family1
 M2TS.mts	ImageWidth	family2
-M2TS.mts	ShutterSpeed	family1
-M2TS.mts	ShutterSpeed	family2
 MIFF.miff	Category	family1
 MIFF.miff	Category	family2
 MIFF.miff	Credit	family1
@@ -220,7 +211,6 @@ Ricoh.jpg	RicohImageWidth	family1
 Ricoh2.jpg	RicohDate	family1
 Ricoh2.jpg	RicohImageHeight	family1
 Ricoh2.jpg	RicohImageWidth	family1
-Sigma.x3f	WhiteBalance	family2
 SigmaDP2.x3f	PreviewImage	family1
 Sony.pmp	Make	family1
 Sony.pmp	Make	family2

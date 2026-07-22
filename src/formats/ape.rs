@@ -107,10 +107,6 @@ pub fn read_mpc(data: &[u8]) -> Result<Vec<Tag>> {
         0
     };
 
-    // Also read ID3 tags
-    let id3_tags = id3::read_mp3(data).unwrap_or_default();
-    tags.extend(id3_tags);
-
     // MPC data starts at mpc_offset
     let mpc_data = if mpc_offset < data.len() {
         &data[mpc_offset..]
@@ -128,6 +124,11 @@ pub fn read_mpc(data: &[u8]) -> Result<Vec<Tag>> {
 
     // Look for APE tags
     parse_ape_tags(data, &mut tags);
+
+    // ID3 last: ProcessID3 (ID3.pm:1578) runs the audio module — here MPC, which
+    // carries the APE tags — before it reports ID3Size and the ID3 directories,
+    // so an ID3 Title overrides the APE one by last-wins.
+    tags.extend(id3::read_mp3(data).unwrap_or_default());
 
     Ok(tags)
 }

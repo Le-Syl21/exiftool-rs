@@ -1847,7 +1847,61 @@ impl ExifTool {
                 // BaseISO is the CIFF case: a .crw stores the value twice, once
                 // in CanonRaw and once in the Canon MakerNotes, and ExifTool
                 // keeps the CanonRaw one.
-                const LOW_PRIORITY_TAGS: &[(&str, &str)] = &[("Canon", "BaseISO")];
+                #[rustfmt::skip]
+                const LOW_PRIORITY_TAGS: &[(&str, &str)] = &[
+                    ("Canon", "BaseISO"),          // Canon.pm:2789
+                    // Canon::ShotInfo 22/23 carry `Priority => 0` (Canon.pm:2959,
+                    // 2973, 2986) so the ExifIFD copies win. Canon::ExposureInfo
+                    // has the same two names at default priority, but it is CR3
+                    // timed metadata, i.e. a sub-document only `-ee` reaches, and
+                    // duplicates are never collapsed under `-ee`.
+                    ("Canon", "FNumber"),
+                    ("Canon", "ExposureTime"),
+                    // Canon::FocalLength 1: "the EXIF FocalLength is more reliable,
+                    // so set this priority to zero" (Canon.pm:2709-2710). A CIFF
+                    // file reaches the same table through CanonRaw 0x1029.
+                    ("Canon", "FocalLength"),
+                    ("CIFF", "FocalLength"),
+                    // Sigma.pm:324, 337, 350, 363, 376 — the MakerNotes copies of
+                    // the X3F header's picture-adjustment values are `Priority => 0`,
+                    // so SigmaRaw::HeaderExt (no PRIORITY) keeps them.
+                    ("Sigma", "Contrast"),
+                    ("Sigma", "Shadow"),
+                    ("Sigma", "Highlight"),
+                    ("Sigma", "Saturation"),
+                    ("Sigma", "Sharpness"),
+                ];
+                // Tables ExifTool declares `PRIORITY => 0` wholesale, keyed by the
+                // family-1 group their tags land in:
+                //   * APP12.pm:27 `%APP12::PictureInfo` — the JPEG APP12 "Picture
+                //     Info" segment never displaces an EXIF value;
+                //   * SigmaRaw.pm:138 `%SigmaRaw::Properties` — "(because these
+                //     aren't writable like the EXIF ones)". Only the PROP tags are
+                //     demoted; SigmaRaw::HeaderExt keeps the default priority, which
+                //     is why the X3F header still wins Contrast and friends above;
+                //   * CaptureOne COS properties are invented on the fly, and XMP.pm:3595
+                //     builds those tagInfos as `{ Name, IsDefault => 1, Priority => 0 }`.
+                //     They land in family-1 group XML (CaptureOne.pm:26), whose table
+                //     declares one static tag only.
+                const LOW_PRIORITY_GROUPS1: &[&str] = &["PictureInfo", "XML"];
+                // The tag names of `%SigmaRaw::Properties` (SigmaRaw.pm:135-...),
+                // which shares its family-1 group with the normal-priority
+                // SigmaRaw::Header* tables and so cannot be demoted group-wide.
+                #[rustfmt::skip]
+                const SIGMARAW_PROPERTIES: &[&str] = &[
+                    "AFArea", "AFInFocus", "ApertureDisplayed", "BracketShot",
+                    "BurstShot", "CameraName", "ColorSpace", "DateTimeOriginal",
+                    "DriveMode", "EvalState", "ExposureCompensation",
+                    "ExposureProgram", "ExposureTime", "FNumber", "FirmwareVersion",
+                    "FlashExpComp", "FlashMode", "FlashPower", "FlashTTLMode",
+                    "FlashType", "FocalLength", "FocalLengthIn35mmFormat", "Focus",
+                    "FocusMode", "ISO", "ImageBoardID", "ImagerBoardID",
+                    "IntegrationTime", "LensApertureRange", "LensFocalRange",
+                    "LensType", "Make", "MeteringMode", "Model",
+                    "NetExposureCompensation", "Quality", "SensorID",
+                    "SensorTemperature", "SerialNumber", "ShutterSpeedDisplayed",
+                    "VersionBF", "WhiteBalance",
+                ];
                 // ExifTool.pm:4368 initialises `LOW_PRIORITY_DIR = { PreviewIFD => 1 }`
                 // and only two places ever add to it: ProcessJPEG (ExifTool.pm:7317,
                 // `$$self{LOW_PRIORITY_DIR}{IFD1} = 1; # lower priority of IFD1 tags`)
@@ -1870,7 +1924,10 @@ impl ExifTool {
                     if g.family3 != MAIN_DOCUMENT {
                         return true;
                     }
-                    if LOW_PRIORITY_TAGS.contains(&(g1, name)) {
+                    if LOW_PRIORITY_TAGS.contains(&(g1, name))
+                        || LOW_PRIORITY_GROUPS1.contains(&g1)
+                        || (g1 == "SigmaRaw" && SIGMARAW_PROPERTIES.contains(&name))
+                    {
                         return true;
                     }
                     match g.family0.as_str() {
@@ -1959,19 +2016,15 @@ impl ExifTool {
                     })
                     .map(|t| t.group.family1.clone());
                 use std::collections::HashMap as HM;
-                // Only duplicates from the same family 0 and the same family-3
-                // document compete; a different family 0 is a different metadata
-                // source, already arbitrated by the source-precedence passes above,
-                // and a different family 3 is a different document. So the
-                // competition key is (name, family0, family3): a file carrying
-                // XResolution in both EXIF (IFD0 + its IFD1 echo) and Photoshop
-                // still gets its two EXIF instances arbitrated against each other.
-                let mut by_name: HM<(&str, &str), Vec<usize>> = HM::new();
+                // The competition is group-blind, exactly as in Perl: `$$self{VALUE}`
+                // holds ONE entry per tag NAME, and FoundTag arbitrates every
+                // incoming instance against it whatever directory it came from
+                // (ExifTool.pm:9545-9570). So EXIF:FNumber and MakerNotes:FNumber
+                // genuinely compete, and the loser is only reachable as `FNumber (1)`
+                // with the Duplicates option on. The key is the name alone.
+                let mut by_name: HM<&str, Vec<usize>> = HM::new();
                 for (i, t) in tags.iter().enumerate() {
-                    by_name
-                        .entry((t.name.as_str(), duplicate_source(&t.group)))
-                        .or_default()
-                        .push(i);
+                    by_name.entry(t.name.as_str()).or_default().push(i);
                 }
                 let mut drop: std::collections::HashSet<usize> = std::collections::HashSet::new();
                 for idxs in by_name.values() {
