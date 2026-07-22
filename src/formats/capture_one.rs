@@ -259,12 +259,22 @@ fn compression_name(method: u16) -> &'static str {
 
 /// Extract K/V pairs from a COS XML string.
 /// COS format: <E K="key" V="value"/> elements anywhere in the XML.
-/// Later occurrences of the same key override earlier ones (AL overrides DL).
+///
+/// Every element is reported, in document order: `FoundCOS` calls
+/// `$et->HandleTag` once per property with no lookup of what came before
+/// (CaptureOne.pm:91). A key that appears in both the DL and the AL section is
+/// therefore extracted twice, and it is the ordinary duplicate arbitration that
+/// leaves only the AL value when the Duplicates option is off.
+///
+/// That arbitration is last-wins here even though every EIP member is a
+/// sub-document (`$$et{DOC_NUM} = ++$docNum`, CaptureOne.pm:163): a sub-document
+/// tag may still displace a stored one when the two carry the SAME document
+/// number (ExifTool.pm:9564), and the whole .cos is a single member. Tags from
+/// the OTHER members — the .iiq's EXIF WhiteBalance, say — carry a different
+/// number and are not displaced, which is why this collapse is done here, over
+/// the one member, and not by the engine's group-blind pass.
 fn parse_cos_xml(xml: &str) -> Vec<(String, String)> {
-    // We use an ordered map to preserve insertion order while allowing overrides.
-    // Use a Vec of (key, value) where we track index by key.
-    let mut order: Vec<String> = Vec::new();
-    let mut map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let mut pairs: Vec<(String, String)> = Vec::new();
 
     let mut rest = xml;
     while let Some(e_pos) = rest.find("<E ") {
@@ -280,10 +290,7 @@ fn parse_cos_xml(xml: &str) -> Vec<(String, String)> {
         // Extract K attribute
         if let (Some(k), Some(v)) = (xml_attr(elem, "K"), xml_attr_v(elem)) {
             if !k.is_empty() {
-                if !map.contains_key(&k) {
-                    order.push(k.clone());
-                }
-                map.insert(k, v);
+                pairs.push((k, v));
             }
         }
 
@@ -293,13 +300,21 @@ fn parse_cos_xml(xml: &str) -> Vec<(String, String)> {
         }
     }
 
-    order
-        .into_iter()
-        .map(|k| {
-            let v = map.remove(&k).unwrap_or_default();
-            (k, v)
-        })
-        .collect()
+    if !crate::metadata::exif::keep_duplicates() {
+        // Keep the last instance of each key, in its own position — the entry the
+        // surviving tag key holds once FoundTag has moved the earlier ones aside.
+        let mut seen = std::collections::HashSet::new();
+        let mut keep: Vec<bool> = pairs
+            .iter()
+            .rev()
+            .map(|(k, _)| seen.insert(k.clone()))
+            .collect();
+        keep.reverse();
+        let mut it = keep.into_iter();
+        pairs.retain(|_| it.next().unwrap_or(true));
+    }
+
+    pairs
 }
 
 /// Extract K attribute from an element string like `<E K="foo" V="bar"/>`.
