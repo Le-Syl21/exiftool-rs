@@ -5,6 +5,22 @@ use crate::error::Result;
 use crate::tag::Tag;
 use crate::value::Value;
 
+/// The PCAP ByteOrder tag. `PCAP::Main` is
+/// `GROUPS => { 0 => 'File', 1 => 'File', 2 => 'Other' }` (PCAP.pm line 21) and
+/// its ByteOrder entry (line 26) adds no override — unlike the ByteOrder of
+/// `DPX::Main` (DPX.pm line 23) and `Other::PFM` (Other.pm line 22), which sit
+/// in the same File/File group but are `Image`.
+fn byte_order_tag(order: &str) -> Tag {
+    let mut t = mktag(
+        "File",
+        "ByteOrder",
+        "Byte Order",
+        Value::String(order.into()),
+    );
+    t.group.family2 = "Other".into();
+    t
+}
+
 pub fn read_pcap(data: &[u8]) -> Result<Vec<Tag>> {
     if data.len() < 24 {
         return Err(crate::error::Error::InvalidData("not a PCAP file".into()));
@@ -42,12 +58,7 @@ pub fn read_pcap(data: &[u8]) -> Result<Vec<Tag>> {
     } else {
         "Big-endian (Motorola, MM)"
     };
-    tags.push(mktag(
-        "File",
-        "ByteOrder",
-        "Byte Order",
-        Value::String(bo_str.into()),
-    ));
+    tags.push(byte_order_tag(bo_str));
     tags.push(mktag(
         "File",
         "PCAPVersion",
@@ -114,12 +125,7 @@ pub fn read_pcapng(data: &[u8]) -> Result<Vec<Tag>> {
     } else {
         "Big-endian (Motorola, MM)"
     };
-    tags.push(mktag(
-        "File",
-        "ByteOrder",
-        "Byte Order",
-        Value::String(bo_str.into()),
-    ));
+    tags.push(byte_order_tag(bo_str));
     tags.push(mktag(
         "File",
         "PCAPVersion",

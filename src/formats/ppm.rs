@@ -57,12 +57,18 @@ pub fn read_ppm(data: &[u8]) -> Result<Vec<Tag>> {
                 } else {
                     "Little-endian"
                 };
-                tags.push(mktag(
+                // `Other::PFM` is `GROUPS => { 0 => 'File', 1 => 'File',
+                // 2 => 'Image' }` (Other.pm line 22); PCAP's ByteOrder shares
+                // the File/File group but is `Other`, so the category tables
+                // cannot tell them apart and the reader must say which.
+                let mut bo = mktag(
                     "File",
                     "ByteOrder",
                     "Byte Order",
                     Value::String(byte_order.into()),
-                ));
+                );
+                bo.group.family2 = "Image".into();
+                tags.push(bo);
             }
         }
     } else {

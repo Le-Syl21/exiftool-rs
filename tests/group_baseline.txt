@@ -6,9 +6,7 @@
 AIFF.aif	DateTimeOriginal	family1
 AIFF.aif	Duration	family1
 AIFF.aif	Duration	family2
-APE.ape	CoverArtFront	family2
 APE.ape	Duration	family2
-APE.mpc	CoverArtFront	family2
 APE.mpc	DateTimeOriginal	family1
 Android.mp4	AvgBitrate	family1
 Android.mp4	AvgBitrate	family2
@@ -73,14 +71,6 @@ CanonRaw.cr3	WB_RGGBLevelsShade	family1
 CanonRaw.cr3	WB_RGGBLevelsTungsten	family1
 CanonRaw.cr3	XResolution	family1
 CanonRaw.cr3	YResolution	family1
-CaptureOne.eip	Brightness	family2
-CaptureOne.eip	Clarity	family2
-CaptureOne.eip	ColorBalance	family2
-CaptureOne.eip	Contrast	family2
-CaptureOne.eip	Highlight	family2
-CaptureOne.eip	Rotation	family2
-CaptureOne.eip	Saturation	family2
-CaptureOne.eip	Shadow	family2
 DNG.dng	Creator	family2
 DNG.dng	Flash	family1
 DNG.dng	ThumbnailTIFF	family1
@@ -106,7 +96,6 @@ Font.pfb	Comment	family1
 Font.pfb	Comment	family2
 FujiFilm.raf	PreviewImage	family1
 GIF.gif	Comment	family1
-Garmin.fit	MessageIndex	family2
 Geotag.gpx	GpxCreator	family1
 Geotag.gpx	GpxTrkTrksegTrkptLat	family1
 Geotag.gpx	GpxTrkTrksegTrkptLon	family1
@@ -188,14 +177,12 @@ NikonD2Hs.jpg	PreviewImageStart	family1
 NikonD70.jpg	Compression	family1
 NikonD70.jpg	PreviewImageLength	family1
 NikonD70.jpg	PreviewImageStart	family1
-OOXML.docx	ACustomField	family2
 OlympusE1.jpg	ExtenderStatus	family1
 OpenDoc.ods	Creation-date	family2
 OpenDoc.ods	Keyword	family2
 OpenDoc.ods	Transformation	family2
 OpenEXR.exr	ImageHeight	family1
 OpenEXR.exr	ImageWidth	family1
-PCAP.pcapng	ByteOrder	family2
 PDF.pdf	Category	family1
 PDF.pdf	Category	family2
 PDF.pdf	Credit	family1

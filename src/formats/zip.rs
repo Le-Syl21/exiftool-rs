@@ -1424,11 +1424,13 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
 /// OOXML.pm line 56), so the container-level `ZIP` group is wrong for them; only
 /// the structural `Zip*` members stay in `ZIP`. Family 2 is left for the
 /// category pass to resolve against ExifTool's own tables, exactly as it does
-/// for every other reader.
+/// for every other reader; a property `OOXML::Main` does not list keeps the
+/// table's own `Document` default, since ExifTool invents a tag for it there.
 fn mk_xml(name: &str, description: &str, value: Value) -> Tag {
     let mut t = mk(name, description, value);
     t.group.family0 = "XML".into();
     t.group.family1 = "XML".into();
+    t.group.family2 = "Document".into();
     t
 }
 

@@ -555,6 +555,14 @@ pub fn parse_ape_tags(data: &[u8], tags: &mut Vec<Tag>) {
         // Generate tag name from key (ExifTool MakeTag logic)
         let tag_name = ape_key_to_tag_name(&key);
 
+        // APE.pm line 110: an item tag invented for a key starting with
+        // "Cover Art" and not ending in "Desc" overrides the APE::Main `Audio`
+        // default (line 22) with `Groups => { 2 => 'Preview' }`.
+        let cover_art = |mut t: Tag| {
+            t.group.family2 = "Preview".into();
+            t
+        };
+
         if key.starts_with("Cover Art") && is_binary {
             // Split at first null: description + binary data
             if let Some(null_pos) = val_bytes.iter().position(|&b| b == 0) {
@@ -567,14 +575,19 @@ pub fn parse_ape_tags(data: &[u8], tags: &mut Vec<Tag>) {
                 tags.push(mk(GROUP, GROUP, &desc_name, Value::String(desc)));
 
                 // Emit binary cover art tag
-                tags.push(mk(GROUP, GROUP, &tag_name, Value::Binary(img_data)));
+                tags.push(cover_art(mk(
+                    GROUP,
+                    GROUP,
+                    &tag_name,
+                    Value::Binary(img_data),
+                )));
             } else {
-                tags.push(mk(
+                tags.push(cover_art(mk(
                     GROUP,
                     GROUP,
                     &tag_name,
                     Value::Binary(val_bytes.to_vec()),
-                ));
+                )));
             }
         } else if is_binary {
             tags.push(mk(

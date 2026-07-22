@@ -334,6 +334,17 @@ fn doc_name(n: u32) -> String {
 }
 
 fn mk_tag(group1: &str, doc: u32, name: &str, raw: Value, print: String) -> Tag {
+    // Every message table is `2 => 'Other'` except `Garmin::Common`, the tags
+    // shared by all messages, which is `GROUPS => { 0 => 'Garmin', 1 => 'File',
+    // 2 => 'Unknown' }` (Garmin.pm line 3651); of its three entries only
+    // TimeStamp overrides that, with `Groups => { 2 => 'Time' }` (line 3656).
+    // A message table that defines a field of the same name — Garmin::Set has
+    // its own MessageIndex (line 4882) — is put back to `Other` by the category
+    // tables, which do hold that key.
+    let family2 = match name {
+        "PartIndex" | "MessageIndex" => "Unknown",
+        _ => "Other",
+    };
     Tag {
         id: TagId::Text(name.to_string()),
         name: name.to_string(),
@@ -341,7 +352,7 @@ fn mk_tag(group1: &str, doc: u32, name: &str, raw: Value, print: String) -> Tag 
         group: TagGroup {
             family0: "Garmin".into(),
             family1: group1.into(),
-            family2: "Other".into(),
+            family2: family2.into(),
             family3: doc_name(doc),
         },
         raw_value: raw,

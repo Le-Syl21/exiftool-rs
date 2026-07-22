@@ -245,6 +245,25 @@ pub fn family2_for(
     if family0 == "Olympus" {
         return None;
     }
+    // Every table ExifTool declares as `GROUPS => { 0 => 'XML', 1 => 'XML' }`
+    // invents a tag for each property it meets, so a name that reached this far
+    // is by construction absent from ExifTool's tables and the bare-name tier
+    // could only match an unrelated table by coincidence (Brightness -> Camera,
+    // Rotation -> Image). The categories differ per table — `OOXML::Main` is
+    // `Document` (OOXML.pm line 56), `CaptureOne::Main` is `Image`
+    // (CaptureOne.pm line 26), each with a `Time` override for date-shaped names
+    // — and only the reader knows which one it ran, so keep its category.
+    if family0 == "XML" && family1 == "XML" {
+        return None;
+    }
+    // `PCAP::Main` is `GROUPS => { 0 => 'File', 1 => 'File', 2 => 'Other' }`
+    // (PCAP.pm line 21) while `DPX::Main` (DPX.pm line 23) and `Other::PFM`
+    // (Other.pm line 22) are `Image`; all three declare a ByteOrder tag in the
+    // very same File/File group, so no tier can separate them and the majority
+    // answers `Image`. Each reader stamps its own table's category.
+    if family0 == "File" && family1 == "File" && name == "ByteOrder" {
+        return None;
+    }
     lookup(FAMILY2_BY_NAME, name).map(|c| choose(c, current))
 }
 

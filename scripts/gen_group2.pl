@@ -107,13 +107,22 @@ sub set_key { my $h = shift; return join(',', top($h)) }
 
 # ── Prune tiers that add nothing over the next fallback ─────────────────────
 #
-# Mirrors the tier chain of `family2_for`, including its one special case: an
-# XMP property that no tier matches is Unknown (`%Image::ExifTool::XMP::other`)
-# and never reaches the bare-name tier, so XMP keys must be pruned against
-# "Unknown" rather than against `%k1`.
+# Mirrors the tier chain of `family2_for`, including its two special cases:
+#
+#   * an XMP property that no tier matches is Unknown
+#     (`%Image::ExifTool::XMP::other`) and never reaches the bare-name tier, so
+#     XMP keys must be pruned against "Unknown" rather than against `%k1`;
+#   * every family-0 `XML` table invents a tag for each property it meets, so a
+#     name that reaches the end of the chain has no entry anywhere and
+#     `family2_for` keeps the reader's category instead of guessing from the
+#     bare name. Nothing may be pruned there: a pruned key would fall through to
+#     that guard rather than to `%k1`.
+my $NEVER = "\x00";    # cannot be a category, so no key is ever pruned against it
+
 sub fallback_after_g0 {
     my ($g0, $name) = @_;
     return 'Unknown' if $g0 eq 'XMP';
+    return $NEVER if $g0 eq 'XML';
     return set_key($k1{$name});
 }
 
