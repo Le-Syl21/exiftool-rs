@@ -828,12 +828,7 @@ fn read_riff_chunks(
         };
         if effective_len > 0 {
             let duration = effective_len as f64 / state.avg_bytes_per_sec as f64;
-            tags.push(mk_riff(
-                family,
-                "Duration",
-                "Duration",
-                Value::String(format_duration(duration)),
-            ));
+            tags.push(mk_riff_duration(format_duration(duration)));
         }
     }
 
@@ -862,12 +857,7 @@ fn read_riff_chunks(
             0.0
         };
         if dur > 0.0 {
-            tags.push(mk_riff(
-                family,
-                "Duration",
-                "Duration",
-                Value::String(format_duration(dur)),
-            ));
+            tags.push(mk_riff_duration(format_duration(dur)));
         }
     }
 
@@ -946,8 +936,17 @@ fn parse_bitmapinfoheader(data: &[u8], start: usize, end: usize, tags: &mut Vec<
         Value::String(bmp_version.into()),
     ));
 
-    // Width/Height are at offsets 4/8 but avih already emitted them; skip redundant ImageWidth/Height here
-    // (ExifTool does emit them from strf too via BMP::Main, but they're the same values)
+    // BMP.pm:52 `4 => { Name => 'ImageWidth', Format => 'int32u' }` and
+    // BMP.pm:56 `8 => { Name => 'ImageHeight', Format => 'int32s', ValueConv =>
+    // 'abs($val)' }` ("negative when stored in top-to-bottom order"). The AVI
+    // header (`avih`) reports the same two names in the RIFF group, but the
+    // BITMAPINFOHEADER is read afterwards and both copies carry the default
+    // priority, so the File copy is the one ExifTool keeps.
+    let width = u32::from_le_bytes([cd[4], cd[5], cd[6], cd[7]]);
+    tags.push(mk_bmp("ImageWidth", "Image Width", Value::U32(width)));
+    let height = i32::from_le_bytes([cd[8], cd[9], cd[10], cd[11]]).unsigned_abs();
+    tags.push(mk_bmp("ImageHeight", "Image Height", Value::U32(height)));
+
     // Planes at offset 12 (int16u)
     let planes = u16::from_le_bytes([cd[12], cd[13]]);
     tags.push(mk_bmp("Planes", "Planes", Value::U16(planes)));
@@ -1576,6 +1575,19 @@ fn mk_webp(name: &str, description: &str, value: Value) -> Tag {
         print_value,
         priority: 0,
     }
+}
+
+/// RIFF `Duration` is not a RIFF tag at all: `%RIFF::Composite` (RIFF.pm:1548)
+/// derives it from FrameRate/FrameCount (AVI) or AvgBytesPerSec (WAV), so it
+/// belongs to the Composite table: `GROUPS => { 0 => 'Composite', 1 =>
+/// 'Composite' }` (ExifTool.pm:2303). That table names no family 2, so it falls
+/// back to the global default `Other`.
+fn mk_riff_duration(printed: String) -> Tag {
+    let mut tag = mk_riff("AVI", "Duration", "Duration", Value::String(printed));
+    tag.group.family0 = "Composite".into();
+    tag.group.family1 = "Composite".into();
+    tag.group.family2 = "Other".into();
+    tag
 }
 
 /// Build a tag from an AVI `strf` BITMAPINFOHEADER. ExifTool parses that

@@ -103,6 +103,14 @@ pub fn family2_for(
     if current == XMP_UNKNOWN_NAMESPACE {
         return None;
     }
+    // A tag FoundTag invents from a bare NAME that %Image::ExifTool::Extra does
+    // not describe gets `Groups => \%allGroupsExifTool`, i.e. `( 0 => 'ExifTool',
+    // 1 => 'ExifTool', 2 => 'ExifTool' )` (ExifTool.pm:1226, applied at
+    // ExifTool.pm:9465). Such a name belongs to no table, so the lookups below —
+    // all keyed on the name — could only drag in an unrelated table's category.
+    if family0 == "ExifTool" {
+        return None;
+    }
     // A few readers label a table with a family-0 group of their own choosing
     // where ExifTool's table declares a different one; the generated tables are
     // keyed on ExifTool's, so resolve the category under it. The KyoceraRaw

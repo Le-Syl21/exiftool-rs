@@ -274,6 +274,10 @@ fn vcard_family2(base_name: &str) -> &'static str {
 
 /// Parsed vCard/iCal line
 struct ParsedLine {
+    /// The `group.` prefix of the property line, normalised the way ExifTool
+    /// normalises it (VCard.pm:333, `$$et{SET_GROUP1} = ucfirst lc $1`), so
+    /// `item1.EMAIL` yields `Item1`.
+    group: Option<String>,
     tag: String,
     types: Vec<String>,
     language: Option<String>,
@@ -294,17 +298,22 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
     let mut pos;
     let bytes = line.as_bytes();
 
-    // Skip group prefix (e.g., "item1.")
-    let tag_start = if let Some(dot) = line.find('.') {
-        // Only skip if before the colon and semicolon
+    // Group prefix (e.g. "item1."). VCard.pm:332 strips it with
+    // `$tag =~ s/^([-A-Za-z0-9]+)\.//`, so the prefix is made of that character
+    // class only, and the first dot that follows such a run starts the tag.
+    let (tag_start, group) = {
         let first_sep = line.find([':', ';']).unwrap_or(line.len());
-        if dot < first_sep {
-            dot + 1
-        } else {
-            0
+        match line[..first_sep].find('.') {
+            Some(dot)
+                if dot > 0
+                    && line[..dot]
+                        .bytes()
+                        .all(|b| b.is_ascii_alphanumeric() || b == b'-') =>
+            {
+                (dot + 1, Some(ucfirst_lower(&line[..dot])))
+            }
+            _ => (0, None),
         }
-    } else {
-        0
     };
 
     pos = tag_start;
@@ -488,6 +497,7 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
     };
 
     Some(ParsedLine {
+        group,
         tag: raw_tag.to_string(),
         types,
         language,
@@ -730,6 +740,16 @@ pub fn read_vcard(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
 fn emit_vcard_tag(parsed: &ParsedLine, tags: &mut Vec<Tag>, doc_priority: i32) {
     let start = tags.len();
     emit_vcard_tag_inner(parsed, tags);
+    // VCard.pm:331-338 — a `group.` prefix on the property line sets
+    // `$$et{SET_GROUP1}` for every tag the line emits (the property itself and
+    // its Geo/Label/Tzid parameters), so `item1.EMAIL` reports under `Item1`.
+    // Without a prefix SET_GROUP1 is deleted and the table's own family-1 group
+    // (`VCard`, VCard.pm:36) applies.
+    if let Some(g) = &parsed.group {
+        for t in &mut tags[start..] {
+            t.group.family1 = g.clone();
+        }
+    }
     if doc_priority != 0 {
         for t in &mut tags[start..] {
             t.priority = doc_priority;

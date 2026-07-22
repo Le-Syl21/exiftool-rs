@@ -4284,25 +4284,57 @@ fn decode_preview_ifd(
             break;
         }
         let tag_id = read_u16(data, eoff, bo);
+        let format = read_u16(data, eoff + 2, bo);
         let val = read_u32(data, eoff + 8, bo);
 
         // `Nikon::PreviewIFD` is `GROUPS => { 0 => 'MakerNotes', 1 =>
-        // 'PreviewIFD', 2 => 'Image' }` (Nikon.pm line 5389) and neither 0x201
-        // nor 0x202 overrides family 2, so both are Image — not the `Camera`
-        // that `mk_nikon_str` gives a Nikon::Main tag.
-        let image = |mut t: Tag| {
-            t.group.family2 = "Image".into();
-            t
+        // 'PreviewIFD', 2 => 'Image' }` (Nikon.pm:5389). Every tag of this
+        // table therefore lands in family-1 group `PreviewIFD`, which is what
+        // makes `LOW_PRIORITY_DIR{PreviewIFD}` (ExifTool.pm:4368) apply to it —
+        // not the `Nikon`/`Camera` pair a Nikon::Main tag gets. No tag in the
+        // table overrides family 2, so all of them are `Image`.
+        let preview = |name: &str, raw: Value, print: String| Tag {
+            id: TagId::Text(name.to_string()),
+            name: name.to_string(),
+            description: name.to_string(),
+            group: TagGroup {
+                family0: "MakerNotes".into(),
+                family1: "PreviewIFD".into(),
+                family2: "Image".into(),
+                family3: "Main".into(),
+            },
+            raw_value: raw,
+            print_value: print,
+            priority: 0,
         };
         match tag_id {
+            // Nikon.pm:5400 — `0x103 => { Name => 'Compression', PrintConv =>
+            // \%Image::ExifTool::Exif::compression }`, i.e. the very PrintConv
+            // the EXIF 0x0103 tag uses. Stored as int16u, so the value sits in
+            // the first half of the 4-byte value field.
+            0x0103 if format == 3 => {
+                let v = read_u16(data, eoff + 8, bo);
+                let print = crate::tags::print_conv_generated::print_conv("Exif", 0x0103, v as i64)
+                    .map(str::to_string)
+                    .unwrap_or_else(|| format!("Unknown ({v})"));
+                tags.push(preview("Compression", Value::U16(v), print));
+            }
             0x0201 => {
                 // PreviewImageStart is IsOffset, stored relative to the maker-note
                 // TIFF base. ExifTool reports it file-absolute (base + raw).
                 let abs = val as u64 + mn_file_base as u64;
-                tags.push(image(mk_nikon_str("PreviewImageStart", &abs.to_string())));
+                tags.push(preview(
+                    "PreviewImageStart",
+                    Value::String(abs.to_string()),
+                    abs.to_string(),
+                ));
             }
             0x0202 => {
-                tags.push(image(mk_nikon_str("PreviewImageLength", &val.to_string())));
+                tags.push(preview(
+                    "PreviewImageLength",
+                    Value::String(val.to_string()),
+                    val.to_string(),
+                ));
                 // Also emit PreviewImage as binary marker
                 if val > 0 {
                     tags.push(Tag {

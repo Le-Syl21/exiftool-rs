@@ -87,7 +87,6 @@ Nikon.nef	ee	missing	0	ApplicationRecordVersion	4
 Nikon.nef	ee	missing	0	CFAPattern	[Blue,Green][Green,Red]
 Nikon.nef	ee	missing	0	Caption-Abstract	A caption
 Nikon.nef	ee	missing	0	City	Kingston
-Nikon.nef	ee	missing	0	Compression	JPEG (old-style)
 Nikon.nef	ee	missing	0	Country-PrimaryLocationName	Canada
 Nikon.nef	ee	missing	0	FocalLength	18.3 mm
 Nikon.nef	ee	missing	0	LensFStops	5.33
@@ -97,14 +96,12 @@ Nikon.nef	ee	missing	0	SpecialInstructions	none
 Nikon.nef	ee	missing	0	XResolution	72
 Nikon.nef	ee	missing	0	YResolution	72
 NikonD2Hs.jpg	ee	extra	0	Software	(Binary data 24 bytes, use -b option to extract)
-NikonD2Hs.jpg	ee	missing	0	Compression	JPEG (old-style)
 NikonD2Hs.jpg	ee	missing	0	FocalLength	50.4 mm
 NikonD2Hs.jpg	ee	missing	0	LensFStops	7.33
 NikonD2Hs.jpg	ee	missing	0	ResolutionUnit	inches
 NikonD2Hs.jpg	ee	missing	0	XResolution	300
 NikonD2Hs.jpg	ee	missing	0	YCbCrPositioning	Co-sited
 NikonD2Hs.jpg	ee	missing	0	YResolution	300
-NikonD70.jpg	ee	missing	0	Compression	JPEG (old-style)
 NikonD70.jpg	ee	missing	0	FocalLength	56.6 mm
 NikonD70.jpg	ee	missing	0	LensFStops	5.33
 NikonD70.jpg	ee	missing	0	ResolutionUnit	inches
@@ -128,8 +125,6 @@ PSP.psp	ee	extra	0	Copyright	.
 PSP.psp	ee	extra	0	XResolution	0.8013564977
 PSP.psp	ee	extra	0	YResolution	200
 PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
-Pentax.avi	ee	missing	0	ImageHeight	720
-Pentax.avi	ee	missing	0	ImageWidth	1280
 Pentax.avi	ee	missing	0	LensType	smc PENTAX-DA L 18-55mm F3.5-5.6
 Pentax.avi	ee	missing	0	PentaxModelID	K-x
 Pentax.avi	ee	missing	0	Quality	10000
@@ -184,8 +179,6 @@ QuickTime.m4a	ee	missing	0	CoverArt	(Binary data 19 bytes, use -b option to extr
 QuickTime.mov	ee	extra	0	Warning	[minor] The ExtractEmbedded option may find more tags in the video data
 QuickTime.mov	ee	missing	0	Album	ålbum
 QuickTime.mov	ee	missing	0	Artist	årtist
-RIFF.avi	ee	missing	0	ImageHeight	240
-RIFF.avi	ee	missing	0	ImageWidth	320
 RIFF.avi	ee	missing	0	Quality	10000
 RIFF.avi	ee	missing	0	SampleSize	1 byte
 RIFF.avi	ee	missing	0	StreamType	Audio

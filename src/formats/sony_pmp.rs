@@ -23,9 +23,29 @@ pub fn read_sony_pmp(data: &[u8]) -> Result<Vec<Tag>> {
 
     let mut tags = Vec::new();
 
-    // Make and Model are always Sony DSC-F1
-    tags.push(mk("Make", "Make", Value::String("Sony".into())));
-    tags.push(mk("Model", "Model", Value::String("DSC-F1".into())));
+    // Make and Model are always Sony DSC-F1. ProcessPMP hard-codes them with
+    // `$et->FoundTag(Make => 'Sony')` / `FoundTag(Model => 'DSC-F1')`
+    // (Sony.pm:11376-11377), i.e. by NAME and not through a tag table. FoundTag
+    // looks the name up in %Image::ExifTool::Extra, fails, and falls back to
+    // `$tagInfo = { Name => $tag, Groups => \%allGroupsExifTool }`
+    // (ExifTool.pm:9464) — so all three families report `ExifTool`, not the
+    // MakerNotes/Sony/Image of the Sony::PMP table.
+    let exiftool_group = |mut t: Tag| {
+        t.group.family0 = "ExifTool".into();
+        t.group.family1 = "ExifTool".into();
+        t.group.family2 = "ExifTool".into();
+        t
+    };
+    tags.push(exiftool_group(mk(
+        "Make",
+        "Make",
+        Value::String("Sony".into()),
+    )));
+    tags.push(exiftool_group(mk(
+        "Model",
+        "Model",
+        Value::String("DSC-F1".into()),
+    )));
 
     // JpgFromRawStart at offset 8 (int32u BE)
     let jpg_start = u32::from_be_bytes([data[8], data[9], data[10], data[11]]) as usize;
