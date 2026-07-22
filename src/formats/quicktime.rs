@@ -49,6 +49,10 @@ struct QtState {
     /// Index of the first tag produced by the innermost `meta` atom, so an
     /// enclosing `udta` does not claim it as its own.
     meta_tags_from: usize,
+    /// Index just past the last tag that `meta` atom produced. A `udta` atom
+    /// that follows the `meta` box is still user data, so the exclusion has to
+    /// stop at the box's end rather than run to the end of the directory.
+    meta_tags_to: usize,
 }
 
 /// Give every tag added since `before` the family-1 group of the directory that
@@ -561,6 +565,7 @@ fn parse_atoms(
             b"udta" => {
                 let before_udta = tags.len();
                 let meta_before = state.meta_tags_from;
+                let meta_to_before = state.meta_tags_to;
                 parse_atoms(data, content_start, content_end, tags, state, depth + 1);
                 // Only udta's own atoms are UserData. A `meta` box nested in it
                 // carries its own tables — ItemList/Keys, already stamped, plus
@@ -568,13 +573,15 @@ fn parse_atoms(
                 let meta_range = state.meta_tags_from.max(before_udta);
                 regroup_since(tags, before_udta, "UserData");
                 if state.meta_tags_from > meta_before {
-                    for tag in &mut tags[meta_range..] {
+                    let meta_end = state.meta_tags_to.max(meta_range).min(tags.len());
+                    for tag in &mut tags[meta_range..meta_end] {
                         if tag.group.family1 == "UserData" {
                             tag.group.family1 = "QuickTime".into();
                         }
                     }
                 }
                 state.meta_tags_from = meta_before;
+                state.meta_tags_to = meta_to_before;
             }
             // Metadata container. `meta` is a FullBox (4-byte version/flags before its
             // children) in ISO BMFF, but a plain container in QuickTime — Android MP4s
@@ -583,6 +590,7 @@ fn parse_atoms(
             // present at offset 8 ⇒ ISO (skip version/flags).
             b"meta" => {
                 state.meta_tags_from = tags.len();
+                state.meta_tags_to = tags.len();
                 let off = if content_start + 8 <= content_end
                     && &data[content_start + 4..content_start + 8] == b"hdlr"
                 {
@@ -600,6 +608,7 @@ fn parse_atoms(
                         depth + 1,
                     );
                 }
+                state.meta_tags_to = tags.len();
             }
             // Keys atom: ordered key definitions for the following ilst (Keys metadata)
             b"keys" => {
