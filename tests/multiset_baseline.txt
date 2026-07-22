@@ -37,7 +37,6 @@ QuickTime.mov	ee	missing	0	Artist	årtist
 SigmaDP2.x3f	default	extra	0	PreviewImage	(Binary data 20 bytes, use -b option to extract)
 SigmaDP2.x3f	default	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
 SigmaDP2.x3f	ee	missing	0	PreviewImage	(Binary data 26 bytes, use -b option to extract)
-XMP.xml	ee	extra	0	LightValue	14.2
 XMP.xml	ee	extra	0	ShutterSpeed	1/213
 XMP.xml	ee	missing	0	ShutterSpeed	0.00469483568075117
 XMP4.xmp	ee	missing	0	StructList2Item1	c1-2

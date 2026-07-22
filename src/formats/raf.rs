@@ -71,9 +71,13 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
             id: TagId::Text("PreviewImage".into()),
             name: "PreviewImage".into(),
             description: "Preview Image".into(),
+            // `$et->FoundTag('PreviewImage', \$jpeg)` (FujiFilm.pm line 1960):
+            // a bare NAME, so it resolves through `%Image::ExifTool::Extra` —
+            // File/File with `Groups => { 2 => 'Preview' }` (ExifTool.pm lines
+            // 1781-1783) — not the RAF table.
             group: TagGroup {
-                family0: "RAF".into(),
-                family1: "RAF".into(),
+                family0: "File".into(),
+                family1: "File".into(),
                 family2: "Preview".into(),
                 family3: "Main".into(),
             },

@@ -651,8 +651,16 @@ fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<(Vec<u8>, String, String)> {
     Some((tiff, grp0, grp1))
 }
 
+/// The tag a composite's `Require`/`Desire` entry names.
+///
+/// The lookup is case-SENSITIVE, as ExifTool's is: a `Require` entry names a
+/// tag key, and `$$self{VALUE}{ISO}` is not `$$self{VALUE}{Iso}`. That is what
+/// keeps Composite:LightValue out of an ExifTool-written RDF/XML dump: the
+/// `ExifIFD:ISO` property it carries has no lowercase letter, and GetXMPTagID
+/// rewrites such a name — "all uppercase is ugly, so convert it" — to `Iso`
+/// unless the namespace's table already holds it (XMP.pm lines 3040-3050), so
+/// nothing is called ISO for the Require to find.
 fn find_tag<'a>(tags: &'a [Tag], name: &str) -> Option<&'a Tag> {
-    let name_lower = name.to_lowercase();
     // Composites read ExifTool's primary (unnumbered) tag key. A sub-document tag
     // never becomes that key: FoundTag only lets the incoming tag take it over
     // when it carries no DOC_NUM or the same one (ExifTool.pm:9564). So the main
@@ -660,7 +668,7 @@ fn find_tag<'a>(tags: &'a [Tag], name: &str) -> Option<&'a Tag> {
     // compete.
     let pick = |main_only: bool| {
         tags.iter()
-            .filter(|t| t.name.to_lowercase() == name_lower)
+            .filter(|t| t.name == name)
             .filter(|t| !main_only || t.group.family3 == "Main")
             // Prefer the highest-priority tag (first among ties) so composites use
             // the same value ExifTool's priority dedup would surface, not merely
