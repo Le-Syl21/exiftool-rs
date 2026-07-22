@@ -20,7 +20,6 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
     let hdr_size = u32::from_be_bytes([data[4], data[5], data[6], data[7]]) as usize;
     let hdr_size = hdr_size.max(8);
     let mut pos = hdr_size;
-    let mut first_mdpr = true;
     let mut mdpr_count = 0u32;
     let mut stream_mimes: Vec<String> = Vec::new();
 
@@ -55,8 +54,7 @@ pub fn read_real_media(data: &[u8]) -> Result<Vec<Tag>> {
                 Some("Real-PROP".to_string())
             }
             b"MDPR" => {
-                real_parse_mdpr(chunk_data, &mut tags, first_mdpr, &mut stream_mimes);
-                first_mdpr = false;
+                real_parse_mdpr(chunk_data, &mut tags, &mut stream_mimes);
                 mdpr_count += 1;
                 Some(if mdpr_count == 1 {
                     "Real-MDPR".to_string()
@@ -253,7 +251,7 @@ fn real_parse_prop(data: &[u8], tags: &mut Vec<Tag>) {
     }
 }
 
-fn real_parse_mdpr(data: &[u8], tags: &mut Vec<Tag>, is_first: bool, mimes: &mut Vec<String>) {
+fn real_parse_mdpr(data: &[u8], tags: &mut Vec<Tag>, mimes: &mut Vec<String>) {
     if data.len() < 30 {
         return;
     }
@@ -300,8 +298,12 @@ fn real_parse_mdpr(data: &[u8], tags: &mut Vec<Tag>, is_first: bool, mimes: &mut
         mimes.push(mime_type.clone());
     }
 
-    // Only emit stream info for first non-logical stream (Perl PRIORITY => 0 = first takes priority)
-    if is_first {
+    // Every MDPR chunk is extracted. Real::MediaProps is `PRIORITY => 0`
+    // ("first stream takes priority", Real.pm:120): that decides which stream
+    // wins the duplicate competition, it does not stop the others from being
+    // extracted -- with -ee they all show up, in Real-MDPR, Real-MDPR2, ...
+    let stream_start = tags.len();
+    {
         tags.push(mktag(
             "Real",
             "StreamNumber",
@@ -352,18 +354,29 @@ fn real_parse_mdpr(data: &[u8], tags: &mut Vec<Tag>, is_first: bool, mimes: &mut
             "Stream Duration",
             Value::String(real_convert_duration(dur_secs)),
         ));
-        tags.push(mktag(
-            "Real",
-            "StreamName",
-            "Stream Name",
-            Value::String(stream_name),
-        ));
-        tags.push(mktag(
-            "Real",
-            "StreamMimeType",
-            "Stream Mime Type",
-            Value::String(mime_type.clone()),
-        ));
+        // "don't extract zero-length information": ProcessSerialData only
+        // calls FoundTag `if $count` (Canon.pm:10589), and these two are
+        // `string[$val{8}]` / `string[$val{10}]` (Real.pm:129, :133), so an
+        // empty name or MIME type produces no tag at all.
+        if !stream_name.is_empty() {
+            tags.push(mktag(
+                "Real",
+                "StreamName",
+                "Stream Name",
+                Value::String(stream_name),
+            ));
+        }
+        if !mime_type.is_empty() {
+            tags.push(mktag(
+                "Real",
+                "StreamMimeType",
+                "Stream Mime Type",
+                Value::String(mime_type.clone()),
+            ));
+        }
+    }
+    for t in &mut tags[stream_start..] {
+        t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
     }
 
     // Check for logical-fileinfo stream
@@ -906,32 +919,36 @@ fn real_parse_id3v1(data: &[u8], tags: &mut Vec<Tag>) {
     // Genre: byte 127
     let genre_byte = data[127] as usize;
 
-    // Collect new tags, skipping those already present (PRIORITY => 0 behavior)
+    // Every field is extracted even when the container already reported the
+    // same name. ExifTool's ID3v1 table is `PRIORITY => 0` ("let ID3v2 tags
+    // replace these if they come later", ID3.pm:338), which loses the duplicate
+    // competition -- it does not stop the tag from being extracted.
     let mut new_tags: Vec<Tag> = Vec::new();
-    if !title.is_empty() && !tags.iter().any(|t| t.name == "Title") {
+    if !title.is_empty() {
         new_tags.push(mktag("ID3", "Title", "Title", Value::String(title)));
     }
-    if !artist.is_empty() && !tags.iter().any(|t| t.name == "Artist") {
+    if !artist.is_empty() {
         new_tags.push(mktag("ID3", "Artist", "Artist", Value::String(artist)));
     }
-    if !album.is_empty() && !tags.iter().any(|t| t.name == "Album") {
+    if !album.is_empty() {
         new_tags.push(mktag("ID3", "Album", "Album", Value::String(album)));
     }
-    if !year.is_empty() && !tags.iter().any(|t| t.name == "Year") {
+    if !year.is_empty() {
         new_tags.push(mktag("ID3", "Year", "Year", Value::String(year)));
     }
-    if !comment.is_empty() && !tags.iter().any(|t| t.name == "Comment") {
+    if !comment.is_empty() {
         new_tags.push(mktag("ID3", "Comment", "Comment", Value::String(comment)));
     }
     if let Some(genre_name) = id3v1_genre_name(genre_byte) {
-        if !tags.iter().any(|t| t.name == "Genre") {
-            new_tags.push(mktag(
-                "ID3",
-                "Genre",
-                "Genre",
-                Value::String(genre_name.to_string()),
-            ));
-        }
+        new_tags.push(mktag(
+            "ID3",
+            "Genre",
+            "Genre",
+            Value::String(genre_name.to_string()),
+        ));
+    }
+    for t in &mut new_tags {
+        t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
     }
     tags.extend(new_tags);
 }

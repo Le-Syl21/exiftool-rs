@@ -4,13 +4,6 @@
 # Oracle: tests/expected_multi/*.mvals, from scripts/gen_multiset_baselines.sh
 # Regenerate: UPDATE_MULTISET_BASELINE=1 cargo test --release --test regression regression_tag_multiset
 # Format: <file>\t<default|ee>\t<extra|missing>\t<occurrence>\t<tag>\t<value>
-APE.mpc	ee	missing	0	Album	The Test Album
-APE.mpc	ee	missing	0	Artist	Who Knows
-APE.mpc	ee	missing	0	Comment	a nice comment
-APE.mpc	ee	missing	0	Genre	Funk
-APE.mpc	ee	missing	0	Title	A 4s sample for testing embedd
-APE.mpc	ee	missing	0	Track	1
-APE.mpc	ee	missing	0	Year	2006
 ASF.wmv	ee	missing	0	ErrorCorrectionType	Audio Spread
 ASF.wmv	ee	missing	0	StreamNumber	1
 ASF.wmv	ee	missing	0	StreamType	Audio
@@ -73,13 +66,6 @@ Lytro.lfp	ee	missing	0	ModesRegionOfInterestArrayType	exposure
 Lytro.lfp	ee	missing	0	ModesRegionOfInterestArrayX	0.26874190568923950195
 Lytro.lfp	ee	missing	0	ModesRegionOfInterestArrayY	0.55208665132522583008
 M2TS.mts	ee	extra	0	ShutterSpeed	1/25
-MIE.mie	ee	extra	0	MIMEType	application/x-mie
-MP3.mp3	ee	missing	0	Album	Album
-MP3.mp3	ee	missing	0	Artist	Artist
-MP3.mp3	ee	missing	0	Comment	Comment
-MP3.mp3	ee	missing	0	Genre	Hip-Hop
-MP3.mp3	ee	missing	0	Title	Title
-MP3.mp3	ee	missing	0	Year	2003
 Matroska.mkv	ee	extra	0	DefaultDuration	40 ms
 Minolta.mrw	ee	missing	0	ColorMode	Natural
 Nikon.nef	ee	missing	0	FocalLength	18.3 mm
@@ -141,18 +127,6 @@ RIFF.avi	ee	missing	0	StreamType	Audio
 Radiance.hdr	ee	missing	0	Command	oconv -f -i test4.oct ila01728
 Radiance.hdr	ee	missing	0	Command	oconv mat.rad sky.rad surfaces.rad
 Radiance.hdr	ee	missing	0	Command	rpict -t 30 -vf test4.vf -x 1536 -y 1536 -ps 3 -pt .04 -dp 4096 -ar 68 -ms 0.029 -ds .2 -dt .05 -dc .75 -dr 3 -sj 1 -st .01 -ab 3 -af test4.amb -aa .08 -ad 1024 -as 512 -av 0.5 0.5 0.5 -lr 12 -lw .0005 -st .001 -dj .02
-Real.rm	ee	extra	0	MIMEType	application/vnd.rn-realmedia
-Real.rm	ee	missing	0	Comment	This is a comment
-Real.rm	ee	missing	0	StreamAvgBitrate	0 bps
-Real.rm	ee	missing	0	StreamAvgPacketSize	0
-Real.rm	ee	missing	0	StreamDuration	0 s
-Real.rm	ee	missing	0	StreamMaxBitrate	0 bps
-Real.rm	ee	missing	0	StreamMaxPacketSize	0
-Real.rm	ee	missing	0	StreamMimeType	logical-fileinfo
-Real.rm	ee	missing	0	StreamNumber	1
-Real.rm	ee	missing	0	StreamPreroll	0 s
-Real.rm	ee	missing	0	StreamStartTime	0
-Real.rm	ee	missing	0	Title	This is a title
 Ricoh2.jpg	ee	extra	0	GPSAltitude	117
 Ricoh2.jpg	ee	missing	0	GPSAltitude	117 m
 Ricoh2.jpg	ee	missing	0	GPSLatitude	42 deg 2' 4.47"

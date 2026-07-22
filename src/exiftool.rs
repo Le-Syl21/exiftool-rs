@@ -1475,6 +1475,36 @@ impl ExifTool {
         // The pseudo-tags collected above precede every format tag.
         tags.splice(0..0, pre);
 
+        // A format reader that overrides the file's MIME type does it by
+        // assignment in ExifTool -- `$$et{VALUE}{MIMEType} = $mimeTypes[0]`
+        // (Real.pm:655) -- which replaces the value in place instead of adding
+        // a second tag. Keep only the first File:MIMEType, carrying the last
+        // value, so the count stays one even with the Duplicates option on.
+        {
+            // Only the main document's: an embedded image legitimately reports
+            // its own MIMEType in its own document.
+            let is_mime = |t: &Tag| {
+                t.name == "MIMEType"
+                    && t.group.family0 == "File"
+                    && t.group.family3 == crate::tag::MAIN_DOCUMENT
+            };
+            if tags.iter().filter(|t| is_mime(t)).count() > 1 {
+                let last = tags.iter().rposition(is_mime).unwrap();
+                let (value, print) = (tags[last].raw_value.clone(), tags[last].print_value.clone());
+                let first = tags.iter().position(is_mime).unwrap();
+                tags[first].raw_value = value;
+                tags[first].print_value = print;
+                let mut seen = false;
+                tags.retain(|t| {
+                    !is_mime(t) || {
+                        let keep = !seen;
+                        seen = true;
+                        keep
+                    }
+                });
+            }
+        }
+
         // Promote authoritative specialized-source tags before computing composites,
         // so derived tags (ShutterSpeed, LightValue, ...) use the primary value.
         //
@@ -1616,13 +1646,13 @@ impl ExifTool {
                     ("GoPro", "WhiteBalance"),
                     ("GoPro", "Sharpness"),
                     ("GoPro", "ExposureCompensation"),
-                    // Embedded ID3 Comment overrides the native container's (AIFF/...).
-                    // One entry per ID3 table: only one of them can be present,
-                    // since read_mp3 drops an ID3v1 tag already seen in ID3v2.
+                    // Embedded ID3v2 Comment overrides the native container's
+                    // (AIFF/...). ID3v1 is NOT in this list: its table is
+                    // `PRIORITY => 0` (ID3.pm:338), so it loses to the
+                    // container's tag instead of displacing it.
                     ("ID3v2_4", "Comment"),
                     ("ID3v2_3", "Comment"),
                     ("ID3v2_2", "Comment"),
-                    ("ID3v1", "Comment"),
                     // Minolta RAW (.mrw PRD/native block) is authoritative for these
                     // over the embedded EXIF maker note copies.
                     ("MinoltaRaw", "Contrast"),

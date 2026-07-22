@@ -44,12 +44,15 @@ pub fn read_mp3(data: &[u8]) -> Result<Vec<Tag>> {
         if &data[v1_start..v1_start + 3] == b"TAG" {
             id3_len += 128;
             let id3v1_tags = read_id3v1(&data[v1_start..]);
-            // Only add v1 tags not already present from v2
+            // Every ID3v1 tag is extracted, even when ID3v2 already reported the
+            // same name: ExifTool processes the two directories independently
+            // (ID3.pm:1609 then :1614) and only lets the ID3v1 table lose the
+            // duplicate competition, through `PRIORITY => 0` ("let ID3v2 tags
+            // replace these if they come later", ID3.pm:338).
             for mut t in id3v1_tags {
                 t.group.family1 = "ID3v1".into();
-                if !id3_tags.iter().any(|existing| existing.name == t.name) {
-                    id3_tags.push(t);
-                }
+                t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+                id3_tags.push(t);
             }
         }
     }
