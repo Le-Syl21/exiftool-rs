@@ -36,9 +36,10 @@ exiftool-rs reimplements ExifTool in Rust: the tag tables and print conversions 
 
 | | ExifTool (Perl) | exiftool-rs |
 |---|---|---|
-| Bundled GUI | None (CLI only) | Yes — `exiftool-rs-gui` |
-| De-facto GUI | [ExifToolGUI](https://exiftool.org/gui/) (third-party, Windows, wraps the CLI) | Native [egui](https://github.com/emilk/egui), cross-platform |
-| Editing | via the third-party GUI | Double-click any writable tag |
+| Bundled GUI | None — CLI only | Yes — `exiftool-rs-gui` |
+| Pseudo-official GUI | [ExifToolGUI](https://exiftool.org/gui/) — third-party, Windows-only, drives the CLI underneath | Native [egui](https://github.com/emilk/egui), single binary, cross-platform |
+| Editing | via the third-party GUI | Double-click any writable tag, save back to file |
+| Languages in the GUI | n/a | 23, descriptions and values localized |
 
 ### Languages
 

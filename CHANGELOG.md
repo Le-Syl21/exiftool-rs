@@ -2,6 +2,36 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [0.7.0] - 2026-07-23
+
+### Added
+
+- **Localized PrintConv values under `-lang`.** Enum output values are now
+  translated, not just tag descriptions — `Orientation` reads `Horizontale
+  (normale)`, `ResolutionUnit` reads `pouce`, and so on. Value output matches
+  ExifTool's `-lang` across the corpus (192/195 files) for all 16 ExifTool
+  languages, in text, JSON, and the GUI. Translations are generated from
+  ExifTool 13.59's `Lang/*.pm`; a group-scoped override layer (derived from
+  ExifTool's real output) disambiguates same-named tags that ExifTool localizes
+  differently per source table, and values re-read from a standalone XMP file
+  are left in English to match ExifTool.
+- **81 newly-emitted tags** (Garmin FIT metrics, Android capture tags, HEVC
+  colour attributes, GPS destination coordinates) added to all 23 locale files,
+  natively translated where ExifTool provides a translation.
+
+### Changed
+
+- **All dependencies updated to their latest releases**, including a migration
+  of the optional GUI to **egui / eframe 0.35** (plus brotli 8, xml-rs 1.0,
+  rfd 0.17). The name/value/group/`-ee` parity regression suite is unchanged.
+
+### Fixed
+
+- **`-lang` regional codes.** The argument parser stripped the separator, so
+  `en_ca`/`en_gb`/`zh_tw` were mangled (and `zh_tw` was forced to `zh`);
+  canonicalization now lives in one place and regional variants resolve
+  correctly for both descriptions and values.
+
 ## [0.6.1] - 2026-06-14
 
 ### Performance
