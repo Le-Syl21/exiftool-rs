@@ -1,0 +1,276 @@
+AdvancedFilter	Partial Color Blue	Partial Colour Blue
+AdvancedFilter	Partial Color Green	Partial Colour Green
+AdvancedFilter	Partial Color Orange	Partial Colour Orange
+AdvancedFilter	Partial Color Purple	Partial Colour Purple
+AdvancedFilter	Partial Color Red	Partial Colour Red
+AdvancedFilter	Partial Color Yellow	Partial Colour Yellow
+AdvancedFilter	Pop Color	Pop Colour
+AdvancedSceneMode	Color Select	Colour Select
+Alpha	Alpha Exists (W color component)	Alpha Exists (W colour component)
+Alpha	Alpha Exists (color not premultiplied)	Alpha Exists (colour not premultiplied)
+Alpha	Alpha Exists (color premultiplied)	Alpha Exists (colour premultiplied)
+ArtFilter	Pale & Light Color	Pale & Light Colour
+ArtFilter	Pale & Light Color II	Pale & Light Colour II
+ArtFilter	Partial Color	Partial Colour
+ArtFilter	Partial Color II	Partial Colour II
+ArtFilter	Partial Color III	Partial Colour III
+ArtFilter	Watercolor	Watercolour
+ArtFilter	Watercolor I	Watercolour I
+ArtFilter	Watercolor II	Watercolour II
+ArtFilterEffect	Green Color Filter	Green Colour Filter
+ArtFilterEffect	No Color Filter	No Colour Filter
+ArtFilterEffect	Orange Color Filter	Orange Colour Filter
+ArtFilterEffect	Pale & Light Color	Pale & Light Colour
+ArtFilterEffect	Pale & Light Color II	Pale & Light Colour II
+ArtFilterEffect	Partial Color	Partial Colour
+ArtFilterEffect	Partial Color II	Partial Colour II
+ArtFilterEffect	Partial Color III	Partial Colour III
+ArtFilterEffect	Red Color Filter	Red Colour Filter
+ArtFilterEffect	Watercolor	Watercolour
+ArtFilterEffect	Watercolor I	Watercolour I
+ArtFilterEffect	Watercolor II	Watercolour II
+ArtFilterEffect	Yellow Color Filter	Yellow Colour Filter
+BackgroundColorIndicator	Specified Background Color	Specified Background Colour
+BackgroundColorIndicator	Unspecified Background Color	Unspecified Background Colour
+BestShotMode	Water Color	Water Colour
+CodingMethods	JBIG color	JBIG colour
+Color	Color	Colour
+ColorMode	Indexed Color	Indexed Colour
+ColorMode	Natural color	Natural colour
+ColorMode	Neutral Color	Neutral Colour
+ColorMode	RGB Color	RGB Colour
+ColorMode	Saturated Color	Saturated Colour
+ColorMode	Vivid color	Vivid colour
+ColorSpace	Embedded Color Profile	Embedded Colour Profile
+ColorSpace	Linked Color Profile	Linked Colour Profile
+ColorSpace	No color space specified	No colour space specified
+ColorSpace	Windows Color Space	Windows Colour Space
+ColorSpecMethod	Vendor Color	Vendor Colour
+ColorTemperatureSetting	Color Filter	Colour Filter
+ColorType	Color	Colour
+ColorType	Color Alpha	Colour Alpha
+Compression	JBIG Color	JBIG Colour
+ContrastMode	Dynamic (Color Film)	Dynamic (Colour Film)
+ContrastMode	Dynamic Art (My Color)	Dynamic Art (My Colour)
+ContrastMode	Elegant (My Color)	Elegant (My Colour)
+ContrastMode	Nature (Color Film)	Nature (Colour Film)
+ContrastMode	Nostalgic (Color Film)	Nostalgic (Colour Film)
+ContrastMode	Retro (My Color)	Retro (My Colour)
+ContrastMode	Smooth (Color Film) or Pure (My Color)	Smooth (Colour Film) or Pure (My Colour)
+ContrastMode	Vibrant (Color Film) or Expressive (My Color)	Vibrant (Colour Film) or Expressive (My Colour)
+DeltaType	Color Addition	Colour Addition
+DeltaType	Color Replacement	Colour Replacement
+DigitalFilter01	Color Filter	Colour Filter
+DigitalFilter01	Extract Color	Extract Colour
+DigitalFilter01	Invert Color	Invert Colour
+DigitalFilter01	Replace Color	Replace Colour
+DigitalFilter01	Unicolor Bold	Unicolour Bold
+DigitalFilter01	Water Color	Water Colour
+DigitalFilter02	Color Filter	Colour Filter
+DigitalFilter02	Extract Color	Extract Colour
+DigitalFilter02	Invert Color	Invert Colour
+DigitalFilter02	Water Color	Water Colour
+DigitalFilter03	Color Filter	Colour Filter
+DigitalFilter03	Extract Color	Extract Colour
+DigitalFilter03	Invert Color	Invert Colour
+DigitalFilter03	Water Color	Water Colour
+DigitalFilter04	Color Filter	Colour Filter
+DigitalFilter04	Extract Color	Extract Colour
+DigitalFilter04	Invert Color	Invert Colour
+DigitalFilter04	Water Color	Water Colour
+DigitalFilter05	Color Filter	Colour Filter
+DigitalFilter05	Extract Color	Extract Colour
+DigitalFilter05	Invert Color	Invert Colour
+DigitalFilter05	Water Color	Water Colour
+DigitalFilter06	Color Filter	Colour Filter
+DigitalFilter06	Extract Color	Extract Colour
+DigitalFilter06	Invert Color	Invert Colour
+DigitalFilter06	Water Color	Water Colour
+DigitalFilter07	Color Filter	Colour Filter
+DigitalFilter07	Extract Color	Extract Colour
+DigitalFilter07	Invert Color	Invert Colour
+DigitalFilter07	Water Color	Water Colour
+DigitalFilter08	Color Filter	Colour Filter
+DigitalFilter08	Extract Color	Extract Colour
+DigitalFilter08	Invert Color	Invert Colour
+DigitalFilter08	Water Color	Water Colour
+DigitalFilter09	Color Filter	Colour Filter
+DigitalFilter09	Extract Color	Extract Colour
+DigitalFilter09	Invert Color	Invert Colour
+DigitalFilter09	Water Color	Water Colour
+DigitalFilter10	Color Filter	Colour Filter
+DigitalFilter10	Extract Color	Extract Colour
+DigitalFilter10	Invert Color	Invert Colour
+DigitalFilter10	Water Color	Water Colour
+DigitalFilter11	Color Filter	Colour Filter
+DigitalFilter11	Extract Color	Extract Colour
+DigitalFilter11	Invert Color	Invert Colour
+DigitalFilter11	Water Color	Water Colour
+DigitalFilter12	Color Filter	Colour Filter
+DigitalFilter12	Extract Color	Extract Colour
+DigitalFilter12	Invert Color	Invert Colour
+DigitalFilter12	Water Color	Water Colour
+DigitalFilter13	Color Filter	Colour Filter
+DigitalFilter13	Extract Color	Extract Colour
+DigitalFilter13	Invert Color	Invert Colour
+DigitalFilter13	Water Color	Water Colour
+DigitalFilter14	Color Filter	Colour Filter
+DigitalFilter14	Extract Color	Extract Colour
+DigitalFilter14	Invert Color	Invert Colour
+DigitalFilter14	Water Color	Water Colour
+DigitalFilter15	Color Filter	Colour Filter
+DigitalFilter15	Extract Color	Extract Colour
+DigitalFilter15	Invert Color	Invert Colour
+DigitalFilter15	Water Color	Water Colour
+DigitalFilter16	Color Filter	Colour Filter
+DigitalFilter16	Extract Color	Extract Colour
+DigitalFilter16	Invert Color	Invert Colour
+DigitalFilter16	Water Color	Water Colour
+DigitalFilter17	Color Filter	Colour Filter
+DigitalFilter17	Extract Color	Extract Colour
+DigitalFilter17	Invert Color	Invert Colour
+DigitalFilter17	Water Color	Water Colour
+DigitalFilter18	Color Filter	Colour Filter
+DigitalFilter18	Extract Color	Extract Colour
+DigitalFilter18	Invert Color	Invert Colour
+DigitalFilter18	Water Color	Water Colour
+DigitalFilter19	Color Filter	Colour Filter
+DigitalFilter19	Extract Color	Extract Colour
+DigitalFilter19	Invert Color	Invert Colour
+DigitalFilter19	Water Color	Water Colour
+DigitalFilter20	Color Filter	Colour Filter
+DigitalFilter20	Extract Color	Extract Colour
+DigitalFilter20	Invert Color	Invert Colour
+DigitalFilter20	Water Color	Water Colour
+DisplayUnits	meters	Metres
+DriveMode	D-Range Optimizer Bracketing High	D-Range Optimiser Bracketing High
+DriveMode	D-Range Optimizer Bracketing Low	D-Range Optimiser Bracketing Low
+DriveMode2	D-Range Optimizer Bracketing High	D-Range Optimiser Bracketing High
+DriveMode2	D-Range Optimizer Bracketing Low	D-Range Optimiser Bracketing Low
+EasyMode	Color Accent	Colour Accent
+EasyMode	Color Swap	Colour Swap
+EasyMode	My Colors	My Colours
+ExposureProgram	Partial Color Blue	Partial Colour Blue
+ExposureProgram	Partial Color Green	Partial Colour Green
+ExposureProgram	Partial Color Red	Partial Colour Red
+ExposureProgram	Partial Color Yellow	Partial Colour Yellow
+ExposureProgram	Pop Color	Pop Colour
+FaxProfile	Lossless color and grayscale, L	Lossless colour and grayscale, L
+FaxProfile	Lossy color and grayscale, C	Lossy colour and grayscale, C
+FileFormat	JPEG (lossy/non-quantization toggled)	JPEG (lossy/non-quantisation toggled)
+FileFormat	JPEG (non-quantization)	JPEG (non-quantisation)
+FilmMode	Dynamic (color)	Dynamic (colour)
+FilmMode	Nature (color)	Nature (colour)
+FilmMode	Smooth (color)	Smooth (colour)
+FilmMode	Standard (color)	Standard (colour)
+GenreID	Books|Kids|Basic Concepts|Colors	Books|Kids|Basic Concepts|Colours
+ImageAlterationConstraints	No Colorization	No Colourization
+ImageAlterationConstraints	No De-Colorization	No De-Colourization
+ImageColorIndicator	Specified Image Color	Specified Image Colour
+ImageColorIndicator	Unspecified Image Color	Unspecified Image Colour
+ImageMedium	Color hard copy	Colour hard copy
+ImageMedium	Color negative	Colour negative
+ImageMedium	Color reversal	Colour reversal
+LayerBlendModes	Color	Colour
+LayerBlendModes	Color Burn	Colour Burn
+LayerBlendModes	Color Dodge	Colour Dodge
+LayerBlendModes	Darker Color	Darker Colour
+LayerBlendModes	Lighter Color	Lighter Colour
+MagicFilter	Pale & Light Color	Pale & Light Colour
+MagicFilter	Pale & Light Color II	Pale & Light Colour II
+MagicFilter	Partial Color	Partial Colour
+MagicFilter	Partial Color II	Partial Colour II
+MagicFilter	Partial Color III	Partial Colour III
+MagicFilter	Watercolor	Watercolour
+MagicFilter	Watercolor I	Watercolour I
+MagicFilter	Watercolor II	Watercolour II
+MandatoryBackground	Color Advisory, Image Mandatory	Colour Advisory, Image Mandatory
+MandatoryBackground	Color Mandatory, Image Advisory	Colour Mandatory, Image Advisory
+MandatoryBackground	Color and Image Advisory	Colour and Image Advisory
+MandatoryBackground	Color and Image Mandatory	Colour and Image Mandatory
+MyColorMode	Color Accent	Colour Accent
+MyColorMode	Color Swap	Colour Swap
+PhotoEffect	My Color Data	My Colour Data
+PhotometricInterpretation	Color Filter Array	Colour Filter Array
+PhotoshopFormat	Optimized	Optimised
+PictureEffect	Partial Color (blue)	Partial Colour (blue)
+PictureEffect	Partial Color (green)	Partial Colour (green)
+PictureEffect	Partial Color (red)	Partial Colour (red)
+PictureEffect	Partial Color (yellow)	Partial Colour (yellow)
+PictureEffect	Pop Color	Pop Colour
+PictureEffect	Water Color	Water Colour
+PictureEffect	Water Color 2	Water Colour 2
+PictureEffect2	Partial Color	Partial Colour
+PictureEffect2	Pop Color	Pop Colour
+PictureEffect2	Water Color	Water Colour
+PictureMode	Color Creator	Colour Creator
+PictureMode	Color Profile 1	Colour Profile 1
+PictureMode	Color Profile 2	Colour Profile 2
+PictureMode	Color Profile 3	Colour Profile 3
+PictureType	Bright(ly) Colored Fish	Bright(ly) Coloured Fish
+PresetWhiteBalance	Color Temperature	Colour Temperature
+ProfileClass	ColorSpace Conversion Profile	ColourSpace Conversion Profile
+ProfileClass	NamedColor Profile	Named Colour Profile
+QuantizationMethod	Color Space Specific	Colour Space Specific
+RawDevArtFilter	Pale & Light Color	Pale & Light Colour
+RawDevArtFilter	Pale & Light Color II	Pale & Light Colour II
+RawDevArtFilter	Partial Color	Partial Colour
+RawDevArtFilter	Partial Color II	Partial Colour II
+RawDevArtFilter	Partial Color III	Partial Colour III
+RawDevArtFilter	Watercolor	Watercolour
+RawDevArtFilter	Watercolor I	Watercolour I
+RawDevArtFilter	Watercolor II	Watercolour II
+RawDevSettings	Color Space	Colour Space
+RawDevSettings	WB Color Temp	WB Colour Temp
+RawDevWhiteBalance	Color Temperature	Colour Temperature
+RenderingIntent	Absolute Colorimetric (LCS_GM_ABS_COLORIMETRIC)	Absolute Colourimetric (LCS_GM_ABS_COLORIMETRIC)
+RenderingIntent	ICC-Absolute Colorimetric	ICC-Absolute Colourimetric
+RenderingIntent	Media-Relative Colorimetric	Media-Relative Colourimetric
+RetouchHistory	Color Custom	Colour Custom
+RetouchHistory	Color Outline	Colour Outline
+RetouchHistory	Color Sketch	Colour Sketch
+RetouchHistory	Selective Color	Selective Colour
+SRGBRendering	Absolute Colorimetric	Absolute Colourimetric
+SRGBRendering	Relative Colorimetric	Relative Colourimetric
+SceneBalanceAlgorithmCommand	Neutral SBA Off, Color SBA Off	Neutral SBA Off, Colour SBA Off
+SceneBalanceAlgorithmCommand	Neutral SBA Off, Color SBA On	Neutral SBA Off, Colour SBA On
+SceneBalanceAlgorithmCommand	Neutral SBA On, Color SBA Off	Neutral SBA On, Colour SBA Off
+SceneBalanceAlgorithmCommand	Neutral SBA On, Color SBA On	Neutral SBA On, Colour SBA On
+SceneMode	Color Effects	Colour Effects
+SceneMode	My Color	My Colour
+SensingMethod	Color sequential area	Colour sequential area
+SensingMethod	Color sequential linear	Colour sequential linear
+SensingMethod	One-chip color area	One-chip colour area
+SensingMethod	Three-chip color area	Three-chip colour area
+SensingMethod	Two-chip color area	Two-chip colour area
+ShootingMode	Color Effects	Colour Effects
+ShootingMode	My Color	My Colour
+SpecialEffectsOpticalFilter	Colored	Coloured
+SubfileType	Color IW44	Colour IW44
+TestTarget	Color Chart	Colour Chart
+ToningEffect	Color	Colour
+TypeOfOriginal	Color Document	Colour Document
+TypeOfOriginal	Color Print	Colour Print
+USPTOOriginalContentType	Color	Colour
+VisualColor	Color	Colour
+WBAdjLighting	High Color Rendering Fluorescent (3700K)	High Colour Rendering Fluorescent (1)
+WBAdjLighting	High Color Rendering Fluorescent (5000K)	High Colour Rendering Fluorescent (3)
+WBAdjLighting	High Color Rendering Fluorescent (cool white)	High Colour Rendering Fluorescent (2)
+WBAdjLighting	High Color Rendering Fluorescent (daylight)	High Colour Rendering Fluorescent (4)
+WBAdjLighting	High Color Rendering Fluorescent (warm white)	High Colour Rendering Fluorescent (0)
+WBAdjLighting	Sodium Vapor Lamps	Sodium Vapour Lamps
+WBAdjLighting	Standard Fluorescent (high temperature mercury vapor)	Standard Fluorescent (high temperature mercury vapour)
+WhiteBalance	Color Filter	Colour Filter
+WhiteBalance	Color Temperature	Colour Temperature
+WhiteBalance	Color Temperature Enhancement	Colour Temperature Enhancement
+WhiteBalance	Color Temperature/Color Filter	Colour Temperature/Colour Filter
+WhiteBalance2	Auto (Keep Warm Color Off)	Auto (Keep Warm Colour Off)
+WhiteBalanceSet	Set Color Temperature 1	Set Colour Temperature 1
+WhiteBalanceSet	Set Color Temperature 2	Set Colour Temperature 2
+WhiteBalanceSet	Set Color Temperature 3	Set Colour Temperature 3
+WhiteBalanceSetting	Color Temperature/Color Filter	Colour Temperature/Colour Filter
+WorkColorSpace	ColorMatch RGB	ColourMatch RGB
+XMethod	Color Closest Pixel and Alpha Linear Interpolation	Colour Closest Pixel and Alpha Linear Interpolation
+XMethod	Color Linear Interpolation and Alpha Closest Pixel	Colour Linear Interpolation and Alpha Closest Pixel
+YMethod	Color Closest Pixel and Alpha Linear Interpolation	Colour Closest Pixel and Alpha Linear Interpolation
+YMethod	Color Linear Interpolation and Alpha Closest Pixel	Colour Linear Interpolation and Alpha Closest Pixel

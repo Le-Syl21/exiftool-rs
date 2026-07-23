@@ -1,0 +1,3425 @@
+AEBAutoCancel	Off	Aus
+AEBAutoCancel	On	Ein
+AEBSequenceAutoCancel	-,0,+/Disabled	-,0,+/Aus
+AEBSequenceAutoCancel	-,0,+/Enabled	-,0,+/Ein
+AEBSequenceAutoCancel	0,-,+/Disabled	0,-,+/Aus
+AEBSequenceAutoCancel	0,-,+/Enabled	0,-,+/Ein
+AEFlags	AE lock	AE Speicherung
+AEFlags	Aperture wide open	Offene Blende
+AEFlags	Flash recommended?	Blitz erforderlich
+AELock	Off	Aus
+AELock	On	Ein
+AELockButton	AE Lock (hold)	Nur Belichtung (halten)
+AELockButton	AE Lock Only	Nur Belichtung
+AELockButton	AE-L/AF Area	Belichtung & Messfeld
+AELockButton	AE-L/AF-L/AF Area	Bel. & Fokus & Messfeld
+AELockButton	AE/AF Lock	Belichtung & Fokus
+AELockButton	AF Lock Only	Nur Fokus
+AELockButton	AF-L/AF Area	Fokus & Messfeld
+AELockButton	AF-ON	AF-Aktivierung
+AELockButton	AF-ON/AF Area	AF-Aktiv. & Messfeld
+AELockButton	FV Lock	FV-Messwertspeicher
+AELockButton	Focus Area Selection	AF-Messfeldauswahl
+AEMeteringMode	Center-weighted average	Mittenbetont
+AEMeteringMode	Multi-segment	Multi-Segment
+AEMicroadjustment	Disable	Deaktiviert
+AEMicroadjustment	Enable	Aktiviert
+AEProgramMode	Av, B or X	Av, B oder X
+AEProgramMode	Candlelight	Kerzenlicht
+AEProgramMode	DOF Program	Schärfentiefe-Priorität
+AEProgramMode	DOF Program (P-Shift)	Schärfentiefe-Priorität (P Shift)
+AEProgramMode	Hi-speed Program	HS-Priorität
+AEProgramMode	Hi-speed Program (P-Shift)	HS-Priorität (P Shift)
+AEProgramMode	Kids	Kinder
+AEProgramMode	Landscape	Landschaft
+AEProgramMode	M, P or TAv	M, P oder TAv
+AEProgramMode	MTF Program	MTF-Priorität
+AEProgramMode	MTF Program (P-Shift)	MTF-Priorität (P Shift)
+AEProgramMode	Macro	Makro
+AEProgramMode	Night Scene	Nachtszene
+AEProgramMode	Night Scene Portrait	Nacht-Porträt
+AEProgramMode	No Flash	Kein Blitz
+AEProgramMode	Pet	Haustiere
+AEProgramMode	Portrait	Porträt
+AEProgramMode	Sunset	Sonnenuntergang
+AEProgramMode	Surf & Snow	Surf & Schnee
+AEProgramMode	Sv or Green Mode	Sv oder "Grünes" AE-Programm
+AESetting	AE Lock	AE-Speicherung
+AESetting	AE Lock + Exposure Comp.	AE-Speicherung + Belichtungskorrektur
+AESetting	Exposure Compensation	Belichtungskorrektur
+AESetting	No AE	Kein AE
+AF-CPrioritySelection	Focus	Schärfepriorität
+AF-CPrioritySelection	Release	Auslösepriorität
+AF-CPrioritySelection	Release + Focus	Auslösepriorität & AF
+AF-OnForMB-D10	AE Lock (hold)	Belichtung speichern ein/aus
+AF-OnForMB-D10	AE Lock (reset on release)	Bel. speichern ein/aus (Reset)
+AF-OnForMB-D10	AE Lock Only	Belichtung speichern
+AF-OnForMB-D10	AE/AF Lock	Belichtung & Fokus speichern
+AF-OnForMB-D10	AF Lock Only	Fokus speichern
+AF-OnForMB-D10	AF-On	Autofokus aktiviert
+AF-OnForMB-D10	Same as FUNC Button	Wie Funktionstaste
+AF-SPrioritySelection	Focus	Schärfepriorität
+AF-SPrioritySelection	Release	Auslösepriorität
+AFActivation	AF-On Only	Nur AF-ON-Taste
+AFActivation	Shutter/AF-On	AF-On-Taste & Auslöser
+AFAndMeteringButtons	AE lock	AE Speicherung
+AFAndMeteringButtons	AF stop	AE Stopp
+AFAndMeteringButtons	Metering + AF start	Messung + AF Start
+AFAndMeteringButtons	Metering start	Messung Start
+AFAndMeteringButtons	No function	Keine Funktion
+AFAreaIllumination	Auto	Automatisch
+AFAreaIllumination	Off	Aus
+AFAreaIllumination	On	Ein
+AFAreaMode	1-area	1 Bereich
+AFAreaMode	1-area (high speed)	1 Bereich (kurze Verschlußzeit)
+AFAreaMode	23-area	23 Bereiche
+AFAreaMode	3-area (center)?	3 Bereiche (mitte)
+AFAreaMode	3-area (high speed)	3 Bereiche (kurze Verschlußzeit)
+AFAreaMode	3-area (left)?	3 Bereiche (links)
+AFAreaMode	3-area (right)?	3 Bereiche (rechts)
+AFAreaMode	5-area	5 Bereiche
+AFAreaMode	9-area	9 Bereiche
+AFAreaMode	AF Point Expansion	AF Punkt-Erweiterung
+AFAreaMode	Auto (41 points)	Automatisch (41 Punkte)
+AFAreaMode	Auto-area	Autom. Messfeldgr.
+AFAreaMode	Center	Mitte
+AFAreaMode	Contrast-detect	Kontrasterkennung
+AFAreaMode	Contrast-detect (face priority)	Kontrasterkennung (Gesichtserkennung)
+AFAreaMode	Contrast-detect (normal area)	Kontrasterkennung (Standardbereich)
+AFAreaMode	Contrast-detect (subject tracking)	Kontrasterkennung (Objektverfolgung)
+AFAreaMode	Contrast-detect (wide area)	Kontrasterkennung (großer Bereich)
+AFAreaMode	Default	Standard
+AFAreaMode	Dynamic Area	Dynamisch
+AFAreaMode	Dynamic Area (21 points)	Dynamischer Bereich (21 Punkte)
+AFAreaMode	Dynamic Area (3D-tracking)	Dynamischer Bereich (3D-Nachführung)
+AFAreaMode	Dynamic Area (51 points)	Dynamischer Bereich (51 Punkte)
+AFAreaMode	Dynamic Area (51 points, 3D-tracking)	Dynamischer Bereich (51 Punkte, 3D-Nachführung)
+AFAreaMode	Dynamic Area (9 points)	Dynamischer Bereich (9 Punkte)
+AFAreaMode	Dynamic Area (closest subject)	Dynamic Messfeldgruppensteuerung (priorität der kürzesten Aufnahmedistanz)
+AFAreaMode	Dynamic Area (wide)	Dynamische Messfeldsteuerung (groß)
+AFAreaMode	Dynamic Area (wide, 3D-tracking)	Dynamischer Bereich (groß, 3D-Nachführung)
+AFAreaMode	Face + Tracking	Gesichtserkennung + Nachführung
+AFAreaMode	Face Detect	Gesichtserkennung
+AFAreaMode	Face Detect AF	Gesichtserkennung AF
+AFAreaMode	Face Priority (41 points)	Gesichtserkennung (41 Punkte)
+AFAreaMode	Face Tracking	Gesichtserkennung
+AFAreaMode	Flexible	Angepasst
+AFAreaMode	Flexible Spot	Gesetzter Punkt
+AFAreaMode	Flexizone Multi	Mehrpunkt-Bereich
+AFAreaMode	Flexizone Single	Einpunkt-Bereich
+AFAreaMode	Group Dynamic	Dynamische Messfeldgruppensteuerung
+AFAreaMode	Local	Lokal
+AFAreaMode	Manual	Manuell
+AFAreaMode	Multi	Mehrpunkt
+AFAreaMode	Multi-point AF or AI AF	Mehrpunkt AF oder AI AF
+AFAreaMode	Normal?	Normal
+AFAreaMode	Off (Manual Focus)	Aus (Manueller Fokus)
+AFAreaMode	Selective (for Miniature effect)	Selektiv (für Vorschau-Effekt)
+AFAreaMode	Single (135 points)	Einpunkt (135 Punkte)
+AFAreaMode	Single Area	Einzelfeld
+AFAreaMode	Single Area (wide)	Einzelfeldmessung (groß)
+AFAreaMode	Single-point AF	Einpunkt AF
+AFAreaMode	Spot Focusing	Spotfokussierung
+AFAreaMode	Spot Focusing 2	Spotfokussierung 2
+AFAreaMode	Spot Mode Off	Spot-Modus Aus
+AFAreaMode	Spot Mode On	Spot-Modus Ein
+AFAreaMode	Subject Tracking (41 points)	Objektverfolgung (41 Punkte)
+AFAreaMode	Touch	Berührungspunkt
+AFAreaMode	Tracking	Nachführung
+AFAreaMode	Wide	Weit
+AFAreaMode	Zone	Bereich
+AFAreaMode	Zone AF	Zonen AF
+AFAreaMode	n/a	(nicht gesetzt)
+AFAreaModeSetting	3D-tracking (11 points)	3D Nachführung (11 Punkte)
+AFAreaModeSetting	Auto-area	Automatischer Bereich
+AFAreaModeSetting	Center	Mitte
+AFAreaModeSetting	Closest Subject	Nächstes Objekt
+AFAreaModeSetting	Dynamic Area	Dynamisch
+AFAreaModeSetting	Flexible Spot	Gesetzter Punkt
+AFAreaModeSetting	Local	Lokal
+AFAreaModeSetting	Multi	Mehrpunkt
+AFAreaModeSetting	Single Area	Einzelfeld
+AFAreaModeSetting	Wide	Weit
+AFAreaModeSetting	Zone	Bereich
+AFAssist	Does not emit/Fires	Kein Messlicht/Zündung
+AFAssist	Emits/Does not fire	Messlicht/keine Zündung
+AFAssist	Emits/Fires	Messlicht/Zündung
+AFAssist	Off	Aus
+AFAssist	On	Ein
+AFAssist	Only ext. flash emits/Fires	Nur ext. Messl./Zündung
+AFAssistBeam	Does not emit	Deaktiv
+AFAssistBeam	Emits	Aktiv
+AFAssistBeam	Only ext. flash emits	Nur bei ext. Blitz aktiv
+AFAssistLamp	Disabled and Not Required	Nicht eingestellt, war nicht nötig
+AFAssistLamp	Disabled but Required	Nicht eingestellt, war aber nötig
+AFAssistLamp	Enabled but Not Used	Eingestellt, aber nicht verwendet
+AFAssistLamp	Fired	Blitz wurde ausgelöst
+AFDuringLiveView	Disable	Inaktiv
+AFDuringLiveView	Enable	Aktiv
+AFDuringLiveView	Live mode	LiveModus
+AFDuringLiveView	Quick mode	QuickModus
+AFFineTune	Off	Aus
+AFFineTune	On (1)	Ein (1)
+AFFineTune	On (2)	Ein (2)
+AFIlluminator	Off	Aus
+AFIlluminator	n/a	(nicht gesetzt)
+AFMicroAdjMode	Adjust all by the same amount	Korrektur immer um gleichen Wert
+AFMicroAdjMode	Adjust by lens	Korrektur objektivabhängig
+AFMicroAdjMode	Disable	Deaktiviert
+AFMicroAdjMode	Off	Aus
+AFMicroAdjMode	On	Ein
+AFMicroadjustment	Adjust all by same amount	Alle auf gleichen Wert
+AFMicroadjustment	Adjust by lens	Abstimmung pro Objektiv
+AFMicroadjustment	Disable	Deaktivieren
+AFMode	Face Detection	Gesichtserkennung
+AFMode	Off	Aus
+AFMode	Tracking	Nachführung
+AFMode	n/a	(nicht gesetzt)
+AFOnAELockButtonSwitch	Disable	Deaktiviert
+AFOnAELockButtonSwitch	Enable	Aktiviert
+AFPoint	(none)	(keiner)
+AFPoint	Auto AF point selection	Automatische Wahl des AF-Punktes
+AFPoint	Bottom	Unten
+AFPoint	Bottom (horizontal)	Unten (horizontal)
+AFPoint	Bottom (vertical)	Unten (vertikal)
+AFPoint	Bottom Center	Unten Mitte
+AFPoint	Bottom Left	Unten Links
+AFPoint	Bottom Right	Unten Rechts
+AFPoint	Bottom-center (horizontal)	Unten Mitte (horizontal)
+AFPoint	Bottom-center (vertical)	Unten Mitte (vertikal)
+AFPoint	Bottom-left	Unten Links
+AFPoint	Bottom-left (horizontal)	Unten Links (horizontal)
+AFPoint	Bottom-left (vertical)	Unten Links (vertikal)
+AFPoint	Bottom-right	Unten Rechts
+AFPoint	Bottom-right (horizontal)	Unten Rechts (horizontal)
+AFPoint	Bottom-right (vertical)	Unten Rechts (vertikal)
+AFPoint	Center	Mitte
+AFPoint	Center (horizontal)	Mitte (horizontal)
+AFPoint	Center (vertical)	Mitte (vertikal)
+AFPoint	Center Left	Mitte Links
+AFPoint	Center Right	Mitte Rechts
+AFPoint	Face Detect	Gesichtserkennung
+AFPoint	Far Left	Weit links
+AFPoint	Far Left (horizontal)	Weit links (horizontal)
+AFPoint	Far Left (vertical)	Weit links (vertikal)
+AFPoint	Far Left/Right of Center	Weit Links/Rechts der Mitte
+AFPoint	Far Left/Right of Center/Bottom	Weit Links/Rechts der Mitte/Unten
+AFPoint	Far Right	Weit rechts
+AFPoint	Far Right (horizontal)	Weit rechts (horizontal)
+AFPoint	Far Right (vertical)	Weit rechts (vertikal)
+AFPoint	Left	Links
+AFPoint	Left (horizontal)	Links (horizontal)
+AFPoint	Left (or n/a)	Links (oder Nicht gesetzt)
+AFPoint	Left (vertical)	Links (vertikal)
+AFPoint	Lower Far Left	Unten ganz links
+AFPoint	Lower Far Right	Unten ganz rechts
+AFPoint	Lower-left	Links unten
+AFPoint	Lower-left (horizontal)	Links unten (horizontal)
+AFPoint	Lower-left (vertical)	Links unten (vertikal)
+AFPoint	Lower-middle	Untere Mitte
+AFPoint	Lower-right	Rechts unten
+AFPoint	Lower-right (horizontal)	Rechts unten (horizontal)
+AFPoint	Lower-right (vertical)	Unten rechts (vertikal)
+AFPoint	Manual AF point selection	Manuell gewählter AF-Punkt
+AFPoint	Mid-left	Links mitte
+AFPoint	Mid-left (horizontal)	Links mitte (horizontal)
+AFPoint	Mid-left (vertical)	Links mitte (vertikal)
+AFPoint	Mid-right	Rechts mitte
+AFPoint	Mid-right (horizontal)	Rechts mitte (horizontal)
+AFPoint	Mid-right (vertical)	Rechts mitte (vertikal)
+AFPoint	Near Left	Nahe Links
+AFPoint	Near Left/Right of Center	Nahe Links/Rechts der Mitte
+AFPoint	Near Right	Nahe Rechts
+AFPoint	Near Upper/Left	Nahe Links oben
+AFPoint	None	Keiner
+AFPoint	None (MF)	Keiner (MF)
+AFPoint	Right	Rechts
+AFPoint	Right (horizontal)	Rechts (horizontal)
+AFPoint	Right (vertical)	Rechts (vertikal)
+AFPoint	Top	Oben
+AFPoint	Top (horizontal)	Oben (horizontal)
+AFPoint	Top (vertical)	Oben (vertikal)
+AFPoint	Top Center	Oben Mitte
+AFPoint	Top Left	Oben Links
+AFPoint	Top Near-left	Oben nahe-Links
+AFPoint	Top Near-right	Nahe Rechts-oben
+AFPoint	Top Right	Oben Rechts
+AFPoint	Top-center (horizontal)	Oben Mitte (horizontal)
+AFPoint	Top-center (vertical)	Oben Mitte (vertikal)
+AFPoint	Top-left	Oben Links
+AFPoint	Top-left (horizontal)	Oben Links (horizontal)
+AFPoint	Top-left (vertical)	Oben Links (vertikal)
+AFPoint	Top-right	Oben Rechts
+AFPoint	Top-right (horizontal)	Oben Rechts (horizontal)
+AFPoint	Top-right (vertical)	Oben Rechts (vertikal)
+AFPoint	Upper Far Left	Oben ganz links
+AFPoint	Upper Far Right	Oben ganz rechts
+AFPoint	Upper Left	Links oben
+AFPoint	Upper Right	Rechts oben
+AFPoint	Upper-left	Links oben
+AFPoint	Upper-left (horizontal)	Links oben (horizontal)
+AFPoint	Upper-left (vertical)	Links oben (vertikal)
+AFPoint	Upper-middle	Obere Mitte
+AFPoint	Upper-right	Rechts oben
+AFPoint	Upper-right (horizontal)	Rechts oben (horizontal)
+AFPoint	Upper-right (vertical)	Oben rechts (vertikal)
+AFPoint	n/a	(nicht gesetzt)
+AFPointActivationArea	Expanded	Erweitert
+AFPointAreaExpansion	All 45 points area	Alle 45 Punkte
+AFPointAreaExpansion	Disable	Aus
+AFPointAreaExpansion	Enable	Ein
+AFPointAreaExpansion	Left/right AF points	Möglich (linkes/rechtes zusätzliches AF-Messfeld)
+AFPointAreaExpansion	Surrounding AF points	Möglich (entsprechendes zusätzliches AF-Messfeld)
+AFPointAtShutterRelease	(out of focus)	(ausserhalb Fokus)
+AFPointAtShutterRelease	Bottom (horizontal)	Unten (horizontal)
+AFPointAtShutterRelease	Bottom (vertical)	Unten (vertikal)
+AFPointAtShutterRelease	Center (horizontal)	Mitte (horizontal)
+AFPointAtShutterRelease	Center (vertical)	Mitte (vertikal)
+AFPointAtShutterRelease	Far Left	Weit links
+AFPointAtShutterRelease	Far Left (horizontal)	Weit links (horizontal)
+AFPointAtShutterRelease	Far Left (vertical)	Weit links (vertikal)
+AFPointAtShutterRelease	Far Right	Weit rechts
+AFPointAtShutterRelease	Far Right (horizontal)	Weit rechts (horizontal)
+AFPointAtShutterRelease	Far Right (vertical)	Weit rechts (vertikal)
+AFPointAtShutterRelease	Left	Links
+AFPointAtShutterRelease	Left (horizontal)	Links (horizontal)
+AFPointAtShutterRelease	Left (vertical)	Links (vertikal)
+AFPointAtShutterRelease	Lower Far Left	Unten ganz links
+AFPointAtShutterRelease	Lower Far Right	Unten ganz rechts
+AFPointAtShutterRelease	Lower-left	Links unten
+AFPointAtShutterRelease	Lower-left (horizontal)	Links unten (horizontal)
+AFPointAtShutterRelease	Lower-left (vertical)	Links unten (vertikal)
+AFPointAtShutterRelease	Lower-middle	Unten mitte
+AFPointAtShutterRelease	Lower-right	Rechts unten
+AFPointAtShutterRelease	Lower-right (horizontal)	Rechts unten (horizontal)
+AFPointAtShutterRelease	Lower-right (vertical)	Rechts unten (vertikal)
+AFPointAtShutterRelease	Near Left	Nahe links
+AFPointAtShutterRelease	Near Right	Nahe rechts
+AFPointAtShutterRelease	Right	Rechts
+AFPointAtShutterRelease	Right (horizontal)	Rechts (horizontal)
+AFPointAtShutterRelease	Right (vertical)	Rechts (vertikal)
+AFPointAtShutterRelease	Top (horizontal)	Oben (horizontal)
+AFPointAtShutterRelease	Top (vertical)	Oben (vertikal)
+AFPointAtShutterRelease	Upper Far Left	Oben ganz links
+AFPointAtShutterRelease	Upper Far Right	Oben ganz rechts
+AFPointAtShutterRelease	Upper-left	Links oben
+AFPointAtShutterRelease	Upper-left (horizontal)	Links oben (horizontal)
+AFPointAtShutterRelease	Upper-left (vertical)	Links oben (vertikal)
+AFPointAtShutterRelease	Upper-middle	Oben mitte
+AFPointAtShutterRelease	Upper-right	Rechts oben
+AFPointAtShutterRelease	Upper-right (horizontal)	Rechts oben (horizontal)
+AFPointAtShutterRelease	Upper-right (vertical)	Rechts oben (vertikal)
+AFPointAutoSelection	Control-direct:disable/Main:disable	Schnelleinstellrad-Direkt:nicht möglich/Haupt-Wahlrad:nein
+AFPointAutoSelection	Control-direct:disable/Main:enable	Schnelleinstellrad-Direkt:nicht möglich/Haupt-Wahlrad:möglich
+AFPointAutoSelection	Control-direct:enable/Main:enable	Schnelleinstellrad-Direkt:möglich/Haupt-Wahlrad:möglich
+AFPointBrightness	Brighter	Heller
+AFPointBrightness	Extra High	Extra Hoch
+AFPointBrightness	High	Hoch
+AFPointBrightness	Low	Niedrig
+AFPointDisplayDuringFocus	Off	Aus
+AFPointDisplayDuringFocus	On	Ein
+AFPointDisplayDuringFocus	On (when focus achieved)	Ein (nach Scharfeinstellung)
+AFPointIllumination	Auto	Automatisch
+AFPointIllumination	Off	Aus
+AFPointIllumination	On	Ein
+AFPointInFocus	(none)	(keiner)
+AFPointInFocus	Bottom (horizontal)	Unten (horizontal)
+AFPointInFocus	Bottom (vertical)	Unten (vertikal)
+AFPointInFocus	Center (horizontal)	Mitte (horizontal)
+AFPointInFocus	Center (vertical)	Mitte (vertikal)
+AFPointInFocus	Far Left	Weit links
+AFPointInFocus	Far Left (horizontal)	Weit links(horizontal)
+AFPointInFocus	Far Left (vertical)	Weit links (vertikal)
+AFPointInFocus	Far Right	Weit rechts
+AFPointInFocus	Far Right (horizontal)	Weit rechts (horizontal)
+AFPointInFocus	Far Right (vertical)	Weit rechts (vertikal)
+AFPointInFocus	Left	Links
+AFPointInFocus	Left (horizontal)	Links (horizontal)
+AFPointInFocus	Left (vertical)	Links (vertikal)
+AFPointInFocus	Lower Far Left	Unten ganz Links
+AFPointInFocus	Lower Far Right	Unten ganz rechts
+AFPointInFocus	Lower-left	Links unten
+AFPointInFocus	Lower-left (horizontal)	Links unten (horizontal)
+AFPointInFocus	Lower-left (vertical)	Links unten (vertikal)
+AFPointInFocus	Lower-middle	Unten mitte
+AFPointInFocus	Lower-right	Rechts unten
+AFPointInFocus	Lower-right (horizontal)	Rechts unten (horizontal)
+AFPointInFocus	Lower-right (vertical)	Rechts unten (vertikal)
+AFPointInFocus	Near Left	Nahe links
+AFPointInFocus	Near Right	Nahe rechts
+AFPointInFocus	Right	Rechts
+AFPointInFocus	Right (horizontal)	Rechts (horizontal)
+AFPointInFocus	Right (vertical)	Rechts (vertikal)
+AFPointInFocus	Top (horizontal)	Oben (horizontal)
+AFPointInFocus	Top (vertical)	Oben (vertikal)
+AFPointInFocus	Upper Far Left	Oben ganz links
+AFPointInFocus	Upper Far Right	Oben ganz rechts
+AFPointInFocus	Upper-left	Links oben
+AFPointInFocus	Upper-left (horizontal)	Links oben (horizontal)
+AFPointInFocus	Upper-left (vertical)	Links oben (vertikal)
+AFPointInFocus	Upper-middle	Oben mitte
+AFPointInFocus	Upper-right	Rechts oben
+AFPointInFocus	Upper-right (horizontal)	Rechts oben (horizontal)
+AFPointInFocus	Upper-right (vertical)	Rechts oben (vertikal)
+AFPointMode	Auto	Automatisch
+AFPointRegistration	Automatic	Automatisch
+AFPointRegistration	Bottom	Unten
+AFPointRegistration	Center	Mitte
+AFPointRegistration	Extreme Left	Ganz links
+AFPointRegistration	Extreme Right	Ganz rechts
+AFPointRegistration	Left	Links
+AFPointRegistration	Right	Rechts
+AFPointRegistration	Top	Oben
+AFPointSelected	Auto	Automatisch
+AFPointSelected	Automatic Tracking AF	Nachführ AF
+AFPointSelected	Bottom	Unten
+AFPointSelected	Bottom-left	Unten-links
+AFPointSelected	Bottom-right	Unten-rechts
+AFPointSelected	Center	Mitte
+AFPointSelected	Face Detect AF	Gesichtserkennungs-AF
+AFPointSelected	Far Left	Weit links
+AFPointSelected	Far Right	Weit rechts
+AFPointSelected	Fixed Center	Auf Mitte fixiert
+AFPointSelected	Left	Links
+AFPointSelected	Lower Far Left	Unten weit Links
+AFPointSelected	Lower Far Right	Unten weit Rechts
+AFPointSelected	Lower-left	Links unten
+AFPointSelected	Lower-middle	Untere Mitte
+AFPointSelected	Lower-right	Rechts unten
+AFPointSelected	Mid-left	Links mitte
+AFPointSelected	Mid-right	Rechts mitte
+AFPointSelected	Near Left	Nahe Links
+AFPointSelected	Near Right	Nahe Rechts
+AFPointSelected	Right	Rechts
+AFPointSelected	Top	Oben
+AFPointSelected	Top-left	Oben-links
+AFPointSelected	Top-right	Oben-rechts
+AFPointSelected	Upper Far Left	Oben weit Links
+AFPointSelected	Upper Far Right	Oben weit Rechts
+AFPointSelected	Upper-left	Links oben
+AFPointSelected	Upper-middle	Obere Mitte
+AFPointSelected	Upper-right	Rechts oben
+AFPointSelected2	Auto	Automatisch
+AFPointSelected2	Bottom	Unten
+AFPointSelected2	Center	Mitte
+AFPointSelected2	Left	Links
+AFPointSelected2	Lower-left	Links unten
+AFPointSelected2	Lower-right	Rechts unten
+AFPointSelected2	Mid-left	Links mitte
+AFPointSelected2	Mid-right	Rechts mitte
+AFPointSelected2	Right	Rechts
+AFPointSelected2	Top	Oben
+AFPointSelected2	Upper-left	Links oben
+AFPointSelected2	Upper-right	Rechts oben
+AFPointSelection	11 Points	11 Messfelder
+AFPointSelection	51 Points	51 Messfelder (3D-Tracking)
+AFPointSelectionMethod	Multi-controller direct	Multicontroller
+AFPointSelectionMethod	Quick Control Dial direct	Schnelleinstellrad
+AFPointSet	No	Nein
+AFPointSet	Yes	Ja
+AFPointsInFocus	(none)	(Keine)
+AFPointsInFocus	All	Alle
+AFPointsInFocus	All 11 Points	Alle 11 Punkte
+AFPointsInFocus	Bottom	Unten
+AFPointsInFocus	Bottom, Center	Unten, Mitte
+AFPointsInFocus	Bottom-center	Unten-mitte
+AFPointsInFocus	Bottom-left	Unten-links
+AFPointsInFocus	Bottom-right	Unten-rechts
+AFPointsInFocus	Center	Mitte
+AFPointsInFocus	Center (horizontal)	Mitte (horizontal)
+AFPointsInFocus	Center (vertical)	Mitte (vertikal)
+AFPointsInFocus	Center+Right	Mitte Rechts
+AFPointsInFocus	Far Left	Weit links
+AFPointsInFocus	Far Right	Weit rechts
+AFPointsInFocus	Fixed Center or Multiple	Auf Mitte fixiert oder mehrere
+AFPointsInFocus	Left	Links
+AFPointsInFocus	Left+Center	Links Mitte
+AFPointsInFocus	Left+Right	Links Rechts
+AFPointsInFocus	Lower-left	Links unten
+AFPointsInFocus	Lower-left, Bottom	Links unten, Unten
+AFPointsInFocus	Lower-left, Mid-left	Links unten, Links mitte
+AFPointsInFocus	Lower-right	Rechts unten
+AFPointsInFocus	Lower-right, Bottom	Rechts unten, Unten
+AFPointsInFocus	Lower-right, Mid-right	Rechts unten, Rechts mitte
+AFPointsInFocus	Mid-left	Links mitte
+AFPointsInFocus	Mid-left, Center	Links mitte, Mitte
+AFPointsInFocus	Mid-right	Rechts mitte
+AFPointsInFocus	Mid-right, Center	Rechts mitte, Mitte
+AFPointsInFocus	None	Keiner
+AFPointsInFocus	None (MF)	Keiner (MF)
+AFPointsInFocus	Right	Rechts
+AFPointsInFocus	Top	Oben
+AFPointsInFocus	Top, Center	Oben, Mitte
+AFPointsInFocus	Top-center	Oben-Mitte
+AFPointsInFocus	Top-left	Oben-links
+AFPointsInFocus	Top-right	Oben-rechts
+AFPointsInFocus	Upper-left	Links oben
+AFPointsInFocus	Upper-left, Mid-left	Links oben, Links mitte
+AFPointsInFocus	Upper-left, Top	Links oben, Oben
+AFPointsInFocus	Upper-right	Rechts oben
+AFPointsInFocus	Upper-right, Mid-right	Rechts oben, Rechts mitte
+AFPointsInFocus	Upper-right, Top	Rechts oben, Oben
+AFPointsInFocus5D	Bottom	Unten
+AFPointsInFocus5D	Center	Mitte
+AFPointsInFocus5D	Left	Links
+AFPointsInFocus5D	Lower-left	Unten links
+AFPointsInFocus5D	Lower-right	Rechts unten
+AFPointsInFocus5D	Right	Rechts
+AFPointsInFocus5D	Top	Oben
+AFPointsInFocus5D	Upper-left	Links oben
+AFPointsInFocus5D	Upper-right	Rechts oben
+AFPointsUnknown1	All	Alle
+AFPointsUnknown1	Bottom	Unten
+AFPointsUnknown1	Center	Mitte
+AFPointsUnknown1	Central 9 points	Alle mittleren 9 Punkte
+AFPointsUnknown1	Left	Links
+AFPointsUnknown1	Lower-left	Links unten
+AFPointsUnknown1	Lower-right	Rechts unten
+AFPointsUnknown1	Mid-left	Links mitte
+AFPointsUnknown1	Mid-right	Rechts mitte
+AFPointsUnknown1	Right	Rechts
+AFPointsUnknown1	Top	Oben
+AFPointsUnknown1	Upper-left	Links oben
+AFPointsUnknown1	Upper-right	Rechts oben
+AFPointsUnknown2	Auto	Automatisch
+AFPointsUnknown2	Bottom	Unten
+AFPointsUnknown2	Center	Mitte
+AFPointsUnknown2	Left	Links
+AFPointsUnknown2	Lower-left	Links unten
+AFPointsUnknown2	Lower-right	Rechts unten
+AFPointsUnknown2	Mid-left	Links mitte
+AFPointsUnknown2	Mid-right	Rechts mitte
+AFPointsUnknown2	Right	Rechts
+AFPointsUnknown2	Top	Oben
+AFPointsUnknown2	Upper-left	Links oben
+AFPointsUnknown2	Upper-right	Rechts oben
+AFPointsUsed	All 11 Points	Alle 11 Punkte
+AFPointsUsed	Bottom	Unten
+AFPointsUsed	Center	Mitte
+AFPointsUsed	Far Left	Weit links
+AFPointsUsed	Far Right	Weit rechts
+AFPointsUsed	Lower-left	Links unten
+AFPointsUsed	Lower-right	Rechts unten
+AFPointsUsed	Mid-left	Links mitte
+AFPointsUsed	Mid-right	Rechts mitte
+AFPointsUsed	Top	Oben
+AFPointsUsed	Upper-left	Links oben
+AFPointsUsed	Upper-right	Rechts oben
+AFSearch	Not Ready	Nicht bereit
+AFSearch	Ready	Bereit
+AFSensorActive	Bottom	Unten
+AFSensorActive	Bottom-left	Unten Links
+AFSensorActive	Bottom-right	Unten Rechts
+AFSensorActive	Center Vertical	Mitte vertikal
+AFSensorActive	Middle Horizontal	Mitte horizontal
+AFSensorActive	Top	Oben
+AFSensorActive	Top-left	Oben Links
+AFSensorActive	Top-right	Rechts Oben
+AFStatusActiveSensor	In Focus	Im Fokus
+AFStatusActiveSensor	Out of Focus	Nicht im Fokus
+AFStatusBottom	In Focus	Im Fokus
+AFStatusBottom	Out of Focus	Nicht im Fokus
+AFStatusBottom-left	In Focus	Im Fokus
+AFStatusBottom-left	Out of Focus	Nicht im Fokus
+AFStatusBottom-right	In Focus	Im Fokus
+AFStatusBottom-right	Out of Focus	Nicht im Fokus
+AFStatusCenterHorizontal	In Focus	Im Fokus
+AFStatusCenterHorizontal	Out of Focus	Nicht im Fokus
+AFStatusCenterVertical	In Focus	Im Fokus
+AFStatusCenterVertical	Out of Focus	Nicht im Fokus
+AFStatusLeft	In Focus	Im Fokus
+AFStatusLeft	Out of Focus	Nicht im Fokus
+AFStatusMiddleHorizontal	In Focus	Im Fokus
+AFStatusMiddleHorizontal	Out of Focus	Nicht im Fokus
+AFStatusRight	In Focus	Im Fokus
+AFStatusRight	Out of Focus	Nicht im Fokus
+AFStatusTop	In Focus	Im Fokus
+AFStatusTop	Out of Focus	Nicht im Fokus
+AFStatusTop-left	In Focus	Im Fokus
+AFStatusTop-left	Out of Focus	Nicht im Fokus
+AFStatusTop-right	In Focus	Im Fokus
+AFStatusTop-right	Out of Focus	Nicht im Fokus
+AFType	15-point	15 Punkte
+AFType	19-point	19 Punkte
+AIServoImagePriority	1: AF, 2: Drive speed	AF-Priorität/Transportgeschwindigkeit
+AIServoImagePriority	1: AF, 2: Tracking	AF-Priorität/Nachführpriorität
+AIServoImagePriority	1: Release, 2: Drive speed	Auslösung/Transportgeschwindigkeit
+AIServoImagePriority	1: Release, 2: Tracking	1: Auslösung, 2: Nachführung
+AIServoTrackingMethod	Continuous AF track priority	AF Nachführ-Priorität
+AIServoTrackingMethod	Main focus point priority	Hauptfokussierungsfeld
+AIServoTrackingSensitivity	Fast	Schnell
+AIServoTrackingSensitivity	Medium Fast	Mittel-Schnell
+AIServoTrackingSensitivity	Medium Slow	Mittel
+AIServoTrackingSensitivity	Slow	Langsam
+ActiveD-Lighting	High	Hoch
+ActiveD-Lighting	Low	Leicht
+ActiveD-Lighting	Off	Aus
+ActiveD-Lighting	On	Ein
+ActiveD-LightingMode	High	Hoch
+ActiveD-LightingMode	Low	Leicht
+ActiveD-LightingMode	Off	Aus
+AddAspectRatioInfo	Off	Aus
+AddOriginalDecisionData	Off	Aus
+AddOriginalDecisionData	On	Ein
+AdultContentWarning	Unknown	Unbekannt
+AdvancedRaw	Off	Aus
+AdvancedRaw	On	Ein
+AdvancedSceneMode	Creative Macro	Makro kreativ
+AdvancedSceneMode	Flower	Blumen
+AdvancedSceneMode	HDR B&W	HDR Schwarz-Weiß
+AdvancedSceneMode	High Key	High-Key
+AdvancedSceneMode	Indoor Sports	Hallensport
+AdvancedSceneMode	Low Key	Low-Key
+AdvancedSceneMode	Off	Aus
+AdvancedSceneMode	Outdoor Sports	Freiluftsport
+AlphaDataDiscard	Flexbits Discarded	FlexBits verworfen
+AlphaDataDiscard	Full Resolution	Volle Auflösung
+AlphaDataDiscard	HighPass Frequency Data Discarded	Hochpass-Frequenz-Daten verworfen
+AlphaDataDiscard	Highpass and LowPass Frequency Data Discarded	Hochpass- und Tiefpass-Frequenz-Daten verworfen
+Anti-Blur	Off	Aus
+Anti-Blur	On (Continuous)	Ein (Kontinuierlich)
+Anti-Blur	On (Shooting)	Ein (Aufnahme)
+Anti-Blur	n/a	(nicht gesetzt)
+ApertureRange	Disable	Nicht möglich
+ApertureRange	Enable	Möglich
+ApertureRingUse	Permitted	Erlaubt
+ApertureRingUse	Prohibited	Nicht erlaubt
+ApplyShootingMeteringMode	Disable	Nicht möglich
+ApplyShootingMeteringMode	Enable	Möglich
+ArtFilter	Drawing	Zeichnung
+ArtFilter	Fish Eye	Fischauge
+ArtFilter	Off	Aus
+ArtFilter	Reflection	Reflektierung
+ArtFilter	Soft Focus	Weichzeichner
+ArtFilter	Soft Focus 2	Weichzeichner 2
+ArtFilter	Sparkle	Perleffekt
+ArtFilter	Watercolor	Wasserfarbe
+ArtFilter	Watercolor II	Wasserfarbe II
+ArtFilterEffect	B&W	Schwarz/Weiß
+ArtFilterEffect	Drawing	Zeichnung
+ArtFilterEffect	Fish Eye	Fischauge
+ArtFilterEffect	No Effect	Ohne Effekt
+ArtFilterEffect	Off	Aus
+ArtFilterEffect	Reflection	Reflektierung
+ArtFilterEffect	Soft Focus	Weichzeichner
+ArtFilterEffect	Soft Focus 2	Weichzeichner 2
+ArtFilterEffect	Sparkle	Perleffekt
+ArtFilterEffect	Watercolor	Wasserfarbe
+ArtFilterEffect	Watercolor II	Wasserfarbe II
+ArtMode	Silent Movie	Stillleben
+AssignBktButton	Auto Bracketing	Automatische Belichtungsreihe
+AssignBktButton	Multiple Exposure	Mehrfachbelichtung
+AssignFuncButton	Exposure comp./AEB setting	Belichtungskorrektur/AEB-Einstellung
+AssignFuncButton	Image jump with main dial	Bildsprung mit Haupt-Wahlrad
+AssignFuncButton	Image quality	Qualität ändern
+AssignFuncButton	LCD brightness	LCD-Helligkeit
+AssignFuncButton	Live view function settings	Livebild Funktionseinstellung
+AssistButtonFunction	Av+/- (AF point by QCD)	Av+/- (AF-Feld mit Daumenrad)
+AssistButtonFunction	FE lock	FE Blitzmesswertspeicherung
+AssistButtonFunction	Select HP (while pressing)	Ausw.G.pos.(Ass-Taste gedr.)
+AssistButtonFunction	Select Home Position	Auswahl Grundposition
+Audio	No	Nein
+Audio	Yes	Ja
+AudioCodecID	Unknown -	Unbekannt -
+AutoAperture	Off	Aus
+AutoAperture	On	Ein
+AutoBracketModeM	Flash Only	Nur Blitz
+AutoBracketModeM	Flash/Aperture	Blitz & Blende
+AutoBracketModeM	Flash/Speed	Blitz & Zeit
+AutoBracketModeM	Flash/Speed/Aperture	Blitz, Zeit & Blende
+AutoBracketSet	AE & Flash	Belichtung & Blitz
+AutoBracketSet	AE Only	Nur Belichtung
+AutoBracketSet	Exposure	Belichtung
+AutoBracketSet	Flash Only	Nur Blitz
+AutoBracketSet	WB Bracketing	Weißabgleichs-Belichtungsreihe
+AutoBracketing	AE	Belichtung
+AutoBracketing	Contrast	Kontrast
+AutoBracketing	Effect	Effekt
+AutoBracketing	No flash & flash	Kein Blitz & Blitz
+AutoBracketing	Off	Aus
+AutoBracketing	On	Ein
+AutoBracketing	Pre-shot	Vorauslösung
+AutoBracketing	WB	Weißabgleich
+AutoBracketing	WB2	Weißabgleich 2
+AutoBracketingSet	AE & Flash	Belichtung & Blitz
+AutoBracketingSet	AE Only	Nur Belichtung
+AutoBracketingSet	Flash Only	Nur Blitz
+AutoBracketingSet	WB Bracketing	Weißabgleich-Belichtungsreihe
+AutoDistortionControl	Off	Aus
+AutoDistortionControl	On	Ein
+AutoExposureBracketing	Off	Aus
+AutoExposureBracketing	On	Ein
+AutoFP	Off	Aus
+AutoFP	On	Ein
+AutoFocus	Off	Deaktiviert
+AutoFocus	On	Aktiviert
+AutoISO	Off	Aus
+AutoISO	On	Ein
+AutoISO	On (high sensitivity)	Ein (Hohe Empfindlichkeit)
+AutoLightingOptimizer	Disable	Inaktiv
+AutoLightingOptimizer	Enable	Aktiv
+AutoLightingOptimizer	Low	Gering
+AutoLightingOptimizer	Off	Aus
+AutoLightingOptimizer	Strong	Stark
+AutoLightingOptimizer	n/a	(nicht gesetzt)
+AutoLightingOptimizerOn	No	Nein
+AutoLightingOptimizerOn	Yes	Ja
+AutoPortraitFramed	No	Nein
+AutoPortraitFramed	Yes	Ja
+AutoRedEye	Off	Aus
+AutoRedEye	On	Ein
+AutoRotate	None	Keine
+AutoRotate	Rotate 180	180° gedreht
+AutoRotate	Rotate 270 CW	90° gegen den Uhrzeigersinn
+AutoRotate	Rotate 90 CW	90° im Uhrzeigersinn
+AutoRotate	n/a	(nicht gesetzt)
+AvSettingWithoutLens	Disable	Nicht möglich
+AvSettingWithoutLens	Enable	Möglich
+BWMode	Off	Aus
+BWMode	On	Ein
+BackgroundTiling	No	Nein
+BackgroundTiling	Yes	Ja
+BannerImageType	None	Keines
+BatteryOrder	Camera Battery First	Zuerst Akku in der Kamera
+BatteryOrder	MB-D10 First	Zuerst Akkus im MB-D10
+BatteryState	Almost full	Fast Voll
+BatteryState	Empty	Leer
+BatteryState	Full	Voll
+BatteryState	Half full	Halb Voll
+BatteryState	Low	Niedrig
+Beep	High	Hoch
+Beep	Low	Tief
+Beep	Off	Aus
+Beep	On	Ein
+BestShotMode	Autumn Leaves	Herbstlaub
+BestShotMode	Baby CS	Kleinkind
+BestShotMode	Backlight	Hintergrundbeleuchtung
+BestShotMode	Beach	Strand
+BestShotMode	Candlelight Portrait	Kerzenlicht Porträt
+BestShotMode	Child CS	Kinder
+BestShotMode	Children	Kinder
+BestShotMode	Collection	Sammlung
+BestShotMode	Fireworks	Feuerwerk
+BestShotMode	Flower	Blumen
+BestShotMode	Food	Lebensmittel
+BestShotMode	For YouTube	Für YouTube
+BestShotMode	For eBay	Für eBay
+BestShotMode	High Sensitivity	Hohe Empfindlichkeit
+BestShotMode	Natural Green	Naturgrün
+BestShotMode	Night Scene	Nachtszene
+BestShotMode	Night Scene Portrait	Nacht-Porträt
+BestShotMode	People	Menschen
+BestShotMode	Pet	Haustiere
+BestShotMode	Pet CS	Haustiere
+BestShotMode	Portrait	Porträt
+BestShotMode	Silent	Stillleben
+BestShotMode	Snow	Schnee
+BestShotMode	Sports	Sport
+BestShotMode	Sports CS	Sport CS
+BestShotMode	Sundown	Sonnenuntergang
+BestShotMode	Twilight	Dämmerung
+BestShotMode	Underwater	Unterwasser
+BlurControl	High	Hoch
+BlurControl	Low	Niedrig
+BlurControl	Medium	Mittel
+BlurControl	Off	Aus
+BlurWarning	Blur Warning	Verwackelungswarnung
+BlurWarning	None	Keine
+BodyBatteryState	Almost Empty	Fast leer
+BodyBatteryState	Empty or Missing	Leer oder nicht vorhanden
+BodyBatteryState	Full	Voll geladen
+BodyBatteryState	Running Low	Schwach
+BracketMode	Off	Aus
+BracketShotNumber	1 of 2	1 von 2
+BracketShotNumber	1 of 3	1 von 3
+BracketShotNumber	1 of 5	1 von 5
+BracketShotNumber	2 of 2	2 von 2
+BracketShotNumber	2 of 3	2 von 3
+BracketShotNumber	2 of 5	2 von 5
+BracketShotNumber	3 of 3	3 von 3
+BracketShotNumber	3 of 5	3 von 5
+BracketShotNumber	4 of 5	4 von 5
+BracketShotNumber	5 of 5	5 von 5
+BracketShotNumber	n/a	(nicht gesetzt)
+BracketStep	1 EV	1 LW
+BracketStep	1/3 EV	1/3 LW
+BracketStep	2/3 EV	2/3 LW
+BurstMode	Auto Exposure Bracketing (AEB)	Automatische Belichtungsreihe
+BurstMode	Off	Aus
+BurstMode	On	Ein
+BurstMode	Unlimited	Unbegrenzt
+ButtonFunctionControlOff	Disable main, Control, Multi-control	Deaktiv Haupt-Wahlrad, Schnelleinstellrad, Multicontroller
+ButtonFunctionControlOff	Normal (enable)	Normal (eingeschaltet)
+CFALayout	Rectangular	Rechteckig
+CPUByteOrder	Big endian	Big-endian
+CPUByteOrder	Little endian	Little-endian
+CPUType	Any	Unbestimmt
+CPUType	None	Unbestimmt
+CPUType	i860 big endian	i860 big-endian
+CPUType	i860 little endian	i860 little-endian
+CalibrationIlluminant1	Cloudy	Bewölkt
+CalibrationIlluminant1	Cool White Fluorescent	Neonlicht kaltweiß
+CalibrationIlluminant1	Day White Fluorescent	Neonlicht neutralweiß
+CalibrationIlluminant1	Daylight	Tageslicht
+CalibrationIlluminant1	Daylight Fluorescent	Neonlicht tageslichtweiß
+CalibrationIlluminant1	Fine Weather	Wolkenlos
+CalibrationIlluminant1	Flash	Blitz
+CalibrationIlluminant1	Fluorescent	Neonlicht
+CalibrationIlluminant1	ISO Studio Tungsten	ISO Studio-Kunstlicht (Glühbirne)
+CalibrationIlluminant1	Other	Andere Lichtquelle
+CalibrationIlluminant1	Shade	Schatten
+CalibrationIlluminant1	Standard Light A	Standard-Licht A
+CalibrationIlluminant1	Standard Light B	Standard-Licht B
+CalibrationIlluminant1	Standard Light C	Standard-Licht C
+CalibrationIlluminant1	Tungsten (Incandescent)	Kunstlicht (Glühbirne)
+CalibrationIlluminant1	Unknown	Unbekannt
+CalibrationIlluminant1	Warm White Fluorescent	Neonlicht warmweiß
+CalibrationIlluminant1	White Fluorescent	Neonlicht universalweiß
+CalibrationIlluminant2	Cloudy	Bewölkt
+CalibrationIlluminant2	Cool White Fluorescent	Neonlicht kaltweiß
+CalibrationIlluminant2	Day White Fluorescent	Neonlicht neutralweiß
+CalibrationIlluminant2	Daylight	Tageslicht
+CalibrationIlluminant2	Daylight Fluorescent	Neonlicht tageslichtweiß
+CalibrationIlluminant2	Fine Weather	Wolkenlos
+CalibrationIlluminant2	Flash	Blitz
+CalibrationIlluminant2	Fluorescent	Neonlicht
+CalibrationIlluminant2	ISO Studio Tungsten	ISO Studio-Kunstlicht (Glühbirne)
+CalibrationIlluminant2	Other	Andere Lichtquelle
+CalibrationIlluminant2	Shade	Schatten
+CalibrationIlluminant2	Standard Light A	Standard-Licht A
+CalibrationIlluminant2	Standard Light B	Standard-Licht B
+CalibrationIlluminant2	Standard Light C	Standard-Licht C
+CalibrationIlluminant2	Tungsten (Incandescent)	Kunstlicht (Glühbirne)
+CalibrationIlluminant2	Unknown	Unbekannt
+CalibrationIlluminant2	Warm White Fluorescent	Neonlicht warmweiß
+CalibrationIlluminant2	White Fluorescent	Neonlicht universalweiß
+CameraOrientation	Downwards	Abwärts
+CameraOrientation	Rotate 180	180° gedreht
+CameraOrientation	Rotate 270 CW	90° gegen den Uhrzeigersinn
+CameraOrientation	Rotate 90 CW	90° im Uhrzeigersinn
+CameraOrientation	Upwards	Aufwärts
+CameraType	Compact	Kompakt
+CameraType	DV Camera	DV Kamera
+CameraType	EOS High-end	EOS Highend
+CameraType	EOS Mid-range	EOS Mittelklasse
+CameraType	n/a	(nicht gesetzt)
+CanonExposureMode	Aperture-priority AE	Blendenpriorität
+CanonExposureMode	Bulb	Bulb-Modus
+CanonExposureMode	Manual	Manuell
+CanonExposureMode	Program AE	Programmautomatik
+CanonExposureMode	Shutter speed priority AE	Verschlusspriorität
+CanonFlashMode	Auto	Automatisch
+CanonFlashMode	External flash	Externer Blitz
+CanonFlashMode	Off	Aus
+CanonFlashMode	On	Ein
+CanonFlashMode	Red-eye reduction	Rote-Augen-Reduzierung
+CanonFlashMode	Red-eye reduction (Auto)	Rote-Augen-Reduzierung (Automatisch)
+CanonFlashMode	Red-eye reduction (On)	Rote-Augen-Reduzierung (Ein)
+CanonFlashMode	n/a	(nicht gesetzt)
+CanonImageSize	Large	Groß
+CanonImageSize	Medium	Mittelgroß
+CanonImageSize	Medium 1	Mittelgroß 1
+CanonImageSize	Medium 2	Mittelgroß 2
+CanonImageSize	Medium 3	Mittelgroß 3
+CanonImageSize	Medium Movie	Mittelgroßer Film
+CanonImageSize	Postcard	Postkarte
+CanonImageSize	Small	Klein
+CanonImageSize	Small 1	Klein 1
+CanonImageSize	Small 2	Klein 2
+CanonImageSize	Small 3	Klein 3
+CanonImageSize	Small Movie	Kleiner Film
+CanonImageSize	Widescreen	Breitbild
+CaptureXResolutionUnit	um	µm (Mikrometer)
+CaptureYResolutionUnit	um	µm (Mikrometer)
+Categories	People	Menschen
+Categories	Scenery	Szene
+CenterAFArea	Normal Zone	Normal
+CenterAFArea	Wide Zone	Groß
+CenterFocusPoint	Normal Zone	Normaler Bereich
+CenterFocusPoint	Wide Zone	Großer Bereich
+CenterWeightedAreaSize	Average	Durchschnitt
+ChromaticAberrationCorr	Off	Aus
+ChromaticAberrationCorr	On	Ein
+ChromaticAberrationCorrection	Off	Aus
+ChromaticAberrationCorrection	On	Ein
+ChromaticAberrationSetting	Off	Aus
+ChromaticAberrationSetting	On	Ein
+ChrominanceNR_TIFF_JPEG	High	Hoch
+ChrominanceNR_TIFF_JPEG	Low	Leicht
+ChrominanceNR_TIFF_JPEG	Off	Aus
+ChrominanceNoiseReduction	High	Hoch
+ChrominanceNoiseReduction	Low	Leicht
+ChrominanceNoiseReduction	Off	Aus
+CodePage	Unicode UTF-16, big endian	Unicode UTF-16, Big-endian
+CodePage	Unicode UTF-16, little endian	Unicode UTF-16, Little-endian
+CodePage	Unicode UTF-32, big endian	Unicode UTF-32, Big-endian
+CodePage	Unicode UTF-32, little endian	Unicode UTF-32, Little-endian
+CodedContentScanningKind	Unknown	Unbekannt
+ColorAberrationControl	Off	Aus
+ColorAberrationControl	On	Ein
+ColorAdjustmentMode	Off	Aus
+ColorAdjustmentMode	On	Ein
+ColorBalanceAdj	Off	Aus
+ColorBalanceAdj	On	Ein
+ColorBoostType	Nature	Natur
+ColorBoostType	People	Menschen
+ColorBooster	Off	Aus
+ColorBooster	On	Ein
+ColorEffect	Black & White	Schwarz/Weiß
+ColorEffect	Cool	Kühl
+ColorEffect	Off	Aus
+ColorFilter	Black & White	Schwarz/Weiß
+ColorFilter	Blue	Blau
+ColorFilter	Green	Grün
+ColorFilter	Off	Aus
+ColorFilter	Purple	Lila
+ColorFilter	Red	Rot
+ColorFilter	Yellow	Gelb
+ColorMode	Autumn	Herbst
+ColorMode	Autumn Leaves	Herbstlaub
+ColorMode	B & W	S/W
+ColorMode	B&W	Schwarz/Weiß
+ColorMode	B&W Red Filter	Schwarz-Weiß Rotfilter
+ColorMode	B&W Yellow Filter	Schwarz-Weiß Gelbfilter
+ColorMode	Black & White	Schwarz/Weiß
+ColorMode	Chrome	Farbe
+ColorMode	Clear	Klar
+ColorMode	Deep	Tief
+ColorMode	Duotone	Zweiton
+ColorMode	Evening	Abends
+ColorMode	Grayscale	Graustufen
+ColorMode	Indexed	Indiziert
+ColorMode	Indexed Color	Indizierte Farben
+ColorMode	Landscape	Landschaft
+ColorMode	Light	Hell
+ColorMode	Multichannel	Mehrkanal
+ColorMode	Natural	Natürlich
+ColorMode	Natural color	Natürliche Farben
+ColorMode	Natural sRGB	Neutral sRGB
+ColorMode	Natural+ sRGB	Neutral+ sRGB
+ColorMode	Night Portrait	Nachtporträt
+ColorMode	Night Scene	Nachtszene
+ColorMode	Night View	Abendszene
+ColorMode	Night View/Portrait	Abendszene/Porträt
+ColorMode	Off	Aus
+ColorMode	Portrait	Porträt
+ColorMode	RGB Color	RGB Farbe
+ColorMode	Solarization	Solarisation
+ColorMode	Sunset	Sonnenuntergang
+ColorMode	Vivid	Lebhafte Farbe
+ColorMode	Vivid color	Lebhafte Farbe
+ColorMode	n/a	(nicht gesetzt)
+ColorMoireReduction	Off	Aus
+ColorMoireReduction	On	Ein
+ColorMoireReductionMode	High	Hoch
+ColorMoireReductionMode	Low	Leicht
+ColorMoireReductionMode	Off	Aus
+ColorProfile	Embedded	Eingebunden
+ColorProfile	Not Embedded	Nicht eingebunden
+ColorSpace	B&W	Schwarz/Weiß
+ColorSpace	ICC Profile	ICC-Profil
+ColorSpace	Monochrome	Monochrom
+ColorSpace	Natural sRGB	Neutral sRGB
+ColorSpace	Natural+ sRGB	Neutral+ sRGB
+ColorSpace	Uncalibrated	Nicht festgelegt
+ColorSpace	Undefined	Nicht definiert
+ColorTemperatureSetting	Color Filter	Farbfilter
+ColorToneFaithful	n/a	(nicht gesetzt)
+ColorToneLandscape	n/a	(nicht gesetzt)
+ColorToneMonochrome	n/a	(nicht gesetzt)
+ColorToneNeutral	n/a	(nicht gesetzt)
+ColorTonePortrait	n/a	(nicht gesetzt)
+ColorToneStandard	n/a	(nicht gesetzt)
+ColorToneUnknown	n/a	(nicht gesetzt)
+ColorToneUserDef1	n/a	(nicht gesetzt)
+ColorToneUserDef2	n/a	(nicht gesetzt)
+ColorToneUserDef3	n/a	(nicht gesetzt)
+ColorTransform	Unknown (RGB or CMYK)	Unbekannt (RGB oder CMYK)
+CommandDials	Reversed (Main Aperture, Sub Shutter)	Vertauscht
+CommandDials	Standard (Main Shutter, Sub Aperture)	Standard
+CommandDialsApertureSetting	Aperture Ring	Mit Blendenring
+CommandDialsApertureSetting	Sub-command Dial	Mit Einstellrad
+CommandDialsChangeMainSub	Off	Aus
+CommandDialsChangeMainSub	On	Ein
+CommandDialsMenuAndPlayback	Off	Aus
+CommandDialsMenuAndPlayback	On	Ein
+CommandDialsReverseRotation	No	Standard
+CommandDialsReverseRotation	Yes	Umgekehrt
+CommanderGroupAMode	Auto Aperture	Blendenautomatik (AA)
+CommanderGroupAMode	Manual	Manuell
+CommanderGroupAMode	Off	Aus
+CommanderGroupBMode	Auto Aperture	Blendenautomatik (AA)
+CommanderGroupBMode	Manual	Manuell
+CommanderGroupBMode	Off	Aus
+CommanderInternalFlash	Manual	Manuell
+CommanderInternalFlash	Off	Aus
+Compilation	No	Nein
+Compilation	Yes	Ja
+Compression	Bitfields	Bitfelder
+Compression	JBIG B&W	JBIG Schwarz-Weiß
+Compression	JBIG Color	JBIG Farbe
+Compression	JPEG	JPEG-Komprimierung
+Compression	JPEG (old-style)	JPEG (alte Version)
+Compression	Kodak DCR Compressed	Kodak DCR-Komprimierung
+Compression	Kodak KDC Compressed	Kodak KDC-Komprimierung
+Compression	Next	NeXT 2-Bit Kodierung
+Compression	Nikon NEF Compressed	Nikon NEF-Komprimierung
+Compression	None	Keines
+Compression	PNG	PNG-Komprimierung
+Compression	Pentax PEF Compressed	Pentax PEF-Komprimierung
+Compression	SGILog	SGI 32-Bit Log Luminance Kodierung
+Compression	SGILog24	SGI 24-Bit Log Luminance Kodierung
+Compression	Sony ARW Compressed	Sony ARW-Komprimierung
+Compression	Thunderscan	ThunderScan 4-Bit Kodierung
+Compression	Uncompressed	Nicht komprimiert
+CompressionType	Little-endian, no compression	Little-endian, keine Komprimierung
+CompressionType	None	Keines
+ContinuousBracketing	High	Hoch
+ContinuousBracketing	Low	Niedrig
+ContinuousDrive	Continuous	Serienaufnahme
+ContinuousDrive	Movie	Filmen
+ContinuousDrive	Silent Single	Stillleben
+ContinuousDrive	Single	Einzelbild
+ContinuousShootingSpeed	Disable	Nicht möglich
+ContinuousShootingSpeed	Enable	Möglich
+ContinuousShotLimit	Disable	Nicht möglich
+ContinuousShotLimit	Enable	Möglich
+Contrast	+1 (medium high)	+1 (Leicht erhöht)
+Contrast	+2 (high)	+2 (Stark)
+Contrast	+3 (very high)	+3 (Sehr hoch)
+Contrast	-1 (medium low)	-1 (Leicht verringert)
+Contrast	-2 (low)	-2 (Leicht)
+Contrast	-3 (very low)	-3 (Sehr gering)
+Contrast	Film Simulation	Film-Simulation
+Contrast	High	Stark
+Contrast	Low	Leicht
+Contrast	Med High	Leicht erhöht
+Contrast	Med Low	Leicht verringert
+Contrast	Medium High	Mittel-Hoch
+Contrast	Medium Low	Mittel-Gering
+Contrast	Very High	Sehr hoch
+Contrast	Very Low	Sehr gering
+Contrast	n/a	(nicht gesetzt)
+ContrastFaithful	n/a	(nicht gesetzt)
+ContrastHighlightShadowAdj	Off	Aus
+ContrastHighlightShadowAdj	On	Ein
+ContrastLandscape	n/a	(nicht gesetzt)
+ContrastMode	High	Hoch
+ContrastMode	High Dynamic	Hoch dynamisch
+ContrastMode	Low	Niedrig
+ContrastMode	Low Key	Low-Key
+ContrastMode	Medium High	Mitte hoch
+ContrastMode	Medium Low	Mitte niedrig
+ContrastMonochrome	n/a	(nicht gesetzt)
+ContrastNeutral	n/a	(nicht gesetzt)
+ContrastPortrait	n/a	(nicht gesetzt)
+ContrastStandard	n/a	(nicht gesetzt)
+ContrastUnknown	n/a	(nicht gesetzt)
+ContrastUserDef1	n/a	(nicht gesetzt)
+ContrastUserDef2	n/a	(nicht gesetzt)
+ContrastUserDef3	n/a	(nicht gesetzt)
+ControlDialSet	Aperture	Blende
+ControlDialSet	Shutter Speed	Belichtungszeit
+ControlMode	Camera Local Control	Lokale Kamerasteuerung
+ControlMode	Computer Remote Control	Kamerasteuerung per Computer
+ControlMode	n/a	(nicht gesetzt)
+ConversionLens	Macro	Makro
+ConversionLens	Off	Aus
+ConversionLens	Telephoto	Tele
+CopyrightStatus	Unknown	Unbekannt
+CreativeStyle	Autumn	Herbst
+CreativeStyle	Autumn Leaves	Herbstlaub
+CreativeStyle	B&W	Schwarz/Weiß
+CreativeStyle	Clear	Klar
+CreativeStyle	Deep	Tief
+CreativeStyle	Landscape	Landschaft
+CreativeStyle	Light	Hell
+CreativeStyle	Night View/Portrait	Abendszene/Porträt
+CreativeStyle	Portrait	Porträt
+CreativeStyle	Sunset	Sonnenuntergang
+CreativeStyle	Vivid	Lebhafte Farbe
+CreativeStyleSetting	B&W	Schwarz/Weiß
+CreativeStyleSetting	Landscape	Landschaft
+CreativeStyleSetting	Portrait	Porträt
+CreativeStyleSetting	Sunset	Sonnenuntergang
+CreatorAppID	Unknown	Unbekannt
+CropActive	No	Nein
+CropActive	Yes	Ja
+CropAspectRatio	A-size Landscape	DIN A Querformat
+CropAspectRatio	A-size Portrait	DIN A Hochformat
+CropAspectRatio	Circle	Kreis
+CropAspectRatio	Custom	Benutzerdefiniert
+CropAspectRatio	Free	Frei
+CropAspectRatio	Letter-size Landscape	Letter Querformat
+CropAspectRatio	Letter-size Portrait	Letter Querformat
+CropCircleActive	No	Nein
+CropCircleActive	Yes	Ja
+CropUnit	inches	Zoll
+CropUnit	pixels	Pixel
+CropUnits	inches	Zoll
+CropUnits	pixels	Pixel
+Curves	Off	Aus
+Curves	On	Ein
+CustomLinear	No	Nein
+CustomLinear	Yes	Ja
+CustomRendered	Custom	Benutzerdefinierter Prozess
+CustomRendered	Normal	Standard-Prozess
+D-LightingHQ	Off	Aus
+D-LightingHQ	On	Ein
+D-LightingHQSelected	No	Nein
+D-LightingHQSelected	Yes	Ja
+D-LightingHS	Off	Aus
+D-LightingHS	On	Ein
+D-RangeOptimizerMode	Manual	Manuell
+D-RangeOptimizerMode	Off	Aus
+DECPosition	Contrast	Kontrast
+DECPosition	Exposure	Belichtung
+DECPosition	Saturation	Sättigung
+DLOOn	No	Nein
+DLOOn	Yes	Ja
+DataImprint	MM/DD/HH:MM	MM/TT/SS:MM
+DataImprint	None	Keine
+DataImprint	YYYY/MM/DD	JJJJ/MM/TT
+DateDisplayFormat	D/M/Y	Tag/Monat/Jahr
+DateDisplayFormat	M/D/Y	Monat/Tag/Jahr
+DateDisplayFormat	Y/M/D	Jahr/Monat/Tag
+DateStampMode	Date	Datum
+DateStampMode	Off	Aus
+DaylightSavings	No	Aus
+DaylightSavings	Yes	Ein
+DefaultEraseOption	Cancel selected	Abbruch
+DefaultEraseOption	Erase selected	Löschen
+DestinationDST	No	Deaktiviert
+DestinationDST	Yes	Aktiviert
+DialDirectionTvAv	Reversed	Umgekehrt
+DigitalFilter01	Color Filter	Farbfilter
+DigitalFilter01	Fisheye	Fischauge
+DigitalFilter01	High Contrast	Hoher Kontrast
+DigitalFilter02	Color Filter	Farbfilter
+DigitalFilter02	Fisheye	Fischauge
+DigitalFilter02	High Contrast	Hoher Kontrast
+DigitalFilter03	Color Filter	Farbfilter
+DigitalFilter03	Fisheye	Fischauge
+DigitalFilter03	High Contrast	Hoher Kontrast
+DigitalFilter04	Color Filter	Farbfilter
+DigitalFilter04	Fisheye	Fischauge
+DigitalFilter04	High Contrast	Hoher Kontrast
+DigitalFilter05	Color Filter	Farbfilter
+DigitalFilter05	Fisheye	Fischauge
+DigitalFilter05	High Contrast	Hoher Kontrast
+DigitalFilter06	Color Filter	Farbfilter
+DigitalFilter06	Fisheye	Fischauge
+DigitalFilter06	High Contrast	Hoher Kontrast
+DigitalFilter07	Color Filter	Farbfilter
+DigitalFilter07	Fisheye	Fischauge
+DigitalFilter07	High Contrast	Hoher Kontrast
+DigitalFilter08	Color Filter	Farbfilter
+DigitalFilter08	Fisheye	Fischauge
+DigitalFilter08	High Contrast	Hoher Kontrast
+DigitalFilter09	Color Filter	Farbfilter
+DigitalFilter09	Fisheye	Fischauge
+DigitalFilter09	High Contrast	Hoher Kontrast
+DigitalFilter10	Color Filter	Farbfilter
+DigitalFilter10	Fisheye	Fischauge
+DigitalFilter10	High Contrast	Hoher Kontrast
+DigitalFilter11	Color Filter	Farbfilter
+DigitalFilter11	Fisheye	Fischauge
+DigitalFilter11	High Contrast	Hoher Kontrast
+DigitalFilter12	Color Filter	Farbfilter
+DigitalFilter12	Fisheye	Fischauge
+DigitalFilter12	High Contrast	Hoher Kontrast
+DigitalFilter13	Color Filter	Farbfilter
+DigitalFilter13	Fisheye	Fischauge
+DigitalFilter13	High Contrast	Hoher Kontrast
+DigitalFilter14	Color Filter	Farbfilter
+DigitalFilter14	Fisheye	Fischauge
+DigitalFilter14	High Contrast	Hoher Kontrast
+DigitalFilter15	Color Filter	Farbfilter
+DigitalFilter15	Fisheye	Fischauge
+DigitalFilter15	High Contrast	Hoher Kontrast
+DigitalFilter16	Color Filter	Farbfilter
+DigitalFilter16	Fisheye	Fischauge
+DigitalFilter16	High Contrast	Hoher Kontrast
+DigitalFilter17	Color Filter	Farbfilter
+DigitalFilter17	Fisheye	Fischauge
+DigitalFilter17	High Contrast	Hoher Kontrast
+DigitalFilter18	Color Filter	Farbfilter
+DigitalFilter18	Fisheye	Fischauge
+DigitalFilter18	High Contrast	Hoher Kontrast
+DigitalFilter19	Color Filter	Farbfilter
+DigitalFilter19	Fisheye	Fischauge
+DigitalFilter19	High Contrast	Hoher Kontrast
+DigitalFilter20	Color Filter	Farbfilter
+DigitalFilter20	Fisheye	Fischauge
+DigitalFilter20	High Contrast	Hoher Kontrast
+DigitalZoom	Electronic magnification	Elektronische Vergrößerung
+DigitalZoom	None	Kein
+DigitalZoom	Off	Aus
+DigitalZoom	Other	Unbekannt
+DigitalZoomOn	Off	Aus
+DigitalZoomOn	On	Ein
+DisplayAllAFPoints	Disable	Deaktiviert
+DisplayAllAFPoints	Enable	Aktiviert
+DisplayUnit	Pixels	Pixel
+DisplayUnit	inches	Zoll
+DisplayUnits	inches	Zoll
+DisplayUnits	meters	Meter
+DisplayXResolutionUnit	um	µm (Mikrometer)
+DisplayYResolutionUnit	um	µm (Mikrometer)
+DisplayedUnitsX	inches	Zoll
+DisplayedUnitsY	inches	Zoll
+DistortionControl	Off	Aus
+DistortionControl	On	Ein
+DistortionCorrection	Off	Aus
+DistortionCorrection	On	Ein
+DistortionCorrection	n/a	(nicht gesetzt)
+DistortionCorrection2	Off	Aus
+DistortionCorrection2	On	Ein
+DocSecurity	Locked for annotations	Gesperrt für Anmerkungen
+DocSecurity	None	Keine
+DocSecurity	Password protected	Passwort geschützt
+DocSecurity	Read-only enforced	Nur Lesen - erzwungen
+DocSecurity	Read-only recommended	Nur Lesen - vorgeschlagen
+DriveMode	10 s Timer	Selbstauslöser 10 s
+DriveMode	2 s Timer	Selbstauslöser 2 s
+DriveMode	Auto Bracket	Belichtungsreihe
+DriveMode	Bracketing	Belichtungsreihe
+DriveMode	Continuous	Serienaufnahme
+DriveMode	Continuous (Lo)	Serienaufnahme (Niedrig)
+DriveMode	Continuous Bracketing	Serienbild-Belichtungsreihe
+DriveMode	Continuous Exposure Bracketing	Serienaufnahme Belichtungsreihe
+DriveMode	Continuous High	Serienaufnahme (Hi)
+DriveMode	Continuous Low	Serienaufnahme Niedrig
+DriveMode	Continuous Shooting	Serienaufnahme
+DriveMode	HS continuous	High-Speed Serienbild
+DriveMode	Mirror Lock-up	Spiegel hochgeklappt
+DriveMode	Multi Shot	Serienaufnahme
+DriveMode	Multiple Exposure	Mehrfachbelichtung
+DriveMode	No Timer	Ohne Selbstauslöser
+DriveMode	Off	Aus
+DriveMode	Remote Control	Fernauslöser
+DriveMode	Remote Control (3 s delay)	Fernauslöser (3 Sek. Verzögerung)
+DriveMode	Self-Timer 2 sec	Selbstauslöser 2 s
+DriveMode	Self-timer	Selbstauslöser
+DriveMode	Self-timer (12 s)	Selbstauslöser (12 Sek.)
+DriveMode	Self-timer (2 s)	Selbstauslöser (2 Sek.)
+DriveMode	Self-timer 10 sec	Selbstauslöser 10 s
+DriveMode	Self-timer 2 sec, Mirror Lock-up	Selbstauslöser 2 s, Spiegel hochgeklappt
+DriveMode	Self-timer Operation	Selbstauslöser
+DriveMode	Shutter Button	Kamera-Auslöser
+DriveMode	Single	Einzelbild
+DriveMode	Single Exposure	Einzelbelichtung
+DriveMode	Single Frame	Einzelbild
+DriveMode	Single Shot	Einzelbild
+DriveMode	Single-Frame Bracketing	Einzelbild-Belichtungsreihe
+DriveMode	Single-frame	Einzelbild
+DriveMode	Single-frame Bracketing	Einzelbild-Belichtungsreihe
+DriveMode	Single-frame Exposure Bracketing	Einzelbild Belichtungsreihe
+DriveMode	Single-frame Shooting	Einzelbild
+DriveMode	UHS continuous	Ultra High-Speed Serienbild
+DriveMode	White Balance Bracketing	Weißabgleichs-Belichtungsreihe
+DriveMode	White Balance Bracketing High	Weißabgleich-Belichtungsreihe Hoch
+DriveMode	White Balance Bracketing Low	Weißabgleich-Belichtungsreihe Niedrig
+DriveMode	n/a	(nicht gesetzt)
+DriveMode2	Continous Bracketing Low	Serienaufnahme Belichtungsreihe Niedrig
+DriveMode2	Continuous	Serienaufnahme
+DriveMode2	Continuous (Lo)	Serienaufnahme (Niedrig)
+DriveMode2	Continuous Bracketing	Serienaufnahme Belichtungsreihe
+DriveMode2	Continuous Bracketing 0.3 EV	Serienaufnahme Belichtungsreihe 0.3 EV
+DriveMode2	Continuous Bracketing 0.7 EV	Serienaufnahme Belichtungsreihe 0.7 EV
+DriveMode2	Continuous Bracketing High	Serienaufnahme Belichtungsreihe Hoch
+DriveMode2	Continuous High	Serienaufnahme Hoch
+DriveMode2	Continuous Low	Serienaufnahme Niedrig
+DriveMode2	Exposure Bracket	Belichtungsreihe
+DriveMode2	Mirror Lock-up	Spiegel hochgeklappt
+DriveMode2	Multiple Exposure	Mehrfachbelichtung
+DriveMode2	Remote Control	Fernauslöser
+DriveMode2	Remote Control (3 s delay)	Fernauslöser (3 s verzögert)
+DriveMode2	Self-timer (12 s)	Selbstauslöser (12 s)
+DriveMode2	Self-timer (2 s)	Selbstauslöser (2 s)
+DriveMode2	Self-timer 10 sec	Selbstauslöser 10 s
+DriveMode2	Self-timer 2 sec	Selbstauslöser 2 s
+DriveMode2	Self-timer 2 sec, Mirror Lock-up	Selbstauslöser 2 s, Spiegel hochgeklappt
+DriveMode2	Single Frame	Einzelbild
+DriveMode2	Single-frame	Einzelbildaufnahme
+DriveMode2	Single-frame Bracketing	Einzelbild Belichtungsreihe
+DriveMode2	Single-frame Bracketing High	Einzelbild Belichtungsreihe Hoch
+DriveMode2	Single-frame Bracketing Low	Einzelbild Belichtungsreihe Niedrig
+DriveMode2	White Balance Bracketing High	Weißabgleich Belichtungsreihe Hoch
+DriveMode2	White Balance Bracketing Low	Weißabgleich Belichtungsreihe Niedrig
+DriveModeSetting	Continuous High	Serienaufnahme Hoch
+DriveModeSetting	Continuous Low	Serienaufnahme Niedrig
+DriveModeSetting	Self-timer 10 sec	Selbstauslöser 10 s
+DriveModeSetting	Self-timer 2 sec, Mirror Lock-up	Selbstauslöser 2 s, Spiegel hochgeklappt
+DriveModeSetting	Single Frame	Einzelbild
+DriveType	Unknown	Unbekannt
+DynamicAFArea	21 Points	21 Messfelder
+DynamicAFArea	51 Points	51 Messfelder
+DynamicAFArea	51 Points (3D-tracking)	51 Messfelder (3D-Tracking)
+DynamicAFArea	9 Points	9 Messfelder
+DynamicRange	Wide	Weit
+DynamicRangeExpansion	Off	Aus
+DynamicRangeExpansion	On	Ein
+DynamicRangeOptimizer	Advanced Auto	Erw. Automatik
+DynamicRangeOptimizer	Advanced Lv1	Erw. Stufe 1
+DynamicRangeOptimizer	Advanced Lv2	Erw. Stufe 2
+DynamicRangeOptimizer	Advanced Lv3	Erw. Stufe 3
+DynamicRangeOptimizer	Advanced Lv4	Erw. Stufe 4
+DynamicRangeOptimizer	Advanced Lv5	Erw. Stufe 5
+DynamicRangeOptimizer	Auto	Automatisch
+DynamicRangeOptimizer	Off	Aus
+DynamicRangeOptimizerBracket	High	Hoch
+DynamicRangeOptimizerBracket	Low	Niedrig
+DynamicRangeOptimizerBracket	Off	Aus
+DynamicRangeOptimizerMode	Off	Aus
+DynamicRangeSetting	Film Simulation	Film-Simulation
+DynamicRangeSetting	Wide1 (230%)	Weit1 (230%)
+DynamicRangeSetting	Wide2 (400%)	Weit2 (400%)
+E-DialInProgram	Tv or Av	Tv oder Av
+ETTLII	Average	Integralmessung
+ETTLII	Evaluative	Mehrfeldmessung
+EVStepSize	1/2 EV	1/2 LW
+EVStepSize	1/3 EV	1/3 LW
+EVSteps	1/2 EV Steps	1/2 LW-Schritte
+EVSteps	1/3 EV Steps	1/3 LW-Schritte
+EasyExposureCompensation	Off	Aus
+EasyExposureCompensation	On	Ein
+EasyExposureCompensation	On (auto reset)	Einstellrad (Reset)
+EasyMode	Beach	Strand
+EasyMode	Black & White	Schwarz/Weiß
+EasyMode	Blur Reduction	Unschärfereduktion
+EasyMode	Color Accent	Farbton
+EasyMode	Color Swap	Farbwechsel
+EasyMode	Digital Macro	Digitales Makro
+EasyMode	Fireworks	Feuerwerk
+EasyMode	Foliage	Laub
+EasyMode	Full auto	Vollautomatisch
+EasyMode	Indoor	Innenaufnahme
+EasyMode	Kids & Pets	Kinder & Tiere
+EasyMode	Landscape	Landschaft
+EasyMode	Live View Control	Live View Kontrolle
+EasyMode	Low Light	Wenig Licht
+EasyMode	Low Light 2	Wenig Licht 2
+EasyMode	Macro	Makro
+EasyMode	Manual	Manuell
+EasyMode	Night	Nachtszene
+EasyMode	Night Scene	Nachtszene
+EasyMode	Night Snapshot	Nacht Schnappschuss
+EasyMode	Pan focus	Pan Fokus
+EasyMode	Portrait	Porträt
+EasyMode	Snow	Schnee
+EasyMode	Sports	Sport
+EasyMode	Sunset	Sonnenuntergang
+EasyMode	Super Macro	Super-Makro
+EasyMode	Super Macro 2	Super Makro 2
+EasyMode	Underwater	Unterwasser
+EasyMode	Zoom Blur	Zoom Unschärfe
+EdgeNoiseReduction	Off	Aus
+EdgeNoiseReduction	On	Ein
+Emphasis	None	Keine
+Emphasis	reserved	reserviert
+Encoding	Unknown -	Unbekannt -
+EnhanceDarkTones	Off	Aus
+EnhanceDarkTones	On	Ein
+Enhancement	Blue	Blau
+Enhancement	Green	Grün
+Enhancement	Off	Aus
+Enhancement	Red	Rot
+Enhancement	Underwater	Unterwasser
+EnvelopePriority	0 (reserved)	0 (reserviert)
+EnvelopePriority	1 (most urgent)	1 (sehr dringend)
+EnvelopePriority	5 (normal urgency)	5 (normale Dringlichkeit)
+EnvelopePriority	8 (least urgent)	8 (geringe Wichtigkeit)
+EnvelopePriority	9 (user-defined priority)	9 (benutzerdefinierte Priorität)
+ExposureCompStepSize	1 EV	1 LW
+ExposureCompStepSize	1/2 EV	1/2 LW
+ExposureCompStepSize	1/3 EV	1/3 LW
+ExposureControlStepSize	1 EV	1 LW
+ExposureControlStepSize	1/2 EV	1/2 LW
+ExposureControlStepSize	1/3 EV	1/3 LW
+ExposureDelayMode	Off	Aus
+ExposureDelayMode	On	Ein
+ExposureLevelIncrements	1-stop set, 1/3-stop comp.	1-Blende, 1/3-Blendenkompensation
+ExposureLevelIncrements	1/2 Stop	1/2 LW
+ExposureLevelIncrements	1/2-stop set, 1/2-stop comp.	1/2-Blende, 1/2-Blendenkompensation
+ExposureLevelIncrements	1/3 Stop	1/3 LW
+ExposureLevelIncrements	1/3-stop set, 1/3-stop comp.	1/3-Blende, 1/3-Blendenkompensation
+ExposureMode	Anti Motion Blur	Verwackelungsschutz
+ExposureMode	Aperture Priority	Blendenpriorität
+ExposureMode	Aperture-priority AE	Blendenpriorität
+ExposureMode	Auto	Automatische Belichtung
+ExposureMode	Auto bracket	Belichtungsreihe
+ExposureMode	Auto?	Automatisch?
+ExposureMode	Backlight Correction HDR	Hintergrundbeleuchtung HDR Korrektur
+ExposureMode	Beach	Strand
+ExposureMode	Bulb	Bulb-Modus
+ExposureMode	Fireworks	Feuerwerk
+ExposureMode	Food	Lebensmittel
+ExposureMode	High Sensitivity	Hohe Empfindlichkeit
+ExposureMode	Landscape	Landschaft
+ExposureMode	Macro	Makro
+ExposureMode	Manual	Manuelle Belichtung
+ExposureMode	Night Scene / Twilight	Nachtszene / Dämmerung
+ExposureMode	Night View/Portrait	Abendszene/Porträt
+ExposureMode	Pet	Haustiere
+ExposureMode	Portrait	Porträt
+ExposureMode	Program	Programmautomatik
+ExposureMode	Program AE	Programmautomatik
+ExposureMode	Program-shift	Programm-Shift
+ExposureMode	Program-shift A	Programmverschiebung A
+ExposureMode	Program-shift S	Programmverschiebung S
+ExposureMode	Shutter Priority	Verschlusspriorität
+ExposureMode	Shutter speed priority AE	Verschlusspriorität
+ExposureMode	Snow	Schnee
+ExposureMode	Sports	Sport
+ExposureMode	Sunset	Sonnenuntergang
+ExposureMode	Twilight Portrait	Dämmerung Portät
+ExposureMode	Underwater	Unterwasser
+ExposureMode	n/a	(nicht gesetzt)
+ExposureModeInManual	Center-weighted average	Mittenbetont
+ExposureModeInManual	Evaluative metering	Mehrfeldmessung
+ExposureModeInManual	Partial metering	Teilbild
+ExposureModeInManual	Specified metering mode	Spezifizierte Messmethode
+ExposureModeInManual	Spot metering	Spotmessung
+ExposureProgram	Action (High speed)	Kreativ-Programm (ausgerichtet auf schnelle Verschlussgeschwindigkeit)
+ExposureProgram	Anti Motion Blur	Verwackelungsschutz
+ExposureProgram	Aperture Priority	Blendenpriorität
+ExposureProgram	Aperture-priority AE	Blendenpriorität
+ExposureProgram	Creative (Slow speed)	Kreativ-Programm (ausgerichtet auf Schärfentiefe)
+ExposureProgram	Landscape	Landschaft
+ExposureProgram	Macro	Makro
+ExposureProgram	Manual	Manuell
+ExposureProgram	Night Portrait	Nachtporträt
+ExposureProgram	Night view	Abendszene
+ExposureProgram	Night view/portrait	Abendszene/Porträt
+ExposureProgram	Not Defined	Nicht definiert
+ExposureProgram	Portrait	Porträt
+ExposureProgram	Program	Programmautomatik
+ExposureProgram	Program AE	Programmautomatik
+ExposureProgram	Shutter Priority	Verschlusspriorität
+ExposureProgram	Shutter speed priority AE	Verschlusspriorität
+ExposureProgram	Sports	Sport
+ExposureProgram	Sunset	Sonnenuntergang
+ExposureWarning	Bad exposure	Schlechte Belichtung
+ExposureWarning	Good	OK
+ExtendedWBDetect	Off	Aus
+ExtendedWBDetect	On	Ein
+Extender	None	Keiner
+ExtenderStatus	Attached	Angesetzt
+ExtenderStatus	Not attached	Nicht angesetzt
+ExtenderStatus	Removed	Entfernt
+ExternalFlash	Off	Aus
+ExternalFlash	On	Ein
+ExternalFlashBounce	Bounce	Mit Bounce
+ExternalFlashBounce	Direct	Direkt
+ExternalFlashBounce	No	Nein
+ExternalFlashBounce	Yes	Ja
+ExternalFlashBounce	n/a	(nicht gesetzt)
+ExternalFlashExposureComp	-0.5	-0.5 LW
+ExternalFlashExposureComp	-1.0	-1.0 LW
+ExternalFlashExposureComp	-1.5	-1.5 LW
+ExternalFlashExposureComp	-2.0	-2.0 LW
+ExternalFlashExposureComp	-2.5	-2.5 LW
+ExternalFlashExposureComp	-3.0	-3.0 LW
+ExternalFlashExposureComp	0.0	0.0 LW
+ExternalFlashExposureComp	0.5	0.5 LW
+ExternalFlashExposureComp	1.0	1.0 LW
+ExternalFlashExposureComp	n/a	Nicht gesetzt  (Aus oder Auto-Modi)
+ExternalFlashExposureComp	n/a (Manual Mode)	Nicht gesetzt (Manueller Modus)
+ExternalFlashFirmware	n/a	(nicht gesetzt)
+ExternalFlashFlags	Fired	Ausgelöst
+ExternalFlashMode	Off	Aus
+ExternalFlashMode	On, Auto	Ein, Auto
+ExternalFlashMode	On, Contrast-control Sync	Ein, Kontrast-Steuerungs-Synchronisation
+ExternalFlashMode	On, Flash Problem	Ein, Blitzproblem?
+ExternalFlashMode	On, High-speed Sync	Ein, High-Speed-Synchronisation
+ExternalFlashMode	On, Manual	Ein, Manuell
+ExternalFlashMode	On, P-TTL Auto	Ein, P-TTL-Blitzautomatik
+ExternalFlashMode	On, Wireless	Ein, Drahtlos
+ExternalFlashMode	On, Wireless, High-speed Sync	Ein, Drahtlos, High-Speed-Synchronisation
+ExternalFlashMode	n/a - Off-Auto-Aperture	K/A - Blendenring nicht auf A
+FEMicroadjustment	Disable	Deaktiviert
+FEMicroadjustment	Enable	Aktiviert
+FaceDetect	Off	Aus
+FaceDetect	On	Ein
+FaceOrientation	Rotate 180	180° gedreht
+FaceOrientation	Rotate 270 CW	90° gegen den Uhrzeigersinn
+FaceOrientation	Rotate 90 CW	90° im Uhrzeigersinn
+FacesDetected	n/a	(nicht gesetzt)
+FastSeek	No	Nein
+FastSeek	Yes	Ja
+FaxProfile	Unknown	Unbekannt
+FileNumberMemory	Off	Aus
+FileNumberMemory	On	Ein
+FileNumberSequence	Off	Aus
+FileNumberSequence	On	Ein
+FileSource	Digital Camera	Digital-Kamera
+FileSource	Film Scanner	Film-Scanner
+FileSource	Reflection Print Scanner	Scanner
+FileSource	Sigma Digital Camera	Sigma Digital-Kamera
+FillFlashAutoReduction	Disable	Nicht möglich
+FillFlashAutoReduction	Enable	Möglich
+FilmMode	F1/Studio Portrait	F1/Studio-Porträt
+FilmMode	F1a/Studio Portrait Enhanced Saturation	F1a/Studio-Porträt Erweiterte Sättigung
+FilmMode	F1b/Studio Portrait Smooth Skin Tone (ASTIA)	F1b/Studio-Porträt Weiche Hauttöne
+FilmMode	F1b/Studio Portrait Smooth Skin Tone (Astia)	F1b/Studio-Porträt Weiche Hauttöne
+FilmMode	F1c/Studio Portrait Increased Sharpness	F1c/Studio-Porträt Erhöhte Schärfe
+FilmMode	F3/Studio Portrait Ex	F3/Studio Porträt Ex
+FilmMode	n/a	(nicht gesetzt)
+FilterEffect	Green	Grün
+FilterEffect	None	Keiner
+FilterEffect	Off	Aus
+FilterEffect	Red	Rot
+FilterEffect	Yellow	Gelb
+FilterEffect	n/a	(nicht gesetzt)
+FilterEffectFaithful	n/a	(nicht gesetzt)
+FilterEffectLandscape	n/a	(nicht gesetzt)
+FilterEffectMonochrome	Green	Grün
+FilterEffectMonochrome	None	Keiner
+FilterEffectMonochrome	Red	Rot
+FilterEffectMonochrome	Yellow	Gelb
+FilterEffectMonochrome	n/a	(nicht gesetzt)
+FilterEffectNeutral	n/a	(nicht gesetzt)
+FilterEffectPortrait	n/a	(nicht gesetzt)
+FilterEffectStandard	n/a	(nicht gesetzt)
+FilterEffectUnknown	Green	Grün
+FilterEffectUnknown	None	Keiner
+FilterEffectUnknown	Red	Rot
+FilterEffectUnknown	Yellow	Gelb
+FilterEffectUnknown	n/a	(nicht gesetzt)
+FilterEffectUserDef1	Green	Grün
+FilterEffectUserDef1	None	Keiner
+FilterEffectUserDef1	Red	Rot
+FilterEffectUserDef1	Yellow	Gelb
+FilterEffectUserDef1	n/a	(nicht gesetzt)
+FilterEffectUserDef2	Green	Grün
+FilterEffectUserDef2	None	Keiner
+FilterEffectUserDef2	Red	Rot
+FilterEffectUserDef2	Yellow	Gelb
+FilterEffectUserDef2	n/a	(nicht gesetzt)
+FilterEffectUserDef3	Green	Grün
+FilterEffectUserDef3	None	Keiner
+FilterEffectUserDef3	Red	Rot
+FilterEffectUserDef3	Yellow	Gelb
+FilterEffectUserDef3	n/a	(nicht gesetzt)
+FinderDisplayDuringExposure	Off	Aus
+FinderDisplayDuringExposure	On	Ein
+FineSharpness	Extra fine	Extra
+FineSharpness	Off	Aus
+FineSharpness	On	Ein
+Flash	Auto, Did not fire	Blitz wurde nicht ausgelöst, Automodus
+Flash	Auto, Did not fire, Red-eye reduction	Blitz wurde nicht ausgelöst, Rote-Augen-Reduzierung
+Flash	Auto, Fired	Blitz wurde ausgelöst, Automodus
+Flash	Auto, Fired, Red-eye reduction	Blitz wurde ausgelöst, Automodus, Rote-Augen-Reduzierung
+Flash	Auto, Fired, Red-eye reduction, Return detected	Blitz wurde ausgelöst, Automodus, Messblitz-Licht zurückgeworfen, Rote-Augen-Reduzierung
+Flash	Auto, Fired, Red-eye reduction, Return not detected	Blitz wurde ausgelöst, Automodus, kein Messblitz-Licht zurückgeworfen, Rote-Augen-Reduzierung
+Flash	Auto, Fired, Return detected	Blitz wurde ausgelöst, Automodus, Messblitz-Licht zurückgeworfen
+Flash	Auto, Fired, Return not detected	Blitz wurde ausgelöst, Automodus, kein Messblitz-Licht zurückgeworfen
+Flash	Did not fire	Blitz wurde nicht ausgelöst
+Flash	Fired	Blitz wurde ausgelöst
+Flash	Fired, Red-eye reduction	Blitz wurde ausgelöst, Rote-Augen-Reduzierung
+Flash	Fired, Red-eye reduction, Return detected	Blitz wurde ausgelöst, Rote-Augen-Reduzierung, Messblitz-Licht zurückgeworfen
+Flash	Fired, Red-eye reduction, Return not detected	Blitz wurde ausgelöst, Rote-Augen-Reduzierung, kein Messblitz-Licht zurückgeworfen
+Flash	Fired, Return detected	Messblitz-Licht zurückgeworfen
+Flash	Fired, Return not detected	Kein Messblitz-Licht zurückgeworfen
+Flash	No Flash	Blitz wurde nicht ausgelöst
+Flash	No flash function	Keine Blitzfunktion
+Flash	Off	Aus
+Flash	Off, Did not fire	Blitz wurde nicht ausgelöst, Blitz unterdrücken-Modus
+Flash	Off, Did not fire, Return not detected	Deaktiviert, Blitz wurde nicht ausgelöst, kein Messblitz-Licht zurückgeworfen
+Flash	Off, No flash function	Deaktiviert, Keine Blitzfunktion
+Flash	Off, Red-eye reduction	Deaktiviert, Rote-Augen-Reduzierung
+Flash	On	Ein
+Flash	On, Did not fire	Ein, Blitz wurde nicht ausgelöst
+Flash	On, Fired	Blitz wurde ausgelöst, Blitz erzwingen-Modus
+Flash	On, Red-eye reduction	Blitz wurde ausgelöst, Blitz erzwingen-Modus, Rote-Augen-Reduzierung
+Flash	On, Red-eye reduction, Return detected	Blitz wurde ausgelöst, Blitz erzwingen-Modus, Rote-Augen-Reduzierung, Messblitz-Licht zurückgeworfen
+Flash	On, Red-eye reduction, Return not detected	Blitz wurde ausgelöst, Blitz erzwingen-Modus, Rote-Augen-Reduzierung, kein Messblitz-Licht zurückgeworfen
+Flash	On, Return detected	Blitz wurde ausgelöst, Blitz erzwingen-Modus, Messblitz-Licht zurückgeworfen
+Flash	On, Return not detected	Blitz wurde ausgelöst, Blitz erzwingen-Modus, kein Messblitz-Licht zurückgeworfen
+FlashAction2	Did not fire	Blitz wurde nicht ausgelöst
+FlashAction2	Fired	Blitz wurde ausgelöst
+FlashBits	2nd-curtain sync used	Synchronisatiopn auf 2. Verschlußvorhang
+FlashBits	Built-in	Integrierter Blitz
+FlashBits	External	Extern
+FlashBits	FP sync enabled	FP Synchronisation eingestellt
+FlashBits	FP sync used	FP Synchronistaion
+FlashBits	Manual	Manuell
+FlashCommanderMode	Off	Aus
+FlashCommanderMode	On	Ein
+FlashControlBuilt-in	Commander Mode	Master-Steuerung
+FlashControlMode	Auto Aperture	Blendenautomatik (AA)
+FlashControlMode	Manual	Manuell
+FlashControlMode	Off	Aus
+FlashControlMode	Repeating Flash	Stroboskopblitz
+FlashCurtain	1st	1. Vorhang
+FlashCurtain	2nd	2. Vorhang
+FlashDefault	Fill Flash	Aufhellblitz
+FlashDevice	External	Extern
+FlashDevice	Internal	Intern
+FlashDevice	Internal + External	Intern + Extern
+FlashDevice	None	Keines
+FlashExposureIndicator	Bottom of Scale	Unterer Wert
+FlashExposureIndicator	Not Indicated	Nicht angezeigt
+FlashExposureIndicator	Over Scale	Wert zu hoch
+FlashExposureIndicator	Top of Scale	Oberer Wert
+FlashExposureIndicator	Under Scale	Wert zu niedrig
+FlashExposureIndicatorLast	Bottom of Scale	Unterer Wert
+FlashExposureIndicatorLast	Not Indicated	Nicht angezeigt
+FlashExposureIndicatorLast	Over Scale	Wert zu hoch
+FlashExposureIndicatorLast	Top of Scale	Oberer Wert
+FlashExposureIndicatorLast	Under Scale	Wert zu niedrig
+FlashExposureIndicatorNext	Bottom of Scale	Unterer Wert
+FlashExposureIndicatorNext	Not Indicated	Nicht angezeigt
+FlashExposureIndicatorNext	Over Scale	Wert zu hoch
+FlashExposureIndicatorNext	Top of Scale	Oberer Wert
+FlashExposureIndicatorNext	Under Scale	Wert zu niedrig
+FlashExposureLock	Off	Aus
+FlashExposureLock	On	Ein
+FlashFired	False	Nein
+FlashFired	No	Nein
+FlashFired	True	Ja
+FlashFired	Yes	Ja
+FlashFiring	Does not fire	Unterdrückt
+FlashFiring	Fires	Aktiv
+FlashFunction	Built-in flash	Integrierter Blitz
+FlashFunction	False	Nein
+FlashFunction	Manual	Manuell
+FlashFunction	No flash	Kein Blitz
+FlashFunction	Strobe	Stroboskop
+FlashFunction	True	Ja
+FlashGNDistance	n/a	(nicht gesetzt)
+FlashGroupAControlMode	Auto Aperture	Blendenautomatik (AA)
+FlashGroupAControlMode	Manual	Manuell
+FlashGroupAControlMode	Off	Aus
+FlashGroupAControlMode	Repeating Flash	Stroboskopblitz
+FlashGroupBControlMode	Auto Aperture	Blendenautomatik (AA)
+FlashGroupBControlMode	Automatic	Automatik
+FlashGroupBControlMode	Manual	Manuell
+FlashGroupBControlMode	Off	Aus
+FlashGroupBControlMode	Repeating Flash	Stroboskopblitz
+FlashGroupCControlMode	Auto Aperture	Blendenautomatik (AA)
+FlashGroupCControlMode	Manual	Manuell
+FlashGroupCControlMode	Off	Aus
+FlashGroupCControlMode	Repeating Flash	Stroboskopblitz
+FlashIntensity	High	Hoch
+FlashIntensity	Strong	Stark
+FlashLevel	High	Hoch
+FlashLevel	n/a	(nicht gesetzt)
+FlashMetering	Manual flash control	Manuelle Blitz-Kontrolle
+FlashMetering	Pre-flash TTL	Vorblitz TTL
+FlashMeteringMode	External Auto	Extern Automatisch
+FlashMeteringMode	External Manual	Extern Manuell
+FlashMeteringMode	Off	Aus
+FlashMode	2nd Curtain	Auf 2. Verschlußvorhang
+FlashMode	Auto	Automatisch
+FlashMode	Auto, Did not fire	Auto, nicht ausgelöst
+FlashMode	Auto, Did not fire, Red-eye reduction	Auto, nicht ausgelöst, Rote-Augen-Reduzierung
+FlashMode	Auto, Fired	Auto, ausgelöst
+FlashMode	Auto, Fired, Red-eye reduction	Auto, ausgelöst, Rote-Augen-Reduzierung
+FlashMode	Did Not Fire	Nicht ausgelöst
+FlashMode	Disabled	Deaktiviert
+FlashMode	External, Auto	Extern, Auto
+FlashMode	External, Contrast-control Sync	Extern, Kontrast-Steuerungs-Synchronisation
+FlashMode	External, Flash Problem	Extern, Blitzproblem?
+FlashMode	External, High-speed Sync	Extern, High-Speed-Synchronisation
+FlashMode	External, Manual	Extern, Manuell
+FlashMode	External, P-TTL Auto	Extern, P-TTL-Blitzautomatik
+FlashMode	External, Wireless	Extern, Drahtlos
+FlashMode	External, Wireless, High-speed Sync	Extern, Drahtlos, High-Speed-Synchronisation
+FlashMode	Fill flash	Aufhellblitz
+FlashMode	Fill-in	Aufhellen
+FlashMode	Fired, Commander Mode	Ausgelöst, Befehlsmodus
+FlashMode	Fired, External	Ausgelöst, Extern
+FlashMode	Fired, Manual	Ausgelöst, Manuell
+FlashMode	Fired, TTL Mode	Ausgelöst, TTL-Modus
+FlashMode	Internal	Intern
+FlashMode	Not Ready	Nicht bereit
+FlashMode	Off	Aus
+FlashMode	Off, Did not fire	Aus
+FlashMode	Off?	Aus?
+FlashMode	On	Ein
+FlashMode	On, Did not fire	Ein, nicht ausgelöst
+FlashMode	On, Did not fire, Wireless (Master)	Ein, nicht ausgelöst, Drahtlos (Hauptblitz)
+FlashMode	On, Fired	Ein
+FlashMode	On, Red-eye reduction	Ein, Rote-Augen-Reduzierung
+FlashMode	On, Slow-sync	Ein, Langzeit-Synchronisation
+FlashMode	On, Slow-sync, Red-eye reduction	Ein, Langzeit-Synchronisation, Rote-Augen-Reduzierung
+FlashMode	On, Soft	Ein, Softblitz
+FlashMode	On, Trailing-curtain Sync	Ein, 2. Verschlussvorhang
+FlashMode	On, Wireless (Control)	Ein, Drahtlos (Steuerblitz)
+FlashMode	On, Wireless (Master)	Ein, Drahtlos (Hauptblitz)
+FlashMode	Rear flash sync	Synchronisation auf den zweiten Verschlussvorhang
+FlashMode	Red eye	Rote-Augen-Reduzierung
+FlashMode	Red-eye	Rote Augen
+FlashMode	Red-eye Reduction	Rote-Augen-Reduzierung
+FlashMode	Red-eye reduction	Rote-Augen-Reduzierung
+FlashMode	Unknown	Unbekannt
+FlashMode	Wireless	Drahtlos
+FlashMode	n/a - Off-Auto-Aperture	K/A - Blendenring nicht auf A
+FlashModel	None	Keines
+FlashOptions	Auto	Automatisch
+FlashOptions	Auto, Red-eye reduction	Auto, Rote-Augen-Reduzierung
+FlashOptions	Red-eye reduction	Rote-Augen-Reduzierung
+FlashOptions	Slow-sync	Langzeit-Synchronisation
+FlashOptions	Slow-sync, Red-eye reduction	Langzeit-Synchronisation, Rote-Augen-Reduzierung
+FlashOptions	Trailing-curtain Sync	2. Verschlussvorhang
+FlashOptions	Wireless (Control)	Drahtlos (Steuerblitz)
+FlashOptions	Wireless (Master)	Drahtlos (Hauptblitz)
+FlashOptions2	Auto	Automatisch
+FlashOptions2	Auto, Red-eye reduction	Auto, Rote-Augen-Reduzierung
+FlashOptions2	Red-eye reduction	Rote-Augen-Reduzierung
+FlashOptions2	Slow-sync	Langzeit-Synchronisation
+FlashOptions2	Slow-sync, Red-eye reduction	Langzeit-Synchronisation, Rote-Augen-Reduzierung
+FlashOptions2	Trailing-curtain Sync	2. Verschlussvorhang
+FlashOptions2	Wireless (Control)	Drahtlos (Steuerblitz)
+FlashOptions2	Wireless (Master)	Drahtlos (Hauptblitz)
+FlashRedEyeMode	False	Nein
+FlashRedEyeMode	True	Ja
+FlashRemoteControl	Off	Aus
+FlashReturn	No return detection	Keine Erkennung
+FlashReturn	Return detected	Reflexion erkannt
+FlashReturn	Return not detected	Reflexion nicht erkannt
+FlashReturn	Subject Inside Flash Range	Objekt innerhalb der Blitzreichweite
+FlashReturn	Subject Outside Flash Range	Objekt ausserhalb der Blitzreichweite
+FlashStatus	Built-in Flash present	Integrierter Blitz vorhanden
+FlashStatus	Built-in Flash present and fired	Integrierter Blitz vorhanden und ausgelöst
+FlashStatus	External Flash present	Externer Blitz vorhanden
+FlashStatus	External Flash present and fired	Externer Blitz vorhanden und ausgelöst
+FlashStatus	External, Did not fire	Extern, nicht ausgelöst
+FlashStatus	External, Fired	Extern, ausgelöst
+FlashStatus	Internal, Did not fire	Intern, nicht ausgelöst
+FlashStatus	Internal, Did not fire (0x08)	Intern, nicht ausgelöst
+FlashStatus	Internal, Fired	Intern, ausgelöst
+FlashStatus	No Flash present	Kein Blitz vorhanden
+FlashStatus	Off	Aus
+FlashStatus	Off (1)	Aus (1)
+FlashSyncSpeedAv	1/200 Fixed	1/200 Fest
+FlashSyncSpeedAv	1/200-1/60 Auto	1/200-1/60 automatisch
+FlashSyncSpeedAv	1/250 Fixed	1/250 Fest
+FlashSyncSpeedAv	1/250-1/60 Auto	1/200-1/60 automatisch
+FlashSyncSpeedAv	1/300 Fixed	1/300 Fest
+FlashSyncSpeedAv	Auto	Automatisch
+FlashType	Built-In Flash	Intern
+FlashType	External	Extern
+FlashType	None	Keiner
+FlashWarning	Off	Aus
+FlashWarning	On	Ein
+FlickerReduce	Off	Aus
+FlickerReduce	On	Ein
+FlipHorizontal	No	Nein
+FlipHorizontal	Yes	Ja
+FocalPlaneResolutionUnit	None	Keine
+FocalPlaneResolutionUnit	inches	Zoll
+FocalPlaneResolutionUnit	um	µm (Mikrometer)
+FocalType	Fixed	Festbrennweite
+FocalType	Zoom	Zoom-Objektiv
+Focus	Auto-focus Didn't Lock	Autofokus nicht gesperrt
+Focus	Auto-focus Locked	Autofokus gesperrt
+Focus	Manual	Manuell
+FocusArea	Spot Focus	Spot-AF-Messfeld
+FocusArea	Wide Focus (normal)	Großes AF-Messfeld (normal)
+FocusAreaSelection	No Wrap	Am Rand stoppen
+FocusAreaSelection	Wrap	Umlaufend
+FocusContinuous	Continuous	Serienaufnahme
+FocusContinuous	Manual	Manuell
+FocusDisplayAIServoAndMF	Disable	Deaktiviert
+FocusDisplayAIServoAndMF	Enable	Aktiviert
+FocusMode	AF-C	AF-C (Kontinuierlicher Autofokus)
+FocusMode	AF-S	AF-S (Einzelautofokus)
+FocusMode	AI Focus AF	AI Fokus AF
+FocusMode	Auto	Automatisch
+FocusMode	Continuous	Serienaufnahme
+FocusMode	Custom	Benutzerdefiniert
+FocusMode	Face Detect	Gesichtserkennung AF
+FocusMode	Infinity	Unendlich
+FocusMode	Macro	Makro
+FocusMode	Macro (1)	Makro (1)
+FocusMode	Macro (2)	Makro (2)
+FocusMode	Manual	Manuell
+FocusMode	Manual Focus (3)	Manueller Fokus (3)
+FocusMode	Manual Focus (6)	Manueller Fokus (6)
+FocusMode	Multi AF	Mehrpunkt AF
+FocusMode	One-shot AF	One-Shot AF
+FocusMode	Pan Focus	Pan-Fokus
+FocusMode	Single	Einzelbild
+FocusMode	Single AF	Einpunkt AF
+FocusMode	Super Macro	Super-Makro
+FocusMode	n/a	(nicht gesetzt)
+FocusMode2	AF-C	AF-C (Kontinuierlicher Autofokus)
+FocusMode2	AF-S	AF-S (Einzelautofokus)
+FocusMode2	Manual	Manuell
+FocusModeSetting	AF-A	AF-Automatik
+FocusModeSetting	AF-C	AF-C (Kontinuierlicher Autofokus)
+FocusModeSetting	AF-S	AF-S (Einzelautofokus)
+FocusModeSetting	Manual	Manuell
+FocusModeSwitch	Manual	Manuell
+FocusPointWrap	No Wrap	Am Rand stoppen
+FocusPointWrap	Wrap	Umlaufend
+FocusProcess	AF Not Used	Ohne AF
+FocusProcess	AF Used	Mit AF
+FocusRange	Auto	Automatisch
+FocusRange	Close	Nah
+FocusRange	Far Range	Entfernt
+FocusRange	Infinity	Unendlich
+FocusRange	Macro	Makro
+FocusRange	Manual	Manuell
+FocusRange	Middle Range	Mittlerer Bereich
+FocusRange	Not Known	Nicht bekannt
+FocusRange	Pan Focus	Pan-Fokus
+FocusRange	Super Macro	Super-Makro
+FocusRange	Very Close	Sehr nah
+FocusTrackingLockOn	1 (Short)	5 (Kurz)
+FocusTrackingLockOn	1 Short	1 Kurz
+FocusTrackingLockOn	5 (Long)	5 (Lang)
+FocusTrackingLockOn	5 Long	5 Lang
+FocusTrackingLockOn	Long	Lang
+FocusTrackingLockOn	Off	Aus
+FocusTrackingLockOn	Short	Kurz
+FocusWarning	Good	OK
+FocusWarning	Out of focus	Ausserhalb des Fokus
+FujiFlashMode	Auto	Automatisch
+FujiFlashMode	External	Externer Blitz
+FujiFlashMode	Off	Unterdrückter Blitz
+FujiFlashMode	On	Erzwungener Blitz
+FujiFlashMode	Red-eye reduction	Rote-Augen-Reduzierung
+FunctionButton	AF-area Mode	Messfeldsteuerung
+FunctionButton	Auto Bracketing	Belichtungsreihe
+FunctionButton	Center AF Area	AF-Messfeldgröße
+FunctionButton	Center-weighted	Mittenbetont
+FunctionButton	FV Lock	FV-Messwertspeicher
+FunctionButton	Flash Off	Blitz aus
+FunctionButton	Framing Grid	Gitterlinien
+FunctionButton	ISO Display	ISO-Anzeige
+FunctionButton	Image Quality	Bildqualität
+FunctionButton	Matrix Metering	Matrixmessung
+FunctionButton	Spot Metering	Spotmessung
+FunctionButton	White Balance	Weißabgleich
+GPSAltitudeRef	Above Sea Level	Höhe über Normal-Null (Meeresspiegel)
+GPSAltitudeRef	Below Sea Level	Höhe unter Normal-Null (Meeresspiegel)
+GPSDestBearingRef	Magnetic North	Magnetische Ausrichtung
+GPSDestBearingRef	True North	Geographische Ausrichtung
+GPSDestDistanceRef	Kilometers	Kilometer
+GPSDestDistanceRef	Miles	Meilen
+GPSDestDistanceRef	Nautical Miles	Knoten
+GPSDestLatitudeRef	North	Nördliche Breite
+GPSDestLatitudeRef	South	Südliche Breite
+GPSDestLongitudeRef	East	Östliche Länge
+GPSDestLongitudeRef	West	Westliche Länge
+GPSDifferential	Differential Corrected	Differentialkorrektur angewandt
+GPSDifferential	No Correction	Messung ohne Differentialkorrektur
+GPSImgDirectionRef	Magnetic North	Magnetische Ausrichtung
+GPSImgDirectionRef	True North	Geographische Ausrichtung
+GPSLatitudeRef	North	Nördliche Breite
+GPSLatitudeRef	South	Südliche Breite
+GPSLongitudeRef	East	Östliche Länge
+GPSLongitudeRef	West	Westliche Länge
+GPSMeasureMode	2-D	2-Dimensionale Messung
+GPSMeasureMode	2-Dimensional	2-Dimensionale Messung
+GPSMeasureMode	2-Dimensional Measurement	2-Dimensionale Messung
+GPSMeasureMode	3-D	3-Dimensionale Messung
+GPSMeasureMode	3-Dimensional	3-Dimensionale Messung
+GPSMeasureMode	3-Dimensional Measurement	3-Dimensionale Messung
+GPSSpeedRef	km/h	Kilometer pro Stunde
+GPSSpeedRef	knots	Knoten
+GPSSpeedRef	mph	Meilen pro Stunde
+GPSStatus	Measurement Active	Messung aktiv
+GPSStatus	Measurement Void	Messung ungültig
+GPSTrackRef	Magnetic North	Magnetische Ausrichtung
+GPSTrackRef	True North	Geographische Ausrichtung
+GainControl	High gain down	Hohe Helligkeitsminderung
+GainControl	High gain up	Hohe Helligkeitsverstärkung
+GainControl	Low gain down	Geringe Helligkeitsminderung
+GainControl	Low gain up	Geringe Helligkeitsverstärkung
+GainControl	None	Keine
+Gapless	No	Nein
+Gapless	Yes	Ja
+Gradation	Auto-Override	Automatisch
+Gradation	High Key	High-Key
+Gradation	Low Key	Low-Key
+Gradation	User-Selected	Benutzerauswahl
+Gradation	n/a	(nicht gesetzt)
+GrayResponseUnit	0.0001	Nummer stellt ein 1000tel einer Einheit dar
+GrayResponseUnit	0.001	Nummer stellt ein 100tel einer Einheit dar
+GrayResponseUnit	0.1	Nummer stellt ein 10tel einer Einheit dar
+GrayResponseUnit	1e-05	Nummer stellt ein 10000tel einer Einheit dar
+GrayResponseUnit	1e-06	Nummer stellt ein 100000tel einer Einheit dar
+GridDisplay	Off	Aus
+GridDisplay	On	Ein
+GripBatteryState	Almost Empty	Fast leer
+GripBatteryState	Empty or Missing	Leer oder nicht vorhanden
+GripBatteryState	Full	Voll geladen
+GripBatteryState	Running Low	Schwach
+HDR	Off	Aus
+HDRImageType	HDR Image	HDR Bild
+HDRImageType	Original Image	Originalbild
+HighISONoiseReduction	+1 (medium strong)	+1
+HighISONoiseReduction	+2 (strong)	+2 (Stark)
+HighISONoiseReduction	+3 (very strong)	+3
+HighISONoiseReduction	+4 (strongest)	+4
+HighISONoiseReduction	-1 (medium weak)	-1
+HighISONoiseReduction	-2 (weak)	-2 (Gering)
+HighISONoiseReduction	-3 (very weak)	-3
+HighISONoiseReduction	-4 (weakest)	-4 (Sehr gering)
+HighISONoiseReduction	0 (normal)	0 (Normal)
+HighISONoiseReduction	Auto	Automatisch
+HighISONoiseReduction	High	Stärker
+HighISONoiseReduction	Low	Schwächer
+HighISONoiseReduction	Off	Aus
+HighISONoiseReduction	On	Ein
+HighISONoiseReduction	Strong	Stark
+HighISONoiseReduction	Weak	Gering
+HighISONoiseReduction	Weakest	Sehr gering
+HighISONoiseReduction	n/a	(nicht gesetzt)
+HighISONoiseReduction2	High	Hoch
+HighISONoiseReduction2	Low	Niedrig
+HighISONoiseReduction2	Off	Aus
+HighISONoiseReduction2	n/a	(nicht gesetzt)
+HighlightTonePriority	Disable	Nicht möglich
+HighlightTonePriority	Enable	Möglich
+HighlightTonePriority	Off	Aus
+HighlightTonePriority	On	Ein
+HometownDST	No	Deaktiviert
+HometownDST	Yes	Aktiviert
+HueAdjust	Cool	Kühl
+HueAdjust	Off	Aus
+HueAdjust	Yellow	Gelb
+IDCCreativeStyle	Autumn Leaves	Herbstlaub
+IDCCreativeStyle	B&W	Schwarz/Weiß
+IDCCreativeStyle	Landscape	Landschaft
+IDCCreativeStyle	Night View	Abendszene
+IDCCreativeStyle	Portrait	Porträt
+IDCCreativeStyle	Sunset	Sonnenuntergang
+IPTCImageRotation	0	Normal
+IPTCImageRotation	180	180° gedreht
+IPTCImageRotation	270	90° gegen den Uhrzeigersinn
+IPTCImageRotation	90	90° im Uhrzeigersinn
+ISOExpansion	Off	Aus
+ISOExpansion	On	Ein
+ISOExpansion2	Off	Aus
+ISOSetting	200 (Zone Matching High)	200 (Zonenabgleich High)
+ISOSetting	80 (Zone Matching Low)	80 (Zonenabgleich Low)
+ISOSetting	Auto	Automatisch
+ISOSetting	Manual	Manuell
+ISOSetting	n/a	(nicht gesetzt)
+ISOSpeedExpansion	No	Nein
+ISOSpeedExpansion	Yes	Ja
+ISOSpeedIncrements	1 Stop	1 LW
+ISOSpeedIncrements	1/3 Stop	1/3 LW
+ISOSpeedRange	Disable	Nicht möglich
+ISOSpeedRange	Enable	Möglich
+ISOStepSize	1 EV	1 LW
+ISOStepSize	1/2 EV	1/2 LW
+ISOStepSize	1/3 EV	1/3 LW
+Illumination	Off	Aus
+Illumination	On	Ein
+ImageAuthentication	Off	Aus
+ImageAuthentication	On	Ein
+ImageDataDiscard	Flexbits Discarded	FlexBits verworfen
+ImageDataDiscard	Full Resolution	Volle Auflösung
+ImageDataDiscard	HighPass Frequency Data Discarded	Hochpass-Frequenz-Daten verworfen
+ImageDataDiscard	Highpass and LowPass Frequency Data Discarded	Hochpass- und Tiefpass-Frequenz-Daten verworfen
+ImageDustOff	Off	Aus
+ImageDustOff	On	Ein
+ImageEditing	Cropped	Beschnitten
+ImageEditing	Digital Filter	Digitalfilter
+ImageEditing	Frame Synthesis?	Rahmen?
+ImageEditing	None	Unbearbeitet
+ImageEffects	High Key	High-Key
+ImageGeneration	Original Image	Originalbild
+ImageGeneration	Re-developed from RAW	RAW generiert
+ImageOrientation	Landscape	Querformat
+ImageOrientation	Portrait	Porträt
+ImageOrientation	Square	Quadratisch
+ImageQuality	High	Hoch
+ImageReview	Off	Aus
+ImageReview	On	Ein
+ImageRotated	No	Nein
+ImageRotated	Yes	Ja
+ImageRotation	None	Keine
+ImageStabilization	Anti-Shake	Verwackeln
+ImageStabilization	Best Shot	Beste Aufnahme
+ImageStabilization	CCD Shift + High Sensitivity	CCD Shift + Hohe Empfindlichkeit
+ImageStabilization	Dynamic	Dynamisch
+ImageStabilization	Dynamic (2)	Dynamisch (2)
+ImageStabilization	High Sensitivity	Hohe Empfindlichkeit
+ImageStabilization	None	Keine
+ImageStabilization	Off	Aus
+ImageStabilization	Off (0xbf)	Aus (0xbf)
+ImageStabilization	Off (1)	Aus (1)
+ImageStabilization	Off (2)	Aus (2)
+ImageStabilization	On	Ein
+ImageStabilization	On (0x3f)	Ein (0x3f)
+ImageStabilization	On (2)	Ein (2)
+ImageStabilization	On (mode 1, continuous)	Ein (Modus 1, nachführend)
+ImageStabilization	On (mode 2, shooting only)	Ein (Modus 2, Aufnahme)
+ImageStabilization	On, Mode 1	Ein, Modus 1
+ImageStabilization	On, Mode 2	Ein, Modus 2
+ImageStabilization	On, Mode 3	Ein, Modus 3
+ImageStabilization	On, Mode 4	Ein, Modus 4
+ImageStabilization	Optical	Optisch
+ImageStabilization	Panning	Schwenken
+ImageStabilization	Panning (2)	Schwenken (2)
+ImageStabilization	Sensor-shift	Sensor-Shift
+ImageStabilization	Shoot Only	Aufnahme
+ImageStabilization	Shoot Only (2)	Aufnahme (2)
+ImageStabilization	Slow Shutter	Kurzer Verschluß
+ImageStabilization	n/a	(nicht gesetzt)
+ImageStabilizationSetting	Off	Aus
+ImageStabilizationSetting	On	Ein
+ImageStyle	B&W	Schwarz/Weiß
+ImageStyle	Landscape	Landschaft
+ImageStyle	Night View/Portrait	Abendszene/Porträt
+ImageStyle	Portrait	Porträt
+ImageStyle	Sunset	Sonnenuntergang
+ImageTone	Bright	Leuchtend
+ImageTone	Landscape	Landschaft
+ImageTone	Monochrome	Monochrom
+ImageTone	Natural	Natürlich
+ImageTone	Portrait	Porträt
+ImageType	Page	Seite
+ImageType	Preview	Vorschau
+InfoButtonWhenShooting	Displays camera settings	Anzeige Kameradaten
+InfoButtonWhenShooting	Displays shooting functions	Anzeige Aufnahmedaten
+InitialZoomSetting	High Magnification	Starke Vergrößerung
+InitialZoomSetting	Low Magnification	Geringe Vergrößerung
+InitialZoomSetting	Medium Magnification	Mittlere Vergrößerung
+IntelligentAuto	Advanced	Erweitert
+IntelligentAuto	Off	Aus
+IntelligentAuto	On	Ein
+IntelligentContrast	Off	Aus
+IntelligentContrast	On	Ein
+IntelligentContrast	n/a	(nicht gesetzt)
+IntelligentD-Range	High	Hoch
+IntelligentD-Range	Low	Niedrig
+IntelligentD-Range	Off	Aus
+IntelligentExposure	High	Hoch
+IntelligentExposure	Low	Niedrig
+IntelligentExposure	Off	Aus
+IntelligentResolution	Extended	Erweitert
+IntelligentResolution	High	Hoch
+IntelligentResolution	Low	Niedrig
+IntelligentResolution	Off	Aus
+IntensityStereo	Off	Aus
+IntensityStereo	On	Ein
+InternalFlash	Commander Mode	Master-Steuerung
+InternalFlash	Fired	Blitz wurde ausgelöst
+InternalFlash	Manual	Manuell
+InternalFlash	No	Blitz wurde nicht ausgelöst
+InternalFlash	Off	Aus
+InternalFlash	On	Ein
+InternalFlash	Repeating Flash	Stroboskopblitz
+InternalFlashMode	Did not fire, (Unknown 0xf4)	Aus (Unbekannt 0xF4?)
+InternalFlashMode	Did not fire, Auto	Aus, Auto
+InternalFlashMode	Did not fire, Auto, Red-eye reduction	Aus, Auto, Rote-Augen-Reduzierung
+InternalFlashMode	Did not fire, Normal	Aus, Normal
+InternalFlashMode	Did not fire, Red-eye reduction	Aus, Rote-Augen-Reduzierung
+InternalFlashMode	Did not fire, Slow-sync	Aus, Langzeit-Synchronisation
+InternalFlashMode	Did not fire, Slow-sync, Red-eye reduction	Aus, Langzeit-Synchronisation, Rote-Augen-Reduzierung
+InternalFlashMode	Did not fire, Trailing-curtain Sync	Aus, 2. Verschlussvorhang
+InternalFlashMode	Did not fire, Wireless (Control)	Aus, Drahtlos (Steuerblitz)
+InternalFlashMode	Did not fire, Wireless (Master)	Aus, Drahtlos (Hauptblitz)
+InternalFlashMode	Fired	Ein
+InternalFlashMode	Fired, Auto	Ein, Auto
+InternalFlashMode	Fired, Auto, Red-eye reduction	Ein, Auto, Rote-Augen-Reduzierung
+InternalFlashMode	Fired, Red-eye reduction	Ein, Rote-Augen-Reduzierung
+InternalFlashMode	Fired, Slow-sync	Ein, Langzeit-Synchronisation
+InternalFlashMode	Fired, Slow-sync, Red-eye reduction	Ein, Langzeit-Synchronisation, Rote-Augen-Reduzierung
+InternalFlashMode	Fired, Trailing-curtain Sync	Ein, 2. Verschlussvorhang
+InternalFlashMode	Fired, Wireless (Control)	Ein, Drahtlos (Steuerblitz)
+InternalFlashMode	Fired, Wireless (Master)	Ein, Drahtlos (Hauptblitz)
+InternalFlashMode	n/a - Off-Auto-Aperture	K/A - Blendenring nicht auf A
+InteropIndex	R03 - DCF option file (Adobe RGB)	R03: DCF Option-Format (Adobe RGB)
+InteropIndex	R98 - DCF basic file (sRGB)	R98: DCF Basic-Format (sRGB)
+InteropIndex	THM - DCF thumbnail file	THM: DCF Miniaturbild-Format
+IntervalMode	Still Image	Standbild
+IntervalMode	Time-lapse Movie	Zeitraffer-Film
+IsCustomPictureStyle	No	Nein
+IsCustomPictureStyle	Yes	Ja
+JPEGProc	Lossless	Verlustfrei
+JPEGQuality	Extra Fine	Extra-Fein
+JPEGQuality	Fine	Fein
+JPEGQuality	Standard	Standardqualität
+JPEGQuality	n/a	(nicht gesetzt)
+LCDDisplayAtPowerOn	Retain power off status	Aus-Status beibehalten
+LCDDisplayReturnToShoot	Also with * etc.	Auch mit * etc.
+LCDDisplayReturnToShoot	With Shutter Button only	Nur mit Auslöser
+LCDIllumination	Off	Aus
+LCDIllumination	On	Ein
+LCDIlluminationDuringBulb	Off	Aus
+LCDIlluminationDuringBulb	On	Ein
+LCHEditor	Off	Aus
+LCHEditor	On	Ein
+LanguageCode	Process default	Systemeinstellung
+LateralChromaticAberration	Off	Aus
+LateralChromaticAberration	n/a	(nicht gesetzt)
+LensAFStopButton	AE lock	AE-Speicherung
+LensAFStopButton	AE lock while metering	AE-Sperre b. aktiv. Messung
+LensAFStopButton	AF Stop	AF-Stopp
+LensAFStopButton	AF point: M->Auto/Auto->ctr	AF-Messf: M->Aut./Aut.->Ctr
+LensAFStopButton	AF start	AF-Start
+LensAFStopButton	AF stop	AF-Stopp
+LensAFStopButton	IS start	Start Bildstabilisierung
+LensAFStopButton	Switch to registered AF point	Auf gesp. AF-Messf. schalten
+LensDriveNoAF	Focus search off	Schärfensuche aus
+LensDriveNoAF	Focus search on	Schärfensuche ein
+LensType	None	Keiner
+LensType	Uncoded lens	Nicht kodiertes Objektiv
+LevelOrientation	Downwards	Abwärts
+LevelOrientation	Horizontal; Off Level	Horizontal; ohne Level
+LevelOrientation	Rotate 180	180° gedreht
+LevelOrientation	Rotate 180; Off Level	180° gedreht; ohne Level
+LevelOrientation	Rotate 270 CW	90° gegen den Uhrzeigersinn
+LevelOrientation	Rotate 270 CW; Off Level	90° gegen den Uhrzeigersinn; ohne Level
+LevelOrientation	Rotate 90 CW	90° im Uhrzeigersinn
+LevelOrientation	Rotate 90 CW; Off Level	90° im Uhrzeigersinn; ohne Level
+LevelOrientation	Upwards	Aufwärts
+LicenseType	Commercial	Kommerziell
+LicenseType	Unknown	Unbekannt
+LightSource	Cloudy	Bewölkt
+LightSource	Cool White Fluorescent	Neonlicht kaltweiß
+LightSource	Day White Fluorescent	Neonlicht neutralweiß
+LightSource	Daylight	Tageslicht
+LightSource	Daylight Fluorescent	Neonlicht tageslichtweiß
+LightSource	Evening Sunlight	Abendstimmung
+LightSource	Fine Weather	Wolkenlos
+LightSource	Flash	Blitz
+LightSource	Fluorescent	Neonlicht
+LightSource	ISO Studio Tungsten	ISO Studio-Kunstlicht (Glühbirne)
+LightSource	One Touch White Balance	Sofort-Weißabgleich
+LightSource	Other	Andere Lichtquelle
+LightSource	Shade	Schatten
+LightSource	Standard Light A	Standard-Licht A
+LightSource	Standard Light B	Standard-Licht B
+LightSource	Standard Light C	Standard-Licht C
+LightSource	Tungsten	Glühbirne
+LightSource	Tungsten (Incandescent)	Kunstlicht (Glühbirne)
+LightSource	Unknown	Unbekannt
+LightSource	Warm White Fluorescent	Neonlicht warmweiß
+LightSource	White Fluorescent	Neonlicht universalweiß
+LightSourceSpecial	Off	Aus
+LightSourceSpecial	On	Ein
+Lit	No	Nein
+Lit	Yes	Ja
+LiveViewAFAreaMode	Face-Priority	Gesichtserkennung
+LiveViewAFAreaMode	NormalArea	Normaler Bereich
+LiveViewAFAreaMode	SubjectTracking	Objektnachführung
+LiveViewAFAreaMode	WideArea	Großer Bereich
+LiveViewAFMethod	n/a	(nicht gesetzt)
+LiveViewAFSetting	n/a	(nicht gesetzt)
+LiveViewExposureSimulation	Disable (LCD auto adjust)	Inaktiv (automatische LCD-Anzeige)
+LiveViewExposureSimulation	Enable (simulates exposure)	Aktiv (simuliert Belichtung)
+LiveViewFocusMode	Manual	Manuell
+LiveViewFocusMode	n/a	(nicht gesetzt)
+LiveViewMetering	n/a	(nicht gesetzt)
+LiveViewShooting	Off	Aus
+LiveViewShooting	On	Ein
+LockMicrophoneButton	Protect (hold:record memo)	Geschützt (drücken:Tonaufnahme)
+LockMicrophoneButton	Record memo (protect:disable)	Tonaufnahme (ungeschützt)
+LongExposureNoiseReduction	Auto	Automatisch
+LongExposureNoiseReduction	Off	Aus
+LongExposureNoiseReduction	On	Ein
+LongExposureNoiseReduction	n/a	(nicht gesetzt)
+LongExposureNoiseReduction2	Off	Aus
+LongExposureNoiseReduction2	On	Ein
+LongExposureNoiseReduction2	On (1D)	Ein (1D)
+LuminanceNoiseReduction	High	Hoch
+LuminanceNoiseReduction	Low	Leicht
+LuminanceNoiseReduction	Off	Aus
+MB-D10Batteries	FR6 (AA lithium)	FR6 (Mignon, Lithium)
+MB-D10Batteries	HR6 (AA Ni-MH)	HR6 (Mignon, NiMH)
+MB-D10Batteries	LR6 (AA alkaline)	LR6 (Mignon, Alkaline)
+MB-D10Batteries	ZR6 (AA Ni-Mn)	ZR6 (Mignon, NiMn)
+MB-D80Batteries	FR6 (AA Lithium)	FR6 (Mignon-Lithium)
+MB-D80Batteries	HR6 (AA Ni-MH)	HR6 (Mignon-Ni-MH)
+MB-D80Batteries	LR6 (AA Alkaline)	LR6 (Mignon-Alkaline)
+MB-D80Batteries	ZR6 (AA Ni-Mg)	ZR6 (Mignon-Ni-Mg)
+MPImageType	Large Thumbnail (VGA equivalent)	Vorschaubild groß (VGA)
+MPImageType	Large Thumbnail (full HD equivalent)	Vorschaubild groß (HD)
+MPImageType	Multi-frame Panorama	Mehrbild Panorama
+MPImageType	Undefined	Nicht definiert
+MSStereo	Off	Aus
+MSStereo	On	Ein
+Macro	Macro	Makro
+Macro	Manual	Manuell
+Macro	Off	Aus
+Macro	On	Ein
+Macro	Super Macro	Super-Makro
+Macro	n/a	(nicht gesetzt)
+MacroLED	Off	Aus
+MacroLED	On	Ein
+MacroMode	Macro	Makro
+MacroMode	Macro Zoom	Makro-Zoom
+MacroMode	Off	Aus
+MacroMode	On	Ein
+MacroMode	Super Macro	Super-Makro
+MacroMode	Tele-Macro	Tele-Makro
+MagicFilter	Drawing	Zeichnung
+MagicFilter	Fish Eye	Fischauge
+MagicFilter	Off	Aus
+MagicFilter	Reflection	Reflektierung
+MagicFilter	Soft Focus	Weichzeichner
+MagicFilter	Soft Focus 2	Weichzeichner 2
+MagicFilter	Sparkle	Perleffekt
+MagicFilter	Watercolor	Wasserfarben
+MagnifiedView	Image playback only	Nur bei Bildwiedergabe
+MagnifiedView	Image review and playback	Sofortbild u. Wiedergabe
+MainDialExposureComp	Off	Aus
+MainDialExposureComp	On	Ein
+MakerNoteSafety	Safe	Sicher
+MakerNoteSafety	Unsafe	Unsicher
+ManualFlashOutput	Full	Voll
+ManualFlashOutput	Low	Gering
+ManualFlashOutput	Medium	Mittel
+ManualFlashOutput	n/a	(nicht gesetzt)
+ManualTv	Tv=Control/Av=Main	Tv=Schnelleinstellrad/Av=Haupt-Wahlrad
+ManualTv	Tv=Main/Av=Control	Tv=Haupt-Wahlrad/Av=Schnelleinstellrad
+MeasurementGeometry	0/45 or 45/0	0/45 oder 45/0
+MeasurementGeometry	0/d or d/0	0/d oder d/0
+MenuButtonDisplayPosition	Previous	Vorherige Anzeige
+MenuButtonDisplayPosition	Previous (top if power off)	Vorherige (Anfang nach AUS)
+MenuButtonDisplayPosition	Top	Oben
+MenuButtonReturn	Previous	Vorherige Anzeige
+MenuButtonReturn	Top	Oben
+Metering	Center-weighted	Mittenbetont
+Metering	Matrix	Mehrfeldmessung
+Metering	Spot	Spotmessung
+MeteringMode	Average	Integralmessung
+MeteringMode	Center-weighted Average	Mittenbetont
+MeteringMode	Center-weighted average	Mittenbetont
+MeteringMode	Default	System
+MeteringMode	Evaluative	Mehrfeldmessung
+MeteringMode	Multi-segment	Multi-Segment
+MeteringMode	Multi-spot	MultiSpot
+MeteringMode	Other	Andere
+MeteringMode	Partial	Teilbild
+MeteringMode	Spot	Spotmessung
+MeteringMode	Spot+Highlight control	Spot+Helligkeitsbetont
+MeteringMode	Spot+Shadow control	Spot+Schattenbetont
+MeteringMode	Unknown	Unbekannt
+MeteringMode2	Center-weighted average	Mittenbetont
+MeteringMode2	Multi-segment	Multi-Segment
+MeteringMode3	Multi-segment	Multi-Segment
+MeteringTime	No Limit	Unbegrenzt
+MiniatureFilterOrientation	Vertical	Vertikal
+MinoltaImageSize	Full	Volle Größe
+MinoltaImageSize	Large	Groß
+MinoltaImageSize	Medium	Mittelgroß
+MinoltaImageSize	Small	Klein
+MinoltaQuality	Extra Fine	Extra-Fein
+MinoltaQuality	Fine	Fein
+MinoltaQuality	RAW+JPEG	RAW + JPEG
+MinoltaQuality	Super Fine	Super-Fein
+MirrorLockup	Disable	Ausgeschaltet
+MirrorLockup	Enable	Eingeschaltet
+MirrorLockup	Enable: Down with Set	Eingeschaltet: Abwärts mit SET (Taste)
+ModeDialPosition	Aperture-priority AE	Blendenpriorität
+ModeDialPosition	Manual	Manuell
+ModeDialPosition	No Flash	Kein Blitz
+ModeDialPosition	Program AE	Programmautomatik
+ModeDialPosition	Shutter speed priority AE	Verschlußpriorität
+ModelingFlash	Off	Aus
+ModelingFlash	On	Ein
+ModifiedPictureStyle	Faithful	Natürlich
+ModifiedPictureStyle	Landscape	Landschaft
+ModifiedPictureStyle	Monochrome	Monochrom
+ModifiedPictureStyle	None	Keiner
+ModifiedPictureStyle	Portrait	Porträt
+ModifiedPictureStyle	User Def. 1	Benutzerdefiniert 1
+ModifiedPictureStyle	User Def. 2	Benutzerdefiniert 2
+ModifiedPictureStyle	User Def. 3	Benutzerdefiniert 3
+ModifiedSaturation	Off	Aus
+ModifiedSharpnessFreq	High	Hoch
+ModifiedSharpnessFreq	Highest	Höchste
+ModifiedSharpnessFreq	Low	Leicht
+ModifiedSharpnessFreq	Lowest	Niedrigste
+ModifiedSharpnessFreq	n/a	(nicht gesetzt)
+ModifiedToneCurve	Custom	Benutzerdefiniert
+ModifiedToneCurve	Manual	Manuell
+ModifiedWhiteBalance	Auto	Automatisch
+ModifiedWhiteBalance	Black & White	Schwarz/Weiß
+ModifiedWhiteBalance	Cloudy	Bewölkt
+ModifiedWhiteBalance	Custom	Benutzerdefiniert
+ModifiedWhiteBalance	Custom 1	Benutzerdefiniert 1
+ModifiedWhiteBalance	Custom 2	Benutzerdefiniert 2
+ModifiedWhiteBalance	Custom 3	Benutzerdefiniert 3
+ModifiedWhiteBalance	Custom 4	Benutzerdefiniert 4
+ModifiedWhiteBalance	Daylight	Tageslicht
+ModifiedWhiteBalance	Daylight Fluorescent	Neonlicht tageslichtweiß
+ModifiedWhiteBalance	Flash	Blitz
+ModifiedWhiteBalance	Fluorescent	Neonlicht
+ModifiedWhiteBalance	Manual Temperature (Kelvin)	Manuelle Temperatur (Kelvin)
+ModifiedWhiteBalance	Shade	Schatten
+ModifiedWhiteBalance	Tungsten	Glühbirne
+ModifiedWhiteBalance	Underwater	Unterwasser
+MoireFilter	Off	Aus
+MoireFilter	On	Ein
+MonochromeFilterEffect	Green	Grün
+MonochromeFilterEffect	None	Keiner
+MonochromeFilterEffect	Red	Rot
+MonochromeFilterEffect	Yellow	Gelb
+MonochromeLinear	No	Nein
+MonochromeLinear	Yes	Ja
+MonochromeToningEffect	Blue	Blau
+MonochromeToningEffect	Green	Grün
+MonochromeToningEffect	None	Keiner
+MonochromeToningEffect	Purple	Lila
+MultiBurstMode	Off	Aus
+MultiBurstMode	On	Ein
+MultiControllerWhileMetering	AF point selection	AF-Punkt-Auswahl
+MultiControllerWhileMetering	Off	Aus
+MultiExposureAutoGain	Off	Aus
+MultiExposureAutoGain	On	Ein
+MultiExposureMode	Image Overlay	Bildüberlagerung
+MultiExposureMode	Multiple Exposure	Mehrfachbelichtung
+MultiExposureMode	Off	Aus
+MultiFrameNoiseReduction	Off	Aus
+MultiFrameNoiseReduction	On	Ein
+MultiFrameNoiseReduction	n/a	(nicht gesetzt)
+MultiFunctionLock	Main dial	Haupt-Wahlrad
+MultiFunctionLock	Multi-controller	Multicontroller
+MultiFunctionLock	Off	Aus
+MultiFunctionLock	On	Ein
+MultiFunctionLock	Quick control dial	Schnelleinstellrad
+MultiSelector	Do Nothing	Ohne Funktion
+MultiSelector	Reset Meter-off Delay	Ruhezustand verzögern
+MultiSelectorPlaybackMode	Choose Folder	Ordner auswählen
+MultiSelectorPlaybackMode	Thumbnail On/Off	Bildindex ein/aus
+MultiSelectorPlaybackMode	View Histograms	Histogramme anzeigen
+MultiSelectorPlaybackMode	Zoom On/Off	Ausschnitt ein/aus
+MultiSelectorShootMode	Highlight Active Focus Point	AF-Messfeld hervorheben
+MultiSelectorShootMode	Not Used	Ohne Funktion
+MultiSelectorShootMode	Select Center Focus Point	Mittleres AF-Messfeld
+MultipleExposureMode	Off	Aus
+MultipleExposureMode	On (2 frames)	Ein (2 Bilder
+MultipleExposureMode	On (3 frames)	Ein (3 Bilder
+MultipleExposureSet	Off	Aus
+MultipleExposureSet	On	Ein
+Mute	Off	Aus
+Mute	On	Ein
+MyColorMode	B&W	Schwarz/Weiß
+MyColorMode	Custom	Benutzerdefiniert
+MyColorMode	Off	Aus
+NDFilter	Off	Aus
+NDFilter	On	Ein
+NDFilter	n/a	(nicht gesetzt)
+NEFBitDepth	n/a (JPEG)	Nicht gesetzt  (JPEG)
+NEFCompression	Lossless	Verlustfrei
+NEFCompression	Lossy (type 1)	Verlustbehaftet (Type 1)
+NEFCompression	Lossy (type 2)	Verlustbehaftet (Type 2)
+NEFCompression	Uncompressed	Nicht komprimiert
+NikonImageSize	Large	Groß
+NikonImageSize	Large (10.0 M)	Groß (10.0M)
+NikonImageSize	Medium	Mittel
+NikonImageSize	Medium (5.6 M)	Mittel (5.6M)
+NikonImageSize	Small	Klein
+NikonImageSize	Small (2.5 M)	Klein (2.5M)
+NoMemoryCard	Enable Release	Aus
+NoMemoryCard	Release Locked	Ein
+NoiseFilter	High	Hoch
+NoiseFilter	Low	Leicht
+NoiseFilter	Off	Aus
+NoiseFilter	n/a	(nicht gesetzt)
+NoiseReduction	Auto	Automatisch
+NoiseReduction	High (+1)	Hoch (+1)
+NoiseReduction	Highest (+2)	Am höchsten (+2)
+NoiseReduction	Low	Gering
+NoiseReduction	Low (-1)	Niedrig (-1)
+NoiseReduction	Lowest (-2)	Am niedrigsten (+2)
+NoiseReduction	Max	Maximal
+NoiseReduction	Noise Filter	Rauschfilter
+NoiseReduction	Noise Filter (ISO Boost)	Rauschfilter (ISO Boost)
+NoiseReduction	Noise Reduction	Rauschreduktion
+NoiseReduction	Off	Aus
+NoiseReduction	On	Ein
+NoiseReduction	Strong	Stark
+NoiseReduction	Weak	Schwach
+NoiseReduction	n/a	(nicht gesetzt)
+NoiseReduction2	Noise Filter	Rauschfilter
+NoiseReduction2	Noise Filter (ISO Boost)	Rauschfilter (ISO Boost)
+NoiseReduction2	Noise Reduction	Rauschreduktion
+NoiseReductionMethod	Better Quality	Bessere Qualität"
+NoiseReductionMethod	Faster	Schneller
+NoiseReductionMode	Off	Aus
+NoiseReductionMode	On	Ein
+NumberOfFocusPoints	11 Points	11 Punkte
+NumberOfFocusPoints	39 Points	39 Punkte
+OPIProxy	Higher resolution image does not exist	Höher aufgelöstes Bild nicht vorhanden
+OPIProxy	Higher resolution image exists	Höher aufgelöstes Bild vorhanden
+ObjectCycle	Both Morning and Evening	Beides
+ObjectCycle	Evening	Abends
+ObjectCycle	Morning	Morgens
+ObjectFileType	Executable file	Ausführbare Datei
+ObjectFileType	None	Keiner
+ObjectFileType	Unknown	Unbekannt
+OldSubfileType	Full-resolution image	Bild in voller Auflösung
+OldSubfileType	Reduced-resolution image	Bild in reduzierter Auflösung
+OldSubfileType	Single page of multi-page image	Einzelbild eines mehrseitigen Bildes
+OneTouchWB	Off	Aus
+OneTouchWB	On	Ein
+OneTouchWB	On (Preset)	Ein (Preset)
+OperatingSystem	unknown	Unbekannt
+OpticalZoomMode	Extended	Erweitert
+OpticalZoomOn	Off	Aus
+OpticalZoomOn	On	Ein
+Orientation	Mirror horizontal	Horizontal gespiegelt
+Orientation	Mirror horizontal and rotate 270 CW	Horizontal gespiegelt und 90° gegen den Uhrzeigersinn
+Orientation	Mirror horizontal and rotate 90 CW	Horizontal gespiegelt und 90° im Uhrzeigersinn
+Orientation	Mirror vertical	Vertikal gespiegelt
+Orientation	Rotate 180	180° gedreht
+Orientation	Rotate 270 CW	90° gegen den Uhrzeigersinn
+Orientation	Rotate 90 CW	90° im Uhrzeigersinn
+Orientation2	Rotate 180	180° gedreht
+Orientation2	Rotate 270 CW	90° gegen den Uhrzeigersinn
+Orientation2	Rotate 90 CW	90° im Uhrzeigersinn
+PanOrientation	Bottom to top	Von Unten nach Oben
+PanOrientation	Clockwise	Im Uhrzeigersinn
+PanOrientation	Counter clockwise	Gegen den Uhrzeigersinn
+PanOrientation	Left to right	Von Links nach Rechts
+PanOrientation	Right to left	Von Rechts nach Links
+PanOrientation	Start at bottom left	Links unten beginnend
+PanOrientation	Start at bottom right	Rechts unten beginnend
+PanOrientation	Start at top left	Links oben beginnend
+PanOrientation	Start at top right	Rechts oben beginnend
+PanOrientation	Top to bottom	Von Oben nach Unten
+PanOrientation	[unused]	[nicht verwendet]
+PanoramaDirection	2x2 Matrix (Clockwise)	2x2 Matrix (im Uhrzeigersinn)
+PanoramaDirection	Bottom to Top	Unten nach Oben
+PanoramaDirection	Left to Right	Links nach Rechts
+PanoramaDirection	Right to Left	Rechts nach Links
+PanoramaDirection	Top to Bottom	Oben nach Unten
+PanoramaSize3D	n/a	(nicht gesetzt)
+PentaxImageSize	2304x1728 or 2592x1944	2304 x 1728 oder 2592 x 1944
+PentaxImageSize	2560x1920 or 2304x1728	2560 x 1920 oder 2304 x 1728
+PentaxImageSize	2816x2212 or 2816x2112	2816 x 2212 oder 2816 x 2112
+PentaxImageSize	3008x2008 or 3040x2024	3008 x 2008 oder 3040 x 2024
+PentaxImageSize	Full	Voll
+Permits	Distribution	Verteilung
+Permits	Reproduction	Reproduktion
+PhaseDetectAF	Off	Aus
+PhaseDetectAF	On (11-point)	Ein (11-Punkt)
+PhaseDetectAF	On (39-point)	Ein (39 Punkte)
+PhaseDetectAF	On (51-point)	Ein (51-Punkt)
+PhaseDetectAF	On (hybrid)	Ein (Hybrid)
+PhotoEffect	B&W	Schwarz/Weiß
+PhotoEffect	Custom	Benutzerdefiniert
+PhotoEffect	Off	Aus
+PhotoEffects	Off	Aus
+PhotoEffects	On	Ein
+PhotoEffectsType	B&W	Schwarz/Weiß
+PhotoEffectsType	None	Keine
+PhotoEffectsType	Tinted	Getont
+PhotoInfoPlayback	Info Left-right, Playback Up-down	Info <> / Wiedergabe
+PhotoInfoPlayback	Info Up-down, Playback Left-right	Info / Wiedergabe <>
+PhotoStyle	Monochrome	Schwarz/Weiß
+PhotoStyle	Natural	Natürlich
+PhotoStyle	Portrait	Porträt
+PhotoStyle	Scenery	Szene
+PhotoStyle	Standard or Custom	Standard oder benutzerdefiniert
+PhotoStyle	Vivid	Lebendig
+PhotometricInterpretation	BlackIsZero	Schwarz ist Null
+PhotometricInterpretation	Color Filter Array	CFA (Farbfiltermatrix)
+PhotometricInterpretation	Pixar LogL	CIE Log2(L) (Log Luminanz)
+PhotometricInterpretation	Pixar LogLuv	CIE Log2(L)(u',v') (Log Luminanz und Chrominanz)
+PhotometricInterpretation	Transparency Mask	Transparenzmaske
+PhotometricInterpretation	WhiteIsZero	Weiß ist Null
+PictureControl	Off	Aus
+PictureControl	On	Ein
+PictureControlActive	Off	Aus
+PictureControlActive	On	Ein
+PictureControlAdjust	Default Settings	Standardeinstellungen
+PictureControlAdjust	Full Control	Manuelle Einstellung
+PictureControlAdjust	Quick Adjust	Schnelleinstellung
+PictureFinish	Evening Scene	Abendszene
+PictureFinish	Monochrome	Monochrom
+PictureFinish	Natural	Natürlich
+PictureFinish	Natural+	Natürlich+
+PictureFinish	Night Portrait	Nachtporträt
+PictureFinish	Night Scene	Nachtszene
+PictureFinish	Portrait	Porträt
+PictureFinish	Wind Scene	Windszene
+PictureMode	1/2 EV steps	1/2 LW Schritte
+PictureMode	1/3 EV steps	1/3 LW Schitte
+PictureMode	Anti-blur	Motivschärfe-Modus
+PictureMode	Aperture Priority	Zeitautomatik
+PictureMode	Aperture Priority, Off-Auto-Aperture	Zeitautomatik (Blendenring nicht auf A)
+PictureMode	Aperture-priority AE	Blendenpriorität
+PictureMode	Auto	Automatisch
+PictureMode	Auto PICT (Landscape)	Auto PICT (Landschaft)
+PictureMode	Auto PICT (Macro)	Auto PICT (Makro)
+PictureMode	Auto PICT (Portrait)	Auto PICT (Porträt)
+PictureMode	Auto PICT (Sport)	Auto PICT (Motiv in Bewegung)
+PictureMode	Auto PICT (Standard)	Auto PICT (Normal)
+PictureMode	Autumn	Herbst
+PictureMode	Backlight Silhouette	Hintergrundbeleuchtung Silhouette
+PictureMode	Beach	Strand
+PictureMode	Beach & Snow	Strand & Schnee
+PictureMode	Black & White	Schwarz/Weiß
+PictureMode	Blue	Blau
+PictureMode	Blur Control	Bildstabilisierung
+PictureMode	Blur Reduction	Unschärfereduktion
+PictureMode	Bulb	Bulb-Modus
+PictureMode	Bulb, Off-Auto-Aperture	Bulb (Blendenring nicht auf A)
+PictureMode	Candlelight	Kerzenlicht
+PictureMode	DOF Program	Schärfentiefe-Priorität
+PictureMode	DOF Program (HyP)	Schärfentiefe-Priorität (Hyper-Programm)
+PictureMode	Dark Pet	Haustier (Dunkel)
+PictureMode	Digital Filter	Digitalfilter
+PictureMode	Fireworks	Feuerwerk
+PictureMode	Fisheye	Fischauge
+PictureMode	Flash X-Sync Speed AE	Blitz X-synch. Zeit
+PictureMode	Flower	Blumen
+PictureMode	Food	Lebensmittel
+PictureMode	Forest	Wald
+PictureMode	Frame Composite	Rahmen
+PictureMode	Green	Grün
+PictureMode	Green Mode	Grüner Modus
+PictureMode	Half-length Portrait	Brustbild
+PictureMode	Hi-speed Program	HS-Priorität
+PictureMode	Hi-speed Program (HyP)	HS-Priorität (Hyper-Programm)
+PictureMode	Illustrations	Dokument
+PictureMode	Kids	Kinder
+PictureMode	Landscape	Landschaft
+PictureMode	Light Pet	Haustier (Hell)
+PictureMode	MTF Program	MTF-Priorität
+PictureMode	MTF Program (HyP)	MTF-Priorität (Hyper-Programm)
+PictureMode	Macro	Makro
+PictureMode	Manual	Manuell
+PictureMode	Manual, Off-Auto-Aperture	Manuell (Blendenring nicht auf A)
+PictureMode	Medium Pet	Haustier (Neutrale Helligkeit)
+PictureMode	Natural	Natur
+PictureMode	Natural Light	Umgebungslicht
+PictureMode	Natural Light & Flash	Umgebungslicht & Blitz
+PictureMode	Natural Skin Tone	Nat. Hautton
+PictureMode	Night Scene	Nachtszene
+PictureMode	Night Scene HDR	Nachtszene
+PictureMode	Night Scene Portrait	Nacht-Porträt
+PictureMode	No Flash	Kein Blitz
+PictureMode	Pet	Haustiere
+PictureMode	Pink	Rosa
+PictureMode	Portrait	Porträt
+PictureMode	Portrait 2	Porträt 2
+PictureMode	Program	Programmautomatik
+PictureMode	Program (HyP)	Programmautomatik (Hyper-Programm)
+PictureMode	Program AE	Programmautomatik
+PictureMode	Program Av Shift	Av Shift-Belichtungsprogramm
+PictureMode	Program Tv Shift	Tv Shift-Belichtungsprogramm
+PictureMode	Purple	Violett
+PictureMode	Red	Rot
+PictureMode	Self Portrait	Selbstporträt
+PictureMode	Sensitivity Priority AE	Blenden- & Zeitautomatik (Sv, ISO-Vorgabe)
+PictureMode	Shutter & Aperture Priority AE	Empfindlichkeitsautomatik (TAv, Zeit-/Blendenvorgabe)
+PictureMode	Shutter Speed Priority	Verschlusspriorität
+PictureMode	Shutter speed priority AE	Verschlusspriorität
+PictureMode	Snow	Schnee
+PictureMode	Soft	Soft (Weichzeichnung)
+PictureMode	Sports	Sport
+PictureMode	Sunset	Sonnenuntergang
+PictureMode	Surf & Snow	Surf & Schnee
+PictureMode	Synchro Sound Record	Synchr. Sprachnotiz
+PictureMode	Underwater	Unterwasser
+PictureMode	Yellow	Gelb
+PictureMode2	Aperture Priority	Blendenpriorität
+PictureMode2	Aperture Priority, Off-Auto-Aperture	Zeitautomatik (Blendenring nicht auf A)
+PictureMode2	Bulb	Bulb-Modus
+PictureMode2	Bulb, Off-Auto-Aperture	Bulb (Blendenring nicht auf A)
+PictureMode2	Flash X-Sync Speed AE	Blitz X-synch. Zeit
+PictureMode2	Green Mode	"Grünes" AE-Programm
+PictureMode2	Manual	Manuell
+PictureMode2	Manual, Off-Auto-Aperture	Manuell (Blendenring nicht auf A)
+PictureMode2	Program AE	Programmautomatik
+PictureMode2	Program Av Shift	Av Shift-Belichtungsprogramm
+PictureMode2	Program Tv Shift	Tv Shift-Belichtungsprogramm
+PictureMode2	Scene Mode	Motivprogramm
+PictureMode2	Sensitivity Priority AE	Blenden- & Zeitautomatik (Sv, ISO-Vorgabe)
+PictureMode2	Shutter & Aperture Priority AE	Empfindlichkeitsautomatik (TAv, Zeit-/Blendenvorgabe)
+PictureMode2	Shutter Speed Priority	Verschlusspriorität
+PictureModeBWFilter	Green	Grün
+PictureModeBWFilter	Red	Rot
+PictureModeBWFilter	Yellow	Gelb
+PictureModeBWFilter	n/a	(nicht gesetzt)
+PictureModeEffect	High	Hoch
+PictureModeEffect	Low	Niedrig
+PictureModeEffect	n/a	(nicht gesetzt)
+PictureModeTone	Blue	Blau
+PictureModeTone	Green	Grün
+PictureModeTone	Purple	Lila
+PictureModeTone	n/a	(nicht gesetzt)
+PictureStyle	Custom	Benutzerdefiniert
+PictureStyle	Faithful	Natürlich
+PictureStyle	High Saturation	Hohe Farbsättigung
+PictureStyle	Landscape	Landschaft
+PictureStyle	Low Saturation	Geringe Farbsättigung
+PictureStyle	Monochrome	Monochrom
+PictureStyle	None	Keiner
+PictureStyle	Portrait	Porträt
+PictureStyle	Unknown?	Unbekannt?
+PictureStyle	User Def. 1	Benutzerdefiniert 1
+PictureStyle	User Def. 2	Benutzerdefiniert 2
+PictureStyle	User Def. 3	Benutzerdefiniert 3
+PictureWizardMode	Forest	Wald
+PictureWizardMode	Landscape	Landschaft
+PictureWizardMode	Portrait	Porträt
+PictureWizardMode	n/a	(nicht gesetzt)
+PixelFormat	Black & White	Schwarz/Weiß
+PixelUnits	Unknown	Unbekannt
+PixelUnits	meters	Meter
+PlanarConfiguration	Chunky	Kompaktformat
+PlanarConfiguration	Planar	Ebenes Format
+PowerSource	Body Battery	Batterie im Gehäuse
+PowerSource	External Power Supply	Externe Stromversorgung
+PowerSource	Grip Battery	Batterie im Griff
+Predictor	Horizontal differencing	Horizontale Differenzierung
+Predictor	None	Kein Prädiktor-Schema in Benutzung
+PresetWhiteBalance	Cloudy	Bewölkt
+PresetWhiteBalance	Daylight	Tageslicht
+PresetWhiteBalance	Flash	Blitz
+PresetWhiteBalance	Fluorescent	Neonlicht
+PresetWhiteBalance	Shade	Schatten
+PresetWhiteBalance	Tungsten	Glühbirne
+PreviewColorSpace	Unknown	Unbekannt
+PreviewImageValid	No	Nein
+PreviewImageValid	Yes	Ja
+PreviewQuality	Fine	Fein
+PreviewQuality	Superfine	Superfein
+PreviewQuality	n/a	(nicht gesetzt)
+PrimaryAFPoint	(none)	(keiner)
+PrimaryAFPoint	Bottom	Unten
+PrimaryAFPoint	C6 (Center)	C6 (Mitte)
+PrimaryAFPoint	Center	Mitte
+PrimaryAFPoint	Far Left	Weit links
+PrimaryAFPoint	Far Right	Weit rechts
+PrimaryAFPoint	Lower-left	Links unten
+PrimaryAFPoint	Lower-right	Rechts unten
+PrimaryAFPoint	Mid-left	Links mitte
+PrimaryAFPoint	Mid-right	Rechts mitte
+PrimaryAFPoint	Top	Oben
+PrimaryAFPoint	Upper-left	Links oben
+PrimaryAFPoint	Upper-right	Rechts oben
+ProfileClass	Abstract Profile	Abstract-Profil
+ProfileClass	ColorSpace Conversion Profile	Farbraum-Konvertierungsprofile
+ProfileClass	DeviceLink Profile	DeviceLink-Profil
+ProfileClass	Display Device Profile	Bildschirm-Geräteprofil
+ProfileClass	Input Device Profile	Eingabe-Geräteprofil
+ProfileClass	NamedColor Profile	Named Color-Profil
+ProfileClass	Nikon Input Device Profile (NON-STANDARD!)	Nikon-Profil ("nkpf")
+ProfileClass	Output Device Profile	Ausgabe-Geräteprofil
+ProfileType	Group 3 FAX	Gruppe 3 Fax
+ProfileType	Unspecified	Nicht bekannt
+ProgramISO	Intelligent ISO	ISO intelligent
+ProgramISO	n/a	(nicht gesetzt)
+ProgramLine	Depth	Schärfentiefe-Priorität
+ProgramLine	Hi Speed	HS-Priorität
+ProgramLine	MTF	MTF-Priorität
+ProgramMode	Night Portrait	Nachtporträt
+ProgramMode	None	Keiner
+ProgramMode	Portrait	Porträt
+ProgramMode	Sports	Sport
+ProgramMode	Sunset	Sonnenuntergang
+Prohibits	Commercial Use	Kommerzielle Verwendung
+Quality	Best	Optimal
+Quality	Better	Besser
+Quality	Compressed RAW	Komprimiertes RAW
+Quality	Compressed RAW + JPEG	Komprimiertes RAW + JPEG
+Quality	Extra Fine	Extra-Fein
+Quality	Fine	Fein
+Quality	Good	Gut
+Quality	High	Hoch
+Quality	Low	Leicht
+Quality	Normal	Standardqualität
+Quality	RAW + JPEG	RAW+JPEG
+Quality	Super Fine	Super-Fein
+Quality	Superfine	Superfein
+Quality	n/a	(nicht gesetzt)
+QualityMode	Fine	Fein
+QuickControlDialInMeter	AF point selection	Auswahl des AF-Messfelds
+QuickControlDialInMeter	Exposure comp/Aperture	Belichtungskorrektur/Blende
+QuickControlDialInMeter	ISO speed	ISO-Empfindlichkeit
+QuickShot	Off	Aus
+QuickShot	On	Ein
+RawAndJpgRecording	JPEG (Best)	JPEG (Optimal)
+RawAndJpgRecording	JPEG (Better)	JPEG (Besser)
+RawAndJpgRecording	JPEG (Good)	JPEG (Gut)
+RawAndJpgRecording	RAW (DNG, Best)	RAW (DNG, Optimal)
+RawAndJpgRecording	RAW (DNG, Better)	RAW (DNG, Besser)
+RawAndJpgRecording	RAW (DNG, Good)	RAW (DNG, Gut)
+RawAndJpgRecording	RAW (PEF, Best)	RAW (PEF, Optimal)
+RawAndJpgRecording	RAW (PEF, Better)	RAW (PEF, Besser)
+RawAndJpgRecording	RAW (PEF, Good)	RAW (PEF, Gut)
+RawAndJpgRecording	RAW+JPEG (DNG, Best)	RAW+JPEG (DNG, Optimal)
+RawAndJpgRecording	RAW+JPEG (DNG, Better)	RAW+JPEG (DNG, Besser)
+RawAndJpgRecording	RAW+JPEG (DNG, Good)	RAW+JPEG (DNG, Gut)
+RawAndJpgRecording	RAW+JPEG (PEF, Best)	RAW+JPEG (PEF, Optimal)
+RawAndJpgRecording	RAW+JPEG (PEF, Better)	RAW+JPEG (PEF, Besser)
+RawAndJpgRecording	RAW+JPEG (PEF, Good)	RAW+JPEG (PEF, Gut)
+RawAndJpgRecording	RAW+Large/Fine	RAW+Groß/Fein
+RawAndJpgRecording	RAW+Large/Normal	RAW+Groß/Normal
+RawAndJpgRecording	RAW+Medium/Fine	RAW+Mittel/Fein
+RawAndJpgRecording	RAW+Medium/Normal	RAW+Mittel/Normal
+RawAndJpgRecording	RAW+Small/Fine	RAW+Klein/Fein
+RawAndJpgRecording	RAW+Small/Normal	RAW+Klein/Normal
+RawColorAdj	Custom	Benutzerdefiniert
+RawColorAdj	Faithful	Natürlich
+RawColorAdj	Shot Settings	Aufnahmeeinstellung
+RawDevArtFilter	Drawing	Zeichnung
+RawDevArtFilter	Fish Eye	Fischauge
+RawDevArtFilter	Off	Aus
+RawDevArtFilter	Reflection	Reflektierung
+RawDevArtFilter	Soft Focus	Weichzeichner
+RawDevArtFilter	Soft Focus 2	Weichzeichner 2
+RawDevArtFilter	Sparkle	Perleffekt
+RawDevArtFilter	Watercolor	Wasserfarbe
+RawDevArtFilter	Watercolor II	Wasserfarbe II
+RawDevAutoGradation	Off	Aus
+RawDevAutoGradation	On	Ein
+RawDevNoiseReduction	Noise Filter	Rauschfilter
+RawDevNoiseReduction	Noise Filter (ISO Boost)	Rauschfilter (ISO Boost)
+RawDevNoiseReduction	Noise Reduction	Rauschreduktion
+RawDevPMPictureTone	Blue	Blau
+RawDevPMPictureTone	Green	Grün
+RawDevPMPictureTone	Purple	Lila
+RawDevPM_BWFilter	Green	Grün
+RawDevPM_BWFilter	Red	Rot
+RawDevPM_BWFilter	Yellow	Gelb
+RawDevPictureMode	Natural	Natürlich
+RawDevWhiteBalance	Color Temperature	Farbtemperatur
+RawJpgQuality	Fine	Fein
+RawJpgQuality	Superfine	Superfein
+RawJpgQuality	n/a	(nicht gesetzt)
+RawJpgSize	Large	Groß
+RawJpgSize	Medium	Mittelgroß
+RawJpgSize	Medium 1	Mittelgroß 1
+RawJpgSize	Medium 2	Mittelgroß 2
+RawJpgSize	Medium 3	Mittelgroß 3
+RawJpgSize	Medium Movie	Mittelgroßer Film
+RawJpgSize	Postcard	Postkarte
+RawJpgSize	Small	Klein
+RawJpgSize	Small Movie	Kleiner Film
+RawJpgSize	Widescreen	Breitbild
+RecordMode	Aperture Priority	Blendenpriorität
+RecordMode	Manual	Manuell
+RecordMode	Shutter Priority	Verschlusspriorität
+RecordingMode	Auto	Automatisch
+RecordingMode	Landscape	Landschaft
+RecordingMode	Manual	Manuell
+RecordingMode	Night Scene	Nachtszene
+RecordingMode	Portrait	Porträt
+RedEyeCorrection	Automatic	Automatisch
+RedEyeCorrection	Click on Eyes	Klick auf Augen
+RedEyeCorrection	Off	Aus
+RedEyeReduction	Off	Aus
+RedEyeReduction	On	Ein
+ReleaseButtonToUseDial	No	Gedrückt halten
+ReleaseButtonToUseDial	Yes	Ein & aus
+ReleaseMode	AE Bracketing	Belichtungsreihe
+ReleaseMode	Contrast Bracketing	Kontrast Belichtungsreihe
+ReleaseMode	High Speed Burst	Aufnahme Burst
+ReleaseMode	WB Bracketing	Weißabgleich-Belichtungsreihe
+ReleaseMode	n/a	(nicht gesetzt)
+RenderingIntent	ICC-Absolute Colorimetric	Absolut farbmetrisch
+RenderingIntent	Media-Relative Colorimetric	Relativ farbmetrisch
+RenderingIntent	Perceptual	Wahrnehmungsorientiert (perzeptiv, fotografisch)
+RenderingIntent	Saturation	Sättigungserhaltend
+ResampleParamsQuality	High	Hoch
+ResampleParamsQuality	Low	Leicht
+Resaved	No	Nein
+Resaved	Yes	Ja
+ResolutionUnit	None	Keine
+ResolutionUnit	inches	Zoll
+RetouchHistory	B & W	Schwarz/Weiß
+RetouchHistory	Color Custom	Farbabgleich
+RetouchHistory	Cyanotype	Blauton
+RetouchHistory	Distortion Control	Verzeichnungskontrolle
+RetouchHistory	Fisheye	Fischauge
+RetouchHistory	Image Overlay	Bildmontage
+RetouchHistory	None	Keine
+RetouchHistory	Perspective Control	Perspektivenkontrolle
+RetouchHistory	Red Eye	Rote-Augen-Korrektur
+RetouchHistory	Sky Light	Skylight
+RetouchHistory	Small Picture	Kompaktbild
+RetouchHistory	Soft Filter	Weichzeichner
+RetouchHistory	Trim	Beschneiden
+RetouchHistory	Warm Tone	Warmer Farbton
+ReverseShutterSpeedAperture	No	Nein
+ReverseShutterSpeedAperture	Yes	Ja
+Rotation	Rotate 180	180° gedreht
+Rotation	Rotate 270 CW	90° gegen den Uhrzeigersinn
+Rotation	Rotate 90 CW	90° im Uhrzeigersinn
+Rotation	Rotated 180	180° gedreht
+Rotation	Rotated 270 CW	90° gegen den Uhrzeigersinn
+Rotation	Rotated 90 CW	90° im Uhrzeigersinn
+SRAWQuality	n/a	(nicht gesetzt)
+SRActive	No	Deaktiviert
+SRActive	Yes	Aktiviert
+SRResult	Not stabilized	Nicht stabilisiert
+SafetyShift	Disable	Nicht möglich
+SafetyShift	Enable (ISO speed)	Möglich (ISO Empfindlichkeit)
+SafetyShift	Enable (Tv/Av)	Möglich (Tv/Av)
+SafetyShiftInAvOrTv	Disable	Nicht möglich
+SafetyShiftInAvOrTv	Enable	Möglich
+SampleFormat	Complex int	Komplexer Integer
+SampleFormat	Float	Fließkommawert
+SampleFormat	Signed	Vorzeichenbehafteter Integer
+SampleFormat	Undefined	Nicht definiert
+SampleFormat	Unsigned	Vorzeichenloser Integer
+Saturation	+1 (medium high)	+1 (Leicht erhöht)
+Saturation	+2 (high)	+2 (Hohe Farbsättigung)
+Saturation	+3 (very high)	+3 (Sehr hoch)
+Saturation	+4 (highest)	+4
+Saturation	+4 (maximum)	+4
+Saturation	-1 (medium low)	-1 (Leicht verringert)
+Saturation	-2 (low)	-2 (Geringe Farbsättigung)
+Saturation	-3 (very low)	-3 (Sehr gering)
+Saturation	-4 (lowest)	-4
+Saturation	-4 (minimum)	-4
+Saturation	0 (normal)	0 (Normal)
+Saturation	B&W	Schwarz/Weiß
+Saturation	B&W Green Filter	Schwarz-Weiß Grünfilter
+Saturation	B&W Red Filter	Schwarz-Weiß Rotfilter
+Saturation	B&W Sepia	Schwarz-Weiß Sepia
+Saturation	B&W Yellow Filter	Schwarz-Weiß Gelbfilter
+Saturation	Black & White	Schwarz/Weiß
+Saturation	Film Simulation	Film-Simulation
+Saturation	High	Hohe Farbsättigung
+Saturation	Low	Geringe Farbsättigung
+Saturation	Medium High	Mittel-Hoch
+Saturation	Medium Low	Mittel-Gering
+Saturation	Natural	Natürlich
+Saturation	None	Nicht gesetzt
+Saturation	None (B&W)	Keine (S&W)
+Saturation	Toning Effect	Tönungseffekt
+Saturation	Vintage B&W	Vintage Schwarz-Weiß
+Saturation	Vivid	Lebhaft
+SaturationFaithful	n/a	(nicht gesetzt)
+SaturationLandscape	n/a	(nicht gesetzt)
+SaturationMonochrome	n/a	(nicht gesetzt)
+SaturationNeutral	n/a	(nicht gesetzt)
+SaturationPortrait	n/a	(nicht gesetzt)
+SaturationStandard	n/a	(nicht gesetzt)
+SaturationUnknown	n/a	(nicht gesetzt)
+SaturationUserDef1	n/a	(nicht gesetzt)
+SaturationUserDef2	n/a	(nicht gesetzt)
+SaturationUserDef3	n/a	(nicht gesetzt)
+ScanImageEnhancer	Off	Aus
+ScanImageEnhancer	On	Ein
+SceneCaptureType	Landscape	Landschaft
+SceneCaptureType	Night	Nachtszene
+SceneCaptureType	Portrait	Porträt
+SceneMode	3D Sweep Panorama	3D Sweep-Panorama
+SceneMode	Anti Motion Blur	Verwackelungsschutz
+SceneMode	Aperture Priority	Blendenpriorität
+SceneMode	Auto	Automatisch
+SceneMode	Available Light	Verfügbares Licht
+SceneMode	Baby	Kleinkind
+SceneMode	Beach	Strand
+SceneMode	Beach & Snow	Strand & Schnee
+SceneMode	Behind Glass	Hinterglas
+SceneMode	Candle	Kerzenlicht
+SceneMode	Candlelight	Kerzenlicht
+SceneMode	Children	Kinder
+SceneMode	Color Effects	Farbeffekte
+SceneMode	Cont. Priority AE	Andauernde AE Priorität
+SceneMode	Creative Control	Kreativprogramm
+SceneMode	Digital Filter	Digitaler Filter
+SceneMode	Documents	Dokumente
+SceneMode	Fireworks	Feuerwerk
+SceneMode	Food	Lebensmittel
+SceneMode	Handheld Night Shot	Nachtaufnahme händisch
+SceneMode	High Key	High-Key
+SceneMode	High Sensitivity	Hohe Empfindlichkeit
+SceneMode	Indoor	Innenaufnahme
+SceneMode	Intelligent ISO	Iso Intelligent
+SceneMode	Landscape	Landschaft
+SceneMode	Landscape+Portrait	Landschaft+Porträt
+SceneMode	Low Key	Low-Key
+SceneMode	Macro	Makro
+SceneMode	Manual	Manuell
+SceneMode	My Mode	Benutzerdefiniert
+SceneMode	Night Landscape	Landschaft bei Nacht
+SceneMode	Night Portrait	Nachtporträt
+SceneMode	Night Scene	Nachtszene
+SceneMode	Night Scenery	Nachtszene
+SceneMode	Night View/Portrait	Abendszene/Porträt
+SceneMode	Night+Portrait	Nacht+Porträt
+SceneMode	Off	Aus
+SceneMode	Pet	Haustiere
+SceneMode	Portrait	Porträt
+SceneMode	Program	Programmautomatik
+SceneMode	Self Portrait	Selbstporträt
+SceneMode	Self Portrait+Self Timer	Selbstporträt+Selbstauslöser
+SceneMode	Shutter Priority	Verschlusspriorität
+SceneMode	Snow	Schnee
+SceneMode	Sports	Sport
+SceneMode	Spot	Spotmessung
+SceneMode	Starry Night	Sternennacht
+SceneMode	Sunset	Sonnenuntergang
+SceneMode	Super Macro	Super-Makro
+SceneMode	Sweep Panorama	Sweep-Panorama
+SceneMode	Underwater	Unterwasser
+SceneMode	Underwater Macro	Unterwasser Makro
+SceneMode	Underwater Wide1	Unterwasserlandschaft
+SceneMode	Underwater Wide2	Unterwasserlandschaft 2
+SceneMode	n/a	(nicht gesetzt)
+SceneModeUsed	Aperture Priority	Blendenpriorität
+SceneModeUsed	Beach	Strand
+SceneModeUsed	Candlelight	Kerzenlicht
+SceneModeUsed	Children	Kinder
+SceneModeUsed	Fireworks	Feuerwerk
+SceneModeUsed	Landscape	Landschaft
+SceneModeUsed	Macro	Makro
+SceneModeUsed	Manual	Manuell
+SceneModeUsed	Night Landscape	Landschaft bei Nacht
+SceneModeUsed	Night Portrait	Nachtporträt
+SceneModeUsed	Portrait	Porträt
+SceneModeUsed	Program	Programmautomatik
+SceneModeUsed	Shutter Priority	Verschlusspriorität
+SceneModeUsed	Snow	Schnee
+SceneModeUsed	Sunset	Sonnenuntergang
+SceneSelect	Night	Nachtszene
+SceneSelect	Off	Aus
+SceneType	Directly photographed	Direkt aufgenommenes Bild
+Security	Locked for annotations	Gesperrt für Anmerkungen
+Security	None	Keine
+Security	Password protected	Passwort geschützt
+Security	Read-only enforced	Nur Lesen - erzwungen
+Security	Read-only recommended	Nur Lesen - vorgeschlagen
+SecurityClassification	Confidential	Vertraulich
+SecurityClassification	Restricted	Eingeschränkt
+SecurityClassification	Secret	Geheim
+SecurityClassification	Top Secret	Streng geheim
+SecurityClassification	Unclassified	Nicht klassifiziert
+SelectAFAreaSelectMode	Disable	Deaktiviert
+SelectAFAreaSelectMode	Enable	Aktiviert
+SelectAFAreaSelectMode	Select AF-modes	Wahl AF-Modus
+SelectableAFPoint	11 points	11 Felder
+SelectableAFPoint	19 Points, Multi-controller selectable	19 Punkte, wählbar mit Multicontroller
+SelectableAFPoint	19 points	19 Felder
+SelectableAFPoint	45 points	45 Felder
+SelectableAFPoint	Inner 9 Points, Multi-controller selectable	Innere 9 Punkte, wählbar mit Multicontroller
+SelectableAFPoint	Inner 9 points	Innere 9 Felder
+SelectableAFPoint	Outer 9 Points, Multi-controller selectable	Äußere 9 Punkte, wählbar mit Multicontroller
+SelectableAFPoint	Outer 9 points	Äußere 9 Felder
+SelfTimer	10 s / 3 pictures	10 s / 3 Bilder
+SelfTimer	Off	Aus
+SelfTimer	On	Ein
+SensingMethod	Color sequential area	Color-Sequential-Area-Sensor
+SensingMethod	Color sequential linear	Color-Sequential-Linear-Sensor
+SensingMethod	Monochrome area	Monochrom-Sensor
+SensingMethod	Monochrome linear	Monochrom-linearer Sensor
+SensingMethod	Not defined	Nicht definiert
+SensingMethod	One-chip color area	Ein-Chip-Farbsensor
+SensingMethod	Three-chip color area	Drei-Chip-Farbsensor
+SensingMethod	Trilinear	Trilinearer Sensor
+SensingMethod	Two-chip color area	Zwei-Chip-Farbsensor
+SensitivitySteps	1 EV Steps	1 LW-Schritte
+SensitivitySteps	As EV Steps	Wie LW-Schritte
+SensitivityType	ISO Speed	ISO Empfindlichkeit
+SensitivityType	Recommended Exposure Index	Empfohlener Belichtungsindex
+SensitivityType	Recommended Exposure Index and ISO Speed	Empfohlener Belichtungsindex und ISO Empfindlichkeit
+SensitivityType	Standard Output Sensitivity	Standard Ausgabeempfindlichkeit
+SensitivityType	Standard Output Sensitivity and ISO Speed	Standard Ausgabeempfindlichkeit und ISO Empfindlichkeit
+SensitivityType	Standard Output Sensitivity and Recommended Exposure Index	Standard Ausgabeempfindlichkeit und empfohlener Belichtungsindex
+SensitivityType	Standard Output Sensitivity, Recommended Exposure Index and ISO Speed	Standard Ausgabeempfindlichkeit,empfohlener Belichtungsindex und ISO Empfindlichkeit
+SensitivityType	Unknown	Unbekannt
+SensorCleaning	Disable	Nicht möglich
+SensorCleaning	Enable	Möglich
+SequenceNumber	n/a	(nicht gesetzt)
+SequentialShot	Adjust Exposure	Belichtungskorrektur
+SequentialShot	Best	Beste
+SequentialShot	None	Keine
+SetButtonCrossKeysFunc	Cross keys: AF point select	Kreuztaste:AF Feld Auswahl
+SetButtonCrossKeysFunc	Set: Flash Exposure Comp	SET:Blitzbelichtungskorrektur
+SetButtonCrossKeysFunc	Set: Parameter	SET:Parameter ändern
+SetButtonCrossKeysFunc	Set: Picture Style	SET:Bildstil
+SetButtonCrossKeysFunc	Set: Playback	SET:Wiedergabe
+SetButtonCrossKeysFunc	Set: Quality	SET:Qualität
+SetButtonWhenShooting	Change ISO speed	ISO-Wert ändern
+SetButtonWhenShooting	Change parameters	Parameter ändern
+SetButtonWhenShooting	Default (no function)	Normal (gesperrt)
+SetButtonWhenShooting	Disabled	Gesperrt
+SetButtonWhenShooting	Flash exposure compensation	Blitzbelichtungskorrektur
+SetButtonWhenShooting	ISO speed	ISO-Empfindlichkeit
+SetButtonWhenShooting	Image playback	Bildwiedergabe
+SetButtonWhenShooting	Image quality	Qualität ändern
+SetButtonWhenShooting	Image size	Bildgröße
+SetButtonWhenShooting	LCD monitor On/Off	LCD-Monitor Ein/Aus
+SetButtonWhenShooting	Menu display	Menüanzeige
+SetButtonWhenShooting	Normal (disabled)	Normal (gesperrt)
+SetButtonWhenShooting	Picture style	Bildstil
+SetButtonWhenShooting	Quick control screen	Schnelleinstellung Bildschirm
+SetButtonWhenShooting	Record func. + media/folder	Aufnahme-Funktion + Medium/Ordner
+SetButtonWhenShooting	Record movie (Live View)	Movie-Aufnahme (Livebild)
+SetButtonWhenShooting	White balance	Weißabgleich
+SetFunctionWhenShooting	Change Parameters	Parameter ändern
+SetFunctionWhenShooting	Change Picture Style	Bildstil
+SetFunctionWhenShooting	Change quality	Qualität ändern
+SetFunctionWhenShooting	Default (no function)	Normal (gesperrt)
+SetFunctionWhenShooting	Image replay	Bildwiedergabe
+SetFunctionWhenShooting	Menu display	Menüanzeige
+ShadingCompensation	Off	Aus
+ShadingCompensation	On	Ein
+ShadingCompensation2	Off	Aus
+ShadingCompensation2	On	Ein
+ShakeReduction	Off	Aus
+ShakeReduction	On	Ein
+Sharpening	High	Hoch
+Sharpening	Low	Niedrig
+Sharpening	Medium High	Mittel
+Sharpening	Off	Aus
+Sharpness	+1 (medium hard)	+1 (Leicht erhöht)
+Sharpness	+2 (hard)	+2 (Stark)
+Sharpness	+3 (very hard)	+3 (Sehr hoch)
+Sharpness	+4 (hardest)	+4
+Sharpness	+4 (maximum)	+4
+Sharpness	-1 (medium soft)	-1 (Leicht verringert)
+Sharpness	-2 (soft)	-2 (Leicht)
+Sharpness	-3 (very soft)	-3 (Sehr weich)
+Sharpness	-4 (minimum)	-4
+Sharpness	-4 (softest)	-4
+Sharpness	0 (normal)	0 (Normal)
+Sharpness	Film Simulation	Film-Simulation
+Sharpness	Hard	Stark
+Sharpness	Sharp	Hart
+Sharpness	Soft	Leicht
+Sharpness	n/a	(nicht gesetzt)
+SharpnessFaithful	n/a	(nicht gesetzt)
+SharpnessFrequency	High	Hoch
+SharpnessFrequency	Highest	Höchste
+SharpnessFrequency	Low	Leicht
+SharpnessFrequency	n/a	(nicht gesetzt)
+SharpnessLandscape	n/a	(nicht gesetzt)
+SharpnessMonochrome	n/a	(nicht gesetzt)
+SharpnessNeutral	n/a	(nicht gesetzt)
+SharpnessPortrait	n/a	(nicht gesetzt)
+SharpnessStandard	n/a	(nicht gesetzt)
+SharpnessUnknown	n/a	(nicht gesetzt)
+SharpnessUserDef1	n/a	(nicht gesetzt)
+SharpnessUserDef2	n/a	(nicht gesetzt)
+SharpnessUserDef3	n/a	(nicht gesetzt)
+ShootingInfoDisplay	Auto	Automatisch
+ShootingInfoDisplay	Manual (dark on light)	Manuell - Dunkel auf Hell
+ShootingInfoDisplay	Manual (light on dark)	Manuell - Hell auf dunkel
+ShootingMode	Aperture Priority	Blendenpriorität
+ShootingMode	Baby	Kleinkind
+ShootingMode	Beach	Strand
+ShootingMode	Candlelight	Kerzenlicht
+ShootingMode	Color Effects	Farbeffekte
+ShootingMode	Fireworks	Feuerwerk
+ShootingMode	Food	Lebensmittel
+ShootingMode	High Sensitivity	Hohe Empfindlichkeit
+ShootingMode	Macro	Makro
+ShootingMode	Manual	Manuell
+ShootingMode	Night Portrait	Nachtporträt
+ShootingMode	Night Scenery	Nachtszene
+ShootingMode	Pet	Haustiere
+ShootingMode	Portrait	Porträt
+ShootingMode	Program	Programmautomatik
+ShootingMode	Self Portrait	Selbstportait
+ShootingMode	Shutter Priority	Verschlusspriorität
+ShootingMode	Snow	Schnee
+ShootingMode	Sports	Sport
+ShootingMode	Spot	Spotmessung
+ShootingMode	Starry Night	Sternennacht
+ShootingMode	Sunset	Sonnenuntergang
+ShootingMode	Underwater	Unterwasser
+ShootingModeSetting	Continuous	Serienaufnahme
+ShootingModeSetting	Delayed Remote	Fernauslöser m. Vorlauf
+ShootingModeSetting	Quick-response Remote	Fernauslöser
+ShootingModeSetting	Self-timer	Selbstauslöser
+ShootingModeSetting	Single Frame	Einzelbild
+ShortReleaseTimeLag	Disable	Ausgeschaltet
+ShortReleaseTimeLag	Enable	Eingeschaltet
+Shutter-AELock	AE lock/AF	AE-Speicherung/AF
+Shutter-AELock	AE/AF, No AE lock	AE/AF, keine AE-Speicherung
+Shutter-AELock	AF/AE lock	AF/AE-Speicherung
+Shutter-AELock	AF/AF lock	AF/AF-Speicherung
+Shutter-AELock	AF/AF lock, No AE lock	AF/AF-Speicherung, keine AE-Speicherung
+ShutterButtonAFOnButton	AE lock/Metering + AF start	AESpeicherung/Messung+AFStart
+ShutterButtonAFOnButton	Metering + AF start	Messung+AFStart
+ShutterButtonAFOnButton	Metering + AF start/AF stop	Messung+AFStart / AFStopp
+ShutterButtonAFOnButton	Metering + AF start/disable	Messung+AFStart/Deaktiviert
+ShutterButtonAFOnButton	Metering start/Meter + AF start	Messung Start/Mess.+AFStart
+ShutterCurtainSync	1st-curtain sync	1. Verschlussvorhang
+ShutterCurtainSync	2nd-curtain sync	2. Verschlussvorhang
+ShutterMode	Aperture Priority	Blendenpriorität
+ShutterMode	Auto	Automatisch
+ShutterReleaseButtonAE-L	Off	Aus
+ShutterReleaseButtonAE-L	On	Ein
+ShutterReleaseMethod	Continuous Shooting	Serienaufnahme
+ShutterReleaseMethod	Single Shot	Einzelbild
+ShutterReleaseNoCFCard	No	Nein
+ShutterReleaseNoCFCard	Yes	Ja
+ShutterReleaseTiming	Priority on focus	Schärfepriorität
+ShutterReleaseTiming	Priority on shutter	Verschlußpriorität
+ShutterSpeedRange	Disable	Nicht möglich
+ShutterSpeedRange	Enable	Möglich
+SingleFrameBracketing	High	Hoch
+SingleFrameBracketing	Low	Niedrig
+SlideShow	No	Nein
+SlideShow	Yes	Ja
+SlowShutter	Night Scene	Nachtszene
+SlowShutter	None	Keine
+SlowShutter	Off	Aus
+SlowShutter	On	Ein
+SlowShutter	n/a	(nicht gesetzt)
+SlowSync	Off	Aus
+SlowSync	On	Ein
+SoftSkinEffect	n/a	(nicht gesetzt)
+SonyImageSize	Large	Groß
+SonyImageSize	Large (16:9)	Groß (16:9)
+SonyImageSize	Large (3:2)	Groß (3:2)
+SonyImageSize	Medium	Mittel
+SonyImageSize	Medium (16:9)	Mittel (16:9)
+SonyImageSize	Medium (3:2)	Mittel (3:2)
+SonyImageSize	Small	Klein
+SonyImageSize	Small (16:9)	Klein (16:9)
+SonyImageSize	Small (3:2)	Klein (3:2)
+SpecialEffectMode	Mist Removal	Dunstentfernung
+SpecialEffectMode	Off	Aus
+SpecialEffectMode	Vivid Landscape	Lebende Landschaft
+SpecialEffectsOpticalFilter	Colored	Farbfilter
+SpecialEffectsOpticalFilter	Diffusion	Diffusionsfilter
+SpecialEffectsOpticalFilter	Multi-image	Mehrfachbildfilter
+SpecialEffectsOpticalFilter	None	Keiner
+SpecialEffectsOpticalFilter	Polarizing	Polarisationsfilter
+SpecialEffectsOpticalFilter	Split-field	Splitfilter
+SpecialEffectsOpticalFilter	Star	Sternenfilter
+SpotMeterLinkToAFPoint	Disable (use center AF point)	Deaktiviert (zentrales AF-Feld)
+SpotMeterLinkToAFPoint	Enable (use active AF point)	Aktiviert (aktives AF-Feld)
+SpotMeteringMode	AF Point	AF-Punkt
+SpotMeteringMode	Center	Mitte
+SubfileType	Alternate reduced-resolution image	Alternatives Bild in reduzierter Auflösung
+SubfileType	Full-resolution image	Bild in voller Auflösung
+SubfileType	Reduced-resolution image	Bild in reduzierter Auflösung
+SubfileType	Single page of multi-page image	Einzelbild eines mehrseitigen Bildes
+SubfileType	Single page of multi-page reduced-resolution image	Einzelbild eines mehrseitigen Bildes in reduzierter Auflösung
+SubfileType	TIFF-FX mixed raster content	TIFF-FX gersteter Inhalt
+SubfileType	TIFF/IT final page	TIFF/IT endgültige Seite
+SubfileType	Thumbnail image	Miniaturbild
+SubfileType	Transparency mask	Transparenzmaske
+SubfileType	Transparency mask of multi-page image	Transparenzmaske eines mehrseitigen Bildes
+SubfileType	Transparency mask of reduced-resolution image	Transparenzmaske eines Bildes in reduzierter Auflösung
+SubfileType	Transparency mask of reduced-resolution multi-page image	Transparenzmaske eines mehrseitigen Bildes in reduzierter Auflösung
+SubimageColor	Monochrome	Monochrom
+SubjectDistanceRange	Close	Nahaufnahme
+SubjectDistanceRange	Distant	Fernaufnahme
+SubjectDistanceRange	Macro	Makro
+SubjectDistanceRange	Unknown	Unbekannt
+SubjectProgram	Night portrait	Nachtporträt
+SubjectProgram	None	Keine
+SubjectProgram	Portrait	Porträt
+SubjectProgram	Sports action	Sportereignis
+SubjectProgram	Sunset	Sonnenuntergang
+SubjectUnits	meters	Meter
+SubjectUnits	radians	Winkelgrade
+Subsystem	Unknown	Unbekannt
+SuperMacro	Off	Aus
+SuperimposedDisplay	Off	Aus
+SuperimposedDisplay	On	Ein
+SwitchToRegisteredAFPoint	Disable	Nicht möglich
+SwitchToRegisteredAFPoint	Enable	Möglich
+SwitchToRegisteredAFPoint	Only while AEL is pressed	Nur während AEL gedrückt
+SwitchToRegisteredAFPoint	Switch with multi-controller	Wechseln mit Multicontroller
+TIFF_FXExtensions	B&W JBIG2	Schwarz-Weiß JBIG2
+Tagged	No	Nein
+Tagged	Yes	Ja
+Technology	Active Matrix Display	Aktives Matrix-Display
+Technology	Cathode Ray Tube Display	Kathodenstrahlröhrenbildschirm
+Technology	Digital Camera	Digitalkamera
+Technology	Dye Sublimation Printer	Thermosublimationsdrucker
+Technology	Electrophotographic Printer	Laserdrucker
+Technology	Electrostatic Printer	Elektrostatischer Drucker
+Technology	Film Scanner	Film-Scanner
+Technology	Film Writer	Film-Writer
+Technology	Flexography	Flexographie
+Technology	Gravure	Gravur
+Technology	Ink Jet Printer	Tintenstrahldrucker
+Technology	Offset Lithography	Offset Lithographie
+Technology	Passive Matrix Display	Passives Matrix-Display
+Technology	Photo CD	Photo-CD
+Technology	Photo Image Setter	Foto-Filmbelichter
+Technology	Photographic Paper Printer	Fotopapierdrucker
+Technology	Projection Television	Projektionsfernsehgerät
+Technology	Reflective Scanner	Reflexionsscanner
+Technology	Thermal Wax Printer	Thermowachsdrucker
+Technology	Video Camera	Videokamera
+Technology	Video Monitor	Video-Monitor
+Teleconverter	None	Keiner
+TextEncoding	n/a	(nicht gesetzt)
+TextStamp	Off	Aus
+TextStamp	On	Ein
+TimeScaleParamsQuality	High	Hoch
+TimeScaleParamsQuality	Low	Leicht
+TimeZoneCity	n/a	(nicht gesetzt)
+TimerFunctionButton	Auto Bracketing	Belichtungsreihe
+TimerFunctionButton	ISO	ISO-Empfindlichkeit
+TimerFunctionButton	Image Quality/Size	Bildqualität/-größe
+TimerFunctionButton	Self-timer	Selbstauslöser
+TimerFunctionButton	Shooting Mode	Aufnahmebetriebsart
+TimerFunctionButton	White Balance	Weißabgleich
+TimerLength	Disable	Nicht möglich
+TimerLength	Enable	Möglich
+ToneCurve	Custom	Benutzerdefiniert
+ToneCurve	Manual	Manuell
+ToneCurveActive	No	Nein
+ToneCurveActive	Yes	Ja
+ToneCurveInterpolation	Curve	Kurve
+ToneCurveInterpolation	Straight	Gerade
+ToneCurveMode	Luminance	Luminanz
+ToneCurveName	Custom	Benutzerdefiniert
+ToneCurveName	Medium Contrast	Kontrast mittel
+ToneCurveName	Strong Contrast	Kontrast stark
+ToneCurveProperty	Custom 1	Benutzerdefiniert 1
+ToneCurveProperty	Custom 2	Benutzerdefiniert 2
+ToneCurveProperty	Custom 3	Benutzerdefiniert 3
+ToneCurveProperty	Custom 4	Benutzerdefiniert 4
+ToneCurveProperty	Custom 5	Benutzerdefiniert 5
+ToneCurveProperty	Shot Settings	Aufnahmeeinstellung
+ToningEffect	B&W	Schwarz/Weiß
+ToningEffect	Blue	Blau
+ToningEffect	Blue-green	Blau-Grün
+ToningEffect	Color	Farbe
+ToningEffect	Green	Grün
+ToningEffect	None	Keiner
+ToningEffect	Purple	Lila
+ToningEffect	Purple-blue	Violett-Blau
+ToningEffect	Red	Rot
+ToningEffect	Red-purple	Rot-Violett
+ToningEffect	Yellow	Gelb
+ToningEffect	n/a	(nicht gesetzt)
+ToningEffectFaithful	n/a	(nicht gesetzt)
+ToningEffectLandscape	n/a	(nicht gesetzt)
+ToningEffectMonochrome	Blue	Blau
+ToningEffectMonochrome	Green	Grün
+ToningEffectMonochrome	None	Keiner
+ToningEffectMonochrome	Purple	Lila
+ToningEffectMonochrome	n/a	(nicht gesetzt)
+ToningEffectNeutral	n/a	(nicht gesetzt)
+ToningEffectPortrait	n/a	(nicht gesetzt)
+ToningEffectStandard	n/a	(nicht gesetzt)
+ToningEffectUnknown	Blue	Blau
+ToningEffectUnknown	Green	Grün
+ToningEffectUnknown	None	Keiner
+ToningEffectUnknown	Purple	Lila
+ToningEffectUnknown	n/a	(nicht gesetzt)
+ToningEffectUserDef1	Blue	Blau
+ToningEffectUserDef1	Green	Grün
+ToningEffectUserDef1	None	Keiner
+ToningEffectUserDef1	Purple	Lila
+ToningEffectUserDef1	n/a	(nicht gesetzt)
+ToningEffectUserDef2	Blue	Blau
+ToningEffectUserDef2	Green	Grün
+ToningEffectUserDef2	None	Keiner
+ToningEffectUserDef2	Purple	Lila
+ToningEffectUserDef2	n/a	(nicht gesetzt)
+ToningEffectUserDef3	Blue	Blau
+ToningEffectUserDef3	Green	Grün
+ToningEffectUserDef3	None	Keiner
+ToningEffectUserDef3	Purple	Lila
+ToningEffectUserDef3	n/a	(nicht gesetzt)
+Transform	Off	Aus
+Transform	Slim High	Stark abnehmend
+Transform	Slim Low	Wenig abnehmend
+Transform	Stretch High	Stark streckend
+Transform	Stretch Low	Wenig streckend
+Transformation	Mirror horizontal	Horizontal gespiegelt
+Transformation	Mirror horizontal and rotate 270 CW	Horizontal gespiegelt und 90° gegen den Uhrzeigersinn
+Transformation	Mirror horizontal and rotate 90 CW	Horizontal gespiegelt und 90° im Uhrzeigersinn
+Transformation	Mirror vertical	Vertikal gespiegelt
+Transformation	Rotate 180	180° gedreht
+Transformation	Rotate 270 CW	90° gegen den Uhrzeigersinn
+Transformation	Rotate 90 CW	90° im Uhrzeigersinn
+Trapped	Unknown	Unbekannt
+TypeOfOriginal	B&W Document	Schwarz-Weiß Dokument
+TypeOfOriginal	B&W Print	Schwarz-Weiß Druck
+TypeOfOriginal	Color Document	Farb Dokument
+TypeOfOriginal	Color Print	Farbdruck
+USMLensElectronicMF	Disable after one-shot AF	Nicht mögl. nach One-Shot AF
+USMLensElectronicMF	Disable in AF mode	Nicht möglich im AF-Modus
+USMLensElectronicMF	Enable after one-shot AF	Möglich nach One-Shot AF
+Uncompressed	No	Nein
+Uncompressed	Yes	Ja
+UnknownLinear	No	Nein
+UnknownLinear	Yes	Ja
+Unsharp1Color	Blue	Blau
+Unsharp1Color	Green	Grün
+Unsharp1Color	Red	Rot
+Unsharp1Color	Yellow	Gelb
+Unsharp2Color	Blue	Blau
+Unsharp2Color	Green	Grün
+Unsharp2Color	Red	Rot
+Unsharp2Color	Yellow	Gelb
+Unsharp3Color	Blue	Blau
+Unsharp3Color	Green	Grün
+Unsharp3Color	Red	Rot
+Unsharp3Color	Yellow	Gelb
+Unsharp4Color	Blue	Blau
+Unsharp4Color	Green	Grün
+Unsharp4Color	Red	Rot
+Unsharp4Color	Yellow	Gelb
+UnsharpMask	Off	Aus
+UnsharpMask	On	Ein
+Urgency	0 (reserved)	0 (reserviert)
+Urgency	1 (most urgent)	1 (sehr dringend)
+Urgency	5 (normal urgency)	5 (normale Dringlichkeit)
+Urgency	8 (least urgent)	8 (geringe Dringlichkeit)
+Urgency	9 (user-defined priority)	9 (benutzerdefinierte Priorität)
+UsableMeteringModes	Disable	Nicht möglich
+UsableMeteringModes	Enable	Möglich
+UsableShootingModes	Disable	Nicht möglich
+UsableShootingModes	Enable	Möglich
+UserDef1PictureStyle	Faithful	Natürlich
+UserDef1PictureStyle	Landscape	Landschaft
+UserDef1PictureStyle	Monochrome	Monochrom
+UserDef1PictureStyle	Portrait	Porträt
+UserDef2PictureStyle	Faithful	Natürlich
+UserDef2PictureStyle	Landscape	Landschaft
+UserDef2PictureStyle	Monochrome	Monochrom
+UserDef2PictureStyle	Portrait	Porträt
+UserDef3PictureStyle	Faithful	Natürlich
+UserDef3PictureStyle	Landscape	Landschaft
+UserDef3PictureStyle	Monochrome	Monochrom
+UserDef3PictureStyle	Portrait	Porträt
+UserProfile	User Profile 0 (Dynamic)	Benutzerprofil 0 (dynamisch)
+UserProfile	User Profile 1	Benutzerprofil 1
+UserProfile	User Profile 2	Benutzerprofil 2
+UserProfile	User Profile 3	Benutzerprofil 3
+VFDisplayIllumination	Disable	Deaktiviert
+VFDisplayIllumination	Enable	Aktiviert
+VR_0x66	Off	Aus
+VR_0x66	On (active)	Ein (Aktiv)
+VR_0x66	On (normal)	Ein (Normal)
+VibrationReduction	Off	Aus
+VibrationReduction	On	Ein
+VibrationReduction	On (1)	Ein (1)
+VibrationReduction	On (2)	Ein (2)
+VibrationReduction	On (3)	Ein (3)
+VibrationReduction	n/a	(nicht gesetzt)
+ViewInfoDuringExposure	Disable	Nicht möglich
+ViewInfoDuringExposure	Enable	Möglich
+ViewfinderWarning	Off	Aus
+ViewfinderWarning	On	Ein
+ViewfinderWarnings	ISO expansion	ISO-Erweiterung
+ViewingMode2	n/a	(nicht gesetzt)
+VignetteControl	High	Hoch
+VignetteControl	Low	Schwach
+VignetteControl	Normal	Mittel
+VignetteControl	Off	Aus
+VignetteControl	On	Ein
+VignettingCorrection	n/a	(nicht gesetzt)
+VoiceMemo	Off	Aus
+VoiceMemo	On	Ein
+WBAdjLighting	Daylight (cloudy)	Tageslicht (2)
+WBAdjLighting	Daylight (direct sunlight)	Tageslicht (0)
+WBAdjLighting	Daylight (shade)	Tageslicht (1)
+WBAdjLighting	Flash	Blitz
+WBAdjLighting	Incandescent	Glühbirne
+WBAdjLighting	None	Keines
+WBBracketMode	Off	Aus
+WBBracketMode	On (shift AB)	Ein (AB-Verschiebung)
+WBBracketMode	On (shift GM)	Ein (GM-Verschiebung)
+WBFineTuneActive	No	Nein
+WBFineTuneActive	Yes	Ja
+WBMediaImageSizeSetting	LCD monitor	LCD-Monitor
+WBMediaImageSizeSetting	Rear LCD panel	Hinteres LCD-Panel
+WBMode	Auto	Automatisch
+WhiteBalance	As Shot	Aufnahme
+WhiteBalance	Auto	Automatisch
+WhiteBalance	Black & White	Schwarz/Weiß
+WhiteBalance	Cloudy	Bewölkt
+WhiteBalance	Color Temperature/Color Filter	Farbtemperatur/Farbfilter
+WhiteBalance	Cool White Fluorescent	Neonlicht kaltweiß
+WhiteBalance	Custom	Benutzerdefiniert
+WhiteBalance	Custom 1	Benutzerdefiniert 1
+WhiteBalance	Custom 2	Benutzerdefiniert 2
+WhiteBalance	Custom 3	Benutzerdefiniert 3
+WhiteBalance	Custom 4	Benutzerdefiniert 4
+WhiteBalance	Custom2	Benutzerdefiniert 2
+WhiteBalance	Custom3	Benutzerdefiniert 3
+WhiteBalance	Custom4	Benutzerdefiniert 4
+WhiteBalance	Custom5	Benutzerdefiniert 5
+WhiteBalance	Day White Fluorescent	Neonlicht neutralweiß
+WhiteBalance	Daylight	Tageslicht
+WhiteBalance	Daylight Fluorescent	Neonlicht tageslichtweiß
+WhiteBalance	Flash	Blitz
+WhiteBalance	Flash?	Blitz
+WhiteBalance	Fluorescent	Neonlicht
+WhiteBalance	Incandescent	Glühbirne
+WhiteBalance	Living Room Warm White Fluorescent	Neonlicht Wohnzimmer-warmweiß)
+WhiteBalance	Manual	Manuell
+WhiteBalance	Manual Temperature (Kelvin)	Manuelle Temperatur (Kelvin)
+WhiteBalance	Shade	Schatten
+WhiteBalance	Tungsten	Glühbirne
+WhiteBalance	Underwater	Unterwasser
+WhiteBalance	Underwater 1 (Blue Water)	Unterwasser 1 (blaues Wasser)
+WhiteBalance	Underwater 2 (Green Water)	Unterwasser 2 (grünes Wasser)
+WhiteBalance	Unknown	Unbekannt
+WhiteBalance	User-Selected	Benutzerdefiniert
+WhiteBalance	Warm White Fluorescent	Neonlicht warmweiß
+WhiteBalance	White Fluorescent	Neonlicht universalweiß
+WhiteBalance2	3000K (Tungsten light)	3000K (Glühbirne)
+WhiteBalance2	3600K (Tungsten light-like)	3600K (ähnlich Glühbirne)
+WhiteBalance2	4000K (Cool white fluorescent)	4000K (Neonlicht kaltweiß)
+WhiteBalance2	4500K (Neutral white fluorescent)	4500K (Neonlicht neutralweiß)
+WhiteBalance2	5300K (Fine Weather)	5300K (Wolkenlos)
+WhiteBalance2	6000K (Cloudy)	6000K (Bewölkt)
+WhiteBalance2	6600K (Daylight fluorescent)	6600K (Neonlicht tageslichtweiß)
+WhiteBalance2	7500K (Fine Weather with Shade)	7500K (Sonne und Schatten)
+WhiteBalance2	Auto	Automatisch
+WhiteBalanceAdj	Auto	Automatisch
+WhiteBalanceAdj	Cloudy	Bewölkt
+WhiteBalanceAdj	Daylight	Tageslicht
+WhiteBalanceAdj	Flash	Blitz
+WhiteBalanceAdj	Fluorescent	Neonlicht
+WhiteBalanceAdj	Off	Aus
+WhiteBalanceAdj	On	Ein
+WhiteBalanceAdj	Shade	Schatten
+WhiteBalanceAdj	Tungsten	Glühbirne
+WhiteBalanceAutoAdjustment	Off	Aus
+WhiteBalanceAutoAdjustment	On	Ein
+WhiteBalanceBracketing	High	Hoch
+WhiteBalanceBracketing	Low	Niedrig
+WhiteBalanceBracketing	Off	Aus
+WhiteBalanceMode	Auto (Cloudy)	Automatisch (Bewölkt)
+WhiteBalanceMode	Auto (Day White Fluorescent)	Automatisch (Neonlicht neutralweiß)
+WhiteBalanceMode	Auto (Daylight Fluorescent)	Automatisch (Neonlicht tageslichtweiß)
+WhiteBalanceMode	Auto (Daylight)	Automatisch (Tageslicht)
+WhiteBalanceMode	Auto (Flash)	Automatisch (Blitz)
+WhiteBalanceMode	Auto (Shade)	Automatisch (Schatten)
+WhiteBalanceMode	Auto (Tungsten)	Automatisch (Glühbirne)
+WhiteBalanceMode	Auto (White Fluorescent)	Automatisch (Neonlicht universalweiß)
+WhiteBalanceMode	Unknown	Unbekannt
+WhiteBalanceMode	User-Selected	Benutzerdefiniert
+WhiteBalanceSet	Auto	Automatisch
+WhiteBalanceSet	Cloudy	Bewölkt
+WhiteBalanceSet	Day White Fluorescent	Neonlicht neutralweiß
+WhiteBalanceSet	Daylight	Tageslicht
+WhiteBalanceSet	Daylight Fluorescent	Neonlicht tageslichtweiß
+WhiteBalanceSet	Flash	Blitz
+WhiteBalanceSet	Manual	Manuell
+WhiteBalanceSet	Set Color Temperature 1	Farbtemperatur-Einstellung 1
+WhiteBalanceSet	Set Color Temperature 2	Farbtemperatur-Einstellung 2
+WhiteBalanceSet	Set Color Temperature 3	Farbtemperatur-Einstellung 3
+WhiteBalanceSet	Shade	Schatten
+WhiteBalanceSet	Tungsten	Glühbirne
+WhiteBalanceSet	White Fluorescent	Neonlicht universalweiß
+WhiteBalanceSetting	Color Temperature/Color Filter	Farbtemperatur/Farbfilter
+WhiteBalanceSetting	Custom	Benutzerdefiniert
+WhiteBalanceSetting	Preset	Voreinstellung
+WideFocusZone	Center zone (horizontal orientation)	Mittlere Zone (horizontale Ausrichtung)
+WideFocusZone	Center zone (vertical orientation)	Mittlere Zone (vertikale Ausrichtung)
+WideFocusZone	Left zone	Linke Zone
+WideFocusZone	No zone	Keine Zone
+WideFocusZone	Right zone	Rechte Zone
+WideRange	Off	Aus
+WideRange	On	Ein
+WorldTimeLocation	Destination	Zielort
+WorldTimeLocation	Home	Heimatort
+WorldTimeLocation	Hometown	Heimatort
+YCbCrPositioning	Centered	Zentriert
+YCbCrPositioning	Co-sited	Benachbart
+ZoneMatching	High Key	Hi
+ZoneMatching	ISO Setting Used	Aus (ISO-Einstellung verwendet)
+ZoneMatching	Low Key	Lo
+ZoneMatchingOn	Off	Aus
+ZoneMatchingOn	On	Ein

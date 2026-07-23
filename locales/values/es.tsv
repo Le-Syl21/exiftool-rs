@@ -1,0 +1,1326 @@
+AELockButton	None	Ninguno
+AELockButtonPlusDials	None	Ninguno
+AEProgramMode	Landscape	Paisaje
+AEProgramMode	Portrait	Retrato
+AEProgramMode	Standard	Estándar
+AESetting	AE Lock	Bloqueo AE
+AESetting	Exposure Compensation	Compensación Exposición
+AFAreaIllumination	Off	Desactivado
+AFAreaIllumination	On	Activado
+AFAreaMode	Face Detect AF	Detección Caras AF
+AFAreaMode	Multi-point AF or AI AF	Multipunto AF o AI AF
+AFAreaMode	Off (Manual Focus)	Desactivado (Enfoque Manual)
+AFAreaMode	Single-point AF	Punto único AF)
+AFAreaMode	Zone AF	Zona AF
+AFAssist	Off	Desactivado
+AFAssist	On	Activado
+AFPoint	Center	Centro
+AFPoint	Face Detect	Detección Caras
+AFPoint	Left	Izquierda
+AFPoint	None	Ninguno
+AFPoint	None (MF)	Ninguno (MF)
+AFPoint	Right	Derecha
+AFPointActivationArea	Standard	Estándar
+AFPointAreaExpansion	Disable	Desactivado
+AFPointBrightness	Brighter	Brillante
+AFPointBrightness	High	Alto
+AFPointBrightness	Low	Bajo
+AFPointDisplayDuringFocus	Off	Desactivado
+AFPointDisplayDuringFocus	On	Activado
+AFPointIllumination	Brighter	Brillante
+AFPointIllumination	Off	Desactivado
+AFPointIllumination	On	Activado
+AFPointSelected	None	Ninguno
+AFPointsInFocus	All	Todo
+AFPointsInFocus	None	Ninguno
+AFPointsInFocus5D	Bottom	Abajo
+AFPointsInFocus5D	Center	Centro
+AFPointsInFocus5D	Left	Izquierda
+AFPointsInFocus5D	Lower-left	Inferior izquierda
+AFPointsInFocus5D	Lower-right	Inferior derecha
+AFPointsInFocus5D	Right	Derecha
+AFPointsInFocus5D	Top	Arriba
+AFPointsInFocus5D	Upper-left	Superior izquierda
+AFPointsInFocus5D	Upper-right	Superior derecha
+AFPointsUnknown1	All	Todo
+AIServoTrackingSensitivity	Fast	Rápido
+AIServoTrackingSensitivity	Standard	Estándar
+ActionAdvised	Object Append	Añadir Objeto
+ActionAdvised	Object Kill	Destruir Objecto
+ActionAdvised	Object Reference	Referencia Objecto
+ActionAdvised	Object Replace	Reemplazar Objecto
+ActionAdvised	Ojbect Append	Añadir Objeto
+ActiveD-Lighting	High	Alto
+ActiveD-Lighting	Low	Bajo
+ActiveD-Lighting	Off	Desactivado
+ActiveD-Lighting	On	Activado
+ActiveD-LightingMode	High	Alto
+ActiveD-LightingMode	Off	Desactivado
+AddAspectRatioInfo	Off	Desactivado
+AddOriginalDecisionData	Off	Desactivado
+AddOriginalDecisionData	On	Activado
+AdvancedRaw	Off	Desactivado
+AdvancedRaw	On	Activado
+AdvancedSceneMode	Monochrome	Monocromo
+AdvancedSceneMode	Soft	Suave
+AlphaDataDiscard	Flexbits Discarded	FlexBits Descartado
+AlphaDataDiscard	Full Resolution	Resolución Total
+AlphaDataDiscard	HighPass Frequency Data Discarded	Datos Frecuencia High-Pass Descartados
+AlphaDataDiscard	Highpass and LowPass Frequency Data Discarded	Dato Frecuencia High-Pass y Low-Pass Descartados
+AmbienceSelection	Brighter	Brillante
+AmbienceSelection	Cool	Frío
+AmbienceSelection	Darker	Oscuro
+AmbienceSelection	Intense	Intenso
+AmbienceSelection	Monochrome	Monocromo
+AmbienceSelection	Soft	Suave
+AmbienceSelection	Standard	Estándar
+AmbienceSelection	Vivid	Vívido
+AmbienceSelection	Warm	Cálido
+Anti-Blur	Off	Desactivado
+ArtMode	Monochrome	Monocromo
+ArtMode	Panorama	Panoramica
+Audio	Yes	Si
+AudioChannelType	Other	Otro
+AudioCodecID	Unknown -	Desconocido -
+AudioSampleType	Other	Otro
+AudioType	Mono Actuality	Actualidad (audio mono (1 canal))
+AudioType	Mono Music	Música transmitida por si misma (audio mono (1 canal))
+AudioType	Mono Question and Answer Session	Sesión pregunta y respuesta (audio mono (1 canal))
+AudioType	Mono Raw Sound	Sonido bruto (audio mono (1 canal))
+AudioType	Mono Response to a Question	Respuesta a una pregunta (audio mono (1 canal))
+AudioType	Mono Scener	Escena (audio mono (1 canal))
+AudioType	Mono Voicer	Voz (audio mono (1 canal))
+AudioType	Mono Wrap	Envolvente (audio mono (1 canal))
+AudioType	Stereo Actuality	Actualidad (audio estéreo (2 canales))
+AudioType	Stereo Music	Música transmitida por si misma (audio estéreo (2 canales))
+AudioType	Stereo Question and Answer Session	Sesión pregunta y respuesta (audio estéreo (2 canales))
+AudioType	Stereo Raw Sound	Sonido bruto (audio estéreo (2 canales))
+AudioType	Stereo Response to a Question	Respuesta a una pregunta (audio estéreo (2 canales))
+AudioType	Stereo Scener	Escena (audio estéreo (2 canales))
+AudioType	Stereo Voicer	Voz (audio estéreo (2 canales))
+AudioType	Stereo Wrap	Envolvente (audio estéreo (2 canales))
+AudioType	Text Only	Solo texto (sin dato de objeto)
+AutoAperture	Off	Desactivado
+AutoAperture	On	Activado
+AutoExposureBracketing	Off	Desactivado
+AutoExposureBracketing	On	Activado
+AutoFP	Off	Desactivado
+AutoFP	On	Activado
+AutoLightingOptimizer	Low	Bajo
+AutoLightingOptimizer	Off	Desactivado
+AutoLightingOptimizer	Standard	Estándar
+AutoLightingOptimizer	Strong	Fuerte
+AutoLightingOptimizerOn	Yes	Si
+AutoRedEye	Off	Desactivado
+AutoRedEye	On	Activado
+AutoRotate	None	Ninguno
+AutoRotate	Rotate 180	Girado 180°
+AutoRotate	Rotate 270 CW	Girado 270° sentido reloj
+AutoRotate	Rotate 90 CW	Girado 90° sentido reloj
+BackgroundTiling	Yes	Si
+BannerImageType	None	Ninguno
+BatteryState	Low	Bajo
+Beep	High	Alto
+Beep	Low	Bajo
+Beep	Off	Desactivado
+Beep	On	Activado
+BeepPitch	High	Alto
+BeepPitch	Low	Bajo
+BestShotMode	Beach	Playa
+BestShotMode	Fireworks	Fuegos Artificiales
+BestShotMode	Food	Comida
+BestShotMode	Monochrome	Monocromo
+BestShotMode	Portrait	Retrato
+BestShotMode	Snow	Nieve
+BestShotMode	Underwater	Subacuatica
+BleachBypassToning	Green	Verde
+BleachBypassToning	Orange	Naranja
+BleachBypassToning	Red	Rojo
+BleachBypassToning	Yellow	Amarillo
+BlurControl	High	Alto
+BlurControl	Low	Bajo
+BlurWarning	None	Ninguno
+BracketMode	Off	Desactivado
+CFALayout	Even columns offset down 1/2 row	Distribución escalonada A: columnas pares son movidas hacia abajo 1/2 fila
+CFALayout	Even columns offset up 1/2 row	Distribución escalonada B: columnas pares son movidas hacia arriba 1/2 fila
+CFALayout	Even rows offset left 1/2 column	Distribución escalonada D: filas pares son movidas a la izquierda 1/2 columna
+CFALayout	Even rows offset right 1/2 column	Distribución escalonada C: filas pares son movidas a la derecha 1/2 columna
+CFALayout	Rectangular	Distribución Rectangular (o cuadrada)
+CPUType	None	Ninguno
+CalibrationIlluminant1	Cloudy	Tiempo Nublado
+CalibrationIlluminant1	Cool White Fluorescent	Fluorescente blanco cálido (W 3800 - 4500K)
+CalibrationIlluminant1	Day White Fluorescent	Fluorescente blanco día (N 4600 - 5500K)
+CalibrationIlluminant1	Daylight	Luz del día
+CalibrationIlluminant1	Daylight Fluorescent	Fluorescente luz de día (D 5700 - 7100K)
+CalibrationIlluminant1	Fine Weather	Buen tiempo
+CalibrationIlluminant1	Fluorescent	Fluorescente
+CalibrationIlluminant1	ISO Studio Tungsten	Tungsteno estudio ISO
+CalibrationIlluminant1	Other	Otras Fuentes Luz
+CalibrationIlluminant1	Shade	Sombrío
+CalibrationIlluminant1	Standard Light A	Luz Estándar A
+CalibrationIlluminant1	Standard Light B	Luz Estándar B
+CalibrationIlluminant1	Standard Light C	Luz Estándar C
+CalibrationIlluminant1	Tungsten (Incandescent)	Tungsteno (luz incandescente)
+CalibrationIlluminant1	Unknown	Desconocido
+CalibrationIlluminant1	Warm White Fluorescent	Fluorescente blanco cálido (L 2600 - 3250K)
+CalibrationIlluminant1	White Fluorescent	Fluorescente blanco (WW 3250 - 3800K)
+CalibrationIlluminant2	Cloudy	Tiempo Nublado
+CalibrationIlluminant2	Cool White Fluorescent	Fluorescente blanco cálido (W 3800 - 4500K)
+CalibrationIlluminant2	Day White Fluorescent	Fluorescente blanco día (N 4600 - 5500K)
+CalibrationIlluminant2	Daylight	Luz del día
+CalibrationIlluminant2	Daylight Fluorescent	Fluorescente luz de día (D 5700 - 7100K)
+CalibrationIlluminant2	Fine Weather	Buen tiempo
+CalibrationIlluminant2	Fluorescent	Fluorescente
+CalibrationIlluminant2	ISO Studio Tungsten	Tungsteno estudio ISO
+CalibrationIlluminant2	Other	Otras Fuentes Luz
+CalibrationIlluminant2	Shade	Sombrío
+CalibrationIlluminant2	Standard Light A	Luz Estándar A
+CalibrationIlluminant2	Standard Light B	Luz Estándar B
+CalibrationIlluminant2	Standard Light C	Luz Estándar C
+CalibrationIlluminant2	Tungsten (Incandescent)	Tungsteno (luz incandescente)
+CalibrationIlluminant2	Unknown	Desconocido
+CalibrationIlluminant2	Warm White Fluorescent	Fluorescente blanco cálido (L 2600 - 3250K)
+CalibrationIlluminant2	White Fluorescent	Fluorescente blanco (WW 3250 - 3800K)
+CameraOrientation	Rotate 270 CW	Girado 270° sentido reloj
+CameraOrientation	Rotate 90 CW	Girado 90° sentido reloj
+CanonFlashMode	Auto	Automático
+CanonFlashMode	External flash	Flash Externo
+CanonFlashMode	Off	Desactivado
+CanonFlashMode	On	Activado
+CanonFlashMode	Red-eye reduction	Réducción ojos rojos
+CanonFlashMode	Red-eye reduction (Auto)	Réducción ojos rojos (Automático)
+CanonFlashMode	Red-eye reduction (On)	Réducción ojos rojos (Activado)
+CanonImageSize	1280x720 Movie	Película 1280x720
+CanonImageSize	1920x1080 Movie	Película 1920x1080
+CanonImageSize	640x480 Movie	Película 640x480
+CanonImageSize	Large	Ancho
+CanonImageSize	Medium	Medio
+CanonImageSize	Medium 1	Medio 1
+CanonImageSize	Medium 2	Medio 2
+CanonImageSize	Medium 3	Medio 3
+CanonImageSize	Small	Pequeño
+CanonImageSize	Small 1	Pequeño 1
+CanonImageSize	Small 2	Pequeño 2
+CanonImageSize	Small 3	Pequeño 3
+CanonImageSize	Small Movie	Película Pequeña
+ChrominanceNR_TIFF_JPEG	High	Alto
+ChrominanceNR_TIFF_JPEG	Low	Bajo
+ChrominanceNR_TIFF_JPEG	Off	Desactivado
+ChrominanceNoiseReduction	High	Alto
+ChrominanceNoiseReduction	Low	Bajo
+ChrominanceNoiseReduction	Off	Desactivado
+ColorAberrationControl	Off	Desactivado
+ColorAberrationControl	On	Activado
+ColorAdjustmentMode	Off	Apagado
+ColorAdjustmentMode	On	Encendido
+ColorBalanceAdj	Off	Desactivado
+ColorBalanceAdj	On	Activado
+ColorBooster	Off	Desactivado
+ColorBooster	On	Activado
+ColorEffect	Cool	Frío
+ColorEffect	Warm	Cálido
+ColorFilter	Green	Verde
+ColorFilter	Red	Rojo
+ColorFilter	Yellow	Amarillo
+ColorMode	Autumn Leaves	Hojas de otoño
+ColorMode	B&W	ByN
+ColorMode	Clear	Claro
+ColorMode	Deep	Profundo
+ColorMode	Evening	Tarde
+ColorMode	Landscape	Paisaje
+ColorMode	Light	Luz
+ColorMode	Neutral	Neutro
+ColorMode	Night View	Vista nocturna
+ColorMode	Night View/Portrait	Retrato noct.
+ColorMode	Portrait	Retrato
+ColorMode	Standard	Estándar
+ColorMode	Sunset	Puesta sol
+ColorMode	Vivid	Vívido
+ColorMoireReduction	Off	Desactivado
+ColorMoireReduction	On	Activado
+ColorMoireReductionMode	High	Alto
+ColorMoireReductionMode	Low	Bajo
+ColorMoireReductionMode	Off	Desactivado
+ColorRepresentation	3 Components, Frame Sequential in Multiple Objects	Tres componentes, Marco secuencial en múltiples objectos
+ColorRepresentation	3 Components, Frame Sequential in One Object	Tres componentes, Marco secuencial en un único objeto
+ColorRepresentation	3 Components, Line Sequential	Tres componentes, Línea secuencial
+ColorRepresentation	3 Components, Pixel Sequential	Tres componentes, Pixel secuencial
+ColorRepresentation	3 Components, Single Frame	Tres componentes, Marco simple
+ColorRepresentation	3 Components, Special Interleaving	Tres componentes, Entrelazado especial
+ColorRepresentation	4 Components, Frame Sequential in Multiple Objects	Cuatro componentes, Marco secuencial en múltiples objectos
+ColorRepresentation	4 Components, Frame Sequential in One Object	Cuatro componentes, Marco secuencial en un único objeto
+ColorRepresentation	4 Components, Line Sequential	Cuatro componentes, Línea secuencial
+ColorRepresentation	4 Components, Pixel Sequential	Cuatro componentes, Pixel secuencial
+ColorRepresentation	4 Components, Single Frame	Cuatro componentes, Marco simple
+ColorRepresentation	4 Components, Special Interleaving	Cuatro componentes, Entrelazado especial
+ColorRepresentation	Monochrome, Single Frame	Monocromo, Marco simple
+ColorRepresentation	No Image, Single Frame	Sin imagen, Marco simple
+ColorSpace	ICC Profile	Perfil ICC
+ColorSpace	Monochrome	Monocromo
+ColorSpace	Uncalibrated	Sin calibrar
+ColorSpace	Wide Gamut RGB	Gamut RVB Grande
+ColorTone	Normal	Estándar
+CommandDialsChangeMainSub	Off	Desactivado
+CommandDialsChangeMainSub	On	Activado
+CommandDialsMenuAndPlayback	Off	Desactivado
+CommandDialsMenuAndPlayback	On	Activado
+CommandDialsReverseRotation	Yes	Si
+CommanderGroupAMode	Off	Desactivado
+CommanderGroupBMode	Off	Desactivado
+CommanderInternalFlash	Off	Desactivado
+Compilation	Yes	Si
+Compression	JPEG	Compresión JPEG
+Compression	JPEG (old-style)	JPEG (estilo antiguo)
+Compression	Kodak DCR Compressed	Compresión Kodak DCR
+Compression	Kodak KDC Compressed	Compresión Kodak KDC
+Compression	Next	Codificación NeXT 2-bit
+Compression	Nikon NEF Compressed	Compresión Nikon NEF
+Compression	None	Ninguno
+Compression	Pentax PEF Compressed	Compresión Pentax PEF
+Compression	SGILog	Codificación Log Luminancia SGI 32-bit
+Compression	SGILog24	Codificación Log Luminancia SGI 24-bit
+Compression	Sony ARW Compressed	Compresión Sony ARW
+Compression	Thunderscan	Codificación ThunderScan 4-bit
+Compression	Uncompressed	Sin comprimir
+CompressionType	None	Ninguno
+ContinuousBracketing	High	Alto
+ContinuousBracketing	Low	Bajo
+ContinuousDrive	Continuous	Continuo
+ContinuousDrive	Continuous, High	Continuo, Alto
+ContinuousDrive	Continuous, Low	Continuo, Bajo
+ContinuousDrive	Continuous, Speed Priority	Continuo, Prioridad Velocidad
+ContinuousDrive	Movie	Película
+ContinuousDrive	Single	Simple
+Contrast	High	Alto
+Contrast	Low	Bajo
+Contrast	Normal	Estándar
+ContrastMode	High	Alto
+ContrastMode	Low	Bajo
+CreativeStyle	Autumn Leaves	Hojas de otoño
+CreativeStyle	B&W	ByN
+CreativeStyle	Clear	Claro
+CreativeStyle	Deep	Profundo
+CreativeStyle	Landscape	Paisaje
+CreativeStyle	Light	Luz
+CreativeStyle	Neutral	Neutro
+CreativeStyle	Night View/Portrait	Retrato noct.
+CreativeStyle	Portrait	Retrato
+CreativeStyle	Standard	Estándar
+CreativeStyle	Sunset	Puesta sol
+CreativeStyle	Vivid	Vívido
+CreativeStyleSetting	Landscape	Paisaje
+CreativeStyleSetting	Portrait	Retrato
+CreativeStyleSetting	Standard	Estándar
+CreativeStyleSetting	Vivid	Vívido
+CropActive	Yes	Si
+Curves	Off	Desactivado
+Curves	On	Activado
+CustomRendered	Custom	Proceso personalizado
+CustomRendered	Normal	Proceso normal
+D-LightingHQ	Off	Desactivado
+D-LightingHQ	On	Activado
+D-LightingHQSelected	Yes	Si
+D-LightingHS	Off	Desactivado
+D-LightingHS	On	Activado
+DataImprint	None	Ninguno
+DateStampMode	Off	Desactivado
+DaylightSavings	Yes	Si
+DefaultBlackRender	None	Ninguno
+DerivedFromMaskMarkers	All	Todo
+DerivedFromMaskMarkers	None	Ninguno
+DestinationDST	Yes	Si
+DigitalFilter01	Monochrome	Monocromo
+DigitalFilter02	Monochrome	Monocromo
+DigitalFilter03	Monochrome	Monocromo
+DigitalFilter04	Monochrome	Monocromo
+DigitalFilter05	Monochrome	Monocromo
+DigitalFilter06	Monochrome	Monocromo
+DigitalFilter07	Monochrome	Monocromo
+DigitalFilter08	Monochrome	Monocromo
+DigitalFilter09	Monochrome	Monocromo
+DigitalFilter10	Monochrome	Monocromo
+DigitalFilter11	Monochrome	Monocromo
+DigitalFilter12	Monochrome	Monocromo
+DigitalFilter13	Monochrome	Monocromo
+DigitalFilter14	Monochrome	Monocromo
+DigitalFilter15	Monochrome	Monocromo
+DigitalFilter16	Monochrome	Monocromo
+DigitalFilter17	Monochrome	Monocromo
+DigitalFilter18	Monochrome	Monocromo
+DigitalFilter19	Monochrome	Monocromo
+DigitalFilter20	Monochrome	Monocromo
+DigitalZoom	None	Ninguno
+DigitalZoom	Off	Desactivado
+DigitalZoomOn	Off	Apagado
+DigitalZoomOn	On	Encendido
+DistortionControl	Off	Desactivado
+DistortionCorrection	Off	Desactivado
+DistortionCorrection	On	Activado
+DistortionCorrection2	Off	Desactivado
+DistortionCorrection2	On	Activado
+DocSecurity	None	Ninguno
+DriveMode	Off	Desactivado
+DynamicRange	Standard	Estándar
+DynamicRangeOptimizer	Advanced Auto	Avanzado Autom
+DynamicRangeOptimizer	Advanced Lv1	Avanzado Nvl.1
+DynamicRangeOptimizer	Advanced Lv2	Avanzado Nvl.2
+DynamicRangeOptimizer	Advanced Lv3	Avanzado Nvl.3
+DynamicRangeOptimizer	Advanced Lv4	Avanzado Nvl.4
+DynamicRangeOptimizer	Advanced Lv5	Avanzado Nvl.5
+DynamicRangeOptimizer	Off	Desactivado
+DynamicRangeOptimizer	Standard	Estándar
+DynamicRangeOptimizerBracket	Low	Bajo
+DynamicRangeOptimizerMode	Standard	Estándar
+DynamicRangeOptimizerSetting	Standard	Estándar
+EasyExposureCompensation	Off	Desactivado
+EasyExposureCompensation	On	Activado
+EasyMode	Beach	Playa
+EasyMode	Black & White	Blanco y Negro
+EasyMode	Digital Macro	Macro digital
+EasyMode	Easy	Fácil
+EasyMode	Fireworks	Fuegos Artificiales
+EasyMode	Fisheye Effect	Efecto Ojo de Pez
+EasyMode	Flash Off	Flash Desactivado
+EasyMode	Foliage	Follaje
+EasyMode	Gray Scale	Escala de Grises
+EasyMode	Indoor	Interior
+EasyMode	Kids & Pets	Niños y Mascotas
+EasyMode	Landscape	Paisaje
+EasyMode	Monochrome	Monocromo
+EasyMode	Neutral	Neutro
+EasyMode	Night	Nocturno
+EasyMode	Night Scene	Escena Nocturna
+EasyMode	Night Snapshot	Fotografía Nocturna
+EasyMode	Nostalgic	Nostalgico
+EasyMode	Portrait	Retrato
+EasyMode	Smile	Sonrisa
+EasyMode	Snow	Nieve
+EasyMode	Sports	Deportes
+EasyMode	Sunset	Puesta de sol
+EasyMode	Surface	Superficie
+EasyMode	Underwater	Subacuatica
+EasyMode	Vivid	Vívido
+EdgeNoiseReduction	Off	Desactivado
+EdgeNoiseReduction	On	Activado
+EditorialUpdate	Additional language	Idioma Adicional
+Emphasis	None	Ninguno
+EnhanceDarkTones	Off	Desactivado
+EnhanceDarkTones	On	Activado
+Enhancement	Green	Verde
+Enhancement	Red	Rojo
+Enhancement	Underwater	Subacuatica
+EnvelopePriority	0 (reserved)	0 (reservada para uso futuro)
+EnvelopePriority	1 (most urgent)	1 (más urgente)
+EnvelopePriority	5 (normal urgency)	5 (urgencia normal)
+EnvelopePriority	8 (least urgent)	8 (menos urgente)
+EnvelopePriority	9 (user-defined priority)	9 (prioridad definida por el usuario)
+ExcursionTolerance	Allowed	Puede ocurrir
+ExcursionTolerance	Not Allowed	No Permitido (defecto)
+ExposureDelayMode	Off	Desactivado
+ExposureDelayMode	On	Activado
+ExposureMode	Aperture-priority AE	Prioridad Aberture AE
+ExposureMode	Auto	Exposición automática
+ExposureMode	Auto bracket	Auto-horquillado
+ExposureMode	Beach	Playa
+ExposureMode	Fireworks	Fuegos Artificiales
+ExposureMode	Food	Comida
+ExposureMode	Landscape	Paisaje
+ExposureMode	Manual	Exposición manual
+ExposureMode	Panorama	Panoramica
+ExposureMode	Portrait	Retrato
+ExposureMode	Program AE	Programa AE
+ExposureMode	Shutter speed priority AE	Prioridad velocidad obturador AE
+ExposureMode	Snow	Nieve
+ExposureMode	Underwater	Subacuatica
+ExposureProgram	Action (High speed)	Programa acción (orientado a velocidad de obturación rápida)
+ExposureProgram	Aperture-priority AE	Prioridad Apertura
+ExposureProgram	Creative (Slow speed)	Programa creativo (orientado a profundidad de campo)
+ExposureProgram	Landscape	Modo paisaje (para fotos de paisaje con el fondo en enfoque)
+ExposureProgram	Manual	Exposición manual
+ExposureProgram	Not Defined	No definido
+ExposureProgram	Portrait	Modo retrato (para fotos de cerca con el fondo fuera de enfoque)
+ExposureProgram	Program AE	Programa normal
+ExposureProgram	Shutter speed priority AE	Prioridad obturador
+Extender	None	Ninguno
+ExternalFlash	Off	Desactivado
+ExternalFlash	On	Activado
+ExternalFlashBounce	Yes	Si
+ExternalFlashMode	Off	Desactivado
+FaceOrientation	Horizontal (normal)	0° (arriba/izquierda)
+FaceOrientation	Rotate 180	Girado 180°
+FaceOrientation	Rotate 270 CW	Girado 270° sentido reloj
+FaceOrientation	Rotate 90 CW	Girado 90° sentido reloj
+FastSeek	Yes	Si
+FaxProfile	Unknown	Desconocido
+FileNumberMemory	Off	Desactivado
+FileNumberMemory	On	Activado
+FileNumberSequence	Off	Desactivado
+FileNumberSequence	On	Activado
+FileSource	Digital Camera	Cámara Digital
+FileSource	Film Scanner	Escaner Película
+FileSource	Reflection Print Scanner	Escaner de Reflexión
+FilterEffect	Green	Verde
+FilterEffect	None	Ninguno
+FilterEffect	Off	Desactivado
+FilterEffect	Orange	Naranja
+FilterEffect	Red	Rojo
+FilterEffect	Yellow	Amarillo
+FilterEffectMonochrome	Green	Verde
+FilterEffectMonochrome	None	Ninguno
+FilterEffectMonochrome	Orange	Naranja
+FilterEffectMonochrome	Red	Rojo
+FilterEffectMonochrome	Yellow	Amarillo
+FilterEffectUnknown	Green	Verde
+FilterEffectUnknown	None	Ninguno
+FilterEffectUnknown	Orange	Naranja
+FilterEffectUnknown	Red	Rojo
+FilterEffectUnknown	Yellow	Amarillo
+FilterEffectUserDef1	Green	Verde
+FilterEffectUserDef1	None	Ninguno
+FilterEffectUserDef1	Orange	Naranja
+FilterEffectUserDef1	Red	Rojo
+FilterEffectUserDef1	Yellow	Amarillo
+FilterEffectUserDef2	Green	Verde
+FilterEffectUserDef2	None	Ninguno
+FilterEffectUserDef2	Orange	Naranja
+FilterEffectUserDef2	Red	Rojo
+FilterEffectUserDef2	Yellow	Amarillo
+FilterEffectUserDef3	Green	Verde
+FilterEffectUserDef3	None	Ninguno
+FilterEffectUserDef3	Orange	Naranja
+FilterEffectUserDef3	Red	Rojo
+FilterEffectUserDef3	Yellow	Amarillo
+FinderDisplayDuringExposure	Off	Desactivado
+FinderDisplayDuringExposure	On	Activado
+Flags	Comment	Comentario
+Flags	FileName	Nombre de Archivo
+Flags	Text	Texto
+Flash	Auto, Did not fire	Flash no disparado, modo automático
+Flash	Auto, Did not fire, Red-eye reduction	Auto, Flash no disparado, modo reducción ojos rojos
+Flash	Auto, Fired	Flash disparado, modo automático
+Flash	Auto, Fired, Red-eye reduction	Flash disparado, modo automático, modo reducción ojos rojos
+Flash	Auto, Fired, Red-eye reduction, Return detected	Flash disparado, modo automático, retorno luz detectado, modo reducción ojos rojos
+Flash	Auto, Fired, Red-eye reduction, Return not detected	Flash disparado, modo automático, retorno luz no detectado, modo reducción ojos rojos
+Flash	Auto, Fired, Return detected	Flash disparado, modo automático, retorno luz detectado
+Flash	Auto, Fired, Return not detected	Flash disparado, modo automático, retorno luz no detectado
+Flash	Did not fire	No se ha disparado el flash
+Flash	Fired	Flash disparado
+Flash	Fired, Red-eye reduction	Flash disparado, modo reducción ojos rojos
+Flash	Fired, Red-eye reduction, Return detected	Flash disparado, modo reducción ojos rojos, retorno luz detectado
+Flash	Fired, Red-eye reduction, Return not detected	Flash disparado, modo reducción ojos rojos, retorno luz no detectado
+Flash	Fired, Return detected	Luz devuelta en captador detectada
+Flash	Fired, Return not detected	Luz devuelta en captador no detectada
+Flash	No Flash	Flash no disparado
+Flash	No flash function	Sin función flash
+Flash	Off	Desactivado
+Flash	Off, Did not fire	Flash no disparado, modo flash forzado
+Flash	Off, Did not fire, Return not detected	Apagado, flash no disparado, retorno luz no detectado
+Flash	Off, No flash function	Apagado, sin función flash
+Flash	Off, Red-eye reduction	Apagado, modo reducción ojos rojos
+Flash	On	Activado
+Flash	On, Did not fire	Encendido, flash no disparado
+Flash	On, Fired	Flash disparado, modo flash forzardo
+Flash	On, Red-eye reduction	Flash disparado, modo flash forzado, modo reducción ojos rojos
+Flash	On, Red-eye reduction, Return detected	Flash disparado, modo flash forzado, modo reducción ojos rojos, retorno luz detectado
+Flash	On, Red-eye reduction, Return not detected	Flash disparado, modo flash forzado, modo reducción ojos rojos, retorno luz no detectado
+Flash	On, Return detected	Flash disparado, modo flash forzado, retorno luz detectado
+Flash	On, Return not detected	Flash disparado, modo flash forzado, retorno luz no detectado
+FlashColorFilter	None	Ninguno
+FlashColorFilter	Red	Rojo
+FlashColorFilter	Yellow	Amarillo
+FlashCommanderMode	Off	Desactivado
+FlashCommanderMode	On	Activado
+FlashControlMode	Off	Desactivado
+FlashControlMode	Repeating Flash	Flash Estroboscopico
+FlashDevice	None	Ninguno
+FlashExposureLock	Off	Desactivado
+FlashExposureLock	On	Activado
+FlashFired	Yes	Si
+FlashGroupAControlMode	Off	Desactivado
+FlashGroupBControlMode	Off	Desactivado
+FlashGroupCControlMode	Off	Desactivado
+FlashIntensity	High	Alto
+FlashIntensity	Low	Bajo
+FlashLevel	Low	Bajo
+FlashMeteringMode	External Auto	Externo Automatico
+FlashMeteringMode	External Manual	Externo Manual
+FlashMeteringMode	Off	Desactivado
+FlashMode	Auto	Automático
+FlashMode	Disabled	Desactivado
+FlashMode	Force	Forzado
+FlashMode	Off	Apagado
+FlashMode	On	Encendido
+FlashMode	Red eye	Ojos rojos
+FlashModel	None	Ninguno
+FlashSource	None	Ninguno
+FlashStatus	Off	Desactivado
+FlashType	None	Ninguno
+FlashWarning	Off	Desactivado
+FlashWarning	On	Activado
+FlickerReduce	Off	Apagado
+FlickerReduce	On	Encendido
+FlipHorizontal	Yes	Si
+FocalPlaneResolutionUnit	None	Ninguno
+FocalPlaneResolutionUnit	inches	Pulgada
+FocalPlaneResolutionUnit	um	µm (Micrometro)
+FocusContinuous	Continuous	Continuo
+FocusContinuous	Single	Sencillo
+FocusMode	Continuous	Continuo
+FocusMode	Manual Focus (3)	Enfoque Manual (6)
+FocusMode	Manual Focus (6)	Enfoque Manual (6)
+FocusMode	Single	Simple
+FocusRange	Close	Próximo
+FocusRange	Infinity	Infinito
+FocusRange	Not Known	Desconocido
+FocusRange	Very Close	Muy Próximo
+FocusTrackingLockOn	Off	Desactivado
+FuncButton	None	Ninguno
+FuncButtonPlusDials	None	Ninguno
+GPSAltitudeRef	Above Sea Level	Nivel del Mar
+GPSAltitudeRef	Below Sea Level	Referencia Nivel del Mar (valor negativo)
+GPSDestBearingRef	Magnetic North	Dirección magnética
+GPSDestBearingRef	True North	Dirección real
+GPSDestDistanceRef	Kilometers	Kilómetros
+GPSDestDistanceRef	Miles	Millas
+GPSDestDistanceRef	Nautical Miles	Nudos
+GPSDestLatitudeRef	North	Latitud norte
+GPSDestLatitudeRef	South	Latitud sur
+GPSDestLongitudeRef	East	Longitud este
+GPSDestLongitudeRef	West	Longitud oeste
+GPSDifferential	Differential Corrected	Corrección diferencial aplicada
+GPSDifferential	No Correction	Medición sin corrección diferencial
+GPSImgDirectionRef	Magnetic North	Dirección magnética
+GPSImgDirectionRef	True North	Dirección real
+GPSLatitudeRef	North	Latitud norte
+GPSLatitudeRef	South	Latitud sur
+GPSLongitudeRef	East	Longitud Este
+GPSLongitudeRef	West	Longitud Oeste
+GPSMeasureMode	2-Dimensional Measurement	Medición bidimensional
+GPSMeasureMode	3-Dimensional Measurement	Medición tridimensional
+GPSSpeedRef	km/h	Kilómetros por hora
+GPSSpeedRef	knots	Nudos
+GPSSpeedRef	mph	Millas por hora
+GPSStatus	Measurement Active	Medición Activa
+GPSStatus	Measurement Void	Medición Vacía
+GPSTrackRef	Magnetic North	Dirección magnética
+GPSTrackRef	True North	Dirección real
+GainControl	High gain down	Atenuación alta
+GainControl	High gain up	Ganancia alta
+GainControl	Low gain down	Atenuación baja
+GainControl	Low gain up	Ganancia debil
+GainControl	None	Ninguno
+Gapless	Yes	Si
+Genre	None	Ninguno
+Genre	Other	Otro
+GrayResponseUnit	0.0001	Número representa la milésima de una unidad
+GrayResponseUnit	0.001	Número representa la centésima de una unidad
+GrayResponseUnit	0.1	Número representa la décima de una unidad
+GrayResponseUnit	1e-05	Número representa la diezmilésima de una unidad
+GrayResponseUnit	1e-06	Número representa la cienmilésima de una unidad
+GridDisplay	Off	Desactivado
+GridDisplay	On	Activado
+HDR	Off	Desactivado
+HDRSmoothing	Low	Bajo
+HDRSmoothing	Off	Desactivado
+HighISONoiseReduction	High	Alto
+HighISONoiseReduction	Low	Bajo
+HighISONoiseReduction	Off	Desactivado
+HighISONoiseReduction	On	Activado
+HighISONoiseReduction	Standard	Estándar
+HighISONoiseReduction	Strong	Fuerte
+HighISONoiseReduction2	Low	Bajo
+HighlightColorDistortReduct	Standard	Estándar
+HighlightTonePriority	Off	Desactivado
+HighlightTonePriority	On	Activado
+HometownDST	Yes	Si
+Hue	None	Ninguno
+IDCCreativeStyle	Landscape	Retrato
+IDCCreativeStyle	Neutral	Neutro
+IDCCreativeStyle	Standard	Estándar
+IDCCreativeStyle	Vivid	Vívido
+IPTCImageRotation	0	Sin rotación
+IPTCImageRotation	180	Rotación 180 grados
+IPTCImageRotation	270	Rotación 270 grados
+IPTCImageRotation	90	Rotación 90 grados
+ISOAutoMinSpeed	Auto Fast	Auto-rápido
+ISOAutoMinSpeed	Auto Standard	Auto-estándar
+ISOExpansion	Off	Desactivado
+ISOExpansion2	Off	Desactivado
+ISOSpeedExpansion	Yes	Si
+Illumination	Off	Desactivado
+Illumination	On	Activado
+ImageAuthentication	Off	Desactivado
+ImageColor	Monochrome	Monocromo
+ImageDataDiscard	Flexbits Discarded	FlexBits Descartados
+ImageDataDiscard	Full Resolution	Resolución Total
+ImageDataDiscard	HighPass Frequency Data Discarded	Datos Frecuencia High-Pass Descartados
+ImageDataDiscard	Highpass and LowPass Frequency Data Discarded	Dato Frecuencia High-Pass y Low-Pass Descartados
+ImageDustOff	Off	Desactivado
+ImageDustOff	On	Activado
+ImageEditing	None	Ninguno
+ImageFileFormatAsDelivered	Other	Otro
+ImageOrientation	Landscape	Paisaje
+ImageOrientation	Portrait	Retrato
+ImageOrientation	Square	Cuadro
+ImageQuality	High	Alto
+ImageQuality	Standard	Estándar
+ImageReview	Off	Desactivado
+ImageReview	On	Activado
+ImageRotated	Yes	Si
+ImageRotation	None	Ninguno
+ImageStabilization	Off	Desactivado
+ImageStabilization	On	Activado
+ImageStyle	Landscape	Paisaje
+ImageStyle	Neutral	Neutro
+ImageStyle	Portrait	Retrato
+ImageStyle	Standard	Estándar
+ImageStyle	Vivid	Vívido
+ImageTone	Landscape	Paisaje
+ImageTone	Monochrome	Monocromo
+ImageTone	Portrait	Retrato
+ImageType	Other	Otro
+IngredientsMaskMarkers	All	Todo
+IngredientsMaskMarkers	None	Ninguno
+IntelligentContrast	Off	Desactivado
+IntelligentContrast	On	Activado
+IntelligentContrast	n/a	No Aplica
+IntelligentD-Range	High	Alto
+IntelligentD-Range	Low	Bajo
+IntelligentD-Range	Standard	Estándar
+IntelligentExposure	High	Alto
+IntelligentExposure	Low	Bajo
+IntelligentExposure	Standard	Estándar
+IntelligentResolution	High	Alto
+IntelligentResolution	Low	Bajo
+IntelligentResolution	Standard	Estándar
+IntensityStereo	Off	Desactivado
+IntensityStereo	On	Activado
+InterchangeColorSpace	CMY (K) Device Dependent	Dispositivo dependiente CMY(K)
+InterchangeColorSpace	RGB Device Dependent	Dispositivo dependiente RGB
+InternalFlashMode	Fired	Activado
+InteropIndex	R03 - DCF option file (Adobe RGB)	R03: Archivo opción DCF (Adobe RGB)
+InteropIndex	R98 - DCF basic file (sRGB)	R98: Archivo básico DCF (sRGB)
+InteropIndex	THM - DCF thumbnail file	THM: Archivo miniatura DCF
+JPEGQuality	Extra Fine	Extrafina
+JPEGQuality	Fine	Fina
+JPEGQuality	Standard	Calidad estándar
+LCDIllumination	Off	Desactivado
+LCDIllumination	On	Activado
+LCDIlluminationDuringBulb	Off	Desactivado
+LCDIlluminationDuringBulb	On	Activado
+LCHEditor	Off	Desactivado
+LCHEditor	On	Activado
+LanguageCode	Neutral	Neutro
+LensType	None	Ninguno
+LightSource	Cloudy	Tiempo Nublado
+LightSource	Cool White Fluorescent	Fluorescente blanco cálido (W 3800 - 4500K)
+LightSource	Day White Fluorescent	Fluorescente blanco día (N 4600 - 5500K)
+LightSource	Daylight	Luz del día
+LightSource	Daylight Fluorescent	Fluorescente luz de día (D 5700 - 7100K)
+LightSource	Fine Weather	Buen tiempo
+LightSource	Fluorescent	Fluorescente
+LightSource	ISO Studio Tungsten	Tungsteno estudio ISO
+LightSource	Other	Otras Fuentes Luz
+LightSource	Shade	Sombrío
+LightSource	Standard Light A	Luz Estándar A
+LightSource	Standard Light B	Luz Estándar B
+LightSource	Standard Light C	Luz Estándar C
+LightSource	Tungsten (Incandescent)	Tungsteno (luz incandescente)
+LightSource	Unknown	Desconocido
+LightSource	Warm White Fluorescent	Fluorescente blanco cálido (L 2600 - 3250K)
+LightSource	White Fluorescent	Fluorescente blanco (WW 3250 - 3800K)
+LightSourceSpecial	Off	Apagado
+LightSourceSpecial	On	Encendido
+Lit	Yes	Si
+LiveViewShooting	Off	Desactivado
+LiveViewShooting	On	Activado
+LongExposureNoiseReduction	Off	Desactivado
+LongExposureNoiseReduction	On	Activado
+LuminanceNoiseReduction	High	Alto
+LuminanceNoiseReduction	Low	Bajo
+LuminanceNoiseReduction	Off	Desactivado
+MSStereo	Off	Desactivado
+MSStereo	On	Activado
+Macro	Off	Apagado
+Macro	On	Encendido
+Macro	View	Vista
+MainDialExposureComp	Off	Desactivado
+MainDialExposureComp	On	Activado
+MakerNoteSafety	Safe	Seguro
+MakerNoteSafety	Unsafe	No Seguro
+ManagedFromMaskMarkers	All	Todo
+ManagedFromMaskMarkers	None	Ninguno
+ManifestReferenceMaskMarkers	All	Todo
+ManifestReferenceMaskMarkers	None	Ninguno
+ManualFlashOutput	Full	Completo
+ManualFlashOutput	Low	Bajo
+ManualFlashOutput	Medium	Medio
+ManualFlashOutput	n/a	No Aplica
+MeasurementGeometry	0/45 or 45/0	0/45 o 45/0
+MeasurementGeometry	0/d or d/0	0/d o d/0
+MeteringMode	Average	Promedio
+MeteringMode	Center-weighted average	Media ponderada al centro
+MeteringMode	Multi-segment	Multi-segmento
+MeteringMode	Multi-spot	Multi-puntual
+MeteringMode	Other	Otro
+MeteringMode	Partial	Parcial
+MeteringMode	Spot	Puntual
+MeteringMode	Unknown	Desconocido
+MinoltaQuality	Standard	Estándar
+ModeDialPosition	Panorama	Panoramica
+ModelReleaseStatus	None	Ninguno
+ModelingFlash	Off	Desactivado
+ModelingFlash	On	Activado
+ModifiedPictureStyle	High Saturation	Saturación Alta
+ModifiedPictureStyle	Landscape	Paisaje
+ModifiedPictureStyle	Low Saturation	Saturación Baja
+ModifiedPictureStyle	Monochrome	Monocromo
+ModifiedPictureStyle	Neutral	Neutro
+ModifiedPictureStyle	None	Ninguno
+ModifiedPictureStyle	Portrait	Retrato
+ModifiedPictureStyle	Standard	Estándar
+ModifiedSharpnessFreq	High	Alto
+ModifiedSharpnessFreq	Low	Bajo
+ModifiedSharpnessFreq	Standard	Estándar
+ModifiedToneCurve	Standard	Estándar
+ModifiedWhiteBalance	Underwater	Subacuatica
+MoireFilter	Off	Desactivado
+MoireFilter	On	Activado
+MonochromeFilterEffect	Green	Verde
+MonochromeFilterEffect	None	Ninguno
+MonochromeFilterEffect	Orange	Naranja
+MonochromeFilterEffect	Red	Rojo
+MonochromeFilterEffect	Yellow	Amarillo
+MonochromeLinear	Yes	Si
+MonochromeToning	None	Ninguno
+MonochromeToningEffect	Green	Verde
+MonochromeToningEffect	None	Ninguno
+MultiExposureAutoGain	Off	Desactivado
+MultiExposureAutoGain	On	Activado
+MultiExposureMode	Off	Desactivado
+MultiFrameNoiseReduction	None	Ninguno
+MultiFrameNoiseReduction	Off	Desactivado
+MultiFrameNoiseReduction	On	Activado
+MultipleExposureSet	Off	Desactivado
+MultipleExposureSet	On	Activado
+Mute	Off	Desactivado
+Mute	On	Activado
+MyColorMode	Neutral	Neutro
+MyColorMode	Off	Desactivado
+MyColorMode	Vivid	Vívido
+NDFilter	Off	Desactivado
+NDFilter	On	Activado
+NoiseFilter	High	Alto
+NoiseFilter	Low	Bajo
+NoiseFilter	Off	Desactivado
+NoiseFilter	Standard	Estándar
+NoiseReduction	Low	Bajo
+NoiseReduction	Off	Desactivado
+NoiseReduction	Standard	Estándar
+ObjectCycle	Both Morning and Evening	Ambos
+ObjectCycle	Evening	Tarde
+ObjectCycle	Morning	Mañana
+ObjectFileType	None	Ninguno
+ObjectFileType	Unknown	Desconocido
+OperatingSystem	unknown	desconocido
+OpticalZoomMode	Standard	Estándar
+OpticalZoomOn	Off	Apagado
+OpticalZoomOn	On	Encendido
+Orientation	Horizontal (normal)	0° (arriba/izquierda)
+Orientation	Mirror horizontal	Invertir horizontal
+Orientation	Mirror horizontal and rotate 270 CW	Invertir horizontal y rotar 270° sentido reloj
+Orientation	Mirror horizontal and rotate 90 CW	Invertir horizontal y rotar 90° sentido reloj
+Orientation	Mirror vertical	Invertir vertical
+Orientation	Rotate 180	Girado 180°
+Orientation	Rotate 270 CW	Girado 270° sentido reloj
+Orientation	Rotate 90 CW	Girado 90° sentido reloj
+OriginPlatform	Other	Otro
+PackingMethod	Best Compression	Mejor Compresión
+PackingMethod	Fast	Rápido
+PackingMethod	Fastest	Mas Rápido
+PackingMethod	Good Compression	Buena Compresión
+PackingMethod	Stored	Almacenado
+PanoramaSize3D	Standard	Estándar
+PhotoEffect	B&W	Blanco y Negro
+PhotoEffect	Custom	Personalizado
+PhotoEffect	Neutral	Neutro
+PhotoEffect	Off	Desactivado
+PhotoEffect	Vivid	Vívido
+PhotoEffects	Off	Desactivado
+PhotoEffects	On	Activado
+PhotoEffectsType	None	Ninguno
+PhotometricInterpretation	BlackIsZero	Negro es cero
+PhotometricInterpretation	Color Filter Array	CFA (Matriz Filtro Color)
+PhotometricInterpretation	Pixar LogL	CIE Log2(L) (Log luminancia)
+PhotometricInterpretation	Pixar LogLuv	CIE Log2(L)(u',v') (Log luminancia y crominancia)
+PhotometricInterpretation	RGB Palette	Paleta Color
+PhotometricInterpretation	Transparency Mask	Máscara de transparencia
+PhotometricInterpretation	WhiteIsZero	Blanco es cero
+PhotoshopFormat	Standard	Estándar
+PictureControl	Off	Desactivado
+PictureControl	On	Activado
+PictureControlActive	Off	Desactivado
+PictureControlActive	On	Activado
+PictureFinish	Monochrome	Monocromo
+PictureFinish	Portrait	Retrato
+PictureMode	Beach	Playa
+PictureMode	Fireworks	Fuegos Artificiales
+PictureMode	Food	Comida
+PictureMode	Green	Verde
+PictureMode	Landscape	Paisaje
+PictureMode	Panorama	Panoramica
+PictureMode	Portrait	Retrato
+PictureMode	Red	Rojo
+PictureMode	Snow	Nieve
+PictureMode	Soft	Suave
+PictureMode	Standard	Estándar
+PictureMode	Underwater	Subacuatica
+PictureMode	Vivid	Vívido
+PictureMode	Yellow	Amarillo
+PictureModeBWFilter	Green	Verde
+PictureModeBWFilter	Neutral	Neutro
+PictureModeBWFilter	Orange	Naranja
+PictureModeBWFilter	Red	Rojo
+PictureModeBWFilter	Yellow	Amarillo
+PictureModeEffect	High	Alto
+PictureModeEffect	Low	Bajo
+PictureModeEffect	Standard	Estándar
+PictureModeTone	Green	Verde
+PictureModeTone	Neutral	Neutro
+PictureStyle	Faithful	Fiel
+PictureStyle	High Saturation	Saturación Alta
+PictureStyle	Landscape	Paisaje
+PictureStyle	Low Saturation	Saturación Baja
+PictureStyle	Monochrome	Monocromo
+PictureStyle	Neutral	Neutro
+PictureStyle	None	Ninguno
+PictureStyle	Portrait	Retrato
+PictureStyle	Standard	Estándar
+PictureType	32x32 PNG Icon	Icono PNG 32x32
+PictureType	Artist	Artista
+PictureType	Back Cover	Cubierta Posterior
+PictureType	Composer	Compositor
+PictureType	Conductor	Director
+PictureType	Front Cover	Cubierta Frontal
+PictureType	Illustration	Ilustración
+PictureType	Lyricist	Letrista
+PictureType	Media	Soporte
+PictureType	Other	Otro
+PictureType	Other Icon	Otro Icono
+PictureType	Performance	Interpretación
+PictureType	Recording Session	Sesión Grabación
+PictureWizardMode	Cool	Frío
+PictureWizardMode	Landscape	Paisaje
+PictureWizardMode	Portrait	Retrato
+PictureWizardMode	Standard	Estándar
+PictureWizardMode	Vivid	Vívido
+PlanarConfiguration	Chunky	Formato 'Chunky' (Entrelazado)
+PlanarConfiguration	Planar	Formato 'Planar'
+Predictor	Horizontal differencing	Diferenciación Horizontal
+Predictor	None	No se usa esquema de predicción antes de codificar
+PreviewButton	None	Ninguno
+PreviewButtonPlusDials	None	Ninguno
+PreviewColorSpace	Unknown	Desconocido
+PreviewImageValid	Yes	Si
+ProfileClass	Abstract Profile	Perfil Abstracto
+ProfileClass	ColorSpace Conversion Profile	Perfil Conversión Espacio Color
+ProfileClass	DeviceLink Profile	Perfil Dispositivo Conexión
+ProfileClass	Display Device Profile	Perfil Dispositivo Pantalla
+ProfileClass	Input Device Profile	Perfil Dispositivo Entrada
+ProfileClass	NamedColor Profile	Perfil Color Nombrado
+ProfileClass	Nikon Input Device Profile (NON-STANDARD!)	Perfil Nikon ("nkpf")
+ProfileClass	Output Device Profile	Perfil Dispositivo Salida
+ProfileEmbedPolicy	Allow Copying	Permitir copia
+ProfileEmbedPolicy	Embed if Used	Incrustar si se usa
+ProfileEmbedPolicy	Never Embed	Incrustado nunca
+ProfileEmbedPolicy	No Restrictions	Sin restricciones
+ProgramMode	None	Ninguno
+ProgramMode	Portrait	Retrato
+PropertyReleaseStatus	None	Ninguno
+Quality	Compressed RAW	cRAW
+Quality	Compressed RAW + JPEG	cRAW+JPEG
+Quality	Extra Fine	Extrafina
+Quality	Fine	Fina
+Quality	High	Alto
+Quality	Low	Bajo
+Quality	Normal	Calidad estándar
+Quality	RAW + JPEG	RAW+JPEG
+Quality	Standard	Estándar
+Quality	n/a	no aplica
+QuantizationMethod	AP Domestic Analogue	AP Doméstico Análogo
+QuantizationMethod	Color Space Specific	Espacio Color Específico
+QuantizationMethod	Compression Method Specific	Método Compresión Específico
+QuantizationMethod	Gamma Compensated	Gamma Compensada
+QuantizationMethod	IPTC Ref B	IPTC ref "B"
+QuantizationMethod	Linear Density	Densidad lineal
+QuantizationMethod	Linear Dot Percent	Porcentaje Punto lineal
+QuantizationMethod	Linear Reflectance/Transmittance	Reflectancia/transmitancia lineal
+QuickShot	Off	Apagado
+QuickShot	On	Encendido
+Rating	none	Ninguno
+RawDevAutoGradation	Off	Desactivado
+RawDevAutoGradation	On	Activado
+RawDevNoiseReduction	Noise Filter	Filtro ruido
+RawDevNoiseReduction	Noise Filter (ISO Boost)	Filtro ruido (ISO Boost)
+RawDevNoiseReduction	Noise Reduction	Reducción ruido
+RawDevPMPictureTone	Green	Verde
+RawDevPMPictureTone	Neutral	Neutro
+RawDevPM_BWFilter	Green	Verde
+RawDevPM_BWFilter	Neutral	Neutro
+RawDevPM_BWFilter	Orange	Naranja
+RawDevPM_BWFilter	Red	Rojo
+RawDevPM_BWFilter	Yellow	Amarillo
+RawDevPictureMode	Vivid	Vívido
+RawDevSettings	Noise Reduction	Reducción ruido
+RawJpgSize	Medium	Medio
+RawJpgSize	Medium 1	Medio 1 
+RawJpgSize	Medium 2	Medio 2
+RawJpgSize	Medium 3	Medio 3
+RawJpgSize	Postcard	Tarjeta Postal
+RawJpgSize	Small 1	Pequeño 1
+RawJpgSize	Small 2	Pequeño 21
+RawJpgSize	Small 3	Pequeño 3
+RecordShutterRelease	Press start, press stop	Pulsa para iniciar, pulsa para parar
+RecordShutterRelease	Record while down	Grabar mientras se pulsa
+RecordingMode	Panorama	Panoramica
+RecordingMode	Portrait	Retrato
+RedEyeCorrection	Off	Desactivado
+RedEyeReduction	Off	Desactivado
+RedEyeReduction	On	Activado
+ReleaseButtonToUseDial	Yes	Si
+RenderingIntent	ICC-Absolute Colorimetric	Colorimétrica Absoluta
+RenderingIntent	Media-Relative Colorimetric	Colorimétrica Relativa
+RenderingIntent	Saturation	Saturación
+RenditionOfMaskMarkers	All	Todo
+RenditionOfMaskMarkers	None	Ninguno
+ResampleParamsQuality	High	Alto
+ResampleParamsQuality	Low	Bajo
+Resaved	Yes	Si
+ResolutionUnit	None	Ninguno
+ResolutionUnit	cm	Píxeles/cm
+ResolutionUnit	inches	Pulgada
+RetouchHistory	None	Ninguno
+Rotation	Rotate 180	Girado 180°
+Rotation	Rotate 270 CW	Girado 270° sentido reloj
+Rotation	Rotate 90 CW	Girado 90° sentido reloj
+Rotation	Rotated 180	Girado 180°
+Rotation	Rotated 270 CW	Girado 270° sentido reloj
+Rotation	Rotated 90 CW	Girado 90° sentido reloj
+SRAWQuality	n/a	No Aplica
+SRActive	Yes	Si
+SampleStructure	CompressionDependent	Definido dentro del proceso de compresión
+SampleStructure	Orthogonal4-2-2Sampling	Ortogonal con las frecuencias de muestreo en el ratio de 4:2:2:(4)
+SampleStructure	OrthogonalConstangSampling	Ortogonal con la mismas frecuencias de muestreo relativo en cada componente
+SanyoQuality	Fine/High	Fino/Alto
+SanyoQuality	Fine/Low	Fino/Bajo
+SanyoQuality	Fine/Medium	Fino/Medio
+SanyoQuality	Fine/Medium High	Fino/Medio Alto
+SanyoQuality	Fine/Medium Low	Fino/Medio bajo
+SanyoQuality	Fine/Super High	Fino/Super Alto
+SanyoQuality	Fine/Very High	Fino/Muy Alto
+SanyoQuality	Fine/Very Low	Fino/Muy bajo
+SanyoQuality	Normal/High	Normal/Alto
+SanyoQuality	Normal/Low	Normal/Bajo
+SanyoQuality	Normal/Medium	Normal/Medio
+SanyoQuality	Normal/Medium High	Normal/Medio Alto
+SanyoQuality	Normal/Medium Low	Normal/Medio bajo
+SanyoQuality	Normal/Super High	Normal/Super Alto
+SanyoQuality	Normal/Very High	Normal/Muy Alto
+SanyoQuality	Normal/Very Low	Normal/Muy bajo
+SanyoQuality	Super Fine/High	Super Fino/Alto
+SanyoQuality	Super Fine/Low	Super Fino/Bajo
+SanyoQuality	Super Fine/Medium	Super Fino/Medio
+SanyoQuality	Super Fine/Medium High	Super Fino/Medio Alto
+SanyoQuality	Super Fine/Medium Low	Super Fino/Medio Bajo
+SanyoQuality	Super Fine/Super High	Super Fino/Super Alto
+SanyoQuality	Super Fine/Very High	Super Fino/Muy Alto
+SanyoQuality	Super Fine/Very Low	Super Fino/Muy Bajo
+Saturation	High	Alto
+Saturation	Low	Bajo
+Saturation	None	Ninguno
+Saturation	None (B&W)	Ninguna (N&B)
+Saturation	Normal	Estándar
+Saturation	Vivid	Vívido
+ScanImageEnhancer	Off	Desactivado
+ScanImageEnhancer	On	Activado
+ScanningDirection	Bottom-Top, L-R	Abajo a arriba, izquierda a derecha
+ScanningDirection	Bottom-Top, R-L	Abajo a arriba, derecha a izquierda
+ScanningDirection	L-R, Bottom-Top	Izquierda a derecha, abajo a arriba
+ScanningDirection	L-R, Top-Bottom	Izquierda a derecha, arriba a abajo
+ScanningDirection	R-L, Bottom-Top	Derecha a izquierda, abajo a arriba
+ScanningDirection	R-L, Top-Bottom	Derecha a izquierda, arriba a abajo
+ScanningDirection	Top-Bottom, L-R	Arriba a abajo, izquierda a derecha
+ScanningDirection	Top-Bottom, R-L	Arriba a abajo, derecha a izquierda
+SceneCaptureType	Landscape	Paisaje
+SceneCaptureType	Night	Escena nocturna
+SceneCaptureType	Portrait	Retrato
+SceneCaptureType	Standard	Estándar
+SceneMode	3D Sweep Panorama	3D
+SceneMode	Anti Motion Blur	Anti movimiento
+SceneMode	Beach	Playa
+SceneMode	Cont. Priority AE	AE prioridad cont.
+SceneMode	Fireworks	Fuegos Artificiales
+SceneMode	Food	Comida
+SceneMode	Handheld Night Shot	Toma noct. manual
+SceneMode	Indoor	Interior
+SceneMode	Landscape	Paisaje
+SceneMode	Night Portrait	Retrato noct.
+SceneMode	Night Scene	Vista nocturna
+SceneMode	Night View/Portrait	Vista/retrato nocturno
+SceneMode	Off	Desactivado
+SceneMode	Panorama	Panoramica
+SceneMode	Portrait	Retrato
+SceneMode	Snow	Nieve
+SceneMode	Sports	Acción deportiva
+SceneMode	Standard	Estándar
+SceneMode	Sunset	Puesta sol
+SceneMode	Sweep Panorama	Barrido panorámico
+SceneMode	Underwater	Subacuatica
+SceneMode	Vivid	Vívido
+SceneModeUsed	Beach	Playa
+SceneModeUsed	Fireworks	Fuegos Artificiales
+SceneModeUsed	Landscape	Paisaje
+SceneModeUsed	Panorama	Panoramica
+SceneModeUsed	Portrait	Retrato
+SceneModeUsed	Snow	Nieve
+SceneSelect	Lamp	Lámpara
+SceneSelect	Night	Noche
+SceneSelect	Off	Apagado
+SceneSelect	Sport	Deporte
+SceneSelect	User 1	Usuario 1
+SceneSelect	User 2	Usuario 2
+SceneType	Directly photographed	Imagen fotografiada directamente
+Security	None	Ninguno
+SecurityClassification	Confidential	Confidencial
+SecurityClassification	Restricted	Restringida
+SecurityClassification	Secret	Secreta
+SecurityClassification	Top Secret	Alto secreto
+SecurityClassification	Unclassified	Sin clasificar
+SelfTimer	Off	Apagado
+SelfTimer	On	Encendido
+SensingMethod	Color sequential area	Sensor de color secuencial
+SensingMethod	Color sequential linear	Sensor lineal de color secuencial
+SensingMethod	Monochrome area	Sensor monocromo
+SensingMethod	Monochrome linear	Sensor lineal monocromo
+SensingMethod	Not defined	No definido
+SensingMethod	One-chip color area	Sensor monochip de color
+SensingMethod	Three-chip color area	Sensor tres chips de color
+SensingMethod	Trilinear	Sensor trilineal
+SensingMethod	Two-chip color area	Sensor bichip de color
+SensitivityType	Unknown	Desconocido
+SequenceShotInterval	10 frames/s	10 cuadros/s
+SequenceShotInterval	15 frames/s	15 cuadros/s
+SequenceShotInterval	20 frames/s	20 cuadros/s
+SequenceShotInterval	5 frames/s	5 cuadros/s
+SequentialShot	Adjust Exposure	Ajustar Exposición
+SequentialShot	Best	Mejor
+SequentialShot	None	Ninguno
+SequentialShot	Standard	Estándar
+ShadingCompensation2	Off	Desactivado
+ShadingCompensation2	On	Activado
+ShakeReduction	Off	Desactivado
+ShakeReduction	On	Activado
+Sharpening	High	Alto
+Sharpening	Low	Bajo
+Sharpness	Hard	Fuerte
+Sharpness	Normal	Estándar
+Sharpness	Sharp	Nitido
+Sharpness	Soft	Suave
+SharpnessFrequency	High	Alto
+SharpnessFrequency	Highest	Muy Alto
+SharpnessFrequency	Low	Bajo
+SharpnessFrequency	Lowest	Mas bajo
+SharpnessFrequency	Standard	Estándar
+SharpnessFrequency	n/a	No Aplica
+ShootingMode	Beach	Playa
+ShootingMode	Fireworks	Fuegos Artificiales
+ShootingMode	Food	Comida
+ShootingMode	Portrait	Retrato
+ShootingMode	Snow	Nieve
+ShootingMode	Underwater	Subacuatica
+ShutterReleaseButtonAE-L	Off	Desactivado
+ShutterReleaseButtonAE-L	On	Activado
+ShutterReleaseNoCFCard	Yes	Si
+SingleFrameBracketing	High	Alto
+SingleFrameBracketing	Low	Bajo
+SlideShow	Yes	Si
+SlowShutter	None	Ninguno
+SlowShutter	Off	Desactivado
+SlowShutter	On	Activado
+SoftSkinEffect	Low	Bajo
+SonyImageSize	Standard	Estándar
+SonyQuality	Standard	Estándar
+SpecialEffectsOpticalFilter	None	Ninguno
+Speed	Fast	Rápido
+SpotMeteringMode	AF Point	Punto AF
+SpotMeteringMode	Center	Centro
+StreamColor	Monochrome	Monocromo
+StreamType	Binary	Binario
+StreamType	File Transfer	Transferencia Archivo
+SubimageColor	Monochrome	Monocromo
+SubjectDistanceRange	Close	Vista cercana
+SubjectDistanceRange	Distant	Vista alejada
+SubjectDistanceRange	Unknown	Desconocido
+SubjectProgram	None	Ninguno
+SubjectProgram	Portrait	Retrato
+Subsystem	Unknown	Desconocido
+SuperimposedDisplay	Off	Desactivado
+SuperimposedDisplay	On	Activado
+SupplementalType	Main Image	No Definido
+SupplementalType	Rasterized Caption	Título Rasterizado
+SupplementalType	Reduced Resolution Image	Imagen resolución reducida
+SweepPanoramaSize	Standard	Estándar
+SynchronizedLyricsType	Other	Otro
+Tagged	Yes	Si
+Technology	Active Matrix Display	Pantalla Matriz Activa
+Technology	Cathode Ray Tube Display	Pantalla Tubo Rayos Catódicos
+Technology	Digital Camera	Cámara Digital
+Technology	Dye Sublimation Printer	Impresora Sublimación
+Technology	Electrophotographic Printer	Impresora Electrofotográfica (Laser)
+Technology	Electrostatic Printer	Impresora Electrostática
+Technology	Film Scanner	Escaner Película
+Technology	Film Writer	Impresora Película
+Technology	Flexography	Flexografía
+Technology	Gravure	Grabado
+Technology	Ink Jet Printer	Impresora Inyección Tinta
+Technology	Offset Lithography	Litografía Offset
+Technology	Passive Matrix Display	Pantalla Matriz Pasiva
+Technology	Photo Image Setter	Marco Foto
+Technology	Photographic Paper Printer	Impresora Papel Fotográfico
+Technology	Projection Television	Televisión Proyección
+Technology	Reflective Scanner	Escaner Reflectivo
+Technology	Silkscreen	Pantalla Sedosa
+Technology	Thermal Wax Printer	Impresora Cera Termal
+Technology	Video Camera	Videocámara
+Technology	Video Monitor	Monitor Video
+Teleconverter	None	Ninguno
+TextStamp	On	Activado
+TimeScaleParamsQuality	High	Alto
+TimeScaleParamsQuality	Low	Bajo
+TimeSignature	other	Otro
+ToneCurve	Standard	Estándar
+ToneCurveActive	Yes	Si
+ToningEffect	Green	Verde
+ToningEffect	None	Ninguno
+ToningEffect	Red	Rojo
+ToningEffect	Yellow	Amarillo
+ToningEffectMonochrome	Green	Verde
+ToningEffectMonochrome	None	Ninguno
+ToningEffectUnknown	Green	Verde
+ToningEffectUnknown	None	Ninguno
+ToningEffectUserDef1	Green	Verde
+ToningEffectUserDef1	None	Ninguno
+ToningEffectUserDef2	Green	Verde
+ToningEffectUserDef2	None	Ninguno
+ToningEffectUserDef3	Green	Verde
+ToningEffectUserDef3	None	Ninguno
+Transformation	Mirror horizontal	Invertir horizontal
+Transformation	Mirror horizontal and rotate 270 CW	Invertir horizontal y rotar 270° sentido reloj
+Transformation	Mirror horizontal and rotate 90 CW	Invertir horizontal y rotar 90° sentido reloj
+Transformation	Mirror vertical	Invertir vertical
+Transformation	Rotate 180	Girado 180°
+Transformation	Rotate 270 CW	Girado 270° sentido reloj
+Transformation	Rotate 90 CW	Girado 90° sentido reloj
+Uncompressed	Yes	Si
+Unsharp1Color	Green	Verde
+Unsharp1Color	Red	Rojo
+Unsharp1Color	Yellow	Amarillo
+Unsharp2Color	Green	Verde
+Unsharp2Color	Red	Rojo
+Unsharp2Color	Yellow	Amarillo
+Unsharp3Color	Green	Verde
+Unsharp3Color	Red	Rojo
+Unsharp3Color	Yellow	Amarillo
+Unsharp4Color	Green	Verde
+Unsharp4Color	Red	Rojo
+Unsharp4Color	Yellow	Amarillo
+UnsharpMask	Off	Desactivado
+UnsharpMask	On	Activado
+Urgency	0 (reserved)	0 (reservado para futuro uso)
+Urgency	1 (most urgent)	1 (más urgente)
+Urgency	5 (normal urgency)	5 (urgencia normal)
+Urgency	8 (least urgent)	8 (menos urgente)
+Urgency	9 (user-defined priority)	9 (reservado para futuro uso)
+UserDef1PictureStyle	Landscape	Paisaje
+UserDef1PictureStyle	Monochrome	Monocromo
+UserDef1PictureStyle	Neutral	Neutro
+UserDef1PictureStyle	Portrait	Retrato
+UserDef1PictureStyle	Standard	Estándar
+UserDef2PictureStyle	Landscape	Paisaje
+UserDef2PictureStyle	Monochrome	Monocromo
+UserDef2PictureStyle	Neutral	Neutro
+UserDef2PictureStyle	Portrait	Retrato
+UserDef2PictureStyle	Standard	Estándar
+UserDef3PictureStyle	Landscape	Paisaje
+UserDef3PictureStyle	Monochrome	Monocromo
+UserDef3PictureStyle	Neutral	Neutro
+UserDef3PictureStyle	Portrait	Retrato
+UserDef3PictureStyle	Standard	Estándar
+VR_0x66	Off	Desactivado
+VibrationReduction	Off	Desactivado
+VibrationReduction	On	Activado
+VideoAlphaMode	None	Ninguno
+VideoFieldOrder	Lower	Inferior
+VideoFieldOrder	Progressive	Progresivo
+VideoFieldOrder	Upper	Superior
+VideoPixelDepth	16-bit integer	Entero 16-bits
+VideoPixelDepth	24-bit integer	Entero 24-bits
+VideoPixelDepth	32-bit float	Flotante 32-bits
+VideoPixelDepth	32-bit integer	Entero 32-bits
+VideoPixelDepth	8-bit integer	Entero 8-bits
+VideoPixelDepth	Other	Otro
+VideoQuality	Low	Bajo
+VideoQuality	Standard	Estándar
+ViewfinderWarning	Off	Desactivado
+ViewfinderWarning	On	Activado
+ViewfinderWarnings	Monochrome	Monocromo
+VignetteControl	High	Alto
+VignetteControl	Low	Bajo
+VignetteControl	Off	Desactivado
+VignetteControl	On	Activado
+VoiceMemo	Off	Apagado
+VoiceMemo	On	Encendido
+WBAdjLighting	None	Ninguno
+WBBracketMode	Off	Desactivado
+WBFineTuneActive	Yes	Si
+WhiteBalance	Auto	Automático
+WhiteBalance	Black & White	Monocromo
+WhiteBalance	Cloudy	Nublado
+WhiteBalance	Color Temperature/Color Filter	Temperatura de color / Filtro de color
+WhiteBalance	Cool White Fluorescent	Fluorescente blanco frío
+WhiteBalance	Custom	Personalizado
+WhiteBalance	Custom 1	Personalizado 1
+WhiteBalance	Custom 2	Personalizado 2
+WhiteBalance	Custom 3	Personalizado 3
+WhiteBalance	Custom 4	Personalizado 4
+WhiteBalance	Day White Fluorescent	Fluorescente blanco de día
+WhiteBalance	Daylight	Luz de día
+WhiteBalance	Daylight Fluorescent	Fluorescente luz de día
+WhiteBalance	Fluorescent	Flourescente
+WhiteBalance	Manual	Equilibrio del blanco manual
+WhiteBalance	Manual Temperature (Kelvin)	Temperatura Manual (Kelvin)
+WhiteBalance	Shade	Sombrío
+WhiteBalance	Tungsten	Tungsteno
+WhiteBalance	Underwater	Subacuatica
+WhiteBalance	Unknown	Desconocido
+WhiteBalance	Warm White Fluorescent	Fluorescente blanco cálido
+WhiteBalance	White Fluorescent	Fluorescente blanco
+WhiteBalanceAdj	Off	Desactivado
+WhiteBalanceAdj	On	Activado
+WhiteBalanceBracketing	High	Alto
+WhiteBalanceBracketing	Low	Bajo
+WideRange	Off	Apagado
+WideRange	On	Encendido
+YCbCrPositioning	Centered	Centrado
+YCbCrPositioning	Co-sited	Vecino
+ZipCompression	None	Ninguno
+ZipCompression	Reduced with compression factor 1	Reducido con factor de compresión 1
+ZipCompression	Reduced with compression factor 2	Reducido con factor de compresión 2
+ZipCompression	Reduced with compression factor 3	Reducido con factor de compresión 3
+ZipCompression	Reduced with compression factor 4	Reducido con factor de compresión 4
+ZoneMatching	High Key	Alto
+ZoneMatching	ISO Setting Used	Desactivado
+ZoneMatching	Low Key	Bajo
+ZoneMatchingMode	Standard	Estándar
+ZoneMatchingOn	Off	Desactivado
+ZoneMatchingOn	On	Activado

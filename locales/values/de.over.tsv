@@ -1,0 +1,37 @@
+Canon	AFPointsInFocus	(none)	(none)
+Canon	FlashBits	E-TTL, Built-in	E-TTL, Integrierter Blitz
+Canon	SelfTimer	Off	Off
+CanonCustom	AFMicroadjustment	Disable; 0; 0; 0; 0	Deaktivieren; 0; 0; 0; 0
+CanonCustom	ApertureRange	Disable; Closed 91; Open 1	Nicht möglich; Closed 91; Open 1
+CanonCustom	ApplyShootingMeteringMode	Disable; 0; 0; 3; 112; 48; 0; 0	Nicht möglich; 0; 0; 3; 112; 48; 0; 0
+CanonCustom	ContinuousShootingSpeed	Disable; Hi 10; Lo 3	Nicht möglich; Hi 10; Lo 3
+CanonCustom	ContinuousShotLimit	Disable; 99 shots	Nicht möglich; 99 shots
+CanonCustom	ISOSpeedRange	Disable; Max 3200; Min 100	Nicht möglich; Max 3200; Min 100
+CanonCustom	ShutterSpeedRange	Disable; Hi 1/8192; Lo 32	Nicht möglich; Hi 1/8192; Lo 32
+CanonCustom	TimerLength	Disable; 6 s: 6; 16 s: 16; After release: 2	Nicht möglich; 6 s: 6; 16 s: 16; After release: 2
+CanonCustom	UsableMeteringModes	Disable; Flags 0xf0	Nicht möglich; Flags 0xf0
+CanonCustom	UsableShootingModes	Disable; Flags 0xfc	Nicht möglich; Flags 0xfc
+Composite	ShootingMode	Aperture-priority AE	Blendenpriorität
+Composite	ShootingMode	Program AE	Programmautomatik
+EXE	CPUByteOrder	Big endian	Big endian
+Kodak	ISOSetting	Auto	Auto
+MIE-Camera	ExposureMode	Manual	Manual
+MIE-Camera	ShootingMode	Manual	Manual
+Minolta	ImageStabilization	On	On
+Minolta	WhiteBalance	Auto	Auto
+Nikon	FocusMode	AF-C	AF-C
+Nikon	FocusMode	AF-S	AF-S
+Nikon	NoiseReduction	Off	Off
+Nikon	Quality	Fine	Fine
+Nikon	WhiteBalance	Auto	Auto
+Olympus	DriveMode	Single Shot	Single Shot
+Olympus	ImageStabilization	On, Mode 2	On, Mode 2
+Pentax	DriveMode	Single-frame; No Timer; Shutter Button; Single Exposure	Einzelbild; Ohne Selbstauslöser; Kamera-Auslöser; Einzelbelichtung
+Pentax	DriveMode	Video; n/a; Shutter Button; Video	Video; (nicht gesetzt); Kamera-Auslöser; Video
+Pentax	FlashMode	Off, Did not fire; Internal	Aus; Intern
+Pentax	PictureMode	Aperture Priority; 1/3 EV steps	Zeitautomatik; 1/3 LW Schitte
+Pentax	PictureMode	Video (4); 1/3 EV steps	Video (4); 1/3 LW Schitte
+Sigma	AFPoint	Center	Center
+Sigma	WhiteBalance	Auto	Auto
+SigmaRaw	FlashMode	Off	Off
+SigmaRaw	FocusMode	AF-S	AF-S

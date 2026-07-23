@@ -1,0 +1,511 @@
+AEMeteringMode	Multi-segment	Multi segment
+AEProgramMode	Landscape	Krajina
+AEProgramMode	Macro	Makro
+AEProgramMode	Portrait	Portrét
+AFPoint	None	Žádná
+AFPointBrightness	Normal	Normální
+AFPointSelectionMethod	Normal	Normální
+AFPointsInFocus	None	Žádná
+ActiveD-Lighting	Low	Méně
+ActiveD-Lighting	Normal	Normální
+ActiveD-LightingMode	Low	Méně
+ActiveD-LightingMode	Normal	Normální
+AdultContentWarning	Unknown	Neznámý
+AssistButtonFunction	Normal	Normální
+AutoLightingOptimizer	Low	Méně
+AutoRotate	None	Žádná
+AutoRotate	Rotate 180	180° (dolů/vpravo)
+AutoRotate	Rotate 270 CW	90° po směru HR (vlevo/dolů)
+AutoRotate	Rotate 90 CW	90° ptoti směru HR (vpravo/nahoru)
+AutoRotate	n/a	Neznámý
+BannerImageType	None	Žádná
+BlurWarning	None	Žádná
+CPUType	None	Žádná
+CalibrationIlluminant1	Cloudy	Zataženo
+CalibrationIlluminant1	Cool White Fluorescent	Studená zářivka
+CalibrationIlluminant1	Day White Fluorescent	Denní zářivka
+CalibrationIlluminant1	Daylight	Denní světlo
+CalibrationIlluminant1	Daylight Fluorescent	Denní světlo
+CalibrationIlluminant1	Fine Weather	Slunečno
+CalibrationIlluminant1	Flash	Blesk
+CalibrationIlluminant1	Fluorescent	Žárovka
+CalibrationIlluminant1	ISO Studio Tungsten	Studiová světla
+CalibrationIlluminant1	Other	Jiné osvětlení
+CalibrationIlluminant1	Shade	Stíny
+CalibrationIlluminant1	Standard Light A	Standardní světlo A
+CalibrationIlluminant1	Standard Light B	Standardní světlo B
+CalibrationIlluminant1	Standard Light C	Standardní světlo C
+CalibrationIlluminant1	Tungsten (Incandescent)	Zářivka
+CalibrationIlluminant1	Unknown	Neznámý
+CalibrationIlluminant1	White Fluorescent	Bílá zářivka
+CalibrationIlluminant2	Cloudy	Zataženo
+CalibrationIlluminant2	Cool White Fluorescent	Studená zářivka
+CalibrationIlluminant2	Day White Fluorescent	Denní zářivka
+CalibrationIlluminant2	Daylight	Denní světlo
+CalibrationIlluminant2	Daylight Fluorescent	Denní světlo
+CalibrationIlluminant2	Fine Weather	Slunečno
+CalibrationIlluminant2	Flash	Blesk
+CalibrationIlluminant2	Fluorescent	Žárovka
+CalibrationIlluminant2	ISO Studio Tungsten	Studiová světla
+CalibrationIlluminant2	Other	Jiné osvětlení
+CalibrationIlluminant2	Shade	Stíny
+CalibrationIlluminant2	Standard Light A	Standardní světlo A
+CalibrationIlluminant2	Standard Light B	Standardní světlo B
+CalibrationIlluminant2	Standard Light C	Standardní světlo C
+CalibrationIlluminant2	Tungsten (Incandescent)	Zářivka
+CalibrationIlluminant2	Unknown	Neznámý
+CalibrationIlluminant2	White Fluorescent	Bílá zářivka
+CameraOrientation	Horizontal (normal)	0° (nahoru/vlevo)
+CameraOrientation	Rotate 270 CW	90° po směru HR (vlevo/dolů)
+CameraOrientation	Rotate 90 CW	90° ptoti směru HR (vpravo/nahoru)
+CanonExposureMode	Aperture-priority AE	Priorita clony
+CanonExposureMode	Manual	Manuální
+CanonExposureMode	Shutter speed priority AE	Priorita času
+CaptureXResolutionUnit	um	µm (mikrometr)
+CaptureYResolutionUnit	um	µm (mikrometr)
+CenterWeightedAreaSize	Average	Průměr
+ChrominanceNR_TIFF_JPEG	Low	Méně
+ChrominanceNoiseReduction	Low	Méně
+ColorEffect	Sepia	Sépie
+ColorMode	Landscape	Krajina
+ColorMode	Normal	Normální
+ColorMode	Portrait	Portrét
+ColorMoireReductionMode	Low	Méně
+ColorSpace	ICC Profile	ICC Profil
+ColorSpace	Uncalibrated	Nekalibrován
+ColorTone	Normal	Normální
+CommanderGroupAMode	Manual	Manuální
+CommanderGroupBMode	Manual	Manuální
+CommanderInternalFlash	Manual	Manuální
+Compression	JPEG	JPEG komprese
+Compression	JPEG (old-style)	JPEG (pův. verze)
+Compression	Kodak DCR Compressed	Kodak DCR komprese
+Compression	Kodak KDC Compressed	Kodak KDC komprese
+Compression	Next	Kódování NeXT 2-bit
+Compression	Nikon NEF Compressed	Nikon NEF komprese
+Compression	None	Žádná
+Compression	Pentax PEF Compressed	Pentax PEF komprese
+Compression	SGILog	Kódování SGI 32-bit Log Luminance
+Compression	SGILog24	Kódování SGI 24-bit Log Luminance
+Compression	Sony ARW Compressed	Sony ARW komprese
+Compression	Thunderscan	Kódování ThunderScan 4-bit
+Compression	Uncompressed	Bez komprese
+CompressionType	None	Žádná
+Contrast	High	Více
+Contrast	Low	Méně
+Contrast	Normal	Normální
+ConversionLens	Macro	Makro
+CopyrightStatus	Unknown	Neznámý
+CropUnit	inches	Palce
+CropUnits	inches	Palce
+CustomRendered	Custom	Uživatelské zpracování
+CustomRendered	Normal	Normální proces
+DataImprint	None	Žádná
+DialDirectionTvAv	Normal	Normální
+DigitalZoom	None	Žádná
+DisplaySize	Normal	Normální
+DisplayUnits	inches	Palce
+DisplayXResolutionUnit	um	µm (mikrometr)
+DisplayYResolutionUnit	um	µm (mikrometr)
+DisplayedUnitsX	inches	Palce
+DisplayedUnitsY	inches	Palce
+ETTLII	Average	Průměr
+EasyMode	Landscape	Krajina
+EasyMode	Macro	Makro
+EasyMode	Manual	Manuální
+EasyMode	Night	Noční foto
+EasyMode	Portrait	Portrét
+Emphasis	None	Žádná
+ExposureMode	Aperture Priority	Priorita clony
+ExposureMode	Aperture-priority AE	Priorita clony
+ExposureMode	Auto	Automatická expozice
+ExposureMode	Auto bracket	Auto braketing
+ExposureMode	Landscape	Krajina
+ExposureMode	Manual	Manuální expozice
+ExposureMode	Portrait	Portrét
+ExposureMode	Shutter Priority	Priorita času
+ExposureMode	Shutter speed priority AE	Priorita času
+ExposureModeInManual	Center-weighted average	Zvýrazněný střed
+ExposureModeInManual	Partial metering	Blokové
+ExposureModeInManual	Spot metering	Středový bod
+ExposureProgram	Action (High speed)	Akční program (ovlivněný čas závěrky)
+ExposureProgram	Aperture Priority	Priorita clony
+ExposureProgram	Aperture-priority AE	Priorita clony
+ExposureProgram	Bulb	Žárovka
+ExposureProgram	Creative (Slow speed)	Kreativní program (ovlivněná hloubka ostrosti)
+ExposureProgram	Landscape	Krajina
+ExposureProgram	Manual	Manuální
+ExposureProgram	Not Defined	Nedefinovaný
+ExposureProgram	Portrait	Portrét
+ExposureProgram	Program AE	Normální program
+ExposureProgram	Shutter Priority	Priorita času
+ExposureProgram	Shutter speed priority AE	Priorita času
+FaceOrientation	Horizontal (normal)	0° (nahoru/vlevo)
+FaceOrientation	Rotate 180	180° (dolů/vpravo)
+FaceOrientation	Rotate 270 CW	90° po směru HR (vlevo/dolů)
+FaceOrientation	Rotate 90 CW	90° ptoti směru HR (vpravo/nahoru)
+FaxProfile	Unknown	Neznámý
+FileSource	Digital Camera	Digitální fotoaparát
+FileSource	Film Scanner	Filmový skener
+FileSource	Reflection Print Scanner	Skener
+FillOrder	Normal	Normální
+FilterEffect	None	Žádná
+FilterEffectMonochrome	None	Žádná
+Flash	Auto, Did not fire	Blesk nepoužit, auto mod
+Flash	Auto, Did not fire, Red-eye reduction	Auto mod, nepoužit, redukce červených očí
+Flash	Auto, Fired	Blesk použit, auto mod
+Flash	Auto, Fired, Red-eye reduction	Blesk použit, auto mod, redukce červených očí
+Flash	Auto, Fired, Red-eye reduction, Return detected	Blesk použit, auto mod, redukce červených očí, odraz detekován
+Flash	Auto, Fired, Red-eye reduction, Return not detected	Blesk použit, auto mod, redukce červených očí, odraz nezjištěn
+Flash	Auto, Fired, Return detected	Blesk použit, auto mod, odraz detekován
+Flash	Auto, Fired, Return not detected	Blesk použit, auto mod, odraz nedetekován
+Flash	Did not fire	Blesk ne
+Flash	Fired	Blesk ano
+Flash	Fired, Red-eye reduction	Blesk použit, redukce červených očí
+Flash	Fired, Red-eye reduction, Return detected	Blesk použit, redukce červených očí, odraz detekován
+Flash	Fired, Red-eye reduction, Return not detected	Blesk použit, redukce červených očí, odraz nezjištěn
+Flash	Fired, Return detected	Odraz strobozáblesků detekován
+Flash	Fired, Return not detected	Odraz strobozáblesků nezjištěn
+Flash	No Flash	Blesk ne
+Flash	No flash function	Blesk nezjištěn
+Flash	Off	Blesk nepoužit, vynucený mod
+Flash	Off, Did not fire	Blesk nepoužit, vynucený mod
+Flash	Off, Did not fire, Return not detected	Blesk vypnut, bez záblesku, odraz nezachycen
+Flash	Off, No flash function	Neaktivní, bez funkce blesku
+Flash	Off, Red-eye reduction	Neaktivní, redukce červených očí
+Flash	On	Blesk použit, vynucený mod
+Flash	On, Did not fire	Blesk zapnut, nepoužit
+Flash	On, Fired	Blesk použit, vynucený mod
+Flash	On, Red-eye reduction	Blesk použit, vynucený mod, redukce červených očí
+Flash	On, Red-eye reduction, Return detected	Blesk použit, vynucený mod, redukce červených očí, odraz detekován
+Flash	On, Red-eye reduction, Return not detected	Blesk použit, vynucený mod, redukce červených očí, odraz nezjištěn
+Flash	On, Return detected	Blesk použit, vynucený mod, odraz detekován
+Flash	On, Return not detected	Blesk použit, vynucený mod, odraz nezjištěn
+FlashControlMode	Manual	Manuální
+FlashDevice	None	Žádná
+FlashGroupAControlMode	Manual	Manuální
+FlashGroupBControlMode	Manual	Manuální
+FlashGroupCControlMode	Manual	Manuální
+FlashIntensity	Normal	Normální
+FlashMode	Normal	Normální
+FlashMode	Unknown	Neznámý
+FlashModel	None	Žádná
+FlashOptions	Normal	Normální
+FlashOptions2	Normal	Normální
+FlashType	None	Žádná
+FocalPlaneResolutionUnit	None	Žádná
+FocalPlaneResolutionUnit	inches	Palce
+FocalPlaneResolutionUnit	um	µm (mikrometr)
+Focus	Manual	Manuální
+FocusContinuous	Manual	Manuální
+FocusMode	Macro	Makro
+FocusMode	Manual	Manuální
+FocusMode	Normal	Normální
+FocusMode2	Manual	Manuální
+FocusModeSetting	Manual	Manuální
+FocusRange	Macro	Makro
+FocusRange	Manual	Manuální
+FocusRange	Normal	Normální
+FocusTrackingLockOn	Normal	Normální
+GPSAltitudeRef	Above Sea Level	Nadmořská výška
+GPSAltitudeRef	Below Sea Level	Nadmořská výška (záporná hodnota)
+GPSDestBearingRef	Magnetic North	Magnetický směr
+GPSDestBearingRef	True North	Geografický směr
+GPSDestDistanceRef	Kilometers	Kilometry
+GPSDestDistanceRef	Miles	Míle
+GPSDestDistanceRef	Nautical Miles	Uzle
+GPSDestLatitudeRef	North	Severní šířka
+GPSDestLatitudeRef	South	Jižní šířka
+GPSDestLongitudeRef	East	Východní délka
+GPSDestLongitudeRef	West	Západní délka
+GPSDifferential	Differential Corrected	Započítaná rozdílová korekce
+GPSDifferential	No Correction	Měření bez korekce
+GPSImgDirectionRef	Magnetic North	Magnetický směr
+GPSImgDirectionRef	True North	Geografický směr
+GPSLatitudeRef	North	Severní šířka
+GPSLatitudeRef	South	Jižní šířka
+GPSLongitudeRef	East	Východní délka
+GPSLongitudeRef	West	Západní délka
+GPSMeasureMode	2-D	2-dimenzionální měření
+GPSMeasureMode	2-Dimensional	2-dimenzionální měření
+GPSMeasureMode	2-Dimensional Measurement	2-dimenzionální měření
+GPSMeasureMode	3-D	3-dimenzionální měření
+GPSMeasureMode	3-Dimensional	3-dimenzionální měření
+GPSMeasureMode	3-Dimensional Measurement	3-dimenzionální měření
+GPSSpeedRef	km/h	Kilometry za hodinu
+GPSSpeedRef	knots	Uzle
+GPSSpeedRef	mph	Míle za hodinu
+GPSStatus	Measurement Active	Probíhá měření
+GPSStatus	Measurement Void	Vzájemné měření
+GPSTrackRef	Magnetic North	Magnetický směr
+GPSTrackRef	True North	Geografický směr
+GainControl	High gain down	Silné zeslabení
+GainControl	High gain up	Silné zesílení
+GainControl	Low gain down	Slabé zeslabení
+GainControl	Low gain up	Slabé zesílení
+GainControl	None	Žádná
+GrayResponseUnit	0.0001	Číslo udávající tisíce jednotek
+GrayResponseUnit	0.001	Číslo udávající stovky jednotek
+GrayResponseUnit	0.1	Číslo udávající desítky jednotek
+GrayResponseUnit	1e-05	Číslo udávající desetitisíce jednotek
+GrayResponseUnit	1e-06	Číslo udávající statisíce jednotek
+HighISONoiseReduction	Low	Méně
+HighISONoiseReduction	Normal	Normální
+ISOSetting	Manual	Manuální
+ImageOrientation	Portrait	Portrét
+ImageQuality	Normal	Normální
+ImageTone	Landscape	Krajina
+ImageTone	Portrait	Portrét
+InternalFlash	Fired	Blesk ano
+InternalFlash	Manual	Manuální
+InternalFlash	No	Blesk ne
+InteropIndex	R03 - DCF option file (Adobe RGB)	R03: DCF option file (Adobe RGB)
+InteropIndex	R98 - DCF basic file (sRGB)	R98: DCF basic file (sRGB)
+InteropIndex	THM - DCF thumbnail file	THM: DCF thumbnail file
+JPEGQuality	Standard	Normální
+LicenseType	Unknown	Neznámý
+LightSource	Cloudy	Zataženo
+LightSource	Cool White Fluorescent	Studená zářivka
+LightSource	Day White Fluorescent	Denní zářivka
+LightSource	Daylight	Denní světlo
+LightSource	Daylight Fluorescent	Denní světlo
+LightSource	Fine Weather	Slunečno
+LightSource	Flash	Blesk
+LightSource	Fluorescent	Žárovka
+LightSource	ISO Studio Tungsten	Studiová světla
+LightSource	Other	Jiné osvětlení
+LightSource	Shade	Stíny
+LightSource	Standard Light A	Standardní světlo A
+LightSource	Standard Light B	Standardní světlo B
+LightSource	Standard Light C	Standardní světlo C
+LightSource	Tungsten (Incandescent)	Zářivka
+LightSource	Unknown	Neznámý
+LightSource	White Fluorescent	Bílá zářivka
+LoopStyle	Normal	Normální
+LuminanceNoiseReduction	Low	Méně
+Macro	Macro	Makro
+Macro	Manual	Manuální
+Macro	Normal	Normální
+MacroMode	Macro	Makro
+MacroMode	Normal	Normální
+ManualFlashOutput	Low	Méně
+MediaType	Normal	Normální
+Metering	Spot	Středový bod
+MeteringMode	Average	Průměr
+MeteringMode	Center-weighted average	Zvýrazněný střed
+MeteringMode	Multi-segment	Multi segment
+MeteringMode	Multi-spot	Vícebodové
+MeteringMode	Other	Jiné
+MeteringMode	Partial	Blokové
+MeteringMode	Spot	Středový bod
+MeteringMode	Unknown	Neznámý
+MeteringMode2	Multi-segment	Multi segment
+MeteringMode3	Multi-segment	Multi segment
+MinoltaQuality	Normal	Normální
+ModifiedPictureStyle	Landscape	Krajina
+ModifiedPictureStyle	None	Žádná
+ModifiedPictureStyle	Portrait	Portrét
+ModifiedSharpnessFreq	Low	Méně
+ModifiedToneCurve	Manual	Manuální
+ModifiedWhiteBalance	Cloudy	Zataženo
+ModifiedWhiteBalance	Daylight	Denní světlo
+ModifiedWhiteBalance	Daylight Fluorescent	Denní světlo
+ModifiedWhiteBalance	Flash	Blesk
+ModifiedWhiteBalance	Fluorescent	Žárovka
+ModifiedWhiteBalance	Shade	Stíny
+ModifiedWhiteBalance	Tungsten	Zářivka
+MonochromeFilterEffect	None	Žádná
+MonochromeToningEffect	None	Žádná
+NEFCompression	Uncompressed	Bez komprese
+NoiseFilter	Low	Méně
+NoiseReduction	Normal	Normální
+ObjectFileType	None	Žádná
+ObjectFileType	Unknown	Neznámý
+Orientation	Horizontal (normal)	0° (nahoru/vlevo)
+Orientation	Mirror horizontal	0° (nahoru/vpravo)
+Orientation	Mirror horizontal and rotate 270 CW	90° po směru HR (vlevo/nahoru)
+Orientation	Mirror horizontal and rotate 90 CW	90° ptoti směru HR (vpravo/dolů)
+Orientation	Mirror vertical	180° (dolů/vlevo)
+Orientation	Rotate 180	180° (dolů/vpravo)
+Orientation	Rotate 270 CW	90° po směru HR (vlevo/dolů)
+Orientation	Rotate 90 CW	90° ptoti směru HR (vpravo/nahoru)
+PhotoEffectsType	None	Žádná
+PhotometricInterpretation	BlackIsZero	Černá je nula
+PhotometricInterpretation	Color Filter Array	CFA (Color Filter Matrix)
+PhotometricInterpretation	Pixar LogL	CIE Log2(L) (Log luminance)
+PhotometricInterpretation	Pixar LogLuv	CIE Log2(L)(u',v') (Log luminance and chrominance)
+PhotometricInterpretation	RGB Palette	Barevné schema
+PhotometricInterpretation	Transparency Mask	Průhlednost
+PhotometricInterpretation	WhiteIsZero	Bílá je nula
+PictureFinish	Portrait	Portrét
+PictureMode	Aperture-priority AE	Priorita clony
+PictureMode	Landscape	Krajina
+PictureMode	Macro	Makro
+PictureMode	Manual	Manuální
+PictureMode	Portrait	Portrét
+PictureMode	Shutter speed priority AE	Priorita času
+PictureMode2	Aperture Priority	Priorita clony
+PictureMode2	Manual	Manuální
+PictureMode2	Shutter Speed Priority	Priorita času
+PictureStyle	Landscape	Krajina
+PictureStyle	None	Žádná
+PictureStyle	Portrait	Portrét
+PixelUnits	Unknown	Neznámý
+PlanarConfiguration	Chunky	Chunky Format (prokládaný)
+PlanarConfiguration	Planar	Planární (dvojrozměrný)
+Predictor	Horizontal differencing	Horizontální diferenciace
+Predictor	None	Bez predikce
+PreviewColorSpace	Unknown	Neznámý
+PreviewQuality	Normal	Normální
+ProgramLine	Normal	Normální
+ProgramMode	None	Žádná
+ProgramMode	Portrait	Portrét
+Quality	Low	Méně
+Quality	Normal	Normální
+QualityMode	Normal	Normální
+RawJpgQuality	Normal	Normální
+RecordMode	Aperture Priority	Priorita clony
+RecordMode	Manual	Manuální
+RecordMode	Shutter Priority	Priorita času
+RecordingMode	Landscape	Krajina
+RecordingMode	Manual	Manuální
+RecordingMode	Portrait	Portrét
+ResampleParamsQuality	Low	Méně
+ResolutionUnit	None	Žádná
+ResolutionUnit	cm	Pixely/cm
+ResolutionUnit	inches	Palce
+RetouchHistory	None	Žádná
+Rotation	Horizontal	0° (nahoru/vlevo)
+Rotation	Horizontal (normal)	0° (nahoru/vlevo)
+Rotation	Rotate 180	180° (dolů/vpravo)
+Rotation	Rotate 270 CW	90° po směru HR (vlevo/dolů)
+Rotation	Rotate 90 CW	90° ptoti směru HR (vpravo/nahoru)
+Rotation	Rotated 180	180° (dolů/vpravo)
+Rotation	Rotated 270 CW	90° po směru HR (vlevo/dolů)
+Rotation	Rotated 90 CW	90° ptoti směru HR (vpravo/nahoru)
+SampleFormat	Complex int	Komplexní číslo
+SampleFormat	Float	Desetinná čárka
+SampleFormat	Signed	Záporné číslo
+SampleFormat	Undefined	Nedefinované
+SampleFormat	Unsigned	Kladné číslo
+Saturation	High	Vysoká
+Saturation	Low	Nízká
+Saturation	Normal	Normální
+SceneCaptureType	Landscape	Krajina
+SceneCaptureType	Night	Noční foto
+SceneCaptureType	Portrait	Portrét
+SceneMode	Aperture Priority	Priorita clony
+SceneMode	Landscape	Krajina
+SceneMode	Macro	Makro
+SceneMode	Manual	Manuální
+SceneMode	Normal	Normální
+SceneMode	Portrait	Portrét
+SceneMode	Shutter Priority	Priorita času
+SceneMode	Spot	Středový bod
+SceneMode	Sunset	Západ
+SceneModeUsed	Aperture Priority	Priorita clony
+SceneModeUsed	Landscape	Krajina
+SceneModeUsed	Macro	Makro
+SceneModeUsed	Manual	Manuální
+SceneModeUsed	Portrait	Portrét
+SceneModeUsed	Shutter Priority	Priorita času
+SceneSelect	Night	Noční foto
+SceneType	Directly photographed	Přímo pořízený snímek
+SecurityClassification	Confidential	Důvěrný
+SecurityClassification	Restricted	Vyhrazený
+SecurityClassification	Secret	Tajný
+SecurityClassification	Top Secret	Velmi tajný
+SecurityClassification	Unclassified	Neurčeno
+SensingMethod	Color sequential area	Barevný sekvenční plošný sensor
+SensingMethod	Color sequential linear	Barevný sekvenčné-lineární senzor
+SensingMethod	Monochrome area	Monochromatický senzor
+SensingMethod	Monochrome linear	Monochromatický lineární senzor
+SensingMethod	Not defined	Nedefinovaný
+SensingMethod	One-chip color area	Jednočipový barevný senzor
+SensingMethod	Three-chip color area	Tříčipový barevný senzor
+SensingMethod	Trilinear	Třílineární senzor
+SensingMethod	Two-chip color area	Dvoučipový barevný senzor
+SequentialShot	None	Žádná
+SetButtonCrossKeysFunc	Normal	Normální
+Sharpness	Hard	Silné
+Sharpness	Normal	Normální
+Sharpness	Soft	Lehké
+SharpnessFrequency	Low	Méně
+ShootingMode	Aperture Priority	Priorita clony
+ShootingMode	Macro	Makro
+ShootingMode	Manual	Manuální
+ShootingMode	Normal	Normální
+ShootingMode	Portrait	Portrét
+ShootingMode	Shutter Priority	Priorita času
+ShootingMode	Spot	Středový bod
+ShutterMode	Aperture Priority	Priorita clony
+SlowShutter	None	Žádná
+SpecialEffectsOpticalFilter	None	Žádná
+SubjectDistanceRange	Close	Blízký
+SubjectDistanceRange	Distant	Vzdálený
+SubjectDistanceRange	Macro	Makro
+SubjectDistanceRange	Unknown	Neznámý
+SubjectProgram	None	Žádná
+SubjectProgram	Portrait	Portrét
+Subsystem	Unknown	Neznámý
+Teleconverter	None	Žádná
+TimeScaleParamsQuality	Low	Méně
+ToneCurve	Manual	Manuální
+ToningEffect	None	Žádná
+ToningEffectMonochrome	None	Žádná
+Transformation	Horizontal (normal)	0° (nahoru/vlevo)
+Transformation	Mirror horizontal	0° (nahoru/vpravo)
+Transformation	Mirror horizontal and rotate 270 CW	90° po směru HR (vlevo/nahoru)
+Transformation	Mirror horizontal and rotate 90 CW	90° ptoti směru HR (vpravo/dolů)
+Transformation	Mirror vertical	180° (dolů/vlevo)
+Transformation	Rotate 180	180° (dolů/vpravo)
+Transformation	Rotate 270 CW	90° po směru HR (vlevo/dolů)
+Transformation	Rotate 90 CW	90° ptoti směru HR (vpravo/nahoru)
+Trapped	Unknown	Neznámý
+UserDef1PictureStyle	Landscape	Krajina
+UserDef1PictureStyle	Portrait	Portrét
+UserDef2PictureStyle	Landscape	Krajina
+UserDef2PictureStyle	Portrait	Portrét
+UserDef3PictureStyle	Landscape	Krajina
+UserDef3PictureStyle	Portrait	Portrét
+VignetteControl	Normal	Normální
+WBAdjLighting	Daylight (cloudy)	Denní světlo (2)
+WBAdjLighting	Daylight (direct sunlight)	Denní světlo (0)
+WBAdjLighting	Daylight (shade)	Denní světlo (1)
+WBAdjLighting	Flash	Blesk
+WBAdjLighting	None	Žádná
+WhiteBalance	Auto	Automatické vyvážení bílé
+WhiteBalance	Black & White	Černobílé foto
+WhiteBalance	Cloudy	Zataženo
+WhiteBalance	Cool White Fluorescent	Chladná bílá fluorescentní
+WhiteBalance	Custom 1	VLASTNÍ1
+WhiteBalance	Custom 2	VLASTNÍ2
+WhiteBalance	Custom 3	VLASTNÍ3
+WhiteBalance	Custom 4	VLASTNÍ4
+WhiteBalance	Day White Fluorescent	Denní zářivka
+WhiteBalance	Daylight	Denní světlo
+WhiteBalance	Daylight Fluorescent	Denní světlo
+WhiteBalance	Flash	Blesk
+WhiteBalance	Fluorescent	Žárovka
+WhiteBalance	Manual	Manuální
+WhiteBalance	Shade	Stíny
+WhiteBalance	Tungsten	Zářivka
+WhiteBalance	Unknown	Neznámý
+WhiteBalance	White Fluorescent	Bílá zářivka
+WhiteBalanceAdj	Cloudy	Zataženo
+WhiteBalanceAdj	Daylight	Denní světlo
+WhiteBalanceAdj	Flash	Blesk
+WhiteBalanceAdj	Fluorescent	Žárovka
+WhiteBalanceAdj	Shade	Stíny
+WhiteBalanceAdj	Tungsten	Zářivka
+WhiteBalanceMode	Unknown	Neznámý
+WhiteBalanceSet	Cloudy	Zataženo
+WhiteBalanceSet	Daylight	Denní světlo
+WhiteBalanceSet	Daylight Fluorescent	Denní světlo
+WhiteBalanceSet	Flash	Blesk
+WhiteBalanceSet	Manual	Manuální
+WhiteBalanceSet	Shade	Stíny
+WhiteBalanceSet	Tungsten	Zářivka
+WhiteBalanceSet	White Fluorescent	Bílá zářivka
+YCbCrPositioning	Centered	Centrované
+YCbCrPositioning	Co-sited	Po stranách

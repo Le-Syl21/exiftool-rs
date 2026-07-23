@@ -1,0 +1,405 @@
+AELock	Off	Wyłączona
+AELock	On	Włączona
+AFPoint	None	Brak
+AFPointSelected	Auto	Automatyczny
+AFPointSelected	Automatic Tracking AF	Śledzący AF
+AFPointSelected	Bottom	Dolny
+AFPointSelected	Center	Centralny
+AFPointSelected	Face Detect AF	Wykrywanie twarzy
+AFPointSelected	Fixed Center	Centralny
+AFPointSelected	Left	Lewy
+AFPointSelected	Lower-left	Dolny-lewy
+AFPointSelected	Lower-right	Dolny-prawy
+AFPointSelected	Mid-left	Środek-lewy
+AFPointSelected	Mid-right	Środek-prawy
+AFPointSelected	Right	Prawy
+AFPointSelected	Top	Górny
+AFPointSelected	Upper-left	Górny-lewy
+AFPointSelected	Upper-right	Górny-prawy
+AFPointsInFocus	Bottom-center	Dolny-centralny
+AFPointsInFocus	Bottom-left	Dolny-lewy
+AFPointsInFocus	Bottom-right	Dolny-prawy
+AFPointsInFocus	Center	Centralny
+AFPointsInFocus	Fixed Center or Multiple	Centralny lub wiele
+AFPointsInFocus	Left	Lewy
+AFPointsInFocus	None	Brak
+AFPointsInFocus	Right	Prawy
+AFPointsInFocus	Top-center	Górny-centralny
+AFPointsInFocus	Top-left	Górny-lewy
+AFPointsInFocus	Top-right	Górny-prawy
+AutoRotate	None	Brak
+AutoRotate	Rotate 180	180° (dół/prawo)
+AutoRotate	Rotate 270 CW	90° CW (lewo/dół)
+AutoRotate	Rotate 90 CW	90° CCW (prawo/góra)
+BannerImageType	None	Brak
+BlurWarning	None	Brak
+CPUType	None	Brak
+CalibrationIlluminant1	Cloudy	Zachmurzone niebo
+CalibrationIlluminant1	Cool White Fluorescent	Zimna biała jarzeniówka (W 3800 - 4500K)
+CalibrationIlluminant1	Day White Fluorescent	Jarzeniówka z naturalnym białym światłem (N 4600 - 5500K)
+CalibrationIlluminant1	Daylight	Światło dzienne
+CalibrationIlluminant1	Daylight Fluorescent	Jarzeniówka dająca światło dzienne (D 5700 - 7100K)
+CalibrationIlluminant1	Fine Weather	Dobra pogoda
+CalibrationIlluminant1	Flash	Lampa błyskowa
+CalibrationIlluminant1	Fluorescent	Jarzeniowy
+CalibrationIlluminant1	ISO Studio Tungsten	ISO dla studyjnych lamp żarowych
+CalibrationIlluminant1	Other	Inne źródło światła
+CalibrationIlluminant1	Shade	Cień
+CalibrationIlluminant1	Standard Light A	Standardowe światło A
+CalibrationIlluminant1	Standard Light B	Standardowe światło B
+CalibrationIlluminant1	Standard Light C	Standardowe światło C
+CalibrationIlluminant1	Tungsten (Incandescent)	Światło żarowe
+CalibrationIlluminant1	Unknown	Nieznane
+CalibrationIlluminant1	White Fluorescent	Biała jarzeniówka (WW3250 - 3800K)
+CalibrationIlluminant2	Cloudy	Zachmurzone niebo
+CalibrationIlluminant2	Cool White Fluorescent	Zimna biała jarzeniówka (W 3800 - 4500K)
+CalibrationIlluminant2	Day White Fluorescent	Jarzeniówka z naturalnym białym światłem (N 4600 - 5500K)
+CalibrationIlluminant2	Daylight	Światło dzienne
+CalibrationIlluminant2	Daylight Fluorescent	Jarzeniówka dająca światło dzienne (D 5700 - 7100K)
+CalibrationIlluminant2	Fine Weather	Dobra pogoda
+CalibrationIlluminant2	Flash	Lampa błyskowa
+CalibrationIlluminant2	Fluorescent	Jarzeniowy
+CalibrationIlluminant2	ISO Studio Tungsten	ISO dla studyjnych lamp żarowych
+CalibrationIlluminant2	Other	Inne źródło światła
+CalibrationIlluminant2	Shade	Cień
+CalibrationIlluminant2	Standard Light A	Standardowe światło A
+CalibrationIlluminant2	Standard Light B	Standardowe światło B
+CalibrationIlluminant2	Standard Light C	Standardowe światło C
+CalibrationIlluminant2	Tungsten (Incandescent)	Światło żarowe
+CalibrationIlluminant2	Unknown	Nieznane
+CalibrationIlluminant2	White Fluorescent	Biała jarzeniówka (WW3250 - 3800K)
+CameraOrientation	Horizontal (normal)	0° (góra/lewo)
+CameraOrientation	Rotate 270 CW	90° CW (lewo/dół)
+CameraOrientation	Rotate 90 CW	90° CCW (prawo/góra)
+CleanFaxData	Clean	Dobry
+CleanFaxData	Regenerated	Ponowiony
+CleanFaxData	Unclean	Niedobry
+CodingMethods	Baseline JPEG	JPEG podstawowa
+CodingMethods	JBIG color	JBIG kolor
+CodingMethods	Modified Huffman	Huffmana zmodyfikowana
+CodingMethods	Modified MR	Zmodyfikowany MR
+CodingMethods	Modified Read	Zmodyfikowany odczyt
+CodingMethods	Unspecified compression	Nie podane
+ColorSpace	Uncalibrated	Nie skalibrowany
+Compression	Epson ERF Compressed	Skompresowany Epson ERF
+Compression	JBIG B&W	JBIG Czarno Biały
+Compression	JBIG Color	JBIG Kolorowy
+Compression	JPEG	Kompresja JPEG
+Compression	JPEG (old-style)	JPEG (w starym stylu)
+Compression	Kodak DCR Compressed	Skompresowany Kodak DCR
+Compression	Kodak KDC Compressed	Skompresowany Kodak KDC
+Compression	Next	Kodowanie 2-bitowe NeXT
+Compression	Nikon NEF Compressed	Skompresowany Nikon NEF
+Compression	None	Brak
+Compression	Packed RAW	Spakowany RAW
+Compression	Pentax PEF Compressed	Skompresowany Pentax PEF
+Compression	SGILog	Kodowanie 32-bitowe SGI Log Luminance
+Compression	SGILog24	Kodowanie 24-bitowe SGI Log Luminance
+Compression	Samsung SRW Compressed	Skompresowany Samsung SRW
+Compression	Sony ARW Compressed	Skompresowany Sony ARW
+Compression	Thunderscan	Kodowanie 4-bitowe ThunderScan
+Compression	Uncompressed	Bez kompresji
+CompressionType	None	Brak
+Contrast	High	Ostre
+Contrast	Low	Miękkie
+Contrast	Normal	Standard
+CropUnit	inches	Cal
+CropUnits	inches	Cal
+CustomRendered	Custom	Proces zdefiniowany przez użytkownika
+CustomRendered	Normal	Normalny proces
+DataImprint	None	Brak
+DestinationDST	No	Nie
+DestinationDST	Yes	Tak
+DisplayUnits	inches	Cal
+DisplayedUnitsX	inches	Cal
+DisplayedUnitsY	inches	Cal
+DynamicRangeExpansion	Off	Wyłączone
+DynamicRangeExpansion	On	Włączone
+Emphasis	None	Brak
+EnvelopePriority	0 (reserved)	0 (zarezerwowane na przyszłość)
+EnvelopePriority	1 (most urgent)	1 (najpilniejszy)
+EnvelopePriority	5 (normal urgency)	5 (zwykły)
+EnvelopePriority	8 (least urgent)	8 (niezbyt pilny)
+EnvelopePriority	9 (user-defined priority)	9 (priorytet określony przez użytkownika)
+ExposureMode	Auto	Automatyczna ekspozycja
+ExposureMode	Auto bracket	Funkcja Autobracketing
+ExposureMode	Manual	Manualna ekspozycja
+ExposureProgram	Action (High speed)	Program akcji
+ExposureProgram	Aperture-priority AE	Priorytet przysłony
+ExposureProgram	Creative (Slow speed)	Program kreatywny
+ExposureProgram	Landscape	Krajobraz
+ExposureProgram	Manual	Manualna ekspozycja
+ExposureProgram	Portrait	Portret
+ExposureProgram	Program AE	Normalny program
+ExposureProgram	Shutter speed priority AE	Priorytet migawki
+FaceOrientation	Horizontal (normal)	0° (góra/lewo)
+FaceOrientation	Rotate 180	180° (dół/prawo)
+FaceOrientation	Rotate 270 CW	90° CW (lewo/dół)
+FaceOrientation	Rotate 90 CW	90° CCW (prawo/góra)
+FaxProfile	Extended B&W lossless, F	Rozszerzony cz.b. bezstratny, F
+FaxProfile	Lossless JBIG B&W, J	Bezstratny JBIG cz.b., J
+FaxProfile	Lossless color and grayscale, L	Bezstratne kolor i skala szarości, L
+FaxProfile	Lossy color and grayscale, C	Stratne kolor i skala szarości, C
+FaxProfile	Minimal B&W lossless, S	Minimalny cz.b. bezstratny, S
+FaxProfile	Mixed raster content, M	Raster — zawartość mieszana, M
+FaxProfile	Multi Profiles	Wiele profili
+FaxProfile	Unknown	Nieznany
+FileSource	Digital Camera	DSC
+FileSource	Film Scanner	Skaner do materiałów transparentnych
+FileSource	Reflection Print Scanner	Skaner do zdjęć
+FillOrder	Normal	Normalna
+FillOrder	Reversed	Zajęte
+FilterEffectMonochrome	None	Brak
+Flash	Auto, Fired	Włączony (Automatyczny błysk lampy)
+Flash	Auto, Fired, Red-eye reduction	"Włączony (Błysk automatyczny, Redukcja efektu czerwonych oczu)"
+Flash	Auto, Fired, Red-eye reduction, Return detected	"Włączony (Błysk automatyczny, Redukcja efektu czerwonych oczu, rejestracja światła odbitego)"
+Flash	Auto, Fired, Return detected	"Włączony (Automatyczny błysk lampy, rejestracja światła odbitego)"
+Flash	Did not fire	Nie nastąpił błysk lampy
+Flash	Fired	Nastąpił błysk lampy
+Flash	Fired, Red-eye reduction	Włączony (Redukcja efektu czerwonych oczu)
+Flash	Fired, Red-eye reduction, Return detected	"Włączony (Redukcja efektu czerwonych oczu, rejestracja światła odbitego)"
+Flash	Fired, Return detected	Włączony (Rejestracja światła odbitego)
+Flash	No Flash	Brak funkcji lampy błyskowej
+Flash	On, Fired	Włączony (Błysk dopełniający)
+Flash	On, Red-eye reduction	"Włączony (Błysk dopełniający, Redukcja efektu czerwonych oczu)"
+Flash	On, Red-eye reduction, Return detected	"Włączony (Błysk dopełniający, Redukcja efektu czerwonych oczu, rejestracja światła odbitego)"
+Flash	On, Return detected	"Włączony (Błysk dopełniający, rejestracja światła odbitego)"
+FlashDevice	None	Brak
+FlashModel	None	Brak
+FlashType	None	Brak
+FocalPlaneResolutionUnit	None	Brak
+FocalPlaneResolutionUnit	inches	Cal
+FocalPlaneResolutionUnit	um	µm (mikrometr)
+GPSAltitudeRef	Above Sea Level	Poziom morza
+GPSAltitudeRef	Below Sea Level	Względem poziomu morza (wartość ujemna)
+GPSDifferential	Differential Corrected	Zastosowanie korekcji różnicowej
+GPSDifferential	No Correction	Pomiar bez korekcji różnicowej
+GPSLatitudeRef	North	Szerokości północnej
+GPSLatitudeRef	South	Szerokości południowej
+GPSLongitudeRef	East	Długości wschodniej
+GPSLongitudeRef	West	Długości zachodniej
+GPSMeasureMode	3-Dimensional Measurement	Pomiar 3-wymiarowy
+GPSSpeedRef	km/h	Kilometrów na godzinę
+GPSSpeedRef	knots	Węzły
+GPSSpeedRef	mph	Mil na godzinę
+GPSStatus	Measurement Active	Trwa pomiar
+GPSStatus	Measurement Void	Wzajemna niesprzeczność pomiarów
+GPSTrackRef	Magnetic North	Kierunek strzałki magnetycznej
+GPSTrackRef	True North	Rzeczywisty kierunek
+GainControl	High gain down	Z dużym krokiem do dołu
+GainControl	High gain up	Z dużym krokiem w górę
+GainControl	Low gain down	Z małym krokiem do dołu
+GainControl	Low gain up	Z małym krokiem w górę
+GainControl	None	Brak
+HometownDST	No	Nie
+HometownDST	Yes	Tak
+ImageTone	Bright	Jasny
+ImageTone	Landscape	Krajobraz
+ImageTone	Monochrome	Monochromatyczny
+ImageTone	Natural	Naturalny
+ImageTone	Portrait	Portret
+ImageType	Page	Strona
+Indexed	Indexed	Indeksowane
+Indexed	Not indexed	Nie indeksowane
+InkSet	Not CMYK	Nie CMYK
+InteropIndex	R03 - DCF option file (Adobe RGB)	R03: Plik pomocniczy DCF (Adobe RGB)
+InteropIndex	R98 - DCF basic file (sRGB)	R98: Plik zasadniczy DCF (sRGB)
+InteropIndex	THM - DCF thumbnail file	THM: Plik miniatury DCF
+JPEGProc	Baseline	JPEG Podstawowy
+JPEGProc	Lossless	Bezstratny
+JPEGQuality	Standard	Standardowa jakość
+LightSource	Cloudy	Zachmurzone niebo
+LightSource	Cool White Fluorescent	Zimna biała jarzeniówka (W 3800 - 4500K)
+LightSource	Day White Fluorescent	Jarzeniówka z naturalnym białym światłem (N 4600 - 5500K)
+LightSource	Daylight	Światło dzienne
+LightSource	Daylight Fluorescent	Jarzeniówka dająca światło dzienne (D 5700 - 7100K)
+LightSource	Fine Weather	Dobra pogoda
+LightSource	Flash	Lampa błyskowa
+LightSource	Fluorescent	Jarzeniowy
+LightSource	ISO Studio Tungsten	ISO dla studyjnych lamp żarowych
+LightSource	Other	Inne źródło światła
+LightSource	Shade	Cień
+LightSource	Standard Light A	Standardowe światło A
+LightSource	Standard Light B	Standardowe światło B
+LightSource	Standard Light C	Standardowe światło C
+LightSource	Tungsten (Incandescent)	Światło żarowe
+LightSource	Unknown	Nieznane
+LightSource	White Fluorescent	Biała jarzeniówka (WW3250 - 3800K)
+MeasurementGeometry	0/45 or 45/0	0/45 lub 45/0
+MeasurementGeometry	0/d or d/0	0/d lub d/0
+MeteringMode	Average	Średni
+MeteringMode	Center-weighted average	Centralnie ważony uśredniony
+MeteringMode	Multi-segment	Wzór
+MeteringMode	Multi-spot	Wielopunktowy
+MeteringMode	Other	Inne
+MeteringMode	Partial	Częściowy
+MeteringMode	Spot	Punktowy
+MeteringMode	Unknown	Nieznane
+ModifiedPictureStyle	None	Brak
+MonochromeFilterEffect	None	Brak
+MonochromeToningEffect	None	Brak
+NEFCompression	Uncompressed	Bez kompresji
+NoiseReduction	Off	Wyłączona
+NoiseReduction	On	Włączona
+ObjectFileType	None	Brak
+OldSubfileType	Full-resolution image	Obraz w pełnej rozdzielczości
+OldSubfileType	Reduced-resolution image	Obraz o zredukowanej rozdzielczości
+OldSubfileType	Single page of multi-page image	Jedna strona obrazu wielostronicowego
+Orientation	Horizontal (normal)	0° (góra/lewo)
+Orientation	Mirror horizontal	0° (góra/prawo)
+Orientation	Mirror horizontal and rotate 270 CW	90° CW (lewo/góra)
+Orientation	Mirror horizontal and rotate 90 CW	90° CCW (prawo/dół)
+Orientation	Mirror vertical	180° (dół/lewo)
+Orientation	Rotate 180	180° (dół/prawo)
+Orientation	Rotate 270 CW	90° CW (lewo/dół)
+Orientation	Rotate 90 CW	90° CCW (prawo/góra)
+PentaxImageSize	2304x1728 or 2592x1944	2304 x 1728 lub 2592 x 1944
+PentaxImageSize	2560x1920 or 2304x1728	2560 x 1920 lub 2304 x 1728
+PentaxImageSize	2816x2212 or 2816x2112	2816 x 2212 lub 2816 x 2112
+PentaxImageSize	3008x2008 or 3040x2024	3008 x 2008 lub 3040 x 2024
+PentaxImageSize	Full	Pełny
+PhotoEffectsType	None	Brak
+PhotometricInterpretation	BlackIsZero	Czarny jest zerem
+PhotometricInterpretation	Color Filter Array	CFA (Filtr kolorów matrycy)
+PhotometricInterpretation	Pixar LogL	CIE Log2(L) (Log luminancji)
+PhotometricInterpretation	Pixar LogLuv	CIE Log2(l)(u',v') (Log luminancji i chrominancji)
+PhotometricInterpretation	RGB Palette	Paleta kolorów
+PhotometricInterpretation	Transparency Mask	Maska przeźroczystości
+PhotometricInterpretation	WhiteIsZero	Biały jest zerem
+PictureStyle	None	Brak
+PixelFormat	128-bit PRGBA Float	128-bitów PRGBA (zapis zmienno przecinkowy)
+PixelFormat	128-bit RGB Float	128-bitów RGB (zapis zmienno przecinkowy)
+PixelFormat	128-bit RGBA Float	128-bitów RGBA (zapis zmienno przecinkowy)
+PixelFormat	16-bit Gray	16-bitów Szarość
+PixelFormat	32-bit Gray Float	32-bity Szarość (zapis zmienno przecinkowy)
+PixelFormat	48-bit RGB Fixed Point	48-bitów RGB (zapis stałopozycyjny)
+PixelFormat	8-bit Gray	8-bitów Szarość
+PixelFormat	96-bit RGB Fixed Point	96-bitów RGB (zapis stałopozycyjny)
+PixelFormat	Black & White	Czarno Biały
+PlanarConfiguration	Chunky	Format "chunky" (z przeplotem)
+PlanarConfiguration	Planar	Format "planar"
+Predictor	Horizontal differencing	W oparciu o różnicę w poziomie
+Predictor	None	Bez przelicznika
+PreviewColorSpace	Unknown	Nieznany
+ProfileClass	Abstract Profile	Profil abstrakcyjny
+ProfileClass	ColorSpace Conversion Profile	Profil konwersji przestrzeni barw
+ProfileClass	DeviceLink Profile	Profil DeviceLink
+ProfileClass	Display Device Profile	Profil urządzenia wyświetlającego
+ProfileClass	Input Device Profile	Profil urządzenia wejściowego
+ProfileClass	NamedColor Profile	Nazwany profil kolorów
+ProfileClass	Nikon Input Device Profile (NON-STANDARD!)	Profil Nikon ("nkpf")
+ProfileClass	Output Device Profile	Profil urządzenia wyjściowego
+ProfileType	Unspecified	Nie podany
+ProgramMode	None	Brak
+Quality	Best	Najlepsza
+Quality	Better	Lepsza
+Quality	Good	Dobra
+Quality	Low	Niska jakość
+Quality	Normal	Standardowa jakość
+ResolutionUnit	None	Brak
+ResolutionUnit	cm	centymetry
+ResolutionUnit	inches	Cal
+RetouchHistory	None	Brak
+Rotation	Horizontal	0° (góra/lewo)
+Rotation	Horizontal (normal)	0° (góra/lewo)
+Rotation	Rotate 180	180° (dół/prawo)
+Rotation	Rotate 270 CW	90° CW (lewo/dół)
+Rotation	Rotate 90 CW	90° CCW (prawo/góra)
+Rotation	Rotated 180	180° (dół/prawo)
+Rotation	Rotated 270 CW	90° CW (lewo/dół)
+Rotation	Rotated 90 CW	90° CCW (prawo/góra)
+SampleFormat	Float	Zmienno przecinkowa
+SampleFormat	Signed	Całkowita ze znakiem
+SampleFormat	Undefined	Nie podano
+SampleFormat	Unsigned	Całkowita bez znaku
+Saturation	High	Wysokie nasycenie
+Saturation	Low	Niskie nasycenie
+Saturation	Normal	Standardowy
+SceneCaptureType	Landscape	Krajobraz
+SceneCaptureType	Night	Sceny nocne
+SceneCaptureType	Portrait	Portret
+SceneCaptureType	Standard	Standardowy
+SceneMode	Sunset	Zachód słońca
+SceneType	Directly photographed	Zdjęcie uzyskane bezpośrednio
+SensingMethod	Color sequential area	Sekwencyjny sensor obszaru koloru
+SensingMethod	Color sequential linear	Sekwencyjny liniowy sensor koloru
+SensingMethod	One-chip color area	Jednoprocesorowy sensor obszaru koloru
+SensingMethod	Three-chip color area	Trójprocesorowy sensor obszaru koloru
+SensingMethod	Trilinear	Trój liniowy sensor
+SensingMethod	Two-chip color area	Dwuprocesorowy sensor obszaru koloru
+SequentialShot	None	Brak
+Sharpness	Hard	Ostry
+Sharpness	Normal	Standardowy
+Sharpness	Soft	Miękki
+SlowShutter	None	Brak
+SpecialEffectsOpticalFilter	None	Brak
+SubfileType	Full-resolution image	Obraz w pełnej rozdzielczości
+SubfileType	Reduced-resolution image	Obraz o zredukowanej rozdzielczości
+SubfileType	Single page of multi-page image	Jedna strona obrazu wielostronicowego
+SubfileType	Single page of multi-page reduced-resolution image	Jedna strona obrazu wielostronicowego o zredukowanej rozdzielczości
+SubfileType	TIFF/IT final page	Ostatnia strona TIFF/IT
+SubfileType	Transparency mask	Maska przezroczystości
+SubfileType	Transparency mask of multi-page image	Maska przezroczystości obrazu wielostronicowego
+SubfileType	Transparency mask of reduced-resolution image	Maska przezroczystości obrazu o zredukowanej rozdzielczości
+SubfileType	Transparency mask of reduced-resolution multi-page image	Maska przezroczystości obrazu wielostronicowego o zredukowanej rozdzielczości
+SubfileType	invalid	Błędny
+SubjectDistanceRange	Close	Zbliżenie
+SubjectDistanceRange	Distant	Odległy plan
+SubjectDistanceRange	Macro	Makro
+SubjectProgram	None	Brak
+T6Options	Uncompressed	Nieskompresowany
+Technology	Active Matrix Display	Wyświetlacz z matrycą aktywną
+Technology	Cathode Ray Tube Display	Wyświetlacz kineskopowy
+Technology	Digital Camera	Aparat cyfrowy
+Technology	Dye Sublimation Printer	Drukarka termosublimacyjna
+Technology	Electrophotographic Printer	Drukarka laserowa
+Technology	Film Scanner	Skaner do filmów
+Technology	Film Writer	Zapis na filmie
+Technology	Ink Jet Printer	Drukarka atramentowa
+Technology	Passive Matrix Display	Wyświetlacz z matrycą pasywną
+Technology	Photo CD	Foto-CD
+Technology	Photographic Paper Printer	Drukarka z papierem fotograficznym
+Technology	Projection Television	Projektor telewizyjny
+Technology	Reflective Scanner	Skaner
+Technology	Video Camera	Kamera wideo
+Technology	Video Monitor	Monitor wideo
+Teleconverter	None	Brak
+ToningEffectMonochrome	None	Brak
+Transformation	Horizontal (normal)	0° (góra/lewo)
+Transformation	Mirror horizontal	0° (góra/prawo)
+Transformation	Mirror horizontal and rotate 270 CW	90° CW (lewo/góra)
+Transformation	Mirror horizontal and rotate 90 CW	90° CCW (prawo/dół)
+Transformation	Mirror vertical	180° (dół/lewo)
+Transformation	Rotate 180	180° (dół/prawo)
+Transformation	Rotate 270 CW	90° CW (lewo/dół)
+Transformation	Rotate 90 CW	90° CCW (prawo/góra)
+WBAdjLighting	None	Brak
+WhiteBalance	Auto	Automatyczny balans bieli
+WhiteBalance	Black & White	Monochromatyczny
+WhiteBalance	Cloudy	Pochmurna pogoda
+WhiteBalance	Cool White Fluorescent	Jarzeniówka z zimnym białym światłem
+WhiteBalance	Custom 1	WŁASNE 1
+WhiteBalance	Custom 2	WŁASNE 2
+WhiteBalance	Custom 3	WŁASNE 3
+WhiteBalance	Custom 4	WŁASNE 4
+WhiteBalance	Day White Fluorescent	Jarzeniówka z naturalnym białym światłem
+WhiteBalance	Daylight	Światło dzienne
+WhiteBalance	Daylight Fluorescent	Jarzeniówka ze światłem dziennym
+WhiteBalance	Fluorescent	Jarzeniowy
+WhiteBalance	Manual	Manualny balans bieli
+WhiteBalance	Shade	Cień
+WhiteBalance	Tungsten	Światło żarówek
+WhiteBalanceMode	Auto (Cloudy)	Automatyczny (zachmurzenie)
+WhiteBalanceMode	Auto (Day White Fluorescent)	Automatyczny (białe fluorescencyjne światło dzienne)
+WhiteBalanceMode	Auto (Daylight Fluorescent)	Automatyczny (fluorescencyjne światło dzienne)
+WhiteBalanceMode	Auto (Daylight)	Automatyczny (światło dzienne)
+WhiteBalanceMode	Auto (Flash)	Automatyczny (lampa błyskowa)
+WhiteBalanceMode	Auto (Shade)	Automatyczny (cień)
+WhiteBalanceMode	Auto (Tungsten)	Automatyczny (światło żarowe)
+WhiteBalanceMode	Auto (White Fluorescent)	Automatyczny (białe światło fluorescencyjne)
+WhiteBalanceMode	Unknown	Automatyczny (nie wykryty)
+WhiteBalanceMode	User-Selected	Użytkownika
+WorldTimeLocation	Destination	Przeznaczenie
+WorldTimeLocation	Hometown	Miasto domowe
+YCbCrPositioning	Centered	Wyśrodkowane
+YCbCrPositioning	Co-sited	Obok siebie (?)

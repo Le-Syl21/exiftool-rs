@@ -327,6 +327,31 @@ impl App {
         description
     }
 
+    /// Localize a PrintConv output value when a non-English language is active.
+    /// Returns the original value when there is no translation.
+    fn translate_value(&self, group0: &str, group1: &str, tag_name: &str, value: &str) -> String {
+        // In a standalone XMP file ExifTool re-reads binary metadata (exif:*,
+        // MakerNotes, ...) without PrintConv, so -lang leaves those values English;
+        // only XMP-native and Composite tags are localized. Match that by
+        // suppressing every non-XMP, non-Composite group here.
+        let suppress = group0 != "XMP"
+            && group0 != "Composite"
+            && self
+                .tags
+                .iter()
+                .find(|t| t.name == "FileType")
+                .map(|t| t.print_value == "XMP")
+                .unwrap_or(false);
+        if self.lang != "en" && !suppress {
+            if let Some(tv) =
+                exiftool_rs::i18n::translate_value(&self.lang, group1, tag_name, value)
+            {
+                return tv;
+            }
+        }
+        value.to_string()
+    }
+
     fn is_tag_writable(&self, tag_name: &str) -> bool {
         match &self.writable_tags {
             None => false,      // no file loaded
@@ -681,13 +706,21 @@ impl eframe::App for App {
                                     for tag in group_tags {
                                         let desc = self.translate(&tag.name, &tag.description);
 
-                                        // Check if this tag has a pending edit
+                                        // Check if this tag has a pending edit; otherwise show
+                                        // the (optionally localized) print value.
                                         let display_value = self
                                             .pending_edits
                                             .iter()
                                             .find(|(name, _)| name == &tag.name)
-                                            .map(|(_, v)| v.as_str())
-                                            .unwrap_or(&tag.print_value);
+                                            .map(|(_, v)| v.clone())
+                                            .unwrap_or_else(|| {
+                                                self.translate_value(
+                                                    &tag.group.family0,
+                                                    &tag.group.family1,
+                                                    &tag.name,
+                                                    &tag.print_value,
+                                                )
+                                            });
 
                                         let is_edited =
                                             self.pending_edits.iter().any(|(n, _)| n == &tag.name);
@@ -702,15 +735,15 @@ impl eframe::App for App {
                                         // Value — double-click to edit
                                         let writable = self.is_tag_writable(&tag.name);
                                         let value_text = if is_edited {
-                                            egui::RichText::new(display_value)
+                                            egui::RichText::new(display_value.as_str())
                                                 .color(egui::Color32::YELLOW)
                                                 .strong()
                                         } else if writable {
-                                            egui::RichText::new(display_value)
+                                            egui::RichText::new(display_value.as_str())
                                                 .color(egui::Color32::from_rgb(100, 200, 100))
                                                 .strong()
                                         } else {
-                                            egui::RichText::new(display_value)
+                                            egui::RichText::new(display_value.as_str())
                                                 .color(egui::Color32::from_rgb(200, 100, 100))
                                                 .strong()
                                         };

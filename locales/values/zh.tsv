@@ -1,0 +1,462 @@
+AEProgramMode	Landscape	风景
+AEProgramMode	Portrait	人物
+AFAreaIllumination	Auto	自动
+AFPointIllumination	Auto	自动
+AFPointMode	Auto	自动
+AFPointRegistration	Automatic	自动
+AFPointSelected	Auto	自动
+AFPointSelected2	Auto	自动
+AFPointsUnknown2	Auto	自动
+AdultContentWarning	Unknown	未知
+Anti-Blur	n/a	未设置
+AutoLightingOptimizer	n/a	未设置
+AutoRotate	Rotate 180	180° (底/右)
+AutoRotate	Rotate 270 CW	90° CW (左/底)
+AutoRotate	Rotate 90 CW	90° CCW (右/上)
+AutoRotate	n/a	未知
+BracketShotNumber	n/a	未设置
+CalibrationIlluminant1	Cloudy	阴天
+CalibrationIlluminant1	Cool White Fluorescent	冷白色荧光灯（W3800-4500K）
+CalibrationIlluminant1	Day White Fluorescent	日光白色荧光灯（N4600-5500K）
+CalibrationIlluminant1	Daylight	太阳光
+CalibrationIlluminant1	Daylight Fluorescent	日光色荧光灯（D5700-7100K）
+CalibrationIlluminant1	Fine Weather	晴天
+CalibrationIlluminant1	Flash	闪光
+CalibrationIlluminant1	Fluorescent	荧光
+CalibrationIlluminant1	ISO Studio Tungsten	ISO相室白炽灯
+CalibrationIlluminant1	Other	其他光源
+CalibrationIlluminant1	Shade	阴影
+CalibrationIlluminant1	Standard Light A	标准光A
+CalibrationIlluminant1	Standard Light B	标准光B
+CalibrationIlluminant1	Standard Light C	标准光C
+CalibrationIlluminant1	Tungsten (Incandescent)	白炽灯
+CalibrationIlluminant1	Unknown	未知
+CalibrationIlluminant1	Warm White Fluorescent	暖白荧光灯（L2600-3250K）
+CalibrationIlluminant1	White Fluorescent	白色荧光灯（WW3250-3800K）
+CalibrationIlluminant2	Cloudy	阴天
+CalibrationIlluminant2	Cool White Fluorescent	冷白色荧光灯（W3800-4500K）
+CalibrationIlluminant2	Day White Fluorescent	日光白色荧光灯（N4600-5500K）
+CalibrationIlluminant2	Daylight	太阳光
+CalibrationIlluminant2	Daylight Fluorescent	日光色荧光灯（D5700-7100K）
+CalibrationIlluminant2	Fine Weather	晴天
+CalibrationIlluminant2	Flash	闪光
+CalibrationIlluminant2	Fluorescent	荧光
+CalibrationIlluminant2	ISO Studio Tungsten	ISO相室白炽灯
+CalibrationIlluminant2	Other	其他光源
+CalibrationIlluminant2	Shade	阴影
+CalibrationIlluminant2	Standard Light A	标准光A
+CalibrationIlluminant2	Standard Light B	标准光B
+CalibrationIlluminant2	Standard Light C	标准光C
+CalibrationIlluminant2	Tungsten (Incandescent)	白炽灯
+CalibrationIlluminant2	Unknown	未知
+CalibrationIlluminant2	Warm White Fluorescent	暖白荧光灯（L2600-3250K）
+CalibrationIlluminant2	White Fluorescent	白色荧光灯（WW3250-3800K）
+CameraOrientation	Horizontal (normal)	0° (上/左)
+CameraOrientation	Rotate 270 CW	90° CW (左/底)
+CameraOrientation	Rotate 90 CW	90° CCW (右/上)
+CanonExposureMode	Aperture-priority AE	光圈优先
+CanonExposureMode	Manual	手动
+CanonExposureMode	Shutter speed priority AE	快门优先
+CanonFlashMode	Auto	自动
+CaptureXResolutionUnit	um	µm (微米)
+CaptureYResolutionUnit	um	µm (微米)
+ColorEffect	Sepia	怀旧深咖啡色
+ColorMode	Autumn Leaves	红叶
+ColorMode	B&W	黑白
+ColorMode	Clear	清澈
+ColorMode	Deep	深色
+ColorMode	Landscape	风景
+ColorMode	Light	轻淡
+ColorMode	Neutral	中性
+ColorMode	Night View	夜景
+ColorMode	Night View/Portrait	夜晚肖像
+ColorMode	Portrait	人物
+ColorMode	Standard	标准
+ColorMode	Sunset	黄昏
+ColorMode	Vivid	生动色彩
+ColorSpace	ICC Profile	色彩特性文件
+ColorSpace	Uncalibrated	自发
+CommanderGroupAMode	Manual	手动
+CommanderGroupBMode	Manual	手动
+CommanderInternalFlash	Manual	手动
+Compression	JPEG	JEPG压缩率
+Compression	JPEG (old-style)	JPEG (旧样式)
+Compression	Kodak DCR Compressed	柯达 DCR 压缩
+Compression	Kodak KDC Compressed	柯达 KDC 压缩
+Compression	Next	NeXT 2比特编码
+Compression	Nikon NEF Compressed	尼康 NEF 压缩
+Compression	Pentax PEF Compressed	宾得 PEF 压缩
+Compression	SGILog	SGI 32比特对数亮度编码
+Compression	SGILog24	SGI 24比特对数亮度编码
+Compression	Sony ARW Compressed	索尼 ARW 压缩
+Compression	Thunderscan	ThunderScan 4比特编码
+Compression	Uncompressed	未压缩
+Contrast	High	硬调
+Contrast	Low	软调
+Contrast	Normal	标准
+ControlMode	n/a	未设置
+CopyrightStatus	Unknown	未知
+CustomRendered	Custom	自定义处理
+CustomRendered	Normal	普通模式
+DisplayXResolutionUnit	um	µm (微米)
+DisplayYResolutionUnit	um	µm (微米)
+DynamicRangeOptimizer	Advanced Auto	高级自动
+DynamicRangeOptimizer	Advanced Lv1	高级优化程度 1
+DynamicRangeOptimizer	Advanced Lv2	高级优化程度 2
+DynamicRangeOptimizer	Advanced Lv3	高级优化程度 3
+DynamicRangeOptimizer	Advanced Lv4	高级优化程度 4
+DynamicRangeOptimizer	Advanced Lv5	高级优化程度 5
+DynamicRangeOptimizer	Auto	自动
+DynamicRangeOptimizer	Off	关
+DynamicRangeOptimizer	Standard	标准
+EasyMode	Landscape	风景
+EasyMode	Manual	手动
+EasyMode	Night	夜景
+EasyMode	Portrait	人物
+ExposureMode	Aperture Priority	光圈优先
+ExposureMode	Aperture-priority AE	光圈优先
+ExposureMode	Auto	自动曝光
+ExposureMode	Auto bracket	自动支架
+ExposureMode	Landscape	风景
+ExposureMode	Manual	手动曝光
+ExposureMode	Portrait	人物
+ExposureMode	Shutter Priority	快门优先
+ExposureMode	Shutter speed priority AE	快门优先
+ExposureMode	n/a	未设置
+ExposureProgram	Action (High speed)	运动摄影
+ExposureProgram	Aperture Priority	光圈优先
+ExposureProgram	Aperture-priority AE	光圈优先
+ExposureProgram	Creative (Slow speed)	创意摄影
+ExposureProgram	Landscape	风景
+ExposureProgram	Manual	手动
+ExposureProgram	Portrait	人物
+ExposureProgram	Program AE	一般程序
+ExposureProgram	Shutter Priority	快门优先
+ExposureProgram	Shutter speed priority AE	快门优先
+ExternalFlashBounce	n/a	未设置
+ExternalFlashExposureComp	n/a	未设置 (Off or Auto Modes)
+ExternalFlashExposureComp	n/a (Manual Mode)	未设置 (Manual Mode)
+FaceOrientation	Horizontal (normal)	0° (上/左)
+FaceOrientation	Rotate 180	180° (底/右)
+FaceOrientation	Rotate 270 CW	90° CW (左/底)
+FaceOrientation	Rotate 90 CW	90° CCW (右/上)
+FaxProfile	Unknown	未知
+FileSource	Digital Camera	数码相机
+FileSource	Film Scanner	胶片扫描仪
+FileSource	Reflection Print Scanner	反射型扫描仪
+FilterEffect	n/a	未设置
+Flash	Auto, Fired	开 (自动闪光)
+Flash	Auto, Fired, Red-eye reduction	开 (自动闪光，减轻红眼)
+Flash	Auto, Fired, Red-eye reduction, Return detected	开 (强制闪光，减轻红眼，检测返回光)
+Flash	Auto, Fired, Return detected	开 (自动闪光，检测返回光)
+Flash	Did not fire	闪光灯未亮
+Flash	Fired	闪光灯亮
+Flash	Fired, Red-eye reduction	开 (减轻红眼)
+Flash	Fired, Red-eye reduction, Return detected	开 (减轻红眼，检测返回光)
+Flash	Fired, Return detected	开 (检测返回光)
+Flash	No Flash	无闪光功能
+Flash	On, Fired	开 (强制闪光)
+Flash	On, Red-eye reduction	开 (强制闪光(减轻红眼))
+Flash	On, Red-eye reduction, Return detected	开 (强制闪光，减轻红眼，检测返回光)
+Flash	On, Return detected	开 (强制闪光，检测返回光)
+FlashControlMode	Manual	手动
+FlashGroupAControlMode	Manual	手动
+FlashGroupBControlMode	Manual	手动
+FlashGroupCControlMode	Manual	手动
+FlashMode	Auto	自动
+FlashMode	Unknown	未知
+FlashOptions	Auto	自动
+FlashOptions2	Auto	自动
+FlashSyncSpeedAv	Auto	自动
+FocalPlaneResolutionUnit	inches	英寸
+FocalPlaneResolutionUnit	um	µm (微米)
+Focus	Manual	手动
+FocusContinuous	Manual	手动
+FocusMode	Auto	自动
+FocusMode	Manual	手动
+FocusMode2	Manual	手动
+FocusModeSetting	Manual	手动
+FocusRange	Auto	自动
+FocusRange	Manual	手动
+FujiFlashMode	Auto	自动
+GPSAltitudeRef	Above Sea Level	海平面
+GPSAltitudeRef	Below Sea Level	海拔(负值)
+GPSDestDistanceRef	Kilometers	公里数
+GPSDestDistanceRef	Miles	英里数
+GPSDestDistanceRef	Nautical Miles	节数
+GPSDestLatitudeRef	North	北纬
+GPSDestLatitudeRef	South	南纬
+GPSDestLongitudeRef	East	东经
+GPSDestLongitudeRef	West	西经
+GPSDifferential	Differential Corrected	差分校正定位
+GPSDifferential	No Correction	非差分校正测量
+GPSLatitudeRef	North	北纬
+GPSLatitudeRef	South	南纬
+GPSLongitudeRef	East	东经
+GPSLongitudeRef	West	西经
+GPSMeasureMode	2-D	2维测量
+GPSMeasureMode	2-Dimensional	2维测量
+GPSMeasureMode	2-Dimensional Measurement	2维测量
+GPSMeasureMode	3-D	3维测量
+GPSMeasureMode	3-Dimensional	3维测量
+GPSMeasureMode	3-Dimensional Measurement	3维测量
+GPSSpeedRef	km/h	公里/小时
+GPSSpeedRef	knots	海里/小时
+GPSSpeedRef	mph	英里/小时
+GPSStatus	Measurement Active	正在测量中
+GPSStatus	Measurement Void	测量中断
+GPSTrackRef	Magnetic North	磁场方向
+GPSTrackRef	True North	真方向
+GainControl	High gain down	强减少
+GainControl	High gain up	强增益
+GainControl	Low gain down	弱减少
+GainControl	Low gain up	弱增益
+GainControl	None	无
+HDR	Off	关
+HighISONoiseReduction	Auto	自动
+HighISONoiseReduction	High	强
+HighISONoiseReduction	Low	弱
+HighISONoiseReduction	Normal	标准
+HighISONoiseReduction	Off	关
+ISOSetting	Auto	自动
+ISOSetting	Manual	手动
+ImageOrientation	Portrait	人物
+ImageTone	Landscape	风景
+ImageTone	Portrait	人物
+InternalFlash	Manual	手动
+InteropIndex	THM - DCF thumbnail file	THM: DCF 缩略图文件
+JPEGQuality	Extra Fine	超精细
+JPEGQuality	Fine	精细
+JPEGQuality	Standard	标准画质
+JPEGQuality	n/a	未设置
+LicenseType	Unknown	未知
+LightSource	Cloudy	阴天
+LightSource	Cool White Fluorescent	冷白色荧光灯（W3800-4500K）
+LightSource	Day White Fluorescent	日光白色荧光灯（N4600-5500K）
+LightSource	Daylight	太阳光
+LightSource	Daylight Fluorescent	日光色荧光灯（D5700-7100K）
+LightSource	Fine Weather	晴天
+LightSource	Flash	闪光
+LightSource	Fluorescent	荧光
+LightSource	ISO Studio Tungsten	ISO相室白炽灯
+LightSource	Other	其他光源
+LightSource	Shade	阴影
+LightSource	Standard Light A	标准光A
+LightSource	Standard Light B	标准光B
+LightSource	Standard Light C	标准光C
+LightSource	Tungsten (Incandescent)	白炽灯
+LightSource	Unknown	未知
+LightSource	Warm White Fluorescent	暖白荧光灯（L2600-3250K）
+LightSource	White Fluorescent	白色荧光灯（WW3250-3800K）
+LongExposureNoiseReduction	Auto	自动
+LongExposureNoiseReduction	Off	关
+LongExposureNoiseReduction	On	开
+LongExposureNoiseReduction	n/a	未设置
+Macro	Manual	手动
+Macro	n/a	未设置
+ManualFlashOutput	n/a	未设置
+MeteringMode	Average	平均
+MeteringMode	Center-weighted average	中央重点
+MeteringMode	Multi-segment	分割测光
+MeteringMode	Multi-spot	多点
+MeteringMode	Other	其它
+MeteringMode	Partial	部分测光
+MeteringMode	Spot	点测光
+MeteringMode	Unknown	未知
+ModifiedPictureStyle	Landscape	风景
+ModifiedPictureStyle	Portrait	人物
+ModifiedSharpnessFreq	n/a	未设置
+ModifiedToneCurve	Manual	手动
+ModifiedWhiteBalance	Auto	自动
+ModifiedWhiteBalance	Cloudy	阴天
+ModifiedWhiteBalance	Daylight	太阳光
+ModifiedWhiteBalance	Flash	闪光
+ModifiedWhiteBalance	Fluorescent	荧光
+ModifiedWhiteBalance	Shade	阴影
+MultiFrameNoiseReduction	Off	关
+MultiFrameNoiseReduction	On	开
+NEFCompression	Uncompressed	未压缩
+NoiseReduction	Auto	自动
+ObjectFileType	Unknown	未知
+Orientation	Horizontal (normal)	0° (上/左)
+Orientation	Mirror horizontal	0° (上/右)
+Orientation	Mirror horizontal and rotate 270 CW	90° CW (左/上)
+Orientation	Mirror horizontal and rotate 90 CW	90° CCW (右/底)
+Orientation	Mirror vertical	180° (底/左)
+Orientation	Rotate 180	180° (底/右)
+Orientation	Rotate 270 CW	90° CW (左/底)
+Orientation	Rotate 90 CW	90° CCW (右/上)
+PhotometricInterpretation	BlackIsZero	零黑色
+PhotometricInterpretation	Color Filter Array	CFA (颜色滤镜矩阵)
+PhotometricInterpretation	Pixar LogL	CIE Log2(L) (对数亮度)
+PhotometricInterpretation	Pixar LogLuv	CIE Log2(L)(u',v') (对数亮度和色度)
+PhotometricInterpretation	RGB Palette	调色板颜色
+PhotometricInterpretation	Transparency Mask	透明蒙板
+PhotometricInterpretation	WhiteIsZero	零白色
+PictureFinish	Portrait	人物
+PictureMode	Aperture-priority AE	光圈优先
+PictureMode	Auto	自动
+PictureMode	Landscape	风景
+PictureMode	Manual	手动
+PictureMode	Portrait	人物
+PictureMode	Shutter speed priority AE	快门优先
+PictureMode2	Aperture Priority	光圈优先
+PictureMode2	Manual	手动
+PictureMode2	Shutter Speed Priority	快门优先
+PictureModeBWFilter	n/a	未设置
+PictureModeTone	n/a	未设置
+PictureStyle	Landscape	风景
+PictureStyle	Portrait	人物
+PixelUnits	Unknown	未知
+PlanarConfiguration	Chunky	点顺序格式
+PlanarConfiguration	Planar	平面格式
+PreviewColorSpace	Unknown	未知
+ProgramMode	Portrait	人物
+Quality	Compressed RAW	cRAW
+Quality	Compressed RAW + JPEG	cRAW+JPEG
+Quality	Extra Fine	超精细
+Quality	Fine	精细
+Quality	Low	低画质
+Quality	Normal	标准画质
+Quality	RAW + JPEG	RAW+JPEG
+Quality	Standard	标准
+Quality	n/a	未设置
+RecordMode	Aperture Priority	光圈优先
+RecordMode	Manual	手动
+RecordMode	Shutter Priority	快门优先
+RecordingMode	Auto	自动
+RecordingMode	Landscape	风景
+RecordingMode	Manual	手动
+RecordingMode	Portrait	人物
+RedEyeCorrection	Automatic	自动
+ResolutionUnit	cm	像素/厘米
+ResolutionUnit	inches	英寸
+Rotation	Horizontal	0° (上/左)
+Rotation	Horizontal (normal)	0° (上/左)
+Rotation	Rotate 180	180° (底/右)
+Rotation	Rotate 270 CW	90° CW (左/底)
+Rotation	Rotate 90 CW	90° CCW (右/上)
+Rotation	Rotated 180	180° (底/右)
+Rotation	Rotated 270 CW	90° CW (左/底)
+Rotation	Rotated 90 CW	90° CCW (右/上)
+SRAWQuality	n/a	未设置
+Saturation	High	高饱和度
+Saturation	Low	低饱和度
+Saturation	None	未设置
+Saturation	Normal	标准
+SceneCaptureType	Landscape	风景
+SceneCaptureType	Night	夜景
+SceneCaptureType	Portrait	人物
+SceneCaptureType	Standard	标准
+SceneMode	3D Sweep Panorama	3D
+SceneMode	Anti Motion Blur	动作防抖
+SceneMode	Aperture Priority	光圈优先
+SceneMode	Auto	自动
+SceneMode	Cont. Priority AE	连续拍摄优先AE
+SceneMode	Handheld Night Shot	手持夜景拍摄
+SceneMode	Landscape	风景
+SceneMode	Macro	微距
+SceneMode	Manual	手动
+SceneMode	Night Portrait	夜晚肖像
+SceneMode	Night Scene	夜景
+SceneMode	Night View/Portrait	夜景/肖像
+SceneMode	Portrait	人物
+SceneMode	Shutter Priority	快门优先
+SceneMode	Sports	运动模式
+SceneMode	Sunset	夕阳
+SceneMode	Sweep Panorama	扫描全景
+SceneModeUsed	Aperture Priority	光圈优先
+SceneModeUsed	Landscape	风景
+SceneModeUsed	Manual	手动
+SceneModeUsed	Portrait	人物
+SceneModeUsed	Shutter Priority	快门优先
+SceneSelect	Night	夜景
+SceneType	Directly photographed	直接拍摄的图像
+SensingMethod	Color sequential area	色彩连续区感应器
+SensingMethod	Color sequential linear	色彩连续线性感应器
+SensingMethod	One-chip color area	单片色彩区感应器
+SensingMethod	Three-chip color area	3 片色彩区传感器
+SensingMethod	Trilinear	3 线传感器
+SensingMethod	Two-chip color area	2 片色彩区传感器
+Sharpness	Hard	强
+Sharpness	Normal	标准
+Sharpness	Soft	弱
+Sharpness	n/a	未设置
+SharpnessFrequency	n/a	未设置
+ShootingInfoDisplay	Auto	自动
+ShootingMode	Aperture Priority	光圈优先
+ShootingMode	Manual	手动
+ShootingMode	Portrait	人物
+ShootingMode	Shutter Priority	快门优先
+ShutterMode	Aperture Priority	光圈优先
+ShutterMode	Auto	自动
+SubjectDistanceRange	Close	近景
+SubjectDistanceRange	Distant	远景
+SubjectDistanceRange	Macro	微距
+SubjectDistanceRange	Unknown	未知
+SubjectProgram	Portrait	人物
+Subsystem	Unknown	未知
+SupplementalType	Main Image	未设置
+ToneCurve	Manual	手动
+ToningEffect	n/a	未设置
+Transformation	Horizontal (normal)	0° (上/左)
+Transformation	Mirror horizontal	0° (上/右)
+Transformation	Mirror horizontal and rotate 270 CW	90° CW (左/上)
+Transformation	Mirror horizontal and rotate 90 CW	90° CCW (右/底)
+Transformation	Mirror vertical	180° (底/左)
+Transformation	Rotate 180	180° (底/右)
+Transformation	Rotate 270 CW	90° CW (左/底)
+Transformation	Rotate 90 CW	90° CCW (右/上)
+Trapped	Unknown	未知
+UserDef1PictureStyle	Landscape	风景
+UserDef1PictureStyle	Portrait	人物
+UserDef2PictureStyle	Landscape	风景
+UserDef2PictureStyle	Portrait	人物
+UserDef3PictureStyle	Landscape	风景
+UserDef3PictureStyle	Portrait	人物
+VibrationReduction	n/a	未设置
+WBAdjLighting	Daylight (cloudy)	太阳光 (2)
+WBAdjLighting	Daylight (direct sunlight)	太阳光 (0)
+WBAdjLighting	Daylight (shade)	太阳光 (1)
+WBAdjLighting	Flash	闪光
+WBMode	Auto	自动
+WhiteBalance	Auto	自动
+WhiteBalance	Black & White	黑白
+WhiteBalance	Cloudy	阴天
+WhiteBalance	Color Temperature/Color Filter	色温 / 彩色滤光片
+WhiteBalance	Cool White Fluorescent	白色荧光灯
+WhiteBalance	Custom	自定义
+WhiteBalance	Custom 1	自定义1
+WhiteBalance	Custom 2	自定义2
+WhiteBalance	Custom 3	自定义3
+WhiteBalance	Custom 4	自定义4
+WhiteBalance	Day White Fluorescent	日光白色荧光灯
+WhiteBalance	Daylight	太阳光
+WhiteBalance	Daylight Fluorescent	日光色荧光灯
+WhiteBalance	Flash	闪光
+WhiteBalance	Fluorescent	荧光
+WhiteBalance	Manual	手动
+WhiteBalance	Shade	阴影
+WhiteBalance	Tungsten	白炽灯
+WhiteBalance	Unknown	未知
+WhiteBalance	Warm White Fluorescent	暖白荧光灯
+WhiteBalance	White Fluorescent	白色荧光灯
+WhiteBalance2	Auto	自动
+WhiteBalanceAdj	Auto	自动
+WhiteBalanceAdj	Cloudy	阴天
+WhiteBalanceAdj	Daylight	太阳光
+WhiteBalanceAdj	Flash	闪光
+WhiteBalanceAdj	Fluorescent	荧光
+WhiteBalanceAdj	Shade	阴影
+WhiteBalanceMode	Unknown	未知
+WhiteBalanceSet	Auto	自动
+WhiteBalanceSet	Cloudy	阴天
+WhiteBalanceSet	Daylight	太阳光
+WhiteBalanceSet	Flash	闪光
+WhiteBalanceSet	Manual	手动
+WhiteBalanceSet	Shade	阴影
+YCbCrPositioning	Centered	中心的
+YCbCrPositioning	Co-sited	一致
+ZoneMatching	High Key	强
+ZoneMatching	ISO Setting Used	关
+ZoneMatching	Low Key	弱

@@ -1,0 +1,849 @@
+AELock	Off	Pois
+AELock	On	Päällä
+AFAssistLamp	Disabled and Not Required	Deaktivoitu eikä tarpeen
+AFAssistLamp	Disabled but Required	Deaktivoitu mutta tarpeen
+AFAssistLamp	Enabled but Not Used	Aktivoitu muttei käytetty
+AFAssistLamp	Fired	Lauennut
+AFPoint	Bottom Center	Alhaalla keskellä
+AFPoint	Bottom Left	Alavasemmalla
+AFPoint	Bottom Right	Alaoikealla
+AFPoint	Center	Keskellä
+AFPoint	Center Left	Keskellä vasemmalla
+AFPoint	Center Right	Keskellä oikealla
+AFPoint	Far Left/Right of Center	Kaukana vasemmalla/keskioikealla
+AFPoint	Far Left/Right of Center/Bottom	Kaukana vasemmalla/keskioikealla/alhaalla
+AFPoint	Near Left/Right of Center	Hieman vasemmalla/keskioikealla
+AFPoint	Near Upper/Left	Hieman ylhäällä/vasemmalla
+AFPoint	Top Center	Ylhäällä keskellä
+AFPoint	Top Left	Ylävasemmalla
+AFPoint	Top Near-left	Hieman ylävasemmalla
+AFPoint	Top Near-right	Hieman yläoikealla
+AFPoint	Top Right	Yläoikealla
+AFPoint	Upper Left	Ylävasemmalla
+AFPoint	Upper Right	Yläoikealla
+AFPointSelected	Auto	Automaattinen
+AFPointSelected	Automatic Tracking AF	Automaattiseuranta-AF
+AFPointSelected	Bottom	Alas
+AFPointSelected	Center	Keskelle
+AFPointSelected	Face Detect AF	Kasvojentunnistus-AF
+AFPointSelected	Fixed Center	Kiinteästi keskustaan
+AFPointSelected	Left	Vasemmalle
+AFPointSelected	Lower-left	Alavasemmalle
+AFPointSelected	Lower-right	Alaoikealle
+AFPointSelected	Mid-left	Keskivasemmalle
+AFPointSelected	Mid-right	Keskioikealle
+AFPointSelected	Right	Oikealle
+AFPointSelected	Top	Ylös
+AFPointSelected	Upper-left	Ylävasemmalle
+AFPointSelected	Upper-right	Yläoikealle
+AFPointsInFocus	Bottom-center	Alakeski
+AFPointsInFocus	Bottom-left	Alavasen
+AFPointsInFocus	Bottom-right	Alaoikea
+AFPointsInFocus	Center	Keski
+AFPointsInFocus	Fixed Center or Multiple	Kiinteästi keskellä tai useita
+AFPointsInFocus	Left	Vasen
+AFPointsInFocus	None	Ei yhtään
+AFPointsInFocus	Right	Oikea
+AFPointsInFocus	Top-center	Yläkeski
+AFPointsInFocus	Top-left	Yläoikea
+AFPointsInFocus	Top-right	Yläoikea
+AFSearch	Not Ready	Ei valmis
+AFSearch	Ready	Valmis
+ActionAdvised	Object Append	Objektiliitäntä
+ActionAdvised	Object Kill	Objektin tuhonta
+ActionAdvised	Object Reference	Objektiviite
+ActionAdvised	Object Replace	Objektin korvaus
+ActionAdvised	Ojbect Append	Objektiliitäntä
+AdvancedSceneMode	Auto	Automaattinen
+AdvancedSceneMode	Creative	Luova
+AdvancedSceneMode	Indoor/Architecture/Objects/HDR B&W	Sisällä/arkkitehtuuri/kohteet
+AdvancedSceneMode	Normal	Normaali
+AdvancedSceneMode	Outdoor/Illuminations/Flower/HDR Art	Ulkona/valaistukset/kukka
+AlphaDataDiscard	Flexbits Discarded	FlexBits hylätty
+AlphaDataDiscard	Full Resolution	Täysi resoluutio
+AlphaDataDiscard	HighPass Frequency Data Discarded	Ylipäästötaajuusdata hylätty
+AlphaDataDiscard	Highpass and LowPass Frequency Data Discarded	Yli- ja alipäästötaajuusdata hylätty
+Audio	No	Ei
+Audio	Yes	Kyllä
+AudioType	Mono Actuality	Aktuaalisuus (monoaudio (1 kanava))
+AudioType	Mono Music	Musiikki, itsensä välittämä (monoaudio (1 kanava))
+AudioType	Mono Question and Answer Session	Kysymys- ja vastausistunto (monoaudio (1 kanava))
+AudioType	Mono Raw Sound	Raakaääni (monoaudio (1 kanava))
+AudioType	Mono Response to a Question	Vastaus kysymykseen (monoaudio (1 kanava))
+AudioType	Mono Scener	Kohtaus (monoaudio (1 kanava))
+AudioType	Mono Voicer	Ihmisääni (monoaudio (1 kanava))
+AudioType	Mono Wrap	Pakkaus (monoaudio (1 kanava))
+AudioType	Stereo Actuality	Aktuaalisuus (stereoaudio (2 kanavaa))
+AudioType	Stereo Music	Musiikki, itsensä välittämä (stereomono (2 kanavaa))
+AudioType	Stereo Question and Answer Session	Kysymys- ja vastausistunto (stereoaudio (2 kanavaa))
+AudioType	Stereo Raw Sound	Raakaääni (stereoaudio (2 kanavaa))
+AudioType	Stereo Response to a Question	Vastaus kysymykseen (stereoaudio (2 kanavaa))
+AudioType	Stereo Scener	Kohtaus (stereoaudio (2 kanavaa))
+AudioType	Stereo Voicer	Ihmisääni (stereoaudio (2 kanavaa))
+AudioType	Stereo Wrap	Pakkaus (stereoaudio (2 kanavaa))
+AudioType	Text Only	Vain teksti (ei objektidataa)
+AutoBracketing	No flash & flash	Ei salamaa & Salama
+AutoBracketing	Off	Pois
+AutoBracketing	On	Päällä
+AutoFocus	Off	Pois
+AutoFocus	On	Päällä
+AutoISO	Off	Pois
+AutoISO	On	Päällä
+BWMode	Off	Pois
+BWMode	On	Päällä
+BestShotMode	Off	Pois
+BlurWarning	Blur Warning	Tärinävaroitus
+BlurWarning	None	Ei mitään
+BurstMode	Auto Exposure Bracketing (AEB)	Ääretön
+BurstMode	Infinite	Ääretön
+BurstMode	Off	Pois
+BurstMode	On	Matala/korkea laatu
+BurstMode	Unlimited	Rajaton
+CCDScanMode	Interlaced	Lomitettu
+CCDScanMode	Progressive	Progressiivinen
+CFALayout	Even columns offset down 1/2 row	Horjahtanut sommitelma A: parilliset sarakkeet siirtyneet alas 1/2 riviä
+CFALayout	Even columns offset up 1/2 row	Horjahtanut sommitelma B: parilliset sarakkeet osiirtyneet ylös 1/2 riviä
+CFALayout	Even rows offset left 1/2 column	Horjahtanut sommitelma D: parilliset rivit siirtyneet vasemmalle 1/2 saraketta
+CFALayout	Even rows offset right 1/2 column	Horjahtanut sommitelma C: parilliset rivit siirtyneet oikealle 1/2 saraketta
+CFALayout	Rectangular	Suorakulmainen (tai neliömäinen) sommitelma
+CalibrationIlluminant1	Unknown	Tuntematon
+CalibrationIlluminant2	Unknown	Tuntematon
+ColorAdjustmentMode	Off	Pois
+ColorAdjustmentMode	On	Päällä
+ColorEffect	Black & White	Musta & Valkoinen
+ColorEffect	Cool	Viileä
+ColorEffect	Off	Pois
+ColorEffect	Sepia	Seepia
+ColorEffect	Warm	Lämmin
+ColorFilter	Off	Pois
+ColorMode	Autumn Leaves	Syksyn lehdet
+ColorMode	B & W	M & V
+ColorMode	B&W	M&V
+ColorMode	Black & White	Heleät värit
+ColorMode	Chrome	Kellastunut
+ColorMode	Clear	Selkeä
+ColorMode	Deep	Syvä
+ColorMode	Evening	Ilta
+ColorMode	Landscape	Maisema
+ColorMode	Light	Valoisa
+ColorMode	Natural	Luonnollinen
+ColorMode	Natural color	Luonnonvalo
+ColorMode	Natural sRGB	Luonnollinen sRGB
+ColorMode	Natural+ sRGB	Luonnollinen+ sRGB
+ColorMode	Neutral	Neutraali
+ColorMode	Night Portrait	Yön muotokuva
+ColorMode	Night Scene	Yönäkymä
+ColorMode	Night View	Iltanäkymä
+ColorMode	Night View/Portrait	Yönäkymä
+ColorMode	Normal	Normaali
+ColorMode	Off	Pois
+ColorMode	Portrait	Muotokuva
+ColorMode	Sepia	Seepia
+ColorMode	Solarization	Solarisaatio
+ColorMode	Standard	Vakio
+ColorMode	Sunset	Auringonlasku
+ColorMode	Vivid	Heleät värit
+ColorMode	Vivid color	Heleä väri
+ColorSpace	ICC Profile	ICC-profiili
+ColorSpace	Uncalibrated	Kalibroimaton
+ColorSpace	Wide Gamut RGB	Laaja Gamut RVB
+Contrast	Film Simulation	Filminsimulaatio
+Contrast	High	Korkea
+Contrast	Low	Matala
+Contrast	Medium High	Korkeahko
+Contrast	Medium Low	Matalahko
+Contrast	Normal	Vakio
+ConversionLens	Macro	Makro
+ConversionLens	Off	Pois
+ConversionLens	Telephoto	Tele
+ConversionLens	Wide	Laajakulma
+CreativeStyle	Autumn Leaves	Syksyn lehdet
+CreativeStyle	B&W	M&V
+CreativeStyle	Clear	Selkeä
+CreativeStyle	Deep	Syvä
+CreativeStyle	Landscape	Maisema
+CreativeStyle	Light	Valoisa
+CreativeStyle	Neutral	Neutraali
+CreativeStyle	Night View/Portrait	Yönäkymä
+CreativeStyle	Portrait	Muotokuva
+CreativeStyle	Sepia	Seepia
+CreativeStyle	Standard	Vakio
+CreativeStyle	Sunset	Auringonlasku
+CreativeStyle	Vivid	Heleät värit
+CustomRendered	Custom	Mukautettu käsittely
+CustomRendered	Normal	Normaali käsittely
+DestinationDST	No	Ei
+DestinationDST	Yes	Kyllä
+DigitalZoomOn	Off	Pois
+DigitalZoomOn	On	Päällä
+DynamicRange	Standard	Vakio
+DynamicRange	Wide	Laaja
+DynamicRangeExpansion	Off	Pois
+DynamicRangeExpansion	On	Päällä
+DynamicRangeOptimizer	Advanced Auto	Edistynyt automatiikka
+DynamicRangeOptimizer	Advanced Lv1	Edistynyt taso 1
+DynamicRangeOptimizer	Advanced Lv2	Edistynyt taso 2
+DynamicRangeOptimizer	Advanced Lv3	Edistynyt taso 3
+DynamicRangeOptimizer	Advanced Lv4	Edistynyt taso 4
+DynamicRangeOptimizer	Advanced Lv5	Edistynyt taso 5
+DynamicRangeOptimizer	Off	Pois
+DynamicRangeOptimizer	Standard	Vakio
+DynamicRangeSetting	Film Simulation	Filminsimulaatio
+DynamicRangeSetting	Standard (100%)	Vakio (100%)
+DynamicRangeSetting	Wide1 (230%)	Laaja 1 (230%)
+DynamicRangeSetting	Wide2 (400%)	Laaja 2 (400%)
+EditorialUpdate	Additional language	Lisäkielet
+Enhancement	Blue	Sininen
+Enhancement	Flesh Tones	Lihanvärinen
+Enhancement	Green	Vihreä
+Enhancement	Off	Pois
+Enhancement	Red	Punainen
+EnvelopePriority	0 (reserved)	0 (varattu tulevaan käyttöön)
+EnvelopePriority	1 (most urgent)	1 (hyvin kiireellinen)
+EnvelopePriority	5 (normal urgency)	5 (normaali kiireellisyys)
+EnvelopePriority	8 (least urgent)	8 (lievän kiireellinen)
+EnvelopePriority	9 (user-defined priority)	9 (käyttäjän määrittämä prioriteetti)
+ExcursionTolerance	Allowed	Voi toteutua
+ExcursionTolerance	Not Allowed	Ei sallittu (oletus)
+ExposureMode	Aperture Priority	Aukon esivalinta
+ExposureMode	Aperture-priority AE	Aukon esivalinta AE
+ExposureMode	Auto	Automaattinen
+ExposureMode	Auto bracket	Automaattihaarukointi
+ExposureMode	Landscape	Maisema
+ExposureMode	Manual	Manuaalinen
+ExposureMode	Night Scene / Twilight	Yönäkymä
+ExposureMode	Program	Ohjelma
+ExposureMode	Program AE	Ohjelma-AE
+ExposureMode	Program-shift	Ohjelma-siirto
+ExposureMode	Shutter Priority	Ajan esivalinta
+ExposureMode	Shutter speed priority AE	Ajan esivalinta AE
+ExposureMode	n/a	Ei asetettu
+ExposureProgram	Action (High speed)	Toimintaohjelma (painotettu suljinnopeutta)
+ExposureProgram	Aperture-priority AE	Aukon esivalinta
+ExposureProgram	Creative (Slow speed)	Luova ohjelma (painotettu syväterävyyttä)
+ExposureProgram	Landscape	Maisemamoodi (maisemakuviin terävällä taustalla)
+ExposureProgram	Manual	Manuaalinen
+ExposureProgram	Not Defined	Ei määritetty
+ExposureProgram	Portrait	Muotokuvamoodi (lähikuviin epäterävällä taustalla)
+ExposureProgram	Program AE	Normaali ohjelma
+ExposureProgram	Shutter speed priority AE	Ajan esivalinta
+ExposureWarning	Bad exposure	Valotusvirhe
+ExposureWarning	Good	OK
+ExtendedWBDetect	Off	Pois
+ExtendedWBDetect	On	Päällä
+ExternalFlashBounce	Bounce or Off	Heijastus tai pois
+ExternalFlashBounce	Direct	Suora
+ExternalFlashBounce	No	Ei
+ExternalFlashBounce	Yes	Kyllä
+FileSource	Digital Camera	Digitaalikamera
+FileSource	Film Scanner	Filmiskanneri
+FileSource	Reflection Print Scanner	Heijastava skanneri
+FilmMode	Dynamic (B&W)	Dynaaminen (M&V)
+FilmMode	Dynamic (color)	Dynaaminen (väri)
+FilmMode	F0/Standard (PROVIA)	F0/vakio
+FilmMode	F0/Standard (Provia)	F0/vakio
+FilmMode	F1/Studio Portrait	F1/studiomuotokuva
+FilmMode	F1a/Studio Portrait Enhanced Saturation	F1a/studiomuotokuva laajennettu värikylläisyys
+FilmMode	F1b/Studio Portrait Smooth Skin Tone (ASTIA)	F1b/studiomuotokuva pehmeä ihonväri
+FilmMode	F1b/Studio Portrait Smooth Skin Tone (Astia)	F1b/studiomuotokuva pehmeä ihonväri
+FilmMode	F1c/Studio Portrait Increased Sharpness	F1c/studiomuotokuva lisätty terävyys
+FilmMode	F3/Studio Portrait Ex	F3/studiomuotokuva Ex
+FilmMode	Nature (color)	Luonnollinen (väri)
+FilmMode	Nostalgic	Nostalginen väri
+FilmMode	Smooth (B&W)	Pehmeä (M&V)
+FilmMode	Smooth (color)	Pehmeä (väri)
+FilmMode	Standard (B&W)	Vakio (M&V)
+FilmMode	Standard (color)	Vakio (väri)
+FilmMode	Vibrant	Eloisa väri
+Flash	Auto, Did not fire	Salama ei lauennut, automaattimoodi
+Flash	Auto, Did not fire, Red-eye reduction	Automaattinen, salama ei lauennut, punasilmien esto
+Flash	Auto, Fired	Salama lauennut, automaattimoodi
+Flash	Auto, Fired, Red-eye reduction	Salama lauennut, automaattimoodi, punasilmien estomoodi
+Flash	Auto, Fired, Red-eye reduction, Return detected	Salama lauennut, automaattimoodi, heijastusvalo havaittu, punasilmien estomoodi
+Flash	Auto, Fired, Red-eye reduction, Return not detected	Salama lauennut, automaattimoodi, heijastusvaloa ei havaittu, punasilmien estomoodi
+Flash	Auto, Fired, Return detected	Salama lauennut, automaattimoodi. heijastusvalo havaittu
+Flash	Auto, Fired, Return not detected	Salama lauennut, automaattimoodi, heijastusvaloa ei havaittu
+Flash	Fired	Salama lauennut
+Flash	Fired, Red-eye reduction	Salama lauennut, punasilmien estomoodi
+Flash	Fired, Red-eye reduction, Return detected	Salama lauennut, punasilmien estomoodi, heijastusvalo havaittu
+Flash	Fired, Red-eye reduction, Return not detected	Salama lauennut, punasilmien estomoodi, heijastusvaloa ei havaittu
+Flash	Fired, Return detected	Strobo-salaman heijastus havaittu
+Flash	Fired, Return not detected	Strobo-salaman heijastusta ei havaittu
+Flash	No Flash	Salama ei lauennut
+Flash	No flash function	Ei salamatoimintoa
+Flash	Off, Did not fire	Salama ei lauennut, pakkosalamatila
+Flash	Off, Did not fire, Return not detected	Pois, salama ei lauennut, heijastusta ei havaittu
+Flash	Off, No flash function	Pois, ei salamatoimintoa
+Flash	Off, Red-eye reduction	Pois, punasilmien esto
+Flash	On, Did not fire	Päällä, salama ei lauennut
+Flash	On, Fired	Salama lauennut, pakkosalamatila
+Flash	On, Red-eye reduction	Salama lauennut, pakkosalamatila, punasilmien estomoodi
+Flash	On, Red-eye reduction, Return detected	Salama lauennut, pakkosalamatila, punasilmien estomoodi, heijastusvalo havaittu
+Flash	On, Red-eye reduction, Return not detected	Salama lauennut, pakkosalamatila, punasilmien estomoodi, heijastusvaloa ei havaittu
+Flash	On, Return detected	Salama lauennut, pakkosalamatila, heijastusvalo havaittu
+Flash	On, Return not detected	Salama lauennut, pakkosalamatila, heijastusvaloa ei havaittu
+FlashFired	No	Ei
+FlashFired	Yes	Kyllä
+FlashIntensity	High	Korkea
+FlashIntensity	Low	Matala
+FlashIntensity	Normal	Normaali
+FlashIntensity	Strong	Voimakas
+FlashIntensity	Weak	Heikko
+FlashMode	Auto	Automaattinen
+FlashMode	Did Not Fire	Ei lauennut
+FlashMode	Disabled	Deaktivoitu
+FlashMode	Fired, Commander Mode	Lauennut, pakkotapa
+FlashMode	Fired, External	Lauennut, ulkoinen
+FlashMode	Fired, Manual	Lauennut, manuaalinen
+FlashMode	Fired, TTL Mode	Lauennut, TTL-tapa
+FlashMode	Force	Pakkotapa
+FlashMode	Not Ready	Ei valmis
+FlashMode	Off	Pois (3)
+FlashMode	On	Päällä (2)
+FlashMode	Red eye	Punasilmien esto
+FlashModel	None	Ei mitään
+FlashType	E-System	E-järjestelmä
+FlashType	None	Ei mitään
+FlashType	Simple E-System	Yksinkertainen E-järjestelmä
+FlickerReduce	Off	Pois
+FlickerReduce	On	Päällä
+FocalPlaneResolutionUnit	None	Ei mitään
+FocalPlaneResolutionUnit	inches	Tuuma
+FocalPlaneResolutionUnit	um	µm (mikrometri)
+FocusMode	Auto	Automaattinen
+FocusMode	Manual	Manuaalinen
+FocusRange	Macro	Makro
+FocusRange	Normal	Normaali
+FocusWarning	Good	OK
+FocusWarning	Out of focus	Epätarkka
+FujiFlashMode	External	Ulkoinen salama
+FujiFlashMode	Off	Pois
+FujiFlashMode	On	Päällä
+FujiFlashMode	Red-eye reduction	Punasilmäisyyden vähennys
+GPSAltitudeRef	Above Sea Level	Merenpinnan korkeus
+GPSAltitudeRef	Below Sea Level	Merenpinnan viitekorkeus (negatiivinen arvo)
+GPSDestBearingRef	Magnetic North	Magneettinen suunta
+GPSDestBearingRef	True North	Todellinen suunta
+GPSDestDistanceRef	Kilometers	Kilometriä
+GPSDestDistanceRef	Miles	Mailia
+GPSDestDistanceRef	Nautical Miles	Solmua
+GPSDestLatitudeRef	North	Pohjoista leveyttä
+GPSDestLatitudeRef	South	Eteläistä leveyttä
+GPSDestLongitudeRef	East	Itäistä pituutta
+GPSDestLongitudeRef	West	Läntistä pituutta
+GPSDifferential	Differential Corrected	Differentiaalikorjausta käytetty
+GPSDifferential	No Correction	Mittaus ilman differentiaalikorjausta
+GPSImgDirectionRef	Magnetic North	Magneettinen suunta
+GPSImgDirectionRef	True North	Todellinen suunta
+GPSLatitudeRef	North	Pohjoista leveyttä
+GPSLatitudeRef	South	Eteläistä leveyttä
+GPSLongitudeRef	East	Itäistä pituutta
+GPSLongitudeRef	West	Läntistä pituutta
+GPSMeasureMode	2-Dimensional Measurement	2-ulotteinen mittaus
+GPSMeasureMode	3-Dimensional Measurement	3-ulotteinen mittaus
+GPSSpeedRef	km/h	Kilometriä per tunti
+GPSSpeedRef	knots	Solmua
+GPSSpeedRef	mph	Mailia per tunti
+GPSStatus	Measurement Active	Mittaus aktiivinen
+GPSStatus	Measurement Void	Mittaus virheellinen
+GPSTrackRef	Magnetic North	Magneettinen suunta
+GPSTrackRef	True North	Todellinen suunta
+GainControl	High gain down	Suuri valoisuuden vähennys
+GainControl	High gain up	Suuri valoisuuden lisäys
+GainControl	Low gain down	Pieni valoisuuden vähennys
+GainControl	Low gain up	Pieni valoisuuden lisäys
+GainControl	None	Ei mitään
+GrayResponseUnit	0.0001	Numero edustaa yksikön tuhannesosia
+GrayResponseUnit	0.001	Numero edustaa yksikön sadasosia
+GrayResponseUnit	0.1	Numero edustaa yksikön kymmenyksiä
+GrayResponseUnit	1e-05	Numero edustaa yksikön kymmenestuhannesosia
+GrayResponseUnit	1e-06	Numero edustaa yksikön sadastuhannesosia
+HighISONoiseReduction	High	Korkea
+HighISONoiseReduction	Low	Matala
+HighISONoiseReduction	Minimal	Minimaalinen
+HighISONoiseReduction	Normal	Normaali
+HighISONoiseReduction	Off	Pois
+HometownDST	No	Ei
+HometownDST	Yes	Kyllä
+IPTCImageRotation	0	Ei kiertoa
+IPTCImageRotation	180	180 asteen kierto
+IPTCImageRotation	270	270 asteen kierto
+IPTCImageRotation	90	90 asteen kierto
+ImageAuthentication	Off	Pois
+ImageAuthentication	On	Päällä
+ImageDataDiscard	Flexbits Discarded	FlexBits hylätty
+ImageDataDiscard	Full Resolution	Täysi resoluutio
+ImageDataDiscard	HighPass Frequency Data Discarded	Ylipäästötaajuusdata hylätty
+ImageDataDiscard	Highpass and LowPass Frequency Data Discarded	Yli- ja alipäästötaajuusdata hylätty
+ImageOrientation	Landscape	Vaakakuva
+ImageOrientation	Portrait	Pystykuva
+ImageOrientation	Square	Neliömäinen
+ImageStabilization	Best Shot	Paras kuva
+ImageStabilization	Off	Pois
+ImageStabilization	On	Päällä
+ImageStabilization	On, Mode 1	Päällä, tapa 1
+ImageStabilization	On, Mode 2	Päällä, tapa 2
+ImageTone	Bleach Bypass	Bleach bypass -esivalotus
+ImageTone	Bright	Kirkas
+ImageTone	Landscape	Maisema
+ImageTone	Monochrome	Yksivärinen
+ImageTone	Muted	Vaimennettu
+ImageTone	Natural	Luonnollinen
+ImageTone	Portrait	Muotokuva
+ImageTone	Reversal Film	Kääntöfilmi
+ImageTone	Vibrant	Eloisa
+InternalFlash	Off	Pois
+InternalFlash	On	Päällä
+InteropIndex	R03 - DCF option file (Adobe RGB)	R03: DCF-valintatiedosto (Adobe RGB)
+InteropIndex	R98 - DCF basic file (sRGB)	R98: DCF-perustiedosto (sRGB)
+InteropIndex	THM - DCF thumbnail file	THM: DCF-näytekuvatiedosto
+JPEGQuality	Extra Fine	Erityishieno
+JPEGQuality	Fine	Hieno
+JPEGQuality	Standard	Normaali
+JPEGQuality	n/a	Ei asetettu
+LightSource	Cloudy	Pilvinen
+LightSource	Cool White Fluorescent	Viileä valkoinen loistelamppu (W 3900 - 4500K)
+LightSource	Day White Fluorescent	Valkoinen päivänvaloloistelamppu (N 4600 - 5400K)
+LightSource	Daylight	Päivänvalo
+LightSource	Daylight Fluorescent	Päivänvaloloistelamppu (D 5700 - 7100K)
+LightSource	Fine Weather	Pilvetön
+LightSource	Flash	Salama
+LightSource	Fluorescent	Loistevalo
+LightSource	ISO Studio Tungsten	ISO studiokeinovalo (hehkulamppu)
+LightSource	Other	Muu valonlähde
+LightSource	Shade	Varjo
+LightSource	Standard Light A	Standardivalo A
+LightSource	Standard Light B	Standardivalo B
+LightSource	Standard Light C	Standardivalo C
+LightSource	Tungsten (Incandescent)	Keinovalo (hehkulamppu)
+LightSource	Unknown	Tuntematon
+LightSource	White Fluorescent	Lämmin valkoinen loistelamppu (WW 3200 - 3700K)
+LightSourceSpecial	Off	Pois
+LightSourceSpecial	On	Päällä
+LongExposureNoiseReduction	Off	Pois
+LongExposureNoiseReduction	On	Päällä
+LongExposureNoiseReduction	n/a	Ei asetettu
+Macro	Off	Pois
+Macro	On	Päällä
+Macro	n/a	Ei asetettu
+MacroMode	Off	Pois
+MacroMode	On	Päällä
+MacroMode	Super Macro	Supermakro
+MacroMode	Tele-Macro	Telemakro
+MakerNoteSafety	Safe	Turvallinen
+MakerNoteSafety	Unsafe	Turvaton
+MeteringMode	Average	Keskiarvo
+MeteringMode	Center-weighted average	Keskustapainotteinen keskiarvo
+MeteringMode	Multi-segment	Monisegmenttimittaus
+MeteringMode	Multi-spot	Monipiste
+MeteringMode	Other	Muu
+MeteringMode	Partial	Osa-alue
+MeteringMode	Pattern+AF	Kuvio + AF
+MeteringMode	Spot	Pistemittaus
+MeteringMode	Spot+Highlight control	Pistemittaus + valoalueen säätö
+MeteringMode	Spot+Shadow control	Pistemittaus + varjoalueen säätö
+MeteringMode	Unknown	Tuntematon
+MinoltaQuality	Economy	Taloudellinen
+MinoltaQuality	Extra fine	Erityishieno
+MinoltaQuality	Fine	Hieno
+MinoltaQuality	Standard	Normaali
+MinoltaQuality	Super Fine	Superhieno
+ModifiedSaturation	CM1 (Red Enhance)	CM1 (punaisen parantelu)
+ModifiedSaturation	CM2 (Green Enhance)	CM2 (vihreän parantelu)
+ModifiedSaturation	CM3 (Blue Enhance)	CM3 (sinisen parantelu)
+ModifiedSaturation	CM4 (Skin Tones)	CM4 (ihonvärin parantelu)
+ModifiedSaturation	Off	Pois
+NoiseReduction	High (+1)	+1 (korkea)
+NoiseReduction	Highest (+2)	+2 (korkein)
+NoiseReduction	Low	Matala
+NoiseReduction	Low (-1)	-1 (matala)
+NoiseReduction	Lowest (-2)	-2 (matalin)
+NoiseReduction	Normal	Vakio
+NoiseReduction	Off	Pois
+NoiseReduction	On	Päällä
+NoiseReduction	Standard	±0 (vakio)
+ObjectCycle	Both Morning and Evening	Molempina
+ObjectCycle	Evening	Iltaisin
+ObjectCycle	Morning	Aamuisin
+OneTouchWB	Off	Pois
+OneTouchWB	On	Päällä
+OneTouchWB	On (Preset)	Päällä (esiasetus)
+OpticalZoomMode	Extended	Laajennettu
+OpticalZoomMode	Standard	Vakio
+OpticalZoomOn	Off	Pois
+OpticalZoomOn	On	Päällä
+Orientation	Horizontal (normal)	0° (ylä/vasen)
+Orientation	Mirror horizontal	0° (ylä/oikea)
+Orientation	Mirror horizontal and rotate 270 CW	90° myötäpäivään (vasen/ylä)
+Orientation	Mirror horizontal and rotate 90 CW	90° vastapäivään (oikea/ala)
+Orientation	Mirror vertical	180° (ala/vasen)
+Orientation	Rotate 180	180° (ala/oikea)
+Orientation	Rotate 270 CW	90° myötäpäivään (vasen/ala)
+Orientation	Rotate 90 CW	90° vastapäivään (oikea/ylä)
+PentaxImageSize	2304x1728 or 2592x1944	2304 x 1728 tai 2592 x 1944
+PentaxImageSize	2560x1920 or 2304x1728	2560 x 1920 tai 2304 x 1728
+PentaxImageSize	2816x2212 or 2816x2112	2816 x 2212 tai 2816 x 2112
+PentaxImageSize	3008x2008 or 3040x2024	3008 x 2008 tai 3040 x 2024
+PentaxImageSize	Full	Täysi
+PhotometricInterpretation	BlackIsZero	Musta on nolla
+PhotometricInterpretation	Color Filter Array	CFA (värisuodinmatriisi)
+PhotometricInterpretation	Pixar LogL	CIE Log2(L) (Log-luminanssi)
+PhotometricInterpretation	Pixar LogLuv	CIE Log2(L)(u',v') (Log-luminanssi ja -krominanssi)
+PhotometricInterpretation	RGB Palette	Väripaletti
+PhotometricInterpretation	Transparency Mask	Läpinäkyvyysmaski
+PhotometricInterpretation	WhiteIsZero	Valkoinen on nolla
+PictureMode	Anti-blur	Epätarkkuden vähennys
+PictureMode	Aperture-priority AE	Aukon esivalinta AE
+PictureMode	Auto	Automaattinen
+PictureMode	Beach	Hiekkaranta
+PictureMode	Beach & Snow	Hiekkaranta & Lumi
+PictureMode	Fireworks	Ilotulitus
+PictureMode	Flower	Kukka
+PictureMode	Landscape	Maisema
+PictureMode	Macro	Lähikuva (Kukka)
+PictureMode	Manual	Manuaalinen
+PictureMode	Museum	Museo
+PictureMode	Natural Light	Luonnonvalo
+PictureMode	Natural Light & Flash	Luonnonvalo & Salama
+PictureMode	Night Scene	Yö
+PictureMode	Party	Juhlat
+PictureMode	Portrait	Muotokuva
+PictureMode	Program AE	Automaattinen valotusohjelma
+PictureMode	Shutter speed priority AE	Ajan esivalinta AE
+PictureMode	Snow	Lumi
+PictureMode	Sports	Urheilu
+PictureMode	Sunset	Auringonlasku
+PictureMode	Text	Teksti
+PictureMode	Underwater	Veden alla
+PictureModeBWFilter	Green	Vihreä
+PictureModeBWFilter	Neutral	Neutraali
+PictureModeBWFilter	Orange	Oranssi
+PictureModeBWFilter	Red	Punainen
+PictureModeBWFilter	Yellow	Keltainen
+PictureModeBWFilter	n/a	E.s.
+PictureModeTone	Blue	Sininen
+PictureModeTone	Green	Vihreä
+PictureModeTone	Neutral	Neutraali
+PictureModeTone	Purple	Violetti
+PictureModeTone	Sepia	Seepia
+PictureModeTone	n/a	E.s.
+PlanarConfiguration	Chunky	Lohkoformaatti (lomitettu)
+PlanarConfiguration	Planar	Tasoformaatti
+Predictor	Horizontal differencing	Horisontaalinen differointi
+Predictor	None	Prediktioskeemaa ei käytetty ennen koodausta
+PreviewColorSpace	Unknown	Tuntematon
+PreviewImageValid	No	Ei
+PreviewImageValid	Yes	Kyllä
+ProfileEmbedPolicy	Allow Copying	Salli kopiointi
+ProfileEmbedPolicy	Embed if Used	Upota jos käytössä
+ProfileEmbedPolicy	Never Embed	Älä koskaan upota
+ProfileEmbedPolicy	No Restrictions	Ei rajoituksia
+Quality	Best	Paras
+Quality	Better	Parempi
+Quality	Compressed RAW	Pakattu RAW
+Quality	Compressed RAW + JPEG	Pakattu RAW + JPEG
+Quality	Economy	Taloudellinen
+Quality	Extra Fine	Erityishieno
+Quality	Fine	Hieno
+Quality	Good	Hyvä
+Quality	Normal	Normaali
+Quality	Standard	Vakio
+Quality	Super Fine	Superhieno
+Quality	n/a	Ei asetettu
+QualityMode	Economy	Taloudellinen
+QualityMode	Fine	Hieno
+QualityMode	Normal	Normaali
+QuantizationMethod	AP Domestic Analogue	AP domestinen analogia
+QuantizationMethod	Color Space Specific	Erityisväriavaruus
+QuantizationMethod	Compression Method Specific	Erityispakkausmetodi
+QuantizationMethod	Gamma Compensated	Kompensoitu gamma
+QuantizationMethod	IPTC Ref B	IPTC ref "B"
+QuantizationMethod	Linear Density	Lineaarinen tiheys
+QuantizationMethod	Linear Dot Percent	Lineaarinen pisteprosentti
+QuantizationMethod	Linear Reflectance/Transmittance	Lineaarinen heijastavuus/läpäisevyys
+QuickShot	Off	Pois
+QuickShot	On	Päällä
+RawDevEditStatus	Edited (Landscape)	Studio (maisema)
+RawDevEditStatus	Edited (Portrait)	Studio (muotokuva)
+RawDevEditStatus	Original	Alkuperäinen
+RawDevEngine	Advanced High Speed	Edistynyt suurnopeus
+RawDevEngine	High Function	Hyvä suorituskyky
+RawDevEngine	High Speed	Suurnopeus
+RecordMode	Aperture Priority	Aukon esivalinta
+RecordMode	Best Shot	Paras kuva
+RecordMode	Manual	Manuaalinen
+RecordMode	Movie	Elokuva
+RecordMode	Movie (19)	Elokuva (19)
+RecordMode	Program AE	AE-ohjelma
+RecordMode	Shutter Priority	Ajan esivalinta
+RecordMode	YouTube Movie	YouTube-elokuva
+RecordShutterRelease	Press start, press stop	Aloitus painaen, lopetus painaen
+RecordShutterRelease	Record while down	Tallennus laukaisin alhaalla
+Resaved	No	Ei
+Resaved	Yes	Kyllä
+ResolutionUnit	None	Ei mitään
+ResolutionUnit	inches	Tuuma
+Rotation	Horizontal (normal)	Vaakatasossa (normaali)
+Rotation	Rotate 270 CW	Kierto 90° VP
+Rotation	Rotate 90 CW	Kierto 90° MP
+SampleStructure	CompressionDependent	Määritetty pakkaustoiminnon yhteydessä
+SampleStructure	Orthogonal4-2-2Sampling	Toisistaan riippumattomat näytetaajuuksin suhteessa 4:2:2:(4)
+SampleStructure	OrthogonalConstangSampling	Toisistaan riippumattomat samoin suhteellisin näytetaajuuksin kussakin komponentissa
+SanyoQuality	Fine/High	Hieno/korkea
+SanyoQuality	Fine/Low	Hieno/matala
+SanyoQuality	Fine/Medium	Hieno/keskilaatu
+SanyoQuality	Fine/Medium High	Hieno/korkeahko
+SanyoQuality	Fine/Medium Low	Hieno/matalahko
+SanyoQuality	Fine/Super High	Hieno/superkorkea
+SanyoQuality	Fine/Very High	Hieno/hyvin korkea
+SanyoQuality	Fine/Very Low	Hieno/hyvin matala
+SanyoQuality	Normal/High	Normaali/korkea
+SanyoQuality	Normal/Low	Normaali/matala
+SanyoQuality	Normal/Medium	Normaali/keskilaatu
+SanyoQuality	Normal/Medium High	Normaali/korkeahko
+SanyoQuality	Normal/Medium Low	Normaali/matalahko
+SanyoQuality	Normal/Super High	Normaali/superkorkea
+SanyoQuality	Normal/Very High	Normaali/hyvin korkea
+SanyoQuality	Normal/Very Low	Normaali/hyvin matala
+SanyoQuality	Super Fine/High	Superhieno/korkea
+SanyoQuality	Super Fine/Low	Superhieno/matala
+SanyoQuality	Super Fine/Medium	Superhieno/keskilaatu
+SanyoQuality	Super Fine/Medium High	Superhieno/korkeahko
+SanyoQuality	Super Fine/Medium Low	Superhieno/matalahko
+SanyoQuality	Super Fine/Super High	Superhieno/superkorkea
+SanyoQuality	Super Fine/Very High	Superhieno/hyvin korkea
+SanyoQuality	Super Fine/Very Low	Superhieno/hyvin matala
+Saturation	+1 (medium high)	Korkeahko
+Saturation	+2 (high)	Korkea
+Saturation	-1 (medium low)	Matalahko
+Saturation	0 (normal)	Vakio
+Saturation	Film Simulation	Filminsimulaatio
+Saturation	High	Korkea
+Saturation	Low	Matala
+Saturation	Medium High	Korkeahko
+Saturation	Medium Low	Matalahko
+Saturation	None (B&W)	Ei mitään (M&V)
+Saturation	Normal	Vakio
+ScanImageEnhancer	Off	Pois
+ScanningDirection	Bottom-Top, L-R	Alhaalta ylös, vasemmalta oikealle
+ScanningDirection	Bottom-Top, R-L	Alhaalta ylös, oikealta vasemmalle
+ScanningDirection	L-R, Bottom-Top	Vasemmalta oikealle, alhaalta ylös
+ScanningDirection	L-R, Top-Bottom	Vasemmalta oikealle, ylhäältä alas
+ScanningDirection	R-L, Bottom-Top	Oikealta vasemmalle, alhaalta ylös
+ScanningDirection	R-L, Top-Bottom	Oikealta vasemmalle, ylhäältä alas
+ScanningDirection	Top-Bottom, L-R	Ylhäältä alas, vasemmalta oikealle
+ScanningDirection	Top-Bottom, R-L	Ylhäältä alas, oikealta vasemmalle
+SceneCaptureType	Landscape	Maisema
+SceneCaptureType	Night	Yönäkymä
+SceneCaptureType	Portrait	Muotokuva
+SceneCaptureType	Standard	Standardi
+SceneMode	2 in 1	2 1:ssä
+SceneMode	Auction	Huutokauppa
+SceneMode	Auto	Automaattinen
+SceneMode	Available Light	Vallitseva valo
+SceneMode	Beach	Hiekkaranta
+SceneMode	Beach & Snow	Hiekkaranta&Lumi
+SceneMode	Behind Glass	Lasin takaa
+SceneMode	Candle	Kynttilä
+SceneMode	Children	Lapset
+SceneMode	Cuisine	Ateria
+SceneMode	Digital Image Stabilization	Digitaalinen kuvanvakautus
+SceneMode	Documents	Dokumentit
+SceneMode	Face Portrait	Kasvokuva
+SceneMode	Fireworks	Ilotulitus
+SceneMode	Food	Ateria
+SceneMode	High Key	High key -yläsävykuva
+SceneMode	Indoor	Sisäkuva
+SceneMode	Landscape	Maisema
+SceneMode	Landscape+Portrait	Maisema+muotokuva
+SceneMode	Low Key	Low key -alasävykuva
+SceneMode	Macro	Makro
+SceneMode	Movie	Elokuva
+SceneMode	Museum	Museo
+SceneMode	My Mode	Oma tapa
+SceneMode	Nature Macro	Luontomakro
+SceneMode	Night Portrait	Yön muotokuva
+SceneMode	Night Scene	Iltanäkymä
+SceneMode	Night View/Portrait	Iltanäkymä/Yön muotokuva
+SceneMode	Night+Portrait	Yö+muotokuva
+SceneMode	Normal	Normaali
+SceneMode	Panorama	Panoraama
+SceneMode	Pet	Lemmikki
+SceneMode	Portrait	Muotokuva
+SceneMode	Self Portrait	Omakuva
+SceneMode	Self Portrait+Self Timer	Omakuva+itselaukaisin
+SceneMode	Self Protrait+Timer	Omakuva+itselaukaisin
+SceneMode	Shoot & Select	Kuvaa & Valitse
+SceneMode	Shoot & Select1	Kuvaus&valinta 1
+SceneMode	Shoot & Select2	Kuvaus&valinta 2
+SceneMode	Shooting Guide	Kuvausopas
+SceneMode	Smile Shot	Hymykuva
+SceneMode	Snow	Lumi
+SceneMode	Sport	Urheilu
+SceneMode	Sports	Urheilutapahtuma
+SceneMode	Standard	Vakio
+SceneMode	Sunset	Auringonlasku
+SceneMode	Super Macro	Supermakro
+SceneMode	Text	Teksti
+SceneMode	Underwater Macro	Veden alla makro
+SceneMode	Underwater Snapshot	Veden alla tilannekuva
+SceneMode	Underwater Wide1	Veden alla laaja 1
+SceneMode	Underwater Wide2	Veden alla laaja 2
+SceneMode	Vivid	Heleä
+SceneSelect	Lamp	Lamppu
+SceneSelect	Night	Yö
+SceneSelect	Off	Pois
+SceneSelect	Sport	Urheilu
+SceneSelect	User 1	Käyttäjä 1
+SceneSelect	User 2	Käyttäjä 2
+SceneType	Directly photographed	Suoraan otettu valokuva
+SecurityClassification	Confidential	Luottamuksellinen
+SecurityClassification	Restricted	Rajoitettu
+SecurityClassification	Secret	Salainen
+SecurityClassification	Top Secret	Huippusalainen
+SecurityClassification	Unclassified	Ei luokiteltu
+SelfTimer	Off	Pois
+SelfTimer	On	Päällä
+SensingMethod	Color sequential area	Peräkkäisvärialueen anturi
+SensingMethod	Color sequential linear	Peräkkäisvärien lineaarianturi
+SensingMethod	Monochrome area	Monokromialueen anturi
+SensingMethod	Monochrome linear	Monokromilineaarinen anturi
+SensingMethod	Not defined	Ei määritetty
+SensingMethod	One-chip color area	Yhden chipin värialueen anturi
+SensingMethod	Three-chip color area	Kolmen chipin värialueen anturi
+SensingMethod	Trilinear	Trilineaarinen anturi
+SensingMethod	Two-chip color area	Kahden chipin värialueen anturi
+SequenceShotInterval	10 frames/s	10 ruutua/s
+SequenceShotInterval	15 frames/s	15 ruutua/s
+SequenceShotInterval	20 frames/s	20 ruutua/s
+SequenceShotInterval	5 frames/s	5 ruutua/s
+SequentialShot	Adjust Exposure	Valotuksen säätö
+SequentialShot	Best	Paras
+SequentialShot	None	Ei mitään
+SequentialShot	Standard	Vakio
+ShadingCompensation	Off	Pois
+ShadingCompensation	On	Päällä
+Sharpness	+1 (medium hard)	Kovahko
+Sharpness	+2 (hard)	Kova
+Sharpness	+3 (very hard)	Kova 2
+Sharpness	-1 (medium soft)	Pehmeähkö
+Sharpness	-2 (soft)	Pehmeä 2
+Sharpness	-3 (very soft)	Pehmeä
+Sharpness	0 (normal)	Vakio
+Sharpness	Film Simulation	Filminsimulaatio
+Sharpness	Hard	Kova
+Sharpness	Hard2	Kova 2
+Sharpness	Medium Hard	Kovahko
+Sharpness	Medium Soft	Pehmeähkö
+Sharpness	Normal	Vakio
+Sharpness	Soft	Pehmeä
+Sharpness	Soft2	Pehmeä 2
+Sharpness	n/a	E.s.
+SlowSync	Off	Pois
+SlowSync	On	Päällä
+SubjectDistanceRange	Close	Lähikuva
+SubjectDistanceRange	Distant	Etäkuva
+SubjectDistanceRange	Macro	Makro
+SubjectDistanceRange	Unknown	Tuntematon
+SuperMacro	Off	Pois
+SuperMacro	On (1)	Päällä (1)
+SuperMacro	On (2)	Päällä (2)
+SupplementalType	Main Image	Ei asetettu
+SupplementalType	Rasterized Caption	Rasteroitu seloste
+SupplementalType	Reduced Resolution Image	Alennetun resoluution kuva
+Technology	Digital Camera	Digitaalikamera
+Technology	Dye Sublimation Printer	Lämpösublimaatiotulostin
+Technology	Electrophotographic Printer	Lasertulostin
+Technology	Electrostatic Printer	Sähköstaattinen tulostin
+Technology	Film Scanner	Filmiskanneri
+Technology	Film Writer	Filmitulostin
+Technology	Flexography	Fleksografia
+Technology	Gravure	Syväpaino
+Technology	Ink Jet Printer	Mustesuihkutulostin
+Technology	Offset Lithography	Offsetlitografia
+Technology	Photo CD	Valokuva-CD
+Technology	Photo Image Setter	Valokuvaimagesetteri
+Technology	Photographic Paper Printer	Valokuvapaperitulostin
+Technology	Projection Television	Projektiotelevisio
+Technology	Reflective Scanner	Heijastusskanneri
+Technology	Silkscreen	Silkkipaino
+Technology	Thermal Wax Printer	Lämpövahatulostin
+Technology	Video Camera	Videokamera
+Technology	Video Monitor	Videomonitori
+TextStamp	Off	Päällä
+Transformation	Mirror horizontal	Peilaa vaakasuunnassa
+Transformation	Mirror horizontal and rotate 270 CW	Peilaa vaakasuunnassa ja kierrä 270° myötäpäivään
+Transformation	Mirror horizontal and rotate 90 CW	Peilaa vaakasuunnassa ja kierrä 90° myötäpäivään
+Transformation	Mirror vertical	Peilaa pystysuunnassa
+Transformation	Rotate 180	Kierrä 180°
+Transformation	Rotate 270 CW	Kierrä 90° myötäpäivään
+Transformation	Rotate 90 CW	Kierrä 90° myötäpäivään
+Uncompressed	No	Ei
+Uncompressed	Yes	Kyllä
+Urgency	0 (reserved)	0 (varattu tulevaan käyttöön)
+Urgency	1 (most urgent)	1 (hyvin kiireellinen)
+Urgency	5 (normal urgency)	5 (normaali kiirellisyys)
+Urgency	8 (least urgent)	8 (lievän kiireellinen)
+Urgency	9 (user-defined priority)	9 (varattu tulevaan käyttöön)
+VignetteControl	High	Korkea
+VignetteControl	Low	Matala
+VignetteControl	Normal	Normaali
+VignetteControl	Off	Pois
+VoiceMemo	Off	Pois
+VoiceMemo	On	Päällä
+WBMode	Auto	Automaattinen
+WhiteBalance	Auto	Automaattinen
+WhiteBalance	Cloudy	Pilvinen
+WhiteBalance	Custom	Mukautus
+WhiteBalance	Custom2	Mukautus 2
+WhiteBalance	Custom3	Mukautus 3
+WhiteBalance	Custom4	Mukautus 4
+WhiteBalance	Day White Fluorescent	Valkoinen päivänvaloloistelamppu
+WhiteBalance	Daylight	Auringonvalo
+WhiteBalance	Daylight Fluorescent	Päivänvaloloistelamppu
+WhiteBalance	Flash	Salama
+WhiteBalance	Incandescent	Hehkulamppu
+WhiteBalance	Living Room Warm White Fluorescent	Asuinhuoneen lämmin valkoinen loistelamppu
+WhiteBalance	Manual	Manuaalinen
+WhiteBalance	Warm White Fluorescent	Lämmin valkoinen loistelamppu
+WhiteBalance	White Fluorescent	Valkoinen loistelamppu
+WhiteBalance2	3000K (Tungsten light)	3000 K (hehkulamppu)
+WhiteBalance2	3600K (Tungsten light-like)	3600 K (hehkulamppumainen valo)
+WhiteBalance2	4000K (Cool white fluorescent)	4000 K (viileän valkoinen loistelamppu)
+WhiteBalance2	4500K (Neutral white fluorescent)	4500 K (neutraali valkoinen loistelamppu)
+WhiteBalance2	5300K (Fine Weather)	5300 K (kaunis sää)
+WhiteBalance2	6000K (Cloudy)	6000 K (pilvinen)
+WhiteBalance2	6600K (Daylight fluorescent)	6600 K (päivänvaloloistelamppu)
+WhiteBalance2	7500K (Fine Weather with Shade)	7500 K (kaunis sää ja varjoja)
+WhiteBalance2	Auto	Automaattinen
+WhiteBalance2	Custom WB 1	Mukautettu valkotasapaino 1
+WhiteBalance2	Custom WB 2	Mukautettu valkotasapaino 2
+WhiteBalance2	Custom WB 2900K	Mukautettu valkotasapaino 2900 K
+WhiteBalance2	Custom WB 3	Mukautettu valkotasapaino 3
+WhiteBalance2	Custom WB 4	Mukautettu valkotasapaino 4
+WhiteBalance2	Custom WB 5400K	Mukautettu valkotasapaino 5400 K
+WhiteBalance2	Custom WB 8000K	Mukautettu valkotasapaino 8000 K
+WhiteBalance2	One Touch WB 1	Mukautettu valkotasapaino 1
+WhiteBalance2	One Touch WB 2	Mukautettu valkotasapaino 2
+WhiteBalance2	One Touch WB 3	Mukautettu valkotasapaino 3
+WhiteBalance2	One Touch WB 4	Mukautettu valkotasapaino 4
+WhiteBalanceMode	Auto (Cloudy)	Automaattinen (pilvinen)
+WhiteBalanceMode	Auto (Day White Fluorescent)	Automaattinen (valkoinen päivänvaloloistelamppu)
+WhiteBalanceMode	Auto (Daylight Fluorescent)	Automaattinen (päivänvaloloistelamppu)
+WhiteBalanceMode	Auto (Daylight)	Automaattinen (auringonvalo)
+WhiteBalanceMode	Auto (Flash)	Automaattinen (salama)
+WhiteBalanceMode	Auto (Shade)	Automaattinen (varjo)
+WhiteBalanceMode	Auto (Tungsten)	Automaattinen (hehkulamppu)
+WhiteBalanceMode	Auto (White Fluorescent)	Automaattinen (valkoinen loistelamppu)
+WhiteBalanceMode	Unknown	Automaattinen (ei tunnistettu)
+WhiteBalanceMode	User-Selected	Itse valittu
+WideRange	Off	Pois
+WideRange	On	Päällä
+WorldTimeLocation	Destination	Kohde
+WorldTimeLocation	Home	Koti
+WorldTimeLocation	Hometown	Kotiseutu
+YCbCrPositioning	Centered	Keskitetty
+YCbCrPositioning	Co-sited	Vierekkäin
+ZoneMatching	High Key	Yläsävykuva
+ZoneMatching	ISO Setting Used	Pois (käytetty ISO-asetusta)
+ZoneMatching	Low Key	Alasävykuva

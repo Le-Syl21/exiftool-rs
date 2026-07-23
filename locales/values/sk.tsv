@@ -1,0 +1,580 @@
+ActionAdvised	Object Append	Pripojenie objektu
+ActionAdvised	Object Kill	Zničenie objektu
+ActionAdvised	Object Reference	Odkaz na objekt
+ActionAdvised	Object Replace	Nahradenie objektu
+AlphaDataDiscard	Flexbits Discarded	Vyradené flexibilné bity
+AlphaDataDiscard	Full Resolution	Úplné rozlíšenie
+AlphaDataDiscard	HighPass Frequency Data Discarded	Vyradené údaje s vysokou frekvenciou
+AlphaDataDiscard	Highpass and LowPass Frequency Data Discarded	Vyradené údaje o vysokej a nízkej frekvencii
+AudioType	Mono Actuality	Monofónna realita
+AudioType	Mono Music	Monofónna hudba
+AudioType	Mono Question and Answer Session	Monofónne zasadnutie otázok a odpovedí
+AudioType	Mono Raw Sound	Monofonický surový zvuk
+AudioType	Mono Response to a Question	Monofónna odpoveď na otázku
+AudioType	Mono Scener	Monofónny snímač
+AudioType	Mono Voicer	Monofónny hlasový záznamník
+AudioType	Mono Wrap	Mono zábal
+AudioType	Stereo Actuality	Stereofónna realita
+AudioType	Stereo Music	Stereofónna hudba
+AudioType	Stereo Question and Answer Session	Stereofónne zasadnutie otázok a odpovedí
+AudioType	Stereo Raw Sound	Stereofonický surový zvuk
+AudioType	Stereo Response to a Question	Stereofónna odpoveď na otázku
+AudioType	Stereo Scener	Stereofónny snímač
+AudioType	Stereo Voicer	Stereofónny hlasový záznamník
+AudioType	Stereo Wrap	Stereofónny zábal
+AudioType	Text Only	Len text
+BackgroundColorIndicator	Specified Background Color	Špecifikovaná farba pozadia
+BackgroundColorIndicator	Unspecified Background Color	Nešpecifikovaná farba pozadia
+CFALayout	Even columns offset down 1/2 row	Párne stĺpce posunuté o 1/2 riadku nadol
+CFALayout	Even columns offset up 1/2 row	Párne stĺpce posunuté o 1/2 riadku nahor
+CFALayout	Even rows offset down by 1/2 row, even columns offset left by 1/2 column	Párne riadky posunuté nadol o 1/2 riadka, párne stĺpce posunuté zľava o 1/2 stĺpca
+CFALayout	Even rows offset down by 1/2 row, even columns offset right by 1/2 column	Párne riadky posunuté nadol o 1/2 riadku, párne stĺpce posunuté vpravo o 1/2 stĺpca
+CFALayout	Even rows offset left 1/2 column	Párne riadky posunuté vľavo o 1/2 stĺpca
+CFALayout	Even rows offset right 1/2 column	Párne riadky posunuté vpravo o 1/2 stĺpca
+CFALayout	Even rows offset up by 1/2 row, even columns offset left by 1/2 column	Párne riadky posunuté nahor o 1/2 riadku, párne stĺpce posunuté doľava o 1/2 stĺpca
+CFALayout	Even rows offset up by 1/2 row, even columns offset right by 1/2 column	Párne riadky posunuté nahor o 1/2 riadku, párne stĺpce posunuté doprava o 1/2 stĺpca
+CFALayout	Rectangular	Obdĺžnikové
+CFAPattern	[Blue,Green][Green,Red]	[Modrá,Zelená][Zelená,Červená]
+CFAPattern	[Green,Blue][Red,Green]	[Zelená,Modrá][Červená,Zelená]
+CFAPattern	[Green,Red][Blue,Green]	[Zelená,Červená][Modrá,Zelená]
+CFAPattern	[Red,Green][Green,Blue]	[Červená,Zelená][Zelená,Modrá]
+CR2CFAPattern	[Blue,Green][Green,Red]	[Modrá,Zelená][Zelená,Červená]
+CR2CFAPattern	[Green,Blue][Red,Green]	[Zelená,Modrá][Červená,Zelená]
+CR2CFAPattern	[Green,Red][Blue,Green]	[Zelená,Červená][Modrá,Zelená]
+CR2CFAPattern	[Red,Green][Green,Blue]	[Červená,Zelená][Zelená,Modrá]
+CalibrationIlluminant1	Cloudy	Zamračené
+CalibrationIlluminant1	Cool White Fluorescent	Studená biela žiarivka
+CalibrationIlluminant1	Day White Fluorescent	Denná biela žiarivka
+CalibrationIlluminant1	Daylight	Denné svetlo
+CalibrationIlluminant1	Daylight Fluorescent	Denné svetlo žiarivky
+CalibrationIlluminant1	Fine Weather	Pekné počasie
+CalibrationIlluminant1	Flash	Blesk
+CalibrationIlluminant1	Fluorescent	Žiarivka
+CalibrationIlluminant1	ISO Studio Tungsten	Štúdio ISO Tungsten
+CalibrationIlluminant1	Other	Iné
+CalibrationIlluminant1	Shade	Tieň
+CalibrationIlluminant1	Standard Light A	Štandardné svetlo A
+CalibrationIlluminant1	Standard Light B	Štandardné svetlo B
+CalibrationIlluminant1	Standard Light C	Štandardné svetlo C
+CalibrationIlluminant1	Tungsten (Incandescent)	Volfrámová (žiarovka)
+CalibrationIlluminant1	Unknown	Neznáme
+CalibrationIlluminant1	Warm White Fluorescent	Teplá biela žiarivka
+CalibrationIlluminant1	White Fluorescent	Biela žiarivka
+CalibrationIlluminant2	Cloudy	Zamračené
+CalibrationIlluminant2	Cool White Fluorescent	Studená biela žiarivka
+CalibrationIlluminant2	Day White Fluorescent	Denná biela žiarivka
+CalibrationIlluminant2	Daylight	Denné svetlo
+CalibrationIlluminant2	Daylight Fluorescent	Denné svetlo žiarivky
+CalibrationIlluminant2	Fine Weather	Pekné počasie
+CalibrationIlluminant2	Flash	Blesk
+CalibrationIlluminant2	Fluorescent	Žiarivka
+CalibrationIlluminant2	ISO Studio Tungsten	Štúdio ISO Tungsten
+CalibrationIlluminant2	Other	Iné
+CalibrationIlluminant2	Shade	Tieň
+CalibrationIlluminant2	Standard Light A	Štandardné svetlo A
+CalibrationIlluminant2	Standard Light B	Štandardné svetlo B
+CalibrationIlluminant2	Standard Light C	Štandardné svetlo C
+CalibrationIlluminant2	Tungsten (Incandescent)	Volfrámová (žiarovka)
+CalibrationIlluminant2	Unknown	Neznáme
+CalibrationIlluminant2	Warm White Fluorescent	Teplá biela žiarivka
+CalibrationIlluminant2	White Fluorescent	Biela žiarivka
+CalibrationIlluminant3	Cloudy	Zamračené
+CalibrationIlluminant3	Cool White Fluorescent	Studená biela žiarivka
+CalibrationIlluminant3	Day White Fluorescent	Denná biela žiarivka
+CalibrationIlluminant3	Daylight	Denné svetlo
+CalibrationIlluminant3	Daylight Fluorescent	Denné svetlo žiarivky
+CalibrationIlluminant3	Fine Weather	Pekné počasie
+CalibrationIlluminant3	Flash	Blesk
+CalibrationIlluminant3	Fluorescent	Žiarivka
+CalibrationIlluminant3	ISO Studio Tungsten	Štúdio ISO Tungsten
+CalibrationIlluminant3	Other	Iné
+CalibrationIlluminant3	Shade	Tieň
+CalibrationIlluminant3	Standard Light A	Štandardné svetlo A
+CalibrationIlluminant3	Standard Light B	Štandardné svetlo B
+CalibrationIlluminant3	Standard Light C	Štandardné svetlo C
+CalibrationIlluminant3	Tungsten (Incandescent)	Volfrámová (žiarovka)
+CalibrationIlluminant3	Warm White Fluorescent	Teplá biela žiarivka
+CalibrationIlluminant3	White Fluorescent	Biela žiarivka
+ChromaticAberrationCorrection	Auto	Automatická
+ChromaticAberrationCorrection	No correction params available	Nie sú dostupné žiadne parametre korekcie
+ChromaticAberrationCorrection	Off	Vypnutá
+CleanFaxData	Clean	Čisté
+CleanFaxData	Regenerated	Regenerované
+CleanFaxData	Unclean	Nečisté
+CodingMethods	Baseline JPEG	Základný formát JPEG
+CodingMethods	JBIG color	Farebnosť JBIG
+CodingMethods	Modified Huffman	Upravený Huffman
+CodingMethods	Modified MR	Upravená MR
+CodingMethods	Modified Read	Upravené čítanie
+CodingMethods	Unspecified compression	Nešpecifikovaná kompresia
+ColorRepresentation	3 Components, Frame Sequential in Multiple Objects	3 komponenty, sekvenčné snímky vo viacerých objektoch
+ColorRepresentation	3 Components, Frame Sequential in One Object	3 komponenty, sekvenčné snímky v jednom objekte
+ColorRepresentation	3 Components, Line Sequential	3 komponenty, sekvenčná línia
+ColorRepresentation	3 Components, Pixel Sequential	3 komponenty, sekvenčný pixel
+ColorRepresentation	3 Components, Single Frame	3 komponenty, jeden snímok
+ColorRepresentation	3 Components, Special Interleaving	3 komponenty, špeciálne prelínanie
+ColorRepresentation	4 Components, Frame Sequential in Multiple Objects	4 komponenty, sekvenčné snímky vo viacerých objektoch
+ColorRepresentation	4 Components, Frame Sequential in One Object	4 komponenty, sekvenčné snímky v jednom objekte
+ColorRepresentation	4 Components, Line Sequential	4 komponenty, sekvenčná línia
+ColorRepresentation	4 Components, Pixel Sequential	4 komponenty, sekvenčný pixel
+ColorRepresentation	4 Components, Single Frame	4 komponenty, jeden snímok
+ColorRepresentation	4 Components, Special Interleaving	4 komponenty, špeciálne prelínanie
+ColorRepresentation	Monochrome, Single Frame	Monochromatický, jeden snímok
+ColorRepresentation	No Image, Single Frame	Žiadny obrázok, jeden snímok
+ColorSpace	ICC Profile	Profil ICC
+ColorSpace	Uncalibrated	Nekalibrovaný
+ColorSpace	Wide Gamut RGB	Široký rozsah RGB
+CompositeImage	Composite Image Captured While Shooting	Zložený obrázok zachytený počas snímania
+CompositeImage	General Composite Image	Všeobecný zložený obrázok
+CompositeImage	Not a Composite Image	Nie je to zložený obrázok
+CompositeImage	Unknown	Neznáme
+Compression	JBIG B&W	JBIG čiernobiely
+Compression	JBIG Color	JBIG Farebný
+Compression	JPEG (old-style)	JPEG (zastaralý)
+Compression	Kodak DCR Compressed	Komprimovaný Kodak DCR
+Compression	Kodak KDC Compressed	Komprimovaný Kodak KDC
+Compression	Lossy JPEG	Stratový JPEG
+Compression	Microsoft Document Imaging (MDI) Binary Level Codec	Binárny kodek Microsoft Document Imaging (MDI)
+Compression	Microsoft Document Imaging (MDI) Progressive Transform Codec	Kodek progresívnej transformácie Microsoft Document Imaging (MDI)
+Compression	Microsoft Document Imaging (MDI) Vector	Microsoft Document Imaging (MDI) Vektor
+Compression	Next	Kódovanie NeXT
+Compression	Nikon NEF Compressed	Komprimovaný Nikon NEF
+Compression	Packed RAW	Balený RAW
+Compression	Pentax PEF Compressed	Komprimovaný Pentax PEF
+Compression	Samsung SRW Compressed	Komprimovaný Samsung SRW
+Compression	Samsung SRW Compressed 2	Komprimovaný 2 Samsung SRW
+Compression	Sony ARW Compressed	Komprimovaný Sony ARW
+Compression	Uncompressed	Bez kompresie
+Contrast	High	Vysoký
+Contrast	Low	Nízky
+Contrast	Normal	Normálny
+CustomRendered	Custom	Vlastné
+CustomRendered	HDR (no original saved)	HDR (nie je uložený žiadny originál)
+CustomRendered	HDR (original saved)	HDR (originál uložený)
+CustomRendered	Normal	Normálne
+CustomRendered	Original (for HDR)	Originál (pre HDR)
+CustomRendered	Panorama	Panoráma
+CustomRendered	Portrait	Portrét
+CustomRendered	Portrait HDR	Portrét HDR
+DefaultBlackRender	Auto	Automatické
+DefaultBlackRender	None	Žiadne
+DepthFormat	Inverse	Inverzný
+DepthFormat	Linear	Lineárny
+DepthFormat	Unknown	Neznámy
+DepthMeasureType	Optical Axis	Optická os
+DepthMeasureType	Optical Ray	Optický lúč
+DepthMeasureType	Unknown	Neznáme
+DepthUnits	Meters	Metre
+DepthUnits	Unknown	Neznáme
+DistortionCorrection	Auto	Automatická
+DistortionCorrection	Auto fixed by lens	Automaticky fixovaná objektívom
+DistortionCorrection	No correction params available	Nie sú dostupné žiadne parametre korekcie
+DistortionCorrection	Off	Vypnutá
+EditorialUpdate	Additional language	Doplnkový jazyk
+EnvelopePriority	0 (reserved)	0 (rezervované)
+EnvelopePriority	1 (most urgent)	1 (najnaliehavejšie)
+EnvelopePriority	5 (normal urgency)	5 (bežná naliehavosť)
+EnvelopePriority	8 (least urgent)	8 (najmenej naliehavé)
+EnvelopePriority	9 (user-defined priority)	9 (priorita definovaná užívateľom)
+ExcursionTolerance	Allowed	Povolené
+ExcursionTolerance	Not Allowed	Nie je povolené
+ExposureMode	Auto	Automatický
+ExposureMode	Auto bracket	Automatické stupňovanie
+ExposureMode	Manual	Manuálny
+ExposureProgram	Action (High speed)	Akčný (vysoká rýchlosť) 
+ExposureProgram	Aperture-priority AE	AE s prioritou clony
+ExposureProgram	Bulb	Žiarovka
+ExposureProgram	Creative (Slow speed)	Kreatívny (pomalá rýchlosť)
+ExposureProgram	Landscape	Krajina 
+ExposureProgram	Manual	Manuálny
+ExposureProgram	Not Defined	Nedefinovaný
+ExposureProgram	Portrait	Portrét 
+ExposureProgram	Shutter speed priority AE	Priorita rýchlosti uzávierky AE
+ExtraSamples	Associated Alpha	Pridružené alfa
+ExtraSamples	Unassociated Alpha	Nepripojený alfa
+ExtraSamples	Unspecified	Nešpecifikované
+FaxProfile	Extended B&W lossless, F	Rozšírené čiernobiele bezstratové, F
+FaxProfile	Lossless JBIG B&W, J	Bezstratový JBIG čiernobiely, J
+FaxProfile	Lossless color and grayscale, L	Bezstratové farby a odtiene sivej, L
+FaxProfile	Lossy color and grayscale, C	Stratové farby a odtiene šedej, C
+FaxProfile	Minimal B&W lossless, S	Minimálne čiernobiele bezstratové, S
+FaxProfile	Mixed raster content, M	Zmiešaný obsah rastra, M
+FaxProfile	Multi Profiles	Viacnásobné profily
+FaxProfile	Profile T	Profil T
+FaxProfile	Unknown	Neznámy
+FileFormat	Compressed Binary File [.ZIP] (PKWare Inc)	Komprimovaný binárny súbor [.ZIP] (PKWare Inc)
+FileFormat	IPTC Unstructured Character Oriented File Format (UCOFF)	Formát neštruktúrovaných znakovo orientovaných súborov IPTC (UCOFF)
+FileFormat	IPTC-NAA Digital Newsphoto Parameter Record	Záznam parametrov digitálnych novín IPTC-NAA
+FileFormat	IPTC7901 Recommended Message Format	Odporúčaný formát správy IPTC7901
+FileFormat	News Industry Text Format (NITF)	Textový formát pre spravodajstvo (NITF)
+FileFormat	No ObjectData	Žiadne údaje o objekte
+FileFormat	Ritzaus Bureau NITF version (RBNITF DTD)	Verzia Ritzaus Bureau NITF (RBNITF DTD)
+FileFormat	Tagged Image File Format (Adobe/Aldus Image data)	Označený formát obrazového súboru (obrazové údaje Adobe/Aldus)
+FileSource	Digital Camera	Digitálny fotoaparát
+FileSource	Film Scanner	Filmový skener
+FileSource	Reflection Print Scanner	Odrazový skener
+FileSource	Sigma Digital Camera	Digitálny fotoaparát Sigma
+FillOrder	Normal	Normálne
+FillOrder	Reversed	Obrátené
+Flash	Auto, Did not fire	Automaticky, nebol odpálený
+Flash	Auto, Did not fire, Red-eye reduction	Automaticky, nebol odpálený, redukcia červených očí
+Flash	Auto, Fired	Automaticky, odpálený
+Flash	Auto, Fired, Red-eye reduction	Zapnutý, odpálený, redukcia červených očí
+Flash	Auto, Fired, Red-eye reduction, Return detected	Zapnutý, odpálený, redukcia červených očí, návrat bol zistený
+Flash	Auto, Fired, Red-eye reduction, Return not detected	Zapnutý, odpálený, redukcia červených očí, návrat nebol zistený
+Flash	Auto, Fired, Return detected	Automaticky, odpálený, návrat bol zistený
+Flash	Auto, Fired, Return not detected	Automaticky, odpálený, návrat nebol zistený
+Flash	Fired	Odpálený
+Flash	Fired, Red-eye reduction	Odpálený, redukcia červených očí
+Flash	Fired, Red-eye reduction, Return detected	Odpálený, redukcia červených očí, návrat bol zistený
+Flash	Fired, Red-eye reduction, Return not detected	Odpálený, redukcia červených očí, návrat nebol zistený
+Flash	Fired, Return detected	Odpálený, návrat bol zistený
+Flash	Fired, Return not detected	Odpálený, návrat nebol zistený
+Flash	No Flash	Bez blesku
+Flash	No flash function	Žiadna funkcia blesku
+Flash	Off, Did not fire	Vypnutý, nebol odpálený
+Flash	Off, Did not fire, Return not detected	Vypnutý, nebol odpálený, návrat nebol zistený
+Flash	Off, No flash function	Výpnutý, žiadna funkcia blesku
+Flash	Off, Red-eye reduction	Vypnutý, redukcia červených očí
+Flash	On, Did not fire	Zapnutý, nebol odpálený
+Flash	On, Fired	Zapnutý, odpálený
+Flash	On, Red-eye reduction	Zapnutý, redukcia červených očí
+Flash	On, Red-eye reduction, Return detected	Zapnutý, redukcia červených očí, návrat bol zistený
+Flash	On, Red-eye reduction, Return not detected	Zapnutý, redukcia červených očí, návrat nebol zistený
+Flash	On, Return detected	Zapnutý, návrat bol zistený 
+Flash	On, Return not detected	Zapnutý, návrat nebol zistený 
+FocalPlaneResolutionUnit	None	žiadne
+FocalPlaneResolutionUnit	inches	palce
+GPSAltitudeRef	Above Sea Level	Nad hladinou mora
+GPSAltitudeRef	Below Sea Level	Pod hladinou mora
+GPSDestBearingRef	Magnetic North	Magnetický sever
+GPSDestBearingRef	True North	Skutočný sever
+GPSDestDistanceRef	Kilometers	Kilometre
+GPSDestDistanceRef	Miles	Míle
+GPSDestDistanceRef	Nautical Miles	Námorné míle
+GPSDestLatitudeRef	North	Severná šírka
+GPSDestLatitudeRef	South	Južná šírka
+GPSDestLongitudeRef	East	Východná dĺžka
+GPSDestLongitudeRef	West	Západná dĺžka
+GPSDifferential	Differential Corrected	Diferenciálna korekcia
+GPSDifferential	No Correction	Žiadna korekcia
+GPSImgDirectionRef	Magnetic North	Magnetický sever
+GPSImgDirectionRef	True North	Skutočný sever
+GPSLatitudeRef	North	Severná šírka
+GPSLatitudeRef	South	Južná šírka
+GPSLongitudeRef	East	Východná dĺžka
+GPSLongitudeRef	West	Západná dĺžka
+GPSMeasureMode	2-Dimensional Measurement	2-rozmerné meranie
+GPSMeasureMode	3-Dimensional Measurement	3-rozmerné meranie
+GPSSpeedRef	knots	uzly
+GPSStatus	Measurement Active	Meranie je aktívne
+GPSStatus	Measurement Void	Meranie je nesprávne
+GPSTrackRef	Magnetic North	Magnetický sever
+GPSTrackRef	True North	Skutočný sever
+GainControl	High gain down	Vysoké zosilnenie nižšie
+GainControl	High gain up	Vysoké zosilnenie
+GainControl	Low gain down	Nízke zosilnenie nižšie
+GainControl	Low gain up	Nízke zosilnenie
+GainControl	None	Žiadna
+HCUsage	Line Art	Umenie línie
+HCUsage	Trap	Zachytenie
+IPTCImageRotation	0	0°
+IPTCImageRotation	180	180°
+IPTCImageRotation	270	270°
+IPTCImageRotation	90	90°
+ImageColorIndicator	Specified Image Color	Špecifikovaná farba obrázku
+ImageColorIndicator	Unspecified Image Color	Nešpecifikovaná farba obrázku
+ImageDataDiscard	Flexbits Discarded	Vyradené flexibilné bity
+ImageDataDiscard	Full Resolution	Úplné rozlíšenie
+ImageDataDiscard	HighPass Frequency Data Discarded	Vyradené údaje s vysokou frekvenciou
+ImageDataDiscard	Highpass and LowPass Frequency Data Discarded	Vyradené údaje o vysokej a nízkej frekvencii
+ImageOrientation	Landscape	Krajina
+ImageOrientation	Portrait	Portrét
+ImageOrientation	Square	Štvorec
+ImageType	Page	Stránka
+ImageType	Preview	Náhľad
+Indexed	Indexed	Indexované
+Indexed	Not indexed	Neindexované
+InkSet	Not CMYK	Nie CMYK
+InteropIndex	R03 - DCF option file (Adobe RGB)	R03 - súbor možností DCF (Adobe RGB)
+InteropIndex	R98 - DCF basic file (sRGB)	R98 - základný súbor DCF (sRGB)
+InteropIndex	THM - DCF thumbnail file	THM - súbor miniatúry DCF
+JPEGProc	Baseline	Základná línia
+JPEGProc	Lossless	Bezstratové
+LightSource	Cloudy	Zamračené
+LightSource	Cool White Fluorescent	Studená biela žiarivka
+LightSource	Day White Fluorescent	Denná biela žiarivka
+LightSource	Daylight	Denné svetlo
+LightSource	Daylight Fluorescent	Denné svetlo žiarivky
+LightSource	Fine Weather	Slnečno
+LightSource	Flash	Blesk
+LightSource	Fluorescent	Žiarivka
+LightSource	ISO Studio Tungsten	Štúdio ISO Tungsten
+LightSource	Other	Iné osvetlenie
+LightSource	Shade	Tieň
+LightSource	Standard Light A	Štandardné svetlo A
+LightSource	Standard Light B	Štandardné svetlo B
+LightSource	Standard Light C	Štandardné svetlo C
+LightSource	Tungsten (Incandescent)	Volfrámové (žiarovky)
+LightSource	Unknown	Neznáme
+LightSource	Warm White Fluorescent	Teplá biela žiarivka
+LightSource	White Fluorescent	Biela žiarivka
+MakerNoteSafety	Safe	Bezpečný
+MakerNoteSafety	Unsafe	Nebezpečný
+MeteringMode	Average	Priemerné
+MeteringMode	Center-weighted average	Stredovo vyvážený priemer
+MeteringMode	Multi-segment	Viacsegmentovo
+MeteringMode	Multi-spot	Viacbodovo
+MeteringMode	Other	Iné
+MeteringMode	Partial	Čiastočne
+MeteringMode	Spot	Bodovo
+MeteringMode	Unknown	Neznáme
+MultiProfiles	JBIG2 Profile M	Profil JBIG2 M
+MultiProfiles	N Layer Profile M	N Profil vrstvy M
+MultiProfiles	Profile C	Profil C
+MultiProfiles	Profile F	Profil F
+MultiProfiles	Profile J	Profil J
+MultiProfiles	Profile L	Profil L
+MultiProfiles	Profile M	Profil M
+MultiProfiles	Profile S	Profil S
+MultiProfiles	Profile T	Profil T
+MultiProfiles	Resolution/Image Width	Rozlíšenie/Šírka obrázku
+MultiProfiles	Shared Data	Zdieľaný dátový
+Multishot	Off	Vypnuté
+Multishot	Pixel Shift	Posun pixelov
+OPIProxy	Higher resolution image does not exist	Obrázok s vyšším rozlíšením neexistuje
+OPIProxy	Higher resolution image exists	Obrázok s vyšším rozlíšením existuje
+ObjectCycle	Both Morning and Evening	Ráno aj večer
+ObjectCycle	Evening	Večer
+ObjectCycle	Morning	Ráno
+ObjectPreviewFileFormat	Compressed Binary File [.ZIP] (PKWare Inc)	Komprimovaný binárny súbor [.ZIP] (PKWare Inc)
+ObjectPreviewFileFormat	IPTC Unstructured Character Oriented File Format (UCOFF)	Formát neštruktúrovaných znakovo orientovaných súborov IPTC (UCOFF)
+ObjectPreviewFileFormat	IPTC-NAA Digital Newsphoto Parameter Record	Záznam parametrov digitálnych novín IPTC-NAA
+ObjectPreviewFileFormat	IPTC7901 Recommended Message Format	Odporúčaný formát správy IPTC7901
+ObjectPreviewFileFormat	News Industry Text Format (NITF)	Textový formát pre spravodajstvo (NITF)
+ObjectPreviewFileFormat	No ObjectData	Žiadne údaje o objekte
+ObjectPreviewFileFormat	Ritzaus Bureau NITF version (RBNITF DTD)	Verzia Ritzaus Bureau NITF (RBNITF DTD)
+ObjectPreviewFileFormat	Tagged Image File Format (Adobe/Aldus Image data)	Označený formát obrazového súboru (obrazové údaje Adobe/Aldus)
+OldSubfileType	Full-resolution image	Obrázok v plnom rozlíšení
+OldSubfileType	Reduced-resolution image	Obrázok so zníženým rozlíšením
+OldSubfileType	Single page of multi-page image	Jedna strana viacstranového obrázku
+Orientation	Horizontal (normal)	Horizontálna (normálne)
+Orientation	Mirror horizontal	Zrkadlená horizontálne
+Orientation	Mirror horizontal and rotate 270 CW	Zrkadlená horizontálne a otočená o 270° v smere hodinových ručičiek
+Orientation	Mirror horizontal and rotate 90 CW	Zrkadlená horizontálne a otočená o 90° v smere hodinových ručičiek
+Orientation	Mirror vertical	Zrkadlená vertikálne
+Orientation	Rotate 180	Otočená o 180°
+Orientation	Rotate 270 CW	Otočená o 270° v smere hodinových ručičiek
+Orientation	Rotate 90 CW	Otočená o 90° v smere hodinových ručičiek
+PhotometricInterpretation	BlackIsZero	Čierna je nula
+PhotometricInterpretation	Color Filter Array	Pole farebných filtrov
+PhotometricInterpretation	Depth Map	Hĺbková mapa
+PhotometricInterpretation	Linear Raw	Surový lineárny
+PhotometricInterpretation	RGB Palette	Paleta RGB
+PhotometricInterpretation	Semantic Mask	Sémantická maska
+PhotometricInterpretation	Sequential Color Filter	Sekvenčný farebný filter
+PhotometricInterpretation	Transparency Mask	Priehľadná maska
+PhotometricInterpretation	WhiteIsZero	Biela je nula
+PixelFormat	112-bit 6 Channels Alpha	112-bitový so 6 alfa kanálmi
+PixelFormat	112-bit 7 Channels	112-bitový so 7 kanálmi
+PixelFormat	128-bit 7 Channels Alpha	128-bitový so 7 alfa kanálmi
+PixelFormat	128-bit 8 Channels	128-bitový s 8 kanálmi
+PixelFormat	128-bit PRGBA Float	128-bitové PRGBA plávajúce
+PixelFormat	128-bit RGB Float	128-bitové RGB plávajúce
+PixelFormat	128-bit RGBA Fixed Point	128-bitové RGBA s pevným bodom
+PixelFormat	128-bit RGBA Float	128-bitové RGBA plávajúce
+PixelFormat	144-bit 8 Channels Alpha	144-bitový s 8 alfa kanálmi
+PixelFormat	16-bit BGR555	16-bitový BGR555
+PixelFormat	16-bit BGR565	16-bitový BGR565
+PixelFormat	16-bit Gray	16-bitový šedý
+PixelFormat	16-bit Gray Half	16-bitový šedý polovičný
+PixelFormat	24-bit 3 Channels	24-bitový s 3 kanálmi
+PixelFormat	24-bit BGR	24-bitový BGR
+PixelFormat	24-bit RGB	24-bitové RGB
+PixelFormat	32-bit 3 Channels Alpha	32-bitový s 3 alfa kanálmi
+PixelFormat	32-bit 4 Channels	32-bitový so 4 kanálmi
+PixelFormat	32-bit BGR	32-bitový BGR
+PixelFormat	32-bit BGR101010	32-bitové BGR101010
+PixelFormat	32-bit BGRA	32-bitové BGRA
+PixelFormat	32-bit CMYK	32-bitový CMYK
+PixelFormat	32-bit Gray Fixed Point	32-bitový šedý s pevným bodom
+PixelFormat	32-bit Gray Float	32-bitový šedý plávajúci
+PixelFormat	32-bit PBGRA	32-bitové PBGRA
+PixelFormat	32-bit RGBE	32-bitový RGBE 
+PixelFormat	40-bit 4 Channels Alpha	40-bitový so 4 alfa kanálmi
+PixelFormat	40-bit 5 Channels	40-bitový s 5 kanálmi
+PixelFormat	40-bit CMYK Alpha	40-bitový alfa CMYK
+PixelFormat	48-bit 3 Channels	48-bitový s 3 kanálmi
+PixelFormat	48-bit 5 Channels Alpha	48-bitový s 5 alfa kanálmi
+PixelFormat	48-bit 6 Channels	48-bitový so 6 kanálmi
+PixelFormat	48-bit RGB	48--bitové RGB
+PixelFormat	48-bit RGB Fixed Point	48-bitové RGB s pevným bodom
+PixelFormat	48-bit RGB Half	48-bitové RGB polovičné
+PixelFormat	56-bit 6 Channels Alpha	56-bitový s 6 alfa kanálmi
+PixelFormat	56-bit 7 Channels	56-bitový so 7 kanálmi
+PixelFormat	64-bit 3 Channels Alpha	64-bitový s 3 alfa kanálmi
+PixelFormat	64-bit 4 Channels	64-bitový so 4 kanálmi
+PixelFormat	64-bit 7 Channels Alpha	64-bitový so 7 alfa kanálmi
+PixelFormat	64-bit 8 Channels	64-bitový s 8 kanálmi
+PixelFormat	64-bit CMYK	64-bitový CMYK
+PixelFormat	64-bit PRGBA	64--bitové PRGBA
+PixelFormat	64-bit RGBA	64--bitové RGBA
+PixelFormat	64-bit RGBA Fixed Point	64-bitové RGBA s pevným bodom
+PixelFormat	64-bit RGBA Half	64-bitové RGBA polovičné
+PixelFormat	72-bit 8 Channels Alpha	72-bitový s 8 alfa kanálmi
+PixelFormat	8-bit Gray	8-bitový sivý
+PixelFormat	80-bit 4 Channels Alpha	80-bitový s 4 alfa kanálmi
+PixelFormat	80-bit 5 Channels	80-bitový s 5 kanálmi
+PixelFormat	80-bit CMYK Alpha	80-bitový alfa CMYK
+PixelFormat	96-bit 5 Channels Alpha	96-bitový s 5 alfa kanálmi
+PixelFormat	96-bit 6 Channels	96-bitový so 6 kanálmi
+PixelFormat	96-bit RGB Fixed Point	96-bitové RGB s pevným bodom
+PixelFormat	Black & White	Čiernobiely
+PlanarConfiguration	Chunky	Hrubá
+PlanarConfiguration	Planar	Plošná
+Predictor	Floating point	Plávajúci bod
+Predictor	Floating point X2	Plávajúci bod X2
+Predictor	Floating point X4	Plávajúci bod X4
+Predictor	Horizontal difference X2	Horizontálne rozlišovanie X2
+Predictor	Horizontal difference X4	Horizontálne rozlišovanie X4
+Predictor	Horizontal differencing	Horizontálne rozlišovanie
+Predictor	None	Žiadna
+PreviewColorSpace	Gray Gamma 2.2	Sivá gama 2,2
+PreviewColorSpace	Unknown	Neznámy
+ProfileEmbedPolicy	Allow Copying	Povoliť kopírovanie
+ProfileEmbedPolicy	Embed if Used	Vložiť, ak sa používa
+ProfileEmbedPolicy	Never Embed	Nikdy nevkladať
+ProfileEmbedPolicy	No Restrictions	Bez obmedzení
+ProfileHueSatMapEncoding	Linear	Lineárne
+ProfileLookTableEncoding	Linear	Lineárne
+ProfileType	Group 3 FAX	Skupina 3 FAX
+ProfileType	Unspecified	Nešpecifikovaný
+QuantizationMethod	AP Domestic Analogue	Domáce analógové AP
+QuantizationMethod	Color Space Specific	Špecifický farebný priestor
+QuantizationMethod	Compression Method Specific	Špecifická metóda kompresie
+QuantizationMethod	Gamma Compensated	Kompenzácia gama
+QuantizationMethod	Linear Density	Lineárna hustota
+QuantizationMethod	Linear Dot Percent	Lineárne bodové percento
+QuantizationMethod	Linear Reflectance/Transmittance	Lineárna odrazivosť/priepustnosť
+RasterPadding	Byte	Bajt
+RasterPadding	Long Sector	Dlhý sektor
+RasterPadding	Long Word	Dlhé slovo
+RasterPadding	Sector	Sektor
+RasterPadding	Word	Slovo
+ResolutionUnit	None	žiadne
+ResolutionUnit	cm	centimetre
+ResolutionUnit	inches	palce
+SampleFormat	Complex float	Komplexné číslo s pohyblivou čiarkou
+SampleFormat	Complex int	Komplexné celé číslo
+SampleFormat	Float	Pohyblivá desatinná čiarka
+SampleFormat	Signed	Celé číslo so znamienkom dvojkovej sústavy
+SampleFormat	Undefined	Nedefinovaný
+SampleFormat	Unsigned	Celé číslo bez znamienka
+Saturation	High	Vysoká
+Saturation	Low	Nízka
+Saturation	Normal	Normálna
+ScanningDirection	Bottom-Top, L-R	Dole-hore, L-R
+ScanningDirection	Bottom-Top, R-L	Dole-hore, R-L
+ScanningDirection	L-R, Bottom-Top	L-R, odspodu nahor
+ScanningDirection	L-R, Top-Bottom	L-R, zhora nadol
+ScanningDirection	R-L, Bottom-Top	R-L, odspodu nahor
+ScanningDirection	R-L, Top-Bottom	R-L, zhora nadol
+ScanningDirection	Top-Bottom, L-R	Hore-dole, L-R
+ScanningDirection	Top-Bottom, R-L	Hore-dole, R-L
+SceneCaptureType	Landscape	Na šírku
+SceneCaptureType	Night	Noc
+SceneCaptureType	Other	Iný
+SceneCaptureType	Portrait	Na výšku
+SceneCaptureType	Standard	Štandardný
+SceneType	Directly photographed	Priamo odfotografované
+SecurityClassification	Confidential	Dôverné
+SecurityClassification	Restricted	Vyhradené
+SecurityClassification	Secret	Tajné
+SecurityClassification	Top Secret	Prísne tajné
+SecurityClassification	Unclassified	Neklasifikované
+SensingMethod	Color sequential area	Farebná sekvenčná oblasť
+SensingMethod	Color sequential linear	Farebný sekvenčný lineárny
+SensingMethod	Monochrome area	Jednofarebná oblasť
+SensingMethod	Monochrome linear	Monochromatické lineárne
+SensingMethod	Not defined	Nie je definované
+SensingMethod	One-chip color area	Jednočipová farebná oblasť
+SensingMethod	Three-chip color area	Trojčipová farebná oblasť
+SensingMethod	Trilinear	Trilineárna
+SensingMethod	Two-chip color area	Dvojčipová farebná oblasť
+SensitivityType	ISO Speed	Rýchlosť ISO
+SensitivityType	Recommended Exposure Index	Odporúčaný index expozície
+SensitivityType	Recommended Exposure Index and ISO Speed	Odporúčaný index expozície a rýchlosť ISO
+SensitivityType	Standard Output Sensitivity	Štandardná výstupná citlivosť
+SensitivityType	Standard Output Sensitivity and ISO Speed	Štandardná výstupná citlivosť a citlivosť ISO 
+SensitivityType	Standard Output Sensitivity and Recommended Exposure Index	Štandardná výstupná citlivosť a odporúčaný index expozície
+SensitivityType	Standard Output Sensitivity, Recommended Exposure Index and ISO Speed	Štandardná výstupná citlivosť, odporúčaný expozičný index a citlivosť ISO
+SensitivityType	Unknown	Neznámy
+Sharpness	Hard	Tvrdá
+Sharpness	Normal	Normálna
+Sharpness	Soft	Mäkká
+SizeMode	Size Known	Známa veľkosť
+SizeMode	Size Not Known	Veľkosť neznáma
+SonyRawFileType	Sony Compressed RAW	Sony komprimovaný RAW
+SonyRawFileType	Sony Lossless Compressed RAW	Sony bezstratový komprimovaný RAW
+SonyRawFileType	Sony Lossless Compressed RAW 2	Sony bezstratový komprimovaný RAW 2
+SonyRawFileType	Sony Uncompressed 12-bit RAW	Sony nekomprimovaný 12-bitový RAW
+SonyRawFileType	Sony Uncompressed 14-bit RAW	Sony nekomprimovaný 14-bitový RAW
+SubfileType	Alternate reduced-resolution image	Alternatívny obrázok so zníženým rozlíšením
+SubfileType	Depth map	Hĺbková mapa
+SubfileType	Depth map of reduced-resolution image	Hĺbková mapa obrázku so zníženým rozlíšením
+SubfileType	Enhanced image data	Vylepšené údaje obrázku
+SubfileType	Full-resolution image	Obrázok v plnom rozlíšení
+SubfileType	Reduced-resolution image	Obrázok so zníženým rozlíšením
+SubfileType	Semantic Mask	Sémantická maska
+SubfileType	Single page of multi-page image	Jedna strana viacstranového obrázku
+SubfileType	Single page of multi-page reduced-resolution image	Jedna strana viacstranového obrázku so zníženým rozlíšením
+SubfileType	Transparency mask	Maska priehľadnosti
+SubfileType	Transparency mask of multi-page image	Maska priehľadnosti viacstránkového obrázku
+SubfileType	Transparency mask of reduced-resolution image	Maska priehľadnosti obrázok so zníženým rozlíšením
+SubfileType	Transparency mask of reduced-resolution multi-page image	Maska priehľadnosti viacstránkového obrázku so zníženým rozlíšením
+SubfileType	invalid	neplatný
+SubjectDistanceRange	Close	Blízky
+SubjectDistanceRange	Distant	Vzdialený
+SubjectDistanceRange	Macro	Makro
+SubjectDistanceRange	Unknown	Neznámy
+SupplementalType	Main Image	Hlavný obrázok
+SupplementalType	Rasterized Caption	Rastrovaný titulok
+SupplementalType	Reduced Resolution Image	Obrázok so zníženým rozlíšením
+T4Options	2-Dimensional encoding	Dvojrozmerné kódovanie
+T4Options	Fill bits added	Pridanie bitov výplne
+T4Options	Uncompressed	Nekomprimované
+T6Options	Uncompressed	Nekomprimované
+TIFF_FXExtensions	B&W JBIG2	ČB JBIG2
+TIFF_FXExtensions	JBIG2 Profile M	Profil JBIG2 M
+TIFF_FXExtensions	N Layer Profile M	N profil vrstvy M
+TIFF_FXExtensions	Resolution/Image Width	Rozlíšenie/šírka obrazu
+TIFF_FXExtensions	Shared Data	Zdieľaný dátový
+Thresholding	No dithering or halftoning	Žiadne rozostrenie alebo polotónovanie
+Thresholding	Ordered dither or halftone	Usporiadaný rozklad alebo poltón
+Thresholding	Randomized dither	Náhodný rozklad
+Transformation	Horizontal (normal)	Horizontálne (normálne)
+Transformation	Mirror horizontal	Zrkadlené horizontálne 
+Transformation	Mirror horizontal and rotate 270 CW	Zrkadlené horizontálne a otočené 270° doprava
+Transformation	Mirror horizontal and rotate 90 CW	Zrkadlené horizontálne a otočené 90° doprava
+Transformation	Mirror vertical	Zrkadlené vertikálne
+Transformation	Rotate 180	Otočené o 180°
+Transformation	Rotate 270 CW	Otočené o 270° doprava
+Transformation	Rotate 90 CW	Otočené o 90° doprava
+USPTOOriginalContentType	Color	Farba
+USPTOOriginalContentType	Grayscale	Odtiene šedej
+USPTOOriginalContentType	Text or Drawing	Text alebo kresba
+Uncompressed	No	Nie
+Uncompressed	Yes	Áno
+Urgency	0 (reserved)	0 (rezervované)
+Urgency	1 (most urgent)	1 (najnaliehavejšie)
+Urgency	5 (normal urgency)	5 (bežná naliehavosť)
+Urgency	8 (least urgent)	8 (najmenej naliehavé)
+Urgency	9 (user-defined priority)	9 (priorita definovaná užívateľom)
+VignettingCorrection	Auto	Automatická
+VignettingCorrection	Auto (ILCE-1)	Automatická (ILCE-1)
+VignettingCorrection	No correction params available	Nie sú dostupné žiadne parametre korekcie
+VignettingCorrection	Off	Vypnutá
+WhiteBalance	Auto	Automatické
+WhiteBalance	Manual	Manuálne
+YCbCrPositioning	Centered	Vycentrované
+YCbCrPositioning	Co-sited	Spoločné umiestnenie

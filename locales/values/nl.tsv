@@ -1,0 +1,1126 @@
+AEBAutoCancel	Off	Uit
+AEBAutoCancel	On	Aan
+AELock	Off	Uit
+AELock	On	Aan
+AELockButton	AE Lock (hold)	AE-vergrendeling vast
+AELockButton	AE Lock Only	AE-vergrendeling
+AELockButton	AE-L/AF Area	AE-L/AF veld
+AELockButton	AE-L/AF-L/AF Area	AE-L/AF-L/AF veld
+AELockButton	AE/AF Lock	AE/AF-vergrendeling
+AELockButton	AF Lock Only	AF-vergrendeling
+AELockButton	AF-L/AF Area	AF-L/AF veld
+AELockButton	AF-ON/AF Area	AF-ON/AF veld
+AELockButton	FV Lock	FV-vergrendeling
+AELockButton	Focus Area Selection	AF-veld
+AEMeteringMode	Multi-segment	Multi segment
+AEProgramMode	Landscape	Landschap
+AEProgramMode	Portrait	Portret
+AEProgramMode	Standard	Standaard
+AF-CPrioritySelection	Focus	Scherpstelling
+AF-CPrioritySelection	Release	Ontspannen
+AF-CPrioritySelection	Release + Focus	Ontspannen + scherpstelling
+AF-OnForMB-D10	AE Lock (hold)	AE-vergrendeling (vast)
+AF-OnForMB-D10	AE Lock (reset on release)	AE-vergr. (herstel na ontspan.)
+AF-OnForMB-D10	AE Lock Only	AE-vergrendeling
+AF-OnForMB-D10	AE/AF Lock	AE/AF-vergrendeling
+AF-OnForMB-D10	AF Lock Only	AF-vergrendeling
+AF-OnForMB-D10	AF-On	AF-ON
+AF-OnForMB-D10	Same as FUNC Button	Zelfde als FUNC.-knop
+AF-SPrioritySelection	Focus	Scherpstelling
+AF-SPrioritySelection	Release	Ontspannen
+AFActivation	AF-On Only	Alleen AF-ON
+AFActivation	Shutter/AF-On	Ontspanknop/AF-ON
+AFAreaIllumination	Auto	Automatisch
+AFAreaIllumination	Off	Uit
+AFAreaIllumination	On	Aan
+AFAreaMode	Auto-area	Automatischveld AF
+AFAreaMode	Dynamic Area	Dynamisch veld
+AFAreaMode	Single Area	Enkelveld
+AFAreaModeSetting	Closest Subject	Dichtstbz. onderw.
+AFAreaModeSetting	Dynamic Area	Dynamisch veld
+AFAreaModeSetting	Single Area	Enkelveld
+AFAssist	Off	Uit
+AFAssist	On	Aan
+AFPoint	None	Geen
+AFPointActivationArea	Standard	Standaard
+AFPointBrightness	Normal	Normaal
+AFPointDisplayDuringFocus	Off	Uit
+AFPointDisplayDuringFocus	On	Aan
+AFPointIllumination	Auto	Automatisch
+AFPointIllumination	Off	Uit
+AFPointIllumination	On	Aan
+AFPointMode	Auto	Automatisch
+AFPointRegistration	Automatic	Automatisch
+AFPointSelected	Auto	Automatisch
+AFPointSelected2	Auto	Automatisch
+AFPointSelection	11 Points	11 punten
+AFPointSelection	51 Points	51 punten (3D-tracking)
+AFPointSelectionMethod	Normal	Normaal
+AFPointsInFocus	None	Geen
+AFPointsUnknown2	Auto	Automatisch
+AIServoTrackingSensitivity	Standard	Standaard
+ActionAdvised	Object Append	Object toevoegen
+ActionAdvised	Object Kill	Object verwijderen
+ActionAdvised	Object Reference	Object referentie
+ActionAdvised	Object Replace	Object vervangen
+ActionAdvised	Ojbect Append	Object toevoegen
+ActiveD-Lighting	High	Hoog
+ActiveD-Lighting	Low	Laag
+ActiveD-Lighting	Normal	Normaal
+ActiveD-Lighting	Off	Uit
+ActiveD-Lighting	On	Aan
+ActiveD-LightingMode	High	Hoog
+ActiveD-LightingMode	Low	Laag
+ActiveD-LightingMode	Normal	Normaal
+ActiveD-LightingMode	Off	Uit
+AddAspectRatioInfo	Off	Uit
+AddOriginalDecisionData	Off	Uit
+AddOriginalDecisionData	On	Aan
+AdultContentWarning	Unknown	Onbekend
+AdvancedRaw	Off	Uit
+AdvancedRaw	On	Aan
+AlphaDataDiscard	Flexbits Discarded	Afgedankte flexbits
+AlphaDataDiscard	Full Resolution	Volledige resolutie
+AlphaDataDiscard	HighPass Frequency Data Discarded	Afgedankte hoogdoorlaat frequentiegegevens
+AlphaDataDiscard	Highpass and LowPass Frequency Data Discarded	Afgedankte hoogdoorlaat en laagdoorlaat frequentiegegevens
+Anti-Blur	Off	Uit
+AssistButtonFunction	Normal	Normaal
+Audio	No	Nee
+Audio	Yes	Ja
+AudioType	Mono Actuality	Actualiteit (mono (1 kanaal) audio)
+AudioType	Mono Music	Muziek, zelf verstuurd (mono (1 kanaal) audio)
+AudioType	Mono Question and Answer Session	Vraag en antwoord sessie (mono (1 kanaal) audio)
+AudioType	Mono Raw Sound	Ruwe geluid (mono (1 kanaal) audio)
+AudioType	Mono Response to a Question	Beantwoord een vraag (mono (1 kanaal) audio)
+AudioType	Mono Scener	Toneel (mono (1 kanaal) audio)
+AudioType	Mono Voicer	Stem (mono (1 kanaals) audio)
+AudioType	Mono Wrap	Wrap (mono (1 kanaals) audio)
+AudioType	Stereo Actuality	Actualiteit (stereo (2 kanalen) audio)
+AudioType	Stereo Music	Muziek, zelf verstuurd (stereo (2 kanalen) audio)
+AudioType	Stereo Question and Answer Session	Vraag en antwoord sessie (stereo (2 kanalen) audio)
+AudioType	Stereo Raw Sound	Ruwe geluid (stereo (2 kanalen) audio)
+AudioType	Stereo Response to a Question	Beantwoord een vraag (stereo (2 kanalen) audio)
+AudioType	Stereo Scener	Toneel (stereo (2 kanaals) audio)
+AudioType	Stereo Voicer	Stem (stereo (2 kanaals) audio)
+AudioType	Stereo Wrap	Wrap (stereo (2 kanaals) audio)
+AudioType	Text Only	Alleen tekst (geen objectgegevens)
+AutoAperture	Off	Uit
+AutoAperture	On	Aan
+AutoBracketModeM	Flash Only	Alleen flits
+AutoBracketModeM	Flash/Aperture	Flits/diafragma
+AutoBracketModeM	Flash/Speed	Flits/sluitertijd
+AutoBracketModeM	Flash/Speed/Aperture	Flits/sluitertijd/diafragma
+AutoBracketSet	AE & Flash	AE & flits
+AutoBracketSet	AE Only	Alleen AE
+AutoBracketSet	Flash Only	Alleen flits
+AutoBracketSet	WB Bracketing	Witbalans bracketing
+AutoBracketing	Off	Uit
+AutoExposureBracketing	Off	Uit
+AutoExposureBracketing	On	Aan
+AutoFP	Off	Uit
+AutoFP	On	Aan
+AutoFocus	Off	Uit
+AutoFocus	On	Aan
+AutoISO	Off	Uit
+AutoISO	On	Aan
+AutoLightingOptimizer	Low	Laag
+AutoLightingOptimizer	Off	Uit
+AutoLightingOptimizer	Standard	Standaard
+AutoLightingOptimizerOn	No	Nee
+AutoLightingOptimizerOn	Yes	Ja
+AutoRedEye	Off	Uit
+AutoRedEye	On	Aan
+AutoRotate	None	Geen
+AutoRotate	Rotate 180	180° (onder/rechts)
+AutoRotate	Rotate 270 CW	Draai 270° met de klok mee
+AutoRotate	Rotate 90 CW	90° tegen de klok in (rechts/boven)
+AutoRotate	n/a	Onbekend
+BWMode	Off	Uit
+BackgroundTiling	No	Nee
+BackgroundTiling	Yes	Ja
+BannerImageType	None	Geen
+BatteryOrder	Camera Battery First	Camerabatterij eerst
+BatteryOrder	MB-D10 First	MB-D10 batterijen eerst
+Beep	High	Hoog
+Beep	Low	Laag
+Beep	Off	Uit
+Beep	On	Aan
+BlurWarning	None	Geen
+BracketMode	Off	Uit
+BracketStep	1 EV	1 stop
+BracketStep	1/3 EV	1/3 stop
+BracketStep	2/3 EV	2/3 stop
+BurstMode	Off	Uit
+BurstMode	On	Aan
+CPUType	None	Geen
+CalibrationIlluminant1	Cloudy	Bewolkt
+CalibrationIlluminant1	Cool White Fluorescent	Koel wit TL-licht
+CalibrationIlluminant1	Day White Fluorescent	Daglicht wit TL-licht
+CalibrationIlluminant1	Daylight	Daglicht
+CalibrationIlluminant1	Daylight Fluorescent	Daglicht TL-licht
+CalibrationIlluminant1	Fine Weather	Onbewolkt
+CalibrationIlluminant1	Flash	Flits
+CalibrationIlluminant1	Fluorescent	Fluoresceren
+CalibrationIlluminant1	ISO Studio Tungsten	ISO studio kunstlicht (gloeilamp)
+CalibrationIlluminant1	Other	Andere lichtbron
+CalibrationIlluminant1	Shade	Schaduw
+CalibrationIlluminant1	Standard Light A	Standaard licht A
+CalibrationIlluminant1	Standard Light B	Standaard licht B
+CalibrationIlluminant1	Standard Light C	Standaard licht C
+CalibrationIlluminant1	Tungsten (Incandescent)	Kunstlicht (gloeilamp)
+CalibrationIlluminant1	Unknown	Onbekend
+CalibrationIlluminant1	Warm White Fluorescent	Warm wit TL-licht
+CalibrationIlluminant1	White Fluorescent	Wit TL-licht
+CalibrationIlluminant2	Cloudy	Bewolkt
+CalibrationIlluminant2	Cool White Fluorescent	Koel wit TL-licht
+CalibrationIlluminant2	Day White Fluorescent	Daglicht wit TL-licht
+CalibrationIlluminant2	Daylight	Daglicht
+CalibrationIlluminant2	Daylight Fluorescent	Daglicht TL-licht
+CalibrationIlluminant2	Fine Weather	Onbewolkt
+CalibrationIlluminant2	Flash	Flits
+CalibrationIlluminant2	Fluorescent	Fluoresceren
+CalibrationIlluminant2	ISO Studio Tungsten	ISO studio kunstlicht (gloeilamp)
+CalibrationIlluminant2	Other	Andere lichtbron
+CalibrationIlluminant2	Shade	Schaduw
+CalibrationIlluminant2	Standard Light A	Standaard licht A
+CalibrationIlluminant2	Standard Light B	Standaard licht B
+CalibrationIlluminant2	Standard Light C	Standaard licht C
+CalibrationIlluminant2	Tungsten (Incandescent)	Kunstlicht (gloeilamp)
+CalibrationIlluminant2	Unknown	Onbekend
+CalibrationIlluminant2	Warm White Fluorescent	Warm wit TL-licht
+CalibrationIlluminant2	White Fluorescent	Wit TL-licht
+CameraOrientation	Horizontal (normal)	0° (boven/links)
+CameraOrientation	Rotate 270 CW	Draai 270° met de klok mee
+CameraOrientation	Rotate 90 CW	90° tegen de klok in (rechts/boven)
+CanonExposureMode	Aperture-priority AE	Diafragmaprioriteit
+CanonExposureMode	Manual	Handmatig
+CanonExposureMode	Shutter speed priority AE	Sluiterprioriteit
+CanonFlashMode	Auto	Automatisch
+CanonFlashMode	Off	Uit
+CanonFlashMode	On	Aan
+CaptureXResolutionUnit	um	µm (micrometer)
+CaptureYResolutionUnit	um	µm (micrometer)
+CenterAFArea	Normal Zone	Normaal
+CenterAFArea	Wide Zone	Breed
+CenterWeightedAreaSize	Average	Gemiddeld
+ChrominanceNR_TIFF_JPEG	High	Hoog
+ChrominanceNR_TIFF_JPEG	Low	Laag
+ChrominanceNR_TIFF_JPEG	Off	Uit
+ChrominanceNoiseReduction	High	Hoog
+ChrominanceNoiseReduction	Low	Laag
+ChrominanceNoiseReduction	Off	Uit
+ColorAberrationControl	Off	Uit
+ColorAberrationControl	On	Aan
+ColorAdjustmentMode	Off	Uit
+ColorAdjustmentMode	On	Aan
+ColorBalanceAdj	Off	Uit
+ColorBalanceAdj	On	Aan
+ColorBooster	Off	Uit
+ColorBooster	On	Aan
+ColorEffect	Off	Uit
+ColorFilter	Off	Uit
+ColorMode	Autumn Leaves	Herfstbladeren
+ColorMode	B&W	Zwart-wit
+ColorMode	Clear	Doorzichtig
+ColorMode	Deep	Diep
+ColorMode	Evening	Avond
+ColorMode	Landscape	Landschap
+ColorMode	Light	Licht
+ColorMode	Neutral	Neutraal
+ColorMode	Night View	Nacht
+ColorMode	Night View/Portrait	Nachtportret
+ColorMode	Normal	Normaal
+ColorMode	Off	Uit
+ColorMode	Portrait	Portret
+ColorMode	Standard	Standaard
+ColorMode	Sunset	Zonsondergang
+ColorMode	Vivid	Levendige kleuren
+ColorMoireReduction	Off	Uit
+ColorMoireReduction	On	Aan
+ColorMoireReductionMode	High	Hoog
+ColorMoireReductionMode	Low	Laag
+ColorMoireReductionMode	Off	Uit
+ColorSpace	ICC Profile	ICC-profiel
+ColorSpace	Uncalibrated	Niet vastgelegd
+ColorTone	Normal	Normaal
+CommandDials	Reversed (Main Aperture, Sub Shutter)	Verwissel hoofd/sec.
+CommandDials	Standard (Main Shutter, Sub Aperture)	Standaard
+CommandDialsApertureSetting	Aperture Ring	Diafragmaring
+CommandDialsApertureSetting	Sub-command Dial	Secundaire instelschijf
+CommandDialsChangeMainSub	Off	Uit
+CommandDialsChangeMainSub	On	Aan
+CommandDialsMenuAndPlayback	Off	Uit
+CommandDialsMenuAndPlayback	On	Aan
+CommandDialsReverseRotation	No	Nee
+CommandDialsReverseRotation	Yes	Ja
+CommanderGroupAMode	Manual	Handmatig
+CommanderGroupAMode	Off	Uit
+CommanderGroupAMode	TTL	DDL
+CommanderGroupBMode	Manual	Handmatig
+CommanderGroupBMode	Off	Uit
+CommanderGroupBMode	TTL	DDL
+CommanderInternalFlash	Manual	Handmatig
+CommanderInternalFlash	Off	Uit
+CommanderInternalFlash	TTL	DDL
+Compilation	No	Nee
+Compilation	Yes	Ja
+Compression	JPEG	JPEG-compressie
+Compression	JPEG (old-style)	JPEG (oude versie)
+Compression	Kodak DCR Compressed	Kodak DCR gcomprimeerd
+Compression	Kodak KDC Compressed	Kodak KDC gecomprimeerd
+Compression	Next	NeXT 2-Bit codering
+Compression	Nikon NEF Compressed	Nikon NEF gecomprimeerd
+Compression	None	Geen
+Compression	Pentax PEF Compressed	Pentax PEF gecomprimeerd
+Compression	SGILog	SGI 32-Bit Log Luminance gecodeerd
+Compression	SGILog24	SGI 24-Bit Log Luminance gecodeerd
+Compression	Sony ARW Compressed	Sony ARW gecomprimeerd
+Compression	Thunderscan	ThunderScan 4-Bit codering
+Compression	Uncompressed	Niet gecomprimeerd
+CompressionType	None	Geen
+ContinuousDrive	Continuous	Continu
+Contrast	High	Hoog
+Contrast	Low	Laag
+Contrast	Normal	Normaal
+ConversionLens	Off	Uit
+CopyrightStatus	Unknown	Onbekend
+CropActive	No	Nee
+CropActive	Yes	Ja
+Curves	Off	Uit
+Curves	On	Aan
+CustomRendered	Custom	Gebruiker gedefineerd proces
+CustomRendered	Normal	Standaard proces
+D-LightingHQ	Off	Uit
+D-LightingHQ	On	Aan
+D-LightingHQSelected	No	Nee
+D-LightingHQSelected	Yes	Ja
+D-LightingHS	Off	Uit
+D-LightingHS	On	Aan
+DataImprint	None	Geen
+DateStampMode	Off	Uit
+DaylightSavings	No	Nee
+DaylightSavings	Yes	Ja
+DestinationDST	No	Nee
+DestinationDST	Yes	Ja
+DialDirectionTvAv	Normal	Normaal
+DigitalZoom	None	Geen
+DigitalZoom	Off	Uit
+DigitalZoomOn	Off	Uit
+DigitalZoomOn	On	Aan
+DisplaySize	Normal	Normaal
+DisplayXResolutionUnit	um	µm (micrometer)
+DisplayYResolutionUnit	um	µm (micrometer)
+DistortionCorrection	Off	Uit
+DistortionCorrection	On	Aan
+DistortionCorrection2	Off	Uit
+DistortionCorrection2	On	Aan
+DriveMode	Continuous	Continu
+DriveMode	Continuous Shooting	Continu
+DriveMode	Off	Uit
+DriveMode	Self-timer	Zelfontspanner
+DriveMode	Self-timer Operation	Zelfontspanner
+DriveMode	Single	Enkel beeld
+DriveMode	Single Frame	Enkel beeld
+DriveMode	Single Shot	Enkel beeld
+DriveMode	Single-frame Shooting	Enkel beeld
+DynamicAFArea	21 Points	21 punten
+DynamicAFArea	51 Points	51 punten
+DynamicAFArea	51 Points (3D-tracking)	51 punten (3D-tracking)
+DynamicAFArea	9 Points	9 punten
+DynamicRange	Standard	Standaard
+DynamicRangeExpansion	Off	Uit
+DynamicRangeExpansion	On	Aan
+DynamicRangeOptimizer	Advanced Auto	Geavancrd Auto
+DynamicRangeOptimizer	Advanced Lv1	Geavanceerd-1
+DynamicRangeOptimizer	Advanced Lv2	Geavanceerd-2
+DynamicRangeOptimizer	Advanced Lv3	Geavanceerd-3
+DynamicRangeOptimizer	Advanced Lv4	Geavanceerd-4
+DynamicRangeOptimizer	Advanced Lv5	Geavanceerd-5
+DynamicRangeOptimizer	Auto	Automatisch
+DynamicRangeOptimizer	Off	Uit
+DynamicRangeOptimizer	Standard	Standaard
+ETTLII	Average	Gemiddeld
+EVStepSize	1/2 EV	1/2 stop
+EVStepSize	1/3 EV	1/3 stop
+EasyExposureCompensation	Off	Uit
+EasyExposureCompensation	On	Aan
+EasyExposureCompensation	On (auto reset)	Aan (autoherstel)
+EasyMode	Landscape	Landschap
+EasyMode	Manual	Handmatig
+EasyMode	Night	Nachtscene
+EasyMode	Portrait	Portret
+EdgeNoiseReduction	Off	Uit
+EdgeNoiseReduction	On	Aan
+EditorialUpdate	Additional language	Extra taal
+Emphasis	None	Geen
+EnhanceDarkTones	Off	Uit
+EnhanceDarkTones	On	Aan
+Enhancement	Off	Uit
+EnvelopePriority	0 (reserved)	0 (Gereserveerd voor toekomstig gebruik)
+EnvelopePriority	1 (most urgent)	1 (Meest belangrijk)
+EnvelopePriority	5 (normal urgency)	5 (Normaal)
+EnvelopePriority	8 (least urgent)	8 (Minst belangrijk)
+EnvelopePriority	9 (user-defined priority)	9 (Door gebruiker aangegeven prioriteit)
+ExposureCompStepSize	1 EV	1 stop
+ExposureCompStepSize	1/2 EV	1/2 stop
+ExposureCompStepSize	1/3 EV	1/3 stop
+ExposureControlStepSize	1 EV	1 stop
+ExposureControlStepSize	1/2 EV	1/2 stop
+ExposureControlStepSize	1/3 EV	1/3 stop
+ExposureDelayMode	Off	Uit
+ExposureDelayMode	On	Aan
+ExposureLevelIncrements	1/2 Stop	1/2 stop
+ExposureLevelIncrements	1/3 Stop	1/3 stop
+ExposureMode	Aperture Priority	Diafragmaprioriteit
+ExposureMode	Aperture-priority AE	Diafragmaprioriteit
+ExposureMode	Auto	Automatische belichting
+ExposureMode	Auto bracket	Belichting serie
+ExposureMode	Landscape	Landschap
+ExposureMode	Manual	Handmatige belichting
+ExposureMode	Portrait	Portret
+ExposureMode	Shutter Priority	Sluiterprioriteit
+ExposureMode	Shutter speed priority AE	Sluiterprioriteit
+ExposureModeInManual	Center-weighted average	Centrum gemiddelde
+ExposureModeInManual	Partial metering	Gedeelte
+ExposureProgram	Action (High speed)	Actie programma (georiënteerd op snelle sluitertijden)
+ExposureProgram	Aperture Priority	Diafragmaprioriteit
+ExposureProgram	Aperture-priority AE	Diafragmaprioriteit
+ExposureProgram	Creative (Slow speed)	Creatief programma (georiënteerd op scherptediepte)
+ExposureProgram	Landscape	Landschap modus
+ExposureProgram	Manual	Handmatig
+ExposureProgram	Not Defined	Niet gedefinieerd
+ExposureProgram	Portrait	Portret modus
+ExposureProgram	Program AE	Normaal programma
+ExposureProgram	Shutter Priority	Sluiterprioriteit
+ExposureProgram	Shutter speed priority AE	Sluiterprioriteit
+ExtendedWBDetect	Off	Uit
+ExtendedWBDetect	On	Aan
+ExternalFlash	Off	Uit
+ExternalFlash	On	Aan
+ExternalFlashBounce	No	Nee
+ExternalFlashBounce	Yes	Ja
+ExternalFlashMode	Off	Uit
+FaceOrientation	Horizontal (normal)	0° (boven/links)
+FaceOrientation	Rotate 180	180° (onder/rechts)
+FaceOrientation	Rotate 270 CW	Draai 270° met de klok mee
+FaceOrientation	Rotate 90 CW	90° tegen de klok in (rechts/boven)
+FastSeek	No	Nee
+FastSeek	Yes	Ja
+FaxProfile	Unknown	Onbekend
+FileNumberMemory	Off	Uit
+FileNumberMemory	On	Aan
+FileNumberSequence	Off	Uit
+FileNumberSequence	On	Aan
+FileSource	Digital Camera	Digitale camera
+FileSource	Film Scanner	Film scanner
+FileSource	Reflection Print Scanner	Scanner
+FillOrder	Normal	Normaal
+Filter	Off	Uit
+FilterEffect	None	Geen
+FilterEffect	Off	Uit
+FilterEffectMonochrome	None	Geen
+FinderDisplayDuringExposure	Off	Uit
+FinderDisplayDuringExposure	On	Aan
+Flash	Auto, Did not fire	Flits werd niet ontstoken, automodus
+Flash	Auto, Did not fire, Red-eye reduction	Flits werd niet ontstoken, rode ogen reductie
+Flash	Auto, Fired	Flits werd ontstoken, automodus
+Flash	Auto, Fired, Red-eye reduction	Flits werd ontstoken, automodus, rode ogen reductie
+Flash	Auto, Fired, Red-eye reduction, Return detected	Flits werd ontstoken, automodus, gereflecteerd flitslicht, rode ogen reductie
+Flash	Auto, Fired, Red-eye reduction, Return not detected	Flits werd ontstoken, automodus, geen gereflecteerd flitslicht, rode ogen reductie
+Flash	Auto, Fired, Return detected	Flits werd ontstoken, automodus, gereflecteerd flitslicht
+Flash	Auto, Fired, Return not detected	Flits werd ontstoken, automodus, geen gereflecteerd flitslicht
+Flash	Did not fire	Geen flits
+Flash	Fired	Flits afgevuurd
+Flash	Fired, Red-eye reduction	Flits werd ontstoken, Rode ogen reductie
+Flash	Fired, Red-eye reduction, Return detected	Flits werd ontstoken, rode ogen reductie, gereflecteerd flitslicht
+Flash	Fired, Red-eye reduction, Return not detected	Flits werd ontstoken, rode oen reductie, geen gereflecteerd flitslicht
+Flash	Fired, Return detected	Gereflecteerd flitslicht gedetecteerd
+Flash	Fired, Return not detected	Geen gereflecteerd flitslicht gedetecteerd
+Flash	No Flash	Geen flits
+Flash	No flash function	Geen flits functie
+Flash	Off	Uit
+Flash	Off, Did not fire	Flits werd niet ontstoken, flits onderdruk modus
+Flash	Off, Did not fire, Return not detected	Gedeactiveerd, flits werd niet ontstoken, geen gereflecteerd flitslicht
+Flash	Off, No flash function	Gedeactiveerd, geen flits functie
+Flash	Off, Red-eye reduction	Gedeactiveerd, rode ogen reductie
+Flash	On	Aan
+Flash	On, Did not fire	Aan, flits werd niet ontstoken
+Flash	On, Fired	Flits werd ontstoken, flits afdwing modus
+Flash	On, Red-eye reduction	Flits werd ontstoken, flits afdwing modus, rode ogen reductie
+Flash	On, Red-eye reduction, Return detected	Flits werd ontstoken, flits afdwing modus, rode ogen reductie, gereflecteerd flitslicht
+Flash	On, Red-eye reduction, Return not detected	Flits werd ontstoken, flits afdwing modus, rode ogen reductie, geen gereflecteerd flitslicht
+Flash	On, Return detected	Flits werd ontstoken, flits afdwing modus, gereflecteerd flitslicht gedetecteerd
+Flash	On, Return not detected	Flits werd ontstoken, flits afdwing modus, geen gereflecteerd flitslicht gedetecteerd
+FlashCommanderMode	Off	Uit
+FlashCommanderMode	On	Aan
+FlashControlMode	Manual	Handmatig
+FlashControlMode	Off	Uit
+FlashControlMode	Repeating Flash	Stroboscopisch flitsen
+FlashDevice	None	Geen
+FlashExposureLock	Off	Uit
+FlashExposureLock	On	Aan
+FlashFired	No	Nee
+FlashFired	Yes	Ja
+FlashGroupAControlMode	Manual	Handmatig
+FlashGroupAControlMode	Off	Uit
+FlashGroupAControlMode	Repeating Flash	Stroboscopisch flitsen
+FlashGroupBControlMode	Manual	Handmatig
+FlashGroupBControlMode	Off	Uit
+FlashGroupBControlMode	Repeating Flash	Stroboscopisch flitsen
+FlashGroupCControlMode	Manual	Handmatig
+FlashGroupCControlMode	Off	Uit
+FlashGroupCControlMode	Repeating Flash	Stroboscopisch flitsen
+FlashIntensity	High	Hoog
+FlashIntensity	Normal	Normaal
+FlashMode	Auto	Automatisch
+FlashMode	Normal	Normaal
+FlashMode	Off	Uit
+FlashMode	On	Aan
+FlashMode	Unknown	Onbekend
+FlashModel	None	Geen
+FlashOptions	Auto	Automatisch
+FlashOptions	Normal	Normaal
+FlashOptions2	Auto	Automatisch
+FlashOptions2	Normal	Normaal
+FlashStatus	Off	Uit
+FlashSyncSpeedAv	Auto	Automatisch
+FlashType	None	Geen
+FlashWarning	Off	Uit
+FlashWarning	On	Aan
+FlickerReduce	Off	Uit
+FlickerReduce	On	Aan
+FlipHorizontal	No	Nee
+FlipHorizontal	Yes	Ja
+FocalPlaneResolutionUnit	None	Geen
+FocalPlaneResolutionUnit	inches	inch
+FocalPlaneResolutionUnit	um	µm (micrometer)
+Focus	Manual	Handmatig
+FocusAreaSelection	No Wrap	Geen doorloop
+FocusAreaSelection	Wrap	Doorloop
+FocusContinuous	Continuous	Continu
+FocusContinuous	Manual	Handmatig
+FocusMode	Auto	Automatisch
+FocusMode	Continuous	Continu
+FocusMode	Manual	Handmatig
+FocusMode	Normal	Normaal
+FocusMode2	Manual	Handmatig
+FocusModeSetting	AF-A	Automatische AF
+FocusModeSetting	AF-C	Continue AF
+FocusModeSetting	AF-S	Enkelvoudige AF
+FocusModeSetting	Manual	Handmatig
+FocusPointWrap	No Wrap	Geen doorloop
+FocusPointWrap	Wrap	Doorloop
+FocusRange	Auto	Automatisch
+FocusRange	Manual	Handmatig
+FocusRange	Normal	Normaal
+FocusTrackingLockOn	Long	Lang
+FocusTrackingLockOn	Normal	Normaal
+FocusTrackingLockOn	Off	Uit
+FocusTrackingLockOn	Short	Kort
+FujiFlashMode	Auto	Automatisch
+FunctionButton	AF-area Mode	AF-veldstand
+FunctionButton	Center AF Area	Centrale AF-veld
+FunctionButton	Center-weighted	Centrumgericht
+FunctionButton	FV Lock	FV-vergrendeling
+FunctionButton	Flash Off	Flitser uit
+FunctionButton	Framing Grid	Rasterweergave
+FunctionButton	ISO Display	ISO-weergave
+FunctionButton	Matrix Metering	Matrixmeting
+FunctionButton	Spot Metering	Spotmeting
+GPSAltitudeRef	Above Sea Level	Boven zeeniveau
+GPSAltitudeRef	Below Sea Level	Onder zeeniveau
+GPSDestBearingRef	Magnetic North	Magnetische noorden
+GPSDestBearingRef	True North	Geografische noorden
+GPSDestDistanceRef	Miles	Engelse mijlen
+GPSDestDistanceRef	Nautical Miles	Zeemijlen
+GPSDestLatitudeRef	North	Noorderbreedte
+GPSDestLatitudeRef	South	Zuiderbreedte
+GPSDestLongitudeRef	East	Oosterlengte
+GPSDestLongitudeRef	West	Westerlengte
+GPSDifferential	Differential Corrected	Met differentiaal correctie
+GPSDifferential	No Correction	Zonder differentiaal correctie
+GPSImgDirectionRef	Magnetic North	Magnetische noorden
+GPSImgDirectionRef	True North	Geografische noorden
+GPSLatitudeRef	North	Noorderbreedte
+GPSLatitudeRef	South	Zuiderbreedte
+GPSLongitudeRef	East	Oosterlengte
+GPSLongitudeRef	West	Westerlengte
+GPSMeasureMode	2-D	Tweedimensionale meting
+GPSMeasureMode	2-Dimensional	Tweedimensionale meting
+GPSMeasureMode	2-Dimensional Measurement	Tweedimensionale meting
+GPSMeasureMode	3-D	Driedimensionale meting
+GPSMeasureMode	3-Dimensional	Driedimensionale meting
+GPSMeasureMode	3-Dimensional Measurement	Driedimensionale meting
+GPSSpeedRef	km/h	Kilometer per uur
+GPSSpeedRef	knots	Knopen
+GPSSpeedRef	mph	Mijl per uur
+GPSStatus	Measurement Active	Actuele meting beschikbaar
+GPSStatus	Measurement Void	Actuele meting niet beschikbaar
+GPSTrackRef	Magnetic North	Magnetische noorden
+GPSTrackRef	True North	Geografische noorden
+GainControl	High gain down	Hoge helderheidsverminderring
+GainControl	High gain up	Hoge helderheidsvesterking
+GainControl	Low gain down	Kleine helderheidsverminderring
+GainControl	Low gain up	Kleine helderheidsvesterking
+GainControl	None	Geen
+Gapless	No	Nee
+Gapless	Yes	Ja
+GrayResponseUnit	0.0001	Nummer stelt een 1000ste van een eenheid voor
+GrayResponseUnit	0.001	Nummer stelt een 100ste van een eenheid voor
+GrayResponseUnit	0.1	Nummer stelt een 10de van een eenheid voor
+GrayResponseUnit	1e-05	Nummer stelt een 10000ste van een eenheid voor
+GrayResponseUnit	1e-06	Nummer stelt een 100000ste van een eenheid voor
+GridDisplay	Off	Uit
+GridDisplay	On	Aan
+HDR	Off	Uit
+HighISONoiseReduction	Auto	Automatisch
+HighISONoiseReduction	High	Hi
+HighISONoiseReduction	Low	Laag
+HighISONoiseReduction	Normal	Normaal
+HighISONoiseReduction	Off	Uit
+HighISONoiseReduction	On	Aan
+HighISONoiseReduction	Standard	Standaard
+HighlightTonePriority	Off	Uit
+HighlightTonePriority	On	Aan
+HometownDST	No	Nee
+HometownDST	Yes	Ja
+ISOExpansion	Off	Uit
+ISOExpansion	On	Aan
+ISOExpansion2	Off	Uit
+ISOSetting	Auto	Automatisch
+ISOSetting	Manual	Handmatig
+ISOSpeedExpansion	No	Nee
+ISOSpeedExpansion	Yes	Ja
+ISOSpeedIncrements	1 Stop	1 stop
+ISOSpeedIncrements	1/3 Stop	1/3 stop
+ISOStepSize	1 EV	1 stop
+ISOStepSize	1/2 EV	1/2 stop
+ISOStepSize	1/3 EV	1/3 stop
+Illumination	Off	Uit
+Illumination	On	Aan
+ImageAuthentication	Off	Uit
+ImageDataDiscard	Flexbits Discarded	Afgedankte flexbits
+ImageDataDiscard	Full Resolution	Volledige resolutie
+ImageDataDiscard	HighPass Frequency Data Discarded	Afgedankte hoogdoorlaat frequentiegegevens
+ImageDataDiscard	Highpass and LowPass Frequency Data Discarded	Afgedankte hoogdoorlaat en laagdoorlaat frequentiegegevens
+ImageDustOff	Off	Uit
+ImageDustOff	On	Aan
+ImageOrientation	Landscape	Landschap
+ImageOrientation	Portrait	Portret
+ImageOrientation	Square	Vierkant
+ImageQuality	High	Hoog
+ImageQuality	Normal	Normaal
+ImageReview	Off	Uit
+ImageReview	On	Aan
+ImageRotated	No	Nee
+ImageRotated	Yes	Ja
+ImageStabilization	Off	Uit
+ImageStabilization	On	Aan
+ImageTone	Landscape	Landschap
+ImageTone	Portrait	Portret
+InitialZoomSetting	High Magnification	Hoge zoom
+InitialZoomSetting	Low Magnification	Lage zoom
+InitialZoomSetting	Medium Magnification	Gemiddelde zoom
+IntensityStereo	Off	Uit
+IntensityStereo	On	Aan
+InternalFlash	Commander Mode	Commanderstand
+InternalFlash	Fired	Flits afgevuurd
+InternalFlash	Manual	Handmatig
+InternalFlash	No	Geen flits
+InternalFlash	Off	Uit
+InternalFlash	On	Aan
+InternalFlash	Repeating Flash	Stroboscopisch flitsen
+InternalFlash	TTL	DDL
+InternalFlashMode	On	Aan
+InteropIndex	R03 - DCF option file (Adobe RGB)	R03: DCF Optie formaat (Adobe RGB)
+InteropIndex	R98 - DCF basic file (sRGB)	R98: DCF Basis formaat (sRGB)
+InteropIndex	THM - DCF thumbnail file	THM: DCF Miniatuur formaat
+JPEGQuality	Extra Fine	Extra fijn
+JPEGQuality	Fine	Fijn
+JPEGQuality	Standard	Normaal
+LCDIllumination	Off	Uit
+LCDIllumination	On	Aan
+LCDIlluminationDuringBulb	Off	Uit
+LCDIlluminationDuringBulb	On	Aan
+LCHEditor	Off	Uit
+LCHEditor	On	Aan
+LicenseType	Unknown	Onbekend
+LightSource	Cloudy	Bewolkt
+LightSource	Cool White Fluorescent	Koel wit TL-licht
+LightSource	Day White Fluorescent	Daglicht wit TL-licht
+LightSource	Daylight	Daglicht
+LightSource	Daylight Fluorescent	Daglicht TL-licht
+LightSource	Fine Weather	Onbewolkt
+LightSource	Flash	Flits
+LightSource	Fluorescent	Fluoresceren
+LightSource	ISO Studio Tungsten	ISO studio kunstlicht (gloeilamp)
+LightSource	Other	Andere lichtbron
+LightSource	Shade	Schaduw
+LightSource	Standard Light A	Standaard licht A
+LightSource	Standard Light B	Standaard licht B
+LightSource	Standard Light C	Standaard licht C
+LightSource	Tungsten (Incandescent)	Kunstlicht (gloeilamp)
+LightSource	Unknown	Onbekend
+LightSource	Warm White Fluorescent	Warm wit TL-licht
+LightSource	White Fluorescent	Wit TL-licht
+LightSourceSpecial	Off	Uit
+LightSourceSpecial	On	Aan
+Lit	No	Nee
+Lit	Yes	Ja
+LiveViewShooting	Off	Uit
+LiveViewShooting	On	Aan
+LongExposureNoiseReduction	Auto	Automatisch
+LongExposureNoiseReduction	Off	Uit
+LongExposureNoiseReduction	On	Aan
+LoopStyle	Normal	Normaal
+LuminanceNoiseReduction	High	Hoog
+LuminanceNoiseReduction	Low	Laag
+LuminanceNoiseReduction	Off	Uit
+MSStereo	Off	Uit
+MSStereo	On	Aan
+Macro	Manual	Handmatig
+Macro	Normal	Normaal
+Macro	Off	Uit
+Macro	On	Aan
+MacroMode	Normal	Normaal
+MacroMode	Off	Uit
+MacroMode	On	Aan
+MainDialExposureComp	Off	Uit
+MainDialExposureComp	On	Aan
+ManualFlashOutput	Low	Laag
+MediaType	Normal	Normaal
+Metering	Center-weighted	Centrumgericht
+Metering	Matrix	Matrixmeting
+MeteringMode	Average	Gemiddeld
+MeteringMode	Center-weighted average	Centrum gemiddelde
+MeteringMode	Multi-segment	Multi segment
+MeteringMode	Multi-spot	MultiSpot
+MeteringMode	Other	Andere
+MeteringMode	Partial	Gedeelte
+MeteringMode	Unknown	Onbekend
+MeteringMode2	Multi-segment	Multi segment
+MeteringMode3	Multi-segment	Multi segment
+MeteringTime	No Limit	Altijd aan
+MinoltaQuality	Normal	Normaal
+MinoltaQuality	Standard	Standaard
+ModelingFlash	Off	Uit
+ModelingFlash	On	Aan
+ModifiedPictureStyle	Landscape	Landschap
+ModifiedPictureStyle	None	Geen
+ModifiedPictureStyle	Portrait	Portret
+ModifiedPictureStyle	Standard	Standaard
+ModifiedSaturation	Off	Uit
+ModifiedSharpnessFreq	High	Hoog
+ModifiedSharpnessFreq	Low	Laag
+ModifiedSharpnessFreq	Standard	Standaard
+ModifiedToneCurve	Manual	Handmatig
+ModifiedToneCurve	Standard	Standaard
+ModifiedWhiteBalance	Auto	Automatisch
+ModifiedWhiteBalance	Cloudy	Bewolkt
+ModifiedWhiteBalance	Daylight	Daglicht
+ModifiedWhiteBalance	Daylight Fluorescent	Daglicht TL-licht
+ModifiedWhiteBalance	Flash	Flits
+ModifiedWhiteBalance	Fluorescent	Fluoresceren
+ModifiedWhiteBalance	Shade	Schaduw
+ModifiedWhiteBalance	Tungsten	Kunstlicht (gloeilamp)
+MoireFilter	Off	Uit
+MoireFilter	On	Aan
+MonochromeFilterEffect	None	Geen
+MonochromeLinear	No	Nee
+MonochromeLinear	Yes	Ja
+MonochromeToningEffect	None	Geen
+MultiExposureAutoGain	Off	Uit
+MultiExposureAutoGain	On	Aan
+MultiExposureMode	Off	Uit
+MultiFrameNoiseReduction	Off	Uit
+MultiFrameNoiseReduction	On	Aan
+MultiSelector	Do Nothing	Doe niets
+MultiSelector	Reset Meter-off Delay	Activeer lichtmeter
+MultiSelectorPlaybackMode	Choose Folder	Map selecteren
+MultiSelectorPlaybackMode	Thumbnail On/Off	Miniatuur aan/uit
+MultiSelectorPlaybackMode	View Histograms	Histogrammen weergeven
+MultiSelectorPlaybackMode	Zoom On/Off	Zoom aan/uit
+MultiSelectorShootMode	Highlight Active Focus Point	Actieve AF-punt markeren
+MultiSelectorShootMode	Not Used	Geen functie
+MultiSelectorShootMode	Select Center Focus Point	Middelste AF-punt selecteren
+MultipleExposureSet	Off	Uit
+MultipleExposureSet	On	Aan
+Mute	Off	Uit
+Mute	On	Aan
+MyColorMode	Off	Uit
+NDFilter	Off	Uit
+NDFilter	On	Aan
+NEFCompression	Uncompressed	Niet gecomprimeerd
+NoMemoryCard	Enable Release	Ontgrendel ontspanknop
+NoMemoryCard	Release Locked	Vergrendel ontspanknop
+NoiseFilter	High	Hoog
+NoiseFilter	Low	Laag
+NoiseFilter	Off	Uit
+NoiseFilter	Standard	Standaard
+NoiseReduction	Auto	Automatisch
+NoiseReduction	Normal	Normaal
+NoiseReduction	Off	Uit
+NoiseReduction	On	Aan
+NoiseReduction	Standard	Standaard
+ObjectCycle	Both Morning and Evening	Beide
+ObjectCycle	Evening	Avond
+ObjectCycle	Morning	Ochtend
+ObjectFileType	None	Geen
+ObjectFileType	Unknown	Onbekend
+OneTouchWB	Off	Uit
+OpticalZoomMode	Standard	Standaard
+OpticalZoomOn	Off	Uit
+OpticalZoomOn	On	Aan
+Orientation	Horizontal (normal)	0° (boven/links)
+Orientation	Mirror horizontal	Horizontaal gespiegeld
+Orientation	Mirror horizontal and rotate 270 CW	Spiegel horizontaal en draai 270° met de klok mee
+Orientation	Mirror horizontal and rotate 90 CW	Spiegel horizontaal en draai 90° met de klok mee
+Orientation	Mirror vertical	Vertikaal gespiegeld
+Orientation	Rotate 180	180° (onder/rechts)
+Orientation	Rotate 270 CW	Draai 270° met de klok mee
+Orientation	Rotate 90 CW	90° tegen de klok in (rechts/boven)
+PhotoEffect	Off	Uit
+PhotoEffects	Off	Uit
+PhotoEffects	On	Aan
+PhotoEffectsType	None	Geen
+PhotoInfoPlayback	Info Left-right, Playback Up-down	Info <> / Foto’s
+PhotoInfoPlayback	Info Up-down, Playback Left-right	Info / Foto’s <>
+PhotometricInterpretation	BlackIsZero	Zwart is nul
+PhotometricInterpretation	Color Filter Array	CFA (Kleur Filter Matrix)
+PhotometricInterpretation	Pixar LogL	CIE Log2(L) (Log Luminantie)
+PhotometricInterpretation	Pixar LogLuv	CIE Log2(L)(u',v') (Log Luminantie en Chrominantie)
+PhotometricInterpretation	RGB Palette	RGB palet
+PhotometricInterpretation	Transparency Mask	Transparent masker
+PhotometricInterpretation	WhiteIsZero	Wit is nul
+PhotoshopFormat	Standard	Standaard
+PictureControl	Off	Uit
+PictureControl	On	Aan
+PictureControlActive	Off	Uit
+PictureControlActive	On	Aan
+PictureFinish	Portrait	Portret
+PictureMode	Aperture-priority AE	Diafragmaprioriteit
+PictureMode	Auto	Automatisch
+PictureMode	Landscape	Landschap
+PictureMode	Manual	Handmatig
+PictureMode	Portrait	Portret
+PictureMode	Shutter speed priority AE	Sluiterprioriteit
+PictureMode	Standard	Standaard
+PictureMode2	Aperture Priority	Diafragmaprioriteit
+PictureMode2	Manual	Handmatig
+PictureMode2	Shutter Speed Priority	Sluiterprioriteit
+PictureStyle	Landscape	Landschap
+PictureStyle	None	Geen
+PictureStyle	Portrait	Portret
+PictureStyle	Standard	Standaard
+PixelUnits	Unknown	Onbekend
+PlanarConfiguration	Chunky	Chunky Formaat (Interleaved)
+PlanarConfiguration	Planar	Planar Formaat
+Predictor	Horizontal differencing	Horizontale differencering
+Predictor	None	Geen prodictor schema in gebruik
+PreviewColorSpace	Unknown	Onbekend
+PreviewImageValid	No	Nee
+PreviewImageValid	Yes	Ja
+PreviewQuality	Normal	Normaal
+ProfileClass	Abstract Profile	Abstractprofiel
+ProfileClass	ColorSpace Conversion Profile	Kleurenruimteprofiel
+ProfileClass	DeviceLink Profile	Apparaatverbindingsprofiel
+ProfileClass	Display Device Profile	Beeldschermapparaatprofiel
+ProfileClass	Input Device Profile	Invoerapparaatprofiel
+ProfileClass	NamedColor Profile	Genoemd kleurenprofiel
+ProfileClass	Nikon Input Device Profile (NON-STANDARD!)	Nikonprofiel ("nkpf")
+ProfileClass	Output Device Profile	Uitvoerapparaatprofiel
+ProgramLine	Normal	Normaal
+ProgramMode	None	Geen
+ProgramMode	Portrait	Portret
+Quality	Compressed RAW	cRAW
+Quality	Compressed RAW + JPEG	cRAW+JPEG
+Quality	Extra Fine	Extra fijn
+Quality	Fine	Fijn
+Quality	High	Hoog
+Quality	Low	Laag
+Quality	Normal	Normaal
+Quality	RAW + JPEG	RAW+JPEG
+Quality	Standard	Standaard
+QualityMode	Normal	Normaal
+QuickShot	Off	Uit
+QuickShot	On	Aan
+RawDevAutoGradation	Off	Uit
+RawDevAutoGradation	On	Aan
+RawJpgQuality	Normal	Normaal
+RecordMode	Aperture Priority	Diafragmaprioriteit
+RecordMode	Manual	Handmatig
+RecordMode	Shutter Priority	Sluiterprioriteit
+RecordingMode	Auto	Automatisch
+RecordingMode	Landscape	Landschap
+RecordingMode	Manual	Handmatig
+RecordingMode	Portrait	Portret
+RedEyeCorrection	Automatic	Automatisch
+RedEyeCorrection	Off	Uit
+RedEyeReduction	Off	Uit
+RedEyeReduction	On	Aan
+ReleaseButtonToUseDial	No	Nee
+ReleaseButtonToUseDial	Yes	Ja
+RenderingIntent	ICC-Absolute Colorimetric	Absoluut colorimetrisch
+RenderingIntent	Media-Relative Colorimetric	Relatieve colorimetrisch
+RenderingIntent	Perceptual	Waarnemend
+RenderingIntent	Saturation	Verzadiging
+ResampleParamsQuality	High	Hoog
+ResampleParamsQuality	Low	Laag
+Resaved	No	Nee
+Resaved	Yes	Ja
+ResolutionUnit	None	Geen
+ResolutionUnit	cm	centimeter
+RetouchHistory	None	Geen
+Rotation	Horizontal	0° (boven/links)
+Rotation	Horizontal (normal)	0° (boven/links)
+Rotation	Rotate 180	180° (onder/rechts)
+Rotation	Rotate 270 CW	Draai 270° met de klok mee
+Rotation	Rotate 90 CW	90° tegen de klok in (rechts/boven)
+Rotation	Rotated 180	180° (onder/rechts)
+Rotation	Rotated 270 CW	Draai 270° met de klok mee
+Rotation	Rotated 90 CW	90° tegen de klok in (rechts/boven)
+SRActive	No	Nee
+SRActive	Yes	Ja
+SampleFormat	Complex int	Complexe integer
+SampleFormat	Float	Drijvende komma waarde
+SampleFormat	Signed	Integer met voorteken
+SampleFormat	Undefined	Niet gedefinierd
+SampleFormat	Unsigned	Integer zonder voorteken
+Saturation	High	Hoge kleurvezadiging
+Saturation	Low	Lage kleurverzadiging
+Saturation	Normal	Normaal
+ScanImageEnhancer	Off	Uit
+ScanImageEnhancer	On	Aan
+SceneCaptureType	Landscape	Landschap
+SceneCaptureType	Night	Nachtscene
+SceneCaptureType	Portrait	Portret
+SceneCaptureType	Standard	Standaard
+SceneMode	3D Sweep Panorama	3D
+SceneMode	Anti Motion Blur	Anti-bewegingswaas
+SceneMode	Aperture Priority	Diafragmaprioriteit
+SceneMode	Auto	Automatisch
+SceneMode	Cont. Priority AE	Continuvoork. AE
+SceneMode	Handheld Night Shot	Nachtopname uit hand
+SceneMode	Landscape	Landschap
+SceneMode	Manual	Handmatig
+SceneMode	Night Portrait	Nachtportret
+SceneMode	Night Scene	Nacht
+SceneMode	Night View/Portrait	Nacht/portret
+SceneMode	Normal	Normaal
+SceneMode	Off	Uit
+SceneMode	Portrait	Portret
+SceneMode	Shutter Priority	Sluiterprioriteit
+SceneMode	Sports	Sportactie
+SceneMode	Standard	Standaard
+SceneMode	Sunset	Zonsondergang
+SceneMode	Sweep Panorama	Panorama d. beweg.
+SceneModeUsed	Aperture Priority	Diafragmaprioriteit
+SceneModeUsed	Landscape	Landschap
+SceneModeUsed	Manual	Handmatig
+SceneModeUsed	Portrait	Portret
+SceneModeUsed	Shutter Priority	Sluiterprioriteit
+SceneSelect	Night	Nachtscene
+SceneSelect	Off	Uit
+SceneType	Directly photographed	Direkt opgenomen afbeelding
+SecurityClassification	Confidential	Vertrouwelijk
+SecurityClassification	Restricted	Begrensd
+SecurityClassification	Secret	Geheim
+SecurityClassification	Top Secret	Streng geheim
+SecurityClassification	Unclassified	Niet geclassificeerd
+SelfTimer	Off	Uit
+SelfTimer	On	Aan
+SensingMethod	Color sequential area	Color sequential area sensor
+SensingMethod	Color sequential linear	Kleur sequentiële lineaire sensor
+SensingMethod	Monochrome area	Monochrome sensor
+SensingMethod	Monochrome linear	Monochrome lineaire sensor
+SensingMethod	Not defined	Niet gedefineerd
+SensingMethod	One-chip color area	Één chip kleur sensor
+SensingMethod	Three-chip color area	Drie chip kleur sensor
+SensingMethod	Trilinear	Trilineaire sensor
+SensingMethod	Two-chip color area	Twee chip kleur sensor
+SequentialShot	None	Geen
+SequentialShot	Standard	Standaard
+SetButtonCrossKeysFunc	Normal	Normaal
+ShadingCompensation	Off	Uit
+ShadingCompensation	On	Aan
+ShadingCompensation2	Off	Uit
+ShadingCompensation2	On	Aan
+ShakeReduction	Off	Uit
+ShakeReduction	On	Aan
+Sharpness	Hard	+
+Sharpness	Normal	Normaal
+Sharpness	Soft	Zacht
+SharpnessFrequency	High	Hoog
+SharpnessFrequency	Low	Laag
+SharpnessFrequency	Standard	Standaard
+ShootingInfoDisplay	Auto	Automatisch
+ShootingInfoDisplay	Manual (dark on light)	Handmatig - Donker op licht
+ShootingInfoDisplay	Manual (light on dark)	Handmatig - Licht op donker
+ShootingMode	Aperture Priority	Diafragmaprioriteit
+ShootingMode	Manual	Handmatig
+ShootingMode	Normal	Normaal
+ShootingMode	Portrait	Portret
+ShootingMode	Shutter Priority	Sluiterprioriteit
+ShootingModeSetting	Continuous	Continu
+ShootingModeSetting	Delayed Remote	Vertraagd op afstand
+ShootingModeSetting	Quick-response Remote	Direct op afstand
+ShootingModeSetting	Self-timer	Zelfontspanner
+ShootingModeSetting	Single Frame	Enkel beeld
+ShutterMode	Aperture Priority	Diafragmaprioriteit
+ShutterMode	Auto	Automatisch
+ShutterReleaseButtonAE-L	Off	Uit
+ShutterReleaseButtonAE-L	On	Aan
+ShutterReleaseNoCFCard	No	Nee
+ShutterReleaseNoCFCard	Yes	Ja
+SlideShow	No	Nee
+SlideShow	Yes	Ja
+SlowShutter	None	Geen
+SlowShutter	Off	Uit
+SlowShutter	On	Aan
+SlowSync	Off	Uit
+SpecialEffectsOpticalFilter	None	Geen
+SubjectDistanceRange	Close	Dichtbij
+SubjectDistanceRange	Distant	Verweg
+SubjectDistanceRange	Unknown	Onbekend
+SubjectProgram	None	Geen
+SubjectProgram	Portrait	Portret
+Subsystem	Unknown	Onbekend
+SuperMacro	Off	Uit
+SuperimposedDisplay	Off	Uit
+SuperimposedDisplay	On	Aan
+Tagged	No	Nee
+Tagged	Yes	Ja
+Technology	Active Matrix Display	Actieve matrixdisplay
+Technology	Cathode Ray Tube Display	CRT-beeldscherm
+Technology	Digital Camera	Digitale camera
+Technology	Dye Sublimation Printer	Dye sublimation printer
+Technology	Electrophotographic Printer	Laserprinter
+Technology	Electrostatic Printer	Electrostatische printer
+Technology	Film Scanner	Filmscanner
+Technology	Film Writer	Filmprinter
+Technology	Flexography	Flexografie
+Technology	Gravure	Fotogravure - koperdiepdruk
+Technology	Ink Jet Printer	Inkjet printer
+Technology	Offset Lithography	Offset Lithografie
+Technology	Passive Matrix Display	Passieve matrixdisplay
+Technology	Photo CD	Photo-CD
+Technology	Photo Image Setter	Fotofilmbelichter
+Technology	Photographic Paper Printer	Fotopapier printer
+Technology	Projection Television	Projectietelevisie
+Technology	Reflective Scanner	Reflectieve Scanner
+Technology	Thermal Wax Printer	Thermische was printer
+Technology	Video Camera	Videocamera
+Technology	Video Monitor	Videomonitor
+Teleconverter	None	Geen
+TextStamp	Off	Uit
+TextStamp	On	Aan
+TimeScaleParamsQuality	High	Hoog
+TimeScaleParamsQuality	Low	Laag
+TimerFunctionButton	ISO	ISO-gevoeligheid
+TimerFunctionButton	Image Quality/Size	Bldkwaliteit/-formaat
+TimerFunctionButton	Self-timer	Zelfontspanner
+TimerFunctionButton	Shooting Mode	Opnamestand
+TimerFunctionButton	White Balance	Witbalans
+ToneCurve	Manual	Handmatig
+ToneCurve	Standard	Standaard
+ToneCurveActive	No	Nee
+ToneCurveActive	Yes	Ja
+ToningEffect	None	Geen
+ToningEffectMonochrome	None	Geen
+Transformation	Horizontal (normal)	0° (boven/links)
+Transformation	Mirror horizontal	Horizontaal gespiegeld
+Transformation	Mirror horizontal and rotate 270 CW	Spiegel horizontaal en draai 270° met de klok mee
+Transformation	Mirror horizontal and rotate 90 CW	Spiegel horizontaal en draai 90° met de klok mee
+Transformation	Mirror vertical	Vertikaal gespiegeld
+Transformation	Rotate 180	180° (onder/rechts)
+Transformation	Rotate 270 CW	Draai 270° met de klok mee
+Transformation	Rotate 90 CW	90° tegen de klok in (rechts/boven)
+Trapped	Unknown	Onbekend
+Uncompressed	No	Nee
+Uncompressed	Yes	Ja
+UnsharpMask	Off	Uit
+UnsharpMask	On	Aan
+Urgency	0 (reserved)	0 (Gereserveerd voor toekomstig gebruik)
+Urgency	1 (most urgent)	1 (zeer dringend)
+Urgency	5 (normal urgency)	5 (dringend)
+Urgency	8 (least urgent)	8 (minst dringend)
+Urgency	9 (user-defined priority)	9 (Gereserveerd voor toekomstig gebruik)
+UserDef1PictureStyle	Landscape	Landschap
+UserDef1PictureStyle	Portrait	Portret
+UserDef1PictureStyle	Standard	Standaard
+UserDef2PictureStyle	Landscape	Landschap
+UserDef2PictureStyle	Portrait	Portret
+UserDef2PictureStyle	Standard	Standaard
+UserDef3PictureStyle	Landscape	Landschap
+UserDef3PictureStyle	Portrait	Portret
+UserDef3PictureStyle	Standard	Standaard
+VR_0x66	Off	Uit
+VibrationReduction	Off	Uit
+VibrationReduction	On	Aan
+ViewfinderWarning	Off	Uit
+ViewfinderWarning	On	Aan
+VignetteControl	High	Hoog
+VignetteControl	Normal	Normaal
+VignetteControl	Off	Uit
+VignetteControl	On	Aan
+VoiceMemo	Off	Uit
+VoiceMemo	On	Aan
+WBAdjLighting	Daylight (cloudy)	Daglicht (2)
+WBAdjLighting	Daylight (direct sunlight)	Daglicht (0)
+WBAdjLighting	Daylight (shade)	Daglicht (1)
+WBAdjLighting	Flash	Flits
+WBAdjLighting	None	Geen
+WBBracketMode	Off	Uit
+WBFineTuneActive	No	Nee
+WBFineTuneActive	Yes	Ja
+WBMode	Auto	Automatisch
+WhiteBalance	Auto	Automatisch
+WhiteBalance	Black & White	Monochroom
+WhiteBalance	Cloudy	Bewolkt
+WhiteBalance	Color Temperature/Color Filter	Kleurtemperatuur / Kleurfilter
+WhiteBalance	Cool White Fluorescent	Koelwit TL-licht
+WhiteBalance	Custom	Eigen instel.
+WhiteBalance	Custom 1	VOORKEUR 1
+WhiteBalance	Custom 2	VOORKEUR 2
+WhiteBalance	Custom 3	VOORKEUR 3
+WhiteBalance	Custom 4	VOORKEUR 4
+WhiteBalance	Day White Fluorescent	Daglicht wit TL-licht
+WhiteBalance	Daylight	Daglicht
+WhiteBalance	Daylight Fluorescent	Daglicht TL-licht
+WhiteBalance	Flash	Flits
+WhiteBalance	Fluorescent	Fluoresceren
+WhiteBalance	Manual	Handmatig
+WhiteBalance	Shade	Schaduw
+WhiteBalance	Tungsten	Kunstlicht (gloeilamp)
+WhiteBalance	Unknown	Onbekend
+WhiteBalance	Warm White Fluorescent	Warm wit TL-licht
+WhiteBalance	White Fluorescent	Wit TL-licht
+WhiteBalance2	Auto	Automatisch
+WhiteBalanceAdj	Auto	Automatisch
+WhiteBalanceAdj	Cloudy	Bewolkt
+WhiteBalanceAdj	Daylight	Daglicht
+WhiteBalanceAdj	Flash	Flits
+WhiteBalanceAdj	Fluorescent	Fluoresceren
+WhiteBalanceAdj	Off	Uit
+WhiteBalanceAdj	On	Aan
+WhiteBalanceAdj	Shade	Schaduw
+WhiteBalanceAdj	Tungsten	Kunstlicht (gloeilamp)
+WhiteBalanceMode	Unknown	Onbekend
+WhiteBalanceSet	Auto	Automatisch
+WhiteBalanceSet	Cloudy	Bewolkt
+WhiteBalanceSet	Daylight	Daglicht
+WhiteBalanceSet	Daylight Fluorescent	Daglicht TL-licht
+WhiteBalanceSet	Flash	Flits
+WhiteBalanceSet	Manual	Handmatig
+WhiteBalanceSet	Shade	Schaduw
+WhiteBalanceSet	Tungsten	Kunstlicht (gloeilamp)
+WhiteBalanceSet	White Fluorescent	Warm wit TL-licht
+WideRange	Off	Uit
+WideRange	On	Aan
+YCbCrPositioning	Centered	Gecentreerd
+YCbCrPositioning	Co-sited	Naast liggend
+ZoneMatching	High Key	Hi
+ZoneMatching	ISO Setting Used	Uit
+ZoneMatching	Low Key	Lo
+ZoneMatchingOn	Off	Uit
+ZoneMatchingOn	On	Aan

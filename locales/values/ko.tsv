@@ -1,0 +1,805 @@
+AELock	Off	꺼짐
+AELock	On	켜짐
+AELockButton	AE Lock (hold)	AE 고정(유지)
+AELockButton	AE Lock Only	AE 고정
+AELockButton	AE/AF Lock	AE/AF 고정
+AELockButton	AF Lock Only	AF 고정
+AF-CPrioritySelection	Focus	포커스
+AF-CPrioritySelection	Release	릴리즈
+AF-CPrioritySelection	Release + Focus	릴리즈 + 포커스
+AF-OnForMB-D10	AE Lock (hold)	AE 고정 (유지)
+AF-OnForMB-D10	AE Lock (reset on release)	AE 고정 (릴리즈때 리셋)
+AF-OnForMB-D10	AE Lock Only	AE 고정
+AF-OnForMB-D10	AE/AF Lock	AE/AF 고정
+AF-OnForMB-D10	AF Lock Only	AF 고정
+AF-OnForMB-D10	AF-On	AF-ON
+AF-OnForMB-D10	Same as FUNC Button	FUNC 버튼과 같음
+AF-SPrioritySelection	Focus	포커스
+AF-SPrioritySelection	Release	릴리즈
+AFActivation	AF-On Only	AF-ON 고정
+AFActivation	Shutter/AF-On	셔터/AF-ON
+AFAreaIllumination	Auto	자동
+AFAreaIllumination	Off	꺼짐
+AFAreaIllumination	On	켜짐
+AFAreaMode	Auto-area	자동 영역 AF
+AFAreaMode	Dynamic Area	다이내믹 영역
+AFAreaMode	Dynamic Area (closest subject)	다이내믹 영역 (지근거리 우선)
+AFAreaMode	Dynamic Area (wide)	다이내믹 영역 (와이드)
+AFAreaMode	Group Dynamic	그룹 다이내믹
+AFAreaMode	Single Area	싱글 영역
+AFAreaMode	Single Area (wide)	싱글 영역 (와이드)
+AFAreaModeSetting	Closest Subject	접사
+AFAreaModeSetting	Dynamic Area	다이내믹 영역
+AFAreaModeSetting	Single Area	싱글 영역
+AFAssist	Off	꺼짐
+AFAssist	On	켜짐
+AFPoint	Bottom	하단
+AFPoint	Center	중앙
+AFPoint	Far Left	맨 좌측
+AFPoint	Far Right	맨 우측
+AFPoint	Left	왼쪽
+AFPoint	Lower-left	좌하단
+AFPoint	Lower-right	우하단
+AFPoint	Mid-left	왼쪽
+AFPoint	Mid-right	오른쪽
+AFPoint	Right	오른쪽
+AFPoint	Top	상단
+AFPoint	Upper-left	좌상단
+AFPoint	Upper-right	우상단
+AFPointIllumination	Auto	자동
+AFPointIllumination	Off	꺼짐
+AFPointIllumination	On	켜짐
+AFPointMode	Auto	자동
+AFPointSelected	Auto	자동
+AFPointSelected2	Auto	자동
+AFPointSelection	11 Points	11 포인트
+AFPointSelection	51 Points	51 포인트
+AFPointsInFocus	Far Left	맨 좌측
+AFPointsInFocus	Far Right	맨 우측
+AFPointsInFocus	Lower-left	좌하단
+AFPointsInFocus	Lower-right	우하단
+AFPointsInFocus	Upper-left	좌상단
+AFPointsInFocus	Upper-right	우상단
+AFPointsUnknown2	Auto	자동
+AFPointsUsed	Bottom	하단
+AFPointsUsed	Center	중앙
+AFPointsUsed	Far Left	맨 좌측
+AFPointsUsed	Far Right	맨 우측
+AFPointsUsed	Lower-left	좌하단
+AFPointsUsed	Lower-right	우하단
+AFPointsUsed	Top	상단
+AFPointsUsed	Upper-left	좌상단
+AFPointsUsed	Upper-right	우상단
+ActiveD-Lighting	Off	꺼짐
+ActiveD-Lighting	On	켜짐
+ActiveD-LightingMode	Off	꺼짐
+AddAspectRatioInfo	Off	꺼짐
+AddOriginalDecisionData	Off	꺼짐
+AddOriginalDecisionData	On	켜짐
+AdvancedRaw	Off	꺼짐
+AdvancedRaw	On	켜짐
+Anti-Blur	Off	꺼짐
+AutoAperture	Off	꺼짐
+AutoAperture	On	켜짐
+AutoBracketModeM	Flash Only	플래시
+AutoBracketModeM	Flash/Aperture	플래시/조리개
+AutoBracketModeM	Flash/Speed	플래시/스피드
+AutoBracketModeM	Flash/Speed/Aperture	플래시/스피드/조리개
+AutoBracketSet	AE & Flash	AE & 플래시
+AutoBracketSet	AE Only	AE 브라케팅
+AutoBracketSet	Flash Only	플래시 브라케팅
+AutoBracketSet	WB Bracketing	WB 브라케팅
+AutoBracketing	Off	꺼짐
+AutoExposureBracketing	Off	꺼짐
+AutoExposureBracketing	On	켜짐
+AutoFP	Off	꺼짐
+AutoFP	On	켜짐
+AutoFocus	Off	비활성
+AutoFocus	On	활성
+AutoISO	Off	꺼짐
+AutoISO	On	켜짐
+AutoLightingOptimizer	Off	꺼짐
+AutoRedEye	Off	꺼짐
+AutoRedEye	On	켜짐
+BWMode	Off	꺼짐
+BatteryOrder	Camera Battery First	카메라 배터리 우선
+BatteryOrder	MB-D10 First	MB-D10 배터리 우선
+Beep	High	크게
+Beep	Low	작게
+Beep	Off	꺼짐
+Beep	On	켜짐
+BracketMode	Off	꺼짐
+BurstMode	Off	꺼짐
+BurstMode	On	켜짐
+CalibrationIlluminant1	Cloudy	흐린 날씨
+CalibrationIlluminant1	Cool White Fluorescent	냉백색 형광등 (W 3800 - 4500K)
+CalibrationIlluminant1	Day White Fluorescent	주백색 형광등 (N 4600 - 5500K)
+CalibrationIlluminant1	Daylight	주광
+CalibrationIlluminant1	Daylight Fluorescent	주광색 형광등 (D 5700 - 7100K)
+CalibrationIlluminant1	Fine Weather	맑은 날씨
+CalibrationIlluminant1	Flash	플래시
+CalibrationIlluminant1	Fluorescent	형광등
+CalibrationIlluminant1	ISO Studio Tungsten	ISO 스튜디오 텅스텐
+CalibrationIlluminant1	Other	기타 광원
+CalibrationIlluminant1	Shade	그늘
+CalibrationIlluminant1	Standard Light A	표준 광원 A
+CalibrationIlluminant1	Standard Light B	표준 광원 B
+CalibrationIlluminant1	Standard Light C	표준 광원 C
+CalibrationIlluminant1	Tungsten (Incandescent)	텅스텐 (백열등)
+CalibrationIlluminant1	Unknown	알 수 없음
+CalibrationIlluminant1	Warm White Fluorescent	따뜻한 흰색 형광 (L 2600 - 3250K)
+CalibrationIlluminant1	White Fluorescent	백색 형광등 (WW 3250 - 3800K)
+CalibrationIlluminant2	Cloudy	흐린 날씨
+CalibrationIlluminant2	Cool White Fluorescent	냉백색 형광등 (W 3800 - 4500K)
+CalibrationIlluminant2	Day White Fluorescent	주백색 형광등 (N 4600 - 5500K)
+CalibrationIlluminant2	Daylight	주광
+CalibrationIlluminant2	Daylight Fluorescent	주광색 형광등 (D 5700 - 7100K)
+CalibrationIlluminant2	Fine Weather	맑은 날씨
+CalibrationIlluminant2	Flash	플래시
+CalibrationIlluminant2	Fluorescent	형광등
+CalibrationIlluminant2	ISO Studio Tungsten	ISO 스튜디오 텅스텐
+CalibrationIlluminant2	Other	기타 광원
+CalibrationIlluminant2	Shade	그늘
+CalibrationIlluminant2	Standard Light A	표준 광원 A
+CalibrationIlluminant2	Standard Light B	표준 광원 B
+CalibrationIlluminant2	Standard Light C	표준 광원 C
+CalibrationIlluminant2	Tungsten (Incandescent)	텅스텐 (백열등)
+CalibrationIlluminant2	Unknown	알 수 없음
+CalibrationIlluminant2	Warm White Fluorescent	따뜻한 흰색 형광 (L 2600 - 3250K)
+CalibrationIlluminant2	White Fluorescent	백색 형광등 (WW 3250 - 3800K)
+CanonExposureMode	Manual	수동
+CanonFlashMode	Auto	자동
+CanonFlashMode	Off	꺼짐
+CanonFlashMode	On	켜짐
+CenterAFArea	Normal Zone	일반 영역
+CenterAFArea	Wide Zone	와이드 영역
+ChrominanceNR_TIFF_JPEG	Off	꺼짐
+ChrominanceNoiseReduction	Off	꺼짐
+ColorAberrationControl	Off	꺼짐
+ColorAberrationControl	On	켜짐
+ColorBalanceAdj	Off	꺼짐
+ColorBalanceAdj	On	켜짐
+ColorBooster	Off	꺼짐
+ColorBooster	On	켜짐
+ColorEffect	Off	꺼짐
+ColorEffect	Sepia	세피아
+ColorFilter	Green	녹색
+ColorFilter	Off	꺼짐
+ColorFilter	Red	빨강
+ColorFilter	Yellow	노랑
+ColorMode	Autumn Leaves	단풍
+ColorMode	B&W	흑백
+ColorMode	Clear	반투명
+ColorMode	Deep	진한
+ColorMode	Landscape	풍경
+ColorMode	Light	라이트
+ColorMode	Neutral	뉴트럴
+ColorMode	Night View	야경
+ColorMode	Night View/Portrait	야경 인물
+ColorMode	Off	꺼짐
+ColorMode	Portrait	인물
+ColorMode	Standard	표준
+ColorMode	Sunset	일몰
+ColorMode	Vivid	생생한
+ColorMoireReduction	Off	꺼짐
+ColorMoireReduction	On	켜짐
+ColorMoireReductionMode	Off	꺼짐
+ColorSpace	ICC Profile	ICC 프로필
+ColorSpace	Uncalibrated	조정되지 않음
+CommandDials	Reversed (Main Aperture, Sub Shutter)	역방향
+CommandDials	Standard (Main Shutter, Sub Aperture)	기본
+CommandDialsApertureSetting	Aperture Ring	조리개 링
+CommandDialsApertureSetting	Sub-command Dial	서브 커맨드 다이얼
+CommandDialsChangeMainSub	Off	꺼짐
+CommandDialsChangeMainSub	On	켜짐
+CommandDialsMenuAndPlayback	Off	꺼짐
+CommandDialsMenuAndPlayback	On	켜짐
+CommandDialsReverseRotation	No	아니오
+CommandDialsReverseRotation	Yes	예
+CommanderGroupAMode	Auto Aperture	자동 조리개 (AA)
+CommanderGroupAMode	Manual	수동
+CommanderGroupAMode	Off	꺼짐
+CommanderGroupBMode	Auto Aperture	자동 조리개 (AA)
+CommanderGroupBMode	Manual	수동
+CommanderGroupBMode	Off	꺼짐
+CommanderInternalFlash	Manual	수동
+CommanderInternalFlash	Off	꺼짐
+Compression	JPEG	JPEG 압축
+Compression	JPEG (old-style)	JPEG (예전 스타일)
+Compression	Kodak DCR Compressed	Kodak DCR 압축
+Compression	Kodak KDC Compressed	Kodak KDC 압축
+Compression	Next	NeXT 2-bit 인코딩
+Compression	Nikon NEF Compressed	Nikon NEF 압축
+Compression	Pentax PEF Compressed	Pentax PEF 압축
+Compression	SGILog	SGI 32-bit Log 휘도 인코딩
+Compression	SGILog24	SGI 24-bit Log 휘도 인코딩
+Compression	Sony ARW Compressed	Sony ARW 압축
+Compression	Thunderscan	ThunderScan 4-bit 인코딩
+Compression	Uncompressed	무압축
+Contrast	High	강하게
+Contrast	Low	약하게
+Contrast	Normal	표준
+ConversionLens	Off	꺼짐
+Curves	Off	꺼짐
+Curves	On	켜짐
+CustomRendered	Custom	사용자 처리
+CustomRendered	Normal	표준 처리
+D-LightingHQ	Off	꺼짐
+D-LightingHQ	On	켜짐
+D-LightingHS	Off	꺼짐
+D-LightingHS	On	켜짐
+DateDisplayFormat	D/M/Y	일/월/년
+DateDisplayFormat	M/D/Y	월/일/년
+DateDisplayFormat	Y/M/D	년/월/일
+DateStampMode	Off	꺼짐
+DaylightSavings	No	꺼짐
+DaylightSavings	Yes	켜짐
+DigitalZoom	Off	꺼짐
+DistortionCorrection	Off	꺼짐
+DistortionCorrection	On	켜짐
+DistortionCorrection2	Off	꺼짐
+DistortionCorrection2	On	켜짐
+DriveMode	Multiple Exposure	다중 노출
+DriveMode	Off	꺼짐
+DynamicAFArea	21 Points	21 포인트
+DynamicAFArea	51 Points	51 포인트
+DynamicAFArea	51 Points (3D-tracking)	51포인트 (3D-트래킹)
+DynamicAFArea	9 Points	9 포인트
+DynamicRangeExpansion	Off	꺼짐
+DynamicRangeExpansion	On	켜짐
+DynamicRangeOptimizer	Advanced Auto	고급 자동
+DynamicRangeOptimizer	Advanced Lv1	고급 레벨1
+DynamicRangeOptimizer	Advanced Lv2	고급 레벨2
+DynamicRangeOptimizer	Advanced Lv3	고급 레벨3
+DynamicRangeOptimizer	Advanced Lv4	고급 레벨4
+DynamicRangeOptimizer	Advanced Lv5	고급 레벨5
+DynamicRangeOptimizer	Auto	자동
+DynamicRangeOptimizer	Off	꺼짐
+DynamicRangeOptimizer	Standard	표준
+EVStepSize	1/2 EV	1/2 스텝
+EVStepSize	1/3 EV	1/3 스텝
+EasyExposureCompensation	Off	꺼짐
+EasyExposureCompensation	On	켜짐
+EasyExposureCompensation	On (auto reset)	켜짐 (자동 리셋)
+EasyMode	Manual	수동
+EdgeNoiseReduction	Off	꺼짐
+EdgeNoiseReduction	On	켜짐
+EnhanceDarkTones	Off	꺼짐
+EnhanceDarkTones	On	켜짐
+Enhancement	Green	녹색
+Enhancement	Off	꺼짐
+Enhancement	Red	빨강
+ExposureDelayMode	Off	꺼짐
+ExposureDelayMode	On	켜짐
+ExposureMode	Auto	자동 노출
+ExposureMode	Auto bracket	오토 브라케스팅
+ExposureMode	Manual	수동 노출
+ExposureProgram	Action (High speed)	스포츠 모드 (빠른 셔터 스피드에 편향됨)
+ExposureProgram	Aperture-priority AE	조리개 우선
+ExposureProgram	Bulb	벌브
+ExposureProgram	Creative (Slow speed)	독창적 프로그램 (피사계심도에 편향됨)
+ExposureProgram	Landscape	풍경 모드 (배경의 인포커스가 있는 풍경 사진)
+ExposureProgram	Manual	수동
+ExposureProgram	Not Defined	정의되지 않음
+ExposureProgram	Portrait	인물 모드 (배경의 아웃포커스가 있는 근접 사진)
+ExposureProgram	Program AE	보통 프로그램
+ExposureProgram	Shutter speed priority AE	셔터 우선
+ExtendedWBDetect	Off	꺼짐
+ExtendedWBDetect	On	켜짐
+ExternalFlash	Off	꺼짐
+ExternalFlash	On	켜짐
+ExternalFlashMode	Off	꺼짐
+FaceOrientation	Horizontal (normal)	0° (위쪽/좌측)
+FaceOrientation	Rotate 180	180° (아래/우측)
+FaceOrientation	Rotate 270 CW	90° 시계방향 (좌측/아래)
+FaceOrientation	Rotate 90 CW	90° 반시계방향 (우측/위쪽)
+FileNumberMemory	Off	꺼짐
+FileNumberMemory	On	켜짐
+FileNumberSequence	Off	꺼짐
+FileNumberSequence	On	켜짐
+FileSource	Digital Camera	디지털 카메라
+FileSource	Film Scanner	필름 스캐너
+FileSource	Reflection Print Scanner	반사 프린트 스캐너
+Filter	Off	꺼짐
+FilterEffect	Green	녹색
+FilterEffect	Off	꺼짐
+FilterEffect	Orange	주황
+FilterEffect	Red	빨강
+FilterEffect	Yellow	노랑
+FilterEffect	n/a	설정 안됨
+FilterEffectMonochrome	Green	녹색
+FilterEffectMonochrome	Orange	주황
+FilterEffectMonochrome	Red	빨강
+FilterEffectMonochrome	Yellow	노랑
+FinderDisplayDuringExposure	Off	꺼짐
+FinderDisplayDuringExposure	On	켜짐
+Flash	Auto, Did not fire	플래시 발광 안됨, 자동모드
+Flash	Auto, Did not fire, Red-eye reduction	자동, 발광안됨, 적목감소
+Flash	Auto, Fired	플래시 발광, 자동모드
+Flash	Auto, Fired, Red-eye reduction	플래시 발광, 자동모드, 적목감소모드
+Flash	Auto, Fired, Red-eye reduction, Return detected	플래시 발광, 자동모드, 복귀광 감지됨, 적목감소모드
+Flash	Auto, Fired, Red-eye reduction, Return not detected	플래시 발광, 자동모드, 복귀광 감지안됨, 적목감소모드
+Flash	Auto, Fired, Return detected	플래시 발광, 자동모드, 복귀광 감지됨
+Flash	Auto, Fired, Return not detected	플래시 발광, 자동모드, 복귀광 감지 안됨
+Flash	Did not fire	플래시가 점등하지 않았습니다
+Flash	Fired	플래시 발광
+Flash	Fired, Red-eye reduction	플래시 발광, 적목감소모드
+Flash	Fired, Red-eye reduction, Return detected	플래시 발광, 적목감소모드, 복귀광 감지됨
+Flash	Fired, Red-eye reduction, Return not detected	플래시 발광, 적목감소모드, 복귀광 감지 안됨
+Flash	Fired, Return detected	스트로브 복귀광 감지됨
+Flash	Fired, Return not detected	스트로브 복귀광 감지 안됨
+Flash	No Flash	플래시 발광 안됨
+Flash	No flash function	플래시 작동 없음
+Flash	Off, Did not fire	플래시 발광 안됨, 강제발광모드
+Flash	Off, Did not fire, Return not detected	꺼짐, 발광 안됨, 복귀광 감지 안됨
+Flash	Off, No flash function	꺼짐, 플래시 작동 없음
+Flash	Off, Red-eye reduction	꺼짐, 적목감소
+Flash	On, Did not fire	켜짐, 플래시 발광 안됨
+Flash	On, Fired	플래시 발광, 강제발광모드
+Flash	On, Red-eye reduction	플래시 발광, 강제발광모드, 적목감소모드
+Flash	On, Red-eye reduction, Return detected	플래시 발광, 강제발광모드, 적목감소모드, 복귀광 감지됨
+Flash	On, Red-eye reduction, Return not detected	플래시 발광, 강제발광모드, 적목감소모드, 복귀광 감지 안됨
+Flash	On, Return detected	플래시 발광, 강제발광모드, 복귀광 감지됨
+Flash	On, Return not detected	플래시 발광, 강제발광모드, 복귀광 감지 안됨
+FlashCommanderMode	Off	꺼짐
+FlashCommanderMode	On	켜짐
+FlashControlMode	Auto Aperture	자동 조리개 (AA)
+FlashControlMode	Manual	수동
+FlashControlMode	Off	꺼짐
+FlashControlMode	Repeating Flash	리피팅 플래시
+FlashExposureLock	Off	꺼짐
+FlashExposureLock	On	켜짐
+FlashGroupAControlMode	Auto Aperture	자동 조리개 (AA)
+FlashGroupAControlMode	Manual	수동
+FlashGroupAControlMode	Off	꺼짐
+FlashGroupAControlMode	Repeating Flash	리피팅 플래시
+FlashGroupBControlMode	Auto Aperture	자동 조리개 (AA)
+FlashGroupBControlMode	Manual	수동
+FlashGroupBControlMode	Off	꺼짐
+FlashGroupBControlMode	Repeating Flash	리피팅 플래시
+FlashGroupCControlMode	Auto Aperture	자동 조리개 (AA)
+FlashGroupCControlMode	Manual	수동
+FlashGroupCControlMode	Off	꺼짐
+FlashGroupCControlMode	Repeating Flash	리피팅 플래시
+FlashMode	Did Not Fire	발광 안됨
+FlashMode	Fired, Commander Mode	발광됨, 커맨더 모드
+FlashMode	Fired, External	발광됨, 외장
+FlashMode	Fired, Manual	발광됨, 수동
+FlashMode	Fired, TTL Mode	발광됨, TTL 모드
+FlashOptions	Auto	자동
+FlashOptions2	Auto	자동
+FlashStatus	Off	꺼짐
+FlashSyncSpeedAv	Auto	자동
+FlashWarning	Off	꺼짐
+FlashWarning	On	켜짐
+FocalPlaneResolutionUnit	None	없음
+FocalPlaneResolutionUnit	inches	인치
+FocalPlaneResolutionUnit	um	µm (마이크로미터)
+Focus	Manual	수동
+FocusAreaSelection	No Wrap	꺼짐
+FocusAreaSelection	Wrap	켜짐
+FocusContinuous	Manual	수동
+FocusMode	Manual	수동
+FocusMode2	Manual	수동
+FocusModeSetting	AF-A	자동 AF 서보
+FocusModeSetting	AF-C	컨티뉴어스 AF 서보
+FocusModeSetting	AF-S	싱글 AF 서보
+FocusModeSetting	Manual	수동
+FocusPointWrap	No Wrap	순환 안함
+FocusPointWrap	Wrap	순환
+FocusRange	Auto	자동
+FocusRange	Manual	수동
+FocusTrackingLockOn	Long	길게
+FocusTrackingLockOn	Normal	표준
+FocusTrackingLockOn	Off	꺼짐
+FocusTrackingLockOn	Short	짧게
+FujiFlashMode	Auto	자동
+FunctionButton	AF-area Mode	AF 영역 모드 설정
+FunctionButton	Center AF Area	중앙 초점 영역
+FunctionButton	Center-weighted	중앙부 중점 측광
+FunctionButton	FV Lock	FV 고정
+FunctionButton	Flash Off	플래시 OFF
+FunctionButton	Framing Grid	격자선 표시
+FunctionButton	ISO Display	ISO 표시
+FunctionButton	Matrix Metering	멀티 패턴 측광
+FunctionButton	Spot Metering	스팟 측광
+GPSAltitudeRef	Above Sea Level	해면
+GPSAltitudeRef	Below Sea Level	해면 참조(음수 값)
+GPSDifferential	Differential Corrected	편차 보정 적용
+GPSDifferential	No Correction	편차 보정 없이 측정
+GPSLatitudeRef	North	북위
+GPSLatitudeRef	South	남위
+GPSLongitudeRef	East	동경
+GPSLongitudeRef	West	서경
+GPSMeasureMode	2-Dimensional Measurement	2-차원 측량(평면 측량)
+GPSMeasureMode	3-Dimensional Measurement	3차원 측정
+GPSSpeedRef	km/h	시간당 킬로미터
+GPSSpeedRef	knots	노트
+GPSSpeedRef	mph	시간당 마일
+GPSStatus	Measurement Active	진행 중인 측정
+GPSStatus	Measurement Void	측정 상호 운용성
+GPSTrackRef	Magnetic North	자기 방향
+GPSTrackRef	True North	실제 방향
+GainControl	High gain down	높은 이득 감소
+GainControl	High gain up	높은 이득 증가
+GainControl	Low gain down	적은 이득 감소
+GainControl	Low gain up	적은 이득 증가
+GainControl	None	없음
+GridDisplay	Off	꺼짐
+GridDisplay	On	켜짐
+HDR	Off	없음
+HighISONoiseReduction	Auto	자동
+HighISONoiseReduction	High	강함
+HighISONoiseReduction	Low	약함
+HighISONoiseReduction	Minimal	최소
+HighISONoiseReduction	Normal	표준
+HighISONoiseReduction	Off	꺼짐
+HighISONoiseReduction	On	켜짐
+HighlightTonePriority	Off	꺼짐
+HighlightTonePriority	On	켜짐
+ISOExpansion	Off	꺼짐
+ISOExpansion2	Off	꺼짐
+ISOSetting	Auto	자동
+ISOSetting	Manual	수동
+Illumination	Off	꺼짐
+Illumination	On	켜짐
+ImageAuthentication	Off	꺼짐
+ImageAuthentication	On	켜짐
+ImageDustOff	Off	꺼짐
+ImageDustOff	On	켜짐
+ImageReview	Off	꺼짐
+ImageReview	On	켜짐
+ImageStabilization	Off	꺼짐
+ImageStabilization	On	켜짐
+InitialZoomSetting	High Magnification	큰 확대
+InitialZoomSetting	Low Magnification	작은 확대
+InitialZoomSetting	Medium Magnification	중간 확대
+IntensityStereo	Off	꺼짐
+IntensityStereo	On	켜짐
+InternalFlash	Commander Mode	커맨더 모드
+InternalFlash	Manual	수동
+InternalFlash	Off	꺼짐
+InternalFlash	On	켜짐
+InternalFlash	Repeating Flash	리피팅 플래시
+InternalFlashMode	On	켜짐
+JPEGQuality	Extra Fine	엑스트라 파인
+JPEGQuality	Fine	파인
+JPEGQuality	Standard	표준화질
+LCDIllumination	Off	꺼짐
+LCDIllumination	On	켜짐
+LCDIlluminationDuringBulb	Off	꺼짐
+LCDIlluminationDuringBulb	On	켜짐
+LCHEditor	Off	꺼짐
+LCHEditor	On	켜짐
+LightSource	Cloudy	흐린 날씨
+LightSource	Cool White Fluorescent	냉백색 형광등 (W 3800 - 4500K)
+LightSource	Day White Fluorescent	주백색 형광등 (N 4600 - 5500K)
+LightSource	Daylight	주광
+LightSource	Daylight Fluorescent	주광색 형광등 (D 5700 - 7100K)
+LightSource	Fine Weather	맑은 날씨
+LightSource	Flash	플래시
+LightSource	Fluorescent	형광등
+LightSource	ISO Studio Tungsten	ISO 스튜디오 텅스텐
+LightSource	Other	기타 광원
+LightSource	Shade	그늘
+LightSource	Standard Light A	표준 광원 A
+LightSource	Standard Light B	표준 광원 B
+LightSource	Standard Light C	표준 광원 C
+LightSource	Tungsten (Incandescent)	텅스텐 (백열등)
+LightSource	Unknown	알 수 없음
+LightSource	Warm White Fluorescent	따뜻한 흰색 형광 (L 2600 - 3250K)
+LightSource	White Fluorescent	백색 형광등 (WW 3250 - 3800K)
+LiveViewShooting	Off	꺼짐
+LiveViewShooting	On	켜짐
+LongExposureNoiseReduction	Auto	자동
+LongExposureNoiseReduction	Off	없음
+LongExposureNoiseReduction	On	있음
+LuminanceNoiseReduction	Off	꺼짐
+MB-D80Batteries	FR6 (AA Lithium)	FR6 (AA 리튬)
+MB-D80Batteries	LR6 (AA Alkaline)	LR6 (AA 알카라인)
+MSStereo	Off	꺼짐
+MSStereo	On	켜짐
+Macro	Manual	수동
+MacroMode	Off	꺼짐
+MacroMode	On	켜짐
+MainDialExposureComp	Off	꺼짐
+MainDialExposureComp	On	켜짐
+Metering	Center-weighted	중앙부 중점
+Metering	Matrix	멀티패턴
+Metering	Spot	스팟
+MeteringMode	Average	평균
+MeteringMode	Center-weighted average	중앙중점 평균
+MeteringMode	Multi-segment	멀티 패턴
+MeteringMode	Multi-spot	멀티 스팟
+MeteringMode	Other	기타
+MeteringMode	Partial	부분
+MeteringMode	Spot	스팟
+MeteringMode	Unknown	알 수 없음
+MeteringTime	No Limit	무제한
+ModelingFlash	Off	꺼짐
+ModelingFlash	On	켜짐
+ModifiedSaturation	Off	꺼짐
+ModifiedToneCurve	Manual	수동
+ModifiedWhiteBalance	Auto	자동
+MoireFilter	Off	꺼짐
+MoireFilter	On	켜짐
+MonochromeFilterEffect	Green	녹색
+MonochromeFilterEffect	Orange	주황
+MonochromeFilterEffect	Red	빨강
+MonochromeFilterEffect	Yellow	노랑
+MonochromeToningEffect	Green	녹색
+MultiExposureAutoGain	Off	꺼짐
+MultiExposureAutoGain	On	켜짐
+MultiExposureMode	Image Overlay	이미지 오버레이
+MultiExposureMode	Multiple Exposure	다중 노출
+MultiExposureMode	Off	꺼짐
+MultiFrameNoiseReduction	Off	없음
+MultiFrameNoiseReduction	On	있음
+MultiSelector	Do Nothing	아무것도 안함
+MultiSelector	Reset Meter-off Delay	노출계 꺼짐 시간 초기화
+MultiSelectorPlaybackMode	Choose Folder	폴더 선택
+MultiSelectorPlaybackMode	Thumbnail On/Off	섬네일 on/off
+MultiSelectorPlaybackMode	View Histograms	히스토그램 표시
+MultiSelectorPlaybackMode	Zoom On/Off	줌 on/off
+MultiSelectorShootMode	Highlight Active Focus Point	활성 초점 포인트 하이라이트
+MultiSelectorShootMode	Not Used	사용 안됨
+MultiSelectorShootMode	Select Center Focus Point	중앙 초점 포인트 선택
+MultipleExposureSet	Off	꺼짐
+MultipleExposureSet	On	켜짐
+Mute	Off	꺼짐
+Mute	On	켜짐
+MyColorMode	Off	꺼짐
+NDFilter	Off	꺼짐
+NDFilter	On	켜짐
+NEFCompression	Lossless	손실 없음
+NEFCompression	Lossy (type 1)	손실됨 (타입 1)
+NEFCompression	Lossy (type 2)	손실됨 (타입 2)
+NEFCompression	Uncompressed	압축되지 않음
+NikonImageSize	Large (10.0 M)	큰 (10.0M)
+NikonImageSize	Medium (5.6 M)	중간 (5.6M)
+NikonImageSize	Small (2.5 M)	작은 (2.5M)
+NoMemoryCard	Enable Release	릴리즈 허용
+NoMemoryCard	Release Locked	릴리즈 잠금
+NoiseFilter	Off	꺼짐
+NoiseReduction	Auto	자동
+NoiseReduction	Off	꺼짐
+NoiseReduction	On	켜짐
+OneTouchWB	Off	꺼짐
+Orientation	Horizontal (normal)	0° (위쪽/좌측)
+Orientation	Mirror horizontal	0° (위쪽/우측)
+Orientation	Mirror horizontal and rotate 270 CW	90° 시계방향 (좌측/위쪽)
+Orientation	Mirror horizontal and rotate 90 CW	90° 반시계방향 (우측/아래)
+Orientation	Mirror vertical	180° (아래/좌측)
+Orientation	Rotate 180	180° (아래/우측)
+Orientation	Rotate 270 CW	90° 시계방향 (좌측/아래)
+Orientation	Rotate 90 CW	90° 반시계방향 (우측/위쪽)
+PhaseDetectAF	Off	비활성
+PhaseDetectAF	On (51-point)	활성
+PhotoEffect	Off	꺼짐
+PhotoEffects	Off	꺼짐
+PhotoEffects	On	켜짐
+PhotoInfoPlayback	Info Left-right, Playback Up-down	정보 <> / 재생
+PhotoInfoPlayback	Info Up-down, Playback Left-right	정보 / 재생 <>
+PhotometricInterpretation	BlackIsZero	블랙은 제로임
+PhotometricInterpretation	RGB Palette	팔렛트 컬러
+PhotometricInterpretation	Transparency Mask	투명 마스크
+PhotometricInterpretation	WhiteIsZero	화이트는 제로임
+PictureControl	Off	꺼짐
+PictureControl	On	켜짐
+PictureControlActive	Off	꺼짐
+PictureControlActive	On	켜짐
+PictureControlAdjust	Default Settings	기본 설정
+PictureControlAdjust	Full Control	전체 제어
+PictureControlAdjust	Quick Adjust	빠른 조정
+PictureMode	Auto	자동
+PictureMode	Manual	수동
+PictureMode2	Manual	수동
+PictureModeBWFilter	Green	녹색
+PictureModeBWFilter	Orange	주황
+PictureModeBWFilter	Red	빨강
+PictureModeBWFilter	Yellow	노랑
+PictureModeTone	Green	녹색
+PlanarConfiguration	Chunky	청키 형식
+PlanarConfiguration	Planar	평면 형식
+PrimaryAFPoint	Bottom	하단
+PrimaryAFPoint	C6 (Center)	C6 (중앙)
+PrimaryAFPoint	Center	중앙
+PrimaryAFPoint	Far Left	맨 좌측
+PrimaryAFPoint	Far Right	맨 우측
+PrimaryAFPoint	Lower-left	좌하단
+PrimaryAFPoint	Lower-right	우하단
+PrimaryAFPoint	Mid-left	왼쪽
+PrimaryAFPoint	Mid-right	오른쪽
+PrimaryAFPoint	Top	상단
+PrimaryAFPoint	Upper-left	좌상단
+PrimaryAFPoint	Upper-right	우상단
+Quality	Compressed RAW	cRAW
+Quality	Compressed RAW + JPEG	cRAW+JPEG
+Quality	Extra Fine	엑스트라 파인
+Quality	Fine	파인
+Quality	Low	저화질
+Quality	Normal	표준화질
+Quality	RAW + JPEG	RAW+JPEG
+Quality	Standard	표준
+RawDevAutoGradation	Off	꺼짐
+RawDevAutoGradation	On	켜짐
+RawDevPMPictureTone	Green	녹색
+RawDevPM_BWFilter	Green	녹색
+RawDevPM_BWFilter	Orange	주황
+RawDevPM_BWFilter	Red	빨강
+RawDevPM_BWFilter	Yellow	노랑
+RecordMode	Manual	수동
+RecordingMode	Auto	자동
+RecordingMode	Manual	수동
+RedEyeCorrection	Off	꺼짐
+RedEyeReduction	Off	꺼짐
+RedEyeReduction	On	켜짐
+ReleaseButtonToUseDial	No	아니오
+ReleaseButtonToUseDial	Yes	예
+ResolutionUnit	None	없음
+ResolutionUnit	cm	센티미터
+ResolutionUnit	inches	인치
+RetouchHistory	B & W	흑백
+RetouchHistory	Color Custom	커스텀 컬러
+RetouchHistory	Cyanotype	청사진
+RetouchHistory	Image Overlay	이미지 오버레이
+RetouchHistory	None	없음
+RetouchHistory	Sepia	세피아
+RetouchHistory	Sky Light	스카이 라이트
+RetouchHistory	Small Picture	스몰
+RetouchHistory	Trim	트리밍
+RetouchHistory	Warm Tone	따뜻한 톤
+Rotation	Horizontal	0° (수평)
+Rotation	Rotated 180	180° (상하반전)
+Rotation	Rotated 270 CW	90° 좌회전
+Rotation	Rotated 90 CW	90° 우회전
+Saturation	High	고채도
+Saturation	Low	저채도
+Saturation	Normal	표준
+ScanImageEnhancer	Off	꺼짐
+ScanImageEnhancer	On	켜짐
+SceneCaptureType	Landscape	풍경
+SceneCaptureType	Night	야경
+SceneCaptureType	Portrait	인물
+SceneCaptureType	Standard	표준
+SceneMode	3D Sweep Panorama	3D
+SceneMode	Anti Motion Blur	인물 흔들림 방지
+SceneMode	Auto	자동
+SceneMode	Cont. Priority AE	연속 촬영 우선 AE
+SceneMode	Handheld Night Shot	손으로 야간 촬영
+SceneMode	Landscape	풍경
+SceneMode	Macro	매크로
+SceneMode	Manual	수동
+SceneMode	Night Portrait	야경 인물
+SceneMode	Night Scene	야경
+SceneMode	Night View/Portrait	야경/인물
+SceneMode	Off	꺼짐
+SceneMode	Portrait	인물
+SceneMode	Sports	스포츠 액션
+SceneMode	Sunset	석양촬영
+SceneMode	Sweep Panorama	스위프 파노라마
+SceneModeUsed	Manual	수동
+SceneType	Directly photographed	직접 촬영된 이미지
+SecurityClassification	Confidential	기밀
+SecurityClassification	Restricted	제한
+SecurityClassification	Secret	비밀
+SecurityClassification	Top Secret	1급비밀
+SecurityClassification	Unclassified	분류안됨
+SensingMethod	Color sequential area	색상 순차 영역 센서
+SensingMethod	Color sequential linear	색상 순차 선형 센서
+SensingMethod	Monochrome area	모노크롬 영역 센서
+SensingMethod	Monochrome linear	모노크롬 선형 센서
+SensingMethod	Not defined	정의되지 않음
+SensingMethod	One-chip color area	One-chip 색상 영역 센서
+SensingMethod	Three-chip color area	Three-chip 색상 영역 센서
+SensingMethod	Trilinear	Trilinear 센서
+SensingMethod	Two-chip color area	Two-chip 색상 영역 센서
+ShadingCompensation	Off	꺼짐
+ShadingCompensation	On	켜짐
+ShadingCompensation2	Off	꺼짐
+ShadingCompensation2	On	켜짐
+ShakeReduction	Off	꺼짐
+ShakeReduction	On	켜짐
+Sharpness	Hard	강하게
+Sharpness	Normal	표준
+Sharpness	Soft	약하게
+ShootingInfoDisplay	Auto	자동
+ShootingInfoDisplay	Manual (dark on light)	수동 - 밝은배경에 어두움
+ShootingInfoDisplay	Manual (light on dark)	수동 - 어두운 배경에 밝음
+ShootingMode	Manual	수동
+ShootingModeSetting	Continuous	연사
+ShootingModeSetting	Delayed Remote	촬영대기 리모컨
+ShootingModeSetting	Quick-response Remote	즉시촬영 리모컨
+ShootingModeSetting	Self-timer	셀프타이머
+ShootingModeSetting	Single Frame	싱글 프레임
+ShutterMode	Auto	자동
+ShutterReleaseButtonAE-L	Off	꺼짐
+ShutterReleaseButtonAE-L	On	켜짐
+SlowShutter	Off	꺼짐
+SlowShutter	On	켜짐
+SlowSync	Off	꺼짐
+SubjectDistanceRange	Close	근경
+SubjectDistanceRange	Distant	원경
+SubjectDistanceRange	Macro	매크로
+SubjectDistanceRange	Unknown	알 수 없음
+SuperMacro	Off	꺼짐
+SuperimposedDisplay	Off	꺼짐
+SuperimposedDisplay	On	켜짐
+TextStamp	Off	꺼짐
+TextStamp	On	켜짐
+TimerFunctionButton	ISO	ISO 감도
+TimerFunctionButton	Image Quality/Size	이미지 화질/크기
+TimerFunctionButton	Self-timer	셀프타이머
+TimerFunctionButton	Shooting Mode	촬영 모드
+TimerFunctionButton	White Balance	화이트 밸런스
+ToneCurve	Manual	수동
+ToningEffect	B&W	흑백
+ToningEffect	Blue	블루
+ToningEffect	Blue-green	블루-그린
+ToningEffect	Green	녹색
+ToningEffect	Purple-blue	퍼플-블루
+ToningEffect	Red	빨강
+ToningEffect	Red-purple	레드-퍼플
+ToningEffect	Yellow	노랑
+ToningEffect	n/a	설정 안됨
+ToningEffectMonochrome	Green	녹색
+Unsharp1Color	Green	녹색
+Unsharp1Color	Red	빨강
+Unsharp1Color	Yellow	노랑
+Unsharp2Color	Green	녹색
+Unsharp2Color	Red	빨강
+Unsharp2Color	Yellow	노랑
+Unsharp3Color	Green	녹색
+Unsharp3Color	Red	빨강
+Unsharp3Color	Yellow	노랑
+Unsharp4Color	Green	녹색
+Unsharp4Color	Red	빨강
+Unsharp4Color	Yellow	노랑
+UnsharpMask	Off	꺼짐
+UnsharpMask	On	켜짐
+VR_0x66	Off	꺼짐
+VibrationReduction	Off	꺼짐
+VibrationReduction	On	켜짐
+ViewfinderWarning	Off	꺼짐
+ViewfinderWarning	On	켜짐
+VignetteControl	High	높음
+VignetteControl	Low	낮음
+VignetteControl	Normal	표준
+VignetteControl	Off	꺼짐
+VignetteControl	On	켜짐
+WBBracketMode	Off	꺼짐
+WBMode	Auto	자동
+WhiteBalance	Auto	자동
+WhiteBalance	Black & White	흑백
+WhiteBalance	Cloudy	흐린날
+WhiteBalance	Color Temperature/Color Filter	색 온도 / 컬러 필터
+WhiteBalance	Cool White Fluorescent	차가운 백색 형광
+WhiteBalance	Custom	사용자 정의
+WhiteBalance	Custom 1	개인설정1
+WhiteBalance	Custom 2	개인설정2
+WhiteBalance	Custom 3	개인설정3
+WhiteBalance	Custom 4	개인설정4
+WhiteBalance	Day White Fluorescent	중성 백색 형광
+WhiteBalance	Daylight	맑은날
+WhiteBalance	Daylight Fluorescent	일광 형광
+WhiteBalance	Flash	플래시
+WhiteBalance	Fluorescent	형광등
+WhiteBalance	Manual	수동
+WhiteBalance	Shade	그늘
+WhiteBalance	Tungsten	백열등
+WhiteBalance	Unknown	알 수 없음
+WhiteBalance	Warm White Fluorescent	따뜻한 흰색 형광
+WhiteBalance	White Fluorescent	백색 형광등
+WhiteBalance2	Auto	자동
+WhiteBalanceAdj	Auto	자동
+WhiteBalanceAdj	Off	꺼짐
+WhiteBalanceAdj	On	켜짐
+WhiteBalanceSet	Auto	자동
+WhiteBalanceSet	Manual	수동
+YCbCrPositioning	Centered	중앙
+YCbCrPositioning	Co-sited	주변
+ZoneMatching	High Key	Hi
+ZoneMatching	ISO Setting Used	없음
+ZoneMatching	Low Key	Lo
+ZoneMatchingOn	Off	꺼짐
+ZoneMatchingOn	On	켜짐

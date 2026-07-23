@@ -1,0 +1,12 @@
+Canon	SelfTimer	Off	Off
+MIE-Camera	ExposureMode	Manual	Manual
+Minolta	ImageStabilization	On	On
+Minolta	WhiteBalance	Auto	Auto
+Nikon	NoiseReduction	Off	Off
+Nikon	Quality	Fine	Fine
+Nikon	Saturation	Normal	Normal
+Nikon	WhiteBalance	Auto	Auto
+Sigma	AFPoint	Center	Center
+Sigma	WhiteBalance	Auto	Auto
+SigmaRaw	FlashMode	Off	Off
+ZIP	Flags	FileName, Comment	Nombre de Archivo, Comentario

@@ -1,0 +1,296 @@
+CalibrationIlluminant1	Cloudy	多雲
+CalibrationIlluminant1	Cool White Fluorescent	冷白色熒光燈 (W 3800 - 4500K)
+CalibrationIlluminant1	Day White Fluorescent	日光白色熒光燈 (N 4600 - 5500K)
+CalibrationIlluminant1	Daylight	日光
+CalibrationIlluminant1	Daylight Fluorescent	日光熒光燈 (D 5700 - 7100K)
+CalibrationIlluminant1	Fine Weather	晴天
+CalibrationIlluminant1	Flash	閃光燈
+CalibrationIlluminant1	Fluorescent	日光燈
+CalibrationIlluminant1	ISO Studio Tungsten	ISO 攝影棚鎢燈
+CalibrationIlluminant1	Other	其他光源
+CalibrationIlluminant1	Shade	陰天
+CalibrationIlluminant1	Standard Light A	標準燈光 A
+CalibrationIlluminant1	Standard Light B	標準燈光 B
+CalibrationIlluminant1	Standard Light C	標準燈光 C
+CalibrationIlluminant1	Tungsten (Incandescent)	鎢絲燈
+CalibrationIlluminant1	Unknown	未知
+CalibrationIlluminant1	Warm White Fluorescent	暖白螢光燈 (L 2600 - 3250K)
+CalibrationIlluminant1	White Fluorescent	白色熒光燈 (WW 3250 - 3800K)
+CalibrationIlluminant2	Cloudy	多雲
+CalibrationIlluminant2	Cool White Fluorescent	冷白色熒光燈 (W 3800 - 4500K)
+CalibrationIlluminant2	Day White Fluorescent	日光白色熒光燈 (N 4600 - 5500K)
+CalibrationIlluminant2	Daylight	日光
+CalibrationIlluminant2	Daylight Fluorescent	日光熒光燈 (D 5700 - 7100K)
+CalibrationIlluminant2	Fine Weather	晴天
+CalibrationIlluminant2	Flash	閃光燈
+CalibrationIlluminant2	Fluorescent	日光燈
+CalibrationIlluminant2	ISO Studio Tungsten	ISO 攝影棚鎢燈
+CalibrationIlluminant2	Other	其他光源
+CalibrationIlluminant2	Shade	陰天
+CalibrationIlluminant2	Standard Light A	標準燈光 A
+CalibrationIlluminant2	Standard Light B	標準燈光 B
+CalibrationIlluminant2	Standard Light C	標準燈光 C
+CalibrationIlluminant2	Tungsten (Incandescent)	鎢絲燈
+CalibrationIlluminant2	Unknown	未知
+CalibrationIlluminant2	Warm White Fluorescent	暖白螢光燈 (L 2600 - 3250K)
+CalibrationIlluminant2	White Fluorescent	白色熒光燈 (WW 3250 - 3800K)
+ColorEffect	Sepia	懷舊深咖啡色
+ColorMode	Autumn Leaves	秋葉
+ColorMode	B&W	黑白
+ColorMode	Clear	透明
+ColorMode	Deep	深色
+ColorMode	Landscape	風景
+ColorMode	Light	淡色
+ColorMode	Neutral	中性
+ColorMode	Night View	夜景
+ColorMode	Night View/Portrait	夜間肖像
+ColorMode	Portrait	肖像
+ColorMode	Standard	標準
+ColorMode	Sunset	日落
+ColorMode	Vivid	鮮明色彩
+ColorSpace	ICC Profile	色彩描述檔
+ColorSpace	Uncalibrated	未校準
+Compression	JPEG	JPEG壓縮率
+Compression	JPEG (old-style)	JPEG (舊式)
+Compression	Kodak DCR Compressed	Kodak DCR 壓縮
+Compression	Kodak KDC Compressed	Kodak KDC 壓縮
+Compression	Next	NeXT 2-bit 編碼
+Compression	Nikon NEF Compressed	Nikon NEF 壓縮
+Compression	Pentax PEF Compressed	Pentax PEF 壓縮
+Compression	SGILog	SGI 32-bit Log Luminance 編碼
+Compression	SGILog24	SGI 24-bit Log Luminance 編碼
+Compression	Sony ARW Compressed	Sony ARW 壓縮
+Compression	Thunderscan	ThunderScan 4-bit 編碼
+Compression	Uncompressed	未壓縮
+Contrast	High	硬
+Contrast	Low	軟
+Contrast	Normal	標準
+CustomRendered	Custom	自訂程序
+CustomRendered	Normal	正常程序
+DynamicRangeOptimizer	Advanced Auto	進階自動
+DynamicRangeOptimizer	Advanced Lv1	進階等級 1
+DynamicRangeOptimizer	Advanced Lv2	進階等級 2
+DynamicRangeOptimizer	Advanced Lv3	進階等級 3
+DynamicRangeOptimizer	Advanced Lv4	進階等級 4
+DynamicRangeOptimizer	Advanced Lv5	進階等級 5
+DynamicRangeOptimizer	Auto	自動
+DynamicRangeOptimizer	Off	關閉
+DynamicRangeOptimizer	Standard	標準
+ExposureMode	Auto	自動曝光
+ExposureMode	Auto bracket	自動包圍曝光
+ExposureMode	Manual	手動曝光
+ExposureProgram	Action (High speed)	動態模式 (高速快門)
+ExposureProgram	Aperture-priority AE	光圈優先
+ExposureProgram	Creative (Slow speed)	景深優先
+ExposureProgram	Landscape	風景模式
+ExposureProgram	Manual	手動
+ExposureProgram	Not Defined	未定義
+ExposureProgram	Portrait	肖像模式 (背景在焦距以外的特寫照片)
+ExposureProgram	Program AE	正常
+ExposureProgram	Shutter speed priority AE	快門優先
+FaceOrientation	Horizontal (normal)	0° (頂端/左邊)
+FaceOrientation	Rotate 180	180° (底部/右邊)
+FaceOrientation	Rotate 270 CW	90° CW (左邊/底部)
+FaceOrientation	Rotate 90 CW	90° CCW (右邊/頂端)
+FileSource	Digital Camera	數位相機
+FileSource	Film Scanner	底片掃描器
+FileSource	Reflection Print Scanner	反射列印掃描器
+Flash	Auto, Did not fire	閃光燈未擊發, 自動模式
+Flash	Auto, Did not fire, Red-eye reduction	自動, 閃光燈未擊發, 防紅眼模式
+Flash	Auto, Fired	閃光燈擊發, 自動模式
+Flash	Auto, Fired, Red-eye reduction	閃光燈擊發, 自動模式, 防紅眼模式
+Flash	Auto, Fired, Red-eye reduction, Return detected	閃光燈擊發, 自動模式, 偵測到反射光, 防紅眼模式
+Flash	Auto, Fired, Red-eye reduction, Return not detected	閃光燈擊發, 自動模式, 未偵測到反射光, 防紅眼模式
+Flash	Auto, Fired, Return detected	閃光燈擊發, 自動模式, 偵測到反射光
+Flash	Auto, Fired, Return not detected	閃光燈擊發, 自動模式, 未偵測到反射光
+Flash	Did not fire	閃光燈未亮
+Flash	Fired	閃光燈擊發
+Flash	Fired, Red-eye reduction	閃光燈擊發, 防紅眼模式
+Flash	Fired, Red-eye reduction, Return detected	閃光燈擊發, 防紅眼模式, 偵測到反射光
+Flash	Fired, Red-eye reduction, Return not detected	閃光燈擊發, 防紅眼模式, 未偵測到反射光
+Flash	Fired, Return detected	偵測到 Strobe 反射光
+Flash	Fired, Return not detected	未偵測到 Strobe 反射光
+Flash	No Flash	閃光燈未擊發
+Flash	No flash function	沒有閃光功能
+Flash	Off, Did not fire	閃光燈未擊發, 強制閃光模式
+Flash	Off, Did not fire, Return not detected	關閉, 閃光燈未擊發, 反射未偵測
+Flash	Off, No flash function	關閉, 沒有閃光功能
+Flash	Off, Red-eye reduction	關閉, 防紅眼模式
+Flash	On, Did not fire	開啟, 閃光燈未擊發
+Flash	On, Fired	閃光燈擊發, 強制閃光模式
+Flash	On, Red-eye reduction	閃光燈擊發, 強制閃光模式, 防紅眼模式
+Flash	On, Red-eye reduction, Return detected	閃光燈擊發, 強制閃光模式, 防紅眼模式, 偵測到反射光
+Flash	On, Red-eye reduction, Return not detected	閃光燈擊發, 強制閃光模式, 防紅眼模式, 未偵測到反射光
+Flash	On, Return detected	閃光燈擊發, 強制閃光模式, 偵測到反射光
+Flash	On, Return not detected	閃光燈擊發, 強制閃光模式, 未偵測到反射光
+FocalPlaneResolutionUnit	None	無
+FocalPlaneResolutionUnit	inches	英吋
+FocalPlaneResolutionUnit	um	µm (微米)
+GPSAltitudeRef	Above Sea Level	海平面
+GPSAltitudeRef	Below Sea Level	海平面參考(負值)
+GPSDestBearingRef	Magnetic North	磁性的方位
+GPSDestBearingRef	True North	真實的方位
+GPSDestDistanceRef	Kilometers	公里
+GPSDestDistanceRef	Miles	英里
+GPSDestDistanceRef	Nautical Miles	節
+GPSDestLatitudeRef	North	北緯
+GPSDestLatitudeRef	South	南緯
+GPSDestLongitudeRef	East	東經
+GPSDestLongitudeRef	West	西經
+GPSDifferential	Differential Corrected	定位偏差修正
+GPSDifferential	No Correction	無定位偏差修正
+GPSImgDirectionRef	Magnetic North	磁性的方位 
+GPSImgDirectionRef	True North	真實的方位
+GPSLatitudeRef	North	北緯
+GPSLatitudeRef	South	南緯
+GPSLongitudeRef	East	東經
+GPSLongitudeRef	West	西經
+GPSMeasureMode	2-Dimensional Measurement	2-三維測量
+GPSMeasureMode	3-Dimensional Measurement	3-三維測量
+GPSSpeedRef	km/h	時速
+GPSSpeedRef	knots	節
+GPSSpeedRef	mph	英里
+GPSStatus	Measurement Active	測量有效
+GPSStatus	Measurement Void	測量無效
+GPSTrackRef	Magnetic North	磁性的方位 
+GPSTrackRef	True North	真實的方位
+GainControl	High gain down	高衰減
+GainControl	High gain up	高增益
+GainControl	Low gain down	低衰減
+GainControl	Low gain up	低增益
+GainControl	None	無
+HDR	Off	關閉
+HighISONoiseReduction	Auto	自動
+HighISONoiseReduction	High	高
+HighISONoiseReduction	Low	低
+HighISONoiseReduction	Normal	一般
+HighISONoiseReduction	Off	關閉
+JPEGQuality	Extra Fine	超精細
+JPEGQuality	Fine	精細
+JPEGQuality	Standard	標準品質
+LightSource	Cloudy	多雲
+LightSource	Cool White Fluorescent	冷白色熒光燈 (W 3800 - 4500K)
+LightSource	Day White Fluorescent	日光白色熒光燈 (N 4600 - 5500K)
+LightSource	Daylight	日光
+LightSource	Daylight Fluorescent	日光熒光燈 (D 5700 - 7100K)
+LightSource	Fine Weather	晴天
+LightSource	Flash	閃光燈
+LightSource	Fluorescent	日光燈
+LightSource	ISO Studio Tungsten	ISO 攝影棚鎢燈
+LightSource	Other	其他光源
+LightSource	Shade	陰天
+LightSource	Standard Light A	標準燈光 A
+LightSource	Standard Light B	標準燈光 B
+LightSource	Standard Light C	標準燈光 C
+LightSource	Tungsten (Incandescent)	鎢絲燈
+LightSource	Unknown	未知
+LightSource	Warm White Fluorescent	暖白螢光燈 (L 2600 - 3250K)
+LightSource	White Fluorescent	白色熒光燈 (WW 3250 - 3800K)
+LongExposureNoiseReduction	Off	關閉
+LongExposureNoiseReduction	On	開啟
+MeteringMode	Average	平均測光
+MeteringMode	Center-weighted average	中央重點平均測光
+MeteringMode	Multi-segment	評價測光
+MeteringMode	Multi-spot	多點測光
+MeteringMode	Other	其他
+MeteringMode	Partial	局部測光
+MeteringMode	Spot	點測光
+MeteringMode	Unknown	未知
+MultiFrameNoiseReduction	Off	關閉
+MultiFrameNoiseReduction	On	開啟
+Orientation	Horizontal (normal)	0° (頂端/左邊)
+Orientation	Mirror horizontal	0° (頂端/右邊)
+Orientation	Mirror horizontal and rotate 270 CW	90° CW (左邊/頂端)
+Orientation	Mirror horizontal and rotate 90 CW	90° CCW (右邊/底部)
+Orientation	Mirror vertical	180° (底部/左邊)
+Orientation	Rotate 180	180° (底部/右邊)
+Orientation	Rotate 270 CW	90° CW (左邊/底部)
+Orientation	Rotate 90 CW	90° CCW (右邊/頂端)
+PhotometricInterpretation	BlackIsZero	黑色為零
+PhotometricInterpretation	Color Filter Array	CFA (彩色濾光片矩陣)
+PhotometricInterpretation	RGB Palette	調色板的顏色
+PhotometricInterpretation	Transparency Mask	透明遮罩
+PhotometricInterpretation	WhiteIsZero	白色為零
+PlanarConfiguration	Chunky	Chunky 格式 (交錯型)
+PlanarConfiguration	Planar	Planar 格式 (平面型)
+Predictor	Horizontal differencing	水平區別
+Predictor	None	沒有使用過預測編碼方案
+Quality	Compressed RAW	cRAW
+Quality	Compressed RAW + JPEG	cRAW+JPEG
+Quality	Extra Fine	超精細
+Quality	Fine	精細
+Quality	Low	低品質
+Quality	Normal	標準品質
+Quality	RAW + JPEG	RAW+JPEG
+Quality	Standard	標準
+ResolutionUnit	None	無
+ResolutionUnit	cm	公分
+ResolutionUnit	inches	英吋
+Saturation	High	高飽和度
+Saturation	Low	低飽和度
+Saturation	Normal	標準
+SceneCaptureType	Landscape	風景
+SceneCaptureType	Night	夜景
+SceneCaptureType	Portrait	肖像
+SceneCaptureType	Standard	標準
+SceneMode	3D Sweep Panorama	3D
+SceneMode	Anti Motion Blur	防止移動模糊
+SceneMode	Auto	自動
+SceneMode	Cont. Priority AE	連拍優先AE
+SceneMode	Handheld Night Shot	手持夜拍
+SceneMode	Landscape	風景
+SceneMode	Macro	超近拍攝
+SceneMode	Night Portrait	夜間肖像
+SceneMode	Night Scene	夜景
+SceneMode	Night View/Portrait	夜景/肖像
+SceneMode	Portrait	肖像
+SceneMode	Sports	運動場面
+SceneMode	Sunset	夕陽
+SceneMode	Sweep Panorama	全景攝影
+SceneType	Directly photographed	直接拍攝的影像
+SecurityClassification	Confidential	秘密
+SecurityClassification	Restricted	限制
+SecurityClassification	Secret	機密
+SecurityClassification	Top Secret	最高機密
+SecurityClassification	Unclassified	未分類
+SensingMethod	Color sequential area	連續彩色感測器
+SensingMethod	Color sequential linear	連續彩色線性感測器
+SensingMethod	Monochrome area	單色感測器
+SensingMethod	Monochrome linear	單色線性感測器
+SensingMethod	Not defined	未定義
+SensingMethod	One-chip color area	單晶片彩色感測器
+SensingMethod	Three-chip color area	三晶片彩色感測器
+SensingMethod	Trilinear	三線性感測器
+SensingMethod	Two-chip color area	雙晶片彩色感測器
+Sharpness	Hard	硬
+Sharpness	Normal	標準
+Sharpness	Soft	軟
+SubjectDistanceRange	Close	近
+SubjectDistanceRange	Distant	遠
+SubjectDistanceRange	Macro	微距
+SubjectDistanceRange	Unknown	未知
+WhiteBalance	Auto	自動
+WhiteBalance	Black & White	黑白
+WhiteBalance	Cloudy	多雲
+WhiteBalance	Color Temperature/Color Filter	色溫 / 彩色濾鏡
+WhiteBalance	Cool White Fluorescent	冷白色螢光燈
+WhiteBalance	Custom	自設
+WhiteBalance	Custom 1	用戶自定1
+WhiteBalance	Custom 2	用戶自定2
+WhiteBalance	Custom 3	用戶自定3
+WhiteBalance	Custom 4	用戶自定4
+WhiteBalance	Day White Fluorescent	日光白色螢光燈
+WhiteBalance	Daylight	日光
+WhiteBalance	Daylight Fluorescent	日光色螢光燈
+WhiteBalance	Flash	閃光燈
+WhiteBalance	Fluorescent	熒光燈
+WhiteBalance	Manual	手動
+WhiteBalance	Shade	陰天
+WhiteBalance	Tungsten	白熾燈
+WhiteBalance	Warm White Fluorescent	暖白螢光燈
+WhiteBalance	White Fluorescent	白色熒光燈
+YCbCrPositioning	Centered	中心
+YCbCrPositioning	Co-sited	一致
+ZoneMatching	High Key	高
+ZoneMatching	ISO Setting Used	關閉
+ZoneMatching	Low Key	低

@@ -1,0 +1,20 @@
+Canon	SelfTimer	Off	Off
+Composite	CFAPattern	[Blue,Green][Green,Red]	[Blue,Green][Green,Red]
+Composite	CFAPattern	[Red,Green][Green,Blue]	[Red,Green][Green,Blue]
+ExifIFD	CFAPattern	[Blue,Green][Green,Red]	[Blue,Green][Green,Red]
+ExifIFD	CFAPattern	[Green,Blue][Red,Green]	[Green,Blue][Red,Green]
+File	ByteOrder	Little-endian	Little-endian
+Kodak	ISOSetting	Auto	Auto
+LNK	Flags	IDList, LinkInfo, Description, RelativePath, WorkingDir, CommandArgs, Unicode	Список ID, Информация о ссылке, Описание, Относительный путь, Рабочая папка, CommandArgs, Юникод
+MIE-Camera	ExposureMode	Manual	Manual
+Minolta	WhiteBalance	Auto	Auto
+Nikon	Quality	Fine	Fine
+Nikon	Saturation	Normal	Normal
+Nikon	WhiteBalance	Auto	Auto
+Real-PROP	Flags	Allow Recording, Allow Download	Разрешить запись, Разрешить загрузку
+Sigma	WhiteBalance	Auto	Auto
+XML-File	EncodingProcess	Baseline DCT, Huffman coding	Baseline DCT, Huffman coding
+XML-File	ExifByteOrder	Little-endian (Intel, II)	Little-endian (Intel, II)
+XMP-plus	ImageAlterationConstraints	No Cropping, No Flipping, No Retouching, No Colorization, No De-Colorization, No Merging	Не кадрировать, Не отражать, Не ретушировать, Не раскрашивать, Не обесцвечивать, Не объединять
+XMP-plus	ImageFileConstraints	Maintain File Name, Maintain ID in File Name, Maintain Metadata, Maintain File Type	Запрещается переименование файла, Запрещается изменять ID в имени файла, Запрещается изменение метаданных, Запрещается изменять тип файла
+ZIP	Flags	FileName, Comment	Название файлов, Комментарий

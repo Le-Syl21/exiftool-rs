@@ -1,0 +1,165 @@
+CalibrationIlluminant1	Cloudy	Bulutlu Hava
+CalibrationIlluminant1	Cool White Fluorescent	Soğuk beyaz floresan (W 3800 - 4500K)
+CalibrationIlluminant1	Day White Fluorescent	Gün beyaz floresan (N 4600 - 5500K)
+CalibrationIlluminant1	Daylight	Günışığı
+CalibrationIlluminant1	Daylight Fluorescent	Günışığı floresan (D 5700 - 7100K)
+CalibrationIlluminant1	Fine Weather	İyi hava
+CalibrationIlluminant1	Flash	Flaş
+CalibrationIlluminant1	Fluorescent	Floresan
+CalibrationIlluminant1	ISO Studio Tungsten	ISO stüdyo tungsten
+CalibrationIlluminant1	Other	Diğer ışık kaynağı
+CalibrationIlluminant1	Shade	Gölge
+CalibrationIlluminant1	Standard Light A	Standard Işık A
+CalibrationIlluminant1	Standard Light B	Standard Işık B
+CalibrationIlluminant1	Standard Light C	Standard Işık C
+CalibrationIlluminant1	Tungsten (Incandescent)	Tungsten
+CalibrationIlluminant1	Unknown	Bilinmeyen
+CalibrationIlluminant1	White Fluorescent	Beyaz floresan (WW 3250 - 3800K)
+CalibrationIlluminant2	Cloudy	Bulutlu Hava
+CalibrationIlluminant2	Cool White Fluorescent	Soğuk beyaz floresan (W 3800 - 4500K)
+CalibrationIlluminant2	Day White Fluorescent	Gün beyaz floresan (N 4600 - 5500K)
+CalibrationIlluminant2	Daylight	Günışığı
+CalibrationIlluminant2	Daylight Fluorescent	Günışığı floresan (D 5700 - 7100K)
+CalibrationIlluminant2	Fine Weather	İyi hava
+CalibrationIlluminant2	Flash	Flaş
+CalibrationIlluminant2	Fluorescent	Floresan
+CalibrationIlluminant2	ISO Studio Tungsten	ISO stüdyo tungsten
+CalibrationIlluminant2	Other	Diğer ışık kaynağı
+CalibrationIlluminant2	Shade	Gölge
+CalibrationIlluminant2	Standard Light A	Standard Işık A
+CalibrationIlluminant2	Standard Light B	Standard Işık B
+CalibrationIlluminant2	Standard Light C	Standard Işık C
+CalibrationIlluminant2	Tungsten (Incandescent)	Tungsten
+CalibrationIlluminant2	Unknown	Bilinmeyen
+CalibrationIlluminant2	White Fluorescent	Beyaz floresan (WW 3250 - 3800K)
+ColorSpace	Uncalibrated	Kalibre edilmemiş
+Compression	JPEG	JPEG Sıkıştırma
+Compression	Uncompressed	Sıkıştırılmamış
+Contrast	High	Sert
+Contrast	Low	Yumuşak
+Contrast	Normal	Standard
+CustomRendered	Custom	Özel işlem
+CustomRendered	Normal	Normal işlem
+ExposureMode	Auto	Otomatik
+ExposureMode	Auto bracket	Otomatik çerçeve
+ExposureMode	Manual	Manuel pozlama
+ExposureProgram	Action (High speed)	Hareket programı
+ExposureProgram	Aperture-priority AE	Apertür önceliği
+ExposureProgram	Bulb	Ampul
+ExposureProgram	Creative (Slow speed)	Yaratıcı program
+ExposureProgram	Landscape	Manzara
+ExposureProgram	Manual	Manuel Pozlama
+ExposureProgram	Portrait	Portre
+ExposureProgram	Program AE	Normal program
+ExposureProgram	Shutter speed priority AE	Deklanşör önceliği
+FaceOrientation	Horizontal (normal)	Pozitif yön
+FaceOrientation	Rotate 90 CW	Saat yönünde 90° döndür
+FileSource	Digital Camera	DSC
+FileSource	Film Scanner	Transparan tip tarayıcı
+FileSource	Reflection Print Scanner	Refleks tipi tarayıcı
+Flash	Auto, Fired	AÇIK (Otom-flaş)
+Flash	Auto, Fired, Red-eye reduction	"AÇIK (Otom-flaş, Kırmızı-Göz Azaltma)"
+Flash	Auto, Fired, Red-eye reduction, Return detected	"AÇIK (Otom-flaş, Kırmızı-Göz Azaltma, Geri dönen ışık bulundu)"
+Flash	Auto, Fired, Return detected	"AÇIK (Otom-flaş, Geri dönen ışık bulundu)"
+Flash	Did not fire	Flaş patlamadı
+Flash	Fired	Flaş patladı
+Flash	Fired, Red-eye reduction	AÇIK (Kırmızı-Göz Azaltma)
+Flash	Fired, Red-eye reduction, Return detected	"AÇIK (Kırmızı-Göz Azaltma, Geri dönen ışık bulundu)"
+Flash	Fired, Return detected	AÇIK (Geri dönen ışık bulundu)
+Flash	No Flash	Flaş fonksiyonu yok
+Flash	On, Fired	AÇIK (Doldurma)
+Flash	On, Red-eye reduction	"AÇIK (Doldurma, Kırmızı-Göz Önleme)"
+Flash	On, Red-eye reduction, Return detected	"AÇIK (Doldurma, Kırmızı-Göz Önleme, Geri dönen ışık bulundu)"
+Flash	On, Return detected	"AÇIK (Doldurma, Geri dönen ışık bulundu)"
+FocalPlaneResolutionUnit	inches	inç
+GPSAltitudeRef	Above Sea Level	Deniz düzeyi
+GPSAltitudeRef	Below Sea Level	Deniz düzeyi referansı (negatif değer)
+GPSDifferential	Differential Corrected	Difrensiyel düzeltme uygulandı
+GPSDifferential	No Correction	Difrensiyel düzeltme olmadan ölçüm
+GPSLatitudeRef	North	Kuzey enlemi
+GPSLatitudeRef	South	Güney enlemi
+GPSLongitudeRef	East	Doğu boylamı
+GPSLongitudeRef	West	Batı boylamı
+GPSMeasureMode	3-Dimensional Measurement	3-boyutlu ölçüm
+GPSSpeedRef	km/h	km / saat
+GPSSpeedRef	knots	Knot
+GPSSpeedRef	mph	Mil / saat
+GPSStatus	Measurement Active	İlerlemeli ölçüm
+GPSStatus	Measurement Void	Ölçü Birlikte İşlerliği
+GPSTrackRef	Magnetic North	Manyetik yön
+GPSTrackRef	True North	Gerçek yön
+GainControl	High gain down	Yüksek kazanç aşağı
+GainControl	High gain up	Yüksek kazanç yukarı
+GainControl	Low gain down	Düşek kazanç aşağı
+GainControl	Low gain up	Düşük kazanç yukarı
+GainControl	None	Hiçbiri
+JPEGQuality	Standard	Standart Kalite
+LightSource	Cloudy	Bulutlu Hava
+LightSource	Cool White Fluorescent	Soğuk beyaz floresan (W 3800 - 4500K)
+LightSource	Day White Fluorescent	Gün beyaz floresan (N 4600 - 5500K)
+LightSource	Daylight	Günışığı
+LightSource	Daylight Fluorescent	Günışığı floresan (D 5700 - 7100K)
+LightSource	Fine Weather	İyi hava
+LightSource	Flash	Flaş
+LightSource	Fluorescent	Floresan
+LightSource	ISO Studio Tungsten	ISO stüdyo tungsten
+LightSource	Other	Diğer ışık kaynağı
+LightSource	Shade	Gölge
+LightSource	Standard Light A	Standard Işık A
+LightSource	Standard Light B	Standard Işık B
+LightSource	Standard Light C	Standard Işık C
+LightSource	Tungsten (Incandescent)	Tungsten
+LightSource	Unknown	Bilinmeyen
+LightSource	White Fluorescent	Beyaz floresan (WW 3250 - 3800K)
+MeteringMode	Average	Ortalama
+MeteringMode	Center-weighted average	CenterWeightedAverage
+MeteringMode	Multi-segment	Desen
+MeteringMode	Multi-spot	Multispot
+MeteringMode	Other	Diğer
+MeteringMode	Partial	Kısmen
+MeteringMode	Unknown	Bilinmeyen
+Orientation	Horizontal (normal)	Pozitif yön
+Orientation	Rotate 90 CW	Saat yönünde 90° döndür
+PlanarConfiguration	Chunky	Chunky format
+PlanarConfiguration	Planar	Planar format
+Quality	Low	Düşük Kalite
+Quality	Normal	Standart Kalite
+ResolutionUnit	cm	santimetre
+ResolutionUnit	inches	inç
+Saturation	High	Yüksek Doyma
+Saturation	Low	Düşük Doyma
+Saturation	Normal	Standard
+SceneCaptureType	Landscape	Manzara
+SceneCaptureType	Night	Gece çekimi
+SceneCaptureType	Portrait	Portre
+SceneMode	Sunset	Günbatımı
+SceneType	Directly photographed	Doğrudan fotograflanmış imaj
+SensingMethod	Color sequential area	Renk ardaşık alan alıcısı
+SensingMethod	Color sequential linear	Renk ardışık çizgisel alıcı
+SensingMethod	One-chip color area	Tek-çip renk alanı alıcı
+SensingMethod	Three-chip color area	Üç-çip renk alanı alıcı
+SensingMethod	Trilinear	Triple çizgisel alıcı
+SensingMethod	Two-chip color area	İki-çip renk alanı alıcı
+Sharpness	Hard	Sert
+Sharpness	Normal	Standard
+Sharpness	Soft	Yumuşak
+SubjectDistanceRange	Close	Yakın görüntü
+SubjectDistanceRange	Distant	Uzak görüntü
+SubjectDistanceRange	Macro	Makro
+WhiteBalance	Auto	Otomatik beyaz ayarı
+WhiteBalance	Black & White	Monokrom
+WhiteBalance	Cloudy	Bulutlu hava
+WhiteBalance	Cool White Fluorescent	Soğuk beyaz floresan
+WhiteBalance	Custom 1	ÖZEL1
+WhiteBalance	Custom 2	ÖZEL2
+WhiteBalance	Custom 3	ÖZEL3
+WhiteBalance	Custom 4	ÖZEL4
+WhiteBalance	Day White Fluorescent	Gün beyaz floresan
+WhiteBalance	Daylight	Günışığı
+WhiteBalance	Daylight Fluorescent	Günışığı floresan
+WhiteBalance	Fluorescent	Floresan
+WhiteBalance	Manual	Elle beyaz ayarı
+WhiteBalance	Shade	Gölge
+WhiteBalance	Tungsten	Tungsten ışık
+YCbCrPositioning	Centered	Ortalanmış
+YCbCrPositioning	Co-sited	Birlikte-konumlanmış

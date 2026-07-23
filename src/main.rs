@@ -360,13 +360,11 @@ fn main() {
             "-lang" => {
                 if i + 1 < args.len() {
                     i += 1;
-                    lang = Some(args[i].to_lowercase().replace("-", "_").replace("_", ""));
-                    // Normalize: zh_cn -> zh, pt_br -> pt, etc.
-                    if let Some(ref mut l) = lang {
-                        if l.starts_with("zh") {
-                            *l = "zh".into();
-                        }
-                    }
+                    // Lowercase and canonicalize the separator to '_' (fr, en_ca,
+                    // zh_tw, ...). Region folding (zh_cn -> zh, pt_br -> pt) is left
+                    // to i18n::normalize_lang so regional variants (en_ca/en_gb/
+                    // zh_tw) survive instead of being flattened away.
+                    lang = Some(args[i].to_lowercase().replace('-', "_"));
                 }
             }
             "-api" => {
@@ -944,6 +942,7 @@ fn main() {
             show_groups,
             group_family,
             et.options().extract_embedded == 0,
+            lang.as_deref(),
         );
     } else if args_output {
         print_args(&et, &files);
@@ -1016,6 +1015,7 @@ fn main() {
                 no_composites,
                 numeric,
                 &translations,
+                lang.as_deref(),
                 date_format.as_deref(),
                 separator.as_deref(),
             );
@@ -1027,6 +1027,24 @@ fn main() {
 ///
 /// Families 4 to 6 (instance, path, format) are not modelled by [`TagGroup`],
 /// so they fall back to family 1 rather than printing nothing.
+/// True when the source is a standalone XMP file (FileType "XMP").
+fn file_is_xmp(tags: &[exiftool_rs::Tag]) -> bool {
+    tags.iter()
+        .find(|t| t.name == "FileType")
+        .map(|t| t.print_value == "XMP")
+        .unwrap_or(false)
+}
+
+/// Whether to skip `-lang` value translation for this tag. In a standalone XMP
+/// file ExifTool re-reads binary metadata (exif:*, MakerNotes, ...) back from the
+/// XMP as their original groups but without running the PrintConv, so `-lang`
+/// leaves those values in English; only genuine XMP-native tags (and the Composite
+/// tags built from them) are localized. Match that by suppressing every non-XMP,
+/// non-Composite group in an XMP file (`xmp_file` is precomputed per file).
+fn suppress_value_lang(xmp_file: bool, tag: &exiftool_rs::Tag) -> bool {
+    xmp_file && tag.group.family0 != "XMP" && tag.group.family0 != "Composite"
+}
+
 fn group_for_family(tag: &exiftool_rs::Tag, family: u8) -> &str {
     match family {
         0 => &tag.group.family0,
@@ -1083,6 +1101,7 @@ fn run_stay_open(
                                     show_groups,
                                     group_family,
                                     et.options().extract_embedded == 0,
+                                    None,
                                 );
                             } else {
                                 for tag in &tags {
@@ -1340,6 +1359,7 @@ fn print_text_full(
     no_composites: bool,
     numeric: bool,
     translations: &Option<std::collections::HashMap<&str, &str>>,
+    lang: Option<&str>,
     date_format: Option<&str>,
     separator: Option<&str>,
 ) {
@@ -1361,9 +1381,24 @@ fn print_text_full(
                 if multiple && !quiet {
                     println!("======== {}", file);
                 }
+                let xmp_file = file_is_xmp(&tags);
                 for tag in &tags {
                     let val_raw = tag.display_value(numeric);
                     let mut val = sanitize_display_value(&val_raw);
+                    // Apply -lang PrintConv value translation (English print value is
+                    // the lookup key; -n numeric output has no PrintConv to localize).
+                    if !numeric && !suppress_value_lang(xmp_file, tag) {
+                        if let Some(l) = lang {
+                            if let Some(tv) = exiftool_rs::i18n::translate_value(
+                                l,
+                                &tag.group.family1,
+                                &tag.name,
+                                &val,
+                            ) {
+                                val = tv;
+                            }
+                        }
+                    }
                     // Apply -sep: replace default ", " list separator
                     if let Some(sep) = separator {
                         val = val.replace(", ", sep);
@@ -1738,17 +1773,21 @@ fn print_json_all(
     show_groups: bool,
     group_family: u8,
     dedup: bool,
+    lang: Option<&str>,
 ) {
     print!("[");
     for (idx, file) in files.iter().enumerate() {
         match et.extract_info(file) {
-            Ok(tags) => print_json_tags(&tags, file, idx > 0, show_groups, group_family, dedup),
+            Ok(tags) => {
+                print_json_tags(&tags, file, idx > 0, show_groups, group_family, dedup, lang)
+            }
             Err(e) => eprintln!("Error: {} - {}", file, e),
         }
     }
     println!("]");
 }
 
+#[allow(clippy::too_many_arguments)]
 fn print_json_tags(
     tags: &[exiftool_rs::Tag],
     filename: &str,
@@ -1756,10 +1795,12 @@ fn print_json_tags(
     show_groups: bool,
     group_family: u8,
     dedup: bool,
+    lang: Option<&str>,
 ) {
     if prepend_comma {
         print!(",");
     }
+    let xmp_file = file_is_xmp(tags);
     println!("{{");
     println!("  \"SourceFile\": \"{}\",", escape_json(filename));
     // ExifTool suppresses duplicate tag names in JSON output (`$noDups`,
@@ -1802,7 +1843,20 @@ fn print_json_tags(
             .collect()
     };
     for (i, (key, tag)) in keyed.iter().enumerate() {
-        let value_str = tag.print_value.as_str();
+        // With -lang, localize the scalar PrintConv value (ExifTool keeps the tag
+        // name as the JSON key and translates only the value). List values are
+        // per-element and not PrintConv-keyed, so they are left untranslated.
+        let translated = lang
+            .filter(|_| !suppress_value_lang(xmp_file, tag))
+            .and_then(|l| {
+                exiftool_rs::i18n::translate_value(
+                    l,
+                    &tag.group.family1,
+                    &tag.name,
+                    &tag.print_value,
+                )
+            });
+        let value_str = translated.as_deref().unwrap_or(tag.print_value.as_str());
         let comma = if i + 1 < keyed.len() { "," } else { "" };
         // ExifTool's FormatJSON prints an ARRAY-ref value as a JSON array `[...]`
         // (unless `$joinLists`, only set by -sep/-List — never in default mode).

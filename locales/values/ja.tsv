@@ -1,0 +1,2297 @@
+AEBAutoCancel	Off	オフ
+AEBAutoCancel	On	オン
+AEBSequenceAutoCancel	-,0,+/Disabled	－→0 →＋/しない
+AEBSequenceAutoCancel	-,0,+/Enabled	－→0 →＋/する
+AEBSequenceAutoCancel	0,-,+/Disabled	0 →－→＋/しない
+AEBSequenceAutoCancel	0,-,+/Enabled	0 →－→＋/する
+AELock	Off	オフ
+AELock	On	オン
+AELockButton	AE-L/AF Area	AE-L/AFエリア
+AELockButton	AE-L/AF-L/AF Area	AE-L/AF-L/AFエリア
+AELockButton	AF-L/AF Area	AF-L/AFエリア
+AELockButton	AF-ON/AF Area	AFオン/AFエリア
+AELockButton	FV Lock	FVロック
+AELockButton	Focus Area Selection	フォーカスエリア選択
+AEMeteringMode	Multi-segment	パターン
+AEProgramMode	Av, B or X	Av, BかX
+AEProgramMode	Candlelight	キャンドルライト
+AEProgramMode	DOF Program	深度優先プログラム
+AEProgramMode	DOF Program (P-Shift)	深度優先プログラム（Pシフト）
+AEProgramMode	Hi-speed Program	高速優先プログラム
+AEProgramMode	Hi-speed Program (P-Shift)	高速優先プログラム（Pシフト）
+AEProgramMode	Kids	キッズ
+AEProgramMode	Landscape	風景
+AEProgramMode	M, P or TAv	M, PかTAv
+AEProgramMode	MTF Program	MTF優先プログラム
+AEProgramMode	MTF Program (P-Shift)	MTF優先プログラム（Pシフト）
+AEProgramMode	Macro	マクロ
+AEProgramMode	Museum	ミュージアム
+AEProgramMode	Night Scene	夜景
+AEProgramMode	Night Scene Portrait	人物、夜景
+AEProgramMode	No Flash	フラッシュ無し
+AEProgramMode	Pet	ペット
+AEProgramMode	Portrait	ポートレート
+AEProgramMode	Sport	スポーツ
+AEProgramMode	Standard	スタンダード
+AEProgramMode	Sunset	夕日
+AEProgramMode	Surf & Snow	サーフ＆スノー
+AEProgramMode	Sv or Green Mode	Svかグリーンモード
+AEProgramMode	Text	テキスト
+AESetting	Exposure Compensation	露出補正
+AF-CPrioritySelection	Focus	フォーカス
+AF-CPrioritySelection	Release	レリーズ
+AF-CPrioritySelection	Release + Focus	レリーズ+フォーカス
+AF-OnForMB-D10	AE Lock (hold)	AEロック（ホールド）
+AF-OnForMB-D10	AE Lock (reset on release)	AEロック（レリーズ時リセット）
+AF-OnForMB-D10	AE Lock Only	AEロックのみ
+AF-OnForMB-D10	AE/AF Lock	AE/AFロック
+AF-OnForMB-D10	AF Lock Only	AFロックのみ
+AF-OnForMB-D10	AF-On	AFオン
+AF-OnForMB-D10	Same as FUNC Button	ファンクションボタンと同一
+AF-SPrioritySelection	Focus	フォーカス
+AF-SPrioritySelection	Release	レリーズ
+AFActivation	AF-On Only	AFオンのみ
+AFActivation	Shutter/AF-On	シャッター/AFオン
+AFAreaIllumination	Auto	オート
+AFAreaIllumination	Off	オフ
+AFAreaIllumination	On	オン
+AFAreaMode	1-area	１点
+AFAreaMode	1-area (high speed)	高速１点
+AFAreaMode	3-area (center)?	３点中央？
+AFAreaMode	3-area (left)?	３点左？
+AFAreaMode	3-area (right)?	３点右？
+AFAreaMode	5-area	５点
+AFAreaMode	Auto-area	自動エリアAF
+AFAreaMode	Dynamic Area	ダイナミックエリア
+AFAreaMode	Dynamic Area (closest subject)	ダイナミック（重点主題）
+AFAreaMode	Dynamic Area (wide)	ダイナミック（ワイド）
+AFAreaMode	Face Detect AF	顔優先
+AFAreaMode	Group Dynamic	グループダイナミック
+AFAreaMode	Normal?	ノーマル？
+AFAreaMode	Single Area	シングルポイント
+AFAreaMode	Single Area (wide)	シングルポイント（ワイド）
+AFAreaMode	Spot Focusing	スポットフォーカス
+AFAreaMode	Spot Mode On	スポットモードオン
+AFAreaModeSetting	Closest Subject	オートエリア
+AFAreaModeSetting	Dynamic Area	ダイナミックエリア
+AFAreaModeSetting	Single Area	シングルポイント
+AFAssist	Does not emit/Fires	しない/する
+AFAssist	Emits/Does not fire	する/しない
+AFAssist	Emits/Fires	する/する
+AFAssist	Off	オフ
+AFAssist	On	オン
+AFAssist	Only ext. flash emits/Fires	外部ストロボのみする/する
+AFAssistBeam	Does not emit	しない
+AFAssistBeam	Emits	する
+AFAssistBeam	Only ext. flash emits	外部ストロボのみする
+AFDuringLiveView	Disable	しない
+AFDuringLiveView	Enable	する
+AFDuringLiveView	Live mode	ライブモード
+AFDuringLiveView	Quick mode	クイックモード
+AFMicroadjustment	Adjust all by same amount	全レンズ一律調整
+AFMicroadjustment	Adjust by lens	レンズごとに調整
+AFMicroadjustment	Disable	しない
+AFOnAELockButtonSwitch	Disable	しない
+AFOnAELockButtonSwitch	Enable	する
+AFPoint	Auto AF point selection	オートAFポイント選択
+AFPoint	Bottom	下
+AFPoint	Center	中央
+AFPoint	Face Detect	顔認識
+AFPoint	Left	左
+AFPoint	Manual AF point selection	マニュアルAFポイント選択
+AFPoint	Mid-left	中央左
+AFPoint	Mid-right	中央右
+AFPoint	None	無し
+AFPoint	None (MF)	無し（MF）
+AFPoint	Right	右
+AFPoint	Top	上
+AFPointActivationArea	Standard	スタンダード
+AFPointAreaExpansion	Disable	しない
+AFPointAreaExpansion	Enable	する
+AFPointAreaExpansion	Left/right AF points	する(左右1領域アシスト有効)
+AFPointAreaExpansion	Surrounding AF points	する(周囲1領域アシスト有効)
+AFPointAutoSelection	Control-direct:disable/Main:disable	サブ電子ダイヤル直接:不可/メイン電子ダイヤル→不可
+AFPointAutoSelection	Control-direct:disable/Main:enable	サブ電子ダイヤル直接:不可/メイン電子ダイヤル→可
+AFPointAutoSelection	Control-direct:enable/Main:enable	サブ電子ダイヤル直接:可/メイン電子ダイヤル→可
+AFPointBrightness	Brighter	明るい
+AFPointBrightness	Normal	標準
+AFPointDisplayDuringFocus	Off	しない
+AFPointDisplayDuringFocus	On	する
+AFPointDisplayDuringFocus	On (when focus achieved)	する(合焦時)
+AFPointIllumination	Auto	オート
+AFPointIllumination	Off	オフ
+AFPointIllumination	On	オン
+AFPointMode	Auto	オート
+AFPointRegistration	Automatic	オート
+AFPointRegistration	Bottom	下
+AFPointRegistration	Center	中央
+AFPointRegistration	Extreme Left	左端
+AFPointRegistration	Extreme Right	右端
+AFPointRegistration	Left	左
+AFPointRegistration	Right	右
+AFPointRegistration	Top	上
+AFPointSelected	Auto	オート
+AFPointSelected	Automatic Tracking AF	自動追尾
+AFPointSelected	Bottom	下
+AFPointSelected	Center	中央
+AFPointSelected	Face Detect AF	顔認識
+AFPointSelected	Fixed Center	中央固定
+AFPointSelected	Left	左
+AFPointSelected	Lower-left	左下
+AFPointSelected	Lower-right	右下
+AFPointSelected	Mid-left	中央左
+AFPointSelected	Mid-right	中央右
+AFPointSelected	Right	右
+AFPointSelected	Top	上
+AFPointSelected	Upper-left	左上
+AFPointSelected	Upper-right	右上
+AFPointSelected2	Auto	オート
+AFPointSelection	11 Points	11点
+AFPointSelection	51 Points	51点（3Dトラッキング）
+AFPointSelectionMethod	Multi-controller direct	マルチコントローラーダイレクト
+AFPointSelectionMethod	Normal	標準
+AFPointSelectionMethod	Quick Control Dial direct	サブ電子ダイヤルダイレクト
+AFPointsInFocus	All	全て
+AFPointsInFocus	Bottom	下
+AFPointsInFocus	Bottom, Center	下+中央
+AFPointsInFocus	Bottom-center	中央下
+AFPointsInFocus	Bottom-left	左下
+AFPointsInFocus	Bottom-right	右下
+AFPointsInFocus	Center	中央
+AFPointsInFocus	Center (horizontal)	中央（水平）
+AFPointsInFocus	Center (vertical)	中央（水平）
+AFPointsInFocus	Center+Right	中央+右
+AFPointsInFocus	Fixed Center or Multiple	中央固定または複数
+AFPointsInFocus	Left	左
+AFPointsInFocus	Left+Center	左+中央
+AFPointsInFocus	Left+Right	左+右
+AFPointsInFocus	Lower-left, Bottom	左下+下
+AFPointsInFocus	Lower-left, Mid-left	左下+中央左
+AFPointsInFocus	Lower-right, Bottom	右下+下
+AFPointsInFocus	Lower-right, Mid-right	右下+中央右
+AFPointsInFocus	Mid-left	中央左
+AFPointsInFocus	Mid-left, Center	中央左+中央
+AFPointsInFocus	Mid-right	中央右
+AFPointsInFocus	Mid-right, Center	中央右+中央
+AFPointsInFocus	None	無し
+AFPointsInFocus	None (MF)	無し（MF）
+AFPointsInFocus	Right	右
+AFPointsInFocus	Top	上
+AFPointsInFocus	Top, Center	上+中央
+AFPointsInFocus	Top-center	中央上
+AFPointsInFocus	Top-left	左上
+AFPointsInFocus	Top-right	右上
+AFPointsInFocus	Upper-left, Mid-left	左上+中央左
+AFPointsInFocus	Upper-left, Top	左上+上
+AFPointsInFocus	Upper-right, Mid-right	右上+中央右
+AFPointsInFocus	Upper-right, Top	右上+上
+AFPointsUnknown2	Auto	オート
+AFPointsUsed	Bottom	下
+AFPointsUsed	Center	中央
+AFPointsUsed	Mid-left	中央左
+AFPointsUsed	Mid-right	中央右
+AFPointsUsed	Top	上
+AFSearch	Not Ready	準備ができていない
+AFSearch	Ready	準備完了
+AIServoImagePriority	1: AF, 2: Drive speed	ピント優先/撮影速度優先
+AIServoImagePriority	1: AF, 2: Tracking	ピント優先/被写体追従優先
+AIServoImagePriority	1: Release, 2: Drive speed	レリーズ優先/撮影速度最優先
+AIServoTrackingMethod	Continuous AF track priority	測距連続性優先
+AIServoTrackingMethod	Main focus point priority	測距中心優先
+AIServoTrackingSensitivity	Fast	速い
+AIServoTrackingSensitivity	Slow	遅い
+AIServoTrackingSensitivity	Standard	スタンダード
+ActiveD-Lighting	High	高い
+ActiveD-Lighting	Low	ソフト
+ActiveD-Lighting	Normal	標準
+ActiveD-Lighting	Off	オフ
+ActiveD-Lighting	On	オン
+ActiveD-LightingMode	High	高い
+ActiveD-LightingMode	Low	ソフト
+ActiveD-LightingMode	Normal	標準
+ActiveD-LightingMode	Off	オフ
+AddAspectRatioInfo	Off	オフ
+AddOriginalDecisionData	Off	オフ
+AddOriginalDecisionData	On	オン
+AdultContentWarning	Unknown	不明
+AdvancedRaw	Off	オフ
+AdvancedRaw	On	オン
+AdvancedSceneMode	Auto	インテリジェントオート
+AlphaDataDiscard	Flexbits Discarded	フレックスビット破棄
+AlphaDataDiscard	Full Resolution	完全な解像度
+AlphaDataDiscard	HighPass Frequency Data Discarded	ハイパス周波数データ破棄
+AlphaDataDiscard	Highpass and LowPass Frequency Data Discarded	ハイパスとローパス周波数データ破棄
+Anti-Blur	Off	オフ
+Anti-Blur	On (Continuous)	オン（連写）
+Anti-Blur	On (Shooting)	オン（撮影）
+Anti-Blur	n/a	該当無し
+ApertureRange	Disable	しない
+ApertureRange	Enable	する
+ApertureRingUse	Permitted	許可
+ApertureRingUse	Prohibited	禁止
+ApplyShootingMeteringMode	Disable	しない
+ApplyShootingMeteringMode	Enable	する
+AssignFuncButton	Exposure comp./AEB setting	露出補正／AEB設定
+AssignFuncButton	Image jump with main dial	メイン電子ダイヤル での画像送り
+AssignFuncButton	Image quality	記録画質選択
+AssignFuncButton	LCD brightness	液晶の明るさ
+AssignFuncButton	Live view function settings	ライブビュー機能設定
+AssistButtonFunction	Av+/- (AF point by QCD)	Av±（サブ電子：AFフレーム選択）
+AssistButtonFunction	FE lock	FEロック
+AssistButtonFunction	Normal	標準
+AssistButtonFunction	Select HP (while pressing)	HPに移動（押している間）
+AssistButtonFunction	Select Home Position	HPに移動
+Audio	No	いいえ
+Audio	Yes	はい
+AutoAperture	Off	オフ
+AutoAperture	On	オン
+AutoBracketModeM	Flash Only	フラッシュのみ
+AutoBracketModeM	Flash/Aperture	フラッシュ/絞り
+AutoBracketModeM	Flash/Speed	フラッシュ/シャッター速度
+AutoBracketModeM	Flash/Speed/Aperture	フラッシュ/シャッター速度/絞り
+AutoBracketSet	AE & Flash	自動露出＆フラッシュ
+AutoBracketSet	AE Only	自動露出のみ
+AutoBracketSet	Flash Only	フラッシュのみ
+AutoBracketSet	WB Bracketing	ホワイトバランスブラケット
+AutoBracketing	No flash & flash	フラッシュ無し＆フラッシュ有り
+AutoBracketing	Off	オフ
+AutoBracketing	On	オン
+AutoExposureBracketing	Off	オフ
+AutoExposureBracketing	On	オン
+AutoExposureBracketing	On (shot 1)	オン（ショット1）
+AutoExposureBracketing	On (shot 2)	オン（ショット2）
+AutoExposureBracketing	On (shot 3)	オン（ショット3）
+AutoFP	Off	オフ
+AutoFP	On	オン
+AutoFocus	Off	オフ
+AutoFocus	On	オン
+AutoISO	Off	オフ
+AutoISO	On	オン
+AutoLightingOptimizer	Disable	しない
+AutoLightingOptimizer	Enable	する
+AutoLightingOptimizer	Low	ソフト
+AutoLightingOptimizer	Off	オフ
+AutoLightingOptimizer	Standard	スタンダード
+AutoLightingOptimizer	Strong	強
+AutoLightingOptimizer	n/a	該当無し
+AutoLightingOptimizerOn	No	いいえ
+AutoLightingOptimizerOn	Yes	はい
+AutoRedEye	Off	オフ
+AutoRedEye	On	オン
+AutoRotate	None	無し
+AutoRotate	Rotate 180	180度回転
+AutoRotate	Rotate 270 CW	270度回転 CW
+AutoRotate	Rotate 90 CW	90度回転 CW
+AutoRotate	n/a	ソフトウェアで回転
+AvSettingWithoutLens	Disable	不可
+AvSettingWithoutLens	Enable	可
+BWMode	Off	オフ
+BWMode	On	オン
+BackgroundTiling	No	いいえ
+BackgroundTiling	Yes	はい
+BannerImageType	None	無し
+BatteryOrder	Camera Battery First	カメラのバッテリーを最初に使う
+BatteryOrder	MB-D10 First	MB-D10のバッテリーを最初に使う
+Beep	High	高い
+Beep	Low	低い
+Beep	Off	オフ
+Beep	On	オン
+BestShotMode	Off	オフ
+BlurWarning	Blur Warning	手振れ警告
+BlurWarning	None	無し
+BracketMode	Off	オフ
+BracketShotNumber	n/a	該当無し
+BracketStep	1 EV	1ステップ
+BracketStep	1/3 EV	1/3ステップ
+BracketStep	2/3 EV	2/3ステップ
+BurstMode	Auto Exposure Bracketing (AEB)	無限
+BurstMode	Infinite	無限
+BurstMode	Off	オフ
+BurstMode	On	オン
+ButtonFunctionControlOff	Disable main, Control, Multi-control	メイン電子ダイヤル、サブ電子ダイヤル、マルチコントローラーは無効
+ButtonFunctionControlOff	Normal (enable)	通常(有効)
+CCDScanMode	Interlaced	インタレース
+CCDScanMode	Progressive	プログレッシブ
+CPUType	None	無し
+CalibrationIlluminant1	Cloudy	曇り
+CalibrationIlluminant1	Cool White Fluorescent	白色蛍光灯
+CalibrationIlluminant1	Day White Fluorescent	昼白色蛍光灯
+CalibrationIlluminant1	Daylight	昼光
+CalibrationIlluminant1	Daylight Fluorescent	昼光色蛍光灯
+CalibrationIlluminant1	Fine Weather	良い天気
+CalibrationIlluminant1	Flash	ストロボ
+CalibrationIlluminant1	Fluorescent	蛍光灯
+CalibrationIlluminant1	ISO Studio Tungsten	ISOスタジオタングステン
+CalibrationIlluminant1	Other	その他の光源
+CalibrationIlluminant1	Shade	日陰
+CalibrationIlluminant1	Standard Light A	標準ライトA
+CalibrationIlluminant1	Standard Light B	標準ライトB
+CalibrationIlluminant1	Standard Light C	標準ライトC
+CalibrationIlluminant1	Tungsten (Incandescent)	タングステン(白熱灯)
+CalibrationIlluminant1	Unknown	不明
+CalibrationIlluminant1	Warm White Fluorescent	暖白光色蛍光灯
+CalibrationIlluminant1	White Fluorescent	温白色蛍光灯
+CalibrationIlluminant2	Cloudy	曇り
+CalibrationIlluminant2	Cool White Fluorescent	白色蛍光灯
+CalibrationIlluminant2	Day White Fluorescent	昼白色蛍光灯
+CalibrationIlluminant2	Daylight	昼光
+CalibrationIlluminant2	Daylight Fluorescent	昼光色蛍光灯
+CalibrationIlluminant2	Fine Weather	良い天気
+CalibrationIlluminant2	Flash	ストロボ
+CalibrationIlluminant2	Fluorescent	蛍光灯
+CalibrationIlluminant2	ISO Studio Tungsten	ISOスタジオタングステン
+CalibrationIlluminant2	Other	その他の光源
+CalibrationIlluminant2	Shade	日陰
+CalibrationIlluminant2	Standard Light A	標準ライトA
+CalibrationIlluminant2	Standard Light B	標準ライトB
+CalibrationIlluminant2	Standard Light C	標準ライトC
+CalibrationIlluminant2	Tungsten (Incandescent)	タングステン(白熱灯)
+CalibrationIlluminant2	Unknown	不明
+CalibrationIlluminant2	Warm White Fluorescent	暖白光色蛍光灯
+CalibrationIlluminant2	White Fluorescent	温白色蛍光灯
+CameraOrientation	Horizontal (normal)	水平（標準）
+CameraOrientation	Rotate 270 CW	270度回転 CW
+CameraOrientation	Rotate 90 CW	90度回転 CW
+CameraType	Compact	コンパクト
+CameraType	DV Camera	DVカメラ
+CameraType	EOS High-end	EOSハイエンド
+CameraType	EOS Mid-range	EOSミドルレンジ
+CanonExposureMode	Aperture-priority AE	絞り優先
+CanonExposureMode	Bulb	バルブ
+CanonExposureMode	Depth-of-field AE	被写界深度AE
+CanonExposureMode	Easy	簡単
+CanonExposureMode	Manual	マニュアル
+CanonExposureMode	Program AE	プログラムAE
+CanonExposureMode	Shutter speed priority AE	シャッター優先
+CanonFlashMode	Auto	オート
+CanonFlashMode	External flash	外付フラッシュ
+CanonFlashMode	Off	オフ
+CanonFlashMode	On	オン
+CanonFlashMode	Red-eye reduction	赤目軽減
+CanonFlashMode	Red-eye reduction (Auto)	赤目軽減（オート）
+CanonFlashMode	Red-eye reduction (On)	赤目軽減（オン）
+CanonFlashMode	Slow-sync	スローシンクロ
+CanonImageSize	Large	ラージ
+CanonImageSize	Medium	ミドル
+CanonImageSize	Medium 1	ミドル1
+CanonImageSize	Medium 2	ミドル2
+CanonImageSize	Medium 3	ミドル3
+CanonImageSize	Medium Movie	ミディアム動画
+CanonImageSize	Postcard	ハガキ
+CanonImageSize	Small	スモール
+CanonImageSize	Small 1	スモール1
+CanonImageSize	Small 2	スモール2
+CanonImageSize	Small 3	スモール3
+CanonImageSize	Small Movie	スモール動画
+CanonImageSize	Widescreen	ワイド画面
+CenterAFArea	Normal Zone	ノーマルゾーン
+CenterAFArea	Wide Zone	ワイドゾーン
+CenterWeightedAreaSize	Average	平均
+ChrominanceNR_TIFF_JPEG	High	高い
+ChrominanceNR_TIFF_JPEG	Low	ソフト
+ChrominanceNR_TIFF_JPEG	Off	オフ
+ChrominanceNoiseReduction	High	高い
+ChrominanceNoiseReduction	Low	ソフト
+ChrominanceNoiseReduction	Off	オフ
+ColorAberrationControl	Off	オフ
+ColorAberrationControl	On	オン
+ColorAdjustmentMode	Off	オフ
+ColorAdjustmentMode	On	オン
+ColorBalanceAdj	Off	オフ
+ColorBalanceAdj	On	オン
+ColorBoostType	Nature	自然
+ColorBoostType	People	人々
+ColorBooster	Off	オフ
+ColorBooster	On	オン
+ColorEffect	Black & White	白黒
+ColorEffect	Cool	冷色
+ColorEffect	Off	オフ
+ColorEffect	Sepia	セピア
+ColorEffect	Warm	暖色
+ColorFilter	Black & White	白黒
+ColorFilter	Blue	青
+ColorFilter	Green	緑
+ColorFilter	Off	オフ
+ColorFilter	Pink	ピンク
+ColorFilter	Purple	紫
+ColorFilter	Red	赤
+ColorFilter	Sepia	セピア
+ColorFilter	Yellow	黄色
+ColorMode	Autumn Leaves	紅葉
+ColorMode	B & W	白黒
+ColorMode	B&W	白黒
+ColorMode	Black & White	白黒
+ColorMode	Chrome	クローム
+ColorMode	Clear	クリアー
+ColorMode	Deep	ディープ
+ColorMode	Evening	夕焼け
+ColorMode	Landscape	風景
+ColorMode	Light	ライト
+ColorMode	Natural	ナチュラル
+ColorMode	Natural color	ナチュラルカラー
+ColorMode	Natural sRGB	ナチュラル sRGB
+ColorMode	Natural+ sRGB	ナチュラル+ sRGB
+ColorMode	Neutral	ニュートラル
+ColorMode	Night Portrait	人物夜景
+ColorMode	Night Scene	夜景
+ColorMode	Night View	ナイトビュー
+ColorMode	Night View/Portrait	夜景/夜景ポートレート
+ColorMode	Normal	ノーマル
+ColorMode	Off	オフ
+ColorMode	Portrait	ポートレート
+ColorMode	Sepia	セピア
+ColorMode	Solarization	ソラリゼーション
+ColorMode	Standard	スタンダード
+ColorMode	Sunset	夕日
+ColorMode	Vivid	ビビッド
+ColorMode	Vivid color	ビビッドカラー
+ColorMoireReduction	Off	オフ
+ColorMoireReduction	On	オン
+ColorMoireReductionMode	High	高い
+ColorMoireReductionMode	Low	ソフト
+ColorMoireReductionMode	Off	オフ
+ColorProfile	Embedded	埋め込み
+ColorProfile	Not Embedded	埋め込み無し
+ColorSpace	ICC Profile	ICCプロフィール
+ColorSpace	Monochrome	モノトーン
+ColorSpace	Uncalibrated	未調整
+ColorTone	Normal	標準
+CommandDials	Reversed (Main Aperture, Sub Shutter)	リバース
+CommandDials	Standard (Main Shutter, Sub Aperture)	デフォルト
+CommandDialsApertureSetting	Aperture Ring	絞りリング
+CommandDialsApertureSetting	Sub-command Dial	サブコントロールダイヤル
+CommandDialsChangeMainSub	Off	オフ
+CommandDialsChangeMainSub	On	オン
+CommandDialsMenuAndPlayback	Off	オフ
+CommandDialsMenuAndPlayback	On	オン
+CommandDialsReverseRotation	No	いいえ
+CommandDialsReverseRotation	Yes	はい
+CommanderGroupAMode	Auto Aperture	自動絞り（AA）
+CommanderGroupAMode	Manual	マニュアル
+CommanderGroupAMode	Off	オフ
+CommanderGroupBMode	Auto Aperture	自動絞り（AA）
+CommanderGroupBMode	Manual	マニュアル
+CommanderGroupBMode	Off	オフ
+CommanderInternalFlash	Manual	マニュアル
+CommanderInternalFlash	Off	オフ
+Compilation	No	いいえ
+Compilation	Yes	はい
+Compression	JPEG	JPEG圧縮率
+Compression	JPEG (old-style)	JPEG (古い形式)
+Compression	None	無し
+Compression	Uncompressed	非圧縮
+CompressionType	None	無し
+ContinuousDrive	Continuous	連続撮影
+ContinuousDrive	Continuous, High	連写（High）
+ContinuousDrive	Continuous, Low	連写（Low）
+ContinuousDrive	Continuous, Speed Priority	高速連写
+ContinuousDrive	Movie	動画
+ContinuousDrive	Single	１コマ撮影
+ContinuousShootingSpeed	Disable	しない
+ContinuousShootingSpeed	Enable	する
+ContinuousShotLimit	Disable	しない
+ContinuousShotLimit	Enable	する
+Contrast	+1 (medium high)	+1 (少し高い)
+Contrast	+2 (high)	+2 (ハード)
+Contrast	+3 (very high)	+3 (かなり高い)
+Contrast	-1 (medium low)	-1 (少し低い)
+Contrast	-2 (low)	-2 (ソフト)
+Contrast	-3 (very low)	-3 (かなり低い)
+Contrast	0 (normal)	0 (スタンダード)
+Contrast	Film Simulation	フィルムシミュレーション
+Contrast	High	ハード
+Contrast	Low	ソフト
+Contrast	Medium High	少し高い
+Contrast	Medium Low	少し低い
+Contrast	Normal	スタンダード
+ControlMode	Camera Local Control	カメラローカルコントロール
+ControlMode	Computer Remote Control	コンピュータリモートコントロール
+ControlMode	n/a	該当無し
+ConversionLens	Macro	マクロ
+ConversionLens	Off	オフ
+ConversionLens	Telephoto	テレフォト
+ConversionLens	Wide	ワイド
+CopyrightStatus	Unknown	不明
+CreativeStyle	Autumn	秋
+CreativeStyle	Autumn Leaves	紅葉
+CreativeStyle	B&W	白黒
+CreativeStyle	Clear	クリアー
+CreativeStyle	Deep	ディープ
+CreativeStyle	Landscape	風景
+CreativeStyle	Light	ライト
+CreativeStyle	Neutral	ニュートラル
+CreativeStyle	Night View/Portrait	夜景/夜景ポートレート
+CreativeStyle	Portrait	ポートレート
+CreativeStyle	Sepia	セピア
+CreativeStyle	Standard	スタンダード
+CreativeStyle	Sunset	夕日
+CreativeStyle	Vivid	ビビッド
+CropActive	No	いいえ
+CropActive	Yes	はい
+Curves	Off	オフ
+Curves	On	オン
+CustomRendered	Custom	カスタム処理
+CustomRendered	Normal	標準処理
+D-LightingHQ	Off	オフ
+D-LightingHQ	On	オン
+D-LightingHQSelected	No	いいえ
+D-LightingHQSelected	Yes	はい
+D-LightingHS	Off	オフ
+D-LightingHS	On	オン
+DECPosition	Contrast	コントラスト
+DECPosition	Exposure	露出
+DECPosition	Filter	フィルター
+DECPosition	Saturation	彩度
+DataImprint	None	無し
+DataImprint	Text	テキスト
+DateDisplayFormat	D/M/Y	日/月/年
+DateDisplayFormat	M/D/Y	月/日/年
+DateDisplayFormat	Y/M/D	年/月/日
+DateStampMode	Date	日付
+DateStampMode	Off	オフ
+DaylightSavings	No	オフ
+DaylightSavings	Yes	オン
+DestinationDST	No	いいえ
+DestinationDST	Yes	はい
+DialDirectionTvAv	Normal	通常
+DialDirectionTvAv	Reversed	設定方向を反転
+DigitalZoom	None	無し
+DigitalZoom	Off	オフ
+DigitalZoom	Other	未確認
+DigitalZoomOn	Off	オフ
+DigitalZoomOn	On	オン
+DisplaySize	Normal	標準
+DistortionCorrection	Off	オフ
+DistortionCorrection	On	オン
+DistortionCorrection2	Off	オフ
+DistortionCorrection2	On	オン
+DriveMode	Bracketing	ブラケット
+DriveMode	Burst	高速連射
+DriveMode	Continuous	連続撮影
+DriveMode	Continuous High	連射 (Hi)
+DriveMode	Continuous Shooting	連続撮影
+DriveMode	HS continuous	HS連写
+DriveMode	Interval	インターバル
+DriveMode	Multiple Exposure	複数の露出
+DriveMode	No Timer	タイマー無し
+DriveMode	Off	オフ
+DriveMode	Remote Control	リモコン
+DriveMode	Remote Control (3 s delay)	リモコン (3秒後レリーズ)
+DriveMode	Self-timer	セルフタイマー
+DriveMode	Self-timer (12 s)	セルフタイマー (12秒)
+DriveMode	Self-timer (2 s)	セルフタイマー (2秒)
+DriveMode	Self-timer Operation	セルフタイマー
+DriveMode	Shutter Button	シャッターボタン
+DriveMode	Single	１コマ撮影
+DriveMode	Single Exposure	シングル露出
+DriveMode	Single Frame	１コマ撮影
+DriveMode	Single Shot	１コマ撮影
+DriveMode	Single-frame	1コマ撮影
+DriveMode	Single-frame Shooting	１コマ撮影
+DriveMode	UHS continuous	UHS連写
+DriveMode2	Single-frame	１コマ撮影
+DynamicAFArea	21 Points	21点
+DynamicAFArea	51 Points	51点
+DynamicAFArea	51 Points (3D-tracking)	51点（3Dトラッキング）
+DynamicAFArea	9 Points	9点
+DynamicRange	Standard	スタンダード
+DynamicRange	Wide	ワイド
+DynamicRangeExpansion	Off	オフ
+DynamicRangeExpansion	On	オン
+DynamicRangeOptimizer	Advanced Auto	アドバンスオート
+DynamicRangeOptimizer	Advanced Lv1	アドバンスLv1
+DynamicRangeOptimizer	Advanced Lv2	アドバンスLv2
+DynamicRangeOptimizer	Advanced Lv3	アドバンスLv3
+DynamicRangeOptimizer	Advanced Lv4	アドバンスLv4
+DynamicRangeOptimizer	Advanced Lv5	アドバンスLv5
+DynamicRangeOptimizer	Auto	オート
+DynamicRangeOptimizer	Off	オフ
+DynamicRangeOptimizer	Standard	スタンダード
+E-DialInProgram	P Shift	Pシフト
+E-DialInProgram	Tv or Av	TvかAv
+ETTLII	Average	平均
+ETTLII	Evaluative	評価
+EVStepSize	1/2 EV	1/2ステップ
+EVStepSize	1/3 EV	1/3ステップ
+EVSteps	1/2 EV Steps	1/2 EVステップ
+EVSteps	1/3 EV Steps	1/3 EVステップ
+EasyExposureCompensation	Off	オフ
+EasyExposureCompensation	On	オン
+EasyExposureCompensation	On (auto reset)	オン（自動リセット）
+EasyMode	Aquarium	水族館
+EasyMode	Beach	ビーチ
+EasyMode	Black & White	白黒
+EasyMode	Color Accent	カラーアクセント
+EasyMode	Color Swap	スイッチカラー
+EasyMode	Digital Macro	デジタルマクロ
+EasyMode	Fast shutter	高速シャッター
+EasyMode	Fireworks	花火
+EasyMode	Flash Off	フラッシュオフ
+EasyMode	Foliage	葉
+EasyMode	Full auto	フルオート
+EasyMode	Gray Scale	グレースケール
+EasyMode	ISO 3200	ISO3200
+EasyMode	Indoor	室内
+EasyMode	Kids & Pets	キッズ＆ペット
+EasyMode	Landscape	風景
+EasyMode	Long Shutter	長秒シャッター
+EasyMode	Macro	マクロ
+EasyMode	Manual	マニュアル
+EasyMode	My Colors	ワンポイントカラー
+EasyMode	Neutral	ニュートラル
+EasyMode	Night	夜景
+EasyMode	Night Scene	夜景
+EasyMode	Night Snapshot	ナイトスナップ
+EasyMode	Pan focus	パンフォーカス
+EasyMode	Portrait	ポートレート
+EasyMode	Sepia	セピア
+EasyMode	Slow shutter	スローシャッター
+EasyMode	Snow	スノー
+EasyMode	Sports	スポーツ
+EasyMode	Still Image	静止画像
+EasyMode	Sunset	夕焼け
+EasyMode	Super Macro	スーパーマクロ
+EasyMode	Underwater	水中
+EasyMode	Vivid	ビビッド
+EdgeNoiseReduction	Off	オフ
+EdgeNoiseReduction	On	オン
+EditorialUpdate	Additional language	追加言語
+Emphasis	None	無し
+EnhanceDarkTones	Off	オフ
+EnhanceDarkTones	On	オン
+Enhancement	Blue	青
+Enhancement	Flesh Tones	肌調
+Enhancement	Green	緑
+Enhancement	Off	オフ
+Enhancement	Red	赤
+EnvelopePriority	0 (reserved)	0 (将来拡張用)
+EnvelopePriority	1 (most urgent)	1 (高い緊急性)
+EnvelopePriority	5 (normal urgency)	5 (普通の緊急性)
+EnvelopePriority	8 (least urgent)	8 (低い緊急性)
+EnvelopePriority	9 (user-defined priority)	9 (ユーザ定義優先度)
+ExposureCompStepSize	1 EV	1ステップ
+ExposureCompStepSize	1/2 EV	1/2ステップ
+ExposureCompStepSize	1/3 EV	1/3ステップ
+ExposureControlStepSize	1 EV	1ステップ
+ExposureControlStepSize	1/2 EV	1/2ステップ
+ExposureControlStepSize	1/3 EV	1/3ステップ
+ExposureDelayMode	Off	オフ
+ExposureDelayMode	On	オン
+ExposureLevelIncrements	1-stop set, 1/3-stop comp.	設定1 露出補正1/3
+ExposureLevelIncrements	1/2 Stop	1/2ステップ
+ExposureLevelIncrements	1/2-stop set, 1/2-stop comp.	設定1/2 露出補正1/2
+ExposureLevelIncrements	1/3 Stop	1/3ステップ
+ExposureLevelIncrements	1/3-stop set, 1/3-stop comp.	設定1/3 露出補正1/3
+ExposureMode	Aperture Priority	絞り優先
+ExposureMode	Aperture-priority AE	絞り優先
+ExposureMode	Auto	自動露出
+ExposureMode	Auto bracket	オートブラケット
+ExposureMode	Bulb	バルブ
+ExposureMode	Landscape	風景
+ExposureMode	Manual	マニュアル露出
+ExposureMode	Night Scene / Twilight	夜景
+ExposureMode	Portrait	ポートレート
+ExposureMode	Program	プログラム
+ExposureMode	Program AE	プログラムAE
+ExposureMode	Program-shift	プログラムシフト
+ExposureMode	Shutter Priority	シャッター優先
+ExposureMode	Shutter speed priority AE	シャッター優先
+ExposureMode	n/a	未設定
+ExposureModeInManual	Center-weighted average	中央重点
+ExposureModeInManual	Evaluative metering	評価測光
+ExposureModeInManual	Partial metering	部分
+ExposureModeInManual	Specified metering mode	設定測光モード
+ExposureModeInManual	Spot metering	スポット
+ExposureProgram	Action (High speed)	スポーツモード(高速シャッター優先)
+ExposureProgram	Aperture Priority	絞り優先
+ExposureProgram	Aperture-priority AE	絞り優先
+ExposureProgram	Bulb	バルブ
+ExposureProgram	Creative (Slow speed)	クリエイティブプログラム(被写界深度優先)
+ExposureProgram	Landscape	風景モード
+ExposureProgram	Manual	マニュアル
+ExposureProgram	Not Defined	未定義
+ExposureProgram	Portrait	ポートレートモード
+ExposureProgram	Program	プログラム
+ExposureProgram	Program AE	ノーマルプログラム
+ExposureProgram	Shutter Priority	シャッター優先
+ExposureProgram	Shutter speed priority AE	シャッター優先
+ExposureWarning	Bad exposure	露出失敗
+ExposureWarning	Good	適正
+ExtendedWBDetect	Off	オフ
+ExtendedWBDetect	On	オン
+ExternalFlash	Off	オフ
+ExternalFlash	On	オン
+ExternalFlashBounce	Bounce	バウンス
+ExternalFlashBounce	Bounce or Off	バウンスかオフ
+ExternalFlashBounce	Direct	ダイレクト
+ExternalFlashBounce	No	いいえ
+ExternalFlashBounce	Yes	はい
+ExternalFlashBounce	n/a	該当無し
+ExternalFlashExposureComp	n/a	未設定（オフかオートモード）
+ExternalFlashExposureComp	n/a (Manual Mode)	未設定（マニュアルモード）
+ExternalFlashMode	Off	オフ
+ExternalFlashMode	On, Auto	オン、オート
+ExternalFlashMode	On, Contrast-control Sync	オン、光量比制御シンクロ
+ExternalFlashMode	On, Flash Problem	オン、フラッシュの問題？
+ExternalFlashMode	On, High-speed Sync	オン、ハイスピードシンクロ
+ExternalFlashMode	On, Manual	オン、マニュアル
+ExternalFlashMode	On, P-TTL Auto	オン、P-TTLオート
+ExternalFlashMode	On, Wireless	オン、ワイヤレス
+ExternalFlashMode	On, Wireless, High-speed Sync	オン、ワイヤレス、ハイスピードシンクロ
+ExternalFlashMode	n/a - Off-Auto-Aperture	該当なし-自動絞りオフ
+FaceDetect	Off	オフ
+FaceDetect	On	オン
+FaceOrientation	Horizontal (normal)	水平（標準）
+FaceOrientation	Rotate 180	180度回転
+FaceOrientation	Rotate 270 CW	270度回転 CW
+FaceOrientation	Rotate 90 CW	90度回転 CW
+FastSeek	No	いいえ
+FastSeek	Yes	はい
+FaxProfile	Unknown	不明
+FileNumberMemory	Off	オフ
+FileNumberMemory	On	オン
+FileNumberSequence	Off	オフ
+FileNumberSequence	On	オン
+FileSource	Digital Camera	デジタルカメラ
+FileSource	Film Scanner	フィルムスキャナー
+FileSource	Reflection Print Scanner	反射印刷スキャナー
+FillFlashAutoReduction	Disable	しない
+FillFlashAutoReduction	Enable	する
+FillOrder	Normal	標準
+FilmMode	Dynamic (B&W)	ダイナミック（白黒）
+FilmMode	Dynamic (color)	ダイナミック（カラー）
+FilmMode	Nature (color)	ナチュラル（カラー）
+FilmMode	Smooth (B&W)	滑らか（白黒）
+FilmMode	Smooth (color)	滑らか（カラー）
+FilmMode	Standard (B&W)	スタンダード（白黒）
+FilmMode	Standard (color)	スタンダード（カラー）
+Filter	Off	オフ
+FilterEffect	Green	緑
+FilterEffect	None	無し
+FilterEffect	Off	オフ
+FilterEffect	Orange	オレンジ
+FilterEffect	Red	赤
+FilterEffect	Yellow	黄色
+FilterEffect	n/a	該当無し
+FilterEffectMonochrome	Green	緑
+FilterEffectMonochrome	None	無し
+FilterEffectMonochrome	Orange	オレンジ
+FilterEffectMonochrome	Red	赤
+FilterEffectMonochrome	Yellow	黄色
+FinderDisplayDuringExposure	Off	オフ
+FinderDisplayDuringExposure	On	オン
+Flash	Auto, Did not fire	フラッシュ未発光、オートモード
+Flash	Auto, Did not fire, Red-eye reduction	オート、フラッシュ未発光、赤目軽減モード
+Flash	Auto, Fired	フラッシュ発光、オートモード
+Flash	Auto, Fired, Red-eye reduction	フラッシュ発光、オートモード、赤目軽減モード
+Flash	Auto, Fired, Red-eye reduction, Return detected	フラッシュ発光、オートモード、ストロボ光検知、赤目軽減モード
+Flash	Auto, Fired, Red-eye reduction, Return not detected	フラッシュ発光、オートモード、ストロボ光未検知、赤目軽減モード
+Flash	Auto, Fired, Return detected	フラッシュ発光、オートモード、ストロボ光検知
+Flash	Auto, Fired, Return not detected	フラッシュ発光、オートモード、ストロボ光未検知
+Flash	Did not fire	フラッシュ未発光
+Flash	Fired	フラッシュ発光
+Flash	Fired, Red-eye reduction	フラッシュ発光、赤目軽減モード
+Flash	Fired, Red-eye reduction, Return detected	フラッシュ発光、赤目軽減モード、ストロボ光検知
+Flash	Fired, Red-eye reduction, Return not detected	フラッシュ発光、赤目軽減モード、ストロボ光未検知
+Flash	Fired, Return detected	ストロボ光検知
+Flash	Fired, Return not detected	ストロボ光未検知
+Flash	No Flash	フラッシュ未発光
+Flash	No flash function	フラッシュ機能無し
+Flash	Off	オフ
+Flash	Off, Did not fire	フラッシュ未発光、強制発光モード
+Flash	Off, Did not fire, Return not detected	オフ、フラッシュ未発光、ストロボ光未検知
+Flash	Off, No flash function	オフ、フラッシュ機能無し
+Flash	Off, Red-eye reduction	オフ、赤目軽減モード
+Flash	On	オン
+Flash	On, Did not fire	オン、フラッシュ未発光
+Flash	On, Fired	フラッシュ発光、強制発光モード
+Flash	On, Red-eye reduction	フラッシュ発光、強制発光モード、赤目軽減モード
+Flash	On, Red-eye reduction, Return detected	フラッシュ発光、強制発光モード、赤目軽減モード、ストロボ光検知
+Flash	On, Red-eye reduction, Return not detected	フラッシュ発光、強制発光モード、赤目軽減モード、ストロボ光未検知
+Flash	On, Return detected	フラッシュ発光、強制発光モード、ストロボ光検知
+Flash	On, Return not detected	フラッシュ発光、強制発光モード、ストロボ光未検知
+FlashCommanderMode	Off	オフ
+FlashCommanderMode	On	オン
+FlashControlMode	Auto Aperture	自動絞り（AA）
+FlashControlMode	Manual	マニュアル
+FlashControlMode	Off	オフ
+FlashControlMode	Repeating Flash	リピーティングフラッシュ
+FlashDevice	External	外付け
+FlashDevice	Internal	内蔵
+FlashDevice	Internal + External	内蔵+外付け
+FlashDevice	None	無し
+FlashExposureLock	Off	オフ
+FlashExposureLock	On	オン
+FlashFired	No	いいえ
+FlashFired	Yes	はい
+FlashFiring	Does not fire	しない
+FlashFiring	Fires	する
+FlashGroupAControlMode	Auto Aperture	自動絞り（AA）
+FlashGroupAControlMode	Manual	マニュアル
+FlashGroupAControlMode	Off	オフ
+FlashGroupAControlMode	Repeating Flash	リピーティングフラッシュ
+FlashGroupBControlMode	Auto Aperture	自動絞り（AA）
+FlashGroupBControlMode	Manual	マニュアル
+FlashGroupBControlMode	Off	オフ
+FlashGroupBControlMode	Repeating Flash	リピーティングフラッシュ
+FlashGroupCControlMode	Auto Aperture	自動絞り（AA）
+FlashGroupCControlMode	Manual	マニュアル
+FlashGroupCControlMode	Off	オフ
+FlashGroupCControlMode	Repeating Flash	リピーティングフラッシュ
+FlashIntensity	High	高い
+FlashIntensity	Low	低い
+FlashIntensity	Normal	標準
+FlashIntensity	Strong	強い
+FlashIntensity	Weak	弱い
+FlashMode	Auto	オート
+FlashMode	Auto, Did not fire	オート、発光無し
+FlashMode	Auto, Did not fire, Red-eye reduction	オート、発光無し、赤目軽減
+FlashMode	Auto, Fired	オート、発光
+FlashMode	Auto, Fired, Red-eye reduction	オート、発光、赤目軽減
+FlashMode	Did Not Fire	発光禁止
+FlashMode	External, Auto	外付、オート
+FlashMode	External, Contrast-control Sync	外付、光量比制御シンクロ
+FlashMode	External, Flash Problem	外付、フラッシュの問題?
+FlashMode	External, High-speed Sync	外付、ハイスピードシンクロ
+FlashMode	External, Manual	外付、マニュアル
+FlashMode	External, P-TTL Auto	外付、P-TTL自動調光
+FlashMode	External, Wireless	外付、ワイヤレス
+FlashMode	External, Wireless, High-speed Sync	外付、ワイヤレス、ハイスピードシンクロ
+FlashMode	Fill flash	強制発光
+FlashMode	Fired, Commander Mode	発光、コマンダーモード
+FlashMode	Fired, External	発光、外付
+FlashMode	Fired, Manual	発光、マニュアル
+FlashMode	Fired, TTL Mode	発光、TTLモード
+FlashMode	Internal	内蔵
+FlashMode	Normal	標準
+FlashMode	Off	オフ
+FlashMode	Off, Did not fire	オフ
+FlashMode	Off?	オフ？
+FlashMode	On	オン
+FlashMode	On, Did not fire	オン、発光無し
+FlashMode	On, Fired	オン
+FlashMode	On, Red-eye reduction	オン、赤目軽減
+FlashMode	On, Slow-sync	オン、スローシンクロ
+FlashMode	On, Slow-sync, Red-eye reduction	オン、スローシンクロ、赤目軽減
+FlashMode	On, Soft	オン、ソフト
+FlashMode	On, Trailing-curtain Sync	オン、後幕シンクロ
+FlashMode	On, Wireless (Control)	オン、ワイヤレス (コントロール)
+FlashMode	On, Wireless (Master)	オン、ワイヤレス (マスター)
+FlashMode	Rear flash sync	リアフラッシュシンクロ
+FlashMode	Red-eye Reduction	赤目軽減
+FlashMode	Red-eye reduction	赤目軽減
+FlashMode	Unknown	不明
+FlashMode	Wireless	ワイヤレス
+FlashMode	n/a - Off-Auto-Aperture	該当なし-自動絞りオフ
+FlashModel	None	無し
+FlashOptions	Auto	オート
+FlashOptions	Auto, Red-eye reduction	オート、赤目軽減
+FlashOptions	Normal	標準
+FlashOptions	Red-eye reduction	赤目軽減
+FlashOptions	Slow-sync	スローシンクロ
+FlashOptions	Slow-sync, Red-eye reduction	スローシンクロ、赤目軽減
+FlashOptions	Trailing-curtain Sync	後幕シンクロ
+FlashOptions	Wireless (Control)	ワイヤレス（コントロール発光）
+FlashOptions	Wireless (Master)	ワイヤレス（マスター発光）
+FlashOptions2	Auto	オート
+FlashOptions2	Auto, Red-eye reduction	オート、赤目軽減
+FlashOptions2	Normal	標準
+FlashOptions2	Red-eye reduction	赤目軽減
+FlashOptions2	Slow-sync	スローシンクロ
+FlashOptions2	Slow-sync, Red-eye reduction	スローシンクロ、赤目軽減
+FlashOptions2	Trailing-curtain Sync	後幕シンクロ
+FlashOptions2	Wireless (Control)	ワイヤレス（コントロール発光）
+FlashOptions2	Wireless (Master)	ワイヤレス（マスター発光）
+FlashStatus	External, Did not fire	外付、未発光
+FlashStatus	External, Fired	外付、発光
+FlashStatus	Internal, Did not fire	内蔵、未発光
+FlashStatus	Internal, Fired	内蔵、発光
+FlashStatus	Off	オフ
+FlashSyncSpeedAv	1/200 Fixed	1/200秒固定
+FlashSyncSpeedAv	1/250 Fixed	1/250秒固定
+FlashSyncSpeedAv	1/300 Fixed	1/300秒固定
+FlashSyncSpeedAv	Auto	オート
+FlashType	E-System	E-システム
+FlashType	None	無し
+FlashType	Simple E-System	シンプルE-システム
+FlashWarning	Off	オフ
+FlashWarning	On	オン
+FlickerReduce	Off	オフ
+FlickerReduce	On	オン
+FlipHorizontal	No	いいえ
+FlipHorizontal	Yes	はい
+FocalPlaneResolutionUnit	None	無し
+FocalPlaneResolutionUnit	inches	インチ
+FocalType	Fixed	固定
+FocalType	Zoom	ズーム
+Focus	Manual	マニュアル
+FocusAreaSelection	No Wrap	ノーラップ
+FocusAreaSelection	Wrap	ラップ
+FocusContinuous	Continuous	連続
+FocusContinuous	Manual	マニュアル
+FocusContinuous	Single	シングル
+FocusMode	AI Focus AF	AIフォーカスAF
+FocusMode	AI Servo AF	AIサーボAF
+FocusMode	Auto	オート
+FocusMode	Auto, Continuous	オート、コンティニュアス
+FocusMode	Auto, Focus button	オート、フォーカスボタン
+FocusMode	Continuous	連写
+FocusMode	Continuous AF	コンティニュアスAF
+FocusMode	Custom	カスタム
+FocusMode	Infinity	無限遠
+FocusMode	Macro	マクロ
+FocusMode	Macro (1)	マクロ(1)
+FocusMode	Macro (2)	マクロ(2)
+FocusMode	Manual	マニュアル
+FocusMode	Manual Focus (3)	マニュアルフォーカス(3)
+FocusMode	Manual Focus (6)	マニュアルフォーカス(6)
+FocusMode	Multi AF	マルチAF
+FocusMode	Normal	標準
+FocusMode	One-shot AF	ワンショットAF
+FocusMode	Pan Focus	パンフォーカス
+FocusMode	Sequential shooting AF	シーケンシャルシューティングAF
+FocusMode	Single	シングル
+FocusMode	Single AF	シングルAF
+FocusMode	Super Macro	スーパーマクロ
+FocusModeSetting	Manual	マニュアル
+FocusPointWrap	No Wrap	ノーラップ
+FocusPointWrap	Wrap	ラップ
+FocusProcess	AF Not Used	AF未使用
+FocusProcess	AF Used	AF使用
+FocusRange	Auto	オート
+FocusRange	Close	近景
+FocusRange	Far Range	遠景
+FocusRange	Infinity	無限遠
+FocusRange	Macro	マクロ
+FocusRange	Manual	マニュアル
+FocusRange	Middle Range	中間範囲
+FocusRange	Normal	ノーマル
+FocusRange	Not Known	不明
+FocusRange	Pan Focus	パンフォーカス
+FocusRange	Super Macro	スーパーマクロ
+FocusRange	Very Close	近接
+FocusTrackingLockOn	Long	ロング
+FocusTrackingLockOn	Normal	標準
+FocusTrackingLockOn	Off	オフ
+FocusTrackingLockOn	Short	ショート
+FocusWarning	Good	ジャスピン
+FocusWarning	Out of focus	ピンボケ
+FujiFlashMode	Auto	オート
+FujiFlashMode	External	外付フラッシュ
+FujiFlashMode	Off	オフ
+FujiFlashMode	On	オン
+FujiFlashMode	Red-eye reduction	赤目軽減
+FunctionButton	AF-area Mode	AFエリアモード
+FunctionButton	Center AF Area	中央AFエリア
+FunctionButton	Center-weighted	中央重点測光
+FunctionButton	FV Lock	FVロック
+FunctionButton	Flash Off	フラッシュオフ
+FunctionButton	Framing Grid	フレーミンググリッド
+FunctionButton	ISO Display	ISO表示
+FunctionButton	Matrix Metering	分割測光
+FunctionButton	Spot Metering	スポット測光
+GPSAltitudeRef	Above Sea Level	海水面
+GPSAltitudeRef	Below Sea Level	参照海水面(負の値)
+GPSDestBearingRef	Magnetic North	磁気の方向
+GPSDestBearingRef	True North	正常な方向
+GPSDestDistanceRef	Kilometers	キロメートル
+GPSDestDistanceRef	Miles	マイル
+GPSDestDistanceRef	Nautical Miles	ノット
+GPSDestLatitudeRef	North	北緯
+GPSDestLatitudeRef	South	南緯
+GPSDestLongitudeRef	East	東経
+GPSDestLongitudeRef	West	西経
+GPSDifferential	Differential Corrected	誤差修正あり
+GPSDifferential	No Correction	誤差修正無し
+GPSImgDirectionRef	Magnetic North	磁気の方向
+GPSImgDirectionRef	True North	本当の方向
+GPSLatitudeRef	North	北緯
+GPSLatitudeRef	South	南緯
+GPSLongitudeRef	East	東経
+GPSLongitudeRef	West	西経
+GPSMeasureMode	2-D	２次元測定
+GPSMeasureMode	2-Dimensional	２次元測定
+GPSMeasureMode	2-Dimensional Measurement	２次元測定
+GPSMeasureMode	3-D	３次元測定
+GPSMeasureMode	3-Dimensional	３次元測定
+GPSMeasureMode	3-Dimensional Measurement	３次元測定
+GPSSpeedRef	km/h	時速(km)
+GPSSpeedRef	knots	ノット
+GPSSpeedRef	mph	時速(マイル)
+GPSStatus	Measurement Active	測定アクティブ
+GPSStatus	Measurement Void	測定無効
+GPSTrackRef	Magnetic North	磁気の方向
+GPSTrackRef	True North	本当の方向
+GainControl	High gain down	高いゲインダウン
+GainControl	High gain up	高いゲインアップ
+GainControl	Low gain down	低いゲインダウン
+GainControl	Low gain up	低いゲインアップ
+GainControl	None	無し
+Gapless	No	いいえ
+Gapless	Yes	はい
+GrayResponseUnit	0.0001	単位の数は1000を表す
+GrayResponseUnit	0.001	単位の数は100を表す
+GrayResponseUnit	0.1	単位の数は10を表す
+GrayResponseUnit	1e-05	単位の数は10-1000を表す
+GrayResponseUnit	1e-06	単位の数は100-1000を表す
+GridDisplay	Off	オフ
+GridDisplay	On	オン
+HDR	Off	切
+HighISONoiseReduction	+2 (strong)	+2 (強)
+HighISONoiseReduction	-2 (weak)	-2 (弱)
+HighISONoiseReduction	-4 (weakest)	-4 (微弱)
+HighISONoiseReduction	Auto	オート
+HighISONoiseReduction	High	高い
+HighISONoiseReduction	Low	ソフト
+HighISONoiseReduction	Minimal	最小
+HighISONoiseReduction	Normal	標準
+HighISONoiseReduction	Off	オフ
+HighISONoiseReduction	On	オン
+HighISONoiseReduction	Standard	スタンダード
+HighISONoiseReduction	Strong	強
+HighISONoiseReduction	Weak	弱
+HighISONoiseReduction	Weakest	微弱
+HighlightTonePriority	Disable	しない
+HighlightTonePriority	Enable	する
+HighlightTonePriority	Off	オフ
+HighlightTonePriority	On	オン
+HometownDST	No	いいえ
+HometownDST	Yes	はい
+ISOExpansion	Off	オフ
+ISOExpansion	On	オン
+ISOExpansion2	Off	オフ
+ISOSetting	Auto	オート
+ISOSetting	Manual	マニュアル
+ISOSpeedExpansion	No	いいえ
+ISOSpeedExpansion	Yes	はい
+ISOSpeedIncrements	1 Stop	1ステップ
+ISOSpeedIncrements	1/3 Stop	1/3ステップ
+ISOSpeedRange	Disable	しない
+ISOSpeedRange	Enable	する
+ISOStepSize	1 EV	1ステップ
+ISOStepSize	1/2 EV	1/2ステップ
+ISOStepSize	1/3 EV	1/3ステップ
+Illumination	Off	オフ
+Illumination	On	オン
+ImageAuthentication	Off	オフ
+ImageAuthentication	On	オン
+ImageDataDiscard	Flexbits Discarded	フレックスビット破棄
+ImageDataDiscard	Full Resolution	完全な解像度
+ImageDataDiscard	HighPass Frequency Data Discarded	ハイパス周波数データ破棄
+ImageDataDiscard	Highpass and LowPass Frequency Data Discarded	ハイパスとローパス周波数データ破棄
+ImageDustOff	Off	オフ
+ImageDustOff	On	オン
+ImageEditing	Cropped	クロップ
+ImageEditing	Digital Filter	デジタルフィルター
+ImageEditing	Frame Synthesis?	フレーム合成？
+ImageEditing	None	未処理
+ImageOrientation	Landscape	ランドスケープ
+ImageOrientation	Portrait	ポートレート
+ImageOrientation	Square	正方形
+ImageQuality	High	高い
+ImageQuality	Motion Picture	動画
+ImageQuality	Normal	標準
+ImageReview	Off	オフ
+ImageReview	On	オン
+ImageRotated	No	いいえ
+ImageRotated	Yes	はい
+ImageStabilization	Best Shot	ベストショット
+ImageStabilization	Off	オフ
+ImageStabilization	On	オン
+ImageStabilization	On, Mode 1	オン、モード１
+ImageStabilization	On, Mode 2	オン、モード２
+ImageTone	Bright	鮮やか
+ImageTone	Landscape	風景
+ImageTone	Monochrome	モノトーン
+ImageTone	Natural	ナチュラル
+ImageTone	Portrait	ポートレート
+ImageTone	Vibrant	雅(MIYABI)
+InfoButtonWhenShooting	Displays camera settings	カメラ設定内容を表示
+InfoButtonWhenShooting	Displays shooting functions	撮影機能の設定状態を表示
+InitialZoomSetting	High Magnification	高い拡大
+InitialZoomSetting	Low Magnification	低い拡大
+InitialZoomSetting	Medium Magnification	中間拡大
+IntensityStereo	Off	オフ
+IntensityStereo	On	オン
+InternalFlash	Commander Mode	コマンダーモード
+InternalFlash	Fired	フラッシュ発光
+InternalFlash	Manual	マニュアル
+InternalFlash	No	フラッシュ未発光
+InternalFlash	Off	オフ
+InternalFlash	On	オン
+InternalFlash	Repeating Flash	リピーティングフラッシュ
+InternalFlashMode	Did not fire, (Unknown 0xf4)	オフ（未確認 0xF4?）
+InternalFlashMode	Did not fire, Auto	オフ、オート
+InternalFlashMode	Did not fire, Auto, Red-eye reduction	オフ、オート、赤目軽減
+InternalFlashMode	Did not fire, Normal	オフ、標準
+InternalFlashMode	Did not fire, Red-eye reduction	オフ、赤目軽減
+InternalFlashMode	Did not fire, Slow-sync	オフ、スローシンクロ
+InternalFlashMode	Did not fire, Slow-sync, Red-eye reduction	オフ、スローシンクロ、赤目軽減
+InternalFlashMode	Did not fire, Trailing-curtain Sync	オフ、後幕シンクロ
+InternalFlashMode	Did not fire, Wireless (Control)	オフ、ワイヤレス（コントロール発光）
+InternalFlashMode	Did not fire, Wireless (Master)	オフ、ワイヤレス（マスター発光）
+InternalFlashMode	Fired	オン
+InternalFlashMode	Fired, Auto	オン、オート
+InternalFlashMode	Fired, Auto, Red-eye reduction	オン、オート、赤目軽減
+InternalFlashMode	Fired, Red-eye reduction	オン、赤目軽減
+InternalFlashMode	Fired, Slow-sync	オン、スローシンクロ
+InternalFlashMode	Fired, Slow-sync, Red-eye reduction	オン、スローシンクロ、赤目軽減
+InternalFlashMode	Fired, Trailing-curtain Sync	オン、後幕シンクロ
+InternalFlashMode	Fired, Wireless (Control)	オン、ワイヤレス（コントロール発光）
+InternalFlashMode	Fired, Wireless (Master)	オン、ワイヤレス（マスター発光）
+InternalFlashMode	n/a - Off-Auto-Aperture	該当なし-自動絞りオフ
+InteropIndex	R03 - DCF option file (Adobe RGB)	R03: DCFオプションファイル(Adobe RGB)
+InteropIndex	R98 - DCF basic file (sRGB)	R98: DCF基本ファイル(sRGB)
+InteropIndex	THM - DCF thumbnail file	THM: DCFサムネイルファイル
+JPEGQuality	Extra Fine	エクストラファイン
+JPEGQuality	Fine	ファイン
+JPEGQuality	Standard	ノーマル
+JPEGQuality	n/a	未設定
+LCDDisplayAtPowerOn	Display	点灯
+LCDDisplayAtPowerOn	Retain power off status	電源〈OFF〉時の状態を保持
+LCDDisplayReturnToShoot	Also with * etc.	*ボタンなどでも復帰
+LCDDisplayReturnToShoot	With Shutter Button only	シャッターボタンでのみ復帰
+LCDIllumination	Off	オフ
+LCDIllumination	On	オン
+LCDIlluminationDuringBulb	Off	オフ
+LCDIlluminationDuringBulb	On	オン
+LCHEditor	Off	オフ
+LCHEditor	On	オン
+LensAFStopButton	AE lock	AEロック
+LensAFStopButton	AE lock while metering	AEロック(タイマー中)
+LensAFStopButton	AF Stop	AFストップ
+LensAFStopButton	AF point: M->Auto/Auto->ctr	測距点 任意→自動/自動→中央
+LensAFStopButton	AF start	AFスタート
+LensAFStopButton	AF stop	AFストップ
+LensAFStopButton	IS start	手ブレ補正機能作動
+LensAFStopButton	One Shot <-> AI servo	ワンショット/AIサーボ
+LensAFStopButton	Switch to registered AF point	登録AFフレームへの切り換え
+LensDriveNoAF	Focus search off	駆動しない
+LensDriveNoAF	Focus search on	サーチ駆動する
+LicenseType	Unknown	不明
+LightSource	Cloudy	曇り
+LightSource	Cool White Fluorescent	白色蛍光灯
+LightSource	Custom 1-4	カスタム1-4
+LightSource	Day White Fluorescent	昼白色蛍光灯
+LightSource	Daylight	昼光
+LightSource	Daylight Fluorescent	昼光色蛍光灯
+LightSource	Fine Weather	良い天気
+LightSource	Flash	ストロボ
+LightSource	Fluorescent	蛍光灯
+LightSource	ISO Studio Tungsten	ISOスタジオタングステン
+LightSource	Other	その他の光源
+LightSource	Shade	日陰
+LightSource	Standard Light A	標準ライトA
+LightSource	Standard Light B	標準ライトB
+LightSource	Standard Light C	標準ライトC
+LightSource	Tungsten (Incandescent)	タングステン(白熱灯)
+LightSource	Unknown	不明
+LightSource	Warm White Fluorescent	暖白光色蛍光灯
+LightSource	White Fluorescent	温白色蛍光灯
+LightSourceSpecial	Off	オフ
+LightSourceSpecial	On	オン
+Lit	No	いいえ
+Lit	Yes	はい
+LiveViewExposureSimulation	Disable (LCD auto adjust)	しない(適正表示)
+LiveViewExposureSimulation	Enable (simulates exposure)	する(撮影露出イメージ表示)
+LiveViewShooting	Off	オフ
+LiveViewShooting	On	オン
+LockMicrophoneButton	Protect (hold:record memo)	プロテクト(長押しで録音)
+LockMicrophoneButton	Record memo (protect:disable)	録音(プロテクト不可)
+LongExposureNoiseReduction	Auto	オート
+LongExposureNoiseReduction	Off	オフ
+LongExposureNoiseReduction	On	オン
+LongExposureNoiseReduction	n/a	未設定
+LoopStyle	Normal	標準
+LuminanceNoiseReduction	High	高い
+LuminanceNoiseReduction	Low	ソフト
+LuminanceNoiseReduction	Off	オフ
+MSStereo	Off	オフ
+MSStereo	On	オン
+Macro	Macro	マクロ
+Macro	Manual	マニュアル
+Macro	Normal	標準
+Macro	Off	オフ
+Macro	On	オン
+Macro	Super Macro	スーパーマクロ
+Macro	n/a	未設定
+MacroMode	Macro	マクロ
+MacroMode	Normal	ノーマル
+MacroMode	Off	オフ
+MacroMode	On	オン
+MacroMode	Super Macro	スーパーマクロ
+MacroMode	Tele-Macro	テレマクロ
+MagnifiedView	Image playback only	再生時のみ
+MagnifiedView	Image review and playback	撮影直後と再生時
+MainDialExposureComp	Off	オフ
+MainDialExposureComp	On	オン
+MakerNoteSafety	Safe	安全
+MakerNoteSafety	Unsafe	危険
+ManualFlashOutput	Low	ソフト
+ManualFlashOutput	n/a	該当無し
+ManualTv	Tv=Control/Av=Main	Tv値=サブ電子ダイヤル/Av値=メイン電子ダイヤル
+ManualTv	Tv=Main/Av=Control	Tv値=メイン電子ダイヤル/Av値=サブ電子ダイヤル
+MediaType	Movie	動画
+MediaType	Normal	標準
+MenuButtonDisplayPosition	Previous	直前のメニュー
+MenuButtonDisplayPosition	Previous (top if power off)	直前のメニュー（電源切で先頭）
+MenuButtonDisplayPosition	Top	メニューの先頭
+MenuButtonReturn	Previous	直前のメニュー
+MenuButtonReturn	Top	上
+Metering	Center-weighted	中央重点
+Metering	Matrix	分割
+Metering	Spot	スポット
+MeteringMode	Average	平均
+MeteringMode	Center-weighted average	中央重点
+MeteringMode	Default	デフォルト
+MeteringMode	Evaluative	評価
+MeteringMode	Multi-segment	パターン
+MeteringMode	Multi-spot	マルチスポット
+MeteringMode	Other	その他
+MeteringMode	Partial	部分
+MeteringMode	Pattern+AF	パターン+AF
+MeteringMode	Spot	スポット
+MeteringMode	Spot+Highlight control	スポット+ハイライトコントロール
+MeteringMode	Spot+Shadow control	スポット+シャドウコントロール
+MeteringMode	Unknown	不明
+MeteringMode2	Multi-segment	パターン
+MeteringMode3	Multi-segment	パターン
+MinoltaImageSize	Full	フル
+MinoltaImageSize	Large	ラージ
+MinoltaImageSize	Medium	ミドル
+MinoltaImageSize	Small	スモール
+MinoltaQuality	Economy	エコノミー
+MinoltaQuality	Extra Fine	エクストラファイン
+MinoltaQuality	Extra fine	エクストラファイン
+MinoltaQuality	Fine	ファイン
+MinoltaQuality	Normal	標準
+MinoltaQuality	Standard	スタンダード
+MinoltaQuality	Super Fine	スーパーファイン
+MirrorLockup	Disable	しない
+MirrorLockup	Enable	する
+MirrorLockup	Enable: Down with Set	する(SETボタンでダウン)
+ModelingFlash	Off	オフ
+ModelingFlash	On	オン
+ModifiedPictureStyle	CM Set 1	CMセット1
+ModifiedPictureStyle	CM Set 2	CMセット2
+ModifiedPictureStyle	Faithful	忠実設定
+ModifiedPictureStyle	High Saturation	高彩度
+ModifiedPictureStyle	Landscape	風景
+ModifiedPictureStyle	Low Saturation	低彩度
+ModifiedPictureStyle	Monochrome	モノトーン
+ModifiedPictureStyle	Neutral	ニュートラル
+ModifiedPictureStyle	None	無し
+ModifiedPictureStyle	Portrait	ポートレート
+ModifiedPictureStyle	Standard	スタンダード
+ModifiedPictureStyle	User Def. 1	ユーザ設定1
+ModifiedPictureStyle	User Def. 2	ユーザ設定2
+ModifiedPictureStyle	User Def. 3	ユーザ設定3
+ModifiedSaturation	CM1 (Red Enhance)	CM1 (赤増)
+ModifiedSaturation	CM2 (Green Enhance)	CM2 (緑増)
+ModifiedSaturation	CM3 (Blue Enhance)	CM3 (青増)
+ModifiedSaturation	CM4 (Skin Tones)	CM4 (肌色増)
+ModifiedSaturation	Off	オフ
+ModifiedSharpnessFreq	High	高い
+ModifiedSharpnessFreq	Low	ソフト
+ModifiedSharpnessFreq	Standard	スタンダード
+ModifiedSharpnessFreq	n/a	該当無し
+ModifiedToneCurve	Custom	カスタム
+ModifiedToneCurve	Manual	マニュアル
+ModifiedToneCurve	Standard	スタンダード
+ModifiedWhiteBalance	Auto	オート
+ModifiedWhiteBalance	Black & White	白黒
+ModifiedWhiteBalance	Cloudy	曇り
+ModifiedWhiteBalance	Custom	カスタム
+ModifiedWhiteBalance	Custom 1	カスタム1
+ModifiedWhiteBalance	Custom 2	カスタム2
+ModifiedWhiteBalance	Custom 3	カスタム3
+ModifiedWhiteBalance	Custom 4	カスタム4
+ModifiedWhiteBalance	Daylight	昼光
+ModifiedWhiteBalance	Daylight Fluorescent	昼光色蛍光灯
+ModifiedWhiteBalance	Flash	ストロボ
+ModifiedWhiteBalance	Fluorescent	蛍光灯
+ModifiedWhiteBalance	Manual Temperature (Kelvin)	マニュアル白熱灯（ケルビン）
+ModifiedWhiteBalance	PC Set1	PC設定1
+ModifiedWhiteBalance	PC Set2	PC設定2
+ModifiedWhiteBalance	PC Set3	PC設定3
+ModifiedWhiteBalance	PC Set4	PC設定4
+ModifiedWhiteBalance	PC Set5	PC設定5
+ModifiedWhiteBalance	Shade	日陰
+ModifiedWhiteBalance	Tungsten	タングステン(白熱灯)
+ModifiedWhiteBalance	Underwater	水中
+MoireFilter	Off	オフ
+MoireFilter	On	オン
+MonochromeFilterEffect	Green	緑
+MonochromeFilterEffect	None	無し
+MonochromeFilterEffect	Orange	オレンジ
+MonochromeFilterEffect	Red	赤
+MonochromeFilterEffect	Yellow	黄色
+MonochromeLinear	No	いいえ
+MonochromeLinear	Yes	はい
+MonochromeToningEffect	Blue	青
+MonochromeToningEffect	Green	緑
+MonochromeToningEffect	None	無し
+MonochromeToningEffect	Purple	紫
+MonochromeToningEffect	Sepia	セピア
+MultiExposureAutoGain	Off	オフ
+MultiExposureAutoGain	On	オン
+MultiExposureMode	Image Overlay	イメージオーバーレイ
+MultiExposureMode	Multiple Exposure	多重露出
+MultiExposureMode	Off	オフ
+MultiFrameNoiseReduction	Off	切
+MultiFrameNoiseReduction	On	入
+MultiSelector	Do Nothing	何もしない
+MultiSelector	Reset Meter-off Delay	メーターオフ遅延時間リセット
+MultiSelectorPlaybackMode	Choose Folder	フォルダー選択
+MultiSelectorPlaybackMode	Thumbnail On/Off	サムネイル　オン/オフ
+MultiSelectorPlaybackMode	View Histograms	ヒストグラム表示
+MultiSelectorPlaybackMode	Zoom On/Off	ズーム　オン/オフ
+MultiSelectorShootMode	Highlight Active Focus Point	ハイライトアクティブフォーカスポイント
+MultiSelectorShootMode	Not Used	未使用
+MultiSelectorShootMode	Select Center Focus Point	中央フォーカスポイント選択
+MultipleExposureSet	Off	オフ
+MultipleExposureSet	On	オン
+Mute	Off	オフ
+Mute	On	オン
+MyColorMode	B&W	白黒
+MyColorMode	Color Accent	カラーアクセント
+MyColorMode	Color Swap	スイッチカラー
+MyColorMode	Custom	カスタム
+MyColorMode	Dark Skin Tone	ダークスキン調
+MyColorMode	Light Skin Tone	ライトスカイ調
+MyColorMode	Neutral	ニュートラル
+MyColorMode	Off	オフ
+MyColorMode	Positive Film	ポジフィルム
+MyColorMode	Sepia	セピア
+MyColorMode	Vivid	ビビッド
+MyColorMode	Vivid Blue	ビビッド青
+MyColorMode	Vivid Green	ビビッド緑
+MyColorMode	Vivid Red	ビビッド赤
+NDFilter	Off	オフ
+NDFilter	On	オン
+NEFCompression	Lossless	ロスレス
+NEFCompression	Lossy (type 1)	圧縮（タイプ１）
+NEFCompression	Lossy (type 2)	圧縮（タイプ２）
+NEFCompression	Uncompressed	非圧縮
+NoMemoryCard	Enable Release	レリーズ可能
+NoMemoryCard	Release Locked	レリーズロック
+NoiseFilter	High	高い
+NoiseFilter	Low	ソフト
+NoiseFilter	Off	オフ
+NoiseFilter	Standard	スタンダード
+NoiseReduction	Auto	オート
+NoiseReduction	Low	低い
+NoiseReduction	Normal	標準
+NoiseReduction	Off	オフ
+NoiseReduction	On	オン
+NoiseReduction	Standard	スタンダード
+ObjectFileType	None	無し
+ObjectFileType	Unknown	不明
+OneTouchWB	Off	オフ
+OneTouchWB	On	オン
+OneTouchWB	On (Preset)	オン（プリセット）
+OpticalZoomMode	Extended	EX光学
+OpticalZoomMode	Standard	スタンダード
+OpticalZoomOn	Off	オフ
+OpticalZoomOn	On	オン
+Orientation	Horizontal (normal)	水平（標準）
+Orientation	Rotate 180	180度回転
+Orientation	Rotate 270 CW	270度回転 CW
+Orientation	Rotate 90 CW	90度回転 CW
+PhaseDetectAF	Off	オフ
+PhaseDetectAF	On (51-point)	オン
+PhotoEffect	B&W	白黒
+PhotoEffect	Custom	カスタム
+PhotoEffect	Neutral	ニュートラル
+PhotoEffect	Off	オフ
+PhotoEffect	Sepia	セピア
+PhotoEffect	Vivid	ビビッド
+PhotoEffects	Off	オフ
+PhotoEffects	On	オン
+PhotoEffectsType	B&W	白黒
+PhotoEffectsType	None	無し
+PhotoEffectsType	Sepia	セピア
+PhotoEffectsType	Tinted	淡調
+PhotoInfoPlayback	Info Left-right, Playback Up-down	情報<>/再生
+PhotoInfoPlayback	Info Up-down, Playback Left-right	情報/再生<>
+PhotometricInterpretation	BlackIsZero	黒はゼロ
+PhotometricInterpretation	Color Filter Array	CFA (カラーフィルターマトリックス)
+PhotometricInterpretation	Pixar LogL	CIE Log2(L) (ログ輝度)
+PhotometricInterpretation	Pixar LogLuv	CIE Log2(L)(u',v') (ログ輝度と基準色)
+PhotometricInterpretation	RGB Palette	パレット色
+PhotometricInterpretation	Transparency Mask	透明度マスク
+PhotometricInterpretation	WhiteIsZero	白はゼロ
+PhotoshopFormat	Standard	スタンダード
+PictureControl	Off	オフ
+PictureControl	On	オン
+PictureControlActive	Off	オフ
+PictureControlActive	On	オン
+PictureControlAdjust	Default Settings	デフォルト設定
+PictureControlAdjust	Full Control	フルコントロール
+PictureControlAdjust	Quick Adjust	クイック調整
+PictureFinish	Monochrome	モノトーン
+PictureFinish	Natural	ナチュラル
+PictureFinish	Night Portrait	人物夜景
+PictureFinish	Night Scene	夜景
+PictureFinish	Portrait	ポートレート
+PictureMode	1/2 EV steps	1/2 EVステップ
+PictureMode	1/3 EV steps	1/3 EVステップ
+PictureMode	Anti-blur	手振れ補正
+PictureMode	Aperture Priority	絞り優先
+PictureMode	Aperture Priority, Off-Auto-Aperture	絞り優先（自動絞りOFF）
+PictureMode	Aperture-priority AE	絞り優先
+PictureMode	Auto	オート
+PictureMode	Auto PICT (Landscape)	オートピクチャー（風景）
+PictureMode	Auto PICT (Macro)	オートピクチャー（マクロ）
+PictureMode	Auto PICT (Portrait)	オートピクチャー（ポートレート）
+PictureMode	Auto PICT (Sport)	オートピクチャー（スポーツ）
+PictureMode	Auto PICT (Standard)	オートピクチャー（標準）
+PictureMode	Autumn	秋
+PictureMode	Beach	ビーチ
+PictureMode	Beach & Snow	ビーチ＆スノー
+PictureMode	Blur Reduction	Digital SR
+PictureMode	Bulb	バルブ
+PictureMode	Bulb, Off-Auto-Aperture	バルブ（自動絞りOFF）
+PictureMode	Candlelight	キャンドルライト
+PictureMode	DOF Program	深度優先プログラム
+PictureMode	DOF Program (HyP)	深度優先プログラム（ハイパープログラム）
+PictureMode	Dark Pet	ペット黒色
+PictureMode	Digital Filter	デジタルフィルター
+PictureMode	Fireworks	花火
+PictureMode	Flash X-Sync Speed AE	ストロボ同調速度AE
+PictureMode	Flower	花
+PictureMode	Food	料理
+PictureMode	Frame Composite	フレーム合成
+PictureMode	Green Mode	グリーンモード
+PictureMode	Hi-speed Program	高速優先プログラム
+PictureMode	Hi-speed Program (HyP)	高速優先プログラム（ハイパープログラム）
+PictureMode	Illustrations	イラスト
+PictureMode	Kids	キッズ
+PictureMode	Landscape	風景
+PictureMode	Light Pet	ペット白色
+PictureMode	MTF Program	MTF優先プログラム
+PictureMode	MTF Program (HyP)	MTF優先プログラム（ハイパープログラム）
+PictureMode	Macro	マクロ
+PictureMode	Manual	マニュアル
+PictureMode	Manual, Off-Auto-Aperture	マニュアル（自動絞りOFF）
+PictureMode	Medium Pet	ペット灰色
+PictureMode	Monotone	モノトーン
+PictureMode	Museum	美術館
+PictureMode	Muted	弱める
+PictureMode	Natural	ナチュラル
+PictureMode	Natural Light	ナチュラルフォト
+PictureMode	Natural Light & Flash	ナチュラルフォト＆フラッシュ
+PictureMode	Natural Skin Tone	美肌
+PictureMode	Night Scene	夜景
+PictureMode	Night Scene Portrait	人物、夜景
+PictureMode	No Flash	フラッシュ無し
+PictureMode	Panorama	パノラマ
+PictureMode	Party	パーティ
+PictureMode	Pet	ペット
+PictureMode	Portrait	ポートレート
+PictureMode	Program	プログラム
+PictureMode	Program (HyP)	プログラムAE（ハイパープログラム）
+PictureMode	Program AE	プログラムAE
+PictureMode	Program Av Shift	プログラムAvシフト
+PictureMode	Program Tv Shift	プログラムTvシフト
+PictureMode	Self Portrait	自分撮り
+PictureMode	Sensitivity Priority AE	感度優先AE
+PictureMode	Sepia	セピア
+PictureMode	Shutter & Aperture Priority AE	シャッター＆絞り優先AE
+PictureMode	Shutter Speed Priority	シャッター優先
+PictureMode	Shutter speed priority AE	シャッター優先
+PictureMode	Snow	スノー
+PictureMode	Soft	ソフト
+PictureMode	Sport	スポーツ
+PictureMode	Sports	スポーツ
+PictureMode	Standard	スタンダード
+PictureMode	Sunset	夕日
+PictureMode	Surf & Snow	サーフ＆スノー
+PictureMode	Synchro Sound Record	ボイスレコーディング
+PictureMode	Text	テキスト
+PictureMode	Underwater	水中
+PictureMode	Vivid	ビビッド
+PictureMode2	Aperture Priority	絞り優先
+PictureMode2	Aperture Priority, Off-Auto-Aperture	絞り優先（自動絞りオフ）
+PictureMode2	Auto PICT	オートピクチャ
+PictureMode2	Bulb	バルブ
+PictureMode2	Bulb, Off-Auto-Aperture	バルブ（自動絞りオフ）
+PictureMode2	Flash X-Sync Speed AE	ストロボ同調速度AE
+PictureMode2	Green Mode	グリーンモード
+PictureMode2	Manual	マニュアル
+PictureMode2	Manual, Off-Auto-Aperture	マニュアル（自動絞りオフ）
+PictureMode2	Program AE	プログラムAE
+PictureMode2	Program Av Shift	プログラムAvシフト
+PictureMode2	Program Tv Shift	プログラムTvシフト
+PictureMode2	Scene Mode	シーンモード
+PictureMode2	Sensitivity Priority AE	感度優先AE
+PictureMode2	Shutter & Aperture Priority AE	シャッター＆絞り優先AE
+PictureMode2	Shutter Speed Priority	シャッター優先
+PictureModeBWFilter	Green	緑
+PictureModeBWFilter	Neutral	ニュートラル
+PictureModeBWFilter	Orange	オレンジ
+PictureModeBWFilter	Red	赤
+PictureModeBWFilter	Yellow	黄色
+PictureModeBWFilter	n/a	該当無し
+PictureModeTone	Blue	青
+PictureModeTone	Green	緑
+PictureModeTone	Neutral	ニュートラル
+PictureModeTone	Purple	紫
+PictureModeTone	Sepia	セピア
+PictureModeTone	n/a	該当無し
+PictureStyle	CM Set 1	CMセット1
+PictureStyle	CM Set 2	CMセット2
+PictureStyle	Faithful	忠実設定
+PictureStyle	High Saturation	高彩度
+PictureStyle	Landscape	風景
+PictureStyle	Low Saturation	低彩度
+PictureStyle	Monochrome	モノトーン
+PictureStyle	Neutral	ニュートラル
+PictureStyle	None	無し
+PictureStyle	Portrait	ポートレート
+PictureStyle	Standard	スタンダード
+PictureStyle	User Def. 1	ユーザ設定1
+PictureStyle	User Def. 2	ユーザ設定2
+PictureStyle	User Def. 3	ユーザ設定3
+PixelFormat	Black & White	白黒
+PixelUnits	Unknown	不明
+PlanarConfiguration	Chunky	点順次形式 (重ね合わせ)
+PlanarConfiguration	Planar	平面形式
+PowerSource	Body Battery	本体電源
+PowerSource	External Power Supply	外部電源
+PowerSource	Grip Battery	バッテリーグリップ
+PreviewColorSpace	Unknown	不明
+PreviewImageValid	No	いいえ
+PreviewImageValid	Yes	はい
+PreviewQuality	Economy	エコノミー
+PreviewQuality	Fine	ファイン
+PreviewQuality	Normal	標準
+PreviewQuality	Normal Movie	標準動画
+PreviewQuality	Superfine	S.ファイン
+PrimaryAFPoint	Bottom	下
+PrimaryAFPoint	C6 (Center)	C6 (中央)
+PrimaryAFPoint	Center	中央
+PrimaryAFPoint	Mid-left	中央左
+PrimaryAFPoint	Mid-right	中央右
+PrimaryAFPoint	Top	上
+ProfileClass	Abstract Profile	抜粋プロフィール
+ProfileClass	ColorSpace Conversion Profile	色空間変換プロフィール
+ProfileClass	DeviceLink Profile	デバイスリンクプロフィール
+ProfileClass	Display Device Profile	表示装置プロフィール
+ProfileClass	Input Device Profile	入力装置プロフィール
+ProfileClass	NamedColor Profile	色名称プロフィール
+ProfileClass	Nikon Input Device Profile (NON-STANDARD!)	ニコンプロフィール("nkpf")
+ProfileClass	Output Device Profile	出力装置プロフィール
+ProfileEmbedPolicy	Allow Copying	コピー許可
+ProfileEmbedPolicy	Embed if Used	埋め込み使用
+ProfileEmbedPolicy	Never Embed	埋め込み禁止
+ProfileEmbedPolicy	No Restrictions	無制限
+ProgramLine	Depth	深度優先
+ProgramLine	Hi Speed	高速優先
+ProgramLine	MTF	MTF優先
+ProgramLine	Normal	ノーマル
+ProgramMode	Night Portrait	人物夜景
+ProgramMode	None	無し
+ProgramMode	Portrait	ポートレート
+ProgramMode	Sports	スポーツ
+ProgramMode	Sunset	夕日
+ProgramMode	Text	テキスト
+Quality	Best	S.ファイン
+Quality	Better	ファイン
+Quality	Compressed RAW	cRAW
+Quality	Compressed RAW + JPEG	cRAW+JPEG
+Quality	Economy	エコノミー
+Quality	Extra Fine	エクストラファイン
+Quality	Fine	ファイン
+Quality	Good	エコノミー
+Quality	Low	低画質
+Quality	Normal	ノーマル
+Quality	Premium	プレミアム
+Quality	RAW + JPEG	RAW+JPEG
+Quality	Standard	スタンダード
+Quality	n/a	未設定
+QualityMode	Economy	エコノミー
+QualityMode	Fine	ファイン
+QualityMode	Normal	ノーマル
+QuickControlDialInMeter	AF point selection	AFフレーム選択
+QuickControlDialInMeter	Exposure comp/Aperture	露出補正/絞り数値
+QuickControlDialInMeter	ISO speed	ISO感度
+QuickShot	Off	オフ
+QuickShot	On	オン
+RawAndJpgRecording	RAW+Large/Fine	RAW+ラージ／ファイン
+RawAndJpgRecording	RAW+Large/Normal	RAW+ラージ／ノーマル
+RawAndJpgRecording	RAW+Medium/Fine	RAW+ミドル／ファイン
+RawAndJpgRecording	RAW+Medium/Normal	RAW+ミドル／ノーマル
+RawAndJpgRecording	RAW+Small/Fine	RAW+スモール／ファイン
+RawAndJpgRecording	RAW+Small/Normal	RAW+スモール／ノーマル
+RawColorAdj	Custom	カスタム
+RawColorAdj	Faithful	忠実設定
+RawDevAutoGradation	Off	オフ
+RawDevAutoGradation	On	オン
+RawDevEditStatus	Edited (Landscape)	スタジオ（風景）
+RawDevEditStatus	Edited (Portrait)	スタジオ（ポートレート）
+RawDevEditStatus	Original	オリジナル
+RawDevEngine	Advanced High Speed	アドバンス高速
+RawDevEngine	High Function	高機能
+RawDevEngine	High Speed	高速
+RawDevPMPictureTone	Blue	青
+RawDevPMPictureTone	Green	緑
+RawDevPMPictureTone	Neutral	ニュートラル
+RawDevPMPictureTone	Purple	紫
+RawDevPMPictureTone	Sepia	セピア
+RawDevPM_BWFilter	Green	緑
+RawDevPM_BWFilter	Neutral	ニュートラル
+RawDevPM_BWFilter	Orange	オレンジ
+RawDevPM_BWFilter	Red	赤
+RawDevPM_BWFilter	Yellow	黄色
+RawDevPictureMode	Natural	ナチュラル
+RawDevPictureMode	Sepia	セピア
+RawDevPictureMode	Vivid	ビビッド
+RawDevWhiteBalance	Color Temperature	色温度
+RawJpgQuality	Economy	エコノミー
+RawJpgQuality	Fine	ファイン
+RawJpgQuality	Normal	標準
+RawJpgQuality	Normal Movie	標準動画
+RawJpgQuality	Superfine	S.ファイン
+RawJpgSize	Large	ラージ
+RawJpgSize	Medium	ミドル
+RawJpgSize	Medium 1	ミドル1
+RawJpgSize	Medium 2	ミドル2
+RawJpgSize	Medium 3	ミドル3
+RawJpgSize	Medium Movie	ミディアム動画
+RawJpgSize	Postcard	ハガキ
+RawJpgSize	Small	スモール
+RawJpgSize	Small Movie	スモール動画
+RawJpgSize	Widescreen	ワイド画面
+RecordMode	Aperture Priority	絞り優先
+RecordMode	Best Shot	ベストショット
+RecordMode	Manual	マニュアル
+RecordMode	Movie	動画
+RecordMode	Movie (19)	動画（19）
+RecordMode	Program AE	プログラムAE
+RecordMode	Shutter Priority	シャッター優先
+RecordMode	YouTube Movie	YouTube動画
+RecordingMode	Auto	オート
+RecordingMode	Landscape	風景
+RecordingMode	Manual	マニュアル
+RecordingMode	Night Scene	夜景
+RecordingMode	Panorama	パノラマ
+RecordingMode	Portrait	ポートレート
+RecordingMode	Single Shutter	シングルシャッター
+RedEyeCorrection	Automatic	オート
+RedEyeCorrection	Off	オフ
+RedEyeReduction	Off	オフ
+RedEyeReduction	On	オン
+ReleaseButtonToUseDial	No	いいえ
+ReleaseButtonToUseDial	Yes	はい
+RenderingIntent	ICC-Absolute Colorimetric	絶対比色分析
+RenderingIntent	Media-Relative Colorimetric	相対比色分析
+RenderingIntent	Perceptual	知覚的
+RenderingIntent	Saturation	飽和
+ResampleParamsQuality	High	高い
+ResampleParamsQuality	Low	ソフト
+Resaved	No	いいえ
+Resaved	Yes	はい
+ResolutionUnit	None	無し
+ResolutionUnit	cm	ピクセル/cm
+ResolutionUnit	inches	インチ
+RetouchHistory	None	無し
+RetouchHistory	Sepia	セピア
+Rotation	Horizontal	水平（標準）
+Rotation	Horizontal (normal)	水平（標準）
+Rotation	Rotate 180	180度回転
+Rotation	Rotate 270 CW	270度回転 CW
+Rotation	Rotate 90 CW	90度回転 CW
+Rotation	Rotated 180	180度回転
+Rotation	Rotated 270 CW	270度回転 CW
+Rotation	Rotated 90 CW	90度回転 CW
+SRAWQuality	n/a	該当無し
+SRActive	No	オフ
+SRActive	Yes	オン
+SRResult	Not stabilized	なし
+SafetyShift	Disable	しない
+SafetyShift	Enable (ISO speed)	する(ISO感度)
+SafetyShift	Enable (Tv/Av)	する(Tv/Av値)
+SafetyShiftInAvOrTv	Disable	しない
+SafetyShiftInAvOrTv	Enable	する
+Saturation	+1 (medium high)	+1 (少し高い)
+Saturation	+2 (high)	+2 (ハード)
+Saturation	+3 (very high)	+3 (かなり高い)
+Saturation	+4 (highest)	+4
+Saturation	+4 (maximum)	+4
+Saturation	-1 (medium low)	-1 (少し低い)
+Saturation	-2 (low)	-2 (ソフト)
+Saturation	-3 (very low)	-3 (かなり低い)
+Saturation	-4 (lowest)	-4
+Saturation	-4 (minimum)	-4
+Saturation	0 (normal)	0 (スタンダード)
+Saturation	B&W	黒＆白
+Saturation	Film Simulation	フィルムシミュレーション
+Saturation	High	高い彩度
+Saturation	Low	低い彩度
+Saturation	Medium High	少し高い
+Saturation	Medium Low	少し低い
+Saturation	None	未設定
+Saturation	None (B&W)	無し（黒＆白）
+Saturation	Normal	標準
+ScanImageEnhancer	Off	オフ
+ScanImageEnhancer	On	オン
+SceneCaptureType	Landscape	風景
+SceneCaptureType	Night	夜景
+SceneCaptureType	Portrait	ポートレート
+SceneCaptureType	Standard	スタンダード
+SceneMode	2 in 1	2イン1
+SceneMode	3D Sweep Panorama	3D
+SceneMode	Aerial Photo	空撮
+SceneMode	Anti Motion Blur	人物ブレ軽減
+SceneMode	Aperture Priority	絞り優先
+SceneMode	Auction	アクション
+SceneMode	Auto	オート
+SceneMode	Auto+	Auto アドバンス
+SceneMode	Available Light	自然光
+SceneMode	Baby	赤ちゃん
+SceneMode	Beach	ビーチ
+SceneMode	Beach & Snow	ビーチ＆スノー
+SceneMode	Behind Glass	ガラス越し
+SceneMode	Candle	キャンドル
+SceneMode	Candlelight	キャンドルライト
+SceneMode	Children	子供
+SceneMode	Color Effects	カラーエフェクト
+SceneMode	Cont. Priority AE	連続撮影優先AE
+SceneMode	Cuisine	料理
+SceneMode	Digital Image Stabilization	デジタル手振れ補正
+SceneMode	Documents	文書
+SceneMode	Face Portrait	寝顔
+SceneMode	Fireworks	花火
+SceneMode	Food	料理
+SceneMode	Handheld Night Shot	手持ち夜景
+SceneMode	High Key	ハイキー
+SceneMode	High Sensitivity	高感度
+SceneMode	High Speed Continuous Shooting	高速連写
+SceneMode	Indoor	屋内撮影
+SceneMode	Intelligent Auto	インテリジェントオート
+SceneMode	Intelligent ISO	インテリジェントISO
+SceneMode	Landscape	風景
+SceneMode	Landscape+Portrait	風景+人物
+SceneMode	Low Key	ローキー
+SceneMode	Macro	マクロ
+SceneMode	Manual	マニュアル
+SceneMode	Movie	動画
+SceneMode	Movie Preview	動画プレビュー
+SceneMode	Museum	美術館
+SceneMode	My Mode	マイモード
+SceneMode	Nature Macro	自然マクロ
+SceneMode	Night Portrait	人物夜景
+SceneMode	Night Scene	夜景
+SceneMode	Night Scenery	夜景
+SceneMode	Night View/Portrait	ナイトビュー/ポートレイト
+SceneMode	Night+Portrait	夜景+人物
+SceneMode	Normal	ノーマル
+SceneMode	Off	オフ
+SceneMode	Panning	パンニング
+SceneMode	Panorama	パノラマ
+SceneMode	Panorama Assist	パノラマアシスト
+SceneMode	Party	パーティ
+SceneMode	Pet	ペット
+SceneMode	Portrait	ポートレート
+SceneMode	Program	プログラム
+SceneMode	Scenery	風景
+SceneMode	Self Portrait	自分撮り
+SceneMode	Self Portrait+Self Timer	自分撮り+セルフタイマー
+SceneMode	Self Protrait+Timer	自分撮り+セルフタイマー
+SceneMode	Shoot & Select	ショット＆セレクト
+SceneMode	Shoot & Select1	ショット＆セレクト1
+SceneMode	Shoot & Select2	ショット＆セレクト2
+SceneMode	Shooting Guide	撮影ガイド
+SceneMode	Shutter Priority	シャッター優先
+SceneMode	Simple	シンプル
+SceneMode	Smile Shot	スマイルショット
+SceneMode	Snow	スノー
+SceneMode	Soft Skin	ソフトスキン
+SceneMode	Sport	スポーツ
+SceneMode	Sports	スポーツ
+SceneMode	Spot	スポット
+SceneMode	Standard	スタンダード
+SceneMode	Starry Night	星空
+SceneMode	Sunset	夕日
+SceneMode	Super Macro	スーパーマクロ
+SceneMode	Sweep Panorama	スイングパノラマ
+SceneMode	Text	テキスト
+SceneMode	Underwater	水中
+SceneMode	Underwater Macro	水中マクロ
+SceneMode	Underwater Snapshot	水中スナップ
+SceneMode	Underwater Wide1	水中ワイド1
+SceneMode	Underwater Wide2	水中ワイド2
+SceneMode	Vivid	ビビッド
+SceneModeUsed	Aperture Priority	絞り優先
+SceneModeUsed	Beach	ビーチ
+SceneModeUsed	Candlelight	キャンドルライト
+SceneModeUsed	Fireworks	花火
+SceneModeUsed	Landscape	風景
+SceneModeUsed	Macro	マクロ
+SceneModeUsed	Manual	マニュアル
+SceneModeUsed	Night Portrait	人物夜景
+SceneModeUsed	Portrait	ポートレート
+SceneModeUsed	Program	プログラム
+SceneModeUsed	Shutter Priority	シャッター優先
+SceneModeUsed	Snow	スノー
+SceneModeUsed	Sunset	夕日
+SceneModeUsed	Text	テキスト
+SceneSelect	Lamp	ランプ
+SceneSelect	Night	夜景
+SceneSelect	Off	オフ
+SceneSelect	Sport	スポーツ
+SceneSelect	TV	テレビ
+SceneSelect	User 1	ユーザー1
+SceneSelect	User 2	ユーザー2
+SceneType	Directly photographed	直接撮影画像
+SecurityClassification	Confidential	機密文書
+SecurityClassification	Restricted	限定
+SecurityClassification	Secret	秘密
+SecurityClassification	Top Secret	最高機密
+SecurityClassification	Unclassified	未分類
+SelectableAFPoint	11 points	11点
+SelectableAFPoint	19 points	19点
+SelectableAFPoint	45 points	45点
+SelectableAFPoint	Inner 9 points	9点(内側)
+SelectableAFPoint	Outer 9 points	9点(外側)
+SelfTimer	Off	オフ
+SelfTimer	On	オン
+SensingMethod	Color sequential area	シーケンシャルカラーセンサー
+SensingMethod	Color sequential linear	シーケンシャルカラーラインセンサー
+SensingMethod	Monochrome area	モノクロエリアセンサー
+SensingMethod	Monochrome linear	モノクロラインセンサー
+SensingMethod	Not defined	未定義
+SensingMethod	One-chip color area	単板式カラーセンサー
+SensingMethod	Three-chip color area	３板式カラーセンサー
+SensingMethod	Trilinear	３ラインセンサー
+SensingMethod	Two-chip color area	２板式カラーセンサー
+SensitivitySteps	1 EV Steps	1EVステップ
+SensitivitySteps	As EV Steps	露出ステップに従う
+SensorCleaning	Disable	しない
+SensorCleaning	Enable	する
+SequentialShot	None	無し
+SequentialShot	Standard	スタンダード
+SetButtonCrossKeysFunc	Cross keys: AF point select	十字キー:AFフレーム選択
+SetButtonCrossKeysFunc	Normal	標準
+SetButtonCrossKeysFunc	Set: Flash Exposure Comp	SET:調光補正
+SetButtonCrossKeysFunc	Set: Parameter	SET:現像パラメーター選択
+SetButtonCrossKeysFunc	Set: Picture Style	SET:ピクチャースタイル
+SetButtonCrossKeysFunc	Set: Playback	SET:画像の再生
+SetButtonCrossKeysFunc	Set: Quality	SET:記録画質
+SetButtonWhenShooting	Change parameters	現像パラメーター選択
+SetButtonWhenShooting	Default (no function)	通常(なし)
+SetButtonWhenShooting	Disabled	無効
+SetButtonWhenShooting	Flash exposure compensation	調光補正
+SetButtonWhenShooting	ISO speed	ISO感度
+SetButtonWhenShooting	Image playback	画像再生
+SetButtonWhenShooting	Image quality	記録画質選択
+SetButtonWhenShooting	Image size	画像サイズ
+SetButtonWhenShooting	LCD monitor On/Off	液晶モニターの入/切
+SetButtonWhenShooting	Menu display	メニュー表示
+SetButtonWhenShooting	Normal (disabled)	通常(無効)
+SetButtonWhenShooting	Picture style	ピクチャースタイル
+SetButtonWhenShooting	Quick control screen	クイック設定画面
+SetButtonWhenShooting	Record func. + media/folder	記録機能とメディア・フォルダ
+SetButtonWhenShooting	Record movie (Live View)	動画撮影(ライブビュー)
+SetButtonWhenShooting	White balance	ホワイトバランス
+SetFunctionWhenShooting	Change Parameters	現像パラメーター選択
+SetFunctionWhenShooting	Change quality	記録画質選択
+SetFunctionWhenShooting	Default (no function)	通常(なし)
+SetFunctionWhenShooting	Image replay	画像の再生
+SetFunctionWhenShooting	Menu display	メニュー表示
+ShadingCompensation	Off	オフ
+ShadingCompensation	On	オン
+ShadingCompensation2	Off	オフ
+ShadingCompensation2	On	オン
+ShakeReduction	Off	オフ
+ShakeReduction	On	オン
+Sharpness	+1 (medium hard)	+1 (少しハード)
+Sharpness	+2 (hard)	+2 (ハード)
+Sharpness	+3 (very hard)	+3 (かなりハード)
+Sharpness	+4 (hardest)	+4
+Sharpness	+4 (maximum)	+4
+Sharpness	-1 (medium soft)	-1 (ミドルソフト)
+Sharpness	-2 (soft)	-2 (ソフト)
+Sharpness	-3 (very soft)	-3 (かなりソフト)
+Sharpness	-4 (minimum)	-4
+Sharpness	-4 (softest)	-4
+Sharpness	0 (normal)	0 (ノーマル)
+Sharpness	Film Simulation	フィルムシミュレーション
+Sharpness	Hard	ハード
+Sharpness	Hard2	ハード2
+Sharpness	Medium Hard	ミドルハード
+Sharpness	Medium Soft	ミドルソフト
+Sharpness	Normal	ノーマル
+Sharpness	Sharp	シャープ
+Sharpness	Soft	ソフト
+Sharpness	Soft2	ソフト2
+Sharpness	n/a	該当無し
+SharpnessFrequency	High	高い
+SharpnessFrequency	Low	ソフト
+SharpnessFrequency	Standard	スタンダード
+SharpnessFrequency	n/a	該当無し
+ShootingInfoDisplay	Auto	オート
+ShootingInfoDisplay	Manual (dark on light)	手動-黒地に白
+ShootingInfoDisplay	Manual (light on dark)	手動-白地に黒
+ShootingMode	Aerial Photo	空撮
+ShootingMode	Aperture Priority	絞り優先
+ShootingMode	Baby	赤ちゃん
+ShootingMode	Beach	ビーチ
+ShootingMode	Candlelight	キャンドルライト
+ShootingMode	Clipboard	メモ
+ShootingMode	Color Effects	カラーエフェクト
+ShootingMode	Economy	エコモード
+ShootingMode	Fireworks	花火
+ShootingMode	Food	料理
+ShootingMode	High Sensitivity	高感度
+ShootingMode	High Speed Continuous Shooting	高速連写
+ShootingMode	Intelligent Auto	インテリジェントオート
+ShootingMode	Intelligent ISO	インテリジェントISO
+ShootingMode	Macro	マクロ
+ShootingMode	Manual	マニュアル
+ShootingMode	Movie Preview	動画プレビュー
+ShootingMode	Night Portrait	人物夜景
+ShootingMode	Night Scenery	夜景
+ShootingMode	Normal	標準
+ShootingMode	Panning	パンニング
+ShootingMode	Panorama Assist	パノラマアシスト
+ShootingMode	Party	パーティ
+ShootingMode	Pet	ペット
+ShootingMode	Portrait	ポートレート
+ShootingMode	Program	プログラム
+ShootingMode	Scenery	風景
+ShootingMode	Self Portrait	自分撮り
+ShootingMode	Shutter Priority	シャッター優先
+ShootingMode	Simple	シンプル
+ShootingMode	Snow	スノー
+ShootingMode	Soft Skin	ソフトスキン
+ShootingMode	Sports	スポーツ
+ShootingMode	Spot	スポット
+ShootingMode	Starry Night	星空
+ShootingMode	Sunset	夕日
+ShootingMode	Underwater	水中
+ShootingModeSetting	Continuous	連続撮影
+ShootingModeSetting	Delayed Remote	遅延リモート
+ShootingModeSetting	Quick-response Remote	即時リモート
+ShootingModeSetting	Self-timer	セルフタイマー
+ShootingModeSetting	Single Frame	１コマ撮影
+ShortReleaseTimeLag	Disable	しない
+ShortReleaseTimeLag	Enable	する
+Shutter-AELock	AE lock/AF	AEロック/AF
+Shutter-AELock	AE/AF, No AE lock	AE/AF（AEロックなし）
+Shutter-AELock	AF/AE lock	AF/AEロック
+Shutter-AELock	AF/AF lock	AF/AFロック
+Shutter-AELock	AF/AF lock, No AE lock	AF/AFロック（AEロックなし）
+ShutterButtonAFOnButton	AE lock/Metering + AF start	AEロック/測光・AF開始
+ShutterButtonAFOnButton	Metering + AF start	測光・AF開始
+ShutterButtonAFOnButton	Metering + AF start/AF stop	測光・AF開始/AFストップ
+ShutterButtonAFOnButton	Metering + AF start/disable	測光・AF開始/無効
+ShutterButtonAFOnButton	Metering start/Meter + AF start	測光開始/測光・AF開始
+ShutterCurtainSync	1st-curtain sync	先幕シンクロ
+ShutterCurtainSync	2nd-curtain sync	後幕シンクロ
+ShutterMode	Aperture Priority	絞り優先
+ShutterMode	Auto	オート
+ShutterReleaseButtonAE-L	Off	オフ
+ShutterReleaseButtonAE-L	On	オン
+ShutterReleaseNoCFCard	No	いいえ
+ShutterReleaseNoCFCard	Yes	はい
+ShutterSpeedRange	Disable	しない
+ShutterSpeedRange	Enable	する
+SlideShow	No	いいえ
+SlideShow	Yes	はい
+SlowShutter	Night Scene	夜景
+SlowShutter	None	無し
+SlowShutter	Off	オフ
+SlowShutter	On	オン
+SlowSync	Off	オフ
+SlowSync	On	オン
+SpecialEffectsOpticalFilter	None	無し
+SpotMeterLinkToAFPoint	Disable (use center AF point)	しない(中央固定
+SpotMeterLinkToAFPoint	Enable (use active AF point)	する(測距点連動)
+SpotMeteringMode	Center	中央
+StreamType	Text	テキスト
+SubimageColor	Monochrome	モノトーン
+SubjectDistanceRange	Close	近景
+SubjectDistanceRange	Distant	遠景
+SubjectDistanceRange	Macro	マクロ
+SubjectDistanceRange	Unknown	不明
+SubjectProgram	Night portrait	人物夜景
+SubjectProgram	None	無し
+SubjectProgram	Portrait	ポートレート
+SubjectProgram	Sports action	スポーツアクション
+SubjectProgram	Sunset	夕日
+SubjectProgram	Text	テキスト
+Subsystem	Unknown	不明
+SuperMacro	Off	オフ
+SuperMacro	On (1)	オン(1)
+SuperMacro	On (2)	オン(2)
+SuperimposedDisplay	Off	オフ
+SuperimposedDisplay	On	オン
+SwitchToRegisteredAFPoint	Disable	しない
+SwitchToRegisteredAFPoint	Enable	する
+Tagged	No	いいえ
+Tagged	Yes	はい
+Technology	Active Matrix Display	アクティブマトリクス型ディスプレイ
+Technology	Cathode Ray Tube Display	CRTディスプレイ
+Technology	Digital Camera	デジタルカメラ
+Technology	Dye Sublimation Printer	昇華型プリンター
+Technology	Electrophotographic Printer	静電記録式プリンター
+Technology	Electrostatic Printer	静電気プリンター
+Technology	Film Scanner	フイルムスキャナー
+Technology	Film Writer	フィルムライター
+Technology	Flexography	アニリン印刷
+Technology	Gravure	グラビア印刷
+Technology	Ink Jet Printer	インクジェットプリンター
+Technology	Offset Lithography	オフセット印刷
+Technology	Passive Matrix Display	単純マトリクス型ディスプレイ
+Technology	Photo CD	フォトCD
+Technology	Photo Image Setter	フォトイメージセッター
+Technology	Photographic Paper Printer	印画紙プリンター
+Technology	Projection Television	プロジェクションテレビ
+Technology	Reflective Scanner	反射スキャナ
+Technology	Silkscreen	シルクスクリーン印刷
+Technology	Thermal Wax Printer	熱転写プリンター
+Technology	Video Camera	ビデオカメラ
+Technology	Video Monitor	ビデオモニター
+Teleconverter	None	無し
+TextStamp	Off	オフ
+TextStamp	On	オン
+TimeScaleParamsQuality	High	高い
+TimeScaleParamsQuality	Low	ソフト
+TimerFunctionButton	ISO	ISO感度
+TimerFunctionButton	Image Quality/Size	画像品質/サイズ
+TimerFunctionButton	Self-timer	セルフタイマー
+TimerFunctionButton	Shooting Mode	撮影モード
+TimerFunctionButton	White Balance	ホワイトバランス
+TimerLength	Disable	しない
+TimerLength	Enable	する
+ToneCurve	Custom	カスタム
+ToneCurve	Manual	マニュアル
+ToneCurve	Standard	スタンダード
+ToneCurveActive	No	いいえ
+ToneCurveActive	Yes	はい
+ToneCurveName	Custom	カスタム
+ToningEffect	B&W	白黒
+ToningEffect	Blue	青
+ToningEffect	Blue-green	青緑
+ToningEffect	Cyanotype	青写真
+ToningEffect	Green	緑
+ToningEffect	None	無し
+ToningEffect	Purple	紫
+ToningEffect	Purple-blue	青紫
+ToningEffect	Red	赤
+ToningEffect	Red-purple	赤紫
+ToningEffect	Sepia	セピア
+ToningEffect	Yellow	黄色
+ToningEffect	n/a	該当無し
+ToningEffectMonochrome	Blue	青
+ToningEffectMonochrome	Green	緑
+ToningEffectMonochrome	None	無し
+ToningEffectMonochrome	Purple	紫
+ToningEffectMonochrome	Sepia	セピア
+Transformation	Horizontal (normal)	水平（標準）
+Transformation	Rotate 180	180度回転
+Transformation	Rotate 270 CW	270度回転 CW
+Transformation	Rotate 90 CW	90度回転 CW
+Trapped	Unknown	不明
+USMLensElectronicMF	Disable after one-shot AF	ワンショットAF作動後・不可
+USMLensElectronicMF	Disable in AF mode	AF時すべて不可
+USMLensElectronicMF	Enable after one-shot AF	ワンショットAF作動後・可
+Uncompressed	No	いいえ
+Uncompressed	Yes	はい
+Unsharp1Color	Blue	青
+Unsharp1Color	Cyan	シアン
+Unsharp1Color	Green	緑
+Unsharp1Color	Magenta	マゼンダ
+Unsharp1Color	Red	赤
+Unsharp1Color	Yellow	黄色
+Unsharp2Color	Blue	青
+Unsharp2Color	Cyan	シアン
+Unsharp2Color	Green	緑
+Unsharp2Color	Magenta	マゼンダ
+Unsharp2Color	Red	赤
+Unsharp2Color	Yellow	黄色
+Unsharp3Color	Blue	青
+Unsharp3Color	Cyan	シアン
+Unsharp3Color	Green	緑
+Unsharp3Color	Magenta	マゼンダ
+Unsharp3Color	Red	赤
+Unsharp3Color	Yellow	黄色
+Unsharp4Color	Blue	青
+Unsharp4Color	Cyan	シアン
+Unsharp4Color	Green	緑
+Unsharp4Color	Magenta	マゼンダ
+Unsharp4Color	Red	赤
+Unsharp4Color	Yellow	黄色
+UnsharpMask	Off	オフ
+UnsharpMask	On	オン
+UsableMeteringModes	Disable	しない
+UsableMeteringModes	Enable	する
+UsableShootingModes	Disable	しない
+UsableShootingModes	Enable	する
+UserDef1PictureStyle	Faithful	忠実設定
+UserDef1PictureStyle	Landscape	風景
+UserDef1PictureStyle	Monochrome	モノトーン
+UserDef1PictureStyle	Neutral	ニュートラル
+UserDef1PictureStyle	Portrait	ポートレート
+UserDef1PictureStyle	Standard	スタンダード
+UserDef2PictureStyle	Faithful	忠実設定
+UserDef2PictureStyle	Landscape	風景
+UserDef2PictureStyle	Monochrome	モノトーン
+UserDef2PictureStyle	Neutral	ニュートラル
+UserDef2PictureStyle	Portrait	ポートレート
+UserDef2PictureStyle	Standard	スタンダード
+UserDef3PictureStyle	Faithful	忠実設定
+UserDef3PictureStyle	Landscape	風景
+UserDef3PictureStyle	Monochrome	モノトーン
+UserDef3PictureStyle	Neutral	ニュートラル
+UserDef3PictureStyle	Portrait	ポートレート
+UserDef3PictureStyle	Standard	スタンダード
+VR_0x66	Off	オフ
+VR_0x66	On (active)	オン（アクティブ）
+VR_0x66	On (normal)	オン（ノーマル）
+VibrationReduction	Off	オフ
+VibrationReduction	On	オン
+VibrationReduction	On (1)	オン（1）
+VibrationReduction	On (2)	オン（2）
+VibrationReduction	On (3)	オン（3）
+VibrationReduction	n/a	該当無し
+ViewInfoDuringExposure	Disable	しない
+ViewInfoDuringExposure	Enable	する
+ViewfinderWarning	Off	オフ
+ViewfinderWarning	On	オン
+VignetteControl	High	高い
+VignetteControl	Low	低い
+VignetteControl	Normal	標準
+VignetteControl	Off	オフ
+VignetteControl	On	オン
+VoiceMemo	Off	オフ
+VoiceMemo	On	オン
+WBAdjLighting	Daylight	昼光
+WBAdjLighting	Flash	ストロボ
+WBAdjLighting	High Color Rendering Fluorescent (3700K)	ハイカラーレンダリング蛍光灯 (1)
+WBAdjLighting	High Color Rendering Fluorescent (5000K)	ハイカラーレンダリング蛍光灯 (3)
+WBAdjLighting	High Color Rendering Fluorescent (cool white)	ハイカラーレンダリング蛍光灯 (2)
+WBAdjLighting	High Color Rendering Fluorescent (daylight)	ハイカラーレンダリング蛍光灯 (4)
+WBAdjLighting	High Color Rendering Fluorescent (warm white)	ハイカラーレンダリング蛍光灯 (0)
+WBAdjLighting	Incandescent	電球
+WBAdjLighting	None	無し
+WBAdjLighting	Standard Fluorescent (3700K)	標準蛍光灯 (1)
+WBAdjLighting	Standard Fluorescent (5000K)	標準蛍光灯 (3)
+WBAdjLighting	Standard Fluorescent (6500K)	標準蛍光灯 (4)
+WBAdjLighting	Standard Fluorescent (cool white)	標準蛍光灯 (2)
+WBAdjLighting	Standard Fluorescent (high temperature mercury vapor)	標準蛍光灯 (5)
+WBAdjLighting	Standard Fluorescent (warm white)	標準蛍光灯 (0)
+WBAdjMode	Calculate Automatically	自動計算
+WBAdjMode	Recorded Value	記録値
+WBAdjMode	Use Gray Point	グレーポイント使用
+WBAdjMode	Use Temperature	温度使用
+WBBracketMode	Off	オフ
+WBBracketMode	On (shift AB)	オン（シフトAB）
+WBBracketMode	On (shift GM)	オン（シフトGM）
+WBFineTuneActive	No	いいえ
+WBFineTuneActive	Yes	はい
+WBMediaImageSizeSetting	LCD monitor	液晶モニター
+WBMediaImageSizeSetting	Rear LCD panel	背面表示パネル
+WBMode	Auto	オート
+WhiteBalance	Auto	オート
+WhiteBalance	Black & White	白黒
+WhiteBalance	Cloudy	曇り
+WhiteBalance	Color Temperature/Color Filter	色温度マニュアル指定
+WhiteBalance	Cool White Fluorescent	白色蛍光灯
+WhiteBalance	Custom	カスタム
+WhiteBalance	Custom 1	カスタム1
+WhiteBalance	Custom 2	カスタム2
+WhiteBalance	Custom 3	カスタム3
+WhiteBalance	Custom 4	カスタム4
+WhiteBalance	Custom2	カスタム2
+WhiteBalance	Custom3	カスタム3
+WhiteBalance	Custom4	カスタム4
+WhiteBalance	Custom5	カスタム5
+WhiteBalance	Day White Fluorescent	昼白色蛍光灯
+WhiteBalance	Daylight	昼光
+WhiteBalance	Daylight Fluorescent	昼光色蛍光灯
+WhiteBalance	Flash	ストロボ
+WhiteBalance	Fluorescent	蛍光灯
+WhiteBalance	Incandescent	電球
+WhiteBalance	Kelvin	ケルビン
+WhiteBalance	Living Room Warm White Fluorescent	リビング暖白光色蛍光灯
+WhiteBalance	Manual	マニュアル
+WhiteBalance	Manual Temperature (Kelvin)	マニュアル白熱灯（ケルビン）
+WhiteBalance	PC Set1	PC設定1
+WhiteBalance	PC Set2	PC設定2
+WhiteBalance	PC Set3	PC設定3
+WhiteBalance	PC Set4	PC設定4
+WhiteBalance	PC Set5	PC設定5
+WhiteBalance	Shade	日陰
+WhiteBalance	Tungsten	タングステン(白熱灯)
+WhiteBalance	Underwater	水中
+WhiteBalance	Unknown	不明
+WhiteBalance	User-Selected	ユーザ選択
+WhiteBalance	Warm White Fluorescent	暖白光色蛍光灯
+WhiteBalance	White Fluorescent	温白色蛍光灯
+WhiteBalance2	3000K (Tungsten light)	3000K (白熱電球)
+WhiteBalance2	3600K (Tungsten light-like)	3600K (白熱電球-like)
+WhiteBalance2	4000K (Cool white fluorescent)	4000K (蛍光灯１)
+WhiteBalance2	4500K (Neutral white fluorescent)	4500K (蛍光灯２)
+WhiteBalance2	5300K (Fine Weather)	5300K (晴天)
+WhiteBalance2	6000K (Cloudy)	6000K (曇り)
+WhiteBalance2	6600K (Daylight fluorescent)	6600K (蛍光灯３)
+WhiteBalance2	7500K (Fine Weather with Shade)	7500K (晴天と影)
+WhiteBalance2	Auto	オート
+WhiteBalance2	Custom WB 1	カスタムホワイトバランス1
+WhiteBalance2	Custom WB 2	カスタムホワイトバランス2
+WhiteBalance2	Custom WB 2900K	カスタムホワイトバランス2900K
+WhiteBalance2	Custom WB 3	カスタムホワイトバランス3
+WhiteBalance2	Custom WB 4	カスタムホワイトバランス4
+WhiteBalance2	Custom WB 5400K	カスタムホワイトバランス5400K
+WhiteBalance2	Custom WB 8000K	カスタムホワイトバランス8000K
+WhiteBalance2	One Touch WB 1	カスタムホワイトバランス1
+WhiteBalance2	One Touch WB 2	カスタムホワイトバランス2
+WhiteBalance2	One Touch WB 3	カスタムホワイトバランス3
+WhiteBalance2	One Touch WB 4	カスタムホワイトバランス4
+WhiteBalanceAdj	Auto	オート
+WhiteBalanceAdj	Cloudy	曇り
+WhiteBalanceAdj	Daylight	昼光
+WhiteBalanceAdj	Flash	ストロボ
+WhiteBalanceAdj	Fluorescent	蛍光灯
+WhiteBalanceAdj	Off	オフ
+WhiteBalanceAdj	On	オン
+WhiteBalanceAdj	Shade	日陰
+WhiteBalanceAdj	Tungsten	タングステン(白熱灯)
+WhiteBalanceMode	Auto (Cloudy)	オート（曇天）
+WhiteBalanceMode	Auto (Day White Fluorescent)	オート（昼白色蛍光灯）
+WhiteBalanceMode	Auto (Daylight Fluorescent)	オート（昼光色蛍光灯）
+WhiteBalanceMode	Auto (Daylight)	オート（昼光）
+WhiteBalanceMode	Auto (Flash)	オート（ストロボ）
+WhiteBalanceMode	Auto (Shade)	オート（日陰）
+WhiteBalanceMode	Auto (Tungsten)	オート（白熱灯）
+WhiteBalanceMode	Auto (White Fluorescent)	オート（白色蛍光灯）
+WhiteBalanceMode	Unknown	不明
+WhiteBalanceMode	User-Selected	ユーザー選択
+WhiteBalanceSet	Auto	オート
+WhiteBalanceSet	Cloudy	曇り
+WhiteBalanceSet	Day White Fluorescent	昼白色蛍光灯
+WhiteBalanceSet	Daylight	昼光
+WhiteBalanceSet	Daylight Fluorescent	昼光色蛍光灯
+WhiteBalanceSet	Flash	ストロボ
+WhiteBalanceSet	Manual	マニュアル
+WhiteBalanceSet	Set Color Temperature 1	色温度設定1
+WhiteBalanceSet	Set Color Temperature 2	色温度設定2
+WhiteBalanceSet	Set Color Temperature 3	色温度設定3
+WhiteBalanceSet	Shade	日陰
+WhiteBalanceSet	Tungsten	タングステン(白熱灯)
+WhiteBalanceSet	White Fluorescent	温白色蛍光灯
+WideRange	Off	オフ
+WideRange	On	オン
+WorldTimeLocation	Destination	目的地
+WorldTimeLocation	Home	自宅
+WorldTimeLocation	Hometown	現在地
+YCbCrPositioning	Centered	中央
+YCbCrPositioning	Co-sited	相互配置
+ZoneMatching	High Key	ハイキー
+ZoneMatching	ISO Setting Used	オフ(ISO設定使用)
+ZoneMatching	Low Key	ローキー
+ZoneMatchingOn	Off	オフ
+ZoneMatchingOn	On	オン

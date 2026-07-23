@@ -1,0 +1,1549 @@
+AIRulerUnits	Centimeters	Сантиметры
+AIRulerUnits	Inches	Дюймы
+AIRulerUnits	Millimeters	Милиметры
+AIRulerUnits	Picas	Пики
+AIRulerUnits	Pixels	Пиксели
+AIRulerUnits	Points	Точки
+ATSCContent	No	Нет
+ATSCContent	Yes	Да
+ActionAdvised	Object Append	Добавить объект
+ActionAdvised	Object Kill	Уничтожить объект
+ActionAdvised	Object Reference	Сделать ссылку на объект
+ActionAdvised	Object Replace	Заменить объект
+AdultContentWarning	Adult Content Warning Required	Требуется
+AdultContentWarning	Not Required	Не требуется
+AdultContentWarning	Unknown	Не задано
+AdvancedSceneMode	Architecture	Архитектура
+AdvancedSceneMode	Bleach Bypass	Удержание серебра
+AdvancedSceneMode	Cinema	Кино
+AdvancedSceneMode	Color Select	Выбранный цвет
+AdvancedSceneMode	Creative Macro	Творческий макро
+AdvancedSceneMode	Creative Night Scenery	Творческий ночной пейзаж
+AdvancedSceneMode	Creative Portrait	Творческий портрет
+AdvancedSceneMode	Creative Scenery	Творческий пейзаж
+AdvancedSceneMode	Creative Sports	Творческий спорт
+AdvancedSceneMode	Cross Process	Кросспроцесс
+AdvancedSceneMode	Dynamic Art	Динамика
+AdvancedSceneMode	Dynamic Monochrome	Динамичное монохромное
+AdvancedSceneMode	Elegant	Элегантный
+AdvancedSceneMode	Expressive	Выразительный
+AdvancedSceneMode	Fantasy	Фэнтези
+AdvancedSceneMode	Flower	Цветок
+AdvancedSceneMode	HDR Art	HDR
+AdvancedSceneMode	HDR B&W	Чёрно-Белый HDR
+AdvancedSceneMode	Handheld Night Shot	Ночная съёмка с руки
+AdvancedSceneMode	High Dynamic	Высокая динамика
+AdvancedSceneMode	High Key	В высоком ключе
+AdvancedSceneMode	Illuminations	Свеча
+AdvancedSceneMode	Impressive Art	Впечатляющий
+AdvancedSceneMode	Indoor Portrait	Внутренний портрет
+AdvancedSceneMode	Indoor Sports	Спорт в помещении
+AdvancedSceneMode	Low Key	В низком ключе
+AdvancedSceneMode	Miniature	Миниатюра
+AdvancedSceneMode	Monochrome	Монохромный
+AdvancedSceneMode	Nature	Природа
+AdvancedSceneMode	Objects	Объекты
+AdvancedSceneMode	Old Days	Старые времена
+AdvancedSceneMode	Outdoor Portrait	Наружный портрет
+AdvancedSceneMode	Outdoor Sports	Спорт на открытом воздухе
+AdvancedSceneMode	Pure	Чистый
+AdvancedSceneMode	Retro	Ретро
+AdvancedSceneMode	Rough Monochrome	Грубый монохромный
+AdvancedSceneMode	Sepia	Сепия
+AdvancedSceneMode	Silhouette	Силуэт
+AdvancedSceneMode	Silky Monochrome	Шелковистый монохромный
+AdvancedSceneMode	Soft	Мягкий
+AdvancedSceneMode	Star	Звёзды
+AdvancedSceneMode	Sunshine	Солнечный свет
+AdvancedSceneMode	Toy Effect	Эффект ломографии
+AdvancedSceneMode	Toy Pop	Ломография с выделением цвета
+Alpha	Alpha Exists (W color component)	Альфа-канал присутствует (цветной компонент W)
+Alpha	Alpha Exists (color not premultiplied)	Альфа-канал присутствует (не предварительно умноженный цвет)
+Alpha	Alpha Exists (color premultiplied)	Альфа-канал присутствует (предварительно умноженный цвет)
+Alpha	No Alpha Plane	Альфа-канал отсутствует
+AlphaDataDiscard	Flexbits Discarded	Гибкие биты отброшены
+AlphaDataDiscard	Full Resolution	Полное разрешение
+AlphaDataDiscard	HighPass Frequency Data Discarded	Данные высоких частот отброшены
+AlphaDataDiscard	Highpass and LowPass Frequency Data Discarded	Данные высоких и низких частот отброшены
+AudioEncoding	Device-specific sound	Зависящий от устройства звук
+AudioEncoding	G.711 A-law logarithmic PCM	G.711 A-law логарифмический PCM
+AudioEncoding	G.711 mu-law logarithmic PCM	G.711 mu-law логарифмический PCM
+AudioEncoding	Nellymoser 16kHz Mono	Nellymoser 16 кГц, моно
+AudioEncoding	Nellymoser 8kHz Mono	Nellymoser 8kHz, моно
+AudioEncoding	PCM-BE (uncompressed)	PCM-BE (без сжатия)
+AudioEncoding	PCM-LE (uncompressed)	PCM-LE (без сжатия)
+AudioType	Mono Actuality	Событие – Моно
+AudioType	Mono Music	Музыка – Моно
+AudioType	Mono Question and Answer Session	Вопросы и ответы – Моно
+AudioType	Mono Raw Sound	Необработанная запись – Моно
+AudioType	Mono Response to a Question	Ответ на вопрос – Моно
+AudioType	Mono Scener	Обстоятельства события – Моно
+AudioType	Mono Voicer	Голосовая запись – Моно
+AudioType	Mono Wrap	Итог события – Моно
+AudioType	Stereo Actuality	Событие – Стерео
+AudioType	Stereo Music	Музыка – Стерео
+AudioType	Stereo Question and Answer Session	Вопросы и ответы – Стерео
+AudioType	Stereo Raw Sound	Необработанная запись – Стерео
+AudioType	Stereo Response to a Question	Ответ на вопрос – Стерео
+AudioType	Stereo Scener	Обстоятельства события – Стерео
+AudioType	Stereo Voicer	Голосовая запись – Стерео
+AudioType	Stereo Wrap	Итог события – Стерео
+AudioType	Text Only	Только текст
+AutoFocus	Off	Не включён
+AutoFocus	On	Включен
+AutoRotation	Auto	Автоматически
+AutoRotation	Down	Вниз
+AutoRotation	Up	Вверх
+BMPVersion	AVI BMP structure?	Структура AVI BMP?
+BackgroundColorIndicator	Specified Background Color	Указан
+BackgroundColorIndicator	Unspecified Background Color	Не указан
+BitDepth	Custom	Заданная пользователем
+ByteOrder	Big-endian	Порядок от старшего к младшему
+ByteOrder	Little-endian	Порядок от младшего к старшему
+CFALayout	Even columns offset down 1/2 row	Чётные столбцы смещены вниз на 1/2 строки
+CFALayout	Even columns offset up 1/2 row	Чётные столбцы смещены вверх 1/2 строки
+CFALayout	Even rows offset down by 1/2 row, even columns offset left by 1/2 column	Чётные строки смещены вниз на 1/2 строки, чётные столбцы смещены влево на 1/2 столбца
+CFALayout	Even rows offset down by 1/2 row, even columns offset right by 1/2 column	Чётные строки смещены вниз на 1/2 строки, чётные столбцы смещены вправо на 1/2 столбца
+CFALayout	Even rows offset left 1/2 column	Чётные строки смещены влево на 1/2 столбца
+CFALayout	Even rows offset right 1/2 column	Чётные строки смещены вправо на 1/2 столбца
+CFALayout	Even rows offset up by 1/2 row, even columns offset left by 1/2 column	Чётные строки смещены вверх на 1/2 строки, чётные столбцы смещены влево на 1/2 столбца
+CFALayout	Even rows offset up by 1/2 row, even columns offset right by 1/2 column	Чётные строки смещены вверх на 1/2 строки, чётные столбцы смещены вправо на 1/2 столбца
+CFALayout	Rectangular	Прямоугольная компоновка
+CFAPattern	[Blue,Green][Green,Red]	[Синий, Зелёный][Зелёный, Красный]
+CFAPattern	[Green,Blue][Red,Green]	[Зелёный, Синий][Красный, Зелёный]
+CFAPattern	[Green,Red][Blue,Green]	[Зелёный, Красный][Синий, Зелёный]
+CFAPattern	[Red,Green][Green,Blue]	[Красный, Зелёный][Зелёный, Синий]
+CFAPattern	n/a	Нет данных
+CR2CFAPattern	[Blue,Green][Green,Red]	[Синий, Зеленый][Зеленый, Красный]
+CR2CFAPattern	[Green,Blue][Red,Green]	[Зеленый, Синий][Красный, Зеленый]
+CR2CFAPattern	[Green,Red][Blue,Green]	[Зеленый, Красный][Синий, Зеленый]
+CR2CFAPattern	[Red,Green][Green,Blue]	[Красный, Зеленый][Зеленый, Синий]
+CalibrationIlluminant1	Cloudy	Облачно (6500 К)
+CalibrationIlluminant1	Cool White Fluorescent	Флуоресцентная лампа – Холодный свет (4150 К)
+CalibrationIlluminant1	D50	D50 (5000 К)
+CalibrationIlluminant1	D55	D55 (5500 К)
+CalibrationIlluminant1	D65	D65 (6500 К)
+CalibrationIlluminant1	D75	D75 (7500 К)
+CalibrationIlluminant1	Day White Fluorescent	Флуоресцентная лампа – Дневной белый (5050 К)
+CalibrationIlluminant1	Daylight	Дневной свет (5500 К)
+CalibrationIlluminant1	Daylight Fluorescent	Флуоресцентная лампа дневного света (6400 К)
+CalibrationIlluminant1	Fine Weather	Ясная погода (5500 К)
+CalibrationIlluminant1	Flash	Вспышка (5500 К)
+CalibrationIlluminant1	Fluorescent	Флуоресцентная лампа (4150 К)
+CalibrationIlluminant1	ISO Studio Tungsten	Студийная лампа накаливания (3200 К)
+CalibrationIlluminant1	Other	Другой источник света
+CalibrationIlluminant1	Shade	Тень (7500 К)
+CalibrationIlluminant1	Standard Light A	Стандартное освещение A (2850 К)
+CalibrationIlluminant1	Standard Light B	Стандартное освещение B (5500 К)
+CalibrationIlluminant1	Standard Light C	Стандартное освещение C (6500 К)
+CalibrationIlluminant1	Tungsten (Incandescent)	Лампа накаливания (2850 К)
+CalibrationIlluminant1	Unknown	Неизвестно
+CalibrationIlluminant1	Warm White Fluorescent	Флуоресцентная лампа – Тёплый свет (2925 К)
+CalibrationIlluminant1	White Fluorescent	Флуоресцентная лампа – Белый свет (3525 К)
+CalibrationIlluminant2	Cloudy	Облачно (6500 К)
+CalibrationIlluminant2	Cool White Fluorescent	Флуоресцентная лампа – Холодный свет (4150 К)
+CalibrationIlluminant2	D50	D50 (5000 К)
+CalibrationIlluminant2	D55	D55 (5500 К)
+CalibrationIlluminant2	D65	D65 (6500 К)
+CalibrationIlluminant2	D75	D75 (7500 К)
+CalibrationIlluminant2	Day White Fluorescent	Флуоресцентная лампа – Дневной белый (5050 К)
+CalibrationIlluminant2	Daylight	Дневной свет (5500 К)
+CalibrationIlluminant2	Daylight Fluorescent	Флуоресцентная лампа дневного света (6400 К)
+CalibrationIlluminant2	Fine Weather	Ясная погода (5500 К)
+CalibrationIlluminant2	Flash	Вспышка (5500 К)
+CalibrationIlluminant2	Fluorescent	Флуоресцентная лампа (4150 К)
+CalibrationIlluminant2	ISO Studio Tungsten	Студийная лампа накаливания (3200 К)
+CalibrationIlluminant2	Other	Другой источник света
+CalibrationIlluminant2	Shade	Тень (7500 К)
+CalibrationIlluminant2	Standard Light A	Стандартное освещение A (2850 К)
+CalibrationIlluminant2	Standard Light B	Стандартное освещение B (5500 К)
+CalibrationIlluminant2	Standard Light C	Стандартное освещение C (6500 К)
+CalibrationIlluminant2	Tungsten (Incandescent)	Лампа накаливания (2850 К)
+CalibrationIlluminant2	Unknown	Неизвестное
+CalibrationIlluminant2	Warm White Fluorescent	Флуоресцентная лампа – Тёплый свет (2925 К)
+CalibrationIlluminant2	White Fluorescent	Флуоресцентная лампа – Белый свет (3525 К)
+CameraOrientation	Horizontal (normal)	Горизонтальная
+CameraOrientation	Rotate 180	Поверот на 180°
+CameraOrientation	Rotate 270 CW	Поворот на 270° по часовой стрелке
+CameraOrientation	Rotate 90 CW	Поворот на 90° по часовой стрелке
+CaptureXResolutionUnit	0.01 mm	0.01 мм
+CaptureXResolutionUnit	0.1 mm	0.1 мм
+CaptureXResolutionUnit	10 cm	10 см
+CaptureXResolutionUnit	10 m	10 м
+CaptureXResolutionUnit	100 m	100 м
+CaptureXResolutionUnit	cm	см
+CaptureXResolutionUnit	km	км
+CaptureXResolutionUnit	m	м
+CaptureXResolutionUnit	mm	мм
+CaptureXResolutionUnit	um	мкм
+CaptureYResolutionUnit	0.01 mm	0.01 мм
+CaptureYResolutionUnit	0.1 mm	0.1 мм
+CaptureYResolutionUnit	10 cm	10 см
+CaptureYResolutionUnit	10 m	10 м
+CaptureYResolutionUnit	100 m	100 м
+CaptureYResolutionUnit	cm	см
+CaptureYResolutionUnit	km	км
+CaptureYResolutionUnit	m	м
+CaptureYResolutionUnit	mm	мм
+CaptureYResolutionUnit	um	мкм
+ChannelMode	Dual Channel	Двухканальное
+ChannelMode	Joint Stereo	Объединённое стерео
+ChannelMode	Single Channel	Моно
+ChannelMode	Stereo	Стерео
+ChromaticAberrationCorrection	Auto	Автоматическая
+ChromaticAberrationCorrection	No correction params available	Недоступна
+ChromaticAberrationCorrection	Off	Не включена
+ChromaticAberrationCorrection	On	Включена
+CleanFaxData	Clean	Без битых строк
+CleanFaxData	Regenerated	Битые  строки восстановлены
+CleanFaxData	Unclean	Битые строки не восстановлены
+CodePage	Windows Latin 1 (Western European)	Windows Latin 1 (Западноевропейская)
+CodingMethods	Baseline JPEG	Базовое JPEG
+CodingMethods	JBIG color	Цветное JBIG
+CodingMethods	Modified Huffman	Одномерное – Модификация Хаффмана
+CodingMethods	Modified MR	Двумерное – Modified Modified READ
+CodingMethods	Modified Read	Двумерное – Modified READ
+CodingMethods	Unspecified compression	Неизвестное сжатие
+ColorAdjustmentMode	Off	Не включён
+ColorAdjustmentMode	On	Включен
+ColorClass	0 (None)	0 (Не указан)
+ColorClass	1 (Winner)	1 (Лучшее)
+ColorClass	2 (Winner alt)	2 (Лучшее Alt)
+ColorClass	3 (Superior)	3 (Хорошее)
+ColorClass	4 (Superior alt)	4 (Хорошее Alt)
+ColorClass	5 (Typical)	5 (Обычноеl)
+ColorClass	6 (Typical alt)	6 (Обычное Alt)
+ColorClass	7 (Extras)	7 (Экстра)
+ColorClass	8 (Trash)	8 (Хлам)
+ColorEffect	Sepia	Сепия
+ColorMode	Autumn Leaves	Осенние листья
+ColorMode	B&W	Чёрно-белое
+ColorMode	Bitmap	Монохромная
+ColorMode	Black & White	Чёрно-белый
+ColorMode	Clear	Прозрачный
+ColorMode	Color Palette	Цветовая палитра
+ColorMode	Deep	Глубокий
+ColorMode	Duotone	Двуцветная
+ColorMode	Embed Adobe RGB	Встроенный Adobe RGB
+ColorMode	Evening	Вечер
+ColorMode	Grayscale	В градациях серого
+ColorMode	Indexed	Индексированные цвета
+ColorMode	Indexed Color	Индексированный цвет
+ColorMode	Landscape	Пейзаж
+ColorMode	Light	Бледный
+ColorMode	Multichannel	Многоканальная
+ColorMode	Natural	Натуральный
+ColorMode	Natural color	Натуральный цвет
+ColorMode	Natural sRGB	Натуральный sRGB
+ColorMode	Natural+ sRGB	Натуральный+ sRGB
+ColorMode	Neutral	Нейтральный
+ColorMode	Night Portrait	Ночной портрет
+ColorMode	Night Scene	Ночная сцена
+ColorMode	Night View	Ночной вид
+ColorMode	Night View/Portrait	Ночной вид/портрет
+ColorMode	Portrait	Портрет
+ColorMode	RGB Color	Цвет RGB
+ColorMode	Sepia	Сепия
+ColorMode	Solarization	Соляризация
+ColorMode	Standard	Стандартный
+ColorMode	Sunset	Закат
+ColorMode	Vivid	Яркий цвет
+ColorMode	Vivid color	Яркий цвет
+ColorMode	n/a	Нет данных
+ColorRepresentation	3 Components, Frame Sequential in Multiple Objects	3 компонента. Последовательность кадров в нескольких объектах
+ColorRepresentation	3 Components, Frame Sequential in One Object	3 компонента. Последовательность кадров в одном объекте
+ColorRepresentation	3 Components, Line Sequential	3 компонента. Последовательная строка
+ColorRepresentation	3 Components, Pixel Sequential	3 компонента. Последовательность пикселей
+ColorRepresentation	3 Components, Single Frame	3 компонента. Один кадр
+ColorRepresentation	3 Components, Special Interleaving	3 компонента. Специальное чередование
+ColorRepresentation	4 Components, Frame Sequential in Multiple Objects	4 компонента. Последовательность кадров в нескольких объектах
+ColorRepresentation	4 Components, Frame Sequential in One Object	4 компонента. Последовательность кадров в одном объекте
+ColorRepresentation	4 Components, Line Sequential	4 компонента. Последовательная строка
+ColorRepresentation	4 Components, Pixel Sequential	4 компонента. Последовательность пикселей
+ColorRepresentation	4 Components, Single Frame	4 компонента. Один кадр
+ColorRepresentation	4 Components, Special Interleaving	4 компонента. Специальное чередование
+ColorRepresentation	Monochrome, Single Frame	Монохромное. Один кадр
+ColorRepresentation	No Image, Single Frame	Нет изображения. Один кадр
+ColorSpace	BT 2020 Constant Luminance	Постоянная яркость BT 2020
+ColorSpace	Calibrated RGB	Калиброванный RGB
+ColorSpace	Device CMYK	Устройство CMYK
+ColorSpace	Device RGB	Устройство RGB
+ColorSpace	Embedded Color Profile	Встроенный цветовой профиль
+ColorSpace	Grayscale	Оттенки серого
+ColorSpace	ICC Profile	ICC-профиль
+ColorSpace	Linked Color Profile	Связанный цветовой профиль
+ColorSpace	Uncalibrated	Некалиброванное
+ColorSpace	Undefined	Не определено
+ColorSpace	Windows Color Space	Цветовое пространство Windows
+ColorSpecApproximation	Accurate	Точная
+ColorSpecApproximation	Exceptional Quality	Лучшее качество
+ColorSpecApproximation	Not Specified	Не указана
+ColorSpecApproximation	Poor Quality	Низкое качество
+ColorSpecApproximation	Reasonable Quality	Приемлемое качество
+ColorSpecMethod	Any ICC	Любой ICC
+ColorSpecMethod	Enumerated	Перечислимый
+ColorSpecMethod	Restricted ICC	Ограниченный ICC
+ColorSpecMethod	Vendor Color	Цвет поставщика
+ColorType	Grayscale	Градация серого
+ColorType	Grayscale with Alpha	Градация серого с Альфа-каналом
+ColorType	Palette	Палитра
+ColorType	RGB with Alpha	RGB с Альфа-каналом
+ComponentsConfiguration	Alpha (matte)	Альфа-канал (маска)
+ComponentsConfiguration	Alpha, B, G, R	Альфа-канал, B, G, R
+ComponentsConfiguration	Blue (B)	Синий (B)
+ComponentsConfiguration	Chrominance (Cb, Cr, subsampled by two)	Цветность (Cb, Cr, субдискретизация на два)
+ComponentsConfiguration	Composite video	Композитное видео
+ComponentsConfiguration	Depth (Z)	Глубина (Z)
+ComponentsConfiguration	Green (G)	Зелёный (G)
+ComponentsConfiguration	Luminance (Y)	Яркость (Y)
+ComponentsConfiguration	R, G, B, Alpha	R, G, B, Альфа-канал
+ComponentsConfiguration	Red (R)	Красный (R)
+ComponentsConfiguration	User-defined 2 component element	2-компонентный элемент определяемый пользователем
+ComponentsConfiguration	User-defined 3 component element	3-компонентный элемент определяемый пользователем
+ComponentsConfiguration	User-defined 4 component element	4-компонентный элемент определяемый пользователем
+ComponentsConfiguration	User-defined 5 component element	5-компонентный элемент определяемый пользователем
+ComponentsConfiguration	User-defined 6 component element	6-компонентный элемент определяемый пользователем
+ComponentsConfiguration	User-defined 7 component element	7-компонентный элемент определяемый пользователем
+ComponentsConfiguration	User-defined 8 component element	8-компонентный элемент определяемый пользователем
+ComponentsConfiguration	User-defined single component	Один компонент определяемый пользователем
+CompositeImage	Composite Image Captured While Shooting	Полученное во время съёмки
+CompositeImage	General Composite Image	Созданное в редакторе
+CompositeImage	Not a Composite Image	Нет
+CompositeImage	Unknown	Геизвестно
+Compressed	False	Нет
+Compressed	True	Да
+Compression	4-Bit RLE	4-битное RLE
+Compression	8-Bit RLE	8-битное RLE
+Compression	Bitfields	Битовые поля
+Compression	Fractal	Фрактальное
+Compression	JPEG	JPEG сжатие
+Compression	JPEG (old-style)	JPEG (старый стиль)
+Compression	Modified Huffman	Модифицированное кодирование Хаффмана
+Compression	Modified Modified READ	Modified Modified READ (MMR)
+Compression	Modified READ	Modified READ (MR)
+Compression	None	Без сжатия
+Compression	RLE Encoding	Кодирование RLE
+Compression	Uncompressed	Несжатый
+Compression	ZIP with prediction	ZIP с предсказанием
+Compression	ZIP without prediction	ZIP без предсказания
+ContentProtected	No	Нет
+ContentProtected	Yes	Да
+ContentRating	Adult Supervision Recommended	Под наблюдением взрослых
+ContentRating	Adults Only	Только для взрослых
+ContentRating	All Ages	Для любого возраста
+ContentRating	No Rating	Возрастная группа не указана
+ContentRating	Older Children	Старшим детям
+ContentRating	Older Teens	Старшим подросткам
+ContentRating	Younger Teens	Младшим подросткам
+Contrast	High	Высокая
+Contrast	Low	Низкая
+Contrast	Normal	Стандартная
+ConvergenceBaseImage	Equivalent for Both Viewpoints	Эквивалент для обеих точек просмотра
+ConvergenceBaseImage	Left Viewpoint	Левая точка просмотра
+ConvergenceBaseImage	Right Viewpoint	Правая точка просмотра
+CopyrightFlag	False	Нет
+CopyrightFlag	True	Есть
+CopyrightStatus	Protected	Защищено
+CopyrightStatus	Public Domain	Всеобщее достояние
+CopyrightStatus	Unknown	Не указано
+CreativeStyleWasChanged	No	Нет
+CreativeStyleWasChanged	Yes	Да
+CreatorAppID	Unknown	Неизвестное
+CreditLineRequired	Credit Adjacent To Image	Кредит рядом с изображением
+CreditLineRequired	Credit in Credits Area	Кредит в области кредитов
+CreditLineRequired	Credit on Image	Кредит на изображение
+CreditLineRequired	Not Required	Кредит не требуется
+CropXCommonOffset	Common Offset Setting	Общая настройка смещения
+CropXCommonOffset	Individual Offset Setting	Индивидуальная настройка смещения
+CropYCommonOffset	Common Offset Setting	Общая настройка смещения
+CropYCommonOffset	Individual Offset Setting	Индивидуальная настройка смещения
+Cropping	Off	Не включено
+Cropping	On	Включено
+CustomRendered	Custom	Пользовательский
+CustomRendered	Normal	Обычный
+CustomRendered	Panorama	Панорама
+CustomRendered	Portrait	Портрет
+D-RangeOptimizerMode	Auto	Автоматический
+D-RangeOptimizerMode	Manual	Ручной
+D-RangeOptimizerMode	Off	Не включён
+DTVContent	No	Нет
+DTVContent	Yes	Да
+DataLocation	Downloaded Separately	Скачивается отдельно
+DataLocation	Local Music File	Локальный музыкальный файл
+DataSign	Signed	Подписан
+DataSign	Unsigned	Неподписан
+DataType	Artwork	Обложка
+DayOfWeek	Friday	Пятница
+DayOfWeek	Monday	Понедельник
+DayOfWeek	Saturday	Суббота
+DayOfWeek	Sunday	Воскресенье
+DayOfWeek	Thursday	Четверг
+DayOfWeek	Tuesday	Вторник
+DayOfWeek	Wednesday	Среда
+DefaultBlackRender	Auto	Автоматическая
+DefaultBlackRender	None	Не обрабатывать
+DigitalZoom	No	Нет
+DigitalZoom	Yes	Да
+DigitalZoomOn	Off	Не включён
+DigitalZoomOn	On	Включен
+DisplayXResolutionUnit	0.01 mm	0.01 мм
+DisplayXResolutionUnit	0.1 mm	0.1 мм
+DisplayXResolutionUnit	10 cm	10 см
+DisplayXResolutionUnit	10 m	10 м
+DisplayXResolutionUnit	100 m	100 м
+DisplayXResolutionUnit	cm	см
+DisplayXResolutionUnit	km	км
+DisplayXResolutionUnit	m	м
+DisplayXResolutionUnit	mm	мм
+DisplayXResolutionUnit	um	мкм
+DisplayYResolutionUnit	0.01 mm	0.01 мм
+DisplayYResolutionUnit	0.1 mm	0.1 мм
+DisplayYResolutionUnit	10 cm	10 см
+DisplayYResolutionUnit	10 m	10 м
+DisplayYResolutionUnit	100 m	100 м
+DisplayYResolutionUnit	cm	см
+DisplayYResolutionUnit	km	км
+DisplayYResolutionUnit	m	м
+DisplayYResolutionUnit	mm	мм
+DisplayYResolutionUnit	um	мкм
+DisplayedUnitsX	cm	Сантиметры
+DisplayedUnitsX	inches	Дюймы
+DisplayedUnitsY	cm	Сантиметры
+DisplayedUnitsY	inches	Дюймы
+DistortionCompensation	Off	Не включена
+DistortionCompensation	On	Включена
+DistortionCompensation	n/a	Нет данных
+DistortionCorrection	Auto	Автоматическая
+DistortionCorrection	Auto fixed by lens	Автоматическая по объективу
+DistortionCorrection	No correction params available	Не доступна
+DistortionCorrection	Off	Не включена
+DittoKey	New	Заново
+DittoKey	Same	Так же
+DriveMode	Continuous Shooting	Серийная съёмка
+DriveMode	Self-timer Operation	Съёмка с автоспуском
+DriveMode	Single-frame Shooting	Покадровая съёмка
+DriveType	Fixed Disk	Установленный диск
+DriveType	Invalid Root Path	Неверный корневой путь
+DriveType	Ram Disk	Ram диск
+DriveType	Remote Drive	Удаленный диск
+DriveType	Removable Media	Съемный диск
+DriveType	Unknown	Неизвестный
+DynamicRangeOptimizer	Advanced Auto	Расширенная. Автоматическая
+DynamicRangeOptimizer	Advanced Lv1	Расширенная. Уровень 1
+DynamicRangeOptimizer	Advanced Lv2	Расширенная. Уровень 2
+DynamicRangeOptimizer	Advanced Lv3	Расширенная. Уровень 3
+DynamicRangeOptimizer	Advanced Lv4	Расширенная. Уровень 4
+DynamicRangeOptimizer	Advanced Lv5	Расширенная. Уровень 5
+DynamicRangeOptimizer	Auto	Автоматическая
+DynamicRangeOptimizer	Off	Не включена
+DynamicRangeOptimizer	Standard	Стандартная
+EditorialUpdate	Additional language	Дополнительный язык
+Emphasis	None	Нет
+EncodingProcess	Baseline DCT, Huffman coding	Базовое DCT, кодирование Хаффмана
+EncodingProcess	Extended sequential DCT, Huffman coding	Расширенное последовательное DCT, кодирование Хаффмана
+EncodingProcess	Extended sequential DCT, arithmetic coding	Расширенное последовательное DCT, арифметическое кодирование
+EncodingProcess	Lossless, Differential Huffman coding	Без потерь, дифференциальное кодирование Хаффмана
+EncodingProcess	Lossless, Huffman coding	Без потерь, кодирование Хаффмана
+EncodingProcess	Lossless, arithmetic coding	Без потерь, арифметическое кодирование
+EncodingProcess	Lossless, differential arithmetic coding	Без потерь, дифференциальное арифметическое кодирование
+EncodingProcess	Progressive DCT, Huffman coding	Прогрессивное DCT, кодирование Хаффмана
+EncodingProcess	Progressive DCT, arithmetic coding	Прогрессивное DCT, арифметическое кодирование
+EncodingProcess	Progressive DCT, differential Huffman coding	Прогрессивное DCT, дифференциальное кодирование Хаффмана
+EncodingProcess	Progressive DCT, differential arithmetic coding	Прогрессивное DCT, дифференциальное арифметическое кодирование
+EncodingProcess	Sequential DCT, differential Huffman coding	Последовательное DCT, Дифференциальное кодирование Хаффмана
+EncodingProcess	Sequential DCT, differential arithmetic coding	Последовательное DCT, дифференциальное арифметическое кодирование
+Encryption	None	Нет
+Encryption	Old Mobipocket	Старый Mobipocket
+EnvelopePriority	0 (reserved)	0 (В резерве)
+EnvelopePriority	1 (most urgent)	1 (Неотложное)
+EnvelopePriority	5 (normal urgency)	5 (Обычное)
+EnvelopePriority	8 (least urgent)	8 (Не срочное)
+EnvelopePriority	9 (user-defined priority)	9 (Пользовательский приоритет)
+EnvironmentMap	Cube	Куб
+EnvironmentMap	Latitude/Longitude	Широта/Долгота
+ExcursionTolerance	Allowed	Допускается
+ExcursionTolerance	Not Allowed	Не допускается
+ExifByteOrder	Big-endian (Motorola, MM)	Порядок от старшего к младшему  (Motorola, MM)
+ExifByteOrder	Little-endian (Intel, II)	Порядок от младшего к старшему (Intel, II)
+ExifUnicodeByteOrder	Big-endian (Motorola, MM)	Порядок от старшего к младшему (Motorola, MM)
+ExifUnicodeByteOrder	Little-endian (Intel, II)	Порядок от младшего к старшему (Intel, II)
+ExposureMode	Auto	Автоэкспозиция
+ExposureMode	Auto bracket	Автобрекетинг
+ExposureMode	Manual	Ручная экспозиция
+ExposureProgram	Action (High speed)	Спорт
+ExposureProgram	Aperture-priority AE	Автоэкспозиция с приоритетом Диафрагмы
+ExposureProgram	Bulb	Выдержка от руки
+ExposureProgram	Creative (Slow speed)	Творческая
+ExposureProgram	Landscape	Пейзаж
+ExposureProgram	Manual	Ручная
+ExposureProgram	Not Defined	Не определена
+ExposureProgram	Portrait	Портрет
+ExposureProgram	Program AE	Программная автоэкспозиция
+ExposureProgram	Shutter speed priority AE	Автоэкспозиция с приоритетом Выдержки
+ExtenderStatus	Attached	Прикреплен
+ExtenderStatus	Not attached	Не прикреплен
+ExtenderStatus	Removed	Удалён
+ExtraFlags	(none)	Отсутствуют
+ExtraFlags	Fastest Algorithm	Быстрый алгоритм
+ExtraFlags	Maximum Compression	Максимальное сжатие
+ExtraSamples	Associated Alpha	Связаные альфа-данные
+ExtraSamples	Unassociated Alpha	Несвязанные альфа-данные
+ExtraSamples	Unspecified	Данные без указания
+FaceOrientation	Horizontal (normal)	Положительное направление
+FaceOrientation	Rotate 180	Поворот на 180°
+FaceOrientation	Rotate 270 CW	Поворот на 270° по часовой стрелке
+FaceOrientation	Rotate 90 CW	Поворот на 90° по часовой стрелке
+FastSeek	No	Нет
+FastSeek	Yes	Да
+FaxProfile	Extended B&W lossless, F	Расширенный чёрно-белый без потерь, профиль F
+FaxProfile	Lossless JBIG B&W, J	JBIG чёрно-белый без потерь, профиль J
+FaxProfile	Lossless color and grayscale, L	Цветной и с оттенками серого без потерь, профиль L
+FaxProfile	Lossy color and grayscale, C	Цветной и с оттенками серого с потерями, профиль C
+FaxProfile	Minimal B&W lossless, S	Минимальный чёрно-белый без потерь, профиль S
+FaxProfile	Mixed raster content, M	Смешанное содержимое растра, профиль M
+FaxProfile	Multi Profiles	Несколько профилей
+FaxProfile	Profile T	Профиль T
+FaxProfile	Unknown	Не соответствует профилю факсимильной связи
+FieldOfView	Linear	Линейный
+FieldOfView	Wide	Широкий
+FieldPermissions	Allow changes to specified form fields	Разрешить изменения в указанных полях формы
+FieldPermissions	Disallow changes to all form fields	Запретить изменения во всех полях формы
+FieldPermissions	Disallow changes to specified form fields	Запретить изменения в указанных полях формы
+FileAttributes	Archive	Архивный
+FileAttributes	BSD Whiteout	BSD – Скрытый
+FileAttributes	Block	Блок
+FileAttributes	Character	Символ
+FileAttributes	Compressed	Сжатый
+FileAttributes	Device	Устройство
+FileAttributes	Directory	Каталог
+FileAttributes	Encrypted	Зашифрованный
+FileAttributes	Encrypted?	Зашифрованные?
+FileAttributes	FIFO	FIFO (именованный канал)
+FileAttributes	Hidden	Скрытый
+FileAttributes	Mux Block	Блок Mux
+FileAttributes	Mux Character	Символ Mux
+FileAttributes	Normal	Без атрибутов
+FileAttributes	Not Content Indexed	Не проиндексированный
+FileAttributes	Not indexed	Не индексированный
+FileAttributes	Offline	Автономный
+FileAttributes	Read Only	Только для чтения
+FileAttributes	Read-only	Только для чтения
+FileAttributes	Regular	Обычный
+FileAttributes	Reparse Point	Точки повторной обработки
+FileAttributes	Reparse point	Точки повторной обработки
+FileAttributes	Set Group ID	Установка ID группы
+FileAttributes	Set User ID	Установка ID пользователя
+FileAttributes	Socket	Сокет
+FileAttributes	Solaris Door	Дверь (в Solaris)
+FileAttributes	Solaris Shadow Inode	Теневой индекс Solaris
+FileAttributes	Sparse	Разрежённый
+FileAttributes	Sparse File	Разрежённый файл
+FileAttributes	Symbolic Link	Символическая ссылка
+FileAttributes	System	Системный
+FileAttributes	Temporary	Временный
+FileAttributes	Unknown	Неизвестный
+FileAttributes	Volume	Том
+FileAttributes	Volume Label	Метка тома
+FileAttributes	VxFS Compressed	Сжатый VxFS
+FileAttributes	XENIX Named	Именованный (в XENIX)
+FileFormat	AppleSingle (Apple Computer Inc)	AppleSingle (Apple)
+FileFormat	Audio Interchange File Format AIFF (Apple Computer Inc)	Аудиофайл формата AIFF (Apple)
+FileFormat	Bit Mapped Graphics File [.BMP] (Microsoft)	Битовый графический файл [.BMP] (Microsoft)
+FileFormat	Compressed Binary File [.ZIP] (PKWare Inc)	Сжатый двоичный файл [.ZIP] (Компания PKWare)
+FileFormat	Digital Audio File [.WAV] (Microsoft & Creative Labs)	Аудиофайл формата [.WAV] (Microsoft и Creative Labs)
+FileFormat	Hypertext Markup Language [.HTML] (The Internet Society)	Язык гипертекстовой разметки [.HTML] (The Internet Society)
+FileFormat	IPTC Unstructured Character Oriented File Format (UCOFF)	Неструктурированный символьно-ориентированный формат файла IPTC  (UCOFF)
+FileFormat	IPTC7901 Recommended Message Format	IPTC7901 Рекомендуемый формат сообщения
+FileFormat	Illustrator (Adobe Graphics data)	Illustrator (Графические данные Adobe)
+FileFormat	JPEG File Interchange (JFIF)	Формат обмена файлами стандарта JPEG (JFIF)
+FileFormat	MPEG 2 Audio Layer 2 (Musicom), ISO/IEC	Аудио второго уровня MPEG 2  (Musicom), ISO/IEC
+FileFormat	MPEG 2 Audio Layer 3, ISO/IEC	Аудио третьего уровня MPEG 2 , ISO/IEC
+FileFormat	News Industry Text Format (NITF)	Текстовый формат новостной индустрии (NITF)
+FileFormat	No ObjectData	Данные объекта отсутствуют
+FileFormat	PC DOS/Windows Executable Files [.COM][.EXE]	Исполняемый файл PC DOS/Windows [.COM][.EXE]
+FileFormat	RIFF Wave (Microsoft Corporation)	RIFF Wave (Microsoft)
+FileFormat	Ritzaus Bureau NITF version (RBNITF DTD)	Ritzaus Bureau вариант NITF  (RBNITF DTD)
+FileFormat	Tagged Image File Format (Adobe/Aldus Image data)	Формат файла изображения с тегами (Adobe/Aldus данные изображения)
+FileFormat	Tape Archive [.TAR]	Формат файла архива [.TAR]
+FileFormat	Tidningarnas Telegrambyra NITF version (TTNITF DTD)	Tidningarnas Telegrambyra вариант NITF (TTNITF DTD)
+FileFormat	United Press International ANPA 1312 variant	United Press International  – Вариант ANPA 1312
+FileFormat	United Press International Down-Load Message	United Press International – Down-Load Message
+FileSource	Digital Camera	Цифровая фотокамера
+FileSource	Film Scanner	Плёночный сканер
+FileSource	Reflection Print Scanner	Планшетный сканер
+FileSource	Sigma Digital Camera	Цифровая фотокамера Sigma
+FillOrder	Normal	Обычный
+FillOrder	Reversed	Обратный
+Filter	Adaptive	Адаптивный
+Flags	Allow Download	Разрешить загрузку
+Flags	Allow Recording	Разрешить запись
+Flags	Animation	Анимация
+Flags	Comment	Комментарий
+Flags	Description	Описание
+Flags	Extension Present	Настоящее время
+Flags	ExtraFields	Дополнительное поле
+Flags	FileName	Название файлов
+Flags	IDList	Список ID
+Flags	IconFile	Иконка файла
+Flags	Limited Range	Ограниченный диапазон
+Flags	LinkInfo	Информация о ссылке
+Flags	LinkToLink	Ссылка на ссылку
+Flags	Live	В прямом эфире
+Flags	NoLinkInfo	Информация о ссылке отсутствует
+Flags	NoLinkPathTracking	Отслеживание пути без ссылки
+Flags	NoLinkTrack	Без ссылки на трек
+Flags	Perfect Play	Воспроизводить после загрузки
+Flags	RelativePath	Относительный путь
+Flags	RunAsUser	Запуск от имени пользователя
+Flags	TargetMetadata	Целевые метаданные
+Flags	Text	Текст
+Flags	Unicode	Юникод
+Flags	WorkingDir	Рабочая папка
+Flash	Auto, Did not fire	Автоматический режим. Вспышка не сработала
+Flash	Auto, Did not fire, Red-eye reduction	Автоматический режим. Вспышка не сработала. Включён режим уменьшения эффекта «красных глаз»
+Flash	Auto, Fired	Автоматический режим. Вспышка сработала
+Flash	Auto, Fired, Red-eye reduction	Автоматический режим. Вспышка сработала
+Flash	Auto, Fired, Red-eye reduction, Return detected	Автоматический режим. Вспышка сработала. Включён режим уменьшения эффекта «красных глаз». Отражённый свет обнаружен
+Flash	Auto, Fired, Red-eye reduction, Return not detected	Автоматический режим. Вспышка сработала. Включён режим уменьшения эффекта «красных глаз». Отражённый свет не обнаружен
+Flash	Auto, Fired, Return detected	Автоматический режим. Вспышка сработала. Отражённый свет обнаружен
+Flash	Auto, Fired, Return not detected	Автоматический режим. Вспышка сработала. Отражённый свет не обнаружен
+Flash	Did not fire	Вспышка не сработала
+Flash	Fired	Вспышка сработала
+Flash	Fired, Red-eye reduction	Вспышка сработала. Включён режим уменьшения эффекта «красных глаз»
+Flash	Fired, Red-eye reduction, Return detected	Вспышка сработала. Включён режим уменьшения эффекта «красных глаз». Отражённый свет обнаружен
+Flash	Fired, Red-eye reduction, Return not detected	Вспышка сработала. Включён режим уменьшения эффекта «красных глаз». Отражённый свет не обнаружен
+Flash	Fired, Return detected	Вспышка сработала. Отражённый свет обнаружен
+Flash	Fired, Return not detected	Вспышка сработала. Отражённый свет не обнаружен
+Flash	No Flash	Без вспышки
+Flash	No flash function	Функция вспышки не поддерживается
+Flash	Off	Не включена
+Flash	Off, Did not fire	Не включена. Вспышка не сработала
+Flash	Off, Did not fire, Return not detected	Не включена. Вспышка не сработала. Отражённый свет не обнаружен
+Flash	Off, No flash function	Не включена. Функция вспышки не поддерживается
+Flash	Off, Red-eye reduction	Не включена. Включён режим уменьшения эффекта «красных глаз»
+Flash	On	Включена
+Flash	On, Did not fire	Принудительный режим. Вспышка не сработала
+Flash	On, Fired	Принудительный режим. Вспышка сработала
+Flash	On, Red-eye reduction	Принудительный режим. Включён режим уменьшения эффекта «красных глаз»
+Flash	On, Red-eye reduction, Return detected	Принудительный режим. Включён режим уменьшения эффекта «красных глаз». Отражённый свет обнаружен
+Flash	On, Red-eye reduction, Return not detected	Принудительный режим. Включён режим уменьшения эффекта «красных глаз». Отражённый свет не обнаружен
+Flash	On, Return detected	Принудительный режим. Отражённый свет обнаружен
+Flash	On, Return not detected	Принудительный режим. Отражённый свет не обнаружен
+FlashAttributes	UseNetwork	Использовать сеть
+FlashMode	Auto	Автоматический
+FlashMode	Disabled	Вспышка не включена
+FlashMode	Force	Принудительный
+FlashMode	Red eye	Красные глаза
+FlashType	Built-In Flash	Встроенная
+FlashType	External	Внешняя
+FlickerReduce	Off	Не включено
+FlickerReduce	On	Включено
+FocalPlaneResolutionUnit	None	Не указано
+FocalPlaneResolutionUnit	cm	см
+FocalPlaneResolutionUnit	inches	дюймы
+FocalPlaneResolutionUnit	mm	мм
+FocalPlaneResolutionUnit	um	мкм
+FontFamily	Decorative	Декоративный
+FontFamily	Don't Care	Без разницы
+FontFamily	Modern	Модерн
+FontFamily	Script	Скрипт
+Format	RangeInverse	Диапазон инверсии
+Format	RangeLinear	Диапазон линейности
+GPSAltitudeRef	Above Sea Level	Над уровнем моря
+GPSAltitudeRef	Below Sea Level	Ниже уровня моря
+GPSDestBearingRef	Magnetic North	На магнитный северный полюс
+GPSDestBearingRef	True North	На географический северный полюс
+GPSDestDistanceRef	Kilometers	Километры
+GPSDestDistanceRef	Miles	Мили
+GPSDestDistanceRef	Nautical Miles	Морские мили
+GPSDestLatitudeRef	North	Северная широта
+GPSDestLatitudeRef	South	Южная широта
+GPSDestLongitudeRef	East	Восточная долгота
+GPSDestLongitudeRef	West	Западная долгота
+GPSDifferential	Differential Corrected	Дифференциальная поправка применена
+GPSDifferential	No Correction	Измерение без дифференциальной поправки
+GPSImgDirectionRef	Magnetic North	На магнитный северный полюс
+GPSImgDirectionRef	True North	На географический северный полюс
+GPSLatitudeRef	North	Северная широта
+GPSLatitudeRef	South	Южная широта
+GPSLongitudeRef	East	Восточная долгота
+GPSLongitudeRef	West	Западная долгота
+GPSMeasureMode	2-Dimensional Measurement	2-мерная навигация
+GPSMeasureMode	3-Dimensional Measurement	3-мерная навигация
+GPSSpeedRef	km/h	Км/ч
+GPSSpeedRef	knots	Узлы
+GPSSpeedRef	mph	Миль/ч
+GPSStatus	Measurement Active	Координаты актуальные
+GPSStatus	Measurement Void	Актуальных координат нету
+GPSTrackRef	Magnetic North	На магнитный северный полюс
+GPSTrackRef	True North	На географический северный полюс
+GainControl	High gain down	С большим шагом вниз
+GainControl	High gain up	С большим шагом вверх
+GainControl	Low gain down	С малым шагом вниз
+GainControl	Low gain up	С малым шагом вверх
+GainControl	None	Отсутствует
+Gapless	No	Нет
+Gapless	Yes	Да
+HDContent	No	Нет
+HDContent	Yes	Да
+HDR	Off	Не включён
+HDRImageType	HDR Image	HDR изображение
+HDRImageType	Original Image	Оригинальное изображение
+HasColorMap	No	Нет
+HasColorMap	Yes	Да
+HasRealMergedData	No	Нет
+HasRealMergedData	Yes	Да
+HasXFA	No	Отсутствует
+HasXFA	Yes	Есть
+HighISONoiseReduction	Auto	Автоматическое
+HighISONoiseReduction	High	Сильное
+HighISONoiseReduction	Low	Слабое
+HighISONoiseReduction	Normal	Стандартное
+HighISONoiseReduction	Off	Не включено
+HighISONoiseReduction	Standard	Стандартное
+HighISONoiseReduction	Strong	Сильное
+HighlightColorDistortReduct	Advanced	Расширенный
+HighlightColorDistortReduct	Standard	Стандартный
+HotKey	(none)	Отсутствует
+IDCCreativeStyle	A100 Standard	Стандарт A100
+IDCCreativeStyle	Autumn Leaves	Осенние листья
+IDCCreativeStyle	B&W	Чёрно-Белое
+IDCCreativeStyle	Camera Setting	Настройка камеры
+IDCCreativeStyle	Clear	Чистый
+IDCCreativeStyle	Deep	Глубокий
+IDCCreativeStyle	Landscape	Пейзаж
+IDCCreativeStyle	Light	Светлый
+IDCCreativeStyle	Neutral	Нейтральный
+IDCCreativeStyle	Night View	Ночной вид
+IDCCreativeStyle	Portrait	Портрет
+IDCCreativeStyle	Real	Реальный
+IDCCreativeStyle	Sepia	Сепия
+IDCCreativeStyle	Standard	Стандарт
+IDCCreativeStyle	Sunset	Закат
+IDCCreativeStyle	Vivid	Яркий
+IPTCImageRotation	0	Не вращать
+IPTCImageRotation	180	Повернуть вправо на 180°
+IPTCImageRotation	270	Повернуть вправо на 270°
+IPTCImageRotation	90	Повернуть вправо на 90°
+ISOSetting	200 (Zone Matching High)	200 (Согласование зон. В высоком ключе)
+ISOSetting	80 (Zone Matching Low)	80 (Согласование зон. В низком ключе)
+ISOSetting	Auto	Автоматически
+Illumination	Off	Не включена
+Illumination	On	Включена
+ImageAlterationConstraints	No Colorization	Не раскрашивать
+ImageAlterationConstraints	No Cropping	Не кадрировать
+ImageAlterationConstraints	No De-Colorization	Не обесцвечивать
+ImageAlterationConstraints	No Flipping	Не отражать
+ImageAlterationConstraints	No Merging	Не объединять
+ImageAlterationConstraints	No Retouching	Не ретушировать
+ImageArrangement	Cross View Alignment	Пересечное расположение
+ImageArrangement	Parallel View Alignment	Параллельное расположение
+ImageColorIndicator	Specified Image Color	Указан
+ImageColorIndicator	Unspecified Image Color	Не указан
+ImageDataDiscard	Flexbits Discarded	Гибкие биты отброшены
+ImageDataDiscard	Full Resolution	Полное разрешение
+ImageDataDiscard	HighPass Frequency Data Discarded	Данные высоких частот отброшены
+ImageDataDiscard	Highpass and LowPass Frequency Data Discarded	Данные высоких и низких частот отброшены
+ImageDuplicationConstraints	Duplication Only as Necessary Under License	Дублировать только при необходимости в соответствии с лицензией
+ImageDuplicationConstraints	No Duplication	Дублирование запрещено
+ImageDuplicationConstraints	No Duplication Constraints	Ограничения на дублирование отсутствуют
+ImageFileConstraints	Maintain File Name	Запрещается переименование файла
+ImageFileConstraints	Maintain File Type	Запрещается изменять тип файла
+ImageFileConstraints	Maintain ID in File Name	Запрещается изменять ID в имени файла
+ImageFileConstraints	Maintain Metadata	Запрещается изменение метаданных
+ImageFileFormatAsDelivered	Other	Другой формат
+ImageFileSizeAsDelivered	Greater than 50 MB	Более 50 МБ
+ImageFileSizeAsDelivered	Up to 1 MB	До 1 МБ
+ImageFileSizeAsDelivered	Up to 10 MB	До 10 МБ
+ImageFileSizeAsDelivered	Up to 30 MB	До 30 МБ
+ImageFileSizeAsDelivered	Up to 50 MB	До 50 МБ
+ImageOrientation	Landscape	Альбомная
+ImageOrientation	Portrait	Портретная
+ImageOrientation	Square	Квадратная
+ImageRotation	None	Нет
+ImageStabilization	CCD Shift	Оптический стабилизатор
+ImageStabilization	High Sensitivity	Движение объекта съёмки
+ImageStabilization	Off	Выкл
+ImageStabilization	Off (1)	Выкл (1)
+ImageType	Grayscale (interlaced)	Градация серого (чересстрочная)
+ImageType	Grayscale (non-interlaced)	Градация серого (без чередования)
+ImageType	Grayscale Animation (interlaced)	Анимация в градациях серого (чересстрочная)
+ImageType	Grayscale Animation (non-interlaced)	Анимация в градациях серого (без чередования)
+ImageType	Illustrated Image	Графическое изображение
+ImageType	Multimedia or Composited Image	Мультимедийное или композитное изображение
+ImageType	Other	Другой тип
+ImageType	Page	Страница
+ImageType	Photographic Image	Фотография
+ImageType	Preview	Предпросмотр
+ImageType	RGB (interlaced)	RGB (чересстрочная)
+ImageType	RGB (non-interlaced)	RGB (без чередования)
+ImageType	RGB Animation (interlaced)	Анимация RGB (чересстрочная)
+ImageType	RGB Animation (non-interlaced)	Анимация RGB (без чередования)
+ImageType	RGBA (interlaced)	RGBA (чересстрочная)
+ImageType	RGBA (non-interlaced)	RGBA (без чередования)
+ImageType	RGBA Animation (interlaced)	Анимация RGBA (чересстрочная)
+ImageType	RGBA Animation (non-interlaced)	Анимация RGBA  (без чередования)
+ImageType	Video	Видео
+Importance	High	Высокая
+Importance	Low	Низкая
+Importance	Normal	Обычная
+InclinationCorrection	Off	Не включена
+InclinationCorrection	On	Включена
+Indexable	False	Нет
+Indexable	True	Да
+Indexed	Indexed	Да
+Indexed	Not indexed	Нет
+InfraredIlluminator	Off	Не включена
+InfraredIlluminator	On	Включена
+InitialDisplayEffect	Off	Не включён
+InitialDisplayEffect	On	Включен
+InkSet	Not CMYK	Не CMYK
+InstanceType	Exception to Recurring Appointment	Исключение для повторяющегося события
+InstanceType	Non-recurring Appointment	Неповторяющиеся событие
+InstanceType	Recurring Appointment	Повторяющиеся событие
+InstanceType	Single Instance of Recurring Appointment	Событие с единократным повторением
+InterchangeColorSpace	CMY (K) Device Dependent	Аппаратно-зависимый CMY (K)
+InterchangeColorSpace	RGB Device Dependent	Аппаратно-зависимый RGB
+Interlace	Adam7 Interlace	Чересстрочная Adam7
+Interlace	Noninterlaced	Прогрессивная
+InteropIndex	R03 - DCF option file (Adobe RGB)	R03 – Дополнительный файл DCF (Adobe RGB)
+InteropIndex	R98 - DCF basic file (sRGB)	R98 – Основной файл DCF (sRGB)
+InteropIndex	THM - DCF thumbnail file	THM – Файл с миниатюрами DCF
+JPEGProc	Baseline	Базовое последовательное
+JPEGProc	Lossless	Без потерь с кодированием Хаффмана
+JPEGQuality	Extra Fine	Сверхвысокое
+JPEGQuality	Fine	Высокое
+JPEGQuality	Standard	Стандартное качество
+LameMethod	ABR	ABR – Средний битрейт
+LameMethod	ABR (2-pass)	ABR – Средний битрейт (2 прохода)
+LameMethod	CBR	CBR – Постоянный битрейт
+LameMethod	CBR (2-pass)	CBR – Постоянный битрейт (2 прохода)
+LameMethod	VBR	VBR – переменный битрейт
+LameMethod	VBR (new/mtrh)	VBR – переменный битрейт (новый/mtrh)
+LameMethod	VBR (old/rh)	VBR – переменный битрейт (старый/rh)
+LameStereoMode	Auto	Автоматический
+LameStereoMode	Dual Channels	Двуканальный режим
+LameStereoMode	Forced Joint Stereo	Принудительное объединённое стерео
+LameStereoMode	Intensity Stereo	Интенсивное стерео
+LameStereoMode	Joint Stereo	Объединённое стерео
+LameStereoMode	Mono	Моно
+LameStereoMode	Stereo	Стерео
+LayerBlendModes	Color	Цветность
+LayerBlendModes	Color Burn	Затемнение основы
+LayerBlendModes	Color Dodge	Осветление основы
+LayerBlendModes	Darken	Затемнение
+LayerBlendModes	Darker Color	Темнее
+LayerBlendModes	Difference	Разница
+LayerBlendModes	Dissolve	Затухание
+LayerBlendModes	Divide	Разделить
+LayerBlendModes	Exclusion	Исключение
+LayerBlendModes	Hard Light	Жёсткий свет
+LayerBlendModes	Hard Mix	Жёсткое смешение
+LayerBlendModes	Hue	Цветовой тон
+LayerBlendModes	Lighten	Замена светлым
+LayerBlendModes	Lighter Color	Светлее
+LayerBlendModes	Linear Burn	Линейный затемнитель
+LayerBlendModes	Linear Dodge	Линейный осветлитель
+LayerBlendModes	Linear Light	Линейный свет
+LayerBlendModes	Luminosity	Яркость
+LayerBlendModes	Multiply	Умножение
+LayerBlendModes	Normal	Обычный
+LayerBlendModes	Overlay	Перекрытие
+LayerBlendModes	Pass Through	Пропустить
+LayerBlendModes	Pin Light	Точечный свет
+LayerBlendModes	Saturation	Насыщенность
+LayerBlendModes	Screen	Экран
+LayerBlendModes	Soft Light	Мягкий свет
+LayerBlendModes	Subtract	Вычитание
+LayerBlendModes	Vivid Light	Яркий свет
+Layout	Scan Lines	Линии сканирования
+Layout	Tiles	Тайлы
+LicensorTelephoneType1	Cell	Мобильный
+LicensorTelephoneType1	FAX	ФАКС
+LicensorTelephoneType1	Home	Домашний
+LicensorTelephoneType1	Pager	Пейджер
+LicensorTelephoneType1	Work	Рабочий
+LicensorTelephoneType2	Cell	Мобильный
+LicensorTelephoneType2	FAX	ФАКС
+LicensorTelephoneType2	Home	Домашний
+LicensorTelephoneType2	Pager	Пейджер
+LicensorTelephoneType2	Work	Рабочий
+LightSource	Cloudy	Облачно (6500 К)
+LightSource	Cool White Fluorescent	Флуоресцентная лампа – Холодный свет (4150 К)
+LightSource	Day White Fluorescent	Флуоресцентная лампа – Дневной белый (5050 К)
+LightSource	Daylight	Дневной свет (5500 К)
+LightSource	Daylight Fluorescent	Флуоресцентная лампа дневного света (6400 К)
+LightSource	Fine Weather	Ясная погода (5500 К)
+LightSource	Flash	Вспышка (5500 К)
+LightSource	Fluorescent	Флуоресцентная лампа (4150 К)
+LightSource	ISO Studio Tungsten	ISO для студийных ламп накаливания
+LightSource	Other	Другой источник света
+LightSource	Shade	Тень (7500 К)
+LightSource	Standard Light A	Стандартный свет A
+LightSource	Standard Light B	Стандартный свет B
+LightSource	Standard Light C	Стандартный свет C
+LightSource	Tungsten (Incandescent)	Лампа накаливания (2850 К)
+LightSource	Unknown	Неизвестный
+LightSource	Warm White Fluorescent	Флуоресцентная лампа – Тёплый свет (2925 К)
+LightSource	White Fluorescent	Флуоресцентная лампа – Белый свет (3525 К)
+LightSourceSpecial	Off	Не использовался
+LightSourceSpecial	On	Использовался
+LineOrder	Decreasing Y	По убыванию Y
+LineOrder	Increasing Y	По возрастанию Y
+LineOrder	Random Y	Случайный Y
+Linearized	No	Нет
+Linearized	Yes	Да
+LongExposureNoiseReduction	Auto	Автоматическое
+LongExposureNoiseReduction	Off	Не включено
+LongExposureNoiseReduction	On	Включено
+MDItemFSLabel	0 (none)	0 (Без метки)
+MDItemFSLabel	1 (Gray)	1 (Серая)
+MDItemFSLabel	2 (Green)	2 (Зелёная)
+MDItemFSLabel	3 (Purple)	3 (Пурпурная)
+MDItemFSLabel	4 (Blue)	4 (Синяя)
+MDItemFSLabel	5 (Yellow)	5 (Жёлтая)
+MDItemFSLabel	6 (Red)	6 (Красная)
+MDItemFSLabel	7 (Orange)	7 (Оранжевая)
+MPImageFlags	Dependent child image	Зависимое вложенное изображение
+MPImageFlags	Dependent parent image	Зависимое родительское изображение
+MPImageFlags	Representative image	Репрезентативное изображение
+MPImageType	Baseline MP Primary Image	Базовое первичное изображение MP
+MPImageType	Large Thumbnail (VGA equivalent)	Большой эскиз (эквивалент VGA)
+MPImageType	Large Thumbnail (full HD equivalent)	Большой эскиз (эквивалент Full HD)
+MPImageType	Multi-angle	Многоракурсное
+MPImageType	Multi-frame Disparity	Многокадровое смещённое (Disparity)
+MPImageType	Multi-frame Panorama	Многокадровая панорама
+MPImageType	Undefined	Неопределённый
+MSStereo	Off	Не включено
+MSStereo	On	Включено
+Macro	Macro	Макро
+Macro	Manual	Ручной
+Macro	Normal	Обычный
+Macro	Off	Выключен
+Macro	On	Включен
+MajorBrand	JPEG 2000 Compound Image (.JPM)	Составное изображение JPEG 2000 (.JPM)
+MajorBrand	JPEG 2000 Image (.JP2)	Изображение JPEG 2000 (.JP2)
+MajorBrand	JPEG 2000 with extensions (.JPX)	Улучшенный JPEG 2000 (.JPX)
+MakerNoteSafety	Safe	Безопасно
+MakerNoteSafety	Unsafe	Небезопасно
+MeasureType	OpticalAxis	Оптическая ось
+MeasureType	OpticalRay	Оптический луч
+MediaIsDelay	No	Нет
+MediaIsDelay	Yes	Да
+MediaIsFinale	No	Нет
+MediaIsFinale	Yes	Да
+MediaIsLive	No	Нет
+MediaIsLive	Yes	Да
+MediaIsMovie	No	Нет
+MediaIsMovie	Yes	Да
+MediaIsPremiere	No	Нет
+MediaIsPremiere	Yes	Да
+MediaIsRepeat	No	Нет
+MediaIsRepeat	Yes	Да
+MediaIsSAP	No	Нет
+MediaIsSAP	Yes	Да
+MediaIsSport	No	Нет
+MediaIsSport	Yes	Да
+MediaIsStereo	No	Нет
+MediaIsStereo	Yes	Да
+MediaIsSubtitled	No	Нет
+MediaIsSubtitled	Yes	Да
+MediaIsTape	No	Нет
+MediaIsTape	Yes	Да
+MeteringMode	Average	Усреднённый
+MeteringMode	Center-weighted average	Центрально-взвешенный
+MeteringMode	Multi-segment	Оценочный/Многозонный
+MeteringMode	Multi-spot	Многоточечный
+MeteringMode	Other	Другой
+MeteringMode	Partial	Частичный
+MeteringMode	Spot	Точечный
+MeteringMode	Unknown	Неизвестный
+MinorModelAgeDisclosure	Age 14 or Under	14 лет и меньше
+MinorModelAgeDisclosure	Age 15	15 лет
+MinorModelAgeDisclosure	Age 16	16 лет
+MinorModelAgeDisclosure	Age 17	17 лет
+MinorModelAgeDisclosure	Age 18	18 лет
+MinorModelAgeDisclosure	Age 19	19 лет
+MinorModelAgeDisclosure	Age 20	20 лет
+MinorModelAgeDisclosure	Age 21	21 год
+MinorModelAgeDisclosure	Age 22	22 года
+MinorModelAgeDisclosure	Age 23	23 года
+MinorModelAgeDisclosure	Age 24	24 года
+MinorModelAgeDisclosure	Age 25 or Over	25 лет и выше
+MinorModelAgeDisclosure	Age Unknown	Возраст неизвестен
+MobiType	Audio	Аудио
+MobiType	KF8: generated by kindlegen2	KF8: сгенерированный kindlegen 2
+MobiType	Mobipocket Book	Книга Mobipocket
+MobiType	News	Новости
+MobiType	News_Feed	Новостная лента
+MobiType	News_Magazine	Журнал новостей
+MobiType	PalmDoc Book	Книга PalmDoc
+MobiType	mobipocket? generated by kindlegen1.2	Mobipocket? Сгенерированный kindlegen 1.2
+ModeExtension	Bands 12-31	Полосы 12-32
+ModeExtension	Bands 16-31	Полосы 16-31
+ModeExtension	Bands 4-31	Полосы 4-31
+ModeExtension	Bands 8-31	Полосы 8-31
+ModelReleaseStatus	Limited or Incomplete Model Releases	Ограниченные или неполные версии моделей
+ModelReleaseStatus	None	Не обозначено
+ModelReleaseStatus	Not Applicable	Не действующий
+ModelReleaseStatus	Unlimited Model Releases	Неограниченное количество релизов модели
+ModificationPermissions	Do not restrict applications to reader permissions	Не ограничивать всем приложениям права на чтение
+ModificationPermissions	Fill forms, Create page templates, Sign	Разрешается: Заполнение форм, Создание шаблонов страниц, Электронная подпись
+ModificationPermissions	Fill forms, Create page templates, Sign, Create/Delete/Edit annotations	Разрешается: Заполнение форм, Создание шаблонов страниц, Электронная подпись, Создание/Удаление/Редактирование аннотаций
+ModificationPermissions	No changes permitted	Редактирование запрещено
+ModificationPermissions	Restrict all applications to reader permissions	Ограничивать всем приложениям права на чтение
+MoonPhase	First Quarter	Первая четверть
+MoonPhase	Full	Полнолуние
+MoonPhase	Last Quarter	Последняя четверть
+MoonPhase	New	Новолуние
+MoonPhase	New Crescent	Молодая луна
+MoonPhase	Old Crescent	Старая луна
+MoonPhase	Waning Gibbous	Убывающая луна
+MoonPhase	Waxing Gibbous	Растущая луна
+MultiFrameNoiseReduction	Off	Не включено
+MultiFrameNoiseReduction	On	Включено
+MultiProfiles	JBIG2 Profile M	JBIG2 профиль M
+MultiProfiles	N Layer Profile M	N слой Профиль M
+MultiProfiles	Profile C	Профиль C
+MultiProfiles	Profile F	Профиль F
+MultiProfiles	Profile J	Профиль J
+MultiProfiles	Profile L	Профиль L
+MultiProfiles	Profile M	Профиль M
+MultiProfiles	Profile S	Профиль S
+MultiProfiles	Profile T	Профиль T
+MultiProfiles	Resolution/Image Width	Разрешение/Ширина изображения
+MultiProfiles	Shared Data	Общие данные
+Multishot	Off	Не включена
+Multishot	Pixel Shift	Сдвиг пикселей
+NoiseReductionMode	Off	Не включён
+NoiseReductionMode	On	Включён
+NominalVideoBitrate	Unspecified	Неопределённый
+OPIProxy	Higher resolution image does not exist	Изображение большего разрешения отсутствует
+OPIProxy	Higher resolution image exists	Присутствует изображение с большим разрешением
+ObjectCycle	Both Morning and Evening	Утро и вечер
+ObjectCycle	Evening	Вечер
+ObjectCycle	Morning	Утро
+ObjectPreviewFileFormat	AppleSingle (Apple Computer Inc)	AppleSingle (Apple)
+ObjectPreviewFileFormat	Audio Interchange File Format AIFF (Apple Computer Inc)	Аудиофайл формата AIFF (Apple)
+ObjectPreviewFileFormat	Bit Mapped Graphics File [.BMP] (Microsoft)	Битовый графический файл [.BMP] (Microsoft)
+ObjectPreviewFileFormat	Compressed Binary File [.ZIP] (PKWare Inc)	Сжатый двоичный файл [.ZIP] (Компания PKWare)
+ObjectPreviewFileFormat	Digital Audio File [.WAV] (Microsoft & Creative Labs)	Аудиофайл формата [.WAV] (Microsoft и Creative Labs)
+ObjectPreviewFileFormat	Hypertext Markup Language [.HTML] (The Internet Society)	Язык гипертекстовой разметки [.HTML] (The Internet Society)
+ObjectPreviewFileFormat	IPTC Unstructured Character Oriented File Format (UCOFF)	Неструктурированный символьно-ориентированный формат файла IPTC  (UCOFF)
+ObjectPreviewFileFormat	IPTC7901 Recommended Message Format	IPTC7901 Рекомендуемый формат сообщения
+ObjectPreviewFileFormat	Illustrator (Adobe Graphics data)	Illustrator (Графические данные Adobe)
+ObjectPreviewFileFormat	JPEG File Interchange (JFIF)	Формат обмена файлами стандарта JPEG (JFIF)
+ObjectPreviewFileFormat	MPEG 2 Audio Layer 2 (Musicom), ISO/IEC	Аудио второго уровня MPEG 2  (Musicom), ISO/IEC
+ObjectPreviewFileFormat	MPEG 2 Audio Layer 3, ISO/IEC	Аудио третьего уровня MPEG 2 , ISO/IEC
+ObjectPreviewFileFormat	News Industry Text Format (NITF)	Текстовый формат новостной индустрии (NITF)
+ObjectPreviewFileFormat	No ObjectData	Данные объекта отсутствуют
+ObjectPreviewFileFormat	PC DOS/Windows Executable Files [.COM][.EXE]	Исполняемый файл PC DOS/Windows [.COM][.EXE]
+ObjectPreviewFileFormat	RIFF Wave (Microsoft Corporation)	RIFF Wave (Microsoft)
+ObjectPreviewFileFormat	Ritzaus Bureau NITF version (RBNITF DTD)	Ritzaus Bureau вариант NITF  (RBNITF DTD)
+ObjectPreviewFileFormat	Tagged Image File Format (Adobe/Aldus Image data)	Формат файла изображения с тегами (Adobe/Aldus данные изображения)
+ObjectPreviewFileFormat	Tape Archive [.TAR]	Формат файла архива [.TAR]
+ObjectPreviewFileFormat	Tidningarnas Telegrambyra NITF version (TTNITF DTD)	Tidningarnas Telegrambyra вариант NITF (TTNITF DTD)
+ObjectPreviewFileFormat	United Press International ANPA 1312 variant	United Press International  – Вариант ANPA 1312
+ObjectPreviewFileFormat	United Press International Down-Load Message	United Press International – Down-Load Message
+OldSubfileType	Full-resolution image	Изображение с полным разрешением
+OldSubfileType	Reduced-resolution image	Изображение с пониженным разрешением
+OldSubfileType	Single page of multi-page image	Одна страница из многостраничного изображения
+OperatingSystem	FAT filesystem (MS-DOS, OS/2, NT/Win32)	Файловая система FAT (MS-DOS, OS/2, NT/Win32)
+OperatingSystem	HPFS filesystem (OS/2, NT)	Файловая система HPFS (OS/2, NT)
+OperatingSystem	NTFS filesystem (NT)	Файловая система NTFS (NT)
+OperatingSystem	VMS (or OpenVMS)	VMS (или OpenVMS)
+OperatingSystem	Z-System	Z/OS
+OperatingSystem	unknown	Неизвестная
+OpticalZoomOn	Off	Не включён
+OpticalZoomOn	On	Включен
+Orientation	Horizontal (normal)	Горизонтальная
+Orientation	Mirror horizontal	Отражение по горизонтали
+Orientation	Mirror horizontal and rotate 270 CW	Отражение по горизонтали и поворот на 270° по часовой стрелке
+Orientation	Mirror horizontal and rotate 90 CW	Отражение по горизонтали и поворот на 90° по часовой стрелке
+Orientation	Mirror vertical	Отражение по вертикали
+Orientation	Rotate 180	Поворот на 180°
+Orientation	Rotate 270 CW	Поворот на 270° по часовой стрелке
+Orientation	Rotate 90 CW	Поворот на 90° по часовой стрелке
+OriginalMedia	False	Нет
+OriginalMedia	True	Да
+PackingMethod	Best Compression	Максимальный
+PackingMethod	Fast	Быстрый
+PackingMethod	Fastest	Скоростной
+PackingMethod	Good Compression	Хороший
+PackingMethod	Normal	Обычный
+PackingMethod	Stored	Без сжатия
+PanOrientation	Bottom to top	Снизу вверх
+PanOrientation	Clockwise	По часовой стрелке
+PanOrientation	Counter clockwise	Против часовой стрелки
+PanOrientation	Left to right	Слева направо
+PanOrientation	Right to left	Справа налево
+PanOrientation	Start at bottom left	Начало внизу слева
+PanOrientation	Start at bottom right	Начало внизу справа
+PanOrientation	Start at top left	Начало сверху слева
+PanOrientation	Start at top right	Начало сверху справа
+PanOrientation	Top to bottom	Сверху вниз
+PanOrientation	Zigzag (column start)	Зигзаг (начало колонки)
+PanOrientation	Zigzag (row start)	Зигзаг (начало строки)
+PanOrientation	[unused]	Неиспользуется
+PanoramicStitchCameraMotion	3D Rotation	3D-вращение
+PanoramicStitchCameraMotion	Affine	Аффинное преобразование
+PanoramicStitchCameraMotion	Homography	Гомография
+PanoramicStitchCameraMotion	Rigid Scale	Жёсткая шкала
+PanoramicStitchMapType	Horizontal Cylindrical	Горизонтальная цилиндрическая
+PanoramicStitchMapType	Horizontal Spherical	Горизонтальная сферическая
+PanoramicStitchMapType	Perspective	Перспектива
+PanoramicStitchMapType	Vertical Cylindrical	Вертикальная цилиндрическая
+PanoramicStitchMapType	Vertical Spherical	Вертикальная сферическая
+PhotometricInterpretation	BlackIsZero	Чёрный равен нулю
+PhotometricInterpretation	Color Filter Array	Массив цветных фильтров (CFA)
+PhotometricInterpretation	RGB Palette	Палитра RGB
+PhotometricInterpretation	Transparency Mask	Маска прозрачности
+PhotometricInterpretation	WhiteIsZero	Белый равен нулю
+PhotoshopFormat	Optimized	Оптимизированный
+PhotoshopFormat	Progressive	Прогрессивный
+PhotoshopFormat	Standard	Стандартный
+PictureType	32x32 PNG Icon	32x32 иконка PNG
+PictureType	Artist	Исполнитель
+PictureType	Back Cover	Задняя обложка
+PictureType	Band	Группа
+PictureType	Band Logo	Логотип группы/исполнителя
+PictureType	Bright(ly) Colored Fish	Ярко окрашенная рыба
+PictureType	Capture from Movie or Video	Захват из фильма или видео
+PictureType	Composer	Композитор
+PictureType	Conductor	Дирижер
+PictureType	Front Cover	Передняя обложка
+PictureType	Illustration	Иллюстрация
+PictureType	Lead Artist	Ведущий Артист/Исполнитель/Солист
+PictureType	Leaflet	Листовка
+PictureType	Lyricist	Автор текста
+PictureType	Media	Носитель
+PictureType	Other	Другое
+PictureType	Other Icon	Другая иконка
+PictureType	Performance	Представление
+PictureType	Publisher Logo	Логотип издателя/студии
+PictureType	Recording Session	Запись сессии
+PictureType	Recording Studio or Location	Студия звукозаписи или местоположение
+PixelFormat	112-bit 6 Channels Alpha	112-битный, 6 каналов, альфа-канал
+PixelFormat	112-bit 7 Channels	112-битный, 7 каналов
+PixelFormat	128-bit 7 Channels Alpha	128-битный, 7 каналов, альфа-канал
+PixelFormat	128-bit 8 Channels	128-битный, 8 каналов
+PixelFormat	128-bit PRGBA Float	128-битный, PRGBA с плавающей точкой
+PixelFormat	128-bit RGB Float	128-битный, RGB с плавающей точкой
+PixelFormat	128-bit RGBA Fixed Point	128-битный, RGBA с фиксированной точкой
+PixelFormat	128-bit RGBA Float	128-битный, RGBA с плавающей точкой
+PixelFormat	144-bit 8 Channels Alpha	144-битный, 8 каналов, альфа-канал
+PixelFormat	16-bit BGR555	16-битный, BGR555
+PixelFormat	16-bit BGR565	16-битный, BGR565
+PixelFormat	16-bit Gray	16-битный, Серый
+PixelFormat	16-bit Gray Half	16-битный, половина серого
+PixelFormat	24-bit 3 Channels	24-битный, 3 канала
+PixelFormat	24-bit BGR	24-битный, BGR
+PixelFormat	24-bit RGB	24-битный, RGB
+PixelFormat	32-bit 3 Channels Alpha	32-битный, 3 канала, альфа-канал
+PixelFormat	32-bit 4 Channels	32-битный, 4 канала
+PixelFormat	32-bit BGR	32-битный, BGR
+PixelFormat	32-bit BGR101010	32-битный, BGR101010
+PixelFormat	32-bit BGRA	32-битный, BGRA
+PixelFormat	32-bit CMYK	32-битный, CMYK
+PixelFormat	32-bit Gray Fixed Point	32-битный, серый с фиксированной точкой
+PixelFormat	32-bit Gray Float	32-битный, Серый с плавающей точкой
+PixelFormat	32-bit PBGRA	32-битный, PBGRA
+PixelFormat	32-bit RGBE	32-битный, RGBE
+PixelFormat	40-bit 4 Channels Alpha	40-битный, 4 канала, альфа-канал
+PixelFormat	40-bit 5 Channels	40-битный, 5 каналов
+PixelFormat	40-bit CMYK Alpha	40-битный, CMYK, альфа-канал
+PixelFormat	48-bit 3 Channels	48-битный, 3 канала
+PixelFormat	48-bit 5 Channels Alpha	48-битный, 5 каналов, альфа-канал
+PixelFormat	48-bit 6 Channels	48-битный, 6 каналов
+PixelFormat	48-bit RGB	48-битный, RGB
+PixelFormat	48-bit RGB Fixed Point	48-битный, RGB с фиксированной точкой
+PixelFormat	48-bit RGB Half	48-битный, RGB Half
+PixelFormat	4:2:0 (chroma at 0, 0.5)	4:2:0 (цветность в 0, 0.5)
+PixelFormat	4:2:0 (chroma at 0.5, 0.5)	4:2:0 (цветность в 0.5, 0.5)
+PixelFormat	4:2:2 (chroma at 0, 0)	4:2:2 (цветность в 0, 0)
+PixelFormat	4:2:2 (chroma at 0.5, 0)	4:2:2 (цветность в 0.5, 0)
+PixelFormat	56-bit 6 Channels Alpha	56-битный, 6 каналов, альфа-канал
+PixelFormat	56-bit 7 Channels	56-битный, 7 каналов
+PixelFormat	64-bit 3 Channels Alpha	64-битный, 3 канала, альфа-канал
+PixelFormat	64-bit 4 Channels	64-битный, 4 канала
+PixelFormat	64-bit 7 Channels Alpha	64-битный, 7 каналов, альфа-канал
+PixelFormat	64-bit 8 Channels	64-битный, 8 каналов
+PixelFormat	64-bit CMYK	64-битный, CMYK
+PixelFormat	64-bit PRGBA	64-битный, PRGBA
+PixelFormat	64-bit RGBA	64-битный, RGBA
+PixelFormat	64-bit RGBA Fixed Point	64-битный, RGBA с фиксированной точкой
+PixelFormat	64-bit RGBA Half	64-битный, RGBA Half
+PixelFormat	72-bit 8 Channels Alpha	72-битный, 8 каналов, альфа-канал
+PixelFormat	8-bit Gray	8-битный, Серый
+PixelFormat	80-bit 4 Channels Alpha	80-битный, 4 канала, альфа-канал
+PixelFormat	80-bit 5 Channels	80-битный, 5 канаов
+PixelFormat	80-bit CMYK Alpha	80-битный, CMYK, альфа-канал
+PixelFormat	96-bit 5 Channels Alpha	96-битный, 5 каналов, альфа-канал
+PixelFormat	96-bit 6 Channels	96-битный, 6 канаов
+PixelFormat	96-bit RGB Fixed Point	96-битный, RGB с фиксированной точкой
+PixelFormat	Black & White	Чёрно-белый
+PixelFormat	Grayscale	Оттенки серого
+PixelUnits	Unknown	Неизвестно
+PixelUnits	meters	Метры
+PlanarConfiguration	Chunky	Непрерывный (RGBRGB)
+PlanarConfiguration	Planar	По каналам (RRGGBB)
+Predictor	Horizontal differencing	Горизонтальное дифференцирование
+Predictor	None	Не использовался
+PresetWhiteBalance	Auto	Автоматический
+PresetWhiteBalance	Camera Setting	Настройка камеры
+PresetWhiteBalance	Cloudy	Облачно
+PresetWhiteBalance	Color Temperature	Цветовая температура
+PresetWhiteBalance	Cool White Fluorescent	Холодный белый (флуоресцентная лампа)
+PresetWhiteBalance	Day Light Fluorescent	Дневной свет (флуоресцентная лампа)
+PresetWhiteBalance	Day White Fluorescent	Дневной белый (флуоресцентная лампа)
+PresetWhiteBalance	Daylight	Дневной свет
+PresetWhiteBalance	Flash	Вспышка
+PresetWhiteBalance	Shade	Тень
+PresetWhiteBalance	Specify Gray Point	Указанная точка серого
+PresetWhiteBalance	Tungsten	Лампа накаливания
+PresetWhiteBalance	Warm White Fluorescent	Тёплый белый (флуоресцентная лампа)
+PreviewColorSpace	Unknown	Неизвестно
+PrintStyle	Centered	По центру
+PrintStyle	Size to Fit	Подогнать под формат листа
+PrintStyle	User Defined	Определённый пользователем
+ProTune	Off	Не включён
+ProTune	On	Включен
+ProfileEmbedPolicy	Allow Copying	Разрешено копирование
+ProfileEmbedPolicy	Embed if Used	Внедрить если используется
+ProfileEmbedPolicy	Never Embed	Никогда не внедрять
+ProfileEmbedPolicy	No Restrictions	Без ограничений
+ProfileHueSatMapEncoding	Linear	Линейное
+ProfileLookTableEncoding	Linear	Линейное
+ProfileType	Unspecified	Не указан
+ProgramMode	Night Portrait	Ночной портрет
+ProgramMode	None	Отсутствует
+ProgramMode	Portrait	Портрет
+ProgramMode	Sports	Спорт
+ProgramMode	Sunset	Закат
+ProgramMode	Text	Текст
+ProgressiveScans	3 Scans	3 прохода
+ProgressiveScans	4 Scans	4 прохода
+ProgressiveScans	5 Scans	5 проходов
+PropertyReleaseStatus	Limited or Incomplete Property Releases	Ограниченные или неполные релизы
+PropertyReleaseStatus	None	Не обозначено
+PropertyReleaseStatus	Not Applicable	Не используется
+PropertyReleaseStatus	Unlimited Property Releases	Неограниченные релизы свойств
+PxShiftPeriphEdgeNR	Off	Не включён
+PxShiftPeriphEdgeNR	On	Включен
+Quality	2 (Telephone)	2 (Телефон)
+Quality	3 (Thumb)	3 (Эскиз)
+Quality	4 (Radio)	4 (Радио)
+Quality	5 (Standard)	5 (Стандартное)
+Quality	6 (Xtreme)	6 (Экстремальное)
+Quality	7 (Insane)	7 (Сумасшедшее)
+Quality	8 (BrainDead)	8 (Полный улёт)
+Quality	Compressed RAW	cRAW
+Quality	Compressed RAW + JPEG	cRAW+JPEG
+Quality	Extra Fine	Сверхвысокое
+Quality	Fine	Высокое
+Quality	Low	Низкое качество
+Quality	Normal	Стандартное качество
+Quality	RAW + JPEG	RAW+JPEG
+Quality	Standard	Стандартное
+Quality	Unstable/Experimental	Нестабильное/Экспериментальное
+QuantizationMethod	Color Space Specific	Специфичное цветовое пространство
+QuantizationMethod	Compression Method Specific	Специфичный метод сжатия
+QuantizationMethod	Gamma Compensated	Компенсация гаммы
+QuantizationMethod	Linear Density	Линейная плотность
+QuantizationMethod	Linear Reflectance/Transmittance	Линейное Отражение/Пропускание
+QuickShot	Off	Не включён
+QuickShot	On	Включен
+RasterPadding	Byte	Байт
+RasterPadding	Long Sector	Длинный сектор
+RasterPadding	Long Word	Длинное слово
+RasterPadding	Sector	Сектор
+RasterPadding	Word	Слово
+RecordShutterRelease	Press start, press stop	Нажать «Старт», нажать «Стоп»
+RecordShutterRelease	Record while down	Запись пока нажата кнопка
+RedEyeReduction	Off	Не включено
+RedEyeReduction	On	Включено
+RegionFocusUsage	Evaluated, Not Used	Учитывался, но не использовался
+RegionFocusUsage	Evaluated, Used	Учитывался и использовался
+RegionFocusUsage	Not Evaluated, Not Used	Не учитывался и не использовался
+RegionType	BarCode	Штрихкод
+RegionType	Face	Лицо
+RegionType	Focus	Фокус
+RegionType	Pet	Животное
+RenderingIntent	Absolute Colorimetric (LCS_GM_ABS_COLORIMETRIC)	Абсолютный колориметрический (LCS_GM_ABS_COLORIMETRIC)
+RenderingIntent	Graphic (LCS_GM_BUSINESS)	По насыщенности  (LCS_GM_BUSINESS)
+RenderingIntent	Picture (LCS_GM_IMAGES)	Перцепционный (LCS_GM_IMAGES)
+RenderingIntent	Proof (LCS_GM_GRAPHICS)	Относительный колориметрический (LCS_GM_GRAPHICS)
+RepresentativeImage	Left Viewpoint	Левая точка просмотра
+RepresentativeImage	Right Viewpoint	Правая точка просмотра
+Resaved	No	Нет
+Resaved	Yes	Да
+ResolutionUnit	None	Не указаны
+ResolutionUnit	cm	см
+ResolutionUnit	inches	дюймы
+Reuse	Not Applicable	Запрещено
+Reuse	Repeat Use	Разрешено
+RunTimeFlags	Has been rounded	Округленное время
+RunTimeFlags	Indefinite	Неопределённое время
+RunTimeFlags	Negative infinity	Минус бесконечность
+RunTimeFlags	Positive infinity	Плюс бесконечность
+RunTimeFlags	Valid	Действительное время
+RunWindow	Hide	Скрытый
+RunWindow	Minimized	Минимизировать
+RunWindow	Normal	Обычный
+RunWindow	Restore	Восстановить
+RunWindow	Show	Показывать
+RunWindow	Show Default	Отображать по-умолчанию
+RunWindow	Show Maximized	Отображать развёрнутым
+RunWindow	Show Minimized	Отображать свернутым
+RunWindow	Show Minimized No Activate	Отображать свернутым и не активвным
+RunWindow	Show No Activate	Отображать
+SRGBRendering	Absolute Colorimetric	Абсолютно колориметрический
+SRGBRendering	Perceptual	Перцепционный
+SRGBRendering	Relative Colorimetric	Относительно колориметрический
+SRGBRendering	Saturation	Насыщенный
+SampleFormat	Complex float	Комплексные данные с плавающей точкой IEEE
+SampleFormat	Complex int	Комплексные целые данные
+SampleFormat	Float	Данные с плавающей точкой IEEE
+SampleFormat	Signed	Целочисленные данные со знаком
+SampleFormat	Undefined	Неопределенный формат данных
+SampleFormat	Unsigned	Беззнаковые целочисленные данные
+SampleStructure	CompressionDependent	Зависимая от сжатия
+SampleStructure	Orthogonal4-2-2Sampling	Ортогональная с частотами дискретизации в соотношении 4: 2: 2: (4)
+SampleStructure	OrthogonalConstangSampling	Ортогональная с теми же относительными частотами дискретизации в каждом компоненте
+SanyoQuality	Fine/High	Хорошее/Высокое
+SanyoQuality	Fine/Low	Хорошее/Низкое
+SanyoQuality	Fine/Medium	Хорошее/Среднее
+SanyoQuality	Fine/Medium High	Хорошее/Выше среднего
+SanyoQuality	Fine/Medium Low	Хорошее/Ниже среднего
+SanyoQuality	Fine/Super High	Хорошее/Лучшее
+SanyoQuality	Fine/Very High	Хорошее/Очень высокое
+SanyoQuality	Fine/Very Low	Хорошее/Очень низкое
+SanyoQuality	Normal/High	Нормальное/Высокое
+SanyoQuality	Normal/Low	Нормальное/Низкое
+SanyoQuality	Normal/Medium	Нормальное/Среднее
+SanyoQuality	Normal/Medium High	Нормальное/Выше среднего
+SanyoQuality	Normal/Medium Low	Нормальное/Ниже среднего
+SanyoQuality	Normal/Super High	Нормальное/Лучшее
+SanyoQuality	Normal/Very High	Нормальное/Очень высокое
+SanyoQuality	Normal/Very Low	Нормальное/Очень низкое
+SanyoQuality	Super Fine/High	Лучшее/Высокое
+SanyoQuality	Super Fine/Low	Лучшее/Низкое
+SanyoQuality	Super Fine/Medium	Лучшее/Среднее
+SanyoQuality	Super Fine/Medium High	Лучшее/Выше среднего
+SanyoQuality	Super Fine/Medium Low	Лучшее/Ниже среднего
+SanyoQuality	Super Fine/Super High	Лучшее/Лучшее
+SanyoQuality	Super Fine/Very High	Лучшее/Очень высокое
+SanyoQuality	Super Fine/Very Low	Лучшее/Очень низкое
+Saturation	High	Высокая
+Saturation	Low	Низкая
+Saturation	Normal	Стандартная
+ScanningDirection	Bottom-Top, L-R	Снизу вверх, слева направо
+ScanningDirection	Bottom-Top, R-L	Снизу вверх, справа налево
+ScanningDirection	L-R, Bottom-Top	Слева направо, снизу вверх
+ScanningDirection	L-R, Top-Bottom	Слева направо, сверху вниз
+ScanningDirection	R-L, Bottom-Top	Справа налево, снизу вверх
+ScanningDirection	R-L, Top-Bottom	Справа налево, сверху вниз
+ScanningDirection	Top-Bottom, L-R	Сверху вниз, слева направо
+ScanningDirection	Top-Bottom, R-L	Сверху вниз, справа налево
+SceneCaptureType	Landscape	Пейзаж
+SceneCaptureType	Night	Ночная съёмка
+SceneCaptureType	Other	Другой
+SceneCaptureType	Portrait	Портрет
+SceneCaptureType	Standard	Стандартный режим
+SceneMode	3D Sweep Panorama	3D
+SceneMode	Anti Motion Blur	Устранение смазывания
+SceneMode	Auto	Авто
+SceneMode	Cont. Priority AE	Автоэкспозиция с приоритетом серийной съёмки
+SceneMode	Handheld Night Shot	Ночная съёмка с рук
+SceneMode	Landscape	Пейзаж
+SceneMode	Macro	Макросъёмка
+SceneMode	Night Portrait	Ночной портрет
+SceneMode	Night Scene	Ночной вид
+SceneMode	Night View/Portrait	Ночной вид/портрет
+SceneMode	Portrait	Портрет
+SceneMode	Sports	Спортивные сцены
+SceneMode	Sunset	Закат
+SceneMode	Sweep Panorama	Панорамный обзор
+SceneSelect	Lamp	Лампа
+SceneSelect	Night	Ночь
+SceneSelect	Off	Не задействован
+SceneSelect	Sport	Спорт
+SceneSelect	User 1	Пользовательская 1
+SceneSelect	User 2	Пользовательская 2
+SceneType	Directly photographed	Сфотографировано цифровой камерой
+SecurityClassification	Confidential	Личное
+SecurityClassification	Restricted	Для узкого круга
+SecurityClassification	Secret	Секретно
+SecurityClassification	Top Secret	Совершенно секретно
+SecurityClassification	Unclassified	Без классификации
+SelfTimer	Off	Не задействован
+SelfTimer	On	Включен
+SensingMethod	Color sequential area	Цветной последовательный сенсор
+SensingMethod	Color sequential linear	Цветной последовательный линейный сенсор
+SensingMethod	Monochrome area	Монохромный сенсор
+SensingMethod	Monochrome linear	Монохромный линейный сенсор
+SensingMethod	Not defined	Не опредеен
+SensingMethod	One-chip color area	Одночиповый цветной сенсор
+SensingMethod	Three-chip color area	Трехчиповый цветной сенсор
+SensingMethod	Trilinear	Трехлинейный цветной сенсор
+SensingMethod	Two-chip color area	Двухчиповый цветной сенсор
+SensitivityType	ISO Speed	Чувствительность ISO
+SensitivityType	Recommended Exposure Index	Рекомендуемый индекс экспозиции
+SensitivityType	Recommended Exposure Index and ISO Speed	Рекомендуемый индекс экспозиции и ISO
+SensitivityType	Standard Output Sensitivity	Стандартная выходная чувствительность
+SensitivityType	Standard Output Sensitivity and ISO Speed	Стандартная выходная чувствительность и ISO
+SensitivityType	Standard Output Sensitivity and Recommended Exposure Index	Стандартная выходная чувствительность и рекомендуемый индекс экспозиции
+SensitivityType	Standard Output Sensitivity, Recommended Exposure Index and ISO Speed	Стандартная выходная чувствительность и рекомендуемый индекс экспозиции и ISO
+SensitivityType	Unknown	Неизвестно
+SequenceShotInterval	10 frames/s	10 кадров/с
+SequenceShotInterval	15 frames/s	15 кадров/с
+SequenceShotInterval	20 frames/s	20 кадров/с
+SequenceShotInterval	5 frames/s	5 кадров/с
+SequentialShot	Adjust Exposure	По сдвигу экспозиции
+SequentialShot	Best	Лучший снимок
+SequentialShot	None	Нет
+SequentialShot	Standard	Стандартная
+Sharpness	Hard	Сильная
+Sharpness	Normal	Стандартная
+Sharpness	Soft	Слабая
+ShutterCurtainHack	1st-curtain sync	Синхронизация по 1-й шторке
+ShutterCurtainHack	2nd-curtain sync	Синхронизация по 2-й шторке
+SizeMode	Size Known	Размер известный
+SizeMode	Size Not Known	Размер не известен
+Software	PC Paintbrush 2.8 (with palette)	PC Paintbrush 2.8 (с палитрой)
+Software	PC Paintbrush 2.8 (without palette)	PC Paintbrush 2.8 (без палитры)
+Software	PC Paintbrush for Windows	PC Paintbrush для Windows
+SonyRawFileType	Sony Compressed RAW	Sony – сжатый RAW
+SonyRawFileType	Sony Lossless Compressed RAW	Sony – сжатый без потерь RAW
+SonyRawFileType	Sony Uncompressed 12-bit RAW	Sony – 12-битный несжатый RAW
+SonyRawFileType	Sony Uncompressed 14-bit RAW	Sony – 14-битный несжатый RAW
+SubfileType	Alternate reduced-resolution image	Альтернативное изображение с пониженным разрешением
+SubfileType	Color IW44	Цветной IW44
+SubfileType	Full-resolution image	Изображение с полным разрешением
+SubfileType	Grayscale IW44	Градация серого IW44
+SubfileType	Multi-page document	Многостраничный документ
+SubfileType	Reduced-resolution image	Изображение с пониженным разрешением
+SubfileType	Shared component	Общий компонент
+SubfileType	Single page of multi-page image	Одна страница из многостраничного изображения
+SubfileType	Single page of multi-page reduced-resolution image	Одна страница из многостраничного изображения с пониженным разрешением
+SubfileType	Single-page image	Одностраничное изображение
+SubfileType	TIFF-FX mixed raster content	Смешанное растровое содержимое TIFF-FX
+SubfileType	TIFF/IT final page	Последняя страница TIFF/IT
+SubfileType	Thumbnail image	Миниатюра
+SubfileType	Transparency mask	Маска прозрачности изображения
+SubfileType	Transparency mask of multi-page image	Маска прозрачности многостраничного изображения
+SubfileType	Transparency mask of reduced-resolution image	Маска прозрачности изображения с пониженным разрешением
+SubfileType	Transparency mask of reduced-resolution multi-page image	Маска прозрачности многостраничного изображения с пониженным разрешением
+SubfileType	invalid	Некорректный
+SubjectDistanceRange	Close	Съёмка с близкого расстояния
+SubjectDistanceRange	Distant	Съёмка с дальнего  расстояния
+SubjectDistanceRange	Macro	Макро съёмка
+SubjectDistanceRange	Unknown	Неизвестно
+SubjectUnits	meters	Метры
+SubjectUnits	radians	Радианы
+SupplementalType	Logo	Логотип
+SupplementalType	Main Image	Основное изображение
+SupplementalType	Rasterized Caption	Растрированный заголовок
+SupplementalType	Reduced Resolution Image	Изображение с пониженным разрешением
+T4Options	2-Dimensional encoding	Двумерное кодирование
+T4Options	Fill bits added	Добавление заполняющих битов
+T4Options	Uncompressed	Без сжатия
+T6Options	Uncompressed	Без сжатия
+TIFF_FXExtensions	JBIG2 Profile M	JBIG2 профиль M
+TIFF_FXExtensions	N Layer Profile M	N слой Профиль M
+TIFF_FXExtensions	Resolution/Image Width	Разрешение/Ширина изображения
+TIFF_FXExtensions	Shared Data	Общие данные
+Tagged	No	Нет
+Tagged	Yes	Да
+TaggedPDF	No	Нет
+TaggedPDF	Yes	Да
+TextToSpeech	Disabled	Не включеён
+TextToSpeech	Enabled	Включен
+Thresholding	No dithering or halftoning	Дизеринг или полутонирование не применялось
+Thresholding	Ordered dither or halftone	Заказной дизеринг или полутонирование
+Thresholding	Randomized dither	Случайный дизеринг
+Transformation	Horizontal (normal)	Горизонтально
+Transformation	Mirror horizontal	Отразить по горизонтали
+Transformation	Mirror horizontal and rotate 270 CW	Отражение по горизонтали и поворот на 270° по часовой стрелке
+Transformation	Mirror horizontal and rotate 90 CW	Отражение по горизонтали и поворот на 90° по часовой стрелке
+Transformation	Mirror vertical	Отразить по вертикали
+Transformation	Rotate 180	Повернуть на 180°
+Transformation	Rotate 270 CW	Поворот на 270° по часовой стрелке
+Transformation	Rotate 90 CW	Поворот на 90° по часовой стрелке
+TriggerMode	CodeLoc Not Entered	Код блокировки не задан
+TriggerMode	External Sensor	Внешний датчик
+TriggerMode	Motion Detection	Обнаружение движения
+TriggerMode	Point and Shoot	Наведи и снимай
+TriggerMode	Time Lapse	Таймлапс
+USPTOOriginalContentType	Color	Цвет
+USPTOOriginalContentType	Grayscale	Оттенки серого
+USPTOOriginalContentType	Text or Drawing	Текст или рисунок
+Uncompressed	No	Нет
+Uncompressed	Yes	Да
+Units	Inches	Дюймы
+Units	Picas	Пики
+Units	Points	Точки
+Units	mm	Милиметры
+Urgency	0 (reserved)	0 (Зарезервированно)
+Urgency	1 (most urgent)	1 (Срочно)
+Urgency	5 (normal urgency)	5 (Обычный)
+Urgency	8 (least urgent)	8 (Не срочно)
+Urgency	9 (user-defined priority)	9 (Пользовательский приоритет)
+UserAccess	Annotate	Аннотирование
+UserAccess	Assemble	Сборка
+UserAccess	Copy	Копирование
+UserAccess	Extract	Извлечение
+UserAccess	Fill forms	Заполнение форм
+UserAccess	Modify	Редактирование
+UserAccess	Print	Печать
+UserAccess	Print high-res	Печать в высоком разрешении
+VideoClosedCaptioning	No	Нет
+VideoClosedCaptioning	Yes	Да
+ViewType	No Pop-up Effect	Без всплывающего эффекта
+ViewType	Pop-up Effect	С всплывающим эффектом
+VignettingCorrection	Auto	Автоматическая
+VignettingCorrection	No correction params available	Недоступна
+VignettingCorrection	Off	Не включена
+VoiceMemo	Off	Не включено
+VoiceMemo	On	Включено
+Watched	No	Нет
+Watched	Yes	Да
+WhiteBalance	Auto	Автоматический
+WhiteBalance	Black & White	Монохром
+WhiteBalance	Cloudy	Облачность
+WhiteBalance	Color Temperature/Color Filter	Цветовая температура/Цветовой фильтр
+WhiteBalance	Cool White Fluorescent	Флуоресцентный белый холодный
+WhiteBalance	Custom	Пользователь
+WhiteBalance	Custom 1	ПЕРСОНАЛЬНЫЙ 1
+WhiteBalance	Custom 2	ПЕРСОНАЛЬНЫЙ 2
+WhiteBalance	Custom 3	ПЕРСОНАЛЬНЫЙ 3
+WhiteBalance	Custom 4	ПЕРСОНАЛЬНЫЙ 4
+WhiteBalance	Day White Fluorescent	Флуоресцентный белый дневной
+WhiteBalance	Daylight	Дневной свет
+WhiteBalance	Daylight Fluorescent	Флуоресцентный дневной
+WhiteBalance	Flash	Вспышка
+WhiteBalance	Fluorescent	Флуоресцентный
+WhiteBalance	Manual	Ручной
+WhiteBalance	Shade	Тень
+WhiteBalance	Tungsten	Лампа накаливания
+WhiteBalance	Unknown	неизвестно
+WhiteBalance	Warm White Fluorescent	Флуоресцентный теплый белый
+WhiteBalance	White Fluorescent	Флуоресцентный белый
+WideRange	Off	Не включён
+WideRange	On	Включен
+YCbCrPositioning	Centered	Центрованный
+YCbCrPositioning	Co-sited	Совместимый
+ZipCompression	Enhanced Deflate using Deflate64(tm)	Улучшенный Deflate с использованием Deflate64(tm)
+ZipCompression	IBM LZ77 z Architecture (PFS)	IBM LZ77 z/Architecture (PFS)
+ZipCompression	IBM TERSE (new)	IBM TERSE (новый)
+ZipCompression	Imploded (old IBM TERSE)	Imploded (старый IBM TERSE)
+ZipCompression	None	Без сжатия
+ZipCompression	PPMd version I, Rev 1	PPMd версия I, Ревизия 1
+ZipCompression	Reduced with compression factor 1	Сжатый с коэффициентом сжатия 1
+ZipCompression	Reduced with compression factor 2	Сжатый с коэффициентом сжатия 2
+ZipCompression	Reduced with compression factor 3	Сжатый с коэффициентом сжатия 3
+ZipCompression	Reduced with compression factor 4	Сжатый с коэффициентом сжатия 4
+ZipCompression	WavPack compressed	WavPack
+ZoneMatching	High Key	В высоком ключе
+ZoneMatching	ISO Setting Used	Используются параметры ISO
+ZoneMatching	Low Key	В низком ключе

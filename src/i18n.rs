@@ -1,8 +1,14 @@
-//! Internationalization support for tag descriptions.
+//! Internationalization support for tag descriptions and PrintConv values.
 //!
-//! Uses YAML locale files in `locales/` directory.
-//! Add a new language by creating `locales/xx.yml` with `TagName: "Translation"` entries,
-//! then add it to AVAILABLE_LANGUAGES and LOCALES below.
+//! Tag descriptions + UI strings live in YAML locale files (`locales/xx.yml`,
+//! `TagName: "Translation"` and `_ui.*` entries). PrintConv value translations
+//! (localized enum output, e.g. `Off` → `Arrêt`) live in tab-separated tables
+//! (`locales/values/xx.tsv`, `tag<TAB>english<TAB>translation`), applied only
+//! when `-lang` is set. Both are generated from ExifTool's `Lang/*.pm`.
+//!
+//! Add a new language by creating `locales/xx.yml` (and optionally
+//! `locales/values/xx.tsv`), then add it to AVAILABLE_LANGUAGES, LOCALES, and
+//! VALUE_LOCALES below.
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -60,7 +66,64 @@ static LOCALES: &[(&str, &str)] = &[
     ("ko", include_str!("../locales/ko.yml")),
 ];
 
+// Embed PrintConv value-translation tables (tab-separated: tag\tenglish\ttranslation)
+// at compile time. Only the languages ExifTool itself localizes have a file; the
+// extra languages (ar/bn/hi/pt) and English carry no value translations.
+static VALUE_LOCALES: &[(&str, &str)] = &[
+    ("en_ca", include_str!("../locales/values/en_ca.tsv")),
+    ("en_gb", include_str!("../locales/values/en_gb.tsv")),
+    ("fr", include_str!("../locales/values/fr.tsv")),
+    ("es", include_str!("../locales/values/es.tsv")),
+    ("it", include_str!("../locales/values/it.tsv")),
+    ("de", include_str!("../locales/values/de.tsv")),
+    ("nl", include_str!("../locales/values/nl.tsv")),
+    ("sv", include_str!("../locales/values/sv.tsv")),
+    ("fi", include_str!("../locales/values/fi.tsv")),
+    ("pl", include_str!("../locales/values/pl.tsv")),
+    ("cs", include_str!("../locales/values/cs.tsv")),
+    ("sk", include_str!("../locales/values/sk.tsv")),
+    ("tr", include_str!("../locales/values/tr.tsv")),
+    ("ru", include_str!("../locales/values/ru.tsv")),
+    ("zh", include_str!("../locales/values/zh.tsv")),
+    ("zh_tw", include_str!("../locales/values/zh_tw.tsv")),
+    ("ja", include_str!("../locales/values/ja.tsv")),
+    ("ko", include_str!("../locales/values/ko.tsv")),
+];
+
+// Group-scoped PrintConv value overrides (tab-separated: group1\ttag\tenglish\t
+// output). These correct the flat tables where the family-1 group changes whether
+// (or how) ExifTool localizes a value; an output equal to the English input means
+// "ExifTool keeps English here" (suppress the flat translation). Generated from
+// ExifTool's real corpus output by scripts/gen_value_overrides.py.
+static VALUE_OVERRIDES: &[(&str, &str)] = &[
+    ("en_ca", include_str!("../locales/values/en_ca.over.tsv")),
+    ("en_gb", include_str!("../locales/values/en_gb.over.tsv")),
+    ("fr", include_str!("../locales/values/fr.over.tsv")),
+    ("es", include_str!("../locales/values/es.over.tsv")),
+    ("it", include_str!("../locales/values/it.over.tsv")),
+    ("de", include_str!("../locales/values/de.over.tsv")),
+    ("nl", include_str!("../locales/values/nl.over.tsv")),
+    ("sv", include_str!("../locales/values/sv.over.tsv")),
+    ("fi", include_str!("../locales/values/fi.over.tsv")),
+    ("pl", include_str!("../locales/values/pl.over.tsv")),
+    ("cs", include_str!("../locales/values/cs.over.tsv")),
+    ("sk", include_str!("../locales/values/sk.over.tsv")),
+    ("tr", include_str!("../locales/values/tr.over.tsv")),
+    ("ru", include_str!("../locales/values/ru.over.tsv")),
+    ("zh", include_str!("../locales/values/zh.over.tsv")),
+    ("zh_tw", include_str!("../locales/values/zh_tw.over.tsv")),
+    ("ja", include_str!("../locales/values/ja.over.tsv")),
+    ("ko", include_str!("../locales/values/ko.over.tsv")),
+];
+
 static PARSED_LOCALES: OnceLock<HashMap<String, HashMap<String, String>>> = OnceLock::new();
+#[allow(clippy::type_complexity)]
+static PARSED_VALUES: OnceLock<HashMap<String, HashMap<String, HashMap<String, String>>>> =
+    OnceLock::new();
+// lang -> (group1, tag, english) -> output
+#[allow(clippy::type_complexity)]
+static PARSED_OVERRIDES: OnceLock<HashMap<String, HashMap<(String, String, String), String>>> =
+    OnceLock::new();
 
 fn parse_yaml_simple(content: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
@@ -90,17 +153,102 @@ fn get_all_locales() -> &'static HashMap<String, HashMap<String, String>> {
     })
 }
 
-/// Get translations for a language code. Returns None for "en" or unknown languages.
-pub fn get_translations(lang: &str) -> Option<HashMap<&'static str, &'static str>> {
-    // Normalize lang code
-    let lang = match lang {
+/// Normalize a user-supplied language code to the locale key used by the tables
+/// (e.g. "zh_CN" → "zh", "pt-BR" → "pt", "en-GB" → "en_gb").
+fn normalize_lang(lang: &str) -> &str {
+    match lang {
         "zh_cn" | "zh_CN" | "zhcn" | "zh-cn" | "zh-CN" => "zh",
         "zh_tw" | "zh_TW" | "zhtw" | "zh-tw" | "zh-TW" => "zh_tw",
         "pt_br" | "pt_BR" | "ptbr" | "pt-br" | "pt-BR" => "pt",
         "en_ca" | "en_CA" | "en-ca" | "en-CA" => "en_ca",
         "en_gb" | "en_GB" | "en-gb" | "en-GB" => "en_gb",
         other => other,
-    };
+    }
+}
+
+fn parse_values_tsv(content: &str) -> HashMap<String, HashMap<String, String>> {
+    let mut map: HashMap<String, HashMap<String, String>> = HashMap::new();
+    for line in content.lines() {
+        let mut parts = line.splitn(3, '\t');
+        if let (Some(tag), Some(eng), Some(tr)) = (parts.next(), parts.next(), parts.next()) {
+            if !tag.is_empty() && !eng.is_empty() && !tr.is_empty() {
+                map.entry(tag.to_string())
+                    .or_default()
+                    .insert(eng.to_string(), tr.to_string());
+            }
+        }
+    }
+    map
+}
+
+fn get_all_values() -> &'static HashMap<String, HashMap<String, HashMap<String, String>>> {
+    PARSED_VALUES.get_or_init(|| {
+        let mut all = HashMap::new();
+        for (code, content) in VALUE_LOCALES {
+            all.insert(code.to_string(), parse_values_tsv(content));
+        }
+        all
+    })
+}
+
+#[allow(clippy::type_complexity)]
+fn get_all_overrides() -> &'static HashMap<String, HashMap<(String, String, String), String>> {
+    PARSED_OVERRIDES.get_or_init(|| {
+        let mut all = HashMap::new();
+        for (code, content) in VALUE_OVERRIDES {
+            let mut map = HashMap::new();
+            for line in content.lines() {
+                let mut p = line.splitn(4, '\t');
+                if let (Some(g), Some(tag), Some(eng), Some(out)) =
+                    (p.next(), p.next(), p.next(), p.next())
+                {
+                    if !g.is_empty() && !tag.is_empty() {
+                        map.insert(
+                            (g.to_string(), tag.to_string(), eng.to_string()),
+                            out.to_string(),
+                        );
+                    }
+                }
+            }
+            all.insert(code.to_string(), map);
+        }
+        all
+    })
+}
+
+/// Translate a PrintConv output value for a tag, when `-lang` is set. `group1` is
+/// the tag's family-1 group, used to disambiguate same-named tags that ExifTool
+/// localizes differently (or not at all) depending on their source table.
+/// Returns the localized string, or `None` when the value stays in English.
+/// Faithful to ExifTool: a group-scoped override (from real corpus output) wins
+/// over the broad per-tag table, and an override equal to the input value means
+/// ExifTool keeps English there.
+pub fn translate_value(lang: &str, group1: &str, tag_name: &str, value: &str) -> Option<String> {
+    let lang = normalize_lang(lang);
+    if lang == "en" {
+        return None;
+    }
+    // Group-scoped override is authoritative (it mirrors ExifTool's real output).
+    if let Some(over) = get_all_overrides().get(lang) {
+        if let Some(out) = over.get(&(group1.to_string(), tag_name.to_string(), value.to_string()))
+        {
+            return if out == value {
+                None
+            } else {
+                Some(out.clone())
+            };
+        }
+    }
+    get_all_values()
+        .get(lang)?
+        .get(tag_name)?
+        .get(value)
+        .cloned()
+}
+
+/// Get translations for a language code. Returns None for "en" or unknown languages.
+pub fn get_translations(lang: &str) -> Option<HashMap<&'static str, &'static str>> {
+    let lang = normalize_lang(lang);
 
     if lang == "en" {
         return None;

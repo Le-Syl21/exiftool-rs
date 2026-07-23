@@ -15,8 +15,39 @@ A pure Rust reimplementation of [ExifTool](https://exiftool.org/) v13.59 — rea
 - **15 format writers**: JPEG, TIFF, PNG, WebP, PSD, PDF, MP4, MKV, AVI, WAV, FLAC, MP3, OGG, CR2, HEIF/AVIF
 - **17 MakerNote manufacturers** with deep sub-table decoders
 - **Timed metadata extraction** (`-ee`) for dashcams, action cams, drones
-- **Optional GUI** with 23 languages (3311 tag descriptions per language)
+- **Optional GUI** with 23 languages: 3311 tag descriptions **and** localized PrintConv values per language, matching ExifTool's `-lang` output across the corpus
 - **0 compiler warnings**, `unsafe` limited to three OS calls, minimal dependencies
+
+## How it compares to ExifTool
+
+exiftool-rs reimplements ExifTool in Rust: the tag tables and print conversions are generated from the Perl source, so the **data** matches, while the implementation is a compiled, dependency-free binary.
+
+### Analysis engine
+
+| | ExifTool (Perl) | exiftool-rs |
+|---|---|---|
+| Language | Perl 5, interpreted | Rust, compiled |
+| Size | 225 modules, ~327k lines | 162 files, ~192k lines (73k generated) |
+| Tag tables | Perl hashes, loaded at runtime | Static tables generated from the Perl source |
+| `PrintConv` / `ValueConv` | Perl code, `eval`-uated at runtime | Ported Rust functions / match tables |
+| Runtime dependencies | Perl + CPAN modules | None (`unsafe` limited to three OS calls) |
+
+### GUI
+
+| | ExifTool (Perl) | exiftool-rs |
+|---|---|---|
+| Bundled GUI | None (CLI only) | Yes — `exiftool-rs-gui` |
+| De-facto GUI | [ExifToolGUI](https://exiftool.org/gui/) (third-party, Windows, wraps the CLI) | Native [egui](https://github.com/emilk/egui), cross-platform |
+| Editing | via the third-party GUI | Double-click any writable tag |
+
+### Languages
+
+| | ExifTool (Perl) | exiftool-rs |
+|---|---|---|
+| Languages | 18 | 23 (adds Arabic, Bengali, Hindi, Portuguese) |
+| Tag descriptions | ✅ | ✅ |
+| PrintConv values (`Off` → `Arrêt`) | ✅ | ✅ — matches `-lang` on 192/195 corpus files |
+| Source | `Lang/*.pm` | generated from `Lang/*.pm` |
 
 ## Supported Formats
 
@@ -164,7 +195,7 @@ exiftool-rs-gui -lang fr
 | `en_gb` | English (UK) | `fi` | Finnish | `zh` | Chinese (Simplified) |
 | `es` | Spanish | | | `zh_tw` | Chinese (Traditional) |
 
-Each language includes 3311 tag descriptions plus all UI strings — natively translated where ExifTool 13.59 provides a translation, English otherwise.
+Each language includes 3311 tag descriptions, localized PrintConv values (e.g. `Orientation` reads `Horizontale (normale)` under `-lang fr`), and all UI strings — natively translated where ExifTool 13.59 provides a translation, English otherwise. Value output matches ExifTool's `-lang` across the test corpus, except one cosmetic case (Mach-O `CPUArchitecture`, which ExifTool localizes for PE/ELF binaries but not Mach-O).
 
 ### Platform Notes
 

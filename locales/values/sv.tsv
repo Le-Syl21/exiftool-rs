@@ -1,0 +1,226 @@
+CalibrationIlluminant1	Cloudy	Mulet
+CalibrationIlluminant1	Cool White Fluorescent	Kalljusrör (W 3800 - 4500 k)
+CalibrationIlluminant1	Day White Fluorescent	Dagljusrör, högdager (N 4600 - 5500k)
+CalibrationIlluminant1	Daylight	Dagsljus
+CalibrationIlluminant1	Daylight Fluorescent	Dagljusrör (D 5700 - 7100 k)
+CalibrationIlluminant1	Fine Weather	Fint väder
+CalibrationIlluminant1	Flash	Blixt
+CalibrationIlluminant1	Fluorescent	Lysrörsbelysning
+CalibrationIlluminant1	ISO Studio Tungsten	ISO tungsten studiobelysning
+CalibrationIlluminant1	Other	Annan ljuskälla
+CalibrationIlluminant1	Shade	Skugga
+CalibrationIlluminant1	Standard Light A	Standardljus A
+CalibrationIlluminant1	Standard Light B	Standardljus B
+CalibrationIlluminant1	Standard Light C	Standardljus C
+CalibrationIlluminant1	Tungsten (Incandescent)	Tungsten
+CalibrationIlluminant1	Unknown	Okänt
+CalibrationIlluminant1	Warm White Fluorescent	Varmt vitt fluorescerande (L 2600 - 3250k)
+CalibrationIlluminant1	White Fluorescent	Vit lysrörsbelysning (WW 3250 - 3800 k)
+CalibrationIlluminant2	Cloudy	Mulet
+CalibrationIlluminant2	Cool White Fluorescent	Kalljusrör (W 3800 - 4500 k)
+CalibrationIlluminant2	Day White Fluorescent	Dagljusrör, högdager (N 4600 - 5500k)
+CalibrationIlluminant2	Daylight	Dagsljus
+CalibrationIlluminant2	Daylight Fluorescent	Dagljusrör (D 5700 - 7100 k)
+CalibrationIlluminant2	Fine Weather	Fint väder
+CalibrationIlluminant2	Flash	Blixt
+CalibrationIlluminant2	Fluorescent	Lysrörsbelysning
+CalibrationIlluminant2	ISO Studio Tungsten	ISO tungsten studiobelysning
+CalibrationIlluminant2	Other	Annan ljuskälla
+CalibrationIlluminant2	Shade	Skugga
+CalibrationIlluminant2	Standard Light A	Standardljus A
+CalibrationIlluminant2	Standard Light B	Standardljus B
+CalibrationIlluminant2	Standard Light C	Standardljus C
+CalibrationIlluminant2	Tungsten (Incandescent)	Tungsten
+CalibrationIlluminant2	Unknown	Okänt
+CalibrationIlluminant2	Warm White Fluorescent	Varmt vitt fluorescerande (L 2600 - 3250k)
+CalibrationIlluminant2	White Fluorescent	Vit lysrörsbelysning (WW 3250 - 3800 k)
+ColorMode	Autumn Leaves	Höstlöv
+ColorMode	B&W	Svartvitt
+ColorMode	Clear	Klart
+ColorMode	Deep	Djupt
+ColorMode	Landscape	Landskap
+ColorMode	Light	Ljust
+ColorMode	Neutral	Neutralt
+ColorMode	Night View	Nattvy
+ColorMode	Night View/Portrait	Nattporträtt
+ColorMode	Portrait	Porträtt
+ColorMode	Sunset	Solnedgång
+ColorMode	Vivid	Levande färg
+ColorSpace	ICC Profile	ICC-profil
+ColorSpace	Uncalibrated	Ej kalibrerat
+Compression	JPEG	JPEG-komprimering
+Compression	Uncompressed	Ingen komprimering
+Contrast	High	Hård
+Contrast	Low	Mjuk
+Contrast	Normal	Standard
+CustomRendered	Custom	Anpassad process
+CustomRendered	Normal	Normal process
+DynamicRangeOptimizer	Advanced Auto	Avancerad auto
+DynamicRangeOptimizer	Advanced Lv1	Avancerad niv1
+DynamicRangeOptimizer	Advanced Lv2	Avancerad niv2
+DynamicRangeOptimizer	Advanced Lv3	Avancerad niv3
+DynamicRangeOptimizer	Advanced Lv4	Avancerad niv4
+DynamicRangeOptimizer	Advanced Lv5	Avancerad niv5
+DynamicRangeOptimizer	Auto	Automatisk
+DynamicRangeOptimizer	Off	Av
+ExposureMode	Auto	Automatisk exponering
+ExposureMode	Auto bracket	Automatisk alternativexponering
+ExposureMode	Manual	Manuell exponering
+ExposureProgram	Action (High speed)	Sport
+ExposureProgram	Aperture-priority AE	Bländarprioritet
+ExposureProgram	Bulb	Glödlampa
+ExposureProgram	Creative (Slow speed)	Kreativ
+ExposureProgram	Landscape	Liggande
+ExposureProgram	Manual	Manuell exponering
+ExposureProgram	Portrait	Stående
+ExposureProgram	Program AE	Normalt program
+ExposureProgram	Shutter speed priority AE	Slutarprioritet
+FaceOrientation	Horizontal (normal)	Positiv riktning
+FaceOrientation	Rotate 90 CW	Rotera 90° medurs
+FileSource	Digital Camera	DSC
+FileSource	Film Scanner	Skanner av transparent typ
+FileSource	Reflection Print Scanner	Skanner av reflextyp
+Flash	Auto, Fired	PÅ (automatisk blixt)
+Flash	Auto, Fired, Red-eye reduction	"PÅ (automatisk blixt, reducering av röda ögon)"
+Flash	Auto, Fired, Red-eye reduction, Return detected	"PÅ (automatisk blixt, reducering av röda ögon, reflekterat ljus)"
+Flash	Auto, Fired, Return detected	"PÅ (automatisk blixt, reflekterat ljus)"
+Flash	Did not fire	Blixten utlöstes inte
+Flash	Fired	Blixten utlöstes
+Flash	Fired, Red-eye reduction	PÅ (reducering av röda ögon)
+Flash	Fired, Red-eye reduction, Return detected	"PÅ (reducering av röda ögon, reflekterat ljus)"
+Flash	Fired, Return detected	PÅ (reflekterat ljus)
+Flash	No Flash	Ingen blixtfunktion
+Flash	On, Fired	PÅ (upplättnad)
+Flash	On, Red-eye reduction	"PÅ (upplättnad, reducering av röda ögon)"
+Flash	On, Red-eye reduction, Return detected	"PÅ upplättnad reducering av röda ögon, reflekterat ljus)"
+Flash	On, Return detected	"PÅ (upplättnad, reflekterat ljus)"
+FocalPlaneResolutionUnit	inches	tum
+GPSAltitudeRef	Above Sea Level	Havsnivå
+GPSAltitudeRef	Below Sea Level	Havsnivåref. (negativt värde)
+GPSDifferential	Differential Corrected	Differentialkorrigering använd
+GPSDifferential	No Correction	Mätning utan differentialkorrigering
+GPSLatitudeRef	North	Nordlig bredd
+GPSLatitudeRef	South	Sydlig bredd
+GPSLongitudeRef	East	Östlig längd
+GPSLongitudeRef	West	Västlig längd
+GPSMeasureMode	3-Dimensional Measurement	3D-mätning
+GPSSpeedRef	km/h	Km/tim
+GPSSpeedRef	knots	Knop
+GPSSpeedRef	mph	Miles/tim
+GPSStatus	Measurement Active	Mätning pågår
+GPSStatus	Measurement Void	Mätningssamverkan
+GPSTrackRef	Magnetic North	Magnetisk riktning
+GPSTrackRef	True North	Verklig riktning
+GainControl	High gain down	Hög förstärkning ned
+GainControl	High gain up	Hög förstärkning upp
+GainControl	Low gain down	Låg förstärkning ned
+GainControl	Low gain up	Låg förstärkning upp
+GainControl	None	Ingen
+HDR	Off	Av
+HighISONoiseReduction	Auto	Automatisk
+HighISONoiseReduction	High	Hög
+HighISONoiseReduction	Low	Låg
+HighISONoiseReduction	Off	Av
+JPEGQuality	Extra Fine	Extra fin
+JPEGQuality	Fine	Fin
+JPEGQuality	Standard	Standardkvalitet
+LightSource	Cloudy	Mulet
+LightSource	Cool White Fluorescent	Kalljusrör (W 3800 - 4500 k)
+LightSource	Day White Fluorescent	Dagljusrör, högdager (N 4600 - 5500k)
+LightSource	Daylight	Dagsljus
+LightSource	Daylight Fluorescent	Dagljusrör (D 5700 - 7100 k)
+LightSource	Fine Weather	Fint väder
+LightSource	Flash	Blixt
+LightSource	Fluorescent	Lysrörsbelysning
+LightSource	ISO Studio Tungsten	ISO tungsten studiobelysning
+LightSource	Other	Annan ljuskälla
+LightSource	Shade	Skugga
+LightSource	Standard Light A	Standardljus A
+LightSource	Standard Light B	Standardljus B
+LightSource	Standard Light C	Standardljus C
+LightSource	Tungsten (Incandescent)	Tungsten
+LightSource	Unknown	Okänt
+LightSource	Warm White Fluorescent	Varmt vitt fluorescerande (L 2600 - 3250k)
+LightSource	White Fluorescent	Vit lysrörsbelysning (WW 3250 - 3800 k)
+LongExposureNoiseReduction	Off	Av
+LongExposureNoiseReduction	On	På
+MeteringMode	Average	Genomsnitt
+MeteringMode	Center-weighted average	Centrumvägd genomsnittsmätning
+MeteringMode	Multi-segment	Mönster
+MeteringMode	Multi-spot	MultiSpot
+MeteringMode	Other	Annat
+MeteringMode	Partial	Delvis
+MeteringMode	Unknown	Okänt
+MultiFrameNoiseReduction	Off	Av
+MultiFrameNoiseReduction	On	På
+Orientation	Horizontal (normal)	Positiv riktning
+Orientation	Rotate 90 CW	Rotera 90° medurs
+PlanarConfiguration	Chunky	Kompakt format
+PlanarConfiguration	Planar	Planar format
+Quality	Compressed RAW	cRAW
+Quality	Compressed RAW + JPEG	cRAW+JPEG
+Quality	Extra Fine	Extra fin
+Quality	Fine	Fin
+Quality	Low	Låg kvalitet
+Quality	Normal	Standardkvalitet
+Quality	RAW + JPEG	RAW+JPEG
+ResolutionUnit	cm	centimeter
+ResolutionUnit	inches	tum
+Saturation	High	Hög mättnad
+Saturation	Low	Låg mättnad
+Saturation	Normal	Standard
+SceneCaptureType	Landscape	Landskap
+SceneCaptureType	Night	Nattmotiv
+SceneCaptureType	Portrait	Porträtt
+SceneMode	3D Sweep Panorama	3D
+SceneMode	Anti Motion Blur	Anti-rörelseoskärpa
+SceneMode	Auto	Automatisk
+SceneMode	Cont. Priority AE	Kont. prioritet AE
+SceneMode	Handheld Night Shot	Manuell nattbild
+SceneMode	Landscape	Landskap
+SceneMode	Macro	Makro
+SceneMode	Night Portrait	Nattporträtt
+SceneMode	Night Scene	Nattvy
+SceneMode	Night View/Portrait	Nattvy/porträtt
+SceneMode	Portrait	Porträtt
+SceneMode	Sports	Sporthändelse
+SceneMode	Sunset	Solnedgång
+SceneMode	Sweep Panorama	Panorering
+SceneType	Directly photographed	En direktfotograferad bild
+SensingMethod	Color sequential area	Color sequential area sensor
+SensingMethod	Color sequential linear	Color sequential linear sensor
+SensingMethod	One-chip color area	One-chip color area sensor
+SensingMethod	Three-chip color area	Three-chip color area sensor
+SensingMethod	Trilinear	Trilinear sensor
+SensingMethod	Two-chip color area	Two-chip color area sensor
+Sharpness	Hard	Hård
+Sharpness	Normal	Standard
+Sharpness	Soft	Mjuk
+SubjectDistanceRange	Close	Nära håll
+SubjectDistanceRange	Distant	Långt håll
+SubjectDistanceRange	Macro	Makro
+WhiteBalance	Auto	Automatisk vitbalans
+WhiteBalance	Black & White	Monokrom
+WhiteBalance	Cloudy	Mulet
+WhiteBalance	Color Temperature/Color Filter	Färgtemperatur / Färgfilter
+WhiteBalance	Cool White Fluorescent	Kalljusrör
+WhiteBalance	Custom	Special
+WhiteBalance	Custom 1	ANPASSNING1
+WhiteBalance	Custom 2	ANPASSNING2
+WhiteBalance	Custom 3	ANPASSNING3
+WhiteBalance	Custom 4	ANPASSNING4
+WhiteBalance	Day White Fluorescent	"Dagljusrör, högdager"
+WhiteBalance	Daylight	Dagsljus
+WhiteBalance	Daylight Fluorescent	Dagljusrör
+WhiteBalance	Flash	Blixt
+WhiteBalance	Fluorescent	Lysrörsbelysning
+WhiteBalance	Manual	Manuell vitbalans
+WhiteBalance	Shade	Skugga
+WhiteBalance	Tungsten	Glödlampa
+WhiteBalance	Unknown	Okänt
+WhiteBalance	Warm White Fluorescent	Varmt vitt fluorescerande
+WhiteBalance	White Fluorescent	Vit lysrörsbelysning
+YCbCrPositioning	Centered	Centrerad
+ZoneMatching	High Key	Hög
+ZoneMatching	ISO Setting Used	Av
+ZoneMatching	Low Key	Låg
