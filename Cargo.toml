@@ -49,7 +49,18 @@ brotli = "8"
 unicode-width = "0.2"
 
 # GUI dependencies (optional)
-eframe = { version = "0.35", optional = true }
+# eframe 0.35 flipped its default renderer to wgpu; its D3D12 backend fails to
+# build on Windows (wgpu/windows-rs mismatch). We render with glow (OpenGL, as in
+# 0.31), so select the default feature set with wgpu swapped for glow — this drops
+# egui-wgpu/wgpu/d3d12 entirely and keeps the build portable.
+eframe = { version = "0.35", optional = true, default-features = false, features = [
+    "accesskit",
+    "default_fonts",
+    "glow",
+    "wayland",
+    "web_screen_reader",
+    "x11",
+] }
 egui = { version = "0.35", optional = true }
 image = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png", "gif", "bmp", "tiff"] }
 rfd = { version = "0.17", optional = true }

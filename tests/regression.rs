@@ -850,9 +850,22 @@ fn assert_fit_parity(extract_embedded: u8, baseline: &str, mode: &str) {
     use exiftool_rs::Options;
     use std::collections::BTreeMap;
 
+    // FIT record timestamps (GPSDateTime/TimeStamp) are rendered in the machine's
+    // local time — the baseline was frozen in one zone, so their offset differs on
+    // any other zone (e.g. UTC CI runners). Drop them from BOTH sides here, the same
+    // way the machine-state File* dates are already excluded; this stays FIT-local
+    // and does not touch how the shared multiset test compares GPSDateTime elsewhere
+    // (where it is UTC and portable). The instant is still parsed; only its
+    // non-portable zone rendering is not value-compared.
+    let is_local_time_fit = |name: &str| name == "GPSDateTime" || name == "TimeStamp";
+
     let expected = std::fs::read_to_string(baseline)
         .unwrap_or_else(|e| panic!("missing baseline {baseline}: {e}"));
-    let mut want: Vec<String> = expected.lines().map(|l| l.to_string()).collect();
+    let mut want: Vec<String> = expected
+        .lines()
+        .filter(|l| !is_local_time_fit(l.split('\t').next().unwrap_or("")))
+        .map(|l| l.to_string())
+        .collect();
     want.sort();
 
     let et = ExifTool::with_options(Options {
@@ -865,7 +878,7 @@ fn assert_fit_parity(extract_embedded: u8, baseline: &str, mode: &str) {
 
     let mut got: Vec<String> = tags
         .iter()
-        .filter(|t| !FIT_VOLATILE_TAGS.contains(&t.name.as_str()))
+        .filter(|t| !FIT_VOLATILE_TAGS.contains(&t.name.as_str()) && !is_local_time_fit(&t.name))
         .map(|t| format!("{}\t{}", t.name, sanitize_value(&t.print_value)))
         .collect();
     got.sort();
