@@ -15,7 +15,7 @@
 
 use super::group2_generated::{
     Family2Entry, FAMILY2_BY_G0_G1_NAME, FAMILY2_BY_G0_NAME, FAMILY2_BY_NAME,
-    XMP_NAMESPACE_FAMILY2, XMP_OWN_FAMILY2_BY_NAME,
+    XMP_NAMESPACE_FAMILY2, XMP_NAMESPACE_RAW_KEYS, XMP_OWN_FAMILY2_BY_NAME,
 };
 
 /// Separator between key components. Cannot occur in a group or tag name.
@@ -52,6 +52,54 @@ fn is_canon_ambiguous(name: &str) -> bool {
 /// in when it meets an XMP property from a namespace it has no schema for.
 const XMP_UNKNOWN_NAMESPACE: &str = "Unknown";
 
+/// Placeholder family 2 the XMP reader stamps on a genuine top-level property
+/// it has determined ExifTool INVENTS — one whose raw XML local name is no key
+/// of its namespace table (see [`xmp_toplevel_is_invented`]). It carries the
+/// U+0001 separator, so it can never collide with a real category, and
+/// [`family2_for`] resolves it to the namespace table's default. The reader,
+/// not [`family2_for`], makes the call because only it has the property's raw,
+/// case-sensitive local name and its structural position (top-level vs a
+/// flattened struct field, which is resolved through its struct, not this
+/// lookup).
+pub const XMP_INVENTED_SENTINEL: &str = "\u{1}Invented";
+
+/// The family-2 category `family1`'s XMP namespace table gives a property it
+/// invents, or [`XMP_UNKNOWN_NAMESPACE`] for a namespace ExifTool has no table
+/// for (its properties fall to `%Image::ExifTool::XMP::other`).
+fn xmp_namespace_default(family1: &str) -> &'static str {
+    XMP_NAMESPACE_FAMILY2
+        .binary_search_by(|(g, _)| (*g).cmp(family1))
+        .map(|i| XMP_NAMESPACE_FAMILY2[i].1)
+        .unwrap_or(XMP_UNKNOWN_NAMESPACE)
+}
+
+/// Whether a genuine top-level XMP property is one ExifTool INVENTS rather than
+/// matches: its raw XML local name `raw` is absent from `family1`'s namespace
+/// table, so `GetTagInfo` — which keys the table case-sensitively on the local
+/// name (XMP.pm line 3591) — finds nothing and a new tag is built in that table
+/// (line 3595), inheriting only the table's `GROUPS{2}` default.
+///
+/// The caller must pass the property's raw local name and must have established
+/// that it is a genuine top-level property, NOT a flattened struct field: a
+/// field's local name (`exif:Flash`'s `Fired`) is not a top-level table key
+/// either, but ExifTool resolves it through its struct definition, so this
+/// top-level lookup does not apply to it. `false` for a namespace ExifTool has
+/// no table for — such a property goes to `XMP::other` (Unknown) by the
+/// ordinary path, not through this invented-in-a-known-table rule.
+///
+/// ```
+/// # use exiftool_rs::tags::group2::xmp_toplevel_is_invented;
+/// assert!(xmp_toplevel_is_invented("XMP-dc", "Creator")); // not the `creator` key
+/// assert!(!xmp_toplevel_is_invented("XMP-dc", "creator")); // the real key
+/// assert!(!xmp_toplevel_is_invented("XMP-dc", "title")); // a real key
+/// ```
+pub fn xmp_toplevel_is_invented(family1: &str, raw: &str) -> bool {
+    XMP_NAMESPACE_RAW_KEYS
+        .binary_search_by(|(g, _)| (*g).cmp(family1))
+        .ok()
+        .is_some_and(|i| !XMP_NAMESPACE_RAW_KEYS[i].1.contains(&raw))
+}
+
 /// Pick a category out of the candidates ExifTool uses for one key.
 ///
 /// A single candidate is the answer. Several mean the tables disagree and none
@@ -87,6 +135,17 @@ pub fn family2_for(
     name: &str,
     current: &str,
 ) -> Option<&'static str> {
+    // A genuine top-level XMP property the reader has determined ExifTool
+    // invents (its raw local name is no key of its namespace table): it takes
+    // the namespace table's `GROUPS{2}` default, never the category of a real
+    // same-named tag its display Name would otherwise resolve to. The reader
+    // makes the call — only it has the raw local name and structural position —
+    // and marks the tag with [`XMP_INVENTED_SENTINEL`]. Resolving it here, at
+    // the same point the other categories are settled, keeps the sentinel from
+    // ever reaching output.
+    if current == XMP_INVENTED_SENTINEL {
+        return Some(xmp_namespace_default(family1));
+    }
     // `Unknown` is not a category any ExifTool table hands out for a tag it
     // describes; it is the default of the tables ExifTool invents entries in for
     // material it has NO description for — `%Image::ExifTool::XMP::other`,
@@ -215,12 +274,7 @@ pub fn family2_for(
         // invented in that namespace's own table (line 3595), so it takes ITS
         // default rather than XMP::other's Unknown: an arbitrary `pdfx:`
         // property is Document (XMP.pm line 1246).
-        return Some(
-            XMP_NAMESPACE_FAMILY2
-                .binary_search_by(|(g, _)| (*g).cmp(family1))
-                .map(|i| XMP_NAMESPACE_FAMILY2[i].1)
-                .unwrap_or(XMP_UNKNOWN_NAMESPACE),
-        );
+        return Some(xmp_namespace_default(family1));
     }
     // FITS::Main invents a dynamic tag for every keyword it has no entry for,
     // inheriting its GROUPS => { 2 => 'Image' } default; the reader already
@@ -508,6 +562,46 @@ mod tests {
         // A property ExifTool does know keeps its schema's category.
         assert_eq!(
             family2_for("XMP", "XMP-dc", "Creator", "Other"),
+            Some("Author")
+        );
+    }
+
+    #[test]
+    fn xmp_toplevel_invented_detection() {
+        // `dc:Creator` (capital C) is no key of the dc table — `creator` is —
+        // so ExifTool invents it. The real keys are not invented.
+        assert!(xmp_toplevel_is_invented("XMP-dc", "Creator"));
+        assert!(!xmp_toplevel_is_invented("XMP-dc", "creator"));
+        assert!(!xmp_toplevel_is_invented("XMP-dc", "title"));
+        // exif keys are NOT uniformly lcfirst(Name): ExifVersion is stored cased.
+        assert!(!xmp_toplevel_is_invented("XMP-exif", "ExifVersion"));
+        // A namespace ExifTool has no table for is not answered here — such a
+        // property is Unknown by the ordinary path, not invented in a table.
+        assert!(!xmp_toplevel_is_invented("XMP-NoSuchNamespace", "Whatever"));
+    }
+
+    #[test]
+    fn xmp_invented_sentinel_resolves_to_the_namespace_default() {
+        // The reader marks an invented dc property with the sentinel; it
+        // resolves to the dc table default `Other`, never the `Author` its
+        // display Name would give.
+        assert_eq!(
+            family2_for("XMP", "XMP-dc", "Creator", XMP_INVENTED_SENTINEL),
+            Some("Other")
+        );
+        // An unschemed namespace's sentinel resolves to Unknown.
+        assert_eq!(
+            family2_for(
+                "XMP",
+                "XMP-NoSuchNamespace",
+                "Whatever",
+                XMP_INVENTED_SENTINEL
+            ),
+            Some("Unknown")
+        );
+        // A real dc:creator (no sentinel) keeps its schema category.
+        assert_eq!(
+            family2_for("XMP", "XMP-dc", "Creator", "Author"),
             Some("Author")
         );
     }

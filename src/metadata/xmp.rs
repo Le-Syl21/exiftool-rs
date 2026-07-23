@@ -134,6 +134,31 @@ fn namespace_category(prefix: &str) -> &str {
     }
 }
 
+/// Family 2 to store for an XMP property emitted as a genuine TOP-LEVEL tag.
+///
+/// Returns [`crate::tags::group2::XMP_INVENTED_SENTINEL`] when the property is
+/// one ExifTool invents — its raw XML local name is no key of its namespace
+/// table — so the central family-2 pass resolves it to that table's default
+/// category. This is what makes a `dc:Creator` written with a capital C (not
+/// the `creator` key, so invented, XMP.pm line 3595) report as `Other` (the dc
+/// table default) and not `Author`, the category its display Name would give.
+/// Otherwise the reader's placeholder `fallback` stands and the pass refines it.
+///
+/// `own_prefix` is the property's own namespace prefix, `raw_local` its raw,
+/// case-sensitive XML local name. The caller MUST have established that the
+/// property is genuinely top-level (empty struct-ancestor prefix): a flattened
+/// struct field's local name is not a top-level key either, yet ExifTool
+/// resolves it through its struct definition, not this lookup.
+fn xmp_toplevel_family2<'a>(own_prefix: &str, raw_local: &str, fallback: &'a str) -> &'a str {
+    let canonical = exiftool_namespace_alias(own_prefix).unwrap_or(own_prefix);
+    let family1 = format!("XMP-{canonical}");
+    if crate::tags::group2::xmp_toplevel_is_invented(&family1, raw_local) {
+        crate::tags::group2::XMP_INVENTED_SENTINEL
+    } else {
+        fallback
+    }
+}
+
 /// Check whether an attribute's local_name is the GCamera HDRPlus makernote field.
 /// ExifTool maps GCamera:HdrPlusMakernote (and GCamera:hdrp_makernote) → HDRPlusMakerNote.
 fn is_hdrp_makernote_attr(local_name: &str) -> bool {
@@ -434,6 +459,11 @@ impl XmpReader {
                                     prefix
                                 };
                                 let category = namespace_category(group_prefix);
+                                // Top-level property element (full name is just its
+                                // own local name): mark an invented one for the
+                                // central pass, as the other top-level paths do.
+                                let category =
+                                    xmp_toplevel_family2(group_prefix, &name.local_name, category);
                                 let full_name = ucfirst(&name.local_name);
                                 let value = if bag_values.len() == 1 {
                                     Value::String(bag_values[0].clone())
@@ -692,24 +722,40 @@ impl XmpReader {
                                 // prefix the tag with the property element's name.
                                 // path = [..., parent_prop, Description] → parent_prop is rev().nth(1)
                                 let rdf_ns2 = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-                                let full_name = if let Some(parent_elem) = path.iter().rev().nth(1)
-                                {
-                                    if parent_elem.0 != rdf_ns2
-                                        && parent_elem.1 != "RDF"
-                                        && parent_elem.1 != "xmpmeta"
-                                        && parent_elem.1 != "xapmeta"
-                                    {
-                                        let parent_uc = ucfirst(&strip_non_ascii(&parent_elem.1));
-                                        let field_uc =
-                                            ucfirst(&strip_non_ascii(&attr.name.local_name));
-                                        let stripped = strip_struct_prefix(&parent_uc, &field_uc);
-                                        apply_flat_name_remap(&format!("{}{}", parent_uc, stripped))
-                                            .to_string()
-                                    } else {
-                                        remapped
+                                // A simple property written as an attribute on a
+                                // top-level rdf:Description (or the root) is a
+                                // top-level property; nested inside a property
+                                // element it is a struct field.
+                                let is_top_level = match path.iter().rev().nth(1) {
+                                    Some(p) => {
+                                        p.0 == rdf_ns2
+                                            || p.1 == "RDF"
+                                            || p.1 == "xmpmeta"
+                                            || p.1 == "xapmeta"
                                     }
-                                } else {
+                                    None => true,
+                                };
+                                let full_name = if is_top_level {
                                     remapped
+                                } else {
+                                    let parent_elem = path.iter().rev().nth(1).unwrap();
+                                    let parent_uc = ucfirst(&strip_non_ascii(&parent_elem.1));
+                                    let field_uc = ucfirst(&strip_non_ascii(&attr.name.local_name));
+                                    let stripped = strip_struct_prefix(&parent_uc, &field_uc);
+                                    apply_flat_name_remap(&format!("{}{}", parent_uc, stripped))
+                                        .to_string()
+                                };
+                                // Mark an invented top-level property (raw local
+                                // name is no key of its namespace table) for the
+                                // central pass, as the element paths do.
+                                let category = if is_top_level {
+                                    xmp_toplevel_family2(
+                                        group_prefix,
+                                        &attr.name.local_name,
+                                        category,
+                                    )
+                                } else {
+                                    category
                                 };
                                 tags.push(Tag {
                                     id: TagId::Text(format!(
@@ -1156,7 +1202,13 @@ impl XmpReader {
                                             &tag_name,
                                         )))
                                         .to_string();
-                                        (tn, group_prefix.to_string(), category.to_string())
+                                        // Genuine top-level lang-alt property: mark
+                                        // an invented one (raw local name is no key
+                                        // of its namespace table) for the central
+                                        // pass, as the simple/list paths do.
+                                        let cat =
+                                            xmp_toplevel_family2(group_prefix, &tag_name, category);
+                                        (tn, group_prefix.to_string(), cat.to_string())
                                     };
 
                                 // Emit x-default as main tag
@@ -1271,6 +1323,15 @@ impl XmpReader {
                                     apply_flat_name_remap(&raw).to_string()
                                 } else {
                                     apply_flat_name_remap(&field_uc).to_string()
+                                };
+                                // A genuine top-level property (no struct ancestor)
+                                // whose raw local name is no key of its namespace
+                                // table is one ExifTool invents; mark it for the
+                                // central pass, as the simple/list paths do.
+                                let category = if ancestor_prefix.is_empty() {
+                                    xmp_toplevel_family2(group_prefix, &tag_name, category)
+                                } else {
+                                    category
                                 };
 
                                 // Collect all language codes (maintaining insertion order: x-default first)
@@ -1456,6 +1517,15 @@ impl XmpReader {
                                 };
 
                                 let emit_cat = namespace_category(&emit_group_prefix);
+                                // A genuine top-level list property (no struct
+                                // ancestor) whose raw local name is no key of its
+                                // namespace table is one ExifTool invents; mark it
+                                // so the central pass gives it the table default.
+                                let emit_cat = if ancestor_prefix.is_empty() {
+                                    xmp_toplevel_family2(&emit_group_prefix, tag_name, emit_cat)
+                                } else {
+                                    emit_cat
+                                };
                                 let print_value = value.to_display_string();
 
                                 tags.push(Tag {
@@ -1609,6 +1679,16 @@ impl XmpReader {
                             {
                                 print_value = pc;
                             }
+
+                            // A genuine top-level simple property (no struct
+                            // ancestor) whose raw local name is no key of its
+                            // namespace table is one ExifTool invents; mark it so
+                            // the central pass gives it the table default.
+                            let category = if ancestor_prefix.is_empty() {
+                                xmp_toplevel_family2(group_prefix, tag_name, category)
+                            } else {
+                                category
+                            };
 
                             tags.push(Tag {
                                 id: TagId::Text(format!("{}:{}", group_prefix, tag_name)),

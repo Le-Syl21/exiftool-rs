@@ -100,6 +100,7 @@ no warnings 'once';    # %Image::ExifTool::allTables is populated above
 # `GROUPS => { 1 => 'XMP-pdfx', 2 => 'Document' }` (XMP.pm line 1246), which is
 # why an arbitrary pdfx property is Document and not Unknown.
 my %ns_default;
+my %ns_raw_keys;
 my %own;
 for my $ns (sort keys %Image::ExifTool::XMP::Main) {
     my $tg = $Image::ExifTool::XMP::Main{$ns};
@@ -108,6 +109,20 @@ for my $ns (sort keys %Image::ExifTool::XMP::Main) {
     my $g1 = $$tbl{GROUPS}{1};
     my $g2 = $$tbl{GROUPS}{2};
     $ns_default{$g1} = $g2 if defined $g1 and defined $g2 and $g1 =~ /^XMP-/;
+    # ── The namespace's case-sensitive raw hash keys ────────────────────────
+    #
+    # HandleXMPTag resolves a top-level property with `GetTagInfo`, which keys
+    # the namespace table on the property's raw XML local name CASE-SENSITIVELY
+    # (XMP.pm line 3591). A `dc:Creator` therefore never finds the `creator`
+    # entry: it is invented instead (line 3595) and takes the table's GROUPS{2}
+    # default (`%ns_default` above). Collected BEFORE AddFlattenedTags, so only
+    # the real property keys are recorded — a struct field (`exif:Flash`'s
+    # `Fired`) is not a top-level key and is resolved through its struct, not by
+    # this lookup. The keys are NOT uniformly `lcfirst(Name)` (`exif:ExifVersion`
+    # is stored under `ExifVersion`), so they must come from the table itself.
+    if (defined $g1 and $g1 =~ /^XMP-/) {
+        $ns_raw_keys{$g1}{$_} = 1 for Image::ExifTool::TagTableKeys($tbl);
+    }
     Image::ExifTool::XMP::AddFlattenedTags($tbl);
     for my $tag_id (Image::ExifTool::TagTableKeys($tbl)) {
         for my $ti (Image::ExifTool::GetTagInfoList($tbl, $tag_id)) {
@@ -259,6 +274,29 @@ emit('FAMILY2_BY_NAME',       'Keyed on `"<name>"`',                            
         . "/// `%%Image::ExifTool::XMP::other` instead, whose category is Unknown.\n"
         . "pub static XMP_NAMESPACE_FAMILY2: &[(&str, &str)] = &[\n", scalar @keys;
     print qq{    ("$_", "$ns_default{$_}"),\n} for @keys;
+    print "];\n";
+}
+
+# ── Emit the per-namespace case-sensitive raw-key set ───────────────────────
+#
+# The actual hash keys of each XMP namespace table, exactly as `GetTagInfo`
+# keys them (XMP.pm line 3591). A top-level property whose raw local name is
+# absent here is one ExifTool has no entry for and invents in the namespace's
+# own table (line 3595), so it takes that table's category from
+# `XMP_NAMESPACE_FAMILY2` rather than the category of a same-named real tag.
+{
+    my @nss = sort keys %ns_raw_keys;
+    printf "\n/// Case-sensitive raw XML local names each XMP namespace table holds\n"
+        . "/// (%d namespaces), keyed on family 1 and sorted.\n"
+        . "///\n/// These are the hash keys `GetTagInfo` matches against; a top-level\n"
+        . "/// property whose local name is absent is invented and takes the namespace\n"
+        . "/// table's default category (see [`XMP_NAMESPACE_FAMILY2`]).\n"
+        . "pub static XMP_NAMESPACE_RAW_KEYS: &[(&str, &[&str])] = &[\n", scalar @nss;
+    for my $g1 (@nss) {
+        my @keys = sort keys %{$ns_raw_keys{$g1}};
+        my $list = join ', ', map { "\"$_\"" } @keys;
+        print qq{    ("$g1", &[$list]),\n};
+    }
     print "];\n";
 }
 
