@@ -4,19 +4,19 @@
 [![Documentation](https://docs.rs/exiftool-rs/badge.svg)](https://docs.rs/exiftool-rs)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
-A pure Rust reimplementation of [ExifTool](https://exiftool.org/) v13.53 — read, write, and edit metadata in image, audio, video, and document files. No unsafe code, no Perl dependency, no system libraries.
+A pure Rust reimplementation of [ExifTool](https://exiftool.org/) v13.59 — read, write, and edit metadata in image, audio, video, and document files. No Perl dependency, no system libraries; `unsafe` is confined to three OS calls (locale lookup, local-time offset, and an optional memory-map for large files).
 
 ![Screenshot](assets/screenshot.png)
 
 ## Features
 
-- **194/194 test files (100%)** produce identical tag names as Perl ExifTool v13.53
+- **Byte-for-byte parity with Perl ExifTool v13.59** across all 195 corpus files: identical tag **names** and **values**, with tag **groups** and repeated-instance (`-ee`) output matching too — save a single documented divergence (we decode a Latin-1 `©` in one EXIF Copyright to readable UTF-8 where ExifTool passes the raw byte)
 - **93 format readers** covering all Perl ExifTool modules
 - **15 format writers**: JPEG, TIFF, PNG, WebP, PSD, PDF, MP4, MKV, AVI, WAV, FLAC, MP3, OGG, CR2, HEIF/AVIF
 - **17 MakerNote manufacturers** with deep sub-table decoders
 - **Timed metadata extraction** (`-ee`) for dashcams, action cams, drones
 - **Optional GUI** with 23 languages (3230 tags translated per language)
-- **0 compiler warnings**, no unsafe code, minimal dependencies
+- **0 compiler warnings**, `unsafe` limited to three OS calls, minimal dependencies
 
 ## Supported Formats
 
@@ -211,11 +211,12 @@ Each language includes 3230 translated tag descriptions plus all UI strings.
 # Unit tests
 cargo test
 
-# ISO-functional test against Perl ExifTool's 194 test files
+# ISO-functional test against Perl ExifTool's 195 test files
 # No Perl required — reference files included in tests/expected/
 ./scripts/test_iso.sh
 
-# 194/194 files (100%) produce identical tag names — 11625 tags verified
+# 195/195 files produce identical tag names — names and values verified
+# against ExifTool 13.59; see tests/*_baseline.txt for the ratcheting contract
 ```
 
 ## Building
