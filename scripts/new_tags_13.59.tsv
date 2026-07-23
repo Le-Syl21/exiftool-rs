@@ -1,0 +1,81 @@
+AccumulatedPower	Accumulated Power
+AndroidMake	Android Make
+AndroidModel	Android Model
+AndroidVersion	Android Version
+AvgCadence	Avg Cadence
+AvgCadencePosition	Avg Cadence Position
+AvgFractionalCadence	Avg Fractional Cadence
+AvgHeartRate	Avg Heart Rate
+AvgLeftPowerPhase	Avg Left Power Phase
+AvgLeftPowerPhasePeak	Avg Left Power Phase Peak
+AvgPowerPosition	Avg Power Position
+AvgRightPowerPhase	Avg Right Power Phase
+AvgRightPowerPhasePeak	Avg Right Power Phase Peak
+AvgTemperature	Avg Temperature
+BeginningBodyBattery	Beginning Body Battery
+BodyBattery	Body Battery
+Cadence	Cadence
+ColorPrimaries	Color Primaries
+ColorProfiles	Color Profiles
+CycleLength16	Cycle Length 16
+EmbeddedFileName	Embedded File Name
+EmbeddedImage	Embedded Image
+EmbeddedImageColorSpace	Embedded Image Color Space
+EmbeddedImageFilter	Embedded Image Filter
+EmbeddedImageHeight	Embedded Image Height
+EmbeddedImageWidth	Embedded Image Width
+EndingBodyBattery	Ending Body Battery
+EnhancedAvgAltitude	Enhanced Avg Altitude
+EnhancedAvgSpeed	Enhanced Avg Speed
+EnhancedMaxAltitude	Enhanced Max Altitude
+EnhancedMaxSpeed	Enhanced Max Speed
+EnhancedMinAltitude	Enhanced Min Altitude
+EstSweatLoss	Est Sweat Loss
+Event	Event
+EventType	Event Type
+FirstLapIndex	First Lap Index
+FractionalCadence	Fractional Cadence
+GPSDestLatitude	GPS Dest Latitude
+GPSDestLongitude	GPS Dest Longitude
+HandlerDescription	Handler Description
+LapTrigger	Lap Trigger
+MatrixCoefficients	Matrix Coefficients
+MaxCadence	Max Cadence
+MaxCadencePosition	Max Cadence Position
+MaxFractionalCadence	Max Fractional Cadence
+MaxHeartRate	Max Heart Rate
+MaxPowerPosition	Max Power Position
+MaxTemperature	Max Temperature
+MessageIndex	Message Index
+MetabolicCalories	Metabolic Calories
+MinHeartRate	Min Heart Rate
+MinTemperature	Min Temperature
+NECLatitude	NEC Latitude
+NECLongitude	NEC Longitude
+NumLaps	Num Laps
+PrimaryBenefit	Primary Benefit
+ProtocolVersion	Protocol Version
+RestingCalories	Resting Calories
+SWCLatitude	SWC Latitude
+SWCLongitude	SWC Longitude
+Sport	Sport
+SportProfileName	Sport Profile Name
+SubSport	Sub Sport
+Temperature	Temperature
+TotalAnaerobicTrainingEffect	Total Anaerobic Training Effect
+TotalAscent	Total Ascent
+TotalCalories	Total Calories
+TotalCycles	Total Cycles
+TotalDescent	Total Descent
+TotalDistance	Total Distance
+TotalElapsedTime	Total Elapsed Time
+TotalSets	Total Sets
+TotalTimerTime	Total Timer Time
+TotalTrainingEffect	Total Training Effect
+TrainingLoadPeak	Training Load Peak
+TransferCharacteristics	Transfer Characteristics
+Trigger	Trigger
+VideoFullRangeFlag	Video Full Range Flag
+Volume	Volume
+WB_GRGBLevelsFlash	WB GRGB Levels Flash
+WristHeartRate	Wrist Heart Rate

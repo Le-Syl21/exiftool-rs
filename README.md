@@ -15,7 +15,7 @@ A pure Rust reimplementation of [ExifTool](https://exiftool.org/) v13.59 — rea
 - **15 format writers**: JPEG, TIFF, PNG, WebP, PSD, PDF, MP4, MKV, AVI, WAV, FLAC, MP3, OGG, CR2, HEIF/AVIF
 - **17 MakerNote manufacturers** with deep sub-table decoders
 - **Timed metadata extraction** (`-ee`) for dashcams, action cams, drones
-- **Optional GUI** with 23 languages (3230 tags translated per language)
+- **Optional GUI** with 23 languages (3311 tag descriptions per language)
 - **0 compiler warnings**, `unsafe` limited to three OS calls, minimal dependencies
 
 ## Supported Formats
@@ -164,7 +164,7 @@ exiftool-rs-gui -lang fr
 | `en_gb` | English (UK) | `fi` | Finnish | `zh` | Chinese (Simplified) |
 | `es` | Spanish | | | `zh_tw` | Chinese (Traditional) |
 
-Each language includes 3230 translated tag descriptions plus all UI strings.
+Each language includes 3311 tag descriptions plus all UI strings — natively translated where ExifTool 13.59 provides a translation, English otherwise.
 
 ### Platform Notes
 
