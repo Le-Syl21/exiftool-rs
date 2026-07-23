@@ -4,5 +4,15 @@
 # Oracle: tests/expected_multi/*.mvals, from scripts/gen_multiset_baselines.sh
 # Regenerate: UPDATE_MULTISET_BASELINE=1 cargo test --release --test regression regression_tag_multiset
 # Format: <file>\t<default|ee>\t<extra|missing>\t<occurrence>\t<tag>\t<value>
+#
+# DELIBERATE DIVERGENCE (owner decision 2026-07-23), not a defect to fix.
+# The EXIF Copyright holds a raw Latin-1 0xA9 byte (©). ExifTool's ConvertExifText
+# (Exif.pm:5554) does NOT transcode EXIF ASCII unless CharsetEXIF is set (it is
+# unset by default), so Perl emits the raw byte — which is invalid UTF-8. We decode
+# Latin-1 to a readable © instead. A published crate returning U+FFFD for real
+# accented Artist/Copyright is a worse service than byte-parity with an
+# invalid-UTF-8 reference is worth. These two lines are the whole price.
+# Do NOT "fix" by switching metadata/exif.rs to from_utf8_lossy — that regresses
+# every real Latin-1 EXIF string in the wild.
 PSP.psp	ee	extra	0	Copyright	© 2010 Phil Harvey
 PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
