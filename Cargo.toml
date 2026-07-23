@@ -42,17 +42,17 @@ gui = ["eframe", "egui", "image", "rfd", "noto-fonts-dl"]
 thiserror = "2"
 byteorder = "1"
 memmap2 = "0.9"
-xml-rs = "0.8"
+xml-rs = "1"
 encoding_rs = "0.8"
 flate2 = "1"
-brotli = "7"
+brotli = "8"
 unicode-width = "0.2"
 
 # GUI dependencies (optional)
-eframe = { version = "0.31", optional = true }
-egui = { version = "0.31", optional = true }
+eframe = { version = "0.35", optional = true }
+egui = { version = "0.35", optional = true }
 image = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png", "gif", "bmp", "tiff"] }
-rfd = { version = "0.15", optional = true }
+rfd = { version = "0.17", optional = true }
 noto-fonts-dl = { version = "0.1", optional = true, features = ["ar", "bn", "hi", "ja", "ko", "zh", "zh_tw"] }
 filetime = "0.2.27"
 

@@ -338,7 +338,11 @@ impl App {
 
 #[cfg(feature = "gui")]
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // egui 0.35: App::update(ctx) became App::ui(ui). Keep a cheap Arc-clone
+        // of the context so the existing ctx-based calls below stay unchanged.
+        let ctx = ui.ctx().clone();
+
         // Configure fonts for CJK, Arabic, Devanagari, Bengali support
         if !self.fonts_configured {
             self.fonts_configured = true;
@@ -407,7 +411,7 @@ impl eframe::App for App {
         });
 
         // Top toolbar
-        egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
+        egui::Panel::top("toolbar").show(ui, |ui| {
             ui.horizontal(|ui| {
                 if ui
                     .button(exiftool_rs::i18n::ui_text(&self.lang, "open"))
@@ -531,7 +535,7 @@ impl eframe::App for App {
 
         // Navigation bar
         if !self.files.is_empty() {
-            egui::TopBottomPanel::top("navigation").show(ctx, |ui| {
+            egui::Panel::top("navigation").show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.add_space(ui.available_width() / 2.0 - 150.0);
 
@@ -565,7 +569,7 @@ impl eframe::App for App {
             });
 
             // Editable hint bar
-            egui::TopBottomPanel::top("editable_hint").show(ctx, |ui| {
+            egui::Panel::top("editable_hint").show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(
                         egui::RichText::new(exiftool_rs::i18n::ui_text(
@@ -582,7 +586,7 @@ impl eframe::App for App {
         let is_flashing = self
             .flash_until
             .is_some_and(|t| t > std::time::Instant::now());
-        egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
+        egui::Panel::bottom("status").show(ui, |ui| {
             ui.horizontal(|ui| {
                 if is_flashing {
                     ui.label(
@@ -623,7 +627,7 @@ impl eframe::App for App {
         }
 
         // Main panel: tags
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             // Draw watermark logo in background
             if let Some(ref tex) = self.icon_texture {
                 let panel_rect = ui.available_rect_before_wrap();
@@ -753,7 +757,7 @@ impl eframe::App for App {
             .open(&mut open)
             .collapsible(false)
             .resizable(false)
-            .show(ctx, |ui| {
+            .show(&ctx, |ui| {
                 ui.label(format!(
                     "{}: {}",
                     exiftool_rs::i18n::ui_text(&self.lang, "original"),
@@ -801,7 +805,7 @@ impl eframe::App for App {
                 .collapsible(false)
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-                .show(ctx, |ui| {
+                .show(&ctx, |ui| {
                     ui.vertical_centered(|ui| {
                         if let Some(ref tex) = self.icon_texture {
                             ui.image((tex.id(), egui::vec2(64.0, 64.0)));
