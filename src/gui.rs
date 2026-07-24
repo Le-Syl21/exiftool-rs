@@ -867,6 +867,11 @@ impl eframe::App for App {
                         ui.hyperlink_to("exiftool.org", "https://exiftool.org/");
                         ui.add_space(4.0);
                         ui.hyperlink_to("GitHub", "https://github.com/Le-Syl21/exiftool-rs");
+                        ui.add_space(4.0);
+                        ui.hyperlink_to(
+                            "💬 Discord — community & support",
+                            "https://discord.gg/T37DYHmt2j",
+                        );
                         ui.add_space(8.0);
                         ui.label(
                             egui::RichText::new(

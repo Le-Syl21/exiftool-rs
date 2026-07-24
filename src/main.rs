@@ -2352,6 +2352,8 @@ fn print_usage() {
     eprintln!();
     eprintln!("GUI (requires --features gui):");
     eprintln!("  exiftool-rs-gui [FILE|DIR]   Open metadata viewer/editor");
+    eprintln!();
+    eprintln!("Community & support: https://discord.gg/T37DYHmt2j");
 }
 
 #[cfg(test)]

@@ -57,6 +57,10 @@
 //!
 //! **MakerNotes**: Canon, Nikon, Sony, Pentax, Olympus, Panasonic, Fujifilm, Samsung,
 //! Sigma, Casio, Ricoh, Minolta, Apple, Google, FLIR, GE, GoPro
+//!
+//! # Community & support
+//!
+//! Questions, bugs, beta testing — join the Discord: <https://discord.gg/T37DYHmt2j>
 
 pub mod composite;
 pub mod config;

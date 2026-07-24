@@ -2,6 +2,12 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [0.7.1] - 2026-07-24
+
+### Added
+
+- Add Discord community & support link (README, docs, --help, About).
+
 ## [0.7.0] - 2026-07-23
 
 ### Added

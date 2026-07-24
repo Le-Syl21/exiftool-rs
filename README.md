@@ -3,10 +3,17 @@
 [![Crates.io](https://img.shields.io/crates/v/exiftool-rs.svg)](https://crates.io/crates/exiftool-rs)
 [![Documentation](https://docs.rs/exiftool-rs/badge.svg)](https://docs.rs/exiftool-rs)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![Discord](https://img.shields.io/badge/Discord-Le--Syl21%20Tools-5865F2?logo=discord&logoColor=white)](https://discord.gg/T37DYHmt2j)
 
 A pure Rust reimplementation of [ExifTool](https://exiftool.org/) v13.59 — read, write, and edit metadata in image, audio, video, and document files. No Perl dependency, no system libraries; `unsafe` is confined to three OS calls (locale lookup, local-time offset, and an optional memory-map for large files).
 
 ![Screenshot](assets/screenshot.png)
+
+## Community & support
+
+Questions, bug reports, beta testing, or just want to chat? Join the Discord:
+
+[![Discord](https://img.shields.io/badge/Discord-Le--Syl21%20Tools-5865F2?logo=discord&logoColor=white)](https://discord.gg/T37DYHmt2j)
 
 ## Features
 
