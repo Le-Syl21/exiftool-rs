@@ -62,6 +62,7 @@ fn main() {
     let mut path_override: Option<String> = None;
     let mut images = "tests/images".to_string();
     let mut update = false;
+    let mut show: Option<String> = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -78,12 +79,17 @@ fn main() {
                 i += 1;
             }
             "--update" => update = true,
+            "--show" => {
+                show = args.get(i + 1).cloned();
+                i += 1;
+            }
             "-h" | "--help" => {
                 eprintln!(
                     "parity — diff exiftool-rs vs a pinned Perl ExifTool\n\
                      --exiftool <ver>     ExifTool release to fetch (default {})\n\
                      --exiftool-path <d>  use a local ExifTool checkout instead\n\
                      --images <dir>       corpus (default tests/images)\n\
+                     --show <file>        tag-by-tag ExifTool vs exiftool-rs for one file\n\
                      --update             refresh the read baseline",
                     exiftool_rs::EXIFTOOL_VERSION
                 );
@@ -112,6 +118,11 @@ fn main() {
         );
     }
     check_modules(&script);
+
+    if let Some(file) = show {
+        show_file(&script, Path::new(&file));
+        return;
+    }
     println!(
         "\nREAD PARITY — input {}/*, output compared tag-by-tag (Group1:Tag)",
         Path::new(&images).display()
@@ -280,11 +291,19 @@ fn read_parity(script: &Path, images: &Path, update: bool) -> usize {
     // delta-key ("file::Group1:Tag") → (ours, perl); "∅" marks an absent side.
     let mut current: BTreeMap<String, (String, String)> = BTreeMap::new();
     let mut files_clean = 0usize;
+    // Per-file rows for the overview table: (file, ExifTool tag count, ours, ISO).
+    let mut per_file: Vec<(String, usize, usize, bool)> = Vec::new();
 
     for file in &files {
         let ours = read_ours(file);
         let theirs = read_perl(script, file);
         let mut file_deltas = 0;
+        let cmp = |m: &BTreeMap<String, String>| {
+            m.keys()
+                .filter(|k| !EXCLUDE.iter().any(|e| k.ends_with(e)))
+                .count()
+        };
+        let (ours_n, perl_n) = (cmp(&ours), cmp(&theirs));
         let keys: std::collections::BTreeSet<&String> = ours.keys().chain(theirs.keys()).collect();
         for k in keys {
             if EXCLUDE.iter().any(|e| k.ends_with(e)) {
@@ -303,6 +322,12 @@ fn read_parity(script: &Path, images: &Path, update: bool) -> usize {
         if file_deltas == 0 {
             files_clean += 1;
         }
+        per_file.push((
+            file.file_name().unwrap().to_string_lossy().into_owned(),
+            perl_n,
+            ours_n,
+            file_deltas == 0,
+        ));
     }
 
     if update {
@@ -324,6 +349,24 @@ fn read_parity(script: &Path, images: &Path, update: bool) -> usize {
         .iter()
         .filter(|k| !current.contains_key(*k))
         .count();
+    // Per-file table: one row per corpus file — same args on each, tag counts
+    // on both sides, and the ISO verdict. `--show <file>` dumps a file's full
+    // tag-by-tag comparison.
+    let file_rows: Vec<Vec<String>> = per_file
+        .iter()
+        .map(|(f, p, o, iso)| {
+            vec![
+                f.clone(),
+                p.to_string(),
+                o.to_string(),
+                if *iso { "✓".into() } else { "✗".into() },
+            ]
+        })
+        .collect();
+    print_table(
+        &["File", "ExifTool tags", "exiftool-rs tags", "ISO"],
+        &file_rows,
+    );
     // Recap table — always printed, so every run ends on a tabular verdict.
     print_table(
         &["Files identical", "Read deltas", "New (fail)", "ISO"],
@@ -364,6 +407,46 @@ fn read_parity(script: &Path, images: &Path, update: bool) -> usize {
         println!("  ({fixed} baselined delta(s) no longer occur — run --update to tighten)");
     }
     new.len()
+}
+
+/// Tag-by-tag ExifTool vs exiftool-rs dump for one file, so a human can eyeball
+/// that the same args on the same file yield the same output.
+fn show_file(script: &Path, file: &Path) {
+    let ours = read_ours(file);
+    let theirs = read_perl(script, file);
+    println!(
+        "\n{}\n  ExifTool:    perl <exiftool> {} {}\n  exiftool-rs: extract_info",
+        file.display(),
+        PERL_READ_ARGS.join(" "),
+        file.display()
+    );
+    let keys: std::collections::BTreeSet<&String> = ours.keys().chain(theirs.keys()).collect();
+    let mut rows = Vec::new();
+    let mut diffs = 0usize;
+    for k in keys {
+        if EXCLUDE.iter().any(|e| k.ends_with(e)) {
+            continue;
+        }
+        let o = ours.get(k).cloned().unwrap_or_else(|| "∅".into());
+        let p = theirs.get(k).cloned().unwrap_or_else(|| "∅".into());
+        let iso = o == p;
+        if !iso {
+            diffs += 1;
+        }
+        rows.push(vec![
+            k.clone(),
+            p,
+            o,
+            if iso { "✓".into() } else { "✗".into() },
+        ]);
+    }
+    print_table(&["Group1:Tag", "ExifTool", "exiftool-rs", "ISO"], &rows);
+    println!(
+        "{} tag(s) compared, {} identical, {} differ",
+        rows.len(),
+        rows.len() - diffs,
+        diffs
+    );
 }
 
 fn read_ours(file: &Path) -> BTreeMap<String, String> {
