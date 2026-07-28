@@ -116,24 +116,34 @@ fn resolve_local(p: &Path) -> PathBuf {
     script
 }
 
-/// Fetch `Image-ExifTool-<version>.tar.gz` from exiftool.org into
-/// `target/parity/` (cached) and return the extracted `exiftool` script.
+/// Fetch ExifTool `<version>` into `target/parity/` (cached) and return the
+/// extracted `exiftool` script. Tries, in order: exiftool.org current,
+/// exiftool.org `/older/`, then the GitHub release tag — so any pinned version
+/// resolves in CI, not just whatever exiftool.org currently serves.
 fn ensure_exiftool(version: &str) -> PathBuf {
     let cache = Path::new("target/parity");
-    let dir = cache.join(format!("Image-ExifTool-{version}"));
-    let script = dir.join("exiftool");
-    if script.exists() {
-        return script;
+    if let Some(s) = locate_script(cache, version) {
+        return s;
     }
     std::fs::create_dir_all(cache).expect("create cache dir");
-    let tarball = cache.join(format!("Image-ExifTool-{version}.tar.gz"));
+    let tarball = cache.join(format!("exiftool-{version}.tar.gz"));
     if !tarball.exists() {
-        let url = format!("https://exiftool.org/Image-ExifTool-{version}.tar.gz");
-        println!("downloading {url}");
-        run(
-            "curl",
-            &["-fSL", "-o", tarball.to_str().unwrap(), &url],
-            "download ExifTool (old versions may need --exiftool-path)",
+        let urls = [
+            format!("https://exiftool.org/Image-ExifTool-{version}.tar.gz"),
+            format!("https://exiftool.org/older/Image-ExifTool-{version}.tar.gz"),
+            format!("https://github.com/exiftool/exiftool/archive/refs/tags/{version}.tar.gz"),
+        ];
+        let ok = urls.iter().any(|url| {
+            println!("trying {url}");
+            Command::new("curl")
+                .args(["-fSL", "-o", tarball.to_str().unwrap(), url])
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+        });
+        assert!(
+            ok,
+            "could not download ExifTool {version} — use --exiftool-path"
         );
     }
     run(
@@ -146,12 +156,24 @@ fn ensure_exiftool(version: &str) -> PathBuf {
         ],
         "extract ExifTool",
     );
-    assert!(
-        script.exists(),
-        "extracted archive has no {}",
-        script.display()
-    );
-    script
+    locate_script(cache, version)
+        .unwrap_or_else(|| panic!("extracted archive has no exiftool script for {version}"))
+}
+
+/// The `exiftool` script for `version` under `cache`, whatever the archive's
+/// top-level dir is named (`Image-ExifTool-13.59/` on exiftool.org,
+/// `exiftool-13.59/` on GitHub).
+fn locate_script(cache: &Path, version: &str) -> Option<PathBuf> {
+    for name in [
+        format!("Image-ExifTool-{version}"),
+        format!("exiftool-{version}"),
+    ] {
+        let s = cache.join(name).join("exiftool");
+        if s.exists() {
+            return Some(s);
+        }
+    }
+    None
 }
 
 fn perl_version(script: &Path) -> String {
