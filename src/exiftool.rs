@@ -690,30 +690,13 @@ impl ExifTool {
             None
         };
 
-        // Build new IPTC data
-        let new_iptc_data = if !iptc_values.is_empty() {
-            let records: Vec<iptc_writer::IptcRecord> = iptc_values
-                .iter()
-                .filter_map(|nv| {
-                    let value = nv.value.as_deref()?;
-                    let (record, dataset) = iptc_writer::tag_name_to_iptc(&nv.tag)?;
-                    Some(iptc_writer::IptcRecord {
-                        record,
-                        dataset,
-                        // IPTC-IIM strings use the internal charset (Latin-1
-                        // by default); writing raw UTF-8 double-encodes
-                        // accented characters. See issue #6.
-                        data: crate::encoding::encode_latin1(value),
-                    })
-                })
-                .collect();
-            if records.is_empty() {
-                None
-            } else {
-                Some(iptc_writer::build_iptc(&records))
-            }
-        } else {
+        // Build new IPTC data by merging changes into the file's existing
+        // IPTC (issue #7), so writing one dataset doesn't drop the rest.
+        let new_iptc_data = if iptc_values.is_empty() {
             None
+        } else {
+            let existing = jpeg_writer::extract_jpeg_iptc_iim(data);
+            self.build_new_iptc(existing.as_deref(), &iptc_values)
         };
 
         // Rewrite JPEG
@@ -728,6 +711,61 @@ impl ExifTool {
             remove_iptc,
             remove_comment,
         )
+    }
+
+    /// Build the IPTC-IIM block by merging queued changes into the file's
+    /// existing IPTC instead of replacing it (issue #7). Datasets not being
+    /// changed are preserved (including `CodedCharacterSet`); a change updates
+    /// its dataset, and a `None` value deletes it. String values are encoded
+    /// in the block's charset — Latin-1 by default, UTF-8 if the existing IPTC
+    /// declares `CodedCharacterSet=UTF8`.
+    fn build_new_iptc(&self, existing: Option<&[u8]>, values: &[&NewValue]) -> Option<Vec<u8>> {
+        let mut records = existing.map(iptc_writer::parse_iim).unwrap_or_default();
+        // ESC % G (1B 25 47) in the CodedCharacterSet dataset (1:90) → UTF-8.
+        let utf8 = records.iter().any(|r| {
+            r.record == 1 && r.dataset == 90 && r.data.windows(3).any(|w| w == [0x1B, 0x25, 0x47])
+        });
+        for nv in values {
+            let Some((record, dataset)) = iptc_writer::tag_name_to_iptc(&nv.tag) else {
+                continue;
+            };
+            match nv.value.as_deref() {
+                // Set: update the dataset in place (ExifTool preserves the
+                // file's original dataset order — it does not re-sort), drop
+                // any duplicates, or append if the tag is new.
+                Some(value) => {
+                    let data = if utf8 {
+                        value.as_bytes().to_vec()
+                    } else {
+                        crate::encoding::encode_latin1(value)
+                    };
+                    let mut updated = false;
+                    records.retain_mut(|r| {
+                        if r.record == record && r.dataset == dataset {
+                            if updated {
+                                return false; // collapse repeated datasets to one
+                            }
+                            r.data = data.clone();
+                            updated = true;
+                        }
+                        true
+                    });
+                    if !updated {
+                        records.push(iptc_writer::IptcRecord {
+                            record,
+                            dataset,
+                            data,
+                        });
+                    }
+                }
+                // Delete: remove all datasets for this tag.
+                None => records.retain(|r| !(r.record == record && r.dataset == dataset)),
+            }
+        }
+        if records.is_empty() {
+            return None;
+        }
+        Some(iptc_writer::build_iptc(&records))
     }
 
     /// Build new EXIF data by merging existing EXIF with queued changes.

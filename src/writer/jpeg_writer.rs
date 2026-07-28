@@ -245,6 +245,39 @@ fn write_app1_xmp(output: &mut Vec<u8>, xmp_data: &[u8]) {
     }
 }
 
+/// Extract the raw IPTC-IIM bytes (Photoshop IRB resource `0x0404`) from a
+/// JPEG, so a write can merge into the existing IPTC rather than replacing it
+/// and dropping every other dataset (issue #7). Returns `None` if the file
+/// has no IPTC.
+pub fn extract_jpeg_iptc_iim(jpeg: &[u8]) -> Option<Vec<u8>> {
+    const PS_HEADER: &[u8] = b"Photoshop 3.0\0";
+    let mut pos = 2; // skip SOI (FF D8)
+    while pos + 4 <= jpeg.len() {
+        if jpeg[pos] != 0xFF {
+            break;
+        }
+        let marker = jpeg[pos + 1];
+        // Standalone markers carry no length payload.
+        if marker == 0x01 || (0xD0..=0xD9).contains(&marker) {
+            pos += 2;
+            continue;
+        }
+        if marker == 0xDA {
+            break; // start of scan: compressed image data follows
+        }
+        let len = u16::from_be_bytes([jpeg[pos + 2], jpeg[pos + 3]]) as usize;
+        if len < 2 || pos + 2 + len > jpeg.len() {
+            break;
+        }
+        let seg = &jpeg[pos + 4..pos + 2 + len];
+        if marker == 0xED && seg.starts_with(PS_HEADER) {
+            return crate::formats::jpeg::extract_photoshop_irbs(&seg[PS_HEADER.len()..]).0;
+        }
+        pos += 2 + len;
+    }
+    None
+}
+
 fn write_app13_iptc(output: &mut Vec<u8>, iptc_data: &[u8]) {
     let mut segment = Vec::new();
     segment.extend_from_slice(b"Photoshop 3.0\0");

@@ -2,6 +2,18 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- **IPTC write is no longer destructive (JPEG).** Setting one IPTC tag used to
+  drop every other IPTC tag in the file (e.g. 20 tags → 1). Writes now merge
+  into the file's existing IPTC — updating or deleting the changed datasets in
+  place, preserving the rest (including `CodedCharacterSet`) — matching
+  ExifTool byte-for-byte (`CurrentIPTCDigest` identical for set / delete / add).
+  The PSD writer still replaces; tracked in
+  [#7](https://github.com/Le-Syl21/exiftool-rs/issues/7).
+
 ## [0.7.2] - 2026-07-28
 
 ### Fixed

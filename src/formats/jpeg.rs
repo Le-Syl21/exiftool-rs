@@ -2889,7 +2889,7 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
 }
 
 /// Extract all Photoshop IRBs, returning IPTC data and IRB tags.
-fn extract_photoshop_irbs(data: &[u8]) -> (Option<Vec<u8>>, Vec<crate::tag::Tag>) {
+pub(crate) fn extract_photoshop_irbs(data: &[u8]) -> (Option<Vec<u8>>, Vec<crate::tag::Tag>) {
     let mut iptc = None;
     let mut tags = Vec::new();
     let mut pos = 0;
