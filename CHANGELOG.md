@@ -2,7 +2,7 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
-## [Unreleased]
+## [0.7.3] - 2026-07-28
 
 ### Added
 
@@ -26,9 +26,9 @@ All notable changes to `exiftool-rs` are documented here.
 - **String output matches ExifTool's display sanitization.** Control characters
   (0x01–0x1F, 0x7F) are rendered as `.`, NULs are dropped, and edge whitespace is
   trimmed — exactly as ExifTool's console output does (accented/multibyte text is
-  untouched). Live read parity against ExifTool 13.59 went from 145/195 to
-  **194/195** files byte-identical (96 → 2 deltas; the last two are the known PSP
-  copyright group assignment, not a value difference).
+  untouched). This alone moved live read parity against ExifTool 13.59 from
+  145/195 to 194/195 files byte-identical (the PSP/RealAudio fix above closes the
+  rest, reaching 195/195).
 - **IPTC write is no longer destructive (JPEG).** Setting one IPTC tag used to
   drop every other IPTC tag in the file (e.g. 20 tags → 1). Writes now merge
   into the file's existing IPTC — updating or deleting the changed datasets in
