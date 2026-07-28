@@ -62,6 +62,7 @@ fn main() {
     let mut path_override: Option<String> = None;
     let mut images = "tests/images".to_string();
     let mut update = false;
+    let mut dump = false;
     let mut show: Option<String> = None;
     let mut i = 0;
     while i < args.len() {
@@ -79,6 +80,7 @@ fn main() {
                 i += 1;
             }
             "--update" => update = true,
+            "--dump" => dump = true,
             "--show" => {
                 show = args.get(i + 1).cloned();
                 i += 1;
@@ -90,6 +92,7 @@ fn main() {
                      --exiftool-path <d>  use a local ExifTool checkout instead\n\
                      --images <dir>       corpus (default tests/images)\n\
                      --show <file>        tag-by-tag ExifTool vs exiftool-rs for one file\n\
+                     --dump               TSV of the whole corpus (file, tag, both values, iso)\n\
                      --update             refresh the read baseline",
                     exiftool_rs::EXIFTOOL_VERSION
                 );
@@ -121,6 +124,10 @@ fn main() {
 
     if let Some(file) = show {
         show_file(&script, Path::new(&file));
+        return;
+    }
+    if dump {
+        dump_all(&script, Path::new(&images));
         return;
     }
     println!(
@@ -447,6 +454,34 @@ fn show_file(script: &Path, file: &Path) {
         rows.len() - diffs,
         diffs
     );
+}
+
+/// TSV dump of the whole corpus for a report: one line per (file, tag) with
+/// both values and the ISO verdict (1/0). A header line comes first.
+fn dump_all(script: &Path, images: &Path) {
+    let mut files: Vec<PathBuf> = std::fs::read_dir(images)
+        .expect("read images dir")
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.is_file())
+        .collect();
+    files.sort();
+    let clean = |s: &str| s.replace(['\t', '\n', '\r'], " ");
+    println!("file\ttag\texiftool\texiftool_rs\tiso");
+    for file in &files {
+        let fname = file.file_name().unwrap().to_string_lossy();
+        let ours = read_ours(file);
+        let theirs = read_perl(script, file);
+        let keys: std::collections::BTreeSet<&String> = ours.keys().chain(theirs.keys()).collect();
+        for k in keys {
+            if EXCLUDE.iter().any(|e| k.ends_with(e)) {
+                continue;
+            }
+            let o = ours.get(k).map_or("∅", String::as_str);
+            let p = theirs.get(k).map_or("∅", String::as_str);
+            let iso = u8::from(o == p);
+            println!("{fname}\t{k}\t{}\t{}\t{iso}", clean(p), clean(o));
+        }
+    }
 }
 
 fn read_ours(file: &Path) -> BTreeMap<String, String> {
