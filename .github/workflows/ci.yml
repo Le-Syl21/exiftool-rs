@@ -172,18 +172,18 @@ jobs:
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
 
-      # Installing the distro exiftool package pulls its recommended optional
-      # Perl modules (Archive::Zip, LZMA, Brotli, Unicode::LineBreak); we add the
-      # POSIX::strptime *suggest* explicitly. Its own exiftool binary is never
-      # run — the parity binary downloads and uses the pinned EXIFTOOL_VERSION —
-      # so it just sits there unused. File::StatX stays absent by design: not
-      # packaged, and only adds machine-state (FileCreateDate/inode) that would
-      # break determinism.
+      # Pull ExifTool's full optional Perl-module set (Archive::Zip, LZMA, Brotli,
+      # Unicode::LineBreak from Recommends, POSIX::strptime from Suggests) via the
+      # distro package. Perl packages Suggest/Recommend only other Perl modules,
+      # so --install-suggests stays small — no hand-maintained list. The distro's
+      # exiftool binary is never run (the parity binary uses the downloaded pinned
+      # version). File::StatX stays absent by design: not packaged, and only adds
+      # machine-state (FileCreateDate/inode) that would break determinism.
       - name: Install ExifTool's optional Perl modules
         run: |
           sudo apt-get update
-          sudo apt-get install -y --install-recommends \
-            libimage-exiftool-perl libposix-strptime-perl
+          sudo apt-get install -y --install-recommends --install-suggests \
+            libimage-exiftool-perl
 
       - name: Live parity vs pinned Perl ExifTool
         run: cargo run --release --features parity --bin parity
