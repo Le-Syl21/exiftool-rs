@@ -24,9 +24,58 @@ pub fn decode_utf8_or_latin1(bytes: &[u8]) -> String {
     }
 }
 
+/// Encode a UTF-8 string as Latin-1 (ISO 8859-1) bytes — the inverse of
+/// [`decode_latin1`].
+///
+/// Each code point U+0000–U+00FF maps to a single byte; anything above is
+/// not representable in Latin-1 and is substituted with `?`, matching Perl
+/// ExifTool's default behaviour when writing a character the IPTC internal
+/// charset can't hold (the alternative is declaring `CodedCharacterSet` =
+/// UTF8). Without this, a UTF-8 `&str` written straight to an IPTC-IIM
+/// dataset double-encodes: `í` (U+00ED → UTF-8 `C3 AD`) reads back as `Ã­`
+/// under the default Latin-1 IPTC charset.
+pub fn encode_latin1(s: &str) -> Vec<u8> {
+    s.chars()
+        .map(|c| {
+            let cp = c as u32;
+            if cp <= 0xFF {
+                cp as u8
+            } else {
+                b'?'
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_encode_latin1_roundtrip() {
+        // Inverse of decode_latin1 across the representable range.
+        assert_eq!(encode_latin1("hello"), b"hello");
+        assert_eq!(encode_latin1("éüñ"), vec![0xE9, 0xFC, 0xF1]);
+        assert_eq!(encode_latin1("©®ö"), vec![0xA9, 0xAE, 0xF6]);
+        // The reported case: "Martín" → 'í' is 0xED, one byte.
+        assert_eq!(
+            encode_latin1("Martín"),
+            vec![b'M', b'a', b'r', b't', 0xED, b'n']
+        );
+    }
+
+    #[test]
+    fn test_encode_latin1_substitutes_unrepresentable() {
+        // Beyond Latin-1 (e.g. Cyrillic, emoji) → '?'.
+        assert_eq!(encode_latin1("Пример"), b"??????");
+        assert_eq!(encode_latin1("a😀b"), b"a?b");
+    }
+
+    #[test]
+    fn test_encode_decode_latin1_inverse() {
+        let s = "Àéîõü©";
+        assert_eq!(decode_latin1(&encode_latin1(&s)), s);
+    }
 
     #[test]
     fn test_decode_latin1_ascii() {

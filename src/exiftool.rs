@@ -700,7 +700,10 @@ impl ExifTool {
                     Some(iptc_writer::IptcRecord {
                         record,
                         dataset,
-                        data: value.as_bytes().to_vec(),
+                        // IPTC-IIM strings use the internal charset (Latin-1
+                        // by default); writing raw UTF-8 double-encodes
+                        // accented characters. See issue #6.
+                        data: crate::encoding::encode_latin1(value),
                     })
                 })
                 .collect();
@@ -853,7 +856,10 @@ impl ExifTool {
                     Some(iptc_writer::IptcRecord {
                         record,
                         dataset,
-                        data: value.as_bytes().to_vec(),
+                        // IPTC-IIM strings use the internal charset (Latin-1
+                        // by default); writing raw UTF-8 double-encodes
+                        // accented characters. See issue #6.
+                        data: crate::encoding::encode_latin1(value),
                     })
                 })
                 .collect();
@@ -2056,18 +2062,42 @@ impl ExifTool {
             }
         }
 
-        // Filter by requested tags if specified
+        // Filter by requested tags if specified. A request is either a bare
+        // tag name (`By-line`) or group-qualified (`IPTC:By-line`); the group
+        // prefix matches any family 0-2 and `*` is a tag wildcard (`IPTC:*`).
         if !self.options.requested_tags.is_empty() {
-            let requested: Vec<String> = self
-                .options
-                .requested_tags
-                .iter()
-                .map(|t| t.to_lowercase())
-                .collect();
-            tags.retain(|t| requested.contains(&t.name.to_lowercase()));
+            tags.retain(|t| {
+                self.options
+                    .requested_tags
+                    .iter()
+                    .any(|req| Self::tag_matches_request(t, req))
+            });
         }
 
         Ok(tags)
+    }
+
+    /// Match a tag against a `-TAG` or `-GROUP:TAG` request (case-insensitive).
+    /// The optional group prefix matches any of the tag's group families
+    /// (0-2); a `*` tag name matches every tag (in the group, if given).
+    fn tag_matches_request(tag: &Tag, request: &str) -> bool {
+        let req = request.to_lowercase();
+        let (group, name) = match req.split_once(':') {
+            Some((g, n)) => (Some(g), n),
+            None => (None, req.as_str()),
+        };
+        if name != "*" && tag.name.to_lowercase() != name {
+            return false;
+        }
+        match group {
+            None => true,
+            Some(g) => {
+                let grp = &tag.group;
+                grp.family0.to_lowercase() == g
+                    || grp.family1.to_lowercase() == g
+                    || grp.family2.to_lowercase() == g
+            }
+        }
     }
 
     /// Format extracted tags into a simple name→value map.
@@ -3591,6 +3621,37 @@ mod tests {
         assert_eq!(et.options().show_unknown, 0);
         assert!(!et.options().process_compressed);
         assert!(!et.options().use_mwg);
+    }
+
+    #[test]
+    fn tag_matches_request_group_qualified() {
+        let tag = Tag {
+            id: crate::tag::TagId::Text("By-line".into()),
+            name: "By-line".into(),
+            description: "By-line".into(),
+            group: crate::tag::TagGroup {
+                family0: "IPTC".into(),
+                family1: "IPTC".into(),
+                family2: "Author".into(),
+                family3: "Main".into(),
+            },
+            raw_value: Value::String("Martín".into()),
+            print_value: "Martín".into(),
+            priority: 1,
+        };
+        // Bare name (case-insensitive).
+        assert!(ExifTool::tag_matches_request(&tag, "By-line"));
+        assert!(ExifTool::tag_matches_request(&tag, "by-line"));
+        // Group-qualified against families 0 and 2.
+        assert!(ExifTool::tag_matches_request(&tag, "IPTC:By-line"));
+        assert!(ExifTool::tag_matches_request(&tag, "Author:By-line"));
+        // Wildcards.
+        assert!(ExifTool::tag_matches_request(&tag, "IPTC:*"));
+        assert!(ExifTool::tag_matches_request(&tag, "*"));
+        // Wrong group / wrong name → no match.
+        assert!(!ExifTool::tag_matches_request(&tag, "EXIF:By-line"));
+        assert!(!ExifTool::tag_matches_request(&tag, "IPTC:Make"));
+        assert!(!ExifTool::tag_matches_request(&tag, "Headline"));
     }
 
     #[test]
