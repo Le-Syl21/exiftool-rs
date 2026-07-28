@@ -4,6 +4,15 @@ All notable changes to `exiftool-rs` are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- `exiftool_rs::EXIFTOOL_VERSION` — the Perl ExifTool release this crate mirrors
+  (currently 13.59), as a single source of truth.
+- Live parity auditor (`parity` binary, dev-only behind the `parity` feature):
+  pins and downloads an ExifTool release, then diffs its output against
+  exiftool-rs over a corpus — read parity with a ratcheting baseline, and live
+  write-parity by IPTC digest. Complements (and regenerates) the test baselines.
+
 ### Fixed
 
 - **IPTC write is no longer destructive (JPEG).** Setting one IPTC tag used to

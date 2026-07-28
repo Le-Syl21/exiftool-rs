@@ -29,6 +29,13 @@ name = "exiftool-rs-gui"
 path = "src/gui.rs"
 required-features = ["gui"]
 
+# Live differential parity auditor vs a pinned Perl ExifTool release. Dev-only
+# (needs perl + network), behind a feature so normal builds stay lean.
+[[bin]]
+name = "parity"
+path = "src/bin/parity.rs"
+required-features = ["parity"]
+
 [lib]
 name = "exiftool_rs"
 path = "src/lib.rs"
@@ -37,6 +44,8 @@ path = "src/lib.rs"
 default = []
 win-icon = ["winres"]
 gui = ["eframe", "egui", "image", "rfd", "noto-fonts-dl"]
+# No extra deps: the parity auditor shells out to curl/tar/perl.
+parity = []
 
 [dependencies]
 thiserror = "2"

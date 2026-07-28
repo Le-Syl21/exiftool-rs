@@ -99,3 +99,9 @@ pub fn get_file_type<P: AsRef<std::path::Path>>(path: P) -> Result<FileType> {
 
 /// Library version.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// The Perl ExifTool release this crate mirrors — the single source of truth
+/// for "which ExifTool are we iso with". Bump it when the ported tables /
+/// print conversions are regenerated against a newer ExifTool. The `parity`
+/// binary pins this version by default when diffing live against Perl.
+pub const EXIFTOOL_VERSION: &str = "13.59";
