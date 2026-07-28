@@ -15,6 +15,14 @@ All notable changes to `exiftool-rs` are documented here.
 
 ### Fixed
 
+- **Accented strings are readable (PSP, RealAudio).** The PSP creator-block and
+  RealAudio `Copyright` fields were decoded with `from_utf8_lossy`, turning a
+  Latin-1 `©`/`ü` into `�`. They now decode UTF-8-or-Latin-1 like the other
+  string fields, and the PSP `Copyright` group matches ExifTool (IFD0 wins by
+  default). Live read parity against ExifTool 13.59 is now **195/195 files** —
+  full data parity. (The `parity` binary's Perl reader was also taught to decode
+  ExifTool's raw Latin-1 output faithfully, and now prints an ISO comparison
+  table for the read deltas and write cases.)
 - **String output matches ExifTool's display sanitization.** Control characters
   (0x01–0x1F, 0x7F) are rendered as `.`, NULs are dropped, and edge whitespace is
   trimmed — exactly as ExifTool's console output does (accented/multibyte text is

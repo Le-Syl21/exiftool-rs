@@ -36,6 +36,9 @@ const EXCLUDE: &[&str] = &[
 
 const READ_BASELINE: &str = "tests/parity_live_baseline.txt";
 
+/// Args passed to Perl ExifTool for the read comparison (shown in the report).
+const PERL_READ_ARGS: &[&str] = &["-s", "-G1"];
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut version = exiftool_rs::EXIFTOOL_VERSION.to_string();
@@ -91,7 +94,15 @@ fn main() {
             exiftool_rs::EXIFTOOL_VERSION
         );
     }
-    println!();
+    println!(
+        "\nREAD PARITY — input {}/*, output compared tag-by-tag (Group1:Tag)",
+        Path::new(&images).display()
+    );
+    println!(
+        "  exiftool-rs: extract_info(<FILE>) (in-process)\n  \
+         ExifTool:    perl <exiftool> {} <FILE>",
+        PERL_READ_ARGS.join(" ")
+    );
 
     let read_new = read_parity(&script, Path::new(&images), update);
     let write_bad = write_parity(&script, Path::new(&images));
@@ -197,7 +208,8 @@ fn read_parity(script: &Path, images: &Path, update: bool) -> usize {
     files.sort();
 
     let baseline = load_baseline();
-    let mut current: BTreeMap<String, String> = BTreeMap::new(); // delta-key → detail
+    // delta-key ("file::Group1:Tag") → (ours, perl); "∅" marks an absent side.
+    let mut current: BTreeMap<String, (String, String)> = BTreeMap::new();
     let mut files_clean = 0usize;
 
     for file in &files {
@@ -213,13 +225,9 @@ fn read_parity(script: &Path, images: &Path, update: bool) -> usize {
             let b = theirs.get(k);
             if a != b {
                 let dkey = format!("{}::{k}", file.file_name().unwrap().to_string_lossy());
-                let detail = match (a, b) {
-                    (None, Some(v)) => format!("MISSING (perl: {v})"),
-                    (Some(v), None) => format!("EXTRA (ours: {v})"),
-                    (Some(x), Some(y)) => format!("DIFF (ours: {x} | perl: {y})"),
-                    (None, None) => unreachable!(),
-                };
-                current.insert(dkey, detail);
+                let ours_v = a.cloned().unwrap_or_else(|| "∅".into());
+                let perl_v = b.cloned().unwrap_or_else(|| "∅".into());
+                current.insert(dkey, (ours_v, perl_v));
                 file_deltas += 1;
             }
         }
@@ -238,21 +246,44 @@ fn read_parity(script: &Path, images: &Path, update: bool) -> usize {
         return 0;
     }
 
-    let new: Vec<_> = current.keys().filter(|k| !baseline.contains(*k)).collect();
+    let new: Vec<String> = current
+        .keys()
+        .filter(|k| !baseline.contains(*k))
+        .cloned()
+        .collect();
     let fixed = baseline
         .iter()
         .filter(|k| !current.contains_key(*k))
         .count();
     println!(
-        "read: {}/{} files identical, {} known delta(s), {} NEW, {} improved",
+        "READ PARITY — {}/{} files byte-identical, {} known delta(s), {} new, {} improved",
         files_clean,
         files.len(),
         current.len(),
         new.len(),
         fixed
     );
-    for k in &new {
-        println!("  NEW  {k}  {}", current[*k]);
+    // Table of the deltas that fail this run (baselined ones are known and
+    // omitted). Each row shows both sides and the ISO verdict.
+    if !new.is_empty() {
+        let rows: Vec<Vec<String>> = new
+            .iter()
+            .map(|k| {
+                let (file, tag) = k.split_once("::").unwrap_or(("?", k.as_str()));
+                let (o, p) = &current[k];
+                vec![
+                    file.to_string(),
+                    tag.to_string(),
+                    o.clone(),
+                    p.clone(),
+                    "✗".into(),
+                ]
+            })
+            .collect();
+        print_table(
+            &["File", "Group1:Tag", "exiftool-rs", "ExifTool", "ISO"],
+            &rows,
+        );
     }
     if fixed > 0 {
         println!("  ({fixed} baselined delta(s) no longer occur — run --update to tighten)");
@@ -274,13 +305,18 @@ fn read_ours(file: &Path) -> BTreeMap<String, String> {
 fn read_perl(script: &Path, file: &Path) -> BTreeMap<String, String> {
     let out = Command::new("perl")
         .arg(script)
-        .args(["-s", "-G1"])
+        .args(PERL_READ_ARGS)
         .arg(file)
         .output()
         .expect("run perl exiftool");
-    let text = String::from_utf8_lossy(&out.stdout);
     let mut m = BTreeMap::new();
-    for line in text.lines() {
+    // ExifTool emits UTF-8 for text tags but passes raw bytes through for
+    // undef/binary values (e.g. a Latin-1 `©` = 0xA9). Decoding the whole
+    // stream as UTF-8 would mangle those to U+FFFD and fake a delta, so decode
+    // each line UTF-8-or-Latin-1: a stray high byte falls back to Latin-1 (the
+    // rest of the line is ASCII), while genuinely UTF-8 lines stay intact.
+    for raw in out.stdout.split(|&b| b == b'\n') {
+        let line = exiftool_rs::encoding::decode_utf8_or_latin1(raw);
         // `[Group1]        TagName             : Value`
         let Some(rest) = line.strip_prefix('[') else {
             continue;
@@ -308,7 +344,7 @@ fn load_baseline() -> std::collections::BTreeSet<String> {
         .collect()
 }
 
-fn save_baseline(current: &BTreeMap<String, String>) {
+fn save_baseline(current: &BTreeMap<String, (String, String)>) {
     let mut s = String::from(
         "# Live read-parity baseline: known exiftool-rs vs Perl ExifTool deltas.\n\
          # One delta key per line. Refresh with `--update`. New deltas fail the run.\n",
@@ -349,16 +385,40 @@ fn write_parity(script: &Path, images: &Path) -> usize {
         ),
     ];
     let mut bad = 0;
+    let mut rows: Vec<Vec<String>> = Vec::new();
     for (id, ops) in cases {
         let ours = write_and_snapshot(&src, ops, WriteWith::Ours);
         let theirs = write_and_snapshot(&src, ops, WriteWith::Perl(script));
-        if ours == theirs {
-            println!("write [{id}]: OK (digest {})", digest_of(&ours));
-        } else {
+        let iso = ours == theirs;
+        if !iso {
             bad += 1;
-            eprintln!("write [{id}]: MISMATCH\n--- ours ---\n{ours}--- perl ---\n{theirs}");
+            eprintln!("write [{id}] MISMATCH\n--- ours ---\n{ours}--- perl ---\n{theirs}");
         }
+        let edits = ops
+            .iter()
+            .map(|(t, v)| match v {
+                Some(v) => format!("{t}={v}"),
+                None => format!("{t}=∅"),
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+        rows.push(vec![
+            (*id).to_string(),
+            edits,
+            digest_of(&ours).to_string(),
+            digest_of(&theirs).to_string(),
+            if iso { "✓".into() } else { "✗".into() },
+        ]);
     }
+    println!(
+        "\nWRITE PARITY — input {}, output compared by CurrentIPTCDigest",
+        src.display()
+    );
+    println!(
+        "  exiftool-rs: set_new_value + write_info (in-process)\n  \
+         ExifTool:    perl <exiftool> -charset UTF8 -overwrite_original <edits> <copy>"
+    );
+    print_table(&["Case", "Edits", "exiftool-rs", "ExifTool", "ISO"], &rows);
     bad
 }
 
@@ -421,6 +481,63 @@ fn digest_of(snap: &str) -> &str {
 }
 
 // ── util ────────────────────────────────────────────────────────────────────
+
+/// Render an aligned box table. Cells wider than `MAX` chars are ellipsised.
+fn print_table(headers: &[&str], rows: &[Vec<String>]) {
+    const MAX: usize = 46;
+    let cols = headers.len();
+    let clip = |s: &str| -> String {
+        let cs: Vec<char> = s.chars().collect();
+        if cs.len() > MAX {
+            format!("{}…", cs[..MAX - 1].iter().collect::<String>())
+        } else {
+            s.to_string()
+        }
+    };
+    let body: Vec<Vec<String>> = rows
+        .iter()
+        .map(|r| r.iter().map(|c| clip(c)).collect())
+        .collect();
+    let mut w = vec![0usize; cols];
+    for (i, h) in headers.iter().enumerate() {
+        w[i] = h.chars().count();
+    }
+    for r in &body {
+        for (i, c) in r.iter().enumerate() {
+            w[i] = w[i].max(c.chars().count());
+        }
+    }
+    let rule = |l: char, m: char, r: char| -> String {
+        let mut s = String::new();
+        s.push(l);
+        for (i, wi) in w.iter().enumerate() {
+            s.extend(std::iter::repeat('─').take(wi + 2));
+            s.push(if i + 1 == cols { r } else { m });
+        }
+        s
+    };
+    let line = |cells: &[String]| -> String {
+        let mut s = String::from("│");
+        for (i, c) in cells.iter().enumerate() {
+            let pad = w[i] - c.chars().count();
+            s.push(' ');
+            s.push_str(c);
+            s.extend(std::iter::repeat(' ').take(pad));
+            s.push_str(" │");
+        }
+        s
+    };
+    println!("{}", rule('┌', '┬', '┐'));
+    println!(
+        "{}",
+        line(&headers.iter().map(|h| (*h).to_string()).collect::<Vec<_>>())
+    );
+    println!("{}", rule('├', '┼', '┤'));
+    for r in &body {
+        println!("{}", line(r));
+    }
+    println!("{}", rule('└', '┴', '┘'));
+}
 
 fn run(cmd: &str, args: &[&str], what: &str) {
     let status = Command::new(cmd)
