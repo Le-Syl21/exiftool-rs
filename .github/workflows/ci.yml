@@ -185,6 +185,9 @@ jobs:
           sudo apt-get install -y --install-recommends --install-suggests \
             libimage-exiftool-perl
 
+      - name: Show which Perl module packages got installed
+        run: dpkg -l | awk '$2 ~ /perl/ && $2 ~ /zip|compress|brotli|lzma|strptime|linebreak|charset|exiftool/ {print $2, $3}'
+
       - name: Live parity vs pinned Perl ExifTool
         run: cargo run --release --features parity --bin parity
 

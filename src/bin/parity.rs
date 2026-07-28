@@ -324,16 +324,22 @@ fn read_parity(script: &Path, images: &Path, update: bool) -> usize {
         .iter()
         .filter(|k| !current.contains_key(*k))
         .count();
-    println!(
-        "READ PARITY — {}/{} files byte-identical, {} known delta(s), {} new, {} improved",
-        files_clean,
-        files.len(),
-        current.len(),
-        new.len(),
-        fixed
+    // Recap table — always printed, so every run ends on a tabular verdict.
+    print_table(
+        &["Files identical", "Read deltas", "New (fail)", "ISO"],
+        &[vec![
+            format!("{}/{}", files_clean, files.len()),
+            current.len().to_string(),
+            new.len().to_string(),
+            if new.is_empty() {
+                "✓".into()
+            } else {
+                "✗".into()
+            },
+        ]],
     );
-    // Table of the deltas that fail this run (baselined ones are known and
-    // omitted). Each row shows both sides and the ISO verdict.
+    // Detail table of the deltas that fail this run (baselined ones are known
+    // and omitted). Each row shows both sides and the ISO verdict.
     if !new.is_empty() {
         let rows: Vec<Vec<String>> = new
             .iter()
