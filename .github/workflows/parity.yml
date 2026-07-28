@@ -1,0 +1,26 @@
+name: parity
+
+# Live differential parity vs the pinned ExifTool (exiftool_rs::EXIFTOOL_VERSION).
+# Manual by default — costs nothing until you run it from the Actions tab.
+# Uncomment the schedule for an automatic weekly drift check.
+on:
+  workflow_dispatch: {}
+  # schedule:
+  #   - cron: '0 5 * * 1'   # Mondays 05:00 UTC — parity drifts slowly, so weekly
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4  # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      # perl, curl and tar ship with ubuntu-latest, and ExifTool is pure Perl
+      # with no CPAN dependencies. Uncomment only if the corpus grows ZIP-based
+      # fixtures (DOCX/APK/…):
+      # - run: sudo apt-get update && sudo apt-get install -y libarchive-zip-perl
+      - name: Live parity vs pinned Perl ExifTool
+        # Downloads the pinned release (GitHub fallback), diffs read + write
+        # against the committed baseline, and fails on any NEW delta.
+        run: cargo run --features parity --bin parity
