@@ -146,13 +146,18 @@ fn iptc_write_parity() {
             eprintln!("regenerated {}", exp.display());
         } else {
             write_ours(&src, &tmp, case.ops);
-            let got = snapshot(&tmp);
-            let want = std::fs::read_to_string(&exp).unwrap_or_else(|_| {
-                panic!(
-                    "missing baseline {} — run `WRITE_PARITY_REGEN=1 cargo test --test write_parity`",
-                    exp.display()
-                )
-            });
+            // Normalise line endings: git may check the baseline out with CRLF
+            // on Windows while our snapshot uses LF, which would otherwise fail
+            // the byte comparison for a purely cosmetic reason.
+            let got = snapshot(&tmp).replace("\r\n", "\n");
+            let want = std::fs::read_to_string(&exp)
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "missing baseline {} — run `WRITE_PARITY_REGEN=1 cargo test --test write_parity`",
+                        exp.display()
+                    )
+                })
+                .replace("\r\n", "\n");
             if got != want {
                 mismatches.push(format!(
                     "case `{}`:\n--- expected (Perl ExifTool) ---\n{want}--- got (exiftool-rs) ---\n{got}",

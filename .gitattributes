@@ -1,0 +1,9 @@
+# Test baselines and snapshots are compared byte-for-byte. Keep them LF on all
+# platforms so a Windows checkout (core.autocrlf) can't rewrite them to CRLF and
+# fail the comparison for a purely cosmetic reason.
+tests/expected_write/*.snap text eol=lf
+tests/*baseline*.txt text eol=lf
+tests/expected/** text eol=lf
+tests/expected_values/** text eol=lf
+tests/expected_groups/** text eol=lf
+tests/expected_multi/** text eol=lf
