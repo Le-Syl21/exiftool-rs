@@ -23,19 +23,20 @@ jobs:
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
 
-      # ExifTool needs these optional Perl modules to decode the corpus fully;
-      # without them it emits fewer tags and the diff shows fake deltas. (The
-      # binary also checks their presence and fails clearly if one is missing.)
-      - name: ExifTool's optional Perl modules
+      # ExifTool needs optional Perl modules to decode the corpus fully; without
+      # them it emits fewer tags and the diff shows fake deltas. Derive the set
+      # from the Debian/Ubuntu exiftool package's own Recommends+Suggests (we
+      # read only its metadata, not the distro's ExifTool). The binary also
+      # checks their presence and fails clearly if one is missing.
+      - name: ExifTool's recommended Perl modules
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libarchive-zip-perl \
-            libio-compress-brotli-perl \
-            libcompress-raw-lzma-perl \
-            libposix-strptime-perl \
-            libunicode-linebreak-perl \
-            libmime-charset-perl
+          mods=$(apt-cache show libimage-exiftool-perl \
+            | awk -F': ' '/^Recommends:|^Suggests:/ {print $2}' \
+            | tr ',' '\n' | sed 's/[[:space:]]//g' | sort -u)
+          echo "modules: $mods"
+          test -n "$mods"
+          sudo apt-get install -y $mods
 
       - name: Live parity
         run: |
