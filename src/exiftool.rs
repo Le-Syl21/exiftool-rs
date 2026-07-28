@@ -2101,19 +2101,20 @@ impl ExifTool {
         }
 
         // Match ExifTool's console sanitization (its `Printable`, the non-`-E`
-        // path): control chars 0x01-0x1F and 0x7F become '.', NULs are dropped,
-        // and trailing whitespace is trimmed (we also trim leading). Runs on
-        // print values only — raw values feed composites and `-n`. ASCII control
-        // chars are single bytes in UTF-8, so accented/multibyte text (>= 0x80)
-        // is untouched; this is a no-op for numeric print values.
+        // path) exactly: control chars 0x01-0x1F and 0x7F become '.', NULs are
+        // dropped, and *trailing* whitespace is trimmed (`s/\s+$//`) — leading
+        // whitespace is preserved, as ExifTool preserves it. Runs on print
+        // values only — raw values feed composites and `-n`. ASCII control chars
+        // are single bytes in UTF-8, so accented/multibyte text (>= 0x80) is
+        // untouched; this is a no-op for numeric print values.
         let is_ws = |c: char| c.is_ascii_whitespace();
         for tag in &mut tags {
             let pv = tag.print_value.as_str();
-            let dirty = pv.chars().any(|c| {
-                let u = c as u32;
-                u == 0 || (0x01..=0x1f).contains(&u) || u == 0x7f
-            }) || pv.starts_with(is_ws)
-                || pv.ends_with(is_ws);
+            let dirty = pv.ends_with(is_ws)
+                || pv.chars().any(|c| {
+                    let u = c as u32;
+                    u == 0 || (0x01..=0x1f).contains(&u) || u == 0x7f
+                });
             if !dirty {
                 continue;
             }
@@ -2130,7 +2131,7 @@ impl ExifTool {
                     }
                 })
                 .collect();
-            tag.print_value = mapped.trim_matches(is_ws).to_string();
+            tag.print_value = mapped.trim_end_matches(is_ws).to_string();
         }
 
         // Filter by requested tags if specified. A request is either a bare

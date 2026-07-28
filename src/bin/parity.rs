@@ -392,19 +392,22 @@ fn read_perl(script: &Path, file: &Path) -> BTreeMap<String, String> {
     // rest of the line is ASCII), while genuinely UTF-8 lines stay intact.
     for raw in out.stdout.split(|&b| b == b'\n') {
         let line = exiftool_rs::encoding::decode_utf8_or_latin1(raw);
-        // `[Group1]        TagName             : Value`
+        // `[Group1]        TagName             : Value`. Split on the `": "`
+        // separator (not just `:`) and keep the value verbatim — trimming it
+        // would drop a leading space that ExifTool preserves (e.g. the ASF
+        // AudioCodecDescription " 20 kbps"), silently masking a real delta.
         let Some(rest) = line.strip_prefix('[') else {
             continue;
         };
         let Some((group, rest)) = rest.split_once(']') else {
             continue;
         };
-        let Some((name, value)) = rest.split_once(':') else {
+        let Some((name, value)) = rest.split_once(": ") else {
             continue;
         };
         m.insert(
             format!("{}:{}", group.trim(), name.trim()),
-            value.trim().to_string(),
+            value.to_string(),
         );
     }
     m

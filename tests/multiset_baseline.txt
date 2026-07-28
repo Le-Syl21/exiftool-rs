@@ -5,14 +5,22 @@
 # Regenerate: UPDATE_MULTISET_BASELINE=1 cargo test --release --test regression regression_tag_multiset
 # Format: <file>\t<default|ee>\t<extra|missing>\t<occurrence>\t<tag>\t<value>
 #
-# DELIBERATE DIVERGENCE (owner decision 2026-07-23), not a defect to fix.
-# The EXIF Copyright holds a raw Latin-1 0xA9 byte (©). ExifTool's ConvertExifText
-# (Exif.pm:5554) does NOT transcode EXIF ASCII unless CharsetEXIF is set (it is
-# unset by default), so Perl emits the raw byte — which is invalid UTF-8. We decode
-# Latin-1 to a readable © instead. A published crate returning U+FFFD for real
-# accented Artist/Copyright is a worse service than byte-parity with an
-# invalid-UTF-8 reference is worth. These two lines are the whole price.
-# Do NOT "fix" by switching metadata/exif.rs to from_utf8_lossy — that regresses
-# every real Latin-1 EXIF string in the wild.
+# DELIBERATE DIVERGENCE (owner decision), not a defect to fix.
+# EXIF / PSP creator-block / RealAudio Copyright (and kin) hold raw Latin-1
+# bytes (© = 0xA9, ü = 0xFC). ExifTool emits them raw — invalid UTF-8 — because
+# it does not transcode these charsets by default (Exif.pm ConvertExifText; the
+# PSP/RealAudio readers pass bytes through). We decode UTF-8-or-Latin-1 to a
+# readable ©/ü instead: returning U+FFFD (�) for real accented Copyright is a
+# worse service than byte-parity with an invalid-UTF-8 reference. `extra` = our
+# readable output, `missing` = the reference's raw byte. Do NOT "fix" with
+# from_utf8_lossy — it regresses every real Latin-1 string in the wild.
+PSP.psp	default	extra	0	Copyright	© 2010 Phil Harvey
+PSP.psp	default	missing	0	Copyright	� 2010 Phil Harvey
 PSP.psp	ee	extra	0	Copyright	© 2010 Phil Harvey
+PSP.psp	ee	extra	1	Copyright	© 2010 Phil Harvey
 PSP.psp	ee	missing	0	Copyright	� 2010 Phil Harvey
+PSP.psp	ee	missing	1	Copyright	� 2010 Phil Harvey
+Real.ra	default	extra	0	Copyright	** institut für universelle zusammenhänge
+Real.ra	default	missing	0	Copyright	** institut f�r universelle zusammenh�nge
+Real.ra	ee	extra	0	Copyright	** institut für universelle zusammenhänge
+Real.ra	ee	missing	0	Copyright	** institut f�r universelle zusammenh�nge

@@ -24,9 +24,9 @@ All notable changes to `exiftool-rs` are documented here.
   ExifTool's raw Latin-1 output faithfully, and now prints an ISO comparison
   table for the read deltas and write cases.)
 - **String output matches ExifTool's display sanitization.** Control characters
-  (0x01–0x1F, 0x7F) are rendered as `.`, NULs are dropped, and edge whitespace is
-  trimmed — exactly as ExifTool's console output does (accented/multibyte text is
-  untouched). This alone moved live read parity against ExifTool 13.59 from
+  (0x01–0x1F, 0x7F) are rendered as `.`, NULs are dropped, and *trailing*
+  whitespace is trimmed (leading whitespace is preserved) — exactly as ExifTool's
+  console output does (accented/multibyte text is untouched). This alone moved live read parity against ExifTool 13.59 from
   145/195 to 194/195 files byte-identical (the PSP/RealAudio fix above closes the
   rest, reaching 195/195).
 - **IPTC write is no longer destructive (JPEG).** Setting one IPTC tag used to

@@ -1,3 +1,8 @@
 # Value-parity baseline: (file, tag) whose printed value differs from ExifTool.
 # New deltas fail regression_tag_values; fixes tighten it.
 # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
+#
+# DELIBERATE DIVERGENCE: PSP / RealAudio Copyright decode Latin-1 to a readable
+# ©/ü; ExifTool emits the raw byte (invalid UTF-8). See multiset_baseline.txt.
+PSP.psp	Copyright
+Real.ra	Copyright
