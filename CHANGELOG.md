@@ -2,6 +2,20 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [0.7.2] - 2026-07-28
+
+### Fixed
+
+- **IPTC string encoding.** Setting an IPTC tag no longer double-encodes
+  accented characters — `By-line=Martín` was read back as `MartÃ­n`. Strings
+  are now Latin-1-encoded on write (matching ExifTool's default IPTC charset),
+  so the written bytes and `CurrentIPTCDigest` match ExifTool. Characters
+  outside Latin-1 are substituted with `?`, as ExifTool does without
+  `CodedCharacterSet=UTF8`. ([#6](https://github.com/Le-Syl21/exiftool-rs/issues/6))
+- **Group-qualified tag filters.** `-IPTC:By-line` (and any `-GROUP:TAG` or
+  `-GROUP:*` form) now filters correctly instead of printing nothing; the
+  group prefix matches families 0–2 and `*` is a tag wildcard.
+
 ## [0.7.1] - 2026-07-24
 
 ### Added
