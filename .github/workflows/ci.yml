@@ -172,21 +172,18 @@ jobs:
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
 
-      # Install ExifTool's optional Perl modules, derived from the Debian/Ubuntu
-      # exiftool package's own Recommends+Suggests — the maintained, authoritative
-      # set (Archive::Zip, LZMA, Brotli, Unicode::LineBreak, POSIX::strptime; the
-      # rest is transitive). We read only its metadata, not the distro's older
-      # ExifTool. File::StatX is deliberately absent: it isn't packaged and only
-      # adds machine-state (FileCreateDate/inode), which would break determinism.
-      - name: Install ExifTool's recommended Perl modules
+      # Installing the distro exiftool package pulls its recommended optional
+      # Perl modules (Archive::Zip, LZMA, Brotli, Unicode::LineBreak); we add the
+      # POSIX::strptime *suggest* explicitly. Its own exiftool binary is never
+      # run — the parity binary downloads and uses the pinned EXIFTOOL_VERSION —
+      # so it just sits there unused. File::StatX stays absent by design: not
+      # packaged, and only adds machine-state (FileCreateDate/inode) that would
+      # break determinism.
+      - name: Install ExifTool's optional Perl modules
         run: |
           sudo apt-get update
-          mods=$(apt-cache show libimage-exiftool-perl \
-            | awk -F': ' '/^Recommends:|^Suggests:/ {print $2}' \
-            | tr ',' '\n' | sed 's/[[:space:]]//g' | sort -u)
-          echo "modules: $mods"
-          test -n "$mods"   # fail if the package/metadata is unexpectedly empty
-          sudo apt-get install -y $mods
+          sudo apt-get install -y --install-recommends \
+            libimage-exiftool-perl libposix-strptime-perl
 
       - name: Live parity vs pinned Perl ExifTool
         run: cargo run --release --features parity --bin parity
