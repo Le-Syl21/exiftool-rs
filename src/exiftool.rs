@@ -2100,18 +2100,37 @@ impl ExifTool {
             }
         }
 
-        // Match ExifTool's display cleanup: string values carry trailing NULs
-        // (fixed-width fields) and stray edge whitespace that ExifTool trims on
-        // output. Do the same for print values so `-s` is byte-iso. Numeric
-        // print values have no edge NUL/whitespace, so this is a no-op for them;
-        // raw values are left untouched (composites and `-n` read those).
+        // Match ExifTool's console sanitization (its `Printable`, the non-`-E`
+        // path): control chars 0x01-0x1F and 0x7F become '.', NULs are dropped,
+        // and trailing whitespace is trimmed (we also trim leading). Runs on
+        // print values only — raw values feed composites and `-n`. ASCII control
+        // chars are single bytes in UTF-8, so accented/multibyte text (>= 0x80)
+        // is untouched; this is a no-op for numeric print values.
+        let is_ws = |c: char| c.is_ascii_whitespace();
         for tag in &mut tags {
-            let trimmed = tag
-                .print_value
-                .trim_matches(|c: char| c == '\0' || c.is_ascii_whitespace());
-            if trimmed.len() != tag.print_value.len() {
-                tag.print_value = trimmed.to_string();
+            let pv = tag.print_value.as_str();
+            let dirty = pv.chars().any(|c| {
+                let u = c as u32;
+                u == 0 || (0x01..=0x1f).contains(&u) || u == 0x7f
+            }) || pv.starts_with(is_ws)
+                || pv.ends_with(is_ws);
+            if !dirty {
+                continue;
             }
+            let mapped: String = pv
+                .chars()
+                .filter_map(|c| {
+                    let u = c as u32;
+                    if u == 0 {
+                        None
+                    } else if (0x01..=0x1f).contains(&u) || u == 0x7f {
+                        Some('.')
+                    } else {
+                        Some(c)
+                    }
+                })
+                .collect();
+            tag.print_value = mapped.trim_matches(is_ws).to_string();
         }
 
         // Filter by requested tags if specified. A request is either a bare

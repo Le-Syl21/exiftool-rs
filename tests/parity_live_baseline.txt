@@ -1,21 +1,4 @@
 # Live read-parity baseline: known exiftool-rs vs Perl ExifTool deltas.
 # One delta key per line. Refresh with `--update`. New deltas fail the run.
-ExifTool.jpg::File:Comment
-ExifTool.jpg::FlashPix:Storage-StreamPathname
-Font.pfa::File:Comment
-Font.pfa::Font:Notice
-Font.pfb::File:Comment
-GIF.gif::File:Comment
-Geotag.gpx::XMP-xsi:GpxSchemaLocation
-GoPro.jpg::ExifIFD:FlashpixVersion
-HTML.html::HTML-office:Description
-Jpeg2000.jp2::XML-xsi:ContentDescriptionSchemaLocation
-Jpeg2000.jp2::XML-xsi:ImageCreationSchemaLocation
-MacOS.macos::MacOS:XAttrMDItemUserTags
 PSP.psp::IFD0:Copyright
 PSP.psp::PSP:Copyright
-RTF.rtf::RTF:Comments
-SigmaDP2.x3f::Sigma:Calibration
-VCard.vcf::VCard:AddressOtherLabel
-VCard.vcf::VCard:LabelWork
-VCard.vcf::VCard:Note
