@@ -39,6 +39,23 @@ const READ_BASELINE: &str = "tests/parity_live_baseline.txt";
 /// Args passed to Perl ExifTool for the read comparison (shown in the report).
 const PERL_READ_ARGS: &[&str] = &["-s", "-G1"];
 
+/// Optional Perl modules ExifTool must have loaded for the corpus to decode
+/// fully. The baseline is generated with these present; if CI (or a dev box)
+/// lacks one, ExifTool silently emits fewer tags and the diff shows fake
+/// deltas — so we fail loudly with an env mismatch instead.
+const REQUIRED_MODULES: &[&str] = &[
+    "Archive::Zip",         // .zip / DOCX / APK / EPUB
+    "POSIX::strptime",      // date parsing
+    "Unicode::LineBreak",   // charset / line handling (pulls MIME::Charset)
+    "Compress::Raw::Lzma",  // xz / 7z / LZMA
+    "IO::Compress::Brotli", // JXL / woff2
+];
+
+/// Debian/Ubuntu packages that provide [`REQUIRED_MODULES`].
+const MODULE_APT_HINT: &str = "libarchive-zip-perl libio-compress-brotli-perl \
+    libcompress-raw-lzma-perl libposix-strptime-perl libunicode-linebreak-perl \
+    libmime-charset-perl";
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut version = exiftool_rs::EXIFTOOL_VERSION.to_string();
@@ -94,6 +111,7 @@ fn main() {
             exiftool_rs::EXIFTOOL_VERSION
         );
     }
+    check_modules(&script);
     println!(
         "\nREAD PARITY — input {}/*, output compared tag-by-tag (Group1:Tag)",
         Path::new(&images).display()
@@ -194,6 +212,57 @@ fn perl_version(script: &Path) -> String {
         .output()
         .expect("run perl exiftool -ver");
     String::from_utf8_lossy(&out.stdout).trim().to_string()
+}
+
+/// Assert ExifTool loaded every module in [`REQUIRED_MODULES`]; exit with a
+/// clear env-mismatch message otherwise, so a missing module never masquerades
+/// as a metadata delta. Reads the `-ver -v` "Optional libraries:" report.
+fn check_modules(script: &Path) {
+    let out = Command::new("perl")
+        .arg(script)
+        .args(["-ver", "-v"])
+        .output()
+        .expect("run perl exiftool -ver -v");
+    let text = String::from_utf8_lossy(&out.stdout);
+    let mut installed = std::collections::BTreeSet::new();
+    let mut in_section = false;
+    for line in text.lines() {
+        if line.starts_with("Optional libraries:") {
+            in_section = true;
+            continue;
+        }
+        if !in_section {
+            continue;
+        }
+        // Indented `  Module::Name   version-or-(not installed)`.
+        if !line.starts_with(char::is_whitespace) {
+            break;
+        }
+        let mut it = line.split_whitespace();
+        let Some(name) = it.next() else { continue };
+        let rest = it.collect::<Vec<_>>().join(" ");
+        if !rest.contains("not installed") {
+            installed.insert(name.to_string());
+        }
+    }
+    let missing: Vec<&str> = REQUIRED_MODULES
+        .iter()
+        .copied()
+        .filter(|m| !installed.contains(*m))
+        .collect();
+    if !missing.is_empty() {
+        eprintln!(
+            "ExifTool environment mismatch — missing optional module(s): {}",
+            missing.join(", ")
+        );
+        eprintln!("The baseline needs these present. On Debian/Ubuntu:");
+        eprintln!("  sudo apt-get install -y {MODULE_APT_HINT}");
+        std::process::exit(2);
+    }
+    println!(
+        "ExifTool optional modules OK ({})",
+        REQUIRED_MODULES.join(", ")
+    );
 }
 
 // ── read parity ─────────────────────────────────────────────────────────────

@@ -1,26 +1,47 @@
 name: parity
 
-# Live differential parity vs the pinned ExifTool (exiftool_rs::EXIFTOOL_VERSION).
-# Manual by default — costs nothing until you run it from the Actions tab.
-# Uncomment the schedule for an automatic weekly drift check.
+# On-demand differential parity check against a chosen Perl ExifTool version —
+# the manual companion to the release gate in ci.yml (which pins
+# EXIFTOOL_VERSION). Use it to measure drift against a newer ExifTool before
+# deciding to port it. No schedule: it runs only when you trigger it.
 on:
-  workflow_dispatch: {}
-  # schedule:
-  #   - cron: '0 5 * * 1'   # Mondays 05:00 UTC — parity drifts slowly, so weekly
+  workflow_dispatch:
+    inputs:
+      exiftool_version:
+        description: "ExifTool version to diff against (blank = the pinned EXIFTOOL_VERSION)"
+        required: false
+        default: ""
 
 jobs:
   parity:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
       - name: Rust toolchain
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4  # stable
+
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
-      # perl, curl and tar ship with ubuntu-latest, and ExifTool is pure Perl
-      # with no CPAN dependencies. Uncomment only if the corpus grows ZIP-based
-      # fixtures (DOCX/APK/…):
-      # - run: sudo apt-get update && sudo apt-get install -y libarchive-zip-perl
-      - name: Live parity vs pinned Perl ExifTool
-        # Downloads the pinned release (GitHub fallback), diffs read + write
-        # against the committed baseline, and fails on any NEW delta.
-        run: cargo run --features parity --bin parity
+
+      # ExifTool needs these optional Perl modules to decode the corpus fully;
+      # without them it emits fewer tags and the diff shows fake deltas. (The
+      # binary also checks their presence and fails clearly if one is missing.)
+      - name: ExifTool's optional Perl modules
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libarchive-zip-perl \
+            libio-compress-brotli-perl \
+            libcompress-raw-lzma-perl \
+            libposix-strptime-perl \
+            libunicode-linebreak-perl \
+            libmime-charset-perl
+
+      - name: Live parity
+        run: |
+          v='${{ inputs.exiftool_version }}'
+          if [ -n "$v" ]; then
+            cargo run --release --features parity --bin parity -- --exiftool "$v"
+          else
+            cargo run --release --features parity --bin parity
+          fi

@@ -150,13 +150,49 @@ jobs:
           name: exiftool-rs-gui-${{ matrix.label }}
           path: exiftool-rs-gui-${{ matrix.label }}.*
 
+  # Gate de parité différentielle live, avant toute signature : on lance le Perl
+  # ExifTool épinglé (EXIFTOOL_VERSION, PAS la dernière version — sinon un tag
+  # amont en avance bloquerait la release) et exiftool-rs sur le corpus, et on
+  # diffe la sortie. Un delta lecture nouveau ou un écart d'écriture fait échouer
+  # le job, donc rien n'est signé ni publié. Le bin télécharge ExifTool lui-même ;
+  # ubuntu-latest fournit perl/curl/tar, et on installe les modules Perl optionnels
+  # dont le corpus a besoin (sinon ExifTool décode moins → faux deltas ; le bin
+  # vérifie aussi leur présence et échoue proprement si l'un manque).
+  parity:
+    needs: lint
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4  # stable
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+
+      - name: Install ExifTool's optional Perl modules (match the baseline env)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libarchive-zip-perl \
+            libio-compress-brotli-perl \
+            libcompress-raw-lzma-perl \
+            libposix-strptime-perl \
+            libunicode-linebreak-perl \
+            libmime-charset-perl
+
+      - name: Live parity vs pinned Perl ExifTool
+        run: cargo run --release --features parity --bin parity
+
   # Signature + notarisation Apple du CLI et de la GUI. Derrière `signing` au même
   # titre que Windows : les secrets Apple sont désormais des secrets d'environnement
   # (illisibles depuis le job `build`, qui ne déclare aucun environnement), et une
   # signature Developer ID engage l'identité du propriétaire — elle ne doit jamais
   # partir sans approbation explicite.
   sign-apple:
-    needs: build
+    needs: [build, parity]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-latest
     environment: signing
@@ -331,7 +367,7 @@ jobs:
   # them via Certum (no Windows, no vendor stack). Gated by the `signing`
   # environment (owner approval); the release below needs it.
   sign-windows:
-    needs: build
+    needs: [build, parity]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: signing
