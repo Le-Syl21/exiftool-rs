@@ -2100,6 +2100,20 @@ impl ExifTool {
             }
         }
 
+        // Match ExifTool's display cleanup: string values carry trailing NULs
+        // (fixed-width fields) and stray edge whitespace that ExifTool trims on
+        // output. Do the same for print values so `-s` is byte-iso. Numeric
+        // print values have no edge NUL/whitespace, so this is a no-op for them;
+        // raw values are left untouched (composites and `-n` read those).
+        for tag in &mut tags {
+            let trimmed = tag
+                .print_value
+                .trim_matches(|c: char| c == '\0' || c.is_ascii_whitespace());
+            if trimmed.len() != tag.print_value.len() {
+                tag.print_value = trimmed.to_string();
+            }
+        }
+
         // Filter by requested tags if specified. A request is either a bare
         // tag name (`By-line`) or group-qualified (`IPTC:By-line`); the group
         // prefix matches any family 0-2 and `*` is a tag wildcard (`IPTC:*`).

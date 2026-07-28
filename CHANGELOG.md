@@ -15,6 +15,11 @@ All notable changes to `exiftool-rs` are documented here.
 
 ### Fixed
 
+- **String output matches ExifTool's whitespace/NUL trimming.** Fixed-width
+  fields and stray leading/trailing whitespace are now trimmed from displayed
+  values, as ExifTool does. Live read parity against ExifTool 13.59 jumped from
+  145/195 to 182/195 files identical (96 → 19 deltas, all remaining ones being
+  substantive: non-printable rendering, multi-line, the known PSP copyright case).
 - **IPTC write is no longer destructive (JPEG).** Setting one IPTC tag used to
   drop every other IPTC tag in the file (e.g. 20 tags → 1). Writes now merge
   into the file's existing IPTC — updating or deleting the changed datasets in
