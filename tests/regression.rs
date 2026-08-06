@@ -224,15 +224,21 @@ fn sanitize_value(s: &str) -> String {
 /// `Europe/Paris`. A handful of tags (gzip/psp/palm/… mtimes) convert a Unix
 /// timestamp to *local* time, so their printed value depends on the process
 /// timezone. CI runners are UTC, which would spuriously diverge from the oracle.
-/// Pin the test process to `Europe/Paris` (the `TZ` env var overrides
-/// `/etc/localtime` in libc's `localtime_r`) so the conversion is deterministic
-/// on any machine — local dev, Linux CI, or macOS CI alike.
+/// Pin the test process to the oracle's timezone (Paris) so the conversion is
+/// deterministic on any machine — local dev, Linux CI, macOS CI alike.
+///
+/// The zone is spelled as a self-contained POSIX rule rather than
+/// `Europe/Paris`: a named zone needs the tzdata database, which minimal
+/// sandboxes (Nix builds, scratch containers) don't ship — libc then silently
+/// falls back to UTC and every QuickTime date drifts by the UTC offset
+/// (issue #9). The rule below is byte-identical to `Europe/Paris` for every
+/// post-1996 timestamp, i.e. the whole corpus.
 #[cfg(unix)]
 fn force_oracle_tz() {
     use std::sync::Once;
     static TZ_INIT: Once = Once::new();
     TZ_INIT.call_once(|| {
-        std::env::set_var("TZ", "Europe/Paris");
+        std::env::set_var("TZ", "CET-1CEST,M3.5.0,M10.5.0/3");
         extern "C" {
             fn tzset();
         }
