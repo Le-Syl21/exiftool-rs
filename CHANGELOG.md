@@ -2,6 +2,16 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [0.7.4] - 2026-08-07
+
+### Fixed
+
+- Test suite: the regression oracle's timezone is now pinned with a
+  self-contained POSIX rule (`CET-1CEST,M3.5.0,M10.5.0/3`) instead of a named
+  zone, so the suite passes in environments without tzdata — notably the Nix
+  build sandbox ([#9](https://github.com/Le-Syl21/exiftool-rs/issues/9)).
+  No library code changed: shipped behavior is identical to 0.7.3.
+
 ## [0.7.3] - 2026-07-28
 
 ### Added
