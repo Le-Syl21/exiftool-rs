@@ -396,23 +396,23 @@ impl eframe::App for App {
 
         // Handle dropped files
         ctx.input(|i| {
-            if !i.raw.dropped_files.is_empty() {
-                if let Some(path) = i.raw.dropped_files[0].path.as_ref() {
-                    if path.is_dir() {
-                        self.open_folder(path);
-                    } else {
-                        // Open the file's parent folder and navigate to it
-                        if let Some(parent) = path.parent() {
-                            self.open_folder(parent);
-                            // Find the file in the list
-                            if let Some(idx) = self.files.iter().position(|f| f == path) {
-                                self.current = idx;
-                                self.load_current();
-                            }
-                        } else {
-                            self.open_file(path);
-                        }
+            if let Some(dropped) = i.raw.dropped_files.first() {
+                // egui 0.36 made `DroppedFile` a trait whose `path()` returns
+                // `&Path` rather than the old `Option<PathBuf>` field: a
+                // dropped file now always has one.
+                let path = dropped.path();
+                if path.is_dir() {
+                    self.open_folder(path);
+                } else if let Some(parent) = path.parent() {
+                    // Open the file's parent folder and navigate to it
+                    self.open_folder(parent);
+                    // Find the file in the list
+                    if let Some(idx) = self.files.iter().position(|f| f == path) {
+                        self.current = idx;
+                        self.load_current();
                     }
+                } else {
+                    self.open_file(path);
                 }
             }
         });
