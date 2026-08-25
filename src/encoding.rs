@@ -74,7 +74,7 @@ mod tests {
     #[test]
     fn test_encode_decode_latin1_inverse() {
         let s = "Àéîõü©";
-        assert_eq!(decode_latin1(&encode_latin1(&s)), s);
+        assert_eq!(decode_latin1(&encode_latin1(s)), s);
     }
 
     #[test]

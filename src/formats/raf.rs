@@ -53,15 +53,14 @@ pub fn read_raf(data: &[u8]) -> Result<Vec<Tag>> {
     }
 
     // JPEG offset at 0x54 (uint32 BE) and length at 0x58
-    let jpeg_offset;
-    let jpeg_length;
-    if data.len() >= 0x5C {
-        jpeg_offset = u32::from_be_bytes([data[0x54], data[0x55], data[0x56], data[0x57]]) as usize;
-        jpeg_length = u32::from_be_bytes([data[0x58], data[0x59], data[0x5A], data[0x5B]]) as usize;
+    let (jpeg_offset, jpeg_length) = if data.len() >= 0x5C {
+        (
+            u32::from_be_bytes([data[0x54], data[0x55], data[0x56], data[0x57]]) as usize,
+            u32::from_be_bytes([data[0x58], data[0x59], data[0x5A], data[0x5B]]) as usize,
+        )
     } else {
-        jpeg_offset = 0;
-        jpeg_length = 0;
-    }
+        (0, 0)
+    };
 
     // Add PreviewImage tag (binary data of embedded JPEG)
     if jpeg_offset > 0 && jpeg_offset + jpeg_length <= data.len() && jpeg_length > 0 {
