@@ -2,6 +2,23 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [0.7.5] - 2026-08-25
+
+### Fixed
+
+- Pinned `xml` below 1.4. Its 1.4 lexer normalises line endings per the XML
+  spec, so a CR inside an attribute value becomes a space before we ever see
+  it — and ExifTool renders that CR as `.`, which is how the two URIs of an
+  `xsi:schemaLocation` are separated. A routine `cargo update` took the minor
+  bump and silently cost three tags of read parity. Lifting the pin means
+  reading those attribute values from the raw bytes.
+- Dropped the `xml-rs` stub in favour of `xml`, the crate it renames to.
+
+### Changed
+
+- GUI on egui/eframe 0.36. `DroppedFile` became a trait whose `path()` returns
+  `&Path` instead of an `Option<PathBuf>` field: a dropped file always has one.
+
 ## [0.7.4] - 2026-08-07
 
 ### Fixed
