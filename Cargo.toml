@@ -51,16 +51,12 @@ parity = []
 thiserror = "2"
 byteorder = "1"
 memmap2 = "0.9"
-# Pinned below 1.4 deliberately, and it is a DATA constraint, not a build one.
-# `xml` 1.4 added XML-spec line-ending normalisation to its lexer: a CR inside
-# an attribute value becomes LF, then attribute-value normalisation makes it a
-# space. ExifTool renders that CR as `.` — it is how it separates the two URIs
-# of an `xsi:schemaLocation` — and once the parser has replaced it we cannot
-# tell it from a real space, so the information is gone before we see it.
-# A routine `cargo update` took 1.3.0 -> 1.4.0 and silently cost three tags of
-# read parity. Lifting this pin means reading those attribute values from the
-# raw bytes ourselves; until then it stays.
-xml = ">=1.3, <1.4"
+# Unpinned again: attribute values reach us through
+# `escape_attribute_whitespace`, which rewrites CR/LF/TAB as character
+# references before parsing. Those are exempt from XML attribute-value
+# normalisation, so ExifTool's raw bytes survive any conforming parser --
+# 1.4 added that normalisation and cost three tags of read parity before.
+xml = "1"
 encoding_rs = "0.8"
 flate2 = "1"
 brotli = "8"

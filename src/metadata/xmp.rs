@@ -246,7 +246,10 @@ impl XmpReader {
         // Also strip invalid XML chars from xpacket processing instructions.
         let xml_sanitized: String = sanitize_xmp_xml(xml_data);
         let xml_clean: String = fix_malformed_xml(&xml_sanitized);
-        let xml_for_parse: &str = &xml_clean;
+        // Keep attribute newlines/tabs alive through XML attribute-value
+        // normalisation, which ExifTool does not apply.
+        let xml_escaped: String = escape_attribute_whitespace(&xml_clean);
+        let xml_for_parse: &str = &xml_escaped;
 
         // INX detection: InDesign Interchange format — XMP is embedded in CDATA
         // Detect by: starts with <?xml, followed by <?aid on next line
@@ -3370,6 +3373,98 @@ fn sanitize_xmp_xml(xml: &str) -> String {
     result
 }
 
+/// True when `chars` begins with `pat`.
+fn chars_start_with(chars: &[char], pat: &str) -> bool {
+    let p: Vec<char> = pat.chars().collect();
+    chars.len() >= p.len() && chars[..p.len()] == p[..]
+}
+
+/// Copy `chars[i..]` up to and including the first `end` (or to the end of the
+/// input when `end` never appears), returning how many chars were consumed.
+fn copy_through(chars: &[char], i: usize, end: &str, out: &mut String) -> usize {
+    let e: Vec<char> = end.chars().collect();
+    let mut j = i;
+    let stop = loop {
+        if j + e.len() > chars.len() {
+            break chars.len();
+        }
+        if chars[j..j + e.len()] == e[..] {
+            break j + e.len();
+        }
+        j += 1;
+    };
+    out.extend(&chars[i..stop]);
+    stop - i
+}
+
+/// Pre-pass: rewrite literal CR/LF/TAB inside quoted attribute values as
+/// character references (`&#13;` / `&#10;` / `&#9;`).
+///
+/// XML requires a conforming parser to mangle those bytes twice over: §2.11
+/// turns CR and CRLF into LF before parsing, then §3.3.3 replaces every
+/// remaining CR, LF and TAB in an attribute value with a space. ExifTool does
+/// neither — it reports attribute bytes verbatim, so a `xsi:schemaLocation`
+/// wrapped across lines keeps its newline and its indentation.
+///
+/// A character reference is exempt from both rules, so escaping here yields
+/// ExifTool's raw value through *any* conforming parser. That is what keeps us
+/// off a pinned `xml` version: we no longer depend on a parser that happens to
+/// skip the normalisation (xml-rs did until 1.4.0, which fixed it).
+///
+/// Only quoted attribute values are touched. A reference means nothing inside
+/// CDATA, a comment or a processing instruction, so escaping there would
+/// insert a literal `&#13;` into the reported text.
+fn escape_attribute_whitespace(xml: &str) -> String {
+    let mut out = String::with_capacity(xml.len());
+    let chars: Vec<char> = xml.chars().collect();
+    let mut i = 0;
+    let mut quote: Option<char> = None; // quote char of the value being scanned
+    let mut in_tag = false;
+    while i < chars.len() {
+        let c = chars[i];
+        if let Some(q) = quote {
+            if c == q {
+                quote = None;
+                out.push(c);
+            } else {
+                match c {
+                    '\r' => out.push_str("&#13;"),
+                    '\n' => out.push_str("&#10;"),
+                    '\t' => out.push_str("&#9;"),
+                    _ => out.push(c),
+                }
+            }
+            i += 1;
+            continue;
+        }
+        if in_tag {
+            match c {
+                '"' | '\'' => quote = Some(c),
+                '>' => in_tag = false,
+                _ => {}
+            }
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        if c == '<' {
+            // Markup whose body must be copied through untouched.
+            let verbatim = [("<!--", "-->"), ("<![CDATA[", "]]>"), ("<?", "?>")]
+                .into_iter()
+                .find(|(open, _)| chars_start_with(&chars[i..], open));
+            if let Some((_, end)) = verbatim {
+                i += copy_through(&chars, i, end, &mut out);
+                continue;
+            }
+            // A start/end tag, or a declaration: its attribute values are ours.
+            in_tag = true;
+        }
+        out.push(c);
+        i += 1;
+    }
+    out
+}
+
 /// Pre-pass: collect rdf:nodeID-mapped Bag/Seq values from XMP XML.
 /// Returns a map from nodeID string → list of rdf:li text values.
 fn collect_node_bag_values(xml: &str) -> std::collections::HashMap<String, Vec<String>> {
@@ -3591,4 +3686,60 @@ fn collect_blank_node_properties(
         }
     }
     map
+}
+
+#[cfg(test)]
+mod attribute_whitespace_tests {
+    use super::escape_attribute_whitespace as esc;
+
+    #[test]
+    fn literal_whitespace_in_an_attribute_becomes_a_character_reference() {
+        assert_eq!(esc("<a v=\"x\ry\"/>"), "<a v=\"x&#13;y\"/>");
+        assert_eq!(esc("<a v=\"x\n  y\"/>"), "<a v=\"x&#10;  y\"/>");
+        assert_eq!(esc("<a v=\"x\ty\"/>"), "<a v=\"x&#9;y\"/>");
+        assert_eq!(esc("<a v='x\ry'/>"), "<a v='x&#13;y'/>");
+    }
+
+    #[test]
+    fn markup_and_text_are_left_alone() {
+        // Newlines between attributes and around elements are markup: escaping
+        // them would produce invalid XML.
+        assert_eq!(
+            esc("<a\n  v=\"1\">\ntext\n</a>"),
+            "<a\n  v=\"1\">\ntext\n</a>"
+        );
+    }
+
+    #[test]
+    fn cdata_comments_and_pis_are_copied_through() {
+        // A character reference is not recognised in any of these, so escaping
+        // would insert a literal "&#13;" into the value we report.
+        for doc in [
+            "<a><![CDATA[x\ry]]></a>",
+            "<a><!-- x\ry --></a>",
+            "<?xpacket begin=\"﻿\" id=\"x\ry\"?><a/>",
+        ] {
+            assert_eq!(esc(doc), doc, "rewrote {doc:?}");
+        }
+    }
+
+    #[test]
+    fn unterminated_markup_does_not_lose_input() {
+        assert_eq!(esc("<a><!-- never closed"), "<a><!-- never closed");
+        assert_eq!(esc("<a v=\"unclosed\r"), "<a v=\"unclosed&#13;");
+    }
+
+    #[test]
+    fn the_value_survives_a_round_trip_through_the_parser() {
+        use xml::reader::{EventReader, XmlEvent};
+        let doc = esc("<a v=\"http://x/1 http://y/2\n     http://z/3\"/>");
+        let value = EventReader::from_str(&doc)
+            .into_iter()
+            .find_map(|e| match e {
+                Ok(XmlEvent::StartElement { attributes, .. }) => Some(attributes[0].value.clone()),
+                _ => None,
+            })
+            .expect("start element");
+        assert_eq!(value, "http://x/1 http://y/2\n     http://z/3");
+    }
 }
