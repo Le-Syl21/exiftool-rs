@@ -1,10 +1,19 @@
 name: parity
 
-# On-demand differential parity check against a chosen Perl ExifTool version —
-# the manual companion to the release gate in ci.yml (which pins
-# EXIFTOOL_VERSION). Use it to measure drift against a newer ExifTool before
-# deciding to port it. No schedule: it runs only when you trigger it.
+# Differential parity check against a Perl ExifTool version — the companion to
+# the release gate in ci.yml (which pins EXIFTOOL_VERSION). Triggered manually
+# to measure drift against a *newer* ExifTool before deciding to port it, and
+# automatically on `main` against the pinned one.
+#
+# ci.yml deliberately builds nothing on a push to `main`, but parity is a DATA
+# gate, not a build one: a routine `cargo update` took `xml` 1.3 -> 1.4 and cost
+# three tags of read parity while compiling clean with every test green (see the
+# `escape_attribute_whitespace` fix). Nothing on the path of a lockfile commit
+# would have caught it — ci.yml's parity job only runs on tags, i.e. after the
+# regression is already in a release candidate. This ~4 min job closes that gap.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       exiftool_version:
