@@ -3,4 +3,3 @@
 # = regression, or a new spurious tag). Improvements are allowed.
 # Regenerate: UPDATE_PARITY_BASELINE=1 cargo test --test regression regression_tag_names
 # Format: <file>\t<missing|extra>\t<tag>
-SonyILCE9.arw	extra	XMPToolkit

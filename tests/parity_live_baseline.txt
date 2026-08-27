@@ -20,4 +20,3 @@ SonyILCE9.arw::Sony:Shutter
 SonyILCE9.arw::Sony:SonyModelID
 SonyILCE9.arw::Sony:VariableLowPassFilter
 SonyILCE9.arw::Sony:WBShiftAB_GM_Precise
-SonyILCE9.arw::XMP-x:XMPToolkit

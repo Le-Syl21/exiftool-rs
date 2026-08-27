@@ -418,7 +418,13 @@ impl XmpReader {
                     // x:xmpmeta or x:xapmeta — extract XMPToolkit from x:xmptk/x:xaptk attribute
                     if name.local_name == "xmpmeta" || name.local_name == "xapmeta" {
                         for attr in &attributes {
-                            if attr.name.local_name == "xmptk" || attr.name.local_name == "xaptk" {
+                            // XMP.pm extracts a recognized attribute "only once
+                            // if not empty" (`ref $recognizedAttrs{$propName}
+                            // and $shortVal`), so an `x:xmptk=''` is no tag at
+                            // all -- and Sony writes exactly that.
+                            if (attr.name.local_name == "xmptk" || attr.name.local_name == "xaptk")
+                                && !attr.value.is_empty()
+                            {
                                 tags.push(Tag {
                                     id: TagId::Text("x:xmptk".into()),
                                     name: "XMPToolkit".into(),

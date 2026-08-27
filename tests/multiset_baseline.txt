@@ -32,7 +32,6 @@ SonyILCE9.arw	default	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	default	extra	0	SonyModelID	358
 SonyILCE9.arw	default	extra	0	VariableLowPassFilter	0 0
 SonyILCE9.arw	default	extra	0	WBShiftAB_GM_Precise	0 0
-SonyILCE9.arw	default	extra	0	XMPToolkit	
 SonyILCE9.arw	default	missing	0	AFPointSelected	n/a
 SonyILCE9.arw	default	missing	0	AFPointsUsed	(none)
 SonyILCE9.arw	default	missing	0	Anti-Blur	On (Shooting)
@@ -74,7 +73,6 @@ SonyILCE9.arw	ee	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	ee	extra	0	SonyModelID	358
 SonyILCE9.arw	ee	extra	0	VariableLowPassFilter	0 0
 SonyILCE9.arw	ee	extra	0	WBShiftAB_GM_Precise	0 0
-SonyILCE9.arw	ee	extra	0	XMPToolkit	
 SonyILCE9.arw	ee	missing	0	AFPointSelected	n/a
 SonyILCE9.arw	ee	missing	0	AFPointsUsed	(none)
 SonyILCE9.arw	ee	missing	0	APS-CSizeCapture	Off
