@@ -1,4 +1,15 @@
-//! MakerNotes sub-table dispatch system.
+//! MakerNotes sub-table dispatch.
+//!
+//! **Hand-written, despite the file name.** `scripts/gen_sub_tables.pl` claims
+//! this path in its usage line but has never produced it: its output is a
+//! `decode_sub_table` entry point that appears nowhere in the tree. The name
+//! said "generated" for long enough that nobody looked inside, which is how a
+//! dispatcher here came to answer with the name of a layout instead of decoding
+//! one -- see the test at the bottom of this file.
+//!
+//! Selection conditions belong in `variant_selectors_generated`, which does come
+//! from ExifTool. What is left here is the decoding around them.
+//!
 //!
 //! Properly dispatches to model-specific binary structure decoders
 //! based on the same conditions as Perl ExifTool:

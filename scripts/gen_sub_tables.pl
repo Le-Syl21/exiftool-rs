@@ -2,7 +2,16 @@
 # Extract MakerNotes binary sub-table definitions from ExifTool Perl source.
 # Generates Rust decoders for int16s/int16u arrays (CameraSettings, ShotInfo, etc.)
 #
-# Usage: perl scripts/gen_sub_tables.pl /path/to/exiftool/lib > src/tags/sub_tables_generated.rs
+# NOT WIRED IN. This writes a `decode_sub_table` entry point that nothing in the
+# crate calls, and the file its usage line used to name -- sub_tables_generated.rs
+# -- is hand-written and always was. Three bugs were fixed here in the course of
+# finding that out (decimal-only field indices, a $t->{table} key that does not
+# exist, and Perl capture variables clobbered by a nested match), so it now emits
+# 168 tables where it emitted broken output before. Wiring it in means reconciling
+# it with the hand-written decoders in metadata/makernotes.rs, which is a separate
+# job; scripts/gen_sony_ciphered.pl shows the shape that worked.
+#
+# Usage: perl scripts/gen_sub_tables.pl /path/to/exiftool/lib > /tmp/preview.rs
 
 use strict;
 use warnings;
