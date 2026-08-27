@@ -21,15 +21,6 @@ SonyILCE9.arw::Sony:DistortionCorrectionSetting
 SonyILCE9.arw::Sony:DynamicRangeOptimizer2
 SonyILCE9.arw::Sony:ExposureProgram
 SonyILCE9.arw::Sony:FileFormat
-SonyILCE9.arw::Sony:FocalPlaneAFPointArea
-SonyILCE9.arw::Sony:FocalPlaneAFPointLocation1
-SonyILCE9.arw::Sony:FocalPlaneAFPointLocation2
-SonyILCE9.arw::Sony:FocalPlaneAFPointLocation3
-SonyILCE9.arw::Sony:FocalPlaneAFPointLocation4
-SonyILCE9.arw::Sony:FocalPlaneAFPointLocation5
-SonyILCE9.arw::Sony:FocalPlaneAFPointLocation6
-SonyILCE9.arw::Sony:FocalPlaneAFPointLocation7
-SonyILCE9.arw::Sony:FocalPlaneAFPointLocation8
 SonyILCE9.arw::Sony:FullImageSize
 SonyILCE9.arw::Sony:HDR
 SonyILCE9.arw::Sony:HighISONoiseReduction2

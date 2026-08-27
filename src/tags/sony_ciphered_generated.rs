@@ -9192,7 +9192,7 @@ fn tag202a(data: &[u8], model: &str) -> Vec<Tag> {
     let mut dm: Vec<(&str, f64)> = Vec::new();
     let _ = &dm;
     if let Some(v) = u8_at(data, 0x1) {
-        dm.push(("FocalPlaneAFPointsUsed", f64::from(v)));
+        dm.push(("Locations", f64::from(v)));
         let rc = conv_expr::eval("$$self{Locations} = $val", &Conv::Num(f64::from(v)));
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]

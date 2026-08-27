@@ -152,6 +152,11 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
             next;
         }
 
+        # A field can store its value under a name of its own: Tag202a reads
+        # FocalPlaneAFPointsUsed but the conditions after it ask for
+        # `$$self{Locations}`.
+        my ($dmname) = $fb =~ /DataMember\s*=>\s*'(\w+)'/;
+
         my ($ffmt) = $fb =~ /Format\s*=>\s*'([^']+)'/;
         $ffmt ||= $fmt;
         # A fixed-size array of a scalar type is just N reads joined by spaces,
@@ -204,7 +209,8 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
         if ($ffmt =~ /^(string|undef)\[(\d+)\]$/) {
             push @fields, { off => $off, name => $name, fmt => $1, n => $2,
                             re => $re, neg => $neg, conv => {},
-                            vconv => undef, pconv => undef, hidden => $hidden };
+                            vconv => undef, pconv => undef, hidden => $hidden,
+                            dmname => $dmname };
             next;
         }
         unless (exists $WIDTH{$ffmt}) {
@@ -251,6 +257,7 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
             off => $off, name => $name, fmt => $ffmt, n => $count_n,
             re => $re, neg => $neg, conv => \%conv,
             vconv => $vconv, pconv => $pconv, hidden => $hidden, rconv => $rconv,
+            dmname => $dmname,
         };
     }
 
@@ -729,7 +736,7 @@ for my $t (@tables) {
             next;
         }
         printf "%sif let Some(v) = %s(data, 0x%x) {\n", $ind, $reader, $f->{off};
-        printf "%s    dm.push((\"%s\", f64::from(v)));\n", $ind, $f->{name};
+        printf "%s    dm.push((\"%s\", f64::from(v)));\n", $ind, $f->{dmname} // $f->{name};
         # A RawConv can rule the value out entirely -- `$val ? $val : undef`
         # means "only when it is not zero" -- or reshape it. One this evaluator
         # declines leaves the raw value, which is the honest answer.

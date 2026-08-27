@@ -49,15 +49,6 @@ SonyILCE9.arw	default	missing	0	Anti-Blur	On (Shooting)
 SonyILCE9.arw	default	missing	0	ColorTemperature	Auto
 SonyILCE9.arw	default	missing	0	DistortionCorrectionSetting	Auto
 SonyILCE9.arw	default	missing	0	FileFormat	ARW 2.3.5
-SonyILCE9.arw	default	missing	0	FocalPlaneAFPointArea	640 428
-SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation1	356 194
-SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation2	356 214
-SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation3	338 214
-SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation4	338 194
-SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation5	338 174
-SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation6	356 174
-SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation7	374 174
-SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation8	374 214
 SonyILCE9.arw	default	missing	0	FocusDistance2	282.2 m
 SonyILCE9.arw	default	missing	0	FullImageSize	6000x4000
 SonyILCE9.arw	default	missing	0	HDR	Off; Uncorrected image
@@ -150,15 +141,6 @@ SonyILCE9.arw	ee	missing	0	ExposureProgram	Manual
 SonyILCE9.arw	ee	missing	1	ExposureProgram	Manual
 SonyILCE9.arw	ee	missing	0	ExposureTime	1/20
 SonyILCE9.arw	ee	missing	0	FileFormat	ARW 2.3.5
-SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointArea	640 428
-SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation1	356 194
-SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation2	356 214
-SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation3	338 214
-SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation4	338 194
-SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation5	338 174
-SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation6	356 174
-SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation7	374 174
-SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation8	374 214
 SonyILCE9.arw	ee	missing	0	FocusDistance2	282.2 m
 SonyILCE9.arw	ee	missing	0	FocusMode	AF-C
 SonyILCE9.arw	ee	missing	0	FullImageSize	6000x4000
