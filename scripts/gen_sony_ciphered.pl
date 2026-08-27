@@ -16,10 +16,20 @@
 
 use strict;
 use warnings;
+# Reading a package hash by name needs symbolic references.
+no strict 'refs';
 
 my $lib = $ARGV[0] || '../exiftool/lib';
 my $pm  = "$lib/Image/ExifTool/Sony.pm";
 die "Cannot read $pm\n" unless -f $pm;
+
+# Some of these tables are built when the module loads rather than written out:
+# `%sonyLensTypes = %$minoltaTypes` copies Minolta's list and derives the
+# four-digit entries some bodies report. A scan of the text cannot see one, so
+# the module is loaded and the hash read from it.
+unshift @INC, $lib;
+eval { require Image::ExifTool::Sony; require Image::ExifTool::Minolta; 1 }
+    or warn "could not load Image::ExifTool::Sony: $@";
 
 open my $fh, '<', $pm or die $!;
 my $src = do { local $/; <$fh> };
@@ -266,6 +276,17 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
             # A reference to a shared table, such as the 313-entry lens list.
             # Without following it a lens prints as 49475 instead of its name.
             $conv_src = $shared{$1};
+        } elsif ($fb =~ /PrintConv\s*=>\s*\\%(\w+)/ and %{"Image::ExifTool::Sony::$1"}) {
+            # A table the module builds as it loads: read it from the module.
+            my $h = \%{"Image::ExifTool::Sony::$1"};
+            # OTHER and Notes are ExifTool's own keys, not conversions. A key
+            # like 65535.1 is a second lens sharing an id; sorted numerically
+            # the whole id comes first, and that is the one ExifTool prints.
+            for my $k (sort { $a <=> $b } grep { /^-?\d+(\.\d+)?\$/ } keys %$h) {
+                next if ref $$h{$k};
+                my $key = int($k);
+                $conv{$key} = $$h{$k} unless exists $conv{$key};
+            }
         } elsif ($fb =~ /^\s+%(\w+),\s*$/m and exists $shared{$1}) {
             my $body = $shared{$1};
             ($conv_src) = $body =~ /PrintConv\s*=>\s*\{(.*?)\n\s{4}\}/s;

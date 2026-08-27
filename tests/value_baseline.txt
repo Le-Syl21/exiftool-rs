@@ -13,11 +13,9 @@ SonyILCE9.arw	HDR
 SonyILCE9.arw	LensID
 SonyILCE9.arw	LensSpec
 SonyILCE9.arw	LensSpecFeatures
-SonyILCE9.arw	LensType
 SonyILCE9.arw	PixelShiftInfo
 SonyILCE9.arw	PreviewImageSize
 SonyILCE9.arw	Quality
 SonyILCE9.arw	Shutter
-SonyILCE9.arw	SonyModelID
 SonyILCE9.arw	VariableLowPassFilter
 SonyILCE9.arw	WBShiftAB_GM_Precise

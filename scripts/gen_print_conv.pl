@@ -7,9 +7,17 @@
 use strict;
 use warnings;
 use File::Find;
+# Reading a package hash by name needs symbolic references.
+no strict 'refs';
 
 my $lib_dir = $ARGV[0] || '../exiftool/lib';
 die "Cannot find $lib_dir" unless -d $lib_dir;
+
+# Load ExifTool so the tables it builds as it loads can be read from it. A
+# scan of the text cannot see `%sonyLensTypes = %$minoltaTypes`, and without
+# it a lens prints as its raw id.
+unshift @INC, $lib_dir;
+my @loaded;
 
 # Collect all .pm files
 my @pm_files;
@@ -23,15 +31,26 @@ my %tag_names; # TagID => Name mapping per module
 
 my $total_entries = 0;
 my $total_tags = 0;
+my @dropped;   # conversions not emitted, reported at the end
 
 for my $file (@pm_files) {
     open my $fh, '<', $file or next;
     my $content = do { local $/; <$fh> };
     close $fh;
 
+    # (module name is derived below; load it so its runtime tables exist)
+
     # Extract module name from filename
     my ($module) = $file =~ m{/(\w+)\.pm$};
     next unless $module;
+
+    # Load it so any table it builds as it loads can be read from the symbol
+    # table. A module that will not load is no reason to stop: the text scan
+    # still finds everything written out literally.
+    unless ($loaded[0] and grep { $_ eq $module } @loaded) {
+        push @loaded, $module;
+        eval { require "Image/ExifTool/$module.pm"; 1 };
+    }
 
     # Strategy: find tag entries with PrintConv => { ... }
     # We look for patterns like:
@@ -97,6 +116,36 @@ for my $file (@pm_files) {
         # PrintConv => \%hashName
         if ($body =~ /PrintConv\s*=>\s*\\%(\w+)/) {
             my $hash_name = $1;
+            # Some of these are built when the module loads rather than
+            # written out -- `%sonyLensTypes = %$minoltaTypes` copies Minolta's
+            # list and derives entries from it -- so a scan of the text finds
+            # nothing and the lens printed as 65535. Read those from the loaded
+            # module instead.
+            my $runtime = \%{"Image::ExifTool::${module}::${hash_name}"};
+            if (%$runtime) {
+                my %conv;
+                # A key like 65535.1 is a second lens sharing an id. Sorted
+                # numerically the whole id comes first, and that is the entry
+                # ExifTool prints -- taken in hash order it printed whichever
+                # lens happened to come out of the bucket.
+                for my $key (sort { $a <=> $b } grep { /^-?\d+(\.\d+)?$/ } keys %$runtime) {
+                    next if ref $$runtime{$key};
+                    my $k = int($key);
+                    $conv{$k} = $$runtime{$key} unless exists $conv{$k};
+                }
+                if (%conv) {
+                    my $conv_key = "${module}::${tag_id}";
+                    $all_convs{$conv_key} = {
+                        module => $module,
+                        tag_id => $tag_id,
+                        tag_name => $name,
+                        conv => \%conv,
+                    };
+                    $total_entries += scalar keys %conv;
+                    $total_tags++;
+                    next;
+                }
+            }
             # Try to find the hash definition in the same file
             if ($content =~ /\%${hash_name}\s*=\s*\(([^;]+)\);/s) {
                 my $hash_body = $1;
@@ -148,9 +197,15 @@ for my $module (sort keys %by_module) {
         my %conv = %{$tag->{conv}};
         my @keys = sort { $a <=> $b } keys %conv;
 
-        # Skip very large tables (>100 entries) and tables with only negative keys
-        next if scalar @keys > 100;
-        next if scalar @keys < 2;
+        # A table of one entry is not a lookup to choose from. Everything
+        # else is emitted however long it is: the lens lists run to several
+        # hundred entries, and capping them at a hundred is why LensType
+        # printed its raw id.
+        if (scalar @keys < 2) {
+            push @dropped, sprintf("%s 0x%04X %s: only %d entry",
+                                   $module, $tag->{tag_id}, $tag->{tag_name}, scalar @keys);
+            next;
+        }
 
         printf "        (\"%s\", 0x%04X) => match value { // %s\n",
             $module, $tag->{tag_id}, $tag->{tag_name};
@@ -179,7 +234,7 @@ my %by_name;
 for my $key (sort keys %all_convs) {
     my $info = $all_convs{$key};
     my %conv = %{$info->{conv}};
-    next if scalar(keys %conv) > 100 || scalar(keys %conv) < 2;
+    next if scalar(keys %conv) < 2;
     $by_name{$info->{tag_name}} = $info unless exists $by_name{$info->{tag_name}};
 }
 
@@ -203,4 +258,8 @@ print "        _ => None,\n";
 print "    }\n";
 print "}\n";
 
+if (@dropped) {
+    warn sprintf("%d conversion(s) not emitted:\n", scalar @dropped);
+    warn "  $_\n" for @dropped;
+}
 warn "Extracted $total_tags tags with $total_entries entries from " . scalar(@pm_files) . " files\n";

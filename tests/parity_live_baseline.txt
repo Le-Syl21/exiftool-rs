@@ -12,11 +12,9 @@ SonyILCE9.arw::Sony:FullImageSize
 SonyILCE9.arw::Sony:HDR
 SonyILCE9.arw::Sony:LensSpec
 SonyILCE9.arw::Sony:LensSpecFeatures
-SonyILCE9.arw::Sony:LensType
 SonyILCE9.arw::Sony:PixelShiftInfo
 SonyILCE9.arw::Sony:PreviewImageSize
 SonyILCE9.arw::Sony:Quality
 SonyILCE9.arw::Sony:Shutter
-SonyILCE9.arw::Sony:SonyModelID
 SonyILCE9.arw::Sony:VariableLowPassFilter
 SonyILCE9.arw::Sony:WBShiftAB_GM_Precise
