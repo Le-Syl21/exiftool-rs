@@ -16,6 +16,8 @@ use regex_lite::Regex;
 /// does ExifTool's output until it is printed.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Val {
+    /// Perl's `undef`: what a hash member that was never set reads as.
+    Undef,
     Num(f64),
     Str(String),
     /// Perl's list: what `split` and `unpack` produce and `join` consumes.
@@ -28,6 +30,7 @@ impl Val {
         match self {
             Self::Num(n) => *n,
             // Perl reads a leading number out of a string and calls the rest zero.
+            Self::Undef => 0.0,
             Self::Str(s) => leading_number(s),
             // A list in numeric context is its length.
             #[allow(clippy::cast_precision_loss)]
@@ -38,6 +41,7 @@ impl Val {
     #[must_use]
     pub fn as_string(&self) -> String {
         match self {
+            Self::Undef => String::new(),
             Self::Num(n) => format_number(*n),
             Self::Str(s) => s.clone(),
             // `"@a"` interpolates a list separated by `$"`, which is a space.
@@ -47,6 +51,7 @@ impl Val {
 
     fn truthy(&self) -> bool {
         match self {
+            Self::Undef => false,
             Self::Num(n) => *n != 0.0,
             Self::Str(s) => !s.is_empty() && s != "0",
             Self::List(v) => !v.is_empty(),
@@ -86,13 +91,44 @@ fn leading_number(s: &str) -> f64 {
 /// Returns `None` when the expression uses anything outside the supported
 /// grammar, which the caller must treat as "leave the value alone".
 #[must_use]
+/// What a conversion can ask about the file being read.
+///
+/// ExifTool keeps its parse state on the object itself, and conversions reach
+/// into it: `$$self{TimecodeScale}`, `$$self{Model}`. `member` returns `None`
+/// for a name the reader does not track at all, which declines the conversion
+/// -- as opposed to `Some(Val::Undef)`, which is Perl's own answer for a
+/// member that exists but was never set, and is a value like any other.
+pub trait ParseState {
+    fn member(&self, name: &str) -> Option<Val>;
+}
+
+/// A reader with no parse state at all: every member is unknown.
+impl ParseState for () {
+    fn member(&self, _: &str) -> Option<Val> {
+        None
+    }
+}
+
+impl ParseState for std::collections::HashMap<String, Val> {
+    fn member(&self, name: &str) -> Option<Val> {
+        self.get(name).cloned()
+    }
+}
+
 pub fn eval(expr: &str, val: &Val) -> Option<Val> {
+    eval_with(expr, val, &())
+}
+
+/// As [`eval`], with the file-level parse state the conversion may read.
+pub fn eval_with(expr: &str, val: &Val, state: &dyn ParseState) -> Option<Val> {
     let mut p = Parser {
         s: expr.as_bytes(),
         i: 0,
         val: val.clone(),
         captures: Vec::new(),
         vars: std::collections::HashMap::new(),
+        state,
+        subject_after: None,
     };
     // These conversions are sometimes two statements: `$val =~ s/ +$//; $val`
     // substitutes and then hands back the value it changed. The last one is the
@@ -153,6 +189,10 @@ struct Parser<'a> {
     /// `my` variables. Scalars are stored under their bare name, arrays under
     /// the same name prefixed with `@`, and `$_` under `_`.
     vars: std::collections::HashMap<String, Val>,
+    state: &'a dyn ParseState,
+    /// What `s///` or `tr///` made of its subject, for the caller to store
+    /// back into whatever the match was bound to.
+    subject_after: Option<Val>,
 }
 
 impl<'a> Parser<'a> {
@@ -533,24 +573,65 @@ impl<'a> Parser<'a> {
     }
 
     fn comparison(&mut self) -> Option<Val> {
-        // `$val =~ ...` binds looser than arithmetic and tighter than a ternary.
-        if self.peek("$val") {
-            let save = self.i;
-            self.eat("$val");
+        // `=~` binds looser than arithmetic and tighter than a ternary. Its
+        // left side is whatever the match reads and `s///` writes back to --
+        // `$val` nearly always, but a `my` variable or a parse-state member
+        // just as legitimately.
+        let save = self.i;
+        if let Some(target) = self.lvalue() {
             if self.peek("=~") || self.peek("!~") {
                 let negated = self.peek("!~");
                 self.eat(if negated { "!~" } else { "=~" });
-                return self.bind_operation(negated);
+                return self.bind_operation(&target, negated);
+            }
+        }
+        self.i = save;
+        if self.peek("$$self{") || self.peek("$self->{") {
+            let subject = self.primary()?;
+            if self.peek("=~") || self.peek("!~") {
+                let negated = self.peek("!~");
+                self.eat(if negated { "!~" } else { "=~" });
+                // A member is read-only here: nothing writes a substitution
+                // back into the parse state.
+                return self.bind_to_value(&subject, negated);
             }
             self.i = save;
         }
         let left = self.additive()?;
-        for op in ["<=", ">=", "==", "!=", "<", ">"] {
+        // Perl keeps its string comparisons under separate names, and a word
+        // operator must not be read out of the middle of an identifier.
+        for (op, kind) in [("eq", 0), ("ne", 1), ("le", 2), ("ge", 3), ("lt", 4), ("gt", 5)] {
+            self.skip_ws();
+            if self.s[self.i..].starts_with(op.as_bytes())
+                && !self.s.get(self.i + 2).is_some_and(|c| ident_char(*c))
+            {
+                self.i += 2;
+                let right = self.additive()?;
+                let (a, b) = (left.as_string(), right.as_string());
+                let r = match kind {
+                    0 => a == b,
+                    1 => a != b,
+                    2 => a <= b,
+                    3 => a >= b,
+                    4 => a < b,
+                    _ => a > b,
+                };
+                return Some(Val::Num(if r { 1.0 } else { 0.0 }));
+            }
+        }
+        for op in ["<=>", "<=", ">=", "==", "!=", "<", ">"] {
             // `<` must not swallow the `<=` case, hence the order above.
             if self.peek(op) {
                 self.eat(op);
                 let right = self.additive()?;
                 let (a, b) = (left.as_num(), right.as_num());
+                if op == "<=>" {
+                    return Some(Val::Num(match a.partial_cmp(&b)? {
+                        std::cmp::Ordering::Less => -1.0,
+                        std::cmp::Ordering::Equal => 0.0,
+                        std::cmp::Ordering::Greater => 1.0,
+                    }));
+                }
                 let r = match op {
                     "<=" => a <= b,
                     ">=" => a >= b,
@@ -688,6 +769,17 @@ impl<'a> Parser<'a> {
             return Some(Val::Str(
                 self.captures.get(idx.checked_sub(1)?).cloned().unwrap_or_default(),
             ));
+        }
+        // `$$self{Name}` and `$self->{Name}` read the file-level parse state.
+        if self.peek("$$self{") || self.peek("$self->{") {
+            if !self.eat("$$self{") {
+                self.eat("$self->{");
+            }
+            let name = self.ident()?;
+            if !self.eat("}") {
+                return None; // a nested member is state we do not model
+            }
+            return self.state.member(&name);
         }
         // A `my` variable, an element of one, or `$_` inside a `foreach`.
         // An unknown name is state we do not have, and declines.
@@ -843,6 +935,17 @@ impl<'a> Parser<'a> {
                 out.push_str(self.captures.get(idx.checked_sub(1)?)?);
                 continue;
             }
+            if self.s[self.i..].starts_with(b"$$self{") || self.s[self.i..].starts_with(b"$self->{") {
+                if !self.eat("$$self{") {
+                    self.eat("$self->{");
+                }
+                let name = self.ident()?;
+                if !self.eat("}") {
+                    return None;
+                }
+                out.push_str(&self.state.member(&name)?.as_string());
+                continue;
+            }
             // A `my` variable, or a whole array joined by `$"`. An `@` that no
             // name follows is literal text, as it is in Perl.
             if self.s[self.i] == b'$'
@@ -866,7 +969,23 @@ impl<'a> Parser<'a> {
     /// The right-hand side of `=~`: a substitution, a transliteration, or a
     /// match. Perl's `s///` and `tr///` change the variable and return a count;
     /// these conversions then hand `$val` back, so the change has to stick.
-    fn bind_operation(&mut self, negated: bool) -> Option<Val> {
+    fn bind_operation(&mut self, target: &LValue, negated: bool) -> Option<Val> {
+        let subject = self.read_lvalue(target)?;
+        let before = self.i;
+        let r = self.bind_to_value(&subject, negated)?;
+        // `s///` and `tr///` rewrote the subject; put it back where it came
+        // from, which is what makes `$val =~ s/ +$//; $val` work.
+        if self.i != before {
+            let rewritten = std::mem::replace(&mut self.subject_after, None);
+            if let Some(v) = rewritten {
+                self.write_lvalue(target, v)?;
+            }
+        }
+        Some(r)
+    }
+
+    fn bind_to_value(&mut self, subject: &Val, negated: bool) -> Option<Val> {
+        self.subject_after = None;
         self.skip_ws();
         if self.peek("s/") {
             self.eat("s/");
@@ -874,14 +993,14 @@ impl<'a> Parser<'a> {
             let rep = self.delimited('/')?;
             let flags = self.regex_flags();
             let re = build_regex(&pat, &flags)?;
-            let subject = self.val.as_string();
+            let subject = subject.as_string();
             let replaced = if flags.contains('g') {
                 re.replace_all(&subject, perl_replacement(&rep).as_str()).into_owned()
             } else {
                 re.replace(&subject, perl_replacement(&rep).as_str()).into_owned()
             };
             let changed = replaced != subject;
-            self.val = Val::Str(replaced);
+            self.subject_after = Some(Val::Str(replaced));
             return Some(Val::Num(if changed { 1.0 } else { 0.0 }));
         }
         if self.peek("tr/") || self.peek("y/") {
@@ -893,8 +1012,7 @@ impl<'a> Parser<'a> {
             let f: Vec<char> = from.chars().collect();
             let t: Vec<char> = to.chars().collect();
             let mut n = 0usize;
-            let out: String = self
-                .val
+            let out: String = subject
                 .as_string()
                 .chars()
                 .map(|c| match f.iter().position(|x| *x == c) {
@@ -906,7 +1024,7 @@ impl<'a> Parser<'a> {
                     None => c,
                 })
                 .collect();
-            self.val = Val::Str(out);
+            self.subject_after = Some(Val::Str(out));
             return Some(Val::Num(n as f64));
         }
         // A bare match, with or without a leading `m`.
@@ -920,7 +1038,7 @@ impl<'a> Parser<'a> {
         let pat = self.delimited('/')?;
         let flags = self.regex_flags();
         let re = build_regex(&pat, &flags)?;
-        let subject = self.val.as_string();
+        let subject = subject.as_string();
         let hit = match re.captures(&subject) {
             Some(c) => {
                 self.captures = (1..c.len())
@@ -2028,6 +2146,32 @@ mod tests {
                 .as_string(),
             "fefe"
         );
+    }
+
+    /// The file-level parse state, which a conversion reads off the ExifTool
+    /// object. A member the reader does not track declines; one it tracks but
+    /// never set is `undef`, and false, exactly as in Perl.
+    #[test]
+    fn the_parse_state_dictionary() {
+        let mut state: std::collections::HashMap<String, Val> = std::collections::HashMap::new();
+        state.insert("TimecodeScale".to_string(), Val::Num(1_000_000.0));
+        state.insert("Model".to_string(), Val::Str("ILCE-9".into()));
+        state.insert("FacesDetected".to_string(), Val::Undef);
+        let e = "$$self{TimecodeScale} ? $val * $$self{TimecodeScale} / 1e9 : $val";
+        assert_eq!(eval_with(e, &n(500.0), &state).unwrap().as_num(), 0.5);
+        assert_eq!(
+            eval_with("$self->{Model} =~ /^ILCE/ ? 1 : 0", &n(0.0), &state).unwrap().as_num(),
+            1.0
+        );
+        // Tracked but unset: Perl takes the false branch.
+        assert_eq!(
+            eval_with("$$self{FacesDetected} ? \"faces\" : \"none\"", &n(0.0), &state)
+                .unwrap()
+                .as_string(),
+            "none"
+        );
+        // Not tracked at all: refuse rather than answer as if it were unset.
+        assert!(eval_with("$$self{Make} ? 1 : 0", &n(0.0), &state).is_none());
     }
 
     /// `my` variables, the `foreach` modifier that aliases `$_` to each
