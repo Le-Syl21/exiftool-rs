@@ -117,6 +117,7 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
     }
 
     my @fields;
+    my @subdirs;
     for my $rf (@raw_fields) {
         my ($off_s, $fb) = @$rf;
         my $off   = $off_s =~ /^0x/ ? hex($off_s) : int($off_s);
@@ -139,10 +140,38 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
         # conditioned on. Dropping it outright left CameraTemperature with
         # nothing to test.
         my $hidden = $fb =~ /Hidden\s*=>\s*1/ ? 1 : 0;
-        # A field that opens a sub-table of its own is not a scalar to read.
+        # A field can open a table of its own at that offset -- Tag9401 holds
+        # ISOInfo at whichever offset its version says. The block is already
+        # deciphered here, so the nested table reads it as it stands.
         if ($fb =~ /SubDirectory\s*=>/) {
             my ($sub) = $fb =~ /TagTable\s*=>\s*'Image::ExifTool::Sony::(\w+)'/;
-            push @skipped, sprintf("%s 0x%04x: sub-directory into %s", $table, $off, $sub // '?');
+            my ($sfmt, $slen) = $fb =~ /Format\s*=>\s*'(\w+)\[(\d+)\]'/;
+            unless ($sub) {
+                push @skipped, sprintf("%s 0x%04x: sub-directory with no table named",
+                                       $table, $off);
+                next;
+            }
+            unless (defined $slen and defined $sfmt and $sfmt eq 'int8u') {
+                push @skipped, sprintf("%s 0x%04x: sub-directory into %s, of unknown length",
+                                       $table, $off, $sub);
+                next;
+            }
+            my $scond = undef;
+            my ($c_src) = $fb =~ /Condition\s*=>\s*q\{(.*?)\}\s*,/ms;
+            ($c_src) = $fb =~ /Condition\s*=>\s*'([^']*)'/ unless defined $c_src;
+            if (defined $c_src) {
+                $c_src =~ s/\s+/ /g;
+                $c_src =~ s/^ | $//g;
+                my @c = compile_cond($c_src, 'field');
+                unless (@c) {
+                    push @skipped, sprintf("%s 0x%04x: sub-directory into %s, condition -- %s",
+                                           $table, $off, $sub, $c_src);
+                    next;
+                }
+                $scond = $c[0];
+            }
+            push @subdirs, { table => $table, off => $off, sub => $sub,
+                             len => $slen, cond => $scond };
             next;
         }
 
@@ -233,11 +262,21 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
         } elsif ($fb =~ /^\s+%(\w+),\s*$/m and exists $shared{$1}) {
             my $body = $shared{$1};
             ($conv_src) = $body =~ /PrintConv\s*=>\s*\{(.*?)\n\s{4}\}/s;
+        } elsif ($fb =~ /ValueConv\s*=>\s*\\%(\w+)/ and exists $shared{$1}) {
+            # A hash used as a ValueConv rather than a PrintConv: ISOInfo's
+            # three fields are indices into %isoSetting2010, and the ISO speed
+            # they stand for *is* the value. Both end up as the printed text
+            # here, which is what ExifTool shows.
+            $conv_src = $shared{$1};
         }
         if (defined $conv_src) {
             my $cs = $conv_src;
-            while ($cs =~ /(-?\d+|0x[0-9a-fA-F]+)\s*=>\s*'((?:[^'\\]|\\.)*)'/g) {
-                my $k = $1; my $v = $2;
+            # A value is quoted text or a bare number: %isoSetting2010 maps
+            # index 15 to 250, with no quotes, and reading only the quoted
+            # entries left `Auto` and nothing else.
+            while ($cs =~ /(-?\d+|0x[0-9a-fA-F]+)\s*=>\s*(?:'((?:[^'\\]|\\.)*)'|(-?[\d.]+))(?=\s*[,}]|\s*$)/gm) {
+                my $k = $1;
+                my $v = defined $2 ? $2 : $3;
                 $k = $k =~ /^0x/ ? hex($k) : int($k);
                 $v =~ s/\\'/'/g;
                 $conv{$k} = $v;
@@ -263,7 +302,23 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
 
     next unless @fields;
     push @tables, { name => $table, unit => $unit, fields => \@fields, grp2 => $grp2,
-                    enciphered => $enciphered, low_priority => $low_priority };
+                    enciphered => $enciphered, low_priority => $low_priority,
+                    subdirs => \@subdirs };
+}
+
+# A sub-directory can point at a table defined further down the file, so the
+# targets are checked once collection is over rather than as they are seen.
+for my $t (@tables) {
+    my @kept;
+    for my $sd (@{$t->{subdirs}}) {
+        if (grep { $_->{name} eq $sd->{sub} } @tables) {
+            push @kept, $sd;
+        } else {
+            push @skipped, sprintf("%s 0x%04x: sub-directory into %s, which has no table",
+                                   $t->{name}, $sd->{off}, $sd->{sub});
+        }
+    }
+    $t->{subdirs} = \@kept;
 }
 
 # ------------------------------------------------- variant selection (Main)
@@ -895,6 +950,18 @@ for my $t (@tables) {
         }
         printf "%s}\n", $ind;
         print  "    }\n" if defined $f->{re};
+    }
+    for my $sd (@{$t->{subdirs} || []}) {
+        my $ind = "    ";
+        if (defined $sd->{cond}) {
+            printf "%sif %s {\n", $ind, $sd->{cond};
+            $ind = "        ";
+        }
+        printf "%sif let Some(sub) = data.get(0x%x..0x%x + %d) {\n",
+            $ind, $sd->{off}, $sd->{off}, $sd->{len};
+        printf "%s    tags.extend(%s(sub, model));\n", $ind, lc $sd->{sub};
+        printf "%s}\n", $ind;
+        print  "    }\n" if defined $sd->{cond};
     }
     print "    tags\n}\n\n";
 }

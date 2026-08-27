@@ -74,54 +74,55 @@ static MODEL_RE_53: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX1RM3|
 static MODEL_RE_54: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX350|HX400V|HX60V|HX80|HX90|HX90V|QX30|RX10|RX10M2|RX10M3|RX100M3|RX100M4))\\b").unwrap());
 static MODEL_RE_55: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX95|HX99|RX0|RX0M2|RX10M4|RX100M5|RX100M5A|RX100M6))\\b").unwrap());
 static MODEL_RE_56: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX100M7A?|ZV-(1A?|1F|1M2))\\b").unwrap());
-static MODEL_RE_57: LazyLock<Regex> = LazyLock::new(|| Regex::new("^SLT-").unwrap());
-static MODEL_RE_58: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|ZV-)").unwrap());
-static MODEL_RE_59: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-|ILCE-(7RM2|7M3|7RM3A?|7RM4A?|7SM2|6100|6300|6400|6500|6600|7C|9|9M2)|DSC-(HX80|HX90V|HX99|RX0|RX10M2|RX10M3|RX10M4|RX100M4|RX100M5|RX100M5A|RX100M6|RX100M7|WX500)|ZV-)").unwrap());
-static MODEL_RE_60: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-(68|77M2)|ILCE-(5000|5100|6000|7|7R|7S|QX1)|Lusso)\\b").unwrap());
-static MODEL_RE_61: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX100M5|RX100M5A|RX100M6|RX100M7|RX10M4|HX99)|ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9M2)|ZV-E10)").unwrap());
-static MODEL_RE_62: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M2)").unwrap());
-static MODEL_RE_63: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-99M2|ILCE-(6100|6400|6500|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)").unwrap());
-static MODEL_RE_64: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7RM2|7SM2)|DSC-(HX80|HX90V|RX10M2|RX10M3|RX100M4|WX500))").unwrap());
-static MODEL_RE_65: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6300|7RM2|7SM2))").unwrap());
-static MODEL_RE_66: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-99M2|ILCE-6500)").unwrap());
-static MODEL_RE_67: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)").unwrap());
-static MODEL_RE_68: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7|7R)|Lusso)$").unwrap());
-static MODEL_RE_69: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCA-").unwrap());
-static MODEL_RE_70: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6300|6500|7M3|7RM2|7RM3A?|7SM2|9))\\b").unwrap());
-static MODEL_RE_71: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-)").unwrap());
-static MODEL_RE_72: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M5)\\b").unwrap());
-static MODEL_RE_73: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7RM6)\\b").unwrap());
-static MODEL_RE_74: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M5)").unwrap());
-static MODEL_RE_75: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7RM6)").unwrap());
-static MODEL_RE_76: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1|7SM3)|ILME-FX3A?)\\b").unwrap());
-static MODEL_RE_77: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M4)").unwrap());
-static MODEL_RE_78: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|6700|7CM2|7CR|7RM5)|ILME-(FX2|FX30)|ZV-(E1|E10M2))\\b").unwrap());
-static MODEL_RE_79: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|7CM2|7CR|7RM5)|ZV-E1)\\b").unwrap());
-static MODEL_RE_80: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-A(230|290|330|380|390)\\b").unwrap());
-static MODEL_RE_81: LazyLock<Regex> = LazyLock::new(|| Regex::new("^NEX-5N$").unwrap());
-static MODEL_RE_82: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|NEX-(7|VG20E)|Lunar)$").unwrap());
-static MODEL_RE_83: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(37|57)|NEX-F3)$").unwrap());
-static MODEL_RE_84: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX10V|HX20V|HX30V|HX200V|TX66|TX200V|TX300V|WX50|WX70|WX100|WX150))$").unwrap());
-static MODEL_RE_85: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A99V?|HV|SLT-A58|ILCE-(3000|3500)|NEX-(3N|5R|5T|6|VG900|VG30E)|DSC-(RX100|RX1|RX1R)|Stellar)$").unwrap());
-static MODEL_RE_86: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX300|HX50|HX50V|TX30|WX60|WX80|WX200|WX300))$").unwrap());
-static MODEL_RE_87: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX100M2|QX10|QX100))$").unwrap());
-static MODEL_RE_88: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(QX30|RX10|RX100M3|HX60V|HX350|HX400V|WX220|WX350)|ILCE-(7(R|S|M2)?|[56]000|5100|QX1)|ILCA-(68|77M2))\\b").unwrap());
-static MODEL_RE_89: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX0|RX1RM2|RX10M2|RX10M3|RX100M4|RX100M5|HX80|HX90V?|WX500)|ILCE-(6300|6500|7RM2|7SM2)|ILCA-99M2)\\b").unwrap());
-static MODEL_RE_90: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6400A?|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|DSC-(RX10M4|RX100M6|RX100M5A|RX100M7A?|HX95|HX99|RX0M2)|ZV-(1[AF]?|1M2|E10))\\b").unwrap());
-static MODEL_RE_91: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV)").unwrap());
-static MODEL_RE_92: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|ZV-|DSC-(RX10M4|RX100M6|RX100M7|RX100M5A|HX95|HX99|RX0M2|RX1RM3))").unwrap());
-static MODEL_RE_93: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-|ILME-)").unwrap());
-static MODEL_RE_94: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-|DSC-|ZV-)").unwrap());
-static MODEL_RE_95: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCA-(68|77M2)").unwrap());
-static MODEL_RE_96: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(5100|6000|7M2))").unwrap());
-static MODEL_RE_97: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCE-7RM2").unwrap());
-static MODEL_RE_98: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|Stellar|ILCE-(1|6100|6300|6400|6500|6600|6700|7C|7M3|7M4|7M5|7RM2|7RM3A?|7RM4A?|7RM5|7RM6|7SM2|7SM3|9|9M2)|ILCA-99M2|ILME-(FX2|FX3)|ZV-)").unwrap());
-static MODEL_RE_99: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6300|6400A?|6500|6600|7C|7M3|7RM2|7RM3A?|7RM4A?|7SM2|9|9M2)|ILCA-99M2|ZV-E10)\\b").unwrap());
-static MODEL_RE_100: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1\\b|7M4|7RM5|7SM3)|ILME-FX3)").unwrap());
-static MODEL_RE_101: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6700|7CM2|7CR)|ILME-FX2|ZV-(E1|E10M2))\\b").unwrap());
-static MODEL_RE_102: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|Lunar|ZV-E10|ZV-E10M2|ZV-E1)\\b").unwrap());
-static MODEL_RE_103: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSC-(RX10M4|RX100M6|RX100M7|RX100M5A|HX95|HX99|RX0M2|RX1RM3)").unwrap());
-static MODEL_RE_104: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX1RM3)\\b").unwrap());
+static MODEL_RE_57: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ZV-1M2").unwrap());
+static MODEL_RE_58: LazyLock<Regex> = LazyLock::new(|| Regex::new("^SLT-").unwrap());
+static MODEL_RE_59: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|ZV-)").unwrap());
+static MODEL_RE_60: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-|ILCE-(7RM2|7M3|7RM3A?|7RM4A?|7SM2|6100|6300|6400|6500|6600|7C|9|9M2)|DSC-(HX80|HX90V|HX99|RX0|RX10M2|RX10M3|RX10M4|RX100M4|RX100M5|RX100M5A|RX100M6|RX100M7|WX500)|ZV-)").unwrap());
+static MODEL_RE_61: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-(68|77M2)|ILCE-(5000|5100|6000|7|7R|7S|QX1)|Lusso)\\b").unwrap());
+static MODEL_RE_62: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX100M5|RX100M5A|RX100M6|RX100M7|RX10M4|HX99)|ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9M2)|ZV-E10)").unwrap());
+static MODEL_RE_63: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M2)").unwrap());
+static MODEL_RE_64: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-99M2|ILCE-(6100|6400|6500|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)").unwrap());
+static MODEL_RE_65: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7RM2|7SM2)|DSC-(HX80|HX90V|RX10M2|RX10M3|RX100M4|WX500))").unwrap());
+static MODEL_RE_66: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6300|7RM2|7SM2))").unwrap());
+static MODEL_RE_67: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-99M2|ILCE-6500)").unwrap());
+static MODEL_RE_68: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)").unwrap());
+static MODEL_RE_69: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7|7R)|Lusso)$").unwrap());
+static MODEL_RE_70: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCA-").unwrap());
+static MODEL_RE_71: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6300|6500|7M3|7RM2|7RM3A?|7SM2|9))\\b").unwrap());
+static MODEL_RE_72: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-)").unwrap());
+static MODEL_RE_73: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M5)\\b").unwrap());
+static MODEL_RE_74: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7RM6)\\b").unwrap());
+static MODEL_RE_75: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M5)").unwrap());
+static MODEL_RE_76: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7RM6)").unwrap());
+static MODEL_RE_77: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1|7SM3)|ILME-FX3A?)\\b").unwrap());
+static MODEL_RE_78: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M4)").unwrap());
+static MODEL_RE_79: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|6700|7CM2|7CR|7RM5)|ILME-(FX2|FX30)|ZV-(E1|E10M2))\\b").unwrap());
+static MODEL_RE_80: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|7CM2|7CR|7RM5)|ZV-E1)\\b").unwrap());
+static MODEL_RE_81: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-A(230|290|330|380|390)\\b").unwrap());
+static MODEL_RE_82: LazyLock<Regex> = LazyLock::new(|| Regex::new("^NEX-5N$").unwrap());
+static MODEL_RE_83: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|NEX-(7|VG20E)|Lunar)$").unwrap());
+static MODEL_RE_84: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(37|57)|NEX-F3)$").unwrap());
+static MODEL_RE_85: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX10V|HX20V|HX30V|HX200V|TX66|TX200V|TX300V|WX50|WX70|WX100|WX150))$").unwrap());
+static MODEL_RE_86: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A99V?|HV|SLT-A58|ILCE-(3000|3500)|NEX-(3N|5R|5T|6|VG900|VG30E)|DSC-(RX100|RX1|RX1R)|Stellar)$").unwrap());
+static MODEL_RE_87: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX300|HX50|HX50V|TX30|WX60|WX80|WX200|WX300))$").unwrap());
+static MODEL_RE_88: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX100M2|QX10|QX100))$").unwrap());
+static MODEL_RE_89: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(QX30|RX10|RX100M3|HX60V|HX350|HX400V|WX220|WX350)|ILCE-(7(R|S|M2)?|[56]000|5100|QX1)|ILCA-(68|77M2))\\b").unwrap());
+static MODEL_RE_90: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX0|RX1RM2|RX10M2|RX10M3|RX100M4|RX100M5|HX80|HX90V?|WX500)|ILCE-(6300|6500|7RM2|7SM2)|ILCA-99M2)\\b").unwrap());
+static MODEL_RE_91: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6400A?|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|DSC-(RX10M4|RX100M6|RX100M5A|RX100M7A?|HX95|HX99|RX0M2)|ZV-(1[AF]?|1M2|E10))\\b").unwrap());
+static MODEL_RE_92: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV)").unwrap());
+static MODEL_RE_93: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|ZV-|DSC-(RX10M4|RX100M6|RX100M7|RX100M5A|HX95|HX99|RX0M2|RX1RM3))").unwrap());
+static MODEL_RE_94: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-|ILME-)").unwrap());
+static MODEL_RE_95: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-|DSC-|ZV-)").unwrap());
+static MODEL_RE_96: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCA-(68|77M2)").unwrap());
+static MODEL_RE_97: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(5100|6000|7M2))").unwrap());
+static MODEL_RE_98: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCE-7RM2").unwrap());
+static MODEL_RE_99: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|Stellar|ILCE-(1|6100|6300|6400|6500|6600|6700|7C|7M3|7M4|7M5|7RM2|7RM3A?|7RM4A?|7RM5|7RM6|7SM2|7SM3|9|9M2)|ILCA-99M2|ILME-(FX2|FX3)|ZV-)").unwrap());
+static MODEL_RE_100: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6300|6400A?|6500|6600|7C|7M3|7RM2|7RM3A?|7RM4A?|7SM2|9|9M2)|ILCA-99M2|ZV-E10)\\b").unwrap());
+static MODEL_RE_101: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1\\b|7M4|7RM5|7SM3)|ILME-FX3)").unwrap());
+static MODEL_RE_102: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6700|7CM2|7CR)|ILME-FX2|ZV-(E1|E10M2))\\b").unwrap());
+static MODEL_RE_103: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|Lunar|ZV-E10|ZV-E10M2|ZV-E1)\\b").unwrap());
+static MODEL_RE_104: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSC-(RX10M4|RX100M6|RX100M7|RX100M5A|HX95|HX99|RX0M2|RX1RM3)").unwrap());
+static MODEL_RE_105: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX1RM3)\\b").unwrap());
 
 fn u8_at(d: &[u8], o: usize) -> Option<u8> { d.get(o).copied() }
 fn i8_at(d: &[u8], o: usize) -> Option<i8> { d.get(o).map(|v| *v as i8) }
@@ -228,19 +229,19 @@ pub fn main_tag_name(
     let _ = (data, count, format);
     match tag {
         0x2020 => {
-            if !MODEL_RE_94.is_match(model) {
+            if !MODEL_RE_95.is_match(model) {
                 return Some(Some("AFPointsUsed"));
             }
-            if MODEL_RE_95.is_match(model) {
+            if MODEL_RE_96.is_match(model) {
                 return Some(Some("AFPointsUsed"));
             }
             Some(None)
         }
         0x2022 => {
-            if MODEL_RE_96.is_match(model) {
+            if MODEL_RE_97.is_match(model) {
                 return Some(Some("FocalPlaneAFPointsUsed"));
             }
-            if MODEL_RE_97.is_match(model) {
+            if MODEL_RE_98.is_match(model) {
                 return Some(Some("FocalPlaneAFPointsUsed"));
             }
             Some(None)
@@ -264,25 +265,25 @@ pub fn main_tag_name(
             Some(None)
         }
         0x201b => {
-            if (!MODEL_RE_20.is_match(model) || MODEL_RE_103.is_match(model)) {
+            if (!MODEL_RE_20.is_match(model) || MODEL_RE_104.is_match(model)) {
                 return Some(Some("FocusMode"));
             }
             Some(None)
         }
         0x201d => {
-            if MODEL_RE_92.is_match(model) {
+            if MODEL_RE_93.is_match(model) {
                 return Some(Some("FlexibleSpotPosition"));
             }
             Some(None)
         }
         0x2021 => {
-            if (!MODEL_RE_20.is_match(model) || MODEL_RE_103.is_match(model)) {
+            if (!MODEL_RE_20.is_match(model) || MODEL_RE_104.is_match(model)) {
                 return Some(Some("AFTracking"));
             }
             Some(None)
         }
         0x205c => {
-            if MODEL_RE_104.is_match(model) {
+            if MODEL_RE_105.is_match(model) {
                 return Some(Some("StepCropShooting"));
             }
             Some(None)
@@ -425,7 +426,7 @@ pub fn variant_for(
             if MODEL_RE_0.is_match(model) {
                 return Some(Variant { table: "ExtraInfo", sets_double_cipher: false });
             }
-            if MODEL_RE_80.is_match(model) {
+            if MODEL_RE_81.is_match(model) {
                 return Some(Variant { table: "ExtraInfo2", sets_double_cipher: false });
             }
             Some(Variant { table: "ExtraInfo3", sets_double_cipher: false })
@@ -437,31 +438,31 @@ pub fn variant_for(
             None
         }
         0x2010 => {
-            if MODEL_RE_81.is_match(model) {
+            if MODEL_RE_82.is_match(model) {
                 return Some(Variant { table: "Tag2010a", sets_double_cipher: false });
             }
-            if MODEL_RE_82.is_match(model) {
+            if MODEL_RE_83.is_match(model) {
                 return Some(Variant { table: "Tag2010b", sets_double_cipher: false });
             }
-            if MODEL_RE_83.is_match(model) {
+            if MODEL_RE_84.is_match(model) {
                 return Some(Variant { table: "Tag2010c", sets_double_cipher: false });
             }
-            if (MODEL_RE_84.is_match(model) && !(panorama)) {
+            if (MODEL_RE_85.is_match(model) && !(panorama)) {
                 return Some(Variant { table: "Tag2010d", sets_double_cipher: false });
             }
-            if (MODEL_RE_85.is_match(model) || (MODEL_RE_86.is_match(model) && !(panorama))) {
+            if (MODEL_RE_86.is_match(model) || (MODEL_RE_87.is_match(model) && !(panorama))) {
                 return Some(Variant { table: "Tag2010e", sets_double_cipher: false });
             }
-            if MODEL_RE_87.is_match(model) {
+            if MODEL_RE_88.is_match(model) {
                 return Some(Variant { table: "Tag2010f", sets_double_cipher: false });
             }
-            if MODEL_RE_88.is_match(model) {
+            if MODEL_RE_89.is_match(model) {
                 return Some(Variant { table: "Tag2010g", sets_double_cipher: false });
             }
-            if MODEL_RE_89.is_match(model) {
+            if MODEL_RE_90.is_match(model) {
                 return Some(Variant { table: "Tag2010h", sets_double_cipher: false });
             }
-            if MODEL_RE_90.is_match(model) {
+            if MODEL_RE_91.is_match(model) {
                 return Some(Variant { table: "Tag2010i", sets_double_cipher: false });
             }
             None
@@ -479,16 +480,16 @@ pub fn variant_for(
             Some(Variant { table: "ShotInfo", sets_double_cipher: false })
         }
         0x9050 => {
-            if !MODEL_RE_98.is_match(model) {
+            if !MODEL_RE_99.is_match(model) {
                 return Some(Variant { table: "Tag9050a", sets_double_cipher: false });
             }
-            if MODEL_RE_99.is_match(model) {
+            if MODEL_RE_100.is_match(model) {
                 return Some(Variant { table: "Tag9050b", sets_double_cipher: false });
             }
-            if MODEL_RE_100.is_match(model) {
+            if MODEL_RE_101.is_match(model) {
                 return Some(Variant { table: "Tag9050c", sets_double_cipher: false });
             }
-            if (MODEL_RE_101.is_match(model) || (MODEL_RE_48.is_match(model) && prefix_matches(data, &[&[0x00], &[0x00], &[0x00], &[0x00], &[0x00]]))) {
+            if (MODEL_RE_102.is_match(model) || (MODEL_RE_48.is_match(model) && prefix_matches(data, &[&[0x00], &[0x00], &[0x00], &[0x00], &[0x00]]))) {
                 return Some(Variant { table: "Tag9050d", sets_double_cipher: false });
             }
             None
@@ -548,13 +549,13 @@ pub fn variant_for(
             None
         }
         0x940a => {
-            if MODEL_RE_91.is_match(model) {
+            if MODEL_RE_92.is_match(model) {
                 return Some(Variant { table: "Tag940a", sets_double_cipher: false });
             }
             None
         }
         0x940c => {
-            if MODEL_RE_102.is_match(model) {
+            if MODEL_RE_103.is_match(model) {
                 return Some(Variant { table: "Tag940c", sets_double_cipher: false });
             }
             None
@@ -11623,6 +11624,41 @@ fn tag9401(data: &[u8], model: &str) -> Vec<Tag> {
             let v = rc.map_or(v, |x| x.as_num() as _);
         }
     }
+    if dm_get(&dm, "Ver9401").is_some_and(|v| v == 181.0) {
+        if let Some(sub) = data.get(0x3e2..0x3e2 + 5) {
+            tags.extend(isoinfo(sub, model));
+        }
+    }
+    if dm_get(&dm, "Ver9401").is_some_and(|v| v == 198.0) {
+        if let Some(sub) = data.get(0x453..0x453 + 5) {
+            tags.extend(isoinfo(sub, model));
+        }
+    }
+    if dm_get(&dm, "Ver9401").is_some_and(|v| v == 148.0) {
+        if let Some(sub) = data.get(0x498..0x498 + 5) {
+            tags.extend(isoinfo(sub, model));
+        }
+    }
+    if (dm_get(&dm, "Ver9401").is_some_and(|v| v == 155.0) && MODEL_RE_57.is_match(model)) {
+        if let Some(sub) = data.get(0x4ba..0x4ba + 5) {
+            tags.extend(isoinfo(sub, model));
+        }
+    }
+    if dm_get(&dm, "Ver9401").is_some_and(|v| v == 68.0) {
+        if let Some(sub) = data.get(0x634..0x634 + 5) {
+            tags.extend(isoinfo(sub, model));
+        }
+    }
+    if dm_get(&dm, "Ver9401").is_some_and(|v| v == 78.0) {
+        if let Some(sub) = data.get(0x64c..0x64c + 5) {
+            tags.extend(isoinfo(sub, model));
+        }
+    }
+    if dm_get(&dm, "Ver9401").is_some_and(|v| v == 90.0) {
+        if let Some(sub) = data.get(0x653..0x653 + 5) {
+            tags.extend(isoinfo(sub, model));
+        }
+    }
     tags
 }
 
@@ -11635,15 +11671,153 @@ fn isoinfo(data: &[u8], model: &str) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = u8_at(data, 0x0) {
         dm.push(("ISOSetting", f64::from(v)));
-        tags.push(mk_prio("ISOSetting", v.to_string(), Value::I32(v as i32), GRP2, PRIO));
+        let s = match v as i64 {
+            0 => "Auto".to_string(),
+            5 => "25".to_string(),
+            7 => "40".to_string(),
+            8 => "50".to_string(),
+            9 => "64".to_string(),
+            10 => "80".to_string(),
+            11 => "100".to_string(),
+            12 => "125".to_string(),
+            13 => "160".to_string(),
+            14 => "200".to_string(),
+            15 => "250".to_string(),
+            16 => "320".to_string(),
+            17 => "400".to_string(),
+            18 => "500".to_string(),
+            19 => "640".to_string(),
+            20 => "800".to_string(),
+            21 => "1000".to_string(),
+            22 => "1250".to_string(),
+            23 => "1600".to_string(),
+            24 => "2000".to_string(),
+            25 => "2500".to_string(),
+            26 => "3200".to_string(),
+            27 => "4000".to_string(),
+            28 => "5000".to_string(),
+            29 => "6400".to_string(),
+            30 => "8000".to_string(),
+            31 => "10000".to_string(),
+            32 => "12800".to_string(),
+            33 => "16000".to_string(),
+            34 => "20000".to_string(),
+            35 => "25600".to_string(),
+            36 => "32000".to_string(),
+            37 => "40000".to_string(),
+            38 => "51200".to_string(),
+            39 => "64000".to_string(),
+            40 => "80000".to_string(),
+            41 => "102400".to_string(),
+            42 => "128000".to_string(),
+            43 => "160000".to_string(),
+            44 => "204800".to_string(),
+            45 => "256000".to_string(),
+            46 => "320000".to_string(),
+            47 => "409600".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk_prio("ISOSetting", s, Value::I32(v as i32), GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x2) {
         dm.push(("ISOAutoMin", f64::from(v)));
-        tags.push(mk_prio("ISOAutoMin", v.to_string(), Value::I32(v as i32), GRP2, PRIO));
+        let s = match v as i64 {
+            0 => "Auto".to_string(),
+            5 => "25".to_string(),
+            7 => "40".to_string(),
+            8 => "50".to_string(),
+            9 => "64".to_string(),
+            10 => "80".to_string(),
+            11 => "100".to_string(),
+            12 => "125".to_string(),
+            13 => "160".to_string(),
+            14 => "200".to_string(),
+            15 => "250".to_string(),
+            16 => "320".to_string(),
+            17 => "400".to_string(),
+            18 => "500".to_string(),
+            19 => "640".to_string(),
+            20 => "800".to_string(),
+            21 => "1000".to_string(),
+            22 => "1250".to_string(),
+            23 => "1600".to_string(),
+            24 => "2000".to_string(),
+            25 => "2500".to_string(),
+            26 => "3200".to_string(),
+            27 => "4000".to_string(),
+            28 => "5000".to_string(),
+            29 => "6400".to_string(),
+            30 => "8000".to_string(),
+            31 => "10000".to_string(),
+            32 => "12800".to_string(),
+            33 => "16000".to_string(),
+            34 => "20000".to_string(),
+            35 => "25600".to_string(),
+            36 => "32000".to_string(),
+            37 => "40000".to_string(),
+            38 => "51200".to_string(),
+            39 => "64000".to_string(),
+            40 => "80000".to_string(),
+            41 => "102400".to_string(),
+            42 => "128000".to_string(),
+            43 => "160000".to_string(),
+            44 => "204800".to_string(),
+            45 => "256000".to_string(),
+            46 => "320000".to_string(),
+            47 => "409600".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk_prio("ISOAutoMin", s, Value::I32(v as i32), GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x4) {
         dm.push(("ISOAutoMax", f64::from(v)));
-        tags.push(mk_prio("ISOAutoMax", v.to_string(), Value::I32(v as i32), GRP2, PRIO));
+        let s = match v as i64 {
+            0 => "Auto".to_string(),
+            5 => "25".to_string(),
+            7 => "40".to_string(),
+            8 => "50".to_string(),
+            9 => "64".to_string(),
+            10 => "80".to_string(),
+            11 => "100".to_string(),
+            12 => "125".to_string(),
+            13 => "160".to_string(),
+            14 => "200".to_string(),
+            15 => "250".to_string(),
+            16 => "320".to_string(),
+            17 => "400".to_string(),
+            18 => "500".to_string(),
+            19 => "640".to_string(),
+            20 => "800".to_string(),
+            21 => "1000".to_string(),
+            22 => "1250".to_string(),
+            23 => "1600".to_string(),
+            24 => "2000".to_string(),
+            25 => "2500".to_string(),
+            26 => "3200".to_string(),
+            27 => "4000".to_string(),
+            28 => "5000".to_string(),
+            29 => "6400".to_string(),
+            30 => "8000".to_string(),
+            31 => "10000".to_string(),
+            32 => "12800".to_string(),
+            33 => "16000".to_string(),
+            34 => "20000".to_string(),
+            35 => "25600".to_string(),
+            36 => "32000".to_string(),
+            37 => "40000".to_string(),
+            38 => "51200".to_string(),
+            39 => "64000".to_string(),
+            40 => "80000".to_string(),
+            41 => "102400".to_string(),
+            42 => "128000".to_string(),
+            43 => "160000".to_string(),
+            44 => "204800".to_string(),
+            45 => "256000".to_string(),
+            46 => "320000".to_string(),
+            47 => "409600".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk_prio("ISOAutoMax", s, Value::I32(v as i32), GRP2, PRIO));
     }
     tags
 }
@@ -11793,7 +11967,7 @@ fn tag9404a(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk_prio("IntelligentAuto", s, Value::I32(v as i32), GRP2, PRIO));
     }
-    if !MODEL_RE_57.is_match(model) {
+    if !MODEL_RE_58.is_match(model) {
         if let Some(v) = u16_at(data, 0x19) {
             dm.push(("LensZoomPosition", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
@@ -12376,7 +12550,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
         if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
         tags.push(mk_prio("SonyExposureTime2", cv.as_string(), raw, GRP2, PRIO));
     }
-    if !MODEL_RE_58.is_match(model) {
+    if !MODEL_RE_59.is_match(model) {
         if let Some(v) = u16_at(data, 0x14) {
             dm.push(("SonyFNumber", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
@@ -12914,7 +13088,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if !MODEL_RE_59.is_match(model) {
+    if !MODEL_RE_60.is_match(model) {
         if let Some(v) = u16_at(data, 0x342) {
             dm.push(("LensZoomPosition", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
@@ -12923,7 +13097,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO));
         }
     }
-    if MODEL_RE_60.is_match(model) {
+    if MODEL_RE_61.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..16 {
@@ -12938,7 +13112,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_61.is_match(model) {
+    if MODEL_RE_62.is_match(model) {
         if let Some(v) = u16_at(data, 0x34e) {
             dm.push(("LensZoomPosition", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
@@ -12947,7 +13121,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO));
         }
     }
-    if MODEL_RE_62.is_match(model) {
+    if MODEL_RE_63.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..16 {
@@ -12962,7 +13136,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_64.is_match(model) {
+    if MODEL_RE_65.is_match(model) {
         if let Some(v) = u16_at(data, 0x35a) {
             dm.push(("LensZoomPosition", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
@@ -12971,7 +13145,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO));
         }
     }
-    if MODEL_RE_63.is_match(model) {
+    if MODEL_RE_64.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..16 {
@@ -12986,7 +13160,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_65.is_match(model) {
+    if MODEL_RE_66.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..16 {
@@ -13001,7 +13175,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_60.is_match(model) {
+    if MODEL_RE_61.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -13016,7 +13190,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_62.is_match(model) {
+    if MODEL_RE_63.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -13031,7 +13205,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_65.is_match(model) {
+    if MODEL_RE_66.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -13046,7 +13220,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_66.is_match(model) {
+    if MODEL_RE_67.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -13061,7 +13235,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_67.is_match(model) {
+    if MODEL_RE_68.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -13112,7 +13286,7 @@ fn tag9406(data: &[u8], model: &str) -> Vec<Tag> {
         if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
         tags.push(mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO));
     }
-    if !MODEL_RE_68.is_match(model) {
+    if !MODEL_RE_69.is_match(model) {
         if let Some(v) = u8_at(data, 0x8) {
             dm.push(("BatteryLevelGrip2", f64::from(v)));
             let rc = conv_expr::eval("($val and $val != 255) ? $val : undef", &Conv::Num(f64::from(v)));
@@ -13592,13 +13766,13 @@ fn afinfo(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("AFType", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if !MODEL_RE_69.is_match(model) {
+    if !MODEL_RE_70.is_match(model) {
         if let Some(v) = u8_at(data, 0x4) {
             dm.push(("AFStatusActiveSensor", f64::from(v)));
             tags.push(mk_prio("AFStatusActiveSensor", v.to_string(), Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if MODEL_RE_69.is_match(model) {
+    if MODEL_RE_70.is_match(model) {
         if let Some(v) = u8_at(data, 0x5) {
             dm.push(("FocusMode", f64::from(v)));
             let s = match v as i64 {
@@ -13612,7 +13786,7 @@ fn afinfo(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if !MODEL_RE_69.is_match(model) {
+    if !MODEL_RE_70.is_match(model) {
         if let Some(v) = u8_at(data, 0xa) {
             dm.push(("AFAreaMode", f64::from(v)));
             let s = match v as i64 {
@@ -13625,7 +13799,7 @@ fn afinfo(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if !MODEL_RE_69.is_match(model) {
+    if !MODEL_RE_70.is_match(model) {
         if let Some(v) = u8_at(data, 0xb) {
             dm.push(("FocusMode", f64::from(v)));
             let s = match v as i64 {
@@ -13640,7 +13814,7 @@ fn afinfo(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if MODEL_RE_69.is_match(model) {
+    if MODEL_RE_70.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..10 {
@@ -13970,7 +14144,7 @@ fn afinfo(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("AFPointAtShutterRelease", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if MODEL_RE_69.is_match(model) {
+    if MODEL_RE_70.is_match(model) {
         if let Some(v) = u8_at(data, 0x3a) {
             dm.push(("AFAreaMode", f64::from(v)));
             let s = match v as i64 {
@@ -13984,13 +14158,13 @@ fn afinfo(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if MODEL_RE_69.is_match(model) {
+    if MODEL_RE_70.is_match(model) {
         if let Some(v) = u8_at(data, 0x3b) {
             dm.push(("AFStatusActiveSensor", f64::from(v)));
             tags.push(mk_prio("AFStatusActiveSensor", v.to_string(), Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if MODEL_RE_69.is_match(model) {
+    if MODEL_RE_70.is_match(model) {
         if let Some(v) = u8_at(data, 0x43) {
             dm.push(("ExposureProgram", f64::from(v)));
             let s = match v as i64 {
@@ -14032,13 +14206,13 @@ fn afinfo(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if MODEL_RE_69.is_match(model) {
+    if MODEL_RE_70.is_match(model) {
         if let Some(v) = i8_at(data, 0x50) {
             dm.push(("AFMicroAdj", f64::from(v)));
             tags.push(mk_prio("AFMicroAdj", v.to_string(), Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if !MODEL_RE_69.is_match(model) {
+    if !MODEL_RE_70.is_match(model) {
         if let Some(v) = u32_at(data, 0x16e) {
             dm.push(("AFPointsUsed", f64::from(v)));
             let s = match v as i64 {
@@ -14066,13 +14240,13 @@ fn afinfo(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("AFPointsUsed", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if !MODEL_RE_69.is_match(model) {
+    if !MODEL_RE_70.is_match(model) {
         if let Some(v) = i8_at(data, 0x17d) {
             dm.push(("AFMicroAdj", f64::from(v)));
             tags.push(mk_prio("AFMicroAdj", v.to_string(), Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if !MODEL_RE_69.is_match(model) {
+    if !MODEL_RE_70.is_match(model) {
         if let Some(v) = u8_at(data, 0x17e) {
             dm.push(("ExposureProgram", f64::from(v)));
             let s = match v as i64 {
@@ -14880,7 +15054,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk_prio("CreativeStyle", s, Value::I32(v as i32), GRP2, PRIO));
     }
-    if !MODEL_RE_71.is_match(model) {
+    if !MODEL_RE_72.is_match(model) {
         if let Some(v) = u8_at(data, 0x48) {
             dm.push(("LensMount", f64::from(v)));
             let s = match v as i64 {
@@ -14893,7 +15067,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if !MODEL_RE_71.is_match(model) {
+    if !MODEL_RE_72.is_match(model) {
         if let Some(v) = u8_at(data, 0x49) {
             dm.push(("LensFormat", f64::from(v)));
             let s = match v as i64 {
@@ -15296,7 +15470,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO));
         }
     }
-    if MODEL_RE_72.is_match(model) {
+    if MODEL_RE_73.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -15311,7 +15485,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_73.is_match(model) {
+    if MODEL_RE_74.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -15326,7 +15500,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_74.is_match(model) {
+    if MODEL_RE_75.is_match(model) {
         if let Some(v) = u8_at(data, 0x74a) {
             dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
@@ -15337,7 +15511,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if MODEL_RE_75.is_match(model) {
+    if MODEL_RE_76.is_match(model) {
         if let Some(v) = u8_at(data, 0x74f) {
             dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
@@ -15348,7 +15522,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if MODEL_RE_74.is_match(model) {
+    if MODEL_RE_75.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -15363,7 +15537,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_75.is_match(model) {
+    if MODEL_RE_76.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -15378,7 +15552,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_76.is_match(model) {
+    if MODEL_RE_77.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..16 {
@@ -15393,7 +15567,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_77.is_match(model) {
+    if MODEL_RE_78.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..16 {
@@ -15408,7 +15582,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_78.is_match(model) {
+    if MODEL_RE_79.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -15423,7 +15597,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_76.is_match(model) {
+    if MODEL_RE_77.is_match(model) {
         if let Some(v) = u8_at(data, 0x8b5) {
             dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
@@ -15434,7 +15608,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if MODEL_RE_77.is_match(model) {
+    if MODEL_RE_78.is_match(model) {
         if let Some(v) = u8_at(data, 0x8b7) {
             dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
@@ -15445,7 +15619,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if MODEL_RE_79.is_match(model) {
+    if MODEL_RE_80.is_match(model) {
         if let Some(v) = u8_at(data, 0x8e5) {
             dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
@@ -15456,7 +15630,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO));
         }
     }
-    if MODEL_RE_76.is_match(model) {
+    if MODEL_RE_77.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -15471,7 +15645,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_77.is_match(model) {
+    if MODEL_RE_78.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -15486,7 +15660,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
         }
     }
-    if MODEL_RE_78.is_match(model) {
+    if MODEL_RE_79.is_match(model) {
         {
             let mut parts = Vec::new();
             for k in 0..32 {
@@ -15999,5 +16173,6 @@ mod tests {
         LazyLock::force(&MODEL_RE_102);
         LazyLock::force(&MODEL_RE_103);
         LazyLock::force(&MODEL_RE_104);
+        LazyLock::force(&MODEL_RE_105);
     }
 }
