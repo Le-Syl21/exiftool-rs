@@ -428,6 +428,12 @@ impl ExifReader {
             }
         }
 
+        // Sony hangs a private IFD off the same tag, and reaching it does not
+        // depend on whether a MakerNote was found: a raw file has both.
+        if make.to_ascii_uppercase().starts_with("SONY") {
+            Self::parse_sony_sr2(data, &header, &mut tags);
+        }
+
         // DNG PrivateData (0xC634): parse Adobe MakN for MakerNotes if no MakerNote found
         if mn_info.is_none() {
             // Scan for DNGPrivateData in tags — look for "Adobe\0" header
@@ -633,6 +639,31 @@ impl ExifReader {
     }
 
     /// Find MakerNote (tag 0x927C) offset and size in ExifIFD.
+    /// Read Sony's private IFD, hung off DNGPrivateData (0xC634).
+    ///
+    /// Sony writes the tag as a single int32u whose value is where that IFD
+    /// starts, rather than as the byte block Adobe puts there.
+    fn parse_sony_sr2(data: &[u8], header: &TiffHeader, tags: &mut Vec<Tag>) {
+        let ifd0 = header.ifd0_offset as usize;
+        if ifd0 + 2 > data.len() {
+            return;
+        }
+        let count = read_u16(data, ifd0, header.byte_order) as usize;
+        for i in 0..count {
+            let e = ifd0 + 2 + i * 12;
+            if e + 12 > data.len() {
+                break;
+            }
+            if read_u16(data, e, header.byte_order) != 0xC634 {
+                continue;
+            }
+            let private_offset = read_u32(data, e + 8, header.byte_order) as usize;
+            let le = header.byte_order == ByteOrderMark::LittleEndian;
+            tags.extend(crate::metadata::sony_sr2::read(data, private_offset, le));
+            return;
+        }
+    }
+
     /// Parse DNG PrivateData (0xC634) to extract embedded MakerNotes
     fn parse_dng_private_data(
         data: &[u8],

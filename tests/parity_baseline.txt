@@ -25,7 +25,6 @@ SonyILCE9.arw	missing	BaseISO
 SonyILCE9.arw	missing	BatteryLevel
 SonyILCE9.arw	missing	BatteryTemperature
 SonyILCE9.arw	missing	CameraTemperature
-SonyILCE9.arw	missing	ColorMatrix
 SonyILCE9.arw	missing	DistortionCorrectionSetting
 SonyILCE9.arw	missing	FaceInfoLength
 SonyILCE9.arw	missing	FaceInfoOffset
@@ -56,9 +55,6 @@ SonyILCE9.arw	missing	PreviewImageLength
 SonyILCE9.arw	missing	PreviewImageStart
 SonyILCE9.arw	missing	Quality2
 SonyILCE9.arw	missing	ReleaseMode3
-SonyILCE9.arw	missing	SR2SubIFDKey
-SonyILCE9.arw	missing	SR2SubIFDLength
-SonyILCE9.arw	missing	SR2SubIFDOffset
 SonyILCE9.arw	missing	SelfTimer
 SonyILCE9.arw	missing	SequenceFileNumber
 SonyILCE9.arw	missing	SequenceImageNumber
@@ -71,18 +67,3 @@ SonyILCE9.arw	missing	SonyImageWidth
 SonyILCE9.arw	missing	SonyImageWidthMax
 SonyILCE9.arw	missing	SonyMaxApertureValue
 SonyILCE9.arw	missing	StopsAboveBaseISO
-SonyILCE9.arw	missing	WB_RGBLevels2500K
-SonyILCE9.arw	missing	WB_RGBLevels3200K
-SonyILCE9.arw	missing	WB_RGBLevels4500K
-SonyILCE9.arw	missing	WB_RGBLevels6000K
-SonyILCE9.arw	missing	WB_RGBLevels8500K
-SonyILCE9.arw	missing	WB_RGBLevelsCloudy
-SonyILCE9.arw	missing	WB_RGBLevelsDaylight
-SonyILCE9.arw	missing	WB_RGBLevelsFlash
-SonyILCE9.arw	missing	WB_RGBLevelsFluorescent
-SonyILCE9.arw	missing	WB_RGBLevelsFluorescentM1
-SonyILCE9.arw	missing	WB_RGBLevelsFluorescentP1
-SonyILCE9.arw	missing	WB_RGBLevelsFluorescentP2
-SonyILCE9.arw	missing	WB_RGBLevelsShade
-SonyILCE9.arw	missing	WB_RGBLevelsTungsten
-SonyILCE9.arw	missing	WB_RGGBLevelsAuto

@@ -8,7 +8,6 @@ SonyILCE9.arw	AFPointSelected
 SonyILCE9.arw	Anti-Blur
 SonyILCE9.arw	CameraE-mountVersion
 SonyILCE9.arw	ColorTemperature
-SonyILCE9.arw	DistortionCorrParams
 SonyILCE9.arw	FileFormat
 SonyILCE9.arw	FullImageSize
 SonyILCE9.arw	HDR
@@ -29,4 +28,3 @@ SonyILCE9.arw	VariableLowPassFilter
 SonyILCE9.arw	WBShiftAB_GM
 SonyILCE9.arw	WBShiftAB_GM_Precise
 SonyILCE9.arw	WB_RGBLevels
-SonyILCE9.arw	WhiteLevel

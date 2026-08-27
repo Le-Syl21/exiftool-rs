@@ -5,6 +5,7 @@ pub mod makernotes;
 pub mod nikon_capture;
 pub mod nikon_decrypt;
 pub mod sony_decrypt;
+pub mod sony_sr2;
 pub mod xmp;
 
 pub use exif::ExifReader;
