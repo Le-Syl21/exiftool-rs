@@ -7,7 +7,7 @@
 //! and addressed by byte offset. Model conditions are carried over from the
 //! Perl source verbatim rather than translated, so they cannot drift from it.
 //!
-//! Tables: 59, fields: 1017.
+//! Tables: 59, fields: 1022.
 
 use std::sync::LazyLock;
 
@@ -9848,7 +9848,7 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         }
     }
     if let Some(v) = u8_at(data, 0x31) {
-        dm.push(("FlashStatus".to_string(), f64::from(v)));
+        dm.push(("FlashFired".to_string(), f64::from(v)));
         let rc = conv_expr::eval("$$self{FlashFired} = $val", &Conv::Num(f64::from(v)));
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -9920,6 +9920,17 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             other => other.to_string(),
         };
         tags.push(mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO));
+    }
+    if (MODEL_RE_23.is_match(model) && dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1)) {
+        if let Some(v) = u32_at(data, 0x4c) {
+            dm.push(("ShutterCount2".to_string(), f64::from(v)));
+            let rc = conv_expr::eval("$val & 0x00ffffff", &Conv::Num(f64::from(v)));
+            if rc.as_ref() != Some(&Conv::Undef) {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let v = rc.map_or(v, |x| x.as_num() as _);
+                tags.push(mk_prio("ShutterCount2", v.to_string(), Value::I32(v as i32), GRP2, PRIO));
+            }
+        }
     }
     if MODEL_RE_23.is_match(model) {
         if let Some(text) = text_at(data, 0x51, 6, false) {
@@ -10418,7 +10429,7 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         }
     }
     if let Some(v) = u8_at(data, 0x39) {
-        dm.push(("FlashStatus".to_string(), f64::from(v)));
+        dm.push(("FlashFired".to_string(), f64::from(v)));
         let rc = conv_expr::eval("$$self{FlashFired} = $val", &Conv::Num(f64::from(v)));
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -10490,6 +10501,39 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             other => other.to_string(),
         };
         tags.push(mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO));
+    }
+    if (dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1) && (MODEL_RE_32.is_match(model) || MODEL_RE_33.is_match(&crate::metadata::exif::software()))) {
+        if let Some(v) = u32_at(data, 0x50) {
+            dm.push(("ShutterCount2".to_string(), f64::from(v)));
+            let rc = conv_expr::eval("$val & 0x00ffffff", &Conv::Num(f64::from(v)));
+            if rc.as_ref() != Some(&Conv::Undef) {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let v = rc.map_or(v, |x| x.as_num() as _);
+                tags.push(mk_prio("ShutterCount2", v.to_string(), Value::I32(v as i32), GRP2, PRIO));
+            }
+        }
+    }
+    if (dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1) && MODEL_RE_34.is_match(model)) {
+        if let Some(v) = u32_at(data, 0x52) {
+            dm.push(("ShutterCount2".to_string(), f64::from(v)));
+            let rc = conv_expr::eval("$val & 0x00ffffff", &Conv::Num(f64::from(v)));
+            if rc.as_ref() != Some(&Conv::Undef) {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let v = rc.map_or(v, |x| x.as_num() as _);
+                tags.push(mk_prio("ShutterCount2", v.to_string(), Value::I32(v as i32), GRP2, PRIO));
+            }
+        }
+    }
+    if (dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1) && (!MODEL_RE_35.is_match(model) && !MODEL_RE_33.is_match(&crate::metadata::exif::software()))) {
+        if let Some(v) = u32_at(data, 0x58) {
+            dm.push(("ShutterCount2".to_string(), f64::from(v)));
+            let rc = conv_expr::eval("$val & 0x00ffffff", &Conv::Num(f64::from(v)));
+            if rc.as_ref() != Some(&Conv::Undef) {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let v = rc.map_or(v, |x| x.as_num() as _);
+                tags.push(mk_prio("ShutterCount2", v.to_string(), Value::I32(v as i32), GRP2, PRIO));
+            }
+        }
     }
     if !MODEL_RE_36.is_match(model) {
         if let Some(text) = text_at(data, 0x61, 2, false) {
@@ -11056,7 +11100,7 @@ fn tag9050c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         }
     }
     if let Some(v) = u8_at(data, 0x39) {
-        dm.push(("FlashStatus".to_string(), f64::from(v)));
+        dm.push(("FlashFired".to_string(), f64::from(v)));
         let rc = conv_expr::eval("$$self{FlashFired} = $val", &Conv::Num(f64::from(v)));
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -11128,6 +11172,17 @@ fn tag9050c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             other => other.to_string(),
         };
         tags.push(mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO));
+    }
+    if dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1) {
+        if let Some(v) = u32_at(data, 0x50) {
+            dm.push(("ShutterCount2".to_string(), f64::from(v)));
+            let rc = conv_expr::eval("$val & 0x00ffffff", &Conv::Num(f64::from(v)));
+            if rc.as_ref() != Some(&Conv::Undef) {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let v = rc.map_or(v, |x| x.as_num() as _);
+                tags.push(mk_prio("ShutterCount2", v.to_string(), Value::I32(v as i32), GRP2, PRIO));
+            }
+        }
     }
     if let Some(v) = u16_at(data, 0x66) {
         dm.push(("SonyExposureTime".to_string(), f64::from(v)));
@@ -13473,7 +13528,7 @@ fn tag940c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let mut tags = Vec::new();
     let _ = &dm;
     if let Some(v) = u8_at(data, 0x8) {
-        dm.push(("LensMount2".to_string(), f64::from(v)));
+        dm.push(("LensMount".to_string(), f64::from(v)));
         let rc = conv_expr::eval("$$self{LensMount} = $val", &Conv::Num(f64::from(v)));
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]

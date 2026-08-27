@@ -48,7 +48,6 @@ SonyILCE9.arw	default	missing	0	PixelShiftInfo	n/a
 SonyILCE9.arw	default	missing	0	PreviewImageSize	1616x1080
 SonyILCE9.arw	default	missing	0	Quality	RAW
 SonyILCE9.arw	default	missing	0	Shutter	Mechanical (2858 5239 6643)
-SonyILCE9.arw	default	missing	0	ShutterCount2	105978
 SonyILCE9.arw	default	missing	0	SonyModelID	ILCE-9
 SonyILCE9.arw	default	missing	0	VariableLowPassFilter	n/a
 SonyILCE9.arw	default	missing	0	WBShiftAB_GM_Precise	0.00 0.00
@@ -136,7 +135,6 @@ SonyILCE9.arw	ee	missing	0	SequenceImageNumber	1
 SonyILCE9.arw	ee	missing	0	SequenceLength	1 shot
 SonyILCE9.arw	ee	missing	0	Sharpness	0
 SonyILCE9.arw	ee	missing	0	Shutter	Mechanical (2858 5239 6643)
-SonyILCE9.arw	ee	missing	0	ShutterCount2	105978
 SonyILCE9.arw	ee	missing	0	SonyFNumber	8.0
 SonyILCE9.arw	ee	missing	0	SonyISO	252
 SonyILCE9.arw	ee	missing	0	SonyModelID	ILCE-9

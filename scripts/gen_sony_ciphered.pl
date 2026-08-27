@@ -185,6 +185,13 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
         # FocalPlaneAFPointsUsed but the conditions after it ask for
         # `$$self{Locations}`.
         my ($dmname) = $fb =~ /DataMember\s*=>\s*'(\w+)'/;
+        # A RawConv can store the value under a name of its own without any
+        # DataMember line: `RawConv => '$$self{FlashFired} = $val'` is how
+        # FlashStatus becomes the FlashFired that four ShutterCount2 variants
+        # are conditioned on.
+        unless (defined $dmname) {
+            ($dmname) = $fb =~ /RawConv\s*=>\s*'\$\$self\{(\w+)\}\s*=\s*\$val'/;
+        }
 
         my ($ffmt) = $fb =~ /Format\s*=>\s*'([^']+)'/;
         $ffmt ||= $fmt;
@@ -498,6 +505,13 @@ sub compile_cond {
     if ($mode eq 'field') {
         if ($cond =~ /^\$\$self\{(\w+)\}$/) {
             return (sprintf('dm_get(&dm, "%s").is_some_and(|v| v != 0.0)', $1), 'false');
+        }
+        # `($$self{FlashFired} & 0x01) != 1`: a bit of a stored value.
+        if ($cond =~ /^\(?\$\$self\{(\w+)\} & (0x[0-9a-fA-F]+|\d+)\)? (==|!=) (-?\d+)$/) {
+            my ($dm, $mask, $op, $num) = ($1, $2, $3, $4);
+            $mask = hex($mask) if $mask =~ /^0x/;
+            return (sprintf('dm_get(&dm, "%s").is_some_and(|v| ((v as i64) & %d) %s %d)',
+                            $dm, $mask, $op, $num), 'false');
         }
         if ($cond =~ /^\$\$self\{(\w+)\} (==|!=|<=|>=|<|>) (-?[\d.]+)$/) {
             my ($dm, $op, $num) = ($1, $2, $3);
