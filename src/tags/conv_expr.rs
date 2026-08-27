@@ -92,12 +92,13 @@ pub fn eval(expr: &str, val: &Val) -> Option<Val> {
         i: 0,
         val: val.clone(),
         captures: Vec::new(),
+        vars: std::collections::HashMap::new(),
     };
     // These conversions are sometimes two statements: `$val =~ s/ +$//; $val`
     // substitutes and then hands back the value it changed. The last one is the
     // result, as in Perl.
     p.skip_require();
-    let mut last = p.ternary()?;
+    let mut last = p.statement()?;
     loop {
         p.skip_ws();
         if p.i < p.s.len() && p.s[p.i] == b';' {
@@ -107,13 +108,39 @@ pub fn eval(expr: &str, val: &Val) -> Option<Val> {
             if p.i == p.s.len() {
                 break;
             }
-            last = p.ternary()?;
+            last = p.statement()?;
         } else {
             break;
         }
     }
     p.skip_ws();
     if p.i == p.s.len() { Some(last) } else { None }
+}
+
+/// Somewhere a value can be stored.
+enum LValue {
+    /// `$val` itself, which several conversions rewrite before returning it.
+    TheValue,
+    Var(String),
+    Elem(String, usize),
+}
+
+fn ident_char(c: u8) -> bool {
+    c.is_ascii_alphanumeric() || c == b'_'
+}
+
+/// Perl's `%`, which truncates both sides to integers and takes the sign of
+/// the right-hand one.
+fn perl_modulo(a: f64, b: f64) -> Option<f64> {
+    #[allow(clippy::cast_possible_truncation)]
+    let (a, b) = (a.trunc() as i64, b.trunc() as i64);
+    if b == 0 {
+        return None;
+    }
+    #[allow(clippy::cast_precision_loss)]
+    let m = a.rem_euclid(b.abs());
+    #[allow(clippy::cast_precision_loss)]
+    Some(if b < 0 && m != 0 { (m - b.abs()) as f64 } else { m as f64 })
 }
 
 struct Parser<'a> {
@@ -123,6 +150,9 @@ struct Parser<'a> {
     val: Val,
     /// `$1`..`$9` from the most recent match.
     captures: Vec<String>,
+    /// `my` variables. Scalars are stored under their bare name, arrays under
+    /// the same name prefixed with `@`, and `$_` under `_`.
+    vars: std::collections::HashMap<String, Val>,
 }
 
 impl<'a> Parser<'a> {
@@ -163,6 +193,330 @@ impl<'a> Parser<'a> {
     fn peek(&mut self, tok: &str) -> bool {
         self.skip_ws();
         self.s[self.i..].starts_with(tok.as_bytes())
+    }
+
+    /// One statement of a conversion. Perl lets a statement carry a trailing
+    /// `foreach`, which runs it once per element with `$_` *aliased* to the
+    /// element -- that aliasing is the whole point of
+    /// `$_ /= 0x4000 foreach @a`, which scales the array in place.
+    fn statement(&mut self) -> Option<Val> {
+        if let Some((body_end, kw_end)) = self.find_foreach() {
+            let body_start = self.i;
+            self.i = kw_end;
+            self.skip_ws();
+            // Aliasing needs to know which array to write back into.
+            let name = if self.eat("@") {
+                Some(format!("@{}", self.ident()?))
+            } else {
+                None
+            };
+            let mut items = match &name {
+                Some(n) => flatten(&[self.vars.get(n)?.clone()]),
+                None => flatten(&[self.expr()?]),
+            };
+            for item in &mut *items {
+                self.vars.insert("_".to_string(), item.clone());
+                self.run_slice(body_start, body_end)?;
+                *item = self.vars.get("_")?.clone();
+            }
+            let result = Val::List(items);
+            if let Some(n) = name {
+                self.vars.insert(n, result.clone());
+            }
+            return Some(result);
+        }
+        self.declaration()
+    }
+
+    /// Re-run a slice of the source with the same variables, which is what a
+    /// statement modifier needs: the body is evaluated once per element.
+    fn run_slice(&mut self, from: usize, to: usize) -> Option<Val> {
+        let saved_s = self.s;
+        let saved_i = self.i;
+        self.s = &saved_s[from..to];
+        self.i = 0;
+        let r = self.declaration();
+        self.s = saved_s;
+        self.i = saved_i;
+        r
+    }
+
+    /// Look ahead for a `foreach` (or `for`) modifier in this statement,
+    /// outside any string or bracket. Returns where the body ends and where
+    /// the list begins.
+    fn find_foreach(&mut self) -> Option<(usize, usize)> {
+        let mut depth = 0i32;
+        let mut j = self.i;
+        while j < self.s.len() {
+            match self.s[j] {
+                b'"' | b'\'' => {
+                    let q = self.s[j];
+                    j += 1;
+                    while j < self.s.len() && self.s[j] != q {
+                        j += if self.s[j] == b'\\' { 2 } else { 1 };
+                    }
+                }
+                b'(' | b'[' | b'{' => depth += 1,
+                b')' | b']' | b'}' => depth -= 1,
+                b';' if depth == 0 => return None,
+                b'f' if depth == 0 && j > self.i && self.s[j - 1].is_ascii_whitespace() => {
+                    for kw in ["foreach", "for"] {
+                        if self.s[j..].starts_with(kw.as_bytes())
+                            && self.s.get(j + kw.len()).is_some_and(u8::is_ascii_whitespace)
+                        {
+                            return Some((j, j + kw.len()));
+                        }
+                    }
+                }
+                _ => {}
+            }
+            j += 1;
+        }
+        None
+    }
+
+    /// `my $x = ...`, `my @a = ...`, `my ($a,$b,$c) = ...`, or a plain
+    /// expression.
+    fn declaration(&mut self) -> Option<Val> {
+        self.skip_ws();
+        if !(self.s[self.i..].starts_with(b"my")
+            && self
+                .s
+                .get(self.i + 2)
+                .is_some_and(|c| c.is_ascii_whitespace() || *c == b'(' || *c == b'$' || *c == b'@'))
+        {
+            return self.expr();
+        }
+        self.eat("my");
+        self.skip_ws();
+        if self.eat("(") {
+            let mut names = Vec::new();
+            loop {
+                self.skip_ws();
+                if !self.eat("$") {
+                    return None;
+                }
+                names.push(self.ident()?);
+                if !self.eat(",") {
+                    break;
+                }
+            }
+            if !self.eat(")") || !self.eat("=") {
+                return None;
+            }
+            let items = flatten(&[self.expr()?]);
+            for (k, n) in names.iter().enumerate() {
+                // Perl leaves a name with no value undefined; an expression
+                // that then reads it is one we cannot answer for.
+                let v = items.get(k)?.clone();
+                self.vars.insert(n.clone(), v);
+            }
+            return Some(Val::List(items));
+        }
+        if self.eat("@") {
+            let name = format!("@{}", self.ident()?);
+            if !self.eat("=") {
+                return None;
+            }
+            let items = Val::List(flatten(&[self.expr()?]));
+            self.vars.insert(name, items.clone());
+            return Some(items);
+        }
+        if self.eat("$") {
+            let name = self.ident()?;
+            if !self.eat("=") {
+                return None;
+            }
+            let v = self.expr()?;
+            self.vars.insert(name, v.clone());
+            return Some(v);
+        }
+        None
+    }
+
+    /// Assignment, which is the loosest-binding operator here and associates
+    /// to the right.
+    fn expr(&mut self) -> Option<Val> {
+        if let Some(v) = self.try_assignment() {
+            return Some(v);
+        }
+        self.ternary()
+    }
+
+    fn try_assignment(&mut self) -> Option<Val> {
+        let save = self.i;
+        self.skip_ws();
+        let Some(target) = self.lvalue() else {
+            self.i = save;
+            return None;
+        };
+        self.skip_ws();
+        let mut op = None;
+        for candidate in ["**=", "+=", "-=", "*=", "/=", ".=", "%="] {
+            if self.s[self.i..].starts_with(candidate.as_bytes()) {
+                op = Some(candidate);
+                break;
+            }
+        }
+        if op.is_none()
+            && self.s[self.i..].starts_with(b"=")
+            && !self.s[self.i..].starts_with(b"==")
+            && !self.s[self.i..].starts_with(b"=~")
+            && !self.s[self.i..].starts_with(b"=>")
+        {
+            op = Some("=");
+        }
+        let Some(op) = op else {
+            self.i = save;
+            return None;
+        };
+        self.i += op.len();
+        let Some(rhs) = self.expr() else {
+            self.i = save;
+            return None;
+        };
+        let cur = self.read_lvalue(&target);
+        let value = match op {
+            "=" => rhs,
+            "+=" => Val::Num(cur?.as_num() + rhs.as_num()),
+            "-=" => Val::Num(cur?.as_num() - rhs.as_num()),
+            "*=" => Val::Num(cur?.as_num() * rhs.as_num()),
+            "**=" => Val::Num(cur?.as_num().powf(rhs.as_num())),
+            "%=" => Val::Num(perl_modulo(cur?.as_num(), rhs.as_num())?),
+            ".=" => Val::Str(format!("{}{}", cur?.as_string(), rhs.as_string())),
+            _ => {
+                let d = rhs.as_num();
+                if d == 0.0 {
+                    return None;
+                }
+                Val::Num(cur?.as_num() / d)
+            }
+        };
+        self.write_lvalue(&target, value.clone())?;
+        Some(value)
+    }
+
+    /// Something that can be assigned to. Returns `None` without moving if
+    /// what is there is not one.
+    fn lvalue(&mut self) -> Option<LValue> {
+        let save = self.i;
+        self.skip_ws();
+        if self.s[self.i..].starts_with(b"$val")
+            && !self.s.get(self.i + 4).is_some_and(|c| ident_char(*c))
+        {
+            self.i += 4;
+            return Some(LValue::TheValue);
+        }
+        if self.s[self.i..].starts_with(b"@") {
+            self.i += 1;
+            let Some(name) = self.ident() else {
+                self.i = save;
+                return None;
+            };
+            return Some(LValue::Var(format!("@{name}")));
+        }
+        if self.s[self.i..].starts_with(b"$") && self.s.get(self.i + 1) != Some(&b'$') {
+            self.i += 1;
+            let Some(name) = self.ident() else {
+                self.i = save;
+                return None;
+            };
+            if self.peek("[") {
+                self.eat("[");
+                let Some(idx) = self.expr() else {
+                    self.i = save;
+                    return None;
+                };
+                if !self.eat("]") {
+                    self.i = save;
+                    return None;
+                }
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                return Some(LValue::Elem(format!("@{name}"), idx.as_num() as usize));
+            }
+            return Some(LValue::Var(name));
+        }
+        self.i = save;
+        None
+    }
+
+    fn read_lvalue(&self, target: &LValue) -> Option<Val> {
+        match target {
+            LValue::TheValue => Some(self.val.clone()),
+            LValue::Var(n) => self.vars.get(n).cloned(),
+            LValue::Elem(n, k) => match self.vars.get(n) {
+                Some(Val::List(items)) => items.get(*k).cloned(),
+                _ => None,
+            },
+        }
+    }
+
+    fn write_lvalue(&mut self, target: &LValue, v: Val) -> Option<()> {
+        match target {
+            LValue::TheValue => self.val = v,
+            LValue::Var(n) => {
+                self.vars.insert(n.clone(), v);
+            }
+            LValue::Elem(n, k) => {
+                let Some(Val::List(items)) = self.vars.get_mut(n) else {
+                    return None;
+                };
+                *items.get_mut(*k)? = v;
+            }
+        }
+        Some(())
+    }
+
+    fn ident(&mut self) -> Option<String> {
+        self.skip_ws();
+        // `$_` is a name of its own.
+        if self.s.get(self.i) == Some(&b'_') && !self.s.get(self.i + 1).is_some_and(|c| ident_char(*c))
+        {
+            self.i += 1;
+            return Some("_".to_string());
+        }
+        let start = self.i;
+        if !self.s.get(self.i).is_some_and(|c| c.is_ascii_alphabetic() || *c == b'_') {
+            return None;
+        }
+        while self.i < self.s.len() && ident_char(self.s[self.i]) {
+            self.i += 1;
+        }
+        std::str::from_utf8(&self.s[start..self.i]).ok().map(str::to_string)
+    }
+
+    /// A variable reference in expression or string position: `$_`, a `my`
+    /// scalar, an element of a `my` array, or the whole array.
+    fn variable(&mut self) -> Option<Val> {
+        let save = self.i;
+        if self.eat("@") {
+            let Some(name) = self.ident() else {
+                self.i = save;
+                return None;
+            };
+            return self.vars.get(&format!("@{name}")).cloned();
+        }
+        if !self.eat("$") {
+            return None;
+        }
+        let Some(name) = self.ident() else {
+            self.i = save;
+            return None;
+        };
+        if self.peek("[") {
+            self.eat("[");
+            let idx = self.expr()?;
+            if !self.eat("]") {
+                return None;
+            }
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let k = idx.as_num() as usize;
+            return match self.vars.get(&format!("@{name}")) {
+                Some(Val::List(items)) => items.get(k).cloned(),
+                _ => None,
+            };
+        }
+        self.vars.get(&name).cloned()
     }
 
     fn ternary(&mut self) -> Option<Val> {
@@ -270,6 +624,10 @@ impl<'a> Parser<'a> {
                 self.eat("*");
                 let r = self.power()?;
                 acc = Val::Num(acc.as_num() * r.as_num());
+            } else if self.peek("%") {
+                self.eat("%");
+                let r = self.power()?;
+                acc = Val::Num(perl_modulo(acc.as_num(), r.as_num())?);
             } else if self.peek("/") {
                 self.eat("/");
                 let r = self.power()?;
@@ -314,7 +672,7 @@ impl<'a> Parser<'a> {
             return None;
         }
         if self.eat("(") {
-            let v = self.ternary()?;
+            let v = self.expr()?;
             if !self.eat(")") {
                 return None;
             }
@@ -330,6 +688,16 @@ impl<'a> Parser<'a> {
             return Some(Val::Str(
                 self.captures.get(idx.checked_sub(1)?).cloned().unwrap_or_default(),
             ));
+        }
+        // A `my` variable, an element of one, or `$_` inside a `foreach`.
+        // An unknown name is state we do not have, and declines.
+        if (self.s[self.i] == b'$' && self.s.get(self.i + 1) != Some(&b'$')
+            && !self.s[self.i..].starts_with(b"$self"))
+            || self.s[self.i] == b'@'
+        {
+            if let Some(v) = self.variable() {
+                return Some(v);
+            }
         }
         // ExifTool passes itself as the first argument to several helpers. It
         // carries options we do not model, and every helper ported here uses
@@ -468,9 +836,21 @@ impl<'a> Parser<'a> {
                 self.i += 4;
                 continue;
             }
-            // Any other variable means state we do not have.
-            if self.s[self.i] == b'$' {
-                return None;
+            // `$1`..`$9` from the last match.
+            if self.s[self.i] == b'$' && self.s.get(self.i + 1).is_some_and(u8::is_ascii_digit) {
+                let idx = (self.s[self.i + 1] - b'0') as usize;
+                self.i += 2;
+                out.push_str(self.captures.get(idx.checked_sub(1)?)?);
+                continue;
+            }
+            // A `my` variable, or a whole array joined by `$"`. An `@` that no
+            // name follows is literal text, as it is in Perl.
+            if self.s[self.i] == b'$'
+                || (self.s[self.i] == b'@'
+                    && self.s.get(self.i + 1).is_some_and(|c| c.is_ascii_alphabetic() || *c == b'_'))
+            {
+                out.push_str(&self.variable()?.as_string());
+                continue;
             }
             let c = self.s[self.i];
             out.push(c as char);
@@ -619,9 +999,9 @@ impl<'a> Parser<'a> {
             self.i = save;
             return None;
         }
-        let mut args = vec![self.ternary()?];
+        let mut args = vec![self.expr()?];
         while self.eat(",") {
-            args.push(self.ternary()?);
+            args.push(self.expr()?);
         }
         if !self.eat(")") {
             self.i = save;
@@ -676,7 +1056,7 @@ impl<'a> Parser<'a> {
                 self.regex_flags();
                 split_pat = Some((pat, false));
             } else {
-                let v = self.ternary()?;
+                let v = self.expr()?;
                 let text = v.as_string();
                 // A pattern of one literal space is Perl's awk mode: leading
                 // whitespace goes, and any run of it separates.
@@ -692,13 +1072,13 @@ impl<'a> Parser<'a> {
         let mut args: Vec<Val> = Vec::new();
         if !(paren && self.peek(")")) {
             if is_list {
-                args.push(self.ternary()?);
+                args.push(self.expr()?);
                 while self.eat(",") {
                     self.skip_ws();
                     if paren && self.peek(")") {
                         break; // a trailing comma
                     }
-                    args.push(self.ternary()?);
+                    args.push(self.expr()?);
                 }
             } else {
                 args.push(self.additive()?);
@@ -736,7 +1116,7 @@ impl<'a> Parser<'a> {
         }
         let mut args = Vec::new();
         while self.eat(",") {
-            args.push(self.ternary()?);
+            args.push(self.expr()?);
         }
         if !self.eat(")") {
             return None;
@@ -750,6 +1130,8 @@ impl<'a> Parser<'a> {
 fn format_sprintf(fmt: &str, args: &[Val]) -> Option<String> {
     let mut out = String::new();
     let mut it = fmt.chars().peekable();
+    // `sprintf("%d.%d%c", @a)` passes one array, and Perl sees three arguments.
+    let args = flatten(args);
     let mut arg = args.iter();
     while let Some(c) = it.next() {
         if c != '%' {
@@ -799,9 +1181,13 @@ fn format_sprintf(fmt: &str, args: &[Val]) -> Option<String> {
         let v = arg.next()?;
         let mut s = match conv {
             'd' | 'i' => {
-                let n = v.as_num().round() as i64;
+                // Perl truncates towards zero here; it does not round.
+                let n = v.as_num().trunc() as i64;
                 if plus && n >= 0 { format!("+{n}") } else { format!("{n}") }
             }
+            // `%c` is the character with that code.
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            'c' => char::from_u32(v.as_num() as u32)?.to_string(),
             'f' => {
                 let n = v.as_num();
                 let p = prec.unwrap_or(6);
@@ -872,9 +1258,27 @@ fn perl_replacement(rep: &str) -> String {
     let b: Vec<char> = rep.chars().collect();
     let mut i = 0;
     while i < b.len() {
-        if b[i] == '$' && i + 1 < b.len() && b[i + 1].is_ascii_digit() {
+        // A backreference, spelled `$1` or `\1`, becomes the form regex-lite
+        // reads. Everything else a backslash protects is literal text, and
+        // Perl drops the backslash: `\.` in a replacement is a full stop.
+        if (b[i] == '$' || b[i] == '\\') && i + 1 < b.len() && b[i + 1].is_ascii_digit() {
             out.push_str(&format!("${{{}}}", b[i + 1]));
             i += 2;
+            continue;
+        }
+        if b[i] == '\\' && i + 1 < b.len() {
+            let rest: String = b[i + 1..].iter().collect();
+            if let Some((c, len)) = string_escape(rest.as_bytes()) {
+                out.push(c);
+                i += 1 + len;
+                continue;
+            }
+        }
+        // A lone `$` is literal here, but `$` is how a replacement names a
+        // group, so it has to be doubled on the way out.
+        if b[i] == '$' {
+            out.push_str("$$");
+            i += 1;
             continue;
         }
         out.push(b[i]);
@@ -1626,6 +2030,38 @@ mod tests {
         );
     }
 
+    /// `my` variables, the `foreach` modifier that aliases `$_` to each
+    /// element, and assignment back into `$val`. Every expected value was read
+    /// off Perl itself first.
+    #[test]
+    fn variables_and_the_foreach_modifier() {
+        let s = |e: &str, v: &str| eval(e, &Val::Str(v.into())).unwrap().as_string();
+        assert_eq!(s("my @a = split \" \",$val; $_ /= 2 foreach @a; \"@a\"", "1 2 3"), "0.5 1 1.5");
+        assert_eq!(
+            s("my @v=split \" \",$val; \"$v[0] (min $v[1], max $v[2])\"", "1 2 3"),
+            "1 (min 2, max 3)"
+        );
+        assert_eq!(s("my @v=reverse split(\" \",$val);\"@v\"", "1 2 3"), "3 2 1");
+        assert_eq!(
+            eval("$val=sprintf(\"%x\",$val);$val=~s/(.{3})$/\\.$1/;$val", &n(4660.0))
+                .unwrap()
+                .as_string(),
+            "1.234"
+        );
+        assert_eq!(s("my @a = split \" \",$val; sprintf(\"%d.%d%c\",@a)", "1 2 65"), "1.2A");
+        assert_eq!(
+            eval(
+                "my ($a,$b,$c)=unpack(\"c3\",$val); $c ? $a*($b/$c) : 0",
+                &Val::Str("\u{a}\u{2}\u{4}".into())
+            )
+            .unwrap()
+            .as_num(),
+            5.0
+        );
+        // `%` truncates its operands and takes the sign of the right-hand one.
+        assert_eq!(eval("(-1) % 24", &n(0.0)).unwrap().as_num(), 23.0);
+    }
+
     /// Every expected value here was read off Perl itself before it was
     /// written down.
     #[test]
@@ -1760,7 +2196,7 @@ mod tests {
     #[test]
     fn unsupported_expressions_decline() {
         assert!(eval("Image::ExifTool::ASF::GetGUID($val)", &n(1.0)).is_none());
-        assert!(eval("my @a = split \" \", $val; $a[0]", &n(1.0)).is_none());
+        assert!(eval("$self->Decode($val, \"UTF8\")", &n(1.0)).is_none());
         assert!(eval("$$self{Model}", &n(1.0)).is_none());
         assert!(eval("$val / 0", &n(1.0)).is_none());
     }
