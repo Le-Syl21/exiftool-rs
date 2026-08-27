@@ -1,12 +1,17 @@
 name: pages
 
-# Publish the live parity report to GitHub Pages on every push to main (and on
-# demand). Independent of the release pipeline (ci.yml) — a Pages hiccup can
-# never block a crate publish. Regenerates the report from the shipped corpus:
-# diffs exiftool-rs against the pinned Perl ExifTool tag-by-tag, then renders it.
+# Publish the live parity report to GitHub Pages on release (and on demand).
+# Independent of the release pipeline (ci.yml) — a Pages hiccup can never block
+# a crate publish. Regenerates the report from the shipped corpus: diffs
+# exiftool-rs against the pinned Perl ExifTool tag-by-tag, then renders it.
+#
+# It used to run on every push to main. That is a full build of the crate plus
+# a Perl ExifTool run, several times a day, to republish a page nobody reads
+# between releases — the work belongs on a machine that is already building,
+# which is the one the commit came from.
 on:
   push:
-    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
