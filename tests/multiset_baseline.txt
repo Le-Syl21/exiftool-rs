@@ -38,7 +38,6 @@ SonyILCE9.arw	default	missing	0	AFPointsUsed	(none)
 SonyILCE9.arw	default	missing	0	Anti-Blur	On (Shooting)
 SonyILCE9.arw	default	missing	0	ColorTemperature	Auto
 SonyILCE9.arw	default	missing	0	FileFormat	ARW 2.3.5
-SonyILCE9.arw	default	missing	0	FocusDistance2	282.2 m
 SonyILCE9.arw	default	missing	0	FullImageSize	6000x4000
 SonyILCE9.arw	default	missing	0	HDR	Off; Uncorrected image
 SonyILCE9.arw	default	missing	0	LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD
@@ -107,7 +106,6 @@ SonyILCE9.arw	ee	missing	0	ExposureProgram	Manual
 SonyILCE9.arw	ee	missing	1	ExposureProgram	Manual
 SonyILCE9.arw	ee	missing	0	ExposureTime	1/20
 SonyILCE9.arw	ee	missing	0	FileFormat	ARW 2.3.5
-SonyILCE9.arw	ee	missing	0	FocusDistance2	282.2 m
 SonyILCE9.arw	ee	missing	0	FocusMode	AF-C
 SonyILCE9.arw	ee	missing	0	FullImageSize	6000x4000
 SonyILCE9.arw	ee	missing	0	HDR	Off; Uncorrected image

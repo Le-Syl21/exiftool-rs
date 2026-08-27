@@ -28,6 +28,10 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         composite.push(es);
     }
 
+    if let Some(fd) = compute_sony_focus_distance2(tags) {
+        composite.push(fd);
+    }
+
     // GPSPosition: combine GPSLatitude/Ref + GPSLongitude/Ref
     if let Some(pos) = compute_gps_position(tags) {
         composite.push(pos);
@@ -858,6 +862,38 @@ fn compute_gps_altitude(tags: &[Tag]) -> Option<Tag> {
     // ExifTool's Composite GPSAltitude overrides the plain EXIF GPSAltitude tag.
     t.priority = 1;
     Some(t)
+}
+
+/// Sony::Composite FocusDistance2, from the focus position and the 35 mm
+/// equivalent focal length.
+///
+/// Sony.pm carries a note that the formula may be wrong -- the embedded value
+/// looks like a magnification rather than a distance -- but the point here is
+/// to print what ExifTool prints.
+fn compute_sony_focus_distance2(tags: &[Tag]) -> Option<Tag> {
+    let pos = tags
+        .iter()
+        .find(|t| t.name == "FocusPosition2" && t.group.family1 == "Sony")
+        .and_then(|t| t.raw_value.as_f64())?;
+    let focal35 = find_tag_f64(tags, "FocalLengthIn35mmFormat")?;
+    if pos == 0.0 {
+        return None;
+    }
+    let print = if pos >= 255.0 {
+        "inf".to_string()
+    } else {
+        let metres = (2.0_f64.powf(pos / 16.0 - 5.0) + 1.0) * focal35 / 1000.0;
+        crate::tags::conv_expr::eval(
+            "sprintf(\"%.4g m\", $val)",
+            &crate::tags::conv_expr::Val::Num(metres),
+        )?
+        .as_string()
+    };
+    Some(mk_composite(
+        "FocusDistance2",
+        "Focus Distance 2",
+        Value::String(print),
+    ))
 }
 
 fn compute_shutter_speed(tags: &[Tag]) -> Option<Tag> {
