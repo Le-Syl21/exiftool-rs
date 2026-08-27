@@ -7,7 +7,7 @@
 //! and addressed by byte offset. Model conditions are carried over from the
 //! Perl source verbatim rather than translated, so they cannot drift from it.
 //!
-//! Tables: 26, fields: 168.
+//! Tables: 26, fields: 211.
 
 use std::sync::LazyLock;
 
@@ -17,56 +17,70 @@ use crate::tags::conv_expr::{self, Val as Conv};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
-static MODEL_RE_0: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX1|RX1R))\\b").unwrap());
-static MODEL_RE_1: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A58|ILCE-(3000|3500)|NEX-3N|DSC-(HX300|HX50V|WX60|WX80|WX200|WX300|TX30))\\b").unwrap());
-static MODEL_RE_2: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|Stellar)").unwrap());
-static MODEL_RE_3: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSC-").unwrap());
-static MODEL_RE_4: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX100|Stellar)\\b").unwrap());
-static MODEL_RE_5: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|Lunar|ILCE-)").unwrap());
-static MODEL_RE_6: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|Lunar|NEX-(5N|7|VG20E))").unwrap());
-static MODEL_RE_7: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A99|HV|ILCE-7)").unwrap());
-static MODEL_RE_8: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(5100|QX1)|ILCA-(68|77M2))").unwrap());
-static MODEL_RE_9: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(58|99V?)|HV|NEX-(3N|5R|5T|6|VG900|VG30E)|ILCE-([35]000|3500))\\b").unwrap());
-static MODEL_RE_10: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(37|57|65|77)V?|Lunar|NEX-(F3|5N|7|VG20E))").unwrap());
-static MODEL_RE_11: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-)").unwrap());
-static MODEL_RE_12: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7M3|7RM3A?))").unwrap());
-static MODEL_RE_13: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7|ILCE-9|ILCA-99)").unwrap());
-static MODEL_RE_14: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6400A?|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)\\b").unwrap());
-static MODEL_RE_15: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7RM2|7SM2))").unwrap());
-static MODEL_RE_16: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6300|6500)|ILCA-99M2)").unwrap());
-static MODEL_RE_17: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|6700|7CM2|7CR|7M5|7RM6)|ILME-FX2)").unwrap());
-static MODEL_RE_18: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|7M5|7RM6))").unwrap());
-static MODEL_RE_19: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-(A65|A77)V?|NEX-(5N|7|VG20E)|Lunar|DSC-(HX10V|HX20V|HX200V|TX20|TX55|TX300V|WX30|WX70))\\b").unwrap());
-static MODEL_RE_20: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV|NEX-|Lunar|DSC-RX|Stellar)").unwrap());
-static MODEL_RE_21: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-(68|77M2|99M2)|ILCE-(5000|5100|6000|6300|6500|7|7M2|7R|7RM2|7S|7SM2|QX1)|DSC-(HX350|HX400V|HX60V|HX80|HX90|HX90V|QX30|RX0|RX1RM2|RX10|RX10M2|RX10M3|RX100M3|RX100M4|RX100M5|WX220|WX350|WX500))\\b").unwrap());
-static MODEL_RE_22: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX1RM3|ILCE-(1|6700|7CM2|7CR|7M4|7M5|7RM5|7RM6|7SM3|9M3)|ILME-(FX2|FX3A?|FX30)|ZV-(E1|E10M2))\\b").unwrap());
-static MODEL_RE_23: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX350|HX400V|HX60V|HX80|HX90|HX90V|QX30|RX10|RX10M2|RX10M3|RX100M3|RX100M4))\\b").unwrap());
-static MODEL_RE_24: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX95|HX99|RX0|RX0M2|RX10M4|RX100M5|RX100M5A|RX100M6))\\b").unwrap());
-static MODEL_RE_25: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX100M7A?|ZV-(1A?|1F|1M2))\\b").unwrap());
-static MODEL_RE_26: LazyLock<Regex> = LazyLock::new(|| Regex::new("^SLT-").unwrap());
-static MODEL_RE_27: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV|ILCA-)").unwrap());
-static MODEL_RE_28: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|ZV-)").unwrap());
-static MODEL_RE_29: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-|ILCE-(7RM2|7M3|7RM3A?|7RM4A?|7SM2|6100|6300|6400|6500|6600|7C|9|9M2)|DSC-(HX80|HX90V|HX99|RX0|RX10M2|RX10M3|RX10M4|RX100M4|RX100M5|RX100M5A|RX100M6|RX100M7|WX500)|ZV-)").unwrap());
-static MODEL_RE_30: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX100M5|RX100M5A|RX100M6|RX100M7|RX10M4|HX99)|ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9M2)|ZV-E10)").unwrap());
-static MODEL_RE_31: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7RM2|7SM2)|DSC-(HX80|HX90V|RX10M2|RX10M3|RX100M4|WX500))").unwrap());
-static MODEL_RE_32: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7|7R)|Lusso)$").unwrap());
-static MODEL_RE_33: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-)").unwrap());
-static MODEL_RE_34: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M5)").unwrap());
-static MODEL_RE_35: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7RM6)").unwrap());
-static MODEL_RE_36: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1|7SM3)|ILME-FX3A?)\\b").unwrap());
-static MODEL_RE_37: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M4)").unwrap());
-static MODEL_RE_38: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|7CM2|7CR|7RM5)|ZV-E1)\\b").unwrap());
-static MODEL_RE_39: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|NEX-(7|VG20E)|Lunar)$").unwrap());
-static MODEL_RE_40: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(37|57)|NEX-F3)$").unwrap());
-static MODEL_RE_41: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX100M2|QX10|QX100))$").unwrap());
-static MODEL_RE_42: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(QX30|RX10|RX100M3|HX60V|HX350|HX400V|WX220|WX350)|ILCE-(7(R|S|M2)?|[56]000|5100|QX1)|ILCA-(68|77M2))\\b").unwrap());
-static MODEL_RE_43: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX0|RX1RM2|RX10M2|RX10M3|RX100M4|RX100M5|HX80|HX90V?|WX500)|ILCE-(6300|6500|7RM2|7SM2)|ILCA-99M2)\\b").unwrap());
-static MODEL_RE_44: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6400A?|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|DSC-(RX10M4|RX100M6|RX100M5A|RX100M7A?|HX95|HX99|RX0M2)|ZV-(1[AF]?|1M2|E10))\\b").unwrap());
-static MODEL_RE_45: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|Stellar|ILCE-(1|6100|6300|6400|6500|6600|6700|7C|7M3|7M4|7M5|7RM2|7RM3A?|7RM4A?|7RM5|7RM6|7SM2|7SM3|9|9M2)|ILCA-99M2|ILME-(FX2|FX3)|ZV-)").unwrap());
-static MODEL_RE_46: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6300|6400A?|6500|6600|7C|7M3|7RM2|7RM3A?|7RM4A?|7SM2|9|9M2)|ILCA-99M2|ZV-E10)\\b").unwrap());
-static MODEL_RE_47: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1\\b|7M4|7RM5|7SM3)|ILME-FX3)").unwrap());
-static MODEL_RE_48: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV)").unwrap());
-static MODEL_RE_49: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|Lunar|ZV-E10|ZV-E10M2|ZV-E1)\\b").unwrap());
+static MODEL_RE_0: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-(A99|A99V)|NEX-(5R|5T|6|VG900|VG30E)|DSC-RX100|Stellar|HV)\\b").unwrap());
+static MODEL_RE_1: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX1|RX1R))\\b").unwrap());
+static MODEL_RE_2: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A58|ILCE-(3000|3500)|NEX-3N|DSC-(HX300|HX50V|WX60|WX80|WX200|WX300|TX30))\\b").unwrap());
+static MODEL_RE_3: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|Stellar)").unwrap());
+static MODEL_RE_4: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSC-").unwrap());
+static MODEL_RE_5: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX100|Stellar)\\b").unwrap());
+static MODEL_RE_6: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|Lunar|ILCE-)").unwrap());
+static MODEL_RE_7: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|Lunar|NEX-(5N|7|VG20E))").unwrap());
+static MODEL_RE_8: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(Lunar|NEX-(5N|7|VG20E)|SLT-|HV|ILCA-)").unwrap());
+static MODEL_RE_9: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV|ILCA-)").unwrap());
+static MODEL_RE_10: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A99|HV|ILCE-7)").unwrap());
+static MODEL_RE_11: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(5100|QX1)|ILCA-(68|77M2))").unwrap());
+static MODEL_RE_12: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(58|99V?)|HV|NEX-(3N|5R|5T|6|VG900|VG30E)|ILCE-([35]000|3500))\\b").unwrap());
+static MODEL_RE_13: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(37|57|65|77)V?|Lunar|NEX-(F3|5N|7|VG20E))").unwrap());
+static MODEL_RE_14: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-)").unwrap());
+static MODEL_RE_15: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7M3|7RM3A?))").unwrap());
+static MODEL_RE_16: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7|ILCE-9|ILCA-99)").unwrap());
+static MODEL_RE_17: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6400A?|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)\\b").unwrap());
+static MODEL_RE_18: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7RM2|7SM2))").unwrap());
+static MODEL_RE_19: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6300|6500)|ILCA-99M2)").unwrap());
+static MODEL_RE_20: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7M4|7RM5|7SM3)|ILME-FX3)").unwrap());
+static MODEL_RE_21: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-1)").unwrap());
+static MODEL_RE_22: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|6700|7CM2|7CR|7M5|7RM6)|ILME-FX2)").unwrap());
+static MODEL_RE_23: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|7M5|7RM6))").unwrap());
+static MODEL_RE_24: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ZV-E10M2)").unwrap());
+static MODEL_RE_25: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-(A65|A77)V?|NEX-(5N|7|VG20E)|Lunar|DSC-(HX10V|HX20V|HX200V|TX20|TX55|TX300V|WX30|WX70))\\b").unwrap());
+static MODEL_RE_26: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV|NEX-|Lunar|DSC-RX|Stellar)").unwrap());
+static MODEL_RE_27: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-(68|77M2|99M2)|ILCE-(5000|5100|6000|6300|6500|7|7M2|7R|7RM2|7S|7SM2|QX1)|DSC-(HX350|HX400V|HX60V|HX80|HX90|HX90V|QX30|RX0|RX1RM2|RX10|RX10M2|RX10M3|RX100M3|RX100M4|RX100M5|WX220|WX350|WX500))\\b").unwrap());
+static MODEL_RE_28: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX1RM3|ILCE-(1|6700|7CM2|7CR|7M4|7M5|7RM5|7RM6|7SM3|9M3)|ILME-(FX2|FX3A?|FX30)|ZV-(E1|E10M2))\\b").unwrap());
+static MODEL_RE_29: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX350|HX400V|HX60V|HX80|HX90|HX90V|QX30|RX10|RX10M2|RX10M3|RX100M3|RX100M4))\\b").unwrap());
+static MODEL_RE_30: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX95|HX99|RX0|RX0M2|RX10M4|RX100M5|RX100M5A|RX100M6))\\b").unwrap());
+static MODEL_RE_31: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX100M7A?|ZV-(1A?|1F|1M2))\\b").unwrap());
+static MODEL_RE_32: LazyLock<Regex> = LazyLock::new(|| Regex::new("^SLT-").unwrap());
+static MODEL_RE_33: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|ZV-)").unwrap());
+static MODEL_RE_34: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-|ILCE-(7RM2|7M3|7RM3A?|7RM4A?|7SM2|6100|6300|6400|6500|6600|7C|9|9M2)|DSC-(HX80|HX90V|HX99|RX0|RX10M2|RX10M3|RX10M4|RX100M4|RX100M5|RX100M5A|RX100M6|RX100M7|WX500)|ZV-)").unwrap());
+static MODEL_RE_35: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-(68|77M2)|ILCE-(5000|5100|6000|7|7R|7S|QX1)|Lusso)\\b").unwrap());
+static MODEL_RE_36: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX100M5|RX100M5A|RX100M6|RX100M7|RX10M4|HX99)|ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9M2)|ZV-E10)").unwrap());
+static MODEL_RE_37: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M2)").unwrap());
+static MODEL_RE_38: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-99M2|ILCE-(6100|6400|6500|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)").unwrap());
+static MODEL_RE_39: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7RM2|7SM2)|DSC-(HX80|HX90V|RX10M2|RX10M3|RX100M4|WX500))").unwrap());
+static MODEL_RE_40: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6300|7RM2|7SM2))").unwrap());
+static MODEL_RE_41: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-99M2|ILCE-6500)").unwrap());
+static MODEL_RE_42: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)").unwrap());
+static MODEL_RE_43: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7|7R)|Lusso)$").unwrap());
+static MODEL_RE_44: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-)").unwrap());
+static MODEL_RE_45: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M5)\\b").unwrap());
+static MODEL_RE_46: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7RM6)\\b").unwrap());
+static MODEL_RE_47: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M5)").unwrap());
+static MODEL_RE_48: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7RM6)").unwrap());
+static MODEL_RE_49: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1|7SM3)|ILME-FX3A?)\\b").unwrap());
+static MODEL_RE_50: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M4)").unwrap());
+static MODEL_RE_51: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|6700|7CM2|7CR|7RM5)|ILME-(FX2|FX30)|ZV-(E1|E10M2))\\b").unwrap());
+static MODEL_RE_52: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|7CM2|7CR|7RM5)|ZV-E1)\\b").unwrap());
+static MODEL_RE_53: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|NEX-(7|VG20E)|Lunar)$").unwrap());
+static MODEL_RE_54: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(37|57)|NEX-F3)$").unwrap());
+static MODEL_RE_55: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX100M2|QX10|QX100))$").unwrap());
+static MODEL_RE_56: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(QX30|RX10|RX100M3|HX60V|HX350|HX400V|WX220|WX350)|ILCE-(7(R|S|M2)?|[56]000|5100|QX1)|ILCA-(68|77M2))\\b").unwrap());
+static MODEL_RE_57: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX0|RX1RM2|RX10M2|RX10M3|RX100M4|RX100M5|HX80|HX90V?|WX500)|ILCE-(6300|6500|7RM2|7SM2)|ILCA-99M2)\\b").unwrap());
+static MODEL_RE_58: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6400A?|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|DSC-(RX10M4|RX100M6|RX100M5A|RX100M7A?|HX95|HX99|RX0M2)|ZV-(1[AF]?|1M2|E10))\\b").unwrap());
+static MODEL_RE_59: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|Stellar|ILCE-(1|6100|6300|6400|6500|6600|6700|7C|7M3|7M4|7M5|7RM2|7RM3A?|7RM4A?|7RM5|7RM6|7SM2|7SM3|9|9M2)|ILCA-99M2|ILME-(FX2|FX3)|ZV-)").unwrap());
+static MODEL_RE_60: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6300|6400A?|6500|6600|7C|7M3|7RM2|7RM3A?|7RM4A?|7SM2|9|9M2)|ILCA-99M2|ZV-E10)\\b").unwrap());
+static MODEL_RE_61: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1\\b|7M4|7RM5|7SM3)|ILME-FX3)").unwrap());
+static MODEL_RE_62: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV)").unwrap());
+static MODEL_RE_63: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|Lunar|ZV-E10|ZV-E10M2|ZV-E1)\\b").unwrap());
 
 fn u8_at(d: &[u8], o: usize) -> Option<u8> { d.get(o).copied() }
 fn i8_at(d: &[u8], o: usize) -> Option<i8> { d.get(o).map(|v| *v as i8) }
@@ -141,14 +155,14 @@ pub fn decode(table: &str, data: &[u8], model: &str) -> Vec<Tag> {
 pub fn variant_for(tag: u16, model: &str) -> Option<&'static str> {
     match tag {
         0x2010 => {
-            if MODEL_RE_39.is_match(model) { return Some("Tag2010b"); }
-            if MODEL_RE_40.is_match(model) { return Some("Tag2010c"); }
+            if MODEL_RE_53.is_match(model) { return Some("Tag2010b"); }
+            if MODEL_RE_54.is_match(model) { return Some("Tag2010c"); }
             Some("Tag2010d")
         }
         0x9050 => {
-            if !MODEL_RE_45.is_match(model) { return Some("Tag9050a"); }
-            if MODEL_RE_46.is_match(model) { return Some("Tag9050b"); }
-            if MODEL_RE_47.is_match(model) { return Some("Tag9050c"); }
+            if !MODEL_RE_59.is_match(model) { return Some("Tag9050a"); }
+            if MODEL_RE_60.is_match(model) { return Some("Tag9050b"); }
+            if MODEL_RE_61.is_match(model) { return Some("Tag9050c"); }
             None
         }
         0x9400 => {
@@ -158,11 +172,11 @@ pub fn variant_for(tag: u16, model: &str) -> Option<&'static str> {
             Some("Tag9403")
         }
         0x940a => {
-            if MODEL_RE_48.is_match(model) { return Some("Tag940a"); }
+            if MODEL_RE_62.is_match(model) { return Some("Tag940a"); }
             None
         }
         0x940c => {
-            if MODEL_RE_49.is_match(model) { return Some("Tag940c"); }
+            if MODEL_RE_63.is_match(model) { return Some("Tag940c"); }
             None
         }
         0x9416 => {
@@ -178,6 +192,32 @@ fn tag2010b(data: &[u8], model: &str) -> Vec<Tag> {
     if let Some(v) = u32_at(data, 0x0) {
         tags.push(mk("SonyImageWidth3", v.to_string(), Value::I32(v as i32)));
     }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x1128 + k * 2) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s)));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..16 {
+            match i16_at(data, 0x1a23 + k * 2) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+        }
+    }
     tags
 }
 
@@ -190,6 +230,19 @@ fn tag2010c(data: &[u8], model: &str) -> Vec<Tag> {
         let raw = Value::F64(cv.as_num());
         tags.push(mk("SonyImageWidth3", cv.as_string(), raw));
     }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x1104 + k * 2) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s)));
+        }
+    }
     tags
 }
 
@@ -198,6 +251,19 @@ fn tag2010d(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if let Some(v) = u32_at(data, 0x0) {
         tags.push(mk("SonyImageWidth3", v.to_string(), Value::I32(v as i32)));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x1180 + k * 2) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s)));
+        }
     }
     tags
 }
@@ -211,6 +277,21 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
         tags.push(mk("SonyImageWidth3", cv.as_string(), raw));
     }
     if MODEL_RE_0.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..3 {
+                match u16_at(data, 0x115c + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_1.is_match(model) {
         if let Some(v) = u16_at(data, 0x1258) {
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
@@ -219,7 +300,7 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("SonyISO", cv.as_string(), raw));
         }
     }
-    if MODEL_RE_1.is_match(model) {
+    if MODEL_RE_2.is_match(model) {
         if let Some(v) = u16_at(data, 0x1278) {
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
@@ -228,7 +309,7 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("FocalLength", cv.as_string(), raw));
         }
     }
-    if MODEL_RE_1.is_match(model) {
+    if MODEL_RE_2.is_match(model) {
         if let Some(v) = u16_at(data, 0x127a) {
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
@@ -237,7 +318,7 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("MinFocalLength", cv.as_string(), raw));
         }
     }
-    if MODEL_RE_1.is_match(model) {
+    if MODEL_RE_2.is_match(model) {
         if let Some(v) = u16_at(data, 0x127c) {
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
@@ -246,7 +327,7 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("MaxFocalLength", cv.as_string(), raw));
         }
     }
-    if MODEL_RE_1.is_match(model) {
+    if MODEL_RE_2.is_match(model) {
         if let Some(v) = u16_at(data, 0x1280) {
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
@@ -255,7 +336,22 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("SonyISO", cv.as_string(), raw));
         }
     }
-    if !MODEL_RE_2.is_match(model) {
+    if !MODEL_RE_3.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x1870 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x1891) {
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
@@ -275,17 +371,27 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("LensMount", s, Value::I32(v as i32)));
     }
-    if !MODEL_RE_2.is_match(model) {
-        if let Some(v) = u8_at(data, 0x1898) {
-            tags.push(mk("DistortionCorrParamsPresent", v.to_string(), Value::I32(v as i32)));
-        }
-    }
     if !MODEL_RE_3.is_match(model) {
-        if let Some(v) = u8_at(data, 0x1899) {
-            tags.push(mk("DistortionCorrParamsNumber", v.to_string(), Value::I32(v as i32)));
+        if let Some(v) = u8_at(data, 0x1898) {
+            let s = match v as i64 {
+                0 => "No".to_string(),
+                1 => "Yes".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
         }
     }
     if !MODEL_RE_4.is_match(model) {
+        if let Some(v) = u8_at(data, 0x1899) {
+            let s = match v as i64 {
+                11 => "11 (APS-C)".to_string(),
+                16 => "16 (Full-frame)".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("DistortionCorrParamsNumber", s, Value::I32(v as i32)));
+        }
+    }
+    if !MODEL_RE_5.is_match(model) {
         if let Some(v) = u8_at(data, 0x192c) {
             let s = match v as i64 {
                 0 => "16:9".to_string(),
@@ -298,7 +404,7 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("AspectRatio", s, Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_4.is_match(model) {
+    if MODEL_RE_5.is_match(model) {
         if let Some(v) = u8_at(data, 0x1a88) {
             let s = match v as i64 {
                 0 => "16:9".to_string(),
@@ -319,6 +425,19 @@ fn tag2010f(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if let Some(v) = u32_at(data, 0x4) {
         tags.push(mk("SonyImageWidth3", v.to_string(), Value::I32(v as i32)));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x1014 + k * 2) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s)));
+        }
     }
     if let Some(v) = u16_at(data, 0x1136) {
         let mut cv = Conv::Num(f64::from(v));
@@ -385,7 +504,22 @@ fn tag2010g(data: &[u8], model: &str) -> Vec<Tag> {
         if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
         tags.push(mk("SonyISO", cv.as_string(), raw));
     }
-    if !MODEL_RE_3.is_match(model) {
+    if !MODEL_RE_4.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x189c + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x18bd) {
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
@@ -405,14 +539,24 @@ fn tag2010g(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("LensMount", s, Value::I32(v as i32)));
     }
-    if !MODEL_RE_3.is_match(model) {
+    if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x18c4) {
-            tags.push(mk("DistortionCorrParamsPresent", v.to_string(), Value::I32(v as i32)));
+            let s = match v as i64 {
+                0 => "No".to_string(),
+                1 => "Yes".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
         }
     }
-    if !MODEL_RE_3.is_match(model) {
+    if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x18c5) {
-            tags.push(mk("DistortionCorrParamsNumber", v.to_string(), Value::I32(v as i32)));
+            let s = match v as i64 {
+                11 => "11 (APS-C)".to_string(),
+                16 => "16 (Full-frame)".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("DistortionCorrParamsNumber", s, Value::I32(v as i32)));
         }
     }
     if let Some(v) = u8_at(data, 0x1958) {
@@ -459,7 +603,22 @@ fn tag2010h(data: &[u8], model: &str) -> Vec<Tag> {
         if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
         tags.push(mk("SonyISO", cv.as_string(), raw));
     }
-    if !MODEL_RE_3.is_match(model) {
+    if !MODEL_RE_4.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x18cc + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x18ed) {
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
@@ -479,14 +638,24 @@ fn tag2010h(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("LensMount", s, Value::I32(v as i32)));
     }
-    if !MODEL_RE_3.is_match(model) {
+    if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x18f4) {
-            tags.push(mk("DistortionCorrParamsPresent", v.to_string(), Value::I32(v as i32)));
+            let s = match v as i64 {
+                0 => "No".to_string(),
+                1 => "Yes".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
         }
     }
-    if !MODEL_RE_3.is_match(model) {
+    if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x18f5) {
-            tags.push(mk("DistortionCorrParamsNumber", v.to_string(), Value::I32(v as i32)));
+            let s = match v as i64 {
+                11 => "11 (APS-C)".to_string(),
+                16 => "16 (Full-frame)".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("DistortionCorrParamsNumber", s, Value::I32(v as i32)));
         }
     }
     if let Some(v) = u8_at(data, 0x192c) {
@@ -533,7 +702,22 @@ fn tag2010i(data: &[u8], model: &str) -> Vec<Tag> {
         if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
         tags.push(mk("SonyISO", cv.as_string(), raw));
     }
-    if !MODEL_RE_3.is_match(model) {
+    if !MODEL_RE_4.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x17d0 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x17f1) {
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
@@ -553,14 +737,24 @@ fn tag2010i(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("LensMount", s, Value::I32(v as i32)));
     }
-    if !MODEL_RE_3.is_match(model) {
+    if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x17f8) {
-            tags.push(mk("DistortionCorrParamsPresent", v.to_string(), Value::I32(v as i32)));
+            let s = match v as i64 {
+                0 => "No".to_string(),
+                1 => "Yes".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
         }
     }
-    if !MODEL_RE_3.is_match(model) {
+    if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x17f9) {
-            tags.push(mk("DistortionCorrParamsNumber", v.to_string(), Value::I32(v as i32)));
+            let s = match v as i64 {
+                11 => "11 (APS-C)".to_string(),
+                16 => "16 (Full-frame)".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("DistortionCorrParamsNumber", s, Value::I32(v as i32)));
         }
     }
     if let Some(v) = u8_at(data, 0x188c) {
@@ -579,7 +773,7 @@ fn tag2010i(data: &[u8], model: &str) -> Vec<Tag> {
 
 fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
-    if !MODEL_RE_5.is_match(model) {
+    if !MODEL_RE_6.is_match(model) {
         if let Some(v) = u8_at(data, 0x0) {
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
@@ -588,13 +782,26 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("SonyMaxAperture", cv.as_string(), raw));
         }
     }
-    if !MODEL_RE_5.is_match(model) {
+    if !MODEL_RE_6.is_match(model) {
         if let Some(v) = u8_at(data, 0x1) {
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
             tags.push(mk("SonyMinAperture", cv.as_string(), raw));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x20 + k * 2) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("Shutter", s.clone(), Value::String(s)));
         }
     }
     if let Some(v) = u8_at(data, 0x31) {
@@ -656,7 +863,7 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
     }
-    if !MODEL_RE_6.is_match(model) {
+    if !MODEL_RE_7.is_match(model) {
         if let Some(v) = u8_at(data, 0x67) {
             let s = match v as i64 {
                 0 => "Normal".to_string(),
@@ -687,6 +894,36 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
         }
     }
+    if !MODEL_RE_8.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u8_at(data, 0x7c + k * 1) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
+                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" "))));
+            }
+        }
+    }
+    if MODEL_RE_9.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..5 {
+                match u8_at(data, 0xf0 + k * 1) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
+                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" "))));
+            }
+        }
+    }
     if let Some(v) = u8_at(data, 0x105) {
         let s = match v as i64 {
             0 => "Unknown".to_string(),
@@ -706,9 +943,14 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
         tags.push(mk("LensFormat", s, Value::I32(v as i32)));
     }
     if let Some(v) = u8_at(data, 0x10b) {
-        tags.push(mk("DistortionCorrParamsPresent", v.to_string(), Value::I32(v as i32)));
+        let s = match v as i64 {
+            0 => "No".to_string(),
+            1 => "Yes".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
     }
-    if MODEL_RE_7.is_match(model) {
+    if MODEL_RE_10.is_match(model) {
         if let Some(v) = u8_at(data, 0x114) {
             let s = match v as i64 {
                 0 => "Off".to_string(),
@@ -718,17 +960,17 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_8.is_match(model) {
+    if MODEL_RE_11.is_match(model) {
         if let Some(v) = u32_at(data, 0x1a0) {
             tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_9.is_match(model) {
+    if MODEL_RE_12.is_match(model) {
         if let Some(v) = u32_at(data, 0x1aa) {
             tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_10.is_match(model) {
+    if MODEL_RE_13.is_match(model) {
         if let Some(v) = u32_at(data, 0x1bd) {
             tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32)));
         }
@@ -738,7 +980,7 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
 
 fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
-    if MODEL_RE_11.is_match(model) {
+    if MODEL_RE_14.is_match(model) {
         if let Some(v) = u8_at(data, 0x0) {
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
@@ -747,13 +989,26 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("SonyMaxAperture", cv.as_string(), raw));
         }
     }
-    if MODEL_RE_11.is_match(model) {
+    if MODEL_RE_14.is_match(model) {
         if let Some(v) = u8_at(data, 0x1) {
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
             tags.push(mk("SonyMinAperture", cv.as_string(), raw));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x26 + k * 2) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("Shutter", s.clone(), Value::String(s)));
         }
     }
     if let Some(v) = u8_at(data, 0x39) {
@@ -816,7 +1071,7 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
     }
-    if MODEL_RE_12.is_match(model) {
+    if MODEL_RE_15.is_match(model) {
         if let Some(v) = u8_at(data, 0x6d) {
             let s = match v as i64 {
                 0 => "Normal".to_string(),
@@ -847,6 +1102,19 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
         }
     }
+    {
+        let mut parts = Vec::new();
+        for k in 0..6 {
+            match u8_at(data, 0x88 + k * 1) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
+            tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" "))));
+        }
+    }
     if let Some(v) = u8_at(data, 0x105) {
         let s = match v as i64 {
             0 => "Unknown".to_string(),
@@ -866,9 +1134,14 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
         tags.push(mk("LensFormat", s, Value::I32(v as i32)));
     }
     if let Some(v) = u8_at(data, 0x10b) {
-        tags.push(mk("DistortionCorrParamsPresent", v.to_string(), Value::I32(v as i32)));
+        let s = match v as i64 {
+            0 => "No".to_string(),
+            1 => "Yes".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
     }
-    if MODEL_RE_13.is_match(model) {
+    if MODEL_RE_16.is_match(model) {
         if let Some(v) = u8_at(data, 0x114) {
             let s = match v as i64 {
                 0 => "Off".to_string(),
@@ -878,22 +1151,22 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_14.is_match(model) {
+    if MODEL_RE_17.is_match(model) {
         if let Some(v) = u32_at(data, 0x19f) {
             tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_15.is_match(model) {
+    if MODEL_RE_18.is_match(model) {
         if let Some(v) = u32_at(data, 0x1cb) {
             tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_16.is_match(model) {
+    if MODEL_RE_19.is_match(model) {
         if let Some(v) = u32_at(data, 0x1cd) {
             tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_15.is_match(model) {
+    if MODEL_RE_18.is_match(model) {
         if let Some(v) = u8_at(data, 0x21a) {
             let s = match v as i64 {
                 0 => "Off".to_string(),
@@ -907,8 +1180,20 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
 }
 
 fn tag9050c(data: &[u8], model: &str) -> Vec<Tag> {
-    let _ = model;
     let mut tags = Vec::new();
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x26 + k * 2) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("Shutter", s.clone(), Value::String(s)));
+        }
+    }
     if let Some(v) = u8_at(data, 0x39) {
         let s = match v as i64 {
             0 => "No Flash present".to_string(),
@@ -1011,12 +1296,42 @@ fn tag9050c(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
     }
+    if MODEL_RE_20.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..6 {
+                match u8_at(data, 0x88 + k * 1) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
+                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" "))));
+            }
+        }
+    }
+    if MODEL_RE_21.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..6 {
+                match u8_at(data, 0x8a + k * 1) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
+                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" "))));
+            }
+        }
+    }
     tags
 }
 
 fn tag9050d(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
-    if MODEL_RE_17.is_match(model) {
+    if MODEL_RE_22.is_match(model) {
         if let Some(v) = u32_at(data, 0xa) {
             tags.push(mk("ShutterCount", v.to_string(), Value::I32(v as i32)));
         }
@@ -1028,7 +1343,7 @@ fn tag9050d(data: &[u8], model: &str) -> Vec<Tag> {
         if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
         tags.push(mk("SonyExposureTime", cv.as_string(), raw));
     }
-    if !MODEL_RE_18.is_match(model) {
+    if !MODEL_RE_23.is_match(model) {
         if let Some(v) = u16_at(data, 0x1c) {
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
@@ -1066,12 +1381,27 @@ fn tag9050d(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
     }
+    if !MODEL_RE_24.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..6 {
+                match u8_at(data, 0x38 + k * 1) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
+                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" "))));
+            }
+        }
+    }
     tags
 }
 
 fn tag9400a(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
-    if !MODEL_RE_19.is_match(model) {
+    if !MODEL_RE_25.is_match(model) {
         if let Some(v) = u8_at(data, 0x8) {
             let s = match v as i64 {
                 0 => "No".to_string(),
@@ -1120,7 +1450,7 @@ fn tag9400a(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("Quality2", s, Value::I32(v as i32)));
     }
-    if MODEL_RE_20.is_match(model) {
+    if MODEL_RE_26.is_match(model) {
         if let Some(v) = u16_at(data, 0x44) {
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
@@ -1128,7 +1458,7 @@ fn tag9400a(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("SonyImageHeight", cv.as_string(), raw));
         }
     }
-    if MODEL_RE_20.is_match(model) {
+    if MODEL_RE_26.is_match(model) {
         if let Some(v) = u8_at(data, 0x52) {
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
@@ -1206,7 +1536,7 @@ fn tag9400b(data: &[u8], model: &str) -> Vec<Tag> {
 
 fn tag9400c(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
-    if MODEL_RE_21.is_match(model) {
+    if MODEL_RE_27.is_match(model) {
         if let Some(v) = u32_at(data, 0x9) {
             tags.push(mk("ShotNumberSincePowerUp", v.to_string(), Value::I32(v as i32)));
         }
@@ -1255,7 +1585,7 @@ fn tag9400c(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("CameraOrientation", s, Value::I32(v as i32)));
     }
-    if !MODEL_RE_22.is_match(model) {
+    if !MODEL_RE_28.is_match(model) {
         if let Some(v) = u8_at(data, 0x53) {
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
@@ -1263,7 +1593,7 @@ fn tag9400c(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("ModelReleaseYear", cv.as_string(), raw));
         }
     }
-    if MODEL_RE_23.is_match(model) {
+    if MODEL_RE_29.is_match(model) {
         if let Some(v) = u8_at(data, 0x133) {
             let s = match v as i64 {
                 7 => "Electronic".to_string(),
@@ -1273,7 +1603,7 @@ fn tag9400c(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("ShutterType", s, Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_24.is_match(model) {
+    if MODEL_RE_30.is_match(model) {
         if let Some(v) = u8_at(data, 0x139) {
             let s = match v as i64 {
                 7 => "Electronic".to_string(),
@@ -1283,7 +1613,7 @@ fn tag9400c(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("ShutterType", s, Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_25.is_match(model) {
+    if MODEL_RE_31.is_match(model) {
         if let Some(v) = u8_at(data, 0x13f) {
             let s = match v as i64 {
                 7 => "Electronic".to_string(),
@@ -1333,7 +1663,7 @@ fn tag9402(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("AFAreaMode", s, Value::I32(v as i32)));
     }
-    if !MODEL_RE_2.is_match(model) {
+    if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x2d) {
             tags.push(mk("FocusPosition2", v.to_string(), Value::I32(v as i32)));
         }
@@ -1352,12 +1682,14 @@ fn tag9403(data: &[u8], model: &str) -> Vec<Tag> {
 
 fn tag9404a(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
-    if !MODEL_RE_26.is_match(model) {
+    if !MODEL_RE_32.is_match(model) {
         if let Some(v) = u16_at(data, 0xb) {
-            let mut cv = Conv::Num(f64::from(v));
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
-            tags.push(mk("IntelligentAuto", cv.as_string(), raw));
+            let s = match v as i64 {
+                0 => "Off".to_string(),
+                1 => "On".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("IntelligentAuto", s, Value::I32(v as i32)));
         }
     }
     tags
@@ -1365,15 +1697,17 @@ fn tag9404a(data: &[u8], model: &str) -> Vec<Tag> {
 
 fn tag9404b(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
-    if !MODEL_RE_27.is_match(model) {
+    if !MODEL_RE_9.is_match(model) {
         if let Some(v) = u16_at(data, 0xc) {
-            let mut cv = Conv::Num(f64::from(v));
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
-            tags.push(mk("IntelligentAuto", cv.as_string(), raw));
+            let s = match v as i64 {
+                0 => "Off".to_string(),
+                1 => "On".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("IntelligentAuto", s, Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_27.is_match(model) {
+    if MODEL_RE_9.is_match(model) {
         if let Some(v) = u8_at(data, 0x20) {
             tags.push(mk("FocusPosition2", v.to_string(), Value::I32(v as i32)));
         }
@@ -1383,9 +1717,14 @@ fn tag9404b(data: &[u8], model: &str) -> Vec<Tag> {
 
 fn tag9405a(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
-    if !MODEL_RE_2.is_match(model) {
+    if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x600) {
-            tags.push(mk("DistortionCorrParamsPresent", v.to_string(), Value::I32(v as i32)));
+            let s = match v as i64 {
+                0 => "No".to_string(),
+                1 => "Yes".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
         }
     }
     if let Some(v) = u8_at(data, 0x601) {
@@ -1396,7 +1735,7 @@ fn tag9405a(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("DistortionCorrection", s, Value::I32(v as i32)));
     }
-    if !MODEL_RE_2.is_match(model) {
+    if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x603) {
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
@@ -1415,6 +1754,51 @@ fn tag9405a(data: &[u8], model: &str) -> Vec<Tag> {
             other => other.to_string(),
         };
         tags.push(mk("LensMount", s, Value::I32(v as i32)));
+    }
+    if !MODEL_RE_3.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x64a + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if !MODEL_RE_3.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x66a + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if !MODEL_RE_3.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x6ca + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+            }
+        }
     }
     tags
 }
@@ -1442,7 +1826,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
         if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
         tags.push(mk("SonyExposureTime2", cv.as_string(), raw));
     }
-    if !MODEL_RE_28.is_match(model) {
+    if !MODEL_RE_33.is_match(model) {
         if let Some(v) = u16_at(data, 0x14) {
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
@@ -1506,9 +1890,14 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
         if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
         tags.push(mk("Sharpness", cv.as_string(), raw));
     }
-    if !MODEL_RE_3.is_match(model) {
+    if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x5a) {
-            tags.push(mk("DistortionCorrParamsPresent", v.to_string(), Value::I32(v as i32)));
+            let s = match v as i64 {
+                0 => "No".to_string(),
+                1 => "Yes".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
         }
     }
     if let Some(v) = u8_at(data, 0x5b) {
@@ -1519,7 +1908,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("DistortionCorrection", s, Value::I32(v as i32)));
     }
-    if !MODEL_RE_3.is_match(model) {
+    if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x5d) {
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
@@ -1539,7 +1928,22 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("LensMount", s, Value::I32(v as i32)));
     }
-    if !MODEL_RE_29.is_match(model) {
+    if !MODEL_RE_4.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x64 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if !MODEL_RE_34.is_match(model) {
         if let Some(v) = u16_at(data, 0x342) {
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
@@ -1547,7 +1951,22 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("LensZoomPosition", cv.as_string(), raw));
         }
     }
-    if MODEL_RE_30.is_match(model) {
+    if MODEL_RE_35.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x34a + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_36.is_match(model) {
         if let Some(v) = u16_at(data, 0x34e) {
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
@@ -1555,12 +1974,132 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("LensZoomPosition", cv.as_string(), raw));
         }
     }
-    if MODEL_RE_31.is_match(model) {
+    if MODEL_RE_37.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x350 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_39.is_match(model) {
         if let Some(v) = u16_at(data, 0x35a) {
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
             tags.push(mk("LensZoomPosition", cv.as_string(), raw));
+        }
+    }
+    if MODEL_RE_38.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x35c + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_40.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x368 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_35.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x37c + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_37.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x384 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_40.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x39c + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_41.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x3b0 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_42.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x3b8 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+            }
         }
     }
     tags
@@ -1587,7 +2126,7 @@ fn tag9406(data: &[u8], model: &str) -> Vec<Tag> {
         if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
         tags.push(mk("BatteryLevel", cv.as_string(), raw));
     }
-    if !MODEL_RE_32.is_match(model) {
+    if !MODEL_RE_43.is_match(model) {
         if let Some(v) = u8_at(data, 0x8) {
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
@@ -1737,7 +2276,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
         };
         tags.push(mk("CreativeStyle", s, Value::I32(v as i32)));
     }
-    if !MODEL_RE_33.is_match(model) {
+    if !MODEL_RE_44.is_match(model) {
         if let Some(v) = u8_at(data, 0x48) {
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
@@ -1749,7 +2288,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("LensMount", s, Value::I32(v as i32)));
         }
     }
-    if !MODEL_RE_33.is_match(model) {
+    if !MODEL_RE_44.is_match(model) {
         if let Some(v) = u8_at(data, 0x49) {
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
@@ -1768,6 +2307,19 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             other => other.to_string(),
         };
         tags.push(mk("LensMount", s, Value::I32(v as i32)));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..16 {
+            match i16_at(data, 0x4f + k * 2) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+        }
     }
     if let Some(v) = u16_at(data, 0x70) {
         let mut cv = Conv::Num(f64::from(v));
@@ -1790,7 +2342,37 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
         tags.push(mk("MaxFocalLength", cv.as_string(), raw));
     }
-    if MODEL_RE_34.is_match(model) {
+    if MODEL_RE_45.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x702 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_46.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x708 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_47.is_match(model) {
         if let Some(v) = u8_at(data, 0x74a) {
             let s = match v as i64 {
                 0 => "Off".to_string(),
@@ -1800,7 +2382,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_35.is_match(model) {
+    if MODEL_RE_48.is_match(model) {
         if let Some(v) = u8_at(data, 0x74f) {
             let s = match v as i64 {
                 0 => "Off".to_string(),
@@ -1810,7 +2392,82 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_36.is_match(model) {
+    if MODEL_RE_47.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x83b + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_48.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x843 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_49.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x88f + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_50.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..16 {
+                match i16_at(data, 0x891 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_51.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x89d + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_49.is_match(model) {
         if let Some(v) = u8_at(data, 0x8b5) {
             let s = match v as i64 {
                 0 => "Off".to_string(),
@@ -1820,7 +2477,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_37.is_match(model) {
+    if MODEL_RE_50.is_match(model) {
         if let Some(v) = u8_at(data, 0x8b7) {
             let s = match v as i64 {
                 0 => "Off".to_string(),
@@ -1830,7 +2487,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
         }
     }
-    if MODEL_RE_38.is_match(model) {
+    if MODEL_RE_52.is_match(model) {
         if let Some(v) = u8_at(data, 0x8e5) {
             let s = match v as i64 {
                 0 => "Off".to_string(),
@@ -1838,6 +2495,51 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
                 other => other.to_string(),
             };
             tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
+        }
+    }
+    if MODEL_RE_49.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x914 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_50.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x916 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+            }
+        }
+    }
+    if MODEL_RE_51.is_match(model) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..32 {
+                match i16_at(data, 0x945 + k * 2) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+            }
         }
     }
     tags
@@ -1901,5 +2603,19 @@ mod tests {
         LazyLock::force(&MODEL_RE_47);
         LazyLock::force(&MODEL_RE_48);
         LazyLock::force(&MODEL_RE_49);
+        LazyLock::force(&MODEL_RE_50);
+        LazyLock::force(&MODEL_RE_51);
+        LazyLock::force(&MODEL_RE_52);
+        LazyLock::force(&MODEL_RE_53);
+        LazyLock::force(&MODEL_RE_54);
+        LazyLock::force(&MODEL_RE_55);
+        LazyLock::force(&MODEL_RE_56);
+        LazyLock::force(&MODEL_RE_57);
+        LazyLock::force(&MODEL_RE_58);
+        LazyLock::force(&MODEL_RE_59);
+        LazyLock::force(&MODEL_RE_60);
+        LazyLock::force(&MODEL_RE_61);
+        LazyLock::force(&MODEL_RE_62);
+        LazyLock::force(&MODEL_RE_63);
     }
 }

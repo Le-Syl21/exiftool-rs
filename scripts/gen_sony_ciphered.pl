@@ -79,6 +79,17 @@ while ($src =~ /^%Image::ExifTool::Sony::(Tag(?:2010[a-z]?|9050[a-z]?|94[0-9a-f]
 
         my ($ffmt) = $fb =~ /Format\s*=>\s*'([^']+)'/;
         $ffmt ||= $fmt;
+        # A fixed-size array of a scalar type is just N reads joined by spaces,
+        # which is how ExifTool prints one. Large ones are sub-structures with a
+        # decoder of their own, so they stay reported rather than flattened.
+        my $count_n = 1;
+        if ($ffmt =~ /^(\w+)\[(\d+)\]$/ and exists $WIDTH{$1}) {
+            ($ffmt, $count_n) = ($1, $2);
+            if ($count_n > 64) {
+                push @skipped, "$table 0x" . sprintf('%04x', $off) . " $name: array of $count_n, likely a sub-structure";
+                next;
+            }
+        }
         unless (exists $WIDTH{$ffmt}) {
             push @skipped, "$table 0x" . sprintf('%04x', $off) . " $name: format '$ffmt'";
             next;
@@ -112,6 +123,10 @@ while ($src =~ /^%Image::ExifTool::Sony::(Tag(?:2010[a-z]?|9050[a-z]?|94[0-9a-f]
         my $conv_src;
         if ($fb =~ /PrintConv\s*=>\s*\{(.*?)\n\s{8}\}/s) {
             $conv_src = $1;
+        } elsif ($fb =~ /PrintConv\s*=>\s*\{([^{}\n]*)\}/) {
+            # Short tables are written on one line: { 0 => 'No', 1 => 'Yes'}.
+            # Requiring a multi-line block left those printing raw numbers.
+            $conv_src = $1;
         } elsif ($fb =~ /^\s+%(\w+),\s*$/m and exists $shared{$1}) {
             my $body = $shared{$1};
             ($conv_src) = $body =~ /PrintConv\s*=>\s*\{(.*?)\n\s{4}\}/s;
@@ -134,7 +149,7 @@ while ($src =~ /^%Image::ExifTool::Sony::(Tag(?:2010[a-z]?|9050[a-z]?|94[0-9a-f]
         for ($vconv, $pconv) { $_ =~ s/\\'/'/g if defined }
 
         push @fields, {
-            off => $off, name => $name, fmt => $ffmt,
+            off => $off, name => $name, fmt => $ffmt, n => $count_n,
             re => $re, neg => $neg, conv => \%conv,
             vconv => $vconv, pconv => $pconv,
         };
@@ -293,6 +308,29 @@ for my $t (@tables) {
         if (defined $f->{re}) {
             printf "%sif %sMODEL_RE_%d.is_match(model) {\n", $ind, ($f->{neg} ? '!' : ''), $f->{re};
             $ind = "        ";
+        }
+        if (($f->{n} // 1) > 1) {
+            my $w = { int8u => 1, int8s => 1, int16u => 2, int16s => 2, int32u => 4, int32s => 4 }->{$f->{fmt}};
+            printf "%s{\n", $ind;
+            printf "%s    let mut parts = Vec::new();\n", $ind;
+            printf "%s    for k in 0..%d {\n", $ind, $f->{n};
+            printf "%s        match %s(data, 0x%x + k * %d) {\n", $ind, $reader, $f->{off}, $w;
+            printf "%s            Some(x) => parts.push(x.to_string()),\n", $ind;
+            printf "%s            None => { parts.clear(); break }\n", $ind;
+            printf "%s        }\n%s    }\n", $ind, $ind;
+            printf "%s    if !parts.is_empty() {\n", $ind;
+            my $joined = "parts.join(\" \")";
+            if (defined $f->{pconv} and $f->{pconv} =~ /unpack\s+"H\*"/) {
+                # `unpack "H*", pack "C*", split " ", $val`: the bytes as hex.
+                printf "%s        let hex: String = parts.iter().map(|p| format!(\"{:02x}\", p.parse::<u32>().unwrap_or(0))).collect();\n", $ind;
+                printf "%s        tags.push(mk(\"%s\", hex, Value::String(%s)));\n", $ind, $f->{name}, $joined;
+            } else {
+                printf "%s        let s = %s;\n", $ind, $joined;
+                printf "%s        tags.push(mk(\"%s\", s.clone(), Value::String(s)));\n", $ind, $f->{name};
+            }
+            printf "%s    }\n%s}\n", $ind, $ind;
+            print  "    }\n" if defined $f->{re};
+            next;
         }
         printf "%sif let Some(v) = %s(data, 0x%x) {\n", $ind, $reader, $f->{off};
         my %conv = %{$f->{conv}};

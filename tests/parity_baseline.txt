@@ -47,7 +47,6 @@ SonyILCE9.arw	missing	HDRSetting
 SonyILCE9.arw	missing	ISOAutoMax
 SonyILCE9.arw	missing	ISOAutoMin
 SonyILCE9.arw	missing	ISOSetting
-SonyILCE9.arw	missing	InternalSerialNumber
 SonyILCE9.arw	missing	LensE-mountVersion
 SonyILCE9.arw	missing	LensFirmwareVersion
 SonyILCE9.arw	missing	LensSpecFeatures
@@ -66,7 +65,6 @@ SonyILCE9.arw	missing	SR2SubIFDOffset
 SonyILCE9.arw	missing	SelfTimer
 SonyILCE9.arw	missing	SequenceFileNumber
 SonyILCE9.arw	missing	SequenceImageNumber
-SonyILCE9.arw	missing	Shutter
 SonyILCE9.arw	missing	ShutterCount2
 SonyILCE9.arw	missing	SonyDateTime
 SonyILCE9.arw	missing	SonyExposureTime2

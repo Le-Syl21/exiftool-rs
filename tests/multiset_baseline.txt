@@ -19,8 +19,7 @@ SonyILCE9.arw	default	extra	0	AFPointSelected	0
 SonyILCE9.arw	default	extra	0	Anti-Blur	2
 SonyILCE9.arw	default	extra	0	CameraE-mountVersion	384
 SonyILCE9.arw	default	extra	0	ColorTemperature	0
-SonyILCE9.arw	default	extra	0	DistortionCorrParamsNumber	16
-SonyILCE9.arw	default	extra	0	DistortionCorrParamsPresent	1
+SonyILCE9.arw	default	extra	0	DistortionCorrParams	0 2 10 24 46 74 108 148 194 246 306 372 444 522 608 700
 SonyILCE9.arw	default	extra	0	DynamicRangeOptimizer2	Standard
 SonyILCE9.arw	default	extra	0	FileFormat	(Binary data 4 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	FullImageSize	4000x6000
@@ -36,6 +35,7 @@ SonyILCE9.arw	default	extra	0	PreviewImageSize	1080x1616
 SonyILCE9.arw	default	extra	0	Quality	1 0
 SonyILCE9.arw	default	extra	0	SequenceLength	Continuous
 SonyILCE9.arw	default	extra	0	ShotInfo	(Binary data 390 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	default	extra	0	SonyModelID	358
 SonyILCE9.arw	default	extra	0	Sony_0x9407	(Binary data 64 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	Sony_0x9408	(Binary data 1000 bytes, use -b option to extract)
@@ -68,8 +68,7 @@ SonyILCE9.arw	default	missing	0	CameraE-mountVersion	1.80
 SonyILCE9.arw	default	missing	0	CameraTemperature	28 C
 SonyILCE9.arw	default	missing	0	ColorMatrix	1282 -211 -15 -32 1247 -159 48 -48 1056
 SonyILCE9.arw	default	missing	0	ColorTemperature	Auto
-SonyILCE9.arw	default	missing	0	DistortionCorrParamsNumber	16 (Full-frame)
-SonyILCE9.arw	default	missing	0	DistortionCorrParamsPresent	Yes
+SonyILCE9.arw	default	missing	0	DistortionCorrParams	16 0 2 9 22 41 66 97 133 174 221 275 334 399 469 546 629
 SonyILCE9.arw	default	missing	0	DistortionCorrectionSetting	Auto
 SonyILCE9.arw	default	missing	0	FaceInfoLength	37
 SonyILCE9.arw	default	missing	0	FaceInfoOffset	94
@@ -94,7 +93,6 @@ SonyILCE9.arw	default	missing	0	HDRSetting	Off
 SonyILCE9.arw	default	missing	0	ISOAutoMax	6400
 SonyILCE9.arw	default	missing	0	ISOAutoMin	100
 SonyILCE9.arw	default	missing	0	ISOSetting	250
-SonyILCE9.arw	default	missing	0	InternalSerialNumber	fefe0000f707
 SonyILCE9.arw	default	missing	0	LensE-mountVersion	1.70
 SonyILCE9.arw	default	missing	0	LensFirmwareVersion	Ver.01.000
 SonyILCE9.arw	default	missing	0	LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD
@@ -160,8 +158,6 @@ SonyILCE9.arw	ee	extra	0	Anti-Blur	2
 SonyILCE9.arw	ee	extra	0	CameraE-mountVersion	384
 SonyILCE9.arw	ee	extra	0	ColorTemperature	0
 SonyILCE9.arw	ee	extra	0	Contrast	Normal
-SonyILCE9.arw	ee	extra	0	DistortionCorrParamsNumber	16
-SonyILCE9.arw	ee	extra	0	DistortionCorrParamsPresent	1
 SonyILCE9.arw	ee	extra	0	DistortionCorrection	Auto
 SonyILCE9.arw	ee	extra	0	DynamicRangeOptimizer2	Standard
 SonyILCE9.arw	ee	extra	0	FileFormat	(Binary data 4 bytes, use -b option to extract)
@@ -180,6 +176,7 @@ SonyILCE9.arw	ee	extra	0	Saturation	Low
 SonyILCE9.arw	ee	extra	0	SequenceLength	Continuous
 SonyILCE9.arw	ee	extra	0	Sharpness	Normal
 SonyILCE9.arw	ee	extra	0	ShotInfo	(Binary data 390 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	ee	extra	0	SonyModelID	358
 SonyILCE9.arw	ee	extra	0	Sony_0x9407	(Binary data 64 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	Sony_0x9408	(Binary data 1000 bytes, use -b option to extract)
@@ -232,12 +229,9 @@ SonyILCE9.arw	ee	missing	0	ColorTemperature	Auto
 SonyILCE9.arw	ee	missing	0	Contrast	0
 SonyILCE9.arw	ee	missing	0	CreativeStyle	Standard
 SonyILCE9.arw	ee	missing	0	DistortionCorrParams	0 2 10 24 46 74 108 148 194 246 306 372 444 522 608 700
-SonyILCE9.arw	ee	missing	1	DistortionCorrParams	0 2 10 24 46 74 108 148 194 246 306 372 444 522 608 700
 SonyILCE9.arw	ee	missing	0	DistortionCorrParams	16 0 2 9 22 41 66 97 133 174 221 275 334 399 469 546 629
-SonyILCE9.arw	ee	missing	0	DistortionCorrParamsNumber	16 (Full-frame)
 SonyILCE9.arw	ee	missing	0	DistortionCorrParamsPresent	Yes
 SonyILCE9.arw	ee	missing	1	DistortionCorrParamsPresent	Yes
-SonyILCE9.arw	ee	missing	2	DistortionCorrParamsPresent	Yes
 SonyILCE9.arw	ee	missing	0	DistortionCorrection	Applied
 SonyILCE9.arw	ee	missing	0	DistortionCorrectionSetting	Auto
 SonyILCE9.arw	ee	missing	0	DynamicRangeOptimizer	Auto
@@ -275,7 +269,6 @@ SonyILCE9.arw	ee	missing	0	ISOAutoMax	6400
 SonyILCE9.arw	ee	missing	0	ISOAutoMin	100
 SonyILCE9.arw	ee	missing	0	ISOSetting	250
 SonyILCE9.arw	ee	missing	0	IntelligentAuto	Off
-SonyILCE9.arw	ee	missing	0	InternalSerialNumber	fefe0000f707
 SonyILCE9.arw	ee	missing	0	LensE-mountVersion	1.70
 SonyILCE9.arw	ee	missing	0	LensFirmwareVersion	Ver.01.000
 SonyILCE9.arw	ee	missing	0	LensFormat	Full-frame

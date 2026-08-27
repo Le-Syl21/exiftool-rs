@@ -8,8 +8,7 @@ SonyILCE9.arw	AFPointSelected
 SonyILCE9.arw	Anti-Blur
 SonyILCE9.arw	CameraE-mountVersion
 SonyILCE9.arw	ColorTemperature
-SonyILCE9.arw	DistortionCorrParamsNumber
-SonyILCE9.arw	DistortionCorrParamsPresent
+SonyILCE9.arw	DistortionCorrParams
 SonyILCE9.arw	FileFormat
 SonyILCE9.arw	FullImageSize
 SonyILCE9.arw	HDR
@@ -21,6 +20,7 @@ SonyILCE9.arw	PixelShiftInfo
 SonyILCE9.arw	PreviewImageSize
 SonyILCE9.arw	Quality
 SonyILCE9.arw	SequenceLength
+SonyILCE9.arw	Shutter
 SonyILCE9.arw	SonyModelID
 SonyILCE9.arw	ThumbnailLength
 SonyILCE9.arw	ThumbnailOffset

@@ -47,8 +47,7 @@ SonyILCE9.arw::Sony:BatteryTemperature
 SonyILCE9.arw::Sony:CameraE-mountVersion
 SonyILCE9.arw::Sony:CameraTemperature
 SonyILCE9.arw::Sony:ColorTemperature
-SonyILCE9.arw::Sony:DistortionCorrParamsNumber
-SonyILCE9.arw::Sony:DistortionCorrParamsPresent
+SonyILCE9.arw::Sony:DistortionCorrParams
 SonyILCE9.arw::Sony:DistortionCorrection
 SonyILCE9.arw::Sony:DistortionCorrectionSetting
 SonyILCE9.arw::Sony:DynamicRangeOptimizer2
@@ -76,7 +75,6 @@ SonyILCE9.arw::Sony:HighISONoiseReduction2
 SonyILCE9.arw::Sony:ISOAutoMax
 SonyILCE9.arw::Sony:ISOAutoMin
 SonyILCE9.arw::Sony:ISOSetting
-SonyILCE9.arw::Sony:InternalSerialNumber
 SonyILCE9.arw::Sony:LensE-mountVersion
 SonyILCE9.arw::Sony:LensFirmwareVersion
 SonyILCE9.arw::Sony:LensSpec
@@ -126,7 +124,6 @@ SonyILCE9.arw::Sony:WB_RGBLevels
 SonyILCE9.arw::Sony:WhiteBalance2
 SonyILCE9.arw::SubIFD:BlackLevel
 SonyILCE9.arw::SubIFD:ChromaticAberrationCorrParams
-SonyILCE9.arw::SubIFD:DistortionCorrParams
 SonyILCE9.arw::SubIFD:DistortionCorrection
 SonyILCE9.arw::SubIFD:VignettingCorrParams
 SonyILCE9.arw::SubIFD:VignettingCorrection
