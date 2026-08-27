@@ -7,7 +7,7 @@
 //! and addressed by byte offset. Model conditions are carried over from the
 //! Perl source verbatim rather than translated, so they cannot drift from it.
 //!
-//! Tables: 26, fields: 211.
+//! Tables: 26, fields: 234.
 
 use std::sync::LazyLock;
 
@@ -97,7 +97,21 @@ fn i32_at(d: &[u8], o: usize) -> Option<i32> {
     Some(i32::from_le_bytes([*d.get(o)?, *d.get(o + 1)?, *d.get(o + 2)?, *d.get(o + 3)?]))
 }
 
-fn mk(name: &str, print_value: String, raw: Value) -> Tag {
+/// The most recent value read under this name in the table being decoded.
+///
+/// ExifTool calls these DATAMEMBERs: a field stores its value so a later field
+/// can be conditioned on it, which is how one offset holds LensType2 on an
+/// E-mount body and LensType on an A-mount one.
+fn dm_get(dm: &[(&str, f64)], name: &str) -> Option<f64> {
+    dm.iter().rev().find(|(n, _)| *n == name).map(|(_, v)| *v)
+}
+
+fn mk(name: &str, print_value: String, raw: Value, default_group2: &'static str) -> Tag {
+    // Each table declares its own family-2 default -- Image for these -- and a
+    // few tags override it. Stamping them all the same put two of them in the
+    // wrong category.
+    let family2 = crate::tags::group2::family2_for("MakerNotes", "Sony", name, default_group2)
+        .unwrap_or(default_group2);
     Tag {
         id: TagId::Text(name.to_string()),
         name: name.to_string(),
@@ -105,7 +119,7 @@ fn mk(name: &str, print_value: String, raw: Value) -> Tag {
         group: TagGroup {
             family0: "MakerNotes".into(),
             family1: "Sony".into(),
-            family2: "Camera".into(),
+            family2: family2.into(),
             family3: crate::tag::MAIN_DOCUMENT.into(),
         },
         raw_value: raw,
@@ -187,10 +201,14 @@ pub fn variant_for(tag: u16, model: &str) -> Option<&'static str> {
 }
 
 fn tag2010b(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let _ = model;
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u32_at(data, 0x0) {
-        tags.push(mk("SonyImageWidth3", v.to_string(), Value::I32(v as i32)));
+        dm.push(("SonyImageWidth3", f64::from(v)));
+        tags.push(mk("SonyImageWidth3", v.to_string(), Value::I32(v as i32), GRP2));
     }
     {
         let mut parts = Vec::new();
@@ -202,7 +220,7 @@ fn tag2010b(data: &[u8], model: &str) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s)));
+            tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s), GRP2));
         }
     }
     {
@@ -215,20 +233,24 @@ fn tag2010b(data: &[u8], model: &str) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+            tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s), GRP2));
         }
     }
     tags
 }
 
 fn tag2010c(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let _ = model;
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u32_at(data, 0x0) {
+        dm.push(("SonyImageWidth3", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val/16", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("SonyImageWidth3", cv.as_string(), raw));
+        tags.push(mk("SonyImageWidth3", cv.as_string(), raw, GRP2));
     }
     {
         let mut parts = Vec::new();
@@ -240,17 +262,21 @@ fn tag2010c(data: &[u8], model: &str) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s)));
+            tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s), GRP2));
         }
     }
     tags
 }
 
 fn tag2010d(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let _ = model;
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u32_at(data, 0x0) {
-        tags.push(mk("SonyImageWidth3", v.to_string(), Value::I32(v as i32)));
+        dm.push(("SonyImageWidth3", f64::from(v)));
+        tags.push(mk("SonyImageWidth3", v.to_string(), Value::I32(v as i32), GRP2));
     }
     {
         let mut parts = Vec::new();
@@ -262,19 +288,23 @@ fn tag2010d(data: &[u8], model: &str) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s)));
+            tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s), GRP2));
         }
     }
     tags
 }
 
 fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u32_at(data, 0x0) {
+        dm.push(("SonyImageWidth3", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val/16", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("SonyImageWidth3", cv.as_string(), raw));
+        tags.push(mk("SonyImageWidth3", cv.as_string(), raw, GRP2));
     }
     if MODEL_RE_0.is_match(model) {
         {
@@ -287,53 +317,58 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s)));
+                tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s), GRP2));
             }
         }
     }
     if MODEL_RE_1.is_match(model) {
         if let Some(v) = u16_at(data, 0x1258) {
+            dm.push(("SonyISO", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-            tags.push(mk("SonyISO", cv.as_string(), raw));
+            tags.push(mk("SonyISO", cv.as_string(), raw, GRP2));
         }
     }
     if MODEL_RE_2.is_match(model) {
         if let Some(v) = u16_at(data, 0x1278) {
+            dm.push(("FocalLength", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(mk("FocalLength", cv.as_string(), raw));
+            tags.push(mk("FocalLength", cv.as_string(), raw, GRP2));
         }
     }
     if MODEL_RE_2.is_match(model) {
         if let Some(v) = u16_at(data, 0x127a) {
+            dm.push(("MinFocalLength", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(mk("MinFocalLength", cv.as_string(), raw));
+            tags.push(mk("MinFocalLength", cv.as_string(), raw, GRP2));
         }
     }
     if MODEL_RE_2.is_match(model) {
         if let Some(v) = u16_at(data, 0x127c) {
+            dm.push(("MaxFocalLength", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(mk("MaxFocalLength", cv.as_string(), raw));
+            tags.push(mk("MaxFocalLength", cv.as_string(), raw, GRP2));
         }
     }
     if MODEL_RE_2.is_match(model) {
         if let Some(v) = u16_at(data, 0x1280) {
+            dm.push(("SonyISO", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-            tags.push(mk("SonyISO", cv.as_string(), raw));
+            tags.push(mk("SonyISO", cv.as_string(), raw, GRP2));
         }
     }
     if !MODEL_RE_3.is_match(model) {
@@ -347,52 +382,359 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
     if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x1891) {
+            dm.push(("LensFormat", f64::from(v)));
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
                 1 => "APS-C".to_string(),
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("LensFormat", s, Value::I32(v as i32)));
+            tags.push(mk("LensFormat", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x1892) {
+        dm.push(("LensMount", f64::from(v)));
         let s = match v as i64 {
             0 => "Unknown".to_string(),
             1 => "A-mount".to_string(),
             2 => "E-mount".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensMount", s, Value::I32(v as i32)));
+        tags.push(mk("LensMount", s, Value::I32(v as i32), GRP2));
+    }
+    if dm_get(&dm, "LensMount") == Some(2.0) {
+        if let Some(v) = u16_at(data, 0x1893) {
+            dm.push(("LensType2", f64::from(v)));
+            let s = match v as i64 {
+                0 => "Unknown E-mount lens or other lens".to_string(),
+                1 => "Samyang AF 35mm F1.8".to_string(),
+                2 => "Viltrox 16mm F1.8 FE".to_string(),
+                3 => "Viltrox 23mm F1.4 E".to_string(),
+                4 => "Viltrox 24mm F1.8 FE".to_string(),
+                5 => "Viltrox 28mm F1.8 FE".to_string(),
+                6 => "Viltrox 33mm F1.4 E".to_string(),
+                7 => "Viltrox 35mm F1.8 FE".to_string(),
+                8 => "Viltrox 50mm F1.8 FE".to_string(),
+                9 => "Viltrox 75mm F1.2 E Pro".to_string(),
+                13 => "Samyang AF 35-150mm F2-2.8".to_string(),
+                17 => "Samyang RS 21mm F3.5".to_string(),
+                18 => "Samyang RS 28mm F3.5".to_string(),
+                19 => "Samyang RS 32mm F2.8".to_string(),
+                20 => "Samyang AF 35mm F1.4 P FE".to_string(),
+                21 => "Samyang AF 14-24mm F2.8".to_string(),
+                22 => "Samyang AF 24-60mm F2.8".to_string(),
+                24 => "Samyang AF 85mm F1.8 P FE".to_string(),
+                44 => "Metabones Canon EF Smart Adapter".to_string(),
+                78 => "Metabones Canon EF Smart Adapter Mark III or Other Adapter".to_string(),
+                184 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                234 => "Metabones Canon EF Smart Adapter Mark IV".to_string(),
+                239 => "Metabones Canon EF Speed Booster".to_string(),
+                24593 => "LA-EA4r MonsterAdapter".to_string(),
+                32784 => "Sony E 16mm F2.8".to_string(),
+                32785 => "Sony E 18-55mm F3.5-5.6 OSS".to_string(),
+                32786 => "Sony E 55-210mm F4.5-6.3 OSS".to_string(),
+                32787 => "Sony E 18-200mm F3.5-6.3 OSS".to_string(),
+                32788 => "Sony E 30mm F3.5 Macro".to_string(),
+                32789 => "Sony E 24mm F1.8 ZA or Samyang AF 50mm F1.4".to_string(),
+                32790 => "Sony E 50mm F1.8 OSS or Samyang AF 14mm F2.8".to_string(),
+                32791 => "Sony E 16-70mm F4 ZA OSS".to_string(),
+                32792 => "Sony E 10-18mm F4 OSS".to_string(),
+                32793 => "Sony E PZ 16-50mm F3.5-5.6 OSS".to_string(),
+                32794 => "Sony FE 35mm F2.8 ZA or Samyang Lens".to_string(),
+                32795 => "Sony FE 24-70mm F4 ZA OSS".to_string(),
+                32796 => "Sony FE 85mm F1.8 or Viltrox PFU RBMH 85mm F1.8".to_string(),
+                32797 => "Sony E 18-200mm F3.5-6.3 OSS LE".to_string(),
+                32798 => "Sony E 20mm F2.8".to_string(),
+                32799 => "Sony E 35mm F1.8 OSS".to_string(),
+                32800 => "Sony E PZ 18-105mm F4 G OSS".to_string(),
+                32801 => "Sony FE 12-24mm F4 G".to_string(),
+                32802 => "Sony FE 90mm F2.8 Macro G OSS".to_string(),
+                32803 => "Sony E 18-50mm F4-5.6".to_string(),
+                32804 => "Sony FE 24mm F1.4 GM".to_string(),
+                32805 => "Sony FE 24-105mm F4 G OSS".to_string(),
+                32807 => "Sony E PZ 18-200mm F3.5-6.3 OSS".to_string(),
+                32808 => "Sony FE 55mm F1.8 ZA".to_string(),
+                32810 => "Sony FE 70-200mm F4 G OSS".to_string(),
+                32811 => "Sony FE 16-35mm F4 ZA OSS".to_string(),
+                32812 => "Sony FE 50mm F2.8 Macro".to_string(),
+                32813 => "Sony FE 28-70mm F3.5-5.6 OSS".to_string(),
+                32814 => "Sony FE 35mm F1.4 ZA".to_string(),
+                32815 => "Sony FE 24-240mm F3.5-6.3 OSS".to_string(),
+                32816 => "Sony FE 28mm F2".to_string(),
+                32817 => "Sony FE PZ 28-135mm F4 G OSS".to_string(),
+                32819 => "Sony FE 100mm F2.8 STF GM OSS".to_string(),
+                32820 => "Sony E PZ 18-110mm F4 G OSS".to_string(),
+                32821 => "Sony FE 24-70mm F2.8 GM".to_string(),
+                32822 => "Sony FE 50mm F1.4 ZA".to_string(),
+                32823 => "Sony FE 85mm F1.4 GM or Samyang AF 85mm F1.4".to_string(),
+                32824 => "Sony FE 50mm F1.8".to_string(),
+                32826 => "Sony FE 21mm F2.8 (SEL28F20 + SEL075UWC)".to_string(),
+                32827 => "Sony FE 16mm F3.5 Fisheye (SEL28F20 + SEL057FEC)".to_string(),
+                32828 => "Sony FE 70-300mm F4.5-5.6 G OSS".to_string(),
+                32829 => "Sony FE 100-400mm F4.5-5.6 GM OSS".to_string(),
+                32830 => "Sony FE 70-200mm F2.8 GM OSS".to_string(),
+                32831 => "Sony FE 16-35mm F2.8 GM".to_string(),
+                32848 => "Sony FE 400mm F2.8 GM OSS".to_string(),
+                32849 => "Sony E 18-135mm F3.5-5.6 OSS".to_string(),
+                32850 => "Sony FE 135mm F1.8 GM".to_string(),
+                32851 => "Sony FE 200-600mm F5.6-6.3 G OSS".to_string(),
+                32852 => "Sony FE 600mm F4 GM OSS".to_string(),
+                32853 => "Sony E 16-55mm F2.8 G".to_string(),
+                32854 => "Sony E 70-350mm F4.5-6.3 G OSS".to_string(),
+                32855 => "Sony FE C 16-35mm T3.1 G".to_string(),
+                32858 => "Sony FE 35mm F1.8".to_string(),
+                32859 => "Sony FE 20mm F1.8 G".to_string(),
+                32860 => "Sony FE 12-24mm F2.8 GM".to_string(),
+                32862 => "Sony FE 50mm F1.2 GM".to_string(),
+                32863 => "Sony FE 14mm F1.8 GM".to_string(),
+                32864 => "Sony FE 28-60mm F4-5.6".to_string(),
+                32865 => "Sony FE 35mm F1.4 GM".to_string(),
+                32866 => "Sony FE 24mm F2.8 G".to_string(),
+                32867 => "Sony FE 40mm F2.5 G".to_string(),
+                32868 => "Sony FE 50mm F2.5 G".to_string(),
+                32871 => "Sony FE PZ 16-35mm F4 G".to_string(),
+                32873 => "Sony E PZ 10-20mm F4 G".to_string(),
+                32874 => "Sony FE 70-200mm F2.8 GM OSS II".to_string(),
+                32875 => "Sony FE 24-70mm F2.8 GM II".to_string(),
+                32876 => "Sony E 11mm F1.8".to_string(),
+                32877 => "Sony E 15mm F1.4 G".to_string(),
+                32878 => "Sony FE 20-70mm F4 G".to_string(),
+                32879 => "Sony FE 50mm F1.4 GM".to_string(),
+                32880 => "Sony FE 16mm F1.8 G".to_string(),
+                32881 => "Sony FE 24-50mm F2.8 G".to_string(),
+                32882 => "Sony FE 16-25mm F2.8 G".to_string(),
+                32884 => "Sony FE 70-200mm F4 Macro G OSS II".to_string(),
+                32885 => "Sony FE 16-35mm F2.8 GM II".to_string(),
+                32886 => "Sony FE 300mm F2.8 GM OSS".to_string(),
+                32887 => "Sony E PZ 16-50mm F3.5-5.6 OSS II".to_string(),
+                32888 => "Sony FE 85mm F1.4 GM II".to_string(),
+                32889 => "Sony FE 28-70mm F2 GM".to_string(),
+                32890 => "Sony FE 400-800mm F6.3-8 G OSS".to_string(),
+                32891 => "Sony FE 50-150mm F2 GM".to_string(),
+                32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
+                32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
+                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
+                33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
+                33077 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 1.4X Teleconverter".to_string(),
+                33078 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 2X Teleconverter".to_string(),
+                33079 => "Sony FE 400mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33080 => "Sony FE 400mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33081 => "Sony FE 200-600mm F5.6-6.3 G OSS + 1.4X Teleconverter".to_string(),
+                33082 => "Sony FE 200-600mm F5.6-6.3 G OSS + 2X Teleconverter".to_string(),
+                33083 => "Sony FE 600mm F4 GM OSS + 1.4X Teleconverter".to_string(),
+                33084 => "Sony FE 600mm F4 GM OSS + 2X Teleconverter".to_string(),
+                33085 => "Sony FE 70-200mm F2.8 GM OSS II + 1.4X Teleconverter".to_string(),
+                33086 => "Sony FE 70-200mm F2.8 GM OSS II + 2X Teleconverter".to_string(),
+                33087 => "Sony FE 70-200mm F4 Macro G OSS II + 1.4X Teleconverter".to_string(),
+                33088 => "Sony FE 70-200mm F4 Macro G OSS II + 2X Teleconverter".to_string(),
+                33089 => "Sony FE 300mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33090 => "Sony FE 300mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33091 => "Sony FE 400-800mm F6.3-8 G OSS + 1.4X Teleconverter".to_string(),
+                33092 => "Sony FE 400-800mm F6.3-8 G OSS + 2X Teleconverter".to_string(),
+                33093 => "Sony FE 100mm F2.8 Macro GM OSS + 1.4X Teleconverter".to_string(),
+                33094 => "Sony FE 100mm F2.8 Macro GM OSS + 2X Teleconverter".to_string(),
+                33095 => "Sony FE 100-400mm F4.5 GM OSS + 1.4X Teleconverter".to_string(),
+                33096 => "Sony FE 100-400mm F4.5 GM OSS + 2X Teleconverter".to_string(),
+                49201 => "Zeiss Touit 12mm F2.8 or other Touit lens".to_string(),
+                49202 => "Zeiss Touit 32mm F1.8".to_string(),
+                49203 => "Zeiss Touit 50mm F2.8 Macro".to_string(),
+                49216 => "Zeiss Batis 25mm F2".to_string(),
+                49217 => "Zeiss Batis 85mm F1.8".to_string(),
+                49218 => "Zeiss Batis 18mm F2.8".to_string(),
+                49219 => "Zeiss Batis 135mm F2.8".to_string(),
+                49220 => "Zeiss Batis 40mm F2 CF".to_string(),
+                49232 => "Zeiss Loxia 50mm F2".to_string(),
+                49233 => "Zeiss Loxia 35mm F2".to_string(),
+                49234 => "Zeiss Loxia 21mm F2.8".to_string(),
+                49235 => "Zeiss Loxia 85mm F2.4".to_string(),
+                49236 => "Zeiss Loxia 25mm F2.4".to_string(),
+                49456 => "Tamron E 18-200mm F3.5-6.3 Di III VC".to_string(),
+                49457 => "Tamron 28-75mm F2.8 Di III RXD".to_string(),
+                49458 => "Tamron 17-28mm F2.8 Di III RXD".to_string(),
+                49459 => "Tamron 35mm F2.8 Di III OSD M1:2".to_string(),
+                49460 => "Tamron 24mm F2.8 Di III OSD M1:2".to_string(),
+                49461 => "Tamron 20mm F2.8 Di III OSD M1:2".to_string(),
+                49462 => "Tamron 70-180mm F2.8 Di III VXD".to_string(),
+                49463 => "Tamron 28-200mm F2.8-5.6 Di III RXD".to_string(),
+                49464 => "Tamron 70-300mm F4.5-6.3 Di III RXD".to_string(),
+                49465 => "Tamron 17-70mm F2.8 Di III-A VC RXD".to_string(),
+                49466 => "Tamron 150-500mm F5-6.7 Di III VC VXD".to_string(),
+                49467 => "Tamron 11-20mm F2.8 Di III-A RXD".to_string(),
+                49468 => "Tamron 18-300mm F3.5-6.3 Di III-A VC VXD".to_string(),
+                49469 => "Tamron 35-150mm F2-F2.8 Di III VXD".to_string(),
+                49470 => "Tamron 28-75mm F2.8 Di III VXD G2".to_string(),
+                49471 => "Tamron 50-400mm F4.5-6.3 Di III VC VXD".to_string(),
+                49472 => "Tamron 20-40mm F2.8 Di III VXD".to_string(),
+                49473 => "Tamron 17-50mm F4 Di III VXD or Tokina or Viltrox lens".to_string(),
+                49474 => "Tamron 70-180mm F2.8 Di III VXD G2 or Viltrox lens".to_string(),
+                49475 => "Tamron 50-300mm F4.5-6.3 Di III VC VXD".to_string(),
+                49476 => "Tamron 28-300mm F4-7.1 Di III VC VXD".to_string(),
+                49477 => "Tamron 90mm F2.8 Di III Macro VXD".to_string(),
+                49478 => "Tamron 16-30mm F2.8 Di III VXD G2".to_string(),
+                49479 => "Tamron 25-200mm F2.8-5.6 Di III VXD G2".to_string(),
+                49480 => "Tamron 35-100mm F2.8 Di III VXD".to_string(),
+                49712 => "Tokina FiRIN 20mm F2 FE AF".to_string(),
+                49713 => "Tokina FiRIN 100mm F2.8 FE MACRO".to_string(),
+                49714 => "Tokina atx-m 11-18mm F2.8 E".to_string(),
+                50480 => "Sigma 30mm F1.4 DC DN | C".to_string(),
+                50481 => "Sigma 50mm F1.4 DG HSM | A".to_string(),
+                50482 => "Sigma 18-300mm F3.5-6.3 DC MACRO OS HSM | C + MC-11".to_string(),
+                50483 => "Sigma 18-35mm F1.8 DC HSM | A + MC-11".to_string(),
+                50484 => "Sigma 24-35mm F2 DG HSM | A + MC-11".to_string(),
+                50485 => "Sigma 24mm F1.4 DG HSM | A + MC-11".to_string(),
+                50486 => "Sigma 150-600mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50487 => "Sigma 20mm F1.4 DG HSM | A + MC-11".to_string(),
+                50488 => "Sigma 35mm F1.4 DG HSM | A".to_string(),
+                50489 => "Sigma 150-600mm F5-6.3 DG OS HSM | S + MC-11".to_string(),
+                50490 => "Sigma 120-300mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50492 => "Sigma 24-105mm F4 DG OS HSM | A + MC-11".to_string(),
+                50493 => "Sigma 17-70mm F2.8-4 DC MACRO OS HSM | C + MC-11".to_string(),
+                50495 => "Sigma 50-100mm F1.8 DC HSM | A + MC-11".to_string(),
+                50499 => "Sigma 85mm F1.4 DG HSM | A".to_string(),
+                50501 => "Sigma 100-400mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50503 => "Sigma 16mm F1.4 DC DN | C".to_string(),
+                50507 => "Sigma 105mm F1.4 DG HSM | A".to_string(),
+                50508 => "Sigma 56mm F1.4 DC DN | C".to_string(),
+                50512 => "Sigma 70-200mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50513 => "Sigma 70mm F2.8 DG MACRO | A".to_string(),
+                50514 => "Sigma 45mm F2.8 DG DN | C".to_string(),
+                50515 => "Sigma 35mm F1.2 DG DN | A".to_string(),
+                50516 => "Sigma 14-24mm F2.8 DG DN | A".to_string(),
+                50517 => "Sigma 24-70mm F2.8 DG DN | A".to_string(),
+                50518 => "Sigma 100-400mm F5-6.3 DG DN OS | C".to_string(),
+                50521 => "Sigma 85mm F1.4 DG DN | A".to_string(),
+                50522 => "Sigma 105mm F2.8 DG DN MACRO | A".to_string(),
+                50523 => "Sigma 65mm F2 DG DN | C".to_string(),
+                50524 => "Sigma 35mm F2 DG DN | C".to_string(),
+                50525 => "Sigma 24mm F3.5 DG DN | C".to_string(),
+                50526 => "Sigma 28-70mm F2.8 DG DN | C".to_string(),
+                50527 => "Sigma 150-600mm F5-6.3 DG DN OS | S".to_string(),
+                50528 => "Sigma 35mm F1.4 DG DN | A".to_string(),
+                50529 => "Sigma 90mm F2.8 DG DN | C".to_string(),
+                50530 => "Sigma 24mm F2 DG DN | C".to_string(),
+                50531 => "Sigma 18-50mm F2.8 DC DN | C".to_string(),
+                50532 => "Sigma 20mm F2 DG DN | C".to_string(),
+                50533 => "Sigma 16-28mm F2.8 DG DN | C".to_string(),
+                50534 => "Sigma 20mm F1.4 DG DN | A".to_string(),
+                50535 => "Sigma 24mm F1.4 DG DN | A".to_string(),
+                50536 => "Sigma 60-600mm F4.5-6.3 DG DN OS | S".to_string(),
+                50537 => "Sigma 50mm F2 DG DN | C".to_string(),
+                50538 => "Sigma 17mm F4 DG DN | C".to_string(),
+                50539 => "Sigma 50mm F1.4 DG DN | A".to_string(),
+                50540 => "Sigma 14mm F1.4 DG DN | A".to_string(),
+                50543 => "Sigma 70-200mm F2.8 DG DN OS | S".to_string(),
+                50544 => "Sigma 23mm F1.4 DC DN | C".to_string(),
+                50545 => "Sigma 24-70mm F2.8 DG DN II | A".to_string(),
+                50546 => "Sigma 500mm F5.6 DG DN OS | S".to_string(),
+                50547 => "Sigma 10-18mm F2.8 DC DN | C".to_string(),
+                50548 => "Sigma 15mm F1.4 DG DN DIAGONAL FISHEYE | A".to_string(),
+                50549 => "Sigma 50mm F1.2 DG DN | A".to_string(),
+                50550 => "Sigma 28-105mm F2.8 DG DN | A".to_string(),
+                50551 => "Sigma 28-45mm F1.8 DG DN | A".to_string(),
+                50552 => "Sigma 35mm F1.2 DG II | A".to_string(),
+                50553 => "Sigma 300-600mm F4 DG OS | S".to_string(),
+                50554 => "Sigma 16-300mm F3.5-6.7 DC OS | C".to_string(),
+                50555 => "Sigma 12mm F1.4 DC | C".to_string(),
+                50556 => "Sigma 17-40mm F1.8 DC | A".to_string(),
+                50557 => "Sigma 200mm F2 DG OS | S".to_string(),
+                50558 => "Sigma 20-200mm F3.5-6.3 DG | C".to_string(),
+                50559 => "Sigma 135mm F1.4 DG | A".to_string(),
+                50563 => "Sigma 35mm F1.4 DG II | A".to_string(),
+                50564 => "Sigma 15mm F1.4 DC | C".to_string(),
+                50992 => "Voigtlander SUPER WIDE-HELIAR 15mm F4.5 III".to_string(),
+                50993 => "Voigtlander HELIAR-HYPER WIDE 10mm F5.6".to_string(),
+                50994 => "Voigtlander ULTRA WIDE-HELIAR 12mm F5.6 III".to_string(),
+                50995 => "Voigtlander MACRO APO-LANTHAR 65mm F2 Aspherical".to_string(),
+                50996 => "Voigtlander NOKTON 40mm F1.2 Aspherical".to_string(),
+                50997 => "Voigtlander NOKTON classic 35mm F1.4".to_string(),
+                50998 => "Voigtlander MACRO APO-LANTHAR 110mm F2.5".to_string(),
+                50999 => "Voigtlander COLOR-SKOPAR 21mm F3.5 Aspherical".to_string(),
+                51000 => "Voigtlander NOKTON 50mm F1.2 Aspherical".to_string(),
+                51001 => "Voigtlander NOKTON 21mm F1.4 Aspherical".to_string(),
+                51002 => "Voigtlander APO-LANTHAR 50mm F2 Aspherical".to_string(),
+                51003 => "Voigtlander NOKTON 35mm F1.2 Aspherical SE".to_string(),
+                51006 => "Voigtlander APO-LANTHAR 35mm F2 Aspherical".to_string(),
+                51007 => "Voigtlander NOKTON 50mm F1 Aspherical".to_string(),
+                51008 => "Voigtlander NOKTON 75mm F1.5 Aspherical".to_string(),
+                51009 => "Voigtlander NOKTON 28mm F1.5 Aspherical".to_string(),
+                51011 => "Voigtlander APO-LANTHAR 28mm F2 Aspherical".to_string(),
+                51072 => "ZEISS Otus ML 50mm F1.4".to_string(),
+                51073 => "ZEISS Otus ML 85mm F1.4".to_string(),
+                51504 => "Samyang AF 50mm F1.4".to_string(),
+                51505 => "Samyang AF 14mm F2.8 or Samyang AF 35mm F2.8".to_string(),
+                51507 => "Samyang AF 35mm F1.4".to_string(),
+                51508 => "Samyang AF 45mm F1.8".to_string(),
+                51510 => "Samyang AF 18mm F2.8 or Samyang AF 35mm F1.8".to_string(),
+                51512 => "Samyang AF 75mm F1.8".to_string(),
+                51513 => "Samyang AF 35mm F1.8".to_string(),
+                51514 => "Samyang AF 24mm F1.8".to_string(),
+                51515 => "Samyang AF 12mm F2.0".to_string(),
+                51516 => "Samyang AF 24-70mm F2.8".to_string(),
+                51517 => "Samyang AF 50mm F1.4 II".to_string(),
+                51518 => "Samyang AF 135mm F1.8".to_string(),
+                61569 => "LAOWA FFII 10mm F2.8 C&D Dreamer".to_string(),
+                61572 => "LAOWA FFII 12mm F2.8 C&D Dreamer".to_string(),
+                61600 => "Thypoch AF 24-50mm F2.8 FE".to_string(),
+                61760 => "Viltrox 135mm F1.8 FE LAB".to_string(),
+                61761 => "Viltrox 28mm F4.5 FE".to_string(),
+                61762 => "Viltrox 35mm F1.2 FE LAB".to_string(),
+                61763 => "Viltrox 85mm F1.4 FE Pro".to_string(),
+                61766 => "Viltrox 40mm F2.5 FE Air".to_string(),
+                61767 => "Viltrox 50mm F2.0 FE Air".to_string(),
+                61768 => "Viltrox 25mm F1.7 E Air".to_string(),
+                61776 => "Viltrox 50mm F1.4 FE Pro".to_string(),
+                61777 => "Viltrox 9mm F2.8 E Air".to_string(),
+                61778 => "Viltrox 14mm F4.0 FE Air".to_string(),
+                61779 => "Viltrox 56mm F1.2 E Pro".to_string(),
+                61780 => "Viltrox 85mm F2.0 FE EVO".to_string(),
+                61781 => "Viltrox 55mm F1.8 FE EVO".to_string(),
+                61783 => "Viltrox 15mm F1.7 E Air".to_string(),
+                61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("LensType2", s, Value::I32(v as i32), GRP2));
+        }
+    }
+    if dm_get(&dm, "LensMount") == Some(1.0) {
+        if let Some(v) = u16_at(data, 0x1896) {
+            dm.push(("LensType", f64::from(v)));
+            tags.push(mk("LensType", v.to_string(), Value::I32(v as i32), GRP2));
+        }
     }
     if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x1898) {
+            dm.push(("DistortionCorrParamsPresent", f64::from(v)));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
+            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2));
         }
     }
     if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x1899) {
+            dm.push(("DistortionCorrParamsNumber", f64::from(v)));
             let s = match v as i64 {
                 11 => "11 (APS-C)".to_string(),
                 16 => "16 (Full-frame)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("DistortionCorrParamsNumber", s, Value::I32(v as i32)));
+            tags.push(mk("DistortionCorrParamsNumber", s, Value::I32(v as i32), GRP2));
         }
     }
     if !MODEL_RE_5.is_match(model) {
         if let Some(v) = u8_at(data, 0x192c) {
+            dm.push(("AspectRatio", f64::from(v)));
             let s = match v as i64 {
                 0 => "16:9".to_string(),
                 1 => "4:3".to_string(),
@@ -401,11 +743,12 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
                 5 => "Panorama".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("AspectRatio", s, Value::I32(v as i32)));
+            tags.push(mk("AspectRatio", s, Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_5.is_match(model) {
         if let Some(v) = u8_at(data, 0x1a88) {
+            dm.push(("AspectRatio", f64::from(v)));
             let s = match v as i64 {
                 0 => "16:9".to_string(),
                 1 => "4:3".to_string(),
@@ -414,17 +757,21 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
                 5 => "Panorama".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("AspectRatio", s, Value::I32(v as i32)));
+            tags.push(mk("AspectRatio", s, Value::I32(v as i32), GRP2));
         }
     }
     tags
 }
 
 fn tag2010f(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let _ = model;
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u32_at(data, 0x4) {
-        tags.push(mk("SonyImageWidth3", v.to_string(), Value::I32(v as i32)));
+        dm.push(("SonyImageWidth3", f64::from(v)));
+        tags.push(mk("SonyImageWidth3", v.to_string(), Value::I32(v as i32), GRP2));
     }
     {
         let mut parts = Vec::new();
@@ -436,31 +783,35 @@ fn tag2010f(data: &[u8], model: &str) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s)));
+            tags.push(mk("WB_RGBLevels", s.clone(), Value::String(s), GRP2));
         }
     }
     if let Some(v) = u16_at(data, 0x1136) {
+        dm.push(("MinFocalLength", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("MinFocalLength", cv.as_string(), raw));
+        tags.push(mk("MinFocalLength", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x1138) {
+        dm.push(("MaxFocalLength", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("MaxFocalLength", cv.as_string(), raw));
+        tags.push(mk("MaxFocalLength", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x113c) {
+        dm.push(("SonyISO", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyISO", cv.as_string(), raw));
+        tags.push(mk("SonyISO", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u8_at(data, 0x192c) {
+        dm.push(("AspectRatio", f64::from(v)));
         let s = match v as i64 {
             0 => "16:9".to_string(),
             1 => "4:3".to_string(),
@@ -469,40 +820,47 @@ fn tag2010f(data: &[u8], model: &str) -> Vec<Tag> {
             5 => "Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AspectRatio", s, Value::I32(v as i32)));
+        tags.push(mk("AspectRatio", s, Value::I32(v as i32), GRP2));
     }
     tags
 }
 
 fn tag2010g(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u32_at(data, 0x4) {
+        dm.push(("WB_RGBLevels", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("WB_RGBLevels", cv.as_string(), raw));
+        tags.push(mk("WB_RGBLevels", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x32e) {
+        dm.push(("MinFocalLength", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("MinFocalLength", cv.as_string(), raw));
+        tags.push(mk("MinFocalLength", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x330) {
+        dm.push(("MaxFocalLength", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("MaxFocalLength", cv.as_string(), raw));
+        tags.push(mk("MaxFocalLength", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x344) {
+        dm.push(("SonyISO", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyISO", cv.as_string(), raw));
+        tags.push(mk("SonyISO", cv.as_string(), raw, GRP2));
     }
     if !MODEL_RE_4.is_match(model) {
         {
@@ -515,51 +873,358 @@ fn tag2010g(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
     if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x18bd) {
+            dm.push(("LensFormat", f64::from(v)));
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
                 1 => "APS-C".to_string(),
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("LensFormat", s, Value::I32(v as i32)));
+            tags.push(mk("LensFormat", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x18be) {
+        dm.push(("LensMount", f64::from(v)));
         let s = match v as i64 {
             0 => "Unknown".to_string(),
             1 => "A-mount".to_string(),
             2 => "E-mount".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensMount", s, Value::I32(v as i32)));
+        tags.push(mk("LensMount", s, Value::I32(v as i32), GRP2));
+    }
+    if dm_get(&dm, "LensMount") == Some(2.0) {
+        if let Some(v) = u16_at(data, 0x18bf) {
+            dm.push(("LensType2", f64::from(v)));
+            let s = match v as i64 {
+                0 => "Unknown E-mount lens or other lens".to_string(),
+                1 => "Samyang AF 35mm F1.8".to_string(),
+                2 => "Viltrox 16mm F1.8 FE".to_string(),
+                3 => "Viltrox 23mm F1.4 E".to_string(),
+                4 => "Viltrox 24mm F1.8 FE".to_string(),
+                5 => "Viltrox 28mm F1.8 FE".to_string(),
+                6 => "Viltrox 33mm F1.4 E".to_string(),
+                7 => "Viltrox 35mm F1.8 FE".to_string(),
+                8 => "Viltrox 50mm F1.8 FE".to_string(),
+                9 => "Viltrox 75mm F1.2 E Pro".to_string(),
+                13 => "Samyang AF 35-150mm F2-2.8".to_string(),
+                17 => "Samyang RS 21mm F3.5".to_string(),
+                18 => "Samyang RS 28mm F3.5".to_string(),
+                19 => "Samyang RS 32mm F2.8".to_string(),
+                20 => "Samyang AF 35mm F1.4 P FE".to_string(),
+                21 => "Samyang AF 14-24mm F2.8".to_string(),
+                22 => "Samyang AF 24-60mm F2.8".to_string(),
+                24 => "Samyang AF 85mm F1.8 P FE".to_string(),
+                44 => "Metabones Canon EF Smart Adapter".to_string(),
+                78 => "Metabones Canon EF Smart Adapter Mark III or Other Adapter".to_string(),
+                184 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                234 => "Metabones Canon EF Smart Adapter Mark IV".to_string(),
+                239 => "Metabones Canon EF Speed Booster".to_string(),
+                24593 => "LA-EA4r MonsterAdapter".to_string(),
+                32784 => "Sony E 16mm F2.8".to_string(),
+                32785 => "Sony E 18-55mm F3.5-5.6 OSS".to_string(),
+                32786 => "Sony E 55-210mm F4.5-6.3 OSS".to_string(),
+                32787 => "Sony E 18-200mm F3.5-6.3 OSS".to_string(),
+                32788 => "Sony E 30mm F3.5 Macro".to_string(),
+                32789 => "Sony E 24mm F1.8 ZA or Samyang AF 50mm F1.4".to_string(),
+                32790 => "Sony E 50mm F1.8 OSS or Samyang AF 14mm F2.8".to_string(),
+                32791 => "Sony E 16-70mm F4 ZA OSS".to_string(),
+                32792 => "Sony E 10-18mm F4 OSS".to_string(),
+                32793 => "Sony E PZ 16-50mm F3.5-5.6 OSS".to_string(),
+                32794 => "Sony FE 35mm F2.8 ZA or Samyang Lens".to_string(),
+                32795 => "Sony FE 24-70mm F4 ZA OSS".to_string(),
+                32796 => "Sony FE 85mm F1.8 or Viltrox PFU RBMH 85mm F1.8".to_string(),
+                32797 => "Sony E 18-200mm F3.5-6.3 OSS LE".to_string(),
+                32798 => "Sony E 20mm F2.8".to_string(),
+                32799 => "Sony E 35mm F1.8 OSS".to_string(),
+                32800 => "Sony E PZ 18-105mm F4 G OSS".to_string(),
+                32801 => "Sony FE 12-24mm F4 G".to_string(),
+                32802 => "Sony FE 90mm F2.8 Macro G OSS".to_string(),
+                32803 => "Sony E 18-50mm F4-5.6".to_string(),
+                32804 => "Sony FE 24mm F1.4 GM".to_string(),
+                32805 => "Sony FE 24-105mm F4 G OSS".to_string(),
+                32807 => "Sony E PZ 18-200mm F3.5-6.3 OSS".to_string(),
+                32808 => "Sony FE 55mm F1.8 ZA".to_string(),
+                32810 => "Sony FE 70-200mm F4 G OSS".to_string(),
+                32811 => "Sony FE 16-35mm F4 ZA OSS".to_string(),
+                32812 => "Sony FE 50mm F2.8 Macro".to_string(),
+                32813 => "Sony FE 28-70mm F3.5-5.6 OSS".to_string(),
+                32814 => "Sony FE 35mm F1.4 ZA".to_string(),
+                32815 => "Sony FE 24-240mm F3.5-6.3 OSS".to_string(),
+                32816 => "Sony FE 28mm F2".to_string(),
+                32817 => "Sony FE PZ 28-135mm F4 G OSS".to_string(),
+                32819 => "Sony FE 100mm F2.8 STF GM OSS".to_string(),
+                32820 => "Sony E PZ 18-110mm F4 G OSS".to_string(),
+                32821 => "Sony FE 24-70mm F2.8 GM".to_string(),
+                32822 => "Sony FE 50mm F1.4 ZA".to_string(),
+                32823 => "Sony FE 85mm F1.4 GM or Samyang AF 85mm F1.4".to_string(),
+                32824 => "Sony FE 50mm F1.8".to_string(),
+                32826 => "Sony FE 21mm F2.8 (SEL28F20 + SEL075UWC)".to_string(),
+                32827 => "Sony FE 16mm F3.5 Fisheye (SEL28F20 + SEL057FEC)".to_string(),
+                32828 => "Sony FE 70-300mm F4.5-5.6 G OSS".to_string(),
+                32829 => "Sony FE 100-400mm F4.5-5.6 GM OSS".to_string(),
+                32830 => "Sony FE 70-200mm F2.8 GM OSS".to_string(),
+                32831 => "Sony FE 16-35mm F2.8 GM".to_string(),
+                32848 => "Sony FE 400mm F2.8 GM OSS".to_string(),
+                32849 => "Sony E 18-135mm F3.5-5.6 OSS".to_string(),
+                32850 => "Sony FE 135mm F1.8 GM".to_string(),
+                32851 => "Sony FE 200-600mm F5.6-6.3 G OSS".to_string(),
+                32852 => "Sony FE 600mm F4 GM OSS".to_string(),
+                32853 => "Sony E 16-55mm F2.8 G".to_string(),
+                32854 => "Sony E 70-350mm F4.5-6.3 G OSS".to_string(),
+                32855 => "Sony FE C 16-35mm T3.1 G".to_string(),
+                32858 => "Sony FE 35mm F1.8".to_string(),
+                32859 => "Sony FE 20mm F1.8 G".to_string(),
+                32860 => "Sony FE 12-24mm F2.8 GM".to_string(),
+                32862 => "Sony FE 50mm F1.2 GM".to_string(),
+                32863 => "Sony FE 14mm F1.8 GM".to_string(),
+                32864 => "Sony FE 28-60mm F4-5.6".to_string(),
+                32865 => "Sony FE 35mm F1.4 GM".to_string(),
+                32866 => "Sony FE 24mm F2.8 G".to_string(),
+                32867 => "Sony FE 40mm F2.5 G".to_string(),
+                32868 => "Sony FE 50mm F2.5 G".to_string(),
+                32871 => "Sony FE PZ 16-35mm F4 G".to_string(),
+                32873 => "Sony E PZ 10-20mm F4 G".to_string(),
+                32874 => "Sony FE 70-200mm F2.8 GM OSS II".to_string(),
+                32875 => "Sony FE 24-70mm F2.8 GM II".to_string(),
+                32876 => "Sony E 11mm F1.8".to_string(),
+                32877 => "Sony E 15mm F1.4 G".to_string(),
+                32878 => "Sony FE 20-70mm F4 G".to_string(),
+                32879 => "Sony FE 50mm F1.4 GM".to_string(),
+                32880 => "Sony FE 16mm F1.8 G".to_string(),
+                32881 => "Sony FE 24-50mm F2.8 G".to_string(),
+                32882 => "Sony FE 16-25mm F2.8 G".to_string(),
+                32884 => "Sony FE 70-200mm F4 Macro G OSS II".to_string(),
+                32885 => "Sony FE 16-35mm F2.8 GM II".to_string(),
+                32886 => "Sony FE 300mm F2.8 GM OSS".to_string(),
+                32887 => "Sony E PZ 16-50mm F3.5-5.6 OSS II".to_string(),
+                32888 => "Sony FE 85mm F1.4 GM II".to_string(),
+                32889 => "Sony FE 28-70mm F2 GM".to_string(),
+                32890 => "Sony FE 400-800mm F6.3-8 G OSS".to_string(),
+                32891 => "Sony FE 50-150mm F2 GM".to_string(),
+                32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
+                32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
+                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
+                33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
+                33077 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 1.4X Teleconverter".to_string(),
+                33078 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 2X Teleconverter".to_string(),
+                33079 => "Sony FE 400mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33080 => "Sony FE 400mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33081 => "Sony FE 200-600mm F5.6-6.3 G OSS + 1.4X Teleconverter".to_string(),
+                33082 => "Sony FE 200-600mm F5.6-6.3 G OSS + 2X Teleconverter".to_string(),
+                33083 => "Sony FE 600mm F4 GM OSS + 1.4X Teleconverter".to_string(),
+                33084 => "Sony FE 600mm F4 GM OSS + 2X Teleconverter".to_string(),
+                33085 => "Sony FE 70-200mm F2.8 GM OSS II + 1.4X Teleconverter".to_string(),
+                33086 => "Sony FE 70-200mm F2.8 GM OSS II + 2X Teleconverter".to_string(),
+                33087 => "Sony FE 70-200mm F4 Macro G OSS II + 1.4X Teleconverter".to_string(),
+                33088 => "Sony FE 70-200mm F4 Macro G OSS II + 2X Teleconverter".to_string(),
+                33089 => "Sony FE 300mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33090 => "Sony FE 300mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33091 => "Sony FE 400-800mm F6.3-8 G OSS + 1.4X Teleconverter".to_string(),
+                33092 => "Sony FE 400-800mm F6.3-8 G OSS + 2X Teleconverter".to_string(),
+                33093 => "Sony FE 100mm F2.8 Macro GM OSS + 1.4X Teleconverter".to_string(),
+                33094 => "Sony FE 100mm F2.8 Macro GM OSS + 2X Teleconverter".to_string(),
+                33095 => "Sony FE 100-400mm F4.5 GM OSS + 1.4X Teleconverter".to_string(),
+                33096 => "Sony FE 100-400mm F4.5 GM OSS + 2X Teleconverter".to_string(),
+                49201 => "Zeiss Touit 12mm F2.8 or other Touit lens".to_string(),
+                49202 => "Zeiss Touit 32mm F1.8".to_string(),
+                49203 => "Zeiss Touit 50mm F2.8 Macro".to_string(),
+                49216 => "Zeiss Batis 25mm F2".to_string(),
+                49217 => "Zeiss Batis 85mm F1.8".to_string(),
+                49218 => "Zeiss Batis 18mm F2.8".to_string(),
+                49219 => "Zeiss Batis 135mm F2.8".to_string(),
+                49220 => "Zeiss Batis 40mm F2 CF".to_string(),
+                49232 => "Zeiss Loxia 50mm F2".to_string(),
+                49233 => "Zeiss Loxia 35mm F2".to_string(),
+                49234 => "Zeiss Loxia 21mm F2.8".to_string(),
+                49235 => "Zeiss Loxia 85mm F2.4".to_string(),
+                49236 => "Zeiss Loxia 25mm F2.4".to_string(),
+                49456 => "Tamron E 18-200mm F3.5-6.3 Di III VC".to_string(),
+                49457 => "Tamron 28-75mm F2.8 Di III RXD".to_string(),
+                49458 => "Tamron 17-28mm F2.8 Di III RXD".to_string(),
+                49459 => "Tamron 35mm F2.8 Di III OSD M1:2".to_string(),
+                49460 => "Tamron 24mm F2.8 Di III OSD M1:2".to_string(),
+                49461 => "Tamron 20mm F2.8 Di III OSD M1:2".to_string(),
+                49462 => "Tamron 70-180mm F2.8 Di III VXD".to_string(),
+                49463 => "Tamron 28-200mm F2.8-5.6 Di III RXD".to_string(),
+                49464 => "Tamron 70-300mm F4.5-6.3 Di III RXD".to_string(),
+                49465 => "Tamron 17-70mm F2.8 Di III-A VC RXD".to_string(),
+                49466 => "Tamron 150-500mm F5-6.7 Di III VC VXD".to_string(),
+                49467 => "Tamron 11-20mm F2.8 Di III-A RXD".to_string(),
+                49468 => "Tamron 18-300mm F3.5-6.3 Di III-A VC VXD".to_string(),
+                49469 => "Tamron 35-150mm F2-F2.8 Di III VXD".to_string(),
+                49470 => "Tamron 28-75mm F2.8 Di III VXD G2".to_string(),
+                49471 => "Tamron 50-400mm F4.5-6.3 Di III VC VXD".to_string(),
+                49472 => "Tamron 20-40mm F2.8 Di III VXD".to_string(),
+                49473 => "Tamron 17-50mm F4 Di III VXD or Tokina or Viltrox lens".to_string(),
+                49474 => "Tamron 70-180mm F2.8 Di III VXD G2 or Viltrox lens".to_string(),
+                49475 => "Tamron 50-300mm F4.5-6.3 Di III VC VXD".to_string(),
+                49476 => "Tamron 28-300mm F4-7.1 Di III VC VXD".to_string(),
+                49477 => "Tamron 90mm F2.8 Di III Macro VXD".to_string(),
+                49478 => "Tamron 16-30mm F2.8 Di III VXD G2".to_string(),
+                49479 => "Tamron 25-200mm F2.8-5.6 Di III VXD G2".to_string(),
+                49480 => "Tamron 35-100mm F2.8 Di III VXD".to_string(),
+                49712 => "Tokina FiRIN 20mm F2 FE AF".to_string(),
+                49713 => "Tokina FiRIN 100mm F2.8 FE MACRO".to_string(),
+                49714 => "Tokina atx-m 11-18mm F2.8 E".to_string(),
+                50480 => "Sigma 30mm F1.4 DC DN | C".to_string(),
+                50481 => "Sigma 50mm F1.4 DG HSM | A".to_string(),
+                50482 => "Sigma 18-300mm F3.5-6.3 DC MACRO OS HSM | C + MC-11".to_string(),
+                50483 => "Sigma 18-35mm F1.8 DC HSM | A + MC-11".to_string(),
+                50484 => "Sigma 24-35mm F2 DG HSM | A + MC-11".to_string(),
+                50485 => "Sigma 24mm F1.4 DG HSM | A + MC-11".to_string(),
+                50486 => "Sigma 150-600mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50487 => "Sigma 20mm F1.4 DG HSM | A + MC-11".to_string(),
+                50488 => "Sigma 35mm F1.4 DG HSM | A".to_string(),
+                50489 => "Sigma 150-600mm F5-6.3 DG OS HSM | S + MC-11".to_string(),
+                50490 => "Sigma 120-300mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50492 => "Sigma 24-105mm F4 DG OS HSM | A + MC-11".to_string(),
+                50493 => "Sigma 17-70mm F2.8-4 DC MACRO OS HSM | C + MC-11".to_string(),
+                50495 => "Sigma 50-100mm F1.8 DC HSM | A + MC-11".to_string(),
+                50499 => "Sigma 85mm F1.4 DG HSM | A".to_string(),
+                50501 => "Sigma 100-400mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50503 => "Sigma 16mm F1.4 DC DN | C".to_string(),
+                50507 => "Sigma 105mm F1.4 DG HSM | A".to_string(),
+                50508 => "Sigma 56mm F1.4 DC DN | C".to_string(),
+                50512 => "Sigma 70-200mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50513 => "Sigma 70mm F2.8 DG MACRO | A".to_string(),
+                50514 => "Sigma 45mm F2.8 DG DN | C".to_string(),
+                50515 => "Sigma 35mm F1.2 DG DN | A".to_string(),
+                50516 => "Sigma 14-24mm F2.8 DG DN | A".to_string(),
+                50517 => "Sigma 24-70mm F2.8 DG DN | A".to_string(),
+                50518 => "Sigma 100-400mm F5-6.3 DG DN OS | C".to_string(),
+                50521 => "Sigma 85mm F1.4 DG DN | A".to_string(),
+                50522 => "Sigma 105mm F2.8 DG DN MACRO | A".to_string(),
+                50523 => "Sigma 65mm F2 DG DN | C".to_string(),
+                50524 => "Sigma 35mm F2 DG DN | C".to_string(),
+                50525 => "Sigma 24mm F3.5 DG DN | C".to_string(),
+                50526 => "Sigma 28-70mm F2.8 DG DN | C".to_string(),
+                50527 => "Sigma 150-600mm F5-6.3 DG DN OS | S".to_string(),
+                50528 => "Sigma 35mm F1.4 DG DN | A".to_string(),
+                50529 => "Sigma 90mm F2.8 DG DN | C".to_string(),
+                50530 => "Sigma 24mm F2 DG DN | C".to_string(),
+                50531 => "Sigma 18-50mm F2.8 DC DN | C".to_string(),
+                50532 => "Sigma 20mm F2 DG DN | C".to_string(),
+                50533 => "Sigma 16-28mm F2.8 DG DN | C".to_string(),
+                50534 => "Sigma 20mm F1.4 DG DN | A".to_string(),
+                50535 => "Sigma 24mm F1.4 DG DN | A".to_string(),
+                50536 => "Sigma 60-600mm F4.5-6.3 DG DN OS | S".to_string(),
+                50537 => "Sigma 50mm F2 DG DN | C".to_string(),
+                50538 => "Sigma 17mm F4 DG DN | C".to_string(),
+                50539 => "Sigma 50mm F1.4 DG DN | A".to_string(),
+                50540 => "Sigma 14mm F1.4 DG DN | A".to_string(),
+                50543 => "Sigma 70-200mm F2.8 DG DN OS | S".to_string(),
+                50544 => "Sigma 23mm F1.4 DC DN | C".to_string(),
+                50545 => "Sigma 24-70mm F2.8 DG DN II | A".to_string(),
+                50546 => "Sigma 500mm F5.6 DG DN OS | S".to_string(),
+                50547 => "Sigma 10-18mm F2.8 DC DN | C".to_string(),
+                50548 => "Sigma 15mm F1.4 DG DN DIAGONAL FISHEYE | A".to_string(),
+                50549 => "Sigma 50mm F1.2 DG DN | A".to_string(),
+                50550 => "Sigma 28-105mm F2.8 DG DN | A".to_string(),
+                50551 => "Sigma 28-45mm F1.8 DG DN | A".to_string(),
+                50552 => "Sigma 35mm F1.2 DG II | A".to_string(),
+                50553 => "Sigma 300-600mm F4 DG OS | S".to_string(),
+                50554 => "Sigma 16-300mm F3.5-6.7 DC OS | C".to_string(),
+                50555 => "Sigma 12mm F1.4 DC | C".to_string(),
+                50556 => "Sigma 17-40mm F1.8 DC | A".to_string(),
+                50557 => "Sigma 200mm F2 DG OS | S".to_string(),
+                50558 => "Sigma 20-200mm F3.5-6.3 DG | C".to_string(),
+                50559 => "Sigma 135mm F1.4 DG | A".to_string(),
+                50563 => "Sigma 35mm F1.4 DG II | A".to_string(),
+                50564 => "Sigma 15mm F1.4 DC | C".to_string(),
+                50992 => "Voigtlander SUPER WIDE-HELIAR 15mm F4.5 III".to_string(),
+                50993 => "Voigtlander HELIAR-HYPER WIDE 10mm F5.6".to_string(),
+                50994 => "Voigtlander ULTRA WIDE-HELIAR 12mm F5.6 III".to_string(),
+                50995 => "Voigtlander MACRO APO-LANTHAR 65mm F2 Aspherical".to_string(),
+                50996 => "Voigtlander NOKTON 40mm F1.2 Aspherical".to_string(),
+                50997 => "Voigtlander NOKTON classic 35mm F1.4".to_string(),
+                50998 => "Voigtlander MACRO APO-LANTHAR 110mm F2.5".to_string(),
+                50999 => "Voigtlander COLOR-SKOPAR 21mm F3.5 Aspherical".to_string(),
+                51000 => "Voigtlander NOKTON 50mm F1.2 Aspherical".to_string(),
+                51001 => "Voigtlander NOKTON 21mm F1.4 Aspherical".to_string(),
+                51002 => "Voigtlander APO-LANTHAR 50mm F2 Aspherical".to_string(),
+                51003 => "Voigtlander NOKTON 35mm F1.2 Aspherical SE".to_string(),
+                51006 => "Voigtlander APO-LANTHAR 35mm F2 Aspherical".to_string(),
+                51007 => "Voigtlander NOKTON 50mm F1 Aspherical".to_string(),
+                51008 => "Voigtlander NOKTON 75mm F1.5 Aspherical".to_string(),
+                51009 => "Voigtlander NOKTON 28mm F1.5 Aspherical".to_string(),
+                51011 => "Voigtlander APO-LANTHAR 28mm F2 Aspherical".to_string(),
+                51072 => "ZEISS Otus ML 50mm F1.4".to_string(),
+                51073 => "ZEISS Otus ML 85mm F1.4".to_string(),
+                51504 => "Samyang AF 50mm F1.4".to_string(),
+                51505 => "Samyang AF 14mm F2.8 or Samyang AF 35mm F2.8".to_string(),
+                51507 => "Samyang AF 35mm F1.4".to_string(),
+                51508 => "Samyang AF 45mm F1.8".to_string(),
+                51510 => "Samyang AF 18mm F2.8 or Samyang AF 35mm F1.8".to_string(),
+                51512 => "Samyang AF 75mm F1.8".to_string(),
+                51513 => "Samyang AF 35mm F1.8".to_string(),
+                51514 => "Samyang AF 24mm F1.8".to_string(),
+                51515 => "Samyang AF 12mm F2.0".to_string(),
+                51516 => "Samyang AF 24-70mm F2.8".to_string(),
+                51517 => "Samyang AF 50mm F1.4 II".to_string(),
+                51518 => "Samyang AF 135mm F1.8".to_string(),
+                61569 => "LAOWA FFII 10mm F2.8 C&D Dreamer".to_string(),
+                61572 => "LAOWA FFII 12mm F2.8 C&D Dreamer".to_string(),
+                61600 => "Thypoch AF 24-50mm F2.8 FE".to_string(),
+                61760 => "Viltrox 135mm F1.8 FE LAB".to_string(),
+                61761 => "Viltrox 28mm F4.5 FE".to_string(),
+                61762 => "Viltrox 35mm F1.2 FE LAB".to_string(),
+                61763 => "Viltrox 85mm F1.4 FE Pro".to_string(),
+                61766 => "Viltrox 40mm F2.5 FE Air".to_string(),
+                61767 => "Viltrox 50mm F2.0 FE Air".to_string(),
+                61768 => "Viltrox 25mm F1.7 E Air".to_string(),
+                61776 => "Viltrox 50mm F1.4 FE Pro".to_string(),
+                61777 => "Viltrox 9mm F2.8 E Air".to_string(),
+                61778 => "Viltrox 14mm F4.0 FE Air".to_string(),
+                61779 => "Viltrox 56mm F1.2 E Pro".to_string(),
+                61780 => "Viltrox 85mm F2.0 FE EVO".to_string(),
+                61781 => "Viltrox 55mm F1.8 FE EVO".to_string(),
+                61783 => "Viltrox 15mm F1.7 E Air".to_string(),
+                61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("LensType2", s, Value::I32(v as i32), GRP2));
+        }
+    }
+    if dm_get(&dm, "LensMount") == Some(1.0) {
+        if let Some(v) = u16_at(data, 0x18c2) {
+            dm.push(("LensType", f64::from(v)));
+            tags.push(mk("LensType", v.to_string(), Value::I32(v as i32), GRP2));
+        }
     }
     if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x18c4) {
+            dm.push(("DistortionCorrParamsPresent", f64::from(v)));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
+            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2));
         }
     }
     if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x18c5) {
+            dm.push(("DistortionCorrParamsNumber", f64::from(v)));
             let s = match v as i64 {
                 11 => "11 (APS-C)".to_string(),
                 16 => "16 (Full-frame)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("DistortionCorrParamsNumber", s, Value::I32(v as i32)));
+            tags.push(mk("DistortionCorrParamsNumber", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x1958) {
+        dm.push(("AspectRatio", f64::from(v)));
         let s = match v as i64 {
             0 => "16:9".to_string(),
             1 => "4:3".to_string(),
@@ -568,40 +1233,47 @@ fn tag2010g(data: &[u8], model: &str) -> Vec<Tag> {
             5 => "Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AspectRatio", s, Value::I32(v as i32)));
+        tags.push(mk("AspectRatio", s, Value::I32(v as i32), GRP2));
     }
     tags
 }
 
 fn tag2010h(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u32_at(data, 0x4) {
+        dm.push(("WB_RGBLevels", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("WB_RGBLevels", cv.as_string(), raw));
+        tags.push(mk("WB_RGBLevels", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x32e) {
+        dm.push(("MinFocalLength", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("MinFocalLength", cv.as_string(), raw));
+        tags.push(mk("MinFocalLength", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x330) {
+        dm.push(("MaxFocalLength", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("MaxFocalLength", cv.as_string(), raw));
+        tags.push(mk("MaxFocalLength", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x346) {
+        dm.push(("SonyISO", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyISO", cv.as_string(), raw));
+        tags.push(mk("SonyISO", cv.as_string(), raw, GRP2));
     }
     if !MODEL_RE_4.is_match(model) {
         {
@@ -614,51 +1286,358 @@ fn tag2010h(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
     if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x18ed) {
+            dm.push(("LensFormat", f64::from(v)));
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
                 1 => "APS-C".to_string(),
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("LensFormat", s, Value::I32(v as i32)));
+            tags.push(mk("LensFormat", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x18ee) {
+        dm.push(("LensMount", f64::from(v)));
         let s = match v as i64 {
             0 => "Unknown".to_string(),
             1 => "A-mount".to_string(),
             2 => "E-mount".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensMount", s, Value::I32(v as i32)));
+        tags.push(mk("LensMount", s, Value::I32(v as i32), GRP2));
+    }
+    if dm_get(&dm, "LensMount") == Some(2.0) {
+        if let Some(v) = u16_at(data, 0x18ef) {
+            dm.push(("LensType2", f64::from(v)));
+            let s = match v as i64 {
+                0 => "Unknown E-mount lens or other lens".to_string(),
+                1 => "Samyang AF 35mm F1.8".to_string(),
+                2 => "Viltrox 16mm F1.8 FE".to_string(),
+                3 => "Viltrox 23mm F1.4 E".to_string(),
+                4 => "Viltrox 24mm F1.8 FE".to_string(),
+                5 => "Viltrox 28mm F1.8 FE".to_string(),
+                6 => "Viltrox 33mm F1.4 E".to_string(),
+                7 => "Viltrox 35mm F1.8 FE".to_string(),
+                8 => "Viltrox 50mm F1.8 FE".to_string(),
+                9 => "Viltrox 75mm F1.2 E Pro".to_string(),
+                13 => "Samyang AF 35-150mm F2-2.8".to_string(),
+                17 => "Samyang RS 21mm F3.5".to_string(),
+                18 => "Samyang RS 28mm F3.5".to_string(),
+                19 => "Samyang RS 32mm F2.8".to_string(),
+                20 => "Samyang AF 35mm F1.4 P FE".to_string(),
+                21 => "Samyang AF 14-24mm F2.8".to_string(),
+                22 => "Samyang AF 24-60mm F2.8".to_string(),
+                24 => "Samyang AF 85mm F1.8 P FE".to_string(),
+                44 => "Metabones Canon EF Smart Adapter".to_string(),
+                78 => "Metabones Canon EF Smart Adapter Mark III or Other Adapter".to_string(),
+                184 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                234 => "Metabones Canon EF Smart Adapter Mark IV".to_string(),
+                239 => "Metabones Canon EF Speed Booster".to_string(),
+                24593 => "LA-EA4r MonsterAdapter".to_string(),
+                32784 => "Sony E 16mm F2.8".to_string(),
+                32785 => "Sony E 18-55mm F3.5-5.6 OSS".to_string(),
+                32786 => "Sony E 55-210mm F4.5-6.3 OSS".to_string(),
+                32787 => "Sony E 18-200mm F3.5-6.3 OSS".to_string(),
+                32788 => "Sony E 30mm F3.5 Macro".to_string(),
+                32789 => "Sony E 24mm F1.8 ZA or Samyang AF 50mm F1.4".to_string(),
+                32790 => "Sony E 50mm F1.8 OSS or Samyang AF 14mm F2.8".to_string(),
+                32791 => "Sony E 16-70mm F4 ZA OSS".to_string(),
+                32792 => "Sony E 10-18mm F4 OSS".to_string(),
+                32793 => "Sony E PZ 16-50mm F3.5-5.6 OSS".to_string(),
+                32794 => "Sony FE 35mm F2.8 ZA or Samyang Lens".to_string(),
+                32795 => "Sony FE 24-70mm F4 ZA OSS".to_string(),
+                32796 => "Sony FE 85mm F1.8 or Viltrox PFU RBMH 85mm F1.8".to_string(),
+                32797 => "Sony E 18-200mm F3.5-6.3 OSS LE".to_string(),
+                32798 => "Sony E 20mm F2.8".to_string(),
+                32799 => "Sony E 35mm F1.8 OSS".to_string(),
+                32800 => "Sony E PZ 18-105mm F4 G OSS".to_string(),
+                32801 => "Sony FE 12-24mm F4 G".to_string(),
+                32802 => "Sony FE 90mm F2.8 Macro G OSS".to_string(),
+                32803 => "Sony E 18-50mm F4-5.6".to_string(),
+                32804 => "Sony FE 24mm F1.4 GM".to_string(),
+                32805 => "Sony FE 24-105mm F4 G OSS".to_string(),
+                32807 => "Sony E PZ 18-200mm F3.5-6.3 OSS".to_string(),
+                32808 => "Sony FE 55mm F1.8 ZA".to_string(),
+                32810 => "Sony FE 70-200mm F4 G OSS".to_string(),
+                32811 => "Sony FE 16-35mm F4 ZA OSS".to_string(),
+                32812 => "Sony FE 50mm F2.8 Macro".to_string(),
+                32813 => "Sony FE 28-70mm F3.5-5.6 OSS".to_string(),
+                32814 => "Sony FE 35mm F1.4 ZA".to_string(),
+                32815 => "Sony FE 24-240mm F3.5-6.3 OSS".to_string(),
+                32816 => "Sony FE 28mm F2".to_string(),
+                32817 => "Sony FE PZ 28-135mm F4 G OSS".to_string(),
+                32819 => "Sony FE 100mm F2.8 STF GM OSS".to_string(),
+                32820 => "Sony E PZ 18-110mm F4 G OSS".to_string(),
+                32821 => "Sony FE 24-70mm F2.8 GM".to_string(),
+                32822 => "Sony FE 50mm F1.4 ZA".to_string(),
+                32823 => "Sony FE 85mm F1.4 GM or Samyang AF 85mm F1.4".to_string(),
+                32824 => "Sony FE 50mm F1.8".to_string(),
+                32826 => "Sony FE 21mm F2.8 (SEL28F20 + SEL075UWC)".to_string(),
+                32827 => "Sony FE 16mm F3.5 Fisheye (SEL28F20 + SEL057FEC)".to_string(),
+                32828 => "Sony FE 70-300mm F4.5-5.6 G OSS".to_string(),
+                32829 => "Sony FE 100-400mm F4.5-5.6 GM OSS".to_string(),
+                32830 => "Sony FE 70-200mm F2.8 GM OSS".to_string(),
+                32831 => "Sony FE 16-35mm F2.8 GM".to_string(),
+                32848 => "Sony FE 400mm F2.8 GM OSS".to_string(),
+                32849 => "Sony E 18-135mm F3.5-5.6 OSS".to_string(),
+                32850 => "Sony FE 135mm F1.8 GM".to_string(),
+                32851 => "Sony FE 200-600mm F5.6-6.3 G OSS".to_string(),
+                32852 => "Sony FE 600mm F4 GM OSS".to_string(),
+                32853 => "Sony E 16-55mm F2.8 G".to_string(),
+                32854 => "Sony E 70-350mm F4.5-6.3 G OSS".to_string(),
+                32855 => "Sony FE C 16-35mm T3.1 G".to_string(),
+                32858 => "Sony FE 35mm F1.8".to_string(),
+                32859 => "Sony FE 20mm F1.8 G".to_string(),
+                32860 => "Sony FE 12-24mm F2.8 GM".to_string(),
+                32862 => "Sony FE 50mm F1.2 GM".to_string(),
+                32863 => "Sony FE 14mm F1.8 GM".to_string(),
+                32864 => "Sony FE 28-60mm F4-5.6".to_string(),
+                32865 => "Sony FE 35mm F1.4 GM".to_string(),
+                32866 => "Sony FE 24mm F2.8 G".to_string(),
+                32867 => "Sony FE 40mm F2.5 G".to_string(),
+                32868 => "Sony FE 50mm F2.5 G".to_string(),
+                32871 => "Sony FE PZ 16-35mm F4 G".to_string(),
+                32873 => "Sony E PZ 10-20mm F4 G".to_string(),
+                32874 => "Sony FE 70-200mm F2.8 GM OSS II".to_string(),
+                32875 => "Sony FE 24-70mm F2.8 GM II".to_string(),
+                32876 => "Sony E 11mm F1.8".to_string(),
+                32877 => "Sony E 15mm F1.4 G".to_string(),
+                32878 => "Sony FE 20-70mm F4 G".to_string(),
+                32879 => "Sony FE 50mm F1.4 GM".to_string(),
+                32880 => "Sony FE 16mm F1.8 G".to_string(),
+                32881 => "Sony FE 24-50mm F2.8 G".to_string(),
+                32882 => "Sony FE 16-25mm F2.8 G".to_string(),
+                32884 => "Sony FE 70-200mm F4 Macro G OSS II".to_string(),
+                32885 => "Sony FE 16-35mm F2.8 GM II".to_string(),
+                32886 => "Sony FE 300mm F2.8 GM OSS".to_string(),
+                32887 => "Sony E PZ 16-50mm F3.5-5.6 OSS II".to_string(),
+                32888 => "Sony FE 85mm F1.4 GM II".to_string(),
+                32889 => "Sony FE 28-70mm F2 GM".to_string(),
+                32890 => "Sony FE 400-800mm F6.3-8 G OSS".to_string(),
+                32891 => "Sony FE 50-150mm F2 GM".to_string(),
+                32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
+                32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
+                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
+                33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
+                33077 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 1.4X Teleconverter".to_string(),
+                33078 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 2X Teleconverter".to_string(),
+                33079 => "Sony FE 400mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33080 => "Sony FE 400mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33081 => "Sony FE 200-600mm F5.6-6.3 G OSS + 1.4X Teleconverter".to_string(),
+                33082 => "Sony FE 200-600mm F5.6-6.3 G OSS + 2X Teleconverter".to_string(),
+                33083 => "Sony FE 600mm F4 GM OSS + 1.4X Teleconverter".to_string(),
+                33084 => "Sony FE 600mm F4 GM OSS + 2X Teleconverter".to_string(),
+                33085 => "Sony FE 70-200mm F2.8 GM OSS II + 1.4X Teleconverter".to_string(),
+                33086 => "Sony FE 70-200mm F2.8 GM OSS II + 2X Teleconverter".to_string(),
+                33087 => "Sony FE 70-200mm F4 Macro G OSS II + 1.4X Teleconverter".to_string(),
+                33088 => "Sony FE 70-200mm F4 Macro G OSS II + 2X Teleconverter".to_string(),
+                33089 => "Sony FE 300mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33090 => "Sony FE 300mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33091 => "Sony FE 400-800mm F6.3-8 G OSS + 1.4X Teleconverter".to_string(),
+                33092 => "Sony FE 400-800mm F6.3-8 G OSS + 2X Teleconverter".to_string(),
+                33093 => "Sony FE 100mm F2.8 Macro GM OSS + 1.4X Teleconverter".to_string(),
+                33094 => "Sony FE 100mm F2.8 Macro GM OSS + 2X Teleconverter".to_string(),
+                33095 => "Sony FE 100-400mm F4.5 GM OSS + 1.4X Teleconverter".to_string(),
+                33096 => "Sony FE 100-400mm F4.5 GM OSS + 2X Teleconverter".to_string(),
+                49201 => "Zeiss Touit 12mm F2.8 or other Touit lens".to_string(),
+                49202 => "Zeiss Touit 32mm F1.8".to_string(),
+                49203 => "Zeiss Touit 50mm F2.8 Macro".to_string(),
+                49216 => "Zeiss Batis 25mm F2".to_string(),
+                49217 => "Zeiss Batis 85mm F1.8".to_string(),
+                49218 => "Zeiss Batis 18mm F2.8".to_string(),
+                49219 => "Zeiss Batis 135mm F2.8".to_string(),
+                49220 => "Zeiss Batis 40mm F2 CF".to_string(),
+                49232 => "Zeiss Loxia 50mm F2".to_string(),
+                49233 => "Zeiss Loxia 35mm F2".to_string(),
+                49234 => "Zeiss Loxia 21mm F2.8".to_string(),
+                49235 => "Zeiss Loxia 85mm F2.4".to_string(),
+                49236 => "Zeiss Loxia 25mm F2.4".to_string(),
+                49456 => "Tamron E 18-200mm F3.5-6.3 Di III VC".to_string(),
+                49457 => "Tamron 28-75mm F2.8 Di III RXD".to_string(),
+                49458 => "Tamron 17-28mm F2.8 Di III RXD".to_string(),
+                49459 => "Tamron 35mm F2.8 Di III OSD M1:2".to_string(),
+                49460 => "Tamron 24mm F2.8 Di III OSD M1:2".to_string(),
+                49461 => "Tamron 20mm F2.8 Di III OSD M1:2".to_string(),
+                49462 => "Tamron 70-180mm F2.8 Di III VXD".to_string(),
+                49463 => "Tamron 28-200mm F2.8-5.6 Di III RXD".to_string(),
+                49464 => "Tamron 70-300mm F4.5-6.3 Di III RXD".to_string(),
+                49465 => "Tamron 17-70mm F2.8 Di III-A VC RXD".to_string(),
+                49466 => "Tamron 150-500mm F5-6.7 Di III VC VXD".to_string(),
+                49467 => "Tamron 11-20mm F2.8 Di III-A RXD".to_string(),
+                49468 => "Tamron 18-300mm F3.5-6.3 Di III-A VC VXD".to_string(),
+                49469 => "Tamron 35-150mm F2-F2.8 Di III VXD".to_string(),
+                49470 => "Tamron 28-75mm F2.8 Di III VXD G2".to_string(),
+                49471 => "Tamron 50-400mm F4.5-6.3 Di III VC VXD".to_string(),
+                49472 => "Tamron 20-40mm F2.8 Di III VXD".to_string(),
+                49473 => "Tamron 17-50mm F4 Di III VXD or Tokina or Viltrox lens".to_string(),
+                49474 => "Tamron 70-180mm F2.8 Di III VXD G2 or Viltrox lens".to_string(),
+                49475 => "Tamron 50-300mm F4.5-6.3 Di III VC VXD".to_string(),
+                49476 => "Tamron 28-300mm F4-7.1 Di III VC VXD".to_string(),
+                49477 => "Tamron 90mm F2.8 Di III Macro VXD".to_string(),
+                49478 => "Tamron 16-30mm F2.8 Di III VXD G2".to_string(),
+                49479 => "Tamron 25-200mm F2.8-5.6 Di III VXD G2".to_string(),
+                49480 => "Tamron 35-100mm F2.8 Di III VXD".to_string(),
+                49712 => "Tokina FiRIN 20mm F2 FE AF".to_string(),
+                49713 => "Tokina FiRIN 100mm F2.8 FE MACRO".to_string(),
+                49714 => "Tokina atx-m 11-18mm F2.8 E".to_string(),
+                50480 => "Sigma 30mm F1.4 DC DN | C".to_string(),
+                50481 => "Sigma 50mm F1.4 DG HSM | A".to_string(),
+                50482 => "Sigma 18-300mm F3.5-6.3 DC MACRO OS HSM | C + MC-11".to_string(),
+                50483 => "Sigma 18-35mm F1.8 DC HSM | A + MC-11".to_string(),
+                50484 => "Sigma 24-35mm F2 DG HSM | A + MC-11".to_string(),
+                50485 => "Sigma 24mm F1.4 DG HSM | A + MC-11".to_string(),
+                50486 => "Sigma 150-600mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50487 => "Sigma 20mm F1.4 DG HSM | A + MC-11".to_string(),
+                50488 => "Sigma 35mm F1.4 DG HSM | A".to_string(),
+                50489 => "Sigma 150-600mm F5-6.3 DG OS HSM | S + MC-11".to_string(),
+                50490 => "Sigma 120-300mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50492 => "Sigma 24-105mm F4 DG OS HSM | A + MC-11".to_string(),
+                50493 => "Sigma 17-70mm F2.8-4 DC MACRO OS HSM | C + MC-11".to_string(),
+                50495 => "Sigma 50-100mm F1.8 DC HSM | A + MC-11".to_string(),
+                50499 => "Sigma 85mm F1.4 DG HSM | A".to_string(),
+                50501 => "Sigma 100-400mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50503 => "Sigma 16mm F1.4 DC DN | C".to_string(),
+                50507 => "Sigma 105mm F1.4 DG HSM | A".to_string(),
+                50508 => "Sigma 56mm F1.4 DC DN | C".to_string(),
+                50512 => "Sigma 70-200mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50513 => "Sigma 70mm F2.8 DG MACRO | A".to_string(),
+                50514 => "Sigma 45mm F2.8 DG DN | C".to_string(),
+                50515 => "Sigma 35mm F1.2 DG DN | A".to_string(),
+                50516 => "Sigma 14-24mm F2.8 DG DN | A".to_string(),
+                50517 => "Sigma 24-70mm F2.8 DG DN | A".to_string(),
+                50518 => "Sigma 100-400mm F5-6.3 DG DN OS | C".to_string(),
+                50521 => "Sigma 85mm F1.4 DG DN | A".to_string(),
+                50522 => "Sigma 105mm F2.8 DG DN MACRO | A".to_string(),
+                50523 => "Sigma 65mm F2 DG DN | C".to_string(),
+                50524 => "Sigma 35mm F2 DG DN | C".to_string(),
+                50525 => "Sigma 24mm F3.5 DG DN | C".to_string(),
+                50526 => "Sigma 28-70mm F2.8 DG DN | C".to_string(),
+                50527 => "Sigma 150-600mm F5-6.3 DG DN OS | S".to_string(),
+                50528 => "Sigma 35mm F1.4 DG DN | A".to_string(),
+                50529 => "Sigma 90mm F2.8 DG DN | C".to_string(),
+                50530 => "Sigma 24mm F2 DG DN | C".to_string(),
+                50531 => "Sigma 18-50mm F2.8 DC DN | C".to_string(),
+                50532 => "Sigma 20mm F2 DG DN | C".to_string(),
+                50533 => "Sigma 16-28mm F2.8 DG DN | C".to_string(),
+                50534 => "Sigma 20mm F1.4 DG DN | A".to_string(),
+                50535 => "Sigma 24mm F1.4 DG DN | A".to_string(),
+                50536 => "Sigma 60-600mm F4.5-6.3 DG DN OS | S".to_string(),
+                50537 => "Sigma 50mm F2 DG DN | C".to_string(),
+                50538 => "Sigma 17mm F4 DG DN | C".to_string(),
+                50539 => "Sigma 50mm F1.4 DG DN | A".to_string(),
+                50540 => "Sigma 14mm F1.4 DG DN | A".to_string(),
+                50543 => "Sigma 70-200mm F2.8 DG DN OS | S".to_string(),
+                50544 => "Sigma 23mm F1.4 DC DN | C".to_string(),
+                50545 => "Sigma 24-70mm F2.8 DG DN II | A".to_string(),
+                50546 => "Sigma 500mm F5.6 DG DN OS | S".to_string(),
+                50547 => "Sigma 10-18mm F2.8 DC DN | C".to_string(),
+                50548 => "Sigma 15mm F1.4 DG DN DIAGONAL FISHEYE | A".to_string(),
+                50549 => "Sigma 50mm F1.2 DG DN | A".to_string(),
+                50550 => "Sigma 28-105mm F2.8 DG DN | A".to_string(),
+                50551 => "Sigma 28-45mm F1.8 DG DN | A".to_string(),
+                50552 => "Sigma 35mm F1.2 DG II | A".to_string(),
+                50553 => "Sigma 300-600mm F4 DG OS | S".to_string(),
+                50554 => "Sigma 16-300mm F3.5-6.7 DC OS | C".to_string(),
+                50555 => "Sigma 12mm F1.4 DC | C".to_string(),
+                50556 => "Sigma 17-40mm F1.8 DC | A".to_string(),
+                50557 => "Sigma 200mm F2 DG OS | S".to_string(),
+                50558 => "Sigma 20-200mm F3.5-6.3 DG | C".to_string(),
+                50559 => "Sigma 135mm F1.4 DG | A".to_string(),
+                50563 => "Sigma 35mm F1.4 DG II | A".to_string(),
+                50564 => "Sigma 15mm F1.4 DC | C".to_string(),
+                50992 => "Voigtlander SUPER WIDE-HELIAR 15mm F4.5 III".to_string(),
+                50993 => "Voigtlander HELIAR-HYPER WIDE 10mm F5.6".to_string(),
+                50994 => "Voigtlander ULTRA WIDE-HELIAR 12mm F5.6 III".to_string(),
+                50995 => "Voigtlander MACRO APO-LANTHAR 65mm F2 Aspherical".to_string(),
+                50996 => "Voigtlander NOKTON 40mm F1.2 Aspherical".to_string(),
+                50997 => "Voigtlander NOKTON classic 35mm F1.4".to_string(),
+                50998 => "Voigtlander MACRO APO-LANTHAR 110mm F2.5".to_string(),
+                50999 => "Voigtlander COLOR-SKOPAR 21mm F3.5 Aspherical".to_string(),
+                51000 => "Voigtlander NOKTON 50mm F1.2 Aspherical".to_string(),
+                51001 => "Voigtlander NOKTON 21mm F1.4 Aspherical".to_string(),
+                51002 => "Voigtlander APO-LANTHAR 50mm F2 Aspherical".to_string(),
+                51003 => "Voigtlander NOKTON 35mm F1.2 Aspherical SE".to_string(),
+                51006 => "Voigtlander APO-LANTHAR 35mm F2 Aspherical".to_string(),
+                51007 => "Voigtlander NOKTON 50mm F1 Aspherical".to_string(),
+                51008 => "Voigtlander NOKTON 75mm F1.5 Aspherical".to_string(),
+                51009 => "Voigtlander NOKTON 28mm F1.5 Aspherical".to_string(),
+                51011 => "Voigtlander APO-LANTHAR 28mm F2 Aspherical".to_string(),
+                51072 => "ZEISS Otus ML 50mm F1.4".to_string(),
+                51073 => "ZEISS Otus ML 85mm F1.4".to_string(),
+                51504 => "Samyang AF 50mm F1.4".to_string(),
+                51505 => "Samyang AF 14mm F2.8 or Samyang AF 35mm F2.8".to_string(),
+                51507 => "Samyang AF 35mm F1.4".to_string(),
+                51508 => "Samyang AF 45mm F1.8".to_string(),
+                51510 => "Samyang AF 18mm F2.8 or Samyang AF 35mm F1.8".to_string(),
+                51512 => "Samyang AF 75mm F1.8".to_string(),
+                51513 => "Samyang AF 35mm F1.8".to_string(),
+                51514 => "Samyang AF 24mm F1.8".to_string(),
+                51515 => "Samyang AF 12mm F2.0".to_string(),
+                51516 => "Samyang AF 24-70mm F2.8".to_string(),
+                51517 => "Samyang AF 50mm F1.4 II".to_string(),
+                51518 => "Samyang AF 135mm F1.8".to_string(),
+                61569 => "LAOWA FFII 10mm F2.8 C&D Dreamer".to_string(),
+                61572 => "LAOWA FFII 12mm F2.8 C&D Dreamer".to_string(),
+                61600 => "Thypoch AF 24-50mm F2.8 FE".to_string(),
+                61760 => "Viltrox 135mm F1.8 FE LAB".to_string(),
+                61761 => "Viltrox 28mm F4.5 FE".to_string(),
+                61762 => "Viltrox 35mm F1.2 FE LAB".to_string(),
+                61763 => "Viltrox 85mm F1.4 FE Pro".to_string(),
+                61766 => "Viltrox 40mm F2.5 FE Air".to_string(),
+                61767 => "Viltrox 50mm F2.0 FE Air".to_string(),
+                61768 => "Viltrox 25mm F1.7 E Air".to_string(),
+                61776 => "Viltrox 50mm F1.4 FE Pro".to_string(),
+                61777 => "Viltrox 9mm F2.8 E Air".to_string(),
+                61778 => "Viltrox 14mm F4.0 FE Air".to_string(),
+                61779 => "Viltrox 56mm F1.2 E Pro".to_string(),
+                61780 => "Viltrox 85mm F2.0 FE EVO".to_string(),
+                61781 => "Viltrox 55mm F1.8 FE EVO".to_string(),
+                61783 => "Viltrox 15mm F1.7 E Air".to_string(),
+                61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("LensType2", s, Value::I32(v as i32), GRP2));
+        }
+    }
+    if dm_get(&dm, "LensMount") == Some(1.0) {
+        if let Some(v) = u16_at(data, 0x18f2) {
+            dm.push(("LensType", f64::from(v)));
+            tags.push(mk("LensType", v.to_string(), Value::I32(v as i32), GRP2));
+        }
     }
     if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x18f4) {
+            dm.push(("DistortionCorrParamsPresent", f64::from(v)));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
+            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2));
         }
     }
     if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x18f5) {
+            dm.push(("DistortionCorrParamsNumber", f64::from(v)));
             let s = match v as i64 {
                 11 => "11 (APS-C)".to_string(),
                 16 => "16 (Full-frame)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("DistortionCorrParamsNumber", s, Value::I32(v as i32)));
+            tags.push(mk("DistortionCorrParamsNumber", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x192c) {
+        dm.push(("AspectRatio", f64::from(v)));
         let s = match v as i64 {
             0 => "16:9".to_string(),
             1 => "4:3".to_string(),
@@ -667,40 +1646,47 @@ fn tag2010h(data: &[u8], model: &str) -> Vec<Tag> {
             5 => "Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AspectRatio", s, Value::I32(v as i32)));
+        tags.push(mk("AspectRatio", s, Value::I32(v as i32), GRP2));
     }
     tags
 }
 
 fn tag2010i(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u32_at(data, 0x4) {
+        dm.push(("WB_RGBLevels", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("WB_RGBLevels", cv.as_string(), raw));
+        tags.push(mk("WB_RGBLevels", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x30c) {
+        dm.push(("MinFocalLength", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("MinFocalLength", cv.as_string(), raw));
+        tags.push(mk("MinFocalLength", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x30e) {
+        dm.push(("MaxFocalLength", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("MaxFocalLength", cv.as_string(), raw));
+        tags.push(mk("MaxFocalLength", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x320) {
+        dm.push(("SonyISO", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyISO", cv.as_string(), raw));
+        tags.push(mk("SonyISO", cv.as_string(), raw, GRP2));
     }
     if !MODEL_RE_4.is_match(model) {
         {
@@ -713,51 +1699,358 @@ fn tag2010i(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
     if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x17f1) {
+            dm.push(("LensFormat", f64::from(v)));
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
                 1 => "APS-C".to_string(),
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("LensFormat", s, Value::I32(v as i32)));
+            tags.push(mk("LensFormat", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x17f2) {
+        dm.push(("LensMount", f64::from(v)));
         let s = match v as i64 {
             0 => "Unknown".to_string(),
             1 => "A-mount".to_string(),
             2 => "E-mount".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensMount", s, Value::I32(v as i32)));
+        tags.push(mk("LensMount", s, Value::I32(v as i32), GRP2));
+    }
+    if dm_get(&dm, "LensMount") == Some(2.0) {
+        if let Some(v) = u16_at(data, 0x17f3) {
+            dm.push(("LensType2", f64::from(v)));
+            let s = match v as i64 {
+                0 => "Unknown E-mount lens or other lens".to_string(),
+                1 => "Samyang AF 35mm F1.8".to_string(),
+                2 => "Viltrox 16mm F1.8 FE".to_string(),
+                3 => "Viltrox 23mm F1.4 E".to_string(),
+                4 => "Viltrox 24mm F1.8 FE".to_string(),
+                5 => "Viltrox 28mm F1.8 FE".to_string(),
+                6 => "Viltrox 33mm F1.4 E".to_string(),
+                7 => "Viltrox 35mm F1.8 FE".to_string(),
+                8 => "Viltrox 50mm F1.8 FE".to_string(),
+                9 => "Viltrox 75mm F1.2 E Pro".to_string(),
+                13 => "Samyang AF 35-150mm F2-2.8".to_string(),
+                17 => "Samyang RS 21mm F3.5".to_string(),
+                18 => "Samyang RS 28mm F3.5".to_string(),
+                19 => "Samyang RS 32mm F2.8".to_string(),
+                20 => "Samyang AF 35mm F1.4 P FE".to_string(),
+                21 => "Samyang AF 14-24mm F2.8".to_string(),
+                22 => "Samyang AF 24-60mm F2.8".to_string(),
+                24 => "Samyang AF 85mm F1.8 P FE".to_string(),
+                44 => "Metabones Canon EF Smart Adapter".to_string(),
+                78 => "Metabones Canon EF Smart Adapter Mark III or Other Adapter".to_string(),
+                184 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                234 => "Metabones Canon EF Smart Adapter Mark IV".to_string(),
+                239 => "Metabones Canon EF Speed Booster".to_string(),
+                24593 => "LA-EA4r MonsterAdapter".to_string(),
+                32784 => "Sony E 16mm F2.8".to_string(),
+                32785 => "Sony E 18-55mm F3.5-5.6 OSS".to_string(),
+                32786 => "Sony E 55-210mm F4.5-6.3 OSS".to_string(),
+                32787 => "Sony E 18-200mm F3.5-6.3 OSS".to_string(),
+                32788 => "Sony E 30mm F3.5 Macro".to_string(),
+                32789 => "Sony E 24mm F1.8 ZA or Samyang AF 50mm F1.4".to_string(),
+                32790 => "Sony E 50mm F1.8 OSS or Samyang AF 14mm F2.8".to_string(),
+                32791 => "Sony E 16-70mm F4 ZA OSS".to_string(),
+                32792 => "Sony E 10-18mm F4 OSS".to_string(),
+                32793 => "Sony E PZ 16-50mm F3.5-5.6 OSS".to_string(),
+                32794 => "Sony FE 35mm F2.8 ZA or Samyang Lens".to_string(),
+                32795 => "Sony FE 24-70mm F4 ZA OSS".to_string(),
+                32796 => "Sony FE 85mm F1.8 or Viltrox PFU RBMH 85mm F1.8".to_string(),
+                32797 => "Sony E 18-200mm F3.5-6.3 OSS LE".to_string(),
+                32798 => "Sony E 20mm F2.8".to_string(),
+                32799 => "Sony E 35mm F1.8 OSS".to_string(),
+                32800 => "Sony E PZ 18-105mm F4 G OSS".to_string(),
+                32801 => "Sony FE 12-24mm F4 G".to_string(),
+                32802 => "Sony FE 90mm F2.8 Macro G OSS".to_string(),
+                32803 => "Sony E 18-50mm F4-5.6".to_string(),
+                32804 => "Sony FE 24mm F1.4 GM".to_string(),
+                32805 => "Sony FE 24-105mm F4 G OSS".to_string(),
+                32807 => "Sony E PZ 18-200mm F3.5-6.3 OSS".to_string(),
+                32808 => "Sony FE 55mm F1.8 ZA".to_string(),
+                32810 => "Sony FE 70-200mm F4 G OSS".to_string(),
+                32811 => "Sony FE 16-35mm F4 ZA OSS".to_string(),
+                32812 => "Sony FE 50mm F2.8 Macro".to_string(),
+                32813 => "Sony FE 28-70mm F3.5-5.6 OSS".to_string(),
+                32814 => "Sony FE 35mm F1.4 ZA".to_string(),
+                32815 => "Sony FE 24-240mm F3.5-6.3 OSS".to_string(),
+                32816 => "Sony FE 28mm F2".to_string(),
+                32817 => "Sony FE PZ 28-135mm F4 G OSS".to_string(),
+                32819 => "Sony FE 100mm F2.8 STF GM OSS".to_string(),
+                32820 => "Sony E PZ 18-110mm F4 G OSS".to_string(),
+                32821 => "Sony FE 24-70mm F2.8 GM".to_string(),
+                32822 => "Sony FE 50mm F1.4 ZA".to_string(),
+                32823 => "Sony FE 85mm F1.4 GM or Samyang AF 85mm F1.4".to_string(),
+                32824 => "Sony FE 50mm F1.8".to_string(),
+                32826 => "Sony FE 21mm F2.8 (SEL28F20 + SEL075UWC)".to_string(),
+                32827 => "Sony FE 16mm F3.5 Fisheye (SEL28F20 + SEL057FEC)".to_string(),
+                32828 => "Sony FE 70-300mm F4.5-5.6 G OSS".to_string(),
+                32829 => "Sony FE 100-400mm F4.5-5.6 GM OSS".to_string(),
+                32830 => "Sony FE 70-200mm F2.8 GM OSS".to_string(),
+                32831 => "Sony FE 16-35mm F2.8 GM".to_string(),
+                32848 => "Sony FE 400mm F2.8 GM OSS".to_string(),
+                32849 => "Sony E 18-135mm F3.5-5.6 OSS".to_string(),
+                32850 => "Sony FE 135mm F1.8 GM".to_string(),
+                32851 => "Sony FE 200-600mm F5.6-6.3 G OSS".to_string(),
+                32852 => "Sony FE 600mm F4 GM OSS".to_string(),
+                32853 => "Sony E 16-55mm F2.8 G".to_string(),
+                32854 => "Sony E 70-350mm F4.5-6.3 G OSS".to_string(),
+                32855 => "Sony FE C 16-35mm T3.1 G".to_string(),
+                32858 => "Sony FE 35mm F1.8".to_string(),
+                32859 => "Sony FE 20mm F1.8 G".to_string(),
+                32860 => "Sony FE 12-24mm F2.8 GM".to_string(),
+                32862 => "Sony FE 50mm F1.2 GM".to_string(),
+                32863 => "Sony FE 14mm F1.8 GM".to_string(),
+                32864 => "Sony FE 28-60mm F4-5.6".to_string(),
+                32865 => "Sony FE 35mm F1.4 GM".to_string(),
+                32866 => "Sony FE 24mm F2.8 G".to_string(),
+                32867 => "Sony FE 40mm F2.5 G".to_string(),
+                32868 => "Sony FE 50mm F2.5 G".to_string(),
+                32871 => "Sony FE PZ 16-35mm F4 G".to_string(),
+                32873 => "Sony E PZ 10-20mm F4 G".to_string(),
+                32874 => "Sony FE 70-200mm F2.8 GM OSS II".to_string(),
+                32875 => "Sony FE 24-70mm F2.8 GM II".to_string(),
+                32876 => "Sony E 11mm F1.8".to_string(),
+                32877 => "Sony E 15mm F1.4 G".to_string(),
+                32878 => "Sony FE 20-70mm F4 G".to_string(),
+                32879 => "Sony FE 50mm F1.4 GM".to_string(),
+                32880 => "Sony FE 16mm F1.8 G".to_string(),
+                32881 => "Sony FE 24-50mm F2.8 G".to_string(),
+                32882 => "Sony FE 16-25mm F2.8 G".to_string(),
+                32884 => "Sony FE 70-200mm F4 Macro G OSS II".to_string(),
+                32885 => "Sony FE 16-35mm F2.8 GM II".to_string(),
+                32886 => "Sony FE 300mm F2.8 GM OSS".to_string(),
+                32887 => "Sony E PZ 16-50mm F3.5-5.6 OSS II".to_string(),
+                32888 => "Sony FE 85mm F1.4 GM II".to_string(),
+                32889 => "Sony FE 28-70mm F2 GM".to_string(),
+                32890 => "Sony FE 400-800mm F6.3-8 G OSS".to_string(),
+                32891 => "Sony FE 50-150mm F2 GM".to_string(),
+                32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
+                32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
+                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
+                33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
+                33077 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 1.4X Teleconverter".to_string(),
+                33078 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 2X Teleconverter".to_string(),
+                33079 => "Sony FE 400mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33080 => "Sony FE 400mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33081 => "Sony FE 200-600mm F5.6-6.3 G OSS + 1.4X Teleconverter".to_string(),
+                33082 => "Sony FE 200-600mm F5.6-6.3 G OSS + 2X Teleconverter".to_string(),
+                33083 => "Sony FE 600mm F4 GM OSS + 1.4X Teleconverter".to_string(),
+                33084 => "Sony FE 600mm F4 GM OSS + 2X Teleconverter".to_string(),
+                33085 => "Sony FE 70-200mm F2.8 GM OSS II + 1.4X Teleconverter".to_string(),
+                33086 => "Sony FE 70-200mm F2.8 GM OSS II + 2X Teleconverter".to_string(),
+                33087 => "Sony FE 70-200mm F4 Macro G OSS II + 1.4X Teleconverter".to_string(),
+                33088 => "Sony FE 70-200mm F4 Macro G OSS II + 2X Teleconverter".to_string(),
+                33089 => "Sony FE 300mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33090 => "Sony FE 300mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33091 => "Sony FE 400-800mm F6.3-8 G OSS + 1.4X Teleconverter".to_string(),
+                33092 => "Sony FE 400-800mm F6.3-8 G OSS + 2X Teleconverter".to_string(),
+                33093 => "Sony FE 100mm F2.8 Macro GM OSS + 1.4X Teleconverter".to_string(),
+                33094 => "Sony FE 100mm F2.8 Macro GM OSS + 2X Teleconverter".to_string(),
+                33095 => "Sony FE 100-400mm F4.5 GM OSS + 1.4X Teleconverter".to_string(),
+                33096 => "Sony FE 100-400mm F4.5 GM OSS + 2X Teleconverter".to_string(),
+                49201 => "Zeiss Touit 12mm F2.8 or other Touit lens".to_string(),
+                49202 => "Zeiss Touit 32mm F1.8".to_string(),
+                49203 => "Zeiss Touit 50mm F2.8 Macro".to_string(),
+                49216 => "Zeiss Batis 25mm F2".to_string(),
+                49217 => "Zeiss Batis 85mm F1.8".to_string(),
+                49218 => "Zeiss Batis 18mm F2.8".to_string(),
+                49219 => "Zeiss Batis 135mm F2.8".to_string(),
+                49220 => "Zeiss Batis 40mm F2 CF".to_string(),
+                49232 => "Zeiss Loxia 50mm F2".to_string(),
+                49233 => "Zeiss Loxia 35mm F2".to_string(),
+                49234 => "Zeiss Loxia 21mm F2.8".to_string(),
+                49235 => "Zeiss Loxia 85mm F2.4".to_string(),
+                49236 => "Zeiss Loxia 25mm F2.4".to_string(),
+                49456 => "Tamron E 18-200mm F3.5-6.3 Di III VC".to_string(),
+                49457 => "Tamron 28-75mm F2.8 Di III RXD".to_string(),
+                49458 => "Tamron 17-28mm F2.8 Di III RXD".to_string(),
+                49459 => "Tamron 35mm F2.8 Di III OSD M1:2".to_string(),
+                49460 => "Tamron 24mm F2.8 Di III OSD M1:2".to_string(),
+                49461 => "Tamron 20mm F2.8 Di III OSD M1:2".to_string(),
+                49462 => "Tamron 70-180mm F2.8 Di III VXD".to_string(),
+                49463 => "Tamron 28-200mm F2.8-5.6 Di III RXD".to_string(),
+                49464 => "Tamron 70-300mm F4.5-6.3 Di III RXD".to_string(),
+                49465 => "Tamron 17-70mm F2.8 Di III-A VC RXD".to_string(),
+                49466 => "Tamron 150-500mm F5-6.7 Di III VC VXD".to_string(),
+                49467 => "Tamron 11-20mm F2.8 Di III-A RXD".to_string(),
+                49468 => "Tamron 18-300mm F3.5-6.3 Di III-A VC VXD".to_string(),
+                49469 => "Tamron 35-150mm F2-F2.8 Di III VXD".to_string(),
+                49470 => "Tamron 28-75mm F2.8 Di III VXD G2".to_string(),
+                49471 => "Tamron 50-400mm F4.5-6.3 Di III VC VXD".to_string(),
+                49472 => "Tamron 20-40mm F2.8 Di III VXD".to_string(),
+                49473 => "Tamron 17-50mm F4 Di III VXD or Tokina or Viltrox lens".to_string(),
+                49474 => "Tamron 70-180mm F2.8 Di III VXD G2 or Viltrox lens".to_string(),
+                49475 => "Tamron 50-300mm F4.5-6.3 Di III VC VXD".to_string(),
+                49476 => "Tamron 28-300mm F4-7.1 Di III VC VXD".to_string(),
+                49477 => "Tamron 90mm F2.8 Di III Macro VXD".to_string(),
+                49478 => "Tamron 16-30mm F2.8 Di III VXD G2".to_string(),
+                49479 => "Tamron 25-200mm F2.8-5.6 Di III VXD G2".to_string(),
+                49480 => "Tamron 35-100mm F2.8 Di III VXD".to_string(),
+                49712 => "Tokina FiRIN 20mm F2 FE AF".to_string(),
+                49713 => "Tokina FiRIN 100mm F2.8 FE MACRO".to_string(),
+                49714 => "Tokina atx-m 11-18mm F2.8 E".to_string(),
+                50480 => "Sigma 30mm F1.4 DC DN | C".to_string(),
+                50481 => "Sigma 50mm F1.4 DG HSM | A".to_string(),
+                50482 => "Sigma 18-300mm F3.5-6.3 DC MACRO OS HSM | C + MC-11".to_string(),
+                50483 => "Sigma 18-35mm F1.8 DC HSM | A + MC-11".to_string(),
+                50484 => "Sigma 24-35mm F2 DG HSM | A + MC-11".to_string(),
+                50485 => "Sigma 24mm F1.4 DG HSM | A + MC-11".to_string(),
+                50486 => "Sigma 150-600mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50487 => "Sigma 20mm F1.4 DG HSM | A + MC-11".to_string(),
+                50488 => "Sigma 35mm F1.4 DG HSM | A".to_string(),
+                50489 => "Sigma 150-600mm F5-6.3 DG OS HSM | S + MC-11".to_string(),
+                50490 => "Sigma 120-300mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50492 => "Sigma 24-105mm F4 DG OS HSM | A + MC-11".to_string(),
+                50493 => "Sigma 17-70mm F2.8-4 DC MACRO OS HSM | C + MC-11".to_string(),
+                50495 => "Sigma 50-100mm F1.8 DC HSM | A + MC-11".to_string(),
+                50499 => "Sigma 85mm F1.4 DG HSM | A".to_string(),
+                50501 => "Sigma 100-400mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50503 => "Sigma 16mm F1.4 DC DN | C".to_string(),
+                50507 => "Sigma 105mm F1.4 DG HSM | A".to_string(),
+                50508 => "Sigma 56mm F1.4 DC DN | C".to_string(),
+                50512 => "Sigma 70-200mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50513 => "Sigma 70mm F2.8 DG MACRO | A".to_string(),
+                50514 => "Sigma 45mm F2.8 DG DN | C".to_string(),
+                50515 => "Sigma 35mm F1.2 DG DN | A".to_string(),
+                50516 => "Sigma 14-24mm F2.8 DG DN | A".to_string(),
+                50517 => "Sigma 24-70mm F2.8 DG DN | A".to_string(),
+                50518 => "Sigma 100-400mm F5-6.3 DG DN OS | C".to_string(),
+                50521 => "Sigma 85mm F1.4 DG DN | A".to_string(),
+                50522 => "Sigma 105mm F2.8 DG DN MACRO | A".to_string(),
+                50523 => "Sigma 65mm F2 DG DN | C".to_string(),
+                50524 => "Sigma 35mm F2 DG DN | C".to_string(),
+                50525 => "Sigma 24mm F3.5 DG DN | C".to_string(),
+                50526 => "Sigma 28-70mm F2.8 DG DN | C".to_string(),
+                50527 => "Sigma 150-600mm F5-6.3 DG DN OS | S".to_string(),
+                50528 => "Sigma 35mm F1.4 DG DN | A".to_string(),
+                50529 => "Sigma 90mm F2.8 DG DN | C".to_string(),
+                50530 => "Sigma 24mm F2 DG DN | C".to_string(),
+                50531 => "Sigma 18-50mm F2.8 DC DN | C".to_string(),
+                50532 => "Sigma 20mm F2 DG DN | C".to_string(),
+                50533 => "Sigma 16-28mm F2.8 DG DN | C".to_string(),
+                50534 => "Sigma 20mm F1.4 DG DN | A".to_string(),
+                50535 => "Sigma 24mm F1.4 DG DN | A".to_string(),
+                50536 => "Sigma 60-600mm F4.5-6.3 DG DN OS | S".to_string(),
+                50537 => "Sigma 50mm F2 DG DN | C".to_string(),
+                50538 => "Sigma 17mm F4 DG DN | C".to_string(),
+                50539 => "Sigma 50mm F1.4 DG DN | A".to_string(),
+                50540 => "Sigma 14mm F1.4 DG DN | A".to_string(),
+                50543 => "Sigma 70-200mm F2.8 DG DN OS | S".to_string(),
+                50544 => "Sigma 23mm F1.4 DC DN | C".to_string(),
+                50545 => "Sigma 24-70mm F2.8 DG DN II | A".to_string(),
+                50546 => "Sigma 500mm F5.6 DG DN OS | S".to_string(),
+                50547 => "Sigma 10-18mm F2.8 DC DN | C".to_string(),
+                50548 => "Sigma 15mm F1.4 DG DN DIAGONAL FISHEYE | A".to_string(),
+                50549 => "Sigma 50mm F1.2 DG DN | A".to_string(),
+                50550 => "Sigma 28-105mm F2.8 DG DN | A".to_string(),
+                50551 => "Sigma 28-45mm F1.8 DG DN | A".to_string(),
+                50552 => "Sigma 35mm F1.2 DG II | A".to_string(),
+                50553 => "Sigma 300-600mm F4 DG OS | S".to_string(),
+                50554 => "Sigma 16-300mm F3.5-6.7 DC OS | C".to_string(),
+                50555 => "Sigma 12mm F1.4 DC | C".to_string(),
+                50556 => "Sigma 17-40mm F1.8 DC | A".to_string(),
+                50557 => "Sigma 200mm F2 DG OS | S".to_string(),
+                50558 => "Sigma 20-200mm F3.5-6.3 DG | C".to_string(),
+                50559 => "Sigma 135mm F1.4 DG | A".to_string(),
+                50563 => "Sigma 35mm F1.4 DG II | A".to_string(),
+                50564 => "Sigma 15mm F1.4 DC | C".to_string(),
+                50992 => "Voigtlander SUPER WIDE-HELIAR 15mm F4.5 III".to_string(),
+                50993 => "Voigtlander HELIAR-HYPER WIDE 10mm F5.6".to_string(),
+                50994 => "Voigtlander ULTRA WIDE-HELIAR 12mm F5.6 III".to_string(),
+                50995 => "Voigtlander MACRO APO-LANTHAR 65mm F2 Aspherical".to_string(),
+                50996 => "Voigtlander NOKTON 40mm F1.2 Aspherical".to_string(),
+                50997 => "Voigtlander NOKTON classic 35mm F1.4".to_string(),
+                50998 => "Voigtlander MACRO APO-LANTHAR 110mm F2.5".to_string(),
+                50999 => "Voigtlander COLOR-SKOPAR 21mm F3.5 Aspherical".to_string(),
+                51000 => "Voigtlander NOKTON 50mm F1.2 Aspherical".to_string(),
+                51001 => "Voigtlander NOKTON 21mm F1.4 Aspherical".to_string(),
+                51002 => "Voigtlander APO-LANTHAR 50mm F2 Aspherical".to_string(),
+                51003 => "Voigtlander NOKTON 35mm F1.2 Aspherical SE".to_string(),
+                51006 => "Voigtlander APO-LANTHAR 35mm F2 Aspherical".to_string(),
+                51007 => "Voigtlander NOKTON 50mm F1 Aspherical".to_string(),
+                51008 => "Voigtlander NOKTON 75mm F1.5 Aspherical".to_string(),
+                51009 => "Voigtlander NOKTON 28mm F1.5 Aspherical".to_string(),
+                51011 => "Voigtlander APO-LANTHAR 28mm F2 Aspherical".to_string(),
+                51072 => "ZEISS Otus ML 50mm F1.4".to_string(),
+                51073 => "ZEISS Otus ML 85mm F1.4".to_string(),
+                51504 => "Samyang AF 50mm F1.4".to_string(),
+                51505 => "Samyang AF 14mm F2.8 or Samyang AF 35mm F2.8".to_string(),
+                51507 => "Samyang AF 35mm F1.4".to_string(),
+                51508 => "Samyang AF 45mm F1.8".to_string(),
+                51510 => "Samyang AF 18mm F2.8 or Samyang AF 35mm F1.8".to_string(),
+                51512 => "Samyang AF 75mm F1.8".to_string(),
+                51513 => "Samyang AF 35mm F1.8".to_string(),
+                51514 => "Samyang AF 24mm F1.8".to_string(),
+                51515 => "Samyang AF 12mm F2.0".to_string(),
+                51516 => "Samyang AF 24-70mm F2.8".to_string(),
+                51517 => "Samyang AF 50mm F1.4 II".to_string(),
+                51518 => "Samyang AF 135mm F1.8".to_string(),
+                61569 => "LAOWA FFII 10mm F2.8 C&D Dreamer".to_string(),
+                61572 => "LAOWA FFII 12mm F2.8 C&D Dreamer".to_string(),
+                61600 => "Thypoch AF 24-50mm F2.8 FE".to_string(),
+                61760 => "Viltrox 135mm F1.8 FE LAB".to_string(),
+                61761 => "Viltrox 28mm F4.5 FE".to_string(),
+                61762 => "Viltrox 35mm F1.2 FE LAB".to_string(),
+                61763 => "Viltrox 85mm F1.4 FE Pro".to_string(),
+                61766 => "Viltrox 40mm F2.5 FE Air".to_string(),
+                61767 => "Viltrox 50mm F2.0 FE Air".to_string(),
+                61768 => "Viltrox 25mm F1.7 E Air".to_string(),
+                61776 => "Viltrox 50mm F1.4 FE Pro".to_string(),
+                61777 => "Viltrox 9mm F2.8 E Air".to_string(),
+                61778 => "Viltrox 14mm F4.0 FE Air".to_string(),
+                61779 => "Viltrox 56mm F1.2 E Pro".to_string(),
+                61780 => "Viltrox 85mm F2.0 FE EVO".to_string(),
+                61781 => "Viltrox 55mm F1.8 FE EVO".to_string(),
+                61783 => "Viltrox 15mm F1.7 E Air".to_string(),
+                61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("LensType2", s, Value::I32(v as i32), GRP2));
+        }
+    }
+    if dm_get(&dm, "LensMount") == Some(1.0) {
+        if let Some(v) = u16_at(data, 0x17f6) {
+            dm.push(("LensType", f64::from(v)));
+            tags.push(mk("LensType", v.to_string(), Value::I32(v as i32), GRP2));
+        }
     }
     if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x17f8) {
+            dm.push(("DistortionCorrParamsPresent", f64::from(v)));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
+            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2));
         }
     }
     if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x17f9) {
+            dm.push(("DistortionCorrParamsNumber", f64::from(v)));
             let s = match v as i64 {
                 11 => "11 (APS-C)".to_string(),
                 16 => "16 (Full-frame)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("DistortionCorrParamsNumber", s, Value::I32(v as i32)));
+            tags.push(mk("DistortionCorrParamsNumber", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x188c) {
+        dm.push(("AspectRatio", f64::from(v)));
         let s = match v as i64 {
             0 => "16:9".to_string(),
             1 => "4:3".to_string(),
@@ -766,29 +2059,34 @@ fn tag2010i(data: &[u8], model: &str) -> Vec<Tag> {
             5 => "Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AspectRatio", s, Value::I32(v as i32)));
+        tags.push(mk("AspectRatio", s, Value::I32(v as i32), GRP2));
     }
     tags
 }
 
 fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if !MODEL_RE_6.is_match(model) {
         if let Some(v) = u8_at(data, 0x0) {
+            dm.push(("SonyMaxAperture", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-            tags.push(mk("SonyMaxAperture", cv.as_string(), raw));
+            tags.push(mk("SonyMaxAperture", cv.as_string(), raw, GRP2));
         }
     }
     if !MODEL_RE_6.is_match(model) {
         if let Some(v) = u8_at(data, 0x1) {
+            dm.push(("SonyMinAperture", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-            tags.push(mk("SonyMinAperture", cv.as_string(), raw));
+            tags.push(mk("SonyMinAperture", cv.as_string(), raw, GRP2));
         }
     }
     {
@@ -801,10 +2099,11 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Shutter", s.clone(), Value::String(s)));
+            tags.push(mk("Shutter", s.clone(), Value::String(s), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x31) {
+        dm.push(("FlashStatus", f64::from(v)));
         let s = match v as i64 {
             0 => "No Flash present".to_string(),
             2 => "Flash Inhibited".to_string(),
@@ -815,26 +2114,30 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
             129 => "External Flash Fired".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashStatus", s, Value::I32(v as i32)));
+        tags.push(mk("FlashStatus", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u32_at(data, 0x32) {
-        tags.push(mk("ShutterCount", v.to_string(), Value::I32(v as i32)));
+        dm.push(("ShutterCount", f64::from(v)));
+        tags.push(mk("ShutterCount", v.to_string(), Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u16_at(data, 0x3a) {
+        dm.push(("SonyExposureTime", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(mk("SonyExposureTime", cv.as_string(), raw));
+        tags.push(mk("SonyExposureTime", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x3c) {
+        dm.push(("SonyFNumber", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyFNumber", cv.as_string(), raw));
+        tags.push(mk("SonyFNumber", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u8_at(data, 0x3f) {
+        dm.push(("ReleaseMode2", f64::from(v)));
         let s = match v as i64 {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
@@ -861,10 +2164,11 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
+        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32), GRP2));
     }
     if !MODEL_RE_7.is_match(model) {
         if let Some(v) = u8_at(data, 0x67) {
+            dm.push(("ReleaseMode2", f64::from(v)));
             let s = match v as i64 {
                 0 => "Normal".to_string(),
                 1 => "Continuous".to_string(),
@@ -891,7 +2195,7 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
                 146 => "Single Frame - Movie Capture".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
+            tags.push(mk("ReleaseMode2", s, Value::I32(v as i32), GRP2));
         }
     }
     if !MODEL_RE_8.is_match(model) {
@@ -905,7 +2209,7 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
-                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" "))));
+                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" ")), GRP2));
             }
         }
     }
@@ -920,82 +2224,396 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
-                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" "))));
+                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" ")), GRP2));
             }
         }
     }
     if let Some(v) = u8_at(data, 0x105) {
+        dm.push(("LensMount", f64::from(v)));
         let s = match v as i64 {
             0 => "Unknown".to_string(),
             1 => "A-mount".to_string(),
             2 => "E-mount".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensMount", s, Value::I32(v as i32)));
+        tags.push(mk("LensMount", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x106) {
+        dm.push(("LensFormat", f64::from(v)));
         let s = match v as i64 {
             0 => "Unknown".to_string(),
             1 => "APS-C".to_string(),
             2 => "Full-frame".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensFormat", s, Value::I32(v as i32)));
+        tags.push(mk("LensFormat", s, Value::I32(v as i32), GRP2));
+    }
+    if dm_get(&dm, "LensMount") == Some(2.0) {
+        if let Some(v) = u16_at(data, 0x107) {
+            dm.push(("LensType2", f64::from(v)));
+            let s = match v as i64 {
+                0 => "Unknown E-mount lens or other lens".to_string(),
+                1 => "Samyang AF 35mm F1.8".to_string(),
+                2 => "Viltrox 16mm F1.8 FE".to_string(),
+                3 => "Viltrox 23mm F1.4 E".to_string(),
+                4 => "Viltrox 24mm F1.8 FE".to_string(),
+                5 => "Viltrox 28mm F1.8 FE".to_string(),
+                6 => "Viltrox 33mm F1.4 E".to_string(),
+                7 => "Viltrox 35mm F1.8 FE".to_string(),
+                8 => "Viltrox 50mm F1.8 FE".to_string(),
+                9 => "Viltrox 75mm F1.2 E Pro".to_string(),
+                13 => "Samyang AF 35-150mm F2-2.8".to_string(),
+                17 => "Samyang RS 21mm F3.5".to_string(),
+                18 => "Samyang RS 28mm F3.5".to_string(),
+                19 => "Samyang RS 32mm F2.8".to_string(),
+                20 => "Samyang AF 35mm F1.4 P FE".to_string(),
+                21 => "Samyang AF 14-24mm F2.8".to_string(),
+                22 => "Samyang AF 24-60mm F2.8".to_string(),
+                24 => "Samyang AF 85mm F1.8 P FE".to_string(),
+                44 => "Metabones Canon EF Smart Adapter".to_string(),
+                78 => "Metabones Canon EF Smart Adapter Mark III or Other Adapter".to_string(),
+                184 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                234 => "Metabones Canon EF Smart Adapter Mark IV".to_string(),
+                239 => "Metabones Canon EF Speed Booster".to_string(),
+                24593 => "LA-EA4r MonsterAdapter".to_string(),
+                32784 => "Sony E 16mm F2.8".to_string(),
+                32785 => "Sony E 18-55mm F3.5-5.6 OSS".to_string(),
+                32786 => "Sony E 55-210mm F4.5-6.3 OSS".to_string(),
+                32787 => "Sony E 18-200mm F3.5-6.3 OSS".to_string(),
+                32788 => "Sony E 30mm F3.5 Macro".to_string(),
+                32789 => "Sony E 24mm F1.8 ZA or Samyang AF 50mm F1.4".to_string(),
+                32790 => "Sony E 50mm F1.8 OSS or Samyang AF 14mm F2.8".to_string(),
+                32791 => "Sony E 16-70mm F4 ZA OSS".to_string(),
+                32792 => "Sony E 10-18mm F4 OSS".to_string(),
+                32793 => "Sony E PZ 16-50mm F3.5-5.6 OSS".to_string(),
+                32794 => "Sony FE 35mm F2.8 ZA or Samyang Lens".to_string(),
+                32795 => "Sony FE 24-70mm F4 ZA OSS".to_string(),
+                32796 => "Sony FE 85mm F1.8 or Viltrox PFU RBMH 85mm F1.8".to_string(),
+                32797 => "Sony E 18-200mm F3.5-6.3 OSS LE".to_string(),
+                32798 => "Sony E 20mm F2.8".to_string(),
+                32799 => "Sony E 35mm F1.8 OSS".to_string(),
+                32800 => "Sony E PZ 18-105mm F4 G OSS".to_string(),
+                32801 => "Sony FE 12-24mm F4 G".to_string(),
+                32802 => "Sony FE 90mm F2.8 Macro G OSS".to_string(),
+                32803 => "Sony E 18-50mm F4-5.6".to_string(),
+                32804 => "Sony FE 24mm F1.4 GM".to_string(),
+                32805 => "Sony FE 24-105mm F4 G OSS".to_string(),
+                32807 => "Sony E PZ 18-200mm F3.5-6.3 OSS".to_string(),
+                32808 => "Sony FE 55mm F1.8 ZA".to_string(),
+                32810 => "Sony FE 70-200mm F4 G OSS".to_string(),
+                32811 => "Sony FE 16-35mm F4 ZA OSS".to_string(),
+                32812 => "Sony FE 50mm F2.8 Macro".to_string(),
+                32813 => "Sony FE 28-70mm F3.5-5.6 OSS".to_string(),
+                32814 => "Sony FE 35mm F1.4 ZA".to_string(),
+                32815 => "Sony FE 24-240mm F3.5-6.3 OSS".to_string(),
+                32816 => "Sony FE 28mm F2".to_string(),
+                32817 => "Sony FE PZ 28-135mm F4 G OSS".to_string(),
+                32819 => "Sony FE 100mm F2.8 STF GM OSS".to_string(),
+                32820 => "Sony E PZ 18-110mm F4 G OSS".to_string(),
+                32821 => "Sony FE 24-70mm F2.8 GM".to_string(),
+                32822 => "Sony FE 50mm F1.4 ZA".to_string(),
+                32823 => "Sony FE 85mm F1.4 GM or Samyang AF 85mm F1.4".to_string(),
+                32824 => "Sony FE 50mm F1.8".to_string(),
+                32826 => "Sony FE 21mm F2.8 (SEL28F20 + SEL075UWC)".to_string(),
+                32827 => "Sony FE 16mm F3.5 Fisheye (SEL28F20 + SEL057FEC)".to_string(),
+                32828 => "Sony FE 70-300mm F4.5-5.6 G OSS".to_string(),
+                32829 => "Sony FE 100-400mm F4.5-5.6 GM OSS".to_string(),
+                32830 => "Sony FE 70-200mm F2.8 GM OSS".to_string(),
+                32831 => "Sony FE 16-35mm F2.8 GM".to_string(),
+                32848 => "Sony FE 400mm F2.8 GM OSS".to_string(),
+                32849 => "Sony E 18-135mm F3.5-5.6 OSS".to_string(),
+                32850 => "Sony FE 135mm F1.8 GM".to_string(),
+                32851 => "Sony FE 200-600mm F5.6-6.3 G OSS".to_string(),
+                32852 => "Sony FE 600mm F4 GM OSS".to_string(),
+                32853 => "Sony E 16-55mm F2.8 G".to_string(),
+                32854 => "Sony E 70-350mm F4.5-6.3 G OSS".to_string(),
+                32855 => "Sony FE C 16-35mm T3.1 G".to_string(),
+                32858 => "Sony FE 35mm F1.8".to_string(),
+                32859 => "Sony FE 20mm F1.8 G".to_string(),
+                32860 => "Sony FE 12-24mm F2.8 GM".to_string(),
+                32862 => "Sony FE 50mm F1.2 GM".to_string(),
+                32863 => "Sony FE 14mm F1.8 GM".to_string(),
+                32864 => "Sony FE 28-60mm F4-5.6".to_string(),
+                32865 => "Sony FE 35mm F1.4 GM".to_string(),
+                32866 => "Sony FE 24mm F2.8 G".to_string(),
+                32867 => "Sony FE 40mm F2.5 G".to_string(),
+                32868 => "Sony FE 50mm F2.5 G".to_string(),
+                32871 => "Sony FE PZ 16-35mm F4 G".to_string(),
+                32873 => "Sony E PZ 10-20mm F4 G".to_string(),
+                32874 => "Sony FE 70-200mm F2.8 GM OSS II".to_string(),
+                32875 => "Sony FE 24-70mm F2.8 GM II".to_string(),
+                32876 => "Sony E 11mm F1.8".to_string(),
+                32877 => "Sony E 15mm F1.4 G".to_string(),
+                32878 => "Sony FE 20-70mm F4 G".to_string(),
+                32879 => "Sony FE 50mm F1.4 GM".to_string(),
+                32880 => "Sony FE 16mm F1.8 G".to_string(),
+                32881 => "Sony FE 24-50mm F2.8 G".to_string(),
+                32882 => "Sony FE 16-25mm F2.8 G".to_string(),
+                32884 => "Sony FE 70-200mm F4 Macro G OSS II".to_string(),
+                32885 => "Sony FE 16-35mm F2.8 GM II".to_string(),
+                32886 => "Sony FE 300mm F2.8 GM OSS".to_string(),
+                32887 => "Sony E PZ 16-50mm F3.5-5.6 OSS II".to_string(),
+                32888 => "Sony FE 85mm F1.4 GM II".to_string(),
+                32889 => "Sony FE 28-70mm F2 GM".to_string(),
+                32890 => "Sony FE 400-800mm F6.3-8 G OSS".to_string(),
+                32891 => "Sony FE 50-150mm F2 GM".to_string(),
+                32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
+                32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
+                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
+                33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
+                33077 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 1.4X Teleconverter".to_string(),
+                33078 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 2X Teleconverter".to_string(),
+                33079 => "Sony FE 400mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33080 => "Sony FE 400mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33081 => "Sony FE 200-600mm F5.6-6.3 G OSS + 1.4X Teleconverter".to_string(),
+                33082 => "Sony FE 200-600mm F5.6-6.3 G OSS + 2X Teleconverter".to_string(),
+                33083 => "Sony FE 600mm F4 GM OSS + 1.4X Teleconverter".to_string(),
+                33084 => "Sony FE 600mm F4 GM OSS + 2X Teleconverter".to_string(),
+                33085 => "Sony FE 70-200mm F2.8 GM OSS II + 1.4X Teleconverter".to_string(),
+                33086 => "Sony FE 70-200mm F2.8 GM OSS II + 2X Teleconverter".to_string(),
+                33087 => "Sony FE 70-200mm F4 Macro G OSS II + 1.4X Teleconverter".to_string(),
+                33088 => "Sony FE 70-200mm F4 Macro G OSS II + 2X Teleconverter".to_string(),
+                33089 => "Sony FE 300mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33090 => "Sony FE 300mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33091 => "Sony FE 400-800mm F6.3-8 G OSS + 1.4X Teleconverter".to_string(),
+                33092 => "Sony FE 400-800mm F6.3-8 G OSS + 2X Teleconverter".to_string(),
+                33093 => "Sony FE 100mm F2.8 Macro GM OSS + 1.4X Teleconverter".to_string(),
+                33094 => "Sony FE 100mm F2.8 Macro GM OSS + 2X Teleconverter".to_string(),
+                33095 => "Sony FE 100-400mm F4.5 GM OSS + 1.4X Teleconverter".to_string(),
+                33096 => "Sony FE 100-400mm F4.5 GM OSS + 2X Teleconverter".to_string(),
+                49201 => "Zeiss Touit 12mm F2.8 or other Touit lens".to_string(),
+                49202 => "Zeiss Touit 32mm F1.8".to_string(),
+                49203 => "Zeiss Touit 50mm F2.8 Macro".to_string(),
+                49216 => "Zeiss Batis 25mm F2".to_string(),
+                49217 => "Zeiss Batis 85mm F1.8".to_string(),
+                49218 => "Zeiss Batis 18mm F2.8".to_string(),
+                49219 => "Zeiss Batis 135mm F2.8".to_string(),
+                49220 => "Zeiss Batis 40mm F2 CF".to_string(),
+                49232 => "Zeiss Loxia 50mm F2".to_string(),
+                49233 => "Zeiss Loxia 35mm F2".to_string(),
+                49234 => "Zeiss Loxia 21mm F2.8".to_string(),
+                49235 => "Zeiss Loxia 85mm F2.4".to_string(),
+                49236 => "Zeiss Loxia 25mm F2.4".to_string(),
+                49456 => "Tamron E 18-200mm F3.5-6.3 Di III VC".to_string(),
+                49457 => "Tamron 28-75mm F2.8 Di III RXD".to_string(),
+                49458 => "Tamron 17-28mm F2.8 Di III RXD".to_string(),
+                49459 => "Tamron 35mm F2.8 Di III OSD M1:2".to_string(),
+                49460 => "Tamron 24mm F2.8 Di III OSD M1:2".to_string(),
+                49461 => "Tamron 20mm F2.8 Di III OSD M1:2".to_string(),
+                49462 => "Tamron 70-180mm F2.8 Di III VXD".to_string(),
+                49463 => "Tamron 28-200mm F2.8-5.6 Di III RXD".to_string(),
+                49464 => "Tamron 70-300mm F4.5-6.3 Di III RXD".to_string(),
+                49465 => "Tamron 17-70mm F2.8 Di III-A VC RXD".to_string(),
+                49466 => "Tamron 150-500mm F5-6.7 Di III VC VXD".to_string(),
+                49467 => "Tamron 11-20mm F2.8 Di III-A RXD".to_string(),
+                49468 => "Tamron 18-300mm F3.5-6.3 Di III-A VC VXD".to_string(),
+                49469 => "Tamron 35-150mm F2-F2.8 Di III VXD".to_string(),
+                49470 => "Tamron 28-75mm F2.8 Di III VXD G2".to_string(),
+                49471 => "Tamron 50-400mm F4.5-6.3 Di III VC VXD".to_string(),
+                49472 => "Tamron 20-40mm F2.8 Di III VXD".to_string(),
+                49473 => "Tamron 17-50mm F4 Di III VXD or Tokina or Viltrox lens".to_string(),
+                49474 => "Tamron 70-180mm F2.8 Di III VXD G2 or Viltrox lens".to_string(),
+                49475 => "Tamron 50-300mm F4.5-6.3 Di III VC VXD".to_string(),
+                49476 => "Tamron 28-300mm F4-7.1 Di III VC VXD".to_string(),
+                49477 => "Tamron 90mm F2.8 Di III Macro VXD".to_string(),
+                49478 => "Tamron 16-30mm F2.8 Di III VXD G2".to_string(),
+                49479 => "Tamron 25-200mm F2.8-5.6 Di III VXD G2".to_string(),
+                49480 => "Tamron 35-100mm F2.8 Di III VXD".to_string(),
+                49712 => "Tokina FiRIN 20mm F2 FE AF".to_string(),
+                49713 => "Tokina FiRIN 100mm F2.8 FE MACRO".to_string(),
+                49714 => "Tokina atx-m 11-18mm F2.8 E".to_string(),
+                50480 => "Sigma 30mm F1.4 DC DN | C".to_string(),
+                50481 => "Sigma 50mm F1.4 DG HSM | A".to_string(),
+                50482 => "Sigma 18-300mm F3.5-6.3 DC MACRO OS HSM | C + MC-11".to_string(),
+                50483 => "Sigma 18-35mm F1.8 DC HSM | A + MC-11".to_string(),
+                50484 => "Sigma 24-35mm F2 DG HSM | A + MC-11".to_string(),
+                50485 => "Sigma 24mm F1.4 DG HSM | A + MC-11".to_string(),
+                50486 => "Sigma 150-600mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50487 => "Sigma 20mm F1.4 DG HSM | A + MC-11".to_string(),
+                50488 => "Sigma 35mm F1.4 DG HSM | A".to_string(),
+                50489 => "Sigma 150-600mm F5-6.3 DG OS HSM | S + MC-11".to_string(),
+                50490 => "Sigma 120-300mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50492 => "Sigma 24-105mm F4 DG OS HSM | A + MC-11".to_string(),
+                50493 => "Sigma 17-70mm F2.8-4 DC MACRO OS HSM | C + MC-11".to_string(),
+                50495 => "Sigma 50-100mm F1.8 DC HSM | A + MC-11".to_string(),
+                50499 => "Sigma 85mm F1.4 DG HSM | A".to_string(),
+                50501 => "Sigma 100-400mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50503 => "Sigma 16mm F1.4 DC DN | C".to_string(),
+                50507 => "Sigma 105mm F1.4 DG HSM | A".to_string(),
+                50508 => "Sigma 56mm F1.4 DC DN | C".to_string(),
+                50512 => "Sigma 70-200mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50513 => "Sigma 70mm F2.8 DG MACRO | A".to_string(),
+                50514 => "Sigma 45mm F2.8 DG DN | C".to_string(),
+                50515 => "Sigma 35mm F1.2 DG DN | A".to_string(),
+                50516 => "Sigma 14-24mm F2.8 DG DN | A".to_string(),
+                50517 => "Sigma 24-70mm F2.8 DG DN | A".to_string(),
+                50518 => "Sigma 100-400mm F5-6.3 DG DN OS | C".to_string(),
+                50521 => "Sigma 85mm F1.4 DG DN | A".to_string(),
+                50522 => "Sigma 105mm F2.8 DG DN MACRO | A".to_string(),
+                50523 => "Sigma 65mm F2 DG DN | C".to_string(),
+                50524 => "Sigma 35mm F2 DG DN | C".to_string(),
+                50525 => "Sigma 24mm F3.5 DG DN | C".to_string(),
+                50526 => "Sigma 28-70mm F2.8 DG DN | C".to_string(),
+                50527 => "Sigma 150-600mm F5-6.3 DG DN OS | S".to_string(),
+                50528 => "Sigma 35mm F1.4 DG DN | A".to_string(),
+                50529 => "Sigma 90mm F2.8 DG DN | C".to_string(),
+                50530 => "Sigma 24mm F2 DG DN | C".to_string(),
+                50531 => "Sigma 18-50mm F2.8 DC DN | C".to_string(),
+                50532 => "Sigma 20mm F2 DG DN | C".to_string(),
+                50533 => "Sigma 16-28mm F2.8 DG DN | C".to_string(),
+                50534 => "Sigma 20mm F1.4 DG DN | A".to_string(),
+                50535 => "Sigma 24mm F1.4 DG DN | A".to_string(),
+                50536 => "Sigma 60-600mm F4.5-6.3 DG DN OS | S".to_string(),
+                50537 => "Sigma 50mm F2 DG DN | C".to_string(),
+                50538 => "Sigma 17mm F4 DG DN | C".to_string(),
+                50539 => "Sigma 50mm F1.4 DG DN | A".to_string(),
+                50540 => "Sigma 14mm F1.4 DG DN | A".to_string(),
+                50543 => "Sigma 70-200mm F2.8 DG DN OS | S".to_string(),
+                50544 => "Sigma 23mm F1.4 DC DN | C".to_string(),
+                50545 => "Sigma 24-70mm F2.8 DG DN II | A".to_string(),
+                50546 => "Sigma 500mm F5.6 DG DN OS | S".to_string(),
+                50547 => "Sigma 10-18mm F2.8 DC DN | C".to_string(),
+                50548 => "Sigma 15mm F1.4 DG DN DIAGONAL FISHEYE | A".to_string(),
+                50549 => "Sigma 50mm F1.2 DG DN | A".to_string(),
+                50550 => "Sigma 28-105mm F2.8 DG DN | A".to_string(),
+                50551 => "Sigma 28-45mm F1.8 DG DN | A".to_string(),
+                50552 => "Sigma 35mm F1.2 DG II | A".to_string(),
+                50553 => "Sigma 300-600mm F4 DG OS | S".to_string(),
+                50554 => "Sigma 16-300mm F3.5-6.7 DC OS | C".to_string(),
+                50555 => "Sigma 12mm F1.4 DC | C".to_string(),
+                50556 => "Sigma 17-40mm F1.8 DC | A".to_string(),
+                50557 => "Sigma 200mm F2 DG OS | S".to_string(),
+                50558 => "Sigma 20-200mm F3.5-6.3 DG | C".to_string(),
+                50559 => "Sigma 135mm F1.4 DG | A".to_string(),
+                50563 => "Sigma 35mm F1.4 DG II | A".to_string(),
+                50564 => "Sigma 15mm F1.4 DC | C".to_string(),
+                50992 => "Voigtlander SUPER WIDE-HELIAR 15mm F4.5 III".to_string(),
+                50993 => "Voigtlander HELIAR-HYPER WIDE 10mm F5.6".to_string(),
+                50994 => "Voigtlander ULTRA WIDE-HELIAR 12mm F5.6 III".to_string(),
+                50995 => "Voigtlander MACRO APO-LANTHAR 65mm F2 Aspherical".to_string(),
+                50996 => "Voigtlander NOKTON 40mm F1.2 Aspherical".to_string(),
+                50997 => "Voigtlander NOKTON classic 35mm F1.4".to_string(),
+                50998 => "Voigtlander MACRO APO-LANTHAR 110mm F2.5".to_string(),
+                50999 => "Voigtlander COLOR-SKOPAR 21mm F3.5 Aspherical".to_string(),
+                51000 => "Voigtlander NOKTON 50mm F1.2 Aspherical".to_string(),
+                51001 => "Voigtlander NOKTON 21mm F1.4 Aspherical".to_string(),
+                51002 => "Voigtlander APO-LANTHAR 50mm F2 Aspherical".to_string(),
+                51003 => "Voigtlander NOKTON 35mm F1.2 Aspherical SE".to_string(),
+                51006 => "Voigtlander APO-LANTHAR 35mm F2 Aspherical".to_string(),
+                51007 => "Voigtlander NOKTON 50mm F1 Aspherical".to_string(),
+                51008 => "Voigtlander NOKTON 75mm F1.5 Aspherical".to_string(),
+                51009 => "Voigtlander NOKTON 28mm F1.5 Aspherical".to_string(),
+                51011 => "Voigtlander APO-LANTHAR 28mm F2 Aspherical".to_string(),
+                51072 => "ZEISS Otus ML 50mm F1.4".to_string(),
+                51073 => "ZEISS Otus ML 85mm F1.4".to_string(),
+                51504 => "Samyang AF 50mm F1.4".to_string(),
+                51505 => "Samyang AF 14mm F2.8 or Samyang AF 35mm F2.8".to_string(),
+                51507 => "Samyang AF 35mm F1.4".to_string(),
+                51508 => "Samyang AF 45mm F1.8".to_string(),
+                51510 => "Samyang AF 18mm F2.8 or Samyang AF 35mm F1.8".to_string(),
+                51512 => "Samyang AF 75mm F1.8".to_string(),
+                51513 => "Samyang AF 35mm F1.8".to_string(),
+                51514 => "Samyang AF 24mm F1.8".to_string(),
+                51515 => "Samyang AF 12mm F2.0".to_string(),
+                51516 => "Samyang AF 24-70mm F2.8".to_string(),
+                51517 => "Samyang AF 50mm F1.4 II".to_string(),
+                51518 => "Samyang AF 135mm F1.8".to_string(),
+                61569 => "LAOWA FFII 10mm F2.8 C&D Dreamer".to_string(),
+                61572 => "LAOWA FFII 12mm F2.8 C&D Dreamer".to_string(),
+                61600 => "Thypoch AF 24-50mm F2.8 FE".to_string(),
+                61760 => "Viltrox 135mm F1.8 FE LAB".to_string(),
+                61761 => "Viltrox 28mm F4.5 FE".to_string(),
+                61762 => "Viltrox 35mm F1.2 FE LAB".to_string(),
+                61763 => "Viltrox 85mm F1.4 FE Pro".to_string(),
+                61766 => "Viltrox 40mm F2.5 FE Air".to_string(),
+                61767 => "Viltrox 50mm F2.0 FE Air".to_string(),
+                61768 => "Viltrox 25mm F1.7 E Air".to_string(),
+                61776 => "Viltrox 50mm F1.4 FE Pro".to_string(),
+                61777 => "Viltrox 9mm F2.8 E Air".to_string(),
+                61778 => "Viltrox 14mm F4.0 FE Air".to_string(),
+                61779 => "Viltrox 56mm F1.2 E Pro".to_string(),
+                61780 => "Viltrox 85mm F2.0 FE EVO".to_string(),
+                61781 => "Viltrox 55mm F1.8 FE EVO".to_string(),
+                61783 => "Viltrox 15mm F1.7 E Air".to_string(),
+                61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("LensType2", s, Value::I32(v as i32), GRP2));
+        }
+    }
+    if dm_get(&dm, "LensMount") == Some(1.0) {
+        if let Some(v) = u16_at(data, 0x109) {
+            dm.push(("LensType", f64::from(v)));
+            tags.push(mk("LensType", v.to_string(), Value::I32(v as i32), GRP2));
+        }
     }
     if let Some(v) = u8_at(data, 0x10b) {
+        dm.push(("DistortionCorrParamsPresent", f64::from(v)));
         let s = match v as i64 {
             0 => "No".to_string(),
             1 => "Yes".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
+        tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2));
     }
     if MODEL_RE_10.is_match(model) {
         if let Some(v) = u8_at(data, 0x114) {
+            dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
                 0 => "Off".to_string(),
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
+            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_11.is_match(model) {
         if let Some(v) = u32_at(data, 0x1a0) {
-            tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32)));
+            dm.push(("ShutterCount3", f64::from(v)));
+            tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_12.is_match(model) {
         if let Some(v) = u32_at(data, 0x1aa) {
-            tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32)));
+            dm.push(("ShutterCount3", f64::from(v)));
+            tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_13.is_match(model) {
         if let Some(v) = u32_at(data, 0x1bd) {
-            tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32)));
+            dm.push(("ShutterCount3", f64::from(v)));
+            tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32), GRP2));
         }
     }
     tags
 }
 
 fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if MODEL_RE_14.is_match(model) {
         if let Some(v) = u8_at(data, 0x0) {
+            dm.push(("SonyMaxAperture", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-            tags.push(mk("SonyMaxAperture", cv.as_string(), raw));
+            tags.push(mk("SonyMaxAperture", cv.as_string(), raw, GRP2));
         }
     }
     if MODEL_RE_14.is_match(model) {
         if let Some(v) = u8_at(data, 0x1) {
+            dm.push(("SonyMinAperture", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-            tags.push(mk("SonyMinAperture", cv.as_string(), raw));
+            tags.push(mk("SonyMinAperture", cv.as_string(), raw, GRP2));
         }
     }
     {
@@ -1008,10 +2626,11 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Shutter", s.clone(), Value::String(s)));
+            tags.push(mk("Shutter", s.clone(), Value::String(s), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x39) {
+        dm.push(("FlashStatus", f64::from(v)));
         let s = match v as i64 {
             0 => "No Flash present".to_string(),
             2 => "Flash Inhibited".to_string(),
@@ -1023,26 +2642,30 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
             131 => "External Flash ???".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashStatus", s, Value::I32(v as i32)));
+        tags.push(mk("FlashStatus", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u32_at(data, 0x3a) {
-        tags.push(mk("ShutterCount", v.to_string(), Value::I32(v as i32)));
+        dm.push(("ShutterCount", f64::from(v)));
+        tags.push(mk("ShutterCount", v.to_string(), Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u16_at(data, 0x46) {
+        dm.push(("SonyExposureTime", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(mk("SonyExposureTime", cv.as_string(), raw));
+        tags.push(mk("SonyExposureTime", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x48) {
+        dm.push(("SonyFNumber", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyFNumber", cv.as_string(), raw));
+        tags.push(mk("SonyFNumber", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u8_at(data, 0x4b) {
+        dm.push(("ReleaseMode2", f64::from(v)));
         let s = match v as i64 {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
@@ -1069,10 +2692,11 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
+        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32), GRP2));
     }
     if MODEL_RE_15.is_match(model) {
         if let Some(v) = u8_at(data, 0x6d) {
+            dm.push(("ReleaseMode2", f64::from(v)));
             let s = match v as i64 {
                 0 => "Normal".to_string(),
                 1 => "Continuous".to_string(),
@@ -1099,7 +2723,7 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
                 146 => "Single Frame - Movie Capture".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
+            tags.push(mk("ReleaseMode2", s, Value::I32(v as i32), GRP2));
         }
     }
     {
@@ -1112,75 +2736,388 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
-            tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" "))));
+            tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" ")), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x105) {
+        dm.push(("LensMount", f64::from(v)));
         let s = match v as i64 {
             0 => "Unknown".to_string(),
             1 => "A-mount".to_string(),
             2 => "E-mount".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensMount", s, Value::I32(v as i32)));
+        tags.push(mk("LensMount", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x106) {
+        dm.push(("LensFormat", f64::from(v)));
         let s = match v as i64 {
             0 => "Unknown".to_string(),
             1 => "APS-C".to_string(),
             2 => "Full-frame".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensFormat", s, Value::I32(v as i32)));
+        tags.push(mk("LensFormat", s, Value::I32(v as i32), GRP2));
+    }
+    if dm_get(&dm, "LensMount") == Some(2.0) {
+        if let Some(v) = u16_at(data, 0x107) {
+            dm.push(("LensType2", f64::from(v)));
+            let s = match v as i64 {
+                0 => "Unknown E-mount lens or other lens".to_string(),
+                1 => "Samyang AF 35mm F1.8".to_string(),
+                2 => "Viltrox 16mm F1.8 FE".to_string(),
+                3 => "Viltrox 23mm F1.4 E".to_string(),
+                4 => "Viltrox 24mm F1.8 FE".to_string(),
+                5 => "Viltrox 28mm F1.8 FE".to_string(),
+                6 => "Viltrox 33mm F1.4 E".to_string(),
+                7 => "Viltrox 35mm F1.8 FE".to_string(),
+                8 => "Viltrox 50mm F1.8 FE".to_string(),
+                9 => "Viltrox 75mm F1.2 E Pro".to_string(),
+                13 => "Samyang AF 35-150mm F2-2.8".to_string(),
+                17 => "Samyang RS 21mm F3.5".to_string(),
+                18 => "Samyang RS 28mm F3.5".to_string(),
+                19 => "Samyang RS 32mm F2.8".to_string(),
+                20 => "Samyang AF 35mm F1.4 P FE".to_string(),
+                21 => "Samyang AF 14-24mm F2.8".to_string(),
+                22 => "Samyang AF 24-60mm F2.8".to_string(),
+                24 => "Samyang AF 85mm F1.8 P FE".to_string(),
+                44 => "Metabones Canon EF Smart Adapter".to_string(),
+                78 => "Metabones Canon EF Smart Adapter Mark III or Other Adapter".to_string(),
+                184 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                234 => "Metabones Canon EF Smart Adapter Mark IV".to_string(),
+                239 => "Metabones Canon EF Speed Booster".to_string(),
+                24593 => "LA-EA4r MonsterAdapter".to_string(),
+                32784 => "Sony E 16mm F2.8".to_string(),
+                32785 => "Sony E 18-55mm F3.5-5.6 OSS".to_string(),
+                32786 => "Sony E 55-210mm F4.5-6.3 OSS".to_string(),
+                32787 => "Sony E 18-200mm F3.5-6.3 OSS".to_string(),
+                32788 => "Sony E 30mm F3.5 Macro".to_string(),
+                32789 => "Sony E 24mm F1.8 ZA or Samyang AF 50mm F1.4".to_string(),
+                32790 => "Sony E 50mm F1.8 OSS or Samyang AF 14mm F2.8".to_string(),
+                32791 => "Sony E 16-70mm F4 ZA OSS".to_string(),
+                32792 => "Sony E 10-18mm F4 OSS".to_string(),
+                32793 => "Sony E PZ 16-50mm F3.5-5.6 OSS".to_string(),
+                32794 => "Sony FE 35mm F2.8 ZA or Samyang Lens".to_string(),
+                32795 => "Sony FE 24-70mm F4 ZA OSS".to_string(),
+                32796 => "Sony FE 85mm F1.8 or Viltrox PFU RBMH 85mm F1.8".to_string(),
+                32797 => "Sony E 18-200mm F3.5-6.3 OSS LE".to_string(),
+                32798 => "Sony E 20mm F2.8".to_string(),
+                32799 => "Sony E 35mm F1.8 OSS".to_string(),
+                32800 => "Sony E PZ 18-105mm F4 G OSS".to_string(),
+                32801 => "Sony FE 12-24mm F4 G".to_string(),
+                32802 => "Sony FE 90mm F2.8 Macro G OSS".to_string(),
+                32803 => "Sony E 18-50mm F4-5.6".to_string(),
+                32804 => "Sony FE 24mm F1.4 GM".to_string(),
+                32805 => "Sony FE 24-105mm F4 G OSS".to_string(),
+                32807 => "Sony E PZ 18-200mm F3.5-6.3 OSS".to_string(),
+                32808 => "Sony FE 55mm F1.8 ZA".to_string(),
+                32810 => "Sony FE 70-200mm F4 G OSS".to_string(),
+                32811 => "Sony FE 16-35mm F4 ZA OSS".to_string(),
+                32812 => "Sony FE 50mm F2.8 Macro".to_string(),
+                32813 => "Sony FE 28-70mm F3.5-5.6 OSS".to_string(),
+                32814 => "Sony FE 35mm F1.4 ZA".to_string(),
+                32815 => "Sony FE 24-240mm F3.5-6.3 OSS".to_string(),
+                32816 => "Sony FE 28mm F2".to_string(),
+                32817 => "Sony FE PZ 28-135mm F4 G OSS".to_string(),
+                32819 => "Sony FE 100mm F2.8 STF GM OSS".to_string(),
+                32820 => "Sony E PZ 18-110mm F4 G OSS".to_string(),
+                32821 => "Sony FE 24-70mm F2.8 GM".to_string(),
+                32822 => "Sony FE 50mm F1.4 ZA".to_string(),
+                32823 => "Sony FE 85mm F1.4 GM or Samyang AF 85mm F1.4".to_string(),
+                32824 => "Sony FE 50mm F1.8".to_string(),
+                32826 => "Sony FE 21mm F2.8 (SEL28F20 + SEL075UWC)".to_string(),
+                32827 => "Sony FE 16mm F3.5 Fisheye (SEL28F20 + SEL057FEC)".to_string(),
+                32828 => "Sony FE 70-300mm F4.5-5.6 G OSS".to_string(),
+                32829 => "Sony FE 100-400mm F4.5-5.6 GM OSS".to_string(),
+                32830 => "Sony FE 70-200mm F2.8 GM OSS".to_string(),
+                32831 => "Sony FE 16-35mm F2.8 GM".to_string(),
+                32848 => "Sony FE 400mm F2.8 GM OSS".to_string(),
+                32849 => "Sony E 18-135mm F3.5-5.6 OSS".to_string(),
+                32850 => "Sony FE 135mm F1.8 GM".to_string(),
+                32851 => "Sony FE 200-600mm F5.6-6.3 G OSS".to_string(),
+                32852 => "Sony FE 600mm F4 GM OSS".to_string(),
+                32853 => "Sony E 16-55mm F2.8 G".to_string(),
+                32854 => "Sony E 70-350mm F4.5-6.3 G OSS".to_string(),
+                32855 => "Sony FE C 16-35mm T3.1 G".to_string(),
+                32858 => "Sony FE 35mm F1.8".to_string(),
+                32859 => "Sony FE 20mm F1.8 G".to_string(),
+                32860 => "Sony FE 12-24mm F2.8 GM".to_string(),
+                32862 => "Sony FE 50mm F1.2 GM".to_string(),
+                32863 => "Sony FE 14mm F1.8 GM".to_string(),
+                32864 => "Sony FE 28-60mm F4-5.6".to_string(),
+                32865 => "Sony FE 35mm F1.4 GM".to_string(),
+                32866 => "Sony FE 24mm F2.8 G".to_string(),
+                32867 => "Sony FE 40mm F2.5 G".to_string(),
+                32868 => "Sony FE 50mm F2.5 G".to_string(),
+                32871 => "Sony FE PZ 16-35mm F4 G".to_string(),
+                32873 => "Sony E PZ 10-20mm F4 G".to_string(),
+                32874 => "Sony FE 70-200mm F2.8 GM OSS II".to_string(),
+                32875 => "Sony FE 24-70mm F2.8 GM II".to_string(),
+                32876 => "Sony E 11mm F1.8".to_string(),
+                32877 => "Sony E 15mm F1.4 G".to_string(),
+                32878 => "Sony FE 20-70mm F4 G".to_string(),
+                32879 => "Sony FE 50mm F1.4 GM".to_string(),
+                32880 => "Sony FE 16mm F1.8 G".to_string(),
+                32881 => "Sony FE 24-50mm F2.8 G".to_string(),
+                32882 => "Sony FE 16-25mm F2.8 G".to_string(),
+                32884 => "Sony FE 70-200mm F4 Macro G OSS II".to_string(),
+                32885 => "Sony FE 16-35mm F2.8 GM II".to_string(),
+                32886 => "Sony FE 300mm F2.8 GM OSS".to_string(),
+                32887 => "Sony E PZ 16-50mm F3.5-5.6 OSS II".to_string(),
+                32888 => "Sony FE 85mm F1.4 GM II".to_string(),
+                32889 => "Sony FE 28-70mm F2 GM".to_string(),
+                32890 => "Sony FE 400-800mm F6.3-8 G OSS".to_string(),
+                32891 => "Sony FE 50-150mm F2 GM".to_string(),
+                32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
+                32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
+                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
+                33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
+                33077 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 1.4X Teleconverter".to_string(),
+                33078 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 2X Teleconverter".to_string(),
+                33079 => "Sony FE 400mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33080 => "Sony FE 400mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33081 => "Sony FE 200-600mm F5.6-6.3 G OSS + 1.4X Teleconverter".to_string(),
+                33082 => "Sony FE 200-600mm F5.6-6.3 G OSS + 2X Teleconverter".to_string(),
+                33083 => "Sony FE 600mm F4 GM OSS + 1.4X Teleconverter".to_string(),
+                33084 => "Sony FE 600mm F4 GM OSS + 2X Teleconverter".to_string(),
+                33085 => "Sony FE 70-200mm F2.8 GM OSS II + 1.4X Teleconverter".to_string(),
+                33086 => "Sony FE 70-200mm F2.8 GM OSS II + 2X Teleconverter".to_string(),
+                33087 => "Sony FE 70-200mm F4 Macro G OSS II + 1.4X Teleconverter".to_string(),
+                33088 => "Sony FE 70-200mm F4 Macro G OSS II + 2X Teleconverter".to_string(),
+                33089 => "Sony FE 300mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33090 => "Sony FE 300mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33091 => "Sony FE 400-800mm F6.3-8 G OSS + 1.4X Teleconverter".to_string(),
+                33092 => "Sony FE 400-800mm F6.3-8 G OSS + 2X Teleconverter".to_string(),
+                33093 => "Sony FE 100mm F2.8 Macro GM OSS + 1.4X Teleconverter".to_string(),
+                33094 => "Sony FE 100mm F2.8 Macro GM OSS + 2X Teleconverter".to_string(),
+                33095 => "Sony FE 100-400mm F4.5 GM OSS + 1.4X Teleconverter".to_string(),
+                33096 => "Sony FE 100-400mm F4.5 GM OSS + 2X Teleconverter".to_string(),
+                49201 => "Zeiss Touit 12mm F2.8 or other Touit lens".to_string(),
+                49202 => "Zeiss Touit 32mm F1.8".to_string(),
+                49203 => "Zeiss Touit 50mm F2.8 Macro".to_string(),
+                49216 => "Zeiss Batis 25mm F2".to_string(),
+                49217 => "Zeiss Batis 85mm F1.8".to_string(),
+                49218 => "Zeiss Batis 18mm F2.8".to_string(),
+                49219 => "Zeiss Batis 135mm F2.8".to_string(),
+                49220 => "Zeiss Batis 40mm F2 CF".to_string(),
+                49232 => "Zeiss Loxia 50mm F2".to_string(),
+                49233 => "Zeiss Loxia 35mm F2".to_string(),
+                49234 => "Zeiss Loxia 21mm F2.8".to_string(),
+                49235 => "Zeiss Loxia 85mm F2.4".to_string(),
+                49236 => "Zeiss Loxia 25mm F2.4".to_string(),
+                49456 => "Tamron E 18-200mm F3.5-6.3 Di III VC".to_string(),
+                49457 => "Tamron 28-75mm F2.8 Di III RXD".to_string(),
+                49458 => "Tamron 17-28mm F2.8 Di III RXD".to_string(),
+                49459 => "Tamron 35mm F2.8 Di III OSD M1:2".to_string(),
+                49460 => "Tamron 24mm F2.8 Di III OSD M1:2".to_string(),
+                49461 => "Tamron 20mm F2.8 Di III OSD M1:2".to_string(),
+                49462 => "Tamron 70-180mm F2.8 Di III VXD".to_string(),
+                49463 => "Tamron 28-200mm F2.8-5.6 Di III RXD".to_string(),
+                49464 => "Tamron 70-300mm F4.5-6.3 Di III RXD".to_string(),
+                49465 => "Tamron 17-70mm F2.8 Di III-A VC RXD".to_string(),
+                49466 => "Tamron 150-500mm F5-6.7 Di III VC VXD".to_string(),
+                49467 => "Tamron 11-20mm F2.8 Di III-A RXD".to_string(),
+                49468 => "Tamron 18-300mm F3.5-6.3 Di III-A VC VXD".to_string(),
+                49469 => "Tamron 35-150mm F2-F2.8 Di III VXD".to_string(),
+                49470 => "Tamron 28-75mm F2.8 Di III VXD G2".to_string(),
+                49471 => "Tamron 50-400mm F4.5-6.3 Di III VC VXD".to_string(),
+                49472 => "Tamron 20-40mm F2.8 Di III VXD".to_string(),
+                49473 => "Tamron 17-50mm F4 Di III VXD or Tokina or Viltrox lens".to_string(),
+                49474 => "Tamron 70-180mm F2.8 Di III VXD G2 or Viltrox lens".to_string(),
+                49475 => "Tamron 50-300mm F4.5-6.3 Di III VC VXD".to_string(),
+                49476 => "Tamron 28-300mm F4-7.1 Di III VC VXD".to_string(),
+                49477 => "Tamron 90mm F2.8 Di III Macro VXD".to_string(),
+                49478 => "Tamron 16-30mm F2.8 Di III VXD G2".to_string(),
+                49479 => "Tamron 25-200mm F2.8-5.6 Di III VXD G2".to_string(),
+                49480 => "Tamron 35-100mm F2.8 Di III VXD".to_string(),
+                49712 => "Tokina FiRIN 20mm F2 FE AF".to_string(),
+                49713 => "Tokina FiRIN 100mm F2.8 FE MACRO".to_string(),
+                49714 => "Tokina atx-m 11-18mm F2.8 E".to_string(),
+                50480 => "Sigma 30mm F1.4 DC DN | C".to_string(),
+                50481 => "Sigma 50mm F1.4 DG HSM | A".to_string(),
+                50482 => "Sigma 18-300mm F3.5-6.3 DC MACRO OS HSM | C + MC-11".to_string(),
+                50483 => "Sigma 18-35mm F1.8 DC HSM | A + MC-11".to_string(),
+                50484 => "Sigma 24-35mm F2 DG HSM | A + MC-11".to_string(),
+                50485 => "Sigma 24mm F1.4 DG HSM | A + MC-11".to_string(),
+                50486 => "Sigma 150-600mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50487 => "Sigma 20mm F1.4 DG HSM | A + MC-11".to_string(),
+                50488 => "Sigma 35mm F1.4 DG HSM | A".to_string(),
+                50489 => "Sigma 150-600mm F5-6.3 DG OS HSM | S + MC-11".to_string(),
+                50490 => "Sigma 120-300mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50492 => "Sigma 24-105mm F4 DG OS HSM | A + MC-11".to_string(),
+                50493 => "Sigma 17-70mm F2.8-4 DC MACRO OS HSM | C + MC-11".to_string(),
+                50495 => "Sigma 50-100mm F1.8 DC HSM | A + MC-11".to_string(),
+                50499 => "Sigma 85mm F1.4 DG HSM | A".to_string(),
+                50501 => "Sigma 100-400mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50503 => "Sigma 16mm F1.4 DC DN | C".to_string(),
+                50507 => "Sigma 105mm F1.4 DG HSM | A".to_string(),
+                50508 => "Sigma 56mm F1.4 DC DN | C".to_string(),
+                50512 => "Sigma 70-200mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50513 => "Sigma 70mm F2.8 DG MACRO | A".to_string(),
+                50514 => "Sigma 45mm F2.8 DG DN | C".to_string(),
+                50515 => "Sigma 35mm F1.2 DG DN | A".to_string(),
+                50516 => "Sigma 14-24mm F2.8 DG DN | A".to_string(),
+                50517 => "Sigma 24-70mm F2.8 DG DN | A".to_string(),
+                50518 => "Sigma 100-400mm F5-6.3 DG DN OS | C".to_string(),
+                50521 => "Sigma 85mm F1.4 DG DN | A".to_string(),
+                50522 => "Sigma 105mm F2.8 DG DN MACRO | A".to_string(),
+                50523 => "Sigma 65mm F2 DG DN | C".to_string(),
+                50524 => "Sigma 35mm F2 DG DN | C".to_string(),
+                50525 => "Sigma 24mm F3.5 DG DN | C".to_string(),
+                50526 => "Sigma 28-70mm F2.8 DG DN | C".to_string(),
+                50527 => "Sigma 150-600mm F5-6.3 DG DN OS | S".to_string(),
+                50528 => "Sigma 35mm F1.4 DG DN | A".to_string(),
+                50529 => "Sigma 90mm F2.8 DG DN | C".to_string(),
+                50530 => "Sigma 24mm F2 DG DN | C".to_string(),
+                50531 => "Sigma 18-50mm F2.8 DC DN | C".to_string(),
+                50532 => "Sigma 20mm F2 DG DN | C".to_string(),
+                50533 => "Sigma 16-28mm F2.8 DG DN | C".to_string(),
+                50534 => "Sigma 20mm F1.4 DG DN | A".to_string(),
+                50535 => "Sigma 24mm F1.4 DG DN | A".to_string(),
+                50536 => "Sigma 60-600mm F4.5-6.3 DG DN OS | S".to_string(),
+                50537 => "Sigma 50mm F2 DG DN | C".to_string(),
+                50538 => "Sigma 17mm F4 DG DN | C".to_string(),
+                50539 => "Sigma 50mm F1.4 DG DN | A".to_string(),
+                50540 => "Sigma 14mm F1.4 DG DN | A".to_string(),
+                50543 => "Sigma 70-200mm F2.8 DG DN OS | S".to_string(),
+                50544 => "Sigma 23mm F1.4 DC DN | C".to_string(),
+                50545 => "Sigma 24-70mm F2.8 DG DN II | A".to_string(),
+                50546 => "Sigma 500mm F5.6 DG DN OS | S".to_string(),
+                50547 => "Sigma 10-18mm F2.8 DC DN | C".to_string(),
+                50548 => "Sigma 15mm F1.4 DG DN DIAGONAL FISHEYE | A".to_string(),
+                50549 => "Sigma 50mm F1.2 DG DN | A".to_string(),
+                50550 => "Sigma 28-105mm F2.8 DG DN | A".to_string(),
+                50551 => "Sigma 28-45mm F1.8 DG DN | A".to_string(),
+                50552 => "Sigma 35mm F1.2 DG II | A".to_string(),
+                50553 => "Sigma 300-600mm F4 DG OS | S".to_string(),
+                50554 => "Sigma 16-300mm F3.5-6.7 DC OS | C".to_string(),
+                50555 => "Sigma 12mm F1.4 DC | C".to_string(),
+                50556 => "Sigma 17-40mm F1.8 DC | A".to_string(),
+                50557 => "Sigma 200mm F2 DG OS | S".to_string(),
+                50558 => "Sigma 20-200mm F3.5-6.3 DG | C".to_string(),
+                50559 => "Sigma 135mm F1.4 DG | A".to_string(),
+                50563 => "Sigma 35mm F1.4 DG II | A".to_string(),
+                50564 => "Sigma 15mm F1.4 DC | C".to_string(),
+                50992 => "Voigtlander SUPER WIDE-HELIAR 15mm F4.5 III".to_string(),
+                50993 => "Voigtlander HELIAR-HYPER WIDE 10mm F5.6".to_string(),
+                50994 => "Voigtlander ULTRA WIDE-HELIAR 12mm F5.6 III".to_string(),
+                50995 => "Voigtlander MACRO APO-LANTHAR 65mm F2 Aspherical".to_string(),
+                50996 => "Voigtlander NOKTON 40mm F1.2 Aspherical".to_string(),
+                50997 => "Voigtlander NOKTON classic 35mm F1.4".to_string(),
+                50998 => "Voigtlander MACRO APO-LANTHAR 110mm F2.5".to_string(),
+                50999 => "Voigtlander COLOR-SKOPAR 21mm F3.5 Aspherical".to_string(),
+                51000 => "Voigtlander NOKTON 50mm F1.2 Aspherical".to_string(),
+                51001 => "Voigtlander NOKTON 21mm F1.4 Aspherical".to_string(),
+                51002 => "Voigtlander APO-LANTHAR 50mm F2 Aspherical".to_string(),
+                51003 => "Voigtlander NOKTON 35mm F1.2 Aspherical SE".to_string(),
+                51006 => "Voigtlander APO-LANTHAR 35mm F2 Aspherical".to_string(),
+                51007 => "Voigtlander NOKTON 50mm F1 Aspherical".to_string(),
+                51008 => "Voigtlander NOKTON 75mm F1.5 Aspherical".to_string(),
+                51009 => "Voigtlander NOKTON 28mm F1.5 Aspherical".to_string(),
+                51011 => "Voigtlander APO-LANTHAR 28mm F2 Aspherical".to_string(),
+                51072 => "ZEISS Otus ML 50mm F1.4".to_string(),
+                51073 => "ZEISS Otus ML 85mm F1.4".to_string(),
+                51504 => "Samyang AF 50mm F1.4".to_string(),
+                51505 => "Samyang AF 14mm F2.8 or Samyang AF 35mm F2.8".to_string(),
+                51507 => "Samyang AF 35mm F1.4".to_string(),
+                51508 => "Samyang AF 45mm F1.8".to_string(),
+                51510 => "Samyang AF 18mm F2.8 or Samyang AF 35mm F1.8".to_string(),
+                51512 => "Samyang AF 75mm F1.8".to_string(),
+                51513 => "Samyang AF 35mm F1.8".to_string(),
+                51514 => "Samyang AF 24mm F1.8".to_string(),
+                51515 => "Samyang AF 12mm F2.0".to_string(),
+                51516 => "Samyang AF 24-70mm F2.8".to_string(),
+                51517 => "Samyang AF 50mm F1.4 II".to_string(),
+                51518 => "Samyang AF 135mm F1.8".to_string(),
+                61569 => "LAOWA FFII 10mm F2.8 C&D Dreamer".to_string(),
+                61572 => "LAOWA FFII 12mm F2.8 C&D Dreamer".to_string(),
+                61600 => "Thypoch AF 24-50mm F2.8 FE".to_string(),
+                61760 => "Viltrox 135mm F1.8 FE LAB".to_string(),
+                61761 => "Viltrox 28mm F4.5 FE".to_string(),
+                61762 => "Viltrox 35mm F1.2 FE LAB".to_string(),
+                61763 => "Viltrox 85mm F1.4 FE Pro".to_string(),
+                61766 => "Viltrox 40mm F2.5 FE Air".to_string(),
+                61767 => "Viltrox 50mm F2.0 FE Air".to_string(),
+                61768 => "Viltrox 25mm F1.7 E Air".to_string(),
+                61776 => "Viltrox 50mm F1.4 FE Pro".to_string(),
+                61777 => "Viltrox 9mm F2.8 E Air".to_string(),
+                61778 => "Viltrox 14mm F4.0 FE Air".to_string(),
+                61779 => "Viltrox 56mm F1.2 E Pro".to_string(),
+                61780 => "Viltrox 85mm F2.0 FE EVO".to_string(),
+                61781 => "Viltrox 55mm F1.8 FE EVO".to_string(),
+                61783 => "Viltrox 15mm F1.7 E Air".to_string(),
+                61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("LensType2", s, Value::I32(v as i32), GRP2));
+        }
+    }
+    if dm_get(&dm, "LensMount") == Some(1.0) {
+        if let Some(v) = u16_at(data, 0x109) {
+            dm.push(("LensType", f64::from(v)));
+            tags.push(mk("LensType", v.to_string(), Value::I32(v as i32), GRP2));
+        }
     }
     if let Some(v) = u8_at(data, 0x10b) {
+        dm.push(("DistortionCorrParamsPresent", f64::from(v)));
         let s = match v as i64 {
             0 => "No".to_string(),
             1 => "Yes".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
+        tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2));
     }
     if MODEL_RE_16.is_match(model) {
         if let Some(v) = u8_at(data, 0x114) {
+            dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
                 0 => "Off".to_string(),
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
+            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_17.is_match(model) {
         if let Some(v) = u32_at(data, 0x19f) {
-            tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32)));
+            dm.push(("ShutterCount3", f64::from(v)));
+            tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_18.is_match(model) {
         if let Some(v) = u32_at(data, 0x1cb) {
-            tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32)));
+            dm.push(("ShutterCount3", f64::from(v)));
+            tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_19.is_match(model) {
         if let Some(v) = u32_at(data, 0x1cd) {
-            tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32)));
+            dm.push(("ShutterCount3", f64::from(v)));
+            tags.push(mk("ShutterCount3", v.to_string(), Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_18.is_match(model) {
         if let Some(v) = u8_at(data, 0x21a) {
+            dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
                 0 => "Off".to_string(),
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
+            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32), GRP2));
         }
     }
     tags
 }
 
 fn tag9050c(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     {
         let mut parts = Vec::new();
         for k in 0..3 {
@@ -1191,10 +3128,11 @@ fn tag9050c(data: &[u8], model: &str) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Shutter", s.clone(), Value::String(s)));
+            tags.push(mk("Shutter", s.clone(), Value::String(s), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x39) {
+        dm.push(("FlashStatus", f64::from(v)));
         let s = match v as i64 {
             0 => "No Flash present".to_string(),
             2 => "Flash Inhibited".to_string(),
@@ -1205,26 +3143,30 @@ fn tag9050c(data: &[u8], model: &str) -> Vec<Tag> {
             129 => "External Flash Fired".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashStatus", s, Value::I32(v as i32)));
+        tags.push(mk("FlashStatus", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u32_at(data, 0x3a) {
-        tags.push(mk("ShutterCount", v.to_string(), Value::I32(v as i32)));
+        dm.push(("ShutterCount", f64::from(v)));
+        tags.push(mk("ShutterCount", v.to_string(), Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u16_at(data, 0x46) {
+        dm.push(("SonyExposureTime", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(mk("SonyExposureTime", cv.as_string(), raw));
+        tags.push(mk("SonyExposureTime", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x48) {
+        dm.push(("SonyFNumber", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyFNumber", cv.as_string(), raw));
+        tags.push(mk("SonyFNumber", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u8_at(data, 0x4b) {
+        dm.push(("ReleaseMode2", f64::from(v)));
         let s = match v as i64 {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
@@ -1251,23 +3193,26 @@ fn tag9050c(data: &[u8], model: &str) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
+        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u16_at(data, 0x66) {
+        dm.push(("SonyExposureTime", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(mk("SonyExposureTime", cv.as_string(), raw));
+        tags.push(mk("SonyExposureTime", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x68) {
+        dm.push(("SonyFNumber", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyFNumber", cv.as_string(), raw));
+        tags.push(mk("SonyFNumber", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u8_at(data, 0x6b) {
+        dm.push(("ReleaseMode2", f64::from(v)));
         let s = match v as i64 {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
@@ -1294,7 +3239,7 @@ fn tag9050c(data: &[u8], model: &str) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
+        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32), GRP2));
     }
     if MODEL_RE_20.is_match(model) {
         {
@@ -1307,7 +3252,7 @@ fn tag9050c(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
-                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" "))));
+                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" ")), GRP2));
             }
         }
     }
@@ -1322,7 +3267,7 @@ fn tag9050c(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
-                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" "))));
+                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" ")), GRP2));
             }
         }
     }
@@ -1330,29 +3275,36 @@ fn tag9050c(data: &[u8], model: &str) -> Vec<Tag> {
 }
 
 fn tag9050d(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if MODEL_RE_22.is_match(model) {
         if let Some(v) = u32_at(data, 0xa) {
-            tags.push(mk("ShutterCount", v.to_string(), Value::I32(v as i32)));
+            dm.push(("ShutterCount", f64::from(v)));
+            tags.push(mk("ShutterCount", v.to_string(), Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u16_at(data, 0x1a) {
+        dm.push(("SonyExposureTime", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(mk("SonyExposureTime", cv.as_string(), raw));
+        tags.push(mk("SonyExposureTime", cv.as_string(), raw, GRP2));
     }
     if !MODEL_RE_23.is_match(model) {
         if let Some(v) = u16_at(data, 0x1c) {
+            dm.push(("SonyFNumber", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-            tags.push(mk("SonyFNumber", cv.as_string(), raw));
+            tags.push(mk("SonyFNumber", cv.as_string(), raw, GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x1f) {
+        dm.push(("ReleaseMode2", f64::from(v)));
         let s = match v as i64 {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
@@ -1379,7 +3331,7 @@ fn tag9050d(data: &[u8], model: &str) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
+        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32), GRP2));
     }
     if !MODEL_RE_24.is_match(model) {
         {
@@ -1392,7 +3344,7 @@ fn tag9050d(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
-                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" "))));
+                tags.push(mk("InternalSerialNumber", hex, Value::String(parts.join(" ")), GRP2));
             }
         }
     }
@@ -1400,21 +3352,27 @@ fn tag9050d(data: &[u8], model: &str) -> Vec<Tag> {
 }
 
 fn tag9400a(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if !MODEL_RE_25.is_match(model) {
         if let Some(v) = u8_at(data, 0x8) {
+            dm.push(("DigitalZoom", f64::from(v)));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("DigitalZoom", s, Value::I32(v as i32)));
+            tags.push(mk("DigitalZoom", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u32_at(data, 0x1a) {
-        tags.push(mk("ShotNumberSincePowerUp", v.to_string(), Value::I32(v as i32)));
+        dm.push(("ShotNumberSincePowerUp", f64::from(v)));
+        tags.push(mk("ShotNumberSincePowerUp", v.to_string(), Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x22) {
+        dm.push(("SequenceLength", f64::from(v)));
         let s = match v as i64 {
             0 => "Continuous".to_string(),
             1 => "1 shot".to_string(),
@@ -1428,9 +3386,10 @@ fn tag9400a(data: &[u8], model: &str) -> Vec<Tag> {
             200 => "Continuous - Sweep Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SequenceLength", s, Value::I32(v as i32)));
+        tags.push(mk("SequenceLength", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x28) {
+        dm.push(("CameraOrientation", f64::from(v)));
         let s = match v as i64 {
             1 => "Horizontal (normal)".to_string(),
             3 => "Rotate 180".to_string(),
@@ -1438,9 +3397,10 @@ fn tag9400a(data: &[u8], model: &str) -> Vec<Tag> {
             8 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", s, Value::I32(v as i32)));
+        tags.push(mk("CameraOrientation", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x29) {
+        dm.push(("Quality2", f64::from(v)));
         let s = match v as i64 {
             0 => "JPEG".to_string(),
             1 => "RAW".to_string(),
@@ -1448,42 +3408,50 @@ fn tag9400a(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "JPEG + MPO".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("Quality2", s, Value::I32(v as i32)));
+        tags.push(mk("Quality2", s, Value::I32(v as i32), GRP2));
     }
     if MODEL_RE_26.is_match(model) {
         if let Some(v) = u16_at(data, 0x44) {
+            dm.push(("SonyImageHeight", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("$val > 0 ? 8*$val : \"n.a.\"", &cv) { cv = x; }
-            tags.push(mk("SonyImageHeight", cv.as_string(), raw));
+            tags.push(mk("SonyImageHeight", cv.as_string(), raw, GRP2));
         }
     }
     if MODEL_RE_26.is_match(model) {
         if let Some(v) = u8_at(data, 0x52) {
+            dm.push(("ModelReleaseYear", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"20%.2d\", $val)", &cv) { cv = x; }
-            tags.push(mk("ModelReleaseYear", cv.as_string(), raw));
+            tags.push(mk("ModelReleaseYear", cv.as_string(), raw, GRP2));
         }
     }
     tags
 }
 
 fn tag9400b(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let _ = model;
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u8_at(data, 0x8) {
+        dm.push(("DigitalZoom", f64::from(v)));
         let s = match v as i64 {
             0 => "No".to_string(),
             1 => "Yes".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("DigitalZoom", s, Value::I32(v as i32)));
+        tags.push(mk("DigitalZoom", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u32_at(data, 0x16) {
-        tags.push(mk("ShotNumberSincePowerUp", v.to_string(), Value::I32(v as i32)));
+        dm.push(("ShotNumberSincePowerUp", f64::from(v)));
+        tags.push(mk("ShotNumberSincePowerUp", v.to_string(), Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x1e) {
+        dm.push(("SequenceLength", f64::from(v)));
         let s = match v as i64 {
             0 => "Continuous".to_string(),
             1 => "1 shot".to_string(),
@@ -1497,9 +3465,10 @@ fn tag9400b(data: &[u8], model: &str) -> Vec<Tag> {
             200 => "Continuous - Sweep Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SequenceLength", s, Value::I32(v as i32)));
+        tags.push(mk("SequenceLength", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x24) {
+        dm.push(("CameraOrientation", f64::from(v)));
         let s = match v as i64 {
             1 => "Horizontal (normal)".to_string(),
             3 => "Rotate 180".to_string(),
@@ -1507,9 +3476,10 @@ fn tag9400b(data: &[u8], model: &str) -> Vec<Tag> {
             8 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", s, Value::I32(v as i32)));
+        tags.push(mk("CameraOrientation", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x25) {
+        dm.push(("Quality2", f64::from(v)));
         let s = match v as i64 {
             0 => "JPEG".to_string(),
             1 => "RAW".to_string(),
@@ -1517,31 +3487,38 @@ fn tag9400b(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "JPEG + MPO".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("Quality2", s, Value::I32(v as i32)));
+        tags.push(mk("Quality2", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u16_at(data, 0x3f) {
+        dm.push(("SonyImageHeight", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("$val > 0 ? 8*$val : \"n.a.\"", &cv) { cv = x; }
-        tags.push(mk("SonyImageHeight", cv.as_string(), raw));
+        tags.push(mk("SonyImageHeight", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u8_at(data, 0x46) {
+        dm.push(("ModelReleaseYear", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"20%.2d\", $val)", &cv) { cv = x; }
-        tags.push(mk("ModelReleaseYear", cv.as_string(), raw));
+        tags.push(mk("ModelReleaseYear", cv.as_string(), raw, GRP2));
     }
     tags
 }
 
 fn tag9400c(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if MODEL_RE_27.is_match(model) {
         if let Some(v) = u32_at(data, 0x9) {
-            tags.push(mk("ShotNumberSincePowerUp", v.to_string(), Value::I32(v as i32)));
+            dm.push(("ShotNumberSincePowerUp", f64::from(v)));
+            tags.push(mk("ShotNumberSincePowerUp", v.to_string(), Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x12) {
+        dm.push(("SequenceLength", f64::from(v)));
         let s = match v as i64 {
             0 => "Continuous".to_string(),
             1 => "1 shot".to_string(),
@@ -1559,9 +3536,10 @@ fn tag9400c(data: &[u8], model: &str) -> Vec<Tag> {
             200 => "Continuous - Sweep Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SequenceLength", s, Value::I32(v as i32)));
+        tags.push(mk("SequenceLength", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x1a) {
+        dm.push(("SequenceLength", f64::from(v)));
         let s = match v as i64 {
             0 => "Continuous".to_string(),
             1 => "1 file".to_string(),
@@ -1573,9 +3551,10 @@ fn tag9400c(data: &[u8], model: &str) -> Vec<Tag> {
             10 => "10 files".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SequenceLength", s, Value::I32(v as i32)));
+        tags.push(mk("SequenceLength", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x29) {
+        dm.push(("CameraOrientation", f64::from(v)));
         let s = match v as i64 {
             1 => "Horizontal (normal)".to_string(),
             3 => "Rotate 180".to_string(),
@@ -1583,55 +3562,73 @@ fn tag9400c(data: &[u8], model: &str) -> Vec<Tag> {
             8 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", s, Value::I32(v as i32)));
+        tags.push(mk("CameraOrientation", s, Value::I32(v as i32), GRP2));
     }
     if !MODEL_RE_28.is_match(model) {
         if let Some(v) = u8_at(data, 0x53) {
+            dm.push(("ModelReleaseYear", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"20%.2d\", $val)", &cv) { cv = x; }
-            tags.push(mk("ModelReleaseYear", cv.as_string(), raw));
+            tags.push(mk("ModelReleaseYear", cv.as_string(), raw, GRP2));
         }
     }
     if MODEL_RE_29.is_match(model) {
         if let Some(v) = u8_at(data, 0x133) {
+            dm.push(("ShutterType", f64::from(v)));
             let s = match v as i64 {
                 7 => "Electronic".to_string(),
                 23 => "Mechanical".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ShutterType", s, Value::I32(v as i32)));
+            tags.push(mk("ShutterType", s, Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_30.is_match(model) {
         if let Some(v) = u8_at(data, 0x139) {
+            dm.push(("ShutterType", f64::from(v)));
             let s = match v as i64 {
                 7 => "Electronic".to_string(),
                 23 => "Mechanical".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ShutterType", s, Value::I32(v as i32)));
+            tags.push(mk("ShutterType", s, Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_31.is_match(model) {
         if let Some(v) = u8_at(data, 0x13f) {
+            dm.push(("ShutterType", f64::from(v)));
             let s = match v as i64 {
                 7 => "Electronic".to_string(),
                 23 => "Mechanical".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ShutterType", s, Value::I32(v as i32)));
+            tags.push(mk("ShutterType", s, Value::I32(v as i32), GRP2));
         }
     }
     tags
 }
 
 fn tag9402(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u8_at(data, 0x2) {
-        tags.push(mk("TempTest1", v.to_string(), Value::I32(v as i32)));
+        dm.push(("TempTest1", f64::from(v)));
+        tags.push(mk("TempTest1", v.to_string(), Value::I32(v as i32), GRP2));
+    }
+    if dm_get(&dm, "TempTest1") == Some(255.0) {
+        if let Some(v) = i8_at(data, 0x4) {
+            dm.push(("AmbientTemperature", f64::from(v)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("\"$val C\"", &cv) { cv = x; }
+            tags.push(mk("AmbientTemperature", cv.as_string(), raw, GRP2));
+        }
     }
     if let Some(v) = u8_at(data, 0x16) {
+        dm.push(("FocusMode", f64::from(v)));
         let s = match v as i64 {
             0 => "Manual".to_string(),
             2 => "AF-S".to_string(),
@@ -1641,9 +3638,10 @@ fn tag9402(data: &[u8], model: &str) -> Vec<Tag> {
             7 => "AF-D".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FocusMode", s, Value::I32(v as i32)));
+        tags.push(mk("FocusMode", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x17) {
+        dm.push(("AFAreaMode", f64::from(v)));
         let s = match v as i64 {
             0 => "Multi".to_string(),
             1 => "Center".to_string(),
@@ -1661,99 +3659,422 @@ fn tag9402(data: &[u8], model: &str) -> Vec<Tag> {
             255 => "Manual".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AFAreaMode", s, Value::I32(v as i32)));
+        tags.push(mk("AFAreaMode", s, Value::I32(v as i32), GRP2));
     }
     if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x2d) {
-            tags.push(mk("FocusPosition2", v.to_string(), Value::I32(v as i32)));
+            dm.push(("FocusPosition2", f64::from(v)));
+            tags.push(mk("FocusPosition2", v.to_string(), Value::I32(v as i32), GRP2));
         }
     }
     tags
 }
 
 fn tag9403(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let _ = model;
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u8_at(data, 0x4) {
-        tags.push(mk("TempTest2", v.to_string(), Value::I32(v as i32)));
+        dm.push(("TempTest2", f64::from(v)));
+        tags.push(mk("TempTest2", v.to_string(), Value::I32(v as i32), GRP2));
     }
     tags
 }
 
 fn tag9404a(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if !MODEL_RE_32.is_match(model) {
         if let Some(v) = u16_at(data, 0xb) {
+            dm.push(("IntelligentAuto", f64::from(v)));
             let s = match v as i64 {
                 0 => "Off".to_string(),
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("IntelligentAuto", s, Value::I32(v as i32)));
+            tags.push(mk("IntelligentAuto", s, Value::I32(v as i32), GRP2));
         }
     }
     tags
 }
 
 fn tag9404b(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if !MODEL_RE_9.is_match(model) {
         if let Some(v) = u16_at(data, 0xc) {
+            dm.push(("IntelligentAuto", f64::from(v)));
             let s = match v as i64 {
                 0 => "Off".to_string(),
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("IntelligentAuto", s, Value::I32(v as i32)));
+            tags.push(mk("IntelligentAuto", s, Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_9.is_match(model) {
         if let Some(v) = u8_at(data, 0x20) {
-            tags.push(mk("FocusPosition2", v.to_string(), Value::I32(v as i32)));
+            dm.push(("FocusPosition2", f64::from(v)));
+            tags.push(mk("FocusPosition2", v.to_string(), Value::I32(v as i32), GRP2));
         }
     }
     tags
 }
 
 fn tag9405a(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x600) {
+            dm.push(("DistortionCorrParamsPresent", f64::from(v)));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
+            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x601) {
+        dm.push(("DistortionCorrection", f64::from(v)));
         let s = match v as i64 {
             0 => "None".to_string(),
             1 => "Applied".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("DistortionCorrection", s, Value::I32(v as i32)));
+        tags.push(mk("DistortionCorrection", s, Value::I32(v as i32), GRP2));
     }
     if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x603) {
+            dm.push(("LensFormat", f64::from(v)));
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
                 1 => "APS-C".to_string(),
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("LensFormat", s, Value::I32(v as i32)));
+            tags.push(mk("LensFormat", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x604) {
+        dm.push(("LensMount", f64::from(v)));
         let s = match v as i64 {
             0 => "Unknown".to_string(),
             1 => "A-mount".to_string(),
             2 => "E-mount".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensMount", s, Value::I32(v as i32)));
+        tags.push(mk("LensMount", s, Value::I32(v as i32), GRP2));
+    }
+    if dm_get(&dm, "LensMount") == Some(2.0) {
+        if let Some(v) = u16_at(data, 0x605) {
+            dm.push(("LensType2", f64::from(v)));
+            let s = match v as i64 {
+                0 => "Unknown E-mount lens or other lens".to_string(),
+                1 => "Samyang AF 35mm F1.8".to_string(),
+                2 => "Viltrox 16mm F1.8 FE".to_string(),
+                3 => "Viltrox 23mm F1.4 E".to_string(),
+                4 => "Viltrox 24mm F1.8 FE".to_string(),
+                5 => "Viltrox 28mm F1.8 FE".to_string(),
+                6 => "Viltrox 33mm F1.4 E".to_string(),
+                7 => "Viltrox 35mm F1.8 FE".to_string(),
+                8 => "Viltrox 50mm F1.8 FE".to_string(),
+                9 => "Viltrox 75mm F1.2 E Pro".to_string(),
+                13 => "Samyang AF 35-150mm F2-2.8".to_string(),
+                17 => "Samyang RS 21mm F3.5".to_string(),
+                18 => "Samyang RS 28mm F3.5".to_string(),
+                19 => "Samyang RS 32mm F2.8".to_string(),
+                20 => "Samyang AF 35mm F1.4 P FE".to_string(),
+                21 => "Samyang AF 14-24mm F2.8".to_string(),
+                22 => "Samyang AF 24-60mm F2.8".to_string(),
+                24 => "Samyang AF 85mm F1.8 P FE".to_string(),
+                44 => "Metabones Canon EF Smart Adapter".to_string(),
+                78 => "Metabones Canon EF Smart Adapter Mark III or Other Adapter".to_string(),
+                184 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                234 => "Metabones Canon EF Smart Adapter Mark IV".to_string(),
+                239 => "Metabones Canon EF Speed Booster".to_string(),
+                24593 => "LA-EA4r MonsterAdapter".to_string(),
+                32784 => "Sony E 16mm F2.8".to_string(),
+                32785 => "Sony E 18-55mm F3.5-5.6 OSS".to_string(),
+                32786 => "Sony E 55-210mm F4.5-6.3 OSS".to_string(),
+                32787 => "Sony E 18-200mm F3.5-6.3 OSS".to_string(),
+                32788 => "Sony E 30mm F3.5 Macro".to_string(),
+                32789 => "Sony E 24mm F1.8 ZA or Samyang AF 50mm F1.4".to_string(),
+                32790 => "Sony E 50mm F1.8 OSS or Samyang AF 14mm F2.8".to_string(),
+                32791 => "Sony E 16-70mm F4 ZA OSS".to_string(),
+                32792 => "Sony E 10-18mm F4 OSS".to_string(),
+                32793 => "Sony E PZ 16-50mm F3.5-5.6 OSS".to_string(),
+                32794 => "Sony FE 35mm F2.8 ZA or Samyang Lens".to_string(),
+                32795 => "Sony FE 24-70mm F4 ZA OSS".to_string(),
+                32796 => "Sony FE 85mm F1.8 or Viltrox PFU RBMH 85mm F1.8".to_string(),
+                32797 => "Sony E 18-200mm F3.5-6.3 OSS LE".to_string(),
+                32798 => "Sony E 20mm F2.8".to_string(),
+                32799 => "Sony E 35mm F1.8 OSS".to_string(),
+                32800 => "Sony E PZ 18-105mm F4 G OSS".to_string(),
+                32801 => "Sony FE 12-24mm F4 G".to_string(),
+                32802 => "Sony FE 90mm F2.8 Macro G OSS".to_string(),
+                32803 => "Sony E 18-50mm F4-5.6".to_string(),
+                32804 => "Sony FE 24mm F1.4 GM".to_string(),
+                32805 => "Sony FE 24-105mm F4 G OSS".to_string(),
+                32807 => "Sony E PZ 18-200mm F3.5-6.3 OSS".to_string(),
+                32808 => "Sony FE 55mm F1.8 ZA".to_string(),
+                32810 => "Sony FE 70-200mm F4 G OSS".to_string(),
+                32811 => "Sony FE 16-35mm F4 ZA OSS".to_string(),
+                32812 => "Sony FE 50mm F2.8 Macro".to_string(),
+                32813 => "Sony FE 28-70mm F3.5-5.6 OSS".to_string(),
+                32814 => "Sony FE 35mm F1.4 ZA".to_string(),
+                32815 => "Sony FE 24-240mm F3.5-6.3 OSS".to_string(),
+                32816 => "Sony FE 28mm F2".to_string(),
+                32817 => "Sony FE PZ 28-135mm F4 G OSS".to_string(),
+                32819 => "Sony FE 100mm F2.8 STF GM OSS".to_string(),
+                32820 => "Sony E PZ 18-110mm F4 G OSS".to_string(),
+                32821 => "Sony FE 24-70mm F2.8 GM".to_string(),
+                32822 => "Sony FE 50mm F1.4 ZA".to_string(),
+                32823 => "Sony FE 85mm F1.4 GM or Samyang AF 85mm F1.4".to_string(),
+                32824 => "Sony FE 50mm F1.8".to_string(),
+                32826 => "Sony FE 21mm F2.8 (SEL28F20 + SEL075UWC)".to_string(),
+                32827 => "Sony FE 16mm F3.5 Fisheye (SEL28F20 + SEL057FEC)".to_string(),
+                32828 => "Sony FE 70-300mm F4.5-5.6 G OSS".to_string(),
+                32829 => "Sony FE 100-400mm F4.5-5.6 GM OSS".to_string(),
+                32830 => "Sony FE 70-200mm F2.8 GM OSS".to_string(),
+                32831 => "Sony FE 16-35mm F2.8 GM".to_string(),
+                32848 => "Sony FE 400mm F2.8 GM OSS".to_string(),
+                32849 => "Sony E 18-135mm F3.5-5.6 OSS".to_string(),
+                32850 => "Sony FE 135mm F1.8 GM".to_string(),
+                32851 => "Sony FE 200-600mm F5.6-6.3 G OSS".to_string(),
+                32852 => "Sony FE 600mm F4 GM OSS".to_string(),
+                32853 => "Sony E 16-55mm F2.8 G".to_string(),
+                32854 => "Sony E 70-350mm F4.5-6.3 G OSS".to_string(),
+                32855 => "Sony FE C 16-35mm T3.1 G".to_string(),
+                32858 => "Sony FE 35mm F1.8".to_string(),
+                32859 => "Sony FE 20mm F1.8 G".to_string(),
+                32860 => "Sony FE 12-24mm F2.8 GM".to_string(),
+                32862 => "Sony FE 50mm F1.2 GM".to_string(),
+                32863 => "Sony FE 14mm F1.8 GM".to_string(),
+                32864 => "Sony FE 28-60mm F4-5.6".to_string(),
+                32865 => "Sony FE 35mm F1.4 GM".to_string(),
+                32866 => "Sony FE 24mm F2.8 G".to_string(),
+                32867 => "Sony FE 40mm F2.5 G".to_string(),
+                32868 => "Sony FE 50mm F2.5 G".to_string(),
+                32871 => "Sony FE PZ 16-35mm F4 G".to_string(),
+                32873 => "Sony E PZ 10-20mm F4 G".to_string(),
+                32874 => "Sony FE 70-200mm F2.8 GM OSS II".to_string(),
+                32875 => "Sony FE 24-70mm F2.8 GM II".to_string(),
+                32876 => "Sony E 11mm F1.8".to_string(),
+                32877 => "Sony E 15mm F1.4 G".to_string(),
+                32878 => "Sony FE 20-70mm F4 G".to_string(),
+                32879 => "Sony FE 50mm F1.4 GM".to_string(),
+                32880 => "Sony FE 16mm F1.8 G".to_string(),
+                32881 => "Sony FE 24-50mm F2.8 G".to_string(),
+                32882 => "Sony FE 16-25mm F2.8 G".to_string(),
+                32884 => "Sony FE 70-200mm F4 Macro G OSS II".to_string(),
+                32885 => "Sony FE 16-35mm F2.8 GM II".to_string(),
+                32886 => "Sony FE 300mm F2.8 GM OSS".to_string(),
+                32887 => "Sony E PZ 16-50mm F3.5-5.6 OSS II".to_string(),
+                32888 => "Sony FE 85mm F1.4 GM II".to_string(),
+                32889 => "Sony FE 28-70mm F2 GM".to_string(),
+                32890 => "Sony FE 400-800mm F6.3-8 G OSS".to_string(),
+                32891 => "Sony FE 50-150mm F2 GM".to_string(),
+                32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
+                32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
+                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
+                33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
+                33077 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 1.4X Teleconverter".to_string(),
+                33078 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 2X Teleconverter".to_string(),
+                33079 => "Sony FE 400mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33080 => "Sony FE 400mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33081 => "Sony FE 200-600mm F5.6-6.3 G OSS + 1.4X Teleconverter".to_string(),
+                33082 => "Sony FE 200-600mm F5.6-6.3 G OSS + 2X Teleconverter".to_string(),
+                33083 => "Sony FE 600mm F4 GM OSS + 1.4X Teleconverter".to_string(),
+                33084 => "Sony FE 600mm F4 GM OSS + 2X Teleconverter".to_string(),
+                33085 => "Sony FE 70-200mm F2.8 GM OSS II + 1.4X Teleconverter".to_string(),
+                33086 => "Sony FE 70-200mm F2.8 GM OSS II + 2X Teleconverter".to_string(),
+                33087 => "Sony FE 70-200mm F4 Macro G OSS II + 1.4X Teleconverter".to_string(),
+                33088 => "Sony FE 70-200mm F4 Macro G OSS II + 2X Teleconverter".to_string(),
+                33089 => "Sony FE 300mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33090 => "Sony FE 300mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33091 => "Sony FE 400-800mm F6.3-8 G OSS + 1.4X Teleconverter".to_string(),
+                33092 => "Sony FE 400-800mm F6.3-8 G OSS + 2X Teleconverter".to_string(),
+                33093 => "Sony FE 100mm F2.8 Macro GM OSS + 1.4X Teleconverter".to_string(),
+                33094 => "Sony FE 100mm F2.8 Macro GM OSS + 2X Teleconverter".to_string(),
+                33095 => "Sony FE 100-400mm F4.5 GM OSS + 1.4X Teleconverter".to_string(),
+                33096 => "Sony FE 100-400mm F4.5 GM OSS + 2X Teleconverter".to_string(),
+                49201 => "Zeiss Touit 12mm F2.8 or other Touit lens".to_string(),
+                49202 => "Zeiss Touit 32mm F1.8".to_string(),
+                49203 => "Zeiss Touit 50mm F2.8 Macro".to_string(),
+                49216 => "Zeiss Batis 25mm F2".to_string(),
+                49217 => "Zeiss Batis 85mm F1.8".to_string(),
+                49218 => "Zeiss Batis 18mm F2.8".to_string(),
+                49219 => "Zeiss Batis 135mm F2.8".to_string(),
+                49220 => "Zeiss Batis 40mm F2 CF".to_string(),
+                49232 => "Zeiss Loxia 50mm F2".to_string(),
+                49233 => "Zeiss Loxia 35mm F2".to_string(),
+                49234 => "Zeiss Loxia 21mm F2.8".to_string(),
+                49235 => "Zeiss Loxia 85mm F2.4".to_string(),
+                49236 => "Zeiss Loxia 25mm F2.4".to_string(),
+                49456 => "Tamron E 18-200mm F3.5-6.3 Di III VC".to_string(),
+                49457 => "Tamron 28-75mm F2.8 Di III RXD".to_string(),
+                49458 => "Tamron 17-28mm F2.8 Di III RXD".to_string(),
+                49459 => "Tamron 35mm F2.8 Di III OSD M1:2".to_string(),
+                49460 => "Tamron 24mm F2.8 Di III OSD M1:2".to_string(),
+                49461 => "Tamron 20mm F2.8 Di III OSD M1:2".to_string(),
+                49462 => "Tamron 70-180mm F2.8 Di III VXD".to_string(),
+                49463 => "Tamron 28-200mm F2.8-5.6 Di III RXD".to_string(),
+                49464 => "Tamron 70-300mm F4.5-6.3 Di III RXD".to_string(),
+                49465 => "Tamron 17-70mm F2.8 Di III-A VC RXD".to_string(),
+                49466 => "Tamron 150-500mm F5-6.7 Di III VC VXD".to_string(),
+                49467 => "Tamron 11-20mm F2.8 Di III-A RXD".to_string(),
+                49468 => "Tamron 18-300mm F3.5-6.3 Di III-A VC VXD".to_string(),
+                49469 => "Tamron 35-150mm F2-F2.8 Di III VXD".to_string(),
+                49470 => "Tamron 28-75mm F2.8 Di III VXD G2".to_string(),
+                49471 => "Tamron 50-400mm F4.5-6.3 Di III VC VXD".to_string(),
+                49472 => "Tamron 20-40mm F2.8 Di III VXD".to_string(),
+                49473 => "Tamron 17-50mm F4 Di III VXD or Tokina or Viltrox lens".to_string(),
+                49474 => "Tamron 70-180mm F2.8 Di III VXD G2 or Viltrox lens".to_string(),
+                49475 => "Tamron 50-300mm F4.5-6.3 Di III VC VXD".to_string(),
+                49476 => "Tamron 28-300mm F4-7.1 Di III VC VXD".to_string(),
+                49477 => "Tamron 90mm F2.8 Di III Macro VXD".to_string(),
+                49478 => "Tamron 16-30mm F2.8 Di III VXD G2".to_string(),
+                49479 => "Tamron 25-200mm F2.8-5.6 Di III VXD G2".to_string(),
+                49480 => "Tamron 35-100mm F2.8 Di III VXD".to_string(),
+                49712 => "Tokina FiRIN 20mm F2 FE AF".to_string(),
+                49713 => "Tokina FiRIN 100mm F2.8 FE MACRO".to_string(),
+                49714 => "Tokina atx-m 11-18mm F2.8 E".to_string(),
+                50480 => "Sigma 30mm F1.4 DC DN | C".to_string(),
+                50481 => "Sigma 50mm F1.4 DG HSM | A".to_string(),
+                50482 => "Sigma 18-300mm F3.5-6.3 DC MACRO OS HSM | C + MC-11".to_string(),
+                50483 => "Sigma 18-35mm F1.8 DC HSM | A + MC-11".to_string(),
+                50484 => "Sigma 24-35mm F2 DG HSM | A + MC-11".to_string(),
+                50485 => "Sigma 24mm F1.4 DG HSM | A + MC-11".to_string(),
+                50486 => "Sigma 150-600mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50487 => "Sigma 20mm F1.4 DG HSM | A + MC-11".to_string(),
+                50488 => "Sigma 35mm F1.4 DG HSM | A".to_string(),
+                50489 => "Sigma 150-600mm F5-6.3 DG OS HSM | S + MC-11".to_string(),
+                50490 => "Sigma 120-300mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50492 => "Sigma 24-105mm F4 DG OS HSM | A + MC-11".to_string(),
+                50493 => "Sigma 17-70mm F2.8-4 DC MACRO OS HSM | C + MC-11".to_string(),
+                50495 => "Sigma 50-100mm F1.8 DC HSM | A + MC-11".to_string(),
+                50499 => "Sigma 85mm F1.4 DG HSM | A".to_string(),
+                50501 => "Sigma 100-400mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50503 => "Sigma 16mm F1.4 DC DN | C".to_string(),
+                50507 => "Sigma 105mm F1.4 DG HSM | A".to_string(),
+                50508 => "Sigma 56mm F1.4 DC DN | C".to_string(),
+                50512 => "Sigma 70-200mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50513 => "Sigma 70mm F2.8 DG MACRO | A".to_string(),
+                50514 => "Sigma 45mm F2.8 DG DN | C".to_string(),
+                50515 => "Sigma 35mm F1.2 DG DN | A".to_string(),
+                50516 => "Sigma 14-24mm F2.8 DG DN | A".to_string(),
+                50517 => "Sigma 24-70mm F2.8 DG DN | A".to_string(),
+                50518 => "Sigma 100-400mm F5-6.3 DG DN OS | C".to_string(),
+                50521 => "Sigma 85mm F1.4 DG DN | A".to_string(),
+                50522 => "Sigma 105mm F2.8 DG DN MACRO | A".to_string(),
+                50523 => "Sigma 65mm F2 DG DN | C".to_string(),
+                50524 => "Sigma 35mm F2 DG DN | C".to_string(),
+                50525 => "Sigma 24mm F3.5 DG DN | C".to_string(),
+                50526 => "Sigma 28-70mm F2.8 DG DN | C".to_string(),
+                50527 => "Sigma 150-600mm F5-6.3 DG DN OS | S".to_string(),
+                50528 => "Sigma 35mm F1.4 DG DN | A".to_string(),
+                50529 => "Sigma 90mm F2.8 DG DN | C".to_string(),
+                50530 => "Sigma 24mm F2 DG DN | C".to_string(),
+                50531 => "Sigma 18-50mm F2.8 DC DN | C".to_string(),
+                50532 => "Sigma 20mm F2 DG DN | C".to_string(),
+                50533 => "Sigma 16-28mm F2.8 DG DN | C".to_string(),
+                50534 => "Sigma 20mm F1.4 DG DN | A".to_string(),
+                50535 => "Sigma 24mm F1.4 DG DN | A".to_string(),
+                50536 => "Sigma 60-600mm F4.5-6.3 DG DN OS | S".to_string(),
+                50537 => "Sigma 50mm F2 DG DN | C".to_string(),
+                50538 => "Sigma 17mm F4 DG DN | C".to_string(),
+                50539 => "Sigma 50mm F1.4 DG DN | A".to_string(),
+                50540 => "Sigma 14mm F1.4 DG DN | A".to_string(),
+                50543 => "Sigma 70-200mm F2.8 DG DN OS | S".to_string(),
+                50544 => "Sigma 23mm F1.4 DC DN | C".to_string(),
+                50545 => "Sigma 24-70mm F2.8 DG DN II | A".to_string(),
+                50546 => "Sigma 500mm F5.6 DG DN OS | S".to_string(),
+                50547 => "Sigma 10-18mm F2.8 DC DN | C".to_string(),
+                50548 => "Sigma 15mm F1.4 DG DN DIAGONAL FISHEYE | A".to_string(),
+                50549 => "Sigma 50mm F1.2 DG DN | A".to_string(),
+                50550 => "Sigma 28-105mm F2.8 DG DN | A".to_string(),
+                50551 => "Sigma 28-45mm F1.8 DG DN | A".to_string(),
+                50552 => "Sigma 35mm F1.2 DG II | A".to_string(),
+                50553 => "Sigma 300-600mm F4 DG OS | S".to_string(),
+                50554 => "Sigma 16-300mm F3.5-6.7 DC OS | C".to_string(),
+                50555 => "Sigma 12mm F1.4 DC | C".to_string(),
+                50556 => "Sigma 17-40mm F1.8 DC | A".to_string(),
+                50557 => "Sigma 200mm F2 DG OS | S".to_string(),
+                50558 => "Sigma 20-200mm F3.5-6.3 DG | C".to_string(),
+                50559 => "Sigma 135mm F1.4 DG | A".to_string(),
+                50563 => "Sigma 35mm F1.4 DG II | A".to_string(),
+                50564 => "Sigma 15mm F1.4 DC | C".to_string(),
+                50992 => "Voigtlander SUPER WIDE-HELIAR 15mm F4.5 III".to_string(),
+                50993 => "Voigtlander HELIAR-HYPER WIDE 10mm F5.6".to_string(),
+                50994 => "Voigtlander ULTRA WIDE-HELIAR 12mm F5.6 III".to_string(),
+                50995 => "Voigtlander MACRO APO-LANTHAR 65mm F2 Aspherical".to_string(),
+                50996 => "Voigtlander NOKTON 40mm F1.2 Aspherical".to_string(),
+                50997 => "Voigtlander NOKTON classic 35mm F1.4".to_string(),
+                50998 => "Voigtlander MACRO APO-LANTHAR 110mm F2.5".to_string(),
+                50999 => "Voigtlander COLOR-SKOPAR 21mm F3.5 Aspherical".to_string(),
+                51000 => "Voigtlander NOKTON 50mm F1.2 Aspherical".to_string(),
+                51001 => "Voigtlander NOKTON 21mm F1.4 Aspherical".to_string(),
+                51002 => "Voigtlander APO-LANTHAR 50mm F2 Aspherical".to_string(),
+                51003 => "Voigtlander NOKTON 35mm F1.2 Aspherical SE".to_string(),
+                51006 => "Voigtlander APO-LANTHAR 35mm F2 Aspherical".to_string(),
+                51007 => "Voigtlander NOKTON 50mm F1 Aspherical".to_string(),
+                51008 => "Voigtlander NOKTON 75mm F1.5 Aspherical".to_string(),
+                51009 => "Voigtlander NOKTON 28mm F1.5 Aspherical".to_string(),
+                51011 => "Voigtlander APO-LANTHAR 28mm F2 Aspherical".to_string(),
+                51072 => "ZEISS Otus ML 50mm F1.4".to_string(),
+                51073 => "ZEISS Otus ML 85mm F1.4".to_string(),
+                51504 => "Samyang AF 50mm F1.4".to_string(),
+                51505 => "Samyang AF 14mm F2.8 or Samyang AF 35mm F2.8".to_string(),
+                51507 => "Samyang AF 35mm F1.4".to_string(),
+                51508 => "Samyang AF 45mm F1.8".to_string(),
+                51510 => "Samyang AF 18mm F2.8 or Samyang AF 35mm F1.8".to_string(),
+                51512 => "Samyang AF 75mm F1.8".to_string(),
+                51513 => "Samyang AF 35mm F1.8".to_string(),
+                51514 => "Samyang AF 24mm F1.8".to_string(),
+                51515 => "Samyang AF 12mm F2.0".to_string(),
+                51516 => "Samyang AF 24-70mm F2.8".to_string(),
+                51517 => "Samyang AF 50mm F1.4 II".to_string(),
+                51518 => "Samyang AF 135mm F1.8".to_string(),
+                61569 => "LAOWA FFII 10mm F2.8 C&D Dreamer".to_string(),
+                61572 => "LAOWA FFII 12mm F2.8 C&D Dreamer".to_string(),
+                61600 => "Thypoch AF 24-50mm F2.8 FE".to_string(),
+                61760 => "Viltrox 135mm F1.8 FE LAB".to_string(),
+                61761 => "Viltrox 28mm F4.5 FE".to_string(),
+                61762 => "Viltrox 35mm F1.2 FE LAB".to_string(),
+                61763 => "Viltrox 85mm F1.4 FE Pro".to_string(),
+                61766 => "Viltrox 40mm F2.5 FE Air".to_string(),
+                61767 => "Viltrox 50mm F2.0 FE Air".to_string(),
+                61768 => "Viltrox 25mm F1.7 E Air".to_string(),
+                61776 => "Viltrox 50mm F1.4 FE Pro".to_string(),
+                61777 => "Viltrox 9mm F2.8 E Air".to_string(),
+                61778 => "Viltrox 14mm F4.0 FE Air".to_string(),
+                61779 => "Viltrox 56mm F1.2 E Pro".to_string(),
+                61780 => "Viltrox 85mm F2.0 FE EVO".to_string(),
+                61781 => "Viltrox 55mm F1.8 FE EVO".to_string(),
+                61783 => "Viltrox 15mm F1.7 E Air".to_string(),
+                61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("LensType2", s, Value::I32(v as i32), GRP2));
+        }
+    }
+    if dm_get(&dm, "LensMount") == Some(1.0) {
+        if let Some(v) = u16_at(data, 0x608) {
+            dm.push(("LensType", f64::from(v)));
+            tags.push(mk("LensType", v.to_string(), Value::I32(v as i32), GRP2));
+        }
     }
     if !MODEL_RE_3.is_match(model) {
         {
@@ -1766,7 +4087,7 @@ fn tag9405a(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -1781,7 +4102,7 @@ fn tag9405a(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -1796,7 +4117,7 @@ fn tag9405a(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -1804,45 +4125,54 @@ fn tag9405a(data: &[u8], model: &str) -> Vec<Tag> {
 }
 
 fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u16_at(data, 0x4) {
+        dm.push(("SonyISO", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyISO", cv.as_string(), raw));
+        tags.push(mk("SonyISO", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x6) {
+        dm.push(("BaseISO", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(mk("BaseISO", cv.as_string(), raw));
+        tags.push(mk("BaseISO", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0xa) {
+        dm.push(("SonyExposureTime2", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(mk("SonyExposureTime2", cv.as_string(), raw));
+        tags.push(mk("SonyExposureTime2", cv.as_string(), raw, GRP2));
     }
     if !MODEL_RE_33.is_match(model) {
         if let Some(v) = u16_at(data, 0x14) {
+            dm.push(("SonyFNumber", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-            tags.push(mk("SonyFNumber", cv.as_string(), raw));
+            tags.push(mk("SonyFNumber", cv.as_string(), raw, GRP2));
         }
     }
     if let Some(v) = u16_at(data, 0x16) {
+        dm.push(("SonyMaxApertureValue", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyMaxApertureValue", cv.as_string(), raw));
+        tags.push(mk("SonyMaxApertureValue", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x24) {
+        dm.push(("SonyImageWidthMax", f64::from(v)));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "Low".to_string(),
@@ -1850,17 +4180,19 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "High".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SonyImageWidthMax", s, Value::I32(v as i32)));
+        tags.push(mk("SonyImageWidthMax", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x44) {
+        dm.push(("LongExposureNoiseReduction", f64::from(v)));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LongExposureNoiseReduction", s, Value::I32(v as i32)));
+        tags.push(mk("LongExposureNoiseReduction", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x46) {
+        dm.push(("CreativeStyle", f64::from(v)));
         let s = match v as i64 {
             0 => "Standard".to_string(),
             1 => "Vivid".to_string(),
@@ -1882,51 +4214,358 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             255 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CreativeStyle", s, Value::I32(v as i32)));
+        tags.push(mk("CreativeStyle", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = i8_at(data, 0x52) {
+        dm.push(("Sharpness", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(mk("Sharpness", cv.as_string(), raw));
+        tags.push(mk("Sharpness", cv.as_string(), raw, GRP2));
     }
     if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x5a) {
+            dm.push(("DistortionCorrParamsPresent", f64::from(v)));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32)));
+            tags.push(mk("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x5b) {
+        dm.push(("DistortionCorrection", f64::from(v)));
         let s = match v as i64 {
             0 => "None".to_string(),
             1 => "Applied".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("DistortionCorrection", s, Value::I32(v as i32)));
+        tags.push(mk("DistortionCorrection", s, Value::I32(v as i32), GRP2));
     }
     if !MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x5d) {
+            dm.push(("LensFormat", f64::from(v)));
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
                 1 => "APS-C".to_string(),
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("LensFormat", s, Value::I32(v as i32)));
+            tags.push(mk("LensFormat", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x5e) {
+        dm.push(("LensMount", f64::from(v)));
         let s = match v as i64 {
             0 => "Unknown".to_string(),
             1 => "A-mount".to_string(),
             2 => "E-mount".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensMount", s, Value::I32(v as i32)));
+        tags.push(mk("LensMount", s, Value::I32(v as i32), GRP2));
+    }
+    if dm_get(&dm, "LensMount") == Some(2.0) {
+        if let Some(v) = u16_at(data, 0x60) {
+            dm.push(("LensType2", f64::from(v)));
+            let s = match v as i64 {
+                0 => "Unknown E-mount lens or other lens".to_string(),
+                1 => "Samyang AF 35mm F1.8".to_string(),
+                2 => "Viltrox 16mm F1.8 FE".to_string(),
+                3 => "Viltrox 23mm F1.4 E".to_string(),
+                4 => "Viltrox 24mm F1.8 FE".to_string(),
+                5 => "Viltrox 28mm F1.8 FE".to_string(),
+                6 => "Viltrox 33mm F1.4 E".to_string(),
+                7 => "Viltrox 35mm F1.8 FE".to_string(),
+                8 => "Viltrox 50mm F1.8 FE".to_string(),
+                9 => "Viltrox 75mm F1.2 E Pro".to_string(),
+                13 => "Samyang AF 35-150mm F2-2.8".to_string(),
+                17 => "Samyang RS 21mm F3.5".to_string(),
+                18 => "Samyang RS 28mm F3.5".to_string(),
+                19 => "Samyang RS 32mm F2.8".to_string(),
+                20 => "Samyang AF 35mm F1.4 P FE".to_string(),
+                21 => "Samyang AF 14-24mm F2.8".to_string(),
+                22 => "Samyang AF 24-60mm F2.8".to_string(),
+                24 => "Samyang AF 85mm F1.8 P FE".to_string(),
+                44 => "Metabones Canon EF Smart Adapter".to_string(),
+                78 => "Metabones Canon EF Smart Adapter Mark III or Other Adapter".to_string(),
+                184 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                234 => "Metabones Canon EF Smart Adapter Mark IV".to_string(),
+                239 => "Metabones Canon EF Speed Booster".to_string(),
+                24593 => "LA-EA4r MonsterAdapter".to_string(),
+                32784 => "Sony E 16mm F2.8".to_string(),
+                32785 => "Sony E 18-55mm F3.5-5.6 OSS".to_string(),
+                32786 => "Sony E 55-210mm F4.5-6.3 OSS".to_string(),
+                32787 => "Sony E 18-200mm F3.5-6.3 OSS".to_string(),
+                32788 => "Sony E 30mm F3.5 Macro".to_string(),
+                32789 => "Sony E 24mm F1.8 ZA or Samyang AF 50mm F1.4".to_string(),
+                32790 => "Sony E 50mm F1.8 OSS or Samyang AF 14mm F2.8".to_string(),
+                32791 => "Sony E 16-70mm F4 ZA OSS".to_string(),
+                32792 => "Sony E 10-18mm F4 OSS".to_string(),
+                32793 => "Sony E PZ 16-50mm F3.5-5.6 OSS".to_string(),
+                32794 => "Sony FE 35mm F2.8 ZA or Samyang Lens".to_string(),
+                32795 => "Sony FE 24-70mm F4 ZA OSS".to_string(),
+                32796 => "Sony FE 85mm F1.8 or Viltrox PFU RBMH 85mm F1.8".to_string(),
+                32797 => "Sony E 18-200mm F3.5-6.3 OSS LE".to_string(),
+                32798 => "Sony E 20mm F2.8".to_string(),
+                32799 => "Sony E 35mm F1.8 OSS".to_string(),
+                32800 => "Sony E PZ 18-105mm F4 G OSS".to_string(),
+                32801 => "Sony FE 12-24mm F4 G".to_string(),
+                32802 => "Sony FE 90mm F2.8 Macro G OSS".to_string(),
+                32803 => "Sony E 18-50mm F4-5.6".to_string(),
+                32804 => "Sony FE 24mm F1.4 GM".to_string(),
+                32805 => "Sony FE 24-105mm F4 G OSS".to_string(),
+                32807 => "Sony E PZ 18-200mm F3.5-6.3 OSS".to_string(),
+                32808 => "Sony FE 55mm F1.8 ZA".to_string(),
+                32810 => "Sony FE 70-200mm F4 G OSS".to_string(),
+                32811 => "Sony FE 16-35mm F4 ZA OSS".to_string(),
+                32812 => "Sony FE 50mm F2.8 Macro".to_string(),
+                32813 => "Sony FE 28-70mm F3.5-5.6 OSS".to_string(),
+                32814 => "Sony FE 35mm F1.4 ZA".to_string(),
+                32815 => "Sony FE 24-240mm F3.5-6.3 OSS".to_string(),
+                32816 => "Sony FE 28mm F2".to_string(),
+                32817 => "Sony FE PZ 28-135mm F4 G OSS".to_string(),
+                32819 => "Sony FE 100mm F2.8 STF GM OSS".to_string(),
+                32820 => "Sony E PZ 18-110mm F4 G OSS".to_string(),
+                32821 => "Sony FE 24-70mm F2.8 GM".to_string(),
+                32822 => "Sony FE 50mm F1.4 ZA".to_string(),
+                32823 => "Sony FE 85mm F1.4 GM or Samyang AF 85mm F1.4".to_string(),
+                32824 => "Sony FE 50mm F1.8".to_string(),
+                32826 => "Sony FE 21mm F2.8 (SEL28F20 + SEL075UWC)".to_string(),
+                32827 => "Sony FE 16mm F3.5 Fisheye (SEL28F20 + SEL057FEC)".to_string(),
+                32828 => "Sony FE 70-300mm F4.5-5.6 G OSS".to_string(),
+                32829 => "Sony FE 100-400mm F4.5-5.6 GM OSS".to_string(),
+                32830 => "Sony FE 70-200mm F2.8 GM OSS".to_string(),
+                32831 => "Sony FE 16-35mm F2.8 GM".to_string(),
+                32848 => "Sony FE 400mm F2.8 GM OSS".to_string(),
+                32849 => "Sony E 18-135mm F3.5-5.6 OSS".to_string(),
+                32850 => "Sony FE 135mm F1.8 GM".to_string(),
+                32851 => "Sony FE 200-600mm F5.6-6.3 G OSS".to_string(),
+                32852 => "Sony FE 600mm F4 GM OSS".to_string(),
+                32853 => "Sony E 16-55mm F2.8 G".to_string(),
+                32854 => "Sony E 70-350mm F4.5-6.3 G OSS".to_string(),
+                32855 => "Sony FE C 16-35mm T3.1 G".to_string(),
+                32858 => "Sony FE 35mm F1.8".to_string(),
+                32859 => "Sony FE 20mm F1.8 G".to_string(),
+                32860 => "Sony FE 12-24mm F2.8 GM".to_string(),
+                32862 => "Sony FE 50mm F1.2 GM".to_string(),
+                32863 => "Sony FE 14mm F1.8 GM".to_string(),
+                32864 => "Sony FE 28-60mm F4-5.6".to_string(),
+                32865 => "Sony FE 35mm F1.4 GM".to_string(),
+                32866 => "Sony FE 24mm F2.8 G".to_string(),
+                32867 => "Sony FE 40mm F2.5 G".to_string(),
+                32868 => "Sony FE 50mm F2.5 G".to_string(),
+                32871 => "Sony FE PZ 16-35mm F4 G".to_string(),
+                32873 => "Sony E PZ 10-20mm F4 G".to_string(),
+                32874 => "Sony FE 70-200mm F2.8 GM OSS II".to_string(),
+                32875 => "Sony FE 24-70mm F2.8 GM II".to_string(),
+                32876 => "Sony E 11mm F1.8".to_string(),
+                32877 => "Sony E 15mm F1.4 G".to_string(),
+                32878 => "Sony FE 20-70mm F4 G".to_string(),
+                32879 => "Sony FE 50mm F1.4 GM".to_string(),
+                32880 => "Sony FE 16mm F1.8 G".to_string(),
+                32881 => "Sony FE 24-50mm F2.8 G".to_string(),
+                32882 => "Sony FE 16-25mm F2.8 G".to_string(),
+                32884 => "Sony FE 70-200mm F4 Macro G OSS II".to_string(),
+                32885 => "Sony FE 16-35mm F2.8 GM II".to_string(),
+                32886 => "Sony FE 300mm F2.8 GM OSS".to_string(),
+                32887 => "Sony E PZ 16-50mm F3.5-5.6 OSS II".to_string(),
+                32888 => "Sony FE 85mm F1.4 GM II".to_string(),
+                32889 => "Sony FE 28-70mm F2 GM".to_string(),
+                32890 => "Sony FE 400-800mm F6.3-8 G OSS".to_string(),
+                32891 => "Sony FE 50-150mm F2 GM".to_string(),
+                32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
+                32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
+                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
+                33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
+                33077 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 1.4X Teleconverter".to_string(),
+                33078 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 2X Teleconverter".to_string(),
+                33079 => "Sony FE 400mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33080 => "Sony FE 400mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33081 => "Sony FE 200-600mm F5.6-6.3 G OSS + 1.4X Teleconverter".to_string(),
+                33082 => "Sony FE 200-600mm F5.6-6.3 G OSS + 2X Teleconverter".to_string(),
+                33083 => "Sony FE 600mm F4 GM OSS + 1.4X Teleconverter".to_string(),
+                33084 => "Sony FE 600mm F4 GM OSS + 2X Teleconverter".to_string(),
+                33085 => "Sony FE 70-200mm F2.8 GM OSS II + 1.4X Teleconverter".to_string(),
+                33086 => "Sony FE 70-200mm F2.8 GM OSS II + 2X Teleconverter".to_string(),
+                33087 => "Sony FE 70-200mm F4 Macro G OSS II + 1.4X Teleconverter".to_string(),
+                33088 => "Sony FE 70-200mm F4 Macro G OSS II + 2X Teleconverter".to_string(),
+                33089 => "Sony FE 300mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33090 => "Sony FE 300mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33091 => "Sony FE 400-800mm F6.3-8 G OSS + 1.4X Teleconverter".to_string(),
+                33092 => "Sony FE 400-800mm F6.3-8 G OSS + 2X Teleconverter".to_string(),
+                33093 => "Sony FE 100mm F2.8 Macro GM OSS + 1.4X Teleconverter".to_string(),
+                33094 => "Sony FE 100mm F2.8 Macro GM OSS + 2X Teleconverter".to_string(),
+                33095 => "Sony FE 100-400mm F4.5 GM OSS + 1.4X Teleconverter".to_string(),
+                33096 => "Sony FE 100-400mm F4.5 GM OSS + 2X Teleconverter".to_string(),
+                49201 => "Zeiss Touit 12mm F2.8 or other Touit lens".to_string(),
+                49202 => "Zeiss Touit 32mm F1.8".to_string(),
+                49203 => "Zeiss Touit 50mm F2.8 Macro".to_string(),
+                49216 => "Zeiss Batis 25mm F2".to_string(),
+                49217 => "Zeiss Batis 85mm F1.8".to_string(),
+                49218 => "Zeiss Batis 18mm F2.8".to_string(),
+                49219 => "Zeiss Batis 135mm F2.8".to_string(),
+                49220 => "Zeiss Batis 40mm F2 CF".to_string(),
+                49232 => "Zeiss Loxia 50mm F2".to_string(),
+                49233 => "Zeiss Loxia 35mm F2".to_string(),
+                49234 => "Zeiss Loxia 21mm F2.8".to_string(),
+                49235 => "Zeiss Loxia 85mm F2.4".to_string(),
+                49236 => "Zeiss Loxia 25mm F2.4".to_string(),
+                49456 => "Tamron E 18-200mm F3.5-6.3 Di III VC".to_string(),
+                49457 => "Tamron 28-75mm F2.8 Di III RXD".to_string(),
+                49458 => "Tamron 17-28mm F2.8 Di III RXD".to_string(),
+                49459 => "Tamron 35mm F2.8 Di III OSD M1:2".to_string(),
+                49460 => "Tamron 24mm F2.8 Di III OSD M1:2".to_string(),
+                49461 => "Tamron 20mm F2.8 Di III OSD M1:2".to_string(),
+                49462 => "Tamron 70-180mm F2.8 Di III VXD".to_string(),
+                49463 => "Tamron 28-200mm F2.8-5.6 Di III RXD".to_string(),
+                49464 => "Tamron 70-300mm F4.5-6.3 Di III RXD".to_string(),
+                49465 => "Tamron 17-70mm F2.8 Di III-A VC RXD".to_string(),
+                49466 => "Tamron 150-500mm F5-6.7 Di III VC VXD".to_string(),
+                49467 => "Tamron 11-20mm F2.8 Di III-A RXD".to_string(),
+                49468 => "Tamron 18-300mm F3.5-6.3 Di III-A VC VXD".to_string(),
+                49469 => "Tamron 35-150mm F2-F2.8 Di III VXD".to_string(),
+                49470 => "Tamron 28-75mm F2.8 Di III VXD G2".to_string(),
+                49471 => "Tamron 50-400mm F4.5-6.3 Di III VC VXD".to_string(),
+                49472 => "Tamron 20-40mm F2.8 Di III VXD".to_string(),
+                49473 => "Tamron 17-50mm F4 Di III VXD or Tokina or Viltrox lens".to_string(),
+                49474 => "Tamron 70-180mm F2.8 Di III VXD G2 or Viltrox lens".to_string(),
+                49475 => "Tamron 50-300mm F4.5-6.3 Di III VC VXD".to_string(),
+                49476 => "Tamron 28-300mm F4-7.1 Di III VC VXD".to_string(),
+                49477 => "Tamron 90mm F2.8 Di III Macro VXD".to_string(),
+                49478 => "Tamron 16-30mm F2.8 Di III VXD G2".to_string(),
+                49479 => "Tamron 25-200mm F2.8-5.6 Di III VXD G2".to_string(),
+                49480 => "Tamron 35-100mm F2.8 Di III VXD".to_string(),
+                49712 => "Tokina FiRIN 20mm F2 FE AF".to_string(),
+                49713 => "Tokina FiRIN 100mm F2.8 FE MACRO".to_string(),
+                49714 => "Tokina atx-m 11-18mm F2.8 E".to_string(),
+                50480 => "Sigma 30mm F1.4 DC DN | C".to_string(),
+                50481 => "Sigma 50mm F1.4 DG HSM | A".to_string(),
+                50482 => "Sigma 18-300mm F3.5-6.3 DC MACRO OS HSM | C + MC-11".to_string(),
+                50483 => "Sigma 18-35mm F1.8 DC HSM | A + MC-11".to_string(),
+                50484 => "Sigma 24-35mm F2 DG HSM | A + MC-11".to_string(),
+                50485 => "Sigma 24mm F1.4 DG HSM | A + MC-11".to_string(),
+                50486 => "Sigma 150-600mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50487 => "Sigma 20mm F1.4 DG HSM | A + MC-11".to_string(),
+                50488 => "Sigma 35mm F1.4 DG HSM | A".to_string(),
+                50489 => "Sigma 150-600mm F5-6.3 DG OS HSM | S + MC-11".to_string(),
+                50490 => "Sigma 120-300mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50492 => "Sigma 24-105mm F4 DG OS HSM | A + MC-11".to_string(),
+                50493 => "Sigma 17-70mm F2.8-4 DC MACRO OS HSM | C + MC-11".to_string(),
+                50495 => "Sigma 50-100mm F1.8 DC HSM | A + MC-11".to_string(),
+                50499 => "Sigma 85mm F1.4 DG HSM | A".to_string(),
+                50501 => "Sigma 100-400mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50503 => "Sigma 16mm F1.4 DC DN | C".to_string(),
+                50507 => "Sigma 105mm F1.4 DG HSM | A".to_string(),
+                50508 => "Sigma 56mm F1.4 DC DN | C".to_string(),
+                50512 => "Sigma 70-200mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50513 => "Sigma 70mm F2.8 DG MACRO | A".to_string(),
+                50514 => "Sigma 45mm F2.8 DG DN | C".to_string(),
+                50515 => "Sigma 35mm F1.2 DG DN | A".to_string(),
+                50516 => "Sigma 14-24mm F2.8 DG DN | A".to_string(),
+                50517 => "Sigma 24-70mm F2.8 DG DN | A".to_string(),
+                50518 => "Sigma 100-400mm F5-6.3 DG DN OS | C".to_string(),
+                50521 => "Sigma 85mm F1.4 DG DN | A".to_string(),
+                50522 => "Sigma 105mm F2.8 DG DN MACRO | A".to_string(),
+                50523 => "Sigma 65mm F2 DG DN | C".to_string(),
+                50524 => "Sigma 35mm F2 DG DN | C".to_string(),
+                50525 => "Sigma 24mm F3.5 DG DN | C".to_string(),
+                50526 => "Sigma 28-70mm F2.8 DG DN | C".to_string(),
+                50527 => "Sigma 150-600mm F5-6.3 DG DN OS | S".to_string(),
+                50528 => "Sigma 35mm F1.4 DG DN | A".to_string(),
+                50529 => "Sigma 90mm F2.8 DG DN | C".to_string(),
+                50530 => "Sigma 24mm F2 DG DN | C".to_string(),
+                50531 => "Sigma 18-50mm F2.8 DC DN | C".to_string(),
+                50532 => "Sigma 20mm F2 DG DN | C".to_string(),
+                50533 => "Sigma 16-28mm F2.8 DG DN | C".to_string(),
+                50534 => "Sigma 20mm F1.4 DG DN | A".to_string(),
+                50535 => "Sigma 24mm F1.4 DG DN | A".to_string(),
+                50536 => "Sigma 60-600mm F4.5-6.3 DG DN OS | S".to_string(),
+                50537 => "Sigma 50mm F2 DG DN | C".to_string(),
+                50538 => "Sigma 17mm F4 DG DN | C".to_string(),
+                50539 => "Sigma 50mm F1.4 DG DN | A".to_string(),
+                50540 => "Sigma 14mm F1.4 DG DN | A".to_string(),
+                50543 => "Sigma 70-200mm F2.8 DG DN OS | S".to_string(),
+                50544 => "Sigma 23mm F1.4 DC DN | C".to_string(),
+                50545 => "Sigma 24-70mm F2.8 DG DN II | A".to_string(),
+                50546 => "Sigma 500mm F5.6 DG DN OS | S".to_string(),
+                50547 => "Sigma 10-18mm F2.8 DC DN | C".to_string(),
+                50548 => "Sigma 15mm F1.4 DG DN DIAGONAL FISHEYE | A".to_string(),
+                50549 => "Sigma 50mm F1.2 DG DN | A".to_string(),
+                50550 => "Sigma 28-105mm F2.8 DG DN | A".to_string(),
+                50551 => "Sigma 28-45mm F1.8 DG DN | A".to_string(),
+                50552 => "Sigma 35mm F1.2 DG II | A".to_string(),
+                50553 => "Sigma 300-600mm F4 DG OS | S".to_string(),
+                50554 => "Sigma 16-300mm F3.5-6.7 DC OS | C".to_string(),
+                50555 => "Sigma 12mm F1.4 DC | C".to_string(),
+                50556 => "Sigma 17-40mm F1.8 DC | A".to_string(),
+                50557 => "Sigma 200mm F2 DG OS | S".to_string(),
+                50558 => "Sigma 20-200mm F3.5-6.3 DG | C".to_string(),
+                50559 => "Sigma 135mm F1.4 DG | A".to_string(),
+                50563 => "Sigma 35mm F1.4 DG II | A".to_string(),
+                50564 => "Sigma 15mm F1.4 DC | C".to_string(),
+                50992 => "Voigtlander SUPER WIDE-HELIAR 15mm F4.5 III".to_string(),
+                50993 => "Voigtlander HELIAR-HYPER WIDE 10mm F5.6".to_string(),
+                50994 => "Voigtlander ULTRA WIDE-HELIAR 12mm F5.6 III".to_string(),
+                50995 => "Voigtlander MACRO APO-LANTHAR 65mm F2 Aspherical".to_string(),
+                50996 => "Voigtlander NOKTON 40mm F1.2 Aspherical".to_string(),
+                50997 => "Voigtlander NOKTON classic 35mm F1.4".to_string(),
+                50998 => "Voigtlander MACRO APO-LANTHAR 110mm F2.5".to_string(),
+                50999 => "Voigtlander COLOR-SKOPAR 21mm F3.5 Aspherical".to_string(),
+                51000 => "Voigtlander NOKTON 50mm F1.2 Aspherical".to_string(),
+                51001 => "Voigtlander NOKTON 21mm F1.4 Aspherical".to_string(),
+                51002 => "Voigtlander APO-LANTHAR 50mm F2 Aspherical".to_string(),
+                51003 => "Voigtlander NOKTON 35mm F1.2 Aspherical SE".to_string(),
+                51006 => "Voigtlander APO-LANTHAR 35mm F2 Aspherical".to_string(),
+                51007 => "Voigtlander NOKTON 50mm F1 Aspherical".to_string(),
+                51008 => "Voigtlander NOKTON 75mm F1.5 Aspherical".to_string(),
+                51009 => "Voigtlander NOKTON 28mm F1.5 Aspherical".to_string(),
+                51011 => "Voigtlander APO-LANTHAR 28mm F2 Aspherical".to_string(),
+                51072 => "ZEISS Otus ML 50mm F1.4".to_string(),
+                51073 => "ZEISS Otus ML 85mm F1.4".to_string(),
+                51504 => "Samyang AF 50mm F1.4".to_string(),
+                51505 => "Samyang AF 14mm F2.8 or Samyang AF 35mm F2.8".to_string(),
+                51507 => "Samyang AF 35mm F1.4".to_string(),
+                51508 => "Samyang AF 45mm F1.8".to_string(),
+                51510 => "Samyang AF 18mm F2.8 or Samyang AF 35mm F1.8".to_string(),
+                51512 => "Samyang AF 75mm F1.8".to_string(),
+                51513 => "Samyang AF 35mm F1.8".to_string(),
+                51514 => "Samyang AF 24mm F1.8".to_string(),
+                51515 => "Samyang AF 12mm F2.0".to_string(),
+                51516 => "Samyang AF 24-70mm F2.8".to_string(),
+                51517 => "Samyang AF 50mm F1.4 II".to_string(),
+                51518 => "Samyang AF 135mm F1.8".to_string(),
+                61569 => "LAOWA FFII 10mm F2.8 C&D Dreamer".to_string(),
+                61572 => "LAOWA FFII 12mm F2.8 C&D Dreamer".to_string(),
+                61600 => "Thypoch AF 24-50mm F2.8 FE".to_string(),
+                61760 => "Viltrox 135mm F1.8 FE LAB".to_string(),
+                61761 => "Viltrox 28mm F4.5 FE".to_string(),
+                61762 => "Viltrox 35mm F1.2 FE LAB".to_string(),
+                61763 => "Viltrox 85mm F1.4 FE Pro".to_string(),
+                61766 => "Viltrox 40mm F2.5 FE Air".to_string(),
+                61767 => "Viltrox 50mm F2.0 FE Air".to_string(),
+                61768 => "Viltrox 25mm F1.7 E Air".to_string(),
+                61776 => "Viltrox 50mm F1.4 FE Pro".to_string(),
+                61777 => "Viltrox 9mm F2.8 E Air".to_string(),
+                61778 => "Viltrox 14mm F4.0 FE Air".to_string(),
+                61779 => "Viltrox 56mm F1.2 E Pro".to_string(),
+                61780 => "Viltrox 85mm F2.0 FE EVO".to_string(),
+                61781 => "Viltrox 55mm F1.8 FE EVO".to_string(),
+                61783 => "Viltrox 15mm F1.7 E Air".to_string(),
+                61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("LensType2", s, Value::I32(v as i32), GRP2));
+        }
+    }
+    if dm_get(&dm, "LensMount") == Some(1.0) {
+        if let Some(v) = u16_at(data, 0x62) {
+            dm.push(("LensType", f64::from(v)));
+            tags.push(mk("LensType", v.to_string(), Value::I32(v as i32), GRP2));
+        }
     }
     if !MODEL_RE_4.is_match(model) {
         {
@@ -1939,16 +4578,17 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
     if !MODEL_RE_34.is_match(model) {
         if let Some(v) = u16_at(data, 0x342) {
+            dm.push(("LensZoomPosition", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
-            tags.push(mk("LensZoomPosition", cv.as_string(), raw));
+            tags.push(mk("LensZoomPosition", cv.as_string(), raw, GRP2));
         }
     }
     if MODEL_RE_35.is_match(model) {
@@ -1962,16 +4602,17 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
     if MODEL_RE_36.is_match(model) {
         if let Some(v) = u16_at(data, 0x34e) {
+            dm.push(("LensZoomPosition", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
-            tags.push(mk("LensZoomPosition", cv.as_string(), raw));
+            tags.push(mk("LensZoomPosition", cv.as_string(), raw, GRP2));
         }
     }
     if MODEL_RE_37.is_match(model) {
@@ -1985,16 +4626,17 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
     if MODEL_RE_39.is_match(model) {
         if let Some(v) = u16_at(data, 0x35a) {
+            dm.push(("LensZoomPosition", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
-            tags.push(mk("LensZoomPosition", cv.as_string(), raw));
+            tags.push(mk("LensZoomPosition", cv.as_string(), raw, GRP2));
         }
     }
     if MODEL_RE_38.is_match(model) {
@@ -2008,7 +4650,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2023,7 +4665,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2038,7 +4680,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2053,7 +4695,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2068,7 +4710,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2083,7 +4725,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2098,7 +4740,7 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2106,53 +4748,83 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
 }
 
 fn tag9406(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u8_at(data, 0x5) {
+        dm.push(("BatteryTemperature", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("($val - 32) / 1.8", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f C\",$val)", &cv) { cv = x; }
-        tags.push(mk("BatteryTemperature", cv.as_string(), raw));
+        tags.push(mk("BatteryTemperature", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u8_at(data, 0x6) {
+        dm.push(("BatteryLevelGrip1", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
-        tags.push(mk("BatteryLevelGrip1", cv.as_string(), raw));
+        tags.push(mk("BatteryLevelGrip1", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u8_at(data, 0x7) {
+        dm.push(("BatteryLevel", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
-        tags.push(mk("BatteryLevel", cv.as_string(), raw));
+        tags.push(mk("BatteryLevel", cv.as_string(), raw, GRP2));
     }
     if !MODEL_RE_43.is_match(model) {
         if let Some(v) = u8_at(data, 0x8) {
+            dm.push(("BatteryLevelGrip2", f64::from(v)));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
-            tags.push(mk("BatteryLevelGrip2", cv.as_string(), raw));
+            tags.push(mk("BatteryLevelGrip2", cv.as_string(), raw, GRP2));
         }
     }
     tags
 }
 
 fn tag9406b(data: &[u8], model: &str) -> Vec<Tag> {
-    let _ = model;
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u8_at(data, 0x1) {
-        tags.push(mk("Battery2", v.to_string(), Value::I32(v as i32)));
+        dm.push(("Battery2", f64::from(v)));
+        tags.push(mk("Battery2", v.to_string(), Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x4) {
-        tags.push(mk("BatteryStatus1", v.to_string(), Value::I32(v as i32)));
+        dm.push(("BatteryStatus1", f64::from(v)));
+        tags.push(mk("BatteryStatus1", v.to_string(), Value::I32(v as i32), GRP2));
+    }
+    if dm_get(&dm, "BatteryStatus1") != Some(5.0) {
+        if let Some(v) = u8_at(data, 0x5) {
+            dm.push(("BatteryLevel", f64::from(v)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
+            tags.push(mk("BatteryLevel", cv.as_string(), raw, GRP2));
+        }
+    }
+    if dm_get(&dm, "Battery2") == Some(1.0) {
+        if let Some(v) = u8_at(data, 0x6) {
+            dm.push(("BatteryStatus2", f64::from(v)));
+            tags.push(mk("BatteryStatus2", v.to_string(), Value::I32(v as i32), GRP2));
+        }
     }
     tags
 }
 
 fn tag940a(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Camera";
     let _ = model;
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u32_at(data, 0x4) {
+        dm.push(("AFPointsSelected", f64::from(v)));
         let s = match v as i64 {
             0 => "Center".to_string(),
             1 => "Top".to_string(),
@@ -2181,15 +4853,18 @@ fn tag940a(data: &[u8], model: &str) -> Vec<Tag> {
             4294967295 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AFPointsSelected", s, Value::I32(v as i32)));
+        tags.push(mk("AFPointsSelected", s, Value::I32(v as i32), GRP2));
     }
     tags
 }
 
 fn tag940c(data: &[u8], model: &str) -> Vec<Tag> {
-    let _ = model;
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u8_at(data, 0x8) {
+        dm.push(("LensMount2", f64::from(v)));
         let s = match v as i64 {
             0 => "Unknown".to_string(),
             1 => "A-mount (1)".to_string(),
@@ -2197,60 +4872,417 @@ fn tag940c(data: &[u8], model: &str) -> Vec<Tag> {
             5 => "A-mount (5)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensMount2", s, Value::I32(v as i32)));
+        tags.push(mk("LensMount2", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u16_at(data, 0x9) {
-        tags.push(mk("LensType3", v.to_string(), Value::I32(v as i32)));
+        dm.push(("LensType3", f64::from(v)));
+        let s = match v as i64 {
+            0 => "Unknown E-mount lens or other lens".to_string(),
+            1 => "Samyang AF 35mm F1.8".to_string(),
+            2 => "Viltrox 16mm F1.8 FE".to_string(),
+            3 => "Viltrox 23mm F1.4 E".to_string(),
+            4 => "Viltrox 24mm F1.8 FE".to_string(),
+            5 => "Viltrox 28mm F1.8 FE".to_string(),
+            6 => "Viltrox 33mm F1.4 E".to_string(),
+            7 => "Viltrox 35mm F1.8 FE".to_string(),
+            8 => "Viltrox 50mm F1.8 FE".to_string(),
+            9 => "Viltrox 75mm F1.2 E Pro".to_string(),
+            13 => "Samyang AF 35-150mm F2-2.8".to_string(),
+            17 => "Samyang RS 21mm F3.5".to_string(),
+            18 => "Samyang RS 28mm F3.5".to_string(),
+            19 => "Samyang RS 32mm F2.8".to_string(),
+            20 => "Samyang AF 35mm F1.4 P FE".to_string(),
+            21 => "Samyang AF 14-24mm F2.8".to_string(),
+            22 => "Samyang AF 24-60mm F2.8".to_string(),
+            24 => "Samyang AF 85mm F1.8 P FE".to_string(),
+            44 => "Metabones Canon EF Smart Adapter".to_string(),
+            78 => "Metabones Canon EF Smart Adapter Mark III or Other Adapter".to_string(),
+            184 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+            234 => "Metabones Canon EF Smart Adapter Mark IV".to_string(),
+            239 => "Metabones Canon EF Speed Booster".to_string(),
+            24593 => "LA-EA4r MonsterAdapter".to_string(),
+            32784 => "Sony E 16mm F2.8".to_string(),
+            32785 => "Sony E 18-55mm F3.5-5.6 OSS".to_string(),
+            32786 => "Sony E 55-210mm F4.5-6.3 OSS".to_string(),
+            32787 => "Sony E 18-200mm F3.5-6.3 OSS".to_string(),
+            32788 => "Sony E 30mm F3.5 Macro".to_string(),
+            32789 => "Sony E 24mm F1.8 ZA or Samyang AF 50mm F1.4".to_string(),
+            32790 => "Sony E 50mm F1.8 OSS or Samyang AF 14mm F2.8".to_string(),
+            32791 => "Sony E 16-70mm F4 ZA OSS".to_string(),
+            32792 => "Sony E 10-18mm F4 OSS".to_string(),
+            32793 => "Sony E PZ 16-50mm F3.5-5.6 OSS".to_string(),
+            32794 => "Sony FE 35mm F2.8 ZA or Samyang Lens".to_string(),
+            32795 => "Sony FE 24-70mm F4 ZA OSS".to_string(),
+            32796 => "Sony FE 85mm F1.8 or Viltrox PFU RBMH 85mm F1.8".to_string(),
+            32797 => "Sony E 18-200mm F3.5-6.3 OSS LE".to_string(),
+            32798 => "Sony E 20mm F2.8".to_string(),
+            32799 => "Sony E 35mm F1.8 OSS".to_string(),
+            32800 => "Sony E PZ 18-105mm F4 G OSS".to_string(),
+            32801 => "Sony FE 12-24mm F4 G".to_string(),
+            32802 => "Sony FE 90mm F2.8 Macro G OSS".to_string(),
+            32803 => "Sony E 18-50mm F4-5.6".to_string(),
+            32804 => "Sony FE 24mm F1.4 GM".to_string(),
+            32805 => "Sony FE 24-105mm F4 G OSS".to_string(),
+            32807 => "Sony E PZ 18-200mm F3.5-6.3 OSS".to_string(),
+            32808 => "Sony FE 55mm F1.8 ZA".to_string(),
+            32810 => "Sony FE 70-200mm F4 G OSS".to_string(),
+            32811 => "Sony FE 16-35mm F4 ZA OSS".to_string(),
+            32812 => "Sony FE 50mm F2.8 Macro".to_string(),
+            32813 => "Sony FE 28-70mm F3.5-5.6 OSS".to_string(),
+            32814 => "Sony FE 35mm F1.4 ZA".to_string(),
+            32815 => "Sony FE 24-240mm F3.5-6.3 OSS".to_string(),
+            32816 => "Sony FE 28mm F2".to_string(),
+            32817 => "Sony FE PZ 28-135mm F4 G OSS".to_string(),
+            32819 => "Sony FE 100mm F2.8 STF GM OSS".to_string(),
+            32820 => "Sony E PZ 18-110mm F4 G OSS".to_string(),
+            32821 => "Sony FE 24-70mm F2.8 GM".to_string(),
+            32822 => "Sony FE 50mm F1.4 ZA".to_string(),
+            32823 => "Sony FE 85mm F1.4 GM or Samyang AF 85mm F1.4".to_string(),
+            32824 => "Sony FE 50mm F1.8".to_string(),
+            32826 => "Sony FE 21mm F2.8 (SEL28F20 + SEL075UWC)".to_string(),
+            32827 => "Sony FE 16mm F3.5 Fisheye (SEL28F20 + SEL057FEC)".to_string(),
+            32828 => "Sony FE 70-300mm F4.5-5.6 G OSS".to_string(),
+            32829 => "Sony FE 100-400mm F4.5-5.6 GM OSS".to_string(),
+            32830 => "Sony FE 70-200mm F2.8 GM OSS".to_string(),
+            32831 => "Sony FE 16-35mm F2.8 GM".to_string(),
+            32848 => "Sony FE 400mm F2.8 GM OSS".to_string(),
+            32849 => "Sony E 18-135mm F3.5-5.6 OSS".to_string(),
+            32850 => "Sony FE 135mm F1.8 GM".to_string(),
+            32851 => "Sony FE 200-600mm F5.6-6.3 G OSS".to_string(),
+            32852 => "Sony FE 600mm F4 GM OSS".to_string(),
+            32853 => "Sony E 16-55mm F2.8 G".to_string(),
+            32854 => "Sony E 70-350mm F4.5-6.3 G OSS".to_string(),
+            32855 => "Sony FE C 16-35mm T3.1 G".to_string(),
+            32858 => "Sony FE 35mm F1.8".to_string(),
+            32859 => "Sony FE 20mm F1.8 G".to_string(),
+            32860 => "Sony FE 12-24mm F2.8 GM".to_string(),
+            32862 => "Sony FE 50mm F1.2 GM".to_string(),
+            32863 => "Sony FE 14mm F1.8 GM".to_string(),
+            32864 => "Sony FE 28-60mm F4-5.6".to_string(),
+            32865 => "Sony FE 35mm F1.4 GM".to_string(),
+            32866 => "Sony FE 24mm F2.8 G".to_string(),
+            32867 => "Sony FE 40mm F2.5 G".to_string(),
+            32868 => "Sony FE 50mm F2.5 G".to_string(),
+            32871 => "Sony FE PZ 16-35mm F4 G".to_string(),
+            32873 => "Sony E PZ 10-20mm F4 G".to_string(),
+            32874 => "Sony FE 70-200mm F2.8 GM OSS II".to_string(),
+            32875 => "Sony FE 24-70mm F2.8 GM II".to_string(),
+            32876 => "Sony E 11mm F1.8".to_string(),
+            32877 => "Sony E 15mm F1.4 G".to_string(),
+            32878 => "Sony FE 20-70mm F4 G".to_string(),
+            32879 => "Sony FE 50mm F1.4 GM".to_string(),
+            32880 => "Sony FE 16mm F1.8 G".to_string(),
+            32881 => "Sony FE 24-50mm F2.8 G".to_string(),
+            32882 => "Sony FE 16-25mm F2.8 G".to_string(),
+            32884 => "Sony FE 70-200mm F4 Macro G OSS II".to_string(),
+            32885 => "Sony FE 16-35mm F2.8 GM II".to_string(),
+            32886 => "Sony FE 300mm F2.8 GM OSS".to_string(),
+            32887 => "Sony E PZ 16-50mm F3.5-5.6 OSS II".to_string(),
+            32888 => "Sony FE 85mm F1.4 GM II".to_string(),
+            32889 => "Sony FE 28-70mm F2 GM".to_string(),
+            32890 => "Sony FE 400-800mm F6.3-8 G OSS".to_string(),
+            32891 => "Sony FE 50-150mm F2 GM".to_string(),
+            32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
+            32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
+            32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+            33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
+            33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+            33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+            33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
+            33077 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 1.4X Teleconverter".to_string(),
+            33078 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 2X Teleconverter".to_string(),
+            33079 => "Sony FE 400mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+            33080 => "Sony FE 400mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+            33081 => "Sony FE 200-600mm F5.6-6.3 G OSS + 1.4X Teleconverter".to_string(),
+            33082 => "Sony FE 200-600mm F5.6-6.3 G OSS + 2X Teleconverter".to_string(),
+            33083 => "Sony FE 600mm F4 GM OSS + 1.4X Teleconverter".to_string(),
+            33084 => "Sony FE 600mm F4 GM OSS + 2X Teleconverter".to_string(),
+            33085 => "Sony FE 70-200mm F2.8 GM OSS II + 1.4X Teleconverter".to_string(),
+            33086 => "Sony FE 70-200mm F2.8 GM OSS II + 2X Teleconverter".to_string(),
+            33087 => "Sony FE 70-200mm F4 Macro G OSS II + 1.4X Teleconverter".to_string(),
+            33088 => "Sony FE 70-200mm F4 Macro G OSS II + 2X Teleconverter".to_string(),
+            33089 => "Sony FE 300mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+            33090 => "Sony FE 300mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+            33091 => "Sony FE 400-800mm F6.3-8 G OSS + 1.4X Teleconverter".to_string(),
+            33092 => "Sony FE 400-800mm F6.3-8 G OSS + 2X Teleconverter".to_string(),
+            33093 => "Sony FE 100mm F2.8 Macro GM OSS + 1.4X Teleconverter".to_string(),
+            33094 => "Sony FE 100mm F2.8 Macro GM OSS + 2X Teleconverter".to_string(),
+            33095 => "Sony FE 100-400mm F4.5 GM OSS + 1.4X Teleconverter".to_string(),
+            33096 => "Sony FE 100-400mm F4.5 GM OSS + 2X Teleconverter".to_string(),
+            49201 => "Zeiss Touit 12mm F2.8 or other Touit lens".to_string(),
+            49202 => "Zeiss Touit 32mm F1.8".to_string(),
+            49203 => "Zeiss Touit 50mm F2.8 Macro".to_string(),
+            49216 => "Zeiss Batis 25mm F2".to_string(),
+            49217 => "Zeiss Batis 85mm F1.8".to_string(),
+            49218 => "Zeiss Batis 18mm F2.8".to_string(),
+            49219 => "Zeiss Batis 135mm F2.8".to_string(),
+            49220 => "Zeiss Batis 40mm F2 CF".to_string(),
+            49232 => "Zeiss Loxia 50mm F2".to_string(),
+            49233 => "Zeiss Loxia 35mm F2".to_string(),
+            49234 => "Zeiss Loxia 21mm F2.8".to_string(),
+            49235 => "Zeiss Loxia 85mm F2.4".to_string(),
+            49236 => "Zeiss Loxia 25mm F2.4".to_string(),
+            49456 => "Tamron E 18-200mm F3.5-6.3 Di III VC".to_string(),
+            49457 => "Tamron 28-75mm F2.8 Di III RXD".to_string(),
+            49458 => "Tamron 17-28mm F2.8 Di III RXD".to_string(),
+            49459 => "Tamron 35mm F2.8 Di III OSD M1:2".to_string(),
+            49460 => "Tamron 24mm F2.8 Di III OSD M1:2".to_string(),
+            49461 => "Tamron 20mm F2.8 Di III OSD M1:2".to_string(),
+            49462 => "Tamron 70-180mm F2.8 Di III VXD".to_string(),
+            49463 => "Tamron 28-200mm F2.8-5.6 Di III RXD".to_string(),
+            49464 => "Tamron 70-300mm F4.5-6.3 Di III RXD".to_string(),
+            49465 => "Tamron 17-70mm F2.8 Di III-A VC RXD".to_string(),
+            49466 => "Tamron 150-500mm F5-6.7 Di III VC VXD".to_string(),
+            49467 => "Tamron 11-20mm F2.8 Di III-A RXD".to_string(),
+            49468 => "Tamron 18-300mm F3.5-6.3 Di III-A VC VXD".to_string(),
+            49469 => "Tamron 35-150mm F2-F2.8 Di III VXD".to_string(),
+            49470 => "Tamron 28-75mm F2.8 Di III VXD G2".to_string(),
+            49471 => "Tamron 50-400mm F4.5-6.3 Di III VC VXD".to_string(),
+            49472 => "Tamron 20-40mm F2.8 Di III VXD".to_string(),
+            49473 => "Tamron 17-50mm F4 Di III VXD or Tokina or Viltrox lens".to_string(),
+            49474 => "Tamron 70-180mm F2.8 Di III VXD G2 or Viltrox lens".to_string(),
+            49475 => "Tamron 50-300mm F4.5-6.3 Di III VC VXD".to_string(),
+            49476 => "Tamron 28-300mm F4-7.1 Di III VC VXD".to_string(),
+            49477 => "Tamron 90mm F2.8 Di III Macro VXD".to_string(),
+            49478 => "Tamron 16-30mm F2.8 Di III VXD G2".to_string(),
+            49479 => "Tamron 25-200mm F2.8-5.6 Di III VXD G2".to_string(),
+            49480 => "Tamron 35-100mm F2.8 Di III VXD".to_string(),
+            49712 => "Tokina FiRIN 20mm F2 FE AF".to_string(),
+            49713 => "Tokina FiRIN 100mm F2.8 FE MACRO".to_string(),
+            49714 => "Tokina atx-m 11-18mm F2.8 E".to_string(),
+            50480 => "Sigma 30mm F1.4 DC DN | C".to_string(),
+            50481 => "Sigma 50mm F1.4 DG HSM | A".to_string(),
+            50482 => "Sigma 18-300mm F3.5-6.3 DC MACRO OS HSM | C + MC-11".to_string(),
+            50483 => "Sigma 18-35mm F1.8 DC HSM | A + MC-11".to_string(),
+            50484 => "Sigma 24-35mm F2 DG HSM | A + MC-11".to_string(),
+            50485 => "Sigma 24mm F1.4 DG HSM | A + MC-11".to_string(),
+            50486 => "Sigma 150-600mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+            50487 => "Sigma 20mm F1.4 DG HSM | A + MC-11".to_string(),
+            50488 => "Sigma 35mm F1.4 DG HSM | A".to_string(),
+            50489 => "Sigma 150-600mm F5-6.3 DG OS HSM | S + MC-11".to_string(),
+            50490 => "Sigma 120-300mm F2.8 DG OS HSM | S + MC-11".to_string(),
+            50492 => "Sigma 24-105mm F4 DG OS HSM | A + MC-11".to_string(),
+            50493 => "Sigma 17-70mm F2.8-4 DC MACRO OS HSM | C + MC-11".to_string(),
+            50495 => "Sigma 50-100mm F1.8 DC HSM | A + MC-11".to_string(),
+            50499 => "Sigma 85mm F1.4 DG HSM | A".to_string(),
+            50501 => "Sigma 100-400mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+            50503 => "Sigma 16mm F1.4 DC DN | C".to_string(),
+            50507 => "Sigma 105mm F1.4 DG HSM | A".to_string(),
+            50508 => "Sigma 56mm F1.4 DC DN | C".to_string(),
+            50512 => "Sigma 70-200mm F2.8 DG OS HSM | S + MC-11".to_string(),
+            50513 => "Sigma 70mm F2.8 DG MACRO | A".to_string(),
+            50514 => "Sigma 45mm F2.8 DG DN | C".to_string(),
+            50515 => "Sigma 35mm F1.2 DG DN | A".to_string(),
+            50516 => "Sigma 14-24mm F2.8 DG DN | A".to_string(),
+            50517 => "Sigma 24-70mm F2.8 DG DN | A".to_string(),
+            50518 => "Sigma 100-400mm F5-6.3 DG DN OS | C".to_string(),
+            50521 => "Sigma 85mm F1.4 DG DN | A".to_string(),
+            50522 => "Sigma 105mm F2.8 DG DN MACRO | A".to_string(),
+            50523 => "Sigma 65mm F2 DG DN | C".to_string(),
+            50524 => "Sigma 35mm F2 DG DN | C".to_string(),
+            50525 => "Sigma 24mm F3.5 DG DN | C".to_string(),
+            50526 => "Sigma 28-70mm F2.8 DG DN | C".to_string(),
+            50527 => "Sigma 150-600mm F5-6.3 DG DN OS | S".to_string(),
+            50528 => "Sigma 35mm F1.4 DG DN | A".to_string(),
+            50529 => "Sigma 90mm F2.8 DG DN | C".to_string(),
+            50530 => "Sigma 24mm F2 DG DN | C".to_string(),
+            50531 => "Sigma 18-50mm F2.8 DC DN | C".to_string(),
+            50532 => "Sigma 20mm F2 DG DN | C".to_string(),
+            50533 => "Sigma 16-28mm F2.8 DG DN | C".to_string(),
+            50534 => "Sigma 20mm F1.4 DG DN | A".to_string(),
+            50535 => "Sigma 24mm F1.4 DG DN | A".to_string(),
+            50536 => "Sigma 60-600mm F4.5-6.3 DG DN OS | S".to_string(),
+            50537 => "Sigma 50mm F2 DG DN | C".to_string(),
+            50538 => "Sigma 17mm F4 DG DN | C".to_string(),
+            50539 => "Sigma 50mm F1.4 DG DN | A".to_string(),
+            50540 => "Sigma 14mm F1.4 DG DN | A".to_string(),
+            50543 => "Sigma 70-200mm F2.8 DG DN OS | S".to_string(),
+            50544 => "Sigma 23mm F1.4 DC DN | C".to_string(),
+            50545 => "Sigma 24-70mm F2.8 DG DN II | A".to_string(),
+            50546 => "Sigma 500mm F5.6 DG DN OS | S".to_string(),
+            50547 => "Sigma 10-18mm F2.8 DC DN | C".to_string(),
+            50548 => "Sigma 15mm F1.4 DG DN DIAGONAL FISHEYE | A".to_string(),
+            50549 => "Sigma 50mm F1.2 DG DN | A".to_string(),
+            50550 => "Sigma 28-105mm F2.8 DG DN | A".to_string(),
+            50551 => "Sigma 28-45mm F1.8 DG DN | A".to_string(),
+            50552 => "Sigma 35mm F1.2 DG II | A".to_string(),
+            50553 => "Sigma 300-600mm F4 DG OS | S".to_string(),
+            50554 => "Sigma 16-300mm F3.5-6.7 DC OS | C".to_string(),
+            50555 => "Sigma 12mm F1.4 DC | C".to_string(),
+            50556 => "Sigma 17-40mm F1.8 DC | A".to_string(),
+            50557 => "Sigma 200mm F2 DG OS | S".to_string(),
+            50558 => "Sigma 20-200mm F3.5-6.3 DG | C".to_string(),
+            50559 => "Sigma 135mm F1.4 DG | A".to_string(),
+            50563 => "Sigma 35mm F1.4 DG II | A".to_string(),
+            50564 => "Sigma 15mm F1.4 DC | C".to_string(),
+            50992 => "Voigtlander SUPER WIDE-HELIAR 15mm F4.5 III".to_string(),
+            50993 => "Voigtlander HELIAR-HYPER WIDE 10mm F5.6".to_string(),
+            50994 => "Voigtlander ULTRA WIDE-HELIAR 12mm F5.6 III".to_string(),
+            50995 => "Voigtlander MACRO APO-LANTHAR 65mm F2 Aspherical".to_string(),
+            50996 => "Voigtlander NOKTON 40mm F1.2 Aspherical".to_string(),
+            50997 => "Voigtlander NOKTON classic 35mm F1.4".to_string(),
+            50998 => "Voigtlander MACRO APO-LANTHAR 110mm F2.5".to_string(),
+            50999 => "Voigtlander COLOR-SKOPAR 21mm F3.5 Aspherical".to_string(),
+            51000 => "Voigtlander NOKTON 50mm F1.2 Aspherical".to_string(),
+            51001 => "Voigtlander NOKTON 21mm F1.4 Aspherical".to_string(),
+            51002 => "Voigtlander APO-LANTHAR 50mm F2 Aspherical".to_string(),
+            51003 => "Voigtlander NOKTON 35mm F1.2 Aspherical SE".to_string(),
+            51006 => "Voigtlander APO-LANTHAR 35mm F2 Aspherical".to_string(),
+            51007 => "Voigtlander NOKTON 50mm F1 Aspherical".to_string(),
+            51008 => "Voigtlander NOKTON 75mm F1.5 Aspherical".to_string(),
+            51009 => "Voigtlander NOKTON 28mm F1.5 Aspherical".to_string(),
+            51011 => "Voigtlander APO-LANTHAR 28mm F2 Aspherical".to_string(),
+            51072 => "ZEISS Otus ML 50mm F1.4".to_string(),
+            51073 => "ZEISS Otus ML 85mm F1.4".to_string(),
+            51504 => "Samyang AF 50mm F1.4".to_string(),
+            51505 => "Samyang AF 14mm F2.8 or Samyang AF 35mm F2.8".to_string(),
+            51507 => "Samyang AF 35mm F1.4".to_string(),
+            51508 => "Samyang AF 45mm F1.8".to_string(),
+            51510 => "Samyang AF 18mm F2.8 or Samyang AF 35mm F1.8".to_string(),
+            51512 => "Samyang AF 75mm F1.8".to_string(),
+            51513 => "Samyang AF 35mm F1.8".to_string(),
+            51514 => "Samyang AF 24mm F1.8".to_string(),
+            51515 => "Samyang AF 12mm F2.0".to_string(),
+            51516 => "Samyang AF 24-70mm F2.8".to_string(),
+            51517 => "Samyang AF 50mm F1.4 II".to_string(),
+            51518 => "Samyang AF 135mm F1.8".to_string(),
+            61569 => "LAOWA FFII 10mm F2.8 C&D Dreamer".to_string(),
+            61572 => "LAOWA FFII 12mm F2.8 C&D Dreamer".to_string(),
+            61600 => "Thypoch AF 24-50mm F2.8 FE".to_string(),
+            61760 => "Viltrox 135mm F1.8 FE LAB".to_string(),
+            61761 => "Viltrox 28mm F4.5 FE".to_string(),
+            61762 => "Viltrox 35mm F1.2 FE LAB".to_string(),
+            61763 => "Viltrox 85mm F1.4 FE Pro".to_string(),
+            61766 => "Viltrox 40mm F2.5 FE Air".to_string(),
+            61767 => "Viltrox 50mm F2.0 FE Air".to_string(),
+            61768 => "Viltrox 25mm F1.7 E Air".to_string(),
+            61776 => "Viltrox 50mm F1.4 FE Pro".to_string(),
+            61777 => "Viltrox 9mm F2.8 E Air".to_string(),
+            61778 => "Viltrox 14mm F4.0 FE Air".to_string(),
+            61779 => "Viltrox 56mm F1.2 E Pro".to_string(),
+            61780 => "Viltrox 85mm F2.0 FE EVO".to_string(),
+            61781 => "Viltrox 55mm F1.8 FE EVO".to_string(),
+            61783 => "Viltrox 15mm F1.7 E Air".to_string(),
+            61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("LensType3", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u16_at(data, 0xb) {
+        dm.push(("CameraE-mountVersion", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%x.%.2x\",$val>>8,$val&0xff)", &cv) { cv = x; }
-        tags.push(mk("CameraE-mountVersion", cv.as_string(), raw));
+        tags.push(mk("CameraE-mountVersion", cv.as_string(), raw, GRP2));
+    }
+    if dm_get(&dm, "LensMount") != Some(0.0) {
+        if let Some(v) = u16_at(data, 0xd) {
+            dm.push(("LensE-mountVersion", f64::from(v)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%x.%.2x\",$val>>8,$val&0xff)", &cv) { cv = x; }
+            tags.push(mk("LensE-mountVersion", cv.as_string(), raw, GRP2));
+        }
+    }
+    if dm_get(&dm, "LensMount") != Some(0.0) {
+        if let Some(v) = u16_at(data, 0x14) {
+            dm.push(("LensFirmwareVersion", f64::from(v)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"Ver.%.2x.%.3d\",$val>>8,$val&0xff)", &cv) { cv = x; }
+            tags.push(mk("LensFirmwareVersion", cv.as_string(), raw, GRP2));
+        }
     }
     tags
 }
 
 fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
+    const GRP2: &str = "Image";
     let mut tags = Vec::new();
+    let mut dm: Vec<(&str, f64)> = Vec::new();
+    let _ = &dm;
     if let Some(v) = u8_at(data, 0x0) {
+        dm.push(("Tag9416_0000", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%3d\",$val)", &cv) { cv = x; }
-        tags.push(mk("Tag9416_0000", cv.as_string(), raw));
+        tags.push(mk("Tag9416_0000", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x4) {
+        dm.push(("SonyISO", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyISO", cv.as_string(), raw));
+        tags.push(mk("SonyISO", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x6) {
+        dm.push(("SonyExposureTime2", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(mk("SonyExposureTime2", cv.as_string(), raw));
+        tags.push(mk("SonyExposureTime2", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x10) {
+        dm.push(("SonyFNumber2", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyFNumber2", cv.as_string(), raw));
+        tags.push(mk("SonyFNumber2", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x12) {
+        dm.push(("SonyMaxApertureValue", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(mk("SonyMaxApertureValue", cv.as_string(), raw));
+        tags.push(mk("SonyMaxApertureValue", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u8_at(data, 0x35) {
-        tags.push(mk("ExposureProgram", v.to_string(), Value::I32(v as i32)));
+        dm.push(("ExposureProgram", f64::from(v)));
+        let s = match v as i64 {
+            0 => "Program AE".to_string(),
+            1 => "Aperture-priority AE".to_string(),
+            2 => "Shutter speed priority AE".to_string(),
+            3 => "Manual".to_string(),
+            4 => "Auto".to_string(),
+            5 => "iAuto".to_string(),
+            6 => "Superior Auto".to_string(),
+            7 => "iAuto+".to_string(),
+            8 => "Portrait".to_string(),
+            9 => "Landscape".to_string(),
+            10 => "Twilight".to_string(),
+            11 => "Twilight Portrait".to_string(),
+            12 => "Sunset".to_string(),
+            14 => "Action (High speed)".to_string(),
+            16 => "Sports".to_string(),
+            17 => "Handheld Night Shot".to_string(),
+            18 => "Anti Motion Blur".to_string(),
+            19 => "High Sensitivity".to_string(),
+            21 => "Beach".to_string(),
+            22 => "Snow".to_string(),
+            23 => "Fireworks".to_string(),
+            26 => "Underwater".to_string(),
+            27 => "Gourmet".to_string(),
+            28 => "Pet".to_string(),
+            29 => "Macro".to_string(),
+            30 => "Backlight Correction HDR".to_string(),
+            32 => "Night ... ???".to_string(),
+            33 => "Sweep Panorama".to_string(),
+            36 => "Background Defocus".to_string(),
+            37 => "Soft Skin".to_string(),
+            42 => "3D Image".to_string(),
+            43 => "Cont. Priority AE".to_string(),
+            45 => "Document".to_string(),
+            46 => "Party".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ExposureProgram", s, Value::I32(v as i32), GRP2));
     }
     if let Some(v) = u8_at(data, 0x37) {
+        dm.push(("CreativeStyle", f64::from(v)));
         let s = match v as i64 {
             0 => "Standard".to_string(),
             1 => "Vivid".to_string(),
@@ -2274,10 +5306,11 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             255 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CreativeStyle", s, Value::I32(v as i32)));
+        tags.push(mk("CreativeStyle", s, Value::I32(v as i32), GRP2));
     }
     if !MODEL_RE_44.is_match(model) {
         if let Some(v) = u8_at(data, 0x48) {
+            dm.push(("LensMount", f64::from(v)));
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
                 1 => "A-mount".to_string(),
@@ -2285,28 +5318,332 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
                 3 => "A-mount (3)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("LensMount", s, Value::I32(v as i32)));
+            tags.push(mk("LensMount", s, Value::I32(v as i32), GRP2));
         }
     }
     if !MODEL_RE_44.is_match(model) {
         if let Some(v) = u8_at(data, 0x49) {
+            dm.push(("LensFormat", f64::from(v)));
             let s = match v as i64 {
                 0 => "Unknown".to_string(),
                 1 => "APS-C".to_string(),
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("LensFormat", s, Value::I32(v as i32)));
+            tags.push(mk("LensFormat", s, Value::I32(v as i32), GRP2));
         }
     }
     if let Some(v) = u8_at(data, 0x4a) {
+        dm.push(("LensMount", f64::from(v)));
         let s = match v as i64 {
             0 => "Unknown".to_string(),
             1 => "A-mount".to_string(),
             2 => "E-mount".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensMount", s, Value::I32(v as i32)));
+        tags.push(mk("LensMount", s, Value::I32(v as i32), GRP2));
+    }
+    if dm_get(&dm, "LensMount") == Some(2.0) {
+        if let Some(v) = u16_at(data, 0x4b) {
+            dm.push(("LensType2", f64::from(v)));
+            let s = match v as i64 {
+                0 => "Unknown E-mount lens or other lens".to_string(),
+                1 => "Samyang AF 35mm F1.8".to_string(),
+                2 => "Viltrox 16mm F1.8 FE".to_string(),
+                3 => "Viltrox 23mm F1.4 E".to_string(),
+                4 => "Viltrox 24mm F1.8 FE".to_string(),
+                5 => "Viltrox 28mm F1.8 FE".to_string(),
+                6 => "Viltrox 33mm F1.4 E".to_string(),
+                7 => "Viltrox 35mm F1.8 FE".to_string(),
+                8 => "Viltrox 50mm F1.8 FE".to_string(),
+                9 => "Viltrox 75mm F1.2 E Pro".to_string(),
+                13 => "Samyang AF 35-150mm F2-2.8".to_string(),
+                17 => "Samyang RS 21mm F3.5".to_string(),
+                18 => "Samyang RS 28mm F3.5".to_string(),
+                19 => "Samyang RS 32mm F2.8".to_string(),
+                20 => "Samyang AF 35mm F1.4 P FE".to_string(),
+                21 => "Samyang AF 14-24mm F2.8".to_string(),
+                22 => "Samyang AF 24-60mm F2.8".to_string(),
+                24 => "Samyang AF 85mm F1.8 P FE".to_string(),
+                44 => "Metabones Canon EF Smart Adapter".to_string(),
+                78 => "Metabones Canon EF Smart Adapter Mark III or Other Adapter".to_string(),
+                184 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                234 => "Metabones Canon EF Smart Adapter Mark IV".to_string(),
+                239 => "Metabones Canon EF Speed Booster".to_string(),
+                24593 => "LA-EA4r MonsterAdapter".to_string(),
+                32784 => "Sony E 16mm F2.8".to_string(),
+                32785 => "Sony E 18-55mm F3.5-5.6 OSS".to_string(),
+                32786 => "Sony E 55-210mm F4.5-6.3 OSS".to_string(),
+                32787 => "Sony E 18-200mm F3.5-6.3 OSS".to_string(),
+                32788 => "Sony E 30mm F3.5 Macro".to_string(),
+                32789 => "Sony E 24mm F1.8 ZA or Samyang AF 50mm F1.4".to_string(),
+                32790 => "Sony E 50mm F1.8 OSS or Samyang AF 14mm F2.8".to_string(),
+                32791 => "Sony E 16-70mm F4 ZA OSS".to_string(),
+                32792 => "Sony E 10-18mm F4 OSS".to_string(),
+                32793 => "Sony E PZ 16-50mm F3.5-5.6 OSS".to_string(),
+                32794 => "Sony FE 35mm F2.8 ZA or Samyang Lens".to_string(),
+                32795 => "Sony FE 24-70mm F4 ZA OSS".to_string(),
+                32796 => "Sony FE 85mm F1.8 or Viltrox PFU RBMH 85mm F1.8".to_string(),
+                32797 => "Sony E 18-200mm F3.5-6.3 OSS LE".to_string(),
+                32798 => "Sony E 20mm F2.8".to_string(),
+                32799 => "Sony E 35mm F1.8 OSS".to_string(),
+                32800 => "Sony E PZ 18-105mm F4 G OSS".to_string(),
+                32801 => "Sony FE 12-24mm F4 G".to_string(),
+                32802 => "Sony FE 90mm F2.8 Macro G OSS".to_string(),
+                32803 => "Sony E 18-50mm F4-5.6".to_string(),
+                32804 => "Sony FE 24mm F1.4 GM".to_string(),
+                32805 => "Sony FE 24-105mm F4 G OSS".to_string(),
+                32807 => "Sony E PZ 18-200mm F3.5-6.3 OSS".to_string(),
+                32808 => "Sony FE 55mm F1.8 ZA".to_string(),
+                32810 => "Sony FE 70-200mm F4 G OSS".to_string(),
+                32811 => "Sony FE 16-35mm F4 ZA OSS".to_string(),
+                32812 => "Sony FE 50mm F2.8 Macro".to_string(),
+                32813 => "Sony FE 28-70mm F3.5-5.6 OSS".to_string(),
+                32814 => "Sony FE 35mm F1.4 ZA".to_string(),
+                32815 => "Sony FE 24-240mm F3.5-6.3 OSS".to_string(),
+                32816 => "Sony FE 28mm F2".to_string(),
+                32817 => "Sony FE PZ 28-135mm F4 G OSS".to_string(),
+                32819 => "Sony FE 100mm F2.8 STF GM OSS".to_string(),
+                32820 => "Sony E PZ 18-110mm F4 G OSS".to_string(),
+                32821 => "Sony FE 24-70mm F2.8 GM".to_string(),
+                32822 => "Sony FE 50mm F1.4 ZA".to_string(),
+                32823 => "Sony FE 85mm F1.4 GM or Samyang AF 85mm F1.4".to_string(),
+                32824 => "Sony FE 50mm F1.8".to_string(),
+                32826 => "Sony FE 21mm F2.8 (SEL28F20 + SEL075UWC)".to_string(),
+                32827 => "Sony FE 16mm F3.5 Fisheye (SEL28F20 + SEL057FEC)".to_string(),
+                32828 => "Sony FE 70-300mm F4.5-5.6 G OSS".to_string(),
+                32829 => "Sony FE 100-400mm F4.5-5.6 GM OSS".to_string(),
+                32830 => "Sony FE 70-200mm F2.8 GM OSS".to_string(),
+                32831 => "Sony FE 16-35mm F2.8 GM".to_string(),
+                32848 => "Sony FE 400mm F2.8 GM OSS".to_string(),
+                32849 => "Sony E 18-135mm F3.5-5.6 OSS".to_string(),
+                32850 => "Sony FE 135mm F1.8 GM".to_string(),
+                32851 => "Sony FE 200-600mm F5.6-6.3 G OSS".to_string(),
+                32852 => "Sony FE 600mm F4 GM OSS".to_string(),
+                32853 => "Sony E 16-55mm F2.8 G".to_string(),
+                32854 => "Sony E 70-350mm F4.5-6.3 G OSS".to_string(),
+                32855 => "Sony FE C 16-35mm T3.1 G".to_string(),
+                32858 => "Sony FE 35mm F1.8".to_string(),
+                32859 => "Sony FE 20mm F1.8 G".to_string(),
+                32860 => "Sony FE 12-24mm F2.8 GM".to_string(),
+                32862 => "Sony FE 50mm F1.2 GM".to_string(),
+                32863 => "Sony FE 14mm F1.8 GM".to_string(),
+                32864 => "Sony FE 28-60mm F4-5.6".to_string(),
+                32865 => "Sony FE 35mm F1.4 GM".to_string(),
+                32866 => "Sony FE 24mm F2.8 G".to_string(),
+                32867 => "Sony FE 40mm F2.5 G".to_string(),
+                32868 => "Sony FE 50mm F2.5 G".to_string(),
+                32871 => "Sony FE PZ 16-35mm F4 G".to_string(),
+                32873 => "Sony E PZ 10-20mm F4 G".to_string(),
+                32874 => "Sony FE 70-200mm F2.8 GM OSS II".to_string(),
+                32875 => "Sony FE 24-70mm F2.8 GM II".to_string(),
+                32876 => "Sony E 11mm F1.8".to_string(),
+                32877 => "Sony E 15mm F1.4 G".to_string(),
+                32878 => "Sony FE 20-70mm F4 G".to_string(),
+                32879 => "Sony FE 50mm F1.4 GM".to_string(),
+                32880 => "Sony FE 16mm F1.8 G".to_string(),
+                32881 => "Sony FE 24-50mm F2.8 G".to_string(),
+                32882 => "Sony FE 16-25mm F2.8 G".to_string(),
+                32884 => "Sony FE 70-200mm F4 Macro G OSS II".to_string(),
+                32885 => "Sony FE 16-35mm F2.8 GM II".to_string(),
+                32886 => "Sony FE 300mm F2.8 GM OSS".to_string(),
+                32887 => "Sony E PZ 16-50mm F3.5-5.6 OSS II".to_string(),
+                32888 => "Sony FE 85mm F1.4 GM II".to_string(),
+                32889 => "Sony FE 28-70mm F2 GM".to_string(),
+                32890 => "Sony FE 400-800mm F6.3-8 G OSS".to_string(),
+                32891 => "Sony FE 50-150mm F2 GM".to_string(),
+                32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
+                32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
+                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
+                33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
+                33077 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 1.4X Teleconverter".to_string(),
+                33078 => "Sony FE 100-400mm F4.5-5.6 GM OSS + 2X Teleconverter".to_string(),
+                33079 => "Sony FE 400mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33080 => "Sony FE 400mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33081 => "Sony FE 200-600mm F5.6-6.3 G OSS + 1.4X Teleconverter".to_string(),
+                33082 => "Sony FE 200-600mm F5.6-6.3 G OSS + 2X Teleconverter".to_string(),
+                33083 => "Sony FE 600mm F4 GM OSS + 1.4X Teleconverter".to_string(),
+                33084 => "Sony FE 600mm F4 GM OSS + 2X Teleconverter".to_string(),
+                33085 => "Sony FE 70-200mm F2.8 GM OSS II + 1.4X Teleconverter".to_string(),
+                33086 => "Sony FE 70-200mm F2.8 GM OSS II + 2X Teleconverter".to_string(),
+                33087 => "Sony FE 70-200mm F4 Macro G OSS II + 1.4X Teleconverter".to_string(),
+                33088 => "Sony FE 70-200mm F4 Macro G OSS II + 2X Teleconverter".to_string(),
+                33089 => "Sony FE 300mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
+                33090 => "Sony FE 300mm F2.8 GM OSS + 2X Teleconverter".to_string(),
+                33091 => "Sony FE 400-800mm F6.3-8 G OSS + 1.4X Teleconverter".to_string(),
+                33092 => "Sony FE 400-800mm F6.3-8 G OSS + 2X Teleconverter".to_string(),
+                33093 => "Sony FE 100mm F2.8 Macro GM OSS + 1.4X Teleconverter".to_string(),
+                33094 => "Sony FE 100mm F2.8 Macro GM OSS + 2X Teleconverter".to_string(),
+                33095 => "Sony FE 100-400mm F4.5 GM OSS + 1.4X Teleconverter".to_string(),
+                33096 => "Sony FE 100-400mm F4.5 GM OSS + 2X Teleconverter".to_string(),
+                49201 => "Zeiss Touit 12mm F2.8 or other Touit lens".to_string(),
+                49202 => "Zeiss Touit 32mm F1.8".to_string(),
+                49203 => "Zeiss Touit 50mm F2.8 Macro".to_string(),
+                49216 => "Zeiss Batis 25mm F2".to_string(),
+                49217 => "Zeiss Batis 85mm F1.8".to_string(),
+                49218 => "Zeiss Batis 18mm F2.8".to_string(),
+                49219 => "Zeiss Batis 135mm F2.8".to_string(),
+                49220 => "Zeiss Batis 40mm F2 CF".to_string(),
+                49232 => "Zeiss Loxia 50mm F2".to_string(),
+                49233 => "Zeiss Loxia 35mm F2".to_string(),
+                49234 => "Zeiss Loxia 21mm F2.8".to_string(),
+                49235 => "Zeiss Loxia 85mm F2.4".to_string(),
+                49236 => "Zeiss Loxia 25mm F2.4".to_string(),
+                49456 => "Tamron E 18-200mm F3.5-6.3 Di III VC".to_string(),
+                49457 => "Tamron 28-75mm F2.8 Di III RXD".to_string(),
+                49458 => "Tamron 17-28mm F2.8 Di III RXD".to_string(),
+                49459 => "Tamron 35mm F2.8 Di III OSD M1:2".to_string(),
+                49460 => "Tamron 24mm F2.8 Di III OSD M1:2".to_string(),
+                49461 => "Tamron 20mm F2.8 Di III OSD M1:2".to_string(),
+                49462 => "Tamron 70-180mm F2.8 Di III VXD".to_string(),
+                49463 => "Tamron 28-200mm F2.8-5.6 Di III RXD".to_string(),
+                49464 => "Tamron 70-300mm F4.5-6.3 Di III RXD".to_string(),
+                49465 => "Tamron 17-70mm F2.8 Di III-A VC RXD".to_string(),
+                49466 => "Tamron 150-500mm F5-6.7 Di III VC VXD".to_string(),
+                49467 => "Tamron 11-20mm F2.8 Di III-A RXD".to_string(),
+                49468 => "Tamron 18-300mm F3.5-6.3 Di III-A VC VXD".to_string(),
+                49469 => "Tamron 35-150mm F2-F2.8 Di III VXD".to_string(),
+                49470 => "Tamron 28-75mm F2.8 Di III VXD G2".to_string(),
+                49471 => "Tamron 50-400mm F4.5-6.3 Di III VC VXD".to_string(),
+                49472 => "Tamron 20-40mm F2.8 Di III VXD".to_string(),
+                49473 => "Tamron 17-50mm F4 Di III VXD or Tokina or Viltrox lens".to_string(),
+                49474 => "Tamron 70-180mm F2.8 Di III VXD G2 or Viltrox lens".to_string(),
+                49475 => "Tamron 50-300mm F4.5-6.3 Di III VC VXD".to_string(),
+                49476 => "Tamron 28-300mm F4-7.1 Di III VC VXD".to_string(),
+                49477 => "Tamron 90mm F2.8 Di III Macro VXD".to_string(),
+                49478 => "Tamron 16-30mm F2.8 Di III VXD G2".to_string(),
+                49479 => "Tamron 25-200mm F2.8-5.6 Di III VXD G2".to_string(),
+                49480 => "Tamron 35-100mm F2.8 Di III VXD".to_string(),
+                49712 => "Tokina FiRIN 20mm F2 FE AF".to_string(),
+                49713 => "Tokina FiRIN 100mm F2.8 FE MACRO".to_string(),
+                49714 => "Tokina atx-m 11-18mm F2.8 E".to_string(),
+                50480 => "Sigma 30mm F1.4 DC DN | C".to_string(),
+                50481 => "Sigma 50mm F1.4 DG HSM | A".to_string(),
+                50482 => "Sigma 18-300mm F3.5-6.3 DC MACRO OS HSM | C + MC-11".to_string(),
+                50483 => "Sigma 18-35mm F1.8 DC HSM | A + MC-11".to_string(),
+                50484 => "Sigma 24-35mm F2 DG HSM | A + MC-11".to_string(),
+                50485 => "Sigma 24mm F1.4 DG HSM | A + MC-11".to_string(),
+                50486 => "Sigma 150-600mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50487 => "Sigma 20mm F1.4 DG HSM | A + MC-11".to_string(),
+                50488 => "Sigma 35mm F1.4 DG HSM | A".to_string(),
+                50489 => "Sigma 150-600mm F5-6.3 DG OS HSM | S + MC-11".to_string(),
+                50490 => "Sigma 120-300mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50492 => "Sigma 24-105mm F4 DG OS HSM | A + MC-11".to_string(),
+                50493 => "Sigma 17-70mm F2.8-4 DC MACRO OS HSM | C + MC-11".to_string(),
+                50495 => "Sigma 50-100mm F1.8 DC HSM | A + MC-11".to_string(),
+                50499 => "Sigma 85mm F1.4 DG HSM | A".to_string(),
+                50501 => "Sigma 100-400mm F5-6.3 DG OS HSM | C + MC-11".to_string(),
+                50503 => "Sigma 16mm F1.4 DC DN | C".to_string(),
+                50507 => "Sigma 105mm F1.4 DG HSM | A".to_string(),
+                50508 => "Sigma 56mm F1.4 DC DN | C".to_string(),
+                50512 => "Sigma 70-200mm F2.8 DG OS HSM | S + MC-11".to_string(),
+                50513 => "Sigma 70mm F2.8 DG MACRO | A".to_string(),
+                50514 => "Sigma 45mm F2.8 DG DN | C".to_string(),
+                50515 => "Sigma 35mm F1.2 DG DN | A".to_string(),
+                50516 => "Sigma 14-24mm F2.8 DG DN | A".to_string(),
+                50517 => "Sigma 24-70mm F2.8 DG DN | A".to_string(),
+                50518 => "Sigma 100-400mm F5-6.3 DG DN OS | C".to_string(),
+                50521 => "Sigma 85mm F1.4 DG DN | A".to_string(),
+                50522 => "Sigma 105mm F2.8 DG DN MACRO | A".to_string(),
+                50523 => "Sigma 65mm F2 DG DN | C".to_string(),
+                50524 => "Sigma 35mm F2 DG DN | C".to_string(),
+                50525 => "Sigma 24mm F3.5 DG DN | C".to_string(),
+                50526 => "Sigma 28-70mm F2.8 DG DN | C".to_string(),
+                50527 => "Sigma 150-600mm F5-6.3 DG DN OS | S".to_string(),
+                50528 => "Sigma 35mm F1.4 DG DN | A".to_string(),
+                50529 => "Sigma 90mm F2.8 DG DN | C".to_string(),
+                50530 => "Sigma 24mm F2 DG DN | C".to_string(),
+                50531 => "Sigma 18-50mm F2.8 DC DN | C".to_string(),
+                50532 => "Sigma 20mm F2 DG DN | C".to_string(),
+                50533 => "Sigma 16-28mm F2.8 DG DN | C".to_string(),
+                50534 => "Sigma 20mm F1.4 DG DN | A".to_string(),
+                50535 => "Sigma 24mm F1.4 DG DN | A".to_string(),
+                50536 => "Sigma 60-600mm F4.5-6.3 DG DN OS | S".to_string(),
+                50537 => "Sigma 50mm F2 DG DN | C".to_string(),
+                50538 => "Sigma 17mm F4 DG DN | C".to_string(),
+                50539 => "Sigma 50mm F1.4 DG DN | A".to_string(),
+                50540 => "Sigma 14mm F1.4 DG DN | A".to_string(),
+                50543 => "Sigma 70-200mm F2.8 DG DN OS | S".to_string(),
+                50544 => "Sigma 23mm F1.4 DC DN | C".to_string(),
+                50545 => "Sigma 24-70mm F2.8 DG DN II | A".to_string(),
+                50546 => "Sigma 500mm F5.6 DG DN OS | S".to_string(),
+                50547 => "Sigma 10-18mm F2.8 DC DN | C".to_string(),
+                50548 => "Sigma 15mm F1.4 DG DN DIAGONAL FISHEYE | A".to_string(),
+                50549 => "Sigma 50mm F1.2 DG DN | A".to_string(),
+                50550 => "Sigma 28-105mm F2.8 DG DN | A".to_string(),
+                50551 => "Sigma 28-45mm F1.8 DG DN | A".to_string(),
+                50552 => "Sigma 35mm F1.2 DG II | A".to_string(),
+                50553 => "Sigma 300-600mm F4 DG OS | S".to_string(),
+                50554 => "Sigma 16-300mm F3.5-6.7 DC OS | C".to_string(),
+                50555 => "Sigma 12mm F1.4 DC | C".to_string(),
+                50556 => "Sigma 17-40mm F1.8 DC | A".to_string(),
+                50557 => "Sigma 200mm F2 DG OS | S".to_string(),
+                50558 => "Sigma 20-200mm F3.5-6.3 DG | C".to_string(),
+                50559 => "Sigma 135mm F1.4 DG | A".to_string(),
+                50563 => "Sigma 35mm F1.4 DG II | A".to_string(),
+                50564 => "Sigma 15mm F1.4 DC | C".to_string(),
+                50992 => "Voigtlander SUPER WIDE-HELIAR 15mm F4.5 III".to_string(),
+                50993 => "Voigtlander HELIAR-HYPER WIDE 10mm F5.6".to_string(),
+                50994 => "Voigtlander ULTRA WIDE-HELIAR 12mm F5.6 III".to_string(),
+                50995 => "Voigtlander MACRO APO-LANTHAR 65mm F2 Aspherical".to_string(),
+                50996 => "Voigtlander NOKTON 40mm F1.2 Aspherical".to_string(),
+                50997 => "Voigtlander NOKTON classic 35mm F1.4".to_string(),
+                50998 => "Voigtlander MACRO APO-LANTHAR 110mm F2.5".to_string(),
+                50999 => "Voigtlander COLOR-SKOPAR 21mm F3.5 Aspherical".to_string(),
+                51000 => "Voigtlander NOKTON 50mm F1.2 Aspherical".to_string(),
+                51001 => "Voigtlander NOKTON 21mm F1.4 Aspherical".to_string(),
+                51002 => "Voigtlander APO-LANTHAR 50mm F2 Aspherical".to_string(),
+                51003 => "Voigtlander NOKTON 35mm F1.2 Aspherical SE".to_string(),
+                51006 => "Voigtlander APO-LANTHAR 35mm F2 Aspherical".to_string(),
+                51007 => "Voigtlander NOKTON 50mm F1 Aspherical".to_string(),
+                51008 => "Voigtlander NOKTON 75mm F1.5 Aspherical".to_string(),
+                51009 => "Voigtlander NOKTON 28mm F1.5 Aspherical".to_string(),
+                51011 => "Voigtlander APO-LANTHAR 28mm F2 Aspherical".to_string(),
+                51072 => "ZEISS Otus ML 50mm F1.4".to_string(),
+                51073 => "ZEISS Otus ML 85mm F1.4".to_string(),
+                51504 => "Samyang AF 50mm F1.4".to_string(),
+                51505 => "Samyang AF 14mm F2.8 or Samyang AF 35mm F2.8".to_string(),
+                51507 => "Samyang AF 35mm F1.4".to_string(),
+                51508 => "Samyang AF 45mm F1.8".to_string(),
+                51510 => "Samyang AF 18mm F2.8 or Samyang AF 35mm F1.8".to_string(),
+                51512 => "Samyang AF 75mm F1.8".to_string(),
+                51513 => "Samyang AF 35mm F1.8".to_string(),
+                51514 => "Samyang AF 24mm F1.8".to_string(),
+                51515 => "Samyang AF 12mm F2.0".to_string(),
+                51516 => "Samyang AF 24-70mm F2.8".to_string(),
+                51517 => "Samyang AF 50mm F1.4 II".to_string(),
+                51518 => "Samyang AF 135mm F1.8".to_string(),
+                61569 => "LAOWA FFII 10mm F2.8 C&D Dreamer".to_string(),
+                61572 => "LAOWA FFII 12mm F2.8 C&D Dreamer".to_string(),
+                61600 => "Thypoch AF 24-50mm F2.8 FE".to_string(),
+                61760 => "Viltrox 135mm F1.8 FE LAB".to_string(),
+                61761 => "Viltrox 28mm F4.5 FE".to_string(),
+                61762 => "Viltrox 35mm F1.2 FE LAB".to_string(),
+                61763 => "Viltrox 85mm F1.4 FE Pro".to_string(),
+                61766 => "Viltrox 40mm F2.5 FE Air".to_string(),
+                61767 => "Viltrox 50mm F2.0 FE Air".to_string(),
+                61768 => "Viltrox 25mm F1.7 E Air".to_string(),
+                61776 => "Viltrox 50mm F1.4 FE Pro".to_string(),
+                61777 => "Viltrox 9mm F2.8 E Air".to_string(),
+                61778 => "Viltrox 14mm F4.0 FE Air".to_string(),
+                61779 => "Viltrox 56mm F1.2 E Pro".to_string(),
+                61780 => "Viltrox 85mm F2.0 FE EVO".to_string(),
+                61781 => "Viltrox 55mm F1.8 FE EVO".to_string(),
+                61783 => "Viltrox 15mm F1.7 E Air".to_string(),
+                61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("LensType2", s, Value::I32(v as i32), GRP2));
+        }
+    }
+    if dm_get(&dm, "LensMount") == Some(1.0) {
+        if let Some(v) = u16_at(data, 0x4d) {
+            dm.push(("LensType", f64::from(v)));
+            tags.push(mk("LensType", v.to_string(), Value::I32(v as i32), GRP2));
+        }
     }
     {
         let mut parts = Vec::new();
@@ -2318,29 +5655,32 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s)));
+            tags.push(mk("DistortionCorrParams", s.clone(), Value::String(s), GRP2));
         }
     }
     if let Some(v) = u16_at(data, 0x70) {
+        dm.push(("FocalLength", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("FocalLength", cv.as_string(), raw));
+        tags.push(mk("FocalLength", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x73) {
+        dm.push(("MinFocalLength", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("MinFocalLength", cv.as_string(), raw));
+        tags.push(mk("MinFocalLength", cv.as_string(), raw, GRP2));
     }
     if let Some(v) = u16_at(data, 0x75) {
+        dm.push(("MaxFocalLength", f64::from(v)));
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(mk("MaxFocalLength", cv.as_string(), raw));
+        tags.push(mk("MaxFocalLength", cv.as_string(), raw, GRP2));
     }
     if MODEL_RE_45.is_match(model) {
         {
@@ -2353,7 +5693,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2368,28 +5708,30 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
     if MODEL_RE_47.is_match(model) {
         if let Some(v) = u8_at(data, 0x74a) {
+            dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
                 0 => "Off".to_string(),
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
+            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_48.is_match(model) {
         if let Some(v) = u8_at(data, 0x74f) {
+            dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
                 0 => "Off".to_string(),
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
+            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_47.is_match(model) {
@@ -2403,7 +5745,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2418,7 +5760,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2433,7 +5775,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2448,7 +5790,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2463,38 +5805,41 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("VignettingCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
     if MODEL_RE_49.is_match(model) {
         if let Some(v) = u8_at(data, 0x8b5) {
+            dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
                 0 => "Off".to_string(),
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
+            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_50.is_match(model) {
         if let Some(v) = u8_at(data, 0x8b7) {
+            dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
                 0 => "Off".to_string(),
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
+            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_52.is_match(model) {
         if let Some(v) = u8_at(data, 0x8e5) {
+            dm.push(("APS-CSizeCapture", f64::from(v)));
             let s = match v as i64 {
                 0 => "Off".to_string(),
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32)));
+            tags.push(mk("APS-CSizeCapture", s, Value::I32(v as i32), GRP2));
         }
     }
     if MODEL_RE_49.is_match(model) {
@@ -2508,7 +5853,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2523,7 +5868,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }
@@ -2538,7 +5883,7 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s)));
+                tags.push(mk("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2));
             }
         }
     }

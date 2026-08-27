@@ -80,8 +80,6 @@ SonyILCE9.arw::Sony:LensFirmwareVersion
 SonyILCE9.arw::Sony:LensSpec
 SonyILCE9.arw::Sony:LensSpecFeatures
 SonyILCE9.arw::Sony:LensType
-SonyILCE9.arw::Sony:LensType2
-SonyILCE9.arw::Sony:LensType3
 SonyILCE9.arw::Sony:MetaVersion
 SonyILCE9.arw::Sony:Panorama
 SonyILCE9.arw::Sony:PictureEffect2

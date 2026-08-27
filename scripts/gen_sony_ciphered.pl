@@ -31,7 +31,7 @@ my ($et_version) = $src =~ /\$VERSION\s*=\s*'([^']+)'/;
 # `%releaseMode2,` on a line of its own. Collect those so a reference resolves
 # instead of yielding a bare number where ExifTool prints a phrase.
 my %shared;
-while ($src =~ /^my %(\w+)\s*=\s*\((.*?)\n\);/gms) {
+while ($src =~ /^(?:my\s+)?%(\w+)\s*=\s*\((.*?)\n\);/gms) {
     $shared{$1} = $2;
 }
 
@@ -59,6 +59,11 @@ my %WIDTH = (
 
 while ($src =~ /^%Image::ExifTool::Sony::(Tag(?:2010[a-z]?|9050[a-z]?|94[0-9a-f]{2}[a-z]?))\s*=\s*\((.*?)\n\);/gms) {
     my ($table, $body) = ($1, $2);
+
+    # Each of these tables declares its own family-2 default, and it is Image
+    # rather than the Camera one might assume: these are properties of the shot.
+    my ($grp2) = $body =~ /GROUPS\s*=>\s*\{[^}]*2\s*=>\s*'(\w+)'/;
+    $grp2 ||= 'Camera';
 
     my ($fmt) = $body =~ /FORMAT\s*=>\s*'(\w+)'/;
     $fmt ||= 'int8u';
@@ -113,6 +118,11 @@ while ($src =~ /^%Image::ExifTool::Sony::(Tag(?:2010[a-z]?|9050[a-z]?|94[0-9a-f]
                 }
                 $pat =~ s/\\b/\\b/g;   # regex-lite understands \b
                 $re = re_id($pat);
+            } elsif ($cond =~ /^\s*\$\$self\{(\w+)\}\s*(==|!=)\s*(\d+)\s*$/) {
+                # A DATAMEMBER set by an earlier field of this same table:
+                # LensMount is read at 0x0105 and decides how 0x0107 is named.
+                # Fields are emitted in offset order, so the value is there.
+                $re = { dm => $1, op => $2, num => $3 };
             } else {
                 push @skipped, "$table 0x" . sprintf('%04x', $off) . " $name: condition needs parse state -- $cond";
                 next;
@@ -127,6 +137,10 @@ while ($src =~ /^%Image::ExifTool::Sony::(Tag(?:2010[a-z]?|9050[a-z]?|94[0-9a-f]
             # Short tables are written on one line: { 0 => 'No', 1 => 'Yes'}.
             # Requiring a multi-line block left those printing raw numbers.
             $conv_src = $1;
+        } elsif ($fb =~ /PrintConv\s*=>\s*\\%(\w+)/ and exists $shared{$1}) {
+            # A reference to a shared table, such as the 313-entry lens list.
+            # Without following it a lens prints as 49475 instead of its name.
+            $conv_src = $shared{$1};
         } elsif ($fb =~ /^\s+%(\w+),\s*$/m and exists $shared{$1}) {
             my $body = $shared{$1};
             ($conv_src) = $body =~ /PrintConv\s*=>\s*\{(.*?)\n\s{4}\}/s;
@@ -156,7 +170,7 @@ while ($src =~ /^%Image::ExifTool::Sony::(Tag(?:2010[a-z]?|9050[a-z]?|94[0-9a-f]
     }
 
     next unless @fields;
-    push @tables, { name => $table, unit => $unit, fields => \@fields };
+    push @tables, { name => $table, unit => $unit, fields => \@fields, grp2 => $grp2 };
 }
 
 # ------------------------------------------------- variant selection (Main)
@@ -247,7 +261,21 @@ fn i32_at(d: &[u8], o: usize) -> Option<i32> {
     Some(i32::from_le_bytes([*d.get(o)?, *d.get(o + 1)?, *d.get(o + 2)?, *d.get(o + 3)?]))
 }
 
-fn mk(name: &str, print_value: String, raw: Value) -> Tag {
+/// The most recent value read under this name in the table being decoded.
+///
+/// ExifTool calls these DATAMEMBERs: a field stores its value so a later field
+/// can be conditioned on it, which is how one offset holds LensType2 on an
+/// E-mount body and LensType on an A-mount one.
+fn dm_get(dm: &[(&str, f64)], name: &str) -> Option<f64> {
+    dm.iter().rev().find(|(n, _)| *n == name).map(|(_, v)| *v)
+}
+
+fn mk(name: &str, print_value: String, raw: Value, default_group2: &'static str) -> Tag {
+    // Each table declares its own family-2 default -- Image for these -- and a
+    // few tags override it. Stamping them all the same put two of them in the
+    // wrong category.
+    let family2 = crate::tags::group2::family2_for("MakerNotes", "Sony", name, default_group2)
+        .unwrap_or(default_group2);
     Tag {
         id: TagId::Text(name.to_string()),
         name: name.to_string(),
@@ -255,7 +283,7 @@ fn mk(name: &str, print_value: String, raw: Value) -> Tag {
         group: TagGroup {
             family0: "MakerNotes".into(),
             family1: "Sony".into(),
-            family2: "Camera".into(),
+            family2: family2.into(),
             family3: crate::tag::MAIN_DOCUMENT.into(),
         },
         raw_value: raw,
@@ -299,14 +327,22 @@ print "        _ => None,\n    }\n}\n\n";
 
 for my $t (@tables) {
     printf "fn %s(data: &[u8], model: &str) -> Vec<Tag> {\n", lc $t->{name};
+    printf "    const GRP2: &str = \"%s\";\n", $t->{grp2};
     print  "    let _ = model;\n" unless grep { defined $_->{re} } @{$t->{fields}};
     print  "    let mut tags = Vec::new();\n";
+    print  "    let mut dm: Vec<(&str, f64)> = Vec::new();\n";
+    print  "    let _ = &dm;\n";
     for my $f (sort { $a->{off} <=> $b->{off} } @{$t->{fields}}) {
         my $reader = { int8u => 'u8_at', int8s => 'i8_at', int16u => 'u16_at',
                        int16s => 'i16_at', int32u => 'u32_at', int32s => 'i32_at' }->{$f->{fmt}};
         my $ind = "    ";
         if (defined $f->{re}) {
-            printf "%sif %sMODEL_RE_%d.is_match(model) {\n", $ind, ($f->{neg} ? '!' : ''), $f->{re};
+            if (ref $f->{re} eq 'HASH') {
+                printf "%sif dm_get(&dm, \"%s\") %s Some(%s.0) {\n",
+                    $ind, $f->{re}{dm}, ($f->{re}{op} eq '==' ? '==' : '!='), $f->{re}{num};
+            } else {
+                printf "%sif %sMODEL_RE_%d.is_match(model) {\n", $ind, ($f->{neg} ? '!' : ''), $f->{re};
+            }
             $ind = "        ";
         }
         if (($f->{n} // 1) > 1) {
@@ -323,16 +359,17 @@ for my $t (@tables) {
             if (defined $f->{pconv} and $f->{pconv} =~ /unpack\s+"H\*"/) {
                 # `unpack "H*", pack "C*", split " ", $val`: the bytes as hex.
                 printf "%s        let hex: String = parts.iter().map(|p| format!(\"{:02x}\", p.parse::<u32>().unwrap_or(0))).collect();\n", $ind;
-                printf "%s        tags.push(mk(\"%s\", hex, Value::String(%s)));\n", $ind, $f->{name}, $joined;
+                printf "%s        tags.push(mk(\"%s\", hex, Value::String(%s), GRP2));\n", $ind, $f->{name}, $joined;
             } else {
                 printf "%s        let s = %s;\n", $ind, $joined;
-                printf "%s        tags.push(mk(\"%s\", s.clone(), Value::String(s)));\n", $ind, $f->{name};
+                printf "%s        tags.push(mk(\"%s\", s.clone(), Value::String(s), GRP2));\n", $ind, $f->{name};
             }
             printf "%s    }\n%s}\n", $ind, $ind;
             print  "    }\n" if defined $f->{re};
             next;
         }
         printf "%sif let Some(v) = %s(data, 0x%x) {\n", $ind, $reader, $f->{off};
+        printf "%s    dm.push((\"%s\", f64::from(v)));\n", $ind, $f->{name};
         my %conv = %{$f->{conv}};
         if (%conv) {
             printf "%s    let s = match v as i64 {\n", $ind;
@@ -343,7 +380,7 @@ for my $t (@tables) {
             }
             printf "%s        other => other.to_string(),\n", $ind;
             printf "%s    };\n", $ind;
-            printf "%s    tags.push(mk(\"%s\", s, Value::I32(v as i32)));\n", $ind, $f->{name};
+            printf "%s    tags.push(mk(\"%s\", s, Value::I32(v as i32), GRP2));\n", $ind, $f->{name};
         } elsif (defined $f->{vconv} or defined $f->{pconv}) {
             my $esc = sub { my $t = shift; $t =~ s/\\/\\\\/g; $t =~ s/"/\\"/g; $t };
             printf "%s    let mut cv = Conv::Num(f64::from(v));\n", $ind;
@@ -356,9 +393,9 @@ for my $t (@tables) {
                 printf "%s    if let Some(x) = conv_expr::eval(\"%s\", &cv) { cv = x; }\n",
                     $ind, $esc->($f->{pconv});
             }
-            printf "%s    tags.push(mk(\"%s\", cv.as_string(), raw));\n", $ind, $f->{name};
+            printf "%s    tags.push(mk(\"%s\", cv.as_string(), raw, GRP2));\n", $ind, $f->{name};
         } else {
-            printf "%s    tags.push(mk(\"%s\", v.to_string(), Value::I32(v as i32)));\n", $ind, $f->{name};
+            printf "%s    tags.push(mk(\"%s\", v.to_string(), Value::I32(v as i32), GRP2));\n", $ind, $f->{name};
         }
         printf "%s}\n", $ind;
         print  "    }\n" if defined $f->{re};

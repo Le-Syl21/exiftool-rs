@@ -47,10 +47,7 @@ SonyILCE9.arw	missing	HDRSetting
 SonyILCE9.arw	missing	ISOAutoMax
 SonyILCE9.arw	missing	ISOAutoMin
 SonyILCE9.arw	missing	ISOSetting
-SonyILCE9.arw	missing	LensE-mountVersion
-SonyILCE9.arw	missing	LensFirmwareVersion
 SonyILCE9.arw	missing	LensSpecFeatures
-SonyILCE9.arw	missing	LensType2
 SonyILCE9.arw	missing	MetaVersion
 SonyILCE9.arw	missing	PictureEffect2
 SonyILCE9.arw	missing	PictureProfile
