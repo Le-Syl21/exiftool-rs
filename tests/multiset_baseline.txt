@@ -21,7 +21,6 @@ SonyILCE9.arw	default	extra	0	ColorTemperature	0
 SonyILCE9.arw	default	extra	0	FileFormat	(Binary data 4 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	FullImageSize	4000x6000
 SonyILCE9.arw	default	extra	0	HDR	Off
-SonyILCE9.arw	default	extra	0	HighISONoiseReduction2	n/a
 SonyILCE9.arw	default	extra	0	LensID	Unknown 50-300mm
 SonyILCE9.arw	default	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	LensSpecFeatures	.
@@ -76,7 +75,6 @@ SonyILCE9.arw	ee	extra	0	FileFormat	(Binary data 4 bytes, use -b option to extra
 SonyILCE9.arw	ee	extra	0	FocusMode	131
 SonyILCE9.arw	ee	extra	0	FullImageSize	4000x6000
 SonyILCE9.arw	ee	extra	0	HDR	Off
-SonyILCE9.arw	ee	extra	0	HighISONoiseReduction2	n/a
 SonyILCE9.arw	ee	extra	0	LensID	Unknown 50-300mm
 SonyILCE9.arw	ee	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	LensSpecFeatures	.

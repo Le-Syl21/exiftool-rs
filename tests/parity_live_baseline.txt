@@ -18,7 +18,6 @@ SonyILCE9.arw::Sony:ExposureProgram
 SonyILCE9.arw::Sony:FileFormat
 SonyILCE9.arw::Sony:FullImageSize
 SonyILCE9.arw::Sony:HDR
-SonyILCE9.arw::Sony:HighISONoiseReduction2
 SonyILCE9.arw::Sony:ISOAutoMax
 SonyILCE9.arw::Sony:ISOAutoMin
 SonyILCE9.arw::Sony:ISOSetting

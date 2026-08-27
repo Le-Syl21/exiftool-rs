@@ -108,12 +108,20 @@ static MODEL_RE_87: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX100M
 static MODEL_RE_88: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(QX30|RX10|RX100M3|HX60V|HX350|HX400V|WX220|WX350)|ILCE-(7(R|S|M2)?|[56]000|5100|QX1)|ILCA-(68|77M2))\\b").unwrap());
 static MODEL_RE_89: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX0|RX1RM2|RX10M2|RX10M3|RX100M4|RX100M5|HX80|HX90V?|WX500)|ILCE-(6300|6500|7RM2|7SM2)|ILCA-99M2)\\b").unwrap());
 static MODEL_RE_90: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6400A?|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|DSC-(RX10M4|RX100M6|RX100M5A|RX100M7A?|HX95|HX99|RX0M2)|ZV-(1[AF]?|1M2|E10))\\b").unwrap());
-static MODEL_RE_91: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|Stellar|ILCE-(1|6100|6300|6400|6500|6600|6700|7C|7M3|7M4|7M5|7RM2|7RM3A?|7RM4A?|7RM5|7RM6|7SM2|7SM3|9|9M2)|ILCA-99M2|ILME-(FX2|FX3)|ZV-)").unwrap());
-static MODEL_RE_92: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6300|6400A?|6500|6600|7C|7M3|7RM2|7RM3A?|7RM4A?|7SM2|9|9M2)|ILCA-99M2|ZV-E10)\\b").unwrap());
-static MODEL_RE_93: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1\\b|7M4|7RM5|7SM3)|ILME-FX3)").unwrap());
-static MODEL_RE_94: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6700|7CM2|7CR)|ILME-FX2|ZV-(E1|E10M2))\\b").unwrap());
-static MODEL_RE_95: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV)").unwrap());
-static MODEL_RE_96: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|Lunar|ZV-E10|ZV-E10M2|ZV-E1)\\b").unwrap());
+static MODEL_RE_91: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV)").unwrap());
+static MODEL_RE_92: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|ZV-|DSC-(RX10M4|RX100M6|RX100M7|RX100M5A|HX95|HX99|RX0M2|RX1RM3))").unwrap());
+static MODEL_RE_93: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-|ILME-)").unwrap());
+static MODEL_RE_94: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-|DSC-|ZV-)").unwrap());
+static MODEL_RE_95: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCA-(68|77M2)").unwrap());
+static MODEL_RE_96: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(5100|6000|7M2))").unwrap());
+static MODEL_RE_97: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCE-7RM2").unwrap());
+static MODEL_RE_98: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|Stellar|ILCE-(1|6100|6300|6400|6500|6600|6700|7C|7M3|7M4|7M5|7RM2|7RM3A?|7RM4A?|7RM5|7RM6|7SM2|7SM3|9|9M2)|ILCA-99M2|ILME-(FX2|FX3)|ZV-)").unwrap());
+static MODEL_RE_99: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6300|6400A?|6500|6600|7C|7M3|7RM2|7RM3A?|7RM4A?|7SM2|9|9M2)|ILCA-99M2|ZV-E10)\\b").unwrap());
+static MODEL_RE_100: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1\\b|7M4|7RM5|7SM3)|ILME-FX3)").unwrap());
+static MODEL_RE_101: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6700|7CM2|7CR)|ILME-FX2|ZV-(E1|E10M2))\\b").unwrap());
+static MODEL_RE_102: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|Lunar|ZV-E10|ZV-E10M2|ZV-E1)\\b").unwrap());
+static MODEL_RE_103: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSC-(RX10M4|RX100M6|RX100M7|RX100M5A|HX95|HX99|RX0M2|RX1RM3)").unwrap());
+static MODEL_RE_104: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX1RM3)\\b").unwrap());
 
 fn u8_at(d: &[u8], o: usize) -> Option<u8> { d.get(o).copied() }
 fn i8_at(d: &[u8], o: usize) -> Option<i8> { d.get(o).map(|v| *v as i8) }
@@ -200,6 +208,93 @@ pub fn is_subdirectory_only(tag: u16) -> bool {
     matches!(tag,
         0x1003 | 0x202a | 0x2044 | 0x3000 | 0x9401 | 0x9403 | 0x9416
     )
+}
+
+/// The name ExifTool gives a Sony MakerNote tag whose arms are conditioned.
+///
+/// `None` means this id is not one of them and the plain table decides.
+/// `Some(None)` means every condition failed, and ExifTool extracts nothing --
+/// 0xb050 HighISONoiseReduction2 is written `DSC models only`, and a body that
+/// is not one has no such tag.
+#[must_use]
+#[allow(clippy::match_same_arms)]
+pub fn main_tag_name(
+    tag: u16,
+    model: &str,
+    data: &[u8],
+    count: usize,
+    format: &str,
+) -> Option<Option<&'static str>> {
+    let _ = (data, count, format);
+    match tag {
+        0x2020 => {
+            if !MODEL_RE_94.is_match(model) {
+                return Some(Some("AFPointsUsed"));
+            }
+            if MODEL_RE_95.is_match(model) {
+                return Some(Some("AFPointsUsed"));
+            }
+            Some(None)
+        }
+        0x2022 => {
+            if MODEL_RE_96.is_match(model) {
+                return Some(Some("FocalPlaneAFPointsUsed"));
+            }
+            if MODEL_RE_97.is_match(model) {
+                return Some(Some("FocalPlaneAFPointsUsed"));
+            }
+            Some(None)
+        }
+        0x1000 => {
+            if format == "undef" {
+                return Some(Some("MultiBurstMode"));
+            }
+            Some(None)
+        }
+        0x1001 => {
+            if format == "int16u" {
+                return Some(Some("MultiBurstImageWidth"));
+            }
+            Some(None)
+        }
+        0x1002 => {
+            if format == "int16u" {
+                return Some(Some("MultiBurstImageHeight"));
+            }
+            Some(None)
+        }
+        0x201b => {
+            if (!MODEL_RE_20.is_match(model) || MODEL_RE_103.is_match(model)) {
+                return Some(Some("FocusMode"));
+            }
+            Some(None)
+        }
+        0x201d => {
+            if MODEL_RE_92.is_match(model) {
+                return Some(Some("FlexibleSpotPosition"));
+            }
+            Some(None)
+        }
+        0x2021 => {
+            if (!MODEL_RE_20.is_match(model) || MODEL_RE_103.is_match(model)) {
+                return Some(Some("AFTracking"));
+            }
+            Some(None)
+        }
+        0x205c => {
+            if MODEL_RE_104.is_match(model) {
+                return Some(Some("StepCropShooting"));
+            }
+            Some(None)
+        }
+        0xb050 => {
+            if MODEL_RE_19.is_match(model) {
+                return Some(Some("HighISONoiseReduction2"));
+            }
+            Some(None)
+        }
+        _ => None,
+    }
 }
 
 /// Whether a table's block is byte-substitution enciphered in the file.
@@ -384,16 +479,16 @@ pub fn variant_for(
             Some(Variant { table: "ShotInfo", sets_double_cipher: false })
         }
         0x9050 => {
-            if !MODEL_RE_91.is_match(model) {
+            if !MODEL_RE_98.is_match(model) {
                 return Some(Variant { table: "Tag9050a", sets_double_cipher: false });
             }
-            if MODEL_RE_92.is_match(model) {
+            if MODEL_RE_99.is_match(model) {
                 return Some(Variant { table: "Tag9050b", sets_double_cipher: false });
             }
-            if MODEL_RE_93.is_match(model) {
+            if MODEL_RE_100.is_match(model) {
                 return Some(Variant { table: "Tag9050c", sets_double_cipher: false });
             }
-            if (MODEL_RE_94.is_match(model) || (MODEL_RE_48.is_match(model) && prefix_matches(data, &[&[0x00], &[0x00], &[0x00], &[0x00], &[0x00]]))) {
+            if (MODEL_RE_101.is_match(model) || (MODEL_RE_48.is_match(model) && prefix_matches(data, &[&[0x00], &[0x00], &[0x00], &[0x00], &[0x00]]))) {
                 return Some(Variant { table: "Tag9050d", sets_double_cipher: false });
             }
             None
@@ -453,13 +548,13 @@ pub fn variant_for(
             None
         }
         0x940a => {
-            if MODEL_RE_95.is_match(model) {
+            if MODEL_RE_91.is_match(model) {
                 return Some(Variant { table: "Tag940a", sets_double_cipher: false });
             }
             None
         }
         0x940c => {
-            if MODEL_RE_96.is_match(model) {
+            if MODEL_RE_102.is_match(model) {
                 return Some(Variant { table: "Tag940c", sets_double_cipher: false });
             }
             None
@@ -15896,5 +15991,13 @@ mod tests {
         LazyLock::force(&MODEL_RE_94);
         LazyLock::force(&MODEL_RE_95);
         LazyLock::force(&MODEL_RE_96);
+        LazyLock::force(&MODEL_RE_97);
+        LazyLock::force(&MODEL_RE_98);
+        LazyLock::force(&MODEL_RE_99);
+        LazyLock::force(&MODEL_RE_100);
+        LazyLock::force(&MODEL_RE_101);
+        LazyLock::force(&MODEL_RE_102);
+        LazyLock::force(&MODEL_RE_103);
+        LazyLock::force(&MODEL_RE_104);
     }
 }

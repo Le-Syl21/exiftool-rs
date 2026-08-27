@@ -5911,7 +5911,7 @@ fn read_makernote_ifd_with_base(
                     // body with a layout that does not describe it.
                     let known_format = crate::tags::variant_selectors_generated::variant_for(
                         "Canon", 0x000d, model_name, value_data, count as usize,
-                        subs::tiff_format_name(data_type),
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
                     )
                     .is_some();
                     let mut t = Vec::new();
@@ -7676,6 +7676,30 @@ fn read_makernote_ifd_with_base(
             ("ExposureAdjust", "Exposure Adjust")
         } else {
             mn_tags::lookup(manufacturer, tag_id)
+        };
+
+        // Several Sony tags carry a chain of conditions on their name, and
+        // extract nothing when none of them holds: 0xb050 is written `DSC
+        // models only`. The generated resolver mirrors that chain; it has no
+        // opinion on any other id, and the table above decides those.
+        let sony_named;
+        let (raw_name, raw_desc) = if manufacturer == Manufacturer::Sony {
+            match crate::tags::sony_ciphered_generated::main_tag_name(
+                tag_id,
+                model_name,
+                value_data,
+                count as usize,
+                crate::tags::sub_tables_generated::tiff_format_name(data_type),
+            ) {
+                None => (raw_name, raw_desc),
+                Some(None) => continue,
+                Some(Some(n)) => {
+                    sony_named = n;
+                    (sony_named, raw_desc)
+                }
+            }
+        } else {
+            (raw_name, raw_desc)
         };
 
         // ExifTool names a block it can decipher but not interpret after its

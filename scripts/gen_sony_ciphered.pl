@@ -277,6 +277,7 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
 # unconditional, so an ILCE-9 was decoded with the DSC-HX10V table.
 my @selectors;
 my %subdir_only;   # ids ExifTool defines only as a sub-directory
+my @main_names;    # ids whose plain-value name depends on a condition
 my ($main) = $src =~ /^%Image::ExifTool::Sony::Main\s*=\s*\((.*?)\n\);/ms;
 $main ||= '';
 
@@ -480,6 +481,34 @@ while ($main =~ /^\s{4}(0x[0-9a-fA-F]+)\s*=>\s*\[(.*?)\}\],\s*$/gms) {
         $all_subdir = 0 unless $a =~ /SubDirectory\s*=>/;
     }
     $subdir_only{$tag} = 1 if $all_subdir;
+
+    # An id whose arms are all plain values, at least one of them conditioned:
+    # ExifTool picks the name by model, and extracts nothing when no arm
+    # matches. 0xb050 HighISONoiseReduction2 is `DSC models only`.
+    next if $all_subdir;
+    next if grep { /SubDirectory\s*=>/ } @arm_bodies;
+    my @named;
+    my $conditioned = 0;
+    for my $a (@arm_bodies) {
+        my ($nm) = $a =~ /Name\s*=>\s*'([^']+)'/;
+        next unless $nm;
+        my ($cond) = $a =~ /Condition\s*=>\s*q\{(.*?)\}\s*,/ms;
+        ($cond) = $a =~ /Condition\s*=>\s*'([^']*)'/ unless defined $cond;
+        if (defined $cond) {
+            $conditioned = 1;
+            my @c = compile_cond($cond);
+            unless (@c) {
+                push @skipped, sprintf("main 0x%04x -> %s: cannot express -- %s",
+                                       $tag, $nm, join ' ', split ' ', $cond);
+                @named = ();
+                last;
+            }
+            push @named, { name => $nm, expr => $c[0] };
+        } else {
+            push @named, { name => $nm, expr => 'true' };
+        }
+    }
+    push @main_names, { tag => $tag, arms => \@named } if @named and $conditioned;
 }
 
 # Tags with a single, unconditional sub-directory are declared as a plain hash
@@ -489,7 +518,23 @@ while ($main =~ /^\s{4}(0x[0-9a-fA-F]+)\s*=>\s*\{(.*?)^\s{4}\},/gms) {
     my $b   = $2;
     next if grep { $_->{tag} == $tag } @selectors;
     my ($tbl) = $b =~ /TagTable\s*=>\s*'Image::ExifTool::Sony::(\w+)'/;
-    next unless $tbl;
+    unless ($tbl) {
+        # A plain value with a condition of its own: 0xb050 is written
+        # `DSC models only`, and ExifTool extracts nothing from any other body.
+        my ($nm) = $b =~ /Name\s*=>\s*'([^']+)'/;
+        my ($cond) = $b =~ /Condition\s*=>\s*q\{(.*?)\}\s*,/ms;
+        ($cond) = $b =~ /Condition\s*=>\s*'([^']*)'/ unless defined $cond;
+        if ($nm and defined $cond and not grep { $_->{tag} == $tag } @main_names) {
+            my @c = compile_cond($cond);
+            if (@c) {
+                push @main_names, { tag => $tag, arms => [ { name => $nm, expr => $c[0] } ] };
+            } else {
+                push @skipped, sprintf("main 0x%04x -> %s: cannot express -- %s",
+                                       $tag, $nm, join ' ', split ' ', $cond);
+            }
+        }
+        next;
+    }
     unless (grep { $_->{name} eq $tbl } @tables) {
         push @skipped, sprintf("variant 0x%04x -> %s: no table generated for it", $tag, $tbl);
         next;
@@ -637,6 +682,42 @@ SUBDIR
     print "        " . join(" | ", map { sprintf '%#06x', $_ } @ids) . "\n";
 }
 print "    )\n}\n\n";
+
+print <<'MAINNAME';
+/// The name ExifTool gives a Sony MakerNote tag whose arms are conditioned.
+///
+/// `None` means this id is not one of them and the plain table decides.
+/// `Some(None)` means every condition failed, and ExifTool extracts nothing --
+/// 0xb050 HighISONoiseReduction2 is written `DSC models only`, and a body that
+/// is not one has no such tag.
+#[must_use]
+#[allow(clippy::match_same_arms)]
+pub fn main_tag_name(
+    tag: u16,
+    model: &str,
+    data: &[u8],
+    count: usize,
+    format: &str,
+) -> Option<Option<&'static str>> {
+    let _ = (data, count, format);
+    match tag {
+MAINNAME
+for my $m (@main_names) {
+    printf "        %#06x => {\n", $m->{tag};
+    my $uncond = 0;
+    for my $a (@{$m->{arms}}) {
+        if ($a->{expr} eq 'true') {
+            printf "            Some(Some(\"%s\"))\n", $a->{name};
+            $uncond = 1;
+            last;
+        }
+        printf "            if %s {\n                return Some(Some(\"%s\"));\n            }\n",
+            $a->{expr}, $a->{name};
+    }
+    print  "            Some(None)\n" unless $uncond;
+    print  "        }\n";
+}
+print "        _ => None,\n    }\n}\n\n";
 
 print "/// Whether a table's block is byte-substitution enciphered in the file.\n";
 print "///\n/// Deciphering one that is not turns it to noise, which is why this is\n";
