@@ -1,12 +1,10 @@
 # Live read-parity baseline: known exiftool-rs vs Perl ExifTool deltas.
 # One delta key per line. Refresh with `--update`. New deltas fail the run.
 SonyILCE9.arw::Composite:LensID
-SonyILCE9.arw::ExifIFD:ExposureProgram
 SonyILCE9.arw::Sony:AFPointSelected
 SonyILCE9.arw::Sony:AFPointsUsed
 SonyILCE9.arw::Sony:Anti-Blur
 SonyILCE9.arw::Sony:ColorTemperature
-SonyILCE9.arw::Sony:ExposureProgram
 SonyILCE9.arw::Sony:FileFormat
 SonyILCE9.arw::Sony:FullImageSize
 SonyILCE9.arw::Sony:HDR

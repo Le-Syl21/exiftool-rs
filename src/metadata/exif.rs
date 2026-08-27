@@ -201,7 +201,11 @@ pub(crate) const EXIF_PRIMARY_TAGS: &[&str] = &[
     "Flash",
     "FocalLength",
     "ExposureTime",
-    "ExposureProgram",
+    // ExposureProgram is deliberately absent: Sony::Tag9404c states no priority
+    // of its own and is read after the ExifIFD, so ExifTool's own rule -- an
+    // incoming tag takes the name when its priority is >= the stored one's --
+    // gives it the name. Listing it here dropped the maker-note copy before the
+    // arbitration that implements that rule could see it.
     "FNumber",
     "ShutterSpeedValue",
     "ApertureValue",
