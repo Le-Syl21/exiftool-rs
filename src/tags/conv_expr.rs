@@ -300,6 +300,18 @@ impl<'a> Parser<'a> {
     /// element -- that aliasing is the whole point of
     /// `$_ /= 0x4000 foreach @a`, which scales the array in place.
     fn statement(&mut self) -> Option<Val> {
+        // `$val += 4294967296 if $val < 0` runs the statement only when the
+        // condition holds, and is worth nothing when it does not.
+        if let Some((body_end, kw_end, negated)) = self.find_conditional() {
+            let body_start = self.i;
+            self.i = kw_end;
+            let cond = self.expr()?;
+            return if cond.truthy() != negated {
+                self.run_slice(body_start, body_end)
+            } else {
+                Some(Val::Undef)
+            };
+        }
         if let Some((body_end, kw_end)) = self.find_foreach() {
             let body_start = self.i;
             self.i = kw_end;
@@ -328,6 +340,48 @@ impl<'a> Parser<'a> {
         self.declaration()
     }
 
+    /// The `}` that closes a block opened just before `from`.
+    fn scan_to_close(&self, from: usize) -> Option<usize> {
+        let mut depth = 1i32;
+        let mut j = from;
+        while j < self.s.len() {
+            match self.s[j] {
+                b'{' => depth += 1,
+                b'}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(j);
+                    }
+                }
+                _ => {}
+            }
+            j += 1;
+        }
+        None
+    }
+
+    /// The comma that ends `grep`'s first argument: the first one outside any
+    /// bracket.
+    fn scan_to_comma(&self, from: usize) -> Option<usize> {
+        let mut depth = 0i32;
+        let mut j = from;
+        while j < self.s.len() {
+            match self.s[j] {
+                b'(' | b'[' | b'{' => depth += 1,
+                b')' | b']' | b'}' => {
+                    if depth == 0 {
+                        return None;
+                    }
+                    depth -= 1;
+                }
+                b',' if depth == 0 => return Some(j),
+                _ => {}
+            }
+            j += 1;
+        }
+        None
+    }
+
     /// Re-run a slice of the source with the same variables, which is what a
     /// statement modifier needs: the body is evaluated once per element.
     fn run_slice(&mut self, from: usize, to: usize) -> Option<Val> {
@@ -341,10 +395,23 @@ impl<'a> Parser<'a> {
         r
     }
 
+    /// Look ahead for a trailing `if` or `unless`, and say which it was.
+    fn find_conditional(&mut self) -> Option<(usize, usize, bool)> {
+        let (at, kw) = self.find_word_at_depth(&["if", "unless"])?;
+        Some((at, at + kw.len(), kw == "unless"))
+    }
+
     /// Look ahead for a `foreach` (or `for`) modifier in this statement,
     /// outside any string or bracket. Returns where the body ends and where
     /// the list begins.
     fn find_foreach(&mut self) -> Option<(usize, usize)> {
+        let (at, kw) = self.find_word_at_depth(&["foreach", "for"])?;
+        Some((at, at + kw.len()))
+    }
+
+    /// The first of `words` appearing in this statement outside any string or
+    /// bracket -- which is where a statement modifier sits, and nowhere else.
+    fn find_word_at_depth(&mut self, words: &[&'static str]) -> Option<(usize, &'static str)> {
         let mut depth = 0i32;
         let mut j = self.i;
         while j < self.s.len() {
@@ -359,12 +426,12 @@ impl<'a> Parser<'a> {
                 b'(' | b'[' | b'{' => depth += 1,
                 b')' | b']' | b'}' => depth -= 1,
                 b';' if depth == 0 => return None,
-                b'f' if depth == 0 && j > self.i && self.s[j - 1].is_ascii_whitespace() => {
-                    for kw in ["foreach", "for"] {
+                _ if depth == 0 && j > self.i && self.s[j - 1].is_ascii_whitespace() => {
+                    for kw in words {
                         if self.s[j..].starts_with(kw.as_bytes())
                             && self.s.get(j + kw.len()).is_some_and(u8::is_ascii_whitespace)
                         {
-                            return Some((j, j + kw.len()));
+                            return Some((j, kw));
                         }
                     }
                 }
@@ -438,9 +505,6 @@ impl<'a> Parser<'a> {
     /// Assignment, which is the loosest-binding operator here and associates
     /// to the right.
     fn expr(&mut self) -> Option<Val> {
-        if let Some(v) = self.try_assignment() {
-            return Some(v);
-        }
         self.low_or()
     }
 
@@ -702,6 +766,12 @@ impl<'a> Parser<'a> {
             self.i += 3;
             let v = self.low_not()?;
             return Some(Val::Num(if v.truthy() { 0.0 } else { 1.0 }));
+        }
+        // `$val > 1800 and $val -= 3600` assigns on the right of an `and`,
+        // which Perl allows because assignment binds tighter than the word
+        // operators.
+        if let Some(v) = self.try_assignment() {
+            return Some(v);
         }
         self.ternary()
     }
@@ -1148,9 +1218,6 @@ impl<'a> Parser<'a> {
             let target = LValue::Var("_".to_string());
             return self.bind_operation(&target, false);
         }
-        if self.peek("sprintf") && self.s.get(self.i + 7) == Some(&b'(') {
-            return self.sprintf_call();
-        }
         if let Some(v) = self.list_op() {
             return Some(v);
         }
@@ -1229,6 +1296,22 @@ impl<'a> Parser<'a> {
                 self.i += 1 + len;
                 continue;
             }
+            // `${val}` is `$val` with the name spelled out, which a string
+            // needs when a letter follows it.
+            if self.s[self.i..].starts_with(b"${") {
+                let Some(end) = self.s[self.i..].iter().position(|c| *c == b'}') else {
+                    return None;
+                };
+                let name = std::str::from_utf8(&self.s[self.i + 2..self.i + end]).ok()?;
+                let v = if name == "val" {
+                    self.val.clone()
+                } else {
+                    self.vars.get(name)?.clone()
+                };
+                out.push_str(&v.as_string());
+                self.i += end + 1;
+                continue;
+            }
             if self.s[self.i..].starts_with(b"$val") {
                 out.push_str(&self.val.as_string());
                 self.i += 4;
@@ -1295,6 +1378,11 @@ impl<'a> Parser<'a> {
     /// as an `s`.
     fn starts_regex_op(&mut self) -> bool {
         self.skip_ws();
+        // A `/` where a value is expected can only open a match -- division
+        // needs something on its left, and that is a different position.
+        if self.s.get(self.i) == Some(&b'/') {
+            return true;
+        }
         for op in ["tr", "s", "y", "m"] {
             if self.s[self.i..].starts_with(op.as_bytes()) {
                 return self
@@ -1370,6 +1458,23 @@ impl<'a> Parser<'a> {
         }
         let re = build_regex(&first, &flags)?;
         let subject = subject.as_string();
+        // A `/g` match hands back everything it found -- the captures of each
+        // match, or the whole of each when the pattern captures nothing. An
+        // empty list is false, which is the same answer a plain match gives.
+        if flags.contains('g') && !negated {
+            let mut found = Vec::new();
+            for c in re.captures_iter(&subject) {
+                if c.len() > 1 {
+                    for i in 1..c.len() {
+                        found.push(Val::Str(c.get(i).map_or_else(String::new, |m| m.as_str().to_string())));
+                    }
+                } else {
+                    found.push(Val::Str(c.get(0).map_or_else(String::new, |m| m.as_str().to_string())));
+                }
+            }
+            self.captures.clear();
+            return Some(Val::List(found));
+        }
         let hit = match re.captures(&subject) {
             Some(c) => {
                 self.captures = (1..c.len())
@@ -1510,7 +1615,8 @@ impl<'a> Parser<'a> {
     /// pattern and the substring; a named unary takes one argument and lets
     /// the comma go to whoever asked for the list.
     fn list_op(&mut self) -> Option<Val> {
-        const LIST: &[&str] = &["split", "join", "unpack", "pack", "reverse", "substr", "sprintf"];
+        const LIST: &[&str] =
+            &["split", "join", "unpack", "pack", "reverse", "substr", "sprintf", "map", "grep"];
         const UNARY: &[&str] = &[
             "length", "hex", "oct", "ord", "chr", "lc", "uc", "lcfirst", "ucfirst",
         ];
@@ -1530,6 +1636,45 @@ impl<'a> Parser<'a> {
             return None;
         }
         let paren = self.eat("(");
+
+        // `map` and `grep` run their first argument once per element, with
+        // `$_` set to it, so that argument is a piece of source to re-run
+        // rather than a value to compute now.
+        if name == "map" || name == "grep" {
+            self.skip_ws();
+            let (from, to) = if self.peek("{") {
+                self.eat("{");
+                let from = self.i;
+                let to = self.scan_to_close(from)?;
+                self.i = to + 1;
+                self.eat(","); // optional after a block
+                (from, to)
+            } else {
+                let from = self.i;
+                let to = self.scan_to_comma(from)?;
+                self.i = to + 1;
+                (from, to)
+            };
+            let mut list = vec![self.expr()?];
+            while self.eat(",") {
+                list.push(self.expr()?);
+            }
+            if paren && !self.eat(")") {
+                self.i = save;
+                return None;
+            }
+            let mut out = Vec::new();
+            for item in flatten(&list) {
+                self.vars.insert("_".to_string(), item.clone());
+                let r = self.run_slice(from, to)?;
+                if name == "map" {
+                    out.push(r);
+                } else if r.truthy() {
+                    out.push(item);
+                }
+            }
+            return Some(Val::List(out));
+        }
 
         // `split`'s first argument is a pattern, and it is the one place these
         // conversions write a bare regex literal.
@@ -1581,33 +1726,6 @@ impl<'a> Parser<'a> {
                 None
             }
         }
-    }
-
-    fn sprintf_call(&mut self) -> Option<Val> {
-        self.eat("sprintf");
-        if !self.eat("(") {
-            return None;
-        }
-        self.skip_ws();
-        if !self.eat("\"") {
-            return None;
-        }
-        let start = self.i;
-        while self.i < self.s.len() && self.s[self.i] != b'"' {
-            self.i += 1;
-        }
-        let fmt = std::str::from_utf8(&self.s[start..self.i]).ok()?.to_string();
-        if !self.eat("\"") {
-            return None;
-        }
-        let mut args = Vec::new();
-        while self.eat(",") {
-            args.push(self.expr()?);
-        }
-        if !self.eat(")") {
-            return None;
-        }
-        format_sprintf(&fmt, &args).map(Val::Str)
     }
 }
 
@@ -2893,6 +3011,37 @@ mod tests {
                 .unwrap()
                 .as_string(),
             "fefe"
+        );
+    }
+
+    /// `map` and `grep` run a block per element, and the statement modifiers
+    /// decide whether a statement runs at all. Perl gave every value here.
+    #[test]
+    fn map_grep_and_the_statement_modifiers() {
+        let s = |e: &str, v: &str| eval(e, &Val::Str(v.into())).unwrap().as_string();
+        assert_eq!(s("join(\" \",map({ $_/8192 } split(\" \",$val)))", "8192 16384"), "1 2");
+        assert_eq!(
+            s("join \" \", map { sprintf(\"%.5g\",$_) } split(\" \",$val)", "1 2 3"),
+            "1 2 3"
+        );
+        assert_eq!(
+            s("my @a=($val=~/.{4}/sg); @a=grep(!/\\0/,@a); join(\" \",@a)", "ab\0dcdef"),
+            "cdef"
+        );
+        assert_eq!(
+            eval("$val += 4294967296 if $val < 0 and $val >= -2147483648; $val * 1e-7", &n(-100.0))
+                .unwrap()
+                .as_num(),
+            429.496_719_6
+        );
+        assert_eq!(
+            eval("$val > 1800 and $val -= 3600; $val / 10", &n(2000.0)).unwrap().as_num(),
+            -160.0
+        );
+        assert_eq!(s("\"${val} m\"", "5"), "5 m");
+        assert_eq!(
+            s("sprintf(\"%3d %4d\" . \" %3d %4d\" x 1, split(\" \",$val))", "1 2 3 4"),
+            "  1    2   3    4"
         );
     }
 
