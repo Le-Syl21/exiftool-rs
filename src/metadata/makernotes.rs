@@ -5872,6 +5872,7 @@ fn read_makernote_ifd_with_base(
                 data: value_data,
                 count: count as usize,
                 byte_order_le: byte_order == ByteOrderMark::LittleEndian,
+                format: subs::tiff_format_name(data_type),
             };
 
             let sub_tags = match (manufacturer, tag_id) {
@@ -5910,6 +5911,7 @@ fn read_makernote_ifd_with_base(
                     // body with a layout that does not describe it.
                     let known_format = crate::tags::variant_selectors_generated::variant_for(
                         "Canon", 0x000d, model_name, value_data, count as usize,
+                        subs::tiff_format_name(data_type),
                     )
                     .is_some();
                     let mut t = Vec::new();

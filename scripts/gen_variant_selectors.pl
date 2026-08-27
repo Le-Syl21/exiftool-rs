@@ -51,21 +51,29 @@ sub prefix_literals {
 sub cond_to_rust {
     my ($cond, $re_id) = @_;
     my @terms;
+    # ExifTool writes the same access two ways depending on the module's age.
+    $cond =~ s/\$self->\{/\$\$self\{/g;
     for my $term (split /\s+and\s+/, $cond) {
         $term =~ s/^\s*\(?\s*//; $term =~ s/\s*\)?\s*$//;
         if ($term =~ /^\$\$self\{Model\}\s*(=~|!~)\s*\/([^\/]*)\/$/) {
             my ($op, $pat) = ($1, $2);
             return undef if $pat =~ /\(\?[=!<]/;
             push @terms, sprintf('%sRE_%d.is_match(model)', ($op eq '!~' ? '!' : ''), $re_id->($pat));
+        } elsif ($term =~ /^\$\$self\{Model\}\s+(eq|ne)\s+"([^"]*)"$/) {
+            push @terms, sprintf('model %s "%s"', ($1 eq 'eq' ? '==' : '!='), $2);
         } elsif ($term =~ /^\$\$valPt\s*(=~|!~)\s*\/([^\/]*)\/$/) {
             my ($op, $pat) = ($1, $2);
             my @lits = prefix_literals($pat);
             return undef unless @lits;
             my $any = join(' || ', map { sprintf('data.starts_with(b"%s")', $_) } @lits);
             push @terms, ($op eq '!~' ? "!($any)" : "($any)");
+        } elsif ($term =~ /^\$format\s+(eq|ne)\s+"(\w+)"$/) {
+            push @terms, sprintf('format %s "%s"', ($1 eq 'eq' ? '==' : '!='), $2);
         } elsif ($term =~ /^\$count\s*==\s*(\d+)$/) {
             push @terms, "count == $1";
-        } elsif ($term =~ /^\$count\s*==\s*(\d+)((?:\s+or\s+\$count\s*==\s*\d+)+)$/) {
+        } elsif ($term =~ /^\$count\s*!=\s*(\d+)$/) {
+            push @terms, "count != $1";
+        } elsif ($term =~ /^\$count\s*==\s*(\d+)((?:\s*(?:or|\|\|)\s*\$count\s*==\s*\d+)+)$/) {
             my @n = ($1); push @n, $2 =~ /(\d+)/g;
             push @terms, '(' . join(' || ', map { "count == $_" } @n) . ')';
         } else {
@@ -167,8 +175,9 @@ pub fn variant_for(
     model: &str,
     data: &[u8],
     count: usize,
+    format: &str,
 ) -> Option<&'static str> {
-    let _ = (data, count);
+    let _ = (data, count, format);
     match (module, tag) {
 FN
 
@@ -195,8 +204,8 @@ print <<'T2';
     /// and a substring test would.
     #[test]
     fn anchored_patterns_do_not_over_match() {
-        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X", b"", 0), Some("CameraInfo1DX"));
-        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X Mark II", b"", 0), None);
+        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X", b"", 0, "int8u"), Some("CameraInfo1DX"));
+        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X Mark II", b"", 0, "int8u"), None);
     }
 }
 T2

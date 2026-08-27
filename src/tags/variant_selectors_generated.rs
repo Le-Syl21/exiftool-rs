@@ -48,6 +48,8 @@ static RE_32: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-A(230|290|330
 static RE_33: LazyLock<Regex> = LazyLock::new(|| Regex::new("^NEX-5N$").unwrap());
 static RE_34: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|NEX-(7|VG20E)|Lunar)$").unwrap());
 static RE_35: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(37|57)|NEX-F3)$").unwrap());
+static RE_36: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DYNAX 5D|MAXXUM 5D|ALPHA SWEET)").unwrap());
+static RE_37: LazyLock<Regex> = LazyLock::new(|| Regex::new("^Caplio RR1\\b").unwrap());
 
 /// The sub-table ExifTool would use for this MakerNote tag on this body.
 ///
@@ -61,8 +63,9 @@ pub fn variant_for(
     model: &str,
     data: &[u8],
     count: usize,
+    format: &str,
 ) -> Option<&'static str> {
-    let _ = (data, count);
+    let _ = (data, count, format);
     match (module, tag) {
         ("Canon", 0x000d) => {
             if RE_0.is_match(model) { return Some("CameraInfo1DmkII"); }
@@ -95,6 +98,7 @@ pub fn variant_for(
             if RE_27.is_match(model) { return Some("CameraInfoR6m2"); }
             if RE_28.is_match(model) { return Some("CameraInfoR6m3"); }
             if RE_29.is_match(model) { return Some("CameraInfoG5XII"); }
+            if format == "int32u" && (count == 138 || count == 148) { return Some("CameraInfoPowerShot"); }
             None
         }
         ("Canon", 0x0096) => {
@@ -105,7 +109,17 @@ pub fn variant_for(
             return Some("ColorData1");
             None
         }
+        ("Minolta", 0x0018) => {
+            if model == "DSLR-A100" { return Some("ISInfoA100"); }
+            None
+        }
+        ("Minolta", 0x0114) => {
+            if RE_36.is_match(model) { return Some("CameraSettings5D"); }
+            if model == "DSLR-A100" { return Some("CameraSettingsA100"); }
+            None
+        }
         ("Nikon", 0x0014) => {
+            if format == "undef" && count == 2560 { return Some("ColorBalanceA"); }
             if (data.starts_with(b"NRW 0100")) { return Some("ColorBalanceB"); }
             if (data.starts_with(b"NRW ")) { return Some("ColorBalanceC"); }
             None
@@ -115,6 +129,11 @@ pub fn variant_for(
             if (data.starts_with(b"02")) { return Some("PictureControl2"); }
             if (data.starts_with(b"03")) { return Some("PictureControl3"); }
             return Some("PictureControlUnknown");
+            None
+        }
+        ("Nikon", 0x0035) => {
+            if count != 6 { return Some("HDRInfo"); }
+            return Some("HDRInfo2");
             None
         }
         ("Nikon", 0x0091) => {
@@ -139,13 +158,111 @@ pub fn variant_for(
             return Some("FlashInfoUnknown");
             None
         }
+        ("Olympus", 0x2010) => {
+            if format != "ifd" && format != "int32u" { return Some("Equipment"); }
+            return Some("Equipment");
+            None
+        }
+        ("Olympus", 0x2020) => {
+            if format != "ifd" && format != "int32u" { return Some("CameraSettings"); }
+            return Some("CameraSettings");
+            None
+        }
+        ("Olympus", 0x2030) => {
+            if format != "ifd" && format != "int32u" { return Some("RawDevelopment"); }
+            return Some("RawDevelopment");
+            None
+        }
+        ("Olympus", 0x2031) => {
+            if format != "ifd" && format != "int32u" { return Some("RawDevelopment2"); }
+            return Some("RawDevelopment2");
+            None
+        }
+        ("Olympus", 0x2040) => {
+            if format != "ifd" && format != "int32u" { return Some("ImageProcessing"); }
+            return Some("ImageProcessing");
+            None
+        }
+        ("Olympus", 0x2100) => {
+            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            return Some("FETags");
+            None
+        }
+        ("Olympus", 0x2200) => {
+            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            return Some("FETags");
+            None
+        }
+        ("Olympus", 0x2300) => {
+            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            return Some("FETags");
+            None
+        }
+        ("Olympus", 0x2400) => {
+            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            return Some("FETags");
+            None
+        }
+        ("Olympus", 0x2500) => {
+            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            return Some("FETags");
+            None
+        }
+        ("Olympus", 0x2600) => {
+            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            return Some("FETags");
+            None
+        }
+        ("Olympus", 0x2700) => {
+            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            return Some("FETags");
+            None
+        }
+        ("Olympus", 0x2800) => {
+            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            return Some("FETags");
+            None
+        }
+        ("Olympus", 0x2900) => {
+            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            return Some("FETags");
+            None
+        }
+        ("Olympus", 0x3000) => {
+            if format != "ifd" && format != "int32u" { return Some("RawInfo"); }
+            return Some("RawInfo");
+            None
+        }
+        ("Olympus", 0x4000) => {
+            if format != "ifd" && format != "int32u" { return Some("Main"); }
+            return Some("Main");
+            None
+        }
+        ("Olympus", 0x5000) => {
+            if format != "ifd" && format != "int32u" { return Some("UnknownInfo"); }
+            return Some("UnknownInfo");
+            None
+        }
         ("Pentax", 0x002d) => {
+            if format == "int16u" { return Some("LensRec"); }
             if count == 1 { return Some("SRInfo"); }
+            return Some("SRInfo2");
             None
         }
         ("Pentax", 0x0208) => {
             if count == 27 { return Some("FlashInfo"); }
             return Some("FlashInfoUnknown");
+            None
+        }
+        ("Ricoh", 0x1001) => {
+            if format != "int16u" { return Some("ImageInfo"); }
+            if format == "int16u" { return Some("Subdir"); }
+            if !RE_37.is_match(model) { return Some("Subdir"); }
+            return Some("Subdir");
+            None
+        }
+        ("Sanyo", 0x0223) => {
+            if format == "rational64u" { return Some("FaceInfo"); }
             None
         }
         ("Sony", 0x0010) => {
@@ -163,6 +280,8 @@ pub fn variant_for(
         ("Sony", 0x0114) => {
             if (count == 280 || count == 364) { return Some("CameraSettings"); }
             if count == 332 { return Some("CameraSettings2"); }
+            if (count == 1536 || count == 2048) { return Some("CameraSettings3"); }
+            return Some("CameraSettingsUnknown");
             None
         }
         ("Sony", 0x0116) => {
@@ -225,13 +344,15 @@ mod tests {
         LazyLock::force(&RE_33);
         LazyLock::force(&RE_34);
         LazyLock::force(&RE_35);
+        LazyLock::force(&RE_36);
+        LazyLock::force(&RE_37);
     }
 
     /// The anchors matter: ExifTool's `/EOS-1D X$/` does not claim the Mark II,
     /// and a substring test would.
     #[test]
     fn anchored_patterns_do_not_over_match() {
-        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X", b"", 0), Some("CameraInfo1DX"));
-        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X Mark II", b"", 0), None);
+        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X", b"", 0, "int8u"), Some("CameraInfo1DX"));
+        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X Mark II", b"", 0, "int8u"), None);
     }
 }

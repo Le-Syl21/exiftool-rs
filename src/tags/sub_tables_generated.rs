@@ -18,6 +18,33 @@ pub struct DispatchContext<'a> {
     pub data: &'a [u8],
     pub count: usize,
     pub byte_order_le: bool,
+    /// The TIFF format name ExifTool would use, e.g. `int32u`.
+    ///
+    /// Several conditions test it -- Olympus decides three of its sub-tables on
+    /// `$format ne "ifd" and $format ne "int32u"` alone -- so a selector that
+    /// cannot see it has to refuse those tags entirely.
+    pub format: &'static str,
+}
+
+/// ExifTool's name for a TIFF data type, as its conditions spell it.
+#[must_use]
+pub fn tiff_format_name(data_type: u16) -> &'static str {
+    match data_type {
+        1 => "int8u",
+        2 => "string",
+        3 => "int16u",
+        4 => "int32u",
+        5 => "rational64u",
+        6 => "int8s",
+        7 => "undef",
+        8 => "int16s",
+        9 => "int32s",
+        10 => "rational64s",
+        11 => "float",
+        12 => "double",
+        13 => "ifd",
+        _ => "unknown",
+    }
 }
 
 impl<'a> DispatchContext<'a> {
@@ -254,7 +281,7 @@ pub fn dispatch_nikon_af_info2(ctx: &DispatchContext) -> Vec<Tag> {
 pub fn dispatch_sony_camera_settings(ctx: &DispatchContext) -> Vec<Tag> {
     // Same as the Canon case above: the variant is known, the layouts are not
     // ported, and naming the variant is not a value anyone can use.
-    let _ = crate::tags::variant_selectors_generated::variant_for("Sony", 0x0114, ctx.model, ctx.data, ctx.count);
+    let _ = crate::tags::variant_selectors_generated::variant_for("Sony", 0x0114, ctx.model, ctx.data, ctx.count, ctx.format);
     Vec::new()
 }
 
