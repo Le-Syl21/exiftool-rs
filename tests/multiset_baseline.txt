@@ -37,12 +37,6 @@ SonyILCE9.arw	default	extra	0	SequenceLength	Continuous
 SonyILCE9.arw	default	extra	0	ShotInfo	(Binary data 390 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	default	extra	0	SonyModelID	358
-SonyILCE9.arw	default	extra	0	Sony_0x9407	(Binary data 64 bytes, use -b option to extract)
-SonyILCE9.arw	default	extra	0	Sony_0x9408	(Binary data 1000 bytes, use -b option to extract)
-SonyILCE9.arw	default	extra	0	Sony_0x9409	(Binary data 1344 bytes, use -b option to extract)
-SonyILCE9.arw	default	extra	0	Sony_0x940b	(Binary data 400 bytes, use -b option to extract)
-SonyILCE9.arw	default	extra	0	Sony_0x940d	(Binary data 1260 bytes, use -b option to extract)
-SonyILCE9.arw	default	extra	0	Sony_0x940f	(Binary data 2048 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	Tag202a	(Binary data 66 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	Tag9401	(Binary data 4096 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	TempTest2	18
@@ -155,12 +149,6 @@ SonyILCE9.arw	ee	extra	0	Sharpness	Normal
 SonyILCE9.arw	ee	extra	0	ShotInfo	(Binary data 390 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	ee	extra	0	SonyModelID	358
-SonyILCE9.arw	ee	extra	0	Sony_0x9407	(Binary data 64 bytes, use -b option to extract)
-SonyILCE9.arw	ee	extra	0	Sony_0x9408	(Binary data 1000 bytes, use -b option to extract)
-SonyILCE9.arw	ee	extra	0	Sony_0x9409	(Binary data 1344 bytes, use -b option to extract)
-SonyILCE9.arw	ee	extra	0	Sony_0x940b	(Binary data 400 bytes, use -b option to extract)
-SonyILCE9.arw	ee	extra	0	Sony_0x940d	(Binary data 1260 bytes, use -b option to extract)
-SonyILCE9.arw	ee	extra	0	Sony_0x940f	(Binary data 2048 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	Tag202a	(Binary data 66 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	Tag9401	(Binary data 4096 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	TempTest2	18

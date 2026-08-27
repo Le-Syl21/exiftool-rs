@@ -7,12 +7,6 @@ SonyILCE9.arw	extra	DynamicRangeOptimizer2
 SonyILCE9.arw	extra	HighISONoiseReduction2
 SonyILCE9.arw	extra	Panorama
 SonyILCE9.arw	extra	ShotInfo
-SonyILCE9.arw	extra	Sony_0x9407
-SonyILCE9.arw	extra	Sony_0x9408
-SonyILCE9.arw	extra	Sony_0x9409
-SonyILCE9.arw	extra	Sony_0x940b
-SonyILCE9.arw	extra	Sony_0x940d
-SonyILCE9.arw	extra	Sony_0x940f
 SonyILCE9.arw	extra	Tag202a
 SonyILCE9.arw	extra	Tag9401
 SonyILCE9.arw	extra	TempTest2

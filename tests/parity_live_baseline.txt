@@ -78,12 +78,6 @@ SonyILCE9.arw::Sony:SonyImageWidth
 SonyILCE9.arw::Sony:SonyImageWidthMax
 SonyILCE9.arw::Sony:SonyMaxApertureValue
 SonyILCE9.arw::Sony:SonyModelID
-SonyILCE9.arw::Sony:Sony_0x9407
-SonyILCE9.arw::Sony:Sony_0x9408
-SonyILCE9.arw::Sony:Sony_0x9409
-SonyILCE9.arw::Sony:Sony_0x940b
-SonyILCE9.arw::Sony:Sony_0x940d
-SonyILCE9.arw::Sony:Sony_0x940f
 SonyILCE9.arw::Sony:StopsAboveBaseISO
 SonyILCE9.arw::Sony:Tag202a
 SonyILCE9.arw::Sony:Tag9401

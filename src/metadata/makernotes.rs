@@ -7658,6 +7658,17 @@ fn read_makernote_ifd_with_base(
             mn_tags::lookup(manufacturer, tag_id)
         };
 
+        // ExifTool names a block it can decipher but not interpret after its
+        // maker and hex id -- Sony_0x9407 -- and marks the lot Unknown and
+        // Hidden. The name carries no "Unknown" for the test below to catch, so
+        // six of them were being reported where ExifTool shows none.
+        let hidden_cipher_block = raw_name
+            .split_once("_0x")
+            .is_some_and(|(_, hex)| hex.len() == 4 && hex.bytes().all(|b| b.is_ascii_hexdigit()));
+        if hidden_cipher_block && crate::metadata::exif::get_show_unknown() == 0 {
+            continue;
+        }
+
         // Suppress Unknown tags (unless -u/-U is active)
         let (name, description): (&str, &str) =
             if raw_name == "Unknown" || raw_name.contains("Unknown") {
