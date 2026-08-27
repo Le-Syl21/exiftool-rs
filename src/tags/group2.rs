@@ -614,11 +614,19 @@ mod tests {
     #[test]
     fn canon_ambiguous_names_defer_to_reader() {
         // WhiteBalance/FocusDistanceUpper live in several Canon sub-tables whose
-        // categories disagree; the reader knows the real one, so defer to it.
+        // categories disagree; the reader knows the real one, so it is kept.
+        // (The answer is the reader's own value rather than `None`, which comes
+        // to the same thing at the call site and says so more directly.)
         assert_eq!(
             family2_for("MakerNotes", "Canon", "WhiteBalance", "Image"),
-            None
+            Some("Image")
         );
+        assert_eq!(
+            family2_for("MakerNotes", "Canon", "WhiteBalance", "Camera"),
+            Some("Camera")
+        );
+        // CanonRaw has no FocusDistanceUpper of its own, so no tier answers and
+        // the reader's choice stands untouched.
         assert_eq!(
             family2_for("MakerNotes", "CanonRaw", "FocusDistanceUpper", "Camera"),
             None
@@ -673,11 +681,18 @@ mod tests {
         // Camera for Model and Video for Duration.
         assert_eq!(family2_for("Olympus", "Olympus", "Model", "Audio"), None);
         assert_eq!(family2_for("Olympus", "Olympus", "Duration", "Audio"), None);
-        // The Olympus maker notes are family 0 MakerNotes and unaffected: their
-        // Model is resolved from the tables as usual.
+        // The Olympus maker notes are family 0 MakerNotes and resolved from
+        // the tables as usual -- but two of those tables, DSS and WAV, are
+        // themselves Audio, so a reader that read one of them keeps its
+        // answer. A reader with no such knowledge gets Camera, the category of
+        // the other six.
+        assert_eq!(
+            family2_for("MakerNotes", "Olympus", "Model", "Image"),
+            Some("Camera")
+        );
         assert_eq!(
             family2_for("MakerNotes", "Olympus", "Model", "Audio"),
-            Some("Camera")
+            Some("Audio")
         );
     }
 

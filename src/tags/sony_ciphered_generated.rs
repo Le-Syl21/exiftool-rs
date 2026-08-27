@@ -186,8 +186,11 @@ fn mk_prio(
     // Each table declares its own family-2 default -- Image for these -- and a
     // few tags override it. Stamping them all the same put two of them in the
     // wrong category.
-    let family2 = crate::tags::group2::family2_for("MakerNotes", "Sony", name, default_group2)
-        .unwrap_or(default_group2);
+    // ExifTool resolves family 2 from the tag's own `Groups => { 2 => ... }`
+    // and falls back to the table's GROUPS -- both of which the generator has
+    // already read. There is no name-keyed lookup in that chain, and one
+    // guessed the wrong category for six of these.
+    let family2 = default_group2;
     Tag {
         id: TagId::Text(name.to_string()),
         name: name.to_string(),
@@ -4410,7 +4413,7 @@ fn shotinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         }
     }
     if let Some(text) = text_at(data, 0x6, 20, true) {
-        tags.push(text_tag("SonyDateTime", GRP2, text, PRIO));
+        tags.push(text_tag("SonyDateTime", "Time", text, PRIO));
     }
     if let Some(v) = u16_at(data, 0x1a) {
         dm.push(("SonyImageHeight".to_string(), f64::from(v)));
@@ -4788,7 +4791,7 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         tags.push(mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x1b6, 7, false) {
-        tags.push(text_tag("SonyDateTime", GRP2, text, PRIO));
+        tags.push(text_tag("SonyDateTime", "Time", text, PRIO));
     }
     if let Some(v) = u8_at(data, 0x324) {
         dm.push(("DynamicRangeOptimizer".to_string(), f64::from(v)));
@@ -5171,7 +5174,7 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         tags.push(mk_prio("DigitalZoomRatio", cv.as_string(), raw, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x210, 7, false) {
-        tags.push(text_tag("SonyDateTime", GRP2, text, PRIO));
+        tags.push(text_tag("SonyDateTime", "Time", text, PRIO));
     }
     if let Some(v) = u8_at(data, 0x300) {
         dm.push(("DynamicRangeOptimizer".to_string(), f64::from(v)));
@@ -5534,7 +5537,7 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         tags.push(mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x1fe, 7, false) {
-        tags.push(text_tag("SonyDateTime", GRP2, text, PRIO));
+        tags.push(text_tag("SonyDateTime", "Time", text, PRIO));
     }
     if let Some(v) = u8_at(data, 0x37c) {
         dm.push(("DynamicRangeOptimizer".to_string(), f64::from(v)));
@@ -5885,7 +5888,7 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         tags.push(mk_prio("DigitalZoomRatio", cv.as_string(), raw, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x22c, 7, false) {
-        tags.push(text_tag("SonyDateTime", GRP2, text, PRIO));
+        tags.push(text_tag("SonyDateTime", "Time", text, PRIO));
     }
     if let Some(v) = u8_at(data, 0x328) {
         dm.push(("DynamicRangeOptimizer".to_string(), f64::from(v)));
@@ -9934,7 +9937,7 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     }
     if MODEL_RE_23.is_match(model) {
         if let Some(text) = text_at(data, 0x51, 6, false) {
-            tags.push(text_tag("SonyDateTime2", GRP2, text, PRIO));
+            tags.push(text_tag("SonyDateTime2", "Time", text, PRIO));
         }
     }
     if !MODEL_RE_24.is_match(model) {
@@ -16121,7 +16124,7 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk_prio("DateTimeOriginal", s.clone(), Value::String(s), GRP2, PRIO));
+            tags.push(mk_prio("DateTimeOriginal", s.clone(), Value::String(s), "Time", PRIO));
         }
     }
     {
@@ -16134,7 +16137,7 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk_prio("ModifyDate", s.clone(), Value::String(s), GRP2, PRIO));
+            tags.push(mk_prio("ModifyDate", s.clone(), Value::String(s), "Time", PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x66) {
@@ -16184,7 +16187,7 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if let Some(x) = conv_expr::eval("$val / 100", &cv) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO));
+            tags.push(mk_prio("FocalLength", cv.as_string(), raw, "Camera", PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x76) {
@@ -16194,7 +16197,7 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "Fired".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk_prio("Flash", s, Value::I32(v as i32), GRP2, PRIO));
+        tags.push(mk_prio("Flash", s, Value::I32(v as i32), "Camera", PRIO));
     }
     tags
 }

@@ -19,12 +19,16 @@
 #   FAMILY2_BY_NAME         "<name>"
 #
 # A key can legitimately carry several categories, one per table that defines
-# it. We keep only the most frequent ones — `WhiteBalance` under `MakerNotes` /
-# `Canon` is `Camera` in 21 Canon sub-tables and `Image` in 2, so `Camera` is
-# the answer — and a key that stays ambiguous after that (a genuine tie) lets
-# the caller keep whatever the parser already decided (see
-# `crate::tags::group2::family2_for`), because the parser knows which table the
-# tag actually came from and a name lookup does not.
+# it, and all of them are kept, most frequent first. ExifTool has no name
+# lookup at all — a tag's category comes from its own table — so these tiers
+# are an approximation for a reader that does not know which table it read.
+# Listing every category lets `crate::tags::group2::family2_for` keep whatever
+# the parser already decided when the parser DOES know, and fall back to the
+# common case when it does not.
+#
+# Keeping only the most frequent one was a majority vote, and it lost: Sony's
+# LensType is Image in nine sub-tables and Camera in the Main table, so the
+# vote overwrote the Camera the reader had correctly stamped.
 #
 # A tier entry is omitted when its winning categories are identical to the ones
 # the next (less specific) tier would return, which is the common case — that
@@ -180,15 +184,30 @@ for my $h (\%k3, \%k2) {
 
 # The categories tied for the most tables under one key, sorted. Everything
 # else is dropped: it never wins, so storing it would only bloat the tables.
+# Every category this key is seen with, the most frequent first.
+#
+# Keeping only the most frequent one was a majority vote: Sony's LensType is
+# Image in nine sub-tables and Camera in the Main table, and the vote erased
+# the Camera the reader had correctly stamped. `choose` prefers whichever
+# candidate the reader already picked, so listing them all lets a reader that
+# knows its table keep its answer, while one with no opinion still gets the
+# common case first.
 sub top {
-    my $h = shift;
+    my ($h, $all) = @_;
     return () unless $h;
+    # The most specific tier lists every category it has seen, most frequent
+    # first, so a reader that knows which table it read keeps its answer. The
+    # looser tiers keep only the winner: there, a disagreement is far more
+    # likely to be a reader's arbitrary default than a real table difference,
+    # and deferring to it would preserve the mistake. `Model` alone is Camera,
+    # Video, Audio, Image and Other across ExifTool.
+    return sort { $h->{$b} <=> $h->{$a} or $a cmp $b } keys %$h if $all;
     my $max = 0;
     for my $c (values %$h) { $max = $c if $c > $max }
     return sort grep { $h->{$_} == $max } keys %$h;
 }
 
-sub set_key { my $h = shift; return join(',', top($h)) }
+sub set_key { my ($h, $all) = @_; return join(',', top($h, $all)) }
 
 # ── Prune tiers that add nothing over the next fallback ─────────────────────
 #
@@ -230,7 +249,7 @@ for my $key (sort keys %k3) {
     my $fallback = $keep2{"$g0\x01$name"}
         ? set_key($k2{"$g0\x01$name"})
         : fallback_after_g0($g0, $name);
-    $keep3{$key} = 1 if set_key($k3{$key}) ne $fallback;
+    $keep3{$key} = 1 if set_key($k3{$key}, 1) ne $fallback;
 }
 
 # ── Emit ────────────────────────────────────────────────────────────────────
@@ -249,19 +268,19 @@ pub type Family2Entry = (&'static str, &'static [&'static str]);
 HEADER
 
 sub emit {
-    my ($var, $doc, $map, $keep) = @_;
+    my ($var, $doc, $map, $keep, $all) = @_;
     my @keys = sort grep { !$keep || $keep->{$_} } keys %$map;
     printf "\n/// %s (%d entries).\npub static %s: &[Family2Entry] = &[\n", $doc, scalar @keys, $var;
     for my $key (@keys) {
         my $rust_key = $key;
         $rust_key =~ s/\x01/\\u{1}/g;
-        my $cats = join ', ', map { "\"$_\"" } top($map->{$key});
+        my $cats = join ', ', map { "\"$_\"" } top($map->{$key}, $all);
         print "    (\"$rust_key\", &[$cats]),\n";
     }
     print "];\n";
 }
 
-emit('FAMILY2_BY_G0_G1_NAME', 'Keyed on `"<family0>\\u{1}<family1>\\u{1}<name>"`', \%k3, \%keep3);
+emit('FAMILY2_BY_G0_G1_NAME', 'Keyed on `"<family0>\\u{1}<family1>\\u{1}<name>"`', \%k3, \%keep3, 1);
 emit('FAMILY2_BY_G0_NAME',    'Keyed on `"<family0>\\u{1}<name>"`',                \%k2, \%keep2);
 emit('FAMILY2_BY_NAME',       'Keyed on `"<name>"`',                               \%k1, undef);
 

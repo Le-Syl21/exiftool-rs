@@ -84,6 +84,16 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
     next unless $body =~ /FIRST_ENTRY/ or $body =~ /%binaryDataAttrs/;
     # Enciphered tables are byte-substituted before they can be read; the rest
     # are not, and deciphering one of those would turn it to noise.
+    # A table with a reader of its own is not binary data laid out by offset:
+    # Sony::MoreInfo is walked by ProcessMoreInfo, and reading it as a flat
+    # block finds tags where there are none.
+    if ($body =~ /PROCESS_PROC\s*=>\s*\\&(?:Image::ExifTool::)?(\w+)/) {
+        my $proc = $1;
+        unless ($proc eq 'ProcessBinaryData' or $proc eq 'ProcessEnciphered') {
+            push @skipped, "$table: read by $proc, not as binary data";
+            next;
+        }
+    }
     my $enciphered = $body =~ /ProcessEnciphered/ ? 1 : 0;
     # `PRIORITY => 0` says a tag from this table must not displace one of the
     # same name read earlier: the Main table's HighISONoiseReduction is the one
@@ -194,6 +204,11 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
         # A field can store its value under a name of its own: Tag202a reads
         # FocalPlaneAFPointsUsed but the conditions after it ask for
         # `$$self{Locations}`.
+        # A field can override the table's category: ExifTool resolves family 2
+        # from the tag's own `Groups => { 2 => ... }` and falls back to the
+        # table's GROUPS. There is no name-keyed lookup in that chain, and a
+        # name-keyed guess is what put six of these in the wrong category.
+        my ($fgrp2) = $fb =~ /Groups\s*=>\s*\{[^}]*2\s*=>\s*'(\w+)'/;
         my ($dmname) = $fb =~ /DataMember\s*=>\s*'(\w+)'/;
         # A RawConv can store the value under a name of its own without any
         # DataMember line: `RawConv => '$$self{FlashFired} = $val'` is how
@@ -256,7 +271,7 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
             push @fields, { off => $off, name => $name, fmt => $1, n => $2,
                             re => $re, neg => $neg, conv => {},
                             vconv => undef, pconv => undef, hidden => $hidden,
-                            dmname => $dmname };
+                            dmname => $dmname, grp2 => $fgrp2 };
             next;
         }
         unless (exists $WIDTH{$ffmt}) {
@@ -324,7 +339,7 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
             off => $off, name => $name, fmt => $ffmt, n => $count_n,
             re => $re, neg => $neg, conv => \%conv,
             vconv => $vconv, pconv => $pconv, hidden => $hidden, rconv => $rconv,
-            dmname => $dmname,
+            dmname => $dmname, grp2 => $fgrp2,
         };
     }
 
@@ -654,6 +669,12 @@ while ($main =~ /^\s{4}(0x[0-9a-fA-F]+)\s*=>\s*\{(.*?)^\s{4}\},/gms) {
 }
 @selectors = sort { $a->{tag} <=> $b->{tag} } @selectors;
 
+# A field's own category if it states one, the table's constant otherwise.
+sub grp2_of {
+    my ($f) = @_;
+    return defined $f->{grp2} ? "\"$f->{grp2}\"" : 'GRP2';
+}
+
 # ------------------------------------------------------------------ emission
 my $nf = 0; $nf += scalar @{$_->{fields}} for @tables;
 
@@ -746,8 +767,11 @@ fn mk_prio(
     // Each table declares its own family-2 default -- Image for these -- and a
     // few tags override it. Stamping them all the same put two of them in the
     // wrong category.
-    let family2 = crate::tags::group2::family2_for("MakerNotes", "Sony", name, default_group2)
-        .unwrap_or(default_group2);
+    // ExifTool resolves family 2 from the tag's own `Groups => { 2 => ... }`
+    // and falls back to the table's GROUPS -- both of which the generator has
+    // already read. There is no name-keyed lookup in that chain, and one
+    // guessed the wrong category for six of these.
+    let family2 = default_group2;
     Tag {
         id: TagId::Text(name.to_string()),
         name: name.to_string(),
@@ -914,7 +938,7 @@ for my $t (@tables) {
         if ($f->{fmt} eq 'string' or $f->{fmt} eq 'undef') {
             printf "%sif let Some(text) = text_at(data, 0x%x, %d, %s) {\n",
                 $ind, $f->{off}, $f->{n}, ($f->{fmt} eq 'string' ? 'true' : 'false');
-            printf "%s    tags.push(text_tag(\"%s\", GRP2, text, PRIO));\n", $ind, $f->{name}
+            printf "%s    tags.push(text_tag(\"%s\", %s, text, PRIO));\n", $ind, $f->{name}, grp2_of($f)
                 unless $f->{hidden};
             printf "%s}\n", $ind;
             print  "    }\n" if defined $f->{re};
@@ -934,11 +958,11 @@ for my $t (@tables) {
             if (defined $f->{pconv} and $f->{pconv} =~ /unpack\s+"H\*"/) {
                 # `unpack "H*", pack "C*", split " ", $val`: the bytes as hex.
                 printf "%s        let hex: String = parts.iter().map(|p| format!(\"{:02x}\", p.parse::<u32>().unwrap_or(0))).collect();\n", $ind;
-                printf "%s        tags.push(mk_prio(\"%s\", hex, Value::String(%s), GRP2, PRIO));\n", $ind, $f->{name}, $joined
+                printf "%s        tags.push(mk_prio(\"%s\", hex, Value::String(%s), %s, PRIO));\n", $ind, $f->{name}, $joined, grp2_of($f)
                     unless $f->{hidden};
             } else {
                 printf "%s        let s = %s;\n", $ind, $joined;
-                printf "%s        tags.push(mk_prio(\"%s\", s.clone(), Value::String(s), GRP2, PRIO));\n", $ind, $f->{name}
+                printf "%s        tags.push(mk_prio(\"%s\", s.clone(), Value::String(s), %s, PRIO));\n", $ind, $f->{name}, grp2_of($f)
                     unless $f->{hidden};
             }
             printf "%s    }\n%s}\n", $ind, $ind;
@@ -970,7 +994,7 @@ for my $t (@tables) {
             }
             printf "%s        other => other.to_string(),\n", $ind;
             printf "%s    };\n", $ind;
-            printf "%s    tags.push(mk_prio(\"%s\", s, Value::I32(v as i32), GRP2, PRIO));\n", $ind, $f->{name}
+            printf "%s    tags.push(mk_prio(\"%s\", s, Value::I32(v as i32), %s, PRIO));\n", $ind, $f->{name}, grp2_of($f)
                 unless $f->{hidden};
         } elsif (defined $f->{vconv} or defined $f->{pconv}) {
             my $esc = sub { my $t = shift; $t =~ s/\\/\\\\/g; $t =~ s/"/\\"/g; $t };
@@ -984,10 +1008,10 @@ for my $t (@tables) {
                 printf "%s    if let Some(x) = conv_expr::eval(\"%s\", &cv) { cv = x; }\n",
                     $ind, $esc->($f->{pconv});
             }
-            printf "%s    tags.push(mk_prio(\"%s\", cv.as_string(), raw, GRP2, PRIO));\n", $ind, $f->{name}
+            printf "%s    tags.push(mk_prio(\"%s\", cv.as_string(), raw, %s, PRIO));\n", $ind, $f->{name}, grp2_of($f)
                 unless $f->{hidden};
         } else {
-            printf "%s    tags.push(mk_prio(\"%s\", v.to_string(), Value::I32(v as i32), GRP2, PRIO));\n", $ind, $f->{name}
+            printf "%s    tags.push(mk_prio(\"%s\", v.to_string(), Value::I32(v as i32), %s, PRIO));\n", $ind, $f->{name}, grp2_of($f)
                 unless $f->{hidden};
         }
         if ($raw_guard) {
