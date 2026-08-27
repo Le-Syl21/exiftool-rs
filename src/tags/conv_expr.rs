@@ -2509,6 +2509,7 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
     const TAKES_SELF: &[&str] = &[
         "Printable", "Decode", "ConvertID3v1Text", "ConvertExifText", "CalcScaleFactor35efl",
         "AddUnits", "ConvertPascalString", "PrintLensID", "CalcRotation", "ToDMS",
+        "DecompressRTF", "CalcScaleFactor35efl",
     ];
     let args: &[Val] = if TAKES_SELF.contains(&name) && !method { args.get(1..)? } else { args };
     // Some of these take nothing but the object: `CalcRotation($self)` reads
@@ -3259,6 +3260,11 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
                 None => Val::Str(format!("Unknown (0x{v:x})")),
             }
         }
+        // Exif.pm CalcScaleFactor35efl: how much longer a 35 mm lens would
+        // have to be for this frame.
+        "CalcScaleFactor35efl" => scale_factor_35efl(args, state)?,
+        // TNEF.pm DecompressRTF: the compressed RTF body of a mail message.
+        "DecompressRTF" => Val::Binary(decompress_rtf(&perl_bytes(first)?)?),
         // GPS.pm PrintTimeStamp: trims the fractional seconds to microseconds.
         "PrintTimeStamp" => Val::Str(print_time_stamp(&first.as_string())),
         // XMP.pm ConvertXMPDate: an XMP date back into EXIF's layout.
@@ -3365,6 +3371,202 @@ fn to_degrees(text: &str) -> Option<f64> {
         .next()
         .is_some_and(|t| t.eq_ignore_ascii_case("S") || t.eq_ignore_ascii_case("W"));
     Some(if neg { -deg } else { deg })
+}
+
+/// Exif.pm CalcScaleFactor35efl. Perl shifts its way down the argument list,
+/// so this walks the same list with a cursor and in the same order.
+#[allow(clippy::too_many_lines)]
+fn scale_factor_35efl(args: &[Val], state: &dyn ParseState) -> Option<Val> {
+    // The units of the focal plane resolution, kept before ToFloat turns it
+    // into a number.
+    let res = args.get(7).map(Val::as_string).unwrap_or_default();
+    let sens_xy = args.get(4).map(Val::as_string).unwrap_or_default();
+    // ToFloat digs the number out of each argument, whatever text surrounds it.
+    let nums: Vec<Option<f64>> = args
+        .iter()
+        .map(|v| {
+            let t = v.as_string();
+            if t.is_empty() { None } else { perl_float(&t) }
+        })
+        .collect();
+    let mut i = 0usize;
+    macro_rules! next {
+        () => {{
+            let v = nums.get(i).copied().flatten();
+            i += 1;
+            v
+        }};
+    }
+    let focal = next!().unwrap_or(0.0);
+    let foc35 = next!().unwrap_or(0.0);
+    if focal != 0.0 && foc35 != 0.0 {
+        return Some(Val::Num(foc35 / focal));
+    }
+    let digz = match next!() {
+        Some(v) if v != 0.0 => v,
+        _ => 1.0,
+    };
+    let mut diag = next!().filter(|d| *d != 0.0);
+    let sens = next!().unwrap_or(0.0);
+
+    // Canon stores the sensor size in the denominator of the focal plane
+    // resolution, and has an algorithm of its own for it.
+    if state.member("Make").is_some_and(|m| m.as_string() == "Canon") {
+        if let Some(d) = canon_sensor_diag(state) {
+            diag = Some(d);
+        }
+    }
+    if diag.is_none() {
+        if sens != 0.0 {
+            if let Some(c) = build_regex(r" (\d+(\.?\d*)?)$", "").and_then(|re| re.captures(&sens_xy))
+            {
+                let y = c.get(1).map_or(0.0, |m| leading_number(m.as_str()));
+                diag = Some((sens * sens + y * y).sqrt());
+            }
+        }
+        if diag.is_none() {
+            let xsize = next!().unwrap_or(0.0);
+            let ysize = next!().unwrap_or(0.0);
+            if xsize != 0.0 && ysize != 0.0 {
+                // FocalPlaneX/YSize is not reliable, so the aspect ratio has
+                // to look like a camera's before it is believed.
+                let a = xsize / ysize;
+                if (a - 1.3333).abs() < 0.1 || (a - 1.5).abs() < 0.1 {
+                    diag = Some((xsize * xsize + ysize * ysize).sqrt());
+                }
+            }
+        }
+        if diag.is_none() {
+            // Millimetres per unit; inches unless the file says otherwise.
+            let unit_of = |u: &str| match u {
+                "3" | "cm" => Some(10.0),
+                "4" | "mm" => Some(1.0),
+                "5" | "um" => Some(0.001),
+                _ => None,
+            };
+            let named = args.get(i).map(Val::as_string).unwrap_or_default();
+            i += 1;
+            let units = unit_of(&named).or_else(|| unit_of(&res)).unwrap_or(25.4);
+            let x_res = next!().filter(|v| *v != 0.0)?;
+            let y_res = next!().filter(|v| *v != 0.0).unwrap_or(x_res);
+            let (mut w, mut h);
+            loop {
+                if i + 2 > args.len() {
+                    return Some(Val::Undef);
+                }
+                w = next!().unwrap_or(0.0);
+                h = next!().unwrap_or(0.0);
+                if w == 0.0 || h == 0.0 {
+                    continue;
+                }
+                let a = w / h;
+                if a > 0.5 && a < 2.0 {
+                    break;
+                }
+            }
+            w *= units / x_res;
+            h *= units / y_res;
+            let d = (w * w + h * h).sqrt();
+            if !(d > 1.0 && d < 100.0) {
+                return Some(Val::Undef);
+            }
+            diag = Some(d);
+        }
+    }
+    let diag = diag.filter(|d| *d != 0.0)?;
+    Some(Val::Num((36.0f64 * 36.0 + 24.0 * 24.0).sqrt() * digz / diag))
+}
+
+/// Canon.pm CalcSensorDiag: the sensor size hides in the denominators of the
+/// focal plane resolution, and the assumptions are checked before it is used.
+fn canon_sensor_diag(state: &dyn ParseState) -> Option<f64> {
+    let parse = |name: &str| -> Option<(f64, f64)> {
+        let text = state.tag_extra(name, "Rational")?.as_string();
+        let parts: Vec<f64> = text.split([' ', '/']).map(leading_number).collect();
+        Some((*parts.first()?, *parts.get(1)?))
+    };
+    let (xn, xd) = parse("FocalPlaneXResolution")?;
+    let (yn, yd) = parse("FocalPlaneYResolution")?;
+    // Numerators are the image size times 1000; denominators the sensor size
+    // in thousandths of an inch.
+    if xn % 1000.0 == 0.0
+        && yn % 1000.0 == 0.0
+        && xn >= 640_000.0
+        && yn >= 480_000.0
+        && xn < 10_000_000.0
+        && yn < 10_000_000.0
+        && (61.0..1500.0).contains(&xd)
+        && (61.0..1000.0).contains(&yd)
+        && xd != yd
+    {
+        return Some((xd * xd + yd * yd).sqrt() * 0.0254);
+    }
+    None
+}
+
+/// TNEF.pm DecompressRTF: Microsoft's LZ variant over a fixed starting
+/// dictionary. An unknown compression method gives nothing back, as it does
+/// in ExifTool (which warns and returns an empty string).
+fn decompress_rtf(cdat: &[u8]) -> Option<Vec<u8>> {
+    if cdat.len() <= 16 {
+        return Some(Vec::new());
+    }
+    let comp = u32::from_le_bytes(cdat.get(8..12)?.try_into().ok()?);
+    if comp == 0x414c_454D {
+        return Some(cdat[16..].to_vec()); // stored, not compressed
+    }
+    if comp != 0x7546_5a4c {
+        return Some(Vec::new());
+    }
+    const START: &str = concat!(
+        r"{\rtf1\ansi\mac\deff0\deftab720{\fonttbl;}",
+        r"{\f0\fnil \froman \fswiss \fmodern ",
+        r"\fscript \fdecor MS Sans SerifSymbolArialTimes",
+        r" New RomanCourier{\colortbl\red0\green0\blue0",
+        "\r\n",
+        r"\par \pard\plain\f0\fs20\b\i\u\tab\tx",
+    );
+    let mut dict: Vec<u8> = START.bytes().collect();
+    dict.resize(4096, 0);
+    let mut dpos = START.len();
+    let dict_len = START.len();
+    let mut out: Vec<u8> = Vec::new();
+    let mut cpos = 16usize;
+    while cpos < cdat.len() {
+        let control = cdat[cpos];
+        cpos += 1;
+        for bit in 0..8 {
+            if cpos >= cdat.len() {
+                break;
+            }
+            if control & (1 << bit) == 0 {
+                let ch = cdat[cpos];
+                cpos += 1;
+                dict[dpos % 4096] = ch;
+                dpos += 1;
+                out.push(ch);
+                continue;
+            }
+            if cpos + 2 > cdat.len() {
+                return Some(out);
+            }
+            let r = u16::from_be_bytes([cdat[cpos], cdat[cpos + 1]]);
+            cpos += 2;
+            let mut off = usize::from(r >> 4);
+            let len = usize::from(r & 0x0f) + 2;
+            if off == dpos % 4096 || off % 4096 >= dict_len {
+                return Some(out);
+            }
+            for _ in 0..len {
+                let ch = dict[off % 4096];
+                off += 1;
+                dict[dpos % 4096] = ch;
+                dpos += 1;
+                out.push(ch);
+            }
+        }
+    }
+    Some(out)
 }
 
 /// ID3.pm PrintGenre: `(17)` and `17/20` both name genres, and a number with
@@ -4059,6 +4261,54 @@ mod tests {
         );
     }
 
+    /// The 35 mm scale factor and the RTF decompressor. Perl gave every
+    /// expected value here.
+    #[test]
+    fn scale_factor_and_compressed_rtf() {
+        struct Nikon;
+        impl ParseState for Nikon {
+            fn member(&self, name: &str) -> Option<Val> {
+                (name == "Make").then(|| Val::Str("NIKON".to_string()))
+            }
+        }
+        let f = |args: &str| {
+            eval_with(
+                &format!("Image::ExifTool::Exif::CalcScaleFactor35efl($self, {args})"),
+                &n(0.0),
+                &Nikon,
+            )
+            .unwrap()
+            .as_num()
+        };
+        assert_eq!(f("50, 75"), 1.5);
+        assert!((f("50, undef, 1, undef, undef, 23.6, 15.8") - 1.523_434_594_281_88).abs() < 1e-12);
+
+        // A sixteen-byte header, then a control byte of literals.
+        let mut lzfu: Vec<u8> = Vec::new();
+        lzfu.extend([0u8; 8]);
+        lzfu.extend(0x7546_5a4cu32.to_le_bytes());
+        lzfu.extend([0u8; 4]);
+        lzfu.push(0);
+        lzfu.extend(b"hello wo");
+        lzfu.push(0);
+        lzfu.extend(b"rld!");
+        let v = Val::Str(lzfu.iter().map(|b| *b as char).collect());
+        assert_eq!(
+            eval("Image::ExifTool::TNEF::DecompressRTF($self,$val)", &v).unwrap(),
+            Val::Binary(b"hello world!".to_vec())
+        );
+        let mut stored: Vec<u8> = Vec::new();
+        stored.extend([0u8; 8]);
+        stored.extend(0x414c_454du32.to_le_bytes());
+        stored.extend([0u8; 4]);
+        stored.extend(b"raw text");
+        let v = Val::Str(stored.iter().map(|b| *b as char).collect());
+        assert_eq!(
+            eval("Image::ExifTool::TNEF::DecompressRTF($self,$val)", &v).unwrap(),
+            Val::Binary(b"raw text".to_vec())
+        );
+    }
+
     /// The two tables ported as data, and the functions that read them.
     /// Perl gave every expected value here.
     #[test]
@@ -4551,7 +4801,7 @@ mod tests {
     /// keeps the raw value, which is honest, where a wrong conversion is not.
     #[test]
     fn unsupported_expressions_decline() {
-        assert!(eval("Image::ExifTool::TNEF::DecompressRTF($self,$val)", &n(1.0)).is_none());
+        assert!(eval("Image::ExifTool::XMP::PrintLensID($self, @val)", &n(1.0)).is_none());
         assert!(eval("$$self{Model}", &n(1.0)).is_none());
         assert!(eval("$val / 0", &n(1.0)).is_none());
     }
