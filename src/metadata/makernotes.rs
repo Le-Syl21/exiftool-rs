@@ -8238,12 +8238,14 @@ fn read_makernote_ifd_with_base(
             },
             raw_value: value,
             print_value,
-            // `%FLIR::Main` is `PRIORITY => 0, # (unreliable)` (FLIR.pm:58), so
-            // its Emissivity never displaces the FFF one. `Nikon::Main` 0x0002
-            // ISO says the same of itself: `Priority => 0, # the EXIF ISO is
-            // more reliable` (Nikon.pm line 1803).
+            // `%FLIR::Main` is `PRIORITY => 0, # (unreliable)` (FLIR.pm:58),
+            // so its Emissivity never displaces the FFF one. The tags that say
+            // it of themselves -- Nikon's 0x0002 ISO, "the EXIF ISO is more
+            // reliable"; Sony's 0xb04f DynamicRangeOptimizer, unreliable on the
+            // A77 -- come from the generated set rather than a list kept here
+            // by hand.
             priority: if manufacturer == Manufacturer::Flir
-                || (manufacturer == Manufacturer::Nikon && tag_id == 0x0002)
+                || crate::tags::priority0_generated::makernote_is_priority0(group_name, tag_id)
             {
                 crate::tag::PRIORITY_EXPLICIT_ZERO
             } else {

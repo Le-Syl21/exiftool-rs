@@ -6,7 +6,6 @@
 SonyILCE9.arw	AFAreaMode	family2
 SonyILCE9.arw	BatteryLevel	family2
 SonyILCE9.arw	BatteryTemperature	family2
-SonyILCE9.arw	DistortionCorrection	family1
 SonyILCE9.arw	DynamicRangeOptimizer	family2
 SonyILCE9.arw	ExposureProgram	family1
 SonyILCE9.arw	ExposureProgram	family2
@@ -15,5 +14,3 @@ SonyILCE9.arw	FocusPosition2	family2
 SonyILCE9.arw	LensType	family2
 SonyILCE9.arw	ThumbnailLength	family1
 SonyILCE9.arw	ThumbnailOffset	family1
-SonyILCE9.arw	VignettingCorrection	family1
-SonyILCE9.arw	VignettingCorrection	family2

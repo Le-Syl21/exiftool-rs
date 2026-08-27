@@ -10,15 +10,10 @@ SonyILCE9.arw::IFD0:ThumbnailLength
 SonyILCE9.arw::IFD0:ThumbnailOffset
 SonyILCE9.arw::IFD1:ThumbnailLength
 SonyILCE9.arw::IFD1:ThumbnailOffset
-SonyILCE9.arw::Sony:AFAreaMode
-SonyILCE9.arw::Sony:AFAreaModeSetting
 SonyILCE9.arw::Sony:AFPointSelected
 SonyILCE9.arw::Sony:AFPointsUsed
 SonyILCE9.arw::Sony:Anti-Blur
 SonyILCE9.arw::Sony:ColorTemperature
-SonyILCE9.arw::Sony:DistortionCorrection
-SonyILCE9.arw::Sony:DistortionCorrectionSetting
-SonyILCE9.arw::Sony:DynamicRangeOptimizer2
 SonyILCE9.arw::Sony:ExposureProgram
 SonyILCE9.arw::Sony:FileFormat
 SonyILCE9.arw::Sony:FullImageSize
@@ -41,10 +36,5 @@ SonyILCE9.arw::Sony:ShutterCount2
 SonyILCE9.arw::Sony:SonyModelID
 SonyILCE9.arw::Sony:Tag9401
 SonyILCE9.arw::Sony:VariableLowPassFilter
-SonyILCE9.arw::Sony:VignettingCorrection
-SonyILCE9.arw::Sony:WBShiftAB_GM
 SonyILCE9.arw::Sony:WBShiftAB_GM_Precise
-SonyILCE9.arw::Sony:WhiteBalance2
-SonyILCE9.arw::SubIFD:DistortionCorrection
-SonyILCE9.arw::SubIFD:VignettingCorrection
 SonyILCE9.arw::XMP-x:XMPToolkit

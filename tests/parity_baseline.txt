@@ -3,15 +3,10 @@
 # = regression, or a new spurious tag). Improvements are allowed.
 # Regenerate: UPDATE_PARITY_BASELINE=1 cargo test --test regression regression_tag_names
 # Format: <file>\t<missing|extra>\t<tag>
-SonyILCE9.arw	extra	DynamicRangeOptimizer2
 SonyILCE9.arw	extra	HighISONoiseReduction2
 SonyILCE9.arw	extra	Panorama
 SonyILCE9.arw	extra	Tag9401
-SonyILCE9.arw	extra	WhiteBalance2
 SonyILCE9.arw	extra	XMPToolkit
-SonyILCE9.arw	missing	AFAreaModeSetting
-SonyILCE9.arw	missing	AFPointsUsed
-SonyILCE9.arw	missing	DistortionCorrectionSetting
 SonyILCE9.arw	missing	FocusDistance2
 SonyILCE9.arw	missing	ISOAutoMax
 SonyILCE9.arw	missing	ISOAutoMin

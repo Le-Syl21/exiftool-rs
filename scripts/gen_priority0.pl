@@ -60,6 +60,30 @@ my %seen;     # XMP: "group1\tname"
 my %below;    # XMP: "group1\tname", for a priority BELOW 0
 my %exif;     # EXIF: numeric id => { name => priority }
 my %qt;       # QuickTime: "TableName\tatom code" => priority
+my @mn_mixed; # ids whose tagInfos disagree on priority
+my %mn;       # MakerNotes: "Maker\tid" => priority, for the Main tables
+
+# The MakerNote Main tables our reader looks tags up in by numeric id. A
+# `Priority => 0` there is what keeps Sony's 0xb04f DynamicRangeOptimizer --
+# noted unreliable on the A77 -- from displacing the one read earlier.
+my %MN_TABLES = (
+    'Image::ExifTool::Sony::Main'      => 'Sony',
+    'Image::ExifTool::Canon::Main'     => 'Canon',
+    'Image::ExifTool::Nikon::Main'     => 'Nikon',
+    'Image::ExifTool::Olympus::Main'   => 'Olympus',
+    'Image::ExifTool::Panasonic::Main' => 'Panasonic',
+    'Image::ExifTool::Pentax::Main'    => 'Pentax',
+    'Image::ExifTool::FujiFilm::Main'  => 'FujiFilm',
+    'Image::ExifTool::Casio::Main'     => 'Casio',
+    'Image::ExifTool::Ricoh::Main'     => 'Ricoh',
+    'Image::ExifTool::Sigma::Main'     => 'Sigma',
+    'Image::ExifTool::Samsung::Main'   => 'Samsung',
+    'Image::ExifTool::Sanyo::Main'     => 'Sanyo',
+    'Image::ExifTool::Minolta::Main'   => 'Minolta',
+    'Image::ExifTool::Apple::Main'     => 'Apple',
+    'Image::ExifTool::DJI::Main'       => 'DJI',
+    'Image::ExifTool::GoPro::Main'     => 'GoPro',
+);
 
 # The QuickTime tables our reader decodes atom by atom. Microsoft::Xtra is
 # listed for completeness of the record, even though its 452 priority-0
@@ -75,13 +99,30 @@ foreach my $tableName (sort keys %$all) {
     my $family0 = $$table{GROUPS}{0} // '';
     my $tablePriority = $$table{PRIORITY};
     my $qtGroup = $QT_TABLES{$tableName};
-    next unless $family0 eq 'XMP' or $family0 eq 'EXIF' or $qtGroup;
+    my $mnGroup = $MN_TABLES{$tableName};
+    next unless $family0 eq 'XMP' or $family0 eq 'EXIF' or $qtGroup or $mnGroup;
     foreach my $id (Image::ExifTool::TagTableKeys($table)) {
         foreach my $tagInfo (Image::ExifTool::GetTagInfoList($table, $id)) {
             next unless ref $tagInfo eq 'HASH';
             next if $$tagInfo{SubDirectory} and not defined $$tagInfo{Writable};
             my $priority = resolve_priority($tagInfo, $tablePriority);
             my $name = $$tagInfo{Name};
+
+            if ($mnGroup and $id =~ /^\d+$/) {
+                my $p = defined $priority ? $priority : 1;
+                # One id can carry several tagInfos (a Condition chain). They
+                # agree on priority here; the check keeps it that way.
+                my $key = "$mnGroup\t$id";
+                # One id can carry several tagInfos through a Condition chain,
+                # and they need not agree: Minolta 0x0103 is priority 0 in one
+                # arm and 1 in another. Keep the highest, so an id is only
+                # demoted when every arm says so -- and say which ones differ.
+                if (defined $mn{$key} and $mn{$key} != $p) {
+                    push @mn_mixed, sprintf("%s 0x%04x %s: %d and %d", $mnGroup, $id, $name, $mn{$key}, $p);
+                    $p = $mn{$key} > $p ? $mn{$key} : $p;
+                }
+                $mn{$key} = $p;
+            }
 
             if ($qtGroup) {
                 my $key = "$qtGroup\t$id";
@@ -281,3 +322,37 @@ pub fn keys_is_priority0(key: &[u8]) -> bool {
     KEYS_PRIORITY0.binary_search(&key).is_ok()
 }
 FOOTER
+
+# ---------------------------------------------------------- MakerNotes
+print <<'MNHEAD';
+
+/// Whether a MakerNote Main-table tag is stored at priority 0.
+///
+/// ExifTool marks a handful of them unreliable -- Sony's 0xb04f
+/// DynamicRangeOptimizer is noted as wrong on the A77 -- and a priority-0
+/// duplicate never displaces a value already stored under that name.
+#[must_use]
+pub fn makernote_is_priority0(maker: &str, id: u16) -> bool {
+    matches!((maker, id),
+MNHEAD
+{
+    my @rows;
+    foreach my $key (sort keys %mn) {
+        next if $mn{$key};    # only priority 0 is interesting
+        my ($maker, $id) = split /\t/, $key;
+        push @rows, sprintf('("%s", %#06x)', $maker, $id);
+    }
+    if (@rows) {
+        print "        " . join("\n        | ", @rows) . "\n";
+    } else {
+        print "        (\"\", 0xffff) if false\n";
+    }
+}
+print "    )\n}\n";
+
+if (@mn_mixed) {
+    printf STDERR "\n%d MakerNote id(s) whose variants disagree on priority (kept at the\n"
+                . "highest, so none of them is demoted):\n", scalar @mn_mixed;
+    print STDERR "  $_\n" for @mn_mixed;
+}
+
