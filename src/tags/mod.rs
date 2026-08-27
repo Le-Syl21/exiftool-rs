@@ -1,4 +1,5 @@
 pub mod canon_sub;
+pub mod conv_tables_generated;
 pub mod exif;
 pub mod generated;
 pub mod group2;

@@ -188,7 +188,9 @@ fn main() {
         // without dividing by zero.
         let composite =
             ["$val[", "@val", "$prt[", "@prt", "$raw[", "@raw"].iter().any(|m| e.contains(m));
-        let parts = [Val::Num(3.0), Val::Num(2.0), Val::Num(7.0), Val::Num(9.0)];
+        // A Composite tag can be built from a dozen parts; a short list would
+        // make one of these read past the end and refuse for the wrong reason.
+        let parts: Vec<Val> = (1..=12).map(|k| Val::Num(f64::from(k))).collect();
         // A single number does not exercise every conversion: some read a
         // whole row of them and would divide by an absent one, which Perl
         // would die on too. So a refusal is tried again with a value that has

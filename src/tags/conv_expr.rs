@@ -2010,6 +2010,7 @@ fn format_sprintf(fmt: &str, args: &[Val]) -> Option<String> {
             'g' | 'G' => {
                 // Perl's %g: significant digits, trailing zeros trimmed.
                 let n = v.as_num();
+                let sign = if plus && n >= 0.0 { "+" } else { "" };
                 let p = prec.unwrap_or(6).max(1);
                 let mut t = format!("{n:.*e}", p - 1);
                 if let Some((m, e)) = t.split_once('e') {
@@ -2025,7 +2026,7 @@ fn format_sprintf(fmt: &str, args: &[Val]) -> Option<String> {
                         t = format!("{m}e{exp:+03}");
                     }
                 }
-                t
+                format!("{sign}{t}")
             }
             'u' => format!("{:0>width$}", to_u64(v)?, width = prec.unwrap_or(1)),
             'x' => format!("{:0>width$x}", to_u64(v)?, width = prec.unwrap_or(1)),
@@ -2510,7 +2511,10 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
         "AddUnits", "ConvertPascalString", "PrintLensID", "CalcRotation", "ToDMS",
     ];
     let args: &[Val] = if TAKES_SELF.contains(&name) && !method { args.get(1..)? } else { args };
-    let first = args.first()?;
+    // Some of these take nothing but the object: `CalcRotation($self)` reads
+    // the file's own tags and has no value in hand at all.
+    const NOTHING: Val = Val::Undef;
+    let first = args.first().unwrap_or(&NOTHING);
     Some(match name {
         // Without a -d format ExifTool returns the date untouched, and that is
         // the default. This is the single most-used conversion it has.
@@ -3229,6 +3233,32 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
             }
             Val::Undef
         }
+        // ID3.pm PrintGenre: the numbers, in brackets or separated by
+        // slashes, replaced by the genres they stand for.
+        "PrintGenre" => Val::Str(print_genre(&first.as_string())?),
+        // Minolta.pm ConvertWhiteBalance: a mode, or an A2 mode shifted by
+        // up to three settings.
+        "ConvertWhiteBalance" => {
+            use crate::tags::conv_tables_generated::MINOLTA_WHITE_BAL;
+            #[allow(clippy::cast_possible_truncation)]
+            let v = first.as_num().trunc() as i64;
+            if let Some((_, name)) = MINOLTA_WHITE_BAL.iter().find(|(k, _)| *k == v) {
+                return Some(Val::Str((*name).to_string()));
+            }
+            if v & 0xffff_0000 == 0 {
+                return Some(Val::Str(format!("Unknown ({})", first.as_string())));
+            }
+            // Each setting of shift adds 0x10000 to the base mode.
+            let base = (v & 0xff00_0000) + 0x0080_0000;
+            match MINOLTA_WHITE_BAL.iter().find(|(k, _)| *k == base) {
+                Some((_, name)) => {
+                    #[allow(clippy::cast_precision_loss)]
+                    let shift = (v - base) as f64 / 65536.0;
+                    Val::Str(format!("{name}{}", format_sprintf("%+.8g", &[Val::Num(shift)])?))
+                }
+                None => Val::Str(format!("Unknown (0x{v:x})")),
+            }
+        }
         // GPS.pm PrintTimeStamp: trims the fractional seconds to microseconds.
         "PrintTimeStamp" => Val::Str(print_time_stamp(&first.as_string())),
         // XMP.pm ConvertXMPDate: an XMP date back into EXIF's layout.
@@ -3335,6 +3365,55 @@ fn to_degrees(text: &str) -> Option<f64> {
         .next()
         .is_some_and(|t| t.eq_ignore_ascii_case("S") || t.eq_ignore_ascii_case("W"));
     Some(if neg { -deg } else { deg })
+}
+
+/// ID3.pm PrintGenre: `(17)` and `17/20` both name genres, and a number with
+/// no name of its own is shown as itself.
+fn print_genre(val: &str) -> Option<String> {
+    use crate::tags::conv_tables_generated::ID3_GENRE;
+    let name = |n: &str| -> String {
+        let k: i64 = n.parse().unwrap_or(-1);
+        ID3_GENRE
+            .iter()
+            .find(|(g, _)| *g == k)
+            .map_or_else(|| format!("Unknown ({n})"), |(_, v)| (*v).to_string())
+    };
+    // `(17)` -> `(Rock)`
+    let bracketed = build_regex(r"\((\d+)\)", "")?;
+    let mut out = String::new();
+    let mut last = 0usize;
+    for c in bracketed.captures_iter(val) {
+        let m = c.get(0)?;
+        out.push_str(&val[last..m.start()]);
+        out.push_str(&format!("({})", name(c.get(1)?.as_str())));
+        last = m.end();
+    }
+    out.push_str(&val[last..]);
+
+    // `17` or `17/20` -> the names, keeping the slashes.
+    let slashed = build_regex(r"(^|/)(\d+)($|/)", "")?;
+    let mut done = String::new();
+    let mut last = 0usize;
+    while let Some(c) = slashed.captures(&out[last..]) {
+        let m = c.get(0)?;
+        let (start, end) = (last + m.start(), last + m.end());
+        done.push_str(&out[last..start]);
+        done.push_str(c.get(1)?.as_str());
+        done.push_str(&name(c.get(2)?.as_str()));
+        // The trailing slash is left for the next match to open with.
+        last = end - c.get(3)?.as_str().len();
+    }
+    done.push_str(&out[last..]);
+
+    // A name in brackets, possibly repeated after it, is just the name.
+    let tidy = build_regex(r"^\(([^)]+)\)(.*)$", "")?;
+    if let Some(c) = tidy.captures(&done) {
+        let (inner, rest) = (c.get(1)?.as_str(), c.get(2)?.as_str());
+        if rest.is_empty() || rest == inner {
+            return Some(inner.to_string());
+        }
+    }
+    Some(done)
 }
 
 /// PDF.pm ConvertPDFDate: `D:20260827112202+02'00'` into EXIF's layout.
@@ -3980,6 +4059,28 @@ mod tests {
         );
     }
 
+    /// The two tables ported as data, and the functions that read them.
+    /// Perl gave every expected value here.
+    #[test]
+    fn genres_and_minolta_white_balance() {
+        let g = |v: &str| {
+            eval("Image::ExifTool::ID3::PrintGenre($val)", &Val::Str(v.into()))
+                .unwrap()
+                .as_string()
+        };
+        assert_eq!(g("(17)"), "Rock");
+        assert_eq!(g("17"), "Rock");
+        assert_eq!(g("17/20"), "Rock/Alternative");
+        assert_eq!(g("(17)Rock"), "Rock");
+        assert_eq!(g("(200)"), "(Unknown (200))");
+        let wb = |v: f64| {
+            eval("Image::ExifTool::Minolta::ConvertWhiteBalance($val)", &n(v)).unwrap().as_string()
+        };
+        assert_eq!(wb(2.0), "Cloudy");
+        assert_eq!(wb(f64::from(0x0181_0000)), "Daylight+1");
+        assert_eq!(wb(99.0), "Unknown (99)");
+    }
+
     /// The batch of named printers around file sizes, levels and patterns.
     /// Perl produced every expected value here first.
     #[test]
@@ -4406,7 +4507,7 @@ mod tests {
         assert_eq!(eval("ConvertBitrate($val)", &n(1_500_000.0)).unwrap().as_string(), "1.5 Mbps");
         assert_eq!(eval("ConvertBitrate($val)", &n(999.0)).unwrap().as_string(), "999 bps");
         // A name we have not ported still declines.
-        assert!(eval("Image::ExifTool::ID3::PrintGenre($val)", &n(1.0)).is_none());
+        assert!(eval("Image::ExifTool::XMP::PrintLensID($self, @val)", &n(1.0)).is_none());
     }
 
     #[test]
