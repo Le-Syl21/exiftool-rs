@@ -27,14 +27,12 @@ SonyILCE9.arw::Sony:LensFirmwareVersion
 SonyILCE9.arw::Sony:LensSpec
 SonyILCE9.arw::Sony:LensSpecFeatures
 SonyILCE9.arw::Sony:LensType
-SonyILCE9.arw::Sony:Panorama
 SonyILCE9.arw::Sony:PixelShiftInfo
 SonyILCE9.arw::Sony:PreviewImageSize
 SonyILCE9.arw::Sony:Quality
 SonyILCE9.arw::Sony:Shutter
 SonyILCE9.arw::Sony:ShutterCount2
 SonyILCE9.arw::Sony:SonyModelID
-SonyILCE9.arw::Sony:Tag9401
 SonyILCE9.arw::Sony:VariableLowPassFilter
 SonyILCE9.arw::Sony:WBShiftAB_GM_Precise
 SonyILCE9.arw::XMP-x:XMPToolkit

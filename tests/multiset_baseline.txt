@@ -26,13 +26,11 @@ SonyILCE9.arw	default	extra	0	LensID	Unknown 50-300mm
 SonyILCE9.arw	default	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	LensSpecFeatures	.
 SonyILCE9.arw	default	extra	0	LensType	65535
-SonyILCE9.arw	default	extra	0	Panorama	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 SonyILCE9.arw	default	extra	0	PixelShiftInfo	(Binary data 6 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	PreviewImageSize	1080x1616
 SonyILCE9.arw	default	extra	0	Quality	1 0
 SonyILCE9.arw	default	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	default	extra	0	SonyModelID	358
-SonyILCE9.arw	default	extra	0	Tag9401	(Binary data 4096 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	ThumbnailLength	228105
 SonyILCE9.arw	default	extra	0	ThumbnailOffset	131234
 SonyILCE9.arw	default	extra	0	VariableLowPassFilter	0 0
@@ -83,7 +81,6 @@ SonyILCE9.arw	ee	extra	0	LensID	Unknown 50-300mm
 SonyILCE9.arw	ee	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	LensSpecFeatures	.
 SonyILCE9.arw	ee	extra	0	LensType	65535
-SonyILCE9.arw	ee	extra	0	Panorama	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 SonyILCE9.arw	ee	extra	0	PixelShiftInfo	(Binary data 6 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	PreviewImageSize	1080x1616
 SonyILCE9.arw	ee	extra	0	Quality	1 0
@@ -91,7 +88,6 @@ SonyILCE9.arw	ee	extra	0	Saturation	Low
 SonyILCE9.arw	ee	extra	0	Sharpness	Normal
 SonyILCE9.arw	ee	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	ee	extra	0	SonyModelID	358
-SonyILCE9.arw	ee	extra	0	Tag9401	(Binary data 4096 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	ThumbnailLength	228105
 SonyILCE9.arw	ee	extra	0	ThumbnailOffset	131234
 SonyILCE9.arw	ee	extra	0	VariableLowPassFilter	0 0

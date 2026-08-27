@@ -276,6 +276,7 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
 # Reading a `q{...}` condition as absent is what made every multi-line arm
 # unconditional, so an ILCE-9 was decoded with the DSC-HX10V table.
 my @selectors;
+my %subdir_only;   # ids ExifTool defines only as a sub-directory
 my ($main) = $src =~ /^%Image::ExifTool::Sony::Main\s*=\s*\((.*?)\n\);/ms;
 $main ||= '';
 
@@ -469,6 +470,16 @@ while ($main =~ /^\s{4}(0x[0-9a-fA-F]+)\s*=>\s*\[(.*?)\}\],\s*$/gms) {
         push @choices, { tbl => $tbl, expr => $c[0], dbl => $c[1], uncond => $unconditional };
     }
     push @selectors, { tag => $tag, choices => \@choices } if @choices;
+
+    # Every arm opens a sub-directory: there is no plain value behind this id,
+    # so when no arm matches ExifTool extracts nothing at all. Emitting the
+    # block as a tag of its own is a tag ExifTool never has.
+    my @arm_bodies = $arms =~ /\{(.*?)(?=\},\{|\}\]|$)/gs;
+    my $all_subdir = @arm_bodies ? 1 : 0;
+    for my $a (@arm_bodies) {
+        $all_subdir = 0 unless $a =~ /SubDirectory\s*=>/;
+    }
+    $subdir_only{$tag} = 1 if $all_subdir;
 }
 
 # Tags with a single, unconditional sub-directory are declared as a plain hash
@@ -495,6 +506,7 @@ while ($main =~ /^\s{4}(0x[0-9a-fA-F]+)\s*=>\s*\{(.*?)^\s{4}\},/gms) {
     }
     push @selectors, { tag => $tag,
                        choices => [ { tbl => $tbl, expr => $c[0], dbl => $c[1], uncond => 1 } ] };
+    $subdir_only{$tag} = 1;
 }
 @selectors = sort { $a->{tag} <=> $b->{tag} } @selectors;
 
@@ -610,6 +622,22 @@ RD
 # dispatcher
 print "/// Decode one deciphered Sony sub-table. `data` must already be deciphered.\n";
 print "#[must_use]\n";
+print <<'SUBDIR';
+/// Whether ExifTool defines this MakerNote tag only as a sub-directory.
+///
+/// Such a tag has no value of its own: when none of its conditions matches,
+/// ExifTool extracts nothing, where a reader that falls back to printing the
+/// block reports a tag ExifTool never has.
+#[must_use]
+pub fn is_subdirectory_only(tag: u16) -> bool {
+    matches!(tag,
+SUBDIR
+{
+    my @ids = sort { $a <=> $b } keys %subdir_only;
+    print "        " . join(" | ", map { sprintf '%#06x', $_ } @ids) . "\n";
+}
+print "    )\n}\n\n";
+
 print "/// Whether a table's block is byte-substitution enciphered in the file.\n";
 print "///\n/// Deciphering one that is not turns it to noise, which is why this is\n";
 print "/// read off ExifTool's PROCESS_PROC rather than assumed.\n";

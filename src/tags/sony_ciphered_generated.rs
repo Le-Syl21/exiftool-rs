@@ -190,6 +190,18 @@ fn mk_prio(
 
 /// Decode one deciphered Sony sub-table. `data` must already be deciphered.
 #[must_use]
+/// Whether ExifTool defines this MakerNote tag only as a sub-directory.
+///
+/// Such a tag has no value of its own: when none of its conditions matches,
+/// ExifTool extracts nothing, where a reader that falls back to printing the
+/// block reports a tag ExifTool never has.
+#[must_use]
+pub fn is_subdirectory_only(tag: u16) -> bool {
+    matches!(tag,
+        0x1003 | 0x202a | 0x2044 | 0x3000 | 0x9401 | 0x9403 | 0x9416
+    )
+}
+
 /// Whether a table's block is byte-substitution enciphered in the file.
 ///
 /// Deciphering one that is not turns it to noise, which is why this is

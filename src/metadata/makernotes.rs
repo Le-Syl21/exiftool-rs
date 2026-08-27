@@ -7186,6 +7186,16 @@ fn read_makernote_ifd_with_base(
                 _ => Vec::new(),
             };
 
+            // A Sony tag ExifTool defines only as a sub-directory has no
+            // value of its own: when no condition matches -- 0x1003 Panorama
+            // on a frame that is not one -- ExifTool extracts nothing, and
+            // printing the block would be a tag it never has.
+            if sub_tags.is_empty()
+                && manufacturer == Manufacturer::Sony
+                && crate::tags::sony_ciphered_generated::is_subdirectory_only(tag_id)
+            {
+                continue;
+            }
             if !sub_tags.is_empty() {
                 // The custom-function blocks are decoded by CanonCustom.pm, a
                 // module of its own, so its tags carry its own family-1 group.
