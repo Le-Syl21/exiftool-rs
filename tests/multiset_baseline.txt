@@ -26,23 +26,16 @@ SonyILCE9.arw	default	extra	0	FileFormat	(Binary data 4 bytes, use -b option to 
 SonyILCE9.arw	default	extra	0	FullImageSize	4000x6000
 SonyILCE9.arw	default	extra	0	HDR	Off
 SonyILCE9.arw	default	extra	0	HighISONoiseReduction2	n/a
-SonyILCE9.arw	default	extra	0	LensID	Unknown 500-3000mm
+SonyILCE9.arw	default	extra	0	LensID	Unknown 50-300mm
 SonyILCE9.arw	default	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	LensType	65535
 SonyILCE9.arw	default	extra	0	LensType3	49475
-SonyILCE9.arw	default	extra	0	MaxFocalLength	3000
-SonyILCE9.arw	default	extra	0	MinFocalLength	500
-SonyILCE9.arw	default	extra	0	ModelReleaseYear	18
 SonyILCE9.arw	default	extra	0	Panorama	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 SonyILCE9.arw	default	extra	0	PixelShiftInfo	(Binary data 6 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	PreviewImageSize	1080x1616
 SonyILCE9.arw	default	extra	0	Quality	1 0
-SonyILCE9.arw	default	extra	0	ReleaseMode2	0
 SonyILCE9.arw	default	extra	0	SequenceLength	Continuous
 SonyILCE9.arw	default	extra	0	ShotInfo	(Binary data 390 bytes, use -b option to extract)
-SonyILCE9.arw	default	extra	0	SonyExposureTime	5205
-SonyILCE9.arw	default	extra	0	SonyFNumber	5632
-SonyILCE9.arw	default	extra	0	SonyISO	3754
 SonyILCE9.arw	default	extra	0	SonyModelID	358
 SonyILCE9.arw	default	extra	0	Sony_0x9407	(Binary data 64 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	Sony_0x9408	(Binary data 1000 bytes, use -b option to extract)
@@ -58,7 +51,7 @@ SonyILCE9.arw	default	extra	0	ThumbnailOffset	131234
 SonyILCE9.arw	default	extra	0	VariableLowPassFilter	0 0
 SonyILCE9.arw	default	extra	0	WBShiftAB_GM	Auto
 SonyILCE9.arw	default	extra	0	WBShiftAB_GM_Precise	0 0
-SonyILCE9.arw	default	extra	0	WB_RGBLevels	0
+SonyILCE9.arw	default	extra	0	WB_RGBLevels	0.0 mm
 SonyILCE9.arw	default	extra	0	WhiteBalance2	Auto
 SonyILCE9.arw	default	extra	0	WhiteLevel	16383
 SonyILCE9.arw	default	extra	0	XMPToolkit	
@@ -110,10 +103,7 @@ SonyILCE9.arw	default	missing	0	LensSpecFeatures	E
 SonyILCE9.arw	default	missing	0	LensType	E-Mount, T-Mount, Other Lens or no lens
 SonyILCE9.arw	default	missing	0	LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
 SonyILCE9.arw	default	missing	0	LensType3	Tamron 50-300mm F4.5-6.3 Di III VC VXD
-SonyILCE9.arw	default	missing	0	MaxFocalLength	300.0 mm
 SonyILCE9.arw	default	missing	0	MetaVersion	DC7303320222000
-SonyILCE9.arw	default	missing	0	MinFocalLength	50.0 mm
-SonyILCE9.arw	default	missing	0	ModelReleaseYear	2018
 SonyILCE9.arw	default	missing	0	PictureEffect2	Off
 SonyILCE9.arw	default	missing	0	PictureProfile	Gamma Still - Standard/Neutral (PP2)
 SonyILCE9.arw	default	missing	0	PixelShiftInfo	n/a
@@ -123,7 +113,6 @@ SonyILCE9.arw	default	missing	0	PreviewImageSize	1616x1080
 SonyILCE9.arw	default	missing	0	PreviewImageStart	131234
 SonyILCE9.arw	default	missing	0	Quality	RAW
 SonyILCE9.arw	default	missing	0	Quality2	RAW
-SonyILCE9.arw	default	missing	0	ReleaseMode2	Normal
 SonyILCE9.arw	default	missing	0	ReleaseMode3	Normal
 SonyILCE9.arw	default	missing	0	SR2SubIFDKey	0x44332211
 SonyILCE9.arw	default	missing	0	SR2SubIFDLength	42826
@@ -135,10 +124,7 @@ SonyILCE9.arw	default	missing	0	SequenceLength	1 file
 SonyILCE9.arw	default	missing	0	Shutter	Mechanical (2858 5239 6643)
 SonyILCE9.arw	default	missing	0	ShutterCount2	105978
 SonyILCE9.arw	default	missing	0	SonyDateTime	2026:07:01 11:22:02
-SonyILCE9.arw	default	missing	0	SonyExposureTime	1/20
 SonyILCE9.arw	default	missing	0	SonyExposureTime2	1/20
-SonyILCE9.arw	default	missing	0	SonyFNumber	8.0
-SonyILCE9.arw	default	missing	0	SonyISO	252
 SonyILCE9.arw	default	missing	0	SonyImageHeight	4000
 SonyILCE9.arw	default	missing	0	SonyImageHeightMax	4024
 SonyILCE9.arw	default	missing	0	SonyImageWidth	6000
@@ -182,25 +168,18 @@ SonyILCE9.arw	ee	extra	0	FileFormat	(Binary data 4 bytes, use -b option to extra
 SonyILCE9.arw	ee	extra	0	FullImageSize	4000x6000
 SonyILCE9.arw	ee	extra	0	HDR	Off
 SonyILCE9.arw	ee	extra	0	HighISONoiseReduction2	n/a
-SonyILCE9.arw	ee	extra	0	LensID	Unknown 500-3000mm
+SonyILCE9.arw	ee	extra	0	LensID	Unknown 50-300mm
 SonyILCE9.arw	ee	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	LensType	65535
 SonyILCE9.arw	ee	extra	0	LensType3	49475
-SonyILCE9.arw	ee	extra	0	MaxFocalLength	3000
-SonyILCE9.arw	ee	extra	0	MinFocalLength	500
-SonyILCE9.arw	ee	extra	0	ModelReleaseYear	18
 SonyILCE9.arw	ee	extra	0	Panorama	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 SonyILCE9.arw	ee	extra	0	PixelShiftInfo	(Binary data 6 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	PreviewImageSize	1080x1616
 SonyILCE9.arw	ee	extra	0	Quality	1 0
-SonyILCE9.arw	ee	extra	0	ReleaseMode2	0
 SonyILCE9.arw	ee	extra	0	Saturation	Low
 SonyILCE9.arw	ee	extra	0	SequenceLength	Continuous
 SonyILCE9.arw	ee	extra	0	Sharpness	Normal
 SonyILCE9.arw	ee	extra	0	ShotInfo	(Binary data 390 bytes, use -b option to extract)
-SonyILCE9.arw	ee	extra	0	SonyExposureTime	5205
-SonyILCE9.arw	ee	extra	0	SonyFNumber	5632
-SonyILCE9.arw	ee	extra	0	SonyISO	3754
 SonyILCE9.arw	ee	extra	0	SonyModelID	358
 SonyILCE9.arw	ee	extra	0	Sony_0x9407	(Binary data 64 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	Sony_0x9408	(Binary data 1000 bytes, use -b option to extract)
@@ -216,7 +195,7 @@ SonyILCE9.arw	ee	extra	0	ThumbnailOffset	131234
 SonyILCE9.arw	ee	extra	0	VariableLowPassFilter	0 0
 SonyILCE9.arw	ee	extra	0	WBShiftAB_GM	Auto
 SonyILCE9.arw	ee	extra	0	WBShiftAB_GM_Precise	0 0
-SonyILCE9.arw	ee	extra	0	WB_RGBLevels	0
+SonyILCE9.arw	ee	extra	0	WB_RGBLevels	0.0 mm
 SonyILCE9.arw	ee	extra	0	WhiteBalance2	Auto
 SonyILCE9.arw	ee	extra	0	XMPToolkit	
 SonyILCE9.arw	ee	missing	0	AFAreaMode	Multi
@@ -313,11 +292,8 @@ SonyILCE9.arw	ee	missing	1	LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
 SonyILCE9.arw	ee	missing	2	LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
 SonyILCE9.arw	ee	missing	0	LensType3	Tamron 50-300mm F4.5-6.3 Di III VC VXD
 SonyILCE9.arw	ee	missing	0	LongExposureNoiseReduction	Off
-SonyILCE9.arw	ee	missing	0	MaxFocalLength	300.0 mm
 SonyILCE9.arw	ee	missing	0	MetaVersion	DC7303320222000
 SonyILCE9.arw	ee	missing	0	MeteringMode	Multi-segment
-SonyILCE9.arw	ee	missing	0	MinFocalLength	50.0 mm
-SonyILCE9.arw	ee	missing	0	ModelReleaseYear	2018
 SonyILCE9.arw	ee	missing	0	PictureEffect2	Off
 SonyILCE9.arw	ee	missing	1	PictureEffect2	Off
 SonyILCE9.arw	ee	missing	0	PictureProfile	Gamma Still - Standard/Neutral (PP2)
@@ -335,7 +311,6 @@ SonyILCE9.arw	ee	missing	1	ReleaseMode2	Normal
 SonyILCE9.arw	ee	missing	2	ReleaseMode2	Normal
 SonyILCE9.arw	ee	missing	3	ReleaseMode2	Normal
 SonyILCE9.arw	ee	missing	4	ReleaseMode2	Normal
-SonyILCE9.arw	ee	missing	5	ReleaseMode2	Normal
 SonyILCE9.arw	ee	missing	0	ReleaseMode3	Normal
 SonyILCE9.arw	ee	missing	0	SR2SubIFDKey	0x44332211
 SonyILCE9.arw	ee	missing	0	SR2SubIFDLength	42826
@@ -352,12 +327,9 @@ SonyILCE9.arw	ee	missing	1	Sharpness	0
 SonyILCE9.arw	ee	missing	0	Shutter	Mechanical (2858 5239 6643)
 SonyILCE9.arw	ee	missing	0	ShutterCount2	105978
 SonyILCE9.arw	ee	missing	0	SonyDateTime	2026:07:01 11:22:02
-SonyILCE9.arw	ee	missing	0	SonyExposureTime	1/20
 SonyILCE9.arw	ee	missing	0	SonyExposureTime2	1/20
 SonyILCE9.arw	ee	missing	0	SonyFNumber	8.0
-SonyILCE9.arw	ee	missing	1	SonyFNumber	8.0
 SonyILCE9.arw	ee	missing	0	SonyISO	252
-SonyILCE9.arw	ee	missing	1	SonyISO	252
 SonyILCE9.arw	ee	missing	0	SonyImageHeight	4000
 SonyILCE9.arw	ee	missing	0	SonyImageHeightMax	4024
 SonyILCE9.arw	ee	missing	0	SonyImageWidth	6000

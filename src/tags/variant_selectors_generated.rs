@@ -106,8 +106,7 @@ pub fn variant_for(
             None
         }
         ("Canon", 0x4001) => {
-            return Some("ColorData1");
-            None
+            Some("ColorData1")
         }
         ("Minolta", 0x0018) => {
             if model == "DSLR-A100" { return Some("ISInfoA100"); }
@@ -120,182 +119,151 @@ pub fn variant_for(
         }
         ("Nikon", 0x0014) => {
             if format == "undef" && count == 2560 { return Some("ColorBalanceA"); }
-            if (data.starts_with(b"NRW 0100")) { return Some("ColorBalanceB"); }
-            if (data.starts_with(b"NRW ")) { return Some("ColorBalanceC"); }
+            if data.starts_with(b"NRW 0100") { return Some("ColorBalanceB"); }
+            if data.starts_with(b"NRW ") { return Some("ColorBalanceC"); }
             None
         }
         ("Nikon", 0x0023) => {
-            if (data.starts_with(b"01")) { return Some("PictureControl"); }
-            if (data.starts_with(b"02")) { return Some("PictureControl2"); }
-            if (data.starts_with(b"03")) { return Some("PictureControl3"); }
-            return Some("PictureControlUnknown");
-            None
+            if data.starts_with(b"01") { return Some("PictureControl"); }
+            if data.starts_with(b"02") { return Some("PictureControl2"); }
+            if data.starts_with(b"03") { return Some("PictureControl3"); }
+            Some("PictureControlUnknown")
         }
         ("Nikon", 0x0035) => {
             if count != 6 { return Some("HDRInfo"); }
-            return Some("HDRInfo2");
-            None
+            Some("HDRInfo2")
         }
         ("Nikon", 0x0091) => {
-            return Some("ShotInfoD40");
-            None
+            Some("ShotInfoD40")
         }
         ("Nikon", 0x0097) => {
-            return Some("ColorBalance1");
-            None
+            Some("ColorBalance1")
         }
         ("Nikon", 0x0098) => {
-            return Some("LensData00");
-            None
+            Some("LensData00")
         }
         ("Nikon", 0x00a8) => {
-            if (data.starts_with(b"0100") || data.starts_with(b"0101")) { return Some("FlashInfo0100"); }
-            if (data.starts_with(b"0102")) { return Some("FlashInfo0102"); }
-            if (data.starts_with(b"0103") || data.starts_with(b"0104") || data.starts_with(b"0105")) { return Some("FlashInfo0103"); }
-            if (data.starts_with(b"0106")) { return Some("FlashInfo0106"); }
-            if (data.starts_with(b"0107") || data.starts_with(b"0108")) { return Some("FlashInfo0107"); }
-            if (data.starts_with(b"0300") || data.starts_with(b"0301")) { return Some("FlashInfo0300"); }
-            return Some("FlashInfoUnknown");
-            None
+            if data.starts_with(b"0100") || data.starts_with(b"0101") { return Some("FlashInfo0100"); }
+            if data.starts_with(b"0102") { return Some("FlashInfo0102"); }
+            if data.starts_with(b"0103") || data.starts_with(b"0104") || data.starts_with(b"0105") { return Some("FlashInfo0103"); }
+            if data.starts_with(b"0106") { return Some("FlashInfo0106"); }
+            if data.starts_with(b"0107") || data.starts_with(b"0108") { return Some("FlashInfo0107"); }
+            if data.starts_with(b"0300") || data.starts_with(b"0301") { return Some("FlashInfo0300"); }
+            Some("FlashInfoUnknown")
         }
         ("Olympus", 0x2010) => {
             if format != "ifd" && format != "int32u" { return Some("Equipment"); }
-            return Some("Equipment");
-            None
+            Some("Equipment")
         }
         ("Olympus", 0x2020) => {
             if format != "ifd" && format != "int32u" { return Some("CameraSettings"); }
-            return Some("CameraSettings");
-            None
+            Some("CameraSettings")
         }
         ("Olympus", 0x2030) => {
             if format != "ifd" && format != "int32u" { return Some("RawDevelopment"); }
-            return Some("RawDevelopment");
-            None
+            Some("RawDevelopment")
         }
         ("Olympus", 0x2031) => {
             if format != "ifd" && format != "int32u" { return Some("RawDevelopment2"); }
-            return Some("RawDevelopment2");
-            None
+            Some("RawDevelopment2")
         }
         ("Olympus", 0x2040) => {
             if format != "ifd" && format != "int32u" { return Some("ImageProcessing"); }
-            return Some("ImageProcessing");
-            None
+            Some("ImageProcessing")
         }
         ("Olympus", 0x2100) => {
             if format != "ifd" && format != "int32u" { return Some("FETags"); }
-            return Some("FETags");
-            None
+            Some("FETags")
         }
         ("Olympus", 0x2200) => {
             if format != "ifd" && format != "int32u" { return Some("FETags"); }
-            return Some("FETags");
-            None
+            Some("FETags")
         }
         ("Olympus", 0x2300) => {
             if format != "ifd" && format != "int32u" { return Some("FETags"); }
-            return Some("FETags");
-            None
+            Some("FETags")
         }
         ("Olympus", 0x2400) => {
             if format != "ifd" && format != "int32u" { return Some("FETags"); }
-            return Some("FETags");
-            None
+            Some("FETags")
         }
         ("Olympus", 0x2500) => {
             if format != "ifd" && format != "int32u" { return Some("FETags"); }
-            return Some("FETags");
-            None
+            Some("FETags")
         }
         ("Olympus", 0x2600) => {
             if format != "ifd" && format != "int32u" { return Some("FETags"); }
-            return Some("FETags");
-            None
+            Some("FETags")
         }
         ("Olympus", 0x2700) => {
             if format != "ifd" && format != "int32u" { return Some("FETags"); }
-            return Some("FETags");
-            None
+            Some("FETags")
         }
         ("Olympus", 0x2800) => {
             if format != "ifd" && format != "int32u" { return Some("FETags"); }
-            return Some("FETags");
-            None
+            Some("FETags")
         }
         ("Olympus", 0x2900) => {
             if format != "ifd" && format != "int32u" { return Some("FETags"); }
-            return Some("FETags");
-            None
+            Some("FETags")
         }
         ("Olympus", 0x3000) => {
             if format != "ifd" && format != "int32u" { return Some("RawInfo"); }
-            return Some("RawInfo");
-            None
+            Some("RawInfo")
         }
         ("Olympus", 0x4000) => {
             if format != "ifd" && format != "int32u" { return Some("Main"); }
-            return Some("Main");
-            None
+            Some("Main")
         }
         ("Olympus", 0x5000) => {
             if format != "ifd" && format != "int32u" { return Some("UnknownInfo"); }
-            return Some("UnknownInfo");
-            None
+            Some("UnknownInfo")
         }
         ("Pentax", 0x002d) => {
             if format == "int16u" { return Some("LensRec"); }
             if count == 1 { return Some("SRInfo"); }
-            return Some("SRInfo2");
-            None
+            Some("SRInfo2")
         }
         ("Pentax", 0x0208) => {
             if count == 27 { return Some("FlashInfo"); }
-            return Some("FlashInfoUnknown");
-            None
+            Some("FlashInfoUnknown")
         }
         ("Ricoh", 0x1001) => {
             if format != "int16u" { return Some("ImageInfo"); }
             if format == "int16u" { return Some("Subdir"); }
             if !RE_37.is_match(model) { return Some("Subdir"); }
-            return Some("Subdir");
-            None
+            Some("Subdir")
         }
         ("Sanyo", 0x0223) => {
             if format == "rational64u" { return Some("FaceInfo"); }
             None
         }
         ("Sony", 0x0010) => {
-            if (count == 368 || count == 5478) { return Some("CameraInfo"); }
-            if (count == 5506 || count == 6118) { return Some("CameraInfo2"); }
+            if count == 368 || count == 5478 { return Some("CameraInfo"); }
+            if count == 5506 || count == 6118 { return Some("CameraInfo2"); }
             if count == 15360 { return Some("CameraInfo3"); }
-            return Some("CameraInfoUnknown");
-            None
+            Some("CameraInfoUnknown")
         }
         ("Sony", 0x0020) => {
-            if (count == 19154 || count == 19148) { return Some("FocusInfo"); }
-            return Some("MoreInfo");
-            None
+            if count == 19154 || count == 19148 { return Some("FocusInfo"); }
+            Some("MoreInfo")
         }
         ("Sony", 0x0114) => {
-            if (count == 280 || count == 364) { return Some("CameraSettings"); }
+            if count == 280 || count == 364 { return Some("CameraSettings"); }
             if count == 332 { return Some("CameraSettings2"); }
-            if (count == 1536 || count == 2048) { return Some("CameraSettings3"); }
-            return Some("CameraSettingsUnknown");
-            None
+            if count == 1536 || count == 2048 { return Some("CameraSettings3"); }
+            Some("CameraSettingsUnknown")
         }
         ("Sony", 0x0116) => {
             if RE_31.is_match(model) { return Some("ExtraInfo"); }
             if RE_32.is_match(model) { return Some("ExtraInfo2"); }
-            return Some("ExtraInfo3");
-            None
+            Some("ExtraInfo3")
         }
         ("Sony", 0x2010) => {
             if RE_33.is_match(model) { return Some("Tag2010a"); }
             if RE_34.is_match(model) { return Some("Tag2010b"); }
             if RE_35.is_match(model) { return Some("Tag2010c"); }
-            return Some("Tag2010d");
-            None
+            Some("Tag2010d")
         }
         _ => None,
     }

@@ -13,6 +13,7 @@ use std::sync::LazyLock;
 
 use regex_lite::Regex;
 
+use crate::tags::conv_expr::{self, Val as Conv};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
@@ -142,13 +143,7 @@ pub fn variant_for(tag: u16, model: &str) -> Option<&'static str> {
         0x2010 => {
             if MODEL_RE_39.is_match(model) { return Some("Tag2010b"); }
             if MODEL_RE_40.is_match(model) { return Some("Tag2010c"); }
-            return Some("Tag2010d");
-            return Some("Tag2010e");
-            if MODEL_RE_41.is_match(model) { return Some("Tag2010f"); }
-            if MODEL_RE_42.is_match(model) { return Some("Tag2010g"); }
-            if MODEL_RE_43.is_match(model) { return Some("Tag2010h"); }
-            if MODEL_RE_44.is_match(model) { return Some("Tag2010i"); }
-            None
+            Some("Tag2010d")
         }
         0x9050 => {
             if !MODEL_RE_45.is_match(model) { return Some("Tag9050a"); }
@@ -157,12 +152,10 @@ pub fn variant_for(tag: u16, model: &str) -> Option<&'static str> {
             None
         }
         0x9400 => {
-            return Some("Tag9400a");
-            None
+            Some("Tag9400a")
         }
         0x9403 => {
-            return Some("Tag9403");
-            None
+            Some("Tag9403")
         }
         0x940a => {
             if MODEL_RE_48.is_match(model) { return Some("Tag940a"); }
@@ -173,8 +166,7 @@ pub fn variant_for(tag: u16, model: &str) -> Option<&'static str> {
             None
         }
         0x9416 => {
-            return Some("Tag9416");
-            None
+            Some("Tag9416")
         }
         _ => None,
     }
@@ -193,7 +185,10 @@ fn tag2010c(data: &[u8], model: &str) -> Vec<Tag> {
     let _ = model;
     let mut tags = Vec::new();
     if let Some(v) = u32_at(data, 0x0) {
-        tags.push(mk("SonyImageWidth3", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val/16", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("SonyImageWidth3", cv.as_string(), raw));
     }
     tags
 }
@@ -210,31 +205,54 @@ fn tag2010d(data: &[u8], model: &str) -> Vec<Tag> {
 fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if let Some(v) = u32_at(data, 0x0) {
-        tags.push(mk("SonyImageWidth3", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val/16", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("SonyImageWidth3", cv.as_string(), raw));
     }
     if MODEL_RE_0.is_match(model) {
         if let Some(v) = u16_at(data, 0x1258) {
-            tags.push(mk("SonyISO", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+            tags.push(mk("SonyISO", cv.as_string(), raw));
         }
     }
     if MODEL_RE_1.is_match(model) {
         if let Some(v) = u16_at(data, 0x1278) {
-            tags.push(mk("FocalLength", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+            tags.push(mk("FocalLength", cv.as_string(), raw));
         }
     }
     if MODEL_RE_1.is_match(model) {
         if let Some(v) = u16_at(data, 0x127a) {
-            tags.push(mk("MinFocalLength", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+            tags.push(mk("MinFocalLength", cv.as_string(), raw));
         }
     }
     if MODEL_RE_1.is_match(model) {
         if let Some(v) = u16_at(data, 0x127c) {
-            tags.push(mk("MaxFocalLength", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+            tags.push(mk("MaxFocalLength", cv.as_string(), raw));
         }
     }
     if MODEL_RE_1.is_match(model) {
         if let Some(v) = u16_at(data, 0x1280) {
-            tags.push(mk("SonyISO", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+            tags.push(mk("SonyISO", cv.as_string(), raw));
         }
     }
     if !MODEL_RE_2.is_match(model) {
@@ -303,13 +321,25 @@ fn tag2010f(data: &[u8], model: &str) -> Vec<Tag> {
         tags.push(mk("SonyImageWidth3", v.to_string(), Value::I32(v as i32)));
     }
     if let Some(v) = u16_at(data, 0x1136) {
-        tags.push(mk("MinFocalLength", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("MinFocalLength", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x1138) {
-        tags.push(mk("MaxFocalLength", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("MaxFocalLength", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x113c) {
-        tags.push(mk("SonyISO", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyISO", cv.as_string(), raw));
     }
     if let Some(v) = u8_at(data, 0x192c) {
         let s = match v as i64 {
@@ -328,16 +358,32 @@ fn tag2010f(data: &[u8], model: &str) -> Vec<Tag> {
 fn tag2010g(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if let Some(v) = u32_at(data, 0x4) {
-        tags.push(mk("WB_RGBLevels", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("WB_RGBLevels", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x32e) {
-        tags.push(mk("MinFocalLength", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("MinFocalLength", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x330) {
-        tags.push(mk("MaxFocalLength", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("MaxFocalLength", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x344) {
-        tags.push(mk("SonyISO", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyISO", cv.as_string(), raw));
     }
     if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x18bd) {
@@ -386,16 +432,32 @@ fn tag2010g(data: &[u8], model: &str) -> Vec<Tag> {
 fn tag2010h(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if let Some(v) = u32_at(data, 0x4) {
-        tags.push(mk("WB_RGBLevels", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("WB_RGBLevels", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x32e) {
-        tags.push(mk("MinFocalLength", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("MinFocalLength", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x330) {
-        tags.push(mk("MaxFocalLength", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("MaxFocalLength", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x346) {
-        tags.push(mk("SonyISO", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyISO", cv.as_string(), raw));
     }
     if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x18ed) {
@@ -444,16 +506,32 @@ fn tag2010h(data: &[u8], model: &str) -> Vec<Tag> {
 fn tag2010i(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if let Some(v) = u32_at(data, 0x4) {
-        tags.push(mk("WB_RGBLevels", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("WB_RGBLevels", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x30c) {
-        tags.push(mk("MinFocalLength", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("MinFocalLength", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x30e) {
-        tags.push(mk("MaxFocalLength", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("MaxFocalLength", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x320) {
-        tags.push(mk("SonyISO", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyISO", cv.as_string(), raw));
     }
     if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x17f1) {
@@ -503,12 +581,20 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if !MODEL_RE_5.is_match(model) {
         if let Some(v) = u8_at(data, 0x0) {
-            tags.push(mk("SonyMaxAperture", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
+            tags.push(mk("SonyMaxAperture", cv.as_string(), raw));
         }
     }
     if !MODEL_RE_5.is_match(model) {
         if let Some(v) = u8_at(data, 0x1) {
-            tags.push(mk("SonyMinAperture", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+            tags.push(mk("SonyMinAperture", cv.as_string(), raw));
         }
     }
     if let Some(v) = u8_at(data, 0x31) {
@@ -528,17 +614,77 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
         tags.push(mk("ShutterCount", v.to_string(), Value::I32(v as i32)));
     }
     if let Some(v) = u16_at(data, 0x3a) {
-        tags.push(mk("SonyExposureTime", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
+        tags.push(mk("SonyExposureTime", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x3c) {
-        tags.push(mk("SonyFNumber", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyFNumber", cv.as_string(), raw));
     }
     if let Some(v) = u8_at(data, 0x3f) {
-        tags.push(mk("ReleaseMode2", v.to_string(), Value::I32(v as i32)));
+        let s = match v as i64 {
+            0 => "Normal".to_string(),
+            1 => "Continuous".to_string(),
+            2 => "Continuous - Exposure Bracketing".to_string(),
+            3 => "DRO or White Balance Bracketing".to_string(),
+            5 => "Continuous - Burst".to_string(),
+            6 => "Single Frame - Capture During Movie".to_string(),
+            7 => "Continuous - Sweep Panorama".to_string(),
+            8 => "Continuous - Anti-Motion Blur, Hand-held Twilight".to_string(),
+            9 => "Continuous - HDR".to_string(),
+            10 => "Continuous - Background defocus".to_string(),
+            13 => "Continuous - 3D Sweep Panorama".to_string(),
+            15 => "Continuous - High Resolution Sweep Panorama".to_string(),
+            16 => "Continuous - 3D Image".to_string(),
+            17 => "Continuous - Burst 2".to_string(),
+            18 => "Normal - iAuto+".to_string(),
+            19 => "Continuous - Speed/Advance Priority".to_string(),
+            20 => "Continuous - Multi Frame NR".to_string(),
+            23 => "Single-frame - Exposure Bracketing".to_string(),
+            26 => "Continuous Low".to_string(),
+            27 => "Continuous - High Sensitivity".to_string(),
+            28 => "Smile Shutter".to_string(),
+            29 => "Continuous - Tele-zoom Advance Priority".to_string(),
+            146 => "Single Frame - Movie Capture".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
     }
     if !MODEL_RE_6.is_match(model) {
         if let Some(v) = u8_at(data, 0x67) {
-            tags.push(mk("ReleaseMode2", v.to_string(), Value::I32(v as i32)));
+            let s = match v as i64 {
+                0 => "Normal".to_string(),
+                1 => "Continuous".to_string(),
+                2 => "Continuous - Exposure Bracketing".to_string(),
+                3 => "DRO or White Balance Bracketing".to_string(),
+                5 => "Continuous - Burst".to_string(),
+                6 => "Single Frame - Capture During Movie".to_string(),
+                7 => "Continuous - Sweep Panorama".to_string(),
+                8 => "Continuous - Anti-Motion Blur, Hand-held Twilight".to_string(),
+                9 => "Continuous - HDR".to_string(),
+                10 => "Continuous - Background defocus".to_string(),
+                13 => "Continuous - 3D Sweep Panorama".to_string(),
+                15 => "Continuous - High Resolution Sweep Panorama".to_string(),
+                16 => "Continuous - 3D Image".to_string(),
+                17 => "Continuous - Burst 2".to_string(),
+                18 => "Normal - iAuto+".to_string(),
+                19 => "Continuous - Speed/Advance Priority".to_string(),
+                20 => "Continuous - Multi Frame NR".to_string(),
+                23 => "Single-frame - Exposure Bracketing".to_string(),
+                26 => "Continuous Low".to_string(),
+                27 => "Continuous - High Sensitivity".to_string(),
+                28 => "Smile Shutter".to_string(),
+                29 => "Continuous - Tele-zoom Advance Priority".to_string(),
+                146 => "Single Frame - Movie Capture".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
         }
     }
     if let Some(v) = u8_at(data, 0x105) {
@@ -594,12 +740,20 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if MODEL_RE_11.is_match(model) {
         if let Some(v) = u8_at(data, 0x0) {
-            tags.push(mk("SonyMaxAperture", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
+            tags.push(mk("SonyMaxAperture", cv.as_string(), raw));
         }
     }
     if MODEL_RE_11.is_match(model) {
         if let Some(v) = u8_at(data, 0x1) {
-            tags.push(mk("SonyMinAperture", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+            tags.push(mk("SonyMinAperture", cv.as_string(), raw));
         }
     }
     if let Some(v) = u8_at(data, 0x39) {
@@ -620,17 +774,77 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
         tags.push(mk("ShutterCount", v.to_string(), Value::I32(v as i32)));
     }
     if let Some(v) = u16_at(data, 0x46) {
-        tags.push(mk("SonyExposureTime", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
+        tags.push(mk("SonyExposureTime", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x48) {
-        tags.push(mk("SonyFNumber", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyFNumber", cv.as_string(), raw));
     }
     if let Some(v) = u8_at(data, 0x4b) {
-        tags.push(mk("ReleaseMode2", v.to_string(), Value::I32(v as i32)));
+        let s = match v as i64 {
+            0 => "Normal".to_string(),
+            1 => "Continuous".to_string(),
+            2 => "Continuous - Exposure Bracketing".to_string(),
+            3 => "DRO or White Balance Bracketing".to_string(),
+            5 => "Continuous - Burst".to_string(),
+            6 => "Single Frame - Capture During Movie".to_string(),
+            7 => "Continuous - Sweep Panorama".to_string(),
+            8 => "Continuous - Anti-Motion Blur, Hand-held Twilight".to_string(),
+            9 => "Continuous - HDR".to_string(),
+            10 => "Continuous - Background defocus".to_string(),
+            13 => "Continuous - 3D Sweep Panorama".to_string(),
+            15 => "Continuous - High Resolution Sweep Panorama".to_string(),
+            16 => "Continuous - 3D Image".to_string(),
+            17 => "Continuous - Burst 2".to_string(),
+            18 => "Normal - iAuto+".to_string(),
+            19 => "Continuous - Speed/Advance Priority".to_string(),
+            20 => "Continuous - Multi Frame NR".to_string(),
+            23 => "Single-frame - Exposure Bracketing".to_string(),
+            26 => "Continuous Low".to_string(),
+            27 => "Continuous - High Sensitivity".to_string(),
+            28 => "Smile Shutter".to_string(),
+            29 => "Continuous - Tele-zoom Advance Priority".to_string(),
+            146 => "Single Frame - Movie Capture".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
     }
     if MODEL_RE_12.is_match(model) {
         if let Some(v) = u8_at(data, 0x6d) {
-            tags.push(mk("ReleaseMode2", v.to_string(), Value::I32(v as i32)));
+            let s = match v as i64 {
+                0 => "Normal".to_string(),
+                1 => "Continuous".to_string(),
+                2 => "Continuous - Exposure Bracketing".to_string(),
+                3 => "DRO or White Balance Bracketing".to_string(),
+                5 => "Continuous - Burst".to_string(),
+                6 => "Single Frame - Capture During Movie".to_string(),
+                7 => "Continuous - Sweep Panorama".to_string(),
+                8 => "Continuous - Anti-Motion Blur, Hand-held Twilight".to_string(),
+                9 => "Continuous - HDR".to_string(),
+                10 => "Continuous - Background defocus".to_string(),
+                13 => "Continuous - 3D Sweep Panorama".to_string(),
+                15 => "Continuous - High Resolution Sweep Panorama".to_string(),
+                16 => "Continuous - 3D Image".to_string(),
+                17 => "Continuous - Burst 2".to_string(),
+                18 => "Normal - iAuto+".to_string(),
+                19 => "Continuous - Speed/Advance Priority".to_string(),
+                20 => "Continuous - Multi Frame NR".to_string(),
+                23 => "Single-frame - Exposure Bracketing".to_string(),
+                26 => "Continuous Low".to_string(),
+                27 => "Continuous - High Sensitivity".to_string(),
+                28 => "Smile Shutter".to_string(),
+                29 => "Continuous - Tele-zoom Advance Priority".to_string(),
+                146 => "Single Frame - Movie Capture".to_string(),
+                other => other.to_string(),
+            };
+            tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
         }
     }
     if let Some(v) = u8_at(data, 0x105) {
@@ -712,22 +926,90 @@ fn tag9050c(data: &[u8], model: &str) -> Vec<Tag> {
         tags.push(mk("ShutterCount", v.to_string(), Value::I32(v as i32)));
     }
     if let Some(v) = u16_at(data, 0x46) {
-        tags.push(mk("SonyExposureTime", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
+        tags.push(mk("SonyExposureTime", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x48) {
-        tags.push(mk("SonyFNumber", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyFNumber", cv.as_string(), raw));
     }
     if let Some(v) = u8_at(data, 0x4b) {
-        tags.push(mk("ReleaseMode2", v.to_string(), Value::I32(v as i32)));
+        let s = match v as i64 {
+            0 => "Normal".to_string(),
+            1 => "Continuous".to_string(),
+            2 => "Continuous - Exposure Bracketing".to_string(),
+            3 => "DRO or White Balance Bracketing".to_string(),
+            5 => "Continuous - Burst".to_string(),
+            6 => "Single Frame - Capture During Movie".to_string(),
+            7 => "Continuous - Sweep Panorama".to_string(),
+            8 => "Continuous - Anti-Motion Blur, Hand-held Twilight".to_string(),
+            9 => "Continuous - HDR".to_string(),
+            10 => "Continuous - Background defocus".to_string(),
+            13 => "Continuous - 3D Sweep Panorama".to_string(),
+            15 => "Continuous - High Resolution Sweep Panorama".to_string(),
+            16 => "Continuous - 3D Image".to_string(),
+            17 => "Continuous - Burst 2".to_string(),
+            18 => "Normal - iAuto+".to_string(),
+            19 => "Continuous - Speed/Advance Priority".to_string(),
+            20 => "Continuous - Multi Frame NR".to_string(),
+            23 => "Single-frame - Exposure Bracketing".to_string(),
+            26 => "Continuous Low".to_string(),
+            27 => "Continuous - High Sensitivity".to_string(),
+            28 => "Smile Shutter".to_string(),
+            29 => "Continuous - Tele-zoom Advance Priority".to_string(),
+            146 => "Single Frame - Movie Capture".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
     }
     if let Some(v) = u16_at(data, 0x66) {
-        tags.push(mk("SonyExposureTime", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
+        tags.push(mk("SonyExposureTime", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x68) {
-        tags.push(mk("SonyFNumber", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyFNumber", cv.as_string(), raw));
     }
     if let Some(v) = u8_at(data, 0x6b) {
-        tags.push(mk("ReleaseMode2", v.to_string(), Value::I32(v as i32)));
+        let s = match v as i64 {
+            0 => "Normal".to_string(),
+            1 => "Continuous".to_string(),
+            2 => "Continuous - Exposure Bracketing".to_string(),
+            3 => "DRO or White Balance Bracketing".to_string(),
+            5 => "Continuous - Burst".to_string(),
+            6 => "Single Frame - Capture During Movie".to_string(),
+            7 => "Continuous - Sweep Panorama".to_string(),
+            8 => "Continuous - Anti-Motion Blur, Hand-held Twilight".to_string(),
+            9 => "Continuous - HDR".to_string(),
+            10 => "Continuous - Background defocus".to_string(),
+            13 => "Continuous - 3D Sweep Panorama".to_string(),
+            15 => "Continuous - High Resolution Sweep Panorama".to_string(),
+            16 => "Continuous - 3D Image".to_string(),
+            17 => "Continuous - Burst 2".to_string(),
+            18 => "Normal - iAuto+".to_string(),
+            19 => "Continuous - Speed/Advance Priority".to_string(),
+            20 => "Continuous - Multi Frame NR".to_string(),
+            23 => "Single-frame - Exposure Bracketing".to_string(),
+            26 => "Continuous Low".to_string(),
+            27 => "Continuous - High Sensitivity".to_string(),
+            28 => "Smile Shutter".to_string(),
+            29 => "Continuous - Tele-zoom Advance Priority".to_string(),
+            146 => "Single Frame - Movie Capture".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
     }
     tags
 }
@@ -740,15 +1022,49 @@ fn tag9050d(data: &[u8], model: &str) -> Vec<Tag> {
         }
     }
     if let Some(v) = u16_at(data, 0x1a) {
-        tags.push(mk("SonyExposureTime", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
+        tags.push(mk("SonyExposureTime", cv.as_string(), raw));
     }
     if !MODEL_RE_18.is_match(model) {
         if let Some(v) = u16_at(data, 0x1c) {
-            tags.push(mk("SonyFNumber", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
+            tags.push(mk("SonyFNumber", cv.as_string(), raw));
         }
     }
     if let Some(v) = u8_at(data, 0x1f) {
-        tags.push(mk("ReleaseMode2", v.to_string(), Value::I32(v as i32)));
+        let s = match v as i64 {
+            0 => "Normal".to_string(),
+            1 => "Continuous".to_string(),
+            2 => "Continuous - Exposure Bracketing".to_string(),
+            3 => "DRO or White Balance Bracketing".to_string(),
+            5 => "Continuous - Burst".to_string(),
+            6 => "Single Frame - Capture During Movie".to_string(),
+            7 => "Continuous - Sweep Panorama".to_string(),
+            8 => "Continuous - Anti-Motion Blur, Hand-held Twilight".to_string(),
+            9 => "Continuous - HDR".to_string(),
+            10 => "Continuous - Background defocus".to_string(),
+            13 => "Continuous - 3D Sweep Panorama".to_string(),
+            15 => "Continuous - High Resolution Sweep Panorama".to_string(),
+            16 => "Continuous - 3D Image".to_string(),
+            17 => "Continuous - Burst 2".to_string(),
+            18 => "Normal - iAuto+".to_string(),
+            19 => "Continuous - Speed/Advance Priority".to_string(),
+            20 => "Continuous - Multi Frame NR".to_string(),
+            23 => "Single-frame - Exposure Bracketing".to_string(),
+            26 => "Continuous Low".to_string(),
+            27 => "Continuous - High Sensitivity".to_string(),
+            28 => "Smile Shutter".to_string(),
+            29 => "Continuous - Tele-zoom Advance Priority".to_string(),
+            146 => "Single Frame - Movie Capture".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ReleaseMode2", s, Value::I32(v as i32)));
     }
     tags
 }
@@ -806,12 +1122,18 @@ fn tag9400a(data: &[u8], model: &str) -> Vec<Tag> {
     }
     if MODEL_RE_20.is_match(model) {
         if let Some(v) = u16_at(data, 0x44) {
-            tags.push(mk("SonyImageHeight", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("$val > 0 ? 8*$val : \"n.a.\"", &cv) { cv = x; }
+            tags.push(mk("SonyImageHeight", cv.as_string(), raw));
         }
     }
     if MODEL_RE_20.is_match(model) {
         if let Some(v) = u8_at(data, 0x52) {
-            tags.push(mk("ModelReleaseYear", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"20%.2d\", $val)", &cv) { cv = x; }
+            tags.push(mk("ModelReleaseYear", cv.as_string(), raw));
         }
     }
     tags
@@ -868,10 +1190,16 @@ fn tag9400b(data: &[u8], model: &str) -> Vec<Tag> {
         tags.push(mk("Quality2", s, Value::I32(v as i32)));
     }
     if let Some(v) = u16_at(data, 0x3f) {
-        tags.push(mk("SonyImageHeight", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("$val > 0 ? 8*$val : \"n.a.\"", &cv) { cv = x; }
+        tags.push(mk("SonyImageHeight", cv.as_string(), raw));
     }
     if let Some(v) = u8_at(data, 0x46) {
-        tags.push(mk("ModelReleaseYear", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"20%.2d\", $val)", &cv) { cv = x; }
+        tags.push(mk("ModelReleaseYear", cv.as_string(), raw));
     }
     tags
 }
@@ -929,7 +1257,10 @@ fn tag9400c(data: &[u8], model: &str) -> Vec<Tag> {
     }
     if !MODEL_RE_22.is_match(model) {
         if let Some(v) = u8_at(data, 0x53) {
-            tags.push(mk("ModelReleaseYear", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"20%.2d\", $val)", &cv) { cv = x; }
+            tags.push(mk("ModelReleaseYear", cv.as_string(), raw));
         }
     }
     if MODEL_RE_23.is_match(model) {
@@ -1023,7 +1354,10 @@ fn tag9404a(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if !MODEL_RE_26.is_match(model) {
         if let Some(v) = u16_at(data, 0xb) {
-            tags.push(mk("IntelligentAuto", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
+            tags.push(mk("IntelligentAuto", cv.as_string(), raw));
         }
     }
     tags
@@ -1033,7 +1367,10 @@ fn tag9404b(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if !MODEL_RE_27.is_match(model) {
         if let Some(v) = u16_at(data, 0xc) {
-            tags.push(mk("IntelligentAuto", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
+            tags.push(mk("IntelligentAuto", cv.as_string(), raw));
         }
     }
     if MODEL_RE_27.is_match(model) {
@@ -1085,21 +1422,41 @@ fn tag9405a(data: &[u8], model: &str) -> Vec<Tag> {
 fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if let Some(v) = u16_at(data, 0x4) {
-        tags.push(mk("SonyISO", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyISO", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x6) {
-        tags.push(mk("BaseISO", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+        tags.push(mk("BaseISO", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0xa) {
-        tags.push(mk("SonyExposureTime2", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
+        tags.push(mk("SonyExposureTime2", cv.as_string(), raw));
     }
     if !MODEL_RE_28.is_match(model) {
         if let Some(v) = u16_at(data, 0x14) {
-            tags.push(mk("SonyFNumber", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
+            tags.push(mk("SonyFNumber", cv.as_string(), raw));
         }
     }
     if let Some(v) = u16_at(data, 0x16) {
-        tags.push(mk("SonyMaxApertureValue", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyMaxApertureValue", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x24) {
         let s = match v as i64 {
@@ -1144,7 +1501,10 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
         tags.push(mk("CreativeStyle", s, Value::I32(v as i32)));
     }
     if let Some(v) = i8_at(data, 0x52) {
-        tags.push(mk("Sharpness", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
+        tags.push(mk("Sharpness", cv.as_string(), raw));
     }
     if !MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x5a) {
@@ -1181,17 +1541,26 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
     }
     if !MODEL_RE_29.is_match(model) {
         if let Some(v) = u16_at(data, 0x342) {
-            tags.push(mk("LensZoomPosition", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
+            tags.push(mk("LensZoomPosition", cv.as_string(), raw));
         }
     }
     if MODEL_RE_30.is_match(model) {
         if let Some(v) = u16_at(data, 0x34e) {
-            tags.push(mk("LensZoomPosition", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
+            tags.push(mk("LensZoomPosition", cv.as_string(), raw));
         }
     }
     if MODEL_RE_31.is_match(model) {
         if let Some(v) = u16_at(data, 0x35a) {
-            tags.push(mk("LensZoomPosition", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
+            tags.push(mk("LensZoomPosition", cv.as_string(), raw));
         }
     }
     tags
@@ -1200,17 +1569,30 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
 fn tag9406(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if let Some(v) = u8_at(data, 0x5) {
-        tags.push(mk("BatteryTemperature", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("($val - 32) / 1.8", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f C\",$val)", &cv) { cv = x; }
+        tags.push(mk("BatteryTemperature", cv.as_string(), raw));
     }
     if let Some(v) = u8_at(data, 0x6) {
-        tags.push(mk("BatteryLevelGrip1", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
+        tags.push(mk("BatteryLevelGrip1", cv.as_string(), raw));
     }
     if let Some(v) = u8_at(data, 0x7) {
-        tags.push(mk("BatteryLevel", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
+        tags.push(mk("BatteryLevel", cv.as_string(), raw));
     }
     if !MODEL_RE_32.is_match(model) {
         if let Some(v) = u8_at(data, 0x8) {
-            tags.push(mk("BatteryLevelGrip2", v.to_string(), Value::I32(v as i32)));
+            let mut cv = Conv::Num(f64::from(v));
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
+            tags.push(mk("BatteryLevelGrip2", cv.as_string(), raw));
         }
     }
     tags
@@ -1282,7 +1664,10 @@ fn tag940c(data: &[u8], model: &str) -> Vec<Tag> {
         tags.push(mk("LensType3", v.to_string(), Value::I32(v as i32)));
     }
     if let Some(v) = u16_at(data, 0xb) {
-        tags.push(mk("CameraE-mountVersion", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%x.%.2x\",$val>>8,$val&0xff)", &cv) { cv = x; }
+        tags.push(mk("CameraE-mountVersion", cv.as_string(), raw));
     }
     tags
 }
@@ -1290,19 +1675,38 @@ fn tag940c(data: &[u8], model: &str) -> Vec<Tag> {
 fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if let Some(v) = u8_at(data, 0x0) {
-        tags.push(mk("Tag9416_0000", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%3d\",$val)", &cv) { cv = x; }
+        tags.push(mk("Tag9416_0000", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x4) {
-        tags.push(mk("SonyISO", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyISO", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x6) {
-        tags.push(mk("SonyExposureTime2", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
+        tags.push(mk("SonyExposureTime2", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x10) {
-        tags.push(mk("SonyFNumber2", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyFNumber2", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x12) {
-        tags.push(mk("SonyMaxApertureValue", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
+        tags.push(mk("SonyMaxApertureValue", cv.as_string(), raw));
     }
     if let Some(v) = u8_at(data, 0x35) {
         tags.push(mk("ExposureProgram", v.to_string(), Value::I32(v as i32)));
@@ -1366,13 +1770,25 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
         tags.push(mk("LensMount", s, Value::I32(v as i32)));
     }
     if let Some(v) = u16_at(data, 0x70) {
-        tags.push(mk("FocalLength", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("FocalLength", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x73) {
-        tags.push(mk("MinFocalLength", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("MinFocalLength", cv.as_string(), raw));
     }
     if let Some(v) = u16_at(data, 0x75) {
-        tags.push(mk("MaxFocalLength", v.to_string(), Value::I32(v as i32)));
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
+        tags.push(mk("MaxFocalLength", cv.as_string(), raw));
     }
     if MODEL_RE_34.is_match(model) {
         if let Some(v) = u8_at(data, 0x74a) {

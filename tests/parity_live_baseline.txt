@@ -84,10 +84,7 @@ SonyILCE9.arw::Sony:LensSpecFeatures
 SonyILCE9.arw::Sony:LensType
 SonyILCE9.arw::Sony:LensType2
 SonyILCE9.arw::Sony:LensType3
-SonyILCE9.arw::Sony:MaxFocalLength
 SonyILCE9.arw::Sony:MetaVersion
-SonyILCE9.arw::Sony:MinFocalLength
-SonyILCE9.arw::Sony:ModelReleaseYear
 SonyILCE9.arw::Sony:Panorama
 SonyILCE9.arw::Sony:PictureEffect2
 SonyILCE9.arw::Sony:PictureProfile
@@ -95,7 +92,6 @@ SonyILCE9.arw::Sony:PixelShiftInfo
 SonyILCE9.arw::Sony:PreviewImageSize
 SonyILCE9.arw::Sony:Quality
 SonyILCE9.arw::Sony:Quality2
-SonyILCE9.arw::Sony:ReleaseMode2
 SonyILCE9.arw::Sony:ReleaseMode3
 SonyILCE9.arw::Sony:SelfTimer
 SonyILCE9.arw::Sony:SequenceFileNumber
@@ -105,10 +101,7 @@ SonyILCE9.arw::Sony:ShotInfo
 SonyILCE9.arw::Sony:Shutter
 SonyILCE9.arw::Sony:ShutterCount2
 SonyILCE9.arw::Sony:SonyDateTime
-SonyILCE9.arw::Sony:SonyExposureTime
 SonyILCE9.arw::Sony:SonyExposureTime2
-SonyILCE9.arw::Sony:SonyFNumber
-SonyILCE9.arw::Sony:SonyISO
 SonyILCE9.arw::Sony:SonyImageHeight
 SonyILCE9.arw::Sony:SonyImageHeightMax
 SonyILCE9.arw::Sony:SonyImageWidth

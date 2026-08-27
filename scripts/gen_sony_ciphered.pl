@@ -26,6 +26,15 @@ my $src = do { local $/; <$fh> };
 close $fh;
 
 my ($et_version) = $src =~ /\$VERSION\s*=\s*'([^']+)'/;
+
+# Some fields do not spell out their PrintConv: they splice in a shared hash,
+# `%releaseMode2,` on a line of its own. Collect those so a reference resolves
+# instead of yielding a bare number where ExifTool prints a phrase.
+my %shared;
+while ($src =~ /^my %(\w+)\s*=\s*\((.*?)\n\);/gms) {
+    $shared{$1} = $2;
+}
+
 $et_version ||= '?';
 
 # ---------------------------------------------------------------- collection
@@ -100,8 +109,15 @@ while ($src =~ /^%Image::ExifTool::Sony::(Tag(?:2010[a-z]?|9050[a-z]?|94[0-9a-f]
         }
 
         my %conv;
+        my $conv_src;
         if ($fb =~ /PrintConv\s*=>\s*\{(.*?)\n\s{8}\}/s) {
-            my $cs = $1;
+            $conv_src = $1;
+        } elsif ($fb =~ /^\s+%(\w+),\s*$/m and exists $shared{$1}) {
+            my $body = $shared{$1};
+            ($conv_src) = $body =~ /PrintConv\s*=>\s*\{(.*?)\n\s{4}\}/s;
+        }
+        if (defined $conv_src) {
+            my $cs = $conv_src;
             while ($cs =~ /(-?\d+|0x[0-9a-fA-F]+)\s*=>\s*'((?:[^'\\]|\\.)*)'/g) {
                 my $k = $1; my $v = $2;
                 $k = $k =~ /^0x/ ? hex($k) : int($k);
@@ -110,9 +126,17 @@ while ($src =~ /^%Image::ExifTool::Sony::(Tag(?:2010[a-z]?|9050[a-z]?|94[0-9a-f]
             }
         }
 
+        # Conversions written as Perl expressions rather than a hash. They are
+        # carried over verbatim and evaluated by tags::conv_expr, which declines
+        # anything outside its grammar so the raw value survives untouched.
+        my ($vconv) = $fb =~ /ValueConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
+        my ($pconv) = $fb =~ /PrintConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
+        for ($vconv, $pconv) { $_ =~ s/\\'/'/g if defined }
+
         push @fields, {
             off => $off, name => $name, fmt => $ffmt,
             re => $re, neg => $neg, conv => \%conv,
+            vconv => $vconv, pconv => $pconv,
         };
     }
 
@@ -178,6 +202,7 @@ use std::sync::LazyLock;
 
 use regex_lite::Regex;
 
+use crate::tags::conv_expr::{self, Val as Conv};
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
@@ -241,15 +266,19 @@ print "pub fn variant_for(tag: u16, model: &str) -> Option<&'static str> {\n";
 print "    match tag {\n";
 for my $s (@selectors) {
     printf "        0x%04x => {\n", $s->{tag};
+    my $unconditional = 0;
     for my $c (@{$s->{choices}}) {
         if (defined $c->{re}) {
             printf "            if %sMODEL_RE_%d.is_match(model) { return Some(\"%s\"); }\n",
                 ($c->{neg} ? '!' : ''), $c->{re}, $c->{tbl};
         } else {
-            printf "            return Some(\"%s\");\n", $c->{tbl};
+            printf "            Some(\"%s\")\n", $c->{tbl};
+            $unconditional = 1;
+            last;   # nothing after an unconditional arm can be reached
         }
     }
-    print  "            None\n        }\n";
+    print  "            None\n" unless $unconditional;
+    print  "        }\n";
 }
 print "        _ => None,\n    }\n}\n\n";
 
@@ -277,6 +306,19 @@ for my $t (@tables) {
             printf "%s        other => other.to_string(),\n", $ind;
             printf "%s    };\n", $ind;
             printf "%s    tags.push(mk(\"%s\", s, Value::I32(v as i32)));\n", $ind, $f->{name};
+        } elsif (defined $f->{vconv} or defined $f->{pconv}) {
+            my $esc = sub { my $t = shift; $t =~ s/\\/\\\\/g; $t =~ s/"/\\"/g; $t };
+            printf "%s    let mut cv = Conv::Num(f64::from(v));\n", $ind;
+            if (defined $f->{vconv}) {
+                printf "%s    if let Some(x) = conv_expr::eval(\"%s\", &cv) { cv = x; }\n",
+                    $ind, $esc->($f->{vconv});
+            }
+            printf "%s    let raw = Value::F64(cv.as_num());\n", $ind;
+            if (defined $f->{pconv}) {
+                printf "%s    if let Some(x) = conv_expr::eval(\"%s\", &cv) { cv = x; }\n",
+                    $ind, $esc->($f->{pconv});
+            }
+            printf "%s    tags.push(mk(\"%s\", cv.as_string(), raw));\n", $ind, $f->{name};
         } else {
             printf "%s    tags.push(mk(\"%s\", v.to_string(), Value::I32(v as i32)));\n", $ind, $f->{name};
         }

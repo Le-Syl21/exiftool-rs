@@ -183,14 +183,33 @@ FN
 
 for my $e (sort { $a->{module} cmp $b->{module} || $a->{tag} <=> $b->{tag} } @entries) {
     printf "        (\"%s\", 0x%04x) => {\n", $e->{module}, $e->{tag};
+    my $unconditional = 0;
     for my $c (@{$e->{choices}}) {
         if (defined $c->{expr}) {
-            printf "            if %s { return Some(\"%s\"); }\n", $c->{expr}, $c->{tbl};
+            my $x = $c->{expr};
+            # A single parenthesised term needs no parentheses in an if. The
+            # content has parentheses of its own, so the outer pair has to be
+            # matched by balance rather than by shape.
+            if ($x =~ /^\((.*)\)$/s) {
+                my $inner = $1;
+                my $d = 0;
+                my $balanced = 1;
+                for my $ch (split //, $inner) {
+                    $d++ if $ch eq '(';
+                    $d-- if $ch eq ')';
+                    if ($d < 0) { $balanced = 0; last }
+                }
+                $x = $inner if $balanced and $d == 0;
+            }
+            printf "            if %s { return Some(\"%s\"); }\n", $x, $c->{tbl};
         } else {
-            printf "            return Some(\"%s\");\n", $c->{tbl};
+            printf "            Some(\"%s\")\n", $c->{tbl};
+            $unconditional = 1;
+            last;
         }
     }
-    print  "            None\n        }\n";
+    print  "            None\n" unless $unconditional;
+    print  "        }\n";
 }
 print "        _ => None,\n    }\n}\n";
 
