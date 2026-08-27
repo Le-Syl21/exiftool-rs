@@ -43,6 +43,32 @@ impl ParseState for Probe {
         self.asked.set(true);
         Some("II")
     }
+
+    fn tag_value(&self, name: &str) -> Option<Val> {
+        self.asked.set(true);
+        // Enough for a conversion that walks the extracted tags looking for a
+        // video track, and no more.
+        match name {
+            "HandlerType" => Some(Val::Str("vide".to_string())),
+            "MatrixStructure" => Some(Val::Str("1 0 0 0 1 0 0 0 1".to_string())),
+            _ => None,
+        }
+    }
+
+    fn tag_group1(&self, _: &str) -> Option<String> {
+        self.asked.set(true);
+        Some("Track1".to_string())
+    }
+
+    fn tag_extra(&self, _: &str, _: &str) -> Option<Val> {
+        self.asked.set(true);
+        Some(Val::List(vec![Val::Str("m".to_string())]))
+    }
+
+    fn current_tag(&self) -> Option<String> {
+        self.asked.set(true);
+        Some("ProbeTag".to_string())
+    }
 }
 
 /// Whether Perl itself can compile the expression.

@@ -129,6 +129,29 @@ pub trait ParseState {
     fn byte_order(&self) -> Option<&str> {
         None
     }
+
+    /// A tag the reader has already extracted, by the name ExifTool would use
+    /// (`"HandlerType"`, `"MatrixStructure (1)"`).
+    fn tag_value(&self, _name: &str) -> Option<Val> {
+        None
+    }
+
+    /// The family-1 group of an extracted tag, which is how QuickTime tells
+    /// one track's tags from another's.
+    fn tag_group1(&self, _name: &str) -> Option<String> {
+        None
+    }
+
+    /// A note the reader kept beside a tag while parsing -- GoPro records the
+    /// units of each field that way.
+    fn tag_extra(&self, _tag: &str, _key: &str) -> Option<Val> {
+        None
+    }
+
+    /// The tag being converted, which a few conversions pass on as `$tag`.
+    fn current_tag(&self) -> Option<String> {
+        None
+    }
 }
 
 /// A reader with no parse state at all: every member is unknown.
@@ -1266,6 +1289,11 @@ impl<'a> Parser<'a> {
                 return None;
             }
             return self.state.option(&name.as_string());
+        }
+        // `$tag` is the name of the tag being converted.
+        if self.peek("$tag") && !self.s.get(self.i + 4).is_some_and(|c| ident_char(*c)) {
+            self.eat("$tag");
+            return Some(Val::Str(self.state.current_tag()?));
         }
         // `$$self{Name}` and `$self->{Name}` read the file-level parse state.
         if self.peek("$$self{") || self.peek("$self->{") {
@@ -3112,6 +3140,95 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
         // Nothing reads its return value; the conversion goes on to use the
         // array it changed.
         "ToFloat" => Val::Undef,
+        // Exif.pm ConvertExifText: an eight-byte encoding header, then the
+        // text in whatever it names.
+        "ConvertExifText" => {
+            let bytes = perl_bytes(first)?;
+            if bytes.len() < 8 {
+                return Some(first.clone());
+            }
+            let id = from_bytes(&bytes[..8]);
+            let body = from_bytes(&bytes[8..]);
+            let ascii_flex = args.get(1).map(Val::as_string).unwrap_or_default();
+            let mut str_val = if build_regex(r"^(ASCII)?(\x00|[\x00 ]+$)", "")?.is_match(&id) {
+                // Truncate at the null terminator: the spec says there is not
+                // one, and cameras put one there anyway.
+                let cut = body.split('\0').next().unwrap_or_default().to_string();
+                if ascii_flex == "1" {
+                    match state.option("CharsetEXIF") {
+                        Some(Val::Undef) | None => cut,
+                        Some(enc) => decode_charset(&Val::Str(cut), &enc.as_string(), None, state)?
+                            .as_string(),
+                    }
+                } else {
+                    cut
+                }
+            } else if build_regex(r"^(UNICODE)[\x00 ]$", "")?.is_match(&id) {
+                // MicrosoftPhoto writes this little-endian even inside
+                // big-endian EXIF, so the byte order has to be guessed.
+                decode_charset(&Val::Str(body), "UTF16", Some(&Val::Str("Unknown".into())), state)?
+                    .as_string()
+            } else if build_regex(r"^(JIS)[\x00 ]{5}$", "")?.is_match(&id) {
+                return None; // JIS is a character set we have no table for
+            } else {
+                format!("{id}{body}")
+            };
+            while str_val.ends_with(' ') {
+                str_val.pop();
+            }
+            Val::Str(str_val)
+        }
+        // GoPro.pm AddUnits: each field gets the unit the reader recorded for
+        // it while parsing.
+        "AddUnits" => {
+            let tag = args.get(1)?.as_string();
+            let Some(units) = state.tag_extra(&tag, "Units") else {
+                return Some(first.clone());
+            };
+            let units = flatten(&[units]);
+            let parts: Vec<String> =
+                first.as_string().split_whitespace().map(str::to_string).collect();
+            if units.len() != parts.len() {
+                return Some(first.clone());
+            }
+            Val::Str(
+                parts
+                    .iter()
+                    .zip(units.iter())
+                    .map(|(a, u)| {
+                        let u = u.as_string();
+                        if u.is_empty() { a.clone() } else { format!("{a} {u}") }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            )
+        }
+        // QuickTime.pm CalcRotation: the angle in the video track's matrix.
+        "CalcRotation" => {
+            let mut track = None;
+            for i in 0..64 {
+                let name =
+                    if i == 0 { "HandlerType".to_string() } else { format!("HandlerType ({i})") };
+                let Some(v) = state.tag_value(&name) else { break };
+                if v.as_string() == "vide" {
+                    track = state.tag_group1(&name);
+                    break;
+                }
+            }
+            let track = track?;
+            for i in 0..64 {
+                let name = if i == 0 {
+                    "MatrixStructure".to_string()
+                } else {
+                    format!("MatrixStructure ({i})")
+                };
+                let Some(v) = state.tag_value(&name) else { break };
+                if state.tag_group1(&name).as_deref() == Some(track.as_str()) {
+                    return call_helper("GetRotationAngle", &[v], state, false);
+                }
+            }
+            Val::Undef
+        }
         // GPS.pm PrintTimeStamp: trims the fractional seconds to microseconds.
         "PrintTimeStamp" => Val::Str(print_time_stamp(&first.as_string())),
         // XMP.pm ConvertXMPDate: an XMP date back into EXIF's layout.
