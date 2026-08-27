@@ -687,7 +687,12 @@ fn format_sprintf(fmt: &str, args: &[Val]) -> Option<String> {
 /// Compile a Perl pattern for regex-lite, declining what it cannot express.
 fn build_regex(pat: &str, flags: &str) -> Option<Regex> {
     // Perl's \Z and \z both mean end-of-string here; regex-lite spells it $.
-    let mut p = pat.replace("\\Z", "$").replace("\\z", "$");
+    // Perl writes a NUL in a pattern as \0; regex-lite wants \x00. Several
+    // conversions strip trailing NULs with `s/[ \0]+$//`.
+    let mut p = pat
+        .replace("\\Z", "$")
+        .replace("\\z", "$")
+        .replace("\\0", "\\x00");
     if flags.contains('i') {
         p = format!("(?i){p}");
     }
@@ -736,6 +741,15 @@ fn call_helper(name: &str, args: &[Val]) -> Option<Val> {
         "ToDegrees" => Val::Num(to_degrees(&first.as_string())?),
         "ExifDate" => Val::Str(exif_date(&first.as_string())),
         "ExifTime" => Val::Str(exif_time(&first.as_string())),
+        // `unpack("H*", $val)` is the bytes as lowercase hex, and the only
+        // unpack template these conversions use often enough to be worth it.
+        "unpack" => {
+            if first.as_string() != "H*" {
+                return None;
+            }
+            let bytes = args.get(1)?.as_string();
+            Val::Str(bytes.bytes().map(|b| format!("{b:02x}")).collect())
+        }
         _ => return None,
     })
 }
@@ -989,6 +1003,22 @@ mod tests {
     }
 
     /// Every expected value here came out of Perl ExifTool, not out of my head.
+    #[test]
+    fn nul_in_a_pattern_and_unpack_hex() {
+        assert_eq!(
+            eval("$val =~ s/[ \\0]+$//; $val", &Val::Str("abc \0\0".into()))
+                .unwrap()
+                .as_string(),
+            "abc"
+        );
+        assert_eq!(
+            eval("unpack(\"H*\", $val)", &Val::Str("\u{fe}\u{fe}".into()))
+                .unwrap()
+                .as_string(),
+            "c3bec3be"
+        );
+    }
+
     #[test]
     fn substitutions_transliterations_and_matches() {
         let s = |e: &str, v: &str| eval(e, &Val::Str(v.into())).unwrap().as_string();
