@@ -5903,9 +5903,15 @@ fn read_makernote_ifd_with_base(
                     crate::tags::canon_sub::decode_focal_length(&values, model_name, focal_units)
                 }
                 (Manufacturer::Canon, 0x000D) => {
-                    let variant_tags = subs::dispatch_canon_camera_info(&dispatch_ctx);
-                    let known_format = !variant_tags.is_empty(); // Only decode for known models
-                                                                 // Note: variant_tags contains CameraInfoVariant (internal metadata), don't add to output
+                    // Is this a body Canon.pm has a CameraInfo layout for? The
+                    // selector answers with the conditions from Canon.pm itself,
+                    // anchors included: `/EOS-1D X$/` does not claim the Mark II,
+                    // where the substring test this used to do did, and decoded a
+                    // body with a layout that does not describe it.
+                    let known_format = crate::tags::variant_selectors_generated::variant_for(
+                        "Canon", 0x000d, model_name,
+                    )
+                    .is_some();
                     let mut t = Vec::new();
                     // NOTE: BracketMode/BracketValue/BracketShotNumber are NOT
                     // CameraInfo tags. Canon.pm defines them at indices 3/4/5 of

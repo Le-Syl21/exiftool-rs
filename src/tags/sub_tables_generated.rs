@@ -38,72 +38,6 @@ impl<'a> DispatchContext<'a> {
 // ============================================================================
 
 #[allow(clippy::if_same_then_else)]
-pub fn dispatch_canon_camera_info(ctx: &DispatchContext) -> Vec<Tag> {
-    let m = ctx.model;
-    // Exact order from Canon.pm lines 1307-1494
-    let variant =
-        if m.contains("1DS") || (m.contains("1D") && !m.contains("Mark") && !m.contains("1DX")) {
-            "CameraInfo1D"
-        } else if m.contains("1D")
-            && m.contains("Mark II")
-            && !m.contains("Mark III")
-            && !m.contains("Mark IV")
-            && !m.contains("II N")
-        {
-            "CameraInfo1DmkII"
-        } else if m.contains("1D") && m.contains("Mark II N") {
-            "CameraInfo1DmkIIN"
-        } else if m.contains("1D") && m.contains("Mark III") {
-            "CameraInfo1DmkIII"
-        } else if m.contains("1D Mark IV") {
-            "CameraInfo1DmkIV"
-        } else if m.contains("1D X") {
-            "CameraInfo1DX"
-        } else if m.contains("5D") && !m.contains("Mark") {
-            "CameraInfo5D"
-        } else if m.contains("5D Mark II") && !m.contains("Mark III") {
-            "CameraInfo5DmkII"
-        } else if m.contains("5D Mark III") {
-            "CameraInfo5DmkIII"
-        } else if m.contains("6D") && !m.contains("Mark") {
-            "CameraInfo6D"
-        } else if m.contains("7D") && !m.contains("Mark") {
-            "CameraInfo7D"
-        } else if m.contains("40D") {
-            "CameraInfo40D"
-        } else if m.contains("50D") {
-            "CameraInfo50D"
-        } else if m.contains("60D") {
-            "CameraInfo60D"
-        } else if m.contains("70D") {
-            "CameraInfo70D"
-        } else if m.contains("80D") {
-            "CameraInfo80D"
-        } else if m.contains("450D") || m.contains("REBEL XSi") || m.contains("Kiss X2") {
-            "CameraInfo450D"
-        } else if m.contains("500D") || m.contains("REBEL T1i") || m.contains("Kiss X3") {
-            "CameraInfo500D"
-        } else if m.contains("550D") || m.contains("REBEL T2i") || m.contains("Kiss X4") {
-            "CameraInfo550D"
-        } else if m.contains("600D") || m.contains("REBEL T3i") || m.contains("Kiss X5") {
-            "CameraInfo600D"
-        } else if m.contains("650D") || m.contains("REBEL T4i") || m.contains("Kiss X6i") {
-            "CameraInfo650D"
-        } else if m.contains("700D") || m.contains("REBEL T5i") || m.contains("Kiss X7i") {
-            "CameraInfo650D" // reuses 650D
-        } else if m.contains("750D") || m.contains("Rebel T6i") || m.contains("Kiss X8i") {
-            "CameraInfo750D"
-        } else if m.contains("1000D") || m.contains("REBEL XS") || m.contains("Kiss F") {
-            "CameraInfo1000D"
-        } else if m.contains("1100D") || m.contains("REBEL T3") || m.contains("Kiss X50") {
-            "CameraInfo600D" // reuses 600D
-        } else if m.contains("EOS R5") || m.contains("EOS R6") {
-            "CameraInfoR6"
-        } else {
-            return Vec::new();
-        };
-    vec![mk("Canon", "CameraInfoVariant", variant)]
-}
 
 // ============================================================================
 // Nikon: ShotInfo (0x0091) — 30 variants by version prefix + count
@@ -149,10 +83,10 @@ pub fn dispatch_nikon_shot_info(ctx: &DispatchContext) -> Vec<Tag> {
         _ => return Vec::new(),
     };
 
-    let tags = vec![
-        mk("Nikon", "ShotInfoVersion", ver),
-        mk("Nikon", "ShotInfoVariant", variant),
-    ];
+    // ShotInfoVersion is a real Nikon tag. The variant is not: it names the
+    // layout we would decode with, which is our business and not a value.
+    let _ = variant;
+    let tags = vec![mk("Nikon", "ShotInfoVersion", ver)];
 
     // Nikon ShotInfo is encrypted (DecryptStart=4) — version prefix readable
     // Decryption requires SerialNumber + ShutterCount, not available here
@@ -318,13 +252,10 @@ pub fn dispatch_nikon_af_info2(ctx: &DispatchContext) -> Vec<Tag> {
 // ============================================================================
 
 pub fn dispatch_sony_camera_settings(ctx: &DispatchContext) -> Vec<Tag> {
-    let variant = match ctx.count {
-        280 | 364 => "CameraSettings",    // A200/A300/A350/A700/A850/A900
-        332 => "CameraSettings2",         // A230/A290/A330/A380/A390
-        1536 | 2048 => "CameraSettings3", // NEX/A5xx/A33/A55 (LittleEndian)
-        _ => return Vec::new(),
-    };
-    vec![mk("Sony", "CameraSettingsVariant", variant)]
+    // Same as the Canon case above: the variant is known, the layouts are not
+    // ported, and naming the variant is not a value anyone can use.
+    let _ = crate::tags::variant_selectors_generated::variant_for("Sony", 0x0114, ctx.model);
+    Vec::new()
 }
 
 // ============================================================================
@@ -450,5 +381,27 @@ fn mkn(module: &str, name: &str, value: i32) -> Tag {
         raw_value: Value::I32(value),
         print_value: value.to_string(),
         priority: 0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    /// No dispatcher may report the name of a layout as if it were a value.
+    ///
+    /// Three of them used to: a body whose layout we cannot read produced a tag
+    /// like `EncryptedVariant: Tag2010i`, which ExifTool has no equivalent for.
+    /// It made a gap look filled, and it took a bug report to notice.
+    #[test]
+    fn no_dispatcher_invents_a_variant_tag() {
+        let src = include_str!("sub_tables_generated.rs");
+        for (n, line) in src.lines().enumerate() {
+            assert!(
+                // Built at runtime so this very line does not match itself.
+                !line.contains(&format!("{}\", {}", "Variant", "variant")),
+                "line {}: a dispatcher is reporting a layout name as a tag value: {}",
+                n + 1,
+                line.trim()
+            );
+        }
     }
 }
