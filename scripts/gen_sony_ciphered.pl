@@ -115,6 +115,19 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
         my ($off_s, $fb) = @$rf;
         my $off   = $off_s =~ /^0x/ ? hex($off_s) : int($off_s);
 
+        # A whole field can be one splice: `0x0210 => { %selfTimerB2010 }`
+        # carries its Name, Format and PrintConv in a hash defined elsewhere.
+        # Without expanding it the field has no Name at all, which is how
+        # seven of Tag2010i's tags went missing.
+        # Only a whole item is a splice: `%name` opening the body or following
+        # a comma, and ending it. A `%x` inside a sprintf format is not one,
+        # and expanding it turned `1.80` into `1,.80`.
+        for (1 .. 4) {
+            my $before = $fb;
+            $fb =~ s/(^|[{,]\s*)%(\w+)\s*(?=[,}]|$)/exists $shared{$2} ? "$1$shared{$2}," : "$1%$2"/gme;
+            last if $fb eq $before;
+        }
+
         # `Hidden => 1` keeps a field out of the output -- but it is still
         # read, because the value behind it is what a later field is
         # conditioned on. Dropping it outright left CameraTemperature with
@@ -195,7 +208,7 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
 
         my %conv;
         my $conv_src;
-        if ($fb =~ /PrintConv\s*=>\s*\{(.*?)\n\s{8}\}/s) {
+        if ($fb =~ /PrintConv\s*=>\s*\{(.*?)\n\s*\}/s) {
             $conv_src = $1;
         } elsif ($fb =~ /PrintConv\s*=>\s*\{([^{}\n]*)\}/) {
             # Short tables are written on one line: { 0 => 'No', 1 => 'Yes'}.

@@ -7106,10 +7106,11 @@ fn read_makernote_ifd_with_base(
                 (Manufacturer::Apple, 0x0003) => decode_apple_runtime(value_data),
                 // Ricoh RicohSubdir (tag 0x2001): contains ManufactureDate1/ManufactureDate2
                 (Manufacturer::Ricoh, 0x2001) => decode_ricoh_subdir(value_data, data, byte_order),
-                // Sony sub-tables
+                // Sony sub-tables. 0x2010 and 0x9400 used to be picked here by
+                // a hand-written chain of model prefixes; the generated
+                // selector carries ExifTool's own conditions, so the arm below
+                // reaches them and these no longer have a say.
                 (Manufacturer::Sony, 0x0114) => subs::dispatch_sony_camera_settings(&dispatch_ctx),
-                (Manufacturer::Sony, 0x2010) => subs::dispatch_sony_tag2010(&dispatch_ctx),
-                (Manufacturer::Sony, 0x9400) => subs::dispatch_sony_tag9400(&dispatch_ctx),
                 // The remaining Sony ciphered blocks. Which sub-table applies is
                 // decided by the generated selector, straight from Sony.pm, so
                 // this arm never has to know about individual bodies.
