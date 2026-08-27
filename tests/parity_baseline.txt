@@ -10,7 +10,4 @@ SonyILCE9.arw	missing	ISOAutoMin
 SonyILCE9.arw	missing	ISOSetting
 SonyILCE9.arw	missing	LensE-mountVersion
 SonyILCE9.arw	missing	LensFirmwareVersion
-SonyILCE9.arw	missing	PreviewImage
-SonyILCE9.arw	missing	PreviewImageLength
-SonyILCE9.arw	missing	PreviewImageStart
 SonyILCE9.arw	missing	ShutterCount2

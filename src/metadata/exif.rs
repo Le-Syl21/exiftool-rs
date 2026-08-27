@@ -5,7 +5,7 @@
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
 use crate::error::{Error, Result};
 use crate::tag::{Tag, TagGroup, TagId};
@@ -19,6 +19,22 @@ thread_local! {
     /// instance under its own key; the name-level pruning in this module reproduces
     /// the Duplicates-off collapse and must be skipped in that case.
     static KEEP_DUPLICATES: Cell<bool> = const { Cell::new(false) };
+    /// ExifTool's `$$self{TIFF_TYPE}`: which flavour of TIFF is being read.
+    /// Several tag names depend on it -- 0x0201 in IFD0 is a thumbnail offset
+    /// in a JPEG and a preview offset in an ARW -- and it is set once per file
+    /// rather than threaded through every IFD reader.
+    static TIFF_TYPE: RefCell<String> = const { RefCell::new(String::new()) };
+}
+
+/// Set the TIFF flavour being read (ExifTool's `TIFF_TYPE`).
+pub fn set_tiff_type(kind: &str) {
+    TIFF_TYPE.with(|s| s.borrow_mut().replace_range(.., kind));
+}
+
+/// The TIFF flavour being read.
+#[must_use]
+pub fn tiff_type() -> String {
+    TIFF_TYPE.with(|s| s.borrow().clone())
 }
 
 /// Set whether duplicate tag names must all be kept (ExifTool's Duplicates option).
@@ -253,9 +269,14 @@ impl ExifReader {
         // Read IFD0 (main image)
         Self::read_ifd(data, &header, header.ifd0_offset, "IFD0", &mut tags)?;
 
+        // An ARW or SR2 names its IFD0 0x0201/0x0202 pair PreviewImageStart and
+        // PreviewImageLength (done as they are read), and ExifTool extracts the
+        // image they point at, exactly as it does for a CR2.
+        let preview_in_ifd0 = is_cr2 || matches!(tiff_type().as_str(), "ARW" | "SR2");
+
         // For CR2 files, rename IFD0 StripOffsets→PreviewImageStart and
         // StripByteCounts→PreviewImageLength, then construct PreviewImage.
-        if is_cr2 {
+        if preview_in_ifd0 {
             // Rename tags in-place
             for tag in tags.iter_mut() {
                 if tag.group.family1 == "IFD0" {
@@ -282,8 +303,16 @@ impl ExifReader {
                 .and_then(|t| t.raw_value.as_u64())
                 .map(|v| v as usize);
             if let (Some(start), Some(len)) = (preview_start, preview_len) {
-                if len > 0 && start + len <= data.len() {
-                    let img_data = data[start..start + len].to_vec();
+                if len > 0 {
+                    // The tag reports the length the file declares. A preview
+                    // that runs past the end of what we hold still exists as a
+                    // tag -- ExifTool lists it from the pair, not from the
+                    // bytes -- so only the payload is trimmed to what is there.
+                    let img_data = data
+                        .get(start..start + len)
+                        .or_else(|| data.get(start..))
+                        .unwrap_or_default()
+                        .to_vec();
                     let pv = format!("(Binary data {} bytes, use -b option to extract)", len);
                     tags.push(Tag {
                         id: TagId::Text("PreviewImage".to_string()),
@@ -1003,6 +1032,36 @@ impl ExifReader {
                 // PrintConv `$val =~ /^(inf|undef)$/ ? $val : "$val m"` passes
                 // through unchanged (GPS.pm:119-125). So it prints "undef", exactly
                 // like the sibling GPSSpeed rational in the same file.
+                // Exif.pm 0x201: the name depends on where the tag is and what
+                // kind of TIFF this is. In an ARW or an SR2, IFD0 holds the
+                // preview, not a thumbnail.
+                0x0201 | 0x0202
+                    if ifd_name == "IFD0" && matches!(tiff_type().as_str(), "ARW" | "SR2") =>
+                {
+                    if let Some(val) = read_ifd_value(data, &entry, header.byte_order) {
+                        let (name, desc) = if entry.tag == 0x0201 {
+                            ("PreviewImageStart", "Preview Image Start")
+                        } else {
+                            ("PreviewImageLength", "Preview Image Length")
+                        };
+                        let pv = val.to_display_string();
+                        tags.push(Tag {
+                            id: TagId::Numeric(entry.tag),
+                            name: name.into(),
+                            description: desc.into(),
+                            group: TagGroup {
+                                family0: "EXIF".into(),
+                                family1: ifd_name.to_string(),
+                                family2: "Image".into(),
+                                family3: "Main".into(),
+                            },
+                            raw_value: val,
+                            print_value: pv,
+                            priority: 0,
+                        });
+                    }
+                    continue;
+                }
                 // In SubIFD, tag 0x0201 = JpgFromRawStart (JPEG preview offset)
                 0x0201 if ifd_name.starts_with("SubIFD") => {
                     if let Some(val) = read_ifd_value(data, &entry, header.byte_order) {

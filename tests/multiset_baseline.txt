@@ -30,8 +30,6 @@ SonyILCE9.arw	default	extra	0	PreviewImageSize	1080x1616
 SonyILCE9.arw	default	extra	0	Quality	1 0
 SonyILCE9.arw	default	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	default	extra	0	SonyModelID	358
-SonyILCE9.arw	default	extra	0	ThumbnailLength	228105
-SonyILCE9.arw	default	extra	0	ThumbnailOffset	131234
 SonyILCE9.arw	default	extra	0	VariableLowPassFilter	0 0
 SonyILCE9.arw	default	extra	0	WBShiftAB_GM_Precise	0 0
 SonyILCE9.arw	default	extra	0	XMPToolkit	
@@ -53,16 +51,11 @@ SonyILCE9.arw	default	missing	0	LensSpec	E 50-300mm F4.5-6.3
 SonyILCE9.arw	default	missing	0	LensSpecFeatures	E
 SonyILCE9.arw	default	missing	0	LensType	E-Mount, T-Mount, Other Lens or no lens
 SonyILCE9.arw	default	missing	0	PixelShiftInfo	n/a
-SonyILCE9.arw	default	missing	0	PreviewImage	(Binary data 228105 bytes, use -b option to extract)
-SonyILCE9.arw	default	missing	0	PreviewImageLength	228105
 SonyILCE9.arw	default	missing	0	PreviewImageSize	1616x1080
-SonyILCE9.arw	default	missing	0	PreviewImageStart	131234
 SonyILCE9.arw	default	missing	0	Quality	RAW
 SonyILCE9.arw	default	missing	0	Shutter	Mechanical (2858 5239 6643)
 SonyILCE9.arw	default	missing	0	ShutterCount2	105978
 SonyILCE9.arw	default	missing	0	SonyModelID	ILCE-9
-SonyILCE9.arw	default	missing	0	ThumbnailLength	4737
-SonyILCE9.arw	default	missing	0	ThumbnailOffset	43392
 SonyILCE9.arw	default	missing	0	VariableLowPassFilter	n/a
 SonyILCE9.arw	default	missing	0	WBShiftAB_GM_Precise	0.00 0.00
 SonyILCE9.arw	ee	extra	0	AFPointSelected	0
@@ -86,8 +79,6 @@ SonyILCE9.arw	ee	extra	0	Saturation	Low
 SonyILCE9.arw	ee	extra	0	Sharpness	Normal
 SonyILCE9.arw	ee	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	ee	extra	0	SonyModelID	358
-SonyILCE9.arw	ee	extra	0	ThumbnailLength	228105
-SonyILCE9.arw	ee	extra	0	ThumbnailOffset	131234
 SonyILCE9.arw	ee	extra	0	VariableLowPassFilter	0 0
 SonyILCE9.arw	ee	extra	0	WBShiftAB_GM_Precise	0 0
 SonyILCE9.arw	ee	extra	0	XMPToolkit	
@@ -144,10 +135,7 @@ SonyILCE9.arw	ee	missing	1	LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
 SonyILCE9.arw	ee	missing	0	PictureEffect2	Off
 SonyILCE9.arw	ee	missing	0	PictureProfile	Gamma Still - Standard/Neutral (PP2)
 SonyILCE9.arw	ee	missing	0	PixelShiftInfo	n/a
-SonyILCE9.arw	ee	missing	0	PreviewImage	(Binary data 228105 bytes, use -b option to extract)
-SonyILCE9.arw	ee	missing	0	PreviewImageLength	228105
 SonyILCE9.arw	ee	missing	0	PreviewImageSize	1616x1080
-SonyILCE9.arw	ee	missing	0	PreviewImageStart	131234
 SonyILCE9.arw	ee	missing	0	Quality	RAW
 SonyILCE9.arw	ee	missing	0	Quality2	RAW
 SonyILCE9.arw	ee	missing	0	ReleaseMode2	Normal

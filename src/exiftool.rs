@@ -1143,7 +1143,13 @@ impl ExifTool {
         // Propagate process_compressed to format readers via thread-local
         crate::formats::pdf::set_process_compressed(self.options.process_compressed);
 
+        // ExifTool's `$$self{TIFF_TYPE}`. Several EXIF tag names read it -- 0x0201
+        // in IFD0 is a thumbnail offset in a JPEG and a preview offset in an ARW --
+        // so it has to be in place before anything is parsed, not after.
         let file_type_result = self.detect_file_type(data, path);
+        crate::metadata::exif::set_tiff_type(
+            file_type_result.as_ref().map_or("", |ft| ft.code()),
+        );
         let (file_type, mut tags) = match file_type_result {
             Ok(ft) => {
                 let t = self

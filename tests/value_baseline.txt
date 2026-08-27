@@ -19,7 +19,5 @@ SonyILCE9.arw	PreviewImageSize
 SonyILCE9.arw	Quality
 SonyILCE9.arw	Shutter
 SonyILCE9.arw	SonyModelID
-SonyILCE9.arw	ThumbnailLength
-SonyILCE9.arw	ThumbnailOffset
 SonyILCE9.arw	VariableLowPassFilter
 SonyILCE9.arw	WBShiftAB_GM_Precise

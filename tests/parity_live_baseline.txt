@@ -3,13 +3,6 @@
 SonyILCE9.arw::Composite:FocusDistance2
 SonyILCE9.arw::Composite:LensID
 SonyILCE9.arw::ExifIFD:ExposureProgram
-SonyILCE9.arw::IFD0:PreviewImage
-SonyILCE9.arw::IFD0:PreviewImageLength
-SonyILCE9.arw::IFD0:PreviewImageStart
-SonyILCE9.arw::IFD0:ThumbnailLength
-SonyILCE9.arw::IFD0:ThumbnailOffset
-SonyILCE9.arw::IFD1:ThumbnailLength
-SonyILCE9.arw::IFD1:ThumbnailOffset
 SonyILCE9.arw::Sony:AFPointSelected
 SonyILCE9.arw::Sony:AFPointsUsed
 SonyILCE9.arw::Sony:Anti-Blur
