@@ -7114,7 +7114,14 @@ fn read_makernote_ifd_with_base(
                 // decided by the generated selector, straight from Sony.pm, so
                 // this arm never has to know about individual bodies.
                 (Manufacturer::Sony, t)
-                    if crate::tags::sony_ciphered_generated::variant_for(t, dispatch_ctx.model).is_some() =>
+                    if crate::tags::sony_ciphered_generated::variant_for(
+                        t,
+                        dispatch_ctx.model,
+                        value_data,
+                        false,
+                        false,
+                    )
+                    .is_some() =>
                 {
                     subs::decode_sony_ciphered(t, &dispatch_ctx)
                 }

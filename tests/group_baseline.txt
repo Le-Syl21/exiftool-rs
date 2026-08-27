@@ -4,10 +4,13 @@
 # Regenerate: UPDATE_GROUP_BASELINE=1 cargo test --release --test regression regression_tag_groups
 # Format: <file>\t<tag>\t<family1|family2>
 SonyILCE9.arw	AFAreaMode	family2
+SonyILCE9.arw	BatteryLevel	family2
+SonyILCE9.arw	BatteryTemperature	family2
 SonyILCE9.arw	DistortionCorrection	family1
 SonyILCE9.arw	DynamicRangeOptimizer	family2
 SonyILCE9.arw	ExposureProgram	family1
 SonyILCE9.arw	ExposureProgram	family2
+SonyILCE9.arw	FacesDetected	family2
 SonyILCE9.arw	LensType	family2
 SonyILCE9.arw	ThumbnailLength	family1
 SonyILCE9.arw	ThumbnailOffset	family1
