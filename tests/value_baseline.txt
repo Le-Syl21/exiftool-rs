@@ -1,8 +1,38 @@
 # Value-parity baseline: (file, tag) whose printed value differs from ExifTool.
 # New deltas fail regression_tag_values; fixes tighten it.
 # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
-#
-# DELIBERATE DIVERGENCE: PSP / RealAudio Copyright decode Latin-1 to a readable
-# ©/ü; ExifTool emits the raw byte (invalid UTF-8). See multiset_baseline.txt.
 PSP.psp	Copyright
 Real.ra	Copyright
+SonyILCE9.arw	AFAreaMode
+SonyILCE9.arw	AFPointSelected
+SonyILCE9.arw	Anti-Blur
+SonyILCE9.arw	CameraE-mountVersion
+SonyILCE9.arw	ColorTemperature
+SonyILCE9.arw	DistortionCorrParamsNumber
+SonyILCE9.arw	DistortionCorrParamsPresent
+SonyILCE9.arw	FileFormat
+SonyILCE9.arw	FullImageSize
+SonyILCE9.arw	HDR
+SonyILCE9.arw	LensID
+SonyILCE9.arw	LensSpec
+SonyILCE9.arw	LensType
+SonyILCE9.arw	LensType3
+SonyILCE9.arw	MaxFocalLength
+SonyILCE9.arw	MinFocalLength
+SonyILCE9.arw	ModelReleaseYear
+SonyILCE9.arw	PixelShiftInfo
+SonyILCE9.arw	PreviewImageSize
+SonyILCE9.arw	Quality
+SonyILCE9.arw	ReleaseMode2
+SonyILCE9.arw	SequenceLength
+SonyILCE9.arw	SonyExposureTime
+SonyILCE9.arw	SonyFNumber
+SonyILCE9.arw	SonyISO
+SonyILCE9.arw	SonyModelID
+SonyILCE9.arw	ThumbnailLength
+SonyILCE9.arw	ThumbnailOffset
+SonyILCE9.arw	VariableLowPassFilter
+SonyILCE9.arw	WBShiftAB_GM
+SonyILCE9.arw	WBShiftAB_GM_Precise
+SonyILCE9.arw	WB_RGBLevels
+SonyILCE9.arw	WhiteLevel

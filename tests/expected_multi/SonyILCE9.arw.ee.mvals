@@ -1,0 +1,342 @@
+AFAreaMode	Multi
+AFAreaModeSetting	Wide
+AFPointSelected	n/a
+AFPointsUsed	(none)
+AFTracking	Off
+APS-CSizeCapture	Off
+APS-CSizeCapture	Off
+AmbientTemperature	0 C
+Anti-Blur	On (Shooting)
+Aperture	8.0
+AspectRatio	3:2
+AutoPortraitFramed	No
+BaseISO	100
+BatteryLevel	70%
+BatteryTemperature	36.7 C
+BitsPerSample	14
+BlackLevel	512 512 512 512
+BlackLevel	512 512 512 512
+BlueBalance	1.335938
+Brightness	0
+BrightnessValue	5.28671875
+BrightnessValue	5.28671875
+CFAPattern	[Red,Green][Green,Blue]
+CFAPattern2	0 1 1 2
+CFARepeatPatternDim	2 2
+CameraE-mountVersion	1.80
+CameraOrientation	Rotate 270 CW
+CameraTemperature	28 C
+ChromaticAberrationCorrParams	-497 -599 -675 -721 -742 -724 -698 -689 -681 -657 -633 -616 -601 -578 -547 -508 594 651 688 705 703 675 639 613 592 580 564 521 484 473 507 423
+ChromaticAberrationCorrParams	32 -512 -640 -640 -768 -768 -768 -640 -640 -640 -640 -640 -640 -640 -640 -512 -512 640 640 640 768 640 640 640 640 640 640 512 512 512 512 512 384
+ChromaticAberrationCorrParams	32 -512 -640 -640 -768 -768 -768 -640 -640 -640 -640 -640 -640 -640 -640 -512 -512 640 640 640 768 640 640 640 640 640 640 512 512 512 512 512 384
+ChromaticAberrationCorrection	Auto
+CircleOfConfusion	0.030 mm
+ColorCompensationFilter	0
+ColorMatrix	1282 -211 -15 -32 1247 -159 48 -48 1056
+ColorMode	Autumnleaves
+ColorMode	BW
+ColorMode	Clear
+ColorMode	Deep
+ColorMode	Landscape
+ColorMode	Light
+ColorMode	Neutral
+ColorMode	Nightview
+ColorMode	Portrait
+ColorMode	Sepia
+ColorMode	Standard
+ColorMode	Standard
+ColorMode	Sunset
+ColorMode	Vivid
+ColorSpace	Uncalibrated
+ColorTemperature	Auto
+ComponentsConfiguration	Y, Cb, Cr, -
+CompressedBitsPerPixel	8
+Compression	JPEG (old-style)
+Compression	JPEG (old-style)
+Compression	Sony ARW Compressed
+Contrast	0
+Contrast	Normal
+CreateDate	2026:07:01 11:22:02
+CreativeStyle	Standard
+CreativeStyle	Standard
+CustomRendered	Normal
+DateTimeOriginal	2026:07:01 11:22:02
+DefaultCropOrigin	12 12
+DefaultCropSize	6000 4000
+DigitalZoomRatio	1
+DistortionCorrParams	0 2 10 24 46 74 108 148 194 246 306 372 444 522 608 700
+DistortionCorrParams	0 2 10 24 46 74 108 148 194 246 306 372 444 522 608 700
+DistortionCorrParams	16 0 2 9 22 41 66 97 133 174 221 275 334 399 469 546 629
+DistortionCorrParams	16 0 2 9 22 41 66 97 133 174 221 275 334 399 469 546 629
+DistortionCorrParamsNumber	16 (Full-frame)
+DistortionCorrParamsPresent	Yes
+DistortionCorrParamsPresent	Yes
+DistortionCorrParamsPresent	Yes
+DistortionCorrection	Applied
+DistortionCorrection	Auto
+DistortionCorrectionSetting	Auto
+DynamicRangeOptimizer	Auto
+DynamicRangeOptimizer	Auto
+DynamicRangeOptimizer	Auto
+DynamicRangeOptimizer	Standard
+ElectronicFrontCurtainShutter	On
+ExifByteOrder	Little-endian (Intel, II)
+ExifImageHeight	4000
+ExifImageWidth	6000
+ExifVersion	0231
+ExposureCompensation	0
+ExposureCompensation	0
+ExposureMode	Manual
+ExposureMode	Manual
+ExposureProgram	Manual
+ExposureProgram	Manual
+ExposureProgram	Manual
+ExposureProgram	Manual
+ExposureStandardAdjustment	0
+ExposureTime	1/20
+ExposureTime	1/20
+FNumber	8.0
+FOV	12.0 deg
+FaceInfoLength	37
+FaceInfoOffset	94
+FacesDetected	0
+FileFormat	ARW 2.3.5
+FileSource	Digital Camera
+FileType	ARW
+FileTypeExtension	arw
+Flash	Off, Did not fire
+FlashAction	Did not fire
+FlashExposureComp	0
+FlashLevel	Normal
+FlashMode	Fill-flash
+FlashStatus	No Flash present
+FlashpixVersion	0100
+FlexibleSpotPosition	0 0
+FocalLength	171.0 mm
+FocalLength	171.0 mm
+FocalLength35efl	171.0 mm (35 mm equivalent: 171.0 mm)
+FocalLengthIn35mmFormat	171 mm
+FocalPlaneAFPointArea	640 428
+FocalPlaneAFPointLocation1	356 194
+FocalPlaneAFPointLocation2	356 214
+FocalPlaneAFPointLocation3	338 214
+FocalPlaneAFPointLocation4	338 194
+FocalPlaneAFPointLocation5	338 174
+FocalPlaneAFPointLocation6	356 174
+FocalPlaneAFPointLocation7	374 174
+FocalPlaneAFPointLocation8	374 214
+FocalPlaneAFPointsUsed	8
+FocusDistance2	282.2 m
+FocusLocation	6000 4000 3337 1808
+FocusMode	AF-C
+FocusMode	AF-C
+FocusPosition2	251
+FullImageSize	6000x4000
+Gamma	2.2
+HDR	Off; Uncorrected image
+HDRSetting	Off
+HighISONoiseReduction	Normal
+HighISONoiseReduction	Off
+HyperfocalDistance	121.65 m
+ISO	250
+ISOAutoMax	6400
+ISOAutoMin	100
+ISOSetting	250
+ImageDescription	
+ImageDescription	
+ImageHeight	4024
+ImageSize	6048x4024
+ImageStabilization	On
+ImageWidth	6048
+IntelligentAuto	Off
+IntelligentAuto	Off
+InternalSerialNumber	fefe0000f707
+InteropIndex	R03 - DCF option file (Adobe RGB)
+InteropVersion	0100
+LateralChromaticAberration	Auto
+LensE-mountVersion	1.70
+LensFirmwareVersion	Ver.01.000
+LensFormat	Full-frame
+LensFormat	Full-frame
+LensFormat	Full-frame
+LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+LensInfo	50-300mm f/4.5-6.3
+LensModel	E 50-300mm F4.5-6.3 A069
+LensMount	E-mount
+LensMount	E-mount
+LensMount	E-mount
+LensMount2	E-mount
+LensSpec	E 50-300mm F4.5-6.3
+LensSpecFeatures	E
+LensSpecFeatures	E
+LensType	E-Mount, T-Mount, Other Lens or no lens
+LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+LensType3	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+LightSource	Unknown
+LightValue	9.0
+LongExposureNoiseReduction	Off
+LongExposureNoiseReduction	Off
+MIMEType	image/x-sony-arw
+Make	SONY
+Make	SONY
+MaxApertureValue	5.6
+MaxFocalLength	300.0 mm
+Megapixels	24.3
+MetaVersion	DC7303320222000
+MeteringMode	Multi-segment
+MeteringMode	Multi-segment
+MeteringMode2	Multi-segment
+MinFocalLength	50.0 mm
+Model	ILCE-9
+Model	ILCE-9
+ModelReleaseYear	2018
+ModifyDate	2026:07:01 11:22:02
+ModifyDate	2026:07:01 11:22:02
+MultiFrameNREffect	Normal
+MultiFrameNoiseReduction	Off
+OffsetTime	+08:00
+OffsetTimeDigitized	+08:00
+OffsetTimeOriginal	+08:00
+Orientation	Rotate 270 CW
+Orientation	Rotate 270 CW
+PhotometricInterpretation	Color Filter Array
+PictureEffect	Off
+PictureEffect2	Off
+PictureEffect2	Off
+PictureProfile	Gamma Still - Standard/Neutral (PP2)
+PictureProfile	Gamma Still - Standard/Neutral (PP2)
+PixelShiftInfo	n/a
+PlanarConfiguration	Chunky
+PreviewImage	(Binary data 228105 bytes, use -b option to extract)
+PreviewImageLength	228105
+PreviewImageSize	1616x1080
+PreviewImageStart	131234
+PrimaryChromaticities	0.64 0.33 0.21 0.71 0.15 0.06
+PrintIMVersion	0300
+PrioritySetInAWB	Standard
+Quality	RAW
+Quality	RAW
+Quality2	RAW
+Quality2	RAW
+RAWFileType	Compressed RAW
+Rating	0
+Rating	0
+RecommendedExposureIndex	250
+RedBalance	2.550781
+ReleaseMode	Normal
+ReleaseMode2	Normal
+ReleaseMode2	Normal
+ReleaseMode2	Normal
+ReleaseMode2	Normal
+ReleaseMode2	Normal
+ReleaseMode2	Normal
+ReleaseMode3	Normal
+ResolutionUnit	inches
+ResolutionUnit	inches
+ResolutionUnit	inches
+RowsPerStrip	4024
+SR2SubIFDKey	0x44332211
+SR2SubIFDLength	42826
+SR2SubIFDOffset	49612
+SamplesPerPixel	1
+Saturation	0
+Saturation	Normal
+ScaleFactor35efl	1.0
+SceneCaptureType	Standard
+SceneMode	Standard
+SceneType	Directly photographed
+SelfTimer	Off
+SensitivityType	Recommended Exposure Index
+SequenceFileNumber	1
+SequenceImageNumber	1
+SequenceImageNumber	1
+SequenceLength	1 file
+SequenceLength	1 shot
+SequenceNumber	Single
+Sharpness	0
+Sharpness	0
+Sharpness	Normal
+Shutter	Mechanical (2858 5239 6643)
+ShutterCount	105978
+ShutterCount2	105978
+ShutterCount3	105978
+ShutterSpeed	1/20
+SoftSkinEffect	Off
+Software	ILCE-9 v6.00
+Software	ILCE-9 v6.00
+SonyCropSize	6000 4000
+SonyCropTopLeft	12 12
+SonyDateTime	2026:07:01 11:22:02
+SonyExposureTime	1/20
+SonyExposureTime2	1/20
+SonyFNumber	8.0
+SonyFNumber	8.0
+SonyISO	252
+SonyISO	252
+SonyImageHeight	4000
+SonyImageHeightMax	4024
+SonyImageWidth	6000
+SonyImageWidthMax	6024
+SonyMaxApertureValue	6.0
+SonyModelID	ILCE-9
+SonyRawFileType	Sony Compressed RAW
+SonyToneCurve	8000 10400 12900 14100
+StopsAboveBaseISO	1.3
+StopsAboveBaseISO	1.3
+StripByteCounts	24337152
+StripOffsets	360448
+SubSecCreateDate	2026:07:01 11:22:02+08:00
+SubSecDateTimeOriginal	2026:07:01 11:22:02+08:00
+SubSecModifyDate	2026:07:01 11:22:02+08:00
+SubfileType	Full-resolution image
+SubfileType	Reduced-resolution image
+SubfileType	Reduced-resolution image
+ThumbnailImage	(Binary data 4737 bytes, use -b option to extract)
+ThumbnailLength	4737
+ThumbnailOffset	43392
+UserComment	
+VariableLowPassFilter	n/a
+VignettingCorrParams	0 0 32 64 128 192 320 480 736 1184 1920 3168 4704 6464 8352 10208
+VignettingCorrParams	16 0 0 32 64 128 192 320 480 736 1184 1920 3168 4704 6464 8352 10208
+VignettingCorrParams	16 0 0 32 64 128 192 320 480 736 1184 1920 3168 4704 6464 8352 10208
+VignettingCorrection	Auto
+VignettingCorrection	Auto
+WBShiftAB_GM	0 0
+WBShiftAB_GM_Precise	0.00 0.00
+WB_RGBLevels	653 256 342
+WB_RGBLevels2500K	1304 1024 3240
+WB_RGBLevels3200K	1668 1024 2344
+WB_RGBLevels4500K	2172 1024 1700
+WB_RGBLevels6000K	2568 1024 1400
+WB_RGBLevels8500K	2988 1024 1184
+WB_RGBLevelsCloudy	2588 1024 1388
+WB_RGBLevelsDaylight	2400 1024 1512
+WB_RGBLevelsFlash	2740 1024 1388
+WB_RGBLevelsFluorescent	2148 1024 2192
+WB_RGBLevelsFluorescentM1	1696 1024 2664
+WB_RGBLevelsFluorescentP1	2280 1024 1608
+WB_RGBLevelsFluorescentP2	2536 1024 1476
+WB_RGBLevelsShade	2844 1024 1248
+WB_RGBLevelsTungsten	1496 1024 2700
+WB_RGGBLevels	2612 1024 1024 1368
+WB_RGGBLevels	2612 1024 1024 1368
+WB_RGGBLevelsAuto	2612 1024 1024 1368
+WhiteBalance	Auto
+WhiteBalance	Auto
+WhiteBalance	Auto
+WhiteBalanceFineTune	0
+WhiteLevel	15360 15360 15360
+WhiteLevel	16383
+WhitePoint	0.313 0.329
+XResolution	350
+XResolution	350
+XResolution	72
+YCbCrCoefficients	0.299 0.587 0.114
+YCbCrPositioning	Co-sited
+YCbCrPositioning	Co-sited
+YResolution	350
+YResolution	350
+YResolution	72
+ZoneMatching	ISO Setting Used

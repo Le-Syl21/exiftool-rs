@@ -4,16 +4,6 @@
 # Oracle: tests/expected_multi/*.mvals, from scripts/gen_multiset_baselines.sh
 # Regenerate: UPDATE_MULTISET_BASELINE=1 cargo test --release --test regression regression_tag_multiset
 # Format: <file>\t<default|ee>\t<extra|missing>\t<occurrence>\t<tag>\t<value>
-#
-# DELIBERATE DIVERGENCE (owner decision), not a defect to fix.
-# EXIF / PSP creator-block / RealAudio Copyright (and kin) hold raw Latin-1
-# bytes (© = 0xA9, ü = 0xFC). ExifTool emits them raw — invalid UTF-8 — because
-# it does not transcode these charsets by default (Exif.pm ConvertExifText; the
-# PSP/RealAudio readers pass bytes through). We decode UTF-8-or-Latin-1 to a
-# readable ©/ü instead: returning U+FFFD (�) for real accented Copyright is a
-# worse service than byte-parity with an invalid-UTF-8 reference. `extra` = our
-# readable output, `missing` = the reference's raw byte. Do NOT "fix" with
-# from_utf8_lossy — it regresses every real Latin-1 string in the wild.
 PSP.psp	default	extra	0	Copyright	© 2010 Phil Harvey
 PSP.psp	default	missing	0	Copyright	� 2010 Phil Harvey
 PSP.psp	ee	extra	0	Copyright	© 2010 Phil Harvey
@@ -24,3 +14,379 @@ Real.ra	default	extra	0	Copyright	** institut für universelle zusammenhänge
 Real.ra	default	missing	0	Copyright	** institut f�r universelle zusammenh�nge
 Real.ra	ee	extra	0	Copyright	** institut für universelle zusammenhänge
 Real.ra	ee	missing	0	Copyright	** institut f�r universelle zusammenh�nge
+SonyILCE9.arw	default	extra	0	AFAreaMode	Wide
+SonyILCE9.arw	default	extra	0	AFPointSelected	0
+SonyILCE9.arw	default	extra	0	Anti-Blur	2
+SonyILCE9.arw	default	extra	0	CameraE-mountVersion	384
+SonyILCE9.arw	default	extra	0	ColorTemperature	0
+SonyILCE9.arw	default	extra	0	DistortionCorrParamsNumber	16
+SonyILCE9.arw	default	extra	0	DistortionCorrParamsPresent	1
+SonyILCE9.arw	default	extra	0	DynamicRangeOptimizer2	Standard
+SonyILCE9.arw	default	extra	0	FileFormat	(Binary data 4 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	FullImageSize	4000x6000
+SonyILCE9.arw	default	extra	0	HDR	Off
+SonyILCE9.arw	default	extra	0	HighISONoiseReduction2	n/a
+SonyILCE9.arw	default	extra	0	LensID	Unknown 500-3000mm
+SonyILCE9.arw	default	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	LensType	65535
+SonyILCE9.arw	default	extra	0	LensType3	49475
+SonyILCE9.arw	default	extra	0	MaxFocalLength	3000
+SonyILCE9.arw	default	extra	0	MinFocalLength	500
+SonyILCE9.arw	default	extra	0	ModelReleaseYear	18
+SonyILCE9.arw	default	extra	0	Panorama	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+SonyILCE9.arw	default	extra	0	PixelShiftInfo	(Binary data 6 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	PreviewImageSize	1080x1616
+SonyILCE9.arw	default	extra	0	Quality	1 0
+SonyILCE9.arw	default	extra	0	ReleaseMode2	0
+SonyILCE9.arw	default	extra	0	SequenceLength	Continuous
+SonyILCE9.arw	default	extra	0	ShotInfo	(Binary data 390 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	SonyExposureTime	5205
+SonyILCE9.arw	default	extra	0	SonyFNumber	5632
+SonyILCE9.arw	default	extra	0	SonyISO	3754
+SonyILCE9.arw	default	extra	0	SonyModelID	358
+SonyILCE9.arw	default	extra	0	Sony_0x9407	(Binary data 64 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	Sony_0x9408	(Binary data 1000 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	Sony_0x9409	(Binary data 1344 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	Sony_0x940b	(Binary data 400 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	Sony_0x940d	(Binary data 1260 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	Sony_0x940f	(Binary data 2048 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	Tag202a	(Binary data 66 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	Tag9401	(Binary data 4096 bytes, use -b option to extract)
+SonyILCE9.arw	default	extra	0	TempTest2	18
+SonyILCE9.arw	default	extra	0	ThumbnailLength	228105
+SonyILCE9.arw	default	extra	0	ThumbnailOffset	131234
+SonyILCE9.arw	default	extra	0	VariableLowPassFilter	0 0
+SonyILCE9.arw	default	extra	0	WBShiftAB_GM	Auto
+SonyILCE9.arw	default	extra	0	WBShiftAB_GM_Precise	0 0
+SonyILCE9.arw	default	extra	0	WB_RGBLevels	0
+SonyILCE9.arw	default	extra	0	WhiteBalance2	Auto
+SonyILCE9.arw	default	extra	0	WhiteLevel	16383
+SonyILCE9.arw	default	extra	0	XMPToolkit	
+SonyILCE9.arw	default	missing	0	AFAreaMode	Multi
+SonyILCE9.arw	default	missing	0	AFAreaModeSetting	Wide
+SonyILCE9.arw	default	missing	0	AFPointSelected	n/a
+SonyILCE9.arw	default	missing	0	AFPointsUsed	(none)
+SonyILCE9.arw	default	missing	0	AmbientTemperature	0 C
+SonyILCE9.arw	default	missing	0	Anti-Blur	On (Shooting)
+SonyILCE9.arw	default	missing	0	BaseISO	100
+SonyILCE9.arw	default	missing	0	BatteryLevel	70%
+SonyILCE9.arw	default	missing	0	BatteryTemperature	36.7 C
+SonyILCE9.arw	default	missing	0	CameraE-mountVersion	1.80
+SonyILCE9.arw	default	missing	0	CameraTemperature	28 C
+SonyILCE9.arw	default	missing	0	ColorMatrix	1282 -211 -15 -32 1247 -159 48 -48 1056
+SonyILCE9.arw	default	missing	0	ColorTemperature	Auto
+SonyILCE9.arw	default	missing	0	DistortionCorrParamsNumber	16 (Full-frame)
+SonyILCE9.arw	default	missing	0	DistortionCorrParamsPresent	Yes
+SonyILCE9.arw	default	missing	0	DistortionCorrectionSetting	Auto
+SonyILCE9.arw	default	missing	0	FaceInfoLength	37
+SonyILCE9.arw	default	missing	0	FaceInfoOffset	94
+SonyILCE9.arw	default	missing	0	FacesDetected	0
+SonyILCE9.arw	default	missing	0	FileFormat	ARW 2.3.5
+SonyILCE9.arw	default	missing	0	FlashMode	Fill-flash
+SonyILCE9.arw	default	missing	0	FocalPlaneAFPointArea	640 428
+SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation1	356 194
+SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation2	356 214
+SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation3	338 214
+SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation4	338 194
+SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation5	338 174
+SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation6	356 174
+SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation7	374 174
+SonyILCE9.arw	default	missing	0	FocalPlaneAFPointLocation8	374 214
+SonyILCE9.arw	default	missing	0	FocalPlaneAFPointsUsed	8
+SonyILCE9.arw	default	missing	0	FocusDistance2	282.2 m
+SonyILCE9.arw	default	missing	0	FocusPosition2	251
+SonyILCE9.arw	default	missing	0	FullImageSize	6000x4000
+SonyILCE9.arw	default	missing	0	HDR	Off; Uncorrected image
+SonyILCE9.arw	default	missing	0	HDRSetting	Off
+SonyILCE9.arw	default	missing	0	ISOAutoMax	6400
+SonyILCE9.arw	default	missing	0	ISOAutoMin	100
+SonyILCE9.arw	default	missing	0	ISOSetting	250
+SonyILCE9.arw	default	missing	0	InternalSerialNumber	fefe0000f707
+SonyILCE9.arw	default	missing	0	LensE-mountVersion	1.70
+SonyILCE9.arw	default	missing	0	LensFirmwareVersion	Ver.01.000
+SonyILCE9.arw	default	missing	0	LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+SonyILCE9.arw	default	missing	0	LensSpec	E 50-300mm F4.5-6.3
+SonyILCE9.arw	default	missing	0	LensSpecFeatures	E
+SonyILCE9.arw	default	missing	0	LensType	E-Mount, T-Mount, Other Lens or no lens
+SonyILCE9.arw	default	missing	0	LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+SonyILCE9.arw	default	missing	0	LensType3	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+SonyILCE9.arw	default	missing	0	MaxFocalLength	300.0 mm
+SonyILCE9.arw	default	missing	0	MetaVersion	DC7303320222000
+SonyILCE9.arw	default	missing	0	MinFocalLength	50.0 mm
+SonyILCE9.arw	default	missing	0	ModelReleaseYear	2018
+SonyILCE9.arw	default	missing	0	PictureEffect2	Off
+SonyILCE9.arw	default	missing	0	PictureProfile	Gamma Still - Standard/Neutral (PP2)
+SonyILCE9.arw	default	missing	0	PixelShiftInfo	n/a
+SonyILCE9.arw	default	missing	0	PreviewImage	(Binary data 228105 bytes, use -b option to extract)
+SonyILCE9.arw	default	missing	0	PreviewImageLength	228105
+SonyILCE9.arw	default	missing	0	PreviewImageSize	1616x1080
+SonyILCE9.arw	default	missing	0	PreviewImageStart	131234
+SonyILCE9.arw	default	missing	0	Quality	RAW
+SonyILCE9.arw	default	missing	0	Quality2	RAW
+SonyILCE9.arw	default	missing	0	ReleaseMode2	Normal
+SonyILCE9.arw	default	missing	0	ReleaseMode3	Normal
+SonyILCE9.arw	default	missing	0	SR2SubIFDKey	0x44332211
+SonyILCE9.arw	default	missing	0	SR2SubIFDLength	42826
+SonyILCE9.arw	default	missing	0	SR2SubIFDOffset	49612
+SonyILCE9.arw	default	missing	0	SelfTimer	Off
+SonyILCE9.arw	default	missing	0	SequenceFileNumber	1
+SonyILCE9.arw	default	missing	0	SequenceImageNumber	1
+SonyILCE9.arw	default	missing	0	SequenceLength	1 file
+SonyILCE9.arw	default	missing	0	Shutter	Mechanical (2858 5239 6643)
+SonyILCE9.arw	default	missing	0	ShutterCount2	105978
+SonyILCE9.arw	default	missing	0	SonyDateTime	2026:07:01 11:22:02
+SonyILCE9.arw	default	missing	0	SonyExposureTime	1/20
+SonyILCE9.arw	default	missing	0	SonyExposureTime2	1/20
+SonyILCE9.arw	default	missing	0	SonyFNumber	8.0
+SonyILCE9.arw	default	missing	0	SonyISO	252
+SonyILCE9.arw	default	missing	0	SonyImageHeight	4000
+SonyILCE9.arw	default	missing	0	SonyImageHeightMax	4024
+SonyILCE9.arw	default	missing	0	SonyImageWidth	6000
+SonyILCE9.arw	default	missing	0	SonyImageWidthMax	6024
+SonyILCE9.arw	default	missing	0	SonyMaxApertureValue	6.0
+SonyILCE9.arw	default	missing	0	SonyModelID	ILCE-9
+SonyILCE9.arw	default	missing	0	StopsAboveBaseISO	1.3
+SonyILCE9.arw	default	missing	0	ThumbnailLength	4737
+SonyILCE9.arw	default	missing	0	ThumbnailOffset	43392
+SonyILCE9.arw	default	missing	0	VariableLowPassFilter	n/a
+SonyILCE9.arw	default	missing	0	WBShiftAB_GM	0 0
+SonyILCE9.arw	default	missing	0	WBShiftAB_GM_Precise	0.00 0.00
+SonyILCE9.arw	default	missing	0	WB_RGBLevels	653 256 342
+SonyILCE9.arw	default	missing	0	WB_RGBLevels2500K	1304 1024 3240
+SonyILCE9.arw	default	missing	0	WB_RGBLevels3200K	1668 1024 2344
+SonyILCE9.arw	default	missing	0	WB_RGBLevels4500K	2172 1024 1700
+SonyILCE9.arw	default	missing	0	WB_RGBLevels6000K	2568 1024 1400
+SonyILCE9.arw	default	missing	0	WB_RGBLevels8500K	2988 1024 1184
+SonyILCE9.arw	default	missing	0	WB_RGBLevelsCloudy	2588 1024 1388
+SonyILCE9.arw	default	missing	0	WB_RGBLevelsDaylight	2400 1024 1512
+SonyILCE9.arw	default	missing	0	WB_RGBLevelsFlash	2740 1024 1388
+SonyILCE9.arw	default	missing	0	WB_RGBLevelsFluorescent	2148 1024 2192
+SonyILCE9.arw	default	missing	0	WB_RGBLevelsFluorescentM1	1696 1024 2664
+SonyILCE9.arw	default	missing	0	WB_RGBLevelsFluorescentP1	2280 1024 1608
+SonyILCE9.arw	default	missing	0	WB_RGBLevelsFluorescentP2	2536 1024 1476
+SonyILCE9.arw	default	missing	0	WB_RGBLevelsShade	2844 1024 1248
+SonyILCE9.arw	default	missing	0	WB_RGBLevelsTungsten	1496 1024 2700
+SonyILCE9.arw	default	missing	0	WB_RGGBLevelsAuto	2612 1024 1024 1368
+SonyILCE9.arw	default	missing	0	WhiteLevel	15360 15360 15360
+SonyILCE9.arw	ee	extra	0	AFAreaMode	Wide
+SonyILCE9.arw	ee	extra	0	AFPointSelected	0
+SonyILCE9.arw	ee	extra	0	Anti-Blur	2
+SonyILCE9.arw	ee	extra	0	CameraE-mountVersion	384
+SonyILCE9.arw	ee	extra	0	ColorTemperature	0
+SonyILCE9.arw	ee	extra	0	Contrast	Normal
+SonyILCE9.arw	ee	extra	0	DistortionCorrParamsNumber	16
+SonyILCE9.arw	ee	extra	0	DistortionCorrParamsPresent	1
+SonyILCE9.arw	ee	extra	0	DistortionCorrection	Auto
+SonyILCE9.arw	ee	extra	0	DynamicRangeOptimizer2	Standard
+SonyILCE9.arw	ee	extra	0	FileFormat	(Binary data 4 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	FullImageSize	4000x6000
+SonyILCE9.arw	ee	extra	0	HDR	Off
+SonyILCE9.arw	ee	extra	0	HighISONoiseReduction2	n/a
+SonyILCE9.arw	ee	extra	0	LensID	Unknown 500-3000mm
+SonyILCE9.arw	ee	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	LensType	65535
+SonyILCE9.arw	ee	extra	0	LensType3	49475
+SonyILCE9.arw	ee	extra	0	MaxFocalLength	3000
+SonyILCE9.arw	ee	extra	0	MinFocalLength	500
+SonyILCE9.arw	ee	extra	0	ModelReleaseYear	18
+SonyILCE9.arw	ee	extra	0	Panorama	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+SonyILCE9.arw	ee	extra	0	PixelShiftInfo	(Binary data 6 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	PreviewImageSize	1080x1616
+SonyILCE9.arw	ee	extra	0	Quality	1 0
+SonyILCE9.arw	ee	extra	0	ReleaseMode2	0
+SonyILCE9.arw	ee	extra	0	Saturation	Low
+SonyILCE9.arw	ee	extra	0	SequenceLength	Continuous
+SonyILCE9.arw	ee	extra	0	Sharpness	Normal
+SonyILCE9.arw	ee	extra	0	ShotInfo	(Binary data 390 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	SonyExposureTime	5205
+SonyILCE9.arw	ee	extra	0	SonyFNumber	5632
+SonyILCE9.arw	ee	extra	0	SonyISO	3754
+SonyILCE9.arw	ee	extra	0	SonyModelID	358
+SonyILCE9.arw	ee	extra	0	Sony_0x9407	(Binary data 64 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	Sony_0x9408	(Binary data 1000 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	Sony_0x9409	(Binary data 1344 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	Sony_0x940b	(Binary data 400 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	Sony_0x940d	(Binary data 1260 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	Sony_0x940f	(Binary data 2048 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	Tag202a	(Binary data 66 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	Tag9401	(Binary data 4096 bytes, use -b option to extract)
+SonyILCE9.arw	ee	extra	0	TempTest2	18
+SonyILCE9.arw	ee	extra	0	ThumbnailLength	228105
+SonyILCE9.arw	ee	extra	0	ThumbnailOffset	131234
+SonyILCE9.arw	ee	extra	0	VariableLowPassFilter	0 0
+SonyILCE9.arw	ee	extra	0	WBShiftAB_GM	Auto
+SonyILCE9.arw	ee	extra	0	WBShiftAB_GM_Precise	0 0
+SonyILCE9.arw	ee	extra	0	WB_RGBLevels	0
+SonyILCE9.arw	ee	extra	0	WhiteBalance2	Auto
+SonyILCE9.arw	ee	extra	0	XMPToolkit	
+SonyILCE9.arw	ee	missing	0	AFAreaMode	Multi
+SonyILCE9.arw	ee	missing	0	AFAreaModeSetting	Wide
+SonyILCE9.arw	ee	missing	0	AFPointSelected	n/a
+SonyILCE9.arw	ee	missing	0	AFPointsUsed	(none)
+SonyILCE9.arw	ee	missing	0	APS-CSizeCapture	Off
+SonyILCE9.arw	ee	missing	0	AmbientTemperature	0 C
+SonyILCE9.arw	ee	missing	0	Anti-Blur	On (Shooting)
+SonyILCE9.arw	ee	missing	0	BaseISO	100
+SonyILCE9.arw	ee	missing	0	BatteryLevel	70%
+SonyILCE9.arw	ee	missing	0	BatteryTemperature	36.7 C
+SonyILCE9.arw	ee	missing	0	BlackLevel	512 512 512 512
+SonyILCE9.arw	ee	missing	0	BrightnessValue	5.28671875
+SonyILCE9.arw	ee	missing	0	CameraE-mountVersion	1.80
+SonyILCE9.arw	ee	missing	0	CameraTemperature	28 C
+SonyILCE9.arw	ee	missing	0	ChromaticAberrationCorrParams	-497 -599 -675 -721 -742 -724 -698 -689 -681 -657 -633 -616 -601 -578 -547 -508 594 651 688 705 703 675 639 613 592 580 564 521 484 473 507 423
+SonyILCE9.arw	ee	missing	0	ChromaticAberrationCorrParams	32 -512 -640 -640 -768 -768 -768 -640 -640 -640 -640 -640 -640 -640 -640 -512 -512 640 640 640 768 640 640 640 640 640 640 512 512 512 512 512 384
+SonyILCE9.arw	ee	missing	0	ColorMatrix	1282 -211 -15 -32 1247 -159 48 -48 1056
+SonyILCE9.arw	ee	missing	0	ColorMode	Autumnleaves
+SonyILCE9.arw	ee	missing	0	ColorMode	BW
+SonyILCE9.arw	ee	missing	0	ColorMode	Clear
+SonyILCE9.arw	ee	missing	0	ColorMode	Deep
+SonyILCE9.arw	ee	missing	0	ColorMode	Landscape
+SonyILCE9.arw	ee	missing	0	ColorMode	Light
+SonyILCE9.arw	ee	missing	0	ColorMode	Neutral
+SonyILCE9.arw	ee	missing	0	ColorMode	Nightview
+SonyILCE9.arw	ee	missing	0	ColorMode	Portrait
+SonyILCE9.arw	ee	missing	0	ColorMode	Sepia
+SonyILCE9.arw	ee	missing	0	ColorMode	Standard
+SonyILCE9.arw	ee	missing	0	ColorMode	Sunset
+SonyILCE9.arw	ee	missing	0	ColorMode	Vivid
+SonyILCE9.arw	ee	missing	0	ColorTemperature	Auto
+SonyILCE9.arw	ee	missing	0	Contrast	0
+SonyILCE9.arw	ee	missing	0	CreativeStyle	Standard
+SonyILCE9.arw	ee	missing	0	DistortionCorrParams	0 2 10 24 46 74 108 148 194 246 306 372 444 522 608 700
+SonyILCE9.arw	ee	missing	1	DistortionCorrParams	0 2 10 24 46 74 108 148 194 246 306 372 444 522 608 700
+SonyILCE9.arw	ee	missing	0	DistortionCorrParams	16 0 2 9 22 41 66 97 133 174 221 275 334 399 469 546 629
+SonyILCE9.arw	ee	missing	0	DistortionCorrParamsNumber	16 (Full-frame)
+SonyILCE9.arw	ee	missing	0	DistortionCorrParamsPresent	Yes
+SonyILCE9.arw	ee	missing	1	DistortionCorrParamsPresent	Yes
+SonyILCE9.arw	ee	missing	2	DistortionCorrParamsPresent	Yes
+SonyILCE9.arw	ee	missing	0	DistortionCorrection	Applied
+SonyILCE9.arw	ee	missing	0	DistortionCorrectionSetting	Auto
+SonyILCE9.arw	ee	missing	0	DynamicRangeOptimizer	Auto
+SonyILCE9.arw	ee	missing	1	DynamicRangeOptimizer	Auto
+SonyILCE9.arw	ee	missing	0	DynamicRangeOptimizer	Standard
+SonyILCE9.arw	ee	missing	0	ExposureCompensation	0
+SonyILCE9.arw	ee	missing	0	ExposureProgram	Manual
+SonyILCE9.arw	ee	missing	1	ExposureProgram	Manual
+SonyILCE9.arw	ee	missing	2	ExposureProgram	Manual
+SonyILCE9.arw	ee	missing	0	ExposureTime	1/20
+SonyILCE9.arw	ee	missing	0	FaceInfoLength	37
+SonyILCE9.arw	ee	missing	0	FaceInfoOffset	94
+SonyILCE9.arw	ee	missing	0	FacesDetected	0
+SonyILCE9.arw	ee	missing	0	FileFormat	ARW 2.3.5
+SonyILCE9.arw	ee	missing	0	FlashMode	Fill-flash
+SonyILCE9.arw	ee	missing	0	FocalLength	171.0 mm
+SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointArea	640 428
+SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation1	356 194
+SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation2	356 214
+SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation3	338 214
+SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation4	338 194
+SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation5	338 174
+SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation6	356 174
+SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation7	374 174
+SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointLocation8	374 214
+SonyILCE9.arw	ee	missing	0	FocalPlaneAFPointsUsed	8
+SonyILCE9.arw	ee	missing	0	FocusDistance2	282.2 m
+SonyILCE9.arw	ee	missing	0	FocusMode	AF-C
+SonyILCE9.arw	ee	missing	0	FocusPosition2	251
+SonyILCE9.arw	ee	missing	0	FullImageSize	6000x4000
+SonyILCE9.arw	ee	missing	0	HDR	Off; Uncorrected image
+SonyILCE9.arw	ee	missing	0	HDRSetting	Off
+SonyILCE9.arw	ee	missing	0	HighISONoiseReduction	Normal
+SonyILCE9.arw	ee	missing	0	ISOAutoMax	6400
+SonyILCE9.arw	ee	missing	0	ISOAutoMin	100
+SonyILCE9.arw	ee	missing	0	ISOSetting	250
+SonyILCE9.arw	ee	missing	0	IntelligentAuto	Off
+SonyILCE9.arw	ee	missing	0	InternalSerialNumber	fefe0000f707
+SonyILCE9.arw	ee	missing	0	LensE-mountVersion	1.70
+SonyILCE9.arw	ee	missing	0	LensFirmwareVersion	Ver.01.000
+SonyILCE9.arw	ee	missing	0	LensFormat	Full-frame
+SonyILCE9.arw	ee	missing	1	LensFormat	Full-frame
+SonyILCE9.arw	ee	missing	0	LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+SonyILCE9.arw	ee	missing	0	LensMount	E-mount
+SonyILCE9.arw	ee	missing	1	LensMount	E-mount
+SonyILCE9.arw	ee	missing	0	LensSpec	E 50-300mm F4.5-6.3
+SonyILCE9.arw	ee	missing	0	LensSpecFeatures	E
+SonyILCE9.arw	ee	missing	1	LensSpecFeatures	E
+SonyILCE9.arw	ee	missing	0	LensType	E-Mount, T-Mount, Other Lens or no lens
+SonyILCE9.arw	ee	missing	0	LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+SonyILCE9.arw	ee	missing	1	LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+SonyILCE9.arw	ee	missing	2	LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+SonyILCE9.arw	ee	missing	0	LensType3	Tamron 50-300mm F4.5-6.3 Di III VC VXD
+SonyILCE9.arw	ee	missing	0	LongExposureNoiseReduction	Off
+SonyILCE9.arw	ee	missing	0	MaxFocalLength	300.0 mm
+SonyILCE9.arw	ee	missing	0	MetaVersion	DC7303320222000
+SonyILCE9.arw	ee	missing	0	MeteringMode	Multi-segment
+SonyILCE9.arw	ee	missing	0	MinFocalLength	50.0 mm
+SonyILCE9.arw	ee	missing	0	ModelReleaseYear	2018
+SonyILCE9.arw	ee	missing	0	PictureEffect2	Off
+SonyILCE9.arw	ee	missing	1	PictureEffect2	Off
+SonyILCE9.arw	ee	missing	0	PictureProfile	Gamma Still - Standard/Neutral (PP2)
+SonyILCE9.arw	ee	missing	1	PictureProfile	Gamma Still - Standard/Neutral (PP2)
+SonyILCE9.arw	ee	missing	0	PixelShiftInfo	n/a
+SonyILCE9.arw	ee	missing	0	PreviewImage	(Binary data 228105 bytes, use -b option to extract)
+SonyILCE9.arw	ee	missing	0	PreviewImageLength	228105
+SonyILCE9.arw	ee	missing	0	PreviewImageSize	1616x1080
+SonyILCE9.arw	ee	missing	0	PreviewImageStart	131234
+SonyILCE9.arw	ee	missing	0	Quality	RAW
+SonyILCE9.arw	ee	missing	0	Quality2	RAW
+SonyILCE9.arw	ee	missing	1	Quality2	RAW
+SonyILCE9.arw	ee	missing	0	ReleaseMode2	Normal
+SonyILCE9.arw	ee	missing	1	ReleaseMode2	Normal
+SonyILCE9.arw	ee	missing	2	ReleaseMode2	Normal
+SonyILCE9.arw	ee	missing	3	ReleaseMode2	Normal
+SonyILCE9.arw	ee	missing	4	ReleaseMode2	Normal
+SonyILCE9.arw	ee	missing	5	ReleaseMode2	Normal
+SonyILCE9.arw	ee	missing	0	ReleaseMode3	Normal
+SonyILCE9.arw	ee	missing	0	SR2SubIFDKey	0x44332211
+SonyILCE9.arw	ee	missing	0	SR2SubIFDLength	42826
+SonyILCE9.arw	ee	missing	0	SR2SubIFDOffset	49612
+SonyILCE9.arw	ee	missing	0	Saturation	0
+SonyILCE9.arw	ee	missing	0	SelfTimer	Off
+SonyILCE9.arw	ee	missing	0	SequenceFileNumber	1
+SonyILCE9.arw	ee	missing	0	SequenceImageNumber	1
+SonyILCE9.arw	ee	missing	1	SequenceImageNumber	1
+SonyILCE9.arw	ee	missing	0	SequenceLength	1 file
+SonyILCE9.arw	ee	missing	0	SequenceLength	1 shot
+SonyILCE9.arw	ee	missing	0	Sharpness	0
+SonyILCE9.arw	ee	missing	1	Sharpness	0
+SonyILCE9.arw	ee	missing	0	Shutter	Mechanical (2858 5239 6643)
+SonyILCE9.arw	ee	missing	0	ShutterCount2	105978
+SonyILCE9.arw	ee	missing	0	SonyDateTime	2026:07:01 11:22:02
+SonyILCE9.arw	ee	missing	0	SonyExposureTime	1/20
+SonyILCE9.arw	ee	missing	0	SonyExposureTime2	1/20
+SonyILCE9.arw	ee	missing	0	SonyFNumber	8.0
+SonyILCE9.arw	ee	missing	1	SonyFNumber	8.0
+SonyILCE9.arw	ee	missing	0	SonyISO	252
+SonyILCE9.arw	ee	missing	1	SonyISO	252
+SonyILCE9.arw	ee	missing	0	SonyImageHeight	4000
+SonyILCE9.arw	ee	missing	0	SonyImageHeightMax	4024
+SonyILCE9.arw	ee	missing	0	SonyImageWidth	6000
+SonyILCE9.arw	ee	missing	0	SonyImageWidthMax	6024
+SonyILCE9.arw	ee	missing	0	SonyMaxApertureValue	6.0
+SonyILCE9.arw	ee	missing	0	SonyModelID	ILCE-9
+SonyILCE9.arw	ee	missing	0	StopsAboveBaseISO	1.3
+SonyILCE9.arw	ee	missing	1	StopsAboveBaseISO	1.3
+SonyILCE9.arw	ee	missing	0	VariableLowPassFilter	n/a
+SonyILCE9.arw	ee	missing	0	VignettingCorrParams	0 0 32 64 128 192 320 480 736 1184 1920 3168 4704 6464 8352 10208
+SonyILCE9.arw	ee	missing	0	VignettingCorrParams	16 0 0 32 64 128 192 320 480 736 1184 1920 3168 4704 6464 8352 10208
+SonyILCE9.arw	ee	missing	0	VignettingCorrection	Auto
+SonyILCE9.arw	ee	missing	0	WBShiftAB_GM_Precise	0.00 0.00
+SonyILCE9.arw	ee	missing	0	WB_RGBLevels	653 256 342
+SonyILCE9.arw	ee	missing	0	WB_RGBLevels2500K	1304 1024 3240
+SonyILCE9.arw	ee	missing	0	WB_RGBLevels3200K	1668 1024 2344
+SonyILCE9.arw	ee	missing	0	WB_RGBLevels4500K	2172 1024 1700
+SonyILCE9.arw	ee	missing	0	WB_RGBLevels6000K	2568 1024 1400
+SonyILCE9.arw	ee	missing	0	WB_RGBLevels8500K	2988 1024 1184
+SonyILCE9.arw	ee	missing	0	WB_RGBLevelsCloudy	2588 1024 1388
+SonyILCE9.arw	ee	missing	0	WB_RGBLevelsDaylight	2400 1024 1512
+SonyILCE9.arw	ee	missing	0	WB_RGBLevelsFlash	2740 1024 1388
+SonyILCE9.arw	ee	missing	0	WB_RGBLevelsFluorescent	2148 1024 2192
+SonyILCE9.arw	ee	missing	0	WB_RGBLevelsFluorescentM1	1696 1024 2664
+SonyILCE9.arw	ee	missing	0	WB_RGBLevelsFluorescentP1	2280 1024 1608
+SonyILCE9.arw	ee	missing	0	WB_RGBLevelsFluorescentP2	2536 1024 1476
+SonyILCE9.arw	ee	missing	0	WB_RGBLevelsShade	2844 1024 1248
+SonyILCE9.arw	ee	missing	0	WB_RGBLevelsTungsten	1496 1024 2700
+SonyILCE9.arw	ee	missing	0	WB_RGGBLevels	2612 1024 1024 1368
+SonyILCE9.arw	ee	missing	0	WB_RGGBLevelsAuto	2612 1024 1024 1368
+SonyILCE9.arw	ee	missing	0	WhiteBalance	Auto
+SonyILCE9.arw	ee	missing	0	WhiteLevel	15360 15360 15360

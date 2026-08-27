@@ -3,11 +3,25 @@
 # Oracle: tests/expected_groups/*.grps, produced by scripts/gen_group_baselines.sh
 # Regenerate: UPDATE_GROUP_BASELINE=1 cargo test --release --test regression regression_tag_groups
 # Format: <file>\t<tag>\t<family1|family2>
-#
-# The single remaining delta, and a downstream consequence of the deliberate
-# encoding divergence documented in multiset_baseline.txt (owner decision
-# 2026-07-23): our PSP Copyright is read from the PSP block, ExifTool's from IFD0.
-# Reaching family-1 parity here means adopting ExifTool's emission order, which
-# would surface the raw-0xA9 (invalid-UTF-8) value we deliberately decode instead.
-# Left as-is with the encoding choice.
-PSP.psp	Copyright	family1
+SonyILCE9.arw	AFAreaMode	family2
+SonyILCE9.arw	BlackLevel	family1
+SonyILCE9.arw	BlackLevel	family2
+SonyILCE9.arw	ChromaticAberrationCorrParams	family1
+SonyILCE9.arw	ChromaticAberrationCorrParams	family2
+SonyILCE9.arw	DistortionCorrParams	family1
+SonyILCE9.arw	DistortionCorrParams	family2
+SonyILCE9.arw	DistortionCorrection	family1
+SonyILCE9.arw	DynamicRangeOptimizer	family2
+SonyILCE9.arw	ExposureProgram	family1
+SonyILCE9.arw	ExposureProgram	family2
+SonyILCE9.arw	LensType	family2
+SonyILCE9.arw	ThumbnailLength	family1
+SonyILCE9.arw	ThumbnailOffset	family1
+SonyILCE9.arw	VignettingCorrParams	family1
+SonyILCE9.arw	VignettingCorrParams	family2
+SonyILCE9.arw	VignettingCorrection	family1
+SonyILCE9.arw	VignettingCorrection	family2
+SonyILCE9.arw	WB_RGGBLevels	family1
+SonyILCE9.arw	WB_RGGBLevels	family2
+SonyILCE9.arw	WhiteLevel	family1
+SonyILCE9.arw	WhiteLevel	family2
