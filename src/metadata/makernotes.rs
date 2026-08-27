@@ -8252,6 +8252,48 @@ fn read_makernote_ifd_with_base(
                 })
         };
 
+        // The ValueConv and PrintConv ExifTool writes as Perl expressions on
+        // the maker's Main table. The hash-shaped ones are already applied
+        // above; these were not applied at all, so `ColorTemperature` printed 0
+        // where ExifTool prints Auto. `conv_expr` declines anything outside its
+        // grammar, and a declined conversion leaves the value exactly as it was.
+        let (value, print_value) = {
+            use crate::tags::conv_expr::{eval, Val};
+            use crate::tags::makernote_conv_generated as mn_conv;
+
+            let maker = group_name;
+            let mut val = value;
+            let mut printed = print_value;
+            // A value the hash conversions already turned into a phrase is not
+            // one to run an expression over: ExifTool applies one or the other.
+            let untouched = printed == val.to_display_string();
+            if untouched {
+                let as_conv = |v: &Value| match v {
+                    Value::String(s) => Val::Str(s.clone()),
+                    other => match other.as_f64() {
+                        Some(n) => Val::Num(n),
+                        None => Val::Str(other.to_display_string()),
+                    },
+                };
+                if let Some(expr) = mn_conv::value_conv_expr(maker, tag_id) {
+                    if let Some(v) = eval(expr, &as_conv(&val)) {
+                        let text = v.as_string();
+                        val = match v {
+                            Val::Num(n) => Value::F64(n),
+                            _ => Value::String(text.clone()),
+                        };
+                        printed = text;
+                    }
+                }
+                if let Some(expr) = mn_conv::print_conv_expr(maker, tag_id) {
+                    if let Some(v) = eval(expr, &as_conv(&val)) {
+                        printed = v.as_string();
+                    }
+                }
+            }
+            (val, printed)
+        };
+
         // Track Pentax PreviewImage offset/length for post-loop synthesis
         if manufacturer == Manufacturer::Pentax {
             if tag_id == 0x0004 {

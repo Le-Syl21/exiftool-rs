@@ -4,7 +4,6 @@ SonyILCE9.arw::Composite:LensID
 SonyILCE9.arw::Sony:AFPointSelected
 SonyILCE9.arw::Sony:AFPointsUsed
 SonyILCE9.arw::Sony:Anti-Blur
-SonyILCE9.arw::Sony:ColorTemperature
 SonyILCE9.arw::Sony:FileFormat
 SonyILCE9.arw::Sony:FullImageSize
 SonyILCE9.arw::Sony:HDR
@@ -15,4 +14,3 @@ SonyILCE9.arw::Sony:PreviewImageSize
 SonyILCE9.arw::Sony:Quality
 SonyILCE9.arw::Sony:Shutter
 SonyILCE9.arw::Sony:VariableLowPassFilter
-SonyILCE9.arw::Sony:WBShiftAB_GM_Precise

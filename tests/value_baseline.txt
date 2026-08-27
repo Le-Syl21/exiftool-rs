@@ -6,7 +6,6 @@ Real.ra	Copyright
 SonyILCE9.arw	AFPointSelected
 SonyILCE9.arw	AFPointsUsed
 SonyILCE9.arw	Anti-Blur
-SonyILCE9.arw	ColorTemperature
 SonyILCE9.arw	FileFormat
 SonyILCE9.arw	FullImageSize
 SonyILCE9.arw	HDR
@@ -18,4 +17,3 @@ SonyILCE9.arw	PreviewImageSize
 SonyILCE9.arw	Quality
 SonyILCE9.arw	Shutter
 SonyILCE9.arw	VariableLowPassFilter
-SonyILCE9.arw	WBShiftAB_GM_Precise

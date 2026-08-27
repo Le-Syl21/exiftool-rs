@@ -5,6 +5,7 @@ pub mod generated;
 pub mod group2;
 pub mod group2_generated;
 pub mod iptc;
+pub mod makernote_conv_generated;
 pub mod makernotes;
 pub mod nikon_conv;
 pub mod olympus_camera_types;

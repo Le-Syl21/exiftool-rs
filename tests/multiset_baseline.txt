@@ -17,7 +17,6 @@ Real.ra	ee	missing	0	Copyright	** institut f�r universelle zusammenh�nge
 SonyILCE9.arw	default	extra	0	AFPointSelected	0
 SonyILCE9.arw	default	extra	0	AFPointsUsed	(Binary data 10 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	Anti-Blur	2
-SonyILCE9.arw	default	extra	0	ColorTemperature	0
 SonyILCE9.arw	default	extra	0	FileFormat	(Binary data 4 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	FullImageSize	4000x6000
 SonyILCE9.arw	default	extra	0	HDR	Off
@@ -29,11 +28,9 @@ SonyILCE9.arw	default	extra	0	PreviewImageSize	1080x1616
 SonyILCE9.arw	default	extra	0	Quality	1 0
 SonyILCE9.arw	default	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	default	extra	0	VariableLowPassFilter	0 0
-SonyILCE9.arw	default	extra	0	WBShiftAB_GM_Precise	0 0
 SonyILCE9.arw	default	missing	0	AFPointSelected	n/a
 SonyILCE9.arw	default	missing	0	AFPointsUsed	(none)
 SonyILCE9.arw	default	missing	0	Anti-Blur	On (Shooting)
-SonyILCE9.arw	default	missing	0	ColorTemperature	Auto
 SonyILCE9.arw	default	missing	0	FileFormat	ARW 2.3.5
 SonyILCE9.arw	default	missing	0	FullImageSize	6000x4000
 SonyILCE9.arw	default	missing	0	HDR	Off; Uncorrected image
@@ -45,12 +42,10 @@ SonyILCE9.arw	default	missing	0	PreviewImageSize	1616x1080
 SonyILCE9.arw	default	missing	0	Quality	RAW
 SonyILCE9.arw	default	missing	0	Shutter	Mechanical (2858 5239 6643)
 SonyILCE9.arw	default	missing	0	VariableLowPassFilter	n/a
-SonyILCE9.arw	default	missing	0	WBShiftAB_GM_Precise	0.00 0.00
 SonyILCE9.arw	ee	extra	0	AFPointSelected	0
 SonyILCE9.arw	ee	extra	0	AFPointsUsed	(Binary data 10 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	Anti-Blur	2
 SonyILCE9.arw	ee	extra	0	BrightnessValue	5.286718749999999
-SonyILCE9.arw	ee	extra	0	ColorTemperature	0
 SonyILCE9.arw	ee	extra	0	Contrast	Normal
 SonyILCE9.arw	ee	extra	0	FileFormat	(Binary data 4 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	FocusMode	131
@@ -66,7 +61,6 @@ SonyILCE9.arw	ee	extra	0	Saturation	Low
 SonyILCE9.arw	ee	extra	0	Sharpness	Normal
 SonyILCE9.arw	ee	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	ee	extra	0	VariableLowPassFilter	0 0
-SonyILCE9.arw	ee	extra	0	WBShiftAB_GM_Precise	0 0
 SonyILCE9.arw	ee	missing	0	AFPointSelected	n/a
 SonyILCE9.arw	ee	missing	0	AFPointsUsed	(none)
 SonyILCE9.arw	ee	missing	0	APS-CSizeCapture	Off
@@ -86,7 +80,6 @@ SonyILCE9.arw	ee	missing	0	ColorMode	Sepia
 SonyILCE9.arw	ee	missing	0	ColorMode	Standard
 SonyILCE9.arw	ee	missing	0	ColorMode	Sunset
 SonyILCE9.arw	ee	missing	0	ColorMode	Vivid
-SonyILCE9.arw	ee	missing	0	ColorTemperature	Auto
 SonyILCE9.arw	ee	missing	0	Contrast	0
 SonyILCE9.arw	ee	missing	0	DistortionCorrParams	0 2 10 24 46 74 108 148 194 246 306 372 444 522 608 700
 SonyILCE9.arw	ee	missing	1	DistortionCorrParams	0 2 10 24 46 74 108 148 194 246 306 372 444 522 608 700
@@ -131,4 +124,3 @@ SonyILCE9.arw	ee	missing	0	SonyISO	252
 SonyILCE9.arw	ee	missing	0	StopsAboveBaseISO	1.3
 SonyILCE9.arw	ee	missing	0	VariableLowPassFilter	n/a
 SonyILCE9.arw	ee	missing	0	VignettingCorrParams	0 0 32 64 128 192 320 480 736 1184 1920 3168 4704 6464 8352 10208
-SonyILCE9.arw	ee	missing	0	WBShiftAB_GM_Precise	0.00 0.00

@@ -1528,8 +1528,11 @@ impl<'a> Parser<'a> {
         let before = self.i;
         let r = self.bind_to_value(&subject, negated)?;
         // `s///` and `tr///` rewrote the subject; put it back where it came
-        // from, which is what makes `$val =~ s/ +$//; $val` work.
-        if self.i != before {
+        // from, which is what makes `$val =~ s/ +$//; $val` work. Not in a
+        // branch Perl would never have run, though: `$val and $val =~ s/^(\d)/+$1/`
+        // leaves a zero alone, and writing the substitution back anyway turned
+        // it into `+0`.
+        if self.i != before && self.quiet == 0 {
             let rewritten = std::mem::replace(&mut self.subject_after, None);
             if let Some(v) = rewritten {
                 self.write_lvalue(target, v)?;
@@ -4585,6 +4588,15 @@ mod tests {
         );
         // A lookup table is a hash we have no way to name here.
         assert!(eval("Image::ExifTool::DecodeBits($val, %lookup, 16)", &n(1.0)).is_none());
+    }
+
+    /// A substitution in a branch Perl never runs must not change anything.
+    /// `$val and $val =~ s/^(\d)/+$1/; $val` leaves a zero alone.
+    #[test]
+    fn a_skipped_substitution_writes_nothing_back() {
+        let e = "$val and $val =~ s/^(\\d)/\\+$1/; $val";
+        assert_eq!(eval(e, &Val::Str("0".into())).unwrap().as_string(), "0");
+        assert_eq!(eval(e, &Val::Str("3".into())).unwrap().as_string(), "+3");
     }
 
     /// The logical and bitwise operators, and the branch Perl never runs.
