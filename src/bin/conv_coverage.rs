@@ -32,6 +32,12 @@ impl ParseState for Probe {
         self.asked.set(true);
         Some(Val::Num(1.0))
     }
+
+    /// An option nobody set, which is how ExifTool runs unless told otherwise.
+    fn option(&self, _: &str) -> Option<Val> {
+        self.asked.set(true);
+        Some(Val::Undef)
+    }
 }
 
 /// Every PrintConv/ValueConv written as a Perl expression, with its occurrence
@@ -122,8 +128,15 @@ fn main() {
 
     for (n, e) in &exprs {
         let probe = Probe::default();
-        // A value that exercises arithmetic without dividing by zero.
-        if eval_with(e, &Val::Num(3.0), &probe).is_some() {
+        // A Composite tag is handed the list of values it is built from, and
+        // says so by reading `@val` or `$val[0]`; everything else gets a
+        // number, which exercises the arithmetic without dividing by zero.
+        let probe_val = if e.contains("$val[") || e.contains("@val") {
+            Val::List(vec![Val::Num(3.0), Val::Str("S".to_string()), Val::Num(7.0)])
+        } else {
+            Val::Num(3.0)
+        };
+        if eval_with(e, &probe_val, &probe).is_some() {
             if probe.asked.get() {
                 state_d += 1;
                 state_o += n;

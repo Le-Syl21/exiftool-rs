@@ -22,6 +22,11 @@ pub enum Val {
     Str(String),
     /// Perl's list: what `split` and `unpack` produce and `join` consumes.
     List(Vec<Val>),
+    /// What `\$val` makes: a reference, which is how a conversion says "this
+    /// is binary data, not something to print". ExifTool renders it as
+    /// `(Binary data N bytes, use -b option to extract)`; rendering it is the
+    /// caller's job, so the bytes are kept here as they are.
+    Binary(Vec<u8>),
 }
 
 impl Val {
@@ -31,6 +36,8 @@ impl Val {
             Self::Num(n) => *n,
             // Perl reads a leading number out of a string and calls the rest zero.
             Self::Undef => 0.0,
+            #[allow(clippy::cast_precision_loss)]
+            Self::Binary(b) => b.len() as f64,
             Self::Str(s) => leading_number(s),
             // A list in numeric context is its length.
             #[allow(clippy::cast_precision_loss)]
@@ -42,6 +49,7 @@ impl Val {
     pub fn as_string(&self) -> String {
         match self {
             Self::Undef => String::new(),
+            Self::Binary(b) => from_bytes(b),
             Self::Num(n) => format_number(*n),
             Self::Str(s) => s.clone(),
             // `"@a"` interpolates a list separated by `$"`, which is a space.
@@ -52,6 +60,7 @@ impl Val {
     fn truthy(&self) -> bool {
         match self {
             Self::Undef => false,
+            Self::Binary(b) => !b.is_empty(),
             Self::Num(n) => *n != 0.0,
             Self::Str(s) => !s.is_empty() && s != "0",
             Self::List(v) => !v.is_empty(),
@@ -100,6 +109,13 @@ fn leading_number(s: &str) -> f64 {
 /// member that exists but was never set, and is a value like any other.
 pub trait ParseState {
     fn member(&self, name: &str) -> Option<Val>;
+
+    /// A reader option, as `$self->Options("DateFormat")` asks for. `None`
+    /// declines; `Some(Val::Undef)` is an option that is simply not set, which
+    /// is what most of them are and what these conversions branch on.
+    fn option(&self, _name: &str) -> Option<Val> {
+        None
+    }
 }
 
 /// A reader with no parse state at all: every member is unknown.
@@ -970,6 +986,13 @@ impl<'a> Parser<'a> {
             let v = self.unary()?;
             return Some(Val::Num(if v.truthy() { 0.0 } else { 1.0 }));
         }
+        // `\$val` takes a reference, which is ExifTool's way of saying the
+        // value is binary and should not be printed as text.
+        if self.peek("\\") {
+            self.eat("\\");
+            let v = self.unary()?;
+            return Some(Val::Binary(perl_bytes(&v)?));
+        }
         if self.peek("~") {
             self.eat("~");
             let v = self.unary()?;
@@ -1031,6 +1054,15 @@ impl<'a> Parser<'a> {
             return Some(Val::Str(
                 self.captures.get(idx.checked_sub(1)?).cloned().unwrap_or_default(),
             ));
+        }
+        // `$self->Options("Unknown")` asks the reader how it was configured.
+        if self.peek("$self->Options(") {
+            self.eat("$self->Options(");
+            let name = self.expr()?;
+            if !self.eat(")") {
+                return None;
+            }
+            return self.state.option(&name.as_string());
         }
         // `$$self{Name}` and `$self->{Name}` read the file-level parse state.
         if self.peek("$$self{") || self.peek("$self->{") {
@@ -2685,6 +2717,38 @@ mod tests {
                 .unwrap()
                 .as_string(),
             "fefe"
+        );
+    }
+
+    /// `\$val` is not a value to print: it is ExifTool saying the tag holds
+    /// binary data. And `$self->Options(...)` asks the reader how it was
+    /// configured, which an unconfigured reader answers with undef.
+    #[test]
+    fn binary_references_and_reader_options() {
+        let long: String = "x".repeat(40);
+        let v = eval("length($val) > 32 ? \\$val : $val", &Val::Str(long.clone())).unwrap();
+        assert_eq!(v, Val::Binary(long.into_bytes()));
+        assert_eq!(
+            eval("length($val) > 32 ? \\$val : $val", &Val::Str("short".into())).unwrap(),
+            Val::Str("short".into())
+        );
+        // No reader configuration at all: the option is unknown, not unset.
+        assert!(eval("$self->Options(\"Unknown\") ? $val : $val & 0x7ff", &n(4096.0)).is_none());
+
+        struct Defaults;
+        impl ParseState for Defaults {
+            fn member(&self, _: &str) -> Option<Val> {
+                None
+            }
+            fn option(&self, _: &str) -> Option<Val> {
+                Some(Val::Undef)
+            }
+        }
+        assert_eq!(
+            eval_with("$self->Options(\"Unknown\") ? $val : $val & 0x7ff", &n(4096.0), &Defaults)
+                .unwrap()
+                .as_num(),
+            0.0
         );
     }
 
