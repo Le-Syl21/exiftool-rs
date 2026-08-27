@@ -138,7 +138,9 @@ pub fn eval_with(expr: &str, val: &Val, state: &dyn ParseState) -> Option<Val> {
     let mut last = p.statement()?;
     loop {
         p.skip_ws();
-        if p.i < p.s.len() && p.s[p.i] == b';' {
+        // Perl's comma is also a statement separator in scalar context, and
+        // `$_=$val,s/(\d+)(\d{4})/$1-$2/,$_` uses it as one.
+        if p.i < p.s.len() && (p.s[p.i] == b';' || p.s[p.i] == b',') {
             p.i += 1;
             p.skip_ws();
             p.skip_require();
@@ -171,6 +173,22 @@ fn to_u64(v: &Val) -> Option<u64> {
     }
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     Some(if n < 0.0 { n.trunc() as i64 as u64 } else { n.trunc() as u64 })
+}
+
+/// What Perl accepts as a quoting delimiter after `s`, `m`, `tr` or `y`.
+fn is_delimiter(c: u8) -> bool {
+    !c.is_ascii_alphanumeric() && !c.is_ascii_whitespace() && c != b'_' && c != b',' && c != b';'
+}
+
+/// The closing half of a bracketing delimiter, if it has one.
+fn closing_delimiter(c: u8) -> Option<u8> {
+    Some(match c {
+        b'{' => b'}',
+        b'(' => b')',
+        b'[' => b']',
+        b'<' => b'>',
+        _ => return None,
+    })
 }
 
 fn ident_char(c: u8) -> bool {
@@ -959,6 +977,23 @@ impl<'a> Parser<'a> {
             }
             return Some(v);
         }
+        // A Composite tag is handed the list of the values it is built from,
+        // and reads them as `@val` and `$val[0]`.
+        if self.peek("$val[") {
+            self.eat("$val[");
+            let idx = self.expr()?;
+            if !self.eat("]") {
+                return None;
+            }
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let k = idx.as_num() as usize;
+            let Val::List(items) = &self.val else { return None };
+            return Some(items.get(k).cloned().unwrap_or(Val::Undef));
+        }
+        if self.peek("@val") {
+            self.eat("@val");
+            return Some(self.val.clone());
+        }
         if self.eat("$val") {
             return Some(self.val.clone());
         }
@@ -1045,6 +1080,11 @@ impl<'a> Parser<'a> {
                 }
                 return Some(Val::Num(f(v.as_num())));
             }
+        }
+        // A substitution with nothing bound to it works on `$_`.
+        if self.starts_regex_op() {
+            let target = LValue::Var("_".to_string());
+            return self.bind_operation(&target, false);
         }
         if self.peek("sprintf") && self.s.get(self.i + 7) == Some(&b'(') {
             return self.sprintf_call();
@@ -1188,33 +1228,67 @@ impl<'a> Parser<'a> {
         Some(r)
     }
 
+    /// Whether what follows is `s`, `tr`, `y` or `m` used as an operator --
+    /// which it is only when a delimiter comes next, or `sprintf` would read
+    /// as an `s`.
+    fn starts_regex_op(&mut self) -> bool {
+        self.skip_ws();
+        for op in ["tr", "s", "y", "m"] {
+            if self.s[self.i..].starts_with(op.as_bytes()) {
+                return self
+                    .s
+                    .get(self.i + op.len())
+                    .is_some_and(|c| is_delimiter(*c));
+            }
+        }
+        false
+    }
+
     fn bind_to_value(&mut self, subject: &Val, negated: bool) -> Option<Val> {
         self.subject_after = None;
         self.skip_ws();
-        if self.peek("s/") {
-            self.eat("s/");
-            let pat = self.delimited('/')?;
-            let rep = self.delimited('/')?;
-            let flags = self.regex_flags();
-            let re = build_regex(&pat, &flags)?;
+        // Any punctuation can quote these: `s{^/}{}` is as good as `s/^\///`,
+        // and ExifTool writes both.
+        let op = ["tr", "s", "y", "m"]
+            .into_iter()
+            .find(|o| {
+                self.s[self.i..].starts_with(o.as_bytes())
+                    && self.s.get(self.i + o.len()).is_some_and(|c| is_delimiter(*c))
+            })
+            .unwrap_or("");
+        self.i += op.len();
+        if op.is_empty() && !self.peek("/") {
+            return None;
+        }
+        let (first, open) = self.quoted_part()?;
+        let second = if matches!(op, "s" | "tr" | "y") {
+            Some(if closing_delimiter(open).is_some() {
+                self.quoted_part()?.0
+            } else {
+                // The closing delimiter doubles as the second one's opening.
+                self.delimited(open as char)?
+            })
+        } else {
+            None
+        };
+        let flags = self.regex_flags();
+
+        if op == "s" {
+            let re = build_regex(&first, &flags)?;
+            let rep = perl_replacement(&second?);
             let subject = subject.as_string();
             let replaced = if flags.contains('g') {
-                re.replace_all(&subject, perl_replacement(&rep).as_str()).into_owned()
+                re.replace_all(&subject, rep.as_str()).into_owned()
             } else {
-                re.replace(&subject, perl_replacement(&rep).as_str()).into_owned()
+                re.replace(&subject, rep.as_str()).into_owned()
             };
             let changed = replaced != subject;
             self.subject_after = Some(Val::Str(replaced));
             return Some(Val::Num(if changed { 1.0 } else { 0.0 }));
         }
-        if self.peek("tr/") || self.peek("y/") {
-            let op = if self.peek("tr/") { "tr/" } else { "y/" };
-            self.eat(op);
-            let from = self.delimited('/')?;
-            let to = self.delimited('/')?;
-            self.regex_flags();
-            let f: Vec<char> = from.chars().collect();
-            let t: Vec<char> = to.chars().collect();
+        if op == "tr" || op == "y" {
+            let f: Vec<char> = first.chars().collect();
+            let t: Vec<char> = second?.chars().collect();
             let mut n = 0usize;
             let out: String = subject
                 .as_string()
@@ -1229,19 +1303,10 @@ impl<'a> Parser<'a> {
                 })
                 .collect();
             self.subject_after = Some(Val::Str(out));
+            #[allow(clippy::cast_precision_loss)]
             return Some(Val::Num(n as f64));
         }
-        // A bare match, with or without a leading `m`.
-        if self.peek("m/") {
-            self.eat("m");
-        }
-        if !self.peek("/") {
-            return None;
-        }
-        self.eat("/");
-        let pat = self.delimited('/')?;
-        let flags = self.regex_flags();
-        let re = build_regex(&pat, &flags)?;
+        let re = build_regex(&first, &flags)?;
         let subject = subject.as_string();
         let hit = match re.captures(&subject) {
             Some(c) => {
@@ -1256,6 +1321,41 @@ impl<'a> Parser<'a> {
             }
         };
         Some(Val::Num(if hit != negated { 1.0 } else { 0.0 }))
+    }
+
+    /// Read one delimited part, starting at its opening delimiter. Bracketing
+    /// delimiters nest; the rest end at their next unescaped appearance.
+    fn quoted_part(&mut self) -> Option<(String, u8)> {
+        self.skip_ws();
+        let open = *self.s.get(self.i)?;
+        if !is_delimiter(open) {
+            return None;
+        }
+        self.i += 1;
+        let bracketing = closing_delimiter(open);
+        let close = bracketing.unwrap_or(open);
+        let mut out = String::new();
+        let mut depth = 1i32;
+        while self.i < self.s.len() {
+            let c = self.s[self.i];
+            if c == b'\\' && self.i + 1 < self.s.len() {
+                out.push('\\');
+                out.push(self.s[self.i + 1] as char);
+                self.i += 2;
+                continue;
+            }
+            self.i += 1;
+            if bracketing.is_some() && c == open {
+                depth += 1;
+            } else if c == close {
+                depth -= 1;
+                if depth == 0 {
+                    return Some((out, open));
+                }
+            }
+            out.push(c as char);
+        }
+        None
     }
 
     /// Read up to the next unescaped delimiter, consuming it.
@@ -1500,7 +1600,10 @@ fn format_sprintf(fmt: &str, args: &[Val]) -> Option<String> {
             }
         }
         let conv = it.next()?;
-        let v = arg.next()?;
+        // Perl prints an argument that is not there as undef: 0 for a number,
+        // empty for a string. It does not refuse the format.
+        let missing = Val::Undef;
+        let v = arg.next().unwrap_or(&missing);
         let mut s = match conv {
             'd' | 'i' => {
                 // Perl truncates towards zero here; it does not round.

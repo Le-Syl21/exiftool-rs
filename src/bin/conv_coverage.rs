@@ -49,26 +49,60 @@ fn collect(lib: &PathBuf) -> Vec<(usize, String)> {
             continue;
         }
         let Ok(text) = std::fs::read_to_string(&p) else { continue };
-        for line in text.lines() {
-            for key in ["PrintConv", "ValueConv"] {
-                let Some(i) = line.find(key) else { continue };
-                let rest = &line[i + key.len()..];
-                // PrintConvInv and ValueConvInv are the write direction: they
-                // turn a printed value back into a raw one, which a reader never
-                // does. Counting them would inflate the target by half.
-                if rest.starts_with("Inv") {
-                    continue;
-                }
-                let Some(j) = rest.find("=>") else { continue };
-                let after = rest[j + 2..].trim_start();
-                // Only the single-quoted form is an expression; { ... } is a table.
-                if !after.starts_with('\'') {
-                    continue;
-                }
-                let body = &after[1..];
-                let Some(end) = body.find('\'') else { continue };
-                *counts.entry(body[..end].to_string()).or_default() += 1;
+        // Scanned over the whole file rather than line by line: a good number
+        // of these expressions run to three or four lines, and cutting them at
+        // the newline counted a fragment nothing could evaluate.
+        let b: Vec<char> = text.chars().collect();
+        let mut i = 0usize;
+        while i < b.len() {
+            let Some(key) = ["PrintConv", "ValueConv"]
+                .into_iter()
+                .find(|k| b[i..].starts_with(&k.chars().collect::<Vec<_>>()[..]))
+            else {
+                i += 1;
+                continue;
+            };
+            i += key.len();
+            // PrintConvInv and ValueConvInv are the write direction: they turn
+            // a printed value back into a raw one, which a reader never does.
+            // Counting them would inflate the target by half.
+            if b[i..].starts_with(&['I', 'n', 'v']) {
+                continue;
             }
+            while i < b.len() && b[i].is_whitespace() {
+                i += 1;
+            }
+            if !b[i..].starts_with(&['=', '>']) {
+                continue;
+            }
+            i += 2;
+            while i < b.len() && b[i].is_whitespace() {
+                i += 1;
+            }
+            // Only the single-quoted form is an expression; { ... } is a table.
+            if b.get(i) != Some(&'\'') {
+                continue;
+            }
+            i += 1;
+            let mut body = String::new();
+            while i < b.len() {
+                if b[i] == '\\' && i + 1 < b.len() {
+                    body.push(b[i]);
+                    body.push(b[i + 1]);
+                    i += 2;
+                    continue;
+                }
+                if b[i] == '\'' {
+                    i += 1;
+                    break;
+                }
+                body.push(b[i]);
+                i += 1;
+            }
+            // Perl's own escapes inside a single-quoted string: only the quote
+            // and the backslash mean anything.
+            let body = body.replace("\\'", "'").replace("\\\\", "\\");
+            *counts.entry(body).or_default() += 1;
         }
     }
     let mut v: Vec<(usize, String)> = counts.into_iter().map(|(e, n)| (n, e)).collect();
