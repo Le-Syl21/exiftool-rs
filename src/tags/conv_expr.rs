@@ -233,6 +233,15 @@ impl<'a> Parser<'a> {
         if self.eat("$val") {
             return Some(self.val.clone());
         }
+        // ExifTool passes itself as the first argument to several helpers. It
+        // carries options we do not model, and every helper ported here uses
+        // only the defaults, so it stands in as an empty value.
+        // …but `$self->Something(...)` is a call, not a value, and the helper
+        // dispatch below must get to see it.
+        if self.peek("$self") && !self.peek("$self->") {
+            self.eat("$self");
+            return Some(Val::Str(String::new()));
+        }
         if self.peek("\"") {
             return self.interpolated_string();
         }
@@ -548,8 +557,141 @@ fn call_helper(name: &str, args: &[Val]) -> Option<Val> {
         "PrintFraction" => Val::Str(crate::tags::exif::print_fraction(first.as_num())),
         "ConvertDuration" => Val::Str(convert_duration(first)?),
         "ConvertBitrate" => Val::Str(convert_bitrate(first)?),
+        "ConvertUnixTime" => Val::Str(convert_unix_time(first.as_num())),
+        // GPS::ToDMS takes the ExifTool object first, so the coordinate is the
+        // second argument and the hemisphere the fourth when present.
+        "ToDMS" => Val::Str(to_dms(
+            args.get(1)?.as_num(),
+            args.get(3).map(Val::as_string).as_deref(),
+        )),
+        "ToDegrees" => Val::Num(to_degrees(&first.as_string())?),
+        "ExifDate" => Val::Str(exif_date(&first.as_string())),
+        "ExifTime" => Val::Str(exif_time(&first.as_string())),
         _ => return None,
     })
+}
+
+/// ExifTool.pm ConvertUnixTime: seconds since the epoch, in EXIF's own layout.
+fn convert_unix_time(t: f64) -> String {
+    if t == 0.0 {
+        return "0000:00:00 00:00:00".to_string();
+    }
+    // Days since 1970-01-01, then the civil date from them. No leap seconds,
+    // which is what gmtime gives ExifTool too.
+    let secs = t.trunc() as i64;
+    let (days, rem) = (secs.div_euclid(86_400), secs.rem_euclid(86_400));
+    let (h, mi, sec) = (rem / 3600, (rem % 3600) / 60, rem % 60);
+    // Howard Hinnant's civil_from_days.
+    let z = days + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    format!("{y:04}:{m:02}:{d:02} {h:02}:{mi:02}:{sec:02}")
+}
+
+/// GPS.pm ToDMS with the default CoordFormat: `48 deg 51' 30.24" N`.
+///
+/// A negative coordinate flips the hemisphere rather than carrying a sign,
+/// which is why the reference has to be known here and not applied afterwards.
+fn to_dms(val: f64, reference: Option<&str>) -> String {
+    let (mut v, suffix) = match reference {
+        Some(r) if !r.is_empty() => {
+            let flipped = if val < 0.0 {
+                match r {
+                    "N" => "S",
+                    "E" => "W",
+                    "S" => "N",
+                    "W" => "E",
+                    other => other,
+                }
+            } else {
+                r
+            };
+            (val.abs(), format!(" {flipped}"))
+        }
+        _ => (val.abs(), String::new()),
+    };
+    let d = v.trunc();
+    v = (v - d) * 60.0;
+    let m = v.trunc();
+    let sec = (v - m) * 60.0;
+    // Rounding can carry the seconds to 60; ExifTool pushes that up a place.
+    let (d, m, sec) = if format!("{sec:.2}").starts_with("60") {
+        if m + 1.0 >= 60.0 {
+            (d + 1.0, 0.0, 0.0)
+        } else {
+            (d, m + 1.0, 0.0)
+        }
+    } else {
+        (d, m, sec)
+    };
+    format!("{d} deg {m}' {sec:.2}\"{suffix}")
+}
+
+/// GPS.pm ToDegrees: the first three numbers found, as degrees/minutes/seconds.
+fn to_degrees(text: &str) -> Option<f64> {
+    if text.contains("inf") || text.contains("undef") {
+        return None;
+    }
+    let mut nums = Vec::new();
+    let b = text.as_bytes();
+    let mut i = 0;
+    while i < b.len() && nums.len() < 3 {
+        if b[i].is_ascii_digit() || (b[i] == b'.' && i + 1 < b.len() && b[i + 1].is_ascii_digit()) {
+            let start = if i > 0 && (b[i - 1] == b'-' || b[i - 1] == b'+') { i - 1 } else { i };
+            let mut j = i;
+            while j < b.len() && (b[j].is_ascii_digit() || b[j] == b'.') {
+                j += 1;
+            }
+            if let Ok(n) = std::str::from_utf8(&b[start..j]).ok()?.parse::<f64>() {
+                nums.push(n);
+            }
+            i = j;
+        } else {
+            i += 1;
+        }
+    }
+    if nums.is_empty() {
+        return None;
+    }
+    let deg = nums.first().copied().unwrap_or(0.0)
+        + nums.get(1).copied().unwrap_or(0.0) / 60.0
+        + nums.get(2).copied().unwrap_or(0.0) / 3600.0;
+    // A trailing S or W means the southern or western hemisphere.
+    let neg = text
+        .rsplit(|c: char| c.is_whitespace())
+        .next()
+        .is_some_and(|t| t.eq_ignore_ascii_case("S") || t.eq_ignore_ascii_case("W"));
+    Some(if neg { -deg } else { deg })
+}
+
+/// Exif.pm ExifDate: eight digits, however they were separated, become
+/// `YYYY:MM:DD`.
+fn exif_date(date: &str) -> String {
+    let d = date.trim_end_matches('\0');
+    let digits: Vec<char> = d.chars().filter(char::is_ascii_digit).collect();
+    if digits.len() == 8 {
+        let s: String = digits.iter().collect();
+        return format!("{}:{}:{}", &s[0..4], &s[4..6], &s[6..8]);
+    }
+    d.to_string()
+}
+
+/// Exif.pm ExifTime: spaces become colons, and six digits gain separators.
+fn exif_time(time: &str) -> String {
+    let t = time.trim_end_matches('\0').replace(' ', ":");
+    let digits: Vec<char> = t.chars().filter(char::is_ascii_digit).collect();
+    if digits.len() == 6 && !t.contains(':') {
+        let s: String = digits.iter().collect();
+        return format!("{}:{}:{}", &s[0..2], &s[2..4], &s[4..6]);
+    }
+    t
 }
 
 /// ExifTool.pm ConvertDuration: seconds to `1.23 s`, `1:02:03`, or with days.
@@ -677,6 +819,39 @@ mod tests {
         assert_eq!(eval("$val ? 1 : 0", &n(0.0)).unwrap().as_num(), 0.0);
     }
 
+    /// Every expected value here came out of Perl ExifTool, not out of my head.
+    #[test]
+    fn the_gps_and_date_helpers() {
+        assert_eq!(
+            eval("Image::ExifTool::GPS::ToDMS($self, $val, 1, \"N\")", &n(48.8584)).unwrap().as_string(),
+            "48 deg 51' 30.24\" N"
+        );
+        // A negative latitude turns N into S rather than printing a minus.
+        assert_eq!(
+            eval("Image::ExifTool::GPS::ToDMS($self, $val, 1, \"E\")", &n(-2.2945)).unwrap().as_string(),
+            "2 deg 17' 40.20\" W"
+        );
+        assert_eq!(
+            eval("Image::ExifTool::GPS::ToDMS($self, $val, 1)", &n(48.8584)).unwrap().as_string(),
+            "48 deg 51' 30.24\""
+        );
+        assert_eq!(
+            eval("ConvertUnixTime($val)", &n(1_000_000_000.0)).unwrap().as_string(),
+            "2001:09:09 01:46:40"
+        );
+        assert_eq!(eval("ConvertUnixTime($val)", &n(0.0)).unwrap().as_string(), "0000:00:00 00:00:00");
+        let deg = eval("Image::ExifTool::GPS::ToDegrees($val, 1)", &Val::Str("48 51 30.24".into())).unwrap();
+        assert!((deg.as_num() - 48.8584).abs() < 1e-6, "got {}", deg.as_num());
+        assert_eq!(
+            eval("Image::ExifTool::Exif::ExifDate($val)", &Val::Str("20260827".into())).unwrap().as_string(),
+            "2026:08:27"
+        );
+        assert_eq!(
+            eval("Image::ExifTool::Exif::ExifTime($val)", &Val::Str("11 22 02".into())).unwrap().as_string(),
+            "11:22:02"
+        );
+    }
+
     #[test]
     fn the_helpers_by_any_of_their_spellings() {
         // ExifTool writes the same call three ways; all three must land.
@@ -695,7 +870,7 @@ mod tests {
         assert_eq!(eval("ConvertBitrate($val)", &n(1_500_000.0)).unwrap().as_string(), "1.5 Mbps");
         assert_eq!(eval("ConvertBitrate($val)", &n(999.0)).unwrap().as_string(), "999 bps");
         // A name we have not ported still declines.
-        assert!(eval("ConvertUnixTime($val)", &n(1.0)).is_none());
+        assert!(eval("ConvertRIFFDate($val)", &n(1.0)).is_none());
     }
 
     #[test]
@@ -739,7 +914,7 @@ mod tests {
     /// keeps the raw value, which is honest, where a wrong conversion is not.
     #[test]
     fn unsupported_expressions_decline() {
-        assert!(eval("Image::ExifTool::GPS::ToDMS($self, $val, 1)", &n(1.0)).is_none());
+        assert!(eval("Image::ExifTool::ASF::GetGUID($val)", &n(1.0)).is_none());
         assert!(eval("$val =~ s/ +$//", &n(1.0)).is_none());
         assert!(eval("$$self{Model}", &n(1.0)).is_none());
         assert!(eval("$val / 0", &n(1.0)).is_none());
