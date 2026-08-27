@@ -7102,6 +7102,14 @@ fn read_makernote_ifd_with_base(
                 (Manufacturer::Sony, 0x0114) => subs::dispatch_sony_camera_settings(&dispatch_ctx),
                 (Manufacturer::Sony, 0x2010) => subs::dispatch_sony_tag2010(&dispatch_ctx),
                 (Manufacturer::Sony, 0x9400) => subs::dispatch_sony_tag9400(&dispatch_ctx),
+                // The remaining Sony ciphered blocks. Which sub-table applies is
+                // decided by the generated selector, straight from Sony.pm, so
+                // this arm never has to know about individual bodies.
+                (Manufacturer::Sony, t)
+                    if crate::tags::sony_ciphered_generated::variant_for(t, dispatch_ctx.model).is_some() =>
+                {
+                    subs::decode_sony_ciphered(t, &dispatch_ctx)
+                }
                 // Panasonic FaceDetInfo (tag 0x004e): binary subdirectory
                 // FORMAT=int16u, FIRST_ENTRY=0
                 // 0=NumFacePositions, 1=Face1Position[4], 5=Face2Position[4], ...

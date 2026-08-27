@@ -49,9 +49,15 @@ for my $module (@modules) {
 
         # Extract field definitions: INDEX => { Name => 'FieldName', ... }
         my @fields;
-        while ($body =~ /(\d+)\s*=>\s*\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*)\}/g) {
-            my $index = int($1);
+        # Indices may be decimal (Canon/Nikon style) or hexadecimal (Sony's
+        # ciphered tables write 0x0026 => { ... }). Matching only decimal made
+        # every Sony ciphered table come out empty, silently.
+        while ($body =~ /((?:0x[0-9a-fA-F]+|\d+))\s*=>\s*\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*)\}/g) {
+            # Save both captures before matching again: a successful match
+            # resets $1/$2, so testing $1 in place would clobber them.
+            my $index_str = $1;
             my $field_body = $2;
+            my $index = $index_str =~ /^0x/ ? hex($index_str) : int($index_str);
 
             my ($name) = $field_body =~ /Name\s*=>\s*['"](\w+)['"]/;
             next unless $name;
@@ -61,9 +67,11 @@ for my $module (@modules) {
             if ($field_body =~ /PrintConv\s*=>\s*\{([^}]+)\}/) {
                 my $conv_str = $1;
                 while ($conv_str =~ /(-?\d+|0x[0-9a-fA-F]+)\s*=>\s*['"]([^'"]*)['"]/g) {
+                    # Same trap as above: read both captures before matching again.
                     my $k = $1;
+                    my $v = $2;
                     if ($k =~ /^0x/) { $k = hex($k); }
-                    $conv{int($k)} = $2;
+                    $conv{int($k)} = $v;
                 }
             }
 
@@ -126,8 +134,8 @@ print "    match (module, table) {\n";
 
 for my $t (@all_tables) {
     printf "        (\"%s\", \"%s\") => decode_%s_%s(data, byte_order_le),\n",
-        $t->{module}, $t->{table},
-        lc($t->{module}), lc($t->{table});
+        $t->{module}, $t->{table_name},
+        lc($t->{module}), lc($t->{table_name});
 }
 
 print "        _ => Vec::new(),\n";
@@ -136,7 +144,7 @@ print "}\n\n";
 
 # Generate individual decoder functions
 for my $t (@all_tables) {
-    my $fn_name = sprintf "decode_%s_%s", lc($t->{module}), lc($t->{table});
+    my $fn_name = sprintf "decode_%s_%s", lc($t->{module}), lc($t->{table_name});
     my $is_signed = $t->{format} =~ /int16s|int32s/;
     my $is_32bit = $t->{format} =~ /int32/;
     my $elem_size = $is_32bit ? 4 : 2;

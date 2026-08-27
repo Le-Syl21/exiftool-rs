@@ -379,8 +379,26 @@ pub fn dispatch_sony_tag2010(ctx: &DispatchContext) -> Vec<Tag> {
         return Vec::new();
     };
 
-    // All Tag2010 variants are encrypted
-    vec![mk("Sony", "EncryptedVariant", variant)]
+    decode_ciphered(variant, ctx)
+}
+
+/// Decode a Sony ciphered block whose variant the generated selector resolves.
+#[must_use]
+pub fn decode_sony_ciphered(tag: u16, ctx: &DispatchContext) -> Vec<Tag> {
+    match crate::tags::sony_ciphered_generated::variant_for(tag, ctx.model) {
+        Some(variant) => decode_ciphered(variant, ctx),
+        None => Vec::new(),
+    }
+}
+
+/// Decipher a Sony sub-table and decode it with the generated tables.
+///
+/// The block is byte-substitution enciphered; the decoders address it by byte
+/// offset. Both halves come from ExifTool's Sony.pm, so neither can drift.
+fn decode_ciphered(variant: &str, ctx: &DispatchContext) -> Vec<Tag> {
+    let mut buf = ctx.data.to_vec();
+    crate::metadata::sony_decrypt::sony_decipher(&mut buf);
+    crate::tags::sony_ciphered_generated::decode(variant, &buf, ctx.model)
 }
 
 // ============================================================================
@@ -394,7 +412,7 @@ pub fn dispatch_sony_tag9400(ctx: &DispatchContext) -> Vec<Tag> {
         0x23 | 0x24 | 0x26 | 0x28 | 0x31 | 0x32 | 0x33 | 0x41 => "Tag9400c",
         _ => return Vec::new(),
     };
-    vec![mk("Sony", "EncryptedVariant", variant)]
+    decode_ciphered(variant, ctx)
 }
 
 // ============================================================================

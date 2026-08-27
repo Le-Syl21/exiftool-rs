@@ -11,4 +11,5 @@ pub mod plus_media_matrix;
 pub mod print_conv_generated;
 pub mod priority0_generated;
 pub mod sony_conv;
+pub mod sony_ciphered_generated;
 pub mod sub_tables_generated;

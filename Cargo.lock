@@ -1032,6 +1032,7 @@ dependencies = [
  "image",
  "memmap2",
  "noto-fonts-dl",
+ "regex-lite",
  "rfd",
  "tempfile",
  "thiserror 2.0.20",
@@ -2429,6 +2430,12 @@ checksum = "d678d17679829e73d371e96880897e98fee2ded7acc0a50bdf8af2affa4b2fe5"
 dependencies = [
  "bitflags 2.13.1",
 ]
+
+[[package]]
+name = "regex-lite"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cab834c73d247e67f4fae452806d17d3c7501756d98c8808d7c9c7aa7d18f973"
 
 [[package]]
 name = "renderdoc-sys"
