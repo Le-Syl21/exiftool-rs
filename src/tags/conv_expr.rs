@@ -129,6 +129,7 @@ pub fn eval_with(expr: &str, val: &Val, state: &dyn ParseState) -> Option<Val> {
         vars: std::collections::HashMap::new(),
         state,
         subject_after: None,
+        quiet: 0,
     };
     // These conversions are sometimes two statements: `$val =~ s/ +$//; $val`
     // substitutes and then hands back the value it changed. The last one is the
@@ -159,6 +160,17 @@ enum LValue {
     TheValue,
     Var(String),
     Elem(String, usize),
+}
+
+/// Perl's bitwise operators work on integers; a value that is not one is not
+/// something to guess at.
+fn to_u64(v: &Val) -> Option<u64> {
+    let n = v.as_num();
+    if !n.is_finite() {
+        return None;
+    }
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    Some(if n < 0.0 { n.trunc() as i64 as u64 } else { n.trunc() as u64 })
 }
 
 fn ident_char(c: u8) -> bool {
@@ -193,6 +205,11 @@ struct Parser<'a> {
     /// What `s///` or `tr///` made of its subject, for the caller to store
     /// back into whatever the match was bound to.
     subject_after: Option<Val>,
+    /// Non-zero while evaluating a branch Perl would never have run. The
+    /// parser still has to walk it to find where it ends, but a division by
+    /// zero in there is not a reason to refuse the conversion -- Perl guards
+    /// exactly that way: `$val ? 1/$val : 0`.
+    quiet: usize,
 }
 
 impl<'a> Parser<'a> {
@@ -348,7 +365,8 @@ impl<'a> Parser<'a> {
             for (k, n) in names.iter().enumerate() {
                 // Perl leaves a name with no value undefined; an expression
                 // that then reads it is one we cannot answer for.
-                let v = items.get(k)?.clone();
+                // Perl leaves a name past the end of the list undefined.
+                let v = items.get(k).cloned().unwrap_or(Val::Undef);
                 self.vars.insert(n.clone(), v);
             }
             return Some(Val::List(items));
@@ -380,7 +398,7 @@ impl<'a> Parser<'a> {
         if let Some(v) = self.try_assignment() {
             return Some(v);
         }
-        self.ternary()
+        self.low_or()
     }
 
     fn try_assignment(&mut self) -> Option<Val> {
@@ -427,7 +445,7 @@ impl<'a> Parser<'a> {
             _ => {
                 let d = rhs.as_num();
                 if d == 0.0 {
-                    return None;
+                    return self.unreachable();
                 }
                 Val::Num(cur?.as_num() / d)
             }
@@ -551,25 +569,189 @@ impl<'a> Parser<'a> {
             }
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let k = idx.as_num() as usize;
+            // An element past the end of a known array is undef, as in Perl.
+            // An array we never heard of is a gap, and declines.
             return match self.vars.get(&format!("@{name}")) {
-                Some(Val::List(items)) => items.get(k).cloned(),
+                Some(Val::List(items)) => Some(items.get(k).cloned().unwrap_or(Val::Undef)),
                 _ => None,
             };
         }
         self.vars.get(&name).cloned()
     }
 
+    /// A value Perl would never have computed, in a branch it would never have
+    /// run. Inside such a branch it stands in for the result; outside one, an
+    /// arithmetic fault is a real one and refuses the conversion.
+    fn unreachable(&self) -> Option<Val> {
+        if self.quiet > 0 { Some(Val::Undef) } else { None }
+    }
+
+    /// Evaluate the branch that was not taken, only to find where it ends.
+    fn skip_branch(&mut self, f: fn(&mut Self) -> Option<Val>) -> Option<Val> {
+        self.quiet += 1;
+        let r = f(self);
+        self.quiet -= 1;
+        r
+    }
+
+    /// `or` and `xor`, Perl's loosest operators -- looser even than assignment,
+    /// which is why `$val and $val =~ s/^(\d)/+$1/` reads the way it does.
+    fn low_or(&mut self) -> Option<Val> {
+        let mut acc = self.low_and()?;
+        loop {
+            self.skip_ws();
+            let word = ["or", "xor"]
+                .into_iter()
+                .find(|w| self.word_is(w));
+            let Some(word) = word else { return Some(acc) };
+            self.i += word.len();
+            if word == "xor" {
+                let r = self.low_and()?;
+                acc = Val::Num(if acc.truthy() != r.truthy() { 1.0 } else { 0.0 });
+            } else if acc.truthy() {
+                self.skip_branch(Self::low_and)?;
+            } else {
+                acc = self.low_and()?;
+            }
+        }
+    }
+
+    fn low_and(&mut self) -> Option<Val> {
+        let mut acc = self.low_not()?;
+        loop {
+            self.skip_ws();
+            if !self.word_is("and") {
+                return Some(acc);
+            }
+            self.i += 3;
+            if acc.truthy() {
+                acc = self.low_not()?;
+            } else {
+                self.skip_branch(Self::low_not)?;
+            }
+        }
+    }
+
+    fn low_not(&mut self) -> Option<Val> {
+        self.skip_ws();
+        if self.word_is("not") {
+            self.i += 3;
+            let v = self.low_not()?;
+            return Some(Val::Num(if v.truthy() { 0.0 } else { 1.0 }));
+        }
+        self.ternary()
+    }
+
+    /// A bare word operator, which must not be read out of an identifier.
+    fn word_is(&self, w: &str) -> bool {
+        self.s[self.i..].starts_with(w.as_bytes())
+            && !self.s.get(self.i + w.len()).is_some_and(|c| ident_char(*c))
+    }
+
     fn ternary(&mut self) -> Option<Val> {
-        let cond = self.comparison()?;
+        let cond = self.or_or()?;
         if self.eat("?") {
-            let a = self.ternary()?;
+            let taken = cond.truthy();
+            let a = if taken { self.ternary()? } else { self.skip_branch(Self::ternary)? };
             if !self.eat(":") {
                 return None;
             }
-            let b = self.ternary()?;
-            return Some(if cond.truthy() { a } else { b });
+            let b = if taken { self.skip_branch(Self::ternary)? } else { self.ternary()? };
+            return Some(if taken { a } else { b });
         }
         Some(cond)
+    }
+
+    /// `||` and `//`, which return the operand rather than a boolean: the
+    /// `$val / ($$self{FocalUnits} || 1)` idiom depends on that.
+    fn or_or(&mut self) -> Option<Val> {
+        let mut acc = self.and_and()?;
+        loop {
+            self.skip_ws();
+            // `//` is defined-or, but a `/` here could also start a regex, so
+            // only the doubled form counts.
+            let defined_or = self.s[self.i..].starts_with(b"//");
+            if !defined_or && !self.s[self.i..].starts_with(b"||") {
+                return Some(acc);
+            }
+            self.i += 2;
+            let keep = if defined_or { acc != Val::Undef } else { acc.truthy() };
+            if keep {
+                self.skip_branch(Self::and_and)?;
+            } else {
+                acc = self.and_and()?;
+            }
+        }
+    }
+
+    fn and_and(&mut self) -> Option<Val> {
+        let mut acc = self.bit_or()?;
+        loop {
+            self.skip_ws();
+            if !self.s[self.i..].starts_with(b"&&") {
+                return Some(acc);
+            }
+            self.i += 2;
+            if acc.truthy() {
+                acc = self.bit_or()?;
+            } else {
+                self.skip_branch(Self::bit_or)?;
+            }
+        }
+    }
+
+    /// The bitwise operators, which ExifTool reaches for constantly to pull a
+    /// field out of a packed value: `sprintf("%x.%.2x",$val>>8,$val&0xff)`.
+    fn bit_or(&mut self) -> Option<Val> {
+        let mut acc = self.bit_and()?;
+        loop {
+            self.skip_ws();
+            let c = self.s.get(self.i).copied();
+            if (c != Some(b'|') && c != Some(b'^')) || self.s.get(self.i + 1).copied() == c {
+                return Some(acc);
+            }
+            self.i += 1;
+            let r = self.bit_and()?;
+            let (a, b) = (to_u64(&acc)?, to_u64(&r)?);
+            #[allow(clippy::cast_precision_loss)]
+            let v = if c == Some(b'|') { a | b } else { a ^ b };
+            acc = Val::Num(v as f64);
+        }
+    }
+
+    fn bit_and(&mut self) -> Option<Val> {
+        let mut acc = self.comparison()?;
+        loop {
+            self.skip_ws();
+            if self.s.get(self.i) != Some(&b'&') || self.s.get(self.i + 1) == Some(&b'&') {
+                return Some(acc);
+            }
+            self.i += 1;
+            let r = self.comparison()?;
+            #[allow(clippy::cast_precision_loss)]
+            let v = (to_u64(&acc)? & to_u64(&r)?) as f64;
+            acc = Val::Num(v);
+        }
+    }
+
+    fn shift_expr(&mut self) -> Option<Val> {
+        let mut acc = self.additive()?;
+        loop {
+            self.skip_ws();
+            let left = self.s[self.i..].starts_with(b"<<");
+            if !left && !self.s[self.i..].starts_with(b">>") {
+                return Some(acc);
+            }
+            self.i += 2;
+            let r = self.additive()?;
+            let (a, b) = (to_u64(&acc)?, to_u64(&r)?);
+            if b >= 64 {
+                return self.unreachable();
+            }
+            #[allow(clippy::cast_precision_loss)]
+            let v = if left { a << b } else { a >> b };
+            acc = Val::Num(v as f64);
+        }
     }
 
     fn comparison(&mut self) -> Option<Val> {
@@ -597,7 +779,7 @@ impl<'a> Parser<'a> {
             }
             self.i = save;
         }
-        let left = self.additive()?;
+        let left = self.shift_expr()?;
         // Perl keeps its string comparisons under separate names, and a word
         // operator must not be read out of the middle of an identifier.
         for (op, kind) in [("eq", 0), ("ne", 1), ("le", 2), ("ge", 3), ("lt", 4), ("gt", 5)] {
@@ -606,7 +788,7 @@ impl<'a> Parser<'a> {
                 && !self.s.get(self.i + 2).is_some_and(|c| ident_char(*c))
             {
                 self.i += 2;
-                let right = self.additive()?;
+                let right = self.shift_expr()?;
                 let (a, b) = (left.as_string(), right.as_string());
                 let r = match kind {
                     0 => a == b,
@@ -623,7 +805,7 @@ impl<'a> Parser<'a> {
             // `<` must not swallow the `<=` case, hence the order above.
             if self.peek(op) {
                 self.eat(op);
-                let right = self.additive()?;
+                let right = self.shift_expr()?;
                 let (a, b) = (left.as_num(), right.as_num());
                 if op == "<=>" {
                     return Some(Val::Num(match a.partial_cmp(&b)? {
@@ -708,7 +890,10 @@ impl<'a> Parser<'a> {
             } else if self.peek("%") {
                 self.eat("%");
                 let r = self.power()?;
-                acc = Val::Num(perl_modulo(acc.as_num(), r.as_num())?);
+                acc = match perl_modulo(acc.as_num(), r.as_num()) {
+                    Some(m) => Val::Num(m),
+                    None => self.unreachable()?,
+                };
             } else if self.peek("/") {
                 self.eat("/");
                 let r = self.power()?;
@@ -717,7 +902,7 @@ impl<'a> Parser<'a> {
                 // so reaching it means we misread something. Refuse rather than
                 // return an infinity that would be printed as a value.
                 if d == 0.0 {
-                    return None;
+                    return self.unreachable();
                 }
                 acc = Val::Num(acc.as_num() / d);
             } else {
@@ -739,6 +924,21 @@ impl<'a> Parser<'a> {
 
     fn unary(&mut self) -> Option<Val> {
         self.skip_ws();
+        if self.peek("!") && !self.s[self.i..].starts_with(b"!~") {
+            self.eat("!");
+            let v = self.unary()?;
+            return Some(Val::Num(if v.truthy() { 0.0 } else { 1.0 }));
+        }
+        if self.peek("~") {
+            self.eat("~");
+            let v = self.unary()?;
+            #[allow(clippy::cast_precision_loss)]
+            return Some(Val::Num(!to_u64(&v)? as f64));
+        }
+        if self.peek("+") {
+            self.eat("+");
+            return self.unary();
+        }
         if self.peek("-") {
             self.eat("-");
             let v = self.unary()?;
@@ -761,6 +961,10 @@ impl<'a> Parser<'a> {
         }
         if self.eat("$val") {
             return Some(self.val.clone());
+        }
+        if self.word_is("undef") {
+            self.i += 5;
+            return Some(Val::Undef);
         }
         // `$1`..`$9`, from the last successful match.
         if self.i + 1 < self.s.len() && self.s[self.i] == b'$' && self.s[self.i + 1].is_ascii_digit() {
@@ -2146,6 +2350,29 @@ mod tests {
                 .as_string(),
             "fefe"
         );
+    }
+
+    /// The logical and bitwise operators, and the branch Perl never runs.
+    /// Every expected value was read off Perl itself first.
+    #[test]
+    fn logic_bits_and_the_branch_not_taken() {
+        assert_eq!(
+            eval("sprintf(\"%x.%.2x\",$val>>8,$val&0xff)", &n(0x1234 as f64)).unwrap().as_string(),
+            "12.34"
+        );
+        // The division is never run, so it is not a reason to refuse.
+        assert_eq!(eval("$val ? 1/$val : \"zero\"", &n(0.0)).unwrap().as_string(), "zero");
+        assert_eq!(eval("$val / (0 || 4)", &n(5.0)).unwrap().as_num(), 1.25);
+        assert_eq!(eval("7 ^ 2", &n(0.0)).unwrap().as_num(), 5.0);
+        assert_eq!(eval("~0 & 0xff", &n(0.0)).unwrap().as_num(), 255.0);
+        assert_eq!(eval("1 << 10", &n(0.0)).unwrap().as_num(), 1024.0);
+        assert_eq!(eval("3 <=> 5", &n(0.0)).unwrap().as_num(), -1.0);
+        assert_eq!(eval("not 0", &n(0.0)).unwrap().as_num(), 1.0);
+        assert_eq!(
+            eval("$val eq \"x\" ? \"yes\" : \"no\"", &Val::Str("x".into())).unwrap().as_string(),
+            "yes"
+        );
+        assert_eq!(eval("$val ? abs($val) : undef", &n(0.0)).unwrap(), Val::Undef);
     }
 
     /// The file-level parse state, which a conversion reads off the ExifTool
