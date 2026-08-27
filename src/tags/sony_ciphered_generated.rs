@@ -402,8 +402,8 @@ pub fn variant_for(
             Some(Variant { table: "Tag9401", sets_double_cipher: false })
         }
         0x9402 => {
-            if (if double_cipher { prefix_matches(data, &[&[0x7e, 0x46, 0x1d, 0x18, 0x3a, 0x95, 0x24, 0x26, 0xd6], &[0x01]]) } else { prefix_matches(data, &[&[0x8a, 0x70, 0xb6, 0x69, 0x88, 0x20, 0x30, 0xd7, 0xbb, 0x92, 0x28], &[0x01]]) }) {
-                return Some(Variant { table: "Tag9402", sets_double_cipher: (if double_cipher { false } else { false }) });
+            if (!MODEL_RE_26.is_match(model) && !prefix_matches(data, &[&[0x05, 0xff]])) {
+                return Some(Variant { table: "Tag9402", sets_double_cipher: false });
             }
             None
         }
@@ -3915,8 +3915,6 @@ fn camerasettings3(data: &[u8], model: &str) -> Vec<Tag> {
                 32891 => "Sony FE 50-150mm F2 GM".to_string(),
                 32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
                 32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
-                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
-                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
                 33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
                 33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
                 33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
@@ -4357,7 +4355,6 @@ fn tag2010a(data: &[u8], model: &str) -> Vec<Tag> {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
             2 => "Bracketing".to_string(),
-            3 => "Remote Commander".to_string(),
             4 => "Continuous - Burst".to_string(),
             5 => "Continuous - Speed/Advance Priority".to_string(),
             6 => "Normal - Self-timer".to_string(),
@@ -4415,7 +4412,6 @@ fn tag2010a(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "Slow Sync".to_string(),
             4 => "Rear Sync".to_string(),
             6 => "Wireless".to_string(),
-            129 => "unknown".to_string(),
             other => other.to_string(),
         };
         tags.push(mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO));
@@ -4613,7 +4609,6 @@ fn tag2010a(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -4716,7 +4711,6 @@ fn tag2010b(data: &[u8], model: &str) -> Vec<Tag> {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
             2 => "Bracketing".to_string(),
-            3 => "Remote Commander".to_string(),
             4 => "Continuous - Burst".to_string(),
             5 => "Continuous - Speed/Advance Priority".to_string(),
             6 => "Normal - Self-timer".to_string(),
@@ -4774,7 +4768,6 @@ fn tag2010b(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "Slow Sync".to_string(),
             4 => "Rear Sync".to_string(),
             6 => "Wireless".to_string(),
-            129 => "unknown".to_string(),
             other => other.to_string(),
         };
         tags.push(mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO));
@@ -4972,7 +4965,6 @@ fn tag2010b(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -5103,7 +5095,6 @@ fn tag2010c(data: &[u8], model: &str) -> Vec<Tag> {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
             2 => "Bracketing".to_string(),
-            3 => "Remote Commander".to_string(),
             4 => "Continuous - Burst".to_string(),
             5 => "Continuous - Speed/Advance Priority".to_string(),
             6 => "Normal - Self-timer".to_string(),
@@ -5161,7 +5152,6 @@ fn tag2010c(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "Slow Sync".to_string(),
             4 => "Rear Sync".to_string(),
             6 => "Wireless".to_string(),
-            129 => "unknown".to_string(),
             other => other.to_string(),
         };
         tags.push(mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO));
@@ -5359,7 +5349,6 @@ fn tag2010c(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -5470,7 +5459,6 @@ fn tag2010d(data: &[u8], model: &str) -> Vec<Tag> {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
             2 => "Bracketing".to_string(),
-            3 => "Remote Commander".to_string(),
             4 => "Continuous - Burst".to_string(),
             5 => "Continuous - Speed/Advance Priority".to_string(),
             6 => "Normal - Self-timer".to_string(),
@@ -5528,7 +5516,6 @@ fn tag2010d(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "Slow Sync".to_string(),
             4 => "Rear Sync".to_string(),
             6 => "Wireless".to_string(),
-            129 => "unknown".to_string(),
             other => other.to_string(),
         };
         tags.push(mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO));
@@ -5708,7 +5695,6 @@ fn tag2010d(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -5825,7 +5811,6 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
             2 => "Bracketing".to_string(),
-            3 => "Remote Commander".to_string(),
             4 => "Continuous - Burst".to_string(),
             5 => "Continuous - Speed/Advance Priority".to_string(),
             6 => "Normal - Self-timer".to_string(),
@@ -5883,7 +5868,6 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "Slow Sync".to_string(),
             4 => "Rear Sync".to_string(),
             6 => "Wireless".to_string(),
-            129 => "unknown".to_string(),
             other => other.to_string(),
         };
         tags.push(mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO));
@@ -6081,7 +6065,6 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -6324,8 +6307,6 @@ fn tag2010e(data: &[u8], model: &str) -> Vec<Tag> {
                 32891 => "Sony FE 50-150mm F2 GM".to_string(),
                 32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
                 32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
-                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
-                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
                 33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
                 33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
                 33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
@@ -6626,7 +6607,6 @@ fn tag2010f(data: &[u8], model: &str) -> Vec<Tag> {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
             2 => "Bracketing".to_string(),
-            3 => "Remote Commander".to_string(),
             4 => "Continuous - Burst".to_string(),
             5 => "Continuous - Speed/Advance Priority".to_string(),
             6 => "Normal - Self-timer".to_string(),
@@ -6684,7 +6664,6 @@ fn tag2010f(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "Slow Sync".to_string(),
             4 => "Rear Sync".to_string(),
             6 => "Wireless".to_string(),
-            129 => "unknown".to_string(),
             other => other.to_string(),
         };
         tags.push(mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO));
@@ -6882,7 +6861,6 @@ fn tag2010f(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -7011,7 +6989,6 @@ fn tag2010g(data: &[u8], model: &str) -> Vec<Tag> {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
             2 => "Bracketing".to_string(),
-            3 => "Remote Commander".to_string(),
             4 => "Continuous - Burst".to_string(),
             5 => "Continuous - Speed/Advance Priority".to_string(),
             6 => "Normal - Self-timer".to_string(),
@@ -7069,7 +7046,6 @@ fn tag2010g(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "Slow Sync".to_string(),
             4 => "Rear Sync".to_string(),
             6 => "Wireless".to_string(),
-            129 => "unknown".to_string(),
             other => other.to_string(),
         };
         tags.push(mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO));
@@ -7267,7 +7243,6 @@ fn tag2010g(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -7482,8 +7457,6 @@ fn tag2010g(data: &[u8], model: &str) -> Vec<Tag> {
                 32891 => "Sony FE 50-150mm F2 GM".to_string(),
                 32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
                 32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
-                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
-                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
                 33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
                 33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
                 33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
@@ -7767,7 +7740,6 @@ fn tag2010h(data: &[u8], model: &str) -> Vec<Tag> {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
             2 => "Bracketing".to_string(),
-            3 => "Remote Commander".to_string(),
             4 => "Continuous - Burst".to_string(),
             5 => "Continuous - Speed/Advance Priority".to_string(),
             6 => "Normal - Self-timer".to_string(),
@@ -7825,7 +7797,6 @@ fn tag2010h(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "Slow Sync".to_string(),
             4 => "Rear Sync".to_string(),
             6 => "Wireless".to_string(),
-            129 => "unknown".to_string(),
             other => other.to_string(),
         };
         tags.push(mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO));
@@ -8023,7 +7994,6 @@ fn tag2010h(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -8238,8 +8208,6 @@ fn tag2010h(data: &[u8], model: &str) -> Vec<Tag> {
                 32891 => "Sony FE 50-150mm F2 GM".to_string(),
                 32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
                 32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
-                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
-                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
                 33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
                 33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
                 33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
@@ -8523,7 +8491,6 @@ fn tag2010i(data: &[u8], model: &str) -> Vec<Tag> {
             0 => "Normal".to_string(),
             1 => "Continuous".to_string(),
             2 => "Bracketing".to_string(),
-            3 => "Remote Commander".to_string(),
             4 => "Continuous - Burst".to_string(),
             5 => "Continuous - Speed/Advance Priority".to_string(),
             6 => "Normal - Self-timer".to_string(),
@@ -8581,7 +8548,6 @@ fn tag2010i(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "Slow Sync".to_string(),
             4 => "Rear Sync".to_string(),
             6 => "Wireless".to_string(),
-            129 => "unknown".to_string(),
             other => other.to_string(),
         };
         tags.push(mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO));
@@ -8779,7 +8745,6 @@ fn tag2010i(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -8994,8 +8959,6 @@ fn tag2010i(data: &[u8], model: &str) -> Vec<Tag> {
                 32891 => "Sony FE 50-150mm F2 GM".to_string(),
                 32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
                 32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
-                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
-                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
                 33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
                 33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
                 33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
@@ -10072,8 +10035,6 @@ fn tag9050a(data: &[u8], model: &str) -> Vec<Tag> {
                 32891 => "Sony FE 50-150mm F2 GM".to_string(),
                 32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
                 32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
-                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
-                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
                 33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
                 33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
                 33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
@@ -10382,7 +10343,6 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
                 66 => "Built-in Flash Inhibited".to_string(),
                 128 => "External Flash present".to_string(),
                 129 => "External Flash Fired".to_string(),
-                131 => "External Flash ???".to_string(),
                 other => other.to_string(),
             };
             tags.push(mk_prio("FlashStatus", s, Value::I32(v as i32), GRP2, PRIO));
@@ -10629,8 +10589,6 @@ fn tag9050b(data: &[u8], model: &str) -> Vec<Tag> {
                 32891 => "Sony FE 50-150mm F2 GM".to_string(),
                 32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
                 32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
-                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
-                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
                 33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
                 33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
                 33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
@@ -11614,7 +11572,6 @@ fn tag9402(data: &[u8], model: &str) -> Vec<Tag> {
             3 => "AF-C".to_string(),
             4 => "AF-A".to_string(),
             6 => "DMF".to_string(),
-            7 => "AF-D".to_string(),
             other => other.to_string(),
         };
         tags.push(mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO));
@@ -11634,7 +11591,6 @@ fn tag9402(data: &[u8], model: &str) -> Vec<Tag> {
             15 => "Face Tracking".to_string(),
             20 => "Animal Eye Tracking".to_string(),
             21 => "Human Eye Tracking".to_string(),
-            22 => "Object Tracking???".to_string(),
             255 => "Manual".to_string(),
             other => other.to_string(),
         };
@@ -11710,7 +11666,6 @@ fn tag9404a(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -11778,7 +11733,6 @@ fn tag9404b(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -11853,7 +11807,6 @@ fn tag9404c(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -12041,8 +11994,6 @@ fn tag9405a(data: &[u8], model: &str) -> Vec<Tag> {
                 32891 => "Sony FE 50-150mm F2 GM".to_string(),
                 32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
                 32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
-                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
-                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
                 33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
                 33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
                 33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
@@ -12451,7 +12402,6 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -12653,8 +12603,6 @@ fn tag9405b(data: &[u8], model: &str) -> Vec<Tag> {
                 32891 => "Sony FE 50-150mm F2 GM".to_string(),
                 32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
                 32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
-                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
-                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
                 33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
                 33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
                 33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
@@ -13305,8 +13253,6 @@ fn tag940c(data: &[u8], model: &str) -> Vec<Tag> {
                 32891 => "Sony FE 50-150mm F2 GM".to_string(),
                 32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
                 32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
-                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
-                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
                 33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
                 33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
                 33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),
@@ -13531,7 +13477,6 @@ fn afinfo(data: &[u8], model: &str) -> Vec<Tag> {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
             let s = match v as i64 {
-                0 => "?? n.a.".to_string(),
                 1 => "15-point".to_string(),
                 2 => "19-point".to_string(),
                 3 => "79-point".to_string(),
@@ -13555,7 +13500,6 @@ fn afinfo(data: &[u8], model: &str) -> Vec<Tag> {
                 3 => "AF-C".to_string(),
                 4 => "AF-A".to_string(),
                 6 => "DMF".to_string(),
-                7 => "AF-D".to_string(),
                 other => other.to_string(),
             };
             tags.push(mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO));
@@ -13969,7 +13913,6 @@ fn afinfo(data: &[u8], model: &str) -> Vec<Tag> {
                 28 => "Pet".to_string(),
                 29 => "Macro".to_string(),
                 30 => "Backlight Correction HDR".to_string(),
-                32 => "Night ... ???".to_string(),
                 33 => "Sweep Panorama".to_string(),
                 36 => "Background Defocus".to_string(),
                 37 => "Soft Skin".to_string(),
@@ -14052,7 +13995,6 @@ fn afinfo(data: &[u8], model: &str) -> Vec<Tag> {
                 28 => "Pet".to_string(),
                 29 => "Macro".to_string(),
                 30 => "Backlight Correction HDR".to_string(),
-                32 => "Night ... ???".to_string(),
                 33 => "Sweep Panorama".to_string(),
                 36 => "Background Defocus".to_string(),
                 37 => "Soft Skin".to_string(),
@@ -14793,7 +14735,6 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
             28 => "Pet".to_string(),
             29 => "Macro".to_string(),
             30 => "Backlight Correction HDR".to_string(),
-            32 => "Night ... ???".to_string(),
             33 => "Sweep Panorama".to_string(),
             36 => "Background Defocus".to_string(),
             37 => "Soft Skin".to_string(),
@@ -14983,8 +14924,6 @@ fn tag9416(data: &[u8], model: &str) -> Vec<Tag> {
                 32891 => "Sony FE 50-150mm F2 GM".to_string(),
                 32893 => "Sony FE 100mm F2.8 Macro GM OSS".to_string(),
                 32895 => "Sony FE 100-400mm F4.5 GM OSS".to_string(),
-                32952 => "Metabones Canon EF Speed Booster Ultra".to_string(),
-                33002 => "Metabones Canon EF Smart Adapter with Ver.5x".to_string(),
                 33072 => "Sony FE 70-200mm F2.8 GM OSS + 1.4X Teleconverter".to_string(),
                 33073 => "Sony FE 70-200mm F2.8 GM OSS + 2X Teleconverter".to_string(),
                 33076 => "Sony FE 100mm F2.8 STF GM OSS (macro mode)".to_string(),

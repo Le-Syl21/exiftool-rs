@@ -14,7 +14,6 @@ SonyILCE9.arw::Sony:AFAreaMode
 SonyILCE9.arw::Sony:AFAreaModeSetting
 SonyILCE9.arw::Sony:AFPointSelected
 SonyILCE9.arw::Sony:AFPointsUsed
-SonyILCE9.arw::Sony:AmbientTemperature
 SonyILCE9.arw::Sony:Anti-Blur
 SonyILCE9.arw::Sony:ColorTemperature
 SonyILCE9.arw::Sony:DistortionCorrection
@@ -31,7 +30,6 @@ SonyILCE9.arw::Sony:FocalPlaneAFPointLocation5
 SonyILCE9.arw::Sony:FocalPlaneAFPointLocation6
 SonyILCE9.arw::Sony:FocalPlaneAFPointLocation7
 SonyILCE9.arw::Sony:FocalPlaneAFPointLocation8
-SonyILCE9.arw::Sony:FocusPosition2
 SonyILCE9.arw::Sony:FullImageSize
 SonyILCE9.arw::Sony:HDR
 SonyILCE9.arw::Sony:HighISONoiseReduction2

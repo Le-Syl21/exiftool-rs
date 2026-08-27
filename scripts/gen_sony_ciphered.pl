@@ -25,6 +25,12 @@ open my $fh, '<', $pm or die $!;
 my $src = do { local $/; <$fh> };
 close $fh;
 
+# Drop comment-only lines. Sony.pm keeps superseded Conditions commented out
+# right above the live one -- 0x9402 has a DoubleCipher test sitting there,
+# four lines above the condition it actually uses -- and a parser that cannot
+# tell them apart picks the wrong one.
+$src =~ s/^[ \t]*#.*\n//mg;
+
 my ($et_version) = $src =~ /\$VERSION\s*=\s*'([^']+)'/;
 
 # Some fields do not spell out their PrintConv: they splice in a shared hash,
@@ -378,19 +384,20 @@ sub compile_cond {
         return (sprintf('%sMODEL_RE_%d.is_match(model)', $op eq '!~' ? '!' : '', re_id($pat)), 'false');
     }
     # The raw bytes of the block.
-    if ($cond =~ m{^\$\$valPt =~ /(.*?)/[a-z]*$}) {
-        my $re = $1;
+    if ($cond =~ m{^\$\$valPt (=~|!~) /(.*?)/[a-z]*$}) {
+        my ($op, $re) = ($1, $2);
+        my $neg = $op eq '!~' ? '!' : '';
         # A leading optional group is two patterns: with it and without.
         if ($re =~ /^\^\(([^)]*)\)\?(.*)$/) {
             my ($opt, $rest) = ($1, $2);
             my $with = byte_prefix("^$opt$rest");
             my $without = byte_prefix("^$rest");
             return () unless defined $with and defined $without;
-            return ("(prefix_matches(data, $with) || prefix_matches(data, $without))", 'false');
+            return ("$neg(prefix_matches(data, $with) || prefix_matches(data, $without))", 'false');
         }
         my $pat = byte_prefix($re);
         return () unless defined $pat;
-        return ("prefix_matches(data, $pat)", 'false');
+        return ("$neg" . "prefix_matches(data, $pat)", 'false');
     }
     # `$count` is how many elements the tag holds, which is how ExifTool tells
     # one 0x0010 layout from another.
