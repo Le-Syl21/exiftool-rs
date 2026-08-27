@@ -7,13 +7,11 @@ SonyILCE9.arw	AFPointSelected
 SonyILCE9.arw	AFPointsUsed
 SonyILCE9.arw	Anti-Blur
 SonyILCE9.arw	FileFormat
-SonyILCE9.arw	FullImageSize
 SonyILCE9.arw	HDR
 SonyILCE9.arw	LensID
 SonyILCE9.arw	LensSpec
 SonyILCE9.arw	LensSpecFeatures
 SonyILCE9.arw	PixelShiftInfo
-SonyILCE9.arw	PreviewImageSize
 SonyILCE9.arw	Quality
 SonyILCE9.arw	Shutter
 SonyILCE9.arw	VariableLowPassFilter

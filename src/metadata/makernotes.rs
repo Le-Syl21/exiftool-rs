@@ -8134,8 +8134,14 @@ fn read_makernote_ifd_with_base(
             } else {
                 s.to_string()
             }
-        } else if name.ends_with("ImageSize") && value.to_display_string().contains(' ') {
+        } else if name.ends_with("ImageSize")
+            && value.to_display_string().contains(' ')
+            && crate::tags::makernote_conv_generated::value_conv_expr(group_name, tag_id).is_none()
+        {
             // ExifTool joins the two dimensions with "x" (320 240 -> 320x240).
+            // Unless the tag has a ValueConv of its own: Sony's FullImageSize
+            // and PreviewImageSize reverse the pair first, and joining them
+            // here would leave nothing for that conversion to do.
             value.to_display_string().replace(' ', "x")
         } else if name == "CPUVersions" && matches!(value, Value::Binary(_) | Value::Undefined(_)) {
             // JVC 0x0002: ValueConv s/(\s*\0)+$//; s/(\s*\0)+/, /g — replace each run of
@@ -8264,12 +8270,23 @@ fn read_makernote_ifd_with_base(
             let maker = group_name;
             let mut val = value;
             let mut printed = print_value;
-            // A value the hash conversions already turned into a phrase is not
-            // one to run an expression over: ExifTool applies one or the other.
+            // Only when nothing has converted the value yet. A reader that
+            // already turned it into a phrase used a conversion of its own --
+            // Olympus's CameraType is a string-keyed lookup, Panasonic's
+            // TimeSincePowerOn a duration -- and running an expression over
+            // that phrase would undo it.
             let untouched = printed == val.to_display_string();
             if untouched {
+                // What ExifTool would put in `$val`. For an `undef` tag that
+                // is the raw byte string -- Nikon's ExposureDifference is
+                // `unpack("c3",$val)` and needs the bytes, not the words
+                // "(Binary data 4 bytes)" -- and for everything else it is the
+                // value as it reads.
                 let as_conv = |v: &Value| match v {
                     Value::String(s) => Val::Str(s.clone()),
+                    Value::Binary(b) | Value::Undefined(b, ..) => {
+                        Val::Str(b.iter().map(|c| *c as char).collect())
+                    }
                     other => match other.as_f64() {
                         Some(n) => Val::Num(n),
                         None => Val::Str(other.to_display_string()),
