@@ -22,6 +22,59 @@ die "Cannot find $lib\n" unless -d $lib;
 
 my @modules = qw(Canon Nikon Sony Olympus Pentax Panasonic FujiFilm Samsung Minolta Casio Ricoh Sanyo);
 
+
+# Expand a finite anchored pattern into the literal byte prefixes it matches.
+# Only alternation and single-character classes are accepted: these conditions
+# test a version stamp such as /^0210/ or /^030[01]/, never a real expression.
+sub prefix_literals {
+    my ($pat) = @_;
+    return () unless $pat =~ s/^\^//;
+    return () if $pat =~ /[.*+?\\(){}\$]/;
+    my @out = ('');
+    while (length $pat) {
+        if ($pat =~ s/^\[([^\]]+)\]//) {
+            my @c = split //, $1;
+            @out = map { my $p = $_; map { $p . $_ } @c } @out;
+        } elsif ($pat =~ s/^([A-Za-z0-9_ -])//) {
+            my $c = $1;
+            @out = map { $_ . $c } @out;
+        } else {
+            return ();
+        }
+    }
+    return @out;
+}
+
+# Turn one ExifTool Condition into a Rust boolean expression, or undef.
+# Supported terms, combined with `and`: a Model regex, a data-prefix test, and
+# an element count. Everything else is refused rather than approximated.
+sub cond_to_rust {
+    my ($cond, $re_id) = @_;
+    my @terms;
+    for my $term (split /\s+and\s+/, $cond) {
+        $term =~ s/^\s*\(?\s*//; $term =~ s/\s*\)?\s*$//;
+        if ($term =~ /^\$\$self\{Model\}\s*(=~|!~)\s*\/([^\/]*)\/$/) {
+            my ($op, $pat) = ($1, $2);
+            return undef if $pat =~ /\(\?[=!<]/;
+            push @terms, sprintf('%sRE_%d.is_match(model)', ($op eq '!~' ? '!' : ''), $re_id->($pat));
+        } elsif ($term =~ /^\$\$valPt\s*(=~|!~)\s*\/([^\/]*)\/$/) {
+            my ($op, $pat) = ($1, $2);
+            my @lits = prefix_literals($pat);
+            return undef unless @lits;
+            my $any = join(' || ', map { sprintf('data.starts_with(b"%s")', $_) } @lits);
+            push @terms, ($op eq '!~' ? "!($any)" : "($any)");
+        } elsif ($term =~ /^\$count\s*==\s*(\d+)$/) {
+            push @terms, "count == $1";
+        } elsif ($term =~ /^\$count\s*==\s*(\d+)((?:\s+or\s+\$count\s*==\s*\d+)+)$/) {
+            my @n = ($1); push @n, $2 =~ /(\d+)/g;
+            push @terms, '(' . join(' || ', map { "count == $_" } @n) . ')';
+        } else {
+            return undef;
+        }
+    }
+    return join(' && ', @terms);
+}
+
 my (@entries, @skipped);
 my (%re_index, @re_list);
 sub re_id {
@@ -64,14 +117,8 @@ for my $module (@modules) {
                 }
                 push @choices, { tbl => $tbl, re => undef, neg => 0 };
                 last;
-            } elsif ($cond =~ /^\s*\$\$self\{Model\}\s*(=~|!~)\s*\/([^\/]*)\/\s*$/) {
-                my ($op, $pat) = ($1, $2);
-                if ($pat =~ /\(\?[=!<]/) {
-                    push @skipped, "$module $nm: lookaround";
-                    $incomplete = 1;
-                    next;
-                }
-                push @choices, { tbl => $tbl, re => re_id($pat), neg => ($op eq '!~') };
+            } elsif (defined(my $expr = cond_to_rust($cond, \&re_id))) {
+                push @choices, { tbl => $tbl, expr => $expr };
             } else {
                 push @skipped, sprintf("%s 0x%04x %s: %s", $module, $tag, $nm, $cond);
                 $incomplete = 1;
@@ -114,16 +161,22 @@ print <<'FN';
 /// ExifTool falls back to an "unknown" table there, and decoding with the
 /// nearest-looking layout instead would invent values.
 #[must_use]
-pub fn variant_for(module: &str, tag: u16, model: &str) -> Option<&'static str> {
+pub fn variant_for(
+    module: &str,
+    tag: u16,
+    model: &str,
+    data: &[u8],
+    count: usize,
+) -> Option<&'static str> {
+    let _ = (data, count);
     match (module, tag) {
 FN
 
 for my $e (sort { $a->{module} cmp $b->{module} || $a->{tag} <=> $b->{tag} } @entries) {
     printf "        (\"%s\", 0x%04x) => {\n", $e->{module}, $e->{tag};
     for my $c (@{$e->{choices}}) {
-        if (defined $c->{re}) {
-            printf "            if %sRE_%d.is_match(model) { return Some(\"%s\"); }\n",
-                ($c->{neg} ? '!' : ''), $c->{re}, $c->{tbl};
+        if (defined $c->{expr}) {
+            printf "            if %s { return Some(\"%s\"); }\n", $c->{expr}, $c->{tbl};
         } else {
             printf "            return Some(\"%s\");\n", $c->{tbl};
         }
@@ -142,8 +195,8 @@ print <<'T2';
     /// and a substring test would.
     #[test]
     fn anchored_patterns_do_not_over_match() {
-        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X"), Some("CameraInfo1DX"));
-        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X Mark II"), None);
+        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X", b"", 0), Some("CameraInfo1DX"));
+        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X Mark II", b"", 0), None);
     }
 }
 T2

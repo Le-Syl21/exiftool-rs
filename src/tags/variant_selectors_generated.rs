@@ -55,7 +55,14 @@ static RE_35: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(37|57)|NEX-
 /// ExifTool falls back to an "unknown" table there, and decoding with the
 /// nearest-looking layout instead would invent values.
 #[must_use]
-pub fn variant_for(module: &str, tag: u16, model: &str) -> Option<&'static str> {
+pub fn variant_for(
+    module: &str,
+    tag: u16,
+    model: &str,
+    data: &[u8],
+    count: usize,
+) -> Option<&'static str> {
+    let _ = (data, count);
     match (module, tag) {
         ("Canon", 0x000d) => {
             if RE_0.is_match(model) { return Some("CameraInfo1DmkII"); }
@@ -98,6 +105,18 @@ pub fn variant_for(module: &str, tag: u16, model: &str) -> Option<&'static str> 
             return Some("ColorData1");
             None
         }
+        ("Nikon", 0x0014) => {
+            if (data.starts_with(b"NRW 0100")) { return Some("ColorBalanceB"); }
+            if (data.starts_with(b"NRW ")) { return Some("ColorBalanceC"); }
+            None
+        }
+        ("Nikon", 0x0023) => {
+            if (data.starts_with(b"01")) { return Some("PictureControl"); }
+            if (data.starts_with(b"02")) { return Some("PictureControl2"); }
+            if (data.starts_with(b"03")) { return Some("PictureControl3"); }
+            return Some("PictureControlUnknown");
+            None
+        }
         ("Nikon", 0x0091) => {
             return Some("ShotInfoD40");
             None
@@ -108,6 +127,42 @@ pub fn variant_for(module: &str, tag: u16, model: &str) -> Option<&'static str> 
         }
         ("Nikon", 0x0098) => {
             return Some("LensData00");
+            None
+        }
+        ("Nikon", 0x00a8) => {
+            if (data.starts_with(b"0100") || data.starts_with(b"0101")) { return Some("FlashInfo0100"); }
+            if (data.starts_with(b"0102")) { return Some("FlashInfo0102"); }
+            if (data.starts_with(b"0103") || data.starts_with(b"0104") || data.starts_with(b"0105")) { return Some("FlashInfo0103"); }
+            if (data.starts_with(b"0106")) { return Some("FlashInfo0106"); }
+            if (data.starts_with(b"0107") || data.starts_with(b"0108")) { return Some("FlashInfo0107"); }
+            if (data.starts_with(b"0300") || data.starts_with(b"0301")) { return Some("FlashInfo0300"); }
+            return Some("FlashInfoUnknown");
+            None
+        }
+        ("Pentax", 0x002d) => {
+            if count == 1 { return Some("SRInfo"); }
+            None
+        }
+        ("Pentax", 0x0208) => {
+            if count == 27 { return Some("FlashInfo"); }
+            return Some("FlashInfoUnknown");
+            None
+        }
+        ("Sony", 0x0010) => {
+            if (count == 368 || count == 5478) { return Some("CameraInfo"); }
+            if (count == 5506 || count == 6118) { return Some("CameraInfo2"); }
+            if count == 15360 { return Some("CameraInfo3"); }
+            return Some("CameraInfoUnknown");
+            None
+        }
+        ("Sony", 0x0020) => {
+            if (count == 19154 || count == 19148) { return Some("FocusInfo"); }
+            return Some("MoreInfo");
+            None
+        }
+        ("Sony", 0x0114) => {
+            if (count == 280 || count == 364) { return Some("CameraSettings"); }
+            if count == 332 { return Some("CameraSettings2"); }
             None
         }
         ("Sony", 0x0116) => {
@@ -176,7 +231,7 @@ mod tests {
     /// and a substring test would.
     #[test]
     fn anchored_patterns_do_not_over_match() {
-        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X"), Some("CameraInfo1DX"));
-        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X Mark II"), None);
+        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X", b"", 0), Some("CameraInfo1DX"));
+        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X Mark II", b"", 0), None);
     }
 }

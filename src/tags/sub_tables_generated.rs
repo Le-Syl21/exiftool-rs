@@ -254,7 +254,7 @@ pub fn dispatch_nikon_af_info2(ctx: &DispatchContext) -> Vec<Tag> {
 pub fn dispatch_sony_camera_settings(ctx: &DispatchContext) -> Vec<Tag> {
     // Same as the Canon case above: the variant is known, the layouts are not
     // ported, and naming the variant is not a value anyone can use.
-    let _ = crate::tags::variant_selectors_generated::variant_for("Sony", 0x0114, ctx.model);
+    let _ = crate::tags::variant_selectors_generated::variant_for("Sony", 0x0114, ctx.model, ctx.data, ctx.count);
     Vec::new()
 }
 

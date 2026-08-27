@@ -5909,7 +5909,7 @@ fn read_makernote_ifd_with_base(
                     // where the substring test this used to do did, and decoded a
                     // body with a layout that does not describe it.
                     let known_format = crate::tags::variant_selectors_generated::variant_for(
-                        "Canon", 0x000d, model_name,
+                        "Canon", 0x000d, model_name, value_data, count as usize,
                     )
                     .is_some();
                     let mut t = Vec::new();
