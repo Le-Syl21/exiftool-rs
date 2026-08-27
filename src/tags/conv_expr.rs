@@ -348,28 +348,55 @@ impl<'a> Parser<'a> {
     /// than being approximated: `PrintExposureTime` turning 0.0496 into `1/20`
     /// is not something a generic evaluator can guess.
     fn helper_call(&mut self) -> Option<Val> {
-        const HELPERS: [(&str, fn(f64) -> String); 3] = [
-            ("Image::ExifTool::Exif::PrintExposureTime", print_exposure_time),
-            ("Image::ExifTool::Exif::PrintFNumber", print_f_number),
-            ("Image::ExifTool::Exif::PrintFraction", crate::tags::exif::print_fraction),
-        ];
         let save = self.i;
-        for (name, f) in HELPERS {
-            if self.peek(name) {
-                self.eat(name);
-                if !self.eat("(") {
+        // The same function is written three ways depending on the module's age:
+        // `Image::ExifTool::Exif::PrintFNumber(...)`, `$self->ConvertDateTime(...)`
+        // and a bare `ConvertBitrate(...)`. Strip whichever prefix is there and
+        // match on the name alone.
+        self.skip_ws();
+        if self.peek("$self->") {
+            self.eat("$self->");
+        } else if self.peek("Image::ExifTool::") {
+            self.eat("Image::ExifTool::");
+            // Skip the module qualifier, e.g. `Exif::`.
+            while self.i < self.s.len() {
+                if self.s[self.i..].starts_with(b"::") {
+                    self.i += 2;
+                    break;
+                }
+                if !(self.s[self.i] as char).is_alphanumeric() && self.s[self.i] != b'_' {
                     self.i = save;
                     return None;
                 }
-                let v = self.ternary()?;
-                if !self.eat(")") {
-                    self.i = save;
-                    return None;
-                }
-                return Some(Val::Str(f(v.as_num())));
+                self.i += 1;
             }
         }
-        None
+        let name_start = self.i;
+        while self.i < self.s.len()
+            && ((self.s[self.i] as char).is_alphanumeric() || self.s[self.i] == b'_')
+        {
+            self.i += 1;
+        }
+        let name = std::str::from_utf8(&self.s[name_start..self.i]).ok()?.to_string();
+        if name.is_empty() || !self.eat("(") {
+            self.i = save;
+            return None;
+        }
+        let mut args = vec![self.ternary()?];
+        while self.eat(",") {
+            args.push(self.ternary()?);
+        }
+        if !self.eat(")") {
+            self.i = save;
+            return None;
+        }
+        match call_helper(&name, &args) {
+            Some(v) => Some(v),
+            None => {
+                self.i = save;
+                None
+            }
+        }
     }
 
     fn sprintf_call(&mut self) -> Option<Val> {
@@ -506,6 +533,79 @@ fn format_sprintf(fmt: &str, args: &[Val]) -> Option<String> {
     Some(out)
 }
 
+/// The ExifTool helpers this crate implements, by the name its conversions use.
+///
+/// A name that is not here declines, so the caller keeps the raw value: the
+/// alternative is a plausible-looking number produced by the wrong formula.
+fn call_helper(name: &str, args: &[Val]) -> Option<Val> {
+    let first = args.first()?;
+    Some(match name {
+        // Without a -d format ExifTool returns the date untouched, and that is
+        // the default. This is the single most-used conversion it has.
+        "ConvertDateTime" => first.clone(),
+        "PrintExposureTime" => Val::Str(print_exposure_time(first.as_num())),
+        "PrintFNumber" => Val::Str(print_f_number(first.as_num())),
+        "PrintFraction" => Val::Str(crate::tags::exif::print_fraction(first.as_num())),
+        "ConvertDuration" => Val::Str(convert_duration(first)?),
+        "ConvertBitrate" => Val::Str(convert_bitrate(first)?),
+        _ => return None,
+    })
+}
+
+/// ExifTool.pm ConvertDuration: seconds to `1.23 s`, `1:02:03`, or with days.
+fn convert_duration(v: &Val) -> Option<String> {
+    let Val::Num(_) = v else {
+        // Not a number: ExifTool returns it unchanged, and so must we.
+        return Some(v.as_string());
+    };
+    let mut t = v.as_num();
+    if t == 0.0 {
+        return Some("0 s".to_string());
+    }
+    let sign = if t > 0.0 {
+        String::new()
+    } else {
+        t = -t;
+        "-".to_string()
+    };
+    if t < 30.0 {
+        return Some(format!("{sign}{t:.2} s"));
+    }
+    t += 0.5; // round to the nearest second
+    let mut h = (t / 3600.0).trunc();
+    t -= h * 3600.0;
+    let m = (t / 60.0).trunc();
+    t -= m * 60.0;
+    let mut prefix = sign;
+    if h > 24.0 {
+        let d = (h / 24.0).trunc();
+        h -= d * 24.0;
+        prefix = format!("{prefix}{d} days ");
+    }
+    Some(format!("{prefix}{h}:{m:02}:{:02}", t.trunc()))
+}
+
+/// ExifTool.pm ConvertBitrate: bps through Gbps, three significant digits below
+/// 100 and none above.
+fn convert_bitrate(v: &Val) -> Option<String> {
+    let Val::Num(_) = v else {
+        return Some(v.as_string());
+    };
+    let mut b = v.as_num();
+    for (i, unit) in ["bps", "kbps", "Mbps", "Gbps"].into_iter().enumerate() {
+        if b >= 1000.0 && i < 3 {
+            b /= 1000.0;
+            continue;
+        }
+        return Some(if b < 100.0 {
+            format!("{} {unit}", format_sprintf("%.3g", &[Val::Num(b)])?)
+        } else {
+            format!("{b:.0} {unit}")
+        });
+    }
+    None
+}
+
 /// Exif.pm PrintExposureTime: fractions below a second, plain seconds above.
 fn print_exposure_time(val: f64) -> String {
     if val <= 0.0 {
@@ -522,10 +622,14 @@ fn print_exposure_time(val: f64) -> String {
 /// Exif.pm PrintFNumber: one decimal, trimmed when whole.
 fn print_f_number(val: f64) -> String {
     if val <= 0.0 {
-        return "0".to_string();
+        return format_number(val);
     }
-    let s = format!("{val:.1}");
-    s.trim_end_matches('0').trim_end_matches('.').to_string()
+    // Exif.pm: one decimal, or two below 1.0. It does not trim them.
+    if val < 1.0 {
+        format!("{val:.2}")
+    } else {
+        format!("{val:.1}")
+    }
 }
 
 #[cfg(test)]
@@ -571,6 +675,27 @@ mod tests {
         assert_eq!(eval("$val > 0 ? \"+$val\" : $val", &n(2.0)).unwrap().as_string(), "+2");
         assert_eq!(eval("$val > 0 ? \"+$val\" : $val", &n(-2.0)).unwrap().as_string(), "-2");
         assert_eq!(eval("$val ? 1 : 0", &n(0.0)).unwrap().as_num(), 0.0);
+    }
+
+    #[test]
+    fn the_helpers_by_any_of_their_spellings() {
+        // ExifTool writes the same call three ways; all three must land.
+        for e in [
+            "Image::ExifTool::Exif::PrintFNumber($val)",
+            "PrintFNumber($val)",
+        ] {
+            assert_eq!(eval(e, &n(8.0)).unwrap().as_string(), "8.0", "{e}");
+        }
+        assert_eq!(eval("$self->ConvertDateTime($val)", &Val::Str("2026:08:27 11:22:02".into()))
+            .unwrap().as_string(), "2026:08:27 11:22:02");
+        assert_eq!(eval("ConvertDuration($val)", &n(0.0)).unwrap().as_string(), "0 s");
+        assert_eq!(eval("ConvertDuration($val)", &n(12.5)).unwrap().as_string(), "12.50 s");
+        assert_eq!(eval("ConvertDuration($val)", &n(3723.0)).unwrap().as_string(), "1:02:03");
+        // Checked against Perl: ConvertBitrate(1500000) is "1.5 Mbps", not "1.50".
+        assert_eq!(eval("ConvertBitrate($val)", &n(1_500_000.0)).unwrap().as_string(), "1.5 Mbps");
+        assert_eq!(eval("ConvertBitrate($val)", &n(999.0)).unwrap().as_string(), "999 bps");
+        // A name we have not ported still declines.
+        assert!(eval("ConvertUnixTime($val)", &n(1.0)).is_none());
     }
 
     #[test]
