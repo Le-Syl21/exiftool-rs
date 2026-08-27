@@ -7118,6 +7118,8 @@ fn read_makernote_ifd_with_base(
                         t,
                         dispatch_ctx.model,
                         value_data,
+                        dispatch_ctx.count,
+                        dispatch_ctx.format,
                         false,
                         false,
                     )

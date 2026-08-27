@@ -379,6 +379,15 @@ sub compile_cond {
         return () unless defined $pat;
         return ("prefix_matches(data, $pat)", 'false');
     }
+    # `$count` is how many elements the tag holds, which is how ExifTool tells
+    # one 0x0010 layout from another.
+    if ($cond =~ /^\$count (==|!=|<=|>=|<|>) (\d+)$/) {
+        return ("count $1 $2", 'false');
+    }
+    # `$format eq "undef"`.
+    if ($cond =~ /^\$format (eq|ne) "(\w+)"$/) {
+        return (sprintf('format %s "%s"', $1 eq 'eq' ? '==' : '!=', $2), 'false');
+    }
     # `$$self{Panorama} = (...)` is an assignment whose value is the test.
     if ($cond =~ /^\$\$self\{Panorama\} = \((.*)\)$/) {
         return compile_cond($1, $mode);
@@ -616,16 +625,20 @@ pub fn variant_for(
     tag: u16,
     model: &str,
     data: &[u8],
+    count: usize,
+    format: &str,
     double_cipher: bool,
     panorama: bool,
 ) -> Option<Variant> {
-    let _ = (data, double_cipher, panorama);
+    let _ = (data, count, format, double_cipher, panorama);
     match tag {
 SELECTOR
 for my $s (@selectors) {
     printf "        0x%04x => {\n", $s->{tag};
+    my $unconditional = 0;
     for my $c (@{$s->{choices}}) {
         if ($c->{expr} eq 'true') {
+            $unconditional = 1;
             printf "            Some(Variant { table: \"%s\", sets_double_cipher: %s })\n",
                 $c->{tbl}, $c->{dbl};
             last;   # nothing after an unconditional arm can be reached
@@ -633,7 +646,7 @@ for my $s (@selectors) {
         printf "            if %s {\n                return Some(Variant { table: \"%s\", sets_double_cipher: %s });\n            }\n",
             $c->{expr}, $c->{tbl}, $c->{dbl};
     }
-    print  "            None\n" unless $s->{choices}[-1]{expr} eq 'true';
+    print  "            None\n" unless $unconditional;
     print  "        }\n";
 }
 print "        _ => None,\n    }\n}\n\n";

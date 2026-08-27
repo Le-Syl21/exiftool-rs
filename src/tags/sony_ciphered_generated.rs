@@ -289,12 +289,32 @@ pub fn variant_for(
     tag: u16,
     model: &str,
     data: &[u8],
+    count: usize,
+    format: &str,
     double_cipher: bool,
     panorama: bool,
 ) -> Option<Variant> {
-    let _ = (data, double_cipher, panorama);
+    let _ = (data, count, format, double_cipher, panorama);
     match tag {
         0x0010 => {
+            if (count == 368 || count == 5478) {
+                return Some(Variant { table: "CameraInfo", sets_double_cipher: false });
+            }
+            if (count == 5506 || count == 6118) {
+                return Some(Variant { table: "CameraInfo2", sets_double_cipher: false });
+            }
+            if count == 15360 {
+                return Some(Variant { table: "CameraInfo3", sets_double_cipher: false });
+            }
+            if (count == 19154 || count == 19148) {
+                return Some(Variant { table: "FocusInfo", sets_double_cipher: false });
+            }
+            if (count == 280 || count == 364) {
+                return Some(Variant { table: "CameraSettings", sets_double_cipher: false });
+            }
+            if count == 332 {
+                return Some(Variant { table: "CameraSettings2", sets_double_cipher: false });
+            }
             if MODEL_RE_0.is_match(model) {
                 return Some(Variant { table: "ExtraInfo", sets_double_cipher: false });
             }

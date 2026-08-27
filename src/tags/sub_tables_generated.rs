@@ -357,7 +357,15 @@ pub fn decode_sony_ciphered(tag: u16, ctx: &DispatchContext) -> Vec<Tag> {
     // The conditions that pick a variant are tested against the block as it
     // sits in the file, before any deciphering -- that is where ExifTool tests
     // them, and half of them look at the first byte.
-    match crate::tags::sony_ciphered_generated::variant_for(tag, ctx.model, ctx.data, false, false) {
+    match crate::tags::sony_ciphered_generated::variant_for(
+        tag,
+        ctx.model,
+        ctx.data,
+        ctx.count,
+        ctx.format,
+        false,
+        false,
+    ) {
         Some(variant) => decode_ciphered(variant.table, ctx),
         None => Vec::new(),
     }
