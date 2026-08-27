@@ -291,6 +291,24 @@ impl<'a> Parser<'a> {
         if self.i == start {
             return None;
         }
+        // Scientific notation: `$val / 1e6` is how several of these are written,
+        // and stopping at the `e` left the divisor as 1.
+        if self.i < self.s.len() && (self.s[self.i] | 0x20) == b'e' {
+            let mark = self.i;
+            let mut j = self.i + 1;
+            if j < self.s.len() && (self.s[j] == b'+' || self.s[j] == b'-') {
+                j += 1;
+            }
+            let digits = j;
+            while j < self.s.len() && self.s[j].is_ascii_digit() {
+                j += 1;
+            }
+            if j > digits {
+                self.i = j;
+            } else {
+                self.i = mark;
+            }
+        }
         std::str::from_utf8(&self.s[start..self.i])
             .ok()?
             .parse()
@@ -553,6 +571,14 @@ mod tests {
         assert_eq!(eval("$val > 0 ? \"+$val\" : $val", &n(2.0)).unwrap().as_string(), "+2");
         assert_eq!(eval("$val > 0 ? \"+$val\" : $val", &n(-2.0)).unwrap().as_string(), "-2");
         assert_eq!(eval("$val ? 1 : 0", &n(0.0)).unwrap().as_num(), 0.0);
+    }
+
+    #[test]
+    fn scientific_notation() {
+        assert_eq!(eval("$val / 1e6", &n(2_500_000.0)).unwrap().as_num(), 2.5);
+        assert_eq!(eval("$val * 1.5e-2", &n(200.0)).unwrap().as_num(), 3.0);
+        // A bare `e` that is not an exponent must not swallow anything.
+        assert!(eval("$val 1e", &n(1.0)).is_none());
     }
 
     #[test]

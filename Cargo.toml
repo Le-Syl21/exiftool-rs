@@ -36,6 +36,14 @@ name = "parity"
 path = "src/bin/parity.rs"
 required-features = ["parity"]
 
+# Counter one of the ISO-ExifTool goal: what share of ExifTool's conversion
+# expressions the evaluator understands. Reads them from a Perl checkout, so the
+# figure can be reproduced rather than taken on trust.
+[[bin]]
+name = "conv_coverage"
+path = "src/bin/conv_coverage.rs"
+required-features = ["parity"]
+
 [lib]
 name = "exiftool_rs"
 path = "src/lib.rs"
