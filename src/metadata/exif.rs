@@ -24,6 +24,21 @@ thread_local! {
     /// in a JPEG and a preview offset in an ARW -- and it is set once per file
     /// rather than threaded through every IFD reader.
     static TIFF_TYPE: RefCell<String> = const { RefCell::new(String::new()) };
+    /// ExifTool's `$$self{Software}`: the EXIF Software tag, stored as it is
+    /// read because MakerNote conditions ask for it. Sony tells one ILCE-9
+    /// firmware from another that way, and reads a different offset for each.
+    static SOFTWARE: RefCell<String> = const { RefCell::new(String::new()) };
+}
+
+/// Set the Software string the file declares (ExifTool's `$$self{Software}`).
+pub fn set_software(text: &str) {
+    SOFTWARE.with(|s| s.borrow_mut().replace_range(.., text));
+}
+
+/// The Software string the file declares.
+#[must_use]
+pub fn software() -> String {
+    SOFTWARE.with(|s| s.borrow().clone())
 }
 
 /// Set the TIFF flavour being read (ExifTool's `TIFF_TYPE`).
@@ -330,6 +345,13 @@ impl ExifReader {
                     });
                 }
             }
+        }
+
+        // ExifTool stores Software as it reads it (`DataMember => 'Software'`,
+        // Exif.pm:905) because MakerNote conditions test it -- Sony reads
+        // ShutterCount2 from a different offset on an ILCE-9 running v5 or v6.
+        if let Some(sw) = tags.iter().find(|t| t.name == "Software") {
+            set_software(sw.print_value.trim_end());
         }
 
         // Extract Make + Model for MakerNotes detection and sub-table dispatch

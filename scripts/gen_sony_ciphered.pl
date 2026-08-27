@@ -441,6 +441,15 @@ sub compile_cond {
         return () unless @i;
         return ("!($i[0])", $i[1]);
     }
+    # The firmware the camera reports, which ExifTool keeps from the EXIF
+    # Software tag. Sony reads two of its offsets differently on an ILCE-9
+    # running v5 or v6.
+    if ($cond =~ m{^\$\$self\{Software\} (=~|!~) /(.*)/$}) {
+        my ($op, $pat) = ($1, $2);
+        return () if $pat =~ /\(\?[=!<]/;
+        return (sprintf('%sMODEL_RE_%d.is_match(&crate::metadata::exif::software())',
+                        $op eq '!~' ? '!' : '', re_id($pat)), 'false');
+    }
     # The model name.
     if ($cond =~ m{^\$\$self\{Model\} (=~|!~) /(.*)/$}) {
         my ($op, $pat) = ($1, $2);
@@ -676,13 +685,16 @@ fn text_tag(name: &str, default_group2: &'static str, text: String, priority: i3
     mk_prio(name, text.clone(), Value::String(text), default_group2, priority)
 }
 
-/// The most recent value read under this name in the table being decoded.
+/// What the sub-tables have read so far in this file.
 ///
-/// ExifTool calls these DATAMEMBERs: a field stores its value so a later field
-/// can be conditioned on it, which is how one offset holds LensType2 on an
-/// E-mount body and LensType on an A-mount one.
-fn dm_get(dm: &[(&str, f64)], name: &str) -> Option<f64> {
-    dm.iter().rev().find(|(n, _)| *n == name).map(|(_, v)| *v)
+/// ExifTool calls these DATAMEMBERs and keeps them on the object, not on the
+/// table: Tag9050 reads LensMount, and Tag940c -- a different block entirely --
+/// decides whether to report LensE-mountVersion by what it said.
+pub type State = Vec<(String, f64)>;
+
+/// The most recent value read under this name.
+fn dm_get(dm: &State, name: &str) -> Option<f64> {
+    dm.iter().rev().find(|(n, _)| n == name).map(|(_, v)| *v)
 }
 
 fn mk(name: &str, print_value: String, raw: Value, default_group2: &'static str) -> Tag {
@@ -786,9 +798,9 @@ print "    matches!(table,\n";
 }
 print "    )\n}\n\n";
 
-print "pub fn decode(table: &str, data: &[u8], model: &str) -> Vec<Tag> {\n";
+print "pub fn decode(table: &str, data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {\n";
 print "    match table {\n";
-printf("        \"%s\" => %s(data, model),\n", $_->{name}, lc $_->{name}) for @tables;
+printf("        \"%s\" => %s(data, model, dm),\n", $_->{name}, lc $_->{name}) for @tables;
 print "        _ => Vec::new(),\n    }\n}\n\n";
 
 print <<'SELECTOR';
@@ -843,13 +855,12 @@ for my $s (@selectors) {
 print "        _ => None,\n    }\n}\n\n";
 
 for my $t (@tables) {
-    printf "fn %s(data: &[u8], model: &str) -> Vec<Tag> {\n", lc $t->{name};
+    printf "fn %s(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {\n", lc $t->{name};
     printf "    const GRP2: &str = \"%s\";\n", $t->{grp2};
     printf "    const PRIO: i32 = %s;\n",
         ($t->{low_priority} ? 'crate::tag::PRIORITY_EXPLICIT_ZERO' : '0');
     print  "    let _ = model;\n" unless grep { defined $_->{re} } @{$t->{fields}};
     print  "    let mut tags = Vec::new();\n";
-    print  "    let mut dm: Vec<(&str, f64)> = Vec::new();\n";
     print  "    let _ = &dm;\n";
     for my $f (sort { $a->{off} <=> $b->{off} } @{$t->{fields}}) {
         my $reader = { int8u => 'u8_at', int8s => 'i8_at', int16u => 'u16_at',
@@ -900,7 +911,7 @@ for my $t (@tables) {
             next;
         }
         printf "%sif let Some(v) = %s(data, 0x%x) {\n", $ind, $reader, $f->{off};
-        printf "%s    dm.push((\"%s\", f64::from(v)));\n", $ind, $f->{dmname} // $f->{name};
+        printf "%s    dm.push((\"%s\".to_string(), f64::from(v)));\n", $ind, $f->{dmname} // $f->{name};
         # A RawConv can rule the value out entirely -- `$val ? $val : undef`
         # means "only when it is not zero" -- or reshape it. One this evaluator
         # declines leaves the raw value, which is the honest answer.
@@ -959,7 +970,7 @@ for my $t (@tables) {
         }
         printf "%sif let Some(sub) = data.get(0x%x..0x%x + %d) {\n",
             $ind, $sd->{off}, $sd->{off}, $sd->{len};
-        printf "%s    tags.extend(%s(sub, model));\n", $ind, lc $sd->{sub};
+        printf "%s    tags.extend(%s(sub, model, dm));\n", $ind, lc $sd->{sub};
         printf "%s}\n", $ind;
         print  "    }\n" if defined $sd->{cond};
     }

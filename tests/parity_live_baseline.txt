@@ -11,8 +11,6 @@ SonyILCE9.arw::Sony:ExposureProgram
 SonyILCE9.arw::Sony:FileFormat
 SonyILCE9.arw::Sony:FullImageSize
 SonyILCE9.arw::Sony:HDR
-SonyILCE9.arw::Sony:LensE-mountVersion
-SonyILCE9.arw::Sony:LensFirmwareVersion
 SonyILCE9.arw::Sony:LensSpec
 SonyILCE9.arw::Sony:LensSpecFeatures
 SonyILCE9.arw::Sony:LensType

@@ -41,8 +41,6 @@ SonyILCE9.arw	default	missing	0	FileFormat	ARW 2.3.5
 SonyILCE9.arw	default	missing	0	FocusDistance2	282.2 m
 SonyILCE9.arw	default	missing	0	FullImageSize	6000x4000
 SonyILCE9.arw	default	missing	0	HDR	Off; Uncorrected image
-SonyILCE9.arw	default	missing	0	LensE-mountVersion	1.70
-SonyILCE9.arw	default	missing	0	LensFirmwareVersion	Ver.01.000
 SonyILCE9.arw	default	missing	0	LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD
 SonyILCE9.arw	default	missing	0	LensSpec	E 50-300mm F4.5-6.3
 SonyILCE9.arw	default	missing	0	LensSpecFeatures	E
@@ -113,8 +111,6 @@ SonyILCE9.arw	ee	missing	0	FocusDistance2	282.2 m
 SonyILCE9.arw	ee	missing	0	FocusMode	AF-C
 SonyILCE9.arw	ee	missing	0	FullImageSize	6000x4000
 SonyILCE9.arw	ee	missing	0	HDR	Off; Uncorrected image
-SonyILCE9.arw	ee	missing	0	LensE-mountVersion	1.70
-SonyILCE9.arw	ee	missing	0	LensFirmwareVersion	Ver.01.000
 SonyILCE9.arw	ee	missing	0	LensFormat	Full-frame
 SonyILCE9.arw	ee	missing	1	LensFormat	Full-frame
 SonyILCE9.arw	ee	missing	0	LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD

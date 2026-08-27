@@ -5707,6 +5707,11 @@ fn read_makernote_ifd_with_base(
     let entries_start = ifd_offset + 2;
 
     // Pentax PreviewImage state: track PreviewImageStart and PreviewImageLength
+    // ExifTool keeps a sub-table's DATAMEMBERs on the object, not on the table,
+    // and one block reads what another stored: Tag9050 records LensMount, and
+    // Tag940c decides whether it has a LensE-mountVersion to report by it.
+    let mut sony_state = crate::tags::sony_ciphered_generated::State::new();
+
     let mut pentax_preview_start: Option<usize> = None;
     let mut pentax_preview_length: Option<usize> = None;
     // Pentax ShutterCount (0x00A7) is encrypted with Date (0x0006) and Time (0x0007).
@@ -7126,7 +7131,7 @@ fn read_makernote_ifd_with_base(
                     )
                     .is_some() =>
                 {
-                    subs::decode_sony_ciphered(t, &dispatch_ctx)
+                    subs::decode_sony_ciphered(t, &dispatch_ctx, &mut sony_state)
                 }
                 // Panasonic FaceDetInfo (tag 0x004e): binary subdirectory
                 // FORMAT=int16u, FIRST_ENTRY=0

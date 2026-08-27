@@ -300,60 +300,14 @@ pub fn dispatch_sony_camera_settings(ctx: &DispatchContext) -> Vec<Tag> {
 // Sony: Tag2010 — 9 variants by model regex
 // ============================================================================
 
-pub fn dispatch_sony_tag2010(ctx: &DispatchContext) -> Vec<Tag> {
-    let m = ctx.model;
-    let variant = if m == "NEX-5N" {
-        "Tag2010a"
-    } else if m.starts_with("SLT-A65")
-        || m.starts_with("SLT-A77")
-        || m.starts_with("NEX-7")
-        || m.starts_with("NEX-VG20")
-        || m == "Lunar"
-    {
-        "Tag2010b"
-    } else if m.starts_with("SLT-A37") || m.starts_with("SLT-A57") || m == "NEX-F3" {
-        "Tag2010c"
-    } else if m.starts_with("DSC-HX") || m.starts_with("DSC-TX") || m.starts_with("DSC-WX") {
-        "Tag2010d"
-    } else if m.starts_with("SLT-A99")
-        || m == "HV"
-        || m.starts_with("SLT-A58")
-        || m.starts_with("ILCE-3")
-        || m.starts_with("NEX-")
-        || m.starts_with("DSC-RX1")
-        || m == "DSC-RX100"
-        || m == "Stellar"
-    {
-        "Tag2010e"
-    } else if m == "DSC-RX100M2" || m.starts_with("DSC-QX1") {
-        "Tag2010f"
-    } else if m.starts_with("ILCE-7")
-        || m.starts_with("ILCE-5")
-        || m.starts_with("ILCE-6000")
-        || m.starts_with("ILCA-")
-        || m.starts_with("DSC-RX10")
-        || m.starts_with("DSC-RX100M3")
-    {
-        "Tag2010g"
-    } else if m.starts_with("ILCE-63")
-        || m.starts_with("ILCE-65")
-        || m.starts_with("ILCE-7RM2")
-        || m.starts_with("ILCE-7SM2")
-        || m.starts_with("ILCA-99M2")
-    {
-        "Tag2010h"
-    } else if m.starts_with("ILCE-") || m.starts_with("ZV-") {
-        "Tag2010i"
-    } else {
-        return Vec::new();
-    };
-
-    decode_ciphered(variant, ctx)
-}
 
 /// Decode a Sony ciphered block whose variant the generated selector resolves.
 #[must_use]
-pub fn decode_sony_ciphered(tag: u16, ctx: &DispatchContext) -> Vec<Tag> {
+pub fn decode_sony_ciphered(
+    tag: u16,
+    ctx: &DispatchContext,
+    state: &mut crate::tags::sony_ciphered_generated::State,
+) -> Vec<Tag> {
     // The conditions that pick a variant are tested against the block as it
     // sits in the file, before any deciphering -- that is where ExifTool tests
     // them, and half of them look at the first byte.
@@ -366,7 +320,7 @@ pub fn decode_sony_ciphered(tag: u16, ctx: &DispatchContext) -> Vec<Tag> {
         false,
         false,
     ) {
-        Some(variant) => decode_ciphered(variant.table, ctx),
+        Some(variant) => decode_ciphered(variant.table, ctx, state),
         None => Vec::new(),
     }
 }
@@ -375,29 +329,24 @@ pub fn decode_sony_ciphered(tag: u16, ctx: &DispatchContext) -> Vec<Tag> {
 ///
 /// The block is byte-substitution enciphered; the decoders address it by byte
 /// offset. Both halves come from ExifTool's Sony.pm, so neither can drift.
-fn decode_ciphered(variant: &str, ctx: &DispatchContext) -> Vec<Tag> {
+fn decode_ciphered(
+    variant: &str,
+    ctx: &DispatchContext,
+    state: &mut crate::tags::sony_ciphered_generated::State,
+) -> Vec<Tag> {
     let mut buf = ctx.data.to_vec();
     // Only the enciphered tables are substituted; ShotInfo and its like sit in
     // plain sight, and deciphering one of those would turn it to noise.
     if crate::tags::sony_ciphered_generated::is_enciphered(variant) {
         crate::metadata::sony_decrypt::sony_decipher(&mut buf);
     }
-    crate::tags::sony_ciphered_generated::decode(variant, &buf, ctx.model)
+    crate::tags::sony_ciphered_generated::decode(variant, &buf, ctx.model, state)
 }
 
 // ============================================================================
 // Sony: Tag9400 — variants by first byte
 // ============================================================================
 
-pub fn dispatch_sony_tag9400(ctx: &DispatchContext) -> Vec<Tag> {
-    let variant = match ctx.first_byte() {
-        0x07 | 0x09 | 0x0a => "Tag9400a",
-        0x0c => "Tag9400b",
-        0x23 | 0x24 | 0x26 | 0x28 | 0x31 | 0x32 | 0x33 | 0x41 => "Tag9400c",
-        _ => return Vec::new(),
-    };
-    decode_ciphered(variant, ctx)
-}
 
 // ============================================================================
 // Helpers
