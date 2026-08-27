@@ -11,13 +11,16 @@ name: parity
 # a lockfile commit would have caught it — ci.yml's parity job only runs on
 # tags, i.e. after the regression is already in a release candidate.
 #
-# It used to run on every push to `main`, which is a full build several times a
-# day. The gate now sits in three cheaper places: `target/release/parity` run
-# locally before each push, this weekly run, and the tag gate in ci.yml. The
-# weekly one is what still catches a regression nobody ran locally.
+# It runs on demand only. A scheduled run would re-measure unchanged inputs --
+# the code, the lockfile and EXIFTOOL_VERSION are all pinned in the repository,
+# so the answer cannot move on its own. What this is for is the other question:
+# pointing it at a *newer* ExifTool to see what a version bump would cost,
+# before deciding to port it.
+#
+# The blocking copy of this check is the `parity` job in ci.yml, which runs on
+# every tag and which the release and the crates.io publish depend on. A red
+# parity there stops the release; nothing gets published past it.
 on:
-  schedule:
-    - cron: '0 5 * * 1'      # Monday morning
   workflow_dispatch:
     inputs:
       exiftool_version:

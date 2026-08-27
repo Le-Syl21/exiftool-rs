@@ -450,7 +450,10 @@ jobs:
           overwrite: true
 
   release:
-    needs: [build, sign-windows, sign-apple]
+    # `parity` is named here as well as in the signing jobs: it is the gate
+    # that must stop a release, and inheriting it through them would let a
+    # change to the signing chain drop it without anyone noticing.
+    needs: [build, parity, sign-windows, sign-apple]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     permissions:
