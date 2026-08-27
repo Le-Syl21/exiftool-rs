@@ -55,8 +55,13 @@ impl ParseState for Probe {
 fn perl_compiles(expr: &str) -> Option<bool> {
     let out = std::process::Command::new("perl")
         .arg("-e")
-        .arg("my $val = 42; my @val = (1,2); my @prt = (1,2); my $self; \
-              eval $ARGV[0]; print 'DIES' if $@ and $@ =~ /syntax error|not terminated/")
+        // ExifTool evaluates these inside a module that runs under `strict`,
+        // and the eval inherits it -- so an undeclared variable is a compile
+        // error there just as it is here.
+        .arg("use strict; use warnings; my ($val, $self, $tag) = (42, undef, 'T'); \
+              my (@val, @prt, @raw) = ((1,2), (1,2), (1,2)); \
+              eval $ARGV[0]; \
+              print 'DIES' if $@ and $@ =~ /syntax error|not terminated|requires explicit package/")
         .arg(expr)
         .output()
         .ok()?;
@@ -155,12 +160,18 @@ fn main() {
         // printed forms, and says so by reading `@val`, `$val[0]` or `$prt[0]`;
         // everything else gets a number, which exercises the arithmetic
         // without dividing by zero.
-        let composite = ["$val[", "@val", "$prt[", "@prt"].iter().any(|m| e.contains(m));
+        let composite =
+            ["$val[", "@val", "$prt[", "@prt", "$raw[", "@raw"].iter().any(|m| e.contains(m));
         let parts = [Val::Num(3.0), Val::Num(2.0), Val::Num(7.0), Val::Num(9.0)];
+        // A single number does not exercise every conversion: some read a
+        // whole row of them and would divide by an absent one, which Perl
+        // would die on too. So a refusal is tried again with a value that has
+        // several fields before it counts as a gap.
         let done = if composite {
-            eval_composite(e, &parts, &parts, &probe).is_some()
+            eval_composite(e, &parts, &parts, &parts, &probe).is_some()
         } else {
             eval_with(e, &Val::Num(3.0), &probe).is_some()
+                || eval_with(e, &Val::Str("1 2 3 4 5 6 7 8".to_string()), &probe).is_some()
         };
         if done {
             if probe.asked.get() {

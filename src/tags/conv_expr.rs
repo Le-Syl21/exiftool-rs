@@ -22,6 +22,9 @@ pub enum Val {
     Str(String),
     /// Perl's list: what `split` and `unpack` produce and `join` consumes.
     List(Vec<Val>),
+    /// A reference to a list, which is what `\@val` passes: one argument
+    /// rather than its elements.
+    Reference(Box<Val>),
     /// What `\$val` makes: a reference, which is how a conversion says "this
     /// is binary data, not something to print". ExifTool renders it as
     /// `(Binary data N bytes, use -b option to extract)`; rendering it is the
@@ -38,6 +41,7 @@ impl Val {
             Self::Undef => 0.0,
             #[allow(clippy::cast_precision_loss)]
             Self::Binary(b) => b.len() as f64,
+            Self::Reference(v) => v.as_num(),
             Self::Str(s) => leading_number(s),
             // A list in numeric context is its length.
             #[allow(clippy::cast_precision_loss)]
@@ -50,6 +54,7 @@ impl Val {
         match self {
             Self::Undef => String::new(),
             Self::Binary(b) => from_bytes(b),
+            Self::Reference(v) => v.as_string(),
             Self::Num(n) => format_number(*n),
             Self::Str(s) => s.clone(),
             // `"@a"` interpolates a list separated by `$"`, which is a space.
@@ -61,6 +66,7 @@ impl Val {
         match self {
             Self::Undef => false,
             Self::Binary(b) => !b.is_empty(),
+            Self::Reference(v) => v.truthy(),
             Self::Num(n) => *n != 0.0,
             Self::Str(s) => !s.is_empty() && s != "0",
             Self::List(v) => !v.is_empty(),
@@ -148,10 +154,12 @@ pub fn eval_composite(
     expr: &str,
     vals: &[Val],
     prts: &[Val],
+    raws: &[Val],
     state: &dyn ParseState,
 ) -> Option<Val> {
     let mut p = new_parser(expr, &Val::List(vals.to_vec()), state);
     p.prt = Val::List(prts.to_vec());
+    p.raw = Val::List(raws.to_vec());
     run(p)
 }
 
@@ -171,6 +179,7 @@ fn new_parser<'a>(expr: &'a str, val: &Val, state: &'a dyn ParseState) -> Parser
         subject_after: None,
         quiet: 0,
         prt: Val::Undef,
+        raw: Val::Undef,
     }
 }
 
@@ -271,9 +280,11 @@ struct Parser<'a> {
     /// What `s///` or `tr///` made of its subject, for the caller to store
     /// back into whatever the match was bound to.
     subject_after: Option<Val>,
-    /// The printed values of a Composite tag's parts, read as `@prt`. Undef
-    /// for every other conversion, which has none.
+    /// The printed values of a Composite tag's parts, read as `@prt`, and
+    /// their unconverted forms, read as `@raw`. Undef for every other
+    /// conversion, which has neither.
     prt: Val,
+    raw: Val,
     /// Non-zero while evaluating a branch Perl would never have run. The
     /// parser still has to walk it to find where it ends, but a division by
     /// zero in there is not a reason to refuse the conversion -- Perl guards
@@ -283,8 +294,19 @@ struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn skip_ws(&mut self) {
-        while self.i < self.s.len() && self.s[self.i].is_ascii_whitespace() {
-            self.i += 1;
+        loop {
+            while self.i < self.s.len() && self.s[self.i].is_ascii_whitespace() {
+                self.i += 1;
+            }
+            // A `#` comment runs to the end of the line. One conversion in
+            // Olympus.pm is written across six lines with a comment naming
+            // each field between them.
+            if self.s.get(self.i) != Some(&b'#') {
+                return;
+            }
+            while self.i < self.s.len() && self.s[self.i] != b'\n' {
+                self.i += 1;
+            }
         }
     }
 
@@ -673,6 +695,10 @@ impl<'a> Parser<'a> {
                 let Some(Val::List(items)) = self.vars.get_mut(n) else {
                     return None;
                 };
+                // Perl grows the array to fit, filling the gap with undef.
+                if *k >= items.len() {
+                    items.resize(*k + 1, Val::Undef);
+                }
                 *items.get_mut(*k)? = v;
             }
         }
@@ -1115,6 +1141,11 @@ impl<'a> Parser<'a> {
         if self.peek("\\") {
             self.eat("\\");
             let v = self.unary()?;
+            // A reference to a list stays whole: what matters is that it does
+            // not flatten into an argument list.
+            if matches!(v, Val::List(_)) {
+                return Some(Val::Reference(Box::new(v)));
+            }
             return Some(Val::Binary(perl_bytes(&v)?));
         }
         if self.peek("~") {
@@ -1173,6 +1204,24 @@ impl<'a> Parser<'a> {
                 Val::Binary(b) => Val::Str(from_bytes(&b)),
                 other => other,
             });
+        }
+        if self.peek("$raw[") || self.peek("@raw") {
+            let indexed = self.peek("$raw[");
+            self.eat(if indexed { "$raw[" } else { "@raw" });
+            if self.raw == Val::Undef {
+                return None;
+            }
+            if !indexed {
+                return Some(self.raw.clone());
+            }
+            let idx = self.expr()?;
+            if !self.eat("]") {
+                return None;
+            }
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let k = idx.as_num() as usize;
+            let Val::List(items) = &self.raw else { return None };
+            return Some(items.get(k).cloned().unwrap_or(Val::Undef));
         }
         if self.peek("$prt[") {
             self.eat("$prt[");
@@ -1391,6 +1440,8 @@ impl<'a> Parser<'a> {
             }
             if self.s[self.i..].starts_with(b"$prt[")
                 || self.s[self.i..].starts_with(b"@prt")
+                || self.s[self.i..].starts_with(b"$raw[")
+                || self.s[self.i..].starts_with(b"@raw")
                 || self.s[self.i..].starts_with(b"$val[")
                 || self.s[self.i..].starts_with(b"@val")
             {
@@ -1686,6 +1737,9 @@ impl<'a> Parser<'a> {
             self.i = save;
             return None;
         }
+        // Perl passes the elements of a list, not the list: `PrintFocalRange(@val)`
+        // is three arguments. `\@val` is one, and stays whole.
+        let args = flatten(&args);
         match call_helper(&name, &args, self.state, method) {
             Some(v) => Some(v),
             None => {
@@ -2044,6 +2098,14 @@ fn flatten(args: &[Val]) -> Vec<Val> {
         }
     }
     out
+}
+
+/// What a reference points at.
+fn deref(v: &Val) -> &Val {
+    match v {
+        Val::Reference(inner) => inner,
+        other => other,
+    }
 }
 
 /// A Perl string used as binary data is a string of bytes. Ours arrives as a
@@ -2819,6 +2881,237 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
             let off = args.get(1)?.as_num() as usize;
             Val::Num(f64::from(*bytes.get(off)?))
         }
+        // Photoshop.pm ConvertPascalString: a run of length-prefixed strings.
+        "ConvertPascalString" => {
+            let bytes = perl_bytes(first)?;
+            let mut parts: Vec<String> = Vec::new();
+            let mut i = 0usize;
+            while i < bytes.len() {
+                let n = bytes[i] as usize;
+                if i + n >= bytes.len() {
+                    break;
+                }
+                parts.push(from_bytes(&bytes[i + 1..=i + n]));
+                i += n + 1;
+            }
+            let charset = match state.option("CharsetPhotoshop") {
+                Some(Val::Undef) | None => "Latin".to_string(),
+                Some(other) => {
+                    let t = other.as_string();
+                    if t.is_empty() { "Latin".to_string() } else { t }
+                }
+            };
+            decode_charset(&Val::Str(parts.join(", ")), &charset, None, state)?
+        }
+        // PostScript.pm ImageSize: a bounding box, as a width or a height.
+        "ImageSize" => {
+            let Val::List(vals) = deref(first) else { return None };
+            let want_height = args.get(1)?.truthy();
+            let two = build_regex(r"^(\d+) (\d+)", "")?;
+            let four = build_regex(r"^(\d+) (\d+) (\d+) (\d+)", "")?;
+            let (mut w, mut h) = (None, None);
+            let first_text = vals.first().filter(|v| v.truthy()).map(Val::as_string);
+            let second_text = vals.get(1).filter(|v| v.truthy()).map(Val::as_string);
+            if let Some(c) = first_text.as_deref().and_then(|t| two.captures(t)) {
+                w = c.get(1).map(|m| leading_number(m.as_str()));
+                h = c.get(2).map(|m| leading_number(m.as_str()));
+            } else if let Some(c) = second_text.as_deref().and_then(|t| four.captures(t)) {
+                let g = |i: usize| c.get(i).map_or(0.0, |m| leading_number(m.as_str()));
+                w = Some(g(3) - g(1));
+                h = Some(g(4) - g(2));
+            }
+            match if want_height { h } else { w } {
+                Some(v) => Val::Num(v),
+                None => Val::Undef,
+            }
+        }
+        // Olympus.pm ExtenderStatus: whether the teleconverter was really on.
+        "ExtenderStatus" => {
+            let text = first.as_string();
+            let info: Vec<&str> = text.split_whitespace().collect();
+            if info.len() < 2 || i64::from_str_radix(info[1], 16).unwrap_or(0) == 0 {
+                return Some(Val::Num(0.0));
+            }
+            if format!("{} {}", info[0], info[1]) != "0 04" {
+                return Some(Val::Num(1.0));
+            }
+            let lens_type = args.get(1)?.as_string();
+            let re = build_regex(r" F(\d+(\.\d+)?)", "")?;
+            let Some(c) = re.captures(&lens_type) else { return Some(Val::Num(1.0)) };
+            let max_of_lens = c.get(1).map_or(0.0, |m| leading_number(m.as_str()));
+            Val::Num(if args.get(2)?.as_num() - max_of_lens > 0.2 { 1.0 } else { 2.0 })
+        }
+        // Kodak.pm CalculateRGBLevels: white balance multipliers from a
+        // temperature and a polynomial.
+        "CalculateRGBLevels" => {
+            let a = if let Val::List(items) = deref(first) { items.clone() } else { args.to_vec() };
+            if a.get(10).is_some_and(Val::truthy) {
+                return Some(Val::Undef); // the software levels win
+            }
+            #[allow(clippy::cast_possible_truncation)]
+            let wbi = a.first()?.as_num().trunc() as i64;
+            if !(0..=3).contains(&wbi) {
+                return Some(Val::Undef);
+            }
+            #[allow(clippy::cast_sign_loss)]
+            let wbi = wbi as usize;
+            let mul: Vec<f64> =
+                a.get(wbi + 1)?.as_string().split_whitespace().take(13).map(leading_number).collect();
+            let coefs: Vec<f64> =
+                a.get(wbi + 5)?.as_string().split_whitespace().map(leading_number).collect();
+            let temp = match a.get(9).map(Val::as_num) {
+                Some(t) if t != 0.0 => t,
+                _ => 6500.0,
+            } / 100.0;
+            if mul.len() < 3 || coefs.len() < 12 {
+                return Some(Val::Undef);
+            }
+            let mut out = Vec::new();
+            let mut n = 0usize;
+            for c in 0..3 {
+                let mut num = 0.0;
+                for i in 0..4 {
+                    num += coefs[n] * temp.powi(i);
+                    n += 1;
+                }
+                out.push(format_number(2048.0 / (num * mul[c])));
+            }
+            Val::Str(out.join(" "))
+        }
+        // Olympus.pm PrintAFAreas: each area as its two corners.
+        "PrintAFAreas" => {
+            let text = first.as_string();
+            let mut parts = Vec::new();
+            for pt in text.split_whitespace() {
+                let v = leading_number(pt);
+                if v == 0.0 {
+                    continue;
+                }
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let n = v as u32;
+                let name = match n {
+                    0x3679_4285 => "Left ",
+                    0x7979_8585 => "Center ",
+                    0xBD79_C985 => "Right ",
+                    _ => "",
+                };
+                let b = n.to_be_bytes();
+                parts.push(format!("{name}({},{})-({},{})", b[0], b[1], b[2], b[3]));
+            }
+            Val::Str(if parts.is_empty() { "none".to_string() } else { parts.join(", ") })
+        }
+        // Pentax.pm DecodeAFPoints: a bit field, so many bits per point.
+        "DecodeAFPoints" => {
+            let text = first.as_string();
+            let bytes: Vec<i64> = text
+                .split_whitespace()
+                .map(|b| {
+                    #[allow(clippy::cast_possible_truncation)]
+                    let v = leading_number(b).trunc() as i64;
+                    v
+                })
+                .collect();
+            if bytes.is_empty() {
+                return Some(Val::Str("(none)".into()));
+            }
+            #[allow(clippy::cast_possible_truncation)]
+            let num = args.get(1)?.as_num().trunc() as i64;
+            #[allow(clippy::cast_possible_truncation)]
+            let bits = args.get(2)?.as_num().trunc() as i64;
+            #[allow(clippy::cast_possible_truncation)]
+            let mask = args.get(3)?.as_num().trunc() as i64;
+            let bit_val = args.get(4).map(Val::as_num);
+            let mut next = 1usize;
+            let mut byte = bytes[0];
+            let mut shift = 8 - bits;
+            let mut set = Vec::new();
+            let mut i = 1i64;
+            loop {
+                let field = (byte >> shift) & mask;
+                #[allow(clippy::cast_precision_loss)]
+                let hit = match bit_val {
+                    Some(want) => field as f64 == want,
+                    None => field != 0,
+                };
+                if hit {
+                    set.push(i.to_string());
+                }
+                i += 1;
+                if i > num {
+                    break;
+                }
+                shift -= bits;
+                if shift < 0 {
+                    let Some(b) = bytes.get(next) else { break };
+                    byte = *b;
+                    next += 1;
+                    shift += 8;
+                }
+            }
+            Val::Str(set.join(","))
+        }
+        // Canon.pm PrintAFPoints1D: the focus point, then the points in use.
+        "PrintAFPoints1D" => print_af_points_1d(&perl_bytes(first)?)?,
+        // Exif.pm PrintSFR: named columns, then a table of rationals.
+        "PrintSFR" => print_sfr(&perl_bytes(first)?)?,
+        // IPTC's picture number: a manufacturer, equipment, date and serial.
+        "ConvertPictureNumber" => {
+            let bytes = perl_bytes(first)?;
+            if bytes.iter().all(|b| *b == 0) && bytes.len() == 16 {
+                return Some(Val::Str("Unknown".into()));
+            }
+            if bytes.len() < 16 {
+                return Some(Val::Str("<format error>".into()));
+            }
+            const MAKERS: [&str; 12] = [
+                "Associated Press, USA",
+                "Eastman Kodak Co, USA",
+                "Hasselblad Electronic Imaging, Sweden",
+                "Tecnavia SA, Switzerland",
+                "Nikon Corporation, Japan",
+                "Coatsworth Communications Inc, Canada",
+                "Agence France Presse, France",
+                "T/One Inc, USA",
+                "Associated Newspapers, UK",
+                "Reuters London",
+                "Sandia Imaging Systems Inc, USA",
+                "Visualize, Spain",
+            ];
+            let v = unpack_template("nNA8n", &bytes)?;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let maker = v.first()?.as_num() as usize;
+            let mut out = v.first()?.as_string();
+            if let Some(name) = maker.checked_sub(1).and_then(|k| MAKERS.get(k)) {
+                out.push_str(&format!(" ({name})"));
+            }
+            out.push_str(&format!(", equip {}", v.get(1)?.as_string()));
+            let date = build_regex(r"(\d{4})(\d{2})(\d{2})", "")?
+                .replace(&v.get(2)?.as_string(), "${1}:${2}:${3}")
+                .into_owned();
+            out.push_str(&format!(", {date}, no. {}", v.get(3)?.as_string()));
+            Val::Str(out)
+        }
+        // PDF.pm ConvertPDFDate: PDF's own layout into EXIF's.
+        "ConvertPDFDate" => Val::Str(convert_pdf_date(&first.as_string())?),
+        // QuickTime.pm GetRotationAngle: the angle a display matrix implies.
+        "GetRotationAngle" => {
+            let text = first.as_string();
+            let a: Vec<f64> = text.split_whitespace().map(leading_number).collect();
+            if a.len() < 2 || (a[0] == 0.0 && a[1] == 0.0) {
+                return Some(Val::Undef);
+            }
+            // ExifTool uses a truncated pi here, and the result is rounded to
+            // three decimals, so the difference shows.
+            let mut angle = a[1].atan2(a[0]) * 180.0 / 3.14159;
+            if angle < 0.0 {
+                angle += 360.0;
+            }
+            Val::Num((angle * 1000.0 + 0.5).trunc() / 1000.0)
+        }
+        // ExifTool.pm ToFloat: the arguments become plain numbers in place.
+        // Nothing reads its return value; the conversion goes on to use the
+        // array it changed.
+        "ToFloat" => Val::Undef,
         // GPS.pm PrintTimeStamp: trims the fractional seconds to microseconds.
         "PrintTimeStamp" => Val::Str(print_time_stamp(&first.as_string())),
         // XMP.pm ConvertXMPDate: an XMP date back into EXIF's layout.
@@ -2927,6 +3220,103 @@ fn to_degrees(text: &str) -> Option<f64> {
     Some(if neg { -deg } else { deg })
 }
 
+/// PDF.pm ConvertPDFDate: `D:20260827112202+02'00'` into EXIF's layout.
+fn convert_pdf_date(date: &str) -> Option<String> {
+    let mut date = date.strip_prefix("D:").unwrap_or(date).to_string();
+    const DEFAULT: &str = "00000101000000";
+    if date.len() < DEFAULT.len() {
+        date.push_str(&DEFAULT[date.len()..]);
+    }
+    let re = build_regex(r"^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(.*)", "")?;
+    let Some(c) = re.captures(&date) else { return Some(date) };
+    let g = |i: usize| c.get(i).map_or("", |m| m.as_str());
+    let mut out = format!("{}:{}:{} {}:{}:{}", g(1), g(2), g(3), g(4), g(5), g(6));
+    let tz = g(7);
+    if !tz.is_empty() {
+        if build_regex(r"^\s*Z", "i")?.is_match(tz) {
+            // Anything after the Z is a malformed offset OS X used to add.
+            out.push('Z');
+        } else if let Some(c) = build_regex(r"^\s*([-+])\s*(\d+)[': ]+(\d*)", "")?.captures(tz) {
+            let g = |i: usize| c.get(i).map_or("", |m| m.as_str());
+            let minutes = if g(3).is_empty() { "00" } else { g(3) };
+            out.push_str(&format!("{}{}:{minutes}", g(1), g(2)));
+        }
+    }
+    Some(out)
+}
+
+/// Canon.pm PrintAFPoints1D: the 1D bodies name their points by row letter
+/// and column number, laid out in this fixed grid.
+fn print_af_points_1d(val: &[u8]) -> Option<Val> {
+    if val.len() != 8 {
+        return Some(Val::Str("Unknown".into()));
+    }
+    const FOCUS_PTS: [u8; 61] = [
+        0, 0, 0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0e, 0x10, 0, 0, 0x21, 0x23, 0x25, 0x27, 0x29, 0x2b,
+        0x2d, 0x2f, 0x31, 0x33, 0x40, 0x42, 0x44, 0x46, 0x48, 0x4a, 0x4c, 0x4d, 0x50, 0x52, 0x54,
+        0x61, 0x63, 0x65, 0x67, 0x69, 0x6b, 0x6d, 0x6f, 0x71, 0x73, 0, 0, 0x84, 0x86, 0x88, 0x8a,
+        0x8c, 0x8e, 0x90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
+    const ROWS: &str = "  AAAAAAA  BBBBBBBBBBCCCCCCCCCCCDDDDDDDDDD  EEEEEEE     ";
+    let focus = val[0];
+    // `unpack('b*', ...)` is the bits of each byte, lowest first.
+    let bits: Vec<bool> = val[1..]
+        .iter()
+        .flat_map(|b| (0..8).map(move |k| b >> k & 1 == 1))
+        .collect();
+    let rows: Vec<char> = ROWS.chars().collect();
+    let (mut focusing, mut points, mut last_row, mut col) = (None, Vec::new(), ' ', 0usize);
+    for (k, pt) in FOCUS_PTS.iter().enumerate() {
+        let Some(row) = rows.get(k).copied() else { break };
+        col = if row == last_row { col + 1 } else { 1 };
+        last_row = row;
+        let name = format!("{row}{col}");
+        if focus == *pt && focusing.is_none() {
+            focusing = Some(name.clone());
+        }
+        if bits.get(k).copied().unwrap_or(false) {
+            points.push(name);
+        }
+    }
+    let focusing = focusing.unwrap_or_else(|| {
+        if focus == 0xff { "Auto".to_string() } else { format!("Unknown (0x{focus:02x})") }
+    });
+    Some(Val::Str(format!("{focusing} ({})", points.join(","))))
+}
+
+/// Exif.pm PrintSFR: a spatial frequency response table -- column names, then
+/// one 64-bit rational per cell.
+fn print_sfr(val: &[u8]) -> Option<Val> {
+    if val.len() <= 4 {
+        return Some(Val::Str(from_bytes(val)));
+    }
+    let n = usize::from(u16::from_be_bytes([val[0], val[1]]));
+    let m = usize::from(u16::from_be_bytes([val[2], val[3]]));
+    let rest = from_bytes(&val[4..]);
+    let mut cols: Vec<String> = perl_split("\\x00", false, &rest, Some((n + 1) as f64))?;
+    let pos = val.len().checked_sub(8 * n * m)?;
+    if cols.len() != n + 1 || pos < 4 {
+        return Some(Val::Str(from_bytes(val)));
+    }
+    cols.pop();
+    for (i, col) in cols.iter_mut().enumerate() {
+        let mut rows = Vec::new();
+        for j in 0..m {
+            let at = pos + 8 * (i + j * n);
+            let num = u32::from_be_bytes(val.get(at..at + 4)?.try_into().ok()?);
+            let den = u32::from_be_bytes(val.get(at + 4..at + 8)?.try_into().ok()?);
+            rows.push(if den == 0 {
+                if num == 0 { "undef".to_string() } else { "inf".to_string() }
+            } else {
+                format_number(f64::from(num) / f64::from(den))
+            });
+        }
+        col.push('=');
+        col.push_str(&rows.join(","));
+    }
+    Some(Val::Str(cols.join("; ")))
+}
+
 /// The float ExifTool digs out of a value that may carry units or other
 /// text around it -- the regex CalculateLV and ToFloat both use.
 fn perl_float(v: &str) -> Option<f64> {
@@ -3009,6 +3399,22 @@ fn decode_charset(
     use crate::formats::font_charset;
 
     let bytes = perl_bytes(val)?;
+    // `$from or $from = $$self{OPTIONS}{Charset}`: an empty charset means the
+    // reader's own, and a reader that was not told otherwise reads UTF-8 --
+    // which is also what it converts to, so there is nothing to do.
+    let named;
+    let from = if from.is_empty() {
+        named = state.option("Charset").map_or_else(
+            || "UTF8".to_string(),
+            |c| match c {
+                Val::Undef => "UTF8".to_string(),
+                other => other.as_string(),
+            },
+        );
+        named.as_str()
+    } else {
+        from
+    };
     if bytes.is_empty() || from == "UTF8" || from == "ASCII" {
         return Some(val.clone());
     }
@@ -3927,8 +4333,7 @@ mod tests {
     /// keeps the raw value, which is honest, where a wrong conversion is not.
     #[test]
     fn unsupported_expressions_decline() {
-        assert!(eval("Image::ExifTool::Olympus::PrintAFAreas($val)", &n(1.0)).is_none());
-        assert!(eval("Image::ExifTool::XMP::PrintLensID($self, @val)", &n(1.0)).is_none());
+        assert!(eval("Image::ExifTool::TNEF::DecompressRTF($self,$val)", &n(1.0)).is_none());
         assert!(eval("$$self{Model}", &n(1.0)).is_none());
         assert!(eval("$val / 0", &n(1.0)).is_none());
     }
