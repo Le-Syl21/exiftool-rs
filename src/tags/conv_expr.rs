@@ -142,9 +142,26 @@ pub fn eval(expr: &str, val: &Val) -> Option<Val> {
     eval_with(expr, val, &())
 }
 
+/// A Composite tag's conversion, which is handed both the values it is built
+/// from (`@val`, `$val[0]`) and their printed forms (`@prt`, `$prt[0]`).
+pub fn eval_composite(
+    expr: &str,
+    vals: &[Val],
+    prts: &[Val],
+    state: &dyn ParseState,
+) -> Option<Val> {
+    let mut p = new_parser(expr, &Val::List(vals.to_vec()), state);
+    p.prt = Val::List(prts.to_vec());
+    run(p)
+}
+
 /// As [`eval`], with the file-level parse state the conversion may read.
 pub fn eval_with(expr: &str, val: &Val, state: &dyn ParseState) -> Option<Val> {
-    let mut p = Parser {
+    run(new_parser(expr, val, state))
+}
+
+fn new_parser<'a>(expr: &'a str, val: &Val, state: &'a dyn ParseState) -> Parser<'a> {
+    Parser {
         s: expr.as_bytes(),
         i: 0,
         val: val.clone(),
@@ -153,10 +170,16 @@ pub fn eval_with(expr: &str, val: &Val, state: &dyn ParseState) -> Option<Val> {
         state,
         subject_after: None,
         quiet: 0,
-    };
-    // These conversions are sometimes two statements: `$val =~ s/ +$//; $val`
-    // substitutes and then hands back the value it changed. The last one is the
-    // result, as in Perl.
+        prt: Val::Undef,
+    }
+}
+
+/// Run a prepared parser to the end of its source.
+///
+/// These conversions are sometimes two statements: `$val =~ s/ +$//; $val`
+/// substitutes and then hands back the value it changed. The last one is the
+/// result, as in Perl.
+fn run(mut p: Parser) -> Option<Val> {
     p.skip_require();
     let mut last = p.statement()?;
     loop {
@@ -248,6 +271,9 @@ struct Parser<'a> {
     /// What `s///` or `tr///` made of its subject, for the caller to store
     /// back into whatever the match was bound to.
     subject_after: Option<Val>,
+    /// The printed values of a Composite tag's parts, read as `@prt`. Undef
+    /// for every other conversion, which has none.
+    prt: Val,
     /// Non-zero while evaluating a branch Perl would never have run. The
     /// parser still has to walk it to find where it ends, but a division by
     /// zero in there is not a reason to refuse the conversion -- Perl guards
@@ -1117,6 +1143,24 @@ impl<'a> Parser<'a> {
             self.eat("@val");
             return Some(self.val.clone());
         }
+        if self.peek("$prt[") {
+            self.eat("$prt[");
+            let idx = self.expr()?;
+            if !self.eat("]") {
+                return None;
+            }
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let k = idx.as_num() as usize;
+            let Val::List(items) = &self.prt else { return None };
+            return Some(items.get(k).cloned().unwrap_or(Val::Undef));
+        }
+        if self.peek("@prt") {
+            self.eat("@prt");
+            if self.prt == Val::Undef {
+                return None;
+            }
+            return Some(self.prt.clone());
+        }
         if self.eat("$val") {
             return Some(self.val.clone());
         }
@@ -1310,6 +1354,15 @@ impl<'a> Parser<'a> {
                 };
                 out.push_str(&v.as_string());
                 self.i += end + 1;
+                continue;
+            }
+            if self.s[self.i..].starts_with(b"$prt[")
+                || self.s[self.i..].starts_with(b"@prt")
+                || self.s[self.i..].starts_with(b"$val[")
+                || self.s[self.i..].starts_with(b"@val")
+            {
+                let v = self.primary()?;
+                out.push_str(&v.as_string());
                 continue;
             }
             if self.s[self.i..].starts_with(b"$val") {

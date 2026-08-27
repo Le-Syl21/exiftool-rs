@@ -14,7 +14,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use exiftool_rs::tags::conv_expr::{eval_with, ParseState, Val};
+use exiftool_rs::tags::conv_expr::{eval_composite, eval_with, ParseState, Val};
 
 /// Answers every parse-state member, and remembers that it was asked.
 ///
@@ -38,6 +38,29 @@ impl ParseState for Probe {
         self.asked.set(true);
         Some(Val::Undef)
     }
+
+    fn byte_order(&self) -> Option<&str> {
+        self.asked.set(true);
+        Some("II")
+    }
+}
+
+/// Whether Perl itself can compile the expression.
+///
+/// Some of these cannot be evaluated by ExifTool either -- `PrintConv =>
+/// '$val m'` in MXF.pm is a search pattern that is never terminated -- and its
+/// own eval dies on them, leaving the raw value. Refusing those is the same
+/// answer ExifTool gives, so they are counted apart from the real gaps rather
+/// than held against the evaluator or quietly forgiven.
+fn perl_compiles(expr: &str) -> Option<bool> {
+    let out = std::process::Command::new("perl")
+        .arg("-e")
+        .arg("my $val = 42; my @val = (1,2); my @prt = (1,2); my $self; \
+              eval $ARGV[0]; print 'DIES' if $@ and $@ =~ /syntax error|not terminated/")
+        .arg(expr)
+        .output()
+        .ok()?;
+    Some(!String::from_utf8_lossy(&out.stdout).contains("DIES"))
 }
 
 /// Every PrintConv/ValueConv written as a Perl expression, with its occurrence
@@ -128,15 +151,18 @@ fn main() {
 
     for (n, e) in &exprs {
         let probe = Probe::default();
-        // A Composite tag is handed the list of values it is built from, and
-        // says so by reading `@val` or `$val[0]`; everything else gets a
-        // number, which exercises the arithmetic without dividing by zero.
-        let probe_val = if e.contains("$val[") || e.contains("@val") {
-            Val::List(vec![Val::Num(3.0), Val::Str("S".to_string()), Val::Num(7.0)])
+        // A Composite tag is handed the values it is built from and their
+        // printed forms, and says so by reading `@val`, `$val[0]` or `$prt[0]`;
+        // everything else gets a number, which exercises the arithmetic
+        // without dividing by zero.
+        let composite = ["$val[", "@val", "$prt[", "@prt"].iter().any(|m| e.contains(m));
+        let parts = [Val::Num(3.0), Val::Str("S".to_string()), Val::Num(7.0), Val::Num(9.0)];
+        let done = if composite {
+            eval_composite(e, &parts, &parts, &probe).is_some()
         } else {
-            Val::Num(3.0)
+            eval_with(e, &Val::Num(3.0), &probe).is_some()
         };
-        if eval_with(e, &probe_val, &probe).is_some() {
+        if done {
             if probe.asked.get() {
                 state_d += 1;
                 state_o += n;
@@ -150,6 +176,24 @@ fn main() {
         }
     }
 
+    // Split the refusals: a gap in the evaluator, or an expression Perl
+    // cannot compile either.
+    let mut broken_o = 0usize;
+    let mut broken: Vec<(usize, String)> = Vec::new();
+    let mut perl_missing = false;
+    misses.retain(|(n, e)| match perl_compiles(e) {
+        Some(false) => {
+            broken_o += n;
+            broken.push((*n, e.clone()));
+            false
+        }
+        Some(true) => true,
+        None => {
+            perl_missing = true;
+            true
+        }
+    });
+
     let total_o = ok_o + no_o;
     let total_d = ok_d + no_d;
     println!("COUNTER ONE — conversion expressions understood by tags::conv_expr");
@@ -157,6 +201,20 @@ fn main() {
     println!("  distinct    : {ok_d} / {total_d}");
     println!("  state-fed   : {state_o} occurrences ({state_d} distinct) read a parse-state");
     println!("                member, and are right only once the reader tracks it");
+    if !broken.is_empty() {
+        println!(
+            "  unevaluable: {broken_o} occurrences ({} distinct) are not valid Perl -- ExifTool's",
+            broken.len()
+        );
+        println!("                own eval dies on them, so it prints the raw value too:");
+        for (n, e) in &broken {
+            let shown: String = e.chars().take(72).collect();
+            println!("     {n:5}  {shown}");
+        }
+    }
+    if perl_missing {
+        println!("  (no perl on PATH: refusals could not be checked against it)");
+    }
     println!();
     println!("  still refused, by how often ExifTool uses it:");
     for (n, e) in misses.iter().take(25) {
