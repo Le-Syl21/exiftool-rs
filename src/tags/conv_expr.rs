@@ -160,6 +160,8 @@ pub fn eval_with(expr: &str, val: &Val, state: &dyn ParseState) -> Option<Val> {
 enum LValue {
     /// `$val` itself, which several conversions rewrite before returning it.
     TheValue,
+    /// One of the values a Composite tag is built from.
+    ValElem(usize),
     Var(String),
     Elem(String, usize),
 }
@@ -481,6 +483,19 @@ impl<'a> Parser<'a> {
             && !self.s.get(self.i + 4).is_some_and(|c| ident_char(*c))
         {
             self.i += 4;
+            if self.peek("[") {
+                self.eat("[");
+                let Some(idx) = self.expr() else {
+                    self.i = save;
+                    return None;
+                };
+                if !self.eat("]") {
+                    self.i = save;
+                    return None;
+                }
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                return Some(LValue::ValElem(idx.as_num() as usize));
+            }
             return Some(LValue::TheValue);
         }
         if self.s[self.i..].starts_with(b"@") {
@@ -519,6 +534,10 @@ impl<'a> Parser<'a> {
     fn read_lvalue(&self, target: &LValue) -> Option<Val> {
         match target {
             LValue::TheValue => Some(self.val.clone()),
+            LValue::ValElem(k) => match &self.val {
+                Val::List(items) => Some(items.get(*k).cloned().unwrap_or(Val::Undef)),
+                _ => None,
+            },
             LValue::Var(n) => self.vars.get(n).cloned(),
             LValue::Elem(n, k) => match self.vars.get(n) {
                 Some(Val::List(items)) => items.get(*k).cloned(),
@@ -530,6 +549,10 @@ impl<'a> Parser<'a> {
     fn write_lvalue(&mut self, target: &LValue, v: Val) -> Option<()> {
         match target {
             LValue::TheValue => self.val = v,
+            LValue::ValElem(k) => {
+                let Val::List(items) = &mut self.val else { return None };
+                *items.get_mut(*k)? = v;
+            }
             LValue::Var(n) => {
                 self.vars.insert(n.clone(), v);
             }
@@ -1397,15 +1420,17 @@ impl<'a> Parser<'a> {
             self.eat("$self->");
         } else if self.peek("Image::ExifTool::") {
             self.eat("Image::ExifTool::");
-            // Skip the module qualifier, e.g. `Exif::`.
+            // Skip the module qualifier, e.g. `Exif::` -- but a good number of
+            // these live in ExifTool.pm itself and have none.
+            let unqualified = self.i;
             while self.i < self.s.len() {
                 if self.s[self.i..].starts_with(b"::") {
                     self.i += 2;
                     break;
                 }
-                if !(self.s[self.i] as char).is_alphanumeric() && self.s[self.i] != b'_' {
-                    self.i = save;
-                    return None;
+                if !ident_char(self.s[self.i]) {
+                    self.i = unqualified;
+                    break;
                 }
                 self.i += 1;
             }
@@ -1567,12 +1592,17 @@ fn format_sprintf(fmt: &str, args: &[Val]) -> Option<String> {
         }
         let mut plus = false;
         let mut zero = false;
+        let mut left = false;
         let mut width = String::new();
         let mut prec: Option<usize> = None;
         while let Some(&c) = it.peek() {
             match c {
-                '+' => {
-                    plus = true;
+                '+' | ' ' => {
+                    plus = c == '+';
+                    it.next();
+                }
+                '-' => {
+                    left = true;
                     it.next();
                 }
                 '0' if width.is_empty() => {
@@ -1606,9 +1636,18 @@ fn format_sprintf(fmt: &str, args: &[Val]) -> Option<String> {
         let v = arg.next().unwrap_or(&missing);
         let mut s = match conv {
             'd' | 'i' => {
-                // Perl truncates towards zero here; it does not round.
+                // Perl truncates towards zero here; it does not round. A
+                // precision on an integer is a minimum number of digits.
                 let n = v.as_num().trunc() as i64;
-                if plus && n >= 0 { format!("+{n}") } else { format!("{n}") }
+                let digits = format!("{:0>width$}", n.unsigned_abs(), width = prec.unwrap_or(1));
+                let sign = if n < 0 {
+                    "-"
+                } else if plus {
+                    "+"
+                } else {
+                    ""
+                };
+                format!("{sign}{digits}")
             }
             // `%c` is the character with that code.
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -1642,16 +1681,29 @@ fn format_sprintf(fmt: &str, args: &[Val]) -> Option<String> {
                 }
                 t
             }
-            'x' => format!("{:x}", v.as_num().round() as i64),
-            'X' => format!("{:X}", v.as_num().round() as i64),
-            's' => v.as_string(),
+            'x' => format!("{:0>width$x}", to_u64(v)?, width = prec.unwrap_or(1)),
+            'X' => format!("{:0>width$X}", to_u64(v)?, width = prec.unwrap_or(1)),
+            'o' => format!("{:0>width$o}", to_u64(v)?, width = prec.unwrap_or(1)),
+            'b' => format!("{:0>width$b}", to_u64(v)?, width = prec.unwrap_or(1)),
+            // A precision on a string is a maximum length.
+            's' => {
+                let t = v.as_string();
+                match prec {
+                    Some(p) if t.chars().count() > p => t.chars().take(p).collect(),
+                    _ => t,
+                }
+            }
             _ => return None,
         };
         if let Ok(w) = width.parse::<usize>() {
-            while s.len() < w {
-                if zero {
-                    let rest = s.clone();
-                    s = format!("0{rest}");
+            // Zero padding goes after the sign, not before it: Perl prints
+            // -5 in `%05d` as `-0005`.
+            let sign_len = usize::from(s.starts_with(['-', '+']) && zero && !left);
+            while s.chars().count() < w {
+                if left {
+                    s.push(' ');
+                } else if zero {
+                    s.insert(sign_len, '0');
                 } else {
                     s.insert(0, ' ');
                 }
@@ -2117,6 +2169,103 @@ fn call_helper(name: &str, args: &[Val]) -> Option<Val> {
                 Val::Str(format_sprintf(&f, &[Val::Num(v / d)])?)
             }
         }
+        // ASF.pm GetGUID: sixteen bytes, byte-swapped into the printed order.
+        "GetGUID" => {
+            let bytes = perl_bytes(first)?;
+            if bytes.len() != 16 {
+                return Some(first.clone());
+            }
+            let parts = unpack_template("VvvNN", &bytes)?;
+            let hex: String = pack_template("NnnNN", &parts)?
+                .iter()
+                .map(|b| format!("{b:02X}"))
+                .collect();
+            Val::Str(format!(
+                "{}-{}-{}-{}-{}",
+                &hex[0..8],
+                &hex[8..12],
+                &hex[12..16],
+                &hex[16..20],
+                &hex[20..]
+            ))
+        }
+        // Canon.pm CanonEv: the low five bits are a fraction of a stop, with
+        // two of the codes standing for a third and two thirds.
+        "CanonEv" => {
+            let v = first.as_num();
+            let sign = if v < 0.0 { -1.0 } else { 1.0 };
+            #[allow(clippy::cast_possible_truncation)]
+            let n = v.abs().trunc() as i64;
+            let mut frac = f64::from(u32::try_from(n & 0x1f).ok()?);
+            #[allow(clippy::cast_precision_loss)]
+            let whole = (n - (n & 0x1f)) as f64;
+            if frac == 12.0 {
+                frac = 32.0 / 3.0;
+            } else if frac == 20.0 {
+                frac = 64.0 / 3.0;
+            }
+            Val::Num(sign * (whole + frac) / 32.0)
+        }
+        // CanonVRD.pm ToneCurvePrint: a count, then that many (x,y) pairs.
+        "ToneCurvePrint" => {
+            let text = first.as_string();
+            let vals: Vec<&str> = text.split_whitespace().collect();
+            if vals.len() != 21 {
+                return Some(first.clone());
+            }
+            let Ok(n) = vals[0].parse::<usize>() else {
+                return Some(first.clone());
+            };
+            if !(2..=10).contains(&n) {
+                return Some(first.clone());
+            }
+            Val::Str(
+                (0..n)
+                    .map(|k| format!("({},{})", vals[1 + k * 2], vals[2 + k * 2]))
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            )
+        }
+        // LNK.pm DOSTime: a packed DOS date and time, in one 32-bit value.
+        "DOSTime" => {
+            let v = to_u64(first)?;
+            Val::Str(format!(
+                "{:04}:{:02}:{:02} {:02}:{:02}:{:02}",
+                ((v >> 9) & 0x7f) + 1980,
+                (v >> 5) & 0x0f,
+                v & 0x1f,
+                (v >> 27) & 0x1f,
+                (v >> 21) & 0x3f,
+                (v >> 15) & 0x3e
+            ))
+        }
+        // GPS.pm ConvertTimeStamp: three numbers into a clock time, with the
+        // fraction of a second kept only as far as it goes.
+        "ConvertTimeStamp" => Val::Str(convert_gps_time_stamp(&first.as_string())?),
+        // RIFF.pm ConvertRIFFDate: three layouts, none of them EXIF's.
+        "ConvertRIFFDate" => Val::Str(convert_riff_date(&first.as_string())),
+        // ExifTool.pm ConvertTimeSpan: ticks, at so many seconds each.
+        "ConvertTimeSpan" => convert_time_span(first, args.get(1).map(Val::as_num))?,
+        // ExifTool.pm DecodeBits, with no lookup table: the numbers of the
+        // bits that are set. A lookup is a hash we have no way to name here,
+        // so that form is refused rather than answered with the raw numbers.
+        "DecodeBits" => {
+            if args.get(1).is_some_and(|l| *l != Val::Undef) {
+                return None;
+            }
+            let bits = args.get(2).map_or(32, |b| b.as_num() as i64);
+            let mut set = Vec::new();
+            for (chunk, word) in first.as_string().split_whitespace().enumerate() {
+                let v: u64 = word.parse().ok()?;
+                #[allow(clippy::cast_sign_loss)]
+                for i in 0..bits.clamp(0, 64) {
+                    if v & (1u64 << i) != 0 {
+                        set.push((i + chunk as i64 * bits).to_string());
+                    }
+                }
+            }
+            Val::Str(if set.is_empty() { "(none)".to_string() } else { set.join(",") })
+        }
         // GPS.pm PrintTimeStamp: trims the fractional seconds to microseconds.
         "PrintTimeStamp" => Val::Str(print_time_stamp(&first.as_string())),
         // XMP.pm ConvertXMPDate: an XMP date back into EXIF's layout.
@@ -2223,6 +2372,90 @@ fn to_degrees(text: &str) -> Option<f64> {
         .next()
         .is_some_and(|t| t.eq_ignore_ascii_case("S") || t.eq_ignore_ascii_case("W"));
     Some(if neg { -deg } else { deg })
+}
+
+/// GPS.pm ConvertTimeStamp: hours, minutes and seconds as three numbers,
+/// re-normalised and printed as a clock time.
+fn convert_gps_time_stamp(val: &str) -> Option<String> {
+    let mut it = val.split_whitespace().map(|p| p.parse::<f64>().unwrap_or(0.0));
+    let (h, m, s) = (it.next().unwrap_or(0.0), it.next().unwrap_or(0.0), it.next().unwrap_or(0.0));
+    let mut f = (h * 60.0 + m) * 60.0 + s;
+    let mut h = (f / 3600.0).trunc();
+    f -= h * 3600.0;
+    let mut m = (f / 60.0).trunc();
+    f -= m * 60.0;
+    let mut ss = format_sprintf("%012.9f", &[Val::Num(f)])?;
+    if leading_number(&ss) >= 60.0 {
+        ss = "00".to_string();
+        m += 1.0;
+        if m >= 60.0 {
+            m -= 60.0;
+            h += 1.0;
+        }
+    } else {
+        // Trim the trailing zeros, and the decimal point with them.
+        ss = ss.trim_end_matches('0').trim_end_matches('.').to_string();
+    }
+    Some(format!("{h:02}:{m:02}:{ss}"))
+}
+
+/// RIFF.pm ConvertRIFFDate: the AVI form, and the two cameras that got it
+/// wrong in their own ways.
+fn convert_riff_date(val: &str) -> String {
+    const MONTHS: [&str; 12] = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    let part: Vec<&str> = val.split_whitespace().collect();
+    if part.len() >= 5 {
+        let name = part[1].to_lowercase();
+        if let Some(mon) = MONTHS.iter().position(|m| m.to_lowercase() == name) {
+            return format!("{:0>4}:{:02}:{:0>2} {}", part[4], mon + 1, part[2], part[3]);
+        }
+    }
+    // "2001/ 1/27  1:42PM", and "2005/11/28/ 09:19".
+    if let Some(re) = build_regex(r"(\d{4})/\s*(\d+)/\s*(\d+)/?\s+(\d+):\s*(\d+)\s*(P?)", "") {
+        if let Some(c) = re.captures(val) {
+            let g = |i: usize| c.get(i).map_or("", |m| m.as_str());
+            let hour = g(4).parse::<i64>().unwrap_or(0) + if g(6) == "P" { 12 } else { 0 };
+            return format!(
+                "{:0>4}:{:0>2}:{:0>2} {hour:02}:{:0>2}:00",
+                g(1),
+                g(2),
+                g(3),
+                g(5)
+            );
+        }
+    }
+    // "2002-12-16  15:35:01".
+    if let Some(re) = build_regex(r"(\d{4})[-/](\d+)[-/](\d+)\s+(\d+:\d+:\d+)", "") {
+        if let Some(c) = re.captures(val) {
+            let g = |i: usize| c.get(i).map_or("", |m| m.as_str());
+            return format!("{}:{}:{} {}", g(1), g(2), g(3), g(4));
+        }
+    }
+    val.to_string()
+}
+
+/// ExifTool.pm ConvertTimeSpan: a count of ticks into a readable span. A value
+/// that is not a number is passed through untouched, as Perl does.
+fn convert_time_span(v: &Val, mult: Option<f64>) -> Option<Val> {
+    let text = v.as_string();
+    if text.trim().parse::<f64>().is_err() || v.as_num() == 0.0 {
+        return Some(v.clone());
+    }
+    let mult = mult.unwrap_or(0.0);
+    let val = if mult == 0.0 { v.as_num() } else { v.as_num() * mult };
+    Some(Val::Str(if val < 60.0 {
+        format!("{} seconds", format_number(val))
+    } else if val < 3600.0 {
+        let fmt = if mult >= 60.0 { "%d" } else { "%.1f" };
+        let plural = if val == 60.0 && mult != 0.0 { "" } else { "s" };
+        format!("{} minute{plural}", format_sprintf(fmt, &[Val::Num(val / 60.0)])?)
+    } else if val < 24.0 * 3600.0 {
+        format!("{} hours", format_sprintf("%.1f", &[Val::Num(val / 3600.0)])?)
+    } else {
+        format!("{} days", format_sprintf("%.1f", &[Val::Num(val / (24.0 * 3600.0))])?)
+    }))
 }
 
 /// GPS.pm PrintTimeStamp: seconds kept to microseconds, zero-padded below ten.
@@ -2455,6 +2688,67 @@ mod tests {
         );
     }
 
+    /// The named printers ported this round. Every expected value came out of
+    /// Perl before it was written down.
+    #[test]
+    fn the_named_printers() {
+        let guid: String = (1u8..=16).map(|b| b as char).collect();
+        assert_eq!(
+            eval("Image::ExifTool::ASF::GetGUID($val)", &Val::Str(guid)).unwrap().as_string(),
+            "04030201-0605-0807-090A-0B0C0D0E0F10"
+        );
+        let ev = |v: f64| eval("Image::ExifTool::Canon::CanonEv($val)", &n(v)).unwrap().as_num();
+        assert!((ev(44.0) - 4.0 / 3.0).abs() < 1e-12);
+        assert!((ev(-44.0) + 4.0 / 3.0).abs() < 1e-12);
+        assert_eq!(ev(32.0), 1.0);
+        let curve = format!("3 0 0 128 128 255 255{}", " 0".repeat(14));
+        assert_eq!(
+            eval("Image::ExifTool::CanonVRD::ToneCurvePrint($val)", &Val::Str(curve))
+                .unwrap()
+                .as_string(),
+            "(0,0) (128,128) (255,255)"
+        );
+        let ts = |v: &str| {
+            eval("Image::ExifTool::GPS::ConvertTimeStamp($val)", &Val::Str(v.into()))
+                .unwrap()
+                .as_string()
+        };
+        assert_eq!(ts("11 22 2.5"), "11:22:02.5");
+        assert_eq!(ts("1 2 3"), "01:02:03");
+        assert_eq!(
+            eval("Image::ExifTool::LNK::DOSTime($val)", &n(f64::from(0x2c8a_5a1fu32)))
+                .unwrap()
+                .as_string(),
+            "2025:00:31 05:36:20"
+        );
+        let riff = |v: &str| {
+            eval("Image::ExifTool::RIFF::ConvertRIFFDate($val)", &Val::Str(v.into()))
+                .unwrap()
+                .as_string()
+        };
+        assert_eq!(riff("Mon Mar 10 15:04:43 2003"), "2003:03:10 15:04:43");
+        assert_eq!(riff("2001/ 1/27  1:42PM"), "2001:01:27 13:42:00");
+        assert_eq!(riff("2002-12-16  15:35:01"), "2002:12:16 15:35:01");
+        assert_eq!(eval("ConvertTimeSpan($val)", &n(30.0)).unwrap().as_string(), "30 seconds");
+        assert_eq!(eval("ConvertTimeSpan($val)", &n(90.0)).unwrap().as_string(), "1.5 minutes");
+        assert_eq!(eval("ConvertTimeSpan($val, 60)", &n(60.0)).unwrap().as_string(), "1.0 hours");
+        assert_eq!(eval("ConvertTimeSpan($val)", &n(90000.0)).unwrap().as_string(), "1.0 days");
+        assert_eq!(
+            eval("Image::ExifTool::DecodeBits($val, undef, 16)", &Val::Str("5 2".into()))
+                .unwrap()
+                .as_string(),
+            "0,2,17"
+        );
+        assert_eq!(
+            eval("Image::ExifTool::DecodeBits($val, undef, 16)", &Val::Str("0".into()))
+                .unwrap()
+                .as_string(),
+            "(none)"
+        );
+        // A lookup table is a hash we have no way to name here.
+        assert!(eval("Image::ExifTool::DecodeBits($val, %lookup, 16)", &n(1.0)).is_none());
+    }
+
     /// The logical and bitwise operators, and the branch Perl never runs.
     /// Every expected value was read off Perl itself first.
     #[test]
@@ -2625,7 +2919,7 @@ mod tests {
         assert_eq!(eval("ConvertBitrate($val)", &n(1_500_000.0)).unwrap().as_string(), "1.5 Mbps");
         assert_eq!(eval("ConvertBitrate($val)", &n(999.0)).unwrap().as_string(), "999 bps");
         // A name we have not ported still declines.
-        assert!(eval("ConvertRIFFDate($val)", &n(1.0)).is_none());
+        assert!(eval("ConvertID3v1Text($self,$val)", &n(1.0)).is_none());
     }
 
     #[test]
@@ -2669,7 +2963,7 @@ mod tests {
     /// keeps the raw value, which is honest, where a wrong conversion is not.
     #[test]
     fn unsupported_expressions_decline() {
-        assert!(eval("Image::ExifTool::ASF::GetGUID($val)", &n(1.0)).is_none());
+        assert!(eval("Image::ExifTool::XMP::DecodeBase64($val)", &n(1.0)).is_none());
         assert!(eval("$self->Decode($val, \"UTF8\")", &n(1.0)).is_none());
         assert!(eval("$$self{Model}", &n(1.0)).is_none());
         assert!(eval("$val / 0", &n(1.0)).is_none());
