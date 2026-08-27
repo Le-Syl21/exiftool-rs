@@ -156,7 +156,7 @@ fn main() {
         // everything else gets a number, which exercises the arithmetic
         // without dividing by zero.
         let composite = ["$val[", "@val", "$prt[", "@prt"].iter().any(|m| e.contains(m));
-        let parts = [Val::Num(3.0), Val::Str("S".to_string()), Val::Num(7.0), Val::Num(9.0)];
+        let parts = [Val::Num(3.0), Val::Num(2.0), Val::Num(7.0), Val::Num(9.0)];
         let done = if composite {
             eval_composite(e, &parts, &parts, &probe).is_some()
         } else {
@@ -217,11 +217,11 @@ fn main() {
     }
     println!();
     println!("  still refused, by how often ExifTool uses it:");
-    for (n, e) in misses.iter().take(25) {
+    for (n, e) in misses.iter().take(80) {
         let shown: String = e.chars().take(88).collect();
         println!("  {n:5}  {shown}");
     }
-    if misses.len() > 25 {
-        println!("  … and {} more distinct expressions", misses.len() - 25);
+    if misses.len() > 80 {
+        println!("  … and {} more distinct expressions", misses.len() - 80);
     }
 }
