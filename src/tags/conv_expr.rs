@@ -10,6 +10,8 @@
 //! ExifTool's own helpers. An expression using them returns `None`, and the
 //! caller keeps the raw value rather than inventing a converted one.
 
+use regex_lite::Regex;
+
 /// A value flowing through a conversion: Perl does not distinguish, and neither
 /// does ExifTool's output until it is printed.
 #[derive(Debug, Clone, PartialEq)]
@@ -80,17 +82,37 @@ pub fn eval(expr: &str, val: &Val) -> Option<Val> {
     let mut p = Parser {
         s: expr.as_bytes(),
         i: 0,
-        val,
+        val: val.clone(),
+        captures: Vec::new(),
     };
-    let v = p.ternary()?;
+    // These conversions are sometimes two statements: `$val =~ s/ +$//; $val`
+    // substitutes and then hands back the value it changed. The last one is the
+    // result, as in Perl.
+    let mut last = p.ternary()?;
+    loop {
+        p.skip_ws();
+        if p.i < p.s.len() && p.s[p.i] == b';' {
+            p.i += 1;
+            p.skip_ws();
+            if p.i == p.s.len() {
+                break;
+            }
+            last = p.ternary()?;
+        } else {
+            break;
+        }
+    }
     p.skip_ws();
-    if p.i == p.s.len() { Some(v) } else { None }
+    if p.i == p.s.len() { Some(last) } else { None }
 }
 
 struct Parser<'a> {
     s: &'a [u8],
     i: usize,
-    val: &'a Val,
+    /// Owned, because `s///` and `tr///` rewrite it in place as Perl does.
+    val: Val,
+    /// `$1`..`$9` from the most recent match.
+    captures: Vec<String>,
 }
 
 impl<'a> Parser<'a> {
@@ -129,6 +151,17 @@ impl<'a> Parser<'a> {
     }
 
     fn comparison(&mut self) -> Option<Val> {
+        // `$val =~ ...` binds looser than arithmetic and tighter than a ternary.
+        if self.peek("$val") {
+            let save = self.i;
+            self.eat("$val");
+            if self.peek("=~") || self.peek("!~") {
+                let negated = self.peek("!~");
+                self.eat(if negated { "!~" } else { "=~" });
+                return self.bind_operation(negated);
+            }
+            self.i = save;
+        }
         let left = self.additive()?;
         for op in ["<=", ">=", "==", "!=", "<", ">"] {
             // `<` must not swallow the `<=` case, hence the order above.
@@ -232,6 +265,14 @@ impl<'a> Parser<'a> {
         }
         if self.eat("$val") {
             return Some(self.val.clone());
+        }
+        // `$1`..`$9`, from the last successful match.
+        if self.i + 1 < self.s.len() && self.s[self.i] == b'$' && self.s[self.i + 1].is_ascii_digit() {
+            let idx = (self.s[self.i + 1] - b'0') as usize;
+            self.i += 2;
+            return Some(Val::Str(
+                self.captures.get(idx.checked_sub(1)?).cloned().unwrap_or_default(),
+            ));
         }
         // ExifTool passes itself as the first argument to several helpers. It
         // carries options we do not model, and every helper ported here uses
@@ -356,6 +397,107 @@ impl<'a> Parser<'a> {
     /// them. Written out by name so an unrecognised one still declines rather
     /// than being approximated: `PrintExposureTime` turning 0.0496 into `1/20`
     /// is not something a generic evaluator can guess.
+    /// The right-hand side of `=~`: a substitution, a transliteration, or a
+    /// match. Perl's `s///` and `tr///` change the variable and return a count;
+    /// these conversions then hand `$val` back, so the change has to stick.
+    fn bind_operation(&mut self, negated: bool) -> Option<Val> {
+        self.skip_ws();
+        if self.peek("s/") {
+            self.eat("s/");
+            let pat = self.delimited('/')?;
+            let rep = self.delimited('/')?;
+            let flags = self.regex_flags();
+            let re = build_regex(&pat, &flags)?;
+            let subject = self.val.as_string();
+            let replaced = if flags.contains('g') {
+                re.replace_all(&subject, perl_replacement(&rep).as_str()).into_owned()
+            } else {
+                re.replace(&subject, perl_replacement(&rep).as_str()).into_owned()
+            };
+            let changed = replaced != subject;
+            self.val = Val::Str(replaced);
+            return Some(Val::Num(if changed { 1.0 } else { 0.0 }));
+        }
+        if self.peek("tr/") || self.peek("y/") {
+            let op = if self.peek("tr/") { "tr/" } else { "y/" };
+            self.eat(op);
+            let from = self.delimited('/')?;
+            let to = self.delimited('/')?;
+            self.regex_flags();
+            let f: Vec<char> = from.chars().collect();
+            let t: Vec<char> = to.chars().collect();
+            let mut n = 0usize;
+            let out: String = self
+                .val
+                .as_string()
+                .chars()
+                .map(|c| match f.iter().position(|x| *x == c) {
+                    Some(k) => {
+                        n += 1;
+                        // Perl repeats the last character when the lists differ.
+                        *t.get(k).or_else(|| t.last()).unwrap_or(&c)
+                    }
+                    None => c,
+                })
+                .collect();
+            self.val = Val::Str(out);
+            return Some(Val::Num(n as f64));
+        }
+        // A bare match, with or without a leading `m`.
+        if self.peek("m/") {
+            self.eat("m");
+        }
+        if !self.peek("/") {
+            return None;
+        }
+        self.eat("/");
+        let pat = self.delimited('/')?;
+        let flags = self.regex_flags();
+        let re = build_regex(&pat, &flags)?;
+        let subject = self.val.as_string();
+        let hit = match re.captures(&subject) {
+            Some(c) => {
+                self.captures = (1..c.len())
+                    .map(|i| c.get(i).map(|m| m.as_str().to_string()).unwrap_or_default())
+                    .collect();
+                true
+            }
+            None => {
+                self.captures.clear();
+                false
+            }
+        };
+        Some(Val::Num(if hit != negated { 1.0 } else { 0.0 }))
+    }
+
+    /// Read up to the next unescaped delimiter, consuming it.
+    fn delimited(&mut self, delim: char) -> Option<String> {
+        let mut out = String::new();
+        while self.i < self.s.len() {
+            let c = self.s[self.i] as char;
+            if c == '\\' && self.i + 1 < self.s.len() {
+                out.push(c);
+                out.push(self.s[self.i + 1] as char);
+                self.i += 2;
+                continue;
+            }
+            self.i += 1;
+            if c == delim {
+                return Some(out);
+            }
+            out.push(c);
+        }
+        None
+    }
+
+    fn regex_flags(&mut self) -> String {
+        let start = self.i;
+        while self.i < self.s.len() && (self.s[self.i] as char).is_ascii_alphabetic() {
+            self.i += 1;
+        }
+        String::from_utf8_lossy(&self.s[start..self.i]).into_owned()
+    }
+
     fn helper_call(&mut self) -> Option<Val> {
         let save = self.i;
         // The same function is written three ways depending on the module's age:
@@ -540,6 +682,33 @@ fn format_sprintf(fmt: &str, args: &[Val]) -> Option<String> {
         out.push_str(&s);
     }
     Some(out)
+}
+
+/// Compile a Perl pattern for regex-lite, declining what it cannot express.
+fn build_regex(pat: &str, flags: &str) -> Option<Regex> {
+    // Perl's \Z and \z both mean end-of-string here; regex-lite spells it $.
+    let mut p = pat.replace("\\Z", "$").replace("\\z", "$");
+    if flags.contains('i') {
+        p = format!("(?i){p}");
+    }
+    Regex::new(&p).ok()
+}
+
+/// Perl writes capture references as `$1`; regex-lite wants `${1}`.
+fn perl_replacement(rep: &str) -> String {
+    let mut out = String::new();
+    let b: Vec<char> = rep.chars().collect();
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == '$' && i + 1 < b.len() && b[i + 1].is_ascii_digit() {
+            out.push_str(&format!("${{{}}}", b[i + 1]));
+            i += 2;
+            continue;
+        }
+        out.push(b[i]);
+        i += 1;
+    }
+    out
 }
 
 /// The ExifTool helpers this crate implements, by the name its conversions use.
@@ -821,6 +990,29 @@ mod tests {
 
     /// Every expected value here came out of Perl ExifTool, not out of my head.
     #[test]
+    fn substitutions_transliterations_and_matches() {
+        let s = |e: &str, v: &str| eval(e, &Val::Str(v.into())).unwrap().as_string();
+        // The commonest shape: change the value, then hand it back.
+        assert_eq!(s("$val =~ s/ +$//; $val", "35 mm   "), "35 mm");
+        assert_eq!(s("$val=~s/^.*: //;$val", "Lens: 50mm"), "50mm");
+        assert_eq!(s("$val =~ tr/ /./; $val", "1 2 3"), "1.2.3");
+        assert_eq!(s("$val =~ tr/-/:/; $val", "2026-08-27"), "2026:08:27");
+        // A match that captures, used as a condition.
+        assert_eq!(
+            eval("$val=~/(\\d+)/ ? $1/100 : 1", &Val::Str("abc 250 def".into()))
+                .unwrap()
+                .as_num(),
+            2.5
+        );
+        assert_eq!(
+            eval("$val=~/(\\d+)/ ? $1/100 : 1", &Val::Str("none".into()))
+                .unwrap()
+                .as_num(),
+            1.0
+        );
+    }
+
+    #[test]
     fn the_gps_and_date_helpers() {
         assert_eq!(
             eval("Image::ExifTool::GPS::ToDMS($self, $val, 1, \"N\")", &n(48.8584)).unwrap().as_string(),
@@ -915,7 +1107,7 @@ mod tests {
     #[test]
     fn unsupported_expressions_decline() {
         assert!(eval("Image::ExifTool::ASF::GetGUID($val)", &n(1.0)).is_none());
-        assert!(eval("$val =~ s/ +$//", &n(1.0)).is_none());
+        assert!(eval("my @a = split \" \", $val; $a[0]", &n(1.0)).is_none());
         assert!(eval("$$self{Model}", &n(1.0)).is_none());
         assert!(eval("$val / 0", &n(1.0)).is_none());
     }
