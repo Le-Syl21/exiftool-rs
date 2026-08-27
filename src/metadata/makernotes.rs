@@ -8276,6 +8276,18 @@ fn read_makernote_ifd_with_base(
             // TimeSincePowerOn a duration -- and running an expression over
             // that phrase would undo it.
             let untouched = printed == val.to_display_string();
+            // A conversion keyed by the whole value as text: Sony's
+            // VariableLowPassFilter is `{ '0 0' => 'n/a' }` over a two-element
+            // tag, and no number keys it.
+            if untouched {
+                if let Some(t) = crate::tags::print_conv_generated::print_conv_str(
+                    maker,
+                    tag_id,
+                    &printed,
+                ) {
+                    printed = t.to_string();
+                }
+            }
             if untouched {
                 // What ExifTool would put in `$val`. For an `undef` tag that
                 // is the raw byte string -- Nikon's ExposureDifference is

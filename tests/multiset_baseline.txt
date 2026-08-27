@@ -23,9 +23,7 @@ SonyILCE9.arw	default	extra	0	LensID	Unknown 50-300mm
 SonyILCE9.arw	default	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	LensSpecFeatures	.
 SonyILCE9.arw	default	extra	0	PixelShiftInfo	(Binary data 6 bytes, use -b option to extract)
-SonyILCE9.arw	default	extra	0	Quality	1 0
 SonyILCE9.arw	default	extra	0	Shutter	2858 5239 6643
-SonyILCE9.arw	default	extra	0	VariableLowPassFilter	0 0
 SonyILCE9.arw	default	missing	0	AFPointSelected	n/a
 SonyILCE9.arw	default	missing	0	AFPointsUsed	(none)
 SonyILCE9.arw	default	missing	0	Anti-Blur	On (Shooting)
@@ -35,9 +33,7 @@ SonyILCE9.arw	default	missing	0	LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD
 SonyILCE9.arw	default	missing	0	LensSpec	E 50-300mm F4.5-6.3
 SonyILCE9.arw	default	missing	0	LensSpecFeatures	E
 SonyILCE9.arw	default	missing	0	PixelShiftInfo	n/a
-SonyILCE9.arw	default	missing	0	Quality	RAW
 SonyILCE9.arw	default	missing	0	Shutter	Mechanical (2858 5239 6643)
-SonyILCE9.arw	default	missing	0	VariableLowPassFilter	n/a
 SonyILCE9.arw	ee	extra	0	AFPointSelected	0
 SonyILCE9.arw	ee	extra	0	AFPointsUsed	(Binary data 10 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	Anti-Blur	2
@@ -50,11 +46,9 @@ SonyILCE9.arw	ee	extra	0	LensID	Unknown 50-300mm
 SonyILCE9.arw	ee	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	LensSpecFeatures	.
 SonyILCE9.arw	ee	extra	0	PixelShiftInfo	(Binary data 6 bytes, use -b option to extract)
-SonyILCE9.arw	ee	extra	0	Quality	1 0
 SonyILCE9.arw	ee	extra	0	Saturation	Low
 SonyILCE9.arw	ee	extra	0	Sharpness	Normal
 SonyILCE9.arw	ee	extra	0	Shutter	2858 5239 6643
-SonyILCE9.arw	ee	extra	0	VariableLowPassFilter	0 0
 SonyILCE9.arw	ee	missing	0	AFPointSelected	n/a
 SonyILCE9.arw	ee	missing	0	AFPointsUsed	(none)
 SonyILCE9.arw	ee	missing	0	APS-CSizeCapture	Off
@@ -99,7 +93,6 @@ SonyILCE9.arw	ee	missing	1	LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
 SonyILCE9.arw	ee	missing	0	PictureEffect2	Off
 SonyILCE9.arw	ee	missing	0	PictureProfile	Gamma Still - Standard/Neutral (PP2)
 SonyILCE9.arw	ee	missing	0	PixelShiftInfo	n/a
-SonyILCE9.arw	ee	missing	0	Quality	RAW
 SonyILCE9.arw	ee	missing	0	Quality2	RAW
 SonyILCE9.arw	ee	missing	0	ReleaseMode2	Normal
 SonyILCE9.arw	ee	missing	1	ReleaseMode2	Normal
@@ -114,5 +107,4 @@ SonyILCE9.arw	ee	missing	0	Shutter	Mechanical (2858 5239 6643)
 SonyILCE9.arw	ee	missing	0	SonyFNumber	8.0
 SonyILCE9.arw	ee	missing	0	SonyISO	252
 SonyILCE9.arw	ee	missing	0	StopsAboveBaseISO	1.3
-SonyILCE9.arw	ee	missing	0	VariableLowPassFilter	n/a
 SonyILCE9.arw	ee	missing	0	VignettingCorrParams	0 0 32 64 128 192 320 480 736 1184 1920 3168 4704 6464 8352 10208

@@ -32,6 +32,8 @@ my %tag_names; # TagID => Name mapping per module
 my $total_entries = 0;
 my $total_tags = 0;
 my @dropped;   # conversions not emitted, reported at the end
+my %all_str_convs;      # conversions keyed by the value as a string
+my $total_str_entries = 0;
 
 for my $file (@pm_files) {
     open my $fh, '<', $file or next;
@@ -83,6 +85,25 @@ for my $file (@pm_files) {
             $tag_id = int($tag_hex);
         }
         next if $tag_id > 0xFFFF;
+
+        # A PrintConv can be keyed by the whole value as a string rather than
+        # by a number: Sony's VariableLowPassFilter is `{ '0 0' => 'n/a', '1 0'
+        # => 'Off', ... }` over a two-element tag. Collected apart, since the
+        # numeric lookup cannot express them.
+        if ($body =~ /PrintConv\s*=>\s*\{([^}]+)\}/) {
+            my $conv_body = $1;
+            my %str_conv;
+            while ($conv_body =~ /'([^']*[^0-9'][^']*)'\s*=>\s*'([^']*)'/g) {
+                $str_conv{$1} = $2;
+            }
+            if (%str_conv) {
+                $all_str_convs{"${module}::${tag_id}"} = {
+                    module => $module, tag_id => $tag_id, tag_name => $name,
+                    conv => \%str_conv,
+                };
+                $total_str_entries += scalar keys %str_conv;
+            }
+        }
 
         # Find PrintConv hash (not subroutine)
         if ($body =~ /PrintConv\s*=>\s*\{([^}]+)\}/) {
@@ -258,8 +279,29 @@ print "        _ => None,\n";
 print "    }\n";
 print "}\n";
 
+# ── The conversions keyed by the value as a string ──────────────────────────
+print "\n/// Look up a print conversion whose key is the whole value, as text.\n";
+print "///\n/// Sony's VariableLowPassFilter is `{ '0 0' => 'n/a', '1 0' => 'Off' }` over a\n";
+print "/// two-element tag: no number keys it.\n";
+print "#[must_use]\n";
+print "pub fn print_conv_str(module: &str, tag_id: u16, value: &str) -> Option<&'static str> {\n";
+print "    Some(match (module, tag_id, value) {\n";
+for my $key (sort keys %all_str_convs) {
+    my $info = $all_str_convs{$key};
+    my %conv = %{$info->{conv}};
+    for my $k (sort keys %conv) {
+        my ($kk, $vv) = ($k, $conv{$k});
+        for ($kk, $vv) { s/\\/\\\\/g; s/"/\\"/g }
+        printf "        (\"%s\", %#06x, \"%s\") => \"%s\", // %s\n",
+            $info->{module}, $info->{tag_id}, $kk, $vv, $info->{tag_name};
+    }
+}
+print "        _ => return None,\n    })\n}\n";
+
 if (@dropped) {
     warn sprintf("%d conversion(s) not emitted:\n", scalar @dropped);
     warn "  $_\n" for @dropped;
 }
 warn "Extracted $total_tags tags with $total_entries entries from " . scalar(@pm_files) . " files\n";
+warn sprintf("plus %d string-keyed entries over %d tags\n",
+             $total_str_entries, scalar keys %all_str_convs);
