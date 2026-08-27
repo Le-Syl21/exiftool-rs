@@ -73,9 +73,16 @@ for my $file (@pm_files) {
         my $tag_hex = $1;
         my $body = $2;
 
-        # Get tag name
-        my ($name) = $body =~ /Name\s*=>\s*['"](\w+)['"]/;
-        next unless $name;
+        # Get tag name. A name is not always `\w+`: Sony has Anti-Blur and
+        # APS-CSizeCapture, and requiring word characters dropped those tags
+        # -- with their conversions -- without a word.
+        my ($name) = $body =~ /Name\s*=>\s*['"]([\w-]+)['"]/;
+        unless ($name) {
+            if ($body =~ /Name\s*=>\s*['"]([^'"]+)['"]/) {
+                push @dropped, "$module $tag_hex: name '$1' is not a plain identifier";
+            }
+            next;
+        }
 
         # Get tag ID as number
         my $tag_id;
