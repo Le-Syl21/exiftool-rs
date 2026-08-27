@@ -1,8 +1,11 @@
 #!/usr/bin/perl
 # Generate src/formats/font_charset.rs from ExifTool's Charset tables.
-# This is a MECHANICAL, exact port of the Image::ExifTool::Charset::* hashes
-# used by Font.pm for the TrueType 'name' table (see %ttCharset). Nothing is
-# invented: each Rust entry mirrors one Perl hash entry.
+# This is a MECHANICAL, exact port of the Image::ExifTool::Charset::* hashes.
+# Nothing is invented: each Rust entry mirrors one Perl hash entry.
+#
+# Two callers: Font.pm's TrueType 'name' table (see %ttCharset), and the
+# conversion evaluator, whose `$self->Decode($val, "Latin")` and
+# `$self->Decode($val, "MacRoman")` name these same sets.
 #
 # Usage: perl scripts/gen_font_charset.pl /path/to/exiftool/lib > src/formats/font_charset.rs
 use strict;
@@ -13,7 +16,8 @@ unshift @INC, $lib;
 
 # csType 0x800/0x883 = variable-width (may have 2-byte lead hashes);
 # 0x101 = single-byte fixed-width. Both decode with the same byte-walk here.
-my @charsets = qw(MacRoman MacHebrew MacJapanese MacKorean MacChineseCN MacChineseTW);
+my @charsets = qw(MacRoman MacHebrew MacJapanese MacKorean MacChineseCN MacChineseTW
+                  Latin Latin2);
 
 my $SENTINEL = 0xFFFF; # value marker for a multi-code-point mapping
 
@@ -22,7 +26,8 @@ print <<'HEADER';
 // Image::ExifTool::Charset::Mac* tables. DO NOT EDIT BY HAND.
 //
 // A faithful port of the Mac 'name'-table character sets selected by
-// Font.pm's %ttCharset. Decoding follows Charset.pm::Decompose: a byte-walk
+// Font.pm's %ttCharset, plus the sets `$self->Decode(...)` names. Decoding
+// follows Charset.pm::Decompose: a byte-walk
 // where a "lead" byte consumes the following byte to form a 2-byte code, an
 // unmapped byte passes through unchanged, and a mapping may expand to several
 // code points. Values are all <= 0xFFE6 so 0xFFFF is a safe multi-CP sentinel.

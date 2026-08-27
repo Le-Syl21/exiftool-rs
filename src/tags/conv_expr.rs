@@ -116,6 +116,13 @@ pub trait ParseState {
     fn option(&self, _name: &str) -> Option<Val> {
         None
     }
+
+    /// The byte order the file is being read in, `"II"` or `"MM"`. ExifTool
+    /// keeps it in a package global and `Decode` falls back to it when the
+    /// conversion does not name one. `None` declines.
+    fn byte_order(&self) -> Option<&str> {
+        None
+    }
 }
 
 /// A reader with no parse state at all: every member is unknown.
@@ -1486,7 +1493,7 @@ impl<'a> Parser<'a> {
             self.i = save;
             return None;
         }
-        match call_helper(&name, &args) {
+        match call_helper(&name, &args, self.state) {
             Some(v) => Some(v),
             None => {
                 self.i = save;
@@ -2160,7 +2167,7 @@ fn string_escape(rest: &[u8]) -> Option<(char, usize)> {
     ))
 }
 
-fn call_helper(name: &str, args: &[Val]) -> Option<Val> {
+fn call_helper(name: &str, args: &[Val], state: &dyn ParseState) -> Option<Val> {
     let first = args.first()?;
     Some(match name {
         // Without a -d format ExifTool returns the date untouched, and that is
@@ -2298,6 +2305,60 @@ fn call_helper(name: &str, args: &[Val]) -> Option<Val> {
             }
             Val::Str(if set.is_empty() { "(none)".to_string() } else { set.join(",") })
         }
+        // ExifTool.pm Decode: from the named character set into the internal
+        // one, which is UTF-8 unless the reader was told otherwise.
+        "Decode" => decode_charset(first, &args.get(1)?.as_string(), args.get(2), state)?,
+        // ID3.pm ConvertID3v1Text: Decode, with the charset the reader keeps
+        // for ID3v1 -- `Latin` unless it was overridden.
+        "ConvertID3v1Text" => {
+            let charset = match state.option("CharsetID3")? {
+                Val::Undef => "Latin".to_string(),
+                other => other.as_string(),
+            };
+            decode_charset(args.get(1)?, &charset, None, state)?
+        }
+        // XMP.pm DecodeBase64, which returns a reference: the result is
+        // binary, not text.
+        "DecodeBase64" => Val::Binary(decode_base64(&first.as_string())?),
+        // Pentax.pm PentaxEv: eighths of a stop, with two codes standing for
+        // a third and two thirds.
+        "PentaxEv" => {
+            #[allow(clippy::cast_possible_truncation)]
+            let v = first.as_num().trunc() as i64;
+            #[allow(clippy::cast_precision_loss)]
+            let mut out = v as f64;
+            if v & 0x01 != 0 {
+                let sign = if v < 0 { -1.0 } else { 1.0 };
+                let frac = (v * if v < 0 { -1 } else { 1 }) & 0x07;
+                if frac == 3 {
+                    out += sign * (8.0 / 3.0 - 3.0);
+                } else if frac == 5 {
+                    out += sign * (16.0 / 3.0 - 5.0);
+                }
+            }
+            Val::Num(out / 8.0)
+        }
+        // ExifTool.pm TimeZoneString: a count of minutes, as an offset.
+        "TimeZoneString" => {
+            let mut min = first.as_num();
+            let sign = if min < 0.0 {
+                min = -min;
+                '-'
+            } else {
+                '+'
+            };
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let min = (min + 0.5).trunc() as u64;
+            Val::Str(format!("{sign}{:02}:{:02}", min / 60, min % 60))
+        }
+        // ExifTool.pm IsInt and IsFloat, which several conversions ask before
+        // deciding whether the value is a number at all.
+        "IsInt" => Val::Num(if is_perl_int(&first.as_string()) { 1.0 } else { 0.0 }),
+        "IsFloat" => Val::Num(if first.as_string().trim().parse::<f64>().is_ok() {
+            1.0
+        } else {
+            0.0
+        }),
         // GPS.pm PrintTimeStamp: trims the fractional seconds to microseconds.
         "PrintTimeStamp" => Val::Str(print_time_stamp(&first.as_string())),
         // XMP.pm ConvertXMPDate: an XMP date back into EXIF's layout.
@@ -2404,6 +2465,121 @@ fn to_degrees(text: &str) -> Option<f64> {
         .next()
         .is_some_and(|t| t.eq_ignore_ascii_case("S") || t.eq_ignore_ascii_case("W"));
     Some(if neg { -deg } else { deg })
+}
+
+/// ExifTool.pm IsInt: an optionally signed run of digits, nothing else.
+fn is_perl_int(v: &str) -> bool {
+    let t = v.strip_prefix(['+', '-']).unwrap_or(v);
+    !t.is_empty() && t.bytes().all(|b| b.is_ascii_digit())
+}
+
+/// ExifTool.pm Decode, for the character sets its conversions name.
+///
+/// The destination is the reader's internal set, UTF-8. Charset.pm decomposes
+/// the value into code points and Recompose packs them back, truncating at the
+/// first NUL -- both of which show in the result, so both are here. A set we
+/// have no table for refuses by name rather than passing the bytes through as
+/// if they had been converted.
+fn decode_charset(
+    val: &Val,
+    from: &str,
+    order: Option<&Val>,
+    state: &dyn ParseState,
+) -> Option<Val> {
+    use crate::formats::font_charset;
+
+    let bytes = perl_bytes(val)?;
+    if bytes.is_empty() || from == "UTF8" || from == "ASCII" {
+        return Some(val.clone());
+    }
+    let single = match from {
+        "Latin" => Some(&font_charset::LATIN),
+        "Latin2" => Some(&font_charset::LATIN2),
+        "MacRoman" => Some(&font_charset::MACROMAN),
+        _ => None,
+    };
+    if let Some(table) = single {
+        // ExifTool short-circuits a value that has nothing to remap, and
+        // returns it exactly as it came -- trailing NUL included, which the
+        // converting path would have cut.
+        if !bytes.iter().any(|b| *b >= 0x80) {
+            return Some(val.clone());
+        }
+        let decoded = table.decode(&bytes);
+        return Some(Val::Str(
+            decoded.split('\0').next().unwrap_or_default().to_string(),
+        ));
+    }
+    if !matches!(from, "UCS2" | "UTF16" | "Unicode") {
+        return None; // a character set we have no table for
+    }
+    // Two bytes per character. A byte-order mark wins over the argument, and
+    // without either it is the order the file is being read in.
+    let (mut data, mut big) = (&bytes[..], None);
+    if data.starts_with(&[0xfe, 0xff]) {
+        data = &data[2..];
+        big = Some(true);
+    } else if data.starts_with(&[0xff, 0xfe]) {
+        data = &data[2..];
+        big = Some(false);
+    }
+    let big = match big {
+        Some(b) => b,
+        None => {
+            let named = match order.map(Val::as_string) {
+                Some(o) if !o.is_empty() && o != "Unknown" => o,
+                _ => state.byte_order()?.to_string(),
+            };
+            named == "MM"
+        }
+    };
+    let mut out = String::new();
+    for pair in data.chunks_exact(2) {
+        let u = if big {
+            u16::from_be_bytes([pair[0], pair[1]])
+        } else {
+            u16::from_le_bytes([pair[0], pair[1]])
+        };
+        if u == 0 {
+            break; // Recompose truncates at the first NUL
+        }
+        // Perl packs a lone surrogate as if it were a character; Rust has no
+        // way to hold one, so rather than produce different bytes we decline.
+        out.push(char::from_u32(u32::from(u))?);
+    }
+    Some(Val::Str(out))
+}
+
+/// XMP.pm DecodeBase64. ExifTool truncates at the first character that cannot
+/// be part of base64 data, and ignores white space within.
+fn decode_base64(text: &str) -> Option<Vec<u8>> {
+    const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut bits: Vec<u8> = Vec::new();
+    for c in text.bytes() {
+        if c == b'=' {
+            break;
+        }
+        if c.is_ascii_whitespace() {
+            continue;
+        }
+        let Some(k) = ALPHABET.iter().position(|a| *a == c) else {
+            break; // truncate at the first character that is not base64
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        bits.push(k as u8);
+    }
+    let mut out = Vec::with_capacity(bits.len() * 3 / 4);
+    for chunk in bits.chunks(4) {
+        let mut acc: u32 = 0;
+        for (i, v) in chunk.iter().enumerate() {
+            acc |= u32::from(*v) << (18 - 6 * i);
+        }
+        for i in 0..chunk.len().saturating_sub(1) {
+            #[allow(clippy::cast_possible_truncation)]
+            out.push((acc >> (16 - 8 * i)) as u8);
+        }
+    }
+    Some(out)
 }
 
 /// GPS.pm ConvertTimeStamp: hours, minutes and seconds as three numbers,
@@ -2720,6 +2896,56 @@ mod tests {
         );
     }
 
+    /// Character sets, base64, and four more of ExifTool's printers. Every
+    /// expected value came back from Perl before it was written down.
+    #[test]
+    fn character_sets_and_base64() {
+        struct Reader;
+        impl ParseState for Reader {
+            fn member(&self, _: &str) -> Option<Val> {
+                None
+            }
+            fn option(&self, _: &str) -> Option<Val> {
+                Some(Val::Undef)
+            }
+            fn byte_order(&self) -> Option<&str> {
+                Some("II")
+            }
+        }
+        let dec = |e: &str, bytes: &[u8]| {
+            let v = Val::Str(bytes.iter().map(|b| *b as char).collect());
+            eval_with(e, &v, &Reader).unwrap().as_string()
+        };
+        assert_eq!(dec("$self->Decode($val, \"Latin\")", b"caf\xe9"), "caf\u{e9}");
+        // 0xd5 is a right single quote in MacRoman, not an O with a tilde.
+        assert_eq!(dec("$self->Decode($val, \"MacRoman\")", b"Mac\xd5s"), "Mac\u{2019}s");
+        assert_eq!(dec("$self->Decode($val,\"UCS2\",\"II\")", b"h\0i\0\0\0"), "hi");
+        assert_eq!(dec("$self->Decode($val, \"UTF16\", \"MM\")", b"\0h\0i"), "hi");
+        // Nothing to remap, so ExifTool hands the value straight back -- NUL
+        // and all, where the converting path would have cut it.
+        assert_eq!(dec("$self->Decode($val, \"Latin\")", b"plain\0tail"), "plain\0tail");
+        // Without a byte order named, and no reader to ask, UTF16 declines.
+        assert!(eval("$self->Decode($val, \"UTF16\")", &Val::Str("h\0i\0".into())).is_none());
+        assert_eq!(
+            eval("Image::ExifTool::XMP::DecodeBase64($val)", &Val::Str("SGVsbG8sIHdvcmxkIQ==".into()))
+                .unwrap(),
+            Val::Binary(b"Hello, world!".to_vec())
+        );
+        let pev = |v: f64| eval("Image::ExifTool::Pentax::PentaxEv($val)", &n(v)).unwrap().as_num();
+        assert!((pev(11.0) - 4.0 / 3.0).abs() < 1e-12);
+        assert!((pev(13.0) - 5.0 / 3.0).abs() < 1e-12);
+        assert!((pev(-11.0) + 4.0 / 3.0).abs() < 1e-12);
+        assert_eq!(pev(16.0), 2.0);
+        let tz = |v: f64| {
+            eval("Image::ExifTool::TimeZoneString($val)", &n(v)).unwrap().as_string()
+        };
+        assert_eq!(tz(-330.0), "-05:30");
+        assert_eq!(tz(120.0), "+02:00");
+        assert_eq!(eval("IsInt($val)", &Val::Str("-12".into())).unwrap().as_num(), 1.0);
+        assert_eq!(eval("IsInt($val)", &Val::Str("1.5".into())).unwrap().as_num(), 0.0);
+        assert_eq!(eval("IsFloat($val)", &Val::Str("1.5e3".into())).unwrap().as_num(), 1.0);
+    }
+
     /// `\$val` is not a value to print: it is ExifTool saying the tag holds
     /// binary data. And `$self->Options(...)` asks the reader how it was
     /// configured, which an unconfigured reader answers with undef.
@@ -2983,7 +3209,7 @@ mod tests {
         assert_eq!(eval("ConvertBitrate($val)", &n(1_500_000.0)).unwrap().as_string(), "1.5 Mbps");
         assert_eq!(eval("ConvertBitrate($val)", &n(999.0)).unwrap().as_string(), "999 bps");
         // A name we have not ported still declines.
-        assert!(eval("ConvertID3v1Text($self,$val)", &n(1.0)).is_none());
+        assert!(eval("Image::ExifTool::ID3::PrintGenre($val)", &n(1.0)).is_none());
     }
 
     #[test]
@@ -3027,8 +3253,8 @@ mod tests {
     /// keeps the raw value, which is honest, where a wrong conversion is not.
     #[test]
     fn unsupported_expressions_decline() {
-        assert!(eval("Image::ExifTool::XMP::DecodeBase64($val)", &n(1.0)).is_none());
-        assert!(eval("$self->Decode($val, \"UTF8\")", &n(1.0)).is_none());
+        assert!(eval("Image::ExifTool::Exif::PrintCFAPattern($val)", &n(1.0)).is_none());
+        assert!(eval("Image::ExifTool::Exif::PrintCFAPattern($val)", &n(1.0)).is_none());
         assert!(eval("$$self{Model}", &n(1.0)).is_none());
         assert!(eval("$val / 0", &n(1.0)).is_none());
     }
