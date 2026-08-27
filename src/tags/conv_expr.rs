@@ -18,6 +18,8 @@ use regex_lite::Regex;
 pub enum Val {
     Num(f64),
     Str(String),
+    /// Perl's list: what `split` and `unpack` produce and `join` consumes.
+    List(Vec<Val>),
 }
 
 impl Val {
@@ -27,6 +29,9 @@ impl Val {
             Self::Num(n) => *n,
             // Perl reads a leading number out of a string and calls the rest zero.
             Self::Str(s) => leading_number(s),
+            // A list in numeric context is its length.
+            #[allow(clippy::cast_precision_loss)]
+            Self::List(v) => v.len() as f64,
         }
     }
 
@@ -35,6 +40,8 @@ impl Val {
         match self {
             Self::Num(n) => format_number(*n),
             Self::Str(s) => s.clone(),
+            // `"@a"` interpolates a list separated by `$"`, which is a space.
+            Self::List(v) => v.iter().map(Self::as_string).collect::<Vec<_>>().join(" "),
         }
     }
 
@@ -42,6 +49,7 @@ impl Val {
         match self {
             Self::Num(n) => *n != 0.0,
             Self::Str(s) => !s.is_empty() && s != "0",
+            Self::List(v) => !v.is_empty(),
         }
     }
 }
@@ -88,12 +96,14 @@ pub fn eval(expr: &str, val: &Val) -> Option<Val> {
     // These conversions are sometimes two statements: `$val =~ s/ +$//; $val`
     // substitutes and then hands back the value it changed. The last one is the
     // result, as in Perl.
+    p.skip_require();
     let mut last = p.ternary()?;
     loop {
         p.skip_ws();
         if p.i < p.s.len() && p.s[p.i] == b';' {
             p.i += 1;
             p.skip_ws();
+            p.skip_require();
             if p.i == p.s.len() {
                 break;
             }
@@ -129,6 +139,24 @@ impl<'a> Parser<'a> {
             true
         } else {
             false
+        }
+    }
+
+    /// `require Image::ExifTool::XMP;` only tells Perl to load a file. Every
+    /// module it can name is already part of this crate, so the statement
+    /// carries no value and is skipped whole.
+    fn skip_require(&mut self) {
+        loop {
+            self.skip_ws();
+            if !self.s[self.i..].starts_with(b"require ") {
+                return;
+            }
+            while self.i < self.s.len() && self.s[self.i] != b';' {
+                self.i += 1;
+            }
+            if self.i < self.s.len() {
+                self.i += 1; // the `;`
+            }
         }
     }
 
@@ -196,6 +224,14 @@ impl<'a> Parser<'a> {
                 self.eat("-");
                 let r = self.multiplicative()?;
                 acc = Val::Num(acc.as_num() - r.as_num());
+            } else if self.peek(".")
+                && self.s.get(self.i + 1).is_some_and(|c| *c != b'.' && !c.is_ascii_digit())
+            {
+                // String concatenation. A `.` before a digit is a decimal point
+                // and a `..` is a range, so neither is one of ours.
+                self.eat(".");
+                let r = self.multiplicative()?;
+                acc = Val::Str(format!("{}{}", acc.as_string(), r.as_string()));
             } else {
                 return Some(acc);
             }
@@ -209,7 +245,28 @@ impl<'a> Parser<'a> {
             if self.peek("**") {
                 return Some(acc); // handled by power()
             }
-            if self.peek("*") {
+            // `x` repeats: `"H2" x 7` builds an unpack template, and it binds
+            // as tightly as `*`. `xor` starts with the same letter, so the
+            // operator is only an `x` that no identifier continues.
+            if self.peek("x")
+                && self
+                    .s
+                    .get(self.i + 1)
+                    .is_none_or(|c| !(*c as char).is_alphabetic() && *c != b'_')
+            {
+                self.eat("x");
+                let r = self.power()?;
+                let n = r.as_num();
+                if !(0.0..=4096.0).contains(&n) {
+                    return None;
+                }
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let n = n as usize;
+                acc = match acc {
+                    Val::List(items) => Val::List(std::iter::repeat_n(items, n).flatten().collect()),
+                    other => Val::Str(other.as_string().repeat(n)),
+                };
+            } else if self.peek("*") {
                 self.eat("*");
                 let r = self.power()?;
                 acc = Val::Num(acc.as_num() * r.as_num());
@@ -286,6 +343,26 @@ impl<'a> Parser<'a> {
         if self.peek("\"") {
             return self.interpolated_string();
         }
+        // A single-quoted string interpolates nothing; only `\\` and `\'` are
+        // escapes inside it.
+        if self.peek("'") {
+            self.eat("'");
+            let mut out = String::new();
+            while self.i < self.s.len() {
+                let c = self.s[self.i];
+                if c == b'\\' && self.i + 1 < self.s.len() {
+                    out.push(self.s[self.i + 1] as char);
+                    self.i += 2;
+                    continue;
+                }
+                self.i += 1;
+                if c == b'\'' {
+                    return Some(Val::Str(out));
+                }
+                out.push(c as char);
+            }
+            return None;
+        }
         for (name, f) in [
             ("int", f64::trunc as fn(f64) -> f64),
             ("abs", f64::abs),
@@ -305,8 +382,11 @@ impl<'a> Parser<'a> {
                 return Some(Val::Num(f(v.as_num())));
             }
         }
-        if self.peek("sprintf") {
+        if self.peek("sprintf") && self.s.get(self.i + 7) == Some(&b'(') {
             return self.sprintf_call();
+        }
+        if let Some(v) = self.list_op() {
+            return Some(v);
         }
         if let Some(v) = self.helper_call() {
             return Some(v);
@@ -376,6 +456,12 @@ impl<'a> Parser<'a> {
             if self.s[self.i] == b'"' {
                 self.i += 1;
                 return Some(Val::Str(out));
+            }
+            if self.s[self.i] == b'\\' {
+                let (c, len) = string_escape(&self.s[self.i + 1..])?;
+                out.push(c);
+                self.i += 1 + len;
+                continue;
             }
             if self.s[self.i..].starts_with(b"$val") {
                 out.push_str(&self.val.as_string());
@@ -542,6 +628,87 @@ impl<'a> Parser<'a> {
             return None;
         }
         match call_helper(&name, &args) {
+            Some(v) => Some(v),
+            None => {
+                self.i = save;
+                None
+            }
+        }
+    }
+
+    /// Perl's list and named-unary operators, which ExifTool calls as often
+    /// without parentheses as with: `join " ", split "\0", substr($val, 8)`.
+    ///
+    /// The two families differ in how far right they reach. A list operator
+    /// swallows every comma to its right, so `split` there takes both the
+    /// pattern and the substring; a named unary takes one argument and lets
+    /// the comma go to whoever asked for the list.
+    fn list_op(&mut self) -> Option<Val> {
+        const LIST: &[&str] = &["split", "join", "unpack", "pack", "reverse", "substr", "sprintf"];
+        const UNARY: &[&str] = &[
+            "length", "hex", "oct", "ord", "chr", "lc", "uc", "lcfirst", "ucfirst",
+        ];
+
+        let save = self.i;
+        self.skip_ws();
+        let start = self.i;
+        while self.i < self.s.len()
+            && ((self.s[self.i] as char).is_ascii_alphanumeric() || self.s[self.i] == b'_')
+        {
+            self.i += 1;
+        }
+        let name = std::str::from_utf8(&self.s[start..self.i]).ok()?.to_string();
+        let is_list = LIST.contains(&name.as_str());
+        if (!is_list && !UNARY.contains(&name.as_str())) || self.s[self.i..].starts_with(b"::") {
+            self.i = save;
+            return None;
+        }
+        let paren = self.eat("(");
+
+        // `split`'s first argument is a pattern, and it is the one place these
+        // conversions write a bare regex literal.
+        let mut split_pat: Option<(String, bool)> = None;
+        if name == "split" {
+            self.skip_ws();
+            if self.peek("/") {
+                self.eat("/");
+                let pat = self.delimited('/')?;
+                self.regex_flags();
+                split_pat = Some((pat, false));
+            } else {
+                let v = self.ternary()?;
+                let text = v.as_string();
+                // A pattern of one literal space is Perl's awk mode: leading
+                // whitespace goes, and any run of it separates.
+                let awk = text == " ";
+                split_pat = Some((text, awk));
+            }
+            if !self.eat(",") {
+                self.i = save;
+                return None;
+            }
+        }
+
+        let mut args: Vec<Val> = Vec::new();
+        if !(paren && self.peek(")")) {
+            if is_list {
+                args.push(self.ternary()?);
+                while self.eat(",") {
+                    self.skip_ws();
+                    if paren && self.peek(")") {
+                        break; // a trailing comma
+                    }
+                    args.push(self.ternary()?);
+                }
+            } else {
+                args.push(self.additive()?);
+            }
+        }
+        if paren && !self.eat(")") {
+            self.i = save;
+            return None;
+        }
+        match apply_list_op(&name, split_pat.as_ref(), &args) {
             Some(v) => Some(v),
             None => {
                 self.i = save;
@@ -720,6 +887,366 @@ fn perl_replacement(rep: &str) -> String {
 ///
 /// A name that is not here declines, so the caller keeps the raw value: the
 /// alternative is a plausible-looking number produced by the wrong formula.
+/// Perl flattens nested lists into their elements when a list operator reads
+/// them, and so must we before joining or packing.
+fn flatten(args: &[Val]) -> Vec<Val> {
+    let mut out = Vec::new();
+    for a in args {
+        match a {
+            Val::List(items) => out.extend(flatten(items)),
+            other => out.push(other.clone()),
+        }
+    }
+    out
+}
+
+/// A Perl string used as binary data is a string of bytes. Ours arrives as a
+/// Rust `String`, so a character above 0xFF means it was built from something
+/// other than the raw bytes and we cannot say what those bytes were: refuse
+/// rather than invent them.
+fn perl_bytes(v: &Val) -> Option<Vec<u8>> {
+    v.as_string()
+        .chars()
+        .map(|c| u8::try_from(c as u32).ok())
+        .collect()
+}
+
+fn from_bytes(b: &[u8]) -> String {
+    b.iter().map(|c| *c as char).collect()
+}
+
+fn apply_list_op(name: &str, split_pat: Option<&(String, bool)>, args: &[Val]) -> Option<Val> {
+    Some(match name {
+        "split" => {
+            let (pat, awk) = split_pat?;
+            Val::List(
+                perl_split(pat, *awk, &args.first()?.as_string(), args.get(1).map(Val::as_num))?
+                    .into_iter()
+                    .map(Val::Str)
+                    .collect(),
+            )
+        }
+        "join" => {
+            let sep = args.first()?.as_string();
+            Val::Str(
+                flatten(&args[1..])
+                    .iter()
+                    .map(Val::as_string)
+                    .collect::<Vec<_>>()
+                    .join(&sep),
+            )
+        }
+        "reverse" => {
+            let mut items = flatten(args);
+            items.reverse();
+            Val::List(items)
+        }
+        "unpack" => Val::List(unpack_template(
+            &args.first()?.as_string(),
+            &perl_bytes(args.get(1)?)?,
+        )?),
+        "pack" => Val::Str(from_bytes(&pack_template(
+            &args.first()?.as_string(),
+            &flatten(&args[1..]),
+        )?)),
+        "sprintf" => Val::Str(format_sprintf(&args.first()?.as_string(), &args[1..])?),
+        "substr" => {
+            let chars: Vec<char> = args.first()?.as_string().chars().collect();
+            let len = i64::try_from(chars.len()).ok()?;
+            #[allow(clippy::cast_possible_truncation)]
+            let mut off = args.get(1)?.as_num() as i64;
+            if off < 0 {
+                off += len;
+            }
+            let off = off.clamp(0, len);
+            let end = match args.get(2) {
+                #[allow(clippy::cast_possible_truncation)]
+                Some(n) => {
+                    let n = n.as_num() as i64;
+                    // A negative length means "stop that far from the end".
+                    if n < 0 { (len + n).max(off) } else { (off + n).min(len) }
+                }
+                None => len,
+            };
+            Val::Str(chars[usize::try_from(off).ok()?..usize::try_from(end).ok()?].iter().collect())
+        }
+        #[allow(clippy::cast_precision_loss)]
+        "length" => Val::Num(args.first()?.as_string().chars().count() as f64),
+        "hex" => {
+            let t = args.first()?.as_string();
+            let t = t.trim();
+            let t = t.strip_prefix("0x").or_else(|| t.strip_prefix("0X")).unwrap_or(t);
+            #[allow(clippy::cast_precision_loss)]
+            Val::Num(u64::from_str_radix(t, 16).ok()? as f64)
+        }
+        "oct" => {
+            let t = args.first()?.as_string();
+            let t = t.trim();
+            #[allow(clippy::cast_precision_loss)]
+            let n = if let Some(h) = t.strip_prefix("0x").or_else(|| t.strip_prefix("0X")) {
+                u64::from_str_radix(h, 16).ok()?
+            } else if let Some(b) = t.strip_prefix("0b").or_else(|| t.strip_prefix("0B")) {
+                u64::from_str_radix(b, 2).ok()?
+            } else {
+                u64::from_str_radix(t.trim_start_matches('0'), 8).unwrap_or(0)
+            };
+            Val::Num(n as f64)
+        }
+        "ord" => {
+            #[allow(clippy::cast_precision_loss)]
+            Val::Num(args.first()?.as_string().chars().next().map_or(0.0, |c| c as u32 as f64))
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        "chr" => Val::Str(char::from_u32(args.first()?.as_num() as u32)?.to_string()),
+        "lc" => Val::Str(args.first()?.as_string().to_lowercase()),
+        "uc" => Val::Str(args.first()?.as_string().to_uppercase()),
+        "lcfirst" | "ucfirst" => {
+            let t = args.first()?.as_string();
+            let mut it = t.chars();
+            match it.next() {
+                None => Val::Str(t),
+                Some(c) => {
+                    let head: String = if name == "lcfirst" {
+                        c.to_lowercase().collect()
+                    } else {
+                        c.to_uppercase().collect()
+                    };
+                    Val::Str(head + it.as_str())
+                }
+            }
+        }
+        _ => return None,
+    })
+}
+
+/// Perl's `split`. Without a limit the trailing empty fields are dropped, which
+/// is what makes `split "\0", $val` on a NUL-terminated string give the strings
+/// and not a run of blanks after them.
+fn perl_split(pat: &str, awk: bool, subject: &str, limit: Option<f64>) -> Option<Vec<String>> {
+    #[allow(clippy::cast_possible_truncation)]
+    let limit = limit.map_or(0i64, |n| n as i64);
+    let mut fields: Vec<String> = Vec::new();
+    if awk {
+        fields = subject.split_whitespace().map(str::to_string).collect();
+    } else if pat.is_empty() {
+        fields = subject.chars().map(|c| c.to_string()).collect();
+    } else {
+        let re = build_regex(pat, "")?;
+        let mut last = 0usize;
+        for m in re.find_iter(subject) {
+            // A zero-width match would loop; Perl steps past it.
+            if m.end() == m.start() && m.start() == last {
+                continue;
+            }
+            if limit > 0 && i64::try_from(fields.len()).ok()? + 1 >= limit {
+                break;
+            }
+            fields.push(subject[last..m.start()].to_string());
+            last = m.end();
+        }
+        fields.push(subject[last..].to_string());
+    }
+    if limit == 0 {
+        while fields.last().is_some_and(String::is_empty) {
+            fields.pop();
+        }
+    }
+    Some(fields)
+}
+
+/// One `letter[count|*]` item of a pack/unpack template.
+fn template_items(tmpl: &str) -> Option<Vec<(char, Option<usize>)>> {
+    let mut out = Vec::new();
+    let mut it = tmpl.chars().peekable();
+    while let Some(c) = it.next() {
+        if c.is_whitespace() {
+            continue;
+        }
+        if !c.is_ascii_alphabetic() && c != '@' {
+            return None;
+        }
+        let mut count: Option<usize> = Some(1);
+        if it.peek() == Some(&'*') {
+            it.next();
+            count = None; // "as many as there are"
+        } else if it.peek().is_some_and(char::is_ascii_digit) {
+            let mut n = String::new();
+            while it.peek().is_some_and(char::is_ascii_digit) {
+                n.push(it.next()?);
+            }
+            count = Some(n.parse().ok()?);
+        }
+        out.push((c, count));
+    }
+    Some(out)
+}
+
+/// Perl's `unpack`, for the templates ExifTool's conversions use.
+///
+/// `s S l L q Q f d` are Perl's *native* forms, so their byte order is the
+/// machine's. ExifTool's own output — the baseline this crate is measured
+/// against — comes from Perl on x86, so native means little-endian here.
+/// An unknown letter refuses the whole conversion rather than guessing.
+#[allow(clippy::cast_precision_loss, clippy::too_many_lines)]
+fn unpack_template(tmpl: &str, data: &[u8]) -> Option<Vec<Val>> {
+    let mut out = Vec::new();
+    let mut pos = 0usize;
+    for (letter, count) in template_items(tmpl)? {
+        let left = data.len().saturating_sub(pos);
+        match letter {
+            'a' | 'A' | 'Z' => {
+                let n = count.unwrap_or(left).min(left);
+                let raw = &data[pos..pos + n];
+                pos += n;
+                let text = from_bytes(raw);
+                out.push(Val::Str(match letter {
+                    'A' => text.trim_end_matches([' ', '\0']).to_string(),
+                    'Z' => text.split('\0').next().unwrap_or_default().to_string(),
+                    _ => text,
+                }));
+            }
+            'H' | 'h' => {
+                let digits = count.unwrap_or(left * 2).min(left * 2);
+                let mut text = String::new();
+                for k in 0..digits {
+                    let b = data[pos + k / 2];
+                    let nyb = if (k % 2 == 0) == (letter == 'H') { b >> 4 } else { b & 0x0f };
+                    text.push(char::from_digit(u32::from(nyb), 16)?);
+                }
+                pos += digits.div_ceil(2);
+                out.push(Val::Str(text));
+            }
+            'x' => pos += count.unwrap_or(left).min(left),
+            'X' => pos = pos.saturating_sub(count.unwrap_or(pos)),
+            '@' => pos = count.unwrap_or(pos),
+            _ => {
+                let size = match letter {
+                    'C' | 'c' => 1,
+                    'n' | 'v' | 's' | 'S' => 2,
+                    'N' | 'V' | 'l' | 'L' | 'f' => 4,
+                    'q' | 'Q' | 'd' => 8,
+                    _ => return None,
+                };
+                let n = count.unwrap_or(left / size);
+                for _ in 0..n {
+                    if pos + size > data.len() {
+                        return Some(out); // Perl returns a short list, not an error
+                    }
+                    let b = &data[pos..pos + size];
+                    pos += size;
+                    out.push(Val::Num(match letter {
+                        'C' => f64::from(b[0]),
+                        'c' => f64::from(b[0] as i8),
+                        'n' => f64::from(u16::from_be_bytes([b[0], b[1]])),
+                        'v' | 'S' => f64::from(u16::from_le_bytes([b[0], b[1]])),
+                        's' => f64::from(i16::from_le_bytes([b[0], b[1]])),
+                        'N' => f64::from(u32::from_be_bytes([b[0], b[1], b[2], b[3]])),
+                        'V' | 'L' => f64::from(u32::from_le_bytes([b[0], b[1], b[2], b[3]])),
+                        'l' => f64::from(i32::from_le_bytes([b[0], b[1], b[2], b[3]])),
+                        'f' => f64::from(f32::from_le_bytes([b[0], b[1], b[2], b[3]])),
+                        'd' => f64::from_le_bytes(b.try_into().ok()?),
+                        'q' => i64::from_le_bytes(b.try_into().ok()?) as f64,
+                        _ => u64::from_le_bytes(b.try_into().ok()?) as f64,
+                    }));
+                }
+            }
+        }
+    }
+    Some(out)
+}
+
+/// Perl's `pack`, the inverse of the templates above.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn pack_template(tmpl: &str, args: &[Val]) -> Option<Vec<u8>> {
+    let mut out: Vec<u8> = Vec::new();
+    let mut it = args.iter();
+    for (letter, count) in template_items(tmpl)? {
+        match letter {
+            'a' | 'A' | 'Z' => {
+                let text = perl_bytes(it.next()?)?;
+                let n = count.unwrap_or(text.len() + usize::from(letter == 'Z'));
+                let pad = if letter == 'A' { b' ' } else { 0 };
+                for k in 0..n {
+                    out.push(text.get(k).copied().unwrap_or(pad));
+                }
+            }
+            'H' | 'h' => {
+                let text = it.next()?.as_string();
+                let digits: Vec<u32> = text.chars().map(|c| c.to_digit(16).unwrap_or(0)).collect();
+                let n = count.unwrap_or(digits.len());
+                let mut byte = 0u8;
+                for k in 0..n {
+                    let nyb = digits.get(k).copied().unwrap_or(0) as u8;
+                    if (k % 2 == 0) == (letter == 'H') {
+                        byte = nyb << 4;
+                    } else {
+                        byte |= nyb;
+                    }
+                    if k % 2 == 1 {
+                        out.push(byte);
+                        byte = 0;
+                    }
+                }
+                if n % 2 == 1 {
+                    out.push(byte);
+                }
+            }
+            'x' => out.extend(std::iter::repeat_n(0u8, count.unwrap_or(1))),
+            _ => {
+                let n = count.unwrap_or_else(|| it.len());
+                for _ in 0..n {
+                    let v = it.next()?.as_num();
+                    match letter {
+                        'C' | 'c' => out.push(v as i64 as u8),
+                        'n' => out.extend((v as i64 as u16).to_be_bytes()),
+                        'v' | 'S' | 's' => out.extend((v as i64 as u16).to_le_bytes()),
+                        'N' => out.extend((v as i64 as u32).to_be_bytes()),
+                        'V' | 'L' | 'l' => out.extend((v as i64 as u32).to_le_bytes()),
+                        'f' => out.extend((v as f32).to_le_bytes()),
+                        'd' => out.extend(v.to_le_bytes()),
+                        _ => return None,
+                    }
+                }
+            }
+        }
+    }
+    Some(out)
+}
+
+/// The escape sequences a double-quoted Perl string can carry. Returns the
+/// character and how many bytes of the source it took after the backslash.
+fn string_escape(rest: &[u8]) -> Option<(char, usize)> {
+    let c = *rest.first()?;
+    if c == b'x' {
+        // `\x{263a}` names a code point; `\xNN` names a byte.
+        if rest.get(1) == Some(&b'{') {
+            let end = rest.iter().position(|b| *b == b'}')?;
+            let hex = std::str::from_utf8(&rest[2..end]).ok()?;
+            return Some((char::from_u32(u32::from_str_radix(hex, 16).ok()?)?, end + 1));
+        }
+        let mut n = 0usize;
+        while n < 2 && rest.get(1 + n).is_some_and(u8::is_ascii_hexdigit) {
+            n += 1;
+        }
+        let hex = std::str::from_utf8(&rest[1..1 + n]).ok()?;
+        return Some((char::from_u32(u32::from_str_radix(hex, 16).ok()?)?, 1 + n));
+    }
+    Some((
+        match c {
+            b'n' => '\n',
+            b't' => '\t',
+            b'r' => '\r',
+            b'0' => '\0',
+            b'e' => '\u{1b}',
+            b'a' => '\u{7}',
+            b'f' => '\u{c}',
+            // Perl drops the backslash from anything else.
+            other => other as char,
+        },
+        1,
+    ))
+}
+
 fn call_helper(name: &str, args: &[Val]) -> Option<Val> {
     let first = args.first()?;
     Some(match name {
@@ -741,15 +1268,30 @@ fn call_helper(name: &str, args: &[Val]) -> Option<Val> {
         "ToDegrees" => Val::Num(to_degrees(&first.as_string())?),
         "ExifDate" => Val::Str(exif_date(&first.as_string())),
         "ExifTime" => Val::Str(exif_time(&first.as_string())),
-        // `unpack("H*", $val)` is the bytes as lowercase hex, and the only
-        // unpack template these conversions use often enough to be worth it.
-        "unpack" => {
-            if first.as_string() != "H*" {
-                return None;
+        // Nikon.pm PrintPC: four sentinel values, then a signed format.
+        "PrintPC" => {
+            let v = first.as_num();
+            let norm = args.get(1).map(Val::as_string).unwrap_or_default();
+            let fmt = args.get(2).map(Val::as_string).unwrap_or_default();
+            let div = args.get(3).map_or(1.0, Val::as_num);
+            if v == 0.0 {
+                Val::Str(if norm.is_empty() { "Normal".into() } else { norm })
+            } else if v == 127.0 {
+                Val::Str("n/a".into())
+            } else if v == -128.0 {
+                Val::Str("Auto".into())
+            } else if v == -127.0 {
+                Val::Str("User".into())
+            } else {
+                let f = if fmt.is_empty() { "%+d".to_string() } else { fmt };
+                let d = if div == 0.0 { 1.0 } else { div };
+                Val::Str(format_sprintf(&f, &[Val::Num(v / d)])?)
             }
-            let bytes = args.get(1)?.as_string();
-            Val::Str(bytes.bytes().map(|b| format!("{b:02x}")).collect())
         }
+        // GPS.pm PrintTimeStamp: trims the fractional seconds to microseconds.
+        "PrintTimeStamp" => Val::Str(print_time_stamp(&first.as_string())),
+        // XMP.pm ConvertXMPDate: an XMP date back into EXIF's layout.
+        "ConvertXMPDate" => Val::Str(convert_xmp_date(&first.as_string())),
         _ => return None,
     })
 }
@@ -852,6 +1394,46 @@ fn to_degrees(text: &str) -> Option<f64> {
         .next()
         .is_some_and(|t| t.eq_ignore_ascii_case("S") || t.eq_ignore_ascii_case("W"));
     Some(if neg { -deg } else { deg })
+}
+
+/// GPS.pm PrintTimeStamp: seconds kept to microseconds, zero-padded below ten.
+fn print_time_stamp(val: &str) -> String {
+    let Some(pos) = val.rfind(':') else { return val.to_string() };
+    let (head, tail) = val.split_at(pos);
+    let secs = &tail[1..];
+    if !secs.contains('.') || secs.parse::<f64>().is_err() {
+        return val.to_string();
+    }
+    let Ok(f) = secs.parse::<f64>() else { return val.to_string() };
+    let rounded = (f * 1_000_000.0 + 0.5).trunc() / 1_000_000.0;
+    let mut s = format_number(rounded);
+    if rounded < 10.0 {
+        s = format!("0{s}");
+    }
+    format!("{head}:{s}")
+}
+
+/// XMP.pm ConvertXMPDate: `2026-08-27T11:22:02+02:00` becomes EXIF's
+/// `2026:08:27 11:22:02+02:00`.
+fn convert_xmp_date(val: &str) -> String {
+    let b: Vec<char> = val.chars().collect();
+    let is_full = b.len() >= 16
+        && b[..4].iter().all(char::is_ascii_digit)
+        && b[4] == '-'
+        && b[5..7].iter().all(char::is_ascii_digit)
+        && b[7] == '-'
+        && b[8..10].iter().all(char::is_ascii_digit)
+        && (b[10] == 'T' || b[10] == ' ');
+    if is_full {
+        let date: String = b[..10].iter().collect::<String>().replace('-', ":");
+        let rest: String = b[11..].iter().collect();
+        return format!("{date} {}", rest.trim_start());
+    }
+    // A bare date, or a year-month: only the separators change.
+    if b.len() >= 4 && b[..4].iter().all(char::is_ascii_digit) {
+        return val.replace('-', ":");
+    }
+    val.to_string()
 }
 
 /// Exif.pm ExifDate: eight digits, however they were separated, become
@@ -1004,6 +1586,29 @@ mod tests {
 
     /// Every expected value here came out of Perl ExifTool, not out of my head.
     #[test]
+    fn nikon_picture_control_and_the_date_reshapers() {
+        let pc = |v: f64| {
+            eval("Image::ExifTool::Nikon::PrintPC($val,\"None\",\"%.2f\",4)", &n(v))
+                .unwrap()
+                .as_string()
+        };
+        assert_eq!(pc(0.0), "None");
+        assert_eq!(pc(127.0), "n/a");
+        assert_eq!(pc(-128.0), "Auto");
+        assert_eq!(pc(8.0), "2.00");
+        assert_eq!(
+            eval("Image::ExifTool::XMP::ConvertXMPDate($val)", &Val::Str("2026-08-27T11:22:02+02:00".into()))
+                .unwrap().as_string(),
+            "2026:08:27 11:22:02+02:00"
+        );
+        assert_eq!(
+            eval("Image::ExifTool::GPS::PrintTimeStamp($val)", &Val::Str("11:22:02.500000".into()))
+                .unwrap().as_string(),
+            "11:22:02.5"
+        );
+    }
+
+    #[test]
     fn nul_in_a_pattern_and_unpack_hex() {
         assert_eq!(
             eval("$val =~ s/[ \\0]+$//; $val", &Val::Str("abc \0\0".into()))
@@ -1011,12 +1616,30 @@ mod tests {
                 .as_string(),
             "abc"
         );
+        // A binary value is a string of bytes, so U+00FE is the byte 0xfe --
+        // not the two bytes Rust would encode it as.
         assert_eq!(
             eval("unpack(\"H*\", $val)", &Val::Str("\u{fe}\u{fe}".into()))
                 .unwrap()
                 .as_string(),
-            "c3bec3be"
+            "fefe"
         );
+    }
+
+    /// Every expected value here was read off Perl itself before it was
+    /// written down.
+    #[test]
+    fn the_perl_list_operators() {
+        let s = |e: &str, v: &str| eval(e, &Val::Str(v.into())).unwrap().as_string();
+        assert_eq!(s("join \" \", split \"\\0\", substr($val, 8)", "headerXXab\0cd\0"), "ab cd");
+        assert_eq!(s("join \" \", unpack \"H2H2\", $val", "\u{1f}\u{2e}"), "1f 2e");
+        assert_eq!(s("join(\" \", unpack(\"H2\"x3, $val))", "\u{ab}\u{cd}\u{ef}"), "ab cd ef");
+        assert_eq!(s("join \" \", reverse split(\" \",$val)", "1 2 3"), "3 2 1");
+        assert_eq!(s("unpack \"H*\", pack \"C*\", split \" \", $val", "1 2 255"), "0102ff");
+        assert_eq!(s("\"0x\" . unpack(\"H*\",$val)", "\u{a}"), "0x0a");
+        assert_eq!(s("uc $val", "abc"), "ABC");
+        assert_eq!(s("length($val) > 2 ? \"long\" : \"short\"", "abcd"), "long");
+        assert_eq!(eval("sprintf \"%g\", $val", &Val::Num(0.5)).unwrap().as_string(), "0.5");
     }
 
     #[test]
