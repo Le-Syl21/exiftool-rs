@@ -5018,6 +5018,75 @@ fn mk_nikon_str(name: &str, value: &str) -> Tag {
     }
 }
 
+/// The custom settings a Z body keeps behind two or three offsets.
+///
+/// ShotInfoZ9 holds a four-byte offset to MenuInfoZ9, which holds another to
+/// one of three MenuSettings layouts -- which one the FirmwareVersion at 0x04
+/// decides -- and the settings sit at a fixed index inside that
+/// (Nikon.pm:2606-2640, 9975-10480). The Z6III has one level fewer.
+fn nikon_z_custom_settings(version: &str, d: &[u8]) -> Vec<Tag> {
+    let le32 = |at: usize| -> Option<usize> {
+        d.get(at..at + 4)
+            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize)
+    };
+    // FirmwareVersion is `string[8]` at 0x04 of every ShotInfoZ*.
+    let fw: String = d
+        .get(4..12)
+        .map(|b| {
+            b.iter()
+                .take_while(|c| **c != 0)
+                .map(|c| *c as char)
+                .collect()
+        })
+        .unwrap_or_default();
+
+    // (table, index of the settings inside it)
+    let (table, at) = match version {
+        // Z6III, Z50II, Z5II: ShotInfoZ6III 0x90 -> MenuSettingsZ6III.
+        "0809" | "0810" | "0811" => {
+            let Some(menu) = le32(0x90) else { return Vec::new() };
+            return decode_z_settings(d, menu + 884, "NikonCustom::SettingsZ6III");
+        }
+        // Both Z8 layouts keep the settings at the same index.
+        "0806" => ("NikonCustom::SettingsZ8", 943),
+        // The Z9 has three, and the firmware picks: v2 and earlier keep them
+        // at 614, v3 at 656 under the same table, v4 at 656 under its own.
+        "0805" if fw.as_str() < "03.00" => ("NikonCustom::SettingsZ9", 614),
+        "0805" if fw.as_str() < "04.00" => ("NikonCustom::SettingsZ9", 656),
+        "0805" => ("NikonCustom::SettingsZ9v4", 656),
+        _ => return Vec::new(),
+    };
+    // Z8 and Z9 have a MenuInfo level between: its own offset at 0x8c, then
+    // the settings offset at 0x10 of that, relative to MenuInfo's start.
+    let Some(menu_info) = le32(0x8c) else {
+        return Vec::new();
+    };
+    let Some(settings) = d
+        .get(menu_info + 0x10..menu_info + 0x14)
+        .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize)
+    else {
+        return Vec::new();
+    };
+    decode_z_settings(d, menu_info + settings + at, table)
+}
+
+fn decode_z_settings(d: &[u8], at: usize, table: &str) -> Vec<Tag> {
+    let Some(block) = d.get(at..) else {
+        return Vec::new();
+    };
+    let mut dm = crate::tags::binary_tables_generated::State::new();
+    crate::tags::binary_tables_generated::decode(
+        table,
+        block,
+        "",
+        "",
+        ByteOrderMark::LittleEndian,
+        "",
+        "",
+        &mut dm,
+    )
+}
+
 /// Decrypt Nikon encrypted sub-tables (ShotInfo, LensData, FlashInfo).
 /// Uses SerialNumber + ShutterCount extracted from previously parsed tags.
 fn decrypt_nikon_subtables(
@@ -5140,6 +5209,7 @@ fn decrypt_nikon_subtables(
                         ));
                     }
                 }
+                tags.extend(nikon_z_custom_settings(version, &decrypted));
             }
             // 0x00A8 FlashInfo is NOT encrypted — handled (raw) by decode_nikon_flashinfo
             // in read_makernote_ifd_with_base. Decrypting it here produced garbage.
@@ -6075,7 +6145,10 @@ fn read_makernote_ifd_with_base(
                         crate::tags::binary_tables_generated::count_member("Canon", 0x000d)
                     {
                         #[allow(clippy::cast_precision_loss)]
-                        dm.push((name.to_string(), count as f64));
+                        dm.push((
+                            name.to_string(),
+                            crate::tags::conv_expr::Val::Num(f64::from(count)),
+                        ));
                     }
                     let mut t = crate::tags::binary_tables_generated::variant_for(
                         "Canon",

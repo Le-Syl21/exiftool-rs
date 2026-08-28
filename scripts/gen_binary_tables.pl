@@ -42,7 +42,10 @@ my %WANTED = (
     CanonVRD => [qw(DustInfo)],
     Kodak => [qw(Type9)],
     Nikon => [qw(LensDataUnknown)],
-    NikonCustom => [qw(SettingsD40 SettingsD810 SettingsD850)],
+    NikonCustom => [qw(
+        SettingsD40 SettingsD810 SettingsD850
+        SettingsZ6III SettingsZ8 SettingsZ9 SettingsZ9v4
+    )],
     NikonCapture => [qw(
         DLightingHQ DLightingHS HighlightData PictureCtrl UnsharpData WBAdjData
     )],
@@ -363,8 +366,19 @@ sub compile_cond {
     if ($cond =~ /^defined \$\$self\{(\w+)\}$/) {
         return sprintf('dm_get(dm, "%s").is_some()', $1);
     }
+    # `$$self{FirmwareVersion} ge "05.00"`: a string member, compared the way
+    # Perl compares strings.
+    if ($cond =~ /^\$\$self\{(\w+)\} (eq|ne|lt|le|gt|ge) "([^"]*)"$/) {
+        my ($dm, $op, $str) = ($1, $2, $3);
+        my $rust = { eq => '==', ne => '!=', lt => '<', le => '<=', gt => '>', ge => '>=' }->{$op};
+        $str =~ s/\\/\\\\/g;
+        $str =~ s/"/\\"/g;
+        return sprintf('dm_val(dm, "%s").is_some_and(|v| v.as_string().as_str() %s "%s")',
+                       $dm, $rust, $str);
+    }
     if ($cond =~ /^\$\$self\{(\w+)\}$/) {
-        return sprintf('dm_get(dm, "%s").is_some_and(|v| v != 0.0)', $1);
+        # Perl's truth, not "non-zero": a version string is true.
+        return sprintf('dm_val(dm, "%s").is_some_and(conv_expr::Val::truthy)', $1);
     }
     return ();
 }
@@ -841,10 +855,16 @@ pub type ByteOrder = crate::metadata::exif::ByteOrderMark;
 
 /// What the fields of this block have read so far, by the name ExifTool
 /// stores them under.
-pub type State = Vec<(String, f64)>;
+/// A member is whatever the field read: a Nikon FirmwareVersion is a string,
+/// and the conditions on the Z9's custom settings compare it to one.
+pub type State = Vec<(String, Conv)>;
+
+fn dm_val<'a>(dm: &'a State, name: &str) -> Option<&'a Conv> {
+    dm.iter().rev().find(|(n, _)| n == name).map(|(_, v)| v)
+}
 
 fn dm_get(dm: &State, name: &str) -> Option<f64> {
-    dm.iter().rev().find(|(n, _)| n == name).map(|(_, v)| *v)
+    dm_val(dm, name).map(Conv::as_num)
 }
 
 /// What a conversion of this block can ask the file about.
@@ -874,7 +894,7 @@ impl conv_expr::ParseState for Ctx<'_> {
             "Make" => Some(Conv::Str(self.make.to_string())),
             "Model" => Some(Conv::Str(self.model.to_string())),
             "FILE_TYPE" | "FileType" => Some(Conv::Str(self.file_type.to_string())),
-            _ => dm_get(self.dm, name).map(Conv::Num),
+            _ => dm_val(self.dm, name).cloned(),
         }
     }
 }
@@ -1047,6 +1067,11 @@ for my $t (@tables) {
             }
             printf "%sif let Some(text) = text_at(data, 0x%x, %d, %s) {\n",
                 $ind, $byte, $f->{n}, ($f->{fmt} eq 'string' ? 'true' : 'false');
+            # A string field stores itself where ExifTool names it a
+            # DataMember: the Z9's FirmwareVersion decides which of three
+            # menu-settings layouts applies.
+            printf "%s    dm.push((\"%s\".to_string(), Conv::Str(text.clone())));\n",
+                $ind, $f->{dmname} if defined $f->{dmname};
             printf "%s    tags.push(mk(\"%s\", 0x%x, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));\n",
                 $ind, $f->{name}, $f->{off} unless $f->{hidden};
             printf "%s}\n", $ind;
@@ -1114,7 +1139,7 @@ for my $t (@tables) {
             printf "%s    let v = %s;\n", $ind,
                 $shift ? sprintf('(v & %#x) >> %d', $f->{mask}, $shift) : sprintf('v & %#x', $f->{mask});
         }
-        printf "%s    dm.push((\"%s\".to_string(), f64::from(v)));\n",
+        printf "%s    dm.push((\"%s\".to_string(), Conv::Num(f64::from(v))));\n",
             $ind, $f->{dmname} // $f->{name};
         # `Unknown => 1` is read but not reported unless -u is given, which is
         # not the default. The value still goes into the state, because a later
