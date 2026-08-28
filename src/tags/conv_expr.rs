@@ -3268,6 +3268,46 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
         "CalcScaleFactor35efl" => scale_factor_35efl(args, state)?,
         // TNEF.pm DecompressRTF: the compressed RTF body of a mail message.
         "DecompressRTF" => Val::Binary(decompress_rtf(&perl_bytes(first)?)?),
+        // Sony.pm ConvLensSpec: eight bytes into the six numbers a lens
+        // specification is made of.
+        "ConvLensSpec" => {
+            let b = perl_bytes(first)?;
+            if b.len() != 8 {
+                return Some(first.clone());
+            }
+            // `unpack("H2H4H4H2H2H2")`: one, two, two, one, one, one byte(s)
+            // as hex digits.
+            let hex = |from: usize, n: usize| -> String {
+                b[from..from + n].iter().map(|x| format!("{x:02x}")).collect()
+            };
+            let (flags1, sf, lf) = (hex(0, 1), hex(1, 2), hex(3, 2));
+            // The apertures carry a hex letter where a digit would not fit:
+            // "b0" is f11, so each letter becomes its own value first.
+            let aperture = |h: String| -> f64 {
+                let digits: String = h
+                    .chars()
+                    .map(|c| {
+                        if ('a'..='f').contains(&c) {
+                            c.to_digit(16).unwrap_or(0).to_string()
+                        } else {
+                            c.to_string()
+                        }
+                    })
+                    .collect();
+                leading_number(&digits) / 10.0
+            };
+            Val::Str(format!(
+                "{flags1} {} {} {} {} {}",
+                leading_number(&sf),
+                leading_number(&lf),
+                format_number(aperture(hex(5, 1))),
+                format_number(aperture(hex(6, 1))),
+                hex(7, 1)
+            ))
+        }
+        // Sony.pm PrintLensSpec: the focal and aperture range, with the lens
+        // features its two flag bytes name.
+        "PrintLensSpec" => Val::Str(print_lens_spec(&first.as_string())),
         // GPS.pm PrintTimeStamp: trims the fractional seconds to microseconds.
         "PrintTimeStamp" => Val::Str(print_time_stamp(&first.as_string())),
         // XMP.pm ConvertXMPDate: an XMP date back into EXIF's layout.
@@ -3776,6 +3816,72 @@ fn red_blue_balance(args: &[Val]) -> Option<Val> {
         return Some(Val::Num(a.as_num() / b.as_num()));
     }
     Some(Val::Undef)
+}
+
+/// Sony.pm PrintLensSpec. The two flag bytes name the lens features, and each
+/// goes before or after the focal/aperture range depending on the feature.
+fn print_lens_spec(val: &str) -> String {
+    // (mask, [(bits, name)], prefix?) in the order ExifTool adds them.
+    const FEATURES: &[(u32, &[(u32, &str)], bool)] = &[
+        (0x4000, &[(0x4000, "PZ")], true),
+        (0x0300, &[(0x0100, "DT"), (0x0200, "FE"), (0x0300, "E")], true),
+        (
+            0x00e0,
+            &[(0x0020, "STF"), (0x0040, "Reflex"), (0x0060, "Macro"), (0x0080, "Fisheye")],
+            false,
+        ),
+        (0x000c, &[(0x0004, "ZA"), (0x0008, "G")], false),
+        (0x0003, &[(0x0001, "SSM"), (0x0002, "SAM")], false),
+        (0x8000, &[(0x8000, "OSS")], false),
+        (0x2000, &[(0x2000, "LE")], false),
+        (0x0800, &[(0x0800, "II")], false),
+    ];
+    let a: Vec<&str> = val.split_whitespace().collect();
+    let (f1, f2, mut spec) = match a.len() {
+        // The LensSpecFeatures patch: two flag bytes and nothing else.
+        2 => (a[0], a[1], Some(String::new())),
+        n if n >= 6 => {
+            let num = |s: &str| leading_number(s);
+            let (sf, lf, sa, la) = (num(a[1]), num(a[2]), num(a[3]), num(a[4]));
+            // A crude check that these are a focal length and an aperture.
+            let ok = sf != 0.0 && sa != 0.0 && (lf == 0.0 || lf >= sf) && (la == 0.0 || la >= sa);
+            let text = ok.then(|| {
+                let focal = if lf != sf && lf != 0.0 {
+                    format!("{}-{}", format_number(sf), format_number(lf))
+                } else {
+                    format_number(sf)
+                };
+                let ap = if sa != la && la != 0.0 {
+                    format!("{}-{}", format_number(sa), format_number(la))
+                } else {
+                    format_number(sa)
+                };
+                format!("{focal}mm F{ap}")
+            });
+            (a[0], a[5], text)
+        }
+        _ => ("", "", None),
+    };
+    let Some(ref mut text) = spec else {
+        return format!("Unknown ({val})");
+    };
+    let flags = u32::from_str_radix(&format!("{f1}{f2}"), 16).unwrap_or(0);
+    for (mask, names, prefix) in FEATURES {
+        let bits = mask & flags;
+        let named = names.iter().find(|(b, _)| *b == bits).map(|(_, n)| (*n).to_string());
+        if bits == 0 && named.is_none() {
+            continue;
+        }
+        let str_ = named.unwrap_or_else(|| format!("Unknown({bits:04x})"));
+        *text = if text.is_empty() {
+            str_
+        } else if *prefix {
+            format!("{str_} {text}")
+        } else {
+            format!("{text} {str_}")
+        };
+    }
+    text.clone()
 }
 
 /// ExifTool.pm IsInt: an optionally signed run of digits, nothing else.

@@ -266,11 +266,31 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
             }
         }
 
+        # Conversions written as Perl expressions rather than a hash. They are
+        # carried over verbatim and evaluated by tags::conv_expr, which declines
+        # anything outside its grammar so the raw value survives untouched.
+        my ($rconv) = $fb =~ /RawConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
+        $rconv =~ s/\\'/'/g if defined $rconv;
+        my ($vconv) = $fb =~ /ValueConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
+        my ($pconv) = $fb =~ /PrintConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
+        # A conversion can be a named subroutine: `PrintConv => \&PrintLensSpec`.
+        # Emitting the call lets tags::conv_expr dispatch it, and a name it has
+        # not ported declines there, which leaves the raw value.
+        unless (defined $vconv) {
+            ($vconv) = $fb =~ /ValueConv\s*=>\s*\\&(\w+)/;
+            $vconv = "Image::ExifTool::Sony::$vconv(\$val)" if defined $vconv;
+        }
+        unless (defined $pconv) {
+            ($pconv) = $fb =~ /PrintConv\s*=>\s*\\&(\w+)/;
+            $pconv = "Image::ExifTool::Sony::$pconv(\$val)" if defined $pconv;
+        }
+        for ($vconv, $pconv) { $_ =~ s/\\'/'/g if defined }
+
         # `string[20]` and `undef[6]` are N bytes read as text.
         if ($ffmt =~ /^(string|undef)\[(\d+)\]$/) {
             push @fields, { off => $off, name => $name, fmt => $1, n => $2,
                             re => $re, neg => $neg, conv => {},
-                            vconv => undef, pconv => undef, hidden => $hidden,
+                            vconv => $vconv, pconv => $pconv, hidden => $hidden,
                             dmname => $dmname, grp2 => $fgrp2 };
             next;
         }
@@ -356,15 +376,6 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
                 $conv{$k} = $v;
             }
         }
-
-        # Conversions written as Perl expressions rather than a hash. They are
-        # carried over verbatim and evaluated by tags::conv_expr, which declines
-        # anything outside its grammar so the raw value survives untouched.
-        my ($rconv) = $fb =~ /RawConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
-        $rconv =~ s/\\'/'/g if defined $rconv;
-        my ($vconv) = $fb =~ /ValueConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
-        my ($pconv) = $fb =~ /PrintConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
-        for ($vconv, $pconv) { $_ =~ s/\\'/'/g if defined }
 
         push @fields, {
             off => $off, name => $name, fmt => $ffmt, n => $count_n,
@@ -969,8 +980,22 @@ for my $t (@tables) {
         if ($f->{fmt} eq 'string' or $f->{fmt} eq 'undef') {
             printf "%sif let Some(text) = text_at(data, 0x%x, %d, %s) {\n",
                 $ind, $f->{off}, $f->{n}, ($f->{fmt} eq 'string' ? 'true' : 'false');
-            printf "%s    tags.push(text_tag(\"%s\", %s, text, PRIO));\n", $ind, $f->{name}, grp2_of($f)
-                unless $f->{hidden};
+            # The conversions apply to text fields as much as to numbers:
+            # LensSpecFeatures is two bytes read as hex and then named.
+            if (defined $f->{vconv} or defined $f->{pconv}) {
+                my $esc = sub { my $t = shift; $t =~ s/\\/\\\\/g; $t =~ s/"/\\"/g; $t };
+                printf "%s    let mut cv = Conv::Str(text.clone());\n", $ind;
+                printf "%s    if let Some(x) = conv_expr::eval(\"%s\", &cv) { cv = x; }\n",
+                    $ind, $esc->($f->{vconv}) if defined $f->{vconv};
+                printf "%s    let raw = Value::String(cv.as_string());\n", $ind;
+                printf "%s    if let Some(x) = conv_expr::eval(\"%s\", &cv) { cv = x; }\n",
+                    $ind, $esc->($f->{pconv}) if defined $f->{pconv};
+                printf "%s    tags.push(mk_prio(\"%s\", cv.as_string(), raw, %s, PRIO));\n",
+                    $ind, $f->{name}, grp2_of($f) unless $f->{hidden};
+            } else {
+                printf "%s    tags.push(text_tag(\"%s\", %s, text, PRIO));\n", $ind, $f->{name}, grp2_of($f)
+                    unless $f->{hidden};
+            }
             printf "%s}\n", $ind;
             print  "    }\n" if defined $f->{re};
             next;

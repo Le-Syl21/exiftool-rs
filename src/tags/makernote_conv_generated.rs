@@ -9,6 +9,15 @@
 #[must_use]
 pub fn value_conv_expr(maker: &str, tag: u16) -> Option<&'static str> {
     Some(match (maker, tag) {
+        ("Apple", 0x0002) => "Image::ExifTool::Apple::ConvertPLIST($val)", // AEMatrix
+        ("Apple", 0x003e) => "Image::ExifTool::Apple::ConvertPLIST($val)", // ColorCorrectionMatrix
+        ("Apple", 0x0040) => "Image::ExifTool::Apple::ConvertPLIST($val)", // SemanticStyle
+        ("Apple", 0x0041) => "Image::ExifTool::Apple::ConvertPLIST($val)", // SemanticStyleRenderingVer
+        ("Apple", 0x0042) => "Image::ExifTool::Apple::ConvertPLIST($val)", // SemanticStylePreset
+        ("Apple", 0x004e) => "Image::ExifTool::Apple::ConvertPLIST($val)", // Apple_0x004e
+        ("Apple", 0x004f) => "Image::ExifTool::Apple::ConvertPLIST($val)", // Apple_0x004f
+        ("Apple", 0x0054) => "Image::ExifTool::Apple::ConvertPLIST($val)", // Apple_0x0054
+        ("Apple", 0x005a) => "Image::ExifTool::Apple::ConvertPLIST($val)", // Apple_0x005a
         ("Canon", 0x0023) => "$val =~ s/^8 //; $val", // Categories
         ("Canon", 0x0028) => "unpack(\"H*\", $val)", // ImageUniqueID
         ("Canon", 0x00a1) => "length($val) > 64 ? \\$val : $val", // ToneCurveTable
@@ -60,6 +69,7 @@ pub fn value_conv_expr(maker: &str, tag: u16) -> Option<&'static str> {
         ("Pentax", 0x003c) => "$val & 0x7ff", // AFPointsInFocus
         ("Pentax", 0x0040) => "($val - 50) / 10", // SensitivityAdjust
         ("Pentax", 0x0050) => "53190 - $val", // ColorTemperature
+        ("Pentax", 0x005d) => "Image::ExifTool::Pentax::CryptShutterCount($val)", // ShutterCount
         ("Pentax", 0x0203) => "join(\" \",map({ $_/8192 } split(\" \",$val)))", // ColorMatrixA
         ("Pentax", 0x0204) => "join(\" \",map({ $_/8192 } split(\" \",$val)))", // ColorMatrixB
         ("Sigma", 0x000c) => "$val =~ s/Expo:\\s*//, $val", // ExposureCompensation
@@ -81,6 +91,7 @@ pub fn value_conv_expr(maker: &str, tag: u16) -> Option<&'static str> {
         ("Sony", 0x940d) => "PrintHex($val)", // Sony_0x940d
         ("Sony", 0x940f) => "PrintHex($val)", // Sony_0x940f
         ("Sony", 0x9411) => "PrintHex($val)", // Sony_0x9411
+        ("Sony", 0xb02a) => "Image::ExifTool::Sony::ConvLensSpec($val)", // LensSpec
         ("Sony", 0xb02b) => "join(\" \", reverse split(\" \", $val))", // FullImageSize
         ("Sony", 0xb02c) => "join(\" \", reverse split(\" \", $val))", // PreviewImageSize
         _ => return None,
@@ -124,6 +135,7 @@ pub fn print_conv_expr(maker: &str, tag: u16) -> Option<&'static str> {
         ("Nikon", 0x0019) => "$val !~ /undef/ ? Image::ExifTool::Exif::PrintFraction($val) : \"n/a\"", // ExposureBracketValue
         ("Nikon", 0x001c) => "Image::ExifTool::Exif::PrintFraction($val)", // ExposureTuning
         ("Nikon", 0x0083) => "$_ = $val ? Image::ExifTool::DecodeBits($val, { 0 => 'MF', 1 => 'D', 2 => 'G', 3 => 'VR', 4 => '1', #PH 5 => 'FT-1', #PH/IB 6 => 'E', #PH (electromagnetic aperture mechanism) 7 => 'AF-P', #PH/IB }) : 'AF'; # remove commas and change \"D G\" to just \"G\" s/,//g; s/\\bD G\\b/G/; s/ E\\b// and s/^(G )?/E /; # put \"E\" at the start instead of \"G\" s/ 1// and $_ = \"1 $_\"; # put \"1\" at start s/FT-1 // and $_ .= ' FT-1'; # put \"FT-1\" at end return $_;", // LensType
+        ("Nikon", 0x0084) => "Image::ExifTool::Exif::PrintLensInfo($val)", // Lens
         ("Nikon", 0x0089) => "$_ = ''; unless ($val & 0x87) { return 'Single-Frame' unless $val; $_ = 'Single-Frame, '; } return $_ . Image::ExifTool::DecodeBits($val, { 0 => 'Continuous', 1 => 'Delay', 2 => 'PC Control', 3 => 'Self-timer', #forum6281 (NC) 4 => 'Exposure Bracketing', 5 => $$self{Model}=~/D70\\b/ ? 'Unused LE-NR Slowdown' : 'Auto ISO', 6 => 'White-Balance Bracketing', 7 => 'IR Control', 8 => 'D-Lighting Bracketing', #forum6281 (NC) 11 => 'Pre-capture', #28 Z9 pre-release burst });", // ShootingMode
         ("Nikon", 0x008b) => "sprintf(\"%.2f\", $val)", // LensFStops
         ("Nikon", 0x009a) => "$val=~s/ / x /;\"$val um\"", // SensorPixelSize
@@ -194,7 +206,15 @@ pub fn print_conv_expr(maker: &str, tag: u16) -> Option<&'static str> {
         ("Sony", 0x2035) => "$val > 0 ? \"+$val\" : $val", // SharpnessRange
         ("Sony", 0x2036) => "$val > 0 ? \"+$val\" : $val", // Clarity
         ("Sony", 0x2037) => "my @a = split ' ', $val; return $a[2] ? sprintf('%3dx%3d', $a[0], $a[1]) : 'n/a';", // FocusFrameSize
+        ("Sony", 0x9407) => "Image::ExifTool::LimitLongValues($val)", // Sony_0x9407
+        ("Sony", 0x9408) => "Image::ExifTool::LimitLongValues($val)", // Sony_0x9408
+        ("Sony", 0x9409) => "Image::ExifTool::LimitLongValues($val)", // Sony_0x9409
+        ("Sony", 0x940b) => "Image::ExifTool::LimitLongValues($val)", // Sony_0x940b
+        ("Sony", 0x940d) => "Image::ExifTool::LimitLongValues($val)", // Sony_0x940d
+        ("Sony", 0x940f) => "Image::ExifTool::LimitLongValues($val)", // Sony_0x940f
+        ("Sony", 0x9411) => "Image::ExifTool::LimitLongValues($val)", // Sony_0x9411
         ("Sony", 0xb021) => "$val ? ($val==0xffffffff ? \"n/a\" : $val) : \"Auto\"", // ColorTemperature
+        ("Sony", 0xb02a) => "Image::ExifTool::Sony::PrintLensSpec($val)", // LensSpec
         ("Sony", 0xb02b) => "$val =~ tr/ /x/; $val", // FullImageSize
         ("Sony", 0xb02c) => "$val =~ tr/ /x/; $val", // PreviewImageSize
         _ => return None,

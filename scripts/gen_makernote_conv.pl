@@ -14,6 +14,7 @@
 use strict;
 use warnings;
 no strict 'refs';
+use Sub::Util qw(subname);
 
 my $dir = $ARGV[0] || '/home/sylvain/dev/exiftool';
 die "Cannot find $dir/lib\n" unless -d "$dir/lib";
@@ -80,7 +81,21 @@ for my $maker (@MAKERS) {
             }
             for my $kind ('ValueConv', 'PrintConv') {
                 my $c = $$ti{$kind};
-                next unless defined $c and not ref $c;   # a hash or code ref is not ours
+                # A conversion can be a named subroutine rather than an
+                # expression. Emitting the call lets tags::conv_expr dispatch
+                # it, and an unported name declines there -- which leaves the
+                # raw value, exactly as not emitting it would.
+                if (ref $c eq 'CODE') {
+                    my $sub = subname($c);
+                    if ($sub and $sub !~ /__ANON__/) {
+                        push @rows, [$maker, $id, $kind, $name, "$sub(\$val)"];
+                    } else {
+                        push @skipped, sprintf("%s 0x%04x %s: %s is an anonymous subroutine",
+                                               $maker, $id, $name, $kind);
+                    }
+                    next;
+                }
+                next unless defined $c and not ref $c;   # a hash is not ours
                 # A conversion that spans lines is still one expression.
                 $c =~ s/\s+/ /g;
                 $c =~ s/^ | $//g;
