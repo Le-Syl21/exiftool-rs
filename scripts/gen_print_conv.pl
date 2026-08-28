@@ -33,6 +33,7 @@ my $total_entries = 0;
 my $total_tags = 0;
 my @dropped;   # conversions not emitted, reported at the end
 my %all_str_convs;      # conversions keyed by the value as a string
+my %all_list_convs;     # one conversion per element of a multi-value tag
 my $total_str_entries = 0;
 
 for my $file (@pm_files) {
@@ -64,14 +65,28 @@ for my $file (@pm_files) {
     #       },
     #   },
 
-    # Find all tag definitions with PrintConv hashes
-    while ($content =~ /
-        (0x[0-9a-fA-F]+|[\d]+)\s*=>\s*\{   # tag ID
-        ((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*)  # tag body (nested braces)
-        \}/gx) {
-
+    # Find every tag definition and take its whole body by counting brackets.
+    # A regex that allows only two levels of nesting stops early on a tag whose
+    # PrintConv is a LIST of hashes -- Sony's HDR -- and hands back a body with
+    # no conversion in it at all.
+    my @tag_bodies;
+    while ($content =~ /(0x[0-9a-fA-F]+|[\d]+)\s*=>\s*\{/g) {
         my $tag_hex = $1;
-        my $body = $2;
+        my $from = pos($content);
+        my ($depth, $i) = (1, $from);
+        while ($i < length($content) and $depth) {
+            my $c = substr($content, $i, 1);
+            $depth++ if $c eq '{';
+            $depth-- if $c eq '}';
+            ++$i;
+        }
+        next if $depth;   # unbalanced: not a tag definition we can read
+        push @tag_bodies, [$tag_hex, substr($content, $from, $i - $from - 1)];
+        pos($content) = $from;
+    }
+
+    for my $tb (@tag_bodies) {
+        my ($tag_hex, $body) = @$tb;
 
         # Get tag name. A name is not always `\w+`: Sony has Anti-Blur and
         # APS-CSizeCapture, and requiring word characters dropped those tags
@@ -92,6 +107,50 @@ for my $file (@pm_files) {
             $tag_id = int($tag_hex);
         }
         next if $tag_id > 0xFFFF;
+
+        # A PrintConv can be a LIST of hashes, one per element of the value:
+        # ExifTool splits the value on spaces, converts each element with its
+        # own hash and joins the results with '; ' (ExifTool.pm:3550, 3696).
+        # Sony's HDR is `[{ 0 => 'Off', ... },{ 0 => 'Uncorrected image', ... }]`.
+        if ($body =~ /PrintConv\s*=>\s*\[/) {
+            my $start = $-[0] + length($&);
+            my ($depth, $i) = (1, $start);
+            while ($i < length($body) and $depth) {
+                my $c = substr($body, $i, 1);
+                $depth++ if $c eq '[';
+                $depth-- if $c eq ']';
+                ++$i;
+            }
+            my $listSrc = substr($body, $start, $i - $start - 1);
+            my @parts;
+            my ($d, $from) = (0, undef);
+            for my $j (0 .. length($listSrc) - 1) {
+                my $c = substr($listSrc, $j, 1);
+                if ($c eq '{') { $from = $j + 1 unless $d++; }
+                elsif ($c eq '}') { push @parts, substr($listSrc, $from, $j - $from) unless --$d; }
+            }
+            my @convs;
+            for my $part (@parts) {
+                my %c;
+                while ($part =~ /(-?\d+|0x[0-9a-fA-F]+)\s*=>\s*'([^']*)'/g) {
+                    # Both captures must be taken before any other match: a
+                    # `=~` of its own resets $1 and $2, which left every value
+                    # of this table empty.
+                    my ($k, $v) = ($1, $2);
+                    $k = $k =~ /^0x/ ? hex($k) : int($k);
+                    $c{$k} = $v;
+                }
+                push @convs, \%c if %c;
+            }
+            if (@convs > 1) {
+                $all_list_convs{"${module}::${tag_id}"} = {
+                    module => $module, tag_id => $tag_id, tag_name => $name, convs => \@convs,
+                };
+            } elsif (@parts) {
+                push @dropped, "$module $tag_hex $name: PrintConv list of "
+                             . scalar(@parts) . " part(s), none usable";
+            }
+        }
 
         # A PrintConv can be keyed by the whole value as a string rather than
         # by a number: Sony's VariableLowPassFilter is `{ '0 0' => 'n/a', '1 0'
@@ -302,6 +361,40 @@ for my $key (sort keys %all_str_convs) {
         printf "        (\"%s\", %#06x, \"%s\") => \"%s\", // %s\n",
             $info->{module}, $info->{tag_id}, $kk, $vv, $info->{tag_name};
     }
+}
+print "        _ => return None,\n    })\n}\n";
+
+# ── One conversion per element ──────────────────────────────────────────────
+print "\n/// Look up the print conversion for one element of a multi-value tag.\n";
+print "///\n/// ExifTool splits the value on spaces, converts each element with its own\n";
+print "/// hash, and joins the results with `; ` (ExifTool.pm:3550, 3696).\n";
+print "#[must_use]\n";
+print "pub fn print_conv_list(module: &str, tag_id: u16, index: usize, value: i64) -> Option<&'static str> {\n";
+print "    Some(match (module, tag_id, index, value) {\n";
+for my $key (sort keys %all_list_convs) {
+    my $info = $all_list_convs{$key};
+    my @convs = @{$info->{convs}};
+    for my $idx (0 .. $#convs) {
+        my %c = %{$convs[$idx]};
+        for my $k (sort { $a <=> $b } keys %c) {
+            my $v = $c{$k};
+            $v =~ s/\\/\\\\/g;
+            $v =~ s/"/\\"/g;
+            printf "        (\"%s\", %#06x, %d, %d) => \"%s\", // %s\n",
+                $info->{module}, $info->{tag_id}, $idx, $k, $v, $info->{tag_name};
+        }
+    }
+}
+print "        _ => return None,\n    })\n}\n";
+
+print "\n/// How many elements a multi-value tag's print conversion covers.\n";
+print "#[must_use]\n";
+print "pub fn print_conv_list_len(module: &str, tag_id: u16) -> Option<usize> {\n";
+print "    Some(match (module, tag_id) {\n";
+for my $key (sort keys %all_list_convs) {
+    my $info = $all_list_convs{$key};
+    printf "        (\"%s\", %#06x) => %d, // %s\n",
+        $info->{module}, $info->{tag_id}, scalar @{$info->{convs}}, $info->{tag_name};
 }
 print "        _ => return None,\n    })\n}\n";
 

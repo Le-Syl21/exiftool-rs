@@ -8276,6 +8276,33 @@ fn read_makernote_ifd_with_base(
             // TimeSincePowerOn a duration -- and running an expression over
             // that phrase would undo it.
             let untouched = printed == val.to_display_string();
+            // One conversion per element: ExifTool splits the value on
+            // spaces, converts each with its own hash and joins with "; ".
+            // Sony's HDR is `[{ 0 => 'Off' },{ 0 => 'Uncorrected image' }]`.
+            if untouched {
+                if let Some(n) =
+                    crate::tags::print_conv_generated::print_conv_list_len(maker, tag_id)
+                {
+                    let parts: Vec<&str> = printed.split(' ').collect();
+                    if parts.len() == n {
+                        let mapped: Option<Vec<String>> = parts
+                            .iter()
+                            .enumerate()
+                            .map(|(i, p)| {
+                                p.parse::<i64>().ok().and_then(|v| {
+                                    crate::tags::print_conv_generated::print_conv_list(
+                                        maker, tag_id, i, v,
+                                    )
+                                })
+                                .map(str::to_string)
+                            })
+                            .collect();
+                        if let Some(m) = mapped {
+                            printed = m.join("; ");
+                        }
+                    }
+                }
+            }
             // A conversion keyed by the whole value as text: Sony's
             // VariableLowPassFilter is `{ '0 0' => 'n/a' }` over a two-element
             // tag, and no number keys it.
