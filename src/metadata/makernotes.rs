@@ -6697,60 +6697,110 @@ fn read_makernote_ifd_with_base(
                     // Canon ColorBalance: int16u array with WB_RGGB levels
                     decode_canon_color_balance(value_data, count as usize, byte_order)
                 }
-                (Manufacturer::Canon, 0x00AA) => {
-                    // Canon MeasuredColor → MeasuredRGGB
-                    if count as usize >= 5 {
-                        let r = read_u16(value_data, 2, byte_order);
-                        let g1 = read_u16(value_data, 4, byte_order);
-                        let g2 = read_u16(value_data, 6, byte_order);
-                        let b = read_u16(value_data, 8, byte_order);
-                        vec![mk_canon_str(
-                            "MeasuredRGGB",
-                            &format!("{} {} {} {}", r, g1, g2, b),
-                        )]
-                    } else {
-                        Vec::new()
-                    }
+                // 0x0096 is SerialInfo on an EOS 5D and a plain
+                // InternalSerialNumber string on every other body
+                // (Canon.pm's 0x96 list), so it reaches the table only when
+                // the model condition holds and falls through otherwise.
+                (Manufacturer::Canon, 0x0096)
+                    if crate::tags::binary_tables_generated::variant_for(
+                        "Canon",
+                        0x0096,
+                        &crate::metadata::exif::make(),
+                        model_name,
+                        value_data,
+                        count as usize,
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                    )
+                    .is_some() =>
+                {
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    crate::tags::binary_tables_generated::decode(
+                        "Canon::SerialInfo",
+                        value_data,
+                        &crate::metadata::exif::make(),
+                        model_name,
+                        byte_order,
+                        &crate::metadata::exif::tiff_type(),
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                        &mut dm,
+                    )
                 }
-                (Manufacturer::Canon, 0x4013) => {
-                    // Canon AFMicroAdj: int32s, FIRST_ENTRY=1
-                    // index 1 (bytes 4..8): AFMicroAdjMode (int32s)
-                    // index 2 (bytes 8..16): AFMicroAdjValue (rational64s = num/denom)
-                    let mut t = Vec::new();
-                    let d = value_data;
-                    if d.len() >= 8 {
-                        let mode = i32::from_le_bytes([d[4], d[5], d[6], d[7]]);
-                        let pv = match mode {
-                            0 => "Disable",
-                            1 => "Adjust all by the same amount",
-                            2 => "Adjust by lens",
-                            _ => "",
-                        };
-                        let pv = if pv.is_empty() {
-                            mode.to_string()
-                        } else {
-                            pv.to_string()
-                        };
-                        t.push(mk_canon_str("AFMicroAdjMode", &pv));
-                    }
-                    if d.len() >= 16 {
-                        let num = i32::from_le_bytes([d[8], d[9], d[10], d[11]]) as f64;
-                        let den = i32::from_le_bytes([d[12], d[13], d[14], d[15]]) as f64;
-                        let val = if den != 0.0 { num / den } else { 0.0 };
-                        t.push(mk_canon_str("AFMicroAdjValue", &format!("{:.0}", val)));
-                    }
-                    t
-                }
-                // Three more Canon blocks whose layout Canon.pm gives in
-                // full: the two personal-function tables of the 1D bodies
-                // (0x0091, 0x0092) and the raw burst roll of the R-series
-                // (0x403f).
-                (Manufacturer::Canon, 0x0091)
+                // Every Canon block whose layout Canon.pm gives as a plain
+                // binary table, read by the decoder generated from it. The
+                // list is the mapping Canon::Main declares, id for id.
+                (Manufacturer::Canon, 0x0005)
+                | (Manufacturer::Canon, 0x000A)
+                | (Manufacturer::Canon, 0x0011)
+                | (Manufacturer::Canon, 0x001D)
+                | (Manufacturer::Canon, 0x0024)
+                | (Manufacturer::Canon, 0x0025)
+                | (Manufacturer::Canon, 0x0029)
+                | (Manufacturer::Canon, 0x002F)
+                | (Manufacturer::Canon, 0x0035)
+                | (Manufacturer::Canon, 0x0091)
                 | (Manufacturer::Canon, 0x0092)
+                | (Manufacturer::Canon, 0x00AA)
+                | (Manufacturer::Canon, 0x00B0)
+                | (Manufacturer::Canon, 0x00B1)
+                | (Manufacturer::Canon, 0x00B6)
+                | (Manufacturer::Canon, 0x4013)
+                | (Manufacturer::Canon, 0x4015)
+                | (Manufacturer::Canon, 0x4016)
+                | (Manufacturer::Canon, 0x4018)
+                | (Manufacturer::Canon, 0x4020)
+                | (Manufacturer::Canon, 0x4021)
+                | (Manufacturer::Canon, 0x4025)
+                | (Manufacturer::Canon, 0x4026)
+                | (Manufacturer::Canon, 0x4028)
+                | (Manufacturer::Canon, 0x4053)
+                | (Manufacturer::Canon, 0x4059)
                 | (Manufacturer::Canon, 0x403F) => {
+                    // Two of these ids hold a list of alternatives rather
+                    // than one table: which applies is decided by the bytes
+                    // the block opens with, as Canon::Main writes it.
+                    let selected = crate::tags::binary_tables_generated::variant_for(
+                        "Canon",
+                        tag_id,
+                        &crate::metadata::exif::make(),
+                        model_name,
+                        value_data,
+                        count as usize,
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                    );
                     let table = match tag_id {
+                        // Every arm of 0x4015 is a sub-directory: when none
+                        // of them matches, ExifTool extracts nothing at all.
+                        0x4015 => match selected {
+                            Some(t) => t,
+                            None => continue,
+                        },
+                        0x0005 => "Canon::Panorama",
+                        0x000A => "Canon::UnknownD30",
+                        0x0011 => "Canon::MovieInfo",
+                        0x001D => "Canon::MyColors",
+                        0x0024 => "Canon::FaceDetect1",
+                        0x0025 => "Canon::FaceDetect2",
+                        0x0029 => "Canon::WBInfo",
+                        0x002F => "Canon::FaceDetect3",
+                        0x0035 => "Canon::TimeInfo",
                         0x0091 => "CanonCustom::PersonalFuncs",
                         0x0092 => "CanonCustom::PersonalFuncValues",
+                        0x0096 => "Canon::SerialInfo",
+                        0x00AA => "Canon::MeasuredColor",
+                        0x00B0 => "Canon::Flags",
+                        0x00B1 => "Canon::ModifiedInfo",
+                        0x00B6 => "Canon::PreviewImageInfo",
+                        0x4013 => "Canon::AFMicroAdj",
+                        0x4015 => "Canon::VignettingCorr",
+                        0x4016 => "Canon::VignettingCorr2",
+                        0x4018 => "Canon::LightingOpt",
+                        0x4020 => "Canon::Ambience",
+                        0x4021 => "Canon::MultiExp",
+                        0x4025 => "Canon::HDRInfo",
+                        0x4026 => "Canon::LogInfo",
+                        0x4028 => "Canon::AFConfig",
+                        0x4053 => "Canon::FocusBracketingInfo",
+                        0x4059 => "Canon::LevelInfo",
                         _ => "Canon::RawBurstInfo",
                     };
                     let mut dm = crate::tags::binary_tables_generated::State::new();
@@ -6792,49 +6842,9 @@ fn read_makernote_ifd_with_base(
                         )
                     })
                 }
-                (Manufacturer::Canon, 0x0035) => {
-                    // Canon TimeInfo: int32s FIRST_ENTRY=1
-                    // index 1 = TimeZone (minutes offset from UTC)
-                    // index 2 = TimeZoneCity (0-n)
-                    // index 3 = DaylightSavings (0=Off, 60=On)
-                    decode_canon_time_info(value_data, byte_order)
-                }
-                (Manufacturer::Canon, 0x4015) => {
-                    // Canon VignettingCorr/VignettingCorrUnknown:
-                    // First byte (int8u) is VignettingCorrVersion, regardless of sub-table variant
-                    let mut t = Vec::new();
-                    if !value_data.is_empty() {
-                        let v = value_data[0] as u32;
-                        t.push(mk_canon_str("VignettingCorrVersion", &v.to_string()));
-                    }
-                    t
-                }
-                (Manufacturer::Canon, 0x4016) => {
-                    // Canon VignettingCorr2: int32s FIRST_ENTRY=1
-                    // index 5=PeripheralLightingSetting, 6=ChromaticAberrationSetting,
-                    // 7=DistortionCorrectionSetting, 9=DigitalLensOptimizerSetting
-                    decode_canon_vignetting_corr2(value_data, byte_order)
-                }
-                (Manufacturer::Canon, 0x4018) => {
-                    // Canon LightingOpt: int32s FIRST_ENTRY=1
-                    // index 1=PeripheralIlluminationCorr, 2=AutoLightingOptimizer, 3=HighlightTonePriority,
-                    // 4=LongExposureNoiseReduction, 5=HighISONoiseReduction, 10=DigitalLensOptimizer, 11=DualPixelRaw
-                    decode_canon_lighting_opt(value_data, byte_order)
-                }
-                (Manufacturer::Canon, 0x4020) => {
-                    // Canon AmbienceInfo → Ambience sub-table: int32s FIRST_ENTRY=1
-                    // Condition: not all zeros
-                    // index 1 = AmbienceSelection
-                    decode_canon_ambience(value_data, byte_order)
-                }
                 (Manufacturer::Canon, 0x4024) => {
                     // Canon FilterInfo: custom format (ProcessFilters)
                     decode_canon_filter_info(value_data, byte_order)
-                }
-                (Manufacturer::Canon, 0x4025) => {
-                    // Canon HDRInfo: int32s FIRST_ENTRY=1
-                    // index 1 = HDR, index 2 = HDREffect
-                    decode_canon_hdr_info(value_data, byte_order)
                 }
                 // Nikon sub-tables
                 (Manufacturer::Nikon, 0x0011) => {

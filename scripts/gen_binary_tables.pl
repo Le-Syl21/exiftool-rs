@@ -33,6 +33,11 @@ my %WANTED = (
         ColorData7 ColorData8 ColorData9 ColorData10 ColorData11 ColorData12
         ColorDataUnknown
         ShotInfo RawBurstInfo IAD1
+        Panorama UnknownD30 MovieInfo MyColors FaceDetect1 FaceDetect2
+        FaceDetect3 WBInfo TimeInfo SerialInfo MeasuredColor Flags
+        ModifiedInfo PreviewImageInfo AFMicroAdj VignettingCorr
+        VignettingCorr2 VignettingCorrUnknown LightingOpt Ambience MultiExp
+        HDRInfo LogInfo AFConfig FocusBracketingInfo LevelInfo FocalInfo
     )],
     CanonCustom => [qw(PersonalFuncs PersonalFuncValues)],
     CanonVRD => [qw(DustInfo DLOInfo)],
@@ -67,7 +72,7 @@ my %WANTED = (
 # Main-table ids whose sub-table is chosen by a chain of conditions. The arms
 # are read from the module's own Main table, so the choice is ExifTool's.
 my %SELECTORS = (
-    Canon => [0x000d, 0x4001],
+    Canon => [0x000d, 0x4001, 0x0096, 0x4015],
 );
 
 my %WIDTH = (
@@ -340,6 +345,14 @@ sub compile_cond {
     }
     if ($cond =~ m{^\$\$valPt (=~|!~) /(.*?)/[a-z]*$}) {
         my ($op, $re) = ($1, $2);
+        # `^(A|B)`: the block may open either way. Every alternative is a
+        # prefix of its own, and the test is whether any of them matches.
+        if ($re =~ /^\^\(([^()]*\|[^()]*)\)$/) {
+            my @alts = map { byte_prefix("^$_") } split /\|/, $1;
+            return () if grep { !defined } @alts;
+            return sprintf('%sprefix_matches_any(data.get(__OFF__..).unwrap_or(&[]), &[%s])',
+                           $op eq '!~' ? '!' : '', join(', ', @alts));
+        }
         my $pat = byte_prefix($re);
         return () unless defined $pat;
         # `$$valPt` is the value of the entry the condition is written on,
@@ -392,26 +405,39 @@ sub byte_prefix {
         if ($re =~ s/^\[\\?(\\x[0-9a-fA-F]{2}|\\0|.)-\\?(\\x[0-9a-fA-F]{2}|\\0|.)\]//) {
             my ($a, $b) = (chr_of($1), chr_of($2));
             return undef unless defined $a and defined $b;
-            push @out, "Some(($a, $b))";
+            push @out, "Some(&[($a, $b)])";
+            next;
+        }
+        # `[\x01\x02\x10\x20]`: a set of discrete bytes rather than a range.
+        if ($re =~ s/^\[((?:\\x[0-9a-fA-F]{2}|\\0|[^\]\\-])+)\]//) {
+            my $set = $1;
+            my @bytes;
+            while (length $set) {
+                if ($set =~ s/^(\\x[0-9a-fA-F]{2}|\\0)//) { push @bytes, chr_of($1); next }
+                if ($set =~ s/^(.)//) { push @bytes, ord $1; next }
+                last;
+            }
+            return undef if grep { !defined } @bytes;
+            push @out, 'Some(&[' . join(', ', map { "($_, $_)" } @bytes) . '])';
             next;
         }
         if ($re =~ s/^(\\x[0-9a-fA-F]{2}|\\0)//) {
             my $c = chr_of($1);
             return undef unless defined $c;
-            push @out, "Some(($c, $c))";
+            push @out, "Some(&[($c, $c)])";
             next;
         }
         if ($re =~ s/^\.//) { push @out, 'None'; next }
-        if ($re =~ s/^\\d//) { push @out, 'Some((0x30, 0x39))'; next }
+        if ($re =~ s/^\\d//) { push @out, 'Some(&[(0x30, 0x39)])'; next }
         # An escaped character stands for itself.
         if ($re =~ s/^\\([.\$^*+?()\[\]{}|\/\\])//) {
             my $c = ord $1;
-            push @out, "Some(($c, $c))";
+            push @out, "Some(&[($c, $c)])";
             next;
         }
         if ($re =~ s/^([A-Za-z0-9 _\/-])//) {
             my $c = ord $1;
-            push @out, "Some(($c, $c))";
+            push @out, "Some(&[($c, $c)])";
             next;
         }
         return undef;
@@ -557,13 +583,38 @@ sub parse_table {
             next;
         }
 
+        # Read before the text branches below: a text field carries its
+        # conversions as much as a number does, and extracting them after the
+        # branch that returns left every one of them without.
+        my $rconv_e = code_of($fb, 'RawConv');
+        my $vconv_e = code_of($fb, 'ValueConv');
+        my $pconv_e = code_of($fb, 'PrintConv');
+        for ($rconv_e) { s/\$\$self\{\w+\}\s*=(?![~=])\s*//g if defined }
+        my ($dmname_e) = $fb =~ /DataMember\s*=>\s*'(\w+)'/;
+        unless (defined $dmname_e) {
+            ($dmname_e) = $fb =~ /RawConv\s*=>\s*'\(?\$\$self\{(\w+)\}\s*=\s*\$val/;
+        }
+
         my $count = 1;
+        # `Format => 'string'` with no count runs from the entry to the end
+        # of the block, stopping at the first NUL, as ExifTool's reader does.
+        if ($ffmt eq 'string' or $ffmt eq 'undef') {
+            push @{$t->{fields}}, {
+                off => $off, name => $name, fmt => $ffmt, n => undef,
+                hidden => $hidden, cond => $guard, conv => {}, text => 1,
+                rconv => $rconv_e, vconv => $vconv_e, pconv => $pconv_e,
+                dmname => $dmname_e,
+            };
+            next;
+        }
         if ($ffmt =~ /^(string|undef)\[(0x[0-9a-fA-F]+|\d+)\]$/) {
             my ($f2, $n2) = ($1, $2);
             $n2 = $n2 =~ /^0x/ ? hex($n2) : int($n2);
             push @{$t->{fields}}, {
                 off => $off, name => $name, fmt => $f2, n => $n2, hidden => $hidden,
                 cond => $guard, conv => {}, text => 1,
+                rconv => $rconv_e, vconv => $vconv_e, pconv => $pconv_e,
+                dmname => $dmname_e,
             };
             next;
         }
@@ -964,10 +1015,21 @@ fn text_at(d: &[u8], o: usize, n: usize, stop_at_nul: bool) -> Option<String> {
     Some(raw[..end].iter().map(|b| *b as char).collect())
 }
 
-/// Whether the block opens with these bytes, `None` accepting anything.
-fn prefix_matches(d: &[u8], pat: &[Option<(u8, u8)>]) -> bool {
+/// Whether the block opens with these bytes. A position is `None` when the
+/// pattern accepts anything there, and otherwise a set of ranges the byte has
+/// to fall in -- `[\x01\x02\x10\x20]` is four of them.
+type BytePat<'a> = &'a [Option<&'a [(u8, u8)]>];
+
+fn prefix_matches(d: &[u8], pat: BytePat) -> bool {
     if d.len() < pat.len() { return false; }
-    pat.iter().zip(d).all(|(p, b)| p.is_none_or(|(lo, hi)| *b >= lo && *b <= hi))
+    pat.iter()
+        .zip(d)
+        .all(|(p, b)| p.is_none_or(|set| set.iter().any(|(lo, hi)| *b >= *lo && *b <= *hi)))
+}
+
+/// Whether the block opens the way any one of these patterns says.
+fn prefix_matches_any(d: &[u8], pats: &[BytePat]) -> bool {
+    pats.iter().any(|p| prefix_matches(d, p))
 }
 
 fn mk(
@@ -1064,15 +1126,44 @@ for my $t (@tables) {
                 print  "    }\n" if defined $f->{cond};
                 next;
             }
-            printf "%sif let Some(text) = text_at(data, 0x%x, %d, %s) {\n",
-                $ind, $byte, $f->{n}, ($f->{fmt} eq 'string' ? 'true' : 'false');
+            printf "%sif let Some(text) = text_at(data, 0x%x, %s, %s) {\n",
+                $ind, $byte,
+                defined $f->{n} ? $f->{n} : sprintf('data.len().saturating_sub(0x%x)', $byte),
+                ($f->{fmt} eq 'string' ? 'true' : 'false');
             # A string field stores itself where ExifTool names it a
             # DataMember: the Z9's FirmwareVersion decides which of three
             # menu-settings layouts applies.
             printf "%s    dm.push((\"%s\".to_string(), Conv::Str(text.clone())));\n",
                 $ind, $f->{dmname} if defined $f->{dmname};
-            printf "%s    tags.push(mk(\"%s\", 0x%x, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));\n",
-                $ind, $f->{name}, $f->{off} unless $f->{hidden};
+            # A text field carries its conversions as much as a number does:
+            # SerialInfo's two entries are ruled out by a RawConv unless they
+            # look like a serial number, and emitting them regardless reported
+            # an empty tag ExifTool never has.
+            if (defined $f->{rconv} or defined $f->{vconv} or defined $f->{pconv}) {
+                printf "%s    let ctx = Ctx { make, model, file_type, dm };\n", $ind;
+                printf "%s    let mut cv = Conv::Str(text);\n", $ind;
+                if (defined $f->{rconv}) {
+                    printf "%s    let rc = conv_expr::eval_with(\"%s\", &cv, &ctx);\n",
+                        $ind, esc($f->{rconv});
+                    printf "%s    if rc.as_ref() != Some(&Conv::Undef) {\n", $ind;
+                    printf "%s        if let Some(x) = rc { cv = x; }\n", $ind;
+                    $ind .= "    ";
+                }
+                printf "%s    if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
+                    $ind, esc($f->{vconv}) if defined $f->{vconv};
+                printf "%s    let raw = Value::String(cv.as_string());\n", $ind;
+                printf "%s    if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
+                    $ind, esc($f->{pconv}) if defined $f->{pconv};
+                printf "%s    tags.push(mk(\"%s\", 0x%x, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));\n",
+                    $ind, $f->{name}, $f->{off} unless $f->{hidden};
+                if (defined $f->{rconv}) {
+                    $ind = substr($ind, 4);
+                    printf "%s    }\n", $ind;
+                }
+            } else {
+                printf "%s    tags.push(mk(\"%s\", 0x%x, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));\n",
+                    $ind, $f->{name}, $f->{off} unless $f->{hidden};
+            }
             printf "%s}\n", $ind;
             print  "    }\n" if defined $f->{cond};
             next;
