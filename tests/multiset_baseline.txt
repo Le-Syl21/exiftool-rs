@@ -21,23 +21,8 @@ SonyILCE9.arw	ee	extra	0	Saturation	Low
 SonyILCE9.arw	ee	extra	0	Sharpness	Normal
 SonyILCE9.arw	ee	missing	0	APS-CSizeCapture	Off
 SonyILCE9.arw	ee	missing	0	BrightnessValue	5.28671875
-SonyILCE9.arw	ee	missing	0	ChromaticAberrationCorrParams	-497 -599 -675 -721 -742 -724 -698 -689 -681 -657 -633 -616 -601 -578 -547 -508 594 651 688 705 703 675 639 613 592 580 564 521 484 473 507 423
-SonyILCE9.arw	ee	missing	0	ColorMode	Autumnleaves
-SonyILCE9.arw	ee	missing	0	ColorMode	BW
-SonyILCE9.arw	ee	missing	0	ColorMode	Clear
-SonyILCE9.arw	ee	missing	0	ColorMode	Deep
-SonyILCE9.arw	ee	missing	0	ColorMode	Landscape
-SonyILCE9.arw	ee	missing	0	ColorMode	Light
-SonyILCE9.arw	ee	missing	0	ColorMode	Neutral
-SonyILCE9.arw	ee	missing	0	ColorMode	Nightview
-SonyILCE9.arw	ee	missing	0	ColorMode	Portrait
-SonyILCE9.arw	ee	missing	0	ColorMode	Sepia
-SonyILCE9.arw	ee	missing	0	ColorMode	Standard
-SonyILCE9.arw	ee	missing	0	ColorMode	Sunset
-SonyILCE9.arw	ee	missing	0	ColorMode	Vivid
 SonyILCE9.arw	ee	missing	0	Contrast	0
 SonyILCE9.arw	ee	missing	0	DistortionCorrParams	0 2 10 24 46 74 108 148 194 246 306 372 444 522 608 700
-SonyILCE9.arw	ee	missing	1	DistortionCorrParams	0 2 10 24 46 74 108 148 194 246 306 372 444 522 608 700
 SonyILCE9.arw	ee	missing	0	DistortionCorrParamsPresent	Yes
 SonyILCE9.arw	ee	missing	1	DistortionCorrParamsPresent	Yes
 SonyILCE9.arw	ee	missing	0	DynamicRangeOptimizer	Auto
@@ -67,4 +52,3 @@ SonyILCE9.arw	ee	missing	0	Sharpness	0
 SonyILCE9.arw	ee	missing	0	SonyFNumber	8.0
 SonyILCE9.arw	ee	missing	0	SonyISO	252
 SonyILCE9.arw	ee	missing	0	StopsAboveBaseISO	1.3
-SonyILCE9.arw	ee	missing	0	VignettingCorrParams	0 0 32 64 128 192 320 480 736 1184 1920 3168 4704 6464 8352 10208

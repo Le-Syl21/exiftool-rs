@@ -608,14 +608,24 @@ impl ExifReader {
                     }
                 };
                 let promoted = |p: i32| if p == 0 { 1 } else { p };
-                let mut winner: std::collections::HashMap<(&str, Option<&TagId>), usize> =
-                    std::collections::HashMap::new();
+                // With duplicates kept, two instances of a name are the same
+                // tag only when they come from the same directory as well as
+                // the same id: an ARW holds thirteen SR2DataIFDs, each with a
+                // ColorMode of its own, and ExifTool reports all thirteen.
+                let mut winner: std::collections::HashMap<
+                    (&str, Option<&TagId>, Option<&str>),
+                    usize,
+                > = std::collections::HashMap::new();
                 let mut keep = vec![true; tags.len()];
                 for (i, t) in tags.iter().enumerate() {
                     if t.group.family0 != "MakerNotes" {
                         continue;
                     }
-                    let key = (t.name.as_str(), if by_id { Some(&t.id) } else { None });
+                    let key = (
+                        t.name.as_str(),
+                        if by_id { Some(&t.id) } else { None },
+                        if by_id { Some(t.group.family1.as_str()) } else { None },
+                    );
                     match winner.get(&key).copied() {
                         None => {
                             winner.insert(key, i);

@@ -136,9 +136,64 @@ pub fn read(data: &[u8], private_offset: usize, le: bool) -> Vec<Tag> {
         ) else {
             break;
         };
-        // 0x74c0 is a pointer to a further directory, not a value: ExifTool
-        // follows it and never prints the offsets themselves.
+        // 0x74c0 is not a value but a list of offsets, one per data
+        // directory: an A700 has fourteen of them, this ILCE-9 thirteen. They
+        // point inside the same decrypted block, and each holds one tag --
+        // `%Sony::SR2DataIFD` defines 0x7770 ColorMode and nothing else -- in
+        // a family-1 group named after its position.
         if tag == 0x74c0 {
+            let cnt = cnt as usize;
+            let list = match u32_at(&block, e + 8, le) {
+                Some(a) if (a as usize) >= off => (a as usize) - off,
+                _ => continue,
+            };
+            for k in 0..cnt.min(20) {
+                let Some(target) = u32_at(&block, list + k * 4, le) else { break };
+                let Some(dir) = (target as usize).checked_sub(off) else { continue };
+                let Some(entries) = u16_at(&block, dir, le) else { continue };
+                for j in 0..entries as usize {
+                    let de = dir + 2 + j * 12;
+                    let (Some(dtag), Some(dtype), Some(dcnt)) = (
+                        u16_at(&block, de, le),
+                        u16_at(&block, de + 2, le),
+                        u32_at(&block, de + 4, le),
+                    ) else {
+                        break;
+                    };
+                    if dtag != 0x7770 {
+                        continue;
+                    }
+                    // A string of `dcnt` bytes, in the entry when it fits.
+                    let n = dcnt as usize;
+                    let start = if n <= 4 {
+                        de + 8
+                    } else {
+                        match u32_at(&block, de + 8, le) {
+                            Some(a) if (a as usize) >= off => (a as usize) - off,
+                            _ => continue,
+                        }
+                    };
+                    if dtype != 2 {
+                        continue;
+                    }
+                    let Some(raw) = block.get(start..start + n) else { continue };
+                    let text: String = raw
+                        .iter()
+                        .take_while(|c| **c != 0)
+                        .map(|c| *c as char)
+                        .collect();
+                    let group = if k == 0 {
+                        "SR2DataIFD".to_string()
+                    } else {
+                        format!("SR2DataIFD{k}")
+                    };
+                    let mut t = mk(&group, "ColorMode", text.clone(), Value::String(text));
+                    // `Priority => 0` (Sony.pm): these never displace the
+                    // ColorMode the maker note itself reported.
+                    t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+                    tags.push(t);
+                }
+            }
             continue;
         }
         let Some(name) = SR2_SUB_IFD_TAGS
