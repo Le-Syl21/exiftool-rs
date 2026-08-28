@@ -1249,6 +1249,42 @@ impl<'a> Parser<'a> {
         if self.i >= self.s.len() {
             return None;
         }
+        // `{ 31 => 'No Profile', 30 => 'Main' }`: a hash reference written out
+        // where a value is expected. `DecodeBits` takes one as its lookup, and
+        // there is nowhere else in these conversions that a brace opens a
+        // value, so it is read as the flat list of its keys and values.
+        if self.peek("{") {
+            let save = self.i;
+            self.eat("{");
+            let mut items = Vec::new();
+            loop {
+                self.skip_ws();
+                if self.eat("}") {
+                    // A hash literal is a REFERENCE in Perl: one argument,
+                    // not its elements spread across several. Returned bare,
+                    // `DecodeBits($val, {0 => 'a'})` arrived as three.
+                    return Some(Val::Reference(Box::new(Val::List(items))));
+                }
+                let Some(k) = self.expr() else {
+                    self.i = save;
+                    break;
+                };
+                self.skip_ws();
+                if !self.eat("=>") && !self.eat(",") {
+                    self.i = save;
+                    break;
+                }
+                self.skip_ws();
+                let Some(v) = self.expr() else {
+                    self.i = save;
+                    break;
+                };
+                items.push(k);
+                items.push(v);
+                self.skip_ws();
+                self.eat(",");
+            }
+        }
         if self.eat("(") {
             let v = self.expr()?;
             if self.eat(")") {
@@ -2745,9 +2781,25 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
         // bits that are set. A lookup is a hash we have no way to name here,
         // so that form is refused rather than answered with the raw numbers.
         "DecodeBits" => {
-            if args.get(1).is_some_and(|l| *l != Val::Undef) {
-                return None;
-            }
+            // The lookup, when there is one: bit number to name, as the flat
+            // list a hash literal parses to. A bit with no name of its own
+            // prints as `[n]`, and the names are joined by ", " where bare
+            // numbers are joined by "," (ExifTool.pm:6385-6407).
+            let lookup: Option<&[Val]> = match args.get(1) {
+                None | Some(Val::Undef) => None,
+                Some(Val::Reference(b)) => match b.as_ref() {
+                    Val::List(v) => Some(v.as_slice()),
+                    _ => return None,
+                },
+                Some(Val::List(v)) => Some(v.as_slice()),
+                Some(_) => return None,
+            };
+            let named = |n: i64| -> Option<String> {
+                let l = lookup?;
+                l.chunks_exact(2)
+                    .find(|p| (p[0].as_num() - n as f64).abs() < f64::EPSILON)
+                    .map(|p| p[1].as_string())
+            };
             let bits = args.get(2).map_or(32, |b| b.as_num() as i64);
             let mut set = Vec::new();
             for (chunk, word) in first.as_string().split_whitespace().enumerate() {
@@ -2755,11 +2807,22 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
                 #[allow(clippy::cast_sign_loss)]
                 for i in 0..bits.clamp(0, 64) {
                     if v & (1u64 << i) != 0 {
-                        set.push((i + chunk as i64 * bits).to_string());
+                        let n = i + chunk as i64 * bits;
+                        if lookup.is_some() {
+                            set.push(named(n).unwrap_or_else(|| format!("[{n}]")));
+                            continue;
+                        }
+                        set.push(n.to_string());
                     }
                 }
             }
-            Val::Str(if set.is_empty() { "(none)".to_string() } else { set.join(",") })
+            Val::Str(if set.is_empty() {
+                "(none)".to_string()
+            } else if lookup.is_some() {
+                set.join(", ")
+            } else {
+                set.join(",")
+            })
         }
         // ExifTool.pm Decode: from the named character set into the internal
         // one, which is UTF-8 unless the reader was told otherwise.

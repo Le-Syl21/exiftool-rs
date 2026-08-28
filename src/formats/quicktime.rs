@@ -867,7 +867,24 @@ fn parse_atoms(
             b"hvcC" => {
                 if !state.hevc_config_done {
                     state.hevc_config_done = true;
-                    parse_hvcc(data, content_start, content_end, tags);
+                    // QuickTime::HEVCConfig (QuickTime.pm:3075), the table the
+                    // hand-written reader below was transcribed from.
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    let generated = crate::tags::binary_tables_generated::decode(
+                        "QuickTime::HEVCConfig",
+                        &data[content_start..content_end],
+                        "",
+                        "",
+                        crate::metadata::exif::ByteOrderMark::BigEndian,
+                        "",
+                        "",
+                        &mut dm,
+                    );
+                    if generated.is_empty() {
+                        parse_hvcc(data, content_start, content_end, tags);
+                    } else {
+                        tags.extend(generated);
+                    }
                 }
             }
             // AV1 configuration and content light level, from the tables

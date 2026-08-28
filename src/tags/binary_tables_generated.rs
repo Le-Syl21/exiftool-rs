@@ -8195,20 +8195,12 @@ fn canon_afconfig(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
     }
     if let Some(v) = i32_at(data, 0x30, bo) {
         dm.push(("SelectAFAreaSelectionMode".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "Single-point AF".to_string(),
-            1 => "Auto".to_string(),
-            2 => "Zone AF".to_string(),
-            3 => "AF Point Expansion (4 point)".to_string(),
-            4 => "Spot AF".to_string(),
-            5 => "AF Point Expansion (8 point)".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("SelectAFAreaSelectionMode", 0xc, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::DecodeBits($val, { 0 => 'Single-point AF', 1 => 'Auto', 2 => 'Zone AF', 3 => 'AF Point Expansion (4 point)', 4 => 'Spot AF', 5 => 'AF Point Expansion (8 point)' })", &cv, &ctx) { cv = x; }
+        tags.push(mk("SelectAFAreaSelectionMode", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x34, bo) {
         dm.push(("AFAreaSelectionMethod".to_string(), Conv::Num(f64::from(v))));
@@ -29228,16 +29220,12 @@ fn nikon_shotinfod80(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
     if let Some(v) = u8_at(data, 0x24e) {
         let v = (v & 0xe0) >> 5;
         dm.push(("FlashFired".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            1 => "Internal".to_string(),
-            2 => "External".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("FlashFired", 0x24e, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::DecodeBits($val, { 1 => 'Internal', 2 => 'External' })", &cv, &ctx) { cv = x; }
+        tags.push(mk("FlashFired", 0x24e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x2c4) {
         let v = (v & 0xf0) >> 4;
@@ -60445,26 +60433,12 @@ fn quicktime_hevcconfig(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
     }
     if let Some(v) = u32_at(data, 0x2, bo) {
         dm.push(("GenProfileCompatibilityFlags".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            20 => "High Throughput Screen Content Coding Extensions".to_string(),
-            21 => "Scalable Format Range Extensions".to_string(),
-            22 => "Screen Content Coding Extensions".to_string(),
-            23 => "3D Main".to_string(),
-            24 => "Scalable Main".to_string(),
-            25 => "Multiview Main".to_string(),
-            26 => "High Throughput".to_string(),
-            27 => "Format Range Extensions".to_string(),
-            28 => "Main Still Picture".to_string(),
-            29 => "Main 10".to_string(),
-            30 => "Main".to_string(),
-            31 => "No Profile".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("GenProfileCompatibilityFlags", 0x2, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::DecodeBits($val, { 31 => 'No Profile', 30 => 'Main', 29 => 'Main 10', 28 => 'Main Still Picture', 27 => 'Format Range Extensions', 26 => 'High Throughput', 25 => 'Multiview Main', 24 => 'Scalable Main', 23 => '3D Main', 22 => 'Screen Content Coding Extensions', 21 => 'Scalable Format Range Extensions', 20 => 'High Throughput Screen Content Coding Extensions' })", &cv, &ctx) { cv = x; }
+        tags.push(mk("GenProfileCompatibilityFlags", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();

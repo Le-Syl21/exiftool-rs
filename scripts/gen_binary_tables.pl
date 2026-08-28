@@ -774,7 +774,23 @@ sub parse_table {
                 }
             }
         }
-        if (!%conv and $inline_at > $expr_at and $fb =~ /PrintConv\s*=>\s*\{(.*?)\n\s*\},/s) {
+        # `PrintConv => { BITMASK => { 31 => '...', ... } }`: the value is a
+        # set of bits, and ExifTool joins the names of those that are set.
+        # Read as a plain hash it would print one name for the whole number.
+        if (!%conv and $fb =~ /PrintConv\s*=>\s*\{\s*BITMASK\s*=>\s*\{(.*?)\n\s*\}/s) {
+            my $bits = $1;
+            my @pairs;
+            while ($bits =~ /(\d+)\s*=>\s*'((?:[^'\\]|\\.)*)'/g) {
+                my ($k, $v) = ($1, $2);
+                $v =~ s/\\'/'/g;
+                $v =~ s/'/\\'/g;
+                push @pairs, "$k => '$v'";
+            }
+            $pconv = 'Image::ExifTool::DecodeBits($val, { ' . join(', ', @pairs) . ' })'
+                if @pairs;
+        }
+        if (!%conv and !defined $pconv and $inline_at > $expr_at
+            and $fb =~ /PrintConv\s*=>\s*\{(.*?)\n\s*\},/s) {
             my $c = $1;
             while ($c =~ /(-?\d+|0x[0-9a-fA-F]+)\s*=>\s*'((?:[^'\\]|\\.)*)'/g) {
                 my ($k, $v) = ($1, $2);
