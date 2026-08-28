@@ -2,6 +2,84 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [0.8.0] - 2026-08-29
+
+Three numbers this release is measured by, each printed by a tool in the
+repository so none of them rests on anyone's word:
+
+- `conv_coverage` — **4706 / 4706** PrintConv/ValueConv occurrences in
+  ExifTool 13.59 are understood by `tags::conv_expr`, 988 / 988 distinct.
+- `coverage_report.pl` — **316 / 316** binary sub-tables a reader can get to
+  are reached. The 317th is a duplicate ExifTool defines and never points at.
+- The four parity baselines under `tests/` are at **zero** deltas.
+
+Both counters run at every tag and block the release if they slip.
+
+### Added
+
+- `tags::conv_expr`, an evaluator for ExifTool's conversion expressions.
+  Conversions are carried over from the Perl verbatim and evaluated, rather
+  than transcribed by hand, so they cannot drift from their source. It covers
+  ExifTool's named helpers, `=~` and `s///`, `my` variables, list operators,
+  `map`/`grep`, statement modifiers, `pack`/`unpack`, `sprintf`, and a
+  file-level parse state for the conversions that read one.
+- `scripts/gen_binary_tables.pl`, a maker-agnostic generator for ExifTool's
+  binary sub-tables — **283 tables, 4782 fields**, keyed `Module::Table`. It
+  replaced roughly 1700 lines of hand-written decoders with no change in
+  output, and reads hundreds of tags that were not read before: Canon's
+  ColorData 5 to 12, CameraInfo and ShotInfo; Nikon's thirty-one ShotInfo
+  layouts and the twelve custom-settings tables inside them; every remaining
+  FLIR record; Panasonic, Kodak, Reconyx, Casio, Minolta, Olympus, Samsung,
+  Sanyo, H264, QuickTime and the rest.
+- `tags::lens_id` — `XMP::PrintLensID` with `Exif::PrintLensID`,
+  `Canon::PrintLensID` and their helpers, against lens tables generated whole:
+  the fractional keys `4.1`, `4.2` are what makes narrowing a shared LensID
+  possible at all. Checked case for case against Perl over 2866 generated
+  cases.
+- Sony's enciphered MakerNote sub-tables, generated from Sony.pm.
+
+### Fixed
+
+- Perl's comma binds tighter than `and`, so both halves of `A and B, C` belong
+  to the branch. Read as two statements, a data rate of 206 kB/s printed as
+  206 MB/s.
+- An assignment in a branch Perl never reached must not write back, which was
+  the same fault the substitutions already had.
+- A conversion found by NAME is a guess: a maker-note tag that shares a name
+  with an EXIF one need not share its meaning. Sony's Contrast is a plain
+  number where EXIF's is Normal/Soft/Hard.
+- A binary-data tag is addressed by its offset, and that offset is the id
+  ExifTool reports. Naming them instead collapsed pairs ExifTool keeps apart.
+- `rational32` is four bytes — two 16-bit halves — not the eight of the
+  `rational64` EXIF writes. Read as eight, 1/20 came out as 1/271.
+
+### Changed
+
+- `coverage_report.pl` counts a table as reached only where a reader can
+  actually get to it. It used to match the table's name as a bare substring
+  over the whole tree, so any table whose name is an ordinary word counted
+  although nothing decoded it.
+- `conv_coverage` and `coverage_report.pl` both take `--check`, which turns
+  the report into a gate, and both run in CI at every tag.
+- CI no longer builds on a push to `main`, and the parity workflow no longer
+  runs on a schedule. Work lands directly on `main`, so a build per commit was
+  noise, and a scheduled parity run re-measured inputs that are all pinned in
+  the repository. The gates run on pull requests, at a tag before anything is
+  signed or published, and on demand — which is where parity is now useful,
+  pointed at a *newer* ExifTool to price a version bump. 0.7.6 said parity ran
+  on pushes to `main`; that was true of 0.7.6 and is no longer.
+
+## [0.7.6] - 2026-08-26
+
+### Fixed
+
+- Attribute whitespace is read from the raw bytes, which lifts the pin on
+  `xml` below 1.4.
+
+### Changed
+
+- The parity gate runs on pushes to `main` as well as at a tag.
+
 ## [0.7.5] - 2026-08-25
 
 ### Fixed
