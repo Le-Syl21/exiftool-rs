@@ -35,16 +35,15 @@ my %WANTED = (
         ShotInfo RawBurstInfo IAD1
     )],
     CanonCustom => [qw(PersonalFuncs PersonalFuncValues)],
-    # DLOInfo is not here: it sits at index 0xe0 of the VRD edit data, behind
-    # a DLOOn flag and a Hook that shifts every entry after it by the length
-    # of the DLO data. Generating a decoder nothing can call would only move
-    # a counter.
-    CanonVRD => [qw(DustInfo)],
+    CanonVRD => [qw(DustInfo DLOInfo)],
     Kodak => [qw(Type9)],
     Nikon => [qw(LensDataUnknown)],
     NikonCustom => [qw(
         SettingsD40 SettingsD810 SettingsD850
         SettingsZ6III SettingsZ8 SettingsZ9 SettingsZ9v4
+    )],
+    Parrot => [qw(
+        ARCoreAccel ARCoreAccel0 ARCoreGyro ARCoreGyro0 ARCoreVideo ARCoreCustom
     )],
     NikonCapture => [qw(
         DLightingHQ DLightingHS HighlightData PictureCtrl UnsharpData WBAdjData
@@ -831,7 +830,7 @@ print <<"HDR";
 //! Generated code: the shape of a table decides what is written, so a helper
 //! no table happens to need and a cast that happens to be a no-op are both
 //! ordinary here rather than something to tidy away by hand.
-#![allow(dead_code, unused_parens, unused_mut)]
+#![allow(dead_code, unused_parens, unused_mut, unused_variables)]
 #![allow(clippy::too_many_arguments, clippy::useless_conversion)]
 #![allow(
     clippy::too_many_lines,

@@ -32,6 +32,9 @@ pub struct TrackInfo {
     pub has_jpeg_box: bool,
     /// MetaFormat / OtherFormat from stsd (e.g. "gpmd", "camm", "mebx", "tx3g", etc.)
     pub meta_format: Option<String>,
+    /// The `application/...` string a `mett` sample description carries
+    /// (QuickTime.pm:7769-7774). It says which table the samples hold.
+    pub meta_type: Option<String>,
     /// Media timescale from mdhd
     pub media_timescale: u32,
     /// Chunk offsets from stco/co64
@@ -116,6 +119,7 @@ pub fn extract_stream_tags(
                     sample_data,
                     &handler,
                     meta_format,
+                    track.meta_type.as_deref().unwrap_or(""),
                     s.time,
                     s.duration,
                     &mut sample_tags,
@@ -335,12 +339,14 @@ fn dispatch_sample(
     sample: &[u8],
     handler: &[u8; 4],
     meta_format: &str,
+    meta_type: &str,
     _time: Option<f64>,
     _dur: Option<f64>,
     tags: &mut Vec<Tag>,
 ) -> bool {
     // Try by meta_format first
     match meta_format {
+        "mett" => return process_mett(sample, meta_type, tags),
         "camm" => return process_camm(sample, tags),
         "gpmd" => return process_gpmd(sample, tags),
         "mebx" => return process_mebx(sample, tags),
@@ -1951,4 +1957,50 @@ fn mk_gps_trk(val: f64) -> Tag {
         print_value: format!("{:.4}", val),
         priority: 0,
     }
+}
+
+/// Parrot's `mett` timed metadata: the ARCore records ARCore writes into one.
+///
+/// `Process_mett` (Parrot.pm:791-822): each record opens with 0x0a, then a
+/// length byte -- zero meaning the rest of the sample -- and the sample
+/// description's `application/...` string says which table holds it. All of
+/// them are little-endian (Parrot.pm:62-83).
+fn process_mett(sample: &[u8], meta_type: &str, tags: &mut Vec<Tag>) -> bool {
+    let table = match meta_type {
+        "application/arcore-accel" => "Parrot::ARCoreAccel",
+        "application/arcore-accel-0" => "Parrot::ARCoreAccel0",
+        "application/arcore-gyro" => "Parrot::ARCoreGyro",
+        "application/arcore-gyro-0" => "Parrot::ARCoreGyro0",
+        "application/arcore-video-0" => "Parrot::ARCoreVideo",
+        "application/arcore-custom-event" => "Parrot::ARCoreCustom",
+        _ => return false,
+    };
+    let mut pos = 0usize;
+    let mut found = false;
+    while pos + 2 < sample.len() {
+        if sample[pos] != 0x0a {
+            break;
+        }
+        let mut len = sample[pos + 1] as usize;
+        if pos + len + 2 > sample.len() {
+            break;
+        }
+        if len == 0 {
+            len = sample.len() - pos - 2;
+        }
+        let mut dm = crate::tags::binary_tables_generated::State::new();
+        tags.extend(crate::tags::binary_tables_generated::decode(
+            table,
+            &sample[pos + 2..pos + 2 + len],
+            "",
+            "",
+            crate::metadata::exif::ByteOrderMark::LittleEndian,
+            "",
+            "",
+            &mut dm,
+        ));
+        found = true;
+        pos += len + 2;
+    }
+    found
 }

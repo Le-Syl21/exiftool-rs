@@ -3,14 +3,14 @@
 //! Do not edit: regenerate with
 //! `perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs`.
 //!
-//! 95 tables, 2455 fields. A binary sub-table is a block of
+//! 102 tables, 2463 fields. A binary sub-table is a block of
 //! bytes addressed by index: ExifTool's ProcessBinaryData reads the entry at
 //! `(index - FIRST_ENTRY) * sizeof(FORMAT)`, and a field's own Format says
 //! what to read there. What the generator could not express is on its stderr.
 //! Generated code: the shape of a table decides what is written, so a helper
 //! no table happens to need and a cast that happens to be a no-op are both
 //! ordinary here rather than something to tidy away by hand.
-#![allow(dead_code, unused_parens, unused_mut)]
+#![allow(dead_code, unused_parens, unused_mut, unused_variables)]
 #![allow(clippy::too_many_arguments, clippy::useless_conversion)]
 #![allow(
     clippy::too_many_lines,
@@ -289,6 +289,7 @@ pub fn decode(
         "CanonCustom::PersonalFuncs" => canoncustom_personalfuncs(data, make, model, bo, file_type, format, dm),
         "CanonCustom::PersonalFuncValues" => canoncustom_personalfuncvalues(data, make, model, bo, file_type, format, dm),
         "CanonVRD::DustInfo" => canonvrd_dustinfo(data, make, model, bo, file_type, format, dm),
+        "CanonVRD::DLOInfo" => canonvrd_dloinfo(data, make, model, bo, file_type, format, dm),
         "FLIR::GainDeadData" => flir_gaindeaddata(data, make, model, bo, file_type, format, dm),
         "FLIR::CoarseData" => flir_coarsedata(data, make, model, bo, file_type, format, dm),
         "FLIR::PaintData" => flir_paintdata(data, make, model, bo, file_type, format, dm),
@@ -321,6 +322,12 @@ pub fn decode(
         "Olympus::MOV1" => olympus_mov1(data, make, model, bo, file_type, format, dm),
         "Olympus::MOV2" => olympus_mov2(data, make, model, bo, file_type, format, dm),
         "Olympus::prms" => olympus_prms(data, make, model, bo, file_type, format, dm),
+        "Parrot::ARCoreAccel" => parrot_arcoreaccel(data, make, model, bo, file_type, format, dm),
+        "Parrot::ARCoreAccel0" => parrot_arcoreaccel0(data, make, model, bo, file_type, format, dm),
+        "Parrot::ARCoreGyro" => parrot_arcoregyro(data, make, model, bo, file_type, format, dm),
+        "Parrot::ARCoreGyro0" => parrot_arcoregyro0(data, make, model, bo, file_type, format, dm),
+        "Parrot::ARCoreVideo" => parrot_arcorevideo(data, make, model, bo, file_type, format, dm),
+        "Parrot::ARCoreCustom" => parrot_arcorecustom(data, make, model, bo, file_type, format, dm),
         "Pentax::Junk2" => pentax_junk2(data, make, model, bo, file_type, format, dm),
         "Photoshop::PixelInfo" => photoshop_pixelinfo(data, make, model, bo, file_type, format, dm),
         "QuickTime::HTCBinary" => quicktime_htcbinary(data, make, model, bo, file_type, format, dm),
@@ -21284,6 +21291,28 @@ fn canonvrd_dustinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
     tags
 }
 
+/// `Image::ExifTool::CanonVRD::DLOInfo` -- FORMAT int16s, FIRST_ENTRY 1.
+/// Incomplete: a field of variable length moves every entry after
+/// it, and this reads them where they would be without it.
+fn canonvrd_dloinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "CanonVRD";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = i16_at(data, 0x8, bo) {
+        dm.push(("DLOSettingApplied".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("DLOSettingApplied", 0x4, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0xa, 10, true) {
+        tags.push(mk("DLOVersion", 0x5, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
 /// `Image::ExifTool::FLIR::GainDeadData` -- FORMAT int16u, FIRST_ENTRY 0.
 /// Incomplete: a field of variable length moves every entry after
 /// it, and this reads them where they would be without it.
@@ -31847,6 +31876,84 @@ fn olympus_prms(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: 
     if let Some(text) = text_at(data, 0x17f, 32, true) {
         tags.push(mk("LensModel", 0x17f, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
+    tags
+}
+
+/// `Image::ExifTool::Parrot::ARCoreAccel` -- FORMAT int8u, FIRST_ENTRY 0.
+fn parrot_arcoreaccel(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "Parrot";
+    const GRP1: &str = "Parrot";
+    const GRP2: &str = "Location";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x5, 14, false) {
+        tags.push(mk("Accelerometer", 0x5, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Parrot::ARCoreAccel0` -- FORMAT int8u, FIRST_ENTRY 0.
+fn parrot_arcoreaccel0(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "Parrot";
+    const GRP1: &str = "Parrot";
+    const GRP2: &str = "Location";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x9, 14, false) {
+        tags.push(mk("Accelerometer", 0x9, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Parrot::ARCoreGyro` -- FORMAT int8u, FIRST_ENTRY 0.
+fn parrot_arcoregyro(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "Parrot";
+    const GRP1: &str = "Parrot";
+    const GRP2: &str = "Location";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x5, 14, false) {
+        tags.push(mk("Gyroscope", 0x5, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Parrot::ARCoreGyro0` -- FORMAT int8u, FIRST_ENTRY 0.
+fn parrot_arcoregyro0(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "Parrot";
+    const GRP1: &str = "Parrot";
+    const GRP2: &str = "Location";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x9, 14, false) {
+        tags.push(mk("Gyroscope", 0x9, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Parrot::ARCoreVideo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn parrot_arcorevideo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "Parrot";
+    const GRP1: &str = "Parrot";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    tags
+}
+
+/// `Image::ExifTool::Parrot::ARCoreCustom` -- FORMAT int8u, FIRST_ENTRY 0.
+fn parrot_arcorecustom(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "Parrot";
+    const GRP1: &str = "Parrot";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
     tags
 }
 

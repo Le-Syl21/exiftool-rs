@@ -2508,6 +2508,24 @@ fn parse_stsd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
     // Record meta format for stream extraction
     if state.extract_embedded > 0 && !format_str.is_empty() {
         state.stream_current.meta_format = Some(format_str.clone());
+        // MetaType: `$val =~ /(application[^\0]+)/` over the rest of the
+        // entry (QuickTime.pm:7769-7774). ARCore names its record layout
+        // there, and a `mett` sample means nothing without it.
+        if format_str == "mett" && entry.len() > 8 {
+            if let Some(at) = entry[8..]
+                .windows(11)
+                .position(|w| w == b"application")
+                .map(|p| p + 8)
+            {
+                let end = entry[at..]
+                    .iter()
+                    .position(|b| *b == 0)
+                    .map_or(entry.len(), |n| at + n);
+                state.stream_current.meta_type = Some(
+                    entry[at..end].iter().map(|b| *b as char).collect::<String>(),
+                );
+            }
+        }
     }
 
     // Determine if audio or video based on handler type

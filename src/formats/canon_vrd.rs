@@ -2137,6 +2137,26 @@ fn parse_vrd_ver2(data: &[u8], tags: &mut Vec<Tag>) {
         }
     };
 
+    // DLOInfo sits at index 0xe0 of this table, and only when the DLOOn flag
+    // at 0xdc says so -- ExifTool has seen a DLODataLength of 64869 with DLO
+    // off (CanonVRD.pm:955-961). The Hook there shifts the entries after it
+    // by that length, not this one.
+    if read_i16_at(0xdc).is_some_and(|v| v != 0) {
+        if let Some(block) = data.get(0xe0 * 2..) {
+            let mut dm = crate::tags::binary_tables_generated::State::new();
+            tags.extend(crate::tags::binary_tables_generated::decode(
+                "CanonVRD::DLOInfo",
+                block,
+                "Canon",
+                "",
+                crate::metadata::exif::ByteOrderMark::BigEndian,
+                "",
+                "",
+                &mut dm,
+            ));
+        }
+    }
+
     // 0x02: PictureStyle
     if let Some(v) = read_i16_at(0x02) {
         let print = match v {
