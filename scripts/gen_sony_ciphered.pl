@@ -218,6 +218,12 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
             ($dmname) = $fb =~ /RawConv\s*=>\s*'\$\$self\{(\w+)\}\s*=\s*\$val'/;
         }
 
+        # `Mask => 0x7f`: ExifTool extracts only those bits, shifted down to
+        # the bottom, and everything after -- RawConv, the DataMember, the
+        # PrintConv -- sees the masked value. FocusMode is `often +128`.
+        my ($mask) = $fb =~ /Mask\s*=>\s*(0x[0-9a-fA-F]+|\d+)/;
+        $mask = hex($mask) if defined $mask and $mask =~ /^0x/;
+
         my ($ffmt) = $fb =~ /Format\s*=>\s*'([^']+)'/;
         $ffmt ||= $fmt;
         # A fixed-size array of a scalar type is just N reads joined by spaces,
@@ -288,6 +294,8 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
 
         # `string[20]` and `undef[6]` are N bytes read as text.
         if ($ffmt =~ /^(string|undef)\[(\d+)\]$/) {
+            push @skipped, "$table 0x" . sprintf('%04x', $off) . " $name: Mask on a text field"
+                if defined $mask;
             push @fields, { off => $off, name => $name, fmt => $1, n => $2,
                             re => $re, neg => $neg, conv => {},
                             vconv => $vconv, pconv => $pconv, hidden => $hidden,
@@ -381,7 +389,7 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
             off => $off, name => $name, fmt => $ffmt, n => $count_n,
             re => $re, neg => $neg, conv => \%conv, sconv => \%sconv,
             vconv => $vconv, pconv => $pconv, hidden => $hidden, rconv => $rconv,
-            dmname => $dmname, grp2 => $fgrp2, other => $other_expr,
+            dmname => $dmname, grp2 => $fgrp2, other => $other_expr, mask => $mask,
         };
     }
 
@@ -450,6 +458,13 @@ sub byte_prefix {
 # Compile one condition. Returns (rust_expr, flag_expr) or (), where flag_expr
 # says when `$$self{DoubleCipher} = 1` inside it would have run -- Perl's `and`
 # and `or` short-circuit, so the assignment only happens on some paths.
+# Which Main tags store a DATAMEMBER in the course of testing their own
+# condition, and under what name. `($$self{TagB042} = Get16u($valPt, 0)) and
+# ...` is an assignment used as a test: the value is stored whether or not the
+# arm is taken, and a later tag reads it.
+my %main_store;
+my $cur_main_tag;
+
 sub compile_cond {
     my ($cond, $mode) = @_;
     $mode ||= 'variant';
@@ -592,8 +607,28 @@ sub compile_cond {
             return (sprintf('state.member("%s").is_some_and(|v| v.as_num() %s %s)', $dm, $op, $num),
                     'false');
         }
+        # `$$self{MetaVersion} eq "DC7303320222000"`: a string DATAMEMBER.
+        if ($cond =~ /^\$\$self\{(\w+)\} (eq|ne) ['"]([^'"]*)['"]$/) {
+            my ($dm, $op, $str) = ($1, $2, $3);
+            $str =~ s/\\/\\\\/g; $str =~ s/"/\\"/g;
+            # An unset member is neither equal nor unequal to ExifTool: `ne`
+            # on an undef warns and compares as the empty string, and every
+            # such condition here is guarded by a truth test on the member.
+            return (sprintf('state.member("%s").is_some_and(|v| v.as_string() %s "%s")',
+                            $dm, $op eq 'eq' ? '==' : '!=', $str), 'false');
+        }
         if ($cond =~ /^\$\$self\{(\w+)\}$/) {
-            return (sprintf('state.member("%s").is_some_and(|v| v.as_num() != 0.0)', $1), 'false');
+            # Perl's truth, not "non-zero": a string member is true when it is
+            # neither empty nor "0".
+            return (sprintf('state.member("%s").is_some_and(|v| v.truthy())', $1), 'false');
+        }
+        # `($$self{TagB042} = Get16u($valPt, 0))` is an assignment used as the
+        # test: it stores the block's first 16-bit value and is true when that
+        # value is not zero. The store is what the AFAreaMode arms below read,
+        # so it happens whether or not this arm is the one taken.
+        if ($cond =~ /^\$\$self\{(\w+)\} = Get16u\(\$valPt, 0\)$/) {
+            $main_store{$cur_main_tag} = $1 if defined $cur_main_tag;
+            return ('get16u(state, data, 0).is_some_and(|v| v != 0)', 'false');
         }
     }
     if ($mode eq 'field') {
@@ -687,6 +722,7 @@ for my $entry (@array_entries) {
         ($cond) = $a =~ /Condition\s*=>\s*'([^']*)'/ unless defined $cond;
         if (defined $cond) {
             $conditioned = 1;
+            $cur_main_tag = $tag;
             my @c = compile_cond($cond, 'main');
             unless (@c) {
                 push @skipped, sprintf("main 0x%04x -> %s: cannot express -- %s",
@@ -716,9 +752,14 @@ while ($main =~ /^\s{4}(0x[0-9a-fA-F]+)\s*=>\s*\{(.*?)^\s{4}\},/gms) {
         my ($cond) = $b =~ /Condition\s*=>\s*q\{(.*?)\}\s*,/ms;
         ($cond) = $b =~ /Condition\s*=>\s*'([^']*)'/ unless defined $cond;
         if ($nm and defined $cond and not grep { $_->{tag} == $tag } @main_names) {
-            my @c = compile_cond($cond);
+            # A lone conditional value is read against the same state an array
+            # of alternatives is: the two FocusMode offsets are told apart by
+            # the MetaVersion an earlier table stored.
+            $cur_main_tag = $tag;
+            my @c = compile_cond($cond, 'main');
             if (@c) {
-                push @main_names, { tag => $tag, arms => [ { name => $nm, expr => $c[0] } ] };
+                push @main_names,
+                    { tag => $tag, arms => [ { name => $nm, expr => $c[0], conv => arm_conv($b) } ] };
             } else {
                 push @skipped, sprintf("main 0x%04x -> %s: cannot express -- %s",
                                        $tag, $nm, join ' ', split ' ', $cond);
@@ -803,6 +844,18 @@ print "\n";
 print <<'RD';
 fn u8_at(d: &[u8], o: usize) -> Option<u8> { d.get(o).copied() }
 fn i8_at(d: &[u8], o: usize) -> Option<i8> { d.get(o).map(|v| *v as i8) }
+/// The 16-bit value at an offset of a Main tag's own bytes, read in the
+/// file's byte order -- which is what ExifTool's Get16u does, and which the
+/// fixed little-endian readers above cannot answer for a Main tag.
+fn get16u(state: &dyn conv_expr::ParseState, d: &[u8], o: usize) -> Option<u16> {
+    let b = [*d.get(o)?, *d.get(o + 1)?];
+    Some(if state.byte_order() == Some("MM") {
+        u16::from_be_bytes(b)
+    } else {
+        u16::from_le_bytes(b)
+    })
+}
+
 fn u16_at(d: &[u8], o: usize) -> Option<u16> {
     Some(u16::from_le_bytes([*d.get(o)?, *d.get(o + 1)?]))
 }
@@ -838,11 +891,30 @@ fn text_tag(name: &str, default_group2: &'static str, text: String, priority: i3
 /// ExifTool calls these DATAMEMBERs and keeps them on the object, not on the
 /// table: Tag9050 reads LensMount, and Tag940c -- a different block entirely --
 /// decides whether to report LensE-mountVersion by what it said.
-pub type State = Vec<(String, f64)>;
+///
+/// A member is whatever the field read: MetaVersion is a string, and the
+/// conditions on FocusMode compare it to one.
+pub type State = Vec<(String, Conv)>;
 
 /// The most recent value read under this name.
 fn dm_get(dm: &State, name: &str) -> Option<f64> {
-    dm.iter().rev().find(|(n, _)| n == name).map(|(_, v)| *v)
+    dm_val(dm, name).map(|v| v.as_num())
+}
+
+/// The same, as the value it was read as.
+fn dm_val<'a>(dm: &'a State, name: &str) -> Option<&'a Conv> {
+    dm.iter().rev().find(|(n, _)| n == name).map(|(_, v)| v)
+}
+
+/// Stamp a tag with the offset it was read from.
+///
+/// A binary-data table addresses its tags by offset, and ExifTool reports that
+/// offset as the tag id. Naming them instead collapsed the pairs ExifTool keeps
+/// apart: Tag9050b defines APS-CSizeCapture at both 0x0114 and 0x01ee, and an
+/// ILCE-9 matches the model condition on both, so ExifTool prints it twice.
+fn at(id: u16, mut t: Tag) -> Tag {
+    t.id = TagId::Numeric(id);
+    t
 }
 
 fn mk(name: &str, print_value: String, raw: Value, default_group2: &'static str) -> Tag {
@@ -960,6 +1032,28 @@ for my $m (@main_names) {
 }
 print "        _ => None,\n    }\n}\n\n";
 
+# The DATAMEMBERs a Main tag stores while testing its own condition.
+print <<'MAINSTORE';
+/// What a Main tag stores on the file while testing its own condition.
+///
+/// `($$self{TagB042} = Get16u($valPt, 0)) and ...` is an assignment used as a
+/// test: ExifTool stores the value whether or not the arm is taken, and a
+/// later tag -- 0xb043 AFAreaMode -- is told apart by it. The caller stores
+/// this before asking `main_tag` anything.
+#[must_use]
+pub fn main_store(
+    tag: u16,
+    data: &[u8],
+    state: &dyn crate::tags::conv_expr::ParseState,
+) -> Option<(&'static str, crate::tags::conv_expr::Val)> {
+    match tag {
+MAINSTORE
+for my $t (sort { $a <=> $b } keys %main_store) {
+    printf "        %#06x => get16u(state, data, 0).map(|v| (\"%s\", Conv::Num(f64::from(v)))),\n",
+        $t, $main_store{$t};
+}
+print "        _ => None,\n    }\n}\n\n";
+
 print "/// Whether a table's block is byte-substitution enciphered in the file.\n";
 print "///\n/// Deciphering one that is not turns it to noise, which is why this is\n";
 print "/// read off ExifTool's PROCESS_PROC rather than assumed.\n";
@@ -1063,15 +1157,24 @@ for my $t (@tables) {
                 printf "%s    let raw = Value::String(cv.as_string());\n", $ind;
                 printf "%s    if let Some(x) = conv_expr::eval(\"%s\", &cv) { cv = x; }\n",
                     $ind, $esc->($f->{pconv}) if defined $f->{pconv};
-                printf "%s    tags.push(mk_prio(\"%s\", cv.as_string(), raw, %s, PRIO));\n",
-                    $ind, $f->{name}, grp2_of($f) unless $f->{hidden};
+                printf "%s    tags.push(at(0x%x, mk_prio(\"%s\", cv.as_string(), raw, %s, PRIO)));\n",
+                    $ind, $f->{off}, $f->{name}, grp2_of($f) unless $f->{hidden};
             } else {
-                printf "%s    tags.push(text_tag(\"%s\", %s, text, PRIO));\n", $ind, $f->{name}, grp2_of($f)
+                # A string field stores itself only where ExifTool names it a
+                # DataMember: MetaVersion is read in ShotInfo and the Main
+                # table's two FocusMode offsets are told apart by it.
+                printf "%s    dm.push((\"%s\".to_string(), Conv::Str(text.clone())));\n",
+                    $ind, $f->{dmname} if defined $f->{dmname};
+                printf "%s    tags.push(at(0x%x, text_tag(\"%s\", %s, text, PRIO)));\n", $ind, $f->{off}, $f->{name}, grp2_of($f)
                     unless $f->{hidden};
             }
             printf "%s}\n", $ind;
             print  "    }\n" if defined $f->{re};
             next;
+        }
+        if (($f->{n} // 1) > 1 and defined $f->{mask}) {
+            printf STDERR "%s 0x%04x %s: Mask on an array of %d\n",
+                $t->{name}, $f->{off}, $f->{name}, $f->{n};
         }
         if (($f->{n} // 1) > 1) {
             my $w = { int8u => 1, int8s => 1, int16u => 2, int16s => 2, int32u => 4, int32s => 4 }->{$f->{fmt}};
@@ -1087,7 +1190,7 @@ for my $t (@tables) {
             if (defined $f->{pconv} and $f->{pconv} =~ /unpack\s+"H\*"/) {
                 # `unpack "H*", pack "C*", split " ", $val`: the bytes as hex.
                 printf "%s        let hex: String = parts.iter().map(|p| format!(\"{:02x}\", p.parse::<u32>().unwrap_or(0))).collect();\n", $ind;
-                printf "%s        tags.push(mk_prio(\"%s\", hex, Value::String(%s), %s, PRIO));\n", $ind, $f->{name}, $joined, grp2_of($f)
+                printf "%s        tags.push(at(0x%x, mk_prio(\"%s\", hex, Value::String(%s), %s, PRIO)));\n", $ind, $f->{off}, $f->{name}, $joined, grp2_of($f)
                     unless $f->{hidden};
             } else {
                 printf "%s        let s = %s;\n", $ind, $joined;
@@ -1112,10 +1215,10 @@ for my $t (@tables) {
                         printf "%s            _ => s.clone(),\n", $ind;
                     }
                     printf "%s        };\n", $ind;
-                    printf "%s        tags.push(mk_prio(\"%s\", printed, Value::String(s), %s, PRIO));\n", $ind, $f->{name}, grp2_of($f)
+                    printf "%s        tags.push(at(0x%x, mk_prio(\"%s\", printed, Value::String(s), %s, PRIO)));\n", $ind, $f->{off}, $f->{name}, grp2_of($f)
                         unless $f->{hidden};
                 } else {
-                    printf "%s        tags.push(mk_prio(\"%s\", s.clone(), Value::String(s), %s, PRIO));\n", $ind, $f->{name}, grp2_of($f)
+                    printf "%s        tags.push(at(0x%x, mk_prio(\"%s\", s.clone(), Value::String(s), %s, PRIO)));\n", $ind, $f->{off}, $f->{name}, grp2_of($f)
                         unless $f->{hidden};
                 }
             }
@@ -1124,7 +1227,15 @@ for my $t (@tables) {
             next;
         }
         printf "%sif let Some(v) = %s(data, 0x%x) {\n", $ind, $reader, $f->{off};
-        printf "%s    dm.push((\"%s\".to_string(), f64::from(v)));\n", $ind, $f->{dmname} // $f->{name};
+        if (defined $f->{mask}) {
+            my $shift = 0;
+            my $m = $f->{mask};
+            until ($m & 1) { $m >>= 1; ++$shift }
+            printf "%s    let v = %s;\n", $ind,
+                $shift ? sprintf('(v & %#x) >> %d', $f->{mask}, $shift)
+                       : sprintf('v & %#x', $f->{mask});
+        }
+        printf "%s    dm.push((\"%s\".to_string(), Conv::Num(f64::from(v))));\n", $ind, $f->{dmname} // $f->{name};
         # A RawConv can rule the value out entirely -- `$val ? $val : undef`
         # means "only when it is not zero" -- or reshape it. One this evaluator
         # declines leaves the raw value, which is the honest answer.
@@ -1148,7 +1259,7 @@ for my $t (@tables) {
             }
             printf "%s        other => other.to_string(),\n", $ind;
             printf "%s    };\n", $ind;
-            printf "%s    tags.push(mk_prio(\"%s\", s, Value::I32(v as i32), %s, PRIO));\n", $ind, $f->{name}, grp2_of($f)
+            printf "%s    tags.push(at(0x%x, mk_prio(\"%s\", s, Value::I32(v as i32), %s, PRIO)));\n", $ind, $f->{off}, $f->{name}, grp2_of($f)
                 unless $f->{hidden};
         } elsif (defined $f->{vconv} or defined $f->{pconv}) {
             my $esc = sub { my $t = shift; $t =~ s/\\/\\\\/g; $t =~ s/"/\\"/g; $t };
@@ -1162,10 +1273,10 @@ for my $t (@tables) {
                 printf "%s    if let Some(x) = conv_expr::eval(\"%s\", &cv) { cv = x; }\n",
                     $ind, $esc->($f->{pconv});
             }
-            printf "%s    tags.push(mk_prio(\"%s\", cv.as_string(), raw, %s, PRIO));\n", $ind, $f->{name}, grp2_of($f)
+            printf "%s    tags.push(at(0x%x, mk_prio(\"%s\", cv.as_string(), raw, %s, PRIO)));\n", $ind, $f->{off}, $f->{name}, grp2_of($f)
                 unless $f->{hidden};
         } else {
-            printf "%s    tags.push(mk_prio(\"%s\", v.to_string(), Value::I32(v as i32), %s, PRIO));\n", $ind, $f->{name}, grp2_of($f)
+            printf "%s    tags.push(at(0x%x, mk_prio(\"%s\", v.to_string(), Value::I32(v as i32), %s, PRIO)));\n", $ind, $f->{off}, $f->{name}, grp2_of($f)
                 unless $f->{hidden};
         }
         if ($raw_guard) {

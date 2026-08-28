@@ -62,7 +62,12 @@ impl Val {
         }
     }
 
-    fn truthy(&self) -> bool {
+    /// Perl's notion of true: not undef, not the empty string, not `"0"`,
+    /// not zero. A generated condition on a string DATAMEMBER asks this --
+    /// `$$self{MetaVersion}` is true for `DC7303320222000` where reading it
+    /// as a number gives zero.
+    #[must_use]
+    pub fn truthy(&self) -> bool {
         match self {
             Self::Undef => false,
             Self::Binary(b) => !b.is_empty(),

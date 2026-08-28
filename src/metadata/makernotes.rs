@@ -7200,7 +7200,14 @@ fn read_makernote_ifd_with_base(
                     )
                     .is_some() =>
                 {
-                    subs::decode_sony_ciphered(t, &dispatch_ctx, &mut sony_state)
+                    let decoded = subs::decode_sony_ciphered(t, &dispatch_ctx, &mut sony_state);
+                    // ExifTool keeps DATAMEMBERs on the file, not on the table
+                    // that read them: ShotInfo reads MetaVersion and the Main
+                    // table's two FocusMode offsets are told apart by it.
+                    for (name, val) in &sony_state {
+                        main_state.insert(name.clone(), val.clone());
+                    }
+                    decoded
                 }
                 // Panasonic FaceDetInfo (tag 0x004e): binary subdirectory
                 // FORMAT=int16u, FIRST_ENTRY=0
@@ -7765,6 +7772,16 @@ fn read_makernote_ifd_with_base(
         let sony_named;
         let mut sony_conv: &[(i64, &'static str)] = &[];
         let (raw_name, raw_desc) = if manufacturer == Manufacturer::Sony {
+            // A condition can store before it tests -- 0xb042 keeps its first
+            // 16-bit value under TagB042 whether or not its own arm is taken,
+            // and 0xb043 reads it back.
+            if let Some((name, val)) = crate::tags::sony_ciphered_generated::main_store(
+                tag_id,
+                value_data,
+                &main_state,
+            ) {
+                main_state.insert(name.to_string(), val);
+            }
             match crate::tags::sony_ciphered_generated::main_tag(
                 tag_id,
                 model_name,
@@ -8318,6 +8335,15 @@ fn read_makernote_ifd_with_base(
                     })
                     .map(|s| s.to_string())
                     .or_else(|| {
+                        // A conversion found by NAME is a guess: ExifTool has
+                        // no such lookup, and a maker-note tag that shares a
+                        // name with an EXIF one need not share its meaning --
+                        // Sony's Contrast is a plain number where EXIF's is
+                        // Normal/Soft/Hard. Only where the maker's own table
+                        // says nothing at all.
+                        if manufacturer == Manufacturer::Sony {
+                            return None;
+                        }
                         iv.and_then(|v| {
                             crate::tags::print_conv_generated::print_conv_by_name(name, v)
                         })

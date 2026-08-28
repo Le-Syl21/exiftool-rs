@@ -14,20 +14,5 @@ Real.ra	default	extra	0	Copyright	** institut für universelle zusammenhänge
 Real.ra	default	missing	0	Copyright	** institut f�r universelle zusammenh�nge
 Real.ra	ee	extra	0	Copyright	** institut für universelle zusammenhänge
 Real.ra	ee	missing	0	Copyright	** institut f�r universelle zusammenh�nge
-SonyILCE9.arw	ee	extra	0	Contrast	Normal
-SonyILCE9.arw	ee	extra	0	FocusMode	131
-SonyILCE9.arw	ee	extra	0	Saturation	Low
-SonyILCE9.arw	ee	extra	0	Sharpness	Normal
-SonyILCE9.arw	ee	missing	0	APS-CSizeCapture	Off
-SonyILCE9.arw	ee	missing	0	Contrast	0
-SonyILCE9.arw	ee	missing	0	DynamicRangeOptimizer	Auto
 SonyILCE9.arw	ee	missing	0	ExposureTime	1/20
-SonyILCE9.arw	ee	missing	0	FocusMode	AF-C
-SonyILCE9.arw	ee	missing	0	LensSpecFeatures	E
-SonyILCE9.arw	ee	missing	0	PictureProfile	Gamma Still - Standard/Neutral (PP2)
 SonyILCE9.arw	ee	missing	0	Quality2	RAW
-SonyILCE9.arw	ee	missing	0	ReleaseMode2	Normal
-SonyILCE9.arw	ee	missing	1	ReleaseMode2	Normal
-SonyILCE9.arw	ee	missing	0	Saturation	0
-SonyILCE9.arw	ee	missing	0	SequenceLength	1 shot
-SonyILCE9.arw	ee	missing	0	Sharpness	0
