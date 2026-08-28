@@ -5958,10 +5958,20 @@ fn read_makernote_ifd_with_base(
                     crate::tags::canon_sub::decode_camera_settings(&values)
                 }
                 (Manufacturer::Canon, 0x0004) => {
-                    let values: Vec<i16> = (0..count as usize)
-                        .map(|i| read_u16(value_data, i * 2, byte_order) as i16)
-                        .collect();
-                    crate::tags::canon_sub::decode_shot_info(&values, model_name)
+                    // ShotInfo, generated from Canon.pm. Its entries are
+                    // numbered from 1, and ExifTool reports each by its own
+                    // index -- which is what keeps its ExposureTime apart from
+                    // the one CameraInfo1DmkIII defines at entry 4.
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    crate::tags::binary_tables_generated::decode(
+                        "ShotInfo",
+                        value_data,
+                        model_name,
+                        byte_order,
+                        &crate::metadata::exif::tiff_type(),
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                        &mut dm,
+                    )
                 }
                 (Manufacturer::Canon, 0x0002) => {
                     let values: Vec<u16> = (0..count as usize)
@@ -5978,374 +5988,47 @@ fn read_makernote_ifd_with_base(
                     crate::tags::canon_sub::decode_focal_length(&values, model_name, focal_units)
                 }
                 (Manufacturer::Canon, 0x000D) => {
-                    // Is this a body Canon.pm has a CameraInfo layout for? The
-                    // selector answers with the conditions from Canon.pm itself,
-                    // anchors included: `/EOS-1D X$/` does not claim the Mark II,
-                    // where the substring test this used to do did, and decoded a
-                    // body with a layout that does not describe it.
-                    let known_format = crate::tags::variant_selectors_generated::variant_for(
-                        "Canon", 0x000d, model_name, value_data, count as usize,
+                    // CameraInfo: which of the fifty-odd layouts applies is
+                    // decided by the model, with the conditions from Canon.pm
+                    // itself -- anchors included, so `/EOS-1D X$/` does not
+                    // claim the Mark II. The tables are generated from the
+                    // same source, so this arm never has to know a layout.
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    // A condition can store before it tests: the 1D keeps the
+                    // block's own length, and its last fields are indexed
+                    // from it.
+                    if let Some(name) =
+                        crate::tags::binary_tables_generated::count_member("Canon", 0x000d)
+                    {
+                        #[allow(clippy::cast_precision_loss)]
+                        dm.push((name.to_string(), count as f64));
+                    }
+                    let mut t = crate::tags::binary_tables_generated::variant_for(
+                        "Canon",
+                        0x000d,
+                        model_name,
+                        value_data,
+                        count as usize,
                         crate::tags::sub_tables_generated::tiff_format_name(data_type),
                     )
-                    .is_some();
-                    let mut t = Vec::new();
-                    // NOTE: BracketMode/BracketValue/BracketShotNumber are NOT
-                    // CameraInfo tags. Canon.pm defines them at indices 3/4/5 of
-                    // Canon::FileInfo alone (Canon.pm:6929-6940, maker-note tag
-                    // 0x0093, decoded separately below); in every CameraInfo
-                    // variant those offsets hold something else — 0x03/0x04/0x06 of
-                    // CameraInfo1DmkIII are FNumber/ExposureTime/ISO
-                    // (Canon.pm:3433-3435).
-                    // Decode CameraInfo1DmkIII fields (FORMAT='int8u', byte offsets)
-                    // Perl table: Canon::CameraInfo1DmkIII
-                    let d = value_data;
-                    // Only decode 1DmkIII-specific layout (data size ~1536 bytes)
-                    let is_1dmk3 =
-                        model_name.contains("1D Mark III") || model_name.contains("1DS Mark III");
-                    if known_format && is_1dmk3 {
-                        // Read helpers
-                        let rb = |off: usize| -> u8 {
-                            if off < d.len() {
-                                d[off]
-                            } else {
-                                0
-                            }
-                        };
-                        let r16le = |off: usize| -> u16 {
-                            if off + 2 <= d.len() {
-                                u16::from_le_bytes([d[off], d[off + 1]])
-                            } else {
-                                0
-                            }
-                        };
-                        let r16be = |off: usize| -> u16 {
-                            if off + 2 <= d.len() {
-                                u16::from_be_bytes([d[off], d[off + 1]])
-                            } else {
-                                0
-                            }
-                        };
-                        let r32le = |off: usize| -> u32 {
-                            if off + 4 <= d.len() {
-                                u32::from_le_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
-                            } else {
-                                0
-                            }
-                        };
-                        // 0x03 FNumber — Canon.pm:3433 with %ciFNumber
-                        // (Canon.pm:3087): Format int8u, RawConv suppresses 0,
-                        // ValueConv 'exp(($val-8)/16*log(2))',
-                        // PrintConv 'sprintf("%.2g",$val)'.
-                        if d.len() > 0x03 && rb(0x03) != 0 {
-                            let f =
-                                (((rb(0x03) as f64) - 8.0) / 16.0 * std::f64::consts::LN_2).exp();
-                            t.push(mk_canon_str("FNumber", &crate::value::format_g_prec(f, 2)));
-                        }
-                        // 0x04 ExposureTime — %ciExposureTime (Canon.pm:3097):
-                        // ValueConv 'exp(4*log(2)*(1-CanonEv($val-24)))',
-                        // PrintConv Exif::PrintExposureTime.
-                        if d.len() > 0x04 && rb(0x04) != 0 {
-                            let ev = crate::tags::canon_sub::canon_ev(rb(0x04) as i32 - 24);
-                            let secs = (4.0 * std::f64::consts::LN_2 * (1.0 - ev)).exp();
-                            t.push(mk_canon_str(
-                                "ExposureTime",
-                                &crate::tags::canon_sub::print_exposure_time(secs),
-                            ));
-                        }
-                        // 0x06 ISO — %ciISO (Canon.pm:3107): ValueConv
-                        // '100*exp(($val/8-9)*log(2))', PrintConv 'sprintf("%.0f",$val)'.
-                        // (no RawConv: emitted even when the byte is zero)
-                        if d.len() > 0x06 {
-                            let iso = 100.0
-                                * ((rb(0x06) as f64 / 8.0 - 9.0) * std::f64::consts::LN_2).exp();
-                            t.push(mk_canon_str("ISO", &format!("{:.0}", iso)));
-                        }
-                        // 0x18 CameraTemperature — %ciCameraTemperature
-                        // (Canon.pm:3116): ValueConv '$val - 128', PrintConv '"$val C"'.
-                        if d.len() > 0x18 {
-                            t.push(mk_canon_str(
-                                "CameraTemperature",
-                                &format!("{} C", rb(0x18) as i32 - 128),
-                            ));
-                        }
-                        // 0x1d FocalLength — %ciFocalLength (Canon.pm:3134):
-                        // Format int16uRev (big-endian), RawConv suppresses 0,
-                        // PrintConv '"$val mm"'.
-                        if d.len() > 0x1e {
-                            let fl = r16be(0x1d);
-                            if fl != 0 {
-                                t.push(mk_canon_str("FocalLength", &format!("{} mm", fl)));
-                            }
-                        }
-                        // Single-byte fields (int8u)
-                        if d.len() > 48 {
-                            t.push(mk_canon_str("CameraOrientation", &{
-                                let v = rb(0x30);
-                                let s = match v {
-                                    0 => "Horizontal (normal)",
-                                    1 => "Rotate 90 CW",
-                                    2 => "Rotate 270 CW",
-                                    _ => "",
-                                };
-                                if s.is_empty() {
-                                    v.to_string()
-                                } else {
-                                    s.to_string()
-                                }
-                            }));
-                        }
-                        // FocusDistanceUpper at 0x43, FocusDistanceLower at 0x45 (int16uRev = big-endian)
-                        // RawConv: suppress when 0. ValueConv: val/100. PrintConv: ">655.345 ? 'inf' : '$val m'"
-                        if d.len() > 0x44 {
-                            let fu = r16be(0x43);
-                            if fu != 0 {
-                                let m = fu as f64 / 100.0;
-                                let pv = if m > 655.345 {
-                                    "inf".to_string()
-                                } else {
-                                    format!("{} m", m)
-                                };
-                                t.push(mk_canon_str("FocusDistanceUpper", &pv));
-                                if d.len() > 0x46 {
-                                    let fl = r16be(0x45);
-                                    let m2 = fl as f64 / 100.0;
-                                    let pv2 = if m2 > 655.345 {
-                                        "inf".to_string()
-                                    } else {
-                                        format!("{} m", m2)
-                                    };
-                                    t.push(mk_canon_str("FocusDistanceLower", &pv2));
-                                }
-                            }
-                        }
-                        // 0x86 PictureStyle — Canon.pm:3466, PrintHex + %pictureStyles.
-                        if d.len() > 134 {
-                            let ps = rb(0x86);
-                            let pv = crate::tags::canon_sub::canon_picture_style(ps as u32)
-                                .map(str::to_string)
-                                .unwrap_or_else(|| format!("Unknown (0x{:x})", ps));
-                            t.push(mk_canon_str("PictureStyle", &pv));
-                        }
-                        // int16u fields (little-endian)
-                        if d.len() > 96 {
-                            let v = r16le(0x5e);
-                            let pv_s;
-                            let pv = canon_wb_name(v as i16);
-                            let pv_owned = if pv.is_empty() {
-                                pv_s = v.to_string();
-                                pv_s.as_str()
-                            } else {
-                                pv
-                            };
-                            t.push(mk_canon_str("WhiteBalance", pv_owned));
-                        }
-                        if d.len() > 100 {
-                            let v = r16le(0x62);
-                            if v > 0 {
-                                t.push(mk_canon_str("ColorTemperature", &v.to_string()));
-                            }
-                        }
-                        // LensType at 0x111 = 273 (big-endian int16uRev). RawConv: suppress if 0.
-                        if d.len() > 273 {
-                            let lt = r16be(0x111);
-                            if lt != 0 {
-                                let pv = crate::tags::canon_sub::canon_lens_type_name(lt)
-                                    .map(|s| s.to_string())
-                                    .unwrap_or_else(|| lt.to_string());
-                                t.push(mk_canon_str("LensType", &pv));
-                            }
-                        }
-                        // MinFocalLength at 0x113, MaxFocalLength at 0x115 (big-endian int16uRev)
-                        if d.len() > 275 {
-                            t.push(mk_canon_str(
-                                "MinFocalLength",
-                                &format!("{} mm", r16be(0x113)),
-                            ));
-                        }
-                        if d.len() > 277 {
-                            t.push(mk_canon_str(
-                                "MaxFocalLength",
-                                &format!("{} mm", r16be(0x115)),
-                            ));
-                        }
-                        // FirmwareVersion string at 0x136 = 310, length 6
-                        if d.len() >= 316 {
-                            let fw = crate::encoding::decode_utf8_or_latin1(&d[0x136..0x136 + 6])
-                                .trim_end_matches('\0')
-                                .to_string();
-                            if !fw.is_empty() {
-                                t.push(mk_canon_str("FirmwareVersion", &fw));
-                            }
-                        }
-                        // int32u fields (little-endian)
-                        // FileIndex at 0x172 = 370, ValueConv += 1
-                        if d.len() > 374 {
-                            let v = r32le(0x172);
-                            t.push(mk_canon_str("FileIndex", &(v + 1).to_string()));
-                        }
-                        // ShutterCount at 0x176 = 374, ValueConv += 1
-                        if d.len() > 378 {
-                            let v = r32le(0x176);
-                            t.push(mk_canon_str("ShutterCount", &(v + 1).to_string()));
-                        }
-                        // DirectoryIndex at 0x17e = 382, ValueConv -= 1
-                        if d.len() > 386 {
-                            let v = r32le(0x17e) as i32;
-                            t.push(mk_canon_str("DirectoryIndex", &(v - 1).to_string()));
-                        }
-                        // TimeStamp1 at 0x45a = 1114 (only for 1DMarkIII, not 1DSmkIII)
-                        // RawConv => '$val ? $val : undef' (suppress if 0)
-                        if model_name.contains("1D Mark III") && d.len() > 1118 {
-                            let v = r32le(0x45a);
-                            if v > 0 {
-                                let dt = unix_time_to_datetime(v);
-                                t.push(mk_canon_str("TimeStamp1", &dt));
-                            }
-                        }
-                        // TimeStamp at 0x45e = 1118 (both 1DmkIII and 1DSmkIII)
-                        if d.len() > 1122 {
-                            let v = r32le(0x45e);
-                            if v > 0 {
-                                let dt = unix_time_to_datetime(v);
-                                t.push(mk_canon_str("TimeStamp", &dt));
-                            }
-                        }
-                        // PictureStyleInfo at 0x2aa = 682 (SubDirectory — PSInfo table)
-                        let ps_base = 0x2aausize;
-                        static PS_FIELDS: &[(usize, &str)] = &[
-                            (0, "ContrastStandard"),
-                            (4, "SharpnessStandard"),
-                            (8, "SaturationStandard"),
-                            (12, "ColorToneStandard"),
-                            (24, "ContrastPortrait"),
-                            (28, "SharpnessPortrait"),
-                            (32, "SaturationPortrait"),
-                            (36, "ColorTonePortrait"),
-                            (48, "ContrastLandscape"),
-                            (52, "SharpnessLandscape"),
-                            (56, "SaturationLandscape"),
-                            (60, "ColorToneLandscape"),
-                            (72, "ContrastNeutral"),
-                            (76, "SharpnessNeutral"),
-                            (80, "SaturationNeutral"),
-                            (84, "ColorToneNeutral"),
-                            (96, "ContrastFaithful"),
-                            (100, "SharpnessFaithful"),
-                            (104, "SaturationFaithful"),
-                            (108, "ColorToneFaithful"),
-                            (120, "ContrastMonochrome"),
-                            (124, "SharpnessMonochrome"),
-                            (136, "FilterEffectMonochrome"),
-                            (140, "ToningEffectMonochrome"),
-                            (144, "ContrastUserDef1"),
-                            (148, "SharpnessUserDef1"),
-                            (152, "SaturationUserDef1"),
-                            (156, "ColorToneUserDef1"),
-                            (160, "FilterEffectUserDef1"),
-                            (164, "ToningEffectUserDef1"),
-                            (168, "ContrastUserDef2"),
-                            (172, "SharpnessUserDef2"),
-                            (176, "SaturationUserDef2"),
-                            (180, "ColorToneUserDef2"),
-                            (184, "FilterEffectUserDef2"),
-                            (188, "ToningEffectUserDef2"),
-                            (192, "ContrastUserDef3"),
-                            (196, "SharpnessUserDef3"),
-                            (200, "SaturationUserDef3"),
-                            (204, "ColorToneUserDef3"),
-                            (208, "FilterEffectUserDef3"),
-                            (212, "ToningEffectUserDef3"),
-                            (216, "UserDef1PictureStyle"),
-                            (218, "UserDef2PictureStyle"),
-                            (220, "UserDef3PictureStyle"),
-                        ];
-                        if d.len() > ps_base + 222 {
-                            for &(off, name) in PS_FIELDS {
-                                let abs = ps_base + off;
-                                if abs + 4 <= d.len() {
-                                    let v = i32::from_le_bytes([
-                                        d[abs],
-                                        d[abs + 1],
-                                        d[abs + 2],
-                                        d[abs + 3],
-                                    ]);
-                                    // UserDefNPictureStyle: int16u picture-style id; the other
-                                    // FilterEffect/ToningEffect fields are small enums.
-                                    let pv =
-                                        if name.starts_with("UserDef") && name.ends_with("Style") {
-                                            let s = match (v as u32) & 0xff {
-                                                0x41 | 0x81 => "Standard",
-                                                0x42 | 0x82 => "Portrait",
-                                                0x43 | 0x83 => "Landscape",
-                                                0x44 | 0x84 => "Neutral",
-                                                0x45 | 0x85 => "Faithful",
-                                                0x51 | 0x91 => "Monochrome",
-                                                _ => "",
-                                            };
-                                            if s.is_empty() {
-                                                v.to_string()
-                                            } else {
-                                                s.to_string()
-                                            }
-                                        } else if name.starts_with("FilterEffect") {
-                                            match v {
-                                                0 => "None",
-                                                1 => "Yellow",
-                                                2 => "Orange",
-                                                3 => "Red",
-                                                4 => "Green",
-                                                _ => "",
-                                            }
-                                            .to_string()
-                                        } else if name.starts_with("ToningEffect") {
-                                            match v {
-                                                0 => "None",
-                                                1 => "Sepia",
-                                                2 => "Blue",
-                                                3 => "Purple",
-                                                4 => "Green",
-                                                _ => "",
-                                            }
-                                            .to_string()
-                                        } else {
-                                            v.to_string()
-                                        };
-                                    let pv = if pv.is_empty() { v.to_string() } else { pv };
-                                    t.push(mk_canon_str(name, &pv));
-                                }
-                            }
-                        }
-                    } else if known_format {
-                        // Generic CameraInfo fields for other models (byte offsets, int8u single bytes)
-                        // This is a fallback for non-1DmkIII models that were using the old code
-                    }
-                    // CameraInfoUnknown: FirmwareVersion at byte offset 0x5c1 (1473), string[6]
-                    // Condition: must start with "X.Y.Z\0" pattern (from Perl Canon::CameraInfoUnknown)
-                    // Note: M50 stores firmware version here
-                    let fw_off = 0x5c1usize;
-                    if value_data.len() >= fw_off + 6 {
-                        let fw_bytes = &value_data[fw_off..fw_off + 6];
-                        // Condition: $$valPt =~ /^\d\.\d\.\d\0/
-                        if fw_bytes.len() >= 5
-                            && fw_bytes[0].is_ascii_digit()
-                            && fw_bytes[1] == b'.'
-                            && fw_bytes[2].is_ascii_digit()
-                            && fw_bytes[3] == b'.'
-                            && fw_bytes[4].is_ascii_digit()
-                        {
-                            let fw = crate::encoding::decode_utf8_or_latin1(fw_bytes)
-                                .trim_end_matches('\0')
-                                .to_string();
-                            if !fw.is_empty() && !t.iter().any(|tag| tag.name == "FirmwareVersion")
-                            {
-                                t.push(mk_canon_str("FirmwareVersion", &fw));
-                            }
-                        }
-                    }
+                    .map_or_else(Vec::new, |table| {
+                        crate::tags::binary_tables_generated::decode(
+                            table,
+                            value_data,
+                            model_name,
+                            byte_order,
+                            // Our TIFF_TYPE holds the file-type code ExifTool
+                            // calls FileType -- "JPEG", "CR3" -- which is what
+                            // the three conditions that ask for it compare to.
+                            &crate::metadata::exif::tiff_type(),
+                            crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                            &mut dm,
+                        )
+                    });
                     // Every Canon::CameraInfo* table is `PRIORITY => 0, # these
                     // tags are not reliable since they change with firmware
                     // version` (Canon.pm line 3162 and siblings), so none of
-                    // these ever displaces a value stored before it — the
+                    // these ever displaces a value stored before it -- the
                     // ShotInfo WhiteBalance read earlier keeps the name.
                     for tag in &mut t {
                         tag.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -6917,8 +6600,10 @@ fn read_makernote_ifd_with_base(
                     crate::tags::binary_tables_generated::variant_for(
                         "Canon",
                         0x4001,
+                        model_name,
                         value_data,
                         count as usize,
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
                     )
                     .map_or_else(Vec::new, |table| {
                         crate::tags::binary_tables_generated::decode(
@@ -6926,6 +6611,8 @@ fn read_makernote_ifd_with_base(
                             value_data,
                             model_name,
                             byte_order,
+                            &crate::metadata::exif::tiff_type(),
+                            crate::tags::sub_tables_generated::tiff_format_name(data_type),
                             &mut dm,
                         )
                     })

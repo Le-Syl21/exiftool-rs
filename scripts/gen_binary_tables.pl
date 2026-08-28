@@ -20,6 +20,10 @@ use warnings;
 
 my $lib = $ARGV[0] || '../exiftool/lib';
 die "Cannot find $lib\n" unless -d $lib;
+# The modules are loaded as well as read: `PrintConv => \%canonLensTypes` is a
+# reference to a hash built at run time, and there is no reading it off the
+# source. Loading it is how gen_print_conv.pl reaches the same tables.
+unshift @INC, $lib;
 
 # Which tables to emit, by module. A table named here pulls in the tables its
 # own fields point at, so the list is the entry points rather than the closure.
@@ -28,13 +32,14 @@ my %WANTED = (
         ColorData1 ColorData2 ColorData3 ColorData4 ColorData5 ColorData6
         ColorData7 ColorData8 ColorData9 ColorData10 ColorData11 ColorData12
         ColorDataUnknown
+        ShotInfo
     )],
 );
 
 # Main-table ids whose sub-table is chosen by a chain of conditions. The arms
 # are read from the module's own Main table, so the choice is ExifTool's.
 my %SELECTORS = (
-    Canon => [0x4001],
+    Canon => [0x000d, 0x4001],
 );
 
 my %WIDTH = (
@@ -42,6 +47,10 @@ my %WIDTH = (
     int16u => 2, int16s => 2,
     int32u => 4, int32s => 4,
     rational32u => 4, rational32s => 4,
+    # ExifTool's `int16uRev` is a 16-bit value stored the other way round from
+    # the rest of the block -- Canon writes LensType and ColorTemperature that
+    # way inside a little-endian file.
+    int16uRev => 2,
 );
 my %IS_RATIONAL = (rational32u => 1, rational32s => 1);
 
@@ -70,6 +79,20 @@ sub shared_hashes {
         $shared{$1} = $2;
     }
     return %shared;
+}
+
+# One of a module's package hashes, loaded rather than read.
+my %loaded;
+sub named_hash {
+    my ($module, $name) = @_;
+    unless ($loaded{$module}) {
+        eval "require Image::ExifTool::$module; 1" or return undef;
+        $loaded{$module} = 1;
+    }
+    no strict 'refs';
+    my $ref = \%{"Image::ExifTool::${module}::${name}"};
+    use strict 'refs';
+    return %$ref ? $ref : undef;
 }
 
 sub table_body {
@@ -150,6 +173,34 @@ sub field_cond {
     return $c;
 }
 
+# The body of a Main-table id written as a list of alternatives. The id is
+# matched by its value, not its spelling: Canon writes 0xd where the same
+# table writes 0x4001.
+sub main_arms {
+    my ($main, $tag) = @_;
+    while ($main =~ /^\s{4}(0x[0-9a-fA-F]+|\d+)\s*=>\s*\[/gms) {
+        # Capture before testing: `$1 =~ /^0x/` is itself a match, and it
+        # clears $1 before hex() ever sees it.
+        my $id_s = $1;
+        my $id = $id_s =~ /^0x/ ? hex($id_s) : int($id_s);
+        next unless $id == $tag;
+        my $from = pos($main);
+        my ($depth, $i) = (1, $from);
+        while ($i < length($main) and $depth) {
+            my $c = substr($main, $i, 1);
+            $depth++ if $c eq '[';
+            $depth-- if $c eq ']';
+            ++$i;
+        }
+        return substr($main, $from, $i - $from - 1) unless $depth;
+    }
+    return undef;
+}
+
+# DATAMEMBERs a selector's condition stores by assigning the block's length.
+my %count_store;
+my $cur_sel;
+
 my @re_list;
 sub re_id {
     my ($pat) = @_;
@@ -202,11 +253,29 @@ sub compile_cond {
     if ($cond =~ /^\$format (eq|ne) "(\w+)"$/) {
         return sprintf('format %s "%s"', $1 eq 'eq' ? '==' : '!=', $2);
     }
+    if ($cond =~ m{^\$format (=~|!~) /\^(\w+)/$}) {
+        return sprintf('%sformat.starts_with("%s")', $1 eq '!~' ? '!' : '', $2);
+    }
+    # `$$self{FileType} eq "CR3"`: what the reader opened.
+    if ($cond =~ /^\$\$self\{FileType\} (eq|ne) "(\w+)"$/) {
+        return sprintf('file_type %s "%s"', $1 eq 'eq' ? '==' : '!=', $2);
+    }
     if ($cond =~ m{^\$\$valPt (=~|!~) /(.*?)/[a-z]*$}) {
         my ($op, $re) = ($1, $2);
         my $pat = byte_prefix($re);
         return () unless defined $pat;
-        return ($op eq '!~' ? '!' : '') . "prefix_matches(data, $pat)";
+        # `$$valPt` is the value of the entry the condition is written on,
+        # not the block: inside a binary table it starts at that entry's own
+        # bytes. __OFF__ is filled in where the field is emitted, and is 0 for
+        # a Main-table id, whose value is the whole block.
+        return ($op eq '!~' ? '!' : '') . "prefix_matches(data.get(__OFF__..).unwrap_or(&[]), $pat)";
+    }
+    # `($$self{CameraInfoCount} = $count) and ...`: an assignment used as the
+    # test. ExifTool stores the block's own length whether or not this arm is
+    # taken, and the sub-table indexes its last fields from it.
+    if ($cond =~ /^\$\$self\{(\w+)\} = \$count$/) {
+        $count_store{$cur_sel} = $1 if defined $cur_sel;
+        return 'count != 0';
     }
     # `$$self{ColorDataVersion} == -3`: what an earlier field of this table
     # stored under that name.
@@ -244,6 +313,13 @@ sub byte_prefix {
             next;
         }
         if ($re =~ s/^\.//) { push @out, 'None'; next }
+        if ($re =~ s/^\\d//) { push @out, 'Some((0x30, 0x39))'; next }
+        # An escaped character stands for itself.
+        if ($re =~ s/^\\([.\$^*+?()\[\]{}|\/\\])//) {
+            my $c = ord $1;
+            push @out, "Some(($c, $c))";
+            next;
+        }
         if ($re =~ s/^([A-Za-z0-9 _\/-])//) {
             my $c = ord $1;
             push @out, "Some(($c, $c))";
@@ -347,6 +423,7 @@ sub parse_table {
         # can be conditioned on it.
         my $hidden = $fb =~ /Unknown\s*=>\s*1/ ? 1 : 0;
         my ($ffmt) = $fb =~ /Format\s*=>\s*'([^']+)'/;
+        my $fb_had_format = $ffmt;
         $ffmt ||= $fmt;
 
         if ($fb =~ /SubDirectory\s*=>/) {
@@ -355,36 +432,49 @@ sub parse_table {
                 note("$module\::$table $off_s: sub-directory with no table named");
                 next;
             }
-            my ($sfmt, $slen) = $ffmt =~ /^(\w+)\[(\d+)\]$/;
+            my ($sfmt, $slen) = $ffmt =~ /^(\w+)\[(0x[0-9a-fA-F]+|\d+)\]$/;
+            $slen = ($slen =~ /^0x/ ? hex($slen) : int($slen)) if defined $slen;
             # `undef[120]` and `string[16]` are that many bytes.
             my $sw = defined $sfmt
                 ? ($WIDTH{$sfmt} // (($sfmt eq 'undef' or $sfmt eq 'string') ? 1 : undef))
                 : undef;
-            unless (defined $slen and defined $sw) {
+            my $len;
+            if (defined $slen and defined $sw) {
+                $len = $slen * $sw;
+            } elsif (not defined $fb_had_format) {
+                # No Format of its own: ExifTool runs the sub-directory from
+                # its entry to the end of the block.
+                $len = undef;
+            } else {
                 note("$module\::$table $off_s: sub-directory into $sub, of unknown length ($ffmt)");
                 next;
             }
             push @{$t->{subdirs}}, {
-                off => $off, mod => $mod, sub => $sub, cond => $guard,
-                len => $slen * $sw,
+                off => $off, mod => $mod, sub => $sub, cond => $guard, len => $len,
             };
             push @{$pending{$mod}}, $sub;
             next;
         }
 
         my $count = 1;
-        if ($ffmt =~ /^(string|undef)\[(\d+)\]$/) {
+        if ($ffmt =~ /^(string|undef)\[(0x[0-9a-fA-F]+|\d+)\]$/) {
+            my ($f2, $n2) = ($1, $2);
+            $n2 = $n2 =~ /^0x/ ? hex($n2) : int($n2);
             push @{$t->{fields}}, {
-                off => $off, name => $name, fmt => $1, n => $2, hidden => $hidden,
+                off => $off, name => $name, fmt => $f2, n => $n2, hidden => $hidden,
                 cond => $guard, conv => {}, text => 1,
             };
             next;
         }
-        if ($ffmt =~ /^(\w+)\[(\d+)\]$/) {
-            ($ffmt, $count) = ($1, $2);
+        if ($ffmt =~ /^(\w+)\[(0x[0-9a-fA-F]+|\d+)\]$/) {
+            my ($f2, $c2) = ($1, $2);
+            ($ffmt, $count) = ($f2, $c2 =~ /^0x/ ? hex($c2) : int($c2));
         }
         if ($ffmt =~ /\[/) {
-            note("$module\::$table $off_s $name: count is not a number ($ffmt)");
+            # A variable count shifts every entry after it (ExifTool's
+            # $varSize), so the rest of the table cannot be read either.
+            note("$module\::$table $off_s $name: count is not a number ($ffmt) -- and every entry after it moves with it");
+            $t->{variable} = 1;
             next;
         }
         unless (exists $WIDTH{$ffmt}) {
@@ -400,9 +490,15 @@ sub parse_table {
         $mask = hex($mask) if defined $mask and $mask =~ /^0x/;
         my ($dmname) = $fb =~ /DataMember\s*=>\s*'(\w+)'/;
         unless (defined $dmname) {
-            ($dmname) = $fb =~ /RawConv\s*=>\s*'\$\$self\{(\w+)\}\s*=\s*\$val'/;
+            ($dmname) = $fb =~ /RawConv\s*=>\s*'\(?\$\$self\{(\w+)\}\s*=\s*\$val/;
         }
         my ($rconv) = $fb =~ /RawConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
+        # `($$self{FocusDistanceUpper} = $val) || undef` stores and then tests.
+        # The store is the dm.push that already happened, so what is left to
+        # evaluate is the test -- and without dropping the assignment the
+        # evaluator declines the whole thing and a zero distance is reported
+        # where ExifTool reports nothing.
+        $rconv =~ s/\$\$self\{\w+\}\s*=(?![~=])\s*//g if defined $rconv;
         my ($vconv) = $fb =~ /ValueConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
         my ($pconv) = $fb =~ /PrintConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
         unless (defined $vconv) {
@@ -416,7 +512,55 @@ sub parse_table {
         for ($rconv, $vconv, $pconv) { s/\\'/'/g if defined }
 
         my %conv;
-        if ($fb =~ /PrintConv\s*=>\s*\{(.*?)\n\s*\},/s) {
+        # `PrintConv => \%canonLensTypes`: a reference to one of the module's
+        # own hashes, which only exists once the module is loaded.
+        # A splice puts its own keys where the `%name` stands, and a key
+        # written after it wins -- that is Perl's hash literal. So the last
+        # PrintConv in the expanded body is the one that counts:
+        # FilterEffectMonochrome splices %psInfo and then names its own.
+        my $inline_at = -1;
+        $inline_at = $-[0] if $fb =~ /PrintConv\s*=>\s*\{/;
+        my $ref_at = -1;
+        $ref_at = $-[0] if $fb =~ /PrintConv\s*=>\s*\\%\w+/;
+        if ($ref_at > $inline_at and my ($href) = $fb =~ /PrintConv\s*=>\s*\\%(\w+)/) {
+            my $found = 0;
+            # A `my %name = (...)` is a file-scoped lexical: invisible to the
+            # symbol table, so it is read from the source as text. A package
+            # hash -- %canonLensTypes -- is built at run time and can only be
+            # had by loading the module.
+            if (defined $shared->{$href}) {
+                my $c = $shared->{$href};
+                while ($c =~ /(-?\d+|0x[0-9a-fA-F]+)\s*=>\s*'((?:[^'\\]|\\.)*)'/g) {
+                    my ($k, $v) = ($1, $2);
+                    $k = $k =~ /^0x/ ? hex($k) : int($k);
+                    $v =~ s/\\'/'/g;
+                    $conv{$k} = $v;
+                    $found = 1;
+                }
+                # `OTHER => sub { shift }` prints the raw value, which is what
+                # a key with no entry already does here.
+                $found = 1 if $c =~ /OTHER\s*=>\s*sub\s*\{\s*shift\s*\}/;
+            }
+            unless ($found) {
+                my $ref = named_hash($module, $href);
+                if ($ref) {
+                    for my $k (keys %$ref) {
+                        my $v = $ref->{$k};
+                        if (ref $v) {
+                            note("$module\::$table $off_s $name: %$href\{$k} is a " . ref($v) . " reference");
+                            next;
+                        }
+                        # A fractional key names one of the lenses sharing an
+                        # id, which only PrintLensID reaches.
+                        next unless $k =~ /^-?\d+$/;
+                        $conv{int $k} = $v;
+                    }
+                } else {
+                    note("$module\::$table $off_s $name: PrintConv \\%$href, which is neither a lexical of the file nor a hash of the module");
+                }
+            }
+        }
+        if (!%conv and $inline_at >= 0 and $fb =~ /PrintConv\s*=>\s*\{(.*?)\n\s*\},/s) {
             my $c = $1;
             while ($c =~ /(-?\d+|0x[0-9a-fA-F]+)\s*=>\s*'((?:[^'\\]|\\.)*)'/g) {
                 my ($k, $v) = ($1, $2);
@@ -437,21 +581,131 @@ sub parse_table {
 # ---------------------------------------------------------------- collect
 my %src_of;
 my %shared_of;
+
+# A module's source and its `my %name = (...)` hashes, read once. Reading the
+# source without the hashes left every spliced field without a Name.
+sub module_src {
+    my ($mod) = @_;
+    unless ($src_of{$mod}) {
+        $src_of{$mod} = read_module($mod);
+        $shared_of{$mod} = { shared_hashes($src_of{$mod}) };
+    }
+    return $src_of{$mod};
+}
 for my $mod (sort keys %WANTED) {
     push @{$pending{$mod}}, @{$WANTED{$mod}};
+}
+# The tables a selector's arms point at are wanted too: an id whose choice is
+# generated but whose targets are not would answer with a name nothing decodes.
+for my $mod (sort keys %SELECTORS) {
+    my $main = table_body(module_src($mod), $mod, 'Main') // next;
+    $main =~ s/^\s*#.*$//gm;
+    for my $tag (@{$SELECTORS{$mod}}) {
+        my $arms = main_arms($main, $tag);
+        next unless defined $arms;
+        while ($arms =~ /TagTable\s*=>\s*'Image::ExifTool::(\w+)::(\w+)'/g) {
+            push @{$pending{$1}}, $2;
+        }
+    }
 }
 while (grep { @{$pending{$_} || []} } keys %pending) {
     for my $mod (sort keys %pending) {
         while (my $tbl = shift @{$pending{$mod}}) {
-            unless ($src_of{$mod}) {
-                $src_of{$mod} = read_module($mod);
-                $shared_of{$mod} = { shared_hashes($src_of{$mod}) };
-            }
-            parse_table($mod, $tbl, $src_of{$mod}, $shared_of{$mod});
+            my $src = module_src($mod);
+            parse_table($mod, $tbl, $src, $shared_of{$mod});
         }
     }
 }
 
+my $sel_src = "";
+# ------------------------------------------------------- variant selectors
+$sel_src .= <<'SEL';
+/// Which sub-table a Main-table id opens, by the conditions ExifTool writes
+/// on it.
+///
+/// `None` means no arm matched, which for an id whose arms are all
+/// sub-directories means ExifTool extracts nothing at all.
+#[must_use]
+pub fn variant_for(
+    module: &str,
+    tag: u16,
+    model: &str,
+    data: &[u8],
+    count: usize,
+    format: &str,
+) -> Option<&'static str> {
+    let _ = (model, data, count, format);
+    match (module, tag) {
+SEL
+for my $mod (sort keys %SELECTORS) {
+    my $src = module_src($mod);
+    my $main = table_body($src, $mod, 'Main');
+    unless (defined $main) {
+        note("$mod\::Main: no such table");
+        next;
+    }
+    $main =~ s/^\s*#.*$//gm;
+    for my $tag (@{$SELECTORS{$mod}}) {
+        my $hex = sprintf '0x%04x', $tag;
+        my $arms = main_arms($main, $tag);
+        unless (defined $arms) {
+            note(sprintf("%s::Main %s: no list of alternatives", $mod, $hex));
+            next;
+        }
+        $cur_sel = "$mod\t$tag";
+        $sel_src .= sprintf "        (\"%s\", %s) => {\n", $mod, $hex;
+        my (@arm_bodies, $cur);
+        my $d = 0;
+        for my $c (split //, $arms) {
+            if ($c eq '{') { $d++; $cur = '' unless defined $cur }
+            $cur .= $c if defined $cur;
+            if ($c eq '}') { $d--; if ($d == 0 and defined $cur) { push @arm_bodies, $cur; undef $cur } }
+        }
+        my $unconditional = 0;
+        for my $a (@arm_bodies) {
+            my ($sub) = $a =~ /TagTable\s*=>\s*'Image::ExifTool::\w+::(\w+)'/;
+            next unless $sub;
+            unless ($by_name{"$mod\::$sub"}) {
+                note(sprintf("%s::Main %s -> %s: no decoder generated for it", $mod, $hex, $sub));
+                next;
+            }
+            my $c_src = field_cond($a);
+            unless (defined $c_src) {
+                $sel_src .= sprintf "            Some(\"%s\")\n", $sub;
+                $unconditional = 1;
+                last;
+            }
+            my @c = compile_cond($c_src);
+            unless (@c) {
+                note(sprintf("%s::Main %s -> %s: condition -- %s", $mod, $hex, $sub, $c_src));
+                next;
+            }
+            (my $ce = $c[0]) =~ s/__OFF__/0/g;
+            $sel_src .= sprintf "            if %s {\n                return Some(\"%s\");\n            }\n", $ce, $sub;
+        }
+        $sel_src .= "            None\n" unless $unconditional;
+        $sel_src .= "        }\n";
+    }
+}
+$sel_src .= "        _ => None,\n    }\n}\n\n";
+
+# What a selector's condition stores on the way past.
+$sel_src .= <<'CSTORE';
+/// What a Main-table id stores on the file while testing its own condition.
+///
+/// `($$self{CameraInfoCount} = $count) and ...` is an assignment used as the
+/// test: ExifTool keeps the block's own length whether or not that arm is the
+/// one taken, and the sub-table indexes its last fields from it. The caller
+/// seeds the state with this before decoding.
+#[must_use]
+pub fn count_member(module: &str, tag: u16) -> Option<&'static str> {
+    match (module, tag) {
+CSTORE
+for my $k (sort keys %count_store) {
+    my ($mod, $tag) = split /\t/, $k;
+    $sel_src .= sprintf "        (\"%s\", %#06x) => Some(\"%s\"),\n", $mod, $tag, $count_store{$k};
+}
+$sel_src .= "        _ => None,\n    }\n}\n\n";
 # ---------------------------------------------------------------- emission
 sub esc { my $s = shift; $s =~ s/\\/\\\\/g; $s =~ s/"/\\"/g; $s }
 sub fn_name { my $t = shift; lc "$t->{module}_$t->{name}" }
@@ -468,7 +722,18 @@ print <<"HDR";
 //! bytes addressed by index: ExifTool's ProcessBinaryData reads the entry at
 //! `(index - FIRST_ENTRY) * sizeof(FORMAT)`, and a field's own Format says
 //! what to read there. What the generator could not express is on its stderr.
-#![allow(clippy::too_many_lines, clippy::match_same_arms, clippy::unreadable_literal)]
+//! Generated code: the shape of a table decides what is written, so a helper
+//! no table happens to need and a cast that happens to be a no-op are both
+//! ordinary here rather than something to tidy away by hand.
+#![allow(dead_code, unused_parens, unused_mut)]
+#![allow(
+    clippy::too_many_lines,
+    clippy::match_same_arms,
+    clippy::unreadable_literal,
+    clippy::unnecessary_cast,
+    clippy::identity_op,
+    clippy::cast_lossless
+)]
 
 use std::sync::LazyLock;
 
@@ -489,6 +754,27 @@ fn dm_get(dm: &State, name: &str) -> Option<f64> {
     dm.iter().rev().find(|(n, _)| n == name).map(|(_, v)| *v)
 }
 
+/// What a conversion of this block can ask the file about.
+///
+/// ExifTool keeps these on the object: `\$\$self{Model}` tells one encoding of
+/// TargetExposureTime from another, and `\$\$self{FILE_TYPE} eq "CRW"` decides
+/// whether an ExposureTime of zero means one second or nothing at all.
+struct Ctx<'a> {
+    model: &'a str,
+    file_type: &'a str,
+    dm: &'a State,
+}
+
+impl conv_expr::ParseState for Ctx<'_> {
+    fn member(&self, name: &str) -> Option<Conv> {
+        match name {
+            "Model" => Some(Conv::Str(self.model.to_string())),
+            "FILE_TYPE" | "FileType" => Some(Conv::Str(self.file_type.to_string())),
+            _ => dm_get(self.dm, name).map(Conv::Num),
+        }
+    }
+}
+
 fn u8_at(d: &[u8], o: usize) -> Option<u8> { d.get(o).copied() }
 fn i8_at(d: &[u8], o: usize) -> Option<i8> { d.get(o).map(|b| *b as i8) }
 
@@ -503,6 +789,12 @@ fn u32_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<u32> {
     Some(if bo == ByteOrder::BigEndian { u32::from_be_bytes(b) } else { u32::from_le_bytes(b) })
 }
 fn i32_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<i32> { u32_at(d, o, bo).map(|v| v as i32) }
+
+/// A 16-bit value stored the other way round from the rest of the block.
+fn u16rev_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<u16> {
+    let other = if bo == ByteOrder::BigEndian { ByteOrder::LittleEndian } else { ByteOrder::BigEndian };
+    u16_at(d, o, other)
+}
 
 /// ExifTool's rational32 is two 16-bit halves -- four bytes, not the eight of
 /// the rational64 EXIF writes. A zero denominator reads as infinity, and 0/0
@@ -572,27 +864,49 @@ print "\n" if @re_list;
 
 print "/// Decode one binary sub-table by the name ExifTool gives it.\n";
 print "#[must_use]\n";
-print "pub fn decode(table: &str, data: &[u8], model: &str, bo: ByteOrder, dm: &mut State) -> Vec<Tag> {\n";
+print <<'DECODE';
+pub fn decode(
+    table: &str,
+    data: &[u8],
+    model: &str,
+    bo: ByteOrder,
+    file_type: &str,
+    format: &str,
+    dm: &mut State,
+) -> Vec<Tag> {
+DECODE
 print "    match table {\n";
-printf("        \"%s\" => %s(data, model, bo, dm),\n", $_->{name}, fn_name($_)) for @tables;
+printf("        \"%s\" => %s(data, model, bo, file_type, format, dm),\n", $_->{name}, fn_name($_)) for @tables;
 print "        _ => Vec::new(),\n    }\n}\n\n";
 
 for my $t (@tables) {
     printf "/// `Image::ExifTool::%s::%s` -- FORMAT %s, FIRST_ENTRY %d.\n",
         $t->{module}, $t->{name}, $t->{fmt}, $t->{first};
-    printf "fn %s(data: &[u8], model: &str, bo: ByteOrder, dm: &mut State) -> Vec<Tag> {\n", fn_name($t);
+    if ($t->{variable}) {
+        printf "/// Incomplete: a field of variable length moves every entry after\n";
+        printf "/// it, and this reads them where they would be without it.\n";
+    }
+    printf "fn %s(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {\n", fn_name($t);
     printf "    const GRP1: &str = \"%s\";\n", $t->{module};
     printf "    const GRP2: &str = \"%s\";\n", $t->{grp2};
     printf "    const PRIO: i32 = %s;\n",
         $t->{prio0} ? 'crate::tag::PRIORITY_EXPLICIT_ZERO' : '0';
+    # A table can be empty of readable fields -- CameraInfoUnknown16 is a
+    # name ExifTool gives a layout it does not describe -- so every argument
+    # has to be spoken for.
     print  "    let mut tags = Vec::new();\n";
-    print  "    let _ = (model, bo, &dm);\n";
+    print  "    let _ = (data, model, bo, file_type, format, &dm);\n";
 
     for my $f (sort { $a->{off} <=> $b->{off} } @{$t->{fields}}) {
-        my $byte = ($f->{off} - $t->{first}) * $t->{width};
+        # `my $entry = int($index) * $increment` (ExifTool.pm:9957): the byte
+        # is the index times the table's format size. FIRST_ENTRY does not
+        # shift it -- it only says where an -U scan starts counting -- and
+        # subtracting it moved every field of a FIRST_ENTRY => 1 table by one.
+        my $byte = $f->{off} * $t->{width};
         my $ind = "    ";
         if (defined $f->{cond}) {
-            printf "%sif %s {\n", $ind, $f->{cond};
+            (my $c = $f->{cond}) =~ s/__OFF__/sprintf '0x%x', $byte/ge;
+            printf "%sif %s {\n", $ind, $c;
             $ind .= "    ";
         }
         if ($f->{text}) {
@@ -609,6 +923,7 @@ for my $t (@tables) {
             int16u => 'u16_at', int16s => 'i16_at',
             int32u => 'u32_at', int32s => 'i32_at',
             rational32u => 'rat32u_at', rational32s => 'rat32s_at',
+            int16uRev => 'u16rev_at',
         }->{$f->{fmt}};
         my $args = $f->{fmt} =~ /^int8/ ? '' : ', bo';
         my $w = $WIDTH{$f->{fmt}};
@@ -625,6 +940,11 @@ for my $t (@tables) {
             printf "%s            Some(x) => parts.push(x.to_string()),\n", $ind;
             printf "%s            None => { parts.clear(); break }\n", $ind;
             printf "%s        }\n%s    }\n", $ind, $ind;
+            if ($f->{hidden}) {
+                printf "%s}\n", $ind;
+                print  "    }\n" if defined $f->{cond};
+                next;
+            }
             printf "%s    if !parts.is_empty() {\n", $ind;
             printf "%s        let s = parts.join(\" \");\n", $ind;
             # An array carries its conversions as much as a scalar does:
@@ -632,11 +952,12 @@ for my $t (@tables) {
             # exchanged, and joining them without that gives four other
             # numbers entirely.
             if (defined $f->{vconv} or defined $f->{pconv}) {
+                printf "%s        let ctx = Ctx { model, file_type, dm };\n", $ind;
                 printf "%s        let mut cv = Conv::Str(s.clone());\n", $ind;
-                printf "%s        if let Some(x) = conv_expr::eval(\"%s\", &cv) { cv = x; }\n",
+                printf "%s        if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
                     $ind, esc($f->{vconv}) if defined $f->{vconv};
                 printf "%s        let raw = Value::String(cv.as_string());\n", $ind;
-                printf "%s        if let Some(x) = conv_expr::eval(\"%s\", &cv) { cv = x; }\n",
+                printf "%s        if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
                     $ind, esc($f->{pconv}) if defined $f->{pconv};
                 printf "%s        tags.push(mk(\"%s\", 0x%x, cv.as_string(), raw, GRP1, GRP2, PRIO));\n",
                     $ind, $f->{name}, $f->{off} unless $f->{hidden};
@@ -658,9 +979,20 @@ for my $t (@tables) {
         }
         printf "%s    dm.push((\"%s\".to_string(), f64::from(v)));\n",
             $ind, $f->{dmname} // $f->{name};
+        # `Unknown => 1` is read but not reported unless -u is given, which is
+        # not the default. The value still goes into the state, because a later
+        # field can be conditioned on it; the conversions produce nothing but
+        # the tag, so they are not run at all.
+        if ($f->{hidden}) {
+            printf "%s}\n", $ind;
+            print  "    }\n" if defined $f->{cond};
+            next;
+        }
+        printf "%s    let ctx = Ctx { model, file_type, dm };\n", $ind
+            if defined $f->{rconv} or defined $f->{vconv} or defined $f->{pconv};
         my $guard = 0;
         if (defined $f->{rconv}) {
-            printf "%s    let rc = conv_expr::eval(\"%s\", &Conv::Num(f64::from(v)));\n",
+            printf "%s    let rc = conv_expr::eval_with(\"%s\", &Conv::Num(f64::from(v)), &ctx);\n",
                 $ind, esc($f->{rconv});
             printf "%s    if rc.as_ref() != Some(&Conv::Undef) {\n", $ind;
             printf "%s        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]\n", $ind;
@@ -680,10 +1012,10 @@ for my $t (@tables) {
                 $ind, $f->{name}, $f->{off} unless $f->{hidden};
         } elsif (defined $f->{vconv} or defined $f->{pconv}) {
             printf "%s    let mut cv = Conv::Num(f64::from(v));\n", $ind;
-            printf "%s    if let Some(x) = conv_expr::eval(\"%s\", &cv) { cv = x; }\n",
+            printf "%s    if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
                 $ind, esc($f->{vconv}) if defined $f->{vconv};
             printf "%s    let raw = Value::F64(cv.as_num());\n", $ind;
-            printf "%s    if let Some(x) = conv_expr::eval(\"%s\", &cv) { cv = x; }\n",
+            printf "%s    if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
                 $ind, esc($f->{pconv}) if defined $f->{pconv};
             printf "%s    tags.push(mk(\"%s\", 0x%x, cv.as_string(), raw, GRP1, GRP2, PRIO));\n",
                 $ind, $f->{name}, $f->{off} unless $f->{hidden};
@@ -700,10 +1032,11 @@ for my $t (@tables) {
     }
 
     for my $sd (@{$t->{subdirs}}) {
-        my $byte = ($sd->{off} - $t->{first}) * $t->{width};
+        my $byte = $sd->{off} * $t->{width};
         my $ind = "    ";
         if (defined $sd->{cond}) {
-            printf "%sif %s {\n", $ind, $sd->{cond};
+            (my $c = $sd->{cond}) =~ s/__OFF__/sprintf '0x%x', $byte/ge;
+            printf "%sif %s {\n", $ind, $c;
             $ind .= "    ";
         }
         my $target = $by_name{"$sd->{mod}::$sd->{sub}"};
@@ -712,75 +1045,20 @@ for my $t (@tables) {
             print "    }\n" if defined $sd->{cond};
             next;
         }
-        printf "%sif let Some(sub) = data.get(0x%x..0x%x + %d) {\n", $ind, $byte, $byte, $sd->{len};
-        printf "%s    tags.extend(%s(sub, model, bo, dm));\n", $ind, fn_name($target);
+        if (defined $sd->{len}) {
+            printf "%sif let Some(sub) = data.get(0x%x..0x%x + %d) {\n", $ind, $byte, $byte, $sd->{len};
+        } else {
+            printf "%sif let Some(sub) = data.get(0x%x..) {\n", $ind, $byte;
+        }
+        printf "%s    tags.extend(%s(sub, model, bo, file_type, format, dm));\n", $ind, fn_name($target);
         printf "%s}\n", $ind;
         print  "    }\n" if defined $sd->{cond};
     }
     print "    tags\n}\n\n";
 }
 
-# ------------------------------------------------------- variant selectors
-print <<'SEL';
-/// Which sub-table a Main-table id opens, by the conditions ExifTool writes
-/// on it.
-///
-/// `None` means no arm matched, which for an id whose arms are all
-/// sub-directories means ExifTool extracts nothing at all.
-#[must_use]
-pub fn variant_for(module: &str, tag: u16, data: &[u8], count: usize) -> Option<&'static str> {
-    let _ = (data, count);
-    match (module, tag) {
-SEL
-for my $mod (sort keys %SELECTORS) {
-    my $src = $src_of{$mod} // read_module($mod);
-    my $main = table_body($src, $mod, 'Main');
-    unless (defined $main) {
-        note("$mod\::Main: no such table");
-        next;
-    }
-    $main =~ s/^\s*#.*$//gm;
-    for my $tag (@{$SELECTORS{$mod}}) {
-        my $hex = sprintf '0x%04x', $tag;
-        my ($arms) = $main =~ /^\s{4}\Q$hex\E\s*=>\s*\[(.*?)\n\s{4}\],/ms;
-        unless (defined $arms) {
-            note(sprintf("%s::Main %s: no list of alternatives", $mod, $hex));
-            next;
-        }
-        printf "        (\"%s\", %s) => {\n", $mod, $hex;
-        my (@arm_bodies, $cur);
-        my $d = 0;
-        for my $c (split //, $arms) {
-            if ($c eq '{') { $d++; $cur = '' unless defined $cur }
-            $cur .= $c if defined $cur;
-            if ($c eq '}') { $d--; if ($d == 0 and defined $cur) { push @arm_bodies, $cur; undef $cur } }
-        }
-        my $unconditional = 0;
-        for my $a (@arm_bodies) {
-            my ($sub) = $a =~ /TagTable\s*=>\s*'Image::ExifTool::\w+::(\w+)'/;
-            next unless $sub;
-            unless ($by_name{"$mod\::$sub"}) {
-                note(sprintf("%s::Main %s -> %s: no decoder generated for it", $mod, $hex, $sub));
-                next;
-            }
-            my $c_src = field_cond($a);
-            unless (defined $c_src) {
-                printf "            Some(\"%s\")\n", $sub;
-                $unconditional = 1;
-                last;
-            }
-            my @c = compile_cond($c_src);
-            unless (@c) {
-                note(sprintf("%s::Main %s -> %s: condition -- %s", $mod, $hex, $sub, $c_src));
-                next;
-            }
-            printf "            if %s {\n                return Some(\"%s\");\n            }\n", $c[0], $sub;
-        }
-        print  "            None\n" unless $unconditional;
-        print  "        }\n";
-    }
-}
-print "        _ => None,\n    }\n}\n\n";
+$sel_src =~ s/\s+$//;
+print "$sel_src\n\n";
 
 print "#[cfg(test)]\nmod tests {\n    use super::*;\n\n";
 print "    /// Every generated pattern must compile: a bad one would otherwise\n";

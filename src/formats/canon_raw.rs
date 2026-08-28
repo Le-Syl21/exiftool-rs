@@ -512,9 +512,20 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             true
         }
         0x102a => {
-            // CanonShotInfo — int16s array, same format as JPEG MakerNote tag 0x0004
-            let values: Vec<i16> = (0..data.len() / 2).map(|i| ri16(data, i * 2)).collect();
-            let sub_tags = crate::tags::canon_sub::decode_shot_info(&values, "CRW");
+            // CanonShotInfo — the same block as JPEG MakerNote tag 0x0004,
+            // read by the same generated decoder. A CRW is little-endian and
+            // its own file type, which is what tells an ExposureTime of zero
+            // from a missing one here.
+            let mut dm = crate::tags::binary_tables_generated::State::new();
+            let sub_tags = crate::tags::binary_tables_generated::decode(
+                "ShotInfo",
+                data,
+                "CRW",
+                crate::metadata::exif::ByteOrderMark::LittleEndian,
+                "CRW",
+                "int16s",
+                &mut dm,
+            );
             for mut t in sub_tags {
                 // Keep the family-2 category decode_shot_info assigned from
                 // Canon::ShotInfo's GROUPS (Image, with the per-tag Camera
