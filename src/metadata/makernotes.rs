@@ -7073,6 +7073,37 @@ fn read_makernote_ifd_with_base(
                     }
                     t
                 }
+                // Casio writes two face-detection layouts at one id, told
+                // apart by the bytes the block opens with (Casio.pm:497-510).
+                (Manufacturer::Casio, 0x2089) | (Manufacturer::CasioType2, 0x2089) => {
+                    let table = if value_data.len() > 5
+                        && ((value_data[0] == 0 && value_data[1] == 0)
+                            || (value_data[1] == 0x02
+                                && value_data[2] == 0x80
+                                && value_data[3] == 0x01
+                                && value_data[4] == 0xe0))
+                    {
+                        "Casio::FaceInfo1"
+                    } else if value_data.len() > 2
+                        && value_data[0] == 0x02
+                        && value_data[1] == 0x01
+                    {
+                        "Casio::FaceInfo2"
+                    } else {
+                        continue;
+                    };
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    crate::tags::binary_tables_generated::decode(
+                        table,
+                        value_data,
+                        &crate::metadata::exif::make(),
+                        model_name,
+                        byte_order,
+                        &crate::metadata::exif::tiff_type(),
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                        &mut dm,
+                    )
+                }
                 // Samsung's orientation and picture-wizard blocks
                 // (Samsung.pm's Type2 table), and Pentax's contrast-AF points.
                 (Manufacturer::Samsung, 0x0011)
@@ -7121,6 +7152,40 @@ fn read_makernote_ifd_with_base(
                 // Minolta CameraSettings binary sub-table (int32u format)
                 (Manufacturer::Minolta, 0x0001) | (Manufacturer::Minolta, 0x0003) => {
                     decode_minolta_camera_settings(value_data, byte_order, model_name)
+                }
+                // The A100 and the 5D write their camera settings at 0x0114,
+                // and the A100 its image-stabilisation block at 0x0018
+                // (Minolta.pm:718-760). Both are big-endian but the A100's
+                // settings are little-endian.
+                (Manufacturer::Minolta, 0x0114)
+                | (Manufacturer::Minolta, 0x0018)
+                    if model_name == "DSLR-A100"
+                        || model_name.starts_with("DYNAX 5D")
+                        || model_name.starts_with("MAXXUM 5D")
+                        || model_name.starts_with("ALPHA SWEET") =>
+                {
+                    let (table, bo) = if tag_id == 0x0018 {
+                        ("Minolta::ISInfoA100", ByteOrderMark::BigEndian)
+                    } else if model_name == "DSLR-A100" {
+                        ("Minolta::CameraSettingsA100", ByteOrderMark::LittleEndian)
+                    } else {
+                        ("Minolta::CameraSettings5D", ByteOrderMark::BigEndian)
+                    };
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    let mut t = crate::tags::binary_tables_generated::decode(
+                        table,
+                        value_data,
+                        &crate::metadata::exif::make(),
+                        model_name,
+                        bo,
+                        &crate::metadata::exif::tiff_type(),
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                        &mut dm,
+                    );
+                    for tag in &mut t {
+                        tag.group.family1 = "Minolta".into();
+                    }
+                    t
                 }
                 // Three blocks Minolta writes with a byte order of their own,
                 // declared on the SubDirectory rather than inherited from the

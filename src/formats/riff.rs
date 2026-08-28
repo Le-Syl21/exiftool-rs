@@ -538,6 +538,20 @@ fn read_riff_chunks(
                     ));
                 }
             }
+            // The GV-10's own chunk (RIFF.pm:1266-1268).
+            b"CASI" => {
+                let mut dm = crate::tags::binary_tables_generated::State::new();
+                tags.extend(crate::tags::binary_tables_generated::decode(
+                    "Casio::AVI",
+                    &data[chunk_data_start..chunk_data_end],
+                    "",
+                    "",
+                    crate::metadata::exif::ByteOrderMark::LittleEndian,
+                    "",
+                    "",
+                    &mut dm,
+                ));
+            }
             // The `olym` chunk of an Olympus PCM recorder's WAV
             // (RIFF.pm:508-511).
             b"olym" => {

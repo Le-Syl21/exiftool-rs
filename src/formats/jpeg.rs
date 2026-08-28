@@ -403,81 +403,20 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
                         tags.extend(xmp_tags)
                     }
                 }
-                // Casio QVCI APP1 segment
-                else if seg_data.starts_with(b"QVCI\0") && seg_data.len() > 0x80 {
-                    let d = seg_data;
-                    let mk = |name: &str, val: String| -> crate::tag::Tag {
-                        crate::tag::Tag {
-                            id: crate::tag::TagId::Text(name.into()),
-                            name: name.into(),
-                            description: name.into(),
-                            group: crate::tag::TagGroup {
-                                family0: "MakerNotes".into(),
-                                family1: "Casio".into(),
-                                family2: "Camera".into(),
-                                family3: "Main".into(),
-                            },
-                            raw_value: crate::value::Value::String(val.clone()),
-                            print_value: val,
-                            priority: 0,
-                        }
-                    };
-                    // CasioQuality at 0x2C
-                    let quality = match d[0x2C] {
-                        1 => "Economy",
-                        2 => "Normal",
-                        3 => "Fine",
-                        4 => "Super Fine",
-                        _ => "",
-                    };
-                    if !quality.is_empty() {
-                        tags.push(mk("CasioQuality", quality.into()));
-                    }
-                    // DateTimeOriginal at 0x4D (20 bytes string)
-                    if d.len() > 0x61 {
-                        let dt = crate::encoding::decode_utf8_or_latin1(&d[0x4D..0x61])
-                            .trim_end_matches('\0')
-                            .replace('.', ":")
-                            .to_string();
-                        // YYYY:MM:DD:HH:MM:SS -> YYYY:MM:DD HH:MM:SS
-                        let parts: Vec<&str> = dt.split(':').collect();
-                        let dt = if parts.len() == 6 {
-                            format!(
-                                "{}:{}:{} {}:{}:{}",
-                                parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
-                            )
-                        } else {
-                            dt
-                        };
-                        if !dt.is_empty() {
-                            tags.push(mk("DateTimeOriginal", dt));
-                        }
-                    }
-                    // CasioQVCI ASCII string fields (Casio.pm QVCI table): ModelType
-                    // (0x62, string[7]), ManufactureIndex (0x72, string[9]),
-                    // ManufactureCode (0x7c, string[9]). Truncate at the first null.
-                    let qvci_str = |off: usize, len: usize| -> String {
-                        let end = (off + len).min(d.len());
-                        if off >= end {
-                            return String::new();
-                        }
-                        let raw = &d[off..end];
-                        let stop = raw.iter().position(|&b| b == 0).unwrap_or(raw.len());
-                        crate::encoding::decode_utf8_or_latin1(&raw[..stop])
-                            .trim_end()
-                            .to_string()
-                    };
-                    if d.len() > 0x62 {
-                        tags.push(mk("ModelType", qvci_str(0x62, 7)));
-                    }
-                    if d.len() > 0x72 {
-                        tags.push(mk("ManufactureIndex", qvci_str(0x72, 9)));
-                    }
-                    if d.len() > 0x7c {
-                        tags.push(mk("ManufactureCode", qvci_str(0x7c, 9)));
-                    }
-                    // XResolution, YResolution, ResolutionUnit from TIFF-like structure
-                    // (these may be in the EXIF already)
+                // Casio QVCI APP1 segment (JPEG.pm:59-61), read from the
+                // table Casio.pm gives it.
+                else if seg_data.starts_with(b"QVCI\0") {
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    tags.extend(crate::tags::binary_tables_generated::decode(
+                        "Casio::QVCI",
+                        seg_data,
+                        "",
+                        "",
+                        crate::metadata::exif::ByteOrderMark::BigEndian,
+                        "",
+                        "",
+                        &mut dm,
+                    ));
                 }
                 // FLIR thermal data: "FLIR\0" + type(1) + chunk_num(1) + chunks_total_minus1(1) + FFF data
                 // Chunks must be accumulated and reassembled before decoding (like Perl ExifTool).
