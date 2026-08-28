@@ -8317,6 +8317,42 @@ fn read_makernote_ifd_with_base(
             // TimeSincePowerOn a duration -- and running an expression over
             // that phrase would undo it.
             let untouched = printed == val.to_display_string();
+            // A BITMASK conversion: each word of the value contributes its
+            // own bits, numbered from that word's start, and a value with no
+            // bit set prints the table's entry for zero (ExifTool's DecodeBits).
+            if untouched {
+                if let Some((bits, zero, names)) =
+                    crate::tags::makernote_conv_generated::bitmask(maker, tag_id)
+                {
+                    let mut set: Vec<String> = Vec::new();
+                    let mut ok = true;
+                    for (word, part) in printed.split(' ').enumerate() {
+                        match part.parse::<u64>() {
+                            Ok(v) => {
+                                for bit in 0..bits.min(64) {
+                                    if v & (1u64 << bit) != 0 {
+                                        let n = (word * bits + bit) as u32;
+                                        set.push(
+                                            names
+                                                .iter()
+                                                .find(|(k, _)| *k == n)
+                                                .map_or_else(|| format!("[{n}]"), |(_, t)| (*t).to_string()),
+                                        );
+                                    }
+                                }
+                            }
+                            Err(_) => ok = false,
+                        }
+                    }
+                    if ok {
+                        printed = if set.is_empty() {
+                            zero.to_string()
+                        } else {
+                            set.join(", ")
+                        };
+                    }
+                }
+            }
             // One conversion per element: ExifTool splits the value on
             // spaces, converts each with its own hash and joins with "; ".
             // Sony's HDR is `[{ 0 => 'Off' },{ 0 => 'Uncorrected image' }]`.

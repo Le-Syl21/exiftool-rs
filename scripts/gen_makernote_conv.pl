@@ -26,7 +26,7 @@ require Image::ExifTool;
 my @MAKERS = qw(Sony Canon Nikon Olympus Panasonic Pentax FujiFilm Casio Ricoh
                 Sigma Samsung Sanyo Minolta Apple DJI);
 
-my (@rows, @formats, @skipped);
+my (@rows, @formats, @bitmasks, @skipped);
 for my $maker (@MAKERS) {
     my $tbl = eval { Image::ExifTool::GetTagTable("Image::ExifTool::${maker}::Main") } or next;
     for my $id (Image::ExifTool::TagTableKeys($tbl)) {
@@ -68,6 +68,15 @@ for my $maker (@MAKERS) {
                 } elsif (defined $base) {
                     push @formats, [$maker, $id, $base, $n // 1, $name];
                 }
+            }
+            # A PrintConv can be a BITMASK: ExifTool runs DecodeBits over the
+            # value with the named bits and the tag's BitsPerWord. Sony's
+            # AFPointsUsed is ten words of eight bits.
+            my $pc = $$ti{PrintConv};
+            if (ref $pc eq 'HASH' and ref $$pc{BITMASK} eq 'HASH') {
+                my $bits = $$ti{BitsPerWord} || 32;
+                my $zero = $$pc{0};
+                push @bitmasks, [$maker, $id, $bits, $zero, $$pc{BITMASK}, $name];
             }
             for my $kind ('ValueConv', 'PrintConv') {
                 my $c = $$ti{$kind};
@@ -111,6 +120,36 @@ for my $kind ('ValueConv', 'PrintConv') {
     }
     print  "        _ => return None,\n    })\n}\n\n";
 }
+
+print <<'BITHEAD';
+/// The bits a MakerNote Main tag names, and how wide each of its words is.
+///
+/// ExifTool runs DecodeBits over the value with these: each word contributes
+/// its own bits, numbered from the word's start, and a value with no bit set
+/// prints the table's entry for 0.
+#[must_use]
+pub fn bitmask(maker: &str, tag: u16) -> Option<(usize, &'static str, &'static [(u32, &'static str)])> {
+    Some(match (maker, tag) {
+BITHEAD
+{
+    my %seen;
+    for my $bm (sort { $a->[0] cmp $b->[0] or $a->[1] <=> $b->[1] } @bitmasks) {
+        my ($maker, $id, $bits, $zero, $mask, $name) = @$bm;
+        next if $seen{"$maker/$id"}++;
+        my $z = defined $zero ? $zero : '';
+        for ($z) { s/\\/\\\\/g; s/"/\\"/g }
+        printf "        (\"%s\", %#06x) => (%d, \"%s\", &[ // %s\n", $maker, $id, $bits, $z, $name;
+        for my $k (sort { $a <=> $b } keys %$mask) {
+            next unless $k =~ /^\d+$/;
+            my $v = $$mask{$k};
+            next if ref $v;
+            for ($v) { s/\\/\\\\/g; s/"/\\"/g }
+            printf "            (%d, \"%s\"),\n", $k, $v;
+        }
+        print  "        ]),\n";
+    }
+}
+print "        _ => return None,\n    })\n}\n\n";
 
 print "/// The format a MakerNote Main tag declares for itself, and how many\n";
 print "/// elements of it: ExifTool reads the entry that way whatever type the\n";

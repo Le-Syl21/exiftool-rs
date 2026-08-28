@@ -2,7 +2,6 @@
 # One delta key per line. Refresh with `--update`. New deltas fail the run.
 SonyILCE9.arw::Composite:LensID
 SonyILCE9.arw::Sony:AFPointSelected
-SonyILCE9.arw::Sony:AFPointsUsed
 SonyILCE9.arw::Sony:LensSpec
 SonyILCE9.arw::Sony:LensSpecFeatures
 SonyILCE9.arw::Sony:PixelShiftInfo

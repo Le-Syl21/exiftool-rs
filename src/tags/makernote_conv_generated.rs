@@ -201,6 +201,96 @@ pub fn print_conv_expr(maker: &str, tag: u16) -> Option<&'static str> {
     })
 }
 
+/// The bits a MakerNote Main tag names, and how wide each of its words is.
+///
+/// ExifTool runs DecodeBits over the value with these: each word contributes
+/// its own bits, numbered from the word's start, and a value with no bit set
+/// prints the table's entry for 0.
+#[must_use]
+pub fn bitmask(maker: &str, tag: u16) -> Option<(usize, &'static str, &'static [(u32, &'static str)])> {
+    Some(match (maker, tag) {
+        ("Apple", 0x0019) => (32, "", &[ // ImageProcessingFlags
+        ]),
+        ("Apple", 0x0025) => (32, "", &[ // SceneFlags
+        ]),
+        ("Canon", 0x0023) => (32, "(none)", &[ // Categories
+            (0, "People"),
+            (1, "Scenery"),
+            (2, "Events"),
+            (3, "User 1"),
+            (4, "User 2"),
+            (5, "User 3"),
+            (6, "To Do"),
+        ]),
+        ("Pentax", 0x000f) => (32, "(none)", &[ // AFPointsInFocus
+            (0, "Top-left"),
+            (1, "Top Near-left"),
+            (2, "Top"),
+            (3, "Top Near-right"),
+            (4, "Top-right"),
+            (5, "Upper-left"),
+            (6, "Upper Near-left"),
+            (7, "Upper-middle"),
+            (8, "Upper Near-right"),
+            (9, "Upper-right"),
+            (10, "Far Left"),
+            (11, "Left"),
+            (12, "Near-left"),
+            (13, "Center"),
+            (14, "Near-right"),
+            (15, "Right"),
+            (16, "Far Right"),
+            (17, "Lower-left"),
+            (18, "Lower Near-left"),
+            (19, "Lower-middle"),
+            (20, "Lower Near-right"),
+            (21, "Lower-right"),
+            (22, "Bottom-left"),
+            (23, "Bottom Near-left"),
+            (24, "Bottom"),
+            (25, "Bottom Near-right"),
+            (26, "Bottom-right"),
+        ]),
+        ("Pentax", 0x003c) => (32, "(none)", &[ // AFPointsInFocus
+            (0, "Upper-left"),
+            (1, "Top"),
+            (2, "Upper-right"),
+            (3, "Left"),
+            (4, "Mid-left"),
+            (5, "Center"),
+            (6, "Mid-right"),
+            (7, "Right"),
+            (8, "Lower-left"),
+            (9, "Bottom"),
+            (10, "Lower-right"),
+        ]),
+        ("Sony", 0x2020) => (8, "(none)", &[ // AFPointsUsed
+            (0, "Center"),
+            (1, "Top"),
+            (2, "Upper-right"),
+            (3, "Right"),
+            (4, "Lower-right"),
+            (5, "Bottom"),
+            (6, "Lower-left"),
+            (7, "Left"),
+            (8, "Upper-left"),
+            (9, "Far Right"),
+            (10, "Far Left"),
+            (11, "Upper-middle"),
+            (12, "Near Right"),
+            (13, "Lower-middle"),
+            (14, "Near Left"),
+            (15, "Upper Far Right"),
+            (16, "Lower Far Right"),
+            (17, "Lower Far Left"),
+            (18, "Upper Far Left"),
+        ]),
+        ("Sony", 0x2022) => (8, "(none)", &[ // FocalPlaneAFPointsUsed
+        ]),
+        _ => return None,
+    })
+}
+
 /// The format a MakerNote Main tag declares for itself, and how many
 /// elements of it: ExifTool reads the entry that way whatever type the
 /// file gives it.
