@@ -2568,12 +2568,8 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
     let dir_offset = rd32(0x18) as usize;
     let num_entries = rd32(0x1C) as usize;
 
-    tags.push(mk(
-        "CreatorSoftware",
-        crate::encoding::decode_utf8_or_latin1(&data[4..20])
-            .trim_end_matches('\0')
-            .to_string(),
-    ));
+    // CreatorSoftware is entry 4 of FLIR::Header, which the generated decoder
+    // above already read.
 
     for i in 0..num_entries.min(50) {
         let entry_off = dir_offset + i * 0x20;
