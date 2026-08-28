@@ -232,25 +232,48 @@ pub fn parse_makernotes_exif_base(
         return decode_jvc_text(mn_data);
     }
 
-    // Kodak's ninth maker-note layout: `IIII` then 2 or 3, and a date at
-    // offset 20 (MakerNotes.pm:415-421). Not an IFD either.
-    if mn_data.len() > 30
-        && mn_data.starts_with(b"IIII")
-        && (mn_data[4] == 2 || mn_data[4] == 3)
-        && mn_data[5] == 0
-        && mn_data[20..24].iter().all(u8::is_ascii_digit)
-        && mn_data[24] == b'/'
+    // Reconyx trail cameras: five layouts, each named by the string the
+    // block opens with, and the oldest by a two-byte version instead
+    // (MakerNotes.pm:853-895). All little-endian.
     {
+        let reconyx = if mn_data.starts_with(b"RECONYXUF\0") {
+            Some("Reconyx::UltraFire")
+        } else if mn_data.starts_with(b"RECONYXH2\0") {
+            Some("Reconyx::HyperFire2")
+        } else if mn_data.starts_with(b"RECONYXMF\0") {
+            Some("Reconyx::MicroFire")
+        } else if mn_data.starts_with(b"RECONYXHF4K\0") {
+            Some("Reconyx::HyperFire4K")
+        } else if mn_data.len() > 4
+            && mn_data[0] == 0x01
+            && mn_data[1] == 0xf1
+            && ((matches!(mn_data[2], 0x02 | 0x03) && mn_data[3] == 0) || make == "RECONYX")
+        {
+            Some("Reconyx::HyperFire")
+        } else {
+            None
+        };
+        if let Some(table) = reconyx {
+            let mut dm = crate::tags::binary_tables_generated::State::new();
+            return crate::tags::binary_tables_generated::decode(
+                table,
+                mn_data,
+                make,
+                model,
+                ByteOrderMark::LittleEndian,
+                "",
+                "",
+                &mut dm,
+            );
+        }
+    }
+
+    // Kodak's binary maker notes: nine layouts and an unknown one, tried in
+    // the order MakerNotes.pm lists them (276-478). None of them is an IFD.
+    if let Some((table, bo)) = kodak_binary_layout(mn_data, make, model) {
         let mut dm = crate::tags::binary_tables_generated::State::new();
         return crate::tags::binary_tables_generated::decode(
-            "Kodak::Type9",
-            mn_data,
-            make,
-            model,
-            ByteOrderMark::LittleEndian,
-            "",
-            "",
-            &mut dm,
+            table, mn_data, make, model, bo, "", "", &mut dm,
         );
     }
 
@@ -1668,6 +1691,93 @@ fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark, model: &str) -
         tags.push(mk(name, pv));
     }
     tags
+}
+
+/// Which of Kodak's binary maker-note layouts this block is, and the byte
+/// order it is written in.
+///
+/// The conditions are MakerNotes.pm's own (276-478) and the order is its
+/// order: ExifTool takes the first that matches.
+fn kodak_binary_layout(d: &[u8], make: &str, model: &str) -> Option<(&'static str, ByteOrderMark)> {
+    use ByteOrderMark::{BigEndian, LittleEndian};
+    let at = |i: usize| d.get(i).copied().unwrap_or(0);
+    let starts_ii_mm_aoc =
+        d.starts_with(b"MM") || d.starts_with(b"II") || d.starts_with(b"AOC");
+
+    // Type2: `^.{8}Eastman Kodak` or a fixed nine-byte opening then four letters.
+    if d.len() > 21 && &d[8..21] == b"Eastman Kodak" {
+        return Some(("Kodak::Type2", BigEndian));
+    }
+    if d.len() > 13
+        && at(0) == 0x01
+        && at(1) == 0
+        && matches!(at(2), 0 | 1)
+        && at(3) == 0
+        && at(4) == 0
+        && at(5) == 0
+        && at(6) == 0x04
+        && at(7) == 0
+        && d[8..12].iter().all(u8::is_ascii_alphabetic)
+    {
+        return Some(("Kodak::Type2", BigEndian));
+    }
+    if make.starts_with("EASTMAN KODAK") && d.len() > 13 && at(12) == 0x07 && !starts_ii_mm_aoc {
+        return Some(("Kodak::Type3", BigEndian));
+    }
+    if make.starts_with("Eastman Kodak")
+        && d.len() > 44
+        && &d[41..44] == b"JPG"
+        && !starts_ii_mm_aoc
+    {
+        return Some(("Kodak::Type4", BigEndian));
+    }
+    if make.starts_with("EASTMAN KODAK") {
+        let model_cx = ["CX4200", "CX4230", "CX4300", "CX4310", "CX6200", "CX6230"]
+            .iter()
+            .any(|m| model.contains(m));
+        let opening = d.len() > 3
+            && at(0) == 0
+            && at(3) == 0
+            && matches!(
+                (at(1), at(2)),
+                (0x1a, 0x18) | (0x3a, 0x08) | (0x59, 0xf8) | (0x14, 0x80)
+            );
+        if model_cx || opening {
+            return Some(("Kodak::Type5", BigEndian));
+        }
+        if model.contains("DX3215") {
+            return Some(("Kodak::Type6", BigEndian));
+        }
+        if model.contains("DX3700") {
+            return Some(("Kodak::Type6", LittleEndian));
+        }
+    }
+    let kodak = make.to_lowercase().contains("kodak");
+    if kodak && d.len() > 13 {
+        // `^[CK][A-Z\d]{3} ?[A-Z\d]{1,2}\d{2}[A-Z\d]\d{4}[ \0]`
+        static RE: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+            regex_lite::Regex::new(r"^[CK][A-Z0-9]{3} ?[A-Z0-9]{1,2}[0-9]{2}[A-Z0-9][0-9]{4}[ \x00]")
+                .expect("static pattern")
+        });
+        let head: String = d[..d.len().min(24)].iter().map(|b| *b as char).collect();
+        if RE.is_match(&head) {
+            return Some(("Kodak::Type7", LittleEndian));
+        }
+    }
+    // Type9: `IIII` then 2 or 3, and a date at offset 20.
+    if d.len() > 30
+        && d.starts_with(b"IIII")
+        && matches!(at(4), 2 | 3)
+        && at(5) == 0
+        && d[20..24].iter().all(u8::is_ascii_digit)
+        && at(24) == b'/'
+    {
+        return Some(("Kodak::Type9", LittleEndian));
+    }
+    // MakerNotes.pm's last Kodak arm is a catch-all, but it sits after every
+    // IFD-style Kodak arm: reaching it from here would claim the maker notes
+    // this reader parses as an IFD. It is left to the IFD path.
+    None
 }
 
 /// Decode Kodak binary MakerNotes (from Perl Kodak.pm, FORMAT=int8u mixed).
