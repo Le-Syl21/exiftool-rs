@@ -3,5 +3,4 @@
 # Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
 PSP.psp	Copyright
 Real.ra	Copyright
-SonyILCE9.arw	AFPointSelected
 SonyILCE9.arw	LensID

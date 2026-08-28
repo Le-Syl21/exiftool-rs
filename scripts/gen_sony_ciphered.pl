@@ -580,6 +580,22 @@ sub compile_cond {
     # Inside a table, `$$self{X}` is a DATAMEMBER an earlier field of the same
     # table stored -- CameraTemperature is only valid for some values of the
     # TempTest2 that precedes it.
+    if ($mode eq 'main') {
+        # `defined $$self{AFAreaILCE}`, `$$self{AFAreaILCA} == 8`: what an
+        # earlier tag of the same table stored.
+        if ($cond =~ /^defined \$\$self\{(\w+)\}$/) {
+            return (sprintf('state.member("%s").is_some()', $1), 'false');
+        }
+        if ($cond =~ /^\$\$self\{(\w+)\} (==|!=|<=|>=|<|>) (-?[\d.]+)$/) {
+            my ($dm, $op, $num) = ($1, $2, $3);
+            $num .= '.0' unless $num =~ /\./;
+            return (sprintf('state.member("%s").is_some_and(|v| v.as_num() %s %s)', $dm, $op, $num),
+                    'false');
+        }
+        if ($cond =~ /^\$\$self\{(\w+)\}$/) {
+            return (sprintf('state.member("%s").is_some_and(|v| v.as_num() != 0.0)', $1), 'false');
+        }
+    }
     if ($mode eq 'field') {
         if ($cond =~ /^\$\$self\{(\w+)\}$/) {
             return (sprintf('dm_get(&dm, "%s").is_some_and(|v| v != 0.0)', $1), 'false');
@@ -601,9 +617,28 @@ sub compile_cond {
     return ();
 }
 
-while ($main =~ /^\s{4}(0x[0-9a-fA-F]+)\s*=>\s*\[(.*?)\}\],\s*$/gms) {
-    my $tag = hex($1);
-    my $arms = $2;
+# The arms of every id written as an array, taken by counting brackets. A
+# lazy `\[(.*?)\}\],` finds fifteen of them and misses the rest, 0x201e
+# among them, because an earlier match can end past where the next one starts.
+my @array_entries;
+while ($main =~ /^\s{4}(0x[0-9a-fA-F]+)\s*=>\s*\[/gms) {
+    my $tag_hex = $1;
+    my $from = pos($main);
+    my ($depth, $i) = (1, $from);
+    while ($i < length($main) and $depth) {
+        my $c = substr($main, $i, 1);
+        $depth++ if $c eq '[';
+        $depth-- if $c eq ']';
+        ++$i;
+    }
+    next if $depth;
+    push @array_entries, [$tag_hex, substr($main, $from, $i - $from - 1)];
+    pos($main) = $from;
+}
+
+for my $entry (@array_entries) {
+    my $tag = hex($entry->[0]);
+    my $arms = $entry->[1];
     my @choices;
     while ($arms =~ /\{(.*?)SubDirectory\s*=>\s*\{[^}]*TagTable\s*=>\s*'Image::ExifTool::Sony::(\w+)'/gs) {
         my ($arm, $tbl) = ($1, $2);
@@ -652,16 +687,16 @@ while ($main =~ /^\s{4}(0x[0-9a-fA-F]+)\s*=>\s*\[(.*?)\}\],\s*$/gms) {
         ($cond) = $a =~ /Condition\s*=>\s*'([^']*)'/ unless defined $cond;
         if (defined $cond) {
             $conditioned = 1;
-            my @c = compile_cond($cond);
+            my @c = compile_cond($cond, 'main');
             unless (@c) {
                 push @skipped, sprintf("main 0x%04x -> %s: cannot express -- %s",
                                        $tag, $nm, join ' ', split ' ', $cond);
                 @named = ();
                 last;
             }
-            push @named, { name => $nm, expr => $c[0] };
+            push @named, { name => $nm, expr => $c[0], conv => arm_conv($a) };
         } else {
-            push @named, { name => $nm, expr => 'true' };
+            push @named, { name => $nm, expr => 'true', conv => arm_conv($a) };
         }
     }
     push @main_names, { tag => $tag, arms => \@named } if @named and $conditioned;
@@ -710,6 +745,21 @@ while ($main =~ /^\s{4}(0x[0-9a-fA-F]+)\s*=>\s*\{(.*?)^\s{4}\},/gms) {
     $subdir_only{$tag} = 1;
 }
 @selectors = sort { $a->{tag} <=> $b->{tag} } @selectors;
+
+# The numeric print conversion an arm of a Main entry carries, if any.
+sub arm_conv {
+    my ($arm) = @_;
+    my ($src) = $arm =~ /PrintConv\s*=>\s*\{(.*?)\n\s*\}/s;
+    return undef unless defined $src;
+    my %c;
+    while ($src =~ /(-?\d+|0x[0-9a-fA-F]+)\s*=>\s*'((?:[^'\\]|\\.)*)'/g) {
+        my ($k, $v) = ($1, $2);
+        $k = $k =~ /^0x/ ? hex($k) : int($k);
+        $v =~ s/\\'/'/g;
+        $c{$k} = $v;
+    }
+    return %c ? \%c : undef;
+}
 
 # A field's own category if it states one, the table's constant otherwise.
 sub grp2_of {
@@ -852,35 +902,58 @@ SUBDIR
 print "    )\n}\n\n";
 
 print <<'MAINNAME';
-/// The name ExifTool gives a Sony MakerNote tag whose arms are conditioned.
+/// What ExifTool calls a Sony MakerNote tag whose arms are conditioned, and
+/// how it prints it.
 ///
 /// `None` means this id is not one of them and the plain table decides.
 /// `Some(None)` means every condition failed, and ExifTool extracts nothing --
 /// 0xb050 HighISONoiseReduction2 is written `DSC models only`, and a body that
 /// is not one has no such tag.
+pub struct MainTag {
+    pub name: &'static str,
+    /// The arm's own print conversion, empty when it has none.
+    pub conv: &'static [(i64, &'static str)],
+}
+
 #[must_use]
 #[allow(clippy::match_same_arms)]
-pub fn main_tag_name(
+pub fn main_tag(
     tag: u16,
     model: &str,
     data: &[u8],
     count: usize,
     format: &str,
-) -> Option<Option<&'static str>> {
-    let _ = (data, count, format);
+    state: &dyn crate::tags::conv_expr::ParseState,
+) -> Option<Option<MainTag>> {
+    let _ = (data, count, format, state);
     match tag {
 MAINNAME
+sub conv_literal {
+    my ($c) = @_;
+    return '&[]' unless $c;
+    my @rows;
+    for my $k (sort { $a <=> $b } keys %$c) {
+        my $v = $$c{$k};
+        $v =~ s/\\/\\\\/g;
+        $v =~ s/"/\\"/g;
+        push @rows, sprintf('(%d, "%s")', $k, $v);
+    }
+    return '&[' . join(', ', @rows) . ']';
+}
+
 for my $m (@main_names) {
     printf "        %#06x => {\n", $m->{tag};
     my $uncond = 0;
     for my $a (@{$m->{arms}}) {
+        my $conv = conv_literal($a->{conv});
         if ($a->{expr} eq 'true') {
-            printf "            Some(Some(\"%s\"))\n", $a->{name};
+            printf "            Some(Some(MainTag { name: \"%s\", conv: %s }))\n",
+                $a->{name}, $conv;
             $uncond = 1;
             last;
         }
-        printf "            if %s {\n                return Some(Some(\"%s\"));\n            }\n",
-            $a->{expr}, $a->{name};
+        printf "            if %s {\n                return Some(Some(MainTag { name: \"%s\", conv: %s }));\n            }\n",
+            $a->{expr}, $a->{name}, $conv;
     }
     print  "            Some(None)\n" unless $uncond;
     print  "        }\n";

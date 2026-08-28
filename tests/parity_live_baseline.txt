@@ -1,4 +1,3 @@
 # Live read-parity baseline: known exiftool-rs vs Perl ExifTool deltas.
 # One delta key per line. Refresh with `--update`. New deltas fail the run.
 SonyILCE9.arw::Composite:LensID
-SonyILCE9.arw::Sony:AFPointSelected

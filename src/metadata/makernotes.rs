@@ -7757,18 +7757,21 @@ fn read_makernote_ifd_with_base(
         // models only`. The generated resolver mirrors that chain; it has no
         // opinion on any other id, and the table above decides those.
         let sony_named;
+        let mut sony_conv: &[(i64, &'static str)] = &[];
         let (raw_name, raw_desc) = if manufacturer == Manufacturer::Sony {
-            match crate::tags::sony_ciphered_generated::main_tag_name(
+            match crate::tags::sony_ciphered_generated::main_tag(
                 tag_id,
                 model_name,
                 value_data,
                 count as usize,
                 crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                &main_state,
             ) {
                 None => (raw_name, raw_desc),
                 Some(None) => continue,
-                Some(Some(n)) => {
-                    sony_named = n;
+                Some(Some(t)) => {
+                    sony_named = t.name;
+                    sony_conv = t.conv;
                     (sony_named, raw_desc)
                 }
             }
@@ -8433,6 +8436,17 @@ fn read_makernote_ifd_with_base(
                 // two-element tag, and no number keys it.
                 if let Some(t) = pc::print_conv_str(maker, tag_id, &printed) {
                     printed = t.to_string();
+                }
+
+                // The conversion of the arm the conditions chose, which is not
+                // the one a numeric lookup by id would find: 0x201e names five
+                // arms, each with a table of its own.
+                if !sony_conv.is_empty() {
+                    if let Ok(v) = printed.parse::<i64>() {
+                        if let Some((_, t)) = sony_conv.iter().find(|(k, _)| *k == v) {
+                            printed = (*t).to_string();
+                        }
+                    }
                 }
 
                 if let Some(expr) = mn_conv::print_conv_expr(maker, tag_id) {
