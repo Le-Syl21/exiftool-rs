@@ -1425,6 +1425,19 @@ for my $t (@tables) {
         }
         my %conv = %{$f->{conv}};
         if (%conv) {
+            # A hash conversion looks up the value AFTER any ValueConv, and a
+            # ValueConv that returns undef means no tag at all: H264's
+            # ExposureProgram is `$val == 15 ? undef : $val` and has a hash of
+            # its own, so running only the hash reported the raw 15.
+            my $vguard = 0;
+            if (defined $f->{vconv}) {
+                printf "%s    let vc = conv_expr::eval_with(\"%s\", &base, &ctx);\n",
+                    $ind, esc($f->{vconv});
+                printf "%s    if vc.as_ref() != Some(&Conv::Undef) {\n", $ind;
+                printf "%s        let base = vc.unwrap_or(base);\n", $ind;
+                $vguard = 1;
+                $ind .= "    ";
+            }
             printf "%s    #[allow(clippy::cast_possible_truncation)]\n", $ind;
             printf "%s    let s = match base.as_num() as i64 {\n", $ind;
             for my $k (sort { $a <=> $b } keys %conv) {
@@ -1436,15 +1449,33 @@ for my $t (@tables) {
             printf "%s    let raw = Value::I32(base.as_num() as i32);\n", $ind;
             printf "%s    tags.push(mk(\"%s\", 0x%x, s, raw, GRP0, GRP1, GRP2, PRIO));\n",
                 $ind, $f->{name}, $f->{off} unless $f->{hidden};
+            if ($vguard) {
+                $ind = substr($ind, 4);
+                printf "%s    }\n", $ind;
+            }
         } elsif (defined $f->{vconv} or defined $f->{pconv}) {
             printf "%s    let mut cv = base;\n", $ind;
-            printf "%s    if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
-                $ind, esc($f->{vconv}) if defined $f->{vconv};
+            # A ValueConv that returns undef means the tag is not extracted at
+            # all -- H264's ExposureProgram is `$val == 15 ? undef : $val`, and
+            # reporting it anyway gave three tags ExifTool does not have.
+            my $vguard = 0;
+            if (defined $f->{vconv}) {
+                printf "%s    let vc = conv_expr::eval_with(\"%s\", &cv, &ctx);\n",
+                    $ind, esc($f->{vconv});
+                printf "%s    if vc.as_ref() != Some(&Conv::Undef) {\n", $ind;
+                printf "%s        if let Some(x) = vc { cv = x; }\n", $ind;
+                $vguard = 1;
+                $ind .= "    ";
+            }
             printf "%s    let raw = Value::F64(cv.as_num());\n", $ind;
             printf "%s    if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
                 $ind, esc($f->{pconv}) if defined $f->{pconv};
             printf "%s    tags.push(mk(\"%s\", 0x%x, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));\n",
                 $ind, $f->{name}, $f->{off} unless $f->{hidden};
+            if ($vguard) {
+                $ind = substr($ind, 4);
+                printf "%s    }\n", $ind;
+            }
         } else {
             printf "%s    #[allow(clippy::cast_possible_truncation)]\n", $ind;
             printf "%s    tags.push(mk(\"%s\", 0x%x, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));\n",

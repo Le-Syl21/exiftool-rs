@@ -98,6 +98,9 @@ struct M2tsMdpmData {
     exposure_time: Option<String>,
     make: Option<String>,
     recording_mode: Option<String>,
+    /// What the generated H264 tables read out of the MDPM records this
+    /// reader does not unpack field by field.
+    extra: Vec<crate::tag::Tag>,
 }
 
 /// Parse SEI NAL unit (type 6) from H.264 and extract MDPM camera metadata.
@@ -189,6 +192,7 @@ fn m2ts_parse_mdpm(data: &[u8]) -> Option<M2tsMdpmData> {
     let mut result = M2tsMdpmData {
         datetime_original: None,
         aperture_setting: None,
+        extra: Vec::new(),
         gain: None,
         image_stabilization: None,
         exposure_time: None,
@@ -247,6 +251,32 @@ fn m2ts_parse_mdpm(data: &[u8]) -> Option<M2tsMdpmData> {
                     result.datetime_original = Some(s);
                 }
             }
+            // The five MDPM records whose layout H264.pm gives as a binary
+            // table. WhiteBalance and Focus of Camera1 come from here; the
+            // fields below are the ones this reader also needs as values.
+            0x70 | 0x71 | 0xe0 | 0xe1 | 0xee => {
+                let table = match tag {
+                    0x70 => "H264::Camera1",
+                    0x71 => "H264::Camera2",
+                    0xe0 => "H264::MakeModel",
+                    0xe1 => "H264::RecInfo",
+                    _ => "H264::FrameInfo",
+                };
+                let mut dm = crate::tags::binary_tables_generated::State::new();
+                result.extra.extend(crate::tags::binary_tables_generated::decode(
+                    table,
+                    &val4,
+                    "",
+                    "",
+                    crate::metadata::exif::ByteOrderMark::BigEndian,
+                    "",
+                    "",
+                    &mut dm,
+                ));
+            }
+            _ => {}
+        }
+        match tag {
             0x70 => {
                 // Camera1: byte 0 = ApertureSetting, byte 1 = Gain (low nibble) + ExposureProgram (high nibble)
                 let aperture_raw = val4[0];
@@ -998,6 +1028,17 @@ pub fn read_m2ts(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
                         .to_string(),
                 ),
             ));
+        }
+        // What the generated H264 tables read that the named fields above
+        // do not: Camera1's WhiteBalance and Focus among them. Added last, so
+        // a field this reader unpacks itself keeps its own value.
+        for t in &mdpm.extra {
+            if !tags.iter().any(|x| x.name == t.name) {
+                let mut t = t.clone();
+                t.group.family0 = "H264".into();
+                t.group.family1 = "H264".into();
+                tags.push(t);
+            }
         }
     }
 

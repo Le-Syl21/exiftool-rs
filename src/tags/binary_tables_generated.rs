@@ -1535,10 +1535,13 @@ fn canon_colordata3(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_ty
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashOutput", 0x248, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FlashOutput", 0x248, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x492, bo) {
         dm.push(("FlashBatteryLevel".to_string(), Conv::Num(f64::from(v))));
@@ -1632,10 +1635,13 @@ fn canon_colordata4(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_ty
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashOutput", 0x26b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FlashOutput", 0x26b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x4d8, bo) {
         dm.push(("FlashBatteryLevel".to_string(), Conv::Num(f64::from(v))));
@@ -2843,10 +2849,13 @@ fn canon_colordata7(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_ty
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashOutput", 0x198, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FlashOutput", 0x198, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x332, bo) {
         dm.push(("FlashBatteryLevel".to_string(), Conv::Num(f64::from(v))));
@@ -4864,10 +4873,13 @@ fn canon_colordata10(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashOutput", 0x299, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FlashOutput", 0x299, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x534, bo) {
         dm.push(("FlashBatteryLevel".to_string(), Conv::Num(f64::from(v))));
@@ -6062,10 +6074,13 @@ fn canon_colordata12(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashOutput", 0x203, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FlashOutput", 0x203, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x408, bo) {
         dm.push(("FlashBatteryLevel".to_string(), Conv::Num(f64::from(v))));
@@ -6135,10 +6150,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("exp($val/32*log(2))*100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("AutoISO", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("exp($val/32*log(2))*100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("AutoISO", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x4, bo) {
         dm.push(("BaseISO".to_string(), Conv::Num(f64::from(v))));
@@ -6148,10 +6166,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp($val/32*log(2))*100/32", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("BaseISO", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp($val/32*log(2))*100/32", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("BaseISO", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = i16_at(data, 0x6, bo) {
@@ -6159,10 +6180,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 32 + 5", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.2f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("MeasuredEV", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 32 + 5", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("MeasuredEV", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x8, bo) {
         dm.push(("TargetAperture".to_string(), Conv::Num(f64::from(v))));
@@ -6172,10 +6196,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(Image::ExifTool::Canon::CanonEv($val)*log(2)/2)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("TargetAperture", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(Image::ExifTool::Canon::CanonEv($val)*log(2)/2)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("TargetAperture", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = i16_at(data, 0xa, bo) {
@@ -6186,10 +6213,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val)*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("TargetExposureTime", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val)*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("TargetExposureTime", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = i16_at(data, 0xc, bo) {
@@ -6197,10 +6227,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Canon::CanonEv($val)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureCompensation", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("Image::ExifTool::Canon::CanonEv($val)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureCompensation", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0xe, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -6275,10 +6308,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
             if rc.as_ref() != Some(&Conv::Undef) {
                 let base = rc.unwrap_or(base);
                 let mut cv = base;
-                if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-                let raw = Value::F64(cv.as_num());
-                if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-                tags.push(mk("CameraTemperature", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+                if vc.as_ref() != Some(&Conv::Undef) {
+                    if let Some(x) = vc { cv = x; }
+                    let raw = Value::F64(cv.as_num());
+                    if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+                    tags.push(mk("CameraTemperature", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                }
             }
         }
     }
@@ -6290,9 +6326,12 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 32", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("FlashGuideNumber", 0xd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 32", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("FlashGuideNumber", 0xd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = i16_at(data, 0x1c, bo) {
@@ -6324,10 +6363,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Canon::CanonEv($val)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashExposureComp", 0xf, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("Image::ExifTool::Canon::CanonEv($val)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FlashExposureComp", 0xf, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x20, bo) {
         dm.push(("AutoExposureBracketing".to_string(), Conv::Num(f64::from(v))));
@@ -6350,10 +6392,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Canon::CanonEv($val)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("AEBBracketValue", 0x11, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("Image::ExifTool::Canon::CanonEv($val)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("AEBBracketValue", 0x11, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x24, bo) {
         dm.push(("ControlMode".to_string(), Conv::Num(f64::from(v))));
@@ -6377,10 +6422,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocusDistanceUpper", 0x13, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+                tags.push(mk("FocusDistanceUpper", 0x13, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_val(dm, "FocusDistanceUpper").is_some_and(conv_expr::Val::truthy) {
@@ -6389,10 +6437,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocusDistanceLower", 0x14, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+                tags.push(mk("FocusDistanceLower", 0x14, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = i16_at(data, 0x2a, bo) {
@@ -6403,10 +6454,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(Image::ExifTool::Canon::CanonEv($val)*log(2)/2)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x15, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(Image::ExifTool::Canon::CanonEv($val)*log(2)/2)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x15, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -6418,10 +6472,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
             if rc.as_ref() != Some(&Conv::Undef) {
                 let base = rc.unwrap_or(base);
                 let mut cv = base;
-                if let Some(x) = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val)*log(2))*1000/32", &cv, &ctx) { cv = x; }
-                let raw = Value::F64(cv.as_num());
-                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-                tags.push(mk("ExposureTime", 0x16, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                let vc = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val)*log(2))*1000/32", &cv, &ctx);
+                if vc.as_ref() != Some(&Conv::Undef) {
+                    if let Some(x) = vc { cv = x; }
+                    let raw = Value::F64(cv.as_num());
+                    if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                    tags.push(mk("ExposureTime", 0x16, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                }
             }
         }
     }
@@ -6434,10 +6491,13 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
             if rc.as_ref() != Some(&Conv::Undef) {
                 let base = rc.unwrap_or(base);
                 let mut cv = base;
-                if let Some(x) = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val)*log(2))", &cv, &ctx) { cv = x; }
-                let raw = Value::F64(cv.as_num());
-                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-                tags.push(mk("ExposureTime", 0x16, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                let vc = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val)*log(2))", &cv, &ctx);
+                if vc.as_ref() != Some(&Conv::Undef) {
+                    if let Some(x) = vc { cv = x; }
+                    let raw = Value::F64(cv.as_num());
+                    if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                    tags.push(mk("ExposureTime", 0x16, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                }
             }
         }
     }
@@ -6449,9 +6509,12 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("MeasuredEV2", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("MeasuredEV2", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = i16_at(data, 0x30, bo) {
@@ -6459,9 +6522,12 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("BulbDuration", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("BulbDuration", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x34, bo) {
         dm.push(("CameraType".to_string(), Conv::Num(f64::from(v))));
@@ -6522,9 +6588,12 @@ fn canon_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 10", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("SelfTimer2", 0x1d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 10", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("SelfTimer2", 0x1d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = i16_at(data, 0x42, bo) {
@@ -6669,10 +6738,13 @@ fn canon_movieinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_typ
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("Duration", 0x6a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Duration", 0x6a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0xd8, bo) {
         dm.push(("AudioBitrate".to_string(), Conv::Num(f64::from(v))));
@@ -7414,9 +7486,12 @@ fn canon_modifiedinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ModifiedDigitalGain", 0xb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ModifiedDigitalGain", 0xb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -8036,15 +8111,19 @@ fn canon_afconfig(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         dm.push(("AFConfigTool".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            11 => "Case A".to_string(),
-            2147483648 => "n/a".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("AFConfigTool", 0x1, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                11 => "Case A".to_string(),
+                2147483648 => "n/a".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("AFConfigTool", 0x1, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i32_at(data, 0x8, bo) {
         dm.push(("AFTrackingSensitivity".to_string(), Conv::Num(f64::from(v))));
@@ -8524,48 +8603,63 @@ fn canon_levelinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_typ
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val > 1800 and $val -= 3600; -$val / 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("RollAngle", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val > 1800 and $val -= 3600; -$val / 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("RollAngle", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i32_at(data, 0x14, bo) {
         dm.push(("PitchAngle".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val > 1800 and $val -= 3600; $val / 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("PitchAngle", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val > 1800 and $val -= 3600; $val / 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("PitchAngle", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i32_at(data, 0x1c, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocalLength", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocalLength", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i32_at(data, 0x20, bo) {
         dm.push(("MinFocalLength2".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength2", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("MinFocalLength2", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i32_at(data, 0x24, bo) {
         dm.push(("MaxFocalLength2".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength2", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("MaxFocalLength2", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -8606,10 +8700,13 @@ fn canon_camerainfo1d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u16_at(data, 0xa, bo) {
@@ -9131,10 +9228,13 @@ fn canon_camerainfo1dmkii(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u16rev_at(data, 0x9, bo) {
@@ -9592,10 +9692,13 @@ fn canon_camerainfo1dmkiin(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u16rev_at(data, 0x9, bo) {
@@ -10004,10 +10107,13 @@ fn canon_camerainfo1dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -10018,10 +10124,13 @@ fn canon_camerainfo1dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -10029,20 +10138,26 @@ fn canon_camerainfo1dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x18) {
         dm.push(("CameraTemperature".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if (dm_val(dm, "LensType").is_some_and(conv_expr::Val::truthy) && dm_get(dm, "LensType").is_some_and(|v| v == 124.0)) {
         if let Some(v) = u8_at(data, 0x1b) {
@@ -10050,10 +10165,13 @@ fn canon_camerainfo1dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u16rev_at(data, 0x1d, bo) {
@@ -10088,20 +10206,26 @@ fn canon_camerainfo1dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x45, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x5e, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -10453,27 +10577,36 @@ fn canon_camerainfo1dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x172, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x172, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x176, bo) {
         dm.push(("ShutterCount".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ShutterCount", 0x176, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ShutterCount", 0x176, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x17e, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x17e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x17e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if MODEL_RE_9.is_match(model) {
         if let Some(v) = u32_at(data, 0x45a, bo) {
@@ -10484,10 +10617,13 @@ fn canon_camerainfo1dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
             if rc.as_ref() != Some(&Conv::Undef) {
                 let base = rc.unwrap_or(base);
                 let mut cv = base;
-                if let Some(x) = conv_expr::eval_with("ConvertUnixTime($val)", &cv, &ctx) { cv = x; }
-                let raw = Value::F64(cv.as_num());
-                if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
-                tags.push(mk("TimeStamp1", 0x45a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                let vc = conv_expr::eval_with("ConvertUnixTime($val)", &cv, &ctx);
+                if vc.as_ref() != Some(&Conv::Undef) {
+                    if let Some(x) = vc { cv = x; }
+                    let raw = Value::F64(cv.as_num());
+                    if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+                    tags.push(mk("TimeStamp1", 0x45a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                }
             }
         }
     }
@@ -10499,10 +10635,13 @@ fn canon_camerainfo1dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("ConvertUnixTime($val)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("TimeStamp", 0x45e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("ConvertUnixTime($val)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("TimeStamp", 0x45e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(sub) = data.get(0x2aa..) {
@@ -10545,10 +10684,13 @@ fn canon_camerainfo1dmkiv(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -10559,10 +10701,13 @@ fn canon_camerainfo1dmkiv(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -10570,10 +10715,13 @@ fn canon_camerainfo1dmkiv(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), Conv::Num(f64::from(v))));
@@ -10596,9 +10744,12 @@ fn canon_camerainfo1dmkiv(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("MeasuredEV2", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("MeasuredEV2", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x9) {
@@ -10609,9 +10760,12 @@ fn canon_camerainfo1dmkiv(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("MeasuredEV3", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("MeasuredEV3", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x15) {
@@ -10635,10 +10789,13 @@ fn canon_camerainfo1dmkiv(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -10672,20 +10829,26 @@ fn canon_camerainfo1dmkiv(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x54, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x54, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x56, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x56, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x56, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x78, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -11002,18 +11165,24 @@ fn canon_camerainfo1dmkiv(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x22c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x22c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x238, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x238, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x238, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(sub) = data.get(0x368..) {
         tags.extend(canon_psinfo(sub, make, model, bo, file_type, format, dm));
@@ -11059,10 +11228,13 @@ fn canon_camerainfo1dx(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -11073,10 +11245,13 @@ fn canon_camerainfo1dx(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -11084,20 +11259,26 @@ fn canon_camerainfo1dx(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -11131,20 +11312,26 @@ fn canon_camerainfo1dx(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x8c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x8c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x8e, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x8e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x8e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0xbc, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -11496,18 +11683,24 @@ fn canon_camerainfo1dx(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x2d0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x2d0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x2dc, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x2dc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x2dc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(sub) = data.get(0x3f4..) {
         tags.extend(canon_psinfo2(sub, make, model, bo, file_type, format, dm));
@@ -11531,10 +11724,13 @@ fn canon_camerainfo5d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -11545,10 +11741,13 @@ fn canon_camerainfo5d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -11556,10 +11755,13 @@ fn canon_camerainfo5d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0xc, bo) {
         dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
@@ -11821,10 +12023,13 @@ fn canon_camerainfo5d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if (dm_val(dm, "LensType").is_some_and(conv_expr::Val::truthy) && dm_get(dm, "LensType").is_some_and(|v| v == 124.0)) {
         if let Some(v) = i8_at(data, 0x1b) {
@@ -11832,10 +12037,13 @@ fn canon_camerainfo5d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = i8_at(data, 0x27) {
@@ -12250,9 +12458,12 @@ fn canon_camerainfo5d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0xd0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0xd0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0xe8) {
         dm.push(("ContrastStandard".to_string(), Conv::Num(f64::from(v))));
@@ -12563,10 +12774,13 @@ fn canon_camerainfo5d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("ConvertUnixTime($val)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("TimeStamp", 0x11c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("ConvertUnixTime($val)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("TimeStamp", 0x11c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     tags
@@ -12606,10 +12820,13 @@ fn canon_camerainfo5dmkii(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -12620,10 +12837,13 @@ fn canon_camerainfo5dmkii(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -12631,10 +12851,13 @@ fn canon_camerainfo5dmkii(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), Conv::Num(f64::from(v))));
@@ -12699,10 +12922,13 @@ fn canon_camerainfo5dmkii(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if (dm_val(dm, "LensType").is_some_and(conv_expr::Val::truthy) && dm_get(dm, "LensType").is_some_and(|v| v == 124.0)) {
         if let Some(v) = u8_at(data, 0x1b) {
@@ -12710,10 +12936,13 @@ fn canon_camerainfo5dmkii(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
@@ -12748,20 +12977,26 @@ fn canon_camerainfo5dmkii(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x50, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x50, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x52, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x52, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x52, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x6f, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -13153,18 +13388,24 @@ fn canon_camerainfo5dmkii(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x1bb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x1bb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x1c7, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x1c7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x1c7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(sub) = data.get(0x2f7..) {
         tags.extend(canon_psinfo(sub, make, model, bo, file_type, format, dm));
@@ -13212,10 +13453,13 @@ fn canon_camerainfo5dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -13226,10 +13470,13 @@ fn canon_camerainfo5dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -13237,20 +13484,26 @@ fn canon_camerainfo5dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -13284,20 +13537,26 @@ fn canon_camerainfo5dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x8c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x8c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x8e, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x8e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x8e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0xbc, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -13656,36 +13915,48 @@ fn canon_camerainfo5dmkiii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x28c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x28c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x290, bo) {
         dm.push(("FileIndex2".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex2", 0x290, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex2", 0x290, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x298, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x298, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x298, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x29c, bo) {
         dm.push(("DirectoryIndex2".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex2", 0x29c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex2", 0x29c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(sub) = data.get(0x3b0..) {
         tags.extend(canon_psinfo2(sub, make, model, bo, file_type, format, dm));
@@ -13709,10 +13980,13 @@ fn canon_camerainfo6d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -13723,10 +13997,13 @@ fn canon_camerainfo6d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -13734,20 +14011,26 @@ fn canon_camerainfo6d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -13781,20 +14064,26 @@ fn canon_camerainfo6d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x92, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x92, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x94, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x94, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x94, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0xc2, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -14146,18 +14435,24 @@ fn canon_camerainfo6d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x2aa, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x2aa, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x2b6, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x2b6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x2b6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(sub) = data.get(0x3c6..) {
         tags.extend(canon_psinfo2(sub, make, model, bo, file_type, format, dm));
@@ -14199,10 +14494,13 @@ fn canon_camerainfo7d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -14213,10 +14511,13 @@ fn canon_camerainfo7d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -14224,10 +14525,13 @@ fn canon_camerainfo7d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), Conv::Num(f64::from(v))));
@@ -14250,9 +14554,12 @@ fn canon_camerainfo7d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("MeasuredEV2", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("MeasuredEV2", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x9) {
@@ -14263,9 +14570,12 @@ fn canon_camerainfo7d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("MeasuredEV", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("MeasuredEV", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x15) {
@@ -14289,10 +14599,13 @@ fn canon_camerainfo7d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -14326,20 +14639,26 @@ fn canon_camerainfo7d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x54, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x54, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x56, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x56, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x56, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x77, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -14698,18 +15017,24 @@ fn canon_camerainfo7d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x1eb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x1eb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x1f7, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x1f7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x1f7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(sub) = data.get(0x327..) {
         tags.extend(canon_psinfo(sub, make, model, bo, file_type, format, dm));
@@ -14733,10 +15058,13 @@ fn canon_camerainfo40d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -14747,10 +15075,13 @@ fn canon_camerainfo40d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -14758,10 +15089,13 @@ fn canon_camerainfo40d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("FlashMeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -14784,10 +15118,13 @@ fn canon_camerainfo40d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if (dm_val(dm, "LensType").is_some_and(conv_expr::Val::truthy) && dm_get(dm, "LensType").is_some_and(|v| v == 124.0)) {
         if let Some(v) = u8_at(data, 0x1b) {
@@ -14795,10 +15132,13 @@ fn canon_camerainfo40d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u16rev_at(data, 0x1d, bo) {
@@ -14833,20 +15173,26 @@ fn canon_camerainfo40d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x45, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x6f, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -15163,18 +15509,24 @@ fn canon_camerainfo40d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x133, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x133, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x13f, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x13f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x13f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(text) = text_at(data, 0x92b, 64, true) {
         tags.push(mk("LensModel", 0x92b, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
@@ -15219,10 +15571,13 @@ fn canon_camerainfo50d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -15233,10 +15588,13 @@ fn canon_camerainfo50d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -15244,10 +15602,13 @@ fn canon_camerainfo50d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), Conv::Num(f64::from(v))));
@@ -15283,10 +15644,13 @@ fn canon_camerainfo50d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -15320,20 +15684,26 @@ fn canon_camerainfo50d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x50, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x50, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x52, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x52, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x52, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x6f, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -15715,18 +16085,24 @@ fn canon_camerainfo50d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x19b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x19b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x1a7, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x1a7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x1a7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(sub) = data.get(0x2d7..) {
         tags.extend(canon_psinfo(sub, make, model, bo, file_type, format, dm));
@@ -15750,10 +16126,13 @@ fn canon_camerainfo60d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -15764,10 +16143,13 @@ fn canon_camerainfo60d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -15775,20 +16157,26 @@ fn canon_camerainfo60d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x19) {
         dm.push(("CameraTemperature".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -15841,10 +16229,13 @@ fn canon_camerainfo60d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocusDistanceUpper", 0x55, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+                tags.push(mk("FocusDistanceUpper", 0x55, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if MODEL_RE_10.is_match(model) {
@@ -15853,10 +16244,13 @@ fn canon_camerainfo60d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocusDistanceLower", 0x57, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+                tags.push(mk("FocusDistanceLower", 0x57, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if MODEL_RE_10.is_match(model) {
@@ -16144,9 +16538,12 @@ fn canon_camerainfo60d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("FileIndex", 0x1d9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("FileIndex", 0x1d9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if MODEL_RE_10.is_match(model) {
@@ -16155,9 +16552,12 @@ fn canon_camerainfo60d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("DirectoryIndex", 0x1e5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("DirectoryIndex", 0x1e5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if MODEL_RE_11.is_match(model) {
@@ -16189,10 +16589,13 @@ fn canon_camerainfo70d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -16203,10 +16606,13 @@ fn canon_camerainfo70d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -16214,20 +16620,26 @@ fn canon_camerainfo70d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -16261,20 +16673,26 @@ fn canon_camerainfo70d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x93, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x93, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x95, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x95, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x95, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0xc7, bo) {
         dm.push(("ColorTemperature".to_string(), Conv::Num(f64::from(v))));
@@ -16558,18 +16976,24 @@ fn canon_camerainfo70d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x2b3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x2b3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x2bf, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x2bf, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x2bf, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(sub) = data.get(0x3cf..) {
         tags.extend(canon_psinfo2(sub, make, model, bo, file_type, format, dm));
@@ -16593,10 +17017,13 @@ fn canon_camerainfo80d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -16607,10 +17034,13 @@ fn canon_camerainfo80d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -16618,20 +17048,26 @@ fn canon_camerainfo80d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -16665,20 +17101,26 @@ fn canon_camerainfo80d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0xa5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0xa5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0xa7, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0xa7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0xa7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x13a, bo) {
         dm.push(("ColorTemperature".to_string(), Conv::Num(f64::from(v))));
@@ -16962,18 +17404,24 @@ fn canon_camerainfo80d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x4ae, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x4ae, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x4ba, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x4ba, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x4ba, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -16994,10 +17442,13 @@ fn canon_camerainfo450d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -17008,10 +17459,13 @@ fn canon_camerainfo450d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -17019,10 +17473,13 @@ fn canon_camerainfo450d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("FlashMeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -17045,10 +17502,13 @@ fn canon_camerainfo450d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if (dm_val(dm, "LensType").is_some_and(conv_expr::Val::truthy) && dm_get(dm, "LensType").is_some_and(|v| v == 124.0)) {
         if let Some(v) = u8_at(data, 0x1b) {
@@ -17056,10 +17516,13 @@ fn canon_camerainfo450d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u16rev_at(data, 0x1d, bo) {
@@ -17094,20 +17557,26 @@ fn canon_camerainfo450d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x45, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x6f, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -17415,9 +17884,12 @@ fn canon_camerainfo450d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x13f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x13f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(text) = text_at(data, 0x933, 64, true) {
         tags.push(mk("LensModel", 0x933, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
@@ -17444,10 +17916,13 @@ fn canon_camerainfo500d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -17458,10 +17933,13 @@ fn canon_camerainfo500d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -17469,10 +17947,13 @@ fn canon_camerainfo500d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), Conv::Num(f64::from(v))));
@@ -17508,10 +17989,13 @@ fn canon_camerainfo500d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -17545,20 +18029,26 @@ fn canon_camerainfo500d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x50, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x50, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x52, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x52, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x52, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x73, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -17947,18 +18437,24 @@ fn canon_camerainfo500d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x1d3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x1d3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x1df, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x1df, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x1df, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(sub) = data.get(0x30b..) {
         tags.extend(canon_psinfo(sub, make, model, bo, file_type, format, dm));
@@ -17982,10 +18478,13 @@ fn canon_camerainfo550d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -17996,10 +18495,13 @@ fn canon_camerainfo550d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -18007,10 +18509,13 @@ fn canon_camerainfo550d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), Conv::Num(f64::from(v))));
@@ -18046,10 +18551,13 @@ fn canon_camerainfo550d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -18083,20 +18591,26 @@ fn canon_camerainfo550d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x54, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x54, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x56, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x56, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x56, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x78, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -18455,18 +18969,24 @@ fn canon_camerainfo550d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x1e4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x1e4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x1f0, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x1f0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x1f0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(sub) = data.get(0x31c..) {
         tags.extend(canon_psinfo(sub, make, model, bo, file_type, format, dm));
@@ -18490,10 +19010,13 @@ fn canon_camerainfo600d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -18504,10 +19027,13 @@ fn canon_camerainfo600d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -18515,10 +19041,13 @@ fn canon_camerainfo600d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), Conv::Num(f64::from(v))));
@@ -18554,10 +19083,13 @@ fn canon_camerainfo600d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -18591,20 +19123,26 @@ fn canon_camerainfo600d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x57, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x57, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x59, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x59, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x59, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x7b, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -18963,18 +19501,24 @@ fn canon_camerainfo600d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x1db, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x1db, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x1e7, bo) {
         dm.push(("DirectoryIndex".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x1e7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DirectoryIndex", 0x1e7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(sub) = data.get(0x2fb..) {
         tags.extend(canon_psinfo2(sub, make, model, bo, file_type, format, dm));
@@ -18998,10 +19542,13 @@ fn canon_camerainfo650d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -19012,10 +19559,13 @@ fn canon_camerainfo650d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -19023,20 +19573,26 @@ fn canon_camerainfo650d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -19070,20 +19626,26 @@ fn canon_camerainfo650d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x8c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x8c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x8e, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x8e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x8e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0xbc, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -19457,9 +20019,12 @@ fn canon_camerainfo650d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("FileIndex", 0x270, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("FileIndex", 0x270, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if MODEL_RE_13.is_match(model) {
@@ -19468,9 +20033,12 @@ fn canon_camerainfo650d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("FileIndex", 0x274, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("FileIndex", 0x274, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if MODEL_RE_12.is_match(model) {
@@ -19479,9 +20047,12 @@ fn canon_camerainfo650d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("DirectoryIndex", 0x27c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("DirectoryIndex", 0x27c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if MODEL_RE_13.is_match(model) {
@@ -19490,9 +20061,12 @@ fn canon_camerainfo650d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("DirectoryIndex", 0x280, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val - 1", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("DirectoryIndex", 0x280, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(sub) = data.get(0x390..) {
@@ -19517,10 +20091,13 @@ fn canon_camerainfo750d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -19531,10 +20108,13 @@ fn canon_camerainfo750d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -19542,20 +20122,26 @@ fn canon_camerainfo750d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -19589,20 +20175,26 @@ fn canon_camerainfo750d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0xa5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0xa5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0xa7, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0xa7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0xa7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x131, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -19985,10 +20577,13 @@ fn canon_camerainfo1000d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -19999,10 +20594,13 @@ fn canon_camerainfo1000d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -20010,10 +20608,13 @@ fn canon_camerainfo1000d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x13) {
         let v = v & 0x7f;
@@ -20065,10 +20666,13 @@ fn canon_camerainfo1000d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if (dm_val(dm, "LensType").is_some_and(conv_expr::Val::truthy) && dm_get(dm, "LensType").is_some_and(|v| v == 124.0)) {
         if let Some(v) = u8_at(data, 0x1b) {
@@ -20076,10 +20680,13 @@ fn canon_camerainfo1000d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u16rev_at(data, 0x1d, bo) {
@@ -20114,20 +20721,26 @@ fn canon_camerainfo1000d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x45, bo) {
         dm.push(("FocusDistanceLower".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x6f, bo) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -20450,9 +21063,12 @@ fn canon_camerainfo1000d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x143, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FileIndex", 0x143, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(text) = text_at(data, 0x937, 64, true) {
         tags.push(mk("LensModel", 0x937, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
@@ -20476,10 +21092,13 @@ fn canon_camerainfor6(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x9da, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CameraTemperature", 0x9da, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0xaf1, bo) {
         dm.push(("ShutterCount".to_string(), Conv::Num(f64::from(v))));
@@ -20562,9 +21181,12 @@ fn canon_camerainfog5xii(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("FileIndex", 0xb2d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("FileIndex", 0xb2d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     tags
@@ -20583,30 +21205,39 @@ fn canon_camerainfopowershot(data: &[u8], make: &str, model: &str, bo: ByteOrder
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp((($val-411)/96)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp((($val-411)/96)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i32_at(data, 0x14, bo) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("exp($val/192*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FNumber", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("exp($val/192*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FNumber", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i32_at(data, 0x18, bo) {
         dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("exp(-$val/96*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("exp(-$val/96*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i32_at(data, 0x5c, bo) {
         dm.push(("Rotation".to_string(), Conv::Num(f64::from(v))));
@@ -20652,30 +21283,39 @@ fn canon_camerainfopowershot2(data: &[u8], make: &str, model: &str, bo: ByteOrde
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp((($val-411)/96)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp((($val-411)/96)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i32_at(data, 0x18, bo) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("exp($val/192*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FNumber", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("exp($val/192*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FNumber", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i32_at(data, 0x1c, bo) {
         dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("exp(-$val/96*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("exp(-$val/96*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i32_at(data, 0x60, bo) {
         dm.push(("Rotation".to_string(), Conv::Num(f64::from(v))));
@@ -23545,10 +24185,13 @@ fn canoncustom_personalfuncvalues(data: &[u8], make: &str, model: &str, bo: Byte
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val*4)*log(2))*1000/8", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("PF4ExposureTimeMin", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val*4)*log(2))*1000/8", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("PF4ExposureTimeMin", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u16_at(data, 0xa, bo) {
@@ -23559,10 +24202,13 @@ fn canoncustom_personalfuncvalues(data: &[u8], make: &str, model: &str, bo: Byte
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val*4)*log(2))*1000/8", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("PF4ExposureTimeMax", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val*4)*log(2))*1000/8", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("PF4ExposureTimeMax", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u16_at(data, 0xc, bo) {
@@ -23573,10 +24219,13 @@ fn canoncustom_personalfuncvalues(data: &[u8], make: &str, model: &str, bo: Byte
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(Image::ExifTool::Canon::CanonEv($val*4-32)*log(2)/2)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("PF5ApertureMin", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(Image::ExifTool::Canon::CanonEv($val*4-32)*log(2)/2)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("PF5ApertureMin", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u16_at(data, 0xe, bo) {
@@ -23587,10 +24236,13 @@ fn canoncustom_personalfuncvalues(data: &[u8], make: &str, model: &str, bo: Byte
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("exp(Image::ExifTool::Canon::CanonEv($val*4-32)*log(2)/2)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("PF5ApertureMax", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("exp(Image::ExifTool::Canon::CanonEv($val*4-32)*log(2)/2)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("PF5ApertureMax", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u16_at(data, 0x10, bo) {
@@ -24841,13 +25493,16 @@ fn flir_meterlink(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("
             return $val - 273.15 if $$self{Reading1Units} == 0x0d and $$self{Reading1Description} != 11;
             return $val *= 1000 if $$self{Reading1Units} == 0x24;
             return $val;
-        ", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Reading1Value", 0x60, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        ", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Reading1Value", 0x60, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x7e) {
         dm.push(("Reading2Units".to_string(), Conv::Num(f64::from(v))));
@@ -24899,13 +25554,16 @@ fn flir_meterlink(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("
             return $val - 273.15 if $$self{Reading2Units} == 0x0d and $$self{Reading2Description} != 11;
             return $val *= 1000 if $$self{Reading2Units} == 0x24;
             return $val;
-        ", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Reading2Value", 0xc4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        ", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Reading2Value", 0xc4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xe2) {
         dm.push(("Reading3Units".to_string(), Conv::Num(f64::from(v))));
@@ -24957,13 +25615,16 @@ fn flir_meterlink(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("
             return $val - 273.15 if $$self{Reading3Units} == 0x0d and $$self{Reading3Description} != 11;
             return $val *= 1000 if $$self{Reading3Units} == 0x24;
             return $val;
-        ", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Reading3Value", 0x128, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        ", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Reading3Value", 0x128, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x146) {
         dm.push(("Reading4Units".to_string(), Conv::Num(f64::from(v))));
@@ -25015,13 +25676,16 @@ fn flir_meterlink(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("
             return $val - 273.15 if $$self{Reading4Units} == 0x0d and $$self{Reading4Description} != 11;
             return $val *= 1000 if $$self{Reading4Units} == 0x24;
             return $val;
-        ", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Reading4Value", 0x18c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        ", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Reading4Value", 0x18c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -25059,20 +25723,26 @@ fn flir_params(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 273.15", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f C\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ReflectedApparentTemperature", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 273.15", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f C\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ReflectedApparentTemperature", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = f32_at(data, 0x8, bo) {
         dm.push(("AtmosphericTemperature".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 273.15", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f C\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("AtmosphericTemperature", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 273.15", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f C\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("AtmosphericTemperature", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = f32_at(data, 0xc, bo) {
         dm.push(("Emissivity".to_string(), Conv::Num(f64::from(v))));
@@ -25109,10 +25779,13 @@ fn flir_params(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 273.15", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f C\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("IRWindowTemperature", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 273.15", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f C\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("IRWindowTemperature", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = f32_at(data, 0x20, bo) {
         dm.push(("IRWindowTransmission".to_string(), Conv::Num(f64::from(v))));
@@ -25235,9 +25908,12 @@ fn fujifilm_rafdata(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_ty
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$$self{FujiLayout} ? ($val / 2) : $val", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("RawImageWidth", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$$self{FujiLayout} ? ($val / 2) : $val", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("RawImageWidth", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if !(dm_val(dm, "FujiWidth").is_some_and(conv_expr::Val::truthy)) {
@@ -25249,9 +25925,12 @@ fn fujifilm_rafdata(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_ty
             if rc.as_ref() != Some(&Conv::Undef) {
                 let base = rc.unwrap_or(base);
                 let mut cv = base;
-                if let Some(x) = conv_expr::eval_with("$$self{FujiLayout} ? ($val / 2) : $val", &cv, &ctx) { cv = x; }
-                let raw = Value::F64(cv.as_num());
-                tags.push(mk("RawImageWidth", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                let vc = conv_expr::eval_with("$$self{FujiLayout} ? ($val / 2) : $val", &cv, &ctx);
+                if vc.as_ref() != Some(&Conv::Undef) {
+                    if let Some(x) = vc { cv = x; }
+                    let raw = Value::F64(cv.as_num());
+                    tags.push(mk("RawImageWidth", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                }
             }
         }
     }
@@ -25264,9 +25943,12 @@ fn fujifilm_rafdata(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_ty
             if rc.as_ref() != Some(&Conv::Undef) {
                 let base = rc.unwrap_or(base);
                 let mut cv = base;
-                if let Some(x) = conv_expr::eval_with("$$self{FujiLayout} ? ($val * 2) : $val", &cv, &ctx) { cv = x; }
-                let raw = Value::F64(cv.as_num());
-                tags.push(mk("RawImageHeight", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                let vc = conv_expr::eval_with("$$self{FujiLayout} ? ($val * 2) : $val", &cv, &ctx);
+                if vc.as_ref() != Some(&Conv::Undef) {
+                    if let Some(x) = vc { cv = x; }
+                    let raw = Value::F64(cv.as_num());
+                    tags.push(mk("RawImageHeight", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                }
             }
         }
     }
@@ -25279,9 +25961,12 @@ fn fujifilm_rafdata(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_ty
             if rc.as_ref() != Some(&Conv::Undef) {
                 let base = rc.unwrap_or(base);
                 let mut cv = base;
-                if let Some(x) = conv_expr::eval_with("$$self{FujiLayout} ? ($val / 2) : $val", &cv, &ctx) { cv = x; }
-                let raw = Value::F64(cv.as_num());
-                tags.push(mk("RawImageWidth", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                let vc = conv_expr::eval_with("$$self{FujiLayout} ? ($val / 2) : $val", &cv, &ctx);
+                if vc.as_ref() != Some(&Conv::Undef) {
+                    if let Some(x) = vc { cv = x; }
+                    let raw = Value::F64(cv.as_num());
+                    tags.push(mk("RawImageWidth", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                }
             }
         }
     }
@@ -25294,9 +25979,12 @@ fn fujifilm_rafdata(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_ty
             if rc.as_ref() != Some(&Conv::Undef) {
                 let base = rc.unwrap_or(base);
                 let mut cv = base;
-                if let Some(x) = conv_expr::eval_with("$$self{FujiLayout} ? ($val * 2) : $val", &cv, &ctx) { cv = x; }
-                let raw = Value::F64(cv.as_num());
-                tags.push(mk("RawImageHeight", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                let vc = conv_expr::eval_with("$$self{FujiLayout} ? ($val * 2) : $val", &cv, &ctx);
+                if vc.as_ref() != Some(&Conv::Undef) {
+                    if let Some(x) = vc { cv = x; }
+                    let raw = Value::F64(cv.as_num());
+                    tags.push(mk("RawImageHeight", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                }
             }
         }
     }
@@ -25306,9 +25994,12 @@ fn fujifilm_rafdata(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_ty
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$$self{FujiLayout} ? ($val * 2) : $val", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("RawImageHeight", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$$self{FujiLayout} ? ($val * 2) : $val", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("RawImageHeight", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     tags
@@ -25333,10 +26024,13 @@ fn fujifilm_mov(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val ? 1 / $val : 0", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val ? 1 / $val : 0", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = rat64u_at(data, 0x32, bo) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
@@ -25386,58 +26080,72 @@ fn h264_camera1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val - 1) * 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val==42 ? \"Out of range\" : \"$val dB\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("Gain", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val - 1) * 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val==42 ? \"Out of range\" : \"$val dB\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("Gain", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1) {
         let v = (v & 0xf0) >> 4;
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "Program AE".to_string(),
-            1 => "Gain".to_string(),
-            2 => "Shutter speed priority AE".to_string(),
-            3 => "Aperture-priority AE".to_string(),
-            4 => "Manual".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("ExposureProgram", 0x1, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val == 15 ? undef : $val", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "Program AE".to_string(),
+                1 => "Gain".to_string(),
+                2 => "Shutter speed priority AE".to_string(),
+                3 => "Aperture-priority AE".to_string(),
+                4 => "Manual".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("ExposureProgram", 0x1, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x2) {
         let v = (v & 0xe0) >> 5;
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "Auto".to_string(),
-            1 => "Hold".to_string(),
-            2 => "1-Push".to_string(),
-            3 => "Daylight".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("WhiteBalance", 0x2, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val == 7 ? undef : $val", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "Auto".to_string(),
+                1 => "Hold".to_string(),
+                2 => "1-Push".to_string(),
+                3 => "Daylight".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("WhiteBalance", 0x2, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x3) {
         dm.push(("Focus".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val == 0xff ? undef : $val", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("$val == 0xff ? undef : $val", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             my $foc = ($val & 0x7e) / (($val & 0x01) ? 40 : 400);
             return(($val & 0x80 ? 'Manual' : 'Auto') . \" ($foc)\");
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("Focus", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("Focus", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -25574,9 +26282,12 @@ fn kodak_type9(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("FNumber", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("FNumber", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if !(MODEL_RE_15.is_match(make)) {
@@ -25585,9 +26296,12 @@ fn kodak_type9(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 10", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("FNumber", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 10", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("FNumber", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x10, bo) {
@@ -25595,10 +26309,13 @@ fn kodak_type9(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 1e6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 1e6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(text) = text_at(data, 0x14, 20, true) {
         let ctx = Ctx { make, model, file_type, dm };
@@ -25704,9 +26421,12 @@ fn kodak_type3(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("OpticalZoom", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("OpticalZoom", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x37) {
         dm.push(("Sharpness".to_string(), Conv::Num(f64::from(v))));
@@ -25719,19 +26439,25 @@ fn kodak_type3(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 1e5", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x38, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 1e5", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x38, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x3c, bo) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FNumber", 0x3c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FNumber", 0x3c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x4e, bo) {
         dm.push(("ISO".to_string(), Conv::Num(f64::from(v))));
@@ -25769,10 +26495,13 @@ fn kodak_type5(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 1e5", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x14, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 1e5", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x14, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1a) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -25793,9 +26522,12 @@ fn kodak_type5(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FNumber", 0x1c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FNumber", 0x1c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x1e, bo) {
         dm.push(("ISO".to_string(), Conv::Num(f64::from(v))));
@@ -25808,18 +26540,24 @@ fn kodak_type5(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("OpticalZoom", 0x20, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("OpticalZoom", 0x20, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x22, bo) {
         dm.push(("DigitalZoom".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DigitalZoom", 0x22, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DigitalZoom", 0x22, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x27) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -25878,10 +26616,13 @@ fn kodak_type6(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 1e5", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 1e5", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x14, bo) {
         dm.push(("ISOSetting".to_string(), Conv::Num(f64::from(v))));
@@ -25891,9 +26632,12 @@ fn kodak_type6(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FNumber", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FNumber", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x1a, bo) {
         dm.push(("ISO".to_string(), Conv::Num(f64::from(v))));
@@ -25906,18 +26650,24 @@ fn kodak_type6(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("OpticalZoom", 0x1c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("OpticalZoom", 0x1c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x1e, bo) {
         dm.push(("DigitalZoom".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DigitalZoom", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DigitalZoom", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x22, bo) {
         dm.push(("Flash".to_string(), Conv::Num(f64::from(v))));
@@ -26020,10 +26770,13 @@ fn kodak_mov(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &st
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val ? 10 / $val : 0", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x4e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val ? 10 / $val : 0", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x4e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = rat64u_at(data, 0x52, bo) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
@@ -26281,10 +27034,13 @@ fn minolta_camerasettings7d(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 24", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureCompensation", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 24", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureCompensation", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x4a, bo) {
         dm.push(("ColorSpace".to_string(), Conv::Num(f64::from(v))));
@@ -26305,27 +27061,36 @@ fn minolta_camerasettings7d(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Sharpness", 0x26, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Sharpness", 0x26, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x4e, bo) {
         dm.push(("Contrast".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Contrast", 0x27, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Contrast", 0x27, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x50, bo) {
         dm.push(("Saturation".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Saturation", 0x28, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Saturation", 0x28, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x5a, bo) {
         dm.push(("FreeMemoryCardImages".to_string(), Conv::Num(f64::from(v))));
@@ -26338,18 +27103,24 @@ fn minolta_camerasettings7d(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val * 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ColorTemperature", 0x3f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val * 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ColorTemperature", 0x3f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x80, bo) {
         dm.push(("HueAdjustment".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("HueAdjustment", 0x40, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("HueAdjustment", 0x40, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x8c, bo) {
         dm.push(("Rotation".to_string(), Conv::Num(f64::from(v))));
@@ -26370,20 +27141,26 @@ fn minolta_camerasettings7d(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FNumber", 0x47, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FNumber", 0x47, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x90, bo) {
         dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** ((48-$val)/8)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x48, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** ((48-$val)/8)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x48, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x94, bo) {
         dm.push(("FreeMemoryCardImages".to_string(), Conv::Num(f64::from(v))));
@@ -26396,9 +27173,12 @@ fn minolta_camerasettings7d(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ImageNumber", 0x5e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ImageNumber", 0x5e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0xc0, bo) {
         dm.push(("NoiseReduction".to_string(), Conv::Num(f64::from(v))));
@@ -26418,9 +27198,12 @@ fn minolta_camerasettings7d(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ImageNumber2", 0x62, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ImageNumber2", 0x62, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0xe2, bo) {
         dm.push(("ImageStabilization".to_string(), Conv::Num(f64::from(v))));
@@ -26794,9 +27577,12 @@ fn minolta_wbinfoa100(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val-106)/8", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("AverageLV", 0x38, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val-106)/8", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("AverageLV", 0x38, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x3c) {
         dm.push(("FrameNumber".to_string(), Conv::Num(f64::from(v))));
@@ -27248,18 +28034,24 @@ fn minolta_wbinfoa100(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val-106)/8", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("MeasuredLV", 0x690, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val-106)/8", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("MeasuredLV", 0x690, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x691) {
         dm.push(("BrightnessValue".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val-106)/8", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("BrightnessValue", 0x691, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val-106)/8", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("BrightnessValue", 0x691, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(text) = text_at(data, 0x104c, 9600, false) {
         tags.push(mk("TiffMeteringImage", 0x104c, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
@@ -27269,30 +28061,39 @@ fn minolta_wbinfoa100(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val ? 2 ** (6 - $val/8) : 0", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x49b8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val ? 2 ** (6 - $val/8) : 0", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x49b8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x49ba) {
         dm.push(("ISO".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (($val-48)/8) * 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x49ba, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** (($val-48)/8) * 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO", 0x49ba, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x49bb) {
         dm.push(("FocusDistance".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2**(($val-126)/16)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val > 266 ? \"inf\" : sprintf(\"%.2f m\", $val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistance", 0x49bb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2**(($val-126)/16)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val > 266 ? \"inf\" : sprintf(\"%.2f m\", $val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistance", 0x49bb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16rev_at(data, 0x49bd, bo) {
         dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
@@ -27477,20 +28278,26 @@ fn minolta_wbinfoa100(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 8", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureCompensation", 0x49c0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 8", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureCompensation", 0x49c0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x49c1) {
         dm.push(("FlashExposureComp".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 8", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashExposureComp", 0x49c1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 8", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FlashExposureComp", 0x49c1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x49c2) {
         dm.push(("ImageStabilization".to_string(), Conv::Num(f64::from(v))));
@@ -27510,29 +28317,38 @@ fn minolta_wbinfoa100(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val-106)/8", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("BrightnessValue", 0x49c3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val-106)/8", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("BrightnessValue", 0x49c3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x49c5) {
         dm.push(("MaxAperture".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxAperture", 0x49c5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("MaxAperture", 0x49c5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x49c7) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FNumber", 0x49c7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FNumber", 0x49c7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(text) = text_at(data, 0x49dc, 12, true) {
         tags.push(mk("InternalSerialNumber", 0x49dc, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
@@ -27559,10 +28375,13 @@ fn minolta_mov1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val ? 10 / $val : 0", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val ? 10 / $val : 0", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = rat64u_at(data, 0x32, bo) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
@@ -27613,10 +28432,13 @@ fn minolta_mov2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val ? 10 / $val : 0", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x26, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val ? 10 / $val : 0", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x26, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = rat64u_at(data, 0x2a, bo) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
@@ -27799,47 +28621,62 @@ fn minolta_camerasettings5d(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Sharpness", 0x30, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Sharpness", 0x30, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x62, bo) {
         dm.push(("Contrast".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Contrast", 0x31, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Contrast", 0x31, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x64, bo) {
         dm.push(("Saturation".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Saturation", 0x32, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Saturation", 0x32, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x6a, bo) {
         dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** ((48-$val)/8)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x35, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** ((48-$val)/8)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x35, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x6c, bo) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FNumber", 0x36, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FNumber", 0x36, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x6e, bo) {
         dm.push(("FreeMemoryCardImages".to_string(), Conv::Num(f64::from(v))));
@@ -27852,18 +28689,24 @@ fn minolta_camerasettings5d(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val * 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ColorTemperature", 0x49, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val * 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ColorTemperature", 0x49, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x94, bo) {
         dm.push(("HueAdjustment".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("HueAdjustment", 0x4a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("HueAdjustment", 0x4a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0xa0, bo) {
         dm.push(("Rotation".to_string(), Conv::Num(f64::from(v))));
@@ -27884,10 +28727,13 @@ fn minolta_camerasettings5d(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100 - 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureCompensation", 0x53, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100 - 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureCompensation", 0x53, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0xa8, bo) {
         dm.push(("FreeMemoryCardImages".to_string(), Conv::Num(f64::from(v))));
@@ -27914,9 +28760,12 @@ fn minolta_camerasettings5d(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val * 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ColorTemperature", 0x6e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val * 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ColorTemperature", 0x6e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0xe2, bo) {
         dm.push(("PictureFinish".to_string(), Conv::Num(f64::from(v))));
@@ -27944,9 +28793,12 @@ fn minolta_camerasettings5d(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ImageNumber", 0xae, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ImageNumber", 0xae, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x160, bo) {
         dm.push(("NoiseReduction".to_string(), Conv::Num(f64::from(v))));
@@ -28014,9 +28866,12 @@ fn minolta_camerasettingsa100(data: &[u8], make: &str, model: &str, bo: ByteOrde
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100 - 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ExposureCompensationSetting", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100 - 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ExposureCompensationSetting", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0xa, bo) {
         dm.push(("HighSpeedSync".to_string(), Conv::Num(f64::from(v))));
@@ -28036,40 +28891,52 @@ fn minolta_camerasettingsa100(data: &[u8], make: &str, model: &str, bo: ByteOrde
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val ? 2 ** (6 - $val/8) : 0", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("ShutterSpeedSetting", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val ? 2 ** (6 - $val/8) : 0", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("ShutterSpeedSetting", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0xe, bo) {
         dm.push(("ApertureSetting".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (($val/8 - 1) / 2)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFNumber($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ApertureSetting", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** (($val/8 - 1) / 2)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFNumber($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ApertureSetting", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x10, bo) {
         dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val ? 2 ** (6 - $val/8) : 0", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val ? 2 ** (6 - $val/8) : 0", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x12, bo) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (($val/8 - 1) / 2)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFNumber($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FNumber", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** (($val/8 - 1) / 2)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFNumber($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FNumber", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x14, bo) {
         dm.push(("DriveMode2".to_string(), Conv::Num(f64::from(v))));
@@ -28182,9 +29049,12 @@ fn minolta_camerasettingsa100(data: &[u8], make: &str, model: &str, bo: ByteOrde
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100 - 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("FlashExposureCompSet", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100 - 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("FlashExposureCompSet", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x24, bo) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -28280,27 +29150,36 @@ fn minolta_camerasettingsa100(data: &[u8], make: &str, model: &str, bo: ByteOrde
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Sharpness", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Sharpness", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x32, bo) {
         dm.push(("Contrast".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Contrast", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Contrast", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x34, bo) {
         dm.push(("Saturation".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("Saturation", 0x1a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("Saturation", 0x1a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x38, bo) {
         dm.push(("FlashMetering".to_string(), Conv::Num(f64::from(v))));
@@ -28520,9 +29399,12 @@ fn minolta_camerasettingsa100(data: &[u8], make: &str, model: &str, bo: ByteOrde
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val * 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ColorTemperature", 0x39, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val * 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ColorTemperature", 0x39, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x74, bo) {
         dm.push(("ColorCompensationFilter".to_string(), Conv::Num(f64::from(v))));
@@ -29077,9 +29959,12 @@ fn minolta_camerasettingsa100(data: &[u8], make: &str, model: &str, bo: ByteOrde
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val * 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ColorTemperature", 0x5e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val * 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ColorTemperature", 0x5e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0xbe, bo) {
         dm.push(("ColorCompensationFilter".to_string(), Conv::Num(f64::from(v))));
@@ -29296,10 +30181,13 @@ fn nikon_shotinfod90(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO2", 0x2b5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO2", 0x2b5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x2d5, bo) {
         dm.push(("ShutterCount".to_string(), Conv::Num(f64::from(v))));
@@ -29329,10 +30217,13 @@ fn nikon_shotinfod3a(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO2", 0x256, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO2", 0x256, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x276, bo) {
         dm.push(("ShutterCount".to_string(), Conv::Num(f64::from(v))));
@@ -29422,10 +30313,13 @@ fn nikon_shotinfod3b(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO2", 0x25d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO2", 0x25d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x28a) {
         dm.push(("PreFlashReturnStrength".to_string(), Conv::Num(f64::from(v))));
@@ -29493,10 +30387,13 @@ fn nikon_shotinfod3x(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO2", 0x25d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO2", 0x25d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x280, bo) {
         dm.push(("ShutterCount".to_string(), Conv::Num(f64::from(v))));
@@ -29544,10 +30441,13 @@ fn nikon_shotinfod3s(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO2", 0x221, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO2", 0x221, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x242, bo) {
         dm.push(("ShutterCount".to_string(), Conv::Num(f64::from(v))));
@@ -29591,10 +30491,13 @@ fn nikon_shotinfod300a(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO2", 0x25c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO2", 0x25c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x279, bo) {
         dm.push(("ShutterCount".to_string(), Conv::Num(f64::from(v))));
@@ -29687,10 +30590,13 @@ fn nikon_shotinfod300b(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO2", 0x265, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO2", 0x265, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x284, bo) {
         dm.push(("ShutterCount".to_string(), Conv::Num(f64::from(v))));
@@ -29831,10 +30737,13 @@ fn nikon_shotinfod300s(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO2", 0x265, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO2", 0x265, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x286, bo) {
         dm.push(("ShutterCount".to_string(), Conv::Num(f64::from(v))));
@@ -29867,10 +30776,13 @@ fn nikon_shotinfod700(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO2", 0x265, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO2", 0x265, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x287, bo) {
         dm.push(("ShutterCount".to_string(), Conv::Num(f64::from(v))));
@@ -29963,10 +30875,13 @@ fn nikon_shotinfod800(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val/6)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("RepeatingFlashOutputExternal", 0x4c0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** (-$val/6)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("RepeatingFlashOutputExternal", 0x4c0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x4c2) {
         dm.push(("RepeatingFlashRateExternal".to_string(), Conv::Num(f64::from(v))));
@@ -29997,10 +30912,13 @@ fn nikon_shotinfod800(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("-$val/6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashExposureComp2", 0x4d2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("-$val/6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FlashExposureComp2", 0x4d2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x4da) {
         dm.push(("RepeatingFlashRateBuilt-in".to_string(), Conv::Num(f64::from(v))));
@@ -30158,10 +31076,13 @@ fn nikon_shotinfod5000(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO2", 0x2b5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("100*exp(($val/12-5)*log(2))", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ISO2", 0x2b5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x2d6, bo) {
         dm.push(("ShutterCount".to_string(), Conv::Num(f64::from(v))));
@@ -31064,30 +31985,39 @@ fn nikon_orientationinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val <= 180 ? $val : $val - 360", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\", $val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("RollAngle", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val <= 180 ? $val : $val - 360", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\", $val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("RollAngle", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = fix32u_at(data, 0x4, bo) {
         dm.push(("PitchAngle".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val <= 180 ? $val : $val - 360", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\", $val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("PitchAngle", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val <= 180 ? $val : $val - 360", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\", $val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("PitchAngle", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = fix32u_at(data, 0x8, bo) {
         dm.push(("YawAngle".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val <= 180 ? $val : $val - 360", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\", $val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("YawAngle", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val <= 180 ? $val : $val - 360", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\", $val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("YawAngle", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -32162,18 +33092,22 @@ fn nikon_menusettingsz6iii(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         dm.push(("ReleaseMode".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "Continuous Low".to_string(),
-            1 => "Continuous High".to_string(),
-            2 => "Continuous High (Extended)".to_string(),
-            4 => "Timer".to_string(),
-            5 => "Single Frame".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("ReleaseMode", 0x5c, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$$self{SingleFrame} == 0 ? 5 : $val", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "Continuous Low".to_string(),
+                1 => "Continuous High".to_string(),
+                2 => "Continuous High (Extended)".to_string(),
+                4 => "Timer".to_string(),
+                5 => "Single Frame".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("ReleaseMode", 0x5c, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0xa0, bo) {
         dm.push(("IntervalDurationHours".to_string(), Conv::Num(f64::from(v))));
@@ -33447,21 +34381,25 @@ fn nikon_autocaptureinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
             dm.push(("AutoCaptureCriteriaSubjectType".to_string(), Conv::Num(f64::from(v))));
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
-            #[allow(clippy::cast_possible_truncation)]
-            let s = match base.as_num() as i64 {
-                0 => "Off".to_string(),
-                1 => "Auto".to_string(),
-                2 => "People".to_string(),
-                3 => "Animals".to_string(),
-                4 => "Vehicles".to_string(),
-                5 => "Birds".to_string(),
-                6 => "Airplanes".to_string(),
-                7 => "Faces".to_string(),
-                other => other.to_string(),
-            };
-            #[allow(clippy::cast_possible_truncation)]
-            let raw = Value::I32(base.as_num() as i32);
-            tags.push(mk("AutoCaptureCriteriaSubjectType", 0x6a, s, raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val + 1", &base, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                let base = vc.unwrap_or(base);
+                #[allow(clippy::cast_possible_truncation)]
+                let s = match base.as_num() as i64 {
+                    0 => "Off".to_string(),
+                    1 => "Auto".to_string(),
+                    2 => "People".to_string(),
+                    3 => "Animals".to_string(),
+                    4 => "Vehicles".to_string(),
+                    5 => "Birds".to_string(),
+                    6 => "Airplanes".to_string(),
+                    7 => "Faces".to_string(),
+                    other => other.to_string(),
+                };
+                #[allow(clippy::cast_possible_truncation)]
+                let raw = Value::I32(base.as_num() as i32);
+                tags.push(mk("AutoCaptureCriteriaSubjectType", 0x6a, s, raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     tags
@@ -33706,18 +34644,22 @@ fn nikon_menusettingsz7ii(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         dm.push(("ReleaseMode".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "Continuous Low".to_string(),
-            1 => "Continuous High".to_string(),
-            2 => "Continuous High (Extended)".to_string(),
-            4 => "Timer".to_string(),
-            5 => "Single Frame".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("ReleaseMode", 0x5c, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$$self{SingleFrame} == 0 ? 5 : $val", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "Continuous Low".to_string(),
+                1 => "Continuous High".to_string(),
+                2 => "Continuous High (Extended)".to_string(),
+                4 => "Timer".to_string(),
+                5 => "Single Frame".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("ReleaseMode", 0x5c, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0xa0, bo) {
         dm.push(("IntervalDurationHours".to_string(), Conv::Num(f64::from(v))));
@@ -34693,61 +35635,65 @@ fn nikon_menusettingsz9(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         dm.push(("ISOAutoShutterTime".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            -15 => "Auto".to_string(),
-            -12 => "15 s".to_string(),
-            -9 => "8 s".to_string(),
-            -6 => "4 s".to_string(),
-            -3 => "2 s".to_string(),
-            0 => "1 s".to_string(),
-            1 => "1/1.3 s".to_string(),
-            2 => "1/1.6 s".to_string(),
-            3 => "1/2 s".to_string(),
-            4 => "1/2.5 s".to_string(),
-            5 => "1/12000 s".to_string(),
-            6 => "1/4 s".to_string(),
-            7 => "1/5 s".to_string(),
-            8 => "1/6 s".to_string(),
-            9 => "1/8 s".to_string(),
-            10 => "1/10 s".to_string(),
-            11 => "1/13 s".to_string(),
-            12 => "1/15 s".to_string(),
-            13 => "1/20 s".to_string(),
-            14 => "1/25 s".to_string(),
-            15 => "1/30 s".to_string(),
-            16 => "1/40 s".to_string(),
-            17 => "1/50 s".to_string(),
-            18 => "1/60 s".to_string(),
-            19 => "1/80 s".to_string(),
-            20 => "1/100 s".to_string(),
-            21 => "1/120 s".to_string(),
-            22 => "1/160 s".to_string(),
-            23 => "1/200 s".to_string(),
-            24 => "1/250 s".to_string(),
-            25 => "1/320 s".to_string(),
-            26 => "1/400 s".to_string(),
-            27 => "1/500 s".to_string(),
-            28 => "1/640 s".to_string(),
-            29 => "1/800 s".to_string(),
-            30 => "1/1000 s".to_string(),
-            31 => "1/1250 s".to_string(),
-            32 => "1/1600 s".to_string(),
-            33 => "1/2000 s".to_string(),
-            34 => "1/2500 s".to_string(),
-            35 => "1/3200 s".to_string(),
-            36 => "1/4000 s".to_string(),
-            37 => "1/5000 s".to_string(),
-            38 => "1/6400 s".to_string(),
-            39 => "1/8000 s".to_string(),
-            40 => "1/10000 s".to_string(),
-            41 => "1/13000 s".to_string(),
-            42 => "1/16000 s".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("ISOAutoShutterTime", 0x14e, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 8", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                -15 => "Auto".to_string(),
+                -12 => "15 s".to_string(),
+                -9 => "8 s".to_string(),
+                -6 => "4 s".to_string(),
+                -3 => "2 s".to_string(),
+                0 => "1 s".to_string(),
+                1 => "1/1.3 s".to_string(),
+                2 => "1/1.6 s".to_string(),
+                3 => "1/2 s".to_string(),
+                4 => "1/2.5 s".to_string(),
+                5 => "1/12000 s".to_string(),
+                6 => "1/4 s".to_string(),
+                7 => "1/5 s".to_string(),
+                8 => "1/6 s".to_string(),
+                9 => "1/8 s".to_string(),
+                10 => "1/10 s".to_string(),
+                11 => "1/13 s".to_string(),
+                12 => "1/15 s".to_string(),
+                13 => "1/20 s".to_string(),
+                14 => "1/25 s".to_string(),
+                15 => "1/30 s".to_string(),
+                16 => "1/40 s".to_string(),
+                17 => "1/50 s".to_string(),
+                18 => "1/60 s".to_string(),
+                19 => "1/80 s".to_string(),
+                20 => "1/100 s".to_string(),
+                21 => "1/120 s".to_string(),
+                22 => "1/160 s".to_string(),
+                23 => "1/200 s".to_string(),
+                24 => "1/250 s".to_string(),
+                25 => "1/320 s".to_string(),
+                26 => "1/400 s".to_string(),
+                27 => "1/500 s".to_string(),
+                28 => "1/640 s".to_string(),
+                29 => "1/800 s".to_string(),
+                30 => "1/1000 s".to_string(),
+                31 => "1/1250 s".to_string(),
+                32 => "1/1600 s".to_string(),
+                33 => "1/2000 s".to_string(),
+                34 => "1/2500 s".to_string(),
+                35 => "1/3200 s".to_string(),
+                36 => "1/4000 s".to_string(),
+                37 => "1/5000 s".to_string(),
+                38 => "1/6400 s".to_string(),
+                39 => "1/8000 s".to_string(),
+                40 => "1/10000 s".to_string(),
+                41 => "1/13000 s".to_string(),
+                42 => "1/16000 s".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("ISOAutoShutterTime", 0x14e, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1a0) {
         dm.push(("MovieVignetteControl".to_string(), Conv::Num(f64::from(v))));
@@ -35371,61 +36317,65 @@ fn nikon_menusettingsz9v3(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         dm.push(("ISOAutoShutterTime".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            -15 => "Auto".to_string(),
-            -12 => "15 s".to_string(),
-            -9 => "8 s".to_string(),
-            -6 => "4 s".to_string(),
-            -3 => "2 s".to_string(),
-            0 => "1 s".to_string(),
-            1 => "1/1.3 s".to_string(),
-            2 => "1/1.6 s".to_string(),
-            3 => "1/2 s".to_string(),
-            4 => "1/2.5 s".to_string(),
-            5 => "1/12000 s".to_string(),
-            6 => "1/4 s".to_string(),
-            7 => "1/5 s".to_string(),
-            8 => "1/6 s".to_string(),
-            9 => "1/8 s".to_string(),
-            10 => "1/10 s".to_string(),
-            11 => "1/13 s".to_string(),
-            12 => "1/15 s".to_string(),
-            13 => "1/20 s".to_string(),
-            14 => "1/25 s".to_string(),
-            15 => "1/30 s".to_string(),
-            16 => "1/40 s".to_string(),
-            17 => "1/50 s".to_string(),
-            18 => "1/60 s".to_string(),
-            19 => "1/80 s".to_string(),
-            20 => "1/100 s".to_string(),
-            21 => "1/120 s".to_string(),
-            22 => "1/160 s".to_string(),
-            23 => "1/200 s".to_string(),
-            24 => "1/250 s".to_string(),
-            25 => "1/320 s".to_string(),
-            26 => "1/400 s".to_string(),
-            27 => "1/500 s".to_string(),
-            28 => "1/640 s".to_string(),
-            29 => "1/800 s".to_string(),
-            30 => "1/1000 s".to_string(),
-            31 => "1/1250 s".to_string(),
-            32 => "1/1600 s".to_string(),
-            33 => "1/2000 s".to_string(),
-            34 => "1/2500 s".to_string(),
-            35 => "1/3200 s".to_string(),
-            36 => "1/4000 s".to_string(),
-            37 => "1/5000 s".to_string(),
-            38 => "1/6400 s".to_string(),
-            39 => "1/8000 s".to_string(),
-            40 => "1/10000 s".to_string(),
-            41 => "1/13000 s".to_string(),
-            42 => "1/16000 s".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("ISOAutoShutterTime", 0x162, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 8", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                -15 => "Auto".to_string(),
+                -12 => "15 s".to_string(),
+                -9 => "8 s".to_string(),
+                -6 => "4 s".to_string(),
+                -3 => "2 s".to_string(),
+                0 => "1 s".to_string(),
+                1 => "1/1.3 s".to_string(),
+                2 => "1/1.6 s".to_string(),
+                3 => "1/2 s".to_string(),
+                4 => "1/2.5 s".to_string(),
+                5 => "1/12000 s".to_string(),
+                6 => "1/4 s".to_string(),
+                7 => "1/5 s".to_string(),
+                8 => "1/6 s".to_string(),
+                9 => "1/8 s".to_string(),
+                10 => "1/10 s".to_string(),
+                11 => "1/13 s".to_string(),
+                12 => "1/15 s".to_string(),
+                13 => "1/20 s".to_string(),
+                14 => "1/25 s".to_string(),
+                15 => "1/30 s".to_string(),
+                16 => "1/40 s".to_string(),
+                17 => "1/50 s".to_string(),
+                18 => "1/60 s".to_string(),
+                19 => "1/80 s".to_string(),
+                20 => "1/100 s".to_string(),
+                21 => "1/120 s".to_string(),
+                22 => "1/160 s".to_string(),
+                23 => "1/200 s".to_string(),
+                24 => "1/250 s".to_string(),
+                25 => "1/320 s".to_string(),
+                26 => "1/400 s".to_string(),
+                27 => "1/500 s".to_string(),
+                28 => "1/640 s".to_string(),
+                29 => "1/800 s".to_string(),
+                30 => "1/1000 s".to_string(),
+                31 => "1/1250 s".to_string(),
+                32 => "1/1600 s".to_string(),
+                33 => "1/2000 s".to_string(),
+                34 => "1/2500 s".to_string(),
+                35 => "1/3200 s".to_string(),
+                36 => "1/4000 s".to_string(),
+                37 => "1/5000 s".to_string(),
+                38 => "1/6400 s".to_string(),
+                39 => "1/8000 s".to_string(),
+                40 => "1/10000 s".to_string(),
+                41 => "1/13000 s".to_string(),
+                42 => "1/16000 s".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("ISOAutoShutterTime", 0x162, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1b4) {
         dm.push(("MovieVignetteControl".to_string(), Conv::Num(f64::from(v))));
@@ -36084,61 +37034,65 @@ fn nikon_menusettingsz9v4(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         dm.push(("ISOAutoShutterTime".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            -15 => "Auto".to_string(),
-            -12 => "15 s".to_string(),
-            -9 => "8 s".to_string(),
-            -6 => "4 s".to_string(),
-            -3 => "2 s".to_string(),
-            0 => "1 s".to_string(),
-            1 => "1/1.3 s".to_string(),
-            2 => "1/1.6 s".to_string(),
-            3 => "1/2 s".to_string(),
-            4 => "1/2.5 s".to_string(),
-            5 => "1/12000 s".to_string(),
-            6 => "1/4 s".to_string(),
-            7 => "1/5 s".to_string(),
-            8 => "1/6 s".to_string(),
-            9 => "1/8 s".to_string(),
-            10 => "1/10 s".to_string(),
-            11 => "1/13 s".to_string(),
-            12 => "1/15 s".to_string(),
-            13 => "1/20 s".to_string(),
-            14 => "1/25 s".to_string(),
-            15 => "1/30 s".to_string(),
-            16 => "1/40 s".to_string(),
-            17 => "1/50 s".to_string(),
-            18 => "1/60 s".to_string(),
-            19 => "1/80 s".to_string(),
-            20 => "1/100 s".to_string(),
-            21 => "1/120 s".to_string(),
-            22 => "1/160 s".to_string(),
-            23 => "1/200 s".to_string(),
-            24 => "1/250 s".to_string(),
-            25 => "1/320 s".to_string(),
-            26 => "1/400 s".to_string(),
-            27 => "1/500 s".to_string(),
-            28 => "1/640 s".to_string(),
-            29 => "1/800 s".to_string(),
-            30 => "1/1000 s".to_string(),
-            31 => "1/1250 s".to_string(),
-            32 => "1/1600 s".to_string(),
-            33 => "1/2000 s".to_string(),
-            34 => "1/2500 s".to_string(),
-            35 => "1/3200 s".to_string(),
-            36 => "1/4000 s".to_string(),
-            37 => "1/5000 s".to_string(),
-            38 => "1/6400 s".to_string(),
-            39 => "1/8000 s".to_string(),
-            40 => "1/10000 s".to_string(),
-            41 => "1/13000 s".to_string(),
-            42 => "1/16000 s".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("ISOAutoShutterTime", 0x162, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 8", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                -15 => "Auto".to_string(),
+                -12 => "15 s".to_string(),
+                -9 => "8 s".to_string(),
+                -6 => "4 s".to_string(),
+                -3 => "2 s".to_string(),
+                0 => "1 s".to_string(),
+                1 => "1/1.3 s".to_string(),
+                2 => "1/1.6 s".to_string(),
+                3 => "1/2 s".to_string(),
+                4 => "1/2.5 s".to_string(),
+                5 => "1/12000 s".to_string(),
+                6 => "1/4 s".to_string(),
+                7 => "1/5 s".to_string(),
+                8 => "1/6 s".to_string(),
+                9 => "1/8 s".to_string(),
+                10 => "1/10 s".to_string(),
+                11 => "1/13 s".to_string(),
+                12 => "1/15 s".to_string(),
+                13 => "1/20 s".to_string(),
+                14 => "1/25 s".to_string(),
+                15 => "1/30 s".to_string(),
+                16 => "1/40 s".to_string(),
+                17 => "1/50 s".to_string(),
+                18 => "1/60 s".to_string(),
+                19 => "1/80 s".to_string(),
+                20 => "1/100 s".to_string(),
+                21 => "1/120 s".to_string(),
+                22 => "1/160 s".to_string(),
+                23 => "1/200 s".to_string(),
+                24 => "1/250 s".to_string(),
+                25 => "1/320 s".to_string(),
+                26 => "1/400 s".to_string(),
+                27 => "1/500 s".to_string(),
+                28 => "1/640 s".to_string(),
+                29 => "1/800 s".to_string(),
+                30 => "1/1000 s".to_string(),
+                31 => "1/1250 s".to_string(),
+                32 => "1/1600 s".to_string(),
+                33 => "1/2000 s".to_string(),
+                34 => "1/2500 s".to_string(),
+                35 => "1/3200 s".to_string(),
+                36 => "1/4000 s".to_string(),
+                37 => "1/5000 s".to_string(),
+                38 => "1/6400 s".to_string(),
+                39 => "1/8000 s".to_string(),
+                40 => "1/10000 s".to_string(),
+                41 => "1/13000 s".to_string(),
+                42 => "1/16000 s".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("ISOAutoShutterTime", 0x162, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1b4) {
         dm.push(("MovieVignetteControl".to_string(), Conv::Num(f64::from(v))));
@@ -37122,61 +38076,65 @@ fn nikon_menusettingsz8(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         dm.push(("ISOAutoShutterTime".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            -15 => "Auto".to_string(),
-            -12 => "15 s".to_string(),
-            -9 => "8 s".to_string(),
-            -6 => "4 s".to_string(),
-            -3 => "2 s".to_string(),
-            0 => "1 s".to_string(),
-            1 => "1/1.3 s".to_string(),
-            2 => "1/1.6 s".to_string(),
-            3 => "1/2 s".to_string(),
-            4 => "1/2.5 s".to_string(),
-            5 => "1/12000 s".to_string(),
-            6 => "1/4 s".to_string(),
-            7 => "1/5 s".to_string(),
-            8 => "1/6 s".to_string(),
-            9 => "1/8 s".to_string(),
-            10 => "1/10 s".to_string(),
-            11 => "1/13 s".to_string(),
-            12 => "1/15 s".to_string(),
-            13 => "1/20 s".to_string(),
-            14 => "1/25 s".to_string(),
-            15 => "1/30 s".to_string(),
-            16 => "1/40 s".to_string(),
-            17 => "1/50 s".to_string(),
-            18 => "1/60 s".to_string(),
-            19 => "1/80 s".to_string(),
-            20 => "1/100 s".to_string(),
-            21 => "1/120 s".to_string(),
-            22 => "1/160 s".to_string(),
-            23 => "1/200 s".to_string(),
-            24 => "1/250 s".to_string(),
-            25 => "1/320 s".to_string(),
-            26 => "1/400 s".to_string(),
-            27 => "1/500 s".to_string(),
-            28 => "1/640 s".to_string(),
-            29 => "1/800 s".to_string(),
-            30 => "1/1000 s".to_string(),
-            31 => "1/1250 s".to_string(),
-            32 => "1/1600 s".to_string(),
-            33 => "1/2000 s".to_string(),
-            34 => "1/2500 s".to_string(),
-            35 => "1/3200 s".to_string(),
-            36 => "1/4000 s".to_string(),
-            37 => "1/5000 s".to_string(),
-            38 => "1/6400 s".to_string(),
-            39 => "1/8000 s".to_string(),
-            40 => "1/10000 s".to_string(),
-            41 => "1/13000 s".to_string(),
-            42 => "1/16000 s".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("ISOAutoShutterTime", 0x15e, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 8", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                -15 => "Auto".to_string(),
+                -12 => "15 s".to_string(),
+                -9 => "8 s".to_string(),
+                -6 => "4 s".to_string(),
+                -3 => "2 s".to_string(),
+                0 => "1 s".to_string(),
+                1 => "1/1.3 s".to_string(),
+                2 => "1/1.6 s".to_string(),
+                3 => "1/2 s".to_string(),
+                4 => "1/2.5 s".to_string(),
+                5 => "1/12000 s".to_string(),
+                6 => "1/4 s".to_string(),
+                7 => "1/5 s".to_string(),
+                8 => "1/6 s".to_string(),
+                9 => "1/8 s".to_string(),
+                10 => "1/10 s".to_string(),
+                11 => "1/13 s".to_string(),
+                12 => "1/15 s".to_string(),
+                13 => "1/20 s".to_string(),
+                14 => "1/25 s".to_string(),
+                15 => "1/30 s".to_string(),
+                16 => "1/40 s".to_string(),
+                17 => "1/50 s".to_string(),
+                18 => "1/60 s".to_string(),
+                19 => "1/80 s".to_string(),
+                20 => "1/100 s".to_string(),
+                21 => "1/120 s".to_string(),
+                22 => "1/160 s".to_string(),
+                23 => "1/200 s".to_string(),
+                24 => "1/250 s".to_string(),
+                25 => "1/320 s".to_string(),
+                26 => "1/400 s".to_string(),
+                27 => "1/500 s".to_string(),
+                28 => "1/640 s".to_string(),
+                29 => "1/800 s".to_string(),
+                30 => "1/1000 s".to_string(),
+                31 => "1/1250 s".to_string(),
+                32 => "1/1600 s".to_string(),
+                33 => "1/2000 s".to_string(),
+                34 => "1/2500 s".to_string(),
+                35 => "1/3200 s".to_string(),
+                36 => "1/4000 s".to_string(),
+                37 => "1/5000 s".to_string(),
+                38 => "1/6400 s".to_string(),
+                39 => "1/8000 s".to_string(),
+                40 => "1/10000 s".to_string(),
+                41 => "1/13000 s".to_string(),
+                42 => "1/16000 s".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("ISOAutoShutterTime", 0x15e, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1b0) {
         dm.push(("MovieVignetteControl".to_string(), Conv::Num(f64::from(v))));
@@ -37688,54 +38646,72 @@ fn nikoncapture_picturectrl(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("QuickAdjust", 0x2a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("QuickAdjust", 0x2a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x2b) {
         dm.push(("SharpeningAdj".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val ? $val - 128 : \"Auto\"", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("SharpeningAdj", 0x2b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val ? $val - 128 : \"Auto\"", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("SharpeningAdj", 0x2b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x2c) {
         dm.push(("ContrastAdj".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val ? $val - 128 : \"Auto\"", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ContrastAdj", 0x2c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val ? $val - 128 : \"Auto\"", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ContrastAdj", 0x2c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x2d) {
         dm.push(("BrightnessAdj".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val ? $val - 128 : \"Auto\"", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("BrightnessAdj", 0x2d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val ? $val - 128 : \"Auto\"", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("BrightnessAdj", 0x2d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x2e) {
         dm.push(("SaturationAdj".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val ? $val - 128 : \"Auto\"", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("SaturationAdj", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val ? $val - 128 : \"Auto\"", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("SaturationAdj", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x2f) {
         dm.push(("HueAdj".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("HueAdj", 0x2f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 128", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("HueAdj", 0x2f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -38000,9 +38976,12 @@ fn nikoncapture_brightness(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val * 50", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("BrightnessAdj", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val * 50", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("BrightnessAdj", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x8) {
         dm.push(("EnhanceDarkTones".to_string(), Conv::Num(f64::from(v))));
@@ -38063,9 +39042,12 @@ fn nikoncapture_exposure(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("ExposureAdj", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 100", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("ExposureAdj", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = f64_at(data, 0x12, bo) {
         dm.push(("ExposureAdj2".to_string(), Conv::Num(f64::from(v))));
@@ -38399,23 +39381,29 @@ fn nikoncustom_settingsd40(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("2 ** (-$val)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("ManualFlashOutput", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("ManualFlashOutput", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x9) {
         dm.push(("FlashLevel".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("sprintf(\"%+.1f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashLevel", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%+.1f\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FlashLevel", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xa) {
         let v = (v & 0xc0) >> 6;
@@ -38880,10 +39868,13 @@ fn nikoncustom_settingsd810(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = (v & 0xf0) >> 4;
@@ -38891,10 +39882,13 @@ fn nikoncustom_settingsd810(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptCenterWeighted", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptCenterWeighted", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = v & 0xf;
@@ -38902,10 +39896,13 @@ fn nikoncustom_settingsd810(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xa) {
         let v = (v & 0xc0) >> 6;
@@ -39659,10 +40656,13 @@ fn nikoncustom_settingsd810(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptHighlightWeighted", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptHighlightWeighted", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x2f) {
         let v = (v & 0x80) >> 7;
@@ -40150,10 +41150,13 @@ fn nikoncustom_settingsd850(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = (v & 0xf0) >> 4;
@@ -40161,10 +41164,13 @@ fn nikoncustom_settingsd850(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptCenterWeighted", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptCenterWeighted", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = v & 0xf;
@@ -40172,10 +41178,13 @@ fn nikoncustom_settingsd850(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xa) {
         let v = (v & 0xe0) >> 5;
@@ -40855,10 +41864,13 @@ fn nikoncustom_settingsd850(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptHighlightWeighted", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptHighlightWeighted", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x2f) {
         let v = (v & 0x80) >> 7;
@@ -41590,40 +42602,52 @@ fn nikoncustom_settingsz6iii(data: &[u8], make: &str, model: &str, bo: ByteOrder
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x25) {
         dm.push(("FineTuneOptCenterWeighted".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptCenterWeighted", 0x25, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptCenterWeighted", 0x25, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x27) {
         dm.push(("FineTuneOptSpotMetering".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x27, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x27, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x29) {
         dm.push(("FineTuneOptHighlightWeighted".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptHighlightWeighted", 0x29, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptHighlightWeighted", 0x29, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x2b) {
         dm.push(("ShutterReleaseButtonAE-L".to_string(), Conv::Num(f64::from(v))));
@@ -41764,19 +42788,25 @@ fn nikoncustom_settingsz6iii(data: &[u8], make: &str, model: &str, bo: ByteOrder
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CLModeShootingSpeed", 0x3f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CLModeShootingSpeed", 0x3f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x41, bo) {
         dm.push(("MaxContinuousRelease".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val eq -1 ?  'No Limit' : $val ) ", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("MaxContinuousRelease", 0x41, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val eq -1 ?  'No Limit' : $val ) ", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("MaxContinuousRelease", 0x41, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x45) {
         dm.push(("SyncReleaseMode".to_string(), Conv::Num(f64::from(v))));
@@ -41826,19 +42856,23 @@ fn nikoncustom_settingsz6iii(data: &[u8], make: &str, model: &str, bo: ByteOrder
         dm.push(("FlashSyncSpeed".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "1/60 s".to_string(),
-            1 => "1/80 s".to_string(),
-            2 => "1/100 s".to_string(),
-            3 => "1/125 s".to_string(),
-            4 => "1/160 s".to_string(),
-            5 => "1/200 s".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("FlashSyncSpeed", 0x57, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val-144)/8", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "1/60 s".to_string(),
+                1 => "1/80 s".to_string(),
+                2 => "1/100 s".to_string(),
+                3 => "1/125 s".to_string(),
+                4 => "1/160 s".to_string(),
+                5 => "1/200 s".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("FlashSyncSpeed", 0x57, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x59) {
         dm.push(("HighSpeedSync".to_string(), Conv::Num(f64::from(v))));
@@ -41857,25 +42891,29 @@ fn nikoncustom_settingsz6iii(data: &[u8], make: &str, model: &str, bo: ByteOrder
         dm.push(("FlashShutterSpeed".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "1 s".to_string(),
-            1 => "1/2 s".to_string(),
-            2 => "1/4 s".to_string(),
-            3 => "1/8 s".to_string(),
-            4 => "1/15 s".to_string(),
-            5 => "1/30 s".to_string(),
-            6 => "1/60 s".to_string(),
-            7 => "30 s".to_string(),
-            8 => "15 s".to_string(),
-            9 => "8 s".to_string(),
-            10 => "4 s".to_string(),
-            11 => "2 s".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("FlashShutterSpeed", 0x5b, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("my $t = ($val - 16) % 24; $t ? $val / 24  : 2 + ($val - 16) / 24", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "1 s".to_string(),
+                1 => "1/2 s".to_string(),
+                2 => "1/4 s".to_string(),
+                3 => "1/8 s".to_string(),
+                4 => "1/15 s".to_string(),
+                5 => "1/30 s".to_string(),
+                6 => "1/60 s".to_string(),
+                7 => "30 s".to_string(),
+                8 => "15 s".to_string(),
+                9 => "8 s".to_string(),
+                10 => "4 s".to_string(),
+                11 => "2 s".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("FlashShutterSpeed", 0x5b, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x5d) {
         dm.push(("FlashExposureCompArea".to_string(), Conv::Num(f64::from(v))));
@@ -43073,9 +44111,12 @@ fn nikoncustom_settingsz6iii(data: &[u8], make: &str, model: &str, bo: ByteOrder
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 5", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("MovieAFSpeed", 0xe5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 5", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("MovieAFSpeed", 0xe5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xe7) {
         dm.push(("MovieAFSpeedApply".to_string(), Conv::Num(f64::from(v))));
@@ -43382,40 +44423,52 @@ fn nikoncustom_settingsz8(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x21, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x21, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x23) {
         dm.push(("FineTuneOptCenterWeighted".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptCenterWeighted", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptCenterWeighted", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x25) {
         dm.push(("FineTuneOptSpotMetering".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x25, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x25, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x27) {
         dm.push(("FineTuneOptHighlightWeighted".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptHighlightWeighted", 0x27, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptHighlightWeighted", 0x27, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x29) {
         dm.push(("ShutterReleaseButtonAE-L".to_string(), Conv::Num(f64::from(v))));
@@ -43557,19 +44610,25 @@ fn nikoncustom_settingsz8(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CLModeShootingSpeed", 0x3b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CLModeShootingSpeed", 0x3b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x3d, bo) {
         dm.push(("MaxContinuousRelease".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val eq -1 ?  'No Limit' : $val ) ", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("MaxContinuousRelease", 0x3d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val eq -1 ?  'No Limit' : $val ) ", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("MaxContinuousRelease", 0x3d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x41) {
         dm.push(("SyncReleaseMode".to_string(), Conv::Num(f64::from(v))));
@@ -43619,20 +44678,24 @@ fn nikoncustom_settingsz8(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         dm.push(("FlashSyncSpeed".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "1/60 s".to_string(),
-            1 => "1/80 s".to_string(),
-            2 => "1/100 s".to_string(),
-            3 => "1/125 s".to_string(),
-            4 => "1/160 s".to_string(),
-            5 => "1/200 s".to_string(),
-            6 => "1/250 s".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("FlashSyncSpeed", 0x53, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val-144)/8", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "1/60 s".to_string(),
+                1 => "1/80 s".to_string(),
+                2 => "1/100 s".to_string(),
+                3 => "1/125 s".to_string(),
+                4 => "1/160 s".to_string(),
+                5 => "1/200 s".to_string(),
+                6 => "1/250 s".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("FlashSyncSpeed", 0x53, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x55) {
         dm.push(("HighSpeedSync".to_string(), Conv::Num(f64::from(v))));
@@ -43651,25 +44714,29 @@ fn nikoncustom_settingsz8(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         dm.push(("FlashShutterSpeed".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "1 s".to_string(),
-            1 => "1/2 s".to_string(),
-            2 => "1/4 s".to_string(),
-            3 => "1/8 s".to_string(),
-            4 => "1/15 s".to_string(),
-            5 => "1/30 s".to_string(),
-            6 => "1/60 s".to_string(),
-            7 => "30 s".to_string(),
-            8 => "15 s".to_string(),
-            9 => "8 s".to_string(),
-            10 => "4 s".to_string(),
-            11 => "2 s".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("FlashShutterSpeed", 0x57, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("my $t = ($val - 16) % 24; $t ? $val / 24  : 2 + ($val - 16) / 24", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "1 s".to_string(),
+                1 => "1/2 s".to_string(),
+                2 => "1/4 s".to_string(),
+                3 => "1/8 s".to_string(),
+                4 => "1/15 s".to_string(),
+                5 => "1/30 s".to_string(),
+                6 => "1/60 s".to_string(),
+                7 => "30 s".to_string(),
+                8 => "15 s".to_string(),
+                9 => "8 s".to_string(),
+                10 => "4 s".to_string(),
+                11 => "2 s".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("FlashShutterSpeed", 0x57, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x59) {
         dm.push(("FlashExposureCompArea".to_string(), Conv::Num(f64::from(v))));
@@ -43897,9 +44964,12 @@ fn nikoncustom_settingsz8(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 5", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("MovieAFSpeed", 0xdd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 5", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("MovieAFSpeed", 0xdd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xdf) {
         dm.push(("MovieAFSpeedApply".to_string(), Conv::Num(f64::from(v))));
@@ -43961,10 +45031,13 @@ fn nikoncustom_settingsz8(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CHModeShootingSpeed", 0x10b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CHModeShootingSpeed", 0x10b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x111) {
         dm.push(("FlashBurstPriority".to_string(), Conv::Num(f64::from(v))));
@@ -44374,40 +45447,52 @@ fn nikoncustom_settingsz9(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x21, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x21, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x23) {
         dm.push(("FineTuneOptCenterWeighted".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptCenterWeighted", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptCenterWeighted", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x25) {
         dm.push(("FineTuneOptSpotMetering".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x25, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x25, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x27) {
         dm.push(("FineTuneOptHighlightWeighted".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptHighlightWeighted", 0x27, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptHighlightWeighted", 0x27, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x29) {
         dm.push(("ShutterReleaseButtonAE-L".to_string(), Conv::Num(f64::from(v))));
@@ -44548,19 +45633,25 @@ fn nikoncustom_settingsz9(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CLModeShootingSpeed", 0x3b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CLModeShootingSpeed", 0x3b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x3d, bo) {
         dm.push(("MaxContinuousRelease".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val eq -1 ?  'No Limit' : $val ) ", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("MaxContinuousRelease", 0x3d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val eq -1 ?  'No Limit' : $val ) ", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("MaxContinuousRelease", 0x3d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x41) {
         dm.push(("SyncReleaseMode".to_string(), Conv::Num(f64::from(v))));
@@ -44610,20 +45701,24 @@ fn nikoncustom_settingsz9(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         dm.push(("FlashSyncSpeed".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "1/60 s".to_string(),
-            1 => "1/80 s".to_string(),
-            2 => "1/100 s".to_string(),
-            3 => "1/125 s".to_string(),
-            4 => "1/160 s".to_string(),
-            5 => "1/200 s".to_string(),
-            6 => "1/250 s".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("FlashSyncSpeed", 0x53, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val-144)/8", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "1/60 s".to_string(),
+                1 => "1/80 s".to_string(),
+                2 => "1/100 s".to_string(),
+                3 => "1/125 s".to_string(),
+                4 => "1/160 s".to_string(),
+                5 => "1/200 s".to_string(),
+                6 => "1/250 s".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("FlashSyncSpeed", 0x53, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x55) {
         dm.push(("HighSpeedSync".to_string(), Conv::Num(f64::from(v))));
@@ -44642,25 +45737,29 @@ fn nikoncustom_settingsz9(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         dm.push(("FlashShutterSpeed".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "1 s".to_string(),
-            1 => "1/2 s".to_string(),
-            2 => "1/4 s".to_string(),
-            3 => "1/8 s".to_string(),
-            4 => "1/15 s".to_string(),
-            5 => "1/30 s".to_string(),
-            6 => "1/60 s".to_string(),
-            7 => "30 s".to_string(),
-            8 => "15 s".to_string(),
-            9 => "8 s".to_string(),
-            10 => "4 s".to_string(),
-            11 => "2 s".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("FlashShutterSpeed", 0x57, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("my $t = ($val - 16) % 24; $t ? $val / 24  : 2 + ($val - 16) / 24", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "1 s".to_string(),
+                1 => "1/2 s".to_string(),
+                2 => "1/4 s".to_string(),
+                3 => "1/8 s".to_string(),
+                4 => "1/15 s".to_string(),
+                5 => "1/30 s".to_string(),
+                6 => "1/60 s".to_string(),
+                7 => "30 s".to_string(),
+                8 => "15 s".to_string(),
+                9 => "8 s".to_string(),
+                10 => "4 s".to_string(),
+                11 => "2 s".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("FlashShutterSpeed", 0x57, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x59) {
         dm.push(("FlashExposureCompArea".to_string(), Conv::Num(f64::from(v))));
@@ -44888,9 +45987,12 @@ fn nikoncustom_settingsz9(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 5", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("MovieAFSpeed", 0xdd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 5", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("MovieAFSpeed", 0xdd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xdf) {
         dm.push(("MovieAFSpeedApply".to_string(), Conv::Num(f64::from(v))));
@@ -44952,10 +46054,13 @@ fn nikoncustom_settingsz9(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CHModeShootingSpeed", 0x10b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CHModeShootingSpeed", 0x10b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x10d) {
         let v = (v & 0x2) >> 1;
@@ -45388,40 +46493,52 @@ fn nikoncustom_settingsz9v4(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x21, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x21, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x23) {
         dm.push(("FineTuneOptCenterWeighted".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptCenterWeighted", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptCenterWeighted", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x25) {
         dm.push(("FineTuneOptSpotMetering".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x25, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x25, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i8_at(data, 0x27) {
         dm.push(("FineTuneOptHighlightWeighted".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptHighlightWeighted", 0x27, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptHighlightWeighted", 0x27, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x29) {
         dm.push(("ShutterReleaseButtonAE-L".to_string(), Conv::Num(f64::from(v))));
@@ -45562,19 +46679,25 @@ fn nikoncustom_settingsz9v4(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CLModeShootingSpeed", 0x3b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CLModeShootingSpeed", 0x3b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x3d, bo) {
         dm.push(("MaxContinuousRelease".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val eq -1 ?  'No Limit' : $val ) ", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("MaxContinuousRelease", 0x3d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val eq -1 ?  'No Limit' : $val ) ", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("MaxContinuousRelease", 0x3d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x41) {
         dm.push(("SyncReleaseMode".to_string(), Conv::Num(f64::from(v))));
@@ -45624,20 +46747,24 @@ fn nikoncustom_settingsz9v4(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         dm.push(("FlashSyncSpeed".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "1/60 s".to_string(),
-            1 => "1/80 s".to_string(),
-            2 => "1/100 s".to_string(),
-            3 => "1/125 s".to_string(),
-            4 => "1/160 s".to_string(),
-            5 => "1/200 s".to_string(),
-            6 => "1/250 s".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("FlashSyncSpeed", 0x53, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val-144)/8", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "1/60 s".to_string(),
+                1 => "1/80 s".to_string(),
+                2 => "1/100 s".to_string(),
+                3 => "1/125 s".to_string(),
+                4 => "1/160 s".to_string(),
+                5 => "1/200 s".to_string(),
+                6 => "1/250 s".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("FlashSyncSpeed", 0x53, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x55) {
         dm.push(("HighSpeedSync".to_string(), Conv::Num(f64::from(v))));
@@ -45656,25 +46783,29 @@ fn nikoncustom_settingsz9v4(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         dm.push(("FlashShutterSpeed".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            0 => "1 s".to_string(),
-            1 => "1/2 s".to_string(),
-            2 => "1/4 s".to_string(),
-            3 => "1/8 s".to_string(),
-            4 => "1/15 s".to_string(),
-            5 => "1/30 s".to_string(),
-            6 => "1/60 s".to_string(),
-            7 => "30 s".to_string(),
-            8 => "15 s".to_string(),
-            9 => "8 s".to_string(),
-            10 => "4 s".to_string(),
-            11 => "2 s".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("FlashShutterSpeed", 0x57, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("my $t = ($val - 16) % 24; $t ? $val / 24  : 2 + ($val - 16) / 24", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "1 s".to_string(),
+                1 => "1/2 s".to_string(),
+                2 => "1/4 s".to_string(),
+                3 => "1/8 s".to_string(),
+                4 => "1/15 s".to_string(),
+                5 => "1/30 s".to_string(),
+                6 => "1/60 s".to_string(),
+                7 => "30 s".to_string(),
+                8 => "15 s".to_string(),
+                9 => "8 s".to_string(),
+                10 => "4 s".to_string(),
+                11 => "2 s".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("FlashShutterSpeed", 0x57, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x59) {
         dm.push(("FlashExposureCompArea".to_string(), Conv::Num(f64::from(v))));
@@ -45902,9 +47033,12 @@ fn nikoncustom_settingsz9v4(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 5", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("MovieAFSpeed", 0xdd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 5", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("MovieAFSpeed", 0xdd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xdf) {
         dm.push(("MovieAFSpeedApply".to_string(), Conv::Num(f64::from(v))));
@@ -45966,10 +47100,13 @@ fn nikoncustom_settingsz9v4(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CHModeShootingSpeed", 0x121, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val fps\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("CHModeShootingSpeed", 0x121, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x125) {
         let v = (v & 0x2) >> 1;
@@ -46640,10 +47777,13 @@ fn nikoncustom_settingsd80(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** ($val - 6)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashShutterSpeed", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** ($val - 6)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FlashShutterSpeed", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x7) {
         let v = (v & 0x4) >> 2;
@@ -46695,13 +47835,16 @@ fn nikoncustom_settingsd80(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("2 ** (-$val)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("ManualFlashOutput", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("ManualFlashOutput", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = (v & 0x70) >> 4;
@@ -46709,10 +47852,13 @@ fn nikoncustom_settingsd80(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val-2)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("RepeatingFlashOutput", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** (-$val-2)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("RepeatingFlashOutput", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = v & 0xf;
@@ -46720,9 +47866,12 @@ fn nikoncustom_settingsd80(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val < 10 ? $val + 1 : 5 * ($val - 7)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("RepeatingFlashCount", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val < 10 ? $val + 1 : 5 * ($val - 7)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("RepeatingFlashCount", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xa) {
         let v = (v & 0xf0) >> 4;
@@ -46730,10 +47879,13 @@ fn nikoncustom_settingsd80(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val < 10 ? $val + 1 : 10 * ($val - 8)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val Hz\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("RepeatingFlashRate", 0xa, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val < 10 ? $val + 1 : 10 * ($val - 8)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val Hz\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("RepeatingFlashRate", 0xa, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xa) {
         let v = v & 0x3;
@@ -46741,9 +47893,12 @@ fn nikoncustom_settingsd80(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("CommanderChannel", 0xa, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("CommanderChannel", 0xa, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xb) {
         let v = (v & 0xc0) >> 6;
@@ -46798,10 +47953,13 @@ fn nikoncustom_settingsd80(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderInternalTTLComp", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("CommanderInternalTTLComp", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xc) {
         let v = (v & 0xe0) >> 5;
@@ -46809,13 +47967,16 @@ fn nikoncustom_settingsd80(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("2 ** (-$val)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderInternalManualOutput", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("CommanderInternalManualOutput", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xd) {
         let v = v & 0x1f;
@@ -46823,10 +47984,13 @@ fn nikoncustom_settingsd80(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderGroupA_TTL-AAComp", 0xd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("CommanderGroupA_TTL-AAComp", 0xd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xd) {
         let v = (v & 0xe0) >> 5;
@@ -46834,13 +47998,16 @@ fn nikoncustom_settingsd80(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("2 ** (-$val)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderGroupAManualOutput", 0xd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("CommanderGroupAManualOutput", 0xd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xe) {
         let v = v & 0x1f;
@@ -46848,10 +48015,13 @@ fn nikoncustom_settingsd80(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderGroupB_TTL-AAComp", 0xe, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("CommanderGroupB_TTL-AAComp", 0xe, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xe) {
         let v = (v & 0xe0) >> 5;
@@ -46859,13 +48029,16 @@ fn nikoncustom_settingsd80(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("2 ** (-$val)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderGroupBManualOutput", 0xe, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("CommanderGroupBManualOutput", 0xe, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xf) {
         let v = (v & 0x80) >> 7;
@@ -47249,10 +48422,13 @@ fn nikoncustom_settingsd90(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = (v & 0xf0) >> 4;
@@ -47260,10 +48436,13 @@ fn nikoncustom_settingsd90(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptCenterWeighted", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptCenterWeighted", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = v & 0xf;
@@ -47271,10 +48450,13 @@ fn nikoncustom_settingsd90(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xb) {
         let v = v & 0x7;
@@ -47593,13 +48775,16 @@ fn nikoncustom_settingsd90(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("ManualFlashOutput", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("ManualFlashOutput", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x19) {
         let v = (v & 0x70) >> 4;
@@ -47607,10 +48792,13 @@ fn nikoncustom_settingsd90(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val-2)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("RepeatingFlashOutput", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("2 ** (-$val-2)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("RepeatingFlashOutput", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x19) {
         let v = v & 0xf;
@@ -47618,9 +48806,12 @@ fn nikoncustom_settingsd90(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val < 10 ? $val + 1 : 5 * ($val - 7)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("RepeatingFlashCount", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val < 10 ? $val + 1 : 5 * ($val - 7)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("RepeatingFlashCount", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1a) {
         let v = (v & 0xf0) >> 4;
@@ -47628,10 +48819,13 @@ fn nikoncustom_settingsd90(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val < 10 ? $val + 1 : 10 * ($val - 8)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val Hz\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("RepeatingFlashRate", 0x1a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val < 10 ? $val + 1 : 10 * ($val - 8)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val Hz\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("RepeatingFlashRate", 0x1a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1f) {
         let v = (v & 0x80) >> 7;
@@ -47653,10 +48847,13 @@ fn nikoncustom_settingsd90(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderInternalTTLComp", 0x1f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("CommanderInternalTTLComp", 0x1f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1f) {
         let v = (v & 0x20) >> 5;
@@ -47692,10 +48889,13 @@ fn nikoncustom_settingsd90(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderGroupA_TTLComp", 0x20, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("CommanderGroupA_TTLComp", 0x20, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x21) {
         let v = v & 0x1f;
@@ -47703,10 +48903,13 @@ fn nikoncustom_settingsd90(data: &[u8], make: &str, model: &str, bo: ByteOrder, 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderGroupB_TTLComp", 0x21, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("CommanderGroupB_TTLComp", 0x21, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x22) {
         let v = (v & 0xc0) >> 6;
@@ -48175,10 +49378,13 @@ fn nikoncustom_settingsd3(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptCenterWeighted", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptCenterWeighted", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x8) {
         let v = (v & 0xf0) >> 4;
@@ -48186,10 +49392,13 @@ fn nikoncustom_settingsd3(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x8) {
         let v = v & 0xf;
@@ -48197,10 +49406,13 @@ fn nikoncustom_settingsd3(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = (v & 0xc0) >> 6;
@@ -49574,10 +50786,13 @@ fn nikoncustom_settingsd700(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x6) {
         let v = v & 0xf;
@@ -49585,10 +50800,13 @@ fn nikoncustom_settingsd700(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x7) {
         let v = (v & 0x80) >> 7;
@@ -49934,13 +51152,16 @@ fn nikoncustom_settingsd700(data: &[u8], make: &str, model: &str, bo: ByteOrder,
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("
+            let vc = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-            tags.push(mk("ManualFlashOutput", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                tags.push(mk("ManualFlashOutput", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 2.0) {
@@ -49950,10 +51171,13 @@ fn nikoncustom_settingsd700(data: &[u8], make: &str, model: &str, bo: ByteOrder,
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("2 ** (-$val-2)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("RepeatingFlashOutput", 0x11, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("2 ** (-$val-2)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("RepeatingFlashOutput", 0x11, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 2.0) {
@@ -49963,9 +51187,12 @@ fn nikoncustom_settingsd700(data: &[u8], make: &str, model: &str, bo: ByteOrder,
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val < 10 ? $val + 1 : 5 * ($val - 7)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("RepeatingFlashCount", 0x11, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val < 10 ? $val + 1 : 5 * ($val - 7)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("RepeatingFlashCount", 0x11, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 2.0) {
@@ -49975,10 +51202,13 @@ fn nikoncustom_settingsd700(data: &[u8], make: &str, model: &str, bo: ByteOrder,
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val < 10 ? $val + 1 : 10 * ($val - 8)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("\"$val Hz\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("RepeatingFlashRate", 0x12, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val < 10 ? $val + 1 : 10 * ($val - 8)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("\"$val Hz\"", &cv, &ctx) { cv = x; }
+                tags.push(mk("RepeatingFlashRate", 0x12, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 3.0) {
@@ -50006,10 +51236,13 @@ fn nikoncustom_settingsd700(data: &[u8], make: &str, model: &str, bo: ByteOrder,
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-            tags.push(mk("CommanderInternalTTLCompBuiltin", 0x14, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+                tags.push(mk("CommanderInternalTTLCompBuiltin", 0x14, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 3.0) {
@@ -50019,10 +51252,13 @@ fn nikoncustom_settingsd700(data: &[u8], make: &str, model: &str, bo: ByteOrder,
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-            tags.push(mk("CommanderInternalTTLCompGroupA", 0x15, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+                tags.push(mk("CommanderInternalTTLCompGroupA", 0x15, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 3.0) {
@@ -50032,10 +51268,13 @@ fn nikoncustom_settingsd700(data: &[u8], make: &str, model: &str, bo: ByteOrder,
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-            tags.push(mk("CommanderInternalTTLCompGroupB", 0x16, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+                tags.push(mk("CommanderInternalTTLCompGroupB", 0x16, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x1a) {
@@ -50535,13 +51774,16 @@ fn nikoncustom_settingsd800(data: &[u8], make: &str, model: &str, bo: ByteOrder,
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("
+            let vc = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-            tags.push(mk("ManualFlashOutput", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                tags.push(mk("ManualFlashOutput", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 2.0) {
@@ -50551,10 +51793,13 @@ fn nikoncustom_settingsd800(data: &[u8], make: &str, model: &str, bo: ByteOrder,
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("2 ** (-$val-2)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("RepeatingFlashOutput", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("2 ** (-$val-2)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("RepeatingFlashOutput", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 2.0) {
@@ -50564,9 +51809,12 @@ fn nikoncustom_settingsd800(data: &[u8], make: &str, model: &str, bo: ByteOrder,
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val < 10 ? $val + 1 : 5 * ($val - 7)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("RepeatingFlashCount", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val < 10 ? $val + 1 : 5 * ($val - 7)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("RepeatingFlashCount", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 2.0) {
@@ -50576,10 +51824,13 @@ fn nikoncustom_settingsd800(data: &[u8], make: &str, model: &str, bo: ByteOrder,
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val < 10 ? $val + 1 : 10 * ($val - 8)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("\"$val Hz\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("RepeatingFlashRate", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val < 10 ? $val + 1 : 10 * ($val - 8)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("\"$val Hz\"", &cv, &ctx) { cv = x; }
+                tags.push(mk("RepeatingFlashRate", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x19) {
@@ -50588,9 +51839,12 @@ fn nikoncustom_settingsd800(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("CommanderChannel", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 1", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("CommanderChannel", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1b) {
         let v = (v & 0xc0) >> 6;
@@ -50613,13 +51867,16 @@ fn nikoncustom_settingsd800(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderInternalManualOutput", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("CommanderInternalManualOutput", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1c) {
         let v = (v & 0xc0) >> 6;
@@ -50643,13 +51900,16 @@ fn nikoncustom_settingsd800(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderGroupAManualOutput", 0x1c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("CommanderGroupAManualOutput", 0x1c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1d) {
         let v = (v & 0xc0) >> 6;
@@ -50673,13 +51933,16 @@ fn nikoncustom_settingsd800(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderGroupBManualOutput", 0x1d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("CommanderGroupBManualOutput", 0x1d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1e) {
         let v = (v & 0x20) >> 5;
@@ -50701,10 +51964,13 @@ fn nikoncustom_settingsd800(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderInternalTTLComp", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("CommanderInternalTTLComp", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x1f) {
         let v = v & 0x1f;
@@ -50712,10 +51978,13 @@ fn nikoncustom_settingsd800(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderGroupA_TTL-AAComp", 0x1f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("CommanderGroupA_TTL-AAComp", 0x1f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x20) {
         let v = v & 0x1f;
@@ -50723,10 +51992,13 @@ fn nikoncustom_settingsd800(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("CommanderGroupB_TTL-AAComp", 0x20, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("CommanderGroupB_TTL-AAComp", 0x20, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -51100,13 +52372,16 @@ fn nikoncustom_settingsd5000(data: &[u8], make: &str, model: &str, bo: ByteOrder
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("ManualFlashOutput", 0x16, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("ManualFlashOutput", 0x16, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x20) {
         let v = (v & 0x60) >> 5;
@@ -51484,13 +52759,16 @@ fn nikoncustom_settingsd5100(data: &[u8], make: &str, model: &str, bo: ByteOrder
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("ManualFlashOutput", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("ManualFlashOutput", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -51885,13 +53163,16 @@ fn nikoncustom_settingsd5200(data: &[u8], make: &str, model: &str, bo: ByteOrder
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("ManualFlashOutput", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("ManualFlashOutput", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -52741,13 +54022,16 @@ fn nikoncustom_settingsd7000(data: &[u8], make: &str, model: &str, bo: ByteOrder
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("
+            let vc = conv_expr::eval_with("2 ** (-$val/3)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("
             return 'Full' if $val > 0.99;
             Image::ExifTool::Exif::PrintExposureTime($val);
         ", &cv, &ctx) { cv = x; }
-            tags.push(mk("ManualFlashOutput", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                tags.push(mk("ManualFlashOutput", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 2.0) {
@@ -52757,10 +54041,13 @@ fn nikoncustom_settingsd7000(data: &[u8], make: &str, model: &str, bo: ByteOrder
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("2 ** (-$val-2)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("RepeatingFlashOutput", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("2 ** (-$val-2)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("RepeatingFlashOutput", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 2.0) {
@@ -52770,9 +54057,12 @@ fn nikoncustom_settingsd7000(data: &[u8], make: &str, model: &str, bo: ByteOrder
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val < 10 ? $val + 1 : 5 * ($val - 7)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("RepeatingFlashCount", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val < 10 ? $val + 1 : 5 * ($val - 7)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("RepeatingFlashCount", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 2.0) {
@@ -52782,10 +54072,13 @@ fn nikoncustom_settingsd7000(data: &[u8], make: &str, model: &str, bo: ByteOrder
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val < 10 ? $val + 1 : 10 * ($val - 8)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("\"$val Hz\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("RepeatingFlashRate", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val < 10 ? $val + 1 : 10 * ($val - 8)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("\"$val Hz\"", &cv, &ctx) { cv = x; }
+                tags.push(mk("RepeatingFlashRate", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 3.0) {
@@ -52795,10 +54088,13 @@ fn nikoncustom_settingsd7000(data: &[u8], make: &str, model: &str, bo: ByteOrder
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-            tags.push(mk("CommanderInternalTTLCompBuiltin", 0x1a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+                tags.push(mk("CommanderInternalTTLCompBuiltin", 0x1a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 3.0) {
@@ -52808,10 +54104,13 @@ fn nikoncustom_settingsd7000(data: &[u8], make: &str, model: &str, bo: ByteOrder
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-            tags.push(mk("CommanderInternalTTLCompGroupA", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+                tags.push(mk("CommanderInternalTTLCompGroupA", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if dm_get(dm, "FlashControlBuiltin").is_some_and(|v| v == 3.0) {
@@ -52821,10 +54120,13 @@ fn nikoncustom_settingsd7000(data: &[u8], make: &str, model: &str, bo: ByteOrder
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-            tags.push(mk("CommanderInternalTTLCompGroupB", 0x1c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("($val - 9) / 3", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+                tags.push(mk("CommanderInternalTTLCompGroupB", 0x1c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x1e) {
@@ -53262,10 +54564,13 @@ fn nikoncustom_settingsd4(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = (v & 0xf0) >> 4;
@@ -53273,10 +54578,13 @@ fn nikoncustom_settingsd4(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptCenterWeighted", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptCenterWeighted", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = v & 0xf;
@@ -53284,10 +54592,13 @@ fn nikoncustom_settingsd4(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xa) {
         let v = (v & 0xc0) >> 6;
@@ -54565,10 +55876,13 @@ fn nikoncustom_settingsd610(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x8) {
         let v = (v & 0xf0) >> 4;
@@ -54576,10 +55890,13 @@ fn nikoncustom_settingsd610(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptCenterWeighted", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptCenterWeighted", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x8) {
         let v = v & 0xf;
@@ -54587,10 +55904,13 @@ fn nikoncustom_settingsd610(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x11) {
         let v = (v & 0x2) >> 1;
@@ -55063,10 +56383,13 @@ fn nikoncustom_settingsd5(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = (v & 0xf0) >> 4;
@@ -55074,10 +56397,13 @@ fn nikoncustom_settingsd5(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptCenterWeighted", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptCenterWeighted", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = v & 0xf;
@@ -55085,10 +56411,13 @@ fn nikoncustom_settingsd5(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xa) {
         let v = (v & 0xe0) >> 5;
@@ -55752,10 +57081,13 @@ fn nikoncustom_settingsd5(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptHighlightWeighted", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptHighlightWeighted", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x2f) {
         let v = (v & 0x80) >> 7;
@@ -56652,10 +57984,13 @@ fn nikoncustom_settingsd500(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptMatrixMetering", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = (v & 0xf0) >> 4;
@@ -56663,10 +57998,13 @@ fn nikoncustom_settingsd500(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptCenterWeighted", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptCenterWeighted", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x9) {
         let v = v & 0xf;
@@ -56674,10 +58012,13 @@ fn nikoncustom_settingsd500(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptSpotMetering", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptSpotMetering", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0xa) {
         let v = (v & 0xe0) >> 5;
@@ -57351,10 +58692,13 @@ fn nikoncustom_settingsd500(data: &[u8], make: &str, model: &str, bo: ByteOrder,
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FineTuneOptHighlightWeighted", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val > 0x7 ? $val - 0x10 : $val) / 6", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.2f\", $val) : 0", &cv, &ctx) { cv = x; }
+            tags.push(mk("FineTuneOptHighlightWeighted", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x2f) {
         let v = (v & 0x80) >> 7;
@@ -57925,10 +59269,13 @@ fn nintendo_camerainfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("ConvertUnixTime($val + 10957 * 24 * 3600)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("TimeStamp", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("ConvertUnixTime($val + 10957 * 24 * 3600)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("TimeStamp", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(text) = text_at(data, 0x18, 4, false) {
         let ctx = Ctx { make, model, file_type, dm };
@@ -58030,10 +59377,13 @@ fn olympus_mov2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: 
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val ? 10 / $val : 0", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x36, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val ? 10 / $val : 0", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("ExposureTime", 0x36, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = rat64u_at(data, 0x3a, bo) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
@@ -58430,10 +59780,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("Duration", 0x200, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Duration", 0x200, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u32_at(data, 0x20a, bo) {
         dm.push(("Index01".to_string(), Conv::Num(f64::from(v))));
@@ -58443,10 +59796,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index01", 0x20a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index01", 0x20a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x214, bo) {
@@ -58457,10 +59813,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index02", 0x214, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index02", 0x214, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x21e, bo) {
@@ -58471,10 +59830,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index03", 0x21e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index03", 0x21e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x228, bo) {
@@ -58485,10 +59847,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index04", 0x228, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index04", 0x228, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x232, bo) {
@@ -58499,10 +59864,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index05", 0x232, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index05", 0x232, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x23c, bo) {
@@ -58513,10 +59881,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index06", 0x23c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index06", 0x23c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x246, bo) {
@@ -58527,10 +59898,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index07", 0x246, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index07", 0x246, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x250, bo) {
@@ -58541,10 +59915,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index08", 0x250, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index08", 0x250, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x25a, bo) {
@@ -58555,10 +59932,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index09", 0x25a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index09", 0x25a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x264, bo) {
@@ -58569,10 +59949,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index10", 0x264, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index10", 0x264, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x26e, bo) {
@@ -58583,10 +59966,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index11", 0x26e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index11", 0x26e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x278, bo) {
@@ -58597,10 +59983,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index12", 0x278, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index12", 0x278, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x282, bo) {
@@ -58611,10 +60000,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index13", 0x282, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index13", 0x282, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x28c, bo) {
@@ -58625,10 +60017,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index14", 0x28c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index14", 0x28c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x296, bo) {
@@ -58639,10 +60034,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index15", 0x296, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index15", 0x296, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u32_at(data, 0x2a0, bo) {
@@ -58653,10 +60051,13 @@ fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("Index16", 0x2a0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("Index16", 0x2a0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     tags
@@ -58725,14 +60126,17 @@ fn olympus_focusinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("
             my ($a,$b) = split ' ',$val;
             return 0 if $a == 0xffffffff;
             return $a / 1000;
-        ", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val ? \"$val m\" : \"inf\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistance", 0x305, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        ", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val ? \"$val m\" : \"inf\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistance", 0x305, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if MODEL_RE_28.is_match(model) {
         if let Some(v) = u8_at(data, 0x308) {
@@ -58740,9 +60144,12 @@ fn olympus_focusinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("($val & 0x1f) . \" \" . ($val & 0xffe0)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("AFPoint", 0x308, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("($val & 0x1f) . \" \" . ($val & 0xffe0)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("AFPoint", 0x308, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if !(MODEL_RE_28.is_match(model)) && MODEL_RE_29.is_match(model) {
@@ -58751,9 +60158,12 @@ fn olympus_focusinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("($val & 0x1f) . \" \" . ($val & 0xffe0)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("AFPoint", 0x308, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("($val & 0x1f) . \" \" . ($val & 0xffe0)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("AFPoint", 0x308, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if !(MODEL_RE_28.is_match(model)) && !(MODEL_RE_29.is_match(model)) && !MODEL_RE_30.is_match(model) {
@@ -58793,13 +60203,16 @@ fn olympus_focusinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
             let ctx = Ctx { make, model, file_type, dm };
             let base = Conv::Num(f64::from(v));
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("(($val >> 13) & 0x7) . \" \" . (($val >> 12) & 0x1) . \" \" .  (($val >> 11) & 0x1) . \" \" .
+            let vc = conv_expr::eval_with("(($val >> 13) & 0x7) . \" \" . (($val >> 12) & 0x1) . \" \" .  (($val >> 11) & 0x1) . \" \" .
 
                           (($val >> 8) & 0x3) . \" \" . (($val >> 7) & 0x1) . \" \" . (($val >> 5) & 0x1) . \" \" .
 
-                          (($val >> 4) & 0x1) . \" \" . (($val >> 3) & 0x1) . \" \" . ($val & 0x7)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("AFPointDetails", 0x31b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+                          (($val >> 4) & 0x1) . \" \" . (($val >> 3) & 0x1) . \" \" . ($val & 0x7)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("AFPointDetails", 0x31b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if !(MODEL_RE_31.is_match(model)) {
@@ -59059,13 +60472,16 @@ fn olympus_camerasettings(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val =~ s/\\S* //; $val", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("$val =~ s/\\S* //; $val", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("
             return 'n/a' if $val =~ /undef/;
             sprintf(\"(%d%%,%d%%) (%d%%,%d%%)\", map {$_ * 100} split(\" \",$val));
         ", &cv, &ctx) { cv = x; }
-        tags.push(mk("AFPointSelected", 0x305, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            tags.push(mk("AFPointSelected", 0x305, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x306) {
         dm.push(("AFFineTune".to_string(), Conv::Num(f64::from(v))));
@@ -59737,20 +61153,26 @@ fn olympus_camerasettings(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 10", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val kPa\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("ManometerPressure", 0x900, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 10", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val kPa\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("ManometerPressure", 0x900, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x901) {
         dm.push(("ManometerReading".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("my @a=split(\" \",$val); $_ /= 10 foreach @a; \"@a\"", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val=~s/(\\S+) (\\S+)/$1 m, $2 ft/; $val", &cv, &ctx) { cv = x; }
-        tags.push(mk("ManometerReading", 0x901, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("my @a=split(\" \",$val); $_ /= 10 foreach @a; \"@a\"", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val=~s/(\\S+) (\\S+)/$1 m, $2 ft/; $val", &cv, &ctx) { cv = x; }
+            tags.push(mk("ManometerReading", 0x901, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x902) {
         dm.push(("ExtendedWBDetect".to_string(), Conv::Num(f64::from(v))));
@@ -59770,18 +61192,24 @@ fn olympus_camerasettings(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val=~s/ 1$// ? -$val/10 : \"n/a\"", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("RollAngle", 0x903, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val=~s/ 1$// ? -$val/10 : \"n/a\"", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("RollAngle", 0x903, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x904) {
         dm.push(("PitchAngle".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val =~ s/ 1$// ? $val / 10 : \"n/a\"", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("PitchAngle", 0x904, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val =~ s/ 1$// ? $val / 10 : \"n/a\"", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("PitchAngle", 0x904, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x908) {
         dm.push(("DateTimeUTC".to_string(), Conv::Num(f64::from(v))));
@@ -59844,55 +61272,59 @@ fn panasonic_data1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_typ
         dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
-        #[allow(clippy::cast_possible_truncation)]
-        let s = match base.as_num() as i64 {
-            1 => "Elmarit-M 21mm f/2.8".to_string(),
-            3 => "Elmarit-M 28mm f/2.8 (III)".to_string(),
-            4 => "Tele-Elmarit-M 90mm f/2.8 (II)".to_string(),
-            5 => "Summilux-M 50mm f/1.4 (II)".to_string(),
-            6 => "Summicron-M 35mm f/2 (IV)".to_string(),
-            7 => "Summicron-M 90mm f/2 (II)".to_string(),
-            9 => "Elmarit-M 135mm f/2.8 (I/II)".to_string(),
-            11 => "Summaron-M 28mm f/5.6".to_string(),
-            12 => "Thambar-M 90mm f/2.2".to_string(),
-            16 => "Tri-Elmar-M 16-18-21mm f/4 ASPH.".to_string(),
-            23 => "Summicron-M 50mm f/2 (III)".to_string(),
-            24 => "Elmarit-M 21mm f/2.8 ASPH.".to_string(),
-            25 => "Elmarit-M 24mm f/2.8 ASPH.".to_string(),
-            26 => "Summicron-M 28mm f/2 ASPH.".to_string(),
-            27 => "Elmarit-M 28mm f/2.8 (IV)".to_string(),
-            28 => "Elmarit-M 28mm f/2.8 ASPH.".to_string(),
-            29 => "Summilux-M 35mm f/1.4 ASPH.".to_string(),
-            30 => "Summicron-M 35mm f/2 ASPH.".to_string(),
-            31 => "Noctilux-M 50mm f/1".to_string(),
-            32 => "Summilux-M 50mm f/1.4 ASPH.".to_string(),
-            33 => "Summicron-M 50mm f/2 (IV, V)".to_string(),
-            34 => "Elmar-M 50mm f/2.8".to_string(),
-            35 => "Summilux-M 75mm f/1.4".to_string(),
-            36 => "Apo-Summicron-M 75mm f/2 ASPH.".to_string(),
-            37 => "Apo-Summicron-M 90mm f/2 ASPH.".to_string(),
-            38 => "Elmarit-M 90mm f/2.8".to_string(),
-            39 => "Macro-Elmar-M 90mm f/4".to_string(),
-            40 => "Macro-Adapter M".to_string(),
-            41 => "Apo-Summicron-M 50mm f/2 ASPH.".to_string(),
-            42 => "Tri-Elmar-M 28-35-50mm f/4 ASPH.".to_string(),
-            43 => "Summarit-M 35mm f/2.5".to_string(),
-            44 => "Summarit-M 50mm f/2.5".to_string(),
-            45 => "Summarit-M 75mm f/2.5".to_string(),
-            46 => "Summarit-M 90mm f/2.5".to_string(),
-            47 => "Summilux-M 21mm f/1.4 ASPH.".to_string(),
-            48 => "Summilux-M 24mm f/1.4 ASPH.".to_string(),
-            49 => "Noctilux-M 50mm f/0.95 ASPH.".to_string(),
-            50 => "Elmar-M 24mm f/3.8 ASPH.".to_string(),
-            51 => "Super-Elmar-M 21mm f/3.4 Asph".to_string(),
-            52 => "Apo-Telyt-M 18mm f/3.8 ASPH.".to_string(),
-            53 => "Apo-Telyt-M 135mm f/3.4".to_string(),
-            58 => "Noctilux-M 75mm f/1.25 ASPH.".to_string(),
-            other => other.to_string(),
-        };
-        #[allow(clippy::cast_possible_truncation)]
-        let raw = Value::I32(base.as_num() as i32);
-        tags.push(mk("LensType", 0x16, s, raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("(($val >> 2) & 0xffff) . \" \" . ($val & 0x3)", &base, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            let base = vc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                1 => "Elmarit-M 21mm f/2.8".to_string(),
+                3 => "Elmarit-M 28mm f/2.8 (III)".to_string(),
+                4 => "Tele-Elmarit-M 90mm f/2.8 (II)".to_string(),
+                5 => "Summilux-M 50mm f/1.4 (II)".to_string(),
+                6 => "Summicron-M 35mm f/2 (IV)".to_string(),
+                7 => "Summicron-M 90mm f/2 (II)".to_string(),
+                9 => "Elmarit-M 135mm f/2.8 (I/II)".to_string(),
+                11 => "Summaron-M 28mm f/5.6".to_string(),
+                12 => "Thambar-M 90mm f/2.2".to_string(),
+                16 => "Tri-Elmar-M 16-18-21mm f/4 ASPH.".to_string(),
+                23 => "Summicron-M 50mm f/2 (III)".to_string(),
+                24 => "Elmarit-M 21mm f/2.8 ASPH.".to_string(),
+                25 => "Elmarit-M 24mm f/2.8 ASPH.".to_string(),
+                26 => "Summicron-M 28mm f/2 ASPH.".to_string(),
+                27 => "Elmarit-M 28mm f/2.8 (IV)".to_string(),
+                28 => "Elmarit-M 28mm f/2.8 ASPH.".to_string(),
+                29 => "Summilux-M 35mm f/1.4 ASPH.".to_string(),
+                30 => "Summicron-M 35mm f/2 ASPH.".to_string(),
+                31 => "Noctilux-M 50mm f/1".to_string(),
+                32 => "Summilux-M 50mm f/1.4 ASPH.".to_string(),
+                33 => "Summicron-M 50mm f/2 (IV, V)".to_string(),
+                34 => "Elmar-M 50mm f/2.8".to_string(),
+                35 => "Summilux-M 75mm f/1.4".to_string(),
+                36 => "Apo-Summicron-M 75mm f/2 ASPH.".to_string(),
+                37 => "Apo-Summicron-M 90mm f/2 ASPH.".to_string(),
+                38 => "Elmarit-M 90mm f/2.8".to_string(),
+                39 => "Macro-Elmar-M 90mm f/4".to_string(),
+                40 => "Macro-Adapter M".to_string(),
+                41 => "Apo-Summicron-M 50mm f/2 ASPH.".to_string(),
+                42 => "Tri-Elmar-M 28-35-50mm f/4 ASPH.".to_string(),
+                43 => "Summarit-M 35mm f/2.5".to_string(),
+                44 => "Summarit-M 50mm f/2.5".to_string(),
+                45 => "Summarit-M 75mm f/2.5".to_string(),
+                46 => "Summarit-M 90mm f/2.5".to_string(),
+                47 => "Summilux-M 21mm f/1.4 ASPH.".to_string(),
+                48 => "Summilux-M 24mm f/1.4 ASPH.".to_string(),
+                49 => "Noctilux-M 50mm f/0.95 ASPH.".to_string(),
+                50 => "Elmar-M 24mm f/3.8 ASPH.".to_string(),
+                51 => "Super-Elmar-M 21mm f/3.4 Asph".to_string(),
+                52 => "Apo-Telyt-M 18mm f/3.8 ASPH.".to_string(),
+                53 => "Apo-Telyt-M 135mm f/3.4".to_string(),
+                58 => "Noctilux-M 75mm f/1.25 ASPH.".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("LensType", 0x16, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -60161,10 +61593,13 @@ fn panasonic_focusinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val < 65535 ? \"$val m\" : \"inf\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistance", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val < 65535 ? \"$val m\" : \"inf\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocusDistance", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x2, bo) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -60174,10 +61609,13 @@ fn panasonic_focusinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f mm\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f mm\",$val)", &cv, &ctx) { cv = x; }
+                tags.push(mk("FocalLength", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     tags
@@ -60276,27 +61714,36 @@ fn panasonicraw_distortioninfo(data: &[u8], make: &str, model: &str, bo: ByteOrd
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 32768", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DistortionParam02", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 32768", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DistortionParam02", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x8, bo) {
         dm.push(("DistortionParam04".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 32768", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DistortionParam04", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 32768", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DistortionParam04", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0xa, bo) {
         dm.push(("DistortionScale".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("1 / (1 + $val/32768)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DistortionScale", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("1 / (1 + $val/32768)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DistortionScale", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0xe, bo) {
         let v = v & 0xf;
@@ -60317,27 +61764,36 @@ fn panasonicraw_distortioninfo(data: &[u8], make: &str, model: &str, bo: ByteOrd
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 32768", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DistortionParam08", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 32768", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DistortionParam08", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x12, bo) {
         dm.push(("DistortionParam09".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 32768", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DistortionParam09", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 32768", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DistortionParam09", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x16, bo) {
         dm.push(("DistortionParam11".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 32768", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("DistortionParam11", 0xb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 32768", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("DistortionParam11", 0xb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = i16_at(data, 0x18, bo) {
         dm.push(("DistortionN".to_string(), Conv::Num(f64::from(v))));
@@ -61339,9 +62795,12 @@ fn pentax_cafpointinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         if rc.as_ref() != Some(&Conv::Undef) {
             let base = rc.unwrap_or(base);
             let mut cv = base;
-            if let Some(x) = conv_expr::eval_with("($val >> 4) * ($val & 0x0f)", &cv, &ctx) { cv = x; }
-            let raw = Value::F64(cv.as_num());
-            tags.push(mk("NumCAFPoints", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            let vc = conv_expr::eval_with("($val >> 4) * ($val & 0x0f)", &cv, &ctx);
+            if vc.as_ref() != Some(&Conv::Undef) {
+                if let Some(x) = vc { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("NumCAFPoints", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(v) = u8_at(data, 0x1) {
@@ -61349,10 +62808,13 @@ fn pentax_cafpointinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("($val >> 4) . \" \" . ($val & 0x0f)", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("$val =~ tr/ /x/; $val", &cv, &ctx) { cv = x; }
-        tags.push(mk("CAFGridSize", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("($val >> 4) . \" \" . ($val & 0x0f)", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("$val =~ tr/ /x/; $val", &cv, &ctx) { cv = x; }
+            tags.push(mk("CAFGridSize", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -61647,9 +63109,12 @@ fn quicktime_hevcconfig(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 8", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("BitDepthLuma", 0x11, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 8", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("BitDepthLuma", 0x11, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x12) {
         let v = v & 0x7;
@@ -61657,18 +63122,24 @@ fn quicktime_hevcconfig(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val + 8", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("BitDepthChroma", 0x12, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val + 8", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("BitDepthChroma", 0x12, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x13, bo) {
         dm.push(("AverageFrameRate".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 256", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("AverageFrameRate", 0x13, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 256", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("AverageFrameRate", 0x13, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u8_at(data, 0x15) {
         let v = (v & 0xc0) >> 6;
@@ -61975,10 +63446,13 @@ fn reconyx_hyperfire(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val V\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("BatteryVoltage", 0x2a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val V\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("BatteryVoltage", 0x2a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(text) = text_at(data, 0x56, 22, true) {
         tags.push(mk("UserLabel", 0x2b, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
@@ -62414,18 +63888,24 @@ fn reconyx_hyperfire4k(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("BatteryVoltage", 0x4b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("BatteryVoltage", 0x4b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x4d, bo) {
         dm.push(("BatteryVoltageAvg".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("BatteryVoltageAvg", 0x4d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("BatteryVoltageAvg", 0x4d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x4f, bo) {
         dm.push(("BatteryType".to_string(), Conv::Num(f64::from(v))));
@@ -62584,15 +64064,18 @@ fn reconyx_microfire(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("
             sprintf('%.4d:%.2d:%.2d',
                 ($val >> 9)  + 1980, # year
                 ($val >> 5)  & 0x0f, # month
                  $val        & 0x1f, # day
             );
-        ", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("BluetoothFirmwareDate", 0x3a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        ", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("BluetoothFirmwareDate", 0x3a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     {
         let mut parts = Vec::new();
@@ -62616,15 +64099,18 @@ fn reconyx_microfire(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("
+        let vc = conv_expr::eval_with("
             sprintf('%.4d:%.2d:%.2d',
                 ($val >> 9)  + 1980, # year
                 ($val >> 5)  & 0x0f, # month
                  $val        & 0x1f, # day
             );
-        ", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("WifiFirmwareDate", 0x42, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        ", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("WifiFirmwareDate", 0x42, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(text) = text_at(data, 0x44, 2, true) {
         tags.push(mk("TriggerMode", 0x44, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
@@ -62792,9 +64278,12 @@ fn reconyx_microfire(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("BatteryVoltage", 0x72, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("BatteryVoltage", 0x72, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x74, bo) {
         dm.push(("BatteryType".to_string(), Conv::Num(f64::from(v))));
@@ -62973,10 +64462,13 @@ fn reconyx_ultrafire(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval_with("\"$val V\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("BatteryVoltage", 0x49, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val / 1000", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("\"$val V\"", &cv, &ctx) { cv = x; }
+            tags.push(mk("BatteryVoltage", 0x49, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(text) = text_at(data, 0x4b, 15, true) {
         tags.push(mk("SerialNumber", 0x4b, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
@@ -63416,27 +64908,36 @@ fn samsung_picturewizard(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 4", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("PictureWizardSaturation", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 4", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("PictureWizardSaturation", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x6, bo) {
         dm.push(("PictureWizardSharpness".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 4", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("PictureWizardSharpness", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 4", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("PictureWizardSharpness", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     if let Some(v) = u16_at(data, 0x8, bo) {
         dm.push(("PictureWizardContrast".to_string(), Conv::Num(f64::from(v))));
         let ctx = Ctx { make, model, file_type, dm };
         let base = Conv::Num(f64::from(v));
         let mut cv = base;
-        if let Some(x) = conv_expr::eval_with("$val - 4", &cv, &ctx) { cv = x; }
-        let raw = Value::F64(cv.as_num());
-        tags.push(mk("PictureWizardContrast", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        let vc = conv_expr::eval_with("$val - 4", &cv, &ctx);
+        if vc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = vc { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("PictureWizardContrast", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
