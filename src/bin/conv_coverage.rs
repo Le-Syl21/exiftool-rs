@@ -79,6 +79,15 @@ impl ParseState for Probe {
 /// answer ExifTool gives, so they are counted apart from the real gaps rather
 /// than held against the evaluator or quietly forgiven.
 fn perl_compiles(expr: &str) -> Option<bool> {
+    Some(perl_verdict(expr)?.is_none())
+}
+
+/// What Perl says about an expression it will not compile, in its own words.
+///
+/// This is the one claim in the report that running the evaluator cannot
+/// settle: an expression no evaluator can reach is a statement about Perl, so
+/// Perl is the one who makes it.
+fn perl_verdict(expr: &str) -> Option<Option<String>> {
     let out = std::process::Command::new("perl")
         .arg("-e")
         // ExifTool evaluates these inside a module that runs under `strict`,
@@ -87,11 +96,17 @@ fn perl_compiles(expr: &str) -> Option<bool> {
         .arg("use strict; use warnings; my ($val, $self, $tag) = (42, undef, 'T'); \
               my (@val, @prt, @raw) = ((1,2), (1,2), (1,2)); \
               eval $ARGV[0]; \
-              print 'DIES' if $@ and $@ =~ /syntax error|not terminated|requires explicit package/")
+              print $@ if $@ and $@ =~ /syntax error|not terminated|requires explicit package/")
         .arg(expr)
         .output()
         .ok()?;
-    Some(!String::from_utf8_lossy(&out.stdout).contains("DIES"))
+    let err = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    Some(if err.is_empty() {
+        None
+    } else {
+        // Its first line, without the `at -e line 1.` Perl appends.
+        Some(err.lines().next().unwrap_or_default().trim().to_string())
+    })
 }
 
 /// Every PrintConv/ValueConv written as a Perl expression, with its occurrence
@@ -261,7 +276,8 @@ fn main() {
             "  unevaluable: {broken_o} occurrences ({} distinct) are not valid Perl -- ExifTool's",
             broken.len()
         );
-        println!("                own eval dies on them, so it prints the raw value too:");
+        println!("                own eval dies on them ($value = eval $conv, ExifTool.pm:3663),");
+        println!("                leaving no value for any evaluator to produce:");
         for (n, e) in &broken {
             let shown: String = e.chars().take(72).collect();
             // Named where it is written: this is the one claim in the report
@@ -270,6 +286,9 @@ fn main() {
             let where_ = sites.get(e).map_or_else(String::new, |v| v.join(", "));
             println!("     {n:5}  {shown}");
             println!("            in {where_}");
+            if let Some(Some(why)) = perl_verdict(e) {
+                println!("            perl: {why}");
+            }
         }
     }
     if perl_missing {
