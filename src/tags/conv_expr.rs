@@ -209,7 +209,40 @@ pub fn eval_composite(
 
 /// As [`eval`], with the file-level parse state the conversion may read.
 pub fn eval_with(expr: &str, val: &Val, state: &dyn ParseState) -> Option<Val> {
+    if let Some(v) = perl_will_not_compile(expr, val) {
+        return Some(v);
+    }
     run(new_parser(expr, val, state))
+}
+
+/// The three conversions in ExifTool 13.59 that Perl refuses to compile, and
+/// what ExifTool produces for each.
+///
+/// `src/bin/conv_coverage.rs` finds them by running perl over every
+/// conversion in the source, and prints Perl's own verdict beside the file
+/// and line. They are listed here by their exact text, so a fixed typo
+/// upstream stops matching and the expression is evaluated normally.
+///
+/// This is not a fallback for an expression this evaluator cannot parse --
+/// that must keep declining, or a real gap would pass unnoticed. It is what
+/// ExifTool does with these two, and the two answers differ because the role
+/// differs: `$value = eval $conv` (ExifTool.pm:3663) leaves `$value` undef,
+/// and then `return () unless defined $value` means a PrintConv keeps the
+/// value it was handed while a ValueConv leaves the tag with none.
+fn perl_will_not_compile(expr: &str, val: &Val) -> Option<Val> {
+    match expr {
+        // MXF.pm:681 and :682, `PrintConv => '$val m'` where every other
+        // altitude tag writes `'"$val m"'`. Perl: "Search pattern not
+        // terminated" -- it reads `m` as the match operator and runs out of
+        // string looking for its delimiter. A PrintConv that dies leaves the
+        // value it was handed.
+        "$val m" => Some(val.clone()),
+        // PCAP.pm:282, a ValueConv with one closing parenthesis too many.
+        // Perl: "syntax error near ))". A ValueConv that dies leaves the tag
+        // with no value at all.
+        r#"$_=join(".", unpack("C*", $val))); s/(:.*?:.*?:.*?):/$1 /; $_"# => Some(Val::Undef),
+        _ => None,
+    }
 }
 
 fn new_parser<'a>(expr: &'a str, val: &Val, state: &'a dyn ParseState) -> Parser<'a> {
@@ -5127,6 +5160,34 @@ mod tests {
         )
         .unwrap();
         assert_eq!(bulb.as_string(), "Bulb");
+    }
+
+    /// The two conversions Perl will not compile, and what ExifTool makes of
+    /// them. The answers differ because the role does: a PrintConv that dies
+    /// leaves the value it was handed, a ValueConv that dies leaves none.
+    #[test]
+    fn the_conversions_perl_refuses() {
+        // MXF.pm:681, :682 -- a PrintConv.
+        assert_eq!(eval("$val m", &n(1234.0)), Some(Val::Num(1234.0)));
+        assert_eq!(
+            eval("$val m", &Val::Str("x".into())),
+            Some(Val::Str("x".into()))
+        );
+        // PCAP.pm:282 -- a ValueConv.
+        assert_eq!(
+            eval(
+                r#"$_=join(".", unpack("C*", $val))); s/(:.*?:.*?:.*?):/$1 /; $_"#,
+                &Val::Str("abcd".into())
+            ),
+            Some(Val::Undef)
+        );
+        // The same expression with the typo fixed is evaluated, not matched:
+        // nothing here is a fallback for an expression the grammar cannot read.
+        assert_eq!(
+            eval("\"$val m\"", &n(5.0)),
+            Some(Val::Str("5 m".into()))
+        );
+        assert!(eval("$val zzz", &n(1.0)).is_none());
     }
 
     /// Anything outside the grammar must decline, not approximate: the caller
