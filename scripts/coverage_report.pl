@@ -53,3 +53,10 @@ for my $mod (sort { scalar(@{$missing{$b} || []}) <=> scalar(@{$missing{$a} || [
 }
 printf "\nTOTAL: %d binary sub-tables defined, %d never mentioned in our source (%d%% covered)\n",
     $t, $m, int(100 * ($t - $m) / $t);
+
+# The names, not just the count: a number says how far there is to go, a list
+# says what to do next.
+print "\nNOT REACHED:\n";
+for my $mod (sort keys %missing) {
+    printf "  %-14s %s\n", $mod, join ' ', sort @{$missing{$mod}};
+}

@@ -2557,6 +2557,30 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
         // Without a -d format ExifTool returns the date untouched, and that is
         // the default. This is the single most-used conversion it has.
         "ConvertDateTime" => first.clone(),
+        // `XMP::PrintLensID($self, @val)`: the LensID Adobe wrote, against the
+        // lens table of the maker the file names. ExifTool has three functions
+        // by this name -- XMP's, Exif's and Canon's -- but only XMP's is
+        // written into a conversion; the other two are what it calls.
+        "PrintLensID" => {
+            let val = |i: usize| args.get(i).map(Val::as_string).unwrap_or_default();
+            let num = |i: usize| args.get(i).map_or(0.0, Val::as_num);
+            let opt = |i: usize| {
+                args.get(i)
+                    .map(Val::as_string)
+                    .filter(|s| !s.is_empty() && s != "undef")
+            };
+            let tag = |n: &str| state.tag_value(n).map(|v| v.as_string()).unwrap_or_default();
+            Val::Str(crate::tags::lens_id::xmp_print_lens_id(
+                &val(0),
+                &val(1),
+                opt(2).as_deref(),
+                num(3),
+                opt(4).as_deref(),
+                num(5),
+                &tag("Make"),
+                &tag("Model"),
+            ))
+        }
         "PrintExposureTime" => Val::Str(print_exposure_time(first.as_num())),
         "PrintFNumber" => Val::Str(print_f_number(first.as_num())),
         "PrintFraction" => Val::Str(crate::tags::exif::print_fraction(first.as_num())),
@@ -4947,8 +4971,14 @@ mod tests {
         // Checked against Perl: ConvertBitrate(1500000) is "1.5 Mbps", not "1.50".
         assert_eq!(eval("ConvertBitrate($val)", &n(1_500_000.0)).unwrap().as_string(), "1.5 Mbps");
         assert_eq!(eval("ConvertBitrate($val)", &n(999.0)).unwrap().as_string(), "999 bps");
-        // A name we have not ported still declines.
-        assert!(eval("Image::ExifTool::XMP::PrintLensID($self, @val)", &n(1.0)).is_none());
+        // `XMP::PrintLensID` reads the maker out of the second value: with
+        // nothing that names one, ExifTool answers `Unknown (<id>)` too.
+        assert_eq!(
+            eval("Image::ExifTool::XMP::PrintLensID($self, @val)", &n(1.0))
+                .unwrap()
+                .as_string(),
+            "Unknown (1)"
+        );
     }
 
     #[test]
@@ -4992,7 +5022,6 @@ mod tests {
     /// keeps the raw value, which is honest, where a wrong conversion is not.
     #[test]
     fn unsupported_expressions_decline() {
-        assert!(eval("Image::ExifTool::XMP::PrintLensID($self, @val)", &n(1.0)).is_none());
         assert!(eval("$$self{Model}", &n(1.0)).is_none());
         assert!(eval("$val / 0", &n(1.0)).is_none());
     }

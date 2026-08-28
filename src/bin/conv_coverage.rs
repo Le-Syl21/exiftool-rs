@@ -238,6 +238,13 @@ fn main() {
     println!("COUNTER ONE — conversion expressions understood by tags::conv_expr");
     println!("  occurrences : {ok_o} / {total_o}  ({}%)", 100 * ok_o / total_o.max(1));
     println!("  distinct    : {ok_d} / {total_d}");
+    // The count that can reach 100%: an expression Perl itself cannot compile
+    // is one ExifTool prints the raw value for, and no evaluator can do more.
+    let evaluable = total_o - broken_o;
+    println!(
+        "  of the evaluable: {ok_o} / {evaluable}  ({}%)",
+        100 * ok_o / evaluable.max(1)
+    );
     println!("  state-fed   : {state_o} occurrences ({state_d} distinct) read a parse-state");
     println!("                member, and are right only once the reader tracks it");
     if !broken.is_empty() {

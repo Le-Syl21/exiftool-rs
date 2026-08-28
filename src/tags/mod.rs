@@ -17,3 +17,5 @@ pub mod conv_expr;
 pub mod sony_ciphered_generated;
 pub mod variant_selectors_generated;
 pub mod sub_tables_generated;
+pub mod lens_id;
+pub mod lens_tables_generated;
