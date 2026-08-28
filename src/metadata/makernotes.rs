@@ -7298,8 +7298,14 @@ fn read_makernote_ifd_with_base(
                     // Pentax.pm:2825-2852), and PentaxModelID by both
                     // `Pentax::Main` 0x0005 and `Pentax::CameraInfo` (0x0215,
                     // Pentax.pm:4721). ExifTool reports each of them twice.
-                    if matches!(manufacturer, Manufacturer::Canon | Manufacturer::Pentax)
-                        && matches!(&tag.id, TagId::Text(s) if *s == tag.name)
+                    // Sony needs it for the same reason: DistortionCorrParams
+                    // and its neighbours are defined by Tag2010i, Tag9050b and
+                    // Tag9404c alike, and with duplicates kept ExifTool reports
+                    // one per table. Keyed by name alone they are one tag.
+                    if matches!(
+                        manufacturer,
+                        Manufacturer::Canon | Manufacturer::Pentax | Manufacturer::Sony
+                    ) && matches!(&tag.id, TagId::Text(s) if *s == tag.name)
                     {
                         tag.id = TagId::Numeric(tag_id);
                     }

@@ -22,33 +22,14 @@ SonyILCE9.arw	ee	extra	0	Sharpness	Normal
 SonyILCE9.arw	ee	missing	0	APS-CSizeCapture	Off
 SonyILCE9.arw	ee	missing	0	BrightnessValue	5.28671875
 SonyILCE9.arw	ee	missing	0	Contrast	0
-SonyILCE9.arw	ee	missing	0	DistortionCorrParams	0 2 10 24 46 74 108 148 194 246 306 372 444 522 608 700
-SonyILCE9.arw	ee	missing	0	DistortionCorrParamsPresent	Yes
-SonyILCE9.arw	ee	missing	1	DistortionCorrParamsPresent	Yes
 SonyILCE9.arw	ee	missing	0	DynamicRangeOptimizer	Auto
-SonyILCE9.arw	ee	missing	0	ExposureProgram	Manual
-SonyILCE9.arw	ee	missing	1	ExposureProgram	Manual
 SonyILCE9.arw	ee	missing	0	ExposureTime	1/20
 SonyILCE9.arw	ee	missing	0	FocusMode	AF-C
-SonyILCE9.arw	ee	missing	0	LensFormat	Full-frame
-SonyILCE9.arw	ee	missing	1	LensFormat	Full-frame
-SonyILCE9.arw	ee	missing	0	LensMount	E-mount
-SonyILCE9.arw	ee	missing	1	LensMount	E-mount
 SonyILCE9.arw	ee	missing	0	LensSpecFeatures	E
-SonyILCE9.arw	ee	missing	0	LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
-SonyILCE9.arw	ee	missing	1	LensType2	Tamron 50-300mm F4.5-6.3 Di III VC VXD
-SonyILCE9.arw	ee	missing	0	PictureEffect2	Off
 SonyILCE9.arw	ee	missing	0	PictureProfile	Gamma Still - Standard/Neutral (PP2)
 SonyILCE9.arw	ee	missing	0	Quality2	RAW
 SonyILCE9.arw	ee	missing	0	ReleaseMode2	Normal
 SonyILCE9.arw	ee	missing	1	ReleaseMode2	Normal
-SonyILCE9.arw	ee	missing	2	ReleaseMode2	Normal
-SonyILCE9.arw	ee	missing	3	ReleaseMode2	Normal
-SonyILCE9.arw	ee	missing	4	ReleaseMode2	Normal
 SonyILCE9.arw	ee	missing	0	Saturation	0
-SonyILCE9.arw	ee	missing	0	SequenceImageNumber	1
 SonyILCE9.arw	ee	missing	0	SequenceLength	1 shot
 SonyILCE9.arw	ee	missing	0	Sharpness	0
-SonyILCE9.arw	ee	missing	0	SonyFNumber	8.0
-SonyILCE9.arw	ee	missing	0	SonyISO	252
-SonyILCE9.arw	ee	missing	0	StopsAboveBaseISO	1.3
