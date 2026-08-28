@@ -7461,6 +7461,23 @@ fn read_makernote_ifd_with_base(
                             continue;
                         }
                     };
+                    // Three entries of these sub-IFDs open a binary table of
+                    // their own: AFInfo in FocusInfo, AFTargetInfo and
+                    // SubjectDetectInfo in CameraSettings.
+                    let nested = match (tag_id, stid) {
+                        (0x2050, 0x0328) => Some("Olympus::AFInfo"),
+                        (0x2020, 0x030a) => Some("Olympus::AFTargetInfo"),
+                        (0x2020, 0x030b) => Some("Olympus::SubjectDetectInfo"),
+                        _ => None,
+                    };
+                    if let Some(table) = nested {
+                        let mut dm = crate::tags::binary_tables_generated::State::new();
+                        sub_tags.extend(crate::tags::binary_tables_generated::decode(
+                            table, sval, "", "", byte_order, "", "", &mut dm,
+                        ));
+                        continue;
+                    }
+
                     let val =
                         crate::metadata::makernotes::decode_mn_value(sval, sdt, scnt, byte_order);
 
@@ -10447,6 +10464,21 @@ fn decode_ricoh_subdir(data: &[u8], full_data: &[u8], _parent_bo: ByteOrderMark)
                 continue;
             }
         };
+        // Entry 0x001a of Ricoh::Subdir opens FaceInfo (Ricoh.pm).
+        if tag_id == 0x001a {
+            let mut dm = crate::tags::binary_tables_generated::State::new();
+            tags.extend(crate::tags::binary_tables_generated::decode(
+                "Ricoh::FaceInfo",
+                value_data,
+                "",
+                "",
+                bo,
+                "",
+                "",
+                &mut dm,
+            ));
+            continue;
+        }
 
         let name = match tag_id {
             0x0004 => "ManufactureDate1",

@@ -46,7 +46,7 @@ my %WANTED = (
                      ShotInfo TimeInfo Type2)],
     PanasonicRaw => [qw(DistortionInfo WBInfo WBInfo2)],
     Casio => [qw(FaceInfo1 FaceInfo2 QVCI AVI)],
-    Ricoh => [qw(FaceInfo AVI)],
+    Ricoh => [qw(FaceInfo AVI Subdir)],
     Sanyo => [qw(FaceInfo Thumbnail)],
     Reconyx => [qw(HyperFire HyperFire2 HyperFire4K MicroFire UltraFire)],
     H264 => [qw(Camera1 Camera2 FrameInfo MakeModel RecInfo)],
@@ -76,7 +76,8 @@ my %WANTED = (
         CameraSettings5D CameraSettingsA100 ISInfoA100
     )],
     Olympus => [qw(MOV1 MOV2 prms AFInfo AFTargetInfo MovableInfo
-                   SubjectDetectInfo Thumbnail AVI MP4 WAV)],
+                   SubjectDetectInfo Thumbnail AVI MP4 WAV
+                   FocusInfo CameraSettings)],
     FujiFilm => [qw(FFMV RAFData MOV)],
     QuickTime => [qw(HTCBinary AV1Config ContentLightLevel Flip HEVCConfig)],
     FLIR => [qw(
@@ -344,7 +345,8 @@ sub compile_cond {
     }
     return ("!(" . (compile_cond($1))[0] . ")") if $cond =~ /^not (.*)$/ and compile_cond($1);
     # `$$self{Model} =~ /EOS 70D$/`, `$$self{Make} =~ /Kodak/i`.
-    if ($cond =~ m{^\$\$self\{(Model|Make)\} (=~|!~) /(.*?)/(i?)$}) {
+    # `=~ m/.../` says the same as `=~ /.../`.
+    if ($cond =~ m{^\$\$self\{(Model|Make)\} (=~|!~) m?/(.*?)/(i?)$}) {
         my ($what, $op, $pat, $ci) = ($1, $2, $3, $4);
         return () if $pat =~ /\(\?[=!<]/;
         $pat = "(?i)$pat" if $ci;
@@ -612,7 +614,9 @@ sub parse_table {
             my $len;
             if (defined $slen and defined $sw) {
                 $len = $slen * $sw;
-            } elsif (not defined $fb_had_format) {
+            } elsif (not defined $fb_had_format
+                     or $fb_had_format eq 'undef'
+                     or $fb_had_format eq 'string') {
                 # No Format of its own: ExifTool runs the sub-directory from
                 # its entry to the end of the block.
                 $len = undef;
