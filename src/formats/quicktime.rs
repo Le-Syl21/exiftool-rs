@@ -976,13 +976,13 @@ fn parse_atoms(
                     // the sixteen bytes of the id.
                     else if let Some(table) = match uuid {
                         b"\x57\xf5\xb9\x3e\x51\xe4\x48\xaf\xa0\xd9\xc3\xef\x1b\x37\xf7\x12" => {
-                            Some("SerialNums")
+                            Some("FLIR::SerialNums")
                         }
                         b"\x57\x45\x20\x50\x2c\xbb\x44\xad\xae\x54\x15\xe9\xb8\x39\xd9\x03" => {
-                            Some("UnknownUUID")
+                            Some("FLIR::UnknownUUID")
                         }
                         b"\x7f\x2e\x21\x00\x8b\x46\x49\x18\xaf\xb1\xde\x70\x9a\x74\xf6\xf5" => {
-                            Some("GPS_UUID")
+                            Some("FLIR::GPS_UUID")
                         }
                         _ => None,
                     } {
@@ -1042,13 +1042,120 @@ fn parse_atoms(
                 let cd = &data[content_start..content_end];
                 if cd.starts_with(b"PENTAX DIGITAL CAMERA\0") {
                     parse_pentax_mov(cd, tags);
+                } else if let Some(inner) = olympus_prms(cd) {
+                    // `/^.{16}OLYM\0/`: the E-M5 writes a nest of atoms in
+                    // TAGS -- OLYM, then prms -- rather than a flat block
+                    // (QuickTime.pm:1984, Olympus.pm:3913-3930).
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    tags.extend(crate::tags::binary_tables_generated::decode(
+                        "Olympus::prms",
+                        inner,
+                        "",
+                        crate::metadata::exif::ByteOrderMark::BigEndian,
+                        "",
+                        "",
+                        &mut dm,
+                    ));
+                } else if let Some(table) = mov_tags_table(cd) {
+                    // Every one of these is `ByteOrder => 'LittleEndian'`
+                    // (QuickTime.pm:1927-1975), inside a file whose atoms are
+                    // big-endian.
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    tags.extend(crate::tags::binary_tables_generated::decode(
+                        table,
+                        cd,
+                        "",
+                        crate::metadata::exif::ByteOrderMark::LittleEndian,
+                        "",
+                        "",
+                        &mut dm,
+                    ));
                 }
+            }
+            // FujiFilm's movie block and HTC's, each its own atom.
+            b"FFMV" | b"htcb" => {
+                let mut dm = crate::tags::binary_tables_generated::State::new();
+                tags.extend(crate::tags::binary_tables_generated::decode(
+                    if atom_type == b"FFMV" { "FujiFilm::FFMV" } else { "QuickTime::HTCBinary" },
+                    &data[content_start..content_end],
+                    "",
+                    crate::metadata::exif::ByteOrderMark::BigEndian,
+                    "",
+                    "",
+                    &mut dm,
+                ));
             }
             _ => {}
         }
 
         pos = atom_end;
     }
+}
+
+/// The bytes of the `prms` atom the E-M5 nests inside `OLYM` inside `TAGS`.
+///
+/// Each level is a plain QuickTime atom -- a big-endian length, then a
+/// four-character name -- and ExifTool reaches the innermost one through
+/// Olympus::MOV3 and Olympus::OLYM2.
+fn olympus_prms(cd: &[u8]) -> Option<&[u8]> {
+    if cd.len() < 21 || &cd[16..21] != b"OLYM\0" {
+        return None;
+    }
+    // `Start => 12` (QuickTime.pm:1989): the atom list begins twelve bytes in,
+    // so OLYM's own size word sits at 12 and its name at 16. Its content is
+    // another atom list, and prms is one of those.
+    let olym = find_atom(cd, 12, b"OLYM")?;
+    find_atom(olym, 0, b"prms")
+}
+
+/// The content of the first atom of this name, scanning from an offset.
+fn find_atom<'a>(d: &'a [u8], from: usize, want: &[u8; 4]) -> Option<&'a [u8]> {
+    let mut pos = from;
+    while pos + 8 <= d.len() {
+        let size = u32::from_be_bytes([d[pos], d[pos + 1], d[pos + 2], d[pos + 3]]) as usize;
+        if size < 8 || pos + size > d.len() {
+            return None;
+        }
+        if &d[pos + 4..pos + 8] == want {
+            return Some(&d[pos + 8..pos + size]);
+        }
+        pos += size;
+    }
+    None
+}
+
+/// Which maker's table a `TAGS` atom holds, by the string it opens with.
+///
+/// The conditions are QuickTime.pm's own (1927-1975). Olympus writes two
+/// layouts under one prefix: the first is marked by a 1 at offset 32, and the
+/// second is everything else that is not the shape ExifTool excludes there.
+fn mov_tags_table(cd: &[u8]) -> Option<&'static str> {
+    if cd.starts_with(b"KONICA MINOLTA DIGITAL CAMERA") {
+        return Some("Minolta::MOV1");
+    }
+    if cd.starts_with(b"MINOLTA DIGITAL CAMERA") {
+        return Some("Minolta::MOV2");
+    }
+    if cd.starts_with(b"OLYMPUS DIGITAL CAMERA\0") {
+        // `/^OLYMPUS DIGITAL CAMERA\0.{9}\x01\0/s`
+        if cd.len() > 34 && cd[32] == 0x01 && cd[33] == 0 {
+            return Some("Olympus::MOV1");
+        }
+    }
+    if cd.starts_with(b"OLYMPUS DIGITAL CAMERA") {
+        // `/^OLYMPUS DIGITAL CAMERA(?!\0.{21}\x0a\0{3})/s`: everything but
+        // the shape that negative lookahead excludes.
+        let excluded = cd.len() > 48
+            && cd[22] == 0
+            && cd[44] == 0x0a
+            && cd[45] == 0
+            && cd[46] == 0
+            && cd[47] == 0;
+        if !excluded {
+            return Some("Olympus::MOV2");
+        }
+    }
+    None
 }
 
 /// Parse movie header (mvhd) atom.

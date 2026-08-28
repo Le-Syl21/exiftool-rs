@@ -5964,7 +5964,7 @@ fn read_makernote_ifd_with_base(
                     // the one CameraInfo1DmkIII defines at entry 4.
                     let mut dm = crate::tags::binary_tables_generated::State::new();
                     crate::tags::binary_tables_generated::decode(
-                        "ShotInfo",
+                        "Canon::ShotInfo",
                         value_data,
                         model_name,
                         byte_order,
@@ -6760,9 +6760,9 @@ fn read_makernote_ifd_with_base(
                     if tag_id == 0x0004 || model_name == "DSLR-A100" =>
                 {
                     let (table, bo) = match tag_id {
-                        0x0004 => ("CameraSettings7D", ByteOrderMark::BigEndian),
-                        0x0010 => ("CameraInfoA100", ByteOrderMark::LittleEndian),
-                        _ => ("WBInfoA100", ByteOrderMark::BigEndian),
+                        0x0004 => ("Minolta::CameraSettings7D", ByteOrderMark::BigEndian),
+                        0x0010 => ("Minolta::CameraInfoA100", ByteOrderMark::LittleEndian),
+                        _ => ("Minolta::WBInfoA100", ByteOrderMark::BigEndian),
                     };
                     let mut dm = crate::tags::binary_tables_generated::State::new();
                     let mut t = crate::tags::binary_tables_generated::decode(

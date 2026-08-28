@@ -518,7 +518,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             // from a missing one here.
             let mut dm = crate::tags::binary_tables_generated::State::new();
             let sub_tags = crate::tags::binary_tables_generated::decode(
-                "ShotInfo",
+                "Canon::ShotInfo",
                 data,
                 "CRW",
                 crate::metadata::exif::ByteOrderMark::LittleEndian,

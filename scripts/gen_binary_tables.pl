@@ -35,8 +35,11 @@ my %WANTED = (
         ShotInfo
     )],
     Minolta => [qw(
-        CameraSettings7D CameraInfoA100 WBInfoA100
+        CameraSettings7D CameraInfoA100 WBInfoA100 MOV1 MOV2
     )],
+    Olympus => [qw(MOV1 MOV2 prms)],
+    FujiFilm => [qw(FFMV)],
+    QuickTime => [qw(HTCBinary)],
     FLIR => [qw(
         GainDeadData CoarseData PaintData SerialNums UnknownUUID GPS_UUID
         AFF1 AFF5
@@ -54,13 +57,15 @@ my %WIDTH = (
     int16u => 2, int16s => 2,
     int32u => 4, int32s => 4,
     rational32u => 4, rational32s => 4,
+    # The eight-byte rational EXIF writes: two 32-bit halves.
+    rational64u => 8, rational64s => 8,
     # ExifTool's `int16uRev` is a 16-bit value stored the other way round from
     # the rest of the block -- Canon writes LensType and ColorTemperature that
     # way inside a little-endian file.
     int16uRev => 2,
     float => 4, double => 8,
 );
-my %IS_RATIONAL = (rational32u => 1, rational32s => 1);
+my %IS_RATIONAL = (rational32u => 1, rational32s => 1, rational64u => 1, rational64s => 1);
 
 my @skipped;
 my @tables;      # emitted, in order
@@ -688,7 +693,7 @@ for my $mod (sort keys %SELECTORS) {
             }
             my $c_src = field_cond($a);
             unless (defined $c_src) {
-                $sel_src .= sprintf "            Some(\"%s\")\n", $sub;
+                $sel_src .= sprintf "            Some(\"%s::%s\")\n", $mod, $sub;
                 $unconditional = 1;
                 last;
             }
@@ -698,7 +703,7 @@ for my $mod (sort keys %SELECTORS) {
                 next;
             }
             (my $ce = $c[0]) =~ s/__OFF__/0/g;
-            $sel_src .= sprintf "            if %s {\n                return Some(\"%s\");\n            }\n", $ce, $sub;
+            $sel_src .= sprintf "            if %s {\n                return Some(\"%s::%s\");\n            }\n", $ce, $mod, $sub;
         }
         $sel_src .= "            None\n" unless $unconditional;
         $sel_src .= "        }\n";
@@ -834,6 +839,14 @@ fn rat32u_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
 fn rat32s_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
     ratio(f64::from(i16_at(d, o, bo)?), f64::from(i16_at(d, o + 2, bo)?))
 }
+/// The eight-byte rational EXIF writes: two 32-bit halves.
+fn rat64u_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
+    ratio(f64::from(u32_at(d, o, bo)?), f64::from(u32_at(d, o + 4, bo)?))
+}
+fn rat64s_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
+    ratio(f64::from(i32_at(d, o, bo)?), f64::from(i32_at(d, o + 4, bo)?))
+}
+
 fn ratio(n: f64, d: f64) -> Option<f64> {
     if d == 0.0 { return if n == 0.0 { None } else { Some(f64::INFINITY) }; }
     Some(n / d)
@@ -892,7 +905,8 @@ for my $i (0 .. $#re_list) {
 }
 print "\n" if @re_list;
 
-print "/// Decode one binary sub-table by the name ExifTool gives it.\n";
+print "/// Decode one binary sub-table by the name ExifTool gives it, module first:
+/// `Canon::ShotInfo`. Two modules can name a table the same thing.\n";
 print "#[must_use]\n";
 print <<'DECODE';
 pub fn decode(
@@ -906,7 +920,9 @@ pub fn decode(
 ) -> Vec<Tag> {
 DECODE
 print "    match table {\n";
-printf("        \"%s\" => %s(data, model, bo, file_type, format, dm),\n", $_->{name}, fn_name($_)) for @tables;
+# Keyed by module and table: Minolta and Olympus both call a table MOV1.
+printf("        \"%s::%s\" => %s(data, model, bo, file_type, format, dm),\n",
+       $_->{module}, $_->{name}, fn_name($_)) for @tables;
 print "        _ => Vec::new(),\n    }\n}\n\n";
 
 for my $t (@tables) {
@@ -962,6 +978,7 @@ for my $t (@tables) {
             rational32u => 'rat32u_at', rational32s => 'rat32s_at',
             int16uRev => 'u16rev_at',
             float => 'f32_at', double => 'f64_at',
+            rational64u => 'rat64u_at', rational64s => 'rat64s_at',
         }->{$f->{fmt}};
         my $args = $f->{fmt} =~ /^int8/ ? '' : ', bo';
         my $w = $WIDTH{$f->{fmt}};

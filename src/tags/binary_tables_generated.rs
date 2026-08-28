@@ -3,7 +3,7 @@
 //! Do not edit: regenerate with
 //! `perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs`.
 //!
-//! 63 tables, 1591 fields. A binary sub-table is a block of
+//! 70 tables, 1622 fields. A binary sub-table is a block of
 //! bytes addressed by index: ExifTool's ProcessBinaryData reads the entry at
 //! `(index - FIRST_ENTRY) * sizeof(FORMAT)`, and a field's own Format says
 //! what to read there. What the generator could not express is on its stderr.
@@ -102,6 +102,14 @@ fn rat32u_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
 fn rat32s_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
     ratio(f64::from(i16_at(d, o, bo)?), f64::from(i16_at(d, o + 2, bo)?))
 }
+/// The eight-byte rational EXIF writes: two 32-bit halves.
+fn rat64u_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
+    ratio(f64::from(u32_at(d, o, bo)?), f64::from(u32_at(d, o + 4, bo)?))
+}
+fn rat64s_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
+    ratio(f64::from(i32_at(d, o, bo)?), f64::from(i32_at(d, o + 4, bo)?))
+}
+
 fn ratio(n: f64, d: f64) -> Option<f64> {
     if d == 0.0 { return if n == 0.0 { None } else { Some(f64::INFINITY) }; }
     Some(n / d)
@@ -192,7 +200,8 @@ static MODEL_RE_37: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\bEOS (R6m2|
 static MODEL_RE_38: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\bEOS R6 Mark III$").expect("generated pattern"));
 static MODEL_RE_39: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\bG5 X Mark II$").expect("generated pattern"));
 
-/// Decode one binary sub-table by the name ExifTool gives it.
+/// Decode one binary sub-table by the name ExifTool gives it, module first:
+/// `Canon::ShotInfo`. Two modules can name a table the same thing.
 #[must_use]
 pub fn decode(
     table: &str,
@@ -204,69 +213,76 @@ pub fn decode(
     dm: &mut State,
 ) -> Vec<Tag> {
     match table {
-        "ColorData1" => canon_colordata1(data, model, bo, file_type, format, dm),
-        "ColorData2" => canon_colordata2(data, model, bo, file_type, format, dm),
-        "ColorData3" => canon_colordata3(data, model, bo, file_type, format, dm),
-        "ColorData4" => canon_colordata4(data, model, bo, file_type, format, dm),
-        "ColorData5" => canon_colordata5(data, model, bo, file_type, format, dm),
-        "ColorData6" => canon_colordata6(data, model, bo, file_type, format, dm),
-        "ColorData7" => canon_colordata7(data, model, bo, file_type, format, dm),
-        "ColorData8" => canon_colordata8(data, model, bo, file_type, format, dm),
-        "ColorData9" => canon_colordata9(data, model, bo, file_type, format, dm),
-        "ColorData10" => canon_colordata10(data, model, bo, file_type, format, dm),
-        "ColorData11" => canon_colordata11(data, model, bo, file_type, format, dm),
-        "ColorData12" => canon_colordata12(data, model, bo, file_type, format, dm),
-        "ColorDataUnknown" => canon_colordataunknown(data, model, bo, file_type, format, dm),
-        "ShotInfo" => canon_shotinfo(data, model, bo, file_type, format, dm),
-        "CameraInfo1D" => canon_camerainfo1d(data, model, bo, file_type, format, dm),
-        "CameraInfo1DmkII" => canon_camerainfo1dmkii(data, model, bo, file_type, format, dm),
-        "CameraInfo1DmkIIN" => canon_camerainfo1dmkiin(data, model, bo, file_type, format, dm),
-        "CameraInfo1DmkIII" => canon_camerainfo1dmkiii(data, model, bo, file_type, format, dm),
-        "CameraInfo1DmkIV" => canon_camerainfo1dmkiv(data, model, bo, file_type, format, dm),
-        "CameraInfo1DX" => canon_camerainfo1dx(data, model, bo, file_type, format, dm),
-        "CameraInfo5D" => canon_camerainfo5d(data, model, bo, file_type, format, dm),
-        "CameraInfo5DmkII" => canon_camerainfo5dmkii(data, model, bo, file_type, format, dm),
-        "CameraInfo5DmkIII" => canon_camerainfo5dmkiii(data, model, bo, file_type, format, dm),
-        "CameraInfo6D" => canon_camerainfo6d(data, model, bo, file_type, format, dm),
-        "CameraInfo7D" => canon_camerainfo7d(data, model, bo, file_type, format, dm),
-        "CameraInfo40D" => canon_camerainfo40d(data, model, bo, file_type, format, dm),
-        "CameraInfo50D" => canon_camerainfo50d(data, model, bo, file_type, format, dm),
-        "CameraInfo60D" => canon_camerainfo60d(data, model, bo, file_type, format, dm),
-        "CameraInfo70D" => canon_camerainfo70d(data, model, bo, file_type, format, dm),
-        "CameraInfo80D" => canon_camerainfo80d(data, model, bo, file_type, format, dm),
-        "CameraInfo450D" => canon_camerainfo450d(data, model, bo, file_type, format, dm),
-        "CameraInfo500D" => canon_camerainfo500d(data, model, bo, file_type, format, dm),
-        "CameraInfo550D" => canon_camerainfo550d(data, model, bo, file_type, format, dm),
-        "CameraInfo600D" => canon_camerainfo600d(data, model, bo, file_type, format, dm),
-        "CameraInfo650D" => canon_camerainfo650d(data, model, bo, file_type, format, dm),
-        "CameraInfo750D" => canon_camerainfo750d(data, model, bo, file_type, format, dm),
-        "CameraInfo1000D" => canon_camerainfo1000d(data, model, bo, file_type, format, dm),
-        "CameraInfoR6" => canon_camerainfor6(data, model, bo, file_type, format, dm),
-        "CameraInfoR6m2" => canon_camerainfor6m2(data, model, bo, file_type, format, dm),
-        "CameraInfoR6m3" => canon_camerainfor6m3(data, model, bo, file_type, format, dm),
-        "CameraInfoG5XII" => canon_camerainfog5xii(data, model, bo, file_type, format, dm),
-        "CameraInfoPowerShot" => canon_camerainfopowershot(data, model, bo, file_type, format, dm),
-        "CameraInfoPowerShot2" => canon_camerainfopowershot2(data, model, bo, file_type, format, dm),
-        "CameraInfoUnknown32" => canon_camerainfounknown32(data, model, bo, file_type, format, dm),
-        "CameraInfoUnknown16" => canon_camerainfounknown16(data, model, bo, file_type, format, dm),
-        "CameraInfoUnknown" => canon_camerainfounknown(data, model, bo, file_type, format, dm),
-        "ColorCalib" => canon_colorcalib(data, model, bo, file_type, format, dm),
-        "ColorCoefs" => canon_colorcoefs(data, model, bo, file_type, format, dm),
-        "ColorCoefs2" => canon_colorcoefs2(data, model, bo, file_type, format, dm),
-        "ColorCalib2" => canon_colorcalib2(data, model, bo, file_type, format, dm),
-        "PSInfo" => canon_psinfo(data, model, bo, file_type, format, dm),
-        "PSInfo2" => canon_psinfo2(data, model, bo, file_type, format, dm),
-        "GainDeadData" => flir_gaindeaddata(data, model, bo, file_type, format, dm),
-        "CoarseData" => flir_coarsedata(data, model, bo, file_type, format, dm),
-        "PaintData" => flir_paintdata(data, model, bo, file_type, format, dm),
-        "SerialNums" => flir_serialnums(data, model, bo, file_type, format, dm),
-        "UnknownUUID" => flir_unknownuuid(data, model, bo, file_type, format, dm),
-        "GPS_UUID" => flir_gps_uuid(data, model, bo, file_type, format, dm),
-        "AFF1" => flir_aff1(data, model, bo, file_type, format, dm),
-        "AFF5" => flir_aff5(data, model, bo, file_type, format, dm),
-        "CameraSettings7D" => minolta_camerasettings7d(data, model, bo, file_type, format, dm),
-        "CameraInfoA100" => minolta_camerainfoa100(data, model, bo, file_type, format, dm),
-        "WBInfoA100" => minolta_wbinfoa100(data, model, bo, file_type, format, dm),
+        "Canon::ColorData1" => canon_colordata1(data, model, bo, file_type, format, dm),
+        "Canon::ColorData2" => canon_colordata2(data, model, bo, file_type, format, dm),
+        "Canon::ColorData3" => canon_colordata3(data, model, bo, file_type, format, dm),
+        "Canon::ColorData4" => canon_colordata4(data, model, bo, file_type, format, dm),
+        "Canon::ColorData5" => canon_colordata5(data, model, bo, file_type, format, dm),
+        "Canon::ColorData6" => canon_colordata6(data, model, bo, file_type, format, dm),
+        "Canon::ColorData7" => canon_colordata7(data, model, bo, file_type, format, dm),
+        "Canon::ColorData8" => canon_colordata8(data, model, bo, file_type, format, dm),
+        "Canon::ColorData9" => canon_colordata9(data, model, bo, file_type, format, dm),
+        "Canon::ColorData10" => canon_colordata10(data, model, bo, file_type, format, dm),
+        "Canon::ColorData11" => canon_colordata11(data, model, bo, file_type, format, dm),
+        "Canon::ColorData12" => canon_colordata12(data, model, bo, file_type, format, dm),
+        "Canon::ColorDataUnknown" => canon_colordataunknown(data, model, bo, file_type, format, dm),
+        "Canon::ShotInfo" => canon_shotinfo(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo1D" => canon_camerainfo1d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo1DmkII" => canon_camerainfo1dmkii(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo1DmkIIN" => canon_camerainfo1dmkiin(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo1DmkIII" => canon_camerainfo1dmkiii(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo1DmkIV" => canon_camerainfo1dmkiv(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo1DX" => canon_camerainfo1dx(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo5D" => canon_camerainfo5d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo5DmkII" => canon_camerainfo5dmkii(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo5DmkIII" => canon_camerainfo5dmkiii(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo6D" => canon_camerainfo6d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo7D" => canon_camerainfo7d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo40D" => canon_camerainfo40d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo50D" => canon_camerainfo50d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo60D" => canon_camerainfo60d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo70D" => canon_camerainfo70d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo80D" => canon_camerainfo80d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo450D" => canon_camerainfo450d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo500D" => canon_camerainfo500d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo550D" => canon_camerainfo550d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo600D" => canon_camerainfo600d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo650D" => canon_camerainfo650d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo750D" => canon_camerainfo750d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfo1000D" => canon_camerainfo1000d(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfoR6" => canon_camerainfor6(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfoR6m2" => canon_camerainfor6m2(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfoR6m3" => canon_camerainfor6m3(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfoG5XII" => canon_camerainfog5xii(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfoPowerShot" => canon_camerainfopowershot(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfoPowerShot2" => canon_camerainfopowershot2(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfoUnknown32" => canon_camerainfounknown32(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfoUnknown16" => canon_camerainfounknown16(data, model, bo, file_type, format, dm),
+        "Canon::CameraInfoUnknown" => canon_camerainfounknown(data, model, bo, file_type, format, dm),
+        "Canon::ColorCalib" => canon_colorcalib(data, model, bo, file_type, format, dm),
+        "Canon::ColorCoefs" => canon_colorcoefs(data, model, bo, file_type, format, dm),
+        "Canon::ColorCoefs2" => canon_colorcoefs2(data, model, bo, file_type, format, dm),
+        "Canon::ColorCalib2" => canon_colorcalib2(data, model, bo, file_type, format, dm),
+        "Canon::PSInfo" => canon_psinfo(data, model, bo, file_type, format, dm),
+        "Canon::PSInfo2" => canon_psinfo2(data, model, bo, file_type, format, dm),
+        "FLIR::GainDeadData" => flir_gaindeaddata(data, model, bo, file_type, format, dm),
+        "FLIR::CoarseData" => flir_coarsedata(data, model, bo, file_type, format, dm),
+        "FLIR::PaintData" => flir_paintdata(data, model, bo, file_type, format, dm),
+        "FLIR::SerialNums" => flir_serialnums(data, model, bo, file_type, format, dm),
+        "FLIR::UnknownUUID" => flir_unknownuuid(data, model, bo, file_type, format, dm),
+        "FLIR::GPS_UUID" => flir_gps_uuid(data, model, bo, file_type, format, dm),
+        "FLIR::AFF1" => flir_aff1(data, model, bo, file_type, format, dm),
+        "FLIR::AFF5" => flir_aff5(data, model, bo, file_type, format, dm),
+        "FujiFilm::FFMV" => fujifilm_ffmv(data, model, bo, file_type, format, dm),
+        "Minolta::CameraSettings7D" => minolta_camerasettings7d(data, model, bo, file_type, format, dm),
+        "Minolta::CameraInfoA100" => minolta_camerainfoa100(data, model, bo, file_type, format, dm),
+        "Minolta::WBInfoA100" => minolta_wbinfoa100(data, model, bo, file_type, format, dm),
+        "Minolta::MOV1" => minolta_mov1(data, model, bo, file_type, format, dm),
+        "Minolta::MOV2" => minolta_mov2(data, model, bo, file_type, format, dm),
+        "Olympus::MOV1" => olympus_mov1(data, model, bo, file_type, format, dm),
+        "Olympus::MOV2" => olympus_mov2(data, model, bo, file_type, format, dm),
+        "Olympus::prms" => olympus_prms(data, model, bo, file_type, format, dm),
+        "QuickTime::HTCBinary" => quicktime_htcbinary(data, model, bo, file_type, format, dm),
         _ => Vec::new(),
     }
 }
@@ -19415,6 +19431,20 @@ fn flir_aff5(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &
     tags
 }
 
+/// `Image::ExifTool::FujiFilm::FFMV` -- FORMAT int8u, FIRST_ENTRY 0.
+fn fujifilm_ffmv(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "FujiFilm";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 34, true) {
+        tags.push(mk("MovieStreamName", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
 /// `Image::ExifTool::Minolta::CameraSettings7D` -- FORMAT int16u, FIRST_ENTRY 0.
 fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
     const GRP0: &str = "MakerNotes";
@@ -20641,6 +20671,241 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
     tags
 }
 
+/// `Image::ExifTool::Minolta::MOV1` -- FORMAT int8u, FIRST_ENTRY 0.
+fn minolta_mov1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Minolta";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 32, true) {
+        tags.push(mk("Make", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x20, 8, true) {
+        tags.push(mk("ModelType", 0x20, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x2e, bo) {
+        dm.push(("ExposureTime".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val ? 10 / $val : 0", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureTime", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64u_at(data, 0x32, bo) {
+        dm.push(("FNumber".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FNumber", 0x32, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64s_at(data, 0x3a, bo) {
+        dm.push(("ExposureCompensation".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureCompensation", 0x3a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64u_at(data, 0x50, bo) {
+        dm.push(("FocalLength".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f mm\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FocalLength", 0x50, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Minolta::MOV2` -- FORMAT int8u, FIRST_ENTRY 0.
+fn minolta_mov2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Minolta";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 32, true) {
+        tags.push(mk("Make", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x18, 8, true) {
+        tags.push(mk("ModelType", 0x18, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x26, bo) {
+        dm.push(("ExposureTime".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val ? 10 / $val : 0", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureTime", 0x26, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64u_at(data, 0x2a, bo) {
+        dm.push(("FNumber".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FNumber", 0x2a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64s_at(data, 0x32, bo) {
+        dm.push(("ExposureCompensation".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureCompensation", 0x32, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64u_at(data, 0x48, bo) {
+        dm.push(("FocalLength".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f mm\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FocalLength", 0x48, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Olympus::MOV1` -- FORMAT int8u, FIRST_ENTRY 0.
+fn olympus_mov1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Olympus";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 24, true) {
+        tags.push(mk("Make", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x18, 8, true) {
+        tags.push(mk("Model", 0x18, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x26, bo) {
+        dm.push(("ExposureUnknown".to_string(), f64::from(v)));
+    }
+    if let Some(v) = rat64u_at(data, 0x2a, bo) {
+        dm.push(("FNumber".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFNumber($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FNumber", 0x2a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64s_at(data, 0x32, bo) {
+        dm.push(("ExposureCompensation".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureCompensation", 0x32, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64u_at(data, 0x48, bo) {
+        dm.push(("FocalLength".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f mm\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FocalLength", 0x48, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Olympus::MOV2` -- FORMAT int8u, FIRST_ENTRY 0.
+fn olympus_mov2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Olympus";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 24, true) {
+        tags.push(mk("Make", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x18, 24, true) {
+        tags.push(mk("Model", 0x18, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x36, bo) {
+        dm.push(("ExposureTime".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val ? 10 / $val : 0", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureTime", 0x36, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64u_at(data, 0x3a, bo) {
+        dm.push(("FNumber".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFNumber($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FNumber", 0x3a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64s_at(data, 0x42, bo) {
+        dm.push(("ExposureCompensation".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureCompensation", 0x42, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64u_at(data, 0x58, bo) {
+        dm.push(("FocalLength".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f mm\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FocalLength", 0x58, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xc1, bo) {
+        dm.push(("ISO".to_string(), f64::from(v)));
+        tags.push(mk("ISO", 0xc1, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Olympus::prms` -- FORMAT int8u, FIRST_ENTRY 0.
+fn olympus_prms(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Olympus";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x12, 24, true) {
+        tags.push(mk("Make", 0x12, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x2c, 24, true) {
+        tags.push(mk("Model", 0x2c, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x83, 24, true) {
+        tags.push(mk("DateTime1", 0x83, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x9d, 24, true) {
+        tags.push(mk("DateTime2", 0x9d, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x17f, 32, true) {
+        tags.push(mk("LensModel", 0x17f, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::QuickTime::HTCBinary` -- FORMAT int32u, FIRST_ENTRY 0.
+fn quicktime_htcbinary(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "HTC";
+    const GRP2: &str = "Video";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    tags
+}
+
 /// Which sub-table a Main-table id opens, by the conditions ExifTool writes
 /// on it.
 ///
@@ -20659,150 +20924,150 @@ pub fn variant_for(
     match (module, tag) {
         ("Canon", 0x000d) => {
             if (count != 0 && MODEL_RE_11.is_match(model)) {
-                return Some("CameraInfo1D");
+                return Some("Canon::CameraInfo1D");
             }
             if MODEL_RE_12.is_match(model) {
-                return Some("CameraInfo1DmkII");
+                return Some("Canon::CameraInfo1DmkII");
             }
             if MODEL_RE_13.is_match(model) {
-                return Some("CameraInfo1DmkIIN");
+                return Some("Canon::CameraInfo1DmkIIN");
             }
             if MODEL_RE_14.is_match(model) {
-                return Some("CameraInfo1DmkIII");
+                return Some("Canon::CameraInfo1DmkIII");
             }
             if MODEL_RE_15.is_match(model) {
-                return Some("CameraInfo1DmkIV");
+                return Some("Canon::CameraInfo1DmkIV");
             }
             if MODEL_RE_16.is_match(model) {
-                return Some("CameraInfo1DX");
+                return Some("Canon::CameraInfo1DX");
             }
             if MODEL_RE_17.is_match(model) {
-                return Some("CameraInfo5D");
+                return Some("Canon::CameraInfo5D");
             }
             if MODEL_RE_18.is_match(model) {
-                return Some("CameraInfo5DmkII");
+                return Some("Canon::CameraInfo5DmkII");
             }
             if MODEL_RE_19.is_match(model) {
-                return Some("CameraInfo5DmkIII");
+                return Some("Canon::CameraInfo5DmkIII");
             }
             if MODEL_RE_20.is_match(model) {
-                return Some("CameraInfo6D");
+                return Some("Canon::CameraInfo6D");
             }
             if MODEL_RE_21.is_match(model) {
-                return Some("CameraInfo7D");
+                return Some("Canon::CameraInfo7D");
             }
             if MODEL_RE_22.is_match(model) {
-                return Some("CameraInfo40D");
+                return Some("Canon::CameraInfo40D");
             }
             if MODEL_RE_23.is_match(model) {
-                return Some("CameraInfo50D");
+                return Some("Canon::CameraInfo50D");
             }
             if MODEL_RE_6.is_match(model) {
-                return Some("CameraInfo60D");
+                return Some("Canon::CameraInfo60D");
             }
             if MODEL_RE_24.is_match(model) {
-                return Some("CameraInfo70D");
+                return Some("Canon::CameraInfo70D");
             }
             if MODEL_RE_25.is_match(model) {
-                return Some("CameraInfo80D");
+                return Some("Canon::CameraInfo80D");
             }
             if MODEL_RE_26.is_match(model) {
-                return Some("CameraInfo450D");
+                return Some("Canon::CameraInfo450D");
             }
             if MODEL_RE_27.is_match(model) {
-                return Some("CameraInfo500D");
+                return Some("Canon::CameraInfo500D");
             }
             if MODEL_RE_28.is_match(model) {
-                return Some("CameraInfo550D");
+                return Some("Canon::CameraInfo550D");
             }
             if MODEL_RE_29.is_match(model) {
-                return Some("CameraInfo600D");
+                return Some("Canon::CameraInfo600D");
             }
             if MODEL_RE_30.is_match(model) {
-                return Some("CameraInfo650D");
+                return Some("Canon::CameraInfo650D");
             }
             if MODEL_RE_31.is_match(model) {
-                return Some("CameraInfo650D");
+                return Some("Canon::CameraInfo650D");
             }
             if MODEL_RE_32.is_match(model) {
-                return Some("CameraInfo750D");
+                return Some("Canon::CameraInfo750D");
             }
             if MODEL_RE_33.is_match(model) {
-                return Some("CameraInfo750D");
+                return Some("Canon::CameraInfo750D");
             }
             if MODEL_RE_34.is_match(model) {
-                return Some("CameraInfo1000D");
+                return Some("Canon::CameraInfo1000D");
             }
             if MODEL_RE_35.is_match(model) {
-                return Some("CameraInfo600D");
+                return Some("Canon::CameraInfo600D");
             }
             if MODEL_RE_7.is_match(model) {
-                return Some("CameraInfo60D");
+                return Some("Canon::CameraInfo60D");
             }
             if MODEL_RE_36.is_match(model) {
-                return Some("CameraInfoR6");
+                return Some("Canon::CameraInfoR6");
             }
             if MODEL_RE_37.is_match(model) {
-                return Some("CameraInfoR6m2");
+                return Some("Canon::CameraInfoR6m2");
             }
             if MODEL_RE_38.is_match(model) {
-                return Some("CameraInfoR6m3");
+                return Some("Canon::CameraInfoR6m3");
             }
             if MODEL_RE_39.is_match(model) {
-                return Some("CameraInfoG5XII");
+                return Some("Canon::CameraInfoG5XII");
             }
             if (format == "int32u" && (count == 138 || count == 148)) {
-                return Some("CameraInfoPowerShot");
+                return Some("Canon::CameraInfoPowerShot");
             }
             if (format == "int32u" && (count == 156 || (count == 162 || (count == 167 || (count == 171 || count == 264))))) {
-                return Some("CameraInfoPowerShot2");
+                return Some("Canon::CameraInfoPowerShot2");
             }
             if format.starts_with("int32") {
-                return Some("CameraInfoUnknown32");
+                return Some("Canon::CameraInfoUnknown32");
             }
             if format.starts_with("int16") {
-                return Some("CameraInfoUnknown16");
+                return Some("Canon::CameraInfoUnknown16");
             }
-            Some("CameraInfoUnknown")
+            Some("Canon::CameraInfoUnknown")
         }
         ("Canon", 0x4001) => {
             if count == 582 {
-                return Some("ColorData1");
+                return Some("Canon::ColorData1");
             }
             if count == 653 {
-                return Some("ColorData2");
+                return Some("Canon::ColorData2");
             }
             if count == 796 {
-                return Some("ColorData3");
+                return Some("Canon::ColorData3");
             }
             if (count == 692 || (count == 674 || (count == 702 || (count == 1227 || (count == 1250 || (count == 1251 || (count == 1337 || (count == 1338 || count == 1346)))))))) {
-                return Some("ColorData4");
+                return Some("Canon::ColorData4");
             }
             if count == 5120 {
-                return Some("ColorData5");
+                return Some("Canon::ColorData5");
             }
             if (count == 1273 || count == 1275) {
-                return Some("ColorData6");
+                return Some("Canon::ColorData6");
             }
             if (count == 1312 || (count == 1313 || (count == 1316 || count == 1506))) {
-                return Some("ColorData7");
+                return Some("Canon::ColorData7");
             }
             if (count == 1560 || (count == 1592 || (count == 1353 || count == 1602))) {
-                return Some("ColorData8");
+                return Some("Canon::ColorData8");
             }
             if (count == 1816 || (count == 1820 || count == 1824)) {
-                return Some("ColorData9");
+                return Some("Canon::ColorData9");
             }
             if (count == 2024 || count == 3656) {
-                return Some("ColorData10");
+                return Some("Canon::ColorData10");
             }
             if ((count == 3973 || count == 3778) && prefix_matches(data.get(0..).unwrap_or(&[]), &[Some((48, 64))])) {
-                return Some("ColorData11");
+                return Some("Canon::ColorData11");
             }
             if (count == 4528 || count == 3778) {
-                return Some("ColorData12");
+                return Some("Canon::ColorData12");
             }
-            Some("ColorDataUnknown")
+            Some("Canon::ColorDataUnknown")
         }
         _ => None,
     }

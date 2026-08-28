@@ -2891,11 +2891,11 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
             // magic the block opened with decides.
             0x01 | 0x05 | 0x06 | 0x28 if is_aff || rec_type != 0x01 => {
                 let table = match (is_aff, rec_type) {
-                    (true, 0x01) => "AFF1",
-                    (true, 0x05) => "AFF5",
-                    (_, 0x05) => "GainDeadData",
-                    (_, 0x06) => "CoarseData",
-                    _ => "PaintData",
+                    (true, 0x01) => "FLIR::AFF1",
+                    (true, 0x05) => "FLIR::AFF5",
+                    (_, 0x05) => "FLIR::GainDeadData",
+                    (_, 0x06) => "FLIR::CoarseData",
+                    _ => "FLIR::PaintData",
                 };
                 let mut dm = crate::tags::binary_tables_generated::State::new();
                 tags.extend(crate::tags::binary_tables_generated::decode(
