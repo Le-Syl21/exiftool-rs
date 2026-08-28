@@ -5535,6 +5535,23 @@ fn process_fpxr_segments(contents: &[FpxrEntry]) -> Vec<crate::tag::Tag> {
         }
         let name = &entry.name;
 
+        // A stream named "Property" holds the preview information some
+        // FujiFilm models write (FlashPix.pm:313-318), big-endian.
+        if name.ends_with("Property") {
+            let mut dm = crate::tags::binary_tables_generated::State::new();
+            tags.extend(crate::tags::binary_tables_generated::decode(
+                "FlashPix::PreviewInfo",
+                &entry.stream,
+                "",
+                "",
+                crate::metadata::exif::ByteOrderMark::BigEndian,
+                "",
+                "",
+                &mut dm,
+            ));
+            continue;
+        }
+
         // Screen Nail stream → ScreenNail binary tag (strip 0x1c header)
         if name.contains("Screen Nail") {
             let payload = if entry.stream.len() > 0x1c {
