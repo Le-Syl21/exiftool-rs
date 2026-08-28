@@ -539,6 +539,26 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             }
             true
         }
+        0x1030 => {
+            // WhiteSample (CanonRaw.pm:0x1030), a binary table.
+            let mut dm = crate::tags::binary_tables_generated::State::new();
+            for mut t in crate::tags::binary_tables_generated::decode(
+                "CanonRaw::WhiteSample",
+                data,
+                "Canon",
+                "",
+                crate::metadata::exif::ByteOrderMark::LittleEndian,
+                "",
+                "",
+                &mut dm,
+            ) {
+                t.group.family0 = "MakerNotes".into();
+                t.group.family1 = group1.into();
+                t.group.family3 = "Main".into();
+                tags.push(t);
+            }
+            true
+        }
         0x102d => {
             // CanonCameraSettings — int16s array, same format as JPEG MakerNote tag 0x0001
             let values: Vec<i16> = (0..data.len() / 2).map(|i| ri16(data, i * 2)).collect();

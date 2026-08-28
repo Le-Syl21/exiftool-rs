@@ -7073,6 +7073,28 @@ fn read_makernote_ifd_with_base(
                     }
                     t
                 }
+                // Samsung's and Sanyo's MP4 thumbnail records, Nintendo's
+                // camera info, and FujiFilm's RAFData.
+                (Manufacturer::Samsung, 0x00F4)
+                | (Manufacturer::Sanyo, 0x00F1)
+                | (Manufacturer::Fujifilm, 0xC000) => {
+                    let table = match manufacturer {
+                        Manufacturer::Samsung => "Samsung::Thumbnail",
+                        Manufacturer::Sanyo => "Sanyo::Thumbnail",
+                        _ => "FujiFilm::RAFData",
+                    };
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    crate::tags::binary_tables_generated::decode(
+                        table,
+                        value_data,
+                        &crate::metadata::exif::make(),
+                        model_name,
+                        byte_order,
+                        &crate::metadata::exif::tiff_type(),
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                        &mut dm,
+                    )
+                }
                 // Casio writes two face-detection layouts at one id, told
                 // apart by the bytes the block opens with (Casio.pm:497-510).
                 (Manufacturer::Casio, 0x2089) | (Manufacturer::CasioType2, 0x2089) => {
