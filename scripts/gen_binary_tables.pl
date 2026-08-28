@@ -73,6 +73,7 @@ my %WANTED = (
 # are read from the module's own Main table, so the choice is ExifTool's.
 my %SELECTORS = (
     Canon => [0x000d, 0x4001, 0x0096, 0x4015],
+    Nikon => [0x0091],
 );
 
 my %WIDTH = (
@@ -87,6 +88,8 @@ my %WIDTH = (
     # way inside a little-endian file.
     int16uRev => 2,
     float => 4, double => 8,
+    # A 32-bit fixed-point value: the number divided by 65536.
+    fixed32u => 4, fixed32s => 4,
 );
 # The modules whose tables belong to a maker note; the rest name themselves in
 # family 0 (ExifTool sets it on the module's own table definitions).
@@ -280,6 +283,8 @@ sub main_arms {
 # DATAMEMBERs a selector's condition stores by assigning the block's length.
 my %count_store;
 my $cur_sel;
+# The byte order a SubDirectory declares for the table it opens.
+my %table_byte_order;
 
 my @re_list;
 sub re_id {
@@ -380,6 +385,14 @@ sub compile_cond {
     }
     # `$$self{FirmwareVersion} ge "05.00"`: a string member, compared the way
     # Perl compares strings.
+    # `$$self{ShutterMode} ne 96`: Perl's string comparison, written without
+    # quotes because the value happens to be a number.
+    if ($cond =~ /^\$\$self\{(\w+)\} (eq|ne|lt|le|gt|ge) (-?[\d.]+)$/) {
+        my ($dm, $op, $num) = ($1, $2, $3);
+        my $rust = { eq => '==', ne => '!=', lt => '<', le => '<=', gt => '>', ge => '>=' }->{$op};
+        return sprintf('dm_val(dm, "%s").is_some_and(|v| v.as_string().as_str() %s "%s")',
+                       $dm, $rust, $num);
+    }
     if ($cond =~ /^\$\$self\{(\w+)\} (eq|ne|lt|le|gt|ge) "([^"]*)"$/) {
         my ($dm, $op, $str) = ($1, $2, $3);
         my $rust = { eq => '==', ne => '!=', lt => '<', le => '<=', gt => '>', ge => '>=' }->{$op};
@@ -565,6 +578,21 @@ sub parse_table {
             my $sw = defined $sfmt
                 ? ($WIDTH{$sfmt} // (($sfmt eq 'undef' or $sfmt eq 'string') ? 1 : undef))
                 : undef;
+            # `Start => '$val'`: the entry holds an offset rather than the
+            # block itself, and the sub-directory begins there. `$dirStart +
+            # $val` says the same thing for a reader handed the block.
+            my ($start) = $fb =~ /Start\s*=>\s*'([^']*)'/;
+            if (defined $start
+                and ($start eq '$val' or $start eq '$dirStart + $val')
+                and defined $fb_had_format
+                and exists $WIDTH{$ffmt}) {
+                push @{$t->{subdirs}}, {
+                    off => $off, mod => $mod, sub => $sub, cond => $guard,
+                    len => undef, pointer => $ffmt,
+                };
+                push @{$pending{$mod}}, $sub;
+                next;
+            }
             my $len;
             if (defined $slen and defined $sw) {
                 $len = $slen * $sw;
@@ -761,6 +789,21 @@ for my $mod (sort keys %SELECTORS) {
         while ($arms =~ /TagTable\s*=>\s*'Image::ExifTool::(\w+)::(\w+)'/g) {
             push @{$pending{$1}}, $2;
         }
+        # A SubDirectory can declare the byte order its table is written in --
+        # Nikon reads a D700's ShotInfo big-endian and a D810's little-endian,
+        # inside files that are otherwise the same.
+        my (@abodies, $acur);
+        my $ad = 0;
+        for my $c (split //, $arms) {
+            if ($c eq '{') { $ad++; $acur = '' unless defined $acur }
+            $acur .= $c if defined $acur;
+            if ($c eq '}') { $ad--; if ($ad == 0 and defined $acur) { push @abodies, $acur; undef $acur } }
+        }
+        for my $a (@abodies) {
+            my ($m2, $sub) = $a =~ /TagTable\s*=>\s*'Image::ExifTool::(\w+)::(\w+)'/ or next;
+            my ($bo) = $a =~ /ByteOrder\s*=>\s*'(\w+)'/ or next;
+            $table_byte_order{"$m2\::$sub"} = $bo;
+        }
     }
 }
 while (grep { @{$pending{$_} || []} } keys %pending) {
@@ -842,6 +885,21 @@ for my $mod (sort keys %SELECTORS) {
         $sel_src .= "            None\n" unless $unconditional;
         $sel_src .= "        }\n";
     }
+}
+$sel_src .= "        _ => None,\n    }\n}\n\n";
+
+# The byte order a table is written in, where its SubDirectory says.
+$sel_src .= <<'BO';
+/// The byte order a table is written in, where the SubDirectory that opens it
+/// says so. Nikon reads a D700's ShotInfo big-endian and a D810's
+/// little-endian, inside files that are otherwise the same.
+#[must_use]
+pub fn table_byte_order(table: &str) -> Option<ByteOrder> {
+    match table {
+BO
+for my $k (sort keys %table_byte_order) {
+    $sel_src .= sprintf "        \"%s\" => Some(ByteOrder::%s),\n", $k,
+        $table_byte_order{$k} eq 'LittleEndian' ? 'LittleEndian' : 'BigEndian';
 }
 $sel_src .= "        _ => None,\n    }\n}\n\n";
 
@@ -996,6 +1054,14 @@ fn rat64u_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
 }
 fn rat64s_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
     ratio(f64::from(i32_at(d, o, bo)?), f64::from(i32_at(d, o + 4, bo)?))
+}
+
+/// A 32-bit fixed-point value: the number over 65536.
+fn fix32u_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
+    u32_at(d, o, bo).map(|v| f64::from(v) / 65536.0)
+}
+fn fix32s_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
+    i32_at(d, o, bo).map(|v| f64::from(v) / 65536.0)
 }
 
 fn ratio(n: f64, d: f64) -> Option<f64> {
@@ -1176,6 +1242,7 @@ for my $t (@tables) {
             int16uRev => 'u16rev_at',
             float => 'f32_at', double => 'f64_at',
             rational64u => 'rat64u_at', rational64s => 'rat64s_at',
+            fixed32u => 'fix32u_at', fixed32s => 'fix32s_at',
         }->{$f->{fmt}};
         my $args = $f->{fmt} =~ /^int8/ ? '' : ', bo';
         my $w = $WIDTH{$f->{fmt}};
@@ -1305,7 +1372,16 @@ for my $t (@tables) {
             print "    }\n" if defined $sd->{cond};
             next;
         }
-        if (defined $sd->{len}) {
+        if (defined $sd->{pointer}) {
+            my $reader = {
+                int8u => 'u8_at', int16u => 'u16_at', int32u => 'u32_at',
+                int8s => 'i8_at', int16s => 'i16_at', int32s => 'i32_at',
+            }->{$sd->{pointer}};
+            my $args = $sd->{pointer} =~ /^int8/ ? '' : ', bo';
+            printf "%sif let Some(sub) = %s(data, 0x%x%s)\n", $ind, $reader, $byte, $args;
+            printf "%s    .and_then(|at| data.get(at as usize..))\n", $ind;
+            printf "%s{\n", $ind;
+        } elsif (defined $sd->{len}) {
             printf "%sif let Some(sub) = data.get(0x%x..0x%x + %d) {\n", $ind, $byte, $byte, $sd->{len};
         } else {
             printf "%sif let Some(sub) = data.get(0x%x..) {\n", $ind, $byte;

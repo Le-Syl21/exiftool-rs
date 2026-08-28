@@ -5171,7 +5171,38 @@ fn decrypt_nikon_subtables(
                 // Extract version prefix (unencrypted first 4 bytes)
                 let version =
                     std::str::from_utf8(&data[value_offset..value_offset + 4]).unwrap_or("");
-                tags.push(mk_nikon_str("ShotInfoVersion", version));
+                // ShotInfoVersion is entry 0 of every one of these tables,
+                // so the decoder below reports it; pushing it here as well
+                // reported it twice.
+
+                // Which of the thirty-one ShotInfo layouts applies is decided
+                // by that version and sometimes the block's own length, from
+                // Nikon::Main's own list -- and each says which byte order it
+                // is written in, so a D700 is read big-endian where a D810 is
+                // read little-endian inside otherwise identical files.
+                if let Some(table) = crate::tags::binary_tables_generated::variant_for(
+                    "Nikon",
+                    0x0091,
+                    &crate::metadata::exif::make(),
+                    model,
+                    &data[value_offset..value_offset + total_size],
+                    total_size,
+                    "undef",
+                ) {
+                    let bo = crate::tags::binary_tables_generated::table_byte_order(table)
+                        .unwrap_or(ByteOrderMark::BigEndian);
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    tags.extend(crate::tags::binary_tables_generated::decode(
+                        table,
+                        &decrypted,
+                        "",
+                        model,
+                        bo,
+                        "",
+                        "",
+                        &mut dm,
+                    ));
+                }
 
                 // The custom-settings block each body hides inside its
                 // ShotInfo. The D40 keeps it at a fixed offset; the D810 and
@@ -10494,311 +10525,9 @@ fn decode_nikon_scan_ifd(data: &[u8], offset: usize, bo: ByteOrderMark) -> Vec<T
     tags
 }
 
-// Canon TimeInfo (tag 0x0035): int32s, FIRST_ENTRY=1
-// Index 1=TimeZone(minutes), 2=TimeZoneCity, 3=DaylightSavings(0=Off,60=On)
-fn decode_canon_time_info(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
-    let mut tags = Vec::new();
-    // Data is packed int32s starting at byte 0, FIRST_ENTRY=1 means index 1 is at byte 4
-    let read_i32 = |d: &[u8], idx: usize| -> i32 {
-        let off = idx * 4;
-        if off + 4 > d.len() {
-            return 0;
-        }
-        match bo {
-            ByteOrderMark::LittleEndian => {
-                i32::from_le_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
-            }
-            ByteOrderMark::BigEndian => {
-                i32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
-            }
-        }
-    };
-    if data.len() >= 8 {
-        let tz_minutes = read_i32(data, 1); // FIRST_ENTRY=1 → index 1 at byte 4
-                                            // Format as e.g. "+09:00" or "-05:30"
-        let sign = if tz_minutes >= 0 { "+" } else { "-" };
-        let abs = tz_minutes.unsigned_abs();
-        let tz_str = format!("{}{:02}:{:02}", sign, abs / 60, abs % 60);
-        tags.push(mk_canon_str("TimeZone", &tz_str));
-    }
-    if data.len() >= 12 {
-        let city_val = read_i32(data, 2);
-        let city_name = match city_val {
-            0 => "n/a",
-            1 => "Chatham Islands",
-            2 => "Wellington",
-            3 => "Solomon Islands",
-            4 => "Sydney",
-            5 => "Adelaide",
-            6 => "Tokyo",
-            7 => "Hong Kong",
-            8 => "Bangkok",
-            9 => "Yangon",
-            10 => "Dhaka",
-            11 => "Kathmandu",
-            12 => "Delhi",
-            13 => "Karachi",
-            14 => "Kabul",
-            15 => "Dubai",
-            16 => "Tehran",
-            17 => "Moscow",
-            18 => "Cairo",
-            19 => "Paris",
-            20 => "London",
-            21 => "Azores",
-            22 => "Fernando de Noronha",
-            23 => "Sao Paulo",
-            24 => "Newfoundland",
-            25 => "Santiago",
-            26 => "Caracas",
-            27 => "New York",
-            28 => "Chicago",
-            29 => "Denver",
-            30 => "Los Angeles",
-            31 => "Anchorage",
-            32 => "Honolulu",
-            33 => "Samoa",
-            32766 => "(not set)",
-            _ => "",
-        };
-        let city_out = if city_name.is_empty() {
-            city_val.to_string()
-        } else {
-            city_name.to_string()
-        };
-        tags.push(mk_canon_str("TimeZoneCity", &city_out));
-    }
-    if data.len() >= 16 {
-        let dst = read_i32(data, 3);
-        let dst_str = match dst {
-            0 => "Off",
-            60 => "On",
-            _ => "",
-        };
-        let dst_out = if dst_str.is_empty() {
-            dst.to_string()
-        } else {
-            dst_str.to_string()
-        };
-        tags.push(mk_canon_str("DaylightSavings", &dst_out));
-    }
-    tags
-}
 
-// Canon VignettingCorr2 (tag 0x4016): int32s, FIRST_ENTRY=1
-// Index 5=PeripheralLightingSetting, 6=ChromaticAberrationSetting,
-// 7=DistortionCorrectionSetting, 9=DigitalLensOptimizerSetting
-fn decode_canon_vignetting_corr2(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
-    let mut tags = Vec::new();
-    let read_i32 = |d: &[u8], idx: usize| -> i32 {
-        let off = idx * 4;
-        if off + 4 > d.len() {
-            return -1;
-        }
-        match bo {
-            ByteOrderMark::LittleEndian => {
-                i32::from_le_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
-            }
-            ByteOrderMark::BigEndian => {
-                i32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
-            }
-        }
-    };
-    let off_on = |v: i32| -> String {
-        match v {
-            0 => "Off".to_string(),
-            1 => "On".to_string(),
-            _ => v.to_string(),
-        }
-    };
-    // FIRST_ENTRY=1, so index 5 is at byte offset 5*4=20
-    if data.len() > 5 * 4 {
-        let v = read_i32(data, 5);
-        if v >= 0 {
-            tags.push(mk_canon_str("PeripheralLightingSetting", &off_on(v)));
-        }
-    }
-    if data.len() > 6 * 4 {
-        let v = read_i32(data, 6);
-        if v >= 0 {
-            tags.push(mk_canon_str("ChromaticAberrationSetting", &off_on(v)));
-        }
-    }
-    if data.len() > 7 * 4 {
-        let v = read_i32(data, 7);
-        if v >= 0 {
-            tags.push(mk_canon_str("DistortionCorrectionSetting", &off_on(v)));
-        }
-    }
-    if data.len() > 9 * 4 {
-        let v = read_i32(data, 9);
-        if v >= 0 {
-            tags.push(mk_canon_str("DigitalLensOptimizerSetting", &off_on(v)));
-        }
-    }
-    tags
-}
 
-// Canon LightingOpt (tag 0x4018): int32s, FIRST_ENTRY=1
-fn decode_canon_lighting_opt(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
-    let mut tags = Vec::new();
-    let read_i32 = |d: &[u8], idx: usize| -> Option<i32> {
-        let off = idx * 4;
-        if off + 4 > d.len() {
-            return None;
-        }
-        Some(match bo {
-            ByteOrderMark::LittleEndian => {
-                i32::from_le_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
-            }
-            ByteOrderMark::BigEndian => {
-                i32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
-            }
-        })
-    };
-    let off_on = |v: i32| -> String {
-        match v {
-            0 => "Off".to_string(),
-            1 => "On".to_string(),
-            _ => v.to_string(),
-        }
-    };
-    if let Some(v) = read_i32(data, 1) {
-        tags.push(mk_canon_str("PeripheralIlluminationCorr", &off_on(v)));
-    }
-    if let Some(v) = read_i32(data, 2) {
-        let s = match v {
-            0 => "Standard",
-            1 => "Low",
-            2 => "Strong",
-            3 => "Off",
-            _ => "",
-        };
-        tags.push(mk_canon_str(
-            "AutoLightingOptimizer",
-            &if s.is_empty() {
-                v.to_string()
-            } else {
-                s.to_string()
-            },
-        ));
-    }
-    if let Some(v) = read_i32(data, 3) {
-        let s = match v {
-            0 => "Off",
-            1 => "On",
-            2 => "Enhanced",
-            _ => "",
-        };
-        tags.push(mk_canon_str(
-            "HighlightTonePriority",
-            &if s.is_empty() {
-                v.to_string()
-            } else {
-                s.to_string()
-            },
-        ));
-    }
-    if let Some(v) = read_i32(data, 4) {
-        let s = match v {
-            0 => "Off",
-            1 => "Auto",
-            2 => "On",
-            _ => "",
-        };
-        tags.push(mk_canon_str(
-            "LongExposureNoiseReduction",
-            &if s.is_empty() {
-                v.to_string()
-            } else {
-                s.to_string()
-            },
-        ));
-    }
-    if let Some(v) = read_i32(data, 5) {
-        let s = match v {
-            0 => "Standard",
-            1 => "Low",
-            2 => "Strong",
-            3 => "Off",
-            _ => "",
-        };
-        tags.push(mk_canon_str(
-            "HighISONoiseReduction",
-            &if s.is_empty() {
-                v.to_string()
-            } else {
-                s.to_string()
-            },
-        ));
-    }
-    if let Some(v) = read_i32(data, 10) {
-        let s = match v {
-            0 => "Off",
-            1 => "Standard",
-            2 => "High",
-            _ => "",
-        };
-        tags.push(mk_canon_str(
-            "DigitalLensOptimizer",
-            &if s.is_empty() {
-                v.to_string()
-            } else {
-                s.to_string()
-            },
-        ));
-    }
-    if let Some(v) = read_i32(data, 11) {
-        tags.push(mk_canon_str("DualPixelRaw", &off_on(v)));
-    }
-    tags
-}
 
-// Canon AmbienceInfo (tag 0x4020): int32s, FIRST_ENTRY=1
-// Index 1 = AmbienceSelection
-fn decode_canon_ambience(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
-    let mut tags = Vec::new();
-    if data.len() < 8 {
-        return tags;
-    }
-    // Check not all zeros
-    if data.iter().all(|&b| b == 0) {
-        return tags;
-    }
-    let off = 4;
-    if off + 4 > data.len() {
-        return tags;
-    }
-    let v = match bo {
-        ByteOrderMark::LittleEndian => {
-            i32::from_le_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]])
-        }
-        ByteOrderMark::BigEndian => {
-            i32::from_be_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]])
-        }
-    };
-    let s = match v {
-        0 => "Standard",
-        1 => "Vivid",
-        2 => "Warm",
-        3 => "Soft",
-        4 => "Cool",
-        5 => "Intense",
-        6 => "Brighter",
-        7 => "Darker",
-        8 => "Monochrome",
-        _ => "",
-    };
-    tags.push(mk_canon_str(
-        "AmbienceSelection",
-        &if s.is_empty() {
-            v.to_string()
-        } else {
-            s.to_string()
-        },
-    ));
-    tags
-}
 
 // Canon FilterInfo (tag 0x4024): custom ProcessFilters format
 // Structure: 4 bytes unknown, 4 bytes numFilters, then for each filter:
@@ -10897,57 +10626,3 @@ fn decode_canon_filter_info(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
     tags
 }
 
-// Canon HDRInfo (tag 0x4025): int32s, FIRST_ENTRY=1
-// Index 1 = HDR, index 2 = HDREffect
-fn decode_canon_hdr_info(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
-    let mut tags = Vec::new();
-    let read_i32 = |d: &[u8], idx: usize| -> Option<i32> {
-        let off = idx * 4;
-        if off + 4 > d.len() {
-            return None;
-        }
-        Some(match bo {
-            ByteOrderMark::LittleEndian => {
-                i32::from_le_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
-            }
-            ByteOrderMark::BigEndian => {
-                i32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]])
-            }
-        })
-    };
-    if let Some(v) = read_i32(data, 1) {
-        let s = match v {
-            0 => "Off",
-            1 => "Auto",
-            2 => "On",
-            _ => "",
-        };
-        tags.push(mk_canon_str(
-            "HDR",
-            &if s.is_empty() {
-                v.to_string()
-            } else {
-                s.to_string()
-            },
-        ));
-    }
-    if let Some(v) = read_i32(data, 2) {
-        let s = match v {
-            0 => "Natural",
-            1 => "Art (standard)",
-            2 => "Art (vivid)",
-            3 => "Art (bold)",
-            4 => "Art (embossed)",
-            _ => "",
-        };
-        tags.push(mk_canon_str(
-            "HDREffect",
-            &if s.is_empty() {
-                v.to_string()
-            } else {
-                s.to_string()
-            },
-        ));
-    }
-    tags
-}
