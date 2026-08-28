@@ -8509,8 +8509,18 @@ fn read_makernote_ifd_with_base(
 
 pub fn decode_mn_value(data: &[u8], data_type: u16, count: usize, bo: ByteOrderMark) -> Value {
     match data_type {
-        1 | 7 => {
-            // BYTE / UNDEFINED
+        1 => {
+            // BYTE. ExifTool prints an int8u[4] as "3 3 5 0" -- Sony's
+            // FileFormat is keyed on exactly that string -- where an undef[4]
+            // is a byte string. Reading both as undef lost the difference.
+            if count == 1 {
+                Value::U8(data[0])
+            } else {
+                Value::List(data.iter().map(|b| Value::U8(*b)).collect())
+            }
+        }
+        7 => {
+            // UNDEFINED
             if count == 1 {
                 Value::U8(data[0])
             } else {
@@ -9983,6 +9993,25 @@ fn mn_undef_bytes(value: &Value) -> Option<&[u8]> {
     }
 }
 
+/// The same bytes, whatever the IFD called them.
+///
+/// ExifTool applies a tag's declared `Format => 'undef'` whatever type the
+/// entry carries: Canon's ImageUniqueID is `unpack("H*", $val)` over an entry
+/// the file types as int8u, which reads here as a list of bytes.
+fn mn_bytes_of(value: &Value) -> Option<Vec<u8>> {
+    match value {
+        Value::Binary(b) | Value::Undefined(b) if b.len() >= 3 => Some(b.clone()),
+        Value::List(items) if items.len() >= 3 => items
+            .iter()
+            .map(|v| match v {
+                Value::U8(b) => Some(*b),
+                _ => None,
+            })
+            .collect(),
+        _ => None,
+    }
+}
+
 /// Decode an even-length hex string to its ASCII bytes (Perl `pack "H*"`).
 fn hex_to_ascii(hex: &str) -> Option<String> {
     if hex.is_empty() || hex.len() % 2 != 0 {
@@ -10274,7 +10303,7 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
                 s.split('\0').next().unwrap_or("").trim_end().to_string()
             }),
             // ImageUniqueID (0x0028): undef, ValueConv unpack("H*") -> hex string.
-            0x0028 => mn_undef_bytes(value)
+            0x0028 => mn_bytes_of(value)
                 .map(|b| b.iter().map(|c| format!("{:02x}", c)).collect::<String>()),
             // CanonModelID (ExifTool %canonModelID)
             0x0010 => value
