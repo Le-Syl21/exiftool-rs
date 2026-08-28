@@ -8,6 +8,18 @@
 //! Perl source verbatim rather than translated, so they cannot drift from it.
 //!
 //! Tables: 59, fields: 1070.
+//!
+//! Generated code: the shape of a table decides what is written, so a helper
+//! no table happens to need, a cast that happens to be a no-op and a bracket
+//! that happens to be redundant are all ordinary here rather than something
+//! to tidy away by hand.
+#![allow(dead_code, unused_parens, unused_mut, unused_variables)]
+#![allow(
+    clippy::needless_borrow,
+    clippy::identity_op,
+    clippy::useless_conversion,
+    clippy::duplicated_attributes
+)]
 
 use std::sync::LazyLock;
 
@@ -268,7 +280,6 @@ fn mk_prio(
 }
 
 /// Decode one deciphered Sony sub-table. `data` must already be deciphered.
-#[must_use]
 /// Whether ExifTool defines this MakerNote tag only as a sub-directory.
 ///
 /// Such a tag has no value of its own: when none of its conditions matches,
@@ -15999,6 +16010,7 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval("sprintf(\"%3d\",$val)", &cv) { cv = x; }
+            let _ = &cv;
         }
     }
     if let Some(v) = u16_at(data, 0x4) {

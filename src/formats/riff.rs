@@ -1509,27 +1509,6 @@ fn format_duration(seconds: f64) -> String {
     }
 }
 
-/// Format a float value with ~4 significant digits followed by a unit (like Perl's sprintf("%.4g %s"))
-fn format_sig4(val: f64, unit: &str) -> String {
-    // Implement %.4g: use at most 4 significant figures, no trailing zeros
-    if val == 0.0 {
-        return format!("0 {}", unit);
-    }
-    let magnitude = val.abs().log10().floor() as i32;
-    let decimals = if magnitude >= 3 {
-        0
-    } else {
-        (3 - magnitude).max(0) as usize
-    };
-    let s = format!("{:.prec$}", val, prec = decimals);
-    // Remove trailing zeros after decimal point
-    let s = if s.contains('.') {
-        s.trim_end_matches('0').trim_end_matches('.').to_string()
-    } else {
-        s
-    };
-    format!("{} {}", s, unit)
-}
 
 fn mk_webp(name: &str, description: &str, value: Value) -> Tag {
     let print_value = value.to_display_string();
