@@ -992,7 +992,7 @@ print <<"HDR";
 //! no table happens to need and a cast that happens to be a no-op are both
 //! ordinary here rather than something to tidy away by hand.
 #![allow(dead_code, unused_parens, unused_mut, unused_variables)]
-#![allow(clippy::too_many_arguments, clippy::useless_conversion)]
+#![allow(clippy::too_many_arguments, clippy::useless_conversion, clippy::double_parens)]
 #![allow(
     clippy::too_many_lines,
     clippy::match_same_arms,
