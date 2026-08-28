@@ -14,13 +14,11 @@ Real.ra	default	extra	0	Copyright	** institut für universelle zusammenhänge
 Real.ra	default	missing	0	Copyright	** institut f�r universelle zusammenh�nge
 Real.ra	ee	extra	0	Copyright	** institut für universelle zusammenhänge
 Real.ra	ee	missing	0	Copyright	** institut f�r universelle zusammenh�nge
-SonyILCE9.arw	ee	extra	0	BrightnessValue	5.286718749999999
 SonyILCE9.arw	ee	extra	0	Contrast	Normal
 SonyILCE9.arw	ee	extra	0	FocusMode	131
 SonyILCE9.arw	ee	extra	0	Saturation	Low
 SonyILCE9.arw	ee	extra	0	Sharpness	Normal
 SonyILCE9.arw	ee	missing	0	APS-CSizeCapture	Off
-SonyILCE9.arw	ee	missing	0	BrightnessValue	5.28671875
 SonyILCE9.arw	ee	missing	0	Contrast	0
 SonyILCE9.arw	ee	missing	0	DynamicRangeOptimizer	Auto
 SonyILCE9.arw	ee	missing	0	ExposureTime	1/20

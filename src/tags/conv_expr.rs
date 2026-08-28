@@ -77,11 +77,27 @@ impl Val {
 /// Perl prints a float without a trailing `.0`, and integers as integers.
 fn format_number(n: f64) -> String {
     if n.fract() == 0.0 && n.abs() < 1e15 {
-        format!("{}", n as i64)
-    } else {
-        let s = format!("{n}");
-        s
+        return format!("{}", n as i64);
     }
+    // Perl stringifies a number with %.15g, so `$val/256 - 56.6` prints
+    // 5.28671875 where the shortest round-trip form is 5.286718749999999.
+    // Fifteen significant digits, with the trailing zeros gone.
+    let mut t = format!("{n:.*e}", 14);
+    if let Some((mantissa, exp)) = t.split_once('e') {
+        let exp: i32 = exp.parse().unwrap_or(0);
+        if exp >= -5 && exp < 15 {
+            #[allow(clippy::cast_sign_loss)]
+            let decimals = (14 - exp).max(0) as usize;
+            t = format!("{n:.decimals$}");
+            if t.contains('.') {
+                t = t.trim_end_matches('0').trim_end_matches('.').to_string();
+            }
+        } else {
+            let m = mantissa.trim_end_matches('0').trim_end_matches('.');
+            t = format!("{m}e{exp:+03}");
+        }
+    }
+    t
 }
 
 fn leading_number(s: &str) -> f64 {
