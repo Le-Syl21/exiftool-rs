@@ -510,15 +510,24 @@ fn read_riff_chunks(
                 }
             }
             // AVI Main Header
-            // A JUNK chunk is padding for most writers, but a few cameras
-            // hide a maker note in it. The Optio RZ18's opens with
-            // "PENTDigital Camera" (RIFF.pm:474-478).
+            // A JUNK chunk is padding for most writers, but several cameras
+            // hide a maker note in it, each naming itself in the first bytes
+            // (RIFF.pm:442-478).
             b"JUNK" | b"junk" => {
                 let cd = &data[chunk_data_start..chunk_data_end];
-                if cd.starts_with(b"PENTDigital Camera") {
+                let table = if cd.starts_with(b"OLYMDigital Camera") {
+                    Some("Olympus::AVI")
+                } else if cd.starts_with(b"ucmt") {
+                    Some("Ricoh::AVI")
+                } else if cd.starts_with(b"PENTDigital Camera") {
+                    Some("Pentax::Junk2")
+                } else {
+                    None
+                };
+                if let Some(table) = table {
                     let mut dm = crate::tags::binary_tables_generated::State::new();
                     tags.extend(crate::tags::binary_tables_generated::decode(
-                        "Pentax::Junk2",
+                        table,
                         cd,
                         "",
                         "",
@@ -528,6 +537,21 @@ fn read_riff_chunks(
                         &mut dm,
                     ));
                 }
+            }
+            // The `olym` chunk of an Olympus PCM recorder's WAV
+            // (RIFF.pm:508-511).
+            b"olym" => {
+                let mut dm = crate::tags::binary_tables_generated::State::new();
+                tags.extend(crate::tags::binary_tables_generated::decode(
+                    "Olympus::WAV",
+                    &data[chunk_data_start..chunk_data_end],
+                    "",
+                    "",
+                    crate::metadata::exif::ByteOrderMark::LittleEndian,
+                    "",
+                    "",
+                    &mut dm,
+                ));
             }
             b"avih" => {
                 // The AVI header, from RIFF.pm's own table. Its FrameRate is

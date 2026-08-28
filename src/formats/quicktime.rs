@@ -1193,6 +1193,7 @@ fn mov_tags_table(cd: &[u8]) -> Option<&'static str> {
             return Some("Olympus::MOV1");
         }
     }
+
     if cd.starts_with(b"OLYMPUS DIGITAL CAMERA") {
         // `/^OLYMPUS DIGITAL CAMERA(?!\0.{21}\x0a\0{3})/s`: everything but
         // the shape that negative lookahead excludes.
@@ -1204,6 +1205,12 @@ fn mov_tags_table(cd: &[u8]) -> Option<&'static str> {
             && cd[47] == 0;
         if !excluded {
             return Some("Olympus::MOV2");
+        }
+        // OlympusTags3 comes next in QuickTime.pm's list (1977-1981) and asks
+        // only for the NUL-terminated prefix, so it is what a block MOV2's
+        // lookahead excluded falls to.
+        if cd.starts_with(b"OLYMPUS DIGITAL CAMERA\0") {
+            return Some("Olympus::MP4");
         }
     }
     None

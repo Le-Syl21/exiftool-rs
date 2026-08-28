@@ -3,7 +3,7 @@
 //! Do not edit: regenerate with
 //! `perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs`.
 //!
-//! 277 tables, 4678 fields. A binary sub-table is a block of
+//! 278 tables, 4678 fields. A binary sub-table is a block of
 //! bytes addressed by index: ExifTool's ProcessBinaryData reads the entry at
 //! `(index - FIRST_ENTRY) * sizeof(FORMAT)`, and a field's own Format says
 //! what to read there. What the generator could not express is on its stderr.
@@ -555,6 +555,7 @@ pub fn decode(
         "Reconyx::MicroFire" => reconyx_microfire(data, make, model, bo, file_type, format, dm),
         "Reconyx::UltraFire" => reconyx_ultrafire(data, make, model, bo, file_type, format, dm),
         "Ricoh::FaceInfo" => ricoh_faceinfo(data, make, model, bo, file_type, format, dm),
+        "Ricoh::AVI" => ricoh_avi(data, make, model, bo, file_type, format, dm),
         "Samsung::DualShotExtra" => samsung_dualshotextra(data, make, model, bo, file_type, format, dm),
         "Samsung::Thumbnail2" => samsung_thumbnail2(data, make, model, bo, file_type, format, dm),
         "Samsung::Thumbnail" => samsung_thumbnail(data, make, model, bo, file_type, format, dm),
@@ -61990,6 +61991,17 @@ fn ricoh_faceinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
             }
         }
     }
+    tags
+}
+
+/// `Image::ExifTool::Ricoh::AVI` -- FORMAT int8u, FIRST_ENTRY 0.
+fn ricoh_avi(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Ricoh";
+    const GRP2: &str = "Video";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
     tags
 }
 

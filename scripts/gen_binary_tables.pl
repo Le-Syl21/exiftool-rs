@@ -46,7 +46,7 @@ my %WANTED = (
                      ShotInfo TimeInfo Type2)],
     PanasonicRaw => [qw(DistortionInfo WBInfo WBInfo2)],
     Casio => [qw(FaceInfo1 FaceInfo2 QVCI AVI)],
-    Ricoh => [qw(FaceInfo)],
+    Ricoh => [qw(FaceInfo AVI)],
     Sanyo => [qw(FaceInfo Thumbnail)],
     Reconyx => [qw(HyperFire HyperFire2 HyperFire4K MicroFire UltraFire)],
     H264 => [qw(Camera1 Camera2 FrameInfo MakeModel RecInfo)],
