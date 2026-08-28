@@ -71,7 +71,11 @@ my %WIDTH = (
     int8u  => 1, int8s  => 1,
     int16u => 2, int16s => 2,
     int32u => 4, int32s => 4,
+    # ExifTool's rational32 is two 16-bit halves -- four bytes, not eight.
+    # A rational64 is the eight-byte one EXIF writes.
+    rational32u => 4, rational32s => 4,
 );
+my %IS_RATIONAL = (rational32u => 1, rational32s => 1);
 
 # Every Sony binary sub-table, whether or not it is enciphered: the tables the
 # Main entries point at are the ones a reader has to decode itself, and half of
@@ -121,6 +125,42 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
     my @raw_fields;
     my @lines = split /\n/, $body;
     for (my $i = 0; $i <= $#lines; ++$i) {
+        # `0x002a => [{...},{...}]`: one id with alternatives, the first whose
+        # condition holds being the one ExifTool takes. Matching only `=> {`
+        # dropped every one of these without a word -- Tag9400c's Quality2
+        # among them.
+        if ($lines[$i] =~ /^\s{4}(0x[0-9a-fA-F]+|\d+)\s*=>\s*\[/) {
+            my $off_s = $1;
+            my ($depth, $text, $seen) = (0, '', 0);
+            for (my $j = $i; $j <= $#lines; ++$j) {
+                $text .= $lines[$j] . "\n";
+                while ($lines[$j] =~ /\{/g) { $depth++; $seen = 1 }
+                $depth-- while $lines[$j] =~ /\}/g;
+                if ($seen and $depth <= 0 and $lines[$j] =~ /\]/) {
+                    $i = $j;
+                    last;
+                }
+            }
+            # The arms are the brace groups at the top level of the list.
+            my (@arms, $cur);
+            my $d = 0;
+            for my $c (split //, $text) {
+                if ($c eq '{') {
+                    $d++;
+                    $cur = '' unless defined $cur;
+                }
+                $cur .= $c if defined $cur;
+                if ($c eq '}') {
+                    $d--;
+                    if ($d == 0 and defined $cur) {
+                        push @arms, $cur;
+                        undef $cur;
+                    }
+                }
+            }
+            push @raw_fields, [$off_s, $_, 1] for @arms;
+            next;
+        }
         next unless $lines[$i] =~ /^\s{4}(0x[0-9a-fA-F]+|\d+)\s*=>\s*\{/;
         my $off_s = $1;
         my ($depth, $text) = (0, '');
@@ -138,8 +178,14 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
 
     my @fields;
     my @subdirs;
+    # What the earlier alternatives at an id tested, and which ids were given
+    # up on: ExifTool takes the first arm whose condition holds, so an arm is
+    # only reached when every one before it failed. An id with an arm this
+    # cannot express is dropped whole -- emitting the rest would report the
+    # wrong one.
+    my (%arm_prev, %arm_dead);
     for my $rf (@raw_fields) {
-        my ($off_s, $fb) = @$rf;
+        my ($off_s, $fb, $is_arm) = @$rf;
         my $off   = $off_s =~ /^0x/ ? hex($off_s) : int($off_s);
 
         # A whole field can be one splice: `0x0210 => { %selfTimerB2010 }`
@@ -153,6 +199,28 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
             my $before = $fb;
             $fb =~ s/(^|[{,]\s*)%(\w+)\s*(?=[,}]|$)/exists $shared{$2} ? "$1$shared{$2}," : "$1%$2"/gme;
             last if $fb eq $before;
+        }
+
+        my $arm_guard;
+        if ($is_arm) {
+            next if $arm_dead{$off};
+            my $c_src = field_cond($fb);
+            my $own = 'true';
+            if (defined $c_src) {
+                my @c = compile_cond($c_src, 'field');
+                unless (@c) {
+                    push @skipped, sprintf("%s 0x%04x: alternative %d of %d, condition -- %s",
+                                           $table, $off, 1 + scalar @{$arm_prev{$off} || []},
+                                           scalar(grep { $_->[0] eq $off_s } @raw_fields), $c_src);
+                    $arm_dead{$off} = 1;
+                    next;
+                }
+                $own = $c[0];
+            }
+            my @g = map { "!($_)" } @{$arm_prev{$off} || []};
+            push @{$arm_prev{$off}}, $own;
+            push @g, $own unless $own eq 'true';
+            $arm_guard = @g ? join(' && ', @g) : undef;
         }
 
         # `Hidden => 1` keeps a field out of the output -- but it is still
@@ -176,12 +244,9 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
                                        $table, $off, $sub);
                 next;
             }
-            my $scond = undef;
-            my ($c_src) = $fb =~ /Condition\s*=>\s*q\{(.*?)\}\s*,/ms;
-            ($c_src) = $fb =~ /Condition\s*=>\s*'([^']*)'/ unless defined $c_src;
+            my $scond = $arm_guard;
+            my $c_src = $is_arm ? undef : field_cond($fb);
             if (defined $c_src) {
-                $c_src =~ s/\s+/ /g;
-                $c_src =~ s/^ | $//g;
                 my @c = compile_cond($c_src, 'field');
                 unless (@c) {
                     push @skipped, sprintf("%s 0x%04x: sub-directory into %s, condition -- %s",
@@ -241,13 +306,10 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
         }
         # Per-field condition. Only a bare Model regex is portable; anything
         # referring to other parse state is reported and the field dropped.
-        my $re = undef;
+        my $re = defined $arm_guard ? { expr => $arm_guard } : undef;
         my $neg = 0;
-        my ($cond) = $fb =~ /Condition\s*=>\s*q\{(.*?)\}\s*,/ms;
-        ($cond) = $fb =~ /Condition\s*=>\s*'([^']*)'/ unless defined $cond;
+        my $cond = $is_arm ? undef : field_cond($fb);
         if (defined $cond) {
-            $cond =~ s/\s+/ /g;
-            $cond =~ s/^ | $//g;
             # [^\/]* rather than .+? : a compound condition ("... and
             # $$self{Software} =~ /.../") would otherwise capture up to its last
             # slash and yield a pattern that is not a regex at all.
@@ -464,6 +526,31 @@ sub byte_prefix {
 # arm is taken, and a later tag reads it.
 my %main_store;
 my $cur_main_tag;
+
+# A field's Condition, written on one line. `q{...}` is taken by counting
+# braces: a non-greedy `q\{(.*?)\}` stops at the first brace inside
+# `$$self{Model}` and hands back half a condition.
+sub field_cond {
+    my ($fb) = @_;
+    my $c;
+    if ($fb =~ /Condition\s*=>\s*q\{/g) {
+        my $from = pos($fb);
+        my ($depth, $i) = (1, $from);
+        while ($i < length($fb) and $depth) {
+            my $ch = substr($fb, $i, 1);
+            $depth++ if $ch eq '{';
+            $depth-- if $ch eq '}';
+            ++$i;
+        }
+        $c = substr($fb, $from, $i - $from - 1) unless $depth;
+    }
+    ($c) = $fb =~ /Condition\s*=>\s*'([^']*)'/ unless defined $c;
+    ($c) = $fb =~ /Condition\s*=>\s*"([^"]*)"/ unless defined $c;
+    return undef unless defined $c;
+    $c =~ s/\s+/ /g;
+    $c =~ s/^ | $//g;
+    return $c;
+}
 
 sub compile_cond {
     my ($cond, $mode) = @_;
@@ -856,6 +943,28 @@ fn get16u(state: &dyn conv_expr::ParseState, d: &[u8], o: usize) -> Option<u16> 
     })
 }
 
+/// A rational32: two 16-bit halves, as the number they make.
+///
+/// ExifTool's rational32 is four bytes wide, not the eight of the rational64
+/// EXIF writes -- reading it as two 32-bit halves turned 1/20 into 1/271.
+/// A zero denominator reads as infinity, and 0/0 as nothing at all.
+fn rat32u_at(d: &[u8], o: usize) -> Option<f64> {
+    let (n, den) = (u16_at(d, o)?, u16_at(d, o + 2)?);
+    ratio(f64::from(n), f64::from(den))
+}
+
+fn rat32s_at(d: &[u8], o: usize) -> Option<f64> {
+    let (n, den) = (i16_at(d, o)?, i16_at(d, o + 2)?);
+    ratio(f64::from(n), f64::from(den))
+}
+
+fn ratio(n: f64, d: f64) -> Option<f64> {
+    if d == 0.0 {
+        return if n == 0.0 { None } else { Some(f64::INFINITY) };
+    }
+    Some(n / d)
+}
+
 fn u16_at(d: &[u8], o: usize) -> Option<u16> {
     Some(u16::from_le_bytes([*d.get(o)?, *d.get(o + 1)?]))
 }
@@ -1131,7 +1240,8 @@ for my $t (@tables) {
     print  "    let mut tags = Vec::new();\n";
     print  "    let _ = &dm;\n";
     for my $f (sort { $a->{off} <=> $b->{off} } @{$t->{fields}}) {
-        my $reader = { int8u => 'u8_at', int8s => 'i8_at', int16u => 'u16_at',
+        my $reader = { rational32u => 'rat32u_at', rational32s => 'rat32s_at',
+                       int8u => 'u8_at', int8s => 'i8_at', int16u => 'u16_at',
                        int16s => 'i16_at', int32u => 'u32_at', int32s => 'i32_at' }->{$f->{fmt}};
         my $ind = "    ";
         if (defined $f->{re}) {
@@ -1170,6 +1280,11 @@ for my $t (@tables) {
             }
             printf "%s}\n", $ind;
             print  "    }\n" if defined $f->{re};
+            next;
+        }
+        if (($f->{n} // 1) > 1 and $IS_RATIONAL{$f->{fmt}}) {
+            printf STDERR "  %s 0x%04x %s: array of %d rationals\n",
+                $t->{name}, $f->{off}, $f->{name}, $f->{n};
             next;
         }
         if (($f->{n} // 1) > 1 and defined $f->{mask}) {
@@ -1224,6 +1339,19 @@ for my $t (@tables) {
             }
             printf "%s    }\n%s}\n", $ind, $ind;
             print  "    }\n" if defined $f->{re};
+            next;
+        }
+        if ($IS_RATIONAL{$f->{fmt}}
+            and not (defined $f->{vconv} or defined $f->{pconv})) {
+            # Without a conversion the value would be printed as a decimal and
+            # stored as a truncated integer, where ExifTool keeps the ratio.
+            printf STDERR "  %s 0x%04x %s: rational with no conversion\n",
+                $t->{name}, $f->{off}, $f->{name};
+            next;
+        }
+        if ($IS_RATIONAL{$f->{fmt}} and %{$f->{conv}}) {
+            printf STDERR "  %s 0x%04x %s: rational with a hash conversion\n",
+                $t->{name}, $f->{off}, $f->{name};
             next;
         }
         printf "%sif let Some(v) = %s(data, 0x%x) {\n", $ind, $reader, $f->{off};
