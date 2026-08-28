@@ -19,3 +19,4 @@ pub mod variant_selectors_generated;
 pub mod sub_tables_generated;
 pub mod lens_id;
 pub mod lens_tables_generated;
+pub mod binary_tables_generated;

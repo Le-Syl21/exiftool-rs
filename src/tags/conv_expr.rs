@@ -2581,6 +2581,20 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
                 &tag("Model"),
             ))
         }
+        // `Canon::SwapWords`: the words of a 32-bit value are stored
+        // big-endian where its bytes are little-endian, so each one is read
+        // back with its halves exchanged.
+        "SwapWords" => Val::Str(
+            first
+                .as_string()
+                .split_whitespace()
+                .map(|w| {
+                    let n = w.parse::<u64>().unwrap_or(0);
+                    (((n >> 16) | (n << 16)) & 0xffff_ffff).to_string()
+                })
+                .collect::<Vec<_>>()
+                .join(" "),
+        ),
         "PrintExposureTime" => Val::Str(print_exposure_time(first.as_num())),
         "PrintFNumber" => Val::Str(print_f_number(first.as_num())),
         "PrintFraction" => Val::Str(crate::tags::exif::print_fraction(first.as_num())),
