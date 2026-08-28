@@ -3,7 +3,7 @@
 //! Do not edit: regenerate with
 //! `perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs`.
 //!
-//! 202 tables, 4112 fields. A binary sub-table is a block of
+//! 277 tables, 4678 fields. A binary sub-table is a block of
 //! bytes addressed by index: ExifTool's ProcessBinaryData reads the entry at
 //! `(index - FIRST_ENTRY) * sizeof(FORMAT)`, and a field's own Format says
 //! what to read there. What the generator could not express is on its stderr.
@@ -138,6 +138,23 @@ fn fix32s_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
 fn ratio(n: f64, d: f64) -> Option<f64> {
     if d == 0.0 { return if n == 0.0 { None } else { Some(f64::INFINITY) }; }
     Some(n / d)
+}
+
+/// N bytes as UTF-16 text, in the block's byte order.
+fn utf16_at(d: &[u8], o: usize, n: usize, bo: ByteOrder) -> Option<String> {
+    let raw = d.get(o..o + n)?;
+    let units: Vec<u16> = raw
+        .chunks_exact(2)
+        .map(|c| {
+            if bo == ByteOrder::BigEndian {
+                u16::from_be_bytes([c[0], c[1]])
+            } else {
+                u16::from_le_bytes([c[0], c[1]])
+            }
+        })
+        .take_while(|u| *u != 0)
+        .collect();
+    Some(String::from_utf16_lossy(&units))
 }
 
 /// N bytes as text. A `string` stops at its first NUL, as ExifTool's reader
@@ -351,8 +368,13 @@ pub fn decode(
         "Canon::PSInfo2" => canon_psinfo2(data, make, model, bo, file_type, format, dm),
         "CanonCustom::PersonalFuncs" => canoncustom_personalfuncs(data, make, model, bo, file_type, format, dm),
         "CanonCustom::PersonalFuncValues" => canoncustom_personalfuncvalues(data, make, model, bo, file_type, format, dm),
+        "CanonRaw::WhiteSample" => canonraw_whitesample(data, make, model, bo, file_type, format, dm),
         "CanonVRD::DustInfo" => canonvrd_dustinfo(data, make, model, bo, file_type, format, dm),
         "CanonVRD::DLOInfo" => canonvrd_dloinfo(data, make, model, bo, file_type, format, dm),
+        "Casio::FaceInfo1" => casio_faceinfo1(data, make, model, bo, file_type, format, dm),
+        "Casio::FaceInfo2" => casio_faceinfo2(data, make, model, bo, file_type, format, dm),
+        "Casio::QVCI" => casio_qvci(data, make, model, bo, file_type, format, dm),
+        "Casio::AVI" => casio_avi(data, make, model, bo, file_type, format, dm),
         "FLIR::GainDeadData" => flir_gaindeaddata(data, make, model, bo, file_type, format, dm),
         "FLIR::CoarseData" => flir_coarsedata(data, make, model, bo, file_type, format, dm),
         "FLIR::PaintData" => flir_paintdata(data, make, model, bo, file_type, format, dm),
@@ -361,13 +383,42 @@ pub fn decode(
         "FLIR::GPS_UUID" => flir_gps_uuid(data, make, model, bo, file_type, format, dm),
         "FLIR::AFF1" => flir_aff1(data, make, model, bo, file_type, format, dm),
         "FLIR::AFF5" => flir_aff5(data, make, model, bo, file_type, format, dm),
+        "FLIR::EmbeddedImage" => flir_embeddedimage(data, make, model, bo, file_type, format, dm),
+        "FLIR::GPSInfo" => flir_gpsinfo(data, make, model, bo, file_type, format, dm),
+        "FLIR::Header" => flir_header(data, make, model, bo, file_type, format, dm),
+        "FLIR::MeterLink" => flir_meterlink(data, make, model, bo, file_type, format, dm),
+        "FLIR::MoreInfo" => flir_moreinfo(data, make, model, bo, file_type, format, dm),
+        "FLIR::Params" => flir_params(data, make, model, bo, file_type, format, dm),
+        "FLIR::PiP" => flir_pip(data, make, model, bo, file_type, format, dm),
+        "FlashPix::PreviewInfo" => flashpix_previewinfo(data, make, model, bo, file_type, format, dm),
         "FujiFilm::FFMV" => fujifilm_ffmv(data, make, model, bo, file_type, format, dm),
+        "FujiFilm::RAFData" => fujifilm_rafdata(data, make, model, bo, file_type, format, dm),
+        "FujiFilm::MOV" => fujifilm_mov(data, make, model, bo, file_type, format, dm),
+        "H264::Camera1" => h264_camera1(data, make, model, bo, file_type, format, dm),
+        "H264::Camera2" => h264_camera2(data, make, model, bo, file_type, format, dm),
+        "H264::FrameInfo" => h264_frameinfo(data, make, model, bo, file_type, format, dm),
+        "H264::MakeModel" => h264_makemodel(data, make, model, bo, file_type, format, dm),
+        "H264::RecInfo" => h264_recinfo(data, make, model, bo, file_type, format, dm),
+        "JPEG::Ocad" => jpeg_ocad(data, make, model, bo, file_type, format, dm),
         "Kodak::Type9" => kodak_type9(data, make, model, bo, file_type, format, dm),
+        "Kodak::Type2" => kodak_type2(data, make, model, bo, file_type, format, dm),
+        "Kodak::Type3" => kodak_type3(data, make, model, bo, file_type, format, dm),
+        "Kodak::Type4" => kodak_type4(data, make, model, bo, file_type, format, dm),
+        "Kodak::Type5" => kodak_type5(data, make, model, bo, file_type, format, dm),
+        "Kodak::Type6" => kodak_type6(data, make, model, bo, file_type, format, dm),
+        "Kodak::Type7" => kodak_type7(data, make, model, bo, file_type, format, dm),
+        "Kodak::Processing" => kodak_processing(data, make, model, bo, file_type, format, dm),
+        "Kodak::Unknown" => kodak_unknown(data, make, model, bo, file_type, format, dm),
+        "Kodak::MOV" => kodak_mov(data, make, model, bo, file_type, format, dm),
+        "Microsoft::Stitch" => microsoft_stitch(data, make, model, bo, file_type, format, dm),
         "Minolta::CameraSettings7D" => minolta_camerasettings7d(data, make, model, bo, file_type, format, dm),
         "Minolta::CameraInfoA100" => minolta_camerainfoa100(data, make, model, bo, file_type, format, dm),
         "Minolta::WBInfoA100" => minolta_wbinfoa100(data, make, model, bo, file_type, format, dm),
         "Minolta::MOV1" => minolta_mov1(data, make, model, bo, file_type, format, dm),
         "Minolta::MOV2" => minolta_mov2(data, make, model, bo, file_type, format, dm),
+        "Minolta::CameraSettings5D" => minolta_camerasettings5d(data, make, model, bo, file_type, format, dm),
+        "Minolta::CameraSettingsA100" => minolta_camerasettingsa100(data, make, model, bo, file_type, format, dm),
+        "Minolta::ISInfoA100" => minolta_isinfoa100(data, make, model, bo, file_type, format, dm),
         "Nikon::LensDataUnknown" => nikon_lensdataunknown(data, make, model, bo, file_type, format, dm),
         "Nikon::ShotInfoD40" => nikon_shotinfod40(data, make, model, bo, file_type, format, dm),
         "Nikon::ShotInfoD80" => nikon_shotinfod80(data, make, model, bo, file_type, format, dm),
@@ -435,6 +486,9 @@ pub fn decode(
         "NikonCapture::PictureCtrl" => nikoncapture_picturectrl(data, make, model, bo, file_type, format, dm),
         "NikonCapture::UnsharpData" => nikoncapture_unsharpdata(data, make, model, bo, file_type, format, dm),
         "NikonCapture::WBAdjData" => nikoncapture_wbadjdata(data, make, model, bo, file_type, format, dm),
+        "NikonCapture::Brightness" => nikoncapture_brightness(data, make, model, bo, file_type, format, dm),
+        "NikonCapture::ColorBoost" => nikoncapture_colorboost(data, make, model, bo, file_type, format, dm),
+        "NikonCapture::Exposure" => nikoncapture_exposure(data, make, model, bo, file_type, format, dm),
         "NikonCustom::SettingsD40" => nikoncustom_settingsd40(data, make, model, bo, file_type, format, dm),
         "NikonCustom::SettingsD810" => nikoncustom_settingsd810(data, make, model, bo, file_type, format, dm),
         "NikonCustom::SettingsD850" => nikoncustom_settingsd850(data, make, model, bo, file_type, format, dm),
@@ -455,9 +509,31 @@ pub fn decode(
         "NikonCustom::SettingsD610" => nikoncustom_settingsd610(data, make, model, bo, file_type, format, dm),
         "NikonCustom::SettingsD5" => nikoncustom_settingsd5(data, make, model, bo, file_type, format, dm),
         "NikonCustom::SettingsD500" => nikoncustom_settingsd500(data, make, model, bo, file_type, format, dm),
+        "Nintendo::CameraInfo" => nintendo_camerainfo(data, make, model, bo, file_type, format, dm),
         "Olympus::MOV1" => olympus_mov1(data, make, model, bo, file_type, format, dm),
         "Olympus::MOV2" => olympus_mov2(data, make, model, bo, file_type, format, dm),
         "Olympus::prms" => olympus_prms(data, make, model, bo, file_type, format, dm),
+        "Olympus::AFInfo" => olympus_afinfo(data, make, model, bo, file_type, format, dm),
+        "Olympus::AFTargetInfo" => olympus_aftargetinfo(data, make, model, bo, file_type, format, dm),
+        "Olympus::MovableInfo" => olympus_movableinfo(data, make, model, bo, file_type, format, dm),
+        "Olympus::SubjectDetectInfo" => olympus_subjectdetectinfo(data, make, model, bo, file_type, format, dm),
+        "Olympus::Thumbnail" => olympus_thumbnail(data, make, model, bo, file_type, format, dm),
+        "Olympus::AVI" => olympus_avi(data, make, model, bo, file_type, format, dm),
+        "Olympus::MP4" => olympus_mp4(data, make, model, bo, file_type, format, dm),
+        "Olympus::WAV" => olympus_wav(data, make, model, bo, file_type, format, dm),
+        "Olympus::thmb2" => olympus_thmb2(data, make, model, bo, file_type, format, dm),
+        "Panasonic::Data1" => panasonic_data1(data, make, model, bo, file_type, format, dm),
+        "Panasonic::Data2" => panasonic_data2(data, make, model, bo, file_type, format, dm),
+        "Panasonic::FaceDetInfo" => panasonic_facedetinfo(data, make, model, bo, file_type, format, dm),
+        "Panasonic::FaceRecInfo" => panasonic_facerecinfo(data, make, model, bo, file_type, format, dm),
+        "Panasonic::FocusInfo" => panasonic_focusinfo(data, make, model, bo, file_type, format, dm),
+        "Panasonic::SerialInfo" => panasonic_serialinfo(data, make, model, bo, file_type, format, dm),
+        "Panasonic::ShotInfo" => panasonic_shotinfo(data, make, model, bo, file_type, format, dm),
+        "Panasonic::TimeInfo" => panasonic_timeinfo(data, make, model, bo, file_type, format, dm),
+        "Panasonic::Type2" => panasonic_type2(data, make, model, bo, file_type, format, dm),
+        "PanasonicRaw::DistortionInfo" => panasonicraw_distortioninfo(data, make, model, bo, file_type, format, dm),
+        "PanasonicRaw::WBInfo" => panasonicraw_wbinfo(data, make, model, bo, file_type, format, dm),
+        "PanasonicRaw::WBInfo2" => panasonicraw_wbinfo2(data, make, model, bo, file_type, format, dm),
         "Parrot::ARCoreAccel" => parrot_arcoreaccel(data, make, model, bo, file_type, format, dm),
         "Parrot::ARCoreAccel0" => parrot_arcoreaccel0(data, make, model, bo, file_type, format, dm),
         "Parrot::ARCoreGyro" => parrot_arcoregyro(data, make, model, bo, file_type, format, dm),
@@ -465,11 +541,27 @@ pub fn decode(
         "Parrot::ARCoreVideo" => parrot_arcorevideo(data, make, model, bo, file_type, format, dm),
         "Parrot::ARCoreCustom" => parrot_arcorecustom(data, make, model, bo, file_type, format, dm),
         "Pentax::Junk2" => pentax_junk2(data, make, model, bo, file_type, format, dm),
+        "Pentax::CAFPointInfo" => pentax_cafpointinfo(data, make, model, bo, file_type, format, dm),
         "Photoshop::PixelInfo" => photoshop_pixelinfo(data, make, model, bo, file_type, format, dm),
         "QuickTime::HTCBinary" => quicktime_htcbinary(data, make, model, bo, file_type, format, dm),
+        "QuickTime::AV1Config" => quicktime_av1config(data, make, model, bo, file_type, format, dm),
+        "QuickTime::ContentLightLevel" => quicktime_contentlightlevel(data, make, model, bo, file_type, format, dm),
+        "QuickTime::Flip" => quicktime_flip(data, make, model, bo, file_type, format, dm),
+        "QuickTime::HEVCConfig" => quicktime_hevcconfig(data, make, model, bo, file_type, format, dm),
         "RIFF::AVIHeader" => riff_aviheader(data, make, model, bo, file_type, format, dm),
+        "Reconyx::HyperFire" => reconyx_hyperfire(data, make, model, bo, file_type, format, dm),
+        "Reconyx::HyperFire2" => reconyx_hyperfire2(data, make, model, bo, file_type, format, dm),
+        "Reconyx::HyperFire4K" => reconyx_hyperfire4k(data, make, model, bo, file_type, format, dm),
+        "Reconyx::MicroFire" => reconyx_microfire(data, make, model, bo, file_type, format, dm),
+        "Reconyx::UltraFire" => reconyx_ultrafire(data, make, model, bo, file_type, format, dm),
+        "Ricoh::FaceInfo" => ricoh_faceinfo(data, make, model, bo, file_type, format, dm),
         "Samsung::DualShotExtra" => samsung_dualshotextra(data, make, model, bo, file_type, format, dm),
         "Samsung::Thumbnail2" => samsung_thumbnail2(data, make, model, bo, file_type, format, dm),
+        "Samsung::Thumbnail" => samsung_thumbnail(data, make, model, bo, file_type, format, dm),
+        "Samsung::OrientationInfo" => samsung_orientationinfo(data, make, model, bo, file_type, format, dm),
+        "Samsung::PictureWizard" => samsung_picturewizard(data, make, model, bo, file_type, format, dm),
+        "Sanyo::FaceInfo" => sanyo_faceinfo(data, make, model, bo, file_type, format, dm),
+        "Sanyo::Thumbnail" => sanyo_thumbnail(data, make, model, bo, file_type, format, dm),
         _ => Vec::new(),
     }
 }
@@ -23568,6 +23660,60 @@ fn canoncustom_personalfuncvalues(data: &[u8], make: &str, model: &str, bo: Byte
     tags
 }
 
+/// `Image::ExifTool::CanonRaw::WhiteSample` -- FORMAT int16u, FIRST_ENTRY 1.
+fn canonraw_whitesample(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "CanonRaw";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("WhiteSampleWidth".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("WhiteSampleWidth", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4, bo) {
+        dm.push(("WhiteSampleHeight".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("WhiteSampleHeight", 0x2, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6, bo) {
+        dm.push(("WhiteSampleLeftBorder".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("WhiteSampleLeftBorder", 0x3, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x8, bo) {
+        dm.push(("WhiteSampleTopBorder".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("WhiteSampleTopBorder", 0x4, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xa, bo) {
+        dm.push(("WhiteSampleBits".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("WhiteSampleBits", 0x5, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0x6e + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("BlackLevels", 0x37, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
 /// `Image::ExifTool::CanonVRD::DustInfo` -- FORMAT int32u, FIRST_ENTRY 0.
 fn canonvrd_dustinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
     const GRP0: &str = "MakerNotes";
@@ -23603,6 +23749,457 @@ fn canonvrd_dloinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_ty
     }
     if let Some(text) = text_at(data, 0xa, 10, true) {
         tags.push(mk("DLOVersion", 0x5, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Casio::FaceInfo1` -- FORMAT int8u, FIRST_ENTRY 0.
+fn casio_faceinfo1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Casio";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x0) {
+        dm.push(("FacesDetected".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            tags.push(mk("FacesDetected", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 1.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..2 {
+                match u16_at(data, 0x1 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("FaceDetectFrameSize", 0x1, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 1.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0xd + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face1Position", 0xd, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 2.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x7c + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face2Position", 0x7c, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 3.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0xeb + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face3Position", 0xeb, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 4.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x15a + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face4Position", 0x15a, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 5.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x1c9 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face5Position", 0x1c9, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 6.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x238 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face6Position", 0x238, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 7.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x2a7 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face7Position", 0x2a7, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 8.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x316 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face8Position", 0x316, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 9.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x385 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face9Position", 0x385, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 10.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x3f4 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face10Position", 0x3f4, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::Casio::FaceInfo2` -- FORMAT int8u, FIRST_ENTRY 0.
+fn casio_faceinfo2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Casio";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x2) {
+        dm.push(("FacesDetected".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            tags.push(mk("FacesDetected", 0x2, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 1.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..2 {
+                match u16_at(data, 0x4 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("FaceDetectFrameSize", 0x4, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 1.0) {
+        if let Some(v) = u8_at(data, 0x8) {
+            dm.push(("FaceOrientation".to_string(), Conv::Num(f64::from(v))));
+            let base = Conv::Num(f64::from(v));
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "Horizontal (normal)".to_string(),
+                1 => "Rotate 90 CW".to_string(),
+                2 => "Rotate 270 CW".to_string(),
+                3 => "Rotate 180".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("FaceOrientation", 0x8, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 1.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x18 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face1Position", 0x18, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 2.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x4c + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face2Position", 0x4c, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 3.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x80 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face3Position", 0x80, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 4.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0xb4 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face4Position", 0xb4, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 5.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0xe8 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face5Position", 0xe8, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 6.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x11c + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face6Position", 0x11c, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 7.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x150 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face7Position", 0x150, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 8.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x184 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face8Position", 0x184, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 9.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x1b8 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face9Position", 0x1b8, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 10.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x1ec + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face10Position", 0x1ec, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::Casio::QVCI` -- FORMAT int8u, FIRST_ENTRY 0.
+fn casio_qvci(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Casio";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x2c) {
+        dm.push(("CasioQuality".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            1 => "Economy".to_string(),
+            2 => "Normal".to_string(),
+            3 => "Fine".to_string(),
+            4 => "Super Fine".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("CasioQuality", 0x2c, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x37) {
+        dm.push(("FocalRange".to_string(), Conv::Num(f64::from(v))));
+    }
+    if let Some(text) = text_at(data, 0x4d, 20, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("$val=~tr/./:/; $val=~s/(\\d+:\\d+:\\d+):/$1 /; $val", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("DateTimeOriginal", 0x4d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x62, 7, true) {
+        tags.push(mk("ModelType", 0x62, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x72, 9, true) {
+        tags.push(mk("ManufactureIndex", 0x72, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x7c, 9, true) {
+        tags.push(mk("ManufactureCode", 0x7c, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Casio::AVI` -- FORMAT int8u, FIRST_ENTRY 0.
+fn casio_avi(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Casio";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, data.len().saturating_sub(0x0), true) {
+        tags.push(mk("Software", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
@@ -23909,6 +24506,667 @@ fn flir_aff5(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &st
     tags
 }
 
+/// `Image::ExifTool::FLIR::EmbeddedImage` -- FORMAT int16u, FIRST_ENTRY 0.
+/// Incomplete: a field of variable length moves every entry after
+/// it, and this reads them where they would be without it.
+fn flir_embeddedimage(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "APP1";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("EmbeddedImageByteOrder".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("ToggleByteOrder() if $val >= 0x0100; undef", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            tags.push(mk("EmbeddedImageByteOrder", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("EmbeddedImageWidth".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("EmbeddedImageWidth", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4, bo) {
+        dm.push(("EmbeddedImageHeight".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("EmbeddedImageHeight", 0x2, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x20, 4, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("$val =~ /^\\x89PNG/s ? \"PNG\" : ($val =~ /^\\xff\\xd8\\xff/ ? \"JPG\" : \"DAT\")", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("EmbeddedImageType", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::GPSInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn flir_gpsinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "APP1";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Location";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x0, bo) {
+        dm.push(("GPSValid".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "No".to_string(),
+                1 => "Yes".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("GPSValid", 0x0, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x4, 4, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("$val eq \"\\0\\0\\0\\0\" ? undef : $val", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("join \".\", split //, $val", &cv, &ctx) { cv = x; }
+            tags.push(mk("GPSVersionID", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x8, 2, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("length($val) ? $val : undef", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("GPSLatitudeRef", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0xa, 2, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("length($val) ? $val : undef", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("GPSLongitudeRef", 0xa, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if dm_val(dm, "GPSValid").is_some_and(conv_expr::Val::truthy) {
+        if let Some(v) = f64_at(data, 0x10, bo) {
+            dm.push(("GPSLatitude".to_string(), Conv::Num(f64::from(v))));
+            let ctx = Ctx { make, model, file_type, dm };
+            let base = Conv::Num(f64::from(v));
+            let mut cv = base;
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::GPS::ToDMS($self, $val, 1, \"N\")", &cv, &ctx) { cv = x; }
+            tags.push(mk("GPSLatitude", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if dm_val(dm, "GPSValid").is_some_and(conv_expr::Val::truthy) {
+        if let Some(v) = f64_at(data, 0x18, bo) {
+            dm.push(("GPSLongitude".to_string(), Conv::Num(f64::from(v))));
+            let ctx = Ctx { make, model, file_type, dm };
+            let base = Conv::Num(f64::from(v));
+            let mut cv = base;
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("Image::ExifTool::GPS::ToDMS($self, $val, 1, \"E\")", &cv, &ctx) { cv = x; }
+            tags.push(mk("GPSLongitude", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if dm_val(dm, "GPSValid").is_some_and(conv_expr::Val::truthy) {
+        if let Some(v) = f32_at(data, 0x20, bo) {
+            dm.push(("GPSAltitude".to_string(), Conv::Num(f64::from(v))));
+            let ctx = Ctx { make, model, file_type, dm };
+            let base = Conv::Num(f64::from(v));
+            let mut cv = base;
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2f m\", $val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("GPSAltitude", 0x20, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = f32_at(data, 0x40, bo) {
+        dm.push(("GPSDOP".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val > 0 ? $val : undef", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2f\", $val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("GPSDOP", 0x40, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x44, 2, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("length($val) ? $val : undef", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("GPSSpeedRef", 0x44, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x46, 2, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("length($val) ? $val : undef", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("GPSTrackRef", 0x46, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x48, 2, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("length($val) ? $val : undef", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("GPSImgDirectionRef", 0x48, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u8_at(data, 0x4c) {
+        dm.push(("GPSSpeed".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val < 0 ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            tags.push(mk("GPSSpeed", 0x4c, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u8_at(data, 0x50) {
+        dm.push(("GPSTrack".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val < 0 ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            tags.push(mk("GPSTrack", 0x50, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u8_at(data, 0x54) {
+        dm.push(("GPSImgDirection".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val < 0 ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            tags.push(mk("GPSImgDirection", 0x54, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x58, 16, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("length($val) ? $val : undef", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("GPSMapDatum", 0x58, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::Header` -- FORMAT int8u, FIRST_ENTRY 0.
+fn flir_header(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "APP1";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x4, 16, true) {
+        tags.push(mk("CreatorSoftware", 0x4, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::MeterLink` -- FORMAT int8u, FIRST_ENTRY 0.
+fn flir_meterlink(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "APP1";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x1a) {
+        dm.push(("Reading1Units".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                13 => "C".to_string(),
+                27 => "%".to_string(),
+                29 => "Relative".to_string(),
+                36 => "g/kg".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("Reading1Units", 0x1a, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u8_at(data, 0x1c) {
+        dm.push(("Reading1Description".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "Humidity".to_string(),
+                3 => "Moisture".to_string(),
+                7 => "Dew Point".to_string(),
+                8 => "Air Temperature".to_string(),
+                9 => "IR Temperature".to_string(),
+                11 => "Difference Temperature".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("Reading1Description", 0x1c, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x20, 16, true) {
+        tags.push(mk("Reading1Device", 0x20, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f64_at(data, 0x60, bo) {
+        dm.push(("Reading1Value".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("
+            return $val - 273.15 if $$self{Reading1Units} == 0x0d and $$self{Reading1Description} != 11;
+            return $val *= 1000 if $$self{Reading1Units} == 0x24;
+            return $val;
+        ", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Reading1Value", 0x60, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x7e) {
+        dm.push(("Reading2Units".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                13 => "C".to_string(),
+                27 => "%".to_string(),
+                29 => "rel".to_string(),
+                36 => "g/kg".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("Reading2Units", 0x7e, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u8_at(data, 0x80) {
+        dm.push(("Reading2Description".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "Humidity".to_string(),
+                3 => "Moisture".to_string(),
+                7 => "Dew Point".to_string(),
+                8 => "Air Temperature".to_string(),
+                9 => "IR Temperature".to_string(),
+                11 => "Difference Temperature".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("Reading2Description", 0x80, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x84, 16, true) {
+        tags.push(mk("Reading2Device", 0x84, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f64_at(data, 0xc4, bo) {
+        dm.push(("Reading2Value".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("
+            return $val - 273.15 if $$self{Reading2Units} == 0x0d and $$self{Reading2Description} != 11;
+            return $val *= 1000 if $$self{Reading2Units} == 0x24;
+            return $val;
+        ", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Reading2Value", 0xc4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0xe2) {
+        dm.push(("Reading3Units".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                13 => "C".to_string(),
+                27 => "%".to_string(),
+                29 => "rel".to_string(),
+                36 => "g/kg".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("Reading3Units", 0xe2, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u8_at(data, 0xe4) {
+        dm.push(("Reading3Description".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "Humidity".to_string(),
+                3 => "Moisture".to_string(),
+                7 => "Dew Point".to_string(),
+                8 => "Air Temperature".to_string(),
+                9 => "IR Temperature".to_string(),
+                11 => "Difference Temperature".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("Reading3Description", 0xe4, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0xe8, 16, true) {
+        tags.push(mk("Reading3Device", 0xe8, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f64_at(data, 0x128, bo) {
+        dm.push(("Reading3Value".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("
+            return $val - 273.15 if $$self{Reading3Units} == 0x0d and $$self{Reading3Description} != 11;
+            return $val *= 1000 if $$self{Reading3Units} == 0x24;
+            return $val;
+        ", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Reading3Value", 0x128, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x146) {
+        dm.push(("Reading4Units".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                13 => "C".to_string(),
+                27 => "%".to_string(),
+                29 => "rel".to_string(),
+                36 => "g/kg".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("Reading4Units", 0x146, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u8_at(data, 0x148) {
+        dm.push(("Reading4Description".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                0 => "Humidity".to_string(),
+                3 => "Moisture".to_string(),
+                7 => "Dew Point".to_string(),
+                8 => "Air Temperature".to_string(),
+                9 => "IR Temperature".to_string(),
+                11 => "Difference Temperature".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("Reading4Description", 0x148, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x14c, 16, true) {
+        tags.push(mk("Reading4Device", 0x14c, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f64_at(data, 0x18c, bo) {
+        dm.push(("Reading4Value".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("
+            return $val - 273.15 if $$self{Reading4Units} == 0x0d and $$self{Reading4Description} != 11;
+            return $val *= 1000 if $$self{Reading4Units} == 0x24;
+            return $val;
+        ", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Reading4Value", 0x18c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::MoreInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn flir_moreinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x5, 6, true) {
+        tags.push(mk("LensModel", 0x5, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0xb, bo) {
+        dm.push(("UnknownTemperature1".to_string(), Conv::Num(f64::from(v))));
+    }
+    if let Some(v) = f32_at(data, 0xf, bo) {
+        dm.push(("UnknownTemperature2".to_string(), Conv::Num(f64::from(v))));
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::Params` -- FORMAT float, FIRST_ENTRY 0.
+fn flir_params(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = f32_at(data, 0x4, bo) {
+        dm.push(("ReflectedApparentTemperature".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 273.15", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f C\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ReflectedApparentTemperature", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0x8, bo) {
+        dm.push(("AtmosphericTemperature".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 273.15", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f C\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("AtmosphericTemperature", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0xc, bo) {
+        dm.push(("Emissivity".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Emissivity", 0x3, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0x10, bo) {
+        dm.push(("ObjectDistance".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.2f m\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ObjectDistance", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0x14, bo) {
+        dm.push(("RelativeHumidity".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f %%\",$val*100)", &cv, &ctx) { cv = x; }
+        tags.push(mk("RelativeHumidity", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0x18, bo) {
+        dm.push(("EstimatedAtmosphericTrans".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("EstimatedAtmosphericTrans", 0x6, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0x1c, bo) {
+        dm.push(("IRWindowTemperature".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 273.15", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f C\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("IRWindowTemperature", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0x20, bo) {
+        dm.push(("IRWindowTransmission".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("IRWindowTransmission", 0x8, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::PiP` -- FORMAT int16s, FIRST_ENTRY 0.
+fn flir_pip(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "APP1";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = f32_at(data, 0x0, bo) {
+        dm.push(("Real2IR".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Real2IR", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x4, bo) {
+        dm.push(("OffsetX".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%+d\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("OffsetX", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x6, bo) {
+        dm.push(("OffsetY".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%+d\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("OffsetY", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x8, bo) {
+        dm.push(("PiPX1".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PiPX1", 0x4, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0xa, bo) {
+        dm.push(("PiPX2".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PiPX2", 0x5, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0xc, bo) {
+        dm.push(("PiPY1".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PiPY1", 0x6, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0xe, bo) {
+        dm.push(("PiPY2".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PiPY2", 0x7, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::FlashPix::PreviewInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn flashpix_previewinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "FlashPix";
+    const GRP1: &str = "FlashPix";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0xd, bo) {
+        dm.push(("PreviewImageWidth".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PreviewImageWidth", 0xd, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x17, bo) {
+        dm.push(("PreviewImageHeight".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PreviewImageHeight", 0x17, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
 /// `Image::ExifTool::FujiFilm::FFMV` -- FORMAT int8u, FIRST_ENTRY 0.
 fn fujifilm_ffmv(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
     const GRP0: &str = "MakerNotes";
@@ -23920,6 +25178,347 @@ fn fujifilm_ffmv(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type:
     if let Some(text) = text_at(data, 0x0, 34, true) {
         tags.push(mk("MovieStreamName", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
+    tags
+}
+
+/// `Image::ExifTool::FujiFilm::RAFData` -- FORMAT int8u, FIRST_ENTRY 0.
+fn fujifilm_rafdata(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "FujiFilm";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x0, bo) {
+        dm.push(("FujiWidth".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val < 10000 ? $val : undef", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$$self{FujiLayout} ? ($val / 2) : $val", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("RawImageWidth", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if !(dm_val(dm, "FujiWidth").is_some_and(conv_expr::Val::truthy)) {
+        if let Some(v) = u32_at(data, 0x4, bo) {
+            dm.push(("FujiWidth".to_string(), Conv::Num(f64::from(v))));
+            let ctx = Ctx { make, model, file_type, dm };
+            let base = Conv::Num(f64::from(v));
+            let rc = conv_expr::eval_with("$val < 10000 ? $val : undef", &base, &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                let base = rc.unwrap_or(base);
+                let mut cv = base;
+                if let Some(x) = conv_expr::eval_with("$$self{FujiLayout} ? ($val / 2) : $val", &cv, &ctx) { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("RawImageWidth", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if !(!(dm_val(dm, "FujiWidth").is_some_and(conv_expr::Val::truthy))) {
+        if let Some(v) = u32_at(data, 0x4, bo) {
+            dm.push(("FujiHeight".to_string(), Conv::Num(f64::from(v))));
+            let ctx = Ctx { make, model, file_type, dm };
+            let base = Conv::Num(f64::from(v));
+            let rc = conv_expr::eval_with("$val", &base, &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                let base = rc.unwrap_or(base);
+                let mut cv = base;
+                if let Some(x) = conv_expr::eval_with("$$self{FujiLayout} ? ($val * 2) : $val", &cv, &ctx) { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("RawImageHeight", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if !(dm_val(dm, "FujiWidth").is_some_and(conv_expr::Val::truthy)) {
+        if let Some(v) = u32_at(data, 0x8, bo) {
+            dm.push(("FujiWidth".to_string(), Conv::Num(f64::from(v))));
+            let ctx = Ctx { make, model, file_type, dm };
+            let base = Conv::Num(f64::from(v));
+            let rc = conv_expr::eval_with("$val < 10000 ? $val : undef", &base, &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                let base = rc.unwrap_or(base);
+                let mut cv = base;
+                if let Some(x) = conv_expr::eval_with("$$self{FujiLayout} ? ($val / 2) : $val", &cv, &ctx) { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("RawImageWidth", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if !(!(dm_val(dm, "FujiWidth").is_some_and(conv_expr::Val::truthy))) && !(dm_val(dm, "FujiHeight").is_some_and(conv_expr::Val::truthy)) {
+        if let Some(v) = u32_at(data, 0x8, bo) {
+            dm.push(("FujiHeight".to_string(), Conv::Num(f64::from(v))));
+            let ctx = Ctx { make, model, file_type, dm };
+            let base = Conv::Num(f64::from(v));
+            let rc = conv_expr::eval_with("$val", &base, &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                let base = rc.unwrap_or(base);
+                let mut cv = base;
+                if let Some(x) = conv_expr::eval_with("$$self{FujiLayout} ? ($val * 2) : $val", &cv, &ctx) { cv = x; }
+                let raw = Value::F64(cv.as_num());
+                tags.push(mk("RawImageHeight", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if !(dm_val(dm, "FujiHeight").is_some_and(conv_expr::Val::truthy)) {
+        if let Some(v) = u32_at(data, 0xc, bo) {
+            dm.push(("RawImageHeight".to_string(), Conv::Num(f64::from(v))));
+            let ctx = Ctx { make, model, file_type, dm };
+            let base = Conv::Num(f64::from(v));
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$$self{FujiLayout} ? ($val * 2) : $val", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("RawImageHeight", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::FujiFilm::MOV` -- FORMAT int8u, FIRST_ENTRY 0.
+fn fujifilm_mov(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "FujiFilm";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 24, true) {
+        tags.push(mk("Make", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x18, 16, true) {
+        tags.push(mk("Model", 0x18, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x2e, bo) {
+        dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val ? 1 / $val : 0", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureTime", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64u_at(data, 0x32, bo) {
+        dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FNumber", 0x32, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64s_at(data, 0x3a, bo) {
+        dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\", $val) : 0", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureCompensation", 0x3a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::H264::Camera1` -- FORMAT int8u, FIRST_ENTRY 0.
+fn h264_camera1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "H264";
+    const GRP1: &str = "H264";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x0) {
+        dm.push(("ApertureSetting".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            254 => "Closed".to_string(),
+            255 => "Auto".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ApertureSetting", 0x0, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x1) {
+        let v = v & 0xf;
+        dm.push(("Gain".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("($val - 1) * 3", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("$val==42 ? \"Out of range\" : \"$val dB\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("Gain", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x1) {
+        let v = (v & 0xf0) >> 4;
+        dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Program AE".to_string(),
+            1 => "Gain".to_string(),
+            2 => "Shutter speed priority AE".to_string(),
+            3 => "Aperture-priority AE".to_string(),
+            4 => "Manual".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ExposureProgram", 0x1, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2) {
+        let v = (v & 0xe0) >> 5;
+        dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Auto".to_string(),
+            1 => "Hold".to_string(),
+            2 => "1-Push".to_string(),
+            3 => "Daylight".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WhiteBalance", 0x2, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x3) {
+        dm.push(("Focus".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val == 0xff ? undef : $val", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("
+            my $foc = ($val & 0x7e) / (($val & 0x01) ? 40 : 400);
+            return(($val & 0x80 ? 'Manual' : 'Auto') . \" ($foc)\");
+        ", &cv, &ctx) { cv = x; }
+        tags.push(mk("Focus", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::H264::Camera2` -- FORMAT int8u, FIRST_ENTRY 0.
+fn h264_camera2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "H264";
+    const GRP1: &str = "H264";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x1) {
+        dm.push(("ImageStabilization".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            63 => "On (0x3f)".to_string(),
+            191 => "Off (0xbf)".to_string(),
+            255 => "n/a".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ImageStabilization", 0x1, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::H264::FrameInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn h264_frameinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "H264";
+    const GRP1: &str = "H264";
+    const GRP2: &str = "Video";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x0) {
+        dm.push(("CaptureFrameRate".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("CaptureFrameRate", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x1) {
+        dm.push(("VideoFrameRate".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("VideoFrameRate", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::H264::MakeModel` -- FORMAT int16u, FIRST_ENTRY 0.
+fn h264_makemodel(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "H264";
+    const GRP1: &str = "H264";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("Make".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("($Image::ExifTool::H264::convMake{$val} || \"Unknown\"); $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            let s = match base.as_num() as i64 {
+                259 => "Panasonic".to_string(),
+                264 => "Sony".to_string(),
+                4113 => "Canon".to_string(),
+                4356 => "JVC".to_string(),
+                other => other.to_string(),
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            let raw = Value::I32(base.as_num() as i32);
+            tags.push(mk("Make", 0x0, s, raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::H264::RecInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn h264_recinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "H264";
+    const GRP1: &str = "H264";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x0) {
+        dm.push(("RecordingMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            2 => "XP+".to_string(),
+            4 => "SP".to_string(),
+            5 => "LP".to_string(),
+            6 => "FXP".to_string(),
+            7 => "MXP".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("RecordingMode", 0x0, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::JPEG::Ocad` -- FORMAT int8u, FIRST_ENTRY 0.
+fn jpeg_ocad(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "APP0";
+    const GRP1: &str = "Ocad";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
     tags
 }
 
@@ -23981,6 +25580,511 @@ fn kodak_type9(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &
         if let Some(text) = text_at(data, 0x57, 16, true) {
             tags.push(mk("FirmwareVersion", 0x57, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
         }
+    }
+    tags
+}
+
+/// `Image::ExifTool::Kodak::Type2` -- FORMAT int8u, FIRST_ENTRY 0.
+fn kodak_type2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Kodak";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x8, 32, true) {
+        tags.push(mk("KodakMaker", 0x8, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x28, 32, true) {
+        tags.push(mk("KodakModel", 0x28, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x6c, bo) {
+        dm.push(("KodakImageWidth".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("KodakImageWidth", 0x6c, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x70, bo) {
+        dm.push(("KodakImageHeight".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("KodakImageHeight", 0x70, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Kodak::Type3` -- FORMAT int8u, FIRST_ENTRY 0.
+fn kodak_type3(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Kodak";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0xc, bo) {
+        dm.push(("YearCreated".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("YearCreated", 0xc, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u8_at(data, 0xe + k * 1) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.2d:%.2d\",split(\" \", $val))", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("MonthDayCreated", 0xe, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u8_at(data, 0x10 + k * 1) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%2d:%.2d:%.2d.%.2d\",split(\" \", $val))", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("TimeCreated", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x1e, bo) {
+        dm.push(("OpticalZoom".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("OpticalZoom", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i8_at(data, 0x37) {
+        dm.push(("Sharpness".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Sharpness", 0x37, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x38, bo) {
+        dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 1e5", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureTime", 0x38, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x3c, bo) {
+        dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("FNumber", 0x3c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4e, bo) {
+        dm.push(("ISO".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ISO", 0x4e, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Kodak::Type4` -- FORMAT int8u, FIRST_ENTRY 0.
+fn kodak_type4(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Kodak";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x20, 12, true) {
+        tags.push(mk("OriginalFileName", 0x20, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Kodak::Type5` -- FORMAT int8u, FIRST_ENTRY 0.
+fn kodak_type5(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Kodak";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x14, bo) {
+        dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 1e5", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureTime", 0x14, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x1a) {
+        dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            1 => "Daylight".to_string(),
+            2 => "Flash".to_string(),
+            3 => "Tungsten".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WhiteBalance", 0x1a, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x1c, bo) {
+        dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("FNumber", 0x1c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x1e, bo) {
+        dm.push(("ISO".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ISO", 0x1e, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x20, bo) {
+        dm.push(("OpticalZoom".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("OpticalZoom", 0x20, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x22, bo) {
+        dm.push(("DigitalZoom".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("DigitalZoom", 0x22, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x27) {
+        dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Auto".to_string(),
+            1 => "On".to_string(),
+            2 => "Off".to_string(),
+            3 => "Red-Eye".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("FlashMode", 0x27, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2a) {
+        dm.push(("ImageRotated".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "No".to_string(),
+            1 => "Yes".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ImageRotated", 0x2a, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2b) {
+        dm.push(("Macro".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "On".to_string(),
+            1 => "Off".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("Macro", 0x2b, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Kodak::Type6` -- FORMAT int8u, FIRST_ENTRY 0.
+fn kodak_type6(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Kodak";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x10, bo) {
+        dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 1e5", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureTime", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x14, bo) {
+        dm.push(("ISOSetting".to_string(), Conv::Num(f64::from(v))));
+    }
+    if let Some(v) = u16_at(data, 0x18, bo) {
+        dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("FNumber", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x1a, bo) {
+        dm.push(("ISO".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ISO", 0x1a, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x1c, bo) {
+        dm.push(("OpticalZoom".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("OpticalZoom", 0x1c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x1e, bo) {
+        dm.push(("DigitalZoom".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("DigitalZoom", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x22, bo) {
+        dm.push(("Flash".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "No Flash".to_string(),
+            1 => "Fired".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("Flash", 0x22, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Kodak::Type7` -- FORMAT int8u, FIRST_ENTRY 0.
+fn kodak_type7(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Kodak";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 16, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("$val=~s/\\s+$//; $val", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        tags.push(mk("SerialNumber", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Kodak::Processing` -- FORMAT int16u, FIRST_ENTRY 0.
+fn kodak_processing(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Kodak";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x28 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("
+            my @a = split ' ',$val;
+            foreach (@a) {
+                $_ = 2048 / $_ if $_;
+            }
+            return join ' ', @a;
+        ", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("WB_RGBLevels", 0x14, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::Kodak::Unknown` -- FORMAT int8u, FIRST_ENTRY 0.
+fn kodak_unknown(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Kodak";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    tags
+}
+
+/// `Image::ExifTool::Kodak::MOV` -- FORMAT int8u, FIRST_ENTRY 0.
+fn kodak_mov(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Kodak";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 21, true) {
+        tags.push(mk("Make", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x16, 42, true) {
+        tags.push(mk("Model", 0x16, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x40, 8, true) {
+        tags.push(mk("ModelType", 0x40, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x4e, bo) {
+        dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val ? 10 / $val : 0", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureTime", 0x4e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64u_at(data, 0x52, bo) {
+        dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FNumber", 0x52, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64s_at(data, 0x5a, bo) {
+        dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureCompensation", 0x5a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64u_at(data, 0x70, bo) {
+        dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f mm\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FocalLength", 0x70, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Microsoft::Stitch` -- FORMAT float, FIRST_ENTRY 0.
+fn microsoft_stitch(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Microsoft";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x0, bo) {
+        dm.push(("PanoramicStitchVersion".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PanoramicStitchVersion", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x4, bo) {
+        dm.push(("PanoramicStitchCameraMotion".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            2 => "Rigid Scale".to_string(),
+            3 => "Affine".to_string(),
+            4 => "3D Rotation".to_string(),
+            5 => "Homography".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("PanoramicStitchCameraMotion", 0x1, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x8, bo) {
+        dm.push(("PanoramicStitchMapType".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Perspective".to_string(),
+            1 => "Horizontal Cylindrical".to_string(),
+            2 => "Horizontal Spherical".to_string(),
+            257 => "Vertical Cylindrical".to_string(),
+            258 => "Vertical Spherical".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("PanoramicStitchMapType", 0x2, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0xc, bo) {
+        dm.push(("PanoramicStitchTheta0".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PanoramicStitchTheta0", 0x3, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0x10, bo) {
+        dm.push(("PanoramicStitchTheta1".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PanoramicStitchTheta1", 0x4, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0x14, bo) {
+        dm.push(("PanoramicStitchPhi0".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PanoramicStitchPhi0", 0x5, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0x18, bo) {
+        dm.push(("PanoramicStitchPhi1".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PanoramicStitchPhi1", 0x6, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
@@ -25502,6 +27606,1487 @@ fn minolta_mov2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: 
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f mm\",$val)", &cv, &ctx) { cv = x; }
         tags.push(mk("FocalLength", 0x48, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Minolta::CameraSettings5D` -- FORMAT int16u, FIRST_ENTRY 0.
+fn minolta_camerasettings5d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Minolta";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x14, bo) {
+        dm.push(("ExposureMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Program".to_string(),
+            1 => "Aperture Priority".to_string(),
+            2 => "Shutter Priority".to_string(),
+            3 => "Manual".to_string(),
+            4 => "Auto?".to_string(),
+            4131 => "Connected Copying?".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ExposureMode", 0xa, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x18, bo) {
+        dm.push(("MinoltaImageSize".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Large".to_string(),
+            1 => "Medium".to_string(),
+            2 => "Small".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("MinoltaImageSize", 0xc, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x1a, bo) {
+        dm.push(("MinoltaQuality".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "RAW".to_string(),
+            16 => "Fine".to_string(),
+            32 => "Normal".to_string(),
+            34 => "RAW+JPEG".to_string(),
+            48 => "Economy".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("MinoltaQuality", 0xd, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x1c, bo) {
+        dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Auto".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Cloudy".to_string(),
+            3 => "Shade".to_string(),
+            4 => "Tungsten".to_string(),
+            5 => "Fluorescent".to_string(),
+            6 => "Flash".to_string(),
+            256 => "Kelvin".to_string(),
+            512 => "Manual".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WhiteBalance", 0xe, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x3e, bo) {
+        dm.push(("Flash".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Did not fire".to_string(),
+            1 => "Fired".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("Flash", 0x1f, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x40, bo) {
+        dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Normal".to_string(),
+            1 => "Red-eye reduction".to_string(),
+            2 => "Rear flash sync".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("FlashMode", 0x20, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4a, bo) {
+        dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Multi-segment".to_string(),
+            1 => "Center-weighted average".to_string(),
+            2 => "Spot".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("MeteringMode", 0x25, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4c, bo) {
+        dm.push(("ISOSetting".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Auto".to_string(),
+            8 => "200 (Zone Matching High)".to_string(),
+            10 => "80 (Zone Matching Low)".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ISOSetting", 0x26, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x5e, bo) {
+        dm.push(("ColorSpace".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Natural sRGB".to_string(),
+            1 => "Natural+ sRGB".to_string(),
+            2 => "Monochrome".to_string(),
+            4 => "Adobe RGB (ICC)".to_string(),
+            5 => "Adobe RGB".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ColorSpace", 0x2f, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x60, bo) {
+        dm.push(("Sharpness".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Sharpness", 0x30, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x62, bo) {
+        dm.push(("Contrast".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Contrast", 0x31, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x64, bo) {
+        dm.push(("Saturation".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Saturation", 0x32, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6a, bo) {
+        dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("2 ** ((48-$val)/8)", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureTime", 0x35, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6c, bo) {
+        dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FNumber", 0x36, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6e, bo) {
+        dm.push(("FreeMemoryCardImages".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("FreeMemoryCardImages", 0x37, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x92, bo) {
+        dm.push(("ColorTemperature".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val * 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("ColorTemperature", 0x49, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x94, bo) {
+        dm.push(("HueAdjustment".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("HueAdjustment", 0x4a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xa0, bo) {
+        dm.push(("Rotation".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            72 => "Horizontal (normal)".to_string(),
+            76 => "Rotate 90 CW".to_string(),
+            82 => "Rotate 270 CW".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("Rotation", 0x50, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xa6, bo) {
+        dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 100 - 3", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureCompensation", 0x53, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xa8, bo) {
+        dm.push(("FreeMemoryCardImages".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("FreeMemoryCardImages", 0x54, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xca, bo) {
+        dm.push(("Rotation".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Horizontal (normal)".to_string(),
+            1 => "Rotate 90 CW".to_string(),
+            2 => "Rotate 270 CW".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("Rotation", 0x65, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0xdc, bo) {
+        dm.push(("ColorTemperature".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val * 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("ColorTemperature", 0x6e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xe2, bo) {
+        dm.push(("PictureFinish".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Natural".to_string(),
+            1 => "Natural+".to_string(),
+            2 => "Portrait".to_string(),
+            3 => "Wind Scene".to_string(),
+            4 => "Evening Scene".to_string(),
+            5 => "Night Scene".to_string(),
+            6 => "Night Portrait".to_string(),
+            7 => "Monochrome".to_string(),
+            8 => "Adobe RGB".to_string(),
+            9 => "Adobe RGB (ICC)".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("PictureFinish", 0x71, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x15c, bo) {
+        dm.push(("ImageNumber".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("ImageNumber", 0xae, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x160, bo) {
+        dm.push(("NoiseReduction".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("NoiseReduction", 0xb0, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x17a, bo) {
+        dm.push(("ImageStabilization".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ImageStabilization", 0xbd, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Minolta::CameraSettingsA100` -- FORMAT int16u, FIRST_ENTRY 0.
+fn minolta_camerasettingsa100(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Minolta";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("ExposureMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Program".to_string(),
+            1 => "Aperture Priority".to_string(),
+            2 => "Shutter Priority".to_string(),
+            3 => "Manual".to_string(),
+            4 => "Auto".to_string(),
+            5 => "Program Shift A".to_string(),
+            6 => "Program Shift S".to_string(),
+            4115 => "Portrait".to_string(),
+            4131 => "Sports".to_string(),
+            4147 => "Sunset".to_string(),
+            4163 => "Night View/Portrait".to_string(),
+            4179 => "Landscape".to_string(),
+            4227 => "Macro".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ExposureMode", 0x0, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("ExposureCompensationSetting".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 100 - 3", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("ExposureCompensationSetting", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xa, bo) {
+        dm.push(("HighSpeedSync".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("HighSpeedSync", 0x5, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xc, bo) {
+        dm.push(("ShutterSpeedSetting".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val ? 2 ** (6 - $val/8) : 0", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("ShutterSpeedSetting", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xe, bo) {
+        dm.push(("ApertureSetting".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("2 ** (($val/8 - 1) / 2)", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFNumber($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ApertureSetting", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x10, bo) {
+        dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val ? 2 ** (6 - $val/8) : 0", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureTime", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x12, bo) {
+        dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("2 ** (($val/8 - 1) / 2)", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFNumber($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FNumber", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x14, bo) {
+        dm.push(("DriveMode2".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Self-timer 10 sec".to_string(),
+            1 => "Continuous".to_string(),
+            4 => "Self-timer 2 sec".to_string(),
+            5 => "Single Frame".to_string(),
+            8 => "White Balance Bracketing Low".to_string(),
+            9 => "White Balance Bracketing High".to_string(),
+            770 => "Single-frame Bracketing Low".to_string(),
+            771 => "Continous Bracketing Low".to_string(),
+            1794 => "Single-frame Bracketing High".to_string(),
+            1795 => "Continuous Bracketing High".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("DriveMode2", 0xa, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x16, bo) {
+        dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Auto".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Cloudy".to_string(),
+            3 => "Shade".to_string(),
+            4 => "Tungsten".to_string(),
+            5 => "Fluorescent".to_string(),
+            6 => "Flash".to_string(),
+            256 => "Kelvin".to_string(),
+            512 => "Manual".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WhiteBalance", 0xb, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x18, bo) {
+        dm.push(("FocusMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "AF-S".to_string(),
+            1 => "AF-C".to_string(),
+            4 => "AF-A".to_string(),
+            5 => "Manual".to_string(),
+            6 => "DMF".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("FocusMode", 0xc, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x1a, bo) {
+        dm.push(("AFPointSelected".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            1 => "Center".to_string(),
+            2 => "Top".to_string(),
+            3 => "Top-right".to_string(),
+            4 => "Right".to_string(),
+            5 => "Bottom-right".to_string(),
+            6 => "Bottom".to_string(),
+            7 => "Bottom-left".to_string(),
+            8 => "Left".to_string(),
+            9 => "Top-left".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("AFPointSelected", 0xd, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x1c, bo) {
+        dm.push(("AFAreaMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Wide".to_string(),
+            1 => "Local".to_string(),
+            2 => "Spot".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("AFAreaMode", 0xe, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x1e, bo) {
+        dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Auto".to_string(),
+            2 => "Rear Sync".to_string(),
+            3 => "Wireless".to_string(),
+            4 => "Fill Flash".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("FlashMode", 0xf, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x20, bo) {
+        dm.push(("FlashExposureCompSet".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 100 - 3", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("FlashExposureCompSet", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x24, bo) {
+        dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Multi-segment".to_string(),
+            1 => "Center-weighted average".to_string(),
+            2 => "Spot".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("MeteringMode", 0x12, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x26, bo) {
+        dm.push(("ISOSetting".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Auto".to_string(),
+            174 => "80 (Zone Matching Low)".to_string(),
+            184 => "200 (Zone Matching High)".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ISOSetting", 0x13, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x28, bo) {
+        dm.push(("ZoneMatchingMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "Standard".to_string(),
+            2 => "Advanced".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ZoneMatchingMode", 0x14, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2a, bo) {
+        dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "Standard".to_string(),
+            2 => "Advanced".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("DynamicRangeOptimizer", 0x15, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2c, bo) {
+        dm.push(("ColorMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Standard".to_string(),
+            1 => "Vivid".to_string(),
+            2 => "Portrait".to_string(),
+            3 => "Landscape".to_string(),
+            4 => "Sunset".to_string(),
+            5 => "Night Scene".to_string(),
+            7 => "B&W".to_string(),
+            8 => "Adobe RGB".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ColorMode", 0x16, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2e, bo) {
+        dm.push(("ColorSpace".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "sRGB".to_string(),
+            2 => "B&W".to_string(),
+            5 => "Adobe RGB".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ColorSpace", 0x17, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x30, bo) {
+        dm.push(("Sharpness".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Sharpness", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x32, bo) {
+        dm.push(("Contrast".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Contrast", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x34, bo) {
+        dm.push(("Saturation".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Saturation", 0x1a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x38, bo) {
+        dm.push(("FlashMetering".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "ADI (Advanced Distance Integration)".to_string(),
+            1 => "Pre-flash TTL".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("FlashMetering", 0x1c, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x3a, bo) {
+        dm.push(("PrioritySetupShutterRelease".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "AF".to_string(),
+            1 => "Release".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("PrioritySetupShutterRelease", 0x1d, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x3c, bo) {
+        dm.push(("DriveMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Single Frame".to_string(),
+            1 => "Continuous".to_string(),
+            2 => "Self-timer".to_string(),
+            3 => "Continuous Bracketing".to_string(),
+            4 => "Single-Frame Bracketing".to_string(),
+            5 => "White Balance Bracketing".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("DriveMode", 0x1e, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x3e, bo) {
+        dm.push(("SelfTimerTime".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "10 s".to_string(),
+            4 => "2 s".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("SelfTimerTime", 0x1f, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x40, bo) {
+        dm.push(("ContinuousBracketing".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            771 => "Low".to_string(),
+            1795 => "High".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ContinuousBracketing", 0x20, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x42, bo) {
+        dm.push(("SingleFrameBracketing".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            770 => "Low".to_string(),
+            1794 => "High".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("SingleFrameBracketing", 0x21, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x44, bo) {
+        dm.push(("WhiteBalanceBracketing".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            8 => "Low".to_string(),
+            9 => "High".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WhiteBalanceBracketing", 0x22, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x46, bo) {
+        dm.push(("WhiteBalanceSetting".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Auto".to_string(),
+            1 => "Preset".to_string(),
+            2 => "Custom".to_string(),
+            3 => "Color Temperature/Color Filter".to_string(),
+            32769 => "Preset".to_string(),
+            32770 => "Custom".to_string(),
+            32771 => "Color Temperature/Color Filter".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WhiteBalanceSetting", 0x23, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x48, bo) {
+        dm.push(("PresetWhiteBalance".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            1 => "Daylight".to_string(),
+            2 => "Cloudy".to_string(),
+            3 => "Shade".to_string(),
+            4 => "Tungsten".to_string(),
+            5 => "Fluorescent".to_string(),
+            6 => "Flash".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("PresetWhiteBalance", 0x24, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4a, bo) {
+        dm.push(("ColorTemperatureSetting".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Temperature".to_string(),
+            2 => "Color Filter".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ColorTemperatureSetting", 0x25, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4c, bo) {
+        dm.push(("CustomWBSetting".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Setup".to_string(),
+            1 => "Recall".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("CustomWBSetting", 0x26, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4e, bo) {
+        dm.push(("DynamicRangeOptimizerSetting".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "Standard".to_string(),
+            2 => "Advanced".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("DynamicRangeOptimizerSetting", 0x27, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x64, bo) {
+        dm.push(("FreeMemoryCardImages".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("FreeMemoryCardImages", 0x32, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x68, bo) {
+        dm.push(("CustomWBRedLevel".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("CustomWBRedLevel", 0x34, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6a, bo) {
+        dm.push(("CustomWBGreenLevel".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("CustomWBGreenLevel", 0x35, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6c, bo) {
+        dm.push(("CustomWBBlueLevel".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("CustomWBBlueLevel", 0x36, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6e, bo) {
+        dm.push(("CustomWBError".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "OK".to_string(),
+            1 => "Error".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("CustomWBError", 0x37, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x70, bo) {
+        dm.push(("WhiteBalanceFineTune".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("WhiteBalanceFineTune", 0x38, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x72, bo) {
+        dm.push(("ColorTemperature".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val * 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("ColorTemperature", 0x39, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x74, bo) {
+        dm.push(("ColorCompensationFilter".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ColorCompensationFilter", 0x3a, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x76, bo) {
+        dm.push(("SonyImageSize".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Standard".to_string(),
+            1 => "Medium".to_string(),
+            2 => "Small".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("SonyImageSize", 0x3b, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x78, bo) {
+        dm.push(("SonyQuality".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "RAW".to_string(),
+            32 => "Fine".to_string(),
+            34 => "RAW + JPEG".to_string(),
+            48 => "Standard".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("SonyQuality", 0x3c, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x7a, bo) {
+        dm.push(("InstantPlaybackTime".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val s\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("InstantPlaybackTime", 0x3d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x7c, bo) {
+        dm.push(("InstantPlaybackSetup".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Image and Information".to_string(),
+            1 => "Image Only".to_string(),
+            3 => "Image and Histogram".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("InstantPlaybackSetup", 0x3e, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x7e, bo) {
+        dm.push(("NoiseReduction".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("NoiseReduction", 0x3f, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x80, bo) {
+        dm.push(("EyeStartAF".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "On".to_string(),
+            1 => "Off".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("EyeStartAF", 0x40, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x82, bo) {
+        dm.push(("RedEyeReduction".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("RedEyeReduction", 0x41, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x84, bo) {
+        dm.push(("FlashDefault".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Auto".to_string(),
+            1 => "Fill Flash".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("FlashDefault", 0x42, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x86, bo) {
+        dm.push(("AutoBracketOrder".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "0 - +".to_string(),
+            1 => "- 0 +".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("AutoBracketOrder", 0x43, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x88, bo) {
+        dm.push(("FocusHoldButton".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Focus Hold".to_string(),
+            1 => "DOF Preview".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("FocusHoldButton", 0x44, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x8a, bo) {
+        dm.push(("AELButton".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Hold".to_string(),
+            1 => "Toggle".to_string(),
+            2 => "Spot Hold".to_string(),
+            3 => "Spot Toggle".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("AELButton", 0x45, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x8c, bo) {
+        dm.push(("ControlDialSet".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Shutter Speed".to_string(),
+            1 => "Aperture".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ControlDialSet", 0x46, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x8e, bo) {
+        dm.push(("ExposureCompensationMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Ambient and Flash".to_string(),
+            1 => "Ambient Only".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ExposureCompensationMode", 0x47, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x90, bo) {
+        dm.push(("AFAssist".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "On".to_string(),
+            1 => "Off".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("AFAssist", 0x48, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x92, bo) {
+        dm.push(("CardShutterLock".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "On".to_string(),
+            1 => "Off".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("CardShutterLock", 0x49, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x94, bo) {
+        dm.push(("LensShutterLock".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "On".to_string(),
+            1 => "Off".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("LensShutterLock", 0x4a, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x96, bo) {
+        dm.push(("AFAreaIllumination".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "0.3 s".to_string(),
+            1 => "0.6 s".to_string(),
+            2 => "Off".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("AFAreaIllumination", 0x4b, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x98, bo) {
+        dm.push(("MonitorDisplayOff".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Automatic".to_string(),
+            1 => "Manual".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("MonitorDisplayOff", 0x4c, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x9a, bo) {
+        dm.push(("RecordDisplay".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Auto Rotate".to_string(),
+            1 => "Horizontal".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("RecordDisplay", 0x4d, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x9c, bo) {
+        dm.push(("PlayDisplay".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Auto Rotate".to_string(),
+            1 => "Manual Rotate".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("PlayDisplay", 0x4e, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xa0, bo) {
+        dm.push(("ExposureIndicator".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Not Indicated".to_string(),
+            1 => "Under Scale".to_string(),
+            119 => "Bottom of Scale".to_string(),
+            120 => "-2.0".to_string(),
+            121 => "-1.7".to_string(),
+            122 => "-1.5".to_string(),
+            123 => "-1.3".to_string(),
+            124 => "-1.0".to_string(),
+            125 => "-0.7".to_string(),
+            126 => "-0.5".to_string(),
+            127 => "-0.3".to_string(),
+            128 => "0".to_string(),
+            129 => "+0.3".to_string(),
+            130 => "+0.5".to_string(),
+            131 => "+0.7".to_string(),
+            132 => "+1.0".to_string(),
+            133 => "+1.3".to_string(),
+            134 => "+1.5".to_string(),
+            135 => "+1.7".to_string(),
+            136 => "+2.0".to_string(),
+            253 => "Top of Scale".to_string(),
+            254 => "Over Scale".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ExposureIndicator", 0x50, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xa2, bo) {
+        dm.push(("AELExposureIndicator".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Not Indicated".to_string(),
+            1 => "Under Scale".to_string(),
+            119 => "Bottom of Scale".to_string(),
+            120 => "-2.0".to_string(),
+            121 => "-1.7".to_string(),
+            122 => "-1.5".to_string(),
+            123 => "-1.3".to_string(),
+            124 => "-1.0".to_string(),
+            125 => "-0.7".to_string(),
+            126 => "-0.5".to_string(),
+            127 => "-0.3".to_string(),
+            128 => "0".to_string(),
+            129 => "+0.3".to_string(),
+            130 => "+0.5".to_string(),
+            131 => "+0.7".to_string(),
+            132 => "+1.0".to_string(),
+            133 => "+1.3".to_string(),
+            134 => "+1.5".to_string(),
+            135 => "+1.7".to_string(),
+            136 => "+2.0".to_string(),
+            253 => "Top of Scale".to_string(),
+            254 => "Over Scale".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("AELExposureIndicator", 0x51, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xa4, bo) {
+        dm.push(("ExposureBracketingIndicatorLast".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Not Indicated".to_string(),
+            1 => "Under Scale".to_string(),
+            119 => "Bottom of Scale".to_string(),
+            120 => "-2.0".to_string(),
+            121 => "-1.7".to_string(),
+            122 => "-1.5".to_string(),
+            123 => "-1.3".to_string(),
+            124 => "-1.0".to_string(),
+            125 => "-0.7".to_string(),
+            126 => "-0.5".to_string(),
+            127 => "-0.3".to_string(),
+            128 => "0".to_string(),
+            129 => "+0.3".to_string(),
+            130 => "+0.5".to_string(),
+            131 => "+0.7".to_string(),
+            132 => "+1.0".to_string(),
+            133 => "+1.3".to_string(),
+            134 => "+1.5".to_string(),
+            135 => "+1.7".to_string(),
+            136 => "+2.0".to_string(),
+            253 => "Top of Scale".to_string(),
+            254 => "Over Scale".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ExposureBracketingIndicatorLast", 0x52, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xa6, bo) {
+        dm.push(("MeteringOffScaleIndicator".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Within Range".to_string(),
+            1 => "Under/Over Range".to_string(),
+            255 => "Out of Range".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("MeteringOffScaleIndicator", 0x53, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xa8, bo) {
+        dm.push(("FlashExposureIndicator".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Not Indicated".to_string(),
+            1 => "Under Scale".to_string(),
+            119 => "Bottom of Scale".to_string(),
+            120 => "-2.0".to_string(),
+            121 => "-1.7".to_string(),
+            122 => "-1.5".to_string(),
+            123 => "-1.3".to_string(),
+            124 => "-1.0".to_string(),
+            125 => "-0.7".to_string(),
+            126 => "-0.5".to_string(),
+            127 => "-0.3".to_string(),
+            128 => "0".to_string(),
+            129 => "+0.3".to_string(),
+            130 => "+0.5".to_string(),
+            131 => "+0.7".to_string(),
+            132 => "+1.0".to_string(),
+            133 => "+1.3".to_string(),
+            134 => "+1.5".to_string(),
+            135 => "+1.7".to_string(),
+            136 => "+2.0".to_string(),
+            253 => "Top of Scale".to_string(),
+            254 => "Over Scale".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("FlashExposureIndicator", 0x54, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xaa, bo) {
+        dm.push(("FlashExposureIndicatorNext".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Not Indicated".to_string(),
+            1 => "Under Scale".to_string(),
+            119 => "Bottom of Scale".to_string(),
+            120 => "-2.0".to_string(),
+            121 => "-1.7".to_string(),
+            122 => "-1.5".to_string(),
+            123 => "-1.3".to_string(),
+            124 => "-1.0".to_string(),
+            125 => "-0.7".to_string(),
+            126 => "-0.5".to_string(),
+            127 => "-0.3".to_string(),
+            128 => "0".to_string(),
+            129 => "+0.3".to_string(),
+            130 => "+0.5".to_string(),
+            131 => "+0.7".to_string(),
+            132 => "+1.0".to_string(),
+            133 => "+1.3".to_string(),
+            134 => "+1.5".to_string(),
+            135 => "+1.7".to_string(),
+            136 => "+2.0".to_string(),
+            253 => "Top of Scale".to_string(),
+            254 => "Over Scale".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("FlashExposureIndicatorNext", 0x55, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xac, bo) {
+        dm.push(("FlashExposureIndicatorLast".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Not Indicated".to_string(),
+            1 => "Under Scale".to_string(),
+            119 => "Bottom of Scale".to_string(),
+            120 => "-2.0".to_string(),
+            121 => "-1.7".to_string(),
+            122 => "-1.5".to_string(),
+            123 => "-1.3".to_string(),
+            124 => "-1.0".to_string(),
+            125 => "-0.7".to_string(),
+            126 => "-0.5".to_string(),
+            127 => "-0.3".to_string(),
+            128 => "0".to_string(),
+            129 => "+0.3".to_string(),
+            130 => "+0.5".to_string(),
+            131 => "+0.7".to_string(),
+            132 => "+1.0".to_string(),
+            133 => "+1.3".to_string(),
+            134 => "+1.5".to_string(),
+            135 => "+1.7".to_string(),
+            136 => "+2.0".to_string(),
+            253 => "Top of Scale".to_string(),
+            254 => "Over Scale".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("FlashExposureIndicatorLast", 0x56, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xae, bo) {
+        dm.push(("ImageStabilization".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ImageStabilization", 0x57, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xb0, bo) {
+        dm.push(("FocusModeSwitch".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "AF".to_string(),
+            1 => "MF".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("FocusModeSwitch", 0x58, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xb2, bo) {
+        dm.push(("FlashType".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "Built-in".to_string(),
+            2 => "External".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("FlashType", 0x59, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xb4, bo) {
+        dm.push(("Rotation".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Horizontal (normal)".to_string(),
+            1 => "Rotate 270 CW".to_string(),
+            2 => "Rotate 90 CW".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("Rotation", 0x5a, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xb6, bo) {
+        dm.push(("AELock".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("AELock", 0x5b, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xbc, bo) {
+        dm.push(("ColorTemperature".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val * 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("ColorTemperature", 0x5e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0xbe, bo) {
+        dm.push(("ColorCompensationFilter".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ColorCompensationFilter", 0x5f, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xc0, bo) {
+        dm.push(("BatteryState".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            3 => "Very Low".to_string(),
+            4 => "Low".to_string(),
+            5 => "Half Full".to_string(),
+            6 => "Sufficient Power Remaining".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("BatteryState", 0x60, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Minolta::ISInfoA100` -- FORMAT int8u, FIRST_ENTRY 0.
+fn minolta_isinfoa100(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Minolta";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("ImageStabilization".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            10116 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ImageStabilization", 0x0, s, raw, GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
@@ -34364,6 +37949,130 @@ fn nikoncapture_wbadjdata(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let base = Conv::Num(f64::from(v));
         #[allow(clippy::cast_possible_truncation)]
         tags.push(mk("WBAdjTint", 0x25, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::NikonCapture::Brightness` -- FORMAT int8u, FIRST_ENTRY 0.
+fn nikoncapture_brightness(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "NikonCapture";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = f64_at(data, 0x0, bo) {
+        dm.push(("BrightnessAdj".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val * 50", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("BrightnessAdj", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x8) {
+        dm.push(("EnhanceDarkTones".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("EnhanceDarkTones", 0x8, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::NikonCapture::ColorBoost` -- FORMAT int8u, FIRST_ENTRY 0.
+fn nikoncapture_colorboost(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "NikonCapture";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x0) {
+        dm.push(("ColorBoostType".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Nature".to_string(),
+            1 => "People".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ColorBoostType", 0x0, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x1, bo) {
+        dm.push(("ColorBoostLevel".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ColorBoostLevel", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::NikonCapture::Exposure` -- FORMAT int8u, FIRST_ENTRY 0.
+fn nikoncapture_exposure(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "NikonCapture";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = i16_at(data, 0x0, bo) {
+        dm.push(("ExposureAdj".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("ExposureAdj", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f64_at(data, 0x12, bo) {
+        dm.push(("ExposureAdj2".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.4f\", $val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureAdj2", 0x12, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x24) {
+        dm.push(("ActiveD-Lighting".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ActiveD-Lighting", 0x24, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x25) {
+        dm.push(("ActiveD-LightingMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unchanged".to_string(),
+            1 => "Off".to_string(),
+            2 => "Low".to_string(),
+            3 => "Normal".to_string(),
+            4 => "High".to_string(),
+            6 => "Extra High".to_string(),
+            7 => "Extra High 1".to_string(),
+            8 => "Extra High 2".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ActiveD-LightingMode", 0x25, s, raw, GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
@@ -54166,6 +57875,61 @@ fn nikoncustom_settingsd500(data: &[u8], make: &str, model: &str, bo: ByteOrder,
     tags
 }
 
+/// `Image::ExifTool::Nintendo::CameraInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn nintendo_camerainfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Nintendo";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 4, false) {
+        tags.push(mk("ModelID", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x8, bo) {
+        dm.push(("TimeStamp".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("ConvertUnixTime($val + 10957 * 24 * 3600)", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("TimeStamp", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x18, 4, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("\"0x\" . unpack(\"H*\",$val)", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        tags.push(mk("InternalSerialNumber", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0x28, bo) {
+        dm.push(("Parallax".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.2f\", $val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("Parallax", 0x28, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x30, bo) {
+        dm.push(("Category".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "(none)".to_string(),
+            4096 => "Mii".to_string(),
+            8192 => "Man".to_string(),
+            16384 => "Woman".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("Category", 0x30, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
 /// `Image::ExifTool::Olympus::MOV1` -- FORMAT int8u, FIRST_ENTRY 0.
 fn olympus_mov1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
     const GRP0: &str = "MakerNotes";
@@ -54295,6 +58059,1901 @@ fn olympus_prms(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: 
     }
     if let Some(text) = text_at(data, 0x17f, 32, true) {
         tags.push(mk("LensModel", 0x17f, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Olympus::AFInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn olympus_afinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Olympus";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = i8_at(data, 0x62c) {
+        dm.push(("CAFSensitivity".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("CAFSensitivity", 0x62c, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Olympus::AFTargetInfo` -- FORMAT int16u, FIRST_ENTRY 0.
+fn olympus_aftargetinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Olympus";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x0 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("AFFrameSize", 0x0, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0x4 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("AFFocusArea", 0x2, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0xc + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("AFSelectedArea", 0x6, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::Olympus::MovableInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn olympus_movableinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Olympus";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x4, bo) {
+        dm.push(("ISO".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ISO", 0x4, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x2c, 16, true) {
+        tags.push(mk("EncoderVersion", 0x2c, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x3c, 16, true) {
+        tags.push(mk("DecoderVersion", 0x3c, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(sub) = data.get(0x83..) {
+        tags.extend(olympus_thumbnail(sub, make, model, bo, file_type, format, dm));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Olympus::SubjectDetectInfo` -- FORMAT int16u, FIRST_ENTRY 0.
+fn olympus_subjectdetectinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Olympus";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x0 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("SubjectDetectFrameSize", 0x0, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0x4 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("SubjectDetectArea", 0x2, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0xc + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("SubjectDetectDetail", 0x6, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x14, bo) {
+        dm.push(("SubjectDetectStatus".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "No Data".to_string(),
+            257 => "Subject and L1 Detail Detected".to_string(),
+            258 => "Subject and L2 Detail Detected".to_string(),
+            260 => "Subject Detected, No Details".to_string(),
+            515 => "Face and Eye Detected".to_string(),
+            516 => "Face Detected".to_string(),
+            771 => "Subject Detail or Eye Detected".to_string(),
+            772 => "No Subject or Face Detected".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("SubjectDetectStatus", 0xa, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Olympus::Thumbnail` -- FORMAT int32u, FIRST_ENTRY 0.
+fn olympus_thumbnail(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Olympus";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x4, bo) {
+        dm.push(("ThumbnailWidth".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailWidth", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x8, bo) {
+        dm.push(("ThumbnailHeight".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailHeight", 0x2, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0xc, bo) {
+        dm.push(("ThumbnailLength".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailLength", 0x3, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x10, bo) {
+        dm.push(("ThumbnailOffset".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailOffset", 0x4, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Olympus::AVI` -- FORMAT int8u, FIRST_ENTRY 0.
+fn olympus_avi(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Olympus";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x12, 24, true) {
+        tags.push(mk("Make", 0x12, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x2c, 24, true) {
+        tags.push(mk("Model", 0x2c, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64u_at(data, 0x5e, bo) {
+        dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFNumber($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FNumber", 0x5e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x83, 24, true) {
+        tags.push(mk("DateTime1", 0x83, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x9d, 24, true) {
+        tags.push(mk("DateTime2", 0x9d, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(sub) = data.get(0x129..) {
+        tags.extend(olympus_thmb2(sub, make, model, bo, file_type, format, dm));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Olympus::MP4` -- FORMAT int8u, FIRST_ENTRY 0.
+fn olympus_mp4(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Olympus";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 24, true) {
+        tags.push(mk("Make", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x18, 24, true) {
+        tags.push(mk("Model", 0x18, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64u_at(data, 0x28, bo) {
+        dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFNumber($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FNumber", 0x28, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64s_at(data, 0x30, bo) {
+        dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureCompensation", 0x30, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if prefix_matches(data.get(0x68..).unwrap_or(&[]), &[Some(&[(68, 68)]), Some(&[(73, 73)]), Some(&[(71, 71)]), Some(&[(73, 73)])]) {
+        if let Some(sub) = data.get(0x68..) {
+            tags.extend(olympus_movableinfo(sub, make, model, bo, file_type, format, dm));
+        }
+    }
+    if prefix_matches(data.get(0x72..).unwrap_or(&[]), &[Some(&[(68, 68)]), Some(&[(73, 73)]), Some(&[(71, 71)]), Some(&[(73, 73)])]) {
+        if let Some(sub) = data.get(0x72..) {
+            tags.extend(olympus_movableinfo(sub, make, model, bo, file_type, format, dm));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::Olympus::WAV` -- FORMAT int8u, FIRST_ENTRY 0.
+fn olympus_wav(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Olympus";
+    const GRP2: &str = "Audio";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0xc, 16, true) {
+        tags.push(mk("Model", 0xc, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x1c, bo) {
+        dm.push(("FileNumber".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.4d\", $val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FileNumber", 0x1c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x26, 12, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("
+            return undef unless $val =~ /^(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})$/;
+            my $y = $1 < 70 ? \"20$1\" : \"19$1\";
+            return \"$y:$2:$3 $4:$5:$6\";
+        ", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("DateTimeOriginal", 0x26, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x32, 12, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("
+            return undef unless $val =~ /^(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})$/;
+            my $y = $1 < 70 ? \"20$1\" : \"19$1\";
+            return \"$y:$2:$3 $4:$5:$6\";
+        ", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("DateTimeEnd", 0x32, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x3e, 6, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("$val =~ s/^(\\d{2})(\\d{2})/$1:$2:/; $val", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        tags.push(mk("RecordingTime", 0x3e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x200, bo) {
+        dm.push(("Duration".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("Duration", 0x200, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x20a, bo) {
+        dm.push(("Index01".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index01", 0x20a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x214, bo) {
+        dm.push(("Index02".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index02", 0x214, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x21e, bo) {
+        dm.push(("Index03".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index03", 0x21e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x228, bo) {
+        dm.push(("Index04".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index04", 0x228, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x232, bo) {
+        dm.push(("Index05".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index05", 0x232, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x23c, bo) {
+        dm.push(("Index06".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index06", 0x23c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x246, bo) {
+        dm.push(("Index07".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index07", 0x246, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x250, bo) {
+        dm.push(("Index08".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index08", 0x250, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x25a, bo) {
+        dm.push(("Index09".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index09", 0x25a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x264, bo) {
+        dm.push(("Index10".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index10", 0x264, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x26e, bo) {
+        dm.push(("Index11".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index11", 0x26e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x278, bo) {
+        dm.push(("Index12".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index12", 0x278, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x282, bo) {
+        dm.push(("Index13".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index13", 0x282, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x28c, bo) {
+        dm.push(("Index14".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index14", 0x28c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x296, bo) {
+        dm.push(("Index15".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index15", 0x296, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x2a0, bo) {
+        dm.push(("Index16".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val == 0xffffffff ? undef : $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("ConvertDuration($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("Index16", 0x2a0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::Olympus::thmb2` -- FORMAT int8u, FIRST_ENTRY 0.
+/// Incomplete: a field of variable length moves every entry after
+/// it, and this reads them where they would be without it.
+fn olympus_thmb2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Olympus";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("ThumbnailWidth".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailWidth", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("ThumbnailHeight".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailHeight", 0x2, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x4, bo) {
+        dm.push(("ThumbnailLength".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailLength", 0x4, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Panasonic::Data1` -- FORMAT int8u, FIRST_ENTRY 0.
+fn panasonic_data1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Leica";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x16, bo) {
+        dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            1 => "Elmarit-M 21mm f/2.8".to_string(),
+            3 => "Elmarit-M 28mm f/2.8 (III)".to_string(),
+            4 => "Tele-Elmarit-M 90mm f/2.8 (II)".to_string(),
+            5 => "Summilux-M 50mm f/1.4 (II)".to_string(),
+            6 => "Summicron-M 35mm f/2 (IV)".to_string(),
+            7 => "Summicron-M 90mm f/2 (II)".to_string(),
+            9 => "Elmarit-M 135mm f/2.8 (I/II)".to_string(),
+            11 => "Summaron-M 28mm f/5.6".to_string(),
+            12 => "Thambar-M 90mm f/2.2".to_string(),
+            16 => "Tri-Elmar-M 16-18-21mm f/4 ASPH.".to_string(),
+            23 => "Summicron-M 50mm f/2 (III)".to_string(),
+            24 => "Elmarit-M 21mm f/2.8 ASPH.".to_string(),
+            25 => "Elmarit-M 24mm f/2.8 ASPH.".to_string(),
+            26 => "Summicron-M 28mm f/2 ASPH.".to_string(),
+            27 => "Elmarit-M 28mm f/2.8 (IV)".to_string(),
+            28 => "Elmarit-M 28mm f/2.8 ASPH.".to_string(),
+            29 => "Summilux-M 35mm f/1.4 ASPH.".to_string(),
+            30 => "Summicron-M 35mm f/2 ASPH.".to_string(),
+            31 => "Noctilux-M 50mm f/1".to_string(),
+            32 => "Summilux-M 50mm f/1.4 ASPH.".to_string(),
+            33 => "Summicron-M 50mm f/2 (IV, V)".to_string(),
+            34 => "Elmar-M 50mm f/2.8".to_string(),
+            35 => "Summilux-M 75mm f/1.4".to_string(),
+            36 => "Apo-Summicron-M 75mm f/2 ASPH.".to_string(),
+            37 => "Apo-Summicron-M 90mm f/2 ASPH.".to_string(),
+            38 => "Elmarit-M 90mm f/2.8".to_string(),
+            39 => "Macro-Elmar-M 90mm f/4".to_string(),
+            40 => "Macro-Adapter M".to_string(),
+            41 => "Apo-Summicron-M 50mm f/2 ASPH.".to_string(),
+            42 => "Tri-Elmar-M 28-35-50mm f/4 ASPH.".to_string(),
+            43 => "Summarit-M 35mm f/2.5".to_string(),
+            44 => "Summarit-M 50mm f/2.5".to_string(),
+            45 => "Summarit-M 75mm f/2.5".to_string(),
+            46 => "Summarit-M 90mm f/2.5".to_string(),
+            47 => "Summilux-M 21mm f/1.4 ASPH.".to_string(),
+            48 => "Summilux-M 24mm f/1.4 ASPH.".to_string(),
+            49 => "Noctilux-M 50mm f/0.95 ASPH.".to_string(),
+            50 => "Elmar-M 24mm f/3.8 ASPH.".to_string(),
+            51 => "Super-Elmar-M 21mm f/3.4 Asph".to_string(),
+            52 => "Apo-Telyt-M 18mm f/3.8 ASPH.".to_string(),
+            53 => "Apo-Telyt-M 135mm f/3.4".to_string(),
+            58 => "Noctilux-M 75mm f/1.25 ASPH.".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("LensType", 0x16, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Panasonic::Data2` -- FORMAT int8u, FIRST_ENTRY 0.
+fn panasonic_data2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Leica";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    tags
+}
+
+/// `Image::ExifTool::Panasonic::FaceDetInfo` -- FORMAT int16u, FIRST_ENTRY 0.
+fn panasonic_facedetinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Panasonic";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("NumFacePositions".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            tags.push(mk("NumFacePositions", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0x2 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("Face1Position", 0x1, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0xa + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("Face2Position", 0x5, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0x12 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("Face3Position", 0x9, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0x1a + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("Face4Position", 0xd, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0x22 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("Face5Position", 0x11, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::Panasonic::FaceRecInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn panasonic_facerecinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Panasonic";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("FacesRecognized".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            tags.push(mk("FacesRecognized", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x4, 20, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("$$self{FacesRecognized} < 1 ? undef : $val", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("RecognizedFace1Name", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0x18 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("RecognizedFace1Position", 0x18, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x20, 20, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("$$self{FacesRecognized} < 1 ? undef : $val", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("RecognizedFace1Age", 0x20, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x34, 20, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("$$self{FacesRecognized} < 2 ? undef : $val", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("RecognizedFace2Name", 0x34, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0x48 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("RecognizedFace2Position", 0x48, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x50, 20, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("$$self{FacesRecognized} < 2 ? undef : $val", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("RecognizedFace2Age", 0x50, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x64, 20, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("$$self{FacesRecognized} < 3 ? undef : $val", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("RecognizedFace3Name", 0x64, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0x78 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("RecognizedFace3Position", 0x78, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x80, 20, true) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("$$self{FacesRecognized} < 3 ? undef : $val", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("RecognizedFace3Age", 0x80, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::Panasonic::FocusInfo` -- FORMAT int16u, FIRST_ENTRY 0.
+fn panasonic_focusinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Leica";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("FocusDistance".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("$val < 65535 ? \"$val m\" : \"inf\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("FocusDistance", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val ? $val : undef", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f mm\",$val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("FocalLength", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::Panasonic::SerialInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn panasonic_serialinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Leica";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x4, 8, true) {
+        tags.push(mk("SerialNumber", 0x4, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Panasonic::ShotInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn panasonic_shotinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Leica";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("FileIndex".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("FileIndex", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Panasonic::TimeInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn panasonic_timeinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Panasonic";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 8, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        let rc = conv_expr::eval_with("$val =~ /^\\0/ ? undef : $val", &cv, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            if let Some(x) = rc { cv = x; }
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%s:%s:%s %s:%s:%s.%s\", unpack \"H4H2H2H2H2H2H2\", $val)", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("PanasonicDateTime", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x10, bo) {
+        dm.push(("TimeLapseShotNumber".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("TimeLapseShotNumber", 0x10, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Panasonic::Type2` -- FORMAT int16u, FIRST_ENTRY 0.
+fn panasonic_type2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Panasonic";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 4, true) {
+        tags.push(mk("MakerNoteType", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6, bo) {
+        dm.push(("Gain".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Gain", 0x3, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::PanasonicRaw::DistortionInfo` -- FORMAT int16s, FIRST_ENTRY 0.
+fn panasonicraw_distortioninfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "PanasonicRaw";
+    const GRP1: &str = "PanasonicRaw";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = i16_at(data, 0x4, bo) {
+        dm.push(("DistortionParam02".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 32768", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("DistortionParam02", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x8, bo) {
+        dm.push(("DistortionParam04".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 32768", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("DistortionParam04", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0xa, bo) {
+        dm.push(("DistortionScale".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("1 / (1 + $val/32768)", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("DistortionScale", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0xe, bo) {
+        let v = v & 0xf;
+        dm.push(("DistortionCorrection".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("DistortionCorrection", 0x7, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x10, bo) {
+        dm.push(("DistortionParam08".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 32768", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("DistortionParam08", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x12, bo) {
+        dm.push(("DistortionParam09".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 32768", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("DistortionParam09", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x16, bo) {
+        dm.push(("DistortionParam11".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 32768", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("DistortionParam11", 0xb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x18, bo) {
+        dm.push(("DistortionN".to_string(), Conv::Num(f64::from(v))));
+    }
+    tags
+}
+
+/// `Image::ExifTool::PanasonicRaw::WBInfo` -- FORMAT int16u, FIRST_ENTRY 0.
+fn panasonicraw_wbinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "PanasonicRaw";
+    const GRP1: &str = "PanasonicRaw";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("NumWBEntries".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("NumWBEntries", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("WBType1".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType1", 0x1, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x4 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevels1", 0x2, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x8, bo) {
+        dm.push(("WBType2".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType2", 0x4, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0xa + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevels2", 0x5, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0xe, bo) {
+        dm.push(("WBType3".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType3", 0x7, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x10 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevels3", 0x8, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x14, bo) {
+        dm.push(("WBType4".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType4", 0xa, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x16 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevels4", 0xb, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x1a, bo) {
+        dm.push(("WBType5".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType5", 0xd, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x1c + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevels5", 0xe, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x20, bo) {
+        dm.push(("WBType6".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType6", 0x10, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x22 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevels6", 0x11, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x26, bo) {
+        dm.push(("WBType7".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType7", 0x13, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x28 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevels7", 0x14, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::PanasonicRaw::WBInfo2` -- FORMAT int16u, FIRST_ENTRY 0.
+fn panasonicraw_wbinfo2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "PanasonicRaw";
+    const GRP1: &str = "PanasonicRaw";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("NumWBEntries".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("NumWBEntries", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("WBType1".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType1", 0x1, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x4 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels1", 0x2, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0xa, bo) {
+        dm.push(("WBType2".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType2", 0x5, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0xc + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels2", 0x6, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x12, bo) {
+        dm.push(("WBType3".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType3", 0x9, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x14 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels3", 0xa, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x1a, bo) {
+        dm.push(("WBType4".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType4", 0xd, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x1c + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels4", 0xe, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x22, bo) {
+        dm.push(("WBType5".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType5", 0x11, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x24 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels5", 0x12, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x2a, bo) {
+        dm.push(("WBType6".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType6", 0x15, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x2c + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels6", 0x16, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x32, bo) {
+        dm.push(("WBType7".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Fluorescent".to_string(),
+            3 => "Tungsten (Incandescent)".to_string(),
+            4 => "Flash".to_string(),
+            9 => "Fine Weather".to_string(),
+            10 => "Cloudy".to_string(),
+            11 => "Shade".to_string(),
+            12 => "Daylight Fluorescent".to_string(),
+            13 => "Day White Fluorescent".to_string(),
+            14 => "Cool White Fluorescent".to_string(),
+            15 => "White Fluorescent".to_string(),
+            16 => "Warm White Fluorescent".to_string(),
+            17 => "Standard Light A".to_string(),
+            18 => "Standard Light B".to_string(),
+            19 => "Standard Light C".to_string(),
+            20 => "D55".to_string(),
+            21 => "D65".to_string(),
+            22 => "D75".to_string(),
+            23 => "D50".to_string(),
+            24 => "ISO Studio Tungsten".to_string(),
+            25 => "Daylight".to_string(),
+            26 => "Day White".to_string(),
+            27 => "Cool White".to_string(),
+            28 => "White".to_string(),
+            29 => "Warm White".to_string(),
+            30 => "Daylight LED".to_string(),
+            31 => "Day White LED".to_string(),
+            32 => "Cool White LED".to_string(),
+            33 => "White LED".to_string(),
+            34 => "Warm White LED".to_string(),
+            255 => "Other".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBType7", 0x19, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x34 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels7", 0x1a, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
     }
     tags
 }
@@ -54457,6 +60116,42 @@ fn pentax_junk2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: 
     tags
 }
 
+/// `Image::ExifTool::Pentax::CAFPointInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+/// Incomplete: a field of variable length moves every entry after
+/// it, and this reads them where they would be without it.
+fn pentax_cafpointinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Pentax";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x1) {
+        dm.push(("NumCAFPoints".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("($val & 0x0f) * ($val >> 4); $val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            let mut cv = base;
+            if let Some(x) = conv_expr::eval_with("($val >> 4) * ($val & 0x0f)", &cv, &ctx) { cv = x; }
+            let raw = Value::F64(cv.as_num());
+            tags.push(mk("NumCAFPoints", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u8_at(data, 0x1) {
+        dm.push(("CAFGridSize".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("($val >> 4) . \" \" . ($val & 0x0f)", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("$val =~ tr/ /x/; $val", &cv, &ctx) { cv = x; }
+        tags.push(mk("CAFGridSize", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
 /// `Image::ExifTool::Photoshop::PixelInfo` -- FORMAT int8u, FIRST_ENTRY 0.
 fn photoshop_pixelinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
     const GRP0: &str = "Photoshop";
@@ -54482,6 +60177,344 @@ fn quicktime_htcbinary(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
     const PRIO: i32 = 0;
     let mut tags = Vec::new();
     let _ = (data, make, model, bo, file_type, format, &dm);
+    tags
+}
+
+/// `Image::ExifTool::QuickTime::AV1Config` -- FORMAT int8u, FIRST_ENTRY 0.
+fn quicktime_av1config(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "QuickTime";
+    const GRP1: &str = "QuickTime";
+    const GRP2: &str = "Video";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x0) {
+        let v = v & 0x7f;
+        dm.push(("AV1ConfigurationVersion".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("AV1ConfigurationVersion", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x1) {
+        let v = (v & 0xe0) >> 5;
+        dm.push(("SeqProfile".to_string(), Conv::Num(f64::from(v))));
+    }
+    if let Some(v) = u8_at(data, 0x1) {
+        let v = v & 0x1f;
+        dm.push(("SeqLevelIdx0".to_string(), Conv::Num(f64::from(v))));
+    }
+    if let Some(v) = u8_at(data, 0x2) {
+        let v = (v & 0x80) >> 7;
+        dm.push(("SeqTier0".to_string(), Conv::Num(f64::from(v))));
+    }
+    if let Some(v) = u8_at(data, 0x2) {
+        let v = (v & 0x40) >> 6;
+        dm.push(("HighBitDepth".to_string(), Conv::Num(f64::from(v))));
+    }
+    if let Some(v) = u8_at(data, 0x2) {
+        let v = (v & 0x20) >> 5;
+        dm.push(("TwelveBit".to_string(), Conv::Num(f64::from(v))));
+    }
+    if let Some(v) = u8_at(data, 0x2) {
+        let v = (v & 0x1c) >> 2;
+        dm.push(("ChromaFormat".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "YUV 4:4:4".to_string(),
+            2 => "YUV 4:2:2".to_string(),
+            3 => "YUV 4:2:0".to_string(),
+            7 => "Monochrome 4:0:0".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ChromaFormat", 0x2, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2) {
+        let v = v & 0x3;
+        dm.push(("ChromaSamplePosition".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Vertical".to_string(),
+            2 => "Colocated".to_string(),
+            3 => "(reserved)".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ChromaSamplePosition", 0x2, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x3) {
+        dm.push(("InitialDelaySamples".to_string(), Conv::Num(f64::from(v))));
+    }
+    tags
+}
+
+/// `Image::ExifTool::QuickTime::ContentLightLevel` -- FORMAT int16u, FIRST_ENTRY 0.
+fn quicktime_contentlightlevel(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "QuickTime";
+    const GRP1: &str = "QuickTime";
+    const GRP2: &str = "Video";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("MaxContentLightLevel".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("MaxContentLightLevel", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("MaxPicAverageLightLevel".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("MaxPicAverageLightLevel", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::QuickTime::Flip` -- FORMAT int32u, FIRST_ENTRY 0.
+/// Incomplete: a field of variable length moves every entry after
+/// it, and this reads them where they would be without it.
+fn quicktime_flip(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "QuickTime";
+    const GRP1: &str = "MakerNotes";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x4, bo) {
+        dm.push(("PreviewImageWidth".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PreviewImageWidth", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x8, bo) {
+        dm.push(("PreviewImageHeight".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PreviewImageHeight", 0x2, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x34, bo) {
+        dm.push(("PreviewImageLength".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PreviewImageLength", 0xd, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x38, 16, true) {
+        tags.push(mk("SerialNumber", 0xe, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::QuickTime::HEVCConfig` -- FORMAT int8u, FIRST_ENTRY 0.
+fn quicktime_hevcconfig(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "QuickTime";
+    const GRP1: &str = "QuickTime";
+    const GRP2: &str = "Video";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x0) {
+        dm.push(("HEVCConfigurationVersion".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("HEVCConfigurationVersion", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x1) {
+        let v = (v & 0xc0) >> 6;
+        dm.push(("GeneralProfileSpace".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Conforming".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("GeneralProfileSpace", 0x1, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x1) {
+        let v = (v & 0x20) >> 5;
+        dm.push(("GeneralTierFlag".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Main Tier".to_string(),
+            1 => "High Tier".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("GeneralTierFlag", 0x1, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x1) {
+        let v = v & 0x1f;
+        dm.push(("GeneralProfileIDC".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "No Profile".to_string(),
+            1 => "Main".to_string(),
+            2 => "Main 10".to_string(),
+            3 => "Main Still Picture".to_string(),
+            4 => "Format Range Extensions".to_string(),
+            5 => "High Throughput".to_string(),
+            6 => "Multiview Main".to_string(),
+            7 => "Scalable Main".to_string(),
+            8 => "3D Main".to_string(),
+            9 => "Screen Content Coding Extensions".to_string(),
+            10 => "Scalable Format Range Extensions".to_string(),
+            11 => "High Throughput Screen Content Coding Extensions".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("GeneralProfileIDC", 0x1, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x2, bo) {
+        dm.push(("GenProfileCompatibilityFlags".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            20 => "High Throughput Screen Content Coding Extensions".to_string(),
+            21 => "Scalable Format Range Extensions".to_string(),
+            22 => "Screen Content Coding Extensions".to_string(),
+            23 => "3D Main".to_string(),
+            24 => "Scalable Main".to_string(),
+            25 => "Multiview Main".to_string(),
+            26 => "High Throughput".to_string(),
+            27 => "Format Range Extensions".to_string(),
+            28 => "Main Still Picture".to_string(),
+            29 => "Main 10".to_string(),
+            30 => "Main".to_string(),
+            31 => "No Profile".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("GenProfileCompatibilityFlags", 0x2, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..6 {
+            match u8_at(data, 0x6 + k * 1) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("ConstraintIndicatorFlags", 0x6, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u8_at(data, 0xc) {
+        dm.push(("GeneralLevelIDC".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%d (level %.1f)\", $val, $val/30)", &cv, &ctx) { cv = x; }
+        tags.push(mk("GeneralLevelIDC", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xd, bo) {
+        let v = v & 0xfff;
+        dm.push(("MinSpatialSegmentationIDC".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("MinSpatialSegmentationIDC", 0xd, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0xf) {
+        let v = v & 0x3;
+        dm.push(("ParallelismType".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ParallelismType", 0xf, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x10) {
+        let v = v & 0x3;
+        dm.push(("ChromaFormat".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Monochrome".to_string(),
+            1 => "4:2:0".to_string(),
+            2 => "4:2:2".to_string(),
+            3 => "4:4:4".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ChromaFormat", 0x10, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x11) {
+        let v = v & 0x7;
+        dm.push(("BitDepthLuma".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val + 8", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("BitDepthLuma", 0x11, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x12) {
+        let v = v & 0x7;
+        dm.push(("BitDepthChroma".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val + 8", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("BitDepthChroma", 0x12, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x13, bo) {
+        dm.push(("AverageFrameRate".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 256", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("AverageFrameRate", 0x13, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x15) {
+        let v = (v & 0xc0) >> 6;
+        dm.push(("ConstantFrameRate".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Unknown".to_string(),
+            1 => "Constant Frame Rate".to_string(),
+            2 => "Each Temporal Layer is Constant Frame Rate".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("ConstantFrameRate", 0x15, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x15) {
+        let v = (v & 0x38) >> 3;
+        dm.push(("NumTemporalLayers".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("NumTemporalLayers", 0x15, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x15) {
+        let v = (v & 0x4) >> 2;
+        dm.push(("TemporalIDNested".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "No".to_string(),
+            1 => "Yes".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("TemporalIDNested", 0x15, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
     tags
 }
 
@@ -54547,6 +60580,1377 @@ fn riff_aviheader(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type
     tags
 }
 
+/// `Image::ExifTool::Reconyx::HyperFire` -- FORMAT int16u, FIRST_ENTRY 0.
+fn reconyx_hyperfire(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Reconyx";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("MakerNoteVersion".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"0x%.4x\", $val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("MakerNoteVersion", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x2 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$val=~tr/ /./; $val", &cv, &ctx) { cv = x; }
+            tags.push(mk("FirmwareVersion", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x8 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("
+            my @v = split(' ',$val);
+            sprintf('%.4x:%.2x:%.2x', $v[0], $v[1]>>8, $v[1]&0xff);
+        ", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("FirmwareDate", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0xc, 2, true) {
+        tags.push(mk("TriggerMode", 0x6, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0xe + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$val =~ s/ / of /; $val", &cv, &ctx) { cv = x; }
+            tags.push(mk("Sequence", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x12 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("my @v=split(\" \",$val); ($v[0]<<16) + $v[1]", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("EventNumber", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..6 {
+            match u16_at(data, 0x16 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("
+            my @a = split ' ', $val;
+
+            if ($a[0] & 0xff00 and not $a[0] & 0xff) {
+                $_ = ($_ >> 8) | (($_ & 0xff) << 8) foreach @a;
+            }
+            sprintf('%.4d:%.2d:%.2d %.2d:%.2d:%.2d', @a[5,3,4,2,1,0]);
+        ", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("DateTimeOriginal", 0xb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x24, bo) {
+        dm.push(("MoonPhase".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "New".to_string(),
+            1 => "New Crescent".to_string(),
+            2 => "First Quarter".to_string(),
+            3 => "Waxing Gibbous".to_string(),
+            4 => "Full".to_string(),
+            5 => "Waning Gibbous".to_string(),
+            6 => "Last Quarter".to_string(),
+            7 => "Old Crescent".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("MoonPhase", 0x12, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x26, bo) {
+        dm.push(("AmbientTemperatureFahrenheit".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val F\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("AmbientTemperatureFahrenheit", 0x13, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x28, bo) {
+        dm.push(("AmbientTemperature".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("AmbientTemperature", 0x14, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = utf16_at(data, 0x2a, 30, bo) {
+        tags.push(mk("SerialNumber", 0x15, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x48, bo) {
+        dm.push(("Contrast".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Contrast", 0x24, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4a, bo) {
+        dm.push(("Brightness".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Brightness", 0x25, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4c, bo) {
+        dm.push(("Sharpness".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Sharpness", 0x26, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4e, bo) {
+        dm.push(("Saturation".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Saturation", 0x27, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x50, bo) {
+        dm.push(("InfraredIlluminator".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("InfraredIlluminator", 0x28, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x52, bo) {
+        dm.push(("MotionSensitivity".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("MotionSensitivity", 0x29, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x54, bo) {
+        dm.push(("BatteryVoltage".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val V\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("BatteryVoltage", 0x2a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x56, 22, true) {
+        tags.push(mk("UserLabel", 0x2b, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Reconyx::HyperFire2` -- FORMAT int8u, FIRST_ENTRY 0.
+fn reconyx_hyperfire2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Reconyx";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x10, bo) {
+        dm.push(("FileNumber".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("FileNumber", 0x10, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x12, bo) {
+        dm.push(("DirectoryNumber".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("DirectoryNumber", 0x12, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x14 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("
+            my @a = split / /, $val;
+            sprintf('%.4d:%.2d:%.2d %.2d:%.2d:%.2d',
+                ($a[0] >> 9)  + 1980, # year
+                ($a[0] >> 5)  & 0x0f, # month
+                 $a[0]        & 0x1f, # day
+                ($a[1] >> 11) & 0x1f, # hour
+                ($a[1] >> 5)  & 0x3f, # minute
+                ($a[1]        & 0x1f) * 2  # second
+            );
+        ", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("DirectoryCreateDate", 0x14, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x2a + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("my @a = split \" \",$val; sprintf(\"%d.%d%c\",@a)", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("FirmwareVersion", 0x2a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x30 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("my ($y,$d) = split \" \", $val; sprintf(\"%.4x:%.2x:%.2x\",$y,$d>>8,$d&0xff)", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("FirmwareDate", 0x30, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(text) = text_at(data, 0x34, 2, true) {
+        tags.push(mk("TriggerMode", 0x34, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x36 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$val =~ s/ / of /; $val", &cv, &ctx) { cv = x; }
+            tags.push(mk("Sequence", 0x36, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x3a + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("my @a=split \" \",$val;($a[0]<<16)+$a[1]", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("EventNumber", 0x3a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..6 {
+            match u16_at(data, 0x3e + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("
+            my @a = split ' ', $val;
+            sprintf('%.4d:%.2d:%.2d %.2d:%.2d:%.2d', reverse @a);
+        ", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("DateTimeOriginal", 0x3e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x4a, bo) {
+        dm.push(("DayOfWeek".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Sunday".to_string(),
+            1 => "Monday".to_string(),
+            2 => "Tuesday".to_string(),
+            3 => "Wednesday".to_string(),
+            4 => "Thursday".to_string(),
+            5 => "Friday".to_string(),
+            6 => "Saturday".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("DayOfWeek", 0x4a, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4c, bo) {
+        dm.push(("MoonPhase".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "New".to_string(),
+            1 => "New Crescent".to_string(),
+            2 => "First Quarter".to_string(),
+            3 => "Waxing Gibbous".to_string(),
+            4 => "Full".to_string(),
+            5 => "Waning Gibbous".to_string(),
+            6 => "Last Quarter".to_string(),
+            7 => "Old Crescent".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("MoonPhase", 0x4c, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x4e, bo) {
+        dm.push(("AmbientTemperatureFahrenheit".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val F\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("AmbientTemperatureFahrenheit", 0x4e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x50, bo) {
+        dm.push(("AmbientTemperature".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("AmbientTemperature", 0x50, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x52, bo) {
+        dm.push(("Contrast".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Contrast", 0x52, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x54, bo) {
+        dm.push(("Brightness".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Brightness", 0x54, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x56, bo) {
+        dm.push(("Sharpness".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Sharpness", 0x56, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x58, bo) {
+        dm.push(("Saturation".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Saturation", 0x58, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x5a, bo) {
+        dm.push(("Flash".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Flash", 0x5a, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x5c, bo) {
+        dm.push(("AmbientInfrared".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("AmbientInfrared", 0x5c, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x5e, bo) {
+        dm.push(("AmbientLight".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("AmbientLight", 0x5e, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x60, bo) {
+        dm.push(("MotionSensitivity".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("MotionSensitivity", 0x60, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x62, bo) {
+        dm.push(("BatteryVoltage".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("BatteryVoltage", 0x62, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x64, bo) {
+        dm.push(("BatteryVoltageAvg".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("BatteryVoltageAvg", 0x64, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x66, bo) {
+        dm.push(("BatteryType".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("BatteryType", 0x66, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x68, 22, true) {
+        tags.push(mk("UserLabel", 0x68, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = utf16_at(data, 0x7e, 30, bo) {
+        tags.push(mk("SerialNumber", 0x7e, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Reconyx::HyperFire4K` -- FORMAT int8u, FIRST_ENTRY 0.
+fn reconyx_hyperfire4k(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Reconyx";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x1a, 7, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.2x.%.2x %.4x:%.2x:%.2x Rev.%s\", unpack(\"CCvCCa\", $val))", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        tags.push(mk("FirmwareVersion", 0x1a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x21, 7, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.2x.%.2x %.4x:%.2x:%.2x Rev.%s\", unpack(\"CCvCCa\", $val))", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        tags.push(mk("UIBFirmwareVersion", 0x21, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x28, 1, false) {
+        tags.push(mk("TriggerMode", 0x28, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u8_at(data, 0x29 + k * 1) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$val =~ s/ / of /; $val", &cv, &ctx) { cv = x; }
+            tags.push(mk("Sequence", 0x29, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x2b, bo) {
+        dm.push(("EventNumber".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("EventNumber", 0x2b, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x2f, 7, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.4d:%.2d:%.2d %.2d:%.2d:%.2d\", reverse unpack(\"C5v\",$val))", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("DateTimeOriginal", 0x2f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x36) {
+        dm.push(("DayOfWeek".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            1 => "Sunday".to_string(),
+            2 => "Monday".to_string(),
+            3 => "Tuesday".to_string(),
+            4 => "Wednesday".to_string(),
+            5 => "Thursday".to_string(),
+            6 => "Friday".to_string(),
+            7 => "Saturday".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("DayOfWeek", 0x36, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x37) {
+        dm.push(("MoonPhase".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "New".to_string(),
+            1 => "New Crescent".to_string(),
+            2 => "First Quarter".to_string(),
+            3 => "Waxing Gibbous".to_string(),
+            4 => "Full".to_string(),
+            5 => "Waning Gibbous".to_string(),
+            6 => "Last Quarter".to_string(),
+            7 => "Old Crescent".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("MoonPhase", 0x37, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x38, bo) {
+        dm.push(("AmbientTemperatureFahrenheit".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val F\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("AmbientTemperatureFahrenheit", 0x38, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x3a, bo) {
+        dm.push(("AmbientTemperature".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("AmbientTemperature", 0x3a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x3c, bo) {
+        dm.push(("Contrast".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Contrast", 0x3c, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x3e, bo) {
+        dm.push(("Brightness".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Brightness", 0x3e, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x40, bo) {
+        dm.push(("Sharpness".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Sharpness", 0x40, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x42, bo) {
+        dm.push(("Saturation".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Saturation", 0x42, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x44) {
+        dm.push(("Flash".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Flash", 0x44, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x45, bo) {
+        dm.push(("AmbientLight".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("AmbientLight", 0x45, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x49, bo) {
+        dm.push(("MotionSensitivity".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("MotionSensitivity", 0x49, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4b, bo) {
+        dm.push(("BatteryVoltage".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("BatteryVoltage", 0x4b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4d, bo) {
+        dm.push(("BatteryVoltageAvg".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("BatteryVoltageAvg", 0x4d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4f, bo) {
+        dm.push(("BatteryType".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            1 => "NiMH".to_string(),
+            2 => "Lithium".to_string(),
+            3 => "External".to_string(),
+            4 => "SC10 Solar".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("BatteryType", 0x4f, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x51, 51, true) {
+        tags.push(mk("UserLabel", 0x51, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x84, 15, true) {
+        tags.push(mk("SerialNumber", 0x84, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x93, bo) {
+        dm.push(("DirectoryNumber".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("DirectoryNumber", 0x93, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x95, bo) {
+        dm.push(("FileNumber".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("FileNumber", 0x95, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Reconyx::MicroFire` -- FORMAT int8u, FIRST_ENTRY 0.
+fn reconyx_microfire(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Reconyx";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x10, bo) {
+        dm.push(("FileNumber".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("FileNumber", 0x10, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x12, bo) {
+        dm.push(("DirectoryNumber".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("DirectoryNumber", 0x12, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x14 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("
+            my @a = split / /, $val;
+            sprintf('%.4d:%.2d:%.2d %.2d:%.2d:%.2d',
+                ($a[0] >> 9)  + 1980, # year
+                ($a[0] >> 5)  & 0x0f, # month
+                 $a[0]        & 0x1f, # day
+                ($a[1] >> 11) & 0x1f, # hour
+                ($a[1] >> 5)  & 0x3f, # minute
+                ($a[1]        & 0x1f) * 2  # second
+            );
+        ", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("DirectoryCreateDate", 0x14, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..8 {
+            match u16_at(data, 0x18 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("join \"-\", map sprintf(\"%.4x\",$_), split / /, $val", &cv, &ctx) { cv = x; }
+            tags.push(mk("SDCardID", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x2a + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("my @a = split \" \",$val; sprintf(\"%d.%d%c\",@a)", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("FirmwareVersion", 0x2a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x30 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("my ($y,$d) = split \" \", $val; sprintf(\"%.4x:%.2x:%.2x\",$y,$d>>8,$d&0xff)", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("FirmwareDate", 0x30, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x34 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("my @a = split \" \",$val; sprintf(\"%d.%d%c\",@a)", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("BluetoothFirmwareVersion", 0x34, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x3a, bo) {
+        dm.push(("BluetoothFirmwareDate".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("
+            sprintf('%.4d:%.2d:%.2d',
+                ($val >> 9)  + 1980, # year
+                ($val >> 5)  & 0x0f, # month
+                 $val        & 0x1f, # day
+            );
+        ", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("BluetoothFirmwareDate", 0x3a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x3c + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("my @a = split \" \",$val; sprintf(\"%d.%d%c\",@a)", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("WifiFirmwareVersion", 0x3c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x42, bo) {
+        dm.push(("WifiFirmwareDate".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("
+            sprintf('%.4d:%.2d:%.2d',
+                ($val >> 9)  + 1980, # year
+                ($val >> 5)  & 0x0f, # month
+                 $val        & 0x1f, # day
+            );
+        ", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("WifiFirmwareDate", 0x42, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x44, 2, true) {
+        tags.push(mk("TriggerMode", 0x44, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x46 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$val =~ s/ / of /; $val", &cv, &ctx) { cv = x; }
+            tags.push(mk("Sequence", 0x46, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x4a + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("my @a=split \" \",$val;($a[0]<<16)+$a[1]", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            tags.push(mk("EventNumber", 0x4a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..6 {
+            match u16_at(data, 0x4e + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("
+            my @a = split ' ', $val;
+            sprintf('%.4d:%.2d:%.2d %.2d:%.2d:%.2d', @a[5,3,4,2,1,0]);
+        ", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("DateTimeOriginal", 0x4e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x5a, bo) {
+        dm.push(("DayOfWeek".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            1 => "Sunday".to_string(),
+            2 => "Monday".to_string(),
+            3 => "Tuesday".to_string(),
+            4 => "Wednesday".to_string(),
+            5 => "Thursday".to_string(),
+            6 => "Friday".to_string(),
+            7 => "Saturday".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("DayOfWeek", 0x5a, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x5c, bo) {
+        dm.push(("MoonPhase".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "New".to_string(),
+            1 => "New Crescent".to_string(),
+            2 => "First Quarter".to_string(),
+            3 => "Waxing Gibbous".to_string(),
+            4 => "Full".to_string(),
+            5 => "Waning Gibbous".to_string(),
+            6 => "Last Quarter".to_string(),
+            7 => "Old Crescent".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("MoonPhase", 0x5c, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x5e, bo) {
+        dm.push(("AmbientTemperatureFahrenheit".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val F\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("AmbientTemperatureFahrenheit", 0x5e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x60, bo) {
+        dm.push(("AmbientTemperature".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("AmbientTemperature", 0x60, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x62, bo) {
+        dm.push(("Contrast".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Contrast", 0x62, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x64, bo) {
+        dm.push(("Brightness".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Brightness", 0x64, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x66, bo) {
+        dm.push(("Sharpness".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Sharpness", 0x66, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x68, bo) {
+        dm.push(("Saturation".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Saturation", 0x68, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x6a) {
+        dm.push(("Flash".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Flash", 0x6a, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6c, bo) {
+        dm.push(("AmbientInfrared".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("AmbientInfrared", 0x6c, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6e, bo) {
+        dm.push(("AmbientLight".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("AmbientLight", 0x6e, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x70, bo) {
+        dm.push(("MotionSensitivity".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("MotionSensitivity", 0x70, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x72, bo) {
+        dm.push(("BatteryVoltage".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("BatteryVoltage", 0x72, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x74, bo) {
+        dm.push(("BatteryType".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Lithium".to_string(),
+            1 => "NiMH".to_string(),
+            2 => "Alkaline".to_string(),
+            3 => "Lead Acid".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("BatteryType", 0x74, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x76, 22, true) {
+        tags.push(mk("UserLabel", 0x76, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = utf16_at(data, 0x8c, 30, bo) {
+        tags.push(mk("SerialNumber", 0x8c, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Reconyx::UltraFire` -- FORMAT int8u, FIRST_ENTRY 0.
+fn reconyx_ultrafire(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Reconyx";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x18, 7, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.2x.%.2x %.4x:%.2x:%.2x Rev.%s\", unpack(\"CCvCCa\", $val))", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        tags.push(mk("FirmwareVersion", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x1f, 7, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.2x.%.2x %.4x:%.2x:%.2x Rev.%s\", unpack(\"CCvCCa\", $val))", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        tags.push(mk("Micro1Version", 0x1f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x26, 7, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.2x.%.2x %.4x:%.2x:%.2x Rev.%s\", unpack(\"CCvCCa\", $val))", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        tags.push(mk("BootLoaderVersion", 0x26, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x2d, 7, false) {
+        let ctx = Ctx { make, model, file_type, dm };
+        let mut cv = Conv::Str(text);
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.2x.%.2x %.4x:%.2x:%.2x Rev.%s\", unpack(\"CCvCCa\", $val))", &cv, &ctx) { cv = x; }
+        let raw = Value::String(cv.as_string());
+        tags.push(mk("Micro2Version", 0x2d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x34, 1, false) {
+        tags.push(mk("TriggerMode", 0x34, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u8_at(data, 0x35 + k * 1) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$val =~ s/ / of /; $val", &cv, &ctx) { cv = x; }
+            tags.push(mk("Sequence", 0x35, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u32_at(data, 0x37, bo) {
+        dm.push(("EventNumber".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("EventNumber", 0x37, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u8_at(data, 0x3b + k * 1) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            let ctx = Ctx { make, model, file_type, dm };
+            let mut cv = Conv::Str(s.clone());
+            if let Some(x) = conv_expr::eval_with("sprintf(\"%.4d:%.2d:%.2d %.2d:%.2d:%.2d\", reverse unpack(\"C5v\",$val))", &cv, &ctx) { cv = x; }
+            let raw = Value::String(cv.as_string());
+            if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
+            tags.push(mk("DateTimeOriginal", 0x3b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u8_at(data, 0x42) {
+        dm.push(("DayOfWeek".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Sunday".to_string(),
+            1 => "Monday".to_string(),
+            2 => "Tuesday".to_string(),
+            3 => "Wednesday".to_string(),
+            4 => "Thursday".to_string(),
+            5 => "Friday".to_string(),
+            6 => "Saturday".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("DayOfWeek", 0x42, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x43) {
+        dm.push(("MoonPhase".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "New".to_string(),
+            1 => "New Crescent".to_string(),
+            2 => "First Quarter".to_string(),
+            3 => "Waxing Gibbous".to_string(),
+            4 => "Full".to_string(),
+            5 => "Waning Gibbous".to_string(),
+            6 => "Last Quarter".to_string(),
+            7 => "Old Crescent".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("MoonPhase", 0x43, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x44, bo) {
+        dm.push(("AmbientTemperatureFahrenheit".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val F\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("AmbientTemperatureFahrenheit", 0x44, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x46, bo) {
+        dm.push(("AmbientTemperature".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("AmbientTemperature", 0x46, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x48) {
+        dm.push(("Illumination".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("Illumination", 0x48, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x49, bo) {
+        dm.push(("BatteryVoltage".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val / 1000", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("\"$val V\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("BatteryVoltage", 0x49, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x4b, 15, true) {
+        tags.push(mk("SerialNumber", 0x4b, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x5a, 21, true) {
+        tags.push(mk("UserLabel", 0x5a, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Ricoh::FaceInfo` -- FORMAT int8u, FIRST_ENTRY 0.
+fn ricoh_faceinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Ricoh";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0xb5) {
+        dm.push(("FacesDetected".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let rc = conv_expr::eval_with("$val", &base, &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            let base = rc.unwrap_or(base);
+            #[allow(clippy::cast_possible_truncation)]
+            tags.push(mk("FacesDetected", 0xb5, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0xb6 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("FaceDetectFrameSize", 0xb6, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 1.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0xbc + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face1Position", 0xbc, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 2.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0xc8 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face2Position", 0xc8, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 3.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0xd4 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face3Position", 0xd4, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 4.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0xe0 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face4Position", 0xe0, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 5.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0xec + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face5Position", 0xec, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 6.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0xf8 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face6Position", 0xf8, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 7.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x104 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face7Position", 0x104, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    if dm_get(dm, "FacesDetected").is_some_and(|v| v >= 8.0) {
+        {
+            let mut parts = Vec::new();
+            for k in 0..4 {
+                match u16_at(data, 0x110 + k * 2, bo) {
+                    Some(x) => parts.push(x.to_string()),
+                    None => { parts.clear(); break }
+                }
+            }
+            if !parts.is_empty() {
+                let s = parts.join(" ");
+                tags.push(mk("Face8Position", 0x110, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
+        }
+    }
+    tags
+}
+
 /// `Image::ExifTool::Samsung::DualShotExtra` -- FORMAT int32u, FIRST_ENTRY 0.
 fn samsung_dualshotextra(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
     const GRP0: &str = "MakerNotes";
@@ -54588,6 +61992,200 @@ fn samsung_dualshotextra(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
 fn samsung_thumbnail2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
     const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Samsung";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x4, bo) {
+        dm.push(("ThumbnailWidth".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailWidth", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x8, bo) {
+        dm.push(("ThumbnailHeight".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailHeight", 0x2, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0xc, bo) {
+        dm.push(("ThumbnailLength".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailLength", 0x3, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x10, bo) {
+        dm.push(("ThumbnailOffset".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailOffset", 0x4, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Samsung::Thumbnail` -- FORMAT int32u, FIRST_ENTRY 0.
+fn samsung_thumbnail(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Samsung";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x4, bo) {
+        dm.push(("ThumbnailWidth".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailWidth", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x8, bo) {
+        dm.push(("ThumbnailHeight".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailHeight", 0x2, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0xc, bo) {
+        dm.push(("ThumbnailLength".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailLength", 0x3, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x10, bo) {
+        dm.push(("ThumbnailOffset".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ThumbnailOffset", 0x4, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Samsung::OrientationInfo` -- FORMAT rational64s, FIRST_ENTRY 0.
+fn samsung_orientationinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Samsung";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = rat64s_at(data, 0x0, bo) {
+        dm.push(("YawAngle".to_string(), Conv::Num(f64::from(v))));
+    }
+    if let Some(v) = rat64s_at(data, 0x8, bo) {
+        dm.push(("PitchAngle".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PitchAngle", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = rat64s_at(data, 0x10, bo) {
+        dm.push(("RollAngle".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("RollAngle", 0x2, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Samsung::PictureWizard` -- FORMAT int16u, FIRST_ENTRY 0.
+fn samsung_picturewizard(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Samsung";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("PictureWizardMode".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Standard".to_string(),
+            1 => "Vivid".to_string(),
+            2 => "Portrait".to_string(),
+            3 => "Landscape".to_string(),
+            4 => "Forest".to_string(),
+            5 => "Retro".to_string(),
+            6 => "Cool".to_string(),
+            7 => "Calm".to_string(),
+            8 => "Classic".to_string(),
+            9 => "Custom1".to_string(),
+            10 => "Custom2".to_string(),
+            11 => "Custom3".to_string(),
+            255 => "n/a".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("PictureWizardMode", 0x0, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("PictureWizardColor".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("PictureWizardColor", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4, bo) {
+        dm.push(("PictureWizardSaturation".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 4", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("PictureWizardSaturation", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6, bo) {
+        dm.push(("PictureWizardSharpness".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 4", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("PictureWizardSharpness", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x8, bo) {
+        dm.push(("PictureWizardContrast".to_string(), Conv::Num(f64::from(v))));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 4", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("PictureWizardContrast", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Sanyo::FaceInfo` -- FORMAT int32u, FIRST_ENTRY 0.
+fn sanyo_faceinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Sanyo";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x0, bo) {
+        dm.push(("FacesDetected".to_string(), Conv::Num(f64::from(v))));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("FacesDetected", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u32_at(data, 0x10 + k * 4, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("FacePosition", 0x4, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::Sanyo::Thumbnail` -- FORMAT int32u, FIRST_ENTRY 0.
+fn sanyo_thumbnail(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Sanyo";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
     let mut tags = Vec::new();

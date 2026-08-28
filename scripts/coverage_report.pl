@@ -67,6 +67,89 @@ my $lib_src = '';
     closedir $d;
 }
 
+# Our source with the generated dispatcher's own key lines removed, so a
+# table counts only where a READER names it.
+my $gen = 'src/tags/binary_tables_generated.rs';
+my $outside = '';
+for my $f (keys %ours_by_file) {
+    next if $f =~ /binary_tables_generated\.rs$/;
+    $outside .= $ours_by_file{$f};
+}
+
+# Which generated decoder calls which, so a table opened as a sub-directory by
+# a reached one counts as reached too -- that is how the NikonCustom settings
+# are decoded, from inside their ShotInfo.
+my (%fn_of_table, %table_of_fn, %calls, %called_from_reached);
+if (open my $h, '<', $gen) {
+    local $/;
+    my $body = <$h>;
+    close $h;
+    # The decode dispatcher's own arms, not `table_byte_order`'s: both are
+    # keyed by the same strings, and matching either left every table mapped
+    # to the function `Some`.
+    while ($body =~ /"(\w+)::(\w+)" => (\w+)\(data, /g) {
+        $fn_of_table{"$1\::$2"} = $3;
+        $table_of_fn{$3} = "$1\::$2";
+    }
+    # Every call one decoder makes to another. Read from a copy: a `//g` loop
+    # leaves its position on the scalar, and the next loop over the same one
+    # would start where this ended.
+    my $bodies = $body;
+    while ($bodies =~ /^fn (\w+)\(.*?\n\}/gms) {
+        my $whole = $&;
+        my $from = $1;
+        while ($whole =~ /\b(\w+)\(sub, /g) {
+            push @{$calls{$from}}, $1;
+        }
+    }
+    # A reader can also name a Main-table id and let the generated selector
+    # answer with the table -- that is how ColorData, CameraInfo and ShotInfo
+    # are chosen -- so every table an arm of a selector the reader asks for
+    # can return is reached as well.
+    my %selector_tables;
+    while ($body =~ /\("(\w+)", (0x[0-9a-fA-F]+)\) => \{(.*?)\n        \}/gs) {
+        my ($mod, $id, $arms) = ($1, $2, $3);
+        push @{$selector_tables{"$mod\t$id"}}, $arms =~ /Some\("(\w+::\w+)"\)/g;
+    }
+
+    # Seed: every table a reader names, then close over the call graph.
+    my @queue;
+    for my $t (keys %fn_of_table) {
+        push @queue, $t if $outside =~ /\Q$t\E/;
+    }
+    for my $k (keys %selector_tables) {
+        my ($mod, $id) = split /\t/, $k;
+        my $dec = hex $id;
+        # `variant_for("Canon", 0x4001` or the same id written any other way.
+        # The call is written over several lines, the module on one and the
+        # id on the next.
+        my $asked = 0;
+        while ($outside =~ /variant_for\s*\(\s*"\Q$mod\E"\s*,\s*(0x[0-9a-fA-F]+|\d+)\s*,/gs) {
+            my $got = $1;
+            $asked = 1 if ($got =~ /^0x/ ? hex($got) : $got) == $dec;
+        }
+        # Or the id comes from the tag being read, in which case every arm
+        # the reader lists beside it counts.
+        $asked = 1 if !$asked and $outside =~ /variant_for\s*\(\s*"\Q$mod\E"\s*,\s*tag_id\s*,/s;
+        next unless $asked;
+        for my $t (@{$selector_tables{$k}}) {
+            $called_from_reached{$t} = 1;
+            push @queue, $t;
+        }
+    }
+    my %seen;
+    while (my $t = shift @queue) {
+        next if $seen{$t}++;
+        my $fn = $fn_of_table{$t} or next;
+        for my $callee (@{$calls{$fn} || []}) {
+            my $ct = $table_of_fn{$callee} or next;
+            next if $seen{$ct};
+            $called_from_reached{$ct} = 1;
+            push @queue, $ct;
+        }
+    }
+}
+
 my (%total, %missing, %orphan);
 opendir my $dh, "$lib/Image/ExifTool" or die $!;
 for my $pm (sort grep { /\.pm$/ } readdir $dh) {
@@ -95,7 +178,13 @@ for my $pm (sort grep { /\.pm$/ } readdir $dh) {
         # A bare substring is not a mention: "Thumbnail" occurs in thousands
         # of places, and matching it counted Samsung::Thumbnail as reached
         # when nothing decodes it.
-        my $reached = $ours =~ /\Q$module\E::\Q$table\E/;
+        # Named OUTSIDE the generated dispatcher. A generated decoder that
+        # nothing calls is not reachable: its own `"Mod::Table" => mod_table()`
+        # line would otherwise be the only evidence, and generating a table
+        # would be enough to count it.
+        my $reached = $outside =~ /\Q$module\E::\Q$table\E/;
+        # Or opened as a sub-directory by a table that is itself reached.
+        $reached ||= $called_from_reached{"$module\::$table"};
         unless ($reached) {
             # Or named on its own in a file that says which module it decodes.
             for my $f (keys %ours_by_file) {

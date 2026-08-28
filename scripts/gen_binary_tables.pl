@@ -41,7 +41,21 @@ my %WANTED = (
     )],
     CanonCustom => [qw(PersonalFuncs PersonalFuncValues)],
     CanonVRD => [qw(DustInfo DLOInfo)],
-    Kodak => [qw(Type9)],
+    Kodak => [qw(Type9 Type2 Type3 Type4 Type5 Type6 Type7 Processing Unknown MOV)],
+    Panasonic => [qw(Data1 Data2 FaceDetInfo FaceRecInfo FocusInfo SerialInfo
+                     ShotInfo TimeInfo Type2)],
+    PanasonicRaw => [qw(DistortionInfo WBInfo WBInfo2)],
+    Casio => [qw(FaceInfo1 FaceInfo2 QVCI AVI)],
+    Ricoh => [qw(FaceInfo)],
+    Sanyo => [qw(FaceInfo Thumbnail)],
+    Reconyx => [qw(HyperFire HyperFire2 HyperFire4K MicroFire UltraFire)],
+    H264 => [qw(Camera1 Camera2 FrameInfo MakeModel RecInfo)],
+    Nintendo => [qw(CameraInfo)],
+    Microsoft => [qw(Stitch)],
+    FlashPix => [qw(PreviewInfo)],
+    JPEG => [qw(Ocad)],
+    CanonRaw => [qw(WhiteSample)],
+    Pentax => [qw(Junk2 CAFPointInfo)],
     Nikon => [qw(LensDataUnknown)],
     NikonCustom => [qw(
         SettingsD40 SettingsD810 SettingsD850
@@ -52,20 +66,22 @@ my %WANTED = (
     )],
     NikonCapture => [qw(
         DLightingHQ DLightingHS HighlightData PictureCtrl UnsharpData WBAdjData
+        Brightness ColorBoost Exposure
     )],
     Photoshop => [qw(PixelInfo)],
     RIFF => [qw(AVIHeader)],
-    Pentax => [qw(Junk2)],
-    Samsung => [qw(DualShotExtra Thumbnail2)],
+    Samsung => [qw(DualShotExtra Thumbnail2 Thumbnail OrientationInfo PictureWizard)],
     Minolta => [qw(
         CameraSettings7D CameraInfoA100 WBInfoA100 MOV1 MOV2
+        CameraSettings5D CameraSettingsA100 ISInfoA100
     )],
-    Olympus => [qw(MOV1 MOV2 prms)],
-    FujiFilm => [qw(FFMV)],
-    QuickTime => [qw(HTCBinary)],
+    Olympus => [qw(MOV1 MOV2 prms AFInfo AFTargetInfo MovableInfo
+                   SubjectDetectInfo Thumbnail AVI MP4 WAV)],
+    FujiFilm => [qw(FFMV RAFData MOV)],
+    QuickTime => [qw(HTCBinary AV1Config ContentLightLevel Flip HEVCConfig)],
     FLIR => [qw(
         GainDeadData CoarseData PaintData SerialNums UnknownUUID GPS_UUID
-        AFF1 AFF5
+        AFF1 AFF5 EmbeddedImage GPSInfo Header MeterLink MoreInfo Params PiP
     )],
 );
 
@@ -626,6 +642,18 @@ sub parse_table {
         my $count = 1;
         # `Format => 'string'` with no count runs from the entry to the end
         # of the block, stopping at the first NUL, as ExifTool's reader does.
+        # `unicode[N]` is UTF-16, N characters, in the block's byte order.
+        if ($ffmt =~ /^unicode(?:\[(0x[0-9a-fA-F]+|\d+)\])?$/) {
+            my $n2 = $1;
+            $n2 = defined $n2 ? ($n2 =~ /^0x/ ? hex($n2) : int($n2)) : undef;
+            push @{$t->{fields}}, {
+                off => $off, name => $name, fmt => 'unicode', n => $n2,
+                hidden => $hidden, cond => $guard, conv => {}, text => 1,
+                rconv => $rconv_e, vconv => $vconv_e, pconv => $pconv_e,
+                dmname => $dmname_e,
+            };
+            next;
+        }
         if ($ffmt eq 'string' or $ffmt eq 'undef') {
             push @{$t->{fields}}, {
                 off => $off, name => $name, fmt => $ffmt, n => undef,
@@ -704,13 +732,17 @@ sub parse_table {
         $expr_at = $-[0] if defined $pconv and $fb =~ /PrintConv\s*=>\s*(?:'|q\{)/;
         my $ref_at = -1;
         $ref_at = $-[0] if $fb =~ /PrintConv\s*=>\s*\\%\w+/;
-        if ($ref_at > $inline_at and $ref_at > $expr_at and my ($href) = $fb =~ /PrintConv\s*=>\s*\\%(\w+)/) {
+        if ($ref_at > $inline_at and $ref_at > $expr_at
+            and my ($href) = $fb =~ /PrintConv\s*=>\s*\\%(?:Image::ExifTool::\w+::)?(\w+)/) {
+            # `\%Image::ExifTool::Minolta::minoltaLensTypes` names the module
+            # it lives in; the hash is looked up there, not here.
+            my ($hmod) = $fb =~ /PrintConv\s*=>\s*\\%Image::ExifTool::(\w+)::/;
             my $found = 0;
             # A `my %name = (...)` is a file-scoped lexical: invisible to the
             # symbol table, so it is read from the source as text. A package
             # hash -- %canonLensTypes -- is built at run time and can only be
             # had by loading the module.
-            if (defined $shared->{$href}) {
+            if (!defined $hmod and defined $shared->{$href}) {
                 my $c = $shared->{$href};
                 while ($c =~ /(-?\d+|0x[0-9a-fA-F]+)\s*=>\s*'((?:[^'\\]|\\.)*)'/g) {
                     my ($k, $v) = ($1, $2);
@@ -724,7 +756,7 @@ sub parse_table {
                 $found = 1 if $c =~ /OTHER\s*=>\s*sub\s*\{\s*shift\s*\}/;
             }
             unless ($found) {
-                my $ref = named_hash($module, $href);
+                my $ref = named_hash($hmod // $module, $href);
                 if ($ref) {
                     for my $k (keys %$ref) {
                         my $v = $ref->{$k};
@@ -1069,6 +1101,23 @@ fn ratio(n: f64, d: f64) -> Option<f64> {
     Some(n / d)
 }
 
+/// N bytes as UTF-16 text, in the block's byte order.
+fn utf16_at(d: &[u8], o: usize, n: usize, bo: ByteOrder) -> Option<String> {
+    let raw = d.get(o..o + n)?;
+    let units: Vec<u16> = raw
+        .chunks_exact(2)
+        .map(|c| {
+            if bo == ByteOrder::BigEndian {
+                u16::from_be_bytes([c[0], c[1]])
+            } else {
+                u16::from_le_bytes([c[0], c[1]])
+            }
+        })
+        .take_while(|u| *u != 0)
+        .collect();
+    Some(String::from_utf16_lossy(&units))
+}
+
 /// N bytes as text. A `string` stops at its first NUL, as ExifTool's reader
 /// does; an `undef` is the bytes as they are.
 fn text_at(d: &[u8], o: usize, n: usize, stop_at_nul: bool) -> Option<String> {
@@ -1184,6 +1233,20 @@ for my $t (@tables) {
             (my $c = $f->{cond}) =~ s/__OFF__/sprintf '0x%x', $byte/ge;
             printf "%sif %s {\n", $ind, $c;
             $ind .= "    ";
+        }
+        # `unicode` is UTF-16 in the block's own byte order.
+        if ($f->{text} and $f->{fmt} eq 'unicode') {
+            unless ($f->{hidden}) {
+                printf "%sif let Some(text) = utf16_at(data, 0x%x, %s, bo) {\n",
+                    $ind, $byte,
+                    defined $f->{n} ? 2 * $f->{n}
+                                    : sprintf('data.len().saturating_sub(0x%x)', $byte);
+                printf "%s    tags.push(mk(\"%s\", 0x%x, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));\n",
+                    $ind, $f->{name}, $f->{off};
+                printf "%s}\n", $ind;
+            }
+            print  "    }\n" if defined $f->{cond};
+            next;
         }
         if ($f->{text}) {
             if ($f->{hidden}) {
