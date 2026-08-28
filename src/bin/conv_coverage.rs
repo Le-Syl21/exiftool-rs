@@ -96,8 +96,11 @@ fn perl_compiles(expr: &str) -> Option<bool> {
 
 /// Every PrintConv/ValueConv written as a Perl expression, with its occurrence
 /// count. Hash-table conversions are not expressions and are not counted.
-fn collect(lib: &PathBuf) -> Vec<(usize, String)> {
+fn collect(lib: &PathBuf) -> (Vec<(usize, String)>, HashMap<String, Vec<String>>) {
     let mut counts: HashMap<String, usize> = HashMap::new();
+    // Where each expression is written, so a claim about one can be checked
+    // against the Perl in a second rather than taken on trust.
+    let mut sites: HashMap<String, Vec<String>> = HashMap::new();
     let dir = lib.join("Image/ExifTool");
     let Ok(entries) = std::fs::read_dir(&dir) else {
         eprintln!("cannot read {}", dir.display());
@@ -143,6 +146,7 @@ fn collect(lib: &PathBuf) -> Vec<(usize, String)> {
             if b.get(i) != Some(&'\'') {
                 continue;
             }
+            let start = i;
             i += 1;
             let mut body = String::new();
             while i < b.len() {
@@ -162,12 +166,17 @@ fn collect(lib: &PathBuf) -> Vec<(usize, String)> {
             // Perl's own escapes inside a single-quoted string: only the quote
             // and the backslash mean anything.
             let body = body.replace("\\'", "'").replace("\\\\", "\\");
+            let line = 1 + b[..start].iter().filter(|c| **c == '\n').count();
+            sites.entry(body.clone()).or_default().push(format!(
+                "{}:{line}",
+                p.file_name().map_or_else(String::new, |n| n.to_string_lossy().into_owned())
+            ));
             *counts.entry(body).or_default() += 1;
         }
     }
     let mut v: Vec<(usize, String)> = counts.into_iter().map(|(e, n)| (n, e)).collect();
     v.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
-    v
+    (v, sites)
 }
 
 fn main() {
@@ -175,7 +184,7 @@ fn main() {
         .nth(1)
         .map_or_else(|| PathBuf::from("/home/sylvain/dev/exiftool/lib"), PathBuf::from);
 
-    let exprs = collect(&lib);
+    let (exprs, sites) = collect(&lib);
     let (mut ok_d, mut ok_o, mut no_d, mut no_o) = (0usize, 0usize, 0usize, 0usize);
     let (mut state_d, mut state_o) = (0usize, 0usize);
     let mut misses: Vec<(usize, String)> = Vec::new();
@@ -255,7 +264,12 @@ fn main() {
         println!("                own eval dies on them, so it prints the raw value too:");
         for (n, e) in &broken {
             let shown: String = e.chars().take(72).collect();
+            // Named where it is written: this is the one claim in the report
+            // that cannot be checked by running the evaluator, so it is made
+            // checkable by running perl on the line instead.
+            let where_ = sites.get(e).map_or_else(String::new, |v| v.join(", "));
             println!("     {n:5}  {shown}");
+            println!("            in {where_}");
         }
     }
     if perl_missing {

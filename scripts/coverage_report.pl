@@ -52,11 +52,12 @@ for my $pm (sort grep { /\.pm$/ } readdir $dh) {
         # Only binary sub-tables: those are the ones a reader must decode itself.
         next unless $body =~ /FIRST_ENTRY/;
         # A reference, not the definition: `'Image::ExifTool::Mod::Table'`
-        # in quotes is how a SubDirectory names one.
-        unless ($lib_src =~ /'Image::ExifTool::\Q$module\E::\Q$table\E'/) {
-            push @{$orphan{$module}}, $table;
-            next;
-        }
+        # in quotes is how a SubDirectory names one. A table nothing names is
+        # still counted -- shrinking the denominator would be answering an
+        # easier question than the one asked -- but it is named apart, because
+        # no reader can reach what its own module never points at.
+        push @{$orphan{$module}}, $table
+            unless $lib_src =~ /'Image::ExifTool::\Q$module\E::\Q$table\E'/;
         $total{$module}++;
         # A table we can reach is one whose name appears somewhere in our source,
         # whether in a generated file or a hand-written dispatcher.
@@ -76,13 +77,20 @@ for my $mod (sort { scalar(@{$missing{$b} || []}) <=> scalar(@{$missing{$a} || [
 }
 printf "\nTOTAL: %d binary sub-tables defined, %d never mentioned in our source (%d%% covered)\n",
     $t, $m, int(100 * ($t - $m) / $t);
+if (%orphan) {
+    my $n = 0;
+    $n += scalar @{$orphan{$_}} for keys %orphan;
+    my $reachable = $t - $n;
+    printf "       of which %d cannot be reached by anyone: ExifTool defines them and\n", $n;
+    printf "       never points at them, so %d is the number a reader can get to.\n", $reachable;
+}
 
 # The names, not just the count: a number says how far there is to go, a list
 # says what to do next.
 if (%orphan) {
     my $n = 0;
     $n += scalar @{$orphan{$_}} for keys %orphan;
-    printf "\nNOT COUNTED -- %d table(s) ExifTool defines and never points at:\n", $n;
+    printf "\nUNREACHABLE -- %d table(s) ExifTool defines and never points at:\n", $n;
     for my $mod (sort keys %orphan) {
         printf "  %-14s %s\n", $mod, join ' ', sort @{$orphan{$mod}};
     }
